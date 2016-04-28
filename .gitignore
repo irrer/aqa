@@ -1,0 +1,35 @@
+# Vim stuff
+*~
+.*.sw?
+
+# Visual Studio stuff
+*.vcxproj*
+*.sln
+*.*sdf
+Debug/
+Release/
+ipch/
+
+# CMake Stuff
+CMakeCache.txt
+cmake_install.cmake
+CMakeFiles/
+
+# Maven stuff
+/target/
+/bin/
+
+/log/
+
+# Eclipse stuff
+.classpath
+.project
+.springBeans
+.settings/
+.cache
+.cache-main
+.cache-tests
+hs_err_pid*.log
+
+# xterm stuff
+xterm.exe.stackdump

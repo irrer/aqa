@@ -1,0 +1,33 @@
+
+# The following was executed as a bash cygwin file to generate certificates and put them into a keystore.
+# Caution should be used to ensure that certificates are not leaked to unauthorized parties.
+# The keystore itself is encrypted.
+
+export keystore=keystore_local.jks                   # destination keystore file
+export storepass=44d18166c66bed60b6394e6625c63dea713dbe465ddc960a7cd109514bc0d2bd
+
+# create keystore from scratch to avoid password errors
+rm -f ${keystore} *.txt
+
+# The following lines generate new keys for three hosts.  These three cover the local host and the prime developer's host.
+#
+# Special note: Once generated, I was unable to export these certs and then re-import them into a keystore that would work.  It only
+# works if they are put into the keystore when generated.
+for alcn in UMRO_127_0_0_1:127.0.0.1 UMRO_localhost:localhost UMRO_irrer:141.214.125.68 ; do
+    alias=$(echo $alcn | sed 's/:.*//')
+    comname=$(echo $alcn | sed 's/.*://')
+    echo alias: $alias "    " comname: $comname 
+    keytool -genkey -v -alias ${alias} -dname "CN=${comname}, OU=Radiation Oncology, O=University of Michigan, C=US" \
+        -keypass ${storepass} -keystore ${keystore} -storepass ${storepass} -keyalg "RSA" -sigalg "SHA512withRSA" -keysize 2048 -validity 36500 > /dev/null 2>&1
+    rm -f ${alias}.txt
+    keytool -exportcert -keystore ${keystore} -storepass ${storepass} -alias ${alias} -file ${alias}.txt -rfc
+    dos2unix ${alias}.txt
+done
+
+# list certificates
+keytool -list -keystore ${keystore} -storepass ${storepass}
+
+# save verbose list of certificates
+keytool -list -keystore ${keystore} -storepass ${storepass} -v > keystore_local.txt
+dos2unix keystore_local.txt
+
