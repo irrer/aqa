@@ -12,14 +12,15 @@ case class Institution(
         notes: String // any extra information
         ) {
 
-    def insert = {
-        logInfo("Creating institution: " + this)
-        Db.run(Institution.query ++= Seq(this))
-        logInfo("Created institution: " + this)
+    def insert: Institution = {
+        val insertQuery = Institution.query returning Institution.query.map(_.institutionPK) into ((institution, institutionPK) => institution.copy(institutionPK = Some(institutionPK)))
+        val action = insertQuery += this
+        val result = Db.run(action)
+        result
     }
 
     def insertOrUpdate = Db.run(Institution.query.insertOrUpdate(this))
-    
+
     def fileName = Institution.fileName(name)
 }
 
@@ -35,7 +36,7 @@ object Institution {
     }
 
     val query = TableQuery[InstitutionTable]
-    
+
     def fileName(name: String): String = FileUtil.replaceInvalidFileNameCharacters(name, '_')
 
     def get(institutionPK: Long): Option[Institution] = {

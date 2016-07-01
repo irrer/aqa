@@ -4,7 +4,7 @@ import org.restlet.Response
 import scala.xml.Elem
 import org.aqac.db.Procedure
 
-object ProcedureList {
+object RunProcedureList {
 
     val path = WebUtil.pathOf(ProcedureList.getClass.getName)
 
@@ -16,16 +16,15 @@ object ProcedureList {
 
     private val nameCol = new Column[PU]("Name", _._1.name)
 
-    private val supportedByCol = new Column[PU]("Supported By", _._2.fullName)
-
     private val versionCol = new Column[PU]("Version", _._1.version)
 
     private val notesCol = new Column[PU]("Notes", _._1.notes, notesHTML)
 
-    val colList = Seq(nameCol, supportedByCol, versionCol, notesCol)
+    val colList = Seq(nameCol, versionCol, notesCol)
+
 }
 
-class ProcedureList extends GenericList[Procedure.PU]("Procedure", ProcedureList.colList) {
+class RunProcedureList extends GenericList[Procedure.PU]("Procedure", ProcedureList.colList) {
 
     override def getData = Procedure.listWithDependencies
 

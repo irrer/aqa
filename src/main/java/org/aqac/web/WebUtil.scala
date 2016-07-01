@@ -23,6 +23,7 @@ import java.io.InputStream
 import java.io.FileOutputStream
 import java.lang.Class
 import edu.umro.ScalaUtil.Trace._
+import org.aqac.db.User
 
 object WebUtil {
 
@@ -30,7 +31,15 @@ object WebUtil {
 
     val spacer = "\n.spacer {  margin-top: 40px; }"
 
-    def xmlToText(document: Node): String = new PrettyPrinter(1024, 2).format(document)
+    private val singleQuote = "@@quote1@@"
+
+    private val doubleQuote = "@@quote2@@"
+
+    def snglQuote(text: String): String = singleQuote + text + singleQuote
+
+    def dblQuote(text: String): String = doubleQuote + text + doubleQuote
+
+    def xmlToText(document: Node): String = new PrettyPrinter(1024, 2).format(document).replace(singleQuote, "'").replace(doubleQuote, "\"")
 
     def pathOf(className: String) = "/" + (className.substring(className.lastIndexOf('.') + 1).replace("$", ""))
 
@@ -83,8 +92,17 @@ object WebUtil {
         val paramStart = text.indexOf('?')
         if (paramStart == -1)
             Map[String, String]()
-        else
-            text.substring(paramStart + 1).split('&').map(kv => (kv.split('=')(0), kv.split('=')(1))).toMap
+        else {
+            def getKeyVal(kv: String): (String, String) = {
+                val items = kv.split('=')
+                items.size match {
+                    case 2 => (items(0), items(1))
+                    case 1 => (items(0), null)
+                    case _ => (null, null)
+                }
+            }
+            text.substring(paramStart + 1).split('&').map(kv => getKeyVal(kv)).toMap
+        }
     }
 
     private def saveFileList(request: Request): Map[String, String] = {
@@ -132,7 +150,9 @@ object WebUtil {
         methodIsUpload && (entity != null) && (mediaType != null) && mediaTypeIsUpload
     }
 
-    def getValueMap(request: Request): Map[String, String] = {
+    type ValueMapT = Map[String, String]
+
+    def getValueMap(request: Request): ValueMapT = {
         if (requestIsUpload(request))
             saveFileList(request)
         else
@@ -150,6 +170,7 @@ object WebUtil {
     val HTML_PREFIX = "<!DOCTYPE html>\n"
 
     def wrapBody(content: Elem, pageTitle: String): String = {
+        // <script src="/static/ReloadOutput.js"></script>       // TODO put back in down below?
         val page = {
             <html lang="en">
                 <head>
@@ -160,6 +181,7 @@ object WebUtil {
                     <script src="/static/bootstrap/3.3.6/js/bootstrap.min.js"></script>
                     <script src="/static/dropzone/dropzone-4.3.0/dist/dropzone.js"></script>
                     <link rel="stylesheet" href="/static/dropzone/dropzone-4.3.0/dist/dropzone.css"/>
+                    <script src="/static/ReloadOutput.js"></script>
                 </head>
                 <body>
                     <header class="topbar">
@@ -193,10 +215,6 @@ object WebUtil {
 
     def respond(content: Elem, title: String, response: Response): Unit = respond(content, title, response, Status.SUCCESS_OK)
 
-    class EXrrorMessage(val message: String, val enabled: Boolean) {
-        def this(message: String) = this(message, true)
-    }
-
     val styleNone = Map[String, Style]()
 
     trait ToHtml {
@@ -227,6 +245,8 @@ object WebUtil {
 
         val rowListWithSession = (new WebInputSession) ++ rowList
 
+        val uploadFileInput: Option[IsInput] = if (validCol(fileUpload)) Some(new IsInput("uploadFile")) else None
+
         override def toHtml(valueMap: Map[String, String], errorMap: Map[String, Style]): Elem = {
 
             val valueMapWithSession = if (valueMap.get(sessionLabel).isDefined) valueMap else (Map((sessionLabel, Session.makeUniqueId)) ++ valueMap)
@@ -242,7 +262,7 @@ object WebUtil {
                     val formClass = "dropzone row " + colToName(fileUpload, 0)
 
                     <div class="row">
-                        <form action={ action + "?" + sessionLabel + "=" + sessionId } class={ formClass } id="uploadFile"></form>
+                        <form action={ action + "?" + sessionLabel + "=" + sessionId } class={ formClass } id="uploadFile" style="border-color: #cccccc; border-width: 1px; border-radius: 10px;"></form>
                     </div>
                     <div class="row">
                         { mainForm }
@@ -480,6 +500,17 @@ object WebUtil {
     }
 
     private class WebInputSession extends WebInputHidden(sessionLabel) with ToHtml;
+
+    /**
+     * Given a request, extract the user from it.
+     */
+    def getUser(request: Request): Option[User] = {
+        val cr = request.getChallengeResponse
+        if (cr == null) None
+        else User.findUserByEmail(cr.getIdentifier)
+
+        User.get(6) // TODO get proper login working
+    }
 
     def main(args: Array[String]): Unit = {
 

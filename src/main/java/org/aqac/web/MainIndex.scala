@@ -10,10 +10,10 @@ import java.io.FileInputStream
 import org.restlet.data.Status
 import org.restlet.data.MediaType
 
-class MainIndex extends Restlet {
+class MainIndex(staticDir: File) extends Restlet {
 
     private val content = {
-        val file = new File(WebServer.STATIC_CONTENT_DIR, "index.html")
+        val file = new File(staticDir, "index.html")
         val text: Array[Byte] = new Array[Byte](file.length.toInt)
         (new FileInputStream(file)).read(text)
         text
@@ -22,6 +22,5 @@ class MainIndex extends Restlet {
     override def handle(request: Request, response: Response): Unit = {
         response.setStatus(Status.SUCCESS_OK)
         response.setEntity(new String(content), MediaType.TEXT_HTML)
-
     }
 }

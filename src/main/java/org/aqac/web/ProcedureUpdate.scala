@@ -43,7 +43,11 @@ class ProcedureUpdate extends Restlet {
 
     private val version = new WebInputText("Version", 6, 0, "Required.  Usually dot separated integers")
 
-    private val timeout = new WebInputText("Timeout", 6, 0, "Maximum run time")
+    private def webInterfaceList() = List(("WinstonLutz_1", "WinstonLutz_1")) // TODO should get list of interfaces
+
+    private val webInterface = new WebInputSelect("Interface", 6, 0, webInterfaceList)
+
+    private val timeout = new WebInputText("Timeout", 6, 0, "Maximum run time in minutes")
 
     def directory = new WebPlainText("Directory", 6, 0, "For executable and test data") // TODO
 
@@ -63,7 +67,7 @@ class ProcedureUpdate extends Restlet {
 
     private val procedurePK = new WebInputHidden(ProcedureUpdate.procedurePKTag)
 
-    val fieldList: List[WebRow] = List(List(name), List(version), List(timeout), List(supportingUserPK), List(notes), List(directory))
+    val fieldList: List[WebRow] = List(List(name), List(version), List(timeout), List(webInterface), List(supportingUserPK), List(notes), List(directory))
 
     val createButtonList: List[WebRow] = List(List(createButton, cancelButton))
 
@@ -95,20 +99,18 @@ class ProcedureUpdate extends Restlet {
     }
 
     private def validateUniqueness(valueMap: Map[String, String]): Map[String, Style] = {
-        ???      // TODO
-        /*
-        val pk = procedurePK.getValOrEmpty(valueMap)
-        val newDirName = Procedure.directoryName(name.getValOrEmpty(valueMap), version.getValOrEmpty(valueMap))
-        val existingList = Procedure.list.filter(p => p.directoryName.equalsIgnoreCase(newDirName))
+        val nameText = valueMap.get(name.label).get.trim
+        val versionText = valueMap.get(version.label).get.trim
         
-        if (existingList.isEmpty || existingList.head.procedurePK.get.toString.equals(pk))
+        val existingList = Procedure.list.filter(p => p.name.equalsIgnoreCase(nameText) && (p.version.equalsIgnoreCase(versionText)))
+        
+        if (existingList.isEmpty)
             styleNone
         else
-            Error.make(name, "There is already a procedure with that name and version")
-        */
+            Error.make(name, "There is already a procedure with that name and version of " + nameText + " " + versionText)
     }
 
-    private def validateTimeout(valueMap: Map[String, String]): Map[String, Style] = {
+    private def validateTimeout(valueMap: Map[String, String]): Map[String, Style] = { // TODO  Should be in nicely formatted time HH:MM:SS.sss
         val timeoutText = valueMap.get(timeout.label).get.trim
         val valOf: Option[Float] = {
             try {
@@ -158,9 +160,10 @@ class ProcedureUpdate extends Restlet {
         val timeoutText = valueMap.get(timeout.label).get.trim
         val createdDate = new java.sql.Date(System.currentTimeMillis)
         val supUserPK = valueMap.get(supportingUserPK.label).get.toLong
+        val webInterfaceText = valueMap.get(webInterface.label).get.trim
         val notesText = valueMap.get(notes.label).get.trim
 
-        new Procedure(procedurePK, nameText, versionText, timeoutText.toFloat, createdDate, supUserPK, notesText)
+        new Procedure(procedurePK, nameText, versionText, timeoutText.toFloat, createdDate, supUserPK, webInterfaceText, notesText)
     }
 
     /**

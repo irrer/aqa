@@ -13,10 +13,11 @@ case class User(
         passwordSalt: String // salt used for hashing password
         ) {
 
-    def insert = {
-        logInfo("Creating user: " + this)
-        Db.run(User.query ++= Seq(this))
-        logInfo("Created user: " + this)
+    def insert: User = {
+        val insertQuery = User.query returning User.query.map(_.userPK) into ((user, userPK) => user.copy(userPK = Some(userPK)))
+        val action = insertQuery += this
+        val result = Db.run(action)
+        result
     }
 
     def insertOrUpdate = Db.run(User.query.insertOrUpdate(this))

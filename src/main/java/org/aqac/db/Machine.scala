@@ -14,9 +14,10 @@ case class Machine(
         ) {
 
     def insert = {
-        logInfo("Creating machine: " + this)
-        Db.run(Machine.query ++= Seq(this))
-        logInfo("Created machine: " + this)
+        val insertQuery = Machine.query returning Machine.query.map(_.machinePK) into ((machine, machinePK) => machine.copy(machinePK = Some(machinePK)))
+        val action = insertQuery += this
+        val result = Db.run(action)
+        result
     }
 
     def insertOrUpdate = Db.run(Machine.query.insertOrUpdate(this))
@@ -88,6 +89,6 @@ object Machine {
         val valid = Config.validate
         DbSetup.init
         println("======== machine: " + get(5))
-        println("======== machine delete: " + delete(5))
+        //println("======== machine delete: " + delete(5))
     }
 }

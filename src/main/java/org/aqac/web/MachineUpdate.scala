@@ -74,7 +74,6 @@ class MachineUpdate extends Restlet {
             if (pk.size > 0) { "?" + machinePK.label + "=" + pk }
             else
                 ""
-        response.redirectSeeOther(MachineUpdate.path + suffix)
     }
 
     private def emptyId(valueMap: Map[String, String]): Map[String, Style] = {

@@ -24,7 +24,6 @@ object Session {
             val start = System.currentTimeMillis
             while (System.currentTimeMillis == start) Thread.sleep(1)
             val s = sessionFormat.format(new Date)
-            println("i maked a session id: " + s)          // TODO rm
             s
         })
 

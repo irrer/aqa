@@ -15,19 +15,20 @@
         <Property Name='slick.dbs.default.db.user'>postgres</Property>
         <Property Name='slick.dbs.default.db.password'>postgresjim</Property>
         <!-- These below make no difference. -->
-        <Property Name='logger'                                       >DEBUG</Property>
-        <Property Name='logger.scala'                                 >DEBUG</Property>
-        <Property Name='logger.scala.slick'                           >DEBUG</Property>
-        <Property Name='logger.scala.slick.session'                   >DEBUG</Property>
-        <Property Name='logger.scala.slick.jdbc.JdbcBackend.statement'>DEBUG</Property>
-        <Property Name='logger.scala.slick.jdbc'                      >DEBUG</Property>
+        <Property Name='s.c'                                          >INFO</Property>
+        <Property Name='logger'                                       >INFO</Property>
+        <Property Name='logger.scala'                                 >INFO</Property>
+        <Property Name='logger.scala.slick'                           >INFO</Property>
+        <Property Name='logger.scala.slick.session'                   >INFO</Property>
+        <Property Name='logger.scala.slick.jdbc.JdbcBackend.statement'>INFO</Property>
+        <Property Name='logger.scala.slick.jdbc'                      >INFO</Property>
        
-        <Property Name='slick'                                        >DEBUG</Property>
-        <Property Name='slick.compiler'                               >DEBUG</Property>
-        <Property Name='slick.compiler.CodeGen'                       >DEBUG</Property>
+        <Property Name='slick'                                        >INFO</Property>
+        <Property Name='slick.compiler'                               >INFO</Property>
+        <Property Name='slick.compiler.CodeGen'                       >INFO</Property>
         
-        <Property Name='slick.relational'                             >DEBUG</Property>
-        <Property Name='slick.relational.ResultConverterCompiler'     >DEBUG</Property>
+        <Property Name='slick.relational'                             >INFO</Property>
+        <Property Name='slick.relational.ResultConverterCompiler'     >INFO</Property>
        
     </PropertyList>
     
@@ -44,6 +45,9 @@
     <!-- Directory containing executables and configuration files to run procedures. -->
     <ProgramDir>C:\Program Files\AQAC</ProgramDir>
 
+    <!-- Directory containing procedures' executable code. -->
+    <ProcedureDir>D:\AQAC_Procedures</ProcedureDir>
+
     <!-- Directory containing input and output data consumed by and produced by procedures. -->
     <DataDir>D:\AQAC_Data</DataDir>
 
@@ -54,10 +58,6 @@
     itself. This is done to avoid errors that build up over time.  The time is
     formatted as a 24 hour clock, so 23:00 is eleven PM. -->
     <RestartTime>3:10</RestartTime>
-        
-    <!-- Location on disk where data is stored. -->
-    <!-- <DataDirectory>C:\Program Files\aqac\data</DataDirectory> -->
-    <DataDirectory>D:\tmp\aqac\data</DataDirectory>
 
     <!-- List of users that should have permissions to everything. -->
     <UserWhiteList>

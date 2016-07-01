@@ -5,6 +5,8 @@ import slick.lifted.{ ProvenShape, ForeignKeyQuery }
 import java.sql.Date
 import org.aqac.Logging._
 import edu.umro.ScalaUtil.FileUtil
+import org.aqac.Config
+import java.io.File
 
 /**
  * A quality assurance procedure.
@@ -17,13 +19,15 @@ case class Procedure(
         timeout: Float, // For 'runaway' programs.  Timeout in minutes after which the procedure should be terminated
         created: Date, // time that this record was created
         supportingUserPK: Long, // id of user that supports this procedure, usually the author
+        webInterface: String, // Class name of Restlet for running procedure
         notes: String // Additional information on usage, inputs, limitations, etc.
         ) {
 
-    def insert = {
-        logInfo("Creating procedure: " + this)
-        Db.run(Procedure.query ++= Seq(this))
-        logInfo("Created procedure: " + this)
+    def insert: Procedure = {
+        val insertQuery = Procedure.query returning Procedure.query.map(_.procedurePK) into ((procedure, procedurePK) => procedure.copy(procedurePK = Some(procedurePK)))
+        val action = insertQuery += this
+        val result = Db.run(action)
+        result
     }
 
     def insertOrUpdate = Db.run(Procedure.query.insertOrUpdate(this))
@@ -31,6 +35,13 @@ case class Procedure(
     def fullName = Procedure.fullName(name, version)
 
     def fileName = Procedure.fileName(name, version)
+
+    def webUrl = "/run/" + webInterface + "_" + procedurePK.get 
+
+    def timeoutInMs = (timeout * (60 * 1000)).round.toLong
+
+    /** Get the directory containing the executables for this procedure. */
+    def execDir = new File(Config.ProcedureDir, fileName)
 }
 
 object Procedure {
@@ -42,6 +53,7 @@ object Procedure {
         def timeout = column[Float]("timeout")
         def created = column[Date]("created");
         def supportingUserPK = column[Long]("userPK")
+        def webInterface = column[String]("webInterface")
         def notes = column[String]("notes")
 
         def * = (
@@ -51,6 +63,7 @@ object Procedure {
             timeout,
             created,
             supportingUserPK,
+            webInterface,
             notes) <> ((Procedure.apply _)tupled, Procedure.unapply _)
 
         def supportingUserFK = foreignKey("userPK", supportingUserPK, User.query)(_.userPK)
@@ -65,13 +78,15 @@ object Procedure {
         val fn = fullName(name, version)
         FileUtil.replaceInvalidFileNameCharacters(fn.trim.replace(' ', chr), chr)
     }
+    
+    //def webURL(name: String, version: String): String = fileName(name, version)     TODO remove
 
     def list: Seq[Procedure] = {
         Db.run(query.result).toList
     }
 
     type PU = (Procedure, User)
-    
+
     def listWithDependencies: Seq[PU] = {
         Db.run(query.result).toList
 

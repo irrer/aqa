@@ -13,10 +13,11 @@ case class MachineType(
         notes: String // any extra information
         ) {
 
-    def insert = {
-        logInfo("Creating machineType: " + this)
-        Db.run(MachineType.query ++= Seq(this))
-        logInfo("Created machineType: " + this)
+    def insert: MachineType = {
+        val insertQuery = MachineType.query returning MachineType.query.map(_.machineTypePK) into ((machineType, machineTypePK) => machineType.copy(machineTypePK = Some(machineTypePK)))
+        val action = insertQuery += this
+        val result = Db.run(action)
+        result
     }
 
     def insertOrUpdate = Db.run(MachineType.query.insertOrUpdate(this))

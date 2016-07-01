@@ -12,11 +12,16 @@ import org.aqac.Config
 import org.restlet.routing.Template
 import org.restlet.data.Protocol
 import org.restlet.resource.Directory
-import edu.umro.util.Utility
-import edu.umro.util.General
+import org.aqac.db.Procedure
+import org.aqac.webrun.WinstonLutz_1
+import org.aqac.webrun.WebRun
 
 object WebServer {
-    def STATIC_CONTENT_DIR = new File(Config.DataDirectory, "static")
+    val staticDirName = "static"
+    def DATA_DIR = new File(Config.DataDir, "data")
+
+    val dataDirBaseUrl = "/data"
+    val tmpDirBaseUrl = "/tmp"
 }
 
 class WebServer extends Application {
@@ -33,42 +38,64 @@ class WebServer extends Application {
         }
     }
 
-    private def routeDir(router: Router, dir: File): Unit = {
+    private def getRelativeName(dir: File): String = dir.getAbsolutePath.substring(Config.DataDir.getCanonicalPath.size).replace('\\', '/')
+
+    private def makeDirectory(dir: File): Directory = {
         val uri = ("file:///" + dir.getCanonicalPath).replace('\\', '/') + "/"
         val directory = new Directory(getContext.createChildContext, uri)
         directory.setListingAllowed(true)
-        val relativeName = dir.getAbsolutePath.substring(Config.DataDirectory.getCanonicalPath.size).replace('\\', '/')
+        directory
+    }
 
-        if (true) {
+    private def routeStaticDir(router: Router): Unit = {
+        val directory = makeDirectory(staticDir)
+        router.attach("/" + WebServer.staticDirName, directory)
+
+        /*
+        if (false) {
             // TODO why does this not work?  The browser reloads this content anyway.
             val interval: Long = 35 * 24 * 60 * 60 * 1000.toLong
             val expiresOneHourLaterFilter = new ExpiresLaterFilter(getContext, interval, directory)
 
-            router.attach(relativeName, expiresOneHourLaterFilter)
+            router.attach("/" + WebServer.staticDirName, expiresOneHourLaterFilter)
         }
-        else
-            router.attach(relativeName, directory)
+        */
     }
 
     /**
      * Directory containing the definitive static files.
      */
-    private val installDir: File = {
-        val local = new File("""src\main\resources\static""") // if running in the development system
-        if (local.isDirectory) local
-        else new File(WebServer.STATIC_CONTENT_DIR.getName)
+    private val staticDir: File = {
+        val locations = List(""".\""", """src\main\resources\""").map(name => new File(name + WebServer.staticDirName))
+
+        val dirList = locations.filter(f => f.isDirectory)
+
+        if (dirList.isEmpty) {
+            val fileNameList = locations.foldLeft("")((t, f) => t + f.getAbsolutePath)
+            val msg = "Unable to find static directory in " + fileNameList
+            logSevere(msg)
+            throw new RuntimeException(msg)
+        }
+        logInfo("Using static directory " + dirList.head.getAbsolutePath)
+        dirList.head
     }
 
     /**
      * If the static directory is different from the install directory, then delete it
      * and copy the latest install directory.
+     * private def initStaticContentDir = {
+     * if (!Utility.compareFolders(installDir, WebServer.STATIC_CONTENT_DIR)) {
+     * logInfo("Updating directory " + WebServer.STATIC_CONTENT_DIR.getAbsolutePath + " from " + installDir.getAbsolutePath)
+     * Utility.deleteFileTree(WebServer.STATIC_CONTENT_DIR)
+     * Utility.copyFileTree(installDir, WebServer.STATIC_CONTENT_DIR)
+     * }
+     * }
      */
-    private def initStaticContentDir = {
-        if (!Utility.compareFolders(installDir, WebServer.STATIC_CONTENT_DIR)) {
-            logInfo("Updating directory " + WebServer.STATIC_CONTENT_DIR.getAbsolutePath + " from " + installDir.getAbsolutePath)
-            Utility.deleteFileTree(WebServer.STATIC_CONTENT_DIR)
-            Utility.copyFileTree(installDir, WebServer.STATIC_CONTENT_DIR)
-        }
+
+    def attachProcedures(router: Router): Unit = {
+        Procedure.list.map(p => {
+            router.attach(p.webUrl, new WinstonLutz_1(p))
+        })
     }
 
     /**
@@ -80,9 +107,12 @@ class WebServer extends Application {
 
         component.getClients.add(Protocol.FILE)
 
-        routeDir(router, WebServer.STATIC_CONTENT_DIR)
+        routeStaticDir(router)
 
-        val restletList: List[Restlet] = List(
+        router.attach(WebServer.dataDirBaseUrl, makeDirectory(WebServer.DATA_DIR))
+        router.attach(WebServer.tmpDirBaseUrl, makeDirectory(Config.tmpDir))
+
+        val adminRestletList: Seq[Restlet] = Seq(
             new InstitutionUpdate,
             new InstitutionList,
             new MachineTypeUpdate,
@@ -93,11 +123,17 @@ class WebServer extends Application {
             new UserList,
             new ProcedureUpdate,
             new ProcedureList,
-            new RunWinstonLutz)
+            new OutputList,
+            new WebRunIndex)
 
-        restletList.map(r => router.attach(WebUtil.pathOf(r.getClass.getName), r))
+        adminRestletList.map(r => router.attach("/admin" + WebUtil.pathOf(r.getClass.getName), r))
 
-        router.attach("", new MainIndex)
+        val viewOutput = new ViewOutput
+        router.attach(WebUtil.pathOf(viewOutput.getClass.getName), viewOutput)
+
+        attachProcedures(router)
+
+        router.attach("", new MainIndex(staticDir))
         /*
         router.attach("", new WebHome)
         val authentication = initAuthentication(router)
@@ -113,9 +149,8 @@ class WebServer extends Application {
     /**
      * Initialize and start the service.
      */
-    private def init: Unit = {
+    def init: Unit = {
         addHttps
-        initStaticContentDir
         // component.getServers().add(Protocol.HTTP, 80) // TODO remove.  For testing only
         // authenticationHealthCheck
         component.getDefaultHost.attach(this)
@@ -128,7 +163,5 @@ class WebServer extends Application {
         }
     }
 
-    // constructor code
     init
-
 }

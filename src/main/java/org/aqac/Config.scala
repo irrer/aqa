@@ -130,10 +130,11 @@ object Config {
         value
     }
 
-    private def getFile(name: String): File = {
-        val file = new File(getMainText(name))
-        logText(name, file.getAbsolutePath)
-        file
+    private def getDir(name: String): File = {
+        val dir = new File(getMainText(name))
+        logText(name, dir.getAbsolutePath)
+        dir.mkdirs
+        dir
     }
 
     private def setProperty(node: Node): Unit = {
@@ -152,8 +153,9 @@ object Config {
     val JavaKeyStorePassword = getJavaKeyStorePassword
     val JavaKeyStoreFileList = getJavaKeyStoreFileList
 
-    val ProgramDir = getFile("ProgramDir")
-    val DataDir = getFile("DataDir")
+    val ProgramDir = getDir("ProgramDir")
+    val ProcedureDir = getDir("ProcedureDir")
+    val DataDir = getDir("DataDir")
 
     val RestletLogLevel = mainText("RestletLogLevel")
     val AuthenticationTimeout = mainText("AuthenticationTimeout").toDouble
@@ -174,16 +176,9 @@ object Config {
         millisec
     }
 
-    val DataDirectory = new File(mainText("DataDirectory"))
-    DataDirectory.mkdirs
-    
     /** Place to put temporary files. */
-    val tmpDir = new File(DataDirectory, "tmp")
+    val tmpDir = new File(DataDir, "tmp")
     tmpDir.mkdirs
-
-    /** Place to put files created by running procedures (inputs and outputs). */
-    val procedureDir = new File(DataDirectory, "procedures")
-    procedureDir.mkdirs
 
     initProperties
 

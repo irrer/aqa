@@ -24,17 +24,20 @@ import scala.concurrent.Await
 import org.aqac.db.Institution
 import org.aqac.db.User
 
-class Column[VL](val columnName: String, val getValue: (VL) => Comparable[_<:Any], val makeHTML: (VL) => Elem) {
-    def this(columnName: String, getValue: (VL) => Comparable[_<:Any]) = this(columnName, getValue, (value: VL) => <td>{ getValue(value).toString }</td>)
+class Column[VL](val columnName: String, val getValue: (VL) => Comparable[_ <: Any], val makeHTML: (VL) => Elem) {
+    def this(columnName: String, getValue: (VL) => Comparable[_ <: Any]) = this(columnName, getValue, (value: VL) => <td>{ getValue(value).toString }</td>)
 }
 
-abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]) extends Restlet {
+abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]], val updatePath: String) extends Restlet {
+
+    def this(listName: String, columnList: Seq[Column[VL]]) = this(listName, columnList, "/" + listName + "Update")
 
     val pageTitle = "List " + listName + "s"
 
     val listPath = "/" + listName + "List"
 
-    val updatePath = "/" + listName + "Update"
+    /** Override with false to prevent showing 'Create new' */
+    protected val canCreate: Boolean = true
 
     /**
      * Get the name of the primary key to be used in directing user to the update page.
@@ -65,7 +68,7 @@ abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]
         </thead>
     }
 
-    private def formatValueWithLink(value: VL, column: Column[VL]): Elem = {
+    protected def formatValueWithLink(value: VL, column: Column[VL]): Elem = {
         <td><a href={ updatePath + "?" + getPKName + "=" + getPK(value) }>{ column.getValue(value) }</a></td>
     }
 
@@ -105,12 +108,16 @@ abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]
         data.sortWith((rowA, rowB) => compare(rowA, rowB))
     }
 
-    private def makeForm(valueMap: Map[String, String]): Elem = {
+    private val createNew: Elem = {
+        <div class="row col-md-2 col-md-offset-10">
+            <strong><a href={ updatePath }>Create new { listName }</a><p/></strong>
+        </div>;
+    }
+
+    protected def makeForm(valueMap: ValueMapT): Elem = {
         <div class="row col-md-10 col-md-offset-1">
             <h1>{ pageTitle }</h1>
-            <div class="row col-md-2 col-md-offset-10">
-                <strong><a href={ updatePath }>Create new { listName }</a><p/></strong>
-            </div>
+            { if (canCreate) createNew }
             <table class="table table-striped">
                 <tbody>
                     { tableHead }
@@ -120,7 +127,7 @@ abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]
         </div>;
     }
 
-    private def get(valueMap: Map[String, String], response: Response) = {
+    protected def get(valueMap: Map[String, String], response: Response) = {
         val text = wrapBody(makeForm(valueMap), pageTitle)
         setResponse(text, response, Status.SUCCESS_OK)
     }
