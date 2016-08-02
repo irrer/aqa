@@ -67,9 +67,9 @@ object MaxLeafGap {
             output <- Output.query if output.inputPK === input.inputPK
             maxLeafGap <- MaxLeafGap.query if (maxLeafGap.outputPK === output.outputPK) && (maxLeafGap.status === OutputStatus.valid.toString)
         } yield (output.startDate, maxLeafGap.maxLeafGap)
-        
-        val sorted = search.sortBy(_._1).take(maxSize)     // TODO should replace take with the equivalent of takeRight
-        
+
+        val sorted = search.sortBy(_._1.desc.reverse).take(maxSize)
+
         val list = Db.run(sorted.result)
         list.map(tv => println(tv._1, tv._2))
         list.map(tv => tv._2)
@@ -78,7 +78,7 @@ object MaxLeafGap {
     def main(args: Array[String]): Unit = {
         val valid = Config.validate
         DbSetup.init
-        getHistory(2, 100)
+        getHistory(2, 10)
         //println("======== inst: " + get(5))
         //println("======== inst delete: " + delete(5))
     }

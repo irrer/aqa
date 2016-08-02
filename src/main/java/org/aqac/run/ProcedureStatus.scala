@@ -28,6 +28,7 @@ object ProcedureStatus extends Enumeration {
     val fail = Value("fail", "At least one result was outside acceptable limits.")
     val done = Value("done", "Completed, but no indication as to whether results are acceptable or not.")
     val abort = Value("abort", "Prematurely terminated itself.")
+    val dberr = Value("dberr", "Problem using the database from the procedure.")
     val userabort = Value("userabort", "Prematurely terminated by user.")
     val timeout = Value("timeout", "Terminated when time limit and was exceeded.")
     val crash = Value("crash", "Terminated itself in an uncontrolled fashion.")
