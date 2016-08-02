@@ -26,18 +26,20 @@ import scala.concurrent.duration.DurationInt
 import org.aqac.Logging._
 import org.aqac.db.Institution.InstitutionTable
 import org.aqac.db.Institution
+import org.aqac.db.UserRole
+import org.aqac.Util
 
-class UserUpdate extends Restlet {
+class UserUpdate extends Restlet with SubUrlAdmin {
 
     val userPKTag = "userPK"
-
-    private val path = WebUtil.pathOf(this.getClass.getName)
 
     private val pageTitleCreate = "Create User"
 
     private val pageTitleEdit = "Edit User"
 
-    private val fullName = new WebInputText("Name", 6, 0, "Full name of user, eg: Marie Curie (required)")
+    private val id = new WebInputText("Id", 2, 0, "User Id")
+
+    private val fullName = new WebInputText("Name", 4, 0, "Full name of user, eg: Marie Curie (required)")
 
     private val email = new WebInputEmail("Email", 6, 0, "Email address (required)")
 
@@ -45,10 +47,13 @@ class UserUpdate extends Restlet {
 
     private val institution = new WebInputSelect("Institution", 6, 0, listInst)
 
-    private val password = new WebInputPassword("Password", 6, 0, "")
+    private val password = new WebInputPassword("Password", 4, 0, "")
+
+    def listRole() = UserRole.values.toList.filter(r => r != UserRole.publik).map(v => (v.toString, v.toString))
+    private val role = new WebInputSelect("Role", 2, 0, listRole)
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
-        new FormButton(name, 1, 0, path, buttonType)
+        new FormButton(name, 1, 0,  subUrl, pathOf, buttonType)
     }
 
     private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
@@ -58,9 +63,9 @@ class UserUpdate extends Restlet {
 
     private val userPK = new WebInputHidden(userPKTag)
 
-    private val formCreate = new WebForm(path, List(List(fullName), List(email), List(institution), List(password), List(createButton, cancelButton)))
+    private val formCreate = new WebForm(pathOf, List(List(id, fullName), List(email), List(institution), List(password, role), List(createButton, cancelButton)))
 
-    private val formEdit = new WebForm(path, List(List(fullName), List(email), List(institution), List(password), List(saveButton, cancelButton, deleteButton, userPK)))
+    private val formEdit = new WebForm(pathOf, List(List(id, fullName), List(email), List(institution), List(password, role), List(saveButton, cancelButton, deleteButton, userPK)))
 
     private def redirect(response: Response, valueMap: Map[String, String]) = {
         val pk = userPK.getValOrEmpty(valueMap)
@@ -68,7 +73,17 @@ class UserUpdate extends Restlet {
             if (pk.size > 0) { "?" + userPK.label + "=" + pk }
             else
                 ""
-        response.redirectSeeOther(path + suffix)
+        response.redirectSeeOther(pathOf + suffix)
+    }
+
+    private def emptyId(valueMap: Map[String, String]): Map[String, Style] = {
+        val idText = valueMap.get(id.label).get.trim
+        val isEmpty = idText.trim.size == 0
+        if (isEmpty) {
+            Error.make(id, "Id can not be empty")
+            //formCreate.setFormResponse(Some(valueMap), Some(errMap), pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
+        }
+        else styleNone
     }
 
     private def emptyName(valueMap: Map[String, String]): Map[String, Style] = {
@@ -111,7 +126,7 @@ class UserUpdate extends Restlet {
      * Save changes made to form.
      */
     private def save(valueMap: Map[String, String], response: Response): Unit = {
-        val errMap = emptyName(valueMap) ++ validateEmail(valueMap)
+        val errMap = emptyId(valueMap) ++ emptyName(valueMap) ++ validateEmail(valueMap)
         if (errMap.isEmpty) {
             (createUserFromParameters(valueMap)).insertOrUpdate
             UserList.redirect(response)
@@ -129,15 +144,17 @@ class UserUpdate extends Restlet {
             val e = valueMap.get(userPKTag)
             if (e.isDefined) Some(e.get.toLong) else None
         }
+        val idText = valueMap.get(id.label).get.trim
         val fullNameText = valueMap.get(fullName.label).get.trim
         val emailText = valueMap.get(email.label).get.trim
         val passwordText = valueMap.get(password.label).get.trim
 
         val institutionPK = valueMap.get(institution.label).get.toLong
 
-        val hashedPassword = "hashedPassword" // TODO crypto stuff for passwordText
-        val passwordSalt = "passwordSalt" // TODO crypto stuff for passwordText
-        new User(userPK, fullNameText, emailText, institutionPK, hashedPassword, passwordSalt)
+        val passwordSalt = Util.randomSecureHash // TODO crypto stuff for passwordText
+        val hashedPassword = AuthenticationVerifier.hashPassword(passwordText, passwordSalt) // TODO crypto stuff for passwordText
+        val roleText = valueMap.get(role.label)
+        new User(userPK, idText, fullNameText, emailText, institutionPK, hashedPassword, passwordSalt, roleText)
     }
 
     /**
@@ -167,6 +184,7 @@ class UserUpdate extends Restlet {
     private def edit(user: User, response: Response) = {
         val valueMap = Map(
             (userPK.label, user.userPK.get.toString),
+            (id.label, user.id),
             (fullName.label, user.fullName),
             (email.label, user.email),
             (institution.label, Institution.get(user.institutionPK).get.name))

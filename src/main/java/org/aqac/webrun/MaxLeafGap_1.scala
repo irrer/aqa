@@ -15,26 +15,23 @@ import org.aqac.db.Procedure
 import org.aqac.run.Run
 import org.aqac.Util
 import org.aqac.web.WebUtil
+import org.aqac.db.MaxLeafGap
 
-object WinstonLutz_1 {
+object MaxLeafGap_1 {
     val parametersFileName = "parameters.xml"
-    val WinstonLutz_1PKTag = "WinstonLutz_1PK"
+    val MaxLeafGap_1PKTag = "MaxLeafGap_1PK"
 }
 
-class WinstonLutz_1(procedure: Procedure) extends WebRun(procedure) {
+class MaxLeafGap_1(procedure: Procedure) extends WebRun(procedure) {
 
     /** Maximum tongue and groove offset in mm.  Exceeding this value probably indicates a user error. */
     private val maxTongueAndGrooveOffset = 10.0
 
-    private val pageTitle = "Winston Lutz"
+    private val pageTitle = "Maximum Leaf Gap"
 
     def machineList() = Machine.list.toList.map(m => (m.machinePK.get.toString, m.id))
 
     private val machine = new WebInputSelect("Machine", 6, 0, machineList)
-
-    private val tongueAndGrooveX = new WebInputText("Tongue and Groove correction X", 3, 0, "In mm. Use 0 if not known")
-
-    private val tongueAndGrooveY = new WebInputText("Tongue and Groove correction Y", 3, 0, "In mm. Use 0 if not known")
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
         val action = procedure.webUrl + "?" + name + "=" + name
@@ -44,31 +41,13 @@ class WinstonLutz_1(procedure: Procedure) extends WebRun(procedure) {
     private val runButton = makeButton("Run", true, ButtonType.BtnPrimary)
     private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
 
-    private val form = new WebForm(procedure.webUrl,
-        List(List(machine), List(tongueAndGrooveX, tongueAndGrooveY), List(runButton, cancelButton)),
-        6)
-
-    private val defaultValueMap: ValueMapT =
-        Map((tongueAndGrooveX.label, "0.0"),
-            (tongueAndGrooveY.label, "0.0"))
+    private val form = new WebForm(procedure.webUrl, List(List(machine), List(runButton, cancelButton)), 6)
 
     private def emptyForm(response: Response) = {
-        form.setFormResponse(defaultValueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
+        form.setFormResponse(emptyValueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
     }
 
-    private def validateTongueAndGroove(valueMap: Map[String, String], input: IsInput): Map[String, Style] = {
-        val err = Error.make(input, "Must be a valid floating point number from -" + maxTongueAndGrooveOffset + " to " + maxTongueAndGrooveOffset)
-        try {
-            val tg = input.getValOrEmpty(valueMap).toFloat
-            if ((tg >= (-maxTongueAndGrooveOffset)) && (tg <= (maxTongueAndGrooveOffset))) styleNone
-            else err
-        }
-        catch {
-            case e: Exception => err
-        }
-    }
-
-    private def validateFiles(valueMap: Map[String, String]): Map[String, Style] = {
+    private def validate(valueMap: ValueMapT): StyleMapT = {
         val dir = sessionDir(valueMap)
         0 match {
             case _ if (!dir.isDirectory) => Error.make(form.uploadFileInput.get, "No files have been uploaded (no directory)") // TODO
@@ -77,35 +56,23 @@ class WinstonLutz_1(procedure: Procedure) extends WebRun(procedure) {
         }
     }
 
-    private def validate(valueMap: Map[String, String]): Map[String, Style] = {
-        validateFiles(valueMap) ++
-            validateTongueAndGroove(valueMap, tongueAndGrooveX) ++
-            validateTongueAndGroove(valueMap, tongueAndGrooveY)
-    }
-
-    private def makeParameterFile(valueMap: Map[String, String]): Unit = {
-
-        val xml = {
-            <WinstonLutzParameters>
-                <TongueAndGrooveOffsetX>{ tongueAndGrooveX.getValOrEmpty(valueMap) }</TongueAndGrooveOffsetX>
-                <TongueAndGrooveOffsetY>{ tongueAndGrooveY.getValOrEmpty(valueMap) }</TongueAndGrooveOffsetY>
-            </WinstonLutzParameters>
-        }
-
-        val paramFile = new File(sessionDir(valueMap), WinstonLutz_1.parametersFileName)
-
-        Util.writeFile(paramFile, WebUtil.xmlToText(xml))
+    private val maxHistory = 30
+    private val historyFileName = "history.txt"
+    
+    private def writeHistory(machinePK: Long, dir: File) = {
+        val text = MaxLeafGap.getHistory(machinePK, maxHistory).map(g => g.toString + System.lineSeparator).foldLeft("")((t, gt) => t + gt)
+        Util.writeFile(new File(dir, historyFileName), text)
     }
 
     /**
      * Run the procedure.
      */
-    private def run(valueMap: Map[String, String], request: Request, response: Response) = {
+    private def run(valueMap: ValueMapT, request: Request, response: Response) = {
         val errMap = validate(valueMap)
         if (errMap.isEmpty) {
-            makeParameterFile(valueMap)
             val machinePK = machine.getValOrEmpty(valueMap).toLong
             val dir = sessionDir(valueMap)
+            writeHistory(machinePK, dir)
             val dtp = Util.dateTimeAndPatientIdFromDicom(dir)
             Run.run(procedure, Machine.get(machinePK).get, dir, request, response, dtp.PatientID, dtp.dateTime)
         }
@@ -113,14 +80,14 @@ class WinstonLutz_1(procedure: Procedure) extends WebRun(procedure) {
             form.setFormResponse(valueMap, errMap, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
     }
 
-    private def buttonIs(valueMap: Map[String, String], button: FormButton): Boolean = {
+    private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
         val value = valueMap.get(button.label)
         value.isDefined && value.get.toString.equals(button.label)
     }
 
     override def handle(request: Request, response: Response): Unit = {
 
-        val valueMap: ValueMapT = defaultValueMap ++ getValueMap(request)
+        val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
 
         try {
             0 match {

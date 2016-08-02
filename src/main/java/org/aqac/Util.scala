@@ -13,6 +13,9 @@ import java.text.ParseException
 import com.pixelmed.dicom.DateTimeAttribute
 import gnu.crypto.hash.IMessageDigest
 import gnu.crypto.hash.HashFactory
+import gnu.crypto.prng.BasePRNG
+import gnu.crypto.prng.PRNGFactory
+import scala.util.Random
 
 object Util {
 
@@ -160,13 +163,26 @@ object Util {
 
     private val DIGEST_NAME = "sha-512"
 
-    def secureHash(data: Array[Byte]): Array[Byte] = {
+    private def secureHash(data: Array[Byte]): Array[Byte] = {
         val md = HashFactory.getInstance(DIGEST_NAME);
         md.update(data, 0, data.size);
         md.digest();
     }
 
+    /**
+     * Calculate a secure hash of the given text.
+     */
     def secureHash(text: String): String = byteToString(secureHash(text.getBytes))
+
+    /**
+     * Generate a random cryptographically secure hash value.
+     */
+    def randomSecureHash: String = {
+        val rand = new Random
+        val words = (0 until 100).map(i => rand.nextLong.toString)
+        val text = words.foldLeft(System.currentTimeMillis.toString)((t, l) => t + l)
+        secureHash(text)
+    }
 
     def main(args: Array[String]): Unit = {
 

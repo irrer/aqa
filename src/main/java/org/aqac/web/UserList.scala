@@ -5,9 +5,11 @@ import org.aqac.db.Institution
 import org.restlet.Response
 
 object UserList {
-    val path = "/UserList"
+    val path = WebUtil.pathOf(WebUtil.SubUrl.admin, UserList.getClass.getName)
 
     def redirect(response: Response) = response.redirectSeeOther(path)
+
+    private val idCol = new Column[(User, Institution)]("Name", _._1.id)
 
     private val nameCol = new Column[(User, Institution)]("Name", _._1.fullName)
 
@@ -15,10 +17,16 @@ object UserList {
 
     private val institutionCol = new Column[(User, Institution)]("Institution", _._2.name)
 
-    val colList = Seq(nameCol, emailCol, institutionCol)
+    private def optionToString[T](opt: Option[T]): String = if (opt.isDefined) opt.get.toString else "none";
+
+    def getRole(ui: (User, Institution)): String = if (ui._1.role.isDefined) ui._1.role.get else "none"
+
+    private val roleCol = new Column[(User, Institution)]("Role", getRole)
+
+    val colList = Seq(idCol, nameCol, emailCol, institutionCol, roleCol)
 }
 
-class UserList extends GenericList[(User, Institution)]("User", UserList.colList) {
+class UserList extends GenericList[(User, Institution)]("User", UserList.colList) with WebUtil.SubUrlAdmin {
 
     override def getData = User.listWithDependencies
 

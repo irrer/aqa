@@ -5,7 +5,7 @@ import scala.xml.Elem
 import org.aqac.db.Institution
 
 object InstitutionList {
-    val path = WebUtil.pathOf(InstitutionList.getClass.getName)
+    val path = WebUtil.pathOf(WebUtil.SubUrl.admin, InstitutionList.getClass.getName)
 
     def redirect(response: Response) = response.redirectSeeOther(path)
 
@@ -34,7 +34,7 @@ object InstitutionList {
     val colList = Seq(nameCol, urlCol, notesCol)
 }
 
-class InstitutionList extends GenericList[Institution]("Institution", InstitutionList.colList) {
+class InstitutionList extends GenericList[Institution]("Institution", InstitutionList.colList) with WebUtil.SubUrlAdmin {
 
     override def getData = Institution.list
 

@@ -29,11 +29,10 @@ import org.aqac.db.Institution
 import org.aqac.db.User
 
 object ProcedureUpdate {
-    val path = "/ProcedureUpdate"
     val procedurePKTag = "procedurePK"
 }
 
-class ProcedureUpdate extends Restlet {
+class ProcedureUpdate extends Restlet with SubUrlAdmin {
 
     private val pageTitleCreate = "Create Procedure"
 
@@ -43,7 +42,7 @@ class ProcedureUpdate extends Restlet {
 
     private val version = new WebInputText("Version", 6, 0, "Required.  Usually dot separated integers")
 
-    private def webInterfaceList() = List(("WinstonLutz_1", "WinstonLutz_1")) // TODO should get list of interfaces
+    private def webInterfaceList() = List(("WinstonLutz_1", "WinstonLutz_1"), ("MaxLeafGap_1", "MaxLeafGap_1")) // TODO should get list of interfaces
 
     private val webInterface = new WebInputSelect("Interface", 6, 0, webInterfaceList)
 
@@ -57,7 +56,7 @@ class ProcedureUpdate extends Restlet {
     private val notes = new WebInputTextArea("Notes", 6, 0, "")
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
-        new FormButton(name, 1, 0, ProcedureUpdate.path, buttonType)
+        new FormButton(name, 1, 0,  subUrl, pathOf, buttonType)
     }
 
     private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
@@ -73,9 +72,9 @@ class ProcedureUpdate extends Restlet {
 
     val editButtonList: List[WebRow] = List(List(saveButton, cancelButton, deleteButton, procedurePK))
 
-    private val formCreate = new WebForm(ProcedureUpdate.path, fieldList ++ createButtonList)
+    private val formCreate = new WebForm(pathOf, fieldList ++ createButtonList)
 
-    private val formEdit = new WebForm(ProcedureUpdate.path, fieldList ++ editButtonList)
+    private val formEdit = new WebForm(pathOf, fieldList ++ editButtonList)
 
     private def redirect(response: Response, valueMap: Map[String, String]) = {
         val pk = procedurePK.getValOrEmpty(valueMap)
@@ -83,7 +82,7 @@ class ProcedureUpdate extends Restlet {
             if (pk.size > 0) { "?" + procedurePK.label + "=" + pk }
             else
                 ""
-        response.redirectSeeOther(ProcedureUpdate.path + suffix)
+        response.redirectSeeOther(pathOf + suffix)
     }
 
     private def emptyName(valueMap: Map[String, String]): Map[String, Style] = {
@@ -99,10 +98,15 @@ class ProcedureUpdate extends Restlet {
     }
 
     private def validateUniqueness(valueMap: Map[String, String]): Map[String, Style] = {
+        val pk: Long = {
+            val text = valueMap.get(procedurePK.label)
+            if (text.isDefined) text.get.toLong
+            else -1
+        }
         val nameText = valueMap.get(name.label).get.trim
         val versionText = valueMap.get(version.label).get.trim
         
-        val existingList = Procedure.list.filter(p => p.name.equalsIgnoreCase(nameText) && (p.version.equalsIgnoreCase(versionText)))
+        val existingList = Procedure.list.filter(p => p.name.equalsIgnoreCase(nameText) && (p.version.equalsIgnoreCase(versionText)) && (p.procedurePK.get != pk))
         
         if (existingList.isEmpty)
             styleNone

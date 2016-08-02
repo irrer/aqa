@@ -16,7 +16,7 @@ import org.aqac.web.WebUtil
 import java.io.FileOutputStream
 import org.restlet.Response
 import org.aqac.db.Output
-import sys.process.ProcessCreation
+//import sys.process.ProcessCreation
 import sys.process._
 import edu.umro.ScalaUtil.Trace._
 import org.aqac.Util
@@ -37,6 +37,9 @@ import java.io.Flushable
 import scala.collection.mutable.ArrayBuffer
 import org.aqac.web.ViewOutput
 import java.sql.Timestamp
+import java.io.RandomAccessFile
+import java.io.FileInputStream
+import java.io.FileOutputStream
 
 /**
  * Run a procedure.
@@ -69,7 +72,7 @@ object Run {
             appendPK(procedure.fileName, procedure.procedurePK.get),
             appendPK(Util.currentTimeAsFileName, inputPK))
 
-        val inputDir: File = nameHierarchy.foldLeft(WebServer.DATA_DIR)((d, name) => new File(d, name))
+        val inputDir: File = nameHierarchy.foldLeft(WebServer.dataDir)((d, name) => new File(d, name))
 
         logInfo("New input directory: " + inputDir.getAbsolutePath)
         inputDir
@@ -102,10 +105,10 @@ object Run {
                             catch {
                                 case _: TimeoutException => {
                                     actProc.process.destroy
-                                    ProcedureStatus.writeProcedureStatus(new File(actProc.output.directory), ProcedureStatus.timeout)
+                                    ProcedureStatus.writeProcedureStatus(actProc.output.dir, ProcedureStatus.timeout)
                                 }
                             }
-                            val fileStatus = ProcedureStatus.dirToProcedureStatus(new File(actProc.output.directory))
+                            val fileStatus = ProcedureStatus.dirToProcedureStatus(actProc.output.dir)
                             val status = if (fileStatus.isDefined) fileStatus.get else ProcedureStatus.crash
                             // update DB Output
                             actProc.output.updateStatusAndFinishDate(status.toString, now)
@@ -128,22 +131,30 @@ object Run {
      *    run.exe
      */
     private def startProcess(procedure: Procedure, output: Output): ActiveProcess = {
-        val runCommand = procedure.execDir.getAbsolutePath + File.separator + runCommandName
+        val cd = "CD /D " + output.dir.getAbsolutePath
 
-        val content = "CD /D " + output.directory + " && " + procedure.execDir + File.separator + runCommandName
+        val setDir = "SET PROCEDURE_DIR=" + procedure.execDir
 
-        val processBuilder = Process(Seq("cmd.exe", "/C", content))
+        val setInputPk = "SET inputPK=" + output.inputPK
 
+        val setOutputPk = "SET outputPK=" + output.outputPK.get
+
+        val setDbCommand = "SET DatabaseCommand=" + Config.DatabaseCommand
+
+        val execute = procedure.execDir + File.separator + runCommandName
+
+        val cmdList = List(cd, setDir, setInputPk, setOutputPk, setDbCommand, execute)
+        val inputString = cmdList.foldLeft("")((t, c) => t + c + System.lineSeparator)
+        println("inputString: " + inputString) // TODO rm
+        val inputStream = new java.io.ByteArrayInputStream(inputString.getBytes("UTF-8"))
+
+        val pb = Process(Seq("cmd.exe")) #< inputStream
         val logger = new StdLogger(output)
-        val process = processBuilder.run(logger)
+        val process = pb.run(logger, true)
         new ActiveProcess(output, process, logger)
     }
 
     private def now: Date = new Date(System.currentTimeMillis)
-
-    private def setResponse(output: Output, response: Response): Unit = {
-
-    }
 
     /**
      * Run a procedure.
@@ -161,7 +172,7 @@ object Run {
         // input row, but this is part of the compromise of creating a file hierarchy that has a consistent (as
         // practical) link to the database.
         val inputDir = makeInputDir(machine, procedure, input.inputPK.get)
-        input.updateDirectory(inputDir.getAbsolutePath)
+        input.updateDirectory(WebServer.fileToDataPath(inputDir))
 
         // move input files to their final resting place
         inputDir.getParentFile.mkdirs
@@ -177,7 +188,7 @@ object Run {
             val tempOutput = new Output(
                 outputPK = None,
                 inputPK = input.inputPK.get,
-                directory = outputDir.getAbsolutePath,
+                directory = WebServer.fileToDataPath(outputDir),
                 procedurePK = procedure.procedurePK.get,
                 userPK,
                 new Timestamp(startDate.getTime),
@@ -199,17 +210,173 @@ object Run {
         response.redirectSeeOther(ViewOutput.path + suffix)
     }
 
+    def handleRunning(output: Output, procedure: Procedure) = {
+
+        try {
+            // Get the most recent modification date.
+            def latestFileChange: Long = (output.dir.listFiles :+ output.dir).map(f => f.lastModified).max
+
+            def timeoutTime: Long = output.startDate.getTime + procedure.timeoutInMs
+
+            def procedureHasTimedOut = timeoutTime > System.currentTimeMillis
+
+            def updateDb(status: ProcedureStatus.Value): Unit = {
+                val updatedOutput = new Output(
+                    outputPK = output.outputPK,
+                    inputPK = output.inputPK,
+                    directory = output.directory,
+                    procedurePK = output.procedurePK,
+                    userPK = output.userPK,
+                    startDate = output.startDate,
+                    finishDate = Some(new Timestamp(latestFileChange)),
+                    status = status.toString)
+                updatedOutput.insertOrUpdate
+            }
+
+            def updateFile(status: ProcedureStatus.Value): Unit = ProcedureStatus.writeProcedureStatus(output.dir, status)
+
+            def updateBoth(status: ProcedureStatus.Value): Unit = {
+                updateFile(status)
+                updateDb(status)
+            }
+
+            val statusFromFile = ProcedureStatus.dirToProcedureStatus(WebServer.fileOfDataPath(output.directory))
+
+            def killProcess = logWarning("Need to implement killProcess") // TODO
+
+            def startMonitor = logWarning("Need to implement startMonitor") // TODO
+
+            if (statusFromFile.isDefined) {
+                // procedure finished while server was down, which should be the usual case
+                updateDb(statusFromFile.get)
+            }
+            else {
+                val procedureIsRunning = {
+                    logWarning("Need to implement procedureIsRunning") // TODO  note that rename or any of the file locking on log.txt do not work.
+                    false
+                }
+
+                0 match {
+                    case _ if procedureHasTimedOut && procedureIsRunning => { killProcess; updateBoth(ProcedureStatus.timeout) } // out of time.  Kill it.
+                    case _ if procedureIsRunning => startMonitor // wait for the allotted timeout and the re-evaluate
+                    case _ => updateBoth(ProcedureStatus.crash) // it stopped without giving a status
+                }
+            }
+        }
+        catch {
+            case e: Throwable => {
+                logSevere("Unexpected exeception while wrapping up unterminated procedure after service restart: " +
+                    e.getMessage + "\n    Output: " + output + "\n    Procedure: " + procedure)
+            }
+        }
+    }
+
+    /**
+     * Look for any Output's that were in running state when the server was shut down and handle them.
+     */
+    def handleRunningProcedureList = Output.listWithStatus(ProcedureStatus.running).map(or => handleRunning(or._1, or._2))
+
     def main(args: Array[String]): Unit = {
 
-        /*
         if (true) {
-            val logger = ProcessLogger(
-                (o: String) => println("out " + o),
-                (e: String) => println("err " + e))
+            val procDir = new File("""D:\AQAC_Data\data\University of Michigan Radiation Oncology_1\TB5_2\WinstonLutz_1.0_1""")
 
-            "ls -ld aaa s*" ! logger
+            def newest(dir: File): File = dir.listFiles.sortWith((a, b) => a.lastModified > b.lastModified()).head
+
+            val inDir = newest(procDir)
+
+            val outDir = inDir.listFiles.filter(f => f.getName.startsWith("output")).head
+
+            val logFile = outDir.listFiles.filter(f => f.getName.equalsIgnoreCase("log.txt")).head
+
+            println("logFile: " + logFile.getAbsolutePath)
+
+            if (false) {
+                val dest = new File(logFile.getAbsolutePath + "X.txt")
+                println("dest: " + dest.getAbsolutePath)
+                println("rename: " + logFile.renameTo(dest))
+                System.exit(99)
+            }
+
+            while (true) {
+
+                println("\n" + (new java.util.Date).toString)
+
+                if (false) {
+                    println("logFile canWrite: " + logFile.canWrite)
+                }
+
+                if (false) {
+                    val raf = new RandomAccessFile(logFile, "rw");
+                    val channel = raf.getChannel();
+                    val lock = channel.tryLock()
+                    println("lock is null: " + (lock == null).toString)
+                    if (lock != null) println("lock.isValid: " + lock.isValid)
+                    if (lock != null && lock.isValid) lock.release
+                    channel.close
+                    raf.close
+                }
+
+                if (false) {
+                    val raf = new RandomAccessFile(logFile, "rw");
+                    val channel = raf.getChannel();
+                    val sharedLock = channel.tryLock(0, Long.MaxValue, true)
+                    println("sharedLock is null: " + (sharedLock == null).toString)
+                    println("sharedLock: " + sharedLock.isValid())
+                    if (sharedLock.isValid) sharedLock.release
+                    channel.close
+                    raf.close
+                }
+
+                if (false) {
+                    val raf = new RandomAccessFile(logFile, "rw");
+                    val channel = raf.getChannel();
+                    val notSharedLock = channel.tryLock(0, Long.MaxValue, false)
+                    println("notSharedLock is null: " + (notSharedLock == null).toString)
+                    println("notSharedLock: " + notSharedLock.isValid())
+                    if (notSharedLock.isValid) notSharedLock.release
+                    channel.close
+                    raf.close
+                }
+
+                if (false) {
+                    try {
+                        val in = new FileInputStream(logFile)
+                        val isLocked = in != null
+                        println("isLocked read: " + isLocked)
+                        if (in != null) in.close();
+                    }
+                    catch {
+                        case e: Throwable => println("badness: " + e.getMessage)
+                    }
+                }
+
+                if (false) {
+                    try {
+                        val out = new FileOutputStream(logFile)
+                        val isLocked = out != null
+                        println("isLocked write: " + isLocked)
+                        if (out != null) out.close();
+                    }
+                    catch {
+                        case e: Throwable => println("badness: " + e.getMessage)
+                    }
+                }
+
+                if (true) {
+                    try {
+                        val dest = new File(logFile.getAbsolutePath + "X.txt")
+                        println("dest: " + dest.getAbsolutePath)
+                        println("rename: " + logFile.renameTo(dest))
+                    }
+                    catch {
+                        case e: Throwable => println("badness: " + e.getMessage)
+                    }
+                }
+
+                Thread.sleep(1000)
+            }
         }
-        */
 
         if (false) {
             val contents = Process("date").lineStream

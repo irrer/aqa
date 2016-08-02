@@ -15,7 +15,7 @@ import java.util.Date
 
 class StdLogger(output: Output) extends ProcessLogger with Closeable with Flushable {
     private val LS = System.lineSeparator
-    private val textFile = new File(new File(output.directory), StdLogger.LOG_TEXT_FILE_NAME)
+    private val textFile = new File(output.dir, StdLogger.LOG_TEXT_FILE_NAME)
     private val outputStream = new FileWriter(textFile, true)
     private def timestamp: String = StdLogger.logTimestampFormat.format(new Date(System.currentTimeMillis))
     private def writeString(prefix: String, msg: String): Unit = {

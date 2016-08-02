@@ -26,12 +26,10 @@ import scala.concurrent.duration.DurationInt
 import org.aqac.Logging._
 
 object MachineTypeUpdate {
-    val path = "/MachineTypeUpdate"
-
     val machineTypePKTag = "machineTypePK"
 }
 
-class MachineTypeUpdate extends Restlet {
+class MachineTypeUpdate extends Restlet with SubUrlAdmin {
 
     private val pageTitleCreate = "Create MachineType"
 
@@ -46,8 +44,8 @@ class MachineTypeUpdate extends Restlet {
     private val notes = new WebInputTextArea("Notes", 6, 0, "")
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
-        val action = MachineTypeUpdate.path + "?" + name + "=" + name
-        new FormButton(name, 1, 0, action, buttonType)
+        val action = pathOf + "?" + name + "=" + name
+        new FormButton(name, 1, 0,  subUrl, action, buttonType)
     }
 
     private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
@@ -57,11 +55,11 @@ class MachineTypeUpdate extends Restlet {
 
     private val machineTypePK = new WebInputHidden(MachineTypeUpdate.machineTypePKTag)
 
-    private val formCreate = new WebForm(MachineTypeUpdate.path, List(List(manufacturer), List(model), List(version), List(notes), List(createButton, cancelButton)))
+    private val formCreate = new WebForm(pathOf, List(List(manufacturer), List(model), List(version), List(notes), List(createButton, cancelButton)))
 
-    private val formEdit = new WebForm(MachineTypeUpdate.path, List(List(manufacturer), List(model), List(version), List(notes), List(saveButton, cancelButton, deleteButton, machineTypePK)))
+    private val formEdit = new WebForm(pathOf, List(List(manufacturer), List(model), List(version), List(notes), List(saveButton, cancelButton, deleteButton, machineTypePK)))
 
-    private def emptyManufacturer(valueMap: Map[String, String], pageTitle: String, response: Response): Boolean = {
+    private def emptyManufacturer(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
         val manufacturerText = valueMap.get(manufacturer.label).get.trim
         val isEmpty = manufacturerText.trim.size == 0
         if (isEmpty) {
@@ -71,7 +69,7 @@ class MachineTypeUpdate extends Restlet {
         isEmpty
     }
 
-    private def emptyModel(valueMap: Map[String, String], pageTitle: String, response: Response): Boolean = {
+    private def emptyModel(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
         val modelText = valueMap.get(model.label).get.trim
         val isEmpty = modelText.trim.size == 0
         if (isEmpty) {

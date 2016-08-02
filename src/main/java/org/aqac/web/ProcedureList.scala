@@ -6,7 +6,7 @@ import org.aqac.db.Procedure
 
 object ProcedureList {
 
-    val path = WebUtil.pathOf(ProcedureList.getClass.getName)
+    val path = WebUtil.pathOf(WebUtil.SubUrl.admin, ProcedureList.getClass.getName)
 
     def redirect(response: Response) = response.redirectSeeOther(path)
 
@@ -25,7 +25,7 @@ object ProcedureList {
     val colList = Seq(nameCol, supportedByCol, versionCol, notesCol)
 }
 
-class ProcedureList extends GenericList[Procedure.PU]("Procedure", ProcedureList.colList) {
+class ProcedureList extends GenericList[Procedure.PU]("Procedure", ProcedureList.colList) with WebUtil.SubUrlAdmin {
 
     override def getData = Procedure.listWithDependencies
 

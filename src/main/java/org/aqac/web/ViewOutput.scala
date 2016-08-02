@@ -27,7 +27,7 @@ import org.aqac.run.ProcedureStatus
 private class ImmutableOutput(
         val outputPK: Long,
         val inputPK: Long,
-        val directory: File,
+        val dir: File,
         val procedurePK: Long,
         val userPK: Option[Long],
         val startDate: Timestamp) {
@@ -35,14 +35,15 @@ private class ImmutableOutput(
     def this(output: Output) = this(
         output.outputPK.get,
         output.inputPK,
-        new File(output.directory),
+        WebServer.fileOfDataPath(output.directory),
         output.procedurePK,
         output.userPK,
         output.startDate)
 }
 
 object ViewOutput {
-    val path = "/ViewOutput"
+    val path = WebUtil.pathOf(WebUtil.SubUrl.view, ViewOutput.getClass.getName)
+
     val outputPKTag = "outputPK"
     val summaryTag = "summary"
     val checksumTag = "checksum"
@@ -75,7 +76,7 @@ object ViewOutput {
             val row = {
                 <div class="row">
                     <div class="col-md-2">
-                        <a href={ Output.urlOfFile(file.getAbsolutePath) }>{ file.getName }</a>
+                        <a href={ WebServer.urlOfDataFile(file) }>{ file.getName }</a>
                     </div>
                 </div>
             }
@@ -117,8 +118,8 @@ object ViewOutput {
                     <div class="col-md-2 col-md-offset-3">Started: { Util.timeHumanFriendly(output.startDate) }</div>
                     <div class="col-md-2">Elapsed: { elapsed }</div>
                 </div>
-                { val x = getCachedOutput(output.outputPK.get).directory }
-                { getCachedOutput(output.outputPK.get).directory.listFiles.map(f => fileToRow(f)) }
+                { val x = getCachedOutput(output.outputPK.get).dir }
+                { getCachedOutput(output.outputPK.get).dir.listFiles.map(f => fileToRow(f)) }
             </div>
         }
 
@@ -145,7 +146,7 @@ object ViewOutput {
         })
     }
 
-    private def secureHashOfOutput(outputPK: Long): String = secureHashOfDirTime(getCachedOutput(outputPK).directory)
+    private def secureHashOfOutput(outputPK: Long): String = secureHashOfDirTime(getCachedOutput(outputPK).dir)
 
     /** Determine the last change time of the data. */
     def giveStatus(outputPK: Long, status: String, response: Response) = {
@@ -160,31 +161,16 @@ object ViewOutput {
  * show some metadata and the directory contents, updating it periodically.  If an
  * 'output.*' is created, then show that instead.
  */
-class ViewOutput extends Restlet {
+class ViewOutput extends Restlet with SubUrlView {
 
-    private def pageTitle = "Output" // TODO 
+    private def pageTitle = "Output"
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
         val action = ViewOutput.path + "?" + name + "=" + name
-        new FormButton(name, 1, 0, action, buttonType)
+        new FormButton(name, 1, 0, subUrl, action, buttonType)
     }
 
     private val abortButton = makeButton("Abort", true, ButtonType.BtnPrimary)
-
-    /*
-    private def XgetOutput(valueMap: ValueMapT, request: Request): Option[Output] = {
-        Output.get(14) // TODO
-    }
-
-    private def XdefaultDisplay(valueMap: ValueMapT, request: Request, response: Response): Unit = {
-        if (valueMap.get(ViewOutput.summaryTag).isDefined) {
-            val outputOpt = getOutput(valueMap, request)
-            if (outputOpt.isDefined) ViewOutput.showSummary(outputOpt.get, response)
-        }
-        response.setStatus(Status.SUCCESS_OK)
-        response.setEntity("default summary", MediaType.TEXT_PLAIN) // TODO
-    }
-    */
 
     /**
      * Abort the procedure.
@@ -193,35 +179,14 @@ class ViewOutput extends Restlet {
         // TODO
     }
 
+    private def setResponseWithOutputFile(file: File, response: Response) = {
+        response.setStatus(Status.SUCCESS_OK)
+        response.redirectSeeOther(WebServer.urlOfDataFile(file))
+    }
+
     private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
         val value = valueMap.get(button.label)
         value.isDefined && value.get.toString.equals(button.label)
-    }
-
-    private def mediaTypeOfFile(file: File): MediaType = {
-        val name = file.getName.toLowerCase
-
-        val mediaTypeMap: List[(String, MediaType)] = List(
-            (".html", MediaType.TEXT_HTML),
-            (".htm", MediaType.TEXT_HTML),
-            (".txt", MediaType.TEXT_PLAIN)) // TODO add more types
-
-        val matching = mediaTypeMap.filter(sm => name.endsWith(sm._1))
-
-        if (matching.isEmpty) MediaType.TEXT_PLAIN else matching.head._2
-    }
-
-    private def setResponseWithOutputFile(file: File, response: Response) = {
-        response.setStatus(Status.SUCCESS_OK)
-        val data = Util.readBinaryFile(file)
-        if (data.isRight) {
-            response.setEntity(new String(data.right.get), mediaTypeOfFile(file))
-            response.setStatus(Status.SUCCESS_OK)
-        }
-        else {
-            response.setEntity("Can not read output file " + file.getAbsolutePath, MediaType.TEXT_PLAIN)
-            response.setStatus(Status.SERVER_ERROR_INTERNAL)
-        }
     }
 
     override def handle(request: Request, response: Response) = {
@@ -239,10 +204,10 @@ class ViewOutput extends Restlet {
             }
 
             val outputFile: Option[File] = {
-                if (output.isDefined) Output.outputFile(output.get.directory)
+                if (output.isDefined) Output.outputFile(output.get.dir)
                 else None
             }
-            
+
             0 match {
                 case _ if (output.isDefined && checksum.isDefined) => ViewOutput.giveStatus(output.get.outputPK, checksum.get, response)
                 case _ if (output.isDefined && showSummary) => ViewOutput.showSummary(output.get.outputPK, response)

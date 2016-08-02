@@ -14,19 +14,45 @@ import org.restlet.data.Protocol
 import org.restlet.resource.Directory
 import org.aqac.db.Procedure
 import org.aqac.webrun.WinstonLutz_1
+import org.aqac.webrun.MaxLeafGap_1
 import org.aqac.webrun.WebRun
+import org.restlet.security.ChallengeAuthenticator
+import org.restlet.data.ChallengeScheme
+import org.restlet.security.MapVerifier
+import org.restlet.Context
+import org.restlet.Request
+import org.restlet.Response
+import org.restlet.data.ChallengeRequest
+import org.restlet.data.ChallengeResponse
+import org.restlet.routing.Filter
+import org.aqac.db.User
+import org.aqac.db.UserRole
+import org.restlet.routing.TemplateRoute
 
 object WebServer {
     val staticDirName = "static"
-    def DATA_DIR = new File(Config.DataDir, "data")
+
+    val challengeScheme = ChallengeScheme.HTTP_BASIC
+
+    lazy val dataDir = new File(Config.DataDir, "data")
 
     val dataDirBaseUrl = "/data"
     val tmpDirBaseUrl = "/tmp"
+
+    def urlOfDataPath(filePath: String): String = {
+        (dataDirBaseUrl + "/" + filePath.replace('\\', '/')).replaceAll("///*", "/")
+    }
+
+    def urlOfDataFile(file: File): String = urlOfDataPath(fileToDataPath(file))
+
+    def fileOfDataPath(filePath: String): File = new File(dataDir, filePath)
+
+    def fileToDataPath(file: File): String = file.getAbsolutePath.substring(dataDir.getAbsolutePath.size)
 }
 
 class WebServer extends Application {
 
-    private val component = new Component
+    private lazy val component = new Component
 
     private def addHttps: Unit = {
         val status = RestletHttps.addHttps(component, Config.HTTPSPort, Config.JavaKeyStoreFileList, List(Config.JavaKeyStorePassword))
@@ -47,25 +73,10 @@ class WebServer extends Application {
         directory
     }
 
-    private def routeStaticDir(router: Router): Unit = {
-        val directory = makeDirectory(staticDir)
-        router.attach("/" + WebServer.staticDirName, directory)
-
-        /*
-        if (false) {
-            // TODO why does this not work?  The browser reloads this content anyway.
-            val interval: Long = 35 * 24 * 60 * 60 * 1000.toLong
-            val expiresOneHourLaterFilter = new ExpiresLaterFilter(getContext, interval, directory)
-
-            router.attach("/" + WebServer.staticDirName, expiresOneHourLaterFilter)
-        }
-        */
-    }
-
     /**
      * Directory containing the definitive static files.
      */
-    private val staticDir: File = {
+    private lazy val staticDirFile: File = {
         val locations = List(""".\""", """src\main\resources\""").map(name => new File(name + WebServer.staticDirName))
 
         val dirList = locations.filter(f => f.isDirectory)
@@ -92,50 +103,121 @@ class WebServer extends Application {
      * }
      */
 
-    def attachProcedures(router: Router): Unit = {
+    private def attach(router: Router, url: String, restlet: Restlet): Unit = {
+        val name = restlet.getClass.getName.replaceAll(".*\\.", "")
+        val rootRef = if (restlet.isInstanceOf[Directory]) (" : " + restlet.asInstanceOf[Directory].getRootRef) else ""
+        logInfo("attaching router to " + url + " ==> " + name + rootRef)
+        router.attach(url, restlet)
+    }
+
+    private def attachProcedures(router: Router): Unit = {
         Procedure.list.map(p => {
-            router.attach(p.webUrl, new WinstonLutz_1(p))
+            // TODO this should not be so hard-codey
+            if (p.webInterface.toLowerCase.contains("winston")) attach(router, p.webUrl, new WinstonLutz_1(p))
+            if (p.webInterface.toLowerCase.contains("maxleaf")) attach(router, p.webUrl, new MaxLeafGap_1(p))
         })
+    }
+
+    private lazy val router = new Router(getContext.createChildContext)
+
+    private lazy val staticDir = makeDirectory(staticDirFile)
+
+    /*
+        if (false) {
+            // TODO why does this not work?  The browser reloads this content anyway.
+            val interval: Long = 35 * 24 * 60 * 60 * 1000.toLong
+            val expiresOneHourLaterFilter = new ExpiresLaterFilter(getContext, interval, staticDir)
+
+            attach(router, "/" + WebServer.staticDirName, expiresOneHourLaterFilter)
+        }
+        */
+
+    private lazy val dataDir = makeDirectory(WebServer.dataDir)
+
+    private lazy val tmpDir = makeDirectory(Config.tmpDir)
+
+    private lazy val login = new Login
+    
+    private lazy val setPassword = new SetPassword
+    
+    
+
+    private lazy val webRunIndex = new WebRunIndex
+
+    private lazy val mainIndex = new MainIndex(staticDirFile)
+
+    /**
+     * Determine the role (authorization level) that the request is for.  This is the rules are
+     * defined for authorization, or in other words, given a request, what UserRole is required
+     * to use it?
+     */
+    private def getRequestedRole(request: Request, response: Response): UserRole.Value = {
+        val templateRoute = router.getNext(request, response).asInstanceOf[TemplateRoute]
+        val restlet = templateRoute.getNext
+
+        val role: UserRole.Value = restlet match {
+            case `staticDir` => UserRole.publik
+            case `mainIndex` => UserRole.publik
+            case `login` => UserRole.publik
+            case `setPassword` => UserRole.publik
+            case `dataDir` => UserRole.guest
+            case `webRunIndex` => UserRole.user
+            case `tmpDir` => UserRole.user
+
+            case _ => UserRole.admin // default to most restrictive access for everything else
+        }
+
+        role
+    }
+
+    private def initAuthentication(restlet: Restlet): Restlet = {
+
+        val challAuthn = new ChallengeAuthenticator(getContext.createChildContext, ChallengeScheme.HTTP_BASIC, "enter password now")   // TODO remove when we figure out how to make a real login page
+        //val challAuthn = new ChallAuth(getContext.createChildContext, false, WebServer.challengeScheme, getRequestedRole)    // TODO put back when we figure out how to make a real login page
+        challAuthn.setVerifier(new AuthenticationVerifier)
+        challAuthn.setNext(restlet)
+        challAuthn
     }
 
     /**
      * Standard Restlet override defines how to serve web pages.
      */
     override def createInboundRoot: Restlet = {
-        val router = new Router(getContext.createChildContext)
+
         router.setDefaultMatchingMode(Template.MODE_STARTS_WITH)
 
         component.getClients.add(Protocol.FILE)
 
-        routeStaticDir(router)
+        attach(router, "/" + WebServer.staticDirName, staticDir)
+        attach(router, WebServer.dataDirBaseUrl, dataDir)
+        attach(router, WebServer.tmpDirBaseUrl, tmpDir)
 
-        router.attach(WebServer.dataDirBaseUrl, makeDirectory(WebServer.DATA_DIR))
-        router.attach(WebServer.tmpDirBaseUrl, makeDirectory(Config.tmpDir))
-
-        val adminRestletList: Seq[Restlet] = Seq(
+        val restletList: Seq[Restlet with WebUtil.SubUrl] = Seq(
+            new MachineUpdate,
             new InstitutionUpdate,
             new InstitutionList,
             new MachineTypeUpdate,
             new MachineList,
-            new MachineUpdate,
             new MachineTypeList,
             new UserUpdate,
             new UserList,
             new ProcedureUpdate,
             new ProcedureList,
             new OutputList,
-            new WebRunIndex)
+            webRunIndex,
+            login,
+            setPassword)
 
-        adminRestletList.map(r => router.attach("/admin" + WebUtil.pathOf(r.getClass.getName), r))
+        restletList.map(r => attach(router, WebUtil.SubUrl.url(r.subUrl, WebUtil.cleanClassName(r.getClass.getName)), r))
 
         val viewOutput = new ViewOutput
-        router.attach(WebUtil.pathOf(viewOutput.getClass.getName), viewOutput)
+        attach(router, WebUtil.SubUrl.url(viewOutput.subUrl, WebUtil.cleanClassName(viewOutput.getClass.getName)), viewOutput)
 
         attachProcedures(router)
 
-        router.attach("", new MainIndex(staticDir))
+        attach(router, "", mainIndex)
         /*
-        router.attach("", new WebHome)
+        attach(router, "", new WebHome)
         val authentication = initAuthentication(router)
 
         val auditFilter = new AuditFilter(getContext)
@@ -143,7 +225,7 @@ class WebServer extends Application {
         
         auditFilter
         */
-        router // TODO should authenticate
+        initAuthentication(router) // TODO remove if auth fails
     }
 
     /**

@@ -30,13 +30,11 @@ import org.aqac.db.MachineType
 import edu.umro.ScalaUtil.Trace._
 
 object MachineUpdate {
-    val path = "/MachineUpdate"
-
     val machinePKTag = "machinePK"
 }
 
-class MachineUpdate extends Restlet {
-
+class MachineUpdate extends Restlet with SubUrlAdmin {
+    
     private val pageTitleCreate = "Create Machine"
 
     private val pageTitleEdit = "Edit Machine"
@@ -54,7 +52,7 @@ class MachineUpdate extends Restlet {
     private val notes = new WebInputTextArea("Notes", 6, 0, "")
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
-        new FormButton(name, 1, 0, MachineUpdate.path, buttonType)
+        new FormButton(name, 1, 0,  subUrl, pathOf, buttonType)
     }
 
     private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
@@ -64,9 +62,9 @@ class MachineUpdate extends Restlet {
 
     private val machinePK = new WebInputHidden(MachineUpdate.machinePKTag)
 
-    private val formCreate = new WebForm(MachineUpdate.path, List(List(id), List(machineTypePK), List(institutionPK), List(notes), List(createButton, cancelButton)))
+    private val formCreate = new WebForm(pathOf, List(List(id), List(machineTypePK), List(institutionPK), List(notes), List(createButton, cancelButton)))
 
-    private val formEdit = new WebForm(MachineUpdate.path, List(List(id), List(machineTypePK), List(institutionPK), List(notes), List(saveButton, cancelButton, deleteButton, machinePK)))
+    private val formEdit = new WebForm(pathOf, List(List(id), List(machineTypePK), List(institutionPK), List(notes), List(saveButton, cancelButton, deleteButton, machinePK)))
 
     private def redirect(response: Response, valueMap: Map[String, String]) = {
         val pk = machinePK.getValOrEmpty(valueMap)

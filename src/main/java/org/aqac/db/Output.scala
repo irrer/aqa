@@ -3,6 +3,7 @@ package org.aqac.db
 import slick.driver.PostgresDriver.api._
 import org.aqac.Logging._
 import org.aqac.Config
+import org.aqac.run.ProcedureStatus
 import java.sql.Timestamp
 import java.sql.Date
 import org.aqac.web.WebServer
@@ -33,6 +34,8 @@ case class Output(
 
     def insertOrUpdate = Db.run(Output.query.insertOrUpdate(this))
 
+    def dir: File = WebServer.fileOfDataPath(directory)
+    
     /**
      * Update the status and finish date.  Returns number of records updated, which should always be one.  If it is zero then
      * it is probably because the object is not in the database.
@@ -52,8 +55,6 @@ case class Output(
             else System.currentTimeMillis - startDate.getTime
         elapsed.abs
     }
-
-    val directoryUrl = Output.urlOfFile(directory)
 }
 
 object Output {
@@ -97,16 +98,44 @@ object Output {
      * Get a list of all outputs.
      */
     def list: Seq[Output] = Db.run(query.result)
+    
+    case class ExtendedValues(val output: Output, val input: Input, val machine: Machine, val procedure: Procedure, val institution:Institution, val user: User);
+    
+    /**
+     * Get an extended list of all outputs.
+     */
+    def extendedList(procedure: Option[Procedure], machine: Option[Machine], maxSize: Int): Seq[ExtendedValues] = {
+        val search = for {
+            output <- Output.query
+            input <- Input.query if input.inputPK === output.inputPK
+            machine <- Machine.query if machine.machinePK === input.machinePK
+            procedure <- Procedure.query if procedure.procedurePK === output.procedurePK
+            institution <- Institution.query if institution.institutionPK === machine.institutionPK
+            user <- User.query if user.userPK === output.userPK
+        } yield (output, input, machine, procedure, institution, user)
+        val sorted = search.sortBy(_._2.dataDate).take(maxSize)
+        val result = Db.run(sorted.result)
+        result.map(x => new ExtendedValues(x._1, x._2, x._3, x._4, x._5, x._6))
+    }
+    
+    /**
+     * Get a list of all outputs with the given status and their associated procedures.
+     */
+    def listWithStatus(status: ProcedureStatus.Value): Seq[(Output, Procedure)] = {
+        val statusText = status.toString
+        val action = for {
+            output <- Output.query if output.status === statusText
+            procedure <- Procedure.query if procedure.procedurePK === output.procedurePK
+        } yield (output, procedure)
+        val list = Db.run(action.result)
+        list
+    }
 
     def delete(outputPK: Long): Int = {
         val q = query.filter(_.outputPK === outputPK)
         val action = q.delete
         Db.run(action)
     }
-
-    private val urlOffset = Config.DataDir.getAbsolutePath.size + 2 + WebServer.tmpDirBaseUrl.size
-
-    def urlOfFile(filePath: String): String = (WebServer.dataDirBaseUrl + "/" + filePath.substring(urlOffset)).replace('\\', '/')
 
     val outputFilePrefix = "output".toLowerCase
 

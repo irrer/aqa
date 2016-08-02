@@ -26,12 +26,10 @@ import scala.concurrent.duration.DurationInt
 import org.aqac.Logging._
 
 object InstitutionUpdate {
-    val path = "/InstitutionUpdate"
-
     val institutionPKTag = "institutionPK"
 }
 
-class InstitutionUpdate extends Restlet {
+class InstitutionUpdate extends Restlet with SubUrlAdmin {
 
     private val pageTitleCreate = "Create Institution"
 
@@ -45,7 +43,7 @@ class InstitutionUpdate extends Restlet {
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
         //val action = InstitutionUpdate.path + "?" + name + "=" + name
-        new FormButton(name, 1, 0, InstitutionUpdate.path, buttonType)
+        new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
     }
 
     private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
@@ -55,9 +53,9 @@ class InstitutionUpdate extends Restlet {
 
     private val institutionPK = new WebInputHidden(InstitutionUpdate.institutionPKTag)
 
-    private val formCreate = new WebForm(InstitutionUpdate.path, List(List(name), List(url), List(notes), List(createButton, cancelButton)))
+    private val formCreate = new WebForm(pathOf, List(List(name), List(url), List(notes), List(createButton, cancelButton)))
 
-    private val formEdit = new WebForm(InstitutionUpdate.path, List(List(name), List(url), List(notes), List(saveButton, cancelButton, deleteButton, institutionPK)))
+    private val formEdit = new WebForm(pathOf, List(List(name), List(url), List(notes), List(saveButton, cancelButton, deleteButton, institutionPK)))
 
     /**
      * Return true if the name is empty.

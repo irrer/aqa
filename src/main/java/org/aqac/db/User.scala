@@ -6,11 +6,13 @@ import org.aqac.Config
 
 case class User(
         userPK: Option[Long], // primary key
+        id: String, // login name
         fullName: String, // full name, as in 'Louis Pasteur'
         email: String, // email for contacting
         institutionPK: Long, // institution that this user belongs to
         hashedPassword: String, // cryptographically hashed password
-        passwordSalt: String // salt used for hashing password
+        passwordSalt: String, // salt used for hashing password
+        role: Option[String] // user role which defines authorization
         ) {
 
     def insert: User = {
@@ -27,19 +29,25 @@ object User {
     class UserTable(tag: Tag) extends Table[User](tag, "user") {
 
         def userPK = column[Long]("userPK", O.PrimaryKey, O.AutoInc)
+        def id = column[String]("id")
         def fullName = column[String]("fullName")
         def email = column[String]("email")
         def institutionPK = column[Long]("institutionPK")
         def hashedPassword = column[String]("hashedPassword")
         def passwordSalt = column[String]("passwordSalt")
+        def role = column[Option[String]]("role")
+        
+        // def idIndex = index("idIndex", (id), unique = true)  TODO test later
 
         def * = (
             userPK.?,
             fullName,
+            id,
             email,
             institutionPK,
             hashedPassword,
-            passwordSalt) <> ((User.apply _)tupled, User.unapply _)
+            passwordSalt,
+            role) <> ((User.apply _)tupled, User.unapply _)
 
         def institutionFK = foreignKey("institutionPK", institutionPK, Institution.query)(_.institutionPK)
     }
@@ -66,6 +74,17 @@ object User {
         val textResult: String = if (user.isDefined) user.get.toString else "None"
         logInfo("findUserByEmail search for user with email " + emailRaw + " + found " + textResult)
         user
+    }
+
+    /**
+     * Get the of user with the given id.  Comparison is case insensitive.
+     */
+    def getUserById(idRaw: String): Option[User] = {
+        val id = idRaw.trim.toLowerCase
+        val action = query.filter(_.id.toLowerCase === id)
+        val seq = Db.run(action.result)
+        logInfo("getUserById search for user with id " + idRaw + " + found " + seq.size + " matches.")
+        if (seq.isEmpty) None else Some(seq.head)
     }
 
     /** List all users. */

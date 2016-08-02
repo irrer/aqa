@@ -19,6 +19,7 @@
         <dependency> <groupId>org.restlet.jse</groupId>    <artifactId>org.restlet</artifactId>                <version>2.3.5</version>           </dependency>
         <dependency> <groupId>org.restlet.jse</groupId>    <artifactId>org.restlet.ext.jackson</artifactId>    <version>2.3.5</version>           </dependency>
         <dependency> <groupId>org.restlet.jse</groupId>    <artifactId>org.restlet.ext.httpclient</artifactId> <version>2.3.5</version>           </dependency>
+        <dependency> <groupId>org.restlet.jse</groupId>    <artifactId>org.restlet.ext.crypto</artifactId>     <version>2.3.5</version>           </dependency>
         <dependency> <groupId>com.jsuereth</groupId>       <artifactId>scala-arm_2.11</artifactId>             <version>1.4</version>             </dependency>
         <dependency> <groupId>edu.umro</groupId>           <artifactId>ScalaUtil_2.11</artifactId>             <version>0.0.5</version>           </dependency>
         <dependency> <groupId>edu.umro</groupId>           <artifactId>RestletUtil_2.11</artifactId>           <version>0.0.4</version>           </dependency>

@@ -5,6 +5,7 @@ import org.aqac.Logging._
 import org.aqac.Config
 import java.sql.Timestamp
 import java.io.File
+import org.aqac.web.WebServer
 
 case class Input(
         inputPK: Option[Long], // primary key
@@ -25,6 +26,8 @@ case class Input(
 
     def insertOrUpdate = Db.run(Input.query.insertOrUpdate(this))
 
+    def dir: File = WebServer.fileOfDataPath(directory.get)
+    
     /**
      * Update the directory.  Returns number of records updated, which should always be one.  If it is zero then
      * it is probably because the object is not in the database.

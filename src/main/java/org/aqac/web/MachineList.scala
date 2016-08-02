@@ -5,7 +5,7 @@ import org.aqac.db.Machine
 import scala.xml.Elem
 
 object MachineList {
-    val path = WebUtil.pathOf(MachineList.getClass.getName)
+    val path = WebUtil.pathOf(WebUtil.SubUrl.admin, MachineList.getClass.getName)
 
     type MMI = Machine.MMI
 
@@ -26,7 +26,7 @@ object MachineList {
     val colList = Seq(idCol, typeCol, institutionCol, notesCol)
 }
 
-class MachineList extends GenericList[Machine.MMI]("Machine", MachineList.colList) {
+class MachineList extends GenericList[Machine.MMI]("Machine", MachineList.colList) with WebUtil.SubUrlAdmin {
 
     override def getData = Machine.listWithDependencies
 

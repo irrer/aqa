@@ -25,16 +25,15 @@ import org.aqac.db.Institution
 import org.aqac.db.User
 
 class Column[VL](val columnName: String, val getValue: (VL) => Comparable[_ <: Any], val makeHTML: (VL) => Elem) {
-    def this(columnName: String, getValue: (VL) => Comparable[_ <: Any]) = this(columnName, getValue, (value: VL) => <td>{ getValue(value).toString }</td>)
+    def this(columnName: String, getValue: (VL) => Comparable[_ <: Any]) = this(columnName, getValue, null)
 }
 
-abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]], val updatePath: String) extends Restlet {
-
-    def this(listName: String, columnList: Seq[Column[VL]]) = this(listName, columnList, "/" + listName + "Update")
+abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]) extends Restlet with SubUrlAdmin {
 
     val pageTitle = "List " + listName + "s"
 
-    val listPath = "/" + listName + "List"
+    val updatePath = SubUrl.url(subUrl, listName + "Update")
+    val listPath = SubUrl.url(subUrl, listName + "List")
 
     /** Override with false to prevent showing 'Create new' */
     protected val canCreate: Boolean = true
@@ -74,8 +73,10 @@ abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]
 
     private def makeRow(value: VL): Elem = {
         <tr>
-            { formatValueWithLink(value, columnList(0)) }
-            { columnList.tail.map(col => col.makeHTML(value)) }
+            { if (columnList.head.makeHTML == null) formatValueWithLink(value, columnList(0)) else columnList.head.makeHTML(value) }
+            { columnList.tail.map(col => {
+                if (col.makeHTML == null) <td>{ col.getValue(value).toString }</td> else col.makeHTML(value)}) 
+            }
         </tr>
     }
 

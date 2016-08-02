@@ -5,7 +5,7 @@ import scala.xml.Elem
 import org.aqac.db.MachineType
 
 object MachineTypeList {
-    val path = WebUtil.pathOf(MachineTypeList.getClass.getName)
+    val path = WebUtil.pathOf(WebUtil.SubUrl.admin, MachineTypeList.getClass.getName)
 
     def redirect(response: Response) = response.redirectSeeOther(path)
 
@@ -23,7 +23,7 @@ object MachineTypeList {
 
 }
 
-class MachineTypeList extends GenericList[MachineType]("MachineType", MachineTypeList.colList) {
+class MachineTypeList extends GenericList[MachineType]("MachineType", MachineTypeList.colList) with WebUtil.SubUrlAdmin {
 
     override def getData = MachineType.list
 

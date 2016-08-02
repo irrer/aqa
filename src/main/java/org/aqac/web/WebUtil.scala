@@ -41,11 +41,13 @@ object WebUtil {
 
     def xmlToText(document: Node): String = new PrettyPrinter(1024, 2).format(document).replace(singleQuote, "'").replace(doubleQuote, "\"")
 
-    def pathOf(className: String) = "/" + (className.substring(className.lastIndexOf('.') + 1).replace("$", ""))
+    def cleanClassName(className: String) = className.substring(className.lastIndexOf('.') + 1).replace("$", "")
+
+    def pathOf(subUrl: SubUrl.Value, className: String) = "/" + subUrl + "/" + cleanClassName(className)
 
     /**
      * Extract name/value parameters from request.
-     * def getValueMap(request: Request, dir: Option[File]): Map[String, String] = {
+     * def getValueMap(request: Request, dir: Option[File]): ValueMapT = {
      * val objList = (new Form(request.getEntity)).toArray().toList
      * val formMap = objList.filter(o => o.isInstanceOf[Parameter]).map(o => o.asInstanceOf[Parameter]).map(p => (p.getName, p.getValue)).toMap
      *
@@ -79,7 +81,7 @@ object WebUtil {
         outputStream.close
     }
 
-    def sessionDir(valueMap: Map[String, String]): File = {
+    def sessionDir(valueMap: ValueMapT): File = {
         val sessionId = valueMap.get(sessionLabel).get
         Session.idToFile(sessionId)
     }
@@ -87,11 +89,11 @@ object WebUtil {
     /**
      *  Parse values that are part of the URL.  The Restlet way of doing this could not be ascertained.
      */
-    private def parseOriginalReference(request: Request): Map[String, String] = {
+    private def parseOriginalReference(request: Request): ValueMapT = {
         val text = request.getOriginalRef.toString
         val paramStart = text.indexOf('?')
         if (paramStart == -1)
-            Map[String, String]()
+            emptyValueMap
         else {
             def getKeyVal(kv: String): (String, String) = {
                 val items = kv.split('=')
@@ -105,7 +107,7 @@ object WebUtil {
         }
     }
 
-    private def saveFileList(request: Request): Map[String, String] = {
+    private def saveFileList(request: Request): ValueMapT = {
         val valueMap = parseOriginalReference(request)
 
         val dir = sessionDir(valueMap)
@@ -128,11 +130,11 @@ object WebUtil {
         }
     }
 
-    private def ensureSessionId(valueMap: Map[String, String]): Map[String, String] = {
+    private def ensureSessionId(valueMap: ValueMapT): ValueMapT = {
         if (valueMap.get(sessionLabel).isDefined) valueMap else (valueMap ++ (Map((sessionLabel, Session.makeUniqueId))))
     }
 
-    private def parseForm(form: Form): Map[String, String] = {
+    private def parseForm(form: Form): ValueMapT = {
         val paramList = form.toArray().toList.filter(_.isInstanceOf[Parameter]).map(_.asInstanceOf[Parameter])
         val formMap = paramList.map(p => (p.getName, p.getValue)).toMap
         ensureSessionId(formMap)
@@ -151,6 +153,12 @@ object WebUtil {
     }
 
     type ValueMapT = Map[String, String]
+
+    val emptyValueMap = Map[String, String]()
+
+    type StyleMapT = Map[String, Style]
+
+    val styleNone = Map[String, Style]()
 
     def getValueMap(request: Request): ValueMapT = {
         if (requestIsUpload(request))
@@ -188,7 +196,7 @@ object WebUtil {
                         <div class="row">
                             <div class="col-md-2 col-md-offset-9">
                                 <h1 class="fill">
-                                    <a href="/"><img src="/static/images/AQAC_Banner.png" width="256"/></a>
+                                    <a href="/"><img src="/static/images/AQAC_logo.png" width="128"/></a>
                                 </h1>
                             </div>
                         </div>
@@ -215,16 +223,14 @@ object WebUtil {
 
     def respond(content: Elem, title: String, response: Response): Unit = respond(content, title, response, Status.SUCCESS_OK)
 
-    val styleNone = Map[String, Style]()
-
     trait ToHtml {
-        def toHtml(valueMap: Map[String, String], errorMap: Map[String, Style]): Elem = ???
-        def toHtml(valueMap: Map[String, String]): Elem = toHtml(valueMap, Map[String, Style]())
-        def toHtml: Elem = toHtml(Map[String, String](), Map[String, Style]())
+        def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = ???
+        def toHtml(valueMap: ValueMapT): Elem = toHtml(valueMap, styleNone)
+        def toHtml: Elem = toHtml(emptyValueMap, styleNone)
     }
 
     implicit class WebRow(val colList: List[ToHtml]) extends ToHtml {
-        override def toHtml(valueMap: Map[String, String], errorMap: Map[String, Style]): Elem = {
+        override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
             <div class="form-group">
                 <div class="row">
                     { colList.map(c => c.toHtml(valueMap, errorMap)) }
@@ -247,7 +253,7 @@ object WebUtil {
 
         val uploadFileInput: Option[IsInput] = if (validCol(fileUpload)) Some(new IsInput("uploadFile")) else None
 
-        override def toHtml(valueMap: Map[String, String], errorMap: Map[String, Style]): Elem = {
+        override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
 
             val valueMapWithSession = if (valueMap.get(sessionLabel).isDefined) valueMap else (Map((sessionLabel, Session.makeUniqueId)) ++ valueMap)
 
@@ -276,7 +282,7 @@ object WebUtil {
             </div>
         }
 
-        def setFormResponse(valueMap: Map[String, String], errorMap: Map[String, Style], pageTitle: String, response: Response, status: Status): Unit = {
+        def setFormResponse(valueMap: ValueMapT, errorMap: StyleMapT, pageTitle: String, response: Response, status: Status): Unit = {
             val text = wrapBody(toHtml(valueMap, errorMap), pageTitle)
             def replace(origText: String, col: Any): String = {
                 if (col.isInstanceOf[IsInput]) {
@@ -296,7 +302,7 @@ object WebUtil {
         }
     }
 
-    def valueAsAttr(label: String, valueMap: Map[String, String]): MetaData = {
+    def valueAsAttr(label: String, valueMap: ValueMapT): MetaData = {
         val value = valueMap.get(label)
         (if (value.isDefined) <input value={ value.get }></input> else <input></input>).attributes
     }
@@ -305,7 +311,7 @@ object WebUtil {
 
     def idNameClassAsAttr(label: String): MetaData = (<input class="form-control" id={ label } name={ label }/>).attributes
 
-    def idNameClassValueAsAttr(label: String, valueMap: Map[String, String]): MetaData = {
+    def idNameClassValueAsAttr(label: String, valueMap: ValueMapT): MetaData = {
         (<input/> % idNameClassAsAttr(label) % valueAsAttr(label, valueMap)).attributes
     }
 
@@ -364,7 +370,7 @@ object WebUtil {
         def make(input: IsInput, inputTitle: String) = Map((input.label, new DisableWithTitle(inputTitle)))
     }
 
-    def wrapInput(label: String, showLabel: Boolean, html: Elem, col: Int, offset: Int, styleMap: Map[String, Style]): Elem = {
+    def wrapInput(label: String, showLabel: Boolean, html: Elem, col: Int, offset: Int, styleMap: StyleMapT): Elem = {
 
         val style = if (styleMap.get(label).isDefined) styleMap.get(label).get else new Style
 
@@ -378,7 +384,7 @@ object WebUtil {
     }
 
     class IsInput(val label: String) {
-        def getValOrEmpty(valueMap: Map[String, String]): String = {
+        def getValOrEmpty(valueMap: ValueMapT): String = {
             val v = valueMap.get(label)
             if (v.isDefined) {
                 if (v.get == null) ""
@@ -389,7 +395,7 @@ object WebUtil {
     }
 
     class WebInputText(override val label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
-        override def toHtml(valueMap: Map[String, String], errorMap: Map[String, Style]): Elem = {
+        override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
             val html = <input type="text"/> % idNameClassValueAsAttr(label, valueMap) % placeholderAsAttr(placeholder)
             wrapInput(label, true, html, col, offset, errorMap)
         }
@@ -398,30 +404,30 @@ object WebUtil {
     /**
      * Show text that the user can not change.
      */
-    class WebPlainText(override val label: String, col: Int, offset: Int, html: (Any) => Elem) extends IsInput(label) with ToHtml {
-        def this(label: String, col: Int, offset: Int, content: String) = this(label, col, offset, ((Null)) => <div>{ content }</div>)
-        def this(label: String, col: Int, offset: Int, content: Elem) = this(label, col, offset, ((Null)) => content)
-        override def toHtml(valueMap: Map[String, String], errorMap: Map[String, Style]): Elem = {
-            wrapInput(label, true, html(), col, offset, errorMap)
+    class WebPlainText(override val label: String, val showLabel: Boolean, col: Int, offset: Int, html: (Any) => Elem) extends IsInput(label) with ToHtml {
+        def this(label: String, col: Int, offset: Int, content: String) = this(label, true, col, offset, ((Null)) => <div>{ content }</div>)
+        def this(label: String, col: Int, offset: Int, content: Elem) = this(label, true, col, offset, ((Null)) => content)
+        override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
+            wrapInput(label, showLabel, html(valueMap), col, offset, errorMap)
         }
     }
 
     class WebInputURL(override val label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
-        override def toHtml(valueMap: Map[String, String], errorMap: Map[String, Style]): Elem = {
+        override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
             val html = <input type="url"/> % idNameClassValueAsAttr(label, valueMap) % placeholderAsAttr(placeholder)
             wrapInput(label, true, html, col, offset, errorMap)
         }
     }
 
     class WebInputEmail(override val label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
-        override def toHtml(valueMap: Map[String, String], errorMap: Map[String, Style]): Elem = {
+        override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
             val html = <input type="email"/> % idNameClassValueAsAttr(label, valueMap) % placeholderAsAttr(placeholder)
             wrapInput(label, true, html, col, offset, errorMap)
         }
     }
 
     class WebInputPassword(override val label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
-        override def toHtml(valueMap: Map[String, String], errorMap: Map[String, Style]): Elem = {
+        override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
             val html = <input type="password"/> % idNameClassAsAttr(label) % placeholderAsAttr(placeholder)
             wrapInput(label, true, html, col, offset, errorMap)
         }
@@ -429,7 +435,7 @@ object WebUtil {
 
     class WebInputSelect(override val label: String, col: Int, offset: Int, selectList: () => List[(String, String)]) extends IsInput(label) with ToHtml {
 
-        override def toHtml(valueMap: Map[String, String], errorMap: Map[String, Style]): Elem = {
+        override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
 
             val curValue: Option[String] = if (valueMap.get(label).isDefined) valueMap.get(label) else None
 
@@ -461,6 +467,45 @@ object WebUtil {
         val BtnLink = Value("btn-link")
     }
 
+    object SubUrl extends Enumeration {
+        type SubUrl = Value
+
+        val root = Value("")
+        val admin = Value("admin")
+        val run = Value("run")
+        val view = Value("view")
+
+        def url(subUrl: SubUrl.Value, name: String): String = {
+            ("/" + subUrl + "/" + name).replace("//", "/")
+        }
+    }
+
+    trait SubUrl {
+        val subUrl: SubUrl.Value
+
+        def url(name: String): String = SubUrl.url(subUrl, name)
+
+        private val className = this.getClass.getName // JJJJJ
+        private val cn = className.substring(className.lastIndexOf('.') + 1).replace("$", "")
+        def pathOf = url(cn)
+    }
+
+    trait SubUrlRoot extends SubUrl {
+        override val subUrl = SubUrl.root
+    }
+
+    trait SubUrlAdmin extends SubUrl {
+        override val subUrl = SubUrl.admin
+    }
+
+    trait SubUrlRun extends SubUrl {
+        override val subUrl = SubUrl.run
+    }
+
+    trait SubUrlView extends SubUrl {
+        override val subUrl = SubUrl.view
+    }
+
     /**
      * An HTML button.
      *
@@ -472,16 +517,16 @@ object WebUtil {
      *
      * @param primary True if this button is primary
      */
-    class FormButton(override val label: String, col: Int, offset: Int, action: String, buttonType: ButtonType.Value) extends IsInput(label) with ToHtml {
-        def this(label: String, col: Int, offset: Int, action: String) = this(label, col, offset, action, ButtonType.BtnDefault)
-        override def toHtml(valueMap: Map[String, String], errorMap: Map[String, Style]): Elem = {
+    class FormButton(override val label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String, buttonType: ButtonType.Value) extends IsInput(label) with ToHtml {
+        def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String) = this(label, col, offset, subUrl, action: String, ButtonType.BtnDefault)
+        override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
             val button = { <button type="submit" class={ "btn " + buttonType.toString } action={ action } value={ label } name={ label }>{ label }</button> }
             wrapInput(label, false, button, col, offset, errorMap)
         }
     }
 
     class WebInputTextArea(label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
-        override def toHtml(valueMap: Map[String, String], errorMap: Map[String, Style]): Elem = {
+        override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
             val value = valueMap.get(label)
             val common = { <input class="form-control" id={ label } name={ label }/> }
 
@@ -493,7 +538,7 @@ object WebUtil {
     }
 
     class WebInputHidden(override val label: String) extends IsInput(label) with ToHtml {
-        override def toHtml(valueMap: Map[String, String], errorMap: Map[String, Style]): Elem = {
+        override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
             val html = <input type="text" class="hidden"/> % idNameClassValueAsAttr(label, valueMap)
             <span class="hidden">{ html }</span>
         }

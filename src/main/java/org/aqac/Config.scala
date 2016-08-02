@@ -159,6 +159,9 @@ object Config {
 
     val RestletLogLevel = mainText("RestletLogLevel")
     val AuthenticationTimeout = mainText("AuthenticationTimeout").toDouble
+    val AuthenticationTimeoutInMs = (AuthenticationTimeout * 1000).toLong
+    
+    val DatabaseCommand = mainText("DatabaseCommand")
 
     /** Number of minutes into a 24 hour day at which time service should be restarted. */
     val RestartTime: Long = {

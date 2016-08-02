@@ -51,6 +51,9 @@
     <!-- Directory containing input and output data consumed by and produced by procedures. -->
     <DataDir>D:\AQAC_Data</DataDir>
 
+    <!-- Database command to execute to run database commands. -->
+    <DatabaseCommand>D:\pf\PostgreSQL\9.3\bin\psql postgresql://127.0.0.1:5432/Tonto postgres</DatabaseCommand>
+
     <!-- Authentication timeout.  Number of seconds for a user id+password pair to be cached before re-checking with database. -->
     <AuthenticationTimeout>7200.0</AuthenticationTimeout>
 

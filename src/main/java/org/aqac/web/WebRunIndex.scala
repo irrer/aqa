@@ -9,7 +9,7 @@ import java.util.Date
 
 object WebRunIndex {
 
-    val path = WebUtil.pathOf(WebRunIndex.getClass.getName)
+    val path = WebUtil.pathOf(WebUtil.SubUrl.run, WebRunIndex.getClass.getName)
 
     def redirect(response: Response) = response.redirectSeeOther(path)
 
@@ -26,7 +26,7 @@ object WebRunIndex {
     val colList = Seq(nameCol, versionCol, notesCol)
 }
 
-class WebRunIndex extends GenericList[Procedure.PU]("Procedure", WebRunIndex.colList) {
+class WebRunIndex extends GenericList[Procedure.PU]("Procedure", WebRunIndex.colList) with WebUtil.SubUrlRun {
 
     override val pageTitle = "Run Procedures"
 
