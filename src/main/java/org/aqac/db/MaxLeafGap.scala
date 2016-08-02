@@ -68,7 +68,7 @@ object MaxLeafGap {
             maxLeafGap <- MaxLeafGap.query if (maxLeafGap.outputPK === output.outputPK) && (maxLeafGap.status === OutputStatus.valid.toString)
         } yield (output.startDate, maxLeafGap.maxLeafGap)
         
-        val sorted = search.sortBy(_._1).take(maxSize)
+        val sorted = search.sortBy(_._1).take(maxSize)     // TODO should replace take with the equivalent of takeRight
         
         val list = Db.run(sorted.result)
         list.map(tv => println(tv._1, tv._2))
