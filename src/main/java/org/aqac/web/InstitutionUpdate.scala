@@ -39,7 +39,7 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
 
     private val url = new WebInputURL("URL", 6, 0, "Web address (optional)")
 
-    private val notes = new WebInputTextArea("Notes", 6, 0, "")
+    private val description = new WebInputTextArea("Description", 6, 0, "")
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
         //val action = InstitutionUpdate.path + "?" + name + "=" + name
@@ -53,9 +53,9 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
 
     private val institutionPK = new WebInputHidden(InstitutionUpdate.institutionPKTag)
 
-    private val formCreate = new WebForm(pathOf, List(List(name), List(url), List(notes), List(createButton, cancelButton)))
+    private val formCreate = new WebForm(pathOf, List(List(name), List(url), List(description), List(createButton, cancelButton)))
 
-    private val formEdit = new WebForm(pathOf, List(List(name), List(url), List(notes), List(saveButton, cancelButton, deleteButton, institutionPK)))
+    private val formEdit = new WebForm(pathOf, List(List(name), List(url), List(description), List(saveButton, cancelButton, deleteButton, institutionPK)))
 
     /**
      * Return true if the name is empty.
@@ -109,9 +109,9 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
         }
         val nameText = valueMap.get(name.label).get.trim
         val urlText = valueMap.get(url.label).get.trim
-        val notesText = valueMap.get(notes.label).get.trim
+        val descriptionText = valueMap.get(description.label).get.trim
 
-        new Institution(institutionPK, nameText, urlText, notesText)
+        new Institution(institutionPK, nameText, urlText, descriptionText)
     }
 
     private def emptyForm(response: Response) = {
@@ -136,7 +136,7 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
 
     private def edit(inst: Institution, response: Response) = {
         val pk = inst.institutionPK.get.toString
-        val valueMap = Map((institutionPK.label, pk), (name.label, inst.name), (url.label, inst.url), (notes.label, inst.notes))
+        val valueMap = Map((institutionPK.label, pk), (name.label, inst.name), (url.label, inst.url), (description.label, inst.description))
         val err = deleteErr(Map((institutionPK.label, pk)))
         formEdit.setFormResponse(valueMap, err, pageTitleEdit, response, Status.SUCCESS_OK)
     }

@@ -9,7 +9,7 @@ case class Institution(
         institutionPK: Option[Long], // primary key
         name: String, // name of institution
         url: String, // web address
-        notes: String // any extra information
+        description: String // any extra information
         ) {
 
     def insert: Institution = {
@@ -30,9 +30,9 @@ object Institution {
         def institutionPK = column[Long]("institutionPK", O.PrimaryKey, O.AutoInc)
         def name = column[String]("name")
         def url = column[String]("url")
-        def notes = column[String]("notes")
+        def description = column[String]("description")
 
-        def * = (institutionPK.?, name, url, notes) <> ((Institution.apply _)tupled, Institution.unapply _)
+        def * = (institutionPK.?, name, url, description) <> ((Institution.apply _)tupled, Institution.unapply _)
     }
 
     val query = TableQuery[InstitutionTable]

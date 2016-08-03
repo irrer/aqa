@@ -21,17 +21,17 @@ object InstitutionList {
         else <td></td>
     }
 
-    private def notesHTML(institution: Institution): Elem = {
-        <td> { WebUtil.firstPartOf(institution.notes, 60) } </td>
+    private def descriptionHTML(institution: Institution): Elem = {
+        <td> { WebUtil.firstPartOf(institution.description, 60) } </td>
     }
 
     private val nameCol = new Column[Institution]("Name", _.name)
 
     private val urlCol = new Column[Institution]("URL", _.url, urlHTML)
 
-    private val notesCol = new Column[Institution]("Notes", _.notes, notesHTML)
+    private val descriptionCol = new Column[Institution]("Description", _.description, descriptionHTML)
 
-    val colList = Seq(nameCol, urlCol, notesCol)
+    val colList = Seq(nameCol, urlCol, descriptionCol)
 }
 
 class InstitutionList extends GenericList[Institution]("Institution", InstitutionList.colList) with WebUtil.SubUrlAdmin {
