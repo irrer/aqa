@@ -9,7 +9,7 @@ object UserList {
 
     def redirect(response: Response) = response.redirectSeeOther(path)
 
-    private val idCol = new Column[(User, Institution)]("Name", _._1.id)
+    private val idCol = new Column[(User, Institution)]("Id", _._1.id)
 
     private val nameCol = new Column[(User, Institution)]("Name", _._1.fullName)
 
@@ -19,7 +19,7 @@ object UserList {
 
     private def optionToString[T](opt: Option[T]): String = if (opt.isDefined) opt.get.toString else "none";
 
-    def getRole(ui: (User, Institution)): String = if (ui._1.role.isDefined) ui._1.role.get else "none"
+    def getRole(ui: (User, Institution)): String = ui._1.role
 
     private val roleCol = new Column[(User, Institution)]("Role", getRole)
 

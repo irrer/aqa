@@ -12,7 +12,7 @@ case class User(
         institutionPK: Long, // institution that this user belongs to
         hashedPassword: String, // cryptographically hashed password
         passwordSalt: String, // salt used for hashing password
-        role: Option[String] // user role which defines authorization
+        role: String // user role which defines authorization
         ) {
 
     def insert: User = {
@@ -35,14 +35,14 @@ object User {
         def institutionPK = column[Long]("institutionPK")
         def hashedPassword = column[String]("hashedPassword")
         def passwordSalt = column[String]("passwordSalt")
-        def role = column[Option[String]]("role")
+        def role = column[String]("role")
         
         // def idIndex = index("idIndex", (id), unique = true)  TODO test later
 
         def * = (
             userPK.?,
-            fullName,
             id,
+            fullName,
             email,
             institutionPK,
             hashedPassword,

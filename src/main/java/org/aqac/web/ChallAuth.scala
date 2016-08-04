@@ -52,7 +52,7 @@ class ChallAuth(context: Context, optional: Boolean, challengeScheme: ChallengeS
                 else
                     User.getUserById(chalResp.getIdentifier)
             }
-            
+
             if (user.isDefined) { // TODO rm
                 println("user: " + user + "    secret: " + new String(chalResp.getSecret))
             }
@@ -65,13 +65,15 @@ class ChallAuth(context: Context, optional: Boolean, challengeScheme: ChallengeS
 
             // defined if user exists and is authenticated and has a defined role (should always be defined)
             val userRole: Option[UserRole.Value] = {
-                if (user.isDefined && authenticated && user.get.role.isDefined)
-                    UserRole.stringToUserRole(user.get.role.get)
+                if (user.isDefined && authenticated)
+                    UserRole.stringToUserRole(user.get.role)
                 else
                     None
             }
 
             val authorized: Boolean = userRole.isDefined && (userRole.get.compare(requestedRole) >= 0)
+
+            response.getChallengeRequests.add(new ChallengeRequest(ChallengeScheme.HTTP_BASIC))
 
             0 match {
                 case _ if (!user.isDefined) => { redirectToLogin(response); Filter.STOP }
@@ -80,7 +82,7 @@ class ChallAuth(context: Context, optional: Boolean, challengeScheme: ChallengeS
                 case _ => Filter.CONTINUE
             }
         }
-        Filter.CONTINUE // set to disable security.  TODO rm
+        //Filter.CONTINUE // set to disable security.  TODO rm
     }
 
     override def afterHandle(request: Request, response: Response): Unit = {

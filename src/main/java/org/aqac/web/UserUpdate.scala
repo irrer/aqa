@@ -29,9 +29,11 @@ import org.aqac.db.Institution
 import org.aqac.db.UserRole
 import org.aqac.Util
 
-class UserUpdate extends Restlet with SubUrlAdmin {
-
+object UserUpdate {
     val userPKTag = "userPK"
+}
+
+class UserUpdate extends Restlet with SubUrlAdmin {
 
     private val pageTitleCreate = "Create User"
 
@@ -41,11 +43,11 @@ class UserUpdate extends Restlet with SubUrlAdmin {
 
     private val fullName = new WebInputText("Name", 4, 0, "Full name of user, eg: Marie Curie (required)")
 
-    private val email = new WebInputEmail("Email", 6, 0, "Email address (required)")
+    private val email = new WebInputEmail("Email", 4, 0, "Email address (required)")
 
     def listInst() = Institution.list.toList.map(i => (i.institutionPK.get.toString, i.name))
 
-    private val institution = new WebInputSelect("Institution", 6, 0, listInst)
+    private val institution = new WebInputSelect("Institution", 2, 0, listInst)
 
     private val password = new WebInputPassword("Password", 4, 0, "")
 
@@ -53,7 +55,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
     private val role = new WebInputSelect("Role", 2, 0, listRole)
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
-        new FormButton(name, 1, 0,  subUrl, pathOf, buttonType)
+        new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
     }
 
     private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
@@ -61,11 +63,11 @@ class UserUpdate extends Restlet with SubUrlAdmin {
     private val deleteButton = makeButton("Delete", false, ButtonType.BtnDanger)
     private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
 
-    private val userPK = new WebInputHidden(userPKTag)
+    private val userPK = new WebInputHidden(UserUpdate.userPKTag)
 
-    private val formCreate = new WebForm(pathOf, List(List(id, fullName), List(email), List(institution), List(password, role), List(createButton, cancelButton)))
+    private val formCreate = new WebForm(pathOf, List(List(id, fullName), List(email, institution), List(password, role), List(createButton, cancelButton)))
 
-    private val formEdit = new WebForm(pathOf, List(List(id, fullName), List(email), List(institution), List(password, role), List(saveButton, cancelButton, deleteButton, userPK)))
+    private val formEdit = new WebForm(pathOf, List(List(id, fullName), List(email, institution), List(password, role), List(saveButton, cancelButton, deleteButton, userPK)))
 
     private def redirect(response: Response, valueMap: Map[String, String]) = {
         val pk = userPK.getValOrEmpty(valueMap)
@@ -141,7 +143,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
      */
     private def createUserFromParameters(valueMap: Map[String, String]): User = {
         val userPK: Option[Long] = {
-            val e = valueMap.get(userPKTag)
+            val e = valueMap.get(UserUpdate.userPKTag)
             if (e.isDefined) Some(e.get.toLong) else None
         }
         val idText = valueMap.get(id.label).get.trim
@@ -153,7 +155,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
 
         val passwordSalt = Util.randomSecureHash // TODO crypto stuff for passwordText
         val hashedPassword = AuthenticationVerifier.hashPassword(passwordText, passwordSalt) // TODO crypto stuff for passwordText
-        val roleText = valueMap.get(role.label)
+        val roleText = valueMap.get(role.label).get
         new User(userPK, idText, fullNameText, emailText, institutionPK, hashedPassword, passwordSalt, roleText)
     }
 
@@ -187,12 +189,13 @@ class UserUpdate extends Restlet with SubUrlAdmin {
             (id.label, user.id),
             (fullName.label, user.fullName),
             (email.label, user.email),
+            (role.label, user.role),
             (institution.label, Institution.get(user.institutionPK).get.name))
         formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
     }
 
     private def getReference(valueMap: Map[String, String]): Option[User] = {
-        val value = valueMap.get(userPKTag)
+        val value = valueMap.get(UserUpdate.userPKTag)
         try {
             if (value.isDefined) {
                 val user = User.get(value.get.toLong)
@@ -212,7 +215,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
 
     private def isDelete(valueMap: Map[String, String], response: Response): Boolean = {
         if (buttonIs(valueMap, deleteButton)) {
-            val value = valueMap.get(userPKTag)
+            val value = valueMap.get(UserUpdate.userPKTag)
             if (value.isDefined) {
                 User.delete(value.get.toLong)
                 UserList.redirect(response)
@@ -236,7 +239,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
      */
     private def isEdit(valueMap: Map[String, String], response: Response): Boolean = {
         val user = getReference(valueMap)
-        val value = valueMap.get(userPKTag)
+        val value = valueMap.get(UserUpdate.userPKTag)
         if (user.isDefined) {
             edit(user.get, response)
             true

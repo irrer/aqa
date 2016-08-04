@@ -137,10 +137,12 @@ class WebServer extends Application {
     private lazy val tmpDir = makeDirectory(Config.tmpDir)
 
     private lazy val login = new Login
-    
+
+    private lazy val notAuthorized = new NotAuthorized
+
+    private lazy val notAuthenticated = new NotAuthenticated
+
     private lazy val setPassword = new SetPassword
-    
-    
 
     private lazy val webRunIndex = new WebRunIndex
 
@@ -159,22 +161,28 @@ class WebServer extends Application {
             case `staticDir` => UserRole.publik
             case `mainIndex` => UserRole.publik
             case `login` => UserRole.publik
-            case `setPassword` => UserRole.publik
+            case `notAuthorized` => UserRole.publik
+            case `notAuthenticated` => UserRole.publik
+            case `setPassword` => UserRole.guest
             case `dataDir` => UserRole.guest
             case `webRunIndex` => UserRole.user
             case `tmpDir` => UserRole.user
 
-            case _ => UserRole.admin // default to most restrictive access for everything else
+            case _ => {
+                println("admin role requested") // TODO rm
+                UserRole.admin // default to most restrictive access for everything else
+            }
         }
 
         role
     }
 
     private def initAuthentication(restlet: Restlet): Restlet = {
-
-        val challAuthn = new ChallengeAuthenticator(getContext.createChildContext, ChallengeScheme.HTTP_BASIC, "enter password now")   // TODO remove when we figure out how to make a real login page
+        val challAuthn = new ChallengeAuthenticator(getContext.createChildContext, ChallengeScheme.HTTP_BASIC, "Please enter your AQA password") // TODO remove when we figure out how to make a real login page
+        //println("new ChallAuthn 1") // TODO rm
         //val challAuthn = new ChallAuth(getContext.createChildContext, false, WebServer.challengeScheme, getRequestedRole)    // TODO put back when we figure out how to make a real login page
-        challAuthn.setVerifier(new AuthenticationVerifier)
+        //println("new ChallAuthn 2") // TODO rm
+        challAuthn.setVerifier(new AuthenticationVerifier(getRequestedRole _))
         challAuthn.setNext(restlet)
         challAuthn
     }
@@ -184,6 +192,7 @@ class WebServer extends Application {
      */
     override def createInboundRoot: Restlet = {
 
+        println("createInboundRoot") // TODO rm
         router.setDefaultMatchingMode(Template.MODE_STARTS_WITH)
 
         component.getClients.add(Protocol.FILE)
@@ -206,6 +215,8 @@ class WebServer extends Application {
             new OutputList,
             webRunIndex,
             login,
+            notAuthorized,
+            notAuthenticated,
             setPassword)
 
         restletList.map(r => attach(router, WebUtil.SubUrl.url(r.subUrl, WebUtil.cleanClassName(r.getClass.getName)), r))
@@ -217,12 +228,8 @@ class WebServer extends Application {
 
         attach(router, "", mainIndex)
         /*
-        attach(router, "", new WebHome)
-        val authentication = initAuthentication(router)
-
         val auditFilter = new AuditFilter(getContext)
         auditFilter.setNext(authentication)
-        
         auditFilter
         */
         initAuthentication(router) // TODO remove if auth fails

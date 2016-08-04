@@ -25,6 +25,10 @@ object UserRole extends Enumeration {
             println("foo ur: " + ur)
         }
 
+        println("equality ==     : " + (stringToUserRole("guest").get == UserRole.guest))
+        println("equality eq     : " + (stringToUserRole("guest").get.eq(UserRole.guest)))
+        println("equality equals : " + (stringToUserRole("guest").get.equals(UserRole.guest)))
+
         values.toArray.toList.map(ur => println("ur: " + ur))
 
         foo(UserRole.admin)

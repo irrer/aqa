@@ -167,18 +167,30 @@ object WebUtil {
             parseOriginalReference(request) ++ parseForm(new Form(request.getEntity))
     }
 
+    def simpleWebPage(content: Elem, status: Status, title: String, response: Response) = {
+        response.setEntity(wrapBody(content, title), MediaType.TEXT_HTML)
+        response.setStatus(status)
+    }
+
     def notFound(response: Response) = {
-        response.setStatus(Status.CLIENT_ERROR_NOT_FOUND, "Was not found") // TODO
+        val status = Status.CLIENT_ERROR_NOT_FOUND
+        val content = {
+            <div>{ status.toString } Error : No such web page.</div>
+        }
+        simpleWebPage(content, status, "Not Found", response)
     }
 
     def internalFailure(response: Response, message: String) = {
-        response.setStatus(Status.SERVER_ERROR_INTERNAL, message) // TODO
+        val status = Status.SERVER_ERROR_INTERNAL
+        val content = {
+            <div>{ status.toString } <p/> { message }</div>
+        }
+        simpleWebPage(content, status, "Not Found", response)
     }
 
     val HTML_PREFIX = "<!DOCTYPE html>\n"
 
     def wrapBody(content: Elem, pageTitle: String): String = {
-        // <script src="/static/ReloadOutput.js"></script>       // TODO put back in down below?
         val page = {
             <html lang="en">
                 <head>
@@ -552,9 +564,7 @@ object WebUtil {
     def getUser(request: Request): Option[User] = {
         val cr = request.getChallengeResponse
         if (cr == null) None
-        else User.findUserByEmail(cr.getIdentifier)
-
-        User.get(6) // TODO get proper login working
+        else User.getUserById(cr.getIdentifier)
     }
 
     def main(args: Array[String]): Unit = {

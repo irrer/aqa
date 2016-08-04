@@ -10,52 +10,32 @@ import org.aqac.db.User
 import org.aqac.Util
 import org.aqac.db.DbSetup
 import org.aqac.Logging._
+import org.restlet.engine.header.ChallengeWriter
+import org.aqac.db.UserRole
 
-class AuthenticationVerifier extends Verifier {
-
-    private class Credentials(val secret: String) {
-        val timeout = System.currentTimeMillis + Config.AuthenticationTimeoutInMs
-    }
-
-    private val cache = scala.collection.mutable.HashMap[String, Credentials]()
-
-    private def put(id: String, secret: String): Unit = {
-        cache.synchronized({
-            cache.put(id, new Credentials(secret))
-        })
-    }
-
-    private def clean: Unit = {
-        cache.synchronized({
-            val now = System.currentTimeMillis
-            val expired = cache.filter(c => c._2.timeout < now).map(c1 => c1._1)
-            cache --= expired
-        })
-    }
+class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.Value) extends Verifier {
 
     private def checkCached(id: String, secret: String): Int = {
-        clean
-        cache.synchronized({
-            val cred = cache.get(id)
-            0 match {
-                case _ if (!cred.isDefined) => Verifier.RESULT_UNKNOWN
-                case _ if cred.get.secret.equals(secret) => Verifier.RESULT_VALID
-                case _ => Verifier.RESULT_INVALID
-            }
-        })
+        AuthenticationVerifier.clean
+        val cred = AuthenticationVerifier.getFromCache(id)
+        0 match {
+            case _ if (!cred.isDefined) => Verifier.RESULT_UNKNOWN
+            case _ if cred.get.secret.equals(secret) => Verifier.RESULT_VALID
+            case _ => Verifier.RESULT_INVALID
+        }
     }
 
     private def checkDatabase(id: String, secret: String): Int = {
-        val userList = User.list.filter(u => u.email.equalsIgnoreCase(id))
-        if (userList.isEmpty) Verifier.RESULT_UNKNOWN
-        else {
-            val user = userList.head
+        val userOpt = User.getUserById(id)
+        if (userOpt.isDefined) {
+            val user = userOpt.get
             if (AuthenticationVerifier.validatePassword(secret, user.hashedPassword, user.passwordSalt)) {
-                put(id, secret)
+                AuthenticationVerifier.put(id, secret, UserRole.stringToUserRole(user.role))
                 Verifier.RESULT_VALID
             }
             else Verifier.RESULT_INVALID
         }
+        else Verifier.RESULT_UNKNOWN
     }
 
     /**
@@ -69,36 +49,96 @@ class AuthenticationVerifier extends Verifier {
      * for that.
      */
     private def check(id: String, secret: String): Int = {
-
         if (checkCached(id, secret) == Verifier.RESULT_VALID) Verifier.RESULT_VALID
         else checkDatabase(id, secret)
     }
 
     override def verify(request: Request, response: Response): Int = {
-        response.setStatus(Status.SUCCESS_OK)
-        response.setEntity("try more hard", MediaType.TEXT_PLAIN) // TODO make better message
-        val cr = request.getChallengeResponse
-        val result = {
-            if (cr != null) {
-                val id = cr.getIdentifier
-                val secret = new String(cr.getSecret)
-                check(cr.getIdentifier, new String(cr.getSecret))
+        val requestedRole = getRequestedRole(request, response)
+        //response.setStatus(Status.SUCCESS_OK)
+        //response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
+        //  response.redirectSeeOther("/")  // On failure, send user to home page TODO
+        val UNAUTHORIZED = 100
+        if (requestedRole == UserRole.publik) Verifier.RESULT_VALID
+        else {
+            val cr = request.getChallengeResponse
+            val result: Int = {
+                if (cr == null) Verifier.RESULT_MISSING
+                else {
+                    val id = cr.getIdentifier
+                    val secret = new String(cr.getSecret)
+                    val authentication = check(cr.getIdentifier, new String(cr.getSecret))
+
+                    val authorized: Boolean = {
+                        if (authentication == Verifier.RESULT_VALID) {
+                            val userRole = AuthenticationVerifier.getFromCache(id).get.role
+                            (userRole.isDefined) && (userRole.get.compare(requestedRole) >= 0)
+                        }
+                        else false
+                    }
+
+                    if (false) { // TODO this was supposed to give the user a nice 'Not Authenticated' page, but it does not work.
+                        if (authentication != Verifier.RESULT_VALID) {
+                            val content = {
+                                <div>Your user id or password are incorrect.</div>
+                            }
+                            response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
+                            val text = WebUtil.wrapBody(content, "Not Authenticated")
+                            response.setEntity(text, MediaType.TEXT_HTML)
+                        }
+                    }
+
+                    if (authorized) Verifier.RESULT_VALID else UNAUTHORIZED
+                }
             }
-            else
-                Verifier.RESULT_MISSING
+
+            if (result == UNAUTHORIZED) {
+                val user = if (request.getChallengeResponse != null) request.getChallengeResponse.getIdentifier else "unknown"
+                logWarning("user " + user + " failed to log in.  Status: " + AuthenticationVerifier.verifierResultToString(result))
+                response.setStatus(Status.SUCCESS_OK) // TODO rm
+                response.redirectSeeOther("/NotAuthorized")
+                Verifier.RESULT_INVALID
+            }
+            else result
         }
 
-        if (result != Verifier.RESULT_VALID) {
-            val user = if (request.getChallengeResponse != null) request.getChallengeResponse.getIdentifier else "unknown"
-            logWarning("user " + user + " failed to log in.  Status: " + AuthenticationVerifier.verifierResultToString(result))
-        }
-
-        //result
-        Verifier.RESULT_VALID  // TODO remove! when user editing and password setting is working
+        //Verifier.RESULT_VALID  // TODO remove! when user editing and password setting is working
     }
 }
 
 object AuthenticationVerifier {
+
+    class Credentials(val secret: String, val role: Option[UserRole.Value]) {
+        val timeout = System.currentTimeMillis + Config.AuthenticationTimeoutInMs
+    }
+
+    private val cache = scala.collection.mutable.HashMap[String, Credentials]()
+
+    def put(id: String, secret: String, role: Option[UserRole.Value]): Unit = {
+        cache.synchronized({
+            cache.put(id, new Credentials(secret, role))
+        })
+    }
+
+    def getFromCache(id: String): Option[Credentials] = {
+        cache.synchronized({
+            cache.get(id)
+        })
+    }
+
+    def clean: Unit = {
+        cache.synchronized({
+            val now = System.currentTimeMillis
+            val expired = cache.filter(c => c._2.timeout < now).map(c1 => c1._1)
+            cache --= expired
+        })
+    }
+
+    def remove(id: String): Option[Credentials] = {
+        cache.synchronized({
+            cache.remove(id)
+        })
+    }
 
     def hashPassword(secret: String, passwordSalt: String): String = Util.secureHash(passwordSalt + secret)
 
@@ -122,7 +162,8 @@ object AuthenticationVerifier {
     def main(args: Array[String]): Unit = {
         val confValid = Config.validate
         DbSetup.init
-        val av = new AuthenticationVerifier
+        def fakeRole(request: Request, response: Response): UserRole.Value = UserRole.admin
+        val av = new AuthenticationVerifier(fakeRole _)
         println("check " + verifierResultToString(av.check("jim", "foo")))
         println("check " + verifierResultToString(av.check("irrer@med.umich.edu", "aaaaa")))
     }

@@ -19,6 +19,7 @@ import org.restlet.engine.security.HttpBasicHelper
 import org.restlet.engine.header.ChallengeWriter
 import org.restlet.data.Header
 import org.restlet.util.Series
+import org.restlet.security.SecretVerifier
 
 object Login {
     val path = "/Login"
@@ -88,11 +89,11 @@ class Login extends Restlet with SubUrlRoot {
         val continueUrlText = valueMap.get(continueUrl.label)
         val path = if (continueUrlText.isDefined && (continueUrlText.get.size > 0)) continueUrlText.get else "/"
 
-        if (true) {   // TODO rm
+        if (true) { // TODO rm
             val headers = response.getHeaders
-            
+
             println("before headers size: " + headers.size + "    headers: " + headers)
-            
+
             headers.set("Authorization", "irrer:jimpass")
             println("after  headers size: " + headers.size + "    map: " + headers)
         }
@@ -109,6 +110,19 @@ class Login extends Restlet with SubUrlRoot {
             if (vu.isEmpty) validatePassword(valueMap) else vu
         }
 
+        if (true) {     // TODO rm
+            val cr = request.getChallengeResponse
+            if (cr != null)
+                println("login ident: " + cr.getIdentifier + "    secret: " + new String(cr.getSecret))
+                else println("login ident no credentials")
+        }
+
+        if (false) { // TODO rm
+            val crw = new ChallengeWriter
+            val bh = new HttpBasicHelper
+            println("hey ho")
+        }
+
         if (true) { //   TODO put back if (styleMap.isEmpty) {
             // TODO should send credentials to client for further use
             // TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
@@ -123,7 +137,7 @@ class Login extends Restlet with SubUrlRoot {
                 basicHelper.formatResponse(cw, chalResp, request, httpHeaders)
             }
 
-            if (true) {
+            if (false) {
                 val chalReq = new ChallengeRequest(WebServer.challengeScheme, "Hiya there")
 
                 val challengeRequests = new java.util.ArrayList[ChallengeRequest]()
@@ -135,6 +149,12 @@ class Login extends Restlet with SubUrlRoot {
                 //val authnHelperx = new org.restlet.data.AuthenticationHelper ()
 
                 redirect(valueMap, response)
+            }
+
+            if (false) {
+                val challengeRequest = new ChallengeRequest(WebServer.challengeScheme, "Hiya there")
+                val challengeResponse = new ChallengeResponse(challengeRequest, response, "irrer", "foo")
+                request.setChallengeResponse(challengeResponse)
             }
         }
         else {

@@ -19,10 +19,7 @@ class Authorize(
 
     private def getUserRole(id: String): Option[UserRole.Value] = {
         val user = User.getUserById(id)
-        if (user.isDefined && user.get.role.isDefined) {
-            val role = user.get.role.get
-            UserRole.stringToUserRole(role)
-        }
+        if (user.isDefined) UserRole.stringToUserRole(user.get.role)
         else None
     }
 

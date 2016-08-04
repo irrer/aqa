@@ -66,7 +66,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
     private val formEdit = new WebForm(pathOf, List(List(id), List(machineTypePK), List(institutionPK), List(notes), List(saveButton, cancelButton, deleteButton, machinePK)))
 
-    private def redirect(response: Response, valueMap: Map[String, String]) = {
+    private def redirect(response: Response, valueMap: ValueMapT) = {
         val pk = machinePK.getValOrEmpty(valueMap)
         val suffix =
             if (pk.size > 0) { "?" + machinePK.label + "=" + pk }
@@ -74,7 +74,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
                 ""
     }
 
-    private def emptyId(valueMap: Map[String, String]): Map[String, Style] = {
+    private def emptyId(valueMap: ValueMapT): StyleMapT = {
         val idText = valueMap.get(id.label).get.trim
         val isEmpty = idText.trim.size == 0
         if (isEmpty) {
@@ -91,7 +91,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     /**
      * Check that id is unique within institution
      */
-    private def validateUniqueness(valueMap: Map[String, String]): Map[String, Style] = {
+    private def validateUniqueness(valueMap: ValueMapT): StyleMapT = {
         val instPK = valueMap.get(institutionPK.label).get.toLong
         val machID = valueMap.get(id.label).get.trim
         val machPK = valueMap.get(machinePK.label)
@@ -111,7 +111,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     /**
      * Save changes made to form.
      */
-    private def save(valueMap: Map[String, String], response: Response): Unit = {
+    private def save(valueMap: ValueMapT, response: Response): Unit = {
         val styleMap = emptyId(valueMap) ++ validateUniqueness(valueMap)
         if (styleMap.isEmpty) {
             val machine = createMachineFromParameters(valueMap)
@@ -126,7 +126,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     /**
      * Create a new machine
      */
-    private def createMachineFromParameters(valueMap: Map[String, String]): Machine = {
+    private def createMachineFromParameters(valueMap: ValueMapT): Machine = {
         val pk: Option[Long] = {
             val e = valueMap.get(machinePK.label)
             if (e.isDefined) Some(e.get.toLong) else None
@@ -144,14 +144,14 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
      * Show this when machine asks to create a new machine from machine list.
      */
     private def emptyForm(response: Response) = {
-        formCreate.setFormResponse(Map[String, String](), styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
+        formCreate.setFormResponse(emptyValueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
     }
 
     /**
      * Call this when machine has clicked create button.  If everything is ok, then create the new machine,
      * otherwise show the same screen and communicate the error.
      */
-    private def create(valueMap: Map[String, String], response: Response) = {
+    private def create(valueMap: ValueMapT, response: Response) = {
         val styleMap = emptyId(valueMap) ++ validateUniqueness(valueMap)
 
         if (styleMap.isEmpty) {
@@ -167,7 +167,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     /**
      * Show the edit page by populating the fields with the given machine.
      */
-    private def edit(editValueMap: Map[String, String], response: Response): Unit = {
+    private def edit(editValueMap: ValueMapT, response: Response): Unit = {
         val pk = editValueMap.get(machinePK.label).get.toString.toLong
 
         val mach = Machine.get(pk).get
@@ -182,12 +182,12 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
         formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
     }
 
-    private def delete(valueMap: Map[String, String], response: Response): Unit = {
+    private def delete(valueMap: ValueMapT, response: Response): Unit = {
         Machine.delete(valueMap.get(machinePK.label).get.toLong)
         MachineList.redirect(response)
     }
 
-    private def buttonIs(valueMap: Map[String, String], button: FormButton): Boolean = {
+    private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
         val value = valueMap.get(button.label)
         value.isDefined && value.get.toString.equals(button.label)
     }
@@ -195,7 +195,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     /**
      * Determine if the incoming request is to edit.
      */
-    private def isEdit(valueMap: Map[String, String]): Boolean = valueMap.get(machinePK.label).isDefined
+    private def isEdit(valueMap: ValueMapT): Boolean = valueMap.get(machinePK.label).isDefined
 
     override def handle(request: Request, response: Response): Unit = {
         val valueMap = getValueMap(request)
