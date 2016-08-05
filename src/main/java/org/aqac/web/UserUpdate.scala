@@ -260,8 +260,8 @@ class UserUpdate extends Restlet with SubUrlAdmin {
     }
 
     private def changePassword(valueMap: ValueMapT, response: Response): Unit = {
-        val userId = valueMap.get(id.label)
-        if (userId.isDefined) response.redirectSeeOther(SetPassword.path + "?id=" + userId.get)
+        val pk = valueMap.get(userPK.label)
+        if (pk.isDefined) response.redirectSeeOther(SetPassword.path + "?" + UserUpdate.userPKTag + "=" + pk.get)
         else {
             val msg = "No user specified to set password from UserUpdate"
             logWarning(msg)

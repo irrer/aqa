@@ -29,13 +29,12 @@ object SetPassword {
 
 class SetPassword extends Restlet with SubUrlRoot {
 
-    private val continueUrlTag = "continueUrl"
-
     private val pageTitle = "Set Password"
 
     private def getTargetUserId(vma: Any): Elem = {
-        val userId = (vma.asInstanceOf[ValueMapT]).get(id.label)
-        <div>{ if (userId.isDefined) userId.get else "unknown" }</div>
+        val pk = (vma.asInstanceOf[ValueMapT]).get(userPK.label)
+        val usrId = if (pk.isDefined) User.get(pk.get.toLong).get.id else "unknown"
+        <div>{ usrId }</div>
     }
 
     private val id = new WebPlainText("Id", true, 4, 0, getTargetUserId _)
@@ -44,7 +43,7 @@ class SetPassword extends Restlet with SubUrlRoot {
 
     private val verifyPassword = new WebInputPassword("Verify Password", 4, 0, "")
 
-    val continueUrl = new WebInputHidden(continueUrlTag)
+    val userPK = new WebInputHidden(UserUpdate.userPKTag)
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
         new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
@@ -53,7 +52,7 @@ class SetPassword extends Restlet with SubUrlRoot {
     private val saveButton = makeButton("Save", true, ButtonType.BtnPrimary)
     private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
 
-    private val form = new WebForm(pathOf, List(List(id), List(password), List(verifyPassword), List(saveButton, cancelButton)))
+    private val form = new WebForm(pathOf, List(List(id), List(password), List(verifyPassword), List(saveButton, cancelButton, userPK)))
 
     /**
      * Only permit high quality passwords.
@@ -82,7 +81,7 @@ class SetPassword extends Restlet with SubUrlRoot {
     }
 
     private def authorized(valueMap: ValueMapT, request: Request): StyleMapT = {
-        val targetUser = valueMap.get(id.label) // change password of this user
+        val targetUser = valueMap.get(userPK.label)
         val authnUser = getUser(request)
         val role = if (authnUser.isDefined) UserRole.stringToUserRole(authnUser.get.role) else None
         val isAdmin = role.isDefined && (role.get == UserRole.admin)
@@ -90,41 +89,43 @@ class SetPassword extends Restlet with SubUrlRoot {
         0 match {
             case _ if (!targetUser.isDefined) => Error.make(id, "Target user has not been defined")
             case _ if (!authnUser.isDefined) => Error.make(id, "User has not been authenticated")
-            case _ if isAdmin => styleNone
-            case _ if (authnUser.get.id.equals(targetUser.get)) => styleNone
+            case _ if isAdmin => styleNone // user is admin so they can change anyone's passord
+            case _ if (authnUser.get.userPK.get.toString.equals(targetUser.get)) => styleNone // user is changing their own password
             case _ => Error.make(id, "You can only change your own password unless you are an administrator")
         }
     }
 
-    private def save(valueMap: ValueMapT, request: Request, response: Response) = {
-        val styleMap = {
-            val authz = authorized(valueMap, request)
-            if (!authz.isEmpty) authz
-            else {
-                val vu = judgePassword(valueMap)
-                if (!vu.isEmpty) vu
-                else comparePasswords(valueMap)
-            }
+    private def validate(valueMap: ValueMapT, request: Request): StyleMapT = {
+        val authz = authorized(valueMap, request)
+        if (!authz.isEmpty) authz
+        else {
+            val vu = judgePassword(valueMap)
+            if (!vu.isEmpty) vu
+            else comparePasswords(valueMap)
         }
+    }
 
+    private def save(valueMap: ValueMapT, request: Request, response: Response) = {
+        val styleMap = validate(valueMap, request)
         if (styleMap.isEmpty) {
-            val oldUser = valueMap.get(id.label)
-            if (oldUser.isDefined) {
+            val pkOpt = valueMap.get(userPK.label)
+            if (pkOpt.isDefined) {
                 val newSalt = Util.randomSecureHash
                 val newHashedPW = AuthenticationVerifier.hashPassword(password.getValOrEmpty(valueMap), newSalt)
 
-                val odb = User.getUserById(oldUser.get)
-                if (odb.isDefined) {
-                    val ou = odb.get
+                val usr = User.get(pkOpt.get.toLong)
+                if (usr.isDefined) {
+                    val ou = usr.get
                     val newUser = new User(ou.userPK, ou.id, ou.fullName, ou.email, ou.institutionPK, newHashedPW, newSalt, ou.role)
                     newUser.insertOrUpdate
-                    AuthenticationVerifier.remove(ou.id) // remove the users' credentials from the cache
+                    // replace the users' credentials in the cache
+                    AuthenticationVerifier.put(ou.id, valueMap.get(password.label).get, UserRole.stringToUserRole(ou.role))
                     val content = {
-                        <center>
-                            You will be required to re-login with the new password.
+                        <div>
+                            The password for { ou.id } has been changed.
                             <p></p>
                             <a href="/">Home</a>
-                        </center>
+                        </div>
                     }
                     simpleWebPage(content, Status.SUCCESS_OK, "Password Changed", response)
                 }
@@ -141,36 +142,37 @@ class SetPassword extends Restlet with SubUrlRoot {
     }
 
     /**
-     * Try to get the target user from the valueMap, and if that fails use the current (authenticated) user.
+     * Use the current (authenticated) user.
      */
-    private def getTargetUser(valueMap: ValueMapT, request: Request): Option[String] = {
-        val t = valueMap.get(id.label)
-        if (t.isDefined) t
-        else {
-            val authUser = getUser(request)
-            if (authUser.isDefined) Some(authUser.get.id)
-            else None
+    private def getAuthenticatedUserAndRetry(valueMap: ValueMapT, request: Request, response: Response): Unit = {
+        val authUser = getUser(request)
+        if (authUser.isDefined) {
+            val path = SetPassword.path + "?" + userPK.label + "=" + authUser.get.userPK
+            response.redirectSeeOther(path)
         }
+        else
+            WebUtil.internalFailure(response, "SetPassword Expected user to be authenicated (logged in) but they were not.")
     }
 
-    private def initUser(valueMap: ValueMapT, request: Request): ValueMapT = {
-        val targetUser = getTargetUser(valueMap, request)
-        if (targetUser.isEmpty) valueMap
-        else {
-            val authnUser = getUser(request)
-            if (authnUser.isDefined) valueMap + (id.label -> authnUser.get.id)
-            else valueMap
+    private def processRequest(valueMap: ValueMapT, request: Request, response: Response): Unit = {
+        0 match {
+            case _ if buttonIs(valueMap, saveButton) => save(valueMap, request, response)
+            case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
+            case _ => emptyForm(valueMap, response)
         }
+
     }
 
     override def handle(request: Request, response: Response): Unit = {
-        val valueMap = initUser(getValueMap(request), request)
-
         try {
-            0 match {
-                case _ if buttonIs(valueMap, saveButton) => save(valueMap, request, response)
-                case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
-                case _ => emptyForm(valueMap, response)
+            val valueMap = getValueMap(request)
+
+            val userPKText = valueMap.get(userPK.label)
+            if (userPKText.isDefined) {
+                processRequest(valueMap, request, response)
+            }
+            else {
+                getAuthenticatedUserAndRetry(valueMap, request, response)
             }
         }
         catch {

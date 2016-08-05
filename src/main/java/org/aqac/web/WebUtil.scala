@@ -168,7 +168,12 @@ object WebUtil {
     }
 
     def simpleWebPage(content: Elem, status: Status, title: String, response: Response) = {
-        response.setEntity(wrapBody(content, title), MediaType.TEXT_HTML)
+        val indentedContent = {
+            <div class="row col-md-10 col-md-offset-1">
+                { content }
+            </div>
+        }
+        response.setEntity(wrapBody(indentedContent, title), MediaType.TEXT_HTML)
         response.setStatus(status)
     }
 
@@ -567,7 +572,7 @@ object WebUtil {
         if (cr == null) None
         else User.getUserById(cr.getIdentifier)
     }
-    
+
     def getUserIdOrDefault(request: Request, dflt: String): String = {
         val cr = request.getChallengeResponse
         if (cr == null) dflt else cr.getIdentifier
