@@ -19,4 +19,3 @@ object AQAC {
         println("Service started")
     }
 }
-

@@ -118,11 +118,15 @@ class SetPassword extends Restlet with SubUrlRoot {
                     val ou = usr.get
                     val newUser = new User(ou.userPK, ou.id, ou.fullName, ou.email, ou.institutionPK, newHashedPW, newSalt, ou.role)
                     newUser.insertOrUpdate
+                    // remove old credentials so that the old password will not work
+                    AuthenticationVerifier.remove(ou.id)
                     // replace the users' credentials in the cache
                     AuthenticationVerifier.put(ou.id, valueMap.get(password.label).get, UserRole.stringToUserRole(ou.role))
                     val content = {
                         <div>
                             The password for { ou.id } has been changed.
+                            <p></p>
+                            You will need to re-login.
                             <p></p>
                             <a href="/">Home</a>
                         </div>
@@ -147,7 +151,7 @@ class SetPassword extends Restlet with SubUrlRoot {
     private def getAuthenticatedUserAndRetry(valueMap: ValueMapT, request: Request, response: Response): Unit = {
         val authUser = getUser(request)
         if (authUser.isDefined) {
-            val path = SetPassword.path + "?" + userPK.label + "=" + authUser.get.userPK
+            val path = SetPassword.path + "?" + userPK.label + "=" + authUser.get.userPK.get
             response.redirectSeeOther(path)
         }
         else

@@ -110,11 +110,11 @@ object Util {
         val PatientID = getAttrValue(attrList, TagFromName.PatientID)
 
         val dateTimeTagPairList = List(
+            (TagFromName.ContentDate, TagFromName.ContentTime),
+            (TagFromName.InstanceCreationDate, TagFromName.InstanceCreationTime),
             (TagFromName.AcquisitionDate, TagFromName.AcquisitionTime),
             (TagFromName.CreationDate, TagFromName.CreationTime),
-            (TagFromName.InstanceCreationDate, TagFromName.InstanceCreationTime),
-            (TagFromName.SeriesDate, TagFromName.SeriesTime),
-            (TagFromName.ContentDate, TagFromName.ContentTime))
+            (TagFromName.SeriesDate, TagFromName.SeriesTime))
 
         val AcquisitionDateTime = getTimeAndDate(attrList, TagFromName.AcquisitionDateTime)
 

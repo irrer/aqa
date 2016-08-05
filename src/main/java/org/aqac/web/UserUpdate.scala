@@ -132,7 +132,10 @@ class UserUpdate extends Restlet with SubUrlAdmin {
     private def save(valueMap: ValueMapT, response: Response): Unit = {
         val errMap = emptyId(valueMap) ++ emptyName(valueMap) ++ validateEmail(valueMap)
         if (errMap.isEmpty) {
-            (createUserFromParameters(valueMap)).insertOrUpdate
+            val user = createUserFromParameters(valueMap)
+            // remove old credentials just in case the user role was changed.
+            AuthenticationVerifier.remove(user.id)
+            user.insertOrUpdate
             UserList.redirect(response)
         }
         else {

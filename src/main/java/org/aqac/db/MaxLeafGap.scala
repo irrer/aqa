@@ -66,7 +66,7 @@ object MaxLeafGap {
             input <- Input.query if input.machinePK === machinePK
             output <- Output.query if output.inputPK === input.inputPK
             maxLeafGap <- MaxLeafGap.query if (maxLeafGap.outputPK === output.outputPK) && (maxLeafGap.status === OutputStatus.valid.toString)
-        } yield (output.startDate, maxLeafGap.maxLeafGap)
+        } yield (input.dataDate, maxLeafGap.maxLeafGap)
 
         val sorted = search.sortBy(_._1.desc.reverse).take(maxSize)
 
