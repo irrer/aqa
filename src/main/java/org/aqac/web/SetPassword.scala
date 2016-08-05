@@ -55,20 +55,12 @@ class SetPassword extends Restlet with SubUrlRoot {
 
     private val form = new WebForm(pathOf, List(List(id), List(password), List(verifyPassword), List(saveButton, cancelButton)))
 
-    val minPasswordSize = 8
-
-    private def containsNonAlpha(passwordText: String): Boolean = passwordText.toLowerCase.replaceAll("[a-z]", "").size > 0
-
     /**
      * Only permit high quality passwords.
      */
     private def judgePassword(valueMap: ValueMapT): StyleMapT = {
-        val text = valueMap.get(password.label).get
-        0 match {
-            case _ if (text.size < minPasswordSize) => Error.make(password, "Password must be at least " + minPasswordSize + " characters long.")
-            case _ if (!containsNonAlpha(text)) => Error.make(password, "Password must contain at least one non-alpha character.")
-            case _ => styleNone // good enough
-        }
+        val err = AuthenticationVerifier.judgePassword(valueMap.get(password.label).get)
+        if (err.isDefined) Error.make(password, err.get) else styleNone
     }
 
     /**

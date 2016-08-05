@@ -185,6 +185,7 @@ object WebUtil {
         val content = {
             <div>{ status.toString } <p/> { message }</div>
         }
+        logWarning(Status.SERVER_ERROR_INTERNAL.toString + " shown to user " + getUserIdOrDefault(response.getRequest, "unknown") + " : " + message)
         simpleWebPage(content, status, "Not Found", response)
     }
 
@@ -565,6 +566,11 @@ object WebUtil {
         val cr = request.getChallengeResponse
         if (cr == null) None
         else User.getUserById(cr.getIdentifier)
+    }
+    
+    def getUserIdOrDefault(request: Request, dflt: String): String = {
+        val cr = request.getChallengeResponse
+        if (cr == null) dflt else cr.getIdentifier
     }
 
     def main(args: Array[String]): Unit = {

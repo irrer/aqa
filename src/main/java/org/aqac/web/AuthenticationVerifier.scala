@@ -147,6 +147,21 @@ object AuthenticationVerifier {
         hashPassword(secret, passwordSalt).equals(hashedPassword)
     }
 
+    private val minPasswordSize = 8
+
+    private def containsNonAlpha(passwordText: String): Boolean = passwordText.toLowerCase.replaceAll("[a-z]", "").size > 0
+
+    /**
+     * Only permit high quality passwords.
+     */
+    def judgePassword(password: String): Option[String] = {
+        0 match {
+            case _ if (password.size < minPasswordSize) => Some("Password must be at least " + minPasswordSize + " characters long.")
+            case _ if (!containsNonAlpha(password)) => Some("Password must contain at least one non-alpha character.")
+            case _ => None // good enough
+        }
+    }
+
     def verifierResultToString(result: Int): Option[String] = {
         result match {
             case Verifier.RESULT_INVALID => Some("RESULT_INVALID")

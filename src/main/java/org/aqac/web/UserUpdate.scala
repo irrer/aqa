@@ -50,6 +50,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
     private val institution = new WebInputSelect("Institution", 2, 0, listInst)
 
     private val password = new WebInputPassword("Password", 4, 0, "")
+    private val verifyPassword = new WebInputPassword("Verify Password", 4, 0, "")
 
     def listRole() = UserRole.values.toList.filter(r => r != UserRole.publik).map(v => (v.toString, v.toString))
     private val role = new WebInputSelect("Role", 2, 0, listRole)
@@ -59,17 +60,18 @@ class UserUpdate extends Restlet with SubUrlAdmin {
     }
 
     private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
+    private val changePasswordButton = makeButton("Change Password", true, ButtonType.BtnPrimary)
     private val saveButton = makeButton("Save", true, ButtonType.BtnPrimary)
     private val deleteButton = makeButton("Delete", false, ButtonType.BtnDanger)
     private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
 
     private val userPK = new WebInputHidden(UserUpdate.userPKTag)
 
-    private val formCreate = new WebForm(pathOf, List(List(id, fullName), List(email, institution), List(password, role), List(createButton, cancelButton)))
+    private val formCreate = new WebForm(pathOf, List(List(id, fullName), List(email, institution), List(role), List(password), List(verifyPassword), List(createButton, cancelButton)))
 
-    private val formEdit = new WebForm(pathOf, List(List(id, fullName), List(email, institution), List(password, role), List(saveButton, cancelButton, deleteButton, userPK)))
+    private val formEdit = new WebForm(pathOf, List(List(id, fullName), List(email, institution), List(role), List(saveButton, cancelButton, deleteButton, changePasswordButton, userPK)))
 
-    private def redirect(response: Response, valueMap: Map[String, String]) = {
+    private def redirect(response: Response, valueMap: ValueMapT) = {
         val pk = userPK.getValOrEmpty(valueMap)
         val suffix =
             if (pk.size > 0) { "?" + userPK.label + "=" + pk }
@@ -78,7 +80,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
         response.redirectSeeOther(pathOf + suffix)
     }
 
-    private def emptyId(valueMap: Map[String, String]): Map[String, Style] = {
+    private def emptyId(valueMap: ValueMapT): StyleMapT = {
         val idText = valueMap.get(id.label).get.trim
         val isEmpty = idText.trim.size == 0
         if (isEmpty) {
@@ -88,7 +90,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
         else styleNone
     }
 
-    private def emptyName(valueMap: Map[String, String]): Map[String, Style] = {
+    private def emptyName(valueMap: ValueMapT): StyleMapT = {
         val nameText = valueMap.get(fullName.label).get.trim
         val isEmpty = nameText.trim.size == 0
         if (isEmpty) {
@@ -105,7 +107,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
      *
      * Multiple users may not have the same email (ignore case, white space trimmed)
      */
-    private def validateEmail(valueMap: Map[String, String]): Map[String, Style] = {
+    private def validateEmail(valueMap: ValueMapT): StyleMapT = {
         val emailText = email.getValOrEmpty(valueMap).trim
         val pk = userPK.getValOrEmpty(valueMap)
         val user = if (emailText.size > 0) User.findUserByEmail(emailText) else None
@@ -116,7 +118,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
         0 match {
             case _ if (emailText.size == 0) => Error.make(email, "Name can not be empty")
             case _ if ((!pkSame) && emailSame) => Error.make(email, "That email is used by " + user.get.fullName)
-            case _ => Map[String, Style]()
+            case _ => styleNone
         }
     }
 
@@ -127,7 +129,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
     /**
      * Save changes made to form.
      */
-    private def save(valueMap: Map[String, String], response: Response): Unit = {
+    private def save(valueMap: ValueMapT, response: Response): Unit = {
         val errMap = emptyId(valueMap) ++ emptyName(valueMap) ++ validateEmail(valueMap)
         if (errMap.isEmpty) {
             (createUserFromParameters(valueMap)).insertOrUpdate
@@ -141,7 +143,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
     /**
      * Create a new user
      */
-    private def createUserFromParameters(valueMap: Map[String, String]): User = {
+    private def createUserFromParameters(valueMap: ValueMapT): User = {
         val userPK: Option[Long] = {
             val e = valueMap.get(UserUpdate.userPKTag)
             if (e.isDefined) Some(e.get.toLong) else None
@@ -163,15 +165,24 @@ class UserUpdate extends Restlet with SubUrlAdmin {
      * Show this when user asks to create a new user from user list.
      */
     private def emptyForm(response: Response) = {
-        formCreate.setFormResponse(Map[String, String](), styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
+        formCreate.setFormResponse(emptyValueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
+    }
+
+    private def validatePasswords(valueMap: ValueMapT): StyleMapT = {
+        val err = AuthenticationVerifier.judgePassword(valueMap.get(password.label).get)
+        if (err.isDefined) Error.make(password, err.get)
+        else {
+            if (valueMap.get(password.label).get.equals(valueMap.get(verifyPassword.label).get)) styleNone
+            else Error.make(verifyPassword, "Passwords do not match")
+        }
     }
 
     /**
      * Call this when user has clicked create button.  If everything is ok, then create the new user,
      * otherwise show the same screen and communicate the error.
      */
-    private def create(valueMap: Map[String, String], response: Response) = {
-        val errMap = emptyName(valueMap) ++ validateEmail(valueMap)
+    private def create(valueMap: ValueMapT, response: Response) = {
+        val errMap = emptyName(valueMap) ++ validateEmail(valueMap) ++ validatePasswords(valueMap)
 
         if (errMap.isEmpty) {
             val user = createUserFromParameters(valueMap)
@@ -194,7 +205,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
         formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
     }
 
-    private def getReference(valueMap: Map[String, String]): Option[User] = {
+    private def getReference(valueMap: ValueMapT): Option[User] = {
         val value = valueMap.get(UserUpdate.userPKTag)
         try {
             if (value.isDefined) {
@@ -213,7 +224,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
         }
     }
 
-    private def isDelete(valueMap: Map[String, String], response: Response): Boolean = {
+    private def isDelete(valueMap: ValueMapT, response: Response): Boolean = {
         if (buttonIs(valueMap, deleteButton)) {
             val value = valueMap.get(UserUpdate.userPKTag)
             if (value.isDefined) {
@@ -229,7 +240,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
 
     }
 
-    private def buttonIs(valueMap: Map[String, String], button: FormButton): Boolean = {
+    private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
         val value = valueMap.get(button.label)
         value.isDefined && value.get.toString.equals(button.label)
     }
@@ -237,7 +248,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
     /**
      * Determine if the incoming request is to edit an existing user.
      */
-    private def isEdit(valueMap: Map[String, String], response: Response): Boolean = {
+    private def isEdit(valueMap: ValueMapT, response: Response): Boolean = {
         val user = getReference(valueMap)
         val value = valueMap.get(UserUpdate.userPKTag)
         if (user.isDefined) {
@@ -248,11 +259,22 @@ class UserUpdate extends Restlet with SubUrlAdmin {
             false
     }
 
+    private def changePassword(valueMap: ValueMapT, response: Response): Unit = {
+        val userId = valueMap.get(id.label)
+        if (userId.isDefined) response.redirectSeeOther(SetPassword.path + "?id=" + userId.get)
+        else {
+            val msg = "No user specified to set password from UserUpdate"
+            logWarning(msg)
+            internalFailure(response, msg)
+        }
+    }
+
     override def handle(request: Request, response: Response): Unit = {
         val valueMap = getValueMap(request)
         try {
             0 match {
                 case _ if buttonIs(valueMap, cancelButton) => UserList.redirect(response)
+                case _ if buttonIs(valueMap, changePasswordButton) => changePassword(valueMap, response)
                 case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
                 case _ if buttonIs(valueMap, saveButton) => save(valueMap, response)
                 case _ if isDelete(valueMap, response) => Nil
