@@ -283,8 +283,7 @@ object WebUtil {
             val html = {
                 if (validCol(fileUpload)) {
                     val sessionId: String = valueMapWithSession.get(sessionLabel).get
-                    //val formClass = "dropzone row " + colToName(fileUpload, 0)
-                    val formClass = "dropzone"    // TODO fixes dropzone?
+                    val formClass = "dropzone row " + colToName(fileUpload, 0)
 
                     <div class="row">
                         <form action={ action + "?" + sessionLabel + "=" + sessionId } class={ formClass } id="uploadFile" style="border-color: #cccccc; border-width: 1px; border-radius: 10px;"></form>

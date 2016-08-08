@@ -16,13 +16,14 @@ import org.aqac.run.Run
 import org.aqac.Util
 import org.aqac.web.WebUtil
 import org.aqac.db.MaxLeafGap
+import org.restlet.Restlet
 
 object MaxLeafGap_1 {
     val parametersFileName = "parameters.xml"
     val MaxLeafGap_1PKTag = "MaxLeafGap_1PK"
 }
 
-class MaxLeafGap_1(procedure: Procedure) extends WebRun(procedure) {
+class MaxLeafGap_1(procedure: Procedure) extends WebRunProcedure(procedure) {
 
     /** Maximum tongue and groove offset in mm.  Exceeding this value probably indicates a user error. */
     private val maxTongueAndGrooveOffset = 10.0

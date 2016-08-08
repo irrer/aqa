@@ -17,6 +17,7 @@ CMakeFiles/
 
 # Maven stuff
 /target/
+/trash/
 /bin/
 
 /log/

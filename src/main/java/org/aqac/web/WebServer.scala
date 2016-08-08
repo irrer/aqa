@@ -13,8 +13,6 @@ import org.restlet.routing.Template
 import org.restlet.data.Protocol
 import org.restlet.resource.Directory
 import org.aqac.db.Procedure
-import org.aqac.webrun.WinstonLutz_1
-import org.aqac.webrun.MaxLeafGap_1
 import org.aqac.webrun.WebRun
 import org.restlet.security.ChallengeAuthenticator
 import org.restlet.data.ChallengeScheme
@@ -108,14 +106,6 @@ class WebServer extends Application {
         val rootRef = if (restlet.isInstanceOf[Directory]) (" : " + restlet.asInstanceOf[Directory].getRootRef) else ""
         logInfo("attaching router to " + url + " ==> " + name + rootRef)
         router.attach(url, restlet)
-    }
-
-    private def attachProcedures(router: Router): Unit = {
-        Procedure.list.map(p => {
-            // TODO this should not be so hard-codey
-            if (p.webInterface.toLowerCase.contains("winston")) attach(router, p.webUrl, new WinstonLutz_1(p))
-            if (p.webInterface.toLowerCase.contains("maxleaf")) attach(router, p.webUrl, new MaxLeafGap_1(p))
-        })
     }
 
     private lazy val router = new Router(getContext.createChildContext)
@@ -224,7 +214,8 @@ class WebServer extends Application {
         val viewOutput = new ViewOutput
         attach(router, WebUtil.SubUrl.url(viewOutput.subUrl, WebUtil.cleanClassName(viewOutput.getClass.getName)), viewOutput)
 
-        attachProcedures(router)
+        // This attaches the execution of all procedures
+        router.attach("/run", new WebRun)
 
         attach(router, "", mainIndex)
         /*

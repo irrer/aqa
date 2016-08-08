@@ -2,61 +2,84 @@ package org.aqac.webrun
 
 import org.aqac.db.Procedure
 import org.restlet.Restlet
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.HashMap
 import org.restlet.Request
 import org.restlet.Response
 import org.aqac.web.WebUtil._
 import org.aqac.web.ProcedureUpdate
-import org.aqac.web.WebServer
+import scala.xml.Elem
 
 /**
- * Web interface for running a procedure.
+ * Web interface for running the procedures.
+ *
+ * Looks at the incoming request and determines which procedure restlet the client wants to
+ * invoke.  If the restlet has not been instantiated, then do so, add it to the internal
+ * list (WebRunProcedure.lookup) and return it.
  */
-abstract class WebRun(val procedure: Procedure) extends Restlet {
-    //def handle(valueMap: ValueMapT, request: Request, response: Response): Unit
-}
 
-class XWebRunInvoke extends Restlet {
+class WebRun extends Restlet {
     override def handle(request: Request, response: Response): Unit = {
         super.handle(request, response)
-        val valueMap = getValueMap(request)
-
-        val procedurePK = valueMap.get(ProcedureUpdate.procedurePKTag).get.toLong
-        val procedure: Procedure = Procedure.get(procedurePK).get
-
-        XWebRun.getWebRun(procedure).handle(request, response)
+        val restlet = WebRun.getNext(request, response)
+        if (restlet.isRight)
+            restlet.right.get.handle(request, response)
+        else {
+            internalFailure(response, restlet.left.get)
+            None
+        }
     }
 }
 
-object XWebRun {
+abstract class WebRunProcedure(procedure: Procedure) extends Restlet;
 
-    private val webList: List[Class[WebRun]] forSome { type WebRun } = List(
-        WinstonLutz_1.getClass)
+object WebRun {
 
-    private val procList = ArrayBuffer[WebRun]();
+    type ConstructInterfaceT = (Procedure) => WebRunProcedure
 
-    private val runProcedureList: Seq[WebRun] = {
-        //Procedure.list.map(p => 
-        Procedure.list.filter { p => p.name.equalsIgnoreCase("Winston-Lutz") }.map(wl => new WinstonLutz_1(wl)) //  TODO put back in
+    private val interfaceList: Map[String, ConstructInterfaceT] = Map(
+        ("MaxLeafGap_1", procedure => new MaxLeafGap_1(procedure)),
+        ("WinstonLutz_1", procedure => new WinstonLutz_1(procedure)))
+
+    /** Possible choices for procedure interfaces. */
+    def interfaceChoices = interfaceList.map(nc => nc._1)
+
+    /** List of procedurePK -> interface pairs that have been instantiated. */
+    private val lookup = new HashMap[Long, Restlet]()
+
+    private def interfaceNotFound(procedure: Procedure): String = {
+        "The selected procedure " + procedure.fullName + " specifies that it needs the web interface " +
+            procedure.webInterface + ", but that interface does not exist.  The known interfaces are: " +
+            interfaceList.foldLeft("")((t, i) => t + "\n    " + i)
     }
 
-    def getWebRun(procedure: Procedure): WebRun = {
-        procList.synchronized({
-            //val wrx = procList.find(p => p.procedure.name.equals(procedure.name) && p.procedure.version.equals(procedure.version))  TODO remove
-            val pk = procedure.procedurePK.get
-            val wr = procList.find(p => p.procedure.procedurePK.get == pk)
-            if (wr.isEmpty) {
-                val w = new WinstonLutz_1(procedure) // TODO should go through webList
-                // TODO how to convert class name to nice name
-                // val className = WinstonLutz_1.getClass.getName.replace('$', ' ').trim.replaceAll(".*\\.", "")      // TODO rm
-                //attachToRouter(w)
-                procList += w
-                w
+    private def makeNewInterfaceInstance(procedurePK: Long): Either[String, Restlet] = {
+        val procedure = Procedure.get(procedurePK)
+        if (procedure.isDefined) {
+            val constructor = interfaceList.get(procedure.get.webInterface)
+            if (constructor.isDefined) {
+                val newRestlet = constructor.get(procedure.get)
+                lookup.put(procedurePK, newRestlet)
+                Right(newRestlet)
             }
-            else wr.head
+            else Left(interfaceNotFound(procedure.get))
+        }
+        else {
+            Left("No such procedure with procedurePK " + procedurePK + " in database.")
+        }
+    }
+
+    private def get(procedurePK: Long): Either[String, Restlet] = {
+        // it is important to synchronize this because even one web client often makes multiple overlapping calls, and we
+        // do not want to instantiate multiple copies of the same thing.
+        lookup.synchronized({
+            val restlet = lookup.get(procedurePK)
+            if (restlet.isEmpty) makeNewInterfaceInstance(procedurePK)
+            else Right(restlet.get)
         })
     }
 
-    def loadProcedures: Unit = Procedure.list.map(p => getWebRun(p))
-
+    def getNext(request: Request, response: Response): Either[String, Restlet] = {
+        val procedurePK = request.getResourceRef.getLastSegment.replaceAll(".*_", "").toLong
+        get(procedurePK)
+    }
 }

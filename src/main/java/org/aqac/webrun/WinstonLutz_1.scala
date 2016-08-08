@@ -15,13 +15,14 @@ import org.aqac.db.Procedure
 import org.aqac.run.Run
 import org.aqac.Util
 import org.aqac.web.WebUtil
+import org.restlet.Restlet
 
 object WinstonLutz_1 {
     val parametersFileName = "parameters.xml"
     val WinstonLutz_1PKTag = "WinstonLutz_1PK"
 }
 
-class WinstonLutz_1(procedure: Procedure) extends WebRun(procedure) {
+class WinstonLutz_1(procedure: Procedure) extends WebRunProcedure(procedure) {
 
     /** Maximum tongue and groove offset in mm.  Exceeding this value probably indicates a user error. */
     private val maxTongueAndGrooveOffset = 10.0
@@ -120,7 +121,7 @@ class WinstonLutz_1(procedure: Procedure) extends WebRun(procedure) {
 
     override def handle(request: Request, response: Response): Unit = {
         super.handle(request, response)
-
+        
         val valueMap: ValueMapT = defaultValueMap ++ getValueMap(request)
 
         try {
