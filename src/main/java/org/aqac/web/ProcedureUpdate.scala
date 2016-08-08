@@ -48,8 +48,6 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
 
     private val timeout = new WebInputText("Timeout", 6, 0, "Maximum run time in minutes")
 
-    def directory = new WebPlainText("Directory", 6, 0, "For executable and test data") // TODO
-
     def listSupportingUser() = User.list.map(u => (u.userPK.get.toString, u.fullName))
     private val supportingUserPK = new WebInputSelect("Author", 6, 0, listSupportingUser)
 
@@ -66,7 +64,7 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
 
     private val procedurePK = new WebInputHidden(ProcedureUpdate.procedurePKTag)
 
-    val fieldList: List[WebRow] = List(List(name), List(version), List(timeout), List(webInterface), List(supportingUserPK), List(notes), List(directory))
+    val fieldList: List[WebRow] = List(List(name), List(version), List(timeout), List(webInterface), List(supportingUserPK), List(notes))
 
     val createButtonList: List[WebRow] = List(List(createButton, cancelButton))
 
@@ -247,6 +245,7 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
     private def isEdit(valueMap: Map[String, String]): Boolean = valueMap.get(procedurePK.label).isDefined
 
     override def handle(request: Request, response: Response): Unit = {
+        super.handle(request, response)
         val valueMap = getValueMap(request)
         try {
             0 match {

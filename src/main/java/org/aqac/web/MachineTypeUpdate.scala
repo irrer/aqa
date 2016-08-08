@@ -228,6 +228,7 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
     }
 
     override def handle(request: Request, response: Response): Unit = {
+        super.handle(request, response)
         val valueMap = getValueMap(request)
         try {
             0 match {

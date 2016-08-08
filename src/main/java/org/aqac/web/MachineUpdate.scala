@@ -198,6 +198,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     private def isEdit(valueMap: ValueMapT): Boolean = valueMap.get(machinePK.label).isDefined
 
     override def handle(request: Request, response: Response): Unit = {
+        super.handle(request, response)
         val valueMap = getValueMap(request)
         try {
             0 match {

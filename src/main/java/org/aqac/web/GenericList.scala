@@ -134,6 +134,7 @@ abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]
     }
 
     override def handle(request: Request, response: Response): Unit = {
+        super.handle(request, response)
         val valueMap = getValueMap(request)
         request.getMethod match {
             case Method.GET => get(valueMap, response)

@@ -20,6 +20,7 @@ class MainIndex(staticDir: File) extends Restlet {
     }
 
     override def handle(request: Request, response: Response): Unit = {
+        super.handle(request, response)
         response.setStatus(Status.SUCCESS_OK)
         response.setEntity(new String(content), MediaType.TEXT_HTML)
     }

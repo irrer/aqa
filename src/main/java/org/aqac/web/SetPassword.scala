@@ -168,6 +168,7 @@ class SetPassword extends Restlet with SubUrlRoot {
     }
 
     override def handle(request: Request, response: Response): Unit = {
+        super.handle(request, response)
         try {
             val valueMap = getValueMap(request)
 

@@ -51,6 +51,7 @@ class WebRunIndex extends GenericList[Procedure.PU]("Procedure", WebRunIndex.col
     }
 
     override def handle(request: Request, response: Response): Unit = {
+        super.handle(request, response)
         val valueMap = getValueMap(request)
         val procedure = getProcedure(valueMap)
         //if (procedure.isDefined) WebRun.getWebRun(procedure.get).handle(valueMap, request, response)

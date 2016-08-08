@@ -125,6 +125,7 @@ class ViewInput extends Restlet with SubUrlView {
     }
 
     override def handle(request: Request, response: Response) = {
+        super.handle(request, response)
         try {
             val valueMap = getValueMap(request)
 

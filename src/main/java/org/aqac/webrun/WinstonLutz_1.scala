@@ -119,6 +119,7 @@ class WinstonLutz_1(procedure: Procedure) extends WebRun(procedure) {
     }
 
     override def handle(request: Request, response: Response): Unit = {
+        super.handle(request, response)
 
         val valueMap: ValueMapT = defaultValueMap ++ getValueMap(request)
 

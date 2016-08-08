@@ -16,18 +16,19 @@ abstract class WebRun(val procedure: Procedure) extends Restlet {
     //def handle(valueMap: ValueMapT, request: Request, response: Response): Unit
 }
 
-class WebRunInvoke extends Restlet {
+class XWebRunInvoke extends Restlet {
     override def handle(request: Request, response: Response): Unit = {
+        super.handle(request, response)
         val valueMap = getValueMap(request)
 
         val procedurePK = valueMap.get(ProcedureUpdate.procedurePKTag).get.toLong
         val procedure: Procedure = Procedure.get(procedurePK).get
 
-        WebRun.getWebRun(procedure).handle(request, response)
+        XWebRun.getWebRun(procedure).handle(request, response)
     }
 }
 
-object WebRun {
+object XWebRun {
 
     private val webList: List[Class[WebRun]] forSome { type WebRun } = List(
         WinstonLutz_1.getClass)
