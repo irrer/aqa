@@ -13,12 +13,13 @@ import java.io.File
 import org.aqac.db.DataValidity
 import org.restlet.Request
 import WebUtil._
-import org.aqac.db.MaxLeafGap
+import org.aqac.db.CentralAxis
 import edu.umro.util.Utility
 
 object OutputList {
     val path = WebUtil.pathOf(WebUtil.SubUrl.view, OutputList.getClass.getName)
 
+    val dataValidityTag = "dataValidity"
     val deleteTag = "delete"
 
     def redirect(response: Response) = response.redirectSeeOther(path)
@@ -78,12 +79,14 @@ object OutputList {
         <td><a href={ WebServer.urlOfDataPath(extendedValues.input.directory.get) }>Input</a></td>
     }
 
+    private def invalidateRowName(extendedValues: Output.ExtendedValues): String = extendedValues.output.dataValidity.toString
+
     private def invalidateUrl(extendedValues: Output.ExtendedValues): Elem = {
-        <td><a href={ path + "?" + DataValidity.invalid.toString + "=" + extendedValues.output.outputPK.get }>Invalidate</a></td>
+        <td><a title="Click to change.  Can be undone" href={ path + "?" + OutputList.dataValidityTag + "=" + extendedValues.output.outputPK.get }>{ extendedValues.output.dataValidity.toString }</a></td>
     }
 
     private def deleteUrl(extendedValues: Output.ExtendedValues): Elem = {
-        <td><a href={ path + "?" + OutputList.deleteTag + "=" + extendedValues.output.outputPK.get }>Delete</a></td>
+        <td><a title="Click to delete.  Can NOT be undone" href={ path + "?" + OutputList.deleteTag + "=" + extendedValues.output.outputPK.get }>Delete</a></td>
     }
 
     private val institutionCol = new Column[Output.ExtendedValues]("Institution", _.institution.name)
@@ -98,7 +101,7 @@ object OutputList {
 
     private val statusCol = new Column[Output.ExtendedValues]("Status", _.output.status)
 
-    private val invalidateCol = new Column[Output.ExtendedValues]("Invalidate", _ => "Invalidate", invalidateUrl)
+    private val invalidateCol = new Column[Output.ExtendedValues]("Valid Status", invalidateRowName, invalidateUrl)
 
     private val deleteCol = new Column[Output.ExtendedValues]("Delete", _ => "Delete", deleteUrl)
 
@@ -119,9 +122,17 @@ class OutputList extends GenericList[Output.ExtendedValues]("Output", OutputList
 
     override val canCreate: Boolean = false
 
-    /** Set the dataValidity column to invalid. */
-    private def invalidateOutput(outputPK: Long): Unit = {
+    /** Change the dataValidity column. */
+    private def changeDataValidity(outputPK: Long): Unit = {
+
         val output = Output.get(outputPK).get
+        val ovo = DataValidity.stringToDataValidity(output.dataValidity)
+        val newValidity = {
+            if (ovo.isDefined && (ovo.get == DataValidity.valid)) {
+                DataValidity.invalid
+            }
+            else DataValidity.valid
+        }
 
         val updatedOutput = new Output(
             outputPK = output.outputPK,
@@ -132,21 +143,17 @@ class OutputList extends GenericList[Output.ExtendedValues]("Output", OutputList
             startDate = output.startDate,
             finishDate = output.finishDate,
             status = output.status,
-            dataValidity = DataValidity.invalid.toString)
+            dataValidity = newValidity.toString)
 
         updatedOutput.insertOrUpdate
-
     }
 
     /** Remove the output, the other associated outputs, and the directory. If its input is only referenced by this output, then delete the input too. */
     private def deleteOutput(outputPK: Long): Unit = {
-
         val output = Output.get(outputPK)
         if (output.isDefined) {
-            Output.deleteOutputAndReferences(outputPK)
+            Output.deleteOutputAndReferences(output.get.outputPK.get)
             val list = Output.listByInputPK(output.get.inputPK)
-            println("list.size: " + list.size)   // TODO rm
-            list.map(o => println(o))             // TODO rm
             if (list.size == 0) {
                 val input = Input.get(output.get.inputPK)
                 Input.delete(input.get.inputPK.get)
@@ -158,11 +165,11 @@ class OutputList extends GenericList[Output.ExtendedValues]("Output", OutputList
 
     override def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Unit = {
         try {
-            val invalidate = valueMap.get(DataValidity.invalid.toString)
+            val dataValidity = valueMap.get(OutputList.dataValidityTag)
             val delete = valueMap.get(OutputList.deleteTag)
 
             0 match {
-                case _ if (invalidate.isDefined) => invalidateOutput(invalidate.get.toLong)
+                case _ if (dataValidity.isDefined) => { val dv = changeDataValidity(dataValidity.get.toLong) }
                 case _ if (delete.isDefined) => deleteOutput(delete.get.toLong)
                 case _ => ;
             }

@@ -15,7 +15,7 @@ import org.aqac.db.Procedure
 import org.aqac.run.Run
 import org.aqac.Util
 import org.aqac.web.WebUtil
-import org.aqac.db.MaxLeafGap
+import org.aqac.db.CentralAxis
 import org.restlet.Restlet
 
 object MaxLeafGap_1 {
@@ -61,7 +61,7 @@ class MaxLeafGap_1(procedure: Procedure) extends WebRunProcedure(procedure) {
     private val historyFileName = "history.txt"
     
     private def writeHistory(machinePK: Long, dir: File) = {
-        val text = MaxLeafGap.getHistory(machinePK, maxHistory).map(g => g.toString + System.lineSeparator).foldLeft("")((t, gt) => t + gt)
+        val text = CentralAxis.getHistory(machinePK, maxHistory).map(g => g.toString + System.lineSeparator).foldLeft("")((t, gt) => t + gt)
         Util.writeFile(new File(dir, historyFileName), text)
     }
 

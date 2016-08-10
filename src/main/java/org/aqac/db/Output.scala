@@ -153,7 +153,7 @@ object Output {
      */
     def deleteOutputAndReferences(outputPK: Long): Unit = {
         val action = for {
-            _ <- MaxLeafGap.query.filter(_.outputPK === outputPK).delete
+            _ <- CentralAxis.query.filter(_.outputPK === outputPK).delete
             _ <- query.filter(_.outputPK === outputPK).delete
         } yield ()
 

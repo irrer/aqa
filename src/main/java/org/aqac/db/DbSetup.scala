@@ -17,6 +17,6 @@ object DbSetup {
         Db.createTableIfNonexistent(Machine.query.asInstanceOf[TableQuery[Table[_]]])
         Db.createTableIfNonexistent(Input.query.asInstanceOf[TableQuery[Table[_]]])
         Db.createTableIfNonexistent(Output.query.asInstanceOf[TableQuery[Table[_]]])
-        Db.createTableIfNonexistent(MaxLeafGap.query.asInstanceOf[TableQuery[Table[_]]])
+        Db.createTableIfNonexistent(CentralAxis.query.asInstanceOf[TableQuery[Table[_]]])
     }
 }
