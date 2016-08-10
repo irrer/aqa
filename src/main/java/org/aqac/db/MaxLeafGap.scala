@@ -8,8 +8,7 @@ import org.aqac.Util
 case class MaxLeafGap(
         maxLeafGapPK: Option[Long], // primary key
         outputPK: Long, // company name
-        maxLeafGap: Double, // maximum leaf gap
-        status: String // used to indicate the validity of the value
+        maxLeafGap: Double // maximum leaf gap
         ) {
 
     def insert: MaxLeafGap = {
@@ -21,7 +20,7 @@ case class MaxLeafGap(
 
     def insertOrUpdate = Db.run(MaxLeafGap.query.insertOrUpdate(this))
 
-    override def toString: String = (maxLeafGap + " " + status).trim
+    override def toString: String = (maxLeafGap.toString).trim
 }
 
 object MaxLeafGap {
@@ -35,8 +34,7 @@ object MaxLeafGap {
         def * = (
             maxLeafGapPK.?,
             outputPK,
-            maxLeafGap,
-            status) <> ((MaxLeafGap.apply _)tupled, MaxLeafGap.unapply _)
+            maxLeafGap) <> ((MaxLeafGap.apply _)tupled, MaxLeafGap.unapply _)
     }
 
     val query = TableQuery[MaxLeafGapTable]
@@ -60,12 +58,20 @@ object MaxLeafGap {
         Db.run(action)
     }
     
-    def getHistory(machinePK: Long, maxSize: Int) : Seq[Double] = {
+    def deleteByOutputPK(outputPK: Long): Int = {
+        val q = query.filter(_.outputPK === outputPK)
+        val action = q.delete
+        Db.run(action)
+    }
+    
+    
+
+    def getHistory(machinePK: Long, maxSize: Int): Seq[Double] = {
         val search = for {
             machine <- Machine.query if machine.machinePK === machinePK
             input <- Input.query if input.machinePK === machinePK
             output <- Output.query if output.inputPK === input.inputPK
-            maxLeafGap <- MaxLeafGap.query if (maxLeafGap.outputPK === output.outputPK) && (maxLeafGap.status === OutputStatus.valid.toString)
+            maxLeafGap <- MaxLeafGap.query if (maxLeafGap.outputPK === output.outputPK)
         } yield (input.dataDate, maxLeafGap.maxLeafGap)
 
         val sorted = search.sortBy(_._1.desc.reverse).take(maxSize)

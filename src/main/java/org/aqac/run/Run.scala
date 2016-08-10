@@ -16,7 +16,6 @@ import org.aqac.web.WebUtil
 import java.io.FileOutputStream
 import org.restlet.Response
 import org.aqac.db.Output
-//import sys.process.ProcessCreation
 import sys.process._
 import edu.umro.ScalaUtil.Trace._
 import org.aqac.Util
@@ -40,6 +39,7 @@ import java.sql.Timestamp
 import java.io.RandomAccessFile
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import org.aqac.db.DataValidity
 
 /**
  * Run a procedure.
@@ -193,7 +193,8 @@ object Run {
                 userPK,
                 new Timestamp(startDate.getTime),
                 finishDate = None,
-                status = ProcedureStatus.running.toString)
+                status = ProcedureStatus.running.toString,
+                dataValidity = DataValidity.valid.toString)
             tempOutput.insert
         }
 
@@ -229,7 +230,8 @@ object Run {
                     userPK = output.userPK,
                     startDate = output.startDate,
                     finishDate = Some(new Timestamp(latestFileChange)),
-                    status = status.toString)
+                    status = status.toString,
+                    dataValidity = output.dataValidity)
                 updatedOutput.insertOrUpdate
             }
 

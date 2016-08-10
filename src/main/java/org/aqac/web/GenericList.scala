@@ -28,12 +28,12 @@ class Column[VL](val columnName: String, val getValue: (VL) => Comparable[_ <: A
     def this(columnName: String, getValue: (VL) => Comparable[_ <: Any]) = this(columnName, getValue, null)
 }
 
-abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]) extends Restlet with SubUrlAdmin {
+abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]) extends Restlet with SubUrl {
 
     val pageTitle = "List " + listName + "s"
 
-    val updatePath = SubUrl.url(subUrl, listName + "Update")
-    val listPath = SubUrl.url(subUrl, listName + "List")
+    def updatePath = SubUrl.url(subUrl, listName + "Update")
+    def listPath = SubUrl.url(subUrl, listName + "List")
 
     /** Override with false to prevent showing 'Create new' */
     protected val canCreate: Boolean = true
@@ -132,10 +132,15 @@ abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]
         val text = wrapBody(makeForm(valueMap), pageTitle)
         setResponse(text, response, Status.SUCCESS_OK)
     }
+    
+    protected def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Unit = {
+        println("hey") // TODO rm
+    }
 
     override def handle(request: Request, response: Response): Unit = {
         super.handle(request, response)
         val valueMap = getValueMap(request)
+        beforeHandle(valueMap, request, response)
         request.getMethod match {
             case Method.GET => get(valueMap, response)
             case _ => WebUtil.notFound(response)

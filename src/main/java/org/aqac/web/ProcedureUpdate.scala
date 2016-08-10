@@ -27,6 +27,7 @@ import org.aqac.Logging._
 import org.aqac.db.Institution.InstitutionTable
 import org.aqac.db.Institution
 import org.aqac.db.User
+import org.aqac.webrun.WebRun
 
 object ProcedureUpdate {
     val procedurePKTag = "procedurePK"
@@ -42,7 +43,7 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
 
     private val version = new WebInputText("Version", 6, 0, "Required.  Usually dot separated integers")
 
-    private def webInterfaceList() = List(("WinstonLutz_1", "WinstonLutz_1"), ("MaxLeafGap_1", "MaxLeafGap_1")) // TODO should get list of interfaces
+    private def webInterfaceList() = WebRun.interfaceChoices.toList.map(name => (name, name))
 
     private val webInterface = new WebInputSelect("Interface", 6, 0, webInterfaceList)
 

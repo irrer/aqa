@@ -10,9 +10,16 @@ import org.aqac.db.Input
 import org.aqac.db.Machine
 import org.aqac.db.Institution
 import java.io.File
+import org.aqac.db.DataValidity
+import org.restlet.Request
+import WebUtil._
+import org.aqac.db.MaxLeafGap
+import edu.umro.util.Utility
 
 object OutputList {
     val path = WebUtil.pathOf(WebUtil.SubUrl.view, OutputList.getClass.getName)
+
+    val deleteTag = "delete"
 
     def redirect(response: Response) = response.redirectSeeOther(path)
 
@@ -68,9 +75,15 @@ object OutputList {
     }
 
     private def inputFileUrl(extendedValues: Output.ExtendedValues): Elem = {
-        val input = Input.get(extendedValues.output.inputPK).get
-        println("===== inputFileUrl: " + WebServer.urlOfDataPath(input.directory.get)) // TODO rm
-        <td><a href={ WebServer.urlOfDataPath(input.directory.get) }>Input</a></td>
+        <td><a href={ WebServer.urlOfDataPath(extendedValues.input.directory.get) }>Input</a></td>
+    }
+
+    private def invalidateUrl(extendedValues: Output.ExtendedValues): Elem = {
+        <td><a href={ path + "?" + DataValidity.invalid.toString + "=" + extendedValues.output.outputPK.get }>Invalidate</a></td>
+    }
+
+    private def deleteUrl(extendedValues: Output.ExtendedValues): Elem = {
+        <td><a href={ path + "?" + OutputList.deleteTag + "=" + extendedValues.output.outputPK.get }>Delete</a></td>
     }
 
     private val institutionCol = new Column[Output.ExtendedValues]("Institution", _.institution.name)
@@ -85,20 +98,78 @@ object OutputList {
 
     private val statusCol = new Column[Output.ExtendedValues]("Status", _.output.status)
 
+    private val invalidateCol = new Column[Output.ExtendedValues]("Invalidate", _ => "Invalidate", invalidateUrl)
+
+    private val deleteCol = new Column[Output.ExtendedValues]("Delete", _ => "Delete", deleteUrl)
+
     private val procedureCol = new Column[Output.ExtendedValues]("Procedure", _.procedure.name)
 
     private val machineCol = new Column[Output.ExtendedValues]("Machine", _.machine.id)
 
-    val colList = Seq(startTimeCol, summaryFileCol, inputFileCol, procedureCol, machineCol, institutionCol, userCol, statusCol)
+    val colList = Seq(startTimeCol, summaryFileCol, inputFileCol, procedureCol, machineCol, institutionCol, userCol, statusCol, invalidateCol, deleteCol)
 }
 
 class OutputList extends GenericList[Output.ExtendedValues]("Output", OutputList.colList) with WebUtil.SubUrlView {
 
     val entriesPerPage = 30
-    
+
     override def getData = Output.extendedList(None, None, entriesPerPage)
 
     override def getPK(extendedValues: Output.ExtendedValues): Long = extendedValues.output.outputPK.get
 
     override val canCreate: Boolean = false
+
+    /** Set the dataValidity column to invalid. */
+    private def invalidateOutput(outputPK: Long): Unit = {
+        val output = Output.get(outputPK).get
+
+        val updatedOutput = new Output(
+            outputPK = output.outputPK,
+            inputPK = output.inputPK,
+            directory = output.directory,
+            procedurePK = output.procedurePK,
+            userPK = output.userPK,
+            startDate = output.startDate,
+            finishDate = output.finishDate,
+            status = output.status,
+            dataValidity = DataValidity.invalid.toString)
+
+        updatedOutput.insertOrUpdate
+
+    }
+
+    /** Remove the output, the other associated outputs, and the directory. If its input is only referenced by this output, then delete the input too. */
+    private def deleteOutput(outputPK: Long): Unit = {
+
+        val output = Output.get(outputPK)
+        if (output.isDefined) {
+            Output.deleteOutputAndReferences(outputPK)
+            val list = Output.listByInputPK(output.get.inputPK)
+            println("list.size: " + list.size)   // TODO rm
+            list.map(o => println(o))             // TODO rm
+            if (list.size == 0) {
+                val input = Input.get(output.get.inputPK)
+                Input.delete(input.get.inputPK.get)
+                Utility.deleteFileTree(input.get.dir)
+            }
+            else Utility.deleteFileTree(output.get.dir)
+        }
+    }
+
+    override def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Unit = {
+        try {
+            val invalidate = valueMap.get(DataValidity.invalid.toString)
+            val delete = valueMap.get(OutputList.deleteTag)
+
+            0 match {
+                case _ if (invalidate.isDefined) => invalidateOutput(invalidate.get.toLong)
+                case _ if (delete.isDefined) => deleteOutput(delete.get.toLong)
+                case _ => ;
+            }
+        }
+        catch {
+            case t: Throwable => internalFailure(response, "Unexpected error in OutputList: " + t.toString)
+        }
+    }
+
 }
