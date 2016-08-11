@@ -57,7 +57,7 @@ class MaxLeafGap_1(procedure: Procedure) extends WebRunProcedure(procedure) {
         }
     }
 
-    private val maxHistory = 10
+    private val maxHistory = -1
     private val historyFileName = "history.txt"
     
     private def writeHistory(machinePK: Long, dir: File) = {

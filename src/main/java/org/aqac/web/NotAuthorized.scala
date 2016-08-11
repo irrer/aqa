@@ -44,10 +44,10 @@ class NotAuthorized extends Restlet with SubUrlRoot {
     private val form = new WebForm(pathOf, List(List(message), List(homeButton)))
 
     private def emptyForm(response: Response) = {
-        form.setFormResponse(Map[String, String](), styleNone, pageTitle, response, Status.SUCCESS_OK)
+        form.setFormResponse(emptyValueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
     }
 
-    private def buttonIs(valueMap: Map[String, String], button: FormButton): Boolean = {
+    private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
         val value = valueMap.get(button.label)
         value.isDefined && value.get.toString.equals(button.label)
     }

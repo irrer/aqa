@@ -72,7 +72,10 @@ object CentralAxis {
             centralAxis <- CentralAxis.query if (centralAxis.outputPK === output.outputPK)
         } yield (input.dataDate, centralAxis.maxLeafGap)
 
-        val sorted = search.sortBy(_._1.desc.reverse).take(maxSize)
+        val sorted = {
+            if (maxSize > 0) search.sortBy(_._1.desc.reverse).take(maxSize)
+            else search.sortBy(_._1.desc.reverse)
+        }
 
         val list = Db.run(sorted.result)
         list.map(tv => println(tv._1, tv._2))

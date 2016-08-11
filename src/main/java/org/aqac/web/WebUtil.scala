@@ -214,7 +214,7 @@ object WebUtil {
                         <div class="row">
                             <div class="col-md-2 col-md-offset-9">
                                 <h1 class="fill">
-                                    <a href="/"><img src="/static/images/AQAC_logo.png" width="128"/></a>
+                                    <a href="/"><img src="/static/images/logo.png" width="128"/></a>
                                 </h1>
                             </div>
                         </div>

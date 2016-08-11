@@ -17,9 +17,9 @@ object MachineList {
 
     private val idCol = new Column[MMI]("Name", _._1.id)
 
-    private val typeCol = new Column[MMI]("URL", _._2.toName, machineTypeHTML)
+    private val typeCol = new Column[MMI]("Machine Type", _._2.toName, machineTypeHTML)
 
-    private val institutionCol = new Column[MMI]("URL", _._3.name)
+    private val institutionCol = new Column[MMI]("Institution", _._3.name)
 
     private val notesCol = new Column[MMI]("Notes", _._1.notes, notesHTML)
 

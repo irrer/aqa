@@ -60,7 +60,7 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
     /**
      * Return true if the name is empty.
      */
-    private def emptyName(valueMap: Map[String, String], pageTitle: String, response: Response): Boolean = {
+    private def emptyName(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
         val nameText = valueMap.get(name.label).get.trim
         val isEmpty = nameText.trim.size == 0
         if (isEmpty) {
@@ -70,7 +70,7 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
         isEmpty
     }
 
-    private def alreadyExists(valueMap: Map[String, String], response: Response): Boolean = {
+    private def alreadyExists(valueMap: ValueMapT, response: Response): Boolean = {
         val nameText = valueMap.get(name.label)
         if (nameText.isDefined && Institution.getInstitutionByName(nameText.get).isDefined) {
             val errMap = Error.make(name, "Institution already exists")
@@ -88,7 +88,7 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
     /**
      * Save changes made to form.
      */
-    private def save(valueMap: Map[String, String], response: Response): Unit = {
+    private def save(valueMap: ValueMapT, response: Response): Unit = {
         if (emptyName(valueMap, pageTitleEdit, response)) {
             val errMap = Error.make(name, "Instituton name is required")
             formEdit.setFormResponse(valueMap, errMap, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
@@ -102,7 +102,7 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
     /**
      * Create a new institution
      */
-    private def createInstitutionFromParameters(valueMap: Map[String, String]): Institution = {
+    private def createInstitutionFromParameters(valueMap: ValueMapT): Institution = {
         val institutionPK: Option[Long] = {
             val e = valueMap.get(InstitutionUpdate.institutionPKTag)
             if (e.isDefined) Some(e.get.toLong) else None
@@ -115,10 +115,10 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
     }
 
     private def emptyForm(response: Response) = {
-        formCreate.setFormResponse(Map[String, String](), Map[String, Style](), pageTitleCreate, response, Status.SUCCESS_OK)
+        formCreate.setFormResponse(emptyValueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
     }
 
-    private def createRequestIsValid(valueMap: Map[String, String], response: Response): Boolean = {
+    private def createRequestIsValid(valueMap: ValueMapT, response: Response): Boolean = {
         0 match {
             case _ if (emptyName(valueMap, pageTitleCreate, response)) => false
             case _ if (alreadyExists(valueMap, response)) => false
@@ -126,7 +126,7 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
         }
     }
 
-    private def create(valueMap: Map[String, String], response: Response) = {
+    private def create(valueMap: ValueMapT, response: Response) = {
         if (createRequestIsValid(valueMap, response)) {
             val inst = createInstitutionFromParameters(valueMap)
             inst.insert
@@ -141,7 +141,7 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
         formEdit.setFormResponse(valueMap, err, pageTitleEdit, response, Status.SUCCESS_OK)
     }
 
-    private def getReference(valueMap: Map[String, String]): Option[Institution] = {
+    private def getReference(valueMap: ValueMapT): Option[Institution] = {
         val value = valueMap.get(InstitutionUpdate.institutionPKTag)
         try {
             if (value.isDefined) {
@@ -160,7 +160,7 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
         }
     }
 
-    private def deleteErr(valueMap: Map[String, String]): Map[String, Style] = {
+    private def deleteErr(valueMap: ValueMapT): StyleMapT = {
         val value = valueMap.get(institutionPK.label)
         if (value.isDefined) {
             val instPK = value.get.toLong
@@ -171,7 +171,7 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
         else styleNone
     }
 
-    private def delete(valueMap: Map[String, String], response: Response): Unit = {
+    private def delete(valueMap: ValueMapT, response: Response): Unit = {
         val err = deleteErr(valueMap)
 
         val value = valueMap.get(InstitutionUpdate.institutionPKTag)
@@ -190,7 +190,7 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
         else InstitutionList.redirect(response)
     }
 
-    private def buttonIs(valueMap: Map[String, String], button: FormButton): Boolean = {
+    private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
         val value = valueMap.get(button.label)
         value.isDefined && value.get.toString.equals(button.label)
     }
@@ -198,7 +198,7 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
     /**
      * Determine if the incoming request is to edit an existing institution.
      */
-    private def isEdit(valueMap: Map[String, String], response: Response): Boolean = {
+    private def isEdit(valueMap: ValueMapT, response: Response): Boolean = {
         val inst = getReference(valueMap)
         val value = valueMap.get(InstitutionUpdate.institutionPKTag)
         if (inst.isDefined) {

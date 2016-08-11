@@ -57,7 +57,7 @@ class WinstonLutz_1(procedure: Procedure) extends WebRunProcedure(procedure) {
         form.setFormResponse(defaultValueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
     }
 
-    private def validateTongueAndGroove(valueMap: Map[String, String], input: IsInput): Map[String, Style] = {
+    private def validateTongueAndGroove(valueMap: ValueMapT, input: IsInput): StyleMapT = {
         val err = Error.make(input, "Must be a valid floating point number from -" + maxTongueAndGrooveOffset + " to " + maxTongueAndGrooveOffset)
         try {
             val tg = input.getValOrEmpty(valueMap).toFloat
@@ -69,7 +69,7 @@ class WinstonLutz_1(procedure: Procedure) extends WebRunProcedure(procedure) {
         }
     }
 
-    private def validateFiles(valueMap: Map[String, String]): Map[String, Style] = {
+    private def validateFiles(valueMap: ValueMapT): StyleMapT = {
         val dir = sessionDir(valueMap)
         0 match {
             case _ if (!dir.isDirectory) => Error.make(form.uploadFileInput.get, "No files have been uploaded (no directory)") // TODO
@@ -78,13 +78,13 @@ class WinstonLutz_1(procedure: Procedure) extends WebRunProcedure(procedure) {
         }
     }
 
-    private def validate(valueMap: Map[String, String]): Map[String, Style] = {
+    private def validate(valueMap: ValueMapT): StyleMapT = {
         validateFiles(valueMap) ++
             validateTongueAndGroove(valueMap, tongueAndGrooveX) ++
             validateTongueAndGroove(valueMap, tongueAndGrooveY)
     }
 
-    private def makeParameterFile(valueMap: Map[String, String]): Unit = {
+    private def makeParameterFile(valueMap: ValueMapT): Unit = {
 
         val xml = {
             <WinstonLutzParameters>
@@ -101,7 +101,7 @@ class WinstonLutz_1(procedure: Procedure) extends WebRunProcedure(procedure) {
     /**
      * Run the procedure.
      */
-    private def run(valueMap: Map[String, String], request: Request, response: Response) = {
+    private def run(valueMap: ValueMapT, request: Request, response: Response) = {
         val errMap = validate(valueMap)
         if (errMap.isEmpty) {
             makeParameterFile(valueMap)
@@ -114,7 +114,7 @@ class WinstonLutz_1(procedure: Procedure) extends WebRunProcedure(procedure) {
             form.setFormResponse(valueMap, errMap, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
     }
 
-    private def buttonIs(valueMap: Map[String, String], button: FormButton): Boolean = {
+    private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
         val value = valueMap.get(button.label)
         value.isDefined && value.get.toString.equals(button.label)
     }

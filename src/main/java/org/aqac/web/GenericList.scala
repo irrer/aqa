@@ -88,12 +88,12 @@ abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]
      * Get the column on which to sort.  If there is no column specified or
      * the column is invalid, then sort on column 0.
      */
-    private def getSortColumn(valueMap: Map[String, String]): Int = {
+    private def getSortColumn(valueMap: ValueMapT): Int = {
         val sortText = valueMap.get("sort")
         if ((!sortText.isEmpty) && (sortText.get.toInt >= 0) && (sortText.get.toInt < columnList.size)) sortText.get.toInt else 0
     }
 
-    private def sortedData(valueMap: Map[String, String]): Seq[VL] = {
+    private def sortedData(valueMap: ValueMapT): Seq[VL] = {
         val data = getData
 
         val column = getSortColumn(valueMap)
@@ -132,7 +132,7 @@ abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]
         </div>;
     }
 
-    protected def get(valueMap: Map[String, String], response: Response) = {
+    protected def get(valueMap: ValueMapT, response: Response) = {
         val text = wrapBody(makeForm(valueMap), pageTitle)
         setResponse(text, response, Status.SUCCESS_OK)
     }

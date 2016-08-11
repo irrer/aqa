@@ -79,7 +79,7 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
         isEmpty
     }
 
-    private def alreadyExists(valueMap: Map[String, String], pageTitle: String, response: Response): Boolean = {
+    private def alreadyExists(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
         val ae = machineTypeLookup(valueMap).isDefined
         if (ae) {
             val err = Error.make(model, "Machine type already exists")
@@ -92,11 +92,11 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
         MachineType.query.insertOrUpdate(inst)
     }
 
-    private def machineTypeLookup(valueMap: Map[String, String]): Option[MachineType] = {
+    private def machineTypeLookup(valueMap: ValueMapT): Option[MachineType] = {
         MachineType.get(manufacturer.getValOrEmpty(valueMap).trim, model.getValOrEmpty(valueMap).trim, version.getValOrEmpty(valueMap).trim)
     }
 
-    private def okToSaveAs(valueMap: Map[String, String], pageTitle: String, response: Response): Boolean = {
+    private def okToSaveAs(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
         val mt = machineTypeLookup(valueMap)
         if (mt.isDefined && (mt.get.machineTypePK.get != valueMap.get(MachineTypeUpdate.machineTypePKTag).get.toInt)) {
             val err = Error.make(model, "Machine type already exists")
@@ -106,7 +106,7 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
         else true
     }
 
-    private def okToSave(valueMap: Map[String, String], pageTitle: String, response: Response): Boolean = {
+    private def okToSave(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
         0 match {
             case _ if !fieldsAreValid(valueMap, pageTitleEdit, response) => false
             case _ if !okToSaveAs(valueMap, pageTitleEdit, response) => false
@@ -117,7 +117,7 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
     /**
      * Save changes made to form.
      */
-    private def save(valueMap: Map[String, String], pageTitle: String, response: Response): Unit = {
+    private def save(valueMap: ValueMapT, pageTitle: String, response: Response): Unit = {
         if (okToSave(valueMap, pageTitle, response)) {
             (createMachineTypeFromParameters(valueMap)).insertOrUpdate
             MachineTypeList.redirect(response)
@@ -127,7 +127,7 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
     /**
      * Create a new machineType
      */
-    private def createMachineTypeFromParameters(valueMap: Map[String, String]): MachineType = {
+    private def createMachineTypeFromParameters(valueMap: ValueMapT): MachineType = {
         val machineTypePK: Option[Long] = {
             val e = valueMap.get(MachineTypeUpdate.machineTypePKTag)
             if (e.isDefined) Some(e.get.toLong) else None
@@ -141,10 +141,10 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
     }
 
     private def emptyForm(response: Response) = {
-        formCreate.setFormResponse(Map[String, String](), styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
+        formCreate.setFormResponse(emptyValueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
     }
 
-    private def fieldsAreValid(valueMap: Map[String, String], pageTitle: String, response: Response): Boolean = {
+    private def fieldsAreValid(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
         0 match {
             case _ if emptyManufacturer(valueMap, pageTitle, response) => false
             case _ if emptyModel(valueMap, pageTitle, response) => false
@@ -152,7 +152,7 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
         }
     }
 
-    private def createRequestIsValid(valueMap: Map[String, String], response: Response): Boolean = {
+    private def createRequestIsValid(valueMap: ValueMapT, response: Response): Boolean = {
         0 match {
             case _ if !fieldsAreValid(valueMap, pageTitleCreate, response) => false
             case _ if (alreadyExists(valueMap, pageTitleCreate, response)) => false
@@ -160,7 +160,7 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
         }
     }
 
-    private def create(valueMap: Map[String, String], response: Response) = {
+    private def create(valueMap: ValueMapT, response: Response) = {
         if (createRequestIsValid(valueMap, response)) {
             val inst = createMachineTypeFromParameters(valueMap)
             inst.insert
@@ -173,7 +173,7 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
         formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
     }
 
-    private def getReference(valueMap: Map[String, String]): Option[MachineType] = {
+    private def getReference(valueMap: ValueMapT): Option[MachineType] = {
         val value = valueMap.get(MachineTypeUpdate.machineTypePKTag)
         try {
             if (value.isDefined) {
@@ -192,7 +192,7 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
         }
     }
 
-    private def isDelete(valueMap: Map[String, String], response: Response): Boolean = {
+    private def isDelete(valueMap: ValueMapT, response: Response): Boolean = {
         if (buttonIs(valueMap, deleteButton)) {
             val value = valueMap.get(MachineTypeUpdate.machineTypePKTag)
             if (value.isDefined) {
@@ -208,7 +208,7 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
 
     }
 
-    private def buttonIs(valueMap: Map[String, String], button: FormButton): Boolean = {
+    private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
         val value = valueMap.get(button.label)
         value.isDefined && value.get.toString.equals(button.label)
     }
@@ -216,7 +216,7 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
     /**
      * Determine if the incoming request is to edit an existing machineType.
      */
-    private def isEdit(valueMap: Map[String, String], response: Response): Boolean = {
+    private def isEdit(valueMap: ValueMapT, response: Response): Boolean = {
         val inst = getReference(valueMap)
         val value = valueMap.get(MachineTypeUpdate.machineTypePKTag)
         if (inst.isDefined) {

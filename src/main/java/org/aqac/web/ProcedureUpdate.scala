@@ -55,7 +55,7 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
     private val notes = new WebInputTextArea("Notes", 6, 0, "")
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
-        new FormButton(name, 1, 0,  subUrl, pathOf, buttonType)
+        new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
     }
 
     private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
@@ -75,7 +75,7 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
 
     private val formEdit = new WebForm(pathOf, fieldList ++ editButtonList)
 
-    private def redirect(response: Response, valueMap: Map[String, String]) = {
+    private def redirect(response: Response, valueMap: ValueMapT) = {
         val pk = procedurePK.getValOrEmpty(valueMap)
         val suffix =
             if (pk.size > 0) { "?" + procedurePK.label + "=" + pk }
@@ -84,19 +84,19 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
         response.redirectSeeOther(pathOf + suffix)
     }
 
-    private def emptyName(valueMap: Map[String, String]): Map[String, Style] = {
+    private def emptyName(valueMap: ValueMapT): StyleMapT = {
         val nameText = valueMap.get(name.label).get.trim
         val isEmpty = nameText.trim.size == 0
         if (isEmpty) Error.make(name, "Name can not be empty")
         else styleNone
     }
 
-    private def validateVersion(valueMap: Map[String, String]): Map[String, Style] = {
+    private def validateVersion(valueMap: ValueMapT): StyleMapT = {
         val versionText = valueMap.get(version.label).get.trim
         if (versionText.size == 0) Error.make(version, "Version can not be empty") else styleNone
     }
 
-    private def validateUniqueness(valueMap: Map[String, String]): Map[String, Style] = {
+    private def validateUniqueness(valueMap: ValueMapT): StyleMapT = {
         val pk: Long = {
             val text = valueMap.get(procedurePK.label)
             if (text.isDefined) text.get.toLong
@@ -104,16 +104,16 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
         }
         val nameText = valueMap.get(name.label).get.trim
         val versionText = valueMap.get(version.label).get.trim
-        
+
         val existingList = Procedure.list.filter(p => p.name.equalsIgnoreCase(nameText) && (p.version.equalsIgnoreCase(versionText)) && (p.procedurePK.get != pk))
-        
+
         if (existingList.isEmpty)
             styleNone
         else
             Error.make(name, "There is already a procedure with that name and version of " + nameText + " " + versionText)
     }
 
-    private def validateTimeout(valueMap: Map[String, String]): Map[String, Style] = { // TODO  Should be in nicely formatted time HH:MM:SS.sss
+    private def validateTimeout(valueMap: ValueMapT): StyleMapT = { // TODO  Should be in nicely formatted time HH:MM:SS.sss
         val timeoutText = valueMap.get(timeout.label).get.trim
         val valOf: Option[Float] = {
             try {
@@ -132,14 +132,10 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
         }
     }
 
-    private def updateProcedure(procedure: Procedure): Unit = {
-        Procedure.query.insertOrUpdate(procedure)
-    }
-
     /**
      * Save changes made to form.
      */
-    private def save(valueMap: Map[String, String], response: Response): Unit = {
+    private def save(valueMap: ValueMapT, response: Response): Unit = {
         val errMap = emptyName(valueMap) ++ validateVersion(valueMap) ++ validateUniqueness(valueMap)
         if (errMap.isEmpty) {
             (createProcedureFromParameters(valueMap)).insertOrUpdate
@@ -153,7 +149,7 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
     /**
      * Create a new procedure
      */
-    private def createProcedureFromParameters(valueMap: Map[String, String]): Procedure = {
+    private def createProcedureFromParameters(valueMap: ValueMapT): Procedure = {
         val procedurePK: Option[Long] = {
             val e = valueMap.get(ProcedureUpdate.procedurePKTag)
             if (e.isDefined) Some(e.get.toLong) else None
@@ -173,14 +169,14 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
      * Show this when procedure asks to create a new procedure from procedure list.
      */
     private def emptyForm(response: Response) = {
-        formCreate.setFormResponse(Map[String, String](), styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
+        formCreate.setFormResponse(emptyValueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
     }
 
     /**
      * Call this when procedure has clicked create button.  If everything is ok, then create the new procedure,
      * otherwise show the same screen and communicate the error.
      */
-    private def create(valueMap: Map[String, String], response: Response) = {
+    private def create(valueMap: ValueMapT, response: Response) = {
         val errMap = emptyName(valueMap) ++ validateVersion(valueMap) ++ validateTimeout(valueMap) ++ validateUniqueness(valueMap)
 
         if (errMap.isEmpty) {
@@ -193,13 +189,13 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
         }
     }
 
-    private def edit(valueMap: Map[String, String], response: Response) = {
+    private def edit(valueMap: ValueMapT, response: Response) = {
 
         val procOpt = getReference(valueMap)
 
         if (procOpt.isDefined) {
             val procedure = procOpt.get
-            val valueMap: Map[String, String] = Map(
+            val valueMap: ValueMapT = Map(
                 (procedurePK.label, procedure.procedurePK.get.toString),
                 (name.label, procedure.name),
                 (version.label, procedure.version),
@@ -212,7 +208,7 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
         else emptyForm(response)
     }
 
-    private def getReference(valueMap: Map[String, String]): Option[Procedure] = {
+    private def getReference(valueMap: ValueMapT): Option[Procedure] = {
         val value = valueMap.get(ProcedureUpdate.procedurePKTag)
         try {
             if (value.isDefined) {
@@ -227,7 +223,7 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
         }
     }
 
-    private def delete(valueMap: Map[String, String], response: Response): Unit = {
+    private def delete(valueMap: ValueMapT, response: Response): Unit = {
         val value = valueMap.get(ProcedureUpdate.procedurePKTag)
         if (value.isDefined) {
             Procedure.delete(value.get.toLong)
@@ -235,7 +231,7 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
         }
     }
 
-    private def buttonIs(valueMap: Map[String, String], button: FormButton): Boolean = {
+    private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
         val value = valueMap.get(button.label)
         value.isDefined && value.get.toString.equals(button.label)
     }
@@ -243,7 +239,7 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
     /**
      * Determine if the incoming request is to edit an existing procedure.
      */
-    private def isEdit(valueMap: Map[String, String]): Boolean = valueMap.get(procedurePK.label).isDefined
+    private def isEdit(valueMap: ValueMapT): Boolean = valueMap.get(procedurePK.label).isDefined
 
     override def handle(request: Request, response: Response): Unit = {
         super.handle(request, response)

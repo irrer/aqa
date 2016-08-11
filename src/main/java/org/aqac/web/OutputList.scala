@@ -60,6 +60,11 @@ object OutputList {
 
     private def startTime(extendedValues: Output.ExtendedValues): String = startTimeFormat.format(extendedValues.output.startDate)
 
+    private def inputTime(extendedValues: Output.ExtendedValues): String = {
+        val date = extendedValues.input.dataDate
+        if (date.isDefined) startTimeFormat.format(date.get) else "unknown date"
+    }
+
     private def getUrl(outputPK: Long, summary: Boolean): String = {
         val sum = if (summary) ("&" + ViewOutput.summaryTag + "=true") else ""
         val url = ViewOutput.path + "?" + ViewOutput.outputPKTag + "=" + outputPK + sum
@@ -76,7 +81,7 @@ object OutputList {
     }
 
     private def inputFileUrl(extendedValues: Output.ExtendedValues): Elem = {
-        <td><a href={ WebServer.urlOfDataPath(extendedValues.input.directory.get) }>Input</a></td>
+        <td><a href={ WebServer.urlOfDataPath(extendedValues.input.directory.get) }>{ inputTime(extendedValues) }</a></td>
     }
 
     private def invalidateRowName(extendedValues: Output.ExtendedValues): String = extendedValues.output.dataValidity.toString
@@ -97,7 +102,7 @@ object OutputList {
 
     private val summaryFileCol = new Column[Output.ExtendedValues]("Summary", _.output.directory, summaryFileUrl)
 
-    private val inputFileCol = new Column[Output.ExtendedValues]("Input", _ => "Input", inputFileUrl)
+    private val inputFileCol = new Column[Output.ExtendedValues]("Input", inputTime, inputFileUrl)
 
     private val statusCol = new Column[Output.ExtendedValues]("Status", _.output.status)
 
