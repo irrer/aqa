@@ -499,7 +499,7 @@ object WebUtil {
     }
 
     trait SubUrlTrait {
-        val subUrl: SubUrl.Value
+        def subUrl: SubUrl.Value
 
         def url(name: String): String = SubUrl.url(subUrl, name)
 
@@ -509,19 +509,19 @@ object WebUtil {
     }
 
     trait SubUrlRoot extends SubUrlTrait {
-        override val subUrl = SubUrl.root
+        override def subUrl = SubUrl.root
     }
 
     trait SubUrlAdmin extends SubUrlTrait {
-        override val subUrl = SubUrl.admin
+        override def subUrl = SubUrl.admin
     }
 
     trait SubUrlRun extends SubUrlTrait {
-        override val subUrl = SubUrl.run
+        override def subUrl = SubUrl.run
     }
 
     trait SubUrlView extends SubUrlTrait {
-        override val subUrl = SubUrl.view
+        override def subUrl = SubUrl.view
     }
 
     /**

@@ -8,7 +8,7 @@ import org.aqac.Util
 case class CentralAxis(
         centralAxisPK: Option[Long], // primary key
         outputPK: Long, // company name
-        centralAxis: Double // maximum leaf gap
+        maxLeafGap: Double // maximum leaf gap
         ) {
 
     def insert: CentralAxis = {
@@ -20,7 +20,7 @@ case class CentralAxis(
 
     def insertOrUpdate = Db.run(CentralAxis.query.insertOrUpdate(this))
 
-    override def toString: String = (centralAxis.toString).trim
+    override def toString: String = (maxLeafGap.toString).trim
 }
 
 object CentralAxis {
@@ -28,13 +28,12 @@ object CentralAxis {
 
         def centralAxisPK = column[Long]("centralAxisPK", O.PrimaryKey, O.AutoInc)
         def outputPK = column[Long]("outputPK")
-        def centralAxis = column[Double]("centralAxis")
-        def status = column[String]("status")
+        def maxLeafGap = column[Double]("maxLeafGap")
 
         def * = (
             centralAxisPK.?,
             outputPK,
-            centralAxis) <> ((CentralAxis.apply _)tupled, CentralAxis.unapply _)
+            maxLeafGap) <> ((CentralAxis.apply _)tupled, CentralAxis.unapply _)
     }
 
     val query = TableQuery[CentralAxisTable]
@@ -57,22 +56,21 @@ object CentralAxis {
         val action = q.delete
         Db.run(action)
     }
-    
+
     def deleteByOutputPK(outputPK: Long): Int = {
         val q = query.filter(_.outputPK === outputPK)
         val action = q.delete
         Db.run(action)
     }
-    
-    
 
     def getHistory(machinePK: Long, maxSize: Int): Seq[Double] = {
+        val valid = DataValidity.valid.toString
         val search = for {
             machine <- Machine.query if machine.machinePK === machinePK
             input <- Input.query if input.machinePK === machinePK
-            output <- Output.query if (output.inputPK === input.inputPK) && (output.dataValidity === DataValidity.valid.toString)
+            output <- Output.query if (output.inputPK === input.inputPK) //&& (output.dataValidity === valid)    TODO can we and?
             centralAxis <- CentralAxis.query if (centralAxis.outputPK === output.outputPK)
-        } yield (input.dataDate, centralAxis.centralAxis)
+        } yield (input.dataDate, centralAxis.maxLeafGap)
 
         val sorted = search.sortBy(_._1.desc.reverse).take(maxSize)
 
