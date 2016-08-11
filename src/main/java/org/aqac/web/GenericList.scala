@@ -32,8 +32,6 @@ abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]
 
     val pageTitle = "List " + listName + "s"
 
-    println("GenericList subUrl: " + subUrl) // TODO rm
-
     def updatePath = SubUrl.url(subUrl, listName + "Update")
     def listPath = SubUrl.url(subUrl, listName + "List")
 
