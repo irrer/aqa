@@ -30,13 +30,25 @@ case class Procedure(
         result
     }
 
-    def insertOrUpdate = Db.run(Procedure.query.insertOrUpdate(this))
+    def insertOrUpdate = {
+        // if the procedure already exists, and the execution directory is being
+        // changed (via a name or version change) then rename the execution directory on disk.
+        if (procedurePK.isDefined) {
+            val current = Procedure.get(procedurePK.get)
+            if (current.isDefined) {
+                if (current.get.execDir.getAbsolutePath != execDir.getAbsolutePath) {
+                    current.get.execDir.renameTo(execDir)
+                }
+            }
+        }
+        Db.run(Procedure.query.insertOrUpdate(this))
+    }
 
     def fullName = Procedure.fullName(name, version)
 
     def fileName = Procedure.fileName(name, version)
 
-    def webUrl = "/run/" + webInterface + "_" + procedurePK.get 
+    def webUrl = "/run/" + webInterface + "_" + procedurePK.get
 
     def timeoutInMs = (timeout * (60 * 1000)).round.toLong
 
@@ -78,7 +90,7 @@ object Procedure {
         val fn = fullName(name, version)
         FileUtil.replaceInvalidFileNameCharacters(fn.trim.replace(' ', chr), chr)
     }
-    
+
     //def webURL(name: String, version: String): String = fileName(name, version)     TODO remove
 
     def list: Seq[Procedure] = {
@@ -106,6 +118,18 @@ object Procedure {
     def delete(procedurePK: Long): Int = {
         val action = query.filter(_.procedurePK === procedurePK).delete
         Db.run(action)
+    }
+
+    def main(args: Array[String]): Unit = {
+        println("Starting Procedure.main")
+        val valid = Config.validate
+        DbSetup.init
+
+        def show(p: Procedure) = {
+            println(p.fullName + " : " + p.execDir.getAbsolutePath + " isDirectory: " + p.execDir.isDirectory)
+        }
+
+        list.map(p => show(p))
     }
 
 }
