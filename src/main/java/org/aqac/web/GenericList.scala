@@ -28,9 +28,11 @@ class Column[VL](val columnName: String, val getValue: (VL) => Comparable[_ <: A
     def this(columnName: String, getValue: (VL) => Comparable[_ <: Any]) = this(columnName, getValue, null)
 }
 
-abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]) extends Restlet with SubUrl {
+abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]) extends Restlet with SubUrlTrait {
 
     val pageTitle = "List " + listName + "s"
+
+    println("GenericList subUrl: " + subUrl) // TODO rm
 
     def updatePath = SubUrl.url(subUrl, listName + "Update")
     def listPath = SubUrl.url(subUrl, listName + "List")
@@ -46,12 +48,14 @@ abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]
     /**
      * Get the primary key used to direct the user to the corresponding update page.
      */
-    def getPK(value: VL): Long; // must be overridden 
+    protected def getPK(value: VL): Long; // must be overridden 
 
     /**
      * Retrieve data, usually from the database.
      */
-    def getData: Seq[VL]; // must be overridden 
+    protected def getData: Seq[VL]; // must be overridden
+
+    // protected SubUrl: SubUrl
 
     def columnToHeader(index: Int, column: Column[VL]): Elem = {
         <th class={ "col" + index + " header" }>
@@ -74,8 +78,10 @@ abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]
     private def makeRow(value: VL): Elem = {
         <tr>
             { if (columnList.head.makeHTML == null) formatValueWithLink(value, columnList(0)) else columnList.head.makeHTML(value) }
-            { columnList.tail.map(col => {
-                if (col.makeHTML == null) <td>{ col.getValue(value).toString }</td> else col.makeHTML(value)}) 
+            {
+                columnList.tail.map(col => {
+                    if (col.makeHTML == null) <td>{ col.getValue(value).toString }</td> else col.makeHTML(value)
+                })
             }
         </tr>
     }
@@ -132,7 +138,7 @@ abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]
         val text = wrapBody(makeForm(valueMap), pageTitle)
         setResponse(text, response, Status.SUCCESS_OK)
     }
-    
+
     protected def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Unit = {
         println("hey") // TODO rm
     }

@@ -191,7 +191,7 @@ class WebServer extends Application {
         attach(router, WebServer.dataDirBaseUrl, dataDir)
         attach(router, WebServer.tmpDirBaseUrl, tmpDir)
 
-        val restletList: Seq[Restlet with WebUtil.SubUrl] = Seq(
+        val restletList: Seq[Restlet with WebUtil.SubUrlTrait] = Seq(
             new MachineUpdate,
             new InstitutionUpdate,
             new InstitutionList,
