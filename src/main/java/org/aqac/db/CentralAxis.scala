@@ -70,7 +70,7 @@ object CentralAxis {
         val search = for {
             machine <- Machine.query if machine.machinePK === machinePK
             input <- Input.query if input.machinePK === machinePK
-            output <- Output.query if output.inputPK === input.inputPK
+            output <- Output.query if (output.inputPK === input.inputPK) && (output.dataValidity === DataValidity.valid.toString)
             centralAxis <- CentralAxis.query if (centralAxis.outputPK === output.outputPK)
         } yield (input.dataDate, centralAxis.centralAxis)
 
