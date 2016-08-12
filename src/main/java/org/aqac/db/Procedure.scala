@@ -27,6 +27,7 @@ case class Procedure(
         val insertQuery = Procedure.query returning Procedure.query.map(_.procedurePK) into ((procedure, procedurePK) => procedure.copy(procedurePK = Some(procedurePK)))
         val action = insertQuery += this
         val result = Db.run(action)
+        execDir.mkdirs
         result
     }
 
