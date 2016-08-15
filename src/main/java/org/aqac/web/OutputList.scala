@@ -84,7 +84,6 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     }
 
     private def startTimeUrl(extendedValues: Output.ExtendedValues): Elem = {
-        println("calling startTimeUrl") // TODO rm
         <a href={ getUrl(extendedValues.output.outputPK.get, false) }> { startTimeFormat.format(extendedValues.output.startDate) }</a>
     }
 
