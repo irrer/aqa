@@ -28,5 +28,4 @@ class MachineTypeList extends GenericList[MachineType] with WebUtil.SubUrlAdmin 
     private val notesCol = new Column[MachineType]("Notes", _.notes, notesHTML)
 
     override val columnList = Seq(manufacturerCol, modelCol, versionCol, notesCol)
-
 }
