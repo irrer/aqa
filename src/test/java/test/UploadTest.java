@@ -94,7 +94,7 @@ public class UploadTest extends Application {
                         sb.append(fi.getName()).append("\n");
                         if (System.out != null) {
                             InputStream inStr = fi.openStream();
-                            File outFile = new File("D:\\tmp\\aqac\\outFile");
+                            File outFile = new File("D:\\tmp\\aqa\\outFile");
                             outFile.createNewFile();
                             outFile.delete();
                             byte[] buf = new byte[62 * 1024];
