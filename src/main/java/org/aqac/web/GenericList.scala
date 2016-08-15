@@ -24,13 +24,26 @@ import scala.concurrent.Await
 import org.aqac.db.Institution
 import org.aqac.db.User
 
-class Column[VL](val columnName: String, val getValue: (VL) => Comparable[_ <: Any], val makeHTML: (VL) => Elem) {
-    def this(columnName: String, getValue: (VL) => Comparable[_ <: Any]) = this(columnName, getValue, null)
+case class Column[VL](columnName: String, compare: (VL, VL) => Boolean, makeHTML: (VL) => Elem) {
+
+    def this(columnName: String, getValue: (VL) => String) =
+        this(columnName,
+            (a: VL, b: VL) => { getValue(a).compareTo(getValue(b)) < 0 },
+            (a: VL) => <div>{ getValue(a) }</div>)
+
+    def this(columnName: String, getValue: (VL) => String, makeHTML: (VL) => Elem) =
+        this(columnName,
+            (a: VL, b: VL) => { getValue(a).compareTo(getValue(b)) < 0 },
+            makeHTML)
 }
 
-abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]) extends Restlet with SubUrlTrait {
+abstract class GenericList[VL] extends Restlet with SubUrlTrait {
 
-    val pageTitle = "List " + listName + "s"
+    protected def listName: String;
+
+    protected val columnList: Seq[Column[VL]];
+
+    def pageTitle = "List " + listName + "s"
 
     def updatePath = SubUrl.url(subUrl, listName + "Update")
     def listPath = SubUrl.url(subUrl, listName + "List")
@@ -53,8 +66,6 @@ abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]
      */
     protected def getData: Seq[VL]; // must be overridden
 
-    // protected SubUrl: SubUrl
-
     def columnToHeader(index: Int, column: Column[VL]): Elem = {
         <th class={ "col" + index + " header" }>
             <a href={ listPath + "?sort=" + index }>{ column.columnName }</a>
@@ -69,18 +80,17 @@ abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]
         </thead>
     }
 
-    protected def formatValueWithLink(value: VL, column: Column[VL]): Elem = {
-        <td><a href={ updatePath + "?" + getPKName + "=" + getPK(value) }>{ column.getValue(value) }</a></td>
+    protected def makePrimaryKeyHtml(name: String, pk: String): Elem = {
+        <a href={ updatePath + "?" + getPKName + "=" + pk }>{ name }</a>
     }
+
+    protected def makePrimaryKeyHtml(name: String, pk: Option[Long]): Elem = makePrimaryKeyHtml(name, pk.get.toString)
+
+    private def td(elem: Elem): Elem = { <td>{ elem }</td> }
 
     private def makeRow(value: VL): Elem = {
         <tr>
-            { if (columnList.head.makeHTML == null) formatValueWithLink(value, columnList(0)) else columnList.head.makeHTML(value) }
-            {
-                columnList.tail.map(col => {
-                    if (col.makeHTML == null) <td>{ col.getValue(value).toString }</td> else col.makeHTML(value)
-                })
-            }
+            { columnList.map(col => td(col.makeHTML(value))) }
         </tr>
     }
 
@@ -93,40 +103,24 @@ abstract class GenericList[VL](val listName: String, columnList: Seq[Column[VL]]
         if ((!sortText.isEmpty) && (sortText.get.toInt >= 0) && (sortText.get.toInt < columnList.size)) sortText.get.toInt else 0
     }
 
-    private def sortedData(valueMap: ValueMapT): Seq[VL] = {
-        val data = getData
-
-        val column = getSortColumn(valueMap)
-
-        def compare(rowA: VL, rowB: VL): Boolean = {
-            val a = columnList(column).getValue(rowA)
-            val b = columnList(column).getValue(rowB)
-
-            val compareValue =
-                if (a.isInstanceOf[String] && b.isInstanceOf[String])
-                    a.toString.toLowerCase.compareTo(b.toString.toLowerCase)
-                else a.asInstanceOf[Comparable[Any]].compareTo(b.asInstanceOf[Comparable[Any]])
-
-            compareValue <= 0
-        }
-
-        data.sortWith((rowA, rowB) => compare(rowA, rowB))
-    }
-
-    private val createNew: Elem = {
+    private def createNew: Elem = {
         <div class="row col-md-2 col-md-offset-10">
             <strong><a href={ updatePath }>Create new { listName }</a><p/></strong>
         </div>;
     }
 
     protected def makeForm(valueMap: ValueMapT): Elem = {
+
+        val j0 = getSortColumn(valueMap)
+        val j1 = columnList(j0)
+
         <div class="row col-md-10 col-md-offset-1">
             <h1>{ pageTitle }</h1>
             { if (canCreate) createNew }
             <table class="table table-striped">
                 <tbody>
                     { tableHead }
-                    { sortedData(valueMap).map(value => makeRow(value)) }
+                    { getData.sortWith(columnList(getSortColumn(valueMap)).compare).map(value => makeRow(value)) }
                 </tbody>
             </table>
         </div>;

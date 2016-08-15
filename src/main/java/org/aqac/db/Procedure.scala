@@ -98,9 +98,9 @@ object Procedure {
         Db.run(query.result).toList
     }
 
-    type PU = (Procedure, User)
+    case class ProcedureUser(procedure: Procedure, user: User)
 
-    def listWithDependencies: Seq[PU] = {
+    def listWithDependencies: Seq[ProcedureUser] = {
         Db.run(query.result).toList
 
         val action = for {
@@ -108,7 +108,7 @@ object Procedure {
             user <- User.query if user.userPK === procedure.supportingUserPK
         } yield (procedure, user)
         val seq = Db.run(action.result)
-        seq
+        seq.map(pu => new ProcedureUser(pu._1, pu._2))
     }
 
     def get(pk: Long): Option[Procedure] = {

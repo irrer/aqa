@@ -5,28 +5,27 @@ import scala.xml.Elem
 import org.aqac.db.Procedure
 
 object RunProcedureList {
-
     val path = WebUtil.pathOf(WebUtil.SubUrl.run, ProcedureList.getClass.getName)
 
     def redirect(response: Response) = response.redirectSeeOther(path)
-
-    type PU = Procedure.PU
-
-    private def notesHTML(pu: PU): Elem = <td> { WebUtil.firstPartOf(pu._1.notes, 60) } </td>
-
-    private val nameCol = new Column[PU]("Name", _._1.name)
-
-    private val versionCol = new Column[PU]("Version", _._1.version)
-
-    private val notesCol = new Column[PU]("Notes", _._1.notes, notesHTML)
-
-    val colList = Seq(nameCol, versionCol, notesCol)
-
 }
 
-class RunProcedureList extends GenericList[Procedure.PU]("Procedure", ProcedureList.colList) with WebUtil.SubUrlRun{
+class RunProcedureList extends GenericList[Procedure.ProcedureUser] with WebUtil.SubUrlRun {
+
+    type PU = Procedure.ProcedureUser
+    override def listName = "Procedure"
+
+    private def notesHTML(pu: PU): Elem = <div>{ WebUtil.firstPartOf(pu.procedure.notes, 60) }</div>
+
+    private val idCol = new Column[PU]("Name", _.procedure.name, (pu) => makePrimaryKeyHtml(pu.procedure.name, pu.procedure.procedurePK))
+
+    private val versionCol = new Column[PU]("Version", _.procedure.version)
+
+    private val notesCol = new Column[PU]("Notes", _.procedure.notes, notesHTML)
+
+    override val columnList = Seq(idCol, versionCol, notesCol)
 
     override def getData = Procedure.listWithDependencies
 
-    override def getPK(value: Procedure.PU): Long = value._1.procedurePK.get
+    override def getPK(value: PU): Long = value.procedure.procedurePK.get
 }

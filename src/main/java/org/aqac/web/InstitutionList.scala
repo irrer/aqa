@@ -8,6 +8,9 @@ object InstitutionList {
     val path = WebUtil.pathOf(WebUtil.SubUrl.admin, InstitutionList.getClass.getName)
 
     def redirect(response: Response) = response.redirectSeeOther(path)
+}
+
+class InstitutionList extends GenericList[Institution] with WebUtil.SubUrlAdmin {
 
     private def humanReadableURL(url: String): String = {
         val small = url.replaceAll("^https://", "").replaceAll("^http://", "").replaceAll("^www\\.", "")
@@ -17,24 +20,23 @@ object InstitutionList {
     private def urlHTML(institution: Institution): Elem = {
         val url = institution.url.trim
         if (url.size > 0)
-            <td><a href={ url } target="_blank" title={ url }>{ humanReadableURL(url) }</a></td>
-        else <td></td>
+            <a href={ url } target="_blank" title={ url }>{ humanReadableURL(url) }</a>
+        else <div></div>
     }
 
     private def descriptionHTML(institution: Institution): Elem = {
-        <td> { WebUtil.firstPartOf(institution.description, 60) } </td>
+        <div> { WebUtil.firstPartOf(institution.description, 60) } </div>
     }
 
-    private val nameCol = new Column[Institution]("Name", _.name)
+    private val idCol = new Column[Institution]("Name", _.name, (inst) => makePrimaryKeyHtml(inst.name, inst.institutionPK))
 
     private val urlCol = new Column[Institution]("URL", _.url, urlHTML)
 
     private val descriptionCol = new Column[Institution]("Description", _.description, descriptionHTML)
 
-    val colList = Seq(nameCol, urlCol, descriptionCol)
-}
+    override def listName = "Institution"
 
-class InstitutionList extends GenericList[Institution]("Institution", InstitutionList.colList) with WebUtil.SubUrlAdmin {
+    override val columnList = Seq(idCol, urlCol, descriptionCol)
 
     override def getData = Institution.list
 

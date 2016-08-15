@@ -23,6 +23,11 @@ object OutputList {
     val deleteTag = "delete"
 
     def redirect(response: Response) = response.redirectSeeOther(path)
+}
+
+class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlView {
+
+    override def listName = "Output"
 
     private def humanReadableURL(url: String): String = {
         val small = url.replaceAll("^https://", "").replaceAll("^http://", "").replaceAll("^www\\.", "")
@@ -58,7 +63,14 @@ object OutputList {
 
     private val startTimeFormat = new SimpleDateFormat("yyyy MM dd HH:mm:ss")
 
-    private def startTime(extendedValues: Output.ExtendedValues): String = startTimeFormat.format(extendedValues.output.startDate)
+    //private def startTime(extendedValues: Output.ExtendedValues): String = startTimeFormat.format(extendedValues.output.startDate)
+
+    private def compareByInputTime(a: Output.ExtendedValues, b: Output.ExtendedValues): Int = {
+        if (a.input.dataDate.isDefined && b.input.dataDate.isDefined) a.input.dataDate.get.compareTo(b.input.dataDate.get)
+        else 0
+    }
+
+    private def compareByStartTime(a: Output.ExtendedValues, b: Output.ExtendedValues): Boolean = a.output.startDate.compareTo(b.output.startDate) > 0
 
     private def inputTime(extendedValues: Output.ExtendedValues): String = {
         val date = extendedValues.input.dataDate
@@ -73,51 +85,50 @@ object OutputList {
 
     private def startTimeUrl(extendedValues: Output.ExtendedValues): Elem = {
         println("calling startTimeUrl") // TODO rm
-        <td><a href={ getUrl(extendedValues.output.outputPK.get, false) }> { startTime(extendedValues) } </a></td>
+        <a href={ getUrl(extendedValues.output.outputPK.get, false) }> { startTimeFormat.format(extendedValues.output.startDate) }</a>
     }
 
     private def summaryFileUrl(extendedValues: Output.ExtendedValues): Elem = {
-        <td><a href={ getUrl(extendedValues.output.outputPK.get, true) }>Summary</a></td>
+        <a href={ getUrl(extendedValues.output.outputPK.get, true) }>Summary</a>
     }
 
     private def inputFileUrl(extendedValues: Output.ExtendedValues): Elem = {
-        <td><a href={ WebServer.urlOfDataPath(extendedValues.input.directory.get) }>{ inputTime(extendedValues) }</a></td>
+        <a href={ WebServer.urlOfDataPath(extendedValues.input.directory.get) }>{ inputTime(extendedValues) }</a>
     }
 
     private def invalidateRowName(extendedValues: Output.ExtendedValues): String = extendedValues.output.dataValidity.toString
 
     private def invalidateUrl(extendedValues: Output.ExtendedValues): Elem = {
-        <td><a title="Click to change.  Can be undone" href={ path + "?" + OutputList.dataValidityTag + "=" + extendedValues.output.outputPK.get }>{ extendedValues.output.dataValidity.toString }</a></td>
+        <a title="Click to change.  Can be undone" href={ OutputList.path + "?" + OutputList.dataValidityTag + "=" + extendedValues.output.outputPK.get }>{ extendedValues.output.dataValidity.toString }</a>
     }
 
     private def deleteUrl(extendedValues: Output.ExtendedValues): Elem = {
-        <td><a title="Click to delete.  Can NOT be undone" href={ path + "?" + OutputList.deleteTag + "=" + extendedValues.output.outputPK.get }>Delete</a></td>
+        <a title="Click to delete.  Can NOT be undone" href={ OutputList.path + "?" + OutputList.deleteTag + "=" + extendedValues.output.outputPK.get }>Delete</a>
     }
 
-    private val institutionCol = new Column[Output.ExtendedValues]("Institution", _.institution.name)
+    type ColT = Output.ExtendedValues
 
-    private val userCol = new Column[Output.ExtendedValues]("User", _.user.id)
+    private val institutionCol = new Column[ColT]("Institution", _.institution.name)
 
-    private val startTimeCol = new Column[Output.ExtendedValues]("Start Time", startTime, startTimeUrl)
+    private val userCol = new Column[ColT]("User", _.user.id)
 
-    private val summaryFileCol = new Column[Output.ExtendedValues]("Summary", _.output.directory, summaryFileUrl)
+    private val startTimeCol = new Column[ColT]("Start Time", compareByStartTime _, startTimeUrl _)
 
-    private val inputFileCol = new Column[Output.ExtendedValues]("Input", inputTime, inputFileUrl)
+    private val summaryFileCol = new Column[ColT]("Summary", _.output.directory, summaryFileUrl)
 
-    private val statusCol = new Column[Output.ExtendedValues]("Status", _.output.status)
+    private val inputFileCol = new Column[ColT]("Input", inputTime _, inputFileUrl _)
 
-    private val invalidateCol = new Column[Output.ExtendedValues]("Valid Status", invalidateRowName, invalidateUrl)
+    private val statusCol = new Column[ColT]("Status", _.output.status)
 
-    private val deleteCol = new Column[Output.ExtendedValues]("Delete", _ => "Delete", deleteUrl)
+    private val invalidateCol = new Column[ColT]("Valid Status", invalidateRowName _, invalidateUrl _)
 
-    private val procedureCol = new Column[Output.ExtendedValues]("Procedure", _.procedure.name)
+    private val deleteCol = new Column[ColT]("Delete", _ => "Delete", deleteUrl)
 
-    private val machineCol = new Column[Output.ExtendedValues]("Machine", _.machine.id)
+    private val procedureCol = new Column[ColT]("Procedure", _.procedure.name)
 
-    val colList = Seq(startTimeCol, summaryFileCol, inputFileCol, procedureCol, machineCol, institutionCol, userCol, statusCol, invalidateCol, deleteCol)
-}
+    private val machineCol = new Column[ColT]("Machine", _.machine.id)
 
-class OutputList extends GenericList[Output.ExtendedValues]("Output", OutputList.colList) with WebUtil.SubUrlView {
+    override val columnList = Seq(startTimeCol, summaryFileCol, inputFileCol, procedureCol, machineCol, institutionCol, userCol, statusCol, invalidateCol, deleteCol)
 
     val entriesPerPage = 30
 
@@ -183,5 +194,4 @@ class OutputList extends GenericList[Output.ExtendedValues]("Output", OutputList
             case t: Throwable => internalFailure(response, "Unexpected error in OutputList: " + t.toString)
         }
     }
-
 }

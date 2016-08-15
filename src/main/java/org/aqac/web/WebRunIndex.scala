@@ -12,35 +12,39 @@ object WebRunIndex {
     val path = WebUtil.pathOf(WebUtil.SubUrl.run, WebRunIndex.getClass.getName)
 
     def redirect(response: Response) = response.redirectSeeOther(path)
-
-    type PU = Procedure.PU
-
-    private def notesHTML(pu: PU): Elem = <td> { WebUtil.firstPartOf(pu._1.notes, 60) } </td>
-
-    private val nameCol = new Column[PU]("Name", _._1.name)
-
-    private val versionCol = new Column[PU]("Version", _._1.version)
-
-    private val notesCol = new Column[PU]("Notes", _._1.notes, notesHTML)
-
-    val colList = Seq(nameCol, versionCol, notesCol)
 }
 
-class WebRunIndex extends GenericList[Procedure.PU]("Procedure", WebRunIndex.colList) with WebUtil.SubUrlRun {
+class WebRunIndex extends GenericList[Procedure.ProcedureUser] with WebUtil.SubUrlRun {
 
     override val pageTitle = "Run Procedures"
 
     override val canCreate = false
 
     override def getData = Procedure.listWithDependencies
+    override val listName = "Procedure"
 
-    private type VL = WebRunIndex.PU
+    type PU = Procedure.ProcedureUser
 
-    override def getPK(value: VL): Long = value._1.procedurePK.get
+    private def notesHTML(pu: PU): Elem = <div> { WebUtil.firstPartOf(pu.procedure.notes, 60) } </div>
 
-    override def formatValueWithLink(value: VL, column: Column[VL]): Elem = {
-        <td><a href={ value._1.webUrl }>{ column.getValue(value) }</a></td>
+    private def nameCompare(a: PU, b: PU) = a.procedure.name.compareTo(b.procedure.name) < 0
+
+    private def nameToHtml(pu: PU): Elem = {
+        val j = <div>{ pu.procedure.name }</div>
+        val t = xmlToText(j)
+        <div>{ pu.procedure.name }</div>;
     }
+
+    private val nameCol = new Column[PU]("Name", nameCompare _, nameToHtml _)
+
+    private val versionCol = new Column[PU]("Version", _.procedure.version)
+    //private val versionCol = new Column[PU]("Version", (_) => false, _ => <div>hey</div>)     // TODO rm
+
+    private val notesCol = new Column[PU]("Notes", _.procedure.notes, notesHTML)
+
+    override val columnList = Seq(nameCol, versionCol, notesCol)
+
+    override def getPK(value: PU): Long = value.procedure.procedurePK.get
 
     private def getProcedure(valueMap: ValueMapT): Option[Procedure] = {
         val procedurePK = valueMap.get(ProcedureUpdate.procedurePKTag)

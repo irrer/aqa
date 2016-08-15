@@ -8,10 +8,18 @@ object MachineTypeList {
     val path = WebUtil.pathOf(WebUtil.SubUrl.admin, MachineTypeList.getClass.getName)
 
     def redirect(response: Response) = response.redirectSeeOther(path)
+}
 
-    private def notesHTML(machineType: MachineType): Elem = <td> { WebUtil.firstPartOf(machineType.notes, 60) } </td>
+class MachineTypeList extends GenericList[MachineType] with WebUtil.SubUrlAdmin {
+    override def listName = "MachineType"
 
-    private val manufacturerCol = new Column[MachineType]("Manufacturer", _.manufacturer)
+    override def getData = MachineType.list
+
+    override def getPK(value: MachineType): Long = value.machineTypePK.get
+
+    private def notesHTML(machineType: MachineType): Elem = <div>{ WebUtil.firstPartOf(machineType.notes, 60) }</div>
+
+    private val manufacturerCol = new Column[MachineType]("Manufacturer", _.manufacturer, (mt) => makePrimaryKeyHtml(mt.manufacturer, mt.machineTypePK))
 
     private val modelCol = new Column[MachineType]("Model", _.model)
 
@@ -19,13 +27,6 @@ object MachineTypeList {
 
     private val notesCol = new Column[MachineType]("Notes", _.notes, notesHTML)
 
-    val colList = Seq(manufacturerCol, modelCol, versionCol, notesCol)
+    override val columnList = Seq(manufacturerCol, modelCol, versionCol, notesCol)
 
-}
-
-class MachineTypeList extends GenericList[MachineType]("MachineType", MachineTypeList.colList) with WebUtil.SubUrlAdmin {
-
-    override def getData = MachineType.list
-
-    override def getPK(value: MachineType): Long = value.machineTypePK.get
 }

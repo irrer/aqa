@@ -90,15 +90,17 @@ object User {
     /** List all users. */
     def list: List[User] = Db.run(query.result).toList
 
+    case class UserInstitution(user: User, institution: Institution);
+    
     /**
      * Get a list of all users with institution name.
      */
-    def listWithDependencies: Seq[(User, Institution)] = {
+    def listWithDependencies: Seq[UserInstitution] = {
         val action = for {
             user <- query
             institution <- Institution.query if user.institutionPK === institution.institutionPK
         } yield (user, institution)
-        Db.run(action.result)
+        Db.run(action.result).map(ui => new UserInstitution(ui._1, ui._2))
     }
 
     def delete(userPK: Long): Int = {
