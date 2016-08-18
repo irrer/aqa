@@ -41,16 +41,16 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
 
     private val name = new WebInputText("Name", 6, 0, "Name of procedure")
 
-    private val version = new WebInputText("Version", 6, 0, "Required.  Usually dot separated integers")
+    private val version = new WebInputText("Version", 2, 0, "Required.  Usually dot separated integers")
+
+    private val timeout = new WebInputText("Timeout", 2, 0, "Maximum run time in minutes")
 
     private def webInterfaceList() = WebRun.interfaceChoices.toList.map(name => (name, name))
 
-    private val webInterface = new WebInputSelect("Interface", 6, 0, webInterfaceList)
-
-    private val timeout = new WebInputText("Timeout", 6, 0, "Maximum run time in minutes")
+    private val webInterface = new WebInputSelect("Interface", 4, 0, webInterfaceList)
 
     def listSupportingUser() = User.list.map(u => (u.userPK.get.toString, u.fullName))
-    private val supportingUserPK = new WebInputSelect("Author", 6, 0, listSupportingUser)
+    private val supportingUserPK = new WebInputSelect("Author", 4, 0, listSupportingUser)
 
     private val notes = new WebInputTextArea("Notes", 6, 0, "")
 
@@ -65,7 +65,7 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
 
     private val procedurePK = new WebInputHidden(ProcedureUpdate.procedurePKTag)
 
-    val fieldList: List[WebRow] = List(List(name), List(version), List(timeout), List(webInterface), List(supportingUserPK), List(notes))
+    val fieldList: List[WebRow] = List(List(name), List(version, webInterface), List(timeout, supportingUserPK), List(notes))
 
     val createButtonList: List[WebRow] = List(List(createButton, cancelButton))
 

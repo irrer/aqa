@@ -52,6 +52,10 @@ object WebRun {
             interfaceList.foldLeft("")((t, i) => t + "\n    " + i)
     }
 
+    /**
+     * Make a new interface Restlet for handling the running of the given
+     * procedure.  On failure, return a String explaining the problem.
+     */
     private def makeNewInterfaceInstance(procedurePK: Long): Either[String, Restlet] = {
         val procedure = Procedure.get(procedurePK)
         if (procedure.isDefined) {

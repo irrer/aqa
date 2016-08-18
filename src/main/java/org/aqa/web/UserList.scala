@@ -15,7 +15,6 @@ class UserList extends GenericList[UserInstitution] with WebUtil.SubUrlAdmin {
 
     override val listName = "User"
 
-    private val idCox = new Column[UserInstitution]("Id", _.user.id)
     private val idCol = new Column[UserInstitution]("Name", _.user.id, (ui) => makePrimaryKeyHtml(ui.user.id, ui.user.userPK))
 
     private val nameCol = new Column[UserInstitution]("Name", _.user.fullName)

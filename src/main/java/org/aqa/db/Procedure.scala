@@ -49,7 +49,7 @@ case class Procedure(
 
     def fileName = Procedure.fileName(name, version)
 
-    def webUrl = "/run/" + webInterface + "_" + procedurePK.get
+    def webUrl = webInterface + "_" + procedurePK.get
 
     def timeoutInMs = (timeout * (60 * 1000)).round.toLong
 

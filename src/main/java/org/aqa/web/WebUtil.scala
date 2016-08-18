@@ -503,7 +503,7 @@ object WebUtil {
 
         def url(name: String): String = SubUrl.url(subUrl, name)
 
-        private val className = this.getClass.getName // JJJJJ
+        private val className = this.getClass.getName
         private val cn = className.substring(className.lastIndexOf('.') + 1).replace("$", "")
         def pathOf = url(cn)
     }
