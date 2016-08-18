@@ -5,13 +5,13 @@
 <AQAConfig>
 
     <!-- Port number for the Secure ReST service.   Port 443 is the default for HTTPS. -->
-    <HTTPSPort>443</HTTPSPort>
+    <HTTPSPort>9443</HTTPSPort>
     
     <!-- List of System properties that should be set. -->
     <PropertyList>
         <Property Name='slick.dbs.default.driver'>slick.driver.PostgresDriver$</Property>
         <Property Name='slick.dbs.default.db.driver'>org.postgresql.Driver</Property>
-        <Property Name='slick.dbs.default.db.url'>jdbc:postgresql://127.0.0.1:5432/Tonto</Property>
+        <Property Name='slick.dbs.default.db.url'>jdbc:postgresql://141.214.125.68:5432/Tonto</Property>
         <Property Name='slick.dbs.default.db.user'>postgres</Property>
         <Property Name='slick.dbs.default.db.password'>postgresjim</Property>
         <!-- These below make no difference. -->
@@ -36,12 +36,14 @@
     each tried in the order given until a readable file is found. -->
     <JavaKeyStoreFileList>
         <JavaKeyStoreFile>keystore.jks</JavaKeyStoreFile>
+        <JavaKeyStoreFile>C:\Program Files\UMRO\keystore.jks</JavaKeyStoreFile>
         <JavaKeyStoreFile>src\main\resources\keystore.jks</JavaKeyStoreFile>
     </JavaKeyStoreFileList>
     
     <!-- The password to access the Java Key Store file. -->
-    <JavaKeyStorePassword>44d18166c66bed60b6394e6625c63dea713dbe465ddc960a7cd109514bc0d2bd</JavaKeyStorePassword>    
-
+    <!-- <JavaKeyStorePassword>9c067233b07c7b04025989a197fad9b12cf4c19006678e2b18b121289bd1635a2d395a603122a6e6</JavaKeyStorePassword> -->   <!-- rodicom11dev -->
+    <JavaKeyStorePassword>44d18166c66bed60b6394e6625c63dea713dbe465ddc960a7cd109514bc0d2bd</JavaKeyStorePassword>   <!-- irrer -->
+    
     <!-- Directory containing executables and configuration files to run procedures. -->
     <ProgramDir>C:\Program Files\AQA</ProgramDir>
 
@@ -52,7 +54,7 @@
     <DataDir>D:\AQA_Data</DataDir>
 
     <!-- Database command to execute to run database commands. -->
-    <DatabaseCommand>D:\pf\PostgreSQL\9.3\bin\psql postgresql://127.0.0.1:5432/Tonto postgres</DatabaseCommand>
+    <DatabaseCommand>D:\pf\PostgreSQL\9.3\bin\psql postgresql://141.214.125.68:5432/Tonto postgres</DatabaseCommand>
 
     <!-- Authentication timeout.  Number of seconds for a user id+password pair to be cached before re-checking with database. -->
     <AuthenticationTimeout>7200.0</AuthenticationTimeout>
