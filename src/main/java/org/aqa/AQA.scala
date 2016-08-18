@@ -7,7 +7,8 @@ import edu.umro.ScalaUtil.PeriodicRestart
 import org.aqa.Logging._
 
 /**
- * Main service entry point.
+ * Main service entry point.  Start up major portions of
+ * the service and catch unexpected errors.
  */
 object AQA {
     def main(args: Array[String]): Unit = {

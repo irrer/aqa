@@ -26,6 +26,7 @@ import org.restlet.routing.Filter
 import org.aqa.db.User
 import org.aqa.db.UserRole
 import org.restlet.routing.TemplateRoute
+import edu.umro.ScalaUtil.Trace._
 
 object WebServer {
     val staticDirName = "static"
@@ -182,48 +183,56 @@ class WebServer extends Application {
      */
     override def createInboundRoot: Restlet = {
 
-        println("createInboundRoot") // TODO rm
-        router.setDefaultMatchingMode(Template.MODE_STARTS_WITH)
+        try {
+            println("createInboundRoot") // TODO rm
+            router.setDefaultMatchingMode(Template.MODE_STARTS_WITH)
 
-        component.getClients.add(Protocol.FILE)
+            component.getClients.add(Protocol.FILE)
 
-        attach(router, "/" + WebServer.staticDirName, staticDir)
-        attach(router, WebServer.dataDirBaseUrl, dataDir)
-        attach(router, WebServer.tmpDirBaseUrl, tmpDir)
+            attach(router, "/" + WebServer.staticDirName, staticDir)
+            attach(router, WebServer.dataDirBaseUrl, dataDir)
+            attach(router, WebServer.tmpDirBaseUrl, tmpDir)
 
-        val restletList: Seq[Restlet with WebUtil.SubUrlTrait] = Seq(
-            new MachineUpdate,
-            new InstitutionUpdate,
-            new InstitutionList,
-            new MachineTypeUpdate,
-            new MachineList,
-            new MachineTypeList,
-            new UserUpdate,
-            new UserList,
-            new ProcedureUpdate,
-            new ProcedureList,
-            new OutputList,
-            webRunIndex,
-            login,
-            notAuthorized,
-            notAuthenticated,
-            setPassword)
+            val restletList: Seq[Restlet with WebUtil.SubUrlTrait] = Seq(
+                new MachineUpdate,
+                new InstitutionUpdate,
+                new InstitutionList,
+                new MachineTypeUpdate,
+                new MachineList,
+                new MachineTypeList,
+                new UserUpdate,
+                new UserList,
+                new ProcedureUpdate,
+                new ProcedureList,
+                new OutputList,
+                webRunIndex,
+                login,
+                notAuthorized,
+                notAuthenticated,
+                setPassword)
 
-        restletList.map(r => attach(router, WebUtil.SubUrl.url(r.subUrl, WebUtil.cleanClassName(r.getClass.getName)), r))
+            restletList.map(r => attach(router, WebUtil.SubUrl.url(r.subUrl, WebUtil.cleanClassName(r.getClass.getName)), r))
 
-        val viewOutput = new ViewOutput
-        attach(router, WebUtil.SubUrl.url(viewOutput.subUrl, WebUtil.cleanClassName(viewOutput.getClass.getName)), viewOutput)
+            val viewOutput = new ViewOutput
+            attach(router, WebUtil.SubUrl.url(viewOutput.subUrl, WebUtil.cleanClassName(viewOutput.getClass.getName)), viewOutput)
 
-        // This attaches the execution of all procedures
-        router.attach("/run", new WebRun)
+            // This attaches the execution of all procedures
+            router.attach("/run", new WebRun)
 
-        attach(router, "", mainIndex)
-        /*
+            attach(router, "", mainIndex)
+            /*
         val auditFilter = new AuditFilter(getContext)
         auditFilter.setNext(authentication)
         auditFilter
         */
-        initAuthentication(router) // TODO remove if auth fails
+            initAuthentication(router) // TODO remove if auth fails
+        }
+        catch {
+            case t: Throwable => {
+                println("WebServer.createInboundRoot unexpected error: " + t)    // TODO real badness
+                router
+            }
+        }
     }
 
     /**

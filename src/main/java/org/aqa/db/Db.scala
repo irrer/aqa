@@ -31,17 +31,6 @@ object Db {
         Database.forDataSource(ds)
     }
 
-    /*
-    val dbp = {
-        val ds = new ComboPooledDataSource
-        ds.setDriverClass(Driver)
-        ds.setJdbcUrl(Local)
-        Database.forDataSource(ds)
-    }
-    */
-
-    //val dbx = dbConfig.db
-
     private def tableName(table: TableQuery[Table[_]]): String = table.shaped.value.tableName
 
     def run[R](op: DBIOAction[R, NoStream, Nothing]): R = {
