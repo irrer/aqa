@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.aqa</groupId>
-  <artifactId>aqa</artifactId>
+  <artifactId>AQA</artifactId>
   <version>0.0.1</version>
   
     <packaging>jar</packaging>
@@ -21,7 +21,7 @@
         <dependency> <groupId>org.restlet.jse</groupId>    <artifactId>org.restlet.ext.httpclient</artifactId> <version>2.3.5</version>           </dependency>
         <dependency> <groupId>org.restlet.jse</groupId>    <artifactId>org.restlet.ext.crypto</artifactId>     <version>2.3.5</version>           </dependency>
         <dependency> <groupId>com.jsuereth</groupId>       <artifactId>scala-arm_2.11</artifactId>             <version>1.4</version>             </dependency>
-        <dependency> <groupId>edu.umro</groupId>           <artifactId>ScalaUtil_2.11</artifactId>             <version>0.0.5</version>           </dependency>
+        <dependency> <groupId>edu.umro</groupId>           <artifactId>ScalaUtil_2.11</artifactId>             <version>0.0.6</version>           </dependency>
         <dependency> <groupId>edu.umro</groupId>           <artifactId>RestletUtil_2.11</artifactId>           <version>0.0.4</version>           </dependency>
         <dependency> <groupId>com.mchange</groupId>        <artifactId>c3p0</artifactId>                       <version>0.9.5.2</version>         </dependency>
         
@@ -47,6 +47,7 @@
     -->
   
   <build>
+  <!-- 
     <sourceDirectory>src</sourceDirectory>
     <resources>
       <resource>
@@ -56,6 +57,8 @@
         </excludes>
       </resource>
     </resources>
+     -->
+      <!-- <pluginManagement> -->
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -87,7 +90,6 @@
                 <version>2.4</version>
             </plugin>
 
-
             <plugin>  <!-- jar with dependencies -->
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>2.2-beta-5</version>
@@ -100,7 +102,7 @@
                     <execution>
                         <id>make-assembly</id> <!-- this is used for inheritance merges -->
                         <!-- <phase>package</phase> -->
-                        <phase>test</phase>
+                        <phase>compile</phase>
                         <goals>
                             <goal>single</goal>
                         </goals>
@@ -108,11 +110,63 @@
                 </executions>
             </plugin>
       
+            <plugin>
+              <artifactId>maven-antrun-plugin</artifactId>
+              <version>1.7</version>
+              <executions>
+                <execution>
+                  <phase>package</phase>
+                  <configuration>
+                    <tasks>
+                      <property value="Z:\Projects\AQA\${project.artifactId}-${project.version}" name="project.dir"/>
+                      <property value="${project.dir}\${project.artifactId}-${project.version}" name="dest.dir"/>
+                      <property value="src/main/resources" name="resource.dir"/>
+                      <property value="yajsw-stable-11.03" name="yajsw"/>
+                      <property value="ronet\\umservicesuser" name="user_login"/>
+                      <property value="4UeMPl@nXf3r%" name="user_password"/>
+                      <echo>project.dir is: ${project.dir}</echo>
+                      <echo>dest.dir is: ${dest.dir}</echo>
+                      <echo>artifactId is: ${project.artifactId}</echo>
+                      <delete dir="${project.dir}"/>
+                      <echo>Going to mkdir project.dir : ${project.dir}</echo>
+                      <mkdir dir="${project.dir}"/>
+                      <echo>Did mkdir project.dir : ${project.dir}</echo>
+                      <echo>Going to mkdir dest.dir : ${dest.dir}</echo>
+                      <mkdir dir="${dest.dir}"/>
+                      <echo>Did mkdir dest.dir : ${dest.dir}</echo>
+                      <unzip dest="${dest.dir}" src="${resource.dir}/${yajsw}.zip"/>
+                      <echo>Did unzip</echo>
+                      <copy toDir="${dest.dir}" file="target/${project.artifactId}-${project.version}-jar-with-dependencies.jar"/>
+                      <copy toDir="${dest.dir}" file="${resource.dir}/AQAConfig.xml"/>
+                      <copy toDir="${dest.dir}">
+                        <fileset includes="static/**" dir="${resource.dir}"/>
+                      </copy>
+                      <copy toDir="${dest.dir}/${yajsw}/conf" file="${resource.dir}/wrapper.conf"/>
+                      <copy toDir="${dest.dir}" file="README.txt"/>
+                      <tstamp>
+                        <format locale="en,US" pattern="yyyy-MMM-dd hh:mm:ss aa" property="TIMESTAMP"/>
+                      </tstamp>
+                      <replace value="${project.version}" token="@@VERSION@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
+                      <replace value="${TIMESTAMP}" token="@@BUILD_DATE@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
+                      <replace value="${user.name}" token="@@BUILDER@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
+                      <replace value="${user_login}" token="@@USER_LOGIN@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
+                      <replace value="${user_password}" token="@@USER_PASSWORD@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
+                      <zip destfile="${project.dir}/${project.artifactId}-${project.version}.zip" basedir="${project.dir}"/>
+                    </tasks>
+                  </configuration>
+                  <goals>
+                    <goal>run</goal>
+                  </goals>
+                </execution>
+              </executions>
+            </plugin>
       
       
       
     </plugins>
+      <!-- </pluginManagement> -->
   </build>
+
     <repositories>
         <repository>
             <id>maven-restlet</id>
