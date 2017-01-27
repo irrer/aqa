@@ -20,7 +20,8 @@ for alcn in UMRO_127_0_0_1:127.0.0.1 UMRO_localhost:localhost UMRO_irrer:141.214
     keytool -genkey -v -alias ${alias} -dname "CN=${comname}, OU=Radiation Oncology, O=University of Michigan, C=US" \
         -keypass ${storepass} -keystore ${keystore} -storepass ${storepass} -keyalg "RSA" -sigalg "SHA512withRSA" -keysize 2048 -validity 36500 > /dev/null 2>&1
     rm -f ${alias}.txt
-    keytool -exportcert -keystore ${keystore} -storepass ${storepass} -alias ${alias} -file ${alias}.txt -rfc
+    keytool -exportcert -keystore ${keystore} -storepass ${storepass} -alias ${alias} -file ${alias}_rfc.txt -rfc
+    keytool -exportcert -keystore ${keystore} -storepass ${storepass} -alias ${alias} -file ${alias}.txt
     dos2unix ${alias}.txt
 done
 

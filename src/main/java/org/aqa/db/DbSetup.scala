@@ -18,5 +18,6 @@ object DbSetup {
         Db.createTableIfNonexistent(Input.query.asInstanceOf[TableQuery[Table[_]]])
         Db.createTableIfNonexistent(Output.query.asInstanceOf[TableQuery[Table[_]]])
         Db.createTableIfNonexistent(CentralAxis.query.asInstanceOf[TableQuery[Table[_]]])
+        Db.createTableIfNonexistent(LeafOffsetCorrection.query.asInstanceOf[TableQuery[Table[_]]])
     }
 }

@@ -7,7 +7,7 @@ import org.aqa.Util
 
 case class CentralAxis(
         centralAxisPK: Option[Long], // primary key
-        outputPK: Long, // company name
+        outputPK: Long, // output primary key
         maxLeafGap: Double // maximum leaf gap
         ) {
 

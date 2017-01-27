@@ -163,10 +163,10 @@ object Util {
 
     private val DIGEST_NAME = "sha-512"
 
-    private def secureHash(data: Array[Byte]): Array[Byte] = {
-        val md = HashFactory.getInstance(DIGEST_NAME);
-        md.update(data, 0, data.size);
-        md.digest();
+    def secureHash(data: Array[Byte]): Array[Byte] = {
+        val md = HashFactory.getInstance(DIGEST_NAME)
+        md.update(data, 0, data.size)
+        md.digest
     }
 
     /**

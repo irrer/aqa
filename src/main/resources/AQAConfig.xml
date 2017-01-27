@@ -29,7 +29,6 @@
         
         <Property Name='slick.relational'                             >INFO</Property>
         <Property Name='slick.relational.ResultConverterCompiler'     >INFO</Property>
-       
     </PropertyList>
     
     <!-- Location of file that contains Java Key Store for HTTPS.  If multiple names are given, then they are
