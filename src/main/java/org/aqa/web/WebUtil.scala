@@ -24,6 +24,11 @@ import java.io.FileOutputStream
 import java.lang.Class
 import edu.umro.ScalaUtil.Trace._
 import org.aqa.db.User
+import edu.umro.MSOfficeUtil.Excel.ReadExcel
+import org.apache.poi.ss.usermodel.Workbook
+import org.apache.poi.ss.usermodel.Sheet
+import org.apache.poi.ss.usermodel.Row
+import org.apache.poi.ss.usermodel.Cell
 
 object WebUtil {
 
@@ -576,6 +581,61 @@ object WebUtil {
     def getUserIdOrDefault(request: Request, dflt: String): String = {
         val cr = request.getChallengeResponse
         if (cr == null) dflt else cr.getIdentifier
+    }
+
+    def excelToHtml(workbook: Workbook): String = {
+
+        def doCell(cell: Cell): Elem = {
+            if (cell != null) { // TODO rm
+                println("coords: " + cell.getAddress + " : " + ReadExcel.cellToString(cell))
+                val i = 5
+            }
+            val content: String = try {
+                if (cell == null) "" else ReadExcel.cellToString(cell)
+            }
+            catch {
+                case t: Throwable => ""
+            }
+            <td>{ content }</td>
+        }
+
+        def doRow(row: Row, firstCol: Short, lastCol: Short): Elem = {
+            <tr>{ (firstCol until lastCol).map(cellnum => doCell(row.getCell(cellnum))) }</tr>
+        }
+
+        def doSheet(sheet: Sheet) = {
+            if (false) { // TODO rm
+                val j1 = sheet.getRow(2).getCell(4)
+                val j2 = sheet.getRow(2).getCell(5)
+
+                val j1a = ReadExcel.cellToString(j1)
+                val j2a = ReadExcel.cellToString(j2)
+
+                println("j1 format: " + j1.getCellStyle.getDataFormat)
+                println("j2 format: " + j2.getCellStyle.getDataFormat)
+
+                println("Hey")
+            }
+
+            val rowList = (sheet.getFirstRowNum to sheet.getLastRowNum).map(rownum => sheet.getRow(rownum)).filter(row => row != null)
+            val firstCol = rowList.map(row => row.getFirstCellNum).min
+            val lastCol = rowList.map(row => row.getLastCellNum).max
+
+            <div>
+                <h2 title='Sheet Name'>{ sheet.getSheetName }</h2>
+                <table class="table table-bordered">
+                    { (sheet.getFirstRowNum until sheet.getLastRowNum).map(rownum => sheet.getRow(rownum)).filter(row => row != null).map(row => doRow(row, firstCol, lastCol)) }
+                </table>
+            </div>
+        }
+
+        val html: Elem = {
+            <div style="margin: 40px;">
+                { ReadExcel.sheetList(workbook).map(sheet => doSheet(sheet)) }
+            </div>
+        }
+
+        WebUtil.wrapBody(html, "Leaf Offset Correction")
     }
 
     def main(args: Array[String]): Unit = {

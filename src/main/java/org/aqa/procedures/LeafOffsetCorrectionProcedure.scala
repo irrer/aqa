@@ -8,6 +8,12 @@ import org.aqa.run.ProcedureStatus
 import scala.xml.Elem
 import scala.xml.Node
 import scala.xml.PrettyPrinter
+import org.aqa.web.WebUtil
+import org.apache.poi.ss.usermodel.Workbook
+import org.apache.poi.ss.usermodel.Sheet
+import org.apache.poi.ss.usermodel.CellType
+import org.apache.poi.ss.usermodel.Row
+import edu.umro.MSOfficeUtil.Excel.ReadExcel
 
 object LeafOffsetCorrectionProcedure {
 
@@ -19,7 +25,7 @@ object LeafOffsetCorrectionProcedure {
         System.exit(0)
     }
 
-    private def getExcelFile: CellMapT = {
+    private def getExcelFile: Workbook = {
         //val parentDir = new File(".").getParentFile
         //val parentDir = new File("""D:\AQA_Data\docs\xls\leaf_offset2""")
         val parentDir = new File("""D:\AQA_Data\docs\xls\foo""")
@@ -43,42 +49,44 @@ object LeafOffsetCorrectionProcedure {
         }
     }
 
-    /** Get a sorted list of cell rows. */
-    private def getRowList(ws: CellMapT): Seq[Int] = {
-        val firstLeafNum = ws(new CellCoord(0, 5, 0)).getNumericCellValue.toInt
-        (5 until 1000).toList.takeWhile { x => isInt(ws, 0, x, 0) }.sorted
-    }
-
-    private def isSectionHeader(coord: CellCoord, cell: Cell): Boolean = {
-        (coord.sheet == 0) &&
-            (coord.col > 0) &&
-            cellToString(cell).startsWith("Section")
+    private def isSectionHeader(cell: Cell): Boolean = {
+        (cell != null) && cellToString(cell).startsWith("Section")
     }
 
     /** Get a sorted list of cell columns. */
-    private def getColumnList(ws: CellMapT): Seq[Int] = {
-        val headers = ws.filter(c => isSectionHeader(c._1, c._2)).map(c1 => c1._1.col).toList.sorted
+    private def getColumnList(sheet: Sheet): Seq[Int] = {
+        val headers = ReadExcel.cellList(sheet.getRow(4)).filter(c => isSectionHeader(c)).map(c => c.getAddress.getColumn).sorted
         if (headers.isEmpty) terminate(ProcedureStatus.fail, "No Section headers found")
         headers
     }
 
-    private def locToXml(row: Int, col: Int, ws: CellMapT): Elem = {
-        val leaf = ws(new CellCoord(0, row, 0)).getNumericCellValue.toInt
-        val dataCell = ws(new CellCoord(0, row, col))
-        <LeafOffsetCorrection Leaf={ leaf.toString }>{ dataCell.getNumericCellValue.toString.trim }</LeafOffsetCorrection>
+    private def locToXml(row: Row, col: Int, sheet: Sheet): Elem = {
+        val leaf = row.getCell(0).getNumericCellValue.toInt.toString
+        val loc = row.getCell(col).getNumericCellValue.toString
+        <LeafOffsetCorrection Leaf={ leaf }>{ loc }</LeafOffsetCorrection>
     }
 
-    private def colToXml(col: Int, colId: Int, ws: CellMapT, rowList: Seq[Int]): Elem = {
+    private def colToXml(col: Int, colId: Int, sheet: Sheet, rowList: Seq[Int]): Elem = {
         <Section id={ colId.toString }>
-            { rowList.map(row => locToXml(row, col, ws)) }
+            { rowList.map(row => locToXml(sheet.getRow(row), col, sheet)) }
         </Section>
     }
 
-    private def getLeafOffsetCorrection(ws: CellMapT): Elem = {
-        val rl = getRowList(ws)
+    /** Get a sorted list of cell rows indexes. */
+    private def getRowList(sheet: Sheet): Seq[Int] = {
+        def isLeafRow(row: Row): Boolean = {
+            (row != null) &&
+                (row.getCell(0) != null) &&
+                (row.getCell(0).getCellTypeEnum == CellType.NUMERIC)
+        }
+        (5 until 1000).toList.takeWhile { rownum => isLeafRow(sheet.getRow(rownum)) }.sorted
+    }
+
+    private def getLeafOffsetCorrection(sheet: Sheet): Elem = {
+        val rowList = getRowList(sheet)
         val loc = { //
             <LeafOffsetCorrectionList outputPK={ System.getenv("outputPK") }>
-                { getColumnList(ws).zipWithIndex.map(colInd => colToXml(colInd._1, colInd._2 + 1, ws, rl)) }
+                { getColumnList(sheet).zipWithIndex.map(colInd => colToXml(colInd._1, colInd._2 + 1, sheet, rowList)) }
             </LeafOffsetCorrectionList>
         }
         loc
@@ -88,43 +96,17 @@ object LeafOffsetCorrectionProcedure {
 
     def main(args: Array[String]): Unit = {
         val ws = getExcelFile
-        val text = xmlToText(getLeafOffsetCorrection(ws))
+        val sheet = ws.getSheet("LOC")
+
+        val text = xmlToText(getLeafOffsetCorrection(sheet))
         println(text)
         Util.writeFile(new File("results_LeafOffsetCorrection.xml"), text)
 
-        val maxCol = ws.filter(f => f._1.sheet == 0).map(c => c._1.col).max
-        val maxRow = ws.filter(f => f._1.sheet == 0).map(c => c._1.row).max
+        val html = WebUtil.excelToHtml(ws)
 
-        def doCell(row: Int, col: Int): Elem = {
-            val content: String = try {
-                cellToString(ws(new CellCoord(0, row, col)))
-            }
-            catch {
-                case t: Throwable => ""
-            }
-            <td>{ content }</td>
-        }
-
-        def doRow(row: Int): Elem = {
-            <tr>{ (0 to maxCol).map(c => doCell(row, c)) }</tr>
-        }
-
-        val lead = "<!DOCTYPE html>\n"
-
-        val html = {
-            <html>
-                <head>
-                </head>
-                <body>
-                    <table>
-                        { (0 to maxRow).map(c => doRow(c)) }
-                    </table>
-                </body>
-            </html>
-        }
-
-        val htmlText = lead + xmlToText(html)
-        Util.writeFile(new File("output.html"), htmlText)
+        val outFile = new File("""D:\AQA_Data\data\Chicago_33\TB5x_1\WinstonLutz_1.0_1\2016-12-09T09-50-54-361_134\output_2016-12-09T09-50-54-490\output.html""")
+        Util.writeFile(outFile, html)
+        println("wrote Excel as HTML")
     }
 
     private def undup = {
