@@ -24,7 +24,7 @@ import java.io.FileOutputStream
 import java.lang.Class
 import edu.umro.ScalaUtil.Trace._
 import org.aqa.db.User
-import edu.umro.MSOfficeUtil.Excel.ReadExcel
+import edu.umro.MSOfficeUtil.Excel.ExcelUtil
 import org.apache.poi.ss.usermodel.Workbook
 import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.ss.usermodel.Row
@@ -586,12 +586,8 @@ object WebUtil {
     def excelToHtml(workbook: Workbook): String = {
 
         def doCell(cell: Cell): Elem = {
-            if (cell != null) { // TODO rm
-                println("coords: " + cell.getAddress + " : " + ReadExcel.cellToString(cell))
-                val i = 5
-            }
             val content: String = try {
-                if (cell == null) "" else ReadExcel.cellToString(cell)
+                if (cell == null) "" else ExcelUtil.cellToString(cell)
             }
             catch {
                 case t: Throwable => ""
@@ -608,13 +604,11 @@ object WebUtil {
                 val j1 = sheet.getRow(2).getCell(4)
                 val j2 = sheet.getRow(2).getCell(5)
 
-                val j1a = ReadExcel.cellToString(j1)
-                val j2a = ReadExcel.cellToString(j2)
+                val j1a = ExcelUtil.cellToString(j1)
+                val j2a = ExcelUtil.cellToString(j2)
 
                 println("j1 format: " + j1.getCellStyle.getDataFormat)
                 println("j2 format: " + j2.getCellStyle.getDataFormat)
-
-                println("Hey")
             }
 
             val rowList = (sheet.getFirstRowNum to sheet.getLastRowNum).map(rownum => sheet.getRow(rownum)).filter(row => row != null)
@@ -631,7 +625,7 @@ object WebUtil {
 
         val html: Elem = {
             <div style="margin: 40px;">
-                { ReadExcel.sheetList(workbook).map(sheet => doSheet(sheet)) }
+                { ExcelUtil.sheetList(workbook).map(sheet => doSheet(sheet)) }
             </div>
         }
 
