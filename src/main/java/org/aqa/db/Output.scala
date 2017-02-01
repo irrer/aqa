@@ -59,7 +59,7 @@ case class Output(
     }
 }
 
-object Output {
+object Output  {
     class OutputTable(tag: Tag) extends Table[Output](tag, "output") {
 
         def outputPK = column[Long]("outputPK", O.PrimaryKey, O.AutoInc)
@@ -160,13 +160,13 @@ object Output {
         Db.run(action.transactionally)
     }
 
-    val outputFilePrefix = "output".toLowerCase
+    val displayFilePrefix = "display".toLowerCase
 
     /**
      * If the given directory contains an output file, then return it.
      */
     def outputFile(directory: File): Option[File] = {
-        val list = (directory).listFiles().filter { f => f.canRead && f.getName.toLowerCase.startsWith(Output.outputFilePrefix) }
+        val list = (directory).listFiles().filter { f => f.canRead && f.getName.toLowerCase.startsWith(Output.displayFilePrefix) }
         if (list.isEmpty) None
         else Some(list.head)
     }

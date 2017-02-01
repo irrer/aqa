@@ -7,6 +7,7 @@ import org.aqa.Util
 import java.io.File
 import scala.xml.XML
 import scala.xml.Node
+import scala.xml.Elem
 
 case class LeafOffsetCorrection(
         leafOffsetCorrectionPK: Option[Long], // primary key
@@ -28,7 +29,7 @@ case class LeafOffsetCorrection(
     override def toString: String = (correction_mm.toString).trim
 }
 
-object LeafOffsetCorrection {
+object LeafOffsetCorrection extends ProcedureOutput {
     class LeafOffsetCorrectionTable(tag: Tag) extends Table[LeafOffsetCorrection](tag, "leafOffsetCorrection") {
 
         def leafOffsetCorrectionPK = column[Long]("leafOffsetCorrectionPK", O.PrimaryKey, O.AutoInc)
@@ -46,6 +47,8 @@ object LeafOffsetCorrection {
     }
 
     val query = TableQuery[LeafOffsetCorrectionTable]
+
+    override val topXmlLabel = "LeafOffsetCorrectionList"
 
     def get(leafOffsetCorrectionPK: Long): Option[LeafOffsetCorrection] = {
         val action = for {
@@ -72,9 +75,7 @@ object LeafOffsetCorrection {
         Db.run(action)
     }
 
-    def xmlToList(file: File): Seq[LeafOffsetCorrection] = {
-        val doc = XML.loadFile(file)
-        val outputPK = (doc \ "@outputPK").head.text.toLong
+    def xmlToList(elem: Elem, outputPK: Long): Seq[LeafOffsetCorrection] = {
         def secNodeToLocList(sec: Node): Seq[LeafOffsetCorrection] = {
             val id = (sec \ "@id").head.text
             def leafNodeToLOC(leafNode: Node): LeafOffsetCorrection = {
@@ -83,19 +84,31 @@ object LeafOffsetCorrection {
                 val loc = new LeafOffsetCorrection(None, outputPK, id, leafIndex, correction_mm)
                 loc
             }
-            val leafNodeList = (sec \ "LeafOffsetCorrection").map(leafNode => leafNodeToLOC(leafNode))
+            val leafNodeList = (sec \ "LeafOffsetCorrection_mm").map(leafNode => leafNodeToLOC(leafNode))
             leafNodeList
         }
 
-        (doc \ "Section").map(sec => secNodeToLocList(sec)).flatten
+        (elem \ topXmlLabel).headOption match {
+            case Some(node) => (node \ "Section").map(sec => secNodeToLocList(sec)).flatten
+            case None => Seq[LeafOffsetCorrection]()
+        }
     }
 
+    override def insert(elem: Elem, outputPK: Long): Int = {
+        val toInsert = xmlToList(elem, outputPK)
+        toInsert.map(t => t.insertOrUpdate)
+        toInsert.size
+    }
+
+    /** For testing only. */
     def main(args: Array[String]): Unit = {
         val valid = Config.validate
         DbSetup.init
-        val list = xmlToList(new File("results_LeafOffsetCorrection.xml"))
-        list.map(loc => println("    outputPK: " + loc.outputPK + "     section: " + loc.section + "     leafIndex: " + loc.leafIndex + "     correction_mm: " + loc.correction_mm))
-        list.map(loc => loc.insertOrUpdate)
+        val elem = XML.loadFile(new File("""D:\AQA_Data\data\Chicago_33\TB5x_1\WinstonLutz_1.0_1\2016-12-09T09-50-54-361_134\output_2016-12-09T09-50-54-490\output.xml"""))
+        val xmlList = xmlToList(elem, 134)
+        xmlList.map(loc => println("    outputPK: " + loc.outputPK + "     section: " + loc.section + "     leafIndex: " + loc.leafIndex + "     correction_mm: " + loc.correction_mm))
+        xmlList.map(loc => loc.insertOrUpdate)
+        println("LeafOffsetCorrection.main done")
         //println("======== inst: " + get(5))
         //println("======== inst delete: " + delete(5))
     }

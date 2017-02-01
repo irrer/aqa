@@ -72,7 +72,7 @@ object ProcedureStatus extends Enumeration {
             case t: Throwable => None
         }
     }
-    
+
     def dirToProcedureStatus(dir: File): Option[ProcedureStatus.Value] = ProcedureStatus.fileToProcedureStatus(new File(dir, ProcedureStatus.statusFileName))
 
     def writeProcedureStatus(dir: File, status: ProcedureStatus.Value): Unit = {
@@ -89,6 +89,19 @@ object ProcedureStatus extends Enumeration {
             case t: Throwable => ;
         }
     }
+
+    def terminate(msg: String, status: ProcedureStatus.Value) = {
+        println(msg)
+        ProcedureStatus.writeProcedureStatus(status)
+        val exitCode: Int = status match {
+            case ProcedureStatus.pass => 0
+            case ProcedureStatus.done => 0
+            case _ => 1
+        }
+        System.exit(exitCode)
+    }
+
+    def writeProcedureStatus(status: ProcedureStatus.Value): Unit = writeProcedureStatus(new File("."), status)
 
     /**
      * Sort by id.
