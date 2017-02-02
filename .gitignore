@@ -34,3 +34,5 @@ hs_err_pid*.log
 
 # xterm stuff
 xterm.exe.stackdump
+
+/src/main/resources/investigate/
