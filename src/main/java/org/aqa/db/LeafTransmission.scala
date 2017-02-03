@@ -44,6 +44,8 @@ object LeafTransmission extends ProcedureOutput {
             section,
             leafIndex,
             correction_mm) <> ((LeafTransmission.apply _)tupled, LeafTransmission.unapply _)
+
+        def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK)
     }
 
     val query = TableQuery[LeafTransmissionTable]

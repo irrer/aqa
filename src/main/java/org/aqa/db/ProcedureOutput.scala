@@ -30,6 +30,11 @@ object ProcedureOutput {
 object ProcedureOutputMain {
     private val labelList = ProcedureOutput.procedureList.map(p => p.topXmlLabel)
 
+    private def getOutputFile(args: Array[String]): File = {
+        if ((args == null) || (args.isEmpty)) new File(ProcedureOutput.outputFileName)
+        else new File(args(0))
+    }
+
     def main(args: Array[String]): Unit = {
         try {
             val valid = Config.validate
@@ -37,7 +42,7 @@ object ProcedureOutputMain {
             println("Inserting data into database")
             val outputPK = System.getenv("outputPK").toLong
             println("Using outputPK: " + outputPK)
-            val outputFile = new File(ProcedureOutput.outputFileName)
+            val outputFile = getOutputFile(args)
             println("Using outputFile: " + outputFile.getAbsolutePath)
             val elem = XML.loadFile(outputFile)
             println("Read file " + outputFile.getAbsolutePath)

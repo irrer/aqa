@@ -18,7 +18,9 @@ case class LeafOffsetCorrection(
         ) {
 
     def insert: LeafOffsetCorrection = {
-        val insertQuery = LeafOffsetCorrection.query returning LeafOffsetCorrection.query.map(_.leafOffsetCorrectionPK) into ((leafOffsetCorrection, leafOffsetCorrectionPK) => leafOffsetCorrection.copy(leafOffsetCorrectionPK = Some(leafOffsetCorrectionPK)))
+        val insertQuery = LeafOffsetCorrection.query returning LeafOffsetCorrection.query.map(_.leafOffsetCorrectionPK) into
+            ((leafOffsetCorrection, leafOffsetCorrectionPK) => leafOffsetCorrection.copy(leafOffsetCorrectionPK = Some(leafOffsetCorrectionPK)))
+            
         val action = insertQuery += this
         val result = Db.run(action)
         result
@@ -44,6 +46,9 @@ object LeafOffsetCorrection extends ProcedureOutput {
             section,
             leafIndex,
             correction_mm) <> ((LeafOffsetCorrection.apply _)tupled, LeafOffsetCorrection.unapply _)
+
+        def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK)
+      //def supplier = foreignKey("SUP_FK", supID, suppliers)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)           TODO
     }
 
     val query = TableQuery[LeafOffsetCorrectionTable]

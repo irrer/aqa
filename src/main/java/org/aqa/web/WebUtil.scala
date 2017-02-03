@@ -600,31 +600,27 @@ object WebUtil {
         }
 
         def doSheet(sheet: Sheet) = {
-            if (false) { // TODO rm
-                val j1 = sheet.getRow(2).getCell(4)
-                val j2 = sheet.getRow(2).getCell(5)
-
-                val j1a = ExcelUtil.cellToString(j1)
-                val j2a = ExcelUtil.cellToString(j2)
-
-                println("j1 format: " + j1.getCellStyle.getDataFormat)
-                println("j2 format: " + j2.getCellStyle.getDataFormat)
-            }
-
             val rowList = (sheet.getFirstRowNum to sheet.getLastRowNum).map(rownum => sheet.getRow(rownum)).filter(row => row != null)
             val firstCol = rowList.map(row => row.getFirstCellNum).min
             val lastCol = rowList.map(row => row.getLastCellNum).max
 
             <div>
-                <h2 title='Sheet Name'>{ sheet.getSheetName }</h2>
+                <h2 title='Sheet Name' id={ sheet.getSheetName }>{ sheet.getSheetName }</h2>
+                <a href="#">Top</a>
                 <table class="table table-bordered">
                     { (sheet.getFirstRowNum until sheet.getLastRowNum).map(rownum => sheet.getRow(rownum)).filter(row => row != null).map(row => doRow(row, firstCol, lastCol)) }
                 </table>
             </div>
         }
+        
+        def linkToSheet(sheet: Sheet) = {
+            <a href={"#" + sheet.getSheetName } style="margin: 40px;">{sheet.getSheetName}</a>
+        }
 
         val html: Elem = {
             <div style="margin: 40px;">
+                Sheets: { ExcelUtil.sheetList(workbook).map(sheet => linkToSheet(sheet)) }
+                <br></br>
                 { ExcelUtil.sheetList(workbook).map(sheet => doSheet(sheet)) }
             </div>
         }
