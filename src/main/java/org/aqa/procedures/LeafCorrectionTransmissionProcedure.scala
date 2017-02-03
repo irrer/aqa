@@ -1,4 +1,4 @@
-package org.aqa.procedures.dot_doa
+package org.aqa.procedures
 
 import java.io.File
 import org.aqa.Util
@@ -14,25 +14,22 @@ import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.Row
 import edu.umro.MSOfficeUtil.Excel.ExcelUtil
 import org.aqa.db.ProcedureOutput
+import org.aqa.Config
 
-object DOT_DOA_Procedure {
+object LeafCorrectionTransmissionProcedure {
 
-    // val curDir = new File(".") // TODO reinstate
-    private val curDir = new File("""D:\AQA_Data\data\Chicago_33\TB5x_1\WinstonLutz_1.0_1\2016-12-09T09-50-54-361_134\output_2016-12-09T09-50-54-490""") // TODO rm
-
-    private def terminate(status: ProcedureStatus.Value, msg: String): Unit = {
-        println(msg)
-        ProcedureStatus.writeProcedureStatus(status)
-        System.exit(0)
-    }
+    def curDir = new File(System.getProperty("user.dir"))
+    // private val curDir = new File("""D:\AQA_Data\data\Chicago_33\TB5x_1\WinstonLutz_1.0_1\2016-12-09T09-50-54-361_134\output_2016-12-09T09-50-54-490""") // TODO rm
 
     private def getExcelFile: Workbook = {
+        println("Using curDir: " + curDir.getAbsolutePath)
         val parentDir = curDir.getParentFile
+        println("Using parent directory: " + parentDir.getAbsolutePath)
 
         println("Using parent directory: " + parentDir.getAbsolutePath)
         val excel = parentDir.listFiles.map(af => ExcelUtil.read(af)).filter { ws => ws.isRight }.map(o => o.right.get)
-        if (excel.isEmpty) terminate(ProcedureStatus.fail, "No Excel files found")
-        if (excel.size > 1) terminate(ProcedureStatus.fail, "Expecting one Excel file but found " + excel.size)
+        if (excel.isEmpty) ProcedureStatus.terminate("No Excel files found", ProcedureStatus.fail)
+        if (excel.size > 1) ProcedureStatus.terminate("Expecting one Excel file but found " + excel.size, ProcedureStatus.fail)
         println("Found excel file");
         excel.head
     }
@@ -45,7 +42,7 @@ object DOT_DOA_Procedure {
     private def getColumnList(sheet: Sheet): (Int, Seq[Int]) = {
         def tryHeader(rownum: Int) = ExcelUtil.cellList(sheet.getRow(rownum)).filter(c => isSectionHeader(c)).map(c => c.getAddress.getColumn).sorted
         val headers = (1 to 10).filter(r => sheet.getRow(r) != null).map(r => (r, tryHeader(r))).sortWith((a, b) => a._2.size > b._2.size).head
-        if (headers._2.isEmpty) terminate(ProcedureStatus.fail, "No Section headers found")
+        if (headers._2.isEmpty) ProcedureStatus.terminate("No Section headers found", ProcedureStatus.fail)
         headers
     }
 
@@ -92,7 +89,7 @@ object DOT_DOA_Procedure {
         def process(workbook: Workbook): Option[Elem] = {
             getSheet(workbook, nameList) match {
                 case Some(sheet) => Some(get(sheet, mainLabel, valueLabel))
-                case None if required => { terminate(ProcedureStatus.fail, "Required sheet " + nameList + " not found"); None }
+                case None if required => { ProcedureStatus.terminate("Required sheet " + nameList + " not found", ProcedureStatus.fail); None }
                 case _ => None
             }
         }
@@ -103,29 +100,33 @@ object DOT_DOA_Procedure {
      * spreadsheet to HTML for viewing by user.
      */
     def main(args: Array[String]): Unit = {
-        val workbook = getExcelFile
+        try {
+            val workbook = getExcelFile
 
-        val sheetSpecList: List[SheetSpec] = List(
-            new SheetSpec(Seq("LOC", "Sheet1"), "LeafOffsetCorrectionList", "LeafOffsetCorrection_mm", true),
-            new SheetSpec(Seq("Trans", "Transmission", "Sheet1"), "LeafTransmissionList", "LeafTransmission_pct", true)
-            )
+            val sheetSpecList: List[SheetSpec] = List(
+                new SheetSpec(Seq("LOC", "Sheet1"), "LeafOffsetCorrectionList", "LeafOffsetCorrection_mm", true),
+                new SheetSpec(Seq("Trans", "Transmission", "Sheet1"), "LeafTransmissionList", "LeafTransmission_pct", true))
 
-        val elemList = sheetSpecList.map(ss => ss.process(workbook)).flatten
+            val elemList = sheetSpecList.map(ss => ss.process(workbook)).flatten
 
-        val xml = {
-            <DOT_DOA outputPK={ System.getenv("outputPK") }>
-                { elemList }
-            </DOT_DOA>
+            val xml = {
+                <Output outputPK={ System.getenv("outputPK") }>
+                    { elemList }
+                </Output>
+            }
+
+            val text = xmlToText(xml)
+            Util.writeFile(new File(curDir, ProcedureOutput.outputFileName), text)
+
+            val html = WebUtil.excelToHtml(workbook)
+
+            val outFile = new File(curDir, "display.html")
+            Util.writeFile(outFile, html)
+            println("wrote Excel as HTML")
         }
-
-        val text = xmlToText(xml)
-        Util.writeFile(new File(curDir, ProcedureOutput.outputFileName), text)
-
-        val html = WebUtil.excelToHtml(workbook)
-
-        val outFile = new File(curDir, "display.html")
-        Util.writeFile(outFile, html)
-        println("wrote Excel as HTML")
+        catch {
+            case t: Throwable => ProcedureStatus.terminate("Unexpected error: " + t, ProcedureStatus.abort)
+        }
     }
 
 }

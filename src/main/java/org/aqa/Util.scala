@@ -184,7 +184,17 @@ object Util {
         secureHash(text)
     }
 
+    /**
+     * Get the jar file that contains this class.
+     */
+    lazy val thisJarFile: File = {
+        val clss = this.getClass // Pick current jar.  For a different jar pick a class from that jar.
+        new File(clss.getProtectionDomain.getCodeSource.getLocation.toURI)
+    }
+
     def main(args: Array[String]): Unit = {
+
+        println("thisJarFile: " + thisJarFile.getAbsolutePath)
 
         val fileNameList = List(
             """D:\pf\Conquest\dicomserver1417\data\ISOCAL""",

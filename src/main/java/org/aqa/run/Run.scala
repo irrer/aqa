@@ -193,6 +193,9 @@ object Run {
                 userPK,
                 new Timestamp(startDate.getTime),
                 finishDate = None,
+                dataDate = None, // TODO get from output.xml file
+                analysisDate = None, // TODO get from output.xml file
+                machinePK = None, // TODO get from output.xml file
                 status = ProcedureStatus.running.toString,
                 dataValidity = DataValidity.valid.toString)
             tempOutput.insert
@@ -211,6 +214,7 @@ object Run {
         response.redirectSeeOther(ViewOutput.path + suffix)
     }
 
+    /** Fix-up procedures that were running when the server went down. */
     def handleRunning(output: Output, procedure: Procedure) = {
 
         try {
@@ -230,6 +234,9 @@ object Run {
                     userPK = output.userPK,
                     startDate = output.startDate,
                     finishDate = Some(new Timestamp(latestFileChange)),
+                    dataDate = None, // TODO get from output.xml file
+                    analysisDate = None, // TODO get from output.xml file
+                    machinePK = None, // TODO get from output.xml file
                     status = status.toString,
                     dataValidity = output.dataValidity)
                 updatedOutput.insertOrUpdate

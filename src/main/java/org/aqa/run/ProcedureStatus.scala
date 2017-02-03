@@ -90,6 +90,9 @@ object ProcedureStatus extends Enumeration {
         }
     }
 
+    /** Convenience function to log a message to stdout, write a status file, and
+     *  exit.  The exit code will be 0 for a status of 'pass' or 'done', and 1 for
+     *  all other status values. */ 
     def terminate(msg: String, status: ProcedureStatus.Value) = {
         println(msg)
         ProcedureStatus.writeProcedureStatus(status)

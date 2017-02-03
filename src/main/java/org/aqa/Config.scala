@@ -34,10 +34,16 @@ object Config {
     def getConfigFile = configFile
 
     // Search these directories in the order given to find the configuration file.
-    private val directoryList: List[String] = List(
-        ".",
-        """src\main\resources""" // for development
-        )
+    private lazy val directoryList: List[File] = {
+
+        val resourceDirName = """src\main\resources"""
+        List(
+            Util.thisJarFile.getParentFile, // same directory as jar
+            new File(System.getProperty("user.dir")), // current directory
+            new File(Util.thisJarFile.getParentFile.getParentFile, resourceDirName), // for development
+            new File(resourceDirName) // for development
+            )
+    }
 
     /**
      * Read the configuration file.
@@ -46,8 +52,8 @@ object Config {
      *
      * @return DOM of configuration, or nothing on failure
      */
-    private def readFile(dir: String, name: String): Option[Elem] = {
-        val file = new File(new File(dir), name)
+    private def readFile(dir: File, name: String): Option[Elem] = {
+        val file = new File(dir, name)
         logInfo("Trying config file " + file.getAbsolutePath + " ...")
         if (file.canRead) {
             try {
@@ -75,13 +81,13 @@ object Config {
      * is toast, so log an error and exit with a failed status.
      */
     private def epicFail(name: String) = {
-        val tried = directoryList.foldLeft("")((l, f) => "\n" + l + f)
+        val tried = directoryList.foldLeft("")((l, f) => l + "\n    " + f.getAbsolutePath)
 
         logSevere("Could not find a usable configuration file.  Using file name " + name + " , tried directories: " + tried + "\nShutting down...")
         System.exit(1)
     }
 
-    private def getDoc(dirList: List[String], name: String): Option[Elem] = {
+    private def getDoc(dirList: List[File], name: String): Option[Elem] = {
         if (dirList.length < 1) None
         val elem = readFile(dirList.head, name)
         elem match {
@@ -160,7 +166,7 @@ object Config {
     val RestletLogLevel = mainText("RestletLogLevel")
     val AuthenticationTimeout = mainText("AuthenticationTimeout").toDouble
     val AuthenticationTimeoutInMs = (AuthenticationTimeout * 1000).toLong
-    
+
     val DatabaseCommand = mainText("DatabaseCommand")
 
     /** Number of minutes into a 24 hour day at which time service should be restarted. */

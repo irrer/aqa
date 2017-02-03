@@ -157,6 +157,9 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
             userPK = output.userPK,
             startDate = output.startDate,
             finishDate = output.finishDate,
+            dataDate = output.dataDate,
+            analysisDate = output.analysisDate,
+            machinePK = output.machinePK,
             status = output.status,
             dataValidity = newValidity.toString)
 

@@ -5,6 +5,7 @@ import java.io.File
 import scala.xml.XML
 import org.aqa.run.ProcedureStatus
 import org.aqa.Config
+import org.aqa.Logging._
 
 trait ProcedureOutput {
     /** Identifies the top level XML tag for procedure output. */
@@ -61,7 +62,7 @@ object ProcedureOutputMain {
             System.exit(0)
         }
         catch {
-            case t: Throwable => ProcedureStatus.terminate("Unexpected problem while inserting data into the database: " + t, ProcedureStatus.crash)
+            case t: Throwable => ProcedureStatus.terminate("Unexpected problem while inserting data into the database: " + fmtEx(t), ProcedureStatus.crash)
         }
     }
 }

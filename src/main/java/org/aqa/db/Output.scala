@@ -18,6 +18,9 @@ case class Output(
         userPK: Option[Long], // user that created this output
         startDate: Timestamp, // when procedure was started
         finishDate: Option[Timestamp], // when procedure finished
+        dataDate: Option[Timestamp], // optionally supplied by analysis procedure to indicate or override Input.dataDate 
+        analysisDate: Option[Timestamp], // optionally supplied by analysis procedure to indicate prior analysis
+        machinePK: Option[Long], // optionally supplied by analysis procedure to indicate treatment machine
         status: String, // termination status
         dataValidity: String) // whether the data is valid or otherwise
         {
@@ -59,7 +62,7 @@ case class Output(
     }
 }
 
-object Output  {
+object Output {
     class OutputTable(tag: Tag) extends Table[Output](tag, "output") {
 
         def outputPK = column[Long]("outputPK", O.PrimaryKey, O.AutoInc)
@@ -69,6 +72,9 @@ object Output  {
         def userPK = column[Option[Long]]("userPK")
         def startDate = column[Timestamp]("startDate")
         def finishDate = column[Option[Timestamp]]("finishDate")
+        def dataDate = column[Option[Timestamp]]("dataDate")
+        def analysisDate = column[Option[Timestamp]]("analysisDate")
+        def machinePK = column[Option[Long]]("machinePK")
         def status = column[String]("status")
         def dataValidity = column[String]("dataValidity")
 
@@ -80,6 +86,9 @@ object Output  {
             userPK,
             startDate,
             finishDate,
+            dataDate,
+            analysisDate,
+            machinePK,
             status,
             dataValidity) <> ((Output.apply _)tupled, Output.unapply _)
 
@@ -224,6 +233,9 @@ object Output  {
                 Some((6).toLong), // user that created this output
                 startDate = new Timestamp(System.currentTimeMillis), // when procedure was started
                 finishDate = Some(new Timestamp(System.currentTimeMillis + 1)), // when procedure finished
+                dataDate = None,
+                analysisDate = None,
+                machinePK = None,
                 status = "testing",
                 dataValidity = DataValidity.valid.toString) // termination status
             println("output: " + output)
