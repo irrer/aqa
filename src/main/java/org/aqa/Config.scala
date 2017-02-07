@@ -154,6 +154,30 @@ object Config {
         (document \ "PropertyList" \ "Property").toList.map(node => setProperty(node))
     }
 
+    private def getThisJarFile: File = {
+        // Assume we are in the development environment and get the latest jar
+        def getDevJar: File = {
+            def cmprFileTime(a: File, b: File): Boolean =  a.lastModified > b.lastModified
+            val timeSortedList = (new File("target")).listFiles.sortWith((a,b) => cmprFileTime(a,b))
+            timeSortedList.filter(f => f.getName.matches("^AQA.*jar-with-dependencies.jar$")).headOption match {
+                case Some(f) => f
+                case _ => {
+                    val f = new File("target/AQA-0.0.1-jar-with-dependencies.jar")
+                    Logging.logWarning("Unable to find the jar file being used.  Assuming " + f.getAbsolutePath)
+                    f
+                }
+            }
+        }
+        val jf: File = Util.thisJarFile match {
+            case f if f.isDirectory => getDevJar
+            case f if (f.isFile && f.canRead) => f
+            case f => { Logging.logWarning("Unable to find the jar file being used.  Assuming " + f.getAbsolutePath); f }
+        }
+        val fileDate = if (jf.canRead) " : " + (new Date(jf.lastModified)) else "  can not read file"
+        logText("jarFile", jf.getAbsolutePath + fileDate)
+        jf
+    }
+
     val HTTPSPort = mainText("HTTPSPort").toInt
 
     val JavaKeyStorePassword = getJavaKeyStorePassword
@@ -168,6 +192,8 @@ object Config {
     val AuthenticationTimeoutInMs = (AuthenticationTimeout * 1000).toLong
 
     val DatabaseCommand = mainText("DatabaseCommand")
+
+    val jarFile = getThisJarFile
 
     /** Number of minutes into a 24 hour day at which time service should be restarted. */
     val RestartTime: Long = {

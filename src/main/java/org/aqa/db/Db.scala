@@ -9,10 +9,19 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{ Success, Failure }
 import com.mchange.v2.c3p0.ComboPooledDataSource
+import scala.xml.Elem
+import org.aqa.run.ProcedureStatus
+import org.aqa.Logging._
+import java.io.File
+import org.aqa.Config
+import scala.xml.XML
 
 /** Database utilities. */
 
 object Db {
+
+    /** Ensure that the the configuration has been read. */
+    private val configInit = Config.validate
 
     /**
      * Default timeout for general database overhead operations.  This includes operations like
@@ -70,5 +79,7 @@ object Db {
             if (!tableExists(table)) throw new RuntimeException("Tried but failed to create table " + tableName(table))
         }
     }
+
+    // ==========================================================================
 
 }

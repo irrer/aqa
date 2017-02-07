@@ -2,6 +2,7 @@ package org.aqa.procedures
 
 import java.io.File
 import org.aqa.Util
+import org.aqa.Logging
 import org.apache.poi.ss.usermodel.Cell
 import org.aqa.run.ProcedureStatus
 import scala.xml.Elem
@@ -13,8 +14,9 @@ import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.Row
 import edu.umro.MSOfficeUtil.Excel.ExcelUtil
-import org.aqa.db.ProcedureOutput
 import org.aqa.Config
+import org.aqa.db.Db
+import edu.umro.ScalaUtil.Trace
 
 object LeafCorrectionTransmissionProcedure {
 
@@ -27,11 +29,12 @@ object LeafCorrectionTransmissionProcedure {
         println("Using parent directory: " + parentDir.getAbsolutePath)
 
         println("Using parent directory: " + parentDir.getAbsolutePath)
-        val excel = parentDir.listFiles.map(af => ExcelUtil.read(af)).filter { ws => ws.isRight }.map(o => o.right.get)
+        val excel = parentDir.listFiles.map(af => (af, ExcelUtil.read(af))).filter { fws => fws._2.isRight }.map(fo => (fo._1, fo._2.right.get))
         if (excel.isEmpty) ProcedureStatus.terminate("No Excel files found", ProcedureStatus.fail)
-        if (excel.size > 1) ProcedureStatus.terminate("Expecting one Excel file but found " + excel.size, ProcedureStatus.fail)
-        println("Found excel file");
-        excel.head
+        val fileNameList = excel.foldLeft("")((t, fws) => t + "  " + fws._1.getAbsolutePath)
+        if (excel.size > 1) ProcedureStatus.terminate("Expecting one Excel file but found " + excel.size + " : " + fileNameList, ProcedureStatus.fail)
+        println("Using excel file " + fileNameList);
+        excel.head._2
     }
 
     private def isSectionHeader(cell: Cell): Boolean = {
@@ -116,7 +119,7 @@ object LeafCorrectionTransmissionProcedure {
             }
 
             val text = xmlToText(xml)
-            Util.writeFile(new File(curDir, ProcedureOutput.outputFileName), text)
+            Util.writeFile(new File(curDir, ProcedureOutputUtil.outputFileName), text)
 
             val html = WebUtil.excelToHtml(workbook)
 
@@ -125,7 +128,7 @@ object LeafCorrectionTransmissionProcedure {
             println("wrote Excel as HTML")
         }
         catch {
-            case t: Throwable => ProcedureStatus.terminate("Unexpected error: " + t, ProcedureStatus.abort)
+            case t: Throwable => ProcedureStatus.terminate("Unexpected error: " + Logging.fmtEx(t), ProcedureStatus.abort)
         }
     }
 

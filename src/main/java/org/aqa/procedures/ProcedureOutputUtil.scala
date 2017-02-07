@@ -1,37 +1,27 @@
-package org.aqa.db
+package org.aqa.procedures
 
 import scala.xml.Elem
 import java.io.File
-import scala.xml.XML
+import org.aqa.db.LeafOffsetCorrection
+import org.aqa.db.LeafTransmission
 import org.aqa.run.ProcedureStatus
+import scala.xml.XML
+import org.aqa.db.DbSetup
 import org.aqa.Config
-import org.aqa.Logging._
+import org.aqa.Logging
 
-trait ProcedureOutput {
-    /** Identifies the top level XML tag for procedure output. */
-    val topXmlLabel: String;
-
-    def contains(elem: Elem): Boolean = {
-        (elem \ topXmlLabel).headOption.isDefined
-    }
-
-    def insert(elem: Elem, outputPK: Long): Int;
-}
-
-object ProcedureOutput {
+object ProcedureOutputUtil {
 
     val outputFileName = "output.xml"
 
-    val procedureList: List[ProcedureOutput] = List(LeafOffsetCorrection, LeafTransmission)
+    private val procedureList: List[ProcedureOutput] = List(LeafOffsetCorrection, LeafTransmission)
 
     private def insert(elem: Elem, outputPK: Long) = procedureList.map(po => po.insert(elem, outputPK))
-}
 
-object ProcedureOutputMain {
-    private val labelList = ProcedureOutput.procedureList.map(p => p.topXmlLabel)
+    private val labelList = procedureList.map(p => p.topXmlLabel)
 
     private def getOutputFile(args: Array[String]): File = {
-        if ((args == null) || (args.isEmpty)) new File(ProcedureOutput.outputFileName)
+        if ((args == null) || (args.isEmpty)) new File(outputFileName)
         else new File(args(0))
     }
 
@@ -56,7 +46,7 @@ object ProcedureOutputMain {
             }
 
             def insert(label: String) = {
-                val procedureOutput = ProcedureOutput.procedureList.find(p => p.topXmlLabel.equals(label)).get
+                val procedureOutput = procedureList.find(p => p.topXmlLabel.equals(label)).get
                 println("Inserting values in database for " + label)
                 val count = procedureOutput.insert(elem, outputPK)
                 println("Inserted " + count + " values in database for " + label)
@@ -67,7 +57,11 @@ object ProcedureOutputMain {
             System.exit(0)
         }
         catch {
-            case t: Throwable => ProcedureStatus.terminate("Unexpected problem while inserting data into the database: " + fmtEx(t), ProcedureStatus.crash)
+            case t: Throwable => {
+                ProcedureStatus.terminate("Unexpected problem while inserting data into the database: " + Logging.fmtEx(t), ProcedureStatus.crash)
+                System.exit(1)
+            }
         }
     }
+
 }

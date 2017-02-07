@@ -139,11 +139,13 @@ object Run {
 
         val setOutputPk = "SET outputPK=" + output.outputPK.get
 
+        val setJar = "SET AQAJAR=" + Config.jarFile.getAbsolutePath
+
         val setDbCommand = "SET DatabaseCommand=" + Config.DatabaseCommand
 
         val execute = procedure.execDir + File.separator + runCommandName
 
-        val cmdList = List(cd, setDir, setInputPk, setOutputPk, setDbCommand, execute)
+        val cmdList = List(cd, setDir, setInputPk, setOutputPk, setJar, setDbCommand, execute)
         val inputString = cmdList.foldLeft("")((t, c) => t + c + System.lineSeparator)
         println("inputString: " + inputString) // TODO rm
         val inputStream = new java.io.ByteArrayInputStream(inputString.getBytes("UTF-8"))

@@ -8,6 +8,7 @@ import java.io.File
 import scala.xml.XML
 import scala.xml.Node
 import scala.xml.Elem
+import org.aqa.procedures.ProcedureOutput
 
 case class LeafOffsetCorrection(
         leafOffsetCorrectionPK: Option[Long], // primary key
@@ -20,7 +21,7 @@ case class LeafOffsetCorrection(
     def insert: LeafOffsetCorrection = {
         val insertQuery = LeafOffsetCorrection.query returning LeafOffsetCorrection.query.map(_.leafOffsetCorrectionPK) into
             ((leafOffsetCorrection, leafOffsetCorrectionPK) => leafOffsetCorrection.copy(leafOffsetCorrectionPK = Some(leafOffsetCorrectionPK)))
-            
+
         val action = insertQuery += this
         val result = Db.run(action)
         result
@@ -47,8 +48,8 @@ object LeafOffsetCorrection extends ProcedureOutput {
             leafIndex,
             correction_mm) <> ((LeafOffsetCorrection.apply _)tupled, LeafOffsetCorrection.unapply _)
 
-        def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK)
-      //def supplier = foreignKey("SUP_FK", supID, suppliers)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)           TODO
+        def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+        //def supplier = foreignKey("SUP_FK", supID, suppliers)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)           TODO
     }
 
     val query = TableQuery[LeafOffsetCorrectionTable]

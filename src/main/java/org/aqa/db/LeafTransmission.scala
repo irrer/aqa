@@ -8,6 +8,7 @@ import java.io.File
 import scala.xml.XML
 import scala.xml.Node
 import scala.xml.Elem
+import org.aqa.procedures.ProcedureOutput
 
 case class LeafTransmission(
         leafTransmissionPK: Option[Long], // primary key
@@ -45,7 +46,7 @@ object LeafTransmission extends ProcedureOutput {
             leafIndex,
             correction_mm) <> ((LeafTransmission.apply _)tupled, LeafTransmission.unapply _)
 
-        def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK)
+        def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
     }
 
     val query = TableQuery[LeafTransmissionTable]
@@ -106,6 +107,11 @@ object LeafTransmission extends ProcedureOutput {
     def main(args: Array[String]): Unit = {
         val valid = Config.validate
         DbSetup.init
+
+        val lt = get(1000000.toLong)
+        println("lt: " + lt)
+        System.exit(99)
+
         val elem = XML.loadFile(new File("""D:\AQA_Data\data\Chicago_33\TB5x_1\WinstonLutz_1.0_1\2016-12-09T09-50-54-361_134\output_2016-12-09T09-50-54-490\output.xml"""))
         val xmlList = xmlToList(elem, 134)
         xmlList.map(loc => println("    outputPK: " + loc.outputPK + "     section: " + loc.section + "     leafIndex: " + loc.leafIndex + "     correction_mm: " + loc.transmission_mm))
