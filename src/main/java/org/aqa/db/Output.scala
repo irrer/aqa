@@ -93,8 +93,8 @@ object Output {
             dataValidity) <> ((Output.apply _)tupled, Output.unapply _)
 
         def inputFK = foreignKey("inputPK", inputPK, Input.query)(_.inputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
-        def procedureFK = foreignKey("procedurePK", procedurePK, Procedure.query)(_.procedurePK)
-        def userFK = foreignKey("userPK", userPK, User.query)(_.userPK)
+        def procedureFK = foreignKey("procedurePK", procedurePK, Procedure.query)(_.procedurePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
+        def userFK = foreignKey("userPK", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
         
     }
 

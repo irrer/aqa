@@ -59,8 +59,8 @@ object Input {
             dataDate
         ) <> ((Input.apply _)tupled, Input.unapply _)
 
-        def userFK = foreignKey("userPK", userPK, User.query)(_.userPK)
-        def machineFK = foreignKey("machinePK", machinePK, Machine.query)(_.machinePK)
+        def userFK = foreignKey("userPK", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
+        def machineFK = foreignKey("machinePK", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
     }
 
     val query = TableQuery[InputTable]

@@ -42,8 +42,8 @@ object Machine {
             institutionPK,
             notes) <> ((Machine.apply _)tupled, Machine.unapply _)
 
-        def machineTypeFK = foreignKey("machineTypePK", machineTypePK, MachineType.query)(_.machineTypePK)
-        def institutionFK = foreignKey("institutionPK", institutionPK, Institution.query)(_.institutionPK)
+        def machineTypeFK = foreignKey("machineTypePK", machineTypePK, MachineType.query)(_.machineTypePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
+        def institutionFK = foreignKey("institutionPK", institutionPK, Institution.query)(_.institutionPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
     }
 
     def fileName(id: String): String = FileUtil.replaceInvalidFileNameCharacters(id, '_')
