@@ -132,7 +132,6 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
     }
 
     protected def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Unit = {
-        println("hey") // TODO rm
     }
 
     override def handle(request: Request, response: Response): Unit = {

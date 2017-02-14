@@ -66,6 +66,9 @@ object Db {
         exists
     }
 
+    /**
+     * If the given table exists, drop it.
+     */
     def dropTableIfExists(table: TableQuery[Table[_]]): Unit = {
         if (tableExists(table)) {
             perform(table.schema.drop)
@@ -81,5 +84,28 @@ object Db {
     }
 
     // ==========================================================================
+
+    def main(args: Array[String]): Unit = {
+        //val valid = Config.validate
+
+        val dba = {
+            val ds = new ComboPooledDataSource
+            ds.setDriverClass("slick.driver.PostgresDriver$")
+            ds.setJdbcUrl("jdbc:postgresql://aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA?sslmode=require")
+            ds.setUser("aqa")
+            ds.setPassword("Kwalitee_1")
+            Database.forDataSource(ds)
+        }
+
+        val TM = new DurationInt(5).seconds
+
+        val start = System.currentTimeMillis
+        println("getting table list")
+        val tables = Await.result(dba.run(MTable.getTables), TM).toList
+
+        println("tables.size: " + tables.size)
+        println("Elapsed ms: " + (System.currentTimeMillis - start))
+        //tables.map(t => println("    " + t))
+    }
 
 }

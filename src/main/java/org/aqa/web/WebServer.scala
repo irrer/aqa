@@ -81,7 +81,7 @@ class WebServer extends Application {
         val dirList = locations.filter(f => f.isDirectory)
 
         if (dirList.isEmpty) {
-            val fileNameList = locations.foldLeft("")((t, f) => t + f.getAbsolutePath)
+            val fileNameList = locations.foldLeft("")((t, f) => t + "    " + f.getAbsolutePath)
             val msg = "Unable to find static directory in " + fileNameList
             logSevere(msg)
             throw new RuntimeException(msg)
@@ -160,7 +160,7 @@ class WebServer extends Application {
             case `tmpDir` => UserRole.user
 
             case _ => {
-                println("admin role requested") // TODO rm
+                logInfo("admin role requested")
                 UserRole.admin // default to most restrictive access for everything else
             }
         }
