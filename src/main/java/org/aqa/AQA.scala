@@ -19,7 +19,7 @@ object AQA {
                 Run.handleRunningProcedureList
                 new WebServer
                 new PeriodicRestart(Config.RestartTime)
-                println("Service started")
+                logInfo("Service started")
             }
         }
         catch {

@@ -53,13 +53,23 @@ class WebServer extends Application {
 
     private lazy val component = new Component
 
-    private def addHttps: Unit = {
-        val status = RestletHttps.addHttps(component, Config.HTTPSPort, Config.JavaKeyStoreFileList, List(Config.JavaKeyStorePassword))
-        if (status.isLeft) {
-            logSevere("Unable to use HTTPS.  Error: " + status.left.get)
+    /**
+     * If the Config.HTTPSPort is defined, then use HTTPS, otherwise use HTTP
+     */
+    private def addProtocol: Unit = {
+        if (Config.HTTPSPort.isDefined) {
+            val status = RestletHttps.addHttps(component, Config.HTTPSPort.get, Config.JavaKeyStoreFileList, List(Config.JavaKeyStorePassword))
+            if (status.isLeft) {
+                logSevere("Unable to use HTTPS.  Error: " + status.left.get)
+            }
+            else {
+                logInfo("Using protocol " + Protocol.HTTPS + " on port " + Config.HTTPSPort.get)
+                logInfo("Using keystore file " + status.right.get.keyStoreFile.getAbsolutePath)
+            }
         }
         else {
-            logInfo("Using keystore file " + status.right.get.keyStoreFile.getAbsolutePath)
+            val server = component.getServers.add(Protocol.HTTP, 80)
+            server.getProtocols.toArray.map(p => logInfo("Using protocol " + p + " on port " + server.getPort))
         }
     }
 
@@ -184,7 +194,6 @@ class WebServer extends Application {
     override def createInboundRoot: Restlet = {
 
         try {
-            println("createInboundRoot") // TODO rm
             router.setDefaultMatchingMode(Template.MODE_STARTS_WITH)
 
             component.getClients.add(Protocol.FILE)
@@ -229,8 +238,19 @@ class WebServer extends Application {
         }
         catch {
             case t: Throwable => {
-                println("WebServer.createInboundRoot unexpected error: " + t)    // TODO real badness
+                println("WebServer.createInboundRoot unexpected error: " + t) // TODO extreme badness
                 router
+            }
+        }
+    }
+
+    private def waitForWebServiceToStart = {
+        if (!component.isStarted) Thread.sleep(100)
+        if (!component.isStarted) {
+            val timeout = System.currentTimeMillis + (10 * 1000) // wait up to 10 seconds for the component to start.  It should be only a few milliseconds.
+            while ((!component.isStarted) && (System.currentTimeMillis < timeout)) {
+                logInfo("Waiting for web service to start ...")
+                Thread.sleep(1000)
             }
         }
     }
@@ -239,17 +259,10 @@ class WebServer extends Application {
      * Initialize and start the service.
      */
     def init: Unit = {
-        addHttps
-        // component.getServers().add(Protocol.HTTP, 80) // TODO remove.  For testing only
-        // authenticationHealthCheck
+        addProtocol
         component.getDefaultHost.attach(this)
-        logInfo("Starting web service on port: " + Config.HTTPSPort)
         component.start
-        // setWebLogLevel
-        while (!component.isStarted) {
-            println("waiting ...") // TODO remove
-            Thread.sleep(100)
-        }
+        waitForWebServiceToStart
     }
 
     init

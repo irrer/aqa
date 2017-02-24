@@ -98,13 +98,32 @@ object Config {
 
     private def getJavaKeyStorePassword: String = {
         val name = "JavaKeyStorePassword"
-        val value = getMainText(name)
-        logText(name, "[redacted]")
-        value
+        try {
+            val value = getMainText(name)
+            logText(name, "[redacted]")
+            value
+        }
+        catch {
+            case _: Throwable => {
+                logText(name, "[not configured]")
+                ""
+            }
+        }
     }
 
     private def getJavaKeyStoreFileList: List[File] = {
-        (document \ "JavaKeyStoreFileList" \ "JavaKeyStoreFile").toList.map(node => new File(node.head.text))
+        val name = "JavaKeyStoreFileList"
+        try {
+            val list = (document \ name \ "JavaKeyStoreFile").toList.map(node => new File(node.head.text))
+            list.map(jksf => logText("JavaKeyStoreFile", jksf.getAbsolutePath))
+            list
+        }
+        catch {
+            case _: Throwable => {
+                logText(name, "[not configured]")
+                List[File]()
+            }
+        }
     }
 
     private val document: Elem = {
@@ -157,8 +176,8 @@ object Config {
     private def getThisJarFile: File = {
         // Assume we are in the development environment and get the latest jar
         def getDevJar: File = {
-            def cmprFileTime(a: File, b: File): Boolean =  a.lastModified > b.lastModified
-            val timeSortedList = (new File("target")).listFiles.sortWith((a,b) => cmprFileTime(a,b))
+            def cmprFileTime(a: File, b: File): Boolean = a.lastModified > b.lastModified
+            val timeSortedList = (new File("target")).listFiles.sortWith((a, b) => cmprFileTime(a, b))
             timeSortedList.filter(f => f.getName.matches("^AQA.*jar-with-dependencies.jar$")).headOption match {
                 case Some(f) => f
                 case _ => {
@@ -178,7 +197,21 @@ object Config {
         jf
     }
 
-    val HTTPSPort = mainText("HTTPSPort").toInt
+    val HTTPSPort: Option[Int] = {
+        val name = "HTTPSPort"
+        try {
+            val securePort = getMainText(name).toInt
+            logText(name, securePort.toString)
+            Some(securePort)
+        }
+        catch {
+            case _: Throwable => {
+                logText(name, "Not specified")
+                None
+            }
+        }
+
+    }
 
     val JavaKeyStorePassword = getJavaKeyStorePassword
     val JavaKeyStoreFileList = getJavaKeyStoreFileList

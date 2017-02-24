@@ -3,9 +3,6 @@
 <!-- Generic Configuration for AQA -->
 
 <AQAConfig>
-
-    <!-- Port number for the Secure ReST service.   Port 443 is the default for HTTPS. -->
-    <HTTPSPort>9443</HTTPSPort>
     
     <!-- List of System properties that should be set. -->
     <PropertyList>
@@ -30,6 +27,11 @@
         <Property Name='slick.relational'                             >INFO</Property>
         <Property Name='slick.relational.ResultConverterCompiler'     >INFO</Property>
     </PropertyList>
+
+    <!-- Port number for the Secure ReST service.   Port 443 is the default for HTTPS.
+    If this is missing or commented out, then the server will instead use HTTP on port 80.   Alternately,
+    if this is specified, then the JavaKeyStoreFileList and JavaKeyStorePassword must be given. -->
+    <!-- -->   <HTTPSPort>9443</HTTPSPort> 
     
     <!-- Location of file that contains Java Key Store for HTTPS.  If multiple names are given, then they are
     each tried in the order given until a readable file is found. -->
@@ -40,8 +42,8 @@
     </JavaKeyStoreFileList>
     
     <!-- The password to access the Java Key Store file. -->
-    <!-- <JavaKeyStorePassword>9c067233b07c7b04025989a197fad9b12cf4c19006678e2b18b121289bd1635a2d395a603122a6e6</JavaKeyStorePassword> -->   <!-- rodicom11dev -->
-    <JavaKeyStorePassword>44d18166c66bed60b6394e6625c63dea713dbe465ddc960a7cd109514bc0d2bd</JavaKeyStorePassword>   <!-- irrer -->
+    <JavaKeyStorePassword>9c067233b07c7b04025989a197fad9b12cf4c19006678e2b18b121289bd1635a2d395a603122a6e6</JavaKeyStorePassword> <!-- rodicom11dev -->
+    <!-- <JavaKeyStorePassword>44d18166c66bed60b6394e6625c63dea713dbe465ddc960a7cd109514bc0d2bd</JavaKeyStorePassword> -->     <!-- irrer -->
     
     <!-- Directory containing executables and configuration files to run procedures. -->
     <ProgramDir>C:\Program Files\AQA</ProgramDir>
