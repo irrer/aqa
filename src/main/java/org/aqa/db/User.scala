@@ -3,6 +3,8 @@ package org.aqa.db
 import slick.driver.PostgresDriver.api._
 import org.aqa.Logging._
 import org.aqa.Config
+import org.aqa.Util
+import org.aqa.web.AuthenticationVerifier
 
 case class User(
         userPK: Option[Long], // primary key
@@ -25,7 +27,7 @@ case class User(
     def insertOrUpdate = Db.run(User.query.insertOrUpdate(this))
 }
 
-object User {
+object User extends {
     class UserTable(tag: Tag) extends Table[User](tag, "user") {
 
         def userPK = column[Long]("userPK", O.PrimaryKey, O.AutoInc)
@@ -36,8 +38,6 @@ object User {
         def hashedPassword = column[String]("hashedPassword")
         def passwordSalt = column[String]("passwordSalt")
         def role = column[String]("role")
-        
-        // def idIndex = index("idIndex", (id), unique = true)  TODO test later
 
         def * = (
             userPK.?,
@@ -84,14 +84,20 @@ object User {
         val action = query.filter(_.id.toLowerCase === id)
         val seq = Db.run(action.result)
         logInfo("getUserById search for user with id " + idRaw + " + found " + seq.size + " matches.")
-        if (seq.isEmpty) None else Some(seq.head)
+        seq.headOption
+    }
+
+    /** Get the list of users with the given role. */
+    def getUserListByRole(role: UserRole.Value): Seq[User] = {
+        val action = query.filter(_.role === role.toString)
+        Db.run(action.result)
     }
 
     /** List all users. */
     def list: List[User] = Db.run(query.result).toList
 
     case class UserInstitution(user: User, institution: Institution);
-    
+
     /**
      * Get a list of all users with institution name.
      */

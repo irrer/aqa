@@ -76,7 +76,5 @@ object MachineType {
     def main(args: Array[String]): Unit = {
         val valid = Config.validate
         DbSetup.init
-        println("======== inst: " + get(5))
-        println("======== inst delete: " + delete(5))
     }
 }

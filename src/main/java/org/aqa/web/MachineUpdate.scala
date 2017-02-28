@@ -28,13 +28,14 @@ import org.aqa.db.Institution.InstitutionTable
 import org.aqa.db.Institution
 import org.aqa.db.MachineType
 import edu.umro.ScalaUtil.Trace._
+import org.aqa.db.MultileafCollimator
 
 object MachineUpdate {
     val machinePKTag = "machinePK"
 }
 
 class MachineUpdate extends Restlet with SubUrlAdmin {
-    
+
     private val pageTitleCreate = "Create Machine"
 
     private val pageTitleEdit = "Edit Machine"
@@ -45,6 +46,10 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
     private val machineTypePK = new WebInputSelect("Type", 6, 0, typeName)
 
+    private def collimatorName() = MultileafCollimator.list.toList.map(mlc => (mlc.multileafCollimatorPK.get.toString, mlc.toName))
+
+    private val multileafCollimatorPK = new WebInputSelect("Collimator", 6, 0, collimatorName)
+
     private def institutionList() = Institution.list.toList.map(i => (i.institutionPK.get.toString, i.name))
 
     private val institutionPK = new WebInputSelect("Institution", 6, 0, institutionList)
@@ -52,7 +57,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     private val notes = new WebInputTextArea("Notes", 6, 0, "")
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
-        new FormButton(name, 1, 0,  subUrl, pathOf, buttonType)
+        new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
     }
 
     private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
@@ -62,9 +67,9 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
     private val machinePK = new WebInputHidden(MachineUpdate.machinePKTag)
 
-    private val formCreate = new WebForm(pathOf, List(List(id), List(machineTypePK), List(institutionPK), List(notes), List(createButton, cancelButton)))
+    private val formCreate = new WebForm(pathOf, List(List(id), List(machineTypePK), List(multileafCollimatorPK), List(institutionPK), List(notes), List(createButton, cancelButton)))
 
-    private val formEdit = new WebForm(pathOf, List(List(id), List(machineTypePK), List(institutionPK), List(notes), List(saveButton, cancelButton, deleteButton, machinePK)))
+    private val formEdit = new WebForm(pathOf, List(List(id), List(machineTypePK), List(multileafCollimatorPK), List(institutionPK), List(notes), List(saveButton, cancelButton, deleteButton, machinePK)))
 
     private def redirect(response: Response, valueMap: ValueMapT) = {
         val pk = machinePK.getValOrEmpty(valueMap)
@@ -133,10 +138,11 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
         }
         val idVal = valueMap.get(id.label).get.trim
         val machineTypePKVal = valueMap.get(machineTypePK.label).get.trim.toLong
+        val multilefCollimatorPKVal = valueMap.get(multileafCollimatorPK.label).get.trim.toLong
         val institutionPKVal = valueMap.get(institutionPK.label).get.trim.toLong
         val notesVal = valueMap.get(notes.label).get.trim
 
-        val machine = new Machine(pk, idVal, machineTypePKVal, institutionPKVal, notesVal)
+        val machine = new Machine(pk, idVal, machineTypePKVal, Some(multilefCollimatorPKVal), institutionPKVal, notesVal)
         machine
     }
 

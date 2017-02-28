@@ -80,8 +80,8 @@ object Procedure {
             notes) <> ((Procedure.apply _)tupled, Procedure.unapply _)
 
         def supportingUserFK = foreignKey("userPK", supportingUserPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
-
     }
+
     val query = TableQuery[ProcedureTable]
 
     def fullName(name: String, version: String): String = name + " " + version

@@ -9,6 +9,7 @@ case class Machine(
         machinePK: Option[Long], // primary key
         id: String, // uniquely identifying name within hosting institution
         machineTypePK: Long, // type of machine foreign key
+        multileafCollimatorPK: Option[Long], // collimator
         institutionPK: Long, // institution that this machine belongs to
         notes: String // optional further information
         ) {
@@ -32,6 +33,7 @@ object Machine {
         def machinePK = column[Long]("machinePK", O.PrimaryKey, O.AutoInc)
         def id = column[String]("id")
         def machineTypePK = column[Long]("machineTypePK")
+        def multileafCollimatorPK = column[Option[Long]]("multileafCollimatorPK")
         def institutionPK = column[Long]("institutionPK")
         def notes = column[String]("notes")
 
@@ -39,10 +41,12 @@ object Machine {
             machinePK.?,
             id,
             machineTypePK,
+            multileafCollimatorPK,
             institutionPK,
             notes) <> ((Machine.apply _)tupled, Machine.unapply _)
 
         def machineTypeFK = foreignKey("machineTypePK", machineTypePK, MachineType.query)(_.machineTypePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
+        def multileafCollimatorFK = foreignKey("multileafCollimatorPK", multileafCollimatorPK, MultileafCollimator.query)(_.multileafCollimatorPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
         def institutionFK = foreignKey("institutionPK", institutionPK, Institution.query)(_.institutionPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
     }
 

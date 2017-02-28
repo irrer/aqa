@@ -170,7 +170,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     private def deleteOutput(outputPK: Long): Unit = {
         val output = Output.get(outputPK)
         if (output.isDefined) {
-            Output.deleteOutputAndReferences(output.get.outputPK.get)
+            Output.delete(output.get.outputPK.get)
             val list = Output.listByInputPK(output.get.inputPK)
             if (list.size == 0) {
                 val input = Input.get(output.get.inputPK)

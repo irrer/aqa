@@ -6,11 +6,12 @@
     
     <!-- List of System properties that should be set. -->
     <PropertyList>
-        <Property Name='slick.dbs.default.driver'>slick.driver.PostgresDriver$</Property>
-        <Property Name='slick.dbs.default.db.driver'>org.postgresql.Driver</Property>
+        <!--  <Property Name='slick.dbs.default.db.url'>jdbc:postgresql://141.214.125.68:5432/AQATest</Property> -->
         <Property Name='slick.dbs.default.db.url'>jdbc:postgresql://141.214.125.68:5432/Tonto</Property>
         <Property Name='slick.dbs.default.db.user'>postgres</Property>
         <Property Name='slick.dbs.default.db.password'>postgresjim</Property>
+        <Property Name='slick.dbs.default.driver'>slick.driver.PostgresDriver$</Property>
+        <Property Name='slick.dbs.default.db.driver'>org.postgresql.Driver</Property>
         <!-- These below make no difference. -->
         <Property Name='s.c'                                          >INFO</Property>
         <Property Name='logger'                                       >INFO</Property>

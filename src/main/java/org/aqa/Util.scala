@@ -19,6 +19,9 @@ import scala.util.Random
 
 object Util {
 
+    val aqaDomain = "automatedqualityassurance.org"
+    val aqaUrl = "https://www." + aqaDomain + "/"
+
     private val timeAsFileNameFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss-SSS")
 
     def timeAsFileName(date: Date) = timeAsFileNameFormat.format(date)

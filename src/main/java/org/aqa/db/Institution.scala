@@ -4,6 +4,7 @@ import slick.driver.PostgresDriver.api._
 import org.aqa.Logging._
 import org.aqa.Config
 import edu.umro.ScalaUtil.FileUtil
+import org.aqa.Util
 
 case class Institution(
         institutionPK: Option[Long], // primary key

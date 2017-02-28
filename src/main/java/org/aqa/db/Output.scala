@@ -151,24 +151,24 @@ object Output {
         Db.run(q.result)
     }
 
-    private def delete(outputPK: Long): Int = {
+    def delete(outputPK: Long): Int = {
         val q = query.filter(_.outputPK === outputPK)
         val action = q.delete
         Db.run(action)
     }
 
-    /**
-     * Delete the given output and all rows in other tables that reference it.  Note
-     *  that inputs referenced by the output are not deleted.
-     */
-    def deleteOutputAndReferences(outputPK: Long): Unit = {
-        val action = for {
-            _ <- CentralAxis.query.filter(_.outputPK === outputPK).delete
-            _ <- query.filter(_.outputPK === outputPK).delete
-        } yield ()
-
-        Db.run(action.transactionally)
-    }
+//    /**
+//     * Delete the given output and all rows in other tables that reference it.  Note
+//     *  that inputs referenced by the output are not deleted.
+//     */
+//    def deleteOutputAndReferences(outputPK: Long): Unit = {
+//        val action = for {
+//            _ <- CentralAxis.query.filter(_.outputPK === outputPK).delete
+//            _ <- query.filter(_.outputPK === outputPK).delete
+//        } yield ()
+//
+//        Db.run(action.transactionally)
+//    }
 
     val displayFilePrefix = "display".toLowerCase
 
