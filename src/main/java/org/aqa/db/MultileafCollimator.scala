@@ -10,14 +10,14 @@ case class MultileafCollimator(
         manufacturer: String, // manufacturer's name
         model: String, // manufacturer's model name
         version: String, // details if manufacturer and model are not sufficiently unique
-        outerLeafWidthCount: Int, // total number of opposing outer leaf pairs
-        innerLeafWidthCount: Int, // total number of opposing inner leaf pairs
-        outerLeafWidth_mm: Double, // width of each outer leaf in mm
-        innerLeafWidth_mm: Double, // width of each inner leaf in mm
-        outerLeafRetractedPosition_mm: Double, // fully retracted position of each outer leaf in mm
-        innerLeafRetractedPosition_mm: Double, // fully retracted position of each outer leaf in mm
-        outerLeafExtendedPosition_mm: Double, // fully extended position of each inner leaf in mm
-        innerLeafExtendedPosition_mm: Double, // fully extended position of each inner leaf in mm
+        outerLeafPairCount: Int, // total number of opposing outer leaf pairs
+        innerLeafPairCount: Int, // total number of opposing inner leaf pairs
+        outerLeafWidth_cm: Double, // width of each outer leaf in cm
+        innerLeafWidth_cm: Double, // width of each inner leaf in cm
+        outerLeafRetractedPosition_cm: Double, // fully retracted position of each outer leaf in cm
+        innerLeafRetractedPosition_cm: Double, // fully retracted position of each outer leaf in cm
+        outerLeafExtendedPosition_cm: Double, // fully extended position of each inner leaf in cm
+        innerLeafExtendedPosition_cm: Double, // fully extended position of each inner leaf in cm
         notes: String // any extra information
         ) {
 
@@ -40,14 +40,14 @@ object MultileafCollimator {
         def manufacturer = column[String]("manufacturer")
         def model = column[String]("model")
         def version = column[String]("version")
-        def outerLeafWidthCount = column[Int]("outerLeafWidthCount")
-        def innerLeafWidthCount = column[Int]("innerLeafWidthCount")
-        def outerLeafWidth_mm = column[Double]("outerLeafWidth_mm")
-        def innerLeafWidth_mm = column[Double]("innerLeafWidth_mm")
-        def outerLeafRetractedPosition_mm = column[Double]("outerLeafRetractedPosition_mm")
-        def innerLeafRetractedPosition_mm = column[Double]("innerLeafRetractedPosition_mm")
-        def outerLeafExtendedPosition_mm = column[Double]("outerLeafExtendedPosition_mm")
-        def innerLeafExtendedPosition_mm = column[Double]("innerLeafExtendedPosition_mm")
+        def outerLeafPairCount = column[Int]("outerLeafPairCount")
+        def innerLeafPairCount = column[Int]("innerLeafPairCount")
+        def outerLeafWidth_cm = column[Double]("outerLeafWidth_cm")
+        def innerLeafWidth_cm = column[Double]("innerLeafWidth_cm")
+        def outerLeafRetractedPosition_cm = column[Double]("outerLeafRetractedPosition_cm")
+        def innerLeafRetractedPosition_cm = column[Double]("innerLeafRetractedPosition_cm")
+        def outerLeafExtendedPosition_cm = column[Double]("outerLeafExtendedPosition_cm")
+        def innerLeafExtendedPosition_cm = column[Double]("innerLeafExtendedPosition_cm")
         def notes = column[String]("notes")
 
         def * = (
@@ -55,14 +55,14 @@ object MultileafCollimator {
             manufacturer,
             model,
             version,
-            outerLeafWidthCount,
-            innerLeafWidthCount,
-            outerLeafWidth_mm,
-            innerLeafWidth_mm,
-            outerLeafRetractedPosition_mm,
-            innerLeafRetractedPosition_mm,
-            outerLeafExtendedPosition_mm,
-            innerLeafExtendedPosition_mm,
+            outerLeafPairCount,
+            innerLeafPairCount,
+            outerLeafWidth_cm,
+            innerLeafWidth_cm,
+            outerLeafRetractedPosition_cm,
+            innerLeafRetractedPosition_cm,
+            outerLeafExtendedPosition_cm,
+            innerLeafExtendedPosition_cm,
             notes) <> ((MultileafCollimator.apply _)tupled, MultileafCollimator.unapply _)
     }
 

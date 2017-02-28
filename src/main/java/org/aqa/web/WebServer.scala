@@ -209,6 +209,8 @@ class WebServer extends Application {
                 new MachineTypeUpdate,
                 new MachineList,
                 new MachineTypeList,
+                new MultileafCollimatorList,
+                new MultileafCollimatorUpdate,
                 new UserUpdate,
                 new UserList,
                 new ProcedureUpdate,
