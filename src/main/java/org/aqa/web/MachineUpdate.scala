@@ -29,6 +29,7 @@ import org.aqa.db.Institution
 import org.aqa.db.MachineType
 import edu.umro.ScalaUtil.Trace._
 import org.aqa.db.MultileafCollimator
+import org.aqa.db.EPID
 
 object MachineUpdate {
     val machinePKTag = "machinePK"
@@ -48,7 +49,11 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
     private def collimatorName() = MultileafCollimator.list.toList.map(mlc => (mlc.multileafCollimatorPK.get.toString, mlc.toName))
 
+    private def epidName() = EPID.list.toList.map(e => (e.epidPK.get.toString, e.toName))
+
     private val multileafCollimatorPK = new WebInputSelect("Collimator", 6, 0, collimatorName)
+
+    private val epidPK = new WebInputSelect("EPID", 6, 0, epidName)
 
     private def institutionList() = Institution.list.toList.map(i => (i.institutionPK.get.toString, i.name))
 
@@ -67,9 +72,9 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
     private val machinePK = new WebInputHidden(MachineUpdate.machinePKTag)
 
-    private val formCreate = new WebForm(pathOf, List(List(id), List(machineTypePK), List(multileafCollimatorPK), List(institutionPK), List(notes), List(createButton, cancelButton)))
+    private val formCreate = new WebForm(pathOf, List(List(id), List(machineTypePK), List(multileafCollimatorPK), List(epidPK), List(institutionPK), List(notes), List(createButton, cancelButton)))
 
-    private val formEdit = new WebForm(pathOf, List(List(id), List(machineTypePK), List(multileafCollimatorPK), List(institutionPK), List(notes), List(saveButton, cancelButton, deleteButton, machinePK)))
+    private val formEdit = new WebForm(pathOf, List(List(id), List(machineTypePK), List(multileafCollimatorPK), List(epidPK), List(institutionPK), List(notes), List(saveButton, cancelButton, deleteButton, machinePK)))
 
     private def redirect(response: Response, valueMap: ValueMapT) = {
         val pk = machinePK.getValOrEmpty(valueMap)
@@ -139,10 +144,11 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
         val idVal = valueMap.get(id.label).get.trim
         val machineTypePKVal = valueMap.get(machineTypePK.label).get.trim.toLong
         val multilefCollimatorPKVal = valueMap.get(multileafCollimatorPK.label).get.trim.toLong
+        val epidPKVal = valueMap.get(epidPK.label).get.trim.toLong
         val institutionPKVal = valueMap.get(institutionPK.label).get.trim.toLong
         val notesVal = valueMap.get(notes.label).get.trim
 
-        val machine = new Machine(pk, idVal, machineTypePKVal, Some(multilefCollimatorPKVal), institutionPKVal, notesVal)
+        val machine = new Machine(pk, idVal, machineTypePKVal, Some(multilefCollimatorPKVal), Some(epidPKVal), institutionPKVal, notesVal)
         machine
     }
 

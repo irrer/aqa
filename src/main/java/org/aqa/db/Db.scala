@@ -53,7 +53,7 @@ object Db {
     }
 
     def perform(dbOperation: PostgresDriver.DriverAction[Unit, NoStream, Effect.Schema]): Unit = {
-        dbOperation.statements.foreach { s => println("Executing database statement: " + s) }
+        dbOperation.statements.foreach { s => logInfo("Executing database statement: " + s) }
         run(DBIO.seq(dbOperation))
     }
 

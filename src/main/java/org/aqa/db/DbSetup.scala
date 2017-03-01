@@ -8,6 +8,7 @@ import org.aqa.Logging._
 import java.sql.Timestamp
 import org.aqa.run.ProcedureStatus
 import scala.collection.mutable.ArrayBuffer
+import org.aqa.Config
 
 /** Establish connection to the database and ensure that tables are created. */
 
@@ -49,24 +50,47 @@ object DbSetup {
      * Initialize database by creating tables in dependency order.
      */
     def init = {
-        Db.createTableIfNonexistent(Institution.query.asInstanceOf[TableQuery[Table[_]]])
-        Db.createTableIfNonexistent(User.query.asInstanceOf[TableQuery[Table[_]]])
-        Db.createTableIfNonexistent(Procedure.query.asInstanceOf[TableQuery[Table[_]]])
-        Db.createTableIfNonexistent(MachineType.query.asInstanceOf[TableQuery[Table[_]]])
-        Db.createTableIfNonexistent(MultileafCollimator.query.asInstanceOf[TableQuery[Table[_]]])
-        Db.createTableIfNonexistent(Machine.query.asInstanceOf[TableQuery[Table[_]]])
-        Db.createTableIfNonexistent(Input.query.asInstanceOf[TableQuery[Table[_]]])
-        Db.createTableIfNonexistent(Output.query.asInstanceOf[TableQuery[Table[_]]])
-        Db.createTableIfNonexistent(CentralAxis.query.asInstanceOf[TableQuery[Table[_]]])
-        Db.createTableIfNonexistent(LeafOffsetCorrection.query.asInstanceOf[TableQuery[Table[_]]])
-        Db.createTableIfNonexistent(LeafTransmission.query.asInstanceOf[TableQuery[Table[_]]])
+        val valid = Config.validate // force configuration to be read
+
+        val list = List(Institution.query,
+            User.query,
+            Procedure.query,
+            MachineType.query,
+            MultileafCollimator.query,
+            EPID.query,
+            Machine.query,
+            Input.query,
+            MaintenanceRecord.query,
+            Output.query,
+            CentralAxis.query,
+            LeafOffsetCorrection.query,
+            LeafTransmission.query)
+
+        list.map(q => Db.createTableIfNonexistent(q.asInstanceOf[TableQuery[Table[_]]]))
+
+        //        Db.createTableIfNonexistent(Institution.query.asInstanceOf[TableQuery[Table[_]]])
+        //        Db.createTableIfNonexistent(User.query.asInstanceOf[TableQuery[Table[_]]])
+        //        Db.createTableIfNonexistent(Procedure.query.asInstanceOf[TableQuery[Table[_]]])
+        //        Db.createTableIfNonexistent(MachineType.query.asInstanceOf[TableQuery[Table[_]]])
+        //        Db.createTableIfNonexistent(MultileafCollimator.query.asInstanceOf[TableQuery[Table[_]]])
+        //        Db.createTableIfNonexistent(EPID.query.asInstanceOf[TableQuery[Table[_]]])
+        //        Db.createTableIfNonexistent(Machine.query.asInstanceOf[TableQuery[Table[_]]])
+        //        Db.createTableIfNonexistent(Input.query.asInstanceOf[TableQuery[Table[_]]])
+        //        Db.createTableIfNonexistent(MainentanceRecord.query.asInstanceOf[TableQuery[Table[_]]])
+        //        Db.createTableIfNonexistent(Output.query.asInstanceOf[TableQuery[Table[_]]])
+        //        Db.createTableIfNonexistent(CentralAxis.query.asInstanceOf[TableQuery[Table[_]]])
+        //        Db.createTableIfNonexistent(LeafOffsetCorrection.query.asInstanceOf[TableQuery[Table[_]]])
+        //        Db.createTableIfNonexistent(LeafTransmission.query.asInstanceOf[TableQuery[Table[_]]])
 
         ensureAdminUser
     }
 
     /**
+     * Replace this with something that compares the schema of the database to the schema of a newly made database.  TODO
      * Make one row in each table and then delete this.  This verifies that the
      *  definition in the database matches the definition in the code.
+     *
+     *  This test might leave garbage in the database.  Do not use it.  Need to compare schema instead.
      */
     def smokeTest: Boolean = {
 
@@ -109,7 +133,7 @@ object DbSetup {
             val multileafCollimator = (new MultileafCollimator(None, "manufacturer", "model", "version", 0, 0, 0, 0, 0, 0, 0, 0, "notes")).insert
             undoList += new Undo({ () => MultileafCollimator.delete(multileafCollimator.multileafCollimatorPK.get) }, "multileafCollimator " + multileafCollimator.multileafCollimatorPK.get)
 
-            val machine = (new Machine(None, "id", machineType.machineTypePK.get, multileafCollimator.multileafCollimatorPK, institution.institutionPK.get, "notes")).insert
+            val machine = (new Machine(None, "id", machineType.machineTypePK.get, multileafCollimator.multileafCollimatorPK, None, institution.institutionPK.get, "notes")).insert
             undoList += new Undo({ () => Machine.delete(machine.machinePK.get) }, "machine " + machine.machinePK.get)
 
             val input = (new Input(None, Some("dir"), timestamp, user.userPK, machine.machinePK, Some("PatientID"), Some(timestamp))).insert
