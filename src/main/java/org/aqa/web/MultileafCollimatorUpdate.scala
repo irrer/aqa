@@ -43,11 +43,11 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
 
     private val notes = new WebInputTextArea("Notes", 6, 0, "")
 
-    private val outerLeafPairCount = new WebInputText("Outer Leaf Count", 3, 0, "Number of pairs of opposing outer leaves, must be 0 or greater.")
-    private val innerLeafPairCount = new WebInputText("Inner Leaf Count", 3, 0, "Number of pairs of opposing inner leaves, must be 0 or greater.")
+    private val outerLeafPairCount = new WebInputText("Outer Leaf Count", 3, 0, "No. of opposing outer pairs, must be 0 or greater.")
+    private val innerLeafPairCount = new WebInputText("Inner Leaf Count", 3, 0, "No. of opposing inner pairs, must be 0 or greater.")
 
     private val outerLeafWidth_cm = new WebInputText("Outer Leaf Width", 3, 0, "Outer leaf width in cm")
-    private val innerLeafWidth_cm = new WebInputText("Inner Leaf Count", 3, 0, "Inner  leaf width in cm")
+    private val innerLeafWidth_cm = new WebInputText("Inner Leaf Width", 3, 0, "Inner leaf width in cm")
 
     private val outerLeafRetractedPosition_cm = new WebInputText("Outer Retracted (cm)", 3, 0, "Outer leaf retracted position in cm")
     private val innerLeafRetractedPosition_cm = new WebInputText("Inner Extended (cm)", 3, 0, "Inner leaf retracted position in cm")
@@ -99,6 +99,34 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
             formCreate.setFormResponse(valueMap, err, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
         }
         isEmpty
+    }
+
+    private def isPostitiveInt(valueMap: ValueMapT, pageTitle: String, response: Response, input: IsInput): Boolean = {
+        if (input.getInt(valueMap).isDefined) true
+        else {
+            val err = Error.make(input, "Must be an integer 0 or greater")
+            formCreate.setFormResponse(valueMap, err, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
+            false
+        }
+    }
+
+    private def isDouble(valueMap: ValueMapT, pageTitle: String, response: Response, input: IsInput): Boolean = {
+        if (input.getDouble(valueMap).isDefined) true
+        else {
+            val err = Error.make(input, "Must be a valid floating point number")
+            formCreate.setFormResponse(valueMap, err, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
+            false
+        }
+    }
+
+    private def isPostitiveDouble(valueMap: ValueMapT, pageTitle: String, response: Response, input: IsInput): Boolean = {
+        val d = input.getDouble(valueMap)
+        if (d.isDefined && (d.get >= 0)) true
+        else {
+            val err = Error.make(input, "Must be a valid floating point number 0 or greater")
+            formCreate.setFormResponse(valueMap, err, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
+            false
+        }
     }
 
     private def alreadyExists(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
@@ -159,7 +187,14 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
             manufacturer.getValOrEmpty(valueMap).trim,
             model.getValOrEmpty(valueMap).trim,
             version.getValOrEmpty(valueMap).trim,
-            0, 0, 0, 0, 0, 0, 0, 0,
+            outerLeafPairCount.getValOrEmpty(valueMap).trim.toInt,
+            innerLeafPairCount.getValOrEmpty(valueMap).trim.toInt,
+            outerLeafWidth_cm.getValOrEmpty(valueMap).trim.toDouble,
+            innerLeafWidth_cm.getValOrEmpty(valueMap).trim.toDouble,
+            outerLeafRetractedPosition_cm.getValOrEmpty(valueMap).trim.toDouble,
+            innerLeafRetractedPosition_cm.getValOrEmpty(valueMap).trim.toDouble,
+            outerLeafExtendedPosition_cm.getValOrEmpty(valueMap).trim.toDouble,
+            innerLeafExtendedPosition_cm.getValOrEmpty(valueMap).trim.toDouble,
             notes.getValOrEmpty(valueMap).trim)
     }
 
@@ -171,6 +206,14 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
         0 match {
             case _ if emptyManufacturer(valueMap, pageTitle, response) => false
             case _ if emptyModel(valueMap, pageTitle, response) => false
+            case _ if !isPostitiveInt(valueMap, pageTitle, response, outerLeafPairCount) => false
+            case _ if !isPostitiveInt(valueMap, pageTitle, response, innerLeafPairCount) => false
+            case _ if !isPostitiveDouble(valueMap, pageTitle, response, outerLeafWidth_cm) => false
+            case _ if !isPostitiveDouble(valueMap, pageTitle, response, innerLeafWidth_cm) => false
+            case _ if !isDouble(valueMap, pageTitle, response, outerLeafRetractedPosition_cm) => false
+            case _ if !isDouble(valueMap, pageTitle, response, innerLeafRetractedPosition_cm) => false
+            case _ if !isDouble(valueMap, pageTitle, response, outerLeafExtendedPosition_cm) => false
+            case _ if !isDouble(valueMap, pageTitle, response, innerLeafExtendedPosition_cm) => false
             case _ => true
         }
     }
@@ -192,7 +235,24 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
     }
 
     private def edit(inst: MultileafCollimator, response: Response) = {
-        val valueMap = Map((multileafCollimatorPK.label, inst.multileafCollimatorPK.get.toString), (manufacturer.label, inst.manufacturer), (model.label, inst.model), (version.label, inst.version), (notes.label, inst.notes))
+        val valueMap = Map((multileafCollimatorPK.label, inst.multileafCollimatorPK.get.toString),
+            (manufacturer.label, inst.manufacturer),
+            (model.label, inst.model),
+            (version.label, inst.version),
+
+            (outerLeafPairCount.label, inst.outerLeafPairCount.toString),
+            (innerLeafPairCount.label, inst.innerLeafPairCount.toString),
+
+            (outerLeafWidth_cm.label, inst.outerLeafWidth_cm.toString),
+            (innerLeafWidth_cm.label, inst.innerLeafWidth_cm.toString),
+
+            (outerLeafRetractedPosition_cm.label, inst.outerLeafRetractedPosition_cm.toString),
+            (innerLeafRetractedPosition_cm.label, inst.innerLeafRetractedPosition_cm.toString),
+
+            (outerLeafExtendedPosition_cm.label, inst.outerLeafExtendedPosition_cm.toString),
+            (innerLeafExtendedPosition_cm.label, inst.innerLeafExtendedPosition_cm.toString),
+
+            (notes.label, inst.notes))
         formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
     }
 

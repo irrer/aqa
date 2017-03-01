@@ -415,6 +415,26 @@ object WebUtil {
             }
             else ""
         }
+
+        def getInt(valueMap: ValueMapT): Option[Int] = {
+            val text = getValOrEmpty(valueMap).trim
+            try {
+                Some(text.toInt)
+            }
+            catch {
+                case t: Throwable => None
+            }
+        }
+
+        def getDouble(valueMap: ValueMapT): Option[Double] = {
+            val text = getValOrEmpty(valueMap).trim
+            try {
+                Some(text.toDouble)
+            }
+            catch {
+                case t: Throwable => None
+            }
+        }
     }
 
     class WebInputText(override val label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
@@ -612,14 +632,14 @@ object WebUtil {
                 </table>
             </div>
         }
-        
+
         def linkToSheet(sheet: Sheet) = {
-            <a href={"#" + sheet.getSheetName } style="margin: 40px;">{sheet.getSheetName}</a>
+            <a href={ "#" + sheet.getSheetName } style="margin: 40px;">{ sheet.getSheetName }</a>
         }
 
         val html: Elem = {
             <div style="margin: 40px;">
-                Sheets: { ExcelUtil.sheetList(workbook).map(sheet => linkToSheet(sheet)) }
+                Sheets:{ ExcelUtil.sheetList(workbook).map(sheet => linkToSheet(sheet)) }
                 <br></br>
                 { ExcelUtil.sheetList(workbook).map(sheet => doSheet(sheet)) }
             </div>
