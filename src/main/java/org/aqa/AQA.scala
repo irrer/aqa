@@ -16,6 +16,7 @@ object AQA {
             println("Service starting")
             if (Config.validate) {
                 DbSetup.init
+                DbSetup.smokeTest
                 Run.handleRunningProcedureList
                 new WebServer
                 new PeriodicRestart(Config.RestartTime)

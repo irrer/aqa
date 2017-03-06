@@ -14,7 +14,7 @@ import org.aqa.Config
 
 object DbSetup {
 
-    private def makeDummyInstitution: Institution = new Institution(None, "InstitutionName", Util.aqaUrl, "No description")
+    private def makeDummyInstitution: Institution = new Institution(None, "AQA", Util.aqaUrl, "Automated Quality Assurance")
 
     private def ensureAtLeastOneInstitution: Institution = {
         Institution.list.headOption match {
@@ -46,117 +46,59 @@ object DbSetup {
         }
     }
 
+    private val tableQueryList = List(Institution.query,
+        User.query,
+        Procedure.query,
+        MachineType.query,
+        MultileafCollimator.query,
+        EPID.query,
+        Machine.query,
+        MachineBeamEnergy.query,
+        Input.query,
+        MaintenanceRecord.query,
+        Output.query,
+        CentralAxis.query,
+        LeafOffsetCorrection.query,
+        LeafTransmission.query)
     /**
      * Initialize database by creating tables in dependency order.
      */
     def init = {
         val valid = Config.validate // force configuration to be read
-
-        val list = List(Institution.query,
-            User.query,
-            Procedure.query,
-            MachineType.query,
-            MultileafCollimator.query,
-            EPID.query,
-            Machine.query,
-            Input.query,
-            MaintenanceRecord.query,
-            Output.query,
-            CentralAxis.query,
-            LeafOffsetCorrection.query,
-            LeafTransmission.query)
-
-        list.map(q => Db.createTableIfNonexistent(q.asInstanceOf[TableQuery[Table[_]]]))
-
-        //        Db.createTableIfNonexistent(Institution.query.asInstanceOf[TableQuery[Table[_]]])
-        //        Db.createTableIfNonexistent(User.query.asInstanceOf[TableQuery[Table[_]]])
-        //        Db.createTableIfNonexistent(Procedure.query.asInstanceOf[TableQuery[Table[_]]])
-        //        Db.createTableIfNonexistent(MachineType.query.asInstanceOf[TableQuery[Table[_]]])
-        //        Db.createTableIfNonexistent(MultileafCollimator.query.asInstanceOf[TableQuery[Table[_]]])
-        //        Db.createTableIfNonexistent(EPID.query.asInstanceOf[TableQuery[Table[_]]])
-        //        Db.createTableIfNonexistent(Machine.query.asInstanceOf[TableQuery[Table[_]]])
-        //        Db.createTableIfNonexistent(Input.query.asInstanceOf[TableQuery[Table[_]]])
-        //        Db.createTableIfNonexistent(MainentanceRecord.query.asInstanceOf[TableQuery[Table[_]]])
-        //        Db.createTableIfNonexistent(Output.query.asInstanceOf[TableQuery[Table[_]]])
-        //        Db.createTableIfNonexistent(CentralAxis.query.asInstanceOf[TableQuery[Table[_]]])
-        //        Db.createTableIfNonexistent(LeafOffsetCorrection.query.asInstanceOf[TableQuery[Table[_]]])
-        //        Db.createTableIfNonexistent(LeafTransmission.query.asInstanceOf[TableQuery[Table[_]]])
-
+        tableQueryList.map(q => Db.createTableIfNonexistent(q.asInstanceOf[TableQuery[Table[_]]]))
         ensureAdminUser
     }
 
     /**
-     * Replace this with something that compares the schema of the database to the schema of a newly made database.  TODO
-     * Make one row in each table and then delete this.  This verifies that the
-     *  definition in the database matches the definition in the code.
+     * This does a quick verification that the table definitions in the database match the definition in the code.  It does not
+     * check constraints.  In order to be checked, a table must contain at least one row, and if not, it is ignored.  If a table
+     * contains an extra column that is not defined in the code then the table will still pass as verified.
      *
      *  This test might leave garbage in the database.  Do not use it.  Need to compare schema instead.
      */
     def smokeTest: Boolean = {
-
-        case class Undo(undoFunc: () => _, name: String) {
-            def doUndo: Boolean = {
-                try {
-                    println("Undoing " + name + " ...")
-                    undoFunc()
-                    println("Undid " + name)
-                    true
-                }
-                catch {
-                    case t: Throwable =>
-                        logSevere("delete failure: " + fmtEx(t))
-                        false
-                }
-
-            }
-        }
-
-        val undoList = new ArrayBuffer[Undo]()
 
         try {
             init
 
             val timestamp = new Timestamp(System.currentTimeMillis)
 
-            val institution = (new Institution(None, "InstitutionName", "https://URL.org", "No description")).insert
-            undoList += new Undo({ () => Institution.delete(institution.institutionPK.get) }, "institution " + institution.institutionPK.get)
+            def readOne(query: TableQuery[Table[_]]): Unit = {
+                val tableName = query.shaped.shaped.value.value.tableName
+                println("Verifying table " + tableName)
+                val row = Db.run(query.take(1).result)
+                if (row.size > 0) println("    row value: " + row.head.getClass.getName + " : " + row.head)
+                else println("Table " + tableName + " is empty")
+            }
 
-            val user = makeAdminUser
-            undoList += new Undo({ () => User.delete(user.userPK.get) }, "user ")
+            tableQueryList.map(q => readOne(q.asInstanceOf[TableQuery[Table[_]]]))
 
-            val procedure = (new Procedure(None, "procedureName", "version", 0.toFloat, new Date(System.currentTimeMillis), user.userPK.get, "webInterface", "procedure notes")).insert
-            undoList += new Undo({ () => Procedure.delete(procedure.procedurePK.get) }, "procedure " + procedure.procedurePK.get)
+            true
 
-            val machineType = (new MachineType(None, "manufacturer", "model", "version", "notes")).insert
-            undoList += new Undo({ () => MachineType.delete(machineType.machineTypePK.get) }, "machineType " + machineType.machineTypePK.get)
-
-            val multileafCollimator = (new MultileafCollimator(None, "manufacturer", "model", "version", 0, 0, 0, 0, 0, 0, 0, 0, "notes")).insert
-            undoList += new Undo({ () => MultileafCollimator.delete(multileafCollimator.multileafCollimatorPK.get) }, "multileafCollimator " + multileafCollimator.multileafCollimatorPK.get)
-
-            val machine = (new Machine(None, "id", machineType.machineTypePK.get, multileafCollimator.multileafCollimatorPK, None, institution.institutionPK.get, "notes")).insert
-            undoList += new Undo({ () => Machine.delete(machine.machinePK.get) }, "machine " + machine.machinePK.get)
-
-            val input = (new Input(None, Some("dir"), timestamp, user.userPK, machine.machinePK, Some("PatientID"), Some(timestamp))).insert
-            undoList += new Undo({ () => Input.delete(input.inputPK.get) }, "input " + input.inputPK.get)
-
-            val output = (new Output(None, input.inputPK.get, "dir", procedure.procedurePK.get, user.userPK, timestamp, Some(timestamp), Some(timestamp), Some(timestamp), machine.machinePK, ProcedureStatus.fail.toString, false.toString)).insert
-            undoList += new Undo({ () => Output.delete(output.outputPK.get) }, "output " + output.outputPK.get)
-
-            val centralAxis = (new CentralAxis(None, output.outputPK.get, 0)).insert
-            undoList += new Undo({ () => CentralAxis.delete(centralAxis.centralAxisPK.get) }, "centralAxis " + centralAxis.centralAxisPK.get)
-
-            val leafOffsetCorrection = (new LeafOffsetCorrection(None, output.outputPK.get, "section", 0, 0)).insert
-            undoList += new Undo({ () => LeafOffsetCorrection.delete(leafOffsetCorrection.leafOffsetCorrectionPK.get) }, "leafOffsetCorrection " + leafOffsetCorrection.leafOffsetCorrectionPK.get)
-
-            val leafTransmission = (new LeafTransmission(None, output.outputPK.get, "section", 0, 0)).insert
-            undoList += new Undo({ () => LeafOffsetCorrection.delete(leafTransmission.leafTransmissionPK.get) }, "leafTransmission " + leafTransmission.leafTransmissionPK.get)
-
-            undoList.reverse.map(u => u.doUndo).find(r => !r).isEmpty
         }
         catch {
             case t: Throwable => {
                 logSevere("Failed database smoke test: " + fmtEx(t))
-                undoList.reverse.map(u => u.doUndo)
                 false
             }
         }

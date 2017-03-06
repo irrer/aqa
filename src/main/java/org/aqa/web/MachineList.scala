@@ -16,7 +16,7 @@ class MachineList extends GenericList[Machine.MMI] with WebUtil.SubUrlAdmin {
     type MMI = Machine.MMI
 
     override def listName = "Machine"
-    override def getData = Machine.listWithDependencies
+    override def getData(valueMap: ValueMapT) = Machine.listWithDependencies
     override def getPK(value: Machine.MMI): Long = value.machine.machinePK.get
 
     private def machineTypeHTML(mmi: MMI): Elem = <div> { WebUtil.firstPartOf(mmi.machineType.toName, 40) } </div>

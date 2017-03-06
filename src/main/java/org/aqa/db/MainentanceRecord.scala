@@ -11,7 +11,7 @@ case class MaintenanceRecord(
         machinePK: Long, // machine that was maintained
         dateTime: Timestamp, // when data was loaded into this system
         userPK: Long, // user that performed or oversaw maintenance
-        maintenanceType: String, // general classification of maintenance, must be a member of Enumeration <code>MaintenanceType</code>
+        summary: String, // short description of maintenance
         description: String // description of maintenance
         ) {
 
@@ -32,7 +32,7 @@ object MaintenanceRecord {
         def machinePK = column[Long]("machinePK")
         def dateTime = column[Timestamp]("dateTime")
         def userPK = column[Long]("userPK")
-        def maintenanceType = column[String]("maintenanceType")
+        def summary = column[String]("summary")
         def description = column[String]("description")
 
         def * = (
@@ -40,7 +40,7 @@ object MaintenanceRecord {
             machinePK,
             dateTime,
             userPK,
-            maintenanceType,
+            summary,
             description) <> ((MaintenanceRecord.apply _)tupled, MaintenanceRecord.unapply _)
 
         def machineFK = foreignKey("machinePK", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)

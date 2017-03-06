@@ -5,8 +5,13 @@ package org.aqa.db
  */
 object MaintenanceType extends Enumeration {
 
-    val software = Value // software modification
-    val mechanical = Value // physical modifications, including replacing of parts
+    val epid = Value // involved EPID
+    val obi = Value // involved onboard imager
+    val collimator = Value // involved collimator
+    val jaws = Value // involved jaws
+    val gantry = Value // involved jaws
+    val couch = Value // involved jaws
+    val software = Value // software modification or update
     val calibration = Value // tuning machine for improved performance
     val other = Value // what ever does not fit into another category
 
@@ -24,9 +29,9 @@ object MaintenanceType extends Enumeration {
             println("foo ur: " + ur)
         }
 
-        println("equality ==     : " + (stringToMaintenanceType("mechanical").get == MaintenanceType.mechanical))
-        println("equality eq     : " + (stringToMaintenanceType("mechanical").get.eq(MaintenanceType.mechanical)))
-        println("equality equals : " + (stringToMaintenanceType("mechanical").get.equals(MaintenanceType.mechanical)))
+        println("equality ==     : " + (stringToMaintenanceType("mechanical").get == MaintenanceType.collimator))
+        println("equality eq     : " + (stringToMaintenanceType("mechanical").get.eq(MaintenanceType.collimator)))
+        println("equality equals : " + (stringToMaintenanceType("mechanical").get.equals(MaintenanceType.collimator)))
 
         values.toArray.toList.map(ur => println("ur: " + ur))
 

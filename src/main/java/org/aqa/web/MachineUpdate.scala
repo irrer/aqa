@@ -69,12 +69,13 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     private val saveButton = makeButton("Save", true, ButtonType.BtnPrimary)
     private val deleteButton = makeButton("Delete", false, ButtonType.BtnDanger)
     private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+    private val maintenanceButton = makeButton("Maintenance Records", false, ButtonType.BtnDefault)
 
     private val machinePK = new WebInputHidden(MachineUpdate.machinePKTag)
 
     private val formCreate = new WebForm(pathOf, List(List(id), List(machineTypePK), List(multileafCollimatorPK), List(epidPK), List(institutionPK), List(notes), List(createButton, cancelButton)))
 
-    private val formEdit = new WebForm(pathOf, List(List(id), List(machineTypePK), List(multileafCollimatorPK), List(epidPK), List(institutionPK), List(notes), List(saveButton, cancelButton, deleteButton, machinePK)))
+    private val formEdit = new WebForm(pathOf, List(List(id), List(machineTypePK), List(multileafCollimatorPK), List(epidPK), List(institutionPK), List(notes), List(saveButton, cancelButton, deleteButton, maintenanceButton, machinePK)))
 
     private def redirect(response: Response, valueMap: ValueMapT) = {
         val pk = machinePK.getValOrEmpty(valueMap)
@@ -148,8 +149,9 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
         val institutionPKVal = valueMap.get(institutionPK.label).get.trim.toLong
         val notesVal = valueMap.get(notes.label).get.trim
 
-        val machine = new Machine(pk, idVal, machineTypePKVal, Some(multilefCollimatorPKVal), Some(epidPKVal), institutionPKVal, notesVal)
-        machine
+//        val machine = new Machine(pk, idVal, machineTypePKVal, Some(multilefCollimatorPKVal), Some(epidPKVal), institutionPKVal, notesVal)
+//        machine
+        ???           // TODO fix!
     }
 
     /**
@@ -199,6 +201,12 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
         MachineList.redirect(response)
     }
 
+    private def maintRec(valueMap: ValueMapT, response: Response): Unit = {
+        val j = valueMap(machinePK.label)
+        val path = MaintenanceRecordList.path + "?machinePK=" + valueMap(machinePK.label)
+        response.redirectSeeOther(path)
+    }
+
     private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
         val value = valueMap.get(button.label)
         value.isDefined && value.get.toString.equals(button.label)
@@ -218,6 +226,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
                 case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
                 case _ if buttonIs(valueMap, saveButton) => save(valueMap, response)
                 case _ if buttonIs(valueMap, deleteButton) => delete(valueMap, response)
+                case _ if buttonIs(valueMap, maintenanceButton) => maintRec(valueMap, response)
                 case _ if isEdit(valueMap) => edit(valueMap, response)
                 case _ => emptyForm(response)
             }

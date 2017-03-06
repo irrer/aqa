@@ -3,6 +3,7 @@ package org.aqa.web
 import org.restlet.Response
 import scala.xml.Elem
 import org.aqa.db.MultileafCollimator
+import org.aqa.web.WebUtil._
 
 object MultileafCollimatorList {
     val path = WebUtil.pathOf(WebUtil.SubUrl.admin, MultileafCollimatorList.getClass.getName)
@@ -13,7 +14,7 @@ object MultileafCollimatorList {
 class MultileafCollimatorList extends GenericList[MultileafCollimator] with WebUtil.SubUrlAdmin {
     override def listName = "MultileafCollimator"
 
-    override def getData = MultileafCollimator.list
+    override def getData(valueMap: ValueMapT) = MultileafCollimator.list
 
     override def getPK(value: MultileafCollimator): Long = value.multileafCollimatorPK.get
 

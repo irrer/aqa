@@ -3,6 +3,7 @@ package org.aqa.web
 import org.restlet.Response
 import scala.xml.Elem
 import org.aqa.db.EPID
+import org.aqa.web.WebUtil._
 
 object EPIDList {
     val path = WebUtil.pathOf(WebUtil.SubUrl.admin, EPIDList.getClass.getName)
@@ -15,7 +16,7 @@ class EPIDList extends GenericList[EPID] with WebUtil.SubUrlAdmin {
 
     override def getPKName = "epidPK"
 
-    override def getData = EPID.list
+    override def getData(valueMap: ValueMapT) = EPID.list
 
     override def getPK(value: EPID): Long = value.epidPK.get
 

@@ -4,7 +4,7 @@ import org.restlet.Response
 import scala.xml.Elem
 import org.aqa.db.Procedure
 import org.restlet.Request
-import WebUtil._
+import org.aqa.web.WebUtil._
 import java.util.Date
 
 object WebRunIndex {
@@ -20,7 +20,7 @@ class WebRunIndex extends GenericList[Procedure.ProcedureUser] with WebUtil.SubU
 
     override val canCreate = false
 
-    override def getData = Procedure.listWithDependencies
+    override def getData(valueMap: ValueMapT) = Procedure.listWithDependencies
     override val listName = "Procedure"
 
     type PU = Procedure.ProcedureUser

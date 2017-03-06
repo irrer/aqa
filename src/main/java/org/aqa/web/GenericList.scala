@@ -64,7 +64,7 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
     /**
      * Retrieve data, usually from the database.
      */
-    protected def getData: Seq[VL]; // must be overridden
+    protected def getData(valueMap: ValueMapT): Seq[VL]; // must be overridden
 
     def columnToHeader(index: Int, column: Column[VL]): Elem = {
         <th class={ "col" + index + " header" }>
@@ -105,7 +105,7 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
 
     private def createNew: Elem = {
         <div class="row col-md-2 col-md-offset-10">
-            <strong><a href={ updatePath }>Create new { listName }</a><p/></strong>
+            <strong><a href={ updatePath }>Create new { listName }</a><p> </p></strong>
         </div>;
     }
 
@@ -120,7 +120,7 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
             <table class="table table-striped">
                 <tbody>
                     { tableHead }
-                    { getData.sortWith(columnList(getSortColumn(valueMap)).compare).map(value => makeRow(value)) }
+                    { getData(valueMap).sortWith(columnList(getSortColumn(valueMap)).compare).map(value => makeRow(value)) }
                 </tbody>
             </table>
         </div>;
@@ -142,8 +142,6 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
             case Method.GET => get(valueMap, response)
             case _ => WebUtil.notFound(response)
         }
-        if (true) {
-            response.getEntity.setExpirationDate(new Date(0))
-        }
+        response.getEntity.setExpirationDate(new Date(0))
     }
 }

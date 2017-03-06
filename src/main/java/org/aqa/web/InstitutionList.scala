@@ -3,6 +3,7 @@ package org.aqa.web
 import org.restlet.Response
 import scala.xml.Elem
 import org.aqa.db.Institution
+import org.aqa.web.WebUtil._
 
 object InstitutionList {
     val path = WebUtil.pathOf(WebUtil.SubUrl.admin, InstitutionList.getClass.getName)
@@ -38,7 +39,7 @@ class InstitutionList extends GenericList[Institution] with WebUtil.SubUrlAdmin 
 
     override val columnList = Seq(idCol, urlCol, descriptionCol)
 
-    override def getData = Institution.list
+    override def getData(valueMap: ValueMapT) = Institution.list
 
     override def getPK(value: Institution): Long = value.institutionPK.get
 }

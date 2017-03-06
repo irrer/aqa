@@ -12,47 +12,12 @@ case class Machine(
         multileafCollimatorPK: Option[Long], // collimator
         epidPK: Option[Long], // EPID
         institutionPK: Long, // institution that this machine belongs to
-//        serialNumber: String,
-//        developerModeSupported: Boolean,
-//        imagingBeam2_5_mv: Boolean,
-//        onboardImager: Boolean,
-//        sixDimTabletop: Boolean,
-//        respiratoryManagement: Boolean,
-//        developerMode: Boolean,
-//
-//        photonEnergy0_MeV: Double,
-//        photonEnergy1_MeV: Double,
-//        photonEnergy2_MeV: Double,
-//        photonEnergy3_MeV: Double,
-//        photonEnergy4_MeV: Double,
-//        photonEnergy5_MeV: Double,
-//        photonEnergy6_MeV: Double,
-//        photonEnergy7_MeV: Double,
-//        photonEnergy8_MeV: Double,
-//        photonEnergy9_MeV: Double,
-//
-//        maxDoseRate0_Gy: Double,
-//        maxDoseRate1_Gy: Double,
-//        maxDoseRate2_Gy: Double,
-//        maxDoseRate3_Gy: Double,
-//        maxDoseRate4_Gy: Double,
-//        maxDoseRate5_Gy: Double,
-//        maxDoseRate6_Gy: Double,
-//        maxDoseRate7_Gy: Double,
-//        maxDoseRate8_Gy: Double,
-//        maxDoseRate9_Gy: Double,
-//
-//        fffEnergy0_MeV: Double,
-//        fffEnergy1_MeV: Double,
-//        fffEnergy2_MeV: Double,
-//        fffEnergy3_MeV: Double,
-//        fffEnergy4_MeV: Double,
-//        fffEnergy5_MeV: Double,
-//        fffEnergy6_MeV: Double,
-//        fffEnergy7_MeV: Double,
-//        fffEnergy8_MeV: Double,
-//        fffEnergy9_MeV: Double,
-
+        serialNumber: String,
+        imagingBeam2_5_mv: Boolean,
+        onboardImager: Boolean,
+        sixDimTabletop: Boolean,
+        respiratoryManagement: Boolean,
+        developerMode: Boolean,
         notes: String // optional further information
         ) {
 
@@ -79,6 +44,12 @@ object Machine {
         def epidPK = column[Option[Long]]("epidPK")
         def institutionPK = column[Long]("institutionPK")
         def notes = column[String]("notes")
+        def serialNumber = column[String]("serialNumber")
+        def imagingBeam2_5_mv = column[Boolean]("imagingBeam2_5_mv")
+        def onboardImager = column[Boolean]("onboardImager")
+        def sixDimTabletop = column[Boolean]("sixDimTabletop")
+        def respiratoryManagement = column[Boolean]("respiratoryManagement")
+        def developerMode = column[Boolean]("developerMode")
 
         def * = (
             machinePK.?,
@@ -87,6 +58,13 @@ object Machine {
             multileafCollimatorPK,
             epidPK,
             institutionPK,
+            serialNumber,
+            imagingBeam2_5_mv,
+            onboardImager,
+            sixDimTabletop,
+            respiratoryManagement,
+            developerMode,
+
             notes) <> ((Machine.apply _)tupled, Machine.unapply _)
 
         def machineTypeFK = foreignKey("machineTypePK", machineTypePK, MachineType.query)(_.machineTypePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
@@ -102,7 +80,7 @@ object Machine {
     def get(machinePK: Long): Option[Machine] = {
         val action = query.filter(m => m.machinePK === machinePK)
         val list = Db.run(action.result)
-        if (list.isEmpty) None else Some(list.head)
+        list.headOption
     }
 
     /**

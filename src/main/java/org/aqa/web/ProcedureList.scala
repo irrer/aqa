@@ -3,6 +3,7 @@ package org.aqa.web
 import org.restlet.Response
 import scala.xml.Elem
 import org.aqa.db.Procedure
+import org.aqa.web.WebUtil._
 
 object ProcedureList {
     val path = WebUtil.pathOf(WebUtil.SubUrl.admin, ProcedureList.getClass.getName)
@@ -28,7 +29,7 @@ class ProcedureList extends GenericList[Procedure.ProcedureUser] with WebUtil.Su
 
     override val columnList = Seq(idCol, supportedByCol, versionCol, notesCol)
 
-    override def getData = Procedure.listWithDependencies
+    override def getData(valueMap: ValueMapT) = Procedure.listWithDependencies
 
     override def getPK(value: PU): Long = value.procedure.procedurePK.get
 }

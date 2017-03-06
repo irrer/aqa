@@ -4,6 +4,7 @@ import org.aqa.db.User
 import org.aqa.db.Institution
 import org.restlet.Response
 import org.aqa.db.User.UserInstitution
+import org.aqa.web.WebUtil._
 
 object UserList {
     val path = WebUtil.pathOf(WebUtil.SubUrl.admin, UserList.getClass.getName)
@@ -31,7 +32,7 @@ class UserList extends GenericList[UserInstitution] with WebUtil.SubUrlAdmin {
 
     override val columnList = Seq(idCol, nameCol, emailCol, institutionCol, roleCol)
 
-    override def getData = User.listWithDependencies
+    override def getData(valueMap: ValueMapT) = User.listWithDependencies
 
     override def getPK(value: UserInstitution): Long = value.user.userPK.get
 }

@@ -12,7 +12,7 @@ import org.aqa.db.Institution
 import java.io.File
 import org.aqa.db.DataValidity
 import org.restlet.Request
-import WebUtil._
+import org.aqa.web.WebUtil._
 import org.aqa.db.CentralAxis
 import edu.umro.util.Utility
 
@@ -131,7 +131,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
     val entriesPerPage = 30
 
-    override def getData = Output.extendedList(None, None, entriesPerPage)
+    override def getData(valueMap: ValueMapT) = Output.extendedList(None, None, entriesPerPage)
 
     override def getPK(extendedValues: Output.ExtendedValues): Long = extendedValues.output.outputPK.get
 

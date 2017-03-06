@@ -208,7 +208,7 @@ object WebUtil {
                     <title>{ pageTitle }</title>
                     <link rel="stylesheet" href="/static/bootstrap/3.3.6/css/bootstrap.min.css"/>
                     <link rel="stylesheet" href="/static/bootstrap/3.3.6/css/bootstrap-theme.min.css"/>
-                    <script src="/static/jquery/1.11.3/jquery.min.js"></script>
+                    <script src="/static/jquery/standard/jquery.min.js"></script>
                     <script src="/static/bootstrap/3.3.6/js/bootstrap.min.js"></script>
                     <script src="/static/dropzone/dropzone-4.3.0/dist/dropzone.js"></script>
                     <link rel="stylesheet" href="/static/dropzone/dropzone-4.3.0/dist/dropzone.css"/>
@@ -575,6 +575,18 @@ object WebUtil {
 
             val html = // must not allow embedded blanks
                 <textarea rows="3">{ if (value.isDefined) markLiteralValue(label) else "" }</textarea> % idNameClassAsAttr(label) % placeholderAsAttr(placeholder)
+
+            wrapInput(label, true, html, col, offset, errorMap)
+        }
+    }
+
+    class WebInputDate(label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
+        override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
+            val value = valueMap.get(label)
+            val common = { <input class="form-control" id={ label } name={ label }/> }
+
+            val html = // must not allow embedded blanks
+                <input type="date" rows="3">{ if (value.isDefined) markLiteralValue(label) else "" }</input> % idNameClassAsAttr(label) % placeholderAsAttr(placeholder)
 
             wrapInput(label, true, html, col, offset, errorMap)
         }

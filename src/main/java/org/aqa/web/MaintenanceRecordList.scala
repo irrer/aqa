@@ -4,6 +4,7 @@ import org.restlet.Response
 import scala.xml.Elem
 import org.aqa.db.MaintenanceRecord
 import java.sql.Timestamp
+import org.aqa.web.WebUtil._
 
 object MaintenanceRecordList {
     val path = WebUtil.pathOf(WebUtil.SubUrl.admin, MaintenanceRecordList.getClass.getName)
@@ -14,7 +15,15 @@ object MaintenanceRecordList {
 class MaintenanceRecordList extends GenericList[MaintenanceRecord] with WebUtil.SubUrlAdmin {
     override def listName = "MaintenanceRecord"
 
-    override def getData = MaintenanceRecord.list // TODO must specify machinePK
+    /**
+     * If a machinePK is given, then filter on that, otherwise list maintenance records for all machines.
+     */
+    override def getData(valueMap: ValueMapT) = {
+        valueMap.get(MachineUpdate.machinePKTag) match {
+            case Some(machinePK) => MaintenanceRecord.getByMachine(machinePK.toLong)
+            case _ => MaintenanceRecord.list
+        }
+    }
 
     override def getPK(value: MaintenanceRecord): Long = value.maintenanceRecordPK.get
 
@@ -24,9 +33,9 @@ class MaintenanceRecordList extends GenericList[MaintenanceRecord] with WebUtil.
 
     private val userCol = new Column[MaintenanceRecord]("User", (a, b) => (a.dateTime.getTime < b.dateTime.getTime), (user: MaintenanceRecord) => makePrimaryKeyHtml("user", Some(user.userPK))) //(user:MaintenanceRecord) => makePrimaryKeyHtml("user", Some(user.userPK)))
 
-    private val maintenanceTypeCol = new Column[MaintenanceRecord]("Type", _.maintenanceType)
+    private val summaryCol = new Column[MaintenanceRecord]("Summary", _.summary)
 
     private val descriptionCol = new Column[MaintenanceRecord]("Description", _.description, descHTML)
 
-    override val columnList = Seq(dateTimeCol, userCol, maintenanceTypeCol, descriptionCol)
+    override val columnList = Seq(dateTimeCol, userCol, summaryCol, descriptionCol)
 }

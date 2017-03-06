@@ -3,6 +3,7 @@ package org.aqa.web
 import org.restlet.Response
 import scala.xml.Elem
 import org.aqa.db.MachineType
+import org.aqa.web.WebUtil._
 
 object MachineTypeList {
     val path = WebUtil.pathOf(WebUtil.SubUrl.admin, MachineTypeList.getClass.getName)
@@ -13,7 +14,7 @@ object MachineTypeList {
 class MachineTypeList extends GenericList[MachineType] with WebUtil.SubUrlAdmin {
     override def listName = "MachineType"
 
-    override def getData = MachineType.list
+    override def getData(valueMap: ValueMapT) = MachineType.list
 
     override def getPK(value: MachineType): Long = value.machineTypePK.get
 
