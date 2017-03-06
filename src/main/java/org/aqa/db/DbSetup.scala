@@ -85,10 +85,10 @@ object DbSetup {
 
             def readOne(query: TableQuery[Table[_]]): Unit = {
                 val tableName = query.shaped.shaped.value.value.tableName
-                println("Verifying table " + tableName)
+                logInfo("Verifying table " + tableName)
                 val row = Db.run(query.take(1).result)
-                if (row.size > 0) println("    row value: " + row.head.getClass.getName + " : " + row.head)
-                else println("Table " + tableName + " is empty")
+                if (row.size > 0) logInfo("    verified: " + row.head.getClass.getName + "    with row:  " + row.head)
+                else logInfo("Table " + tableName + " is empty")
             }
 
             tableQueryList.map(q => readOne(q.asInstanceOf[TableQuery[Table[_]]]))

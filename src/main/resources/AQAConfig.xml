@@ -13,6 +13,7 @@
         <Property Name='slick.dbs.default.driver'>slick.driver.PostgresDriver$</Property>
         <Property Name='slick.dbs.default.db.driver'>org.postgresql.Driver</Property>
         <!-- These below make no difference. -->
+        <!--
         <Property Name='s.c'                                          >INFO</Property>
         <Property Name='logger'                                       >INFO</Property>
         <Property Name='logger.scala'                                 >INFO</Property>
@@ -27,6 +28,7 @@
         
         <Property Name='slick.relational'                             >INFO</Property>
         <Property Name='slick.relational.ResultConverterCompiler'     >INFO</Property>
+        -->
     </PropertyList>
 
     <!-- Port number for the Secure ReST service.   Port 443 is the default for HTTPS.
