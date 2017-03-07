@@ -55,6 +55,15 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
     private val epidPK = new WebInputSelect("EPID", 6, 0, epidName)
 
+    private val serialNumber = new WebInputText("Serial Number", 3, 0, "Machine serial number (may be alpha)")
+
+    private val imagingBeam2_5_mv = new WebInputCheckbox("Has 2.5 mv imaging beam", 3, 0)
+
+    private val onboardImager = new WebInputCheckbox("Onboard Imager", 3, 0)
+    private val sixDimTabletop = new WebInputCheckbox("Six Dim Tabletop", 3, 0)
+    private val respiratoryManagement = new WebInputCheckbox("Respiratory Management", 3, 0)
+    private val developerMode = new WebInputCheckbox("Developer Mode", 3, 0)
+
     private def institutionList() = Institution.list.toList.map(i => (i.institutionPK.get.toString, i.name))
 
     private val institutionPK = new WebInputSelect("Institution", 6, 0, institutionList)
@@ -73,9 +82,22 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
     private val machinePK = new WebInputHidden(MachineUpdate.machinePKTag)
 
-    private val formCreate = new WebForm(pathOf, List(List(id), List(machineTypePK), List(multileafCollimatorPK), List(epidPK), List(institutionPK), List(notes), List(createButton, cancelButton)))
+    val fieldList: List[WebRow] = List(
+        List(id),
+        List(machineTypePK),
+        List(multileafCollimatorPK), List(epidPK),
+        List(institutionPK),
+        List(serialNumber, imagingBeam2_5_mv),
+        List(onboardImager, sixDimTabletop),
+        List(respiratoryManagement, developerMode),
+        List(notes))
 
-    private val formEdit = new WebForm(pathOf, List(List(id), List(machineTypePK), List(multileafCollimatorPK), List(epidPK), List(institutionPK), List(notes), List(saveButton, cancelButton, deleteButton, maintenanceButton, machinePK)))
+    val createButtonList: WebRow = List(createButton, cancelButton)
+    val editButtonList: WebRow = List(saveButton, cancelButton, deleteButton, maintenanceButton, machinePK)
+
+    private val formCreate = new WebForm(pathOf, fieldList :+ createButtonList)
+
+    private val formEdit = new WebForm(pathOf, fieldList :+ editButtonList)
 
     private def redirect(response: Response, valueMap: ValueMapT) = {
         val pk = machinePK.getValOrEmpty(valueMap)
@@ -147,11 +169,27 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
         val multilefCollimatorPKVal = valueMap.get(multileafCollimatorPK.label).get.trim.toLong
         val epidPKVal = valueMap.get(epidPK.label).get.trim.toLong
         val institutionPKVal = valueMap.get(institutionPK.label).get.trim.toLong
+
+        val serialNumberVal = valueMap.get(serialNumber.label).get
+
         val notesVal = valueMap.get(notes.label).get.trim
 
-//        val machine = new Machine(pk, idVal, machineTypePKVal, Some(multilefCollimatorPKVal), Some(epidPKVal), institutionPKVal, notesVal)
-//        machine
-        ???           // TODO fix!
+        val imgBeam = valueMap.get(imagingBeam2_5_mv.label).isDefined
+
+        val machine = new Machine(pk,
+            idVal,
+            machineTypePKVal,
+            multilefCollimatorPKVal,
+            epidPKVal,
+            institutionPKVal,
+            serialNumberVal,
+            valueMap.get(imagingBeam2_5_mv.label).isDefined,
+            valueMap.get(onboardImager.label).isDefined,
+            valueMap.get(sixDimTabletop.label).isDefined,
+            valueMap.get(respiratoryManagement.label).isDefined,
+            valueMap.get(developerMode.label).isDefined,
+            notesVal)
+        machine
     }
 
     /**
@@ -186,10 +224,22 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
         val mach = Machine.get(pk).get
 
+        val boolMap = {
+            if (mach.imagingBeam2_5_mv) (imagingBeam2_5_mv.label, "true")
+        }
+
         val valueMap = Map(
             (id.label, mach.id),
             (machineTypePK.label, mach.machineTypePK.toString),
             (institutionPK.label, mach.institutionPK.toString),
+            (multileafCollimatorPK.label, mach.multileafCollimatorPK.toString),
+            (epidPK.label, mach.epidPK.toString),
+            (serialNumber.label, mach.serialNumber.toString),
+            (imagingBeam2_5_mv.label, mach.imagingBeam2_5_mv.toString),
+            (onboardImager.label, mach.onboardImager.toString),
+            (sixDimTabletop.label, mach.sixDimTabletop.toString),
+            (respiratoryManagement.label, mach.respiratoryManagement.toString),
+            (developerMode.label, mach.developerMode.toString),
             (notes.label, mach.notes),
             (machinePK.label, pk.toString))
 

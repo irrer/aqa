@@ -50,7 +50,7 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
     private val innerLeafWidth_cm = new WebInputText("Inner Leaf Width", 3, 0, "Inner leaf width in cm")
 
     private val outerLeafRetractedPosition_cm = new WebInputText("Outer Retracted (cm)", 3, 0, "Outer leaf retracted position in cm")
-    private val innerLeafRetractedPosition_cm = new WebInputText("Inner Extended (cm)", 3, 0, "Inner leaf retracted position in cm")
+    private val innerLeafRetractedPosition_cm = new WebInputText("Inner Retracted (cm)", 3, 0, "Inner leaf retracted position in cm")
 
     private val outerLeafExtendedPosition_cm = new WebInputText("Outer Extended", 3, 0, "Outer leaf extended position in cm")
     private val innerLeafExtendedPosition_cm = new WebInputText("Inner Extended", 3, 0, "Inner leaf extended position in cm")

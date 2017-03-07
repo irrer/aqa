@@ -247,7 +247,7 @@ object WebUtil {
     def respond(content: Elem, title: String, response: Response): Unit = respond(content, title, response, Status.SUCCESS_OK)
 
     trait ToHtml {
-        def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = ???
+        def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = ??? // TODO ?
         def toHtml(valueMap: ValueMapT): Elem = toHtml(valueMap, styleNone)
         def toHtml: Elem = toHtml(emptyValueMap, styleNone)
     }
@@ -491,6 +491,26 @@ object WebUtil {
 
             val list = selectList().map(v => toOption(v._1, v._2))
             val html = <select>{ list }</select> % idNameClassValueAsAttr(label, valueMap)
+            wrapInput(label, true, html, col, offset, errorMap)
+        }
+    }
+
+    class WebInputCheckbox(override val label: String, col: Int, offset: Int) extends IsInput(label) with ToHtml {
+
+        override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
+            val input = <input type="checkbox"/> % idNameClassValueAsAttr(label, valueMap)
+            val inputWithValue: Elem = {
+                val v = valueMap.get(label).get
+                if (valueMap.get(label).isDefined && valueMap.get(label).get.equals("true")) input % (<input checked="true"/>).attributes
+                else input
+            }
+
+            val html = {
+                <label class="form-check-label">
+                    { inputWithValue }
+                </label>
+            }
+
             wrapInput(label, true, html, col, offset, errorMap)
         }
     }

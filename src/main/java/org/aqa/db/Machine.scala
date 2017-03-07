@@ -9,8 +9,8 @@ case class Machine(
         machinePK: Option[Long], // primary key
         id: String, // uniquely identifying name within hosting institution
         machineTypePK: Long, // type of machine foreign key
-        multileafCollimatorPK: Option[Long], // collimator
-        epidPK: Option[Long], // EPID
+        multileafCollimatorPK: Long, // collimator
+        epidPK: Long, // EPID
         institutionPK: Long, // institution that this machine belongs to
         serialNumber: String,
         imagingBeam2_5_mv: Boolean,
@@ -40,8 +40,8 @@ object Machine {
         def machinePK = column[Long]("machinePK", O.PrimaryKey, O.AutoInc)
         def id = column[String]("id")
         def machineTypePK = column[Long]("machineTypePK")
-        def multileafCollimatorPK = column[Option[Long]]("multileafCollimatorPK")
-        def epidPK = column[Option[Long]]("epidPK")
+        def multileafCollimatorPK = column[Long]("multileafCollimatorPK")
+        def epidPK = column[Long]("epidPK")
         def institutionPK = column[Long]("institutionPK")
         def notes = column[String]("notes")
         def serialNumber = column[String]("serialNumber")
