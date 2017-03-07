@@ -29,6 +29,7 @@ import org.apache.poi.ss.usermodel.Workbook
 import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.ss.usermodel.Row
 import org.apache.poi.ss.usermodel.Cell
+import java.text.SimpleDateFormat
 
 object WebUtil {
 
@@ -190,13 +191,19 @@ object WebUtil {
         simpleWebPage(content, status, "Not Found", response)
     }
 
-    def internalFailure(response: Response, message: String) = {
+    def internalFailure(response: Response, message: String): Unit = {
         val status = Status.SERVER_ERROR_INTERNAL
+        val messageAsHtml = message.split('\n').map(line => <br>{ line }</br>)
+
         val content = {
-            <div>{ status.toString } <p/> { message }</div>
+            <div>{ status.toString } <p/> { messageAsHtml }</div>
         }
         logWarning(Status.SERVER_ERROR_INTERNAL.toString + " shown to user " + getUserIdOrDefault(response.getRequest, "unknown") + " : " + message)
         simpleWebPage(content, status, "Not Found", response)
+    }
+
+    def internalFailure(response: Response, throwable: Throwable): Unit = {
+        internalFailure(response, "Unexpected internal failure: " + throwable.getMessage + "\nStack trace:\n" + fmtEx(throwable))
     }
 
     val HTML_PREFIX = "<!DOCTYPE html>\n"
@@ -500,7 +507,6 @@ object WebUtil {
         override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
             val input = <input type="checkbox"/> % idNameClassValueAsAttr(label, valueMap)
             val inputWithValue: Elem = {
-                val v = valueMap.get(label).get
                 if (valueMap.get(label).isDefined && valueMap.get(label).get.equals("true")) input % (<input checked="true"/>).attributes
                 else input
             }
@@ -603,14 +609,32 @@ object WebUtil {
         }
     }
 
-    class WebInputDate(label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
+    val dateTimeFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm")
+        
+    def validateDateTime(text: String): Option[Date] = {
+
+        try {
+            val fields = text.replaceAll("[^0-9]", " ").replaceAll("  *", " ").trim.split(" ").map(t => t.toInt)
+            val year = if (fields(2) < 100) fields(2) + 2000 // adjust year, eg: 17 to 2017
+
+            val formattedText =
+                fields(0).formatted("%02d") + "/" +
+                    fields(1).formatted("%02d") + "/" +
+                    year.formatted("%02d") + " " +
+                    fields(3).formatted("%02d") + ":" +
+                    fields(4).formatted("%02d")
+
+            Some(dateTimeFormat.parse(formattedText))
+        }
+        catch {
+            case t: Throwable => None
+        }
+
+    }
+
+    class WebInputDateTime(label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
         override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
-            val value = valueMap.get(label)
-            val common = { <input class="form-control" id={ label } name={ label }/> }
-
-            val html = // must not allow embedded blanks
-                <input type="date" rows="3">{ if (value.isDefined) markLiteralValue(label) else "" }</input> % idNameClassAsAttr(label) % placeholderAsAttr(placeholder)
-
+            val html = <input type="datetime-local"/> % idNameClassValueAsAttr(label, valueMap) % placeholderAsAttr(placeholder)
             wrapInput(label, true, html, col, offset, errorMap)
         }
     }

@@ -214,6 +214,7 @@ class WebServer extends Application {
                 new EPIDUpdate,
                 new MultileafCollimatorUpdate,
                 new MaintenanceRecordList,
+                new MaintenanceRecordUpdate,
                 new UserUpdate,
                 new UserList,
                 new ProcedureUpdate,
