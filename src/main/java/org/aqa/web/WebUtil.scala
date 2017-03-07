@@ -506,12 +506,15 @@ object WebUtil {
             }
 
             val html = {
-                <label class="form-check-label">
-                    { inputWithValue }
-                </label>
+                <table>
+                    <tr>
+                        <td>{ inputWithValue }</td>
+                        <td> <label style="vertical-align:middle; margin: 5px;"> { label }</label></td>
+                    </tr>
+                </table>
             }
 
-            wrapInput(label, true, html, col, offset, errorMap)
+            wrapInput(label, false, html, col, offset, errorMap)
         }
     }
 
