@@ -64,8 +64,8 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
         List(description),
         List(dateTime))
 
-    val createButtonList: WebRow = List(createButton, cancelButton)
-    val editButtonList: WebRow = List(saveButton, cancelButton, deleteButton, maintenanceRecordPK)
+    val createButtonList: WebRow = List(createButton, cancelButton, machinePK)
+    val editButtonList: WebRow = List(saveButton, cancelButton, deleteButton, machinePK, maintenanceRecordPK)
 
     private val formCreate = new WebForm(pathOf, fieldList :+ createButtonList)
 
@@ -82,7 +82,7 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
     }
 
     private def dateIsValid(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
-        if (validateDateTime(valueMap.get(dateTime.label).get).isDefined) true
+        if (dateTime.validateDateTime(valueMap.get(dateTime.label).get).isDefined) true
         else {
             val err = Error.make(dateTime, dateTime.label + " is invalid.  Expected format: MM/DD/YYYY hh:mm")
             formCreate.setFormResponse(valueMap, err, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
@@ -114,7 +114,7 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
         }
 
         val machPK = machinePK.getValOrEmpty(valueMap).trim.toLong
-        val dt = new Timestamp(validateDateTime(dateTime.getValOrEmpty(valueMap)).get.getTime)
+        val dt = new Timestamp(dateTime.validateDateTime(dateTime.getValOrEmpty(valueMap)).get.getTime)
         val uPK = getUser(request).get.userPK.get
 
         new MaintenanceRecord(
@@ -128,7 +128,10 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
     }
 
     private def emptyForm(response: Response) = {
-        val valueMap = Map((dateTime.label, WebUtil.dateTimeFormat.format(System.currentTimeMillis)))
+        val valueMap = Map(
+     //       (machinePK.label, inst.machinePK.toString),
+                (dateTime.label, dateTime.dateTimeFormat.format(System.currentTimeMillis))
+                )
         formCreate.setFormResponse(valueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
     }
 
@@ -151,7 +154,7 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
         val valueMap = Map(
             (maintenanceRecordPK.label, inst.maintenanceRecordPK.get.toString),
             (machinePK.label, inst.machinePK.toString),
-            (dateTime.label, WebUtil.dateTimeFormat.format(inst.dateTime)),
+            (dateTime.label, dateTime.dateTimeFormat.format(inst.dateTime)),
             (summary.label, inst.summary),
             (description.label, inst.description))
         formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)

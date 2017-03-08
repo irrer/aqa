@@ -609,34 +609,35 @@ object WebUtil {
         }
     }
 
-    val dateTimeFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm")
-        
-    def validateDateTime(text: String): Option[Date] = {
-
-        try {
-            val fields = text.replaceAll("[^0-9]", " ").replaceAll("  *", " ").trim.split(" ").map(t => t.toInt)
-            val year = if (fields(2) < 100) fields(2) + 2000 // adjust year, eg: 17 to 2017
-
-            val formattedText =
-                fields(0).formatted("%02d") + "/" +
-                    fields(1).formatted("%02d") + "/" +
-                    year.formatted("%02d") + " " +
-                    fields(3).formatted("%02d") + ":" +
-                    fields(4).formatted("%02d")
-
-            Some(dateTimeFormat.parse(formattedText))
-        }
-        catch {
-            case t: Throwable => None
-        }
-
-    }
-
     class WebInputDateTime(label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
         override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
             val html = <input type="datetime-local"/> % idNameClassValueAsAttr(label, valueMap) % placeholderAsAttr(placeholder)
             wrapInput(label, true, html, col, offset, errorMap)
         }
+
+        val dateTimeFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm")
+
+        def validateDateTime(text: String): Option[Date] = {
+
+            try {
+                val fields = text.replaceAll("[^0-9]", " ").replaceAll("  *", " ").trim.split(" ").map(t => t.toInt)
+                val year = if (fields(2) < 100) fields(2) + 2000 else fields(2) // adjust year, eg: 17 to 2017
+
+                val formattedText =
+                    fields(0).formatted("%02d") + "/" +
+                        fields(1).formatted("%02d") + "/" +
+                        year.formatted("%02d") + " " +
+                        fields(3).formatted("%02d") + ":" +
+                        fields(4).formatted("%02d")
+
+                Some(dateTimeFormat.parse(formattedText))
+            }
+            catch {
+                case t: Throwable => None
+            }
+
+        }
+
     }
 
     class WebInputHidden(override val label: String) extends IsInput(label) with ToHtml {
