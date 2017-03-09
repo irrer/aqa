@@ -28,8 +28,20 @@ class MaintenanceRecordList extends GenericList[MaintenanceRecord] with WebUtil.
 
     override def getPK(value: MaintenanceRecord): Long = value.maintenanceRecordPK.get
 
+    private def machineParameter(valueMap: ValueMapT): String = { "?" + MachineUpdate.machinePKTag + "=" + valueMap(MachineUpdate.machinePKTag) }
+
     override def createNewPath(valueMap: ValueMapT): String = {
-        WebUtil.cleanClassName(MaintenanceRecordUpdate.getClass.getName) + "?" + MachineUpdate.machinePKTag + "=" + valueMap(MachineUpdate.machinePKTag)
+        WebUtil.cleanClassName(MaintenanceRecordUpdate.getClass.getName) + machineParameter(valueMap)
+    }
+
+    override def createNew(valueMap: ValueMapT): Elem = {
+        val machinePath = WebUtil.cleanClassName(MachineUpdate.getClass.getName) + machineParameter(valueMap)
+        <div class="row col-md-2 col-md-offset-10">
+            <strong>
+                <a href={ createNewPath(valueMap) }>Create new { listName }</a><p> </p>
+                <a href={ machinePath }>Return to machine</a><p> </p>
+            </strong>
+        </div>;
     }
 
     private def descHTML(maintenanceRecord: MaintenanceRecord): Elem = <div>{ WebUtil.firstPartOf(maintenanceRecord.description, 60) }</div>

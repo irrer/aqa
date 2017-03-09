@@ -106,7 +106,7 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
     /** Override this to customize the path (link) to follow to create a new list item. */
     protected def createNewPath(valueMap: ValueMapT): String = updatePath
 
-    private def createNew(valueMap: ValueMapT): Elem = {
+    protected def createNew(valueMap: ValueMapT): Elem = {
         <div class="row col-md-2 col-md-offset-10">
             <strong><a href={ createNewPath(valueMap) }>Create new { listName }</a><p> </p></strong>
         </div>;
