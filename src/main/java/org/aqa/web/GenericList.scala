@@ -103,9 +103,12 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
         if ((!sortText.isEmpty) && (sortText.get.toInt >= 0) && (sortText.get.toInt < columnList.size)) sortText.get.toInt else 0
     }
 
-    private def createNew: Elem = {
+    /** Override this to customize the path (link) to follow to create a new list item. */
+    protected def createNewPath(valueMap: ValueMapT): String = updatePath
+
+    private def createNew(valueMap: ValueMapT): Elem = {
         <div class="row col-md-2 col-md-offset-10">
-            <strong><a href={ updatePath }>Create new { listName }</a><p> </p></strong>
+            <strong><a href={ createNewPath(valueMap) }>Create new { listName }</a><p> </p></strong>
         </div>;
     }
 
@@ -116,7 +119,7 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
 
         <div class="row col-md-10 col-md-offset-1">
             <h1>{ pageTitle }</h1>
-            { if (canCreate) createNew }
+            { if (canCreate) createNew(valueMap) }
             <table class="table table-striped">
                 <tbody>
                     { tableHead }

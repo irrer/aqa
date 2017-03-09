@@ -45,7 +45,7 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
         val action = pathOf + "?" + name + "=" + name
-        new FormButton(name, 1, 0,  subUrl, action, buttonType)
+        new FormButton(name, 1, 0, subUrl, action, buttonType)
     }
 
     private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
@@ -59,33 +59,22 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
 
     private val formEdit = new WebForm(pathOf, List(List(manufacturer), List(model), List(version), List(notes), List(saveButton, cancelButton, deleteButton, machineTypePK)))
 
-    private def emptyManufacturer(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
-        val manufacturerText = valueMap.get(manufacturer.label).get.trim
-        val isEmpty = manufacturerText.trim.size == 0
-        if (isEmpty) {
-            val err = Error.make(manufacturer, "Manufacturer can not be empty")
-            formCreate.setFormResponse(valueMap, err, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
-        }
-        isEmpty
+    /** Return an error if the manufacturer field is not valid. */
+    private def validateManufacturer(valueMap: ValueMapT): StyleMapT = {
+        if (valueMap.get(manufacturer.label).get.trim.isEmpty) Error.make(manufacturer, "Manufacturer can not be empty")
+        else styleNone
     }
 
-    private def emptyModel(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
-        val modelText = valueMap.get(model.label).get.trim
-        val isEmpty = modelText.trim.size == 0
-        if (isEmpty) {
-            val err = Error.make(model, "Model can not be empty")
-            formCreate.setFormResponse(valueMap, err, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
-        }
-        isEmpty
+    /** Return an error if the model field is not valid. */
+    private def validateModel(valueMap: ValueMapT): StyleMapT = {
+        if (valueMap.get(model.label).get.trim.isEmpty) Error.make(model, "Model can not be empty")
+        else styleNone
     }
 
-    private def alreadyExists(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
-        val ae = machineTypeLookup(valueMap).isDefined
-        if (ae) {
-            val err = Error.make(model, "Machine type already exists")
-            formCreate.setFormResponse(valueMap, err, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
-        }
-        ae
+    /** Return an error if the machine type already exists. */
+    private def validateExistence(valueMap: ValueMapT): StyleMapT = {
+        if (machineTypeLookup(valueMap).isDefined) Error.make(model, "Machine type already exists")
+        else styleNone
     }
 
     private def updateMachineType(inst: MachineType): Unit = {
@@ -96,32 +85,27 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
         MachineType.get(manufacturer.getValOrEmpty(valueMap).trim, model.getValOrEmpty(valueMap).trim, version.getValOrEmpty(valueMap).trim)
     }
 
-    private def okToSaveAs(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
-        val mt = machineTypeLookup(valueMap)
-        if (mt.isDefined && (mt.get.machineTypePK.get != valueMap.get(MachineTypeUpdate.machineTypePKTag).get.toInt)) {
-            val err = Error.make(model, "Machine type already exists")
-            formCreate.setFormResponse(valueMap, err, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
-            false
-        }
-        else true
+    private val alreadyExistsStyle = {
+        val msg = "A machine type with that manufacturer, model, and version already exists"
+        Error.make(manufacturer, msg) ++ Error.make(model, msg) ++ Error.make(version, msg)
     }
 
-    private def okToSave(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
-        0 match {
-            case _ if !fieldsAreValid(valueMap, pageTitleEdit, response) => false
-            case _ if !okToSaveAs(valueMap, pageTitleEdit, response) => false
-            case _ => true
-        }
+    private def okToSaveEdited(valueMap: ValueMapT): StyleMapT = {
+        val mt = machineTypeLookup(valueMap)
+        if (mt.isDefined && (mt.get.machineTypePK.get != valueMap.get(MachineTypeUpdate.machineTypePKTag).get.toInt)) alreadyExistsStyle
+        else styleNone
     }
 
     /**
-     * Save changes made to form.
+     * Save changes made to form editing an existing machine type.
      */
-    private def save(valueMap: ValueMapT, pageTitle: String, response: Response): Unit = {
-        if (okToSave(valueMap, pageTitle, response)) {
+    private def saveEdits(valueMap: ValueMapT, pageTitle: String, response: Response): Unit = {
+        val styleMap = validateManufacturer(valueMap) ++ validateModel(valueMap) ++ okToSaveEdited(valueMap)
+        if (styleMap.isEmpty) {
             (createMachineTypeFromParameters(valueMap)).insertOrUpdate
             MachineTypeList.redirect(response)
         }
+        else formEdit.setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
     }
 
     /**
@@ -144,28 +128,19 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
         formCreate.setFormResponse(emptyValueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
     }
 
-    private def fieldsAreValid(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
-        0 match {
-            case _ if emptyManufacturer(valueMap, pageTitle, response) => false
-            case _ if emptyModel(valueMap, pageTitle, response) => false
-            case _ => true
-        }
-    }
-
-    private def createRequestIsValid(valueMap: ValueMapT, response: Response): Boolean = {
-        0 match {
-            case _ if !fieldsAreValid(valueMap, pageTitleCreate, response) => false
-            case _ if (alreadyExists(valueMap, pageTitleCreate, response)) => false
-            case _ => true
-        }
+    private def okToCreate(valueMap: ValueMapT): StyleMapT = {
+        if (machineTypeLookup(valueMap).isDefined) alreadyExistsStyle
+        else styleNone
     }
 
     private def create(valueMap: ValueMapT, response: Response) = {
-        if (createRequestIsValid(valueMap, response)) {
+        val styleMap = validateManufacturer(valueMap) ++ validateModel(valueMap) ++ okToCreate(valueMap)
+        if (styleMap.isEmpty) {
             val inst = createMachineTypeFromParameters(valueMap)
             inst.insert
             MachineTypeList.redirect(response)
         }
+        else formEdit.setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
     }
 
     private def edit(inst: MachineType, response: Response) = {
@@ -234,7 +209,7 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
             0 match {
                 case _ if buttonIs(valueMap, cancelButton) => MachineTypeList.redirect(response)
                 case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
-                case _ if buttonIs(valueMap, saveButton) => save(valueMap, pageTitleEdit, response)
+                case _ if buttonIs(valueMap, saveButton) => saveEdits(valueMap, pageTitleEdit, response)
                 case _ if isDelete(valueMap, response) => Nil
                 case _ if isEdit(valueMap, response) => Nil
                 case _ => emptyForm(response)

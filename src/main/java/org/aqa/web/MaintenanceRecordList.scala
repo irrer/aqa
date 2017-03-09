@@ -5,6 +5,7 @@ import scala.xml.Elem
 import org.aqa.db.MaintenanceRecord
 import java.sql.Timestamp
 import org.aqa.web.WebUtil._
+import org.aqa.db.User
 
 object MaintenanceRecordList {
     val path = WebUtil.pathOf(WebUtil.SubUrl.admin, MaintenanceRecordList.getClass.getName)
@@ -27,11 +28,16 @@ class MaintenanceRecordList extends GenericList[MaintenanceRecord] with WebUtil.
 
     override def getPK(value: MaintenanceRecord): Long = value.maintenanceRecordPK.get
 
+    override def createNewPath(valueMap: ValueMapT): String = {
+        WebUtil.cleanClassName(MaintenanceRecordUpdate.getClass.getName) + "?" + MachineUpdate.machinePKTag + "=" + valueMap(MachineUpdate.machinePKTag)
+    }
+
     private def descHTML(maintenanceRecord: MaintenanceRecord): Elem = <div>{ WebUtil.firstPartOf(maintenanceRecord.description, 60) }</div>
 
-    private val dateTimeCol = new Column[MaintenanceRecord]("Date/Time", _.dateTime.toString)
+    private val dateTimeCol = new Column[MaintenanceRecord]("Date/Time",
+        (a, b) => (a.dateTime.getTime < b.dateTime.getTime), (mr: MaintenanceRecord) => makePrimaryKeyHtml(WebInputDateTime.dateTimeFormat.format(mr.dateTime), mr.maintenanceRecordPK))
 
-    private val userCol = new Column[MaintenanceRecord]("User", (a, b) => (a.dateTime.getTime < b.dateTime.getTime), (user: MaintenanceRecord) => makePrimaryKeyHtml("user", Some(user.userPK))) //(user:MaintenanceRecord) => makePrimaryKeyHtml("user", Some(user.userPK)))
+    private val userCol = new Column[MaintenanceRecord]("User", mr => User.get(mr.userPK).get.id)
 
     private val summaryCol = new Column[MaintenanceRecord]("Summary", _.summary)
 

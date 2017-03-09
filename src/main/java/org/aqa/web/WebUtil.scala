@@ -30,6 +30,7 @@ import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.ss.usermodel.Row
 import org.apache.poi.ss.usermodel.Cell
 import java.text.SimpleDateFormat
+import java.text.ParseException
 
 object WebUtil {
 
@@ -615,13 +616,21 @@ object WebUtil {
             wrapInput(label, true, html, col, offset, errorMap)
         }
 
-        val dateTimeFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm")
+        val dateTimeFormat = WebInputDateTime.dateTimeFormat
 
         def validateDateTime(text: String): Option[Date] = {
+
+            def inRange(i: Int, lo: Int, hi: Int): Unit = if ((i < lo) || (i > hi)) throw new ParseException("value out of range of " + lo + " to " + hi, 0)
 
             try {
                 val fields = text.replaceAll("[^0-9]", " ").replaceAll("  *", " ").trim.split(" ").map(t => t.toInt)
                 val year = if (fields(2) < 100) fields(2) + 2000 else fields(2) // adjust year, eg: 17 to 2017
+
+                inRange(fields(0), 1, 12) // month
+                inRange(fields(1), 1, 31) // day of month (does not catch months with less than 31 days)
+                inRange(year, 1970, 2100)
+                inRange(fields(3), 0, 23) // hour
+                inRange(fields(4), 0, 59) // minute
 
                 val formattedText =
                     fields(0).formatted("%02d") + "/" +
@@ -638,6 +647,10 @@ object WebUtil {
 
         }
 
+    }
+
+    object WebInputDateTime {
+        val dateTimeFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm")
     }
 
     class WebInputHidden(override val label: String) extends IsInput(label) with ToHtml {

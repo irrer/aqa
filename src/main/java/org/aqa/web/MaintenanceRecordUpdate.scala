@@ -71,38 +71,28 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
 
     private val formEdit = new WebForm(pathOf, fieldList :+ editButtonList)
 
-    private def emptySummary(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
-        val summaryText = valueMap.get(summary.label).get.trim
-        val isEmpty = summaryText.trim.size == 0
-        if (isEmpty) {
-            val err = Error.make(summary, summary.label + " can not be empty")
-            formCreate.setFormResponse(valueMap, err, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
-        }
-        isEmpty
+    private def redirectToList(response: Response, valueMap: ValueMapT): Unit = {
+        val path = WebUtil.pathOf(WebUtil.SubUrl.admin, MaintenanceRecordList.getClass.getName) + "?" + MachineUpdate.machinePKTag + "=" + valueMap(MachineUpdate.machinePKTag)
+        response.redirectSeeOther(path)
     }
 
-    private def dateIsValid(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
-        if (dateTime.validateDateTime(valueMap.get(dateTime.label).get).isDefined) true
-        else {
-            val err = Error.make(dateTime, dateTime.label + " is invalid.  Expected format: MM/DD/YYYY hh:mm")
-            formCreate.setFormResponse(valueMap, err, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
-            false
-        }
+    private def emptySummary(valueMap: ValueMapT): StyleMapT = {
+        val summaryText = valueMap.get(summary.label).get.trim
+        val isEmpty = summaryText.trim.size == 0
+        if (isEmpty) Error.make(summary, summary.label + " can not be empty")
+        else styleNone
+    }
+
+    private def dateIsInvalid(valueMap: ValueMapT): StyleMapT = {
+        if (dateTime.validateDateTime(valueMap.get(dateTime.label).get).isDefined) styleNone
+        else Error.make(dateTime, dateTime.label + " is invalid.  Expected format: MM/DD/YYYY hh:mm")
     }
 
     private def updateMaintenanceRecord(inst: MaintenanceRecord): Unit = {
         MaintenanceRecord.query.insertOrUpdate(inst)
     }
 
-    /**
-     * Save changes made to form.
-     */
-    private def save(valueMap: ValueMapT, pageTitle: String, response: Response): Unit = {
-        if (fieldsAreValid(valueMap, pageTitle, response)) {
-            (createMaintenanceRecordFromParameters(valueMap, response.getRequest)).insertOrUpdate
-            MaintenanceRecordList.redirect(response)
-        }
-    }
+    private def checkFields(valueMap: ValueMapT): StyleMapT = emptySummary(valueMap) ++ dateIsInvalid(valueMap)
 
     /**
      * Create a new maintenanceRecord
@@ -127,27 +117,32 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
 
     }
 
-    private def emptyForm(response: Response) = {
-        val valueMap = Map(
-     //       (machinePK.label, inst.machinePK.toString),
-                (dateTime.label, dateTime.dateTimeFormat.format(System.currentTimeMillis))
-                )
-        formCreate.setFormResponse(valueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
+    private def emptyForm(response: Response, valueMap: ValueMapT) = {
+        val vm = Map(
+            (machinePK.label, valueMap(machinePK.label)),
+            (dateTime.label, dateTime.dateTimeFormat.format(System.currentTimeMillis)))
+        formCreate.setFormResponse(vm, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
     }
 
-    private def fieldsAreValid(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
-        0 match {
-            case _ if emptySummary(valueMap, pageTitle, response) => false
-            case _ if !dateIsValid(valueMap, pageTitle, response) => false
-            case _ => true
+    /**
+     * Save changes made to form.
+     */
+    private def save(valueMap: ValueMapT, pageTitle: String, response: Response): Unit = {
+        val styleMap = checkFields(valueMap)
+        if (styleMap.isEmpty) {
+            (createMaintenanceRecordFromParameters(valueMap, response.getRequest)).insertOrUpdate
+            redirectToList(response, valueMap)
         }
+        else formEdit.setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
     }
 
     private def create(valueMap: ValueMapT, pageTitle: String, response: Response) = {
-        if (fieldsAreValid(valueMap, pageTitle, response)) {
+        val styleMap = checkFields(valueMap)
+        if (styleMap.isEmpty) {
             createMaintenanceRecordFromParameters(valueMap, response.getRequest).insert
-            MaintenanceRecordList.redirect(response)
+            redirectToList(response, valueMap)
         }
+        else formCreate.setFormResponse(valueMap, styleMap, pageTitleCreate, response, Status.CLIENT_ERROR_BAD_REQUEST)
     }
 
     private def edit(inst: MaintenanceRecord, response: Response) = {
@@ -184,7 +179,7 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
             val value = valueMap.get(MaintenanceRecordUpdate.maintenanceRecordPKTag)
             if (value.isDefined) {
                 MaintenanceRecord.delete(value.get.toLong)
-                MaintenanceRecordList.redirect(response)
+                redirectToList(response, valueMap)
                 true
             }
             else
@@ -219,12 +214,12 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
         val valueMap = getValueMap(request)
         try {
             0 match {
-                case _ if buttonIs(valueMap, cancelButton) => MaintenanceRecordList.redirect(response)
+                case _ if buttonIs(valueMap, cancelButton) => redirectToList(response, valueMap)
                 case _ if buttonIs(valueMap, createButton) => create(valueMap, pageTitleEdit, response)
                 case _ if buttonIs(valueMap, saveButton) => save(valueMap, pageTitleEdit, response)
                 case _ if isDelete(valueMap, response) => Nil
                 case _ if isEdit(valueMap, response) => Nil
-                case _ => emptyForm(response)
+                case _ => emptyForm(response, valueMap)
             }
         }
         catch {
