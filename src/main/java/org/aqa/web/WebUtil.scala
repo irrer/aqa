@@ -39,14 +39,14 @@ object WebUtil {
     val spacer = "\n.spacer {  margin-top: 40px; }"
 
     private val singleQuote = "@@quote1@@"
-
     private val doubleQuote = "@@quote2@@"
+    val amp = "@@amp@@"
 
     def snglQuote(text: String): String = singleQuote + text + singleQuote
 
     def dblQuote(text: String): String = doubleQuote + text + doubleQuote
 
-    def xmlToText(document: Node): String = new PrettyPrinter(1024, 2).format(document).replace(singleQuote, "'").replace(doubleQuote, "\"")
+    def xmlToText(document: Node): String = new PrettyPrinter(1024, 2).format(document).replace(singleQuote, "'").replace(doubleQuote, "\"").replace(amp, "&")
 
     def cleanClassName(className: String) = className.substring(className.lastIndexOf('.') + 1).replace("$", "")
 
@@ -283,6 +283,10 @@ object WebUtil {
         val rowListWithSession = (new WebInputSession) ++ rowList
 
         val uploadFileInput: Option[IsInput] = if (validCol(fileUpload)) Some(new IsInput("uploadFile")) else None
+        
+        def findInput(label: String): Option[IsInput] = {
+            rowList.map(r => r.colList).flatten.filter(i => i.isInstanceOf[IsInput]).map(in => in.asInstanceOf[IsInput]).find(isIn => isIn.label.equals(label))
+        }
 
         override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
 
@@ -414,6 +418,15 @@ object WebUtil {
         div % style.divAttributes(div.attributes)
     }
 
+    def stringToDouble(text: String): Option[Double] = {
+        try {
+            Some(text.toDouble)
+        }
+        catch {
+            case t: Throwable => None
+        }
+    }
+
     class IsInput(val label: String) {
         def getValOrEmpty(valueMap: ValueMapT): String = {
             val v = valueMap.get(label)
@@ -434,21 +447,16 @@ object WebUtil {
             }
         }
 
-        def getDouble(valueMap: ValueMapT): Option[Double] = {
-            val text = getValOrEmpty(valueMap).trim
-            try {
-                Some(text.toDouble)
-            }
-            catch {
-                case t: Throwable => None
-            }
-        }
+        def getDouble(valueMap: ValueMapT): Option[Double] = stringToDouble(getValOrEmpty(valueMap).trim)
     }
 
-    class WebInputText(override val label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
+    class WebInputText(override val label: String, showLabel: Boolean, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
+
+        def this(label: String, col: Int, offset: Int, placeholder: String) = this(label, true, col, offset, placeholder)
+
         override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
             val html = <input type="text"/> % idNameClassValueAsAttr(label, valueMap) % placeholderAsAttr(placeholder)
-            wrapInput(label, true, html, col, offset, errorMap)
+            wrapInput(label, showLabel, html, col, offset, errorMap)
         }
     }
 
@@ -590,10 +598,12 @@ object WebUtil {
      *
      * @param primary True if this button is primary
      */
-    class FormButton(override val label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String, buttonType: ButtonType.Value) extends IsInput(label) with ToHtml {
-        def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String) = this(label, col, offset, subUrl, action: String, ButtonType.BtnDefault)
+    class FormButton(override val label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String, buttonType: ButtonType.Value, value: String) extends IsInput(label) with ToHtml {
+        def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String, buttonType: ButtonType.Value) = this(label, col, offset, subUrl, action: String, buttonType, label)
+        def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String) = this(label, col, offset, subUrl, action: String, ButtonType.BtnDefault, label)
+
         override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
-            val button = { <button type="submit" class={ "btn " + buttonType.toString } action={ action } value={ label } name={ label }>{ label }</button> }
+            val button = { <button type="submit" class={ "btn " + buttonType.toString } action={ action } value={ value } name={ label }>{ label }</button> }
             wrapInput(label, false, button, col, offset, errorMap)
         }
     }

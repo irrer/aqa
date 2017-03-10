@@ -22,6 +22,13 @@ case class MachineBeamEnergy(
     }
 
     def insertOrUpdate = Db.run(MachineBeamEnergy.query.insertOrUpdate(this))
+
+    override def equals(o: Any): Boolean = {
+        val other = o.asInstanceOf[MachineBeamEnergy]
+        photonEnergy_MeV.equals(other.photonEnergy_MeV) &&
+            maxDoseRate_MUperMin.equals(other.maxDoseRate_MUperMin) &&
+            fffEnergy_MeV.equals(other.fffEnergy_MeV)
+    }
 }
 
 object MachineBeamEnergy {
@@ -51,6 +58,14 @@ object MachineBeamEnergy {
         } yield (inst)
         val list = Db.run(action.result)
         if (list.isEmpty) None else Some(list.head)
+    }
+
+    def getByMachine(machinePK: Long): Seq[MachineBeamEnergy] = {
+        val action = for {
+            inst <- MachineBeamEnergy.query if inst.machinePK === machinePK
+        } yield (inst)
+        val list = Db.run(action.result)
+        list
     }
 
     /**
