@@ -225,7 +225,15 @@ object WebUtil {
                 <body>
                     <header class="topbar">
                         <div class="row">
-                            <div class="col-md-2 col-md-offset-9">
+                            <div class="col-md-1 col-md-offset-9">
+                                <strong>
+                                    <br> </br>
+                                    <a href="/static/admin.html">Administration</a>
+                                    <br> </br>
+                                    <a href="/view/OutputList">Results</a>
+                                </strong>
+                            </div>
+                            <div class="col-md-2">
                                 <h1 class="fill">
                                     <a href="/"><img src="/static/images/logo.png" width="128"/></a>
                                 </h1>
@@ -283,7 +291,7 @@ object WebUtil {
         val rowListWithSession = (new WebInputSession) ++ rowList
 
         val uploadFileInput: Option[IsInput] = if (validCol(fileUpload)) Some(new IsInput("uploadFile")) else None
-        
+
         def findInput(label: String): Option[IsInput] = {
             rowList.map(r => r.colList).flatten.filter(i => i.isInstanceOf[IsInput]).map(in => in.asInstanceOf[IsInput]).find(isIn => isIn.label.equals(label))
         }

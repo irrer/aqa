@@ -20,13 +20,13 @@ class MachineTypeList extends GenericList[MachineType] with WebUtil.SubUrlAdmin 
 
     private def notesHTML(machineType: MachineType): Elem = <div>{ WebUtil.firstPartOf(machineType.notes, 60) }</div>
 
-    private val manufacturerCol = new Column[MachineType]("Manufacturer", _.manufacturer, (mt) => makePrimaryKeyHtml(mt.manufacturer, mt.machineTypePK))
+    private val modelCol = new Column[MachineType]("Model", _.model, (mt) => makePrimaryKeyHtml(mt.model, mt.machineTypePK))
 
-    private val modelCol = new Column[MachineType]("Model", _.model)
+    private val manufacturerCol = new Column[MachineType]("Manufacturer", _.manufacturer)
 
     private val versionCol = new Column[MachineType]("Version", _.version)
 
     private val notesCol = new Column[MachineType]("Notes", _.notes, notesHTML)
 
-    override val columnList = Seq(manufacturerCol, modelCol, versionCol, notesCol)
+    override val columnList = Seq(modelCol, manufacturerCol, versionCol, notesCol)
 }
