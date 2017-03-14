@@ -29,6 +29,30 @@ object Config {
     private val configFileName = "AQAConfig.xml";
     private val DEFAULT_RESTART_TIME = "1:20"
 
+    /** Root directory name for static directory. */
+    val staticDirName = "static"
+
+    /** Root directory name for test results. */
+    val resultsDirName = "results"
+
+    /** Root directory name for temporary files. */
+    val tmpDirName = "tmp"
+
+    /** Root directory name for machine configuration files. */
+    val machineConfigurationDirName = "MachineConfiguration"
+
+    def makeDataDir(dirName: String): File = {
+        val dir = new File(DataDir, dirName)
+        dir.mkdirs
+        dir
+    }
+
+    lazy val resultsDirFile = makeDataDir(resultsDirName)
+
+    lazy val tmpDirFile = makeDataDir(tmpDirName)
+
+    lazy val machineConfigurationDirFile = makeDataDir(machineConfigurationDirName)
+
     private var configFile: File = null
 
     def getConfigFile = configFile
@@ -169,8 +193,12 @@ object Config {
         logText("Property " + name, if (name.toLowerCase.contains("password")) "[redacted]" else value)
     }
 
-    private def initProperties = {
+    private def initProperties: Unit = {
         (document \ "PropertyList" \ "Property").toList.map(node => setProperty(node))
+
+        // force each of these directories to be created.  It would be catastrophic if this fails.
+        if (!(Seq(resultsDirFile, tmpDirFile, machineConfigurationDirFile).map(d => (d.isDirectory && d.canRead)).reduce(_ && _)))
+            throw new RuntimeException("can not read all necessary directories")
     }
 
     private def getThisJarFile: File = {
@@ -243,10 +271,6 @@ object Config {
 
         millisec
     }
-
-    /** Place to put temporary files. */
-    val tmpDir = new File(DataDir, "tmp")
-    tmpDir.mkdirs
 
     initProperties
 

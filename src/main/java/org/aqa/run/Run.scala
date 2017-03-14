@@ -72,7 +72,7 @@ object Run {
             appendPK(procedure.fileName, procedure.procedurePK.get),
             appendPK(Util.currentTimeAsFileName, inputPK))
 
-        val inputDir: File = nameHierarchy.foldLeft(WebServer.dataDir)((d, name) => new File(d, name))
+        val inputDir: File = nameHierarchy.foldLeft(Config.resultsDirFile)((d, name) => new File(d, name))
 
         logInfo("New input directory: " + inputDir.getAbsolutePath)
         inputDir
@@ -174,7 +174,7 @@ object Run {
         // input row, but this is part of the compromise of creating a file hierarchy that has a consistent (as
         // practical) link to the database.
         val inputDir = makeInputDir(machine, procedure, input.inputPK.get)
-        input.updateDirectory(WebServer.fileToDataPath(inputDir))
+        input.updateDirectory(WebServer.fileToResultsPath(inputDir))
 
         // move input files to their final resting place
         inputDir.getParentFile.mkdirs
@@ -190,7 +190,7 @@ object Run {
             val tempOutput = new Output(
                 outputPK = None,
                 inputPK = input.inputPK.get,
-                directory = WebServer.fileToDataPath(outputDir),
+                directory = WebServer.fileToResultsPath(outputDir),
                 procedurePK = procedure.procedurePK.get,
                 userPK,
                 new Timestamp(startDate.getTime),
@@ -251,7 +251,7 @@ object Run {
                 updateDb(status)
             }
 
-            val statusFromFile = ProcedureStatus.dirToProcedureStatus(WebServer.fileOfDataPath(output.directory))
+            val statusFromFile = ProcedureStatus.dirToProcedureStatus(WebServer.fileOfResultsPath(output.directory))
 
             def killProcess = logWarning("Need to implement killProcess") // TODO
 

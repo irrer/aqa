@@ -39,7 +39,7 @@ case class Output(
 
     def insertOrUpdate = Db.run(Output.query.insertOrUpdate(this))
 
-    def dir: File = WebServer.fileOfDataPath(directory)
+    def dir: File = WebServer.fileOfResultsPath(directory)
 
     /**
      * Update the status and finish date.  Returns number of records updated, which should always be one.  If it is zero then

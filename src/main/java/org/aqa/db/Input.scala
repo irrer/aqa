@@ -26,7 +26,7 @@ case class Input(
 
     def insertOrUpdate = Db.run(Input.query.insertOrUpdate(this))
 
-    def dir: File = WebServer.fileOfDataPath(directory.get)
+    def dir: File = WebServer.fileOfResultsPath(directory.get)
     
     /**
      * Update the directory.  Returns number of records updated, which should always be one.  If it is zero then

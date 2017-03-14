@@ -92,7 +92,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     }
 
     private def inputFileUrl(extendedValues: Output.ExtendedValues): Elem = {
-        <a href={ WebServer.urlOfDataPath(extendedValues.input.directory.get) }>{ inputTime(extendedValues) }</a>
+        <a href={ WebServer.urlOfResultsPath(extendedValues.input.directory.get) }>{ inputTime(extendedValues) }</a>
     }
 
     private def invalidateRowName(extendedValues: Output.ExtendedValues): String = extendedValues.output.dataValidity.toString

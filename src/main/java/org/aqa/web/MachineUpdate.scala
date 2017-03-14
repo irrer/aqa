@@ -52,6 +52,17 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
     private def epidName() = EPID.list.toList.map(e => (e.epidPK.get.toString, e.toName))
 
+    private def getConfigUrl(valueMap: ValueMapT): Elem = {
+        val machPk = valueMap.get(machinePK.label)
+        if (machPk.isDefined) {
+            val configDirName = Machine.get(machPk.get.toLong).get.configurationDirectory
+            <a href={ WebServer.urlOfMachineConfigurationPath(configDirName) }>Configuration Directory</a>
+        }
+        else <div>Configuration directory not defined</div>
+    }
+
+    private val configurationDirectory = new WebPlainText("Configuration", false, 6, 0, getConfigUrl _)
+
     private val multileafCollimatorPK = new WebInputSelect("Collimator", 6, 0, collimatorName)
 
     private val epidPK = new WebInputSelect("EPID", 6, 0, epidName)
@@ -136,7 +147,9 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
         val listA: List[WebRow] = List(
             List(id),
             List(machineTypePK),
-            List(multileafCollimatorPK), List(epidPK),
+            List(multileafCollimatorPK),
+            List(configurationDirectory),
+            List(epidPK),
             List(institutionPK),
             List(serialNumber, imagingBeam2_5_mv),
             List(onboardImager, sixDimTabletop),
@@ -239,8 +252,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
         val form = formEdit(valueMap)
         val styleMap = validateAll(valueMap, form)
         if (styleMap.isEmpty) {
-            val machine = createMachineFromParameters(valueMap)
-            machine.insertOrUpdate
+            constructMachineFromParameters(valueMap)
             MachineList.redirect(response)
         }
         else {
@@ -257,10 +269,10 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
             val valList = Seq(pho, max, fff)
             val viable = valList.find { x => x.trim.size > 0 }
-            if (viable.isDefined) {
+            if (viable.isDefined)
                 Some(new MachineBeamEnergy(None, machine.machinePK.get, stringToDouble(pho), stringToDouble(max), stringToDouble(fff)))
-            }
-            else None
+            else
+                None
         }
 
         // The way that the user wants the beam energies
@@ -276,7 +288,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     /**
      * Create a new machine
      */
-    private def createMachineFromParameters(valueMap: ValueMapT): Machine = {
+    private def constructMachineFromParameters(valueMap: ValueMapT): Unit = {
         val pk: Option[Long] = {
             val e = valueMap.get(machinePK.label)
             if (e.isDefined) Some(e.get.toLong) else None
@@ -291,11 +303,21 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
         val notesVal = valueMap.get(notes.label).get.trim
 
-        val imgBeam = valueMap.get(imagingBeam2_5_mv.label).isDefined
+        val configDir: String =
+            if (pk.isDefined) {
+                Machine.get(pk.get).get.configurationDirectory
+            }
+            else {
+                Machine.initConfigDir(institutionPKVal, idVal, serialNumberVal) match {
+                    case Right(cfgDir) => cfgDir
+                    case Left(msg) => throw new RuntimeException("Unable to make config dir for machine")
+                }
+            }
 
         val machine = new Machine(pk,
             idVal,
             machineTypePKVal,
+            configDir,
             multilefCollimatorPKVal,
             epidPKVal,
             institutionPKVal,
@@ -306,8 +328,15 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
             valueMap.get(respiratoryManagement.label).isDefined,
             valueMap.get(developerMode.label).isDefined,
             notesVal)
-        updateBeamEnergies(machine, valueMap)
-        machine
+
+        if (pk.isDefined) {
+            machine.insertOrUpdate
+            updateBeamEnergies(machine, valueMap)
+        }
+        else {
+            val newMachine = machine.insert
+            updateBeamEnergies(newMachine, valueMap)
+        }
     }
 
     /**
@@ -327,8 +356,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
         val styleMap = validateAll(valueMap, form)
 
         if (styleMap.isEmpty) {
-            val machine = createMachineFromParameters(valueMap)
-            machine.insert
+            constructMachineFromParameters(valueMap)
             MachineList.redirect(response)
         }
         else {

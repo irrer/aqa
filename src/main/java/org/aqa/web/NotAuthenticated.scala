@@ -39,7 +39,7 @@ class NotAuthenticated extends Restlet with SubUrlRoot {
 
     private val content = "Either your user id or password are incorrect."
 
-    private val message = new WebPlainText("message", false, 6, 0, ((Null)) => <div>{ content }</div>)
+    private val message = new WebPlainText("message", false, 6, 0, _ => <div>{ content }</div>)
 
     private val form = new WebForm(pathOf, List(List(message), List(homeButton)))
 

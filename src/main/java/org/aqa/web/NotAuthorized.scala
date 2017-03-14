@@ -39,7 +39,7 @@ class NotAuthorized extends Restlet with SubUrlRoot {
 
     private val content = "Your user id and password are correct, but are not authorized to access this content."
 
-    private val message = new WebPlainText("message", false, 6, 0, ((Null)) => <div>{ content }</div>)
+    private val message = new WebPlainText("message", false, 6, 0, _ => <div>{ content }</div>)
 
     private val form = new WebForm(pathOf, List(List(message), List(homeButton)))
 

@@ -35,7 +35,7 @@ private class ImmutableOutput(
     def this(output: Output) = this(
         output.outputPK.get,
         output.inputPK,
-        WebServer.fileOfDataPath(output.directory),
+        WebServer.fileOfResultsPath(output.directory),
         output.procedurePK,
         output.userPK,
         output.startDate)
@@ -76,7 +76,7 @@ object ViewOutput {
             val row = {
                 <div class="row">
                     <div class="col-md-2">
-                        <a href={ WebServer.urlOfDataFile(file) }>{ file.getName }</a>
+                        <a href={ WebServer.urlOfResultsFile(file) }>{ file.getName }</a>
                     </div>
                 </div>
             }
@@ -181,7 +181,7 @@ class ViewOutput extends Restlet with SubUrlView {
 
     private def setResponseWithOutputFile(file: File, response: Response) = {
         response.setStatus(Status.SUCCESS_OK)
-        response.redirectSeeOther(WebServer.urlOfDataFile(file))
+        response.redirectSeeOther(WebServer.urlOfResultsFile(file))
     }
 
     private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {

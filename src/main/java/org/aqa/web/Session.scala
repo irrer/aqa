@@ -27,7 +27,7 @@ object Session {
             s
         })
 
-    def idToFile(id: String): File = new File(Config.tmpDir, id)
+    def idToFile(id: String): File = new File(Config.tmpDirFile, id)
 
     def main(args: Array[String]): Unit = {
         for (i <- (0 until 5)) println(makeUniqueId)

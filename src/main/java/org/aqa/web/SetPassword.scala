@@ -31,8 +31,8 @@ class SetPassword extends Restlet with SubUrlRoot {
 
     private val pageTitle = "Set Password"
 
-    private def getTargetUserId(vma: Any): Elem = {
-        val pk = (vma.asInstanceOf[ValueMapT]).get(userPK.label)
+    private def getTargetUserId(valueMap: ValueMapT): Elem = {
+        val pk = valueMap.get(userPK.label)
         val usrId = if (pk.isDefined) User.get(pk.get.toLong).get.id else "unknown"
         <div>{ usrId }</div>
     }

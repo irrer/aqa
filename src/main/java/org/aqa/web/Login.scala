@@ -36,11 +36,11 @@ class Login extends Restlet with SubUrlRoot {
 
     private val password = new WebInputPassword("Password", 4, 0, "")
 
-    private def getMessage(any: Any): Elem = {
+    private def getMessage(valueMap: ValueMapT): Elem = {
         <div>{
-            {
-                val optMsg = any.asInstanceOf[ValueMapT].get(message.label)
-                if (optMsg.isDefined) URLDecoder.decode(optMsg.get, "UTF-8") else ""
+            valueMap.get(message.label) match {
+                case Some(optMsg) => URLDecoder.decode(optMsg, "UTF-8")
+                case _ => ""
             }
         }</div>
     }
@@ -100,11 +100,11 @@ class Login extends Restlet with SubUrlRoot {
             if (vu.isEmpty) validatePassword(valueMap) else vu
         }
 
-        if (true) {     // TODO rm
+        if (true) { // TODO rm
             val cr = request.getChallengeResponse
             if (cr != null)
                 println("login ident: " + cr.getIdentifier + "    secret: " + new String(cr.getSecret))
-                else println("login ident no credentials")
+            else println("login ident no credentials")
         }
 
         if (false) { // TODO rm

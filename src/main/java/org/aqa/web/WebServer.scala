@@ -29,24 +29,32 @@ import org.restlet.routing.TemplateRoute
 import edu.umro.ScalaUtil.Trace._
 
 object WebServer {
-    val staticDirName = "static"
-
     val challengeScheme = ChallengeScheme.HTTP_BASIC
 
-    lazy val dataDir = new File(Config.DataDir, "data")
+    //  lazy val resultsDir = new File(Config.DataDir, Config.resultsDirName)
 
-    val dataDirBaseUrl = "/data"
-    val tmpDirBaseUrl = "/tmp"
+    val staticDirBaseUrl = "/" + Config.staticDirName
 
-    def urlOfDataPath(filePath: String): String = {
-        (dataDirBaseUrl + "/" + filePath.replace('\\', '/')).replaceAll("///*", "/")
-    }
+    val resultsDirBaseUrl = "/" + Config.resultsDirName
+    val tmpDirBaseUrl = "/" + Config.tmpDirName
+    val machineConfigurationDirBaseUrl = "/" + Config.machineConfigurationDirName
 
-    def urlOfDataFile(file: File): String = urlOfDataPath(fileToDataPath(file))
+    def urlOfPath(baseUrl: String, filePath: String): String = (baseUrl + "/" + filePath.replace('\\', '/')).replaceAll("///*", "/")
 
-    def fileOfDataPath(filePath: String): File = new File(dataDir, filePath)
+    def urlOfResultsPath(filePath: String): String = urlOfPath(resultsDirBaseUrl, filePath)
 
-    def fileToDataPath(file: File): String = file.getAbsolutePath.substring(dataDir.getAbsolutePath.size)
+    def urlOfMachineConfigurationPath(filePath: String): String = urlOfPath(machineConfigurationDirBaseUrl, filePath)
+
+    def urlOfResultsFile(file: File): String = urlOfResultsPath(fileToResultsPath(file))
+
+    def urlOfMachineConfigurationFile(file: File): String = urlOfMachineConfigurationPath(fileToMachineConfigurationPath(file))
+
+    def fileOfResultsPath(filePath: String): File = new File(Config.resultsDirFile, filePath)
+
+    def fileToResultsPath(file: File): String = file.getAbsolutePath.substring(Config.resultsDirFile.getAbsolutePath.size)
+
+    def fileToMachineConfigurationPath(file: File): String = file.getAbsolutePath.substring(Config.resultsDirFile.getAbsolutePath.size)
+
 }
 
 class WebServer extends Application {
@@ -86,7 +94,7 @@ class WebServer extends Application {
      * Directory containing the definitive static files.
      */
     private lazy val staticDirFile: File = {
-        val locations = List(""".\""", """src\main\resources\""").map(name => new File(name + WebServer.staticDirName))
+        val locations = List(""".\""", """src\main\resources\""").map(name => new File(name + Config.staticDirName))
 
         val dirList = locations.filter(f => f.isDirectory)
 
@@ -121,7 +129,9 @@ class WebServer extends Application {
 
     private lazy val router = new Router(getContext.createChildContext)
 
-    private lazy val staticDir = makeDirectory(staticDirFile)
+    private lazy val staticDirRestlet = makeDirectory(staticDirFile)
+
+    private lazy val machineConfigurationDirRestlet = makeDirectory(Config.machineConfigurationDirFile)
 
     /*
         if (false) {
@@ -133,9 +143,9 @@ class WebServer extends Application {
         }
         */
 
-    private lazy val dataDir = makeDirectory(WebServer.dataDir)
+    private lazy val resultsDirectoryRestlet = makeDirectory(Config.resultsDirFile)
 
-    private lazy val tmpDir = makeDirectory(Config.tmpDir)
+    private lazy val tmpDirectoryRestlet = makeDirectory(Config.tmpDirFile)
 
     private lazy val login = new Login
 
@@ -159,15 +169,16 @@ class WebServer extends Application {
         val restlet = templateRoute.getNext
 
         val role: UserRole.Value = restlet match {
-            case `staticDir` => UserRole.publik
+            case `staticDirRestlet` => UserRole.publik
             case `mainIndex` => UserRole.publik
             case `login` => UserRole.publik
             case `notAuthorized` => UserRole.publik
             case `notAuthenticated` => UserRole.publik
             case `setPassword` => UserRole.guest
-            case `dataDir` => UserRole.guest
+            case `resultsDirectoryRestlet` => UserRole.guest
             case `webRunIndex` => UserRole.user
-            case `tmpDir` => UserRole.user
+            case `tmpDirectoryRestlet` => UserRole.user
+            case `machineConfigurationDirRestlet` => UserRole.user
 
             case _ => {
                 logInfo("admin role requested")
@@ -198,9 +209,10 @@ class WebServer extends Application {
 
             component.getClients.add(Protocol.FILE)
 
-            attach(router, "/" + WebServer.staticDirName, staticDir)
-            attach(router, WebServer.dataDirBaseUrl, dataDir)
-            attach(router, WebServer.tmpDirBaseUrl, tmpDir)
+            attach(router, WebServer.staticDirBaseUrl, staticDirRestlet)
+            attach(router, WebServer.resultsDirBaseUrl, resultsDirectoryRestlet)
+            attach(router, WebServer.tmpDirBaseUrl, tmpDirectoryRestlet)
+            attach(router, WebServer.machineConfigurationDirBaseUrl, machineConfigurationDirRestlet)
 
             val restletList: Seq[Restlet with WebUtil.SubUrlTrait] = Seq(
                 new MachineUpdate,

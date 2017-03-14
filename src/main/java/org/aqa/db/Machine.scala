@@ -4,11 +4,13 @@ import slick.driver.PostgresDriver.api._
 import org.aqa.Logging._
 import org.aqa.Config
 import edu.umro.ScalaUtil.FileUtil
+import java.io.File
 
 case class Machine(
         machinePK: Option[Long], // primary key
         id: String, // uniquely identifying name within hosting institution
         machineTypePK: Long, // type of machine foreign key
+        configurationDirectory: String, // directory containing configuration files unique to this machine
         multileafCollimatorPK: Long, // collimator
         epidPK: Long, // EPID
         institutionPK: Long, // institution that this machine belongs to
@@ -32,6 +34,7 @@ case class Machine(
 
     def fileName = Machine.fileName(id)
 
+    def configDir: File = Machine.getConfigDir(configurationDirectory)
 }
 
 object Machine {
@@ -40,6 +43,7 @@ object Machine {
         def machinePK = column[Long]("machinePK", O.PrimaryKey, O.AutoInc)
         def id = column[String]("id")
         def machineTypePK = column[Long]("machineTypePK")
+        def configurationDirectory = column[String]("configurationDirectory")
         def multileafCollimatorPK = column[Long]("multileafCollimatorPK")
         def epidPK = column[Long]("epidPK")
         def institutionPK = column[Long]("institutionPK")
@@ -55,6 +59,7 @@ object Machine {
             machinePK.?,
             id,
             machineTypePK,
+            configurationDirectory,
             multileafCollimatorPK,
             epidPK,
             institutionPK,
@@ -74,6 +79,41 @@ object Machine {
     }
 
     def fileName(id: String): String = FileUtil.replaceInvalidFileNameCharacters(id, '_')
+
+    private lazy val machConfigBaseDir: File = {
+        val dir = new File(Config.DataDir, Config.machineConfigurationDirName)
+        dir.mkdirs
+        dir
+    }
+
+    def getConfigDir(configurationDirectory: String): File = new File(machConfigBaseDir, configurationDirectory)
+
+    /**
+     * Create a new configuration directory for the given machine and ensure that it is unique.
+     */
+    def initConfigDir(institutionPK: Long, id: String, serialNumber: String): Either[String, String] = {
+        try {
+            val sn = if (serialNumber.trim.isEmpty) "" else ("_" + serialNumber.trim)
+            val rawBaseName = (Institution.get(institutionPK).get.name.trim + "_" + id + sn).replace(' ', '_')
+            val baseName = FileUtil.replaceInvalidFileNameCharacters(rawBaseName, '_')
+
+            def make(name: String, suffix: Int): String = {
+                if (suffix > 100) {
+                    val msg = "Unable to make machine config dir (too many tries) for " + rawBaseName
+                    logSevere(msg)
+                    throw new RuntimeException(msg)
+                }
+                val fullName: String = if (suffix == 0) name else name + "_" + suffix.toString
+                val dir = getConfigDir(name)
+                if (dir.mkdirs) name
+                else make(name, suffix + 1)
+            }
+            Right(make(baseName, 0))
+        }
+        catch {
+            case t: Throwable => Left("Unable to make machine configuration dir: " + fmtEx(t))
+        }
+    }
 
     val query = TableQuery[MachineTable]
 
