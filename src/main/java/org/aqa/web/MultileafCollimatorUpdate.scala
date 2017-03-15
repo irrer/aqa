@@ -46,14 +46,10 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
     private val outerLeafPairCount = new WebInputText("Outer Leaf Count", 3, 0, "No. of opposing outer pairs, must be 0 or greater.")
     private val innerLeafPairCount = new WebInputText("Inner Leaf Count", 3, 0, "No. of opposing inner pairs, must be 0 or greater.")
 
-    private val outerLeafWidth_cm = new WebInputText("Outer Leaf Width", 3, 0, "Outer leaf width in cm")
-    private val innerLeafWidth_cm = new WebInputText("Inner Leaf Width", 3, 0, "Inner leaf width in cm")
+    private val outerLeafWidth_cm = new WebInputText("Outer Leaf Width (cm)", 3, 0, "Outer leaf width in cm")
+    private val innerLeafWidth_cm = new WebInputText("Inner Leaf Width (cm)", 3, 0, "Inner leaf width in cm")
 
-    private val outerLeafRetractedPosition_cm = new WebInputText("Outer Retracted (cm)", 3, 0, "Outer leaf retracted position in cm")
-    private val innerLeafRetractedPosition_cm = new WebInputText("Inner Retracted (cm)", 3, 0, "Inner leaf retracted position in cm")
-
-    private val outerLeafExtendedPosition_cm = new WebInputText("Outer Extended", 3, 0, "Outer leaf extended position in cm")
-    private val innerLeafExtendedPosition_cm = new WebInputText("Inner Extended", 3, 0, "Inner leaf extended position in cm")
+    private val leafTravelDistance_cm = new WebInputText("Leaf travel distance (cm)", 3, 1, "Distance that leaf can travel in cm")
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
         val action = pathOf + "?" + name + "=" + name
@@ -70,8 +66,7 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
     val fieldList: List[WebRow] = List(List(manufacturer), List(model), List(version),
         List(outerLeafPairCount, innerLeafPairCount),
         List(outerLeafWidth_cm, innerLeafWidth_cm),
-        List(outerLeafRetractedPosition_cm, innerLeafRetractedPosition_cm),
-        List(outerLeafExtendedPosition_cm, innerLeafExtendedPosition_cm),
+        List(leafTravelDistance_cm),
         List(notes))
 
     val createButtonList: List[WebRow] = List(List(createButton, cancelButton))
@@ -191,10 +186,7 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
             innerLeafPairCount.getValOrEmpty(valueMap).trim.toInt,
             outerLeafWidth_cm.getValOrEmpty(valueMap).trim.toDouble,
             innerLeafWidth_cm.getValOrEmpty(valueMap).trim.toDouble,
-            outerLeafRetractedPosition_cm.getValOrEmpty(valueMap).trim.toDouble,
-            innerLeafRetractedPosition_cm.getValOrEmpty(valueMap).trim.toDouble,
-            outerLeafExtendedPosition_cm.getValOrEmpty(valueMap).trim.toDouble,
-            innerLeafExtendedPosition_cm.getValOrEmpty(valueMap).trim.toDouble,
+            leafTravelDistance_cm.getValOrEmpty(valueMap).trim.toDouble,
             notes.getValOrEmpty(valueMap).trim)
     }
 
@@ -210,10 +202,7 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
             case _ if !isPostitiveInt(valueMap, pageTitle, response, innerLeafPairCount) => false
             case _ if !isPostitiveDouble(valueMap, pageTitle, response, outerLeafWidth_cm) => false
             case _ if !isPostitiveDouble(valueMap, pageTitle, response, innerLeafWidth_cm) => false
-            case _ if !isDouble(valueMap, pageTitle, response, outerLeafRetractedPosition_cm) => false
-            case _ if !isDouble(valueMap, pageTitle, response, innerLeafRetractedPosition_cm) => false
-            case _ if !isDouble(valueMap, pageTitle, response, outerLeafExtendedPosition_cm) => false
-            case _ if !isDouble(valueMap, pageTitle, response, innerLeafExtendedPosition_cm) => false
+            case _ if !isDouble(valueMap, pageTitle, response, leafTravelDistance_cm) => false
             case _ => true
         }
     }
@@ -246,11 +235,7 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
             (outerLeafWidth_cm.label, inst.outerLeafWidth_cm.toString),
             (innerLeafWidth_cm.label, inst.innerLeafWidth_cm.toString),
 
-            (outerLeafRetractedPosition_cm.label, inst.outerLeafRetractedPosition_cm.toString),
-            (innerLeafRetractedPosition_cm.label, inst.innerLeafRetractedPosition_cm.toString),
-
-            (outerLeafExtendedPosition_cm.label, inst.outerLeafExtendedPosition_cm.toString),
-            (innerLeafExtendedPosition_cm.label, inst.innerLeafExtendedPosition_cm.toString),
+            (leafTravelDistance_cm.label, inst.leafTravelDistance_cm.toString),
 
             (notes.label, inst.notes))
         formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)

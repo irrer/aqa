@@ -12,8 +12,8 @@ case class EPID(
         hardwareVersion: String, // version of hardware
         pixelCountX: Int, // number of columns
         pixelCountY: Int, // number of rows
-        pixelSizeX_mm: Double, // size of pixels in X direction in mm
-        pixelSizeY_mm: Double, // size of pixels in Y direction in mm
+        width_cm: Double, // width of imager in cm
+        height_cm: Double, // height of imager in cm
         notes: String // any extra information
         ) {
 
@@ -38,8 +38,8 @@ object EPID {
         def hardwareVersion = column[String]("hardwareVersion")
         def pixelCountX = column[Int]("pixelCountX")
         def pixelCountY = column[Int]("pixelCountY")
-        def pixelSizeX_mm = column[Double]("pixelSizeX_mm")
-        def pixelSizeY_mm = column[Double]("pixelSizeY_mm")
+        def width_cm = column[Double]("width_cm")
+        def height_cm = column[Double]("height_cm")
         def notes = column[String]("notes")
 
         def * = (
@@ -49,8 +49,8 @@ object EPID {
             hardwareVersion,
             pixelCountX,
             pixelCountY,
-            pixelSizeX_mm,
-            pixelSizeY_mm,
+            width_cm,
+            height_cm,
             notes) <> ((EPID.apply _)tupled, EPID.unapply _)
     }
 

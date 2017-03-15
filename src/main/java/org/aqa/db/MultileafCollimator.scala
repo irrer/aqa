@@ -14,10 +14,7 @@ case class MultileafCollimator(
         innerLeafPairCount: Int, // total number of opposing inner leaf pairs
         outerLeafWidth_cm: Double, // width of each outer leaf in cm
         innerLeafWidth_cm: Double, // width of each inner leaf in cm
-        outerLeafRetractedPosition_cm: Double, // fully retracted position of each outer leaf in cm
-        innerLeafRetractedPosition_cm: Double, // fully retracted position of each outer leaf in cm
-        outerLeafExtendedPosition_cm: Double, // fully extended position of each inner leaf in cm
-        innerLeafExtendedPosition_cm: Double, // fully extended position of each inner leaf in cm
+        leafTravelDistance_cm: Double, // distance that a leaf can move in cm
         notes: String // any extra information
         ) {
 
@@ -44,10 +41,7 @@ object MultileafCollimator {
         def innerLeafPairCount = column[Int]("innerLeafPairCount")
         def outerLeafWidth_cm = column[Double]("outerLeafWidth_cm")
         def innerLeafWidth_cm = column[Double]("innerLeafWidth_cm")
-        def outerLeafRetractedPosition_cm = column[Double]("outerLeafRetractedPosition_cm")
-        def innerLeafRetractedPosition_cm = column[Double]("innerLeafRetractedPosition_cm")
-        def outerLeafExtendedPosition_cm = column[Double]("outerLeafExtendedPosition_cm")
-        def innerLeafExtendedPosition_cm = column[Double]("innerLeafExtendedPosition_cm")
+        def leafTravelDistance_cm = column[Double]("leafTravelDistance_cm")
         def notes = column[String]("notes")
 
         def * = (
@@ -59,10 +53,7 @@ object MultileafCollimator {
             innerLeafPairCount,
             outerLeafWidth_cm,
             innerLeafWidth_cm,
-            outerLeafRetractedPosition_cm,
-            innerLeafRetractedPosition_cm,
-            outerLeafExtendedPosition_cm,
-            innerLeafExtendedPosition_cm,
+            leafTravelDistance_cm,
             notes) <> ((MultileafCollimator.apply _)tupled, MultileafCollimator.unapply _)
     }
 

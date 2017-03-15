@@ -43,11 +43,11 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
 
     private val notes = new WebInputTextArea("Notes", 6, 0, "")
 
-    private val pixelCountX = new WebInputText("Width", 3, 0, "Width of image in pixels")
-    private val pixelCountY = new WebInputText("Height", 3, 0, "Height of image in pixels")
+    private val pixelCountX = new WebInputText("Width in pixels", 3, 0, "Width of image in pixels")
+    private val pixelCountY = new WebInputText("Height in pixels", 3, 0, "Height of image in pixels")
 
-    private val pixelSizeX_mm = new WebInputText("Pixel width", 3, 0, "Pixel width in mm")
-    private val pixelSizeY_mm = new WebInputText("Pixel height", 3, 0, "Pixel height in mm")
+    private val width_cm = new WebInputText("Imaging width (cm)", 3, 0, "Imaging width in cm")
+    private val height_cm = new WebInputText("Imaging height (cm)", 3, 0, "Imaging height in cm")
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
         val action = pathOf + "?" + name + "=" + name
@@ -63,7 +63,7 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
 
     val fieldList: List[WebRow] = List(List(manufacturer), List(model), List(hardwareVersion),
         List(pixelCountX, pixelCountY),
-        List(pixelSizeX_mm, pixelSizeY_mm),
+        List(width_cm, height_cm),
         List(notes))
 
     val createButtonList: List[WebRow] = List(List(createButton, cancelButton))
@@ -181,8 +181,8 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
             hardwareVersion.getValOrEmpty(valueMap).trim,
             pixelCountX.getValOrEmpty(valueMap).trim.toInt,
             pixelCountY.getValOrEmpty(valueMap).trim.toInt,
-            pixelSizeX_mm.getValOrEmpty(valueMap).trim.toDouble,
-            pixelSizeY_mm.getValOrEmpty(valueMap).trim.toDouble,
+            width_cm.getValOrEmpty(valueMap).trim.toDouble,
+            height_cm.getValOrEmpty(valueMap).trim.toDouble,
             notes.getValOrEmpty(valueMap).trim)
     }
 
@@ -196,8 +196,8 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
             case _ if emptyModel(valueMap, pageTitle, response) => false
             case _ if !isPostitiveInt(valueMap, pageTitle, response, pixelCountX) => false
             case _ if !isPostitiveInt(valueMap, pageTitle, response, pixelCountY) => false
-            case _ if !isPostitiveDouble(valueMap, pageTitle, response, pixelSizeX_mm) => false
-            case _ if !isPostitiveDouble(valueMap, pageTitle, response, pixelSizeY_mm) => false
+            case _ if !isPostitiveDouble(valueMap, pageTitle, response, width_cm) => false
+            case _ if !isPostitiveDouble(valueMap, pageTitle, response, height_cm) => false
             case _ => true
         }
     }
@@ -227,8 +227,8 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
             (pixelCountX.label, inst.pixelCountX.toString),
             (pixelCountY.label, inst.pixelCountY.toString),
 
-            (pixelSizeX_mm.label, inst.pixelSizeX_mm.toString),
-            (pixelSizeY_mm.label, inst.pixelSizeY_mm.toString),
+            (width_cm.label, inst.width_cm.toString),
+            (height_cm.label, inst.height_cm.toString),
 
             (notes.label, inst.notes))
         formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
