@@ -18,17 +18,18 @@ import org.aqa.web.WebUtil
 import org.aqa.db.CentralAxis
 import org.restlet.Restlet
 
-object MaxLeafGap_1 {
+object UploadAndChooseMachine_1 {
     val parametersFileName = "parameters.xml"
-    val MaxLeafGap_1PKTag = "MaxLeafGap_1PK"
+    val UploadAndChooseMachine_1PKTag = "UploadAndChooseMachine_1PK"
 }
 
-class MaxLeafGap_1(procedure: Procedure) extends WebRunProcedure(procedure) {
+/**
+ * Runs procedures that only need the user to upload files and choose a treatment machine. 
+ */
+class UploadAndChooseMachine_1(procedure: Procedure) extends WebRunProcedure(procedure) {
 
     /** Maximum tongue and groove offset in mm.  Exceeding this value probably indicates a user error. */
     private val maxTongueAndGrooveOffset = 10.0
-
-    private val pageTitle = "Maximum Leaf Gap"
 
     def machineList() = Machine.list.toList.map(m => (m.machinePK.get.toString, m.id))
 
@@ -45,7 +46,7 @@ class MaxLeafGap_1(procedure: Procedure) extends WebRunProcedure(procedure) {
     private val form = new WebForm(procedure.webUrl, List(List(machine), List(runButton, cancelButton)), 6)
 
     private def emptyForm(response: Response) = {
-        form.setFormResponse(emptyValueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
+        form.setFormResponse(emptyValueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
     }
 
     private def validate(valueMap: ValueMapT): StyleMapT = {
@@ -78,7 +79,7 @@ class MaxLeafGap_1(procedure: Procedure) extends WebRunProcedure(procedure) {
             Run.run(procedure, Machine.get(machinePK).get, dir, request, response, dtp.PatientID, dtp.dateTime)
         }
         else
-            form.setFormResponse(valueMap, errMap, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
+            form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
     }
 
     private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
