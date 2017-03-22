@@ -28,9 +28,9 @@ object UploadTransAndOpen {
 
     private val transName = "TRANS_Baseline.dcm"
 
-    def curDir = new File(System.getProperty("user.dir"))
+    private def curDir = new File(System.getProperty("user.dir"))
 
-    def fileToAttributeList(file: File): Option[AttributeList] = {
+    private def fileToAttributeList(file: File): Option[AttributeList] = {
         try {
             val al = new AttributeList
             al.read(file)
@@ -41,14 +41,14 @@ object UploadTransAndOpen {
         }
     }
 
-    def readDicomFiles: Seq[AttributeList] = {
+    private def readDicomFiles: Seq[AttributeList] = {
         curDir.getParentFile.listFiles.toSeq.map(f => fileToAttributeList(f)).flatten
     }
 
     /**
      * Get the ExposureSequence --> ExposureTime or die trying.
      */
-    def getExposureTime(al: AttributeList): Int = {
+    private def getExposureTime(al: AttributeList): Int = {
         try {
             val exposureSequence = al.get(TagFromName.ExposureSequence).asInstanceOf[SequenceAttribute]
             val childAl = exposureSequence.getItem(0).getAttributeList

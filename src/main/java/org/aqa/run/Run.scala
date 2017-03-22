@@ -20,7 +20,6 @@ import sys.process._
 import edu.umro.ScalaUtil.Trace._
 import org.aqa.Util
 import org.restlet.Request
-//import scala.concurrent.Await
 import scala.concurrent._
 import ExecutionContext.Implicits.global
 import scala.sys.process._
@@ -40,6 +39,10 @@ import java.io.RandomAccessFile
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import org.aqa.db.DataValidity
+import org.aqa.db.EPID
+import org.aqa.db.MultileafCollimator
+import org.aqa.db.MachineType
+import org.aqa.db.MachineBeamEnergy
 
 /**
  * Run a procedure.
@@ -47,6 +50,8 @@ import org.aqa.db.DataValidity
 object Run {
 
     private val ouputSubdirNamePrefix = "output_"
+
+    private val matlabEnvFileName = "env.m"
 
     /** Procedure must supply a cmd, bat, or exe file with this name. */
     private val runCommandName = "run"
@@ -123,6 +128,108 @@ object Run {
         runInThread(run)
     }
 
+    private type EnvVal = Map[String, Any]
+
+    private def b2s(b: Boolean): String = if (b) "1" else "0"
+
+    private def mainEnv(procedure: Procedure, output: Output): EnvVal = {
+        Map(
+            ("PROCEDURE_DIR" -> procedure.execDir.getAbsolutePath),
+            ("inputPK" -> output.inputPK),
+            ("outputPK" -> output.outputPK.get),
+            ("AQAJAR" -> Config.jarFile.getAbsolutePath),
+            ("DatabaseCommand" -> Config.DatabaseCommand))
+    }
+
+    private def machineEnv(machine: Machine): EnvVal = {
+        Map(
+            ("machine_id" -> machine.id),
+            ("machine_configurationDirectory" -> machine.configurationDirectory),
+            ("machine_serialNumber" -> machine.serialNumber),
+            ("machine_imagingBeam2_5_mv" -> machine.imagingBeam2_5_mv),
+            ("machine_onboardImager" -> machine.onboardImager),
+            ("machine_sixDimTabletop" -> machine.sixDimTabletop),
+            ("machine_respiratoryManagement" -> machine.respiratoryManagement),
+            ("machine_developerMode" -> machine.developerMode),
+            ("machine_notes" -> machine.notes))
+    }
+
+    private def mlcEnv(mlc: MultileafCollimator): EnvVal = {
+        Map(
+            ("mlc_manufacturer" -> mlc.manufacturer),
+            ("mlc_model" -> mlc.model),
+            ("mlc_version" -> mlc.version),
+            ("mlc_outerLeafPairCount" -> mlc.outerLeafPairCount),
+            ("mlc_innerLeafPairCount" -> mlc.innerLeafPairCount),
+            ("mlc_outerLeafWidth_cm" -> mlc.outerLeafWidth_cm),
+            ("mlc_innerLeafWidth_cm" -> mlc.innerLeafWidth_cm),
+            ("mlc_leafTravelDistance_cm" -> mlc.leafTravelDistance_cm),
+            ("mlc_notes" -> mlc.notes))
+    }
+
+    private def machTypeEnv(mt: MachineType): EnvVal = {
+        Map(
+            ("mt_manufacturer" -> mt.manufacturer),
+            ("mt_model" -> mt.model),
+            ("mt_version" -> mt.version),
+            ("mt_notes" -> mt.notes))
+    }
+
+    private def epidEnv(epid: EPID): EnvVal = {
+        Map(
+            ("epid_manufacturer" -> epid.manufacturer),
+            ("epid_model" -> epid.model),
+            ("epid_hardwareVersion" -> epid.hardwareVersion),
+            ("epid_pixelCountX" -> epid.pixelCountX),
+            ("epid_pixelCountY" -> epid.pixelCountY),
+            ("epid_width_cm" -> epid.width_cm),
+            ("epid_height_cm" -> epid.height_cm),
+            ("epid_notes" -> epid.notes))
+    }
+
+    private def machBeamEnergyEnv(mbeList: Seq[MachineBeamEnergy]): EnvVal = {
+        def mapMBE(mbe: MachineBeamEnergy, index: Int): EnvVal = {
+            def mm(name: String, energy: Option[Double]): Option[(String, Any)] = {
+                energy match {
+                    case Some(e) => Some("MachineBeamEnergy_" + name + "_" + index, e)
+                    case _ => None
+                }
+            }
+
+            Seq(
+                mm("photonEnergy_MeV", mbe.photonEnergy_MeV),
+                mm("maxDoseRate_MUperMin", mbe.maxDoseRate_MUperMin),
+                mm("fffEnergy_MeV", mbe.fffEnergy_MeV)).flatten.toMap
+        }
+
+        mbeList.zipWithIndex.map(mbe => mapMBE(mbe._1, 1 + mbe._2)).flatten.toMap
+    }
+
+    private def writeMatlabMap(kvMap: EnvVal, outputDir: File): Unit = {
+        val ls = System.lineSeparator
+        def v2s(v: Any): String = {
+            println("v.getClass: " + v.getClass) // TODO rm
+            println("v: " + v) // TODO rm
+
+            v match {
+                case s: String => "'" + s + "'"
+                case i: Int => i.toString
+                case l: Long => l.toString
+                case d: Double => d.toString
+                case f: Float => f.toString
+                case b: Boolean => if (b) "1" else "0"
+                case _ => {
+                    throw new RuntimeException("Unexpected value type: " + v.getClass + " in Run.writeMatlabMap")
+                    ""
+                }
+            }
+        }
+        val text = kvMap.map(kv => kv._1.toString + " = " + v2s(kv._2) + ";" + ls).toSeq.sorted.foldLeft("")((t, s) => t + s)
+        println("Run.writeMatlabMap.text:\n" + text) // TODO rm
+        val file = new File(outputDir.getParentFile, matlabEnvFileName)
+        Util.writeFile(file, text)
+    }
+
     /**
      * Run the Windows CMD program and have it change directory to the target directory, and
      * then run the procedure execution file, which can be any of:
@@ -130,22 +237,27 @@ object Run {
      *    run.bat
      *    run.exe
      */
-    private def startProcess(procedure: Procedure, output: Output): ActiveProcess = {
+    private def startProcess(procedure: Procedure, machine: Machine, output: Output): ActiveProcess = {
+
         val cd = "CD /D " + output.dir.getAbsolutePath
 
-        val setDir = "SET PROCEDURE_DIR=" + procedure.execDir
+        val kvMap =
+            mainEnv(procedure, output) ++
+                machineEnv(machine) ++
+                mlcEnv(MultileafCollimator.get(machine.multileafCollimatorPK).get) ++
+                machTypeEnv(MachineType.get(machine.machineTypePK).get) ++
+                epidEnv(EPID.get(machine.epidPK).get) ++
+                machBeamEnergyEnv(MachineBeamEnergy.getByMachine(machine.machinePK.get))
 
-        val setInputPk = "SET inputPK=" + output.inputPK
-
-        val setOutputPk = "SET outputPK=" + output.outputPK.get
-
-        val setJar = "SET AQAJAR=" + Config.jarFile.getAbsolutePath
-
-        val setDbCommand = "SET DatabaseCommand=" + Config.DatabaseCommand
+        writeMatlabMap(kvMap, output.dir)
 
         val execute = procedure.execDir + File.separator + runCommandName
 
-        val cmdList = List(cd, setDir, setInputPk, setOutputPk, setJar, setDbCommand, execute)
+        val kvEnv = kvMap.map(kv => "SET " + kv._1 + "=" + kv._2.toString.replace('\n', ' ')).toSeq.sorted
+
+        val cmdList: List[String] = List(cd) ++ kvEnv ++ List(execute)
+
+        // val cmdList = List(cd, setDir, setInputPk, setOutputPk, setJar, setDbCommand, execute)
         val inputString = cmdList.foldLeft("")((t, c) => t + c + System.lineSeparator)
         println("inputString: " + inputString) // TODO rm
         val inputStream = new java.io.ByteArrayInputStream(inputString.getBytes("UTF-8"))
@@ -204,7 +316,7 @@ object Run {
         }
 
         // Start a process that runs the procedure
-        val actProc = startProcess(procedure, output)
+        val actProc = startProcess(procedure, machine, output)
 
         ActiveProcess.add(actProc)
 
