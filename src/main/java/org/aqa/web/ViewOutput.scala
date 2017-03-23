@@ -96,7 +96,7 @@ object ViewOutput {
             else List()
         }
 
-        val content = {
+        val content: Elem = {
             val status = org.aqa.run.ProcedureStatus.stringToProcedureStatus(output.status)
 
             val statusElem = {
@@ -106,21 +106,30 @@ object ViewOutput {
                     <div class="col-md-1">Status: { output.status }</div>
             }
 
-            <div class="row col-md-10 col-md-offset-1">
-                <p id="demo">demo demo</p>
-                { reload }
-                <div class="row">
-                    <div class="col-md-3">Procedure: { procedure.fullName }</div>
-                    <div class="col-md-2">User: { if (user.isDefined) user.get.fullName else "none" }</div>
-                    { statusElem }
+            val inputDir = WebServer.urlOfResultsPath(Input.get(output.inputPK).get.directory.get)
+
+            val html: Elem = {
+                <div class="row col-md-10 col-md-offset-1">
+                    <p id="demo">demo demo</p>
+                    { reload }
+                    <div class="row">
+                        <div class="col-md-4">Procedure: { procedure.fullName }</div>
+                        <div class="col-md-2">User: { if (user.isDefined) user.get.fullName else "none" }</div>
+                        { statusElem }
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <a href={ inputDir }> { "Input" } </a>
+                        </div>
+                        <div class="col-md-2">Started: { Util.timeHumanFriendly(output.startDate) }</div>
+                        <div class="col-md-2">Elapsed: { elapsed }</div>
+                    </div>
+                    { val x = getCachedOutput(output.outputPK.get).dir }
+                    { getCachedOutput(output.outputPK.get).dir.listFiles.map(f => fileToRow(f)) }
                 </div>
-                <div class="row">
-                    <div class="col-md-2 col-md-offset-3">Started: { Util.timeHumanFriendly(output.startDate) }</div>
-                    <div class="col-md-2">Elapsed: { elapsed }</div>
-                </div>
-                { val x = getCachedOutput(output.outputPK.get).dir }
-                { getCachedOutput(output.outputPK.get).dir.listFiles.map(f => fileToRow(f)) }
-            </div>
+            }
+
+            html
         }
 
         respond(content, "Current Output", response)

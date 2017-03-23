@@ -21,6 +21,8 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import com.pixelmed.dicom.SequenceAttribute
 import com.pixelmed.dicom.TransferSyntax
+import com.pixelmed.dicom.DicomFileUtilities
+import org.aqa.db.Output
 
 object UploadTransAndOpen {
 
@@ -30,50 +32,63 @@ object UploadTransAndOpen {
 
     private def curDir = new File(System.getProperty("user.dir"))
 
-    private def fileToAttributeList(file: File): Option[AttributeList] = {
-        try {
-            val al = new AttributeList
-            al.read(file)
-            Some(al)
-        }
-        catch {
-            case t: Throwable => None
-        }
-    }
-
-    private def readDicomFiles: Seq[AttributeList] = {
-        curDir.getParentFile.listFiles.toSeq.map(f => fileToAttributeList(f)).flatten
-    }
-
-    /**
-     * Get the ExposureSequence --> ExposureTime or die trying.
-     */
-    private def getExposureTime(al: AttributeList): Int = {
-        try {
-            val exposureSequence = al.get(TagFromName.ExposureSequence).asInstanceOf[SequenceAttribute]
-            val childAl = exposureSequence.getItem(0).getAttributeList
-            childAl.get(TagFromName.ExposureTime).getIntegerValues()(0)
-        }
-        catch {
-            case t: Throwable => {
-                ProcedureStatus.terminate("Unable to get : (0018,1150) ExposureTime", ProcedureStatus.abort)
-                -1
+    private case class DicomFile(file: File, attributeList: AttributeList) {
+        /**  Get the ExposureSequence --> ExposureTime.  */
+        def getExposureTime: Option[Int] = {
+            try {
+                val exposureSequence = attributeList.get(TagFromName.ExposureSequence).asInstanceOf[SequenceAttribute]
+                val childAl = exposureSequence.getItem(0).getAttributeList
+                Some(childAl.get(TagFromName.ExposureTime).getIntegerValues()(0))
+            }
+            catch {
+                case t: Throwable => { None }
             }
         }
     }
 
-    private def writeConfigFile(name: String, al: AttributeList) = {
-        val dir = new File(System.getenv(???))
-        val file = new File(dir, name)
-        val transferSyntax = al.get(TagFromName.TransferSyntaxUID).getSingleStringValueOrDefault(TransferSyntax.ExplicitVRLittleEndian);
-        al.write(file, transferSyntax, true, true);
-        println("wrote DICOM file " + file.getAbsolutePath)
+    private def fileToDicomFile(file: File): Option[DicomFile] = {
+        if (file.canRead && DicomFileUtilities.isDicomOrAcrNemaFile(file)) {
+            try {
+                val al = new AttributeList
+                al.read(file)
+                Some(new DicomFile(file, al))
+            }
+            catch {
+                case t: Throwable => None
+            }
+        }
+        else None
     }
 
-    private def copyFiles(open: AttributeList, trans: AttributeList): Unit = {
+    private def readDicomFiles: Seq[DicomFile] = curDir.getParentFile.listFiles.toSeq.map(f => fileToDicomFile(f)).flatten
+
+    private def copyConfigFile(name: String, dicomFile: DicomFile) = {
+        val dir = new File(System.getenv(Util.machineConfigDirEnvName))
+        val outFile = new File(dir, name)
+        val binaryData = Util.readBinaryFile(dicomFile.file).right.get
+        println("writing DICOM file " + outFile.getAbsolutePath)
+        Util.writeBinaryFile(outFile, binaryData)
+        println("wrote DICOM file " + outFile.getAbsolutePath)
+    }
+
+    private def copyFiles(open: DicomFile, trans: DicomFile): Unit = {
         println("found both qualifying DICOM files")
-        writeConfigFile(openName, open)
-        writeConfigFile(transName, trans)
+        copyConfigFile(openName, open)
+        copyConfigFile(transName, trans)
+    }
+
+    def writeHtml = {
+        val html = {
+            <div class="row">
+                <div class="col-md-5 col-md-offset-2">
+                    <h3>Success</h3>
+                    Both the open field and transmission files were written to the configuration directory for machine { System.getenv(Util.machineIdEnvName) }
+                </div>
+            </div>
+        }
+        val file = new File(Output.displayFilePrefix + ".html")
+        val text = WebUtil.wrapBody(html, "Uploaded Open and Transmission")
+        Util.writeFile(file, text)
     }
 
     /**
@@ -85,13 +100,17 @@ object UploadTransAndOpen {
         try {
             println("Starting UploadTransAndOpen")
             val dicomList = readDicomFiles
-            if (dicomList.size != 2) ProcedureStatus.terminate("Abort: Should be exactly 2 DICOM files but there were " + dicomList.size, ProcedureStatus.abort)
-            val exposureTimeList = dicomList.map(al => getExposureTime(al))
+            dicomList.map(df => println("Found DICOM file " + df.file.getName))
+            val exposureTimeList = dicomList.filter(df => df.getExposureTime.isDefined)
+            exposureTimeList.map(df => println("Found DICOM file with exposure time: " + df.file.getName))
+            if (exposureTimeList.size != 2) ProcedureStatus.terminate("Abort: Should be exactly 2 DICOM files but there were " + dicomList.size, ProcedureStatus.abort)
 
-            if (exposureTimeList(0) < exposureTimeList(1))
+            if (exposureTimeList(0).getExposureTime.get < exposureTimeList(1).getExposureTime.get)
                 copyFiles(dicomList(0), dicomList(1))
             else
                 copyFiles(dicomList(1), dicomList(0))
+
+            writeHtml
 
             ProcedureStatus.terminate("Done", ProcedureStatus.done)
         }

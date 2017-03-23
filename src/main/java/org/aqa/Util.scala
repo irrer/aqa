@@ -21,6 +21,8 @@ object Util {
 
     val aqaDomain = "automatedqualityassurance.org"
     val aqaUrl = "https://www." + aqaDomain + "/"
+    val machineConfigDirEnvName = "machine_configDir"
+    val machineIdEnvName = "machine_id"
 
     private val timeAsFileNameFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss-SSS")
 
@@ -49,12 +51,14 @@ object Util {
         fmt.format(new Date(elapsedMs))
     }
 
-    def writeFile(file: File, text: String): Unit = {
+    def writeBinaryFile(file: File, data: Array[Byte]): Unit = {
         val fos = new FileOutputStream(file)
-        fos.write(text.getBytes)
+        fos.write(data)
         fos.flush
         fos.close
     }
+
+    def writeFile(file: File, text: String): Unit = writeBinaryFile(file, text.getBytes)
 
     def readBinaryFile(file: File): Either[Throwable, Array[Byte]] = {
         try {
@@ -74,7 +78,7 @@ object Util {
         if (result.isLeft) Left(result.left.get)
         else Right(new String(result.right.get))
     }
-    
+
     def readDicomFile(file: File): Either[Throwable, AttributeList] = {
         try {
             val al = new AttributeList
