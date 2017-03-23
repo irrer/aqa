@@ -74,6 +74,17 @@ object Util {
         if (result.isLeft) Left(result.left.get)
         else Right(new String(result.right.get))
     }
+    
+    def readDicomFile(file: File): Either[Throwable, AttributeList] = {
+        try {
+            val al = new AttributeList
+            al.read(file)
+            Right(al)
+        }
+        catch {
+            case t: Throwable => Left(t)
+        }
+    }
 
     def getAttrValue(al: AttributeList, tag: AttributeTag): Option[String] = {
         val a = al.get(tag)
@@ -152,8 +163,6 @@ object Util {
         val dateTime = if (pdt._1.isEmpty) None else Some(pdt._1.min.getTime)
 
         val patientId = {
-            println("patIds: " + pdt._2.distinct) // TODO remove
-            println("patIds sorted: " + pdt._2.distinct.sortWith(bestPatId)) // TODO remove
             pdt._2.distinct.sortWith(bestPatId)
             if (pdt._2.isEmpty) None
             else Some(pdt._2.distinct.sortWith(bestPatId).head)

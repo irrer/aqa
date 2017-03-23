@@ -43,6 +43,9 @@ import org.aqa.db.EPID
 import org.aqa.db.MultileafCollimator
 import org.aqa.db.MachineType
 import org.aqa.db.MachineBeamEnergy
+import java.util.function.ToDoubleBiFunction
+import com.pixelmed.dicom.DicomFileUtilities
+import com.pixelmed.dicom.TagFromName
 
 /**
  * Run a procedure.
@@ -142,10 +145,15 @@ object Run {
     }
 
     private def machineEnv(machine: Machine): EnvVal = {
+
+        val cfgDirText = List(machine.configDir).flatten.map(f => f.getAbsolutePath).mkString
+
+        val serNoText = List(machine.serialNumber).flatten.mkString
+
         Map(
             ("machine_id" -> machine.id),
-            ("machine_configurationDirectory" -> machine.configurationDirectory),
-            ("machine_serialNumber" -> machine.serialNumber),
+            ("machine_configDir" -> cfgDirText),
+            ("machine_serialNumber" -> serNoText),
             ("machine_imagingBeam2_5_mv" -> machine.imagingBeam2_5_mv),
             ("machine_onboardImager" -> machine.onboardImager),
             ("machine_sixDimTabletop" -> machine.sixDimTabletop),
@@ -187,7 +195,7 @@ object Run {
             ("epid_notes" -> epid.notes))
     }
 
-    private def machBeamEnergyEnv(mbeList: Seq[MachineBeamEnergy]): EnvVal = {
+    private def machBeamEnergyToEnv(mbeList: Seq[MachineBeamEnergy]): EnvVal = {
         def mapMBE(mbe: MachineBeamEnergy, index: Int): EnvVal = {
             def mm(name: String, energy: Option[Double]): Option[(String, Any)] = {
                 energy match {
@@ -205,11 +213,9 @@ object Run {
         mbeList.zipWithIndex.map(mbe => mapMBE(mbe._1, 1 + mbe._2)).flatten.toMap
     }
 
-    private def writeMatlabMap(kvMap: EnvVal, outputDir: File): Unit = {
+    private def writeMatlabMap(kvMap: EnvVal, beamEnergyList: Seq[MachineBeamEnergy], outputDir: File): Unit = {
         val ls = System.lineSeparator
         def v2s(v: Any): String = {
-            println("v.getClass: " + v.getClass) // TODO rm
-            println("v: " + v) // TODO rm
 
             v match {
                 case s: String => "'" + s + "'"
@@ -224,8 +230,21 @@ object Run {
                 }
             }
         }
-        val text = kvMap.map(kv => kv._1.toString + " = " + v2s(kv._2) + ";" + ls).toSeq.sorted.foldLeft("")((t, s) => t + s)
-        println("Run.writeMatlabMap.text:\n" + text) // TODO rm
+
+        def machBeamEnergyToMatlab: String = {
+            def d2m(name: String, get: (MachineBeamEnergy) => Option[Double]): String = {
+                val doubleList = beamEnergyList.map(b => if (get(b).isDefined) get(b).get else (-1).toDouble)
+                name + " = [ " + "aaaa" + " ];" + System.lineSeparator
+                doubleList.mkString(name + " = [ ", ", ", " ];" + System.lineSeparator)
+            }
+
+            d2m("photonEnergy_MeV", _.photonEnergy_MeV) +
+                d2m("maxDoseRate_MUperMin", _.maxDoseRate_MUperMin) +
+                d2m("fffEnergy_MeV", _.fffEnergy_MeV)
+        }
+
+        val envText = kvMap.map(kv => kv._1.toString + " = " + v2s(kv._2) + ";" + ls).toSeq.sorted.foldLeft("")((t, s) => t + s)
+        val text = envText + machBeamEnergyToMatlab
         val file = new File(outputDir.getParentFile, matlabEnvFileName)
         Util.writeFile(file, text)
     }
@@ -240,32 +259,48 @@ object Run {
     private def startProcess(procedure: Procedure, machine: Machine, output: Output): ActiveProcess = {
 
         val cd = "CD /D " + output.dir.getAbsolutePath
+        val echoOff = "@echo off"
+        val logEnv = "@set > env.txt"
+        val echoOn = "@echo on"
 
         val kvMap =
             mainEnv(procedure, output) ++
                 machineEnv(machine) ++
                 mlcEnv(MultileafCollimator.get(machine.multileafCollimatorPK).get) ++
                 machTypeEnv(MachineType.get(machine.machineTypePK).get) ++
-                epidEnv(EPID.get(machine.epidPK).get) ++
-                machBeamEnergyEnv(MachineBeamEnergy.getByMachine(machine.machinePK.get))
+                epidEnv(EPID.get(machine.epidPK).get)
 
-        writeMatlabMap(kvMap, output.dir)
+        val beamEnergyList = MachineBeamEnergy.getByMachine(machine.machinePK.get)
+        writeMatlabMap(kvMap, beamEnergyList, output.dir)
 
         val execute = procedure.execDir + File.separator + runCommandName
 
-        val kvEnv = kvMap.map(kv => "SET " + kv._1 + "=" + kv._2.toString.replace('\n', ' ')).toSeq.sorted
+        val kvEnv = (kvMap ++ machBeamEnergyToEnv(beamEnergyList)).map(kv => "SET " + kv._1 + "=" + kv._2.toString.replace('\n', ' ')).toSeq.sorted
 
-        val cmdList: List[String] = List(cd) ++ kvEnv ++ List(execute)
+        val cmdList: List[String] = List(cd, echoOff) ++ kvEnv ++ List(logEnv, echoOn, execute)
 
         // val cmdList = List(cd, setDir, setInputPk, setOutputPk, setJar, setDbCommand, execute)
         val inputString = cmdList.foldLeft("")((t, c) => t + c + System.lineSeparator)
-        println("inputString: " + inputString) // TODO rm
         val inputStream = new java.io.ByteArrayInputStream(inputString.getBytes("UTF-8"))
 
         val pb = Process(Seq("cmd.exe")) #< inputStream
         val logger = new StdLogger(output)
         val process = pb.run(logger, true)
         new ActiveProcess(output, process, logger)
+    }
+
+    /** Establish the serial number and machine configuration directory.  Return true if it has been updated. */
+    private def establishSerialNumberAndMachConfig(inputDir: File, machine: Machine): Boolean = {
+        if (List(machine.serialNumber, machine.configurationDirectory).flatten.isEmpty) { // if the serial number and machine configuration directory are not defined
+            val alList = inputDir.listFiles.toList.filter(f => DicomFileUtilities.isDicomOrAcrNemaFile(f)).map(f => Util.readDicomFile(f)).filter(r => r.isRight).map(r => r.right.get)
+            val dsnList = alList.map(al => Util.getAttrValue(al, TagFromName.DeviceSerialNumber)).flatten
+            if (dsnList.nonEmpty) {
+                Machine.setSerialNumber(machine.machinePK.get, dsnList.head)
+                true
+            }
+            else false
+        }
+        else false
     }
 
     private def now: Date = new Date(System.currentTimeMillis)
@@ -290,8 +325,12 @@ object Run {
 
         // move input files to their final resting place
         inputDir.getParentFile.mkdirs
-        val dirRenamed = sessionDir.renameTo(inputDir)
-        if (!dirRenamed) throw new RuntimeException("Unable to rename temporary directory " + sessionDir.getAbsolutePath + " to " + inputDir.getAbsolutePath)
+        if (!sessionDir.renameTo(inputDir)) throw new RuntimeException("Unable to rename temporary directory " + sessionDir.getAbsolutePath + " to " + inputDir.getAbsolutePath)
+
+        val updatedMachine: Machine = {
+            if (establishSerialNumberAndMachConfig(inputDir, machine)) Machine.get(machine.machinePK.get).get
+            else machine
+        }
 
         val startDate = new Date(System.currentTimeMillis)
 
@@ -316,7 +355,7 @@ object Run {
         }
 
         // Start a process that runs the procedure
-        val actProc = startProcess(procedure, machine, output)
+        val actProc = startProcess(procedure, updatedMachine, output)
 
         ActiveProcess.add(actProc)
 

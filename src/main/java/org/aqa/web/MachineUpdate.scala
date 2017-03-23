@@ -55,10 +55,19 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     private def getConfigUrl(valueMap: ValueMapT): Elem = {
         val machPk = valueMap.get(machinePK.label)
         if (machPk.isDefined) {
-            val configDirName = Machine.get(machPk.get.toLong).get.configurationDirectory
+            val configDirName = Machine.get(machPk.get.toLong).get.configurationDirectory.get
             <a href={ WebServer.urlOfMachineConfigurationPath(configDirName) }>Configuration Directory</a>
         }
         else <div>Configuration directory not defined</div>
+    }
+
+    private def getSerialNo(valueMap: ValueMapT): Elem = {
+        val machPk = valueMap.get(machinePK.label)
+        if (machPk.isDefined) {
+            val serNo = Machine.get(machPk.get.toLong).get.serialNumber.get
+            <div>Serial Number { serNo }</div>
+        }
+        else <div>Serial number not defined</div>
     }
 
     private val configurationDirectory = new WebPlainText("Configuration", false, 6, 0, getConfigUrl _)
@@ -67,7 +76,8 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
     private val epidPK = new WebInputSelect("EPID", 6, 0, epidName)
 
-    private val serialNumber = new WebInputText("Serial Number", 3, 0, "Machine serial number (may be alpha)")
+    private val XerialNumber = new WebInputText("Serial Number", 3, 0, "Machine serial number (may be alpha)")
+    private val serialNumber = new WebPlainText("Serial Number", false, 3, 0, getSerialNo _)
 
     private val imagingBeam2_5_mv = new WebInputCheckbox("Has 2.5 mv imaging beam", 3, 0)
 
@@ -299,20 +309,17 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
         val epidPKVal = valueMap.get(epidPK.label).get.trim.toLong
         val institutionPKVal = valueMap.get(institutionPK.label).get.trim.toLong
 
-        val serialNumberVal = valueMap.get(serialNumber.label).get
+        val serialNumberVal = {
+            if (pk.isDefined) Machine.get(pk.get).get.serialNumber
+            else None
+        }
 
         val notesVal = valueMap.get(notes.label).get.trim
 
-        val configDir: String =
-            if (pk.isDefined) {
-                Machine.get(pk.get).get.configurationDirectory
-            }
-            else {
-                Machine.initConfigDir(institutionPKVal, idVal, serialNumberVal) match {
-                    case Right(cfgDir) => cfgDir
-                    case Left(msg) => throw new RuntimeException("Unable to make config dir for machine")
-                }
-            }
+        val configDir: Option[String] = {
+            if (pk.isDefined) Machine.get(pk.get).get.configurationDirectory
+            else None
+        }
 
         val machine = new Machine(pk,
             idVal,
