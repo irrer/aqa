@@ -289,20 +289,6 @@ object Run {
         new ActiveProcess(output, process, logger)
     }
 
-    /** Establish the serial number and machine configuration directory.  Return true if it has been updated. */
-    private def establishSerialNumberAndMachConfig(inputDir: File, machine: Machine): Boolean = {
-        if (List(machine.serialNumber, machine.configurationDirectory).flatten.isEmpty) { // if the serial number and machine configuration directory are not defined
-            val alList = inputDir.listFiles.toList.filter(f => DicomFileUtilities.isDicomOrAcrNemaFile(f)).map(f => Util.readDicomFile(f)).filter(r => r.isRight).map(r => r.right.get)
-            val dsnList = alList.map(al => Util.getAttrValue(al, TagFromName.DeviceSerialNumber)).flatten
-            if (dsnList.nonEmpty) {
-                Machine.setSerialNumber(machine.machinePK.get, dsnList.head)
-                true
-            }
-            else false
-        }
-        else false
-    }
-
     private def now: Date = new Date(System.currentTimeMillis)
 
     /**
@@ -327,11 +313,6 @@ object Run {
         inputDir.getParentFile.mkdirs
         if (!sessionDir.renameTo(inputDir)) throw new RuntimeException("Unable to rename temporary directory " + sessionDir.getAbsolutePath + " to " + inputDir.getAbsolutePath)
 
-        val updatedMachine: Machine = {
-            if (establishSerialNumberAndMachConfig(inputDir, machine)) Machine.get(machine.machinePK.get).get
-            else machine
-        }
-
         val startDate = new Date(System.currentTimeMillis)
 
         val outputDir = new File(inputDir, ouputSubdirNamePrefix + Util.timeAsFileName(startDate))
@@ -355,7 +336,7 @@ object Run {
         }
 
         // Start a process that runs the procedure
-        val actProc = startProcess(procedure, updatedMachine, output)
+        val actProc = startProcess(procedure, machine, output)
 
         ActiveProcess.add(actProc)
 

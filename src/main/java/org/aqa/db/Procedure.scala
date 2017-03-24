@@ -92,8 +92,6 @@ object Procedure {
         FileUtil.replaceInvalidFileNameCharacters(fn.trim.replace(' ', chr), chr)
     }
 
-    //def webURL(name: String, version: String): String = fileName(name, version)     TODO remove
-
     def list: Seq[Procedure] = {
         Db.run(query.result).toList
     }

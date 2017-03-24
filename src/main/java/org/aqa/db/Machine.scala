@@ -153,6 +153,13 @@ object Machine {
         seq
     }
 
+    def findMachinesBySerialNumber(serNo: String): Seq[Machine] = {
+        val sn = serNo.trim
+        val action = query.filter(m => m.serialNumber === sn)
+        val seq = Db.run(action.result)
+        seq
+    }
+
     def delete(machinePK: Long): Int = {
         val q = query.filter(_.machinePK === machinePK)
         val action = q.delete

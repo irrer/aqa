@@ -5,13 +5,15 @@ import scala.xml.Elem
 import org.aqa.db.Procedure
 import org.aqa.web.WebUtil._
 
-object RunProcedureList {
+// TODO can this file be removed?
+
+object XRunProcedureList {
     val path = WebUtil.pathOf(WebUtil.SubUrl.run, ProcedureList.getClass.getName)
 
     def redirect(response: Response) = response.redirectSeeOther(path)
 }
 
-class RunProcedureList extends GenericList[Procedure.ProcedureUser] with WebUtil.SubUrlRun {
+class XRunProcedureList extends GenericList[Procedure.ProcedureUser] with WebUtil.SubUrlRun {
 
     type PU = Procedure.ProcedureUser
     override def listName = "Procedure"

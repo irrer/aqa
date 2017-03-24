@@ -30,9 +30,7 @@ class WebRunIndex extends GenericList[Procedure.ProcedureUser] with WebUtil.SubU
     private def nameCompare(a: PU, b: PU) = a.procedure.name.compareTo(b.procedure.name) < 0
 
     private def nameToHtml(pu: PU): Elem = {
-        val j = <a href={ SubUrl.url(subUrl, pu.procedure.fileName) }>{ pu.procedure.name }</a>      // TODO rm
-        val t = xmlToText(j)   // TODO rm
-        <a href={ SubUrl.url(subUrl, pu.procedure.webUrl) }>{ pu.procedure.name }</a>
+        <a href={ SubUrl.url(subUrl, pu.procedure.webUrl) + "?" + sessionLabel + "=" + Session.makeUniqueId }>{ pu.procedure.name }</a>
     }
 
     private val nameCol = new Column[PU]("Name", _.procedure.name, nameToHtml _) // (pu) => makePrimaryKeyHtml(pu.procedure.name, pu.procedure.procedurePK))

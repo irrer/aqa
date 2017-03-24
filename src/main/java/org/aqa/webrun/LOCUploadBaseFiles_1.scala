@@ -20,15 +20,15 @@ import org.restlet.Restlet
 import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.TagFromName
 
-object UploadAndChooseMachine_1 {
+object LOCUploadBaseFiles_1 {
     val parametersFileName = "parameters.xml"
-    val UploadAndChooseMachine_1PKTag = "UploadAndChooseMachine_1PK"
+    val LOCUploadBaseFiles_1PKTag = "LOCUploadBaseFiles_1PK"
 }
 
 /**
  * Runs procedures that only need the user to upload files and choose a treatment machine. 
  */
-class UploadAndChooseMachine_1(procedure: Procedure) extends WebRunProcedure(procedure) {
+class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedure) {
 
     /** Maximum tongue and groove offset in mm.  Exceeding this value probably indicates a user error. */
     private val maxTongueAndGrooveOffset = 10.0
@@ -45,10 +45,10 @@ class UploadAndChooseMachine_1(procedure: Procedure) extends WebRunProcedure(pro
     private val runButton = makeButton("Run", true, ButtonType.BtnDefault)
     private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
 
-    private val form = new WebForm(procedure.webUrl, List(List(machine), List(runButton, cancelButton)), 6)
+    private def form = new WebForm(procedure.webUrl, List(List(machine), List(runButton, cancelButton)), 6)
 
-    private def emptyForm(response: Response) = {
-        form.setFormResponse(emptyValueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
+    private def emptyForm(valueMap: ValueMapT, response: Response) = {
+        form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
     }
 
     private def validate(valueMap: ValueMapT): StyleMapT = {
@@ -114,7 +114,7 @@ class UploadAndChooseMachine_1(procedure: Procedure) extends WebRunProcedure(pro
             0 match {
                 case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
                 case _ if buttonIs(valueMap, runButton) => run(valueMap, request, response)
-                case _ => emptyForm(response)
+                case _ => emptyForm(valueMap, response)
             }
         }
         catch {

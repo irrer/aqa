@@ -43,6 +43,9 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
 
     protected val columnList: Seq[Column[VL]];
 
+    /** Default time in seconds for page refresh. */
+    val defaultPageRefreshTime: Option[Int] = Some(3600)
+    
     def pageTitle = "List " + listName + "s"
 
     def updatePath = SubUrl.url(subUrl, listName + "Update")
@@ -114,8 +117,8 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
 
     protected def makeForm(valueMap: ValueMapT): Elem = {
 
-        val j0 = getSortColumn(valueMap)
-        val j1 = columnList(j0)
+        //val j0 = getSortColumn(valueMap)   // TODO rm
+        //val j1 = columnList(j0)   // TODO rm
 
         <div class="row col-md-10 col-md-offset-1">
             <h1>{ pageTitle }</h1>
@@ -130,7 +133,7 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
     }
 
     protected def get(valueMap: ValueMapT, response: Response) = {
-        val text = wrapBody(makeForm(valueMap), pageTitle)
+        val text = wrapBody(makeForm(valueMap), pageTitle, defaultPageRefreshTime)
         setResponse(text, response, Status.SUCCESS_OK)
     }
 

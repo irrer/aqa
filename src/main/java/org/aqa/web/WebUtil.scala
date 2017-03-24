@@ -41,12 +41,13 @@ object WebUtil {
     private val singleQuote = "@@quote1@@"
     private val doubleQuote = "@@quote2@@"
     val amp = "@@amp@@"
+    val nl = "@@nl@@"
 
     def snglQuote(text: String): String = singleQuote + text + singleQuote
 
     def dblQuote(text: String): String = doubleQuote + text + doubleQuote
 
-    def xmlToText(document: Node): String = new PrettyPrinter(1024, 2).format(document).replace(singleQuote, "'").replace(doubleQuote, "\"").replace(amp, "&")
+    def xmlToText(document: Node): String = new PrettyPrinter(1024, 2).format(document).replace(singleQuote, "'").replace(doubleQuote, "\"").replace(amp, "&").replace(nl, "\n")
 
     def cleanClassName(className: String) = className.substring(className.lastIndexOf('.') + 1).replace("$", "")
 
@@ -143,8 +144,7 @@ object WebUtil {
 
     private def parseForm(form: Form): ValueMapT = {
         val paramList = form.toArray().toList.filter(_.isInstanceOf[Parameter]).map(_.asInstanceOf[Parameter])
-        val formMap = paramList.map(p => (p.getName, p.getValue)).toMap
-        ensureSessionId(formMap)
+        paramList.map(p => (p.getName, p.getValue)).toMap
     }
 
     /**
@@ -171,7 +171,7 @@ object WebUtil {
         if (requestIsUpload(request))
             saveFileList(request)
         else
-            parseOriginalReference(request) ++ parseForm(new Form(request.getEntity))
+            ensureSessionId(parseOriginalReference(request) ++ parseForm(new Form(request.getEntity)))
     }
 
     def simpleWebPage(content: Elem, status: Status, title: String, response: Response) = {
@@ -209,11 +209,15 @@ object WebUtil {
 
     val HTML_PREFIX = "<!DOCTYPE html>\n"
 
-    def wrapBody(content: Elem, pageTitle: String): String = {
+    def wrapBody(content: Elem, pageTitle: String, refresh: Option[Int]): String = {
+
+        val refreshMeta = Seq(refresh).flatten.filter(r => r > 0).map(r => { <meta http-equiv='refresh' content={ r.toString }/> })
+
         val page = {
             <html lang="en">
                 <head>
                     <title>{ pageTitle }</title>
+                    { refreshMeta }
                     <link rel="stylesheet" href="/static/bootstrap/3.3.6/css/bootstrap.min.css"/>
                     <link rel="stylesheet" href="/static/bootstrap/3.3.6/css/bootstrap-theme.min.css"/>
                     <script src="/static/jquery/standard/jquery.min.js"></script>
@@ -250,6 +254,8 @@ object WebUtil {
         logFine("HTML delivered:\n" + text)
         text
     }
+
+    def wrapBody(content: Elem, pageTitle: String): String = wrapBody(content, pageTitle, None)
 
     def setResponse(text: String, response: Response, status: Status): Unit = {
         response.setStatus(status)
@@ -305,17 +311,47 @@ object WebUtil {
                     { rowListWithSession.map(r => r.toHtml(valueMapWithSession, errorMap)) }
                 </form>;
 
+            val alreadyUploadedFiles: Elem = {
+
+                //                         { alreadyUploadedFiles }
+
+                def fileToText(file: File, index: Int): String = {
+                    val name = "preloadedFile" + index
+                    val text =
+                        "var " + name + " = { name : '" + file.getName + "', size : " + file.length + " };" + nl +
+                            "uploadFile.emit('addedfile', " + name + ");" + nl +
+                            "uploadFile.emit('complete', " + name + ");" + nl
+                    text
+                }
+
+                val dir = Session.idToFile(valueMapWithSession(sessionLabel))
+
+                val text: String = if (dir.isDirectory && dir.list.nonEmpty) {
+                    val dz = "var uploadFile = new Dropzone(\"#uploadFile\");" + nl
+
+                    val fileText = dir.listFiles.toSeq.zipWithIndex.map(fi => fileToText(fi._1, fi._2)).mkString(" ")
+                    (dz + fileText).replaceAllLiterally("\"", doubleQuote).replaceAllLiterally("'", singleQuote)
+                }
+                else ""
+
+                <script>{ text }</script>
+            }
+
             val html = {
                 if (validCol(fileUpload)) {
                     val sessionId: String = valueMapWithSession.get(sessionLabel).get
                     val formClass = "dropzone row " + colToName(fileUpload, 0)
 
-                    <div class="row">
-                        <form action={ action + "?" + sessionLabel + "=" + sessionId } class={ formClass } id="uploadFile" style="border-color: #cccccc; border-width: 1px; border-radius: 10px;"></form>
-                    </div>
-                    <div class="row">
-                        { mainForm }
-                    </div>
+                    val uploadForm = {
+                        <div class="row">
+                            <form action={ action + "?" + sessionLabel + "=" + sessionId } class={ formClass } id="uploadFile" style="border-color: #cccccc; border-width: 1px; border-radius: 10px;"></form>
+                        </div>
+                        <div class="row">
+                            { mainForm }
+                            { alreadyUploadedFiles }
+                        </div>
+                    }
+                    uploadForm
                 }
                 else mainForm
             }
@@ -606,12 +642,13 @@ object WebUtil {
      *
      * @param primary True if this button is primary
      */
-    class FormButton(override val label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String, buttonType: ButtonType.Value, value: String) extends IsInput(label) with ToHtml {
+    class FormButton(override val label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: (ValueMapT) => String, buttonType: ButtonType.Value, value: String) extends IsInput(label) with ToHtml {
+        def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String, buttonType: ButtonType.Value, value: String) = this(label, col, offset, subUrl, (_) => action, buttonType, value)
         def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String, buttonType: ButtonType.Value) = this(label, col, offset, subUrl, action: String, buttonType, label)
         def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String) = this(label, col, offset, subUrl, action: String, ButtonType.BtnDefault, label)
 
         override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
-            val button = { <button type="submit" class={ "btn " + buttonType.toString } action={ action } value={ value } name={ label }>{ label }</button> }
+            val button = { <button type="submit" class={ "btn " + buttonType.toString } action={ action(valueMap) } value={ value } name={ label }>{ label }</button> }
             wrapInput(label, false, button, col, offset, errorMap)
         }
     }
