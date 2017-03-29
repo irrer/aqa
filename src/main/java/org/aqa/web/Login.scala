@@ -20,6 +20,7 @@ import org.restlet.engine.header.ChallengeWriter
 import org.restlet.data.Header
 import org.restlet.util.Series
 import org.restlet.security.SecretVerifier
+import org.aqa.Logging._
 
 object Login {
     val path = "/Login"
@@ -169,7 +170,7 @@ class Login extends Restlet with SubUrlRoot {
         }
         catch {
             case t: Throwable => {
-                WebUtil.internalFailure(response, "Unexpected failure: " + t.toString)
+                WebUtil.internalFailure(response, "Unexpected failure: " + fmtEx(t))
             }
         }
     }

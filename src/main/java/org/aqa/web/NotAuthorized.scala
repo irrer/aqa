@@ -63,7 +63,7 @@ class NotAuthorized extends Restlet with SubUrlRoot {
         }
         catch {
             case t: Throwable => {
-                WebUtil.internalFailure(response, "Unexpected failure: " + t.toString)
+                WebUtil.internalFailure(response, "Unexpected failure: " + fmtEx(t))
             }
         }
     }

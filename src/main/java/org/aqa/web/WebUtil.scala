@@ -31,6 +31,10 @@ import org.apache.poi.ss.usermodel.Row
 import org.apache.poi.ss.usermodel.Cell
 import java.text.SimpleDateFormat
 import java.text.ParseException
+import com.pixelmed.dicom.AttributeList
+import com.pixelmed.dicom.DicomFileUtilities
+import com.pixelmed.dicom.TagFromName
+import org.aqa.db.Machine
 
 object WebUtil {
 
@@ -313,8 +317,6 @@ object WebUtil {
 
             val alreadyUploadedFiles: Elem = {
 
-                //                         { alreadyUploadedFiles }
-
                 def fileToText(file: File, index: Int): String = {
                     val name = "preloadedFile" + index
                     val text =
@@ -340,11 +342,32 @@ object WebUtil {
             val html = {
                 if (validCol(fileUpload)) {
                     val sessionId: String = valueMapWithSession.get(sessionLabel).get
-                    val formClass = "dropzone row " + colToName(fileUpload, 0)
+                    val formClass = "dropzone row " + colToName(fileUpload, 0) + " has-error"
+
+                    val uploadStyle: Style = {
+                        errorMap.get(uploadFileInput.get.label) match {
+                            case Some(sty) => sty
+                            case _ => new Style
+                        }
+                    }
+
+                    val uploadHtml: Elem = {
+                        val hasError = errorMap.get(uploadFileInput.get.label).isDefined
+                        val borderColor = if (hasError) "#a94442" else "#cccccc"
+                        val uploadForm = {
+                            val cssStyle = "border-color: " + borderColor + "; border-width: 1px; border-radius: 10px;"
+                            <form action={ action + "?" + sessionLabel + "=" + sessionId } class={ formClass } id="uploadFile" style={ cssStyle }></form>
+                        }
+                        if (hasError) {
+                            val style: Style = errorMap.get(uploadFileInput.get.label).get
+                            uploadForm % style.divAttributes(uploadForm.attributes)
+                        }
+                        else uploadForm
+                    }
 
                     val uploadForm = {
                         <div class="row">
-                            <form action={ action + "?" + sessionLabel + "=" + sessionId } class={ formClass } id="uploadFile" style="border-color: #cccccc; border-width: 1px; border-radius: 10px;"></form>
+                            { uploadHtml }
                         </div>
                         <div class="row">
                             { mainForm }
@@ -423,7 +446,9 @@ object WebUtil {
     }
 
     object Error {
-        def make(input: IsInput, inputTitle: String) = Map((input.label, new Error(inputTitle)))
+        def make(input: IsInput, inputTitle: String) = {
+            Map((input.label, new Error(inputTitle)))
+        }
     }
 
     class Disable extends Style {
@@ -552,6 +577,16 @@ object WebUtil {
             val list = selectList().map(v => toOption(v._1, v._2))
             val html = <select>{ list }</select> % idNameClassValueAsAttr(label, valueMap)
             wrapInput(label, true, html, col, offset, errorMap)
+        }
+    }
+
+    /**
+     * Optionally show a selection list based on evaluating a function.
+     */
+    class WebInputSelectOption(override val label: String, col: Int, offset: Int, selectList: () => List[(String, String)], show: (ValueMapT) => Boolean) extends WebInputSelect(label, col, offset, selectList) {
+        override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
+            if (show(valueMap)) super.toHtml(valueMap, errorMap)
+            else { <div></div> }
         }
     }
 
@@ -774,6 +809,75 @@ object WebUtil {
         }
 
         WebUtil.wrapBody(html, "Leaf Offset Correction")
+    }
+
+    def fileToDicom(file: File): Option[AttributeList] = {
+        try {
+            if (DicomFileUtilities.isDicomOrAcrNemaFile(file)) {
+                val al = new AttributeList
+                al.read(file)
+                Some(al)
+            }
+            else None
+        }
+        catch {
+            case t: Throwable => None
+        }
+    }
+
+    def attributeListsInSession(valueMap: ValueMapT): Seq[AttributeList] = {
+        val dir = sessionDir(valueMap)
+        if (dir.isDirectory) sessionDir(valueMap).listFiles.toSeq.map(f => fileToDicom(f)).flatten
+        else Seq[AttributeList]()
+    }
+
+    def attributeListToDeviceSerialNumber(al: AttributeList): Option[String] = {
+        val at = al.get(TagFromName.DeviceSerialNumber)
+        if (at == null) None
+        else {
+            val ser = at.getSingleStringValueOrNull
+            if ((ser != null) && ser.trim.nonEmpty) Some(ser.trim) else None
+        }
+    }
+
+    /**
+     * Given a value map, determine which machines' DICOM files have been uploaded to the session.
+     */
+    def attributeListToMachine(attributeList: AttributeList): Option[Machine] = {
+        try {
+            attributeListToDeviceSerialNumber(attributeList) match {
+                case Some(serNo) => Machine.findMachinesBySerialNumber(serNo).headOption
+                case _ => None
+            }
+        }
+        catch {
+            case t: Throwable =>
+                None
+        }
+    }
+
+    /**
+     * Given a value map, determine which machines' DICOM files have been uploaded to the session.
+     */
+    def machinesInSession(valueMap: ValueMapT): Seq[Machine] = {
+        try {
+            attributeListsInSession(valueMap).map(al => attributeListToMachine(al)).flatten
+        }
+        catch {
+            case t: Throwable =>
+                Seq[Machine]()
+        }
+    }
+
+    /**
+     * Determine if the user needs to be asked to associate the machine with the DICOM
+     * files.  If there are DICOM files, but no known machines associated with them, then
+     * return true.
+     */
+    def machineSpecRequired(valueMap: ValueMapT): Boolean = {
+        val dicomList = attributeListsInSession(valueMap)
+        val machineList = dicomList.map(al => attributeListToMachine(al)).flatten
+        dicomList.nonEmpty && machineList.isEmpty
     }
 
     def main(args: Array[String]): Unit = {

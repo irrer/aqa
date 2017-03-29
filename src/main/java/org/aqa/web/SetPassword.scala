@@ -21,6 +21,7 @@ import org.restlet.data.Header
 import org.restlet.util.Series
 import org.aqa.Util
 import org.aqa.db.UserRole
+import org.aqa.Logging._
 
 object SetPassword {
     val path = "/SetPassword"
@@ -182,7 +183,7 @@ class SetPassword extends Restlet with SubUrlRoot {
         }
         catch {
             case t: Throwable => {
-                WebUtil.internalFailure(response, "Unexpected failure: " + t.toString)
+                WebUtil.internalFailure(response, "Unexpected failure: " + fmtEx(t))
             }
         }
     }

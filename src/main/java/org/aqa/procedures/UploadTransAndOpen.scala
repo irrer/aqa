@@ -103,7 +103,8 @@ object UploadTransAndOpen {
             dicomList.map(df => println("Found DICOM file " + df.file.getName))
             val exposureTimeList = dicomList.filter(df => df.getExposureTime.isDefined)
             exposureTimeList.map(df => println("Found DICOM file with exposure time: " + df.file.getName))
-            if (exposureTimeList.size != 2) ProcedureStatus.terminate("Abort: Should be exactly 2 DICOM files but there were " + dicomList.size, ProcedureStatus.abort)
+            println("Number of DICOM files found that have exposure time defined: " + exposureTimeList.size) 
+            if (exposureTimeList.size != 2) ProcedureStatus.terminate("Abort: Should be exactly 2 DICOM files but there were " + exposureTimeList.size, ProcedureStatus.abort)
 
             if (exposureTimeList(0).getExposureTime.get < exposureTimeList(1).getExposureTime.get)
                 copyFiles(dicomList(0), dicomList(1))

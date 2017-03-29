@@ -15,6 +15,7 @@ import org.restlet.Request
 import org.aqa.web.WebUtil._
 import org.aqa.db.CentralAxis
 import edu.umro.util.Utility
+import org.aqa.Logging._
 
 object OutputList {
     val path = WebUtil.pathOf(WebUtil.SubUrl.view, OutputList.getClass.getName)
@@ -193,7 +194,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
             }
         }
         catch {
-            case t: Throwable => internalFailure(response, "Unexpected error in OutputList: " + t.toString)
+            case t: Throwable => internalFailure(response, "Unexpected error in OutputList: " + fmtEx(t))
         }
     }
 }

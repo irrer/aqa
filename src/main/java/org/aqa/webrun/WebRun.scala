@@ -37,8 +37,9 @@ object WebRun {
     type ConstructInterfaceT = (Procedure) => WebRunProcedure
 
     private val interfaceList: Map[String, ConstructInterfaceT] = Map(
-        ("UploadAndChooseMachine_1", procedure => new UploadAndChooseMachine_1(procedure)),
+        ("LOCRun_1", procedure => new LOCRun_1(procedure)),
         ("LOCUploadBaseFiles_1", procedure => new LOCUploadBaseFiles_1(procedure)),
+        ("UploadAndChooseMachine_1", procedure => new UploadAndChooseMachine_1(procedure)),
         ("WinstonLutz_1", procedure => new WinstonLutz_1(procedure)))
 
     /** Possible choices for procedure interfaces. */

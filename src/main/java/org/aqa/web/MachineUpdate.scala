@@ -53,21 +53,34 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     private def epidName() = EPID.list.toList.map(e => (e.epidPK.get.toString, e.toName))
 
     private def getConfigUrl(valueMap: ValueMapT): Elem = {
+        val notDef = { <div>Configuration directory not defined</div> }
         val machPk = valueMap.get(machinePK.label)
         if (machPk.isDefined) {
-            val configDirName = Machine.get(machPk.get.toLong).get.configurationDirectory.get
-            <a href={ WebServer.urlOfMachineConfigurationPath(configDirName) }>Configuration Directory</a>
+            val mach = Machine.get(machPk.get.toLong)
+            if (mach.isDefined) {
+                val machConfigDir = mach.get.configurationDirectory
+                if (machConfigDir.isDefined) {
+                    val configDirName = mach.get.configurationDirectory.get
+                    <a href={ WebServer.urlOfMachineConfigurationPath(configDirName) }>Configuration Directory</a>
+                }
+                else notDef
+            }
+            else notDef
         }
-        else <div>Configuration directory not defined</div>
+        else notDef
     }
 
     private def getSerialNo(valueMap: ValueMapT): Elem = {
+        val notDef = <div>Serial number <em>not defined</em></div>
         val machPk = valueMap.get(machinePK.label)
         if (machPk.isDefined) {
-            val serNo = Machine.get(machPk.get.toLong).get.serialNumber.get
-            <div>Serial Number { serNo }</div>
+            val mach = Machine.get(machPk.get.toLong)
+            if (mach.isDefined && mach.get.serialNumber.isDefined) {
+                <div>Serial Number { mach.get.serialNumber.get }</div>
+            }
+            else notDef
         }
-        else <div>Serial number not defined</div>
+        else notDef
     }
 
     private val configurationDirectory = new WebPlainText("Configuration", false, 6, 0, getConfigUrl _)

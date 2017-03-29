@@ -5,6 +5,7 @@ import org.aqa.Logging._
 import org.aqa.Config
 import edu.umro.ScalaUtil.FileUtil
 import java.io.File
+import edu.umro.util.Utility
 
 case class Machine(
         machinePK: Option[Long], // primary key
@@ -101,6 +102,13 @@ object Machine {
         name
     }
 
+    private def deleteConfigDir(machine: Machine) = {
+        machine.configDir match {
+            case Some(dir) => Utility.deleteFileTree(dir)
+            case _ =>
+        }
+    }
+
     /**
      * Set the serial number for the machine and create the corresponding configuration directory.  Also put the
      *  configuration directory name in the machine's database entry.  Return true on success.
@@ -160,10 +168,19 @@ object Machine {
         seq
     }
 
+    /**
+     * Delete the machine from the database.  If that is successful, then also delete its configuration directory.
+     */
     def delete(machinePK: Long): Int = {
-        val q = query.filter(_.machinePK === machinePK)
-        val action = q.delete
-        Db.run(action)
+        val machine = get(machinePK)
+        if (machine.isDefined) {
+            val q = query.filter(_.machinePK === machinePK)
+            val action = q.delete
+            val count = Db.run(action)
+            deleteConfigDir(machine.get)
+            count
+        }
+        else 0
     }
 
     def main(args: Array[String]): Unit = {

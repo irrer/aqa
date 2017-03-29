@@ -19,18 +19,19 @@ import org.aqa.db.CentralAxis
 import org.restlet.Restlet
 import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.TagFromName
+import com.pixelmed.dicom.AttributeList
 
-object LOCUploadBaseFiles_1 {
+object LOCRun_1 {
     val parametersFileName = "parameters.xml"
-    val LOCUploadBaseFiles_1PKTag = "LOCUploadBaseFiles_1PK"
+    val LOCRun_1PKTag = "LOCRun_1PK"
 }
 
 /**
- * Runs procedures that only need the user to upload files and choose a treatment machine.
+ * Run the LOC procedure.
  */
-class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedure) {
+class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) {
 
-    def machineList() = ("-1", "None") +: Machine.list.toList.map(m => (m.machinePK.get.toString, m.id))
+    def machineList() = Machine.list.toList.map(m => (m.machinePK.get.toString, m.id))
 
     private val machine = new WebInputSelectOption("Machine", 6, 0, machineList, machineSpecRequired)
 
@@ -42,41 +43,30 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
     private val runButton = makeButton("Run", true, ButtonType.BtnDefault)
     private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
 
-    private def form = new WebForm(procedure.webUrl, List(List(machine), List(runButton, cancelButton)), 6)
+    private def form = {
+        new WebForm(procedure.webUrl, List(List(machine), List(runButton, cancelButton)), 6)
+    }
 
     private def emptyForm(valueMap: ValueMapT, response: Response) = {
         form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
     }
 
-    private def needToChooseMachine(valueMap: ValueMapT): Boolean = {
-        if (machinesInSession(valueMap).isEmpty) {
-            Util.stringToLong(machine.getValOrEmpty(valueMap)) match {
-                case Some(machinePK) if (machinePK < 0) => true
-                case Some(machinePK) => Machine.get(machinePK).isEmpty
-                case _ => true
-            }
-        }
-        else true
-    }
-
     private def validate(valueMap: ValueMapT): StyleMapT = {
         val dir = sessionDir(valueMap)
-        if (true) { // TODO rm
-            val j = machine.getValOrEmpty(valueMap)
-            machineList.map(mm => println("    mach list: " + mm._1 + " : " + mm._2))
-            val machInSes = machinesInSession(valueMap)
-            machInSes.map(mm => println("    machine: " + mm))
-            println
-        }
         0 match {
-            case _ if (!dir.isDirectory) => Error.make(form.uploadFileInput.get, "No files have been uploaded")
-            case _ if (dir.list.size != 2) => Error.make(form.uploadFileInput.get, "Exactly two files are required.")
-            case _ if needToChooseMachine(valueMap) => Error.make(machine, "Machine needs to be chosen.")
+            case _ if (!dir.isDirectory) => Error.make(form.uploadFileInput.get, "No files have been uploaded (no directory)")
+            case _ if (dir.list.isEmpty) => Error.make(form.uploadFileInput.get, "At least one file is required.")
             case _ => styleNone
         }
     }
 
-    //private val maxHistory = -1
+    private val maxHistory = -1
+    private val historyFileName = "history.txt"
+
+    private def writeHistory(machinePK: Long, dir: File) = {
+        val text = CentralAxis.getHistory(machinePK, maxHistory).map(g => g.toString + System.lineSeparator).foldLeft("")((t, gt) => t + gt)
+        Util.writeFile(new File(dir, historyFileName), text)
+    }
 
     /** Establish the serial number and machine configuration directory.  Return true if it has been updated. */
     private def establishSerialNumberAndMachConfig(inputDir: File, machine: Machine): Boolean = {
@@ -98,17 +88,12 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
     private def run(valueMap: ValueMapT, request: Request, response: Response) = {
         val errMap = validate(valueMap)
         if (errMap.isEmpty) {
-            val mach: Machine = {
-                val j = machine.getValOrEmpty(valueMap) // TODO rm
-                val userMach = Machine.get(machine.getValOrEmpty(valueMap).toLong)
-                if (userMach.isDefined) userMach.get
-                else machinesInSession(valueMap).head
-            }
-
+            val machinePK = machine.getValOrEmpty(valueMap).toLong
             val dir = sessionDir(valueMap)
+            writeHistory(machinePK, dir)
             val dtp = Util.dateTimeAndPatientIdFromDicom(dir)
-            establishSerialNumberAndMachConfig(dir, mach)
-            Run.run(procedure, Machine.get(mach.machinePK.get).get, dir, request, response, dtp.PatientID, dtp.dateTime)
+            establishSerialNumberAndMachConfig(dir, Machine.get(machinePK).get)
+            Run.run(procedure, Machine.get(machinePK).get, dir, request, response, dtp.PatientID, dtp.dateTime)
         }
         else
             form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)

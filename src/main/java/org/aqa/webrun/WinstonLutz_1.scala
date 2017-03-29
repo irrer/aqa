@@ -133,7 +133,7 @@ class WinstonLutz_1(procedure: Procedure) extends WebRunProcedure(procedure) {
         }
         catch {
             case t: Throwable => {
-                internalFailure(response, "Unexpected failure: " + t.toString)
+                internalFailure(response, "Unexpected failure: " + fmtEx(t))
             }
         }
     }

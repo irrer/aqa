@@ -208,6 +208,19 @@ object Util {
         new File(clss.getProtectionDomain.getCodeSource.getLocation.toURI)
     }
 
+    /**
+     * Get a Long from a string if possible
+     */
+    def stringToLong(text: String): Option[Long] = {
+        try {
+            val l: Long = text.toLong
+            Some(l)
+        }
+        catch {
+            case t: Throwable => None
+        }
+    }
+
     def main(args: Array[String]): Unit = {
 
         println("thisJarFile: " + thisJarFile.getAbsolutePath)

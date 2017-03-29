@@ -119,7 +119,7 @@ class UploadAndChooseMachine_1(procedure: Procedure) extends WebRunProcedure(pro
         }
         catch {
             case t: Throwable => {
-                internalFailure(response, "Unexpected failure: " + t.toString)
+                internalFailure(response, "Unexpected failure: " + fmtEx(t))
             }
         }
     }
