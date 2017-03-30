@@ -19,6 +19,7 @@ import org.aqa.db.CentralAxis
 import org.restlet.Restlet
 import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.TagFromName
+import edu.umro.util.Utility
 import com.pixelmed.dicom.AttributeList
 
 object LOCRun_1 {
@@ -27,13 +28,11 @@ object LOCRun_1 {
 }
 
 /**
- * Run the LOC procedure.
+ * Run LOC code.
  */
 class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) {
 
-    def machineList() = Machine.list.toList.map(m => (m.machinePK.get.toString, m.id))
-
-    private val machine = new WebInputSelect("Machine", 6, 0, machineList)
+    def machineList() = ("-1", "None") +: Machine.list.toList.map(m => (m.machinePK.get.toString, m.id))
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
         val action = procedure.webUrl + "?" + name + "=" + name
@@ -43,65 +42,59 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) {
     private val runButton = makeButton("Run", true, ButtonType.BtnDefault)
     private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
 
-    private def form = {
-        new WebForm(procedure.webUrl, List(List(machine), List(runButton, cancelButton)), 6)
-    }
+    private def form = new WebForm(procedure.webUrl, List(List(runButton, cancelButton)), 6)
 
     private def emptyForm(valueMap: ValueMapT, response: Response) = {
         form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
     }
 
-    private def validate(valueMap: ValueMapT): StyleMapT = {
-        lazy val noDir = Error.make(form.uploadFileInput.get, "No files have been uploaded (no directory)")
+    private case class RunRequirements(machine: Machine, sessionDir: File, alList: Seq[AttributeList]);
+
+    private def validate(valueMap: ValueMapT): Either[StyleMapT, RunRequirements] = {
+        lazy val alList = attributeListsInSession(valueMap)
+
+        // machines that DICOM files reference (based on device serial numbers)
+        lazy val machList = alList.map(al => attributeListToMachine(al)).flatten.distinct
+
+        // The machine to use
+        lazy val mach = machList.headOption
+
+        def formErr(msg: String) = Left(Error.make(form.uploadFileInput.get, msg))
+
         sessionDir(valueMap) match {
-            case Some(dir) if (!dir.isDirectory) => noDir
-            case None => noDir
-            case Some(dir) if (dir.list.isEmpty) => Error.make(form.uploadFileInput.get, "At least one file is required.")
-            case _ => styleNone
+            case Some(dir) if (!dir.isDirectory) => formErr("No files have been uploaded")
+            case _ if (alList.isEmpty) => formErr("No DICOM files have been uploaded.")
+            case _ if (machList.size > 1) => formErr("Files from more than one machine were found.  Click Cancel to start over.")
+            case _ if (machList.isEmpty) => formErr("These files do not have a serial number of a known machine.  Click Cancel and use the baseline LOC upload procedure.")
+            case Some(dir) => Right(new RunRequirements(mach.get, dir, alList))
         }
-    }
-
-    private val maxHistory = -1
-    private val historyFileName = "history.txt"
-
-    private def writeHistory(machinePK: Long, dir: File) = {
-        val text = CentralAxis.getHistory(machinePK, maxHistory).map(g => g.toString + System.lineSeparator).foldLeft("")((t, gt) => t + gt)
-        Util.writeFile(new File(dir, historyFileName), text)
-    }
-
-    /** Establish the serial number and machine configuration directory.  Return true if it has been updated. */
-    private def establishSerialNumberAndMachConfig(inputDir: File, machine: Machine): Boolean = {
-        if (List(machine.serialNumber, machine.configurationDirectory).flatten.isEmpty) { // if the serial number and machine configuration directory are not defined
-            val alList = inputDir.listFiles.toList.filter(f => DicomFileUtilities.isDicomOrAcrNemaFile(f)).map(f => Util.readDicomFile(f)).filter(r => r.isRight).map(r => r.right.get)
-            val dsnList = alList.map(al => Util.getAttrValue(al, TagFromName.DeviceSerialNumber)).flatten
-            if (dsnList.nonEmpty) {
-                Machine.setSerialNumber(machine.machinePK.get, dsnList.head)
-                true
-            }
-            else false
-        }
-        else false
     }
 
     /**
      * Run the procedure.
      */
     private def run(valueMap: ValueMapT, request: Request, response: Response) = {
-        val errMap = validate(valueMap)
-        if (errMap.isEmpty) {
-            val machinePK = machine.getValOrEmpty(valueMap).toLong
-            sessionDir(valueMap) match {
-                case Some(dir) => {
-                    writeHistory(machinePK, dir)
-                    val dtp = Util.dateTimeAndPatientIdFromDicom(dir)
-                    establishSerialNumberAndMachConfig(dir, Machine.get(machinePK).get)
-                    Run.run(procedure, Machine.get(machinePK).get, dir, request, response, dtp.PatientID, dtp.dateTime)
-                }
-                case _ => throw new RuntimeException("Unexpected internal error. None in LOCRun_1.run")
+        validate(valueMap) match {
+            case Right(runReq) => {
+                val machPK = runReq.machine.machinePK.get
+
+                val dtp = Util.dateTimeAndPatientIdFromDicom(runReq.sessionDir)
+
+                Run.run(procedure, Machine.get(machPK).get, runReq.sessionDir, request, response, dtp.PatientID, dtp.dateTime)
             }
+            case Left(errMap) => form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
         }
-        else
-            form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
+    }
+
+    /**
+     * Cancel the procedure.  Remove files and redirect to procedure list.
+     */
+    private def cancel(valueMap: ValueMapT, response: Response) = {
+        sessionDir(valueMap) match {
+            case Some(dir) => Utility.deleteFileTree(dir)
+            case _ => ;
+        }
+        response.redirectSeeOther("/")
     }
 
     private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
@@ -116,7 +109,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) {
 
         try {
             0 match {
-                case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
+                case _ if buttonIs(valueMap, cancelButton) => cancel(valueMap, response)
                 case _ if buttonIs(valueMap, runButton) => run(valueMap, request, response)
                 case _ => emptyForm(valueMap, response)
             }
