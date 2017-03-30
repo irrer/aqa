@@ -70,10 +70,9 @@ class WinstonLutz_1(procedure: Procedure) extends WebRunProcedure(procedure) {
     }
 
     private def validateFiles(valueMap: ValueMapT): StyleMapT = {
-        val dir = sessionDir(valueMap)
-        0 match {
-            case _ if (!dir.isDirectory) => Error.make(form.uploadFileInput.get, "No files have been uploaded (no directory)") // TODO
-            case _ if (dir.list.size < 2) => Error.make(form.uploadFileInput.get, "At least two files are required.") // TODO
+        sessionDir(valueMap) match {
+            case Some(dir) if (!dir.isDirectory) => Error.make(form.uploadFileInput.get, "No files have been uploaded (no directory)") // TODO
+            case Some(dir) if (dir.list.size < 2) => Error.make(form.uploadFileInput.get, "At least two files are required.") // TODO
             case _ => styleNone
         }
     }
@@ -93,9 +92,13 @@ class WinstonLutz_1(procedure: Procedure) extends WebRunProcedure(procedure) {
             </WinstonLutzParameters>
         }
 
-        val paramFile = new File(sessionDir(valueMap), WinstonLutz_1.parametersFileName)
-
-        Util.writeFile(paramFile, WebUtil.xmlToText(xml))
+        sessionDir(valueMap) match {
+            case Some(dir) => {
+                val paramFile = new File(dir, WinstonLutz_1.parametersFileName)
+                Util.writeFile(paramFile, WebUtil.xmlToText(xml))
+            }
+            case _ => throw new RuntimeException("WinstonLutz_1.makeParameterFile : session dir is not valid")
+        }
     }
 
     /**
@@ -106,9 +109,13 @@ class WinstonLutz_1(procedure: Procedure) extends WebRunProcedure(procedure) {
         if (errMap.isEmpty) {
             makeParameterFile(valueMap)
             val machinePK = machine.getValOrEmpty(valueMap).toLong
-            val dir = sessionDir(valueMap)
-            val dtp = Util.dateTimeAndPatientIdFromDicom(dir)
-            Run.run(procedure, Machine.get(machinePK).get, dir, request, response, dtp.PatientID, dtp.dateTime)
+            sessionDir(valueMap) match {
+                case Some(dir) => {
+                    val dtp = Util.dateTimeAndPatientIdFromDicom(dir)
+                    Run.run(procedure, Machine.get(machinePK).get, dir, request, response, dtp.PatientID, dtp.dateTime)
+                }
+                case _ => throw new RuntimeException("WinstonLutz_1.run : session dir is not valid")
+            }
         }
         else
             form.setFormResponse(valueMap, errMap, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
@@ -121,7 +128,7 @@ class WinstonLutz_1(procedure: Procedure) extends WebRunProcedure(procedure) {
 
     override def handle(request: Request, response: Response): Unit = {
         super.handle(request, response)
-        
+
         val valueMap: ValueMapT = defaultValueMap ++ getValueMap(request)
 
         try {

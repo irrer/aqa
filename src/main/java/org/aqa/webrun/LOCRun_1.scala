@@ -52,10 +52,11 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) {
     }
 
     private def validate(valueMap: ValueMapT): StyleMapT = {
-        val dir = sessionDir(valueMap)
-        0 match {
-            case _ if (!dir.isDirectory) => Error.make(form.uploadFileInput.get, "No files have been uploaded (no directory)")
-            case _ if (dir.list.isEmpty) => Error.make(form.uploadFileInput.get, "At least one file is required.")
+        lazy val noDir = Error.make(form.uploadFileInput.get, "No files have been uploaded (no directory)")
+        sessionDir(valueMap) match {
+            case Some(dir) if (!dir.isDirectory) => noDir
+            case None => noDir
+            case Some(dir) if (dir.list.isEmpty) => Error.make(form.uploadFileInput.get, "At least one file is required.")
             case _ => styleNone
         }
     }
@@ -89,11 +90,15 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) {
         val errMap = validate(valueMap)
         if (errMap.isEmpty) {
             val machinePK = machine.getValOrEmpty(valueMap).toLong
-            val dir = sessionDir(valueMap)
-            writeHistory(machinePK, dir)
-            val dtp = Util.dateTimeAndPatientIdFromDicom(dir)
-            establishSerialNumberAndMachConfig(dir, Machine.get(machinePK).get)
-            Run.run(procedure, Machine.get(machinePK).get, dir, request, response, dtp.PatientID, dtp.dateTime)
+            sessionDir(valueMap) match {
+                case Some(dir) => {
+                    writeHistory(machinePK, dir)
+                    val dtp = Util.dateTimeAndPatientIdFromDicom(dir)
+                    establishSerialNumberAndMachConfig(dir, Machine.get(machinePK).get)
+                    Run.run(procedure, Machine.get(machinePK).get, dir, request, response, dtp.PatientID, dtp.dateTime)
+                }
+                case _ => throw new RuntimeException("Unexpected internal error. None in LOCRun_1.run")
+            }
         }
         else
             form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)

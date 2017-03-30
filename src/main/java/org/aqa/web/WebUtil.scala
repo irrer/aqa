@@ -93,9 +93,11 @@ object WebUtil {
         outputStream.close
     }
 
-    def sessionDir(valueMap: ValueMapT): File = {
-        val sessionId = valueMap.get(sessionLabel).get
-        Session.idToFile(sessionId)
+    def sessionDir(valueMap: ValueMapT): Option[File] = {
+        valueMap.get(sessionLabel) match {
+            case Some(sessionId) => Some(Session.idToFile(sessionId))
+            case _ => None
+        }
     }
 
     /**
@@ -122,15 +124,19 @@ object WebUtil {
     private def saveFileList(request: Request): ValueMapT = {
         val valueMap = parseOriginalReference(request)
 
-        val dir = sessionDir(valueMap)
-        val upload = new RestletFileUpload(new DiskFileItemFactory(500, dir)) // TODO change size to -1 ?
-        val itemIterator = upload.getItemIterator(request.getEntity);
+        val dir = sessionDir(valueMap) match {
+            case Some(dir) => {
 
-        while (itemIterator.hasNext) {
-            val ii = itemIterator.next
-            if (!ii.isFormField) saveFile(ii.openStream, new File(dir, ii.getName))
+                val upload = new RestletFileUpload(new DiskFileItemFactory(500, dir)) // TODO change size to -1 ?
+                val itemIterator = upload.getItemIterator(request.getEntity);
+
+                while (itemIterator.hasNext) {
+                    val ii = itemIterator.next
+                    if (!ii.isFormField) saveFile(ii.openStream, new File(dir, ii.getName))
+                }
+            }
+            case _ => throw new RuntimeException("Unexpected internal error. None in WebUtil.saveFileList")
         }
-
         valueMap
     }
 
@@ -826,9 +832,10 @@ object WebUtil {
     }
 
     def attributeListsInSession(valueMap: ValueMapT): Seq[AttributeList] = {
-        val dir = sessionDir(valueMap)
-        if (dir.isDirectory) sessionDir(valueMap).listFiles.toSeq.map(f => fileToDicom(f)).flatten
-        else Seq[AttributeList]()
+        sessionDir(valueMap) match {
+            case Some(dir) => dir.listFiles.toSeq.map(f => fileToDicom(f)).flatten
+            case _ => Seq[AttributeList]()
+        }
     }
 
     def attributeListToDeviceSerialNumber(al: AttributeList): Option[String] = {

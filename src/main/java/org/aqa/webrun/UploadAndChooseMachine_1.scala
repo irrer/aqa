@@ -26,7 +26,7 @@ object UploadAndChooseMachine_1 {
 }
 
 /**
- * Runs procedures that only need the user to upload files and choose a treatment machine. 
+ * Runs procedures that only need the user to upload files and choose a treatment machine.
  */
 class UploadAndChooseMachine_1(procedure: Procedure) extends WebRunProcedure(procedure) {
 
@@ -52,23 +52,23 @@ class UploadAndChooseMachine_1(procedure: Procedure) extends WebRunProcedure(pro
     }
 
     private def validate(valueMap: ValueMapT): StyleMapT = {
-        val dir = sessionDir(valueMap)
-        0 match {
-            case _ if (!dir.isDirectory) => Error.make(form.uploadFileInput.get, "No files have been uploaded (no directory)")
-            case _ if (dir.list.isEmpty) => Error.make(form.uploadFileInput.get, "At least one file is required.")
+        lazy val noDir = Error.make(form.uploadFileInput.get, "No files have been uploaded (no directory)")
+        sessionDir(valueMap) match {
+            case None => noDir
+            case Some(dir) if (!dir.isDirectory) => noDir
+            case Some(dir) if (dir.list.isEmpty) => Error.make(form.uploadFileInput.get, "At least one file is required.")
             case _ => styleNone
         }
     }
 
     private val maxHistory = -1
     private val historyFileName = "history.txt"
-    
+
     private def writeHistory(machinePK: Long, dir: File) = {
         val text = CentralAxis.getHistory(machinePK, maxHistory).map(g => g.toString + System.lineSeparator).foldLeft("")((t, gt) => t + gt)
         Util.writeFile(new File(dir, historyFileName), text)
     }
 
-    
     /** Establish the serial number and machine configuration directory.  Return true if it has been updated. */
     private def establishSerialNumberAndMachConfig(inputDir: File, machine: Machine): Boolean = {
         if (List(machine.serialNumber, machine.configurationDirectory).flatten.isEmpty) { // if the serial number and machine configuration directory are not defined
@@ -90,11 +90,15 @@ class UploadAndChooseMachine_1(procedure: Procedure) extends WebRunProcedure(pro
         val errMap = validate(valueMap)
         if (errMap.isEmpty) {
             val machinePK = machine.getValOrEmpty(valueMap).toLong
-            val dir = sessionDir(valueMap)
-            writeHistory(machinePK, dir)
-            val dtp = Util.dateTimeAndPatientIdFromDicom(dir)
-            establishSerialNumberAndMachConfig(dir, Machine.get(machinePK).get)
-            Run.run(procedure, Machine.get(machinePK).get, dir, request, response, dtp.PatientID, dtp.dateTime)
+            sessionDir(valueMap) match {
+                case Some(dir) => {
+                    writeHistory(machinePK, dir)
+                    val dtp = Util.dateTimeAndPatientIdFromDicom(dir)
+                    establishSerialNumberAndMachConfig(dir, Machine.get(machinePK).get)
+                    Run.run(procedure, Machine.get(machinePK).get, dir, request, response, dtp.PatientID, dtp.dateTime)
+                }
+                case _ => throw new RuntimeException("Unexpected internal error. None in UploadAndChooseMachine_1.run")
+            }
         }
         else
             form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)

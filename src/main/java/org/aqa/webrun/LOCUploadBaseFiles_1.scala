@@ -19,6 +19,7 @@ import org.aqa.db.CentralAxis
 import org.restlet.Restlet
 import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.TagFromName
+import edu.umro.util.Utility
 
 object LOCUploadBaseFiles_1 {
     val parametersFileName = "parameters.xml"
@@ -60,19 +61,11 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
     }
 
     private def validate(valueMap: ValueMapT): StyleMapT = {
-        val dir = sessionDir(valueMap)
-        if (true) { // TODO rm
-            val j = machine.getValOrEmpty(valueMap)
-            machineList.map(mm => println("    mach list: " + mm._1 + " : " + mm._2))
-            val machInSes = machinesInSession(valueMap)
-            machInSes.map(mm => println("    machine: " + mm))
-            println
-        }
-        0 match {
-            case _ if (!dir.isDirectory) => Error.make(form.uploadFileInput.get, "No files have been uploaded")
-            case _ if (dir.list.size != 2) => Error.make(form.uploadFileInput.get, "Exactly two files are required.")
+        sessionDir(valueMap) match {
+            case Some(dir) if (!dir.isDirectory) => Error.make(form.uploadFileInput.get, "No files have been uploaded")
+            case Some(dir) if (dir.list.size != 2) => Error.make(form.uploadFileInput.get, "Exactly two files are required.")
             case _ if needToChooseMachine(valueMap) => Error.make(machine, "Machine needs to be chosen.")
-            case _ => styleNone
+            case _ => styleNone // No error
         }
     }
 
@@ -99,19 +92,33 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
         val errMap = validate(valueMap)
         if (errMap.isEmpty) {
             val mach: Machine = {
-                val j = machine.getValOrEmpty(valueMap) // TODO rm
                 val userMach = Machine.get(machine.getValOrEmpty(valueMap).toLong)
                 if (userMach.isDefined) userMach.get
                 else machinesInSession(valueMap).head
             }
 
-            val dir = sessionDir(valueMap)
-            val dtp = Util.dateTimeAndPatientIdFromDicom(dir)
-            establishSerialNumberAndMachConfig(dir, mach)
-            Run.run(procedure, Machine.get(mach.machinePK.get).get, dir, request, response, dtp.PatientID, dtp.dateTime)
+            sessionDir(valueMap) match {
+                case Some(dir) => {
+                    val dtp = Util.dateTimeAndPatientIdFromDicom(dir)
+                    establishSerialNumberAndMachConfig(dir, mach)
+                    Run.run(procedure, Machine.get(mach.machinePK.get).get, dir, request, response, dtp.PatientID, dtp.dateTime)
+                }
+                case _ => throw new RuntimeException("Unexpected internal error. None in LOCUploadBaseFiles_1.run")
+            }
         }
         else
             form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
+    }
+
+    /**
+     * Cancel the procedure.  Remove files and redirect to procedure list.
+     */
+    private def cancel(valueMap: ValueMapT, response: Response) = {
+        sessionDir(valueMap) match {
+            case Some(dir) => Utility.deleteFileTree(dir)
+            case _ => ;
+        }
+        response.redirectSeeOther("/")
     }
 
     private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
@@ -126,7 +133,7 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
 
         try {
             0 match {
-                case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
+                case _ if buttonIs(valueMap, cancelButton) => cancel(valueMap, response)
                 case _ if buttonIs(valueMap, runButton) => run(valueMap, request, response)
                 case _ => emptyForm(valueMap, response)
             }
