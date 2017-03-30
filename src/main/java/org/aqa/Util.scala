@@ -120,7 +120,7 @@ object Util {
         }
     }
 
-    private def extractDateTimeAndPatientIdFromDicom(file: File): (Seq[Date], Option[String]) = {
+    private def extractDateTimeAndPatientIdFromDicom(file: File): (Seq[Date], Option[String]) = {  // TODO make this safer
 
         val attrList = new AttributeList
         attrList.read(file)

@@ -20,6 +20,7 @@ import org.restlet.Restlet
 import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.TagFromName
 import edu.umro.util.Utility
+import com.pixelmed.dicom.AttributeList
 
 object LOCUploadBaseFiles_1 {
     val parametersFileName = "parameters.xml"
@@ -33,7 +34,7 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
 
     def machineList() = ("-1", "None") +: Machine.list.toList.map(m => (m.machinePK.get.toString, m.id))
 
-    private val machine = new WebInputSelectOption("Machine", 6, 0, machineList, machineSpecRequired)
+    private val machine = new WebInputSelectOption("Machine", 6, 0, machineList, showMachineSelector)
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
         val action = procedure.webUrl + "?" + name + "=" + name
@@ -49,65 +50,77 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
         form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
     }
 
-    private def needToChooseMachine(valueMap: ValueMapT): Boolean = {
-        if (machinesInSession(valueMap).isEmpty) {
-            Util.stringToLong(machine.getValOrEmpty(valueMap)) match {
-                case Some(machinePK) if (machinePK < 0) => true
-                case Some(machinePK) => Machine.get(machinePK).isEmpty
-                case _ => true
-            }
+    private def showMachineSelector(valueMap: ValueMapT): Boolean = {
+        lazy val fileList = sessionDir(valueMap) match {
+            case Some(dir) if dir.isDirectory => dir.listFiles.toSeq
+            case _ => Seq[File]()
         }
-        else true
+        lazy val alList = attributeListsInSession(valueMap)
+
+        lazy val machList = alList.map(al => attributeListToMachine(al)).flatten
+
+        alList match {
+            case _ if fileList.isEmpty => false
+            case _ if alList.isEmpty => false
+            case _ if machList.nonEmpty => false
+            case _ => true
+        }
     }
 
-    private def validate(valueMap: ValueMapT): StyleMapT = {
+    private case class RunRequirements(machine: Machine, serialNumber: Option[String], sessionDir: File, alList: Seq[AttributeList]);
+
+    private def validate(valueMap: ValueMapT): Either[StyleMapT, RunRequirements] = {
+        lazy val alList = attributeListsInSession(valueMap)
+
+        // machines that DICOM files reference (based on device serial numbers)
+        lazy val machList = alList.map(al => attributeListToMachine(al)).flatten.distinct
+
+        // machine that user chose
+        lazy val chosenMach = for (pkTxt <- valueMap.get(machine.label); pk <- Util.stringToLong(pkTxt); mach <- Machine.get(pk)) yield mach
+
+        // The machine to use
+        lazy val mach = List(chosenMach, machList.headOption).flatten.headOption
+
+        def formErr(msg: String) = Left(Error.make(form.uploadFileInput.get, msg))
+
         sessionDir(valueMap) match {
-            case Some(dir) if (!dir.isDirectory) => Error.make(form.uploadFileInput.get, "No files have been uploaded")
-            case Some(dir) if (dir.list.size != 2) => Error.make(form.uploadFileInput.get, "Exactly two files are required.")
-            case _ if needToChooseMachine(valueMap) => Error.make(machine, "Machine needs to be chosen.")
-            case _ => styleNone // No error
-        }
-    }
-
-    //private val maxHistory = -1
-
-    /** Establish the serial number and machine configuration directory.  Return true if it has been updated. */
-    private def establishSerialNumberAndMachConfig(inputDir: File, machine: Machine): Boolean = {
-        if (List(machine.serialNumber, machine.configurationDirectory).flatten.isEmpty) { // if the serial number and machine configuration directory are not defined
-            val alList = inputDir.listFiles.toList.filter(f => DicomFileUtilities.isDicomOrAcrNemaFile(f)).map(f => Util.readDicomFile(f)).filter(r => r.isRight).map(r => r.right.get)
-            val dsnList = alList.map(al => Util.getAttrValue(al, TagFromName.DeviceSerialNumber)).flatten
-            if (dsnList.nonEmpty) {
-                Machine.setSerialNumber(machine.machinePK.get, dsnList.head)
-                true
+            case Some(dir) if (!dir.isDirectory) => formErr("No files have been uploaded")
+            case _ if (alList.isEmpty) => formErr("No DICOM files have been uploaded.")
+            case _ if (alList.size == 1) => formErr("Only one DICOM file has been loaded.  Two are required.")
+            case _ if (alList.size > 2) => formErr("More than two DICOM files have been loaded.  Exactly two are required.  Click Cancel to start over.")
+            case _ if (machList.size > 1) => formErr("Files from more than one machine were found.  Click Cancel to start over.")
+            case _ if (machList.isEmpty && chosenMach.isEmpty) => Left(Error.make(machine, "A machine must be chosen"))
+            case _ if (mach.isEmpty) => Left(Error.make(machine, "A machine needs to be chosen"))
+            case Some(dir) => {
+                val newSerialNumber: Option[String] = chosenMach match {
+                    case Some(m) => m.serialNumber
+                    case _ => None
+                }
+                Right(new RunRequirements(mach.get, newSerialNumber, dir, alList))
             }
-            else false
         }
-        else false
     }
 
     /**
      * Run the procedure.
      */
     private def run(valueMap: ValueMapT, request: Request, response: Response) = {
-        val errMap = validate(valueMap)
-        if (errMap.isEmpty) {
-            val mach: Machine = {
-                val userMach = Machine.get(machine.getValOrEmpty(valueMap).toLong)
-                if (userMach.isDefined) userMach.get
-                else machinesInSession(valueMap).head
-            }
-
-            sessionDir(valueMap) match {
-                case Some(dir) => {
-                    val dtp = Util.dateTimeAndPatientIdFromDicom(dir)
-                    establishSerialNumberAndMachConfig(dir, mach)
-                    Run.run(procedure, Machine.get(mach.machinePK.get).get, dir, request, response, dtp.PatientID, dtp.dateTime)
+        validate(valueMap) match {
+            case Right(runReq) => {
+                val machPK = runReq.machine.machinePK.get
+                // set the machine's serial number (and config dir) if necessary
+                (runReq.serialNumber, runReq.machine.serialNumber) match {
+                    case (Some(newSer), Some(oldSer)) if (newSer != oldSer) => Machine.setSerialNumber(machPK, newSer)
+                    case (Some(newSer), _) => Machine.setSerialNumber(runReq.machine.machinePK.get, newSer)
+                    case _ => ;
                 }
-                case _ => throw new RuntimeException("Unexpected internal error. None in LOCUploadBaseFiles_1.run")
+
+                val dtp = Util.dateTimeAndPatientIdFromDicom(runReq.sessionDir)
+
+                Run.run(procedure, Machine.get(machPK).get, runReq.sessionDir, request, response, dtp.PatientID, dtp.dateTime)
             }
+            case Left(errMap) => form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
         }
-        else
-            form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
     }
 
     /**

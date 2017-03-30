@@ -440,6 +440,12 @@ object WebUtil {
          */
         def divAttributes(metaData: MetaData): MetaData = metaData
         def inputAttributes(metaData: MetaData): MetaData = metaData
+
+        override def toString: String = {
+            val div = { <toString></toString> }
+            val elem = div % divAttributes(div.attributes)
+            xmlToText(elem)
+        }
     }
 
     class Error(inputTitle: String) extends Style {
@@ -833,7 +839,7 @@ object WebUtil {
 
     def attributeListsInSession(valueMap: ValueMapT): Seq[AttributeList] = {
         sessionDir(valueMap) match {
-            case Some(dir) => dir.listFiles.toSeq.map(f => fileToDicom(f)).flatten
+            case Some(dir) if (dir.isDirectory) => dir.listFiles.toSeq.map(f => fileToDicom(f)).flatten
             case _ => Seq[AttributeList]()
         }
     }
@@ -881,11 +887,11 @@ object WebUtil {
      * files.  If there are DICOM files, but no known machines associated with them, then
      * return true.
      */
-    def machineSpecRequired(valueMap: ValueMapT): Boolean = {
-        val dicomList = attributeListsInSession(valueMap)
-        val machineList = dicomList.map(al => attributeListToMachine(al)).flatten
-        dicomList.nonEmpty && machineList.isEmpty
-    }
+    //    def machineSpecRequired(valueMap: ValueMapT): Boolean = {
+    //        val dicomList = attributeListsInSession(valueMap)
+    //        val machineList = dicomList.map(al => attributeListToMachine(al)).flatten
+    //        dicomList.nonEmpty && machineList.isEmpty
+    //    }
 
     def main(args: Array[String]): Unit = {
 

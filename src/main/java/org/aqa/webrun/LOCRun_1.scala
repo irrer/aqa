@@ -33,7 +33,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) {
 
     def machineList() = Machine.list.toList.map(m => (m.machinePK.get.toString, m.id))
 
-    private val machine = new WebInputSelectOption("Machine", 6, 0, machineList, machineSpecRequired)
+    private val machine = new WebInputSelect("Machine", 6, 0, machineList)
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
         val action = procedure.webUrl + "?" + name + "=" + name
