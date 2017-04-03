@@ -21,6 +21,7 @@ import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.TagFromName
 import edu.umro.util.Utility
 import com.pixelmed.dicom.AttributeList
+import org.aqa.web.WebRunIndex
 
 object LOCRun_1 {
     val parametersFileName = "parameters.xml"
@@ -94,7 +95,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) {
             case Some(dir) => Utility.deleteFileTree(dir)
             case _ => ;
         }
-        response.redirectSeeOther("/")
+        WebRunIndex.redirect(response)
     }
 
     private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {

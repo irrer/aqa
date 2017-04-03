@@ -21,6 +21,7 @@ import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.TagFromName
 import edu.umro.util.Utility
 import com.pixelmed.dicom.AttributeList
+import org.aqa.web.WebRunIndex
 
 object LOCUploadBaseFiles_1 {
     val parametersFileName = "parameters.xml"
@@ -70,16 +71,18 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
     private case class RunRequirements(machine: Machine, serialNumber: Option[String], sessionDir: File, alList: Seq[AttributeList]);
 
     private def validate(valueMap: ValueMapT): Either[StyleMapT, RunRequirements] = {
-        lazy val alList = attributeListsInSession(valueMap)
+        val alList = attributeListsInSession(valueMap)
+        
+        val serNoList = alList.map(al => WebUtil.attributeListToDeviceSerialNumber(al)).flatten.distinct
 
         // machines that DICOM files reference (based on device serial numbers)
-        lazy val machList = alList.map(al => attributeListToMachine(al)).flatten.distinct
+        val machList = alList.map(al => attributeListToMachine(al)).flatten.distinct
 
         // machine that user chose
-        lazy val chosenMach = for (pkTxt <- valueMap.get(machine.label); pk <- Util.stringToLong(pkTxt); mach <- Machine.get(pk)) yield mach
+        val chosenMach = for (pkTxt <- valueMap.get(machine.label); pk <- Util.stringToLong(pkTxt); mach <- Machine.get(pk)) yield mach
 
         // The machine to use
-        lazy val mach = List(chosenMach, machList.headOption).flatten.headOption
+        val mach = List(chosenMach, machList.headOption).flatten.headOption
 
         def formErr(msg: String) = Left(Error.make(form.uploadFileInput.get, msg))
 
@@ -88,12 +91,12 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
             case _ if (alList.isEmpty) => formErr("No DICOM files have been uploaded.")
             case _ if (alList.size == 1) => formErr("Only one DICOM file has been loaded.  Two are required.")
             case _ if (alList.size > 2) => formErr("More than two DICOM files have been loaded.  Exactly two are required.  Click Cancel to start over.")
-            case _ if (machList.size > 1) => formErr("Files from more than one machine were found.  Click Cancel to start over.")
+            case _ if (serNoList.size > 1) => formErr("Files from more than one machine were found.  Click Cancel to start over.")
             case _ if (machList.isEmpty && chosenMach.isEmpty) => Left(Error.make(machine, "A machine must be chosen"))
             case _ if (mach.isEmpty) => Left(Error.make(machine, "A machine needs to be chosen"))
             case Some(dir) => {
                 val newSerialNumber: Option[String] = chosenMach match {
-                    case Some(m) => m.serialNumber
+                    case Some(m) => serNoList.headOption
                     case _ => None
                 }
                 Right(new RunRequirements(mach.get, newSerialNumber, dir, alList))
@@ -131,7 +134,7 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
             case Some(dir) => Utility.deleteFileTree(dir)
             case _ => ;
         }
-        response.redirectSeeOther("/")
+        WebRunIndex.redirect(response)
     }
 
     private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {

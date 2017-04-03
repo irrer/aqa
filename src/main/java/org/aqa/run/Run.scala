@@ -133,6 +133,8 @@ object Run {
 
     private type EnvVal = Map[String, Any]
 
+    private val emptyEnvVal = Map[String, Any]()
+
     private def b2s(b: Boolean): String = if (b) "1" else "0"
 
     private def mainEnv(procedure: Procedure, output: Output): EnvVal = {
@@ -142,6 +144,13 @@ object Run {
             ("outputPK" -> output.outputPK.get),
             ("AQAJAR" -> Config.jarFile.getAbsolutePath),
             ("DatabaseCommand" -> Config.DatabaseCommand))
+    }
+
+    private def institutionEnv(inst: Option[Institution]): EnvVal = {
+        inst match {
+            case Some(institution) => Map(("institution_id" -> institution.name))
+            case _ => Map(("institution_id" -> "unknown"))
+        }
     }
 
     private def machineEnv(machine: Machine): EnvVal = {
@@ -265,6 +274,7 @@ object Run {
 
         val kvMap =
             mainEnv(procedure, output) ++
+                institutionEnv(Institution.get(machine.institutionPK)) ++
                 machineEnv(machine) ++
                 mlcEnv(MultileafCollimator.get(machine.multileafCollimatorPK).get) ++
                 machTypeEnv(MachineType.get(machine.machineTypePK).get) ++
