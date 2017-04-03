@@ -27,9 +27,8 @@ object LeafCorrectionTransmissionProcedure {
         println("Using curDir: " + curDir.getAbsolutePath)
         val parentDir = curDir.getParentFile
         println("Using parent directory: " + parentDir.getAbsolutePath)
-
-        println("Using parent directory: " + parentDir.getAbsolutePath)
-        val excel = parentDir.listFiles.map(af => (af, ExcelUtil.read(af))).filter { fws => fws._2.isRight }.map(fo => (fo._1, fo._2.right.get))
+        println("Looking for the Excel file in: " + curDir.list.toSeq.mkString(" "))
+        val excel = curDir.listFiles.map(af => (af, ExcelUtil.read(af))).filter { fws => fws._2.isRight }.map(fo => (fo._1, fo._2.right.get))
         if (excel.isEmpty) ProcedureStatus.terminate("No Excel files found", ProcedureStatus.fail)
         val fileNameList = excel.foldLeft("")((t, fws) => t + "  " + fws._1.getAbsolutePath)
         if (excel.size > 1) ProcedureStatus.terminate("Expecting one Excel file but found " + excel.size + " : " + fileNameList, ProcedureStatus.fail)
