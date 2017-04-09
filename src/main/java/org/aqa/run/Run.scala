@@ -94,36 +94,57 @@ object Run {
     }
 
     /**
+     * Attempt to perform post-processing
+     */
+    private def postProcess(activeProcess: ActiveProcess): Unit = {
+        activeProcess.postProcess match {
+            case Some(postProc) => {
+                try {
+                    postProc.postPerform(activeProcess)
+                }
+
+                catch {
+                    case t: Throwable => logWarning("Unexpected error running procedure post-processing: Output: " + activeProcess.output + " : " + t.getMessage)
+                }
+            }
+            case _ => ;
+        }
+    }
+
+    /**
      * Start a thread to monitor the process.  When the process terminates, its status and
      * finish time will be recorded in the database.  If the process fails to finish before
      * the procedure's timeout, then the process will be killed and assigned the status of
      * <code>timeout</code>.
      */
-    private def startProcessMonitor(actProc: ActiveProcess, msTimeout: Long): Unit = {
+    private def startProcessMonitor(activeProcess: ActiveProcess, msTimeout: Long): Unit = {
         def run(): Unit = {
-            managed(actProc.logger) acquireAndGet {
+            managed(activeProcess.logger) acquireAndGet {
                 lgr =>
                     {
                         try {
-                            val future = Future(blocking(actProc.process.exitValue)) // wrap in Future
+                            val future = Future(blocking(activeProcess.process.exitValue)) // wrap in Future
                             val res = try {
                                 val timeout = Duration(msTimeout, TimeUnit.MILLISECONDS)
                                 Await.result(future, timeout)
                             }
                             catch {
                                 case _: TimeoutException => {
-                                    actProc.process.destroy
-                                    ProcedureStatus.writeProcedureStatus(actProc.output.dir, ProcedureStatus.timeout)
+                                    activeProcess.process.destroy
+                                    ProcedureStatus.writeProcedureStatus(activeProcess.output.dir, ProcedureStatus.timeout)
                                 }
                             }
-                            val fileStatus = ProcedureStatus.dirToProcedureStatus(actProc.output.dir)
+                            postProcess(activeProcess)
+                            val fileStatus = ProcedureStatus.dirToProcedureStatus(activeProcess.output.dir)
                             val status = if (fileStatus.isDefined) fileStatus.get else ProcedureStatus.crash
                             // update DB Output
-                            actProc.output.updateStatusAndFinishDate(status.toString, now)
-                            ActiveProcess.remove(actProc.output.outputPK.get)
+                            activeProcess.output.updateStatusAndFinishDate(status.toString, now)
+                            ActiveProcess.remove(activeProcess.output.outputPK.get)
                         }
                         catch {
-                            case t: Throwable => logWarning("Unexpected error running procedure.  Output: " + actProc.output + " : " + t.getMessage)
+                            case t: Throwable =>
+                                logWarning("Unexpected error running procedure.  Output: " + activeProcess.output + " : " + t.getMessage)
+                                postProcess(activeProcess)
                         }
                     }
             }
@@ -265,7 +286,7 @@ object Run {
      *    run.bat
      *    run.exe
      */
-    private def startProcess(procedure: Procedure, machine: Machine, output: Output): ActiveProcess = {
+    private def startProcess(procedure: Procedure, machine: Machine, output: Output, postProcess: Option[PostProcess]): ActiveProcess = {
 
         val cd = "CD /D " + output.dir.getAbsolutePath
         val echoOff = "@echo off"
@@ -296,7 +317,7 @@ object Run {
         val pb = Process(Seq("cmd.exe")) #< inputStream
         val logger = new StdLogger(output)
         val process = pb.run(logger, true)
-        new ActiveProcess(output, process, logger)
+        new ActiveProcess(output, process, postProcess, logger)
     }
 
     private def now: Date = new Date(System.currentTimeMillis)
@@ -304,7 +325,7 @@ object Run {
     /**
      * Run a procedure.
      */
-    def run(procedure: Procedure, machine: Machine, sessionDir: File, request: Request, response: Response, patientId: Option[String], acquisitionDate: Option[Long]) = {
+    def run(procedure: Procedure, machine: Machine, sessionDir: File, request: Request, response: Response, patientId: Option[String], acquisitionDate: Option[Long], postProcess: Option[PostProcess]) = {
 
         val user = WebUtil.getUser(request)
         val userPK = if (user.isDefined) user.get.userPK else None
@@ -346,7 +367,7 @@ object Run {
         }
 
         // Start a process that runs the procedure
-        val actProc = startProcess(procedure, machine, output)
+        val actProc = startProcess(procedure, machine, output, postProcess)
 
         ActiveProcess.add(actProc)
 

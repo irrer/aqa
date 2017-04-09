@@ -65,9 +65,15 @@ object LeafOffsetCorrection extends ProcedureOutput {
     }
 
     /**
-     * Get a list of all leafOffsetCorrections.
+     * Get a list of all leafOffsetCorrections for the given output
      */
-    def list = Db.run(query.result)
+    def getByOutput(outputPK: Long): Seq[LeafOffsetCorrection] = {
+        val action = for {
+            inst <- LeafOffsetCorrection.query if inst.outputPK === outputPK
+        } yield (inst)
+        val list = Db.run(action.result)
+        list
+    }
 
     def delete(leafOffsetCorrectionPK: Long): Int = {
         val q = query.filter(_.leafOffsetCorrectionPK === leafOffsetCorrectionPK)

@@ -22,6 +22,13 @@ import com.pixelmed.dicom.TagFromName
 import edu.umro.util.Utility
 import com.pixelmed.dicom.AttributeList
 import org.aqa.web.WebRunIndex
+import org.aqa.run.PostProcess
+import org.aqa.run.PostProcess
+import org.aqa.run.PostProcess
+import org.aqa.run.ActiveProcess
+import org.aqa.db.LeafOffsetCorrection
+import org.aqa.db.LeafTransmission
+import scala.xml.Elem
 
 object LOCRun_1 {
     val parametersFileName = "parameters.xml"
@@ -31,7 +38,7 @@ object LOCRun_1 {
 /**
  * Run LOC code.
  */
-class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) {
+class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with PostProcess {
 
     def machineList() = ("-1", "None") +: Machine.list.toList.map(m => (m.machinePK.get.toString, m.id))
 
@@ -81,7 +88,8 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) {
 
                 val dtp = Util.dateTimeAndPatientIdFromDicom(runReq.sessionDir)
 
-                Run.run(procedure, Machine.get(machPK).get, runReq.sessionDir, request, response, dtp.PatientID, dtp.dateTime)
+                val j = this.asInstanceOf[PostProcess]
+                Run.run(procedure, Machine.get(machPK).get, runReq.sessionDir, request, response, dtp.PatientID, dtp.dateTime, Some(j))
             }
             case Left(errMap) => form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
         }
@@ -122,4 +130,40 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) {
         }
     }
 
+    override def postPerform(activeProcess: ActiveProcess): Unit = {
+        def writeOffset(outputPK: Long, dir: File) = {
+            val offset = LeafOffsetCorrection.getByOutput(outputPK)
+        }
+        def writeTrans(outputPK: Long, dir: File) = {
+            val trans = LeafTransmission.getByOutput(outputPK)
+        }
+
+        def makeDisplay: Elem = {
+            val machine = activeProcess.output.machinePK match {
+                case Some(machPK) => Machine.get(machPK)
+                case _ => None
+            }
+
+            if (true) {
+                // TODO continue working here
+                val machine = for (machPK <- activeProcess.output.machinePK; mach <- Machine.get(machPK)) Seq(mach)
+            }
+            machine.get.id
+
+            <div>
+                <h2>LOC Report</h2>
+                Institution:{}
+                Machine:{ "" }
+            </div>
+        }
+
+        activeProcess.output.outputPK match {
+            case Some(outputPK) => {
+                writeOffset(outputPK, activeProcess.output.dir)
+                writeTrans(outputPK, activeProcess.output.dir)
+                val content = makeDisplay
+            }
+            case None => ;
+        }
+    }
 }

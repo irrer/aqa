@@ -62,9 +62,15 @@ object LeafTransmission extends ProcedureOutput {
     }
 
     /**
-     * Get a list of all leafTransmissions.
+     * Get a list of all LeafTransmission for the given output
      */
-    def list = Db.run(query.result)
+    def getByOutput(outputPK: Long): Seq[LeafTransmission] = {
+        val action = for {
+            inst <- LeafTransmission.query if inst.outputPK === outputPK
+        } yield (inst)
+        val list = Db.run(action.result)
+        list
+    }
 
     def delete(leafTransmissionPK: Long): Int = {
         val q = query.filter(_.leafTransmissionPK === leafTransmissionPK)

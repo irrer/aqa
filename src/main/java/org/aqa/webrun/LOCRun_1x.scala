@@ -95,7 +95,7 @@ class LOCRun_1x(procedure: Procedure) extends WebRunProcedure(procedure) {
                     writeHistory(machinePK, dir)
                     val dtp = Util.dateTimeAndPatientIdFromDicom(dir)
                     establishSerialNumberAndMachConfig(dir, Machine.get(machinePK).get)
-                    Run.run(procedure, Machine.get(machinePK).get, dir, request, response, dtp.PatientID, dtp.dateTime)
+                    Run.run(procedure, Machine.get(machinePK).get, dir, request, response, dtp.PatientID, dtp.dateTime, None)
                 }
                 case _ => throw new RuntimeException("Unexpected internal error. None in LOCRun_1.run")
             }

@@ -112,7 +112,7 @@ class WinstonLutz_1(procedure: Procedure) extends WebRunProcedure(procedure) {
             sessionDir(valueMap) match {
                 case Some(dir) => {
                     val dtp = Util.dateTimeAndPatientIdFromDicom(dir)
-                    Run.run(procedure, Machine.get(machinePK).get, dir, request, response, dtp.PatientID, dtp.dateTime)
+                    Run.run(procedure, Machine.get(machinePK).get, dir, request, response, dtp.PatientID, dtp.dateTime, None)
                 }
                 case _ => throw new RuntimeException("WinstonLutz_1.run : session dir is not valid")
             }

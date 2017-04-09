@@ -95,7 +95,7 @@ class UploadAndChooseMachine_1(procedure: Procedure) extends WebRunProcedure(pro
                     writeHistory(machinePK, dir)
                     val dtp = Util.dateTimeAndPatientIdFromDicom(dir)
                     establishSerialNumberAndMachConfig(dir, Machine.get(machinePK).get)
-                    Run.run(procedure, Machine.get(machinePK).get, dir, request, response, dtp.PatientID, dtp.dateTime)
+                    Run.run(procedure, Machine.get(machinePK).get, dir, request, response, dtp.PatientID, dtp.dateTime, None)
                 }
                 case _ => throw new RuntimeException("Unexpected internal error. None in UploadAndChooseMachine_1.run")
             }

@@ -120,7 +120,7 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
 
                 val dtp = Util.dateTimeAndPatientIdFromDicom(runReq.sessionDir)
 
-                Run.run(procedure, Machine.get(machPK).get, runReq.sessionDir, request, response, dtp.PatientID, dtp.dateTime)
+                Run.run(procedure, Machine.get(machPK).get, runReq.sessionDir, request, response, dtp.PatientID, dtp.dateTime, None)
             }
             case Left(errMap) => form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
         }

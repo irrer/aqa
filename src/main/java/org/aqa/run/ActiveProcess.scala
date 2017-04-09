@@ -23,4 +23,4 @@ object ActiveProcess {
     def list = activeProcessList.synchronized({ activeProcessList.map(ap => ap._2) })
 }
 
-class ActiveProcess(val output: Output, val process: Process, val logger: StdLogger);
+class ActiveProcess(val output: Output, val process: Process, val postProcess: Option[PostProcess], val logger: StdLogger);
