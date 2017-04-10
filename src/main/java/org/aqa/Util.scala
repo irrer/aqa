@@ -120,7 +120,7 @@ object Util {
         }
     }
 
-    private def extractDateTimeAndPatientIdFromDicom(file: File): (Seq[Date], Option[String]) = {  // TODO make this safer
+    private def extractDateTimeAndPatientIdFromDicom(file: File): (Seq[Date], Option[String]) = { // TODO make this safer
 
         val attrList = new AttributeList
         attrList.read(file)
@@ -218,6 +218,16 @@ object Util {
         }
         catch {
             case t: Throwable => None
+        }
+    }
+
+    /**
+     * Get a Long from a string if possible
+     */
+    def stringToLong(text: Option[String]): Option[Long] = {
+        text match {
+            case Some(t) => stringToLong(t)
+            case _ => None
         }
     }
 

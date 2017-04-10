@@ -15,7 +15,7 @@ case class LeafTransmission(
         outputPK: Long, // output primary key
         section: String, // arbitrary section name.  May be used to associate this section with input data such as UID
         leafIndex: Int, // leaf number
-        transmission_mm: Double // maximum leaf gap
+        transmission_pct: Double // transmission percent
         ) {
 
     def insert: LeafTransmission = {
@@ -27,7 +27,7 @@ case class LeafTransmission(
 
     def insertOrUpdate = Db.run(LeafTransmission.query.insertOrUpdate(this))
 
-    override def toString: String = (transmission_mm.toString).trim
+    override def toString: String = (transmission_pct.toString).trim
 }
 
 object LeafTransmission extends ProcedureOutput {
@@ -37,14 +37,14 @@ object LeafTransmission extends ProcedureOutput {
         def outputPK = column[Long]("outputPK")
         def section = column[String]("section")
         def leafIndex = column[Int]("leafIndex")
-        def correction_mm = column[Double]("correction_mm")
+        def transmission_pct = column[Double]("transmission_pct")
 
         def * = (
             leafTransmissionPK.?,
             outputPK,
             section,
             leafIndex,
-            correction_mm) <> ((LeafTransmission.apply _)tupled, LeafTransmission.unapply _)
+            transmission_pct) <> ((LeafTransmission.apply _)tupled, LeafTransmission.unapply _)
 
         def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
     }
@@ -89,8 +89,8 @@ object LeafTransmission extends ProcedureOutput {
             val id = (sec \ "@id").head.text
             def leafNodeToLOC(leafNode: Node): LeafTransmission = {
                 val leafIndex = (leafNode \ "@Leaf").head.text.toInt
-                val correction_mm = leafNode.head.text.toDouble
-                val loc = new LeafTransmission(None, outputPK, id, leafIndex, correction_mm)
+                val transmission_pct = leafNode.head.text.toDouble
+                val loc = new LeafTransmission(None, outputPK, id, leafIndex, transmission_pct)
                 loc
             }
             val leafNodeList = (sec \ "LeafTransmission_pct").map(leafNode => leafNodeToLOC(leafNode))
@@ -120,7 +120,7 @@ object LeafTransmission extends ProcedureOutput {
 
         val elem = XML.loadFile(new File("""D:\AQA_Data\data\Chicago_33\TB5x_1\WinstonLutz_1.0_1\2016-12-09T09-50-54-361_134\output_2016-12-09T09-50-54-490\output.xml"""))
         val xmlList = xmlToList(elem, 134)
-        xmlList.map(loc => println("    outputPK: " + loc.outputPK + "     section: " + loc.section + "     leafIndex: " + loc.leafIndex + "     correction_mm: " + loc.transmission_mm))
+        xmlList.map(loc => println("    outputPK: " + loc.outputPK + "     section: " + loc.section + "     leafIndex: " + loc.leafIndex + "     transmission_pct: " + loc.transmission_pct))
         xmlList.map(loc => loc.insertOrUpdate)
         println("LeafTransmission.main done")
     }

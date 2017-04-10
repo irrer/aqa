@@ -219,9 +219,21 @@ object WebUtil {
 
     val HTML_PREFIX = "<!DOCTYPE html>\n"
 
-    def wrapBody(content: Elem, pageTitle: String, refresh: Option[Int]): String = {
+    def wrapBody(content: Elem, pageTitle: String, refresh: Option[Int], c3: Boolean, runScript: Option[String]): String = {
 
         val refreshMeta = Seq(refresh).flatten.filter(r => r > 0).map(r => { <meta http-equiv='refresh' content={ r.toString }/> })
+
+        val c3Refs: Seq[Elem] = {
+            if (c3) {
+                Seq(
+                    <link href="/static/c3/0.4.10/c3.min.css" rel="stylesheet"/>,
+                    <script src="/static/d3/3.5.6/d3.min.js"></script>,
+                    <script src="/static/c3/0.4.10/c3.min.js"></script>)
+            }
+            else Seq[Elem]()
+        }
+
+        val runScriptTag = "@@script@@"
 
         val page = {
             <html lang="en">
@@ -234,6 +246,7 @@ object WebUtil {
                     <script src="/static/bootstrap/3.3.6/js/bootstrap.min.js"></script>
                     <script src="/static/dropzone/dropzone-4.3.0/dist/dropzone.js"></script>
                     <link rel="stylesheet" href="/static/dropzone/dropzone-4.3.0/dist/dropzone.css"/>
+                    { c3Refs }
                     <script src="/static/ReloadOutput.js"></script>
                 </head>
                 <body>
@@ -256,16 +269,24 @@ object WebUtil {
                     </header>
                     { content }
                 </body>
+                { runScriptTag }
             </html>
         }
 
-        val text = HTML_PREFIX + xmlToText(page)
+        val runScriptContent = runScript match {
+            case Some(s) => s
+            case _ => ""
+        }
+
+        val text = HTML_PREFIX + xmlToText(page).replaceAllLiterally(runScriptTag, runScriptContent)
 
         logFine("HTML delivered:\n" + text)
         text
     }
 
-    def wrapBody(content: Elem, pageTitle: String): String = wrapBody(content, pageTitle, None)
+    def wrapBody(content: Elem, pageTitle: String, refresh: Option[Int]): String = wrapBody(content, pageTitle, refresh, false, None)
+
+    def wrapBody(content: Elem, pageTitle: String): String = wrapBody(content, pageTitle, None, false, None)
 
     def setResponse(text: String, response: Response, status: Status): Unit = {
         response.setStatus(status)
@@ -882,58 +903,5 @@ object WebUtil {
         }
     }
 
-    /**
-     * Determine if the user needs to be asked to associate the machine with the DICOM
-     * files.  If there are DICOM files, but no known machines associated with them, then
-     * return true.
-     */
-    //    def machineSpecRequired(valueMap: ValueMapT): Boolean = {
-    //        val dicomList = attributeListsInSession(valueMap)
-    //        val machineList = dicomList.map(al => attributeListToMachine(al)).flatten
-    //        dicomList.nonEmpty && machineList.isEmpty
-    //    }
-
-    def main(args: Array[String]): Unit = {
-
-        val empty = <a></a>;
-        val noAttr = empty.attributes
-        println("noAttr: " + noAttr)
-
-        val one = <a foo='bar' goo='gar'></a>;
-        val oneAttr = one.attributes
-        println("oneAttr: " + oneAttr)
-
-        val x0 = (<aa></aa>) % noAttr
-        val x1 = (<aa></aa>) % oneAttr
-
-        def show(key: String, met: MetaData): Unit = {
-            val v = met.get(key)
-            val text = if (v.isDefined) v.get.toString else "None"
-            println(key + " : " + text)
-        }
-
-        show("foo", oneAttr)
-
-        val md = oneAttr.remove("foo")
-        val newFoo = <a foo='LOO'/>.attributes
-        val one2 = <a/> % newFoo
-        show("foo", one2.attributes)
-
-        val newFoo3 = <a foo='ReplaceMe'/>
-        show("foo", newFoo3.attributes)
-        val one3 = newFoo3 % (<a foo='RRROOO'/>.attributes)
-        show("foo", one3.attributes)
-
-        /*
-        println("x0: " + xmlToText(x0))
-        println("x1: " + xmlToText(x1))
-
-        val b = ButtonType.BtnInfo
-        println("b.toString: " + b.toString)
-        val text = "11\n55\n90890890"
-        val stuff = <aa>{ text }</aa>
-        println(xmlToText(stuff))
-        */
-    }
 }
 

@@ -16,6 +16,7 @@ import org.aqa.run.Run
 import org.aqa.Util
 import org.aqa.web.WebUtil
 import org.aqa.db.CentralAxis
+import org.aqa.db.Institution
 import org.restlet.Restlet
 import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.TagFromName
@@ -29,10 +30,33 @@ import org.aqa.run.ActiveProcess
 import org.aqa.db.LeafOffsetCorrection
 import org.aqa.db.LeafTransmission
 import scala.xml.Elem
+import java.util.Date
+import org.aqa.db.User
+import org.aqa.db.Output
+import org.aqa.db.DbSetup
+import org.aqa.Config
 
 object LOCRun_1 {
     val parametersFileName = "parameters.xml"
     val LOCRun_1PKTag = "LOCRun_1PK"
+
+    def main(args: Array[String]): Unit = {
+        println("Starting")
+        val valid = Config.validate
+        DbSetup.init
+        val procedure = Procedure.get(2).get
+
+        val lr = new LOCRun_1(procedure)
+        val output = Output.get(55).get
+
+        val ap = new ActiveProcess(output, null, null, null)
+
+        lr.postPerform(ap)
+
+        println("Done")
+
+    }
+
 }
 
 /**
@@ -130,38 +154,160 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         }
     }
 
+    private def makeDisplay(output: Output, outputPK: Long): String = {
+
+        val machine = for (machPK <- output.machinePK; mach <- Machine.get(machPK)) yield (mach)
+
+        val machineId = machine match {
+            case Some(mach) => mach.id
+            case _ => ""
+        }
+
+        val institution = for (mach <- machine; inst <- Institution.get(mach.institutionPK)) yield (inst)
+
+        val institutionName = institution match {
+            case Some(inst) => inst.name
+            case _ => ""
+        }
+
+        val user = for (userPK <- output.userPK; u <- User.get(userPK)) yield (u)
+
+        val userId = user match {
+            case Some(u) => u.id
+            case _ => ""
+        }
+
+        val elapsed: String = {
+            output.finishDate match {
+                case Some(finDate) => {
+                    val elapsed = finDate.getTime - output.startDate.getTime
+                    Util.elapsedTimeHumanFriendly(elapsed)
+                }
+                case _ => ""
+            }
+        }
+
+        val analysisDate: String = {
+            val date = output.analysisDate match {
+                case Some(d) => d
+                case _ => output.startDate
+            }
+            Util.timeHumanFriendly(date)
+        }
+
+        def dateToString(date: Option[Date]): String = {
+            date match {
+                case Some(date) => Util.timeHumanFriendly(date)
+                case _ => "unknown"
+            }
+        }
+
+        val procedureDesc: String = {
+            Procedure.get(output.procedurePK) match {
+                case Some(proc) =>
+                    proc.name + " : " + proc.version
+                case _ => ""
+            }
+        }
+
+        case class LeafValue(section: String, leafIndex: Int, value: Double);
+        def groupToDataString(group: Seq[LeafValue]): String = {
+            val sorted = group.sortWith((a, b) => a.leafIndex < b.leafIndex)
+            "            ['Position" + sorted.head.section + "'," + sorted.map(x => x.value).toSeq.mkString(", ") + "]"
+        }
+        def leavesToString(leaves: Seq[Int]): String = {
+            "            ['Leaf'," + leaves.mkString(", ") + "]"
+        }
+
+        val transData = LeafTransmission.getByOutput(outputPK).map(v => new LeafValue(v.section, v.leafIndex, v.transmission_pct))
+        val transLeaves = transData.map(_.section).distinct.sorted
+
+        val offsetDataText: String = {
+            val data = LeafOffsetCorrection.getByOutput(outputPK).map(v => new LeafValue(v.section, v.leafIndex, v.correction_mm))
+            val leaves = data.map(_.leafIndex).distinct.sorted
+            val groupList = data.groupBy(_.section).map(lo => lo._2).toSeq.sortWith((a, b) => a.head.section > b.head.section)
+            leavesToString(leaves) + ",\n" + groupList.map(g => groupToDataString(g)).mkString(",\n")
+        }
+
+        val transDataText: String = {
+            val data = LeafTransmission.getByOutput(outputPK).map(v => new LeafValue(v.section, v.leafIndex, v.transmission_pct))
+            val leaves = data.map(_.leafIndex).distinct.sorted
+            val groupList = data.groupBy(_.section).map(lo => lo._2).toSeq.sortWith((a, b) => a.head.section > b.head.section)
+            leavesToString(leaves) + ",\n" + groupList.map(g => groupToDataString(g)).mkString(",\n")
+        }
+
+        def runScript = {
+
+            """
+            <script>
+            var LocChart = c3.generate({
+                data: {
+                    x: 'Leaf',
+                    columns: [
+                        """ + offsetDataText +
+                """,
+                    ]
+                },
+                bindto : '#LocChart',
+                color : {
+                    pattern : [ '#8888bb', '#9999cc', '#aaaadd', '#bbbbee', '#ddddff' ]
+                }
+            });
+
+            var TransChart = c3.generate({
+                data: {
+                    x: 'Leaf',
+                    columns: [
+                        """ + transDataText +
+                """,
+                    ]
+                },
+                bindto : '#TransChart',
+                color : {
+                    pattern : [ '#88bb88', '#99cc99', '#aaddaa', '#bbeebb', '#ddffdd' ]
+                }
+            });
+            </script>
+"""
+        }
+
+        def make: String = {
+            val div = {
+                <div>
+                    <h2>LOC Report</h2>
+                    <p>Machine:{ machineId }</p>
+                    <p>Institution:{ institutionName }</p>
+                    <p>Test:{ dateToString(output.dataDate) }</p>
+                    <p>Analysis:{ analysisDate }</p>
+                    <p>Analysis by:{ userId }</p>
+                    <p>Procedure:{ procedureDesc }</p>
+                    <p>Status:{ output.status.toString }</p>
+                    <div id="LocChart"></div>
+                    <p></p>
+                    <div id="TransChart"></div>
+                </div>
+            }
+
+            wrapBody(div, "LOC", None, true, Some(runScript))
+        }
+
+        make
+    }
+
     override def postPerform(activeProcess: ActiveProcess): Unit = {
-        def writeOffset(outputPK: Long, dir: File) = {
-            val offset = LeafOffsetCorrection.getByOutput(outputPK)
-        }
-        def writeTrans(outputPK: Long, dir: File) = {
-            val trans = LeafTransmission.getByOutput(outputPK)
-        }
-
-        def makeDisplay: Elem = {
-            val machine = activeProcess.output.machinePK match {
-                case Some(machPK) => Machine.get(machPK)
-                case _ => None
-            }
-
-            if (true) {
-                // TODO continue working here
-                val machine = for (machPK <- activeProcess.output.machinePK; mach <- Machine.get(machPK)) Seq(mach)
-            }
-            machine.get.id
-
-            <div>
-                <h2>LOC Report</h2>
-                Institution:{}
-                Machine:{ "" }
-            </div>
-        }
+        //        def writeOffset(outputPK: Long, dir: File) = {
+        //            val offset = LeafOffsetCorrection.getByOutput(outputPK)
+        //        }
+        //        def writeTrans(outputPK: Long, dir: File) = {
+        //            val trans = LeafTransmission.getByOutput(outputPK)
+        //        }
 
         activeProcess.output.outputPK match {
             case Some(outputPK) => {
-                writeOffset(outputPK, activeProcess.output.dir)
-                writeTrans(outputPK, activeProcess.output.dir)
-                val content = makeDisplay
+                val content = makeDisplay(activeProcess.output, outputPK)
+                val file = new File(activeProcess.output.dir, Output.displayFilePrefix + ".html")
+                logInfo("Writing file " + file.getAbsolutePath)
+                Util.writeFile(file, content)
             }
             case None => ;
         }
