@@ -21,7 +21,6 @@ import edu.umro.ScalaUtil.Trace
 object LeafCorrectionTransmissionProcedure {
 
     def curDir = new File(System.getProperty("user.dir"))
-    // private val curDir = new File("""D:\AQA_Data\data\Chicago_33\TB5x_1\WinstonLutz_1.0_1\2016-12-09T09-50-54-361_134\output_2016-12-09T09-50-54-490""") // TODO rm
 
     private def getExcelFile: Workbook = {
         println("Using curDir: " + curDir.getAbsolutePath)
@@ -107,7 +106,7 @@ object LeafCorrectionTransmissionProcedure {
 
             val sheetSpecList: List[SheetSpec] = List(
                 new SheetSpec(Seq("LOC", "Sheet1"), "LeafOffsetCorrectionList", "LeafOffsetCorrection_mm", true),
-                new SheetSpec(Seq("Trans", "Transmission", "Sheet1"), "LeafTransmissionList", "LeafTransmission_pct", true))
+                new SheetSpec(Seq("Trans", "Transmission", "Sheet2"), "LeafTransmissionList", "LeafTransmission_pct", true))
 
             val elemList = sheetSpecList.map(ss => ss.process(workbook)).flatten
 
@@ -122,7 +121,7 @@ object LeafCorrectionTransmissionProcedure {
 
             val html = WebUtil.excelToHtml(workbook)
 
-            val outFile = new File(curDir, "display.html")
+            val outFile = new File(curDir, "spreadsheet.html")
             Util.writeFile(outFile, html)
             println("wrote Excel as HTML")
         }

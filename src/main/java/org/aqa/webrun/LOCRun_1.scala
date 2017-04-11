@@ -35,6 +35,11 @@ import org.aqa.db.User
 import org.aqa.db.Output
 import org.aqa.db.DbSetup
 import org.aqa.Config
+import org.aqa.run.ProcedureStatus
+import org.aqa.db.DataValidity
+import java.sql.Timestamp
+import org.aqa.db.Input
+import org.aqa.web.ViewOutput
 
 object LOCRun_1 {
     val parametersFileName = "parameters.xml"
@@ -54,7 +59,6 @@ object LOCRun_1 {
         lr.postPerform(ap)
 
         println("Done")
-
     }
 
 }
@@ -63,6 +67,9 @@ object LOCRun_1 {
  * Run LOC code.
  */
 class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with PostProcess {
+
+    /** Defines precision - Format to use when showing numbers. */
+    val outputFormat = "%7.5e"
 
     def machineList() = ("-1", "None") +: Machine.list.toList.map(m => (m.machinePK.get.toString, m.id))
 
@@ -74,7 +81,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
     private val runButton = makeButton("Run", true, ButtonType.BtnDefault)
     private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
 
-    private def form = new WebForm(procedure.webUrl, List(List(runButton, cancelButton)), 6)
+    private def form = new WebForm(procedure.webUrl, Some("LOC"), List(List(runButton, cancelButton)), 6)
 
     private def emptyForm(valueMap: ValueMapT, response: Response) = {
         form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
@@ -111,9 +118,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
                 val machPK = runReq.machine.machinePK.get
 
                 val dtp = Util.dateTimeAndPatientIdFromDicom(runReq.sessionDir)
-
-                val j = this.asInstanceOf[PostProcess]
-                Run.run(procedure, Machine.get(machPK).get, runReq.sessionDir, request, response, dtp.PatientID, dtp.dateTime, Some(j))
+                Run.run(procedure, Machine.get(machPK).get, runReq.sessionDir, request, response, dtp.PatientID, dtp.dateTime, Some(this.asInstanceOf[PostProcess]))
             }
             case Left(errMap) => form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
         }
@@ -178,13 +183,12 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         }
 
         val elapsed: String = {
-            output.finishDate match {
-                case Some(finDate) => {
-                    val elapsed = finDate.getTime - output.startDate.getTime
-                    Util.elapsedTimeHumanFriendly(elapsed)
-                }
-                case _ => ""
+            val fin = output.finishDate match {
+                case Some(finDate) => finDate.getTime
+                case _ => System.currentTimeMillis
             }
+            val elapsed = fin - output.startDate.getTime
+            Util.elapsedTimeHumanFriendly(elapsed)
         }
 
         val analysisDate: String = {
@@ -210,11 +214,19 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
             }
         }
 
+        //  import         org.apache.
+
+        //  org.apache.commons.math4.util.Precision.
+        //   org.apache.commons.ma
         case class LeafValue(section: String, leafIndex: Int, value: Double);
+
         def groupToDataString(group: Seq[LeafValue]): String = {
+            /** Number of digits of precision to display. */
+            def fmt(d: Double): String = d.formatted("%7.5e")
             val sorted = group.sortWith((a, b) => a.leafIndex < b.leafIndex)
-            "            ['Position" + sorted.head.section + "'," + sorted.map(x => x.value).toSeq.mkString(", ") + "]"
+            "            ['Position" + sorted.head.section + "'," + sorted.map(x => x.value).toSeq.map(d => fmt(d)).mkString(", ") + "]"
         }
+
         def leavesToString(leaves: Seq[Int]): String = {
             "            ['Leaf'," + leaves.mkString(", ") + "]"
         }
@@ -236,8 +248,15 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
             leavesToString(leaves) + ",\n" + groupList.map(g => groupToDataString(g)).mkString(",\n")
         }
 
-        def runScript = {
+        val linkToFiles: Elem = {
+            val url = ViewOutput.path + "?outputPK=" + outputPK + "&summary=true"
+            <a href={ url }>Files</a>
+        }
 
+        /**
+         * Javascript to display the graphs.
+         */
+        def runScript = {
             """
             <script>
             var LocChart = c3.generate({
@@ -249,6 +268,17 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
                     ]
                 },
                 bindto : '#LocChart',
+                axis: {
+                    x: {
+                        label: 'Leaf',
+                    },
+                    y: {
+                        label: 'Error in mm',
+                        tick: {
+                            format: d3.format('.4f')
+                        }
+                    }
+                },
                 color : {
                     pattern : [ '#8888bb', '#9999cc', '#aaaadd', '#bbbbee', '#ddddff' ]
                 }
@@ -263,6 +293,14 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
                     ]
                 },
                 bindto : '#TransChart',
+                axis: {
+                    x: {
+                        label: 'Leaf',
+                    },
+                    y: {
+                        label: 'Percent Transmission'
+                    }
+                },
                 color : {
                     pattern : [ '#88bb88', '#99cc99', '#aaddaa', '#bbeebb', '#ddffdd' ]
                 }
@@ -273,18 +311,30 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
         def make: String = {
             val div = {
-                <div>
-                    <h2>LOC Report</h2>
-                    <p>Machine:{ machineId }</p>
-                    <p>Institution:{ institutionName }</p>
-                    <p>Test:{ dateToString(output.dataDate) }</p>
-                    <p>Analysis:{ analysisDate }</p>
-                    <p>Analysis by:{ userId }</p>
-                    <p>Procedure:{ procedureDesc }</p>
-                    <p>Status:{ output.status.toString }</p>
-                    <div id="LocChart"></div>
-                    <p></p>
-                    <div id="TransChart"></div>
+                <div class="row col-md-10 col-md-offset-1">
+                    <div class="row">
+                        <div class="col-md-1" title="Leaf Offset Constancy and Transmission"><h2>LOC</h2></div>
+                        <div class="col-md-2 col-md-offset-1" title="Machine"><h2>{ machineId }</h2></div>
+                    </div>
+                    <div class="row" style="margin:20px;">
+                        <div class="col-md-1"><em>Institution:</em>{ institutionName }</div>
+                        <div class="col-md-2"><em>Data Acquisition:</em><br/>{ dateToString(output.dataDate) }</div>
+                        <div class="col-md-2"><em>Analysis:</em><br/>{ analysisDate }</div>
+                        <div class="col-md-1"><em>Elapsed:</em>{ elapsed }</div>
+                        <div class="col-md-1"><em>Analysis by:</em>{ userId }</div>
+                        <div class="col-md-2"><em>Procedure:</em>{ procedureDesc }</div>
+                        <div class="col-md-2">{ linkToFiles }</div>
+                    </div>
+                    <div class="row">
+                        <h4>Leaf Offset in mm</h4>
+                    </div>
+                    <div class="row">
+                        <div id="LocChart"></div>
+                        <h4>Leaf Transmission Percent</h4>
+                    </div>
+                    <div class="row">
+                        <div id="TransChart"></div>
+                    </div>
                 </div>
             }
 
@@ -304,7 +354,8 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
         activeProcess.output.outputPK match {
             case Some(outputPK) => {
-                val content = makeDisplay(activeProcess.output, outputPK)
+                val output = Output.get(outputPK).get
+                val content = makeDisplay(output, outputPK)
                 val file = new File(activeProcess.output.dir, Output.displayFilePrefix + ".html")
                 logInfo("Writing file " + file.getAbsolutePath)
                 Util.writeFile(file, content)

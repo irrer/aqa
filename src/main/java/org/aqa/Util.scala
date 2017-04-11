@@ -16,6 +16,8 @@ import gnu.crypto.hash.HashFactory
 import gnu.crypto.prng.BasePRNG
 import gnu.crypto.prng.PRNGFactory
 import scala.util.Random
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 object Util {
 
@@ -233,6 +235,9 @@ object Util {
 
     def main(args: Array[String]): Unit = {
 
+        val list: Seq[Double] = Seq(234.29847234, 0.00000023424, 2398472742.12341234)
+        list.map(d => println("    " + d.toString + " --> " + d.formatted("%7.5f") + " ==> " + d.formatted("%7.5e")))
+        
         println("thisJarFile: " + thisJarFile.getAbsolutePath)
 
         val fileNameList = List(

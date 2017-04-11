@@ -358,9 +358,9 @@ object Run {
                 userPK,
                 new Timestamp(startDate.getTime),
                 finishDate = None,
-                dataDate = None, // TODO get from output.xml file
+                dataDate = for (a <- acquisitionDate) yield new Timestamp(a), // TODO get from output.xml file
                 analysisDate = None, // TODO get from output.xml file
-                machinePK = None, // TODO get from output.xml file
+                machinePK = machine.machinePK,
                 status = ProcedureStatus.running.toString,
                 dataValidity = DataValidity.valid.toString)
             tempOutput.insert

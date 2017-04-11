@@ -255,9 +255,9 @@ object WebUtil {
                             <div class="col-md-1 col-md-offset-9">
                                 <strong>
                                     <br> </br>
-                                    <a href="/static/admin.html">Administration</a>
-                                    <br> </br>
                                     <a href="/view/OutputList">Results</a>
+                                    <br> </br>
+                                    <a href="/static/admin.html">Administration</a>
                                 </strong>
                             </div>
                             <div class="col-md-2">
@@ -321,9 +321,10 @@ object WebUtil {
 
     val sessionLabel = "session"
 
-    class WebForm(action: String, rowList: List[WebRow], fileUpload: Int) extends ToHtml {
+    class WebForm(action: String, title: Option[String], rowList: List[WebRow], fileUpload: Int) extends ToHtml {
 
-        def this(action: String, rowList: List[WebRow]) = this(action, rowList, 0)
+        def this(action: String, rowList: List[WebRow]) = this(action, None, rowList, 0)
+        def this(action: String, rowList: List[WebRow], fileUpload: Int) = this(action, None, rowList, fileUpload)
 
         val rowListWithSession = (new WebInputSession) ++ rowList
 
@@ -366,6 +367,13 @@ object WebUtil {
                 <script>{ text }</script>
             }
 
+            val titleHtml: Elem = {
+                title match {
+                    case Some(t) => <h2>{ t }</h2>
+                    case _ => <div/>
+                }
+            }
+
             val html = {
                 if (validCol(fileUpload)) {
                     val sessionId: String = valueMapWithSession.get(sessionLabel).get
@@ -382,7 +390,7 @@ object WebUtil {
                         val hasError = errorMap.get(uploadFileInput.get.label).isDefined
                         val borderColor = if (hasError) "#a94442" else "#cccccc"
                         val uploadForm = {
-                            val cssStyle = "border-color: " + borderColor + "; border-width: 1px; border-radius: 10px;"
+                            val cssStyle = "border-color: " + borderColor + "; border-width: 1px; border-radius: 10px; margin-bottom: 15px;"
                             <form action={ action + "?" + sessionLabel + "=" + sessionId } class={ formClass } id="uploadFile" style={ cssStyle }></form>
                         }
                         if (hasError) {
@@ -407,6 +415,7 @@ object WebUtil {
             }
 
             <div class={ "row " + colToName(10, 1) }>
+                { titleHtml }
                 { html }
             </div>
         }
