@@ -5,10 +5,10 @@ import scala.xml.Elem
 import org.aqa.db.Institution
 import org.aqa.web.WebUtil._
 
-object InstitutionList {
-    val path = WebUtil.pathOf(WebUtil.SubUrl.admin, InstitutionList.getClass.getName)
-
-    def redirect(response: Response) = response.redirectSeeOther(path)
+object InstitutionList {    
+    private val path = new String((new InstitutionList).pathOf)
+    
+    def redirect(response: Response) = redirectSeeOthr(response, path)
 }
 
 class InstitutionList extends GenericList[Institution] with WebUtil.SubUrlAdmin {

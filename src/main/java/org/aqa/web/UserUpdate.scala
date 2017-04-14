@@ -77,7 +77,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
             if (pk.size > 0) { "?" + userPK.label + "=" + pk }
             else
                 ""
-        response.redirectSeeOther(pathOf + suffix)
+        redirectSeeOthr(response, pathOf + suffix)
     }
 
     private def emptyId(valueMap: ValueMapT): StyleMapT = {

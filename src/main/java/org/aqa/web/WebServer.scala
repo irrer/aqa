@@ -8,6 +8,7 @@ import java.io.File
 import edu.umro.RestletUtil.RestletHttps
 import edu.umro.RestletUtil.ExpiresLaterFilter
 import org.restlet.routing.Router
+import org.restlet.routing.Redirector
 import org.aqa.Config
 import org.restlet.routing.Template
 import org.restlet.data.Protocol
@@ -127,7 +128,11 @@ class WebServer extends Application {
         router.attach(url, restlet)
     }
 
-    private lazy val router = new Router(getContext.createChildContext)
+    private lazy val router = {
+        val r = new Router(getContext.createChildContext)
+        val redirector = new Redirector(getContext, "/target?referer={fi}", Redirector.MODE_CLIENT_SEE_OTHER)
+        r
+    }
 
     private lazy val staticDirRestlet = makeDirectory(staticDirFile)
 
@@ -207,6 +212,21 @@ class WebServer extends Application {
         try {
             router.setDefaultMatchingMode(Template.MODE_STARTS_WITH)
 
+            if (false) { // TODO rm
+
+                //val j = org.restlet.util.Resolver.createResolver(null)
+                //    val res = new Resolver
+
+                val to = "https://automatedqualityassurance.org/"
+                class MyRedir(context: Context, targetPattern: String, mode: Int) extends Redirector(context, targetPattern, mode) {
+                    override def handle(request: Request, response: Response) {
+                        super.handle(request, response)
+                    }
+                }
+                val redir = new Redirector(getContext, to, Redirector.MODE_CLIENT_SEE_OTHER)
+                val templateRoute = router.attachDefault(redir)
+            }
+
             component.getClients.add(Protocol.FILE)
 
             attach(router, WebServer.staticDirBaseUrl, staticDirRestlet)
@@ -239,6 +259,8 @@ class WebServer extends Application {
                 setPassword)
 
             restletList.map(r => attach(router, WebUtil.SubUrl.url(r.subUrl, WebUtil.cleanClassName(r.getClass.getName)), r))
+
+            restletList.map(r => attach(router, r.pathOf, r))
 
             val viewOutput = new ViewOutput
             attach(router, WebUtil.SubUrl.url(viewOutput.subUrl, WebUtil.cleanClassName(viewOutput.getClass.getName)), viewOutput)

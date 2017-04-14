@@ -7,9 +7,9 @@ import org.aqa.db.User.UserInstitution
 import org.aqa.web.WebUtil._
 
 object UserList {
-    val path = WebUtil.pathOf(WebUtil.SubUrl.admin, UserList.getClass.getName)
-
-    def redirect(response: Response) = response.redirectSeeOther(path)
+    private val path = new String((new UserList).pathOf)
+    
+    def redirect(response: Response) = redirectSeeOthr(response, path)
 }
 
 class UserList extends GenericList[UserInstitution] with WebUtil.SubUrlAdmin {

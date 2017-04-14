@@ -18,12 +18,12 @@ import edu.umro.util.Utility
 import org.aqa.Logging._
 
 object OutputList {
-    val path = WebUtil.pathOf(WebUtil.SubUrl.view, OutputList.getClass.getName)
-
     val dataValidityTag = "dataValidity"
     val deleteTag = "delete"
 
-    def redirect(response: Response) = response.redirectSeeOther(path)
+    private val path = new String((new OutputList).pathOf)
+
+    def redirect(response: Response) = redirectSeeOthr(response, path)
 }
 
 class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlView {

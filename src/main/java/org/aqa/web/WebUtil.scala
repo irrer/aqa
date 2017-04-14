@@ -35,6 +35,7 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.TagFromName
 import org.aqa.db.Machine
+import org.restlet.data.Protocol
 
 object WebUtil {
 
@@ -56,6 +57,16 @@ object WebUtil {
     def cleanClassName(className: String) = className.substring(className.lastIndexOf('.') + 1).replace("$", "")
 
     def pathOf(subUrl: SubUrl.Value, className: String) = "/" + subUrl + "/" + cleanClassName(className)
+
+    def pathOf(subUrl: SubUrl.Value, any: Any) = "/" + subUrl + "/" + cleanClassName(any.getClass.getName)
+
+    /**
+     * Use the referrer reference to build a full path from a relative path.
+     */
+    def relativeUrlToFullPath(response: Response, path: String): String = {
+        response.getRequest.getReferrerRef.getHostIdentifier
+        response.getRequest.getReferrerRef.getHostIdentifier + path
+    }
 
     /**
      * Extract name/value parameters from request.
@@ -912,5 +923,15 @@ object WebUtil {
         }
     }
 
+    /**
+     * Redirect to a fully qualified URL.
+     */
+    def redirectSeeOthr(response: Response, path: String): Unit = {
+        val fullPath = {
+            if (path.startsWith("/")) relativeUrlToFullPath(response, path)
+            else path
+        }
+        response.redirectSeeOther(fullPath)
+    }
 }
 

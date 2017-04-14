@@ -6,9 +6,9 @@ import org.aqa.db.EPID
 import org.aqa.web.WebUtil._
 
 object EPIDList {
-    val path = WebUtil.pathOf(WebUtil.SubUrl.admin, EPIDList.getClass.getName)
+    private val path = new String((new EPIDList).pathOf)
 
-    def redirect(response: Response) = response.redirectSeeOther(path)
+    def redirect(response: Response) = redirectSeeOthr(response, path)
 }
 
 class EPIDList extends GenericList[EPID] with WebUtil.SubUrlAdmin {

@@ -1,40 +1,23 @@
 <?xml version='1.0' encoding='utf-8'?>
 
-<!-- Generic Configuration for AQA -->
+<!-- Development Configuration for AQA -->
 
 <AQAConfig>
     
     <!-- List of System properties that should be set. -->
     <PropertyList>
         <Property Name='slick.dbs.default.db.url'>jdbc:postgresql://141.214.125.68:5432/AQATest</Property>
-        <!-- <Property Name='slick.dbs.default.db.url'>jdbc:postgresql://141.214.125.68:5432/Tonto</Property> -->
         <Property Name='slick.dbs.default.db.user'>postgres</Property>
         <Property Name='slick.dbs.default.db.password'>postgresjim</Property>
+
         <Property Name='slick.dbs.default.driver'>slick.driver.PostgresDriver$</Property>
         <Property Name='slick.dbs.default.db.driver'>org.postgresql.Driver</Property>
-        <!-- These below make no difference. -->
-        <!--
-        <Property Name='s.c'                                          >INFO</Property>
-        <Property Name='logger'                                       >INFO</Property>
-        <Property Name='logger.scala'                                 >INFO</Property>
-        <Property Name='logger.scala.slick'                           >INFO</Property>
-        <Property Name='logger.scala.slick.session'                   >INFO</Property>
-        <Property Name='logger.scala.slick.jdbc.JdbcBackend.statement'>INFO</Property>
-        <Property Name='logger.scala.slick.jdbc'                      >INFO</Property>
-       
-        <Property Name='slick'                                        >INFO</Property>
-        <Property Name='slick.compiler'                               >INFO</Property>
-        <Property Name='slick.compiler.CodeGen'                       >INFO</Property>
-        
-        <Property Name='slick.relational'                             >INFO</Property>
-        <Property Name='slick.relational.ResultConverterCompiler'     >INFO</Property>
-        -->
     </PropertyList>
 
     <!-- Port number for the Secure ReST service.   Port 443 is the default for HTTPS.
     If this is missing or commented out, then the server will instead use HTTP on port 80.   Alternately,
     if this is specified, then the JavaKeyStoreFileList and JavaKeyStorePassword must be given. -->
-    <!-- -->   <HTTPSPort>9443</HTTPSPort> 
+    <HTTPSPort>9443</HTTPSPort> 
     
     <!-- Location of file that contains Java Key Store for HTTPS.  If multiple names are given, then they are
     each tried in the order given until a readable file is found. -->

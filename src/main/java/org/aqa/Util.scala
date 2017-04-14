@@ -235,9 +235,22 @@ object Util {
 
     def main(args: Array[String]): Unit = {
 
+        if (false) {
+            val j = this
+
+            def doit(j: Any) = {
+                val j1 = j.getClass
+                val j2 = j1.getName
+                val j3 = org.aqa.web.WebUtil.cleanClassName(j2)
+                val j4 = org.aqa.web.WebUtil.pathOf(org.aqa.web.WebUtil.SubUrl.admin, this)
+                println("ey")
+            }
+            doit(j)
+        }
+
         val list: Seq[Double] = Seq(234.29847234, 0.00000023424, 2398472742.12341234)
         list.map(d => println("    " + d.toString + " --> " + d.formatted("%7.5f") + " ==> " + d.formatted("%7.5e")))
-        
+
         println("thisJarFile: " + thisJarFile.getAbsolutePath)
 
         val fileNameList = List(

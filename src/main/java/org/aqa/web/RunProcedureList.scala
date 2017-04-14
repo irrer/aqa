@@ -8,9 +8,9 @@ import org.aqa.web.WebUtil._
 // TODO can this file be removed?
 
 object XRunProcedureList {
-    val path = WebUtil.pathOf(WebUtil.SubUrl.run, ProcedureList.getClass.getName)
-
-    def redirect(response: Response) = response.redirectSeeOther(path)
+    private val path = new String((new XRunProcedureList).pathOf)
+    
+    def redirect(response: Response) = redirectSeeOthr(response, path)
 }
 
 class XRunProcedureList extends GenericList[Procedure.ProcedureUser] with WebUtil.SubUrlRun {

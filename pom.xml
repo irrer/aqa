@@ -137,7 +137,9 @@
                       <unzip dest="${dest.dir}" src="${resource.dir}/${yajsw}.zip"/>
                       <echo>Did unzip</echo>
                       <copy toDir="${dest.dir}" file="target/${project.artifactId}-${project.version}-jar-with-dependencies.jar"/>
-                      <copy toDir="${dest.dir}" file="${resource.dir}/AQAConfig.xml"/>
+                      <copy toFile="${dest.dir}/AQAConfig.xml" file="${resource.dir}/AQAConfigProd.xml"/>
+                      <copy toDir="${dest.dir}" file="${resource.dir}/AQAConfigProd.xml"/>
+                      <copy toDir="${dest.dir}" file="${resource.dir}/AQAConfigDev.xml"/>
                       <copy toDir="${dest.dir}">
                         <fileset includes="static/**" dir="${resource.dir}"/>
                       </copy>

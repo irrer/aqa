@@ -81,7 +81,7 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
             if (pk.size > 0) { "?" + procedurePK.label + "=" + pk }
             else
                 ""
-        response.redirectSeeOther(pathOf + suffix)
+        redirectSeeOthr(response, pathOf + suffix)
     }
 
     private def emptyName(valueMap: ValueMapT): StyleMapT = {

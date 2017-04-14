@@ -6,9 +6,9 @@ import org.aqa.db.Procedure
 import org.aqa.web.WebUtil._
 
 object ProcedureList {
-    val path = WebUtil.pathOf(WebUtil.SubUrl.admin, ProcedureList.getClass.getName)
-
-    def redirect(response: Response) = response.redirectSeeOther(path)
+    private val path = new String((new ProcedureList).pathOf)
+    
+    def redirect(response: Response) = redirectSeeOthr(response, path)
 }
 
 class ProcedureList extends GenericList[Procedure.ProcedureUser] with WebUtil.SubUrlAdmin {

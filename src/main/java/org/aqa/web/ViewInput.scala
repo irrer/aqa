@@ -24,7 +24,7 @@ import org.aqa.db.Machine
 
 
 object ViewInput {
-    val path = WebUtil.pathOf(WebUtil.SubUrl.view, ViewInput.getClass.getName)
+    private val path = new String((new InstitutionList).pathOf)
 
     val inputPKTag = "inputPK"
     val summaryTag = "summary"

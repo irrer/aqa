@@ -6,9 +6,9 @@ import org.aqa.web.WebUtil._
 import scala.xml.Elem
 
 object MachineList {
-    val path = WebUtil.pathOf(WebUtil.SubUrl.admin, MachineList.getClass.getName)
+    private val path = new String((new MachineList).pathOf)
 
-    def redirect(response: Response) = response.redirectSeeOther(path)
+    def redirect(response: Response) = redirectSeeOthr(response, path)
 }
 
 class MachineList extends GenericList[Machine.MMI] with WebUtil.SubUrlAdmin {

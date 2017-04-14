@@ -11,7 +11,7 @@ import org.restlet.routing.Filter
 object ExpLtrFilt {
     val path = "/UserList"
 
-    def redirect(response: Response) = response.redirectSeeOther(path)
+    def redirect(response: Response) = WebUtil.redirectSeeOthr(response, path)
 }
 
 class ExpLtrFilt(context: Context, interval: Long) extends Filter(context) {
@@ -24,7 +24,7 @@ class ExpLtrFilt(context: Context, interval: Long) extends Filter(context) {
             println("badness") // TODO rm
         if (response.getEntity != null) response.getEntity.setExpirationDate(expirationDate)
     }
-    
+
     override def beforeHandle(request: Request, response: Response): Int = {
         setExpiration(response)
         Filter.CONTINUE

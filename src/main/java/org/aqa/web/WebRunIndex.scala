@@ -8,10 +8,9 @@ import org.aqa.web.WebUtil._
 import java.util.Date
 
 object WebRunIndex {
-
-    val path = WebUtil.pathOf(WebUtil.SubUrl.run, WebRunIndex.getClass.getName)
-
-    def redirect(response: Response) = response.redirectSeeOther(path)
+    private val path = new String((new WebRunIndex).pathOf)
+    
+    def redirect(response: Response) = redirectSeeOthr(response, path)
 }
 
 class WebRunIndex extends GenericList[Procedure.ProcedureUser] with WebUtil.SubUrlRun {

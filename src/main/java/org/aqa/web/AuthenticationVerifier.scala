@@ -57,7 +57,7 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
         val requestedRole = getRequestedRole(request, response)
         //response.setStatus(Status.SUCCESS_OK)
         //response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
-        //  response.redirectSeeOther("/")  // On failure, send user to home page TODO
+        //redirectSeeOthr(response, "/")  // On failure, send user to home page TODO
         val UNAUTHORIZED = 100
         if (requestedRole == UserRole.publik) Verifier.RESULT_VALID
         else {
@@ -96,7 +96,7 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
                 val user = if (request.getChallengeResponse != null) request.getChallengeResponse.getIdentifier else "unknown"
                 logWarning("user " + user + " failed to log in.  Status: " + AuthenticationVerifier.verifierResultToString(result))
                 response.setStatus(Status.SUCCESS_OK) // TODO rm
-                response.redirectSeeOther("/NotAuthorized")
+                WebUtil.redirectSeeOthr(response, "/NotAuthorized")
                 Verifier.RESULT_INVALID
             }
             else result

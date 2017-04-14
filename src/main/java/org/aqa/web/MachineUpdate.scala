@@ -192,13 +192,13 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
     private def formEdit(valueMap: ValueMapT) = new WebForm(pathOf, fieldList(valueMap) :+ editButtonList)
 
-    private def redirect(response: Response, valueMap: ValueMapT) = {
-        val pk = machinePK.getValOrEmpty(valueMap)
-        val suffix =
-            if (pk.size > 0) { "?" + machinePK.label + "=" + pk }
-            else
-                ""
-    }
+//    private def redirect(response: Response, valueMap: ValueMapT) = {
+//        val pk = machinePK.getValOrEmpty(valueMap)
+//        val suffix =
+//            if (pk.size > 0) { "?" + machinePK.label + "=" + pk }
+//            else
+//                ""
+//    }
 
     private def emptyId(valueMap: ValueMapT): StyleMapT = {
         val idText = valueMap.get(id.label).get.trim
