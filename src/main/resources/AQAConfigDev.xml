@@ -1,0 +1,64 @@
+<?xml version='1.0' encoding='utf-8'?>
+
+<!-- Development Configuration for AQA -->
+
+<AQAConfig>
+    
+    <!-- List of System properties that should be set. -->
+    <PropertyList>
+        <Property Name='slick.dbs.default.db.url'>jdbc:postgresql://141.214.125.68:5432/AQATest</Property>
+        <Property Name='slick.dbs.default.db.user'>postgres</Property>
+        <Property Name='slick.dbs.default.db.password'>postgresjim</Property>
+
+        <Property Name='slick.dbs.default.driver'>slick.driver.PostgresDriver$</Property>
+        <Property Name='slick.dbs.default.db.driver'>org.postgresql.Driver</Property>
+    </PropertyList>
+
+    <!-- Port number for the Secure ReST service.   Port 443 is the default for HTTPS.
+    If this is missing or commented out, then the server will instead use HTTP on port 80.   Alternately,
+    if this is specified, then the JavaKeyStoreFileList and JavaKeyStorePassword must be given. -->
+    <HTTPSPort>9443</HTTPSPort> 
+    
+    <!-- Location of file that contains Java Key Store for HTTPS.  If multiple names are given, then they are
+    each tried in the order given until a readable file is found. -->
+    <JavaKeyStoreFileList>
+        <JavaKeyStoreFile>keystore.jks</JavaKeyStoreFile>
+        <JavaKeyStoreFile>C:\Program Files\UMRO\keystore.jks</JavaKeyStoreFile>
+        <JavaKeyStoreFile>src\main\resources\keystore.jks</JavaKeyStoreFile>
+    </JavaKeyStoreFileList>
+    
+    <!-- The password to access the Java Key Store file. -->
+    <JavaKeyStorePassword>9c067233b07c7b04025989a197fad9b12cf4c19006678e2b18b121289bd1635a2d395a603122a6e6</JavaKeyStorePassword> <!-- rodicom11dev -->
+    <!-- <JavaKeyStorePassword>44d18166c66bed60b6394e6625c63dea713dbe465ddc960a7cd109514bc0d2bd</JavaKeyStorePassword> -->     <!-- irrer -->
+    
+    <!-- Directory containing executables and configuration files to run procedures. -->
+    <ProgramDir>C:\Program Files\AQA</ProgramDir>
+
+    <!-- Directory containing procedures' executable code. -->
+    <ProcedureDir>D:\AQA_Procedures</ProcedureDir>
+
+    <!-- Directory containing input and output data consumed by and produced by procedures. -->
+    <DataDir>D:\AQA_Data</DataDir>
+
+    <!-- Database command to execute to run database commands. -->
+    <DatabaseCommand>D:\pf\PostgreSQL\9.3\bin\psql postgresql://141.214.125.68:5432/Tonto postgres</DatabaseCommand>
+
+    <!-- Authentication timeout.  Number of seconds for a user id+password pair to be cached before re-checking with database. -->
+    <AuthenticationTimeout>7200.0</AuthenticationTimeout>
+
+    <!-- Time of day as hours and minutes (HH:MM) that program will restart 
+    itself. This is done to avoid errors that build up over time.  The time is
+    formatted as a 24 hour clock, so 23:00 is eleven PM. -->
+    <RestartTime>3:10</RestartTime>
+
+    <!-- List of users that should have permissions to everything. -->
+    <UserWhiteList>
+        <User>irrer</User>
+        <User>jmmoran</User>
+    </UserWhiteList>
+    
+    <!-- Logging level for Restlet.  Messages at or above this severity level will be logged.
+    Possible values are: OFF FINE FINER FINEST INFO WARNING SEVERE ALL -->
+    <RestletLogLevel>WARNING</RestletLogLevel>
+
+</AQAConfig>

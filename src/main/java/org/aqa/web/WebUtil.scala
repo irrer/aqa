@@ -926,12 +926,13 @@ object WebUtil {
     /**
      * Redirect to a fully qualified URL.
      */
-    def redirectSeeOthr(response: Response, path: String): Unit = {
+    def XredirectSeeOthr(response: Response, path: String): Unit = {
         val fullPath = {
             if (path.startsWith("/")) relativeUrlToFullPath(response, path)
             else path
         }
-        response.redirectSeeOther(fullPath)
+        //response.redirectSeeOther(fullPath)  // TODO needed
+        response.redirectSeeOther(path)
     }
 }
 

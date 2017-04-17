@@ -89,7 +89,7 @@ class Login extends Restlet with SubUrlRoot {
     private def redirect(valueMap: ValueMapT, response: Response) {
         val continueUrlText = valueMap.get(continueUrl.label)
         val path = if (continueUrlText.isDefined && (continueUrlText.get.size > 0)) continueUrlText.get else "/"
-        redirectSeeOthr(response, path)
+        response.redirectSeeOther(path)
     }
 
     /**

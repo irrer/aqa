@@ -9,8 +9,8 @@ import org.aqa.db.User
 
 object MaintenanceRecordList {
     val path = new String((new MaintenanceRecordList).pathOf)
-    
-    def redirect(response: Response) = redirectSeeOthr(response, path)
+
+    def redirect(response: Response) = response.redirectSeeOther(path)
 }
 
 class MaintenanceRecordList extends GenericList[MaintenanceRecord] with WebUtil.SubUrlAdmin {

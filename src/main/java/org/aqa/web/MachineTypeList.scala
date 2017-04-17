@@ -8,7 +8,7 @@ import org.aqa.web.WebUtil._
 object MachineTypeList {
     private val path = new String((new MachineTypeList).pathOf)
 
-    def redirect(response: Response) = redirectSeeOthr(response, path)
+    def redirect(response: Response) = response.redirectSeeOther(path)
 }
 
 class MachineTypeList extends GenericList[MachineType] with WebUtil.SubUrlAdmin {

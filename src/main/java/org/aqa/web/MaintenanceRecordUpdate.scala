@@ -73,7 +73,7 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
 
     private def redirectToList(response: Response, valueMap: ValueMapT): Unit = {
         val path = WebUtil.pathOf(WebUtil.SubUrl.admin, MaintenanceRecordList.getClass.getName) + "?" + MachineUpdate.machinePKTag + "=" + valueMap(MachineUpdate.machinePKTag)
-        redirectSeeOthr(response, path)
+        response.redirectSeeOther(path)
     }
 
     private def emptySummary(valueMap: ValueMapT): StyleMapT = {

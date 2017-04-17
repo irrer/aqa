@@ -1,0 +1,47 @@
+<?xml version='1.0' encoding='utf-8'?>
+
+<!-- Production Configuration for AQA -->
+
+<AQAConfig>
+
+    <!-- List of System properties that should be set. -->
+    <PropertyList>
+        <Property Name='slick.dbs.default.db.url'>jdbc:postgresql://aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA?sslmode=require</Property>
+        <Property Name='slick.dbs.default.db.user'>aqa</Property>
+        <Property Name='slick.dbs.default.db.password'>Kwalitee_1</Property>
+
+        <Property Name='slick.dbs.default.driver'>slick.driver.PostgresDriver$</Property>
+        <Property Name='slick.dbs.default.db.driver'>org.postgresql.Driver</Property>
+    </PropertyList>
+    
+    <!-- Directory containing executables and configuration files to run procedures. -->
+    <ProgramDir>C:\Program Files\AQA</ProgramDir>
+
+    <!-- Directory containing procedures' executable code. -->
+    <ProcedureDir>C:\Program Files\AQA\AQA_Procedures</ProcedureDir>
+
+    <!-- Directory containing input and output data consumed by and produced by procedures. -->
+    <DataDir>C:\Program Files\AQA\AQA_Data</DataDir>
+
+    <!-- Database command to execute to run database commands. -->
+    <DatabaseCommand>D:\pf\PostgreSQL\9.3\bin\psql postgresql://141.214.125.68:5432/Tonto postgres</DatabaseCommand>
+
+    <!-- Authentication timeout.  Number of seconds for a user id+password pair to be cached before re-checking with database. -->
+    <AuthenticationTimeout>7200.0</AuthenticationTimeout>
+
+    <!-- Time of day as hours and minutes (HH:MM) that program will restart 
+    itself. This is done to avoid errors that build up over time.  The time is
+    formatted as a 24 hour clock, so 23:00 is eleven PM. -->
+    <RestartTime>3:10</RestartTime>
+
+    <!-- List of users that should have permissions to everything. -->
+    <UserWhiteList>
+        <User>irrer</User>
+        <User>jmmoran</User>
+    </UserWhiteList>
+    
+    <!-- Logging level for Restlet.  Messages at or above this severity level will be logged.
+    Possible values are: OFF FINE FINER FINEST INFO WARNING SEVERE ALL -->
+    <RestletLogLevel>WARNING</RestletLogLevel>
+
+</AQAConfig>

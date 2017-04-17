@@ -376,7 +376,7 @@ object Run {
         // show default summary as web page
         val clientId = OutputPending.add(request, output)
         val suffix = "?" + ViewOutput.outputPKTag + "=" + output.outputPK.get
-        WebUtil.redirectSeeOthr(response, ViewOutput.path + suffix)
+        response.redirectSeeOther(ViewOutput.path + suffix)
     }
 
     /** Fix-up procedures that were running when the server went down. */

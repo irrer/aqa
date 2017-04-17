@@ -9,8 +9,8 @@ import org.aqa.web.WebUtil._
 
 object XRunProcedureList {
     private val path = new String((new XRunProcedureList).pathOf)
-    
-    def redirect(response: Response) = redirectSeeOthr(response, path)
+
+    def redirect(response: Response) = response.redirectSeeOther(path)
 }
 
 class XRunProcedureList extends GenericList[Procedure.ProcedureUser] with WebUtil.SubUrlRun {

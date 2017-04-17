@@ -96,7 +96,7 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
                 val user = if (request.getChallengeResponse != null) request.getChallengeResponse.getIdentifier else "unknown"
                 logWarning("user " + user + " failed to log in.  Status: " + AuthenticationVerifier.verifierResultToString(result))
                 response.setStatus(Status.SUCCESS_OK) // TODO rm
-                WebUtil.redirectSeeOthr(response, "/NotAuthorized")
+                response.redirectSeeOther("/NotAuthorized")
                 Verifier.RESULT_INVALID
             }
             else result

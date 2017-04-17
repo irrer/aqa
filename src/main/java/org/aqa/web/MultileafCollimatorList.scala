@@ -7,8 +7,8 @@ import org.aqa.web.WebUtil._
 
 object MultileafCollimatorList {
     private val path = new String((new MultileafCollimatorList).pathOf)
-    
-    def redirect(response: Response) = redirectSeeOthr(response, path)
+
+    def redirect(response: Response) = response.redirectSeeOther(path)
 }
 
 class MultileafCollimatorList extends GenericList[MultileafCollimator] with WebUtil.SubUrlAdmin {

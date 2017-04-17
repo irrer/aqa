@@ -11,7 +11,7 @@ import org.restlet.routing.Filter
 object ExpLtrFilt {
     val path = "/UserList"
 
-    def redirect(response: Response) = WebUtil.redirectSeeOthr(response, path)
+    def redirect(response: Response) = response.redirectSeeOther(path)
 }
 
 class ExpLtrFilt(context: Context, interval: Long) extends Filter(context) {

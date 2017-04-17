@@ -13,10 +13,12 @@ import org.aqa.Config
 import org.restlet.routing.Template
 import org.restlet.data.Protocol
 import org.restlet.resource.Directory
+import org.restlet.data.Status
 import org.aqa.db.Procedure
 import org.aqa.webrun.WebRun
 import org.restlet.security.ChallengeAuthenticator
 import org.restlet.data.ChallengeScheme
+import org.restlet.data.Reference
 import org.restlet.security.MapVerifier
 import org.restlet.Context
 import org.restlet.Request
@@ -201,7 +203,71 @@ class WebServer extends Application {
         //println("new ChallAuthn 2") // TODO rm
         challAuthn.setVerifier(new AuthenticationVerifier(getRequestedRole _))
         challAuthn.setNext(restlet)
-        challAuthn
+
+        class RedirectUnauthorizedToLogin extends Filter {
+            override def afterHandle(request: Request, response: Response): Unit = {
+                if (response.getStatus == Status.CLIENT_ERROR_UNAUTHORIZED) {
+                    println("Send them to a login screen") // TODO send them to a login screen
+
+                    // This might work for setting the response:
+                    //val cr = new ChallengeResponse(WebServer.challengeScheme, "hey", "password")
+                    //request.setChallengeResponse(cr)
+                    response.setChallengeRequests(???)
+                }
+            }
+        }
+
+        val rutl = new RedirectUnauthorizedToLogin
+        rutl.setNext(challAuthn)
+        rutl
+
+        //challAuthn
+    }
+
+    class ResponseToReferrer(request: Request) extends Response(request) {
+        //        override def setLocationRef(locationUri: String): Unit = {
+        //            println("Setting ref: " + locationUri)
+        //            if (getRequest.getResourceRef != null) {
+        //                val baseRef: Reference =
+        //                    if (getRequest.getResourceRef.getBaseRef != null) {
+        //                        getRequest.getResourceRef.getBaseRef
+        //                    }
+        //                    else {
+        //                        getRequest.getResourceRef
+        //                    }
+        //                setLocationRef(new Reference(baseRef, locationUri).getTargetRef)
+        //            }
+        //        }
+    }
+
+    /**
+     * Filter all messages to fix REDIRECTION_SEE_OTHER messages so that they go to the
+     * 'right' place.  The AWS security layer translates https to http and back, but this
+     * server only sees them as http.  So when it does a redirection, it otherwise redirects
+     * the browser to http.  This is what this filter fixes.  This also works locally on
+     * the AWS host where the client does not go through the security layer but instead
+     * goes directly to the service via http.
+     */
+    private def resolveToReferer(restlet: Restlet): Restlet = {
+
+        class ResolveToRefererFilter extends Filter {
+
+            override def afterHandle(request: Request, response: Response): Unit = {
+                if ((response.getStatus == Status.REDIRECTION_SEE_OTHER) && (request.getReferrerRef != null)) {
+                    val locRef = response.getLocationRef
+                    val desiredHost = request.getReferrerRef.getHostIdentifier
+                    val path = locRef.toString.replaceAll("^" + request.getResourceRef.getHostIdentifier, desiredHost)
+                    response.redirectSeeOther(path)
+                    logInfo("Redirecting response via REDIRECTION_SEE_OTHER from/to:" +
+                        "\n    " + locRef +
+                        "\n    " + path)
+                }
+            }
+        }
+
+        val rToR = new ResolveToRefererFilter
+        rToR.setNext(restlet)
+        rToR
     }
 
     /**
@@ -274,7 +340,8 @@ class WebServer extends Application {
         auditFilter.setNext(authentication)
         auditFilter
         */
-            initAuthentication(router) // TODO remove if auth fails
+            val auth = initAuthentication(router) // TODO remove if auth fails
+            resolveToReferer(auth)
         }
         catch {
             case t: Throwable => {

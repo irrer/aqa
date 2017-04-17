@@ -116,7 +116,7 @@ class UploadAndChooseMachine_1(procedure: Procedure) extends WebRunProcedure(pro
 
         try {
             0 match {
-                case _ if buttonIs(valueMap, cancelButton) => redirectSeeOthr(response, "/")
+                case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
                 case _ if buttonIs(valueMap, runButton) => run(valueMap, request, response)
                 case _ => emptyForm(response)
             }

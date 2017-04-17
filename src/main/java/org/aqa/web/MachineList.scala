@@ -8,7 +8,7 @@ import scala.xml.Elem
 object MachineList {
     private val path = new String((new MachineList).pathOf)
 
-    def redirect(response: Response) = redirectSeeOthr(response, path)
+    def redirect(response: Response) = response.redirectSeeOther(path)
 }
 
 class MachineList extends GenericList[Machine.MMI] with WebUtil.SubUrlAdmin {

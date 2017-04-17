@@ -9,8 +9,8 @@ import java.util.Date
 
 object WebRunIndex {
     private val path = new String((new WebRunIndex).pathOf)
-    
-    def redirect(response: Response) = redirectSeeOthr(response, path)
+
+    def redirect(response: Response) = response.redirectSeeOther(path)
 }
 
 class WebRunIndex extends GenericList[Procedure.ProcedureUser] with WebUtil.SubUrlRun {

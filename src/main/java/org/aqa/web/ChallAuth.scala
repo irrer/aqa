@@ -21,13 +21,13 @@ class ChallAuth(context: Context, optional: Boolean, challengeScheme: ChallengeS
         extends ChallengeAuthenticator(context, optional, challengeScheme, "Enter your AQA password") {
 
     private def redirectToLogin(response: Response) = {
-        WebUtil.redirectSeeOthr(response, Login.path + "?" + Login.messageTag + "=You need to be logged in to perform this action.")
+        response.redirectSeeOther(Login.path + "?" + Login.messageTag + "=You need to be logged in to perform this action.")
         //response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
         //response.setStatus(Status.SUCCESS_OK)
     }
 
     private def redirectToBadPassword(response: Response) = {
-        WebUtil.redirectSeeOthr(response, Login.path + "?" + Login.messageTag + "=Password is incorrect")
+        response.redirectSeeOther(Login.path + "?" + Login.messageTag + "=Password is incorrect")
     }
 
     private def redirectToNotAuthorized(response: Response, userRole: UserRole.Value) = {
