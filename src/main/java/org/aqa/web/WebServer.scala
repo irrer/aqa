@@ -212,7 +212,7 @@ class WebServer extends Application {
                     // This might work for setting the response:
                     //val cr = new ChallengeResponse(WebServer.challengeScheme, "hey", "password")
                     //request.setChallengeResponse(cr)
-                    response.setChallengeRequests(???)
+                    //response.setChallengeRequests(???)
                 }
             }
         }
