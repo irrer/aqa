@@ -27,9 +27,13 @@ class MachineList extends GenericList[Machine.MMI] with WebUtil.SubUrlAdmin {
 
     private val typeCol = new Column[MMI]("Machine Type", _.machineType.toName, machineTypeHTML)
 
+    private val mlcCol = new Column[MMI]("MLC", _.mlc.model)
+
+    private val epidCol = new Column[MMI]("EPID", _.epid.model)
+
     private val institutionCol = new Column[MMI]("Institution", _.institution.name)
 
     private val notesCol = new Column[MMI]("Notes", _.machine.notes, notesHTML)
 
-    override val columnList = Seq(idCol, typeCol, institutionCol, notesCol)
+    override val columnList = Seq(idCol, typeCol, mlcCol, epidCol, institutionCol, notesCol)
 }

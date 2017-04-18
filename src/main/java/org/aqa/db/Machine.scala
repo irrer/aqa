@@ -144,15 +144,18 @@ object Machine {
     def list: Seq[Machine] = Db.run(query.result)
 
     /** Dependent types */
-    case class MMI(machine: Machine, machineType: MachineType, institution: Institution)
+    case class MMI(machine: Machine, machineType: MachineType, institution: Institution, mlc: MultileafCollimator, epid: EPID)
 
     def listWithDependencies: Seq[MMI] = {
         val action = for {
             machine <- query
             machineType <- MachineType.query if machineType.machineTypePK === machine.machineTypePK
             institution <- Institution.query if institution.institutionPK === machine.institutionPK
-        } yield (machine, machineType, institution)
-        Db.run(action.result).map(mmi => new MMI(mmi._1, mmi._2, mmi._3))
+            mlc <- MultileafCollimator.query if mlc.multileafCollimatorPK === machine.multileafCollimatorPK
+            epid <- EPID.query if epid.epidPK === machine.epidPK
+        } yield (machine, machineType, institution, mlc, epid)
+
+        Db.run(action.result).map(mmi => new MMI(mmi._1, mmi._2, mmi._3, mmi._4, mmi._5))
     }
 
     def listMachinesFromInstitution(institutionPK: Long): Seq[Machine] = {

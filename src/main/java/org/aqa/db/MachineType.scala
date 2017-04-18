@@ -22,7 +22,7 @@ case class MachineType(
 
     def insertOrUpdate = Db.run(MachineType.query.insertOrUpdate(this))
 
-    def toName: String = (manufacturer + " " + model + " " + version).trim
+    def toName: String = (model + " " + version).trim
 }
 
 object MachineType {

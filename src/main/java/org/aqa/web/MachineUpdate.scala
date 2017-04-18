@@ -99,7 +99,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     private val respiratoryManagement = new WebInputCheckbox("Respiratory Management", 3, 0)
     private val developerMode = new WebInputCheckbox("Developer Mode", 3, 0)
 
-    private def institutionList() = Institution.list.toList.map(i => (i.institutionPK.get.toString, i.name))
+    private def institutionList() = Institution.list.toList.sortBy(_.name).map(i => (i.institutionPK.get.toString, i.name))
 
     private val institutionPK = new WebInputSelect("Institution", 6, 0, institutionList)
 

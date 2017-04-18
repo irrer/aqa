@@ -304,7 +304,7 @@ object Run {
         val beamEnergyList = MachineBeamEnergy.getByMachine(machine.machinePK.get)
         writeMatlabMap(kvMap, beamEnergyList, output.dir)
 
-        val execute = procedure.execDir + File.separator + runCommandName
+        val execute = "\"" + procedure.execDir + File.separator + runCommandName + "\""
 
         val kvEnv = (kvMap ++ machBeamEnergyToEnv(beamEnergyList)).map(kv => "SET " + kv._1 + "=" + kv._2.toString.replace('\n', ' ')).toSeq.sorted
 
