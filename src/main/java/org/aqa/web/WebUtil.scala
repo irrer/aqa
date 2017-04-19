@@ -614,7 +614,7 @@ object WebUtil {
         }
     }
 
-    class WebInputSelect(override val label: String, col: Int, offset: Int, selectList: () => List[(String, String)]) extends IsInput(label) with ToHtml {
+    class WebInputSelect(override val label: String, col: Int, offset: Int, selectList: () => Seq[(String, String)]) extends IsInput(label) with ToHtml {
 
         override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
 
@@ -636,7 +636,7 @@ object WebUtil {
     /**
      * Optionally show a selection list based on evaluating a function.
      */
-    class WebInputSelectOption(override val label: String, col: Int, offset: Int, selectList: () => List[(String, String)], show: (ValueMapT) => Boolean) extends WebInputSelect(label, col, offset, selectList) {
+    class WebInputSelectOption(override val label: String, col: Int, offset: Int, selectList: () => Seq[(String, String)], show: (ValueMapT) => Boolean) extends WebInputSelect(label, col, offset, selectList) {
         override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = {
             if (show(valueMap)) super.toHtml(valueMap, errorMap)
             else { <div></div> }

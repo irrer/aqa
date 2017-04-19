@@ -22,6 +22,7 @@ import com.pixelmed.dicom.TagFromName
 import edu.umro.util.Utility
 import com.pixelmed.dicom.AttributeList
 import org.aqa.web.WebRunIndex
+import org.aqa.db.Machine.MMI
 
 object LOCUploadBaseFiles_1 {
     val parametersFileName = "parameters.xml"
@@ -33,7 +34,12 @@ object LOCUploadBaseFiles_1 {
  */
 class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedure) {
 
-    def machineList() = ("-1", "None") +: Machine.list.toList.map(m => (m.machinePK.get.toString, m.id))
+    def machineList() = {
+        def mmiToText(mmi: MMI) = mmi.institution.name + " - " + mmi.machine.id
+        def mmiToTuple(mmi: MMI) = (mmi.machine.machinePK.toString, mmiToText(mmi))
+        def sortMMI(a: MMI, b: MMI): Boolean = { mmiToText(a).compareTo(mmiToText(b)) < 0 }
+        ("-1", "None") +: Machine.listWithDependencies.sortWith(sortMMI).map(mmi => mmiToTuple(mmi))
+    }
 
     private val machine = new WebInputSelectOption("Machine", 6, 0, machineList, showMachineSelector)
 

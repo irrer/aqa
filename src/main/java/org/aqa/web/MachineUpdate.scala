@@ -89,7 +89,6 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
     private val epidPK = new WebInputSelect("EPID", 6, 0, epidName)
 
-    private val XerialNumber = new WebInputText("Serial Number", 3, 0, "Machine serial number (may be alpha)")
     private val serialNumber = new WebPlainText("Serial Number", false, 3, 0, getSerialNo _)
 
     private val imagingBeam2_5_mv = new WebInputCheckbox("Has 2.5 mv imaging beam", 3, 0)
