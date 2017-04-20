@@ -147,6 +147,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
         try {
             0 match {
+                //case _ if (!sessionDefined(valueMap)) => redirectWithNewSession(response);
                 case _ if buttonIs(valueMap, cancelButton) => cancel(valueMap, response)
                 case _ if buttonIs(valueMap, runButton) => run(valueMap, request, response)
                 case _ => emptyForm(valueMap, response)

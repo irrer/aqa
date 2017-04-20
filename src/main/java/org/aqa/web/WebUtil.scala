@@ -266,6 +266,8 @@ object WebUtil {
                             <div class="col-md-1 col-md-offset-9">
                                 <strong>
                                     <br> </br>
+                                    <a href="/run/WebRunIndex">Run Procedure</a>
+                                    <br> </br>
                                     <a href="/view/OutputList">Results</a>
                                     <br> </br>
                                     <a href="/static/admin.html">Administration</a>

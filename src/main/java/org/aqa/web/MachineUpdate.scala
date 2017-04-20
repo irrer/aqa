@@ -91,12 +91,14 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
     private val serialNumber = new WebPlainText("Serial Number", false, 3, 0, getSerialNo _)
 
+    private val serialNumberReset = new WebInputCheckbox("Reset Serial Number", 3, 0)
+
     private val imagingBeam2_5_mv = new WebInputCheckbox("Has 2.5 mv imaging beam", 3, 0)
 
-    private val onboardImager = new WebInputCheckbox("Onboard Imager", 3, 0)
-    private val sixDimTabletop = new WebInputCheckbox("Six Dim Tabletop", 3, 0)
+    private val onboardImager = new WebInputCheckbox("Onboard Imager", 2, 0)
+    private val sixDimTabletop = new WebInputCheckbox("Six Dim Tabletop", 2, 0)
+    private val developerMode = new WebInputCheckbox("Developer Mode", 2, 0)
     private val respiratoryManagement = new WebInputCheckbox("Respiratory Management", 3, 0)
-    private val developerMode = new WebInputCheckbox("Developer Mode", 3, 0)
 
     private def institutionList() = Institution.list.toList.sortBy(_.name).map(i => (i.institutionPK.get.toString, i.name))
 
@@ -173,9 +175,9 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
             List(configurationDirectory),
             List(epidPK),
             List(institutionPK),
-            List(serialNumber, imagingBeam2_5_mv),
-            List(onboardImager, sixDimTabletop),
-            List(respiratoryManagement, developerMode),
+            List(serialNumber, serialNumberReset),
+            List(onboardImager, sixDimTabletop, developerMode),
+            List(respiratoryManagement, imagingBeam2_5_mv),
             List(photonEnergyHeader, maxDoseRateHeader, fffEnergyHeader, addBeamEnergyButton))
 
         val listB: List[WebRow] = beamEnergyRows(valueMap)
@@ -322,7 +324,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
         val institutionPKVal = valueMap.get(institutionPK.label).get.trim.toLong
 
         val serialNumberVal = {
-            if (pk.isDefined) Machine.get(pk.get).get.serialNumber
+            if (pk.isDefined && (valueMap.get(serialNumberReset.label).isEmpty)) Machine.get(pk.get).get.serialNumber
             else None
         }
 

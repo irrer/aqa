@@ -35,10 +35,16 @@ object LOCUploadBaseFiles_1 {
 class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedure) {
 
     def machineList() = {
+        def mmiToMachPK(mmi: MMI): String = {
+            mmi.machine.machinePK match {
+                case Some(pk) => pk.toString()
+                case _ => "unknown"
+            }
+        }
         def mmiToText(mmi: MMI) = mmi.institution.name + " - " + mmi.machine.id
-        def mmiToTuple(mmi: MMI) = (mmi.machine.machinePK.toString, mmiToText(mmi))
+        def mmiToTuple(mmi: MMI) = (mmiToMachPK(mmi), mmiToText(mmi))
         def sortMMI(a: MMI, b: MMI): Boolean = { mmiToText(a).compareTo(mmiToText(b)) < 0 }
-        ("-1", "None") +: Machine.listWithDependencies.sortWith(sortMMI).map(mmi => mmiToTuple(mmi))
+        ("-1", "None") +: Machine.listWithDependencies.filter(mmi=> mmi.machine.serialNumber.isEmpty).sortWith(sortMMI).map(mmi => mmiToTuple(mmi))
     }
 
     private val machine = new WebInputSelectOption("Machine", 6, 0, machineList, showMachineSelector)
@@ -97,7 +103,7 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
             case _ if (alList.isEmpty) => formErr("No DICOM files have been uploaded.")
             case _ if (alList.size == 1) => formErr("Only one DICOM file has been loaded.  Two are required.")
             case _ if (alList.size > 2) => formErr("More than two DICOM files have been loaded.  Exactly two are required.  Click Cancel to start over.")
-            case _ if (serNoList.size > 1) => formErr("Files from more than one machine were found.  Click Cancel to start over.")
+            case _ if (serNoList.size > 1) => formErr("Files from more than two different machines were found.  Click Cancel to start over.")
             case _ if (machList.isEmpty && chosenMach.isEmpty) => Left(Error.make(machine, "A machine must be chosen"))
             case _ if (mach.isEmpty) => Left(Error.make(machine, "A machine needs to be chosen"))
             case Some(dir) => {

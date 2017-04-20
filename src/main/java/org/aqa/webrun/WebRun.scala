@@ -8,6 +8,7 @@ import org.restlet.Response
 import org.aqa.web.WebUtil._
 import org.aqa.web.ProcedureUpdate
 import scala.xml.Elem
+import org.aqa.web.Session
 
 /**
  * Web interface for running the procedures.
@@ -30,7 +31,8 @@ class WebRun extends Restlet {
     }
 }
 
-abstract class WebRunProcedure(procedure: Procedure) extends Restlet;
+abstract class WebRunProcedure(procedure: Procedure) extends Restlet {
+}
 
 object WebRun {
 
