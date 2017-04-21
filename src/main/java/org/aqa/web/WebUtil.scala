@@ -36,6 +36,7 @@ import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.TagFromName
 import org.aqa.db.Machine
 import org.restlet.data.Protocol
+import org.aqa.Util
 
 object WebUtil {
 
@@ -256,9 +257,10 @@ object WebUtil {
                     <script src="/static/jquery/standard/jquery.min.js"></script>
                     <script src="/static/bootstrap/3.3.6/js/bootstrap.min.js"></script>
                     <script src="/static/dropzone/dropzone-4.3.0/dist/dropzone.js"></script>
+                    <script src="/static/timeago/jquery.timeago-1.5.3.js"></script>
                     <link rel="stylesheet" href="/static/dropzone/dropzone-4.3.0/dist/dropzone.css"/>
                     { c3Refs }
-                    <script src="/static/ReloadOutput.js"></script>
+                    <script src="/static/AQA.js"></script>
                 </head>
                 <body>
                     <header class="topbar">
@@ -925,16 +927,17 @@ object WebUtil {
         }
     }
 
-    /**
-     * Redirect to a fully qualified URL.
-     */
-    def XredirectSeeOthr(response: Response, path: String): Unit = {
-        val fullPath = {
-            if (path.startsWith("/")) relativeUrlToFullPath(response, path)
-            else path
-        }
-        //response.redirectSeeOther(fullPath)  // TODO needed
-        response.redirectSeeOther(path)
+
+    val humanDateFormat = new SimpleDateFormat("EEE d MMM yyyy  HH:mm:ss")
+
+    def timeAgo(prefix: String, date: Date): Elem = {
+        val stdTime = Util.standardDateFormat.format(date)
+        val humanTime = Util.timeHumanFriendly(date)
+
+        <time class='timeago' datetime={ stdTime }>{ prefix + humanTime }</time>
     }
+
+    def timeAgo(date: Date): Elem = timeAgo("", date)
+
 }
 

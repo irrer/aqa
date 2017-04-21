@@ -6,6 +6,7 @@ import java.util.logging.Logger
 import edu.umro.util.Log
 import org.restlet.Restlet
 import org.restlet.routing.Filter
+import java.io.File
 
 object Logging {
     private def log(level: Level, text: String) = {
@@ -37,6 +38,11 @@ object Logging {
 
     def logSevere(msg: String) = log(Level.SEVERE, msg)
 
+    private lazy val logDir: File = {
+        val logFileName = Util.buildProperties.getProperty("wrapper.logfile")
+        new File(logFileName).getParentFile
+    }
+
     def main(args: Array[String]): Unit = {
         println("Logging starting")
         //System.setProperty("java.util.logging.config.file", """D:\pf\eclipse\workspaceMars\aqa\log4j.properties""")
@@ -44,10 +50,10 @@ object Logging {
         System.setProperty("log4j.rootLogger", "ALL")
         System.setProperty("log4j.logger.org.restlet", "WARN")
         System.setProperty("log4j.logger.org.springframework", "WARN")
-        
+
         val simple = new org.apache.commons.logging.impl.SimpleLog("alfred")
         simple.warn("A warning")
-        
+
         class Foo extends Restlet {
             def wrn = getLogger.warning("Warning from foo")
         }
@@ -69,5 +75,5 @@ object Logging {
         println("Logging done")
         System.exit(99)
     }
-        
+
 }

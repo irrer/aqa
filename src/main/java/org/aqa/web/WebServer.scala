@@ -318,6 +318,7 @@ class WebServer extends Application {
                 new ProcedureUpdate,
                 new ProcedureList,
                 new OutputList,
+                new ServiceInfo,
                 webRunIndex,
                 login,
                 notAuthorized,

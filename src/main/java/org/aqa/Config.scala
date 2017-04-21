@@ -252,8 +252,6 @@ object Config {
     val AuthenticationTimeout = mainText("AuthenticationTimeout").toDouble
     val AuthenticationTimeoutInMs = (AuthenticationTimeout * 1000).toLong
 
-    val DatabaseCommand = mainText("DatabaseCommand")
-
     val jarFile = getThisJarFile
 
     /** Number of minutes into a 24 hour day at which time service should be restarted. */
@@ -280,6 +278,10 @@ object Config {
     val validate = true
 
     override def toString: String = valueText.foldLeft("Configuration values:")((b, t) => b + "\n    " + t)
+
+    def toHtml = {
+            { valueText.map(line => <br>{ line } </br>) }.toSeq
+    }
 
     logInfo(toString)
 

@@ -1,0 +1,168 @@
+package org.aqa.web
+
+import org.restlet.Restlet
+import org.restlet.Request
+import org.restlet.Response
+import org.restlet.data.Method
+import java.util.Date
+import scala.xml.Elem
+import org.restlet.data.Parameter
+import slick.lifted.TableQuery
+import slick.backend.DatabaseConfig
+import slick.driver.PostgresDriver
+import scala.concurrent.duration.DurationInt
+import slick.driver.PostgresDriver.api._
+import org.aqa.db.EPID
+import scala.concurrent.ExecutionContext.Implicits.global
+import play.api._
+import play.api.libs.concurrent.Execution.Implicits._
+import org.restlet.data.Form
+import scala.xml.PrettyPrinter
+import org.restlet.data.Status
+import org.restlet.data.MediaType
+import WebUtil._
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
+import org.aqa.Logging._
+import org.aqa.Util
+import java.io.File
+import org.aqa.AQA
+import org.aqa.Config
+
+object ServiceInfo {
+    private val path = new String((new ServiceInfo).pathOf)
+
+    def redirect(response: Response) = response.redirectSeeOther(path)
+}
+
+class ServiceInfo extends Restlet with SubUrlAdmin {
+    private val logFileTag = "LogFileVersion"
+    private val pageTitle = "Service Information"
+
+    private lazy val logDir: File = {
+        val logFileName: String = {
+            Util.buildProperties.getProperty("wrapper.logfile") match {
+                case name: String if (name != null) => name
+                case _ => """C:\Program Files\AQA\logging""" // Assume a reasonable default
+            }
+        }
+        new File(logFileName).getParentFile
+    }
+
+    private def allFiles: Seq[File] = {
+        Util.listDirFiles(logDir).filter(f => !f.getName.contains("lck")).sortWith((a, b) => a.lastModified > b.lastModified).toSeq
+    }
+
+    private def fileRef(file: File): Elem = {
+        val href = pathOf + "/?" + logFileTag + "=" + file.getName
+        val ago = WebUtil.timeAgo(new Date(file.lastModified))
+        <a href={ href }>{ file.getName + ":" } { ago }</a>
+    }
+
+    private def showList = {
+        allFiles.map(f => { <div class="row"><div class="col-sm-11 col-sm-offset-1" style="margin-top:10px">  { fileRef(f) }</div></div> })
+    }
+
+    private def showFileContents(valueMap: ValueMapT, response: Response): Boolean = {
+        try {
+            val file = new File(logDir, valueMap(logFileTag))
+            val data = Util.readBinaryFile(file).right.get
+            response.setEntity(new String(data), MediaType.TEXT_PLAIN)
+            logInfo("Showing contents of log file " + file.getAbsolutePath)
+            true
+        }
+        catch {
+            case t: Throwable => false
+        }
+    }
+
+    val confirmRestartLabel = "confirmRestart"
+    private def confirmRestart: Elem = {
+        // TODO require user to confirm
+        val href = pathOf + "?" + confirmRestartLabel + "=" + confirmRestartLabel
+        <a class="btn btn-danger" href={ href } role="button" title="Shut down and restart. Jobs in progress will be aborted.">Restart Service</a>
+    }
+
+    val requestRestartLabel = "requestRestart"
+    private def requestRestart: Elem = {
+        // TODO require user to confirm
+        val href = pathOf + "?" + requestRestartLabel + "=" + requestRestartLabel
+        <a class="btn btn-default" href={ href } role="button" title="Shut down and restart. Jobs in progress will be aborted.">Restart Service</a>
+    }
+
+    private def basicInfo: Elem = {
+        <div class="row">
+            <h5>Service started:{ timeAgo("", new Date(AQA.serviceStartTime)) }</h5>
+            <p></p>
+            <h5>Time since service started:{ Util.elapsedTimeHumanFriendly(System.currentTimeMillis - AQA.serviceStartTime) }</h5>
+            { requestRestart }
+        </div>
+    }
+
+    private def configInfo: Elem = {
+        <div class="row">
+            <h4>Configuration Parameters</h4>
+            { Config.toHtml }
+        </div>
+    }
+
+    private def showLogFileList: Elem = {
+        <div class="row">
+            <h4 style="margin-top:40px;">Log Files</h4>
+            { showList }
+        </div>
+    }
+
+    private def doConfirm(response: Response) = {
+        val content = {
+            <div class="row">
+                <div class="col-md-10 col-sm-offset-1">
+                    { confirmRestart }
+                </div>
+            </div>
+        }
+        setResponse(wrapBody(content, pageTitle), response, Status.SUCCESS_OK)
+        ??? // TODO 
+    }
+
+    private def doRestart = {
+        println("restart service")
+        ??? // TODO 
+    }
+
+    private def showServiceInfo(response: Response): Unit = {
+        val content = {
+            <div class="row">
+                <div class="col-md-10 col-sm-offset-1">
+                    <h2>{ pageTitle }</h2>
+                    <div class="col-md-4 col-sm-offset-1">
+                        { configInfo }
+                    </div>
+                    <div class="col-md-4 col-sm-offset-1">
+                        { basicInfo }
+                        { showLogFileList }
+                    </div>
+                </div>
+            </div>
+        }
+        setResponse(wrapBody(content, pageTitle), response, Status.SUCCESS_OK)
+    }
+
+    override def handle(request: Request, response: Response): Unit = {
+        super.handle(request, response)
+        val valueMap = getValueMap(request)
+        try {
+            0 match {
+                case _ if valueMap.contains(requestRestartLabel) => doConfirm(response)
+                case _ if valueMap.contains(confirmRestartLabel) => doRestart
+                case _ if showFileContents(valueMap, response) => {}
+                case _ => showServiceInfo(response)
+            }
+        }
+        catch {
+            case t: Throwable => {
+                WebUtil.internalFailure(response, t)
+            }
+        }
+    }
+}

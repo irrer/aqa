@@ -163,8 +163,7 @@ object Run {
             ("PROCEDURE_DIR" -> procedure.execDir.getAbsolutePath),
             ("inputPK" -> output.inputPK),
             ("outputPK" -> output.outputPK.get),
-            ("AQAJAR" -> Config.jarFile.getAbsolutePath),
-            ("DatabaseCommand" -> Config.DatabaseCommand))
+            ("AQAJAR" -> Config.jarFile.getAbsolutePath))
     }
 
     private def institutionEnv(inst: Option[Institution]): EnvVal = {

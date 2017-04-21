@@ -27,3 +27,10 @@ function reloadOn(outputPK, initialChecksum) {
 	checksum = initialChecksum;
 	setTimeout(watchChecksum, WebRefreshTime);
 }
+
+$(document).ready(function() {
+	$.ajaxSetup({
+		cache : false
+	});
+	jQuery('time.timeago').timeago();
+});

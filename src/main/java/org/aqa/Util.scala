@@ -18,6 +18,7 @@ import gnu.crypto.prng.PRNGFactory
 import scala.util.Random
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.util.Properties
 
 object Util {
 
@@ -32,7 +33,10 @@ object Util {
 
     def currentTimeAsFileName = timeAsFileName(new Date)
 
-    private val timeHumanFriendlyFormat = new SimpleDateFormat("MMM dd yyyy HH:mm:ss")
+    /** Standard date format */
+    val standardDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+
+    private val timeHumanFriendlyFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss")
 
     def timeHumanFriendly(date: Date) = timeHumanFriendlyFormat.format(date)
 
@@ -231,6 +235,38 @@ object Util {
             case Some(t) => stringToLong(t)
             case _ => None
         }
+    }
+
+    val buildProperties: Properties = {
+        val prop = new Properties
+        val propFile = {
+            val std = new File("yajsw-stable-11.03\\conf\\wrapper.conf")
+            if (std.exists) std
+            else new File("src\\main\\resources\\wrapper.conf")
+        }
+        try {
+            prop.load(new FileInputStream(propFile))
+        }
+        catch {
+            // Do not use logging to print an error message because when getting
+            // properties it is quite possible that logging has not yet been set up.
+            case e: Exception => println("Problem reading properties file " + propFile.getAbsolutePath + " : " + Logging.fmtEx(e))
+        }
+        prop
+    }
+
+    /**
+     * Safely get the list of files in a directory.
+     */
+    def listDirFiles(dir: File): Seq[File] = {
+        val list = try {
+            dir.listFiles.toSeq
+        }
+        catch {
+            case t: Throwable => null
+        }
+
+        if (list != null) list else Seq[File]()
     }
 
     def main(args: Array[String]): Unit = {
