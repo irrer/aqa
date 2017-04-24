@@ -49,4 +49,19 @@ object AQA {
             }
         }
     }
+
+    def initiateServiceRestart = {
+        class InitiateServiceRestart extends Runnable {
+            val delay = 2 * 1000
+            def run = {
+                logInfo("Shutting down service for restart in " + delay + " ms...")
+                Thread.sleep(delay)
+                logInfo("Shutting down service now.")
+                System.exit(1)
+            }
+            (new Thread(this)).start
+        }
+        new InitiateServiceRestart
+    }
+
 }

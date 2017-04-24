@@ -78,9 +78,14 @@ class ServiceInfo extends Restlet with SubUrlAdmin {
 
     val confirmRestartLabel = "confirmRestart"
     private def confirmRestart: Elem = {
-        // TODO require user to confirm
         val href = pathOf + "?" + confirmRestartLabel + "=" + confirmRestartLabel
         <a class="btn btn-danger" href={ href } role="button" title="Shut down and restart. Jobs in progress will be aborted.">Restart Service</a>
+    }
+
+    val cancelRestartLabel = "cancelRestart"
+    private def cancelRestart: Elem = {
+        val href = pathOf + "?" + cancelRestartLabel + "=" + cancelRestartLabel
+        <a class="btn btn-default" href={ href } role="button">Cancel</a>
     }
 
     val requestRestartLabel = "requestRestart"
@@ -113,21 +118,32 @@ class ServiceInfo extends Restlet with SubUrlAdmin {
         </div>
     }
 
+    //                    <div style="margin:40px"></div>
     private def doConfirm(response: Response) = {
         val content = {
             <div class="row">
-                <div class="col-md-10 col-sm-offset-1">
-                    { confirmRestart }
+                <div class="col-md-8 col-sm-offset-1">
+                    <h3>Service Restart</h3>
+                    <table style="margin:40px">
+                        <tr>
+                            <td>
+                                { cancelRestart }
+                            </td>
+                            <td><div style="margin:40px"> </div></td>
+                            <td>
+                                { confirmRestart }
+                            </td>
+                        </tr>
+                    </table>
                 </div>
             </div>
         }
         setResponse(wrapBody(content, pageTitle), response, Status.SUCCESS_OK)
-        ??? // TODO 
     }
 
-    private def doRestart = {
-        println("restart service")
-        ??? // TODO 
+    private def restartService(response: Response): Unit = {
+        AQA.initiateServiceRestart
+        response.redirectSeeOther("/")
     }
 
     private def showServiceInfo(response: Response): Unit = {
@@ -154,7 +170,7 @@ class ServiceInfo extends Restlet with SubUrlAdmin {
         try {
             0 match {
                 case _ if valueMap.contains(requestRestartLabel) => doConfirm(response)
-                case _ if valueMap.contains(confirmRestartLabel) => doRestart
+                case _ if valueMap.contains(confirmRestartLabel) => restartService(response)
                 case _ if showFileContents(valueMap, response) => {}
                 case _ => showServiceInfo(response)
             }
