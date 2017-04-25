@@ -79,7 +79,8 @@ class ServiceInfo extends Restlet with SubUrlAdmin {
     val confirmRestartLabel = "confirmRestart"
     private def confirmRestart: Elem = {
         val href = pathOf + "?" + confirmRestartLabel + "=" + confirmRestartLabel
-        <a class="btn btn-danger" href={ href } role="button" title="Shut down and restart. Jobs in progress will be aborted.">Restart Service</a>
+        <a class="btn btn-danger" href={ href } role="button" title="Shut down and restart service.
+Jobs in progress will be aborted.">Confirm Restart</a>
     }
 
     val cancelRestartLabel = "cancelRestart"
@@ -118,7 +119,9 @@ class ServiceInfo extends Restlet with SubUrlAdmin {
         </div>
     }
 
-    //                    <div style="margin:40px"></div>
+    /**
+     * Show a page that lets the user do a confirmation to really really restart the service.
+     */
     private def doConfirm(response: Response) = {
         val content = {
             <div class="row">
@@ -143,7 +146,55 @@ class ServiceInfo extends Restlet with SubUrlAdmin {
 
     private def restartService(response: Response): Unit = {
         AQA.initiateServiceRestart
-        response.redirectSeeOther("/")
+        response.redirectSeeOther(pathOf + "/?" + waitForRestartLabel + "=" + waitForRestartLabel)
+    }
+
+    val waitForRestartLabel = "waitForRestart"
+
+    /**
+     * Show a page that waits until the service has restarted and then redirects them to the home page.
+     */
+    private def waitForRestart(response: Response) = {
+        val content = {
+            <div class="row">
+                <div class="col-md-8 col-sm-offset-1">
+                    <h3>Service Restart</h3>
+                    <h3>Waiting for Service Restart</h3>
+                    When the service is ready you will automatically be redirected to the main page.
+                </div>
+            </div>
+        }
+
+        val javascript = """
+<script language="javascript">
+// Reload the main page when the server is ready.
+
+var status = '""" + AQA.serviceStartTime + """';
+var instanceUrl = '/admin/ServiceInstance';
+var WebRefreshTime = 1000;
+
+function watchStatus() {
+	$.ajax({
+		url : instanceUrl,
+		success : function(result) {
+			if (status == result) {
+			//if (status > 1) {
+				setTimeout(watchStatus, WebRefreshTime);
+			} else {
+				window.location.assign("/");
+			}
+		},
+		error : function(result) {
+			setTimeout(watchStatus, WebRefreshTime);
+		}
+	});
+}
+
+setTimeout(watchStatus, WebRefreshTime);
+</script>
+"""
+
+        setResponse(wrapBody(content, pageTitle, None, true, Some(javascript)), response, Status.SUCCESS_OK)
     }
 
     private def showServiceInfo(response: Response): Unit = {
@@ -171,6 +222,7 @@ class ServiceInfo extends Restlet with SubUrlAdmin {
             0 match {
                 case _ if valueMap.contains(requestRestartLabel) => doConfirm(response)
                 case _ if valueMap.contains(confirmRestartLabel) => restartService(response)
+                case _ if valueMap.contains(waitForRestartLabel) => waitForRestart(response)
                 case _ if showFileContents(valueMap, response) => {}
                 case _ => showServiceInfo(response)
             }

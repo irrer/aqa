@@ -47,6 +47,8 @@
         <dependency> <groupId>edu.umro</groupId>           <artifactId>util</artifactId>                       <version>1.3.14</version>          </dependency>
         <dependency> <groupId>edu.umro</groupId>           <artifactId>util</artifactId>                       <version>1.3.9</version>           </dependency>
         <dependency> <groupId>org.apache.commons</groupId> <artifactId>commons-math3</artifactId>              <version>3.6.1</version>           </dependency>
+        <!__ Note that the play-json_2.11 version 2.3.9 is not the latest release, but the newer releases require Java 8, which is not running on our servers. __ >
+        <dependency> <groupId>com.typesafe.play</groupId>  <artifactId>play-json_2.11</artifactId>             <version>2.3.9</version>           </dependency>
     -->
   
   <build>
