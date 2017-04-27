@@ -60,6 +60,11 @@ case class Output(
             else System.currentTimeMillis - startDate.getTime
         elapsed.abs
     }
+
+    override def equals(o: Any): Boolean = {
+        val other = o.asInstanceOf[Output]
+        outputPK.isDefined && other.outputPK.isDefined && (outputPK.get == other.outputPK.get)
+    }
 }
 
 object Output {
@@ -95,10 +100,11 @@ object Output {
         def inputFK = foreignKey("inputPK", inputPK, Input.query)(_.inputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
         def procedureFK = foreignKey("procedurePK", procedurePK, Procedure.query)(_.procedurePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
         def userFK = foreignKey("userPK", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
-        
+
     }
 
     val query = TableQuery[OutputTable]
+    private val query2 = TableQuery[OutputTable]
 
     def get(outputPK: Long): Option[Output] = {
         val action = for {
@@ -157,19 +163,6 @@ object Output {
         Db.run(action)
     }
 
-//    /**
-//     * Delete the given output and all rows in other tables that reference it.  Note
-//     *  that inputs referenced by the output are not deleted.
-//     */
-//    def deleteOutputAndReferences(outputPK: Long): Unit = {
-//        val action = for {
-//            _ <- CentralAxis.query.filter(_.outputPK === outputPK).delete
-//            _ <- query.filter(_.outputPK === outputPK).delete
-//        } yield ()
-//
-//        Db.run(action.transactionally)
-//    }
-
     val displayFilePrefix = "display".toLowerCase
 
     /**
@@ -181,12 +174,118 @@ object Output {
         else Some(list.head)
     }
 
+    /**
+     * Given an output, find out which other outputs it is redundant with.  Two outputs are
+     * redundant if they are the created by the same procedure with the same machine with data
+     * that has the same acquisition date.
+     */
+    def redundantWith(output: Output): Seq[Output] = {
+        output.dataDate match {
+            case Some(dataDate) => {
+                val q = query.filter(o =>
+                    (o.machinePK === output.machinePK) &&
+                        (o.procedurePK === output.procedurePK) &&
+                        (o.outputPK =!= output.outputPK) &&
+                        (o.dataDate.isDefined && (o.dataDate === dataDate)))
+                Db.run(q.result)
+            }
+            case _ => Seq[Output]()
+        }
+    }
+
+    def removeOldestRedundant(output: Output): Int = {
+        def cmpr(a: Output, b: Output): Boolean = {
+            (a.dataDate, b.dataDate) match {
+                case (Some(aa), Some(bb)) => aa.getTime < bb.getTime
+                case (Some(aa), _) => false
+                case (_, Some(bb)) => true
+                case _ => true
+            }
+        }
+        val list = (redundantWith(output) :+ output).sortWith((a, b) => cmpr(a, b))
+        val keep = list.head
+        list.tail.map(o => delete(o.outputPK.get))
+        list.tail.size
+    }
+
+    /**
+     * Make a list of all outputs that are redundant.  Two outputs are
+     * redundant if they are the created by the same procedure with the same machine with data
+     * that has the same acquisition date.
+     */
+    def redundant: Seq[Set[Output]] = {
+        val q = for {
+            (a, b) <- query join query2
+            if (a.machinePK === b.machinePK) &&
+                (a.procedurePK === b.procedurePK) &&
+                (a.outputPK < b.outputPK) &&
+                (a.dataDate.isDefined && b.dataDate.isDefined && (a.dataDate === b.dataDate))
+        } yield (a, b)
+
+        Db.run(q.result).map(p => Set(p._1, p._2))
+    }
+
+    /**
+     * Make a list of all outputs put into sets where each the members in each set are redundant.  Two outputs are
+     * redundant if they are the created by the same procedure with the same machine with data
+     * that has the same acquisition date.
+     */
+    def redundantReduced(all: Seq[Set[Output]]): Seq[Set[Output]] = {
+        def grp(seq: Seq[Set[Output]], rem: Seq[Set[Output]]): Seq[Set[Output]] = {
+            if (rem.isEmpty) seq
+            else {
+                val i = seq.indexWhere(s => s.intersect(rem.head).nonEmpty)
+                if (i < 0) {
+                    grp(seq :+ rem.head, rem.tail)
+                }
+                else {
+                    grp(seq.updated(i, seq(i).union(rem.head)), rem.tail)
+                }
+            }
+        }
+
+        def grpGrp(seq: Seq[Set[Output]]): Seq[Set[Output]] = {
+            val g = grp(Seq[Set[Output]](), seq)
+            if (g.size == seq.size) g
+            else grpGrp(g)
+        }
+
+        grpGrp(all)
+    }
+
     def main(args: Array[String]): Unit = {
         println("Starting Output.main")
         val valid = Config.validate
         DbSetup.init
 
         if (true) {
+            println("\n\ntesting remove oldest")
+            val out = get(82).get
+            val count = removeOldestRedundant(out)
+            println("removed count : " + count)
+            //System.exit(0)
+        }
+
+        if (true) {
+            println("\n\ntesting redundant")
+            val red = redundant
+            red.map(r => println("  r: " + r.map(r => r.outputPK.get).toSeq.sorted.mkString(", ")))
+            val redred = redundantReduced(red)
+            println("\n\ntesting redundantReduced")
+            println("redred size: " + redred.size)
+            redred.map(r => println("  rr: " + r.map(r => r.outputPK.get).toSeq.sorted.mkString(", ")))
+            System.exit(0)
+        }
+
+        if (false) {
+            println("testing redundantWith")
+            val redun = redundantWith(listByInputPK(73).head)
+            println("redun size: " + redun.size)
+            redun.map(o => println(o))
+            System.exit(0)
+        }
+
+        if (false) {
             println("starting input find")
             val list = listByInputPK(70)
             println("list size: " + list.size)
