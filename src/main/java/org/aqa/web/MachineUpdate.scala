@@ -390,7 +390,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
      */
     private def getBeamEnergyListAsValueMap(machinePK: Long): ValueMapT = {
 
-        val beList = MachineBeamEnergy.getByMachine(machinePK).sortWith((a, b) => a.photonEnergy_MeV.get < b.photonEnergy_MeV.get)
+        val beList = MachineBeamEnergy.getByMachine(machinePK).sortWith(MachineBeamEnergy.sorter)
 
         def sf(d: Option[Double]): String = {
             d match {

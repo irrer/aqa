@@ -85,6 +85,16 @@ object MachineBeamEnergy {
         Db.run(action)
     }
 
+    def sorter(a: MachineBeamEnergy, b: MachineBeamEnergy): Boolean = {
+        def srt(mbe: (MachineBeamEnergy) => Option[Double]): Option[Boolean] = {
+            for (ea <- mbe(a); eb <- mbe(b)) yield (ea < eb)
+        }
+        Seq(srt(_.photonEnergy_MeV), srt(_.maxDoseRate_MUperMin), srt(_.fffEnergy_MeV)).flatten.headOption match {
+            case Some(bool) => bool
+            case _ => true
+        }
+    }
+
     /** For testing only. */
     def main(args: Array[String]): Unit = {
         val valid = Config.validate
