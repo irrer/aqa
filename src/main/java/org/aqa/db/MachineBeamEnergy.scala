@@ -86,12 +86,25 @@ object MachineBeamEnergy {
     }
 
     def sorter(a: MachineBeamEnergy, b: MachineBeamEnergy): Boolean = {
-        def srt(mbe: (MachineBeamEnergy) => Option[Double]): Option[Boolean] = {
+        def srtDef(mbe: (MachineBeamEnergy) => Option[Double]): Option[Boolean] = {
             for (ea <- mbe(a); eb <- mbe(b)) yield (ea < eb)
         }
-        Seq(srt(_.photonEnergy_MeV), srt(_.maxDoseRate_MUperMin), srt(_.fffEnergy_MeV)).flatten.headOption match {
+
+        def srtNotDef(mbe: (MachineBeamEnergy) => Option[Double]): Option[Boolean] = {
+            { (mbe(a), mbe(b)) } match {
+                case (Some(a), _) => Some(false)
+                case (_, Some(b)) => Some(true)
+                case _ => None
+            }
+        }
+        Seq(srtDef(_.photonEnergy_MeV), srtDef(_.maxDoseRate_MUperMin), srtDef(_.fffEnergy_MeV)).flatten.headOption match {
             case Some(bool) => bool
-            case _ => true
+            case _ => {
+                Seq(srtNotDef(_.photonEnergy_MeV), srtNotDef(_.maxDoseRate_MUperMin), srtNotDef(_.fffEnergy_MeV)).flatten.headOption match {
+                    case Some(b) => b
+                    case _ => false
+                }
+            }
         }
     }
 
