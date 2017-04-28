@@ -193,7 +193,22 @@ object Output {
         }
     }
 
-    def removeOldestRedundant(output: Output): Int = {
+    /**
+     * Return the list of redundant outputs, keeping the ones that users would want. The rules are:
+     *
+     *     Keep the latest successful output, even if there are newer ones that were not successful.
+     *
+     *     If the most recent output is not successful, then keep it (useful for diagnostics) but
+     *     remove all previous unsuccessful outputs.
+     *
+     *     An output is successful if it has a status of 'passed', 'failed', or 'done', because all
+     *     of these indicate that the process performed as expected, regardless of whether the data
+     *     was 'good'.
+     *
+     * Two outputs are redundant if they are the created by the same procedure with the same machine
+     * with data that has the same acquisition date.
+     */
+    def listRedundant(outputList: Seq[Output]): Seq[Output] = {
         def cmpr(a: Output, b: Output): Boolean = {
             (a.dataDate, b.dataDate) match {
                 case (Some(aa), Some(bb)) => aa.getTime < bb.getTime
@@ -202,10 +217,26 @@ object Output {
                 case _ => true
             }
         }
-        val list = (redundantWith(output) :+ output).sortWith((a, b) => cmpr(a, b))
-        val keep = list.head
-        list.tail.map(o => delete(o.outputPK.get))
-        list.tail.size
+        val goodStatus = Seq(ProcedureStatus.done, ProcedureStatus.pass, ProcedureStatus.fail).map(s => s.toString)
+        def isGood(output: Output): Boolean = goodStatus.map(g => g.equals(output.status)).contains(true)
+
+        val latestGood = outputList.indexWhere(g => isGood(g))
+        val latestNotGood = outputList.indexWhere(b => !isGood(b))
+
+        // list of indexes in outputList to keep
+        val listToKeep: Seq[Int] = (latestGood, latestNotGood) match {
+            case (-1, -1) => {
+                logWarning("removeRedundant Unexpected error, output is neither good or notGood") // nothing?
+                Seq[Int]() // remove nothing
+            }
+            case (g, -1) => Seq(g) // all outputs good.  Keep only the latest
+            case (-1, b) => Seq(b) // all outputs bad.  Keep only the latest
+            case (g, b) if (g < b) => Seq(g) // at least on each of good and bad, but good is more recent
+            case (g, b) => Seq(b, g) // at least on each of good and bad, but bad is more recent
+        }
+        val pkToKeep = listToKeep.map(k => outputList(k).outputPK.get)
+
+        outputList.filter { o => o.outputPK.isDefined && (!pkToKeep.contains(o.outputPK.get)) }
     }
 
     /**
@@ -258,15 +289,7 @@ object Output {
         val valid = Config.validate
         DbSetup.init
 
-        if (true) {
-            println("\n\ntesting remove oldest")
-            val out = get(82).get
-            val count = removeOldestRedundant(out)
-            println("removed count : " + count)
-            //System.exit(0)
-        }
-
-        if (true) {
+        if (false) {
             println("\n\ntesting redundant")
             val red = redundant
             red.map(r => println("  r: " + r.map(r => r.outputPK.get).toSeq.sorted.mkString(", ")))

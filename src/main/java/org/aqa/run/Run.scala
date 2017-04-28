@@ -111,6 +111,18 @@ object Run {
         }
     }
 
+    private def removeRedundantOutput(outputPK: Option[Long]) = {
+        try {
+            val output = Output.get(outputPK.get).get
+            val redundant = Output.listRedundant(Output.redundantWith(output) :+ output)
+            redundant.map(ro => Output.delete(ro.outputPK.get))
+        }
+        catch {
+            case t: Throwable =>
+                logWarning("removeRedundantOutput Unexpected error cleaning up redundant output.  outputPK: " + outputPK + " : " + t.getMessage)
+        }
+    }
+
     /**
      * Start a thread to monitor the process.  When the process terminates, its status and
      * finish time will be recorded in the database.  If the process fails to finish before
@@ -146,6 +158,7 @@ object Run {
                                 logWarning("Unexpected error running procedure.  Output: " + activeProcess.output + " : " + t.getMessage)
                                 postProcess(activeProcess)
                         }
+                        removeRedundantOutput(activeProcess.output.outputPK)
                     }
             }
         }
