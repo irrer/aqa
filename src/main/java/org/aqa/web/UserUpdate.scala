@@ -218,7 +218,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
             (fullName.label, user.fullName),
             (email.label, user.email),
             (role.label, user.role),
-            (institution.label, Institution.get(user.institutionPK).get.name))
+            (institution.label, user.institutionPK.toString))
         formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
     }
 
