@@ -132,7 +132,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
     private def save(valueMap: ValueMapT, response: Response): Unit = {
         val errMap = emptyId(valueMap) ++ emptyName(valueMap) ++ validateEmail(valueMap)
         if (errMap.isEmpty) {
-            val user = createUserFromParameters(valueMap)
+            val user = reconstructUserFromParameters(valueMap)
             // remove old credentials just in case the user role was changed.
             AuthenticationVerifier.remove(user.id)
             user.insertOrUpdate
@@ -147,10 +147,6 @@ class UserUpdate extends Restlet with SubUrlAdmin {
      * Create a new user
      */
     private def createUserFromParameters(valueMap: ValueMapT): User = {
-        val userPK: Option[Long] = {
-            val e = valueMap.get(UserUpdate.userPKTag)
-            if (e.isDefined) Some(e.get.toLong) else None
-        }
         val idText = valueMap.get(id.label).get.trim
         val fullNameText = valueMap.get(fullName.label).get.trim
         val emailText = valueMap.get(email.label).get.trim
@@ -158,10 +154,28 @@ class UserUpdate extends Restlet with SubUrlAdmin {
 
         val institutionPK = valueMap.get(institution.label).get.toLong
 
-        val passwordSalt = Util.randomSecureHash // TODO crypto stuff for passwordText
-        val hashedPassword = AuthenticationVerifier.hashPassword(passwordText, passwordSalt) // TODO crypto stuff for passwordText
+        val passwordSalt = Util.randomSecureHash
+        val hashedPassword = AuthenticationVerifier.hashPassword(passwordText, passwordSalt)
         val roleText = valueMap.get(role.label).get
-        new User(userPK, idText, fullNameText, emailText, institutionPK, hashedPassword, passwordSalt, roleText)
+        new User(None, idText, fullNameText, emailText, institutionPK, hashedPassword, passwordSalt, roleText)
+    }
+
+    /**
+     * Get save parameters for a user
+     */
+    private def reconstructUserFromParameters(valueMap: ValueMapT): User = {
+        val userPK = valueMap.get(UserUpdate.userPKTag).get.toLong
+        val user = User.get(userPK).get
+
+        val idText = valueMap.get(id.label).get.trim
+        val fullNameText = valueMap.get(fullName.label).get.trim
+        val emailText = valueMap.get(email.label).get.trim
+        val institutionPK = valueMap.get(institution.label).get.toLong
+
+        val passwordSalt = user.passwordSalt
+        val hashedPassword = user.hashedPassword
+        val roleText = valueMap.get(role.label).get
+        new User(Some(userPK), idText, fullNameText, emailText, institutionPK, hashedPassword, passwordSalt, roleText)
     }
 
     /**

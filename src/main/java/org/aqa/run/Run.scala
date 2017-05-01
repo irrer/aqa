@@ -115,7 +115,7 @@ object Run {
         try {
             val output = Output.get(outputPK.get).get
             val redundant = Output.listRedundant(Output.redundantWith(output) :+ output)
-            redundant.map(ro => Output.delete(ro.outputPK.get))
+            redundant.map(ro => Input.delete(ro.inputPK))
         }
         catch {
             case t: Throwable =>

@@ -82,7 +82,7 @@ object UploadTransAndOpen {
             <div class="row">
                 <div class="col-md-5 col-md-offset-2">
                     <h3>Success</h3>
-                    Both the open field and transmission files were written to the configuration directory for machine { System.getenv(Util.machineIdEnvName) }
+                    Both the open field and transmission files were written to the configuration directory for machine{ System.getenv(Util.machineIdEnvName) }
                 </div>
             </div>
         }
@@ -103,7 +103,7 @@ object UploadTransAndOpen {
             dicomList.map(df => println("Found DICOM file " + df.file.getName))
             val exposureTimeList = dicomList.filter(df => df.getExposureTime.isDefined)
             exposureTimeList.map(df => println("Found DICOM file with exposure time: " + df.file.getName))
-            println("Number of DICOM files found that have exposure time defined: " + exposureTimeList.size) 
+            println("Number of DICOM files found that have exposure time defined: " + exposureTimeList.size)
             if (exposureTimeList.size != 2) ProcedureStatus.terminate("Abort: Should be exactly 2 DICOM files but there were " + exposureTimeList.size, ProcedureStatus.abort)
 
             if (exposureTimeList(0).getExposureTime.get < exposureTimeList(1).getExposureTime.get)

@@ -75,6 +75,7 @@ object Input {
 
     def delete(inputPK: Long): Int = {
         val q = query.filter(_.inputPK === inputPK)
+        logInfo("deleting input " + inputPK)
         val action = q.delete
         Db.run(action)
     }
