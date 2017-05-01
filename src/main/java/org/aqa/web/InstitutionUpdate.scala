@@ -35,11 +35,11 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
 
     private val pageTitleEdit = "Edit Institution"
 
-    private val name = new WebInputText("Name", 6, 0, "Name of Institution (required)")
+    private val name = new WebInputText("Name", 6, 0, "Commonly used name of institution (required)")
 
     private val url = new WebInputURL("URL", 6, 0, "Web address (optional)")
 
-    private val description = new WebInputTextArea("Description", 6, 0, "")
+    private val description = new WebInputTextArea("Description", 6, 0, "Full name and other identifying information")
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
         //val action = InstitutionUpdate.path + "?" + name + "=" + name
