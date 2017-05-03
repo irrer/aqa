@@ -274,7 +274,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
                         label: 'Leaf',
                     },
                     y: {
-                        label: 'Error in mm',
+                        label: 'Offset in mm',
                         tick: {
                             format: d3.format('.4f')
                         }
@@ -299,7 +299,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
                         label: 'Leaf',
                     },
                     y: {
-                        label: 'Percent Transmission'
+                        label: 'Leaf Transmission Fraction'
                     }
                 },
                 color : {

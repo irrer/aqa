@@ -39,7 +39,7 @@
 		<p></p>
 		A database account may be used to extract any an all data from the
 		database, which can then be fed to the tool of your choice. Access is
-		limited to read-only.
+		<b>limited to read-only</b>.
 		<p></p>
 		The database can be accessed over the intenet from any host.
 		Connections are encrypted and password protected.
@@ -117,11 +117,22 @@
 		pgAdmin provides a <b>psql</b> which may be invoked from the command line.  To invoke it, add it
 		to your Windows path and enter:
 		<pre>psql postgresql://aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA myDbLogin</pre>
-		From this point standard SQL queries will work.  Some quick tips:
-		
-        <pre>\dt</pre> : List all tables.
-        <pre>select * from epid;</pre> : List all rows in the epid table (remember the terminating <b>;</b>).
-        <pre>\q</pre> : quit.
+		From this point standard SQL queries will work. Some quick tips:
+        <p></p> <br>
+		List all tables.
+		<pre>\dt</pre>
+        <p></p> <br>
+		List all rows in the epid table (remember the terminating <b>;</b>).
+        <pre>select * from epid;</pre>
+        <p></p> <br>
+        General help
+        <pre>\help</pre>
+        <p></p> <br>
+        Specific help
+        <pre>\help select</pre>
+        <p></p> <br>
+        Quit psql
+        <pre>\q</pre>
 		
 		
         <h4>Sample User Friendly Queries</h4>
