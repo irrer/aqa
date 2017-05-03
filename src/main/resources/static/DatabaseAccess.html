@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Direct Database Access</title>
+<meta http-equiv="refresh" content="3600" />
+<link rel="stylesheet"
+	href="/static/bootstrap/3.3.6/css/bootstrap.min.css" />
+<link rel="stylesheet"
+	href="/static/bootstrap/3.3.6/css/bootstrap-theme.min.css" />
+<script src="/static/jquery/standard/jquery.min.js"></script>
+<script src="/static/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+<script src="/static/dropzone/dropzone-4.3.0/dist/dropzone.js"></script>
+<script src="/static/timeago/jquery.timeago-1.5.3.js"></script>
+<link rel="stylesheet"
+	href="/static/dropzone/dropzone-4.3.0/dist/dropzone.css" />
+<script src="/static/AQA.js"></script>
+</head>
+<body>
+	<header class="topbar">
+		<div class="row">
+			<div class="col-md-1 col-md-offset-9">
+				<strong> <br> <a href="/run/WebRunIndex">Run
+						Procedure</a> <br> <a href="/view/OutputList">Results</a> <br>
+					<a href="/static/admin.html">Administration</a>
+				</strong>
+			</div>
+			<div class="col-md-2">
+				<h1 class="fill">
+					<a href="/"> <img src="/static/images/logo.png" width="128" />
+					</a>
+				</h1>
+			</div>
+		</div>
+	</header>
+	<div class="col-md-6 col-md-offset-2">
+		<h2>Direct Database Access</h2>
+		It is often convenient to access the database for for research purposes or
+		generating custom reports.  This guide will help get you started.
+		<p></p>
+		A database account may be used to extract any an all data from the
+		database, which can then be fed to the tool of your choice. Access is
+		limited to read-only.
+		<p></p>
+		The database can be accessed over the intenet from any host.
+		Connections are encrypted and password protected.
+		<p></p>
+		<h4>Obtain an account</h4>
+		Although the user ids are the same, accounts to access the database
+		directly are separate from accounts to use the web site, and have a
+		different password.
+		<p></p>
+		To request a database account, send an email to the site <a
+			href="mailto:irrer@med.umich.edu?Subject=AQA Request Database Account"
+			target="_top">manager</a>.
+		<p></p>
+		If approved you will receive a reply with a password for the account.
+
+		<h4>Download pgAdmin</h4>
+		pgAdmin is a database client that provides both GUI and command line
+		interfaces to Postgresql databases. The GUI can be used to see the
+		general layout of the database and get quick answers. The command line
+		is often used to generate CSV (comma separated value) files that can
+		be consumed by a variety of programs including Excel.
+		<p></p>
+		You can vist the <a href='https://pgadmin.org/'>main website</a> or
+		directly download the <a
+			href='https://ftp.postgresql.org/pub/pgadmin/pgadmin4/v1.4/windows/pgadmin4-1.4-x86.exe'>Windows
+			installer</a>.
+		<p></p>
+		Run the installer and start pgAdmin.
+		<p></p>
+		pgAdmin has a hierarchy of:
+		<p></p>
+		<b>
+			<ul>
+				<li>&nbsp; &nbsp; &nbsp; &nbsp; Server Group<br>
+				<li>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+					Server<br>
+				<li>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+					&nbsp; &nbsp; &nbsp; &nbsp; Database<br>
+			</ul>
+		</b>
+		<p></p>
+		From the GUI use <b>Object</b> -> <b>Create</b> -> <b>Server Group</b>
+		and create a group called <b>Servers</b>.
+		<p></p>
+		Right-click on <b>Servers</b> and use <b>Create</b> -> <b>Server</b>
+		to create a server.
+		<p></p>
+		Name the server <b>AQA</b>. Click the <b>Connection</b> tab and for
+		the <b>Host name/address</b> enter:
+		<p></p>
+
+		&nbsp; &nbsp; &nbsp; &nbsp; <b>aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com</b>
+		<p></p>
+
+		The other fields should be filled as shown below, substituting your
+		login for <b>myDbUserName</b>:
+		<p></p>
+		<img src='/static/images/db_server_parameters.png' />
+		<p></p>
+		Click <b>Save</b> and then double-click on <b>AQA</b>. It will prompt
+		for your password. After entering the password, you may optionally
+		save it on the computer where pgAdmin is installed.
+		<p></p>
+		To look at tables, expand: <b>AQA</b> -> <b>Databases</b> -> <b>Schemas</b> -> <b>public</b> ->	<b>Tables</b>
+		<p></p>
+		To look at data in a table, right-click on the table and click <b>View Data</b>.
+        <p></p>
+		Refer to the <a href='https://pgadmin.org/docs4/1.x/index.html'>pgAdmin documentation</a> for more details.
+        <p></p>
+        The screen shot below shows a typical session:
+        <p></p>
+        <img src='/static/images/pgadmin_table.png' />
+        <p></p>
+		<h4>Command Line Access</h4>
+		pgAdmin provides a <b>psql</b> which may be invoked from the command line.  To invoke it, add it
+		to your Windows path and enter:
+		<pre>psql postgresql://aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA myDbLogin</pre>
+		From this point standard SQL queries will work.  Some quick tips:
+		
+        <pre>\dt</pre> : List all tables.
+        <pre>select * from epid;</pre> : List all rows in the epid table (remember the terminating <b>;</b>).
+        <pre>\q</pre> : quit.
+		
+		
+        <h4>Sample User Friendly Queries</h4>
+        Listing raw table contents can appear cryptic because of the heavy use of integer primary keys used. 
+        The following are some queries that return results in more user friendly formats.  These are intended as
+        a starting point for users to copy and modify to meet specific needs.
+        
+        <pre>
+
+-- List all treatment machines
+        
+select
+    "institution"."name" as "Institution",
+    "machine"."id" as "Machine ID",
+    "machine"."machinePK",
+    "machineType"."version" as "Machine Version",
+    "multileafCollimator"."model" as "Collimator",
+    "epid"."model" as "EPID"
+from
+    "machine", "institution", "machineType", "multileafCollimator", "epid"
+where
+    ( "machine"."institutionPK" = "institution"."institutionPK" ) and
+    ( "machine"."machineTypePK" = "machineType"."machineTypePK" ) and
+    ( "machine"."multileafCollimatorPK" = "multileafCollimator"."multileafCollimatorPK" ) and
+    ( "machine"."epidPK" = "epid"."epidPK" )
+order by
+    "institution"."name", "machine"."id"
+;
+        
+        </pre>
+        <p></p>
+        <pre>
+
+-- List up to 100 outputs (runs of procedures) ordered by data acquisition date for procedure 'LOC'
+
+select
+    "output"."dataDate",
+    "output"."outputPK",
+    "procedure"."name" as "Procedure",
+    "institution"."name" as "Institution",
+    "machine"."id" as "Machine",
+    "output"."status"
+from
+    "output",
+    "procedure",
+    "institution",
+    "machine"
+where
+    ( "output"."machinePK" = "machine"."machinePK")              and
+    ( "output"."procedurePK" = "procedure"."procedurePK")        and
+    ( "procedure"."name" = 'LOC')                                and
+    ( "institution"."institutionPK" = "machine"."institutionPK") and
+    (
+        ( "output"."status" = 'pass' ) or
+        ( "output"."status" = 'fail' ) or
+        ( "output"."status" = 'done' )
+    )
+order by 
+    "output"."dataDate"
+asc
+limit 100;
+        </pre>
+        <p></p>
+        <pre>
+
+-- List the values for one run of procedure 'LOC'
+
+select
+    "leafOffsetCorrection"."section",
+    "leafOffsetCorrection"."leafIndex",
+    "leafOffsetCorrection"."correction_mm"
+from 
+    "leafOffsetCorrection"
+where
+     "leafOffsetCorrection"."outputPK" = 10
+order by
+    "leafOffsetCorrection"."section", "leafOffsetCorrection"."leafIndex"
+;
+        
+        </pre>
+        <p></p>
+        
+        <h4>AQA Database Structure</h4>
+        <p></p>
+        As a general note, all primary keys are 64 bit auto-incrementing integers.  
+        <p></p>        
+        Although the meaning of much of database is obvious, some less obvious are:
+        <p></p>
+        <b>Procedure</b> 
+        <p></p>
+        A procedure (aka test) that the user would run against data.  Procedures have
+        version numbers to track changes in analysis code. 
+        <p></p>
+        <p></p>
+        <b>Input</b> 
+        <p></p>
+        Each time a user uploads data, an <b>Input</b> row is created and the files
+        are scanned for the <b>dataDate</b> (the time when the data was acquired) and
+        put in their own directory.
+        <p></p>
+        <b>Output</b> 
+        <p></p>
+		When a user runs a procedure, an <b>Output</b> row is created and the files
+		generated by the procedure are put in a separate output directory as a
+		child of the input.
+        <p></p>
+        <br>
+        <p></p>
+		A graphical view of the entire database:
+		<p></p>
+        <img src='/static/images/db_schema.png' />
+        <p></p>
+        <br>
+        <p></p>
+        <br>
+        <p></p>
+		<h4>Programmatic Access</h4>
+		Many software platforms such as MATLAB, Python, or Power BI support
+		direct connections to Postgresql databases. Refer to the respective
+		documentation for details.
+		<p></p>
+		<br>
+		<p></p>
+		<br>
+		<p></p>
+	</div>
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
