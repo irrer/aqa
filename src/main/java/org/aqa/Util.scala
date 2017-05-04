@@ -271,6 +271,16 @@ object Util {
 
     def main(args: Array[String]): Unit = {
 
+        if (true) {
+            val file = new File("""D:\tmp\aqa\ritter_bad_loc_upload\copy_me\jj.txt""")
+            val fis = new FileInputStream(file)
+            val data = fis.read()
+            println("Sleeping ....")
+            Thread.sleep(60 * 1000)
+            println("exiting")
+            System.exit(0)
+        }
+
         if (false) {
             val j = this
 

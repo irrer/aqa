@@ -334,6 +334,36 @@ object Run {
 
     private def now: Date = new Date(System.currentTimeMillis)
 
+    private def renameTryingFilePersistently(oldFile: File, newFile: File): Boolean = {
+        val retryLimitMs = 10 * 1000
+        val timeout = System.currentTimeMillis + retryLimitMs
+
+        val oldPath = java.nio.file.Paths.get(oldFile.getAbsolutePath)
+        val newPath = java.nio.file.Paths.get(newFile.getAbsolutePath)
+
+        def rename: Boolean = {
+            try {
+                val path = java.nio.file.Files.move(oldPath, newPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                true
+            }
+            catch {
+                case t: Throwable => {
+
+                    if (System.currentTimeMillis < timeout) {
+                        Thread.sleep(500)
+                        rename
+                    }
+                    else {
+                        logSevere("Unable to rename temporary directory " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath + " : " + fmtEx(t))
+                        false
+                    }
+                }
+            }
+        }
+
+        rename
+    }
+
     /**
      * Run a procedure.
      */
