@@ -207,7 +207,7 @@ class WebServer extends Application {
         class RedirectUnauthorizedToLogin extends Filter {
             override def afterHandle(request: Request, response: Response): Unit = {
                 if (response.getStatus == Status.CLIENT_ERROR_UNAUTHORIZED) {
-                    println("Send them to a login screen") // TODO send them to a login screen
+                    // TODO send them to a login screen
 
                     // This might work for setting the response:
                     //val cr = new ChallengeResponse(WebServer.challengeScheme, "hey", "password")

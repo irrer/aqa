@@ -59,6 +59,7 @@ object DbSetup {
         Output.query,
         CentralAxis.query,
         LeafOffsetCorrection.query,
+        EPIDCenterCorrection.query,
         LeafTransmission.query)
     /**
      * Initialize database by creating tables in dependency order.

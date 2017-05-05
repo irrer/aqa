@@ -334,34 +334,87 @@ object Run {
 
     private def now: Date = new Date(System.currentTimeMillis)
 
-    private def renameTryingFilePersistently(oldFile: File, newFile: File): Boolean = {
-        val retryLimitMs = 10 * 1000
-        val timeout = System.currentTimeMillis + retryLimitMs
+    private def renameFileTryingPersistently(oldFile: File, newFile: File): Boolean = {
+        logInfo("Attempting to rename file from : " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath)
 
-        val oldPath = java.nio.file.Paths.get(oldFile.getAbsolutePath)
-        val newPath = java.nio.file.Paths.get(newFile.getAbsolutePath)
+        def renameUsingOldIo: Boolean = {
+            try {
+                val status = oldFile.renameTo(newFile)
+                if (status) logInfo("Used File.renameTo to successfully rename from : " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath)
+                status
+            }
+            catch {
+                case t: Throwable => {
+                    logWarning("Failed to rename file with File.renameTo from : " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath + " : " + fmtEx(t))
+                    false
+                }
+            }
+        }
 
-        def rename: Boolean = {
+        def renameUsingNio: Boolean = {
+            val retryLimitMs = 10 * 1000
+            val timeout = System.currentTimeMillis + retryLimitMs
+
+            val oldPath = java.nio.file.Paths.get(oldFile.getAbsolutePath)
+            val newPath = java.nio.file.Paths.get(newFile.getAbsolutePath)
             try {
                 val path = java.nio.file.Files.move(oldPath, newPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                logInfo("Used nio to successfully rename from : " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath)
                 true
             }
             catch {
                 case t: Throwable => {
-
                     if (System.currentTimeMillis < timeout) {
+                        logWarning("Failed to rename file with nio - retrying. From : " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath + " : " + fmtEx(t))
                         Thread.sleep(500)
-                        rename
+                        renameUsingNio
                     }
                     else {
-                        logSevere("Unable to rename temporary directory " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath + " : " + fmtEx(t))
+                        logSevere("Unable using nio to rename file " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath + " : " + fmtEx(t))
                         false
                     }
                 }
             }
         }
 
-        rename
+        def deleteLater(f: File): Unit = {
+            class DeleteLater(file: File) extends Runnable {
+                val timeout = System.currentTimeMillis + (60 * 60 * 1000) // try for up to an hour
+                override def run: Unit = {
+                    while ((System.currentTimeMillis < timeout) && (f.exists)) {
+                        Thread.sleep(20 * 1000)
+                        Util.deleteFileTreeSafely(f)
+                    }
+                    if (f.exists) logInfo("Was able to remove file " + f.getAbsolutePath)
+                    else logWarning("Was not able to remove file " + f.getAbsolutePath)
+                }
+
+            }
+            new Thread((new DeleteLater(f))).start
+        }
+
+        def copyFilesAndDeleteLater: Boolean = {
+            try {
+                Utility.copyFileTree(oldFile, newFile)
+                logInfo("Used copyFileTree to successfully copy from : " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath)
+                deleteLater(oldFile)
+                true
+            }
+            catch {
+                case t: Throwable => {
+                    logSevere("Unable using nio to rename file " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath + " : " + fmtEx(t))
+                    false
+                }
+            }
+        }
+
+        if (renameUsingOldIo) true
+        else {
+            if (renameUsingNio) true
+            else {
+                copyFilesAndDeleteLater
+            }
+        }
     }
 
     /**
@@ -384,7 +437,9 @@ object Run {
 
         // move input files to their final resting place
         inputDir.getParentFile.mkdirs
-        if (!sessionDir.renameTo(inputDir)) throw new RuntimeException("Unable to rename temporary directory " + sessionDir.getAbsolutePath + " to " + inputDir.getAbsolutePath)
+        renameFileTryingPersistently(sessionDir, inputDir)
+        if (!inputDir.exists)
+            throw new RuntimeException("Unable to rename temporary directory " + sessionDir.getAbsolutePath + " to input directory " + inputDir.getAbsolutePath)
 
         val startDate = new Date(System.currentTimeMillis)
 

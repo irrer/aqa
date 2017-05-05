@@ -87,7 +87,7 @@ object LeafOffsetCorrection extends ProcedureOutput {
         Db.run(action)
     }
 
-    def xmlToList(elem: Elem, outputPK: Long): Seq[LeafOffsetCorrection] = {
+    private def xmlToList(elem: Elem, outputPK: Long): Seq[LeafOffsetCorrection] = {
         def secNodeToLocList(sec: Node): Seq[LeafOffsetCorrection] = {
             val id = (sec \ "@id").head.text
             def leafNodeToLOC(leafNode: Node): LeafOffsetCorrection = {

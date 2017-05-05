@@ -82,7 +82,8 @@ object UploadTransAndOpen {
             <div class="row">
                 <div class="col-md-5 col-md-offset-2">
                     <h3>Success</h3>
-                    Both the open field and transmission files were written to the configuration directory for machine{ System.getenv(Util.machineIdEnvName) }
+                    Both the open field and transmission files were written to the configuration directory for
+                machine{ System.getenv(Util.machineIdEnvName) + " at " + System.getenv(Util.institutionIdEnvName) }
                 </div>
             </div>
         }

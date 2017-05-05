@@ -19,6 +19,8 @@ import scala.util.Random
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.Properties
+import edu.umro.util.Utility
+import org.aqa.Logging._
 
 object Util {
 
@@ -26,6 +28,7 @@ object Util {
     val aqaUrl = "https://www." + aqaDomain + "/"
     val machineConfigDirEnvName = "machine_configDir"
     val machineIdEnvName = "machine_id"
+    val institutionIdEnvName = "institution_id"
 
     private val timeAsFileNameFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss-SSS")
 
@@ -267,6 +270,15 @@ object Util {
         }
 
         if (list != null) list else Seq[File]()
+    }
+
+    def deleteFileTreeSafely(dir: File) = {
+        try {
+            Utility.deleteFileTree(dir)
+        }
+        catch {
+            case t: Throwable => logWarning("Unable to delete directory " + dir.getAbsolutePath + " : " + fmtEx(t))
+        }
     }
 
     def main(args: Array[String]): Unit = {

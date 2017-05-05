@@ -142,9 +142,14 @@ object WebUtil {
                 val upload = new RestletFileUpload(new DiskFileItemFactory(500, dir)) // TODO change size to -1 ?
                 val itemIterator = upload.getItemIterator(request.getEntity);
 
+                val userId: String = getUser(request) match { case Some(user) => user.id; case _ => "unknown" }
                 while (itemIterator.hasNext) {
                     val ii = itemIterator.next
-                    if (!ii.isFormField) saveFile(ii.openStream, new File(dir, ii.getName))
+                    if (!ii.isFormField) {
+                        val file = new File(dir, ii.getName)
+                        logInfo("Uploading file from user " + userId + " to " + file.getAbsolutePath)
+                        saveFile(ii.openStream, file)
+                    }
                 }
             }
             case _ => throw new RuntimeException("Unexpected internal error. None in WebUtil.saveFileList")
@@ -926,7 +931,6 @@ object WebUtil {
                 Seq[Machine]()
         }
     }
-
 
     val humanDateFormat = new SimpleDateFormat("EEE d MMM yyyy  HH:mm:ss")
 

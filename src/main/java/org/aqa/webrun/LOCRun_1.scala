@@ -40,6 +40,7 @@ import org.aqa.db.DataValidity
 import java.sql.Timestamp
 import org.aqa.db.Input
 import org.aqa.web.ViewOutput
+import org.aqa.db.EPIDCenterCorrection
 
 object LOCRun_1 {
     val parametersFileName = "parameters.xml"
@@ -175,6 +176,13 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
             case Some(inst) => inst.name
             case _ => ""
         }
+        
+        val epidCenterCorrection: String = {
+            EPIDCenterCorrection.getByOutput(outputPK).headOption match {
+                case Some(ecc) => ecc.epidCenterCorrection_mm.formatted("%8.6e")
+                case _ => "not available"
+            }
+        }
 
         val user = for (userPK <- output.userPK; u <- User.get(userPK)) yield (u)
 
@@ -232,7 +240,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
             "            ['Leaf'," + leaves.mkString(", ") + "]"
         }
 
-        val transData = LeafTransmission.getByOutput(outputPK).map(v => new LeafValue(v.section, v.leafIndex, v.transmission_pct))
+        val transData = LeafTransmission.getByOutput(outputPK).map(v => new LeafValue(v.section, v.leafIndex, v.transmission_fract))
         val transLeaves = transData.map(_.section).distinct.sorted
 
         val offsetDataText: String = {
@@ -243,7 +251,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         }
 
         val transDataText: String = {
-            val data = LeafTransmission.getByOutput(outputPK).map(v => new LeafValue(v.section, v.leafIndex, v.transmission_pct))
+            val data = LeafTransmission.getByOutput(outputPK).map(v => new LeafValue(v.section, v.leafIndex, v.transmission_fract))
             val leaves = data.map(_.leafIndex).distinct.sorted
             val groupList = data.groupBy(_.section).map(lo => lo._2).toSeq.sortWith((a, b) => a.head.section > b.head.section)
             leavesToString(leaves) + ",\n" + groupList.map(g => groupToDataString(g)).mkString(",\n")
@@ -316,6 +324,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
                     <div class="row">
                         <div class="col-md-1" title="Leaf Offset Constancy and Transmission"><h2>LOC</h2></div>
                         <div class="col-md-2 col-md-offset-1" title="Machine"><h2>{ machineId }</h2></div>
+                        <div class="col-md-2 col-md-offset-1">EPID Center Correction in mm: { epidCenterCorrection }</div>
                     </div>
                     <div class="row" style="margin:20px;">
                         <div class="col-md-1"><em>Institution:</em>{ institutionName }</div>

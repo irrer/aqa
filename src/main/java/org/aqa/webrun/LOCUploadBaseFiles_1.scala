@@ -44,7 +44,7 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
         def mmiToText(mmi: MMI) = mmi.institution.name + " - " + mmi.machine.id
         def mmiToTuple(mmi: MMI) = (mmiToMachPK(mmi), mmiToText(mmi))
         def sortMMI(a: MMI, b: MMI): Boolean = { mmiToText(a).compareTo(mmiToText(b)) < 0 }
-        ("-1", "None") +: Machine.listWithDependencies.filter(mmi=> mmi.machine.serialNumber.isEmpty).sortWith(sortMMI).map(mmi => mmiToTuple(mmi))
+        ("-1", "None") +: Machine.listWithDependencies.filter(mmi => mmi.machine.serialNumber.isEmpty).sortWith(sortMMI).map(mmi => mmiToTuple(mmi))
     }
 
     private val machine = new WebInputSelectOption("Machine", 6, 0, machineList, showMachineSelector)
@@ -84,7 +84,7 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
 
     private def validate(valueMap: ValueMapT): Either[StyleMapT, RunRequirements] = {
         val alList = attributeListsInSession(valueMap)
-        
+
         val serNoList = alList.map(al => WebUtil.attributeListToDeviceSerialNumber(al)).flatten.distinct
 
         // machines that DICOM files reference (based on device serial numbers)
@@ -143,7 +143,10 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
      */
     private def cancel(valueMap: ValueMapT, response: Response) = {
         sessionDir(valueMap) match {
-            case Some(dir) => Utility.deleteFileTree(dir)
+            case Some(dir) => {
+                logInfo("Removing directory tree " + dir.getAbsolutePath)
+                Util.deleteFileTreeSafely(dir)
+            }
             case _ => ;
         }
         WebRunIndex.redirect(response)
