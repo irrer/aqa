@@ -9,7 +9,7 @@ import org.aqa.run.ProcedureStatus
 import scala.xml.XML
 import org.aqa.db.DbSetup
 import org.aqa.Config
-import org.aqa.Logging
+import org.aqa.Logging._
 
 object ProcedureOutputUtil {
 
@@ -21,11 +21,58 @@ object ProcedureOutputUtil {
 
     private val labelList = procedureList.map(p => p.topXmlLabel)
 
+    private def outputPkFromElem(elem: Elem): Option[Long] = {
+        try {
+            val j0 = elem \ "@outputPK"
+            val j1 = j0.head
+            val j2 = j1.toString
+            val j3 = j2.toLong
+            Some((elem \ "@outputPK").head.toString.toLong)
+        }
+        catch {
+            case t: Throwable => {
+                val msg = "Unable to get outputPK from XML file: " + fmtEx(t)
+                logWarning(msg)
+                throw new RuntimeException(msg)
+                None
+            }
+        }
+
+    }
+
     private def getOutputFile(args: Array[String]): File = {
         if ((args == null) || (args.isEmpty)) new File(outputFileName)
         else new File(args(0))
     }
 
+    /**
+     * Search through the given elem for items that should be put in the database and
+     * put them in the database.  If the given outputPK is defined, then use it, otherwise
+     * look in the elem for the outputPK.  If not defined anywhere then throw an exception.
+     *
+     * Return a list of tags that were unknown.
+     */
+    def insertIntoDatabase(elem: Elem, outputPK: Option[Long]): Seq[String] = {
+        val known = (elem \ "_").map(n => n.label)
+        val unknown = known.diff(labelList)
+
+        val outPK: Long = outputPK match {
+            case Some(opk) => opk
+            case _ => outputPkFromElem(elem).get
+        }
+
+        def insertTable(label: String) = {
+            val procedureOutput = procedureList.find(p => p.topXmlLabel.equals(label)).get
+            logInfo("Inserting values in database for " + label)
+            val count = procedureOutput.insert(elem, outPK)
+            println("Inserted " + count + " values in database for " + label)
+        }
+
+        known.map(label => insertTable(label))
+        unknown
+    }
+
+    /*
     def main(args: Array[String]): Unit = {
         try {
             val valid = Config.validate
@@ -37,23 +84,7 @@ object ProcedureOutputUtil {
             println("Using outputFile: " + outputFile.getAbsolutePath)
             val elem = XML.loadFile(outputFile)
             println("Read file " + outputFile.getAbsolutePath)
-            val known = (elem \ "_").map(n => n.label)
-
-            val unknown = known.diff(labelList)
-            if (unknown.nonEmpty) {
-                val unknownText = (unknown.foldLeft("")((t, l) => t + "  " + l)).trim
-                val msg = ("Unknown top level values in the file " + outputFile.getAbsolutePath + " were defined: " + unknownText)
-                ProcedureStatus.terminate(msg, ProcedureStatus.crash)
-            }
-
-            def insert(label: String) = {
-                val procedureOutput = procedureList.find(p => p.topXmlLabel.equals(label)).get
-                println("Inserting values in database for " + label)
-                val count = procedureOutput.insert(elem, outputPK)
-                println("Inserted " + count + " values in database for " + label)
-            }
-
-            known.map(label => insert(label))
+            insertIntoDatabase(elem, outputPK)
             println("Done inserting data into database")
             System.exit(0)
         }
@@ -64,5 +95,6 @@ object ProcedureOutputUtil {
             }
         }
     }
+    */
 
 }

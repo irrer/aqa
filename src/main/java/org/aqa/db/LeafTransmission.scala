@@ -51,7 +51,7 @@ object LeafTransmission extends ProcedureOutput {
 
     val query = TableQuery[LeafTransmissionTable]
 
-    override val topXmlLabel = "LeafTransmissionList"
+    override val topXmlLabel = "LeafTransmission"
 
     def get(leafTransmissionPK: Long): Option[LeafTransmission] = {
         val action = for {
@@ -85,20 +85,13 @@ object LeafTransmission extends ProcedureOutput {
     }
 
     def xmlToList(elem: Elem, outputPK: Long): Seq[LeafTransmission] = {
-        def secNodeToLocList(sec: Node): Seq[LeafTransmission] = {
-            val id = (sec \ "@id").head.text
-            def leafNodeToLOC(leafNode: Node): LeafTransmission = {
-                val leafIndex = (leafNode \ "@Leaf").head.text.toInt
-                val transmission_fract = leafNode.head.text.toDouble
-                val loc = new LeafTransmission(None, outputPK, id, leafIndex, transmission_fract)
-                loc
-            }
-            val leafNodeList = (sec \ "LeafTransmission_pct").map(leafNode => leafNodeToLOC(leafNode))
-            leafNodeList
+        def leafNodeToTransList(leaf: Node): Seq[LeafTransmission] = {
+            val leafIndex = (leaf \ "leafIndex").head.text.toInt
+            (leaf \ "Value").map(n => n.text.toDouble).zipWithIndex.map(di => new LeafTransmission(None, outputPK, (di._2 + 1).toString, leafIndex, di._1))
         }
 
         (elem \ topXmlLabel).headOption match {
-            case Some(node) => (node \ "Section").map(sec => secNodeToLocList(sec)).flatten
+            case Some(node) => (node \ "LeafList" \ "Leaf").map(leaf => leafNodeToTransList(leaf)).flatten
             case None => Seq[LeafTransmission]()
         }
     }

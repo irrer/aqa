@@ -96,6 +96,23 @@ object LeafCorrectionTransmissionProcedure {
         }
     }
 
+    private def excelToXml(workbook: Workbook) = {
+        val sheetSpecList: List[SheetSpec] = List(
+            new SheetSpec(Seq("LOC", "Sheet1"), "LeafOffsetCorrectionList", "LeafOffsetCorrection_mm", true),
+            new SheetSpec(Seq("Trans", "Transmission", "Sheet2"), "LeafTransmissionList", "LeafTransmission_pct", true))
+
+        val elemList = sheetSpecList.map(ss => ss.process(workbook)).flatten
+
+        val xml = {
+            <Output outputPK={ System.getenv("outputPK") }>
+                { elemList }
+            </Output>
+        }
+
+        val text = xmlToText(xml)
+        Util.writeFile(new File(curDir, ProcedureOutputUtil.outputFileName), text)
+    }
+
     /**
      * Extract DOT-DOA values from Excel spreadsheet and put into XML form for consumption by database.  Also convert
      * spreadsheet to HTML for viewing by user.
@@ -104,20 +121,7 @@ object LeafCorrectionTransmissionProcedure {
         try {
             val workbook = getExcelFile
 
-            val sheetSpecList: List[SheetSpec] = List(
-                new SheetSpec(Seq("LOC", "Sheet1"), "LeafOffsetCorrectionList", "LeafOffsetCorrection_mm", true),
-                new SheetSpec(Seq("Trans", "Transmission", "Sheet2"), "LeafTransmissionList", "LeafTransmission_pct", true))
-
-            val elemList = sheetSpecList.map(ss => ss.process(workbook)).flatten
-
-            val xml = {
-                <Output outputPK={ System.getenv("outputPK") }>
-                    { elemList }
-                </Output>
-            }
-
-            val text = xmlToText(xml)
-            Util.writeFile(new File(curDir, ProcedureOutputUtil.outputFileName), text)
+            // excelToXml(workbook)
 
             val html = WebUtil.excelToHtml(workbook)
 

@@ -41,6 +41,9 @@ import java.sql.Timestamp
 import org.aqa.db.Input
 import org.aqa.web.ViewOutput
 import org.aqa.db.EPIDCenterCorrection
+import org.aqa.procedures.ProcedureOutputUtil
+import java.io.File
+import scala.xml.XML
 
 object LOCRun_1 {
     val parametersFileName = "parameters.xml"
@@ -176,7 +179,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
             case Some(inst) => inst.name
             case _ => ""
         }
-        
+
         val epidCenterCorrection: String = {
             EPIDCenterCorrection.getByOutput(outputPK).headOption match {
                 case Some(ecc) => ecc.epidCenterCorrection_mm.formatted("%8.6e")
@@ -354,17 +357,16 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         make
     }
 
-    override def postPerform(activeProcess: ActiveProcess): Unit = {
-        //        def writeOffset(outputPK: Long, dir: File) = {
-        //            val offset = LeafOffsetCorrection.getByOutput(outputPK)
-        //        }
-        //        def writeTrans(outputPK: Long, dir: File) = {
-        //            val trans = LeafTransmission.getByOutput(outputPK)
-        //        }
+    private def insertIntoDatabase(outputPK: Long) = {
+        val elem = XML.loadFile(new File(ProcedureOutputUtil.outputFileName))
+        ProcedureOutputUtil.insertIntoDatabase(elem, Some(outputPK))
+    }
 
+    override def postPerform(activeProcess: ActiveProcess): Unit = {
         activeProcess.output.outputPK match {
             case Some(outputPK) => {
                 val output = Output.get(outputPK).get
+                insertIntoDatabase(outputPK)
                 val content = makeDisplay(output, outputPK)
                 val file = new File(activeProcess.output.dir, Output.displayFilePrefix + ".html")
                 logInfo("Writing file " + file.getAbsolutePath)

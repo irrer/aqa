@@ -54,7 +54,7 @@ object LeafOffsetCorrection extends ProcedureOutput {
 
     val query = TableQuery[LeafOffsetCorrectionTable]
 
-    override val topXmlLabel = "LeafOffsetCorrectionList"
+    override val topXmlLabel = "LeafOffsetConstancy"
 
     def get(leafOffsetCorrectionPK: Long): Option[LeafOffsetCorrection] = {
         val action = for {
@@ -88,20 +88,13 @@ object LeafOffsetCorrection extends ProcedureOutput {
     }
 
     private def xmlToList(elem: Elem, outputPK: Long): Seq[LeafOffsetCorrection] = {
-        def secNodeToLocList(sec: Node): Seq[LeafOffsetCorrection] = {
-            val id = (sec \ "@id").head.text
-            def leafNodeToLOC(leafNode: Node): LeafOffsetCorrection = {
-                val leafIndex = (leafNode \ "@Leaf").head.text.toInt
-                val correction_mm = leafNode.head.text.toDouble
-                val loc = new LeafOffsetCorrection(None, outputPK, id, leafIndex, correction_mm)
-                loc
-            }
-            val leafNodeList = (sec \ "LeafOffsetCorrection_mm").map(leafNode => leafNodeToLOC(leafNode))
-            leafNodeList
+        def leafNodeToLocList(leaf: Node): Seq[LeafOffsetCorrection] = {
+            val leafIndex = (leaf \ "leafIndex").head.text.toInt
+            (leaf \ "Value").map(n => n.text.toDouble).zipWithIndex.map(di => new LeafOffsetCorrection(None, outputPK, (di._2 + 1).toString, leafIndex, di._1))
         }
 
         (elem \ topXmlLabel).headOption match {
-            case Some(node) => (node \ "Section").map(sec => secNodeToLocList(sec)).flatten
+            case Some(node) => (node \ "LeafList" \ "Leaf").map(leaf => leafNodeToLocList(leaf)).flatten
             case None => Seq[LeafOffsetCorrection]()
         }
     }
@@ -116,7 +109,8 @@ object LeafOffsetCorrection extends ProcedureOutput {
     def main(args: Array[String]): Unit = {
         val valid = Config.validate
         DbSetup.init
-        val elem = XML.loadFile(new File("""D:\AQA_Data\data\Chicago_33\TB5x_1\WinstonLutz_1.0_1\2016-12-09T09-50-54-361_134\output_2016-12-09T09-50-54-490\output.xml"""))
+        //val elem = XML.loadFile(new File("""D:\AQA_Data\data\Chicago_33\TB5x_1\WinstonLutz_1.0_1\2016-12-09T09-50-54-361_134\output_2016-12-09T09-50-54-490\output.xml"""))
+        val elem = XML.loadFile(new File("""D:\tmp\aqa\tmp\output.xml"""))
         val xmlList = xmlToList(elem, 134)
         xmlList.map(loc => println("    outputPK: " + loc.outputPK + "     section: " + loc.section + "     leafIndex: " + loc.leafIndex + "     correction_mm: " + loc.correction_mm))
         xmlList.map(loc => loc.insertOrUpdate)
