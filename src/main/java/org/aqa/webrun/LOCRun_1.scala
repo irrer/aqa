@@ -43,11 +43,18 @@ import org.aqa.web.ViewOutput
 import org.aqa.db.EPIDCenterCorrection
 import org.aqa.procedures.ProcedureOutputUtil
 import java.io.File
+import org.apache.poi.ss.usermodel.Workbook
+import org.apache.poi.ss.usermodel.Sheet
+import org.apache.poi.ss.usermodel.CellType
+import org.apache.poi.ss.usermodel.Row
+import edu.umro.MSOfficeUtil.Excel.ExcelUtil
 import scala.xml.XML
+import org.aqa.run.StdLogger
 
 object LOCRun_1 {
     val parametersFileName = "parameters.xml"
     val LOCRun_1PKTag = "LOCRun_1PK"
+    val spreadsheetHtmlFileName = "spreadsheet.html"
 
     def main(args: Array[String]): Unit = {
         println("Starting")
@@ -262,7 +269,30 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
         val linkToFiles: Elem = {
             val url = ViewOutput.path + "?outputPK=" + outputPK + "&summary=true"
+            val xlsFile: Elem = {
+                val list = output.dir.list.filter(n => n.toLowerCase.contains(".xls"))
+                list.headOption match {
+                    case Some(name) => <a href={ name }>Download Spreadsheet</a>
+                    case _ => <div>No Spreadsheet found</div>
+                }
+            }
             <a href={ url }>Files</a>
+        }
+
+        val viewSpreadsheet: Elem = {
+            <a href={ LOCRun_1.spreadsheetHtmlFileName }>View Spreadsheet</a>
+        }
+
+        val downloadSpreadsheet: Elem = {
+            val list = output.dir.list.filter(n => n.toLowerCase.contains(".xls"))
+            list.headOption match {
+                case Some(name) => <a href={ name }>Download Spreadsheet</a>
+                case _ => <div>No Spreadsheet found</div>
+            }
+        }
+
+        val viewLog: Elem = {
+            <a href={ StdLogger.LOG_TEXT_FILE_NAME }>View Log</a>
         }
 
         /**
@@ -333,17 +363,22 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
                         <div class="col-md-1"><em>Institution:</em>{ institutionName }</div>
                         <div class="col-md-2"><em>Data Acquisition:</em><br/>{ dateToString(output.dataDate) }</div>
                         <div class="col-md-2"><em>Analysis:</em><br/>{ analysisDate }</div>
-                        <div class="col-md-1"><em>Elapsed:</em>{ elapsed }</div>
                         <div class="col-md-1"><em>Analysis by:</em>{ userId }</div>
+                        <div class="col-md-1"><em>Elapsed:</em>{ elapsed }</div>
                         <div class="col-md-2"><em>Procedure:</em>{ procedureDesc }</div>
+                    </div>
+                    <div class="row" style="margin:20px;">
                         <div class="col-md-2">{ linkToFiles }</div>
+                        <div class="col-md-2">{ viewSpreadsheet }</div>
+                        <div class="col-md-2">{ downloadSpreadsheet }</div>
+                        <div class="col-md-2">{ viewLog }</div>
                     </div>
                     <div class="row">
                         <h4>Leaf Offset in mm</h4>
                     </div>
                     <div class="row">
                         <div id="LocChart"></div>
-                        <h4>Leaf Transmission Percent</h4>
+                        <h4>Leaf Transmission Fraction</h4>
                     </div>
                     <div class="row">
                         <div id="TransChart"></div>
@@ -357,16 +392,36 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         make
     }
 
-    private def insertIntoDatabase(outputPK: Long) = {
-        val elem = XML.loadFile(new File(ProcedureOutputUtil.outputFileName))
+    private def insertIntoDatabase(dir: File, outputPK: Long) = {
+        val elem = XML.loadFile(new File(dir, ProcedureOutputUtil.outputFileName))
         ProcedureOutputUtil.insertIntoDatabase(elem, Some(outputPK))
+    }
+
+    private def getExcelFile(dir: File): Option[Workbook] = {
+        val fileList = dir.listFiles.filter { f => f.getName.toLowerCase.contains(".xls") }
+        val workbookList = fileList.map(af => ExcelUtil.read(af)).filter { wb => wb.isRight }.map(w => w.right.get)
+        workbookList.headOption
+    }
+
+    private def excelToXml(dir: File) = {
+        getExcelFile(dir) match {
+            case Some(workbook) => {
+                val html = WebUtil.excelToHtml(workbook)
+                val htmlFile = new File(dir, LOCRun_1.spreadsheetHtmlFileName)
+                logInfo("Writing html version of spreadsheet to " + htmlFile.getAbsolutePath)
+                Util.writeFile(htmlFile, html)
+            }
+            case _ => logWarning("No Excel spreadsheet found.")
+        }
+
     }
 
     override def postPerform(activeProcess: ActiveProcess): Unit = {
         activeProcess.output.outputPK match {
             case Some(outputPK) => {
                 val output = Output.get(outputPK).get
-                insertIntoDatabase(outputPK)
+                insertIntoDatabase(activeProcess.output.dir, outputPK)
+                excelToXml(activeProcess.output.dir)
                 val content = makeDisplay(output, outputPK)
                 val file = new File(activeProcess.output.dir, Output.displayFilePrefix + ".html")
                 logInfo("Writing file " + file.getAbsolutePath)

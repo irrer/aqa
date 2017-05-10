@@ -98,8 +98,13 @@ object LeafTransmission extends ProcedureOutput {
 
     override def insert(elem: Elem, outputPK: Long): Int = {
         val toInsert = xmlToList(elem, outputPK)
-        toInsert.map(t => t.insertOrUpdate)
+        insertSeq(toInsert)
         toInsert.size
+    }
+
+    def insertSeq(list: Seq[LeafTransmission]): Unit = {
+        val ops = list.map { loc => LeafTransmission.query.insertOrUpdate(loc) }
+        Db.perform(ops)
     }
 
     /** For testing only. */

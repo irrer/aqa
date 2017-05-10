@@ -15,6 +15,7 @@ import org.aqa.Logging._
 import java.io.File
 import org.aqa.Config
 import scala.xml.XML
+import slick.profile.FixedSqlAction
 
 /** Database utilities. */
 
@@ -55,6 +56,10 @@ object Db {
     def perform(dbOperation: PostgresDriver.DriverAction[Unit, NoStream, Effect.Schema]): Unit = {
         dbOperation.statements.foreach { s => logInfo("Executing database statement: " + s) }
         run(DBIO.seq(dbOperation))
+    }
+
+    def perform(ops:  Seq[FixedSqlAction[Int, NoStream, Effect.Write]]) = {
+        run(DBIO.sequence(ops))
     }
 
     /**

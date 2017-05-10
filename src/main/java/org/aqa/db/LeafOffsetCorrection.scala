@@ -101,14 +101,20 @@ object LeafOffsetCorrection extends ProcedureOutput {
 
     override def insert(elem: Elem, outputPK: Long): Int = {
         val toInsert = xmlToList(elem, outputPK)
-        toInsert.map(t => t.insertOrUpdate)
+        insertSeq(toInsert)
         toInsert.size
+    }
+
+    def insertSeq(list: Seq[LeafOffsetCorrection]): Unit = {
+        val ops = list.map { loc => LeafOffsetCorrection.query.insertOrUpdate(loc) }
+        Db.perform(ops)
     }
 
     /** For testing only. */
     def main(args: Array[String]): Unit = {
         val valid = Config.validate
         DbSetup.init
+        System.exit(99)
         //val elem = XML.loadFile(new File("""D:\AQA_Data\data\Chicago_33\TB5x_1\WinstonLutz_1.0_1\2016-12-09T09-50-54-361_134\output_2016-12-09T09-50-54-490\output.xml"""))
         val elem = XML.loadFile(new File("""D:\tmp\aqa\tmp\output.xml"""))
         val xmlList = xmlToList(elem, 134)

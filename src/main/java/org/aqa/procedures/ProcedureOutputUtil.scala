@@ -23,10 +23,6 @@ object ProcedureOutputUtil {
 
     private def outputPkFromElem(elem: Elem): Option[Long] = {
         try {
-            val j0 = elem \ "@outputPK"
-            val j1 = j0.head
-            val j2 = j1.toString
-            val j3 = j2.toLong
             Some((elem \ "@outputPK").head.toString.toLong)
         }
         catch {
@@ -46,30 +42,14 @@ object ProcedureOutputUtil {
     }
 
     /**
-     * Search through the given elem for items that should be put in the database and
-     * put them in the database.  If the given outputPK is defined, then use it, otherwise
-     * look in the elem for the outputPK.  If not defined anywhere then throw an exception.
-     *
-     * Return a list of tags that were unknown.
+     * Give each of the ProcedureOutput classes an opportunity to extract data from the XML and insert it into the database.
      */
-    def insertIntoDatabase(elem: Elem, outputPK: Option[Long]): Seq[String] = {
-        val known = (elem \ "_").map(n => n.label)
-        val unknown = known.diff(labelList)
-
+    def insertIntoDatabase(elem: Elem, outputPK: Option[Long]): Unit = {
         val outPK: Long = outputPK match {
             case Some(opk) => opk
             case _ => outputPkFromElem(elem).get
         }
-
-        def insertTable(label: String) = {
-            val procedureOutput = procedureList.find(p => p.topXmlLabel.equals(label)).get
-            logInfo("Inserting values in database for " + label)
-            val count = procedureOutput.insert(elem, outPK)
-            println("Inserted " + count + " values in database for " + label)
-        }
-
-        known.map(label => insertTable(label))
-        unknown
+        procedureList.map(p => p.insert(elem, outPK))
     }
 
     /*
