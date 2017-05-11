@@ -63,7 +63,7 @@ object LOCRun_1 {
         val procedure = Procedure.get(2).get
 
         val lr = new LOCRun_1(procedure)
-        val output = Output.get(55).get
+        val output = Output.get(111).get
 
         val ap = new ActiveProcess(output, null, null, null)
 
@@ -171,7 +171,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         }
     }
 
-    private def makeDisplay(output: Output, outputPK: Long): String = {
+    private def makeDisplay(output: Output, outputPK: Long, locXml: LOCXml): String = {
 
         val machine = for (machPK <- output.machinePK; mach <- Machine.get(machPK)) yield (mach)
 
@@ -239,9 +239,10 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         //   org.apache.commons.ma
         case class LeafValue(section: String, leafIndex: Int, value: Double);
 
+        def fmt(d: Double): String = d.formatted("%7.5e")
+
         def groupToDataString(group: Seq[LeafValue]): String = {
             /** Number of digits of precision to display. */
-            def fmt(d: Double): String = d.formatted("%7.5e")
             val sorted = group.sortWith((a, b) => a.leafIndex < b.leafIndex)
             "            ['Position" + sorted.head.section + "'," + sorted.map(x => x.value).toSeq.map(d => fmt(d)).mkString(", ") + "]"
         }
@@ -252,19 +253,47 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
         val transData = LeafTransmission.getByOutput(outputPK).map(v => new LeafValue(v.section, v.leafIndex, v.transmission_fract))
         val transLeaves = transData.map(_.section).distinct.sorted
+        val leavesText = locXml.leafIndexList.distinct.sorted.mkString("            ['Leaf', ", ", ", "]")
+
+        def twoD2Text(data: Seq[Seq[Double]]): String = {
+            def sec2String(s: Int): String = {
+                val textNums = data.map(v => v(s)).map(d => fmt(d))
+                textNums.mkString("            ['Position" + (s + 1) + "', ", ", ", "]")
+            }
+            val values = (0 until locXml.sections).map(s => sec2String(s)).reverse.mkString(",\n")
+            values
+        }
+
+        def oneD2Text(name: String, data: Seq[Double]): String = {
+            "            ['" + name + "', " + data.map(m => fmt(m)).mkString(", ") + " ]"
+        }
 
         val offsetDataText: String = {
-            val data = LeafOffsetCorrection.getByOutput(outputPK).map(v => new LeafValue(v.section, v.leafIndex, v.correction_mm))
-            val leaves = data.map(_.leafIndex).distinct.sorted
-            val groupList = data.groupBy(_.section).map(lo => lo._2).toSeq.sortWith((a, b) => a.head.section > b.head.section)
-            leavesToString(leaves) + ",\n" + groupList.map(g => groupToDataString(g)).mkString(",\n")
+            val values = twoD2Text(locXml.LeafOffsetConstancyValue)
+            val mean = oneD2Text("Mean", locXml.LeafOffsetConstancyMean) // "            ['Mean', " + locXml.LeafOffsetConstancyMean.map(m => fmt(m)).mkString(", ") + " ],\n"
+            val range = oneD2Text("Range", locXml.LeafOffsetConstancyRange) // "            ['Range', " + locXml.LeafOffsetConstancyRange.map(m => fmt(m)).mkString(", ") + " ]\n"
+            Seq(leavesText, values, mean, range).mkString(",\n")
         }
 
         val transDataText: String = {
-            val data = LeafTransmission.getByOutput(outputPK).map(v => new LeafValue(v.section, v.leafIndex, v.transmission_fract))
-            val leaves = data.map(_.leafIndex).distinct.sorted
-            val groupList = data.groupBy(_.section).map(lo => lo._2).toSeq.sortWith((a, b) => a.head.section > b.head.section)
-            leavesToString(leaves) + ",\n" + groupList.map(g => groupToDataString(g)).mkString(",\n")
+            val values = twoD2Text(locXml.LeafOffsetTransmissionValue)
+            val mean = oneD2Text("Mean", locXml.LeafOffsetTransmissionMean) // "            ['Mean', " + locXml.LeafOffsetConstancyMean.map(m => fmt(m)).mkString(", ") + " ],\n"
+            Seq(leavesText, values, mean).mkString(",\n")
+        }
+
+        val rSquaredText: String = {
+            val values = twoD2Text(locXml.LOCRSquared)
+            Seq(leavesText, values).mkString(",\n")
+        }
+
+        val differenceFromBaselineOpenText: String = {
+            val values = twoD2Text(locXml.LOCDifferenceFromBaselineOpen)
+            Seq(leavesText, values).mkString(",\n")
+        }
+
+        val differenceFromBaselineTransText: String = {
+            val values = twoD2Text(locXml.LOCDifferenceFromBaselineTrans)
+            Seq(leavesText, values).mkString(",\n")
         }
 
         val linkToFiles: Elem = {
@@ -295,6 +324,10 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
             <a href={ StdLogger.LOG_TEXT_FILE_NAME }>View Log</a>
         }
 
+        val viewXml: Elem = {
+            <a href={ ProcedureOutputUtil.outputFileName }>View XML</a>
+        }
+
         /**
          * Javascript to display the graphs.
          */
@@ -305,8 +338,8 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
                 data: {
                     x: 'Leaf',
                     columns: [
-                        """ + offsetDataText +
-                """,
+""" + offsetDataText +
+                """
                     ]
                 },
                 bindto : '#LocChart',
@@ -322,7 +355,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
                     }
                 },
                 color : {
-                    pattern : [ '#8888bb', '#9999cc', '#aaaadd', '#bbbbee', '#ddddff' ]
+                    pattern : [ '#6688bb', '#7788bb', '#8888bb', '#9999cc', '#aaaadd', '#f5b800', '#e49595' ]
                 }
             });
 
@@ -330,8 +363,8 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
                 data: {
                     x: 'Leaf',
                     columns: [
-                        """ + transDataText +
-                """,
+""" + transDataText +
+                """
                     ]
                 },
                 bindto : '#TransChart',
@@ -344,9 +377,76 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
                     }
                 },
                 color : {
-                    pattern : [ '#88bb88', '#99cc99', '#aaddaa', '#bbeebb', '#ddffdd' ]
+                    pattern : [ '#66bb88', '#77bb88', '#88bb88', '#99cc99', '#aaddaa', '#f5b800' ]
                 }
             });
+
+            var RSquaredChart = c3.generate({
+                data: {
+                    x: 'Leaf',
+                    columns: [
+""" + rSquaredText +
+                """
+                    ]
+                },
+                bindto : '#RSquaredChart',
+                axis: {
+                    x: {
+                        label: 'Leaf',
+                    },
+                    y: {
+                        label: 'R Squared'
+                    }
+                },
+                color : {
+                    pattern : [ '#66bb88', '#77bb88', '#88bb88', '#99cc99', '#aaddaa' ]
+                }
+            });
+
+            var DifferenceFromBaselineOpenChart = c3.generate({
+                data: {
+                    x: 'Leaf',
+                    columns: [
+""" + differenceFromBaselineOpenText +
+                """
+                    ]
+                },
+                bindto : '#DifferenceFromBaselineOpenChart',
+                axis: {
+                    x: {
+                        label: 'Leaf',
+                    },
+                    y: {
+                        label: 'Difference From Baseline Open'
+                    }
+                },
+                color : {
+                    pattern : [ '#66bb88', '#77bb88', '#88bb88', '#99cc99', '#aaddaa' ]
+                }
+            });
+
+            var DifferenceFromBaselineTransChart = c3.generate({
+                data: {
+                    x: 'Leaf',
+                    columns: [
+""" + differenceFromBaselineTransText +
+                """
+                    ]
+                },
+                bindto : '#DifferenceFromBaselineTrans',
+                axis: {
+                    x: {
+                        label: 'Leaf',
+                    },
+                    y: {
+                        label: 'Difference From Baseline Transmission'
+                    }
+                },
+                color : {
+                    pattern : [ '#66bb88', '#77bb88', '#88bb88', '#99cc99', '#aaddaa' ]
+                }
+            });
+
             </script>
 """
         }
@@ -372,16 +472,37 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
                         <div class="col-md-2">{ viewSpreadsheet }</div>
                         <div class="col-md-2">{ downloadSpreadsheet }</div>
                         <div class="col-md-2">{ viewLog }</div>
+                        <div class="col-md-2">{ viewXml }</div>
                     </div>
                     <div class="row">
                         <h4>Leaf Offset in mm</h4>
                     </div>
                     <div class="row">
                         <div id="LocChart"></div>
+                    </div>
+                    <div class="row">
                         <h4>Leaf Transmission Fraction</h4>
                     </div>
                     <div class="row">
                         <div id="TransChart"></div>
+                    </div>
+                    <div class="row">
+                        <h4>R<sup>2</sup></h4>
+                    </div>
+                    <div class="row">
+                        <div id="RSquaredChart">aaaaa</div>
+                    </div>
+                    <div class="row">
+                        <h4>Difference from Baseline Open</h4>
+                    </div>
+                    <div class="row">
+                        <div id="DifferenceFromBaselineOpenChart">bbbbb</div>
+                    </div>
+                    <div class="row">
+                        <h4>Difference from Baseline Transmission</h4>
+                    </div>
+                    <div class="row">
+                        <div id="DifferenceFromBaselineTrans">ccccc</div>
                     </div>
                 </div>
             }
@@ -403,6 +524,10 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         workbookList.headOption
     }
 
+    private def makeSpreadsheet(dir: File, locXml: LOCXml): Unit = {
+        // TODO
+    }
+
     private def excelToXml(dir: File) = {
         getExcelFile(dir) match {
             case Some(workbook) => {
@@ -420,9 +545,11 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         activeProcess.output.outputPK match {
             case Some(outputPK) => {
                 val output = Output.get(outputPK).get
+                val locXml = new LOCXml(output.dir)
                 insertIntoDatabase(activeProcess.output.dir, outputPK)
+                makeSpreadsheet(activeProcess.output.dir, locXml)
                 excelToXml(activeProcess.output.dir)
-                val content = makeDisplay(output, outputPK)
+                val content = makeDisplay(output, outputPK, locXml)
                 val file = new File(activeProcess.output.dir, Output.displayFilePrefix + ".html")
                 logInfo("Writing file " + file.getAbsolutePath)
                 Util.writeFile(file, content)
