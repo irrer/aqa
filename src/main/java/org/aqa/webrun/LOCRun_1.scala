@@ -55,9 +55,11 @@ object LOCRun_1 {
     val parametersFileName = "parameters.xml"
     val LOCRun_1PKTag = "LOCRun_1PK"
     val spreadsheetHtmlFileName = "spreadsheet.html"
+    val spreadsheetFileName = "spreadsheet.xlsx"
 
     def main(args: Array[String]): Unit = {
         println("Starting")
+
         val valid = Config.validate
         DbSetup.init
         val procedure = Procedure.get(2).get
@@ -509,7 +511,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
             wrapBody(div, "LOC", None, true, Some(runScript))
         }
-
+        logInfo("Making LOC display for output " + outputPK)
         make
     }
 
@@ -525,20 +527,29 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
     }
 
     private def makeSpreadsheet(dir: File, locXml: LOCXml): Unit = {
-        // TODO
+        try {
+            (new LOCSpreadsheet(dir, locXml)).write
+        }
+        catch {
+            case t: Throwable => logWarning("Failed to make spreadsheet: " + fmtEx(t))
+        }
     }
 
     private def excelToXml(dir: File) = {
-        getExcelFile(dir) match {
-            case Some(workbook) => {
-                val html = WebUtil.excelToHtml(workbook)
-                val htmlFile = new File(dir, LOCRun_1.spreadsheetHtmlFileName)
-                logInfo("Writing html version of spreadsheet to " + htmlFile.getAbsolutePath)
-                Util.writeFile(htmlFile, html)
+        try {
+            getExcelFile(dir) match {
+                case Some(workbook) => {
+                    val html = WebUtil.excelToHtml(workbook)
+                    val htmlFile = new File(dir, LOCRun_1.spreadsheetHtmlFileName)
+                    logInfo("Writing html version of spreadsheet to " + htmlFile.getAbsolutePath)
+                    Util.writeFile(htmlFile, html)
+                }
+                case _ => logWarning("No Excel spreadsheet found.")
             }
-            case _ => logWarning("No Excel spreadsheet found.")
         }
-
+        catch {
+            case t: Throwable => logWarning("Failed to convert spreadsheet to XML: " + fmtEx(t))
+        }
     }
 
     override def postPerform(activeProcess: ActiveProcess): Unit = {

@@ -20,6 +20,8 @@ class LOCXml(dir: File) {
 
     private val constancy = elem \ "LeafOffsetConstancy"
     private val constancyLeafList = constancy \ "LeafList" \ "Leaf"
+    
+    val outputPK = (elem \"@outputPK").head.text.toLong
 
     val LeafOffsetConstancyValue = constancyLeafList.map(n => nodeSeqToDouble(n \ "Value"))
     val LeafOffsetConstancyMean = nodeSeqToDouble(constancyLeafList \ "Mean")
@@ -44,7 +46,7 @@ class LOCXml(dir: File) {
 
     val LOCDifferenceFromBaselineTrans = (elem \ "LOCDifferenceFromBaselineTrans" \ "Leaf").map(n => nodeSeqToDouble(n \ "Value"))
 
-    val leafIndexList = (constancyLeafList \ "leafIndex").map(n => n.head.text.toInt)
+    val leafIndexList = (constancyLeafList \ "leafIndex").map(n => n.head.text.toInt).distinct.sorted
     val sections = LeafOffsetConstancyValue.head.size
 }
 
