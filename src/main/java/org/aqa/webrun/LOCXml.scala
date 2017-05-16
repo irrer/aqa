@@ -22,6 +22,8 @@ class LOCXml(dir: File) {
     private val constancyLeafList = constancy \ "LeafList" \ "Leaf"
     
     val outputPK = (elem \"@outputPK").head.text.toLong
+    
+    val epidCenterCorrection_mm = (elem \ "EPIDCenterCorrection").head.text.toDouble
 
     val LeafOffsetConstancyValue = constancyLeafList.map(n => nodeSeqToDouble(n \ "Value"))
     val LeafOffsetConstancyMean = nodeSeqToDouble(constancyLeafList \ "Mean")

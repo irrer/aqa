@@ -60,6 +60,15 @@ object LOCRun_1 {
     def main(args: Array[String]): Unit = {
         println("Starting")
 
+        if (true) {
+            val inFile = new File("""D:\AQA_Data\results\TBD_2\CHIC1_11\Leaf_Offset_and_Transmission_1.0.0_2\2017-05-16T12-16-11-212_118\output_2017-05-16T12-16-11-261\spreadsheet.xlsx""")
+            val workbook = ExcelUtil.read(inFile).right.get
+            val html = excelToHtml(workbook)
+            val outFile = new File("""D:\AQA_Data\results\TBD_2\CHIC1_11\Leaf_Offset_and_Transmission_1.0.0_2\2017-05-16T12-16-11-212_118\output_2017-05-16T12-16-11-261\tabby.html""")
+            Util.writeFile(outFile, html)
+            println("Done")
+            System.exit(99)
+        }
         val valid = Config.validate
         DbSetup.init
         val procedure = Procedure.get(2).get
@@ -173,7 +182,9 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         }
     }
 
-    private def makeDisplay(output: Output, outputPK: Long, locXml: LOCXml): String = {
+    case class FileWorkbook(file: File, workbook: Workbook);
+
+    private def makeDisplay(output: Output, outputPK: Long, locXml: LOCXml, fileWorkbookList: Seq[FileWorkbook]): String = {
 
         val machine = for (machPK <- output.machinePK; mach <- Machine.get(machPK)) yield (mach)
 
@@ -191,7 +202,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
         val epidCenterCorrection: String = {
             EPIDCenterCorrection.getByOutput(outputPK).headOption match {
-                case Some(ecc) => ecc.epidCenterCorrection_mm.formatted("%8.6e")
+                case Some(ecc) => ecc.epidCenterCorrection_mm.formatted("%6.3f")
                 case _ => "not available"
             }
         }
@@ -235,10 +246,6 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
             }
         }
 
-        //  import         org.apache.
-
-        //  org.apache.commons.math4.util.Precision.
-        //   org.apache.commons.ma
         case class LeafValue(section: String, leafIndex: Int, value: Double);
 
         def fmt(d: Double): String = d.formatted("%7.5e")
@@ -300,27 +307,36 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
         val linkToFiles: Elem = {
             val url = ViewOutput.path + "?outputPK=" + outputPK + "&summary=true"
-            val xlsFile: Elem = {
-                val list = output.dir.list.filter(n => n.toLowerCase.contains(".xls"))
-                list.headOption match {
-                    case Some(name) => <a href={ name }>Download Spreadsheet</a>
-                    case _ => <div>No Spreadsheet found</div>
-                }
-            }
             <a href={ url }>Files</a>
         }
 
-        val viewSpreadsheet: Elem = {
-            <a href={ LOCRun_1.spreadsheetHtmlFileName }>View Spreadsheet</a>
+        def spreadSheetLinks(fileWorkbookList: Seq[FileWorkbook]): IndexedSeq[Elem] = {
+            val spaces = nbsp + " " + nbsp + " " + nbsp + " " + nbsp + " " + nbsp
+
+            def links(fs: FileWorkbook) = {
+                val base = Util.fileBaseName(fs.file)
+                Seq(
+                    { <div><a href={ base + ".html" } title="View HTML version of spreadsheet">View { base }</a>{ spaces }</div> },
+                    { <div><a href={ fs.file.getName } title="Download spreadsheet">Download { base }</a>{ spaces }</div> })
+            }
+
+            if (fileWorkbookList.isEmpty) {
+                IndexedSeq({ <div title="There were not spreadsheets found.  Check the log for possible errors.">No Spreadsheets</div> })
+            }
+            else fileWorkbookList.map(fw => links(fw)).flatten.toIndexedSeq
         }
 
-        val downloadSpreadsheet: Elem = {
-            val list = output.dir.list.filter(n => n.toLowerCase.contains(".xls"))
-            list.headOption match {
-                case Some(name) => <a href={ name }>Download Spreadsheet</a>
-                case _ => <div>No Spreadsheet found</div>
-            }
-        }
+        //        val viewSpreadsheet: Elem = {
+        //            <a href={ LOCRun_1.spreadsheetHtmlFileName }>View Spreadsheet</a>
+        //        }
+        //
+        //        val downloadSpreadsheet: Elem = {
+        //            val list = output.dir.list.filter(n => n.toLowerCase.contains(".xls"))
+        //            list.headOption match {
+        //                case Some(name) => <a href={ name }>Download Spreadsheet</a>
+        //                case _ => <div>No Spreadsheet found</div>
+        //            }
+        //        }
 
         val viewLog: Elem = {
             <a href={ StdLogger.LOG_TEXT_FILE_NAME }>View Log</a>
@@ -454,27 +470,36 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         }
 
         def make: String = {
+            def wrap(col: Int, elem: Elem): Elem = {
+                <div class={ "col-md-" + col }>{ elem }</div>
+            }
+
+            def wrap2(col: Int, name: String, value: String): Elem = {
+                <div class={ "col-md-" + col }><em>{ name }:</em><br/>{ value }</div>
+            }
+
             val div = {
                 <div class="row col-md-10 col-md-offset-1">
                     <div class="row">
                         <div class="col-md-1" title="Leaf Offset Constancy and Transmission"><h2>LOC</h2></div>
                         <div class="col-md-2 col-md-offset-1" title="Machine"><h2>{ machineId }</h2></div>
-                        <div class="col-md-2 col-md-offset-1">EPID Center Correction in mm: { epidCenterCorrection }</div>
+                        <div class="col-md-3 col-md-offset-1">EPID Center Correction in mm: { epidCenterCorrection }</div>
                     </div>
                     <div class="row" style="margin:20px;">
-                        <div class="col-md-1"><em>Institution:</em>{ institutionName }</div>
-                        <div class="col-md-2"><em>Data Acquisition:</em><br/>{ dateToString(output.dataDate) }</div>
-                        <div class="col-md-2"><em>Analysis:</em><br/>{ analysisDate }</div>
-                        <div class="col-md-1"><em>Analysis by:</em>{ userId }</div>
-                        <div class="col-md-1"><em>Elapsed:</em>{ elapsed }</div>
-                        <div class="col-md-2"><em>Procedure:</em>{ procedureDesc }</div>
+                        { wrap2(1, "Institution", institutionName) }
+                        { wrap2(2, "Data Acquisition", dateToString(output.dataDate)) }
+                        { wrap2(2, "Analysis", analysisDate) }
+                        { wrap2(1, "Analysis by", userId) }
+                        { wrap2(1, "Institution", elapsed) }
+                        { wrap2(3, "Procedure", procedureDesc) }
                     </div>
                     <div class="row" style="margin:20px;">
-                        <div class="col-md-2">{ linkToFiles }</div>
-                        <div class="col-md-2">{ viewSpreadsheet }</div>
-                        <div class="col-md-2">{ downloadSpreadsheet }</div>
-                        <div class="col-md-2">{ viewLog }</div>
-                        <div class="col-md-2">{ viewXml }</div>
+                        { spreadSheetLinks(fileWorkbookList).map(e => { wrap(3, e) }) }
+                    </div>
+                    <div class="row" style="margin:20px;">
+                        { wrap(2, linkToFiles) }
+                        { wrap(2, viewLog) }
+                        { wrap(2, viewXml) }
                     </div>
                     <div class="row">
                         <h4>Leaf Offset in mm</h4>
@@ -520,10 +545,10 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         ProcedureOutputUtil.insertIntoDatabase(elem, Some(outputPK))
     }
 
-    private def getExcelFile(dir: File): Option[Workbook] = {
+    private def getExcelWorkbookList(dir: File): Seq[FileWorkbook] = {
         val fileList = dir.listFiles.filter { f => f.getName.toLowerCase.contains(".xls") }
-        val workbookList = fileList.map(af => ExcelUtil.read(af)).filter { wb => wb.isRight }.map(w => w.right.get)
-        workbookList.headOption
+        logInfo("Number Excel spreadsheets found: " + fileList.size + fileList.map(f => "\n    " + f.getAbsolutePath).mkString)
+        fileList.map(f => (f, ExcelUtil.read(f))).filter { fWb => fWb._2.isRight }.map(fWb => (fWb._1, fWb._2.right.get)).toSeq.map(fWb => new FileWorkbook(fWb._1, fWb._2))
     }
 
     private def makeSpreadsheet(dir: File, locXml: LOCXml): Unit = {
@@ -535,20 +560,15 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         }
     }
 
-    private def excelToXml(dir: File) = {
+    def excelToHtml(file: File, workbook: Workbook) = {
         try {
-            getExcelFile(dir) match {
-                case Some(workbook) => {
-                    val html = WebUtil.excelToHtml(workbook)
-                    val htmlFile = new File(dir, LOCRun_1.spreadsheetHtmlFileName)
-                    logInfo("Writing html version of spreadsheet to " + htmlFile.getAbsolutePath)
-                    Util.writeFile(htmlFile, html)
-                }
-                case _ => logWarning("No Excel spreadsheet found.")
-            }
+            val html = WebUtil.excelToHtml(workbook)
+            val htmlFile = new File(file.getParentFile, Util.fileBaseName(file) + ".html")
+            logInfo("Writing html version of spreadsheet to " + htmlFile.getAbsolutePath)
+            Util.writeFile(htmlFile, html)
         }
         catch {
-            case t: Throwable => logWarning("Failed to convert spreadsheet to XML: " + fmtEx(t))
+            case t: Throwable => logWarning("Unable to write workbook for file " + file.getAbsolutePath + " : " + fmtEx(t))
         }
     }
 
@@ -559,8 +579,9 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
                 val locXml = new LOCXml(output.dir)
                 insertIntoDatabase(activeProcess.output.dir, outputPK)
                 makeSpreadsheet(activeProcess.output.dir, locXml)
-                excelToXml(activeProcess.output.dir)
-                val content = makeDisplay(output, outputPK, locXml)
+                val excelWorkbookList = getExcelWorkbookList(activeProcess.output.dir)
+                excelWorkbookList.map(fWb => excelToHtml(fWb.file, fWb.workbook))
+                val content = makeDisplay(output, outputPK, locXml, excelWorkbookList)
                 val file = new File(activeProcess.output.dir, Output.displayFilePrefix + ".html")
                 logInfo("Writing file " + file.getAbsolutePath)
                 Util.writeFile(file, content)

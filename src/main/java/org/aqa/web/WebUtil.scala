@@ -48,12 +48,13 @@ object WebUtil {
     private val doubleQuote = "@@quote2@@"
     val amp = "@@amp@@"
     val nl = "@@nl@@"
+    val nbsp = "@@nbsp@@"
 
     def snglQuote(text: String): String = singleQuote + text + singleQuote
 
     def dblQuote(text: String): String = doubleQuote + text + doubleQuote
 
-    def xmlToText(document: Node): String = new PrettyPrinter(1024, 2).format(document).replace(singleQuote, "'").replace(doubleQuote, "\"").replace(amp, "&").replace(nl, "\n")
+    def xmlToText(document: Node): String = new PrettyPrinter(1024, 2).format(document).replace(singleQuote, "'").replace(doubleQuote, "\"").replace(amp, "&").replace(nl, "\n").replace(nbsp, "&nbsp")
 
     def cleanClassName(className: String) = className.substring(className.lastIndexOf('.') + 1).replace("$", "")
 
@@ -243,9 +244,9 @@ object WebUtil {
         val c3Refs: Seq[Elem] = {
             if (c3) {
                 Seq(
-                    <link href="/static/c3/0.4.10/c3.min.css" rel="stylesheet"/>,
-                    <script src="/static/d3/3.5.6/d3.min.js"></script>,
-                    <script src="/static/c3/0.4.10/c3.min.js"></script>)
+                    <link href="/static/standard/c3.min.css" rel="stylesheet"/>,
+                    <script src="/static/standard/d3.min.js"></script>,
+                    <script src="/static/standard/c3.min.js"></script>)
             }
             else Seq[Elem]()
         }
@@ -257,13 +258,13 @@ object WebUtil {
                 <head>
                     <title>{ pageTitle }</title>
                     { refreshMeta }
-                    <link rel="stylesheet" href="/static/bootstrap/3.3.6/css/bootstrap.min.css"/>
-                    <link rel="stylesheet" href="/static/bootstrap/3.3.6/css/bootstrap-theme.min.css"/>
+                    <link rel="stylesheet" href="/static/standard/bootstrap.min.css"/>
+                    <link rel="stylesheet" href="/static/standard/bootstrap-theme.min.css"/>
                     <script src="/static/jquery/standard/jquery.min.js"></script>
-                    <script src="/static/bootstrap/3.3.6/js/bootstrap.min.js"></script>
-                    <script src="/static/dropzone/dropzone-4.3.0/dist/dropzone.js"></script>
-                    <script src="/static/timeago/jquery.timeago-1.5.3.js"></script>
-                    <link rel="stylesheet" href="/static/dropzone/dropzone-4.3.0/dist/dropzone.css"/>
+                    <script src="/static/standard/bootstrap.min.js"></script>
+                    <script src="/static/standard/dropzone.min.js"></script>
+                    <script src="/static/standard/jquery.timeago-1.5.3.js"></script>
+                    <link rel="stylesheet" href="/static/standard/dropzone.min.css"/>
                     { c3Refs }
                     <script src="/static/AQA.js"></script>
                 </head>
@@ -844,18 +845,37 @@ object WebUtil {
             <tr>{ (firstCol until lastCol).map(cellnum => doCell(row.getCell(cellnum))) }</tr>
         }
 
-        def doSheet(sheet: Sheet) = {
-            val rowList = (sheet.getFirstRowNum to sheet.getLastRowNum).map(rownum => sheet.getRow(rownum)).filter(row => row != null)
-            val firstCol = rowList.map(row => row.getFirstCellNum).min
-            val lastCol = rowList.map(row => row.getLastCellNum).max
+        def nameToId(name: String): String = name.replaceAll("[# \"'@<>]", "_")
 
-            <div>
-                <h2 title='Sheet Name' id={ sheet.getSheetName }>{ sheet.getSheetName }</h2>
-                <a href="#">Top</a>
-                <table class="table table-bordered">
-                    { (sheet.getFirstRowNum until sheet.getLastRowNum).map(rownum => sheet.getRow(rownum)).filter(row => row != null).map(row => doRow(row, firstCol, lastCol)) }
-                </table>
-            </div>
+        def sheetHeader(sheet: Sheet, active: Boolean): Elem = {
+            val id = "#" + nameToId(sheet.getSheetName)
+            if (active) {
+                <li class="active"><a data-toggle="tab" href={ id }>{ sheet.getSheetName }</a></li>
+            }
+            else {
+                <li><a data-toggle="tab" href={ id }>{ sheet.getSheetName }</a></li>
+            }
+        }
+
+        def doSheetContent(sheet: Sheet, active: Boolean): Elem = {
+            val rowList = (sheet.getFirstRowNum to sheet.getLastRowNum).map(rownum => sheet.getRow(rownum)).filter(row => row != null)
+            val firstCol: Short =
+                rowList.map(row => row.getFirstCellNum).min match {
+                    case min if (min >= 0) => min
+                    case _ => 0.toShort
+                }
+
+            val lastCol = rowList.map(row => row.getLastCellNum).max
+            val classValue = if (active) "tab-pane fade in active" else "tab-pane fade"; // funny, but the Scala compiler requires a ; here
+
+            {
+                <div id={ nameToId(sheet.getSheetName) } class={ classValue }>
+                    <h3>{ sheet.getSheetName }</h3>
+                    <table class="table table-bordered">
+                        { (sheet.getFirstRowNum until sheet.getLastRowNum).map(rownum => sheet.getRow(rownum)).filter(row => row != null).map(row => doRow(row, firstCol, lastCol)) }
+                    </table>
+                </div>
+            }
         }
 
         def linkToSheet(sheet: Sheet) = {
@@ -864,9 +884,12 @@ object WebUtil {
 
         val html: Elem = {
             <div style="margin: 40px;">
-                Sheets:{ ExcelUtil.sheetList(workbook).map(sheet => linkToSheet(sheet)) }
-                <br></br>
-                { ExcelUtil.sheetList(workbook).map(sheet => doSheet(sheet)) }
+                <ul class="nav nav-tabs">
+                    { ExcelUtil.sheetList(workbook).zipWithIndex.map(si => sheetHeader(si._1, si._2 == 0)) }
+                </ul>
+                <div class="tab-content">
+                    { ExcelUtil.sheetList(workbook).zipWithIndex.map(si => doSheetContent(si._1, si._2 == 0)) }
+                </div>
             </div>
         }
 

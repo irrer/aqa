@@ -281,6 +281,16 @@ object Util {
         }
     }
 
+    /**
+     * Get the file name without the extension, as in:   foo.bar ==> foo
+     */
+    def fileBaseName(file: File): String = {
+        file.getName match {
+            case name if (name.contains('.')) => name.substring(0, name.lastIndexOf('.'))
+            case name => name
+        }
+    }
+
     def main(args: Array[String]): Unit = {
 
         if (true) {

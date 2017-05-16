@@ -64,6 +64,9 @@ class LOCSpreadsheet(dir: File, locXml: LOCXml) {
         values.map(v => numCell(row, v))
     }
 
+    /**
+     * Make first sheet.
+     */
     private def sheetLeafOffsetConstancy(workbook: SXSSFWorkbook) = {
         val sheet = workbook.createSheet("Leaf Offset Constancy")
         def newRow = newRowFromSheet(sheet)
@@ -132,6 +135,8 @@ class LOCSpreadsheet(dir: File, locXml: LOCXml) {
 
             textCell(row, "Serial No.: " + dicomStringDflt(TagFromName.DeviceSerialNumber, "unknown"))
             textCell(row, "LOC Leaf Averages")
+            textCell(row, "EPID Center Correction in mm: ")
+            numCell(row, locXml.epidCenterCorrection_mm)
         }
 
         def row5 = {
