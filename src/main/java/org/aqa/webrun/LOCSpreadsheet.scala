@@ -147,17 +147,17 @@ class LOCSpreadsheet(dir: File, locXml: LOCXml) {
 
         }
 
-        def rowMainNumbersX = {
-            def addRow(l: Int) = {
-                val row = newRow
-                val i = l - locXml.leafIndexList.head
-                numCell(row, l)
-                (0 until locXml.sections).map(s => numCell(row, locXml.LeafOffsetConstancyValue(i)(s)))
-                numCell(row, locXml.LeafOffsetConstancyMean(i))
-                numCell(row, locXml.LeafOffsetConstancyRange(i))
-            }
-            locXml.leafIndexList.map(l => addRow(l))
-        }
+//        def rowMainNumbersX = {
+//            def addRow(l: Int) = {
+//                val row = newRow
+//                val i = l - locXml.leafIndexList.head
+//                numCell(row, l)
+//                (0 until locXml.sections).map(s => numCell(row, locXml.LeafOffsetConstancyValue(i)(s)))
+//                numCell(row, locXml.LeafOffsetConstancyMean(i))
+//                numCell(row, locXml.LeafOffsetConstancyRange(i))
+//            }
+//            locXml.leafIndexList.map(l => addRow(l))
+//        }
 
         def rowMainNums = {
             def extra(row: SXSSFRow, i: Int): Unit = {

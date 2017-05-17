@@ -3,144 +3,195 @@
 <head>
 <title>Direct Database Access</title>
 <meta http-equiv="refresh" content="3600" />
-<link rel="stylesheet" href="/static/standard/bootstrap.min.css" />
-<link rel="stylesheet" href="/static/standard/bootstrap-theme.min.css" />
-<script src="/static/standard/jquery/standard/jquery.min.js"></script>
-<script src="/static/standard/bootstrap.min.js"></script>
-<script src="/static/standard/dropzone.js"></script>
-<script src="/static/standard/jquery.timeago-1.5.3.js"></script>
-<link rel="stylesheet" href="/static/dropzone.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap-theme.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/dropzone.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/dropzone.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-timeago/1.5.4/jquery.timeago.min.js"></script>
 <script src="/static/AQA.js"></script>
 </head>
 <body>
-	<header class="topbar">
-		<div class="row">
-			<div class="col-md-1 col-md-offset-9">
-				<strong> <br> <a href="/run/WebRunIndex">Run
-						Procedure</a> <br> <a href="/view/OutputList">Results</a> <br>
-					<a href="/static/admin.html">Administration</a>
-				</strong>
-			</div>
-			<div class="col-md-2">
-				<h1 class="fill">
-					<a href="/"> <img src="/static/images/logo.png" width="128" />
-					</a>
-				</h1>
-			</div>
-		</div>
-	</header>
-	<div class="col-md-6 col-md-offset-2">
-		<h2>Direct Database Access</h2>
-		It is often convenient to access the database for for research purposes or
-		generating custom reports.  This guide will help get you started.
-		<p></p>
-		A database account may be used to extract any an all data from the
-		database, which can then be fed to the tool of your choice. Access is
-		<b>limited to read-only</b>.
-		<p></p>
-		The database can be accessed over the intenet from any host.
-		Connections are encrypted and password protected.
-		<p></p>
-		<h4>Obtain an account</h4>
-		Although the user ids are the same, accounts to access the database
-		directly are separate from accounts to use the web site, and have a
-		different password.
-		<p></p>
-		To request a database account, send an email to the site <a
-			href="mailto:irrer@med.umich.edu?Subject=AQA Request Database Account"
-			target="_top">manager</a>.
-		<p></p>
-		If approved you will receive a reply with a password for the account.
+    <header class="topbar">
+        <div class="row">
+            <div class="col-md-3 col-md-offset-1">
+                <p style="margin:40px;"></p>
+              <h2>Direct Database Access</h2>
+            </div>
+            <div class="col-md-1 col-md-offset-6">
+                <h1 class="fill">
+                    <a href="/"> <img src="/static/images/logo.png" width="128" /> </a>
+                </h1>
+            </div>
+        </div>
+    </header>
 
-		<h4>Download pgAdmin</h4>
-		pgAdmin is a database client that provides both GUI and command line
-		interfaces to Postgresql databases. The GUI can be used to see the
-		general layout of the database and get quick answers. The command line
-		is often used to generate CSV (comma separated value) files that can
-		be consumed by a variety of programs including Excel.
-		<p></p>
-		You can vist the <a href='https://pgadmin.org/'>main website</a> or
-		directly download the <a
-			href='https://ftp.postgresql.org/pub/pgadmin/pgadmin4/v1.4/windows/pgadmin4-1.4-x86.exe'>Windows
-			installer</a>.
-		<p></p>
-		Run the installer and start pgAdmin.
-		<p></p>
-		pgAdmin has a hierarchy of:
-		<p></p>
-		<b>
-			<ul>
-				<li>&nbsp; &nbsp; &nbsp; &nbsp; Server Group<br>
-				<li>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
-					Server<br>
-				<li>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
-					&nbsp; &nbsp; &nbsp; &nbsp; Database<br>
-			</ul>
-		</b>
-		<p></p>
-		From the GUI use <b>Object</b> -> <b>Create</b> -> <b>Server Group</b>
-		and create a group called <b>Servers</b>.
-		<p></p>
-		Right-click on <b>Servers</b> and use <b>Create</b> -> <b>Server</b>
-		to create a server.
-		<p></p>
-		Name the server <b>AQA</b>. Click the <b>Connection</b> tab and for
-		the <b>Host name/address</b> enter:
-		<p></p>
+  <!-- ======================================================================= -->
+  <!-- ======================================================================= -->
 
-		&nbsp; &nbsp; &nbsp; &nbsp; <b>aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com</b>
-		<p></p>
+  <div class="row">
+    <div class="col-md-1 col-md-offset-2">
+      <ul class="nav nav-pills nav-stacked">
+        <li class="active">
+          <a data-toggle="pill" href="#Getting_Started">Getting Started</a>
+        </li>
+        <li>
+          <a data-toggle="pill" href="#Getting_an_Account">Getting an Account</a>
+        </li>
+        <li>
+          <a data-toggle="pill" href="#pgAdmin">pgAdmin</a>
+        </li>
+        <li>
+          <a data-toggle="pill" href="#Command_Line">Command Line</a>
+        </li>
+        <li>
+          <a data-toggle="pill" href="#Examples">Examples</a>
+        </li>
+        <li>
+          <a data-toggle="pill" href="#Database_Structure">Database Structure</a>
+        </li>
+        <li>
+          <a data-toggle="pill" href="#Programmatic_Access">Programmatic Access</a>
+        </li>
+      </ul>
+    </div>
 
-		The other fields should be filled as shown below, substituting your
-		login for <b>myDbUserName</b>:
-		<p></p>
-		<img src='/static/images/db_server_parameters.png' />
-		<p></p>
-		Click <b>Save</b> and then double-click on <b>AQA</b>. It will prompt
-		for your password. After entering the password, you may optionally
-		save it on the computer where pgAdmin is installed.
-		<p></p>
-		To look at tables, expand: <b>AQA</b> -> <b>Databases</b> -> <b>Schemas</b> -> <b>public</b> ->	<b>Tables</b>
-		<p></p>
-		To look at data in a table, right-click on the table and click <b>View Data</b>.
-        <p></p>
-		Refer to the <a href='https://pgadmin.org/docs4/1.x/index.html'>pgAdmin documentation</a> for more details.
-        <p></p>
-        The screen shot below shows a typical session:
-        <p></p>
-        <img src='/static/images/pgadmin_table.png' />
-        <p></p>
-		<h4>Command Line Access</h4>
-		pgAdmin provides a <b>psql</b> which may be invoked from the command line.  To invoke it, add it
-		to your Windows path and enter:
-		<pre>psql postgresql://aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA myDbLogin</pre>
-		From this point standard SQL queries will work. Some quick tips:
-        <p></p> <br>
-		List all tables.
-		<pre>\dt</pre>
-        <p></p> <br>
-		List all rows in the epid table (remember the terminating <b>;</b>).
-        <pre>select * from epid;</pre>
-        <p></p> <br>
-        General help
-        <pre>\help</pre>
-        <p></p> <br>
-        Specific help
-        <pre>\help select</pre>
-        <p></p> <br>
-        Quit psql
-        <pre>\q</pre>
-		
-		
-        <h4>Sample User Friendly Queries</h4>
-        Listing raw table contents can appear cryptic because of the heavy use of integer primary keys used. 
-        The following are some queries that return results in more user friendly formats.  These are intended as
-        a starting point for users to copy and modify to meet specific needs.
-        
-        <pre>
+    <!-- ======================================================================= -->
+    <!-- ======================================================================= -->
 
--- List all treatment machines
-        
+    <div class="col-md-8">
+      <div class="tab-content">
+        <div id="Getting_Started" class="tab-pane fade in active">
+          <h3>Getting Started</h3>
+
+            It is often convenient to directly access the database for for research purposes or
+            generating custom reports.  This guide will help get you started.  The
+            first steps are to get an account and install pgAdmin.
+          <p></p>
+          A database account may be used to extract any data from the
+          database, which can then be fed to the tool of your choice. Access is
+          <b>limited to read-only</b>.
+          <p></p>
+          The database can be accessed over the internet from any host.
+          Connections are encrypted and password protected.
+        </div>
+
+        <!-- ======================================================================= -->
+
+        <div id="Getting_an_Account" class="tab-pane fade">
+          <h3>Getting an Account</h3>
+          Although the user ids are the same, accounts to access the database
+          are separate from accounts to use the web site, and have a
+          different password.
+          <p></p>
+          To request a database account, send an email to the site <a
+              href="mailto:irrer@med.umich.edu?Subject=AQA Request Database Account"
+              target="_top">manager</a>.
+          <p></p>
+          If approved, you will receive a reply with a password for the account.
+        </div>
+
+        <!-- ======================================================================= -->
+
+        <div id="pgAdmin" class="tab-pane fade">
+          <h3>pgAdmin</h3>
+          pgAdmin is a database client that provides both GUI and command line
+          interfaces to Postgresql databases. The GUI can be used to see the
+          general layout of the database and get quick answers. The command line
+          is often used to generate CSV (comma separated value) files that can
+          be consumed by a variety of programs including Excel.
+          <p></p>
+          You can vist the <a href='https://pgadmin.org/'>main website</a> or
+          directly download the <a
+              href='https://ftp.postgresql.org/pub/pgadmin/pgadmin4/v1.4/windows/pgadmin4-1.4-x86.exe'>Windows
+              installer</a>.
+          <p></p>
+          Run the installer and start pgAdmin.
+          <p></p>
+          pgAdmin has a hierarchy of:
+          <p></p>
+          <b>
+              <ul>
+                  <li>&nbsp; &nbsp; &nbsp; &nbsp; Server Group<br></li>
+                  <li>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+                      Server<br></li>
+                  <li>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+                      &nbsp; &nbsp; &nbsp; &nbsp; Database<br></li>
+              </ul>
+          </b>
+          <p></p>
+          From the GUI use <b>Object</b> -&gt; <b>Create</b> -&gt; <b>Server Group</b>
+          and create a group called <b>Servers</b>.
+          <p></p>
+          Right-click on <b>Servers</b> and use <b>Create</b> -&gt; <b>Server</b>
+          to create a server.
+          <p></p>
+          Name the server <b>AQA</b>. Click the <b>Connection</b> tab and for
+          the <b>Host name/address</b> enter:
+          <p></p>
+
+          &nbsp; &nbsp; &nbsp; &nbsp; <b>aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com</b>
+          <p></p>
+
+          The other fields should be filled as shown below, substituting your
+          login for <b>myDbUserName</b>:
+          <p></p>
+          <img src='/static/images/db_server_parameters.png' />
+          <p></p>
+          Click <b>Save</b> and then double-click on <b>AQA</b>. It will prompt
+          for your password. After entering the password, you may optionally
+          save it on the computer where pgAdmin is installed.
+          <p></p>
+          To see the tables and columns, expand: <b>AQA</b> -&gt; <b>Databases</b> -&gt; <b>Schemas</b> -&gt; <b>public</b> -&gt;    <b>Tables</b>
+          <p></p>
+          To look at data, right-click on the table and click <b>View Data</b>.
+          <p></p>
+          Refer to the <a href='https://pgadmin.org/docs4/1.x/index.html'>pgAdmin documentation</a> for more details.
+          <p></p>
+          The screen shot below shows a typical session:
+          <p></p>
+          <img src='/static/images/pgadmin_table.png' />
+          <p></p>
+        </div>
+
+        <!-- ======================================================================= -->
+
+        <div id="Command_Line" class="tab-pane fade">
+          <h3>Command Line Access</h3>
+          pgAdmin provides a <b>psql</b> which may be invoked from the command line.  To invoke it, add it
+          to your Windows <em>PATH</em> and enter:
+          <pre>psql postgresql://aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA myDbUserName</pre>
+          From this point standard SQL queries will work. Some quick tips:
+          <p></p> <br>
+          List all tables.
+          <pre>\dt</pre>
+          <p></p> <br>
+          List all rows in the epid table (remember the terminating <b>;</b>).
+          <pre>select * from epid;</pre>
+          <p></p> <br>
+          General help
+          <pre>\help</pre>
+          <p></p> <br>
+          Specific help
+          <pre>\help select</pre>
+          <p></p> <br>
+          Quit psql
+          <pre>\q</pre>
+        </div>
+
+        <!-- ======================================================================= -->
+
+        <div id="Examples" class="tab-pane fade">
+          <h3>Examples</h3>
+          Listing raw table contents can appear cryptic because of the heavy use of integer primary keys used.
+          The following are some queries that return results in more user friendly formats.  These are intended as
+          a starting point for users to copy and modify to meet specific needs.
+
+          <p style="margin:80px;"></p>
+          <h4>List all treatment machines</h4>
+          <pre>
+
 select
     "institution"."name" as "Institution",
     "machine"."id" as "Machine ID",
@@ -158,12 +209,17 @@ where
 order by
     "institution"."name", "machine"."id"
 ;
-        
-        </pre>
-        <p></p>
-        <pre>
 
--- List up to 100 outputs (runs of procedures) ordered by data acquisition date for procedure 'LOC'
+          </pre>
+
+          Results of query in pgAdmin:
+          <img src='/static/images/db_machine_list.png' />
+          <p style="margin:80px;"></p>
+
+          <h4>List Outputs</h4>
+          <pre>
+
+-- List up to 10 outputs (runs of procedures) ordered by data acquisition date for procedure 'LOC'
 
 select
     "output"."dataDate",
@@ -187,89 +243,126 @@ where
         ( "output"."status" = 'fail' ) or
         ( "output"."status" = 'done' )
     )
-order by 
+order by
     "output"."dataDate"
 asc
-limit 100;
-        </pre>
-        <p></p>
-        <pre>
+limit 10;
+          </pre>
 
--- List the values for one run of procedure 'LOC'
+          Results of query in pgAdmin from command line:
+          <p></p>
+          <img style="margin:20px;" src='/static/images/db_LOC_output.png' />
+          <p style="margin:80px;"></p>
+
+          <p></p>
+          <h4>List LOC Data</h4>
+          <pre>
+
+-- List the transmission values for one run of procedure 'LOC' for one leaf
 
 select
-    "leafOffsetCorrection"."section",
-    "leafOffsetCorrection"."leafIndex",
-    "leafOffsetCorrection"."correction_mm"
-from 
-    "leafOffsetCorrection"
+    "leafTransmission"."section",
+    "leafTransmission"."leafIndex",
+    "leafTransmission"."transmission_fract"
+from
+    "leafTransmission"
 where
-     "leafOffsetCorrection"."outputPK" = 10
+     "leafTransmission"."outputPK" = 63   and
+     "leafTransmission"."leafIndex" = 21
 order by
-    "leafOffsetCorrection"."section", "leafOffsetCorrection"."leafIndex"
+    "leafTransmission"."section", "leafTransmission"."leafIndex"
 ;
-        
-        </pre>
-        <p></p>
-        
-        <h4>AQA Database Structure</h4>
-        <p></p>
-        As a general note, all primary keys are 64 bit auto-incrementing integers.  
-        <p></p>        
-        Although the meaning of much of database is obvious, some less obvious are:
-        <p></p>
-        <b>Procedure</b> 
-        <p></p>
-        A procedure (aka test) that the user would run against data.  Procedures have
-        version numbers to track changes in analysis code. 
-        <p></p>
-        <p></p>
-        <b>Input</b> 
-        <p></p>
-        Each time a user uploads data, an <b>Input</b> row is created and the files
-        are scanned for the <b>dataDate</b> (the time when the data was acquired) and
-        put in their own directory.
-        <p></p>
-        <b>Output</b> 
-        <p></p>
-		When a user runs a procedure, an <b>Output</b> row is created and the files
-		generated by the procedure are put in a separate output directory as a
-		child of the input.
-        <p></p>
-        <br>
-        <p></p>
-		A graphical view of the entire database:
-		<p></p>
-        <img src='/static/images/db_schema.png' />
-        <p></p>
-        <br>
-        <p></p>
-        <br>
-        <p></p>
-		<h4>Programmatic Access</h4>
-		Many software platforms such as MATLAB, Python, or Power BI support
-		direct connections to Postgresql databases. Refer to the respective
-		documentation for details.
-		<p></p>
-		<br>
-		<p></p>
-		<br>
-		<p></p>
-	</div>
+
+          </pre>
+          Results of query in pgAdmin from command line:
+          <p></p>
+          <img style="margin:20px;" src='/static/images/db_leaf_transmission.png' />
+          <p style="margin:80px;"></p>
+
+
+          <p></p>
+          <h4>Make a CSV File</h4>
+          To show results in comma separated value (csv) format that can be dropped into Excel, put the above query in a file called <em>leaf_transmission.sql</em> and run the command:
+          <pre>
+psql --quiet --no-align --tuples-only --field-separator=, --file=leaf_transmission.sql --output leaf_transmission.csv postgresql://aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA myDbUserName 
+          </pre>
+          <p></p>
+          The results will be put in <em>leaf_transmission.csv</em>, and look like the following.  This file can be opened with Excel.
+          <pre>
+1,21,0.01367995
+2,21,0.01355522
+3,21,0.01349938
+4,21,0.01367342
+5,21,0.01286042
+          </pre>
+
+          And when opened with Excel:
+          <p></p>
+          <img style="margin:20px;" src='/static/images/db_leaf_transmission_excel.png' />
+          <p style="margin:80px;"></p>
+
+
+
+        </div>
+
+        <!-- ======================================================================= -->
+
+        <div id="Database_Structure" class="tab-pane fade">
+          <h3>Database Structure</h3>
+          <p></p>
+          As a general note, all primary keys are 64 bit auto-incrementing integers.
+          <p></p>
+          Although the meaning of much of database is obvious, some less obvious are:
+          <p></p>
+          <b>Procedure</b>
+          <p></p>
+          A procedure (aka test) that the user would run against data.  Procedures have
+          version numbers to track changes in analysis code.
+          <p></p>
+          <p></p>
+          <b>Input</b>
+          <p></p>
+          Each time a user uploads data, an <b>Input</b> row is created and the files
+          are scanned for the <b>dataDate</b> (the time when the data was acquired) and
+          put in their own directory.
+          <p></p>
+          <b>Output</b>
+          <p></p>
+          When a user runs a procedure, an <b>Output</b> row is created and the files
+          generated by the procedure are put in a separate output directory as a
+          child of the input.
+          <p></p>
+          <br>
+          <p></p>
+          Below is a graphical view of the entire database.  In general, the left hand side
+          is for machine description, and the physics data is on the right.
+          <p></p>
+          <img src='/static/images/db_schema.png' />
+          <p></p>
+          <br>
+          <p></p>
+          <br>
+          <p></p>
+        </div>
+
+        <!-- ======================================================================= -->
+
+        <div id="Programmatic_Access" class="tab-pane fade">
+          <h3>Programmatic Access</h3>
+          It is possible to access the database from a program.
+          Many software platforms such as MATLAB, .NET, Python, or Power BI support
+          direct connections to Postgresql databases. Refer to the respective
+          documentation for details.
+          <p></p>
+          <br>
+          <p></p>
+          <br>
+          <p></p>
+        </div>
+
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-

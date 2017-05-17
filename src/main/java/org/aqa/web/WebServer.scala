@@ -262,6 +262,22 @@ class WebServer extends Application {
                         "\n    " + locRef +
                         "\n    " + path)
                 }
+                // TODO Problem : If css and js is served from Cloudflare, they work, but if served from AQA, they don't.
+                // The problem shows up for tabs in the online spreadsheet viewer and timedatepicker.
+                //                if (request.toString.contains("css")) {
+                //                    val headers = response.getHeaders.toArray.toSeq
+                //                    val entity = response.getEntity
+                //                    val mediaType = if (entity == null) null else entity.getMediaType
+                //                    val charSet = if (entity == null) null else entity.getCharacterSet
+                //                    if (entity != null) {
+                //                        entity.setCharacterSet(null)
+                //                    }
+                //                    println("request: " + request)
+                //                    println("    media type: " + mediaType)
+                //                    println("    charSet: " + charSet)
+                //                    println("    num headers: " + headers.size)
+                //                    headers.map(h => println("    " + h))
+                //                }
             }
         }
 

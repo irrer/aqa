@@ -241,30 +241,43 @@ object WebUtil {
 
         val refreshMeta = Seq(refresh).flatten.filter(r => r > 0).map(r => { <meta http-equiv='refresh' content={ r.toString }/> })
 
+        //                    <link href="/static/standard/c3.min.css" rel="stylesheet"/>,
+        //                    <script src="/static/standard/d3.min.js"></script>,
+        //                    <script src="/static/standard/c3.min.js"></script>)
+
         val c3Refs: Seq[Elem] = {
             if (c3) {
+                // There are newer versions of these files but they don't seem to work in AQA.
                 Seq(
-                    <link href="/static/standard/c3.min.css" rel="stylesheet"/>,
-                    <script src="/static/standard/d3.min.js"></script>,
-                    <script src="/static/standard/c3.min.js"></script>)
+                    <link href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.css" rel="stylesheet"/>,
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>,
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.js"></script>)
             }
             else Seq[Elem]()
         }
 
         val runScriptTag = "@@script@@"
 
+        //                    <link rel="stylesheet" href="/static/standard/bootstrap.min.css"/>
+        //                    <link rel="stylesheet" href="/static/standard/bootstrap-theme.min.css"/>
+        //                    <script src="/static/jquery/standard/jquery.min.js"></script>
+        //                    <script src="/static/standard/bootstrap.min.js"></script>
+        //                    <script src="/static/standard/dropzone.min.js"></script>
+        //                    <script src="/static/standard/jquery.timeago-1.5.3.js"></script>
+        //                    <link rel="stylesheet" href="/static/standard/dropzone.min.css"/>
+
         val page = {
             <html lang="en">
                 <head>
                     <title>{ pageTitle }</title>
                     { refreshMeta }
-                    <link rel="stylesheet" href="/static/standard/bootstrap.min.css"/>
-                    <link rel="stylesheet" href="/static/standard/bootstrap-theme.min.css"/>
-                    <script src="/static/jquery/standard/jquery.min.js"></script>
-                    <script src="/static/standard/bootstrap.min.js"></script>
-                    <script src="/static/standard/dropzone.min.js"></script>
-                    <script src="/static/standard/jquery.timeago-1.5.3.js"></script>
-                    <link rel="stylesheet" href="/static/standard/dropzone.min.css"/>
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"/>
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap-theme.min.css"/>
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/dropzone.min.css"/>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/dropzone.min.js"></script>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-timeago/1.5.4/jquery.timeago.min.js"></script>
                     { c3Refs }
                     <script src="/static/AQA.js"></script>
                 </head>
