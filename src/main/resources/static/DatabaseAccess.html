@@ -85,9 +85,8 @@
           are separate from accounts to use the web site, and have a
           different password.
           <p></p>
-          To request a database account, send an email to the site <a
-              href="mailto:irrer@med.umich.edu?Subject=AQA Request Database Account"
-              target="_top">manager</a>.
+          To request a database account, send an email to the site
+          <a href="mailto:irrer@med.umich.edu?Subject=AQA Request Database Account" target="_top">manager</a>.
           <p></p>
           If approved, you will receive a reply with a password for the account.
         </div>
@@ -160,12 +159,15 @@
         <div id="Command_Line" class="tab-pane fade">
           <h3>Command Line Access</h3>
           pgAdmin provides a <b>psql</b> which may be invoked from the command line.  To invoke it, add it
-          to your Windows <em>PATH</em> and enter:
+          to your Windows <b>PATH</b> and enter:
           <pre>psql postgresql://aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA myDbUserName</pre>
           From this point standard SQL queries will work. Some quick tips:
           <p></p> <br>
           List all tables.
           <pre>\dt</pre>
+          <p></p> <br>
+          List columns in given table.
+          <pre>\d+ epid</pre>
           <p></p> <br>
           List all rows in the epid table (remember the terminating <b>;</b>).
           <pre>select * from epid;</pre>
@@ -187,8 +189,12 @@
           Listing raw table contents can appear cryptic because of the heavy use of integer primary keys used.
           The following are some queries that return results in more user friendly formats.  These are intended as
           a starting point for users to copy and modify to meet specific needs.
+          <p><p/>
+         
+          If you need help or have a suggestion for a query to add to this document, please send it to the
+          <a href="mailto:irrer@med.umich.edu?Subject=AQA Request Database Account" target="_top">manager</a>.
 
-          <p style="margin:80px;"></p>
+          <p style="margin:80px;"></p><hr></hr>
           <h4>List all treatment machines</h4>
           <pre>
 
@@ -214,8 +220,8 @@ order by
 
           Results of query in pgAdmin:
           <img src='/static/images/db_machine_list.png' />
-          <p style="margin:80px;"></p>
 
+          <p style="margin:80px;"></p><hr></hr>
           <h4>List Outputs</h4>
           <pre>
 
@@ -252,8 +258,8 @@ limit 10;
           Results of query in pgAdmin from command line:
           <p></p>
           <img style="margin:20px;" src='/static/images/db_LOC_output.png' />
-          <p style="margin:80px;"></p>
 
+          <p style="margin:80px;"></p><hr></hr>
           <p></p>
           <h4>List LOC Data</h4>
           <pre>
@@ -277,17 +283,16 @@ order by
           Results of query in pgAdmin from command line:
           <p></p>
           <img style="margin:20px;" src='/static/images/db_leaf_transmission.png' />
-          <p style="margin:80px;"></p>
 
-
+          <p style="margin:80px;"></p><hr></hr>
           <p></p>
           <h4>Make a CSV File</h4>
-          To show results in comma separated value (csv) format that can be dropped into Excel, put the above query in a file called <em>leaf_transmission.sql</em> and run the command:
+          To show results in comma separated value (csv) format that can be read by Excel, put the above query in a file called <b>leaf_transmission.sql</b> and run the command:
           <pre>
 psql --quiet --no-align --tuples-only --field-separator=, --file=leaf_transmission.sql --output leaf_transmission.csv postgresql://aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA myDbUserName 
           </pre>
           <p></p>
-          The results will be put in <em>leaf_transmission.csv</em>, and look like the following.  This file can be opened with Excel.
+          The results will be put in <b>leaf_transmission.csv</b>, and look like the following.  This file can be opened with Excel.
           <pre>
 1,21,0.01367995
 2,21,0.01355522
