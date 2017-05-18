@@ -24,11 +24,14 @@ import org.apache.poi.ss.util.CellAddress
 import java.util.Date
 import com.pixelmed.dicom.TagFromName
 import com.pixelmed.dicom.AttributeTag
+import org.restlet.Response
+import org.aqa.web.ViewOutput
+import org.apache.poi.ss.util.CellRangeAddress
 
 /**
  * Extract LOC related values from XML file.
  */
-class LOCSpreadsheet(dir: File, locXml: LOCXml) {
+class LOCSpreadsheet(dir: File, locXml: LOCXml, response: Response) {
 
     private def newRowFromSheet(sheet: SXSSFSheet): SXSSFRow = {
         val rowNum = if (sheet.rowIterator.hasNext) (sheet.getActiveCell.getRow + 1) else 0
@@ -39,9 +42,17 @@ class LOCSpreadsheet(dir: File, locXml: LOCXml) {
 
     def cellNum(row: SXSSFRow): Int = if (row.getLastCellNum < 0) 0 else row.getLastCellNum
 
-    def textCell(row: SXSSFRow, content: String) = row.createCell(cellNum(row), CellType.STRING).setCellValue(content)
+    def textCell(row: SXSSFRow, content: String) = {
+        val cell = row.createCell(cellNum(row), CellType.STRING)
+        cell.setCellValue(content)
+        cell
+    }
 
-    def numCell(row: SXSSFRow, content: Double) = row.createCell(cellNum(row), CellType.NUMERIC).setCellValue(content)
+    def numCell(row: SXSSFRow, content: Double) = {
+        val cell = row.createCell(cellNum(row), CellType.NUMERIC)
+        cell.setCellValue(content)
+        cell
+    }
 
     def leafAndSectionHeaders(row: SXSSFRow) = {
         textCell(row, "Leaf Number")
@@ -89,6 +100,10 @@ class LOCSpreadsheet(dir: File, locXml: LOCXml) {
         def row1 = {
             val row = newRow
             textCell(row, "Calculated Leaf Offset Constancy in 5 Sections Each MLC Leaf")
+            (0 until 5).map(_ => textCell(row, ""))
+            textCell(row, "Report: ")
+            val url = response.getRequest.getHostRef.toString + ViewOutput.path + "?outputPK=" + output.outputPK.get
+            textCell(row, url)
             // TODO add URL and AQA logo
         }
 
@@ -147,17 +162,17 @@ class LOCSpreadsheet(dir: File, locXml: LOCXml) {
 
         }
 
-//        def rowMainNumbersX = {
-//            def addRow(l: Int) = {
-//                val row = newRow
-//                val i = l - locXml.leafIndexList.head
-//                numCell(row, l)
-//                (0 until locXml.sections).map(s => numCell(row, locXml.LeafOffsetConstancyValue(i)(s)))
-//                numCell(row, locXml.LeafOffsetConstancyMean(i))
-//                numCell(row, locXml.LeafOffsetConstancyRange(i))
-//            }
-//            locXml.leafIndexList.map(l => addRow(l))
-//        }
+        //        def rowMainNumbersX = {
+        //            def addRow(l: Int) = {
+        //                val row = newRow
+        //                val i = l - locXml.leafIndexList.head
+        //                numCell(row, l)
+        //                (0 until locXml.sections).map(s => numCell(row, locXml.LeafOffsetConstancyValue(i)(s)))
+        //                numCell(row, locXml.LeafOffsetConstancyMean(i))
+        //                numCell(row, locXml.LeafOffsetConstancyRange(i))
+        //            }
+        //            locXml.leafIndexList.map(l => addRow(l))
+        //        }
 
         def rowMainNums = {
             def extra(row: SXSSFRow, i: Int): Unit = {
@@ -282,10 +297,10 @@ class LOCSpreadsheet(dir: File, locXml: LOCXml) {
 object LOCSpreadsheet {
     def main(args: Array[String]): Unit = {
         println("starting")
-        val dir = new File("""D:\AQA_Data\results\TBD_2\CHIC1_11\Leaf_Offset_and_Transmission_1.0.0_2\2017-05-11T18-19-43-765_111\output_2017-05-11T18-19-43-801""")
+        val dir = new File("""D:\AQA_Data\results\TBD_2\CHIC1_11\Leaf_Offset_and_Transmission_1.0.0_2\2017-05-16T18-01-19-140_126\output_2017-05-16T18-01-19-195""")
         val locXml = new LOCXml(dir)
         val start = System.currentTimeMillis
-        (new LOCSpreadsheet(dir, locXml)).write
+        (new LOCSpreadsheet(dir, locXml, null)).write
         println("done.  Elapsed ms: " + (System.currentTimeMillis - start))
 
         //  workbook.createSheet("Leaf Transmission")

@@ -298,7 +298,7 @@ object Run {
      *    run.bat
      *    run.exe
      */
-    private def startProcess(procedure: Procedure, machine: Machine, output: Output, postProcess: Option[PostProcess]): ActiveProcess = {
+    private def startProcess(procedure: Procedure, machine: Machine, output: Output, postProcess: Option[PostProcess], response: Response): ActiveProcess = {
 
         val cd = "CD /D " + output.dir.getAbsolutePath
         val echoOff = "@echo off"
@@ -329,7 +329,7 @@ object Run {
         val pb = Process(Seq("cmd.exe")) #< inputStream
         val logger = new StdLogger(output)
         val process = pb.run(logger, true)
-        new ActiveProcess(output, process, postProcess, logger)
+        new ActiveProcess(output, process, postProcess, logger, response)
     }
 
     private def now: Date = new Date(System.currentTimeMillis)
@@ -464,7 +464,7 @@ object Run {
         }
 
         // Start a process that runs the procedure
-        val actProc = startProcess(procedure, machine, output, postProcess)
+        val actProc = startProcess(procedure, machine, output, postProcess, response)
 
         ActiveProcess.add(actProc)
 

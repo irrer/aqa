@@ -76,7 +76,10 @@ object LOCRun_1 {
         val lr = new LOCRun_1(procedure)
         val output = Output.get(111).get
 
-        val ap = new ActiveProcess(output, null, null, null)
+        val request = new Request
+        request.setHostRef("https://aqa.org/view/ViewOutput?outputPK=126")
+        val response = new Response(request)
+        val ap = new ActiveProcess(output, null, null, null, response)
 
         lr.postPerform(ap)
 
@@ -551,9 +554,9 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         fileList.map(f => (f, ExcelUtil.read(f))).filter { fWb => fWb._2.isRight }.map(fWb => (fWb._1, fWb._2.right.get)).toSeq.map(fWb => new FileWorkbook(fWb._1, fWb._2))
     }
 
-    private def makeSpreadsheet(dir: File, locXml: LOCXml): Unit = {
+    private def makeSpreadsheet(dir: File, locXml: LOCXml, response: Response): Unit = {
         try {
-            (new LOCSpreadsheet(dir, locXml)).write
+            (new LOCSpreadsheet(dir, locXml, response)).write
         }
         catch {
             case t: Throwable => logWarning("Failed to make spreadsheet: " + fmtEx(t))
@@ -578,7 +581,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
                 val output = Output.get(outputPK).get
                 val locXml = new LOCXml(output.dir)
                 insertIntoDatabase(activeProcess.output.dir, outputPK)
-                makeSpreadsheet(activeProcess.output.dir, locXml)
+                makeSpreadsheet(activeProcess.output.dir, locXml, activeProcess.response)
                 val excelWorkbookList = getExcelWorkbookList(activeProcess.output.dir)
                 excelWorkbookList.map(fWb => excelToHtml(fWb.file, fWb.workbook))
                 val content = makeDisplay(output, outputPK, locXml, excelWorkbookList)

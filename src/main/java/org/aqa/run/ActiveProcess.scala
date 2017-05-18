@@ -3,6 +3,7 @@ package org.aqa.run
 import org.aqa.db.Output
 import scala.collection.mutable.HashMap
 import scala.sys.process._
+import org.restlet.Response
 
 /**
  * Keep track of running processes.
@@ -23,4 +24,4 @@ object ActiveProcess {
     def list = activeProcessList.synchronized({ activeProcessList.map(ap => ap._2) })
 }
 
-class ActiveProcess(val output: Output, val process: Process, val postProcess: Option[PostProcess], val logger: StdLogger);
+class ActiveProcess(val output: Output, val process: Process, val postProcess: Option[PostProcess], val logger: StdLogger, val response: Response);

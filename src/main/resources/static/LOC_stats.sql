@@ -1,4 +1,6 @@
 
+-- Potentially useful database queries
+
 -----------------------------------------------------------------------------
 
 -- create the equivalent column of the LOC 'Mean Across Sections column :
