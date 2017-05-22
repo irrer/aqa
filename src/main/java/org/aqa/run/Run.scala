@@ -112,10 +112,26 @@ object Run {
     }
 
     private def removeRedundantOutput(outputPK: Option[Long]) = {
+        def del(output: Output) = {
+            try {
+                Output.delete(output.outputPK.get)
+                Utility.deleteFileTree(output.dir)
+                if (Output.listByInputPK(output.inputPK).isEmpty) {
+                    val input = Input.get(output.inputPK)
+                    Input.delete(output.inputPK)
+                    Utility.deleteFileTree(input.get.dir)
+                }
+            }
+            catch {
+                case t: Throwable =>
+                    logWarning("removeRedundantOutput.del Unexpected error cleaning up redundant output.  outputPK: " + outputPK + " : " + t.getMessage)
+            }
+
+        }
         try {
             val output = Output.get(outputPK.get).get
             val redundant = Output.listRedundant(Output.redundantWith(output) :+ output)
-            redundant.map(ro => Input.delete(ro.inputPK))
+            redundant.map(ro => del(ro))
         }
         catch {
             case t: Throwable =>
