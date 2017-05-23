@@ -53,10 +53,6 @@ class ChallAuth(context: Context, optional: Boolean, challengeScheme: ChallengeS
                     User.getUserById(chalResp.getIdentifier)
             }
 
-            if (user.isDefined) { // TODO rm
-                println("user: " + user + "    secret: " + new String(chalResp.getSecret))
-            }
-
             // true if user exists and is authenticated
             val authenticated: Boolean = {
                 user.isDefined &&

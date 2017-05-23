@@ -58,4 +58,10 @@
     Possible values are: OFF FINE FINER FINEST INFO WARNING SEVERE ALL -->
     <RestletLogLevel>WARNING</RestletLogLevel>
 
+    <!-- Terms of use for this service (legal). -->
+    <TermsOfUse>
+    Terms Of Use
+    
+    To Be Determined
+    </TermsOfUse>
 </AQAConfig>

@@ -34,7 +34,7 @@ object DbSetup {
         val hashedPassword = AuthenticationVerifier.hashPassword(defaultPassword, passwordSalt)
 
         val institutionPK = ensureAtLeastOneInstitution.institutionPK.get
-        val adminUser = new User(None, "admin", "An Administrator", email, institutionPK, hashedPassword, passwordSalt, UserRole.admin.toString)
+        val adminUser = new User(None, "admin", "An Administrator", email, institutionPK, hashedPassword, passwordSalt, UserRole.admin.toString, None)
         adminUser.insert
     }
 

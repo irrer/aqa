@@ -117,7 +117,7 @@ class SetPassword extends Restlet with SubUrlRoot {
                 val usr = User.get(pkOpt.get.toLong)
                 if (usr.isDefined) {
                     val ou = usr.get
-                    val newUser = new User(ou.userPK, ou.id, ou.fullName, ou.email, ou.institutionPK, newHashedPW, newSalt, ou.role)
+                    val newUser = new User(ou.userPK, ou.id, ou.fullName, ou.email, ou.institutionPK, newHashedPW, newSalt, ou.role, ou.legalAcknowledgment)
                     newUser.insertOrUpdate
                     // remove old credentials so that the old password will not work
                     AuthenticationVerifier.remove(ou.id)

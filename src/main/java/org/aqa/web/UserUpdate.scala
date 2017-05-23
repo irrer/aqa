@@ -157,7 +157,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
         val passwordSalt = Util.randomSecureHash
         val hashedPassword = AuthenticationVerifier.hashPassword(passwordText, passwordSalt)
         val roleText = valueMap.get(role.label).get
-        new User(None, idText, fullNameText, emailText, institutionPK, hashedPassword, passwordSalt, roleText)
+        new User(None, idText, fullNameText, emailText, institutionPK, hashedPassword, passwordSalt, roleText, None)
     }
 
     /**
@@ -175,7 +175,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
         val passwordSalt = user.passwordSalt
         val hashedPassword = user.hashedPassword
         val roleText = valueMap.get(role.label).get
-        new User(Some(userPK), idText, fullNameText, emailText, institutionPK, hashedPassword, passwordSalt, roleText)
+        new User(Some(userPK), idText, fullNameText, emailText, institutionPK, hashedPassword, passwordSalt, roleText, user.legalAcknowledgment)
     }
 
     /**

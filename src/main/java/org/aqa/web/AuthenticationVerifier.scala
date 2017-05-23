@@ -12,31 +12,9 @@ import org.aqa.db.DbSetup
 import org.aqa.Logging._
 import org.restlet.engine.header.ChallengeWriter
 import org.aqa.db.UserRole
+import org.aqa.db.CachedUser
 
 class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.Value) extends Verifier {
-
-    private def checkCached(id: String, secret: String): Int = {
-        AuthenticationVerifier.clean
-        val cred = AuthenticationVerifier.getFromCache(id)
-        0 match {
-            case _ if (!cred.isDefined) => Verifier.RESULT_UNKNOWN
-            case _ if cred.get.secret.equals(secret) => Verifier.RESULT_VALID
-            case _ => Verifier.RESULT_INVALID
-        }
-    }
-
-    private def checkDatabase(id: String, secret: String): Int = {
-        val userOpt = User.getUserById(id)
-        if (userOpt.isDefined) {
-            val user = userOpt.get
-            if (AuthenticationVerifier.validatePassword(secret, user.hashedPassword, user.passwordSalt)) {
-                AuthenticationVerifier.put(id, secret, UserRole.stringToUserRole(user.role))
-                Verifier.RESULT_VALID
-            }
-            else Verifier.RESULT_INVALID
-        }
-        else Verifier.RESULT_UNKNOWN
-    }
 
     /**
      * Check to see if the credentials are valid, first using the cache for efficiency and
@@ -49,8 +27,11 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
      * for that.
      */
     private def check(id: String, secret: String): Int = {
-        if (checkCached(id, secret) == Verifier.RESULT_VALID) Verifier.RESULT_VALID
-        else checkDatabase(id, secret)
+        CachedUser.get(id) match {
+            case Some(user) if AuthenticationVerifier.validatePassword(secret, user.hashedPassword, user.passwordSalt) => Verifier.RESULT_VALID
+            case Some(user) => Verifier.RESULT_INVALID
+            case _ => Verifier.RESULT_UNKNOWN
+        }
     }
 
     override def verify(request: Request, response: Response): Int = {
@@ -71,8 +52,11 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
 
                     val authorized: Boolean = {
                         if (authentication == Verifier.RESULT_VALID) {
-                            val userRole = AuthenticationVerifier.getFromCache(id).get.role
-                            (userRole.isDefined) && (userRole.get.compare(requestedRole) >= 0)
+                            val role = for (cred <- AuthenticationVerifier.getFromCache(id); r <- UserRole.stringToUserRole(cred.user.role)) yield r
+                            role match {
+                                case Some(userRole) => userRole.compare(requestedRole) >= 0
+                                case _ => false
+                            }
                         }
                         else false
                     }
@@ -108,37 +92,37 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
 
 object AuthenticationVerifier {
 
-    class Credentials(val secret: String, val role: Option[UserRole.Value]) {
-        val timeout = System.currentTimeMillis + Config.AuthenticationTimeoutInMs
-    }
-
-    private val cache = scala.collection.mutable.HashMap[String, Credentials]()
-
-    def put(id: String, secret: String, role: Option[UserRole.Value]): Unit = {
-        cache.synchronized({
-            cache.put(id, new Credentials(secret, role))
-        })
-    }
-
-    def getFromCache(id: String): Option[Credentials] = {
-        cache.synchronized({
-            cache.get(id)
-        })
-    }
-
-    def clean: Unit = {
-        cache.synchronized({
-            val now = System.currentTimeMillis
-            val expired = cache.filter(c => c._2.timeout < now).map(c1 => c1._1)
-            cache --= expired
-        })
-    }
-
-    def remove(id: String): Option[Credentials] = {
-        cache.synchronized({
-            cache.remove(id)
-        })
-    }
+    //    class CachedUser(val user: User) {
+    //        val timeout = System.currentTimeMillis + Config.AuthenticationTimeoutInMs
+    //    }
+    //
+    //    private val cache = scala.collection.mutable.HashMap[String, CachedUser]()
+    //
+    //    def put(id: String, secret: String, user: User): Unit = {
+    //        cache.synchronized({
+    //            cache.put(id, new CachedUser(user))
+    //        })
+    //    }
+    //
+    //    def getFromCache(id: String): Option[CachedUser] = {
+    //        cache.synchronized({
+    //            cache.get(id)
+    //        })
+    //    }
+    //
+    //    def clean: Unit = {
+    //        cache.synchronized({
+    //            val now = System.currentTimeMillis
+    //            val expired = cache.filter(c => c._2.timeout < now).map(c1 => c1._1)
+    //            cache --= expired
+    //        })
+    //    }
+    //
+    //    def remove(id: String): Option[CachedUser] = {
+    //        cache.synchronized({
+    //            cache.remove(id)
+    //        })
+    //    }
 
     def hashPassword(secret: String, passwordSalt: String): String = Util.secureHash(passwordSalt + secret)
 

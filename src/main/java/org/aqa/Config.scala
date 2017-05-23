@@ -274,13 +274,15 @@ object Config {
 
     val UserWhiteList: List[String] = (document \ "UserWhiteList" \ "User").toList.map(node => node.head.text.trim.toLowerCase)
 
+    val TermsOfUse = mainText("TermsOfUse")
+
     /** If this is defined, then the configuration was successfully initialized. */
     val validate = true
 
     override def toString: String = valueText.foldLeft("Configuration values:")((b, t) => b + "\n    " + t)
 
     def toHtml = {
-            { valueText.map(line => <br>{ line } </br>) }.toSeq
+        { valueText.map(line => <br>{ line } </br>) }.toSeq
     }
 
     logInfo(toString)

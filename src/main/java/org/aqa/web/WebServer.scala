@@ -30,6 +30,7 @@ import org.aqa.db.User
 import org.aqa.db.UserRole
 import org.restlet.routing.TemplateRoute
 import edu.umro.ScalaUtil.Trace._
+import org.aqa.db.CachedUser
 
 object WebServer {
     val challengeScheme = ChallengeScheme.HTTP_BASIC
@@ -188,7 +189,7 @@ class WebServer extends Application {
             case `machineConfigurationDirRestlet` => UserRole.user
 
             case _ => {
-                logInfo("admin role requested")
+                logInfo("admin role requested by " + WebUtil.getUserIdOrDefault(request, "unknown"))
                 UserRole.admin // default to most restrictive access for everything else
             }
         }
@@ -284,6 +285,38 @@ class WebServer extends Application {
         val rToR = new ResolveToRefererFilter
         rToR.setNext(restlet)
         rToR
+    }
+
+    /**
+     * Ensure that the user has agreed to the terms in the legal statement for using this service.
+     */
+    private def initLegal(restlet: Restlet): Restlet = {
+
+        class LegalFilter extends Filter {
+
+            override def afterHandle(request: Request, response: Response): Unit = {
+
+                CachedUser.get(request) match {
+                    case Some(user) => if (!user.termsOfUseAcknowledgment.isDefined) response.redirectSeeOther("")
+                    case _ =>
+                }
+
+                //                val user = WebUtil.getUserIdOrDefault(request, "")
+                //                if ((response.getStatus == Status.REDIRECTION_SEE_OTHER) && (request.getReferrerRef != null)) {
+                //                    val locRef = response.getLocationRef
+                //                    val desiredHost = request.getReferrerRef.getHostIdentifier
+                //                    val path = locRef.toString.replaceAll("^" + request.getResourceRef.getHostIdentifier, desiredHost)
+                //                    response.redirectSeeOther(path)
+                //                    logInfo("Redirecting response via REDIRECTION_SEE_OTHER from/to:" +
+                //                        "\n    " + locRef +
+                //                        "\n    " + path)
+
+            }
+        }
+
+        val legalFilter = new LegalFilter
+        legalFilter.setNext(restlet)
+        legalFilter
     }
 
     /**

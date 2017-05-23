@@ -5,6 +5,7 @@ import org.aqa.Logging._
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.web.AuthenticationVerifier
+import java.sql.Timestamp
 
 case class User(
         userPK: Option[Long], // primary key
@@ -14,7 +15,8 @@ case class User(
         institutionPK: Long, // institution that this user belongs to
         hashedPassword: String, // cryptographically hashed password
         passwordSalt: String, // salt used for hashing password
-        role: String // user role which defines authorization
+        role: String, // user role which defines authorization
+        termsOfUseAcknowledgment: Option[Timestamp] // time at which user agreed to the legal terms of the service, or 'None' if they never did.
         ) {
 
     def insert: User = {
@@ -25,6 +27,15 @@ case class User(
     }
 
     def insertOrUpdate = Db.run(User.query.insertOrUpdate(this))
+
+    /**
+     * Update the termsOfUseAcknowledgment, possibly to None.  Returns number of records updated, which
+     * should always be one.  If it is zero then it is probably because the object is not in the database.
+     */
+    def updateTermsOfUseAcknowledgment(timestamp: Option[Timestamp]) = {
+        Db.run(User.query.filter(_.userPK === userPK.get).map(u => (u.termsOfUseAcknowledgment)).update((timestamp)))
+    }
+
 }
 
 object User extends {
@@ -38,6 +49,7 @@ object User extends {
         def hashedPassword = column[String]("hashedPassword")
         def passwordSalt = column[String]("passwordSalt")
         def role = column[String]("role")
+        def termsOfUseAcknowledgment = column[Option[Timestamp]]("termsOfUseAcknowledgment")
 
         def * = (
             userPK.?,
@@ -47,7 +59,8 @@ object User extends {
             institutionPK,
             hashedPassword,
             passwordSalt,
-            role) <> ((User.apply _)tupled, User.unapply _)
+            role,
+            termsOfUseAcknowledgment) <> ((User.apply _)tupled, User.unapply _)
 
         def institutionFK = foreignKey("institutionPK", institutionPK, Institution.query)(_.institutionPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
     }
