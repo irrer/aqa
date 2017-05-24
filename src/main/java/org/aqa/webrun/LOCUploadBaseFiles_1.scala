@@ -23,6 +23,7 @@ import edu.umro.util.Utility
 import com.pixelmed.dicom.AttributeList
 import org.aqa.web.WebRunIndex
 import org.aqa.db.Machine.MMI
+import scala.xml.Elem
 
 object LOCUploadBaseFiles_1 {
     val parametersFileName = "parameters.xml"
@@ -47,6 +48,12 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
         ("-1", "None") +: Machine.listWithDependencies.filter(mmi => mmi.machine.serialNumber.isEmpty).sortWith(sortMMI).map(mmi => mmiToTuple(mmi))
     }
 
+    private def getInstructions(valueMap: ValueMapT): Elem = {
+        <div>Drag and drop the two DICOM baseline files for open  and trans.</div>
+    }
+
+    private val instructions = new WebPlainText("Instructions", false, 6, 0, getInstructions _)
+
     private val machine = new WebInputSelectOption("Machine", 6, 0, machineList, showMachineSelector)
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
@@ -57,7 +64,7 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
     private val runButton = makeButton("Run", true, ButtonType.BtnDefault)
     private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
 
-    private def form = new WebForm(procedure.webUrl, List(List(machine), List(runButton, cancelButton)), 6)
+    private def form = new WebForm(procedure.webUrl, Some("Upload LOC Baseline"), List(List(instructions), List(machine), List(runButton, cancelButton)), 6)
 
     private def emptyForm(valueMap: ValueMapT, response: Response) = {
         form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
