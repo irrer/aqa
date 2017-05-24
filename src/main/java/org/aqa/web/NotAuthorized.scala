@@ -37,7 +37,7 @@ class NotAuthorized extends Restlet with SubUrlRoot {
 
     private val homeButton = makeButton("Home", true, ButtonType.BtnPrimary)
 
-    private val content = "Your user id and password are correct, but are not authorized to access this content."
+    private val content = "Your user id and password are correct, but you are not authorized to use this part of the web site."
 
     private val message = new WebPlainText("message", false, 6, 0, _ => <div>{ content }</div>)
 

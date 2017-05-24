@@ -28,6 +28,7 @@ import org.aqa.db.Institution.InstitutionTable
 import org.aqa.db.Institution
 import org.aqa.db.UserRole
 import org.aqa.Util
+import org.aqa.db.CachedUser
 
 object UserUpdate {
     val userPKTag = "userPK"
@@ -134,7 +135,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
         if (errMap.isEmpty) {
             val user = reconstructUserFromParameters(valueMap)
             // remove old credentials just in case the user role was changed.
-            AuthenticationVerifier.remove(user.id)
+            CachedUser.remove(user.id)
             user.insertOrUpdate
             UserList.redirect(response)
         }
@@ -175,7 +176,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
         val passwordSalt = user.passwordSalt
         val hashedPassword = user.hashedPassword
         val roleText = valueMap.get(role.label).get
-        new User(Some(userPK), idText, fullNameText, emailText, institutionPK, hashedPassword, passwordSalt, roleText, user.legalAcknowledgment)
+        new User(Some(userPK), idText, fullNameText, emailText, institutionPK, hashedPassword, passwordSalt, roleText, user.termsOfUseAcknowledgment)
     }
 
     /**

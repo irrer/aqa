@@ -29,64 +29,40 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
     private def check(id: String, secret: String): Int = {
         CachedUser.get(id) match {
             case Some(user) if AuthenticationVerifier.validatePassword(secret, user.hashedPassword, user.passwordSalt) => Verifier.RESULT_VALID
-            case Some(user) => Verifier.RESULT_INVALID
+            case Some(user) => {
+                logWarning("the password of user " + id + " failed to authenticate")
+                Verifier.RESULT_INVALID
+            }
             case _ => Verifier.RESULT_UNKNOWN
         }
     }
 
     override def verify(request: Request, response: Response): Int = {
         val requestedRole = getRequestedRole(request, response)
-        //response.setStatus(Status.SUCCESS_OK)
-        //response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
-        //redirectSeeOthr(response, "/")  // On failure, send user to home page TODO
-        val UNAUTHORIZED = 100
-        if (requestedRole == UserRole.publik) Verifier.RESULT_VALID
+        if (requestedRole.id == UserRole.publik.id) Verifier.RESULT_VALID // let anyone into public areas
         else {
-            val cr = request.getChallengeResponse
-            val result: Int = {
-                if (cr == null) Verifier.RESULT_MISSING
-                else {
-                    val id = cr.getIdentifier
-                    val secret = new String(cr.getSecret)
-                    val authentication = check(cr.getIdentifier, new String(cr.getSecret))
+            request.getChallengeResponse match {
+                case null => Verifier.RESULT_MISSING
+                case challResp => {
+                    val id = challResp.getIdentifier
+                    val secret = new String(challResp.getSecret)
 
-                    val authorized: Boolean = {
-                        if (authentication == Verifier.RESULT_VALID) {
-                            val role = for (cred <- AuthenticationVerifier.getFromCache(id); r <- UserRole.stringToUserRole(cred.user.role)) yield r
-                            role match {
-                                case Some(userRole) => userRole.compare(requestedRole) >= 0
-                                case _ => false
-                            }
+                    CachedUser.get(id) match {
+                        case Some(user) if AuthenticationVerifier.validatePassword(secret, user.hashedPassword, user.passwordSalt) => Verifier.RESULT_VALID
+                        case Some(user) => {
+                            logWarning("Authentication violation.  The password of user " + id + " failed")
+                            Verifier.RESULT_INVALID
                         }
-                        else false
-                    }
-
-                    if (false) { // TODO this was supposed to give the user a nice 'Not Authenticated' page, but it does not work.
-                        if (authentication != Verifier.RESULT_VALID) {
-                            val content = {
-                                <div>Your user id or password are incorrect.</div>
-                            }
-                            response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
-                            val text = WebUtil.wrapBody(content, "Not Authenticated")
-                            response.setEntity(text, MediaType.TEXT_HTML)
+                        case _ => {
+                            logWarning("unknown user " + id + " failed")
+                            Verifier.RESULT_UNKNOWN
                         }
                     }
-
-                    if (authorized) Verifier.RESULT_VALID else UNAUTHORIZED
                 }
             }
-
-            if (result == UNAUTHORIZED) {
-                val user = if (request.getChallengeResponse != null) request.getChallengeResponse.getIdentifier else "unknown"
-                logWarning("user " + user + " failed to log in.  Status: " + AuthenticationVerifier.verifierResultToString(result))
-                response.setStatus(Status.SUCCESS_OK) // TODO rm
-                response.redirectSeeOther("/NotAuthorized")
-                Verifier.RESULT_INVALID
-            }
-            else result
         }
 
-        //Verifier.RESULT_VALID  // TODO remove! when user editing and password setting is working
+        //Verifier.RESULT_VALID  // uncomment this line for testing to allow users to use the system without authenticating 
     }
 }
 

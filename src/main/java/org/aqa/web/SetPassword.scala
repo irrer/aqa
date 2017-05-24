@@ -22,6 +22,7 @@ import org.restlet.util.Series
 import org.aqa.Util
 import org.aqa.db.UserRole
 import org.aqa.Logging._
+import org.aqa.db.CachedUser
 
 object SetPassword {
     val path = "/SetPassword"
@@ -117,15 +118,16 @@ class SetPassword extends Restlet with SubUrlRoot {
                 val usr = User.get(pkOpt.get.toLong)
                 if (usr.isDefined) {
                     val ou = usr.get
-                    val newUser = new User(ou.userPK, ou.id, ou.fullName, ou.email, ou.institutionPK, newHashedPW, newSalt, ou.role, ou.legalAcknowledgment)
+                    val newUser = new User(ou.userPK, ou.id, ou.fullName, ou.email, ou.institutionPK, newHashedPW, newSalt, ou.role, ou.termsOfUseAcknowledgment)
                     newUser.insertOrUpdate
                     // remove old credentials so that the old password will not work
-                    AuthenticationVerifier.remove(ou.id)
+                    CachedUser.remove(ou.id)
                     // replace the users' credentials in the cache
-                    AuthenticationVerifier.put(ou.id, valueMap.get(password.label).get, UserRole.stringToUserRole(ou.role))
+                    CachedUser.put(newUser)
                     val content = {
                         <div>
-                            The password for { ou.id } has been changed.
+                            The password for{ ou.id }
+                            has been changed.
                             <p></p>
                             You will need to re-login.
                             <p></p>

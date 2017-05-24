@@ -24,6 +24,7 @@ import org.aqa.Logging._
 import org.aqa.Config
 import org.aqa.db.CachedUser
 import java.sql.Timestamp
+import java.util.concurrent.CopyOnWriteArrayList
 
 object TermsOfUse {
     val path = "/TermsOfUse"
@@ -31,23 +32,26 @@ object TermsOfUse {
 
 class TermsOfUse extends Restlet with SubUrlRoot {
 
-    private val continueUrlTag = "continueUrl"
+    private val agreeTag = "agree"
 
-    private val pageTitle = "Term Of Use"
-
-    private val id = new WebInputText("Id", 4, 0, "User Id")
-
-    private val password = new WebInputPassword("Password", 4, 0, "")
+    private val pageTitle = "Terms Of Use"
 
     private def getTermsOfUse(valueMap: ValueMapT): Elem = {
-        <div>{
-            Config.TermsOfUse
-        }</div>
+        if (valueMap.contains(agreeTag)) {
+            <div>
+                Thank you for agreeing to the terms of use.
+                <p></p>
+                Click on the AQA logo to continue.
+            </div>
+        }
+        else {
+            <div>{
+                Config.TermsOfUse
+            }</div>
+        }
     }
 
     private val message = new WebPlainText(Login.messageTag, false, 6, 0, getTermsOfUse _)
-
-    val continueUrl = new WebInputHidden(continueUrlTag)
 
     private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
         new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
@@ -56,20 +60,25 @@ class TermsOfUse extends Restlet with SubUrlRoot {
     private val agreeButton = makeButton("Agree", true, ButtonType.BtnPrimary)
     private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
 
-    private val form = new WebForm(pathOf, List(List(id), List(password), List(message), List(continueUrl), List(agreeButton, cancelButton)))
-
-    private def emptyForm(response: Response) = {
-        form.setFormResponse(emptyValueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
+    private def form(valueMap: ValueMapT) = {
+        if (valueMap.contains(agreeTag)) new WebForm(pathOf, List(List(message)))
+        else new WebForm(pathOf, List(List(message), List(agreeButton, cancelButton)))
     }
 
-    private def agree(response: Response) = {
+    private def emptyForm(valueMap: ValueMapT, response: Response) = {
+        form(valueMap).setFormResponse(valueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
+        val cr = new CopyOnWriteArrayList[ChallengeRequest]()
+    }
+
+    private def agree(request: Request, response: Response) = {
         CachedUser.get(response.getRequest) match {
             case Some(user) => {
+                CachedUser.remove(user.id)
                 val timestamp = new Timestamp(System.currentTimeMillis)
                 user.updateTermsOfUseAcknowledgment(Some(timestamp))
-                response.redirectSeeOther("/Agreed") // TODO should show an acknowledgement, and send them to where they were originally going
+                response.redirectSeeOther(pathOf + "?" + agreeTag + "=1")
             }
-            case _ =>
+            case _ => response.redirectSeeOther("/")
         }
     }
 
@@ -83,9 +92,9 @@ class TermsOfUse extends Restlet with SubUrlRoot {
         val valueMap = getValueMap(request)
         try {
             0 match {
-                case _ if buttonIs(valueMap, agreeButton) => agree(response)
+                case _ if buttonIs(valueMap, agreeButton) => agree(request, response)
                 case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
-                case _ => emptyForm(response)
+                case _ => emptyForm(valueMap, response)
             }
         }
         catch {

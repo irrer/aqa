@@ -22,14 +22,14 @@ object UserRole extends Enumeration {
     def main(args: Array[String]): Unit = {
 
         def foo(ur: UserRole.Value): Unit = {
-            println("foo ur: " + ur)
+            println("foo ur: " + ur.id + "  " + ur)
         }
 
         println("equality ==     : " + (stringToUserRole("guest").get == UserRole.guest))
         println("equality eq     : " + (stringToUserRole("guest").get.eq(UserRole.guest)))
         println("equality equals : " + (stringToUserRole("guest").get.equals(UserRole.guest)))
 
-        values.toArray.toList.map(ur => println("ur: " + ur))
+        values.toArray.toList.map(ur => println("ur: " + ur.id + "  " + ur))
 
         foo(UserRole.admin)
 

@@ -165,6 +165,12 @@ class WebServer extends Application {
 
     private lazy val webRunIndex = new WebRunIndex
 
+    private lazy val outputList = new OutputList
+
+    private lazy val viewOutput = new ViewOutput
+
+    private lazy val termsOfUse = new TermsOfUse
+
     private lazy val mainIndex = new MainIndex(staticDirFile)
 
     /**
@@ -182,12 +188,14 @@ class WebServer extends Application {
             case `login` => UserRole.publik
             case `notAuthorized` => UserRole.publik
             case `notAuthenticated` => UserRole.publik
+            case `termsOfUse` => UserRole.publik
             case `setPassword` => UserRole.guest
             case `resultsDirectoryRestlet` => UserRole.guest
             case `webRunIndex` => UserRole.user
+            case `viewOutput` => UserRole.user
+            case `outputList` => UserRole.user
             case `tmpDirectoryRestlet` => UserRole.user
             case `machineConfigurationDirRestlet` => UserRole.user
-
             case _ => {
                 logInfo("admin role requested by " + WebUtil.getUserIdOrDefault(request, "unknown"))
                 UserRole.admin // default to most restrictive access for everything else
@@ -199,21 +207,61 @@ class WebServer extends Application {
 
     private def initAuthentication(restlet: Restlet): Restlet = {
         val challAuthn = new ChallengeAuthenticator(getContext.createChildContext, ChallengeScheme.HTTP_BASIC, "Please enter your AQA password") // TODO remove when we figure out how to make a real login page
-        //println("new ChallAuthn 1") // TODO rm
-        //val challAuthn = new ChallAuth(getContext.createChildContext, false, WebServer.challengeScheme, getRequestedRole)    // TODO put back when we figure out how to make a real login page
-        //println("new ChallAuthn 2") // TODO rm
         challAuthn.setVerifier(new AuthenticationVerifier(getRequestedRole _))
         challAuthn.setNext(restlet)
 
-        class RedirectUnauthorizedToLogin extends Filter {
-            override def afterHandle(request: Request, response: Response): Unit = {
-                if (response.getStatus == Status.CLIENT_ERROR_UNAUTHORIZED) {
-                    // TODO send them to a login screen
+        case class UserAndRole(user: User, role: UserRole.Value);
 
-                    // This might work for setting the response:
-                    //val cr = new ChallengeResponse(WebServer.challengeScheme, "hey", "password")
-                    //request.setChallengeResponse(cr)
-                    //response.setChallengeRequests(???)
+        def checkAuthorization(request: Request, response: Response, challResp: ChallengeResponse): Unit = {
+            val requestedRole = getRequestedRole(request, response)
+
+            if (requestedRole.id != UserRole.publik.id) { // let anyone into public areas
+                val userAndRole = { for (u <- User.getUserById(challResp.getIdentifier); r <- UserRole.stringToUserRole(u.role)) yield new UserAndRole(u, r) }
+                userAndRole match {
+                    case Some(uar) => {
+                        if (uar.role.id < requestedRole.id) {
+                            logWarning("Authorization violation.  User " + uar.user.id +
+                                " attempted to access " + request.toString + " that requires role " + requestedRole + " but their role is only " + uar.role)
+                            response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
+                            //response.redirectSeeOther("/NotAuthorized")   // TODO rm
+                            response.redirectSeeOther(notAuthorized.pathOf)
+                        }
+                        else response.setStatus(Status.SUCCESS_OK)
+                    }
+                    case _ => {
+                        logWarning("Internal authorization error.  Can not identify user.")
+                        response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
+                    }
+                }
+            }
+        }
+
+        def needsToAgreeToTerms(id: String): Boolean = {
+            User.getUserById(id) match {
+                case Some(user) => user.termsOfUseAcknowledgment.isEmpty
+                case _ => false
+            }
+            false // TODO remove this when we figure out how to fix 'aggree to terms of use'
+        }
+
+        class RedirectUnauthorizedToLogin extends Filter {
+            override def beforeHandle(request: Request, response: Response): Int = {
+                // If there are no credentials, then let the authenticator decide whether to
+                // accept or reject the request.  If rejected (not publik), then it will
+                // send a challenge request to the client.
+                request.getChallengeResponse match {
+                    case null => Filter.CONTINUE
+                    case cr => {
+                        if (needsToAgreeToTerms(cr.getIdentifier)) {
+                            termsOfUse.handle(request, response)
+                            Filter.SKIP
+                        }
+                        else {
+                            checkAuthorization(request, response, cr)
+                            if (response.getStatus.getCode != Status.SUCCESS_OK.getCode) Filter.SKIP
+                            else Filter.CONTINUE
+                        }
+                    }
                 }
             }
         }
@@ -297,7 +345,7 @@ class WebServer extends Application {
             override def afterHandle(request: Request, response: Response): Unit = {
 
                 CachedUser.get(request) match {
-                    case Some(user) => if (!user.termsOfUseAcknowledgment.isDefined) response.redirectSeeOther("")
+                    case Some(user) => if (!user.termsOfUseAcknowledgment.isDefined) response.redirectSeeOther("/")
                     case _ =>
                 }
 
@@ -327,21 +375,6 @@ class WebServer extends Application {
         try {
             router.setDefaultMatchingMode(Template.MODE_STARTS_WITH)
 
-            if (false) { // TODO rm
-
-                //val j = org.restlet.util.Resolver.createResolver(null)
-                //    val res = new Resolver
-
-                val to = "https://automatedqualityassurance.org/"
-                class MyRedir(context: Context, targetPattern: String, mode: Int) extends Redirector(context, targetPattern, mode) {
-                    override def handle(request: Request, response: Response) {
-                        super.handle(request, response)
-                    }
-                }
-                val redir = new Redirector(getContext, to, Redirector.MODE_CLIENT_SEE_OTHER)
-                val templateRoute = router.attachDefault(redir)
-            }
-
             component.getClients.add(Protocol.FILE)
 
             attach(router, WebServer.staticDirBaseUrl, staticDirRestlet)
@@ -366,9 +399,10 @@ class WebServer extends Application {
                 new UserList,
                 new ProcedureUpdate,
                 new ProcedureList,
-                new OutputList,
                 new ServiceInfo,
                 new ServiceInstance,
+                termsOfUse,
+                outputList,
                 webRunIndex,
                 login,
                 notAuthorized,
@@ -379,19 +413,17 @@ class WebServer extends Application {
 
             restletList.map(r => attach(router, r.pathOf, r))
 
-            val viewOutput = new ViewOutput
             attach(router, WebUtil.SubUrl.url(viewOutput.subUrl, WebUtil.cleanClassName(viewOutput.getClass.getName)), viewOutput)
 
             // This attaches the execution of all procedures
             router.attach("/run", new WebRun)
 
             attach(router, "", mainIndex)
-            /*
-        val auditFilter = new AuditFilter(getContext)
-        auditFilter.setNext(authentication)
-        auditFilter
-        */
-            val auth = initAuthentication(router) // TODO remove if auth fails
+            //        val auditFilter = new AuditFilter(getContext)
+            //        auditFilter.setNext(authentication)
+            //        auditFilter
+
+            val auth = initAuthentication(router)
             resolveToReferer(auth)
         }
         catch {
