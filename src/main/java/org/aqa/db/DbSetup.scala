@@ -60,7 +60,10 @@ object DbSetup {
         CentralAxis.query,
         LeafOffsetCorrection.query,
         EPIDCenterCorrection.query,
-        LeafTransmission.query)
+        LeafTransmission.query,
+        LOCRSquared.query,
+        DiffBaselineOpen.query,
+        DiffBaselineTrans.query)
     /**
      * Initialize database by creating tables in dependency order.
      */

@@ -5,6 +5,9 @@ import java.io.File
 import org.aqa.db.LeafOffsetCorrection
 import org.aqa.db.LeafTransmission
 import org.aqa.db.EPIDCenterCorrection
+import org.aqa.db.LOCRSquared
+import org.aqa.db.DiffBaselineOpen
+import org.aqa.db.DiffBaselineTrans
 import org.aqa.run.ProcedureStatus
 import scala.xml.XML
 import org.aqa.db.DbSetup
@@ -15,7 +18,7 @@ object ProcedureOutputUtil {
 
     val outputFileName = "output.xml"
 
-    private val procedureList: List[ProcedureOutput] = List(LeafOffsetCorrection, LeafTransmission, EPIDCenterCorrection)
+    private val procedureList: List[ProcedureOutput] = List(LeafOffsetCorrection, LeafTransmission, EPIDCenterCorrection, LOCRSquared, DiffBaselineOpen, DiffBaselineTrans)
 
     private def insert(elem: Elem, outputPK: Long) = procedureList.map(po => po.insert(elem, outputPK))
 
