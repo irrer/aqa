@@ -130,7 +130,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
     override val columnList = Seq(startTimeCol, summaryFileCol, inputFileCol, procedureCol, machineCol, institutionCol, userCol, statusCol, invalidateCol, deleteCol)
 
-    val entriesPerPage = 30
+    val entriesPerPage = 1000
 
     override def getData(valueMap: ValueMapT) = Output.extendedList(None, None, entriesPerPage)
 

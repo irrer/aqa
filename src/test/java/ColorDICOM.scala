@@ -67,15 +67,17 @@ object ColorDICOM {
 
         val image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
         for (row <- (0 until height); col <- (0 until width)) {
-            val p = ((pix(row)(col)) - min) / range
-            image.setRGB(col, row, p2BW(p))
+            val p = if (range == 0) 0 else { ((pix(row)(col)) - min) / range }
+            //image.setRGB(col, row, p2BW(p))
+            image.setRGB(col, row, p2ColorLR(p))
         }
         dest.delete
         ImageIO.write(image, "png", dest)
     }
 
     def write(dicomFile: File): Unit = {
-        val fileName = dicomFile.getName.toLowerCase.replace(".dcm", "bw.png")
+        //val fileName = dicomFile.getName.toLowerCase.replace(".dcm", "bw.png")
+        val fileName = dicomFile.getName.toLowerCase.replace(".dcm", "lr.png")
         val pngFile = new File(dicomFile.getParentFile, fileName)
 
         val al = new AttributeList
@@ -90,7 +92,9 @@ object ColorDICOM {
         //        val p2ColorLRMap = (0 to rng).map(p => p2ColorLR((p.toFloat) / rng)).distinct
         //        println("tried: " + rng + "    num: " + p2ColorLRMap.size)
 
-        val dir = new File("""D:\tmp\ColorDICOM""")
+        // val dir = new File("""D:\tmp\ColorDICOM""")
+        val dir = new File("""D:\tmp\wl\output""")
+
         // val file = new File("""D:\AQA_Data\results\Chicago_33\TB5x_1\Leaf_Correction_and_Transmission_1.0_5\2017-03-03T10-13-50-817_170\RI.1.2.246.352.62.1.5007788524908277936.11459800010619178630.dcm""")
         // val file = new File("""D:\AQA_Data\results\TBD_2\CHIC2_12\Upload_TRANS_and_OPEN_base_DICOM_files_1.0.0_1\2017-04-04T14-44-28-279_52\OPEN_BaselineCHIC2.dcm""")
         // val file = new File("""D:\pf\Conquest\dicomserver1419beta3b\data\000000066\1.2.840.113704.1.111.6492.1435009699.6_0002_000051_144181911500a2.dcm""")
