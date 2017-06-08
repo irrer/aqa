@@ -124,7 +124,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
     private val deleteCol = new Column[ColT]("Delete", _ => "Delete", deleteUrl)
 
-    private val procedureCol = new Column[ColT]("Procedure", _.procedure.name)
+    private val procedureCol = new Column[ColT]("Procedure", (d) => d.procedure.name + " " + d.procedure.version)
 
     private val machineCol = new Column[ColT]("Machine", _.machine.id)
 

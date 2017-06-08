@@ -93,7 +93,8 @@ object ColorDICOM {
         //        println("tried: " + rng + "    num: " + p2ColorLRMap.size)
 
         // val dir = new File("""D:\tmp\ColorDICOM""")
-        val dir = new File("""D:\tmp\wl\output""")
+        // val dir = new File("""D:\tmp\wl\output""")
+        val dir = new File("""D:\tmp\wl\ct2\QASRSWLCTCT2\output""")
 
         // val file = new File("""D:\AQA_Data\results\Chicago_33\TB5x_1\Leaf_Correction_and_Transmission_1.0_5\2017-03-03T10-13-50-817_170\RI.1.2.246.352.62.1.5007788524908277936.11459800010619178630.dcm""")
         // val file = new File("""D:\AQA_Data\results\TBD_2\CHIC2_12\Upload_TRANS_and_OPEN_base_DICOM_files_1.0.0_1\2017-04-04T14-44-28-279_52\OPEN_BaselineCHIC2.dcm""")
