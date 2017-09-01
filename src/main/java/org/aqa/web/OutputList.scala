@@ -18,7 +18,6 @@ import edu.umro.util.Utility
 import org.aqa.Logging._
 
 object OutputList {
-    val dataValidityTag = "dataValidity"
     val deleteTag = "delete"
 
     private val path = new String((new OutputList).pathOf)
@@ -64,8 +63,6 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
     private val startTimeFormat = new SimpleDateFormat("yyyy MM dd HH:mm:ss")
 
-    //private def startTime(extendedValues: Output.ExtendedValues): String = startTimeFormat.format(extendedValues.output.startDate)
-
     private def compareByInputTime(a: Output.ExtendedValues, b: Output.ExtendedValues): Int = {
         if (a.input.dataDate.isDefined && b.input.dataDate.isDefined) a.input.dataDate.get.compareTo(b.input.dataDate.get)
         else 0
@@ -85,22 +82,14 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     }
 
     private def startTimeUrl(extendedValues: Output.ExtendedValues): Elem = {
-        <a href={ getUrl(extendedValues.output.outputPK.get, false) }> { startTimeFormat.format(extendedValues.output.startDate) }</a>
-    }
-
-    private def summaryFileUrl(extendedValues: Output.ExtendedValues): Elem = {
-        <a href={ getUrl(extendedValues.output.outputPK.get, true) }>Summary</a>
+        <a title="Data analysis time" href={ getUrl(extendedValues.output.outputPK.get, false) }> { startTimeFormat.format(extendedValues.output.startDate) }</a>
     }
 
     private def inputFileUrl(extendedValues: Output.ExtendedValues): Elem = {
-        <a href={ WebServer.urlOfResultsPath(extendedValues.input.directory.get) }>{ inputTime(extendedValues) }</a>
+        <a title="Data aquisition time" href={ WebServer.urlOfResultsPath(extendedValues.input.directory.get) }>{ inputTime(extendedValues) }</a>
     }
 
     private def invalidateRowName(extendedValues: Output.ExtendedValues): String = extendedValues.output.dataValidity.toString
-
-    private def invalidateUrl(extendedValues: Output.ExtendedValues): Elem = {
-        <a title="Click to change.  Can be undone" href={ OutputList.path + "?" + OutputList.dataValidityTag + "=" + extendedValues.output.outputPK.get }>{ extendedValues.output.dataValidity.toString }</a>
-    }
 
     private def deleteUrl(extendedValues: Output.ExtendedValues): Elem = {
         <a title="Click to delete.  Can NOT be undone" href={ OutputList.path + "?" + OutputList.deleteTag + "=" + extendedValues.output.outputPK.get }>Delete</a>
@@ -112,15 +101,9 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
     private val userCol = new Column[ColT]("User", _.user.id)
 
-    private val startTimeCol = new Column[ColT]("Start Time", compareByStartTime _, startTimeUrl _)
+    private val startTimeCol = new Column[ColT]("Analysis", compareByStartTime _, startTimeUrl _)
 
-    private val summaryFileCol = new Column[ColT]("Summary", _.output.directory, summaryFileUrl)
-
-    private val inputFileCol = new Column[ColT]("Input", inputTime _, inputFileUrl _)
-
-    private val statusCol = new Column[ColT]("Status", _.output.status)
-
-    private val invalidateCol = new Column[ColT]("Valid Status", invalidateRowName _, invalidateUrl _)
+    private val inputFileCol = new Column[ColT]("Acquisition", inputTime _, inputFileUrl _)
 
     private val deleteCol = new Column[ColT]("Delete", _ => "Delete", deleteUrl)
 
@@ -128,7 +111,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
     private val machineCol = new Column[ColT]("Machine", _.machine.id)
 
-    override val columnList = Seq(startTimeCol, summaryFileCol, inputFileCol, procedureCol, machineCol, institutionCol, userCol, statusCol, invalidateCol, deleteCol)
+    override val columnList = Seq(startTimeCol, inputFileCol, procedureCol, machineCol, institutionCol, userCol, deleteCol)
 
     val entriesPerPage = 1000
 
@@ -137,35 +120,6 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     override def getPK(extendedValues: Output.ExtendedValues): Long = extendedValues.output.outputPK.get
 
     override val canCreate: Boolean = false
-
-    /** Change the dataValidity column. */
-    private def changeDataValidity(outputPK: Long): Unit = {
-
-        val output = Output.get(outputPK).get
-        val ovo = DataValidity.stringToDataValidity(output.dataValidity)
-        val newValidity = {
-            if (ovo.isDefined && (ovo.get == DataValidity.valid)) {
-                DataValidity.invalid
-            }
-            else DataValidity.valid
-        }
-
-        val updatedOutput = new Output(
-            outputPK = output.outputPK,
-            inputPK = output.inputPK,
-            directory = output.directory,
-            procedurePK = output.procedurePK,
-            userPK = output.userPK,
-            startDate = output.startDate,
-            finishDate = output.finishDate,
-            dataDate = output.dataDate,
-            analysisDate = output.analysisDate,
-            machinePK = output.machinePK,
-            status = output.status,
-            dataValidity = newValidity.toString)
-
-        updatedOutput.insertOrUpdate
-    }
 
     /** Remove the output, the other associated outputs, and the directory. If its input is only referenced by this output, then delete the input too. */
     private def deleteOutput(outputPK: Long): Unit = {
@@ -184,11 +138,9 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
     override def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Unit = {
         try {
-            val dataValidity = valueMap.get(OutputList.dataValidityTag)
             val delete = valueMap.get(OutputList.deleteTag)
 
             0 match {
-                case _ if (dataValidity.isDefined) => { val dv = changeDataValidity(dataValidity.get.toLong) }
                 case _ if (delete.isDefined) => deleteOutput(delete.get.toLong)
                 case _ => ;
             }
