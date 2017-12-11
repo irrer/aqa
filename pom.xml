@@ -34,7 +34,24 @@
         <dependency> <groupId>org.restlet.jee</groupId>    <artifactId>org.restlet.ext.fileupload</artifactId> <version>2.3.4</version>           </dependency>
         <dependency> <groupId>javax.servlet</groupId>      <artifactId>javax.servlet-api</artifactId>          <version>3.1.0</version>           </dependency>
         <dependency> <groupId>commons-io</groupId>         <artifactId>commons-io</artifactId>                 <version>2.4</version>             </dependency>
-        <dependency> <groupId>log4j</groupId>              <artifactId>log4j</artifactId>                      <version>1.2.17</version>          </dependency>
+        
+<dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-api</artifactId>
+    <version>2.10.0</version>
+</dependency>
+        <dependency> <groupId>org.apache.logging.log4j</groupId>              <artifactId>log4j-core</artifactId>                      <version>2.10.0</version>          </dependency>
+<dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>log4j-over-slf4j</artifactId>
+    <version>1.7.25</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-slf4j-impl</artifactId>
+    <version>2.10.0</version>
+</dependency>        
+        
         <dependency> <groupId>org.slf4j</groupId>          <artifactId>slf4j-api</artifactId>                  <version>1.7.25</version>          </dependency>
         <dependency> <groupId>pixelmed</groupId>           <artifactId>pixelmed</artifactId>                   <version>20160530</version>        </dependency>
         <dependency> <groupId>org.gnu</groupId>            <artifactId>gnu-crypto</artifactId>                 <version>2.0.1</version>           </dependency>
@@ -47,6 +64,18 @@
 <!-- https://mvnrepository.com/artifact/com.typesafe.slick/slick -->
   
     <!--
+    
+<dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>slf4j-simple</artifactId>
+    <version>1.7.25</version>
+    <scope>test</scope>
+</dependency>
+    
+    
+    
+    
+        <dependency> <groupId>log4j</groupId>              <artifactId>log4j</artifactId>                      <version>1.2.17</version>          </dependency>
         <dependency> <groupId>org.scala-lang.modules</groupId>  <artifactId>scala-xml_2.12</artifactId> <version>1.0.6</version>    </dependency>
         <dependency> <groupId>com.typesafe.play</groupId>  <artifactId>play_2.11</artifactId>                  <version>2.4.6</version>           </dependency>
         <dependency> <groupId>org.apache.logging.log4j</groupId>  <artifactId>log4j-core</artifactId>          <version>2.6.1</version>           </dependency>

@@ -64,8 +64,8 @@ object Logging {
         println("foo.getLogger.getParent.getName: " + foo.getLogger.getParent.getName)
 
         // val priority = new org.apache.spi.ErrorCode
-        import org.apache.log4j.FileAppender
-        val fileAppender = new FileAppender
+//        import org.apache.log4j.FileAppender
+//        val fileAppender = new FileAppender
 
         //org.apache.commons.logging.impl.SimpleLog.warn()
 
