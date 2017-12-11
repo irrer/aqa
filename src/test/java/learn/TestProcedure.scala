@@ -1,4 +1,4 @@
-package test
+package learn
 
 object TestProcedure {
     def main(args: Array[String]): Unit = {

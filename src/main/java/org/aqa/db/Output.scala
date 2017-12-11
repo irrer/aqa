@@ -121,6 +121,26 @@ object Output {
 
     case class ExtendedValues(val output: Output, val input: Input, val machine: Machine, val procedure: Procedure, val institution: Institution, val user: User);
 
+    type ExtendedValuesTables = (Output.OutputTable, Input.InputTable, Machine.MachineTable, Procedure.ProcedureTable, Institution.InstitutionTable, User.UserTable)
+
+    // can pass sorting function in using this horrendous type:   // TODO
+    //
+    //    val k: jType = null
+    //    k._5.description.reverse
+    //
+    //    def jfun(j: jType) = {
+    //        val fwd = true
+    //        val j0a = (j._4.name).reverse
+    //        val j0 = j._4.name
+    //        val j1 = j0.reverse
+    //        val rev= if (fwd) j0 else j0.reverse
+    //        j0
+    //    }
+    //
+    //    def jfunRev(j: jType) = {
+    //        j._4.name.reverse
+    //    }
+
     /**
      * Get an extended list of all outputs.
      */
@@ -134,6 +154,7 @@ object Output {
             user <- User.query if user.userPK === output.userPK
         } yield (output, input, machine, procedure, institution, user)
         val sorted = search.sortBy(_._2.dataDate).take(maxSize)
+        //        val j2 = search.sortBy(jfun _) // TODO make customizable sort
         //val sorted = search.sortBy(_._2.dataDate.desc.reverse).take(maxSize)
         val result = Db.run(sorted.result)
         result.map(x => new ExtendedValues(x._1, x._2, x._3, x._4, x._5, x._6))
