@@ -4,7 +4,6 @@ import org.restlet.Restlet
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-//import java.util.logging.Logger
 import org.aqa.db.DbSetup
 import org.aqa.Config
 import org.aqa.web.WebServer
