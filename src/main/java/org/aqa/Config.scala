@@ -277,7 +277,9 @@ object Config {
     val TermsOfUse = mainText("TermsOfUse")
 
     /** If this is defined, then the configuration was successfully initialized. */
-    val validate = true
+    val validated = true
+    
+    def validate = validated
 
     override def toString: String = valueText.foldLeft("Configuration values:")((b, t) => b + "\n    " + t)
 
