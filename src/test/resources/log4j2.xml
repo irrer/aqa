@@ -4,7 +4,7 @@
     https://raw.githubusercontent.com/apache/logging-log4j2/master/log4j-core/src/main/resources/Log4j-config.xsd">
 
     <Properties>
-        <Property name="pat">%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %location | %msg%n</Property>
+        <Property name="pat">%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %location | %msg\n</Property>
         <Property name="dir">D:\pf\eclipse\workspaceOxygen\aqa\target\log</Property>
     </Properties>
 
