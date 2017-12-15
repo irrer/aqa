@@ -1,4 +1,4 @@
-package test;
+package aqa.test;
 
 import java.util.logging.Logger;
 

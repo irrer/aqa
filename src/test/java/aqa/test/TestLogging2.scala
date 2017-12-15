@@ -1,4 +1,4 @@
-package test
+package aqa.test
 
 trait LogIt {
     val logger = org.slf4j.LoggerFactory.getLogger("")
@@ -8,13 +8,15 @@ trait LogIt {
     }
 }
 
-private class TestLogging2 extends LogIt {
-    import LogMe._
+//private class TestLogging2 extends LogIt {
+private class TestLogging2 {
+    //import LogMe._
 
+    val logger = LogLog.logger
     val logIt: org.slf4j.Logger = org.slf4j.LoggerFactory.getLogger("")
     val hi = "hi from TestLogging2"
     logIt.info(hi)
-    logit(hi)
+    //logit(hi)
 
     def func = {
         val msg = "from logme from func"
@@ -58,6 +60,11 @@ object Thingy extends LogIt {
 object TestLogging2 {
     def main(args: Array[String]): Unit = {
         println("starting")
+        import java.io.File
+
+        println("System Property " + "java.util.logging.manager" + " = " + System.getProperty("java.util.logging.manager"))
+        println("System Property " + "log4j2.configurationFile" + " = " + System.getProperty("log4j2.configurationFile"))
+
         (new TestLogging2)
         Thingy.dolog
     }
