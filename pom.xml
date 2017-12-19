@@ -197,6 +197,7 @@ https://mvnrepository.com/artifact/org.scalatest/scalatest
                       <copy toFile="${dest.dir}/AQAConfig.xml" file="${resource.dir}/AQAConfigProd.xml"/>
                       <copy toDir="${dest.dir}" file="${resource.dir}/AQAConfigProd.xml"/>
                       <copy toDir="${dest.dir}" file="${resource.dir}/AQAConfigDev.xml"/>
+                      <copy toDir="${dest.dir}" file="${resource.dir}/log4j2.xml"/>
                       <copy toDir="${dest.dir}">
                         <fileset includes="static/**" dir="${resource.dir}"/>
                       </copy>
