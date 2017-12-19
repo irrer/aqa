@@ -4,7 +4,6 @@ import org.aqa.db.DbSetup
 import org.aqa.web.WebServer
 import org.aqa.run.Run
 import edu.umro.ScalaUtil.PeriodicRestart
-import org.aqa.Logging._
 import java.io.File
 import java.util.Date
 
@@ -12,7 +11,7 @@ import java.util.Date
  * Main service entry point.  Start up major portions of
  * the service and catch unexpected errors.
  */
-object AQA {
+object AQA extends Logging {
     /** Time at which service was started. */
     val serviceStartTime = System.currentTimeMillis
 
@@ -26,7 +25,7 @@ object AQA {
                 Run.handleRunningProcedureList
                 new WebServer
                 new PeriodicRestart(Config.RestartTime)
-                logInfo("Service started")
+                logger.info("Service started")
             }
         }
         catch {
@@ -38,12 +37,12 @@ object AQA {
             // event that this service behaves badly and keeps exiting when started, an keeps the service from
             // using excessive resources.
             case e: Exception => {
-                logSevere("Unexpected exception in main: " + fmtEx(e))
+                logger.error("Unexpected exception in main: " + fmtEx(e))
                 Thread.sleep(30 * 1000)
                 System.exit(1)
             }
             case t: Throwable => {
-                logSevere("Unexpected throwable in main: " + fmtEx(t))
+                logger.error("Unexpected throwable in main: " + fmtEx(t))
                 Thread.sleep(30 * 1000)
                 System.exit(2)
             }
@@ -54,9 +53,9 @@ object AQA {
         class InitiateServiceRestart extends Runnable {
             val delay = 4 * 1000 // wait long enough for web client to receive a response
             def run = {
-                logInfo("Shutting down service for restart in " + delay + " ms...")
+                logger.info("Shutting down service for restart in " + delay + " ms...")
                 Thread.sleep(delay)
-                logInfo("Shutting down service now.")
+                logger.info("Shutting down service now.")
                 System.exit(1)
             }
             (new Thread(this)).start

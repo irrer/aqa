@@ -23,7 +23,7 @@ import org.restlet.data.MediaType
 import WebUtil._
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
-import org.aqa.Logging._
+import org.aqa.Logging
 import org.aqa.Util
 import java.io.File
 import org.aqa.AQA
@@ -35,7 +35,7 @@ object ServiceInfo {
     def redirect(response: Response) = response.redirectSeeOther(path)
 }
 
-class ServiceInfo extends Restlet with SubUrlAdmin {
+class ServiceInfo extends Restlet with SubUrlAdmin with Logging {
     private val logFileTag = "LogFileVersion"
     private val pageTitle = "Service Information"
 
@@ -68,10 +68,9 @@ class ServiceInfo extends Restlet with SubUrlAdmin {
             val file = new File(logDir, valueMap(logFileTag))
             val data = Util.readBinaryFile(file).right.get
             response.setEntity(new String(data), MediaType.TEXT_PLAIN)
-            logInfo("Showing contents of log file " + file.getAbsolutePath)
+            logger.info("Showing contents of log file " + file.getAbsolutePath)
             true
-        }
-        catch {
+        } catch {
             case t: Throwable => false
         }
     }
@@ -226,8 +225,7 @@ setTimeout(watchStatus, WebRefreshTime);
                 case _ if showFileContents(valueMap, response) => {}
                 case _ => showServiceInfo(response)
             }
-        }
-        catch {
+        } catch {
             case t: Throwable => {
                 WebUtil.internalFailure(response, t)
             }

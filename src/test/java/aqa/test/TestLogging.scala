@@ -25,31 +25,48 @@ import org.scalatest.Matchers
  *
  */
 
-private object OtherClass {
-    val logger: Logger = Logger(this.getClass)
-    def wrn = logger.warn("logtest: warning from class Loo")
-}
+//class LogObject {
+//    private val logger = Logger(this.getClass)
+//}
+//
+//object LogObject {
+//    val logger = (new LogObject).logger
+//}
+//
+//private object OtherClass {
+//    val logger: Logger = Logger(this.getClass)
+//    def wrn = logger.warn("logtest: warning from class Loo")
+//}
 
 class TestLogging extends FlatSpec with Matchers {
-
-    System.getProperty("java.util.logging.manager") should not be (null)
-
-    verifyProperty("java.util.logging.manager")
-    verifyProperty("log4j2.configurationFile")
-
-    System.getProperty("log4j2.configurationFile") should not be (null)
-
-    private def verifyProperty(name: String) = {
-        System.getProperty(name) should not be (null)
-        println("System Property " + name + " : " + System.getProperty(name))
-    }
-
     private val logger = org.slf4j.LoggerFactory.getLogger("")
-    println("logger: " + logger)
 
-    private def foo = {
-        logger.info("logtest: info log from source function foo")
-    }
+//    System.getProperty("java.util.logging.manager") should not be (null)
+//
+//    verifyProperty("java.util.logging.manager")
+//    verifyProperty("log4j2.configurationFile")
+//
+//    System.getProperty("log4j2.configurationFile") should not be (null)
+//
+//    private def verifyProperty(name: String) = {
+//        System.getProperty(name) should not be (null)
+//        println("System Property " + name + " : " + System.getProperty(name))
+//    }
+//
+//    println("logger: " + logger)
+//
+//    private class InnerPrivateClass {
+//        logger.info("logtest: info log from InnerPrivateClass")
+//    }
+//
+//    private class InnerPublicClass {
+//        logger.info("logtest: info log from InnerPublicClass")
+//        //LogObject.logger.info("logtest: info log from InnerPublicClass with LogObject.logger")
+//    }
+//
+//    private def foo = {
+//        logger.info("logtest: info log from function foo")
+//    }
 
     private def performLogging = {
 
@@ -59,7 +76,7 @@ class TestLogging extends FlatSpec with Matchers {
         //System.setProperty("java.util.logging.manager", "org.apache.logging.log4j.jul.LogManager")
 
         //System.setProperty("log4j2.configurationFile", """D:\pf\eclipse\workspaceOxygen\aqa\src\test\resources\log4j2.xml""")
-        LogStuff.doit();
+//        LogStuff.doit();
 
         logger.trace("logtest: trace log")
         logger.debug("logtest: debug log")
@@ -67,21 +84,27 @@ class TestLogging extends FlatSpec with Matchers {
         logger.info("logtest: warn log")
         logger.error("logtest: error log")
 
-        OtherClass.wrn
-        Config.validate
-        DbSetup.init
-        DbSetup.smokeTest
-
-        // val web = new WebServer
-        println("waiting for web server")
-
-        // Logging.logSevere("This is a severe hello from logging!")
-        //Thread.sleep(10 * 1000)
-        println("Logging is done")
-        //System.exit(0)
+        //OtherClass.wrn
+//        Config.validate
+//        DbSetup.init
+//        DbSetup.smokeTest
+//
+//        new InnerPrivateClass
+//
+//        new InnerPublicClass
+//
+//        // val web = new WebServer
+//        println("waiting for web server")
+//
+//        // Logging.logSevere("This is a severe hello from logging!")
+//        //Thread.sleep(10 * 1000)
+//        println("Logging is done")
+//        //System.exit(0)
     }
 
-    performLogging
+    "logging" should "write messages to a file" in {
+        performLogging
+    }
 
     println("Logging class is done")
 }

@@ -21,7 +21,6 @@ import org.restlet.data.Header
 import org.restlet.util.Series
 import org.aqa.Util
 import org.aqa.db.UserRole
-import org.aqa.Logging._
 import org.aqa.db.CachedUser
 
 object SetPassword {

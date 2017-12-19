@@ -1,7 +1,7 @@
 package org.aqa.db
 
 import slick.driver.PostgresDriver.api._
-import org.aqa.Logging._
+import org.aqa.Logging
 import org.aqa.Config
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Util
@@ -25,7 +25,7 @@ case class Institution(
     def fileName = Institution.fileName(name)
 }
 
-object Institution {
+object Institution extends Logging {
     class InstitutionTable(tag: Tag) extends Table[Institution](tag, "institution") {
 
         def institutionPK = column[Long]("institutionPK", O.PrimaryKey, O.AutoInc)
@@ -60,7 +60,7 @@ object Institution {
         val list = Db.run(action.result)
 
         val inst = if (list.isEmpty) None else Some(list.head)
-        logInfo("Institution with " + trimmedName + " : " + inst)
+        logger.info("Institution with " + trimmedName + " : " + inst)
         inst
     }
 

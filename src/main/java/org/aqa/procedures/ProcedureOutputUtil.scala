@@ -12,9 +12,9 @@ import org.aqa.run.ProcedureStatus
 import scala.xml.XML
 import org.aqa.db.DbSetup
 import org.aqa.Config
-import org.aqa.Logging._
+import org.aqa.Logging
 
-object ProcedureOutputUtil {
+object ProcedureOutputUtil extends Logging {
 
     val outputFileName = "output.xml"
 
@@ -31,7 +31,7 @@ object ProcedureOutputUtil {
         catch {
             case t: Throwable => {
                 val msg = "Unable to get outputPK from XML file: " + fmtEx(t)
-                logWarning(msg)
+                logger.warn(msg)
                 throw new RuntimeException(msg)
                 None
             }

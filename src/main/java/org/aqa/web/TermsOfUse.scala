@@ -20,7 +20,6 @@ import org.restlet.engine.header.ChallengeWriter
 import org.restlet.data.Header
 import org.restlet.util.Series
 import org.restlet.security.SecretVerifier
-import org.aqa.Logging._
 import org.aqa.Config
 import org.aqa.db.CachedUser
 import java.sql.Timestamp

@@ -20,9 +20,8 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.Properties
 import edu.umro.util.Utility
-import org.aqa.Logging._
 
-object Util {
+object Util extends Logging {
 
     val aqaDomain = "automatedqualityassurance.org"
     val aqaUrl = "https://www." + aqaDomain + "/"
@@ -253,7 +252,7 @@ object Util {
         catch {
             // Do not use logging to print an error message because when getting
             // properties it is quite possible that logging has not yet been set up.
-            case e: Exception => println("Problem reading properties file " + propFile.getAbsolutePath + " : " + Logging.fmtEx(e))
+            case e: Exception => println("Problem reading properties file " + propFile.getAbsolutePath + " : " + fmtEx(e))
         }
         prop
     }
@@ -277,7 +276,7 @@ object Util {
             Utility.deleteFileTree(dir)
         }
         catch {
-            case t: Throwable => logWarning("Unable to delete directory " + dir.getAbsolutePath + " : " + fmtEx(t))
+            case t: Throwable => logger.warn("Unable to delete directory " + dir.getAbsolutePath + " : " + fmtEx(t))
         }
     }
 

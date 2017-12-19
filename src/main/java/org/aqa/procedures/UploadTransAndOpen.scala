@@ -24,7 +24,7 @@ import com.pixelmed.dicom.TransferSyntax
 import com.pixelmed.dicom.DicomFileUtilities
 import org.aqa.db.Output
 
-object UploadTransAndOpen {
+object UploadTransAndOpen extends Logging {
 
     private val openName = "OPEN_Baseline.dcm"
 
@@ -39,8 +39,7 @@ object UploadTransAndOpen {
                 val exposureSequence = attributeList.get(TagFromName.ExposureSequence).asInstanceOf[SequenceAttribute]
                 val childAl = exposureSequence.getItem(0).getAttributeList
                 Some(childAl.get(TagFromName.ExposureTime).getIntegerValues()(0))
-            }
-            catch {
+            } catch {
                 case t: Throwable => { None }
             }
         }
@@ -52,12 +51,10 @@ object UploadTransAndOpen {
                 val al = new AttributeList
                 al.read(file)
                 Some(new DicomFile(file, al))
-            }
-            catch {
+            } catch {
                 case t: Throwable => None
             }
-        }
-        else None
+        } else None
     }
 
     private def readDicomFiles: Seq[DicomFile] = curDir.getParentFile.listFiles.toSeq.map(f => fileToDicomFile(f)).flatten
@@ -115,9 +112,8 @@ object UploadTransAndOpen {
             writeHtml
 
             ProcedureStatus.terminate("Done", ProcedureStatus.done)
-        }
-        catch {
-            case t: Throwable => ProcedureStatus.terminate("Unexpected error: " + Logging.fmtEx(t), ProcedureStatus.abort)
+        } catch {
+            case t: Throwable => ProcedureStatus.terminate("Unexpected error: " + fmtEx(t), ProcedureStatus.abort)
         }
     }
 

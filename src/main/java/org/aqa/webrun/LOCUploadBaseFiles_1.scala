@@ -7,7 +7,7 @@ import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import org.restlet.data.Status
 import org.aqa.web.WebUtil._
-import org.aqa.Logging._
+import org.aqa.Logging
 import org.aqa.db.Machine
 import edu.umro.ScalaUtil.Trace._
 import java.io.File
@@ -33,7 +33,7 @@ object LOCUploadBaseFiles_1 {
 /**
  * Runs procedures that only need the user to upload files and choose a treatment machine.
  */
-class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedure) {
+class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedure) with Logging {
 
     def machineList() = {
         def mmiToMachPK(mmi: MMI): String = {
@@ -151,7 +151,7 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
     private def cancel(valueMap: ValueMapT, response: Response) = {
         sessionDir(valueMap) match {
             case Some(dir) => {
-                logInfo("Removing directory tree " + dir.getAbsolutePath)
+                logger.info("Removing directory tree " + dir.getAbsolutePath)
                 Util.deleteFileTreeSafely(dir)
             }
             case _ => ;

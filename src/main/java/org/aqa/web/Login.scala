@@ -20,7 +20,6 @@ import org.restlet.engine.header.ChallengeWriter
 import org.restlet.data.Header
 import org.restlet.util.Series
 import org.restlet.security.SecretVerifier
-import org.aqa.Logging._
 
 object Login {
     val path = "/Login"
@@ -147,8 +146,7 @@ class Login extends Restlet with SubUrlRoot {
                 val challengeResponse = new ChallengeResponse(challengeRequest, response, "irrer", "foo")
                 request.setChallengeResponse(challengeResponse)
             }
-        }
-        else {
+        } else {
             form.setFormResponse(valueMap, styleMap, pageTitle, response, Status.CLIENT_ERROR_UNAUTHORIZED)
         }
     }
@@ -167,8 +165,7 @@ class Login extends Restlet with SubUrlRoot {
                 case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
                 case _ => emptyForm(valueMap, response)
             }
-        }
-        catch {
+        } catch {
             case t: Throwable => {
                 WebUtil.internalFailure(response, "Unexpected failure: " + fmtEx(t))
             }

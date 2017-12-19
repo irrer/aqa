@@ -23,7 +23,7 @@ import org.restlet.data.MediaType
 import WebUtil._
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
-import org.aqa.Logging._
+import org.aqa.Logging
 import org.aqa.db.Institution.InstitutionTable
 import org.aqa.db.Institution
 import org.aqa.db.UserRole
@@ -34,8 +34,7 @@ object UserUpdate {
     val userPKTag = "userPK"
 }
 
-class UserUpdate extends Restlet with SubUrlAdmin {
-
+class UserUpdate extends Restlet with SubUrlAdmin with Logging {
     private val pageTitleCreate = "Create User"
 
     private val pageTitleEdit = "Edit User"
@@ -282,7 +281,7 @@ class UserUpdate extends Restlet with SubUrlAdmin {
         if (pk.isDefined) response.redirectSeeOther(SetPassword.path + "?" + UserUpdate.userPKTag + "=" + pk.get)
         else {
             val msg = "No user specified to set password from UserUpdate"
-            logWarning(msg)
+            logger.warn(msg)
             internalFailure(response, msg)
         }
     }

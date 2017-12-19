@@ -2,7 +2,7 @@ package org.aqa.db
 
 import slick.driver.PostgresDriver.api._
 import scala.concurrent.ExecutionContext.Implicits.global
-import org.aqa.Logging._
+import org.aqa.Logging
 import org.aqa.Config
 import org.aqa.run.ProcedureStatus
 import java.sql.Timestamp
@@ -67,7 +67,7 @@ case class Output(
     }
 }
 
-object Output {
+object Output extends Logging {
     class OutputTable(tag: Tag) extends Table[Output](tag, "output") {
 
         def outputPK = column[Long]("outputPK", O.PrimaryKey, O.AutoInc)
@@ -253,7 +253,7 @@ object Output {
         // list of indexes in outputList to keep
         val listToKeep: Seq[Int] = (latestGood, latestNotGood) match {
             case (-1, -1) => {
-                logWarning("removeRedundant Unexpected error, output is neither good or notGood") // nothing?
+                logger.warn("removeRedundant Unexpected error, output is neither good or notGood") // nothing?
                 Seq[Int]() // remove nothing
             }
             case (g, -1) => Seq(g) // all outputs good.  Keep only the latest

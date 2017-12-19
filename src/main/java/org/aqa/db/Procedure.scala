@@ -3,7 +3,6 @@ package org.aqa.db
 import slick.driver.PostgresDriver.api._
 import slick.lifted.{ ProvenShape, ForeignKeyQuery }
 import java.sql.Date
-import org.aqa.Logging._
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Config
 import java.io.File

@@ -1,15 +1,10 @@
 
-
 import org.restlet.Application
 import org.restlet.Restlet
 import org.restlet.Component
-import org.aqa.Logging._
 import org.restlet.routing.Router
 import org.restlet.routing.Template
 import org.restlet.data.Protocol
-//import java.io.File
-//import java.util.Date
-
 
 object WebServ extends Application {
 
@@ -45,7 +40,7 @@ object WebServ extends Application {
     */
 
     class Upload extends Restlet {
-    /*
+        /*
         override def handle(request: Request, response: Response): Unit = {
             println("Upload request: " + request)
             response.setStatus(Status.SUCCESS_OK)

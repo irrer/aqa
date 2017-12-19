@@ -4,7 +4,7 @@ import slick.driver.PostgresDriver.api._
 import org.aqa.Util
 import org.aqa.web.AuthenticationVerifier
 import java.sql.Date
-import org.aqa.Logging._
+import org.aqa.Logging
 import java.sql.Timestamp
 import org.aqa.run.ProcedureStatus
 import scala.collection.mutable.ArrayBuffer
@@ -12,7 +12,7 @@ import org.aqa.Config
 
 /** Establish connection to the database and ensure that tables are created. */
 
-object DbSetup {
+object DbSetup extends Logging {
 
     private def makeDummyInstitution: Institution = new Institution(None, "AQA", Util.aqaUrl, "Automated Quality Assurance")
 
@@ -89,10 +89,10 @@ object DbSetup {
 
             def readOne(query: TableQuery[Table[_]]): Unit = {
                 val tableName = query.shaped.shaped.value.value.tableName
-                logInfo("Verifying table " + tableName)
+                logger.info("Verifying table " + tableName)
                 val row = Db.run(query.take(1).result)
-                if (row.size > 0) logInfo("    verified: " + row.head.getClass.getName + "    with row:  " + row.head)
-                else logInfo("Table " + tableName + " is empty")
+                if (row.size > 0) logger.info("    verified: " + row.head.getClass.getName + "    with row:  " + row.head)
+                else logger.info("Table " + tableName + " is empty")
             }
 
             tableQueryList.map(q => readOne(q.asInstanceOf[TableQuery[Table[_]]]))
@@ -102,7 +102,7 @@ object DbSetup {
         }
         catch {
             case t: Throwable => {
-                logSevere("Failed database smoke test: " + fmtEx(t))
+                logger.error("Failed database smoke test: " + fmtEx(t))
                 false
             }
         }

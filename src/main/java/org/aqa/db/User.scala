@@ -1,23 +1,23 @@
 package org.aqa.db
 
 import slick.driver.PostgresDriver.api._
-import org.aqa.Logging._
+import org.aqa.Logging
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.web.AuthenticationVerifier
 import java.sql.Timestamp
 
 case class User(
-        userPK: Option[Long], // primary key
-        id: String, // login name
-        fullName: String, // full name, as in 'Louis Pasteur'
-        email: String, // email for contacting
-        institutionPK: Long, // institution that this user belongs to
-        hashedPassword: String, // cryptographically hashed password
-        passwordSalt: String, // salt used for hashing password
-        role: String, // user role which defines authorization
-        termsOfUseAcknowledgment: Option[Timestamp] // time at which user agreed to the legal terms of the service, or 'None' if they never did.
-        ) {
+    userPK: Option[Long], // primary key
+    id: String, // login name
+    fullName: String, // full name, as in 'Louis Pasteur'
+    email: String, // email for contacting
+    institutionPK: Long, // institution that this user belongs to
+    hashedPassword: String, // cryptographically hashed password
+    passwordSalt: String, // salt used for hashing password
+    role: String, // user role which defines authorization
+    termsOfUseAcknowledgment: Option[Timestamp] // time at which user agreed to the legal terms of the service, or 'None' if they never did.
+) {
 
     def insert: User = {
         val insertQuery = User.query returning User.query.map(_.userPK) into ((user, userPK) => user.copy(userPK = Some(userPK)))
@@ -38,7 +38,7 @@ case class User(
 
 }
 
-object User extends {
+object User extends Logging {
     class UserTable(tag: Tag) extends Table[User](tag, "user") {
 
         def userPK = column[Long]("userPK", O.PrimaryKey, O.AutoInc)
@@ -85,7 +85,7 @@ object User extends {
 
         val user = if (seq.size > 0) Some(seq(0)) else None
         val textResult: String = if (user.isDefined) user.get.toString else "None"
-        logInfo("findUserByEmail search for user with email " + emailRaw + " + found " + textResult)
+        logger.info("findUserByEmail search for user with email " + emailRaw + " + found " + textResult)
         user
     }
 
@@ -96,7 +96,7 @@ object User extends {
         val id = idRaw.trim.toLowerCase
         val action = query.filter(_.id.toLowerCase === id)
         val seq = Db.run(action.result)
-        logInfo("getUserById search for user with id " + idRaw + " + found " + seq.size + " matches.")
+        logger.info("getUserById search for user with id " + idRaw + " + found " + seq.size + " matches.")
         seq.headOption
     }
 

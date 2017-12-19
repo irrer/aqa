@@ -1,7 +1,7 @@
 package org.aqa.db
 
 import slick.driver.PostgresDriver.api._
-import org.aqa.Logging._
+import org.aqa.Logging
 import org.aqa.Config
 import edu.umro.ScalaUtil.FileUtil
 import java.io.File
@@ -38,7 +38,7 @@ case class Machine(
     def configDir: Option[File] = if (configurationDirectory.isDefined) Some(Machine.getConfigDir(configurationDirectory.get)) else None
 }
 
-object Machine {
+object Machine extends Logging {
     class MachineTable(tag: Tag) extends Table[Machine](tag, "machine") {
 
         def machinePK = column[Long]("machinePK", O.PrimaryKey, O.AutoInc)
@@ -124,7 +124,7 @@ object Machine {
         }
         catch {
             case t: Throwable => {
-                logWarning("Unable to make machine configuration dir for machinePK " + machPK + " : " + fmtEx(t))
+                logger.warn("Unable to make machine configuration dir for machinePK " + machPK + " : " + fmtEx(t))
                 false
             }
         }

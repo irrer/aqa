@@ -19,7 +19,6 @@ import scala.xml.PrettyPrinter
 import org.restlet.data.Status
 import org.restlet.data.MediaType
 import WebUtil._
-import org.aqa.Logging._
 import scala.concurrent.Await
 import org.aqa.db.Institution
 import org.aqa.db.User
@@ -27,12 +26,14 @@ import org.aqa.db.User
 case class Column[VL](columnName: String, compare: (VL, VL) => Boolean, makeHTML: (VL) => Elem) {
 
     def this(columnName: String, getValue: (VL) => String) =
-        this(columnName,
+        this(
+            columnName,
             (a: VL, b: VL) => { getValue(a).compareTo(getValue(b)) < 0 },
             (a: VL) => <div>{ getValue(a) }</div>)
 
     def this(columnName: String, getValue: (VL) => String, makeHTML: (VL) => Elem) =
-        this(columnName,
+        this(
+            columnName,
             (a: VL, b: VL) => { getValue(a).compareTo(getValue(b)) < 0 },
             makeHTML)
 }
@@ -45,7 +46,7 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
 
     /** Default time in seconds for page refresh. */
     val defaultPageRefreshTime: Option[Int] = Some(3600)
-    
+
     def pageTitle = "List " + listName + "s"
 
     def updatePath = SubUrl.url(subUrl, listName + "Update")
@@ -62,7 +63,7 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
     /**
      * Get the primary key used to direct the user to the corresponding update page.
      */
-    protected def getPK(value: VL): Long; // must be overridden 
+    protected def getPK(value: VL): Long; // must be overridden
 
     /**
      * Retrieve data, usually from the database.

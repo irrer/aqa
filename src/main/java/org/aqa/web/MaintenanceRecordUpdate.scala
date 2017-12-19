@@ -23,7 +23,6 @@ import org.restlet.data.MediaType
 import WebUtil._
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
-import org.aqa.Logging._
 import org.aqa.db.Machine
 import java.sql.Timestamp
 

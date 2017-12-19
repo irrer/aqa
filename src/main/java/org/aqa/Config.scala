@@ -16,7 +16,6 @@ import java.util.Date
 import scala.xml.NodeSeq
 import java.net.InetAddress
 import java.util.Properties
-import org.aqa.Logging._
 import edu.umro.util.Utility
 
 /**
@@ -24,7 +23,7 @@ import edu.umro.util.Utility
  * to <code>Config.configFileName</code> for details indicating what the different
  * configuration values are used for.
  */
-object Config {
+object Config extends Logging {
 
     private val configFileName = "AQAConfig.xml";
     private val DEFAULT_RESTART_TIME = "1:20"
@@ -66,7 +65,7 @@ object Config {
             new File(System.getProperty("user.dir")), // current directory
             new File(Util.thisJarFile.getParentFile.getParentFile, resourceDirName), // for development
             new File(resourceDirName) // for development
-            )
+        )
     }
 
     /**
@@ -78,24 +77,22 @@ object Config {
      */
     private def readFile(dir: File, name: String): Option[Elem] = {
         val file = new File(dir, name)
-        logInfo("Trying config file " + file.getAbsolutePath + " ...")
+        logger.info("Trying config file " + file.getAbsolutePath + " ...")
         if (file.canRead) {
             try {
                 val content = Some(XML.loadFile(file))
-                logInfo("Using config file " + file.getAbsolutePath)
+                logger.info("Using config file " + file.getAbsolutePath)
                 configFile = file
                 content
-            }
-            catch {
+            } catch {
                 case e: Exception => {
-                    logInfo("Failed to use config file " + file.getAbsolutePath + "    file exists: " + file.exists + "    can read file: " + file.canRead + "  Exception: " + e)
+                    logger.info("Failed to use config file " + file.getAbsolutePath + "    file exists: " + file.exists + "    can read file: " + file.canRead + "  Exception: " + e)
                     None
                 }
             }
-        }
-        else {
-            if (!file.exists) logInfo("Config file " + file.getAbsoluteFile + " does not exist")
-            else logInfo("Config file " + file.getAbsoluteFile + " is not readable")
+        } else {
+            if (!file.exists) logger.info("Config file " + file.getAbsoluteFile + " does not exist")
+            else logger.info("Config file " + file.getAbsoluteFile + " is not readable")
             None
         }
     }
@@ -107,7 +104,7 @@ object Config {
     private def epicFail(name: String) = {
         val tried = directoryList.foldLeft("")((l, f) => l + "\n    " + f.getAbsolutePath)
 
-        logSevere("Could not find a usable configuration file.  Using file name " + name + " , tried directories: " + tried + "\nShutting down...")
+        logger.error("Could not find a usable configuration file.  Using file name " + name + " , tried directories: " + tried + "\nShutting down...")
         System.exit(1)
     }
 
@@ -126,8 +123,7 @@ object Config {
             val value = getMainText(name)
             logText(name, "[redacted]")
             value
-        }
-        catch {
+        } catch {
             case _: Throwable => {
                 logText(name, "[not configured]")
                 ""
@@ -141,8 +137,7 @@ object Config {
             val list = (document \ name \ "JavaKeyStoreFile").toList.map(node => new File(node.head.text))
             list.map(jksf => logText("JavaKeyStoreFile", jksf.getAbsolutePath))
             list
-        }
-        catch {
+        } catch {
             case _: Throwable => {
                 logText(name, "[not configured]")
                 List[File]()
@@ -162,7 +157,7 @@ object Config {
 
     }
 
-    logFinest("Using configuration:\n" + edu.umro.ScalaUtil.Util.xmlToText(document) + "\n")
+    logger.trace("Using configuration:\n" + edu.umro.ScalaUtil.Util.xmlToText(document) + "\n")
 
     private val valueText = new ArrayBuffer[String]
 
@@ -210,7 +205,7 @@ object Config {
                 case Some(f) => f
                 case _ => {
                     val f = new File("target/AQA-0.0.1-jar-with-dependencies.jar")
-                    Logging.logWarning("Unable to find the jar file being used.  Assuming " + f.getAbsolutePath)
+                    logger.warn("Unable to find the jar file being used.  Assuming " + f.getAbsolutePath)
                     f
                 }
             }
@@ -218,7 +213,7 @@ object Config {
         val jf: File = Util.thisJarFile match {
             case f if f.isDirectory => getDevJar
             case f if (f.isFile && f.canRead) => f
-            case f => { Logging.logWarning("Unable to find the jar file being used.  Assuming " + f.getAbsolutePath); f }
+            case f => { logger.warn("Unable to find the jar file being used.  Assuming " + f.getAbsolutePath); f }
         }
         val fileDate = if (jf.canRead) " : " + (new Date(jf.lastModified)) else "  can not read file"
         logText("jarFile", jf.getAbsolutePath + fileDate)
@@ -231,8 +226,7 @@ object Config {
             val securePort = getMainText(name).toInt
             logText(name, securePort.toString)
             Some(securePort)
-        }
-        catch {
+        } catch {
             case _: Throwable => {
                 logText(name, "Not specified")
                 None
@@ -259,8 +253,7 @@ object Config {
         val dateFormat = new SimpleDateFormat("HH:mm")
         val millisec = try {
             dateFormat.parse(mainText("RestartTime")).getTime
-        }
-        catch {
+        } catch {
             case e: ParseException => {
                 Log.get.warning("Badly formatted RestartTime in configuration file: " + mainText("RestartTime") + " .  Should be HH:MM, as in 1:23 .  Assuming default of " + DEFAULT_RESTART_TIME)
                 dateFormat.parse(DEFAULT_RESTART_TIME).getTime
@@ -278,7 +271,7 @@ object Config {
 
     /** If this is defined, then the configuration was successfully initialized. */
     val validated = true
-    
+
     def validate = validated
 
     override def toString: String = valueText.foldLeft("Configuration values:")((b, t) => b + "\n    " + t)
@@ -287,7 +280,7 @@ object Config {
         { valueText.map(line => <br>{ line } </br>) }.toSeq
     }
 
-    logInfo(toString)
+    logger.info(toString)
 
     def main(args: Array[String]): Unit = {
         val startTime = System.currentTimeMillis

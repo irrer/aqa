@@ -3,7 +3,7 @@ package org.aqa.web
 import org.restlet.Application
 import org.restlet.Restlet
 import org.restlet.Component
-import org.aqa.Logging._
+import org.aqa.Logging
 import java.io.File
 import edu.umro.RestletUtil.RestletHttps
 import edu.umro.RestletUtil.ExpiresLaterFilter
@@ -61,7 +61,7 @@ object WebServer {
 
 }
 
-class WebServer extends Application {
+class WebServer extends Application with Logging {
 
     private lazy val component = new Component
 
@@ -72,16 +72,16 @@ class WebServer extends Application {
         if (Config.HTTPSPort.isDefined) {
             val status = RestletHttps.addHttps(component, Config.HTTPSPort.get, Config.JavaKeyStoreFileList, List(Config.JavaKeyStorePassword))
             if (status.isLeft) {
-                logSevere("Unable to use HTTPS.  Error: " + status.left.get)
+                logger.error("Unable to use HTTPS.  Error: " + status.left.get)
             }
             else {
-                logInfo("Using protocol " + Protocol.HTTPS + " on port " + Config.HTTPSPort.get)
-                logInfo("Using keystore file " + status.right.get.keyStoreFile.getAbsolutePath)
+                logger.info("Using protocol " + Protocol.HTTPS + " on port " + Config.HTTPSPort.get)
+                logger.info("Using keystore file " + status.right.get.keyStoreFile.getAbsolutePath)
             }
         }
         else {
             val server = component.getServers.add(Protocol.HTTP, 80)
-            server.getProtocols.toArray.map(p => logInfo("Using protocol " + p + " on port " + server.getPort))
+            server.getProtocols.toArray.map(p => logger.info("Using protocol " + p + " on port " + server.getPort))
         }
     }
 
@@ -105,10 +105,10 @@ class WebServer extends Application {
         if (dirList.isEmpty) {
             val fileNameList = locations.foldLeft("")((t, f) => t + "    " + f.getAbsolutePath)
             val msg = "Unable to find static directory in " + fileNameList
-            logSevere(msg)
+            logger.error(msg)
             throw new RuntimeException(msg)
         }
-        logInfo("Using static directory " + dirList.head.getAbsolutePath)
+        logger.info("Using static directory " + dirList.head.getAbsolutePath)
         dirList.head
     }
 
@@ -117,7 +117,7 @@ class WebServer extends Application {
      * and copy the latest install directory.
      * private def initStaticContentDir = {
      * if (!Utility.compareFolders(installDir, WebServer.STATIC_CONTENT_DIR)) {
-     * logInfo("Updating directory " + WebServer.STATIC_CONTENT_DIR.getAbsolutePath + " from " + installDir.getAbsolutePath)
+     * logger.info("Updating directory " + WebServer.STATIC_CONTENT_DIR.getAbsolutePath + " from " + installDir.getAbsolutePath)
      * Utility.deleteFileTree(WebServer.STATIC_CONTENT_DIR)
      * Utility.copyFileTree(installDir, WebServer.STATIC_CONTENT_DIR)
      * }
@@ -127,7 +127,7 @@ class WebServer extends Application {
     private def attach(router: Router, url: String, restlet: Restlet): Unit = {
         val name = restlet.getClass.getName.replaceAll(".*\\.", "")
         val rootRef = if (restlet.isInstanceOf[Directory]) (" : " + restlet.asInstanceOf[Directory].getRootRef) else ""
-        logInfo("attaching router to " + url + " ==> " + name + rootRef)
+        logger.info("attaching router to " + url + " ==> " + name + rootRef)
         router.attach(url, restlet)
     }
 
@@ -197,7 +197,7 @@ class WebServer extends Application {
             case `tmpDirectoryRestlet` => UserRole.user
             case `machineConfigurationDirRestlet` => UserRole.user
             case _ => {
-                logInfo("admin role requested by " + WebUtil.getUserIdOrDefault(request, "unknown"))
+                logger.info("admin role requested by " + WebUtil.getUserIdOrDefault(request, "unknown"))
                 UserRole.admin // default to most restrictive access for everything else
             }
         }
@@ -220,7 +220,7 @@ class WebServer extends Application {
                 userAndRole match {
                     case Some(uar) => {
                         if (uar.role.id < requestedRole.id) {
-                            logWarning("Authorization violation.  User " + uar.user.id +
+                            logger.warn("Authorization violation.  User " + uar.user.id +
                                 " attempted to access " + request.toString + " that requires role " + requestedRole + " but their role is only " + uar.role)
                             response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
                             //response.redirectSeeOther("/NotAuthorized")   // TODO rm
@@ -229,7 +229,7 @@ class WebServer extends Application {
                         else response.setStatus(Status.SUCCESS_OK)
                     }
                     case _ => {
-                        logWarning("Internal authorization error.  Can not identify user.")
+                        logger.warn("Internal authorization error.  Can not identify user.")
                         response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
                     }
                 }
@@ -307,7 +307,7 @@ class WebServer extends Application {
                     val desiredHost = request.getReferrerRef.getHostIdentifier
                     val path = locRef.toString.replaceAll("^" + request.getResourceRef.getHostIdentifier, desiredHost)
                     response.redirectSeeOther(path)
-                    logInfo("Redirecting response via REDIRECTION_SEE_OTHER from/to:" +
+                    logger.info("Redirecting response via REDIRECTION_SEE_OTHER from/to:" +
                         "\n    " + locRef +
                         "\n    " + path)
                 }
@@ -355,7 +355,7 @@ class WebServer extends Application {
                 //                    val desiredHost = request.getReferrerRef.getHostIdentifier
                 //                    val path = locRef.toString.replaceAll("^" + request.getResourceRef.getHostIdentifier, desiredHost)
                 //                    response.redirectSeeOther(path)
-                //                    logInfo("Redirecting response via REDIRECTION_SEE_OTHER from/to:" +
+                //                    logger.info("Redirecting response via REDIRECTION_SEE_OTHER from/to:" +
                 //                        "\n    " + locRef +
                 //                        "\n    " + path)
 
@@ -439,7 +439,7 @@ class WebServer extends Application {
         if (!component.isStarted) {
             val timeout = System.currentTimeMillis + (10 * 1000) // wait up to 10 seconds for the component to start.  It should be only a few milliseconds.
             while ((!component.isStarted) && (System.currentTimeMillis < timeout)) {
-                logInfo("Waiting for web service to start ...")
+                logger.info("Waiting for web service to start ...")
                 Thread.sleep(1000)
             }
         }

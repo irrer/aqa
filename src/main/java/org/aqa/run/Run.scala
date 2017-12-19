@@ -6,7 +6,7 @@ import org.aqa.db.Procedure
 import java.io.File
 import org.aqa.Config
 import org.aqa.db.Institution
-import org.aqa.Logging._
+import org.aqa.Logging
 import java.text.SimpleDateFormat
 import org.aqa.db.Input
 import org.aqa.db.User
@@ -50,7 +50,7 @@ import com.pixelmed.dicom.TagFromName
 /**
  * Run a procedure.
  */
-object Run {
+object Run extends Logging {
 
     private val ouputSubdirNamePrefix = "output_"
 
@@ -65,7 +65,7 @@ object Run {
         val institution = Institution.get(machine.institutionPK)
         if (institution.isDefined) appendPK(institution.get.fileName, institution.get.institutionPK.get)
         else {
-            logWarning("Run.dir Could not find institution for machine " + machine.toString)
+            logger.warn("Run.dir Could not find institution for machine " + machine.toString)
             "unknown_institution_" + machine.fileName
         }
     }
@@ -82,7 +82,7 @@ object Run {
 
         val inputDir: File = nameHierarchy.foldLeft(Config.resultsDirFile)((d, name) => new File(d, name))
 
-        logInfo("New input directory: " + inputDir.getAbsolutePath)
+        logger.info("New input directory: " + inputDir.getAbsolutePath)
         inputDir
     }
 
@@ -104,7 +104,7 @@ object Run {
                 }
 
                 catch {
-                    case t: Throwable => logWarning("Unexpected error running procedure post-processing: Output: " + activeProcess.output + " : " + t.getMessage)
+                    case t: Throwable => logger.warn("Unexpected error running procedure post-processing: Output: " + activeProcess.output + " : " + t.getMessage)
                 }
             }
             case _ => ;
@@ -124,7 +124,7 @@ object Run {
             }
             catch {
                 case t: Throwable =>
-                    logWarning("removeRedundantOutput.del Unexpected error cleaning up redundant output.  outputPK: " + outputPK + " : " + t.getMessage)
+                    logger.warn("removeRedundantOutput.del Unexpected error cleaning up redundant output.  outputPK: " + outputPK + " : " + t.getMessage)
             }
 
         }
@@ -135,7 +135,7 @@ object Run {
         }
         catch {
             case t: Throwable =>
-                logWarning("removeRedundantOutput Unexpected error cleaning up redundant output.  outputPK: " + outputPK + " : " + t.getMessage)
+                logger.warn("removeRedundantOutput Unexpected error cleaning up redundant output.  outputPK: " + outputPK + " : " + t.getMessage)
         }
     }
 
@@ -171,7 +171,7 @@ object Run {
                         }
                         catch {
                             case t: Throwable =>
-                                logWarning("Unexpected error running procedure.  Output: " + activeProcess.output + " : " + t.getMessage)
+                                logger.warn("Unexpected error running procedure.  Output: " + activeProcess.output + " : " + t.getMessage)
                                 postProcess(activeProcess)
                         }
                         removeRedundantOutput(activeProcess.output.outputPK)
@@ -343,25 +343,25 @@ object Run {
         val inputStream = new java.io.ByteArrayInputStream(inputString.getBytes("UTF-8"))
 
         val pb = Process(Seq("cmd.exe")) #< inputStream
-        val logger = new StdLogger(output)
-        val process = pb.run(logger, true)
-        new ActiveProcess(output, process, postProcess, logger, response)
+        val processLogger = new StdLogger(output)
+        val process = pb.run(processLogger, true)
+        new ActiveProcess(output, process, postProcess, processLogger, response)
     }
 
     private def now: Date = new Date(System.currentTimeMillis)
 
     private def renameFileTryingPersistently(oldFile: File, newFile: File): Boolean = {
-        logInfo("Attempting to rename file from : " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath)
+        logger.info("Attempting to rename file from : " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath)
 
         def renameUsingOldIo: Boolean = {
             try {
                 val status = oldFile.renameTo(newFile)
-                if (status) logInfo("Used File.renameTo to successfully rename from : " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath)
+                if (status) logger.info("Used File.renameTo to successfully rename from : " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath)
                 status
             }
             catch {
                 case t: Throwable => {
-                    logWarning("Failed to rename file with File.renameTo from : " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath + " : " + fmtEx(t))
+                    logger.warn("Failed to rename file with File.renameTo from : " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath + " : " + fmtEx(t))
                     false
                 }
             }
@@ -375,18 +375,18 @@ object Run {
             val newPath = java.nio.file.Paths.get(newFile.getAbsolutePath)
             try {
                 val path = java.nio.file.Files.move(oldPath, newPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-                logInfo("Used nio to successfully rename from : " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath)
+                logger.info("Used nio to successfully rename from : " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath)
                 true
             }
             catch {
                 case t: Throwable => {
                     if (System.currentTimeMillis < timeout) {
-                        logWarning("Failed to rename file with nio - retrying. From : " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath + " : " + fmtEx(t))
+                        logger.warn("Failed to rename file with nio - retrying. From : " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath + " : " + fmtEx(t))
                         Thread.sleep(500)
                         renameUsingNio
                     }
                     else {
-                        logSevere("Unable using nio to rename file " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath + " : " + fmtEx(t))
+                        logger.error("Unable using nio to rename file " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath + " : " + fmtEx(t))
                         false
                     }
                 }
@@ -401,8 +401,8 @@ object Run {
                         Thread.sleep(20 * 1000)
                         Util.deleteFileTreeSafely(f)
                     }
-                    if (f.exists) logInfo("Was able to remove file " + f.getAbsolutePath)
-                    else logWarning("Was not able to remove file " + f.getAbsolutePath)
+                    if (f.exists) logger.info("Was able to remove file " + f.getAbsolutePath)
+                    else logger.warn("Was not able to remove file " + f.getAbsolutePath)
                 }
 
             }
@@ -412,13 +412,13 @@ object Run {
         def copyFilesAndDeleteLater: Boolean = {
             try {
                 Utility.copyFileTree(oldFile, newFile)
-                logInfo("Used copyFileTree to successfully copy from : " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath)
+                logger.info("Used copyFileTree to successfully copy from : " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath)
                 deleteLater(oldFile)
                 true
             }
             catch {
                 case t: Throwable => {
-                    logSevere("Unable using nio to rename file " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath + " : " + fmtEx(t))
+                    logger.error("Unable using nio to rename file " + oldFile.getAbsolutePath + " to " + newFile.getAbsolutePath + " : " + fmtEx(t))
                     false
                 }
             }
@@ -529,9 +529,9 @@ object Run {
 
             val statusFromFile = ProcedureStatus.dirToProcedureStatus(WebServer.fileOfResultsPath(output.directory))
 
-            def killProcess = logWarning("Need to implement killProcess") // TODO
+            def killProcess = logger.warn("Need to implement killProcess") // TODO
 
-            def startMonitor = logWarning("Need to implement startMonitor") // TODO
+            def startMonitor = logger.warn("Need to implement startMonitor") // TODO
 
             if (statusFromFile.isDefined) {
                 // procedure finished while server was down, which should be the usual case
@@ -539,7 +539,7 @@ object Run {
             }
             else {
                 val procedureIsRunning = {
-                    logWarning("Need to implement procedureIsRunning") // TODO  note that rename or any of the file locking on log.txt do not work.
+                    logger.warn("Need to implement procedureIsRunning") // TODO  note that rename or any of the file locking on log.txt do not work.
                     false
                 }
 
@@ -552,7 +552,7 @@ object Run {
         }
         catch {
             case e: Throwable => {
-                logSevere("Unexpected exeception while wrapping up unterminated procedure after service restart: " +
+                logger.error("Unexpected exeception while wrapping up unterminated procedure after service restart: " +
                     e.getMessage + "\n    Output: " + output + "\n    Procedure: " + procedure)
             }
         }

@@ -14,7 +14,7 @@ import scala.xml.Elem
 import org.restlet.data.Parameter
 import java.util.Date
 import org.restlet.data.Form
-import org.aqa.Logging._
+import org.aqa.Logging
 import org.restlet.data.Method
 import java.io.File
 import org.apache.commons.fileupload.disk.DiskFileItemFactory
@@ -38,7 +38,7 @@ import org.aqa.db.Machine
 import org.restlet.data.Protocol
 import org.aqa.Util
 
-object WebUtil {
+object WebUtil extends Logging {
 
     val bs = "\n.bs-example{ margin: 20px; }" // .bs-example{ margin: 20px;  }
 
@@ -148,7 +148,7 @@ object WebUtil {
                     val ii = itemIterator.next
                     if (!ii.isFormField) {
                         val file = new File(dir, ii.getName)
-                        logInfo("Uploading file from user " + userId + " to " + file.getAbsolutePath)
+                        logger.info("Uploading file from user " + userId + " to " + file.getAbsolutePath)
                         saveFile(ii.openStream, file)
                     }
                 }
@@ -227,7 +227,7 @@ object WebUtil {
         val content = {
             <div>{ status.toString } <p/> { messageAsHtml }</div>
         }
-        logWarning(Status.SERVER_ERROR_INTERNAL.toString + " shown to user " + getUserIdOrDefault(response.getRequest, "unknown") + " : " + message)
+        logger.warn(Status.SERVER_ERROR_INTERNAL.toString + " shown to user " + getUserIdOrDefault(response.getRequest, "unknown") + " : " + message)
         simpleWebPage(content, status, "Not Found", response)
     }
 
@@ -315,7 +315,7 @@ object WebUtil {
 
         val text = HTML_PREFIX + xmlToText(page).replaceAllLiterally(runScriptTag, runScriptContent)
 
-        logFine("HTML delivered:\n" + text)
+        logger.debug("HTML delivered:\n" + text)
         text
     }
 

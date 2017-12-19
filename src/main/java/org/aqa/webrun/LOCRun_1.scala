@@ -7,7 +7,7 @@ import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import org.restlet.data.Status
 import org.aqa.web.WebUtil._
-import org.aqa.Logging._
+import org.aqa.Logging
 import org.aqa.db.Machine
 import edu.umro.ScalaUtil.Trace._
 import java.io.File
@@ -91,7 +91,7 @@ object LOCRun_1 {
 /**
  * Run LOC code.
  */
-class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with PostProcess {
+class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with PostProcess with Logging {
 
     /** Defines precision - Format to use when showing numbers. */
     val outputFormat = "%7.5e"
@@ -539,7 +539,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
             wrapBody(div, "LOC", None, true, Some(runScript))
         }
-        logInfo("Making LOC display for output " + outputPK)
+        logger.info("Making LOC display for output " + outputPK)
         make
     }
 
@@ -550,7 +550,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
     private def getExcelWorkbookList(dir: File): Seq[FileWorkbook] = {
         val fileList = dir.listFiles.filter { f => f.getName.toLowerCase.contains(".xls") }
-        logInfo("Number Excel spreadsheets found: " + fileList.size + fileList.map(f => "\n    " + f.getAbsolutePath).mkString)
+        logger.info("Number Excel spreadsheets found: " + fileList.size + fileList.map(f => "\n    " + f.getAbsolutePath).mkString)
         fileList.map(f => (f, ExcelUtil.read(f))).filter { fWb => fWb._2.isRight }.map(fWb => (fWb._1, fWb._2.right.get)).toSeq.map(fWb => new FileWorkbook(fWb._1, fWb._2))
     }
 
@@ -559,7 +559,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
             (new LOCSpreadsheet(dir, locXml, response)).write
         }
         catch {
-            case t: Throwable => logWarning("Failed to make spreadsheet: " + fmtEx(t))
+            case t: Throwable => logger.warn("Failed to make spreadsheet: " + fmtEx(t))
         }
     }
 
@@ -567,11 +567,11 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         try {
             val html = WebUtil.excelToHtml(workbook)
             val htmlFile = new File(file.getParentFile, Util.fileBaseName(file) + ".html")
-            logInfo("Writing html version of spreadsheet to " + htmlFile.getAbsolutePath)
+            logger.info("Writing html version of spreadsheet to " + htmlFile.getAbsolutePath)
             Util.writeFile(htmlFile, html)
         }
         catch {
-            case t: Throwable => logWarning("Unable to write workbook for file " + file.getAbsolutePath + " : " + fmtEx(t))
+            case t: Throwable => logger.warn("Unable to write workbook for file " + file.getAbsolutePath + " : " + fmtEx(t))
         }
     }
 
@@ -586,7 +586,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
                 excelWorkbookList.map(fWb => excelToHtml(fWb.file, fWb.workbook))
                 val content = makeDisplay(output, outputPK, locXml, excelWorkbookList)
                 val file = new File(activeProcess.output.dir, Output.displayFilePrefix + ".html")
-                logInfo("Writing file " + file.getAbsolutePath)
+                logger.info("Writing file " + file.getAbsolutePath)
                 Util.writeFile(file, content)
             }
             case None => ;

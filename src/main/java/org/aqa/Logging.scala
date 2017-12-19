@@ -8,11 +8,8 @@ import org.restlet.Restlet
 import org.restlet.routing.Filter
 import java.io.File
 
-object Logging {
-    private def log(level: Level, text: String) = {
-        Log.get.log(level, text)
-        //println(level.getName + "|" + text) // TODO write to actual logger
-    }
+trait Logging {
+    protected val logger = org.slf4j.LoggerFactory.getLogger("")
 
     /**
      * Format a <code>Throwable</code>.
@@ -25,28 +22,17 @@ object Logging {
         val textList = throwable.getStackTrace.map(ste => "\n    " + ste) // convert to text
         textList.foldLeft(throwable.toString)((t, ste) => t + ste) // join as one string
     }
+}
 
-    def logFinest(msg: String) = log(Level.FINEST, msg)
+object LoggingMain extends Logging {
 
-    def logFiner(msg: String) = log(Level.FINER, msg)
-
-    def logFine(msg: String) = log(Level.FINE, msg)
-
-    def logInfo(msg: String) = log(Level.INFO, msg)
-
-    def logWarning(msg: String) = log(Level.WARNING, msg)
-
-    def logSevere(msg: String) = log(Level.SEVERE, msg)
-
-    private lazy val logDir: File = {
-        val logFileName = Util.buildProperties.getProperty("wrapper.logfile")
-        new File(logFileName).getParentFile
-    }
+    //    private lazy val logDir: File = {
+    //        val logFileName = Util.buildProperties.getProperty("wrapper.logfile")
+    //        new File(logFileName).getParentFile
+    //    }
 
     def main(args: Array[String]): Unit = {
         println("Logging starting")
-        //System.setProperty("java.util.logging.config.file", """D:\pf\eclipse\workspaceMars\aqa\log4j.properties""")
-        //System.setProperty("java.util.logging.config.file", """D:\pf\eclipse\workspaceMars\aqa\src\resources\logging.propertiesWindows""")
         System.setProperty("log4j.rootLogger", "ALL")
         System.setProperty("log4j.logger.org.restlet", "WARN")
         System.setProperty("log4j.logger.org.springframework", "WARN")
@@ -64,15 +50,15 @@ object Logging {
         println("foo.getLogger.getParent.getName: " + foo.getLogger.getParent.getName)
 
         // val priority = new org.apache.spi.ErrorCode
-//        import org.apache.log4j.FileAppender
-//        val fileAppender = new FileAppender
+        //        import org.apache.log4j.FileAppender
+        //        val fileAppender = new FileAppender
 
         //org.apache.commons.logging.impl.SimpleLog.warn()
 
         // println("simple.dateTimeFormat: " + simple.)
 
-        logSevere("Hello from logging!")
-        println("Logging done")
+        logger.error("Hello from logging!")
+        println("LoggingMain done")
         System.exit(99)
     }
 

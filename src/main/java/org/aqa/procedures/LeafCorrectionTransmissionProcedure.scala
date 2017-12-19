@@ -18,7 +18,7 @@ import org.aqa.Config
 import org.aqa.db.Db
 import edu.umro.ScalaUtil.Trace
 
-object LeafCorrectionTransmissionProcedure {
+object LeafCorrectionTransmissionProcedure extends Logging {
 
     def curDir = new File(System.getProperty("user.dir"))
 
@@ -130,7 +130,7 @@ object LeafCorrectionTransmissionProcedure {
             println("wrote Excel as HTML")
         }
         catch {
-            case t: Throwable => ProcedureStatus.terminate("Unexpected error: " + Logging.fmtEx(t), ProcedureStatus.abort)
+            case t: Throwable => ProcedureStatus.terminate("Unexpected error: " + fmtEx(t), ProcedureStatus.abort)
         }
     }
 

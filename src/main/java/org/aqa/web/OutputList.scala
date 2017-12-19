@@ -15,7 +15,6 @@ import org.restlet.Request
 import org.aqa.web.WebUtil._
 import org.aqa.db.CentralAxis
 import edu.umro.util.Utility
-import org.aqa.Logging._
 
 object OutputList {
     val deleteTag = "delete"

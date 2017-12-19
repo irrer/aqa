@@ -9,12 +9,12 @@ import org.aqa.Config
 import org.aqa.db.User
 import org.aqa.Util
 import org.aqa.db.DbSetup
-import org.aqa.Logging._
+import org.aqa.Logging
 import org.restlet.engine.header.ChallengeWriter
 import org.aqa.db.UserRole
 import org.aqa.db.CachedUser
 
-class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.Value) extends Verifier {
+class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.Value) extends Verifier with Logging {
 
     /**
      * Check to see if the credentials are valid, first using the cache for efficiency and
@@ -30,7 +30,7 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
         CachedUser.get(id) match {
             case Some(user) if AuthenticationVerifier.validatePassword(secret, user.hashedPassword, user.passwordSalt) => Verifier.RESULT_VALID
             case Some(user) => {
-                logWarning("the password of user " + id + " failed to authenticate")
+                logger.warn("the password of user " + id + " failed to authenticate")
                 Verifier.RESULT_INVALID
             }
             case _ => Verifier.RESULT_UNKNOWN
@@ -50,11 +50,11 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
                     CachedUser.get(id) match {
                         case Some(user) if AuthenticationVerifier.validatePassword(secret, user.hashedPassword, user.passwordSalt) => Verifier.RESULT_VALID
                         case Some(user) => {
-                            logWarning("Authentication violation.  The password of user " + id + " failed")
+                            logger.warn("Authentication violation.  The password of user " + id + " failed")
                             Verifier.RESULT_INVALID
                         }
                         case _ => {
-                            logWarning("unknown user " + id + " failed")
+                            logger.warn("unknown user " + id + " failed")
                             Verifier.RESULT_UNKNOWN
                         }
                     }

@@ -23,7 +23,6 @@ import org.restlet.data.MediaType
 import WebUtil._
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
-import org.aqa.Logging._
 
 object EPIDUpdate {
     val epidPKTag = "epidPK"
@@ -144,8 +143,7 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
             val err = Error.make(model, "Machine type already exists")
             formCreate.setFormResponse(valueMap, err, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
             false
-        }
-        else true
+        } else true
     }
 
     private def okToSave(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
@@ -175,7 +173,8 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
             if (e.isDefined) Some(e.get.toLong) else None
         }
 
-        new EPID(epidPK,
+        new EPID(
+            epidPK,
             manufacturer.getValOrEmpty(valueMap).trim,
             model.getValOrEmpty(valueMap).trim,
             hardwareVersion.getValOrEmpty(valueMap).trim,
@@ -219,7 +218,8 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
     }
 
     private def edit(inst: EPID, response: Response) = {
-        val valueMap = Map((epidPK.label, inst.epidPK.get.toString),
+        val valueMap = Map(
+            (epidPK.label, inst.epidPK.get.toString),
             (manufacturer.label, inst.manufacturer),
             (model.label, inst.model),
             (hardwareVersion.label, inst.hardwareVersion),
@@ -241,14 +241,11 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
                 val inst = EPID.get(value.get.toLong)
                 if (inst.isDefined) {
                     inst
-                }
-                else
+                } else
                     None
-            }
-            else
+            } else
                 None
-        }
-        catch {
+        } catch {
             case _: Throwable => None
         }
     }
@@ -260,11 +257,9 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
                 EPID.delete(value.get.toLong)
                 EPIDList.redirect(response)
                 true
-            }
-            else
+            } else
                 false
-        }
-        else
+        } else
             false
 
     }
@@ -283,8 +278,7 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
         if (inst.isDefined) {
             edit(inst.get, response)
             true
-        }
-        else
+        } else
             false
     }
 
@@ -300,8 +294,7 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
                 case _ if isEdit(valueMap, response) => Nil
                 case _ => emptyForm(response)
             }
-        }
-        catch {
+        } catch {
             case t: Throwable => {
                 WebUtil.internalFailure(response, t)
             }

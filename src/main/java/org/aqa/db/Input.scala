@@ -1,7 +1,7 @@
 package org.aqa.db
 
 import slick.driver.PostgresDriver.api._
-import org.aqa.Logging._
+import org.aqa.Logging
 import org.aqa.Config
 import java.sql.Timestamp
 import java.io.File
@@ -37,7 +37,7 @@ case class Input(
     }
 }
 
-object Input {
+object Input extends Logging {
 
     class InputTable(tag: Tag) extends Table[Input](tag, "input") {
 
@@ -75,7 +75,7 @@ object Input {
 
     def delete(inputPK: Long): Int = {
         val q = query.filter(_.inputPK === inputPK)
-        logInfo("deleting input " + inputPK)
+        logger.info("deleting input " + inputPK)
         val action = q.delete
         Db.run(action)
     }

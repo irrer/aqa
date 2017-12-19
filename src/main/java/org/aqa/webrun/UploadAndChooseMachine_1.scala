@@ -7,7 +7,6 @@ import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import org.restlet.data.Status
 import org.aqa.web.WebUtil._
-import org.aqa.Logging._
 import org.aqa.db.Machine
 import edu.umro.ScalaUtil.Trace._
 import java.io.File
