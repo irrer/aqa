@@ -10,7 +10,7 @@
 
     <Appenders>
         <Console name="Console" target="SYSTEM_OUT">
-            <PatternLayout pattern="${pat}" />
+            <PatternLayout pattern=" %location | %msg\r\n" />
         </Console>
 
         <RollingFile name="RollingFile">
@@ -22,12 +22,12 @@
             </Policies>
             <DefaultRolloverStrategy max="5" />
         </RollingFile>
-
     </Appenders>
+
     <Loggers>
-        <Root level="info">
+        <Root level="all">
             <AppenderRef ref="Console" />
-            <AppenderRef ref="RollingFile" />
+            <!-- <AppenderRef ref="RollingFile" /> -->
         </Root>
     </Loggers>
 </Configuration>
