@@ -28,143 +28,165 @@ import org.aqa.Util
 import java.io.File
 import org.aqa.AQA
 import org.aqa.Config
+import edu.umro.util.OpSys
 
 object ServiceInfo {
-    private val path = new String((new ServiceInfo).pathOf)
+  private val path = new String((new ServiceInfo).pathOf)
 
-    def redirect(response: Response) = response.redirectSeeOther(path)
+  def redirect(response: Response) = response.redirectSeeOther(path)
 }
 
 class ServiceInfo extends Restlet with SubUrlAdmin with Logging {
-    private val logFileTag = "LogFileVersion"
-    private val pageTitle = "Service Information"
+  private val logFileTag = "LogFileVersion"
+  private val pageTitle = "Service Information"
 
-    private lazy val logDir: File = {
-        val logFileName: String = {
-            Util.buildProperties.getProperty("wrapper.logfile") match {
-                case name: String if (name != null) => name
-                case _ => """C:\Program Files\AQA\logging""" // Assume a reasonable default
-            }
-        }
-        new File(logFileName).getParentFile
+  private lazy val logDir: File = {
+    val logFileName: String = {
+      Util.buildProperties.getProperty("wrapper.logfile") match {
+        case name: String if (name != null) => name
+        case _ => """C:\Program Files\AQA\logging""" // Assume a reasonable default
+      }
     }
+    new File(logFileName).getParentFile
+  }
 
-    private def allFiles: Seq[File] = {
-        Util.listDirFiles(logDir).filter(f => !f.getName.contains("lck")).sortWith((a, b) => a.lastModified > b.lastModified).toSeq
+  private def allFiles: Seq[File] = {
+    Util.listDirFiles(logDir).filter(f => !f.getName.contains("lck")).sortWith((a, b) => a.lastModified > b.lastModified).toSeq
+  }
+
+  private def fileRef(file: File): Elem = {
+    val href = pathOf + "/?" + logFileTag + "=" + file.getName
+    val ago = WebUtil.timeAgo(new Date(file.lastModified))
+    <a href={ href }>{ file.getName + ":" } { ago }</a>
+  }
+
+  private def showList = {
+    allFiles.map(f => { <div class="row"><div class="col-sm-11 col-sm-offset-1" style="margin-top:10px">  { fileRef(f) }</div></div> })
+  }
+
+  private def showFileContents(valueMap: ValueMapT, response: Response): Boolean = {
+    try {
+      val file = new File(logDir, valueMap(logFileTag))
+      val data = Util.readBinaryFile(file).right.get
+      response.setEntity(new String(data), MediaType.TEXT_PLAIN)
+      logger.info("Showing contents of log file " + file.getAbsolutePath)
+      true
+    } catch {
+      case t: Throwable => false
     }
+  }
 
-    private def fileRef(file: File): Elem = {
-        val href = pathOf + "/?" + logFileTag + "=" + file.getName
-        val ago = WebUtil.timeAgo(new Date(file.lastModified))
-        <a href={ href }>{ file.getName + ":" } { ago }</a>
-    }
-
-    private def showList = {
-        allFiles.map(f => { <div class="row"><div class="col-sm-11 col-sm-offset-1" style="margin-top:10px">  { fileRef(f) }</div></div> })
-    }
-
-    private def showFileContents(valueMap: ValueMapT, response: Response): Boolean = {
-        try {
-            val file = new File(logDir, valueMap(logFileTag))
-            val data = Util.readBinaryFile(file).right.get
-            response.setEntity(new String(data), MediaType.TEXT_PLAIN)
-            logger.info("Showing contents of log file " + file.getAbsolutePath)
-            true
-        } catch {
-            case t: Throwable => false
-        }
-    }
-
-    val confirmRestartLabel = "confirmRestart"
-    private def confirmRestart: Elem = {
-        val href = pathOf + "?" + confirmRestartLabel + "=" + confirmRestartLabel
-        <a class="btn btn-danger" href={ href } role="button" title="Shut down and restart service.
+  val confirmRestartLabel = "confirmRestart"
+  private def confirmRestart: Elem = {
+    val href = pathOf + "?" + confirmRestartLabel + "=" + confirmRestartLabel
+    <a class="btn btn-danger" href={ href } role="button" title="Shut down and restart service.
 Jobs in progress will be aborted.">Confirm Restart</a>
+  }
+
+  val cancelRestartLabel = "cancelRestart"
+  private def cancelRestart: Elem = {
+    val href = pathOf + "?" + cancelRestartLabel + "=" + cancelRestartLabel
+    <a class="btn btn-default" href={ href } role="button">Cancel</a>
+  }
+
+  val requestRestartLabel = "requestRestart"
+  private def requestRestart: Elem = {
+    // TODO require user to confirm
+    val href = pathOf + "?" + requestRestartLabel + "=" + requestRestartLabel
+    <a class="btn btn-default" href={ href } role="button" title="Shut down and restart. Jobs in progress will be aborted.">Restart Service</a>
+  }
+
+  private def basicInfo: Elem = {
+
+    val mac = {
+      val text = OpSys.getMACAddress.formatted("%012x")
+      (0 until 12 by 2).map(octet => text.substring(octet, octet + 2)).mkString("-")
     }
 
-    val cancelRestartLabel = "cancelRestart"
-    private def cancelRestart: Elem = {
-        val href = pathOf + "?" + cancelRestartLabel + "=" + cancelRestartLabel
-        <a class="btn btn-default" href={ href } role="button">Cancel</a>
-    }
+    <div class="row">
+      <p>
+        testing<time class="timeago" datetime="2017-12-29T13:00:00.000-0400" title="Fri Dec 29 2017 12:30:00">45 minutes ago</time>
+      </p>
+      <p>
+        testing<time class="timeago" datetime="2017-12-29T13:00:00.000-0500" title="Fri Dec 29 2017 12:30:00">45 minutes ago</time>
+      </p>
+      <p>
+        testing<time class="timeago" datetime="2017-12-29T13:00:00.000-0600" title="Fri Dec 29 2017 12:30:00">45 minutes ago</time>
+      </p>
+      <h5>Service Version: { System.getProperty("Build.Service_version") }</h5>
+      <h5>Build Date: { System.getProperty("Build.ServiceBuildDate") }</h5>
+      <h5>Built By: { System.getProperty("Build.Builder") }</h5>
+      <h5>Local Server IP: { OpSys.getHostIPAddress }</h5>
+      <h5>Server Name: { OpSys.getHostName }</h5>
+      <h5>Server MAC Address: { mac }</h5>
+      <h5>Service started:{ timeAgo("", new Date(AQA.serviceStartTime)) }</h5>
+      <p></p>
+      <h5>Elapsed time since service started:{ Util.elapsedTimeHumanFriendly(System.currentTimeMillis - AQA.serviceStartTime) }</h5>
+      { requestRestart }
+    </div>
+  }
 
-    val requestRestartLabel = "requestRestart"
-    private def requestRestart: Elem = {
-        // TODO require user to confirm
-        val href = pathOf + "?" + requestRestartLabel + "=" + requestRestartLabel
-        <a class="btn btn-default" href={ href } role="button" title="Shut down and restart. Jobs in progress will be aborted.">Restart Service</a>
-    }
+  private def configInfo: Elem = {
+    <div class="row">
+      <h4>Configuration Parameters</h4>
+      { Config.toHtml }
+    </div>
+  }
 
-    private def basicInfo: Elem = {
-        <div class="row">
-            <h5>Service started:{ timeAgo("", new Date(AQA.serviceStartTime)) }</h5>
-            <p></p>
-            <h5>Time since service started:{ Util.elapsedTimeHumanFriendly(System.currentTimeMillis - AQA.serviceStartTime) }</h5>
-            { requestRestart }
+  private def showLogFileList: Elem = {
+    <div class="row">
+      <h4 style="margin-top:40px;">Log Files</h4>
+      { showList }
+    </div>
+  }
+
+  /**
+   * Show a page that lets the user do a confirmation to really really restart the service.
+   */
+  private def doConfirm(response: Response) = {
+    val content = {
+      <div class="row">
+        <div class="col-md-8 col-sm-offset-1">
+          <h3>Service Restart</h3>
+          <table style="margin:40px">
+            <tr>
+              <td>
+                { cancelRestart }
+              </td>
+              <td><div style="margin:40px"> </div></td>
+              <td>
+                { confirmRestart }
+              </td>
+            </tr>
+          </table>
         </div>
+      </div>
     }
+    setResponse(wrapBody(content, pageTitle), response, Status.SUCCESS_OK)
+  }
 
-    private def configInfo: Elem = {
-        <div class="row">
-            <h4>Configuration Parameters</h4>
-            { Config.toHtml }
+  private def restartService(response: Response): Unit = {
+    AQA.initiateServiceRestart
+    response.redirectSeeOther(pathOf + "/?" + waitForRestartLabel + "=" + waitForRestartLabel)
+  }
+
+  val waitForRestartLabel = "waitForRestart"
+
+  /**
+   * Show a page that waits until the service has restarted and then redirects them to the home page.
+   */
+  private def waitForRestart(response: Response) = {
+    val content = {
+      <div class="row">
+        <div class="col-md-8 col-sm-offset-1">
+          <h3>Service Restart</h3>
+          <h3>Waiting for Service Restart</h3>
+          When the service is ready you will automatically be redirected to the main page.
         </div>
+      </div>
     }
 
-    private def showLogFileList: Elem = {
-        <div class="row">
-            <h4 style="margin-top:40px;">Log Files</h4>
-            { showList }
-        </div>
-    }
-
-    /**
-     * Show a page that lets the user do a confirmation to really really restart the service.
-     */
-    private def doConfirm(response: Response) = {
-        val content = {
-            <div class="row">
-                <div class="col-md-8 col-sm-offset-1">
-                    <h3>Service Restart</h3>
-                    <table style="margin:40px">
-                        <tr>
-                            <td>
-                                { cancelRestart }
-                            </td>
-                            <td><div style="margin:40px"> </div></td>
-                            <td>
-                                { confirmRestart }
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
-        }
-        setResponse(wrapBody(content, pageTitle), response, Status.SUCCESS_OK)
-    }
-
-    private def restartService(response: Response): Unit = {
-        AQA.initiateServiceRestart
-        response.redirectSeeOther(pathOf + "/?" + waitForRestartLabel + "=" + waitForRestartLabel)
-    }
-
-    val waitForRestartLabel = "waitForRestart"
-
-    /**
-     * Show a page that waits until the service has restarted and then redirects them to the home page.
-     */
-    private def waitForRestart(response: Response) = {
-        val content = {
-            <div class="row">
-                <div class="col-md-8 col-sm-offset-1">
-                    <h3>Service Restart</h3>
-                    <h3>Waiting for Service Restart</h3>
-                    When the service is ready you will automatically be redirected to the main page.
-                </div>
-            </div>
-        }
-
-        val javascript = """
+    val javascript = """
 <script language="javascript">
 // Reload the main page when the server is ready.
 
@@ -193,42 +215,42 @@ setTimeout(watchStatus, WebRefreshTime);
 </script>
 """
 
-        setResponse(wrapBody(content, pageTitle, None, true, Some(javascript)), response, Status.SUCCESS_OK)
-    }
+    setResponse(wrapBody(content, pageTitle, None, true, Some(javascript)), response, Status.SUCCESS_OK)
+  }
 
-    private def showServiceInfo(response: Response): Unit = {
-        val content = {
-            <div class="row">
-                <div class="col-md-10 col-sm-offset-1">
-                    <h2>{ pageTitle }</h2>
-                    <div class="col-md-4 col-sm-offset-1">
-                        { configInfo }
-                    </div>
-                    <div class="col-md-4 col-sm-offset-1">
-                        { basicInfo }
-                        { showLogFileList }
-                    </div>
-                </div>
-            </div>
-        }
-        setResponse(wrapBody(content, pageTitle), response, Status.SUCCESS_OK)
+  private def showServiceInfo(response: Response): Unit = {
+    val content = {
+      <div class="row">
+        <div class="col-md-10 col-sm-offset-1">
+          <h2>{ pageTitle }</h2>
+          <div class="col-md-4 col-sm-offset-1">
+            { configInfo }
+          </div>
+          <div class="col-md-4 col-sm-offset-1">
+            { basicInfo }
+            { showLogFileList }
+          </div>
+        </div>
+      </div>
     }
+    setResponse(wrapBody(content, pageTitle), response, Status.SUCCESS_OK)
+  }
 
-    override def handle(request: Request, response: Response): Unit = {
-        super.handle(request, response)
-        val valueMap = getValueMap(request)
-        try {
-            0 match {
-                case _ if valueMap.contains(requestRestartLabel) => doConfirm(response)
-                case _ if valueMap.contains(confirmRestartLabel) => restartService(response)
-                case _ if valueMap.contains(waitForRestartLabel) => waitForRestart(response)
-                case _ if showFileContents(valueMap, response) => {}
-                case _ => showServiceInfo(response)
-            }
-        } catch {
-            case t: Throwable => {
-                WebUtil.internalFailure(response, t)
-            }
-        }
+  override def handle(request: Request, response: Response): Unit = {
+    super.handle(request, response)
+    val valueMap = getValueMap(request)
+    try {
+      0 match {
+        case _ if valueMap.contains(requestRestartLabel) => doConfirm(response)
+        case _ if valueMap.contains(confirmRestartLabel) => restartService(response)
+        case _ if valueMap.contains(waitForRestartLabel) => waitForRestart(response)
+        case _ if showFileContents(valueMap, response) => {}
+        case _ => showServiceInfo(response)
+      }
+    } catch {
+      case t: Throwable => {
+        WebUtil.internalFailure(response, t)
+      }
     }
+  }
 }

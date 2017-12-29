@@ -38,7 +38,7 @@ object Util extends Logging {
     /** Standard date format */
     val standardDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
 
-    private val timeHumanFriendlyFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss")
+    private val timeHumanFriendlyFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss Z")
 
     def timeHumanFriendly(date: Date) = timeHumanFriendlyFormat.format(date)
 
