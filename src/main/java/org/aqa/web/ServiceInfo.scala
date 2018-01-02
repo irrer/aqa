@@ -104,24 +104,13 @@ Jobs in progress will be aborted.">Confirm Restart</a>
     }
 
     <div class="row">
-      <p>
-        testing<time class="timeago" datetime="2017-12-29T13:00:00.000-0400" title="Fri Dec 29 2017 12:30:00">45 minutes ago</time>
-      </p>
-      <p>
-        testing<time class="timeago" datetime="2017-12-29T13:00:00.000-0500" title="Fri Dec 29 2017 12:30:00">45 minutes ago</time>
-      </p>
-      <p>
-        testing<time class="timeago" datetime="2017-12-29T13:00:00.000-0600" title="Fri Dec 29 2017 12:30:00">45 minutes ago</time>
-      </p>
       <h5>Service Version: { System.getProperty("Build.Service_version") }</h5>
       <h5>Build Date: { System.getProperty("Build.ServiceBuildDate") }</h5>
       <h5>Built By: { System.getProperty("Build.Builder") }</h5>
       <h5>Local Server IP: { OpSys.getHostIPAddress }</h5>
       <h5>Server Name: { OpSys.getHostName }</h5>
-      <h5>Server MAC Address: { mac }</h5>
       <h5>Service started:{ timeAgo("", new Date(AQA.serviceStartTime)) }</h5>
       <p></p>
-      <h5>Elapsed time since service started:{ Util.elapsedTimeHumanFriendly(System.currentTimeMillis - AQA.serviceStartTime) }</h5>
       { requestRestart }
     </div>
   }
