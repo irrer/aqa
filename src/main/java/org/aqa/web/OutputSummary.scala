@@ -5,9 +5,9 @@ import WebUtil._
 
 object OutputSummary {
 
-    def outputSummary(ouput: Output): String = {
-        
-        ???
-    }
+  def outputSummary(ouput: Output): String = {
+
+    ???
+  }
 
 }

@@ -5,37 +5,37 @@ package org.aqa.db
  */
 object UserRole extends Enumeration {
 
-    val publik = Value // can look at 'about us' type of information
-    val guest = Value // can look at data but not run procedures
-    val user = Value // can run procedures
-    val dev = Value // can develop procedures
-    val admin = Value // can change configuration
+  val publik = Value // can look at 'about us' type of information
+  val guest = Value // can look at data but not run procedures
+  val user = Value // can run procedures
+  val dev = Value // can develop procedures
+  val admin = Value // can change configuration
 
-    /**
-     * Convert text to a UserRole.  Is case insensitive.
-     */
-    def stringToUserRole(text: String): Option[UserRole.Value] = UserRole.values.find(ur => ur.toString.equalsIgnoreCase(text))
+  /**
+   * Convert text to a UserRole.  Is case insensitive.
+   */
+  def stringToUserRole(text: String): Option[UserRole.Value] = UserRole.values.find(ur => ur.toString.equalsIgnoreCase(text))
 
-    /**
-     * For testing only.
-     */
-    def main(args: Array[String]): Unit = {
+  /**
+   * For testing only.
+   */
+  def main(args: Array[String]): Unit = {
 
-        def foo(ur: UserRole.Value): Unit = {
-            println("foo ur: " + ur.id + "  " + ur)
-        }
-
-        println("equality ==     : " + (stringToUserRole("guest").get == UserRole.guest))
-        println("equality eq     : " + (stringToUserRole("guest").get.eq(UserRole.guest)))
-        println("equality equals : " + (stringToUserRole("guest").get.equals(UserRole.guest)))
-
-        values.toArray.toList.map(ur => println("ur: " + ur.id + "  " + ur))
-
-        foo(UserRole.admin)
-
-        println("stringToUserRole AdMin : " + stringToUserRole("AdMin"))
-
-        println("stringToUserRole foo : " + stringToUserRole("foo"))
+    def foo(ur: UserRole.Value): Unit = {
+      println("foo ur: " + ur.id + "  " + ur)
     }
+
+    println("equality ==     : " + (stringToUserRole("guest").get == UserRole.guest))
+    println("equality eq     : " + (stringToUserRole("guest").get.eq(UserRole.guest)))
+    println("equality equals : " + (stringToUserRole("guest").get.equals(UserRole.guest)))
+
+    values.toArray.toList.map(ur => println("ur: " + ur.id + "  " + ur))
+
+    foo(UserRole.admin)
+
+    println("stringToUserRole AdMin : " + stringToUserRole("AdMin"))
+
+    println("stringToUserRole foo : " + stringToUserRole("foo"))
+  }
 
 }

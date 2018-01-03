@@ -24,46 +24,44 @@ import WebUtil._
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
-
 class NotAuthenticated extends Restlet with SubUrlRoot {
 
-    private val pageTitle = "Not Authorized"
+  private val pageTitle = "Not Authorized"
 
-    private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
-        val action = pathOf + "?" + name + "=" + name
-        new FormButton(name, 1, 0, subUrl, action, buttonType)
+  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+    val action = pathOf + "?" + name + "=" + name
+    new FormButton(name, 1, 0, subUrl, action, buttonType)
+  }
+
+  private val homeButton = makeButton("Home", true, ButtonType.BtnPrimary)
+
+  private val content = "Either your user id or password are incorrect."
+
+  private val message = new WebPlainText("message", false, 6, 0, _ => <div>{ content }</div>)
+
+  private val form = new WebForm(pathOf, List(List(message), List(homeButton)))
+
+  private def emptyForm(response: Response) = {
+    form.setFormResponse(emptyValueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
+  }
+
+  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+    val value = valueMap.get(button.label)
+    value.isDefined && value.get.toString.equals(button.label)
+  }
+
+  override def handle(request: Request, response: Response): Unit = {
+    super.handle(request, response)
+    val valueMap = getValueMap(request)
+    try {
+      0 match {
+        case _ if buttonIs(valueMap, homeButton) => response.redirectSeeOther("/")
+        case _ => emptyForm(response)
+      }
+    } catch {
+      case t: Throwable => {
+        WebUtil.internalFailure(response, "Unexpected failure: " + fmtEx(t))
+      }
     }
-
-    private val homeButton = makeButton("Home", true, ButtonType.BtnPrimary)
-
-    private val content = "Either your user id or password are incorrect."
-
-    private val message = new WebPlainText("message", false, 6, 0, _ => <div>{ content }</div>)
-
-    private val form = new WebForm(pathOf, List(List(message), List(homeButton)))
-
-    private def emptyForm(response: Response) = {
-        form.setFormResponse(emptyValueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
-    }
-
-    private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
-        val value = valueMap.get(button.label)
-        value.isDefined && value.get.toString.equals(button.label)
-    }
-
-    override def handle(request: Request, response: Response): Unit = {
-        super.handle(request, response)
-        val valueMap = getValueMap(request)
-        try {
-            0 match {
-                case _ if buttonIs(valueMap, homeButton) => response.redirectSeeOther("/")
-                case _ => emptyForm(response)
-            }
-        }
-        catch {
-            case t: Throwable => {
-                WebUtil.internalFailure(response, "Unexpected failure: " + fmtEx(t))
-            }
-        }
-    }
+  }
 }

@@ -10,21 +10,20 @@ import org.restlet.data.MediaType
 import org.aqa.web.WebUtil._
 
 object ServiceInstance {
-    private val path = new String((new ServiceInfo).pathOf)
+  private val path = new String((new ServiceInfo).pathOf)
 }
 
 class ServiceInstance extends Restlet with SubUrlAdmin {
 
-    override def handle(request: Request, response: Response): Unit = {
-        super.handle(request, response)
-        try {
-            response.setStatus(Status.SUCCESS_OK)
-            response.setEntity(AQA.serviceStartTime.toString, MediaType.TEXT_PLAIN)
-        }
-        catch {
-            case t: Throwable => {
-                WebUtil.internalFailure(response, t)
-            }
-        }
+  override def handle(request: Request, response: Response): Unit = {
+    super.handle(request, response)
+    try {
+      response.setStatus(Status.SUCCESS_OK)
+      response.setEntity(AQA.serviceStartTime.toString, MediaType.TEXT_PLAIN)
+    } catch {
+      case t: Throwable => {
+        WebUtil.internalFailure(response, t)
+      }
     }
+  }
 }

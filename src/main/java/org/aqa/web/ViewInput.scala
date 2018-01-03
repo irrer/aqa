@@ -21,21 +21,19 @@ import org.aqa.run.ProcedureStatus
 import org.aqa.db.User
 import org.aqa.db.Machine
 
-
-
 object ViewInput {
-    private val path = new String((new InstitutionList).pathOf)
+  private val path = new String((new InstitutionList).pathOf)
 
-    val inputPKTag = "inputPK"
-    val summaryTag = "summary"
+  val inputPKTag = "inputPK"
+  val summaryTag = "summary"
 
-    private def shouldShowSummary(inputFileExists: Boolean, procedureIsRunning: Boolean, summaryRequested: Boolean, clientOnPendingList: Boolean): Boolean = {
-        (inputFileExists, procedureIsRunning, summaryRequested, clientOnPendingList) match {
-            case (false, _, _, _) => true
-            case (true, _, true, false) => true
-            case _ => false
-        }
+  private def shouldShowSummary(inputFileExists: Boolean, procedureIsRunning: Boolean, summaryRequested: Boolean, clientOnPendingList: Boolean): Boolean = {
+    (inputFileExists, procedureIsRunning, summaryRequested, clientOnPendingList) match {
+      case (false, _, _, _) => true
+      case (true, _, true, false) => true
+      case _ => false
     }
+  }
 
 }
 
@@ -46,35 +44,34 @@ object ViewInput {
  */
 class ViewInput extends Restlet with SubUrlView {
 
-    private def pageTitle = "Input"
-    
-    private def inputDir(input: Input): Option[File] = {
-        val dirName = input.directory
-        if (dirName.isDefined) {
-            val dir = new File(dirName.get)
-            if (dir.isDirectory) Some(dir) else None
-        }
-        else None
+  private def pageTitle = "Input"
+
+  private def inputDir(input: Input): Option[File] = {
+    val dirName = input.directory
+    if (dirName.isDefined) {
+      val dir = new File(dirName.get)
+      if (dir.isDirectory) Some(dir) else None
+    } else None
+  }
+
+  private def dataTime(input: Input): String = {
+    val time = input.dataDate
+    if (time.isDefined) Util.timeHumanFriendly(input.uploadDate) else "Not Available"
+  }
+
+  def summary(input: Input, response: Response): Unit = {
+    val dir = inputDir(input)
+    val user = User.get(input.userPK.get)
+    val machine = Machine.get(input.machinePK.get)
+
+    val machineDescription: Elem = {
+      if (machine.isDefined) { <a href={ SubUrl.url(SubUrl.admin, "MachineUpdate") + "?machinePK=" + machine.get.machinePK }>{ machine.get.id }</a> }
+      else { <div>"Not Available"</div> }
     }
-    
-    private def dataTime(input: Input): String = {
-        val time = input.dataDate
-        if (time.isDefined) Util.timeHumanFriendly(input.uploadDate) else "Not Available"
-    }
 
-    def summary(input: Input, response: Response): Unit = {
-        val dir = inputDir(input)
-        val user = User.get(input.userPK.get)
-        val machine = Machine.get(input.machinePK.get)
+    val offset = Config.DataDir.getAbsolutePath.size + 2 + WebServer.tmpDirBaseUrl.size
 
-        val machineDescription: Elem = {
-            if (machine.isDefined) { <a href={ SubUrl.url(SubUrl.admin, "MachineUpdate") + "?machinePK=" + machine.get.machinePK }>{ machine.get.id }</a> }
-            else { <div>"Not Available"</div> }
-        }
-
-        val offset = Config.DataDir.getAbsolutePath.size + 2 + WebServer.tmpDirBaseUrl.size
-
-        /*
+    /*
         def fileToRow(file: File): Elem = {
             val row = {
                 <div class="row">
@@ -114,38 +111,37 @@ class ViewInput extends Restlet with SubUrlView {
 
         respond(content, "Current Input", response)
         */
+  }
+
+  def noInput(response: Response): Unit = {
+    response.setEntity("Unknown test input", MediaType.TEXT_PLAIN) // TODO
+  }
+
+  private def redirectToDir(dir: Option[File], response: Response) = {
+
+  }
+
+  override def handle(request: Request, response: Response) = {
+    super.handle(request, response)
+    try {
+      val valueMap = getValueMap(request)
+
+      val showSummary = valueMap.get(ViewInput.summaryTag).isDefined
+
+      val input: Option[Input] = {
+        val inputPKText = valueMap.get(ViewInput.inputPKTag)
+        if (inputPKText.isDefined) Input.get(inputPKText.get.toLong)
+        else None
+      }
+
+      0 match {
+        case _ if (input.isDefined && showSummary) => summary(input.get, response)
+        case _ if (input.isDefined) => redirectToDir(inputDir(input.get), response)
+        case _ => noInput(response)
+      }
+    } catch {
+      case e: Exception => internalFailure(response, "Unexpected error: " + e.getMessage)
     }
 
-    def noInput(response: Response): Unit = {
-        response.setEntity("Unknown test input", MediaType.TEXT_PLAIN) // TODO
-    }
-
-    private def redirectToDir(dir: Option[File], response: Response) = {
-        
-    }
-
-    override def handle(request: Request, response: Response) = {
-        super.handle(request, response)
-        try {
-            val valueMap = getValueMap(request)
-
-            val showSummary = valueMap.get(ViewInput.summaryTag).isDefined
-
-            val input: Option[Input] = {
-                val inputPKText = valueMap.get(ViewInput.inputPKTag)
-                if (inputPKText.isDefined) Input.get(inputPKText.get.toLong)
-                else None
-            }
-
-            0 match {
-                case _ if (input.isDefined && showSummary) => summary(input.get, response)
-                case _ if (input.isDefined) => redirectToDir(inputDir(input.get), response)
-                case _ => noInput(response)
-            }
-        }
-        catch {
-            case e: Exception => internalFailure(response, "Unexpected error: " + e.getMessage)
-        }
-
-    }
+  }
 }

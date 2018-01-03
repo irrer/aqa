@@ -8,52 +8,53 @@ import org.aqa.web.WebUtil._
 import org.aqa.db.User
 
 object MaintenanceRecordList {
-    val path = new String((new MaintenanceRecordList).pathOf)
+  val path = new String((new MaintenanceRecordList).pathOf)
 
-    def redirect(response: Response) = response.redirectSeeOther(path)
+  def redirect(response: Response) = response.redirectSeeOther(path)
 }
 
 class MaintenanceRecordList extends GenericList[MaintenanceRecord] with WebUtil.SubUrlAdmin {
-    override def listName = "MaintenanceRecord"
+  override def listName = "MaintenanceRecord"
 
-    /**
-     * If a machinePK is given, then filter on that, otherwise list maintenance records for all machines.
-     */
-    override def getData(valueMap: ValueMapT) = {
-        valueMap.get(MachineUpdate.machinePKTag) match {
-            case Some(machinePK) => MaintenanceRecord.getByMachine(machinePK.toLong)
-            case _ => MaintenanceRecord.list
-        }
+  /**
+   * If a machinePK is given, then filter on that, otherwise list maintenance records for all machines.
+   */
+  override def getData(valueMap: ValueMapT) = {
+    valueMap.get(MachineUpdate.machinePKTag) match {
+      case Some(machinePK) => MaintenanceRecord.getByMachine(machinePK.toLong)
+      case _ => MaintenanceRecord.list
     }
+  }
 
-    override def getPK(value: MaintenanceRecord): Long = value.maintenanceRecordPK.get
+  override def getPK(value: MaintenanceRecord): Long = value.maintenanceRecordPK.get
 
-    private def machineParameter(valueMap: ValueMapT): String = { "?" + MachineUpdate.machinePKTag + "=" + valueMap(MachineUpdate.machinePKTag) }
+  private def machineParameter(valueMap: ValueMapT): String = { "?" + MachineUpdate.machinePKTag + "=" + valueMap(MachineUpdate.machinePKTag) }
 
-    override def createNewPath(valueMap: ValueMapT): String = {
-        WebUtil.cleanClassName(MaintenanceRecordUpdate.getClass.getName) + machineParameter(valueMap)
-    }
+  override def createNewPath(valueMap: ValueMapT): String = {
+    WebUtil.cleanClassName(MaintenanceRecordUpdate.getClass.getName) + machineParameter(valueMap)
+  }
 
-    override def createNew(valueMap: ValueMapT): Elem = {
-        val machinePath = WebUtil.cleanClassName(MachineUpdate.getClass.getName) + machineParameter(valueMap)
-        <div class="row col-md-2 col-md-offset-10">
-            <strong>
-                <a href={ createNewPath(valueMap) }>Create new { listName }</a><p> </p>
-                <a href={ machinePath }>Return to machine</a><p> </p>
-            </strong>
-        </div>;
-    }
+  override def createNew(valueMap: ValueMapT): Elem = {
+    val machinePath = WebUtil.cleanClassName(MachineUpdate.getClass.getName) + machineParameter(valueMap)
+    <div class="row col-md-2 col-md-offset-10">
+      <strong>
+        <a href={ createNewPath(valueMap) }>Create new { listName }</a><p> </p>
+        <a href={ machinePath }>Return to machine</a><p> </p>
+      </strong>
+    </div>;
+  }
 
-    private def descHTML(maintenanceRecord: MaintenanceRecord): Elem = <div>{ WebUtil.firstPartOf(maintenanceRecord.description, 60) }</div>
+  private def descHTML(maintenanceRecord: MaintenanceRecord): Elem = <div>{ WebUtil.firstPartOf(maintenanceRecord.description, 60) }</div>
 
-    private val dateTimeCol = new Column[MaintenanceRecord]("Date/Time",
-        (a, b) => (a.dateTime.getTime < b.dateTime.getTime), (mr: MaintenanceRecord) => makePrimaryKeyHtml(WebInputDateTime.dateTimeFormat.format(mr.dateTime), mr.maintenanceRecordPK))
+  private val dateTimeCol = new Column[MaintenanceRecord](
+    "Date/Time",
+    (a, b) => (a.dateTime.getTime < b.dateTime.getTime), (mr: MaintenanceRecord) => makePrimaryKeyHtml(WebInputDateTime.dateTimeFormat.format(mr.dateTime), mr.maintenanceRecordPK))
 
-    private val userCol = new Column[MaintenanceRecord]("User", mr => User.get(mr.userPK).get.id)
+  private val userCol = new Column[MaintenanceRecord]("User", mr => User.get(mr.userPK).get.id)
 
-    private val summaryCol = new Column[MaintenanceRecord]("Summary", _.summary)
+  private val summaryCol = new Column[MaintenanceRecord]("Summary", _.summary)
 
-    private val descriptionCol = new Column[MaintenanceRecord]("Description", _.description, descHTML)
+  private val descriptionCol = new Column[MaintenanceRecord]("Description", _.description, descHTML)
 
-    override val columnList = Seq(dateTimeCol, userCol, summaryCol, descriptionCol)
+  override val columnList = Seq(dateTimeCol, userCol, summaryCol, descriptionCol)
 }

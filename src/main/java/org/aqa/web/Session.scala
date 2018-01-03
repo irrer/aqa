@@ -15,21 +15,21 @@ import org.aqa.Config
 
 object Session {
 
-    /**
-     * Make a unique session id.
-     */
-    def makeUniqueId: String =
-        Session.synchronized({
-            val sessionFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss-SSS")
-            val start = System.currentTimeMillis
-            while (System.currentTimeMillis == start) Thread.sleep(1)
-            val s = sessionFormat.format(new Date)
-            s
-        })
+  /**
+   * Make a unique session id.
+   */
+  def makeUniqueId: String =
+    Session.synchronized({
+      val sessionFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss-SSS")
+      val start = System.currentTimeMillis
+      while (System.currentTimeMillis == start) Thread.sleep(1)
+      val s = sessionFormat.format(new Date)
+      s
+    })
 
-    def idToFile(id: String): File = new File(Config.tmpDirFile, id)
+  def idToFile(id: String): File = new File(Config.tmpDirFile, id)
 
-    def main(args: Array[String]): Unit = {
-        for (i <- (0 until 5)) println(makeUniqueId)
-    }
+  def main(args: Array[String]): Unit = {
+    for (i <- (0 until 5)) println(makeUniqueId)
+  }
 }

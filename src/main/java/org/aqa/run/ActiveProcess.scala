@@ -13,15 +13,15 @@ import org.restlet.Response
  */
 object ActiveProcess {
 
-    private val activeProcessList = new HashMap[Long, ActiveProcess]()
+  private val activeProcessList = new HashMap[Long, ActiveProcess]()
 
-    def add(proc: ActiveProcess): Unit = activeProcessList.synchronized({ activeProcessList.put(proc.output.outputPK.get, proc) })
+  def add(proc: ActiveProcess): Unit = activeProcessList.synchronized({ activeProcessList.put(proc.output.outputPK.get, proc) })
 
-    def get(outputPK: Long) = activeProcessList.synchronized({ activeProcessList.get(outputPK) })
+  def get(outputPK: Long) = activeProcessList.synchronized({ activeProcessList.get(outputPK) })
 
-    def remove(outputPK: Long) = activeProcessList.synchronized({ activeProcessList.remove(outputPK) })
+  def remove(outputPK: Long) = activeProcessList.synchronized({ activeProcessList.remove(outputPK) })
 
-    def list = activeProcessList.synchronized({ activeProcessList.map(ap => ap._2) })
+  def list = activeProcessList.synchronized({ activeProcessList.map(ap => ap._2) })
 }
 
 class ActiveProcess(val output: Output, val process: Process, val postProcess: Option[PostProcess], val logger: StdLogger, val response: Response);

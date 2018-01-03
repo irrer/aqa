@@ -12,16 +12,16 @@ import org.restlet.data.MediaType
 
 class MainIndex(staticDir: File) extends Restlet {
 
-    private val content = {
-        val file = new File(staticDir, "index.html")
-        val text: Array[Byte] = new Array[Byte](file.length.toInt)
-        (new FileInputStream(file)).read(text)
-        text
-    }
+  private val content = {
+    val file = new File(staticDir, "index.html")
+    val text: Array[Byte] = new Array[Byte](file.length.toInt)
+    (new FileInputStream(file)).read(text)
+    text
+  }
 
-    override def handle(request: Request, response: Response): Unit = {
-        super.handle(request, response)
-        response.setStatus(Status.SUCCESS_OK)
-        response.setEntity(new String(content), MediaType.TEXT_HTML)
-    }
+  override def handle(request: Request, response: Response): Unit = {
+    super.handle(request, response)
+    response.setStatus(Status.SUCCESS_OK)
+    response.setEntity(new String(content), MediaType.TEXT_HTML)
+  }
 }

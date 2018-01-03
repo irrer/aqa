@@ -13,27 +13,27 @@ import org.restlet.Request
  */
 object OutputPending {
 
-    // Map of clients that initially asked for output when the output was not yet available.
-    private val pendingClients = new HashMap[String, Output]()
+  // Map of clients that initially asked for output when the output was not yet available.
+  private val pendingClients = new HashMap[String, Output]()
 
-    private def add(op: OutputPending): Unit = pendingClients.synchronized({ pendingClients.put(op.clientId, op.output) })
+  private def add(op: OutputPending): Unit = pendingClients.synchronized({ pendingClients.put(op.clientId, op.output) })
 
-    def get(clientId: String) = pendingClients.synchronized({ pendingClients.get(clientId) })
+  def get(clientId: String) = pendingClients.synchronized({ pendingClients.get(clientId) })
 
-    def remove(clientId: String) = pendingClients.synchronized({ pendingClients.remove(clientId) })
+  def remove(clientId: String) = pendingClients.synchronized({ pendingClients.remove(clientId) })
 
-    def list = pendingClients.synchronized({ pendingClients.map(op => new OutputPending(op._1, op._2)) })
+  def list = pendingClients.synchronized({ pendingClients.map(op => new OutputPending(op._1, op._2)) })
 
-    private def makeUniqueClientId(request: Request): String = {
-        val clientInfo = request.getClientInfo
-        clientInfo.getAddress + clientInfo.getPort + System.currentTimeMillis
-    }
+  private def makeUniqueClientId(request: Request): String = {
+    val clientInfo = request.getClientInfo
+    clientInfo.getAddress + clientInfo.getPort + System.currentTimeMillis
+  }
 
-    def add(request: Request, output: Output): String = {
-        val op = new OutputPending(makeUniqueClientId(request), output)
-        add(op)
-        op.clientId
-    }
+  def add(request: Request, output: Output): String = {
+    val op = new OutputPending(makeUniqueClientId(request), output)
+    add(op)
+    op.clientId
+  }
 }
 
 class OutputPending(val clientId: String, val output: Output);
