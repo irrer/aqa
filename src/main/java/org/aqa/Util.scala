@@ -20,6 +20,9 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.Properties
 import edu.umro.util.Utility
+import java.sql.Blob
+import javax.sql.rowset.serial.SerialBlob
+import java.util.zip.ZipOutputStream
 
 object Util extends Logging {
 
@@ -278,6 +281,14 @@ object Util extends Logging {
       case name if (name.contains('.')) => name.substring(0, name.lastIndexOf('.'))
       case name => name
     }
+  }
+
+  // TODO
+  def putFiles(mainFile: File, excludeList: Seq[File]): Blob = {
+    val blob = new SerialBlob(Array[Byte]())
+
+    val zipOut = new ZipOutputStream(blob.setBinaryStream(0))
+    ???
   }
 
   def main(args: Array[String]): Unit = {

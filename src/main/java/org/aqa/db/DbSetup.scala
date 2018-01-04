@@ -9,6 +9,7 @@ import java.sql.Timestamp
 import org.aqa.run.ProcedureStatus
 import scala.collection.mutable.ArrayBuffer
 import org.aqa.Config
+import edu.umro.util.OpSys
 
 /** Establish connection to the database and ensure that tables are created. */
 
@@ -65,11 +66,27 @@ object DbSetup extends Logging {
     LOCRSquared.query,
     DiffBaselineOpen.query,
     DiffBaselineTrans.query)
+
   /**
    * Initialize database by creating tables in dependency order.
    */
   def init = {
     val valid = Config.validate // force configuration to be read
+
+    def setIfDefined(key: String, value: Option[String]): Unit = {
+      value match {
+        case (Some(v)) => System.setProperty(key, v)
+        case _ => ;
+      }
+    }
+
+    // Slick expects these properties to be set
+    System.setProperty("slick.dbs.default.db.url", Config.SlickDbsDefaultDbUrl)
+    System.setProperty("slick.dbs.default.driver", Config.SlickDbsDefaultDriver)
+    System.setProperty("slick.dbs.default.db.driver", Config.SlickDbsDefaultDbDriver)
+    setIfDefined("slick.dbs.default.db.user", Config.SlickDbsDefaultDbUser)
+    setIfDefined("slick.dbs.default.db.password", Config.SlickDbsDefaultDbPassword)
+
     tableQueryList.map(q => Db.createTableIfNonexistent(q.asInstanceOf[TableQuery[Table[_]]]))
     ensureAdminUser
   }

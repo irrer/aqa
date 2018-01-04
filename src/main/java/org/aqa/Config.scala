@@ -157,18 +157,46 @@ object Config extends Logging {
 
   }
 
-  logger.trace("Using configuration:\n" + edu.umro.ScalaUtil.Util.xmlToText(document) + "\n")
+  // Commented out because of the potential security risk of exposing passwords.
+  //logger.trace("Using configuration:\n" + edu.umro.ScalaUtil.Util.xmlToText(document) + "\n")
 
   private val valueText = new ArrayBuffer[String]
 
   private def logText(name: String, value: String) = valueText += (name + ": " + value)
 
+  private def logTextNotSpecified(name: String) = logText(name, "[not specified]")
+
   private def getMainText(name: String): String = {
-    if ((document \ name).size == 0) throw new RuntimeException("No such XML node " + name)
-    (document \ name).head.text
+    val list = document \ name
+    if (list.isEmpty) throw new RuntimeException("No such XML node " + name)
+
+    def forThisHost(node: Node) = {
+      val attr = (node \ "@HostIp").headOption
+      attr.isDefined && attr.get.text.equalsIgnoreCase(OpSys.getHostIPAddress)
+    }
+
+    def noHostGiven(node: Node) = (node \ "@HostIp").headOption.isEmpty
+
+    val thisHost = list.filter(n => forThisHost(n)).headOption
+
+    val noHost = list.filter(n => noHostGiven(n)).headOption
+
+    (thisHost, noHost) match {
+      case (Some(th), _) => th.text
+      case (_, Some(nh)) => nh.text
+      case _ => throw new RuntimeException("No such XML node " + name)
+    }
   }
 
-  private def mainText(name: String): String = {
+  private def getMainTextOption(name: String): Option[String] = {
+    try {
+      Some(getMainText(name))
+    } catch {
+      case t: Throwable => None
+    }
+  }
+
+  private def logMainText(name: String): String = {
     val value = getMainText(name)
     logText(name, value)
     value
@@ -179,21 +207,6 @@ object Config extends Logging {
     logText(name, dir.getAbsolutePath)
     dir.mkdirs
     dir
-  }
-
-  private def setProperty(node: Node): Unit = {
-    val name = (node \ "@Name").head.text
-    val value = node.head.text
-    System.setProperty(name, value)
-    logText("Property " + name, if (name.toLowerCase.contains("password")) "[redacted]" else value)
-  }
-
-  private def initProperties: Unit = {
-    (document \ "PropertyList" \ "Property").toList.map(node => setProperty(node))
-
-    // force each of these directories to be created.  It would be catastrophic if this fails.
-    if (!(Seq(resultsDirFile, tmpDirFile, machineConfigurationDirFile).map(d => (d.isDirectory && d.canRead)).reduce(_ && _)))
-      throw new RuntimeException("can not read all necessary directories")
   }
 
   private def getThisJarFile: File = {
@@ -228,7 +241,7 @@ object Config extends Logging {
       Some(securePort)
     } catch {
       case _: Throwable => {
-        logText(name, "Not specified")
+        logTextNotSpecified(name)
         None
       }
     }
@@ -242,8 +255,8 @@ object Config extends Logging {
   val ProcedureDir = getDir("ProcedureDir")
   val DataDir = getDir("DataDir")
 
-  val RestletLogLevel = mainText("RestletLogLevel")
-  val AuthenticationTimeout = mainText("AuthenticationTimeout").toDouble
+  val RestletLogLevel = logMainText("RestletLogLevel")
+  val AuthenticationTimeout = logMainText("AuthenticationTimeout").toDouble
   val AuthenticationTimeoutInMs = (AuthenticationTimeout * 1000).toLong
 
   val jarFile = getThisJarFile
@@ -252,10 +265,10 @@ object Config extends Logging {
   val RestartTime: Long = {
     val dateFormat = new SimpleDateFormat("HH:mm")
     val millisec = try {
-      dateFormat.parse(mainText("RestartTime")).getTime
+      dateFormat.parse(logMainText("RestartTime")).getTime
     } catch {
       case e: ParseException => {
-        Log.get.warning("Badly formatted RestartTime in configuration file: " + mainText("RestartTime") + " .  Should be HH:MM, as in 1:23 .  Assuming default of " + DEFAULT_RESTART_TIME)
+        Log.get.warning("Badly formatted RestartTime in configuration file: " + logMainText("RestartTime") + " .  Should be HH:MM, as in 1:23 .  Assuming default of " + DEFAULT_RESTART_TIME)
         dateFormat.parse(DEFAULT_RESTART_TIME).getTime
       }
     }
@@ -263,11 +276,50 @@ object Config extends Logging {
     millisec
   }
 
-  initProperties
+  private def getDbUser: Option[String] = {
+    val name = "SlickDbsDefaultDbUser"
+    getMainTextOption(name) match {
+      case Some(user) => {
+        logText(name, user)
+        Some(user)
+      }
+      case _ => {
+        logTextNotSpecified(name)
+        None
+      }
+    }
+  }
+
+  /**
+   * Get the database password if it exists.
+   */
+  private def getDbPassword: Option[String] = {
+    val name = "SlickDbsDefaultDbPassword"
+    try {
+      val password = getMainText(name)
+      logText(name, "[redacted]")
+      Some(password)
+    } catch {
+      case t: Throwable => {
+        logTextNotSpecified(name)
+        None
+      }
+    }
+  }
+
+  val SlickDbsDefaultDbUrl = logMainText("SlickDbsDefaultDbUrl")
+  val SlickDbsDefaultDbUser = getDbUser
+  val SlickDbsDefaultDbPassword = getDbPassword
+  val SlickDbsDefaultDriver = logMainText("SlickDbsDefaultDriver")
+  val SlickDbsDefaultDbDriver = logMainText("SlickDbsDefaultDbDriver")
 
   val UserWhiteList: List[String] = (document \ "UserWhiteList" \ "User").toList.map(node => node.head.text.trim.toLowerCase)
 
-  val TermsOfUse = mainText("TermsOfUse")
+  val TermsOfUse = logMainText("TermsOfUse")
+
+  // force each of these directories to be created.  It would be catastrophic if this fails.
+  if (!(Seq(resultsDirFile, tmpDirFile, machineConfigurationDirFile).map(d => (d.isDirectory && d.canRead)).reduce(_ && _)))
+    throw new RuntimeException("can not read all necessary directories")
 
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true

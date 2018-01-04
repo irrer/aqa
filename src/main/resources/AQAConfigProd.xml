@@ -4,25 +4,32 @@
 
 <AQAConfig>
 
-    <!-- List of System properties that should be set. -->
-    <PropertyList>
-        <Property Name='slick.dbs.default.db.url'>jdbc:postgresql://aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA?sslmode=require</Property>
-        <Property Name='test.slick.dbs.default.db.url'>jdbc:postgresql://aqatest.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA?sslmode=require</Property>
-        <Property Name='slick.dbs.default.db.user'>aqa</Property>
-        <Property Name='slick.dbs.default.db.password'>Kwalitee_1</Property>
+    <!-- Note concerning the attribute HostIp='******'
+         
+         If given, then only that host will use that value, and that host will not use any alternative value.
+         
+         If not given, then it is considered the default and any host may use that value.
+     -->
 
-        <Property Name='slick.dbs.default.driver'>slick.driver.PostgresDriver$</Property>
-        <Property Name='slick.dbs.default.db.driver'>org.postgresql.Driver</Property>
-    </PropertyList>
+    <!-- Database parameters. -->
+    <SlickDbsDefaultDbUrl HostIp='172.31.43.98'>jdbc:postgresql://aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA?sslmode=require</SlickDbsDefaultDbUrl>
+    <SlickDbsDefaultDbUrl HostIp='141.214.125.209'>jdbc:postgresql://141.214.125.209:5432/AQATest</SlickDbsDefaultDbUrl>
+    <SlickDbsDefaultDbUrl>jdbc:postgresql://aqatest.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA?sslmode=require</SlickDbsDefaultDbUrl>
+    <SlickDbsDefaultDbUser>aqa</SlickDbsDefaultDbUser>
+    <SlickDbsDefaultDbPassword>Kwalitee_1</SlickDbsDefaultDbPassword>
+    <SlickDbsDefaultDriver>slick.driver.PostgresDriver$</SlickDbsDefaultDriver>
+    <SlickDbsDefaultDbDriver>org.postgresql.Driver</SlickDbsDefaultDbDriver>
     
     <!-- Directory containing executables and configuration files to run procedures. -->
     <ProgramDir>C:\Program Files\AQA</ProgramDir>
 
     <!-- Directory containing procedures' executable code. -->
     <ProcedureDir>C:\Program Files\AQA\AQA_Procedures</ProcedureDir>
+    <ProcedureDir HostIp='141.214.125.209'>D:\AQA_Procedures</ProcedureDir>
 
     <!-- Directory containing input and output data consumed by and produced by procedures. -->
     <DataDir>C:\Program Files\AQA\AQA_Data</DataDir>
+    <DataDir HostIp='141.214.125.209'>D:\AQA_Data</DataDir>
 
     <!-- Authentication timeout.  Number of seconds for a user id+password pair to be cached before re-checking with database. -->
     <AuthenticationTimeout>7200.0</AuthenticationTimeout>

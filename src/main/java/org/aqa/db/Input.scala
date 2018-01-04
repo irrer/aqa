@@ -4,6 +4,7 @@ import slick.driver.PostgresDriver.api._
 import org.aqa.Logging
 import org.aqa.Config
 import java.sql.Timestamp
+import java.sql.Blob
 import java.io.File
 import org.aqa.web.WebServer
 
@@ -14,7 +15,8 @@ case class Input(
   userPK: Option[Long], // user that ran the procedure
   machinePK: Option[Long], // procedure was run on this machine.  Machine is optional to support procedures that do not correlate to a single machine.
   patientId: Option[String], // patient ID if applicable.  Often derived from associated DICOM files
-  dataDate: Option[Timestamp] // earliest date when data was acquired.  Often derived from associated DICOM files.
+  dataDate: Option[Timestamp]//, // earliest date when data was acquired.  Often derived from associated DICOM files.
+  //data: Option[Blob] // zip of all files that existed before processing was started, including those that were uploaded and generated
 ) {
 
   def insert: Input = {
@@ -35,6 +37,7 @@ case class Input(
   def updateDirectory(dirName: String) = {
     Db.run(Input.query.filter(_.inputPK === inputPK.get).map(i => i.directory).update(Some(dirName)))
   }
+
 }
 
 object Input extends Logging {
@@ -48,6 +51,7 @@ object Input extends Logging {
     def machinePK = column[Option[Long]]("machinePK")
     def patientId = column[Option[String]]("patientId")
     def dataDate = column[Option[Timestamp]]("dataDate")
+    //def data = column[Option[Blob]]("data")
 
     def * = (
       inputPK.?,
@@ -56,7 +60,9 @@ object Input extends Logging {
       userPK,
       machinePK,
       patientId,
-      dataDate) <> ((Input.apply _)tupled, Input.unapply _)
+      dataDate,
+      //data
+      ) <> ((Input.apply _)tupled, Input.unapply _)
 
     def userFK = foreignKey("userPK", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
     def machineFK = foreignKey("machinePK", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
@@ -82,7 +88,7 @@ object Input extends Logging {
   def main(args: Array[String]): Unit = {
     val valid = Config.validate
     DbSetup.init
-    val input = new Input(None, Some("input_dir"), new Timestamp(System.currentTimeMillis), Some(6), Some(2), None, None)
+    val input = new Input(None, Some("input_dir"), new Timestamp(System.currentTimeMillis), Some(6), Some(2), None, None) //, None)
 
     input.insert
 
