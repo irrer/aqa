@@ -11,9 +11,8 @@ import org.scalatest.Matchers
  */
 
 class TestConfig extends FlatSpec with Matchers {
-  Config.validate
   "Configuration" should "define values" in {
-
+    Config.validate
     Config.validated should be(true)
     Config.TermsOfUse.nonEmpty should be(true)
   }
