@@ -20,15 +20,6 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.Properties
 import edu.umro.util.Utility
-import java.sql.Blob
-import javax.sql.rowset.serial.SerialBlob
-import java.util.zip.ZipOutputStream
-import java.util.zip.ZipEntry
-import java.io.ByteArrayOutputStream
-import edu.umro.ScalaUtil.Trace
-import java.util.zip.ZipInputStream
-import java.io.ByteArrayInputStream
-import resource.managed
 import org.apache.commons.io.IOUtils
 
 object Util extends Logging {
@@ -287,66 +278,6 @@ object Util extends Logging {
     file.getName match {
       case name if (name.contains('.')) => name.substring(0, name.lastIndexOf('.'))
       case name => name
-    }
-  }
-
-  /**
-   * Given a file or directory, make a byte array out of the zipped contents.  If it is a directory, include children.
-   */
-  def fileToByteArray(mainFile: File, excludeList: Seq[File]): Array[Byte] = {
-    def doInclude(file: File) = !excludeList.contains(file)
-
-    def addOneFileToZip(file: File, zipOut: ZipOutputStream, parentName: Option[String]): Unit = {
-      if (doInclude(file)) {
-        val entryName = if (parentName.isDefined) parentName.get + "/" + file.getName else file.getName
-        if (file.isDirectory) file.listFiles.map(f => addOneFileToZip(f, zipOut, Some(entryName)))
-        else {
-          val data = Utility.readBinFile(file)
-          val zipEntry = new ZipEntry(entryName)
-          zipOut.putNextEntry(zipEntry)
-          zipOut.write(data)
-          zipOut.closeEntry
-          Trace.trace("added zip entry: " + entryName)
-        }
-      }
-    }
-
-    val baos = new ByteArrayOutputStream
-
-    managed(new ZipOutputStream(baos)) acquireAndGet {
-      zipOut =>
-        {
-          addOneFileToZip(mainFile, zipOut, None)
-        }
-    }
-
-    baos.toByteArray
-  }
-
-  /**
-   * Given bytes, write them as a zipped tree of files.
-   */
-  def byteArrayToFile(byteArray: Array[Byte], parentDir: File): Unit = {
-    managed(new ZipInputStream(new ByteArrayInputStream(byteArray))) acquireAndGet {
-      zipIn =>
-        {
-          def next: Unit = {
-            val entry = zipIn.getNextEntry
-            if (entry != null) {
-              val file = new File(parentDir, entry.getName.replaceAll("/", File.separator))
-              if (entry.isDirectory) file.mkdirs
-              else {
-                val fos = new FileOutputStream(file)
-                IOUtils.copy(zipIn, fos)
-                fos.close
-                entry
-              }
-              next
-            }
-          }
-          // Start processing
-          next
-        }
     }
   }
 
