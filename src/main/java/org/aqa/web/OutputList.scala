@@ -24,7 +24,7 @@ object OutputList {
   def redirect(response: Response) = response.redirectSeeOther(path)
 }
 
-class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlView {
+class OutputList extends GenericList[Output.ExtendedValues2] with WebUtil.SubUrlView {
 
   override def listName = "Output"
 
@@ -60,15 +60,15 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   private val startTimeFormat = new SimpleDateFormat("yyyy MM dd HH:mm:ss")
 
-  private def compareByInputTime(a: Output.ExtendedValues, b: Output.ExtendedValues): Int = {
-    if (a.input.dataDate.isDefined && b.input.dataDate.isDefined) a.input.dataDate.get.compareTo(b.input.dataDate.get)
+  private def compareByInputTime(a: Output.ExtendedValues2, b: Output.ExtendedValues2): Int = {
+    if (a.input_dataDate.isDefined && b.input_dataDate.isDefined) a.input_dataDate.get.compareTo(b.input_dataDate.get)
     else 0
   }
 
-  private def compareByStartTime(a: Output.ExtendedValues, b: Output.ExtendedValues): Boolean = a.output.startDate.compareTo(b.output.startDate) > 0
+  private def compareByStartTime(a: Output.ExtendedValues2, b: Output.ExtendedValues2): Boolean = a.output_startDate.compareTo(b.output_startDate) > 0
 
-  private def inputTime(extendedValues: Output.ExtendedValues): String = {
-    val date = extendedValues.input.dataDate
+  private def inputTime(extendedValues: Output.ExtendedValues2): String = {
+    val date = extendedValues.input_dataDate
     if (date.isDefined) startTimeFormat.format(date.get) else "unknown date"
   }
 
@@ -78,25 +78,23 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     url
   }
 
-  private def startTimeUrl(extendedValues: Output.ExtendedValues): Elem = {
-    <a title="Data analysis time" href={ getUrl(extendedValues.output.outputPK.get, false) }> { startTimeFormat.format(extendedValues.output.startDate) }</a>
+  private def startTimeUrl(extendedValues: Output.ExtendedValues2): Elem = {
+    <a title="Data analysis time" href={ getUrl(extendedValues.output_outputPK, false) }> { startTimeFormat.format(extendedValues.output_startDate) }</a>
   }
 
-  private def inputFileUrl(extendedValues: Output.ExtendedValues): Elem = {
-    <a title="Data aquisition time" href={ WebServer.urlOfResultsPath(extendedValues.input.directory.get) }>{ inputTime(extendedValues) }</a>
+  private def inputFileUrl(extendedValues: Output.ExtendedValues2): Elem = {
+    <a title="Data aquisition time" href={ WebServer.urlOfResultsPath(extendedValues.input_directory.get) }>{ inputTime(extendedValues) }</a>
   }
 
-  private def invalidateRowName(extendedValues: Output.ExtendedValues): String = extendedValues.output.dataValidity.toString
-
-  private def deleteUrl(extendedValues: Output.ExtendedValues): Elem = {
-    <a title="Click to delete.  Can NOT be undone" href={ OutputList.path + "?" + OutputList.deleteTag + "=" + extendedValues.output.outputPK.get }>Delete</a>
+  private def deleteUrl(extendedValues: Output.ExtendedValues2): Elem = {
+    <a title="Click to delete.  Can NOT be undone" href={ OutputList.path + "?" + OutputList.deleteTag + "=" + extendedValues.output_outputPK }>Delete</a>
   }
 
-  type ColT = Output.ExtendedValues
+  type ColT = Output.ExtendedValues2
 
-  private val institutionCol = new Column[ColT]("Institution", _.institution.name)
+  private val institutionCol = new Column[ColT]("Institution", _.institution_name)
 
-  private val userCol = new Column[ColT]("User", _.user.id)
+  private val userCol = new Column[ColT]("User", _.user_id)
 
   private val startTimeCol = new Column[ColT]("Analysis", compareByStartTime _, startTimeUrl _)
 
@@ -104,17 +102,17 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   private val deleteCol = new Column[ColT]("Delete", _ => "Delete", deleteUrl)
 
-  private val procedureCol = new Column[ColT]("Procedure", (d) => d.procedure.name + " " + d.procedure.version)
+  private val procedureCol = new Column[ColT]("Procedure", (d) => d.procedure_name + " " + d.procedure_version)
 
-  private val machineCol = new Column[ColT]("Machine", _.machine.id)
+  private val machineCol = new Column[ColT]("Machine", _.machine_id)
 
   override val columnList = Seq(startTimeCol, inputFileCol, procedureCol, machineCol, institutionCol, userCol, deleteCol)
 
   val entriesPerPage = 1000
 
-  override def getData(valueMap: ValueMapT) = Output.extendedList(None, None, entriesPerPage)
+  override def getData(valueMap: ValueMapT) = Output.extendedList2(None, None, entriesPerPage)
 
-  override def getPK(extendedValues: Output.ExtendedValues): Long = extendedValues.output.outputPK.get
+  override def getPK(extendedValues: Output.ExtendedValues2): Long = extendedValues.output_outputPK
 
   override val canCreate: Boolean = false
 

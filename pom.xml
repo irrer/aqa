@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.aqa</groupId>
   <artifactId>AQA</artifactId>
-  <version>0.0.4</version>
+  <version>0.0.5</version>
   
     <packaging>jar</packaging>
     <name>${project.artifactId}</name>
@@ -21,7 +21,7 @@
         <dependency> <groupId>commons-io</groupId>               <artifactId>commons-io</artifactId>                 <version>2.4</version>             </dependency>
         <dependency> <groupId>edu.umro</groupId>                 <artifactId>MSOfficeUtil</artifactId>               <version>0.0.1</version>           </dependency>
         <dependency> <groupId>edu.umro</groupId>                 <artifactId>RestletUtil_2.12</artifactId>           <version>0.0.7</version>           </dependency>
-        <dependency> <groupId>edu.umro</groupId>                 <artifactId>ScalaUtil_2.12</artifactId>             <version>0.0.9</version>           </dependency>
+        <dependency> <groupId>edu.umro</groupId>                 <artifactId>ScalaUtil_2.12</artifactId>             <version>0.0.10</version>          </dependency>
         <dependency> <groupId>javax.servlet</groupId>            <artifactId>javax.servlet-api</artifactId>          <version>3.1.0</version>           </dependency>
         <dependency> <groupId>org.apache.logging.log4j</groupId> <artifactId>log4j-api</artifactId>                  <version>2.10.0</version>          </dependency>
         <dependency> <groupId>org.apache.logging.log4j</groupId> <artifactId>log4j-core</artifactId>                 <version>2.10.0</version>          </dependency>
@@ -40,7 +40,7 @@
         <dependency> <groupId>org.scalatest</groupId>            <artifactId>scalatest_2.12</artifactId>             <version>3.2.0-SNAP9</version>     <scope>test</scope></dependency>
         <dependency> <groupId>org.slf4j</groupId>                <artifactId>log4j-over-slf4j</artifactId>           <version>1.7.25</version>          </dependency>
         <dependency> <groupId>org.slf4j</groupId>                <artifactId>slf4j-api</artifactId>                  <version>1.7.25</version>          </dependency>
-        <dependency> <groupId>pixelmed</groupId>                 <artifactId>pixelmed</artifactId>                   <version>20160530</version>        </dependency>
+        <dependency> <groupId>pixelmed</groupId>                 <artifactId>pixelmed</artifactId>                   <version>20170406</version>        </dependency>
         <!-- https://mvnrepository.com/artifact/com.typesafe.scala-logging/scala-logging-slf4j -->
         
     </dependencies>
@@ -147,7 +147,7 @@ https://mvnrepository.com/artifact/org.scalatest/scalatest
                 </configuration>
             </plugin>
 
-              <!-- enable scalatest -->
+            <!-- enable scalatest -->
             <plugin>
                 <groupId>org.scalatest</groupId>
                 <artifactId>scalatest-maven-plugin</artifactId>

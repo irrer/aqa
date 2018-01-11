@@ -52,7 +52,7 @@ import com.pixelmed.dicom.TagFromName
  */
 object Run extends Logging {
 
-  private val ouputSubdirNamePrefix = "output_"
+  private val outputSubdirNamePrefix = "output_"
 
   private val matlabEnvFileName = "env.m"
 
@@ -160,8 +160,10 @@ object Run extends Logging {
               postProcess(activeProcess)
               val fileStatus = ProcedureStatus.dirToProcedureStatus(activeProcess.output.dir)
               val status = if (fileStatus.isDefined) fileStatus.get else ProcedureStatus.crash
+              // build a zip of the contents of the output
+              val data = activeProcess.output.makeZipOfData
               // update DB Output
-              activeProcess.output.updateStatusAndFinishDate(status.toString, now)
+              activeProcess.output.updateStatusAndFinishDateAndData(status.toString, now, Some(data))
               ActiveProcess.remove(activeProcess.output.outputPK.get)
             } catch {
               case t: Throwable =>
@@ -433,13 +435,12 @@ object Run extends Logging {
 
     // create DB Input
     val acq = if (acquisitionDate.isDefined) Some(new Timestamp(acquisitionDate.get)) else None
-    val input = (new Input(None, None, new Timestamp(now.getTime), userPK, machine.machinePK, patientId, acq)).insert
+    val input = (new Input(None, None, new Timestamp(now.getTime), userPK, machine.machinePK, patientId, acq, None)).insert
 
     // The input PK is needed to make the input directory, which creates a circular definition when making an
     // input row, but this is part of the compromise of creating a file hierarchy that has a consistent (as
     // practical) link to the database.
     val inputDir = makeInputDir(machine, procedure, input.inputPK.get)
-    input.updateDirectory(WebServer.fileToResultsPath(inputDir))
 
     // move input files to their final resting place
     inputDir.getParentFile.mkdirs
@@ -447,9 +448,11 @@ object Run extends Logging {
     if (!inputDir.exists)
       throw new RuntimeException("Unable to rename temporary directory " + sessionDir.getAbsolutePath + " to input directory " + inputDir.getAbsolutePath)
 
+    input.updateDirectoryAndData(inputDir)
+    
     val startDate = new Date(System.currentTimeMillis)
 
-    val outputDir = new File(inputDir, ouputSubdirNamePrefix + Util.timeAsFileName(startDate))
+    val outputDir = new File(inputDir, outputSubdirNamePrefix + Util.timeAsFileName(startDate))
     outputDir.mkdirs // create output directory
 
     val output = {
@@ -465,7 +468,8 @@ object Run extends Logging {
         analysisDate = None, // TODO get from output.xml file
         machinePK = machine.machinePK,
         status = ProcedureStatus.running.toString,
-        dataValidity = DataValidity.valid.toString)
+        dataValidity = DataValidity.valid.toString,
+        None)
       tempOutput.insert
     }
 
@@ -506,7 +510,8 @@ object Run extends Logging {
           analysisDate = None, // TODO get from output.xml file
           machinePK = None, // TODO get from output.xml file
           status = status.toString,
-          dataValidity = output.dataValidity)
+          dataValidity = output.dataValidity,
+          data = output.data)
         updatedOutput.insertOrUpdate
       }
 

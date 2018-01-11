@@ -9,6 +9,7 @@ import java.sql.Timestamp
 import java.sql.Date
 import org.aqa.web.WebServer
 import java.io.File
+import edu.umro.ScalaUtil.FileUtil
 
 case class Output(
   outputPK: Option[Long], // primary key
@@ -22,7 +23,8 @@ case class Output(
   analysisDate: Option[Timestamp], // optionally supplied by analysis procedure to indicate prior analysis
   machinePK: Option[Long], // optionally supplied by analysis procedure to indicate treatment machine
   status: String, // termination status
-  dataValidity: String) // whether the data is valid or otherwise
+  dataValidity: String, // whether the data is valid or otherwise
+  data: Option[Array[Byte]]) // The files in zip form created by the process
   {
 
   /**
@@ -42,12 +44,11 @@ case class Output(
   def dir: File = WebServer.fileOfResultsPath(directory)
 
   /**
-   * Update the status and finish date.  Returns number of records updated, which should always be one.  If it is zero then
-   * it is probably because the object is not in the database.
+   * Update the status and finish date.
    */
-  def updateStatusAndFinishDate(sts: String, finDate: Date) = {
+  def updateStatusAndFinishDateAndData(sts: String, finDate: Date, data: Option[Array[Byte]]): Unit = {
     val finTimestamp = new Timestamp(finDate.getTime)
-    Db.run(Output.query.filter(_.outputPK === outputPK.get).map(o => (o.status, o.finishDate)).update((sts, Some(finTimestamp))))
+    Db.run(Output.query.filter(_.outputPK === outputPK.get).map(o => (o.status, o.finishDate, o.data)).update((sts, Some(finTimestamp), data)))
   }
 
   /**
@@ -64,6 +65,10 @@ case class Output(
   override def equals(o: Any): Boolean = {
     val other = o.asInstanceOf[Output]
     outputPK.isDefined && other.outputPK.isDefined && (outputPK.get == other.outputPK.get)
+  }
+
+  def makeZipOfData: Array[Byte] = {
+    FileUtil.readFileTreeToZipByteArray(Seq(dir), Seq[String](), Seq[File]())
   }
 }
 
@@ -82,6 +87,7 @@ object Output extends Logging {
     def machinePK = column[Option[Long]]("machinePK")
     def status = column[String]("status")
     def dataValidity = column[String]("dataValidity")
+    def data = column[Option[Array[Byte]]]("data")
 
     def * = (
       outputPK.?,
@@ -95,7 +101,8 @@ object Output extends Logging {
       analysisDate,
       machinePK,
       status,
-      dataValidity) <> ((Output.apply _)tupled, Output.unapply _)
+      dataValidity,
+      data) <> ((Output.apply _)tupled, Output.unapply _)
 
     def inputFK = foreignKey("inputPK", inputPK, Input.query)(_.inputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
     def procedureFK = foreignKey("procedurePK", procedurePK, Procedure.query)(_.procedurePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
@@ -117,11 +124,44 @@ object Output extends Logging {
   /**
    * Get a list of all outputs.
    */
-  def list: Seq[Output] = Db.run(query.result)
+  def list: Seq[Output] = Db.run(query.result) // TODO long
 
   case class ExtendedValues(val output: Output, val input: Input, val machine: Machine, val procedure: Procedure, val institution: Institution, val user: User);
 
-  type ExtendedValuesTables = (Output.OutputTable, Input.InputTable, Machine.MachineTable, Procedure.ProcedureTable, Institution.InstitutionTable, User.UserTable)
+  case class ExtendedValues2(
+    input_dataDate: Option[Timestamp],
+    input_directory: Option[String],
+    institution_name: String,
+    machine_id: String,
+    output_outputPK: Long,
+    output_startDate: Timestamp,
+    procedure_name: String,
+    procedure_version: String,
+    user_id: String);
+
+  /**
+   * Get an extended list of all outputs.
+   */
+  def extendedList2(procedure: Option[Procedure], machine: Option[Machine], maxSize: Int): Seq[ExtendedValues2] = { // TODO long
+
+    case class OutputE(o_outputPK: Option[Long], o_startDate: Timestamp, o_inputPK: Long)
+
+    case class ProcE(name: String, version: String);
+
+    val search = for {
+      output <- Output.query.map(o => (o.outputPK, o.startDate, o.inputPK, o.procedurePK, o.userPK))
+      input <- Input.query.filter(i => i.inputPK === output._3).map(i => (i.dataDate, i.directory, i.machinePK))
+      machine <- Machine.query.filter(m => m.machinePK === input._3).map(m => (m.id, m.institutionPK))
+      institution <- Institution.query.filter(i => i.institutionPK === machine._2).map(i => i.name)
+      procedure <- Procedure.query.filter(p => p.procedurePK === output._4).map(p => (p.name, p.version))
+      user <- User.query.filter(u => u.userPK === output._5).map(u => u.id)
+    } yield ((input._1, input._2, institution, machine._1, output._1, output._2, procedure._1, procedure._2, user))
+
+    val sorted = search.sortBy(_._1).take(maxSize)
+
+    val result = Db.run(sorted.result).map(a => new ExtendedValues2(a._1, a._2, a._3, a._4, a._5, a._6, a._7, a._8, a._9))
+    result
+  }
 
   // can pass sorting function in using this horrendous type:   // TODO
   //
@@ -144,7 +184,7 @@ object Output extends Logging {
   /**
    * Get an extended list of all outputs.
    */
-  def extendedList(procedure: Option[Procedure], machine: Option[Machine], maxSize: Int): Seq[ExtendedValues] = {
+  def extendedList(procedure: Option[Procedure], machine: Option[Machine], maxSize: Int): Seq[ExtendedValues] = { // TODO long
     val search = for {
       output <- Output.query
       input <- Input.query if input.inputPK === output.inputPK
@@ -163,7 +203,7 @@ object Output extends Logging {
   /**
    * Get a list of all outputs with the given status and their associated procedures.
    */
-  def listWithStatus(status: ProcedureStatus.Value): Seq[(Output, Procedure)] = {
+  def listWithStatus(status: ProcedureStatus.Value): Seq[(Output, Procedure)] = { // TODO long
     val statusText = status.toString
     val action = for {
       output <- Output.query if output.status === statusText
@@ -387,7 +427,8 @@ object Output extends Logging {
         analysisDate = None,
         machinePK = None,
         status = "testing",
-        dataValidity = DataValidity.valid.toString) // termination status
+        dataValidity = DataValidity.valid.toString,
+        data = None) // termination status
       println("output: " + output)
       val result = output.insert
       println("result: " + result)

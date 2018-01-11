@@ -10,6 +10,9 @@ import org.aqa.run.ProcedureStatus
 import scala.collection.mutable.ArrayBuffer
 import org.aqa.Config
 import edu.umro.util.OpSys
+import edu.umro.ScalaUtil.Trace
+import edu.umro.ScalaUtil.FileUtil
+import java.io.File
 
 /** Establish connection to the database and ensure that tables are created. */
 
@@ -57,8 +60,10 @@ object DbSetup extends Logging {
     Machine.query,
     MachineBeamEnergy.query,
     Input.query,
+    InputData.query,
     MaintenanceRecord.query,
     Output.query,
+    OutputData.query,
     CentralAxis.query,
     LeafOffsetCorrection.query,
     EPIDCenterCorrection.query,
@@ -70,7 +75,7 @@ object DbSetup extends Logging {
   /**
    * Initialize database by creating tables in dependency order.
    */
-  def init = {
+  lazy val init: Boolean = {
     val valid = Config.validate // force configuration to be read
 
     def setIfDefined(key: String, value: Option[String]): Unit = {
@@ -89,6 +94,7 @@ object DbSetup extends Logging {
 
     tableQueryList.map(q => Db.createTableIfNonexistent(q.asInstanceOf[TableQuery[Table[_]]]))
     ensureAdminUser
+    true
   }
 
   /**
@@ -123,6 +129,29 @@ object DbSetup extends Logging {
         false
       }
     }
+  }
+
+  def copyFilesToDatabase = {
+    def copyOutput = {
+      val action = Output.query.filter(m => m.data.isEmpty)
+      val list = Db.run(action.result)
+      println("copyFilesToDatabase Output list size: " + list.size)
+
+      def copyFiles(output: Output) = {
+        Db.run(Output.query.filter(_.outputPK === output.outputPK.get).map(o => (o.data)).update((Some(output.makeZipOfData))))
+      }
+      list.map(output => copyFiles(output))
+    }
+
+    def copyInput = {
+      val action = Input.query.filter(m => m.data.isEmpty && m.directory.isDefined)
+      val list = Db.run(action.result)
+      println("copyFilesToDatabase Input list size: " + list.size)
+      list.map(input => input.updateDirectoryAndData(input.dir))
+    }
+
+    copyOutput
+    copyInput
   }
 
   def main(args: Array[String]): Unit = {
