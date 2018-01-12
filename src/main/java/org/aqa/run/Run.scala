@@ -163,7 +163,8 @@ object Run extends Logging {
               // build a zip of the contents of the output
               val data = activeProcess.output.makeZipOfData
               // update DB Output
-              activeProcess.output.updateStatusAndFinishDateAndData(status.toString, now, Some(data))
+              activeProcess.output.updateStatusAndFinishDate(status.toString, now)
+              activeProcess.output.updateData(data)
               ActiveProcess.remove(activeProcess.output.outputPK.get)
             } catch {
               case t: Throwable =>
@@ -435,7 +436,7 @@ object Run extends Logging {
 
     // create DB Input
     val acq = if (acquisitionDate.isDefined) Some(new Timestamp(acquisitionDate.get)) else None
-    val input = (new Input(None, None, new Timestamp(now.getTime), userPK, machine.machinePK, patientId, acq, None)).insert
+    val input = (new Input(None, None, new Timestamp(now.getTime), userPK, machine.machinePK, patientId, acq)).insert
 
     // The input PK is needed to make the input directory, which creates a circular definition when making an
     // input row, but this is part of the compromise of creating a file hierarchy that has a consistent (as
@@ -448,8 +449,9 @@ object Run extends Logging {
     if (!inputDir.exists)
       throw new RuntimeException("Unable to rename temporary directory " + sessionDir.getAbsolutePath + " to input directory " + inputDir.getAbsolutePath)
 
-    input.updateDirectoryAndData(inputDir)
-    
+    input.updateDirectory(inputDir)
+    input.updateData(inputDir)
+
     val startDate = new Date(System.currentTimeMillis)
 
     val outputDir = new File(inputDir, outputSubdirNamePrefix + Util.timeAsFileName(startDate))
@@ -468,8 +470,7 @@ object Run extends Logging {
         analysisDate = None, // TODO get from output.xml file
         machinePK = machine.machinePK,
         status = ProcedureStatus.running.toString,
-        dataValidity = DataValidity.valid.toString,
-        None)
+        dataValidity = DataValidity.valid.toString)
       tempOutput.insert
     }
 
@@ -510,8 +511,7 @@ object Run extends Logging {
           analysisDate = None, // TODO get from output.xml file
           machinePK = None, // TODO get from output.xml file
           status = status.toString,
-          dataValidity = output.dataValidity,
-          data = output.data)
+          dataValidity = output.dataValidity)
         updatedOutput.insertOrUpdate
       }
 

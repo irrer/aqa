@@ -15,8 +15,7 @@ case class Input(
   userPK: Option[Long], // user that ran the procedure
   machinePK: Option[Long], // procedure was run on this machine.  Machine is optional to support procedures that do not correlate to a single machine.
   patientId: Option[String], // patient ID if applicable.  Often derived from associated DICOM files
-  dataDate: Option[Timestamp], // earliest date when data was acquired.  Often derived from associated DICOM files.
-  data: Option[Array[Byte]] // zip of all files that existed before processing was started, including those that were uploaded and generated
+  dataDate: Option[Timestamp] // earliest date when data was acquired.  Often derived from associated DICOM files.
 ) {
 
   def insert: Input = {
@@ -35,16 +34,18 @@ case class Input(
    * records updated, which should always be one.  If it is zero then it is probably because the object is not
    * in the database.
    */
-  def updateDirectoryAndData(inDir: File) = {
+  def updateDirectory(inDir: File) = {
     val dirName = WebServer.fileToResultsPath(inDir)
-    val outputDirList = Output.listByInputPK(inputPK.get).map(o => o.dir)
-    val byteArray = FileUtil.readFileTreeToZipByteArray(Seq(inDir), Seq[String](), outputDirList)
-
-    Db.run(Input.query.filter(_.inputPK === inputPK.get).map(i => (i.directory, i.data)).update((Some(dirName), Some(byteArray))))
+    Db.run(Input.query.filter(_.inputPK === inputPK.get).map(i => (i.directory)).update((Some(dirName))))
   }
 
-  def makeZipOfData: Array[Byte] = {
-    FileUtil.readFileTreeToZipByteArray(Seq(dir), Seq[String](), Seq[File]())
+  /**
+   * Using the currently defined directory, read
+   */
+  def updateData(inputDir: File): Int = {
+    val outputDirList = Output.listByInputPK(inputPK.get).map(o => o.dir)
+    val data = FileUtil.readFileTreeToZipByteArray(Seq(inputDir), Seq[String](), outputDirList)
+    (new InputData(inputPK.get, inputPK.get, data)).insertOrUpdate
   }
 
 }
@@ -60,7 +61,6 @@ object Input extends Logging {
     def machinePK = column[Option[Long]]("machinePK")
     def patientId = column[Option[String]]("patientId")
     def dataDate = column[Option[Timestamp]]("dataDate")
-    def data = column[Option[Array[Byte]]]("data")
 
     def * = (
       inputPK.?,
@@ -69,8 +69,7 @@ object Input extends Logging {
       userPK,
       machinePK,
       patientId,
-      dataDate,
-      data) <> ((Input.apply _)tupled, Input.unapply _)
+      dataDate) <> ((Input.apply _)tupled, Input.unapply _)
 
     def userFK = foreignKey("userPK", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
     def machineFK = foreignKey("machinePK", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
@@ -107,7 +106,7 @@ object Input extends Logging {
   def main(args: Array[String]): Unit = {
     val valid = Config.validate
     DbSetup.init
-    val input = new Input(None, Some("input_dir"), new Timestamp(System.currentTimeMillis), Some(6), Some(2), None, None, None)
+    val input = new Input(None, Some("input_dir"), new Timestamp(System.currentTimeMillis), Some(6), Some(2), None, None)
 
     input.insert
 

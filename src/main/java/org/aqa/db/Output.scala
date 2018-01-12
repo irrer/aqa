@@ -23,8 +23,7 @@ case class Output(
   analysisDate: Option[Timestamp], // optionally supplied by analysis procedure to indicate prior analysis
   machinePK: Option[Long], // optionally supplied by analysis procedure to indicate treatment machine
   status: String, // termination status
-  dataValidity: String, // whether the data is valid or otherwise
-  data: Option[Array[Byte]]) // The files in zip form created by the process
+  dataValidity: String) // whether the data is valid or otherwise
   {
 
   /**
@@ -46,9 +45,13 @@ case class Output(
   /**
    * Update the status and finish date.
    */
-  def updateStatusAndFinishDateAndData(sts: String, finDate: Date, data: Option[Array[Byte]]): Unit = {
+  def updateStatusAndFinishDate(sts: String, finDate: Date): Unit = {
     val finTimestamp = new Timestamp(finDate.getTime)
-    Db.run(Output.query.filter(_.outputPK === outputPK.get).map(o => (o.status, o.finishDate, o.data)).update((sts, Some(finTimestamp), data)))
+    Db.run(Output.query.filter(_.outputPK === outputPK.get).map(o => (o.status, o.finishDate)).update((sts, Some(finTimestamp))))
+  }
+
+  def updateData(data: Array[Byte]) = {
+    (new OutputData(outputPK, outputPK.get, data)).insertOrUpdate
   }
 
   /**
@@ -87,7 +90,6 @@ object Output extends Logging {
     def machinePK = column[Option[Long]]("machinePK")
     def status = column[String]("status")
     def dataValidity = column[String]("dataValidity")
-    def data = column[Option[Array[Byte]]]("data")
 
     def * = (
       outputPK.?,
@@ -101,8 +103,7 @@ object Output extends Logging {
       analysisDate,
       machinePK,
       status,
-      dataValidity,
-      data) <> ((Output.apply _)tupled, Output.unapply _)
+      dataValidity) <> ((Output.apply _)tupled, Output.unapply _)
 
     def inputFK = foreignKey("inputPK", inputPK, Input.query)(_.inputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
     def procedureFK = foreignKey("procedurePK", procedurePK, Procedure.query)(_.procedurePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
@@ -427,8 +428,7 @@ object Output extends Logging {
         analysisDate = None,
         machinePK = None,
         status = "testing",
-        dataValidity = DataValidity.valid.toString,
-        data = None) // termination status
+        dataValidity = DataValidity.valid.toString) // termination status
       println("output: " + output)
       val result = output.insert
       println("result: " + result)
