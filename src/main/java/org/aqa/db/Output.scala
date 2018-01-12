@@ -50,8 +50,9 @@ case class Output(
     Db.run(Output.query.filter(_.outputPK === outputPK.get).map(o => (o.status, o.finishDate)).update((sts, Some(finTimestamp))))
   }
 
-  def updateData(data: Array[Byte]) = {
-    (new OutputData(outputPK, outputPK.get, data)).insertOrUpdate
+  def updateData(data: Array[Byte]): OutputData = {
+    OutputData.delete(outputPK.get)
+    (new OutputData(outputPK.get, outputPK.get, data)).insert
   }
 
   /**

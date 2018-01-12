@@ -9,11 +9,11 @@ import java.security.InvalidParameterException
 
 /**
  * Store the zipped file contents of an Output.
- * 
+ *
  * The convention for the primary key, which is enforced by the code, is to use the same pk for this
  * table as the corresponding output entry.  This is to help ensure that there is at most one OutputData
  * for each Output.
- *  
+ *
  * Note that this tables does NOT use an auto-incrementing counter for the primary key,
  */
 case class OutputData(
@@ -22,7 +22,13 @@ case class OutputData(
   data: Array[Byte]) // The files in zip form created by the process
   {
 
-  def insertOrUpdate = {
+  def insert: OutputData = {
+    val insertQuery = OutputData.query returning OutputData.query.map(_.outputDataPK) into
+      ((epidCenterCorrection, outputDataPK) => epidCenterCorrection.copy(outputDataPK = outputDataPK))
+    Db.run(insertQuery += this)
+  }
+
+  private def XinsertOrUpdate = {
     if (outputDataPK != outputPK) throw new InvalidParameterException("outputDataPK != outputPK : " + outputDataPK + " != " + outputPK)
     Db.run(OutputData.query.insertOrUpdate(this))
   }

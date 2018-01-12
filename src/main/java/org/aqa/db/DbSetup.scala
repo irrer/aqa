@@ -131,27 +131,52 @@ object DbSetup extends Logging {
     }
   }
 
-  def copyFilesToDatabase = {
-//    def copyOutput = {
-//      val action = Output.query.filter(m => m.data.isEmpty)
-//      val list = Db.run(action.result)
-//      println("copyFilesToDatabase Output list size: " + list.size)
-//
-//      def copyFiles(output: Output) = {
-//        Db.run(Output.query.filter(_.outputPK === output.outputPK.get).map(o => (o.data)).update((Some(output.makeZipOfData))))
-//      }
-//      list.map(output => copyFiles(output))
-//    }
-//
-//    def copyInput = {
-//      val action = Input.query.filter(m => m.data.isEmpty && m.directory.isDefined)
-//      val list = Db.run(action.result)
-//      println("copyFilesToDatabase Input list size: " + list.size)
-//      list.map(input => input.updateDirectoryAndData(input.dir))
-//    }
-//
-//    copyOutput
-//    copyInput
+  def storeFilesInDatabase = {
+
+    def copyOutput = {
+      val si = for {
+        oo <- Output.query.map(o => o)
+        if (!({ for { dpk <- OutputData.query.map(d => d.outputPK).filter(d => d === oo.outputPK) } yield dpk }.exists))
+      } yield (oo)
+
+      val notStored = Db.run(si.result)
+      logger.info("Number of outputs that need data updated: " + notStored.size)
+
+      notStored.map(oo => {
+        try {
+          logger.info("Updating OutputData for " + oo.outputPK.get + " : " + oo.dir)
+          oo.updateData(oo.makeZipOfData)
+        } catch {
+          case t: Throwable => {
+            logger.warn("Could not update data for output " + oo + "\n    : " + t)
+          }
+        }
+      })
+    }
+
+    def copyInput = {
+      val si = for {
+        ii <- Input.query.map(i => i)
+        if (!({ for { dpk <- InputData.query.map(d => d.inputPK).filter(d => d === ii.inputPK) } yield dpk }.exists))
+      } yield (ii)
+
+      val notStored = Db.run(si.result)
+      logger.info("Number of inputs that need data updated: " + notStored.size)
+
+      notStored.map(ii => {
+        try {
+          logger.info("Updating InputData for " + ii.inputPK.get + " : " + ii.dir)
+          ii.updateData(ii.dir)
+        } catch {
+          case t: Throwable => {
+            logger.warn("Could not update data for input " + ii + "\n    : " + t)
+          }
+        }
+      })
+    }
+
+    copyInput
+    copyOutput
   }
 
   def main(args: Array[String]): Unit = {

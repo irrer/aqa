@@ -40,12 +40,13 @@ case class Input(
   }
 
   /**
-   * Using the currently defined directory, read
+   * Update data 
    */
-  def updateData(inputDir: File): Int = {
+  def updateData(inputDir: File): InputData = {
     val outputDirList = Output.listByInputPK(inputPK.get).map(o => o.dir)
     val data = FileUtil.readFileTreeToZipByteArray(Seq(inputDir), Seq[String](), outputDirList)
-    (new InputData(inputPK.get, inputPK.get, data)).insertOrUpdate
+    InputData.delete(inputPK.get)
+    (new InputData(inputPK.get, inputPK.get, data)).insert
   }
 
 }

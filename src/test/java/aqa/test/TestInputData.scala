@@ -22,11 +22,11 @@ class TestInputData extends FlatSpec with Matchers {
 
   "insert" should "add entry" in {
 
-    if (false) {
+    if (true) {
       val pk: Long = 40 // TODO should reference test input
       val inputData = new InputData(pk, pk, Array[Byte](2, 3, 5, 7, 11))
       Trace.trace("inputData: " + inputData)
-      inputData.insertOrUpdate
+      inputData.insert
 
       val inputData2 = InputData.get(pk)
 

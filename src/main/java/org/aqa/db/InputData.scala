@@ -22,7 +22,13 @@ case class InputData(
   data: Array[Byte]) // The files in zip form created by the process
   {
 
-  def insertOrUpdate = {
+  def insert: InputData = {
+    val insertQuery = InputData.query returning InputData.query.map(_.inputDataPK) into
+      ((epidCenterCorrection, inputDataPK) => epidCenterCorrection.copy(inputDataPK = inputDataPK))
+    Db.run(insertQuery += this)
+  }
+
+  private def XinsertOrUpdate = {
     if (inputDataPK != inputPK) throw new InvalidParameterException("inputDataPK != inputPK : " + inputDataPK + " != " + inputPK)
     Db.run(InputData.query.insertOrUpdate(this))
   }
