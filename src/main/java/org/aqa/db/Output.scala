@@ -51,7 +51,7 @@ case class Output(
   }
 
   def updateData(data: Array[Byte]): OutputData = {
-    OutputData.delete(outputPK.get)
+    OutputData.deleteByOutputPK(outputPK.get)
     (new OutputData(outputPK.get, outputPK.get, data)).insert
   }
 
@@ -350,6 +350,20 @@ object Output extends Logging {
     }
 
     grpGrp(all)
+  }
+
+  /**
+   * Get the files from the database and restore them to the file system.  Overwrite any files that are already there.
+   *
+   * It is up to the caller to determine if the files need to be restored.
+   *
+   */
+  def getFilesFromDatabase(outputPK: Long, dir: File) = {
+    // Steps are done on separate lines so that if there is an error/exception it can be precisely
+    // tracked.  It is up to the caller to catch any exceptions and act accordingly.
+    val outputDataOption = OutputData.getByOutput(outputPK)
+    val outputData = outputDataOption.get
+    FileUtil.writeByteArrayZipToFileTree(outputData.data, dir)
   }
 
   def main(args: Array[String]): Unit = {

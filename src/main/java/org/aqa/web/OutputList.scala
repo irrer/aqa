@@ -98,7 +98,7 @@ class OutputList extends GenericList[Output.ExtendedValues2] with WebUtil.SubUrl
 
   private val startTimeCol = new Column[ColT]("Analysis", compareByStartTime _, startTimeUrl _)
 
-  private val inputFileCol = new Column[ColT]("Acquisition", inputTime _, inputFileUrl _)
+  private val inputFileCol = new Column[ColT]("Acquisition", inputTime _)
 
   private val deleteCol = new Column[ColT]("Delete", _ => "Delete", deleteUrl)
 
@@ -117,17 +117,22 @@ class OutputList extends GenericList[Output.ExtendedValues2] with WebUtil.SubUrl
   override val canCreate: Boolean = false
 
   /** Remove the output, the other associated outputs, and the directory. If its input is only referenced by this output, then delete the input too. */
-  private def deleteOutput(outputPK: Long): Unit = {
-    val output = Output.get(outputPK)
-    if (output.isDefined) {
-      Output.delete(output.get.outputPK.get)
-      val list = Output.listByInputPK(output.get.inputPK)
-      if (list.size == 0) {
-        val input = Input.get(output.get.inputPK)
-        Input.delete(input.get.inputPK.get)
-        Utility.deleteFileTree(input.get.dir)
-      } else Utility.deleteFileTree(output.get.dir)
+  private def deleteOutput(outputPK: Long, response: Response): Unit = {
+    try {
+      val output = Output.get(outputPK)
+      if (output.isDefined) {
+        Output.delete(output.get.outputPK.get)
+        val list = Output.listByInputPK(output.get.inputPK)
+        if (list.size == 0) {
+          val input = Input.get(output.get.inputPK)
+          Input.delete(input.get.inputPK.get)
+          Utility.deleteFileTree(input.get.dir)
+        } else Utility.deleteFileTree(output.get.dir)
+      }
+    } catch {
+      case t: Throwable => internalFailure(response, "Unexpected error in OutputList.deleteOutput: " + fmtEx(t))
     }
+    OutputList.redirect(response)
   }
 
   override def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Unit = {
@@ -135,7 +140,7 @@ class OutputList extends GenericList[Output.ExtendedValues2] with WebUtil.SubUrl
       val delete = valueMap.get(OutputList.deleteTag)
 
       0 match {
-        case _ if (delete.isDefined) => deleteOutput(delete.get.toLong)
+        case _ if (delete.isDefined) => deleteOutput(delete.get.toLong, response)
         case _ => ;
       }
     } catch {

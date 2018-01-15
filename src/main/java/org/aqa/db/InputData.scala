@@ -28,10 +28,10 @@ case class InputData(
     Db.run(insertQuery += this)
   }
 
-  private def XinsertOrUpdate = {
-    if (inputDataPK != inputPK) throw new InvalidParameterException("inputDataPK != inputPK : " + inputDataPK + " != " + inputPK)
-    Db.run(InputData.query.insertOrUpdate(this))
-  }
+  //  private def XinsertOrUpdate = {
+  //    if (inputDataPK != inputPK) throw new InvalidParameterException("inputDataPK != inputPK : " + inputDataPK + " != " + inputPK)
+  //    Db.run(InputData.query.insertOrUpdate(this))
+  //  }
 }
 
 object InputData extends Logging {
@@ -43,7 +43,7 @@ object InputData extends Logging {
 
     def * = (inputDataPK, inputPK, data) <> ((InputData.apply _)tupled, InputData.unapply _)
 
-    def inputFK = foreignKey("inputPK", inputPK, Input.query)(_.inputPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
+    def inputFK = foreignKey("inputPK", inputPK, Input.query)(_.inputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[InputDataTable]
@@ -56,8 +56,22 @@ object InputData extends Logging {
     if (list.isEmpty) None else Some(list.head)
   }
 
+  def getByInput(inputPK: Long): Option[InputData] = {
+    val action = for {
+      inputData <- query if inputData.inputPK === inputPK
+    } yield (inputData)
+    val list = Db.run(action.result)
+    if (list.isEmpty) None else Some(list.head)
+  }
+
   def delete(inputDataPK: Long): Int = {
     val q = query.filter(_.inputDataPK === inputDataPK)
+    val action = q.delete
+    Db.run(action)
+  }
+
+  def deleteByInputPK(inputPK: Long): Int = {
+    val q = query.filter(_.inputPK === inputPK)
     val action = q.delete
     Db.run(action)
   }

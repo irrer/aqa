@@ -40,12 +40,12 @@ case class Input(
   }
 
   /**
-   * Update data 
+   * Update data
    */
   def updateData(inputDir: File): InputData = {
     val outputDirList = Output.listByInputPK(inputPK.get).map(o => o.dir)
     val data = FileUtil.readFileTreeToZipByteArray(Seq(inputDir), Seq[String](), outputDirList)
-    InputData.delete(inputPK.get)
+    InputData.deleteByInputPK(inputPK.get)
     (new InputData(inputPK.get, inputPK.get, data)).insert
   }
 
@@ -102,6 +102,20 @@ object Input extends Logging {
     logger.info("deleting input " + inputPK)
     val action = q.delete
     Db.run(action)
+  }
+
+  /**
+   * Get the files from the database and restore them to the file system.  Overwrite any files that are already there.
+   *
+   * It is up to the caller to determine if the files need to be restored.
+   *
+   */
+  def getFilesFromDatabase(inputPK: Long, dir: File) = {
+    // Steps are done on separate lines so that if there is an error/exception it can be precisely
+    // tracked.  It is up to the caller to catch any exceptions and act accordingly.
+    val inputDataOption = InputData.getByInput(inputPK)
+    val inputData = inputDataOption.get
+    FileUtil.writeByteArrayZipToFileTree(inputData.data, dir)
   }
 
   def main(args: Array[String]): Unit = {

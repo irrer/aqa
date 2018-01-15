@@ -28,10 +28,10 @@ case class OutputData(
     Db.run(insertQuery += this)
   }
 
-  private def XinsertOrUpdate = {
-    if (outputDataPK != outputPK) throw new InvalidParameterException("outputDataPK != outputPK : " + outputDataPK + " != " + outputPK)
-    Db.run(OutputData.query.insertOrUpdate(this))
-  }
+  //  private def XinsertOrUpdate = {
+  //    if (outputDataPK != outputPK) throw new InvalidParameterException("outputDataPK != outputPK : " + outputDataPK + " != " + outputPK)
+  //    Db.run(OutputData.query.insertOrUpdate(this))
+  //  }
 }
 
 object OutputData extends Logging {
@@ -43,7 +43,7 @@ object OutputData extends Logging {
 
     def * = (outputDataPK, outputPK, data) <> ((OutputData.apply _)tupled, OutputData.unapply _)
 
-    def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
+    def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[OutputDataTable]
@@ -56,8 +56,22 @@ object OutputData extends Logging {
     if (list.isEmpty) None else Some(list.head)
   }
 
+  def getByOutput(outputPK: Long): Option[OutputData] = {
+    val action = for {
+      outputData <- query if outputData.outputPK === outputPK
+    } yield (outputData)
+    val list = Db.run(action.result)
+    if (list.isEmpty) None else Some(list.head)
+  }
+
   def delete(outputDataPK: Long): Int = {
     val q = query.filter(_.outputDataPK === outputDataPK)
+    val action = q.delete
+    Db.run(action)
+  }
+
+  def deleteByOutputPK(outputPK: Long): Int = {
+    val q = query.filter(_.outputPK === outputPK)
     val action = q.delete
     Db.run(action)
   }

@@ -213,8 +213,14 @@ class ViewOutput extends Restlet with SubUrlView {
       }
 
       val outputFile: Option[File] = {
-        if (output.isDefined) Output.outputFile(output.get.dir)
-        else None
+        if (output.isDefined) {
+          if (!output.get.dir.isDirectory) {
+            val inputDir = output.get.dir.getParentFile
+            Output.getFilesFromDatabase(output.get.outputPK, inputDir)
+            Input.getFilesFromDatabase(output.get.inputPK, inputDir.getParentFile)
+          }
+          Output.outputFile(output.get.dir)
+        } else None
       }
 
       0 match {
