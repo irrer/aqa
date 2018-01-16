@@ -144,10 +144,6 @@ object Output extends Logging {
    */
   def extendedList(procedure: Option[Procedure], machine: Option[Machine], maxSize: Int): Seq[ExtendedValues] = { // TODO long
 
-    case class OutputE(o_outputPK: Option[Long], o_startDate: Timestamp, o_inputPK: Long)
-
-    case class ProcE(name: String, version: String);
-
     val search = for {
       output <- Output.query.map(o => (o.outputPK, o.startDate, o.inputPK, o.procedurePK, o.userPK))
       input <- Input.query.filter(i => i.inputPK === output._3).map(i => (i.dataDate, i.directory, i.machinePK))
@@ -345,15 +341,20 @@ object Output extends Logging {
     FileUtil.writeByteArrayZipToFileTree(outputData.data, dir)
   }
 
-  def getLatestBaseline(machinePK: Long): Option[File] = {
-    //            val q = query.filter(o =>
-    //          (o.machinePK === output.machinePK) &&
-    //            (o.procedurePK === output.procedurePK) &&
-    //            (o.outputPK =!= output.outputPK) &&
-    //            (o.dataDate.isDefined && (o.dataDate === dataDate)))
-    //        sortByAnalysisDate(Db.run(q.result))
+  /**
+   * Given a machine PK, get the input and output containing the latest LOC baseline files.
+   */
+  def getLatestLOCBaselineDir(machinePK: Long, webInterface: String): Option[(Input, Output)] = {
+    val search = for {
+      machine <- Machine.query.filter(m => m.machinePK === machinePK)
+      procedure <- Procedure.query.filter(p => p.webInterface === webInterface)
+      output <- Output.query.filter(o => (o.procedurePK === procedure.procedurePK) && (o.status === ProcedureStatus.done.toString))
+      input <- Input.query.filter(i => i.inputPK === output.inputPK)
+    } yield ((input, output))
 
-    ???
+    val sorted = search.sortBy(_._2.startDate)
+
+    Db.run(sorted.result).lastOption
   }
 
   def main(args: Array[String]): Unit = {

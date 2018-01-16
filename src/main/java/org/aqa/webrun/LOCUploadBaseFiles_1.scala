@@ -25,19 +25,69 @@ import org.aqa.web.WebRunIndex
 import org.aqa.db.Machine.MMI
 import scala.xml.Elem
 import org.aqa.db.Output
+import org.aqa.db.Input
+import org.aqa.procedures.UploadTransAndOpen
+import org.aqa.Config
+import edu.umro.ScalaUtil.Trace
 
-object LOCUploadBaseFiles_1 {
+object LOCUploadBaseFiles_1 extends Logging {
   val parametersFileName = "parameters.xml"
   val LOCUploadBaseFiles_1PKTag = "LOCUploadBaseFiles_1PK"
-  
-    
+
   /**
-   * Given a machine PK, make sure that the baseline files are available, and return true if
-   * they are.  It may be necessary to get the files from the database.
+   * Given a machine PK, make sure that the baseline files are available, getting them from the
+   * database if necessary.  If it it is not possible to get the files, then return false.
    */
   def ensureBaseline(machinePK: Long): Boolean = {
-    val inputDir = Output.getLatestBaseline(machinePK)
-    ???
+
+    try {
+      val machine = Machine.get(machinePK).get
+
+      def valid(dir: File): Boolean = {
+        val ok = dir.isDirectory &&
+          (new File(dir, UploadTransAndOpen.openName)).canRead &&
+          (new File(dir, UploadTransAndOpen.transName)).canRead
+        ok
+      }
+
+      val machConfValid: Boolean = {
+        try {
+          val v = valid(machine.configDir.get)
+          v
+        } catch {
+          case t: Throwable => false
+        }
+      }
+
+      def copyOutput(output: Output) = {
+        def copy(name: String) = {
+          val buf = Utility.readBinFile(new File(output.dir, name))
+          Utility.writeFile(new File(machine.configDir.get, name), buf)
+        }
+
+        copy(UploadTransAndOpen.openName)
+        copy(UploadTransAndOpen.transName)
+        true
+      }
+
+      if (machConfValid) true
+      else {
+        logger.info("LOC machine configuration not available for " + machine.id)
+        Output.getLatestLOCBaselineDir(machinePK, "LOCUploadBaseFiles_1") match {
+          case Some((input, output)) if (valid(output.dir)) => copyOutput(output)
+          case Some((input, output)) => {
+            Input.getFilesFromDatabase(input.inputPK.get, input.dir.getParentFile)
+            Output.getFilesFromDatabase(output.outputPK.get, output.dir.getParentFile)
+            copyOutput(output)
+          }
+          case _ => false
+        }
+      }
+
+    } catch {
+      // if anything goes wrong, then the files are not available
+      case t: Throwable => false
+    }
   }
 
 }

@@ -26,9 +26,9 @@ import org.aqa.db.Output
 
 object UploadTransAndOpen extends Logging {
 
-  private val openName = "OPEN_Baseline.dcm"
+  val openName = "OPEN_Baseline.dcm"
 
-  private val transName = "TRANS_Baseline.dcm"
+  val transName = "TRANS_Baseline.dcm"
 
   private def curDir = new File(System.getProperty("user.dir"))
 
@@ -66,6 +66,9 @@ object UploadTransAndOpen extends Logging {
     println("writing DICOM file " + outFile.getAbsolutePath)
     Util.writeBinaryFile(outFile, binaryData)
     println("wrote DICOM file " + outFile.getAbsolutePath)
+    val localOutFile = new File(outFile.getName)
+    Util.writeBinaryFile(localOutFile, binaryData)
+    println("wrote DICOM file " + localOutFile.getAbsolutePath)
   }
 
   private def copyFiles(open: DicomFile, trans: DicomFile): Unit = {
