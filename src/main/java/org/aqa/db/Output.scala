@@ -128,9 +128,7 @@ object Output extends Logging {
    */
   def list: Seq[Output] = Db.run(query.result) // TODO long
 
-  case class ExtendedValues(val output: Output, val input: Input, val machine: Machine, val procedure: Procedure, val institution: Institution, val user: User);
-
-  case class ExtendedValues2(
+  case class ExtendedValues(
     input_dataDate: Option[Timestamp],
     input_directory: Option[String],
     institution_name: String,
@@ -144,7 +142,7 @@ object Output extends Logging {
   /**
    * Get an extended list of all outputs.
    */
-  def extendedList2(procedure: Option[Procedure], machine: Option[Machine], maxSize: Int): Seq[ExtendedValues2] = { // TODO long
+  def extendedList(procedure: Option[Procedure], machine: Option[Machine], maxSize: Int): Seq[ExtendedValues] = { // TODO long
 
     case class OutputE(o_outputPK: Option[Long], o_startDate: Timestamp, o_inputPK: Long)
 
@@ -161,7 +159,7 @@ object Output extends Logging {
 
     val sorted = search.sortBy(_._1).take(maxSize)
 
-    val result = Db.run(sorted.result).map(a => new ExtendedValues2(a._1, a._2, a._3, a._4, a._5, a._6, a._7, a._8, a._9))
+    val result = Db.run(sorted.result).map(a => new ExtendedValues(a._1, a._2, a._3, a._4, a._5, a._6, a._7, a._8, a._9))
     result
   }
 
@@ -182,25 +180,6 @@ object Output extends Logging {
   //    def jfunRev(j: jType) = {
   //        j._4.name.reverse
   //    }
-
-  /**
-   * Get an extended list of all outputs.
-   */
-  def extendedList(procedure: Option[Procedure], machine: Option[Machine], maxSize: Int): Seq[ExtendedValues] = { // TODO long
-    val search = for {
-      output <- Output.query
-      input <- Input.query if input.inputPK === output.inputPK
-      machine <- Machine.query if machine.machinePK === input.machinePK
-      procedure <- Procedure.query if procedure.procedurePK === output.procedurePK
-      institution <- Institution.query if institution.institutionPK === machine.institutionPK
-      user <- User.query if user.userPK === output.userPK
-    } yield (output, input, machine, procedure, institution, user)
-    val sorted = search.sortBy(_._2.dataDate).take(maxSize)
-    //        val j2 = search.sortBy(jfun _) // TODO make customizable sort
-    //val sorted = search.sortBy(_._2.dataDate.desc.reverse).take(maxSize)
-    val result = Db.run(sorted.result)
-    result.map(x => new ExtendedValues(x._1, x._2, x._3, x._4, x._5, x._6))
-  }
 
   /**
    * Get a list of all outputs with the given status and their associated procedures.
@@ -366,6 +345,17 @@ object Output extends Logging {
     FileUtil.writeByteArrayZipToFileTree(outputData.data, dir)
   }
 
+  def getLatestBaseline(machinePK: Long): Option[File] = {
+    //            val q = query.filter(o =>
+    //          (o.machinePK === output.machinePK) &&
+    //            (o.procedurePK === output.procedurePK) &&
+    //            (o.outputPK =!= output.outputPK) &&
+    //            (o.dataDate.isDefined && (o.dataDate === dataDate)))
+    //        sortByAnalysisDate(Db.run(q.result))
+
+    ???
+  }
+
   def main(args: Array[String]): Unit = {
     println("Starting Output.main")
     val valid = Config.validate
@@ -396,38 +386,6 @@ object Output extends Logging {
       println("list size: " + list.size)
       list.map(o => println(o))
       System.exit(0)
-    }
-
-    if (false) {
-      println("starting composed query")
-      val maxSize = 10
-      val machPK = 2.toLong // 3 = EX2      2 = TB5
-      val procPK = 3.toLong // 1 = Winston  3 = Max Leaf Gap
-      val procPKOpt: Option[Long] = Some(3.toLong) // 1 = Winston  3 = Max Leaf Gap
-
-      val mmq = for {
-        machine <- Machine.query if machine.machinePK === machPK
-      } yield (machine)
-
-      val search = for {
-        output <- Output.query
-        input <- Input.query if input.inputPK === output.inputPK
-        machine <- Machine.query if machine.machinePK === input.machinePK
-        procedure <- Procedure.query if procedure.procedurePK === output.procedurePK
-        institution <- Institution.query if institution.institutionPK === machine.institutionPK
-        user <- User.query if user.userPK === output.userPK
-      } yield (output, input, machine, procedure, institution, user)
-
-      val filtered = search
-        .filter(x => (x._3.machinePK === machPK) || (machPK < 0))
-        .filter(x => (x._4.procedurePK === procPK) || (procPK < 0))
-
-      val sorted = filtered.sortBy(_._2.dataDate).take(maxSize)
-
-      val result = Db.run(sorted.result)
-      val list = result.map(x => new ExtendedValues(x._1, x._2, x._3, x._4, x._5, x._6))
-
-      println("done.  Number of rows: " + list.size)
     }
 
     if (false) {

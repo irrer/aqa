@@ -24,10 +24,22 @@ import com.pixelmed.dicom.AttributeList
 import org.aqa.web.WebRunIndex
 import org.aqa.db.Machine.MMI
 import scala.xml.Elem
+import org.aqa.db.Output
 
 object LOCUploadBaseFiles_1 {
   val parametersFileName = "parameters.xml"
   val LOCUploadBaseFiles_1PKTag = "LOCUploadBaseFiles_1PK"
+  
+    
+  /**
+   * Given a machine PK, make sure that the baseline files are available, and return true if
+   * they are.  It may be necessary to get the files from the database.
+   */
+  def ensureBaseline(machinePK: Long): Boolean = {
+    val inputDir = Output.getLatestBaseline(machinePK)
+    ???
+  }
+
 }
 
 /**

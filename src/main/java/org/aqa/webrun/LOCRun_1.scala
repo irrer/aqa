@@ -130,6 +130,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
       case _ if (alList.isEmpty) => formErr("No DICOM files have been uploaded.")
       case _ if (machList.size > 1) => formErr("Files from more than one machine were found.  Click Cancel to start over.")
       case _ if (machList.isEmpty) => formErr("These files do not have a serial number of a known machine.  Click Cancel and use the baseline LOC upload procedure.")
+      case _ if (!LOCUploadBaseFiles_1.ensureBaseline(mach.get.machinePK.get)) => formErr("There are no baseline files for machine " + mach.get.id + ".  Click Cancel and use the baseline LOC upload procedure.")
       case Some(dir) => Right(new RunRequirements(mach.get, dir, alList))
     }
   }

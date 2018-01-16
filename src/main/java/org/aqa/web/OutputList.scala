@@ -24,7 +24,7 @@ object OutputList {
   def redirect(response: Response) = response.redirectSeeOther(path)
 }
 
-class OutputList extends GenericList[Output.ExtendedValues2] with WebUtil.SubUrlView {
+class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlView {
 
   override def listName = "Output"
 
@@ -60,14 +60,14 @@ class OutputList extends GenericList[Output.ExtendedValues2] with WebUtil.SubUrl
 
   private val startTimeFormat = new SimpleDateFormat("yyyy MM dd HH:mm:ss")
 
-  private def compareByInputTime(a: Output.ExtendedValues2, b: Output.ExtendedValues2): Int = {
+  private def compareByInputTime(a: Output.ExtendedValues, b: Output.ExtendedValues): Int = {
     if (a.input_dataDate.isDefined && b.input_dataDate.isDefined) a.input_dataDate.get.compareTo(b.input_dataDate.get)
     else 0
   }
 
-  private def compareByStartTime(a: Output.ExtendedValues2, b: Output.ExtendedValues2): Boolean = a.output_startDate.compareTo(b.output_startDate) > 0
+  private def compareByStartTime(a: Output.ExtendedValues, b: Output.ExtendedValues): Boolean = a.output_startDate.compareTo(b.output_startDate) > 0
 
-  private def inputTime(extendedValues: Output.ExtendedValues2): String = {
+  private def inputTime(extendedValues: Output.ExtendedValues): String = {
     val date = extendedValues.input_dataDate
     if (date.isDefined) startTimeFormat.format(date.get) else "unknown date"
   }
@@ -78,19 +78,19 @@ class OutputList extends GenericList[Output.ExtendedValues2] with WebUtil.SubUrl
     url
   }
 
-  private def startTimeUrl(extendedValues: Output.ExtendedValues2): Elem = {
+  private def startTimeUrl(extendedValues: Output.ExtendedValues): Elem = {
     <a title="Data analysis time" href={ getUrl(extendedValues.output_outputPK, false) }> { startTimeFormat.format(extendedValues.output_startDate) }</a>
   }
 
-  private def inputFileUrl(extendedValues: Output.ExtendedValues2): Elem = {
+  private def inputFileUrl(extendedValues: Output.ExtendedValues): Elem = {
     <a title="Data aquisition time" href={ WebServer.urlOfResultsPath(extendedValues.input_directory.get) }>{ inputTime(extendedValues) }</a>
   }
 
-  private def deleteUrl(extendedValues: Output.ExtendedValues2): Elem = {
+  private def deleteUrl(extendedValues: Output.ExtendedValues): Elem = {
     <a title="Click to delete.  Can NOT be undone" href={ OutputList.path + "?" + OutputList.deleteTag + "=" + extendedValues.output_outputPK }>Delete</a>
   }
 
-  type ColT = Output.ExtendedValues2
+  type ColT = Output.ExtendedValues
 
   private val institutionCol = new Column[ColT]("Institution", _.institution_name)
 
@@ -110,9 +110,9 @@ class OutputList extends GenericList[Output.ExtendedValues2] with WebUtil.SubUrl
 
   val entriesPerPage = 1000
 
-  override def getData(valueMap: ValueMapT) = Output.extendedList2(None, None, entriesPerPage)
+  override def getData(valueMap: ValueMapT) = Output.extendedList(None, None, entriesPerPage)
 
-  override def getPK(extendedValues: Output.ExtendedValues2): Long = extendedValues.output_outputPK
+  override def getPK(extendedValues: Output.ExtendedValues): Long = extendedValues.output_outputPK
 
   override val canCreate: Boolean = false
 
