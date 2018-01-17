@@ -13,6 +13,7 @@ import edu.umro.util.OpSys
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.FileUtil
 import java.io.File
+import edu.umro.util.Utility
 
 /** Establish connection to the database and ensure that tables are created. */
 
@@ -133,6 +134,65 @@ object DbSetup extends Logging {
 
   def storeFilesInDatabase = {
 
+    def reverseCopyLOCBaseline = {
+
+      // PK of LOCUploadBaseFiles_1 procedure
+      val baselineProcPK: Long = Db.run(Procedure.query.result).filter(p => p.webInterface.toLowerCase.contains("base")).head.procedurePK.get
+
+      val outList = {
+        val outQuery = for {
+          oo <- Output.query.filter(o => o.procedurePK === baselineProcPK)
+        } yield (oo)
+        Db.run(outQuery.result)
+      }
+
+      case class ConfigFile(file: File) {
+        val hash = Util.secureHash(Utility.readBinFile(file)).toList
+      }
+
+      val knownMachConfig: Map[List[Byte], ConfigFile] = {
+        val empty = Seq[ConfigFile]()
+        def doDir(dir: File): Seq[ConfigFile] = {
+          def doFile(file: File): Seq[ConfigFile] = {
+            try {
+              Seq(new ConfigFile(file))
+            } catch {
+              case t: Throwable => empty
+            }
+          }
+          if (dir.isDirectory()) {
+            dir.listFiles.filter(f => f.getName.endsWith("_Baseline.dcm")).map(f => doFile(f)).flatten.toSeq
+          } else empty
+        }
+        val allConfig = Config.machineConfigurationDirFile.listFiles.map(d => doDir(d)).flatten.toSeq
+        println(allConfig.mkString("\n"))
+        allConfig.map(cf => (cf.hash, cf)).toMap
+      }
+
+      def doOut(output: Output) = {
+        try {
+          val outDir = output.dir
+          val inDir = outDir.getParentFile
+          val inList = outDir.getParentFile.listFiles.filter(f => f.isFile && f.canRead).map(f => new ConfigFile(f)).toSeq
+          val baselineList = inList.filter(cf => knownMachConfig.contains(cf.hash))
+          baselineList.map(b => {
+            val c = knownMachConfig(b.hash)
+            val data = Utility.readBinFile(c.file)
+            val outFile = new File(outDir, c.file.getName)
+            if (!outFile.exists) {
+              logger.info("Copying baseline file " + c.file.getAbsolutePath + "  -->  " + outFile.getAbsolutePath)
+              Utility.writeFile(outFile, data)
+            }
+          })
+        } catch {
+          case t: Throwable => logger.error("failure to copy baseline file: " + t)
+        }
+      }
+
+      outList.map(o => doOut(o))
+
+    }
+
     def copyOutput = {
       val si = for {
         oo <- Output.query.map(o => o)
@@ -175,6 +235,7 @@ object DbSetup extends Logging {
       })
     }
 
+    reverseCopyLOCBaseline
     copyInput
     copyOutput
   }

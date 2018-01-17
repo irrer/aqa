@@ -37,7 +37,7 @@ case class InputData(
 object InputData extends Logging {
   class InputDataTable(tag: Tag) extends Table[InputData](tag, "inputData") {
 
-    def inputDataPK = column[Long]("inputDataPK")
+    def inputDataPK = column[Long]("inputDataPK", O.PrimaryKey)
     def inputPK = column[Long]("inputPK")
     def data = column[Array[Byte]]("data")
 
