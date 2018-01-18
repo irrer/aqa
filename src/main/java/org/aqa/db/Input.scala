@@ -97,6 +97,15 @@ object Input extends Logging {
     else throw new RuntimeException("Input directory should be placed in results directory " + resultsDirName + " but is " + inputDirName)
   }
 
+  /**
+   * Find the input given the name of its directory.  This parameter must exactly match the <code>input.directory</code> field.
+   */
+  def getByDirectory(dirName: String) = {
+    val action = for { input <- Input.query if input.directory === dirName } yield (input)
+    val list = Db.run(action.result)
+    list.headOption
+  }
+
   def delete(inputPK: Long): Int = {
     val q = query.filter(_.inputPK === inputPK)
     logger.info("deleting input " + inputPK)

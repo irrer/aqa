@@ -31,6 +31,8 @@ import org.aqa.db.UserRole
 import org.restlet.routing.TemplateRoute
 import edu.umro.ScalaUtil.Trace._
 import org.aqa.db.CachedUser
+import org.aqa.db.Output
+import org.aqa.db.Input
 
 object WebServer {
   val challengeScheme = ChallengeScheme.HTTP_BASIC
@@ -147,9 +149,56 @@ class WebServer extends Application with Logging {
 
             attach(router, "/" + WebServer.staticDirName, expiresOneHourLaterFilter)
         }
-        */
+  */
 
-  private lazy val resultsDirectoryRestlet = makeDirectory(Config.resultsDirFile)
+  /**
+   * Allow access to the results directory, which contains the input and output files used by
+   * procedures.  If a file is requested that does not exist, try to get it from the database.
+   */
+  private class ResultsDir extends Filter {
+
+    /**
+     * Attempt to restore the requested file from the database.  See if its directory matches
+     * anything in input or output, and if it does, restore it.
+     */
+    private def restoreFile(file: File) = {
+      try {
+        def fileNameSuffix(f: File) = f.getAbsolutePath.substring(Config.resultsDirFile.getAbsolutePath.size)
+        val outputDir = file.getParentFile
+        val inputDir = outputDir.getParentFile
+
+        Output.getByDirectory(fileNameSuffix(outputDir)) match {
+          case Some(output) => {
+            Output.getFilesFromDatabase(output.outputPK.get, outputDir.getParentFile)
+            logger.info("Restored ouput directory from database: " + outputDir.getAbsolutePath)
+          }
+          case _ =>
+        }
+
+        Input.getByDirectory(fileNameSuffix(inputDir)) match {
+          case Some(input) => {
+            Input.getFilesFromDatabase(input.inputPK.get, inputDir.getParentFile)
+            logger.info("Restored input directory from database: " + inputDir.getAbsolutePath)
+          }
+          case _ =>
+        }
+      } catch {
+        case t: Throwable => {
+          logger.warn("Unable to restore input/output files from database for file " + file.getAbsolutePath + " : " + t)
+        }
+      }
+    }
+
+    override def beforeHandle(request: Request, response: Response): Int = {
+      val fileName = Config.DataDir.getAbsolutePath + request.getOriginalRef.getPath.replace("/", File.separator)
+      val file = new File(fileName)
+      if (!file.canRead) restoreFile(file)
+      Filter.CONTINUE
+    }
+    this.setNext(makeDirectory(Config.resultsDirFile))
+  }
+
+  private lazy val resultsDirectoryRestlet = new ResultsDir
 
   private lazy val tmpDirectoryRestlet = makeDirectory(Config.tmpDirFile)
 

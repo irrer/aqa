@@ -116,11 +116,18 @@ object Output extends Logging {
   private val query2 = TableQuery[OutputTable]
 
   def get(outputPK: Long): Option[Output] = {
-    val action = for {
-      output <- Output.query if output.outputPK === outputPK
-    } yield (output)
+    val action = for { output <- Output.query if output.outputPK === outputPK } yield (output)
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
+  }
+
+  /**
+   * Find the output given the name of its directory.  This parameter must exactly match the <code>output.directory</code> field.
+   */
+  def getByDirectory(dirName: String) = {
+    val action = for { output <- Output.query if output.directory === dirName } yield (output)
+    val list = Db.run(action.result)
+    list.headOption
   }
 
   /**
