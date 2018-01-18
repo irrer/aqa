@@ -50,9 +50,9 @@ case class Output(
     Db.run(Output.query.filter(_.outputPK === outputPK.get).map(o => (o.status, o.finishDate)).update((sts, Some(finTimestamp))))
   }
 
-  def updateData(data: Array[Byte]): OutputData = {
-    OutputData.deleteByOutputPK(outputPK.get)
-    (new OutputData(outputPK.get, outputPK.get, data)).insert
+  def updateData(zippedContent: Array[Byte]): OutputFiles = {
+    OutputFiles.deleteByOutputPK(outputPK.get)
+    (new OutputFiles(outputPK.get, outputPK.get, zippedContent)).insert
   }
 
   /**
@@ -71,7 +71,7 @@ case class Output(
     outputPK.isDefined && other.outputPK.isDefined && (outputPK.get == other.outputPK.get)
   }
 
-  def makeZipOfData: Array[Byte] = {
+  def makeZipOfFiles: Array[Byte] = {
     FileUtil.readFileTreeToZipByteArray(Seq(dir), Seq[String](), Seq[File]())
   }
 }
@@ -336,9 +336,9 @@ object Output extends Logging {
   def getFilesFromDatabase(outputPK: Long, dir: File) = {
     // Steps are done on separate lines so that if there is an error/exception it can be precisely
     // tracked.  It is up to the caller to catch any exceptions and act accordingly.
-    val outputDataOption = OutputData.getByOutput(outputPK)
-    val outputData = outputDataOption.get
-    FileUtil.writeByteArrayZipToFileTree(outputData.data, dir)
+    val outputFilesOption = OutputFiles.getByOutput(outputPK)
+    val outputFiles = outputFilesOption.get
+    FileUtil.writeByteArrayZipToFileTree(outputFiles.zippedContent, dir)
   }
 
   /**

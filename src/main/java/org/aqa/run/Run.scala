@@ -161,10 +161,10 @@ object Run extends Logging {
               val fileStatus = ProcedureStatus.dirToProcedureStatus(activeProcess.output.dir)
               val status = if (fileStatus.isDefined) fileStatus.get else ProcedureStatus.crash
               // build a zip of the contents of the output
-              val data = activeProcess.output.makeZipOfData
+              val zippedContent = activeProcess.output.makeZipOfFiles
               // update DB Output
               activeProcess.output.updateStatusAndFinishDate(status.toString, now)
-              activeProcess.output.updateData(data)
+              activeProcess.output.updateData(zippedContent)
               ActiveProcess.remove(activeProcess.output.outputPK.get)
             } catch {
               case t: Throwable =>
@@ -450,7 +450,7 @@ object Run extends Logging {
       throw new RuntimeException("Unable to rename temporary directory " + sessionDir.getAbsolutePath + " to input directory " + inputDir.getAbsolutePath)
 
     input.updateDirectory(inputDir)
-    input.updateData(inputDir)
+    input.putFilesInDatabase(inputDir)
 
     val startDate = new Date(System.currentTimeMillis)
 

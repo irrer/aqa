@@ -30,7 +30,7 @@ case class Input(
   def dir: File = WebServer.fileOfResultsPath(directory.get)
 
   /**
-   * Update the directory and data from that directory, excluding child output directories.  Returns number of
+   * Update the directory and content from that directory, excluding child output directories.  Returns number of
    * records updated, which should always be one.  If it is zero then it is probably because the object is not
    * in the database.
    */
@@ -40,13 +40,13 @@ case class Input(
   }
 
   /**
-   * Update data
+   * Update content
    */
-  def updateData(inputDir: File): InputData = {
+  def putFilesInDatabase(inputDir: File): InputFiles = {
     val outputDirList = Output.listByInputPK(inputPK.get).map(o => o.dir)
-    val data = FileUtil.readFileTreeToZipByteArray(Seq(inputDir), Seq[String](), outputDirList)
-    InputData.deleteByInputPK(inputPK.get)
-    (new InputData(inputPK.get, inputPK.get, data)).insert
+    val zippedContent = FileUtil.readFileTreeToZipByteArray(Seq(inputDir), Seq[String](), outputDirList)
+    InputFiles.deleteByInputPK(inputPK.get)
+    (new InputFiles(inputPK.get, inputPK.get, zippedContent)).insert
   }
 
 }
@@ -113,9 +113,9 @@ object Input extends Logging {
   def getFilesFromDatabase(inputPK: Long, dir: File) = {
     // Steps are done on separate lines so that if there is an error/exception it can be precisely
     // tracked.  It is up to the caller to catch any exceptions and act accordingly.
-    val inputDataOption = InputData.getByInput(inputPK)
-    val inputData = inputDataOption.get
-    FileUtil.writeByteArrayZipToFileTree(inputData.data, dir)
+    val inputFilesOption = InputFiles.getByInput(inputPK)
+    val inputFiles = inputFilesOption.get
+    FileUtil.writeByteArrayZipToFileTree(inputFiles.zippedContent, dir)
   }
 
   def main(args: Array[String]): Unit = {

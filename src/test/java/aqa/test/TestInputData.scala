@@ -8,15 +8,15 @@ import java.io.File
 import edu.umro.util.Utility
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.FileUtil
-import org.aqa.db.InputData
+import org.aqa.db.InputFiles
 import org.aqa.db.DbSetup
 
 /**
- * Test InputData.
+ * Test InputFiles.
  *
  */
 
-class TestInputData extends FlatSpec with Matchers {
+class TestInputFiles extends FlatSpec with Matchers {
 
   DbSetup.init
 
@@ -24,22 +24,22 @@ class TestInputData extends FlatSpec with Matchers {
 
     if (true) {
       val pk: Long = 40 // TODO should reference test input
-      val inputData = new InputData(pk, pk, Array[Byte](2, 3, 5, 7, 11))
-      Trace.trace("inputData: " + inputData)
-      inputData.insert
+      val inputFiles = new InputFiles(pk, pk, Array[Byte](2, 3, 5, 7, 11))
+      Trace.trace("inputFiles: " + inputFiles)
+      inputFiles.insert
 
-      val inputData2 = InputData.get(pk)
+      val inputFiles2 = InputFiles.get(pk)
 
-      (inputData2.isDefined) should be(true)
+      (inputFiles2.isDefined) should be(true)
 
-      inputData2.get.inputDataPK should be(pk)
-      inputData2.get.inputPK should be(pk)
+      inputFiles2.get.inputFilesPK should be(pk)
+      inputFiles2.get.inputPK should be(pk)
 
-      (inputData.data.toList == inputData2.get.data.toList) should be(true)
+      (inputFiles.zippedContent.toList == inputFiles2.get.zippedContent.toList) should be(true)
 
-      InputData.delete(pk)
+      InputFiles.delete(pk)
 
-      (InputData.get(pk).isEmpty) should be(true)
+      (InputFiles.get(pk).isEmpty) should be(true)
     }
     true should be(true)
   }

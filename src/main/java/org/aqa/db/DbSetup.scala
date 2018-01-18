@@ -61,10 +61,10 @@ object DbSetup extends Logging {
     Machine.query,
     MachineBeamEnergy.query,
     Input.query,
-    InputData.query,
+    InputFiles.query,
     MaintenanceRecord.query,
     Output.query,
-    OutputData.query,
+    OutputFiles.query,
     CentralAxis.query,
     LeafOffsetCorrection.query,
     EPIDCenterCorrection.query,
@@ -196,7 +196,7 @@ object DbSetup extends Logging {
     def copyOutput = {
       val si = for {
         oo <- Output.query.map(o => o)
-        if (!({ for { dpk <- OutputData.query.map(d => d.outputPK).filter(d => d === oo.outputPK) } yield dpk }.exists))
+        if (!({ for { dpk <- OutputFiles.query.map(d => d.outputPK).filter(d => d === oo.outputPK) } yield dpk }.exists))
       } yield (oo)
 
       val notStored = Db.run(si.result)
@@ -204,8 +204,8 @@ object DbSetup extends Logging {
 
       notStored.map(oo => {
         try {
-          logger.info("Updating OutputData for " + oo.outputPK.get + " : " + oo.dir)
-          oo.updateData(oo.makeZipOfData)
+          logger.info("Updating OutputFiles for " + oo.outputPK.get + " : " + oo.dir)
+          oo.updateData(oo.makeZipOfFiles)
         } catch {
           case t: Throwable => {
             logger.warn("Could not update data for output " + oo + "\n    : " + t)
@@ -217,7 +217,7 @@ object DbSetup extends Logging {
     def copyInput = {
       val si = for {
         ii <- Input.query.map(i => i)
-        if (!({ for { dpk <- InputData.query.map(d => d.inputPK).filter(d => d === ii.inputPK) } yield dpk }.exists))
+        if (!({ for { dpk <- InputFiles.query.map(d => d.inputPK).filter(d => d === ii.inputPK) } yield dpk }.exists))
       } yield (ii)
 
       val notStored = Db.run(si.result)
@@ -225,8 +225,8 @@ object DbSetup extends Logging {
 
       notStored.map(ii => {
         try {
-          logger.info("Updating InputData for " + ii.inputPK.get + " : " + ii.dir)
-          ii.updateData(ii.dir)
+          logger.info("Updating InputFiles for " + ii.inputPK.get + " : " + ii.dir)
+          ii.putFilesInDatabase(ii.dir)
         } catch {
           case t: Throwable => {
             logger.warn("Could not update data for input " + ii + "\n    : " + t)
