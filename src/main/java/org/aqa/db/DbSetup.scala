@@ -165,7 +165,6 @@ object DbSetup extends Logging {
           } else empty
         }
         val allConfig = Config.machineConfigurationDirFile.listFiles.map(d => doDir(d)).flatten.toSeq
-        println(allConfig.mkString("\n"))
         allConfig.map(cf => (cf.hash, cf)).toMap
       }
 
@@ -175,6 +174,7 @@ object DbSetup extends Logging {
           val inDir = outDir.getParentFile
           val inList = outDir.getParentFile.listFiles.filter(f => f.isFile && f.canRead).map(f => new ConfigFile(f)).toSeq
           val baselineList = inList.filter(cf => knownMachConfig.contains(cf.hash))
+          logger.info("Number of outputs that have files that need to be put in the database as a zip: " + baselineList.size)
           baselineList.map(b => {
             val c = knownMachConfig(b.hash)
             val data = Utility.readBinFile(c.file)
@@ -221,7 +221,7 @@ object DbSetup extends Logging {
       } yield (ii)
 
       val notStored = Db.run(si.result)
-      logger.info("Number of inputs that need data updated: " + notStored.size)
+      logger.info("Number of inputs that have files that need to be put in the database as a zip: " + notStored.size)
 
       notStored.map(ii => {
         try {
