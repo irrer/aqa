@@ -22,8 +22,9 @@ class TestInputFiles extends FlatSpec with Matchers {
 
   "insert" should "add entry" in {
 
-    if (true) {
-      val pk: Long = 40 // TODO should reference test input
+    val pk: Long = 1000 * 1000 * 1000 // TODO should reference test input
+
+    if (false) {
       val inputFiles = new InputFiles(pk, pk, Array[Byte](2, 3, 5, 7, 11))
       Trace.trace("inputFiles: " + inputFiles)
       inputFiles.insert
@@ -38,10 +39,9 @@ class TestInputFiles extends FlatSpec with Matchers {
       (inputFiles.zippedContent.toList == inputFiles2.get.zippedContent.toList) should be(true)
 
       InputFiles.delete(pk)
-
-      (InputFiles.get(pk).isEmpty) should be(true)
     }
-    true should be(true)
+
+    (InputFiles.get(pk).isEmpty) should be(true)
   }
 
 }

@@ -132,9 +132,20 @@ object DbSetup extends Logging {
     }
   }
 
+  /**
+   * If there are files that should be stored in the database, but are not, then put them in the database.  This includes
+   * input and output files.  Also, put any missing LOC baseline files in their respective output directories.
+   *
+   * This function was written to support the migration towards storing all input and output files in the database.  It may
+   * become obsolete in the future.
+   */
   def storeFilesInDatabase = {
 
-    def reverseCopyLOCBaseline = {
+    /**
+     * At one point the LOC baseline procedure did not rename and copy the files into the output directory.  This
+     * corrects that by copying them from the machine configuration directory to the proper output directory.
+     */
+    def retroactivelyFixLOCBaseline = {
 
       // PK of LOCUploadBaseFiles_1 procedure
       val baselineProcPK: Long = Db.run(Procedure.query.result).filter(p => p.webInterface.toLowerCase.contains("base")).head.procedurePK.get
@@ -235,7 +246,7 @@ object DbSetup extends Logging {
       })
     }
 
-    reverseCopyLOCBaseline
+    retroactivelyFixLOCBaseline
     copyInput
     copyOutput
   }
