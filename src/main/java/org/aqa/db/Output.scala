@@ -360,6 +360,8 @@ object Output extends Logging {
     } yield ((input, output))
 
     val sorted = search.sortBy(_._2.startDate)
+    
+    val all = Db.run(sorted.result)
 
     Db.run(sorted.result).lastOption
   }

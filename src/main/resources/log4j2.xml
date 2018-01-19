@@ -10,7 +10,10 @@
     </Appenders>
 
     <Loggers>
-        <Root level="all">
+        <!-- Only our code shows ALL log messages, the others show INFO. -->
+        <Logger name="org.aqa" level="ALL"/>
+        <Logger name="org.umro" level="ALL"/>
+        <Root level="INFO">
             <AppenderRef ref="Console" />
         </Root>
     </Loggers>
