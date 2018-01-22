@@ -59,10 +59,15 @@ object LOCUploadBaseFiles_1 extends Logging {
         }
       }
 
+      /**
+       * Copy the LOC baseline files from the output directory to the machine configuration directory.
+       */
       def copyOutput(output: Output) = {
+        val machConfigDir = machine.configDir.get
+        machConfigDir.mkdirs
         def copy(name: String) = {
           val buf = Utility.readBinFile(new File(output.dir, name))
-          Utility.writeFile(new File(machine.configDir.get, name), buf)
+          Utility.writeFile(new File(machConfigDir, name), buf)
         }
 
         copy(UploadTransAndOpen.openName)
@@ -74,7 +79,11 @@ object LOCUploadBaseFiles_1 extends Logging {
       else {
         logger.info("LOC machine configuration not available for " + machine.id)
         Output.getLatestLOCBaselineDir(machinePK, "LOCUploadBaseFiles_1") match {
+          // The baseline files exist in the output directory.  Copy them to the machine configuration directory
           case Some((input, output)) if (valid(output.dir)) => copyOutput(output)
+
+          // The base files exist only in the database.  Re-instate the input and output directories from the
+          // database and then copy them to machine configuration directory
           case Some((input, output)) => {
             Input.getFilesFromDatabase(input.inputPK.get, input.dir.getParentFile)
             Output.getFilesFromDatabase(output.outputPK.get, output.dir.getParentFile)

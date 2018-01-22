@@ -32,6 +32,9 @@ CMakeFiles/
 .cache-tests
 hs_err_pid*.log
 
+# vim stuff
+.swp
+
 # xterm stuff
 xterm.exe.stackdump
 

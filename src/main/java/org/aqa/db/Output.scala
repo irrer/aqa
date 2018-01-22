@@ -356,12 +356,10 @@ object Output extends Logging {
       machine <- Machine.query.filter(m => m.machinePK === machinePK)
       procedure <- Procedure.query.filter(p => p.webInterface === webInterface)
       output <- Output.query.filter(o => (o.procedurePK === procedure.procedurePK) && (o.status === ProcedureStatus.done.toString))
-      input <- Input.query.filter(i => i.inputPK === output.inputPK)
+      input <- Input.query.filter(i => (i.inputPK === output.inputPK) && (i.machinePK === machinePK))
     } yield ((input, output))
 
     val sorted = search.sortBy(_._2.startDate)
-    
-    val all = Db.run(sorted.result)
 
     Db.run(sorted.result).lastOption
   }
