@@ -1,0 +1,12 @@
+
+export PATH=$PATH:/cygdrive/d/pf/graphviz/graphviz-2.38/release/bin/dot
+
+export outFile=/cygdrive/d/pf/eclipse/workspaceOxygen/aqa/target/graph.png
+rm $outFile
+
+terraform graph | dot -Tpng > $outFile
+
+echo Graph created in $outFile
+
+explorer $( cygpath -w $outFile) &
+
