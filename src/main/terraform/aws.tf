@@ -3,6 +3,9 @@ provider "aws" {
   region = "us-west-2"
 }
 
+# --------------------------------------------------------
+
+# production infrastructure
 
 # terraform import aws_instance.AQA i-0922f98f35beab8e3
 resource "aws_instance" "AQA" {
@@ -14,19 +17,10 @@ resource "aws_instance" "AQA" {
 }
 
 
-# terraform import aws_instance.AQATest i-0f401d3d7c82ee45a
-resource "aws_instance" "AQATest" {
-  instance_type = "t2.micro"
-  ami           = "ami-cbce62b3"
-  tags          {
-    Name = "AQATest"
-  }
+#terraform import aws_eip.aqa_ip eipalloc-de9697b9
+resource "aws_eip" "aqa_ip" {
 }
 
-
-
-resource "aws_ami" "aqa_backup" {
-}
 
 
 
@@ -55,13 +49,29 @@ resource "aws_db_instance" "aqa_db" {
   }
 }
 
+# --------------------------------------------------------
+
+# test infrastructure
+
+
+# terraform import aws_instance.AQATest i-0f401d3d7c82ee45a
+resource "aws_instance" "AQATest" {
+  instance_type = "t2.micro"
+  ami           = "ami-cbce62b3"
+  tags          {
+    Name = "AQATest"
+  }
+}
+
+
 # terraform import aws_db_instance.aqa_db_test aqatest
 resource "aws_db_instance" "aqa_db_test" {
   instance_class = "db.t2.micro"
   publicly_accessible = "true"
   skip_final_snapshot = "true"
+  engine_version      = "9.6.6"
   tags          {
-   workload-type  = "other"
+    workload-type  = "other"
   }
 }
 
