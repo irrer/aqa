@@ -51,6 +51,23 @@ resource "aws_db_instance" "aqa_db" {
 
 # --------------------------------------------------------
 
+#resource "aws_ebs_snapshot" "aqa_0_0_5" {
+#  volume_id = "vol-0e5cb4cc541b09f6a"
+#}
+
+#resource "aws_ami_copy" "AQA2" {
+#  name              = "AQA2"
+#  description       = "A copy of ami-1562d075 AQA"
+#  source_ami_id     = "ami-1562d075"
+#  source_ami_region = "us-west-2"
+#
+#  tags {
+#    Name = "AQA2"
+#  }
+#}
+
+# --------------------------------------------------------
+
 # test infrastructure
 
 
