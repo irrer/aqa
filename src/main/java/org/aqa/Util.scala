@@ -21,6 +21,7 @@ import java.math.RoundingMode
 import java.util.Properties
 import edu.umro.util.Utility
 import org.apache.commons.io.IOUtils
+import com.pixelmed.dicom.SequenceAttribute
 
 object Util extends Logging {
 
@@ -235,17 +236,39 @@ object Util extends Logging {
 
   val buildProperties: Properties = {
     val prop = new Properties
+    val fileNameList = Seq(
+      """wrapper.conf""",
+      """yajsw-stable-11.03\conf\wrapper.conf""",
+      """src\main\resources\wrapper.conf""",
+      """..\..\main\resources\wrapper.conf""")
+
+    val fileList = fileNameList.map(name => new File(name))
+
     val propFile = {
-      val std = new File("yajsw-stable-11.03\\conf\\wrapper.conf")
-      if (std.exists) std
-      else new File("src\\main\\resources\\wrapper.conf")
+      try {
+        val file = fileList.filter(f => f.exists).headOption
+        if (file.isEmpty) println("Problem finding properties file that exists from list:" + fileList.mkString("\n", "\n", "\n"))
+        file
+      } catch {
+        // Do not use logging to print an error message because when getting
+        // properties it is quite possible that logging has not yet been set up.
+        case e: Exception => {
+          println("Problem loading properties file List:" + fileList.mkString("\n", "\n", "\n") + " : " + fmtEx(e))
+          None
+        }
+      }
+
     }
+
     try {
-      prop.load(new FileInputStream(propFile))
+      if (propFile.isDefined) {
+        prop.load(new FileInputStream(propFile.get))
+        println("Loaded property file " + propFile.get)
+      }
     } catch {
       // Do not use logging to print an error message because when getting
       // properties it is quite possible that logging has not yet been set up.
-      case e: Exception => println("Problem reading properties file " + propFile.getAbsolutePath + " : " + fmtEx(e))
+      case e: Exception => println("Problem reading properties file " + propFile + " : " + fmtEx(e))
     }
     prop
   }
@@ -279,6 +302,14 @@ object Util extends Logging {
       case name if (name.contains('.')) => name.substring(0, name.lastIndexOf('.'))
       case name => name
     }
+  }
+
+  /**
+   * Get the attribute lists of a sequence attribute.
+   */
+  def seq2Attr(al: AttributeList, tag: AttributeTag): Seq[AttributeList] = {
+    val seq = (al.get(tag)).asInstanceOf[SequenceAttribute]
+    (0 until seq.getNumberOfItems).map(i => seq.getItem(i).getAttributeList)
   }
 
   def main(args: Array[String]): Unit = {
