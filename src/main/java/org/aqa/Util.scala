@@ -88,6 +88,9 @@ object Util extends Logging {
     else Right(new String(result.right.get))
   }
 
+  /**
+   * Read a DICOM file.
+   */
   def readDicomFile(file: File): Either[Throwable, AttributeList] = {
     try {
       val al = new AttributeList
@@ -98,6 +101,13 @@ object Util extends Logging {
     }
   }
 
+  /**
+   * Return a list of all the DICOM files in the given directory.
+   */
+  def readDicomInDir(dir: File): Seq[AttributeList] = {
+    listDirFiles(dir).map(f => readDicomFile(f)).filter(al => al.isRight).map(al => al.right.get)
+  }
+
   def getAttrValue(al: AttributeList, tag: AttributeTag): Option[String] = {
     val a = al.get(tag)
     if (a == null) None
@@ -106,6 +116,21 @@ object Util extends Logging {
       if (v == null) None
       else Some(v)
     }
+  }
+
+  /**
+   * Get the SOPInstanceUID of an attribute list.
+   */
+  def sopOfAl(al: AttributeList): String = {
+    val at = al.get(TagFromName.SOPInstanceUID)
+    if (at == null) "" else al.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
+  }
+
+  /**
+   * Return a list of attribute lists that differ by SOPInstanceUID.
+   */
+  def distinctAl(alList: Seq[AttributeList]): Seq[AttributeList] = {
+    alList.map(al => (sopOfAl(al), al)).toMap.values.toSeq
   }
 
   case class DateTimeAndPatientId(val dateTime: Option[Long], val PatientID: Option[String]);

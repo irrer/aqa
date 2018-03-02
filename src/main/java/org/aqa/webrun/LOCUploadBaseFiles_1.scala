@@ -36,7 +36,7 @@ object LOCUploadBaseFiles_1 extends Logging {
 
   /**
    * Given a machine PK, make sure that the baseline files are available, getting them from the
-   * database if necessary.  If it it is not possible to get the files, then return false.
+   * database if necessary.  If it is not possible to get the files, then return false.
    */
   def ensureBaseline(machinePK: Long): Boolean = {
 
@@ -106,19 +106,6 @@ object LOCUploadBaseFiles_1 extends Logging {
  */
 class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedure) with Logging {
 
-  def machineList() = {
-    def mmiToMachPK(mmi: MMI): String = {
-      mmi.machine.machinePK match {
-        case Some(pk) => pk.toString()
-        case _ => "unknown"
-      }
-    }
-    def mmiToText(mmi: MMI) = mmi.institution.name + " - " + mmi.machine.id
-    def mmiToTuple(mmi: MMI) = (mmiToMachPK(mmi), mmiToText(mmi))
-    def sortMMI(a: MMI, b: MMI): Boolean = { mmiToText(a).compareTo(mmiToText(b)) < 0 }
-    ("-1", "None") +: Machine.listWithDependencies.filter(mmi => mmi.machine.serialNumber.isEmpty).sortWith(sortMMI).map(mmi => mmiToTuple(mmi))
-  }
-
   private def getInstructions(valueMap: ValueMapT): Elem = {
     <div>Drag and drop the two DICOM baseline files for open  and trans.</div>
   }
@@ -139,23 +126,6 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
 
   private def emptyForm(valueMap: ValueMapT, response: Response) = {
     form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
-  }
-
-  private def showMachineSelector(valueMap: ValueMapT): Boolean = {
-    lazy val fileList = sessionDir(valueMap) match {
-      case Some(dir) if dir.isDirectory => dir.listFiles.toSeq
-      case _ => Seq[File]()
-    }
-    lazy val alList = attributeListsInSession(valueMap)
-
-    lazy val machList = alList.map(al => attributeListToMachine(al)).flatten
-
-    alList match {
-      case _ if fileList.isEmpty => false
-      case _ if alList.isEmpty => false
-      case _ if machList.nonEmpty => false
-      case _ => true
-    }
   }
 
   private case class RunRequirements(machine: Machine, serialNumber: Option[String], sessionDir: File, alList: Seq[AttributeList]);

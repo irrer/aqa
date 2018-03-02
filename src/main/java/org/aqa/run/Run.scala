@@ -426,6 +426,58 @@ object Run extends Logging {
     }
   }
 
+  def preRun(procedure: Procedure, machine: Machine, sessionDir: File, user: Option[User], patientId: Option[String], acquisitionDate: Option[Long]): Output = {
+    val userPK = if (user.isDefined) user.get.userPK else None
+
+    // create DB Input
+    val acq = if (acquisitionDate.isDefined) Some(new Timestamp(acquisitionDate.get)) else None
+    val input = (new Input(None, None, new Timestamp(now.getTime), userPK, machine.machinePK, patientId, acq)).insert
+
+    // The input PK is needed to make the input directory, which creates a circular definition when making an
+    // input row, but this is part of the compromise of creating a file hierarchy that has a consistent (as
+    // practical) link to the database.
+    val inputDir = makeInputDir(machine, procedure, input.inputPK.get)
+
+    // move input files to their final resting place
+    inputDir.getParentFile.mkdirs
+    renameFileTryingPersistently(sessionDir, inputDir)
+    if (!inputDir.exists)
+      throw new RuntimeException("Unable to rename temporary directory " + sessionDir.getAbsolutePath + " to input directory " + inputDir.getAbsolutePath)
+
+    input.updateDirectory(inputDir)
+    input.putFilesInDatabase(inputDir)
+
+    val startDate = new Date(System.currentTimeMillis)
+
+    val outputDir = new File(inputDir, outputSubdirNamePrefix + Util.timeAsFileName(startDate))
+    outputDir.mkdirs // create output directory
+
+    val output = {
+      val tempOutput = new Output(
+        outputPK = None,
+        inputPK = input.inputPK.get,
+        directory = WebServer.fileToResultsPath(outputDir),
+        procedurePK = procedure.procedurePK.get,
+        userPK,
+        new Timestamp(startDate.getTime),
+        finishDate = None,
+        dataDate = for (a <- acquisitionDate) yield new Timestamp(a), // TODO get from output.xml file
+        analysisDate = None, // TODO get from output.xml file
+        machinePK = machine.machinePK,
+        status = ProcedureStatus.running.toString,
+        dataValidity = DataValidity.valid.toString)
+      tempOutput.insert
+    }
+    output
+  }
+
+  def postRun(status: ProcedureStatus.Value, output: Output) = {
+    val zippedContent = output.makeZipOfFiles
+    // update DB Output
+    output.updateStatusAndFinishDate(status.toString, now)
+    output.updateData(zippedContent)
+  }
+
   /**
    * Run a procedure.
    */

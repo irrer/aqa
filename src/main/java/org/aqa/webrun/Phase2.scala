@@ -70,6 +70,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
   /** Defines precision - Format to use when showing numbers. */
   val outputFormat = "%7.5e"
 
+  private val machine = new WebInputSelectOption("Machine", 6, 0, machineList, showMachineSelector)
+
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
     val action = procedure.webUrl + "?" + name + "=" + name
     new FormButton(name, 1, 0, SubUrl.run, action, buttonType)
@@ -78,31 +80,39 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
   private val runButton = makeButton("Run", true, ButtonType.BtnDefault)
   private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
 
-  private def form = new WebForm(procedure.webUrl, Some("LOC"), List(List(runButton, cancelButton)), 6)
+  private def form = new WebForm(procedure.webUrl, Some("Phase2"), List(List(machine), List(runButton, cancelButton)), 6)
 
   private def emptyForm(valueMap: ValueMapT, response: Response) = {
     form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
   }
 
-  private case class RunRequirements(machine: Machine, sessionDir: File, alList: Seq[AttributeList]);
+  private case class RunRequirements(machine: Machine, sessionDir: File, imageIdList: Seq[ImageIdentification]);
 
   def formErr(msg: String) = Left(Error.make(form.uploadFileInput.get, msg))
 
-  private def validate(valueMap: ValueMapT): Either[StyleMapT, RunRequirements] = {
-    lazy val alList = attributeListsInSession(valueMap)
+  private def validate(valueMap: ValueMapT, outputPK: Option[Long]): Either[StyleMapT, RunRequirements] = {
+    val alList = attributeListsInSession(valueMap)
 
     // machines that DICOM files reference (based on device serial numbers)
-    lazy val machList = alList.map(al => attributeListToMachine(al)).flatten.distinct
+    val machList = alList.filter(al => isModality(al, SOPClass.RTImageStorage)).map(al => attributeListToMachine(al)).flatten.distinct
 
     // The machine to use
-    lazy val mach = machList.headOption
+    val mach = {
+      machList.headOption match {
+        case Some(mach) => Some(mach)
+        case _ => for (pkTxt <- valueMap.get(machine.label); pk <- Util.stringToLong(pkTxt); mach <- Machine.get(pk)) yield mach
+      }
+    }
+
+    val imgIdent = analyzeImageIdentification(alList, mach)
 
     sessionDir(valueMap) match {
       case Some(dir) if (!dir.isDirectory) => formErr("No files have been uploaded")
       case _ if (alList.isEmpty) => formErr("No DICOM files have been uploaded.")
       case _ if (machList.size > 1) => formErr("Files from more than one machine were found.  Click Cancel to start over.")
-      case _ if (machList.isEmpty) => formErr("These files do not have a serial number of a known machine.  Click Cancel and use the baseline LOC upload procedure.") // TODO get machine id
-      case Some(dir) => Right(new RunRequirements(mach.get, dir, alList))
+      case _ if (mach.isEmpty) => formErr("These files do not have a serial number of a known machine.  Choose a machine from the list.  If it is not on the list, then use Administration --> Machines --> Create new Machine.")
+      case _ if (imgIdent.isLeft) => Left(imgIdent.left.get)
+      case Some(dir) => Right(new RunRequirements(mach.get, dir, imgIdent.right.get))
     }
   }
 
@@ -114,12 +124,21 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
     }
   }
 
-  private def getPlan(alList: Seq[AttributeList]): Option[AttributeList] = {
-    try {
-      Some(alList.filter(al => isModality(al, SOPClass.RTPlanStorage)).head)
+  /**
+   * Get all RTPLAN files, including any that were just now downloaded and any that are in the
+   * machine's configuration directory.  If a plan is found more than once then return only one
+   * occurrence of it.
+   */
+  private def getPlanList(alList: Seq[AttributeList], machine: Option[Machine]): Seq[AttributeList] = {
+    val downloadedPlans = alList.filter(al => isModality(al, SOPClass.RTPlanStorage))
+    val allPlans = try {
+      val configuredAlList: Seq[AttributeList] = Util.readDicomInDir(machine.get.configDir.get).filter(al => isModality(al, SOPClass.RTPlanStorage))
+      (downloadedPlans ++ configuredAlList)
     } catch {
-      case t: Throwable => None
+      case t: Throwable => downloadedPlans
     }
+
+    Util.distinctAl(allPlans)
   }
 
   /**
@@ -135,16 +154,41 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
     }
   }
 
-  private def analyze(valueMap: ValueMapT): Either[StyleMapT, Seq[ImageIdentification]] = {
-    val alList = attributeListsInSession(valueMap)
+  private def processPlanGroup(plan: AttributeList, imageList: Seq[AttributeList]) = {
+    (plan, imageList.map(image => ImageIdentificationAnalysis.makeImageIdentification(plan, image)).flatten)
+  }
 
-    getPlan(alList) match {
-      case Some(plan) => {
-        val imageList = alList.filter(al => isModality(al, SOPClass.RTImageStorage))
-        val imgIdent = alList.filter(al => imageReferencesPlan(plan, al)).map(al => ImageIdentificationAnalysis.makeImageIdentification(plan, al)).flatten
-        ???
+  val MIN_IMAGES = 3
+
+  /**
+   * Perform an image identification analysis of the
+   */
+  private def analyzeImageIdentification(alList: Seq[AttributeList], machine: Option[Machine]): Either[StyleMapT, Seq[ImageIdentification]] = {
+    val planList = getPlanList(alList, machine)
+    val imageList = alList.filter(al => isModality(al, SOPClass.RTImageStorage))
+
+    // associate each image with a plan
+    val planGroups = planList.map(plan => (plan, imageList.filter(img => imageReferencesPlan(plan, img)))).filter(pi => pi._2.nonEmpty).toMap
+
+    0 match {
+      case _ if (planList.isEmpty) => formErr("No RTPLANS found")
+      case _ if (imageList.isEmpty) => formErr("No RTIMAGEs given")
+      case _ if (planGroups.isEmpty) => formErr("No RTPLAN found for RTIMAGEs")
+      case _ if (planGroups.size > 1) => formErr("The RTIMAGEs reference multiple plans.  Only one plan per run is permitted.")
+      case _ => {
+        val plan = planGroups.head._1
+        val imageList = planGroups.head._2
+        val results = imageList.map(image => ImageIdentificationAnalysis.makeImageIdentification(plan, image)).flatten
+        val unique = results.map(r => (r.beamName, r)).toMap.values
+        0 match {
+          case _ if (results.size != unique.size) => {
+            val multiImageBeams = results.diff(results).map(r => r.beamName).distinct
+            formErr("Multiple RTIMAGEs were taken from beam " + multiImageBeams)
+          }
+          case _ if (results.size < MIN_IMAGES) => formErr("Your must provide at least " + MIN_IMAGES + " but only " + results.size + " were found")
+          case _ => Right(results)
+        }
       }
-      case _ => formErr("No RT PLAN was given")
     }
   }
 
@@ -152,12 +196,13 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
    * Run the procedure.
    */
   private def run(valueMap: ValueMapT, request: Request, response: Response) = {
-    validate(valueMap) match {
+    validate(valueMap, None) match {
       case Right(runReq) => {
         val machPK = runReq.machine.machinePK.get
 
         val dtp = Util.dateTimeAndPatientIdFromDicom(runReq.sessionDir)
-        Run.run(procedure, Machine.get(machPK).get, runReq.sessionDir, request, response, dtp.PatientID, dtp.dateTime, Some(this.asInstanceOf[PostProcess]))
+        val output = Run.preRun(procedure, Machine.get(machPK).get, runReq.sessionDir, WebUtil.getUser(request), dtp.PatientID, dtp.dateTime)
+        //Run.run(procedure, Machine.get(machPK).get, runReq.sessionDir, request, response, dtp.PatientID, dtp.dateTime, Some(this.asInstanceOf[PostProcess]))
       }
       case Left(errMap) => form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
     }

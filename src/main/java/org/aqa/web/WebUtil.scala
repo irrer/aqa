@@ -37,6 +37,7 @@ import com.pixelmed.dicom.TagFromName
 import org.aqa.db.Machine
 import org.restlet.data.Protocol
 import org.aqa.Util
+import org.aqa.db.Machine.MMI
 
 object WebUtil extends Logging {
 
@@ -965,6 +966,36 @@ object WebUtil extends Logging {
   }
 
   def timeAgo(date: Date): Elem = timeAgo("", date)
+
+  def showMachineSelector(valueMap: ValueMapT): Boolean = {
+    lazy val fileList = sessionDir(valueMap) match {
+      case Some(dir) if dir.isDirectory => dir.listFiles.toSeq
+      case _ => Seq[File]()
+    }
+    lazy val alList = attributeListsInSession(valueMap)
+
+    lazy val machList = alList.map(al => attributeListToMachine(al)).flatten
+
+    alList match {
+      case _ if fileList.isEmpty => false
+      case _ if alList.isEmpty => false
+      case _ if machList.nonEmpty => false
+      case _ => true
+    }
+  }
+
+  def machineList() = {
+    def mmiToMachPK(mmi: MMI): String = {
+      mmi.machine.machinePK match {
+        case Some(pk) => pk.toString()
+        case _ => "unknown"
+      }
+    }
+    def mmiToText(mmi: MMI) = mmi.institution.name + " - " + mmi.machine.id
+    def mmiToTuple(mmi: MMI) = (mmiToMachPK(mmi), mmiToText(mmi))
+    def sortMMI(a: MMI, b: MMI): Boolean = { mmiToText(a).compareTo(mmiToText(b)) < 0 }
+    ("-1", "None") +: Machine.listWithDependencies.filter(mmi => mmi.machine.serialNumber.isEmpty).sortWith(sortMMI).map(mmi => mmiToTuple(mmi))
+  }
 
 }
 
