@@ -146,6 +146,11 @@ object ImageIdentification extends ProcedureOutput {
     Db.run(action)
   }
 
+  def insert(list: Seq[ImageIdentification]) = {
+    val ops = list.map { imgId => ImageIdentification.query.insertOrUpdate(imgId) }
+    Db.perform(ops)
+  }
+
   override def insert(elem: Elem, outputPK: Long): Int = {
     ??? // TODO
   }

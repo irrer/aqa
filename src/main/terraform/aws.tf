@@ -72,23 +72,23 @@ resource "aws_db_instance" "aqa_db" {
 
 
 # terraform import aws_instance.AQATest i-0f401d3d7c82ee45a
-resource "aws_instance" "AQATest" {
-  instance_type = "t2.micro"
-  ami           = "ami-cbce62b3"
-  tags          {
-    Name = "AQATest"
-  }
-}
+#resource "aws_instance" "AQATest" {
+#  instance_type = "t2.micro"
+#  ami           = "ami-cbce62b3"
+#  tags          {
+#    Name = "AQATest"
+#  }
+#}
 
 
 # terraform import aws_db_instance.aqa_db_test aqatest
-resource "aws_db_instance" "aqa_db_test" {
-  instance_class = "db.t2.micro"
-  publicly_accessible = "true"
-  skip_final_snapshot = "true"
-  engine_version      = "9.6.6"
-  tags          {
-    workload-type  = "other"
-  }
-}
+#resource "aws_db_instance" "aqa_db_test" {
+#  instance_class = "db.t2.micro"
+#  publicly_accessible = "true"
+#  skip_final_snapshot = "true"
+#  engine_version      = "9.6.6"
+#  tags          {
+#    workload-type  = "other"
+#  }
+#}
 

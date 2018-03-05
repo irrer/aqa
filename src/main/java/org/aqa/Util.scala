@@ -100,12 +100,16 @@ object Util extends Logging {
       case t: Throwable => Left(t)
     }
   }
+  
+  case class DicomFile(file: File) {
+    lazy val attributeList = readDicomFile(file)
+  }
 
   /**
    * Return a list of all the DICOM files in the given directory.
    */
-  def readDicomInDir(dir: File): Seq[AttributeList] = {
-    listDirFiles(dir).map(f => readDicomFile(f)).filter(al => al.isRight).map(al => al.right.get)
+  def readDicomInDir(dir: File): Seq[DicomFile] = {
+    listDirFiles(dir).map(f => new DicomFile(f)).filter(df => df.attributeList.isRight)
   }
 
   def getAttrValue(al: AttributeList, tag: AttributeTag): Option[String] = {
@@ -151,7 +155,7 @@ object Util extends Logging {
     }
   }
 
-  private def extractDateTimeAndPatientIdFromDicom(file: File): (Seq[Date], Option[String]) = { // TODO make this safer
+  private def extractDateTimeAndPatientIdFromDicom(file: File): (Seq[Date], Option[String]) = {
 
     val attrList = new AttributeList
     attrList.read(file)

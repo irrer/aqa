@@ -911,10 +911,18 @@ object WebUtil extends Logging {
     }
   }
 
+  @deprecated("should use WebUtil.dicomFilesInSession")
   def attributeListsInSession(valueMap: ValueMapT): Seq[AttributeList] = {
     sessionDir(valueMap) match {
-      case Some(dir) if (dir.isDirectory) => dir.listFiles.toSeq.map(f => fileToDicom(f)).flatten
+      case Some(dir) if (dir.isDirectory) => Util.listDirFiles(dir).map(f => fileToDicom(f)).flatten
       case _ => Seq[AttributeList]()
+    }
+  }
+
+  def dicomFilesInSession(valueMap: ValueMapT): Seq[Util.DicomFile] = {
+    sessionDir(valueMap) match {
+      case Some(dir) if (dir.isDirectory) => Util.listDirFiles(dir).map(f => new Util.DicomFile(f))
+      case _ => Seq[Util.DicomFile]()
     }
   }
 

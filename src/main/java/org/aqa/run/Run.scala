@@ -109,7 +109,7 @@ object Run extends Logging {
     }
   }
 
-  private def removeRedundantOutput(outputPK: Option[Long]) = {
+  def removeRedundantOutput(outputPK: Option[Long]) = {
     def del(output: Output) = {
       try {
         Output.delete(output.outputPK.get)
@@ -471,12 +471,12 @@ object Run extends Logging {
     output
   }
 
-  def postRun(status: ProcedureStatus.Value, output: Output) = {
-    val zippedContent = output.makeZipOfFiles
-    // update DB Output
-    output.updateStatusAndFinishDate(status.toString, now)
-    output.updateData(zippedContent)
-  }
+  //  def postRun(output: Output, finish: Date) = {
+  //    val zippedContent = output.makeZipOfFiles
+  //    // update DB Output
+  //    output.updateStatusAndFinishDate(output.status.toString, finish)
+  //    output.updateData(zippedContent)
+  //  }
 
   /**
    * Run a procedure.
