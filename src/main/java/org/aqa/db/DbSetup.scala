@@ -71,7 +71,8 @@ object DbSetup extends Logging {
     LeafTransmission.query,
     LOCRSquared.query,
     DiffBaselineOpen.query,
-    DiffBaselineTrans.query)
+    DiffBaselineTrans.query,
+    ImageIdentification.query)
 
   /**
    * Initialize database by creating tables in dependency order.

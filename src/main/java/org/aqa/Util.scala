@@ -30,6 +30,7 @@ object Util extends Logging {
   val machineConfigDirEnvName = "machine_configDir"
   val machineIdEnvName = "machine_id"
   val institutionIdEnvName = "institution_id"
+  val dicomFileNameSuffix = ".dcm"
 
   private val timeAsFileNameFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss-SSS")
 
@@ -100,17 +101,6 @@ object Util extends Logging {
       case t: Throwable => Left(t)
     }
   }
-  
-  case class DicomFile(file: File) {
-    lazy val attributeList = readDicomFile(file)
-  }
-
-  /**
-   * Return a list of all the DICOM files in the given directory.
-   */
-  def readDicomInDir(dir: File): Seq[DicomFile] = {
-    listDirFiles(dir).map(f => new DicomFile(f)).filter(df => df.attributeList.isRight)
-  }
 
   def getAttrValue(al: AttributeList, tag: AttributeTag): Option[String] = {
     val a = al.get(tag)
@@ -122,19 +112,20 @@ object Util extends Logging {
     }
   }
 
+  def isModality(al: AttributeList, sopClassUID: String): Boolean = {
+    try {
+      al.get(TagFromName.MediaStorageSOPClassUID).getSingleStringValueOrNull.equals(sopClassUID)
+    } catch {
+      case t: Throwable => false
+    }
+  }
+
   /**
    * Get the SOPInstanceUID of an attribute list.
    */
   def sopOfAl(al: AttributeList): String = {
     val at = al.get(TagFromName.SOPInstanceUID)
     if (at == null) "" else al.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
-  }
-
-  /**
-   * Return a list of attribute lists that differ by SOPInstanceUID.
-   */
-  def distinctAl(alList: Seq[AttributeList]): Seq[AttributeList] = {
-    alList.map(al => (sopOfAl(al), al)).toMap.values.toSeq
   }
 
   case class DateTimeAndPatientId(val dateTime: Option[Long], val PatientID: Option[String]);

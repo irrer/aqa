@@ -38,6 +38,7 @@ import org.aqa.db.Machine
 import org.restlet.data.Protocol
 import org.aqa.Util
 import org.aqa.db.Machine.MMI
+import org.aqa.DicomFile
 
 object WebUtil extends Logging {
 
@@ -919,10 +920,10 @@ object WebUtil extends Logging {
     }
   }
 
-  def dicomFilesInSession(valueMap: ValueMapT): Seq[Util.DicomFile] = {
+  def dicomFilesInSession(valueMap: ValueMapT): Seq[DicomFile] = {
     sessionDir(valueMap) match {
-      case Some(dir) if (dir.isDirectory) => Util.listDirFiles(dir).map(f => new Util.DicomFile(f))
-      case _ => Seq[Util.DicomFile]()
+      case Some(dir) if (dir.isDirectory) => DicomFile.readDicomInDir(dir)
+      case _ => Seq[DicomFile]()
     }
   }
 

@@ -9,6 +9,7 @@ import org.aqa.db.Machine
 import java.io.File
 import org.aqa.db.Procedure
 import org.aqa.Util
+import org.aqa.DicomFile
 import com.pixelmed.dicom.TagFromName
 import edu.umro.util.Utility
 import com.pixelmed.dicom.AttributeList
@@ -59,16 +60,17 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
     form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
   }
 
-  private case class RunRequirements(machine: Machine, sessionDir: File, imageIdList: Seq[ImageIdentification]);
+  private case class RunRequirements(machine: Machine, sessionDir: File, plan: DicomFile, imageIdFileList: Seq[ImageIdentificationFile]);
 
   def formErr(msg: String) = Left(Error.make(form.uploadFileInput.get, msg))
 
   private def validate(valueMap: ValueMapT, outputPK: Option[Long]): Either[StyleMapT, RunRequirements] = {
-    val rtimageList = dicomFilesInSession(valueMap).filter(df => isModality(df.attributeList.right.get, SOPClass.RTImageStorage))
-    val alList = rtimageList.map(df => df.attributeList.right.get)
+    val rtimageList = dicomFilesInSession(valueMap).filter(df => df.isModality(SOPClass.RTImageStorage))
+    val rtplanList = dicomFilesInSession(valueMap).filter(df => df.isModality(SOPClass.RTPlanStorage))
+    val dicomList = rtplanList ++ rtimageList
 
     // machines that DICOM files reference (based on device serial numbers)
-    val machList = rtimageList.map(df => attributeListToMachine(df.attributeList.right.get)).flatten.distinct
+    val machList = rtimageList.map(df => attributeListToMachine(df.attributeList.get)).flatten.distinct
 
     // The machine to use
     val mach = {
@@ -78,23 +80,15 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
       }
     }
 
-    val imgIdent = analyzeImageIdentification(alList, mach)
+    val imgIdent = analyzeImageIdentification(dicomList, mach)
 
     sessionDir(valueMap) match {
       case Some(dir) if (!dir.isDirectory) => formErr("No files have been uploaded")
-      case _ if (alList.isEmpty) => formErr("No DICOM files have been uploaded.")
+      case _ if (dicomList.isEmpty) => formErr("No DICOM files have been uploaded.")
       case _ if (machList.size > 1) => formErr("Files from more than one machine were found.  Click Cancel to start over.")
       case _ if (mach.isEmpty) => formErr("These files do not have a serial number of a known machine.  Choose a machine from the list.  If it is not on the list, then use Administration --> Machines --> Create new Machine.")
       case _ if (imgIdent.isLeft) => Left(imgIdent.left.get)
-      case Some(dir) => Right(new RunRequirements(mach.get, dir, imgIdent.right.get))
-    }
-  }
-
-  private def isModality(al: AttributeList, sopClassUID: String): Boolean = {
-    try {
-      al.get(TagFromName.MediaStorageSOPClassUID).getSingleStringValueOrNull.equals(sopClassUID)
-    } catch {
-      case t: Throwable => false
+      case Some(dir) => Right(new RunRequirements(mach.get, dir, imgIdent.right.get._1, imgIdent.right.get._2))
     }
   }
 
@@ -103,26 +97,26 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
    * machine's configuration directory.  If a plan is found more than once then return only one
    * occurrence of it.
    */
-  private def getPlanList(alList: Seq[AttributeList], machine: Option[Machine]): Seq[AttributeList] = {
-    val downloadedPlans = alList.filter(al => isModality(al, SOPClass.RTPlanStorage))
+  private def getPlanList(dicomList: Seq[DicomFile], machine: Option[Machine]): Seq[DicomFile] = {
+    val downloadedPlans = dicomList.filter(df => df.isModality(SOPClass.RTPlanStorage))
     val allPlans = try {
-      val configuredAlList: Seq[AttributeList] = Util.readDicomInDir(machine.get.configDir.get).filter(df => isModality(df.attributeList.right.get, SOPClass.RTPlanStorage)).map(df => df.attributeList.right.get)
+      val configuredAlList: Seq[DicomFile] = DicomFile.readDicomInDir(machine.get.configDir.get).filter(df => df.isModality(SOPClass.RTPlanStorage))
       (downloadedPlans ++ configuredAlList)
     } catch {
       case t: Throwable => downloadedPlans
     }
 
-    Util.distinctAl(allPlans)
+    DicomFile.distinctSOPInstanceUID(allPlans)
   }
 
   /**
    * Determine if the given image references the given plan.
    */
-  private def imageReferencesPlan(plan: AttributeList, image: AttributeList): Boolean = {
+  private def imageReferencesPlan(plan: DicomFile, image: DicomFile): Boolean = {
     try {
-      val planUID = plan.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull
+      val planUID = plan.attributeList.get.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull
       def doesRef(al: AttributeList) = al.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrNull.equals(planUID)
-      Util.seq2Attr(image, TagFromName.ReferencedRTPlanSequence).map(al => doesRef(al)).nonEmpty
+      Util.seq2Attr(image.attributeList.get, TagFromName.ReferencedRTPlanSequence).map(al => doesRef(al)).nonEmpty
     } catch {
       case t: Throwable => false
     }
@@ -130,12 +124,14 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
 
   val MIN_IMAGES = 3
 
+  case class ImageIdentificationFile(dicomFile: DicomFile, imageIdentification: ImageIdentification);
+
   /**
    * Perform an image identification analysis of the
    */
-  private def analyzeImageIdentification(alList: Seq[AttributeList], machine: Option[Machine]): Either[StyleMapT, Seq[ImageIdentification]] = {
-    val planList = getPlanList(alList, machine)
-    val imageList = alList.filter(al => isModality(al, SOPClass.RTImageStorage))
+  private def analyzeImageIdentification(dicomList: Seq[DicomFile], machine: Option[Machine]): Either[StyleMapT, (DicomFile, Seq[ImageIdentificationFile])] = {
+    val planList = getPlanList(dicomList, machine)
+    val imageList = dicomList.filter(df => df.isModality(SOPClass.RTImageStorage))
 
     // associate each image with a plan
     val planGroups = planList.map(plan => (plan, imageList.filter(img => imageReferencesPlan(plan, img)))).filter(pi => pi._2.nonEmpty).toMap
@@ -148,26 +144,30 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
       case _ => {
         val plan = planGroups.head._1
         val imageList = planGroups.head._2
-        val results = imageList.map(image => ImageIdentificationAnalysis.makeImageIdentification(plan, image)).flatten
-        val unique = results.map(r => (r.beamName, r)).toMap.values
+        val results = imageList.
+          map(image => (image, ImageIdentificationAnalysis.makeImageIdentification(plan.attributeList.get, image.attributeList.get))).
+          filter(ii => ii._2.nonEmpty).
+          map(ii => new ImageIdentificationFile(ii._1, ii._2.get))
+        // only let one result in for each beam
+        val distinct = results.map(iif => (iif.imageIdentification.beamName, iif)).toMap.values.toSeq
         0 match {
-          case _ if (results.size != unique.size) => {
-            val multiImageBeams = results.diff(results).map(r => r.beamName).distinct
+          case _ if (results.size != distinct.size) => {
+            val multiImageBeams = distinct.diff(results).map(iff => iff.imageIdentification.beamName).distinct
             formErr("Multiple RTIMAGEs were taken from beam " + multiImageBeams)
           }
           case _ if (results.size < MIN_IMAGES) => formErr("Your must provide at least " + MIN_IMAGES + " but only " + results.size + " were found")
-          case _ => Right(results)
+          case _ => Right(plan, results)
         }
       }
     }
   }
 
-  private def saveResultsToDatabase(output: Output, imageIdList: Seq[ImageIdentification]) = {
-    val list = imageIdList.map(imgId => imgId.copy(outputPK = output.outputPK.get))
+  private def saveResultsToDatabase(output: Output, imageIdFileList: Seq[ImageIdentificationFile]) = {
+    val list = imageIdFileList.map(imgId => imgId.imageIdentification.copy(outputPK = output.outputPK.get))
     ImageIdentification.insert(list)
   }
 
-  private def generateReport(output: Output, runReq: RunRequirements) = {
+  private def makeDisplay(output: Output, runReq: RunRequirements) = {
 
     def wrap(col: Int, elem: Elem): Elem = {
       <div class={ "col-md-" + col }>{ elem }</div>
@@ -220,11 +220,11 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
       }
     }
 
-    /* TODO
+    /* TODO  */
     val div = {
       <div class="row col-md-10 col-md-offset-1">
         <div class="row">
-          <div class="col-md-1" title="Leaf Offset Constancy and Transmission"><h2>LOC</h2></div>
+          <div class="col-md-1" title="Image Identification"><h2>Image Identification</h2></div>
           <div class="col-md-2 col-md-offset-1" title="Machine"><h2>{ machineId }</h2></div>
         </div>
         <div class="row" style="margin:20px;">
@@ -236,12 +236,12 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
           { wrap2(3, "Procedure", procedureDesc) }
         </div>
         <div class="row" style="margin:20px;">
-          { spreadSheetLinks(fileWorkbookList).map(e => { wrap(3, e) }) }
+          spreadSheetLinks(fileWorkbookList).map(e =>  wrap(3, e) )
         </div>
         <div class="row" style="margin:20px;">
-          { wrap(2, linkToFiles) }
-          { wrap(2, viewLog) }
-          { wrap(2, viewXml) }
+          wrap(2, linkToFiles) 
+           wrap(2, viewLog) 
+           wrap(2, viewXml)
         </div>
         <div class="row">
           <h4>Leaf Offset in mm</h4>
@@ -275,8 +275,45 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
         </div>
       </div>
     }
-    */
 
+    val text = wrapBody(div, "Image Identification", None, true, None)
+    text
+  }
+
+  /**
+   * If the serial number for the machine is not already set, then set it by using the DeviceSerialNumber in the RTIMAGE.
+   */
+  private def setMachineSerialNumber(machine: Machine, rtimage: AttributeList) = {
+    if (machine.serialNumber.isEmpty) {
+      try {
+        val DeviceSerialNumber = rtimage.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrNull
+        if (DeviceSerialNumber != null) Machine.setSerialNumber(machine.machinePK.get, DeviceSerialNumber)
+      } catch {
+        case t: Throwable => logger.warn("Unable to update machine serial number " + machine + " : " + t)
+      }
+    }
+  }
+
+  /**
+   * If a plan was used that was not already saved, then save it.
+   */
+  private def saveRtplan(machine: Machine, plan: DicomFile) = {
+    try {
+      Machine.get(machine.machinePK.get) match {
+        case Some(mach) => {
+          val cfgDir = mach.configDir.get
+          if (!cfgDir.equals(plan.file.getParentFile)) {
+            val data = Util.readBinaryFile(plan.file)
+            val planFile = new File(cfgDir, plan.attributeList.get.get(TagFromName.SOPInstanceUID) + Util.dicomFileNameSuffix)
+            Util.writeBinaryFile(planFile, data.right.get)
+            logger.info("Wrote new plan file " + planFile)
+          }
+        }
+        case _ => logger.error("Machine not in database.  Unable to save rtplan for machine " + machine)
+      }
+    } catch {
+      case t: Throwable => logger.warn("Unable to save rtplan for machine " + machine + " : " + t)
+    }
   }
 
   /**
@@ -287,7 +324,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
       case Right(runReq) => {
 
         // only consider the RTIMAGE files for the date-time stamp.  The plan could have been from months ago.
-        val rtimageList = dicomFilesInSession(valueMap).filter(df => isModality(df.attributeList.right.get, SOPClass.RTImageStorage))
+        val rtimageList = dicomFilesInSession(valueMap).filter(df => df.isModality(SOPClass.RTImageStorage))
         val dtp: Util.DateTimeAndPatientId = {
           val list = rtimageList.map(df => Util.dateTimeAndPatientIdFromDicom(df.file))
           if (list.isEmpty) new Util.DateTimeAndPatientId(None, None)
@@ -295,11 +332,14 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
         }
 
         val output = Run.preRun(procedure, runReq.machine, sessionDir(valueMap).get, getUser(request), dtp.PatientID, dtp.dateTime)
-        saveResultsToDatabase(output, runReq.imageIdList)
-        val finalStatus = if (runReq.imageIdList.find(ii => ii.pass == false).isEmpty) ProcedureStatus.pass else ProcedureStatus.fail
+        saveResultsToDatabase(output, runReq.imageIdFileList)
+        val finalStatus = if (runReq.imageIdFileList.find(iif => iif.imageIdentification.pass == false).isEmpty) ProcedureStatus.pass else ProcedureStatus.fail
         val finDate = new Timestamp(System.currentTimeMillis)
         val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
-        generateReport(outputFinal, runReq)
+        val display = makeDisplay(outputFinal, runReq)
+        setResponse(display, response, Status.SUCCESS_OK)
+        setMachineSerialNumber(runReq.machine, runReq.imageIdFileList.head.dicomFile.attributeList.get)
+        saveRtplan(runReq.machine, runReq.plan)
         outputFinal.insertOrUpdate
         outputFinal.updateData(outputFinal.makeZipOfFiles)
         Run.removeRedundantOutput(outputFinal.outputPK)
