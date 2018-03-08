@@ -332,6 +332,14 @@ object Util extends Logging {
     (0 until seq.getNumberOfItems).map(i => seq.getItem(i).getAttributeList)
   }
 
+  /**
+   * Given the text for a single CVS cell, return the properly formatted text for CSV.
+   */
+  def textToCsv(text: String): String = {
+    if (text.contains('"') || text.contains(',')) { '"' + text.replaceAll("\"", "\"\"") + '"' }
+    else text
+  }
+
   def main(args: Array[String]): Unit = {
 
     if (true) {

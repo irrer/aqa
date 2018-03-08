@@ -28,6 +28,7 @@ import org.aqa.run.ProcedureStatus
 import org.aqa.db.Output
 import org.aqa.db.Institution
 import org.aqa.db.User
+import org.aqa.web.ViewOutput
 
 object Phase2 {
   val parametersFileName = "parameters.xml"
@@ -187,6 +188,64 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
     ImageIdentification.insert(list)
   }
 
+  private def makeCsvFile(procedureDesc: String, institutionName: String, outputDir: File, machineId: String, acquisitionDate: String, analysisDate: String, userId: String, runReq: RunRequirements) = {
+
+    type II = ImageIdentification
+
+    val dblFmt = "%14.11f"
+    val textFmt = "%s"
+    val columns: Seq[(String, (II) => Any)] = Seq(
+      ("beamName", (ii: II) => ii.beamName),
+      ("gantryAnglePlan_deg", (ii: II) => ii.gantryAnglePlan_deg),
+      ("gantryAnglePlanMinusImage_deg", (ii: II) => ii.gantryAnglePlanMinusImage_deg),
+      ("collimatorAnglePlan_deg", (ii: II) => ii.collimatorAnglePlan_deg),
+      ("collimatorAnglePlanMinusImage_deg", (ii: II) => ii.collimatorAnglePlanMinusImage_deg),
+      ("x1JawPlan_mm", (ii: II) => ii.x1JawPlan_mm),
+      ("x1JawPlanMinusImage_mm", (ii: II) => ii.x1JawPlanMinusImage_mm),
+      ("x2JawPlan_mm", (ii: II) => ii.x2JawPlan_mm),
+      ("x2JawPlanMinusImage_mm", (ii: II) => ii.x2JawPlanMinusImage_mm),
+      ("y1JawPlan_mm", (ii: II) => ii.y1JawPlan_mm),
+      ("y1JawPlanMinusImage_mm", (ii: II) => ii.y1JawPlanMinusImage_mm),
+      ("y2JawPlan_mm", (ii: II) => ii.y2JawPlan_mm),
+      ("y2JawPlanMinusImage_mm", (ii: II) => ii.y2JawPlanMinusImage_mm),
+      ("energyPlan_kev", (ii: II) => ii.energyPlan_kev),
+      ("energyPlanMinusImage_kev", (ii: II) => ii.energyPlanMinusImage_kev),
+      ("flatteningFilter", (ii: II) => ii.flatteningFilter),
+      ("pass", (ii: II) => ii.pass))
+
+    def imageIdentificationToCsv(ii: ImageIdentification): String = {
+      def fmt(any: Any): String = {
+        any match {
+          case d: Double => d.formatted("%14.11e")
+          case _ => Util.textToCsv(any.toString)
+        }
+      }
+      columns.map(c => fmt(c._2(ii))).mkString(",")
+    }
+
+    val metaData = {
+      val info = Seq(
+        ("Procedure: ", procedureDesc),
+        ("Machine: ", machineId),
+        ("Institution: ", institutionName),
+        ("Acquisition Date: ", acquisitionDate),
+        ("Analysis Date: ", analysisDate),
+        ("User: ", userId))
+
+      Seq(
+        info.map(s => Util.textToCsv(s._1)).mkString(","),
+        info.map(s => Util.textToCsv(s._2)).mkString(","))
+    }
+
+    val header = Seq(columns.map(c => c._1).mkString(","))
+
+    val data = runReq.imageIdFileList.map(iif => imageIdentificationToCsv(iif.imageIdentification))
+
+    val text = (metaData ++ header ++ data).mkString("", "\r\n", "\r\n")
+    val file = new File(outputDir, ImageIdentification.csvFileName)
+    Util.writeFile(file, text)
+  }
+
   private def makeDisplay(output: Output, runReq: RunRequirements) = {
 
     def wrap(col: Int, elem: Elem): Elem = {
@@ -240,6 +299,20 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
       }
     }
 
+    makeCsvFile(
+      procedureDesc,
+      institutionName,
+      output.dir,
+      machineId,
+      (if (output.dataDate.isDefined) Util.standardDateFormat.format(output.dataDate.get) else "none"),
+      (Util.standardDateFormat.format(if (output.analysisDate.isDefined) output.analysisDate.get else (new Date))),
+      userId,
+      runReq)
+
+    val csvFileReference = {
+      <a title="Download Image Identification as CSV File" href={ ImageIdentification.csvFileName }>CSV</a>
+    }
+
     val div = {
       <div class="row col-md-10 col-md-offset-1">
         <div class="row">
@@ -255,7 +328,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
           { wrap2(3, "Procedure", procedureDesc) }
         </div>
         <div class="row" style="margin:20px;">
-          spreadSheetLinks(fileWorkbookList).map(e =>  wrap(3, e) )
+          { csvFileReference }
         </div>
         <div class="row" style="margin:20px;">
           wrap(2, linkToFiles) 
@@ -368,12 +441,16 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
         val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
         val display = makeDisplay(outputFinal, runReq)
         Util.writeBinaryFile(new File(output.dir, Output.displayFilePrefix + ".html"), display.getBytes)
-        setResponse(display, response, Status.SUCCESS_OK)
+        //setResponse(display, response, Status.SUCCESS_OK)
+
         setMachineSerialNumber(runReq.machine, runReq.imageIdFileList.head.dicomFile.attributeList.get)
         saveRtplan(runReq.machine, runReq.plan)
         outputFinal.insertOrUpdate
         outputFinal.updateData(outputFinal.makeZipOfFiles)
         Run.removeRedundantOutput(outputFinal.outputPK)
+
+        val suffix = "?" + ViewOutput.outputPKTag + "=" + outputFinal.outputPK.get
+        response.redirectSeeOther(ViewOutput.path + suffix)
       }
       case Left(errMap) => form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
     }
