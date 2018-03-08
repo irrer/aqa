@@ -61,7 +61,6 @@ object ImageIdentificationAnalysis extends Logging {
 
     try {
       val imageBeamNumber = image.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head
-      //val referencedBeamSeq = getReferencedBeamSeq(plan, imageBeamNumber)
       val planBeamSeq = getBeamSequence(plan, imageBeamNumber)
       val planCtrlPointSeq = Util.seq2Attr(planBeamSeq, TagFromName.ControlPointSequence).head
       val imageExposureSeq = Util.seq2Attr(image, TagFromName.ExposureSequence).head

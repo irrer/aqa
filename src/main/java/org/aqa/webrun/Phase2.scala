@@ -95,18 +95,32 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
   /**
    * Get all RTPLAN files, including any that were just now downloaded and any that are in the
    * machine's configuration directory.  If a plan is found more than once then return only one
-   * occurrence of it.
+   * occurrence of it.  If the plan occurs both in the machine's configuration directory and was
+   * downloaded, then prefer the one in the machine's configuration directory.
    */
   private def getPlanList(dicomList: Seq[DicomFile], machine: Option[Machine]): Seq[DicomFile] = {
-    val downloadedPlans = dicomList.filter(df => df.isModality(SOPClass.RTPlanStorage))
-    val allPlans = try {
-      val configuredAlList: Seq[DicomFile] = DicomFile.readDicomInDir(machine.get.configDir.get).filter(df => df.isModality(SOPClass.RTPlanStorage))
-      (downloadedPlans ++ configuredAlList)
-    } catch {
-      case t: Throwable => downloadedPlans
+    val configuredPlans: Seq[DicomFile] = {
+      try {
+        DicomFile.readDicomInDir(machine.get.configDir.get).filter(df => df.isModality(SOPClass.RTPlanStorage))
+      } catch {
+        case t: Throwable => {
+          logger.warn("Unexpected problem while getting pre-configured RTPLANs: " + t)
+          Seq[DicomFile]()
+        }
+      }
     }
 
-    DicomFile.distinctSOPInstanceUID(allPlans)
+    val downloadedPlans: Seq[DicomFile] = try {
+      val configSopList = configuredPlans.map(c => Util.sopOfAl(c.attributeList.get))
+      dicomList.filter(df => df.isModality(SOPClass.RTPlanStorage)).filter(d => !configSopList.contains(Util.sopOfAl(d.attributeList.get)))
+    } catch {
+      case t: Throwable => {
+        logger.warn("Unexpected problem while getting RTPLAN: " + t)
+        Seq[DicomFile]()
+      }
+    }
+
+    DicomFile.distinctSOPInstanceUID(configuredPlans ++ downloadedPlans)
   }
 
   /**
@@ -124,7 +138,13 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
 
   val MIN_IMAGES = 3
 
-  case class ImageIdentificationFile(dicomFile: DicomFile, imageIdentification: ImageIdentification);
+  case class ImageIdentificationFile(dicomFile: DicomFile, imageIdentification: ImageIdentification) {
+    def move(oldDir: File, newDir: File): ImageIdentificationFile = {
+      if (dicomFile.file.getParentFile == oldDir) {
+        new ImageIdentificationFile(new DicomFile(new File(newDir, dicomFile.file.getName)), imageIdentification)
+      } else this
+    }
+  }
 
   /**
    * Perform an image identification analysis of the
@@ -220,7 +240,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
       }
     }
 
-    /* TODO  */
     val div = {
       <div class="row col-md-10 col-md-offset-1">
         <div class="row">
@@ -304,7 +323,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
           val cfgDir = mach.configDir.get
           if (!cfgDir.equals(plan.file.getParentFile)) {
             val data = Util.readBinaryFile(plan.file)
-            val planFile = new File(cfgDir, plan.attributeList.get.get(TagFromName.SOPInstanceUID) + Util.dicomFileNameSuffix)
+            val planFile = new File(cfgDir, plan.attributeList.get.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull + Util.dicomFileNameSuffix)
             Util.writeBinaryFile(planFile, data.right.get)
             logger.info("Wrote new plan file " + planFile)
           }
@@ -312,7 +331,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
         case _ => logger.error("Machine not in database.  Unable to save rtplan for machine " + machine)
       }
     } catch {
-      case t: Throwable => logger.warn("Unable to save rtplan for machine " + machine + " : " + t)
+      case t: Throwable => logger.error("Unable to save rtplan for machine " + machine + " : " + t)
     }
   }
 
@@ -321,7 +340,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
    */
   private def run(valueMap: ValueMapT, request: Request, response: Response) = {
     validate(valueMap, None) match {
-      case Right(runReq) => {
+      case Right(runReqValidated) => {
 
         // only consider the RTIMAGE files for the date-time stamp.  The plan could have been from months ago.
         val rtimageList = dicomFilesInSession(valueMap).filter(df => df.isModality(SOPClass.RTImageStorage))
@@ -331,12 +350,24 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
           else list.minBy(dt => dt.dateTime)
         }
 
-        val output = Run.preRun(procedure, runReq.machine, sessionDir(valueMap).get, getUser(request), dtp.PatientID, dtp.dateTime)
+        val sessDir = sessionDir(valueMap).get
+        val inputOutput = Run.preRun(procedure, runReqValidated.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
+        val input = inputOutput._1
+        val output = inputOutput._2
+
+        val planDicomFile = {
+          val plan = runReqValidated.plan
+          val machDir = runReqValidated.machine.configDir.get
+          if (plan.file.getParentFile == machDir) plan
+          else (new DicomFile(new File(input.dir, plan.file.getName)))
+        }
+        val runReq = runReqValidated.copy(imageIdFileList = runReqValidated.imageIdFileList.map(iif => iif.move(sessDir, input.dir))).copy(plan = planDicomFile)
         saveResultsToDatabase(output, runReq.imageIdFileList)
         val finalStatus = if (runReq.imageIdFileList.find(iif => iif.imageIdentification.pass == false).isEmpty) ProcedureStatus.pass else ProcedureStatus.fail
         val finDate = new Timestamp(System.currentTimeMillis)
         val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
         val display = makeDisplay(outputFinal, runReq)
+        Util.writeBinaryFile(new File(output.dir, Output.displayFilePrefix + ".html"), display.getBytes)
         setResponse(display, response, Status.SUCCESS_OK)
         setMachineSerialNumber(runReq.machine, runReq.imageIdFileList.head.dicomFile.attributeList.get)
         saveRtplan(runReq.machine, runReq.plan)

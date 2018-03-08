@@ -426,17 +426,17 @@ object Run extends Logging {
     }
   }
 
-  def preRun(procedure: Procedure, machine: Machine, sessionDir: File, user: Option[User], patientId: Option[String], acquisitionDate: Option[Long]): Output = {
+  def preRun(procedure: Procedure, machine: Machine, sessionDir: File, user: Option[User], patientId: Option[String], acquisitionDate: Option[Long]): (Input, Output) = {
     val userPK = if (user.isDefined) user.get.userPK else None
 
     // create DB Input
     val acq = if (acquisitionDate.isDefined) Some(new Timestamp(acquisitionDate.get)) else None
-    val input = (new Input(None, None, new Timestamp(now.getTime), userPK, machine.machinePK, patientId, acq)).insert
+    val inputWithoutDir = (new Input(None, None, new Timestamp(now.getTime), userPK, machine.machinePK, patientId, acq)).insert
 
     // The input PK is needed to make the input directory, which creates a circular definition when making an
     // input row, but this is part of the compromise of creating a file hierarchy that has a consistent (as
     // practical) link to the database.
-    val inputDir = makeInputDir(machine, procedure, input.inputPK.get)
+    val inputDir = makeInputDir(machine, procedure, inputWithoutDir.inputPK.get)
 
     // move input files to their final resting place
     inputDir.getParentFile.mkdirs
@@ -444,7 +444,8 @@ object Run extends Logging {
     if (!inputDir.exists)
       throw new RuntimeException("Unable to rename temporary directory " + sessionDir.getAbsolutePath + " to input directory " + inputDir.getAbsolutePath)
 
-    input.updateDirectory(inputDir)
+    inputWithoutDir.updateDirectory(inputDir)
+    val input = Input.get(inputWithoutDir.inputPK.get).get // update the directory
     input.putFilesInDatabase(inputDir)
 
     val startDate = new Date(System.currentTimeMillis)
@@ -468,7 +469,7 @@ object Run extends Logging {
         dataValidity = DataValidity.valid.toString)
       tempOutput.insert
     }
-    output
+    (input, output)
   }
 
   //  def postRun(output: Output, finish: Date) = {
