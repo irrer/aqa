@@ -225,12 +225,12 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
 
     val metaData = {
       val info = Seq(
-        ("Procedure: ", procedureDesc),
-        ("Machine: ", machineId),
-        ("Institution: ", institutionName),
-        ("Acquisition Date: ", acquisitionDate),
-        ("Analysis Date: ", analysisDate),
-        ("User: ", userId))
+        ("Procedure", procedureDesc),
+        ("Machine", machineId),
+        ("Institution", institutionName),
+        ("Acquisition Date", acquisitionDate),
+        ("Analysis Date", analysisDate),
+        ("User", userId))
 
       Seq(
         info.map(s => Util.textToCsv(s._1)).mkString(","),
@@ -313,6 +313,41 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
       <a title="Download Image Identification as CSV File" href={ ImageIdentification.csvFileName }>CSV</a>
     }
 
+    class Row(title: String, name: String, get: (ImageIdentification) => String) {
+      def toHeader = <th title={ title }>{ name }</th>
+      def toRow(imgId: ImageIdentification) = <td title={ title }>{ get(imgId) }</td>
+    }
+
+    def degree(diff: Double): String = diff.formatted("%6e")
+
+    def jaw(diff: Double): String = diff.formatted("%6e")
+
+    val rowList = Seq(
+      new Row("Name of beam in plan", "Beam Name", (imgId: ImageIdentification) => imgId.beamName),
+      new Row("Gantry Angle plan minus image in degrees", "Gantry Angle", (imgId: ImageIdentification) => degree(imgId.gantryAnglePlanMinusImage_deg)),
+      new Row("Collimator Angle plan minus image in degrees", "Collimator Angle", (imgId: ImageIdentification) => degree(imgId.collimatorAnglePlanMinusImage_deg)),
+      new Row("X1 Jaw plan minus image in mm", "X1 Jaw", (imgId: ImageIdentification) => jaw(imgId.x1JawPlanMinusImage_mm)),
+      new Row("X2 Jaw plan minus image in mm", "X2 Jaw", (imgId: ImageIdentification) => jaw(imgId.x2JawPlanMinusImage_mm)),
+      new Row("Y1 Jaw plan minus image in mm", "Y1 Jaw", (imgId: ImageIdentification) => jaw(imgId.y1JawPlanMinusImage_mm)),
+      new Row("Y2 Jaw plan minus image in mm", "Y2 Jaw", (imgId: ImageIdentification) => jaw(imgId.y2JawPlanMinusImage_mm)),
+      new Row("Energy plan minus image in kev", "Energy", (imgId: ImageIdentification) => imgId.energyPlanMinusImage_kev.toString),
+      new Row("Yes if Flattening Filter was present", "FF", (imgId: ImageIdentification) => if (imgId.flatteningFilter) "Yes" else "No"),
+      new Row("Pass if angles and jaw differences within tolerences", "Status", (imgId: ImageIdentification) => if (imgId.pass) "Pass" else "Fail"))
+
+    def imageIdentificationTableHeader: Elem = {
+      <thead><tr>{ rowList.map(row => row.toHeader) }</tr></thead>
+    }
+
+    def imageIdentificationToTableRow(imgId: ImageIdentification): Elem = {
+      val rand = new scala.util.Random // TODO rm
+      if (rand.nextBoolean) { // TODO rm
+        //if (imgId.pass) {
+        <tr>{ rowList.map(row => row.toRow(imgId)) }</tr>
+      } else {
+        <tr class="Danger">{ rowList.map(row => row.toRow(imgId)) }</tr>
+      }
+    }
+
     val div = {
       <div class="row col-md-10 col-md-offset-1">
         <div class="row">
@@ -323,7 +358,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
           { wrap2(1, "Institution", institutionName) }
           { wrap2(2, "Data Acquisition", dateToString(output.dataDate)) }
           { wrap2(2, "Analysis", analysisDate) }
-          { wrap2(1, "Analysis by", userId) }
+          { wrap2(1, "User", userId) }
           { wrap2(1, "Elapsed", elapsed) }
           { wrap2(3, "Procedure", procedureDesc) }
         </div>
@@ -331,39 +366,13 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
           { csvFileReference }
         </div>
         <div class="row" style="margin:20px;">
-          wrap(2, linkToFiles) 
-           wrap(2, viewLog) 
-           wrap(2, viewXml)
+          <table class="table table-striped">
+            { imageIdentificationTableHeader }
+            <tbody>{ runReq.imageIdFileList.map(iif => imageIdentificationToTableRow(iif.imageIdentification)) }</tbody>
+          </table>
         </div>
         <div class="row">
-          <h4>Leaf Offset in mm</h4>
-        </div>
-        <div class="row">
-          <div id="LocChart"></div>
-        </div>
-        <div class="row">
-          <h4>Leaf Transmission Fraction</h4>
-        </div>
-        <div class="row">
-          <div id="TransChart"></div>
-        </div>
-        <div class="row">
-          <h4>R<sup>2</sup></h4>
-        </div>
-        <div class="row">
-          <div id="RSquaredChart">aaaaa</div>
-        </div>
-        <div class="row">
-          <h4>Difference from Baseline Open</h4>
-        </div>
-        <div class="row">
-          <div id="DifferenceFromBaselineOpenChart">bbbbb</div>
-        </div>
-        <div class="row">
-          <h4>Difference from Baseline Transmission</h4>
-        </div>
-        <div class="row">
-          <div id="DifferenceFromBaselineTrans">ccccc</div>
+          <h4>This is a dummy filler</h4>
         </div>
       </div>
     }
