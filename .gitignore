@@ -39,3 +39,6 @@ hs_err_pid*.log
 xterm.exe.stackdump
 
 /src/main/resources/investigate/
+
+# terraform stuff
+src/main/terraform/test/
