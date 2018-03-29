@@ -61,7 +61,9 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
     form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
   }
 
-  private case class RunRequirements(machine: Machine, sessionDir: File, plan: DicomFile, imageIdFileList: Seq[ImageIdentificationFile]);
+  private case class RunRequirements(machine: Machine, sessionDir: File, plan: DicomFile, imageIdFileList: Seq[ImageIdentificationFile]) {
+    val pass = (imageIdFileList.size > 2) && imageIdFileList.map(iif => iif.imageIdentification.pass).reduce(_ && _)
+  }
 
   def formErr(msg: String) = Left(Error.make(form.uploadFileInput.get, msg))
 
@@ -339,20 +341,27 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
     }
 
     def imageIdentificationToTableRow(imgId: ImageIdentification): Elem = {
-      val rand = new scala.util.Random // TODO rm
-      if (rand.nextBoolean) { // TODO rm
-        //if (imgId.pass) {
+      if (imgId.pass) {
         <tr>{ rowList.map(row => row.toRow(imgId)) }</tr>
       } else {
-        <tr class="Danger">{ rowList.map(row => row.toRow(imgId)) }</tr>
+        <tr class="danger">{ rowList.map(row => row.toRow(imgId)) }</tr>
+      }
+    }
+
+    val passFailImage = {
+      if (runReq.pass) {
+        <div title="Passed!"><img src="/static/images/pass.png" width="128"/></div>
+      } else {
+        <div title="Failed"><img src="/static/images/fail.png" width="128"/></div>
       }
     }
 
     val div = {
       <div class="row col-md-10 col-md-offset-1">
         <div class="row">
-          <div class="col-md-1" title="Image Identification"><h2>Image Identification</h2></div>
-          <div class="col-md-2 col-md-offset-1" title="Machine"><h2>{ machineId }</h2></div>
+          <div class="col-md-1">{ passFailImage }</div>
+          <div class="col-md-3" title="Image Identification"><h2>Image Identification</h2></div>
+          <div class="col-md-1" title="Machine"><h2>{ machineId }</h2></div>
         </div>
         <div class="row" style="margin:20px;">
           { wrap2(1, "Institution", institutionName) }
