@@ -314,6 +314,10 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
     val csvFileReference = {
       <a title="Download Image Identification as CSV File" href={ ImageIdentification.csvFileName }>CSV</a>
     }
+    
+    val dicomReference = {
+      ???  // TODO
+    }
 
     class Row(title: String, name: String, get: (ImageIdentification) => String) {
       def toHeader = <th title={ title }>{ name }</th>
