@@ -3,8 +3,6 @@ package org.aqa.web
 import org.restlet.Restlet
 import org.restlet.Request
 import org.restlet.Response
-import org.restlet.data.Method
-import java.util.Date
 import java.io.File
 import java.io.FileInputStream
 import org.restlet.data.Status
