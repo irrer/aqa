@@ -7,6 +7,7 @@ import com.pixelmed.dicom.TagFromName
 import com.pixelmed.display.ConsumerFormatImageMaker
 import edu.umro.ScalaUtil.DicomUtil
 import java.awt.image.BufferedImage
+import edu.umro.ScalaUtil.Trace
 
 case class DicomFile(file: File) extends Logging {
   private lazy val readResult = Util.readDicomFile(file)

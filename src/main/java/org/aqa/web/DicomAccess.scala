@@ -11,6 +11,7 @@ import javax.imageio.ImageIO
 import edu.umro.ScalaUtil.FileUtil
 import java.io.ByteArrayOutputStream
 import java.io.FileOutputStream
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Create a web page to display a DICOM file.

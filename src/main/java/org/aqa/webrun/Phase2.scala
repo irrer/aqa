@@ -31,6 +31,8 @@ import org.aqa.db.User
 import org.aqa.web.ViewOutput
 import org.aqa.web.DicomAccess
 import org.aqa.web.WebServer
+import com.pixelmed.dicom.TimeAttribute
+import edu.umro.ScalaUtil.DicomUtil
 
 object Phase2 {
   val parametersFileName = "parameters.xml"
@@ -317,6 +319,13 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
       <a title="Download Image Identification as CSV File" href={ ImageIdentification.csvFileName }>CSV</a>
     }
 
+    val viewRtPlan = {
+      val title = "RT Plan"
+      val link = DicomAccess.write(runReq.plan, WebServer.urlOfMachineConfigurationFile(runReq.plan.file), title, output.dir, DicomFile.ContrastModel.maxContrast)
+      val elem = { <a title="View RT Plan DICOM file" href={ link }>{ title }</a> }
+      elem
+    }
+
     class Row(val title: String, name: String, val get: (ImageIdentificationFile) => String) {
       def toHeader = <th title={ title }>{ name }</th>
       def toRow(imgId: ImageIdentificationFile) = <td title={ title }>{ get(imgId) }</td>
@@ -325,7 +334,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
     def degree(diff: Double): String = diff.formatted("%6e")
 
     def jaw(diff: Double): String = diff.formatted("%6e")
-    
+
     class RowBeamName(override val title: String, name: String, override val get: (ImageIdentificationFile) => String) extends Row(title, name, get) {
       override def toRow(imgIdFile: ImageIdentificationFile) = {
 
@@ -368,6 +377,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
       }
     }
 
+    val tbody = runReq.imageIdFileList.sortWith((a, b) => DicomUtil.compareDicom(a.dicomFile.attributeList.get, b.dicomFile.attributeList.get) < 0).map(iif => imageIdentificationToTableRow(iif))
+
     val div = {
       <div class="row col-md-10 col-md-offset-1">
         <div class="row">
@@ -384,19 +395,13 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
           { wrap2(3, "Procedure", procedureDesc) }
         </div>
         <div class="row" style="margin:20px;">
-          { csvFileReference }
+          <div class="col-md-1">{ csvFileReference }</div>
+          <div class="col-md-1">{ viewRtPlan }</div>
         </div>
         <div class="row" style="margin:20px;">
-          <div>
-            Hey there
-            {
-              //              val df = runReq.imageIdFileList.head.dicomFile   // TODO rm
-              //              DicomAccess.write(df, WebServer.urlOfResultsFile(df.file), "My Title", output.dir, DicomFile.ContrastModel.maxContrast)
-            }
-          </div>
           <table class="table table-striped">
             { imageIdentificationTableHeader }
-            <tbody>{ runReq.imageIdFileList.map(iif => imageIdentificationToTableRow(iif)) }</tbody>
+            <tbody>{ tbody }</tbody>
           </table>
         </div>
       </div>
