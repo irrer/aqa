@@ -29,6 +29,8 @@ import org.aqa.db.Output
 import org.aqa.db.Institution
 import org.aqa.db.User
 import org.aqa.web.ViewOutput
+import org.aqa.web.DicomAccess
+import org.aqa.web.WebServer
 
 object Phase2 {
   val parametersFileName = "parameters.xml"
@@ -314,41 +316,47 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
     val csvFileReference = {
       <a title="Download Image Identification as CSV File" href={ ImageIdentification.csvFileName }>CSV</a>
     }
-    
-    val dicomReference = {
-      ???  // TODO
-    }
 
-    class Row(title: String, name: String, get: (ImageIdentification) => String) {
+    class Row(val title: String, name: String, val get: (ImageIdentificationFile) => String) {
       def toHeader = <th title={ title }>{ name }</th>
-      def toRow(imgId: ImageIdentification) = <td title={ title }>{ get(imgId) }</td>
+      def toRow(imgId: ImageIdentificationFile) = <td title={ title }>{ get(imgId) }</td>
     }
 
     def degree(diff: Double): String = diff.formatted("%6e")
 
     def jaw(diff: Double): String = diff.formatted("%6e")
+    
+    class RowBeamName(override val title: String, name: String, override val get: (ImageIdentificationFile) => String) extends Row(title, name, get) {
+      override def toRow(imgIdFile: ImageIdentificationFile) = {
+
+        val link = DicomAccess.write(imgIdFile.dicomFile, WebServer.urlOfResultsFile(imgIdFile.dicomFile.file), get(imgIdFile) + " : " + imgIdFile.dicomFile.file.getName, output.dir, DicomFile.ContrastModel.maxContrast)
+
+        val elem = { <td title={ title + ".  Follow link to view DICOM" }><a href={ link }>{ get(imgIdFile) }</a></td> }
+        elem
+      }
+    }
 
     val rowList = Seq(
-      new Row("Name of beam in plan", "Beam Name", (imgId: ImageIdentification) => imgId.beamName),
-      new Row("Gantry Angle plan minus image in degrees", "Gantry Angle", (imgId: ImageIdentification) => degree(imgId.gantryAnglePlanMinusImage_deg)),
-      new Row("Collimator Angle plan minus image in degrees", "Collimator Angle", (imgId: ImageIdentification) => degree(imgId.collimatorAnglePlanMinusImage_deg)),
-      new Row("X1 Jaw plan minus image in mm", "X1 Jaw", (imgId: ImageIdentification) => jaw(imgId.x1JawPlanMinusImage_mm)),
-      new Row("X2 Jaw plan minus image in mm", "X2 Jaw", (imgId: ImageIdentification) => jaw(imgId.x2JawPlanMinusImage_mm)),
-      new Row("Y1 Jaw plan minus image in mm", "Y1 Jaw", (imgId: ImageIdentification) => jaw(imgId.y1JawPlanMinusImage_mm)),
-      new Row("Y2 Jaw plan minus image in mm", "Y2 Jaw", (imgId: ImageIdentification) => jaw(imgId.y2JawPlanMinusImage_mm)),
-      new Row("Energy plan minus image in kev", "Energy", (imgId: ImageIdentification) => imgId.energyPlanMinusImage_kev.toString),
-      new Row("Yes if Flattening Filter was present", "FF", (imgId: ImageIdentification) => if (imgId.flatteningFilter) "Yes" else "No"),
-      new Row("Pass if angles and jaw differences within tolerences", "Status", (imgId: ImageIdentification) => if (imgId.pass) "Pass" else "Fail"))
+      new RowBeamName("Name of beam in plan", "Beam Name", (imgIdFile: ImageIdentificationFile) => imgIdFile.imageIdentification.beamName),
+      new Row("Gantry Angle plan minus image in degrees", "Gantry Angle", (imgIdFile: ImageIdentificationFile) => degree(imgIdFile.imageIdentification.gantryAnglePlanMinusImage_deg)),
+      new Row("Collimator Angle plan minus image in degrees", "Collimator Angle", (imgIdFile: ImageIdentificationFile) => degree(imgIdFile.imageIdentification.collimatorAnglePlanMinusImage_deg)),
+      new Row("X1 Jaw plan minus image in mm", "X1 Jaw", (imgIdFile: ImageIdentificationFile) => jaw(imgIdFile.imageIdentification.x1JawPlanMinusImage_mm)),
+      new Row("X2 Jaw plan minus image in mm", "X2 Jaw", (imgIdFile: ImageIdentificationFile) => jaw(imgIdFile.imageIdentification.x2JawPlanMinusImage_mm)),
+      new Row("Y1 Jaw plan minus image in mm", "Y1 Jaw", (imgIdFile: ImageIdentificationFile) => jaw(imgIdFile.imageIdentification.y1JawPlanMinusImage_mm)),
+      new Row("Y2 Jaw plan minus image in mm", "Y2 Jaw", (imgIdFile: ImageIdentificationFile) => jaw(imgIdFile.imageIdentification.y2JawPlanMinusImage_mm)),
+      new Row("Energy plan minus image in kev", "Energy", (imgIdFile: ImageIdentificationFile) => imgIdFile.imageIdentification.energyPlanMinusImage_kev.toString),
+      new Row("Yes if Flattening Filter was present", "FF", (imgIdFile: ImageIdentificationFile) => if (imgIdFile.imageIdentification.flatteningFilter) "Yes" else "No"),
+      new Row("Pass if angles and jaw differences within tolerences", "Status", (imgIdFile: ImageIdentificationFile) => if (imgIdFile.imageIdentification.pass) "Pass" else "Fail"))
 
     def imageIdentificationTableHeader: Elem = {
       <thead><tr>{ rowList.map(row => row.toHeader) }</tr></thead>
     }
 
-    def imageIdentificationToTableRow(imgId: ImageIdentification): Elem = {
-      if (imgId.pass) {
-        <tr>{ rowList.map(row => row.toRow(imgId)) }</tr>
+    def imageIdentificationToTableRow(imgIdFile: ImageIdentificationFile): Elem = {
+      if (imgIdFile.imageIdentification.pass) {
+        <tr>{ rowList.map(row => row.toRow(imgIdFile)) }</tr>
       } else {
-        <tr class="danger">{ rowList.map(row => row.toRow(imgId)) }</tr>
+        <tr class="danger">{ rowList.map(row => row.toRow(imgIdFile)) }</tr>
       }
     }
 
@@ -379,13 +387,17 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostP
           { csvFileReference }
         </div>
         <div class="row" style="margin:20px;">
+          <div>
+            Hey there
+            {
+              //              val df = runReq.imageIdFileList.head.dicomFile   // TODO rm
+              //              DicomAccess.write(df, WebServer.urlOfResultsFile(df.file), "My Title", output.dir, DicomFile.ContrastModel.maxContrast)
+            }
+          </div>
           <table class="table table-striped">
             { imageIdentificationTableHeader }
-            <tbody>{ runReq.imageIdFileList.map(iif => imageIdentificationToTableRow(iif.imageIdentification)) }</tbody>
+            <tbody>{ runReq.imageIdFileList.map(iif => imageIdentificationToTableRow(iif)) }</tbody>
           </table>
-        </div>
-        <div class="row">
-          <h4>This is a dummy filler</h4>
         </div>
       </div>
     }

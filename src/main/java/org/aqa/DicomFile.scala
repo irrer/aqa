@@ -8,11 +8,6 @@ import com.pixelmed.display.ConsumerFormatImageMaker
 import edu.umro.ScalaUtil.DicomUtil
 import java.awt.image.BufferedImage
 
-object ColorScheme extends Enumeration {
-  val standard = Value
-  val maxContrast = Value
-}
-
 case class DicomFile(file: File) extends Logging {
   private lazy val readResult = Util.readDicomFile(file)
   lazy val valid = readResult.isRight
@@ -32,15 +27,15 @@ case class DicomFile(file: File) extends Logging {
       val lo = pixelList.min
       val hi = pixelList.max
       val range = hi - lo
-      val ratio = (range / 255.0).toFloat
+      val ratio = (255.0 / range).toFloat
       val height = attributeList.get.get(TagFromName.Rows).getIntegerValues.head
       val width = attributeList.get.get(TagFromName.Columns).getIntegerValues.head
       val image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
 
       for (xy <- (0 until (width * height))) {
         val x = xy % width
-        val y = xy % height
-        val brightness = ((pixelList(xy) - lo) * range).floor.toInt & 0xff
+        val y = xy / width
+        val brightness = ((pixelList(xy) - lo) * ratio).floor.toInt & 0xff
         val rgb = DicomFile.rgbTable(brightness)
         image.setRGB(x, y, rgb)
       }
@@ -49,12 +44,12 @@ case class DicomFile(file: File) extends Logging {
       None
   }
 
-  def getImage(colorScheme: ColorScheme.Value): Option[BufferedImage] = {
-    colorScheme match {
-      case ColorScheme.standard => standardImage
-      case ColorScheme.standard => standardImage
+  def getImage(contrastModel: DicomFile.ContrastModel.Value): Option[BufferedImage] = {
+    contrastModel match {
+      case DicomFile.ContrastModel.standard => standardImage
+      case DicomFile.ContrastModel.maxContrast => maxContrastImage
       case _ => {
-        logger.error(fmtEx(new RuntimeException("Invalid colorScheme: " + colorScheme)))
+        logger.error(fmtEx(new RuntimeException("Invalid colorScheme: " + contrastModel)))
         None
       }
     }
@@ -66,6 +61,11 @@ case class DicomFile(file: File) extends Logging {
 }
 
 object DicomFile {
+
+  object ContrastModel extends Enumeration {
+    val standard = Value
+    val maxContrast = Value
+  }
 
   /** Lookup table for brightness -> color. */
   private lazy val rgbTableBW = (0 until 256).map(b => (b << 16) + (b << 8) + b)

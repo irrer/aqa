@@ -7,82 +7,92 @@ import org.aqa.Logging
 import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.DicomUtil
 import scala.xml.Elem
-import org.aqa.ColorScheme
 import javax.imageio.ImageIO
+import edu.umro.ScalaUtil.FileUtil
+import java.io.ByteArrayOutputStream
+import java.io.FileOutputStream
 
+/**
+ * Create a web page to display a DICOM file.
+ */
 object DicomAccess extends Logging {
 
-  val indexName = "index.html"
-
-  def makeTitle(attrList: Seq[AttributeList]): String = {
+  private def makeTitle(attrList: Seq[AttributeList]): String = {
     val SeriesDescription = attrList.map(al => al.get(TagFromName.SeriesDescription)).distinct.mkString("   ")
     val Modality = attrList.map(al => al.get(TagFromName.Modality)).distinct.mkString("   ")
     Modality + " : " + SeriesDescription
   }
 
-  private def makePages(dicomList: Seq[DicomFile], title: String, dir: File, colorScheme: ColorScheme.Value) = {
-    ??? // TODO
-  }
+  private def makePage(dicom: DicomFile, urlOfFile: String, title: String, dir: File, contrastModel: DicomFile.ContrastModel.Value): String = {
 
-  private def makeIndex(dicomList: Seq[DicomFile], title: String, dir: File, colorScheme: ColorScheme.Value) = {
+    val fileBaseName = FileUtil.replaceInvalidFileNameCharacters(title, '_').replace(' ', '_')
 
-    
-    def makeItem(df: DicomFile) {
-      df.getImage(colorScheme) match {
-        case Some(image) => {
-          val file = new File(dir, df.file.getName.replaceAll(".dcm", "").replaceAll(".DCM", "") + ".png")
-          ImageIO.write(image, "png", file)
-          <td><img src={ file.getName } width="64"/></td>
-        }
-        case _ => {
-          val modality = {
-            if (df.attributeList.isDefined) df.attributeList.get.get(TagFromName.Modality).getSingleStringValueOrDefault("NA")
-            else "NA"
+    val downloadLink = { <a href={ urlOfFile } title="Download as DICOM">Download</a> }
+
+    val content = if (dicom.attributeList.isDefined) {
+      val al = dicom.attributeList.get
+      val image = dicom.getImage(contrastModel)
+      val text = DicomUtil.attributeListToString(dicom.attributeList.get)
+
+      {
+        <div>
+          { downloadLink }
+          <br></br>
+          {
+            if (image.isDefined) {
+              val pngFile = new File(dir, fileBaseName + ".png")
+              val fos = new FileOutputStream(pngFile)
+              ImageIO.write(image.get, "png", fos)
+              // TODO if the file is not a results file, then this URL will be wrong
+              val t = contrastModel match {
+                case DicomFile.ContrastModel.standard => "Image rendered as standard contrast across series"
+                case DicomFile.ContrastModel.maxContrast => "Image rendered for maximum contrast"
+              }
+
+              <img title={ t } src={ WebServer.urlOfResultsFile(pngFile) }/>
+            }
           }
-          // TODO should link to text page of metadata
-          <td><a href={ "???" }>{ modality }</a></td>
-        }
+          <p>
+            <pre title="DICOM meta-data">{ WebUtil.nl + text }</pre>
+          </p>
+        </div>
       }
-    }
-
-    def makeRow(group: Seq[DicomFile]): Elem = {
-      <tr>
-        { group.map(df => 4) }
-      </tr>
-    }
+    } else { downloadLink }
 
     val html = {
-      <div title="DICOM Files.  Mouse over images to enlarge, click images for details" class="row col-md-10 col-md-offset-1">
-        <h2>{ title }</h2>
-        <table>
-          {
-            val groupList = edu.umro.ScalaUtil.Util.sizedGroups(dicomList, 16)
-            groupList.map(g => makeRow(g))
-          }
-        </table>
+      <div class="row col-md-10 col-md-offset-1">
+        <h2 title="Scroll down for metadata">{ title }</h2>
+        { content }
       </div>
     }
+
+    val htmlFile = new File(dir, fileBaseName + ".html")
+    val htmlText = WebUtil.wrapBody(html, title)
+    val htmlOutStream = new FileOutputStream(htmlFile)
+    htmlOutStream.write(htmlText.getBytes)
+    htmlOutStream.close
+    WebServer.urlOfResultsFile(htmlFile)
   }
 
   /**
-   * Create a page for viewing and downloading DICOM files.
+   * Create a page for viewing and downloading a DICOM file.
    *
-   * @param fileList: List of DICOM files
+   * @param dicom: Build display for this content
    *
-   * @param dir: Directory in which to write the HTML.
+   * @param title: Page title
+   *
+   * @param dir: Directory in which to write the HTML and image.
+   *
+   * @param contrastModel: How to render the image.  Only applicable for image modalities.
    */
-  def write(dicomList: Seq[DicomFile], dir: File, colorScheme: ColorScheme.Value) = {
+  def write(dicom: DicomFile, urlOfFile: String, title: String, dir: File, contrastModel: DicomFile.ContrastModel.Value): String = {
     try {
       dir.mkdirs
-      val attrList = DicomUtil.sortDicom(dicomList.map(df => df.attributeList).flatten)
-
-      makePages(dicomList, makeTitle(attrList), dir, colorScheme)
-      
-      makeIndex(dicomList, makeTitle(attrList), dir, colorScheme)
-
+      makePage(dicom, urlOfFile, title, dir, contrastModel)
     } catch {
       case t: Throwable => {
         logger.warn("Unexpected error while generating DICOM view for directory " + dir.getAbsolutePath + " : " + fmtEx(t))
+        "/"
       }
     }
   }
