@@ -59,7 +59,7 @@ object WebServer {
 
   def fileToResultsPath(file: File): String = file.getAbsolutePath.substring(Config.resultsDirFile.getAbsolutePath.size)
 
-  def fileToMachineConfigurationPath(file: File): String = file.getAbsolutePath.substring(Config.resultsDirFile.getAbsolutePath.size)
+  def fileToMachineConfigurationPath(file: File): String = file.getAbsolutePath.substring(Config.machineConfigurationDir.getAbsolutePath.size)
 
 }
 

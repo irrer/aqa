@@ -254,6 +254,8 @@ object Config extends Logging {
   val ProgramDir = getDir("ProgramDir")
   val ProcedureDir = getDir("ProcedureDir")
   val DataDir = getDir("DataDir")
+  val machineConfigurationDir = new File(DataDir, machineConfigurationDirName)
+  machineConfigurationDir.mkdirs
 
   val RestletLogLevel = logMainText("RestletLogLevel")
   val AuthenticationTimeout = logMainText("AuthenticationTimeout").toDouble
