@@ -43,7 +43,7 @@ object PermuteDICOM {
     }
 
     def modify(al: AttributeList, len: Int): AttributeList = {
-        setAttr(al, TagFromName.OtherPatientID, len.formatted("%03d"))
+        setAttr(al, TagFromName.OtherPatientIDs, len.formatted("%03d"))
         val ReferringPhysicianName = (0 until len).map(i => "A").mkString
         setAttr(al, TagFromName.ReferringPhysicianName, ReferringPhysicianName)
         setAttr(al, TagFromName.SeriesInstanceUID, seriesUid + "." + len)
@@ -56,7 +56,7 @@ object PermuteDICOM {
     def write(al: AttributeList) = {
         val transferSyntax = al.get(TagFromName.TransferSyntaxUID).getSingleStringValueOrDefault(TransferSyntax.ExplicitVRLittleEndian)
         val name =
-            al.get(TagFromName.OtherPatientID).getSingleStringValueOrNull + "_" +
+            al.get(TagFromName.OtherPatientIDs).getSingleStringValueOrNull + "_" +
                 al.get(TagFromName.InstanceNumber).getSingleStringValueOrNull.toInt.formatted("%03d") +
                 ".dcm"
         val file = new File(outDir, name)

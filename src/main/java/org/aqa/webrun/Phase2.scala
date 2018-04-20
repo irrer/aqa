@@ -44,7 +44,7 @@ object Phase2 {
 /**
  * Run Phase2 code.
  */
-class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with PostProcess with Logging {
+class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Logging {
 
   /** Defines precision - Format to use when showing numbers. */
   val outputFormat = "%7.5e"
