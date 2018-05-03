@@ -6,7 +6,7 @@ import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import java.io.File
 import edu.umro.ScalaUtil.Trace
-import org.aqa.webrun.ImageIdentificationAnalysis
+import org.aqa.webrun.phase2.ImageIdentificationAnalysis
 
 /**
  * Test the ImageIdentificationAnalysis.

@@ -1,4 +1,4 @@
-package org.aqa.webrun
+package org.aqa.webrun.phase2
 
 import org.aqa.Logging
 import org.aqa.db.ImageIdentification
@@ -6,6 +6,7 @@ import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import org.aqa.Util
+import scala.collection.Seq
 
 /**
  * Analyze DICOM files for ImageAnalysis.

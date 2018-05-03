@@ -112,9 +112,9 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
     form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
   }
 
-  private case class RunRequirements(machine: Machine, sessionDir: File, alList: Seq[AttributeList]);
+  private case class RunRequirementsLOC(machine: Machine, sessionDir: File, alList: Seq[AttributeList]);
 
-  private def validate(valueMap: ValueMapT): Either[StyleMapT, RunRequirements] = {
+  private def validate(valueMap: ValueMapT): Either[StyleMapT, RunRequirementsLOC] = {
     lazy val alList = attributeListsInSession(valueMap)
 
     // machines that DICOM files reference (based on device serial numbers)
@@ -131,7 +131,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
       case _ if (machList.size > 1) => formErr("Files from more than one machine were found.  Click Cancel to start over.")
       case _ if (machList.isEmpty) => formErr("These files do not have a serial number of a known machine.  Click Cancel and use the baseline LOC upload procedure.")
       case _ if (!LOCUploadBaseFiles_1.ensureBaseline(mach.get.machinePK.get)) => formErr("There are no baseline files for machine " + mach.get.id + ".  Click Cancel and use the baseline LOC upload procedure.")
-      case Some(dir) => Right(new RunRequirements(mach.get, dir, alList))
+      case Some(dir) => Right(new RunRequirementsLOC(mach.get, dir, alList))
     }
   }
 
