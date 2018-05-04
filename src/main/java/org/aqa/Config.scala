@@ -48,6 +48,13 @@ object Config extends Logging {
 
   lazy val resultsDirFile = makeDataDir(resultsDirName)
 
+  /** Directory for files shared by multiple machines, possibly multiple institutions. */
+  lazy val sharedDir = {
+    val f = new File(resultsDirFile, "shared")
+    f.mkdirs
+    f
+  }
+
   lazy val tmpDirFile = makeDataDir(tmpDirName)
 
   lazy val machineConfigurationDirFile = makeDataDir(machineConfigurationDirName)
@@ -316,6 +323,10 @@ object Config extends Logging {
   val SlickDbsDefaultDbDriver = logMainText("SlickDbsDefaultDbDriver")
 
   val UserWhiteList: List[String] = (document \ "UserWhiteList" \ "User").toList.map(node => node.head.text.trim.toLowerCase)
+
+  /** Symbols for pass and fail. */
+  val passImageUrl = "/static/images/pass.png"
+  val failImageUrl = "/static/images/fail.png"
 
   val TermsOfUse = logMainText("TermsOfUse")
 

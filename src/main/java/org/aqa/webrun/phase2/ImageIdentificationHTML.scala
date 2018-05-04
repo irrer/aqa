@@ -15,10 +15,18 @@ import org.aqa.web.DicomAccess
 import org.aqa.web.WebUtil._
 import org.aqa.DicomFile
 import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.run.ProcedureStatus
+import java.io.File
+import org.aqa.Config
 
-object CheckAnglesHTML {
+object ImageIdentificationHTML {
+  val htmlFileName = "ImageIdentification.html"
 
-  private def makeDisplay(output: Output, runReq: CheckAnglesRunRequirements) = {
+  /**
+   * Generate a detailed report and write it to the output directory.  Also write a CSV file.  Return an
+   * HTML snippet that serves as a summary and a link to the detailed report.
+   */
+  def makeDisplay(output: Output, runReq: ImageIdentificationRunRequirements, procedureStatus: ProcedureStatus.Value): Elem = {
 
     def wrap(col: Int, elem: Elem): Elem = {
       <div class={ "col-md-" + col }>{ elem }</div>
@@ -71,7 +79,7 @@ object CheckAnglesHTML {
       }
     }
 
-    CheckAnglesCSV.makeCsvFile(
+    ImageIdentificationCSV.makeCsvFile(
       procedureDesc,
       institutionName,
       output.dir,
@@ -82,7 +90,7 @@ object CheckAnglesHTML {
       runReq)
 
     val csvFileReference = {
-      <a title="Download Image Identification as CSV File" href={ ImageIdentification.csvFileName }>CSV</a>
+      <a title="Download Image Identification as CSV File" href={ ImageIdentificationCSV.csvFileName }>CSV</a>
     }
 
     val viewRtPlan = {
@@ -137,7 +145,7 @@ object CheckAnglesHTML {
 
     val passFailImage = {
       val j = runReq
-      if (runReq.pass) {
+      if (procedureStatus == ProcedureStatus.pass) {
         <div title="Passed!"><img src="/static/images/pass.png" width="128"/></div>
       } else {
         <div title="Failed"><img src="/static/images/fail.png" width="128"/></div>
@@ -174,8 +182,30 @@ object CheckAnglesHTML {
       </div>
     }
 
+    // write the report to the output directory
     val text = wrapBody(div, "Image Identification", None, true, None)
-    text
+    val file = new File(output.dir, htmlFileName)
+    Util.writeBinaryFile(file, text.getBytes)
+
+    /**
+     * Make a tiny summary and link to the detailed report.
+     */
+    def makeSummary = {
+      val iconImage = if (procedureStatus == ProcedureStatus.pass) Config.passImageUrl else Config.failImageUrl
+      val href = ""
+      val j = { <a href={ "4" }></a> }
+      val elem = {
+        <div title="Click for details.">
+          <a href={ htmlFileName }>
+            Image Identification<br></br>
+            <img src={ iconImage } height="32"></img>
+          </a>
+        </div>
+      }
+      elem
+    }
+
+    makeSummary
   }
 
 }

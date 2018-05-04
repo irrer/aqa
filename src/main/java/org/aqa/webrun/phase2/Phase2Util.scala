@@ -8,6 +8,7 @@ import com.pixelmed.dicom.SOPClass
 import org.aqa.Logging
 import org.aqa.Util
 import java.io.File
+import org.aqa.Config
 
 object Phase2Util extends Logging {
   /**
@@ -25,14 +26,14 @@ object Phase2Util extends Logging {
 
   /**
    * Get all RTPLAN files, including any that were just now downloaded and any that are in the
-   * machine's configuration directory.  If a plan is found more than once then return only one
-   * occurrence of it.  If the plan occurs both in the machine's configuration directory and was
-   * downloaded, then prefer the one in the machine's configuration directory.
+   * shared directory.  If a plan is found more than once then return only one
+   * occurrence of it.  If the plan occurs both in the shared directory and was
+   * downloaded, then prefer the one in the shared directory.
    */
-  def getPlanList(dicomList: Seq[DicomFile], machine: Machine): Seq[DicomFile] = {
+  def getPlanList(dicomList: Seq[DicomFile]): Seq[DicomFile] = {
     val configuredPlans: Seq[DicomFile] = {
       try {
-        DicomFile.readDicomInDir(machine.configDir.get).filter(df => df.isModality(SOPClass.RTPlanStorage))
+        DicomFile.readDicomInDir(Config.sharedDir).filter(df => df.isModality(SOPClass.RTPlanStorage))
       } catch {
         case t: Throwable => {
           logger.warn("Unexpected problem while getting pre-configured RTPLANs: " + t)
@@ -69,24 +70,18 @@ object Phase2Util extends Logging {
   }
 
   /**
-   * If a plan was used that was not already saved, then save it.
+   * If a plan was used that was not already saved, then save it to the shared directory so that it will be available for future runs.
    */
-  def saveRtplan(machine: Machine, plan: DicomFile) = {
+  def saveRtplan(plan: DicomFile) = {
     try {
-      Machine.get(machine.machinePK.get) match {
-        case Some(mach) => {
-          val cfgDir = mach.configDir.get
-          if (!cfgDir.equals(plan.file.getParentFile)) {
-            val data = Util.readBinaryFile(plan.file)
-            val planFile = new File(cfgDir, plan.attributeList.get.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull + Util.dicomFileNameSuffix)
-            Util.writeBinaryFile(planFile, data.right.get)
-            logger.info("Wrote new plan file " + planFile)
-          }
-        }
-        case _ => logger.error("Machine not in database.  Unable to save rtplan for machine " + machine)
+      if (plan.file.getParentFile != Config.sharedDir) {
+        val data = Util.readBinaryFile(plan.file)
+        val planFile = new File(Config.sharedDir, plan.attributeList.get.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull + Util.dicomFileNameSuffix)
+        Util.writeBinaryFile(planFile, data.right.get)
+        logger.info("Wrote new plan file " + planFile)
       }
     } catch {
-      case t: Throwable => logger.error("Unable to save rtplan for machine " + machine + " : " + t)
+      case t: Throwable => logger.error("Unable to save rtplan " + plan.file.getAbsolutePath + " : " + t)
     }
   }
 

@@ -7,6 +7,7 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import org.aqa.Util
 import scala.collection.Seq
+import scala.xml.Elem
 
 /**
  * Analyze DICOM files for ImageAnalysis.
@@ -144,5 +145,14 @@ object ImageIdentificationAnalysis extends Logging {
     }
   }
 
-}
+  /**
+   * Run the ImageIdentification sub-procedure, save results in the database, return true for pass or false for fail.
+   */
+  def runProcedure(outPK: Long, imageIdentificationRunRequirements: ImageIdentificationRunRequirements): (Boolean, Elem) = {
+    val list = imageIdentificationRunRequirements.imageIdFileList.map(imgId => imgId.imageIdentification.copy(outputPK = outPK))
+    ImageIdentification.insert(list)
+    val pass: Boolean = list.map(ii => ii.pass).reduce(_ && _)
 
+    (pass, null)
+  }
+}

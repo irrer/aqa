@@ -5,7 +5,7 @@ import java.io.File
 import org.aqa.db.ImageIdentification
 
 /**
- * Change this to CheckAnglesFile?  Get rid of move function?   TODO
+ *    TODO
  */
 case class ImageIdentificationFile(dicomFile: DicomFile, imageIdentification: ImageIdentification) {
   def move(oldDir: File, newDir: File): ImageIdentificationFile = {

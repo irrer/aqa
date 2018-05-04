@@ -159,6 +159,4 @@ object ImageIdentification extends ProcedureOutput {
     val ops = list.map { loc => ImageIdentification.query.insertOrUpdate(loc) }
     Db.perform(ops)
   }
-  
-  val csvFileName = "ImageIdentification.csv"
-  }
+}

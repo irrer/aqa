@@ -7,7 +7,7 @@ import org.aqa.Util
 import org.aqa.DicomFile
 import org.aqa.db.ImageIdentification
 
-object CheckAngles {
+object ImageIdentificationValidation {
 
   private val MIN_IMAGES = 3
 
@@ -17,7 +17,7 @@ object CheckAngles {
    * Identify the input files.
    */
   private def analyzeImageIdentification(dicomList: Seq[DicomFile], machine: Machine, uploadFileInput: Option[IsInput]): Either[StyleMapT, (DicomFile, Seq[ImageIdentificationFile])] = {
-    val planList = Phase2Util.getPlanList(dicomList, machine)
+    val planList = Phase2Util.getPlanList(dicomList)
     val imageList = dicomList.filter(df => df.isModality(SOPClass.RTImageStorage))
 
     // associate each image with a plan
@@ -50,10 +50,10 @@ object CheckAngles {
   }
 
   /**
-   * Validate the given data, and, if it is valid, organize it into a <code>CheckAnglesRunRequirements</code> object.  If
+   * Validate the given data, and, if it is valid, organize it into a <code>ImageIdentificationRunRequirements</code> object.  If
    * it is not valid, then return a message indicating the problem.
    */
-  def validate(valueMap: ValueMapT, outputPK: Option[Long], machine: Machine, uploadFileInput: Option[IsInput]): Either[StyleMapT, CheckAnglesRunRequirements] = {
+  def validate(valueMap: ValueMapT, outputPK: Option[Long], machine: Machine, uploadFileInput: Option[IsInput]): Either[StyleMapT, ImageIdentificationRunRequirements] = {
     val rtimageList = dicomFilesInSession(valueMap).filter(df => df.isModality(SOPClass.RTImageStorage))
     val rtplanList = dicomFilesInSession(valueMap).filter(df => df.isModality(SOPClass.RTPlanStorage))
     val dicomList = rtplanList ++ rtimageList
@@ -68,17 +68,9 @@ object CheckAngles {
       case _ if (dicomList.isEmpty) => formErr("No DICOM files have been uploaded.", uploadFileInput)
       case _ if (machList.size > 1) => formErr("Files from more than one machine were found.  Click Cancel to start over.", uploadFileInput)
       case _ if (imgIdent.isLeft) => Left(imgIdent.left.get)
-      case Some(dir) => Right(new CheckAnglesRunRequirements(machine, dir, imgIdent.right.get._1, imgIdent.right.get._2))
+      case Some(dir) => Right(new ImageIdentificationRunRequirements(machine, dir, imgIdent.right.get._1, imgIdent.right.get._2))
     }
     result
   }
 
-  /**
-   * Run the CheckAngles sub-procedure, save results in the database, return true for pass or false for fail.
-   */
-  def runProcedure(outPK: Long, checkAnglesRunRequirements: CheckAnglesRunRequirements) = {
-    val list = checkAnglesRunRequirements.imageIdFileList.map(imgId => imgId.imageIdentification.copy(outputPK = outPK))
-    ImageIdentification.insert(list)
-    pass
-  }
 }

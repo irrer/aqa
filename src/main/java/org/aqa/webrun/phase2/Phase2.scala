@@ -85,7 +85,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     result
   }
 
-  case class RunReq(checkAngles: CheckAnglesRunRequirements) {
+  case class RunReq(imageIdentification: ImageIdentificationRunRequirements) {
   }
 
   /**
@@ -116,8 +116,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     val result = validateMachineSelection(valueMap, rtimageList) match {
       case Left(err) => Left(err)
       case Right(machine) => {
-        val checkAngles = CheckAngles.validate(valueMap, None, machine, ???)
-        checkAngles match {
+        val imageIdentification = ImageIdentificationValidation.validate(valueMap, None, machine, form.uploadFileInput)
+        imageIdentification match {
           case Left(err) => Left(err)
           case Right(chkAnglRR) => Right(new RunReq(chkAnglRR))
         }
@@ -125,11 +125,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     }
     result
   }
-
-  //  private def saveResultsToDatabase(output: Output, imageIdFileList: Seq[ImageIdentificationFile]) = {
-  //    val list = imageIdFileList.map(imgId => imgId.imageIdentification.copy(outputPK = output.outputPK.get))
-  //    ImageIdentification.insert(list)
-  //  }
 
   private def dateTimePatId(rtimageList: Seq[DicomFile]) = {
     val list = rtimageList.map(df => Util.dateTimeAndPatientIdFromDicom(df.file))
@@ -141,10 +136,10 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
    * Run the sub-procedures.
    */
   private def runPhase2(outPK: Long, runReq: RunReq): ProcedureStatus.Value = {
-    val pass = CheckAngles.runProcedure(outPK, runReq.checkAngles)
-    if (pass) {
-      // TODO run collimator center sub-procedure
-      ???
+    val passSummary = ImageIdentificationAnalysis.runProcedure(outPK, runReq.imageIdentification)
+    if (passSummary._1) {
+      logger.info("ImageIdentificationAnalysis passed.")
+      ProcedureStatus.pass
     } else ProcedureStatus.fail
   }
 
@@ -163,13 +158,13 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
         val dtp = dateTimePatId(rtimageList)
 
         val sessDir = sessionDir(valueMap).get
-        val inputOutput = Run.preRun(procedure, runReq.checkAngles.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
+        val inputOutput = Run.preRun(procedure, runReq.imageIdentification.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
         val input = inputOutput._1
         val output = inputOutput._2
 
-        val plan = runReq.checkAngles.plan
-        val machine = runReq.checkAngles.machine
-        Phase2Util.saveRtplan(machine, plan)
+        val plan = runReq.imageIdentification.plan
+        val machine = runReq.imageIdentification.machine
+        Phase2Util.saveRtplan(plan)
 
         val finalStatus = runPhase2(output.outputPK.get, runReq)
         val finDate = new Timestamp(System.currentTimeMillis)
@@ -178,7 +173,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
         Util.writeBinaryFile(new File(output.dir, Output.displayFilePrefix + ".html"), display.getBytes)
         //setResponse(display, response, Status.SUCCESS_OK)     // TODO make html
 
-        Phase2Util.setMachineSerialNumber(machine, runReq.checkAngles.imageIdFileList.head.dicomFile.attributeList.get)
+        Phase2Util.setMachineSerialNumber(machine, runReq.imageIdentification.imageIdFileList.head.dicomFile.attributeList.get)
         outputFinal.insertOrUpdate
         outputFinal.updateData(outputFinal.makeZipOfFiles)
         Run.removeRedundantOutput(outputFinal.outputPK)

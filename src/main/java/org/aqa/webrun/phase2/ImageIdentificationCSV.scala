@@ -4,8 +4,11 @@ import org.aqa.db.ImageIdentification
 import org.aqa.Util
 import java.io.File
 
-object CheckAnglesCSV {
-  def makeCsvFile(procedureDesc: String, institutionName: String, outputDir: File, machineId: String, acquisitionDate: String, analysisDate: String, userId: String, runReq: CheckAnglesRunRequirements) = {
+object ImageIdentificationCSV {
+    
+  val csvFileName = "ImageIdentification.csv"
+
+  def makeCsvFile(procedureDesc: String, institutionName: String, outputDir: File, machineId: String, acquisitionDate: String, analysisDate: String, userId: String, runReq: ImageIdentificationRunRequirements) = {
 
     type II = ImageIdentification
 
@@ -59,7 +62,7 @@ object CheckAnglesCSV {
     val data = runReq.imageIdFileList.map(iif => imageIdentificationToCsv(iif.imageIdentification))
 
     val text = (metaData ++ header ++ data).mkString("", "\r\n", "\r\n")
-    val file = new File(outputDir, ImageIdentification.csvFileName)
+    val file = new File(outputDir, csvFileName)
     Util.writeFile(file, text)
   }
 
