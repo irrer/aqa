@@ -86,6 +86,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   }
 
   case class RunReq(imageIdentification: ImageIdentificationRunRequirements) {
+    def reDir(dir: File): RunReq = new RunReq(imageIdentification.reDir(dir))
   }
 
   /**
@@ -135,12 +136,11 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   /**
    * Run the sub-procedures.
    */
-  private def runPhase2(outPK: Long, runReq: RunReq): ProcedureStatus.Value = {
-    val passSummary = ImageIdentificationAnalysis.runProcedure(outPK, runReq.imageIdentification)
-    if (passSummary._1) {
-      logger.info("ImageIdentificationAnalysis passed.")
-      ProcedureStatus.pass
-    } else ProcedureStatus.fail
+  private def runPhase2(output: Output, runReq: RunReq): ProcedureStatus.Value = {
+    val summary = ImageIdentificationAnalysis.runProcedure(output, runReq.imageIdentification)
+    val iiElem = summary._2
+    // TODO should make main Phase2 web page
+    summary._1
   }
 
   /**
@@ -153,27 +153,29 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       case Left(errMap) => {
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
-      case Right(runReq) => {
+      case Right(runReqSession) => {
         // only consider the RTIMAGE files for the date-time stamp.  The plan could have been from months ago.
         val dtp = dateTimePatId(rtimageList)
 
         val sessDir = sessionDir(valueMap).get
-        val inputOutput = Run.preRun(procedure, runReq.imageIdentification.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
+        val inputOutput = Run.preRun(procedure, runReqSession.imageIdentification.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
         val input = inputOutput._1
         val output = inputOutput._2
 
-        val plan = runReq.imageIdentification.plan
-        val machine = runReq.imageIdentification.machine
+        val runReqFinal = runReqSession.reDir(input.dir)
+
+        val plan = runReqFinal.imageIdentification.plan
+        val machine = runReqFinal.imageIdentification.machine
         Phase2Util.saveRtplan(plan)
 
-        val finalStatus = runPhase2(output.outputPK.get, runReq)
+        val finalStatus = runPhase2(output, runReqFinal)
         val finDate = new Timestamp(System.currentTimeMillis)
         val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
         val display = "" // TODO makeDisplay(outputFinal, runReq)
         Util.writeBinaryFile(new File(output.dir, Output.displayFilePrefix + ".html"), display.getBytes)
         //setResponse(display, response, Status.SUCCESS_OK)     // TODO make html
 
-        Phase2Util.setMachineSerialNumber(machine, runReq.imageIdentification.imageIdFileList.head.dicomFile.attributeList.get)
+        Phase2Util.setMachineSerialNumber(machine, runReqFinal.imageIdentification.imageIdFileList.head.dicomFile.attributeList.get)
         outputFinal.insertOrUpdate
         outputFinal.updateData(outputFinal.makeZipOfFiles)
         Run.removeRedundantOutput(outputFinal.outputPK)

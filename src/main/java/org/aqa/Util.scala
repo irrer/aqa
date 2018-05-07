@@ -340,6 +340,13 @@ object Util extends Logging {
     else text
   }
 
+  /**
+   * Make a new file reference, putting the given file in the given directory.
+   */
+  def reDir(file: File, dir: File) = {
+    new File(dir, file.getName)
+  }
+
   def main(args: Array[String]): Unit = {
 
     if (true) {
