@@ -9,6 +9,15 @@ import org.aqa.Logging
 import org.aqa.Util
 import java.io.File
 import org.aqa.Config
+import org.aqa.db.Output
+import scala.xml.Elem
+import org.aqa.run.ProcedureStatus
+import org.aqa.db.Input
+import org.aqa.db.Procedure
+import org.aqa.db.Institution
+import org.aqa.db.User
+import java.util.Date
+import org.aqa.web.WebUtil._
 
 object Phase2Util extends Logging {
   /**
@@ -83,6 +92,91 @@ object Phase2Util extends Logging {
     } catch {
       case t: Throwable => logger.error("Unable to save rtplan " + plan.file.getAbsolutePath + " : " + t)
     }
+  }
+
+  /**
+   * Wrap Phase2 HTML with nice headers.
+   */
+  def wrapSubProcedure(output: Output, content: Elem, title: String, status: ProcedureStatus.Value): String = {
+
+    def wrap(col: Int, name: String, value: String): Elem = {
+      <div class={ "col-md-" + col }><em>{ name }:</em><br/>{ value }</div>
+    }
+
+    val machine = if (output.machinePK.isDefined) Machine.get(output.machinePK.get) else None
+    val institution = if (machine.isDefined) Institution.get(machine.get.institutionPK) else None
+    val input = Input.get(output.inputPK)
+    val procedure = Procedure.get(output.procedurePK)
+    val user = if (output.userPK.isDefined) User.get(output.userPK.get) else None
+    val institutionName = if (institution.isDefined) institution.get.name else "unknown"
+
+    val analysisDate: String = {
+      val date = output.analysisDate match {
+        case Some(d) => d
+        case _ => output.startDate
+      }
+      Util.timeHumanFriendly(date)
+    }
+
+    def dateToString(date: Option[Date]): String = {
+      date match {
+        case Some(date) => Util.timeHumanFriendly(date)
+        case _ => "unknown"
+      }
+    }
+
+    val machineId = if (machine.isDefined) machine.get.id else "unknown"
+    val userId = if (user.isDefined) user.get.id else "unknown"
+
+    val elapsed: String = {
+      val fin = output.finishDate match {
+        case Some(finDate) => finDate.getTime
+        case _ => System.currentTimeMillis
+      }
+      val elapsed = fin - output.startDate.getTime
+      Util.elapsedTimeHumanFriendly(elapsed)
+    }
+
+    val procedureDesc: String = {
+      procedure match {
+        case Some(proc) =>
+          proc.name + " : " + proc.version
+        case _ => ""
+      }
+    }
+
+    val passFailImage = {
+      if (status == ProcedureStatus.pass) {
+        <div title="Passed!"><img src="/static/images/pass.png" width="128"/></div>
+      } else {
+        <div title="Failed"><img src="/static/images/fail.png" width="128"/></div>
+      }
+    }
+
+    val div = {
+      <div class="row col-md-10 col-md-offset-1">
+        <div class="row">
+          <div class="col-md-1">{ passFailImage }</div>
+          <div class="col-md-3" title={ title }><h2>{ title }</h2></div>
+          <div class="col-md-1" title="Machine"><h2>{ machineId }</h2></div>
+        </div>
+        <div class="row" style="margin:20px;">
+          { wrap(1, "Institution", institutionName) }
+          { wrap(2, "Data Acquisition", dateToString(output.dataDate)) }
+          { wrap(2, "Analysis", analysisDate) }
+          { wrap(1, "User", userId) }
+          { wrap(1, "Elapsed", elapsed) }
+          { wrap(3, "Procedure", procedureDesc) }
+        </div>
+        <div class="row" style="margin:20px;">
+          { content }
+        </div>
+      </div>
+    }
+
+    // write the report to the output directory
+    val text = wrapBody(div, title, None, true, None)
+    text
   }
 
 }

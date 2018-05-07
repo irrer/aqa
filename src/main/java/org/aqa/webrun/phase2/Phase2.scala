@@ -133,13 +133,29 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     else list.minBy(dt => dt.dateTime)
   }
 
+  private def makeHtml(output: Output, procedureStatus: ProcedureStatus.Value, elemList: Seq[Elem]) = {
+
+    def table = {
+      <table>
+        <tr>
+          { elemList.map(e => <td>{ e }</td>) }
+        </tr>
+        >
+      </table>
+    }
+
+    val text = Phase2Util.wrapSubProcedure(output, table, "Phase 2", procedureStatus)
+    val file = new File(output.dir, Output.displayFilePrefix + ".html")
+    Util.writeBinaryFile(file, text.getBytes)
+  }
+
   /**
    * Run the sub-procedures.
    */
   private def runPhase2(output: Output, runReq: RunReq): ProcedureStatus.Value = {
     val summary = ImageIdentificationAnalysis.runProcedure(output, runReq.imageIdentification)
     val iiElem = summary._2
-    // TODO should make main Phase2 web page
+    makeHtml(output, summary._1, Seq(summary._2))
     summary._1
   }
 
@@ -171,9 +187,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
         val finalStatus = runPhase2(output, runReqFinal)
         val finDate = new Timestamp(System.currentTimeMillis)
         val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
-        val display = "" // TODO makeDisplay(outputFinal, runReq)
-        Util.writeBinaryFile(new File(output.dir, Output.displayFilePrefix + ".html"), display.getBytes)
-        //setResponse(display, response, Status.SUCCESS_OK)     // TODO make html
 
         Phase2Util.setMachineSerialNumber(machine, runReqFinal.imageIdentification.imageIdFileList.head.dicomFile.attributeList.get)
         outputFinal.insertOrUpdate
@@ -182,7 +195,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
 
         val suffix = "?" + ViewOutput.outputPKTag + "=" + outputFinal.outputPK.get
         response.redirectSeeOther(ViewOutput.path + suffix)
-
       }
     }
   }

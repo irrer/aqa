@@ -3,12 +3,46 @@ package org.aqa.webrun.phase2
 import org.aqa.db.ImageIdentification
 import org.aqa.Util
 import java.io.File
+import org.aqa.db.Output
+import org.aqa.db.Machine
+import org.aqa.db.Institution
+import org.aqa.db.Procedure
+import org.aqa.db.Input
+import org.aqa.db.User
 
 object ImageIdentificationCSV {
-    
+
   val csvFileName = "ImageIdentification.csv"
 
-  def makeCsvFile(procedureDesc: String, institutionName: String, outputDir: File, machineId: String, acquisitionDate: String, analysisDate: String, userId: String, runReq: ImageIdentificationRunRequirements) = {
+  def makeCsvFile(output: Output, runReq: ImageIdentificationRunRequirements) = {
+
+    // format lots of meta-information for the CSV header
+    val machine = if (output.machinePK.isDefined) Machine.get(output.machinePK.get) else None
+    val institution = if (machine.isDefined) Institution.get(machine.get.institutionPK) else None
+    val input = Input.get(output.inputPK)
+    val procedure = Procedure.get(output.procedurePK)
+    val user = if (output.userPK.isDefined) User.get(output.userPK.get) else None
+    val institutionName = if (institution.isDefined) institution.get.name else "unknown"
+
+    val analysisDate: String = {
+      val date = output.analysisDate match {
+        case Some(d) => d
+        case _ => output.startDate
+      }
+      Util.timeHumanFriendly(date)
+    }
+
+    val procedureDesc: String = {
+      procedure match {
+        case Some(proc) =>
+          proc.name + " : " + proc.version
+        case _ => ""
+      }
+    }
+
+    val machineId = if (machine.isDefined) machine.get.id else "unknown"
+    val userId = if (user.isDefined) user.get.id else "unknown"
+    val acquisitionDate = if (output.dataDate.isDefined) Util.standardDateFormat.format(output.dataDate.get) else "none"
 
     type II = ImageIdentification
 
@@ -62,7 +96,7 @@ object ImageIdentificationCSV {
     val data = runReq.imageIdFileList.map(iif => imageIdentificationToCsv(iif.imageIdentification))
 
     val text = (metaData ++ header ++ data).mkString("", "\r\n", "\r\n")
-    val file = new File(outputDir, csvFileName)
+    val file = new File(output.dir, csvFileName)
     Util.writeFile(file, text)
   }
 

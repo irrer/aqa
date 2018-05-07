@@ -26,22 +26,13 @@ object ImageIdentificationHTML {
    * Generate a detailed report and write it to the output directory.  Also write a CSV file.  Return an
    * HTML snippet that serves as a summary and a link to the detailed report.
    */
-  def makeDisplay(output: Output, runReq: ImageIdentificationRunRequirements, procedureStatus: ProcedureStatus.Value): Elem = {
-
-    def wrap(col: Int, elem: Elem): Elem = {
-      <div class={ "col-md-" + col }>{ elem }</div>
-    }
-
-    def wrap2(col: Int, name: String, value: String): Elem = {
-      <div class={ "col-md-" + col }><em>{ name }:</em><br/>{ value }</div>
-    }
+  def makeDisplay(output: Output, runReq: ImageIdentificationRunRequirements, status: ProcedureStatus.Value): Elem = {
 
     val machine = if (output.machinePK.isDefined) Machine.get(output.machinePK.get) else None
     val institution = if (machine.isDefined) Institution.get(machine.get.institutionPK) else None
     val input = Input.get(output.inputPK)
     val procedure = Procedure.get(output.procedurePK)
     val user = if (output.userPK.isDefined) User.get(output.userPK.get) else None
-
     val institutionName = if (institution.isDefined) institution.get.name else "unknown"
 
     val analysisDate: String = {
@@ -52,42 +43,10 @@ object ImageIdentificationHTML {
       Util.timeHumanFriendly(date)
     }
 
-    def dateToString(date: Option[Date]): String = {
-      date match {
-        case Some(date) => Util.timeHumanFriendly(date)
-        case _ => "unknown"
-      }
-    }
-
     val machineId = if (machine.isDefined) machine.get.id else "unknown"
     val userId = if (user.isDefined) user.get.id else "unknown"
 
-    val elapsed: String = {
-      val fin = output.finishDate match {
-        case Some(finDate) => finDate.getTime
-        case _ => System.currentTimeMillis
-      }
-      val elapsed = fin - output.startDate.getTime
-      Util.elapsedTimeHumanFriendly(elapsed)
-    }
-
-    val procedureDesc: String = {
-      procedure match {
-        case Some(proc) =>
-          proc.name + " : " + proc.version
-        case _ => ""
-      }
-    }
-
-    ImageIdentificationCSV.makeCsvFile(
-      procedureDesc,
-      institutionName,
-      output.dir,
-      machineId,
-      (if (output.dataDate.isDefined) Util.standardDateFormat.format(output.dataDate.get) else "none"),
-      (Util.standardDateFormat.format(if (output.analysisDate.isDefined) output.analysisDate.get else (new Date))),
-      userId,
-      runReq)
+    ImageIdentificationCSV.makeCsvFile(output, runReq)
 
     val csvFileReference = {
       <a title="Download Image Identification as CSV File" href={ ImageIdentificationCSV.csvFileName }>CSV</a>
@@ -143,32 +102,10 @@ object ImageIdentificationHTML {
       }
     }
 
-    val passFailImage = {
-      val j = runReq
-      if (procedureStatus == ProcedureStatus.pass) {
-        <div title="Passed!"><img src="/static/images/pass.png" width="128"/></div>
-      } else {
-        <div title="Failed"><img src="/static/images/fail.png" width="128"/></div>
-      }
-    }
-
     val tbody = runReq.imageIdFileList.sortWith((a, b) => DicomUtil.compareDicom(a.dicomFile.attributeList.get, b.dicomFile.attributeList.get) < 0).map(iif => imageIdentificationToTableRow(iif))
 
-    val div = {
-      <div class="row col-md-10 col-md-offset-1">
-        <div class="row">
-          <div class="col-md-1">{ passFailImage }</div>
-          <div class="col-md-3" title="Image Identification"><h2>Image Identification</h2></div>
-          <div class="col-md-1" title="Machine"><h2>{ machineId }</h2></div>
-        </div>
-        <div class="row" style="margin:20px;">
-          { wrap2(1, "Institution", institutionName) }
-          { wrap2(2, "Data Acquisition", dateToString(output.dataDate)) }
-          { wrap2(2, "Analysis", analysisDate) }
-          { wrap2(1, "User", userId) }
-          { wrap2(1, "Elapsed", elapsed) }
-          { wrap2(3, "Procedure", procedureDesc) }
-        </div>
+    val content = {
+      <div>
         <div class="row" style="margin:20px;">
           <div class="col-md-1">{ csvFileReference }</div>
           <div class="col-md-1">{ viewRtPlan }</div>
@@ -183,7 +120,7 @@ object ImageIdentificationHTML {
     }
 
     // write the report to the output directory
-    val text = wrapBody(div, "Image Identification", None, true, None)
+    val text = Phase2Util.wrapSubProcedure(output, content, "Image Identification", status)
     val file = new File(output.dir, htmlFileName)
     Util.writeBinaryFile(file, text.getBytes)
 
@@ -191,7 +128,7 @@ object ImageIdentificationHTML {
      * Make a tiny summary and link to the detailed report.
      */
     def makeSummary = {
-      val iconImage = if (procedureStatus == ProcedureStatus.pass) Config.passImageUrl else Config.failImageUrl
+      val iconImage = if (status == ProcedureStatus.pass) Config.passImageUrl else Config.failImageUrl
       val href = ""
       val j = { <a href={ "4" }></a> }
       val elem = {
