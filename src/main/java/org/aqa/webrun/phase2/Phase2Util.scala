@@ -147,9 +147,9 @@ object Phase2Util extends Logging {
 
     val passFailImage = {
       if (status == ProcedureStatus.pass) {
-        <div title="Passed!"><img src="/static/images/pass.png" width="128"/></div>
+        <div title="Passed!"><img src={ Config.passImageUrl } width="128"/></div>
       } else {
-        <div title="Failed"><img src="/static/images/fail.png" width="128"/></div>
+        <div title="Failed"><img src={ Config.failImageUrl } width="128"/></div>
       }
     }
 

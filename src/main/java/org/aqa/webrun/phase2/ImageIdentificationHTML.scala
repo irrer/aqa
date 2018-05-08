@@ -129,13 +129,11 @@ object ImageIdentificationHTML {
      */
     def makeSummary = {
       val iconImage = if (status == ProcedureStatus.pass) Config.passImageUrl else Config.failImageUrl
-      val href = ""
-      val j = { <a href={ "4" }></a> }
       val elem = {
         <div title="Click for details.">
           <a href={ htmlFileName }>
-            Image Identification<br></br>
-            <img src={ iconImage } height="32"></img>
+            Image Identification<br/>
+            <img src={ iconImage } height="32"/>
           </a>
         </div>
       }

@@ -140,7 +140,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
         <tr>
           { elemList.map(e => <td>{ e }</td>) }
         </tr>
-        >
       </table>
     }
 
