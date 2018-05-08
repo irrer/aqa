@@ -288,11 +288,11 @@ object WebUtil extends Logging {
             <div class="row">
               <div class="col-md-1 col-md-offset-9">
                 <strong>
-                  <br> </br>
+                  <br/>
                   <a href="/run/WebRunIndex">Run Procedure</a>
-                  <br> </br>
+                  <br/>
                   <a href="/view/OutputList">Results</a>
-                  <br> </br>
+                  <br/>
                   <a href="/static/admin.html">Administration</a>
                 </strong>
               </div>
