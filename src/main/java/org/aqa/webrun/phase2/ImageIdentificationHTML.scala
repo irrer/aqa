@@ -54,7 +54,7 @@ object ImageIdentificationHTML {
 
     val viewRtPlan = {
       val title = "RT Plan"
-      val link = DicomAccess.write(runReq.plan, WebServer.urlOfMachineConfigurationFile(runReq.plan.file), title, output.dir, DicomFile.ContrastModel.maxContrast)
+      val link = DicomAccess.write(runReq.plan, WebServer.urlOfResultsFile(runReq.plan.file), title, output.dir, DicomFile.ContrastModel.maxContrast)
       val elem = { <a title="View RT Plan DICOM file" href={ link }>{ title }</a> }
       elem
     }

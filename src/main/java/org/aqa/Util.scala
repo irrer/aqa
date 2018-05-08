@@ -114,7 +114,7 @@ object Util extends Logging {
 
   def isModality(al: AttributeList, sopClassUID: String): Boolean = {
     try {
-      al.get(TagFromName.MediaStorageSOPClassUID).getSingleStringValueOrNull.equals(sopClassUID)
+      al.get(TagFromName.MediaStorageSOPClassUID).getSingleStringValueOrEmptyString.equals(sopClassUID)
     } catch {
       case t: Throwable => false
     }

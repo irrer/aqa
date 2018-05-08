@@ -6,6 +6,7 @@ import org.aqa.db.Machine
 import org.aqa.Util
 import org.aqa.DicomFile
 import org.aqa.db.ImageIdentification
+import org.aqa.Config
 
 object ImageIdentificationValidation {
 
@@ -33,7 +34,7 @@ object ImageIdentificationValidation {
         val imageList = planGroups.head._2
         val results = imageList.
           map(image => (image, ImageIdentificationAnalysis.makeImageIdentification(plan.attributeList.get, image.attributeList.get))).
-          filter(ii => ii._2.nonEmpty).
+          filter(ii => ii._2.nonEmpty && Config.ImageIdentificationBeamNameList.contains(ii._2.get.beamName)).
           map(ii => new ImageIdentificationFile(ii._1, ii._2.get))
         // only let one result in for each beam
         val distinct = results.map(iif => (iif.imageIdentification.beamName, iif)).toMap.values.toSeq

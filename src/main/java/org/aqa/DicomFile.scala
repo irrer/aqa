@@ -84,9 +84,10 @@ object DicomFile {
   }
 
   /**
-   * Return a list of DicomFiles that differ by SOPInstanceUID.
+   * Return a list of DicomFiles that ha SOPInstanceUID.
    */
   def distinctSOPInstanceUID(dicomFileList: Seq[DicomFile]): Seq[DicomFile] = {
-    dicomFileList.filter(df => df.valid).map(df => (Util.sopOfAl(df.attributeList.get), df)).toMap.values.toSeq
+    val after = dicomFileList.filter(df => df.valid).map(df => (Util.sopOfAl(df.attributeList.get), df)).toMap.values.toSeq
+    after // TODO rm
   }
 }

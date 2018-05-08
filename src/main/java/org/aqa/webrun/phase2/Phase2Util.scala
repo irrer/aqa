@@ -81,7 +81,7 @@ object Phase2Util extends Logging {
   /**
    * If a plan was used that was not already saved, then save it to the shared directory so that it will be available for future runs.
    */
-  def saveRtplan(plan: DicomFile) = {
+  def saveRtplan(plan: DicomFile) = { // TODO plan is null!!??
     try {
       if (plan.file.getParentFile != Config.sharedDir) {
         val data = Util.readBinaryFile(plan.file)

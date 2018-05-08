@@ -316,6 +316,12 @@ object Config extends Logging {
     }
   }
 
+  private def getImageIdentificationBeamNameList = {
+    val list = (document \ "ImageIdentification" \ "BeamName").map(n => n.head.text.toString).toList
+    logText("ImageIdentificationBeamNameList", list.mkString("\n        ", "\n        ", "\n"))
+    list
+  }
+
   val SlickDbsDefaultDbUrl = logMainText("SlickDbsDefaultDbUrl")
   val SlickDbsDefaultDbUser = getDbUser
   val SlickDbsDefaultDbPassword = getDbPassword
@@ -327,6 +333,8 @@ object Config extends Logging {
   /** Symbols for pass and fail. */
   val passImageUrl = "/static/images/pass.png"
   val failImageUrl = "/static/images/fail.png"
+
+  val ImageIdentificationBeamNameList: List[String] = getImageIdentificationBeamNameList
 
   val TermsOfUse = logMainText("TermsOfUse")
 
