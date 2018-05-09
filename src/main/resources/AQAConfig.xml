@@ -60,13 +60,16 @@ Note that when building a package for release, the Maven build process uses the 
     To Be Determined
     </TermsOfUse>
     
-    <!-- List of beam names used by Phase2 ImageIdentification -->
+    <!-- List of beam names used by Phase2 PositioningCheck -->
     <PositioningCheckBeamNameList>
         <BeamName>J10G0C270-6X</BeamName>
         <BeamName>T2 Open</BeamName>
         <BeamName>J10G270</BeamName>
         <BeamName>T3 Open</BeamName>
     </PositioningCheckBeamNameList>
-
+    
+    <!-- Beam names used by Phase2 CollimatorCentering -->
+    <CollimatorCentering090BeamName>99999999</CollimatorCentering090BeamName>
+    <CollimatorCentering270BeamName>27373727</CollimatorCentering270BeamName>
     
 </AQAConfig>

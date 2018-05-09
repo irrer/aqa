@@ -336,6 +336,11 @@ object Config extends Logging {
 
   val PositioningCheckBeamNameList: List[String] = getPositioningCheckBeamNameList
 
+  val CollimatorCentering090BeamName = logMainText("CollimatorCentering090BeamName")
+  val CollimatorCentering270BeamName = logMainText("CollimatorCentering270BeamName")
+  val CollimatorCenteringCoarseBandWidth = 10.0 // TODO
+  val CollimatorCenteringPenumbraThickness = 40.0 // TODO
+
   val TermsOfUse = logMainText("TermsOfUse")
 
   // force each of these directories to be created.  It would be catastrophic if this fails.

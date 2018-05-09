@@ -95,6 +95,28 @@ object Phase2Util extends Logging {
   }
 
   /**
+   * Given an RTPLAN and an RTIMAGE, get the name of the beam that the RTIMAGE is referencing in the plan.
+   */
+  def getBeamNameOfRtimage(plan: DicomFile, rtimage: DicomFile): Option[String] = {
+    try {
+      val ReferencedBeamNumber = rtimage.attributeList.get.get(TagFromName.ReferencedBeamNumber).getIntegerValues().head
+      val beam = Util.seq2Attr(plan.attributeList.get, TagFromName.BeamSequence).find(bs => bs.get(TagFromName.BeamNumber).getIntegerValues().head == ReferencedBeamNumber).get
+      val BeamName = beam.get(TagFromName.BeamName).getSingleStringValueOrNull
+      if (BeamName == null) None else Some(BeamName)
+    } catch {
+      case t: Throwable => None
+    }
+  }
+
+  /**
+   * Given an RTPLAN, a list of RTIMAGEs, and a BeamName, return the RTIMAGE associated with BeamName.
+   */
+  def findRtimageByBeamName(plan: DicomFile, rtimageList: IndexedSeq[DicomFile], BeamName: String): Option[DicomFile] = {
+    val beam = rtimageList.map(rti => (rti, getBeamNameOfRtimage(plan, rti))).filter(rn => rn._2.isDefined && rn._2.get.equals(BeamName))
+    if (beam.nonEmpty) Some(beam.head._1) else None
+  }
+
+  /**
    * Wrap Phase2 HTML with nice headers.
    */
   def wrapSubProcedure(output: Output, content: Elem, title: String, status: ProcedureStatus.Value): String = {
