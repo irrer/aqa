@@ -1,6 +1,6 @@
 package org.aqa.webrun.phase2
 
-import org.aqa.db.ImageIdentification
+import org.aqa.db.PositioningCheck
 import org.aqa.Util
 import java.io.File
 import org.aqa.db.Output
@@ -10,11 +10,11 @@ import org.aqa.db.Procedure
 import org.aqa.db.Input
 import org.aqa.db.User
 
-object ImageIdentificationCSV {
+object PositioningCheckCSV {
 
-  val csvFileName = "ImageIdentification.csv"
+  val csvFileName = "PositioningCheck.csv"
 
-  def makeCsvFile(output: Output, runReq: ImageIdentificationRunRequirements) = {
+  def makeCsvFile(output: Output, runReq: PositioningCheckRunRequirements) = {
 
     // format lots of meta-information for the CSV header
     val machine = if (output.machinePK.isDefined) Machine.get(output.machinePK.get) else None
@@ -44,7 +44,7 @@ object ImageIdentificationCSV {
     val userId = if (user.isDefined) user.get.id else "unknown"
     val acquisitionDate = if (output.dataDate.isDefined) Util.standardDateFormat.format(output.dataDate.get) else "none"
 
-    type II = ImageIdentification
+    type II = PositioningCheck
 
     val dblFmt = "%14.11f"
     val textFmt = "%s"
@@ -67,7 +67,7 @@ object ImageIdentificationCSV {
       ("flatteningFilter", (ii: II) => ii.flatteningFilter),
       ("pass", (ii: II) => ii.pass))
 
-    def imageIdentificationToCsv(ii: ImageIdentification): String = {
+    def positioningCheckToCsv(ii: PositioningCheck): String = {
       def fmt(any: Any): String = {
         any match {
           case d: Double => d.formatted("%14.11e")
@@ -93,7 +93,7 @@ object ImageIdentificationCSV {
 
     val header = Seq(columns.map(c => c._1).mkString(","))
 
-    val data = runReq.imageIdFileList.map(iif => imageIdentificationToCsv(iif.imageIdentification))
+    val data = runReq.imageIdFileList.map(iif => positioningCheckToCsv(iif.positioningCheck))
 
     val text = (metaData ++ header ++ data).mkString("", "\r\n", "\r\n")
     val file = new File(output.dir, csvFileName)

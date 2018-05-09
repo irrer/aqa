@@ -6,23 +6,23 @@ import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import java.io.File
 import edu.umro.ScalaUtil.Trace
-import org.aqa.webrun.phase2.ImageIdentificationAnalysis
+import org.aqa.webrun.phase2.PositioningCheckAnalysis
 
 /**
- * Test the ImageIdentificationAnalysis.
+ * Test the PositioningCheckAnalysis.
  */
 
-class TestImageIdentificationAnalysis extends FlatSpec with Matchers {
+class TestPositioningCheckAnalysis extends FlatSpec with Matchers {
 
-  "makeImageIdentification" should "make a passing one" in {
+  "makePositioningCheck" should "make a passing one" in {
 
-    val plan = Util.readDicomFile(new File("""ImageIdentificationPlan.dcm""")).right.get
-    val image = Util.readDicomFile(new File("""ImageIdentificationImage.dcm""")).right.get
+    val plan = Util.readDicomFile(new File("""PositioningCheckPlan.dcm""")).right.get
+    val image = Util.readDicomFile(new File("""PositioningCheckImage.dcm""")).right.get
 
-    val imageIdentification = ImageIdentificationAnalysis.makeImageIdentification(plan, image)
-    println("ImageIdentification:\n" + imageIdentification)
+    val positioningCheck = PositioningCheckAnalysis.makePositioningCheck(plan, image)
+    println("PositioningCheck:\n" + positioningCheck)
     println("Util.buildProperties: " + Util.buildProperties) // TODO rm
-    (imageIdentification.get.pass) should be(true)
+    (positioningCheck.get.pass) should be(true)
   }
 
 }

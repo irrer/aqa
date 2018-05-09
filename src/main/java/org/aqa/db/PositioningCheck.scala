@@ -9,8 +9,8 @@ import scala.xml.Node
 import scala.xml.Elem
 import org.aqa.procedures.ProcedureOutput
 
-case class ImageIdentification(
-  imageIdentificationPK: Option[Long], // primary key
+case class PositioningCheck(
+  positioningCheckPK: Option[Long], // primary key
   outputPK: Long, // output primary key
   beamName: String, // name of beam in plan
   gantryAnglePlan_deg: Double, // planned gantry angle in degrees
@@ -31,19 +31,19 @@ case class ImageIdentification(
   pass: Boolean // true if all values were within tolerances
 ) {
 
-  def insert: ImageIdentification = {
-    val insertQuery = ImageIdentification.query returning ImageIdentification.query.map(_.imageIdentificationPK) into
-      ((imageIdentification, imageIdentificationPK) => imageIdentification.copy(imageIdentificationPK = Some(imageIdentificationPK)))
+  def insert: PositioningCheck = {
+    val insertQuery = PositioningCheck.query returning PositioningCheck.query.map(_.positioningCheckPK) into
+      ((positioningCheck, positioningCheckPK) => positioningCheck.copy(positioningCheckPK = Some(positioningCheckPK)))
 
     val action = insertQuery += this
     val result = Db.run(action)
     result
   }
 
-  def insertOrUpdate = Db.run(ImageIdentification.query.insertOrUpdate(this))
+  def insertOrUpdate = Db.run(PositioningCheck.query.insertOrUpdate(this))
 
   override def toString: String = {
-    "    imageIdentificationPK: " + imageIdentificationPK + "\n" +
+    "    positioningCheckPK: " + positioningCheckPK + "\n" +
       "    outputPK: " + outputPK + "\n" +
       "    beamName: " + beamName + "\n" +
       "    gantryAnglePlan_deg: " + gantryAnglePlan_deg + "\n" +
@@ -65,10 +65,10 @@ case class ImageIdentification(
   }
 }
 
-object ImageIdentification extends ProcedureOutput {
-  class ImageIdentificationTable(tag: Tag) extends Table[ImageIdentification](tag, "imageIdentification") {
+object PositioningCheck extends ProcedureOutput {
+  class PositioningCheckTable(tag: Tag) extends Table[PositioningCheck](tag, "positioningCheck") {
 
-    def imageIdentificationPK = column[Long]("imageIdentificationPK", O.PrimaryKey, O.AutoInc)
+    def positioningCheckPK = column[Long]("positioningCheckPK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
     def beamName = column[String]("beamName")
     def gantryAnglePlan_deg = column[Double]("gantryAnglePlan_deg")
@@ -89,7 +89,7 @@ object ImageIdentification extends ProcedureOutput {
     def pass = column[Boolean]("pass")
 
     def * = (
-      imageIdentificationPK.?,
+      positioningCheckPK.?,
       outputPK,
       beamName,
       gantryAnglePlan_deg,
@@ -107,19 +107,19 @@ object ImageIdentification extends ProcedureOutput {
       energyPlan_kev,
       energyPlanMinusImage_kev,
       flatteningFilter,
-      pass) <> ((ImageIdentification.apply _)tupled, ImageIdentification.unapply _)
+      pass) <> ((PositioningCheck.apply _)tupled, PositioningCheck.unapply _)
 
     def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
     //def supplier = foreignKey("SUP_FK", supID, suppliers)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)           TODO
   }
 
-  val query = TableQuery[ImageIdentificationTable]
+  val query = TableQuery[PositioningCheckTable]
 
-  override val topXmlLabel = "ImageIdentification"
+  override val topXmlLabel = "PositioningCheck"
 
-  def get(imageIdentificationPK: Long): Option[ImageIdentification] = {
+  def get(positioningCheckPK: Long): Option[PositioningCheck] = {
     val action = for {
-      inst <- ImageIdentification.query if inst.imageIdentificationPK === imageIdentificationPK
+      inst <- PositioningCheck.query if inst.positioningCheckPK === positioningCheckPK
     } yield (inst)
     Db.run(action.result).headOption
   }
@@ -127,15 +127,15 @@ object ImageIdentification extends ProcedureOutput {
   /**
    * Get a list of all rows for the given output
    */
-  def getByOutput(outputPK: Long): Seq[ImageIdentification] = {
+  def getByOutput(outputPK: Long): Seq[PositioningCheck] = {
     val action = for {
-      inst <- ImageIdentification.query if inst.outputPK === outputPK
+      inst <- PositioningCheck.query if inst.outputPK === outputPK
     } yield (inst)
     Db.run(action.result)
   }
 
-  def delete(imageIdentificationPK: Long): Int = {
-    val q = query.filter(_.imageIdentificationPK === imageIdentificationPK)
+  def delete(positioningCheckPK: Long): Int = {
+    val q = query.filter(_.positioningCheckPK === positioningCheckPK)
     val action = q.delete
     Db.run(action)
   }
@@ -146,8 +146,8 @@ object ImageIdentification extends ProcedureOutput {
     Db.run(action)
   }
 
-  def insert(list: Seq[ImageIdentification]) = {
-    val ops = list.map { imgId => ImageIdentification.query.insertOrUpdate(imgId) }
+  def insert(list: Seq[PositioningCheck]) = {
+    val ops = list.map { imgId => PositioningCheck.query.insertOrUpdate(imgId) }
     Db.perform(ops)
   }
 
@@ -155,8 +155,8 @@ object ImageIdentification extends ProcedureOutput {
     ??? // TODO
   }
 
-  def insertSeq(list: Seq[ImageIdentification]): Unit = {
-    val ops = list.map { loc => ImageIdentification.query.insertOrUpdate(loc) }
+  def insertSeq(list: Seq[PositioningCheck]): Unit = {
+    val ops = list.map { loc => PositioningCheck.query.insertOrUpdate(loc) }
     Db.perform(ops)
   }
 }

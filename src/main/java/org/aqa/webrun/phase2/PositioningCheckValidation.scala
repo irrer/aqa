@@ -5,10 +5,10 @@ import com.pixelmed.dicom.SOPClass
 import org.aqa.db.Machine
 import org.aqa.Util
 import org.aqa.DicomFile
-import org.aqa.db.ImageIdentification
+import org.aqa.db.PositioningCheck
 import org.aqa.Config
 
-object ImageIdentificationValidation {
+object PositioningCheckValidation {
 
   private val MIN_IMAGES = 3
 
@@ -17,7 +17,7 @@ object ImageIdentificationValidation {
   /**
    * Identify the input files.
    */
-  private def analyzeImageIdentification(dicomList: Seq[DicomFile], machine: Machine, uploadFileInput: Option[IsInput]): Either[StyleMapT, (DicomFile, Seq[ImageIdentificationFile])] = {
+  private def analyzePositioningCheck(dicomList: Seq[DicomFile], machine: Machine, uploadFileInput: Option[IsInput]): Either[StyleMapT, (DicomFile, Seq[PositioningCheckFile])] = {
     val planList = Phase2Util.getPlanList(dicomList)
     val imageList = dicomList.filter(df => df.isModality(SOPClass.RTImageStorage))
 
@@ -32,18 +32,18 @@ object ImageIdentificationValidation {
       case _ => {
         val plan = planGroups.head._1
         val imageList = planGroups.head._2
-        val results = imageList.
-          map(image => (image, ImageIdentificationAnalysis.makeImageIdentification(plan.attributeList.get, image.attributeList.get))).
-          filter(ii => ii._2.nonEmpty && Config.ImageIdentificationBeamNameList.contains(ii._2.get.beamName)).
-          map(ii => new ImageIdentificationFile(ii._1, ii._2.get))
+        val results = imageList. // TODO this line fails
+          map(image => (image, PositioningCheckAnalysis.makePositioningCheck(plan.attributeList.get, image.attributeList.get))).
+          filter(ii => ii._2.nonEmpty && Config.PositioningCheckBeamNameList.contains(ii._2.get.beamName)).
+          map(ii => new PositioningCheckFile(ii._1, ii._2.get))
         // only let one result in for each beam
-        val distinct = results.map(iif => (iif.imageIdentification.beamName, iif)).toMap.values.toSeq
+        val distinct = results.map(iif => (iif.positioningCheck.beamName, iif)).toMap.values.toSeq
         0 match {
           case _ if (results.size != distinct.size) => {
-            val multiImageBeams = distinct.diff(results).map(iff => iff.imageIdentification.beamName).distinct
+            val multiImageBeams = distinct.diff(results).map(iff => iff.positioningCheck.beamName).distinct
             formErr("Multiple RTIMAGEs were taken from beam " + multiImageBeams, uploadFileInput)
           }
-          case _ if (results.size < MIN_IMAGES) => formErr("Your must provide at least " + MIN_IMAGES + " but only " + results.size + " were found", uploadFileInput)
+          case _ if (results.size < MIN_IMAGES) => formErr("You must provide at least " + MIN_IMAGES + " but only " + results.size + " were found", uploadFileInput)
           case _ => Right(plan, results)
         }
       }
@@ -51,10 +51,10 @@ object ImageIdentificationValidation {
   }
 
   /**
-   * Validate the given data, and, if it is valid, organize it into a <code>ImageIdentificationRunRequirements</code> object.  If
+   * Validate the given data, and, if it is valid, organize it into a <code>PositioningCheckRunRequirements</code> object.  If
    * it is not valid, then return a message indicating the problem.
    */
-  def validate(valueMap: ValueMapT, outputPK: Option[Long], machine: Machine, uploadFileInput: Option[IsInput]): Either[StyleMapT, ImageIdentificationRunRequirements] = {
+  def validate(valueMap: ValueMapT, outputPK: Option[Long], machine: Machine, uploadFileInput: Option[IsInput]): Either[StyleMapT, PositioningCheckRunRequirements] = {
     val rtimageList = dicomFilesInSession(valueMap).filter(df => df.isModality(SOPClass.RTImageStorage))
     val rtplanList = dicomFilesInSession(valueMap).filter(df => df.isModality(SOPClass.RTPlanStorage))
     val dicomList = rtplanList ++ rtimageList
@@ -62,14 +62,14 @@ object ImageIdentificationValidation {
     // machines that DICOM files reference (based on device serial numbers)
     val machList = rtimageList.map(df => attributeListToMachine(df.attributeList.get)).flatten.distinct
 
-    val imgIdent = analyzeImageIdentification(dicomList, machine, uploadFileInput)
+    val imgIdent = analyzePositioningCheck(dicomList, machine, uploadFileInput)
 
     val result = sessionDir(valueMap) match {
       case Some(dir) if (!dir.isDirectory) => formErr("No files have been uploaded", uploadFileInput)
       case _ if (dicomList.isEmpty) => formErr("No DICOM files have been uploaded.", uploadFileInput)
       case _ if (machList.size > 1) => formErr("Files from more than one machine were found.  Click Cancel to start over.", uploadFileInput)
       case _ if (imgIdent.isLeft) => Left(imgIdent.left.get)
-      case Some(dir) => Right(new ImageIdentificationRunRequirements(machine, dir, imgIdent.right.get._1, imgIdent.right.get._2))
+      case Some(dir) => Right(new PositioningCheckRunRequirements(machine, dir, imgIdent.right.get._1, imgIdent.right.get._2))
     }
     result
   }

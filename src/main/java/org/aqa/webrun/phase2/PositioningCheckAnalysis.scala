@@ -1,7 +1,7 @@
 package org.aqa.webrun.phase2
 
 import org.aqa.Logging
-import org.aqa.db.ImageIdentification
+import org.aqa.db.PositioningCheck
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
@@ -14,7 +14,7 @@ import org.aqa.run.ProcedureStatus
 /**
  * Analyze DICOM files for ImageAnalysis.
  */
-object ImageIdentificationAnalysis extends Logging {
+object PositioningCheckAnalysis extends Logging {
 
   /**
    * Determine if the given attribute list references the given beam number.
@@ -59,7 +59,7 @@ object ImageIdentificationAnalysis extends Logging {
     if (pos <= 180) pos else pos - 360
   }
 
-  def makeImageIdentification(plan: AttributeList, image: AttributeList): Option[ImageIdentification] = {
+  def makePositioningCheck(plan: AttributeList, image: AttributeList): Option[PositioningCheck] = {
 
     def findBldpt(all: Seq[AttributeList], name: String) = all.filter(al => al.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrNull.equalsIgnoreCase(name)).head
 
@@ -116,8 +116,8 @@ object ImageIdentificationAnalysis extends Logging {
       // image (independent of plan) uses flattening filter free
       val flatteningFilter = image.get(TagFromName.RTImageDescription).getSingleStringValueOrEmptyString.toLowerCase.contains("fff")
 
-      val imageIdentification = new ImageIdentification(
-        None, // imageIdentificationPK
+      val positioningCheck = new PositioningCheck(
+        None, // positioningCheckPK
         -1, // outputPK
         beamName,
         gantryAnglePlan_deg,
@@ -137,26 +137,26 @@ object ImageIdentificationAnalysis extends Logging {
         flatteningFilter,
         pass)
 
-      logger.info("ImageIdentificationAnalysis.makeImageIdentification:\n" + imageIdentification)
-      Some(imageIdentification)
+      logger.info("PositioningCheckAnalysis.makePositioningCheck:\n" + positioningCheck)
+      Some(positioningCheck)
     } catch {
       case t: Throwable => {
-        logger.info("Unable to make ImageIdentification: " + t)
+        logger.info("Unable to make PositioningCheck: " + t)
         None
       }
     }
   }
 
   /**
-   * Run the ImageIdentification sub-procedure, save results in the database, return true for pass or false for fail.
+   * Run the PositioningCheck sub-procedure, save results in the database, return true for pass or false for fail.
    */
-  def runProcedure(output: Output, imageIdentificationRunRequirements: ImageIdentificationRunRequirements): (ProcedureStatus.Value, Elem) = {
+  def runProcedure(output: Output, positioningCheckRunRequirements: PositioningCheckRunRequirements): (ProcedureStatus.Value, Elem) = {
     val outPK = output.outputPK.get
-    val list = imageIdentificationRunRequirements.imageIdFileList.map(imgId => imgId.imageIdentification.copy(outputPK = outPK))
-    ImageIdentification.insert(list)
+    val list = positioningCheckRunRequirements.imageIdFileList.map(imgId => imgId.positioningCheck.copy(outputPK = outPK))
+    PositioningCheck.insert(list)
     val pass: Boolean = list.map(ii => ii.pass).reduce(_ && _)
     val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
-    val elem = ImageIdentificationHTML.makeDisplay(output, imageIdentificationRunRequirements, procedureStatus)
+    val elem = PositioningCheckHTML.makeDisplay(output, positioningCheckRunRequirements, procedureStatus)
     (procedureStatus, elem)
   }
 }

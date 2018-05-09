@@ -18,7 +18,7 @@ import org.aqa.run.PostProcess
 import scala.xml.Elem
 import org.aqa.procedures.ProcedureOutputUtil
 import scala.xml.XML
-import org.aqa.db.ImageIdentification
+import org.aqa.db.PositioningCheck
 import com.pixelmed.dicom.SOPClass
 import org.aqa.db.Input
 import java.sql.Timestamp
@@ -85,8 +85,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     result
   }
 
-  case class RunReq(imageIdentification: ImageIdentificationRunRequirements) {
-    def reDir(dir: File): RunReq = new RunReq(imageIdentification.reDir(dir))
+  case class RunReq(positioningCheck: PositioningCheckRunRequirements) {
+    def reDir(dir: File): RunReq = new RunReq(positioningCheck.reDir(dir))
   }
 
   /**
@@ -117,8 +117,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     val result = validateMachineSelection(valueMap, rtimageList) match {
       case Left(err) => Left(err)
       case Right(machine) => {
-        val imageIdentification = ImageIdentificationValidation.validate(valueMap, None, machine, form.uploadFileInput)
-        imageIdentification match {
+        val positioningCheck = PositioningCheckValidation.validate(valueMap, None, machine, form.uploadFileInput)
+        positioningCheck match {
           case Left(err) => Left(err)
           case Right(chkAnglRR) => Right(new RunReq(chkAnglRR))
         }
@@ -152,7 +152,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
    * Run the sub-procedures.
    */
   private def runPhase2(output: Output, runReq: RunReq): ProcedureStatus.Value = {
-    val summary = ImageIdentificationAnalysis.runProcedure(output, runReq.imageIdentification)
+    val summary = PositioningCheckAnalysis.runProcedure(output, runReq.positioningCheck)
     val iiElem = summary._2
     makeHtml(output, summary._1, Seq(summary._2))
     summary._1
@@ -173,21 +173,21 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
         val dtp = dateTimePatId(rtimageList)
 
         val sessDir = sessionDir(valueMap).get
-        val inputOutput = Run.preRun(procedure, runReqSession.imageIdentification.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
+        val inputOutput = Run.preRun(procedure, runReqSession.positioningCheck.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
         val input = inputOutput._1
         val output = inputOutput._2
 
         val runReqFinal = runReqSession.reDir(input.dir)
 
-        val plan = runReqFinal.imageIdentification.plan
-        val machine = runReqFinal.imageIdentification.machine
+        val plan = runReqFinal.positioningCheck.plan
+        val machine = runReqFinal.positioningCheck.machine
         Phase2Util.saveRtplan(plan)
 
         val finalStatus = runPhase2(output, runReqFinal)
         val finDate = new Timestamp(System.currentTimeMillis)
         val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
 
-        Phase2Util.setMachineSerialNumber(machine, runReqFinal.imageIdentification.imageIdFileList.head.dicomFile.attributeList.get)
+        Phase2Util.setMachineSerialNumber(machine, runReqFinal.positioningCheck.imageIdFileList.head.dicomFile.attributeList.get)
         outputFinal.insertOrUpdate
         outputFinal.updateData(outputFinal.makeZipOfFiles)
         Run.removeRedundantOutput(outputFinal.outputPK)

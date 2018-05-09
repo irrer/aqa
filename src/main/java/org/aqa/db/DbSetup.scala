@@ -72,7 +72,7 @@ object DbSetup extends Logging {
     LOCRSquared.query,
     DiffBaselineOpen.query,
     DiffBaselineTrans.query,
-    ImageIdentification.query)
+    PositioningCheck.query)
 
   /**
    * Initialize database by creating tables in dependency order.
