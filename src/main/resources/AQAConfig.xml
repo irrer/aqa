@@ -71,5 +71,22 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Beam names used by Phase2 CollimatorCentering -->
     <CollimatorCentering090BeamName>99999999</CollimatorCentering090BeamName>
     <CollimatorCentering270BeamName>27373727</CollimatorCentering270BeamName>
+    <!-- Width of band of pixels in mm to use for initial finding of edge. -->
+    <CollimatorCenteringCoarseBandWidth_mm>5.0</CollimatorCenteringCoarseBandWidth_mm>
+    <!-- Thickness in mm of the penumbra of an edge. -->
+    <CollimatorCenteringPenumbraThickness_mm>10.0</CollimatorCenteringPenumbraThickness_mm>
+    <!-- Number of pixels per million to use as the sets of largest and smallest pixels in the image. -->
+    <CollimatorCenteringPenumbraPlateauSizePerMillion>500</CollimatorCenteringPenumbraPlateauSizePerMillion>
     
+    <!-- An estimate of how many bad pixels (integer >= 0) to expect per million pixels.  A good
+    estimate can marginally improve results, but a bad estimate will probably still be acceptable. -->
+    <MaxBadPixelPerMillion>20</MaxBadPixelPerMillion>
+    
+    <!-- The number of 'normal' pixels to use to characterize pixels. -->
+    <BadPixelSamplePerMillion>250</BadPixelSamplePerMillion>
+    
+    <!-- An estimate of how many bad pixels (integer >= 0) to expect per million pixels.  A good
+    estimate can marginally improve results, but a bad estimate will probably still be acceptable. -->
+    <BadPixelStdDevMultiple>2.0</BadPixelStdDevMultiple>
+
 </AQAConfig>

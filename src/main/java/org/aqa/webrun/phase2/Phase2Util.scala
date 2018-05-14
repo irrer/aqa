@@ -18,6 +18,7 @@ import org.aqa.db.Institution
 import org.aqa.db.User
 import java.util.Date
 import org.aqa.web.WebUtil._
+import edu.umro.ImageUtil.DicomImage
 
 object Phase2Util extends Logging {
   /**
@@ -199,6 +200,17 @@ object Phase2Util extends Logging {
     // write the report to the output directory
     val text = wrapBody(div, title, None, true, None)
     text
+  }
+
+  /**
+   * Create a corrected version of the given image using configured parameters.
+   */
+  def correctBadPixels(originalImage: DicomImage): DicomImage = {
+    val numPixels = originalImage.width * originalImage.height
+    val sampleSize = ((Config.BadPixelSamplePerMillion / 1000000.0) * numPixels).round.toInt
+    val maxBadPixels = ((Config.MaxBadPixelPerMillion / 1000000.0) * numPixels).round.toInt
+    val badPixelList = originalImage.identifyBadPixels(sampleSize, maxBadPixels, Config.BadPixelStdDevMultiple)
+    originalImage.correctBadPixels(badPixelList)
   }
 
 }

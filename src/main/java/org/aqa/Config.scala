@@ -338,8 +338,14 @@ object Config extends Logging {
 
   val CollimatorCentering090BeamName = logMainText("CollimatorCentering090BeamName")
   val CollimatorCentering270BeamName = logMainText("CollimatorCentering270BeamName")
-  val CollimatorCenteringCoarseBandWidth = 10.0 // TODO
-  val CollimatorCenteringPenumbraThickness = 40.0 // TODO
+  val CollimatorCenteringCoarseBandWidth_mm = logMainText("CollimatorCenteringCoarseBandWidth_mm").toDouble
+  val CollimatorCenteringPenumbraThickness_mm = logMainText("CollimatorCenteringPenumbraThickness_mm").toDouble
+  val CollimatorCenteringPenumbraPlateauSize = logMainText("CollimatorCenteringPenumbraThickness_mm").toDouble
+  val CollimatorCenteringPenumbraPlateauSizePerMillion = logMainText("CollimatorCenteringPenumbraPlateauSizePerMillion").toInt
+
+  val MaxBadPixelPerMillion = logMainText("MaxBadPixelPerMillion").toInt
+  val BadPixelSamplePerMillion = logMainText("BadPixelSamplePerMillion").toInt
+  val BadPixelStdDevMultiple = logMainText("BadPixelStdDevMultiple").toDouble
 
   val TermsOfUse = logMainText("TermsOfUse")
 
