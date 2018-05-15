@@ -12,8 +12,8 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Port number for the Secure ReST service.   Port 443 is the default for HTTPS.
     If this is missing or commented out, then the server will instead use HTTP on port 80.   Alternately,
     if this is specified, then the JavaKeyStoreFileList and JavaKeyStorePassword must be given. -->
-    <HTTPSPort>9443</HTTPSPort> 
-    
+    <HTTPSPort>9443</HTTPSPort>
+
     <!-- Location of file that contains Java Key Store for HTTPS.  If multiple names are given, then they are
     each tried in the order given until a readable file is found. -->
     <JavaKeyStoreFileList>
@@ -21,11 +21,11 @@ Note that when building a package for release, the Maven build process uses the 
         <JavaKeyStoreFile>C:\Program Files\UMRO\keystore.jks</JavaKeyStoreFile>
         <JavaKeyStoreFile>src\main\resources\keystore.jks</JavaKeyStoreFile>
     </JavaKeyStoreFileList>
-    
+
     <!-- The password to access the Java Key Store file. -->
     <JavaKeyStorePassword>9c067233b07c7b04025989a197fad9b12cf4c19006678e2b18b121289bd1635a2d395a603122a6e6</JavaKeyStorePassword> <!-- rodicom11dev -->
     <!-- <JavaKeyStorePassword>44d18166c66bed60b6394e6625c63dea713dbe465ddc960a7cd109514bc0d2bd</JavaKeyStorePassword> -->     <!-- irrer -->
-    
+
     <!-- Directory containing executables and configuration files to run procedures. -->
     <ProgramDir>C:\Program Files\AQA</ProgramDir>
 
@@ -38,7 +38,7 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Authentication timeout.  Number of seconds for a user id+password pair to be cached before re-checking with database. -->
     <AuthenticationTimeout>7200.0</AuthenticationTimeout>
 
-    <!-- Time of day as hours and minutes (HH:MM) that program will restart 
+    <!-- Time of day as hours and minutes (HH:MM) that program will restart
     itself. This is done to avoid errors that build up over time.  The time is
     formatted as a 24 hour clock, so 23:00 is eleven PM. -->
     <RestartTime>3:10</RestartTime>
@@ -48,7 +48,7 @@ Note that when building a package for release, the Maven build process uses the 
         <User>irrer</User>
         <User>jmmoran</User>
     </UserWhiteList>
-    
+
     <!-- Logging level for Restlet.  Messages at or above this severity level will be logged.
     Possible values are: OFF FINE FINER FINEST INFO WARNING SEVERE ALL -->
     <RestletLogLevel>WARNING</RestletLogLevel>
@@ -56,10 +56,10 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Terms of use for this service (legal). -->
     <TermsOfUse>
     Terms Of Use
-    
+
     To Be Determined
     </TermsOfUse>
-    
+
     <!-- List of beam names used by Phase2 PositioningCheck -->
     <PositioningCheckBeamNameList>
         <BeamName>J10G0C270-6X</BeamName>
@@ -67,24 +67,27 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>J10G270</BeamName>
         <BeamName>T3 Open</BeamName>
     </PositioningCheckBeamNameList>
-    
+
+    <!-- Beam name for flood field. -->
+    <FloodFieldBeamName>Flood 6X</FloodFieldBeamName>
+
     <!-- Beam names used by Phase2 CollimatorCentering -->
-    <CollimatorCentering090BeamName>99999999</CollimatorCentering090BeamName>
-    <CollimatorCentering270BeamName>27373727</CollimatorCentering270BeamName>
+    <CollimatorCentering090BeamName>J10G90</CollimatorCentering090BeamName>
+    <CollimatorCentering270BeamName>J10G270</CollimatorCentering270BeamName>
     <!-- Width of band of pixels in mm to use for initial finding of edge. -->
     <CollimatorCenteringCoarseBandWidth_mm>5.0</CollimatorCenteringCoarseBandWidth_mm>
     <!-- Thickness in mm of the penumbra of an edge. -->
     <CollimatorCenteringPenumbraThickness_mm>10.0</CollimatorCenteringPenumbraThickness_mm>
     <!-- Number of pixels per million to use as the sets of largest and smallest pixels in the image. -->
     <CollimatorCenteringPenumbraPlateauSizePerMillion>500</CollimatorCenteringPenumbraPlateauSizePerMillion>
-    
+
     <!-- An estimate of how many bad pixels (integer >= 0) to expect per million pixels.  A good
     estimate can marginally improve results, but a bad estimate will probably still be acceptable. -->
     <MaxBadPixelPerMillion>20</MaxBadPixelPerMillion>
-    
+
     <!-- The number of 'normal' pixels to use to characterize pixels. -->
     <BadPixelSamplePerMillion>250</BadPixelSamplePerMillion>
-    
+
     <!-- An estimate of how many bad pixels (integer >= 0) to expect per million pixels.  A good
     estimate can marginally improve results, but a bad estimate will probably still be acceptable. -->
     <BadPixelStdDevMultiple>2.0</BadPixelStdDevMultiple>

@@ -12,8 +12,10 @@ import org.aqa.procedures.ProcedureOutput
 case class CollimatorCentering(
   collimatorCenteringPK: Option[Long], // primary key
   outputPK: Long, // output primary key
-  xCenter_mm: Double, // X center in mm
-  yCenter_mm: Double, // Y center in mm
+  xCollimatorCenterMinusImageCenter_mm: Double, // X center the collimator minus the center of the image in mm
+  yCollimatorCenterMinusImageCenter_mm: Double, // Y center the collimator minus the center of the image in mm
+  xCollimatorCenter_mm: Double, // X collimator center in mm
+  yCollimatorCenter_mm: Double, // Y collimator center in mm
   north090_mm: Double, // north position of collimator leaf edge for collimator at 90 degrees (Y axis) in mm
   south090_mm: Double, // south position of collimator leaf edge for collimator at 90 degrees (Y axis) in mm
   east090_mm: Double, // east position of collimator leaf edge for collimator at 90 degrees (X axis) in mm
@@ -38,6 +40,10 @@ case class CollimatorCentering(
   override def toString: String = {
     "    collimatorCenteringPK: " + collimatorCenteringPK + "\n" +
       "    outputPK: " + outputPK + "\n" +
+      "    xCollimatorCenterMinusImageCenter_mm: " + xCollimatorCenterMinusImageCenter_mm + "\n" +
+      "    yCollimatorCenterMinusImageCenter_mm: " + yCollimatorCenterMinusImageCenter_mm + "\n" +
+      "    xCollimatorCenter_mm: " + xCollimatorCenter_mm + "\n" +
+      "    yCollimatorCenter_mm: " + yCollimatorCenter_mm + "\n" +
       "    north090_mm: " + north090_mm + "\n" +
       "    south090_mm: " + south090_mm + "\n" +
       "    east090_mm: " + east090_mm + "\n" +
@@ -54,8 +60,10 @@ object CollimatorCentering extends ProcedureOutput {
 
     def collimatorCenteringPK = column[Long]("collimatorCenteringPK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
-    def xCenter_mm = column[Double]("xCenter_mm")
-    def yCenter_mm = column[Double]("yCenter_mm")
+    def xCollimatorCenterMinusImageCenter_mm = column[Double]("xCollimatorCenterMinusImageCenter_mm")
+    def yCollimatorCenterMinusImageCenter_mm = column[Double]("yCollimatorCenterMinusImageCenter_mm")
+    def xCollimatorCenter_mm = column[Double]("xCollimatorCenter_mm")
+    def yCollimatorCenter_mm = column[Double]("yCollimatorCenter_mm")
     def north090_mm = column[Double]("north090_mm")
     def south090_mm = column[Double]("south090_mm")
     def east090_mm = column[Double]("east090_mm")
@@ -68,8 +76,10 @@ object CollimatorCentering extends ProcedureOutput {
     def * = (
       collimatorCenteringPK.?,
       outputPK,
-      xCenter_mm,
-      yCenter_mm,
+      xCollimatorCenterMinusImageCenter_mm,
+      yCollimatorCenterMinusImageCenter_mm,
+      xCollimatorCenter_mm,
+      yCollimatorCenter_mm,
       north090_mm,
       south090_mm,
       east090_mm,

@@ -16,13 +16,14 @@ object TestCollimatorCenteringAnalysis {
 
     val fileList = fileNames.map(name => new File(name))
 
-    val results = CollimatorCenteringAnalysis.fineMeasure((new DicomFile(fileList.head)).attributeList.get)
+    val results = CollimatorCenteringAnalysis.testHook((new DicomFile(fileList.head)).attributeList.get)
 
-    val meas = results._1
-    val bufImg = results._2
+    val bufImg = results.bufferedImage
+    val meas = results.measurementSet
 
     println("meas: " + meas)
     val pngFile = new File("""target\\90_0a.png""")
+    pngFile.delete
     ImageIO.write(bufImg, "png", pngFile)
   }
 }
