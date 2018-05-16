@@ -206,11 +206,11 @@ object CollimatorCenteringAnalysis extends Logging {
     (eastRectangle, westRectangle)
   }
 
-  private def fineMeasure(attributeList: AttributeList): AnalysisResult = {
-    val image = Phase2Util.correctBadPixels(new DicomImage(attributeList))
+  private def fineMeasure(dicomFile: DicomFile, floodFile: DicomFile): AnalysisResult = {
+    val image = dicomFile.correctedDicomImage.get
     // TODO should divide pixels by open field image
     val halfwayPixelValue = calcHalfwayPixelValue(image)
-    val ImagePlanePixelSpacing = attributeList.get(TagFromName.ImagePlanePixelSpacing).getDoubleValues
+    val ImagePlanePixelSpacing = dicomFile.attributeList.get.get(TagFromName.ImagePlanePixelSpacing).getDoubleValues
     val imageResolution = new Point2D.Double(ImagePlanePixelSpacing(0), ImagePlanePixelSpacing(1))
 
     val coarse = coarseMeasure(image, halfwayPixelValue, imageResolution)
@@ -240,9 +240,7 @@ object CollimatorCenteringAnalysis extends Logging {
   /**
    * Allow external access for testing.
    */
-  def testHook(attributeList: AttributeList): AnalysisResult = {
-    fineMeasure(attributeList: AttributeList)
-  }
+  def testHook(dicomFile: DicomFile): AnalysisResult = fineMeasure(dicomFile, ???)
 
   /**
    * Get the center of the image (regardless of collimator) in mm.
@@ -260,8 +258,8 @@ object CollimatorCenteringAnalysis extends Logging {
   def runProcedure(output: Output, collimatorCenteringRunRequirements: CollimatorCenteringRunRequirements): (ProcedureStatus.Value, Elem) = {
     val outPK = output.outputPK.get
 
-    val result090 = fineMeasure(collimatorCenteringRunRequirements.image090.attributeList.get)
-    val result270 = fineMeasure(collimatorCenteringRunRequirements.image270.attributeList.get)
+    val result090 = fineMeasure(collimatorCenteringRunRequirements.image090, collimatorCenteringRunRequirements.flood)
+    val result270 = fineMeasure(collimatorCenteringRunRequirements.image270, collimatorCenteringRunRequirements.flood)
 
     val m090 = result090.measurementSet
     val m270 = result270.measurementSet

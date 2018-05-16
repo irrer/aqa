@@ -8,6 +8,7 @@ import com.pixelmed.display.ConsumerFormatImageMaker
 import edu.umro.ScalaUtil.DicomUtil
 import java.awt.image.BufferedImage
 import edu.umro.ScalaUtil.Trace
+import edu.umro.ImageUtil.DicomImage
 
 case class DicomFile(file: File) extends Logging {
   private lazy val readResult = Util.readDicomFile(file)
@@ -61,6 +62,34 @@ case class DicomFile(file: File) extends Logging {
   }
 
   def reDir(dir: File) = new DicomFile(Util.reDir(file, dir))
+
+  lazy val originalDicomImage: Option[DicomImage] = {
+    attributeList match {
+      case Some(al) => Some(new DicomImage(attributeList.get))
+      case _ => None
+    }
+  }
+
+  lazy val badPixelList: Option[IndexedSeq[DicomImage.PixelRating]] = {
+    originalDicomImage match {
+      case Some(odi) => {
+        val numPixels = odi.width * odi.height
+        val sampleSize = ((Config.BadPixelSamplePerMillion / 1000000.0) * numPixels).round.toInt
+        val maxBadPixels = ((Config.MaxBadPixelPerMillion / 1000000.0) * numPixels).round.toInt
+        val badPixelList = odi.identifyBadPixels(sampleSize, maxBadPixels, Config.BadPixelStdDevMultiple)
+        Some(badPixelList)
+      }
+      case _ => None
+    }
+  }
+
+  lazy val correctedDicomImage: Option[DicomImage] = {
+    (originalDicomImage, badPixelList) match {
+      case (Some(odi), Some(bpl)) => Some(odi.correctBadPixels(bpl))
+      case _ => None
+    }
+  }
+
 }
 
 object DicomFile {

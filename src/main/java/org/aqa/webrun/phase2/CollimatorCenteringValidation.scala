@@ -23,14 +23,15 @@ object CollimatorCenteringValidation {
    */
   def validate(valueMap: ValueMapT, plan: DicomFile, rtImageList: IndexedSeq[DicomFile], uploadFileInput: Option[IsInput]): Either[StyleMapT, CollimatorCenteringRunRequirements] = {
 
+    val fileFlood = Phase2Util.findRtimageByBeamName(plan, rtImageList, Config.FloodFieldBeamName)
     val file090 = Phase2Util.findRtimageByBeamName(plan, rtImageList, Config.CollimatorCentering090BeamName)
     val file270 = Phase2Util.findRtimageByBeamName(plan, rtImageList, Config.CollimatorCentering270BeamName)
 
-    val result = (file090, file270) match {
-      case (Some(f090), Some(f270)) => Right(new CollimatorCenteringRunRequirements(f090, f270))
-      case (None, None) => formErr("Neither the 90 or 270 images associated with beams " + Config.CollimatorCentering090BeamName + " and " + Config.CollimatorCentering270BeamName + " could be found.", uploadFileInput)
-      case (None, _) => formErr("The 90 image associated with beam " + Config.CollimatorCentering090BeamName + " could be found.", uploadFileInput)
-      case (_, None) => formErr("The 270 image associated with beam " + Config.CollimatorCentering270BeamName + " could be found.", uploadFileInput)
+    val result = (fileFlood, file090, file270) match {
+      case (Some(flood), Some(f090), Some(f270)) => Right(new CollimatorCenteringRunRequirements(flood, f090, f270))
+      case (None, _, _) => formErr("The flood field image associated with beam " + Config.FloodFieldBeamName + " could be found.", uploadFileInput)
+      case (_, None, _) => formErr("The 90 image associated with beam " + Config.CollimatorCentering090BeamName + " could be found.", uploadFileInput)
+      case (_, _, None) => formErr("The 270 image associated with beam " + Config.CollimatorCentering270BeamName + " could be found.", uploadFileInput)
     }
 
     result
