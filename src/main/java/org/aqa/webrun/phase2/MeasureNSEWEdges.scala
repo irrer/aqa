@@ -21,17 +21,24 @@ import java.awt.image.BufferedImage
 import java.awt.Color
 import java.awt.Graphics2D
 import java.awt.BasicStroke
+import java.awt.Point
 
 /**
- * Analyze DICOM files for ImageAnalysis.
+ * Measure the four edges in an image (north, south, east, west).
  */
-object CollimatorCenteringAnalysis extends Logging {
+object MeasureNSEWEdges extends Logging {
 
-  case class MeasurementSet(north: Double, south: Double, east: Double, west: Double) {
+  case class NSEW(north: Double, south: Double, east: Double, west: Double) {
     val center = new Point2D.Double((east + west) / 2, (north + south) / 2)
+
+    def scale(ImagePlanePixelSpacing: Point2D.Double) = new NSEW(
+      north * ImagePlanePixelSpacing.getY, south * ImagePlanePixelSpacing.getY,
+      east * ImagePlanePixelSpacing.getX, west * ImagePlanePixelSpacing.getX)
+
+    def offset(diff: Point) = new NSEW(north + diff.getY, south + diff.getY, east + diff.getX, west + diff.getX)
   }
 
-  case class AnalysisResult(measurementSet: MeasurementSet, bufferedImage: BufferedImage)
+  case class AnalysisResult(measurementSet: NSEW, bufferedImage: BufferedImage)
 
   private def getCoarseNorthRectangle(image: DicomImage, cntrOfMass: Point2D, imageResolution: Point2D): Rectangle = {
     val width = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / imageResolution.getX).toInt
@@ -71,7 +78,7 @@ object CollimatorCenteringAnalysis extends Logging {
     ((min + max) / 2.0)
   }
 
-  private def coarseMeasure(image: DicomImage, halfwayPixelValue: Double, imageResolution: Point2D): MeasurementSet = {
+  private def coarseMeasure(image: DicomImage, halfwayPixelValue: Double, imageResolution: Point2D): NSEW = {
     val cntrOfMass = new Point2D.Double(ImageUtil.centerOfMass(image.columnSums), ImageUtil.centerOfMass(image.rowSums))
 
     val coarseNorthRectangle = getCoarseNorthRectangle(image, cntrOfMass, imageResolution)
@@ -86,7 +93,7 @@ object CollimatorCenteringAnalysis extends Logging {
     val coarseWestRectangle = getCoarseWestRectangle(image, cntrOfMass, imageResolution)
     val coarseWestEdge = LocateEdge.locateEdge(image.getSubimage(coarseWestRectangle).columnSums, halfwayPixelValue * coarseWestRectangle.getHeight)
 
-    new MeasurementSet(coarseNorthEdge, coarseSouthEdge, coarseEastEdge, coarseWestEdge)
+    new NSEW(coarseNorthEdge, coarseSouthEdge, coarseEastEdge, coarseWestEdge)
   }
 
   private val imageColor = Color.green
@@ -135,7 +142,7 @@ object CollimatorCenteringAnalysis extends Logging {
     ImageUtil.annotatePixel(bufImg, pixelEdge.round.toInt, yMid, annotationColor, text, false)
   }
 
-  private def annotateCenter(bufImg: BufferedImage, graphics: Graphics2D, pixelEdges: MeasurementSet, scaledEdges: MeasurementSet, imageResolution: Point2D) = {
+  private def annotateCenter(bufImg: BufferedImage, graphics: Graphics2D, pixelEdges: NSEW, scaledEdges: NSEW, imageResolution: Point2D) = {
     // center of image (not center of edges)
     val pixelImageCenter = new Point2D.Double(bufImg.getWidth / 2.0, bufImg.getHeight / 2.0)
     // scaled center of image (not center of edges)
@@ -172,21 +179,22 @@ object CollimatorCenteringAnalysis extends Logging {
   /**
    * Make an annotated image that illustrates the edges.
    */
-  private def makeAnnotatedImage(image: DicomImage, pixelEdges: MeasurementSet, scaledEdges: MeasurementSet, northRect: Rectangle, southRect: Rectangle, eastRect: Rectangle, westRect: Rectangle, imageResolution: Point2D): BufferedImage = {
+  private def makeAnnotatedImage(image: DicomImage, measurementSet: NSEW, ImagePlanePixelSpacing: Point2D.Double, northRect: Rectangle, southRect: Rectangle, eastRect: Rectangle, westRect: Rectangle, imageResolution: Point2D): BufferedImage = {
     val bufImg = image.toBufferedImage(imageColor)
     val graphics = ImageUtil.getGraphics(bufImg)
     graphics.setColor(annotationColor)
 
-    annotateNorthSouth(bufImg, graphics, pixelEdges.north, scaledEdges.north, northRect)
-    annotateNorthSouth(bufImg, graphics, pixelEdges.south, scaledEdges.south, southRect)
-    annotateEastWest(bufImg, graphics, pixelEdges.east, scaledEdges.east, eastRect)
-    annotateEastWest(bufImg, graphics, pixelEdges.west, scaledEdges.west, westRect)
+    val scaledMeasurementSet = measurementSet.scale(ImagePlanePixelSpacing)
+    annotateNorthSouth(bufImg, graphics, measurementSet.north, scaledMeasurementSet.north, northRect)
+    annotateNorthSouth(bufImg, graphics, measurementSet.south, scaledMeasurementSet.south, southRect)
+    annotateEastWest(bufImg, graphics, measurementSet.east, scaledMeasurementSet.east, eastRect)
+    annotateEastWest(bufImg, graphics, measurementSet.west, scaledMeasurementSet.west, westRect)
 
-    annotateCenter(bufImg, graphics, pixelEdges, scaledEdges, imageResolution)
+    annotateCenter(bufImg, graphics, measurementSet, scaledMeasurementSet, imageResolution)
     bufImg
   }
 
-  private def northSouthRectangles(coarse: MeasurementSet, penumbraX: Double, penumbraY: Double): (Rectangle, Rectangle) = {
+  private def northSouthRectangles(coarse: NSEW, penumbraX: Double, penumbraY: Double): (Rectangle, Rectangle) = {
     val nsHeight = penumbraY // north and south height
     val nsWidth = (coarse.east - coarse.west) - penumbraX // north and south width
     val nsX = coarse.west + (penumbraX / 2)
@@ -196,7 +204,7 @@ object CollimatorCenteringAnalysis extends Logging {
     (northRectangle, southRectangle)
   }
 
-  private def eastWestRectangles(coarse: MeasurementSet, penumbraX: Double, penumbraY: Double): (Rectangle, Rectangle) = {
+  private def eastWestRectangles(coarse: NSEW, penumbraX: Double, penumbraY: Double): (Rectangle, Rectangle) = {
     val ewHeight = (coarse.south - coarse.north) - penumbraY // east and west height
     val ewWidth = penumbraX // east and west height
     val ewY = coarse.north + (penumbraX / 2)
@@ -206,17 +214,24 @@ object CollimatorCenteringAnalysis extends Logging {
     (eastRectangle, westRectangle)
   }
 
-  private def fineMeasure(dicomFile: DicomFile, floodFile: DicomFile): AnalysisResult = {
-    val image = dicomFile.correctedDicomImage.get
-    // TODO should divide pixels by open field image
+  /**
+   * Measure the four edges in the image, and create an annotated image.
+   *
+   * @param image: Image to analyse.  Should consist of a single rectangle - anything else will produce unpredictable results.
+   *
+   * @param ImagePlanePixelSpacing: Size of X and Y pixels in mm.
+   *
+   * @param annotate: Image containing pixels to be annotated.
+   *
+   * @param floodOffset: XY offset of image to annotate.
+   */
+  def measure(image: DicomImage, ImagePlanePixelSpacing: Point2D.Double, annotate: DicomImage, floodOffset: Point): (NSEW, BufferedImage) = {
     val halfwayPixelValue = calcHalfwayPixelValue(image)
-    val ImagePlanePixelSpacing = dicomFile.attributeList.get.get(TagFromName.ImagePlanePixelSpacing).getDoubleValues
-    val imageResolution = new Point2D.Double(ImagePlanePixelSpacing(0), ImagePlanePixelSpacing(1))
 
-    val coarse = coarseMeasure(image, halfwayPixelValue, imageResolution)
+    val coarse = coarseMeasure(image, halfwayPixelValue, ImagePlanePixelSpacing)
 
-    val penumbraX = Config.CollimatorCenteringPenumbraThickness_mm / imageResolution.getX // penumbra thickness in pixels
-    val penumbraY = Config.CollimatorCenteringPenumbraThickness_mm / imageResolution.getY // penumbra thickness in pixels
+    val penumbraX = Config.CollimatorCenteringPenumbraThickness_mm / ImagePlanePixelSpacing.getX // penumbra thickness in pixels
+    val penumbraY = Config.CollimatorCenteringPenumbraThickness_mm / ImagePlanePixelSpacing.getY // penumbra thickness in pixels
 
     val nsX = coarse.west + (penumbraX / 2)
 
@@ -229,57 +244,12 @@ object CollimatorCenteringAnalysis extends Logging {
     val eastEdge = LocateEdge.locateEdge(image.getSubimage(ewRect._1).columnSums, halfwayPixelValue * ewRect._1.height) + ewRect._1.x
     val westEdge = LocateEdge.locateEdge(image.getSubimage(ewRect._2).columnSums, halfwayPixelValue * ewRect._2.height) + ewRect._2.x
 
-    val pixelEdges = new MeasurementSet(northEdge, southEdge, eastEdge, westEdge)
-    val scaledEdges = new MeasurementSet(northEdge * imageResolution.getY, southEdge * imageResolution.getY, eastEdge * imageResolution.getX, westEdge * imageResolution.getX)
+    val measurementSet = new NSEW(northEdge, southEdge, eastEdge, westEdge)
+    val scaledMeasurementSet = measurementSet.scale(ImagePlanePixelSpacing)
 
-    val bufferedImage = makeAnnotatedImage(image, pixelEdges, scaledEdges, nsRect._1, nsRect._2, ewRect._1, ewRect._2, imageResolution)
+    val bufferedImage = makeAnnotatedImage(annotate, measurementSet, ImagePlanePixelSpacing, nsRect._1, nsRect._2, ewRect._1, ewRect._2, ImagePlanePixelSpacing)
+    (measurementSet, bufferedImage)
 
-    new AnalysisResult(pixelEdges, bufferedImage)
   }
 
-
-  
-  /**
-   * Allow external access for testing.
-   */
-  def testHook(dicomFile: DicomFile): AnalysisResult = fineMeasure(dicomFile, ???)
-
-  /**
-   * Get the center of the image (regardless of collimator) in mm.
-   */
-  private def getImageCenter_mm(al: AttributeList): Point2D.Double = {
-    val ImagePlanePixelSpacing = al.get(TagFromName.ImagePlanePixelSpacing).getDoubleValues
-    val Rows = al.get(TagFromName.Rows).getIntegerValues.head
-    val Columns = al.get(TagFromName.Columns).getIntegerValues.head
-    new Point2D.Double(Columns * ImagePlanePixelSpacing(0), Rows * ImagePlanePixelSpacing(1))
-  }
-
-  /**
-   * Run the CollimatorCentering sub-procedure, save results in the database, return true for pass or false for fail.
-   */
-  def runProcedure(output: Output, collimatorCenteringRunRequirements: CollimatorCenteringRunRequirements): (ProcedureStatus.Value, Elem) = {
-    val outPK = output.outputPK.get
-
-    val result090 = fineMeasure(collimatorCenteringRunRequirements.image090, collimatorCenteringRunRequirements.flood)
-    val result270 = fineMeasure(collimatorCenteringRunRequirements.image270, collimatorCenteringRunRequirements.flood)
-
-    val m090 = result090.measurementSet
-    val m270 = result270.measurementSet
-    val colCntr = new Point2D.Double((m090.center.getX + m270.center.getX) / 2, (m090.center.getY + m270.center.getY) / 2)
-    val imgCntr = getImageCenter_mm(collimatorCenteringRunRequirements.image090.attributeList.get)
-
-    val collimatorCentering = new CollimatorCentering(None, output.outputPK.get,
-      colCntr.getX - imgCntr.getX, colCntr.getY - imgCntr.getY,
-      colCntr.getX, colCntr.getY,
-      m090.north, m090.south, m090.east, m090.west,
-      m270.north, m270.south, m270.east, m270.west)
-
-    CollimatorCenteringHTML.makeDisplay(output, result090, result270, collimatorCenteringRunRequirements)
-
-    val pass: Boolean = false
-    val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
-    //val elem = CollimatorCenteringHTML.makeDisplay(output, positioningCheckRunRequirements, procedureStatus)
-    //(procedureStatus, elem)
-    ???
-  }
 }

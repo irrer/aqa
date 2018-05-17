@@ -17,7 +17,7 @@ object PositioningCheckValidation {
   /**
    * Identify the input files.
    */
-  private def analyzePositioningCheck(dicomList: Seq[DicomFile], machine: Machine, uploadFileInput: Option[IsInput]): Either[StyleMapT, (DicomFile, Seq[PositioningCheckFile])] = {
+  private def analyzePositioningCheck(dicomList: Seq[DicomFile], uploadFileInput: Option[IsInput]): Either[StyleMapT, (DicomFile, Seq[PositioningCheckFile])] = {
     val planList = Phase2Util.getPlanList(dicomList)
     val imageList = dicomList.filter(df => df.isModality(SOPClass.RTImageStorage))
 
@@ -54,7 +54,7 @@ object PositioningCheckValidation {
    * Validate the given data, and, if it is valid, organize it into a <code>PositioningCheckRunRequirements</code> object.  If
    * it is not valid, then return a message indicating the problem.
    */
-  def validate(valueMap: ValueMapT, outputPK: Option[Long], machine: Machine, uploadFileInput: Option[IsInput]): Either[StyleMapT, PositioningCheckRunRequirements] = {
+  def validate(valueMap: ValueMapT, outputPK: Option[Long], uploadFileInput: Option[IsInput]): Either[StyleMapT, PositioningCheckRunRequirements] = {
     val rtimageList = dicomFilesInSession(valueMap).filter(df => df.isModality(SOPClass.RTImageStorage))
     val rtplanList = dicomFilesInSession(valueMap).filter(df => df.isModality(SOPClass.RTPlanStorage))
     val dicomList = rtplanList ++ rtimageList
@@ -62,14 +62,14 @@ object PositioningCheckValidation {
     // machines that DICOM files reference (based on device serial numbers)
     val machList = rtimageList.map(df => attributeListToMachine(df.attributeList.get)).flatten.distinct
 
-    val imgIdent = analyzePositioningCheck(dicomList, machine, uploadFileInput)
+    val imgIdent = analyzePositioningCheck(dicomList, uploadFileInput)
 
     val result = sessionDir(valueMap) match {
       case Some(dir) if (!dir.isDirectory) => formErr("No files have been uploaded", uploadFileInput)
       case _ if (dicomList.isEmpty) => formErr("No DICOM files have been uploaded.", uploadFileInput)
       case _ if (machList.size > 1) => formErr("Files from more than one machine were found.  Click Cancel to start over.", uploadFileInput)
       case _ if (imgIdent.isLeft) => Left(imgIdent.left.get)
-      case Some(dir) => Right(new PositioningCheckRunRequirements(machine, dir, imgIdent.right.get._1, imgIdent.right.get._2))
+      case Some(dir) => Right(new PositioningCheckRunRequirements(dir, imgIdent.right.get._1, imgIdent.right.get._2))
     }
     result
   }

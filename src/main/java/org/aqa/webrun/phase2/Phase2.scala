@@ -38,6 +38,7 @@ import org.aqa.webrun.LOCSpreadsheet
 import org.aqa.webrun.LOCXml
 import org.aqa.db.Machine
 import org.aqa.webrun.RunRequirements
+import org.aqa.Config
 
 object Phase2 {
   val parametersFileName = "parameters.xml"
@@ -85,8 +86,11 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     result
   }
 
-  case class RunReq(positioningCheck: PositioningCheckRunRequirements) {
-    def reDir(dir: File): RunReq = new RunReq(positioningCheck.reDir(dir))
+  case class RunReq(plan: DicomFile, rtimageMap: Map[String, DicomFile], flood: DicomFile) {
+    def reDir(dir: File): RunReq = {
+      val rtiMap = rtimageMap.toSeq.map(ni => (ni._1, ni._2.reDir(dir))).toMap
+      new RunReq(plan.reDir(dir), rtiMap, rtiMap.get(Config.FloodFieldBeamName).get)
+    }
   }
 
   /**
@@ -100,6 +104,18 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       case _ if (rtimageList.isEmpty) => Error.make(form.uploadFileInput.get, "No DICOM RTIMAGE files have been uploaded.")
       case _ => styleNone
     }
+  }
+
+  def commonValidation(valueMap: ValueMapT): Either[StyleMapT, RunReq] = {
+    // TODO move most of PositioningCheckValidation here.  Get the plan, flood, and rtimage map
+    val dicomFileList = dicomFilesInSession(valueMap)
+    val rtplanList = dicomFileList.filter(df => df.isModality(SOPClass.RTPlanStorage))
+    val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
+
+    val referencedPlanUidList = rtimageList.map(rtimage => Phase2Util.referencedPlanUID(rtimage)).distinct
+    
+    val val val val val  // TODO
+    ???
   }
 
   private def validate(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, RunReq] = {
@@ -117,7 +133,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     val result = validateMachineSelection(valueMap, rtimageList) match {
       case Left(err) => Left(err)
       case Right(machine) => {
-        val positioningCheck = PositioningCheckValidation.validate(valueMap, None, machine, form.uploadFileInput)
+        val positioningCheck = PositioningCheckValidation.validate(valueMap, None, form.uploadFileInput)
         positioningCheck match {
           case Left(err) => Left(err)
           case Right(chkAnglRR) => Right(new RunReq(chkAnglRR))
@@ -149,10 +165,18 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   }
 
   /**
+   * Create a list of the RTIMAGEs mapped by beam name.
+   */
+  private def constructRtimageMap(plan: DicomFile, rtimageList: Seq[DicomFile]) = {
+    rtimageList.map(rtimage => (Phase2Util.getBeamNameOfRtimage(plan, rtimage), rtimage)).filter(ni => ni._1.isDefined).map(ni => (ni._1.get, ni._2)).toMap
+  }
+
+  /**
    * Run the sub-procedures.
    */
-  private def runPhase2(output: Output, runReq: RunReq): ProcedureStatus.Value = {
+  private def runPhase2(output: Output, rtimageMap: Map[String, DicomFile], runReq: RunReq): ProcedureStatus.Value = {
     val summary = PositioningCheckAnalysis.runProcedure(output, runReq.positioningCheck)
+    val floodRtimage = rtimageMap.get(Config.FloodFieldBeamName).get
     val iiElem = summary._2
     makeHtml(output, summary._1, Seq(summary._2))
     summary._1
@@ -164,6 +188,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   private def run(valueMap: ValueMapT, request: Request, response: Response) = {
     val dicomFileList = dicomFilesInSession(valueMap)
     val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
+
     validate(valueMap, dicomFileList) match {
       case Left(errMap) => {
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
@@ -183,7 +208,9 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
         val machine = runReqFinal.positioningCheck.machine
         Phase2Util.saveRtplan(plan)
 
-        val finalStatus = runPhase2(output, runReqFinal)
+        val rtimageMap = constructRtimageMap(plan, rtimageList)
+
+        val finalStatus = runPhase2(output, rtimageMap, runReqFinal)
         val finDate = new Timestamp(System.currentTimeMillis)
         val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
 
