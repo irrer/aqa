@@ -150,7 +150,7 @@ object PositioningCheckAnalysis extends Logging {
   /**
    * Run the PositioningCheck sub-procedure, save results in the database, return true for pass or false for fail.
    */
-  def runProcedure(output: Output, positioningCheckRunRequirements: PositioningCheckRunRequirements): (ProcedureStatus.Value, Elem) = {
+  def runProcedure(output: Output, positioningCheckRunRequirements: RunReq): (ProcedureStatus.Value, Elem) = {
     val outPK = output.outputPK.get
     val list = positioningCheckRunRequirements.imageIdFileList.map(imgId => imgId.positioningCheck.copy(outputPK = outPK))
     PositioningCheck.insert(list)

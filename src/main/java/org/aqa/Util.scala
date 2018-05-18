@@ -146,12 +146,12 @@ object Util extends Logging {
     }
   }
 
-  private def extractDateTimeAndPatientIdFromDicom(file: File): (Seq[Date], Option[String]) = {
+  /**
+   * Get dates and patient ID from attribute list.
+   */
+  def extractDateTimeAndPatientIdFromDicom(attributeList: AttributeList): (Seq[Date], Option[String]) = {
 
-    val attrList = new AttributeList
-    attrList.read(file)
-
-    val PatientID = getAttrValue(attrList, TagFromName.PatientID)
+    val PatientID = getAttrValue(attributeList, TagFromName.PatientID)
 
     val dateTimeTagPairList = List(
       (TagFromName.ContentDate, TagFromName.ContentTime),
@@ -160,13 +160,22 @@ object Util extends Logging {
       (TagFromName.CreationDate, TagFromName.CreationTime),
       (TagFromName.SeriesDate, TagFromName.SeriesTime))
 
-    val AcquisitionDateTime = getTimeAndDate(attrList, TagFromName.AcquisitionDateTime)
+    val AcquisitionDateTime = getTimeAndDate(attributeList, TagFromName.AcquisitionDateTime)
 
-    val dateTimePairs = dateTimeTagPairList.map(dt => getTimeAndDate(attrList, dt._1, dt._2))
+    val dateTimePairs = dateTimeTagPairList.map(dt => getTimeAndDate(attributeList, dt._1, dt._2))
 
     val dateList = (AcquisitionDateTime +: dateTimePairs).filter(dt => dt.isDefined).map(dtd => dtd.get).distinct
 
     (dateList, PatientID)
+  }
+
+  /**
+   * Get dates and patient ID from DICOM file.
+   */
+  def extractDateTimeAndPatientIdFromDicom(file: File): (Seq[Date], Option[String]) = {
+    val al = new AttributeList
+    al.read(file)
+    extractDateTimeAndPatientIdFromDicom(al)
   }
 
   private def dateTimeAndPatientIdFromDicom(file: File, dateList: Seq[Date], patientIdList: Seq[String]): (Seq[Date], Seq[String]) = {

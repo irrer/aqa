@@ -86,61 +86,73 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     result
   }
 
-  case class RunReq(plan: DicomFile, rtimageMap: Map[String, DicomFile], flood: DicomFile) {
-    def reDir(dir: File): RunReq = {
-      val rtiMap = rtimageMap.toSeq.map(ni => (ni._1, ni._2.reDir(dir))).toMap
-      new RunReq(plan.reDir(dir), rtiMap, rtiMap.get(Config.FloodFieldBeamName).get)
+  /**
+   * Check that there is a single plan, single machine, and some images.
+   */
+  def basicValidation(valueMap: ValueMapT): Either[StyleMapT, (DicomFile, Machine, Seq[(Option[String], DicomFile)])] = {
+    val dicomFileList = dicomFilesInSession(valueMap)
+    val rtplanList = Phase2Util.getPlanList(dicomFileList)
+    val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
+    val machineSerialNumberListOpt = rtimageList.map(rtimage => Util.getAttrValue(rtimage.attributeList.get, TagFromName.DeviceSerialNumber))
+    val machineSerialNumberList = machineSerialNumberListOpt.flatten
+    val nullSerialNumber = machineSerialNumberList.size != machineSerialNumberListOpt.size
+    val dateTimeList = rtimageList.map(rtimage => Util.extractDateTimeAndPatientIdFromDicom(rtimage.attributeList.get)._1).flatten.distinct.map(d => d.getTime).sorted
+    val maxDuration = Math.round(Config.MaxProcedureDuration * 60 * 1000).toLong
+
+    val machineCheck = validateMachineSelection(valueMap, rtimageList)
+
+    // associate each image with a plan
+    val planGroups = rtplanList.map(plan => (plan, rtimageList.filter(img => Phase2Util.imageReferencesPlan(plan, img)))).filter(pi => pi._2.nonEmpty).toMap
+
+    0 match {
+      case _ if (rtplanList.isEmpty) => formErr("No RTPLANS found")
+      case _ if (rtimageList.isEmpty) => formErr("No RTIMAGEs given")
+      case _ if (planGroups.isEmpty) => formErr("No RTPLAN found for RTIMAGEs")
+      case _ if (planGroups.size > 1) => formErr("The RTIMAGEs reference multiple plans.  Only one plan per run is permitted.")
+      case _ if (machineCheck.isLeft) => Left(machineCheck.left.get)
+      case _ if (machineSerialNumberList.size != 1) => formErr("There are RTIMAGEs from more than one machine.")
+      case _ if (nullSerialNumber) => formErr("At least one RTIMAGE has no serial number.")
+      case _ if ((dateTimeList.last - dateTimeList.head) > maxDuration) =>
+        formErr("Over " + Config.MaxProcedureDuration + " minutes from first to last image.  These RTIMAGE files were not from the same session")
+      case _ => {
+        val rtimageByBeam = rtimageList.map(rtimage => (Phase2Util.getBeamNameOfRtimage(rtplanList.head, rtimage), rtimage))
+        Right((rtplanList.head, machineCheck.right.get, rtimageByBeam))
+      }
     }
   }
 
   /**
-   * Perform some general preliminary checks on the input files.
+   * Check beam definitions, existence of flood field, and organize inputs into <code>RunReq</code> to facilitate further processing.
    */
-  private def basicFileValidation(sessDir: Option[File], dicomFileList: Seq[DicomFile], rtimageList: Seq[DicomFile]) = {
-    sessDir match {
-      case Some(sd) if (!sd.isDirectory) => Error.make(form.uploadFileInput.get, "No files uploaded.")
-      case Some(sd) if (Util.listDirFiles(sd).isEmpty) => Error.make(form.uploadFileInput.get, "No files have been uploaded.")
-      case _ if (dicomFileList.isEmpty) => Error.make(form.uploadFileInput.get, "No DICOM files have been uploaded.")
-      case _ if (rtimageList.isEmpty) => Error.make(form.uploadFileInput.get, "No DICOM RTIMAGE files have been uploaded.")
-      case _ => styleNone
+  def basicBeamValidation(valueMap: ValueMapT, rtplan: DicomFile, machine: Machine, rtimageList: Seq[(Option[String], DicomFile)]): Either[StyleMapT, RunReq] = {
+    val flood = rtimageMap.get(Config.FloodFieldBeamName)
+    val rtimageMap = rtimageList.filter(rl => rl._1.isDefined && (!rl._1.get.equals(Config.FloodFieldBeamName))).map(rl => (rl._1.get, rl._2)).toMap
+
+    0 match {
+      case _ if (rtimageMap.size != rtimageList.size) => formErr("RTIMAGE duplicate beam reference or missing (from plan) beam reference")
+      case _ if (flood.isEmpty) => formErr("Flood field beam is missing")
+      case _ => Right(new RunReq(rtplan, machine, rtimageMap, flood.get))
     }
   }
 
-  def commonValidation(valueMap: ValueMapT): Either[StyleMapT, RunReq] = {
-    // TODO move most of PositioningCheckValidation here.  Get the plan, flood, and rtimage map
-    val dicomFileList = dicomFilesInSession(valueMap)
-    val rtplanList = dicomFileList.filter(df => df.isModality(SOPClass.RTPlanStorage))
-    val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
-
-    val referencedPlanUidList = rtimageList.map(rtimage => Phase2Util.referencedPlanUID(rtimage)).distinct
-    
-    val val val val val  // TODO
-    ???
-  }
-
+  /**
+   * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
+   */
   private def validate(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, RunReq] = {
-    val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
-
-    val sessDir = sessionDir(valueMap)
-
-    basicFileValidation(sessDir, dicomFileList, rtimageList) match {
-      case err if (err.nonEmpty) => Left(err)
-      case _ => {
-
+    val basicValid = basicValidation(valueMap)
+    if (basicValid.isLeft) Left(basicValid.left.get)
+    else {
+      val rtplan = basicValid.right.get._1
+      val machine = basicValid.right.get._2
+      val rtimageList = basicValid.right.get._3
+      val basicBeamValid = basicBeamValidation(valueMap, rtplan, machine, rtimageList)
+      if (basicBeamValid.isLeft) basicBeamValid
+      else {
+        val runReq = basicBeamValid.right.get
+        val err = PositioningCheckValidation.validate(runReq)
+        if (err.isDefined) Left(Error.make(form.uploadFileInput.get, err.get)) else Right(runReq)
       }
     }
-
-    val result = validateMachineSelection(valueMap, rtimageList) match {
-      case Left(err) => Left(err)
-      case Right(machine) => {
-        val positioningCheck = PositioningCheckValidation.validate(valueMap, None, form.uploadFileInput)
-        positioningCheck match {
-          case Left(err) => Left(err)
-          case Right(chkAnglRR) => Right(new RunReq(chkAnglRR))
-        }
-      }
-    }
-    result
   }
 
   private def dateTimePatId(rtimageList: Seq[DicomFile]) = {
@@ -175,7 +187,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
    * Run the sub-procedures.
    */
   private def runPhase2(output: Output, rtimageMap: Map[String, DicomFile], runReq: RunReq): ProcedureStatus.Value = {
-    val summary = PositioningCheckAnalysis.runProcedure(output, runReq.positioningCheck)
+    val summary = PositioningCheckAnalysis.runProcedure(output, runReq)
     val floodRtimage = rtimageMap.get(Config.FloodFieldBeamName).get
     val iiElem = summary._2
     makeHtml(output, summary._1, Seq(summary._2))
@@ -193,19 +205,19 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       case Left(errMap) => {
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
-      case Right(runReqSession) => {
+      case Right(runReq) => {
         // only consider the RTIMAGE files for the date-time stamp.  The plan could have been from months ago.
         val dtp = dateTimePatId(rtimageList)
 
         val sessDir = sessionDir(valueMap).get
-        val inputOutput = Run.preRun(procedure, runReqSession.positioningCheck.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
+        val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
         val input = inputOutput._1
         val output = inputOutput._2
 
-        val runReqFinal = runReqSession.reDir(input.dir)
+        val runReqFinal = runReq.reDir(input.dir)
 
-        val plan = runReqFinal.positioningCheck.plan
-        val machine = runReqFinal.positioningCheck.machine
+        val plan = runReq.rtplan
+        val machine = runReqFinal.machine
         Phase2Util.saveRtplan(plan)
 
         val rtimageMap = constructRtimageMap(plan, rtimageList)
@@ -214,7 +226,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
         val finDate = new Timestamp(System.currentTimeMillis)
         val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
 
-        Phase2Util.setMachineSerialNumber(machine, runReqFinal.positioningCheck.imageIdFileList.head.dicomFile.attributeList.get)
+        Phase2Util.setMachineSerialNumber(machine, runReqFinal.flood.attributeList.get)
         outputFinal.insertOrUpdate
         outputFinal.updateData(outputFinal.makeZipOfFiles)
         Run.removeRedundantOutput(outputFinal.outputPK)

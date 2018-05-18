@@ -22,6 +22,8 @@ import java.awt.Color
 import java.awt.Graphics2D
 import java.awt.BasicStroke
 
+// TODO using MeasureNSEWEdges allows removing most of this code
+
 /**
  * Analyze DICOM files for ImageAnalysis.
  */
@@ -237,8 +239,6 @@ object CollimatorCenteringAnalysis extends Logging {
     new AnalysisResult(pixelEdges, bufferedImage)
   }
 
-
-  
   /**
    * Allow external access for testing.
    */
@@ -257,16 +257,20 @@ object CollimatorCenteringAnalysis extends Logging {
   /**
    * Run the CollimatorCentering sub-procedure, save results in the database, return true for pass or false for fail.
    */
-  def runProcedure(output: Output, collimatorCenteringRunRequirements: CollimatorCenteringRunRequirements): (ProcedureStatus.Value, Elem) = {
+  def runProcedure(output: Output, runReq: RunReq): (ProcedureStatus.Value, Elem) = {
     val outPK = output.outputPK.get
 
-    val result090 = fineMeasure(collimatorCenteringRunRequirements.image090, collimatorCenteringRunRequirements.flood)
-    val result270 = fineMeasure(collimatorCenteringRunRequirements.image270, collimatorCenteringRunRequirements.flood)
+    val file090 = runReq.rtimageMap(Config.CollimatorCentering090BeamName)
+    val file270 = runReq.rtimageMap(Config.CollimatorCentering270BeamName)
+    val fileFlood = runReq.rtimageMap(Config.FloodFieldBeamName)
+
+    val result090 = fineMeasure(file090, fileFlood)
+    val result270 = fineMeasure(file090, fileFlood)
 
     val m090 = result090.measurementSet
     val m270 = result270.measurementSet
     val colCntr = new Point2D.Double((m090.center.getX + m270.center.getX) / 2, (m090.center.getY + m270.center.getY) / 2)
-    val imgCntr = getImageCenter_mm(collimatorCenteringRunRequirements.image090.attributeList.get)
+    val imgCntr = getImageCenter_mm(file090.attributeList.get)
 
     val collimatorCentering = new CollimatorCentering(None, output.outputPK.get,
       colCntr.getX - imgCntr.getX, colCntr.getY - imgCntr.getY,
@@ -274,7 +278,7 @@ object CollimatorCenteringAnalysis extends Logging {
       m090.north, m090.south, m090.east, m090.west,
       m270.north, m270.south, m270.east, m270.west)
 
-    CollimatorCenteringHTML.makeDisplay(output, result090, result270, collimatorCenteringRunRequirements)
+    CollimatorCenteringHTML.makeDisplay(output, result090, result270, runReq)
 
     val pass: Boolean = false
     val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail

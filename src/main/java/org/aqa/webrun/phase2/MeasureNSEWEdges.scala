@@ -230,8 +230,8 @@ object MeasureNSEWEdges extends Logging {
 
     val coarse = coarseMeasure(image, halfwayPixelValue, ImagePlanePixelSpacing)
 
-    val penumbraX = Config.CollimatorCenteringPenumbraThickness_mm / ImagePlanePixelSpacing.getX // penumbra thickness in pixels
-    val penumbraY = Config.CollimatorCenteringPenumbraThickness_mm / ImagePlanePixelSpacing.getY // penumbra thickness in pixels
+    val penumbraX = Config.PenumbraThickness_mm / ImagePlanePixelSpacing.getX // penumbra thickness in pixels
+    val penumbraY = Config.PenumbraThickness_mm / ImagePlanePixelSpacing.getY // penumbra thickness in pixels
 
     val nsX = coarse.west + (penumbraX / 2)
 

@@ -60,6 +60,10 @@ Note that when building a package for release, the Maven build process uses the 
     To Be Determined
     </TermsOfUse>
 
+    <!-- Maximum amount of time in minutes that a procedure should take.  This is used when
+    examining the input files to determine if they are from different sessions. -->
+    <MaxProcedureDuration>120.0</MaxProcedureDuration>
+
     <!-- List of beam names used by Phase2 PositioningCheck -->
     <PositioningCheckBeamNameList>
         <BeamName>J10G0C270-6X</BeamName>
@@ -77,7 +81,7 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Width of band of pixels in mm to use for initial finding of edge. -->
     <CollimatorCenteringCoarseBandWidth_mm>5.0</CollimatorCenteringCoarseBandWidth_mm>
     <!-- Thickness in mm of the penumbra of an edge. -->
-    <CollimatorCenteringPenumbraThickness_mm>10.0</CollimatorCenteringPenumbraThickness_mm>
+    <PenumbraThickness_mm>10.0</PenumbraThickness_mm>
     <!-- Number of pixels per million to use as the sets of largest and smallest pixels in the image. -->
     <CollimatorCenteringPenumbraPlateauSizePerMillion>500</CollimatorCenteringPenumbraPlateauSizePerMillion>
 

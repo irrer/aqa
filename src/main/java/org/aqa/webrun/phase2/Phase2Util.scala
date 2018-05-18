@@ -19,6 +19,7 @@ import org.aqa.db.User
 import java.util.Date
 import org.aqa.web.WebUtil._
 import edu.umro.ImageUtil.DicomImage
+import java.awt.geom.Point2D
 
 object Phase2Util extends Logging {
 
@@ -224,4 +225,8 @@ object Phase2Util extends Logging {
     originalImage.correctBadPixels(badPixelList)
   }
 
+  def getImagePlanePixelSpacing(attributeList: AttributeList): Point2D.Double = {
+    val ImagePlanePixelSpacing = attributeList.get(TagFromName.ImagePlanePixelSpacing).getIntegerValues
+    new Point2D.Double(ImagePlanePixelSpacing(0), ImagePlanePixelSpacing(1))
+  }
 }
