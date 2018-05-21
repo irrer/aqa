@@ -23,10 +23,15 @@ object PositioningCheckHTML {
   val htmlFileName = "PositioningCheck.html"
 
   /**
+   * Associate results with file.
+   */
+  case class PositioningCheckFile(dicomFile: DicomFile, positioningCheck: PositioningCheck);
+
+  /**
    * Generate a detailed report and write it to the output directory.  Also write a CSV file.  Return an
    * HTML snippet that serves as a summary and a link to the detailed report.
    */
-  def makeDisplay(output: Output, runReq: PositioningCheckRunRequirements, status: ProcedureStatus.Value): Elem = {
+  def makeDisplay(output: Output, runReq: RunReq, resultList: Seq[PositioningCheckFile], status: ProcedureStatus.Value): Elem = {
 
     val machine = if (output.machinePK.isDefined) Machine.get(output.machinePK.get) else None
     val institution = if (machine.isDefined) Institution.get(machine.get.institutionPK) else None
@@ -46,7 +51,7 @@ object PositioningCheckHTML {
     val machineId = if (machine.isDefined) machine.get.id else "unknown"
     val userId = if (user.isDefined) user.get.id else "unknown"
 
-    PositioningCheckCSV.makeCsvFile(output, runReq)
+    PositioningCheckCSV.makeCsvFile(output, runReq, resultList.map(r => r.positioningCheck))
 
     val csvFileReference = {
       <a title="Download Positioning Check as CSV File" href={ PositioningCheckCSV.csvFileName }>CSV</a>
@@ -54,7 +59,7 @@ object PositioningCheckHTML {
 
     val viewRtPlan = {
       val title = "RT Plan"
-      val link = DicomAccess.write(runReq.plan, WebServer.urlOfResultsFile(runReq.plan.file), title, output.dir, DicomFile.ContrastModel.maxContrast)
+      val link = DicomAccess.write(runReq.rtplan, WebServer.urlOfResultsFile(runReq.rtplan.file), title, output.dir, DicomFile.ContrastModel.maxContrast)
       val elem = { <a title="View RT Plan DICOM file" href={ link }>{ title }</a> }
       elem
     }
@@ -102,7 +107,7 @@ object PositioningCheckHTML {
       }
     }
 
-    val tbody = runReq.imageIdFileList.sortWith((a, b) => DicomUtil.compareDicom(a.dicomFile.attributeList.get, b.dicomFile.attributeList.get) < 0).map(iif => positioningCheckToTableRow(iif))
+    val tbody = resultList.toSeq.sortWith((a, b) => DicomUtil.compareDicom(a.dicomFile.attributeList.get, b.dicomFile.attributeList.get) < 0).map(iif => positioningCheckToTableRow(iif))
 
     val content = {
       <div>

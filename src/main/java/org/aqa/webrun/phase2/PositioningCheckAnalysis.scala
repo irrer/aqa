@@ -10,6 +10,7 @@ import scala.collection.Seq
 import scala.xml.Elem
 import org.aqa.db.Output
 import org.aqa.run.ProcedureStatus
+import org.aqa.Config
 
 /**
  * Analyze DICOM files for ImageAnalysis.
@@ -59,7 +60,7 @@ object PositioningCheckAnalysis extends Logging {
     if (pos <= 180) pos else pos - 360
   }
 
-  def makePositioningCheck(plan: AttributeList, image: AttributeList): Option[PositioningCheck] = {
+  private def makePositioningCheck(plan: AttributeList, image: AttributeList): Option[PositioningCheck] = {
 
     def findBldpt(all: Seq[AttributeList], name: String) = all.filter(al => al.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrNull.equalsIgnoreCase(name)).head
 
@@ -148,15 +149,21 @@ object PositioningCheckAnalysis extends Logging {
   }
 
   /**
-   * Run the PositioningCheck sub-procedure, save results in the database, return true for pass or false for fail.
+   * Run the PositioningCheck sub-procedure, save results in the database, return true for pass or false for fail.  For it to pass all images have to pass.
    */
-  def runProcedure(output: Output, positioningCheckRunRequirements: RunReq): (ProcedureStatus.Value, Elem) = {
+  def runProcedure(output: Output, runReq: RunReq): (ProcedureStatus.Value, Elem) = {
     val outPK = output.outputPK.get
-    val list = positioningCheckRunRequirements.imageIdFileList.map(imgId => imgId.positioningCheck.copy(outputPK = outPK))
-    PositioningCheck.insert(list)
-    val pass: Boolean = list.map(ii => ii.pass).reduce(_ && _)
+    val planAttrList = runReq.rtplan.attributeList.get
+
+    val rtimageList = Config.PositioningCheckBeamNameList.map(BeamName => runReq.rtimageMap(BeamName))
+    val resultList = rtimageList.map(rtimage => (rtimage, makePositioningCheck(planAttrList, rtimage.attributeList.get))).filter(fr => fr._2.isDefined).map(fr => new PositioningCheckHTML.PositioningCheckFile(fr._1, fr._2.get))
+
+    // make sure all were processed and that they all passed
+    val pass = (resultList.size == Config.PositioningCheckBeamNameList.size) && resultList.map(fr => fr.positioningCheck.pass).reduce(_ && _)
     val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
-    val elem = PositioningCheckHTML.makeDisplay(output, positioningCheckRunRequirements, procedureStatus)
+
+    PositioningCheck.insert(resultList.map(pcf => pcf.positioningCheck))
+    val elem = PositioningCheckHTML.makeDisplay(output, runReq, resultList, procedureStatus)
     (procedureStatus, elem)
   }
 }

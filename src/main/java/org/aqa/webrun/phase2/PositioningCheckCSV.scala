@@ -14,7 +14,7 @@ object PositioningCheckCSV {
 
   val csvFileName = "PositioningCheck.csv"
 
-  def makeCsvFile(output: Output, runReq: PositioningCheckRunRequirements) = {
+  def makeCsvFile(output: Output, runReq: RunReq, positioningCheckSeq: Seq[PositioningCheck]) = {
 
     // format lots of meta-information for the CSV header
     val machine = if (output.machinePK.isDefined) Machine.get(output.machinePK.get) else None
@@ -93,7 +93,7 @@ object PositioningCheckCSV {
 
     val header = Seq(columns.map(c => c._1).mkString(","))
 
-    val data = runReq.imageIdFileList.map(iif => positioningCheckToCsv(iif.positioningCheck))
+    val data = positioningCheckSeq.map(positionCheck => positioningCheckToCsv(positionCheck))
 
     val text = (metaData ++ header ++ data).mkString("", "\r\n", "\r\n")
     val file = new File(output.dir, csvFileName)

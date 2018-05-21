@@ -6,8 +6,8 @@ import org.aqa.db.PositioningCheck
 import org.aqa.Util
 
 /**
- *    TODO
+ * Associate results with file.
  */
 case class XPositioningCheckFile(dicomFile: DicomFile, positioningCheck: PositioningCheck) {
-  def reDir(dir: File) = new XPositioningCheckFile(dicomFile.reDir(dir), positioningCheck)
+  //def reDir(dir: File) = new PositioningCheckFile(dicomFile.reDir(dir), positioningCheck)
 }
