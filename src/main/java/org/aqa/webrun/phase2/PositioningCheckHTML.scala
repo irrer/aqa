@@ -23,15 +23,10 @@ object PositioningCheckHTML {
   val htmlFileName = "PositioningCheck.html"
 
   /**
-   * Associate results with file.
-   */
-  case class PositioningCheckFile(dicomFile: DicomFile, positioningCheck: PositioningCheck);
-
-  /**
    * Generate a detailed report and write it to the output directory.  Also write a CSV file.  Return an
    * HTML snippet that serves as a summary and a link to the detailed report.
    */
-  def makeDisplay(output: Output, runReq: RunReq, resultList: Seq[PositioningCheckFile], status: ProcedureStatus.Value): Elem = {
+  def makeDisplay(output: Output, runReq: RunReq, resultList: Seq[PositioningCheck], status: ProcedureStatus.Value): Elem = {
 
     val machine = if (output.machinePK.isDefined) Machine.get(output.machinePK.get) else None
     val institution = if (machine.isDefined) Institution.get(machine.get.institutionPK) else None
@@ -51,7 +46,7 @@ object PositioningCheckHTML {
     val machineId = if (machine.isDefined) machine.get.id else "unknown"
     val userId = if (user.isDefined) user.get.id else "unknown"
 
-    PositioningCheckCSV.makeCsvFile(output, runReq, resultList.map(r => r.positioningCheck))
+    PositioningCheckCSV.makeCsvFile(output, runReq, resultList)
 
     val csvFileReference = {
       <a title="Download Positioning Check as CSV File" href={ PositioningCheckCSV.csvFileName }>CSV</a>
@@ -64,50 +59,51 @@ object PositioningCheckHTML {
       elem
     }
 
-    class Row(val title: String, name: String, val get: (PositioningCheckFile) => String) {
+    class Row(val title: String, name: String, val get: (PositioningCheck) => String) {
       def toHeader = <th title={ title }>{ name }</th>
-      def toRow(imgId: PositioningCheckFile) = <td title={ title }>{ get(imgId) }</td>
+      def toRow(psnChk: PositioningCheck) = <td title={ title }>{ get(psnChk) }</td>
     }
 
     def degree(diff: Double): String = diff.formatted("%6e")
 
     def jaw(diff: Double): String = diff.formatted("%6e")
 
-    class RowBeamName(override val title: String, name: String, override val get: (PositioningCheckFile) => String) extends Row(title, name, get) {
-      override def toRow(imgIdFile: PositioningCheckFile) = {
+    class RowBeamName(override val title: String, name: String, override val get: (PositioningCheck) => String) extends Row(title, name, get) {
+      override def toRow(positioningCheck: PositioningCheck) = {
 
-        val link = DicomAccess.write(imgIdFile.dicomFile, WebServer.urlOfResultsFile(imgIdFile.dicomFile.file), get(imgIdFile) + " : " + imgIdFile.dicomFile.file.getName, output.dir, DicomFile.ContrastModel.maxContrast)
+        val dicomFile = runReq.rtimageMap(positioningCheck.beamName)
+        val link = DicomAccess.write(dicomFile, WebServer.urlOfResultsFile(dicomFile.file), get(positioningCheck) + " : " + dicomFile.file.getName, output.dir, DicomFile.ContrastModel.maxContrast)
 
-        val elem = { <td title={ title + ".  Follow link to view DICOM" }><a href={ link }>{ get(imgIdFile) }</a></td> }
+        val elem = { <td title={ title + ".  Follow link to view DICOM" }><a href={ link }>{ get(positioningCheck) }</a></td> }
         elem
       }
     }
 
     val rowList = Seq(
-      new RowBeamName("Name of beam in plan", "Beam Name", (imgIdFile: PositioningCheckFile) => imgIdFile.positioningCheck.beamName),
-      new Row("Gantry Angle plan minus image in degrees", "Gantry Angle", (imgIdFile: PositioningCheckFile) => degree(imgIdFile.positioningCheck.gantryAnglePlanMinusImage_deg)),
-      new Row("Collimator Angle plan minus image in degrees", "Collimator Angle", (imgIdFile: PositioningCheckFile) => degree(imgIdFile.positioningCheck.collimatorAnglePlanMinusImage_deg)),
-      new Row("X1 Jaw plan minus image in mm", "X1 Jaw", (imgIdFile: PositioningCheckFile) => jaw(imgIdFile.positioningCheck.x1JawPlanMinusImage_mm)),
-      new Row("X2 Jaw plan minus image in mm", "X2 Jaw", (imgIdFile: PositioningCheckFile) => jaw(imgIdFile.positioningCheck.x2JawPlanMinusImage_mm)),
-      new Row("Y1 Jaw plan minus image in mm", "Y1 Jaw", (imgIdFile: PositioningCheckFile) => jaw(imgIdFile.positioningCheck.y1JawPlanMinusImage_mm)),
-      new Row("Y2 Jaw plan minus image in mm", "Y2 Jaw", (imgIdFile: PositioningCheckFile) => jaw(imgIdFile.positioningCheck.y2JawPlanMinusImage_mm)),
-      new Row("Energy plan minus image in kev", "Energy", (imgIdFile: PositioningCheckFile) => imgIdFile.positioningCheck.energyPlanMinusImage_kev.toString),
-      new Row("Yes if Flattening Filter was present", "FF", (imgIdFile: PositioningCheckFile) => if (imgIdFile.positioningCheck.flatteningFilter) "Yes" else "No"),
-      new Row("Pass if angles and jaw differences within tolerences", "Status", (imgIdFile: PositioningCheckFile) => if (imgIdFile.positioningCheck.pass) "Pass" else "Fail"))
+      new RowBeamName("Name of beam in plan", "Beam Name", (psnChk: PositioningCheck) => psnChk.beamName),
+      new Row("Gantry Angle plan minus image in degrees", "Gantry Angle", (psnChk: PositioningCheck) => degree(psnChk.gantryAnglePlanMinusImage_deg)),
+      new Row("Collimator Angle plan minus image in degrees", "Collimator Angle", (psnChk: PositioningCheck) => degree(psnChk.collimatorAnglePlanMinusImage_deg)),
+      new Row("X1 Jaw plan minus image in mm", "X1 Jaw", (psnChk: PositioningCheck) => jaw(psnChk.x1JawPlanMinusImage_mm)),
+      new Row("X2 Jaw plan minus image in mm", "X2 Jaw", (psnChk: PositioningCheck) => jaw(psnChk.x2JawPlanMinusImage_mm)),
+      new Row("Y1 Jaw plan minus image in mm", "Y1 Jaw", (psnChk: PositioningCheck) => jaw(psnChk.y1JawPlanMinusImage_mm)),
+      new Row("Y2 Jaw plan minus image in mm", "Y2 Jaw", (psnChk: PositioningCheck) => jaw(psnChk.y2JawPlanMinusImage_mm)),
+      new Row("Energy plan minus image in kev", "Energy", (psnChk: PositioningCheck) => psnChk.energyPlanMinusImage_kev.toString),
+      new Row("Yes if Flattening Filter was present", "FF", (psnChk: PositioningCheck) => if (psnChk.flatteningFilter) "Yes" else "No"),
+      new Row("Pass if angles and jaw differences within tolerences", "Status", (psnChk: PositioningCheck) => if (psnChk.pass) "Pass" else "Fail"))
 
     def positioningCheckTableHeader: Elem = {
       <thead><tr>{ rowList.map(row => row.toHeader) }</tr></thead>
     }
 
-    def positioningCheckToTableRow(imgIdFile: PositioningCheckFile): Elem = {
-      if (imgIdFile.positioningCheck.pass) {
-        <tr>{ rowList.map(row => row.toRow(imgIdFile)) }</tr>
+    def positioningCheckToTableRow(positioningCheck: PositioningCheck): Elem = {
+      if (positioningCheck.pass) {
+        <tr>{ rowList.map(row => row.toRow(positioningCheck)) }</tr>
       } else {
-        <tr class="danger">{ rowList.map(row => row.toRow(imgIdFile)) }</tr>
+        <tr class="danger">{ rowList.map(row => row.toRow(positioningCheck)) }</tr>
       }
     }
 
-    val tbody = resultList.toSeq.sortWith((a, b) => DicomUtil.compareDicom(a.dicomFile.attributeList.get, b.dicomFile.attributeList.get) < 0).map(iif => positioningCheckToTableRow(iif))
+    val tbody = resultList.map(psnChk => positioningCheckToTableRow(psnChk))
 
     val content = {
       <div>

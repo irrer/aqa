@@ -19,16 +19,17 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
 
   def reDir(dir: File): RunReq = {
     val rtiMap = rtimageMap.toSeq.map(ni => (ni._1, ni._2.reDir(dir))).toMap
-    new RunReq(rtplan.reDir(dir), machine, rtiMap, rtiMap.get(Config.FloodFieldBeamName).get)
+    val rtplanRedirred = if (rtplan.file.getParentFile.getAbsolutePath.equals(Config.sharedDir.getAbsolutePath)) rtplan else rtplan.reDir(dir)
+    new RunReq(rtplanRedirred, machine, rtiMap, flood.reDir(dir))
   }
 
   val floodOriginalImage = new DicomImage(flood.attributeList.get)
 
   val floodCorrectedImage = Phase2Util.correctBadPixels(floodOriginalImage)
 
-  private val floodMeasurementAndImage = MeasureNSEWEdges.measure(
-    floodCorrectedImage,
-    Phase2Util.getImagePlanePixelSpacing(flood.attributeList.get), floodCorrectedImage, new Point(0, 0))
+  val ImagePlanePixelSpacing = Phase2Util.getImagePlanePixelSpacing(flood.attributeList.get)
+
+  private val floodMeasurementAndImage = MeasureNSEWEdges.measure(floodCorrectedImage, ImagePlanePixelSpacing, floodCorrectedImage, new Point(0, 0))
 
   val floodMeasurement = floodMeasurementAndImage._1
 

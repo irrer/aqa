@@ -96,7 +96,12 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     val machineSerialNumberListOpt = rtimageList.map(rtimage => Util.getAttrValue(rtimage.attributeList.get, TagFromName.DeviceSerialNumber))
     val machineSerialNumberList = machineSerialNumberListOpt.flatten
     val nullSerialNumber = machineSerialNumberList.size != machineSerialNumberListOpt.size
-    val dateTimeList = rtimageList.map(rtimage => Util.extractDateTimeAndPatientIdFromDicom(rtimage.attributeList.get)._1).flatten.distinct.map(d => d.getTime).sorted
+
+    def rtimageDate(rtimage: DicomFile): Long = {
+      Util.extractDateTimeAndPatientIdFromDicom(rtimage.attributeList.get)._1.map(d => d.getTime).distinct.sorted.last
+    }
+
+    val dateTimeList = rtimageList.map(rtimage => rtimageDate(rtimage)).sorted
     val maxDuration = Math.round(Config.MaxProcedureDuration * 60 * 1000).toLong
 
     val machineCheck = validateMachineSelection(valueMap, rtimageList)
@@ -104,13 +109,22 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     // associate each image with a plan
     val planGroups = rtplanList.map(plan => (plan, rtimageList.filter(img => Phase2Util.imageReferencesPlan(plan, img)))).filter(pi => pi._2.nonEmpty).toMap
 
+    /**
+     * Make a human readable list of machines
+     */
+    def machineList: String = {
+      val dstnct = machineSerialNumberList.distinct
+      val idList = dstnct.map(serNo => Machine.findMachinesBySerialNumber(serNo)).flatten.distinct.map(mach => mach.id).mkString("  ")
+      dstnct.mkString("Serial Numbers: " + dstnct.mkString("  ")) + "    Machines: " + idList
+    }
+
     0 match {
       case _ if (rtplanList.isEmpty) => formErr("No RTPLANS found")
       case _ if (rtimageList.isEmpty) => formErr("No RTIMAGEs given")
       case _ if (planGroups.isEmpty) => formErr("No RTPLAN found for RTIMAGEs")
       case _ if (planGroups.size > 1) => formErr("The RTIMAGEs reference multiple plans.  Only one plan per run is permitted.")
       case _ if (machineCheck.isLeft) => Left(machineCheck.left.get)
-      case _ if (machineSerialNumberList.size != 1) => formErr("There are RTIMAGEs from more than one machine.")
+      case _ if (machineSerialNumberList.distinct.size != 1) => formErr("There are RTIMAGEs from more than one machine: " + machineList)
       case _ if (nullSerialNumber) => formErr("At least one RTIMAGE has no serial number.")
       case _ if ((dateTimeList.last - dateTimeList.head) > maxDuration) =>
         formErr("Over " + Config.MaxProcedureDuration + " minutes from first to last image.  These RTIMAGE files were not from the same session")
@@ -125,13 +139,13 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
    * Check beam definitions, existence of flood field, and organize inputs into <code>RunReq</code> to facilitate further processing.
    */
   def basicBeamValidation(valueMap: ValueMapT, rtplan: DicomFile, machine: Machine, rtimageList: Seq[(Option[String], DicomFile)]): Either[StyleMapT, RunReq] = {
-    val flood = rtimageMap.get(Config.FloodFieldBeamName)
     val rtimageMap = rtimageList.filter(rl => rl._1.isDefined && (!rl._1.get.equals(Config.FloodFieldBeamName))).map(rl => (rl._1.get, rl._2)).toMap
+    val flood = rtimageList.filter(rl => rl._1.isDefined && (rl._1.get.equals(Config.FloodFieldBeamName)))
 
     0 match {
-      case _ if (rtimageMap.size != rtimageList.size) => formErr("RTIMAGE duplicate beam reference or missing (from plan) beam reference")
+      case _ if ((rtimageMap.size + 1) != rtimageList.size) => formErr("RTIMAGE duplicate beam reference or missing (from plan) beam reference")
       case _ if (flood.isEmpty) => formErr("Flood field beam is missing")
-      case _ => Right(new RunReq(rtplan, machine, rtimageMap, flood.get))
+      case _ => Right(new RunReq(rtplan, machine, rtimageMap, flood.head._2))
     }
   }
 

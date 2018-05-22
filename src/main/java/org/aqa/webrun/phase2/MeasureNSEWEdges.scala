@@ -40,28 +40,28 @@ object MeasureNSEWEdges extends Logging {
 
   case class AnalysisResult(measurementSet: NSEW, bufferedImage: BufferedImage)
 
-  private def getCoarseNorthRectangle(image: DicomImage, cntrOfMass: Point2D, imageResolution: Point2D): Rectangle = {
-    val width = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / imageResolution.getX).toInt
+  private def getCoarseNorthRectangle(image: DicomImage, cntrOfMass: Point2D, ImagePlanePixelSpacing: Point2D.Double): Rectangle = {
+    val width = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / ImagePlanePixelSpacing.getX).toInt
     val x = (cntrOfMass.getX - (width / 2.0)).round.toInt
     new Rectangle(x, 0, width, image.height - image.height / 2)
   }
 
-  private def getCoarseSouthRectangle(image: DicomImage, cntrOfMass: Point2D, imageResolution: Point2D): Rectangle = {
-    val width = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / imageResolution.getX).toInt
+  private def getCoarseSouthRectangle(image: DicomImage, cntrOfMass: Point2D, ImagePlanePixelSpacing: Point2D.Double): Rectangle = {
+    val width = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / ImagePlanePixelSpacing.getX).toInt
     val x = (cntrOfMass.getX - (width / 2.0)).round.toInt
     new Rectangle(x, image.height / 2, width, image.height - image.height / 2)
   }
 
   //
 
-  private def getCoarseEastRectangle(image: DicomImage, cntrOfMass: Point2D, imageResolution: Point2D): Rectangle = {
-    val height = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / imageResolution.getY).toInt
+  private def getCoarseEastRectangle(image: DicomImage, cntrOfMass: Point2D, ImagePlanePixelSpacing: Point2D.Double): Rectangle = {
+    val height = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / ImagePlanePixelSpacing.getY).toInt
     val y = (cntrOfMass.getY - (height / 2.0)).round.toInt
     new Rectangle(image.width / 2, y, image.width - image.width / 2, height)
   }
 
-  private def getCoarseWestRectangle(image: DicomImage, cntrOfMass: Point2D, imageResolution: Point2D): Rectangle = {
-    val height = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / imageResolution.getY).toInt
+  private def getCoarseWestRectangle(image: DicomImage, cntrOfMass: Point2D, ImagePlanePixelSpacing: Point2D.Double): Rectangle = {
+    val height = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / ImagePlanePixelSpacing.getY).toInt
     val y = (cntrOfMass.getY - (height / 2.0)).round.toInt
     new Rectangle(0, y, image.width / 2, height)
   }
@@ -72,25 +72,25 @@ object MeasureNSEWEdges extends Logging {
    * Calculate the halfway point between the highest and lowest pixel value.
    */
   private def calcHalfwayPixelValue(image: DicomImage): Double = {
-    val pixelCount = ((Config.CollimatorCenteringPenumbraPlateauSizePerMillion / 1000000.0) * image.width * image.height).round.toInt
+    val pixelCount = ((Config.PenumbraPlateauPixelsPerMillion / 1000000.0) * image.width * image.height).round.toInt
     val min = image.minPixelValues(pixelCount).sum / pixelCount
     val max = image.maxPixelValues(pixelCount).sum / pixelCount
     ((min + max) / 2.0)
   }
 
-  private def coarseMeasure(image: DicomImage, halfwayPixelValue: Double, imageResolution: Point2D): NSEW = {
+  private def coarseMeasure(image: DicomImage, halfwayPixelValue: Double, ImagePlanePixelSpacing: Point2D.Double, floodOffset: Point2D): NSEW = {
     val cntrOfMass = new Point2D.Double(ImageUtil.centerOfMass(image.columnSums), ImageUtil.centerOfMass(image.rowSums))
 
-    val coarseNorthRectangle = getCoarseNorthRectangle(image, cntrOfMass, imageResolution)
+    val coarseNorthRectangle = getCoarseNorthRectangle(image, cntrOfMass, ImagePlanePixelSpacing)
     val coarseNorthEdge = LocateEdge.locateEdge(image.getSubimage(coarseNorthRectangle).rowSums, halfwayPixelValue * coarseNorthRectangle.getWidth)
 
-    val coarseSouthRectangle = getCoarseSouthRectangle(image, cntrOfMass, imageResolution)
+    val coarseSouthRectangle = getCoarseSouthRectangle(image, cntrOfMass, ImagePlanePixelSpacing)
     val coarseSouthEdge = LocateEdge.locateEdge(image.getSubimage(coarseSouthRectangle).rowSums, halfwayPixelValue * coarseSouthRectangle.getWidth) + coarseSouthRectangle.getY
 
-    val coarseEastRectangle = getCoarseEastRectangle(image, cntrOfMass, imageResolution)
-    val coarseEastEdge = LocateEdge.locateEdge(image.getSubimage(coarseEastRectangle).columnSums, halfwayPixelValue * coarseEastRectangle.getHeight) + coarseEastRectangle.x
+    val coarseEastRectangle = getCoarseEastRectangle(image, cntrOfMass, ImagePlanePixelSpacing)
+    val coarseEastEdge = LocateEdge.locateEdge(image.getSubimage(coarseEastRectangle).columnSums, halfwayPixelValue * coarseEastRectangle.getHeight) + coarseEastRectangle.getX
 
-    val coarseWestRectangle = getCoarseWestRectangle(image, cntrOfMass, imageResolution)
+    val coarseWestRectangle = getCoarseWestRectangle(image, cntrOfMass, ImagePlanePixelSpacing)
     val coarseWestEdge = LocateEdge.locateEdge(image.getSubimage(coarseWestRectangle).columnSums, halfwayPixelValue * coarseWestRectangle.getHeight)
 
     new NSEW(coarseNorthEdge, coarseSouthEdge, coarseEastEdge, coarseWestEdge)
@@ -142,11 +142,11 @@ object MeasureNSEWEdges extends Logging {
     ImageUtil.annotatePixel(bufImg, pixelEdge.round.toInt, yMid, annotationColor, text, false)
   }
 
-  private def annotateCenter(bufImg: BufferedImage, graphics: Graphics2D, pixelEdges: NSEW, scaledEdges: NSEW, imageResolution: Point2D) = {
+  private def annotateCenter(bufImg: BufferedImage, graphics: Graphics2D, pixelEdges: NSEW, scaledEdges: NSEW, ImagePlanePixelSpacing: Point2D.Double) = {
     // center of image (not center of edges)
     val pixelImageCenter = new Point2D.Double(bufImg.getWidth / 2.0, bufImg.getHeight / 2.0)
     // scaled center of image (not center of edges)
-    val scaledImageCenter = new Point2D.Double(pixelImageCenter.getX * imageResolution.getX, pixelImageCenter.getY * imageResolution.getY)
+    val scaledImageCenter = new Point2D.Double(pixelImageCenter.getX * ImagePlanePixelSpacing.getX, pixelImageCenter.getY * ImagePlanePixelSpacing.getY)
 
     def fmt(d: Double) = d.formatted("%7.2f").trim
 
@@ -179,7 +179,9 @@ object MeasureNSEWEdges extends Logging {
   /**
    * Make an annotated image that illustrates the edges.
    */
-  private def makeAnnotatedImage(image: DicomImage, measurementSet: NSEW, ImagePlanePixelSpacing: Point2D.Double, northRect: Rectangle, southRect: Rectangle, eastRect: Rectangle, westRect: Rectangle, imageResolution: Point2D): BufferedImage = {
+  private def makeAnnotatedImage(image: DicomImage, measurementSet: NSEW, ImagePlanePixelSpacing: Point2D.Double,
+    northRect: Rectangle, southRect: Rectangle, eastRect: Rectangle, westRect: Rectangle,
+    imageResolution: Point2D): BufferedImage = {
     val bufImg = image.toBufferedImage(imageColor)
     val graphics = ImageUtil.getGraphics(bufImg)
     graphics.setColor(annotationColor)
@@ -190,7 +192,7 @@ object MeasureNSEWEdges extends Logging {
     annotateEastWest(bufImg, graphics, measurementSet.east, scaledMeasurementSet.east, eastRect)
     annotateEastWest(bufImg, graphics, measurementSet.west, scaledMeasurementSet.west, westRect)
 
-    annotateCenter(bufImg, graphics, measurementSet, scaledMeasurementSet, imageResolution)
+    annotateCenter(bufImg, graphics, measurementSet, scaledMeasurementSet, ImagePlanePixelSpacing)
     bufImg
   }
 
@@ -217,7 +219,7 @@ object MeasureNSEWEdges extends Logging {
   /**
    * Measure the four edges in the image, and create an annotated image.
    *
-   * @param image: Image to analyse.  Should consist of a single rectangle - anything else will produce unpredictable results.
+   * @param image: Image to analyze.  Should consist of a single rectangle - anything else will produce unpredictable results.
    *
    * @param ImagePlanePixelSpacing: Size of X and Y pixels in mm.
    *
@@ -228,12 +230,12 @@ object MeasureNSEWEdges extends Logging {
   def measure(image: DicomImage, ImagePlanePixelSpacing: Point2D.Double, annotate: DicomImage, floodOffset: Point): (NSEW, BufferedImage) = {
     val halfwayPixelValue = calcHalfwayPixelValue(image)
 
-    val coarse = coarseMeasure(image, halfwayPixelValue, ImagePlanePixelSpacing)
+    val coarse = coarseMeasure(image, halfwayPixelValue, ImagePlanePixelSpacing, floodOffset)
 
     val penumbraX = Config.PenumbraThickness_mm / ImagePlanePixelSpacing.getX // penumbra thickness in pixels
     val penumbraY = Config.PenumbraThickness_mm / ImagePlanePixelSpacing.getY // penumbra thickness in pixels
 
-    val nsX = coarse.west + (penumbraX / 2)
+    //val nsX = coarse.west + (penumbraX / 2)
 
     val nsRect = northSouthRectangles(coarse, penumbraX, penumbraY)
 

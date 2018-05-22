@@ -226,7 +226,7 @@ object Phase2Util extends Logging {
   }
 
   def getImagePlanePixelSpacing(attributeList: AttributeList): Point2D.Double = {
-    val ImagePlanePixelSpacing = attributeList.get(TagFromName.ImagePlanePixelSpacing).getIntegerValues
+    val ImagePlanePixelSpacing = attributeList.get(TagFromName.ImagePlanePixelSpacing).getDoubleValues
     new Point2D.Double(ImagePlanePixelSpacing(0), ImagePlanePixelSpacing(1))
   }
 }

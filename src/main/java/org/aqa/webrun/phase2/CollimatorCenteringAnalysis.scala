@@ -67,7 +67,7 @@ object CollimatorCenteringAnalysis extends Logging {
    * Calculate the halfway point between the highest and lowest pixel value.
    */
   private def calcHalfwayPixelValue(image: DicomImage): Double = {
-    val pixelCount = ((Config.CollimatorCenteringPenumbraPlateauSizePerMillion / 1000000.0) * image.width * image.height).round.toInt
+    val pixelCount = ((Config.PenumbraPlateauPixelsPerMillion / 1000000.0) * image.width * image.height).round.toInt
     val min = image.minPixelValues(pixelCount).sum / pixelCount
     val max = image.maxPixelValues(pixelCount).sum / pixelCount
     ((min + max) / 2.0)
@@ -217,8 +217,8 @@ object CollimatorCenteringAnalysis extends Logging {
 
     val coarse = coarseMeasure(image, halfwayPixelValue, imageResolution)
 
-    val penumbraX = Config.CollimatorCenteringPenumbraThickness_mm / imageResolution.getX // penumbra thickness in pixels
-    val penumbraY = Config.CollimatorCenteringPenumbraThickness_mm / imageResolution.getY // penumbra thickness in pixels
+    val penumbraX = Config.PenumbraThickness_mm / imageResolution.getX // penumbra thickness in pixels
+    val penumbraY = Config.PenumbraThickness_mm / imageResolution.getY // penumbra thickness in pixels
 
     val nsX = coarse.west + (penumbraX / 2)
 

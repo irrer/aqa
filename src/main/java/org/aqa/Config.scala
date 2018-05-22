@@ -204,6 +204,7 @@ object Config extends Logging {
   }
 
   private def logMainText(name: String): String = {
+    println("Name: " + name) // TODO rm
     val value = getMainText(name)
     logText(name, value)
     value
@@ -342,13 +343,12 @@ object Config extends Logging {
   val CollimatorCentering270BeamName = logMainText("CollimatorCentering270BeamName")
   val CollimatorCenteringCoarseBandWidth_mm = logMainText("CollimatorCenteringCoarseBandWidth_mm").toDouble
   val PenumbraThickness_mm = logMainText("PenumbraThickness_mm").toDouble
-  val CollimatorCenteringPenumbraPlateauSize = logMainText("CollimatorCenteringPenumbraThickness_mm").toDouble
-  val CollimatorCenteringPenumbraPlateauSizePerMillion = logMainText("CollimatorCenteringPenumbraPlateauSizePerMillion").toInt
+  val PenumbraPlateauPixelsPerMillion = logMainText("PenumbraPlateauPixelsPerMillion").toInt
 
   val MaxBadPixelPerMillion = logMainText("MaxBadPixelPerMillion").toInt
   val BadPixelSamplePerMillion = logMainText("BadPixelSamplePerMillion").toInt
   val BadPixelStdDevMultiple = logMainText("BadPixelStdDevMultiple").toDouble
-  val MaxProcedureDuration =  logMainText("MaxProcedureDuration").toDouble
+  val MaxProcedureDuration = logMainText("MaxProcedureDuration").toDouble
 
   val TermsOfUse = logMainText("TermsOfUse")
 

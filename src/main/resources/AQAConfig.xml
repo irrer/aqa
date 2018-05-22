@@ -82,8 +82,9 @@ Note that when building a package for release, the Maven build process uses the 
     <CollimatorCenteringCoarseBandWidth_mm>5.0</CollimatorCenteringCoarseBandWidth_mm>
     <!-- Thickness in mm of the penumbra of an edge. -->
     <PenumbraThickness_mm>10.0</PenumbraThickness_mm>
-    <!-- Number of pixels per million to use as the sets of largest and smallest pixels in the image. -->
-    <CollimatorCenteringPenumbraPlateauSizePerMillion>500</CollimatorCenteringPenumbraPlateauSizePerMillion>
+    <!-- Number of pixels per million to use as the sets of largest and smallest pixels in
+    the image.   These pixels are selected after bad pixels have been removed.  -->
+    <PenumbraPlateauPixelsPerMillion>500</PenumbraPlateauPixelsPerMillion>
 
     <!-- An estimate of how many bad pixels (integer >= 0) to expect per million pixels.  A good
     estimate can marginally improve results, but a bad estimate will probably still be acceptable. -->

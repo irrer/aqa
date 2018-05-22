@@ -19,7 +19,7 @@ class TestPositioningCheckAnalysis extends FlatSpec with Matchers {
     val plan = Util.readDicomFile(new File("""PositioningCheckPlan.dcm""")).right.get
     val image = Util.readDicomFile(new File("""PositioningCheckImage.dcm""")).right.get
 
-    val positioningCheck = PositioningCheckAnalysis.makePositioningCheck(plan, image)
+    val positioningCheck = PositioningCheckAnalysis.makePositioningCheck(-1, plan, image)
     println("PositioningCheck:\n" + positioningCheck)
     println("Util.buildProperties: " + Util.buildProperties) // TODO rm
     (positioningCheck.get.pass) should be(true)
