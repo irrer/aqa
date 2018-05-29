@@ -175,7 +175,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     else list.minBy(dt => dt.dateTime)
   }
 
-  private def makeHtml(output: Output, procedureStatus: ProcedureStatus.Value, elemList: Seq[Elem]) = {
+  private def makeHtml(extendedData: ExtendedData, procedureStatus: ProcedureStatus.Value, elemList: Seq[Elem]) = {
 
     def table = {
       <table>
@@ -185,8 +185,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       </table>
     }
 
-    val text = Phase2Util.wrapSubProcedure(output, table, "Phase 2", procedureStatus)
-    val file = new File(output.dir, Output.displayFilePrefix + ".html")
+    val text = Phase2Util.wrapSubProcedure(extendedData, table, "Phase 2", procedureStatus)
+    val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeBinaryFile(file, text.getBytes)
   }
 
@@ -198,14 +198,34 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   }
 
   /**
+   * Make the DICOM files web viewable.
+   */
+  private def makeDicomViews(outputDir: File, runReq: RunReq): Elem = {
+
+    def dicomView(beamName: String): String = {
+      val rtimage = runReq.rtimageMap(beamName)
+      DicomAccess.write(rtimage, WebServer.urlOfResultsFile(rtimage.file), "RTIMAGE Beam " + beamName, outputDir, DicomFile.ContrastModel.maxContrast)
+    }
+
+    val planLink = DicomAccess.write(runReq.rtplan, WebServer.urlOfResultsFile(runReq.rtplan.file), "RTPLAN", outputDir, DicomFile.ContrastModel.maxContrast)
+
+    val floodLink = DicomAccess.write(runReq.flood, WebServer.urlOfResultsFile(runReq.flood.file), "RTIMAGE " + Config.FloodFieldBeamName, outputDir, DicomFile.ContrastModel.maxContrast)
+
+    val rtimageLinkSeq = runReq.rtimageMap.keys.map(beamName => dicomView(beamName))
+    // TODO
+    <div>TODO makeDicomViews</div>
+  }
+
+  /**
    * Run the sub-procedures.
    */
-  private def runPhase2(output: Output, rtimageMap: Map[String, DicomFile], runReq: RunReq): ProcedureStatus.Value = {
-    val summary = PositioningCheckAnalysis.runProcedure(output, runReq)
+  private def runPhase2(extendedData: ExtendedData, rtimageMap: Map[String, DicomFile], runReq: RunReq): ProcedureStatus.Value = {
+    val dicomViews = makeDicomViews(extendedData.output.dir, runReq)
+    val psnChkSummary = PositioningCheckAnalysis.runProcedure(extendedData, runReq)
+    val colCnrtSummary = CollimatorCenteringAnalysis.runProcedure(extendedData, runReq)
     val floodRtimage = rtimageMap.get(Config.FloodFieldBeamName).get
-    val iiElem = summary._2
-    makeHtml(output, summary._1, Seq(summary._2))
-    summary._1
+    makeHtml(extendedData, psnChkSummary._1, Seq(dicomViews, psnChkSummary._2, colCnrtSummary._2))
+    psnChkSummary._1 // TODO aggregate all statuses
   }
 
   /**
@@ -228,6 +248,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
         val input = inputOutput._1
         val output = inputOutput._2
 
+        val extendedData = ExtendedData.get(output)
         val runReqFinal = runReq.reDir(input.dir)
 
         val plan = runReq.rtplan
@@ -236,7 +257,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
 
         val rtimageMap = constructRtimageMap(plan, rtimageList)
 
-        val finalStatus = runPhase2(output, rtimageMap, runReqFinal)
+        val finalStatus = runPhase2(extendedData, rtimageMap, runReqFinal)
         val finDate = new Timestamp(System.currentTimeMillis)
         val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
 

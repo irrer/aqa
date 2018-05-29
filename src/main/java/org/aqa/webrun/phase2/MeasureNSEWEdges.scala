@@ -219,7 +219,7 @@ object MeasureNSEWEdges extends Logging {
   /**
    * Measure the four edges in the image, and create an annotated image.
    *
-   * @param image: Image to analyze.  Should consist of a single rectangle - anything else will produce unpredictable results.
+   * @param image: Image to analyze.  Should have already been corrected for flood field if necessary.
    *
    * @param ImagePlanePixelSpacing: Size of X and Y pixels in mm.
    *
@@ -227,7 +227,7 @@ object MeasureNSEWEdges extends Logging {
    *
    * @param floodOffset: XY offset of image to annotate.
    */
-  def measure(image: DicomImage, ImagePlanePixelSpacing: Point2D.Double, annotate: DicomImage, floodOffset: Point): (NSEW, BufferedImage) = {
+  def measure(image: DicomImage, ImagePlanePixelSpacing: Point2D.Double, annotate: DicomImage, floodOffset: Point): AnalysisResult = {
     val halfwayPixelValue = calcHalfwayPixelValue(image)
 
     val coarse = coarseMeasure(image, halfwayPixelValue, ImagePlanePixelSpacing, floodOffset)
@@ -250,8 +250,7 @@ object MeasureNSEWEdges extends Logging {
     val scaledMeasurementSet = measurementSet.scale(ImagePlanePixelSpacing)
 
     val bufferedImage = makeAnnotatedImage(annotate, measurementSet, ImagePlanePixelSpacing, nsRect._1, nsRect._2, ewRect._1, ewRect._2, ImagePlanePixelSpacing)
-    (measurementSet, bufferedImage)
-
+    new AnalysisResult(measurementSet, bufferedImage)
   }
 
 }

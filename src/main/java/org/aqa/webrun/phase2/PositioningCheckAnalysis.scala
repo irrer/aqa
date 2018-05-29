@@ -151,18 +151,18 @@ object PositioningCheckAnalysis extends Logging {
   /**
    * Run the PositioningCheck sub-procedure, save results in the database, return true for pass or false for fail.  For it to pass all images have to pass.
    */
-  def runProcedure(output: Output, runReq: RunReq): (ProcedureStatus.Value, Elem) = {
+  def runProcedure(extendedData: ExtendedData, runReq: RunReq): (ProcedureStatus.Value, Elem) = {
     val planAttrList = runReq.rtplan.attributeList.get
 
     val rtimageList = Config.PositioningCheckBeamNameList.map(BeamName => runReq.rtimageMap(BeamName))
-    val resultList = rtimageList.map(rtimage => makePositioningCheck(output.outputPK.get, planAttrList, rtimage.attributeList.get)).flatten
+    val resultList = rtimageList.map(rtimage => makePositioningCheck(extendedData.output.outputPK.get, planAttrList, rtimage.attributeList.get)).flatten
 
     // make sure all were processed and that they all passed
     val pass = (resultList.size == Config.PositioningCheckBeamNameList.size) && resultList.map(pc => pc.pass).reduce(_ && _)
     val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
     PositioningCheck.insert(resultList)
-    val elem = PositioningCheckHTML.makeDisplay(output, runReq, resultList, procedureStatus)
+    val elem = PositioningCheckHTML.makeDisplay(extendedData, runReq, resultList, procedureStatus)
     (procedureStatus, elem)
   }
 }

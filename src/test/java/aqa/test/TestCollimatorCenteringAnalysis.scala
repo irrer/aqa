@@ -5,6 +5,10 @@ import org.aqa.webrun.phase2.CollimatorCenteringAnalysis
 import org.aqa.DicomFile
 import edu.umro.ImageUtil.ImageUtil
 import javax.imageio.ImageIO
+import org.aqa.webrun.phase2.MeasureNSEWEdges
+import java.awt.Point
+import org.aqa.webrun.phase2.Phase2Util
+import edu.umro.ImageUtil.DicomImage
 
 object TestCollimatorCenteringAnalysis {
 
@@ -18,7 +22,9 @@ object TestCollimatorCenteringAnalysis {
     val fileList = fileNames.map(name => new File(name))
 
     def processFile(file: File) = {
-      val results = CollimatorCenteringAnalysis.testHook(new DicomFile(file))
+      val dicomFile = new DicomFile(file)
+      val image = new DicomImage(dicomFile.attributeList.get)
+      val results = MeasureNSEWEdges.measure(image, Phase2Util.getImagePlanePixelSpacing(dicomFile.attributeList.get), image, new Point(0, 0))
 
       val bufImg = results.bufferedImage
       val meas = results.measurementSet

@@ -14,35 +14,23 @@ object PositioningCheckCSV {
 
   val csvFileName = "PositioningCheck.csv"
 
-  def makeCsvFile(output: Output, runReq: RunReq, positioningCheckSeq: Seq[PositioningCheck]) = {
+  def makeCsvFile(extendedData: ExtendedData, runReq: RunReq, positioningCheckSeq: Seq[PositioningCheck]) = {
 
     // format lots of meta-information for the CSV header
-    val machine = if (output.machinePK.isDefined) Machine.get(output.machinePK.get) else None
-    val institution = if (machine.isDefined) Institution.get(machine.get.institutionPK) else None
-    val input = Input.get(output.inputPK)
-    val procedure = Procedure.get(output.procedurePK)
-    val user = if (output.userPK.isDefined) User.get(output.userPK.get) else None
-    val institutionName = if (institution.isDefined) institution.get.name else "unknown"
 
     val analysisDate: String = {
-      val date = output.analysisDate match {
+      val date = extendedData.output.analysisDate match {
         case Some(d) => d
-        case _ => output.startDate
+        case _ => extendedData.output.startDate
       }
       Util.timeHumanFriendly(date)
     }
 
-    val procedureDesc: String = {
-      procedure match {
-        case Some(proc) =>
-          proc.name + " : " + proc.version
-        case _ => ""
-      }
-    }
+    val procedureDesc: String = extendedData.procedure.name + " : " + extendedData.procedure.version
 
-    val machineId = if (machine.isDefined) machine.get.id else "unknown"
-    val userId = if (user.isDefined) user.get.id else "unknown"
-    val acquisitionDate = if (output.dataDate.isDefined) Util.standardDateFormat.format(output.dataDate.get) else "none"
+    val machineId = extendedData.machine.id
+    val userId = extendedData.user.id
+    val acquisitionDate = if (extendedData.output.dataDate.isDefined) Util.standardDateFormat.format(extendedData.output.dataDate.get) else "none"
 
     type II = PositioningCheck
 
@@ -81,7 +69,7 @@ object PositioningCheckCSV {
       val info = Seq(
         ("Procedure", procedureDesc),
         ("Machine", machineId),
-        ("Institution", institutionName),
+        ("Institution", extendedData.institution.name),
         ("Acquisition Date", acquisitionDate),
         ("Analysis Date", analysisDate),
         ("User", userId))
@@ -96,7 +84,7 @@ object PositioningCheckCSV {
     val data = positioningCheckSeq.map(positionCheck => positioningCheckToCsv(positionCheck))
 
     val text = (metaData ++ header ++ data).mkString("", "\r\n", "\r\n")
-    val file = new File(output.dir, csvFileName)
+    val file = new File(extendedData.output.dir, csvFileName)
     Util.writeFile(file, text)
   }
 

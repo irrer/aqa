@@ -26,27 +26,20 @@ object PositioningCheckHTML {
    * Generate a detailed report and write it to the output directory.  Also write a CSV file.  Return an
    * HTML snippet that serves as a summary and a link to the detailed report.
    */
-  def makeDisplay(output: Output, runReq: RunReq, resultList: Seq[PositioningCheck], status: ProcedureStatus.Value): Elem = {
-
-    val machine = if (output.machinePK.isDefined) Machine.get(output.machinePK.get) else None
-    val institution = if (machine.isDefined) Institution.get(machine.get.institutionPK) else None
-    val input = Input.get(output.inputPK)
-    val procedure = Procedure.get(output.procedurePK)
-    val user = if (output.userPK.isDefined) User.get(output.userPK.get) else None
-    val institutionName = if (institution.isDefined) institution.get.name else "unknown"
+  def makeDisplay(extendedData: ExtendedData, runReq: RunReq, resultList: Seq[PositioningCheck], status: ProcedureStatus.Value): Elem = {
 
     val analysisDate: String = {
-      val date = output.analysisDate match {
+      val date = extendedData.output.analysisDate match {
         case Some(d) => d
-        case _ => output.startDate
+        case _ => extendedData.output.startDate
       }
       Util.timeHumanFriendly(date)
     }
 
-    val machineId = if (machine.isDefined) machine.get.id else "unknown"
-    val userId = if (user.isDefined) user.get.id else "unknown"
+    val machineId = extendedData.machine.id
+    val userId = extendedData.user.id
 
-    PositioningCheckCSV.makeCsvFile(output, runReq, resultList)
+    PositioningCheckCSV.makeCsvFile(extendedData, runReq, resultList)
 
     val csvFileReference = {
       <a title="Download Positioning Check as CSV File" href={ PositioningCheckCSV.csvFileName }>CSV</a>
@@ -54,7 +47,7 @@ object PositioningCheckHTML {
 
     val viewRtPlan = {
       val title = "RT Plan"
-      val link = DicomAccess.write(runReq.rtplan, WebServer.urlOfResultsFile(runReq.rtplan.file), title, output.dir, DicomFile.ContrastModel.maxContrast)
+      val link = DicomAccess.write(runReq.rtplan, WebServer.urlOfResultsFile(runReq.rtplan.file), title, extendedData.output.dir, DicomFile.ContrastModel.maxContrast)
       val elem = { <a title="View RT Plan DICOM file" href={ link }>{ title }</a> }
       elem
     }
@@ -72,7 +65,7 @@ object PositioningCheckHTML {
       override def toRow(positioningCheck: PositioningCheck) = {
 
         val dicomFile = runReq.rtimageMap(positioningCheck.beamName)
-        val link = DicomAccess.write(dicomFile, WebServer.urlOfResultsFile(dicomFile.file), get(positioningCheck) + " : " + dicomFile.file.getName, output.dir, DicomFile.ContrastModel.maxContrast)
+        val link = DicomAccess.write(dicomFile, WebServer.urlOfResultsFile(dicomFile.file), get(positioningCheck) + " : " + dicomFile.file.getName, extendedData.output.dir, DicomFile.ContrastModel.maxContrast)
 
         val elem = { <td title={ title + ".  Follow link to view DICOM" }><a href={ link }>{ get(positioningCheck) }</a></td> }
         elem
@@ -121,8 +114,8 @@ object PositioningCheckHTML {
     }
 
     // write the report to the output directory
-    val text = Phase2Util.wrapSubProcedure(output, content, "Positioning Check", status)
-    val file = new File(output.dir, htmlFileName)
+    val text = Phase2Util.wrapSubProcedure(extendedData, content, "Positioning Check", status)
+    val file = new File(extendedData.output.dir, htmlFileName)
     Util.writeBinaryFile(file, text.getBytes)
 
     /**

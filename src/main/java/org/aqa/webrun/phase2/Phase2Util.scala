@@ -132,23 +132,16 @@ object Phase2Util extends Logging {
   /**
    * Wrap Phase2 HTML with nice headers.
    */
-  def wrapSubProcedure(output: Output, content: Elem, title: String, status: ProcedureStatus.Value): String = {
+  def wrapSubProcedure(extendedData: ExtendedData, content: Elem, title: String, status: ProcedureStatus.Value): String = {
 
     def wrap(col: Int, name: String, value: String): Elem = {
       <div class={ "col-md-" + col }><em>{ name }:</em><br/>{ value }</div>
     }
 
-    val machine = if (output.machinePK.isDefined) Machine.get(output.machinePK.get) else None
-    val institution = if (machine.isDefined) Institution.get(machine.get.institutionPK) else None
-    val input = Input.get(output.inputPK)
-    val procedure = Procedure.get(output.procedurePK)
-    val user = if (output.userPK.isDefined) User.get(output.userPK.get) else None
-    val institutionName = if (institution.isDefined) institution.get.name else "unknown"
-
     val analysisDate: String = {
-      val date = output.analysisDate match {
+      val date = extendedData.output.analysisDate match {
         case Some(d) => d
-        case _ => output.startDate
+        case _ => extendedData.output.startDate
       }
       Util.timeHumanFriendly(date)
     }
@@ -160,25 +153,19 @@ object Phase2Util extends Logging {
       }
     }
 
-    val machineId = if (machine.isDefined) machine.get.id else "unknown"
-    val userId = if (user.isDefined) user.get.id else "unknown"
+    val machineId = extendedData.machine.id
+    val userId = extendedData.user.id
 
     val elapsed: String = {
-      val fin = output.finishDate match {
+      val fin = extendedData.output.finishDate match {
         case Some(finDate) => finDate.getTime
         case _ => System.currentTimeMillis
       }
-      val elapsed = fin - output.startDate.getTime
+      val elapsed = fin - extendedData.output.startDate.getTime
       Util.elapsedTimeHumanFriendly(elapsed)
     }
 
-    val procedureDesc: String = {
-      procedure match {
-        case Some(proc) =>
-          proc.name + " : " + proc.version
-        case _ => ""
-      }
-    }
+    val procedureDesc: String = extendedData.procedure.name + " : " + extendedData.procedure.version
 
     val passFailImage = {
       if (status == ProcedureStatus.pass) {
@@ -196,8 +183,8 @@ object Phase2Util extends Logging {
           <div class="col-md-1" title="Machine"><h2>{ machineId }</h2></div>
         </div>
         <div class="row" style="margin:20px;">
-          { wrap(1, "Institution", institutionName) }
-          { wrap(2, "Data Acquisition", dateToString(output.dataDate)) }
+          { wrap(1, "Institution", extendedData.institution.name) }
+          { wrap(2, "Data Acquisition", dateToString(extendedData.output.dataDate)) }
           { wrap(2, "Analysis", analysisDate) }
           { wrap(1, "User", userId) }
           { wrap(1, "Elapsed", elapsed) }

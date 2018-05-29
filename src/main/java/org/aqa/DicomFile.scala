@@ -89,7 +89,6 @@ case class DicomFile(file: File) extends Logging {
       case _ => None
     }
   }
-
 }
 
 object DicomFile {

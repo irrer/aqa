@@ -31,7 +31,7 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
 
   private val floodMeasurementAndImage = MeasureNSEWEdges.measure(floodCorrectedImage, ImagePlanePixelSpacing, floodCorrectedImage, new Point(0, 0))
 
-  val floodMeasurement = floodMeasurementAndImage._1
+  val floodMeasurement = floodMeasurementAndImage.measurementSet
 
   /**
    * Rectangle within an image that flood field floods.  Image analysis for other images should
@@ -50,16 +50,20 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
     new Rectangle(x, y, width, height)
   }
 
-  lazy val floodImage = floodMeasurementAndImage._2
+  val floodOffset = floodRectangle.getLocation
 
-  private class Derived(dicomFile: DicomFile) {
+  val floodPixelCorrectedAndCroppedImage = floodCorrectedImage.getSubimage(floodRectangle)
+
+  lazy val floodImage = floodMeasurementAndImage.bufferedImage
+
+  class Derived(dicomFile: DicomFile) {
     lazy val originalImage = new DicomImage(dicomFile.attributeList.get)
-    lazy val correctedImage = Phase2Util.correctBadPixels(originalImage)
-    val croppedImage = correctedImage.getSubimage(floodRectangle)
+    lazy val pixelCorrectedImage = Phase2Util.correctBadPixels(originalImage)
+    lazy val pixelCorrectedCroppedImage = pixelCorrectedImage.getSubimage(floodRectangle)
+    lazy val biasAndPixelCorrectedCroppedImage = pixelCorrectedCroppedImage.biasCorrect(floodPixelCorrectedAndCroppedImage)
   }
 
-  def originalImage(beamName: String) = {
+  val derivedMap = rtimageMap.keys.map(beamName => (beamName, new Derived(rtimageMap(beamName)))).toMap
+  
 
-  }
 }
-

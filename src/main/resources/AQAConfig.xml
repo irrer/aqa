@@ -75,6 +75,9 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Beam name for flood field. -->
     <FloodFieldBeamName>Flood 6X</FloodFieldBeamName>
 
+    <!-- The maximum error tolerated for CollimatorCentering in mm. -->
+    <CollimatorCenteringTolerence_mm>2.0</CollimatorCenteringTolerence_mm>
+    
     <!-- Beam names used by Phase2 CollimatorCentering -->
     <CollimatorCentering090BeamName>J10G90</CollimatorCentering090BeamName>
     <CollimatorCentering270BeamName>J10G270</CollimatorCentering270BeamName>

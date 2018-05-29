@@ -12,6 +12,7 @@ import org.aqa.procedures.ProcedureOutput
 case class CollimatorCentering(
   collimatorCenteringPK: Option[Long], // primary key
   outputPK: Long, // output primary key
+  status: String, // termination status
   xCollimatorCenterMinusImageCenter_mm: Double, // X center the collimator minus the center of the image in mm
   yCollimatorCenterMinusImageCenter_mm: Double, // Y center the collimator minus the center of the image in mm
   xCollimatorCenter_mm: Double, // X collimator center in mm
@@ -40,6 +41,7 @@ case class CollimatorCentering(
   override def toString: String = {
     "    collimatorCenteringPK: " + collimatorCenteringPK + "\n" +
       "    outputPK: " + outputPK + "\n" +
+      "    status: " + status + "\n" +
       "    xCollimatorCenterMinusImageCenter_mm: " + xCollimatorCenterMinusImageCenter_mm + "\n" +
       "    yCollimatorCenterMinusImageCenter_mm: " + yCollimatorCenterMinusImageCenter_mm + "\n" +
       "    xCollimatorCenter_mm: " + xCollimatorCenter_mm + "\n" +
@@ -60,6 +62,7 @@ object CollimatorCentering extends ProcedureOutput {
 
     def collimatorCenteringPK = column[Long]("collimatorCenteringPK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
+    def status = column[String]("status")
     def xCollimatorCenterMinusImageCenter_mm = column[Double]("xCollimatorCenterMinusImageCenter_mm")
     def yCollimatorCenterMinusImageCenter_mm = column[Double]("yCollimatorCenterMinusImageCenter_mm")
     def xCollimatorCenter_mm = column[Double]("xCollimatorCenter_mm")
@@ -76,6 +79,7 @@ object CollimatorCentering extends ProcedureOutput {
     def * = (
       collimatorCenteringPK.?,
       outputPK,
+      status,
       xCollimatorCenterMinusImageCenter_mm,
       yCollimatorCenterMinusImageCenter_mm,
       xCollimatorCenter_mm,
