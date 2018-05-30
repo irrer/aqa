@@ -66,7 +66,7 @@ object CollimatorCenteringAnalysis extends Logging {
     logger.info("Inserting CollimatorCentering row: " + collimatorCentering)
     collimatorCentering.insert
 
-    val elem = CollimatorCenteringHTML.makeDisplay(extendedData, result090, result270, runReq)
+    val elem = CollimatorCenteringHTML.makeDisplay(extendedData, procedureStatus, result090, result270, runReq)
     (procedureStatus, elem)
   }
 }

@@ -102,15 +102,18 @@ object MeasureNSEWEdges extends Logging {
   private val dashedLine = new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, Array(1, 4), 0)
   private val solidLine = new BasicStroke
 
-  private def annotateNorthSouth(bufImg: BufferedImage, graphics: Graphics2D, pixelEdge: Double, scaledEdge: Double, rect: Rectangle) = {
+  private def annotateNorthSouth(bufImg: BufferedImage, graphics: Graphics2D, pixelEdge: Double, scaledEdge: Double, rect: Rectangle, floodOffset: Point) = {
 
-    val xEast = rect.getX.round.toInt
-    val xWest = (rect.getX + rect.getWidth).round.toInt
+    val xOff = floodOffset.getX.round.toInt
+    val yOff = floodOffset.getY.round.toInt
+
+    val xEast = rect.getX.round.toInt + xOff
+    val xWest = (rect.getX + rect.getWidth).round.toInt + xOff
     val xMid = (xEast + xWest) / 2
 
-    val yNorth = rect.getY.round.toInt
-    val ySouth = (rect.getY + rect.getHeight).round.toInt
-    val yMid = pixelEdge.round.toInt
+    val yNorth = rect.getY.round.toInt + yOff
+    val ySouth = (rect.getY + rect.getHeight).round.toInt + yOff
+    val yMid = pixelEdge.round.toInt + yOff
 
     graphics.setStroke(dashedLine)
     graphics.drawLine(xEast, yMid, xWest, yMid) // horizontal line through edge that was found
@@ -119,17 +122,20 @@ object MeasureNSEWEdges extends Logging {
     graphics.drawLine(xWest, yNorth, xWest, ySouth) // vertical line at east side of line
 
     val text = scaledEdge.formatted("%7.2f")
-    ImageUtil.annotatePixel(bufImg, xMid, pixelEdge.round.toInt, annotationColor, text, false)
+    ImageUtil.annotatePixel(bufImg, xMid, pixelEdge.round.toInt + yOff, annotationColor, text, false)
   }
 
-  private def annotateEastWest(bufImg: BufferedImage, graphics: Graphics2D, pixelEdge: Double, scaledEdge: Double, rect: Rectangle) = {
+  private def annotateEastWest(bufImg: BufferedImage, graphics: Graphics2D, pixelEdge: Double, scaledEdge: Double, rect: Rectangle, floodOffset: Point) = {
 
-    val xEast = rect.getX.round.toInt
-    val xWest = (rect.getX + rect.getWidth).round.toInt
-    val xMid = pixelEdge.round.toInt
+    val xOff = floodOffset.getX.round.toInt
+    val yOff = floodOffset.getY.round.toInt
 
-    val yNorth = rect.getY.round.toInt
-    val ySouth = (rect.getY + rect.getHeight).round.toInt
+    val xEast = rect.getX.round.toInt + xOff
+    val xWest = (rect.getX + rect.getWidth).round.toInt + xOff
+    val xMid = pixelEdge.round.toInt + xOff
+
+    val yNorth = rect.getY.round.toInt + yOff
+    val ySouth = (rect.getY + rect.getHeight).round.toInt + yOff
     val yMid = (yNorth + ySouth) / 2
 
     graphics.setStroke(dashedLine)
@@ -139,7 +145,7 @@ object MeasureNSEWEdges extends Logging {
     graphics.drawLine(xEast, ySouth, xWest, ySouth) // horizontal line at east side of line
 
     val text = scaledEdge.formatted("%7.2f")
-    ImageUtil.annotatePixel(bufImg, pixelEdge.round.toInt, yMid, annotationColor, text, false)
+    ImageUtil.annotatePixel(bufImg, pixelEdge.round.toInt + xOff, yMid, annotationColor, text, false)
   }
 
   private def annotateCenter(bufImg: BufferedImage, graphics: Graphics2D, pixelEdges: NSEW, scaledEdges: NSEW, ImagePlanePixelSpacing: Point2D.Double) = {
@@ -181,16 +187,16 @@ object MeasureNSEWEdges extends Logging {
    */
   private def makeAnnotatedImage(image: DicomImage, measurementSet: NSEW, ImagePlanePixelSpacing: Point2D.Double,
     northRect: Rectangle, southRect: Rectangle, eastRect: Rectangle, westRect: Rectangle,
-    imageResolution: Point2D): BufferedImage = {
+    imageResolution: Point2D, floodOffset: Point): BufferedImage = {
     val bufImg = image.toBufferedImage(imageColor)
     val graphics = ImageUtil.getGraphics(bufImg)
     graphics.setColor(annotationColor)
 
     val scaledMeasurementSet = measurementSet.scale(ImagePlanePixelSpacing)
-    annotateNorthSouth(bufImg, graphics, measurementSet.north, scaledMeasurementSet.north, northRect)
-    annotateNorthSouth(bufImg, graphics, measurementSet.south, scaledMeasurementSet.south, southRect)
-    annotateEastWest(bufImg, graphics, measurementSet.east, scaledMeasurementSet.east, eastRect)
-    annotateEastWest(bufImg, graphics, measurementSet.west, scaledMeasurementSet.west, westRect)
+    annotateNorthSouth(bufImg, graphics, measurementSet.north, scaledMeasurementSet.north, northRect, floodOffset)
+    annotateNorthSouth(bufImg, graphics, measurementSet.south, scaledMeasurementSet.south, southRect, floodOffset)
+    annotateEastWest(bufImg, graphics, measurementSet.east, scaledMeasurementSet.east, eastRect, floodOffset)
+    annotateEastWest(bufImg, graphics, measurementSet.west, scaledMeasurementSet.west, westRect, floodOffset)
 
     annotateCenter(bufImg, graphics, measurementSet, scaledMeasurementSet, ImagePlanePixelSpacing)
     bufImg
@@ -249,7 +255,7 @@ object MeasureNSEWEdges extends Logging {
     val measurementSet = new NSEW(northEdge, southEdge, eastEdge, westEdge)
     val scaledMeasurementSet = measurementSet.scale(ImagePlanePixelSpacing)
 
-    val bufferedImage = makeAnnotatedImage(annotate, measurementSet, ImagePlanePixelSpacing, nsRect._1, nsRect._2, ewRect._1, ewRect._2, ImagePlanePixelSpacing)
+    val bufferedImage = makeAnnotatedImage(annotate, measurementSet, ImagePlanePixelSpacing, nsRect._1, nsRect._2, ewRect._1, ewRect._2, ImagePlanePixelSpacing, floodOffset)
     new AnalysisResult(measurementSet, bufferedImage)
   }
 

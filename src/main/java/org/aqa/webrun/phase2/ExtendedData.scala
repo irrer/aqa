@@ -8,7 +8,8 @@ import org.aqa.db.Procedure
 import org.aqa.db.User
 
 /**
- * Convenience class for passing around commonly used data.
+ * Convenience class for passing around commonly used data, which is basically all of
+ * the database objects associated with a given Output object.
  */
 case class ExtendedData(output: Output, input: Input, machine: Machine, institution: Institution, procedure: Procedure, user: User)
 
