@@ -260,7 +260,7 @@ object MeasureNSEWEdges extends Logging {
     val transMeasurementSet = measurementSet.translate(floodOffset, ImagePlanePixelSpacing)
 
     val bufferedImage = makeAnnotatedImage(annotate, measurementSet, transMeasurementSet, nsRect._1, nsRect._2, ewRect._1, ewRect._2, floodOffset, ImagePlanePixelSpacing)
-    new AnalysisResult(measurementSet, bufferedImage)
+    new AnalysisResult(transMeasurementSet, bufferedImage)
   }
 
 }

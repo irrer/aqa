@@ -7,6 +7,7 @@ import edu.umro.ImageUtil.DicomImage
 import java.awt.Point
 import java.awt.Rectangle
 import org.aqa.db.Machine
+import java.awt.geom.Point2D
 
 /**
  * @param rtplan: RTPLAN file
@@ -34,18 +35,19 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
   val floodMeasurement = floodMeasurementAndImage.measurementSet
 
   /**
-   * Rectangle within an image that flood field floods.  Image analysis for other images should
+   * Rectangle in pixels (not mm) within an image that flood field floods.  Image analysis for other images should
    * be done within the confines of this rectangle.
    */
   val floodRectangle = {
-    val ImagePlanePixelSpacing = Phase2Util.getImagePlanePixelSpacing(flood.attributeList.get)
     val pnX = (Config.PenumbraThickness_mm / ImagePlanePixelSpacing.getX) / 2
     val pnY = (Config.PenumbraThickness_mm / ImagePlanePixelSpacing.getY) / 2
 
-    val x = Math.round(floodMeasurement.west + pnX).toInt
-    val y = Math.round(floodMeasurement.north + pnY).toInt
-    val width = Math.round((floodMeasurement.east - floodMeasurement.west) - (pnX * 2)).toInt
-    val height = Math.round((floodMeasurement.south - floodMeasurement.north) - (pnY * 2)).toInt
+    val fPix = floodMeasurement.translate(new Point(0, 0), new Point2D.Double(1 / ImagePlanePixelSpacing.getX, 1 / ImagePlanePixelSpacing.getY))
+
+    val x = Math.round(fPix.west + pnX).toInt
+    val y = Math.round(fPix.north + pnY).toInt
+    val width = Math.round((fPix.east - fPix.west) - (pnX * 2)).toInt
+    val height = Math.round((fPix.south - fPix.north) - (pnY * 2)).toInt
 
     new Rectangle(x, y, width, height)
   }
@@ -64,6 +66,5 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
   }
 
   val derivedMap = rtimageMap.keys.map(beamName => (beamName, new Derived(rtimageMap(beamName)))).toMap
-  
 
 }
