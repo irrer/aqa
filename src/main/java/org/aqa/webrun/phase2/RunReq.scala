@@ -27,7 +27,9 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
 
   val floodOriginalImage = new DicomImage(flood.attributeList.get)
 
-  val floodCorrectedImage = Phase2Util.correctBadPixels(floodOriginalImage)
+  val floodBadPixelList = Phase2Util.identifyBadPixels(floodOriginalImage)
+
+  val floodCorrectedImage = floodOriginalImage.correctBadPixels(floodBadPixelList)
 
   val ImagePlanePixelSpacing = Phase2Util.getImagePlanePixelSpacing(flood.attributeList.get)
 
@@ -61,7 +63,8 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
 
   class Derived(dicomFile: DicomFile) {
     lazy val originalImage = new DicomImage(dicomFile.attributeList.get)
-    lazy val pixelCorrectedImage = Phase2Util.correctBadPixels(originalImage)
+    lazy val badPixelList = Phase2Util.identifyBadPixels(originalImage)
+    lazy val pixelCorrectedImage = originalImage.correctBadPixels(badPixelList)
     lazy val pixelCorrectedCroppedImage = pixelCorrectedImage.getSubimage(floodRectangle)
     lazy val biasAndPixelCorrectedCroppedImage = pixelCorrectedCroppedImage.biasCorrect(floodPixelCorrectedAndCroppedImage)
   }

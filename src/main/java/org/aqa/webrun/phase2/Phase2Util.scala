@@ -20,6 +20,7 @@ import java.util.Date
 import org.aqa.web.WebUtil._
 import edu.umro.ImageUtil.DicomImage
 import java.awt.geom.Point2D
+import java.awt.Point
 
 object Phase2Util extends Logging {
 
@@ -202,15 +203,26 @@ object Phase2Util extends Logging {
   }
 
   /**
-   * Create a corrected version of the given image using configured parameters.
+   * Get a list of bad pixels in the given image according to the configuration for Phase 2.
    */
-  def correctBadPixels(originalImage: DicomImage): DicomImage = {
+  def identifyBadPixels(originalImage: DicomImage): IndexedSeq[Point] = {
     val numPixels = originalImage.width * originalImage.height
     val sampleSize = ((Config.BadPixelSamplePerMillion / 1000000.0) * numPixels).round.toInt
     val maxBadPixels = ((Config.MaxBadPixelPerMillion / 1000000.0) * numPixels).round.toInt
     val badPixelList = originalImage.identifyBadPixels(sampleSize, maxBadPixels, Config.BadPixelStdDevMultiple)
-    originalImage.correctBadPixels(badPixelList)
+    badPixelList
   }
+
+  //  /**
+  //   * Create a corrected version of the given image using configured parameters.
+  //   */
+  //  def correctBadPixels(originalImage: DicomImage, badPixelList: IndexedSeq[Point]): DicomImage = {
+  //    val numPixels = originalImage.width * originalImage.height
+  //    val sampleSize = ((Config.BadPixelSamplePerMillion / 1000000.0) * numPixels).round.toInt
+  //    val maxBadPixels = ((Config.MaxBadPixelPerMillion / 1000000.0) * numPixels).round.toInt
+  //    val badPixelList = originalImage.identifyBadPixels(sampleSize, maxBadPixels, Config.BadPixelStdDevMultiple)
+  //    originalImage.correctBadPixels(badPixelList)
+  //  }
 
   def getImagePlanePixelSpacing(attributeList: AttributeList): Point2D.Double = {
     val ImagePlanePixelSpacing = attributeList.get(TagFromName.ImagePlanePixelSpacing).getDoubleValues
