@@ -31,11 +31,18 @@ object MeasureNSEWEdges extends Logging {
   case class NSEW(north: Double, south: Double, east: Double, west: Double) {
     val center = new Point2D.Double((east + west) / 2, (north + south) / 2)
 
-    def scale(ImagePlanePixelSpacing: Point2D.Double) = new NSEW(
-      north * ImagePlanePixelSpacing.getY, south * ImagePlanePixelSpacing.getY,
-      east * ImagePlanePixelSpacing.getX, west * ImagePlanePixelSpacing.getX)
+    //    private def scale(ImagePlanePixelSpacing: Point2D.Double) = new NSEW(
+    //      north * ImagePlanePixelSpacing.getY, south * ImagePlanePixelSpacing.getY,
+    //      east * ImagePlanePixelSpacing.getX, west * ImagePlanePixelSpacing.getX)
+    //
+    //    private def offset(diff: Point) = new NSEW(north + diff.getY, south + diff.getY, east + diff.getX, west + diff.getX)
 
-    def offset(diff: Point) = new NSEW(north + diff.getY, south + diff.getY, east + diff.getX, west + diff.getX)
+    def translate(floodOffset: Point, ImagePlanePixelSpacing: Point2D.Double) = {
+      def transX(x: Double) = (x + floodOffset.getX) * ImagePlanePixelSpacing.getX
+      def transY(y: Double) = (y + floodOffset.getY) * ImagePlanePixelSpacing.getY
+      new NSEW(transY(north), transY(south), transX(east), transX(west))
+    }
+
   }
 
   case class AnalysisResult(measurementSet: NSEW, bufferedImage: BufferedImage)
@@ -148,10 +155,9 @@ object MeasureNSEWEdges extends Logging {
     ImageUtil.annotatePixel(bufImg, pixelEdge.round.toInt + xOff, yMid, annotationColor, text, false)
   }
 
-  private def annotateCenter(bufImg: BufferedImage, graphics: Graphics2D, pixelEdges: NSEW, scaledEdges: NSEW, ImagePlanePixelSpacing: Point2D.Double) = {
+  private def annotateCenter(bufImg: BufferedImage, graphics: Graphics2D, pixelEdges: NSEW, transMeasurementSet: NSEW, ImagePlanePixelSpacing: Point2D.Double) = {
     // center of image (not center of edges)
     val pixelImageCenter = new Point2D.Double(bufImg.getWidth / 2.0, bufImg.getHeight / 2.0)
-    // scaled center of image (not center of edges)
     val scaledImageCenter = new Point2D.Double(pixelImageCenter.getX * ImagePlanePixelSpacing.getX, pixelImageCenter.getY * ImagePlanePixelSpacing.getY)
 
     def fmt(d: Double) = d.formatted("%7.2f").trim
@@ -177,28 +183,26 @@ object MeasureNSEWEdges extends Logging {
       graphics.drawString(text, x.toFloat, y.toFloat)
     }
 
-    drawText("Collimator Center: " + fmt(scaledEdges.center.getX) + ", " + fmt(scaledEdges.center.getY), 0)
+    drawText("Collimator Center: " + fmt(transMeasurementSet.center.getX) + ", " + fmt(transMeasurementSet.center.getY), 0)
     drawText("Image Center: " + fmt(scaledImageCenter.getX) + ", " + fmt(scaledImageCenter.getY), 1)
-    drawText("Off Center: " + fmt(scaledEdges.center.getX - scaledImageCenter.getX) + ", " + fmt(scaledEdges.center.getY - scaledImageCenter.getY), 2)
+    drawText("Off Center: " + fmt(transMeasurementSet.center.getX - scaledImageCenter.getX) + ", " + fmt(transMeasurementSet.center.getY - scaledImageCenter.getY), 2)
   }
 
   /**
    * Make an annotated image that illustrates the edges.
    */
-  private def makeAnnotatedImage(image: DicomImage, measurementSet: NSEW, ImagePlanePixelSpacing: Point2D.Double,
-    northRect: Rectangle, southRect: Rectangle, eastRect: Rectangle, westRect: Rectangle,
-    imageResolution: Point2D, floodOffset: Point): BufferedImage = {
+  private def makeAnnotatedImage(image: DicomImage, measurementSet: NSEW, transMeasurementSet: NSEW,
+    northRect: Rectangle, southRect: Rectangle, eastRect: Rectangle, westRect: Rectangle, floodOffset: Point, ImagePlanePixelSpacing: Point2D.Double): BufferedImage = {
     val bufImg = image.toBufferedImage(imageColor)
     val graphics = ImageUtil.getGraphics(bufImg)
     graphics.setColor(annotationColor)
 
-    val scaledMeasurementSet = measurementSet.scale(ImagePlanePixelSpacing)
-    annotateNorthSouth(bufImg, graphics, measurementSet.north, scaledMeasurementSet.north, northRect, floodOffset)
-    annotateNorthSouth(bufImg, graphics, measurementSet.south, scaledMeasurementSet.south, southRect, floodOffset)
-    annotateEastWest(bufImg, graphics, measurementSet.east, scaledMeasurementSet.east, eastRect, floodOffset)
-    annotateEastWest(bufImg, graphics, measurementSet.west, scaledMeasurementSet.west, westRect, floodOffset)
+    annotateNorthSouth(bufImg, graphics, measurementSet.north, transMeasurementSet.north, northRect, floodOffset)
+    annotateNorthSouth(bufImg, graphics, measurementSet.south, transMeasurementSet.south, southRect, floodOffset)
+    annotateEastWest(bufImg, graphics, measurementSet.east, transMeasurementSet.east, eastRect, floodOffset)
+    annotateEastWest(bufImg, graphics, measurementSet.west, transMeasurementSet.west, westRect, floodOffset)
 
-    annotateCenter(bufImg, graphics, measurementSet, scaledMeasurementSet, ImagePlanePixelSpacing)
+    annotateCenter(bufImg, graphics, measurementSet, transMeasurementSet, ImagePlanePixelSpacing)
     bufImg
   }
 
@@ -253,9 +257,9 @@ object MeasureNSEWEdges extends Logging {
     val westEdge = LocateEdge.locateEdge(image.getSubimage(ewRect._2).columnSums, halfwayPixelValue * ewRect._2.height) + ewRect._2.x
 
     val measurementSet = new NSEW(northEdge, southEdge, eastEdge, westEdge)
-    val scaledMeasurementSet = measurementSet.scale(ImagePlanePixelSpacing)
+    val transMeasurementSet = measurementSet.translate(floodOffset, ImagePlanePixelSpacing)
 
-    val bufferedImage = makeAnnotatedImage(annotate, measurementSet, ImagePlanePixelSpacing, nsRect._1, nsRect._2, ewRect._1, ewRect._2, ImagePlanePixelSpacing, floodOffset)
+    val bufferedImage = makeAnnotatedImage(annotate, measurementSet, transMeasurementSet, nsRect._1, nsRect._2, ewRect._1, ewRect._2, floodOffset, ImagePlanePixelSpacing)
     new AnalysisResult(measurementSet, bufferedImage)
   }
 

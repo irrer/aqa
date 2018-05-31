@@ -30,17 +30,19 @@ object CollimatorCenteringAnalysis extends Logging {
   /**
    * Get the center of the image (regardless of collimator) in mm.
    */
-  private def getImageCenter_mm(al: AttributeList): Point2D.Double = {
-    val ImagePlanePixelSpacing = al.get(TagFromName.ImagePlanePixelSpacing).getDoubleValues
+  private def getImageCenter_mm(al: AttributeList, ImagePlanePixelSpacing: Point2D.Double): Point2D.Double = {
     val Rows = al.get(TagFromName.Rows).getIntegerValues.head
     val Columns = al.get(TagFromName.Columns).getIntegerValues.head
-    new Point2D.Double(Columns * ImagePlanePixelSpacing(0), Rows * ImagePlanePixelSpacing(1))
+    new Point2D.Double(Columns * ImagePlanePixelSpacing.getX, Rows * ImagePlanePixelSpacing.getY)
   }
 
   /**
    * Run the CollimatorCentering sub-procedure, save results in the database, return true for pass or false for fail.
    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): (ProcedureStatus.Value, Elem) = {
+
+    val al090 = runReq.rtimageMap(Config.CollimatorCentering090BeamName).attributeList.get
+    val ImagePlanePixelSpacing = Phase2Util.getImagePlanePixelSpacing(al090)
 
     val img090 = runReq.derivedMap(Config.CollimatorCentering090BeamName)
     val img270 = runReq.derivedMap(Config.CollimatorCentering270BeamName)
@@ -51,7 +53,7 @@ object CollimatorCenteringAnalysis extends Logging {
     val m270 = result270.measurementSet
     val xCntr = (m090.center.getX + m270.center.getX) / 2
     val yCntr = (m090.center.getY + m270.center.getY) / 2
-    val imgCntr = getImageCenter_mm(runReq.rtimageMap(Config.CollimatorCentering090BeamName).attributeList.get)
+    val imgCntr = getImageCenter_mm(al090, ImagePlanePixelSpacing)
 
     val errDistance = (new Point2D.Double(xCntr, yCntr)).distance(imgCntr.getX, imgCntr.getY)
     val pass: Boolean = errDistance <= Config.CollimatorCenteringTolerence_mm
