@@ -8,6 +8,7 @@ import java.awt.Point
 import java.awt.Rectangle
 import org.aqa.db.Machine
 import java.awt.geom.Point2D
+import edu.umro.ScalaUtil.Trace
 
 /**
  * @param rtplan: RTPLAN file

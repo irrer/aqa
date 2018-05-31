@@ -17,14 +17,14 @@ case class CollimatorCentering(
   yCollimatorCenterMinusImageCenter_mm: Double, // Y center the collimator minus the center of the image in mm
   xCollimatorCenter_mm: Double, // X collimator center in mm
   yCollimatorCenter_mm: Double, // Y collimator center in mm
-  north090_mm: Double, // north position of collimator leaf edge for collimator at 90 degrees (Y axis) in mm
-  south090_mm: Double, // south position of collimator leaf edge for collimator at 90 degrees (Y axis) in mm
-  east090_mm: Double, // east position of collimator leaf edge for collimator at 90 degrees (X axis) in mm
-  west090_mm: Double, // west position of collimator leaf edge for collimator at 90 degrees (X axis) in mm
-  north270_mm: Double, // north position of collimator leaf edge for collimator at 270 degrees (Y axis) in mm
-  south270_mm: Double, // south position of collimator leaf edge for collimator at 270 degrees (Y axis) in mm
-  east270_mm: Double, // east position of collimator leaf edge for collimator at 270 degrees (X axis) in mm
-  west270_mm: Double // west position of collimator leaf edge for collimator at 270 degrees (X axis) in mm
+  north090_mm: Double, // north position of collimator leaf edge for gantry at 90 degrees (Y axis) in mm
+  south090_mm: Double, // south position of collimator leaf edge for gantry at 90 degrees (Y axis) in mm
+  east090_mm: Double, // east position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
+  west090_mm: Double, // west position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
+  north270_mm: Double, // north position of collimator leaf edge for gantry at 270 degrees (Y axis) in mm
+  south270_mm: Double, // south position of collimator leaf edge for gantry at 270 degrees (Y axis) in mm
+  east270_mm: Double, // east position of collimator leaf edge for gantry at 270 degrees (X axis) in mm
+  west270_mm: Double // west position of collimator leaf edge for gantry at 270 degrees (X axis) in mm
 ) {
 
   def insert: CollimatorCentering = {

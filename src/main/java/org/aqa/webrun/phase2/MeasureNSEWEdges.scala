@@ -22,6 +22,7 @@ import java.awt.Color
 import java.awt.Graphics2D
 import java.awt.BasicStroke
 import java.awt.Point
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Measure the four edges in an image (north, south, east, west).

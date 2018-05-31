@@ -21,6 +21,8 @@ import java.awt.image.BufferedImage
 import java.awt.Color
 import java.awt.Graphics2D
 import java.awt.BasicStroke
+import edu.umro.ScalaUtil.Trace
+import scala.collection.parallel.ParSeq
 
 /**
  * Analyze DICOM files for ImageAnalysis.
@@ -46,8 +48,15 @@ object CollimatorCenteringAnalysis extends Logging {
 
     val img090 = runReq.derivedMap(Config.CollimatorCentering090BeamName)
     val img270 = runReq.derivedMap(Config.CollimatorCentering270BeamName)
-    val result090 = MeasureNSEWEdges.measure(img090.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, img090.originalImage, runReq.floodOffset)
-    val result270 = MeasureNSEWEdges.measure(img270.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, img270.originalImage, runReq.floodOffset)
+    // Calculate edges in parallel for efficiency.
+    val resultPair = {
+      def m090 = MeasureNSEWEdges.measure(img090.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, img090.originalImage, runReq.floodOffset)
+      def m270 = MeasureNSEWEdges.measure(img270.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, img270.originalImage, runReq.floodOffset)
+      val rp = ParSeq(m090 _, m270 _).map(f => f()).toList
+      rp
+    }
+    val result090 = resultPair(0)
+    val result270 = resultPair(1)
 
     val m090 = result090.measurementSet
     val m270 = result270.measurementSet
@@ -68,7 +77,7 @@ object CollimatorCenteringAnalysis extends Logging {
     logger.info("Inserting CollimatorCentering row: " + collimatorCentering)
     collimatorCentering.insert
 
-    val elem = CollimatorCenteringHTML.makeDisplay(extendedData, procedureStatus, result090, result270, runReq)
+    val elem = CollimatorCenteringHTML.makeDisplay(extendedData, collimatorCentering, procedureStatus, result090, result270, runReq)
     (procedureStatus, elem)
   }
 }

@@ -39,6 +39,7 @@ import org.aqa.webrun.LOCXml
 import org.aqa.db.Machine
 import org.aqa.webrun.RunRequirements
 import org.aqa.Config
+import edu.umro.ScalaUtil.Trace
 
 object Phase2 {
   val parametersFileName = "parameters.xml"
@@ -204,7 +205,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
 
     def dicomView(beamName: String): String = {
       val rtimage = runReq.rtimageMap(beamName)
-      DicomAccess.write(rtimage, WebServer.urlOfResultsFile(rtimage.file), "RTIMAGE Beam " + beamName, outputDir, DicomFile.ContrastModel.maxContrast)
+      val text = DicomAccess.write(rtimage, WebServer.urlOfResultsFile(rtimage.file), "RTIMAGE Beam " + beamName, outputDir, DicomFile.ContrastModel.maxContrast)
+      text
     }
 
     val planLink = DicomAccess.write(runReq.rtplan, WebServer.urlOfResultsFile(runReq.rtplan.file), "RTPLAN", outputDir, DicomFile.ContrastModel.maxContrast)
