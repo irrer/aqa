@@ -46,10 +46,7 @@ object PositioningCheckHTML {
     }
 
     val viewRtPlan = {
-      val title = "RT Plan"
-      val link = DicomAccess.write(runReq.rtplan, WebServer.urlOfResultsFile(runReq.rtplan.file), title, extendedData.output.dir, DicomFile.ContrastModel.maxContrast)
-      val elem = { <a title="View RT Plan DICOM file" href={ link }>{ title }</a> }
-      elem
+      <a title="View RT Plan DICOM file" href={ extendedData.dicomHref(runReq.rtplan) }>RT Plan</a>
     }
 
     class Row(val title: String, name: String, val get: (PositioningCheck) => String) {
@@ -65,8 +62,7 @@ object PositioningCheckHTML {
       override def toRow(positioningCheck: PositioningCheck) = {
 
         val dicomFile = runReq.rtimageMap(positioningCheck.beamName)
-        val link = DicomAccess.write(dicomFile, WebServer.urlOfResultsFile(dicomFile.file), get(positioningCheck) + " : " + dicomFile.file.getName, extendedData.output.dir, DicomFile.ContrastModel.maxContrast)
-
+        val link = extendedData.dicomHref(dicomFile)
         val elem = { <td title={ title + ".  Follow link to view DICOM" }><a href={ link }>{ get(positioningCheck) }</a></td> }
         elem
       }

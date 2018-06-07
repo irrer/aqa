@@ -40,6 +40,9 @@ import org.aqa.db.Machine
 import org.aqa.webrun.RunRequirements
 import org.aqa.Config
 import edu.umro.ScalaUtil.Trace
+import java.awt.Color
+import edu.umro.ImageUtil.ImageUtil
+import java.awt.Point
 
 object Phase2 {
   val parametersFileName = "parameters.xml"
@@ -205,20 +208,29 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     val outputDir = extendedData.output.dir
     val fileName = "ViewDicom.html"
 
-    def dicomView(beamName: String): String = {
+    def dicomView(beamName: String) = {
       val rtimage = runReq.rtimageMap(beamName)
-      val text = DicomAccess.write(rtimage, WebServer.urlOfResultsFile(rtimage.file), "RTIMAGE Beam " + beamName, outputDir, DicomFile.ContrastModel.maxContrast)
-      text
+      val derived = runReq.derivedMap(beamName)
+      val bufImage = derived.pixelCorrectedImage.toBufferedImage(Color.cyan)
+      val url = WebServer.urlOfResultsFile(rtimage.file)
+      DicomAccess.write(rtimage, url, "RTIMAGE Beam " + beamName, outputDir, Some(bufImage), derived.badPixelList)
     }
 
-    val planLink = DicomAccess.write(runReq.rtplan, WebServer.urlOfResultsFile(runReq.rtplan.file), "RTPLAN", outputDir, DicomFile.ContrastModel.maxContrast)
+    // write the rtplan
+    val planLink = extendedData.dicomHref(runReq.rtplan)
+    DicomAccess.write(runReq.rtplan, planLink, "RTPLAN", outputDir, None, IndexedSeq[Point]())
 
-    val floodLink = DicomAccess.write(runReq.flood, WebServer.urlOfResultsFile(runReq.flood.file), "RTIMAGE " + Config.FloodFieldBeamName, outputDir, DicomFile.ContrastModel.maxContrast)
+    val floodLink = WebServer.urlOfResultsFile(runReq.flood.file)
+    def writeFlood = {
+      val bufImage = runReq.floodCorrectedImage.toBufferedImage(Color.cyan)
+      DicomAccess.write(runReq.flood, floodLink, Config.FloodFieldBeamName, outputDir, Some(bufImage), runReq.floodBadPixelList)
+    }
+    writeFlood
 
-    val rtimageLinkSeq = runReq.rtimageMap.keys.map(beamName => dicomView(beamName))
+    runReq.rtimageMap.keys.map(beamName => dicomView(beamName))
 
     def beamRef(beamName: String): Elem = {
-      <tr><td><a href={ dicomView(beamName) }>{ beamName }</a></td></tr>
+      <tr><td><a href={ WebServer.urlOfResultsFile(runReq.rtimageMap(beamName).file) }>{ beamName }</a></td></tr>
     }
 
     val content = {
@@ -247,6 +259,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   private def runPhase2(extendedData: ExtendedData, rtimageMap: Map[String, DicomFile], runReq: RunReq): ProcedureStatus.Value = {
     val dicomViews = makeDicomViews(extendedData, runReq)
     val psnChkSummary = PositioningCheckAnalysis.runProcedure(extendedData, runReq)
+    BadPixelAnalysis.runProcedure(extendedData, runReq)
     val colCnrtSummary = CollimatorCenteringAnalysis.runProcedure(extendedData, runReq)
     val floodRtimage = rtimageMap.get(Config.FloodFieldBeamName).get
     makeHtml(extendedData, psnChkSummary._1, Seq(dicomViews, psnChkSummary._2, colCnrtSummary._2))

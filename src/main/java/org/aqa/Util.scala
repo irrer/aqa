@@ -356,6 +356,16 @@ object Util extends Logging {
     new File(dir, file.getName)
   }
 
+  /**
+   * Remove the suffix from the given file name.  Examples:
+   *
+   * foo.TXT -> foo
+   * bar.    -> bar
+   * bar..   -> bar.
+   * goo.foo.roo -> goo.foo
+   */
+  def removeFileNameSuffix(fileName: String): String = fileName.replaceAll("\\.[^\\.]*$", "")
+
   def main(args: Array[String]): Unit = {
 
     if (true) {
