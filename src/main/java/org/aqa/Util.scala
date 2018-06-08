@@ -366,6 +366,10 @@ object Util extends Logging {
    */
   def removeFileNameSuffix(fileName: String): String = fileName.replaceAll("\\.[^\\.]*$", "")
 
+  //  def changeFileNameSuffix(file: File, suffix: String): String = {
+  //    removeFileNameSuffix(file.getName) + suffix
+  //  }
+
   def main(args: Array[String]): Unit = {
 
     if (true) {

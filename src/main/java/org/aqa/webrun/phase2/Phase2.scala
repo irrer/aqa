@@ -207,11 +207,13 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   private def makeDicomViews(extendedData: ExtendedData, runReq: RunReq): Elem = {
     val outputDir = extendedData.output.dir
     val fileName = "ViewDicom.html"
+    val colorMap = ImageUtil.rgbColorMap(Color.cyan)
 
     def dicomView(beamName: String) = {
       val rtimage = runReq.rtimageMap(beamName)
       val derived = runReq.derivedMap(beamName)
-      val bufImage = derived.pixelCorrectedImage.toBufferedImage(Color.cyan)
+
+      val bufImage = derived.originalImage.toBufferedImage(colorMap, derived.pixelCorrectedImage.min, derived.pixelCorrectedImage.max)
       val url = WebServer.urlOfResultsFile(rtimage.file)
       DicomAccess.write(rtimage, url, "RTIMAGE Beam " + beamName, outputDir, Some(bufImage), derived.badPixelList)
     }
@@ -220,17 +222,14 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     val planLink = extendedData.dicomHref(runReq.rtplan)
     DicomAccess.write(runReq.rtplan, planLink, "RTPLAN", outputDir, None, IndexedSeq[Point]())
 
-    val floodLink = WebServer.urlOfResultsFile(runReq.flood.file)
-    def writeFlood = {
-      val bufImage = runReq.floodCorrectedImage.toBufferedImage(Color.cyan)
-      DicomAccess.write(runReq.flood, floodLink, Config.FloodFieldBeamName, outputDir, Some(bufImage), runReq.floodBadPixelList)
-    }
-    writeFlood
+    val floodLink = extendedData.dicomHref(runReq.flood)
+    val floodBufImage = runReq.floodOriginalImage.toBufferedImage(colorMap, runReq.floodCorrectedImage.min, runReq.floodCorrectedImage.max)
+    DicomAccess.write(runReq.flood, floodLink, Config.FloodFieldBeamName, outputDir, Some(floodBufImage), runReq.floodBadPixelList)
 
     runReq.rtimageMap.keys.map(beamName => dicomView(beamName))
 
     def beamRef(beamName: String): Elem = {
-      <tr><td><a href={ WebServer.urlOfResultsFile(runReq.rtimageMap(beamName).file) }>{ beamName }</a></td></tr>
+      <tr><td><a href={ extendedData.dicomHref(runReq.rtimageMap(beamName)) }>{ beamName }</a></td></tr>
     }
 
     val content = {
