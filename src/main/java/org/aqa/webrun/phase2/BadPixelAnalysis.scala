@@ -21,6 +21,7 @@ object BadPixelAnalysis extends Logging {
    * Run the PositioningCheck sub-procedure, save results in the database, return true for pass or false for fail.  For it to pass all images have to pass.
    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): (ProcedureStatus.Value, Elem) = {
+    // TODO store bad pixels
     (ProcedureStatus.done, { <div>Hey from extendedData.dicomHref </div> }) // TODO
   }
 }
