@@ -201,52 +201,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     rtimageList.map(rtimage => (Phase2Util.getBeamNameOfRtimage(plan, rtimage), rtimage)).filter(ni => ni._1.isDefined).map(ni => (ni._1.get, ni._2)).toMap
   }
 
-  /**
-   * Make the DICOM files web viewable.
-   */
-  private def makeDicomViews(extendedData: ExtendedData, runReq: RunReq): Elem = {
-    val outputDir = extendedData.output.dir
-    val fileName = "ViewDicom.html"
-    val colorMap = ImageUtil.rgbColorMap(Color.cyan)
-
-    def dicomView(beamName: String) = {
-      val rtimage = runReq.rtimageMap(beamName)
-      val derived = runReq.derivedMap(beamName)
-
-      val bufImage = derived.originalImage.toBufferedImage(colorMap, derived.pixelCorrectedImage.min, derived.pixelCorrectedImage.max)
-      val url = WebServer.urlOfResultsFile(rtimage.file)
-      DicomAccess.write(rtimage, url, "RTIMAGE Beam " + beamName, outputDir, Some(bufImage), derived.badPixelList)
-    }
-
-    // write the rtplan
-    val planLink = extendedData.dicomHref(runReq.rtplan)
-    DicomAccess.write(runReq.rtplan, planLink, "RTPLAN", outputDir, None, IndexedSeq[Point]())
-
-    val floodLink = extendedData.dicomHref(runReq.flood)
-    val floodBufImage = runReq.floodOriginalImage.toBufferedImage(colorMap, runReq.floodCorrectedImage.min, runReq.floodCorrectedImage.max)
-    DicomAccess.write(runReq.flood, floodLink, Config.FloodFieldBeamName, outputDir, Some(floodBufImage), runReq.floodBadPixelList)
-
-    runReq.rtimageMap.keys.map(beamName => dicomView(beamName))
-
-    def beamRef(beamName: String): Elem = {
-      <tr><td><a href={ extendedData.dicomHref(runReq.rtimageMap(beamName)) }>{ beamName }</a></td></tr>
-    }
-
-    val content = {
-      <table>
-        <tr><td><a href={ planLink }>Plan</a></td></tr>
-        <tr><td><a href={ floodLink }>Flood Field</a></td></tr>
-        { runReq.rtimageMap.keys.map(beamName => beamRef(beamName)) }
-      </table>
-    }
-
-    val text = Phase2Util.wrapSubProcedure(extendedData, content, "View Dicom", ProcedureStatus.pass)
-    val file = new File(outputDir, fileName)
-    Util.writeBinaryFile(file, text.getBytes)
-
-    <a href={ fileName }>View Dicom</a>
-  }
-
   private def aggregateStatuses(list: Seq[ProcedureStatus.Value]): ProcedureStatus.Value = {
     val badList = list.distinct.filter(s => s != ProcedureStatus.pass).filter(s => s != ProcedureStatus.done)
     if (badList.isEmpty) ProcedureStatus.pass else ProcedureStatus.fail
@@ -256,12 +210,11 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
    * Run the sub-procedures.
    */
   private def runPhase2(extendedData: ExtendedData, rtimageMap: Map[String, DicomFile], runReq: RunReq): ProcedureStatus.Value = {
-    val dicomViews = makeDicomViews(extendedData, runReq)
     val psnChkSummary = PositioningCheckAnalysis.runProcedure(extendedData, runReq)
-    BadPixelAnalysis.runProcedure(extendedData, runReq)
+    val badPixelSummary = BadPixelAnalysis.runProcedure(extendedData, runReq)
     val colCnrtSummary = CollimatorCenteringAnalysis.runProcedure(extendedData, runReq)
     val floodRtimage = rtimageMap.get(Config.FloodFieldBeamName).get
-    makeHtml(extendedData, psnChkSummary._1, Seq(dicomViews, psnChkSummary._2, colCnrtSummary._2))
+    makeHtml(extendedData, psnChkSummary._1, Seq(badPixelSummary._2, psnChkSummary._2, colCnrtSummary._2))
     aggregateStatuses(Seq(psnChkSummary._1, colCnrtSummary._1))
   }
 

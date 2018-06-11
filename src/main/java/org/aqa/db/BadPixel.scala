@@ -67,6 +67,13 @@ object BadPixel extends ProcedureOutput {
     def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
+  /**
+   * Size of region around bad pixel reported for comparison. Should be a small positive integer.
+   * For example: A value of n equal 2 results in (n*2+1 = 5) would mean that a 5x5 region would
+   * be put in the CSV with the bad pixel at the center.
+   */
+  val radius = 2
+
   val query = TableQuery[BadPixelTable]
 
   override val topXmlLabel = "BadPixel"
