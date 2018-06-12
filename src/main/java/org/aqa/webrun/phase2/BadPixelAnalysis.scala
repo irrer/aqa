@@ -69,7 +69,7 @@ object BadPixelAnalysis extends Logging {
   /**
    * Make the DICOM files web viewable.
    */
-  private def makeDicomViews(extendedData: ExtendedData, runReq: RunReq): Unit = {
+  private def makeDicomViews(extendedData: ExtendedData, runReq: RunReq, badPixelList: Seq[BadPixel]): Unit = {
     val outputDir = extendedData.output.dir
     val colorMap = ImageUtil.rgbColorMap(Color.cyan)
     val smallImageWidth = 100.toString
@@ -98,26 +98,55 @@ object BadPixelAnalysis extends Logging {
     }
 
     val content = {
-      val planRef = <a href={ planLink }>Plan</a>
-      val floodRef = <a href={ floodLink }>{ Config.FloodFieldBeamName }<br/><img src={ floodPngHref } width={ smallImageWidth }/></a>
+      val planRef = { <a href={ planLink }>Plan</a> }
+      val floodRef = { <a href={ floodLink }>{ Config.FloodFieldBeamName }<br/><img src={ floodPngHref } width={ smallImageWidth }/></a> }
       val rtimgRef = runReq.rtimageMap.keys.map(beamName => beamRef(beamName))
       val allRef = (rtimgRef ++ Seq(floodRef, planRef)).map(ref => { <div class="col-md-2" style="margin:20px;">{ ref }</div> })
       val perRow = 4
       val rowList = (0 until ((allRef.size + perRow - 1) / perRow)).map(row => allRef.drop(row * perRow).take(perRow))
       val matrix = rowList.map(row => { <div class="row">{ row }</div> })
-      <div>{ matrix }</div>
+
+      val imageCount = runReq.rtimageMap.size + 1 // beams plus flood
+      val badPixelCount = badPixelList.size
+      val distinctBadPixelCount = badPixelList.map(bp => (bp.x, bp.y)).distinct.size
+
+      val subTitle = {
+        <table class="table table-responsive">
+          <tr>
+            <td>
+              Images:{ imageCount.toString }
+            </td>
+            <td>
+              Total bad pixels:{ badPixelCount.toString }
+            </td>
+            <td>
+              Distinct bad pixels:{ distinctBadPixelCount.toString }
+            </td>
+          </tr>
+        </table>
+      }
+
+      val mainElem = {
+        <div>
+          { subTitle }
+          { matrix }
+        </div>
+      }
+
+      mainElem
     }
 
     val text = Phase2Util.wrapSubProcedure(extendedData, content, "View Dicom", ProcedureStatus.pass)
     val file = new File(outputDir, fileName)
     Util.writeBinaryFile(file, text.getBytes)
   }
+
   /**
    * Run the PositioningCheck sub-procedure, save results in the database, return true for pass or false for fail.  For it to pass all images have to pass.
    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): (ProcedureStatus.Value, Elem) = {
     val badPixelList = storeToDb(extendedData, runReq)
-    makeDicomViews(extendedData, runReq)
+    makeDicomViews(extendedData, runReq, badPixelList)
 
     val summary = {
 

@@ -21,6 +21,7 @@ import org.aqa.db.BadPixel
 import edu.umro.ImageUtil.DicomImage
 import java.awt.BasicStroke
 import edu.umro.ImageUtil.ImageText
+import slick.lifted.Constraint
 
 /**
  * Create a web page to display a DICOM file.
@@ -66,10 +67,16 @@ object DicomAccess extends Logging {
       val yy = y + bufY
       if (dicomImage.validPoint(xx, yy)) {
         val rbg = bufferedImage.getRGB(xx, yy)
-        graphics.setColor(new Color(rbg))
+        val color = new Color(rbg)
+        graphics.setColor(color)
         graphics.fillRect(xi, yi, pixelSize, pixelSize)
 
-        graphics.setColor(new Color(rbg ^ 0xffffff)) // set color for maximum contrast
+        // color for good contrast to background
+        val contrastingColor = {
+          val brightness = (color.getRed + color.getGreen + color.getBlue) / 3.0
+          if (brightness >= 128) Color.black else Color.white
+        }
+        graphics.setColor(contrastingColor)
         ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
         val text = dicomImage.get(xx, yy).round.toInt.toString
         ImageText.drawTextCenteredAt(graphics, xi + pixelSize / 2, yi + pixelSize / 2, text)
