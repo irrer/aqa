@@ -20,6 +20,7 @@ import org.aqa.Util
 import org.aqa.db.BadPixel
 import edu.umro.ImageUtil.DicomImage
 import java.awt.BasicStroke
+import edu.umro.ImageUtil.ImageText
 
 /**
  * Create a web page to display a DICOM file.
@@ -34,6 +35,10 @@ object DicomAccess extends Logging {
 
   /** Size to show a pixel in pixels.  Equivalent to a magnification factor. */
   private val pixelSize = 50
+  private val textPointSize = 11
+
+  /** Show this number of zoomed bad pixels per row. */
+  private val pixRow = 4
 
   private val badPixelDirName = "badPixels"
 
@@ -54,14 +59,20 @@ object DicomAccess extends Logging {
     graphics.fillRect(0, 0, imgSize, imgSize)
 
     def fmtPoint(bufX: Int, bufY: Int): Unit = {
-      val xi = bufX * (pixelSize + 1)
-      val yi = bufY * (pixelSize + 1)
+      val xi = (bufX + BadPixel.radius) * (pixelSize + 1)
+      val yi = (bufY + BadPixel.radius) * (pixelSize + 1)
 
       val xx = x + bufX
       val yy = y + bufY
-      if (dicomImage.validPoint(xx, y)) {
-        graphics.setColor(new Color(bufferedImage.getRGB(xx, yy)))
+      if (dicomImage.validPoint(xx, yy)) {
+        val rbg = bufferedImage.getRGB(xx, yy)
+        graphics.setColor(new Color(rbg))
         graphics.fillRect(xi, yi, pixelSize, pixelSize)
+
+        graphics.setColor(new Color(rbg ^ 0xffffff)) // set color for maximum contrast
+        ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
+        val text = dicomImage.get(xx, yy).round.toInt.toString
+        ImageText.drawTextCenteredAt(graphics, xi + pixelSize / 2, yi + pixelSize / 2, text)
       } else {
         graphics.setColor(naColor)
         graphics.setStroke(naStroke)
@@ -84,9 +95,9 @@ object DicomAccess extends Logging {
     val x = badPixel.getX.round.toInt
     val y = badPixel.getY.round.toInt
 
-    <div class="col-md-2">
+    <div class="col-md-2" style="margin:8px;">
       <center>
-        <h2>{ x.toString + ", " + y.toString }</h2>
+        <h4 title="Pixel coordinates">{ x.toString + ", " + y.toString }</h4>
       </center>
       <img src={ WebServer.urlOfResultsFile(pngFile) }/>
     </div>
@@ -101,7 +112,6 @@ object DicomAccess extends Logging {
     val badPixelDir = new File(outputDir, badPixelDirName)
     badPixelDir.mkdirs
 
-    val pixRow = 5
     val badPixelVisualizationList = badPixelList.map(badPixel => badPixelToHtml(badPixel, dicomImage, fileBaseName, bufferedImage, badPixelDir))
     val rowList = (0 until ((badPixelVisualizationList.size + pixRow - 1) / pixRow)).map(row => badPixelVisualizationList.drop(row * pixRow).take(pixRow))
 
@@ -113,14 +123,16 @@ object DicomAccess extends Logging {
     val imageContent = {
       <div>
         <a href={ imagePageUrl }><img src={ pngUrl }/></a>
-        <p></p>
+        <p/>
+        <h2 title="Zoomed view of bad pixels (centered in each) and raw values with immediate neighbors.">Bad Pixels : { badPixelList.size }</h2>
+        <p/>
         { allRows }
       </div>
     }
 
     val mainImagePage = {
       <div class="col-md-10 col-md-offset-1">
-        <h2 title="Image and bad pixels">{ title }</h2>
+        <h2 title="Image with bad pixels annotated">{ title }</h2>
         { imageContent }
       </div>
     }

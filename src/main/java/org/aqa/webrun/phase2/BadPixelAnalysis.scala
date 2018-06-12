@@ -29,7 +29,7 @@ object BadPixelAnalysis extends Logging {
   /**
    * Store the bad pixels in the database and return the number of bad pixels.
    */
-  private def storeToDb(extendedData: ExtendedData, runReq: RunReq): Int = {
+  private def storeToDb(extendedData: ExtendedData, runReq: RunReq): Seq[BadPixel] = {
 
     /**
      * Given a point, create CSV text showing values for the region around that point.
@@ -43,30 +43,33 @@ object BadPixelAnalysis extends Logging {
 
     val outputPK = extendedData.output.outputPK.get
 
-    def beamToBadPixels(beamName: String): Seq[BadPixel] = {
-      val derived = runReq.derivedMap(beamName)
-
-      val SOPInstanceUID = runReq.rtimageMap(beamName).attributeList.get.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull
-
-      derived.badPixelList.map(bp => {
+    def beamToBadPixels(beamName: String, SOPInstanceUID: String, badPixelList: IndexedSeq[Point], originalImage: DicomImage): Seq[BadPixel] = {
+      badPixelList.map(bp => {
         val x = bp.getX.round.toInt
         val y = bp.getY.round.toInt
-        val j = new BadPixel(None, extendedData.output.outputPK.get, x, y, SOPInstanceUID, beamName, makeCsv(x, y, derived.originalImage))
+        val j = new BadPixel(None, extendedData.output.outputPK.get, x, y, SOPInstanceUID, beamName, makeCsv(x, y, originalImage))
         j
       })
     }
 
-    val beamList = runReq.rtimageMap.keys.map(beamName => beamToBadPixels(beamName)).flatten.toSeq
-    val floodList = Seq[BadPixel]()       // TODO should process flood bad pixels!!!!
-    val list = beamList ++ floodList
+    val beamList = runReq.rtimageMap.keys.map(beamName =>
+      {
+        val SOPInstanceUID = runReq.rtimageMap(beamName).attributeList.get.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull
+        beamToBadPixels(beamName, SOPInstanceUID, runReq.derivedMap(beamName).badPixelList, runReq.derivedMap(beamName).originalImage)
+      }).flatten.toSeq
+
+    val floodSOPInstanceUID = runReq.flood.attributeList.get.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull
+    val floodBadPixelList = beamToBadPixels(Config.FloodFieldBeamName, floodSOPInstanceUID, runReq.floodBadPixelList, runReq.floodOriginalImage)
+
+    val list = beamList ++ floodBadPixelList
     BadPixel.insert(list)
-    list.size
+    list
   }
 
   /**
    * Make the DICOM files web viewable.
    */
-  private def makeDicomViews(extendedData: ExtendedData, runReq: RunReq): Elem = {
+  private def makeDicomViews(extendedData: ExtendedData, runReq: RunReq): Unit = {
     val outputDir = extendedData.output.dir
     val colorMap = ImageUtil.rgbColorMap(Color.cyan)
 
@@ -104,15 +107,30 @@ object BadPixelAnalysis extends Logging {
     val text = Phase2Util.wrapSubProcedure(extendedData, content, "View Dicom", ProcedureStatus.pass)
     val file = new File(outputDir, fileName)
     Util.writeBinaryFile(file, text.getBytes)
-
-    <a href={ fileName }>View Dicom</a>
   }
   /**
    * Run the PositioningCheck sub-procedure, save results in the database, return true for pass or false for fail.  For it to pass all images have to pass.
    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): (ProcedureStatus.Value, Elem) = {
-    val badPixelCount = storeToDb(extendedData, runReq)
-    val summary = makeDicomViews(extendedData, runReq)
-    (ProcedureStatus.done, { <div><a href={ BadPixelAnalysis.fileName }>View DICOM<p></p>{ badPixelCount } bad pixels</a></div> }) // TODO
+    val badPixelList = storeToDb(extendedData, runReq)
+    makeDicomViews(extendedData, runReq)
+
+    val summary = {
+
+      val imageCount = runReq.rtimageMap.size + 1 // beams plus flood
+      val badPixelCount = badPixelList.size
+      val distinctBadPixelCount = badPixelList.map(bp => (bp.x, bp.y)).distinct.size
+
+      val title = "Click to view and download DICOM files.  Images: " + imageCount + "  Bad pixels: " + badPixelCount + "  Distinct bad pixels: " + distinctBadPixelCount
+      <div title={ title }>
+        <a href={ fileName }>
+          View DICOM
+          <br/>
+          <img src={ Config.passImageUrl } height="32"/>
+        </a>
+      </div>
+    }
+
+    (ProcedureStatus.done, summary)
   }
 }
