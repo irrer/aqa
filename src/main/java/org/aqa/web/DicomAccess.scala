@@ -145,7 +145,9 @@ object DicomAccess extends Logging {
     <a href={ imagePageUrl }><img src={ pngUrl } width="256"></img></a>
   }
 
-  private def makePage(dicom: DicomFile, urlOfFile: String, title: String, outputDir: File, bufferedImage: Option[BufferedImage], dicomImage: Option[DicomImage], badPixelList: IndexedSeq[Point]): Unit = {
+  private def makePage(dicom: DicomFile, urlOfFile: String, title: String,
+    outputDir: File, bufferedImage: Option[BufferedImage],
+    dicomImage: Option[DicomImage], badPixelList: IndexedSeq[Point]): Option[String] = {
 
     val fileBaseName = Util.removeFileNameSuffix(dicom.file.getName)
     val downloadLink = { <a href={ WebServer.urlOfResultsFile(dicom.file) } title="Download as DICOM">Download</a> }
@@ -186,6 +188,7 @@ object DicomAccess extends Logging {
       ImageIO.write(bufferedImage.get, "png", fos)
     }
 
+    if (bufferedImage.isDefined) Some(WebServer.urlOfResultsFile(pngFile)) else None
   }
 
   /**
@@ -201,13 +204,14 @@ object DicomAccess extends Logging {
    *
    * @param badPixelList: List of bad pixels.  If non-empty, annotate them on the image and show a zoomed view of each.
    */
-  def write(dicom: DicomFile, urlOfFile: String, title: String, dir: File, bufferedImage: Option[BufferedImage], dicomImage: Option[DicomImage], badPixelList: IndexedSeq[Point]): Unit = {
+  def write(dicom: DicomFile, urlOfFile: String, title: String, dir: File, bufferedImage: Option[BufferedImage], dicomImage: Option[DicomImage], badPixelList: IndexedSeq[Point]): Option[String] = {
     try {
       dir.mkdirs
       makePage(dicom, urlOfFile, title, dir, bufferedImage, dicomImage, badPixelList)
     } catch {
       case t: Throwable => {
         logger.warn("Unexpected error while generating DICOM view for directory " + dir.getAbsolutePath + " : " + fmtEx(t))
+        None
       }
     }
   }

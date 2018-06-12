@@ -72,8 +72,9 @@ object BadPixelAnalysis extends Logging {
   private def makeDicomViews(extendedData: ExtendedData, runReq: RunReq): Unit = {
     val outputDir = extendedData.output.dir
     val colorMap = ImageUtil.rgbColorMap(Color.cyan)
+    val smallImageWidth = 100.toString
 
-    def dicomView(beamName: String) = {
+    def dicomView(beamName: String): Option[String] = {
       val rtimage = runReq.rtimageMap(beamName)
       val derived = runReq.derivedMap(beamName)
 
@@ -88,20 +89,23 @@ object BadPixelAnalysis extends Logging {
 
     val floodLink = extendedData.dicomHref(runReq.flood)
     val floodBufImage = runReq.floodOriginalImage.toBufferedImage(colorMap, runReq.floodCorrectedImage.min, runReq.floodCorrectedImage.max)
-    DicomAccess.write(runReq.flood, floodLink, Config.FloodFieldBeamName, outputDir, Some(floodBufImage), Some(runReq.floodOriginalImage), runReq.floodBadPixelList)
+    val floodPngHref = DicomAccess.write(runReq.flood, floodLink, Config.FloodFieldBeamName, outputDir, Some(floodBufImage), Some(runReq.floodOriginalImage), runReq.floodBadPixelList).get
 
-    runReq.rtimageMap.keys.map(beamName => dicomView(beamName))
+    val pngImageMap = runReq.rtimageMap.keys.map(beamName => (beamName, dicomView(beamName).get)).toMap
 
     def beamRef(beamName: String): Elem = {
-      <tr><td><a href={ extendedData.dicomHref(runReq.rtimageMap(beamName)) }>{ beamName }</a></td></tr>
+      <a href={ extendedData.dicomHref(runReq.rtimageMap(beamName)) }>{ beamName }<br/><img src={ pngImageMap(beamName) } width={ smallImageWidth }/></a>
     }
 
     val content = {
-      <table>
-        <tr><td><a href={ planLink }>Plan</a></td></tr>
-        <tr><td><a href={ floodLink }>Flood Field</a></td></tr>
-        { runReq.rtimageMap.keys.map(beamName => beamRef(beamName)) }
-      </table>
+      val planRef = <a href={ planLink }>Plan</a>
+      val floodRef = <a href={ floodLink }>{ Config.FloodFieldBeamName }<br/><img src={ floodPngHref } width={ smallImageWidth }/></a>
+      val rtimgRef = runReq.rtimageMap.keys.map(beamName => beamRef(beamName))
+      val allRef = (rtimgRef ++ Seq(floodRef, planRef)).map(ref => { <div class="col-md-2" style="margin:20px;">{ ref }</div> })
+      val perRow = 4
+      val rowList = (0 until ((allRef.size + perRow - 1) / perRow)).map(row => allRef.drop(row * perRow).take(perRow))
+      val matrix = rowList.map(row => { <div class="row">{ row }</div> })
+      <div>{ matrix }</div>
     }
 
     val text = Phase2Util.wrapSubProcedure(extendedData, content, "View Dicom", ProcedureStatus.pass)
