@@ -95,16 +95,20 @@ object Phase2Util extends Logging {
   /**
    * If a plan was used that was not already saved, then save it to the shared directory so that it will be available for future runs.
    */
-  def saveRtplan(plan: DicomFile) = { // TODO plan is null!!??
+  def saveRtplan(plan: DicomFile) = {
     try {
       if (plan.file.getParentFile != Config.sharedDir) {
         val data = Util.readBinaryFile(plan.file)
-        val planFile = new File(Config.sharedDir, plan.attributeList.get.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull + Util.dicomFileNameSuffix)
-        Util.writeBinaryFile(planFile, data.right.get)
-        logger.info("Wrote new plan file " + planFile)
+        if (data.isLeft) {
+          logger.warn("Could not read RTPLAN file " + plan.file + " : " + fmtEx(data.left.get))
+        } else {
+          val planFile = new File(Config.sharedDir, plan.attributeList.get.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull + Util.dicomFileNameSuffix)
+          Util.writeBinaryFile(planFile, data.right.get)
+          logger.info("Wrote new plan file " + planFile)
+        }
       }
     } catch {
-      case t: Throwable => logger.error("Unable to save rtplan " + plan.file.getAbsolutePath + " : " + t)
+      case t: Throwable => logger.error("Unable to save rtplan " + plan.file.getAbsolutePath + " : " + fmtEx(t))
     }
   }
 

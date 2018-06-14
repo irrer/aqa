@@ -241,7 +241,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
         val extendedData = ExtendedData.get(output)
         val runReqFinal = runReq.reDir(input.dir)
 
-        val plan = runReq.rtplan
+        val plan = runReqFinal.rtplan
         val machine = runReqFinal.machine
         Phase2Util.saveRtplan(plan)
 
