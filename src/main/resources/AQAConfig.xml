@@ -5,7 +5,8 @@ Note that when building a package for release, the Maven build process uses the 
 
 <AQAConfig>
     <!-- Database parameters. -->
-    <SlickDbsDefaultDbUrl HostIp='141.214.125.209'>jdbc:postgresql://141.214.125.209:5432/AQATest</SlickDbsDefaultDbUrl>
+    <SlickDbsDefaultDbUrl HostIp='141.214.125.209'>jdbc:postgresql://141.214.125.209:5432/AQATest
+    </SlickDbsDefaultDbUrl>
     <SlickDbsDefaultDriver>slick.driver.PostgresDriver$</SlickDbsDefaultDriver>
     <SlickDbsDefaultDbDriver>org.postgresql.Driver</SlickDbsDefaultDbDriver>
 
@@ -23,7 +24,8 @@ Note that when building a package for release, the Maven build process uses the 
     </JavaKeyStoreFileList>
 
     <!-- The password to access the Java Key Store file. -->
-    <JavaKeyStorePassword>9c067233b07c7b04025989a197fad9b12cf4c19006678e2b18b121289bd1635a2d395a603122a6e6</JavaKeyStorePassword> <!-- rodicom11dev -->
+    <JavaKeyStorePassword>9c067233b07c7b04025989a197fad9b12cf4c19006678e2b18b121289bd1635a2d395a603122a6e6
+    </JavaKeyStorePassword> <!-- rodicom11dev -->
     <!-- <JavaKeyStorePassword>44d18166c66bed60b6394e6625c63dea713dbe465ddc960a7cd109514bc0d2bd</JavaKeyStorePassword> -->     <!-- irrer -->
 
     <!-- Directory containing executables and configuration files to run procedures. -->
@@ -55,9 +57,9 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Terms of use for this service (legal). -->
     <TermsOfUse>
-    Terms Of Use
+        Terms Of Use
 
-    To Be Determined
+        To Be Determined
     </TermsOfUse>
 
     <!-- Maximum amount of time in minutes that a procedure should take.  This is used when
@@ -99,5 +101,24 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- An estimate of how many bad pixels (integer >= 0) to expect per million pixels.  A good
     estimate can marginally improve results, but a bad estimate will probably still be acceptable. -->
     <BadPixelStdDevMultiple>2.0</BadPixelStdDevMultiple>
+
+    <!-- Radius in mm (floating point) centered in an image defining the pixels to be used to determine dose. -->
+    <CenterDoseRadius_mm>5.0</CenterDoseRadius_mm>
+
+    <!-- List of beam names of that can be used to record dose at the center of the image. -->
+    <CenterDoseBeamNameList>
+        <BeamName>J10G180</BeamName>
+        <BeamName>Flood 6X</BeamName>
+        <BeamName>J10G90</BeamName>
+        <BeamName>T2 Open</BeamName>
+        <BeamName>J20G0-6F</BeamName>
+        <BeamName>J10G0C270-6X</BeamName>
+        <BeamName>J20G0-6X</BeamName>
+        <BeamName>J20G0-16X</BeamName>
+        <BeamName>J10G0C90EDW45-6X</BeamName>
+        <BeamName>T3 Open</BeamName>
+        <BeamName>J10G0C90-6X</BeamName>
+        <BeamName>J10G270</BeamName>
+    </CenterDoseBeamNameList>
 
 </AQAConfig>

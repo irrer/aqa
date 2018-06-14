@@ -334,6 +334,12 @@ object Config extends Logging {
     list
   }
 
+  private def getCenterDoseBeamNameList = {
+    val list = (document \ "CenterDoseBeamNameList" \ "BeamName").map(n => n.head.text.toString).toList
+    logText("CenterDoseBeamNameList", list.mkString("\n        ", "\n        ", "\n"))
+    list
+  }
+
   val SlickDbsDefaultDbUrl = logMainText("SlickDbsDefaultDbUrl")
   val SlickDbsDefaultDbUser = getDbUser
   val SlickDbsDefaultDbPassword = getDbPassword
@@ -368,10 +374,14 @@ object Config extends Logging {
     if (!dir.canRead) fail("Directory " + name + " is not readable: " + dir)
     if (!dir.isDirectory) fail("Directory " + name + " is required but is not a directory: " + dir)
   }
+
   // force each of these directories to be usable.  It would be catastrophic if this fails.
   requireReadableDirectory("resultsDirFile", resultsDirFile)
   requireReadableDirectory("tmpDirFile", tmpDirFile)
   requireReadableDirectory("machineConfigurationDirFile", machineConfigurationDirFile)
+
+  val CenterDoseRadius_mm = logMainText("CenterDoseSampleRadius_mm").toDouble
+  val CenterDoseBeamNameList = getCenterDoseBeamNameList
 
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true
