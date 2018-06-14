@@ -28,6 +28,8 @@ object Config extends Logging {
   private val configFileName = "AQAConfig.xml";
   private val DEFAULT_RESTART_TIME = "1:20"
 
+  logger.info("Starting configuration.  File name: " + configFileName)
+
   /** Root directory name for static directory. */
   val staticDirName = "static"
 
@@ -39,6 +41,11 @@ object Config extends Logging {
 
   /** Root directory name for machine configuration files. */
   val machineConfigurationDirName = "MachineConfiguration"
+
+  private def fail(msg: String) {
+    logger.error(msg)
+    throw new RuntimeException(msg)
+  }
 
   def makeDataDir(dirName: String): File = {
     val dir = new File(DataDir, dirName)
@@ -175,7 +182,7 @@ object Config extends Logging {
 
   private def getMainText(name: String): String = {
     val list = document \ name
-    if (list.isEmpty) throw new RuntimeException("No such XML node " + name)
+    if (list.isEmpty) fail("No such XML node " + name)
 
     def forThisHost(node: Node) = {
       val attr = (node \ "@HostIp").headOption
@@ -191,7 +198,11 @@ object Config extends Logging {
     (thisHost, noHost) match {
       case (Some(th), _) => th.text
       case (_, Some(nh)) => nh.text
-      case _ => throw new RuntimeException("No such XML node " + name)
+      case _ => {
+        val msg = "No such XML node " + name
+        fail(msg)
+        msg
+      }
     }
   }
 
@@ -353,9 +364,14 @@ object Config extends Logging {
 
   val TermsOfUse = logMainText("TermsOfUse")
 
-  // force each of these directories to be created.  It would be catastrophic if this fails.
-  if (!(Seq(resultsDirFile, tmpDirFile, machineConfigurationDirFile).map(d => (d.isDirectory && d.canRead)).reduce(_ && _)))
-    throw new RuntimeException("can not read all necessary directories")
+  private def requireReadableDirectory(name: String, dir: File) = {
+    if (!dir.canRead) fail("Directory " + name + " is not readable: " + dir)
+    if (!dir.isDirectory) fail("Directory " + name + " is required but is not a directory: " + dir)
+  }
+  // force each of these directories to be usable.  It would be catastrophic if this fails.
+  requireReadableDirectory("resultsDirFile", resultsDirFile)
+  requireReadableDirectory("tmpDirFile", tmpDirFile)
+  requireReadableDirectory("machineConfigurationDirFile", machineConfigurationDirFile)
 
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true
@@ -368,6 +384,7 @@ object Config extends Logging {
     { valueText.map(line => <br>{ line } </br>) }.toSeq
   }
 
+  logger.info("Configuration has been validated.")
   logger.info(toString)
 
   def main(args: Array[String]): Unit = {
