@@ -380,7 +380,7 @@ object Config extends Logging {
   requireReadableDirectory("tmpDirFile", tmpDirFile)
   requireReadableDirectory("machineConfigurationDirFile", machineConfigurationDirFile)
 
-  val CenterDoseRadius_mm = logMainText("CenterDoseSampleRadius_mm").toDouble
+  val CenterDoseRadius_mm = logMainText("CenterDoseRadius_mm").toDouble
   val CenterDoseBeamNameList = getCenterDoseBeamNameList
 
   /** If this is defined, then the configuration was successfully initialized. */

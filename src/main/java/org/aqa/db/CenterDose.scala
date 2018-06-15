@@ -12,6 +12,7 @@ import org.aqa.procedures.ProcedureOutput
 case class CenterDose(
   centerDosePK: Option[Long], // primary key
   outputPK: Long, // output primary key
+  SOPInstanceUID: String, // UID of source image
   beamName: String, // name of beam in plan
   dose: Double, // dose value
   units: String) {
@@ -30,6 +31,7 @@ case class CenterDose(
   override def toString: String = {
     "    centerDosePK: " + centerDosePK + "\n" +
       "    outputPK: " + outputPK + "\n" +
+      "    SOPInstanceUID: " + SOPInstanceUID + "\n" +
       "    beamName: " + beamName + "\n" +
       "    dose: " + dose + "\n" +
       "    units: " + units + "\n"
@@ -41,6 +43,7 @@ object CenterDose extends ProcedureOutput {
 
     def centerDosePK = column[Long]("centerDosePK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
+    def SOPInstanceUID = column[String]("SOPInstanceUID")
     def beamName = column[String]("beamName")
     def dose = column[Double]("dose")
     def units = column[String]("units")
@@ -48,6 +51,7 @@ object CenterDose extends ProcedureOutput {
     def * = (
       centerDosePK.?,
       outputPK,
+      SOPInstanceUID,
       beamName,
       dose,
       units) <> ((CenterDose.apply _)tupled, CenterDose.unapply _)

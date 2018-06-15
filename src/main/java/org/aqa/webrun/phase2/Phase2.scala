@@ -214,8 +214,9 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     val badPixelSummary = BadPixelAnalysis.runProcedure(extendedData, runReq)
     val colCnrtSummary = CollimatorCenteringAnalysis.runProcedure(extendedData, runReq)
     val floodRtimage = rtimageMap.get(Config.FloodFieldBeamName).get
-    makeHtml(extendedData, psnChkSummary._1, Seq(badPixelSummary._2, psnChkSummary._2, colCnrtSummary._2))
-    aggregateStatuses(Seq(psnChkSummary._1, colCnrtSummary._1))
+    val centerDose = CenterDoseAnalysis.runProcedure(extendedData, runReq)
+    makeHtml(extendedData, psnChkSummary._1, Seq(badPixelSummary._2, psnChkSummary._2, colCnrtSummary._2, centerDose._2))
+    aggregateStatuses(Seq(psnChkSummary._1, colCnrtSummary._1, centerDose._1))
   }
 
   /**
