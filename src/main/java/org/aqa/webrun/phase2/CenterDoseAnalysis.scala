@@ -77,10 +77,14 @@ object CenterDoseAnalysis extends Logging {
           <div class="col-md-1">{ viewRtPlan }</div>
         </div>
         <div class="row" style="margin:20px;">
-          <table class="table table-striped">
-            { centerDoseTableHeader }
-            <tbody>{ tbody }</tbody>
-          </table>
+          <div class="row" style="margin:20px;">
+            <div class="col-md-3 col-md-offset-2">
+              <table class="table table-striped">
+                { centerDoseTableHeader }
+                <tbody>{ tbody }</tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     }
@@ -114,20 +118,24 @@ object CenterDoseAnalysis extends Logging {
     val height = attributeList.get(TagFromName.Rows).getIntegerValues().head
 
     // get center of image, accounting for 1/2 pixel offset
-    val xCenter = (width / 2.0) + 0.5
-    val yCenter = (height / 2.0) + 0.5
+    val xCenter = (width / 2.0) + 0.5 // in pixels
+    val yCenter = (height / 2.0) + 0.5 // in pixels
 
     // center of image in mm
-    val center = new Point2D.Double(xCenter / spacing.getX, yCenter / spacing.getY)
+    val center = new Point2D.Double(xCenter * spacing.getX, yCenter * spacing.getY)
 
-    val xRadius = (Config.CenterDoseRadius_mm / spacing.getX).ceil.toInt
-    val yRadius = (Config.CenterDoseRadius_mm / spacing.getY).ceil.toInt
+    val xRadius = (Config.CenterDoseRadius_mm / spacing.getX).toInt + 2 // in pixels
+    val yRadius = (Config.CenterDoseRadius_mm / spacing.getY).toInt + 2 // in pixels
+    println("xRadius: " + xRadius) // TODO rm
+    println("yRadius: " + yRadius) // TODO rm
 
-    val xRange = (xCenter - xRadius).floor.toInt to (xCenter + xRadius).ceil.toInt
-    val yRange = (yCenter - yRadius).floor.toInt to (yCenter + yRadius).ceil.toInt
+    val xRange = (xCenter - xRadius).floor.toInt to (xCenter + xRadius).ceil.toInt // pixel range
+    val yRange = (yCenter - yRadius).floor.toInt to (yCenter + yRadius).ceil.toInt // pixel range
+    println("xRange: " + xRange.mkString("  ")) // TODO rm
+    println("yRange: " + yRange.mkString("  ")) // TODO rm
 
     // step through pixels and see which are close enough.  Both x and y are in pixels.
-    def nearCenter(x: Int, y: Int): Boolean = center.distance(x / spacing.getX, y / spacing.getY) <= Config.CenterDoseRadius_mm
+    def nearCenter(x: Int, y: Int): Boolean = center.distance(x * spacing.getX, y * spacing.getY) <= Config.CenterDoseRadius_mm
 
     val pointList = for (x <- xRange; y <- yRange; if nearCenter(x, y)) yield { new Point(x, y) }
     pointList
@@ -135,7 +143,7 @@ object CenterDoseAnalysis extends Logging {
 
   private def analyse(extendedData: ExtendedData, runReq: RunReq): Seq[CenterDose] = {
     val pointList = makePointList(runReq.flood.attributeList.get)
-    println("PointList: \n    " + pointList.mkString("\n    "))   // TODO rm
+    println("PointList size: " + pointList.size + "\n    " + pointList.mkString("\n    ")) // TODO rm
     val outputPK = extendedData.output.outputPK.get
 
     /**
