@@ -28,17 +28,6 @@ object PositioningCheckHTML {
    */
   def makeDisplay(extendedData: ExtendedData, runReq: RunReq, resultList: Seq[PositioningCheck], status: ProcedureStatus.Value): Elem = {
 
-    val analysisDate: String = {
-      val date = extendedData.output.analysisDate match {
-        case Some(d) => d
-        case _ => extendedData.output.startDate
-      }
-      Util.timeHumanFriendly(date)
-    }
-
-    val machineId = extendedData.machine.id
-    val userId = extendedData.user.id
-
     PositioningCheckCSV.makeCsvFile(extendedData, runReq, resultList)
 
     val csvFileReference = {
