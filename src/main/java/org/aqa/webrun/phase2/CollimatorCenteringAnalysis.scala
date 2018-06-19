@@ -35,7 +35,9 @@ object CollimatorCenteringAnalysis extends Logging {
   private def getImageCenter_mm(al: AttributeList, ImagePlanePixelSpacing: Point2D.Double): Point2D.Double = {
     val Rows = al.get(TagFromName.Rows).getIntegerValues.head
     val Columns = al.get(TagFromName.Columns).getIntegerValues.head
-    new Point2D.Double(Columns * ImagePlanePixelSpacing.getX / 2, Rows * ImagePlanePixelSpacing.getY / 2)
+    val x = ((Columns / 2.0) - 0.5) * ImagePlanePixelSpacing.getX
+    val y = ((Rows / 2.0) - 0.5) * ImagePlanePixelSpacing.getY
+    new Point2D.Double(x, y)
   }
 
   /**
