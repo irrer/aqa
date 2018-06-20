@@ -190,7 +190,7 @@ object DicomAccess extends Logging {
     htmlOutStream.close
 
     if (bufferedImage.isDefined) {
-      badPixelList.map(bp => ImageUtil.annotatePixel(bufferedImage.get, bp.getX, bp.getY, Color.yellow, bp.getX.toInt + ", " + bp.getY.toInt, true))
+      badPixelList.map(bp => ImageUtil.annotatePixel(bufferedImage.get, bp.getX, bp.getY, bp.getX.toInt + ", " + bp.getY.toInt, true))
       val fos = new FileOutputStream(pngFile)
       ImageIO.write(bufferedImage.get, "png", fos)
     }

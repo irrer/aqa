@@ -168,7 +168,10 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       else {
         val runReq = basicBeamValid.right.get
         val err = PositioningCheckValidation.validate(runReq)
-        if (err.isDefined) Left(Error.make(form.uploadFileInput.get, err.get)) else Right(runReq)
+        if (err.isDefined) Left(Error.make(form.uploadFileInput.get, err.get)) else {
+          val bpErr = BadPixelAnalysis.validate(runReq)
+          if (bpErr.isDefined) Left(Error.make(form.uploadFileInput.get, err.get)) else Right(runReq)
+        }
       }
     }
   }

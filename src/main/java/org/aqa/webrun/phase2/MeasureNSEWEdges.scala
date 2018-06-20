@@ -130,7 +130,7 @@ object MeasureNSEWEdges extends Logging {
     graphics.drawLine(xWest, yNorth, xWest, ySouth) // vertical line at east side of line
 
     val text = scaledEdge.formatted("%7.2f")
-    ImageUtil.annotatePixel(bufImg, xMid, pixelEdge.round.toInt + yOff, annotationColor, text, false)
+    ImageUtil.annotatePixel(bufImg, xMid, pixelEdge.round.toInt + yOff, text, false)
   }
 
   private def annotateEastWest(bufImg: BufferedImage, graphics: Graphics2D, pixelEdge: Double, scaledEdge: Double, rect: Rectangle, floodOffset: Point) = {
@@ -153,7 +153,7 @@ object MeasureNSEWEdges extends Logging {
     graphics.drawLine(xEast, ySouth, xWest, ySouth) // horizontal line at east side of line
 
     val text = scaledEdge.formatted("%7.2f")
-    ImageUtil.annotatePixel(bufImg, pixelEdge.round.toInt + xOff, yMid, annotationColor, text, false)
+    ImageUtil.annotatePixel(bufImg, pixelEdge.round.toInt + xOff, yMid, text, false)
   }
 
   private def annotateCenter(bufImg: BufferedImage, graphics: Graphics2D, pixelEdges: NSEW, transMeasurementSet: NSEW, ImagePlanePixelSpacing: Point2D.Double) = {

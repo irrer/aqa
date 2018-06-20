@@ -27,6 +27,13 @@ object BadPixelAnalysis extends Logging {
   val fileName = "ViewDicom.html"
 
   /**
+   * Validate the given data, and, if it is valid, return None, else return a message indicating the problem.
+   */
+  def validate(runReq: RunReq): Option[String] = {
+    if (runReq.flood == null) Some("Flood field is required for ") else None
+  }
+
+  /**
    * Store the bad pixels in the database and return the number of bad pixels.
    */
   private def storeToDb(extendedData: ExtendedData, runReq: RunReq): Seq[BadPixel] = {
