@@ -192,7 +192,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       </table>
     }
 
-    val text = Phase2Util.wrapSubProcedure(extendedData, table, "Phase 2", procedureStatus)
+    val text = Phase2Util.wrapSubProcedure(extendedData, table, "Phase 2", procedureStatus, None)
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeBinaryFile(file, text.getBytes)
   }

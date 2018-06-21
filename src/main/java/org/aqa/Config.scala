@@ -381,6 +381,7 @@ object Config extends Logging {
   requireReadableDirectory("machineConfigurationDirFile", machineConfigurationDirFile)
 
   val CenterDoseRadius_mm = logMainText("CenterDoseRadius_mm").toDouble
+  val CenterDoseReportedHistoryLimit = logMainText("CenterDoseReportedHistoryLimit").toInt
   val CenterDoseBeamNameList = getCenterDoseBeamNameList
 
   /** If this is defined, then the configuration was successfully initialized. */

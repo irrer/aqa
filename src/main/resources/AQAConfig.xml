@@ -104,6 +104,9 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Radius in mm (floating point) centered in an image defining the pixels to be used to determine dose. -->
     <CenterDoseRadius_mm>5.0</CenterDoseRadius_mm>
 
+    <!-- Number of historical entries to show in the HTML page.  Must be integer value 1 or greater. -->
+    <CenterDoseReportedHistoryLimit>50</CenterDoseReportedHistoryLimit>
+
     <!-- List of beam names of that can be used to record dose at the center of the image. -->
     <CenterDoseBeamNameList>
         <BeamName>J10G180</BeamName>
@@ -118,5 +121,5 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>J10G0C90-6X</BeamName>
         <BeamName>J10G270</BeamName>
     </CenterDoseBeamNameList>
-
+    
 </AQAConfig>

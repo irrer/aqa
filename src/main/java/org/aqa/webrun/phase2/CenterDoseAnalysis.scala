@@ -38,16 +38,20 @@ object CenterDoseAnalysis extends Logging {
       <a title="View RT Plan DICOM file" href={ extendedData.dicomHref(runReq.rtplan) }>RT Plan</a>
     }
 
-    class Row(val title: String, name: String, val get: (CenterDose) => String) {
-      def toHeader = <th title={ title }>{ name }</th>
-      def toRow(psnChk: CenterDose) = <td title={ title }>{ get(psnChk) }</td>
+    val history = CenterDose.recentHistory(Config.CenterDoseReportedHistoryLimit, extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get)
+
+    val chart = new CenterDoseChart(resultList, history)
+
+    class Column(val title: String, columnName: String, val get: (CenterDose) => String) {
+      def toHeader = <th title={ title }>{ columnName }</th>
+      def toRow(cntrDose: CenterDose) = <td title={ title }>{ get(cntrDose) }</td>
     }
 
     def degree(diff: Double): String = diff.formatted("%6e")
 
     def jaw(diff: Double): String = diff.formatted("%6e")
 
-    class RowBeamName(override val title: String, name: String, override val get: (CenterDose) => String) extends Row(title, name, get) {
+    class ColumnBeamName(override val title: String, columnName: String, override val get: (CenterDose) => String) extends Column(title, columnName, get) {
       override def toRow(centerDose: CenterDose) = {
 
         val dicomFile = if (centerDose.beamName.equals(Config.FloodFieldBeamName)) runReq.flood else runReq.rtimageMap(centerDose.beamName)
@@ -57,9 +61,15 @@ object CenterDoseAnalysis extends Logging {
       }
     }
 
+    class ColumnChart(override val title: String, columnName: String, override val get: (CenterDose) => String) extends Column(title, columnName, get) {
+      override def toHeader = <th title={ title }>History</th>
+      override def toRow(cntrDose: CenterDose) = <td title={ title } id={ chart.refOfBeam(cntrDose.beamName) }/>
+    }
+
     val rowList = Seq(
-      new RowBeamName("Name of beam in plan", "Beam Name", (centerDose: CenterDose) => centerDose.beamName),
-      new Row("Dose", "Dose", (centerDose: CenterDose) => centerDose.dose.formatted("%f")))
+      new ColumnBeamName("Name of beam in plan", "Beam Name", (centerDose: CenterDose) => centerDose.beamName),
+      new Column("Dose", "Dose", (centerDose: CenterDose) => centerDose.dose.formatted("%f")),
+      new ColumnChart("History of recent values for this machine and beam", "History", (centerDose: CenterDose) => centerDose.dose.formatted("%f")))
 
     def centerDoseTableHeader: Elem = {
       <thead><tr>{ rowList.map(row => row.toHeader) }</tr></thead>
@@ -69,7 +79,19 @@ object CenterDoseAnalysis extends Logging {
       <tr>{ rowList.map(row => row.toRow(centerDose)) }</tr>
     }
 
+    def imageToHtml(centerDose: CenterDose): Elem = {
+      <div class="row">
+        <h3>{ centerDose.beamName + " : " + centerDose.dose.formatted("%5f") } </h3>
+        <div id={ chart.refOfBeam(centerDose.beamName) }>filler</div>
+      </div>
+    }
+
     val tbody = resultList.map(psnChk => centerDoseToTableRow(psnChk))
+
+    //              <table class="table table-striped">
+    //                { centerDoseTableHeader }
+    //                <tbody>{ tbody }</tbody>
+    //              </table>
 
     val content = {
       <div>
@@ -78,11 +100,8 @@ object CenterDoseAnalysis extends Logging {
         </div>
         <div class="row" style="margin:20px;">
           <div class="row" style="margin:20px;">
-            <div class="col-md-3 col-md-offset-2">
-              <table class="table table-striped">
-                { centerDoseTableHeader }
-                <tbody>{ tbody }</tbody>
-              </table>
+            <div class="col-md-8 col-md-offset-1">
+              { resultList.map(cd => imageToHtml(cd)) }
             </div>
           </div>
         </div>
@@ -90,7 +109,7 @@ object CenterDoseAnalysis extends Logging {
     }
 
     // write the report to the output directory
-    val text = Phase2Util.wrapSubProcedure(extendedData, content, "Center Dose", status)
+    val text = Phase2Util.wrapSubProcedure(extendedData, content, "Center Dose", status, Some(chart.chartScript))
     val file = new File(extendedData.output.dir, htmlFileName)
     Util.writeBinaryFile(file, text.getBytes)
 

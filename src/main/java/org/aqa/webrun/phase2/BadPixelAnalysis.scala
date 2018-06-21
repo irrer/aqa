@@ -143,7 +143,7 @@ object BadPixelAnalysis extends Logging {
       mainElem
     }
 
-    val text = Phase2Util.wrapSubProcedure(extendedData, content, "View Dicom", ProcedureStatus.pass)
+    val text = Phase2Util.wrapSubProcedure(extendedData, content, "View Dicom", ProcedureStatus.pass, None)
     val file = new File(outputDir, fileName)
     Util.writeBinaryFile(file, text.getBytes)
   }

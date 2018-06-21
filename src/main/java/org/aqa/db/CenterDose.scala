@@ -8,6 +8,7 @@ import scala.xml.XML
 import scala.xml.Node
 import scala.xml.Elem
 import org.aqa.procedures.ProcedureOutput
+import java.util.Date
 
 case class CenterDose(
   centerDosePK: Option[Long], // primary key
@@ -105,5 +106,23 @@ object CenterDose extends ProcedureOutput {
   def insertSeq(list: Seq[CenterDose]): Unit = {
     val ops = list.map { loc => CenterDose.query.insertOrUpdate(loc) }
     Db.perform(ops)
+  }
+
+  case class CenterDoseHistory(date: Date, beamName: String, dose: Double)
+
+  /**
+   * Get the most recent CenterBeam results.
+   */
+  def recentHistory(limit: Int, machinePK: Long, procedurePK: Long) = {
+
+    val search = for {
+      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined).map(o => (o.outputPK, o.dataDate, o.machinePK))
+      centerDose <- CenterDose.query.filter(c => c.outputPK === output._1).map(c => (c.beamName, c.dose))
+    } yield ((output._2, centerDose._1, centerDose._2))
+
+    val sorted = search.sortBy(_._1.desc).take(limit)
+
+    val result = Db.run(sorted.result).map(h => new CenterDoseHistory(h._1.get, h._2, h._3))
+    result
   }
 }

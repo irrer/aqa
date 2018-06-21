@@ -141,7 +141,7 @@ object Phase2Util extends Logging {
   /**
    * Wrap Phase2 HTML with nice headers.
    */
-  def wrapSubProcedure(extendedData: ExtendedData, content: Elem, title: String, status: ProcedureStatus.Value): String = {
+  def wrapSubProcedure(extendedData: ExtendedData, content: Elem, title: String, status: ProcedureStatus.Value, runScript: Option[String]): String = {
 
     def wrap(col: Int, name: String, value: String): Elem = {
       <div class={ "col-md-" + col }><em>{ name }:</em><br/>{ value }</div>
@@ -206,7 +206,7 @@ object Phase2Util extends Logging {
     }
 
     // write the report to the output directory
-    val text = wrapBody(div, title, None, true, None)
+    val text = wrapBody(div, title, None, true, runScript)
     text
   }
 
