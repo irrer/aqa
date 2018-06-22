@@ -23,6 +23,7 @@ import java.awt.Graphics2D
 import java.awt.BasicStroke
 import java.awt.Point
 import edu.umro.ScalaUtil.Trace
+import edu.umro.ImageUtil.ImageText
 
 /**
  * Measure the four edges in an image (north, south, east, west).
@@ -105,7 +106,7 @@ object MeasureNSEWEdges extends Logging {
   }
 
   private val imageColor = Color.green
-  private val annotationColor = Color.yellow
+  private val annotationColor = Color.gray
 
   private val dashedLine = new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, Array(1, 4), 0)
   private val solidLine = new BasicStroke
@@ -130,7 +131,11 @@ object MeasureNSEWEdges extends Logging {
     graphics.drawLine(xWest, yNorth, xWest, ySouth) // vertical line at east side of line
 
     val text = scaledEdge.formatted("%7.2f")
-    ImageUtil.annotatePixel(bufImg, xMid, pixelEdge.round.toInt + yOff, text, false)
+
+    val textOffset = 16
+    val y = pixelEdge.round.toInt + yOff
+    val yText = if (y > bufImg.getHeight / 2) y + textOffset else y - textOffset
+    ImageText.drawTextCenteredAt(graphics, xMid, yText, text)
   }
 
   private def annotateEastWest(bufImg: BufferedImage, graphics: Graphics2D, pixelEdge: Double, scaledEdge: Double, rect: Rectangle, floodOffset: Point) = {
@@ -153,7 +158,11 @@ object MeasureNSEWEdges extends Logging {
     graphics.drawLine(xEast, ySouth, xWest, ySouth) // horizontal line at east side of line
 
     val text = scaledEdge.formatted("%7.2f")
-    ImageUtil.annotatePixel(bufImg, pixelEdge.round.toInt + xOff, yMid, text, false)
+
+    val textOffset = 30
+    val x = pixelEdge.round.toInt + xOff
+    val xText = if (x > bufImg.getWidth / 2) x + textOffset else x - textOffset
+    ImageText.drawTextCenteredAt(graphics, xText, yMid, text)
   }
 
   private def annotateCenter(bufImg: BufferedImage, graphics: Graphics2D, pixelEdges: NSEW, transMeasurementSet: NSEW, ImagePlanePixelSpacing: Point2D.Double) = {
