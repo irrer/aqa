@@ -120,7 +120,7 @@ object CenterDose extends ProcedureOutput {
       centerDose <- CenterDose.query.filter(c => c.outputPK === output._1).map(c => (c.beamName, c.dose))
     } yield ((output._2, centerDose._1, centerDose._2))
 
-    val sorted = search.sortBy(_._1.desc).take(limit)
+    val sorted = search.distinct.sortBy(_._1.desc).take(limit)
 
     val result = Db.run(sorted.result).map(h => new CenterDoseHistory(h._1.get, h._2, h._3))
     result

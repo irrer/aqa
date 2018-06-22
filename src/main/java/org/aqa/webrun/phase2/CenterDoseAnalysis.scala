@@ -81,7 +81,7 @@ object CenterDoseAnalysis extends Logging {
 
     def imageToHtml(centerDose: CenterDose): Elem = {
       <div class="row">
-        <h3>{ centerDose.beamName + " : " + centerDose.dose.formatted("%5f") } </h3>
+        <h3>{ centerDose.beamName + " : " + centerDose.dose.formatted("%5f") }</h3>
         <div id={ chart.refOfBeam(centerDose.beamName) }>filler</div>
       </div>
     }
@@ -100,7 +100,7 @@ object CenterDoseAnalysis extends Logging {
         </div>
         <div class="row" style="margin:20px;">
           <div class="row" style="margin:20px;">
-            <div class="col-md-8 col-md-offset-1">
+            <div class="col-md-12">
               { resultList.map(cd => imageToHtml(cd)) }
             </div>
           </div>
