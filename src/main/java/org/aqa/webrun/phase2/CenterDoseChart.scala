@@ -11,24 +11,7 @@ class CenterDoseChart(resultList: Seq[CenterDose], history: Seq[CenterDose.Cente
 
   private def sortedHistoryForBeam(beamName: String) = {
     val realHistory = history.filter(h => h.beamName.equals(beamName)).sortWith((a, b) => (a.date.getTime < b.date.getTime))
-
-    if (false) { // TODO for testing only
-      import scala.util.Random
-      import java.util.Date
-      val real = realHistory.head
-      val fakeSize = 20
-      def randHistory = {
-        val rand = new Random
-        val dateRange = fakeSize * 24 * 60 * 60 * 1000
-
-        def randDate = new Date(real.date.getTime - rand.nextInt(dateRange))
-        def randDose = ((rand.nextDouble - 0.5) / 200) + real.dose
-        new CenterDose.CenterDoseHistory(randDate, real.beamName, randDose)
-      }
-      val fakeHistory = (0 until fakeSize).map(i => randHistory) :+ real
-
-      fakeHistory.sortWith((a, b) => (a.date.getTime < b.date.getTime))
-    } else realHistory
+    realHistory
   }
 
   private def beamRefOf(index: Int): String = {
