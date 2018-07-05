@@ -122,4 +122,22 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>J10G270</BeamName>
     </CenterDoseBeamNameList>
     
+    <!-- Allowed error in mm when measuring collimator positions measured in the image to planned positions. -->
+    <CollimatorPositionTolerance_mm>1.0</CollimatorPositionTolerance_mm>
+    
+    <!-- List of beam names of that to be used to evaluation the accuracy of the collimator position. -->
+    <CollimatorPositionBeamNameList>
+        <BeamName>J10G180</BeamName>
+        <BeamName>J10G90</BeamName>
+        <BeamName>T2 Open</BeamName>
+        <BeamName>J20G0-6F</BeamName>
+        <BeamName>J10G0C270-6X</BeamName>
+        <BeamName>J20G0-6X</BeamName>
+        <BeamName>J20G0-16X</BeamName>
+        <BeamName>J10G0C90EDW45-6X</BeamName>
+        <BeamName>T3 Open</BeamName>
+        <BeamName>J10G0C90-6X</BeamName>
+        <BeamName>J10G270</BeamName>
+    </CollimatorPositionBeamNameList>
+    
 </AQAConfig>

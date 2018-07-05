@@ -61,7 +61,7 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
 
   lazy val floodImage = floodMeasurementAndImage.bufferedImage
 
-  class Derived(dicomFile: DicomFile) {
+  case class Derived(dicomFile: DicomFile) {
     lazy val originalImage = new DicomImage(dicomFile.attributeList.get)
     lazy val badPixelList = Phase2Util.identifyBadPixels(originalImage)
     lazy val pixelCorrectedImage = originalImage.correctBadPixels(badPixelList)

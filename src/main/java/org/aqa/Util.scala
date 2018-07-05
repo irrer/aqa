@@ -370,6 +370,16 @@ object Util extends Logging {
   //    removeFileNameSuffix(file.getName) + suffix
   //  }
 
+  /**
+   * Specified by 300A,00B8  RTBeamLimitingDeviceType.
+   */
+  val xOrientation = Seq("X", "ASYMX", "MLCX")
+
+  /**
+   * Specified by 300A,00B8  RTBeamLimitingDeviceType.
+   */
+  val yOrientation = Seq("Y", "ASYMY", "MLCY")
+
   def main(args: Array[String]): Unit = {
 
     if (true) {

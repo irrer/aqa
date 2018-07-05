@@ -340,6 +340,12 @@ object Config extends Logging {
     list
   }
 
+  private def getCollimatorPositionBeamNameList = {
+    val list = (document \ "CollimatorPositionBeamNameList" \ "BeamName").map(n => n.head.text.toString).toList
+    logText("CollimatorPositionBeamNameList", list.mkString("\n        ", "\n        ", "\n"))
+    list
+  }
+
   val SlickDbsDefaultDbUrl = logMainText("SlickDbsDefaultDbUrl")
   val SlickDbsDefaultDbUser = getDbUser
   val SlickDbsDefaultDbPassword = getDbPassword
@@ -383,6 +389,9 @@ object Config extends Logging {
   val CenterDoseRadius_mm = logMainText("CenterDoseRadius_mm").toDouble
   val CenterDoseReportedHistoryLimit = logMainText("CenterDoseReportedHistoryLimit").toInt
   val CenterDoseBeamNameList = getCenterDoseBeamNameList
+
+  val CollimatorPositionTolerance_mm = logMainText("CollimatorPositionTolerance_mm").toDouble
+  val CollimatorPositionBeamNameList = getCollimatorPositionBeamNameList
 
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true
