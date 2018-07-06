@@ -52,13 +52,13 @@ object MeasureNSEWEdges extends Logging {
   private def getCoarseNorthRectangle(image: DicomImage, cntrOfMass: Point2D, ImagePlanePixelSpacing: Point2D.Double): Rectangle = {
     val width = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / ImagePlanePixelSpacing.getX).toInt
     val x = (cntrOfMass.getX - (width / 2.0)).round.toInt
-    new Rectangle(x, 0, width, image.height - image.height / 2)
+    new Rectangle(x, 0, width, image.height / 2)
   }
 
   private def getCoarseSouthRectangle(image: DicomImage, cntrOfMass: Point2D, ImagePlanePixelSpacing: Point2D.Double): Rectangle = {
     val width = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / ImagePlanePixelSpacing.getX).toInt
     val x = (cntrOfMass.getX - (width / 2.0)).round.toInt
-    new Rectangle(x, image.height / 2, width, image.height - image.height / 2)
+    new Rectangle(x, image.height / 2, width, image.height / 2)
   }
 
   //
@@ -66,13 +66,13 @@ object MeasureNSEWEdges extends Logging {
   private def getCoarseEastRectangle(image: DicomImage, cntrOfMass: Point2D, ImagePlanePixelSpacing: Point2D.Double): Rectangle = {
     val height = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / ImagePlanePixelSpacing.getY).toInt
     val y = (cntrOfMass.getY - (height / 2.0)).round.toInt
-    new Rectangle(image.width / 2, y, image.width - image.width / 2, height)
+    new Rectangle(0, y, image.width / 2, height)
   }
 
   private def getCoarseWestRectangle(image: DicomImage, cntrOfMass: Point2D, ImagePlanePixelSpacing: Point2D.Double): Rectangle = {
     val height = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / ImagePlanePixelSpacing.getY).toInt
     val y = (cntrOfMass.getY - (height / 2.0)).round.toInt
-    new Rectangle(0, y, image.width / 2, height)
+    new Rectangle(image.width / 2, y, image.width / 2, height)
   }
 
   //
@@ -81,9 +81,15 @@ object MeasureNSEWEdges extends Logging {
    * Calculate the halfway point between the highest and lowest pixel value.
    */
   private def calcHalfwayPixelValue(image: DicomImage): Double = {
+    Trace.trace
     val pixelCount = ((Config.PenumbraPlateauPixelsPerMillion / 1000000.0) * image.width * image.height).round.toInt
+    Trace.trace(pixelCount)
     val min = image.minPixelValues(pixelCount).sum / pixelCount
+    Trace.trace(min)
     val max = image.maxPixelValues(pixelCount).sum / pixelCount
+    Trace.trace(max)
+    val j = ((min + max) / 2.0)
+    Trace.trace(j)
     ((min + max) / 2.0)
   }
 
@@ -97,10 +103,10 @@ object MeasureNSEWEdges extends Logging {
     val coarseSouthEdge = LocateEdge.locateEdge(image.getSubimage(coarseSouthRectangle).rowSums, halfwayPixelValue * coarseSouthRectangle.getWidth) + coarseSouthRectangle.getY
 
     val coarseEastRectangle = getCoarseEastRectangle(image, cntrOfMass, ImagePlanePixelSpacing)
-    val coarseEastEdge = LocateEdge.locateEdge(image.getSubimage(coarseEastRectangle).columnSums, halfwayPixelValue * coarseEastRectangle.getHeight) + coarseEastRectangle.getX
+    val coarseEastEdge = LocateEdge.locateEdge(image.getSubimage(coarseEastRectangle).columnSums, halfwayPixelValue * coarseEastRectangle.getHeight)
 
     val coarseWestRectangle = getCoarseWestRectangle(image, cntrOfMass, ImagePlanePixelSpacing)
-    val coarseWestEdge = LocateEdge.locateEdge(image.getSubimage(coarseWestRectangle).columnSums, halfwayPixelValue * coarseWestRectangle.getHeight)
+    val coarseWestEdge = LocateEdge.locateEdge(image.getSubimage(coarseWestRectangle).columnSums, halfwayPixelValue * coarseWestRectangle.getHeight) + coarseWestRectangle.getX
 
     new NSEW(coarseNorthEdge, coarseSouthEdge, coarseEastEdge, coarseWestEdge)
   }
@@ -218,8 +224,8 @@ object MeasureNSEWEdges extends Logging {
 
   private def northSouthRectangles(coarse: NSEW, penumbraX: Double, penumbraY: Double): (Rectangle, Rectangle) = {
     val nsHeight = penumbraY // north and south height
-    val nsWidth = (coarse.east - coarse.west) - penumbraX // north and south width
-    val nsX = coarse.west + (penumbraX / 2)
+    val nsWidth = (coarse.west - coarse.east) - penumbraX // north and south width
+    val nsX = coarse.east + (penumbraX / 2)
 
     val northRectangle = new Rectangle(nsX.round.toInt, (coarse.north - (penumbraY / 2)).round.toInt, nsWidth.round.toInt, nsHeight.round.toInt)
     val southRectangle = new Rectangle(nsX.round.toInt, (coarse.south - (penumbraY / 2)).round.toInt, nsWidth.round.toInt, nsHeight.round.toInt)
@@ -248,28 +254,39 @@ object MeasureNSEWEdges extends Logging {
    * @param floodOffset: XY offset of image to annotate.
    */
   def measure(image: DicomImage, ImagePlanePixelSpacing: Point2D.Double, annotate: DicomImage, floodOffset: Point): AnalysisResult = {
+    Trace.trace
     val halfwayPixelValue = calcHalfwayPixelValue(image)
 
     val coarse = coarseMeasure(image, halfwayPixelValue, ImagePlanePixelSpacing, floodOffset)
+    Trace.trace
 
     val penumbraX = Config.PenumbraThickness_mm / ImagePlanePixelSpacing.getX // penumbra thickness in pixels
+    Trace.trace
     val penumbraY = Config.PenumbraThickness_mm / ImagePlanePixelSpacing.getY // penumbra thickness in pixels
-
-    //val nsX = coarse.west + (penumbraX / 2)
+    Trace.trace
 
     val nsRect = northSouthRectangles(coarse, penumbraX, penumbraY)
+    Trace.trace
 
     val ewRect = eastWestRectangles(coarse, penumbraX, penumbraY)
+    Trace.trace
 
     val northEdge = LocateEdge.locateEdge(image.getSubimage(nsRect._1).rowSums, halfwayPixelValue * nsRect._1.width) + nsRect._1.y
+    Trace.trace
     val southEdge = LocateEdge.locateEdge(image.getSubimage(nsRect._2).rowSums, halfwayPixelValue * nsRect._2.width) + nsRect._2.y
+    Trace.trace
     val eastEdge = LocateEdge.locateEdge(image.getSubimage(ewRect._1).columnSums, halfwayPixelValue * ewRect._1.height) + ewRect._1.x
+    Trace.trace
     val westEdge = LocateEdge.locateEdge(image.getSubimage(ewRect._2).columnSums, halfwayPixelValue * ewRect._2.height) + ewRect._2.x
+    Trace.trace
 
     val measurementSet = new NSEW(northEdge, southEdge, eastEdge, westEdge)
+    Trace.trace
     val transMeasurementSet = measurementSet.translate(floodOffset, ImagePlanePixelSpacing)
+    Trace.trace
 
     val bufferedImage = makeAnnotatedImage(annotate, measurementSet, transMeasurementSet, nsRect._1, nsRect._2, ewRect._1, ewRect._2, floodOffset, ImagePlanePixelSpacing)
+    Trace.trace
     new AnalysisResult(transMeasurementSet, bufferedImage)
   }
 

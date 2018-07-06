@@ -75,7 +75,8 @@ object DbSetup extends Logging {
     PositioningCheck.query,
     CollimatorCentering.query,
     BadPixel.query,
-    CenterDose.query)
+    CenterDose.query,
+    CollimatorPosition.query)
 
   /**
    * Initialize database by creating tables in dependency order.

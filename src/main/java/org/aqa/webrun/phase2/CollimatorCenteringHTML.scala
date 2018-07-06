@@ -43,9 +43,9 @@ object CollimatorPositionHTML {
       def toRow(psnChk: CollimatorPosition) = <td title={ title }>{ get(psnChk) }</td>
     }
 
-    def degree(diff: Double): String = diff.formatted("%6e")
+    def degree(deg: Double): String = deg.round.toInt.formatted("%4d")
 
-    def jaw(diff: Double): String = diff.formatted("%6e")
+    def leaf(diff: Double): String = diff.formatted("%8.3f")
 
     class RowBeamName(override val title: String, name: String, override val get: (CollimatorPosition) => String) extends Row(title, name, get) {
       override def toRow(collimatorPosition: CollimatorPosition) = {
@@ -58,21 +58,21 @@ object CollimatorPositionHTML {
     }
 
     val rowList = Seq(
-      new RowBeamName("Name of beam in plan", "Beam Name", (psnChk: CollimatorPosition) => psnChk.beamName),
-      new Row("Actual Gantry Angle in degrees", "Gantry Angle", (psnChk: CollimatorPosition) => degree(psnChk.gantryAngle_deg)),
-      new Row("Actual Collimator Angle in degrees", "Collimator Angle", (psnChk: CollimatorPosition) => degree(psnChk.collimatorAngle_deg)),
-      new Row("Planned north edge - north edge in image, in mm", "North", (psnChk: CollimatorPosition) => jaw(psnChk.northPlanMinusImage_mm)),
-      new Row("Planned south edge - north edge in image, in mm", "South", (psnChk: CollimatorPosition) => jaw(psnChk.southPlanMinusImage_mm)),
-      new Row("Planned east edge - north edge in image, in mm", "East", (psnChk: CollimatorPosition) => jaw(psnChk.eastPlanMinusImage_mm)),
-      new Row("Planned west edge - north edge in image, in mm", "West", (psnChk: CollimatorPosition) => jaw(psnChk.westPlanMinusImage_mm)),
-      new Row("Pass if angles and jaw differences within tolerences", "Status", (psnChk: CollimatorPosition) => if (psnChk.status.toString.equals(ProcedureStatus.pass)) "Pass" else "Fail"))
+      new RowBeamName("Name of beam in plan", "Beam", (psnChk: CollimatorPosition) => psnChk.beamName),
+      new Row("Gantry Angle in degrees", "Gantry", (psnChk: CollimatorPosition) => degree(psnChk.gantryAngle_deg)),
+      new Row("Collimator Angle in degrees", "Collimator", (psnChk: CollimatorPosition) => degree(psnChk.collimatorAngle_deg)),
+      new Row("Planned north edge - north edge in image, in mm", "North", (psnChk: CollimatorPosition) => leaf(psnChk.northPlanMinusImage_mm)),
+      new Row("Planned south edge - north edge in image, in mm", "South", (psnChk: CollimatorPosition) => leaf(psnChk.southPlanMinusImage_mm)),
+      new Row("Planned east edge - north edge in image, in mm", "East", (psnChk: CollimatorPosition) => leaf(psnChk.eastPlanMinusImage_mm)),
+      new Row("Planned west edge - north edge in image, in mm", "West", (psnChk: CollimatorPosition) => leaf(psnChk.westPlanMinusImage_mm)),
+      new Row("Pass if angles and jaw differences within tolerences", "Status", (psnChk: CollimatorPosition) => if (psnChk.status.toString.equals(ProcedureStatus.pass.toString)) "Pass" else "Fail"))
 
     def collimatorPositionTableHeader: Elem = {
       <thead><tr>{ rowList.map(row => row.toHeader) }</tr></thead>
     }
 
     def collimatorPositionToTableRow(collimatorPosition: CollimatorPosition): Elem = {
-      if (collimatorPosition.status.toString.equals(ProcedureStatus.pass)) {
+      if (collimatorPosition.status.toString.equals(ProcedureStatus.pass.toString)) {
         <tr>{ rowList.map(row => row.toRow(collimatorPosition)) }</tr>
       } else {
         <tr class="danger">{ rowList.map(row => row.toRow(collimatorPosition)) }</tr>

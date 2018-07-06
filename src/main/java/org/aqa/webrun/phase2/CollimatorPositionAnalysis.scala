@@ -52,57 +52,83 @@ object CollimatorPositionAnalysis extends Logging {
   /**
    * Measure the four collimator edges.
    */
-  private def measureImage(beamName: String, extendedData: ExtendedData, runReq: RunReq): (CollimatorPosition, BufferedImage) = {
-    Trace.trace(beamName)
-    val derived = runReq.derivedMap(beamName)
+  private def measureImage(beamName: String, extendedData: ExtendedData, runReq: RunReq): Option[(CollimatorPosition, BufferedImage)] = {
+    try {
+      Trace.trace(beamName)
+      val derived = runReq.derivedMap(beamName)
+      Trace.trace(beamName)
 
-    val al = derived.dicomFile.attributeList.get
+      val al = derived.dicomFile.attributeList.get
+      Trace.trace(beamName)
 
-    def dbl(tag: AttributeTag): Double = al.get(tag).getDoubleValues.head
+      def dbl(tag: AttributeTag): Double = al.get(tag).getDoubleValues.head
+      Trace.trace(beamName)
 
-    val edges = MeasureNSEWEdges.measure(derived.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, derived.originalImage, runReq.floodOffset)
-    val spacing = Phase2Util.getImagePlanePixelSpacing(al)
+      val edges = MeasureNSEWEdges.measure(derived.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, derived.originalImage, runReq.floodOffset)
+      Trace.trace(beamName)
+      val spacing = Phase2Util.getImagePlanePixelSpacing(al)
+      Trace.trace(beamName)
 
-    val center = new Point2D.Double(
-      (derived.originalImage.width - 1) * spacing.getX,
-      (derived.originalImage.width - 1) * spacing.getY)
+      val center = new Point2D.Double(
+        ((derived.originalImage.width - 1) * spacing.getX) / 2,
+        ((derived.originalImage.width - 1) * spacing.getY) / 2)
+      Trace.trace(beamName)
 
-    val divergence = dbl(TagFromName.RTImageSID) / dbl(TagFromName.RadiationMachineSAD)
+      val divergence = dbl(TagFromName.RTImageSID) / dbl(TagFromName.RadiationMachineSAD)
+      Trace.trace(beamName)
 
-    val scaledEdges = new NSEW(
-      (edges.measurementSet.north * spacing.getY - center.getY) * divergence,
-      (edges.measurementSet.south * spacing.getY - center.getY) * divergence,
-      (edges.measurementSet.east * spacing.getX - center.getX) * divergence,
-      (edges.measurementSet.west * spacing.getX - center.getX) * divergence)
+      val scaledEdges = new NSEW(
+        (edges.measurementSet.north - center.getY) / divergence,
+        (edges.measurementSet.south - center.getY) / divergence,
+        (edges.measurementSet.east - center.getX) / divergence,
+        (edges.measurementSet.west - center.getX) / divergence)
+      Trace.trace(beamName)
 
-    val planEdges = planCollimatorPositions(beamName, runReq.rtplan.attributeList.get)
+      val planEdges = planCollimatorPositions(beamName, runReq.rtplan.attributeList.get)
+      Trace.trace(beamName)
+      logger.info("Beam " + beamName + "  plan edges: " + planEdges)
 
-    val planMinusScaled = new NSEW(
-      planEdges.north - scaledEdges.north,
-      planEdges.south - scaledEdges.south,
-      planEdges.east - scaledEdges.east,
-      planEdges.west - scaledEdges.west)
+      val planMinusScaled = new NSEW(
+        planEdges.north - scaledEdges.north,
+        planEdges.south - scaledEdges.south,
+        planEdges.east - scaledEdges.east,
+        planEdges.west - scaledEdges.west)
+      Trace.trace(beamName)
 
-    val worst = Seq(planMinusScaled.north, planMinusScaled.south, planMinusScaled.east, planMinusScaled.west).map(m => m.abs).max
+      val worst = Seq(planMinusScaled.north, planMinusScaled.south, planMinusScaled.east, planMinusScaled.west).map(m => m.abs).max
+      Trace.trace(beamName)
 
-    val status = if (worst > Config.CollimatorCenteringTolerence_mm) ProcedureStatus.fail else ProcedureStatus.pass
+      val status = if (worst > Config.CollimatorCenteringTolerence_mm) ProcedureStatus.fail else ProcedureStatus.pass
+      Trace.trace(beamName)
 
-    val uid = al.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
-    val gantryAngle = al.get(TagFromName.GantryAngle).getDoubleValues.head
-    val collimatorAngle = al.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head
+      val uid = al.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
+      Trace.trace(beamName)
+      val gantryAngle = al.get(TagFromName.GantryAngle).getDoubleValues.head
+      Trace.trace(beamName)
+      val collimatorAngle = al.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head
+      Trace.trace(beamName)
 
-    val colPosn = new CollimatorPosition(None, extendedData.output.outputPK.get, status.toString, uid, beamName,
-      scaledEdges.north,
-      scaledEdges.south,
-      scaledEdges.east,
-      scaledEdges.west,
-      planMinusScaled.north,
-      planMinusScaled.south,
-      planMinusScaled.east,
-      planMinusScaled.west,
-      gantryAngle, collimatorAngle)
+      val colPosn = new CollimatorPosition(None, extendedData.output.outputPK.get, status.toString, uid, beamName,
+        scaledEdges.north,
+        scaledEdges.south,
+        scaledEdges.east,
+        scaledEdges.west,
+        planMinusScaled.north,
+        planMinusScaled.south,
+        planMinusScaled.east,
+        planMinusScaled.west,
+        gantryAngle, collimatorAngle)
+      Trace.trace(beamName)
 
-    (colPosn, edges.bufferedImage)
+      Some((colPosn, edges.bufferedImage))
+    } catch {
+      case t: Throwable => {
+        // TODO this should return something reportable
+        logger.warn("Unexpected error in CollimatorPositionAnalysis.measureImage: " + t + "\n" + fmtEx(t))
+        None
+      }
+    }
+
   }
 
   /**
@@ -110,16 +136,15 @@ object CollimatorPositionAnalysis extends Logging {
    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): (ProcedureStatus.Value, Elem) = {
 
-    val resultList = Config.CollimatorPositionBeamNameList.map(beamName => measureImage(beamName, extendedData, runReq))
+    val resultList = Config.CollimatorPositionBeamNameList.filter(beamName => runReq.derivedMap.contains(beamName)).map(beamName => measureImage(beamName, extendedData, runReq)).flatten
 
-    val pass = resultList.map(r => r._1.status == ProcedureStatus.pass).reduce(_ && _)
+    val pass = resultList.find(r => !(r._1.status.toString.equals(ProcedureStatus.pass.toString))).isEmpty
     val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
     CollimatorPosition.insert(resultList.map(r => r._1))
     logger.info("Inserted  " + resultList.size + " + CollimatorPosition rows.")
 
-    val elem = <div>Hey from CollimatorPosition</div>
-    CollimatorPositionHTML.makeDisplay(extendedData, runReq, resultList.map(r => r._1), procedureStatus)
+    val elem = CollimatorPositionHTML.makeDisplay(extendedData, runReq, resultList.map(r => r._1), procedureStatus)
     (procedureStatus, elem)
   }
 }

@@ -49,7 +49,7 @@ object CollimatorPositionCSV {
       ("southPlanMinusImage_mm", (ii: II) => ii.southPlanMinusImage_mm),
       ("eastPlanMinusImage_mm", (ii: II) => ii.eastPlanMinusImage_mm),
       ("westPlanMinusImage_mm", (ii: II) => ii.westPlanMinusImage_mm),
-      ("pass", (ii: II) => ii.status))
+      ("pass-fail status", (ii: II) => ii.status))
 
     def collimatorPositionToCsv(ii: CollimatorPosition): String = {
       def fmt(any: Any): String = {

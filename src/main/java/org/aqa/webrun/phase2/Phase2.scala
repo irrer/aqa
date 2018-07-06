@@ -228,7 +228,10 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       try {
         f()
       } catch {
-        case t: Throwable => (ProcedureStatus.crash, htmlCrash(name))
+        case t: Throwable => {
+          logger.warn("Unexpected exception: " + t + "\n" + fmtEx(t))
+          (ProcedureStatus.crash, htmlCrash(name))
+        }
       }
     }
 

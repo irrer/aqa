@@ -123,7 +123,7 @@ Note that when building a package for release, the Maven build process uses the 
     </CenterDoseBeamNameList>
     
     <!-- Allowed error in mm when measuring collimator positions measured in the image to planned positions. -->
-    <CollimatorPositionTolerance_mm>1.0</CollimatorPositionTolerance_mm>
+    <CollimatorPositionTolerance_mm>2.0</CollimatorPositionTolerance_mm>
     
     <!-- List of beam names of that to be used to evaluation the accuracy of the collimator position. -->
     <CollimatorPositionBeamNameList>
