@@ -78,19 +78,19 @@ object MeasureNSEWEdges extends Logging {
   //
 
   /**
-   * Calculate the halfway point between the highest and lowest pixel value.
+   * Calculate the point at the given percent between the highest and lowest pixel value.
+   *
+   * @param image: Contains range of pixel values
+   *
+   * @param thresholdPercent: Must be from 0 to 1 non-inclusive, indicates where the actual edge should be considered to be.
    */
-  private def calcHalfwayPixelValue(image: DicomImage): Double = {
-    Trace.trace
+  private def calcPercentPixelValue(image: DicomImage, thresholdPercent: Double): Double = {
+    if (!((thresholdPercent > 0) && (thresholdPercent < 1))) throw new IllegalArgumentException("thresholdPercent is " + thresholdPercent + " but must be 0 < t < 1.")
     val pixelCount = ((Config.PenumbraPlateauPixelsPerMillion / 1000000.0) * image.width * image.height).round.toInt
-    Trace.trace(pixelCount)
     val min = image.minPixelValues(pixelCount).sum / pixelCount
-    Trace.trace(min)
     val max = image.maxPixelValues(pixelCount).sum / pixelCount
-    Trace.trace(max)
-    val j = ((min + max) / 2.0)
-    Trace.trace(j)
-    ((min + max) / 2.0)
+    val pctThresh = ((max - min) * thresholdPercent) + min
+    pctThresh
   }
 
   private def coarseMeasure(image: DicomImage, halfwayPixelValue: Double, ImagePlanePixelSpacing: Point2D.Double, floodOffset: Point2D): NSEW = {
@@ -253,41 +253,30 @@ object MeasureNSEWEdges extends Logging {
    *
    * @param floodOffset: XY offset of image to annotate.
    */
-  def measure(image: DicomImage, ImagePlanePixelSpacing: Point2D.Double, annotate: DicomImage, floodOffset: Point): AnalysisResult = {
-    Trace.trace
-    val halfwayPixelValue = calcHalfwayPixelValue(image)
-
-    val coarse = coarseMeasure(image, halfwayPixelValue, ImagePlanePixelSpacing, floodOffset)
-    Trace.trace
+  def measure(image: DicomImage, ImagePlanePixelSpacing: Point2D.Double, annotate: DicomImage, floodOffset: Point, thresholdPercent: Double): AnalysisResult = {
+    val threshold = calcPercentPixelValue(image, thresholdPercent)
+    val coarse = coarseMeasure(image, threshold, ImagePlanePixelSpacing, floodOffset)
 
     val penumbraX = Config.PenumbraThickness_mm / ImagePlanePixelSpacing.getX // penumbra thickness in pixels
-    Trace.trace
     val penumbraY = Config.PenumbraThickness_mm / ImagePlanePixelSpacing.getY // penumbra thickness in pixels
-    Trace.trace
 
     val nsRect = northSouthRectangles(coarse, penumbraX, penumbraY)
-    Trace.trace
-
     val ewRect = eastWestRectangles(coarse, penumbraX, penumbraY)
-    Trace.trace
 
-    val northEdge = LocateEdge.locateEdge(image.getSubimage(nsRect._1).rowSums, halfwayPixelValue * nsRect._1.width) + nsRect._1.y
-    Trace.trace
-    val southEdge = LocateEdge.locateEdge(image.getSubimage(nsRect._2).rowSums, halfwayPixelValue * nsRect._2.width) + nsRect._2.y
-    Trace.trace
-    val eastEdge = LocateEdge.locateEdge(image.getSubimage(ewRect._1).columnSums, halfwayPixelValue * ewRect._1.height) + ewRect._1.x
-    Trace.trace
-    val westEdge = LocateEdge.locateEdge(image.getSubimage(ewRect._2).columnSums, halfwayPixelValue * ewRect._2.height) + ewRect._2.x
-    Trace.trace
+    val northEdge = LocateEdge.locateEdge(image.getSubimage(nsRect._1).rowSums, threshold * nsRect._1.width) + nsRect._1.y
+    val southEdge = LocateEdge.locateEdge(image.getSubimage(nsRect._2).rowSums, threshold * nsRect._2.width) + nsRect._2.y
+    val eastEdge = LocateEdge.locateEdge(image.getSubimage(ewRect._1).columnSums, threshold * ewRect._1.height) + ewRect._1.x
+    val westEdge = LocateEdge.locateEdge(image.getSubimage(ewRect._2).columnSums, threshold * ewRect._2.height) + ewRect._2.x
 
     val measurementSet = new NSEW(northEdge, southEdge, eastEdge, westEdge)
-    Trace.trace
     val transMeasurementSet = measurementSet.translate(floodOffset, ImagePlanePixelSpacing)
-    Trace.trace
 
     val bufferedImage = makeAnnotatedImage(annotate, measurementSet, transMeasurementSet, nsRect._1, nsRect._2, ewRect._1, ewRect._2, floodOffset, ImagePlanePixelSpacing)
-    Trace.trace
     new AnalysisResult(transMeasurementSet, bufferedImage)
+  }
+
+  def measure(image: DicomImage, ImagePlanePixelSpacing: Point2D.Double, annotate: DicomImage, floodOffset: Point): AnalysisResult = {
+    measure(image, ImagePlanePixelSpacing, annotate, floodOffset, 0.5)
   }
 
 }

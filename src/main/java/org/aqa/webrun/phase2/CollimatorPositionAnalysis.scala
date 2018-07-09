@@ -64,7 +64,7 @@ object CollimatorPositionAnalysis extends Logging {
       def dbl(tag: AttributeTag): Double = al.get(tag).getDoubleValues.head
       Trace.trace(beamName)
 
-      val edges = MeasureNSEWEdges.measure(derived.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, derived.originalImage, runReq.floodOffset)
+      val edges = MeasureNSEWEdges.measure(derived.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, derived.originalImage, runReq.floodOffset, Config.PenumbraThresholdPercent / 100)
       Trace.trace(beamName)
       val spacing = Phase2Util.getImagePlanePixelSpacing(al)
       Trace.trace(beamName)

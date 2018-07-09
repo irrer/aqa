@@ -27,6 +27,7 @@ object Config extends Logging {
 
   private val configFileName = "AQAConfig.xml";
   private val DEFAULT_RESTART_TIME = "1:20"
+  private val PenumbraThresholdPercentDefault = 80.0
 
   logger.info("Starting configuration.  File name: " + configFileName)
 
@@ -346,6 +347,19 @@ object Config extends Logging {
     list
   }
 
+  /**
+   * Get the PenumbraThresholdPercent.  If it is not valid in the configuration, then assume the default.
+   */
+  private def getPenumbraThresholdPercent = {
+    val name = "PenumbraThresholdPercent"
+    val ptp = logMainText(name).toDouble
+    if ((ptp > 0) && (ptp < 100)) ptp
+    else {
+      logText(name, "Invalid value, must be greater than 0 and less than 100.  Assuming default value of " + PenumbraThresholdPercentDefault)
+      PenumbraThresholdPercentDefault
+    }
+  }
+
   val SlickDbsDefaultDbUrl = logMainText("SlickDbsDefaultDbUrl")
   val SlickDbsDefaultDbUser = getDbUser
   val SlickDbsDefaultDbPassword = getDbPassword
@@ -368,6 +382,7 @@ object Config extends Logging {
   val CollimatorCenteringCoarseBandWidth_mm = logMainText("CollimatorCenteringCoarseBandWidth_mm").toDouble
   val PenumbraThickness_mm = logMainText("PenumbraThickness_mm").toDouble
   val PenumbraPlateauPixelsPerMillion = logMainText("PenumbraPlateauPixelsPerMillion").toInt
+  val PenumbraThresholdPercent = getPenumbraThresholdPercent
 
   val MaxBadPixelPerMillion = logMainText("MaxBadPixelPerMillion").toInt
   val BadPixelSamplePerMillion = logMainText("BadPixelSamplePerMillion").toInt
