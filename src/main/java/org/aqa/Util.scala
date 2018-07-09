@@ -22,6 +22,9 @@ import java.util.Properties
 import edu.umro.util.Utility
 import org.apache.commons.io.IOUtils
 import com.pixelmed.dicom.SequenceAttribute
+import java.awt.image.RenderedImage
+import javax.imageio.ImageIO
+import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream
 
 object Util extends Logging {
 
@@ -379,6 +382,17 @@ object Util extends Logging {
    * Specified by 300A,00B8  RTBeamLimitingDeviceType.
    */
   val yOrientation = Seq("Y", "ASYMY", "MLCY")
+
+  /**
+   * Write a PNG file in a thread safe way.
+   */
+  def writePng(im: RenderedImage, pngFile: File): Unit = {
+    val stream = new ByteOutputStream
+    ImageIO.write(im, "png", stream)
+    (writePng _).synchronized {
+      writeBinaryFile(pngFile, stream.getBytes)
+    }
+  }
 
   def main(args: Array[String]): Unit = {
 

@@ -92,7 +92,8 @@ object DicomAccess extends Logging {
 
     val fileName = fileBaseName + "_" + x.toString + "-" + y.toString + ".png"
     val pngFile = new File(badPixelDir, fileName)
-    ImageIO.write(bufImg, "png", pngFile)
+    Util.writePng(bufImg, pngFile)
+    // TODO rm ImageIO.write(bufImg, "png", pngFile)
     pngFile
   }
 
@@ -191,8 +192,7 @@ object DicomAccess extends Logging {
 
     if (bufferedImage.isDefined) {
       badPixelList.map(bp => ImageUtil.annotatePixel(bufferedImage.get, bp.getX, bp.getY, bp.getX.toInt + ", " + bp.getY.toInt, true))
-      val fos = new FileOutputStream(pngFile)
-      ImageIO.write(bufferedImage.get, "png", fos)
+      Util.writePng(bufferedImage.get, pngFile)
     }
 
     if (bufferedImage.isDefined) Some(WebServer.urlOfResultsFile(pngFile)) else None

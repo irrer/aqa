@@ -21,7 +21,7 @@ object CollimatorCenteringHTML {
   private def showImage(fileName: String, outputDir: File, bufImg: BufferedImage): Elem = {
     val fn = FileUtil.replaceInvalidFileNameCharacters(fileName, '_')
     val pngFile = new File(outputDir, fn)
-    ImageIO.write(bufImg, "png", pngFile)
+    Util.writePng(bufImg, pngFile)
     <div>
       <center>
         <a href={ fn }>
