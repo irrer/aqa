@@ -5,7 +5,8 @@ Note that when building a package for release, the Maven build process uses the 
 
 <AQAConfig>
     <!-- Database parameters. -->
-    <SlickDbsDefaultDbUrl HostIp='141.214.125.209'>jdbc:postgresql://141.214.125.209:5432/AQATest</SlickDbsDefaultDbUrl>
+    <SlickDbsDefaultDbUrl HostIp='141.214.125.209'>jdbc:postgresql://141.214.125.209:5432/AQATest
+    </SlickDbsDefaultDbUrl>
     <SlickDbsDefaultDriver>slick.driver.PostgresDriver$</SlickDbsDefaultDriver>
     <SlickDbsDefaultDbDriver>org.postgresql.Driver</SlickDbsDefaultDbDriver>
 
@@ -93,16 +94,18 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Percent value of penumbra that is considered to be the actual edge of the collimator or jaw.  -->
     <PenumbraThresholdPercent>80.0</PenumbraThresholdPercent>
 
-    <!-- An estimate of how many bad pixels (integer >= 0) to expect per million pixels.  A good
+    <!-- An maximum estimate of how many bad pixels (integer >= 0) to expect per million pixels.  A good
     estimate can marginally improve results, but a bad estimate will probably still be acceptable. -->
-    <MaxBadPixelPerMillion>20</MaxBadPixelPerMillion>
+    <MaxEstimatedBadPixelPerMillion>20</MaxEstimatedBadPixelPerMillion>
 
     <!-- The number of 'normal' pixels to use to characterize pixels. -->
     <BadPixelSamplePerMillion>250</BadPixelSamplePerMillion>
 
-    <!-- An estimate of how many bad pixels (integer >= 0) to expect per million pixels.  A good
-    estimate can marginally improve results, but a bad estimate will probably still be acceptable. -->
-    <BadPixelStdDevMultiple>2.0</BadPixelStdDevMultiple>
+    <!-- Number of standard deviations that a pixel must be from it's 8 neighbors to be considered a bad pixel. -->
+    <BadPixelStdDev>1.0</BadPixelStdDev>
+    
+    <!-- Maximum number of bad pixel tolerated before considering the image to be of such poor quality that it should be rejected for processing.  Must be a positive integer. -->
+    <MaxAllowedBadPixelsPerMillion>500</MaxAllowedBadPixelsPerMillion>
 
     <!-- Radius in mm (floating point) centered in an image defining the pixels to be used to determine dose. -->
     <CenterDoseRadius_mm>5.0</CenterDoseRadius_mm>
@@ -136,5 +139,5 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>J10G0C90-6X</BeamName>
         <BeamName>J10G270</BeamName>
     </CollimatorPositionBeamNameList>
-    
+
 </AQAConfig>

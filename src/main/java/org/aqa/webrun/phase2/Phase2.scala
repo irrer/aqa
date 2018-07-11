@@ -43,6 +43,7 @@ import edu.umro.ScalaUtil.Trace
 import java.awt.Color
 import edu.umro.ImageUtil.ImageUtil
 import java.awt.Point
+import scala.util.Try
 
 object Phase2 {
   val parametersFileName = "parameters.xml"
@@ -214,35 +215,19 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
    */
   private def runPhase2(extendedData: ExtendedData, rtimageMap: Map[String, DicomFile], runReq: RunReq): ProcedureStatus.Value = {
 
-    def htmlCrash(subprocedureName: String) = {
-      <div>
-        { subprocedureName + " crashed" }<br/>
-        <img src={ Config.failImageUrl } height="32"/>
-      </div>
-    }
+    val psnChkSummary = PositioningCheckAnalysis.runProcedure(extendedData, runReq)
 
-    /**
-     * Wrap a sub-test in a try-catch block to protect against failures.
-     */
-    def subTest(name: String, f: () => (ProcedureStatus.Value, Elem)): (ProcedureStatus.Value, Elem) = {
-      try {
-        f()
-      } catch {
-        case t: Throwable => {
-          logger.warn("Unexpected exception: " + t + "\n" + fmtEx(t))
-          (ProcedureStatus.crash, htmlCrash(name))
-        }
-      }
-    }
+    val badPixelSummary = BadPixelAnalysis.runProcedure(extendedData, runReq)
 
-    val psnChkSummary = subTest("Positioning Check", () => PositioningCheckAnalysis.runProcedure(extendedData, runReq))
-    val badPixelSummary = subTest("Bad Pixel", () => BadPixelAnalysis.runProcedure(extendedData, runReq))
-    val colCnrtSummary = subTest("Collimator Centering", () => CollimatorCenteringAnalysis.runProcedure(extendedData, runReq))
-    val centerDose = subTest("Center Dose", () => CenterDoseAnalysis.runProcedure(extendedData, runReq))
-    val collimatorPosition = subTest("Collimator Position", () => CollimatorPositionAnalysis.runProcedure(extendedData, runReq))
+    val colCnrtSummary = CollimatorCenteringAnalysis.runProcedure(extendedData, runReq)
 
-    makeHtml(extendedData, psnChkSummary._1, Seq(badPixelSummary._2, psnChkSummary._2, colCnrtSummary._2, centerDose._2, collimatorPosition._2))
-    aggregateStatuses(Seq(psnChkSummary._1, colCnrtSummary._1, centerDose._1, collimatorPosition._1))
+    val centerDose = CenterDoseAnalysis.runProcedure(extendedData, runReq)
+                val collimatorPosition = CollimatorPositionAnalysis.runProcedure(extendedData, runReq)
+    
+                makeHtml(extendedData, psnChkSummary._1, Seq(badPixelSummary._2, psnChkSummary., colCnrtSummary._2, centerDose._2, collimatorPosition._2))
+                aggregateStatuses(Seq(psnChkSummary._1, colCnrtSummary._1, centerDose._1, collimatorPosition._1))
+
+    ???
   }
 
   /**

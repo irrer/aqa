@@ -11,6 +11,7 @@ import scala.xml.Elem
 import org.aqa.db.Output
 import org.aqa.run.ProcedureStatus
 import org.aqa.Config
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Analyze DICOM files for ImageAnalysis.
@@ -148,21 +149,40 @@ object PositioningCheckAnalysis extends Logging {
     }
   }
 
+  private val subProcedureName = "Positioning Check"
+
+  class PositioningCheckResult(summary: Elem, status: ProcedureStatus.Value, resultList: Seq[PositioningCheck]) extends SubProcedureResult(summary, status, subProcedureName)
+
   /**
    * Run the PositioningCheck sub-procedure, save results in the database, return true for pass or false for fail.  For it to pass all images have to pass.
    */
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq): (ProcedureStatus.Value, Elem) = {
-    val planAttrList = runReq.rtplan.attributeList.get
+  def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, PositioningCheckResult] = {
+    try {
+      Trace.trace
+      val planAttrList = runReq.rtplan.attributeList.get
+      Trace.trace
 
-    val rtimageList = Config.PositioningCheckBeamNameList.map(BeamName => runReq.rtimageMap(BeamName))
-    val resultList = rtimageList.map(rtimage => makePositioningCheck(extendedData.output.outputPK.get, planAttrList, rtimage.attributeList.get)).flatten
+      Trace.trace
+      val rtimageList = Config.PositioningCheckBeamNameList.map(BeamName => runReq.rtimageMap(BeamName))
+      Trace.trace
+      val resultList = rtimageList.map(rtimage => makePositioningCheck(extendedData.output.outputPK.get, planAttrList, rtimage.attributeList.get)).flatten
+      Trace.trace
 
-    // make sure all were processed and that they all passed
-    val pass = (resultList.size == Config.PositioningCheckBeamNameList.size) && resultList.map(pc => pc.pass).reduce(_ && _)
-    val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
+      // make sure all were processed and that they all passed
+      val pass = (resultList.size == Config.PositioningCheckBeamNameList.size) && resultList.map(pc => pc.pass).reduce(_ && _)
+      Trace.trace
+      val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
+      Trace.trace
 
-    PositioningCheck.insert(resultList)
-    val elem = PositioningCheckHTML.makeDisplay(extendedData, runReq, resultList, procedureStatus)
-    (procedureStatus, elem)
+      PositioningCheck.insert(resultList)
+      Trace.trace
+      val elem = PositioningCheckHTML.makeDisplay(extendedData, runReq, resultList, procedureStatus)
+      Trace.trace
+      Right(new PositioningCheckResult(elem, procedureStatus, resultList))
+    } catch {
+      case t: Throwable => {
+        Left(Phase2Util.procedureCrash(subProcedureName))
+      }
+    }
   }
 }

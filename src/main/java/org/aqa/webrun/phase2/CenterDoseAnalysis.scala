@@ -185,16 +185,23 @@ object CenterDoseAnalysis extends Logging {
     centerDoseFlood +: centerDoseList
   }
 
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq): (ProcedureStatus.Value, Elem) = {
+  private val subProcedureName = "Center Dose"
 
-    // This code only reports values without making judgment as to pass or fail.
-    val status = ProcedureStatus.pass
-    val resultList = analyse(extendedData, runReq)
-    logger.info("Storing results for " + resultList.size + " CenterDose rows")
-    logger.info("CenterDose results: " + resultList.mkString("\n"))
-    CenterDose.insert(resultList)
-    val summary = makeDisplay(extendedData, runReq, resultList, status)
-    (status, summary)
+  class CenterDoseResult(summary: Elem, status: ProcedureStatus.Value, resultList: Seq[CenterDose]) extends SubProcedureResult(summary, status, subProcedureName)
+
+  def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, CenterDoseResult] = {
+    try {
+      // This code only reports values without making judgment as to pass or fail.
+      val status = ProcedureStatus.done
+      val resultList = analyse(extendedData, runReq)
+      logger.info("Storing results for " + resultList.size + " CenterDose rows")
+      logger.info("CenterDose results: " + resultList.mkString("\n"))
+      CenterDose.insert(resultList)
+      val summary = makeDisplay(extendedData, runReq, resultList, status)
+      Right(new CenterDoseResult(summary, status, resultList))
+    } catch {
+      case t: Throwable => Left(Phase2Util.procedureCrash(subProcedureName))
+    }
   }
 
 }

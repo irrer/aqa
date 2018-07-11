@@ -52,7 +52,7 @@ object CollimatorPositionAnalysis extends Logging {
   /**
    * Measure the four collimator edges.
    */
-  private def measureImage(beamName: String, extendedData: ExtendedData, runReq: RunReq): Option[(CollimatorPosition, BufferedImage)] = {
+  private def measureImage(beamName: String, extendedData: ExtendedData, runReq: RunReq): Either[String, (CollimatorPosition, BufferedImage)] = {
     try {
       Trace.trace(beamName)
       val derived = runReq.derivedMap(beamName)
@@ -120,31 +120,47 @@ object CollimatorPositionAnalysis extends Logging {
         gantryAngle, collimatorAngle)
       Trace.trace(beamName)
 
-      Some((colPosn, edges.bufferedImage))
+      Right(colPosn, edges.bufferedImage)
     } catch {
       case t: Throwable => {
-        // TODO this should return something reportable
-        logger.warn("Unexpected error in CollimatorPositionAnalysis.measureImage: " + t + "\n" + fmtEx(t))
-        None
+        val msg = "Unexpected error while analyzing " + beamName + " for collimator position."
+        logger.warn(msg + " : " + t + "\n" + fmtEx(t))
+        Left(msg)
       }
     }
 
   }
 
+  val subProcedureName = "Collimator Position"
+
+  class CollimatorPositionResult(summary: Elem, status: ProcedureStatus.Value, resultList: Seq[CollimatorPosition], crashList: Seq[String]) extends SubProcedureResult(summary, status, subProcedureName)
+
   /**
    * Run the CollimatorPosition sub-procedure, save results in the database, return true for pass or false for fail.
    */
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq): (ProcedureStatus.Value, Elem) = {
+  def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, CollimatorPositionResult] = {
+    try {
+      val resultList = Config.CollimatorPositionBeamNameList.filter(beamName => runReq.derivedMap.contains(beamName)).map(beamName => measureImage(beamName, extendedData, runReq))
 
-    val resultList = Config.CollimatorPositionBeamNameList.filter(beamName => runReq.derivedMap.contains(beamName)).map(beamName => measureImage(beamName, extendedData, runReq)).flatten
+      val doneList = resultList.filter(r => r.isRight).map(r => r.right.get)
+      val crashList = resultList.filter(l => l.isLeft).map(l => l.left.get)
 
-    val pass = resultList.find(r => !(r._1.status.toString.equals(ProcedureStatus.pass.toString))).isEmpty
-    val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
+      // To pass (succeed), there must be no crashes and all successfully processed beams must pass.
+      val pass = crashList.isEmpty && doneList.map(d => d._1.status.toString.equals(ProcedureStatus.pass.toString)).reduce(_ && _)
+      val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
-    CollimatorPosition.insert(resultList.map(r => r._1))
-    logger.info("Inserted  " + resultList.size + " + CollimatorPosition rows.")
+      val doneDataList = doneList.map(r => r._1)
+      CollimatorPosition.insert(doneDataList) // save to database
+      logger.info("Inserted  " + doneList.size + " + CollimatorPosition rows.")
 
-    val elem = CollimatorPositionHTML.makeDisplay(extendedData, runReq, resultList.map(r => r._1), procedureStatus)
-    (procedureStatus, elem)
+      // TODO currently buffered images are created but not used.  Not sure it is worth it to show them to the user or not.  Also they
+      //     do not have the X1X2Y1Y2 labels, nor the difference between measured and expected.
+      val elem = CollimatorPositionHTML.makeDisplay(extendedData, runReq, doneDataList, crashList, procedureStatus)
+      Right(new CollimatorPositionResult(elem, procedureStatus, doneDataList, crashList))
+    } catch {
+      case t: Throwable => {
+        Left(Phase2Util.procedureCrash(subProcedureName))
+      }
+    }
   }
 }

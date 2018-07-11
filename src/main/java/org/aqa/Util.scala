@@ -397,6 +397,33 @@ object Util extends Logging {
   def main(args: Array[String]): Unit = {
 
     if (true) {
+      import scala.util.Try
+      var inc = 0
+
+      def bad = {
+        inc = inc + 1
+        println("*bad " + inc)
+        throw new RuntimeException("being bad")
+        inc
+      }
+
+      def good = {
+        inc = inc + 1
+        println("*good " + inc)
+        inc
+      }
+
+      println("bad good: " + { Try(bad).flatMap(g => Try(good)) })
+      println("bad bad: " + { Try(bad).flatMap(g => Try(bad)) })
+      println("good good: " + { Try(good).flatMap(g => Try(good)) })
+      println("good bad: " + { Try(good).flatMap(g => Try(bad)) })
+
+      val goodBad = { Try(good).flatMap(g => Try(bad)) }
+      println("goodBad.getClass: " + goodBad.getClass)
+      System.exit(0)
+    }
+
+    if (false) {
       val file = new File("""D:\tmp\aqa\ritter_bad_loc_upload\copy_me\jj.txt""")
       val fis = new FileInputStream(file)
       val data = fis.read()

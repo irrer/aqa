@@ -148,29 +148,42 @@ object BadPixelAnalysis extends Logging {
     Util.writeBinaryFile(file, text.getBytes)
   }
 
+  private val subProcedureName = "Bad Pixel"
+
+  class BadPixelResult(summary: Elem, status: ProcedureStatus.Value, resultList: Seq[BadPixel]) extends SubProcedureResult(summary, status, subProcedureName)
+
   /**
    * Run the PositioningCheck sub-procedure, save results in the database, return true for pass or false for fail.  For it to pass all images have to pass.
    */
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq): (ProcedureStatus.Value, Elem) = {
-    val badPixelList = storeToDb(extendedData, runReq)
-    makeDicomViews(extendedData, runReq, badPixelList)
+  def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, BadPixelResult] = {
+    try {
+      val badPixelList = storeToDb(extendedData, runReq)
+      makeDicomViews(extendedData, runReq, badPixelList)
 
-    val summary = {
+      val maxBadInSingleImage = badPixelList.groupBy(b => b.SOPInstanceUID).values.map(list => list.size).max
+      val pass = maxBadInSingleImage <= Config.MaxAllowedBadPixelsPerMillion
+      val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
-      val imageCount = runReq.rtimageMap.size + 1 // beams plus flood
-      val badPixelCount = badPixelList.size
-      val distinctBadPixelCount = badPixelList.map(bp => (bp.x, bp.y)).distinct.size
+      val summary = {
 
-      val title = "Click to view and download DICOM files.  Images: " + imageCount + "  Bad pixels: " + badPixelCount + "  Distinct bad pixels: " + distinctBadPixelCount
-      <div title={ title }>
-        <a href={ fileName }>
-          View DICOM
-          <br/>
-          <img src={ Config.passImageUrl } height="32"/>
-        </a>
-      </div>
+        val imageCount = runReq.rtimageMap.size + 1 // beams plus flood
+        val badPixelCount = badPixelList.size
+        val distinctBadPixelCount = badPixelList.map(bp => (bp.x, bp.y)).distinct.size
+
+        val title = "Click to view and download DICOM files.  Images: " + imageCount + "  Bad pixels: " + badPixelCount + "  Distinct bad pixels: " + distinctBadPixelCount
+        <div title={ title }>
+          <a href={ fileName }>
+            View DICOM
+            <br/>
+            <img src={ if (pass) Config.passImageUrl else Config.failImageUrl } height="32"/>
+          </a>
+        </div>
+      }
+
+      Right(new BadPixelResult(summary, status, badPixelList))
+    } catch {
+      case t: Throwable => Left(Phase2Util.procedureCrash(subProcedureName))
     }
 
-    (ProcedureStatus.done, summary)
   }
 }

@@ -217,7 +217,7 @@ object Phase2Util extends Logging {
     val numPixels = originalImage.width * originalImage.height
     val sampleSize = ((Config.BadPixelSamplePerMillion / 1000000.0) * numPixels).round.toInt
     val maxBadPixels = ((Config.MaxBadPixelPerMillion / 1000000.0) * numPixels).round.toInt
-    val badPixelList = originalImage.identifyBadPixels(sampleSize, maxBadPixels, Config.BadPixelStdDevMultiple)
+    val badPixelList = originalImage.identifyBadPixels(sampleSize, maxBadPixels, Config.BadPixelStdDev)
     badPixelList
   }
 
@@ -236,4 +236,15 @@ object Phase2Util extends Logging {
     val ImagePlanePixelSpacing = attributeList.get(TagFromName.ImagePlanePixelSpacing).getDoubleValues
     new Point2D.Double(ImagePlanePixelSpacing(0), ImagePlanePixelSpacing(1))
   }
+
+  /**
+   * HTML snippet to describe a crash.
+   */
+  def procedureCrash(name: String) = {
+    <div>
+      { name + " crashed" }<br/>
+      <img src={ Config.failImageUrl } height="32"/>
+    </div>
+  }
+
 }

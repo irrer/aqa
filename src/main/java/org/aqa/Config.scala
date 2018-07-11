@@ -384,9 +384,11 @@ object Config extends Logging {
   val PenumbraPlateauPixelsPerMillion = logMainText("PenumbraPlateauPixelsPerMillion").toInt
   val PenumbraThresholdPercent = getPenumbraThresholdPercent
 
-  val MaxBadPixelPerMillion = logMainText("MaxBadPixelPerMillion").toInt
+  val MaxEstimatedBadPixelPerMillion = logMainText("MaxEstimatedBadPixelPerMillion").toInt
   val BadPixelSamplePerMillion = logMainText("BadPixelSamplePerMillion").toInt
-  val BadPixelStdDevMultiple = logMainText("BadPixelStdDevMultiple").toDouble
+  val BadPixelStdDev = logMainText("BadPixelStdDev").toDouble
+  val MaxAllowedBadPixelsPerMillion = logMainText("MaxAllowedBadPixelsPerMillion").toInt
+
   val MaxProcedureDuration = logMainText("MaxProcedureDuration").toDouble
 
   val TermsOfUse = logMainText("TermsOfUse")
