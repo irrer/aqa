@@ -392,9 +392,18 @@ object Util extends Logging {
     writeBinaryFile(pngFile, stream.getBytes)
   }
 
+  def angleRoundedTo90(angleInDegrees: Double): Int = {
+    ((((((angleInDegrees + 3600000) / 90).round.toInt) % 4) + 4) % 4) * 90
+  }
+
   def main(args: Array[String]): Unit = {
 
     if (true) {
+      for (i <- (-1000 until 1000)) println(i.formatted("%5d") + " --> " + angleRoundedTo90(i).formatted("%5d"))
+      System.exit(0)
+    }
+
+    if (false) {
       import scala.util.Try
       var inc = 0
 
