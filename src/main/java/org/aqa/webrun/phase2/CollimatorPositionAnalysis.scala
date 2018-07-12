@@ -24,6 +24,7 @@ import java.awt.BasicStroke
 import edu.umro.ScalaUtil.Trace
 import scala.collection.parallel.ParSeq
 import org.aqa.webrun.phase2.MeasureNSEWEdges.NSEW
+import org.aqa.db.CollimatorCentering
 
 /**
  * Analyze DICOM files for ImageAnalysis.
@@ -54,38 +55,28 @@ object CollimatorPositionAnalysis extends Logging {
    */
   private def measureImage(beamName: String, extendedData: ExtendedData, runReq: RunReq): Either[String, (CollimatorPosition, BufferedImage)] = {
     try {
-      Trace.trace(beamName)
       val derived = runReq.derivedMap(beamName)
-      Trace.trace(beamName)
 
       val al = derived.dicomFile.attributeList.get
-      Trace.trace(beamName)
 
       def dbl(tag: AttributeTag): Double = al.get(tag).getDoubleValues.head
-      Trace.trace(beamName)
 
       val edges = MeasureNSEWEdges.measure(derived.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, derived.originalImage, runReq.floodOffset, Config.PenumbraThresholdPercent / 100)
-      Trace.trace(beamName)
       val spacing = Phase2Util.getImagePlanePixelSpacing(al)
-      Trace.trace(beamName)
 
       val center = new Point2D.Double(
         ((derived.originalImage.width - 1) * spacing.getX) / 2,
         ((derived.originalImage.width - 1) * spacing.getY) / 2)
-      Trace.trace(beamName)
 
       val divergence = dbl(TagFromName.RTImageSID) / dbl(TagFromName.RadiationMachineSAD)
-      Trace.trace(beamName)
 
       val scaledEdges = new NSEW(
         (edges.measurementSet.north - center.getY) / divergence,
         (edges.measurementSet.south - center.getY) / divergence,
         (edges.measurementSet.east - center.getX) / divergence,
         (edges.measurementSet.west - center.getX) / divergence)
-      Trace.trace(beamName)
 
       val planEdges = planCollimatorPositions(beamName, runReq.rtplan.attributeList.get)
-      Trace.trace(beamName)
       logger.info("Beam " + beamName + "  plan edges: " + planEdges)
 
       val planMinusScaled = new NSEW(
@@ -93,20 +84,14 @@ object CollimatorPositionAnalysis extends Logging {
         planEdges.south - scaledEdges.south,
         planEdges.east - scaledEdges.east,
         planEdges.west - scaledEdges.west)
-      Trace.trace(beamName)
 
       val worst = Seq(planMinusScaled.north, planMinusScaled.south, planMinusScaled.east, planMinusScaled.west).map(m => m.abs).max
-      Trace.trace(beamName)
 
       val status = if (worst > Config.CollimatorCenteringTolerence_mm) ProcedureStatus.fail else ProcedureStatus.pass
-      Trace.trace(beamName)
 
       val uid = al.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
-      Trace.trace(beamName)
       val gantryAngle = al.get(TagFromName.GantryAngle).getDoubleValues.head
-      Trace.trace(beamName)
       val collimatorAngle = al.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head
-      Trace.trace(beamName)
 
       val colPosn = new CollimatorPosition(None, extendedData.output.outputPK.get, status.toString, uid, beamName,
         scaledEdges.north,
@@ -118,7 +103,6 @@ object CollimatorPositionAnalysis extends Logging {
         planMinusScaled.east,
         planMinusScaled.west,
         gantryAngle, collimatorAngle)
-      Trace.trace(beamName)
 
       Right(colPosn, edges.bufferedImage)
     } catch {
@@ -133,13 +117,14 @@ object CollimatorPositionAnalysis extends Logging {
 
   val subProcedureName = "Collimator Position"
 
-  class CollimatorPositionResult(summary: Elem, status: ProcedureStatus.Value, resultList: Seq[CollimatorPosition], crashList: Seq[String]) extends SubProcedureResult(summary, status, subProcedureName)
+  case class CollimatorPositionResult(sum: Elem, sts: ProcedureStatus.Value, resultList: Seq[CollimatorPosition], crashList: Seq[String]) extends SubProcedureResult(sum, sts, subProcedureName)
 
   /**
    * Run the CollimatorPosition sub-procedure, save results in the database, return true for pass or false for fail.
    */
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, CollimatorPositionResult] = {
+  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, CollimatorPositionResult] = {
     try {
+      logger.info("Starting analysis of CollimatorPosition")
       val resultList = Config.CollimatorPositionBeamNameList.filter(beamName => runReq.derivedMap.contains(beamName)).map(beamName => measureImage(beamName, extendedData, runReq))
 
       val doneList = resultList.filter(r => r.isRight).map(r => r.right.get)
@@ -156,9 +141,12 @@ object CollimatorPositionAnalysis extends Logging {
       // TODO currently buffered images are created but not used.  Not sure it is worth it to show them to the user or not.  Also they
       //     do not have the X1X2Y1Y2 labels, nor the difference between measured and expected.
       val elem = CollimatorPositionHTML.makeDisplay(extendedData, runReq, doneDataList, crashList, procedureStatus)
-      Right(new CollimatorPositionResult(elem, procedureStatus, doneDataList, crashList))
+      val result = Right(new CollimatorPositionResult(elem, procedureStatus, doneDataList, crashList))
+      logger.info("Starting analysis of CollimatorPosition")
+      result
     } catch {
       case t: Throwable => {
+        logger.warn("Unexpected error in analysis of CollimatorPosition: " + t + fmtEx(t))
         Left(Phase2Util.procedureCrash(subProcedureName))
       }
     }

@@ -158,29 +158,24 @@ object PositioningCheckAnalysis extends Logging {
    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, PositioningCheckResult] = {
     try {
-      Trace.trace
+      logger.info("Starting analysis of PositioningCheck")
       val planAttrList = runReq.rtplan.attributeList.get
-      Trace.trace
 
-      Trace.trace
       val rtimageList = Config.PositioningCheckBeamNameList.map(BeamName => runReq.rtimageMap(BeamName))
-      Trace.trace
       val resultList = rtimageList.map(rtimage => makePositioningCheck(extendedData.output.outputPK.get, planAttrList, rtimage.attributeList.get)).flatten
-      Trace.trace
 
       // make sure all were processed and that they all passed
       val pass = (resultList.size == Config.PositioningCheckBeamNameList.size) && resultList.map(pc => pc.pass).reduce(_ && _)
-      Trace.trace
       val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
-      Trace.trace
 
       PositioningCheck.insert(resultList)
-      Trace.trace
       val elem = PositioningCheckHTML.makeDisplay(extendedData, runReq, resultList, procedureStatus)
-      Trace.trace
-      Right(new PositioningCheckResult(elem, procedureStatus, resultList))
+      val pcr = Right(new PositioningCheckResult(elem, procedureStatus, resultList))
+      logger.info("Finished analysis of PositioningCheck")
+      pcr
     } catch {
       case t: Throwable => {
+        logger.warn("Unexpected error in analysis of PositioningCheck: " + t + fmtEx(t))
         Left(Phase2Util.procedureCrash(subProcedureName))
       }
     }

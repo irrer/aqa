@@ -117,12 +117,11 @@ object CenterDoseAnalysis extends Logging {
      * Make a tiny summary and link to the detailed report.
      */
     def makeSummary = {
-      val iconImage = if (status == ProcedureStatus.pass) Config.passImageUrl else Config.failImageUrl
       val elem = {
         <div title="Click for details.">
           <a href={ htmlFileName }>
             Center Dose.  Images:{ resultList.size }<br/>
-            <img src={ iconImage } height="32"/>
+            <img src={ Config.passImageUrl } height="32"/>
           </a>
         </div>
       }
@@ -192,15 +191,21 @@ object CenterDoseAnalysis extends Logging {
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, CenterDoseResult] = {
     try {
       // This code only reports values without making judgment as to pass or fail.
+      logger.info("Starting analysis of CenterDose")
       val status = ProcedureStatus.done
       val resultList = analyse(extendedData, runReq)
       logger.info("Storing results for " + resultList.size + " CenterDose rows")
       logger.info("CenterDose results: " + resultList.mkString("\n"))
       CenterDose.insert(resultList)
       val summary = makeDisplay(extendedData, runReq, resultList, status)
-      Right(new CenterDoseResult(summary, status, resultList))
+      val result = Right(new CenterDoseResult(summary, status, resultList))
+      logger.info("Finished analysis of CenterDose")
+      result
     } catch {
-      case t: Throwable => Left(Phase2Util.procedureCrash(subProcedureName))
+      case t: Throwable => {
+        logger.warn("Unexpected error in analysis of CenterDose: " + t + fmtEx(t))
+        Left(Phase2Util.procedureCrash(subProcedureName))
+      }
     }
   }
 

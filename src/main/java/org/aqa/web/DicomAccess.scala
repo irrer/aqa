@@ -186,9 +186,7 @@ object DicomAccess extends Logging {
 
     val htmlFile = new File(outputDir, fileBaseName + ".html")
     val htmlText = WebUtil.wrapBody(html, title)
-    val htmlOutStream = new FileOutputStream(htmlFile)
-    htmlOutStream.write(htmlText.getBytes)
-    htmlOutStream.close
+    Util.writeBinaryFile(htmlFile, htmlText.getBytes)
 
     if (bufferedImage.isDefined) {
       badPixelList.map(bp => ImageUtil.annotatePixel(bufferedImage.get, bp.getX, bp.getY, bp.getX.toInt + ", " + bp.getY.toInt, true))

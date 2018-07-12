@@ -177,7 +177,7 @@ object Phase2Util extends Logging {
     val procedureDesc: String = extendedData.procedure.name + " : " + extendedData.procedure.version
 
     val passFailImage = {
-      if (status == ProcedureStatus.pass) {
+      if ((status == ProcedureStatus.pass) || (status == ProcedureStatus.done)) {
         <div title="Passed!"><img src={ Config.passImageUrl } width="128"/></div>
       } else {
         <div title="Failed"><img src={ Config.failImageUrl } width="128"/></div>
@@ -216,7 +216,7 @@ object Phase2Util extends Logging {
   def identifyBadPixels(originalImage: DicomImage): IndexedSeq[Point] = {
     val numPixels = originalImage.width * originalImage.height
     val sampleSize = ((Config.BadPixelSamplePerMillion / 1000000.0) * numPixels).round.toInt
-    val maxBadPixels = ((Config.MaxBadPixelPerMillion / 1000000.0) * numPixels).round.toInt
+    val maxBadPixels = ((Config.MaxEstimatedBadPixelPerMillion / 1000000.0) * numPixels).round.toInt
     val badPixelList = originalImage.identifyBadPixels(sampleSize, maxBadPixels, Config.BadPixelStdDev)
     badPixelList
   }

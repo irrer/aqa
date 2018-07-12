@@ -65,12 +65,12 @@ object Util extends Logging {
     fmt.format(new Date(elapsedMs))
   }
 
-  def writeBinaryFile(file: File, data: Array[Byte]): Unit = {
+  def writeBinaryFile(file: File, data: Array[Byte]): Unit = (writeBinaryFile _).synchronized({
     val fos = new FileOutputStream(file)
     fos.write(data)
     fos.flush
     fos.close
-  }
+  })
 
   def writeFile(file: File, text: String): Unit = writeBinaryFile(file, text.getBytes)
 
@@ -389,9 +389,7 @@ object Util extends Logging {
   def writePng(im: RenderedImage, pngFile: File): Unit = {
     val stream = new ByteOutputStream
     ImageIO.write(im, "png", stream)
-    (writePng _).synchronized {
-      writeBinaryFile(pngFile, stream.getBytes)
-    }
+    writeBinaryFile(pngFile, stream.getBytes)
   }
 
   def main(args: Array[String]): Unit = {

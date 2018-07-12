@@ -42,14 +42,14 @@ object CollimatorCenteringAnalysis extends Logging {
 
   private val subProcedureName = "Collimator Centering"
 
-  class CollimatorCenteringResult(summary: Elem, status: ProcedureStatus.Value, result: CollimatorCentering) extends SubProcedureResult(summary, status, subProcedureName)
+  case class CollimatorCenteringResult(sum: Elem, sts: ProcedureStatus.Value, result: CollimatorCentering) extends SubProcedureResult(sum, sts, subProcedureName)
 
   /**
    * Run the CollimatorCentering sub-procedure, save results in the database, return true for pass or false for fail.
    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, CollimatorCenteringResult] = {
     try {
-      logger.info("Starting processing for " + subProcedureName)
+      logger.info("Starting analysis of CollimatorCentering")
       val al090 = runReq.rtimageMap(Config.CollimatorCentering090BeamName).attributeList.get
       val ImagePlanePixelSpacing = Phase2Util.getImagePlanePixelSpacing(al090)
 
@@ -86,9 +86,14 @@ object CollimatorCenteringAnalysis extends Logging {
 
       val elem = CollimatorCenteringHTML.makeDisplay(extendedData, collimatorCentering, procedureStatus, result090, result270, runReq)
       logger.info("Finished processing for " + subProcedureName)
-      Right(new CollimatorCenteringResult(elem, procedureStatus, collimatorCentering))
+      val result = Right(new CollimatorCenteringResult(elem, procedureStatus, collimatorCentering))
+      logger.info("Finished analysis of CollimatorCentering")
+      result
     } catch {
-      case t: Throwable => Left(Phase2Util.procedureCrash(subProcedureName))
+      case t: Throwable => {
+        logger.warn("Unexpected error in analysis of CollimatorCentering: " + t + fmtEx(t))
+        Left(Phase2Util.procedureCrash(subProcedureName))
+      }
     }
   }
 }

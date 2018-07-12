@@ -19,6 +19,7 @@ import org.aqa.web.WebServer
 import org.aqa.web.DicomAccess
 import java.io.File
 import java.awt.Point
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Store bad pixels in the database and generate HTML.
@@ -59,11 +60,11 @@ object BadPixelAnalysis extends Logging {
       })
     }
 
-    val beamList = runReq.rtimageMap.keys.map(beamName =>
+    val beamList = runReq.rtimageMap.keys.par.map(beamName =>
       {
         val SOPInstanceUID = runReq.rtimageMap(beamName).attributeList.get.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull
         beamToBadPixels(beamName, SOPInstanceUID, runReq.derivedMap(beamName).badPixelList, runReq.derivedMap(beamName).originalImage)
-      }).flatten.toSeq
+      }).flatten.toList
 
     val floodSOPInstanceUID = runReq.flood.attributeList.get.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull
     val floodBadPixelList = beamToBadPixels(Config.FloodFieldBeamName, floodSOPInstanceUID, runReq.floodBadPixelList, runReq.floodOriginalImage)
@@ -82,12 +83,15 @@ object BadPixelAnalysis extends Logging {
     val smallImageWidth = 100.toString
 
     def dicomView(beamName: String): Option[String] = {
+      logger.info("Making DICOM view for beam " + beamName)
       val rtimage = runReq.rtimageMap(beamName)
       val derived = runReq.derivedMap(beamName)
 
       val bufImage = derived.originalImage.toBufferedImage(colorMap, derived.pixelCorrectedImage.min, derived.pixelCorrectedImage.max)
       val url = WebServer.urlOfResultsFile(rtimage.file)
-      DicomAccess.write(rtimage, url, "RTIMAGE Beam " + beamName, outputDir, Some(bufImage), Some(derived.originalImage), derived.badPixelList)
+      val result = DicomAccess.write(rtimage, url, "RTIMAGE Beam " + beamName, outputDir, Some(bufImage), Some(derived.originalImage), derived.badPixelList)
+      logger.info("Finished making DICOM view for beam " + beamName)
+      result
     }
 
     // write the rtplan
@@ -98,7 +102,7 @@ object BadPixelAnalysis extends Logging {
     val floodBufImage = runReq.floodOriginalImage.toBufferedImage(colorMap, runReq.floodCorrectedImage.min, runReq.floodCorrectedImage.max)
     val floodPngHref = DicomAccess.write(runReq.flood, floodLink, Config.FloodFieldBeamName, outputDir, Some(floodBufImage), Some(runReq.floodOriginalImage), runReq.floodBadPixelList).get
 
-    val pngImageMap = runReq.rtimageMap.keys.map(beamName => (beamName, dicomView(beamName).get)).toMap
+    val pngImageMap = runReq.rtimageMap.keys.par.map(beamName => (beamName, dicomView(beamName).get)).toList.toMap
 
     def beamRef(beamName: String): Elem = {
       <a href={ extendedData.dicomHref(runReq.rtimageMap(beamName)) }>{ beamName }<br/><img src={ pngImageMap(beamName) } width={ smallImageWidth }/></a>
@@ -150,22 +154,23 @@ object BadPixelAnalysis extends Logging {
 
   private val subProcedureName = "Bad Pixel"
 
-  class BadPixelResult(summary: Elem, status: ProcedureStatus.Value, resultList: Seq[BadPixel]) extends SubProcedureResult(summary, status, subProcedureName)
+  case class BadPixelResult(sum: Elem, sts: ProcedureStatus.Value, resultList: Seq[BadPixel]) extends SubProcedureResult(sum, sts, subProcedureName)
 
   /**
-   * Run the PositioningCheck sub-procedure, save results in the database, return true for pass or false for fail.  For it to pass all images have to pass.
+   * Run the BadPixelAnalysis sub-procedure, save results in the database, return true for pass or false for fail.  For it to pass all images have to pass.
    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, BadPixelResult] = {
     try {
+      logger.info("Starting analysis of BadPixel")
       val badPixelList = storeToDb(extendedData, runReq)
       makeDicomViews(extendedData, runReq, badPixelList)
 
+      val maxAllowedBadPixels = ((runReq.floodOriginalImage.Rows * runReq.floodOriginalImage.Columns) / 1000000.0) * Config.MaxAllowedBadPixelsPerMillion
       val maxBadInSingleImage = badPixelList.groupBy(b => b.SOPInstanceUID).values.map(list => list.size).max
-      val pass = maxBadInSingleImage <= Config.MaxAllowedBadPixelsPerMillion
+      val pass = maxBadInSingleImage <= maxAllowedBadPixels
       val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
       val summary = {
-
         val imageCount = runReq.rtimageMap.size + 1 // beams plus flood
         val badPixelCount = badPixelList.size
         val distinctBadPixelCount = badPixelList.map(bp => (bp.x, bp.y)).distinct.size
@@ -180,9 +185,14 @@ object BadPixelAnalysis extends Logging {
         </div>
       }
 
-      Right(new BadPixelResult(summary, status, badPixelList))
+      val result = Right(new BadPixelResult(summary, status, badPixelList))
+      logger.info("Finished analysis of BadPixel")
+      result
     } catch {
-      case t: Throwable => Left(Phase2Util.procedureCrash(subProcedureName))
+      case t: Throwable => {
+        logger.warn("Unexpected error in analysis of BadPixel: " + t + fmtEx(t))
+        Left(Phase2Util.procedureCrash(subProcedureName))
+      }
     }
 
   }

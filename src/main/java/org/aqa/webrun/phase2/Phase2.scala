@@ -205,29 +205,55 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     rtimageList.map(rtimage => (Phase2Util.getBeamNameOfRtimage(plan, rtimage), rtimage)).filter(ni => ni._1.isDefined).map(ni => (ni._1.get, ni._2)).toMap
   }
 
-  private def aggregateStatuses(list: Seq[ProcedureStatus.Value]): ProcedureStatus.Value = {
-    val badList = list.distinct.filter(s => s != ProcedureStatus.pass).filter(s => s != ProcedureStatus.done)
-    if (badList.isEmpty) ProcedureStatus.pass else ProcedureStatus.fail
-  }
-
   /**
    * Run the sub-procedures.
    */
   private def runPhase2(extendedData: ExtendedData, rtimageMap: Map[String, DicomFile], runReq: RunReq): ProcedureStatus.Value = {
+    logger.info("Starting Phase2 analysis")
 
-    val psnChkSummary = PositioningCheckAnalysis.runProcedure(extendedData, runReq)
+    val summaryList: Either[Seq[Elem], Seq[Elem]] = PositioningCheckAnalysis.runProcedure(extendedData, runReq) match {
+      case Left(fail) => Left(Seq(fail))
+      case Right(positionCheck) => {
+        BadPixelAnalysis.runProcedure(extendedData, runReq) match {
+          case Left(fail) => Left(Seq(positionCheck.summary, fail))
+          case Right(badPixel) => {
+            CenterDoseAnalysis.runProcedure(extendedData, runReq) match {
+              case Left(fail) => Left(Seq(positionCheck.summary, badPixel.summary, fail))
+              case Right(centerDose) => {
+                CollimatorCenteringAnalysis.runProcedure(extendedData, runReq) match {
+                  case Left(fail) => Left(Seq(positionCheck.summary, badPixel.summary, centerDose.summary, fail))
+                  case Right(collimatorCentering) => {
+                    CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result) match {
+                      case Left(fail) => Left(Seq(positionCheck.summary, badPixel.summary, centerDose.summary, collimatorCentering.summary, fail))
+                      case Right(collimatorPosition) => {
+                        Right(Seq(positionCheck, badPixel, centerDose, collimatorCentering, collimatorPosition).map(r => r.summary))
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    logger.info("Finished all Phase2 analysis")
 
-    val badPixelSummary = BadPixelAnalysis.runProcedure(extendedData, runReq)
+    val status = summaryList match {
+      case Left(_) => ProcedureStatus.fail
+      case Right(_) => ProcedureStatus.pass
+    }
 
-    val colCnrtSummary = CollimatorCenteringAnalysis.runProcedure(extendedData, runReq)
+    val sumList = summaryList match {
+      case Left(list) => list
+      case Right(list) => list
+    }
 
-    val centerDose = CenterDoseAnalysis.runProcedure(extendedData, runReq)
-                val collimatorPosition = CollimatorPositionAnalysis.runProcedure(extendedData, runReq)
-    
-                makeHtml(extendedData, psnChkSummary._1, Seq(badPixelSummary._2, psnChkSummary., colCnrtSummary._2, centerDose._2, collimatorPosition._2))
-                aggregateStatuses(Seq(psnChkSummary._1, colCnrtSummary._1, centerDose._1, collimatorPosition._1))
+    logger.info("Generating Phase2 HTML")
+    makeHtml(extendedData, status, sumList)
+    logger.info("Done generating Phase2 HTML")
 
-    ???
+    status
   }
 
   /**

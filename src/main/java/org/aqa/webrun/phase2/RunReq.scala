@@ -69,6 +69,5 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
     lazy val biasAndPixelCorrectedCroppedImage = pixelCorrectedCroppedImage.biasCorrect(floodPixelCorrectedAndCroppedImage)
   }
 
-  val derivedMap = rtimageMap.keys.par.map(beamName => (beamName, new Derived(rtimageMap(beamName)))).toMap
-
+  val derivedMap = rtimageMap.keys.par.map(beamName => (beamName, new Derived(rtimageMap(beamName)))).toList.toMap
 }
