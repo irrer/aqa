@@ -131,6 +131,11 @@ object Util extends Logging {
     if (at == null) "" else al.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
   }
 
+  def collimatorAngleOfAl(al: AttributeList): Double = {
+    val at = al.get(TagFromName.BeamLimitingDeviceAngle)
+    if (at == null) 0 else al.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head
+  }
+
   case class DateTimeAndPatientId(val dateTime: Option[Long], val PatientID: Option[String]);
 
   private def getTimeAndDate(al: AttributeList, dateTag: AttributeTag, timeTag: AttributeTag): Option[Date] = {
@@ -393,13 +398,13 @@ object Util extends Logging {
   }
 
   def angleRoundedTo90(angleInDegrees: Double): Int = {
-    ((((((angleInDegrees + 3600000) / 90).round.toInt) % 4) + 4) % 4) * 90
+    ((((angleInDegrees % 360.0) + 360.0) / 90.0).round.toInt % 4) * 90
   }
 
   def main(args: Array[String]): Unit = {
 
     if (true) {
-      for (i <- (-1000 until 1000)) println(i.formatted("%5d") + " --> " + angleRoundedTo90(i).formatted("%5d"))
+      for (i <- (-800 until 800)) println(i.formatted("%5d") + " --> " + angleRoundedTo90(i).formatted("%5d"))
       System.exit(0)
     }
 

@@ -23,7 +23,7 @@ import java.awt.Graphics2D
 import java.awt.BasicStroke
 import edu.umro.ScalaUtil.Trace
 import scala.collection.parallel.ParSeq
-import org.aqa.webrun.phase2.MeasureNSEWEdges.NSEW
+import org.aqa.webrun.phase2.MeasureTBLREdges.TBLR
 import org.aqa.db.CollimatorCentering
 
 /**
@@ -35,7 +35,7 @@ object CollimatorPositionAnalysis extends Logging {
 
   def specifiesY(devType: String): Boolean = Seq("Y", "ASYMY", "MLCY").contains(devType.toUpperCase)
 
-  private def planCollimatorPositions(beamName: String, plan: AttributeList): NSEW = {
+  private def planCollimatorPositions(beamName: String, plan: AttributeList): TBLR = {
     val beamSeq = Util.seq2Attr(plan, TagFromName.BeamSequence).find(bs => bs.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.equals(beamName)).get
     val controlPtSeq = Util.seq2Attr(beamSeq, TagFromName.ControlPointSequence).head
     val devPosSeq = Util.seq2Attr(controlPtSeq, TagFromName.BeamLimitingDevicePositionSequence)
@@ -47,7 +47,7 @@ object CollimatorPositionAnalysis extends Logging {
     val xPair = getPair(Util.xOrientation)
     val yPair = getPair(Util.yOrientation)
 
-    new NSEW(xPair.min, xPair.max, yPair.min, yPair.max)
+    new TBLR(xPair.min, xPair.max, yPair.min, yPair.max)
   }
 
   /**
@@ -61,7 +61,7 @@ object CollimatorPositionAnalysis extends Logging {
 
       def dbl(tag: AttributeTag): Double = al.get(tag).getDoubleValues.head
 
-      val edges = MeasureNSEWEdges.measure(derived.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, derived.originalImage, runReq.floodOffset, Config.PenumbraThresholdPercent / 100)
+      val edges = MeasureTBLREdges.measure(derived.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, Util.collimatorAngleOfAl(al), derived.originalImage, runReq.floodOffset, Config.PenumbraThresholdPercent / 100)
       val spacing = Phase2Util.getImagePlanePixelSpacing(al)
 
       val center = new Point2D.Double(
@@ -70,38 +70,41 @@ object CollimatorPositionAnalysis extends Logging {
 
       val divergence = dbl(TagFromName.RTImageSID) / dbl(TagFromName.RadiationMachineSAD)
 
-      val scaledEdges = new NSEW(
-        (edges.measurementSet.north - center.getY) / divergence,
-        (edges.measurementSet.south - center.getY) / divergence,
-        (edges.measurementSet.east - center.getX) / divergence,
-        (edges.measurementSet.west - center.getX) / divergence)
+      val scaledEdges = new TBLR(
+        (edges.measurementSet.top - center.getY) / divergence,
+        (edges.measurementSet.bottom - center.getY) / divergence,
+        (edges.measurementSet.right - center.getX) / divergence,
+        (edges.measurementSet.left - center.getX) / divergence)
 
       val planEdges = planCollimatorPositions(beamName, runReq.rtplan.attributeList.get)
       logger.info("Beam " + beamName + "  plan edges: " + planEdges)
 
-      val planMinusScaled = new NSEW(
-        planEdges.north - scaledEdges.north,
-        planEdges.south - scaledEdges.south,
-        planEdges.east - scaledEdges.east,
-        planEdges.west - scaledEdges.west)
+      val planMinusScaled = new TBLR(
+        planEdges.top - scaledEdges.top,
+        planEdges.bottom - scaledEdges.bottom,
+        planEdges.right - scaledEdges.right,
+        planEdges.left - scaledEdges.left)
 
-      val worst = Seq(planMinusScaled.north, planMinusScaled.south, planMinusScaled.east, planMinusScaled.west).map(m => m.abs).max
+      val worst = Seq(planMinusScaled.top, planMinusScaled.bottom, planMinusScaled.right, planMinusScaled.left).map(m => m.abs).max
 
       val status = if (worst > Config.CollimatorCenteringTolerence_mm) ProcedureStatus.fail else ProcedureStatus.pass
 
       val uid = al.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
       val gantryAngle = al.get(TagFromName.GantryAngle).getDoubleValues.head
-      val collimatorAngle = al.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head
+      val collimatorAngle = Util.collimatorAngleOfAl(al)
+
+      val xyScaledEdges = scaledEdges.toX1X2Y1Y2(collimatorAngle)
+      val xyPlanMinusScaled = planMinusScaled.toX1X2Y1Y2(collimatorAngle)
 
       val colPosn = new CollimatorPosition(None, extendedData.output.outputPK.get, status.toString, uid, beamName,
-        scaledEdges.north,
-        scaledEdges.south,
-        scaledEdges.east,
-        scaledEdges.west,
-        planMinusScaled.north,
-        planMinusScaled.south,
-        planMinusScaled.east,
-        planMinusScaled.west,
+        xyScaledEdges.X1,
+        xyScaledEdges.X2,
+        xyScaledEdges.Y1,
+        xyScaledEdges.Y2,
+        xyPlanMinusScaled.X1,
+        xyPlanMinusScaled.X2,
+        xyPlanMinusScaled.Y1,
+        xyPlanMinusScaled.Y2,
         gantryAngle, collimatorAngle)
 
       Right(colPosn, edges.bufferedImage)

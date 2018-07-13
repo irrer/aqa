@@ -9,6 +9,7 @@ import java.awt.Rectangle
 import org.aqa.db.Machine
 import java.awt.geom.Point2D
 import edu.umro.ScalaUtil.Trace
+import org.aqa.Util
 
 /**
  * @param rtplan: RTPLAN file
@@ -33,7 +34,7 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
 
   val ImagePlanePixelSpacing = Phase2Util.getImagePlanePixelSpacing(flood.attributeList.get)
 
-  private val floodMeasurementAndImage = MeasureNSEWEdges.measure(floodCorrectedImage, ImagePlanePixelSpacing, floodCorrectedImage, new Point(0, 0))
+  private val floodMeasurementAndImage = MeasureTBLREdges.measure(floodCorrectedImage, ImagePlanePixelSpacing, Util.collimatorAngleOfAl(flood.attributeList.get), floodCorrectedImage, new Point(0, 0))
 
   val floodMeasurement = floodMeasurementAndImage.measurementSet
 
@@ -47,10 +48,10 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
 
     val fPix = floodMeasurement.translate(new Point(0, 0), new Point2D.Double(1 / ImagePlanePixelSpacing.getX, 1 / ImagePlanePixelSpacing.getY))
 
-    val x = Math.round(fPix.east + pnX).toInt
-    val y = Math.round(fPix.north + pnY).toInt
-    val width = Math.round((fPix.west - fPix.east) - (pnX * 2)).toInt
-    val height = Math.round((fPix.south - fPix.north) - (pnY * 2)).toInt
+    val x = Math.round(fPix.right + pnX).toInt
+    val y = Math.round(fPix.top + pnY).toInt
+    val width = Math.round((fPix.left - fPix.right) - (pnX * 2)).toInt
+    val height = Math.round((fPix.bottom - fPix.top) - (pnY * 2)).toInt
 
     new Rectangle(x, y, width, height)
   }

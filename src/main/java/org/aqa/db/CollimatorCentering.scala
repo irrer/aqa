@@ -13,18 +13,25 @@ case class CollimatorCentering(
   collimatorCenteringPK: Option[Long], // primary key
   outputPK: Long, // output primary key
   status: String, // termination status
+
+  SOPInstanceUID090: String, // UID of 90 degree DICOM image
+  SOPInstanceUID270: String, // UID of 270 degree DICOM image
+
   xCollimatorCenterMinusImageCenter_mm: Double, // X center the collimator minus the center of the image in mm
   yCollimatorCenterMinusImageCenter_mm: Double, // Y center the collimator minus the center of the image in mm
+
   xCollimatorCenter_mm: Double, // X collimator center in mm
   yCollimatorCenter_mm: Double, // Y collimator center in mm
-  north090_mm: Double, // north position of collimator leaf edge for gantry at 90 degrees (Y axis) in mm
-  south090_mm: Double, // south position of collimator leaf edge for gantry at 90 degrees (Y axis) in mm
-  east090_mm: Double, // east position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
-  west090_mm: Double, // west position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
-  north270_mm: Double, // north position of collimator leaf edge for gantry at 270 degrees (Y axis) in mm
-  south270_mm: Double, // south position of collimator leaf edge for gantry at 270 degrees (Y axis) in mm
-  east270_mm: Double, // east position of collimator leaf edge for gantry at 270 degrees (X axis) in mm
-  west270_mm: Double // west position of collimator leaf edge for gantry at 270 degrees (X axis) in mm
+
+  X1_090_mm: Double, // X1 position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
+  X2_090_mm: Double, // X2 position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
+  Y1_090_mm: Double, // Y1 position of collimator leaf edge for gantry at 90 degrees (Y axis) in mm
+  Y2_090_mm: Double, // Y2 position of collimator leaf edge for gantry at 90 degrees (Y axis) in mm
+
+  X1_270_mm: Double, // X1 position of collimator leaf edge for gantry at 270 degrees (X axis) in mm
+  X2_270_mm: Double, // X2 position of collimator leaf edge for gantry at 270 degrees (X axis) in mm
+  Y1_270_mm: Double, // Y1 position of collimator leaf edge for gantry at 270 degrees (Y axis) in mm
+  Y2_270_mm: Double //  Y2 position of collimator leaf edge for gantry at 270 degrees (Y axis) in mm
 ) {
 
   def insert: CollimatorCentering = {
@@ -42,18 +49,20 @@ case class CollimatorCentering(
     "    collimatorCenteringPK: " + collimatorCenteringPK + "\n" +
       "    outputPK: " + outputPK + "\n" +
       "    status: " + status + "\n" +
+      "    SOPInstanceUID090: " + SOPInstanceUID090 + "\n" +
+      "    SOPInstanceUID270: " + SOPInstanceUID270 + "\n" +
       "    xCollimatorCenterMinusImageCenter_mm: " + xCollimatorCenterMinusImageCenter_mm + "\n" +
       "    yCollimatorCenterMinusImageCenter_mm: " + yCollimatorCenterMinusImageCenter_mm + "\n" +
       "    xCollimatorCenter_mm: " + xCollimatorCenter_mm + "\n" +
       "    yCollimatorCenter_mm: " + yCollimatorCenter_mm + "\n" +
-      "    north090_mm: " + north090_mm + "\n" +
-      "    south090_mm: " + south090_mm + "\n" +
-      "    east090_mm: " + east090_mm + "\n" +
-      "    west090_mm: " + west090_mm + "\n" +
-      "    north270_mm: " + north270_mm + "\n" +
-      "    south270_mm: " + south270_mm + "\n" +
-      "    east270_mm: " + east270_mm + "\n" +
-      "    west270_mm: " + west270_mm + "\n"
+      "    X1_090_mm: " + X1_090_mm + "\n" +
+      "    X2_090_mm: " + X2_090_mm + "\n" +
+      "    Y1_090_mm: " + Y1_090_mm + "\n" +
+      "    Y2_090_mm: " + Y2_090_mm + "\n" +
+      "    X1_270_mm: " + X1_270_mm + "\n" +
+      "    X2_270_mm: " + X2_270_mm + "\n" +
+      "    Y1_270_mm: " + Y1_270_mm + "\n" +
+      "    Y2_270_mm: " + Y2_270_mm + "\n"
   }
 }
 
@@ -63,35 +72,39 @@ object CollimatorCentering extends ProcedureOutput {
     def collimatorCenteringPK = column[Long]("collimatorCenteringPK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
     def status = column[String]("status")
+    def SOPInstanceUID090 = column[String]("SOPInstanceUID090")
+    def SOPInstanceUID270 = column[String]("SOPInstanceUID270")
     def xCollimatorCenterMinusImageCenter_mm = column[Double]("xCollimatorCenterMinusImageCenter_mm")
     def yCollimatorCenterMinusImageCenter_mm = column[Double]("yCollimatorCenterMinusImageCenter_mm")
     def xCollimatorCenter_mm = column[Double]("xCollimatorCenter_mm")
     def yCollimatorCenter_mm = column[Double]("yCollimatorCenter_mm")
-    def north090_mm = column[Double]("north090_mm")
-    def south090_mm = column[Double]("south090_mm")
-    def east090_mm = column[Double]("east090_mm")
-    def west090_mm = column[Double]("west090_mm")
-    def north270_mm = column[Double]("north270_mm")
-    def south270_mm = column[Double]("south270_mm")
-    def east270_mm = column[Double]("east270_mm")
-    def west270_mm = column[Double]("west270_mm")
+    def X1_090_mm = column[Double]("X1_090_mm")
+    def X2_090_mm = column[Double]("X2_090_mm")
+    def Y1_090_mm = column[Double]("Y1_090_mm")
+    def Y2_090_mm = column[Double]("Y2_090_mm")
+    def X1_270_mm = column[Double]("X1_270_mm")
+    def X2_270_mm = column[Double]("X2_270_mm")
+    def Y1_270_mm = column[Double]("Y1_270_mm")
+    def Y2_270_mm = column[Double]("Y2_270_mm")
 
     def * = (
       collimatorCenteringPK.?,
       outputPK,
       status,
+      SOPInstanceUID090,
+      SOPInstanceUID270,
       xCollimatorCenterMinusImageCenter_mm,
       yCollimatorCenterMinusImageCenter_mm,
       xCollimatorCenter_mm,
       yCollimatorCenter_mm,
-      north090_mm,
-      south090_mm,
-      east090_mm,
-      west090_mm,
-      north270_mm,
-      south270_mm,
-      east270_mm,
-      west270_mm) <> ((CollimatorCentering.apply _)tupled, CollimatorCentering.unapply _)
+      X1_090_mm,
+      X2_090_mm,
+      Y1_090_mm,
+      Y2_090_mm,
+      X1_270_mm,
+      X2_270_mm,
+      Y1_270_mm,
+      Y2_270_mm) <> ((CollimatorCentering.apply _)tupled, CollimatorCentering.unapply _)
 
     def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }

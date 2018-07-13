@@ -40,14 +40,14 @@ object CollimatorCenteringHTML {
       new CCRow("Y collimator center - image center", cc.yCollimatorCenterMinusImageCenter_mm),
       new CCRow("X collimator center", cc.xCollimatorCenter_mm),
       new CCRow("Y collimator center", cc.yCollimatorCenter_mm),
-      new CCRow("north edge 90 degrees", cc.north090_mm),
-      new CCRow("south edge 90 degrees", cc.south090_mm),
-      new CCRow("east edge 90 degrees", cc.east090_mm),
-      new CCRow("west edge 90 degrees", cc.west090_mm),
-      new CCRow("north edge 270 degrees", cc.north270_mm),
-      new CCRow("south edge 270 degrees", cc.south270_mm),
-      new CCRow("east edge 270 degrees", cc.east270_mm),
-      new CCRow("west edge 270 degrees", cc.west270_mm: Double))
+      new CCRow("X1 90 degrees", cc.X1_090_mm),
+      new CCRow("X2 90 degrees", cc.X2_090_mm),
+      new CCRow("Y1 90 degrees", cc.Y1_090_mm),
+      new CCRow("Y2 90 degrees", cc.Y2_090_mm),
+      new CCRow("X1 270 degrees", cc.X1_270_mm),
+      new CCRow("X2 270 degrees", cc.X2_270_mm),
+      new CCRow("Y1 270 degrees", cc.Y1_270_mm),
+      new CCRow("Y2 270 degrees", cc.Y2_270_mm))
 
     def rowToHtml(ccRow: CCRow): Elem = {
       <tr>
@@ -84,13 +84,13 @@ object CollimatorCenteringHTML {
     elem
   }
 
-  def makeDisplay(extendedData: ExtendedData, collimatorCentering: CollimatorCentering, status: ProcedureStatus.Value, image090: MeasureNSEWEdges.AnalysisResult, image270: MeasureNSEWEdges.AnalysisResult, runReq: RunReq): Elem = {
+  def makeDisplay(extendedData: ExtendedData, collimatorCentering: CollimatorCentering, status: ProcedureStatus.Value, image090: MeasureTBLREdges.AnalysisResult, image270: MeasureTBLREdges.AnalysisResult, runReq: RunReq): Elem = {
 
     val outputDir = extendedData.output.dir
 
     val imageCenter = new Point2D.Double(runReq.floodOriginalImage.width * runReq.ImagePlanePixelSpacing.getX / 2, runReq.floodOriginalImage.height * runReq.ImagePlanePixelSpacing.getY / 2)
 
-    def imageTitle(name: String, ar: MeasureNSEWEdges.AnalysisResult): Elem = {
+    def imageTitle(name: String, ar: MeasureTBLREdges.AnalysisResult): Elem = {
       val err = fmt(ar.measurementSet.center.getX - imageCenter.getX) + ", " + fmt(ar.measurementSet.center.getY - imageCenter.getY)
       <h3 title="Gantry Angle and center minus image center." style="text-align:center;">{ name + " : " + err }</h3>
     }

@@ -41,14 +41,14 @@ object CollimatorPositionCSV {
       ("SOPInstanceUID", (ii: II) => ii.SOPInstanceUID),
       ("gantryAngle_deg", (ii: II) => ii.gantryAngle_deg),
       ("collimatorAngle_deg", (ii: II) => ii.collimatorAngle_deg),
-      ("north_mm", (ii: II) => ii.north_mm),
-      ("south_mm", (ii: II) => ii.south_mm),
-      ("east_mm", (ii: II) => ii.east_mm),
-      ("west_mm", (ii: II) => ii.west_mm),
-      ("northPlanMinusImage_mm", (ii: II) => ii.northPlanMinusImage_mm),
-      ("southPlanMinusImage_mm", (ii: II) => ii.southPlanMinusImage_mm),
-      ("eastPlanMinusImage_mm", (ii: II) => ii.eastPlanMinusImage_mm),
-      ("westPlanMinusImage_mm", (ii: II) => ii.westPlanMinusImage_mm),
+      ("X1_mm", (ii: II) => ii.X1_mm),
+      ("X2_mm", (ii: II) => ii.X2_mm),
+      ("Y1_mm", (ii: II) => ii.Y1_mm),
+      ("Y2_mm", (ii: II) => ii.Y2_mm),
+      ("X1_PlanMinusImage_mm", (ii: II) => ii.X1_PlanMinusImage_mm),
+      ("X2_PlanMinusImage_mm", (ii: II) => ii.X2_PlanMinusImage_mm),
+      ("Y1_PlanMinusImage_mm", (ii: II) => ii.Y1_PlanMinusImage_mm),
+      ("Y2_PlanMinusImage_mm", (ii: II) => ii.Y2_PlanMinusImage_mm),
       ("pass-fail status", (ii: II) => ii.status))
 
     def collimatorPositionToCsv(ii: CollimatorPosition): String = {

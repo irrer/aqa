@@ -51,14 +51,15 @@ object CollimatorCenteringAnalysis extends Logging {
     try {
       logger.info("Starting analysis of CollimatorCentering")
       val al090 = runReq.rtimageMap(Config.CollimatorCentering090BeamName).attributeList.get
+      val al270 = runReq.rtimageMap(Config.CollimatorCentering270BeamName).attributeList.get
       val ImagePlanePixelSpacing = Phase2Util.getImagePlanePixelSpacing(al090)
 
       val img090 = runReq.derivedMap(Config.CollimatorCentering090BeamName)
       val img270 = runReq.derivedMap(Config.CollimatorCentering270BeamName)
       // Calculate edges in parallel for efficiency.
       val resultPair = {
-        def m090 = MeasureNSEWEdges.measure(img090.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, img090.originalImage, runReq.floodOffset)
-        def m270 = MeasureNSEWEdges.measure(img270.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, img270.originalImage, runReq.floodOffset)
+        def m090 = MeasureTBLREdges.measure(img090.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, Util.collimatorAngleOfAl(al090), img090.originalImage, runReq.floodOffset)
+        def m270 = MeasureTBLREdges.measure(img270.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, Util.collimatorAngleOfAl(al270), img270.originalImage, runReq.floodOffset)
         val rp = ParSeq(m090 _, m270 _).map(f => f()).toList
         rp
       }
@@ -76,11 +77,15 @@ object CollimatorCenteringAnalysis extends Logging {
       val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
       logger.info("CollimatorCentering error in mm: " + errDistance + "    Status: " + procedureStatus)
 
+      val xy090 = m090.toX1X2Y1Y2(Util.collimatorAngleOfAl(al090))
+      val xy270 = m270.toX1X2Y1Y2(Util.collimatorAngleOfAl(al270))
+
       val collimatorCentering = new CollimatorCentering(None, extendedData.output.outputPK.get, procedureStatus.name,
-        xCntr - imgCntr.getX, yCntr - imgCntr.getY,
-        xCntr, yCntr,
-        m090.north, m090.south, m090.east, m090.west,
-        m270.north, m270.south, m270.east, m270.west)
+        Util.sopOfAl(al090), Util.sopOfAl(al270), // SOPInstanceUID090, SOPInstanceUID270
+        xCntr - imgCntr.getX, yCntr - imgCntr.getY, // xCollimatorCenterMinusImageCenter_mm, yCollimatorCenterMinusImageCenter_mm
+        xCntr, yCntr, // xCollimatorCenter_mm, yCollimatorCenter_mm
+        xy090.X1, xy090.X2, xy090.Y1, xy090.Y2,
+        xy270.X1, xy270.X2, xy270.Y1, xy270.Y2)
       logger.info("Inserting CollimatorCentering row: " + collimatorCentering)
       collimatorCentering.insert
 

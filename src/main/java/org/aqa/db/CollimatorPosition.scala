@@ -15,14 +15,14 @@ case class CollimatorPosition(
   status: String, // termination status
   SOPInstanceUID: String, // UID of source image
   beamName: String, // name of beam in plan
-  north_mm: Double, // north position of collimator (Y axis) in mm
-  south_mm: Double, // south position of collimator (Y axis) in mm
-  east_mm: Double, //  east position of collimator  (X axis) in mm
-  west_mm: Double, //  west position of collimator  (X axis) in mm
-  northPlanMinusImage_mm: Double, // plan minus north position of collimator (Y axis) in mm
-  southPlanMinusImage_mm: Double, // plan minus south position of collimator (Y axis) in mm
-  eastPlanMinusImage_mm: Double, //  plan minus east position of collimator  (X axis) in mm
-  westPlanMinusImage_mm: Double, //  plan minus west position of collimator  (X axis) in mm
+  X1_mm: Double, //  X1 jaw position of collimator  (X axis) in mm
+  X2_mm: Double, //  X2 jaw position of collimator  (X axis) in mm
+  Y1_mm: Double, //  Y1  jaw of collimator (Y axis) in mm
+  Y2_mm: Double, //  Y2 jaw position of collimator (Y axis) in mm
+  X1_PlanMinusImage_mm: Double, //  X1 jaw plan minus east position of collimator  (X axis) in mm
+  X2_PlanMinusImage_mm: Double, //  X2 jaw plan minus west position of collimator  (X axis) in mm
+  Y1_PlanMinusImage_mm: Double, //  Y1 jaw plan minus north position of collimator (Y axis) in mm
+  Y2_PlanMinusImage_mm: Double, //  Y2 jaw plan minus south position of collimator (Y axis) in mm
   gantryAngle_deg: Double, // gantry angle in degrees
   collimatorAngle_deg: Double // collimator angle in degrees
 ) {
@@ -44,14 +44,14 @@ case class CollimatorPosition(
       "    status: " + status + "\n" +
       "    SOPInstanceUID: " + SOPInstanceUID + "\n" +
       "    beamName: " + beamName + "\n" +
-      "    north_mm: " + north_mm + "\n" +
-      "    south_mm: " + south_mm + "\n" +
-      "    east_mm: " + east_mm + "\n" +
-      "    west_mm: " + west_mm + "\n" +
-      "    northPlanMinusImage_mm: " + northPlanMinusImage_mm + "\n" +
-      "    southPlanMinusImage_mm: " + southPlanMinusImage_mm + "\n" +
-      "    eastPlanMinusImage_mm: " + eastPlanMinusImage_mm + "\n" +
-      "    westPlanMinusImage_mm: " + westPlanMinusImage_mm + "\n" +
+      "    X1_mm: " + X1_mm + "\n" +
+      "    X2_mm: " + X2_mm + "\n" +
+      "    Y1_mm: " + Y1_mm + "\n" +
+      "    Y2_mm: " + Y2_mm + "\n" +
+      "    X1_PlanMinusImage_mm: " + X1_PlanMinusImage_mm + "\n" +
+      "    X2_PlanMinusImage_mm: " + X2_PlanMinusImage_mm + "\n" +
+      "    Y1_PlanMinusImage_mm: " + Y1_PlanMinusImage_mm + "\n" +
+      "    Y2_PlanMinusImage_mm: " + Y2_PlanMinusImage_mm + "\n" +
       "    gantryAngle_deg: " + gantryAngle_deg + "\n" +
       "    collimatorAngle_deg: " + collimatorAngle_deg + "\n"
   }
@@ -65,14 +65,14 @@ object CollimatorPosition extends ProcedureOutput {
     def status = column[String]("status")
     def SOPInstanceUID = column[String]("SOPInstanceUID")
     def beamName = column[String]("beamName")
-    def north_mm = column[Double]("north_mm")
-    def south_mm = column[Double]("south_mm")
-    def east_mm = column[Double]("east_mm")
-    def west_mm = column[Double]("west_mm")
-    def northPlanMinusImage_mm = column[Double]("northPlanMinusImage_mm")
-    def southPlanMinusImage_mm = column[Double]("southPlanMinusImage_mm")
-    def eastPlanMinusImage_mm = column[Double]("eastPlanMinusImage_mm")
-    def westPlanMinusImage_mm = column[Double]("westPlanMinusImage_mm")
+    def X1_mm = column[Double]("X1_mm")
+    def X2_mm = column[Double]("X2_mm")
+    def Y1_mm = column[Double]("Y1_mm")
+    def Y2_mm = column[Double]("Y2_mm")
+    def X1_PlanMinusImage_mm = column[Double]("X1_PlanMinusImage_mm")
+    def X2_PlanMinusImage_mm = column[Double]("X2_PlanMinusImage_mm")
+    def Y1_PlanMinusImage_mm = column[Double]("Y1_PlanMinusImage_mm")
+    def Y2_PlanMinusImage_mm = column[Double]("Y2_PlanMinusImage_mm")
     def gantryAngle_deg = column[Double]("gantryAngle_deg")
     def collimatorAngle_deg = column[Double]("collimatorAngle_deg")
 
@@ -82,14 +82,14 @@ object CollimatorPosition extends ProcedureOutput {
       status,
       SOPInstanceUID,
       beamName,
-      north_mm,
-      south_mm,
-      east_mm,
-      west_mm,
-      northPlanMinusImage_mm,
-      southPlanMinusImage_mm,
-      eastPlanMinusImage_mm,
-      westPlanMinusImage_mm,
+      X1_mm,
+      X2_mm,
+      Y1_mm,
+      Y2_mm,
+      X1_PlanMinusImage_mm,
+      X2_PlanMinusImage_mm,
+      Y1_PlanMinusImage_mm,
+      Y2_PlanMinusImage_mm,
       gantryAngle_deg,
       collimatorAngle_deg) <> ((CollimatorPosition.apply _)tupled, CollimatorPosition.unapply _)
 

@@ -61,10 +61,10 @@ object CollimatorPositionHTML {
       new RowBeamName("Name of beam in plan", "Beam", (psnChk: CollimatorPosition) => psnChk.beamName),
       new Row("Gantry Angle in degrees", "Gantry", (psnChk: CollimatorPosition) => degree(psnChk.gantryAngle_deg)),
       new Row("Collimator Angle in degrees", "Collimator", (psnChk: CollimatorPosition) => degree(psnChk.collimatorAngle_deg)),
-      new Row("Planned north edge - north edge in image, in mm", "North", (psnChk: CollimatorPosition) => leaf(psnChk.northPlanMinusImage_mm)),
-      new Row("Planned south edge - north edge in image, in mm", "South", (psnChk: CollimatorPosition) => leaf(psnChk.southPlanMinusImage_mm)),
-      new Row("Planned east edge - north edge in image, in mm", "East", (psnChk: CollimatorPosition) => leaf(psnChk.eastPlanMinusImage_mm)),
-      new Row("Planned west edge - north edge in image, in mm", "West", (psnChk: CollimatorPosition) => leaf(psnChk.westPlanMinusImage_mm)),
+      new Row("Planned X1 - X1 edge in image, in mm", "X1", (psnChk: CollimatorPosition) => leaf(psnChk.X1_PlanMinusImage_mm)),
+      new Row("Planned X2 - X2 edge in image, in mm", "X2", (psnChk: CollimatorPosition) => leaf(psnChk.X2_PlanMinusImage_mm)),
+      new Row("Planned Y1 - Y1 edge in image, in mm", "Y1", (psnChk: CollimatorPosition) => leaf(psnChk.Y1_PlanMinusImage_mm)),
+      new Row("Planned Y2 - Y2 edge in image, in mm", "Y2", (psnChk: CollimatorPosition) => leaf(psnChk.Y2_PlanMinusImage_mm)),
       new Row("Pass if angles and jaw differences within tolerences", "Status", (psnChk: CollimatorPosition) => if (psnChk.status.toString.equals(ProcedureStatus.pass.toString)) "Pass" else "Fail"))
 
     def collimatorPositionTableHeader: Elem = {
