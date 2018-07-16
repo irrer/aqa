@@ -40,7 +40,7 @@ object CollimatorCenteringAnalysis extends Logging {
     new Point2D.Double(x, y)
   }
 
-  private val subProcedureName = "Collimator Centering"
+  val subProcedureName = "Collimator Centering"
 
   case class CollimatorCenteringResult(sum: Elem, sts: ProcedureStatus.Value, result: CollimatorCentering) extends SubProcedureResult(sum, sts, subProcedureName)
 

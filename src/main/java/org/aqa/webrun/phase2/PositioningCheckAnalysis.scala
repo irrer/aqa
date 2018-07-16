@@ -57,8 +57,7 @@ object PositioningCheckAnalysis extends Logging {
   }
 
   private def modulo360(degrees: Double) = {
-    val pos = (degrees + 3600.0) % 360.0
-    if (pos <= 180) pos else pos - 360
+    ((degrees % 3600.0) + 3600.0) % 3600.0
   }
 
   def makePositioningCheck(outputPK: Long, plan: AttributeList, image: AttributeList): Option[PositioningCheck] = {

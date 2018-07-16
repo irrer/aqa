@@ -71,12 +71,13 @@ object CollimatorCenteringHTML {
   /**
    * Make a tiny summary and link to the detailed report.
    */
-  private def makeSummary(status: ProcedureStatus.Value) = {
+  private def makeSummary(status: ProcedureStatus.Value, resultSummary: String) = {
     val iconImage = if (status == ProcedureStatus.pass) Config.passImageUrl else Config.failImageUrl
     val elem = {
       <div title="Click for details.">
         <a href={ htmlFileName }>
-          Collimator Centering<br/>
+          { CollimatorCenteringAnalysis.subProcedureName }<br/>
+          { resultSummary }<br/>
           <img src={ iconImage } height="32"/>
         </a>
       </div>
@@ -90,6 +91,8 @@ object CollimatorCenteringHTML {
 
     val imageCenter = new Point2D.Double(runReq.floodOriginalImage.width * runReq.ImagePlanePixelSpacing.getX / 2, runReq.floodOriginalImage.height * runReq.ImagePlanePixelSpacing.getY / 2)
 
+    val resultSummary = collimatorCentering.xCollimatorCenterMinusImageCenter_mm.formatted("%5.2f") + ", " + collimatorCentering.yCollimatorCenterMinusImageCenter_mm.formatted("%5.2f")
+
     def imageTitle(name: String, ar: MeasureTBLREdges.AnalysisResult): Elem = {
       val err = fmt(ar.measurementSet.center.getX - imageCenter.getX) + ", " + fmt(ar.measurementSet.center.getY - imageCenter.getY)
       <h3 title="Gantry Angle and center minus image center." style="text-align:center;">{ name + " : " + err }</h3>
@@ -98,15 +101,18 @@ object CollimatorCenteringHTML {
     val content = {
       <div>
         <div class="col-md-4 col-md-offset-4" align="middle">
+          <h3 title='X, Y difference from image center in mm'>{ resultSummary }</h3>
           { makeTable(collimatorCentering) }
         </div>
         <div class="row" title="Click images for full sized view">
           <div class="col-md-5" align="middle">
             { imageTitle("90", image090) }
+            <a title='Click for DICOM details' href={ extendedData.dicomHref(runReq.rtimageMap(Config.CollimatorCentering090BeamName)) }>{ Config.CollimatorCentering090BeamName }<br/></a>
             { showImage("CollimatorCentering090_" + Config.CollimatorCentering090BeamName + ".png", outputDir, image090.bufferedImage) }
           </div>
           <div class="col-md-5 col-md-offset-1" align="middle">
             { imageTitle("270", image270) }
+            <a title='Click for DICOM details' href={ extendedData.dicomHref(runReq.rtimageMap(Config.CollimatorCentering270BeamName)) }>{ Config.CollimatorCentering270BeamName }<br/></a>
             { showImage("CollimatorCentering270_" + Config.CollimatorCentering270BeamName + ".png", outputDir, image270.bufferedImage) }
           </div>
         </div>
@@ -117,7 +123,7 @@ object CollimatorCenteringHTML {
     val outFile = new File(outputDir, htmlFileName)
     Util.writeFile(outFile, html)
 
-    makeSummary(status)
+    makeSummary(status, resultSummary)
   }
 
 }

@@ -59,6 +59,7 @@ object CollimatorPositionHTML {
 
     val rowList = Seq(
       new RowBeamName("Name of beam in plan", "Beam", (psnChk: CollimatorPosition) => psnChk.beamName),
+      new RowBeamName("Flood field compensation used: True/False", "Flood Comp.", (psnChk: CollimatorPosition) => (if ( psnChk.FloodCompensation) "T" else "F")),
       new Row("Gantry Angle in degrees", "Gantry", (psnChk: CollimatorPosition) => degree(psnChk.gantryAngle_deg)),
       new Row("Collimator Angle in degrees", "Collimator", (psnChk: CollimatorPosition) => degree(psnChk.collimatorAngle_deg)),
       new Row("Planned X1 - X1 edge in image, in mm", "X1", (psnChk: CollimatorPosition) => leaf(psnChk.X1_PlanMinusImage_mm)),

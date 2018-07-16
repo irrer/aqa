@@ -25,6 +25,7 @@ import edu.umro.ScalaUtil.Trace
 import scala.collection.parallel.ParSeq
 import org.aqa.webrun.phase2.MeasureTBLREdges.TBLR
 import org.aqa.db.CollimatorCentering
+import java.awt.Point
 
 /**
  * Analyze DICOM files for ImageAnalysis.
@@ -53,7 +54,7 @@ object CollimatorPositionAnalysis extends Logging {
   /**
    * Measure the four collimator edges.
    */
-  private def measureImage(beamName: String, extendedData: ExtendedData, runReq: RunReq): Either[String, (CollimatorPosition, BufferedImage)] = {
+  private def measureImage(beamName: String, FloodCompensation: Boolean, extendedData: ExtendedData, runReq: RunReq): Either[String, (CollimatorPosition, BufferedImage)] = {
     try {
       val derived = runReq.derivedMap(beamName)
 
@@ -61,7 +62,13 @@ object CollimatorPositionAnalysis extends Logging {
 
       def dbl(tag: AttributeTag): Double = al.get(tag).getDoubleValues.head
 
-      val edges = MeasureTBLREdges.measure(derived.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, Util.collimatorAngleOfAl(al), derived.originalImage, runReq.floodOffset, Config.PenumbraThresholdPercent / 100)
+      val edges = {
+        if (FloodCompensation)
+          MeasureTBLREdges.measure(derived.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, Util.collimatorAngleOfAl(al), derived.originalImage, runReq.floodOffset, Config.PenumbraThresholdPercent / 100)
+        else
+          MeasureTBLREdges.measure(derived.pixelCorrectedImage, runReq.ImagePlanePixelSpacing, Util.collimatorAngleOfAl(al), derived.originalImage, new Point(0, 0), Config.PenumbraThresholdPercent / 100)
+      }
+
       val spacing = Phase2Util.getImagePlanePixelSpacing(al)
 
       val center = new Point2D.Double(
@@ -96,7 +103,7 @@ object CollimatorPositionAnalysis extends Logging {
       val xyScaledEdges = scaledEdges.toX1X2Y1Y2(collimatorAngle)
       val xyPlanMinusScaled = planMinusScaled.toX1X2Y1Y2(collimatorAngle)
 
-      val colPosn = new CollimatorPosition(None, extendedData.output.outputPK.get, status.toString, uid, beamName,
+      val colPosn = new CollimatorPosition(None, extendedData.output.outputPK.get, status.toString, uid, beamName, FloodCompensation,
         xyScaledEdges.X1,
         xyScaledEdges.X2,
         xyScaledEdges.Y1,
@@ -128,7 +135,7 @@ object CollimatorPositionAnalysis extends Logging {
   def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, CollimatorPositionResult] = {
     try {
       logger.info("Starting analysis of CollimatorPosition")
-      val resultList = Config.CollimatorPositionBeamNameList.filter(beamName => runReq.derivedMap.contains(beamName)).map(beamName => measureImage(beamName, extendedData, runReq))
+      val resultList = Config.CollimatorPositionBeamList.filter(cp => runReq.derivedMap.contains(cp.beamName)).map(cp => measureImage(cp.beamName, cp.FloodCompensation, extendedData, runReq))
 
       val doneList = resultList.filter(r => r.isRight).map(r => r.right.get)
       val crashList = resultList.filter(l => l.isLeft).map(l => l.left.get)

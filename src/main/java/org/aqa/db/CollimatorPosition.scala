@@ -15,6 +15,7 @@ case class CollimatorPosition(
   status: String, // termination status
   SOPInstanceUID: String, // UID of source image
   beamName: String, // name of beam in plan
+  FloodCompensation: Boolean, // true if flood compensation was used
   X1_mm: Double, //  X1 jaw position of collimator  (X axis) in mm
   X2_mm: Double, //  X2 jaw position of collimator  (X axis) in mm
   Y1_mm: Double, //  Y1  jaw of collimator (Y axis) in mm
@@ -44,6 +45,7 @@ case class CollimatorPosition(
       "    status: " + status + "\n" +
       "    SOPInstanceUID: " + SOPInstanceUID + "\n" +
       "    beamName: " + beamName + "\n" +
+      "    FloodCompensation: " + FloodCompensation + "\n" +
       "    X1_mm: " + X1_mm + "\n" +
       "    X2_mm: " + X2_mm + "\n" +
       "    Y1_mm: " + Y1_mm + "\n" +
@@ -65,6 +67,7 @@ object CollimatorPosition extends ProcedureOutput {
     def status = column[String]("status")
     def SOPInstanceUID = column[String]("SOPInstanceUID")
     def beamName = column[String]("beamName")
+    def FloodCompensation = column[Boolean]("FloodCompensation")
     def X1_mm = column[Double]("X1_mm")
     def X2_mm = column[Double]("X2_mm")
     def Y1_mm = column[Double]("Y1_mm")
@@ -82,6 +85,7 @@ object CollimatorPosition extends ProcedureOutput {
       status,
       SOPInstanceUID,
       beamName,
+      FloodCompensation,
       X1_mm,
       X2_mm,
       Y1_mm,

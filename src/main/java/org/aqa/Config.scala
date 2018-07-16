@@ -341,8 +341,23 @@ object Config extends Logging {
     list
   }
 
-  private def getCollimatorPositionBeamNameList = {
-    val list = (document \ "CollimatorPositionBeamNameList" \ "BeamName").map(n => n.head.text.toString).toList
+  case class CollimatorPositionBeamConfig(beamName: String, FloodCompensation: Boolean) {
+    override def toString = "Beam name: " + beamName + "  FloodCompensation: " + FloodCompensation
+  }
+
+  private def getCollimatorPositionBeamList = {
+    def nodeToCollimatorPositionBeam(node: Node) = {
+      val beamName = node.head.text.toString
+      val FloodCompensation = {
+        try {
+          (node \ "@FloodCompensation").head.text.toString.toLowerCase.toBoolean
+        } catch {
+          case t: Throwable => false
+        }
+      }
+      new CollimatorPositionBeamConfig(beamName, FloodCompensation)
+    }
+    val list = (document \ "CollimatorPositionBeamList" \ "BeamName").map(node => nodeToCollimatorPositionBeam(node)).toList
     logText("CollimatorPositionBeamNameList", list.mkString("\n        ", "\n        ", "\n"))
     list
   }
@@ -408,7 +423,7 @@ object Config extends Logging {
   val CenterDoseBeamNameList = getCenterDoseBeamNameList
 
   val CollimatorPositionTolerance_mm = logMainText("CollimatorPositionTolerance_mm").toDouble
-  val CollimatorPositionBeamNameList = getCollimatorPositionBeamNameList
+  val CollimatorPositionBeamList = getCollimatorPositionBeamList
 
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true

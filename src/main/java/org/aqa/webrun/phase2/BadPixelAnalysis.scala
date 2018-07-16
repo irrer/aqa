@@ -75,6 +75,24 @@ object BadPixelAnalysis extends Logging {
   }
 
   /**
+   * Get the gantry and collimator angles in a human friendly format.  Angles are rounded to 90.  If either or
+   * both of the angles are missing from the DICOM attribute list, then return an empty string in their place.
+   */
+  private def gantryCollAngles(al: AttributeList): String = {
+    def getAngle(prefix: String, tag: AttributeTag): String = {
+      val attr = al.get(tag)
+      if (attr == null) ""
+      else {
+        val d = attr.getDoubleValues
+        if (d.isEmpty) ""
+        else prefix + Util.angleRoundedTo90(d.head).toString
+      }
+    }
+
+    getAngle("G", TagFromName.GantryAngle) + " " + getAngle("C", TagFromName.BeamLimitingDeviceAngle).trim
+  }
+
+  /**
    * Make the DICOM files web viewable.
    */
   private def makeDicomViews(extendedData: ExtendedData, runReq: RunReq, badPixelList: Seq[BadPixel]): Unit = {
@@ -86,15 +104,16 @@ object BadPixelAnalysis extends Logging {
       logger.info("Making DICOM view for beam " + beamName)
       val rtimage = runReq.rtimageMap(beamName)
       val derived = runReq.derivedMap(beamName)
+      val angles = gantryCollAngles(rtimage.attributeList.get)
 
       val bufImage = derived.originalImage.toBufferedImage(colorMap, derived.pixelCorrectedImage.min, derived.pixelCorrectedImage.max)
       val url = WebServer.urlOfResultsFile(rtimage.file)
-      val result = DicomAccess.write(rtimage, url, "RTIMAGE Beam " + beamName, outputDir, Some(bufImage), Some(derived.originalImage), derived.badPixelList)
+      val result = DicomAccess.write(rtimage, url, angles + " : " + beamName, outputDir, Some(bufImage), Some(derived.originalImage), derived.badPixelList)
       logger.info("Finished making DICOM view for beam " + beamName)
       result
     }
 
-    // write the rtplan
+    // write the RTPLAN
     val planLink = extendedData.dicomHref(runReq.rtplan)
     DicomAccess.write(runReq.rtplan, planLink, "RTPLAN", outputDir, None, None, IndexedSeq[Point]())
 
@@ -105,12 +124,14 @@ object BadPixelAnalysis extends Logging {
     val pngImageMap = runReq.rtimageMap.keys.par.map(beamName => (beamName, dicomView(beamName).get)).toList.toMap
 
     def beamRef(beamName: String): Elem = {
-      <a href={ extendedData.dicomHref(runReq.rtimageMap(beamName)) }>{ beamName }<br/><img src={ pngImageMap(beamName) } width={ smallImageWidth }/></a>
+      val angles = gantryCollAngles(runReq.rtimageMap(beamName).attributeList.get)
+      <a href={ extendedData.dicomHref(runReq.rtimageMap(beamName)) }>{ angles + " : " + beamName }<br/><img src={ pngImageMap(beamName) } width={ smallImageWidth }/></a>
     }
 
     val content = {
       val planRef = { <a href={ planLink }>Plan</a> }
-      val floodRef = { <a href={ floodLink }>{ Config.FloodFieldBeamName }<br/><img src={ floodPngHref } width={ smallImageWidth }/></a> }
+      val floodAngles = gantryCollAngles(runReq.flood.attributeList.get)
+      val floodRef = { <a href={ floodLink }>{ floodAngles + " : " + Config.FloodFieldBeamName }<br/><img src={ floodPngHref } width={ smallImageWidth }/></a> }
       val rtimgRef = runReq.rtimageMap.keys.map(beamName => beamRef(beamName))
       val allRef = (rtimgRef ++ Seq(floodRef, planRef)).map(ref => { <div class="col-md-2" style="margin:20px;">{ ref }</div> })
       val perRow = 4
