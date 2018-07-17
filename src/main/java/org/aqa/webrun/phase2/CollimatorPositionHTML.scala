@@ -38,16 +38,16 @@ object CollimatorPositionHTML {
       <a title="View RT Plan DICOM file" href={ extendedData.dicomHref(runReq.rtplan) }>RT Plan</a>
     }
 
-    class Row(val title: String, name: String, val get: (CollimatorPosition) => String) {
+    class Col(val title: String, name: String, val get: (CollimatorPosition) => String) {
       def toHeader = <th title={ title }>{ name }</th>
       def toRow(psnChk: CollimatorPosition) = <td title={ title }>{ get(psnChk) }</td>
     }
 
-    def degree(deg: Double): String = deg.round.toInt.formatted("%4d")
+    def degree(deg: Double): String = (Util.modulo360(deg).round.toInt % 360).formatted("%4d")
 
     def leaf(diff: Double): String = diff.formatted("%8.3f")
 
-    class RowBeamName(override val title: String, name: String, override val get: (CollimatorPosition) => String) extends Row(title, name, get) {
+    class ColBeamName(override val title: String, name: String, override val get: (CollimatorPosition) => String) extends Col(title, name, get) {
       override def toRow(collimatorPosition: CollimatorPosition) = {
 
         val dicomFile = runReq.rtimageMap(collimatorPosition.beamName)
@@ -58,15 +58,15 @@ object CollimatorPositionHTML {
     }
 
     val rowList = Seq(
-      new RowBeamName("Name of beam in plan", "Beam", (psnChk: CollimatorPosition) => psnChk.beamName),
-      new RowBeamName("Flood field compensation used: True/False", "Flood Comp.", (psnChk: CollimatorPosition) => (if ( psnChk.FloodCompensation) "T" else "F")),
-      new Row("Gantry Angle in degrees", "Gantry", (psnChk: CollimatorPosition) => degree(psnChk.gantryAngle_deg)),
-      new Row("Collimator Angle in degrees", "Collimator", (psnChk: CollimatorPosition) => degree(psnChk.collimatorAngle_deg)),
-      new Row("Planned X1 - X1 edge in image, in mm", "X1", (psnChk: CollimatorPosition) => leaf(psnChk.X1_PlanMinusImage_mm)),
-      new Row("Planned X2 - X2 edge in image, in mm", "X2", (psnChk: CollimatorPosition) => leaf(psnChk.X2_PlanMinusImage_mm)),
-      new Row("Planned Y1 - Y1 edge in image, in mm", "Y1", (psnChk: CollimatorPosition) => leaf(psnChk.Y1_PlanMinusImage_mm)),
-      new Row("Planned Y2 - Y2 edge in image, in mm", "Y2", (psnChk: CollimatorPosition) => leaf(psnChk.Y2_PlanMinusImage_mm)),
-      new Row("Pass if angles and jaw differences within tolerences", "Status", (psnChk: CollimatorPosition) => if (psnChk.status.toString.equals(ProcedureStatus.pass.toString)) "Pass" else "Fail"))
+      new ColBeamName("Name of beam in plan", "Beam", (psnChk: CollimatorPosition) => psnChk.beamName),
+      new Col("Flood field compensation used: True/False", "Flood Comp.", (psnChk: CollimatorPosition) => (if (psnChk.FloodCompensation) "T" else "F")),
+      new Col("Gantry Angle in degrees", "Gantry", (psnChk: CollimatorPosition) => degree(psnChk.gantryAngle_deg)),
+      new Col("Collimator Angle in degrees", "Collimator", (psnChk: CollimatorPosition) => degree(psnChk.collimatorAngle_deg)),
+      new Col("Planned X1 - X1 edge in image, in mm", "X1", (psnChk: CollimatorPosition) => leaf(psnChk.X1_ExpectedMinusImage_mm)),
+      new Col("Planned X2 - X2 edge in image, in mm", "X2", (psnChk: CollimatorPosition) => leaf(psnChk.X2_ExpectedMinusImage_mm)),
+      new Col("Planned Y1 - Y1 edge in image, in mm", "Y1", (psnChk: CollimatorPosition) => leaf(psnChk.Y1_ExpectedMinusImage_mm)),
+      new Col("Planned Y2 - Y2 edge in image, in mm", "Y2", (psnChk: CollimatorPosition) => leaf(psnChk.Y2_ExpectedMinusImage_mm)),
+      new Col("Pass if angles and jaw differences within tolerences", "Status", (psnChk: CollimatorPosition) => if (psnChk.status.toString.equals(ProcedureStatus.pass.toString)) "Pass" else "Fail"))
 
     def collimatorPositionTableHeader: Elem = {
       <thead><tr>{ rowList.map(row => row.toHeader) }</tr></thead>

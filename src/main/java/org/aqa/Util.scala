@@ -9,18 +9,11 @@ import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import com.pixelmed.dicom.AttributeTag
-import java.text.ParseException
 import com.pixelmed.dicom.DateTimeAttribute
-import gnu.crypto.hash.IMessageDigest
 import gnu.crypto.hash.HashFactory
-import gnu.crypto.prng.BasePRNG
-import gnu.crypto.prng.PRNGFactory
 import scala.util.Random
-import java.math.BigDecimal
-import java.math.RoundingMode
 import java.util.Properties
 import edu.umro.util.Utility
-import org.apache.commons.io.IOUtils
 import com.pixelmed.dicom.SequenceAttribute
 import java.awt.image.RenderedImage
 import javax.imageio.ImageIO
@@ -131,9 +124,14 @@ object Util extends Logging {
     if (at == null) "" else al.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
   }
 
-  def collimatorAngleOfAl(al: AttributeList): Double = {
+  def collimatorAngle(al: AttributeList): Double = {
     val at = al.get(TagFromName.BeamLimitingDeviceAngle)
-    if (at == null) 0 else al.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head
+    if (at == null) 0 else at.getDoubleValues.head
+  }
+
+  def gantryAngle(al: AttributeList): Double = {
+    val at = al.get(TagFromName.GantryAngle)
+    if (at == null) 0 else at.getDoubleValues.head
   }
 
   case class DateTimeAndPatientId(val dateTime: Option[Long], val PatientID: Option[String]);
@@ -388,6 +386,9 @@ object Util extends Logging {
    */
   val yOrientation = Seq("Y", "ASYMY", "MLCY")
 
+  def specifiesX(devType: String): Boolean = xOrientation.contains(devType.toUpperCase)
+  def specifiesY(devType: String): Boolean = yOrientation.contains(devType.toUpperCase)
+
   /**
    * Write a PNG file in a thread safe way.
    */
@@ -397,8 +398,18 @@ object Util extends Logging {
     writeBinaryFile(pngFile, stream.getBytes)
   }
 
+  /**
+   * Round the angle to the closest 90 degree angle.
+   */
   def angleRoundedTo90(angleInDegrees: Double): Int = {
     ((((angleInDegrees % 360.0) + 360.0) / 90.0).round.toInt % 4) * 90
+  }
+
+  /**
+   * Convert arbitrary angle in degrees to a number 360 < degrees >= 0
+   */
+  def modulo360(degrees: Double): Double = {
+    ((degrees % 360.0) + 360.0) % 360.0
   }
 
   def main(args: Array[String]): Unit = {

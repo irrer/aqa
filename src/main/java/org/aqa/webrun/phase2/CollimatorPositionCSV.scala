@@ -45,10 +45,10 @@ object CollimatorPositionCSV {
       ("X2_mm", (ii: II) => ii.X2_mm),
       ("Y1_mm", (ii: II) => ii.Y1_mm),
       ("Y2_mm", (ii: II) => ii.Y2_mm),
-      ("X1_PlanMinusImage_mm", (ii: II) => ii.X1_PlanMinusImage_mm),
-      ("X2_PlanMinusImage_mm", (ii: II) => ii.X2_PlanMinusImage_mm),
-      ("Y1_PlanMinusImage_mm", (ii: II) => ii.Y1_PlanMinusImage_mm),
-      ("Y2_PlanMinusImage_mm", (ii: II) => ii.Y2_PlanMinusImage_mm),
+      ("X1_ExpectedMinusImage_mm", (ii: II) => ii.X1_ExpectedMinusImage_mm),
+      ("X2_ExpectedMinusImage_mm", (ii: II) => ii.X2_ExpectedMinusImage_mm),
+      ("Y1_ExpectedMinusImage_mm", (ii: II) => ii.Y1_ExpectedMinusImage_mm),
+      ("Y2_ExpectedMinusImage_mm", (ii: II) => ii.Y2_ExpectedMinusImage_mm),
       ("pass-fail status", (ii: II) => ii.status))
 
     def collimatorPositionToCsv(ii: CollimatorPosition): String = {

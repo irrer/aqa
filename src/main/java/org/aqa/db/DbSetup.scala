@@ -92,7 +92,7 @@ object DbSetup extends Logging {
     }
 
     // Slick expects these properties to be set
-    System.setProperty("slick.dbs.default.db.url", Config.SlickDbsDefaultDbUrl)
+    System.setProperty("slick.dbs.default.db.url", Config.SlickDbsDefaultDbUrl.trim) // trim because sometimes XML formatter adds newline to URL
     System.setProperty("slick.dbs.default.driver", Config.SlickDbsDefaultDriver)
     System.setProperty("slick.dbs.default.db.driver", Config.SlickDbsDefaultDbDriver)
     setIfDefined("slick.dbs.default.db.user", Config.SlickDbsDefaultDbUser)

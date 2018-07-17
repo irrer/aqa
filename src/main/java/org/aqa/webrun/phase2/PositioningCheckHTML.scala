@@ -38,16 +38,16 @@ object PositioningCheckHTML {
       <a title="View RT Plan DICOM file" href={ extendedData.dicomHref(runReq.rtplan) }>RT Plan</a>
     }
 
-    class Row(val title: String, name: String, val get: (PositioningCheck) => String) {
+    class Col(val title: String, name: String, val get: (PositioningCheck) => String) {
       def toHeader = <th title={ title }>{ name }</th>
       def toRow(psnChk: PositioningCheck) = <td title={ title }>{ get(psnChk) }</td>
     }
 
-    def degree(diff: Double): String = diff.formatted("%6e")
+    def degree(diff: Double): String = diff.formatted("%9.4f")
 
-    def jaw(diff: Double): String = diff.formatted("%6e")
+    def jaw(diff: Double): String = diff.formatted("%12.9f")
 
-    class RowBeamName(override val title: String, name: String, override val get: (PositioningCheck) => String) extends Row(title, name, get) {
+    class ColBeamName(override val title: String, name: String, override val get: (PositioningCheck) => String) extends Col(title, name, get) {
       override def toRow(positioningCheck: PositioningCheck) = {
 
         val dicomFile = runReq.rtimageMap(positioningCheck.beamName)
@@ -58,16 +58,16 @@ object PositioningCheckHTML {
     }
 
     val rowList = Seq(
-      new RowBeamName("Name of beam in plan", "Beam Name", (psnChk: PositioningCheck) => psnChk.beamName),
-      new Row("Gantry Angle plan minus image in degrees", "Gantry Angle", (psnChk: PositioningCheck) => degree(psnChk.gantryAnglePlanMinusImage_deg)),
-      new Row("Collimator Angle plan minus image in degrees", "Collimator Angle", (psnChk: PositioningCheck) => degree(psnChk.collimatorAnglePlanMinusImage_deg)),
-      new Row("X1 Jaw plan minus image in mm", "X1 Jaw", (psnChk: PositioningCheck) => jaw(psnChk.x1JawPlanMinusImage_mm)),
-      new Row("X2 Jaw plan minus image in mm", "X2 Jaw", (psnChk: PositioningCheck) => jaw(psnChk.x2JawPlanMinusImage_mm)),
-      new Row("Y1 Jaw plan minus image in mm", "Y1 Jaw", (psnChk: PositioningCheck) => jaw(psnChk.y1JawPlanMinusImage_mm)),
-      new Row("Y2 Jaw plan minus image in mm", "Y2 Jaw", (psnChk: PositioningCheck) => jaw(psnChk.y2JawPlanMinusImage_mm)),
-      new Row("Energy plan minus image in kev", "Energy", (psnChk: PositioningCheck) => psnChk.energyPlanMinusImage_kev.toString),
-      new Row("Yes if Flattening Filter was present", "FF", (psnChk: PositioningCheck) => if (psnChk.flatteningFilter) "Yes" else "No"),
-      new Row("Pass if angles and jaw differences within tolerences", "Status", (psnChk: PositioningCheck) => if (psnChk.pass) "Pass" else "Fail"))
+      new ColBeamName("Name of beam in plan", "Beam Name", (psnChk: PositioningCheck) => psnChk.beamName),
+      new Col("Gantry Angle plan minus image in degrees", "Gantry Angle", (psnChk: PositioningCheck) => degree(psnChk.gantryAnglePlanMinusImage_deg)),
+      new Col("Collimator Angle plan minus image in degrees", "Collimator Angle", (psnChk: PositioningCheck) => degree(psnChk.collimatorAnglePlanMinusImage_deg)),
+      new Col("X1 Jaw plan minus image in mm", "X1 Jaw", (psnChk: PositioningCheck) => jaw(psnChk.x1JawPlanMinusImage_mm)),
+      new Col("X2 Jaw plan minus image in mm", "X2 Jaw", (psnChk: PositioningCheck) => jaw(psnChk.x2JawPlanMinusImage_mm)),
+      new Col("Y1 Jaw plan minus image in mm", "Y1 Jaw", (psnChk: PositioningCheck) => jaw(psnChk.y1JawPlanMinusImage_mm)),
+      new Col("Y2 Jaw plan minus image in mm", "Y2 Jaw", (psnChk: PositioningCheck) => jaw(psnChk.y2JawPlanMinusImage_mm)),
+      new Col("Energy plan minus image in kev", "Energy", (psnChk: PositioningCheck) => psnChk.energyPlanMinusImage_kev.toString),
+      new Col("Yes if Flattening Filter was present", "FF", (psnChk: PositioningCheck) => if (psnChk.flatteningFilter) "Yes" else "No"),
+      new Col("Pass if angles and jaw differences within tolerences", "Status", (psnChk: PositioningCheck) => if (psnChk.pass) "Pass" else "Fail"))
 
     def positioningCheckTableHeader: Elem = {
       <thead><tr>{ rowList.map(row => row.toHeader) }</tr></thead>

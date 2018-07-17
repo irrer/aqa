@@ -58,8 +58,8 @@ object CollimatorCenteringAnalysis extends Logging {
       val img270 = runReq.derivedMap(Config.CollimatorCentering270BeamName)
       // Calculate edges in parallel for efficiency.
       val resultPair = {
-        def m090 = MeasureTBLREdges.measure(img090.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, Util.collimatorAngleOfAl(al090), img090.originalImage, runReq.floodOffset)
-        def m270 = MeasureTBLREdges.measure(img270.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, Util.collimatorAngleOfAl(al270), img270.originalImage, runReq.floodOffset)
+        def m090 = MeasureTBLREdges.measure(img090.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, Util.collimatorAngle(al090), img090.originalImage, runReq.floodOffset)
+        def m270 = MeasureTBLREdges.measure(img270.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, Util.collimatorAngle(al270), img270.originalImage, runReq.floodOffset)
         val rp = ParSeq(m090 _, m270 _).map(f => f()).toList
         rp
       }
@@ -77,8 +77,8 @@ object CollimatorCenteringAnalysis extends Logging {
       val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
       logger.info("CollimatorCentering error in mm: " + errDistance + "    Status: " + procedureStatus)
 
-      val xy090 = m090.toX1X2Y1Y2(Util.collimatorAngleOfAl(al090))
-      val xy270 = m270.toX1X2Y1Y2(Util.collimatorAngleOfAl(al270))
+      val xy090 = m090.toX1X2Y1Y2(Util.collimatorAngle(al090))
+      val xy270 = m270.toX1X2Y1Y2(Util.collimatorAngle(al270))
 
       val collimatorCentering = new CollimatorCentering(None, extendedData.output.outputPK.get, procedureStatus.name,
         Util.sopOfAl(al090), Util.sopOfAl(al270), // SOPInstanceUID090, SOPInstanceUID270

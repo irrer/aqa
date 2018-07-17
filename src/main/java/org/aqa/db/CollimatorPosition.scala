@@ -20,10 +20,10 @@ case class CollimatorPosition(
   X2_mm: Double, //  X2 jaw position of collimator  (X axis) in mm
   Y1_mm: Double, //  Y1  jaw of collimator (Y axis) in mm
   Y2_mm: Double, //  Y2 jaw position of collimator (Y axis) in mm
-  X1_PlanMinusImage_mm: Double, //  X1 jaw plan minus east position of collimator  (X axis) in mm
-  X2_PlanMinusImage_mm: Double, //  X2 jaw plan minus west position of collimator  (X axis) in mm
-  Y1_PlanMinusImage_mm: Double, //  Y1 jaw plan minus north position of collimator (Y axis) in mm
-  Y2_PlanMinusImage_mm: Double, //  Y2 jaw plan minus south position of collimator (Y axis) in mm
+  X1_ExpectedMinusImage_mm: Double, //  X1 jaw plan minus east position of collimator  (X axis) in mm
+  X2_ExpectedMinusImage_mm: Double, //  X2 jaw plan minus west position of collimator  (X axis) in mm
+  Y1_ExpectedMinusImage_mm: Double, //  Y1 jaw plan minus north position of collimator (Y axis) in mm
+  Y2_ExpectedMinusImage_mm: Double, //  Y2 jaw plan minus south position of collimator (Y axis) in mm
   gantryAngle_deg: Double, // gantry angle in degrees
   collimatorAngle_deg: Double // collimator angle in degrees
 ) {
@@ -50,10 +50,10 @@ case class CollimatorPosition(
       "    X2_mm: " + X2_mm + "\n" +
       "    Y1_mm: " + Y1_mm + "\n" +
       "    Y2_mm: " + Y2_mm + "\n" +
-      "    X1_PlanMinusImage_mm: " + X1_PlanMinusImage_mm + "\n" +
-      "    X2_PlanMinusImage_mm: " + X2_PlanMinusImage_mm + "\n" +
-      "    Y1_PlanMinusImage_mm: " + Y1_PlanMinusImage_mm + "\n" +
-      "    Y2_PlanMinusImage_mm: " + Y2_PlanMinusImage_mm + "\n" +
+      "    X1_ExpectedMinusImage_mm: " + X1_ExpectedMinusImage_mm + "\n" +
+      "    X2_ExpectedMinusImage_mm: " + X2_ExpectedMinusImage_mm + "\n" +
+      "    Y1_ExpectedMinusImage_mm: " + Y1_ExpectedMinusImage_mm + "\n" +
+      "    Y2_ExpectedMinusImage_mm: " + Y2_ExpectedMinusImage_mm + "\n" +
       "    gantryAngle_deg: " + gantryAngle_deg + "\n" +
       "    collimatorAngle_deg: " + collimatorAngle_deg + "\n"
   }
@@ -72,10 +72,10 @@ object CollimatorPosition extends ProcedureOutput {
     def X2_mm = column[Double]("X2_mm")
     def Y1_mm = column[Double]("Y1_mm")
     def Y2_mm = column[Double]("Y2_mm")
-    def X1_PlanMinusImage_mm = column[Double]("X1_PlanMinusImage_mm")
-    def X2_PlanMinusImage_mm = column[Double]("X2_PlanMinusImage_mm")
-    def Y1_PlanMinusImage_mm = column[Double]("Y1_PlanMinusImage_mm")
-    def Y2_PlanMinusImage_mm = column[Double]("Y2_PlanMinusImage_mm")
+    def X1_ExpectedMinusImage_mm = column[Double]("X1_ExpectedMinusImage_mm")
+    def X2_ExpectedMinusImage_mm = column[Double]("X2_ExpectedMinusImage_mm")
+    def Y1_ExpectedMinusImage_mm = column[Double]("Y1_ExpectedMinusImage_mm")
+    def Y2_ExpectedMinusImage_mm = column[Double]("Y2_ExpectedMinusImage_mm")
     def gantryAngle_deg = column[Double]("gantryAngle_deg")
     def collimatorAngle_deg = column[Double]("collimatorAngle_deg")
 
@@ -90,10 +90,10 @@ object CollimatorPosition extends ProcedureOutput {
       X2_mm,
       Y1_mm,
       Y2_mm,
-      X1_PlanMinusImage_mm,
-      X2_PlanMinusImage_mm,
-      Y1_PlanMinusImage_mm,
-      Y2_PlanMinusImage_mm,
+      X1_ExpectedMinusImage_mm,
+      X2_ExpectedMinusImage_mm,
+      Y1_ExpectedMinusImage_mm,
+      Y2_ExpectedMinusImage_mm,
       gantryAngle_deg,
       collimatorAngle_deg) <> ((CollimatorPosition.apply _)tupled, CollimatorPosition.unapply _)
 

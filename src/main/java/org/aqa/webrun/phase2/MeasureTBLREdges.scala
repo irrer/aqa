@@ -30,9 +30,18 @@ import edu.umro.ImageUtil.ImageText
  */
 object MeasureTBLREdges extends Logging {
 
-  case class X1X2Y1Y2(X1: Double, X2: Double, Y1: Double, Y2: Double)
+  case class X1X2Y1Y2(X1: Double, X2: Double, Y1: Double, Y2: Double) {
+    def minus(other: X1X2Y1Y2) = new X1X2Y1Y2(
+      X1 - other.X1,
+      X2 - other.X2,
+      Y1 - other.Y1,
+      X2 - other.X2)
+
+    def toSeq = Seq(X1, X2, Y1, Y2)
+  }
 
   def TBLRtoX1X2Y1Y2(collimatorAngle: Double, tblr: TBLR) = {
+    val j = Util.angleRoundedTo90(collimatorAngle) // TODO rm
     Util.angleRoundedTo90(collimatorAngle) match {
       case 0 => new X1X2Y1Y2(tblr.left, tblr.right, tblr.bottom, tblr.top)
       case 90 => new X1X2Y1Y2(tblr.bottom, tblr.top, tblr.right, tblr.left)
@@ -63,6 +72,30 @@ object MeasureTBLREdges extends Logging {
     }
 
     def toX1X2Y1Y2(collimatorAngle: Double) = TBLRtoX1X2Y1Y2(collimatorAngle, this)
+  }
+
+  def getCollimatorPositions(BeamLimitingDeviceSequence: Seq[AttributeList]): X1X2Y1Y2 = {
+    def getPair(nameList: Seq[String]): Array[Double] = {
+      BeamLimitingDeviceSequence.filter(s => nameList.contains(s.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString)).head.get(TagFromName.LeafJawPositions).getDoubleValues
+    }
+
+    val xPair = getPair(Util.xOrientation)
+    val yPair = getPair(Util.yOrientation)
+
+    new X1X2Y1Y2(xPair.min, xPair.max, yPair.min, yPair.max)
+  }
+
+  def planCollimatorPositions(beamName: String, plan: AttributeList): X1X2Y1Y2 = {
+    val beamSeq = Util.seq2Attr(plan, TagFromName.BeamSequence).find(bs => bs.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.equals(beamName)).get
+    val controlPtSeq = Util.seq2Attr(beamSeq, TagFromName.ControlPointSequence).head
+    val BeamLimitingDeviceSequence = Util.seq2Attr(controlPtSeq, TagFromName.BeamLimitingDevicePositionSequence)
+    getCollimatorPositions(BeamLimitingDeviceSequence)
+  }
+
+  def imageCollimatorPositions(al: AttributeList): MeasureTBLREdges.X1X2Y1Y2 = {
+    val ExposureSequence = Util.seq2Attr(al, TagFromName.ExposureSequence).head
+    val BeamLimitingDeviceSequence = Util.seq2Attr(ExposureSequence, TagFromName.BeamLimitingDeviceSequence)
+    getCollimatorPositions(BeamLimitingDeviceSequence)
   }
 
   case class AnalysisResult(measurementSet: TBLR, bufferedImage: BufferedImage)

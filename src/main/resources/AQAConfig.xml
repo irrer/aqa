@@ -141,11 +141,20 @@ Note that when building a package for release, the Maven build process uses the 
     -->
     <CollimatorPositionBeamList>
         <BeamName FloodCompensation='true'>J10G180</BeamName>
+        <BeamName FloodCompensation='false'>J10G180</BeamName>
+
         <BeamName FloodCompensation='true'>J10G90</BeamName>
+        <BeamName FloodCompensation='false'>J10G90</BeamName>
+
         <BeamName FloodCompensation='true'>J10G0C270-6X</BeamName>
+        <BeamName FloodCompensation='false'>J10G0C270-6X</BeamName>
+
         <BeamName FloodCompensation='true'>J10G0C90-6X</BeamName>
+        <BeamName FloodCompensation='false'>J10G0C90-6X</BeamName>
+
         <BeamName FloodCompensation='true'>J10G270</BeamName>
-        
+        <BeamName FloodCompensation='false'>J10G270</BeamName>
+
         <BeamName FloodCompensation='false'>J24G0C270-6X</BeamName>
         <BeamName FloodCompensation='false'>T2 Open</BeamName>
         <BeamName FloodCompensation='false'>J20G0-10F</BeamName>

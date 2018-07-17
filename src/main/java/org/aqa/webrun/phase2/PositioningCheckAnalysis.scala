@@ -56,13 +56,14 @@ object PositioningCheckAnalysis extends Logging {
     getJawPosns(blds)
   }
 
-  private def modulo360(degrees: Double) = {
-    ((degrees % 3600.0) + 3600.0) % 3600.0
-  }
-
   def makePositioningCheck(outputPK: Long, plan: AttributeList, image: AttributeList): Option[PositioningCheck] = {
 
     def findBldpt(all: Seq[AttributeList], name: String) = all.filter(al => al.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrNull.equalsIgnoreCase(name)).head
+
+    def angleDiff(a: Double, b: Double): Double = {
+      val diff = Util.modulo360(a - b)
+      if (diff <= 180) diff else diff - 360
+    }
 
     try {
       val imageBeamNumber = image.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head
@@ -85,8 +86,8 @@ object PositioningCheckAnalysis extends Logging {
       val collimatorAngleImage_deg = aDbl(imageExposureSeq, TagFromName.BeamLimitingDeviceAngle)
       val energyImage_kev = aDbl(imageExposureSeq, TagFromName.KVP)
 
-      val gantryAnglePlanMinusImage_deg = modulo360(gantryAnglePlan_deg - gantryAngleImage_deg)
-      val collimatorAnglePlanMinusImage_deg = modulo360(collimatorAnglePlan_deg - collimatorAngleImage_deg)
+      val gantryAnglePlanMinusImage_deg = angleDiff(gantryAnglePlan_deg, gantryAngleImage_deg)
+      val collimatorAnglePlanMinusImage_deg = angleDiff(collimatorAnglePlan_deg, collimatorAngleImage_deg)
 
       val toleranceTable = Util.seq2Attr(plan, TagFromName.ToleranceTableSequence).head
 

@@ -34,7 +34,7 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
 
   val ImagePlanePixelSpacing = Phase2Util.getImagePlanePixelSpacing(flood.attributeList.get)
 
-  private val floodMeasurementAndImage = MeasureTBLREdges.measure(floodCorrectedImage, ImagePlanePixelSpacing, Util.collimatorAngleOfAl(flood.attributeList.get), floodCorrectedImage, new Point(0, 0))
+  private val floodMeasurementAndImage = MeasureTBLREdges.measure(floodCorrectedImage, ImagePlanePixelSpacing, Util.collimatorAngle(flood.attributeList.get), floodCorrectedImage, new Point(0, 0))
 
   val floodMeasurement = floodMeasurementAndImage.measurementSet
 
