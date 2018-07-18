@@ -23,7 +23,6 @@ import java.awt.Graphics2D
 import java.awt.BasicStroke
 import edu.umro.ScalaUtil.Trace
 import scala.collection.parallel.ParSeq
-import org.aqa.webrun.phase2.MeasureTBLREdges.TBLR
 import org.aqa.db.CollimatorCentering
 import java.awt.Point
 
@@ -60,11 +59,11 @@ object CollimatorPositionAnalysis extends Logging {
 
       val divergence = dbl(TagFromName.RTImageSID) / dbl(TagFromName.RadiationMachineSAD)
 
-      val scaledEdges = new TBLR(
+      val scaledEdges = new MeasureTBLREdges.TBLR(
         (edges.measurementSet.top - center.getY) / divergence,
         (edges.measurementSet.bottom - center.getY) / divergence,
-        (edges.measurementSet.right - center.getX) / divergence,
-        (edges.measurementSet.left - center.getX) / divergence)
+        (edges.measurementSet.left - center.getX) / divergence,
+        (edges.measurementSet.right - center.getX) / divergence)
 
       val orientedScaledEdges = MeasureTBLREdges.TBLRtoX1X2Y1Y2(collimatorAngle, scaledEdges)
 
@@ -111,7 +110,9 @@ object CollimatorPositionAnalysis extends Logging {
   def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, CollimatorPositionResult] = {
     try {
       logger.info("Starting analysis of CollimatorPosition")
-      val resultList = Config.CollimatorPositionBeamList.filter(cp => runReq.derivedMap.contains(cp.beamName)).par.map(cp => measureImage(cp.beamName, cp.FloodCompensation, extendedData, runReq)).toList
+      // TODO put back in
+      //val resultList = Config.CollimatorPositionBeamList.filter(cp => runReq.derivedMap.contains(cp.beamName)).par.map(cp => measureImage(cp.beamName, cp.FloodCompensation, extendedData, runReq)).toList
+      val resultList = Config.CollimatorPositionBeamList.filter(cp => runReq.derivedMap.contains(cp.beamName)).map(cp => measureImage(cp.beamName, cp.FloodCompensation, extendedData, runReq)).toList
 
       val doneList = resultList.filter(r => r.isRight).map(r => r.right.get)
       val crashList = resultList.filter(l => l.isLeft).map(l => l.left.get)

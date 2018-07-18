@@ -58,8 +58,8 @@ object CollimatorCenteringAnalysis extends Logging {
       val img270 = runReq.derivedMap(Config.CollimatorCentering270BeamName)
       // Calculate edges in parallel for efficiency.
       val resultPair = {
-        def m090 = MeasureTBLREdges.measure(img090.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, Util.collimatorAngle(al090), img090.originalImage, runReq.floodOffset)
-        def m270 = MeasureTBLREdges.measure(img270.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, Util.collimatorAngle(al270), img270.originalImage, runReq.floodOffset)
+        def m090 = MeasureTBLREdges.measure(img090.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, Util.collimatorAngle(al090), img090.pixelCorrectedImage, runReq.floodOffset)
+        def m270 = MeasureTBLREdges.measure(img270.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, Util.collimatorAngle(al270), img270.pixelCorrectedImage, runReq.floodOffset)
         val rp = ParSeq(m090 _, m270 _).map(f => f()).toList
         rp
       }

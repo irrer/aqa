@@ -62,13 +62,13 @@ object MeasureTBLREdges extends Logging {
     }
   }
 
-  case class TBLR(top: Double, bottom: Double, right: Double, left: Double) {
+  case class TBLR(top: Double, bottom: Double, left: Double, right: Double) {
     val center = new Point2D.Double((right + left) / 2, (top + bottom) / 2)
 
     def translate(floodOffset: Point, ImagePlanePixelSpacing: Point2D.Double) = {
       def transX(x: Double) = (x + floodOffset.getX) * ImagePlanePixelSpacing.getX
       def transY(y: Double) = (y + floodOffset.getY) * ImagePlanePixelSpacing.getY
-      new TBLR(transY(top), transY(bottom), transX(right), transX(left))
+      new TBLR(transY(top), transY(bottom), transX(left), transX(right))
     }
 
     def toX1X2Y1Y2(collimatorAngle: Double) = TBLRtoX1X2Y1Y2(collimatorAngle, this)
@@ -114,13 +114,13 @@ object MeasureTBLREdges extends Logging {
 
   //
 
-  private def getCoarseRightRectangle(image: DicomImage, cntrOfMass: Point2D, ImagePlanePixelSpacing: Point2D.Double): Rectangle = {
+  private def getCoarseLeftRectangle(image: DicomImage, cntrOfMass: Point2D, ImagePlanePixelSpacing: Point2D.Double): Rectangle = {
     val height = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / ImagePlanePixelSpacing.getY).toInt
     val y = (cntrOfMass.getY - (height / 2.0)).round.toInt
     new Rectangle(0, y, image.width / 2, height)
   }
 
-  private def getCoarseLeftRectangle(image: DicomImage, cntrOfMass: Point2D, ImagePlanePixelSpacing: Point2D.Double): Rectangle = {
+  private def getCoarseRightRectangle(image: DicomImage, cntrOfMass: Point2D, ImagePlanePixelSpacing: Point2D.Double): Rectangle = {
     val height = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / ImagePlanePixelSpacing.getY).toInt
     val y = (cntrOfMass.getY - (height / 2.0)).round.toInt
     new Rectangle(image.width / 2, y, image.width / 2, height)
@@ -138,6 +138,12 @@ object MeasureTBLREdges extends Logging {
   private def calcPercentPixelValue(image: DicomImage, thresholdPercent: Double): Double = {
     if (!((thresholdPercent > 0) && (thresholdPercent < 1))) throw new IllegalArgumentException("thresholdPercent is " + thresholdPercent + " but must be 0 < t < 1.")
     val pixelCount = ((Config.PenumbraPlateauPixelsPerMillion / 1000000.0) * image.width * image.height).round.toInt
+    if (pixelCount < 1) {
+      val ex = new IllegalArgumentException("Image has zero pixels, impossible to calculate threshold")
+      val msg = ex.toString + "\n" + fmtEx(ex)
+      logger.error(msg)
+      throw ex
+    }
     val min = image.minPixelValues(pixelCount).sum / pixelCount
     val max = image.maxPixelValues(pixelCount).sum / pixelCount
     val pctThresh = ((max - min) * thresholdPercent) + min
@@ -153,13 +159,13 @@ object MeasureTBLREdges extends Logging {
     val coarseBottomRectangle = getCoarseBottomRectangle(image, cntrOfMass, ImagePlanePixelSpacing)
     val coarseBottomEdge = LocateEdge.locateEdge(image.getSubimage(coarseBottomRectangle).rowSums, halfwayPixelValue * coarseBottomRectangle.getWidth) + coarseBottomRectangle.getY
 
-    val coarseRightRectangle = getCoarseRightRectangle(image, cntrOfMass, ImagePlanePixelSpacing)
-    val coarseRightEdge = LocateEdge.locateEdge(image.getSubimage(coarseRightRectangle).columnSums, halfwayPixelValue * coarseRightRectangle.getHeight)
-
     val coarseLeftRectangle = getCoarseLeftRectangle(image, cntrOfMass, ImagePlanePixelSpacing)
-    val coarseLeftEdge = LocateEdge.locateEdge(image.getSubimage(coarseLeftRectangle).columnSums, halfwayPixelValue * coarseLeftRectangle.getHeight) + coarseLeftRectangle.getX
+    val coarseLeftEdge = LocateEdge.locateEdge(image.getSubimage(coarseLeftRectangle).columnSums, halfwayPixelValue * coarseLeftRectangle.getHeight)
 
-    new TBLR(coarseTopEdge, coarseBottomEdge, coarseRightEdge, coarseLeftEdge)
+    val coarseRightRectangle = getCoarseRightRectangle(image, cntrOfMass, ImagePlanePixelSpacing)
+    val coarseRightEdge = LocateEdge.locateEdge(image.getSubimage(coarseRightRectangle).columnSums, halfwayPixelValue * coarseRightRectangle.getHeight) + coarseRightRectangle.getX
+
+    new TBLR(coarseTopEdge, coarseBottomEdge, coarseLeftEdge, coarseRightEdge)
   }
 
   private val imageColor = Color.green
@@ -276,22 +282,22 @@ object MeasureTBLREdges extends Logging {
 
   private def topBottomRectangles(coarse: TBLR, penumbraX: Double, penumbraY: Double): (Rectangle, Rectangle) = {
     val nsHeight = penumbraY // top and bottom height
-    val nsWidth = (coarse.left - coarse.right) - penumbraX // top and bottom width
-    val nsX = coarse.right + (penumbraX / 2)
+    val nsWidth = (coarse.right - coarse.left) - penumbraX // top and bottom width
+    val nsX = coarse.left + (penumbraX / 2)
 
     val topRectangle = new Rectangle(nsX.round.toInt, (coarse.top - (penumbraY / 2)).round.toInt, nsWidth.round.toInt, nsHeight.round.toInt)
     val bottomRectangle = new Rectangle(nsX.round.toInt, (coarse.bottom - (penumbraY / 2)).round.toInt, nsWidth.round.toInt, nsHeight.round.toInt)
     (topRectangle, bottomRectangle)
   }
 
-  private def rightLeftRectangles(coarse: TBLR, penumbraX: Double, penumbraY: Double): (Rectangle, Rectangle) = {
+  private def leftRightRectangles(coarse: TBLR, penumbraX: Double, penumbraY: Double): (Rectangle, Rectangle) = {
     val ewHeight = (coarse.bottom - coarse.top) - penumbraY // right and left height
     val ewWidth = penumbraX // right and left height
     val ewY = coarse.top + (penumbraX / 2)
 
-    val rightRectangle = new Rectangle((coarse.right - (penumbraX / 2)).round.toInt, ewY.round.toInt, ewWidth.round.toInt, ewHeight.round.toInt)
     val leftRectangle = new Rectangle((coarse.left - (penumbraX / 2)).round.toInt, ewY.round.toInt, ewWidth.round.toInt, ewHeight.round.toInt)
-    (rightRectangle, leftRectangle)
+    val rightRectangle = new Rectangle((coarse.right - (penumbraX / 2)).round.toInt, ewY.round.toInt, ewWidth.round.toInt, ewHeight.round.toInt)
+    (leftRectangle, rightRectangle)
   }
 
   /**
@@ -313,14 +319,14 @@ object MeasureTBLREdges extends Logging {
     val penumbraY = Config.PenumbraThickness_mm / ImagePlanePixelSpacing.getY // penumbra thickness in pixels
 
     val nsRect = topBottomRectangles(coarse, penumbraX, penumbraY)
-    val ewRect = rightLeftRectangles(coarse, penumbraX, penumbraY)
+    val ewRect = leftRightRectangles(coarse, penumbraX, penumbraY)
 
     val topEdge = LocateEdge.locateEdge(image.getSubimage(nsRect._1).rowSums, threshold * nsRect._1.width) + nsRect._1.y
     val bottomEdge = LocateEdge.locateEdge(image.getSubimage(nsRect._2).rowSums, threshold * nsRect._2.width) + nsRect._2.y
-    val rightEdge = LocateEdge.locateEdge(image.getSubimage(ewRect._1).columnSums, threshold * ewRect._1.height) + ewRect._1.x
-    val leftEdge = LocateEdge.locateEdge(image.getSubimage(ewRect._2).columnSums, threshold * ewRect._2.height) + ewRect._2.x
+    val leftEdge = LocateEdge.locateEdge(image.getSubimage(ewRect._1).columnSums, threshold * ewRect._1.height) + ewRect._1.x
+    val rightEdge = LocateEdge.locateEdge(image.getSubimage(ewRect._2).columnSums, threshold * ewRect._2.height) + ewRect._2.x
 
-    val measurementSet = new TBLR(topEdge, bottomEdge, rightEdge, leftEdge)
+    val measurementSet = new TBLR(topEdge, bottomEdge, leftEdge, rightEdge)
     val transMeasurementSet = measurementSet.translate(floodOffset, ImagePlanePixelSpacing)
 
     val bufferedImage = makeAnnotatedImage(annotate, measurementSet, transMeasurementSet, collimatorAngle, nsRect._1, nsRect._2, ewRect._1, ewRect._2, floodOffset, ImagePlanePixelSpacing)

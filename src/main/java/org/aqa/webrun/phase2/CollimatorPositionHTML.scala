@@ -62,10 +62,10 @@ object CollimatorPositionHTML {
       new Col("Flood field compensation used: True/False", "Flood Comp.", (psnChk: CollimatorPosition) => (if (psnChk.FloodCompensation) "T" else "F")),
       new Col("Gantry Angle in degrees", "Gantry", (psnChk: CollimatorPosition) => degree(psnChk.gantryAngle_deg)),
       new Col("Collimator Angle in degrees", "Collimator", (psnChk: CollimatorPosition) => degree(psnChk.collimatorAngle_deg)),
-      new Col("Planned X1 - X1 edge in image, in mm", "X1", (psnChk: CollimatorPosition) => leaf(psnChk.X1_ExpectedMinusImage_mm)),
-      new Col("Planned X2 - X2 edge in image, in mm", "X2", (psnChk: CollimatorPosition) => leaf(psnChk.X2_ExpectedMinusImage_mm)),
-      new Col("Planned Y1 - Y1 edge in image, in mm", "Y1", (psnChk: CollimatorPosition) => leaf(psnChk.Y1_ExpectedMinusImage_mm)),
-      new Col("Planned Y2 - Y2 edge in image, in mm", "Y2", (psnChk: CollimatorPosition) => leaf(psnChk.Y2_ExpectedMinusImage_mm)),
+      new Col("Expected X1 - X1 edge in image, in mm", "X1", (psnChk: CollimatorPosition) => leaf(psnChk.X1_ExpectedMinusImage_mm)),
+      new Col("Expected X2 - X2 edge in image, in mm", "X2", (psnChk: CollimatorPosition) => leaf(psnChk.X2_ExpectedMinusImage_mm)),
+      new Col("Expected Y1 - Y1 edge in image, in mm", "Y1", (psnChk: CollimatorPosition) => leaf(psnChk.Y1_ExpectedMinusImage_mm)),
+      new Col("Expected Y2 - Y2 edge in image, in mm", "Y2", (psnChk: CollimatorPosition) => leaf(psnChk.Y2_ExpectedMinusImage_mm)),
       new Col("Pass if angles and jaw differences within tolerences", "Status", (psnChk: CollimatorPosition) => if (psnChk.status.toString.equals(ProcedureStatus.pass.toString)) "Pass" else "Fail"))
 
     def collimatorPositionTableHeader: Elem = {

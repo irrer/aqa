@@ -48,9 +48,9 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
 
     val fPix = floodMeasurement.translate(new Point(0, 0), new Point2D.Double(1 / ImagePlanePixelSpacing.getX, 1 / ImagePlanePixelSpacing.getY))
 
-    val x = Math.round(fPix.right + pnX).toInt
+    val x = Math.round(fPix.left + pnX).toInt
     val y = Math.round(fPix.top + pnY).toInt
-    val width = Math.round((fPix.left - fPix.right) - (pnX * 2)).toInt
+    val width = Math.round((fPix.right - fPix.left) - (pnX * 2)).toInt
     val height = Math.round((fPix.bottom - fPix.top) - (pnY * 2)).toInt
 
     new Rectangle(x, y, width, height)
