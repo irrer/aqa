@@ -65,7 +65,8 @@ object CollimatorPositionAnalysis extends Logging {
         (edges.measurementSet.left - center.getX) / divergence,
         (edges.measurementSet.right - center.getX) / divergence)
 
-      val orientedScaledEdges = MeasureTBLREdges.TBLRtoX1X2Y1Y2(collimatorAngle, scaledEdges)
+      // TODO val orientedScaledEdges = MeasureTBLREdges.TBLRtoX1X2Y1Y2(collimatorAngle, scaledEdges)
+      val orientedScaledEdges = MeasureTBLREdges.TBLRtoX1X2Y1Y2(270, scaledEdges) // TODO always use the 'do nothing' angle?
 
       val expectedEdges = MeasureTBLREdges.imageCollimatorPositions(al) //   planCollimatorPositions(beamName, runReq.rtplan.attributeList.get)
       logger.info("Beam " + beamName + "  expected edges: " + expectedEdges)
