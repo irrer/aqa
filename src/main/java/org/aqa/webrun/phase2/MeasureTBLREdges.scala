@@ -38,7 +38,13 @@ object MeasureTBLREdges extends Logging {
       X2 - other.X2)
 
     def toSeq = Seq(X1, X2, Y1, Y2)
+
+    def toString(fmt: String) = {
+      "X1: " + X1.formatted(fmt) + "    X2: " + X2.formatted(fmt) + "    Y1: " + Y1.formatted(fmt) + "    Y2: " + Y2.formatted(fmt)
+    }
   }
+
+  def TBLRtoX1X2Y1Y2( tblr: TBLR) = new X1X2Y1Y2(tblr.left, tblr.right, tblr.top, tblr.bottom)
 
   def TBLRtoX1X2Y1Y2(collimatorAngle: Double, tblr: TBLR) = {
     val j = Util.angleRoundedTo90(collimatorAngle) // TODO rm
