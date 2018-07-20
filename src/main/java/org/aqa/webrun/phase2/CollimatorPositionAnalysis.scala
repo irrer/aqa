@@ -111,9 +111,7 @@ object CollimatorPositionAnalysis extends Logging {
   def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, CollimatorPositionResult] = {
     try {
       logger.info("Starting analysis of CollimatorPosition")
-      // TODO put back in when not debugging
-      //val resultList = Config.CollimatorPositionBeamList.filter(cp => runReq.derivedMap.contains(cp.beamName)).par.map(cp => measureImage(cp.beamName, cp.FloodCompensation, extendedData, runReq)).toList
-      val resultList = Config.CollimatorPositionBeamList.filter(cp => runReq.derivedMap.contains(cp.beamName)).map(cp => measureImage(cp.beamName, cp.FloodCompensation, extendedData, runReq)).toList
+      val resultList = Config.CollimatorPositionBeamList.filter(cp => runReq.derivedMap.contains(cp.beamName)).par.map(cp => measureImage(cp.beamName, cp.FloodCompensation, extendedData, runReq)).toList
 
       val doneList = resultList.filter(r => r.isRight).map(r => r.right.get)
       val crashList = resultList.filter(l => l.isLeft).map(l => l.left.get)
