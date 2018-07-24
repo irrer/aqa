@@ -47,7 +47,6 @@ object MeasureTBLREdges extends Logging {
   def TBLRtoX1X2Y1Y2( tblr: TBLR) = new X1X2Y1Y2(tblr.left, tblr.right, tblr.top, tblr.bottom)
 
   def TBLRtoX1X2Y1Y2(collimatorAngle: Double, tblr: TBLR) = {
-    val j = Util.angleRoundedTo90(collimatorAngle) // TODO rm
     Util.angleRoundedTo90(collimatorAngle) match {
       case 0 => new X1X2Y1Y2(tblr.left, tblr.right, tblr.bottom, tblr.top)
       case 90 => new X1X2Y1Y2(tblr.bottom, tblr.top, tblr.right, tblr.left)
@@ -70,6 +69,8 @@ object MeasureTBLREdges extends Logging {
 
   case class TBLR(top: Double, bottom: Double, left: Double, right: Double) {
     val center = new Point2D.Double((right + left) / 2, (top + bottom) / 2)
+    val width = (right - left).abs
+    val height = (bottom - top).abs
 
     def translate(floodOffset: Point, ImagePlanePixelSpacing: Point2D.Double) = {
       def transX(x: Double) = (x + floodOffset.getX) * ImagePlanePixelSpacing.getX

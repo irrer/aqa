@@ -13,8 +13,8 @@ case class Wedge(
   wedgePK: Option[Long], // primary key
   outputPK: Long, // output primary key
   SOPInstanceUID: String, //  SOPInstanceUID of DICOM file.
-  position_mm: Double, // position in mm from center.
-  dose_gy: Double // dose measured the given position
+  position_mm: Double, // position in mm from isocenter.
+  dose_hu: Double // dose measured the given position in Hounsfield units
 ) {
 
   def insert: Wedge = {
@@ -28,7 +28,7 @@ case class Wedge(
 
   def insertOrUpdate = Db.run(Wedge.query.insertOrUpdate(this))
 
-  override def toString: String = (dose_gy.toString).trim
+  override def toString: String = (dose_hu.toString).trim
 }
 
 object Wedge extends ProcedureOutput {
@@ -38,14 +38,14 @@ object Wedge extends ProcedureOutput {
     def outputPK = column[Long]("outputPK")
     def SOPInstanceUID = column[String]("SOPInstanceUID")
     def position_mm = column[Double]("position_mm")
-    def dose_gy = column[Double]("dose_gy")
+    def dose_hu = column[Double]("dose_hu")
 
     def * = (
       wedgePK.?,
       outputPK,
       SOPInstanceUID,
       position_mm,
-      dose_gy) <> ((Wedge.apply _)tupled, Wedge.unapply _)
+      dose_hu) <> ((Wedge.apply _)tupled, Wedge.unapply _)
 
     def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
     //def supplier = foreignKey("SUP_FK", supID, suppliers)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)           TODO
