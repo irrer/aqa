@@ -131,6 +131,14 @@ object Phase2Util extends Logging {
   }
 
   /**
+   * Given an RTPLAN and a beam name, get the beam sequence.
+   */
+  def getBeamSequenceOfPlan(beamName: String, plan: AttributeList): AttributeList = {
+    val bs = Util.seq2Attr(plan, TagFromName.BeamSequence).filter(b => b.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.equals(beamName)).head
+    bs
+  }
+
+  /**
    * Given an RTPLAN, a list of RTIMAGEs, and a BeamName, return the RTIMAGE associated with BeamName.
    */
   def findRtimageByBeamName(plan: DicomFile, rtimageList: IndexedSeq[DicomFile], BeamName: String): Option[DicomFile] = {

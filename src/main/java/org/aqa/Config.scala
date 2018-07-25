@@ -341,6 +341,12 @@ object Config extends Logging {
     list
   }
 
+  private def getWedgeBeamList = {
+    val list = (document \ "WedgeBeamList" \ "BeamName").map(n => n.head.text.toString).toList
+    logText("WedgeBeamList", list.mkString("\n        ", "\n        ", "\n"))
+    list
+  }
+
   case class CollimatorPositionBeamConfig(beamName: String, FloodCompensation: Boolean) {
     override def toString = "Beam name: " + beamName + "  FloodCompensation: " + FloodCompensation
   }
@@ -424,6 +430,8 @@ object Config extends Logging {
 
   val CollimatorPositionTolerance_mm = logMainText("CollimatorPositionTolerance_mm").toDouble
   val CollimatorPositionBeamList = getCollimatorPositionBeamList
+
+  val WedgeBeamList = getWedgeBeamList
 
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true

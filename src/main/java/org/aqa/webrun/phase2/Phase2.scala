@@ -223,11 +223,23 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
                 CollimatorCenteringAnalysis.runProcedure(extendedData, runReq) match {
                   case Left(fail) => Left(Seq(positionCheck.summary, badPixel.summary, centerDose.summary, fail))
                   case Right(collimatorCentering) => {
-                    CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result) match {
-                      case Left(fail) => Left(Seq(positionCheck.summary, badPixel.summary, centerDose.summary, collimatorCentering.summary, fail))
-                      case Right(collimatorPosition) => {
-                        Right(Seq(positionCheck, badPixel, centerDose, collimatorCentering, collimatorPosition).map(r => r.summary))
+                    val cp = CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result)
+                    val wdg = WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result)
+
+                    (cp, wdg) match {
+                      case (Right(collimatorPosition), Right(wedge)) => {
+                        Right(Seq(positionCheck, badPixel, centerDose, collimatorCentering, collimatorPosition, wedge).map(r => r.summary))
                       }
+                      case (Left(collimatorPositionFail), Right(wedge)) => {
+                        Left(Seq(positionCheck.summary, badPixel.summary, centerDose.summary, collimatorCentering.summary, collimatorPositionFail, wedge.summary))
+                      }
+                      case (Right(collimatorPosition), Left(wedgeFail)) => {
+                        Left(Seq(positionCheck.summary, badPixel.summary, centerDose.summary, collimatorCentering.summary, collimatorPosition.summary, wedgeFail))
+                      }
+                      case (Left(collimatorPositionFail), Left(wedgeFail)) => {
+                        Left(Seq(positionCheck.summary, badPixel.summary, centerDose.summary, collimatorCentering.summary, collimatorPositionFail, wedgeFail))
+                      }
+
                     }
                   }
                 }

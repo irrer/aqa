@@ -12,14 +12,15 @@ import org.aqa.procedures.ProcedureOutput
 case class Wedge(
   wedgePK: Option[Long], // primary key
   outputPK: Long, // output primary key
-  SOPInstanceUID: String, //  SOPInstanceUID of DICOM file.
-  position_mm: Double, // position in mm from isocenter.
-  dose_hu: Double // dose measured the given position in Hounsfield units
+  SOPInstanceUID: String, // SOPInstanceUID of DICOM file.
+  beamName: String,
+  position_mm: Double, // position in mm from isocenter.  Will be either X for horizontal wedge or Y for vertical wedge.
+  radiodensity_hu: Double // radiodensity measured the given position in Hounsfield units
 ) {
 
   def insert: Wedge = {
     val insertQuery = Wedge.query returning Wedge.query.map(_.wedgePK) into
-      ((rSquared, wedgePK) => rSquared.copy(wedgePK = Some(wedgePK)))
+      ((Wedge, wedgePK) => Wedge.copy(wedgePK = Some(wedgePK)))
 
     val action = insertQuery += this
     val result = Db.run(action)
@@ -28,24 +29,26 @@ case class Wedge(
 
   def insertOrUpdate = Db.run(Wedge.query.insertOrUpdate(this))
 
-  override def toString: String = (dose_hu.toString).trim
+  override def toString: String = ("position: " + position_mm + "    radiodensity:" + radiodensity_hu).trim
 }
 
 object Wedge extends ProcedureOutput {
-  class WedgeTable(tag: Tag) extends Table[Wedge](tag, "rSquared") {
+  class WedgeTable(tag: Tag) extends Table[Wedge](tag, "Wedge") {
 
     def wedgePK = column[Long]("wedgePK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
     def SOPInstanceUID = column[String]("SOPInstanceUID")
+    def beamName = column[String]("beamName")
     def position_mm = column[Double]("position_mm")
-    def dose_hu = column[Double]("dose_hu")
+    def radiodensity_hu = column[Double]("radiodensity_hu")
 
     def * = (
       wedgePK.?,
       outputPK,
       SOPInstanceUID,
+      beamName,
       position_mm,
-      dose_hu) <> ((Wedge.apply _)tupled, Wedge.unapply _)
+      radiodensity_hu) <> ((Wedge.apply _)tupled, Wedge.unapply _)
 
     def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
     //def supplier = foreignKey("SUP_FK", supID, suppliers)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)           TODO
@@ -64,7 +67,7 @@ object Wedge extends ProcedureOutput {
   }
 
   /**
-   * Get a list of all rSquareds for the given output
+   * Get a list of all wedges for the given output
    */
   def getByOutput(outputPK: Long): Seq[Wedge] = {
     val action = for {
