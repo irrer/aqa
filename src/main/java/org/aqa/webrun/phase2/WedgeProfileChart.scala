@@ -31,16 +31,26 @@ object WedgeProfileChart extends Logging {
                          """ + huList + """
                     ]
                 },
+                point: { // show point on hover
+                    r: 0,
+                    focus : {
+                        expand: {
+                            r:4
+                        }
+                    }
+                },
                 bindto : '#@@BR@@',
                 axis: {
                     x: {
                         label: 'Position',
-                            format: d3.format('.4f')
+                        tick: {
+                            format: d3.format('.3g')
+                        }
                     },
                     y: {
                         label: 'HU',
                         tick: {
-                            format: d3.format('.4f')
+                            format: d3.format('.4g')
                         }
                     }
                 },
@@ -50,7 +60,7 @@ object WedgeProfileChart extends Logging {
             });
 """
 
-     template.replace(tag, beamRef(beamName))
+    template.replace(tag, beamRef(beamName))
 
   }
 

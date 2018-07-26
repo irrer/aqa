@@ -78,9 +78,9 @@ object WedgeAnalysis extends Logging {
       imageCenter -
         {
           if (orientationHorizontal)
-            ((i + x) / ips.getX) + collimatorCentering.xCollimatorCenterMinusImageCenter_mm
+            ((i + x) * ips.getX) + collimatorCentering.xCollimatorCenterMinusImageCenter_mm
           else
-            ((i + y) / ips.getY) + collimatorCentering.yCollimatorCenterMinusImageCenter_mm
+            ((i + y) * ips.getY) + collimatorCentering.yCollimatorCenterMinusImageCenter_mm
         }
     }
     val resultList = profile.indices.map(i => new Wedge(None, extendedData.output.outputPK.get, SOPInstanceUID, beamName, positionOf(i), profile(i)))

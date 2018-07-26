@@ -51,7 +51,7 @@ object WedgeHTML {
     }
 
     def wedgeHtml(wedgeList: Seq[Wedge]): Elem = {
-      <div class="row" title="Wedge Profile">
+      <div class="row">
         <h3>Beam { wedgeList.head.beamName } </h3>
         <div id={ WedgeProfileChart.beamRef(wedgeList.head.beamName) }>filler</div>
       </div>
