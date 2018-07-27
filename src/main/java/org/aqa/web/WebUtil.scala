@@ -304,8 +304,8 @@ object WebUtil extends Logging {
             </div>
           </header>
           { content }
+          { runScriptTag }
         </body>
-        { runScriptTag }
       </html>
     }
 
