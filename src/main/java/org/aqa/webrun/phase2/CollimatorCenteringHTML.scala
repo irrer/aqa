@@ -101,7 +101,7 @@ object CollimatorCenteringHTML {
     val content = {
       <div>
         <div class="col-md-4 col-md-offset-4" align="middle">
-          <h3 title='X, Y difference from image center in mm'>{ resultSummary }</h3>
+          <h3 title='X, Y difference from image center in mm'>{ resultSummary } mm</h3>
           { makeTable(collimatorCentering) }
         </div>
         <div class="row" title="Click images for full sized view">
