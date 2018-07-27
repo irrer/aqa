@@ -18,7 +18,7 @@ import org.aqa.run.PostProcess
 import scala.xml.Elem
 import org.aqa.procedures.ProcedureOutputUtil
 import scala.xml.XML
-import org.aqa.db.PositioningCheck
+import org.aqa.db.MetadataCheck
 import com.pixelmed.dicom.SOPClass
 import org.aqa.db.Input
 import java.sql.Timestamp
@@ -168,7 +168,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       if (basicBeamValid.isLeft) basicBeamValid
       else {
         val runReq = basicBeamValid.right.get
-        val err = PositioningCheckValidation.validate(runReq)
+        val err = MetadataCheckValidation.validate(runReq)
         if (err.isDefined) Left(Error.make(form.uploadFileInput.get, err.get)) else {
           val bpErr = BadPixelAnalysis.validate(runReq)
           if (bpErr.isDefined) Left(Error.make(form.uploadFileInput.get, err.get)) else Right(runReq)
@@ -211,33 +211,33 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   private def runPhase2(extendedData: ExtendedData, rtimageMap: Map[String, DicomFile], runReq: RunReq): ProcedureStatus.Value = {
     logger.info("Starting Phase2 analysis")
 
-    val summaryList: Either[Seq[Elem], Seq[Elem]] = PositioningCheckAnalysis.runProcedure(extendedData, runReq) match {
+    val summaryList: Either[Seq[Elem], Seq[Elem]] = MetadataCheckAnalysis.runProcedure(extendedData, runReq) match {
       case Left(fail) => Left(Seq(fail))
-      case Right(positionCheck) => {
+      case Right(metadataCheck) => {
         BadPixelAnalysis.runProcedure(extendedData, runReq) match {
-          case Left(fail) => Left(Seq(positionCheck.summary, fail))
+          case Left(fail) => Left(Seq(metadataCheck.summary, fail))
           case Right(badPixel) => {
             CenterDoseAnalysis.runProcedure(extendedData, runReq) match {
-              case Left(fail) => Left(Seq(positionCheck.summary, badPixel.summary, fail))
+              case Left(fail) => Left(Seq(metadataCheck.summary, badPixel.summary, fail))
               case Right(centerDose) => {
                 CollimatorCenteringAnalysis.runProcedure(extendedData, runReq) match {
-                  case Left(fail) => Left(Seq(positionCheck.summary, badPixel.summary, centerDose.summary, fail))
+                  case Left(fail) => Left(Seq(metadataCheck.summary, badPixel.summary, centerDose.summary, fail))
                   case Right(collimatorCentering) => {
                     val cp = CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result)
                     val wdg = WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result)
 
                     (cp, wdg) match {
                       case (Right(collimatorPosition), Right(wedge)) => {
-                        Right(Seq(positionCheck, badPixel, centerDose, collimatorCentering, collimatorPosition, wedge).map(r => r.summary))
+                        Right(Seq(metadataCheck, badPixel, centerDose, collimatorCentering, collimatorPosition, wedge).map(r => r.summary))
                       }
                       case (Left(collimatorPositionFail), Right(wedge)) => {
-                        Left(Seq(positionCheck.summary, badPixel.summary, centerDose.summary, collimatorCentering.summary, collimatorPositionFail, wedge.summary))
+                        Left(Seq(metadataCheck.summary, badPixel.summary, centerDose.summary, collimatorCentering.summary, collimatorPositionFail, wedge.summary))
                       }
                       case (Right(collimatorPosition), Left(wedgeFail)) => {
-                        Left(Seq(positionCheck.summary, badPixel.summary, centerDose.summary, collimatorCentering.summary, collimatorPosition.summary, wedgeFail))
+                        Left(Seq(metadataCheck.summary, badPixel.summary, centerDose.summary, collimatorCentering.summary, collimatorPosition.summary, wedgeFail))
                       }
                       case (Left(collimatorPositionFail), Left(wedgeFail)) => {
-                        Left(Seq(positionCheck.summary, badPixel.summary, centerDose.summary, collimatorCentering.summary, collimatorPositionFail, wedgeFail))
+                        Left(Seq(metadataCheck.summary, badPixel.summary, centerDose.summary, collimatorCentering.summary, collimatorPositionFail, wedgeFail))
                       }
 
                     }

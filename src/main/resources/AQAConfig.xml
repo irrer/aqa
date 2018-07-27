@@ -66,13 +66,13 @@ Note that when building a package for release, the Maven build process uses the 
     examining the input files to determine if they are from different sessions. -->
     <MaxProcedureDuration>120.0</MaxProcedureDuration>
 
-    <!-- List of beam names used by Phase2 PositioningCheck -->
-    <PositioningCheckBeamNameList>
+    <!-- List of beam names used by Phase2 MetadataCheck -->
+    <MetadataCheckBeamNameList>
         <BeamName>J10G0C270-6X</BeamName>
         <BeamName>T2 Open</BeamName>
         <BeamName>J10G270</BeamName>
         <BeamName>T3 Open</BeamName>
-    </PositioningCheckBeamNameList>
+    </MetadataCheckBeamNameList>
 
     <!-- Beam name for flood field. -->
     <FloodFieldBeamName>Flood 6X</FloodFieldBeamName>

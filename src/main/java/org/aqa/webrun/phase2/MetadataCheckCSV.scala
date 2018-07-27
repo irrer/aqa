@@ -1,6 +1,6 @@
 package org.aqa.webrun.phase2
 
-import org.aqa.db.PositioningCheck
+import org.aqa.db.MetadataCheck
 import org.aqa.Util
 import java.io.File
 import org.aqa.db.Output
@@ -10,11 +10,11 @@ import org.aqa.db.Procedure
 import org.aqa.db.Input
 import org.aqa.db.User
 
-object PositioningCheckCSV {
+object MetadataCheckCSV {
 
-  val csvFileName = "PositioningCheck.csv"
+  val csvFileName = "MetadataCheck.csv"
 
-  def makeCsvFile(extendedData: ExtendedData, runReq: RunReq, positioningCheckSeq: Seq[PositioningCheck]) = {
+  def makeCsvFile(extendedData: ExtendedData, runReq: RunReq, metadataCheckSeq: Seq[MetadataCheck]) = {
 
     // format lots of meta-information for the CSV header
 
@@ -32,7 +32,7 @@ object PositioningCheckCSV {
     val userId = extendedData.user.id
     val acquisitionDate = if (extendedData.output.dataDate.isDefined) Util.standardDateFormat.format(extendedData.output.dataDate.get) else "none"
 
-    type II = PositioningCheck
+    type II = MetadataCheck
 
     val dblFmt = "%14.11f"
     val textFmt = "%s"
@@ -55,7 +55,7 @@ object PositioningCheckCSV {
       ("flatteningFilter", (ii: II) => ii.flatteningFilter),
       ("pass", (ii: II) => ii.pass))
 
-    def positioningCheckToCsv(ii: PositioningCheck): String = {
+    def metadataCheckToCsv(ii: MetadataCheck): String = {
       def fmt(any: Any): String = {
         any match {
           case d: Double => d.formatted("%14.11e")
@@ -81,7 +81,7 @@ object PositioningCheckCSV {
 
     val header = Seq(columns.map(c => c._1).mkString(","))
 
-    val data = positioningCheckSeq.map(positionCheck => positioningCheckToCsv(positionCheck))
+    val data = metadataCheckSeq.map(positionCheck => metadataCheckToCsv(positionCheck))
 
     val text = (metaData ++ header ++ data).mkString("", "\r\n", "\r\n")
     val file = new File(extendedData.output.dir, csvFileName)

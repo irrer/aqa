@@ -6,15 +6,15 @@ import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import java.io.File
 import edu.umro.ScalaUtil.Trace
-import org.aqa.webrun.phase2.PositioningCheckAnalysis
+import org.aqa.webrun.phase2.MetadataCheckAnalysis
 
 /**
  * Test the PositioningCheckAnalysis.
  */
 
-class TestPositioningCheckAnalysis extends FlatSpec with Matchers {
+class TestMetadataCheckAnalysis extends FlatSpec with Matchers {
 
-  "makePositioningCheck" should "make a passing one" in {
+  "makeMetadataCheck" should "make a passing one" in {
 
     Trace.trace
     //      val plan = Util.readDicomFile(new File("""PositioningCheckPlan.dcm""")).right.get

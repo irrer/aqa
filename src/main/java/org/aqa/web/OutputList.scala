@@ -90,7 +90,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     <a title="Click to delete.  Can NOT be undone" href={ OutputList.path + "?" + OutputList.deleteTag + "=" + extendedValues.output_outputPK }>Delete</a>
   }
 
-  type ColT = Output.ExtendedValues   // Column Type
+  type ColT = Output.ExtendedValues // Column Type
 
   private val institutionCol = new Column[ColT]("Institution", _.institution_name)
 

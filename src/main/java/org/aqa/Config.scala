@@ -329,9 +329,9 @@ object Config extends Logging {
     }
   }
 
-  private def getPositioningCheckBeamNameList = {
-    val list = (document \ "PositioningCheckBeamNameList" \ "BeamName").map(n => n.head.text.toString).toList
-    logText("PositioningCheckBeamNameList", list.mkString("\n        ", "\n        ", "\n"))
+  private def getMetadataCheckBeamNameList = {
+    val list = (document \ "MetadataCheckBeamNameList" \ "BeamName").map(n => n.head.text.toString).toList
+    logText("MetadataCheckBeamNameList", list.mkString("\n        ", "\n        ", "\n"))
     list
   }
 
@@ -393,7 +393,7 @@ object Config extends Logging {
   val passImageUrl = "/static/images/pass.png"
   val failImageUrl = "/static/images/fail.png"
 
-  val PositioningCheckBeamNameList: List[String] = getPositioningCheckBeamNameList
+  val MetadataCheckBeamNameList: List[String] = getMetadataCheckBeamNameList
 
   val FloodFieldBeamName = logMainText("FloodFieldBeamName")
 

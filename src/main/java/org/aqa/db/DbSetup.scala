@@ -72,7 +72,7 @@ object DbSetup extends Logging {
     LOCRSquared.query,
     DiffBaselineOpen.query,
     DiffBaselineTrans.query,
-    PositioningCheck.query,
+    MetadataCheck.query,
     CollimatorCentering.query,
     BadPixel.query,
     CenterDose.query,

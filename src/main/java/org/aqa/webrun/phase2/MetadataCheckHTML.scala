@@ -10,7 +10,7 @@ import org.aqa.db.User
 import org.aqa.Util
 import java.util.Date
 import org.aqa.web.WebServer
-import org.aqa.db.PositioningCheck
+import org.aqa.db.MetadataCheck
 import org.aqa.web.DicomAccess
 import org.aqa.web.WebUtil._
 import org.aqa.DicomFile
@@ -19,69 +19,69 @@ import org.aqa.run.ProcedureStatus
 import java.io.File
 import org.aqa.Config
 
-object PositioningCheckHTML {
-  val htmlFileName = "PositioningCheck.html"
+object MetadataCheckHTML {
+  val htmlFileName = "MetadataCheck.html"
 
   /**
    * Generate a detailed report and write it to the output directory.  Also write a CSV file.  Return an
    * HTML snippet that serves as a summary and a link to the detailed report.
    */
-  def makeDisplay(extendedData: ExtendedData, runReq: RunReq, resultList: Seq[PositioningCheck], status: ProcedureStatus.Value): Elem = {
+  def makeDisplay(extendedData: ExtendedData, runReq: RunReq, resultList: Seq[MetadataCheck], status: ProcedureStatus.Value): Elem = {
 
-    PositioningCheckCSV.makeCsvFile(extendedData, runReq, resultList)
+    MetadataCheckCSV.makeCsvFile(extendedData, runReq, resultList)
 
     val csvFileReference = {
-      <a title="Download Positioning Check as CSV File" href={ PositioningCheckCSV.csvFileName }>CSV</a>
+      <a title="Download Metadata Check as CSV File" href={ MetadataCheckCSV.csvFileName }>CSV</a>
     }
 
     val viewRtPlan = {
       <a title="View RT Plan DICOM file" href={ extendedData.dicomHref(runReq.rtplan) }>RT Plan</a>
     }
 
-    class Col(val title: String, name: String, val get: (PositioningCheck) => String) {
+    class Col(val title: String, name: String, val get: (MetadataCheck) => String) {
       def toHeader = <th title={ title }>{ name }</th>
-      def toRow(psnChk: PositioningCheck) = <td title={ title }>{ get(psnChk) }</td>
+      def toRow(psnChk: MetadataCheck) = <td title={ title }>{ get(psnChk) }</td>
     }
 
     def degree(diff: Double): String = diff.formatted("%9.4f")
 
     def jaw(diff: Double): String = diff.formatted("%12.9f")
 
-    class ColBeamName(override val title: String, name: String, override val get: (PositioningCheck) => String) extends Col(title, name, get) {
-      override def toRow(positioningCheck: PositioningCheck) = {
+    class ColBeamName(override val title: String, name: String, override val get: (MetadataCheck) => String) extends Col(title, name, get) {
+      override def toRow(metadataCheck: MetadataCheck) = {
 
-        val dicomFile = runReq.rtimageMap(positioningCheck.beamName)
+        val dicomFile = runReq.rtimageMap(metadataCheck.beamName)
         val link = extendedData.dicomHref(dicomFile)
-        val elem = { <td title={ title + ".  Follow link to view DICOM" }><a href={ link }>{ get(positioningCheck) }</a></td> }
+        val elem = { <td title={ title + ".  Follow link to view DICOM" }><a href={ link }>{ get(metadataCheck) }</a></td> }
         elem
       }
     }
 
     val rowList = Seq(
-      new ColBeamName("Name of beam in plan", "Beam Name", (psnChk: PositioningCheck) => psnChk.beamName),
-      new Col("Gantry Angle plan minus image in degrees", "Gantry Angle", (psnChk: PositioningCheck) => degree(psnChk.gantryAnglePlanMinusImage_deg)),
-      new Col("Collimator Angle plan minus image in degrees", "Collimator Angle", (psnChk: PositioningCheck) => degree(psnChk.collimatorAnglePlanMinusImage_deg)),
-      new Col("X1 Jaw plan minus image in mm", "X1 Jaw", (psnChk: PositioningCheck) => jaw(psnChk.x1JawPlanMinusImage_mm)),
-      new Col("X2 Jaw plan minus image in mm", "X2 Jaw", (psnChk: PositioningCheck) => jaw(psnChk.x2JawPlanMinusImage_mm)),
-      new Col("Y1 Jaw plan minus image in mm", "Y1 Jaw", (psnChk: PositioningCheck) => jaw(psnChk.y1JawPlanMinusImage_mm)),
-      new Col("Y2 Jaw plan minus image in mm", "Y2 Jaw", (psnChk: PositioningCheck) => jaw(psnChk.y2JawPlanMinusImage_mm)),
-      new Col("Energy plan minus image in kev", "Energy", (psnChk: PositioningCheck) => psnChk.energyPlanMinusImage_kev.toString),
-      new Col("Yes if Flattening Filter was present", "FF", (psnChk: PositioningCheck) => if (psnChk.flatteningFilter) "Yes" else "No"),
-      new Col("Pass if angles and jaw differences within tolerences", "Status", (psnChk: PositioningCheck) => if (psnChk.pass) "Pass" else "Fail"))
+      new ColBeamName("Name of beam in plan", "Beam Name", (psnChk: MetadataCheck) => psnChk.beamName),
+      new Col("Gantry Angle plan minus image in degrees", "Gantry Angle", (psnChk: MetadataCheck) => degree(psnChk.gantryAnglePlanMinusImage_deg)),
+      new Col("Collimator Angle plan minus image in degrees", "Collimator Angle", (psnChk: MetadataCheck) => degree(psnChk.collimatorAnglePlanMinusImage_deg)),
+      new Col("X1 Jaw plan minus image in mm", "X1 Jaw", (psnChk: MetadataCheck) => jaw(psnChk.x1JawPlanMinusImage_mm)),
+      new Col("X2 Jaw plan minus image in mm", "X2 Jaw", (psnChk: MetadataCheck) => jaw(psnChk.x2JawPlanMinusImage_mm)),
+      new Col("Y1 Jaw plan minus image in mm", "Y1 Jaw", (psnChk: MetadataCheck) => jaw(psnChk.y1JawPlanMinusImage_mm)),
+      new Col("Y2 Jaw plan minus image in mm", "Y2 Jaw", (psnChk: MetadataCheck) => jaw(psnChk.y2JawPlanMinusImage_mm)),
+      new Col("Energy plan minus image in kev", "Energy", (psnChk: MetadataCheck) => psnChk.energyPlanMinusImage_kev.toString),
+      new Col("Yes if Flattening Filter was present", "FF", (psnChk: MetadataCheck) => if (psnChk.flatteningFilter) "Yes" else "No"),
+      new Col("Pass if angles and jaw differences within tolerences", "Status", (psnChk: MetadataCheck) => if (psnChk.pass) "Pass" else "Fail"))
 
-    def positioningCheckTableHeader: Elem = {
+    def metadataCheckTableHeader: Elem = {
       <thead><tr>{ rowList.map(row => row.toHeader) }</tr></thead>
     }
 
-    def positioningCheckToTableRow(positioningCheck: PositioningCheck): Elem = {
-      if (positioningCheck.pass) {
-        <tr>{ rowList.map(row => row.toRow(positioningCheck)) }</tr>
+    def metadataCheckToTableRow(metadataCheck: MetadataCheck): Elem = {
+      if (metadataCheck.pass) {
+        <tr>{ rowList.map(row => row.toRow(metadataCheck)) }</tr>
       } else {
-        <tr class="danger">{ rowList.map(row => row.toRow(positioningCheck)) }</tr>
+        <tr class="danger">{ rowList.map(row => row.toRow(metadataCheck)) }</tr>
       }
     }
 
-    val tbody = resultList.map(psnChk => positioningCheckToTableRow(psnChk))
+    val tbody = resultList.map(psnChk => metadataCheckToTableRow(psnChk))
 
     val content = {
       <div>
@@ -91,7 +91,7 @@ object PositioningCheckHTML {
         </div>
         <div class="row" style="margin:20px;">
           <table class="table table-striped">
-            { positioningCheckTableHeader }
+            { metadataCheckTableHeader }
             <tbody>{ tbody }</tbody>
           </table>
         </div>
@@ -99,7 +99,7 @@ object PositioningCheckHTML {
     }
 
     // write the report to the output directory
-    val text = Phase2Util.wrapSubProcedure(extendedData, content, "Positioning Check", status, None)
+    val text = Phase2Util.wrapSubProcedure(extendedData, content, "Metadata Check", status, None)
     val file = new File(extendedData.output.dir, htmlFileName)
     Util.writeBinaryFile(file, text.getBytes)
 
@@ -111,7 +111,7 @@ object PositioningCheckHTML {
       val elem = {
         <div title="Click for details.">
           <a href={ htmlFileName }>
-            Positioning Check<br/>
+            Metadata Check<br/>
             <img src={ iconImage } height="32"/>
           </a>
         </div>

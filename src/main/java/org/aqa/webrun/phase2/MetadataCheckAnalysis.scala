@@ -1,7 +1,7 @@
 package org.aqa.webrun.phase2
 
 import org.aqa.Logging
-import org.aqa.db.PositioningCheck
+import org.aqa.db.MetadataCheck
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
@@ -16,7 +16,7 @@ import edu.umro.ScalaUtil.Trace
 /**
  * Analyze DICOM files for ImageAnalysis.
  */
-object PositioningCheckAnalysis extends Logging {
+object MetadataCheckAnalysis extends Logging {
 
   /**
    * Determine if the given attribute list references the given beam number.
@@ -56,7 +56,7 @@ object PositioningCheckAnalysis extends Logging {
     getJawPosns(blds)
   }
 
-  def makePositioningCheck(outputPK: Long, plan: AttributeList, image: AttributeList): Option[PositioningCheck] = {
+  def makeMetadata(outputPK: Long, plan: AttributeList, image: AttributeList): Option[MetadataCheck] = {
 
     def findBldpt(all: Seq[AttributeList], name: String) = all.filter(al => al.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrNull.equalsIgnoreCase(name)).head
 
@@ -118,8 +118,8 @@ object PositioningCheckAnalysis extends Logging {
       // image (independent of plan) uses flattening filter free
       val flatteningFilter = image.get(TagFromName.RTImageDescription).getSingleStringValueOrEmptyString.toLowerCase.contains("fff")
 
-      val positioningCheck = new PositioningCheck(
-        None, // positioningCheckPK
+      val metadataCheck = new MetadataCheck(
+        None, // metadataCheckPK
         outputPK, // outputPK
         beamName,
         gantryAnglePlan_deg,
@@ -139,43 +139,43 @@ object PositioningCheckAnalysis extends Logging {
         flatteningFilter,
         pass)
 
-      logger.info("PositioningCheckAnalysis.makePositioningCheck:\n" + positioningCheck)
-      Some(positioningCheck)
+      logger.info("MetadataCheckAnalysis.makeMetadata:\n" + metadataCheck)
+      Some(metadataCheck)
     } catch {
       case t: Throwable => {
-        logger.info("Unable to make PositioningCheck: " + t)
+        logger.info("Unable to make Metadata: " + t)
         None
       }
     }
   }
 
-  private val subProcedureName = "Positioning Check"
+  private val subProcedureName = "Metadata Check"
 
-  class PositioningCheckResult(summary: Elem, status: ProcedureStatus.Value, resultList: Seq[PositioningCheck]) extends SubProcedureResult(summary, status, subProcedureName)
+  class MetadataResult(summary: Elem, status: ProcedureStatus.Value, resultList: Seq[MetadataCheck]) extends SubProcedureResult(summary, status, subProcedureName)
 
   /**
-   * Run the PositioningCheck sub-procedure, save results in the database, return true for pass or false for fail.  For it to pass all images have to pass.
+   * Run the Metadata sub-procedure, save results in the database, return true for pass or false for fail.  For it to pass all images have to pass.
    */
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, PositioningCheckResult] = {
+  def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, MetadataResult] = {
     try {
-      logger.info("Starting analysis of PositioningCheck")
+      logger.info("Starting analysis of " + subProcedureName)
       val planAttrList = runReq.rtplan.attributeList.get
 
-      val rtimageList = Config.PositioningCheckBeamNameList.map(BeamName => runReq.rtimageMap(BeamName))
-      val resultList = rtimageList.map(rtimage => makePositioningCheck(extendedData.output.outputPK.get, planAttrList, rtimage.attributeList.get)).flatten
+      val rtimageList = Config.MetadataCheckBeamNameList.map(BeamName => runReq.rtimageMap(BeamName))
+      val resultList = rtimageList.map(rtimage => makeMetadata(extendedData.output.outputPK.get, planAttrList, rtimage.attributeList.get)).flatten
 
       // make sure all were processed and that they all passed
-      val pass = (resultList.size == Config.PositioningCheckBeamNameList.size) && resultList.map(pc => pc.pass).reduce(_ && _)
+      val pass = (resultList.size == Config.MetadataCheckBeamNameList.size) && resultList.map(pc => pc.pass).reduce(_ && _)
       val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
-      PositioningCheck.insert(resultList)
-      val elem = PositioningCheckHTML.makeDisplay(extendedData, runReq, resultList, procedureStatus)
-      val pcr = Right(new PositioningCheckResult(elem, procedureStatus, resultList))
-      logger.info("Finished analysis of PositioningCheck")
+      MetadataCheck.insert(resultList)
+      val elem = MetadataCheckHTML.makeDisplay(extendedData, runReq, resultList, procedureStatus)
+      val pcr = Right(new MetadataResult(elem, procedureStatus, resultList))
+      logger.info("Finished analysis of Metadata")
       pcr
     } catch {
       case t: Throwable => {
-        logger.warn("Unexpected error in analysis of PositioningCheck: " + t + fmtEx(t))
+        logger.warn("Unexpected error in analysis of Metadata: " + t + fmtEx(t))
         Left(Phase2Util.procedureCrash(subProcedureName))
       }
     }

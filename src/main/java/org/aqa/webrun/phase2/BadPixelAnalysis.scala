@@ -1,14 +1,11 @@
 package org.aqa.webrun.phase2
 
 import org.aqa.Logging
-import org.aqa.db.PositioningCheck
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import org.aqa.Util
-import scala.collection.Seq
 import scala.xml.Elem
-import org.aqa.db.Output
 import org.aqa.run.ProcedureStatus
 import org.aqa.Config
 import org.aqa.db.BadPixel
@@ -19,7 +16,6 @@ import org.aqa.web.WebServer
 import org.aqa.web.DicomAccess
 import java.io.File
 import java.awt.Point
-import edu.umro.ScalaUtil.Trace
 
 /**
  * Store bad pixels in the database and generate HTML.

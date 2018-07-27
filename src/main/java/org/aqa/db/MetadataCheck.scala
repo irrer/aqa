@@ -9,8 +9,8 @@ import scala.xml.Node
 import scala.xml.Elem
 import org.aqa.procedures.ProcedureOutput
 
-case class PositioningCheck(
-  positioningCheckPK: Option[Long], // primary key
+case class MetadataCheck(
+  metadataCheckPK: Option[Long], // primary key
   outputPK: Long, // output primary key
   beamName: String, // name of beam in plan
   gantryAnglePlan_deg: Double, // planned gantry angle in degrees
@@ -31,19 +31,19 @@ case class PositioningCheck(
   pass: Boolean // true if all values were within tolerances
 ) {
 
-  def insert: PositioningCheck = {
-    val insertQuery = PositioningCheck.query returning PositioningCheck.query.map(_.positioningCheckPK) into
-      ((positioningCheck, positioningCheckPK) => positioningCheck.copy(positioningCheckPK = Some(positioningCheckPK)))
+  def insert: MetadataCheck = {
+    val insertQuery = MetadataCheck.query returning MetadataCheck.query.map(_.metadataCheckPK) into
+      ((metadataCheck, metadataCheckPK) => metadataCheck.copy(metadataCheckPK = Some(metadataCheckPK)))
 
     val action = insertQuery += this
     val result = Db.run(action)
     result
   }
 
-  def insertOrUpdate = Db.run(PositioningCheck.query.insertOrUpdate(this))
+  def insertOrUpdate = Db.run(MetadataCheck.query.insertOrUpdate(this))
 
   override def toString: String = {
-    "    positioningCheckPK: " + positioningCheckPK + "\n" +
+    "    metadataCheckPK: " + metadataCheckPK + "\n" +
       "    outputPK: " + outputPK + "\n" +
       "    beamName: " + beamName + "\n" +
       "    gantryAnglePlan_deg: " + gantryAnglePlan_deg + "\n" +
@@ -65,10 +65,10 @@ case class PositioningCheck(
   }
 }
 
-object PositioningCheck extends ProcedureOutput {
-  class PositioningCheckTable(tag: Tag) extends Table[PositioningCheck](tag, "positioningCheck") {
+object MetadataCheck extends ProcedureOutput {
+  class MetadataCheckTable(tag: Tag) extends Table[MetadataCheck](tag, "metadataCheck") {
 
-    def positioningCheckPK = column[Long]("positioningCheckPK", O.PrimaryKey, O.AutoInc)
+    def metadataCheckPK = column[Long]("metadataCheckPK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
     def beamName = column[String]("beamName")
     def gantryAnglePlan_deg = column[Double]("gantryAnglePlan_deg")
@@ -89,7 +89,7 @@ object PositioningCheck extends ProcedureOutput {
     def pass = column[Boolean]("pass")
 
     def * = (
-      positioningCheckPK.?,
+      metadataCheckPK.?,
       outputPK,
       beamName,
       gantryAnglePlan_deg,
@@ -107,19 +107,19 @@ object PositioningCheck extends ProcedureOutput {
       energyPlan_kev,
       energyPlanMinusImage_kev,
       flatteningFilter,
-      pass) <> ((PositioningCheck.apply _)tupled, PositioningCheck.unapply _)
+      pass) <> ((MetadataCheck.apply _)tupled, MetadataCheck.unapply _)
 
     def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
     //def supplier = foreignKey("SUP_FK", supID, suppliers)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)           TODO
   }
 
-  val query = TableQuery[PositioningCheckTable]
+  val query = TableQuery[MetadataCheckTable]
 
-  override val topXmlLabel = "PositioningCheck"
+  override val topXmlLabel = "MetadataCheck"
 
-  def get(positioningCheckPK: Long): Option[PositioningCheck] = {
+  def get(metadataCheckPK: Long): Option[MetadataCheck] = {
     val action = for {
-      inst <- PositioningCheck.query if inst.positioningCheckPK === positioningCheckPK
+      inst <- MetadataCheck.query if inst.metadataCheckPK === metadataCheckPK
     } yield (inst)
     Db.run(action.result).headOption
   }
@@ -127,15 +127,15 @@ object PositioningCheck extends ProcedureOutput {
   /**
    * Get a list of all rows for the given output
    */
-  def getByOutput(outputPK: Long): Seq[PositioningCheck] = {
+  def getByOutput(outputPK: Long): Seq[MetadataCheck] = {
     val action = for {
-      inst <- PositioningCheck.query if inst.outputPK === outputPK
+      inst <- MetadataCheck.query if inst.outputPK === outputPK
     } yield (inst)
     Db.run(action.result)
   }
 
-  def delete(positioningCheckPK: Long): Int = {
-    val q = query.filter(_.positioningCheckPK === positioningCheckPK)
+  def delete(metadataCheckPK: Long): Int = {
+    val q = query.filter(_.metadataCheckPK === metadataCheckPK)
     val action = q.delete
     Db.run(action)
   }
@@ -146,8 +146,8 @@ object PositioningCheck extends ProcedureOutput {
     Db.run(action)
   }
 
-  def insert(list: Seq[PositioningCheck]) = {
-    val ops = list.map { imgId => PositioningCheck.query.insertOrUpdate(imgId) }
+  def insert(list: Seq[MetadataCheck]) = {
+    val ops = list.map { imgId => MetadataCheck.query.insertOrUpdate(imgId) }
     Db.perform(ops)
   }
 
@@ -155,8 +155,8 @@ object PositioningCheck extends ProcedureOutput {
     ??? // TODO
   }
 
-  def insertSeq(list: Seq[PositioningCheck]): Unit = {
-    val ops = list.map { loc => PositioningCheck.query.insertOrUpdate(loc) }
+  def insertSeq(list: Seq[MetadataCheck]): Unit = {
+    val ops = list.map { loc => MetadataCheck.query.insertOrUpdate(loc) }
     Db.perform(ops)
   }
 }

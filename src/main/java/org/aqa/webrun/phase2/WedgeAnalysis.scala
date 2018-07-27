@@ -1,7 +1,7 @@
 package org.aqa.webrun.phase2
 
 import org.aqa.Logging
-import org.aqa.db.PositioningCheck
+import org.aqa.db.MetadataCheck
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
@@ -107,7 +107,7 @@ object WedgeAnalysis extends Logging {
       Right(result)
     } catch {
       case t: Throwable => {
-        logger.warn("Unexpected error in analysis of PositioningCheck: " + t + fmtEx(t))
+        logger.warn("Unexpected error in analysis of MetadataCheck: " + t + fmtEx(t))
         Left(Phase2Util.procedureCrash(subProcedureName))
       }
     }
