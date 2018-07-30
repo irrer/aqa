@@ -99,7 +99,7 @@ object MetadataCheckHTML {
     }
 
     // write the report to the output directory
-    val text = Phase2Util.wrapSubProcedure(extendedData, content, "Metadata Check", status, None)
+    val text = Phase2Util.wrapSubProcedure(extendedData, content, "Metadata Check", status, None, runReq)
     val file = new File(extendedData.output.dir, htmlFileName)
     Util.writeBinaryFile(file, text.getBytes)
 

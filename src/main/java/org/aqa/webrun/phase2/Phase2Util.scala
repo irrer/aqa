@@ -150,7 +150,7 @@ object Phase2Util extends Logging {
   /**
    * Wrap Phase2 HTML with nice headers.
    */
-  def wrapSubProcedure(extendedData: ExtendedData, content: Elem, title: String, status: ProcedureStatus.Value, runScript: Option[String]): String = {
+  def wrapSubProcedure(extendedData: ExtendedData, content: Elem, title: String, status: ProcedureStatus.Value, runScript: Option[String], runReq: RunReq): String = {
 
     def wrap(col: Int, name: String, value: String): Elem = {
       <div class={ "col-md-" + col }><em>{ name }:</em><br/>{ value }</div>
@@ -195,18 +195,26 @@ object Phase2Util extends Logging {
 
     val machType = extendedData.machineType.manufacturer + " " + extendedData.machineType.model + " " + extendedData.machineType.version
 
+    val pixelSpacing = {
+      runReq.imageSize.getX.round.toInt.toString + " * " + runReq.imageSize.getY.round.toInt.toString + " pixels " +
+        runReq.ImagePlanePixelSpacing.getX.formatted("%5.3f") + " * " + runReq.ImagePlanePixelSpacing.getY.formatted("%5.3f") + " mm"
+    }
+
     val div = {
       <div class="row col-md-10 col-md-offset-1">
         <div class="row">
           <div class="col-md-1">{ passFailImage }</div>
           <div class="col-md-3" title={ title }><h2>{ title }</h2></div>
           <div class="col-md-1" title="Machine"> <h2>{ machineId }</h2></div>
-          <div class="col-md-3" title="Machine Details">
+          <div class="col-md-2">
             <span title="Machine Type">{ machType }</span>
             <br/>
             <span title="Multileaf Collimator">{ extendedData.multileafCollimator.model }</span>
-            <br/>
+          </div>
+          <div class="col-md-2" title="Machine Type">
             <span title="EPID (electronic portal imaging device)">{ extendedData.epid.model }</span>
+            <br/>
+            <span title="X*Y pixel size in mm">{ pixelSpacing }</span>
           </div>
         </div>
         <div class="row">

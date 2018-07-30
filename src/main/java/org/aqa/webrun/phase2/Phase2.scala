@@ -44,6 +44,7 @@ import java.awt.Color
 import edu.umro.ImageUtil.ImageUtil
 import java.awt.Point
 import scala.util.Try
+import java.awt.geom.Point2D
 
 object Phase2 {
   val parametersFileName = "parameters.xml"
@@ -183,7 +184,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     else list.minBy(dt => dt.dateTime)
   }
 
-  private def makeHtml(extendedData: ExtendedData, procedureStatus: ProcedureStatus.Value, elemList: Seq[Elem]) = {
+  private def makeHtml(extendedData: ExtendedData, procedureStatus: ProcedureStatus.Value, elemList: Seq[Elem], runReq: RunReq) = {
 
     def table = {
       <table class="table table-responsive">
@@ -193,7 +194,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       </table>
     }
 
-    val text = Phase2Util.wrapSubProcedure(extendedData, table, "Phase 2", procedureStatus, None)
+    val text = Phase2Util.wrapSubProcedure(extendedData, table, "Phase 2", procedureStatus, None, runReq)
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeBinaryFile(file, text.getBytes)
   }
@@ -262,7 +263,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     }
 
     logger.info("Generating Phase2 HTML")
-    makeHtml(extendedData, status, sumList)
+    makeHtml(extendedData, status, sumList, runReq)
     logger.info("Done generating Phase2 HTML")
 
     status

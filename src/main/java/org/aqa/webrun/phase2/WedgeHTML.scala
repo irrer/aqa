@@ -65,7 +65,7 @@ object WedgeHTML {
       </div>
     }
 
-    val html = Phase2Util.wrapSubProcedure(extendedData, content, WedgeAnalysis.subProcedureName, status, Some(charts))
+    val html = Phase2Util.wrapSubProcedure(extendedData, content, WedgeAnalysis.subProcedureName, status, Some(charts), runReq)
     val outFile = new File(outputDir, htmlFileName)
     Util.writeFile(outFile, html)
 

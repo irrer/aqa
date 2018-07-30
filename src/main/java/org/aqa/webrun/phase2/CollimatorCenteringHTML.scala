@@ -119,7 +119,7 @@ object CollimatorCenteringHTML {
       </div>
     }
 
-    val html = Phase2Util.wrapSubProcedure(extendedData, content, "Collimator Centering", status, None)
+    val html = Phase2Util.wrapSubProcedure(extendedData, content, "Collimator Centering", status, None, runReq)
     val outFile = new File(outputDir, htmlFileName)
     Util.writeFile(outFile, html)
 
