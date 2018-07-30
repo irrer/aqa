@@ -21,6 +21,7 @@ import org.aqa.web.WebUtil._
 import edu.umro.ImageUtil.DicomImage
 import java.awt.geom.Point2D
 import java.awt.Point
+import org.aqa.db.MachineType
 
 object Phase2Util extends Logging {
 
@@ -192,14 +193,23 @@ object Phase2Util extends Logging {
       }
     }
 
+    val machType = extendedData.machineType.manufacturer + " " + extendedData.machineType.model + " " + extendedData.machineType.version
+
     val div = {
       <div class="row col-md-10 col-md-offset-1">
         <div class="row">
           <div class="col-md-1">{ passFailImage }</div>
           <div class="col-md-3" title={ title }><h2>{ title }</h2></div>
-          <div class="col-md-1" title="Machine"><h2>{ machineId }</h2></div>
+          <div class="col-md-1" title="Machine"> <h2>{ machineId }</h2></div>
+          <div class="col-md-3" title="Machine Details">
+            <span title="Machine Type">{ machType }</span>
+            <br/>
+            <span title="Multileaf Collimator">{ extendedData.multileafCollimator.model }</span>
+            <br/>
+            <span title="EPID (electronic portal imaging device)">{ extendedData.epid.model }</span>
+          </div>
         </div>
-        <div class="row" style="margin:20px;">
+        <div class="row">
           { wrap(1, "Institution", extendedData.institution.name) }
           { wrap(2, "Data Acquisition", dateToString(extendedData.output.dataDate)) }
           { wrap(2, "Analysis", analysisDate) }
@@ -207,7 +217,7 @@ object Phase2Util extends Logging {
           { wrap(1, "Elapsed", elapsed) }
           { wrap(3, "Procedure", procedureDesc) }
         </div>
-        <div class="row" style="margin:20px;">
+        <div class="row">
           { content }
         </div>
       </div>

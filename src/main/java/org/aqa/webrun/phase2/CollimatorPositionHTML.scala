@@ -76,10 +76,10 @@ object CollimatorPositionHTML {
       new Col("Flood field compensation used: True/False", "Flood Comp.", (psnChk: CollimatorPosition, bufImg: BufferedImage) => (if (psnChk.FloodCompensation) "T" else "F")),
       new Col("Gantry Angle in degrees", "Gantry", (psnChk: CollimatorPosition, bufImg: BufferedImage) => degree(psnChk.gantryAngle_deg)),
       new Col("Collimator Angle in degrees", "Collimator", (psnChk: CollimatorPosition, bufImg: BufferedImage) => degree(psnChk.collimatorAngle_deg)),
-      new Col("Expected X1 - X1 edge in image, in mm", "X1", (psnChk: CollimatorPosition, bufImg: BufferedImage) => leaf(psnChk.X1_ExpectedMinusImage_mm)),
-      new Col("Expected X2 - X2 edge in image, in mm", "X2", (psnChk: CollimatorPosition, bufImg: BufferedImage) => leaf(psnChk.X2_ExpectedMinusImage_mm)),
-      new Col("Expected Y1 - Y1 edge in image, in mm", "Y1", (psnChk: CollimatorPosition, bufImg: BufferedImage) => leaf(psnChk.Y1_ExpectedMinusImage_mm)),
-      new Col("Expected Y2 - Y2 edge in image, in mm", "Y2", (psnChk: CollimatorPosition, bufImg: BufferedImage) => leaf(psnChk.Y2_ExpectedMinusImage_mm)),
+      new Col("Expected X1 - X1 edge in image, in mm", "X1 mm", (psnChk: CollimatorPosition, bufImg: BufferedImage) => leaf(psnChk.X1_ExpectedMinusImage_mm)),
+      new Col("Expected X2 - X2 edge in image, in mm", "X2 mm", (psnChk: CollimatorPosition, bufImg: BufferedImage) => leaf(psnChk.X2_ExpectedMinusImage_mm)),
+      new Col("Expected Y1 - Y1 edge in image, in mm", "Y1 mm", (psnChk: CollimatorPosition, bufImg: BufferedImage) => leaf(psnChk.Y1_ExpectedMinusImage_mm)),
+      new Col("Expected Y2 - Y2 edge in image, in mm", "Y2 mm", (psnChk: CollimatorPosition, bufImg: BufferedImage) => leaf(psnChk.Y2_ExpectedMinusImage_mm)),
       new ColStatus("Pass if angles within tolerences", "Status", (psnChk: CollimatorPosition, bufImg: BufferedImage) => if (psnChk.status.toString.equals(ProcedureStatus.pass.toString)) "Pass" else "Fail"))
 
     def collimatorPositionTableHeader: Elem = {

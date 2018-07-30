@@ -108,7 +108,7 @@ object CenterDose extends ProcedureOutput {
     Db.perform(ops)
   }
 
-  case class CenterDoseHistory(date: Date, beamName: String, dose: Double)
+  case class CenterDoseHistory(date: Date, beamName: String, dose: Double, SOPInstanceUID: String)
 
   /**
    * Get the most recent CenterBeam results.
@@ -117,12 +117,12 @@ object CenterDose extends ProcedureOutput {
 
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined).map(o => (o.outputPK, o.dataDate, o.machinePK))
-      centerDose <- CenterDose.query.filter(c => c.outputPK === output._1).map(c => (c.beamName, c.dose))
-    } yield ((output._2, centerDose._1, centerDose._2))
+      centerDose <- CenterDose.query.filter(c => c.outputPK === output._1).map(c => (c.beamName, c.dose, c.SOPInstanceUID))
+    } yield ((output._2, centerDose._1, centerDose._2, centerDose._3))
 
     val sorted = search.distinct.sortBy(_._1.desc).take(limit)
 
-    val result = Db.run(sorted.result).map(h => new CenterDoseHistory(h._1.get, h._2, h._3))
+    val result = Db.run(sorted.result).map(h => new CenterDoseHistory(h._1.get, h._2, h._3, h._4))
     result
   }
 }

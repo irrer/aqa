@@ -16,7 +16,7 @@ object WedgeProfileChart extends Logging {
     val wedgeList = wedgeListUnsorted.sortWith((a, b) => a.position_mm < b.position_mm)
     val beamName = wedgeList.head.beamName
 
-    val posnList = wedgeList.map(w => w.position_mm).mkString("[ 'Position', ", ", ", " ]")
+    val posnList = wedgeList.map(w => w.position_mm).mkString("[ 'Position mm', ", ", ", " ]")
     val huList = wedgeList.map(w => w.radiodensity_hu).mkString("[ 'HU', ", ", ", " ]")
 
     val tag = "@@BR@@"
@@ -25,7 +25,7 @@ object WedgeProfileChart extends Logging {
 
         var @@BR@@ = c3.generate({
                 data: {
-                    x: 'Position',
+                    x: 'Position mm',
                     columns: [
                          """ + posnList + """,
                          """ + huList + """
@@ -42,7 +42,7 @@ object WedgeProfileChart extends Logging {
                 bindto : '#@@BR@@',
                 axis: {
                     x: {
-                        label: 'Position',
+                        label: 'Position mm',
                         tick: {
                             format: d3.format('.3g')
                         }
