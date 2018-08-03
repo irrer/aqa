@@ -156,6 +156,10 @@ object Phase2Util extends Logging {
       <div class={ "col-md-" + col }><em>{ name }:</em><br/>{ value }</div>
     }
 
+    def mainReport: Elem = {
+      <div class="col-md-1" title='Return to main (overview) report'><a href='display.html'>Main Report</a></div>
+    }
+
     val analysisDate: String = {
       val date = extendedData.output.analysisDate match {
         case Some(d) => d
@@ -218,7 +222,9 @@ object Phase2Util extends Logging {
           </div>
         </div>
         <div class="row">
-          { wrap(1, "Institution", extendedData.institution.name) }
+          { mainReport }
+          { wrap(1, "Main Report", extendedData.institution.name) }
+          { wrap(2, "Institution", extendedData.institution.name) }
           { wrap(2, "Data Acquisition", dateToString(extendedData.output.dataDate)) }
           { wrap(2, "Analysis", analysisDate) }
           { wrap(1, "User", userId) }

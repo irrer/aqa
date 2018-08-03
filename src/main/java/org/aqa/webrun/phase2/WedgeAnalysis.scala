@@ -48,8 +48,8 @@ object WedgeAnalysis extends Logging {
     val SOPInstanceUID = Util.sopOfAl(al)
 
     // cut out a section of the image that is guaranteed to be pure ramp.
-    val xMarginPix = Config.PenumbraThickness_mm / ips.getX
-    val yMarginPix = Config.PenumbraThickness_mm / ips.getY
+    val xMarginPix = (Config.PenumbraThickness_mm * 3) / ips.getX
+    val yMarginPix = (Config.PenumbraThickness_mm * 3) / ips.getY
 
     val pixMeas = {
       val meas = measurements.measurementSet
