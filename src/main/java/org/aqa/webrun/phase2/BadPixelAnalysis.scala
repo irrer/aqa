@@ -16,6 +16,9 @@ import org.aqa.web.WebServer
 import org.aqa.web.DicomAccess
 import java.io.File
 import java.awt.Point
+import com.pixelmed.dicom.Attribute
+import com.pixelmed.dicom.TimeAttribute
+import org.aqa.DicomFile
 
 /**
  * Store bad pixels in the database and generate HTML.
@@ -119,20 +122,101 @@ object BadPixelAnalysis extends Logging {
 
     val pngImageMap = runReq.rtimageMap.keys.par.map(beamName => (beamName, dicomView(beamName).get)).toList.toMap
 
-    def beamRef(beamName: String): Elem = {
-      val angles = gantryCollAngles(runReq.rtimageMap(beamName).attributeList.get)
-      <a href={ extendedData.dicomHref(runReq.rtimageMap(beamName)) }>{ angles + " : " + beamName }<br/><img src={ pngImageMap(beamName) } width={ smallImageWidth }/></a>
+    def timeOf(al: AttributeList): Option[Long] = {
+      val timeAttr = Seq(TagFromName.ContentTime, TagFromName.AcquisitionTime, TagFromName.InstanceCreationTime).
+        map(tag => al.get(tag)).filter(at => (at != null) && at.isInstanceOf[TimeAttribute] && (at.asInstanceOf[TimeAttribute].getDoubleValues.nonEmpty)).
+        map(at => at.asInstanceOf[TimeAttribute]).headOption
+
+      timeAttr match {
+        case Some(at) => Some((at.getDoubleValues.head * 1000).round.toLong)
+        case _ => None
+      }
+    }
+
+    def timeOfBeam(beamName: String): Option[Long] = {
+      timeOf(runReq.rtimageMap(beamName).attributeList.get)
+    }
+
+    def orderBeams(beamA: String, beamB: String): Boolean = {
+      val alA = runReq.rtimageMap(beamA).attributeList.get
+      val alB = runReq.rtimageMap(beamB).attributeList.get
+      (timeOf(alA), timeOf(alB)) match {
+        case (Some(tA), Some(tB)) => tA < tB
+        case _ => beamA.compareTo(beamB) < 0
+      }
+    }
+
+    def sortBeams = runReq.rtimageMap.keys.toList.sortWith(orderBeams _)
+
+    def jawDescription(al: AttributeList): String = {
+      try {
+        val jaws = MeasureTBLREdges.imageCollimatorPositions(al)
+        val width = ((jaws.X1.abs + jaws.X2.abs) / 10).round.toInt
+        val height = ((jaws.Y1.abs + jaws.Y2.abs) / 10).round.toInt
+        width + " x " + height + " cm"
+      } catch {
+        case t: Throwable => ""
+      }
+    }
+
+    def beamRef(beamName: String, dicomFile: DicomFile, pngHref: String): Elem = {
+      val al = dicomFile.attributeList.get
+      def angleOf(tag: AttributeTag) = Util.angleRoundedTo90(al.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head).toString
+
+      def boolToString(b: Boolean) = if (b) "yes" else ""
+
+      {
+        <tr align="center">
+          <td style="text-align: center;"><a href={ extendedData.dicomHref(dicomFile) }>{ beamName }</a></td>
+          <td style="text-align: center;"><a href={ extendedData.dicomImageHref(dicomFile) }><img src={ pngHref } width={ smallImageWidth }/></a></td>
+          <td style="text-align: center;">{ angleOf(TagFromName.GantryAngle) }</td>
+          <td style="text-align: center;">{ angleOf(TagFromName.BeamLimitingDeviceAngle) }</td>
+          <td style="text-align: center;">{ jawDescription(al) }</td>
+          <td style="text-align: center;">{ "relative time" }</td>
+          <td style="text-align: center;">{ boolToString(Config.MetadataCheckBeamNameList.contains(beamName)) }</td>
+          <td style="text-align: center;">{ boolToString(Config.CollimatorCentering090BeamName.equals(beamName) || Config.CollimatorCentering270BeamName.equals(beamName)) }</td>
+          <td style="text-align: center;">{ boolToString(Config.CenterDoseBeamNameList.contains(beamName)) }</td>
+          <td style="text-align: center;">{ boolToString(Config.CollimatorPositionBeamList.contains(beamName)) }</td>
+          <td style="text-align: center;">{ boolToString(Config.WedgeBeamList.contains(beamName)) }</td>
+        </tr>
+      }
     }
 
     val content = {
-      val planRef = { <a href={ planLink }>Plan</a> }
-      val floodAngles = gantryCollAngles(runReq.flood.attributeList.get)
-      val floodRef = { <a href={ floodLink }>{ floodAngles + " : " + Config.FloodFieldBeamName }<br/><img src={ floodPngHref } width={ smallImageWidth }/></a> }
-      val rtimgRef = runReq.rtimageMap.keys.map(beamName => beamRef(beamName))
-      val allRef = (rtimgRef ++ Seq(floodRef, planRef)).map(ref => { <div class="col-md-2" style="margin:20px;">{ ref }</div> })
-      val perRow = 4
-      val rowList = (0 until ((allRef.size + perRow - 1) / perRow)).map(row => allRef.drop(row * perRow).take(perRow))
-      val matrix = rowList.map(row => { <div class="row">{ row }</div> })
+
+      //      val XfloodRef = {
+      //        val floodAngles = gantryCollAngles(runReq.flood.attributeList.get);
+      //        { <a href={ floodLink }>{ floodAngles + " : " + Config.FloodFieldBeamName }<br/><img src={ floodPngHref } width={ smallImageWidth }/></a> }
+      //      }
+
+      val floodRef = beamRef(Config.FloodFieldBeamName, runReq.flood, floodPngHref)
+      val rtimgRef = sortBeams.map(beamName => beamRef(beamName, runReq.rtimageMap(beamName), pngImageMap(beamName)))
+
+      val tableHead = {  // TODO relative time
+        <thead>
+          <tr>
+            <th style="text-align: center;" title='Click to view DICOM metadata'>Beam<br/>Name</th>
+            <th style="text-align: center;" title='Click to view image'>Image</th>
+            <th style="text-align: center;" title='Gantry angle rounded to nearest 90 degrees'>Gantry Angle<br/>in degrees</th>
+            <th style="text-align: center;" title='Collimator angle rounded to nearest 90 degrees'>Collimator Angle<br/>in degrees</th>
+            <th style="text-align: center;" title='Width times height of field in cm'>Field Size cm</th>
+            <th style="text-align: center;" title='relative time'>relative time</th>
+            <th style="text-align: center;" title='"yes" if used in Metadata Check'>Metadata<br/>Check</th>
+            <th style="text-align: center;" title='"yes" if used in Collimator Centering'>Collimator<br/>Centering</th>
+            <th style="text-align: center;" title='"yes" if used in Center Dose'>Center<br/>Dose</th>
+            <th style="text-align: center;" title='"yes" if used in Collimator Position'>Collimator<br/>Position</th>
+            <th style="text-align: center;" title='"yes" if used in Wedge'>Wedge</th>
+          </tr>
+        </thead>
+      }
+
+      val table = {
+        <table class="table table-bordered">
+          { tableHead }
+          { floodRef }
+          { rtimgRef }
+        </table>
+      }
 
       val imageCount = runReq.rtimageMap.size + 1 // beams plus flood
       val badPixelCount = badPixelList.size
@@ -141,6 +225,9 @@ object BadPixelAnalysis extends Logging {
       val subTitle = {
         <table class="table table-responsive">
           <tr>
+            <td>
+              <a href={ planLink }>View Plan</a>
+            </td>
             <td>
               Images:{ imageCount.toString }
             </td>
@@ -157,7 +244,7 @@ object BadPixelAnalysis extends Logging {
       val mainElem = {
         <div>
           { subTitle }
-          { matrix }
+          { table }
         </div>
       }
 
