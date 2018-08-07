@@ -273,7 +273,7 @@ object Util extends Logging {
     val prop = new Properties
     val fileNameList = Seq(
       """wrapper.conf""",
-      """yajsw-stable-11.03\conf\wrapper.conf""",
+      """yajsw-stable-12.12\conf\wrapper.conf""",
       """src\main\resources\wrapper.conf""",
       """..\..\main\resources\wrapper.conf""")
 
