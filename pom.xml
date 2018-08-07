@@ -180,9 +180,9 @@ https://mvnrepository.com/artifact/org.scalatest/scalatest
                       <property value="Z:\Projects\AQA\${project.artifactId}-${project.version}" name="project.dir"/>
                       <property value="${project.dir}\${project.artifactId}-${project.version}" name="dest.dir"/>
                       <property value="src/main/resources" name="resource.dir"/>
-                      <property value="yajsw-stable-11.03" name="yajsw"/>
-                      <property value="ronet\\umservicesuser" name="user_login"/>
-                      <property value="4UeMPl@nXf3r%" name="user_password"/>
+                      <property value="yajsw-stable-12.12" name="yajsw"/>
+                      <!-- <property value="domain\\serviceUserId" name="user_login"/> -->
+                      <!-- <property value="somePassword" name="user_password"/> -->
                       <echo>project.dir is: ${project.dir}</echo>
                       <echo>dest.dir is: ${dest.dir}</echo>
                       <echo>artifactId is: ${project.artifactId}</echo>
@@ -211,8 +211,8 @@ https://mvnrepository.com/artifact/org.scalatest/scalatest
                       <replace value="${project.version}" token="@@VERSION@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
                       <replace value="${TIMESTAMP}" token="@@BUILD_DATE@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
                       <replace value="${user.name}" token="@@BUILDER@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
-                      <replace value="${user_login}" token="@@USER_LOGIN@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
-                      <replace value="${user_password}" token="@@USER_PASSWORD@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
+                      <!-- <replace value="${user_login}" token="@@USER_LOGIN@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/> -->
+                      <!-- <replace value="${user_password}" token="@@USER_PASSWORD@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/> -->
                       <zip destfile="${project.dir}/${project.artifactId}-${project.version}.zip" basedir="${project.dir}"/>
                     </tasks>
                   </configuration>
