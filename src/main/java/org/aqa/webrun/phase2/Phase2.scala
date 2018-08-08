@@ -45,6 +45,8 @@ import edu.umro.ImageUtil.ImageUtil
 import java.awt.Point
 import scala.util.Try
 import java.awt.geom.Point2D
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object Phase2 {
   val parametersFileName = "parameters.xml"
@@ -289,25 +291,27 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
         val input = inputOutput._1
         val output = inputOutput._2
 
-        val extendedData = ExtendedData.get(output)
-        val runReqFinal = runReq.reDir(input.dir)
+        val later = Future {
+          val extendedData = ExtendedData.get(output)
+          val runReqFinal = runReq.reDir(input.dir)
 
-        val plan = runReqFinal.rtplan
-        val machine = runReqFinal.machine
-        Phase2Util.saveRtplan(plan)
+          val plan = runReqFinal.rtplan
+          val machine = runReqFinal.machine
+          Phase2Util.saveRtplan(plan)
 
-        val rtimageMap = constructRtimageMap(plan, rtimageList)
+          val rtimageMap = constructRtimageMap(plan, rtimageList)
 
-        val finalStatus = runPhase2(extendedData, rtimageMap, runReqFinal)
-        val finDate = new Timestamp(System.currentTimeMillis)
-        val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
+          val finalStatus = runPhase2(extendedData, rtimageMap, runReqFinal)
+          val finDate = new Timestamp(System.currentTimeMillis)
+          val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
 
-        Phase2Util.setMachineSerialNumber(machine, runReqFinal.flood.attributeList.get)
-        outputFinal.insertOrUpdate
-        outputFinal.updateData(outputFinal.makeZipOfFiles)
-        Run.removeRedundantOutput(outputFinal.outputPK)
+          Phase2Util.setMachineSerialNumber(machine, runReqFinal.flood.attributeList.get)
+          outputFinal.insertOrUpdate
+          outputFinal.updateData(outputFinal.makeZipOfFiles)
+          Run.removeRedundantOutput(outputFinal.outputPK)
+        }
 
-        val suffix = "?" + ViewOutput.outputPKTag + "=" + outputFinal.outputPK.get
+        val suffix = "?" + ViewOutput.outputPKTag + "=" + output.outputPK.get
         response.redirectSeeOther(ViewOutput.path + suffix)
       }
     }

@@ -19,6 +19,8 @@ import java.awt.Point
 import com.pixelmed.dicom.Attribute
 import com.pixelmed.dicom.TimeAttribute
 import org.aqa.DicomFile
+import java.text.SimpleDateFormat
+import java.util.Date
 
 /**
  * Store bad pixels in the database and generate HTML.
@@ -146,6 +148,13 @@ object BadPixelAnalysis extends Logging {
       }
     }
 
+    val elapsedTimeFormat = new SimpleDateFormat("m:ss")
+
+    val earliestTime = {
+      val floodTime = Seq(timeOf(runReq.flood.attributeList.get))
+      (floodTime ++ runReq.rtimageMap.values.map(df => df.attributeList).flatten.map(al => timeOf(al))).flatten.min
+    }
+
     def sortBeams = runReq.rtimageMap.keys.toList.sortWith(orderBeams _)
 
     def jawDescription(al: AttributeList): String = {
@@ -159,27 +168,37 @@ object BadPixelAnalysis extends Logging {
       }
     }
 
-    def beamRef(beamName: String, dicomFile: DicomFile, pngHref: String): Elem = {
+    def beamRef(beamName: String, dicomFile: DicomFile, pngHref: String): (Option[Long], Elem) = {
       val al = dicomFile.attributeList.get
       def angleOf(tag: AttributeTag) = Util.angleRoundedTo90(al.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head).toString
 
+      val relativeTime = timeOf(dicomFile.attributeList.get)
+
+      val relativeTimeText = {
+        relativeTime match {
+          case Some(t) => elapsedTimeFormat.format(new Date(t - earliestTime))
+          case _ => ""
+        }
+      }
+
       def boolToString(b: Boolean) = if (b) "yes" else ""
 
-      {
+      val elem = {
         <tr align="center">
-          <td style="text-align: center;"><a href={ extendedData.dicomHref(dicomFile) }>{ beamName }</a></td>
-          <td style="text-align: center;"><a href={ extendedData.dicomImageHref(dicomFile) }><img src={ pngHref } width={ smallImageWidth }/></a></td>
-          <td style="text-align: center;">{ angleOf(TagFromName.GantryAngle) }</td>
-          <td style="text-align: center;">{ angleOf(TagFromName.BeamLimitingDeviceAngle) }</td>
-          <td style="text-align: center;">{ jawDescription(al) }</td>
-          <td style="text-align: center;">{ "relative time" }</td>
-          <td style="text-align: center;">{ boolToString(Config.MetadataCheckBeamNameList.contains(beamName)) }</td>
-          <td style="text-align: center;">{ boolToString(Config.CollimatorCentering090BeamName.equals(beamName) || Config.CollimatorCentering270BeamName.equals(beamName)) }</td>
-          <td style="text-align: center;">{ boolToString(Config.CenterDoseBeamNameList.contains(beamName)) }</td>
-          <td style="text-align: center;">{ boolToString(Config.CollimatorPositionBeamList.contains(beamName)) }</td>
-          <td style="text-align: center;">{ boolToString(Config.WedgeBeamList.contains(beamName)) }</td>
+          <td style="text-align: center;" title="Click for DICOM metadata"><a href={ extendedData.dicomHref(dicomFile) }>{ beamName }</a></td>
+          <td style="text-align: center;" title="Click for full size image"><a href={ extendedData.dicomImageHref(dicomFile) }><img src={ pngHref } width={ smallImageWidth }/></a></td>
+          <td style="text-align: center;" title="Gantry Angle deg">{ angleOf(TagFromName.GantryAngle) }</td>
+          <td style="text-align: center;" title="Collimator Angle deg">{ angleOf(TagFromName.BeamLimitingDeviceAngle) }</td>
+          <td style="text-align: center;" title="Jaw opening in CM">{ jawDescription(al) }</td>
+          <td style="text-align: center;" title="Time since first image capture (mm:ss)">{ relativeTimeText }</td>
+          <td style="text-align: center;" title="Media Check">{ boolToString(Config.MetadataCheckBeamNameList.contains(beamName)) }</td>
+          <td style="text-align: center;" title="Collimator Centering">{ boolToString(Config.CollimatorCentering090BeamName.equals(beamName) || Config.CollimatorCentering270BeamName.equals(beamName)) }</td>
+          <td style="text-align: center;" title="Center Dose">{ boolToString(Config.CenterDoseBeamNameList.contains(beamName)) }</td>
+          <td style="text-align: center;" title="Collimator Position">{ boolToString(Config.CollimatorPositionBeamList.contains(beamName)) }</td>
+          <td style="text-align: center;" title="Wedge">{ boolToString(Config.WedgeBeamList.contains(beamName)) }</td>
         </tr>
       }
+      (relativeTime, elem)
     }
 
     val content = {
@@ -189,18 +208,29 @@ object BadPixelAnalysis extends Logging {
       //        { <a href={ floodLink }>{ floodAngles + " : " + Config.FloodFieldBeamName }<br/><img src={ floodPngHref } width={ smallImageWidth }/></a> }
       //      }
 
-      val floodRef = beamRef(Config.FloodFieldBeamName, runReq.flood, floodPngHref)
-      val rtimgRef = sortBeams.map(beamName => beamRef(beamName, runReq.rtimageMap(beamName), pngImageMap(beamName)))
+      val allElem = {
+        val floodRef = beamRef(Config.FloodFieldBeamName, runReq.flood, floodPngHref)
+        val rtimgRef = sortBeams.map(beamName => beamRef(beamName, runReq.rtimageMap(beamName), pngImageMap(beamName)))
+        def cmpr(a: (Option[Long], Elem), b: (Option[Long], Elem)): Boolean = {
+          (a._1, b._1) match {
+            case (Some(ta), Some(tb)) => ta < tb
+            case (Some(ta), _) => false
+            case (_, Some(tb)) => true
+            case (_, _) => true
+          }
+        }
+        (rtimgRef :+ floodRef).sortWith(cmpr _).map(te => te._2)
+      }
 
-      val tableHead = {  // TODO relative time
+      val tableHead = {
         <thead>
           <tr>
             <th style="text-align: center;" title='Click to view DICOM metadata'>Beam<br/>Name</th>
             <th style="text-align: center;" title='Click to view image'>Image</th>
-            <th style="text-align: center;" title='Gantry angle rounded to nearest 90 degrees'>Gantry Angle<br/>in degrees</th>
-            <th style="text-align: center;" title='Collimator angle rounded to nearest 90 degrees'>Collimator Angle<br/>in degrees</th>
-            <th style="text-align: center;" title='Width times height of field in cm'>Field Size cm</th>
-            <th style="text-align: center;" title='relative time'>relative time</th>
+            <th style="text-align: center;" title='Gantry angle rounded to nearest 90 degrees'>Gantry Angle<br/>degrees</th>
+            <th style="text-align: center;" title='Collimator angle rounded to nearest 90 degrees'>Collimator Angle<br/>degrees</th>
+            <th style="text-align: center;" title='Width times height of field in cm'>Field Size<br/>cm</th>
+            <th style="text-align: center;" title='Time since first image capture (mm:ss)'>Acquisition<br/>Time</th>
             <th style="text-align: center;" title='"yes" if used in Metadata Check'>Metadata<br/>Check</th>
             <th style="text-align: center;" title='"yes" if used in Collimator Centering'>Collimator<br/>Centering</th>
             <th style="text-align: center;" title='"yes" if used in Center Dose'>Center<br/>Dose</th>
@@ -213,8 +243,7 @@ object BadPixelAnalysis extends Logging {
       val table = {
         <table class="table table-bordered">
           { tableHead }
-          { floodRef }
-          { rtimgRef }
+          { allElem }
         </table>
       }
 
