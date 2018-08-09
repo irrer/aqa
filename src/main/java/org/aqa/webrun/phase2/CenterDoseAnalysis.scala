@@ -43,7 +43,7 @@ object CenterDoseAnalysis extends Logging {
      */
     val history = {
       val uidSet = resultList.map(cd => cd.SOPInstanceUID).toSet
-      CenterDose.recentHistory(Config.CenterDoseReportedHistoryLimit, extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get).
+      CenterDose.recentHistory(Config.CenterDoseReportedHistoryLimit, extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get, extendedData.output.dataDate).
         filter(cd => !uidSet.contains(cd.SOPInstanceUID))
     }
 

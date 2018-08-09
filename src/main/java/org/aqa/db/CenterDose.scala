@@ -9,6 +9,7 @@ import scala.xml.Node
 import scala.xml.Elem
 import org.aqa.procedures.ProcedureOutput
 import java.util.Date
+import java.sql.Timestamp
 
 case class CenterDose(
   centerDosePK: Option[Long], // primary key
@@ -110,18 +111,55 @@ object CenterDose extends ProcedureOutput {
   case class CenterDoseHistory(date: Date, beamName: String, dose: Double, SOPInstanceUID: String)
 
   /**
-   * Get the most recent CenterBeam results.
+   * Get the CenterBeam results that are nearest in time to the given date, preferring those that have an earlier date.
+   *
+   * @param limit: Only get this many results.  First get all the results that are at or before the given time.  If there
+   * are <code>limit</code> or more values, then return those.  Otherwise, also get values after the given time
+   *
+   * @param machinePK: For this machine
+   *
+   * @param procedurePK: For this procedure
+   *
+   * @param date: For this date
    */
-  def recentHistory(limit: Int, machinePK: Long, procedurePK: Long) = {
+  def recentHistory(limit: Int, machinePK: Long, procedurePK: Long, date: Option[Timestamp]) = {
 
-    val search = for {
-      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined).map(o => (o.outputPK, o.dataDate, o.machinePK))
-      centerDose <- CenterDose.query.filter(c => c.outputPK === output._1).map(c => (c.beamName, c.dose, c.SOPInstanceUID))
-    } yield ((output._2, centerDose._1, centerDose._2, centerDose._3))
+    import java.sql.{ Timestamp, Date, Time }
+    import org.joda.time.DateTime
+    import org.joda.time.{ DateTime, LocalDate, LocalTime, DateTimeZone }
+    import org.joda.time.format._
 
-    val sorted = search.distinct.sortBy(_._1.desc).take(limit)
+    implicit def jodaTimeMapping: BaseColumnType[DateTime] = MappedColumnType.base[DateTime, Timestamp](
+      dateTime => new Timestamp(dateTime.getMillis),
+      timeStamp => new DateTime(timeStamp.getTime))
 
-    val result = Db.run(sorted.result).map(h => new CenterDoseHistory(h._1.get, h._2, h._3, h._4))
+    val ts = if (date.isDefined) date.get else new Timestamp(Long.MaxValue)
+
+    val before = {
+      val search = for {
+        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate.get.toString <= ts.toString)).map(o => (o.outputPK, o.dataDate, o.machinePK))
+        //output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined).map(o => (o.outputPK, o.dataDate, o.machinePK))
+        centerDose <- CenterDose.query.filter(c => c.outputPK === output._1).map(c => (c.beamName, c.dose, c.SOPInstanceUID))
+      } yield ((output._2, centerDose._1, centerDose._2, centerDose._3))
+
+      val sorted = search.distinct.sortBy(_._1.desc).take(limit)
+      Db.run(sorted.result)
+    }
+
+    def after = {
+      val search = for {
+        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate.get.toString > ts.toString)).map(o => (o.outputPK, o.dataDate, o.machinePK))
+        //output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined).map(o => (o.outputPK, o.dataDate, o.machinePK))
+        centerDose <- CenterDose.query.filter(c => c.outputPK === output._1).map(c => (c.beamName, c.dose, c.SOPInstanceUID))
+      } yield ((output._2, centerDose._1, centerDose._2, centerDose._3))
+
+      val sorted = search.distinct.sortBy(_._1.asc).take(limit)
+      Db.run(sorted.result)
+    }
+
+    val all = if (before.size >= limit) before else (before ++ after).take(limit)
+
+    val result = all.map(h => new CenterDoseHistory(h._1.get, h._2, h._3, h._4)).sortWith((a, b) => a.date.getTime < b.date.getTime)
     result
   }
 }
