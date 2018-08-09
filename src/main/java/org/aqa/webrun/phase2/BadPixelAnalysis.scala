@@ -191,7 +191,7 @@ object BadPixelAnalysis extends Logging {
           <td style="text-align: center;" title="Collimator Angle deg">{ angleOf(TagFromName.BeamLimitingDeviceAngle) }</td>
           <td style="text-align: center;" title="Jaw opening in CM">{ jawDescription(al) }</td>
           <td style="text-align: center;" title="Time since first image capture (mm:ss)">{ relativeTimeText }</td>
-          <td style="text-align: center;" title="Media Check">{ boolToString(Config.MetadataCheckBeamNameList.contains(beamName)) }</td>
+          <td style="text-align: center;" title="Metadata Check">{ boolToString(Config.MetadataCheckBeamNameList.contains(beamName)) }</td>
           <td style="text-align: center;" title="Collimator Centering">{ boolToString(Config.CollimatorCentering090BeamName.equals(beamName) || Config.CollimatorCentering270BeamName.equals(beamName)) }</td>
           <td style="text-align: center;" title="Center Dose">{ boolToString(Config.CenterDoseBeamNameList.contains(beamName)) }</td>
           <td style="text-align: center;" title="Collimator Position">{ boolToString(Config.CollimatorPositionBeamList.contains(beamName)) }</td>
