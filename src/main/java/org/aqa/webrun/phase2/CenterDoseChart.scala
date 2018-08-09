@@ -21,12 +21,18 @@ class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Se
     "Chart_" + index + "_" + resultList(index).beamName.replaceAll("[^a-zA-Z0-9]", "_")
   }
 
+  private val allDates = (resultList ++ history).map(cd => cd.date)
+  val minDateText = Util.standardDateFormat.format(allDates.min)
+  val maxDateText = Util.standardDateFormat.format(allDates.max)
+
   private def chart(beamName: String, beamRef: String) = {
     val sortedHistory = sortedHistoryForBeam(beamName)
     val dateList = sortedHistory.map(h => "'" + Util.standardDateFormat.format(h.date) + "'").mkString("[ 'Date', ", ", ", " ]")
     val doseList = sortedHistory.map(h => h.dose.toString).mkString("[ 'HU', ", ", ", " ]")
     val beamRefTag = "@@beamRef@@"
     val dataIndexTag = "@@dataIndex@@"
+    val minDateTag = "@@minDate@@"
+    val maxDateTag = "@@maxDate@@"
     val dataIndex: Int = {
       //val centerDoseUID = resultList.find(cd => cd.beamName.equals(beamName)).get.SOPInstanceUID
       sortedHistory.indexWhere(sh => sopSet.contains(sh.SOPInstanceUID))
@@ -51,6 +57,8 @@ class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Se
                     x: {
                         label: 'Date',
                         type: 'timeseries',
+                        min: '""" + minDateTag + """',
+                        max: '""" + maxDateTag + """',
                         tick: { format: function(dt) { return formatDate(dt); } }
                     },
                     y: {
@@ -64,12 +72,20 @@ class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Se
                     pattern : [ '#6688bb' ]
                 },
                 padding: {
-                  right: 30
+                  right: 30,
+                  top: 10
                 }
             });
 """
 
-    template.replace(beamRefTag, beamRef).replace(dataIndexTag, dataIndex.toString)
+    val allTags = Seq(
+      (beamRefTag, beamRef),
+      (dataIndexTag, dataIndex.toString),
+      (minDateTag, minDateText),
+      (maxDateTag, maxDateText))
+
+    val chartText = allTags.foldLeft(template)((tmpl, tc) => tmpl.replace(tc._1, tc._2))
+    chartText
   }
 
   private val beamRefMap = resultList.indices.map(i => (resultList(i).beamName, beamRefOf(i))).toMap

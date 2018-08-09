@@ -58,7 +58,6 @@ object CenterDose extends ProcedureOutput {
       units) <> ((CenterDose.apply _)tupled, CenterDose.unapply _)
 
     def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
-    //def supplier = foreignKey("SUP_FK", supID, suppliers)(_.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)           TODO
   }
 
   val query = TableQuery[CenterDoseTable]
