@@ -38,9 +38,18 @@ object CenterDoseAnalysis extends Logging {
       <a title="View RT Plan DICOM file" href={ extendedData.dicomHref(runReq.rtplan) }>RT Plan</a>
     }
 
-    val history = CenterDose.recentHistory(Config.CenterDoseReportedHistoryLimit, extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get)
+    /**
+     * Get the history of results from previous runs of this procedure.  Exclude results that were run on this exact data.
+     */
+    val history = {
+      val uidSet = resultList.map(cd => cd.SOPInstanceUID).toSet
+      CenterDose.recentHistory(Config.CenterDoseReportedHistoryLimit, extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get).
+        filter(cd => !uidSet.contains(cd.SOPInstanceUID))
+    }
 
-    val chart = new CenterDoseChart(resultList, history)
+    val resultListAsHistory = resultList.map(cd => new CenterDose.CenterDoseHistory(extendedData.output.dataDate.get, cd.beamName, cd.dose, cd.SOPInstanceUID))
+
+    val chart = new CenterDoseChart(resultListAsHistory, history)
 
     class Column(val title: String, columnName: String, val get: (CenterDose) => String) {
       def toHeader = <th title={ title }>{ columnName }</th>

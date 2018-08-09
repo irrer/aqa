@@ -5,12 +5,15 @@ import org.aqa.db.CenterDose
 import java.text.SimpleDateFormat
 import org.aqa.Util
 
-class CenterDoseChart(resultList: Seq[CenterDose], history: Seq[CenterDose.CenterDoseHistory]) extends Logging {
+class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Seq[CenterDose.CenterDoseHistory]) extends Logging {
 
   private val dateFormat = new SimpleDateFormat("MMM dd")
 
+  /* List of SOPInstanceUID's for data set that was just calculated. */
+  private val sopSet = resultList.map(cd => cd.SOPInstanceUID).toSet
+
   private def sortedHistoryForBeam(beamName: String) = {
-    val realHistory = history.filter(h => h.beamName.equals(beamName)).sortWith((a, b) => (a.date.getTime < b.date.getTime))
+    val realHistory = (resultList ++ history).filter(h => h.beamName.equals(beamName)).sortWith((a, b) => (a.date.getTime < b.date.getTime))
     realHistory
   }
 
@@ -25,8 +28,8 @@ class CenterDoseChart(resultList: Seq[CenterDose], history: Seq[CenterDose.Cente
     val beamRefTag = "@@beamRef@@"
     val dataIndexTag = "@@dataIndex@@"
     val dataIndex: Int = {
-      val centerDoseUID = resultList.find(cd => cd.beamName.equals(beamName)).get.SOPInstanceUID
-      sortedHistory.indexWhere(sh => sh.SOPInstanceUID.equals(centerDoseUID))
+      //val centerDoseUID = resultList.find(cd => cd.beamName.equals(beamName)).get.SOPInstanceUID
+      sortedHistory.indexWhere(sh => sopSet.contains(sh.SOPInstanceUID))
     }
 
     val template = """
