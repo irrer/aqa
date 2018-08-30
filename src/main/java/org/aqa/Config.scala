@@ -17,6 +17,7 @@ import scala.xml.NodeSeq
 import java.net.InetAddress
 import java.util.Properties
 import edu.umro.util.Utility
+import org.aqa.webrun.phase2.SymmetryAndFlatnessPoint
 
 /**
  * This class extracts configuration information from the configuration file.  Refer
@@ -347,6 +348,25 @@ object Config extends Logging {
     list
   }
 
+  private def getSymmetryAndFlatnessBeamList = {
+    val list = (document \ "SymmetryAndFlatnessBeamList" \ "BeamName").map(n => n.head.text.toString).toList
+    logText("SymmetryAndFlatnessBeamList", list.mkString("\n        ", "\n        ", "\n"))
+    list
+  }
+
+  private def getSymmetryAndFlatnessPointList: Seq[SymmetryAndFlatnessPoint] = {
+    def makePoint(node: Node): SymmetryAndFlatnessPoint = {
+      val name = (node \ "@name").head.text.toString
+      val x_mm = (node \ "@x_mm").head.text.toString.toDouble
+      val y_mm = (node \ "@y_mm").head.text.toString.toDouble
+      new SymmetryAndFlatnessPoint(name, x_mm, y_mm)
+    }
+
+    val list = (document \ "SymmetryAndFlatnessPointList" \ "SymmetryAndFlatnessPoint").map(n => makePoint(n)).toList.toSeq
+    logText("SymmetryAndFlatnessPointList", list.mkString("\n        ", "\n        ", "\n"))
+    list
+  }
+
   case class CollimatorPositionBeamConfig(beamName: String, FloodCompensation: Boolean) {
     override def toString = "Beam name: " + beamName + "  FloodCompensation: " + FloodCompensation
   }
@@ -433,10 +453,18 @@ object Config extends Logging {
 
   val WedgeBeamList = getWedgeBeamList
 
+  val SymmetryAndFlatnessDiameter_mm = logMainText("SymmetryAndFlatnessDiameter_mm").toDouble
+
+  val SymmetryAndFlatnessBeamList = getSymmetryAndFlatnessBeamList
+
+  val SymmetryAndFlatnessPointList = getSymmetryAndFlatnessPointList
+
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true
 
-  def validate = validated
+  def validate = {
+    validated
+  }
 
   override def toString: String = valueText.foldLeft("Configuration values:")((b, t) => b + "\n    " + t)
 
