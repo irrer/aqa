@@ -45,26 +45,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       else runReq.derivedMap(beamName).dicomFile.attributeList.get
     }
 
-    def dbl(tag: AttributeTag): Double = al.get(tag).getDoubleValues.head
-
-    // Multiply this value by a measurement in mm in the isoplane to get the corresponding value in pixels in the image plane.
-    val expansionFactor = {
-      val beamExpansionRatio = dbl(TagFromName.RTImageSID) / dbl(TagFromName.RadiationMachineSAD)
-      val pixelSize = (runReq.ImagePlanePixelSpacing.getX + runReq.ImagePlanePixelSpacing.getY) / 2
-      beamExpansionRatio * pixelSize
-    }
-
-    val imageRadiusInPixels = (Config.SymmetryAndFlatnessDiameter_mm / 2) * expansionFactor
-
-    def measurePoint(point: SymmetryAndFlatnessPoint): SymmetryAndFlatnessPointEvaluated = {
-      val x = (point.x_mm * expansionFactor) + (runReq.imageSize.getX / 2)
-      val y = (point.y_mm * expansionFactor) + (runReq.imageSize.getY / 2)
-
-      // TODO resume work here
-      ???
-    }
-
-    Config.SymmetryAndFlatnessPointList.map(p => measurePoint(p))
+    //Config.SymmetryAndFlatnessPointList.map(p => measurePoint(p))
 
     ???
   }
@@ -86,8 +67,11 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     try {
       logger.info("Starting analysis of SymmetryAndFlatness")
 
+      val translator = new IsoImagePlaneTranslator(runReq.flood.attributeList.get)
+      //      val pixelMap = makePixelMap(runReq, translator)
       val beamNameList = Config.SymmetryAndFlatnessBeamList.filter(beamName => runReq.derivedMap.contains(beamName))
       val pointValueList = beamNameList.par.map(beamName => analyzePoints(beamName, extendedData, runReq)).toList
+
       val symmetryList = beamNameList.par.map(beamName => analyzeSymmetry(beamName, extendedData, runReq)).toList
       val flatnessList = beamNameList.par.map(beamName => analyzeFlatness(beamName, extendedData, runReq)).toList
 
