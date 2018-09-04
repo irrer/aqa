@@ -181,15 +181,15 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Coordinates of centers of sampling points.  All are in mm, relative to the center of the image, and in the isoplane. -->
     <SymmetryAndFlatnessPointList>
-        <SymmetryAndFlatnessPoint name='Top'      x_mm='0.0'    y_mm='-750.0'/>
-        <SymmetryAndFlatnessPoint name='Bottom'   x_mm='0.0'    y_mm='750.0'/>
-        <SymmetryAndFlatnessPoint name='Left'     x_mm='-750.0' y_mm='0.0'/>
-        <SymmetryAndFlatnessPoint name='Right'    x_mm='750.0'  y_mm='0.0'/>
-        <SymmetryAndFlatnessPoint name='Center'   x_mm='0.0'    y_mm='0.0'/>
-        <SymmetryAndFlatnessPoint name='Energy 1' x_mm='-375.0' y_mm='0.0'/>
-        <SymmetryAndFlatnessPoint name='Energy 2' x_mm='375.0'  y_mm='0.0'/>
-        <SymmetryAndFlatnessPoint name='Energy 3' x_mm='0.0'    y_mm='-375.0'/>
-        <SymmetryAndFlatnessPoint name='Energy 4' x_mm='0.0'    y_mm='375.0'/>
+        <SymmetryAndFlatnessPoint name='Top'       x_mm=  '0.0'   y_mm= '-70.0'/>
+        <SymmetryAndFlatnessPoint name='Bottom'    x_mm=  '0.0'   y_mm=  '70.0'/>
+        <SymmetryAndFlatnessPoint name='Left'      x_mm='-75.0'   y_mm=   '0.0'/>
+        <SymmetryAndFlatnessPoint name='Right'     x_mm= '75.0'   y_mm=   '0.0'/>
+        <SymmetryAndFlatnessPoint name='Center'    x_mm=  '0.0'   y_mm=   '0.0'/>
+        <SymmetryAndFlatnessPoint name='Energy 1'  x_mm='-37.5'   y_mm=   '0.0'/>
+        <SymmetryAndFlatnessPoint name='Energy 2'  x_mm= '37.5'   y_mm=   '0.0'/>
+        <SymmetryAndFlatnessPoint name='Energy 3'  x_mm=  '0.0'   y_mm= '-37.5'/>
+        <SymmetryAndFlatnessPoint name='Energy 4'  x_mm=  '0.0'   y_mm=  '37.5'/>
     </SymmetryAndFlatnessPointList>
 
 </AQAConfig>

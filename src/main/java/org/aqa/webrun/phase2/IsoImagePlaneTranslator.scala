@@ -25,20 +25,28 @@ class IsoImagePlaneTranslator(al: AttributeList) {
   val beamExpansionRatio = dblOf(TagFromName.RTImageSID) / dblOf(TagFromName.RadiationMachineSAD)
 
   // Multiply this value by a measurement in mm in the isoplane to get the corresponding value in pixels in the image plane.
-  private val expansionFactorX = beamExpansionRatio * ImagePlanePixelSpacing.getX
-  private val expansionFactorY = beamExpansionRatio * ImagePlanePixelSpacing.getY
+  private val expansionFactorX = beamExpansionRatio / ImagePlanePixelSpacing.getX
+  private val expansionFactorY = beamExpansionRatio / ImagePlanePixelSpacing.getY
 
-  def iso2Pix(x: Double, y: Double): Point2D.Double = new Point2D.Double((x / expansionFactorX) + imageCenter.getX, (y * expansionFactorY) + imageCenter.getY)
+  def iso2Pix(x: Double, y: Double): Point2D.Double = new Point2D.Double((x * expansionFactorX) + imageCenter.getX, (y * expansionFactorY) + imageCenter.getY)
   def iso2Pix(isoPoint: Point2D.Double): Point2D.Double = iso2Pix(isoPoint.getX, isoPoint.getY)
 
-  def pix2Iso(x: Double, y: Double): Point2D.Double = new Point2D.Double((x - imageCenter.getX) * expansionFactorX, (y - imageCenter.getY) / expansionFactorY)
+  def pix2Iso(x: Double, y: Double): Point2D.Double = new Point2D.Double((x - imageCenter.getX) / expansionFactorX, (y - imageCenter.getY) / expansionFactorY)
   def pix2Iso(isoPoint: Point2D.Double): Point2D.Double = pix2Iso(isoPoint.getX, isoPoint.getY)
 
   def equalTo(other: IsoImagePlaneTranslator) = {
     (height == other.height) &&
       (width == other.width) &&
       (beamExpansionRatio == other.beamExpansionRatio) &&
-      (ImagePlanePixelSpacing.getX == other.ImagePlanePixelSpacing.getX)
+      (ImagePlanePixelSpacing.getX == other.ImagePlanePixelSpacing.getX) &&
+      (ImagePlanePixelSpacing.getY == other.ImagePlanePixelSpacing.getY)
+  }
+
+  override def toString = {
+    "SID/SAD" + beamExpansionRatio.formatted("%12.8f") +
+      "    SID: " + dblOf(TagFromName.RTImageSID).formatted("%7.5f") + "    SAD: " + dblOf(TagFromName.RadiationMachineSAD).formatted("%7.5f") +
+      "    height: " + height + ", " + "    width: " + width + ", " +
+      "    ImagePlanePixelSpacing: " + ImagePlanePixelSpacing.getX.formatted("%7.5f") + ", " + ImagePlanePixelSpacing.getY.formatted("%7.5f")
   }
 }
 

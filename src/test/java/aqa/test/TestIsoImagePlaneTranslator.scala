@@ -56,15 +56,15 @@ class TestIsoImagePlaneTranslator extends FlatSpec with Matchers {
     val expectedIsoCenterPoint = new Point2D.Double(0.0, 0.0)
     val expectedImageCenterPoint = new Point2D.Double(594.5, 594.5)
 
+    println("0,10 mm --> image pixels: " + translator.iso2Pix(0, 10))
+
+    val point = new Point2D.Double(5, 10)
+    println("round trip of " + point + " : " + translator.pix2Iso(translator.iso2Pix(point)))
+
     (translator.iso2Pix(expectedIsoCenterPoint).equals(expectedImageCenterPoint)) should be(true)
     (translator.pix2Iso(expectedImageCenterPoint).equals(expectedIsoCenterPoint)) should be(true)
 
     // TODO next: Add more tests.  Maybe parameter testing?
   }
 
-  //  "randomSecureHash" should "be different each time" in {
-  //    val size = 100
-  //    val list = (0 until size).map(i => Util.randomSecureHash).distinct
-  //    list.size should be(size)
-  //  }
 }
