@@ -60,7 +60,8 @@ class TestSymmetryAndFlatnessAnalysisPixelMap extends FlatSpec with Matchers {
     val pixMap = SymmetryAndFlatnessAnalysisPixelMap.getPixelMap(al)
     trace
 
-    if (true) {
+    // setting this to true shows an image
+    if (false) {
 
       import java.awt.FlowLayout
       import java.awt.image.BufferedImage

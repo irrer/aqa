@@ -20,10 +20,7 @@ object SymmetryAndFlatnessAnalysisPixelMap extends Logging {
      */
     private def makePixelMap: Map[SymmetryAndFlatnessPoint, IndexedSeq[Point]] = {
 
-      val radius_mm = Config.SymmetryAndFlatnessDiameter_mm / 2
-
-      val imagePlaneCenterInPixels = translator.iso2Pix(0, 0)
-      val circleRadiusInPixels = translator.iso2Pix(radius_mm, radius_mm).distance(imagePlaneCenterInPixels)
+      val circleRadiusInPixels = translator.circleRadiusInPixels
 
       def pixelMapOfPoint(point: SymmetryAndFlatnessPoint) = {
         val centerInPixels = translator.iso2Pix(point.asPoint)

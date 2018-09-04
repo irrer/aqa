@@ -229,6 +229,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
                     val cp = CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result)
                     val wdg = WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result)
 
+                    SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq)
+                    
                     (cp, wdg) match {
                       case (Right(collimatorPosition), Right(wedge)) => {
                         Right(Seq(metadataCheck, badPixel, centerDose, collimatorCentering, collimatorPosition, wedge).map(r => r.summary))

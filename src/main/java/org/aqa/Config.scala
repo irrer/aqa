@@ -18,6 +18,7 @@ import java.net.InetAddress
 import java.util.Properties
 import edu.umro.util.Utility
 import org.aqa.webrun.phase2.SymmetryAndFlatnessPoint
+import java.awt.geom.Point2D
 
 /**
  * This class extracts configuration information from the configuration file.  Refer
@@ -367,6 +368,19 @@ object Config extends Logging {
     list
   }
 
+  private def getSymmetryAndFlatnessPointPairList = {
+
+    val radius = SymmetryAndFlatnessDiameter_mm / 2
+    def isPair(a: SymmetryAndFlatnessPoint, b: SymmetryAndFlatnessPoint) = {
+      val bReflected = new Point2D.Double(-b.x_mm, -b.y_mm)
+      val closeTo = a.asPoint.distance(bReflected) < radius
+      val aLower = (a.x_mm < b.x_mm) || (a.y_mm < b.y_mm)
+      closeTo && aLower
+    }
+
+    for (a <- SymmetryAndFlatnessPointList; b <- SymmetryAndFlatnessPointList; if isPair(a, b)) yield { (a, b) }
+  }
+
   case class CollimatorPositionBeamConfig(beamName: String, FloodCompensation: Boolean) {
     override def toString = "Beam name: " + beamName + "  FloodCompensation: " + FloodCompensation
   }
@@ -458,6 +472,8 @@ object Config extends Logging {
   val SymmetryAndFlatnessBeamList = getSymmetryAndFlatnessBeamList
 
   val SymmetryAndFlatnessPointList = getSymmetryAndFlatnessPointList
+
+  val SymmetryAndFlatnessPointPairList: Seq[(SymmetryAndFlatnessPoint, SymmetryAndFlatnessPoint)] = getSymmetryAndFlatnessPointPairList
 
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true

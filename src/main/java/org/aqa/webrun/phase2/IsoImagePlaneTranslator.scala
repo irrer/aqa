@@ -4,6 +4,7 @@ import com.pixelmed.dicom.AttributeList
 import java.awt.geom.Point2D
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.TagFromName
+import org.aqa.Config
 
 /**
  * Support mapping points between the isoplane and the image plane.  Isoplane values are in mm with
@@ -48,5 +49,13 @@ class IsoImagePlaneTranslator(al: AttributeList) {
       "    height: " + height + ", " + "    width: " + width + ", " +
       "    ImagePlanePixelSpacing: " + ImagePlanePixelSpacing.getX.formatted("%7.5f") + ", " + ImagePlanePixelSpacing.getY.formatted("%7.5f")
   }
+
+  def circleRadiusInPixels = {
+    val radius_mm = Config.SymmetryAndFlatnessDiameter_mm / 2
+    val imagePlaneCenterInPixels = iso2Pix(0, 0)
+    val radiusInPixels = iso2Pix(radius_mm, radius_mm).distance(imagePlaneCenterInPixels)
+    radiusInPixels
+  }
+
 }
 
