@@ -13,6 +13,7 @@ import org.scalactic.source.Position.apply
 import scala.collection.Seq
 import org.aqa.webrun.phase2.IsoImagePlaneTranslator
 import com.pixelmed.dicom.ValueRepresentation
+import edu.umro.ScalaUtil.Trace._
 
 /**
  * Test IsoImagePlaneTranslator.
@@ -51,17 +52,14 @@ class TestIsoImagePlaneTranslator extends FlatSpec with Matchers {
 
   "isopoint" should "translate to image plane" in {
 
-    val j = al.get(TagFromName.ImagePlanePixelSpacing) // TODO rm
-    println("j: " + j)
-
     val translator = new IsoImagePlaneTranslator(al)
-    val isoCenterPoint = new Point2D.Double(0.0, 0.0)
-    val imageCenterPoint = translator.iso2Pix(isoCenterPoint)
-    println("imageCenterPoint: " + imageCenterPoint)
-    
+    val expectedIsoCenterPoint = new Point2D.Double(0.0, 0.0)
+    val expectedImageCenterPoint = new Point2D.Double(594.5, 594.5)
+
+    (translator.iso2Pix(expectedIsoCenterPoint).equals(expectedImageCenterPoint)) should be(true)
+    (translator.pix2Iso(expectedImageCenterPoint).equals(expectedIsoCenterPoint)) should be(true)
+
     // TODO next: Add more tests.  Maybe parameter testing?
-    
-    (Util.randomSecureHash.size > 10) should be(true)
   }
 
   //  "randomSecureHash" should "be different each time" in {
