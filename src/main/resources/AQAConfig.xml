@@ -169,8 +169,13 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Diameter of sample spots in mm. -->
     <SymmetryAndFlatnessDiameter_mm>5.0</SymmetryAndFlatnessDiameter_mm>
 
+    <!-- Maximum allowed value for difference in symmetry in cu (cu : Calibrated Units, similar to hu : Hounsfield Units). -->
+    <SymmetryLimit>0.001</SymmetryLimit>
+
+    <!-- Maximum allowed value for change in flatness from smallest to largest beam intensities.  Calculated as (max-min)/(max+min) -->
+    <FlatnessLimit>1.0</FlatnessLimit>
+
     <SymmetryAndFlatnessBeamList>
-        <BeamName>J10G0C270-6X</BeamName>
         <BeamName>Flood 6X</BeamName>
         <BeamName>J20G0-6X</BeamName>
         <BeamName>J20G0-6F</BeamName>
@@ -191,5 +196,11 @@ Note that when building a package for release, the Maven build process uses the 
         <SymmetryAndFlatnessPoint name='Energy 3'  x_mm=  '0.0'   y_mm= '-37.5'/>
         <SymmetryAndFlatnessPoint name='Energy 4'  x_mm=  '0.0'   y_mm=  '37.5'/>
     </SymmetryAndFlatnessPointList>
+
+    <!-- Names of opposing points (see <SymmetryAndFlatnessPointList>) used to calculate symmetry. -->
+    <SymmetryPointTop     name='Top'/>
+    <SymmetryPointBottom  name='Bottom'/>
+    <SymmetryPointLeft    name='Left'/>
+    <SymmetryPointRight   name='Right'/>
 
 </AQAConfig>

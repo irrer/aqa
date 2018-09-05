@@ -14,7 +14,7 @@ import org.aqa.Config
 
 class IsoImagePlaneTranslator(al: AttributeList) {
   private def dblOf(tag: AttributeTag): Double = al.get(tag).getDoubleValues.head
-  private def intOf(tag: AttributeTag): Double = al.get(tag).getIntegerValues.head
+  private def intOf(tag: AttributeTag): Int = al.get(tag).getIntegerValues.head
 
   private val ImagePlanePixelSpacing = Phase2Util.getImagePlanePixelSpacing(al)
   val width = intOf(TagFromName.Columns)

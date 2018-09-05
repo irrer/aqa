@@ -27,9 +27,9 @@ object SymmetryAndFlatnessAnalysisPixelMap extends Logging {
 
         val expandedRadiusInPixels = circleRadiusInPixels + 2
         val xLo = Math.max((centerInPixels.getX - expandedRadiusInPixels).round.toInt, 0)
-        val xHi = Math.min((centerInPixels.getX + expandedRadiusInPixels).round.toInt, translator.width.toInt - 1)
+        val xHi = Math.min((centerInPixels.getX + expandedRadiusInPixels).round.toInt, translator.width - 1)
         val yLo = Math.max((centerInPixels.getY - expandedRadiusInPixels).round.toInt, 0)
-        val yHi = Math.min((centerInPixels.getY + expandedRadiusInPixels).round.toInt, translator.height.toInt - 1)
+        val yHi = Math.min((centerInPixels.getY + expandedRadiusInPixels).round.toInt, translator.height - 1)
         val list = for (x <- (xLo to xHi); y <- (yLo to yHi); if (new Point2D.Double(x, y).distance(centerInPixels) <= circleRadiusInPixels)) yield { new Point(x, y) }
         if (list.size < 10) {
           // this should never happen

@@ -378,7 +378,17 @@ object Config extends Logging {
       closeTo && aLower
     }
 
-    for (a <- SymmetryAndFlatnessPointList; b <- SymmetryAndFlatnessPointList; if isPair(a, b)) yield { (a, b) }
+    val list = for (a <- SymmetryAndFlatnessPointList; b <- SymmetryAndFlatnessPointList; if isPair(a, b)) yield { (a, b) }
+    val listText = list.map(pair => pair._1.name + "   " + pair._2.name).mkString("\n        ", "\n        ", "\n")
+    logText("SymmetryAndFlatnessPointList", listText)
+    list
+  }
+
+  private def getSymPoint(nodeName: String) = {
+    val name = (document \ nodeName \ "@name").head.text.toString
+    val point = SymmetryAndFlatnessPointList.find(p => p.name.equals(name)).get
+    logText(nodeName, point.toString)
+    point
   }
 
   case class CollimatorPositionBeamConfig(beamName: String, FloodCompensation: Boolean) {
@@ -469,18 +479,25 @@ object Config extends Logging {
 
   val SymmetryAndFlatnessDiameter_mm = logMainText("SymmetryAndFlatnessDiameter_mm").toDouble
 
+  val SymmetryLimit = logMainText("SymmetryLimit").toDouble
+
+  val FlatnessLimit = logMainText("FlatnessLimit").toDouble
+
   val SymmetryAndFlatnessBeamList = getSymmetryAndFlatnessBeamList
 
   val SymmetryAndFlatnessPointList = getSymmetryAndFlatnessPointList
 
   val SymmetryAndFlatnessPointPairList: Seq[(SymmetryAndFlatnessPoint, SymmetryAndFlatnessPoint)] = getSymmetryAndFlatnessPointPairList
 
+  val SymmetryPointTop = getSymPoint("SymmetryPointTop")
+  val SymmetryPointBottom = getSymPoint("SymmetryPointBottom")
+  val SymmetryPointLeft = getSymPoint("SymmetryPointLeft")
+  val SymmetryPointRight = getSymPoint("SymmetryPointRight")
+
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true
 
-  def validate = {
-    validated
-  }
+  def validate = validated
 
   override def toString: String = valueText.foldLeft("Configuration values:")((b, t) => b + "\n    " + t)
 
