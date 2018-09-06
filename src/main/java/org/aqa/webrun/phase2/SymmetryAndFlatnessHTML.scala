@@ -28,6 +28,7 @@ import java.awt.Point
 import edu.umro.ImageUtil.ImageText
 import java.io.File
 import org.aqa.web.WebServer
+import org.aqa.web.WebUtil
 
 /**
  * Analyze DICOM files for symmetry and flatness.
@@ -44,7 +45,12 @@ object SymmetryAndFlatnessHTML extends Logging {
   }
 
   def annotatedImageFile(subDir: File, beamName: String): File = {
-    val fileName = "Sym_Flat_" + beamName.replace(' ', '_') + ".png"
+    val fileName = "Sym_Flat_" + WebUtil.stringToUrlSafe(beamName) + ".png"
+    new File(subDir, fileName)
+  }
+
+  def beamHtmlFile(subDir: File, beamName: String): File = {
+    val fileName = WebUtil.stringToUrlSafe(beamName) + ".html"
     new File(subDir, fileName)
   }
 
@@ -61,92 +67,6 @@ object SymmetryAndFlatnessHTML extends Logging {
     elem
   }
 
-  //  private def titleDicomMetadata = "Click to view DICOM metadata"
-  //  private def titleDetails = "Click to view details"
-  //  private def titleAxialSymmetry = "Axial symmetry from top to bottom: (top-bottom)/bottom.  Max limit is " + Config.SymmetryLimit
-  //  private def titleTransverseSymmetry = "Transverse symmetry from right to left: (right-left)/left.  Max limit is " + Config.SymmetryLimit
-  //  private def titleFlatness = "Flatness: (max-min)/(max+min).  Max limit is " + Config.FlatnessLimit
-  //
-  //  private def tableHead: Elem = {
-  //    <thead>
-  //      <tr>
-  //        <th style="text-align: center;" title={ titleDicomMetadata }>
-  //          Beam
-  //          <br/>
-  //          Name
-  //        </th>
-  //        <th style="text-align: center;" title={ titleDetails }>
-  //          Details
-  //        </th>
-  //        <th style="text-align: center;" title={ titleAxialSymmetry }>
-  //          Axial Symmetry
-  //        </th>
-  //        <th style="text-align: center;" title={ titleTransverseSymmetry }>
-  //          Transverse Symmetry
-  //        </th>
-  //        <th style="text-align: center;" title={ titleFlatness }>
-  //          Flatness
-  //        </th>
-  //      </tr>
-  //    </thead>
-  //  }
-  //
-  //  private def dicomRefColumn(beamName: String, extendedData: ExtendedData, runReq: RunReq): Elem = {
-  //    val dicomFile = runReq.rtimageMap(beamName)
-  //    val link = extendedData.dicomHref(dicomFile)
-  //    <td style="text-align: center;" title={ titleDicomMetadata }><a href={ link }>{ beamName }</a></td>
-  //  }
-  //
-  //  private def detailsColumn(subDir: File, beamName: String, extendedData: ExtendedData, runReq: RunReq): Elem = {
-  //    <td style="text-align: center;" title={ titleDetails }><a href={ "/" }>{ WebServer.urlOfResultsFile(annotatedImageFile(subDir, beamName)) }</a></td>
-  //  }
-  //
-  //  private def axialSymmetryColumn(result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult): Elem = {
-  //    val bsClass = if (result.axialSymmetryStatus == ProcedureStatus.pass) "" else "danger"
-  //    <td class={ bsClass } style="text-align: center;" title={ titleAxialSymmetry }>
-  //      { result.axialSymmetry.formatted("%14.6f") }
-  //    </td>
-  //  }
-  //
-  //  private def transverseSymmetryColumn(result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult): Elem = {
-  //    val bsClass = if (result.transverseSymmetryStatus == ProcedureStatus.pass) "" else "danger"
-  //    <td class={ bsClass } style="text-align: center;" title={ titleTransverseSymmetry }>
-  //      { result.transverseSymmetry.formatted("%14.6f") }
-  //    </td>
-  //  }
-  //
-  //  private def flatnessColumn(result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult): Elem = {
-  //    val bsClass = if (result.flatnessStatus == ProcedureStatus.pass) "" else "danger"
-  //    <td class={ bsClass } style="text-align: center;" title={ titleFlatness }>
-  //      { result.flatness.formatted("%14.6f") }
-  //    </td>
-  //  }
-  //
-  //  private def makeRow(subDir: File, extendedData: ExtendedData, result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult, runReq: RunReq): Elem = {
-  //    <tr align="center">
-  //      {
-  //        Seq(
-  //          dicomRefColumn(result.beamName, extendedData, runReq),
-  //          detailsColumn(subDir, result.beamName, extendedData, runReq),
-  //          axialSymmetryColumn(result),
-  //          transverseSymmetryColumn(result),
-  //          flatnessColumn(result))
-  //      }
-  //    </tr>
-  //  }
-  //
-  //  private def makeContent(subDir: File, extendedData: ExtendedData, resultList: List[SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult], status: ProcedureStatus.Value, runReq: RunReq): Elem = {
-  //    val content = {
-  //      <div class="col-md-12" align="middle">
-  //        <table class="table table-bordered">
-  //          { tableHead }
-  //          { resultList.map(r => makeRow(subDir, extendedData, r, runReq: RunReq)) }
-  //        </table>
-  //      </div>
-  //    }
-  //    content
-  //  }
-
   def makeDisplay(extendedData: ExtendedData, resultList: List[SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult], status: ProcedureStatus.Value, runReq: RunReq): Elem = {
     val subDir = makeSubDir(extendedData.output.dir)
     val mainHtmlFile = new File(subDir, htmlFileName)
@@ -154,6 +74,8 @@ object SymmetryAndFlatnessHTML extends Logging {
 
     val html = Phase2Util.wrapSubProcedure(extendedData, SymmetryAndFlatnessMainHTML.makeContent(subDir, extendedData, resultList, status, runReq), "Symmetry and Flatness", status, None, runReq)
     Util.writeFile(mainHtmlFile, html)
+
+    resultList.map(result => SymmetryAndFlatnessBeamHTML.makeDisplay(subDir, extendedData, result, status, runReq))
 
     summary(mainHtmlFile, resultList.size, status)
   }

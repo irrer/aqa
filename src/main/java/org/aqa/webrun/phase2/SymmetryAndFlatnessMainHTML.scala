@@ -71,7 +71,15 @@ object SymmetryAndFlatnessMainHTML extends Logging {
   }
 
   private def detailsColumn(subDir: File, beamName: String, extendedData: ExtendedData, runReq: RunReq): Elem = {
-    <td style="text-align: center;" title={ titleDetails }><a href={ "/" }>{ WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, beamName)) }</a></td>
+    val img = {
+      <img src={ WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, beamName)) } width="100"/>
+    }
+
+    val ref = {
+      <a href={ WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, beamName)) }>{ img }</a>
+    }
+
+    <td style="text-align: center;" title={ titleDetails }>{ ref }</td>
   }
 
   private def axialSymmetryColumn(result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult): Elem = {

@@ -1006,5 +1006,7 @@ object WebUtil extends Logging {
     ("-1", "None") +: Machine.listWithDependencies.filter(mmi => mmi.machine.serialNumber.isEmpty).sortWith(sortMMI).map(mmi => mmiToTuple(mmi))
   }
 
+  def stringToUrlSafe(text: String): String = text.replaceAll("[^a-zA-Z0-9]", "_")
+
 }
 

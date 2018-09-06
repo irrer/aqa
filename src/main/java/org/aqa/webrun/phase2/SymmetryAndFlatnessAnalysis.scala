@@ -60,16 +60,23 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     Trace.trace("status: " + status)
   }
 
+  private def addGraticules(graphics: Graphics2D, translator: IsoImagePlaneTranslator) = {
+    val min = translator.pix2Iso(0, 0)
+    val max = translator.pix2Iso(translator.width - 1, translator.height - 1)
+
+  }
+
   private def makeAnnotatedImage(dicomImage: DicomImage, attributeList: AttributeList, pointMap: Map[SymmetryAndFlatnessPoint, Double]): BufferedImage = {
-    val img = dicomImage.toBufferedImage(Color.cyan)
+    val img = dicomImage.toBufferedImage(Color.orange)
     val graphics = ImageUtil.getGraphics(img)
-    graphics.setColor(Color.black)
 
     val translator = new IsoImagePlaneTranslator(attributeList)
     val radius = translator.circleRadiusInPixels
     val circleSize = (radius * 2).round.toInt
+    addGraticules(graphics, translator)
 
     def annotatePoint(point: SymmetryAndFlatnessPoint) = {
+      graphics.setColor(Color.black)
       val value = pointMap(point)
       val center = translator.iso2Pix(point.asPoint)
       graphics.drawOval((center.getX - radius).round.toInt, (center.getY - radius).round.toInt, circleSize, circleSize)
@@ -162,7 +169,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val axialProfile = {
       val x = ((translator.width - widthOfBand) / 2.0).round.toInt
       val rectangle = new Rectangle(x, 0, widthOfBand, translator.height)
-      dicomImage.getSubimage(rectangle).columnSums.map(c => ((c / widthOfBand) * RescaleSlope) + RescaleIntercept)
+      dicomImage.getSubimage(rectangle).rowSums.map(c => ((c / widthOfBand) * RescaleSlope) + RescaleIntercept)
     }
 
     val transverse_mm = (0 until translator.width).map(x => translator.pix2Iso(x, 0).getX)
