@@ -226,26 +226,16 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
                 CollimatorCenteringAnalysis.runProcedure(extendedData, runReq) match {
                   case Left(fail) => Left(Seq(metadataCheck.summary, badPixel.summary, centerDose.summary, fail))
                   case Right(collimatorCentering) => {
-                    val cp = CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result)
-                    val wdg = WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result)
 
-                    SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq)
-                    
-                    (cp, wdg) match {
-                      case (Right(collimatorPosition), Right(wedge)) => {
-                        Right(Seq(metadataCheck, badPixel, centerDose, collimatorCentering, collimatorPosition, wedge).map(r => r.summary))
-                      }
-                      case (Left(collimatorPositionFail), Right(wedge)) => {
-                        Left(Seq(metadataCheck.summary, badPixel.summary, centerDose.summary, collimatorCentering.summary, collimatorPositionFail, wedge.summary))
-                      }
-                      case (Right(collimatorPosition), Left(wedgeFail)) => {
-                        Left(Seq(metadataCheck.summary, badPixel.summary, centerDose.summary, collimatorCentering.summary, collimatorPosition.summary, wedgeFail))
-                      }
-                      case (Left(collimatorPositionFail), Left(wedgeFail)) => {
-                        Left(Seq(metadataCheck.summary, badPixel.summary, centerDose.summary, collimatorCentering.summary, collimatorPositionFail, wedgeFail))
-                      }
+                    val prevSummaryList = Seq(metadataCheck, badPixel, centerDose, collimatorCentering).map(r => r.summary)
+                    val list = Seq(
+                      CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
+                      WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
+                      SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq))
 
-                    }
+                    val summaryList = prevSummaryList ++ list.map(r => if (r.isLeft) r.left.get else r.right.get.summary)
+                    if (list.find(r => r.isLeft).isEmpty) Right(summaryList) else Left(summaryList)
+
                   }
                 }
               }

@@ -33,9 +33,6 @@ import java.io.File
  */
 object SymmetryAndFlatnessAnalysis extends Logging {
 
-  val htmlFileName = "SymmetryAndFlatness.html"
-  val subDirName = "SymmetryAndFlatness"
-
   private def boolToStatus(pass: Boolean) = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
   /**
@@ -56,9 +53,11 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
     /** True if everything is ok. */
     val pass = Seq(axialSymmetryStatus, transverseSymmetryStatus, flatnessStatus).filter(s => !(s.toString.equals(ProcedureStatus.pass.toString))).isEmpty
+    Trace.trace("pass: " + pass)
 
     /** Aggregate status. */
     val status = boolToStatus(pass)
+    Trace.trace("status: " + status)
   }
 
   private def makeAnnotatedImage(dicomImage: DicomImage, attributeList: AttributeList, pointMap: Map[SymmetryAndFlatnessPoint, Double]): BufferedImage = {
@@ -145,12 +144,12 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val pointMap = makePointMap(dicomImage, attributeList, RescaleSlope, RescaleIntercept)
 
     val axialSymmetry = analyzeSymmetry(Config.SymmetryPointTop, Config.SymmetryPointBottom, pointMap)
-    val axialSymmetryStatus = boolToStatus(Config.SymmetryLimit >= axialSymmetry)
+    val axialSymmetryStatus = boolToStatus(Config.SymmetryLimit >= axialSymmetry.abs)
     val transverseSymmetry = analyzeSymmetry(Config.SymmetryPointRight, Config.SymmetryPointLeft, pointMap)
-    val transverseSymmetryStatus = boolToStatus(Config.SymmetryLimit >= transverseSymmetry)
+    val transverseSymmetryStatus = boolToStatus(Config.SymmetryLimit >= transverseSymmetry.abs)
 
     val flatness = analyzeFlatness(pointMap)
-    val flatnessStatus = boolToStatus(Config.FlatnessLimit >= flatness)
+    val flatnessStatus = boolToStatus(Config.FlatnessLimit >= flatness.abs)
 
     val annotatedImage = makeAnnotatedImage(dicomImage, attributeList, pointMap)
 
@@ -195,32 +194,12 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       val beamNameList = Config.SymmetryAndFlatnessBeamList.filter(beamName => runReq.derivedMap.contains(beamName))
 
       // only process beams that are both configured and have been uploaded
-      val resultList = beamNameList.par.map(beamName => analyze(beamName, extendedData, runReq)).toList
+      //val resultList = beamNameList.par.map(beamName => analyze(beamName, extendedData, runReq)).toList
+      val resultList = beamNameList.map(beamName => analyze(beamName, extendedData, runReq)).toList // change back to 'par' when debugged
 
       val pass = resultList.map(r => r.status.toString.equals(ProcedureStatus.pass)).reduce(_ && _)
 
-      val subDir = new File(extendedData.output.dir, subDirName)
-      subDir.mkdirs
-
-      def saveImage(beamName: String, image: BufferedImage) = {
-        val fileName = "Sym_Flat_" + beamName.replace(' ', '_') + ".png"
-        val pngFile = new File(subDir, fileName)
-        Util.writePng(image, pngFile)
-      }
-
-      resultList.map(r => saveImage(r.beamName, r.annotatedImage))
-
-      val summary = {
-        val elem = {
-          <div title="Click for details.">
-            <a href={ htmlFileName }>
-              Center Dose.  Images:{ resultList.size }<br/>
-              <img src={ Config.passImageUrl } height="32"/>
-            </a>
-          </div>
-        }
-        elem
-      }
+      val summary = SymmetryAndFlatnessHTML.makeDisplay(extendedData, resultList, boolToStatus(pass), runReq)
 
       Right(new SymmetryAndFlatnessResult(summary, ProcedureStatus.done))
     } catch {

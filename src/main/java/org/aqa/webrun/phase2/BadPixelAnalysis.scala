@@ -196,6 +196,7 @@ object BadPixelAnalysis extends Logging {
           <td style="text-align: center;" title="Center Dose">{ boolToString(Config.CenterDoseBeamNameList.contains(beamName)) }</td>
           <td style="text-align: center;" title="Collimator Position">{ boolToString(Config.CollimatorPositionBeamList.contains(beamName)) }</td>
           <td style="text-align: center;" title="Wedge">{ boolToString(Config.WedgeBeamList.contains(beamName)) }</td>
+          <td style="text-align: center;" title="Symmetry and Flatness">{ boolToString(Config.SymmetryAndFlatnessBeamList.contains(beamName)) }</td>
         </tr>
       }
       (relativeTime, elem)
@@ -236,6 +237,7 @@ object BadPixelAnalysis extends Logging {
             <th style="text-align: center;" title='"yes" if used in Center Dose'>Center<br/>Dose</th>
             <th style="text-align: center;" title='"yes" if used in Collimator Position'>Collimator<br/>Position</th>
             <th style="text-align: center;" title='"yes" if used in Wedge'>Wedge</th>
+            <th style="text-align: center;" title='"yes" if used in Symmetry and Flatness'>Symmetry and Flatness</th>
           </tr>
         </thead>
       }

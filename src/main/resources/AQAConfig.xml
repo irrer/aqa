@@ -173,7 +173,7 @@ Note that when building a package for release, the Maven build process uses the 
     <SymmetryLimit>0.001</SymmetryLimit>
 
     <!-- Maximum allowed value for change in flatness from smallest to largest beam intensities.  Calculated as (max-min)/(max+min) -->
-    <FlatnessLimit>1.0</FlatnessLimit>
+    <FlatnessLimit>0.1</FlatnessLimit>
 
     <SymmetryAndFlatnessBeamList>
         <BeamName>Flood 6X</BeamName>
