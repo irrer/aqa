@@ -99,15 +99,17 @@ object SymmetryAndFlatnessBeamHTML extends Logging {
     val graphTransverse = graph("Transverse " + result.beamName, result.transverseProfile, result.transverse_mm)
     val graphAxial = graph("Axial " + result.beamName, result.axialProfile, result.axial_mm)
     val content = {
-      <div class="col-md-12" align="middle">
-        <div class="row">
-          { <img src={ WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.beamName)) }/> }
+      <div class="row">
+        <div class="col-md-6">
+          { <img class="img-responsive" src={ WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.beamName)) }/> }
         </div>
-        <div class="row">
-          { graphTransverse._1 }
-        </div>
-        <div class="row">
-          { graphAxial._1 }
+        <div class="col-md-4">
+          <div class="row">
+            { graphTransverse._1 }
+          </div>
+          <div class="row">
+            { graphAxial._1 }
+          </div>
         </div>
       </div>
     }

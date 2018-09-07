@@ -1,32 +1,19 @@
 package org.aqa.webrun.phase2
 
 import org.aqa.Logging
-import org.aqa.db.CollimatorPosition
-import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
-import org.aqa.Util
-import scala.collection.Seq
 import scala.xml.Elem
-import org.aqa.db.Output
 import org.aqa.run.ProcedureStatus
-import org.aqa.DicomFile
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageUtil
-import java.awt.geom.Point2D
 import org.aqa.Config
 import java.awt.Rectangle
-import edu.umro.ImageUtil.LocateEdge
 import java.awt.image.BufferedImage
 import java.awt.Color
 import java.awt.Graphics2D
-import java.awt.BasicStroke
 import edu.umro.ScalaUtil.Trace
-import scala.collection.parallel.ParSeq
-import org.aqa.db.CollimatorCentering
-import java.awt.Point
 import edu.umro.ImageUtil.ImageText
-import java.io.File
 
 /**
  * Analyze DICOM files for symmetry and flatness.
@@ -61,13 +48,72 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   }
 
   private def addGraticules(graphics: Graphics2D, translator: IsoImagePlaneTranslator) = {
-    val min = translator.pix2Iso(0, 0)
-    val max = translator.pix2Iso(translator.width - 1, translator.height - 1)
+    val xMin = 0
+    val yMin = 0
+    val xMax = translator.width - 1
+    val yMax = translator.height - 1
+
+    val min = translator.pix2Iso(xMin, yMin)
+    val max = translator.pix2Iso(xMax, yMax)
+
+    val xGrat = ImageUtil.graticule(min.getX, max.getX, 8)
+    val yGrat = ImageUtil.graticule(min.getY, max.getY, 8)
+
+    val gratMajorLength = 10
+    val gratMinorLength = 5
+
+    graphics.setColor(Color.gray)
+
+    // draw border
+    graphics.drawLine(xMin, yMin, xMin, yMax)
+    graphics.drawLine(xMax, yMin, xMax, yMax)
+    graphics.drawLine(xMin, yMin, xMax, yMin)
+    graphics.drawLine(xMin, yMax, xMax, yMax)
+
+    def xToPix(xIso: Double) = translator.iso2Pix(xIso, 0).getX.round.toInt
+    def yToPix(yIso: Double) = translator.iso2Pix(0, yIso).getY.round.toInt
+
+    val offset = 1 // Offset of tic mark from number.
+
+    val numMinorTics = 4 // number of minor tics between major tics
+    val xMinorInc = (xToPix(xGrat(1)) - xToPix(xGrat(0))) / (numMinorTics + 1)
+    val yMinorInc = (yToPix(xGrat(1)) - yToPix(yGrat(0))) / (numMinorTics + 1)
+
+    // draw top and bottom graticules
+    for (xIso <- xGrat) {
+      val x = xToPix(xIso)
+      val minorStart = if (xIso == xGrat.head) -numMinorTics else 1
+      val text = xIso.round.toInt.toString + " "
+      // top
+      graphics.drawLine(x, yMin, x, yMin + gratMajorLength)
+      for (mt <- minorStart to numMinorTics) graphics.drawLine(x + (mt * xMinorInc), yMin, x + (mt * xMinorInc), yMin + gratMinorLength)
+      ImageText.drawTextOffsetFrom(graphics, x, yMin + gratMajorLength + offset, text, 270)
+      // bottom
+      graphics.drawLine(x, yMax, x, yMax - gratMajorLength)
+      for (mt <- minorStart to numMinorTics) graphics.drawLine(x + (mt * xMinorInc), yMax, x + (mt * xMinorInc), yMax - gratMinorLength)
+      ImageText.drawTextOffsetFrom(graphics, x, yMax - gratMajorLength - offset, text, 90)
+    }
+
+    // draw left and right graticules
+    for (yIso <- yGrat) {
+      val y = yToPix(yIso)
+      val minorStart = if (yIso == yGrat.head) -numMinorTics else 1
+      val text = yIso.round.toInt.toString + " "
+      val textWidth = ImageText.getTextDimensions(graphics, text).getWidth.round.toInt
+      // left
+      graphics.drawLine(xMin, y, xMin + gratMajorLength, y)
+      for (mt <- minorStart to numMinorTics) graphics.drawLine(xMin, y + (mt * yMinorInc), xMin + gratMinorLength, y + (mt * yMinorInc))
+      ImageText.drawTextOffsetFrom(graphics, xMin + gratMajorLength + offset, y, text, 0)
+      // right
+      graphics.drawLine(xMax, y, xMax - gratMajorLength, y)
+      for (mt <- minorStart to numMinorTics) graphics.drawLine(xMax, y + (mt * yMinorInc), xMax - gratMinorLength, y + (mt * yMinorInc))
+      ImageText.drawTextOffsetFrom(graphics, xMax - (gratMajorLength + offset + textWidth), y, text, 0)
+    }
 
   }
 
   private def makeAnnotatedImage(dicomImage: DicomImage, attributeList: AttributeList, pointMap: Map[SymmetryAndFlatnessPoint, Double]): BufferedImage = {
-    val img = dicomImage.toBufferedImage(Color.orange)
+    val img = dicomImage.toBufferedImage(new Color(200, 255, 200))
     val graphics = ImageUtil.getGraphics(img)
 
     val translator = new IsoImagePlaneTranslator(attributeList)
