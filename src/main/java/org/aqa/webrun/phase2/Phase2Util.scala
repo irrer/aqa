@@ -157,7 +157,7 @@ object Phase2Util extends Logging {
     }
 
     def mainReport: Elem = {
-      <div class="col-md-1" title='Return to main (overview) report'><a href='display.html'>Main Report</a></div>
+      <div class="col-md-1 col-md-offset-1" title='Return to main (overview) report'><a href='display.html'>Main Report</a></div>
     }
 
     val analysisDate: String = {
@@ -207,7 +207,7 @@ object Phase2Util extends Logging {
     val div = {
       <div class="row">
         <div class="row">
-          <div class="col-md-1">{ passFailImage }</div>
+          <div class="col-md-1 col-md-offset-1">{ passFailImage }</div>
           <div class="col-md-3" title={ title }><h2>{ title }</h2></div>
           <div class="col-md-1" title="Machine"> <h2>{ machineId }</h2></div>
           <div class="col-md-2">

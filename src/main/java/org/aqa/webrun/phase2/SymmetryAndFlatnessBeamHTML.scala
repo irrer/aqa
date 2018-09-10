@@ -100,10 +100,10 @@ object SymmetryAndFlatnessBeamHTML extends Logging {
     val graphAxial = graph("Axial " + result.beamName, result.axialProfile, result.axial_mm)
     val content = {
       <div class="row">
-        <div class="col-md-6">
+        <div class="col-md-6 col-md-offset-1">
           { <img class="img-responsive" src={ WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.beamName)) }/> }
         </div>
-        <div class="col-md-4">
+        <div class="col-md-5">
           <div class="row">
             { graphTransverse._1 }
           </div>
