@@ -118,7 +118,7 @@ object SymmetryAndFlatnessMainHTML extends Logging {
 
   def makeContent(subDir: File, extendedData: ExtendedData, resultList: List[SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult], status: ProcedureStatus.Value, runReq: RunReq): Elem = {
     val content = {
-      <div class="col-md-12" align="middle">
+      <div class="col-md-6 col-md-offset-3">
         <table class="table table-bordered">
           { tableHead }
           { resultList.map(r => makeRow(subDir, extendedData, r, runReq: RunReq)) }

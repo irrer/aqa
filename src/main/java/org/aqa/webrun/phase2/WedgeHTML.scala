@@ -73,10 +73,8 @@ object WedgeHTML {
     }
 
     val content = {
-      <div>
-        <div class="col-md-10" align="middle">
-          { wedgeListList.map(wedgeList => wedgeHtml(wedgeList)) }
-        </div>
+      <div class="col-md-10 col-md-offset-1">
+        { wedgeListList.map(wedgeList => wedgeHtml(wedgeList)) }
       </div>
     }
 

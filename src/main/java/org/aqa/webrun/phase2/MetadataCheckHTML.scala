@@ -84,7 +84,7 @@ object MetadataCheckHTML {
     val tbody = resultList.map(psnChk => metadataCheckToTableRow(psnChk))
 
     val content = {
-      <div>
+      <div class="col-md-10 col-md-offset-1">
         <div class="row" style="margin:20px;">
           <div class="col-md-1">{ csvFileReference }</div>
           <div class="col-md-1">{ viewRtPlan }</div>

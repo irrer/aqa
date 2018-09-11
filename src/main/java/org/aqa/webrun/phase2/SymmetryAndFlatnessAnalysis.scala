@@ -15,6 +15,7 @@ import java.awt.Graphics2D
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ImageUtil.ImageText
 import java.awt.BasicStroke
+import org.aqa.Util
 
 /**
  * Analyze DICOM files for symmetry and flatness.
@@ -48,131 +49,36 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     Trace.trace("status: " + status)
   }
 
-  private def addGrats(imageWidth: Int, imageHeight: Int, xToPix: (Double) => Int, yToPix: (Double) => Int, color: Color, graphics: Graphics2D) = {
-    // TODO
-  }
-
-  private val lightlyDashedLine = new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, Array(0.5f, 4), 0)
-
-  private def addGraticules(img: BufferedImage, translator: IsoImagePlaneTranslator) = {
-    val graphics = ImageUtil.getGraphics(img)
-
-    val xMin = 0
-    val yMin = 0
-    val xMax = translator.width - 1
-    val yMax = translator.height - 1
-    val xMiddle = xMax / 2
-    val yMiddle = yMax / 2
-
-    val min = translator.pix2Iso(xMin, yMin)
-    val max = translator.pix2Iso(xMax, yMax)
-
-    val xGrat = ImageUtil.graticule(min.getX, max.getX, 8)
-    val yGrat = ImageUtil.graticule(min.getY, max.getY, 8)
-
-    val gratMajorLength = 10
-    val gratMinorLength = 5
-
-    graphics.setColor(Color.gray)
-    ImageUtil.setSolidLine(graphics)
-
-    // draw borders and center lines
-    graphics.drawLine(xMin, yMin, xMin, yMax)
-    graphics.drawLine(xMax, yMin, xMax, yMax)
-    graphics.drawLine(xMin, yMin, xMax, yMin)
-    graphics.drawLine(xMin, yMax, xMax, yMax)
-    graphics.drawLine(xMin, yMiddle, xMax, yMiddle)
-    graphics.drawLine(xMiddle, yMin, xMiddle, yMax)
-
-    def xToPix(xIso: Double) = translator.iso2Pix(xIso, 0).getX.round.toInt
-    def yToPix(yIso: Double) = translator.iso2Pix(0, yIso).getY.round.toInt
-
-    val offset = 1 // Offset of tic mark from number.
-
-    def closeTogether(aPix: Double, bPix: Double) = (aPix - bPix).abs < 2
-
-    val numMinorTics = 4 // number of minor tics between major tics
-    val xMinorInc = (xToPix(xGrat(1)) - xToPix(xGrat(0))) / (numMinorTics + 1)
-    val yMinorInc = (yToPix(xGrat(1)) - yToPix(yGrat(0))) / (numMinorTics + 1)
-
-    // draw top, bottom, and center graticules
-    for (xIso <- xGrat) {
-      val x = xToPix(xIso)
-      val minorStart = if (xIso == xGrat.head) -numMinorTics else 1
-      val text = xIso.round.toInt.toString + " "
-
-      if (!closeTogether(x, xMiddle)) { // do not overwrite middle line
-        // draw light grid lines
-        graphics.setStroke(lightlyDashedLine)
-        graphics.drawLine(x, yMin, x, yMax)
-        ImageUtil.setSolidLine(graphics)
-      }
-
-      // top
-      graphics.drawLine(x, yMin, x, yMin + gratMajorLength) // draw major graticule
-      for (mt <- minorStart to numMinorTics) graphics.drawLine(x + (mt * xMinorInc), yMin, x + (mt * xMinorInc), yMin + gratMinorLength)
-      ImageText.drawTextOffsetFrom(graphics, x, yMin + gratMajorLength + offset, text, 270) // draw number corresponding to major graticule
-      // bottom
-      graphics.drawLine(x, yMax, x, yMax - gratMajorLength) // draw major graticule
-      for (mt <- minorStart to numMinorTics) graphics.drawLine(x + (mt * xMinorInc), yMax, x + (mt * xMinorInc), yMax - gratMinorLength)
-      ImageText.drawTextOffsetFrom(graphics, x, yMax - gratMajorLength - offset, text, 90) // draw number corresponding to major graticule
-      // center
-      graphics.drawLine(x, yMiddle - gratMajorLength, x, yMiddle + gratMajorLength) // draw major graticule
-      for (mt <- minorStart to numMinorTics) graphics.drawLine(x + (mt * xMinorInc), yMiddle - gratMinorLength, x + (mt * xMinorInc), yMiddle + gratMinorLength)
-      ImageText.drawTextOffsetFrom(graphics, x, yMiddle - gratMajorLength - offset, text, 90) // draw number corresponding to major graticule
-    }
-
-    // draw left and right graticules
-    for (yIso <- yGrat) {
-      val y = yToPix(yIso)
-      val minorStart = if (yIso == yGrat.head) -numMinorTics else 1
-      val text = yIso.round.toInt.toString + " "
-
-      if (!closeTogether(y, yMiddle)) { // do not overwrite middle line
-        // draw light grid lines
-        graphics.setStroke(lightlyDashedLine)
-        graphics.drawLine(xMin, y, xMax, y)
-        ImageUtil.setSolidLine(graphics)
-      }
-
-      val textWidth = ImageText.getTextDimensions(graphics, text).getWidth.round.toInt
-      // left
-      graphics.drawLine(xMin, y, xMin + gratMajorLength, y) // draw major graticule
-      for (mt <- minorStart to numMinorTics) graphics.drawLine(xMin, y + (mt * yMinorInc), xMin + gratMinorLength, y + (mt * yMinorInc))
-      ImageText.drawTextOffsetFrom(graphics, xMin + gratMajorLength + offset, y, text, 0) // draw number corresponding to major graticule
-      // right
-      graphics.drawLine(xMax, y, xMax - gratMajorLength, y) // draw major graticule
-      for (mt <- minorStart to numMinorTics) graphics.drawLine(xMax, y + (mt * yMinorInc), xMax - gratMinorLength, y + (mt * yMinorInc))
-      ImageText.drawTextOffsetFrom(graphics, xMax - (gratMajorLength + offset + textWidth), y, text, 0) // draw number corresponding to major graticule
-      // center
-      graphics.drawLine(xMiddle - gratMajorLength, y, xMiddle + gratMajorLength, y) // draw major graticule
-      for (mt <- minorStart to numMinorTics) graphics.drawLine(xMiddle - gratMinorLength, y + (mt * yMinorInc), xMiddle + gratMinorLength, y + (mt * yMinorInc))
-      ImageText.drawTextOffsetFrom(graphics, xMax - (xMiddle - gratMajorLength + offset + textWidth), y, text, 0) // draw number corresponding to major graticule
-    }
-
-  }
-
   private def makeAnnotatedImage(dicomImage: DicomImage, attributeList: AttributeList, pointMap: Map[SymmetryAndFlatnessPoint, Double]): BufferedImage = {
-    val img = dicomImage.toBufferedImage(new Color(200, 255, 200))
-    val graphics = ImageUtil.getGraphics(img)
+    val image = dicomImage.toBufferedImage(new Color(200, 255, 200))
+    val graphics = ImageUtil.getGraphics(image)
 
     val translator = new IsoImagePlaneTranslator(attributeList)
     val radius = translator.circleRadiusInPixels
     val circleSize = (radius * 2).round.toInt
-    addGraticules(img, translator)
+
+    //    addGraticules(img, translator)
+    def x2Pix(xIso: Double) = translator.iso2Pix(xIso, 0).getX.round.toInt
+    def y2Pix(yIso: Double) = translator.iso2Pix(0, yIso).getY.round.toInt
+    def pix2X(xPix: Double) = translator.pix2Iso(xPix, 0).getX.round.toInt
+    def pix2Y(yPix: Double) = translator.pix2Iso(0, yPix).getY.round.toInt
+    Util.addGraticules(image, x2Pix _, y2Pix _, pix2X _, pix2Y _, Color.gray)
+
+    def dbl2Text(d: Double): String = if (d.round.toInt == d) d.toInt.toString else d.toString
 
     def annotatePoint(point: SymmetryAndFlatnessPoint) = {
       graphics.setColor(Color.black)
       val value = pointMap(point)
       val center = translator.iso2Pix(point.asPoint)
       graphics.drawOval((center.getX - radius).round.toInt, (center.getY - radius).round.toInt, circleSize, circleSize)
-      ImageText.drawTextOffsetFrom(graphics, center.getX, center.getY - radius, point.name, 90)
+      val description = point.name + " " + dbl2Text(point.x_mm) + ", " + dbl2Text(point.y_mm)
+      ImageText.drawTextOffsetFrom(graphics, center.getX, center.getY - radius, description, 90)
       ImageText.drawTextOffsetFrom(graphics, center.getX, center.getY + radius, value.formatted("%6.4f"), 270)
     }
 
     pointMap.keys.map(p => annotatePoint(p))
 
-    img
+    image
   }
 
   private def getDicomImage(beamName: String, runReq: RunReq): DicomImage = {
