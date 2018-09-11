@@ -20,7 +20,7 @@ case class Baseline(
   installDate: Timestamp, // when the user decided to start using this value as the baseline
   userPK: Option[Long], // user who chose this baseline
   SOPInstanceUID: Option[String], // UID of DICOM image.  May be empty if not applicable.
-  id: String, // unique identifier for data.  Can contain the concatenation of values such as beam name, energy level, jaw position, energy level, etc.
+  id: String, // unique identifier for data.  Can contain the concatenation of values such as beam name, energy level, jaw position, energy level, etc.  Should be human readable / user friendly
   value: String, // text version of value
   description: String // a description that helps the user understand what it is.  This is not used for computation.
 ) {
