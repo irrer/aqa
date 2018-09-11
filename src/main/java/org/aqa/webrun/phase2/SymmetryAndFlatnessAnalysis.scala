@@ -50,7 +50,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   }
 
   private def makeAnnotatedImage(dicomImage: DicomImage, attributeList: AttributeList, pointMap: Map[SymmetryAndFlatnessPoint, Double]): BufferedImage = {
-    val image = dicomImage.toBufferedImage(new Color(200, 255, 200))
+    val image = dicomImage.toDeepColorBufferedImage
     val graphics = ImageUtil.getGraphics(image)
 
     val translator = new IsoImagePlaneTranslator(attributeList)

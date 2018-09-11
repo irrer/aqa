@@ -107,7 +107,8 @@ object BadPixelAnalysis extends Logging {
       val derived = runReq.derivedMap(beamName)
       val angles = gantryCollAngles(rtimage.attributeList.get)
 
-      val bufImage = derived.originalImage.toBufferedImage(colorMap, derived.pixelCorrectedImage.min, derived.pixelCorrectedImage.max)
+      //val bufImage = derived.originalImage.toBufferedImage(colorMap, derived.pixelCorrectedImage.min, derived.pixelCorrectedImage.max)
+      val bufImage = derived.originalImage.toDeepColorBufferedImage(derived.pixelCorrectedImage.min, derived.pixelCorrectedImage.max)
       val url = WebServer.urlOfResultsFile(rtimage.file)
       val result = DicomAccess.write(rtimage, url, angles + " : " + beamName, outputDir, Some(bufImage), Some(derived.originalImage), derived.badPixelList)
       logger.info("Finished making DICOM view for beam " + beamName)
@@ -119,7 +120,8 @@ object BadPixelAnalysis extends Logging {
     DicomAccess.write(runReq.rtplan, planLink, "RTPLAN", outputDir, None, None, IndexedSeq[Point]())
 
     val floodLink = extendedData.dicomHref(runReq.flood)
-    val floodBufImage = runReq.floodOriginalImage.toBufferedImage(colorMap, runReq.floodCorrectedImage.min, runReq.floodCorrectedImage.max)
+    //val floodBufImage = runReq.floodOriginalImage.toBufferedImage(colorMap, runReq.floodCorrectedImage.min, runReq.floodCorrectedImage.max)
+    val floodBufImage = runReq.floodOriginalImage.toDeepColorBufferedImage(runReq.floodCorrectedImage.min, runReq.floodCorrectedImage.max)
     val floodPngHref = DicomAccess.write(runReq.flood, floodLink, Config.FloodFieldBeamName, outputDir, Some(floodBufImage), Some(runReq.floodOriginalImage), runReq.floodBadPixelList).get
 
     val pngImageMap = runReq.rtimageMap.keys.par.map(beamName => (beamName, dicomView(beamName).get)).toList.toMap
@@ -273,7 +275,7 @@ object BadPixelAnalysis extends Logging {
       }
 
       val mainElem = {
-        <div>
+        <div class="col-md-10 col-md-offset-1">
           { subTitle }
           { table }
         </div>

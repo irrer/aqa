@@ -29,7 +29,6 @@ import org.aqa.db.Output
 import org.aqa.db.Institution
 import org.aqa.db.User
 import org.aqa.web.ViewOutput
-//import org.aqa.web.DicomAccess
 import org.aqa.web.WebServer
 import com.pixelmed.dicom.TimeAttribute
 import edu.umro.ScalaUtil.DicomUtil
@@ -189,11 +188,13 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   private def makeHtml(extendedData: ExtendedData, procedureStatus: ProcedureStatus.Value, elemList: Seq[Elem], runReq: RunReq) = {
 
     def table = {
-      <table class="table table-responsive">
-        <tr>
-          { elemList.map(e => <td>{ e }</td>) }
-        </tr>
-      </table>
+      <div class="col-md-10 col-md-offset-1">
+        <table class="table table-responsive">
+          <tr>
+            { elemList.map(e => <td>{ e }</td>) }
+          </tr>
+        </table>
+      </div>
     }
 
     val text = Phase2Util.wrapSubProcedure(extendedData, table, "Phase 2", procedureStatus, None, runReq)
