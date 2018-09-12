@@ -5,7 +5,7 @@ import org.aqa.db.CenterDose
 import java.text.SimpleDateFormat
 import org.aqa.Util
 
-class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Seq[CenterDose.CenterDoseHistory]) extends Logging {
+class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Seq[CenterDose.CenterDoseHistory], units: String) extends Logging {
 
   private val dateFormat = new SimpleDateFormat("MMM dd")
 
@@ -28,7 +28,7 @@ class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Se
   private def chart(beamName: String, beamRef: String) = {
     val sortedHistory = sortedHistoryForBeam(beamName)
     val dateList = sortedHistory.map(h => "'" + Util.standardDateFormat.format(h.date) + "'").mkString("[ 'Date', ", ", ", " ]")
-    val doseList = sortedHistory.map(h => h.dose.toString).mkString("[ 'HU', ", ", ", " ]")
+    val doseList = sortedHistory.map(h => h.dose.toString).mkString("[ '" + units + "', ", ", ", " ]")
     val beamRefTag = "@@beamRef@@"
     val dataIndexTag = "@@dataIndex@@"
     val minDateTag = "@@minDate@@"
@@ -62,7 +62,7 @@ class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Se
                         tick: { format: function(dt) { return formatDate(dt); } }
                     },
                     y: {
-                        label: 'HU',
+                        label: '" + units + "',
                         tick: {
                             format: d3.format('.4f')
                         }

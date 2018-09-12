@@ -48,8 +48,9 @@ object CenterDoseAnalysis extends Logging {
     }
 
     val resultListAsHistory = resultList.map(cd => new CenterDose.CenterDoseHistory(extendedData.output.dataDate.get, cd.beamName, cd.dose, cd.SOPInstanceUID))
+    val units = runReq.flood.attributeList.get.get(TagFromName.RescaleType).getSingleStringValueOrDefault("CU")
 
-    val chart = new CenterDoseChart(resultListAsHistory, history)
+    val chart = new CenterDoseChart(resultListAsHistory, history, units)
 
     class Column(val title: String, columnName: String, val get: (CenterDose) => String) {
       def toHeader = <th title={ title }>{ columnName }</th>

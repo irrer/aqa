@@ -16,6 +16,7 @@ import edu.umro.ScalaUtil.Trace
 import edu.umro.ImageUtil.ImageText
 import java.awt.BasicStroke
 import org.aqa.Util
+import org.aqa.db.Baseline
 
 /**
  * Analyze DICOM files for symmetry and flatness.
@@ -38,7 +39,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     flatnessStatus: ProcedureStatus.Value,
     annotatedImage: BufferedImage,
     transverseProfile: Seq[Double], transverse_mm: IndexedSeq[Double],
-    axialProfile: Seq[Double], axial_mm: IndexedSeq[Double]) {
+    axialProfile: Seq[Double], axial_mm: IndexedSeq[Double],
+    baseline: Option[Baseline]) {
 
     /** True if everything is ok. */
     val pass = Seq(axialSymmetryStatus, transverseSymmetryStatus, flatnessStatus).filter(s => !(s.toString.equals(ProcedureStatus.pass.toString))).isEmpty
@@ -126,6 +128,10 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     pixMap.keys.toSeq.map(p => (p, evalPoint(p))).toMap
   }
 
+  private def getBaseline(beamName: String, extendedData: ExtendedData): Option[Baseline] = {
+    ???
+  }
+
   /**
    * Analyze for symmetry and flatness.  The results should be sufficient to support both recording to
    * the database and generating a report.
@@ -167,6 +173,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val transverse_mm = (0 until translator.width).map(x => translator.pix2Iso(x, 0).getX)
     val axial_mm = (0 until translator.height).map(y => translator.pix2Iso(0, y).getY)
 
+    val baseline = getBaseline(beamName, extendedData)
+
     new SymmetryAndFlatnessBeamResult(beamName, pointMap,
       axialSymmetry,
       transverseSymmetry,
@@ -176,7 +184,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       flatnessStatus,
       annotatedImage,
       transverseProfile, transverse_mm,
-      axialProfile, axial_mm)
+      axialProfile, axial_mm,
+      baseline)
   }
 
   val subProcedureName = "SymmetryAndFlatness";
