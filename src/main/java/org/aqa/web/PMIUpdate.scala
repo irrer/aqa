@@ -12,7 +12,7 @@ import slick.backend.DatabaseConfig
 import slick.driver.PostgresDriver
 import scala.concurrent.duration.DurationInt
 import slick.driver.PostgresDriver.api._
-import org.aqa.db.MaintenanceRecord
+import org.aqa.db.PMI
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -26,17 +26,17 @@ import scala.concurrent.duration.DurationInt
 import org.aqa.db.Machine
 import java.sql.Timestamp
 
-object MaintenanceRecordUpdate {
-  val maintenanceRecordPKTag = "maintenanceRecordPK"
+object PMIUpdate {
+  val pmiPKTag = "pmiPK"
 }
 
-class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
+class PMIUpdate extends Restlet with SubUrlAdmin {
 
-  private val pageTitleCreate = "Create MaintenanceRecord"
+  private val pageTitleCreate = "Create PMI"
 
-  private val pageTitleEdit = "Edit MaintenanceRecord"
+  private val pageTitleEdit = "Edit PMI"
 
-  private val maintenanceRecordPK = new WebInputHidden(MaintenanceRecordUpdate.maintenanceRecordPKTag)
+  private val pmiPK = new WebInputHidden(PMIUpdate.pmiPKTag)
 
   private val machinePK = new WebInputHidden(MachineUpdate.machinePKTag)
 
@@ -64,14 +64,14 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
     List(dateTime))
 
   val createButtonList: WebRow = List(createButton, cancelButton, machinePK)
-  val editButtonList: WebRow = List(saveButton, cancelButton, deleteButton, machinePK, maintenanceRecordPK)
+  val editButtonList: WebRow = List(saveButton, cancelButton, deleteButton, machinePK, pmiPK)
 
   private val formCreate = new WebForm(pathOf, fieldList :+ createButtonList)
 
   private val formEdit = new WebForm(pathOf, fieldList :+ editButtonList)
 
   private def redirectToList(response: Response, valueMap: ValueMapT): Unit = {
-    val path = WebUtil.pathOf(WebUtil.SubUrl.admin, MaintenanceRecordList.getClass.getName) + "?" + MachineUpdate.machinePKTag + "=" + valueMap(MachineUpdate.machinePKTag)
+    val path = WebUtil.pathOf(WebUtil.SubUrl.admin, PMIList.getClass.getName) + "?" + MachineUpdate.machinePKTag + "=" + valueMap(MachineUpdate.machinePKTag)
     response.redirectSeeOther(path)
   }
 
@@ -87,18 +87,18 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
     else Error.make(dateTime, dateTime.label + " is invalid.  Expected format: MM/DD/YYYY hh:mm")
   }
 
-  private def updateMaintenanceRecord(inst: MaintenanceRecord): Unit = {
-    MaintenanceRecord.query.insertOrUpdate(inst)
+  private def updatePMI(inst: PMI): Unit = {
+    PMI.query.insertOrUpdate(inst)
   }
 
   private def checkFields(valueMap: ValueMapT): StyleMapT = emptySummary(valueMap) ++ dateIsInvalid(valueMap)
 
   /**
-   * Create a new maintenanceRecord
+   * Create a new pmi
    */
-  private def createMaintenanceRecordFromParameters(valueMap: ValueMapT, request: Request): MaintenanceRecord = {
+  private def createPMIFromParameters(valueMap: ValueMapT, request: Request): PMI = {
     val mrPK: Option[Long] = {
-      val e = valueMap.get(MaintenanceRecordUpdate.maintenanceRecordPKTag)
+      val e = valueMap.get(PMIUpdate.pmiPKTag)
       if (e.isDefined) Some(e.get.toLong) else None
     }
 
@@ -106,7 +106,7 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
     val dt = new Timestamp(dateTime.validateDateTime(dateTime.getValOrEmpty(valueMap)).get.getTime)
     val uPK = getUser(request).get.userPK.get
 
-    new MaintenanceRecord(
+    new PMI(
       mrPK,
       machPK,
       dt,
@@ -129,7 +129,7 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
   private def save(valueMap: ValueMapT, pageTitle: String, response: Response): Unit = {
     val styleMap = checkFields(valueMap)
     if (styleMap.isEmpty) {
-      (createMaintenanceRecordFromParameters(valueMap, response.getRequest)).insertOrUpdate
+      (createPMIFromParameters(valueMap, response.getRequest)).insertOrUpdate
       redirectToList(response, valueMap)
     } else formEdit.setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
   }
@@ -137,26 +137,26 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
   private def create(valueMap: ValueMapT, pageTitle: String, response: Response) = {
     val styleMap = checkFields(valueMap)
     if (styleMap.isEmpty) {
-      createMaintenanceRecordFromParameters(valueMap, response.getRequest).insert
+      createPMIFromParameters(valueMap, response.getRequest).insert
       redirectToList(response, valueMap)
     } else formCreate.setFormResponse(valueMap, styleMap, pageTitleCreate, response, Status.CLIENT_ERROR_BAD_REQUEST)
   }
 
-  private def edit(inst: MaintenanceRecord, response: Response) = {
+  private def edit(inst: PMI, response: Response) = {
     val valueMap = Map(
-      (maintenanceRecordPK.label, inst.maintenanceRecordPK.get.toString),
+      (pmiPK.label, inst.pmiPK.get.toString),
       (machinePK.label, inst.machinePK.toString),
-      (dateTime.label, dateTime.dateTimeFormat.format(inst.dateTime)),
+      (dateTime.label, dateTime.dateTimeFormat.format(inst.creationTime)),
       (summary.label, inst.summary),
       (description.label, inst.description))
     formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
   }
 
-  private def getReference(valueMap: ValueMapT): Option[MaintenanceRecord] = {
-    val value = valueMap.get(MaintenanceRecordUpdate.maintenanceRecordPKTag)
+  private def getReference(valueMap: ValueMapT): Option[PMI] = {
+    val value = valueMap.get(PMIUpdate.pmiPKTag)
     try {
       if (value.isDefined) {
-        val inst = MaintenanceRecord.get(value.get.toLong)
+        val inst = PMI.get(value.get.toLong)
         if (inst.isDefined) {
           inst
         } else
@@ -170,9 +170,9 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
 
   private def isDelete(valueMap: ValueMapT, response: Response): Boolean = {
     if (buttonIs(valueMap, deleteButton)) {
-      val value = valueMap.get(MaintenanceRecordUpdate.maintenanceRecordPKTag)
+      val value = valueMap.get(PMIUpdate.pmiPKTag)
       if (value.isDefined) {
-        MaintenanceRecord.delete(value.get.toLong)
+        PMI.delete(value.get.toLong)
         redirectToList(response, valueMap)
         true
       } else
@@ -188,11 +188,11 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Determine if the incoming request is to edit an existing maintenanceRecord.
+   * Determine if the incoming request is to edit an existing PMI.
    */
   private def isEdit(valueMap: ValueMapT, response: Response): Boolean = {
     val inst = getReference(valueMap)
-    val value = valueMap.get(MaintenanceRecordUpdate.maintenanceRecordPKTag)
+    val value = valueMap.get(PMIUpdate.pmiPKTag)
     if (inst.isDefined) {
       edit(inst.get, response)
       true

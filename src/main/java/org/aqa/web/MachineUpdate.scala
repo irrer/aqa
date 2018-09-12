@@ -437,7 +437,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   private def maintRec(valueMap: ValueMapT, response: Response): Unit = {
     val j = valueMap(machinePK.label)
-    val path = MaintenanceRecordList.path + "?machinePK=" + valueMap(machinePK.label)
+    val path = PMIList.path + "?machinePK=" + valueMap(machinePK.label)
     response.redirectSeeOther(path)
   }
 
