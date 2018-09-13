@@ -23,6 +23,7 @@ import java.awt.Color
 import edu.umro.ImageUtil.ImageUtil
 import java.awt.BasicStroke
 import edu.umro.ImageUtil.ImageText
+import com.pixelmed.dicom.TransferSyntax
 
 object Util extends Logging {
 
@@ -596,6 +597,35 @@ object Util extends Logging {
       drawLine(xMiddle - gratMajorLength, y, xMiddle + gratMajorLength, y) // draw major graticule
       for (mt <- minorStart to numMinorTics) drawLine(xMiddle - gratMinorLength, y + (mt * yMinorInc), xMiddle + gratMinorLength, y + (mt * yMinorInc))
       ImageText.drawTextOffsetFrom(graphics, xMiddle + gratMajorLength + offset, y, text, 0) // draw number corresponding to major graticule off to the right
+    }
+
+  }
+
+  /**
+   * Convert the given DICOM to a byte array (aka: serialize) and return the byte array.  If there is an error return a string describing it.
+   */
+  def dicomToBytes(attributeList: AttributeList): Either[String, Array[Byte]] = {
+    try {
+      // val j = Util.DEFAULT_TRANSFER_SYNTAX
+      val transferSyntax: String = {
+        val deflt = TransferSyntax.ImplicitVRLittleEndian
+        val a = attributeList.get(TagFromName.TransferSyntaxUID)
+        if (a != null) {
+          val ts = a.getStringValues
+          if (ts.nonEmpty) ts.head else deflt
+        } else deflt
+      }
+
+      val bos = new ByteOutputStream
+      attributeList.write(bos, transferSyntax, true, true)
+      bos.flush
+      Right(bos.getBytes)
+    } catch {
+      case t: Throwable => {
+        val msg = "Error converting DICOM to bytes: " + fmtEx(t)
+        logger.warn(msg)
+        Left(msg)
+      }
     }
 
   }

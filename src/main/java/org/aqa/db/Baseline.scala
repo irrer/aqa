@@ -3,6 +3,8 @@ package org.aqa.db
 import slick.driver.PostgresDriver.api._
 import org.aqa.Logging
 import java.sql.Timestamp
+import com.pixelmed.dicom.AttributeList
+import org.aqa.Util
 
 /**
  * Define values associated with specific machines that are established when the
@@ -68,5 +70,14 @@ object Baseline extends Logging {
     logger.info("deleting baseline " + baselinePK)
     val action = q.delete
     Db.run(action)
+  }
+
+  /**
+   * Construct a baseline object using an attribute list.
+   */
+  def makeBaseline(pmiPK: Long, attributeList: AttributeList, id: String, value: Double): Baseline = {
+    val date = Util.extractDateTimeAndPatientIdFromDicom(attributeList)._1.head
+    val SOPInstanceUID = Util.sopOfAl(attributeList)
+    new Baseline(None, pmiPK, new Timestamp(date.getTime), Some(SOPInstanceUID), id, value.toString)
   }
 }

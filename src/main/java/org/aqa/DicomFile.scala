@@ -91,7 +91,7 @@ case class DicomFile(file: File) extends Logging {
   }
 }
 
-object DicomFile {
+object DicomFile extends Logging {
 
   object ContrastModel extends Enumeration {
     val standard = Value
@@ -118,4 +118,5 @@ object DicomFile {
     val after = dicomFileList.filter(df => df.valid).map(df => (Util.sopOfAl(df.attributeList.get), df)).toMap.values.toSeq
     after // TODO rm
   }
+
 }

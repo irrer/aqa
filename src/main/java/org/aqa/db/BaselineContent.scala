@@ -3,6 +3,8 @@ package org.aqa.db
 import slick.driver.PostgresDriver.api._
 import org.aqa.Logging
 import java.sql.Timestamp
+import com.pixelmed.dicom.AttributeList
+import org.aqa.Util
 
 /**
  * Content in addition to the baseline value.  Usually used for storing binary content.  There may be multiple <code>BaselineContent</code> instances associated with a single <code>Baseline</code> instance.
@@ -55,4 +57,21 @@ object BaselineContent extends Logging {
     val action = q.delete
     Db.run(action)
   }
+
+  /**
+   * Construct a baseline content object using an attribute list.
+   */
+  def makeBaselineContent(baselinePK: Long, attributeList: AttributeList): BaselineContent = {
+    Util.dicomToBytes(attributeList) match {
+      case Left(err) => {
+        val msg = "Could not create BaselineContent for DICOM: " + err
+        logger.warn(msg)
+        throw new RuntimeException(msg)
+      }
+      case Right(bytes) => {
+        new BaselineContent(None, baselinePK, bytes)
+      }
+    }
+  }
+
 }
