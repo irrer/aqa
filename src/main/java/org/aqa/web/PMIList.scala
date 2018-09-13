@@ -16,6 +16,8 @@ object PMIList {
 class PMIList extends GenericList[PMI] with WebUtil.SubUrlAdmin {
   override def listName = "PMI"
 
+  override def getPKName: String = "pmiPK"
+
   /**
    * If a machinePK is given, then filter on that, otherwise list maintenance records for all machines.
    */
