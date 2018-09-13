@@ -108,7 +108,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   private val saveButton = makeButton("Save", true, ButtonType.BtnPrimary)
   private val deleteButton = makeButton("Delete", false, ButtonType.BtnDanger)
   private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
-  private val maintenanceButton = makeButton("Maintenance Records", false, ButtonType.BtnDefault)
+  private val maintenanceButton = makeButton("PMI Records", false, ButtonType.BtnDefault)
   private val machinePK = new WebInputHidden(MachineUpdate.machinePKTag)
 
   private val machineBeamEnergyPKTag = "machineBeamEnergyPK"
