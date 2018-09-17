@@ -67,7 +67,7 @@ object SymmetryAndFlatnessMainHTML extends Logging {
   private def dicomRefColumn(beamName: String, extendedData: ExtendedData, runReq: RunReq): Elem = {
     val dicomFile = runReq.rtimageMap(beamName)
     val link = extendedData.dicomHref(dicomFile)
-    <td style="text-align: center;" title={ titleDicomMetadata }><a href={ link }>{ beamName }</a></td>
+    <td style="vertical-align: middle;" title={ titleDicomMetadata } rowspan="3"><a href={ link }>{ beamName }</a></td>
   }
 
   private def detailsColumn(subDir: File, beamName: String, extendedData: ExtendedData, runReq: RunReq): Elem = {
@@ -79,7 +79,7 @@ object SymmetryAndFlatnessMainHTML extends Logging {
       <a href={ WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, beamName)) }>{ img }</a>
     }
 
-    <td style="text-align: center;" title={ titleDetails }>{ ref }</td>
+    <td style="text-align: center;vertical-align: middle;" title={ titleDetails } rowspan="3">{ ref }</td>
   }
 
   private def axialSymmetryColumn(result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult): Elem = {
@@ -103,17 +103,31 @@ object SymmetryAndFlatnessMainHTML extends Logging {
     </td>
   }
 
-  private def makeRow(subDir: File, extendedData: ExtendedData, result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult, runReq: RunReq): Elem = {
-    <tr align="center">
+  private def makeRow(subDir: File, extendedData: ExtendedData, result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult, runReq: RunReq): Seq[Elem] = {
+    Seq(
       {
-        Seq(
-          dicomRefColumn(result.beamName, extendedData, runReq),
-          detailsColumn(subDir, result.beamName, extendedData, runReq),
-          axialSymmetryColumn(result),
-          transverseSymmetryColumn(result),
-          flatnessColumn(result))
-      }
-    </tr>
+        <tr align="center">
+          { dicomRefColumn(result.beamName, extendedData, runReq) }
+          { detailsColumn(subDir, result.beamName, extendedData, runReq) }
+          { <td>Axial Base</td> }
+          { <td>Axial Percent</td> }
+          { axialSymmetryColumn(result) }
+        </tr>
+      },
+      {
+        <tr>
+          { <td>Transverse Base</td> }
+          { <td>Transverse Percent</td> }
+          { transverseSymmetryColumn(result) }
+        </tr>
+      },
+      {
+        <tr>
+          { <td>Flatness Base</td> }
+          { <td>Flatness Percent</td> }
+          { flatnessColumn(result) }
+        </tr>
+      })
   }
 
   def makeContent(subDir: File, extendedData: ExtendedData, resultList: List[SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult], status: ProcedureStatus.Value, runReq: RunReq): Elem = {

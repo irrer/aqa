@@ -173,7 +173,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val transverse_mm = (0 until translator.width).map(x => translator.pix2Iso(x, 0).getX)
     val axial_mm = (0 until translator.height).map(y => translator.pix2Iso(0, y).getY)
 
-    val baseline = getBaseline(beamName, extendedData)
+    //val baseline = getBaseline(beamName, extendedData)   // TODO
 
     new SymmetryAndFlatnessBeamResult(beamName, pointMap,
       axialSymmetry,
@@ -185,7 +185,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       annotatedImage,
       transverseProfile, transverse_mm,
       axialProfile, axial_mm,
-      baseline)
+      None /* TODO should be Some(baseline) */ )
   }
 
   val subProcedureName = "SymmetryAndFlatness";
