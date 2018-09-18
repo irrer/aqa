@@ -280,6 +280,7 @@ object WebUtil extends Logging {
           <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
           <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/dropzone.min.js"></script>
           <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-timeago/1.5.4/jquery.timeago.min.js"></script>
+          <script src="/static/tooltip/tooltip.js"></script>
           { c3Refs /* only include c3 when needed */ }
           <script src="/static/AQA.js"></script>
         </head>

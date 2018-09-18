@@ -29,6 +29,8 @@ import edu.umro.ImageUtil.ImageText
 import java.io.File
 import org.aqa.web.WebServer
 import org.aqa.web.WebUtil
+import org.aqa.db.PMI
+import org.aqa.db.Baseline
 
 /**
  * Analyze DICOM files for symmetry and flatness.
@@ -67,15 +69,15 @@ object SymmetryAndFlatnessHTML extends Logging {
     elem
   }
 
-  def makeDisplay(extendedData: ExtendedData, resultList: List[SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult], status: ProcedureStatus.Value, runReq: RunReq): Elem = {
+  def makeDisplay(extendedData: ExtendedData, resultList: List[SymmetryAndFlatnessAnalysis.BeamResultBaseline], status: ProcedureStatus.Value, runReq: RunReq): Elem = {
     val subDir = makeSubDir(extendedData.output.dir)
     val mainHtmlFile = new File(subDir, htmlFileName)
-    resultList.par.map(r => Util.writePng(r.annotatedImage, annotatedImageFile(subDir, r.beamName)))
+    resultList.par.map(rb => Util.writePng(rb.result.annotatedImage, annotatedImageFile(subDir, rb.result.beamName)))
 
     val html = Phase2Util.wrapSubProcedure(extendedData, SymmetryAndFlatnessMainHTML.makeContent(subDir, extendedData, resultList, status, runReq), "Symmetry and Flatness", status, None, runReq)
     Util.writeFile(mainHtmlFile, html)
 
-    resultList.map(result => SymmetryAndFlatnessBeamHTML.makeDisplay(subDir, extendedData, result, status, runReq))
+    resultList.map(rb => SymmetryAndFlatnessBeamHTML.makeDisplay(subDir, extendedData, rb.result, status, runReq))
 
     summary(mainHtmlFile, resultList.size, status)
   }

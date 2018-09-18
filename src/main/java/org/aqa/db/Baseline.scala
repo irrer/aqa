@@ -20,7 +20,8 @@ case class Baseline(
   acquisitionDate: Timestamp, // when data was acquired at the treatment machine.  Different from when this record was created.
   SOPInstanceUID: Option[String], // UID of DICOM image.  May be empty if not applicable.
   id: String, // unique identifier for data.  Can contain the concatenation of values such as beam name, energy level, jaw position, energy level, etc.  Should be human readable / user friendly
-  value: String // text version of value
+  value: String, // text version of value
+  setup: String // <code>BaselineSetup</code> value
 ) {
 
   def insert: Baseline = {
@@ -43,6 +44,7 @@ object Baseline extends Logging {
     def SOPInstanceUID = column[Option[String]]("SOPInstanceUID")
     def id = column[String]("id")
     def value = column[String]("value")
+    def setup = column[String]("setup")
 
     def * = (
       baselinePK.?,
@@ -50,7 +52,8 @@ object Baseline extends Logging {
       acquisitionDate,
       SOPInstanceUID,
       id,
-      value) <> ((Baseline.apply _)tupled, Baseline.unapply _)
+      value,
+      setup) <> ((Baseline.apply _)tupled, Baseline.unapply _)
 
     def pmiFK = foreignKey("pmiPK", pmiPK, PMI.query)(_.pmiPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -63,6 +66,20 @@ object Baseline extends Logging {
     } yield (baseline)
     val list = Db.run(action.result)
     if (list.isEmpty) None else Some(list.head)
+  }
+
+  /**
+   * Given a machine and Baseline id, get the latest value if it exists.
+   */
+  def findLatest(machinePK: Long, id: String): Option[(PMI, Baseline)] = {
+    val action = {
+      for {
+        pmi <- PMI.query if (pmi.machinePK === machinePK)
+        baseline <- Baseline.query if (baseline.id === id) && (baseline.pmiPK === pmi.pmiPK)
+      } yield (pmi, baseline)
+    } sortBy (_._1.creationTime.desc)
+
+    Db.run(action.result.headOption)
   }
 
   def delete(baselinePK: Long): Int = {
@@ -78,6 +95,6 @@ object Baseline extends Logging {
   def makeBaseline(pmiPK: Long, attributeList: AttributeList, id: String, value: Double): Baseline = {
     val date = Util.extractDateTimeAndPatientIdFromDicom(attributeList)._1.head
     val SOPInstanceUID = Util.sopOfAl(attributeList)
-    new Baseline(None, pmiPK, new Timestamp(date.getTime), Some(SOPInstanceUID), id, value.toString)
+    new Baseline(None, pmiPK, new Timestamp(date.getTime), Some(SOPInstanceUID), id, value.toString, BaselineSetup.byDefault.toString)
   }
 }

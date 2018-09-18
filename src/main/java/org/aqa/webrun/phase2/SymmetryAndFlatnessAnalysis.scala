@@ -17,6 +17,7 @@ import edu.umro.ImageUtil.ImageText
 import java.awt.BasicStroke
 import org.aqa.Util
 import org.aqa.db.Baseline
+import org.aqa.db.PMI
 
 /**
  * Analyze DICOM files for symmetry and flatness.
@@ -25,6 +26,10 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
   private def boolToStatus(pass: Boolean) = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
+  private val axialSymmetryName = "Axial Symmetry"
+  private val transverseSymmetryName = "Transverse Symmetry"
+  private val flatnessName = "Flatness"
+
   /**
    * Encapsulate data to support both recording to the database and generating a report.
    */
@@ -32,15 +37,17 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     beamName: String,
     pointMap: Map[SymmetryAndFlatnessPoint, Double],
     axialSymmetry: Double,
+    axialSymmetryBaseline: Double,
     transverseSymmetry: Double,
+    transverseSymmetryBaseline: Double,
     flatness: Double,
+    flatnessBaseline: Double,
     axialSymmetryStatus: ProcedureStatus.Value,
     transverseSymmetryStatus: ProcedureStatus.Value,
     flatnessStatus: ProcedureStatus.Value,
     annotatedImage: BufferedImage,
     transverseProfile: Seq[Double], transverse_mm: IndexedSeq[Double],
-    axialProfile: Seq[Double], axial_mm: IndexedSeq[Double],
-    baseline: Option[Baseline]) {
+    axialProfile: Seq[Double], axial_mm: IndexedSeq[Double]) {
 
     /** True if everything is ok. */
     val pass = Seq(axialSymmetryStatus, transverseSymmetryStatus, flatnessStatus).filter(s => !(s.toString.equals(ProcedureStatus.pass.toString))).isEmpty
@@ -128,16 +135,26 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     pixMap.keys.toSeq.map(p => (p, evalPoint(p))).toMap
   }
 
-  private def getBaseline(beamName: String, extendedData: ExtendedData): Option[Baseline] = {
-    ???
+  def makeBaselineName(beamName: String, dataName: String): String = beamName + " " + dataName
+
+  private def getBaseline(machinePK: Long, beamName: String, dataName: String, attributeList: AttributeList, value: Double): (Option[PMI], Baseline) = {
+    val id = makeBaselineName(beamName, dataName)
+    Baseline.findLatest(machinePK, id) match {
+      case Some((pmi, baseline)) => (Some(pmi), baseline)
+      case _ => (None, Baseline.makeBaseline(-1, attributeList, id, value))
+    }
   }
+
+  case class PMIBaseline(pmi: Option[PMI], baseline: Baseline);
+
+  case class BeamResultBaseline(result: SymmetryAndFlatnessBeamResult, pmiBaseline: Seq[PMIBaseline]);
 
   /**
    * Analyze for symmetry and flatness.  The results should be sufficient to support both recording to
    * the database and generating a report.
    *
    */
-  private def analyze(beamName: String, extendedData: ExtendedData, runReq: RunReq): SymmetryAndFlatnessBeamResult = {
+  private def analyze(beamName: String, extendedData: ExtendedData, runReq: RunReq): BeamResultBaseline = {
     val image = getDicomImage(beamName, runReq)
     val attributeList: AttributeList = getAttributeList(beamName, runReq)
     val dicomImage = new DicomImage(attributeList)
@@ -173,19 +190,28 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val transverse_mm = (0 until translator.width).map(x => translator.pix2Iso(x, 0).getX)
     val axial_mm = (0 until translator.height).map(y => translator.pix2Iso(0, y).getY)
 
-    //val baseline = getBaseline(beamName, extendedData)   // TODO
+    val machinePK = extendedData.machine.machinePK.get
+    val axialSymmetryBaseline = getBaseline(machinePK, beamName, axialSymmetryName, attributeList, axialSymmetry)
+    val transverseSymmetryBaseline = getBaseline(machinePK, beamName, transverseSymmetryName, attributeList, transverseSymmetry)
+    val flatnessBaseline = getBaseline(machinePK, beamName, flatnessName, attributeList, flatness)
 
-    new SymmetryAndFlatnessBeamResult(beamName, pointMap,
+    val pmiBaselineList = Seq(axialSymmetryBaseline, transverseSymmetryBaseline, flatnessBaseline).map(pb => new PMIBaseline(pb._1, pb._2))
+
+    val result = new SymmetryAndFlatnessBeamResult(beamName, pointMap,
       axialSymmetry,
+      axialSymmetryBaseline._2.value.toString.toDouble,
       transverseSymmetry,
+      transverseSymmetryBaseline._2.value.toString.toDouble,
       flatness,
+      flatnessBaseline._2.value.toString.toDouble,
       axialSymmetryStatus,
       transverseSymmetryStatus,
       flatnessStatus,
       annotatedImage,
       transverseProfile, transverse_mm,
-      axialProfile, axial_mm,
-      None /* TODO should be Some(baseline) */ )
+      axialProfile, axial_mm)
+
+    new BeamResultBaseline(result, pmiBaselineList)
   }
 
   val subProcedureName = "SymmetryAndFlatness";
@@ -205,7 +231,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       //val resultList = beamNameList.par.map(beamName => analyze(beamName, extendedData, runReq)).toList
       val resultList = beamNameList.map(beamName => analyze(beamName, extendedData, runReq)).toList // change back to 'par' when debugged
 
-      val pass = resultList.map(r => r.status.toString.equals(ProcedureStatus.pass)).reduce(_ && _)
+      val pass = resultList.map(rb => rb.result.status.toString.equals(ProcedureStatus.pass)).reduce(_ && _)
 
       val summary = SymmetryAndFlatnessHTML.makeDisplay(extendedData, resultList, boolToStatus(pass), runReq)
 
