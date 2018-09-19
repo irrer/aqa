@@ -42,6 +42,21 @@ class PMIUpdate extends Restlet with SubUrlAdmin {
 
   private val dateTime = new WebInputDateTime("Date / Time", 6, 0, "Format: Month/Day/Year Hour:Minute")
 
+  private def getOutputReference(valueMap: ValueMapT): Elem = {
+    try {
+      val pk = valueMap.get(PMIUpdate.pmiPKTag).get.toLong
+      val outputPK = PMI.get(pk).get.outputPK.get
+      val url = "/view/ViewOutput?outputPK=" + outputPK
+      <a href={ url }>Related Output</a>
+    } catch {
+      case t: Throwable => {
+        <div>No related output</div>
+      }
+    }
+  }
+
+  private val outputReference = new WebPlainText("RelatedOutput", false, 6, 0, getOutputReference _)
+
   //private val user = new WebInputText("User", 6, 0, "")
 
   private val summary = new WebInputText("Summary", 6, 0, "")
@@ -61,6 +76,7 @@ class PMIUpdate extends Restlet with SubUrlAdmin {
   val fieldList: List[WebRow] = List(
     List(summary),
     List(description),
+    List(outputReference),
     List(dateTime))
 
   val createButtonList: WebRow = List(createButton, cancelButton, machinePK)
@@ -111,6 +127,7 @@ class PMIUpdate extends Restlet with SubUrlAdmin {
       machPK,
       dt,
       uPK,
+      None, // outputPK
       summary.getValOrEmpty(valueMap).trim,
       description.getValOrEmpty(valueMap).trim)
 

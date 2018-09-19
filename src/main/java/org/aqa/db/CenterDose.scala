@@ -120,7 +120,7 @@ object CenterDose extends ProcedureOutput {
    *
    * @param procedurePK: For this procedure
    *
-   * @param date: For this date
+   * @param date: Relative to this date.  If None, then use current date.
    */
   def recentHistory(limit: Int, machinePK: Long, procedurePK: Long, date: Option[Timestamp]) = {
 

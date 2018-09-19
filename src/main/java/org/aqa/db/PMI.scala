@@ -14,6 +14,7 @@ case class PMI(
   machinePK: Long, // machine that was maintained
   creationTime: Timestamp, // when this record was created
   userPK: Long, // user that performed or oversaw maintenance
+  outputPK: Option[Long], // optional reference to a related Output
   summary: String, // short description of maintenance
   description: String // description of maintenance
 ) {
@@ -35,6 +36,7 @@ object PMI {
     def machinePK = column[Long]("machinePK")
     def creationTime = column[Timestamp]("creationTime")
     def userPK = column[Long]("userPK")
+    def outputPK = column[Option[Long]]("outputPK")
     def summary = column[String]("summary")
     def description = column[String]("description")
 
@@ -43,6 +45,7 @@ object PMI {
       machinePK,
       creationTime,
       userPK,
+      outputPK,
       summary,
       description) <> ((PMI.apply _)tupled, PMI.unapply _)
 

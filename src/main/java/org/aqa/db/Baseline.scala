@@ -89,6 +89,11 @@ object Baseline extends Logging {
     Db.run(action)
   }
 
+  def insert(list: Seq[Baseline]) = {
+    val ops = list.map { bl => Baseline.query.insertOrUpdate(bl) }
+    Db.perform(ops)
+  }
+
   /**
    * Construct a baseline object using an attribute list.
    */

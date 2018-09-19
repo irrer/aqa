@@ -18,6 +18,8 @@ import java.awt.BasicStroke
 import org.aqa.Util
 import org.aqa.db.Baseline
 import org.aqa.db.PMI
+import org.aqa.db.SymmetryAndFlatness
+import java.sql.Timestamp
 
 /**
  * Analyze DICOM files for symmetry and flatness.
@@ -31,10 +33,11 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   private val flatnessName = "Flatness"
 
   /**
-   * Encapsulate data to support both recording to the database and generating a report.
+   * Encapsulate data for generating a report.
    */
   case class SymmetryAndFlatnessBeamResult(
     beamName: String,
+    SOPInstanceUID: String,
     pointMap: Map[SymmetryAndFlatnessPoint, Double],
     axialSymmetry: Double,
     axialSymmetryBaseline: Double,
@@ -137,17 +140,17 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
   def makeBaselineName(beamName: String, dataName: String): String = beamName + " " + dataName
 
-  private def getBaseline(machinePK: Long, beamName: String, dataName: String, attributeList: AttributeList, value: Double): (Option[PMI], Baseline) = {
-    val id = makeBaselineName(beamName, dataName)
-    Baseline.findLatest(machinePK, id) match {
-      case Some((pmi, baseline)) => (Some(pmi), baseline)
-      case _ => (None, Baseline.makeBaseline(-1, attributeList, id, value))
-    }
-  }
-
   case class PMIBaseline(pmi: Option[PMI], baseline: Baseline);
 
   case class BeamResultBaseline(result: SymmetryAndFlatnessBeamResult, pmiBaseline: Seq[PMIBaseline]);
+
+  private def getBaseline(machinePK: Long, beamName: String, dataName: String, attributeList: AttributeList, value: Double): PMIBaseline = {
+    val id = makeBaselineName(beamName, dataName)
+    Baseline.findLatest(machinePK, id) match {
+      case Some((pmi, baseline)) => new PMIBaseline(Some(pmi), baseline)
+      case _ => new PMIBaseline(None, Baseline.makeBaseline(-1, attributeList, id, value))
+    }
+  }
 
   /**
    * Analyze for symmetry and flatness.  The results should be sufficient to support both recording to
@@ -166,12 +169,9 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val pointMap = makePointMap(dicomImage, attributeList, RescaleSlope, RescaleIntercept)
 
     val axialSymmetry = analyzeSymmetry(Config.SymmetryPointTop, Config.SymmetryPointBottom, pointMap)
-    val axialSymmetryStatus = boolToStatus(Config.SymmetryLimit >= axialSymmetry.abs)
     val transverseSymmetry = analyzeSymmetry(Config.SymmetryPointRight, Config.SymmetryPointLeft, pointMap)
-    val transverseSymmetryStatus = boolToStatus(Config.SymmetryLimit >= transverseSymmetry.abs)
 
     val flatness = analyzeFlatness(pointMap)
-    val flatnessStatus = boolToStatus(Config.FlatnessLimit >= flatness.abs)
 
     val annotatedImage = makeAnnotatedImage(dicomImage, attributeList, pointMap)
 
@@ -195,31 +195,90 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val transverseSymmetryBaseline = getBaseline(machinePK, beamName, transverseSymmetryName, attributeList, transverseSymmetry)
     val flatnessBaseline = getBaseline(machinePK, beamName, flatnessName, attributeList, flatness)
 
-    val pmiBaselineList = Seq(axialSymmetryBaseline, transverseSymmetryBaseline, flatnessBaseline).map(pb => new PMIBaseline(pb._1, pb._2))
+    def checkPercent(value: Double, baseline: Double, limit: Double) = {
+      val percent = (100 * (value - baseline)) / baseline
+      if (limit >= (percent.abs)) ProcedureStatus.pass else ProcedureStatus.fail
+    }
 
-    val result = new SymmetryAndFlatnessBeamResult(beamName, pointMap,
+    val axialSymmetryStatus = checkPercent(axialSymmetry, axialSymmetryBaseline.baseline.value.toDouble, Config.SymmetryPercentLimit)
+    val transverseSymmetryStatus = checkPercent(transverseSymmetry, transverseSymmetryBaseline.baseline.value.toDouble, Config.SymmetryPercentLimit)
+    val flatnessStatus = checkPercent(flatness, flatnessBaseline.baseline.value.toDouble, Config.FlatnessPercentLimit)
+
+    val pmiBaselineList = Seq(axialSymmetryBaseline, transverseSymmetryBaseline, flatnessBaseline)
+
+    val result = new SymmetryAndFlatnessBeamResult(beamName, Util.sopOfAl(attributeList), pointMap,
       axialSymmetry,
-      axialSymmetryBaseline._2.value.toString.toDouble,
+      axialSymmetryBaseline.baseline.value.toDouble,
       transverseSymmetry,
-      transverseSymmetryBaseline._2.value.toString.toDouble,
+      transverseSymmetryBaseline.baseline.value.toDouble,
       flatness,
-      flatnessBaseline._2.value.toString.toDouble,
+      flatnessBaseline.baseline.value.toDouble,
       axialSymmetryStatus,
       transverseSymmetryStatus,
       flatnessStatus,
       annotatedImage,
       transverseProfile, transverse_mm,
-      axialProfile, axial_mm)
+      axialProfile,
+      axial_mm)
 
     new BeamResultBaseline(result, pmiBaselineList)
   }
 
-  val subProcedureName = "SymmetryAndFlatness";
+  private def storeResultsInDb(resultList: List[SymmetryAndFlatnessAnalysis.BeamResultBaseline], outputPK: Long): Unit = {
+
+    def toSymmetryAndFlatnessDB(sf: SymmetryAndFlatnessBeamResult): SymmetryAndFlatness = {
+      new SymmetryAndFlatness(
+        None,
+        outputPK,
+        sf.SOPInstanceUID,
+        sf.beamName,
+
+        sf.axialSymmetry,
+        sf.axialSymmetryBaseline,
+        sf.axialSymmetryStatus.toString,
+
+        sf.transverseSymmetry,
+        sf.transverseSymmetryBaseline,
+        sf.transverseSymmetryStatus.toString,
+
+        sf.flatness,
+        sf.flatnessBaseline,
+        sf.flatnessStatus.toString)
+    }
+
+    val list = resultList.map(r => toSymmetryAndFlatnessDB(r.result))
+    SymmetryAndFlatness.insert(list)
+    logger.info("Stored " + list.size + " SymmetryAndFlatness records")
+  }
+
+  private def storePmiInDB(resultList: List[BeamResultBaseline], machinePK: Long, userPK: Long, outputPK: Long): Unit = {
+
+    // make list of baselines that need to be saved
+    val baselineList = resultList.map(r => r.pmiBaseline).flatten.filter(p => p.pmi.isEmpty).map(p => p.baseline)
+
+    if (baselineList.nonEmpty) {
+      logger.info("Creating PMI record for Symmetry and Flatness")
+      val summary = "Automatically created baseline values for Symmetry and Flatness."
+      val preamble = "Symmetry and Flatness baseline values are created automatically if they have not been established for the given machine.  The following is a list of the values:\n\n"
+      val valueText = baselineList.map(bl => bl.id + " : " + bl.value).mkString("\n")
+
+      val creationTime = new Timestamp(System.currentTimeMillis)
+      val pmi = new PMI(None, machinePK, creationTime, userPK, Some(outputPK), summary, preamble + valueText)
+      val insertedPmi = pmi.insert
+      val newPmiPK = insertedPmi.pmiPK.get
+      logger.info("Created PMI record for Symmetry and Flatness: " + insertedPmi)
+
+      Baseline.insert(baselineList.map(bl => bl.copy(pmiPK = newPmiPK)))
+      logger.info("Created " + baselineList.size + " new baseline records for Symmetry and Flatness")
+    }
+  }
+
+  val subProcedureName = "SymmetryAndFlatness"
 
   class SymmetryAndFlatnessResult(summary: Elem, status: ProcedureStatus.Value) extends SubProcedureResult(summary, status, subProcedureName)
 
   /**
-   * Run the CollimatorPosition sub-procedure, save results in the database, return true for pass or false for fail.
+   * Run the CollimatorPosition sub-procedure, save results in the database, return right for proper execution or left for crash.
    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, SymmetryAndFlatnessResult] = {
     try {
@@ -231,11 +290,15 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       //val resultList = beamNameList.par.map(beamName => analyze(beamName, extendedData, runReq)).toList
       val resultList = beamNameList.map(beamName => analyze(beamName, extendedData, runReq)).toList // change back to 'par' when debugged
 
-      val pass = resultList.map(rb => rb.result.status.toString.equals(ProcedureStatus.pass)).reduce(_ && _)
+      val pass = resultList.map(rb => rb.result.status.toString.equals(ProcedureStatus.pass.toString)).reduce(_ && _)
+      val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
+
+      storePmiInDB(resultList, extendedData.machine.machinePK.get, extendedData.user.userPK.get, extendedData.output.outputPK.get)
+      storeResultsInDb(resultList, extendedData.output.outputPK.get)
 
       val summary = SymmetryAndFlatnessHTML.makeDisplay(extendedData, resultList, boolToStatus(pass), runReq)
 
-      Right(new SymmetryAndFlatnessResult(summary, ProcedureStatus.done))
+      Right(new SymmetryAndFlatnessResult(summary, status))
     } catch {
       case t: Throwable => {
         logger.warn("Unexpected error in analysis of CollimatorPosition: " + t + fmtEx(t))

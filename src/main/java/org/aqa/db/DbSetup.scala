@@ -79,7 +79,8 @@ object DbSetup extends Logging {
     BadPixel.query,
     CenterDose.query,
     CollimatorPosition.query,
-    Wedge.query)
+    Wedge.query,
+    SymmetryAndFlatness.query)
 
   /**
    * Initialize database by creating tables in dependency order.

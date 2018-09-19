@@ -479,9 +479,6 @@ object Config extends Logging {
 
   val SymmetryAndFlatnessDiameter_mm = logMainText("SymmetryAndFlatnessDiameter_mm").toDouble
 
-  val SymmetryLimit = logMainText("SymmetryLimit").toDouble
-  val FlatnessLimit = logMainText("FlatnessLimit").toDouble
-
   val SymmetryPercentLimit = logMainText("SymmetryPercentLimit").toDouble
   val FlatnessPercentLimit = logMainText("FlatnessPercentLimit").toDouble
 

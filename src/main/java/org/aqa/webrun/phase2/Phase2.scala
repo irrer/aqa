@@ -229,6 +229,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
                   case Right(collimatorCentering) => {
 
                     val prevSummaryList = Seq(metadataCheck, badPixel, centerDose, collimatorCentering).map(r => r.summary)
+                    // TODO run in parallel
                     val list = Seq(
                       CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
                       WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
