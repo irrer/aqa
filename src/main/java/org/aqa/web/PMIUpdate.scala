@@ -47,7 +47,7 @@ class PMIUpdate extends Restlet with SubUrlAdmin {
       val pk = valueMap.get(PMIUpdate.pmiPKTag).get.toLong
       val outputPK = PMI.get(pk).get.outputPK.get
       val url = "/view/ViewOutput?outputPK=" + outputPK
-      <a href={ url }>Related Output</a>
+      <a href={ url }>View Originating Output</a>
     } catch {
       case t: Throwable => {
         <div>No related output</div>

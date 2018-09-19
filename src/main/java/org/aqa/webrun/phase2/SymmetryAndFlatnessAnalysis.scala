@@ -260,7 +260,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       logger.info("Creating PMI record for Symmetry and Flatness")
       val summary = "Automatically created baseline values for Symmetry and Flatness."
       val preamble = "Symmetry and Flatness baseline values are created automatically if they have not been established for the given machine.  The following is a list of the values:\n\n"
-      val valueText = baselineList.map(bl => bl.id + " : " + bl.value).mkString("\n")
+      val valueText = baselineList.map(bl => "    " + bl.id + " : " + bl.value).mkString("\n")
 
       val creationTime = new Timestamp(System.currentTimeMillis)
       val pmi = new PMI(None, machinePK, creationTime, userPK, Some(outputPK), summary, preamble + valueText)
