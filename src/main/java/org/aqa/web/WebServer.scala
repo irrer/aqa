@@ -33,6 +33,7 @@ import edu.umro.ScalaUtil.Trace._
 import org.aqa.db.CachedUser
 import org.aqa.db.Output
 import org.aqa.db.Input
+import org.aqa.webrun.phase2.SymmetryAndFlatnessUseAsBaseline
 
 object WebServer {
   val challengeScheme = ChallengeScheme.HTTP_BASIC
@@ -446,6 +447,7 @@ class WebServer extends Application with Logging {
         new ProcedureList,
         new ServiceInfo,
         new ServiceInstance,
+        new SymmetryAndFlatnessUseAsBaseline,
         termsOfUse,
         outputList,
         webRunIndex,

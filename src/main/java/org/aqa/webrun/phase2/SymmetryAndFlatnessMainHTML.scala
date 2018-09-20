@@ -218,6 +218,16 @@ object SymmetryAndFlatnessMainHTML extends Logging {
   }
 
   def makeContent(subDir: File, extendedData: ExtendedData, resultList: List[BeamResultBaseline], status: ProcedureStatus.Value, runReq: RunReq): Elem = {
+
+    val useAsBaselineButton: Elem = {
+      val href = SymmetryAndFlatnessUseAsBaseline.path + "?outputPK=" + extendedData.output.outputPK.get
+      val title = "Use the values here as the baseline for future symmetry and flatness analysis"
+      val button = {
+        <a class="btn btn-primary" href={ href } role="button" title={ title }>Use As Baseline</a>
+      }
+      button
+    }
+
     val content = {
       <div class="col-md-6 col-md-offset-3">
         <br/>
@@ -227,7 +237,10 @@ object SymmetryAndFlatnessMainHTML extends Logging {
           { tableHead }
           { resultList.map(rb => makeRow(subDir, extendedData, rb, runReq: RunReq)) }
         </table>
+        <p/>
+        { useAsBaselineButton }
       </div>
+
     }
     content
   }

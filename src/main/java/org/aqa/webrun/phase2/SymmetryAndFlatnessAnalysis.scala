@@ -28,9 +28,9 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
   private def boolToStatus(pass: Boolean) = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
-  private val axialSymmetryName = "Axial Symmetry"
-  private val transverseSymmetryName = "Transverse Symmetry"
-  private val flatnessName = "Flatness"
+   val axialSymmetryName = "Axial Symmetry"
+   val transverseSymmetryName = "Transverse Symmetry"
+   val flatnessName = "Flatness"
 
   /**
    * Encapsulate data for generating a report.
