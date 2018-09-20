@@ -764,8 +764,13 @@ object WebUtil extends Logging {
       val value = valueMap.get(label)
       val common = { <input class="form-control" id={ label } name={ label }/> }
 
+      val rowCount: Int = {
+        val s = if (value.isDefined) { value.get.split("\n").size + 1 } else 3
+        Math.max(3, s)
+      }
+
       val html = // must not allow embedded blanks
-        <textarea rows="3">{ if (value.isDefined) markLiteralValue(label) else "" }</textarea> % idNameClassAsAttr(label) % placeholderAsAttr(placeholder)
+        <textarea rows={ rowCount.toString }>{ if (value.isDefined) markLiteralValue(label) else "" }</textarea> % idNameClassAsAttr(label) % placeholderAsAttr(placeholder)
 
       wrapInput(label, true, html, col, offset, errorMap)
     }
