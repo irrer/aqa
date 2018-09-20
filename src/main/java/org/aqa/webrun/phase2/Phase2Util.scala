@@ -22,6 +22,7 @@ import edu.umro.ImageUtil.DicomImage
 import java.awt.geom.Point2D
 import java.awt.Point
 import org.aqa.db.MachineType
+import org.aqa.web.WebServer
 
 object Phase2Util extends Logging {
 
@@ -157,7 +158,8 @@ object Phase2Util extends Logging {
     }
 
     def mainReport: Elem = {
-      <div class="col-md-1 col-md-offset-1" title='Return to main (overview) report'><a href='display.html'>Main Report</a></div>
+      val href = WebServer.fileToResultsPath(extendedData.output.dir) + Output.displayFilePrefix + ".html"
+      <div class="col-md-1 col-md-offset-1" title='Return to main (overview) report'><a href={ href }>Main Report</a></div>
     }
 
     val analysisDate: String = {
