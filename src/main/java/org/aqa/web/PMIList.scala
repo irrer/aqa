@@ -6,6 +6,7 @@ import org.aqa.db.PMI
 import java.sql.Timestamp
 import org.aqa.web.WebUtil._
 import org.aqa.db.User
+import org.aqa.db.Machine
 
 object PMIList {
   val path = new String((new PMIList).pathOf)
@@ -38,10 +39,17 @@ class PMIList extends GenericList[PMI] with WebUtil.SubUrlAdmin {
 
   override def createNew(valueMap: ValueMapT): Elem = {
     val machinePath = WebUtil.cleanClassName(MachineUpdate.getClass.getName) + machineParameter(valueMap)
+    val machineName: String = {
+      try {
+        Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get.id
+      } catch {
+        case t: Throwable => ""
+      }
+    }
     <div class="row col-md-2 col-md-offset-10">
       <strong>
         <a href={ createNewPath(valueMap) }>Create new { listName }</a><p> </p>
-        <a href={ machinePath }>Return to machine</a><p> </p>
+        <a href={ machinePath }>Return to machine { " " + machineName }</a><p> </p>
       </strong>
     </div>;
   }
