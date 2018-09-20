@@ -208,7 +208,7 @@ object Output extends Logging {
     Db.run(action)
   }
 
-  val displayFilePrefix = "display".toLowerCase
+  val displayFilePrefix = "display"
 
   /**
    * If the given directory contains an output file, then return it.

@@ -160,8 +160,7 @@ object SymmetryAndFlatnessMainHTML extends Logging {
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   private def flatnessColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
-    val bsClass = if (result.flatnessStatus == ProcedureStatus.pass) "" else "danger"
-    <td class={ bsClass } style="text-align: center;" title={ titleFlatness }>
+    <td style="text-align: center;" title={ titleFlatness }>
       { result.flatness.formatted("%14.6f") }
     </td>
   }

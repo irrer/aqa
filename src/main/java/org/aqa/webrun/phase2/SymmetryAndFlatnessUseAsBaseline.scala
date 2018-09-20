@@ -36,7 +36,7 @@ class SymmetryAndFlatnessUseAsBaseline extends Restlet with SubUrlRun with Loggi
 
   private def safToBaselineList(saf: SymmetryAndFlatness, pmiPK: Long, acquisitionDate: Timestamp): Seq[Baseline] = {
     def make(name: String, value: Double) = {
-      new Baseline(None, pmiPK, acquisitionDate, Some(saf.SOPInstanceUID), SymmetryAndFlatnessAnalysis.makeBaselineName(saf.beamName, name), saf.axialSymmetry_mm.toString, BaselineSetup.chosen.toString)
+      new Baseline(None, pmiPK, acquisitionDate, Some(saf.SOPInstanceUID), SymmetryAndFlatnessAnalysis.makeBaselineName(saf.beamName, name), value.toString, BaselineSetup.chosen.toString)
     }
     val axial = make(SymmetryAndFlatnessAnalysis.axialSymmetryName, saf.axialSymmetry_mm)
     val transverse = make(SymmetryAndFlatnessAnalysis.transverseSymmetryName, saf.transverseSymmetry_mm)
