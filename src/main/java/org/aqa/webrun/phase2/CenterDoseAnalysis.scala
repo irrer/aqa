@@ -105,11 +105,11 @@ object CenterDoseAnalysis extends Logging {
 
     val content = {
       <div>
-        <div class="row" style="margin:20px;">
+        <div class="row" style="margin:50px;">
           <div class="col-md-1">{ viewRtPlan }</div>
         </div>
-        <div class="row" style="margin:20px;">
-          <div class="row" style="margin:20px;">
+        <div class="row" style="margin:50px;">
+          <div class="row" style="margin:50px;">
             <div class="col-md-12">
               { resultList.map(cd => imageToHtml(cd)) }
             </div>
