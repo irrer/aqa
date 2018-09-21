@@ -35,7 +35,8 @@ object MetadataCheckHTML {
     }
 
     val viewRtPlan = {
-      <a title="View RT Plan DICOM file" href={ extendedData.dicomHref(runReq.rtplan) }>RT Plan</a>
+      val planHref = Phase2Util.dicomViewHref(runReq.rtplan.attributeList.get, extendedData, runReq)
+      <a title="View RT Plan DICOM file" href={ planHref }>RT Plan</a>
     }
 
     class Col(val title: String, name: String, val get: (MetadataCheck) => String) {
@@ -51,8 +52,8 @@ object MetadataCheckHTML {
       override def toRow(metadataCheck: MetadataCheck) = {
 
         val dicomFile = runReq.rtimageMap(metadataCheck.beamName)
-        val link = extendedData.dicomHref(dicomFile)
-        val elem = { <td title={ title + ".  Follow link to view DICOM" }><a href={ link }>{ get(metadataCheck) }</a></td> }
+        val href = Phase2Util.dicomViewHref(dicomFile.attributeList.get, extendedData, runReq)
+        val elem = { <td title={ title + ".  Follow link to view DICOM" }><a href={ href }>{ get(metadataCheck) }</a></td> }
         elem
       }
     }

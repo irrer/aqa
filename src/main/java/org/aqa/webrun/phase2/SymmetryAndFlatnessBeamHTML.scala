@@ -111,6 +111,7 @@ object SymmetryAndFlatnessBeamHTML extends Logging {
             { graphAxial._1 }
           </div>
         </div>
+        <p> </p>
       </div>
     }
     val javascript = "<script>\n" + graphTransverse._2 + graphAxial._2 + "\n</script>\n"

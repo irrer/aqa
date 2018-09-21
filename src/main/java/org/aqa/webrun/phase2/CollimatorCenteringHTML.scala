@@ -99,6 +99,9 @@ object CollimatorCenteringHTML {
     }
 
     val content = {
+      val href090 = Phase2Util.dicomViewHref(runReq.rtimageMap(Config.CollimatorCentering090BeamName).attributeList.get, extendedData, runReq)
+      val href270 = Phase2Util.dicomViewHref(runReq.rtimageMap(Config.CollimatorCentering270BeamName).attributeList.get, extendedData, runReq)
+
       <div>
         <div class="col-md-4 col-md-offset-4" align="middle">
           <h3 title='X, Y difference from image center in mm'>{ resultSummary } mm</h3>
@@ -107,12 +110,12 @@ object CollimatorCenteringHTML {
         <div class="row" title="Click images for full sized view">
           <div class="col-md-5" align="middle">
             { imageTitle("90", image090) }
-            <a title='Click for DICOM details' href={ extendedData.dicomHref(runReq.rtimageMap(Config.CollimatorCentering090BeamName)) }>{ Config.CollimatorCentering090BeamName }<br/></a>
+            <a title='Click for DICOM details' href={ href090 }>{ Config.CollimatorCentering090BeamName }<br/></a>
             { showImage("CollimatorCentering090_" + Config.CollimatorCentering090BeamName + ".png", outputDir, image090.bufferedImage) }
           </div>
           <div class="col-md-5 col-md-offset-1" align="middle">
             { imageTitle("270", image270) }
-            <a title='Click for DICOM details' href={ extendedData.dicomHref(runReq.rtimageMap(Config.CollimatorCentering270BeamName)) }>{ Config.CollimatorCentering270BeamName }<br/></a>
+            <a title='Click for DICOM details' href={ href270 }>{ Config.CollimatorCentering270BeamName }<br/></a>
             { showImage("CollimatorCentering270_" + Config.CollimatorCentering270BeamName + ".png", outputDir, image270.bufferedImage) }
           </div>
         </div>

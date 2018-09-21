@@ -37,7 +37,8 @@ object CollimatorPositionHTML {
     }
 
     val viewRtPlan = {
-      <a title="View RT Plan DICOM file" href={ extendedData.dicomHref(runReq.rtplan) }>RT Plan</a>
+      val planHref = Phase2Util.dicomViewHref(runReq.rtplan.attributeList.get, extendedData, runReq)
+      <a title="View RT Plan DICOM file" href={ planHref }>RT Plan</a>
     }
 
     class Col(val title: String, name: String, val get: (CollimatorPosition, BufferedImage) => String) {
@@ -53,8 +54,8 @@ object CollimatorPositionHTML {
       override def toRow(collimatorPosition: CollimatorPosition, bufImg: BufferedImage) = {
 
         val dicomFile = runReq.rtimageMap(collimatorPosition.beamName)
-        val link = extendedData.dicomHref(dicomFile)
-        val elem = { <td title={ title + ".  Follow link to view DICOM" }><a href={ link }>{ get(collimatorPosition, bufImg) }</a></td> }
+        val href = Phase2Util.dicomViewHref(dicomFile.attributeList.get, extendedData, runReq)
+        val elem = { <td title={ title + ".  Follow link to view DICOM" }><a href={ href }>{ get(collimatorPosition, bufImg) }</a></td> }
         elem
       }
     }

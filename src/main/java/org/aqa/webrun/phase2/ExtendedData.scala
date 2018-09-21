@@ -21,26 +21,6 @@ import org.aqa.db.EPID
 case class ExtendedData(output: Output, input: Input,
   machine: Machine, machineType: MachineType, multileafCollimator: MultileafCollimator, epid: EPID,
   institution: Institution, procedure: Procedure, user: User) {
-
-  /**
-   * Get the file that displays the given DICOM.
-   */
-  private def dicomHtmlFile(dicomFile: DicomFile) = {
-    val name = Util.removeFileNameSuffix(dicomFile.file.getName) + ".html"
-    new File(output.dir, name)
-  }
-
-  /**
-   * Get the file that displays the given DICOM.
-   */
-  private def dicomHtmlImageFile(dicomFile: DicomFile) = {
-    val name = Util.removeFileNameSuffix(dicomFile.file.getName) + "_image.html"
-    new File(output.dir, name)
-  }
-
-  def dicomHref(dicomFile: DicomFile) = WebServer.urlOfResultsFile(dicomHtmlFile(dicomFile))
-
-  def dicomImageHref(dicomFile: DicomFile) = WebServer.urlOfResultsFile(dicomHtmlImageFile(dicomFile))
 }
 
 object ExtendedData {

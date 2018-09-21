@@ -154,12 +154,11 @@ object DicomAccess extends Logging {
   }
 
   private def makePage(dicom: DicomFile, urlOfFile: String, title: String,
-    outputDir: File, bufferedImage: Option[BufferedImage],
+    dir: File, fileBaseName: String, bufferedImage: Option[BufferedImage],
     dicomImage: Option[DicomImage], badPixelList: IndexedSeq[Point]): Option[String] = {
 
-    val fileBaseName = Util.removeFileNameSuffix(dicom.file.getName)
     val downloadLink = { <a href={ WebServer.urlOfResultsFile(dicom.file) } title="Download as DICOM">Download</a> }
-    val pngFile = new File(outputDir, fileBaseName + ".png")
+    val pngFile = new File(dir, fileBaseName + ".png")
 
     val content = if (dicom.attributeList.isDefined) {
       val al = dicom.attributeList.get
@@ -169,7 +168,7 @@ object DicomAccess extends Logging {
         <div>
           { downloadLink }
           <br></br>
-          { if (bufferedImage.isDefined) makeImagePage(title, pngFile, outputDir, fileBaseName, dicomImage.get, bufferedImage.get, badPixelList) }
+          { if (bufferedImage.isDefined) makeImagePage(title, pngFile, dir, fileBaseName, dicomImage.get, bufferedImage.get, badPixelList) }
           <p>
             <pre title="DICOM meta-data">{ WebUtil.nl + text }</pre>
           </p>
@@ -184,7 +183,7 @@ object DicomAccess extends Logging {
       </div>
     }
 
-    val htmlFile = new File(outputDir, fileBaseName + ".html")
+    val htmlFile = new File(dir, fileBaseName + ".html")
     val htmlText = WebUtil.wrapBody(html, title)
     Util.writeBinaryFile(htmlFile, htmlText.getBytes)
 
@@ -209,10 +208,10 @@ object DicomAccess extends Logging {
    *
    * @param badPixelList: List of bad pixels.  If non-empty, annotate them on the image and show a zoomed view of each.
    */
-  def write(dicom: DicomFile, urlOfFile: String, title: String, dir: File, bufferedImage: Option[BufferedImage], dicomImage: Option[DicomImage], badPixelList: IndexedSeq[Point]): Option[String] = {
+  def write(dicom: DicomFile, urlOfFile: String, title: String, dir: File, fileBaseName: String, bufferedImage: Option[BufferedImage], dicomImage: Option[DicomImage], badPixelList: IndexedSeq[Point]): Option[String] = {
     try {
       dir.mkdirs
-      makePage(dicom, urlOfFile, title, dir, bufferedImage, dicomImage, badPixelList)
+      makePage(dicom, urlOfFile, title, dir, fileBaseName, bufferedImage, dicomImage, badPixelList)
     } catch {
       case t: Throwable => {
         logger.warn("Unexpected error while generating DICOM view for directory " + dir.getAbsolutePath + " : " + fmtEx(t))

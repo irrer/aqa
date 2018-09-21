@@ -82,8 +82,8 @@ object SymmetryAndFlatnessMainHTML extends Logging {
 
   private def dicomRefColumn(beamName: String, extendedData: ExtendedData, runReq: RunReq): Elem = {
     val dicomFile = runReq.rtimageMap(beamName)
-    val link = extendedData.dicomHref(dicomFile)
-    <td style="vertical-align: middle;" title={ titleDicomMetadata } rowspan="3"><a href={ link }>{ beamName }</a></td>
+    val href = Phase2Util.dicomViewHref(dicomFile.attributeList.get, extendedData, runReq)
+    <td style="vertical-align: middle;" title={ titleDicomMetadata } rowspan="3"><a href={ href }>{ beamName }</a></td>
   }
 
   private def detailsColumn(subDir: File, beamName: String, extendedData: ExtendedData, runReq: RunReq): Elem = {

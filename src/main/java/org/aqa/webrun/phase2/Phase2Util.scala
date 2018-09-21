@@ -158,7 +158,7 @@ object Phase2Util extends Logging {
     }
 
     def mainReport: Elem = {
-      val href = WebServer.fileToResultsPath(extendedData.output.dir) + Output.displayFilePrefix + ".html"
+      val href = WebServer.urlOfResultsFile(extendedData.output.dir) + "/" + Output.displayFilePrefix + ".html"
       <div class="col-md-1 col-md-offset-1" title='Return to main (overview) report'><a href={ href }>Main Report</a></div>
     }
 
@@ -279,6 +279,51 @@ object Phase2Util extends Logging {
       { name + " crashed" }<br/>
       <img src={ Config.failImageUrl } height="32"/>
     </div>
+  }
+
+  def jawDescription(al: AttributeList): String = {
+    try {
+      val jaws = MeasureTBLREdges.imageCollimatorPositions(al)
+      val width = ((jaws.X1.abs + jaws.X2.abs) / 10).round.toInt
+      val height = ((jaws.Y1.abs + jaws.Y2.abs) / 10).round.toInt
+      width + " x " + height + " cm"
+    } catch {
+      case t: Throwable => ""
+    }
+  }
+
+  def dicomViewBaseName(beamName: String, al: AttributeList): String = {
+    (beamName + "_" + jawDescription(al)).replaceAll("[^a-zA-Z0-9]", "_").replaceAll("__*", "_").replaceAll("_$", "").replaceAll("^_", "")
+  }
+
+  def dicomViewHtmlFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
+    val htmlFile = dicomViewBaseName(runReq.beamNameOfAl(al), al) + ".html"
+    val viewDir = new File(extendedData.output.dir, "view")
+    new File(viewDir, htmlFile)
+  }
+
+  def dicomViewImageHtmlFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
+    val htmlFile = dicomViewBaseName(runReq.beamNameOfAl(al), al) + "_image.html"
+    val viewDir = new File(extendedData.output.dir, "view")
+    new File(viewDir, htmlFile)
+  }
+
+  def dicomViewImageFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
+    val pngFile = dicomViewBaseName(runReq.beamNameOfAl(al), al) + ".png"
+    val viewDir = new File(extendedData.output.dir, "view")
+    new File(viewDir, pngFile)
+  }
+
+  def dicomViewHref(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): String = {
+    WebServer.urlOfResultsFile(dicomViewHtmlFile(al, extendedData, runReq))
+  }
+
+  def dicomViewImageHref(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): String = {
+    WebServer.urlOfResultsFile(dicomViewImageFile(al, extendedData, runReq))
+  }
+
+  def dicomViewImageHtmlHref(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): String = {
+    WebServer.urlOfResultsFile(dicomViewImageHtmlFile(al, extendedData, runReq))
   }
 
 }

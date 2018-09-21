@@ -101,28 +101,30 @@ object BadPixelAnalysis extends Logging {
     val colorMap = ImageUtil.rgbColorMap(Color.cyan)
     val smallImageWidth = 100.toString
 
+    val viewDir = new File(extendedData.output.dir, "view")
     def dicomView(beamName: String): Option[String] = {
       logger.info("Making DICOM view for beam " + beamName)
       val rtimage = runReq.rtimageMap(beamName)
       val derived = runReq.derivedMap(beamName)
       val angles = gantryCollAngles(rtimage.attributeList.get)
 
-      //val bufImage = derived.originalImage.toBufferedImage(colorMap, derived.pixelCorrectedImage.min, derived.pixelCorrectedImage.max)
       val bufImage = derived.originalImage.toDeepColorBufferedImage(derived.pixelCorrectedImage.min, derived.pixelCorrectedImage.max)
       val url = WebServer.urlOfResultsFile(rtimage.file)
-      val result = DicomAccess.write(rtimage, url, angles + " : " + beamName, outputDir, Some(bufImage), Some(derived.originalImage), derived.badPixelList)
+      val result = DicomAccess.write(rtimage, url, angles + " : " + beamName, viewDir, Phase2Util.dicomViewBaseName(beamName, rtimage.attributeList.get), Some(bufImage), Some(derived.originalImage), derived.badPixelList)
       logger.info("Finished making DICOM view for beam " + beamName)
       result
     }
 
     // write the RTPLAN
-    val planLink = extendedData.dicomHref(runReq.rtplan)
-    DicomAccess.write(runReq.rtplan, planLink, "RTPLAN", outputDir, None, None, IndexedSeq[Point]())
+    val planLink = Phase2Util.dicomViewHref(runReq.rtplan.attributeList.get, extendedData, runReq)
+    val rtPlanAl = runReq.rtplan.attributeList.get
+    val planBaseName = Phase2Util.dicomViewBaseName(runReq.beamNameOfAl(rtPlanAl), rtPlanAl)
+    DicomAccess.write(runReq.rtplan, planLink, "RTPLAN", viewDir, planBaseName, None, None, IndexedSeq[Point]())
 
-    val floodLink = extendedData.dicomHref(runReq.flood)
-    //val floodBufImage = runReq.floodOriginalImage.toBufferedImage(colorMap, runReq.floodCorrectedImage.min, runReq.floodCorrectedImage.max)
+    val floodLink = Phase2Util.dicomViewHref(runReq.flood.attributeList.get, extendedData, runReq)
     val floodBufImage = runReq.floodOriginalImage.toDeepColorBufferedImage(runReq.floodCorrectedImage.min, runReq.floodCorrectedImage.max)
-    val floodPngHref = DicomAccess.write(runReq.flood, floodLink, Config.FloodFieldBeamName, outputDir, Some(floodBufImage), Some(runReq.floodOriginalImage), runReq.floodBadPixelList).get
+    val floodBaseName = Phase2Util.dicomViewBaseName(Config.FloodFieldBeamName, runReq.flood.attributeList.get)
+    val floodPngHref = DicomAccess.write(runReq.flood, floodLink, Config.FloodFieldBeamName, viewDir, floodBaseName, Some(floodBufImage), Some(runReq.floodOriginalImage), runReq.floodBadPixelList).get
 
     val pngImageMap = runReq.rtimageMap.keys.par.map(beamName => (beamName, dicomView(beamName).get)).toList.toMap
 
@@ -159,18 +161,7 @@ object BadPixelAnalysis extends Logging {
 
     def sortBeams = runReq.rtimageMap.keys.toList.sortWith(orderBeams _)
 
-    def jawDescription(al: AttributeList): String = {
-      try {
-        val jaws = MeasureTBLREdges.imageCollimatorPositions(al)
-        val width = ((jaws.X1.abs + jaws.X2.abs) / 10).round.toInt
-        val height = ((jaws.Y1.abs + jaws.Y2.abs) / 10).round.toInt
-        width + " x " + height + " cm"
-      } catch {
-        case t: Throwable => ""
-      }
-    }
-
-    def beamRef(beamName: String, dicomFile: DicomFile, pngHref: String): (Option[Long], Elem) = {
+    def beamRef(beamName: String, dicomFile: DicomFile): (Option[Long], Elem) = {
       val al = dicomFile.attributeList.get
       def angleOf(tag: AttributeTag) = Util.angleRoundedTo90(al.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head).toString
 
@@ -185,13 +176,16 @@ object BadPixelAnalysis extends Logging {
 
       def boolToString(b: Boolean) = if (b) "yes" else ""
 
+      val dicomHref = Phase2Util.dicomViewHref(al, extendedData, runReq)
+      val pngHref = Phase2Util.dicomViewImageHref(al, extendedData, runReq)
+
       val elem = {
         <tr align="center">
-          <td style="text-align: center;" title="Click for DICOM metadata"><a href={ extendedData.dicomHref(dicomFile) }>{ beamName }</a></td>
-          <td style="text-align: center;" title="Click for full size image"><a href={ extendedData.dicomImageHref(dicomFile) }><img src={ pngHref } width={ smallImageWidth }/></a></td>
+          <td style="text-align: center;" title="Click for DICOM metadata"><a href={ dicomHref }>{ beamName }</a></td>
+          <td style="text-align: center;" title="Click for full size image"><a href={ Phase2Util.dicomViewImageHtmlHref(al, extendedData, runReq) }><img src={ pngHref } width={ smallImageWidth }/></a></td>
           <td style="text-align: center;" title="Gantry Angle deg">{ angleOf(TagFromName.GantryAngle) }</td>
           <td style="text-align: center;" title="Collimator Angle deg">{ angleOf(TagFromName.BeamLimitingDeviceAngle) }</td>
-          <td style="text-align: center;" title="Jaw opening in CM">{ jawDescription(al) }</td>
+          <td style="text-align: center;" title="Jaw opening in CM">{ Phase2Util.jawDescription(al) }</td>
           <td style="text-align: center;" title="Time since first image capture (mm:ss)">{ relativeTimeText }</td>
           <td style="text-align: center;" title="Metadata Check">{ boolToString(Config.MetadataCheckBeamNameList.contains(beamName)) }</td>
           <td style="text-align: center;" title="Collimator Centering">{ boolToString(Config.CollimatorCentering090BeamName.equals(beamName) || Config.CollimatorCentering270BeamName.equals(beamName)) }</td>
@@ -206,14 +200,9 @@ object BadPixelAnalysis extends Logging {
 
     val content = {
 
-      //      val XfloodRef = {
-      //        val floodAngles = gantryCollAngles(runReq.flood.attributeList.get);
-      //        { <a href={ floodLink }>{ floodAngles + " : " + Config.FloodFieldBeamName }<br/><img src={ floodPngHref } width={ smallImageWidth }/></a> }
-      //      }
-
       val allElem = {
-        val floodRef = beamRef(Config.FloodFieldBeamName, runReq.flood, floodPngHref)
-        val rtimgRef = sortBeams.map(beamName => beamRef(beamName, runReq.rtimageMap(beamName), pngImageMap(beamName)))
+        val floodRef = beamRef(Config.FloodFieldBeamName, runReq.flood)
+        val rtimgRef = sortBeams.map(beamName => beamRef(beamName, runReq.rtimageMap(beamName)))
         def cmpr(a: (Option[Long], Elem), b: (Option[Long], Elem)): Boolean = {
           (a._1, b._1) match {
             case (Some(ta), Some(tb)) => ta < tb

@@ -10,6 +10,7 @@ import org.aqa.db.Machine
 import java.awt.geom.Point2D
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
+import com.pixelmed.dicom.AttributeList
 
 /**
  * @param rtplan: RTPLAN file
@@ -73,4 +74,18 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
   }
 
   val derivedMap = rtimageMap.keys.par.map(beamName => (beamName, new Derived(rtimageMap(beamName)))).toList.toMap
+
+  def beamNameOfAl(al: AttributeList): String = {
+    val sop = Util.sopOfAl(al)
+
+    val beamName = rtimageMap.keys.find(k => Util.sopOfAl(rtimageMap(k).attributeList.get).equals(sop))
+
+    if (beamName.isDefined) beamName.get
+    else {
+      if (sop.equals(Util.sopOfAl(rtplan.attributeList.get))) "RTPLAN"
+      else if (sop.equals(Util.sopOfAl(flood.attributeList.get))) Config.FloodFieldBeamName
+      else "unknown"
+    }
+
+  }
 }
