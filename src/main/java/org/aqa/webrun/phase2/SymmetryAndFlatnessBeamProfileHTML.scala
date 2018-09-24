@@ -33,7 +33,7 @@ import org.aqa.web.WebUtil
 /**
  * Analyze DICOM files for symmetry and flatness.
  */
-object SymmetryAndFlatnessBeamHTML extends Logging {
+object SymmetryAndFlatnessBeamProfileHTML extends Logging {
 
   private def graph(name: String, valueList: Seq[Double], xList: Seq[Double]): (Elem, String) = {
 
@@ -98,6 +98,7 @@ object SymmetryAndFlatnessBeamHTML extends Logging {
   private def makeContent(subDir: File, extendedData: ExtendedData, result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult, status: ProcedureStatus.Value, runReq: RunReq): (Elem, String) = {
     val graphTransverse = graph("Transverse " + result.beamName, result.transverseProfile, result.transverse_mm)
     val graphAxial = graph("Axial " + result.beamName, result.axialProfile, result.axial_mm)
+    val graphHistory = new SymmetryAndFlatnessBeamHistoryHTML(result.beamName, extendedData)
     val content = {
       <div class="row">
         <div class="col-md-6 col-md-offset-1">
@@ -110,11 +111,23 @@ object SymmetryAndFlatnessBeamHTML extends Logging {
           <div class="row">
             { graphAxial._1 }
           </div>
+          <div class="row">
+            <h2>Transverse Symmetry History</h2>
+            { graphHistory.htmlTransverse }
+          </div>
+          <div class="row">
+            <h2>Axial Symmetry History</h2>
+            { graphHistory.htmlAxial }
+          </div>
+          <div class="row">
+            <h2>Flatness History</h2>
+            { graphHistory.htmlFlatness }
+          </div>
         </div>
         <p> </p>
       </div>
     }
-    val javascript = "<script>\n" + graphTransverse._2 + graphAxial._2 + "\n</script>\n"
+    val javascript = "<script>\n" + graphTransverse._2 + graphAxial._2 + graphHistory.graphAll + "\n</script>\n"
     (content, javascript)
   }
 

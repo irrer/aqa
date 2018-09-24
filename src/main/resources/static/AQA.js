@@ -4,7 +4,12 @@
 var WebRefreshTime = 2000;
 var checksum = 'none';
 var baseUrl = 'empty';
+var monthList = [ 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ];
 
+function formatDate(dt) { 
+  return (dt.getYear() + 1900) + ' ' + monthList[dt.getMonth()] + ' ' + dt.getDate();
+};
+        
 function watchChecksum() {
 	$.ajax({
 		url : baseUrl,

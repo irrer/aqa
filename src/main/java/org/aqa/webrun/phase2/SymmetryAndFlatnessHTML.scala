@@ -51,6 +51,9 @@ object SymmetryAndFlatnessHTML extends Logging {
     new File(subDir, fileName)
   }
 
+  /**
+   * Get the file of the HTML for the given beam.
+   */
   def beamHtmlFile(subDir: File, beamName: String): File = {
     val fileName = WebUtil.stringToUrlSafe(beamName) + ".html"
     new File(subDir, fileName)
@@ -77,7 +80,7 @@ object SymmetryAndFlatnessHTML extends Logging {
     val html = Phase2Util.wrapSubProcedure(extendedData, SymmetryAndFlatnessMainHTML.makeContent(subDir, extendedData, resultList, status, runReq), "Symmetry and Flatness", status, None, runReq)
     Util.writeFile(mainHtmlFile, html)
 
-    resultList.map(rb => SymmetryAndFlatnessBeamHTML.makeDisplay(subDir, extendedData, rb.result, status, runReq))
+    resultList.map(rb => SymmetryAndFlatnessBeamProfileHTML.makeDisplay(subDir, extendedData, rb.result, status, runReq))
 
     summary(mainHtmlFile, resultList.size, status)
   }

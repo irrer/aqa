@@ -18,7 +18,7 @@ class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Se
   }
 
   private def beamRefOf(index: Int): String = {
-    "Chart_" + index + "_" + resultList(index).beamName.replaceAll("[^a-zA-Z0-9]", "_")
+    "HistoryChart_" + index + "_" + resultList(index).beamName.replaceAll("[^a-zA-Z0-9]", "_")
   }
 
   private val allDates = (resultList ++ history).map(cd => cd.date)
@@ -95,11 +95,13 @@ class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Se
   private val scriptPrefix = {
     """
 <script>
-        var monthList = [ 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ];
 
-        function formatDate(dt) { 
-            return (dt.getYear() + 1900) + ' ' + monthList[dt.getMonth()] + ' ' + dt.getDate();
-        };
+//        var monthList = [ 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ];
+//
+//        function formatDate(dt) { 
+//            return (dt.getYear() + 1900) + ' ' + monthList[dt.getMonth()] + ' ' + dt.getDate();
+//        };
+
 """
   }
 
