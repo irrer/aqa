@@ -28,9 +28,9 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
   private def boolToStatus(pass: Boolean) = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
-   val axialSymmetryName = "Axial Symmetry"
-   val transverseSymmetryName = "Transverse Symmetry"
-   val flatnessName = "Flatness"
+  val axialSymmetryName = "Axial Symmetry"
+  val transverseSymmetryName = "Transverse Symmetry"
+  val flatnessName = "Flatness"
 
   /**
    * Encapsulate data for generating a report.
@@ -298,7 +298,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
       val summary = SymmetryAndFlatnessHTML.makeDisplay(extendedData, resultList, boolToStatus(pass), runReq)
 
-      Right(new SymmetryAndFlatnessResult(summary, status))
+      val result = new SymmetryAndFlatnessResult(summary, status)
+      if (pass) Right(result) else Left(result.summary)
     } catch {
       case t: Throwable => {
         logger.warn("Unexpected error in analysis of CollimatorPosition: " + t + fmtEx(t))
