@@ -1,10 +1,6 @@
 package org.aqa.web
 
 import org.aqa.Logging
-import org.aqa.db.CenterDose
-import java.text.SimpleDateFormat
-import org.aqa.Util
-import scala.collection.Seq
 
 object C3Chart {
 
@@ -60,7 +56,7 @@ class C3Chart(xAxisLabel: String, xDataLabel: String, xValueList: Seq[Double], x
           """ + yAxisLabels.indices.map(i => column(yAxisLabels(i), yValues(i))).mkString(",\n         ") + """ 
         ]
     },
-    point: { // show point on hover
+    point: { // enlarge point on hover
         r: 0,
         focus : {
             expand: {

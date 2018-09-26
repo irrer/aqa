@@ -8,28 +8,34 @@ import java.io.File
 import edu.umro.util.Utility
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.FileUtil
-import org.aqa.web.C3Chart
+import org.aqa.web.C3ChartHistory
+import scala.util.Random
+import java.util.Date
 
 /**
  * Test the Config.
  *
  */
 
-class TestC3Chart extends FlatSpec with Matchers {
+class TestC3ChartHistory extends FlatSpec with Matchers {
 
-  "C3Chart" should "makeNiceCharch" in {
+  "TestC3ChartHistory" should "makeNiceHistoricalCharch" in {
+
+    val baseDate = Util.standardDateFormat.parse("2018-01-24T15:31:56")
+    val rand = new Random(135)
+    val dateRange = 31 * 24 * 60 * 60
 
     val xAxisLabel = "X Axis Label"
     val xDataLabel = "X Data Label"
-    val xValueList = (2 to 25).map(i => i * 1.1)
+    val xDateList = (0 until 6).map(i => new Date(baseDate.getTime + rand.nextInt(dateRange) * 1000L)).sorted
     val xFormat = ".g4"
-    val yRange = (1 to 6)
+    val yRange = (1 to 3)
     val yAxisLabels = yRange.map(i => "Y Axis " + i + " Label ").toSeq
     val yDataLabel = "Y Data Label"
-    val yValues = yRange.map(yy => yRange.map(y => ((y * 71 * yy) % 13) * 6786.3))
+    val yValues = yRange.map(yy => (0 until xDateList.size).map(y => (rand.nextDouble + 1) * 25346.331))
     val yFormat = ".g4"
 
-    val chart = new C3Chart(xAxisLabel: String, xDataLabel, xValueList, xFormat, yAxisLabels, yDataLabel, yValues, yFormat)
+    val chart = new C3ChartHistory(xAxisLabel: String, xDataLabel, xDateList, xFormat, yAxisLabels, yDataLabel, yValues, yFormat)
 
     println(chart.javascript)
 
