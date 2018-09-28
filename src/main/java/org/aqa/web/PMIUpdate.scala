@@ -25,6 +25,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import org.aqa.db.Machine
 import java.sql.Timestamp
+import org.aqa.Config
 
 object PMIUpdate {
   val pmiPKTag = "pmiPK"
@@ -61,6 +62,8 @@ class PMIUpdate extends Restlet with SubUrlAdmin {
 
   private val summary = new WebInputText("Summary", 6, 0, "")
 
+  private val category = new WebInputSelect("Category", 6, 0, () => Config.MaintenanceCategoryList.map(m => (m.Name, m.Name)))
+
   private val description = new WebInputTextArea("Description", 6, 0, "")
 
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
@@ -75,6 +78,7 @@ class PMIUpdate extends Restlet with SubUrlAdmin {
 
   val fieldList: List[WebRow] = List(
     List(summary),
+    List(category),
     List(description),
     List(outputReference),
     List(dateTime))
@@ -121,9 +125,11 @@ class PMIUpdate extends Restlet with SubUrlAdmin {
     val machPK = machinePK.getValOrEmpty(valueMap).trim.toLong
     val dt = new Timestamp(dateTime.validateDateTime(dateTime.getValOrEmpty(valueMap)).get.getTime)
     val uPK = getUser(request).get.userPK.get
+    val cat = valueMap.get(category.label).get
 
     new PMI(
       mrPK,
+      cat,
       machPK,
       dt,
       uPK,
@@ -162,6 +168,7 @@ class PMIUpdate extends Restlet with SubUrlAdmin {
   private def edit(inst: PMI, response: Response) = {
     val valueMap = Map(
       (pmiPK.label, inst.pmiPK.get.toString),
+      (category.label, inst.category),
       (machinePK.label, inst.machinePK.toString),
       (dateTime.label, dateTime.dateTimeFormat.format(inst.creationTime)),
       (summary.label, inst.summary),

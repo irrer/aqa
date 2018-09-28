@@ -20,6 +20,7 @@ import org.aqa.db.Baseline
 import org.aqa.db.PMI
 import org.aqa.db.SymmetryAndFlatness
 import java.sql.Timestamp
+import org.aqa.db.MaintenanceCategory
 
 /**
  * Analyze DICOM files for symmetry and flatness.
@@ -263,7 +264,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       val valueText = baselineList.map(bl => "    " + bl.id + " : " + bl.value).mkString("\n")
 
       val creationTime = new Timestamp(System.currentTimeMillis)
-      val pmi = new PMI(None, machinePK, creationTime, userPK, Some(outputPK), summary, preamble + valueText)
+      val pmi = new PMI(None,  MaintenanceCategory.setBaseline, machinePK, creationTime, userPK, Some(outputPK), summary, preamble + valueText)
       val insertedPmi = pmi.insert
       val newPmiPK = insertedPmi.pmiPK.get
       logger.info("Created PMI record for Symmetry and Flatness: " + insertedPmi)

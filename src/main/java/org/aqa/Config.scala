@@ -19,6 +19,7 @@ import java.util.Properties
 import edu.umro.util.Utility
 import org.aqa.webrun.phase2.SymmetryAndFlatnessPoint
 import java.awt.geom.Point2D
+import org.aqa.db.MaintenanceCategory
 
 /**
  * This class extracts configuration information from the configuration file.  Refer
@@ -412,6 +413,19 @@ object Config extends Logging {
     list
   }
 
+  private def getMaintenanceCategoryList: List[MaintenanceCategory] = {
+    def nodeToMaintCat(node: Node) = {
+      new MaintenanceCategory(
+        (node \ "@Name").head.text.toString,
+        (node \ "@Color").head.text.toString,
+        node.head.text.toString)
+    }
+
+    val list = (document \ "MaintenanceCategoryList" \ "MaintenanceCategory").map(node => nodeToMaintCat(node)).toList
+    logText("MaintenanceCategoryList", list.mkString("\n        ", "\n        ", "\n"))
+    list
+  }
+
   /**
    * Get the PenumbraThresholdPercent.  If it is not valid in the configuration, then assume the default.
    */
@@ -474,6 +488,8 @@ object Config extends Logging {
 
   val CollimatorPositionTolerance_mm = logMainText("CollimatorPositionTolerance_mm").toDouble
   val CollimatorPositionBeamList = getCollimatorPositionBeamList
+
+  val MaintenanceCategoryList = getMaintenanceCategoryList
 
   val WedgeBeamList = getWedgeBeamList
 

@@ -35,7 +35,7 @@ class TestC3ChartHistory extends FlatSpec with Matchers {
     val yValues = yRange.map(yy => (0 until xDateList.size).map(y => (rand.nextDouble + 1) * 25346.331))
     val yFormat = ".g4"
 
-    val chart = new C3ChartHistory(xAxisLabel: String, xDataLabel, xDateList, xFormat, yAxisLabels, yDataLabel, yValues, yFormat)
+    val chart = new C3ChartHistory(-1, xAxisLabel: String, xDataLabel, xDateList, xFormat, yAxisLabels, yDataLabel, yValues, yFormat)
 
     println(chart.javascript)
 

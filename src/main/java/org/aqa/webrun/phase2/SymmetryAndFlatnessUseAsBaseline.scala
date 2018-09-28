@@ -19,6 +19,7 @@ import org.aqa.db.Input
 import scala.xml.Elem
 import org.aqa.web.PMIUpdate
 import org.restlet.data.Status
+import org.aqa.db.MaintenanceCategory
 
 object SymmetryAndFlatnessUseAsBaseline {
   val path = new String((new SymmetryAndFlatnessUseAsBaseline).pathOf)
@@ -68,13 +69,13 @@ class SymmetryAndFlatnessUseAsBaseline extends Restlet with SubUrlRun with Loggi
     val safList = SymmetryAndFlatness.getByOutput(outputPK)
 
     logger.info("User " + userId + " requested creation of PMI record for Symmetry and Flatness from output " + output.outputPK.get)
-    val summary = "User " + userId + " created baseline values for Symmetry and Flatness from output."
+    val summary = "User " + userId + " created baseline values for Symmetry and Flatness from measured values."
     val preamble = "List of new Symmetry and Flatness baseline values:\n\n"
     val valueText = safList.map(saf => safToDesc(saf)).mkString("\n")
     val creationTime = new Timestamp(System.currentTimeMillis)
     val acquisitionDate = if (input.dataDate.isDefined) input.dataDate.get else creationTime
 
-    val pmi = { new PMI(None, machine.machinePK.get, creationTime, userPK, Some(outputPK), summary, preamble + valueText) }.insert
+    val pmi = { new PMI(None, MaintenanceCategory.setBaseline, machine.machinePK.get, creationTime, userPK, Some(outputPK), summary, preamble + valueText) }.insert
     val baselineList = safList.map(saf => safToBaselineList(saf, pmi.pmiPK.get, acquisitionDate)).flatten
     Baseline.insert(baselineList)
     logger.info("User " + userId + " created PMI record for Symmetry and Flatness " + pmi)

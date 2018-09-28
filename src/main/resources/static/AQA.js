@@ -5,11 +5,16 @@ var WebRefreshTime = 2000;
 var checksum = 'none';
 var baseUrl = 'empty';
 var monthList = [ 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ];
+var standardDateFormat: '%Y-%m-%dT%H:%M:%S';
 
-function formatDate(dt) { 
-  return (dt.getYear() + 1900) + ' ' + monthList[dt.getMonth()] + ' ' + dt.getDate();
+function formatDate(date) { 
+  return (date.getYear() + 1900) + ' ' + monthList[date.getMonth()] + ' ' + date.getDate();
 };
-        
+    
+function formatTime(date) { 
+  return ("0" + date.getHours()).slice(-2) + ':' + ("0" + date.getMinutes()).slice(-2) ;
+};
+      
 function watchChecksum() {
 	$.ajax({
 		url : baseUrl,

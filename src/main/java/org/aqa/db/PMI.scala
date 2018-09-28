@@ -4,6 +4,7 @@ import slick.driver.PostgresDriver.api._
 import org.aqa.Config
 import org.aqa.Util
 import java.sql.Timestamp
+import java.util.Date
 
 /**
  * Record of Preventive Maintenance Inspection.
@@ -11,6 +12,7 @@ import java.sql.Timestamp
 
 case class PMI(
   pmiPK: Option[Long], // primary key
+  category: String, // type of maintenance
   machinePK: Long, // machine that was maintained
   creationTime: Timestamp, // when this record was created
   userPK: Long, // user that performed or oversaw maintenance
@@ -33,6 +35,7 @@ object PMI {
   class PMITable(tag: Tag) extends Table[PMI](tag, "pmi") {
 
     def pmiPK = column[Long]("pmiPK", O.PrimaryKey, O.AutoInc)
+    def category = column[String]("category")
     def machinePK = column[Long]("machinePK")
     def creationTime = column[Timestamp]("creationTime")
     def userPK = column[Long]("userPK")
@@ -42,6 +45,7 @@ object PMI {
 
     def * = (
       pmiPK.?,
+      category,
       machinePK,
       creationTime,
       userPK,
@@ -68,6 +72,19 @@ object PMI {
       inst <- PMI.query if (inst.machinePK === machinePK)
     } yield (inst)
     Db.run(action.result)
+  }
+
+  /**
+   * Get the list of PMI's that have a creation time between the given limits (inclusive), which
+   * may be given in either order.  The list returned is ordered by creation time.
+   */
+  def getRange(machinePK: Long, lo: Date, hi: Date): Seq[PMI] = {
+    val loTs = new Timestamp(Math.min(lo.getTime, hi.getTime))
+    val hiTs = new Timestamp(Math.max(lo.getTime, hi.getTime))
+    val action = for {
+      inst <- PMI.query if (inst.machinePK === machinePK) && (inst.creationTime >= loTs) && (inst.creationTime <= hiTs)
+    } yield (inst)
+    Db.run(action.result).sortWith((a,b) => a.creationTime.getTime < b.creationTime.getTime)
   }
 
   /**
