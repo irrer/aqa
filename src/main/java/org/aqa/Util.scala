@@ -630,4 +630,32 @@ object Util extends Logging {
 
   }
 
+  /**
+   * Given two colors and a pallette size, return a list of colors of the
+   * given size that steps between the given colors.
+   */
+  def colorPallette(colorA: Color, colorB: Color, size: Int): IndexedSeq[Color] = {
+    val step = { if (size == 1) 1.0 else (size - 1).toDouble }
+
+    val stepR = (colorB.getRed - colorA.getRed) / step
+    val stepG = (colorB.getGreen - colorA.getGreen) / step
+    val stepB = (colorB.getBlue - colorA.getBlue) / step
+
+    def toColor(c: Double): Int = {
+      val ci = c.round.toInt
+      ci match {
+        case _ if ci < 0 => 0
+        case _ if ci > 0xff => 0xff
+        case _ => ci
+      }
+    }
+
+    (0 until size).map(i => {
+      val r = toColor(colorA.getRed + i * stepR)
+      val g = toColor(colorA.getGreen + i * stepG)
+      val b = toColor(colorA.getBlue + i * stepB)
+      new Color(r, g, b)
+    })
+  }
+
 }

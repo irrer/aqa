@@ -77,14 +77,14 @@ Note that when building a package for release, the Maven build process uses the 
         The content of the category element is free text that describes the category.
         -->
     <MaintenanceCategoryList>
-        <MaintenanceCategory Name='Maintenance'            Color='#aaaaaa'>General Maintenance</MaintenanceCategory>
-        <MaintenanceCategory Name='PMI'                    Color='#80FF9F'>Preventive Maintenance Inspection</MaintenanceCategory>
-        <MaintenanceCategory Name='Set Baseline'           Color='#80FF9F'>New baseline values set</MaintenanceCategory>
-        <MaintenanceCategory Name='Firmware Update'        Color='#80DFFF'>New treatment machine firmware</MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Jaws'        Color='#80DFFF'>Maintenance performed on jaws</MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Collimator'  Color='#80DFFF'>Maintenance performed on Collimator</MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Gantry'      Color='#80DFFF'>Maintenance performed on Gantry</MaintenanceCategory>
-        <MaintenanceCategory Name='Electrical'             Color='#80DFFF'>Maintenance performed due to electrical issue(s)</MaintenanceCategory>
+        <MaintenanceCategory Name='Maintenance'            Color='#aaaaaa'   >General Maintenance</MaintenanceCategory>
+        <MaintenanceCategory Name='PMI'                    Color='#80FF9F'   >Preventive Maintenance Inspection</MaintenanceCategory>
+        <MaintenanceCategory Name='Set Baseline'           Color='lightgreen'>New baseline values set</MaintenanceCategory>
+        <MaintenanceCategory Name='Firmware Update'        Color='yellow'    >New treatment machine firmware</MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Jaws'        Color='orange'    >Maintenance performed on jaws</MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Collimator'  Color='orange'    >Maintenance performed on Collimator</MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Gantry'      Color='orange'    >Maintenance performed on Gantry</MaintenanceCategory>
+        <MaintenanceCategory Name='Electrical'             Color='orange'    >Maintenance performed due to electrical issue(s)</MaintenanceCategory>
     </MaintenanceCategoryList>
 
     <!-- List of beam names used by Phase2 MetadataCheck -->
