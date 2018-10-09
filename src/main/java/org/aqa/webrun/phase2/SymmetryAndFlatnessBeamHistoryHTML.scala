@@ -6,6 +6,10 @@ import scala.xml.Elem
 import org.aqa.web.WebUtil
 import java.sql.Timestamp
 import org.aqa.Util
+import org.aqa.web.C3ChartHistory
+import java.awt.Color
+import org.aqa.db.PMI
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Analyze DICOM files for symmetry and flatness.
@@ -26,66 +30,76 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, extendedData: Extende
   private val idTransverse = idOf(tagTransverse)
   private val idFlatness = idOf(tagFlatness)
 
-  val graphAxial = graph(idAxial, history.map(h => h.symmetryAndFlatness.axialSymmetry_mm))
-  val graphTransverse = graph(idTransverse, history.map(h => h.symmetryAndFlatness.transverseSymmetry_mm))
-  val graphFlatness = graph(idFlatness, history.map(h => h.symmetryAndFlatness.flatness_mm))
+  private val chartAxial = makeChart(idAxial, history.map(h => h.symmetryAndFlatness.axialSymmetry_mm))
+  private val chartTransverse = makeChart(idTransverse, history.map(h => h.symmetryAndFlatness.transverseSymmetry_mm))
+  private val chartFlatness = makeChart(idFlatness, history.map(h => h.symmetryAndFlatness.flatness_mm))
 
-  val graphAll = graphAxial + graphTransverse + graphFlatness
+  
+  // TODO pmiList is null?
+  private val pmiList = PMI.getRange(extendedData.machine.machinePK.get, history.head.date, history.last.date)
+  Trace.trace(pmiList)
 
-  val htmlAxial = html(idAxial)
-  val htmlTransverse = html(idAxial)
-  val htmlFlatness = html(idAxial)
-
-  private def html(id: String): Elem = { <div id={ id }>filler</div> }
-
-  private def graph(id: String, valueList: Seq[Double]): String = {
+  private def makeChart(id: String, valueList: Seq[Double]): C3ChartHistory = {
 
     val currentDateIndex = dateList.indexWhere(d => extendedData.output.dataDate.get.getTime == d.getTime)
     val minDateTag = dateListFormatted.head
     val maxDateTag = dateListFormatted.last
-    def javascript = {
-      """
 
-        var """ + id + """ = c3.generate({
-                data: {
-                    x: 'Date',
-                    xFormat: '%Y-%m-%dT%H:%M:%S',
-                    columns: [
-                         [ 'Date', """ + dateListFormatted.mkString(", ") + """],
-                         [ 'Value', """ + valueList.mkString(", ") + """]
-                    ],
-                    color: function (color, d) {
-                        return (d.index == """ + currentDateIndex.toString + """) ? 'orange' : color ;
-                    }
-                },
-                bindto : '#""" + id + """',
-                axis: {
-                    x: {
-                        label: 'Date',
-                        type: 'timeseries',
-                        min: '""" + minDateTag + """',
-                        max: '""" + maxDateTag + """',
-                        tick: { format: function(dt) { return formatDate(dt); } }
-                    },
-                    y: {
-                        label: 'Value',
-                        tick: {
-                            format: d3.format('.4f')
-                        }
-                    }
-                },
-                color : {
-                    pattern : [ '#6688bb' ]
-                },
-                padding: {
-                  right: 30,
-                  top: 10
-                }
-            });
-"""
-    }
+    val width = None
+    Trace.trace(width)
 
-    javascript
+    val height = Some(200)
+    Trace.trace(height)
+
+    val xAxisLabel = "Date"
+    Trace.trace(xAxisLabel)
+
+    val xDataLabel = "Date"
+    Trace.trace(xDataLabel)
+
+    val xDateList = dateList
+    Trace.trace(xDateList)
+
+    val xFormat = ".4g"
+    Trace.trace(xFormat)
+
+    val baselineSpec = None
+    Trace.trace(baselineSpec)
+
+    val yAxisLabels = Seq(id)
+    Trace.trace(yAxisLabels)
+
+    val yDataLabel = id
+    Trace.trace(yDataLabel)
+
+    val yValues = Seq(valueList)
+    Trace.trace(yValues)
+
+    val yFormat = ".5"
+    Trace.trace(yFormat)
+
+    val yColorList = Util.colorPallette(new Color(0x4477BB), new Color(0x44AAFF), yValues.size)
+    Trace.trace(yColorList)
+
+    val chart = new C3ChartHistory(
+      pmiList,
+      width,
+      height,
+      xAxisLabel, xDataLabel, xDateList, xFormat,
+      baselineSpec,
+      yAxisLabels, yDataLabel, yValues, yFormat, yColorList)
+
+    Trace.trace(chart)
+    Trace.trace(chart.html)
+    Trace.trace(chart.javascript)
+    chart
   }
+
+  val javascript = chartAxial.javascript + chartTransverse.javascript + chartFlatness.javascript
+  Trace.trace(javascript)
+
+  val htmlAxial = chartAxial.html
+  val htmlTransverse = chartTransverse.html
+  val htmlFlatness = chartFlatness.html
 
 }

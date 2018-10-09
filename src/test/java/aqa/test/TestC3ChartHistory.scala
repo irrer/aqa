@@ -61,11 +61,15 @@ class TestC3ChartHistory extends FlatSpec with Matchers {
     val yValues = yRange.map(yy => (0 until xDateList.size).map(y => (rand.nextDouble + 1) * 25346.331))
     val yFormat = ".5"
     val yColorList = Util.colorPallette(new Color(0x4477BB), new Color(0x44AAFF), yValues.size)
-    val pmiList = Seq(
+    val XpmiList = Seq(
       makePmi(2, MaintenanceCategory.firmwareUpdate),
       makePmi(9, MaintenanceCategory.setBaseline))
 
-    val chart = new C3ChartHistory(pmiList, xAxisLabel: String, xDataLabel, xDateList, xFormat, yAxisLabels, yDataLabel, yValues, yFormat, yColorList)
+    val pmiList = Seq[PMI]()
+    val baselineSpec = new C3ChartHistory.BaselineSpec(yValues.head(3), Color.green)
+
+    val chart = new C3ChartHistory(pmiList, Some(600), Some(200), xAxisLabel: String, xDataLabel, xDateList, xFormat, Some(baselineSpec), yAxisLabels, yDataLabel, yValues, yFormat, yColorList)
+    //val chart = new C3ChartHistory(pmiList, xAxisLabel: String, xDataLabel, xDateList, xFormat, None, yAxisLabels, yDataLabel, yValues, yFormat, yColorList)
 
     val sep = Seq.fill(60)("-").reduce(_ + _)
     println(sep)

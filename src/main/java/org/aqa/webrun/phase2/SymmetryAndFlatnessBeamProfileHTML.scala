@@ -127,7 +127,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
         <p> </p>
       </div>
     }
-    val javascript = "<script>\n" + graphTransverse._2 + graphAxial._2 + graphHistory.graphAll + "\n</script>\n"
+    val javascript = "<script>\n" + graphHistory.javascript + "\n</script>\n"
     (content, javascript)
   }
 
