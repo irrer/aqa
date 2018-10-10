@@ -84,7 +84,8 @@ object PMI {
     val action = for {
       inst <- PMI.query if (inst.machinePK === machinePK) && (inst.creationTime >= loTs) && (inst.creationTime <= hiTs)
     } yield (inst)
-    Db.run(action.result).sortWith((a,b) => a.creationTime.getTime < b.creationTime.getTime)
+    val list = Db.run(action.result)
+    list.sortWith((a,b) => a.creationTime.getTime < b.creationTime.getTime)
   }
 
   /**

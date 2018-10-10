@@ -30,14 +30,9 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, extendedData: Extende
   private val idTransverse = idOf(tagTransverse)
   private val idFlatness = idOf(tagFlatness)
 
-  private val chartAxial = makeChart(idAxial, history.map(h => h.symmetryAndFlatness.axialSymmetry_mm))
-  private val chartTransverse = makeChart(idTransverse, history.map(h => h.symmetryAndFlatness.transverseSymmetry_mm))
-  private val chartFlatness = makeChart(idFlatness, history.map(h => h.symmetryAndFlatness.flatness_mm))
-
-  
   // TODO pmiList is null?
   private val pmiList = PMI.getRange(extendedData.machine.machinePK.get, history.head.date, history.last.date)
-  Trace.trace(pmiList)
+  Trace.trace("pmiList: " + pmiList)
 
   private def makeChart(id: String, valueList: Seq[Double]): C3ChartHistory = {
 
@@ -94,6 +89,10 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, extendedData: Extende
     Trace.trace(chart.javascript)
     chart
   }
+
+  private val chartAxial = makeChart(idAxial, history.map(h => h.symmetryAndFlatness.axialSymmetry_mm))
+  private val chartTransverse = makeChart(idTransverse, history.map(h => h.symmetryAndFlatness.transverseSymmetry_mm))
+  private val chartFlatness = makeChart(idFlatness, history.map(h => h.symmetryAndFlatness.flatness_mm))
 
   val javascript = chartAxial.javascript + chartTransverse.javascript + chartFlatness.javascript
   Trace.trace(javascript)
