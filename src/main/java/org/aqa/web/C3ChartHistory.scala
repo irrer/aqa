@@ -6,7 +6,6 @@ import org.aqa.Util
 import org.aqa.db.PMI
 import org.aqa.db.MaintenanceCategory
 import java.awt.Color
-import edu.umro.ScalaUtil.Trace
 
 /**
  * @param pmiList: List of PMI records that fall chronologically in the displayed range
@@ -19,7 +18,7 @@ import edu.umro.ScalaUtil.Trace
  *
  * @param xValueList: List of X values
  *
- * @param xFormat
+ * @param xFormat: Formatting for x values.   Examples: .3 .4g.  Reference: http://bl.ocks.org/zanarmstrong/05c1e95bf7aa16c4768e
  *
  * @param baselineSpec: Optional baseline value.  If given, a horizontal line
  *
@@ -27,15 +26,13 @@ import edu.umro.ScalaUtil.Trace
  *
  * @param yValues
  *
- * @param yFormat
- *
- * Format: .3 .4g
+ * @param yFormat: Formatting for y values.   Examples: .3 .4g
  */
 class C3ChartHistory(
   pmiList: Seq[PMI],
   width: Option[Int],
   height: Option[Int],
-  xAxisLabel: String, xDataLabel: String, xDateList: Seq[Date], xFormat: String,
+  xLabel: String, xDateList: Seq[Date], xFormat: String,
   baselineSpec: Option[C3ChartHistory.BaselineSpec],
   yAxisLabels: Seq[String], yDataLabel: String, yValues: Seq[Seq[Double]], yFormat: String, yColorList: Seq[Color]) extends Logging {
 
@@ -62,58 +59,24 @@ class C3ChartHistory(
   private val minDate = xDateList.minBy(d => d.getTime)
   private val maxDate = xDateList.maxBy(d => d.getTime)
 
-  Trace.trace(minDate)
-  Trace.trace(maxDate)
   private val pmiDateList = dateColumn("pmiDateList", pmiList.map(pmi => pmi.creationTime))
-  Trace.trace(pmiDateList)
 
   private val allY = yValues.flatten
   private val minY = allY.min
   private val maxY = allY.max
 
-  Trace.trace
-  private val yRangeText: String = {
-    val range = maxY - minY
-    if (range == 0) ""
-    else {
-      val margin = range * 0.1
-      val lo = minY - margin
-      val hi = maxY + margin
-      "min: " + (minY - margin) + ",\n" +
-        "         max: " + (maxY + margin) + ",\n"
-    }
-  }
-  Trace.trace(yRangeText)
-
-  private val chartSizeText: String = {
-    val w = if (width.isDefined) Some("      width: " + width.get) else None
-    val h = if (height.isDefined) Some("      height: " + height.get) else None
-
-    val wh = Seq(w, h).flatten
-    if (wh.nonEmpty) {
-      "\n    size: {" + wh.mkString("\n      ", ",\n      ", "\n    },")
-    } else ""
-  }
-  Trace.trace(chartSizeText)
-
   private val pmiValue = Seq(maxY.abs, (maxY - minY).abs, minY.abs).max
-  Trace.trace(pmiValue)
 
   private val pmiValueList = column("pmiValueList", Seq.fill(pmiList.size)(pmiValue))
-  Trace.trace(pmiValueList)
   private val pmiSummaryList = textColumn(pmiList.map(pmi => pmi.summary))
-  Trace.trace(pmiSummaryList)
   private val pmiColorList = textColumn(pmiList.map(pmi => MaintenanceCategory.findMaintenanceCategoryMatch(pmi.category).Color))
-  Trace.trace(pmiColorList)
   private val pmiCategoryList = textColumn(pmiList.map(pmi => pmi.category))
-  Trace.trace(pmiCategoryList)
 
   val html = { <div id={ idTag }>filler</div> }
-  Trace.trace(html)
 
   private val yLabels = {
-    val yOnly = yAxisLabels.map(y => "'" + y + "' : '" + xAxisLabel + "',")
-    val baselineLabel = if (baselineSpec.isEmpty) Seq[String]() else Seq("'Baseline' : '" + xAxisLabel + "',")
+    val yOnly = yAxisLabels.map(y => "'" + y + "' : '" + xLabel + "',")
+    val baselineLabel = if (baselineSpec.isEmpty) Seq[String]() else Seq("'Baseline' : '" + xLabel + "',")
     (yOnly ++ baselineLabel).mkString("\n        ")
   }
 
@@ -125,7 +88,7 @@ class C3ChartHistory(
 
   val javascript = {
     """
-var """ + idTag + """ = c3.generate({""" + chartSizeText + """
+var """ + idTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) + """
     tooltip: {
       format: {
         value: function (value, ratio, id, index) {
@@ -150,7 +113,7 @@ var """ + idTag + """ = c3.generate({""" + chartSizeText + """
         },
         xFormat: standardDateFormat,
         columns: [
-          """ + dateColumn(xAxisLabel, xDateList) + """,
+          """ + dateColumn(xLabel, xDateList) + """,
           """ + yText + """,
           """ + pmiDateList + """,
           """ + pmiValueList + """
@@ -182,7 +145,7 @@ var """ + idTag + """ = c3.generate({""" + chartSizeText + """
          tick: { format: function(dt) { return [ formatDate(dt) , formatTime(dt) ]; } }
        },
        y: {
-         """ + yRangeText + """         label: 'Y Data Label'
+         """ + C3Chart.rangeText(minY, maxY) + """         label: '""" + yDataLabel + """'
        }
     },
     bar: {

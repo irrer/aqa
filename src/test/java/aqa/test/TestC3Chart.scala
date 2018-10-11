@@ -9,6 +9,7 @@ import edu.umro.util.Utility
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.web.C3Chart
+import java.awt.Color
 
 /**
  * Test the Config.
@@ -17,7 +18,7 @@ import org.aqa.web.C3Chart
 
 class TestC3Chart extends FlatSpec with Matchers {
 
-  "C3Chart" should "makeNiceCharch" in {
+  "C3Chart" should "makeNiceChart" in {
 
     val xAxisLabel = "X Axis Label"
     val xDataLabel = "X Data Label"
@@ -28,8 +29,9 @@ class TestC3Chart extends FlatSpec with Matchers {
     val yDataLabel = "Y Data Label"
     val yValues = yRange.map(yy => yRange.map(y => ((y * 71 * yy) % 13) * 6786.3))
     val yFormat = ".g4"
+    val yColorList = Util.colorPallette(new Color(0x4477BB), new Color(0x44AAFF), yValues.size)
 
-    val chart = new C3Chart(xAxisLabel: String, xDataLabel, xValueList, xFormat, yAxisLabels, yDataLabel, yValues, yFormat)
+    val chart = new C3Chart(None, None, xAxisLabel: String, xDataLabel, xValueList, xFormat, yAxisLabels, yDataLabel, yValues, yFormat, yColorList)
 
     println(chart.javascript)
 

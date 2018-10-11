@@ -29,105 +29,61 @@ import edu.umro.ImageUtil.ImageText
 import java.io.File
 import org.aqa.web.WebServer
 import org.aqa.web.WebUtil
+import org.aqa.web.C3Chart
 
 /**
  * Analyze DICOM files for symmetry and flatness.
  */
 object SymmetryAndFlatnessBeamProfileHTML extends Logging {
 
-  private def graph(name: String, valueList: Seq[Double], xList: Seq[Double]): (Elem, String) = {
-
-    Trace.trace(name + "  valueList.size: " + valueList.size)
-    Trace.trace(name + "  xList.size: " + xList.size)
-    val id = "Chart_" + WebUtil.stringToUrlSafe(name)
-
-    val html = {
-      <div>
-        <div class="col-md-10" align="middle">
-          <div class="row">
-            <h3>{ name }</h3>
-            <div id={ id }>filler</div>
-          </div>
-        </div>
-      </div>
-    }
-
-    val javascript = {
-      """      
-      var """ + id + """ = c3.generate({
-                data: {
-                    x: 'Position mm',
-                    columns: [
-                         [ 'Position mm', """ + xList.mkString(", ") + """],
-                         [ 'CU', """ + valueList.mkString(", ") + """ ]
-                    ]
-                },
-                point: { // show point on hover
-                    r: 0,
-                    focus : {
-                        expand: {
-                            r:4
-                        }
-                    }
-                },
-                bindto : '#""" + id + """',
-                axis: {
-                    x: {
-                        label: 'Position mm',
-                        tick: {
-                            format: d3.format('.3g')
-                        }
-                    },
-                    y: {
-                        label: 'CU',
-                        tick: {
-                            format: d3.format('.4g')
-                        }
-                    }
-                },
-                color : {
-                    pattern : [ '#6688bb' ]
-                }
-            });
-"""
-    }
-
-    (html, javascript)
-  }
-
   private def makeContent(subDir: File, extendedData: ExtendedData, result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult, status: ProcedureStatus.Value, runReq: RunReq): (Elem, String) = {
-    val graphTransverse = graph("Transverse " + result.beamName, result.transverseProfile, result.transverse_mm)
-    val graphAxial = graph("Axial " + result.beamName, result.axialProfile, result.axial_mm)
+    //    val graphTransverse = graph("Transverse " + result.beamName, result.transverseProfile, result.transverse_mm)
+    //    val graphAxial = graph("Axial " + result.beamName, result.axialProfile, result.axial_mm)
+
+    val graphTransverse = new C3Chart(None, None,
+      "Position mm", "Position mm", result.transverse_mm, ".4g",
+      Seq("Level"), "Level", Seq(result.transverseProfile), ".4g", Seq(new Color(0x4477BB)))
+
+    val graphAxial = new C3Chart(None, None,
+      "Position mm", "Position mm", result.axial_mm, ".4g",
+      Seq("Level"), "Level", Seq(result.axialProfile), ".4g", Seq(new Color(0x4477BB)))
+
     val graphHistory = new SymmetryAndFlatnessBeamHistoryHTML(result.beamName, extendedData)
     val content = {
       <div class="row">
-        <div class="col-md-6 col-md-offset-1">
-          { <img class="img-responsive" src={ WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.beamName)) }/> }
+        <div class="row">
+          <div class="col-md-5 col-md-offset-1">
+            { <img class="img-responsive" src={ WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.beamName)) }/> }
+          </div>
+          <div class="col-md-5">
+            <div class="row">
+              <h3>Transverse</h3>{ graphTransverse.html }
+            </div>
+            <div class="row">
+              <h3>Axial</h3>{ graphAxial.html }
+            </div>
+          </div>
         </div>
-        <div class="col-md-5">
-          <div class="row">
-            { graphTransverse._1 }
-          </div>
-          <div class="row">
-            { graphAxial._1 }
-          </div>
-          <div class="row">
-            <h2>Transverse Symmetry History</h2>
-            { graphHistory.htmlTransverse }
-          </div>
-          <div class="row">
-            <h2>Axial Symmetry History</h2>
-            { graphHistory.htmlAxial }
-          </div>
-          <div class="row">
-            <h2>Flatness History</h2>
-            { graphHistory.htmlFlatness }
+        <div class="row">
+          <div class="col-md-10 col-md-offset-1">
+            <div class="row">
+              <h2>Transverse Symmetry History</h2>
+              { graphHistory.htmlTransverse }
+            </div>
+            <div class="row">
+              <h2>Axial Symmetry History</h2>
+              { graphHistory.htmlAxial }
+            </div>
+            <div class="row">
+              <h2>Flatness History</h2>
+              { graphHistory.htmlFlatness }
+            </div>
           </div>
         </div>
         <p> </p>
       </div>
     }
-    val javascript = "<script>\n" + graphHistory.javascript + "\n</script>\n"
+    val javascript = "<script>\n" + graphTransverse.javascript + graphAxial.javascript + graphHistory.javascript + "\n</script>\n"
     (content, javascript)
   }
 

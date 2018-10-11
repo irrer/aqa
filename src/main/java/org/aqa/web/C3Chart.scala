@@ -1,6 +1,7 @@
 package org.aqa.web
 
 import org.aqa.Logging
+import java.awt.Color
 
 object C3Chart {
 
@@ -17,14 +18,48 @@ object C3Chart {
   val scriptPrefix = """\n<script>\n"""
   val scriptSuffix = """\n</script>\n"""
 
+  /**
+   * Make the C3 chart snippet to set the chart width and height if specified.
+   */
+  def chartSizeText(width: Option[Int], height: Option[Int]): String = {
+    val w = if (width.isDefined) Some("      width: " + width.get) else None
+    val h = if (height.isDefined) Some("      height: " + height.get) else None
+
+    val wh = Seq(w, h).flatten
+    if (wh.nonEmpty) {
+      "\n    size: {" + wh.mkString("\n      ", ",\n      ", "\n    },")
+    } else ""
+  }
+
+  /**
+   * Make the C3 chart snippet to set the min and max bounds.
+   */
+  def rangeText(min: Double, max: Double): String = {
+    val range = max - min
+    if (range == 0) ""
+    else {
+      val margin = range * 0.05 // put 5 % space on top and bottom
+      val lo = min - margin
+      val hi = max + margin
+      "min: " + (min - margin) + ",\n" +
+        "         max: " + (max + margin) + ",\n"
+    }
+  }
+
 }
 
 /**
+ * Make a C3 chart.
+ *
+ * @param width: Optional width of chart in pixels.
+ *
+ * @param height: Optional height of chart in pixels.
+ *
  * @param xAxisLabel: Text label for X axis
  *
  * @param xValueList: List of X values
  *
- * @param xFormat
+ * @param xFormat: Formatting for x values.   Examples: .3 .4g.  Reference: http://bl.ocks.org/zanarmstrong/05c1e95bf7aa16c4768e
  *
  * @param yAxisLabels
  *
@@ -34,9 +69,17 @@ object C3Chart {
  *
  * Format: .3g .4g
  */
-class C3Chart(xAxisLabel: String, xDataLabel: String, xValueList: Seq[Double], xFormat: String, yAxisLabels: Seq[String], yDataLabel: String, yValues: Seq[Seq[Double]], yFormat: String) extends Logging {
+class C3Chart(
+  width: Option[Int],
+  height: Option[Int],
+  xAxisLabel: String, xDataLabel: String, xValueList: Seq[Double], xFormat: String,
+  yAxisLabels: Seq[String], yDataLabel: String, yValues: Seq[Seq[Double]], yFormat: String, yColorList: Seq[Color]) extends Logging {
 
   if (yAxisLabels.size != yValues.size) throw new RuntimeException("Must be same number of Y labels as Y data sets.  yAxisLabels.size: " + yAxisLabels.size + "    yValues.size: " + yValues.size)
+
+  private val allY = yValues.flatten
+  private val minY = allY.min
+  private val maxY = allY.max
 
   val idTag = "ChartId_" + C3Chart.getId
 
@@ -48,7 +91,7 @@ class C3Chart(xAxisLabel: String, xDataLabel: String, xValueList: Seq[Double], x
 
   val javascript = {
     """      
-  var """ + idTag + """ = c3.generate({
+var """ + idTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) + """
     data: {
         x: '""" + xAxisLabel + """',
         columns: [
@@ -73,6 +116,7 @@ class C3Chart(xAxisLabel: String, xDataLabel: String, xValueList: Seq[Double], x
             }
         },
         y: {
+            """ + C3Chart.rangeText(minY, maxY) + """
             label: '""" + yDataLabel + """',
             tick: {
                 format: d3.format('""" + yFormat + """')
