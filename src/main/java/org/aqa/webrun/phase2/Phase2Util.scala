@@ -292,6 +292,17 @@ object Phase2Util extends Logging {
     }
   }
 
+  def angleDescription(al: AttributeList): String = {
+    try {
+      val g = al.get(TagFromName.GantryAngle).getDoubleValues.head
+      val c = al.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head
+
+      "G" + Util.angleRoundedTo90(g) + " C" + Util.angleRoundedTo90(c)
+    } catch {
+      case t: Throwable => ""
+    }
+  }
+
   def dicomViewBaseName(beamName: String, al: AttributeList): String = {
     (beamName + "_" + jawDescription(al)).replaceAll("[^a-zA-Z0-9]", "_").replaceAll("__*", "_").replaceAll("_$", "").replaceAll("^_", "")
   }

@@ -35,8 +35,8 @@ import SymmetryAndFlatnessAnalysis._
  */
 object SymmetryAndFlatnessMainHTML extends Logging {
 
-  private def titleDicomMetadata = "Click to view DICOM metadata"
   private def titleDetails = "Click to view graphs and other details"
+  private def titleImage = "Click to view DICOM metadata"
   private def titleAxialSymmetry = "Axial symmetry from top to bottom: (top-bottom)/bottom.  Max percent limit is " + Config.SymmetryPercentLimit
   private def titleTransverseSymmetry = "Transverse symmetry from right to left: (right-left)/left.  Max percent limit is " + Config.SymmetryPercentLimit
   private def titleFlatness = "Flatness: (max-min)/(max+min).  Max percent limit is " + Config.FlatnessPercentLimit
@@ -46,13 +46,11 @@ object SymmetryAndFlatnessMainHTML extends Logging {
   private def tableHead: Elem = {
     <thead>
       <tr>
-        <th style="text-align: center;" title={ titleDicomMetadata }>
-          Beam
-          <br/>
-          Name
-        </th>
         <th style="text-align: center;" title={ titleDetails }>
-          Show Graphs
+          Beam
+        </th>
+        <th style="text-align: center;" title={ titleImage }>
+          Image
         </th>
         <th style="text-align: center;">
           Measurement
@@ -80,21 +78,24 @@ object SymmetryAndFlatnessMainHTML extends Logging {
     (pct * factor).round.toLong.toDouble / factor
   }
 
-  private def dicomRefColumn(beamName: String, extendedData: ExtendedData, runReq: RunReq): Elem = {
-    val dicomFile = runReq.rtimageMap(beamName)
-    val href = Phase2Util.dicomViewHref(dicomFile.attributeList.get, extendedData, runReq)
-    <td style="vertical-align: middle;" title={ titleDicomMetadata } rowspan="3"><a href={ href }>{ beamName }</a></td>
-  }
-
   private def detailsColumn(subDir: File, beamName: String, extendedData: ExtendedData, runReq: RunReq): Elem = {
 
-    val imgUrl = WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, beamName))
+    val al = {
+      if (beamName.equals(Config.FloodFieldBeamName)) runReq.flood.attributeList.get
+      else runReq.derivedMap(beamName).dicomFile.attributeList.get
+    }
+
     val detailUrl = WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, beamName))
+    <td style="vertical-align: middle;" title={ titleDetails } rowspan="3"><a href={ detailUrl }>{ beamName }<br/>{ Phase2Util.jawDescription(al) }<br/>{ Phase2Util.angleDescription(al) }</a></td>
+  }
 
+  private def imageColumn(subDir: File, beamName: String, extendedData: ExtendedData, runReq: RunReq): Elem = {
+    val dicomFile = runReq.rtimageMap(beamName)
+    val dicomHref = Phase2Util.dicomViewHref(dicomFile.attributeList.get, extendedData, runReq)
+    val imgUrl = WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, beamName))
     val imgSmall = { <img src={ imgUrl } width="100"/> }
-    val ref = { <a href={ detailUrl }>{ imgSmall }</a> }
-
-    <td style="text-align: center;vertical-align: middle;" title={ titleDetails } rowspan="3">{ ref }</td>
+    val ref = { <a href={ dicomHref }>{ imgSmall }</a> }
+    <td style="text-align: center;vertical-align: middle;" title={ titleImage } rowspan="3">{ ref }</td>
   }
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -109,6 +110,10 @@ object SymmetryAndFlatnessMainHTML extends Logging {
     <td style="text-align: center;">
       { Config.FlatnessPercentLimit.formatted("%5.2f") }
     </td>
+  }
+
+  private def classOfStatus(status: ProcedureStatus.Value): String = {
+    if (status.toString == ProcedureStatus.pass.toString) "normal" else "danger"
   }
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -126,10 +131,8 @@ object SymmetryAndFlatnessMainHTML extends Logging {
   }
 
   private def axialSymmetryBaselinePercentColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
-    val img = if (result.axialSymmetryStatus == ProcedureStatus.pass) passImg else failImg
     val pct = 100 * ((result.axialSymmetry - result.axialSymmetryBaseline) / result.axialSymmetryBaseline)
-    <td style="text-align: center;">
-      { img }
+    <td style="text-align: center;" class={ classOfStatus(result.axialSymmetryStatus) }>
       { pctRounded(pct).formatted("%5.2f") }
     </td>
   }
@@ -149,10 +152,8 @@ object SymmetryAndFlatnessMainHTML extends Logging {
   }
 
   private def transverseSymmetryBaselinePercentColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
-    val img = if (result.transverseSymmetryStatus == ProcedureStatus.pass) passImg else failImg
     val pct = 100 * ((result.transverseSymmetry - result.transverseSymmetryBaseline) / result.transverseSymmetryBaseline)
-    <td style="text-align: center;">
-      { img }
+    <td style="text-align: center;" class={ classOfStatus(result.transverseSymmetryStatus) }>
       { pctRounded(pct).formatted("%5.2f") }
     </td>
   }
@@ -172,10 +173,8 @@ object SymmetryAndFlatnessMainHTML extends Logging {
   }
 
   private def flatnessBaselinePercentColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
-    val img = if (result.flatnessStatus == ProcedureStatus.pass) passImg else failImg
     val pct = 100 * ((result.flatness - result.flatnessBaseline) / result.flatnessBaseline)
-    <td style="text-align: center;">
-      { img }
+    <td style="text-align: center;" class={ classOfStatus(result.flatnessStatus) }>
       { pctRounded(pct).formatted("%5.2f") }
     </td>
   }
@@ -187,8 +186,8 @@ object SymmetryAndFlatnessMainHTML extends Logging {
     Seq(
       {
         <tr align="center">
-          { dicomRefColumn(result.beamName, extendedData, runReq) }
           { detailsColumn(subDir, result.beamName, extendedData, runReq) }
+          { imageColumn(subDir, result.beamName, extendedData, runReq) }
           <td style="text-align: center;">Axial Symmetry</td>
           { axialSymmetryBaselineColumn(result) }
           { axialSymmetryBaselinePercentColumn(result) }
