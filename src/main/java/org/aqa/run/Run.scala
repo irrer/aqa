@@ -119,6 +119,7 @@ object Run extends Logging {
           Input.delete(output.inputPK)
           Utility.deleteFileTree(input.get.dir)
         }
+        logger.info("Removed redundant output " + output)
       } catch {
         case t: Throwable =>
           logger.warn("removeRedundantOutput.del Unexpected error cleaning up redundant output.  outputPK: " + outputPK + " : " + t.getMessage)
@@ -127,7 +128,7 @@ object Run extends Logging {
     }
     try {
       val output = Output.get(outputPK.get).get
-      val redundant = Output.listRedundant(Output.redundantWith(output) :+ output)
+      val redundant = Output.redundantWith(output)
       redundant.map(ro => del(ro))
     } catch {
       case t: Throwable =>
@@ -171,7 +172,7 @@ object Run extends Logging {
                 logger.warn("Unexpected error running procedure.  Output: " + activeProcess.output + " : " + t.getMessage)
                 postProcess(activeProcess)
             }
-            removeRedundantOutput(activeProcess.output.outputPK)
+            //removeRedundantOutput(activeProcess.output.outputPK)
           }
       }
     }
@@ -469,6 +470,11 @@ object Run extends Logging {
         dataValidity = DataValidity.valid.toString)
       tempOutput.insert
     }
+
+    /*
+     * Remove previous versions of this output so that there will be no conflict.
+     */
+    removeRedundantOutput(output.outputPK)
     (input, output)
   }
 

@@ -232,21 +232,14 @@ object Output extends Logging {
             (o.procedurePK === output.procedurePK) &&
             (o.outputPK =!= output.outputPK) &&
             (o.dataDate.isDefined && (o.dataDate === dataDate)))
-        sortByAnalysisDate(Db.run(q.result))
+        sortByStartDate(Db.run(q.result))
       }
       case _ => Seq[Output]()
     }
   }
 
-  private def sortByAnalysisDate(outputList: Seq[Output]): Seq[Output] = {
-    def cmpr(a: Output, b: Output): Boolean = {
-      (a.analysisDate, b.analysisDate) match {
-        case (Some(aa), Some(bb)) => aa.getTime < bb.getTime
-        case (Some(aa), _) => false
-        case (_, Some(bb)) => true
-        case _ => true
-      }
-    }
+  private def sortByStartDate(outputList: Seq[Output]): Seq[Output] = {
+    def cmpr(a: Output, b: Output): Boolean = a.startDate.getTime < b.startDate.getTime
     outputList.sortWith(cmpr)
   }
 
@@ -264,9 +257,12 @@ object Output extends Logging {
    *
    * Two outputs are redundant if they are the created by the same procedure with the same machine
    * with data that has the same acquisition date.
+   *
+   * @deprecate
    */
-  def listRedundant(outputListUnsorted: Seq[Output]): Seq[Output] = {
-    val outputList = sortByAnalysisDate(outputListUnsorted)
+  @deprecated("Not used.  This is too kind and gentle.  Remove old outputs regardless of crash status, including fail, crash, etc.. ")
+  private def listRedundant(outputListUnsorted: Seq[Output]): Seq[Output] = {
+    val outputList = sortByStartDate(outputListUnsorted)
 
     val goodStatus = Seq(ProcedureStatus.done, ProcedureStatus.pass, ProcedureStatus.fail).map(s => s.toString)
     def isGood(output: Output): Boolean = goodStatus.map(g => g.equals(output.status)).contains(true)

@@ -10,6 +10,7 @@ import org.aqa.web.C3ChartHistory
 import java.awt.Color
 import org.aqa.db.PMI
 import org.aqa.db.Baseline
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Analyze DICOM files for symmetry and flatness.
@@ -20,6 +21,10 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, extendedData: Extende
   private val dateList = history.map(h => h.date)
   private val dateListFormatted = dateList.map(d => Util.standardDateFormat.format(d))
 
+  // index of the entry being charted.
+  private val yIndex = history.indexWhere(h => h.symmetryAndFlatness.outputPK == extendedData.output.outputPK.get)
+
+  // list of all PMIs in this time interval
   private val pmiList = PMI.getRange(extendedData.machine.machinePK.get, history.head.date, history.last.date)
 
   private def getBaseline(dataName: String): Option[C3ChartHistory.BaselineSpec] = {
@@ -44,23 +49,23 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, extendedData: Extende
     val yAxisLabels = Seq(id)
     val yDataLabel = id
     val yValues = Seq(valueList)
-    val yFormat = ".5"
+    val yFormat = ".4g"
     val yColorList = Util.colorPallette(new Color(0x4477BB), new Color(0x44AAFF), yValues.size)
 
     val chart = new C3ChartHistory(
       pmiList,
       width,
       height,
-      xLabel, xDateList, xFormat,
+      xLabel, xDateList,
       baselineSpec,
-      yAxisLabels, yDataLabel, yValues, yFormat, yColorList)
+      yAxisLabels, yDataLabel, yValues, yIndex, yFormat, yColorList)
 
     chart
   }
 
   private val chartAxial = makeChart("Axial Symmetry", getBaseline(SymmetryAndFlatnessAnalysis.axialSymmetryName), history.map(h => h.symmetryAndFlatness.axialSymmetry_mm))
   private val chartTransverse = makeChart("Transverse Symmetry", getBaseline(SymmetryAndFlatnessAnalysis.transverseSymmetryName), history.map(h => h.symmetryAndFlatness.transverseSymmetry_mm))
-  private val chartFlatness = makeChart("Flatness Symmetry", getBaseline(SymmetryAndFlatnessAnalysis.flatnessName), history.map(h => h.symmetryAndFlatness.flatness_mm))
+  private val chartFlatness = makeChart("Flatness", getBaseline(SymmetryAndFlatnessAnalysis.flatnessName), history.map(h => h.symmetryAndFlatness.flatness_mm))
 
   val javascript = chartAxial.javascript + chartTransverse.javascript + chartFlatness.javascript
 

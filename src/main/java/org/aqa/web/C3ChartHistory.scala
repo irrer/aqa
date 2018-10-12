@@ -18,23 +18,23 @@ import java.awt.Color
  *
  * @param xValueList: List of X values
  *
- * @param xFormat: Formatting for x values.   Examples: .3 .4g.  Reference: http://bl.ocks.org/zanarmstrong/05c1e95bf7aa16c4768e
- *
  * @param baselineSpec: Optional baseline value.  If given, a horizontal line
  *
- * @param yAxisLabels
+ * @param yAxisLabels: Labels for each individual Y value
  *
- * @param yValues
+ * @param yValues: Values to be charted.
  *
- * @param yFormat: Formatting for y values.   Examples: .3 .4g
+ * @param yIndex: Index of the Y values that is new.
+ *
+ * @param yFormat: Formatting for y values.   Examples: .3g .4g  Reference: http://bl.ocks.org/zanarmstrong/05c1e95bf7aa16c4768e
  */
 class C3ChartHistory(
   pmiList: Seq[PMI],
   width: Option[Int],
   height: Option[Int],
-  xLabel: String, xDateList: Seq[Date], xFormat: String,
+  xLabel: String, xDateList: Seq[Date],
   baselineSpec: Option[C3ChartHistory.BaselineSpec],
-  yAxisLabels: Seq[String], yDataLabel: String, yValues: Seq[Seq[Double]], yFormat: String, yColorList: Seq[Color]) extends Logging {
+  yAxisLabels: Seq[String], yDataLabel: String, yValues: Seq[Seq[Double]], yIndex: Int, yFormat: String, yColorList: Seq[Color]) extends Logging {
 
   if (yAxisLabels.size != yValues.size) throw new RuntimeException("Must be same number of Y labels as Y data sets.  yAxisLabels.size: " + yAxisLabels.size + "    yValues.size: " + yValues.size)
 
@@ -54,20 +54,19 @@ class C3ChartHistory(
   }
 
   private val baselineColor = if (baselineSpec.isDefined) Seq(baselineSpec.get.color) else Seq[Color]()
-  private val yColorNameList = textColumn((yColorList ++ baselineColor).map(c => (c.getRGB & 0xffffff).formatted("#%06x")))
+  private val pmiColor = if (pmiList.isEmpty) Seq[Color]() else Seq(Color.white)
+  private val yColorNameList = textColumn((yColorList ++ baselineColor ++ pmiColor).map(c => (c.getRGB & 0xffffff).formatted("#%06x")))
 
   private val minDate = xDateList.minBy(d => d.getTime)
   private val maxDate = xDateList.maxBy(d => d.getTime)
 
-  private val pmiDateList = dateColumn("pmiDateList", pmiList.map(pmi => pmi.creationTime))
+  private val pmiDateList = dateColumn("pmiDateList", pmiList.map(pmi => Seq(pmi.creationTime, pmi.creationTime)).flatten)
 
   private val allY = yValues.flatten
   private val minY = allY.min
   private val maxY = allY.max
 
-  private val pmiValue = Seq(maxY.abs, (maxY - minY).abs, minY.abs).max
-
-  private val pmiValueList = column("pmiValueList", Seq.fill(pmiList.size)(pmiValue))
+  private val pmiValueList = column("PMI", Seq.fill(pmiList.size)(Seq(minY, maxY)).flatten)
   private val pmiSummaryList = textColumn(pmiList.map(pmi => pmi.summary))
   private val pmiColorList = textColumn(pmiList.map(pmi => MaintenanceCategory.findMaintenanceCategoryMatch(pmi.category).Color))
   private val pmiCategoryList = textColumn(pmiList.map(pmi => pmi.category))
@@ -93,12 +92,12 @@ var """ + idTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) 
       format: {
         value: function (value, ratio, id, index) {
           var pmiSummaryList = """ + pmiSummaryList + """;
-          if (id === 'pmiValueList') return pmiSummaryList[index];
+          if (id === 'PMI') return pmiSummaryList[index/2];
           return d3.format('""" + yFormat + """')(value);
           },
           name: function (name, ratio, id, index) {
-            var pmiCategoryList = """ + pmiCategoryList + """;   // make
-              if (id === 'pmiValueList') return pmiCategoryList[index];
+            var pmiCategoryList = """ + pmiCategoryList + """;
+              if (id === 'PMI') return pmiCategoryList[index/2];
               return id;
               },
           title: function (value) { 
@@ -109,7 +108,7 @@ var """ + idTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) 
     data: {
       xs: {
         """ + yLabels + """
-        'pmiValueList': 'pmiDateList'
+        'PMI': 'pmiDateList'
         },
         xFormat: standardDateFormat,
         columns: [
@@ -120,15 +119,18 @@ var """ + idTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) 
         ],
         types: {
           """ + yAxisLabels.map(label => "'" + label + "' : 'line'").mkString(",\n          ") + """,
-          'pmiValueList': 'bar'
+          'PMI': 'bar'
         },
         color: function (color, d) {
           var pmiColorList = """ + pmiColorList + """;
-          return d.id === 'pmiValueList' ? pmiColorList[d.index % pmiColorList.length] : color;
+          if (d.id === 'PMI') return pmiColorList[d.index % pmiColorList.length];
+          if (d.id === 'Baseline') return color;
+          if (d.index == """ + yIndex + """) return 'orange';
+          return color;
         }
     },
     point: {
-        r: 0,
+        r: 2,
         focus : {
             expand: {
                 r:4
@@ -145,7 +147,10 @@ var """ + idTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) 
          tick: { format: function(dt) { return [ formatDate(dt) , formatTime(dt) ]; } }
        },
        y: {
-         """ + C3Chart.rangeText(minY, maxY) + """         label: '""" + yDataLabel + """'
+         """ + C3Chart.rangeText(minY, maxY) + """         label: '""" + yDataLabel + """',
+         tick: {
+           format: d3.format('""" + yFormat + """')
+         }
        }
     },
     bar: {

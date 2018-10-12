@@ -30,6 +30,7 @@ import java.io.File
 import org.aqa.web.WebServer
 import org.aqa.web.WebUtil
 import org.aqa.web.C3Chart
+import java.text.Format
 
 /**
  * Analyze DICOM files for symmetry and flatness.
@@ -47,6 +48,10 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
     val graphAxial = new C3Chart(None, None,
       "Position mm", "Position mm", result.axial_mm, ".4g",
       Seq("Level"), "Level", Seq(result.axialProfile), ".4g", Seq(new Color(0x4477BB)))
+
+    def fmt(value: Double): Elem = {
+      <small title='Value calculated by this analysis.  Shows up as orange dot in chart.'><font color='orange'> { value.formatted("%9.6f") } </font></small>
+    }
 
     val graphHistory = new SymmetryAndFlatnessBeamHistoryHTML(result.beamName, extendedData)
     val content = {
@@ -67,15 +72,15 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
         <div class="row">
           <div class="col-md-10 col-md-offset-1">
             <div class="row">
-              <h2>Transverse Symmetry History</h2>
+              <h2>Transverse Symmetry History { fmt(result.transverseSymmetry) }</h2>
               { graphHistory.htmlTransverse }
             </div>
             <div class="row">
-              <h2>Axial Symmetry History</h2>
+              <h2>Axial Symmetry History { fmt(result.axialSymmetry) }</h2>
               { graphHistory.htmlAxial }
             </div>
             <div class="row">
-              <h2>Flatness History</h2>
+              <h2>Flatness History { fmt(result.flatness) }</h2>
               { graphHistory.htmlFlatness }
             </div>
           </div>
