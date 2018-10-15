@@ -4,10 +4,15 @@ import org.aqa.Logging
 import org.aqa.db.CenterDose
 import java.text.SimpleDateFormat
 import org.aqa.Util
+import org.aqa.web.C3ChartHistory
+import org.aqa.db.PMI
+import java.awt.Color
 
-class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Seq[CenterDose.CenterDoseHistory], units: String) extends Logging {
+class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Seq[CenterDose.CenterDoseHistory], units: String, extendedData: ExtendedData) extends Logging {
 
-  private val dateFormat = new SimpleDateFormat("MMM dd")
+  private val allDates = (resultList ++ history).map(cd => cd.date)
+
+  private val pmiList = PMI.getRange(extendedData.machine.machinePK.get, allDates.min, allDates.max)
 
   /* List of SOPInstanceUID's for data set that was just calculated. */
   private val sopSet = resultList.map(cd => cd.SOPInstanceUID).toSet
@@ -21,87 +26,24 @@ class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Se
     "HistoryChart_" + index + "_" + resultList(index).beamName.replaceAll("[^a-zA-Z0-9]", "_")
   }
 
-  private val allDates = (resultList ++ history).map(cd => cd.date)
-  val minDateText = Util.standardDateFormat.format(allDates.min)
-  val maxDateText = Util.standardDateFormat.format(allDates.max)
-
-  private def chart(beamName: String, beamRef: String) = {
+  private def chartOfBeam(beamName: String): C3ChartHistory = {
     val sortedHistory = sortedHistoryForBeam(beamName)
-    val dateList = sortedHistory.map(h => "'" + Util.standardDateFormat.format(h.date) + "'").mkString("[ 'Date', ", ", ", " ]")
-    val doseList = sortedHistory.map(h => h.dose.toString).mkString("[ '" + units + "', ", ", ", " ]")
-    val beamRefTag = "@@beamRef@@"
-    val dataIndexTag = "@@dataIndex@@"
-    val minDateTag = "@@minDate@@"
-    val maxDateTag = "@@maxDate@@"
-    val dataIndex: Int = {
-      //val centerDoseUID = resultList.find(cd => cd.beamName.equals(beamName)).get.SOPInstanceUID
-      sortedHistory.indexWhere(sh => sopSet.contains(sh.SOPInstanceUID))
-    }
+    val index = sortedHistory.indexWhere(sh => sopSet.contains(sh.SOPInstanceUID))
 
-    val template = """
-
-        var """ + beamRefTag + """ = c3.generate({
-                data: {
-                    x: 'Date',
-                    xFormat: '%Y-%m-%dT%H:%M:%S',
-                    columns: [
-                         """ + dateList + """,
-                         """ + doseList + """
-                    ],
-                    color: function (color, d) {
-                        return (d.index == """ + dataIndexTag + """) ? 'orange' : color ;
-                    }
-                },
-                bindto : '#""" + beamRefTag + """',
-                axis: {
-                    x: {
-                        label: 'Date',
-                        type: 'timeseries',
-                        min: '""" + minDateTag + """',
-                        max: '""" + maxDateTag + """',
-                        tick: { format: function(dt) { return formatDate(dt); } }
-                    },
-                    y: {
-                        label: '" + units + "',
-                        tick: {
-                            format: d3.format('.4f')
-                        }
-                    }
-                },
-                color : {
-                    pattern : [ '#6688bb' ]
-                },
-                padding: {
-                  right: 30,
-                  top: 10
-                }
-            });
-"""
-
-    val allTags = Seq(
-      (beamRefTag, beamRef),
-      (dataIndexTag, dataIndex.toString),
-      (minDateTag, minDateText),
-      (maxDateTag, maxDateText))
-
-    val chartText = allTags.foldLeft(template)((tmpl, tc) => tmpl.replace(tc._1, tc._2))
-    chartText
+    new C3ChartHistory(
+      pmiList: Seq[PMI],
+      None, // width
+      None, // height
+      "Date", sortedHistory.map(h => h.date),
+      None, // BaselineSpec
+      Seq(units), units, Seq(sortedHistory.map(h => h.dose)), index, ".g5", Seq(new Color(102, 136, 187)))
   }
-
-  private val beamRefMap = resultList.indices.map(i => (resultList(i).beamName, beamRefOf(i))).toMap
 
   def refOfBeam(beamName: String) = beamRefMap(beamName)
 
   private val scriptPrefix = {
     """
 <script>
-
-//        var monthList = [ 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ];
-//
-//        function formatDate(dt) { 
-//            return (dt.getYear() + 1900) + ' ' + monthList[dt.getMonth()] + ' ' + dt.getDate();
-//        };
-
 """
   }
 
@@ -111,5 +53,10 @@ class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Se
 """
   }
 
-  val chartScript = resultList.zipWithIndex.map(cdi => chart(cdi._1.beamName, beamRefOf(cdi._2))).mkString(scriptPrefix, "\n", scriptSuffix)
+  private val chartList = resultList.map(cd => chartOfBeam(cd.beamName))
+
+  private val beamRefMap = resultList.indices.map(i => (resultList(i).beamName, chartList(i).html)).toMap
+
+  val chartScript = chartList.map(c => c.javascript).mkString(scriptPrefix, "\n", scriptSuffix)
+
 }
