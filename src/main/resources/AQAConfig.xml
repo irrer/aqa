@@ -80,11 +80,11 @@ Note that when building a package for release, the Maven build process uses the 
         <MaintenanceCategory Name='Maintenance'            Color='#aaaaaa'   >General Maintenance</MaintenanceCategory>
         <MaintenanceCategory Name='PMI'                    Color='#80FF9F'   >Preventive Maintenance Inspection</MaintenanceCategory>
         <MaintenanceCategory Name='Set Baseline'           Color='lightgreen'>New baseline values set</MaintenanceCategory>
-        <MaintenanceCategory Name='Firmware Update'        Color='yellow'    >New treatment machine firmware</MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Jaws'        Color='orange'    >Maintenance performed on jaws</MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Collimator'  Color='orange'    >Maintenance performed on Collimator</MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Gantry'      Color='orange'    >Maintenance performed on Gantry</MaintenanceCategory>
-        <MaintenanceCategory Name='Electrical'             Color='orange'    >Maintenance performed due to electrical issue(s)</MaintenanceCategory>
+        <MaintenanceCategory Name='Firmware Update'        Color='#33aa33'   >New treatment machine firmware</MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Jaws'        Color='#aa3322'   >Maintenance performed on jaws</MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Collimator'  Color='#aa3322'   >Maintenance performed on Collimator</MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Gantry'      Color='#aa3322'   >Maintenance performed on Gantry</MaintenanceCategory>
+        <MaintenanceCategory Name='Electrical'             Color='#aa3322'   >Maintenance performed due to electrical issue(s)</MaintenanceCategory>
     </MaintenanceCategoryList>
 
     <!-- List of beam names used by Phase2 MetadataCheck -->

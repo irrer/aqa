@@ -91,7 +91,7 @@ object CenterDoseHTML extends Logging {
 
     def imageToHtml(centerDose: CenterDose): Elem = {
       <div class="row">
-        <h3>{ centerDose.beamName + " : " }<font color='orange'>{ centerDose.dose.formatted("%6.4f") }</font>{ " HU" }</h3>
+        <h3>{ centerDose.beamName + " : " }<font color='orange'>{ centerDose.dose.formatted("%6.4f") }</font> { units }</h3>
         { chart.refOfBeam(centerDose.beamName) }
       </div>
     }
