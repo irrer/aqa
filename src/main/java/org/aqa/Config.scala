@@ -333,25 +333,25 @@ object Config extends Logging {
   }
 
   private def getMetadataCheckBeamNameList = {
-    val list = (document \ "MetadataCheckBeamNameList" \ "BeamName").map(n => n.head.text.toString).toList
+    val list = (document \ "MetadataCheckBeamNameList" \ "BeamName").map(n => n.head.text.toString.toUpperCase).toList
     logText("MetadataCheckBeamNameList", list.mkString("\n        ", "\n        ", "\n"))
     list
   }
 
   private def getCenterDoseBeamNameList = {
-    val list = (document \ "CenterDoseBeamNameList" \ "BeamName").map(n => n.head.text.toString).toList
+    val list = (document \ "CenterDoseBeamNameList" \ "BeamName").map(n => n.head.text.toString.toUpperCase).toList
     logText("CenterDoseBeamNameList", list.mkString("\n        ", "\n        ", "\n"))
     list
   }
 
   private def getWedgeBeamList = {
-    val list = (document \ "WedgeBeamList" \ "BeamName").map(n => n.head.text.toString).toList
+    val list = (document \ "WedgeBeamList" \ "BeamName").map(n => n.head.text.toString.toUpperCase).toList
     logText("WedgeBeamList", list.mkString("\n        ", "\n        ", "\n"))
     list
   }
 
   private def getSymmetryAndFlatnessBeamList = {
-    val list = (document \ "SymmetryAndFlatnessBeamList" \ "BeamName").map(n => n.head.text.toString).toList
+    val list = (document \ "SymmetryAndFlatnessBeamList" \ "BeamName").map(n => n.head.text.toString.toUpperCase).toList
     logText("SymmetryAndFlatnessBeamList", list.mkString("\n        ", "\n        ", "\n"))
     list
   }
@@ -398,7 +398,7 @@ object Config extends Logging {
 
   private def getCollimatorPositionBeamList = {
     def nodeToCollimatorPositionBeam(node: Node) = {
-      val beamName = node.head.text.toString
+      val beamName = node.head.text.toString.toUpperCase
       val FloodCompensation = {
         try {
           (node \ "@FloodCompensation").head.text.toString.toLowerCase.toBoolean

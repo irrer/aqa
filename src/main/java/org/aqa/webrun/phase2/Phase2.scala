@@ -88,15 +88,17 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       case _ if (referencedMachines.size == 1) => Right(referencedMachines.head)
       case _ if (chosenMachine.isDefined) => Right(chosenMachine.get)
       case _ if (referencedMachines.size > 1) => formErr("Files come from more than one machine; please go back and try again.  Machines: " + referencedMachines.map(m => m.id).mkString("  "))
-      case _ => formErr("Unknown machine.  Please use the Administration interface to add it.")
+      case _ => formErr("Unknown machine.  Please choose from the 'Machine' list below or use the Administration interface to add it.")
     }
     result
   }
 
+  private case class BasicData(rtplan: DicomFile, machine: Machine, rtimageListByBeam: Seq[(Option[String], DicomFile)])
+
   /**
    * Check that there is a single plan, single machine, and some images.
    */
-  def basicValidation(valueMap: ValueMapT): Either[StyleMapT, (DicomFile, Machine, Seq[(Option[String], DicomFile)])] = {
+  private def basicValidation(valueMap: ValueMapT): Either[StyleMapT, BasicData] = {
     val dicomFileList = dicomFilesInSession(valueMap)
     val rtplanList = Phase2Util.getPlanList(dicomFileList)
     val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
@@ -116,6 +118,11 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     // associate each image with a plan
     val planGroups = rtplanList.map(plan => (plan, rtimageList.filter(img => Phase2Util.imageReferencesPlan(plan, img)))).filter(pi => pi._2.nonEmpty).toMap
 
+    if (true) { // TODO rm
+      planGroups.keys.map(plan => println("\n\nPlan: " + plan.file.getName + "    size: " + planGroups(plan).size +
+        "\n    " + planGroups(plan).map(d => d.file.getName).mkString("\n    ")))
+      println
+    }
     /**
      * Make a human readable list of machines
      */
@@ -130,14 +137,16 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       case _ if (rtimageList.isEmpty) => formErr("No RTIMAGEs given")
       case _ if (planGroups.isEmpty) => formErr("No RTPLAN found for RTIMAGEs")
       case _ if (planGroups.size > 1) => formErr("The RTIMAGEs reference multiple plans.  Only one plan per run is permitted.")
+      case _ if (planGroups.head._2.size < rtimageList.size) => formErr("There are " + rtimageList.size + " images but only " + planGroups.head._2.size + " reference this plan")
       case _ if (machineCheck.isLeft) => Left(machineCheck.left.get)
       case _ if (machineSerialNumberList.distinct.size != 1) => formErr("There are RTIMAGEs from more than one machine: " + machineList)
       case _ if (nullSerialNumber) => formErr("At least one RTIMAGE has no serial number.")
       case _ if ((dateTimeList.last - dateTimeList.head) > maxDuration) =>
         formErr("Over " + Config.MaxProcedureDuration + " minutes from first to last image.  These RTIMAGE files were not from the same session")
       case _ => {
-        val rtimageByBeam = rtimageList.map(rtimage => (Phase2Util.getBeamNameOfRtimage(rtplanList.head, rtimage), rtimage))
-        Right((rtplanList.head, machineCheck.right.get, rtimageByBeam))
+        val rtplan = planGroups.head._1
+        val rtimageByBeam = rtimageList.map(rtimage => (Phase2Util.getBeamNameOfRtimage(rtplan, rtimage), rtimage))
+        Right(new BasicData(rtplan, machineCheck.right.get, rtimageByBeam))
       }
     }
   }
@@ -145,14 +154,14 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   /**
    * Check beam definitions, existence of flood field, and organize inputs into <code>RunReq</code> to facilitate further processing.
    */
-  def basicBeamValidation(valueMap: ValueMapT, rtplan: DicomFile, machine: Machine, rtimageList: Seq[(Option[String], DicomFile)]): Either[StyleMapT, RunReq] = {
-    val rtimageMap = rtimageList.filter(rl => rl._1.isDefined && (!rl._1.get.equals(Config.FloodFieldBeamName))).map(rl => (rl._1.get, rl._2)).toMap
-    val flood = rtimageList.filter(rl => rl._1.isDefined && (rl._1.get.equals(Config.FloodFieldBeamName)))
+  def basicBeamValidation(valueMap: ValueMapT, basicData: BasicData): Either[StyleMapT, RunReq] = {
+    val rtimageMap = basicData.rtimageListByBeam.filter(rl => rl._1.isDefined && (!rl._1.get.equals(Config.FloodFieldBeamName))).map(rl => (rl._1.get, rl._2)).toMap
+    val flood = basicData.rtimageListByBeam.filter(rl => rl._1.isDefined && (rl._1.get.equals(Config.FloodFieldBeamName)))
 
     0 match {
-      case _ if ((rtimageMap.size + 1) != rtimageList.size) => formErr("RTIMAGE duplicate beam reference or missing (from plan) beam reference")
+      case _ if ((rtimageMap.size + 1) != basicData.rtimageListByBeam.size) => formErr("RTIMAGE duplicate beam reference or missing (from plan) beam reference")
       case _ if (flood.isEmpty) => formErr("Flood field beam is missing")
-      case _ => Right(new RunReq(rtplan, machine, rtimageMap, flood.head._2))
+      case _ => Right(new RunReq(basicData.rtplan, basicData.machine, rtimageMap, flood.head._2))
     }
   }
 
@@ -160,20 +169,18 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
    * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
    */
   private def validate(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, RunReq] = {
-    val basicValid = basicValidation(valueMap)
-    if (basicValid.isLeft) Left(basicValid.left.get)
-    else {
-      val rtplan = basicValid.right.get._1
-      val machine = basicValid.right.get._2
-      val rtimageList = basicValid.right.get._3
-      val basicBeamValid = basicBeamValidation(valueMap, rtplan, machine, rtimageList)
-      if (basicBeamValid.isLeft) basicBeamValid
-      else {
-        val runReq = basicBeamValid.right.get
-        val err = MetadataCheckValidation.validate(runReq)
-        if (err.isDefined) Left(Error.make(form.uploadFileInput.get, err.get)) else {
-          val bpErr = BadPixelAnalysis.validate(runReq)
-          if (bpErr.isDefined) Left(Error.make(form.uploadFileInput.get, err.get)) else Right(runReq)
+    basicValidation(valueMap) match {
+      case Left(fail) => Left(fail)
+      case Right(basicData) => {
+        val basicBeamValid = basicBeamValidation(valueMap, basicData)
+        if (basicBeamValid.isLeft) basicBeamValid
+        else {
+          val runReq = basicBeamValid.right.get
+          val err = MetadataCheckValidation.validate(runReq)
+          if (err.isDefined) Left(Error.make(form.uploadFileInput.get, err.get)) else {
+            val bpErr = BadPixelAnalysis.validate(runReq)
+            if (bpErr.isDefined) Left(Error.make(form.uploadFileInput.get, err.get)) else Right(runReq)
+          }
         }
       }
     }

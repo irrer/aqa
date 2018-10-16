@@ -186,6 +186,7 @@ Note that when building a package for release, the Maven build process uses the 
 
     <WedgeBeamList>
         <BeamName>J10G0C90EDW45-6X</BeamName>
+        <BeamName>J20G0C90EDW60-6X</BeamName>
     </WedgeBeamList>
 
     <!-- Diameter of sample spots in mm. -->

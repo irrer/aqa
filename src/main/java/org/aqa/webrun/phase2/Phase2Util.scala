@@ -42,8 +42,13 @@ object Phase2Util extends Logging {
   def imageReferencesPlan(plan: DicomFile, image: DicomFile): Boolean = {
     try {
       val planUID = plan.attributeList.get.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull
-      def doesRef(al: AttributeList) = al.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrNull.equals(planUID)
-      Util.seq2Attr(image.attributeList.get, TagFromName.ReferencedRTPlanSequence).map(al => doesRef(al)).nonEmpty
+      def doesRef(al: AttributeList) = {
+        val imgRef = al.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrEmptyString
+        val j = imgRef.equals(planUID)
+        imgRef.equals(planUID)
+      }
+      val j1 = Util.seq2Attr(image.attributeList.get, TagFromName.ReferencedRTPlanSequence).filter(al => doesRef(al)).nonEmpty
+      j1
     } catch {
       case t: Throwable => false
     }
@@ -123,10 +128,15 @@ object Phase2Util extends Logging {
    */
   def getBeamNameOfRtimage(plan: DicomFile, rtimage: DicomFile): Option[String] = {
     try {
-      val ReferencedBeamNumber = rtimage.attributeList.get.get(TagFromName.ReferencedBeamNumber).getIntegerValues().head
+      val ReferencedBeamNumber = rtimage.attributeList.get.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head
       val beam = Util.seq2Attr(plan.attributeList.get, TagFromName.BeamSequence).find(bs => bs.get(TagFromName.BeamNumber).getIntegerValues().head == ReferencedBeamNumber).get
       val BeamName = beam.get(TagFromName.BeamName).getSingleStringValueOrNull
-      if (BeamName == null) None else Some(BeamName)
+      val bn = if (BeamName == null) None else Some(BeamName)
+      println("getBeamNameOfRtimage  file: " + rtimage.file.getName +
+        "    ReferencedBeamNumber: " + ReferencedBeamNumber +
+        "    bn: " + bn +
+        "    beam: " + beam.toString.replace('\0', ' ') + "\n")
+      bn
     } catch {
       case t: Throwable => None
     }
