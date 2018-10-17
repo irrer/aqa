@@ -82,8 +82,8 @@ object MetadataCheckAnalysis extends Logging {
       val collimatorAnglePlan_deg = aDbl(planCtrlPointSeq, TagFromName.BeamLimitingDeviceAngle)
       val energyPlan_kev = aDbl(planCtrlPointSeq, TagFromName.NominalBeamEnergy) * 1000.0 //   Convert from MeV to KeV
 
-      val gantryAngleImage_deg = aDbl(imageExposureSeq, TagFromName.GantryAngle)
-      val collimatorAngleImage_deg = aDbl(imageExposureSeq, TagFromName.BeamLimitingDeviceAngle)
+      val gantryAngleImage_deg = aDbl(image, TagFromName.GantryAngle)
+      val collimatorAngleImage_deg = aDbl(image, TagFromName.BeamLimitingDeviceAngle)
       val energyImage_kev = aDbl(imageExposureSeq, TagFromName.KVP)
 
       val gantryAnglePlanMinusImage_deg = angleDiff(gantryAnglePlan_deg, gantryAngleImage_deg)
@@ -143,7 +143,7 @@ object MetadataCheckAnalysis extends Logging {
       Some(metadataCheck)
     } catch {
       case t: Throwable => {
-        logger.info("Unable to make Metadata: " + t)
+        logger.info("Unable to make Metadata: " + t + "\n" + fmtEx(t))
         None
       }
     }
@@ -161,7 +161,7 @@ object MetadataCheckAnalysis extends Logging {
       logger.info("Starting analysis of " + subProcedureName)
       val planAttrList = runReq.rtplan.attributeList.get
 
-      val rtimageList = Config.MetadataCheckBeamNameList.map(BeamName => runReq.rtimageMap(BeamName))
+      val rtimageList = runReq.rtimageMap.filter(img => Config.MetadataCheckBeamNameList.contains(img._1)).map(img => img._2).toList
       val resultList = rtimageList.map(rtimage => makeMetadata(extendedData.output.outputPK.get, planAttrList, rtimage.attributeList.get)).flatten
 
       // make sure all were processed and that they all passed

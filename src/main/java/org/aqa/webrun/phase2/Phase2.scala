@@ -243,8 +243,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
                       SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq))
 
                     val summaryList = prevSummaryList ++ list.map(r => if (r.isLeft) r.left.get else r.right.get.summary)
-                    if (list.find(r => r.isLeft).isEmpty) Right(summaryList) else Left(summaryList)
-
+                    val pass = (list.find(r => r.isLeft).isEmpty) && list.filter(s => !Phase2Util.statusOk(s.right.get.status)).isEmpty
+                    if (pass) Right(summaryList) else Left(summaryList)
                   }
                 }
               }
@@ -288,7 +288,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
         val dtp = dateTimePatId(rtimageList)
 
         val sessDir = sessionDir(valueMap).get
-        val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
+        val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime) // TODO This takes a long time.  Optimize?
         val input = inputOutput._1
         val output = inputOutput._2
 

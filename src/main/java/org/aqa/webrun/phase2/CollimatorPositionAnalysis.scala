@@ -128,7 +128,7 @@ object CollimatorPositionAnalysis extends Logging {
       //     do not have the X1X2Y1Y2 labels, nor the difference between measured and expected.
       val elem = CollimatorPositionHTML.makeDisplay(extendedData, runReq, doneList, crashList, procedureStatus)
       val result = Right(new CollimatorPositionResult(elem, procedureStatus, doneDataList, crashList))
-      logger.info("Starting analysis of CollimatorPosition")
+      logger.info("Finished analysis of CollimatorPosition.  Status: " + procedureStatus)
       result
     } catch {
       case t: Throwable => {

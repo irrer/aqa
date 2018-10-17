@@ -159,6 +159,13 @@ object Phase2Util extends Logging {
   }
 
   /**
+   * Given a status, determine if it is 'good'.
+   */
+  def statusOk(status: ProcedureStatus.Value): Boolean = {
+    Seq(ProcedureStatus.pass, ProcedureStatus.done).find(s => s.toString.equals(status.toString)).isDefined
+  }
+
+  /**
    * Wrap Phase2 HTML with nice headers.
    */
   def wrapSubProcedure(extendedData: ExtendedData, content: Elem, title: String, status: ProcedureStatus.Value, runScript: Option[String], runReq: RunReq): String = {
@@ -202,7 +209,7 @@ object Phase2Util extends Logging {
     val procedureDesc: String = extendedData.procedure.name + " : " + extendedData.procedure.version
 
     val passFailImage = {
-      if ((status == ProcedureStatus.pass) || (status == ProcedureStatus.done)) {
+      if (statusOk(status)) {
         <div title="Passed!"><img src={ Config.passImageUrl } width="128"/></div>
       } else {
         <div title="Failed"><img src={ Config.failImageUrl } width="128"/></div>

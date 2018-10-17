@@ -333,27 +333,27 @@ object Config extends Logging {
   }
 
   private def getMetadataCheckBeamNameList = {
-    val list = (document \ "MetadataCheckBeamNameList" \ "BeamName").map(n => n.head.text.toString.toUpperCase).toList
+    val list = (document \ "MetadataCheckBeamNameList" \ "BeamName").map(n => n.head.text.toString.trim).toList
     logText("MetadataCheckBeamNameList", list.mkString("\n        ", "\n        ", "\n"))
-    list
+    list.distinct
   }
 
   private def getCenterDoseBeamNameList = {
-    val list = (document \ "CenterDoseBeamNameList" \ "BeamName").map(n => n.head.text.toString.toUpperCase).toList
+    val list = (document \ "CenterDoseBeamNameList" \ "BeamName").map(n => n.head.text.toString.trim).toList
     logText("CenterDoseBeamNameList", list.mkString("\n        ", "\n        ", "\n"))
-    list
+    list.distinct
   }
 
   private def getWedgeBeamList = {
-    val list = (document \ "WedgeBeamList" \ "BeamName").map(n => n.head.text.toString.toUpperCase).toList
+    val list = (document \ "WedgeBeamList" \ "BeamName").map(n => n.head.text.toString.trim).toList
     logText("WedgeBeamList", list.mkString("\n        ", "\n        ", "\n"))
-    list
+    list.distinct
   }
 
   private def getSymmetryAndFlatnessBeamList = {
-    val list = (document \ "SymmetryAndFlatnessBeamList" \ "BeamName").map(n => n.head.text.toString.toUpperCase).toList
+    val list = (document \ "SymmetryAndFlatnessBeamList" \ "BeamName").map(n => n.head.text.toString.trim).toList
     logText("SymmetryAndFlatnessBeamList", list.mkString("\n        ", "\n        ", "\n"))
-    list
+    list.distinct
   }
 
   private def getSymmetryAndFlatnessPointList: Seq[SymmetryAndFlatnessPoint] = {
@@ -398,7 +398,7 @@ object Config extends Logging {
 
   private def getCollimatorPositionBeamList = {
     def nodeToCollimatorPositionBeam(node: Node) = {
-      val beamName = node.head.text.toString.toUpperCase
+      val beamName = node.head.text.toString.trim
       val FloodCompensation = {
         try {
           (node \ "@FloodCompensation").head.text.toString.toLowerCase.toBoolean
