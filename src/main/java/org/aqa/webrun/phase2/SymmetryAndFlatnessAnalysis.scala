@@ -197,8 +197,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val flatnessBaseline = getBaseline(machinePK, beamName, flatnessName, attributeList, flatness)
 
     def checkPercent(value: Double, baseline: Double, limit: Double) = {
-      val percent = (100 * (value - baseline)) / baseline
-      if (limit >= (percent.abs)) ProcedureStatus.pass else ProcedureStatus.fail
+      val diff = 100 * (value - baseline)
+      if (limit >= (diff.abs)) ProcedureStatus.pass else ProcedureStatus.fail
     }
 
     val axialSymmetryStatus = checkPercent(axialSymmetry, axialSymmetryBaseline.baseline.value.toDouble, Config.SymmetryPercentLimit)
@@ -264,7 +264,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       val valueText = baselineList.map(bl => "    " + bl.id + " : " + bl.value).mkString("\n")
 
       val creationTime = new Timestamp(System.currentTimeMillis)
-      val pmi = new PMI(None,  MaintenanceCategory.setBaseline, machinePK, creationTime, userPK, Some(outputPK), summary, preamble + valueText)
+      val pmi = new PMI(None, MaintenanceCategory.setBaseline, machinePK, creationTime, userPK, Some(outputPK), summary, preamble + valueText)
       val insertedPmi = pmi.insert
       val newPmiPK = insertedPmi.pmiPK.get
       logger.info("Created PMI record for Symmetry and Flatness: " + insertedPmi)

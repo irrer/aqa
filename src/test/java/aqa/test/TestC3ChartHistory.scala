@@ -64,10 +64,14 @@ class TestC3ChartHistory extends FlatSpec with Matchers {
       makePmi(2, MaintenanceCategory.firmwareUpdate),
       makePmi(9, MaintenanceCategory.setBaseline))
 
+    val yMin = yValues.flatten.min
+    val yMax = yValues.flatten.max
+    val yDiff = yMax - yMin
     val pmiList = Seq[PMI]()
     val baselineSpec = new C3ChartHistory.BaselineSpec(yValues.head(3), Color.green)
 
-    val chart = new C3ChartHistory(pmiList, Some(600), Some(200), xLabel, xDateList, Some(baselineSpec), yAxisLabels, yDataLabel, yValues, yValues.head.size / 2, yFormat, yColorList)
+    val minMax = Some((yDiff * .2) + yMin, (yDiff * .8) + yMin)
+    val chart = new C3ChartHistory(pmiList, Some(600), Some(200), xLabel, xDateList, Some(baselineSpec), minMax, yAxisLabels, yDataLabel, yValues, yValues.head.size / 2, yFormat, yColorList)
     //val chart = new C3ChartHistory(pmiList, xAxisLabel: String, xDataLabel, xDateList, xFormat, None, yAxisLabels, yDataLabel, yValues, yFormat, yColorList)
 
     val sep = Seq.fill(60)("-").reduce(_ + _)

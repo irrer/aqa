@@ -72,15 +72,15 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
         <div class="row">
           <div class="col-md-10 col-md-offset-1">
             <div class="row">
-              <h2>Transverse Symmetry History { fmt(result.transverseSymmetry) }</h2>
+              <h2>Transverse Symmetry History</h2>
               { graphHistory.htmlTransverse }
             </div>
             <div class="row">
-              <h2>Axial Symmetry History { fmt(result.axialSymmetry) }</h2>
+              <h2>Axial Symmetry History</h2>
               { graphHistory.htmlAxial }
             </div>
             <div class="row">
-              <h2>Flatness History { fmt(result.flatness) }</h2>
+              <h2>Flatness History</h2>
               { graphHistory.htmlFlatness }
             </div>
           </div>

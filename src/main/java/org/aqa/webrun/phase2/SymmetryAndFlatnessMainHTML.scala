@@ -40,8 +40,8 @@ object SymmetryAndFlatnessMainHTML extends Logging {
   private def titleAxialSymmetry = "Axial symmetry from top to bottom: (top-bottom)/bottom.  Max percent limit is " + Config.SymmetryPercentLimit
   private def titleTransverseSymmetry = "Transverse symmetry from right to left: (right-left)/left.  Max percent limit is " + Config.SymmetryPercentLimit
   private def titleFlatness = "Flatness: (max-min)/(max+min).  Max percent limit is " + Config.FlatnessPercentLimit
-  private val passImg = { <img title="Passed" src={ Config.passImageUrl } width="30"/> }
-  private val failImg = { <img title="Failed" src={ Config.failImageUrl } width="30"/> }
+  //  private val passImg = { <img title="Passed" src={ Config.passImageUrl } width="30"/> }
+  //  private val failImg = { <img title="Failed" src={ Config.failImageUrl } width="30"/> }
 
   private def tableHead: Elem = {
     <thead>
@@ -56,18 +56,17 @@ object SymmetryAndFlatnessMainHTML extends Logging {
           Measurement
         </th>
         <th style="text-align: center;">
-          Baseline
+          Baseline %
         </th>
-        <th style="text-align: center;" title="(100 * (value - baseline)) / baseline">
-          Percent<br/>
-          Difference
+        <th style="text-align: center;" title="Difference of value from baseline">
+          Difference<br/>
         </th>
         <th style="text-align: center;" title="Maximim allowed percent deviation from baseline">
           Percent<br/>
           Limit
         </th>
         <th style="text-align: center;" title="Measured value">
-          Value
+          Value %
         </th>
       </tr>
     </thead>
@@ -126,12 +125,12 @@ object SymmetryAndFlatnessMainHTML extends Logging {
 
   private def axialSymmetryBaselineColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
     <td style="text-align: center;">
-      { result.axialSymmetryBaseline.formatted("%14.6f") }
+      { (result.axialSymmetryBaseline * 100).formatted("%14.6f") }
     </td>
   }
 
   private def axialSymmetryBaselinePercentColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
-    val pct = 100 * ((result.axialSymmetry - result.axialSymmetryBaseline) / result.axialSymmetryBaseline)
+    val pct = 100 * (result.axialSymmetry - result.axialSymmetryBaseline)
     <td style="text-align: center;" class={ classOfStatus(result.axialSymmetryStatus) }>
       { pctRounded(pct).formatted("%5.2f") }
     </td>
@@ -147,12 +146,12 @@ object SymmetryAndFlatnessMainHTML extends Logging {
 
   private def transverseSymmetryBaselineColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
     <td style="text-align: center;">
-      { result.transverseSymmetryBaseline.formatted("%14.6f") }
+      { (result.transverseSymmetryBaseline * 100).formatted("%14.6f") }
     </td>
   }
 
   private def transverseSymmetryBaselinePercentColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
-    val pct = 100 * ((result.transverseSymmetry - result.transverseSymmetryBaseline) / result.transverseSymmetryBaseline)
+    val pct = 100 * (result.transverseSymmetry - result.transverseSymmetryBaseline)
     <td style="text-align: center;" class={ classOfStatus(result.transverseSymmetryStatus) }>
       { pctRounded(pct).formatted("%5.2f") }
     </td>
@@ -168,12 +167,12 @@ object SymmetryAndFlatnessMainHTML extends Logging {
 
   private def flatnessBaselineColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
     <td style="text-align: center;">
-      { result.flatnessBaseline.formatted("%14.6f") }
+      { (result.flatnessBaseline * 100).formatted("%14.6f") }
     </td>
   }
 
   private def flatnessBaselinePercentColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
-    val pct = 100 * ((result.flatness - result.flatnessBaseline) / result.flatnessBaseline)
+    val pct = 100 * (result.flatness - result.flatnessBaseline)
     <td style="text-align: center;" class={ classOfStatus(result.flatnessStatus) }>
       { pctRounded(pct).formatted("%5.2f") }
     </td>

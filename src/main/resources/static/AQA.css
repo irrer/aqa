@@ -5,3 +5,8 @@
 .c3-axis-y text {
 	font-size: 14px;
 }
+
+.c3-ygrid-line.tolerance line {
+    stroke: red;
+    stroke-dasharray: 5,5;
+}

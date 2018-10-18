@@ -20,6 +20,8 @@ import java.awt.Color
  *
  * @param baselineSpec: Optional baseline value.  If given, a horizontal line
  *
+ * @param minMax: If given, show horizontal tolerance (see AQA.css .c3-ygrid-line.tolerance) lines at the given values.
+ *
  * @param yAxisLabels: Labels for each individual Y value
  *
  * @param yValues: Values to be charted.
@@ -34,6 +36,7 @@ class C3ChartHistory(
   height: Option[Int],
   xLabel: String, xDateList: Seq[Date],
   baselineSpec: Option[C3ChartHistory.BaselineSpec],
+  minMax: Option[(Double, Double)],
   yAxisLabels: Seq[String], yDataLabel: String, yValues: Seq[Seq[Double]], yIndex: Int, yFormat: String, yColorList: Seq[Color]) extends Logging {
 
   if (yAxisLabels.size != yValues.size) throw new RuntimeException("Must be same number of Y labels as Y data sets.  yAxisLabels.size: " + yAxisLabels.size + "    yValues.size: " + yValues.size)
@@ -62,7 +65,12 @@ class C3ChartHistory(
 
   private val pmiDateList = dateColumn("pmiDateList", pmiList.map(pmi => Seq(pmi.creationTime, pmi.creationTime)).flatten)
 
-  private val allY = yValues.flatten
+  private val allY = {
+    val all = yValues.flatten
+    if (minMax.isDefined)
+      all ++ Seq(minMax.get._1, minMax.get._2)
+    else all
+  }
   private val minY = allY.min
   private val maxY = allY.max
 
@@ -83,6 +91,23 @@ class C3ChartHistory(
     val yData = yAxisLabels.indices.map(i => column(yAxisLabels(i), yValues(i)))
     val lines = if (baselineSpec.isEmpty) yData else { yData :+ column("Baseline", Seq.fill(yValues.head.size)(baselineSpec.get.value)) }
     lines.mkString(",\n          ")
+  }
+
+  private val grid = {
+    minMax match {
+      case Some(mm) => {
+        """,
+    grid: {
+        y: {
+            lines: [
+                { position: 'start', class: 'tolerance', value:  """ + mm._1 + """, text: '\0 \0 \0 \0 \0 \0 \0 Minimum Tolerance' },
+                { position: 'start', class: 'tolerance', value:  """ + mm._2 + """, text: '\0 \0 \0 \0 \0 \0 \0 Maximum Tolerance' }
+            ]
+        }
+    }"""
+      }
+      case _ => ""
+    }
   }
 
   val javascript = {
@@ -128,7 +153,7 @@ var """ + idTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) 
           if (d.index == """ + yIndex + """) return 'orange';
           return color;
         }
-    },
+    }""" + grid + """,
     point: {
         r: 2,
         focus : {

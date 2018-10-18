@@ -36,6 +36,7 @@ class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Se
       None, // height
       "Date", sortedHistory.map(h => h.date),
       None, // BaselineSpec
+      None, // minMax
       Seq(units), units, Seq(sortedHistory.map(h => h.dose)), index, ".g5", Seq(new Color(102, 136, 187)))
   }
 
