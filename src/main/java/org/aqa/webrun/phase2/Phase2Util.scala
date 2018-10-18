@@ -131,7 +131,7 @@ object Phase2Util extends Logging {
       val ReferencedBeamNumber = rtimage.attributeList.get.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head
       val beam = Util.seq2Attr(plan.attributeList.get, TagFromName.BeamSequence).find(bs => bs.get(TagFromName.BeamNumber).getIntegerValues().head == ReferencedBeamNumber).get
       val BeamName = beam.get(TagFromName.BeamName).getSingleStringValueOrNull
-      val bn = if (BeamName == null) None else Some(BeamName)
+      val bn = if (BeamName == null) None else Some(BeamName.trim)
       println("getBeamNameOfRtimage  file: " + rtimage.file.getName +
         "    ReferencedBeamNumber: " + ReferencedBeamNumber +
         "    bn: " + bn +
@@ -146,7 +146,7 @@ object Phase2Util extends Logging {
    * Given an RTPLAN and a beam name, get the beam sequence.
    */
   def getBeamSequenceOfPlan(beamName: String, plan: AttributeList): AttributeList = {
-    val bs = Util.seq2Attr(plan, TagFromName.BeamSequence).filter(b => b.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.equals(beamName)).head
+    val bs = Util.seq2Attr(plan, TagFromName.BeamSequence).filter(b => b.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.equals(beamName.trim)).head
     bs
   }
 
@@ -154,7 +154,7 @@ object Phase2Util extends Logging {
    * Given an RTPLAN, a list of RTIMAGEs, and a BeamName, return the RTIMAGE associated with BeamName.
    */
   def findRtimageByBeamName(plan: DicomFile, rtimageList: IndexedSeq[DicomFile], BeamName: String): Option[DicomFile] = {
-    val beam = rtimageList.map(rti => (rti, getBeamNameOfRtimage(plan, rti))).filter(rn => rn._2.isDefined && rn._2.get.equals(BeamName))
+    val beam = rtimageList.map(rti => (rti, getBeamNameOfRtimage(plan, rti))).filter(rn => rn._2.isDefined && rn._2.get.equals(BeamName.trim))
     if (beam.nonEmpty) Some(beam.head._1) else None
   }
 
@@ -321,7 +321,7 @@ object Phase2Util extends Logging {
   }
 
   def dicomViewBaseName(beamName: String, al: AttributeList): String = {
-    (beamName + "_" + jawDescription(al)).replaceAll("[^a-zA-Z0-9]", "_").replaceAll("__*", "_").replaceAll("_$", "").replaceAll("^_", "")
+    (beamName.trim + "_" + jawDescription(al)).replaceAll("[^a-zA-Z0-9]", "_").replaceAll("__*", "_").replaceAll("_$", "").replaceAll("^_", "")
   }
 
   def dicomViewHtmlFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
