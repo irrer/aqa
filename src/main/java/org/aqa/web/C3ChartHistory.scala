@@ -6,6 +6,8 @@ import org.aqa.Util
 import org.aqa.db.PMI
 import org.aqa.db.MaintenanceCategory
 import java.awt.Color
+import org.aqa.db.Baseline
+import java.text.SimpleDateFormat
 
 /**
  * @param pmiList: List of PMI records that fall chronologically in the displayed range
@@ -20,7 +22,7 @@ import java.awt.Color
  *
  * @param baselineSpec: Optional baseline value.  If given, a horizontal line
  *
- * @param minMax: If given, show horizontal tolerance (see AQA.css .c3-ygrid-line.tolerance) lines at the given values.
+ * @param tolerance: If given, show horizontal tolerance (see AQA.css .c3-ygrid-line.tolerance) lines at the given values.
  *
  * @param yAxisLabels: Labels for each individual Y value
  *
@@ -35,8 +37,8 @@ class C3ChartHistory(
   width: Option[Int],
   height: Option[Int],
   xLabel: String, xDateList: Seq[Date],
-  baselineSpec: Option[C3ChartHistory.BaselineSpec],
-  minMax: Option[(Double, Double)],
+  baseline: Option[Baseline],
+  tolerance: Option[C3Chart.Tolerance],
   yAxisLabels: Seq[String], yDataLabel: String, yValues: Seq[Seq[Double]], yIndex: Int, yFormat: String, yColorList: Seq[Color]) extends Logging {
 
   if (yAxisLabels.size != yValues.size) throw new RuntimeException("Must be same number of Y labels as Y data sets.  yAxisLabels.size: " + yAxisLabels.size + "    yValues.size: " + yValues.size)
@@ -56,9 +58,8 @@ class C3ChartHistory(
     "[ '" + label + "', " + valueList.map(d => "'" + Util.standardDateFormat.format(d) + "'").mkString(", ") + "]"
   }
 
-  private val baselineColor = if (baselineSpec.isDefined) Seq(baselineSpec.get.color) else Seq[Color]()
   private val pmiColor = if (pmiList.isEmpty) Seq[Color]() else Seq(Color.white)
-  private val yColorNameList = textColumn((yColorList ++ baselineColor ++ pmiColor).map(c => (c.getRGB & 0xffffff).formatted("#%06x")))
+  private val yColorNameList = textColumn((yColorList ++ pmiColor).map(c => (c.getRGB & 0xffffff).formatted("#%06x")))
 
   private val minDate = xDateList.minBy(d => d.getTime)
   private val maxDate = xDateList.maxBy(d => d.getTime)
@@ -67,8 +68,8 @@ class C3ChartHistory(
 
   private val allY = {
     val all = yValues.flatten
-    if (minMax.isDefined)
-      all ++ Seq(minMax.get._1, minMax.get._2)
+    if (tolerance.isDefined)
+      all ++ Seq(tolerance.get.min, tolerance.get.max)
     else all
   }
   private val minY = allY.min
@@ -83,30 +84,48 @@ class C3ChartHistory(
 
   private val yLabels = {
     val yOnly = yAxisLabels.map(y => "'" + y + "' : '" + xLabel + "',")
-    val baselineLabel = if (baselineSpec.isEmpty) Seq[String]() else Seq("'Baseline' : '" + xLabel + "',")
-    (yOnly ++ baselineLabel).mkString("\n        ")
+    yOnly.mkString("\n        ")
   }
 
   private val yText = {
     val yData = yAxisLabels.indices.map(i => column(yAxisLabels(i), yValues(i)))
-    val lines = if (baselineSpec.isEmpty) yData else { yData :+ column("Baseline", Seq.fill(yValues.head.size)(baselineSpec.get.value)) }
-    lines.mkString(",\n          ")
+    yData.mkString(",\n          ")
+  }
+
+  private def gridLine(clss: String, value: Double, title: String): String = {
+    "{ position: 'start', class: '" + clss + "', value:  " + value.toString + ", text: ' \\0 \\0 \\0 \\0 \\0 \\0 \\0 " + title + " " + Util.fmtDbl(value) + "' }"
   }
 
   private val grid = {
-    minMax match {
-      case Some(mm) => {
-        """,
+
+    val gridTolerance: Seq[String] = {
+      if (tolerance.isDefined) {
+        Seq(
+          gridLine("tolerance", tolerance.get.max, "Maximum Tolerance"),
+          gridLine("tolerance", tolerance.get.min, "Minimum Tolerance"))
+      } else Seq[String]()
+    }
+
+    val gridBaseline: Seq[String] = {
+      if (baseline.isDefined) {
+        val fmt = new SimpleDateFormat("YYYY MMM D hh:mm")
+        Seq(gridLine("baseline", baseline.get.value.toDouble, "Baseline " + fmt.format(baseline.get.acquisitionDate)))
+      } else Seq[String]()
+    }
+
+    val allGrid = gridBaseline ++ gridTolerance
+
+    if (allGrid.isEmpty) ""
+    else {
+
+      """,
     grid: {
         y: {
             lines: [
-                { position: 'start', class: 'tolerance', value:  """ + mm._1 + """, text: '\0 \0 \0 \0 \0 \0 \0 Minimum Tolerance' },
-                { position: 'start', class: 'tolerance', value:  """ + mm._2 + """, text: '\0 \0 \0 \0 \0 \0 \0 Maximum Tolerance' }
+                """ + allGrid.mkString(",\n                ") + """
             ]
         }
     }"""
-      }
-      case _ => ""
     }
   }
 
@@ -149,7 +168,6 @@ var """ + idTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) 
         color: function (color, d) {
           var pmiColorList = """ + pmiColorList + """;
           if (d.id === 'PMI') return pmiColorList[d.index % pmiColorList.length];
-          if (d.id === 'Baseline') return color;
           if (d.index == """ + yIndex + """) return 'orange';
           return color;
         }
@@ -195,6 +213,3 @@ var """ + idTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) 
 
 }
 
-object C3ChartHistory {
-  case class BaselineSpec(value: Double, color: Color)
-}

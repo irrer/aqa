@@ -30,18 +30,18 @@ object SymmetryAndFlatnessUseAsBaseline {
 class SymmetryAndFlatnessUseAsBaseline extends Restlet with SubUrlRun with Logging {
 
   private def safToDesc(saf: SymmetryAndFlatness): String = {
-    "    " + saf.beamName + " : Axial Symmetry_mm: " + saf.axialSymmetry_mm + "\n" +
-      "    " + saf.beamName + " : Transverse Symmetry_mm: " + saf.transverseSymmetry_mm + "\n" +
-      "    " + saf.beamName + " : Flatness_mm: " + saf.flatness_mm
+    "    " + saf.beamName + " : Axial Symmetry pct: " + saf.axialSymmetry_pct + "\n" +
+      "    " + saf.beamName + " : Transverse Symmetry pct: " + saf.transverseSymmetry_pct + "\n" +
+      "    " + saf.beamName + " : Flatness pct: " + saf.flatness_pct
   }
 
   private def safToBaselineList(saf: SymmetryAndFlatness, pmiPK: Long, acquisitionDate: Timestamp): Seq[Baseline] = {
     def make(name: String, value: Double) = {
       new Baseline(None, pmiPK, acquisitionDate, Some(saf.SOPInstanceUID), SymmetryAndFlatnessAnalysis.makeBaselineName(saf.beamName, name), value.toString, BaselineSetup.chosen.toString)
     }
-    val axial = make(SymmetryAndFlatnessAnalysis.axialSymmetryName, saf.axialSymmetry_mm)
-    val transverse = make(SymmetryAndFlatnessAnalysis.transverseSymmetryName, saf.transverseSymmetry_mm)
-    val flatness = make(SymmetryAndFlatnessAnalysis.flatnessName, saf.flatness_mm)
+    val axial = make(SymmetryAndFlatnessAnalysis.axialSymmetryName, saf.axialSymmetry_pct)
+    val transverse = make(SymmetryAndFlatnessAnalysis.transverseSymmetryName, saf.transverseSymmetry_pct)
+    val flatness = make(SymmetryAndFlatnessAnalysis.flatnessName, saf.flatness_pct)
     Seq(axial, transverse, flatness)
   }
 

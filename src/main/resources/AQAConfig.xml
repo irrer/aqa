@@ -222,6 +222,7 @@ Note that when building a package for release, the Maven build process uses the 
         -->
     </SymmetryAndFlatnessPointList>
 
+    <SymmetryPointCenter  name='Center'/>
     <!-- Names of opposing points (see <SymmetryAndFlatnessPointList>) used to calculate symmetry. -->
     <SymmetryPointTop     name='Top'/>
     <SymmetryPointBottom  name='Bottom'/>

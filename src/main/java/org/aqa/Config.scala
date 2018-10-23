@@ -508,6 +508,7 @@ object Config extends Logging {
   val SymmetryPointBottom = getSymPoint("SymmetryPointBottom")
   val SymmetryPointLeft = getSymPoint("SymmetryPointLeft")
   val SymmetryPointRight = getSymPoint("SymmetryPointRight")
+  val SymmetryPointCenter = getSymPoint("SymmetryPointCenter")
 
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true

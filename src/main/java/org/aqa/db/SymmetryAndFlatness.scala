@@ -18,17 +18,24 @@ case class SymmetryAndFlatness(
   SOPInstanceUID: String, // UID of source image
   beamName: String, // name of beam in plan
 
-  axialSymmetry_mm: Double,
-  axialSymmetryBaseline_mm: Double,
+  axialSymmetry_pct: Double,
+  axialSymmetryBaseline_pct: Double,
   axialSymmetryStatus: String,
 
-  transverseSymmetry_mm: Double,
-  transverseSymmetryBaseline_mm: Double,
+  transverseSymmetry_pct: Double,
+  transverseSymmetryBaseline_pct: Double,
   transverseSymmetryStatus: String,
 
-  flatness_mm: Double,
-  flatnessBaseline_mm: Double,
-  flatnessStatus: String) {
+  flatness_pct: Double,
+  flatnessBaseline_pct: Double,
+  flatnessStatus: String,
+
+  top_cu: Double, // average value of top point pixels
+  bottom_cu: Double, // average value of bottom point pixels
+  left_cu: Double, // average value of left point pixels
+  right_cu: Double, // average value of right point pixels
+  center_cu: Double // average value of center point pixels
+) {
 
   def insert: SymmetryAndFlatness = {
     val insertQuery = SymmetryAndFlatness.query returning SymmetryAndFlatness.query.map(_.symmetryAndFlatnessPK) into
@@ -45,15 +52,20 @@ case class SymmetryAndFlatness(
     "    symmetryAndFlatnessPK: " + symmetryAndFlatnessPK + "\n" +
       "    outputPK: " + outputPK + "\n" +
       "    SOPInstanceUID: " + SOPInstanceUID + "\n" +
-      "    axialSymmetry_mm: " + axialSymmetry_mm + "\n" +
-      "    axialSymmetryBaseline_mm: " + axialSymmetryBaseline_mm + "\n" +
+      "    axialSymmetry_pct: " + axialSymmetry_pct + "\n" +
+      "    axialSymmetryBaseline_pct: " + axialSymmetryBaseline_pct + "\n" +
       "    axialSymmetryStatus: " + axialSymmetryStatus + "\n" +
-      "    transverseSymmetry_mm: " + transverseSymmetry_mm + "\n" +
-      "    transverseSymmetryBaseline_mm: " + transverseSymmetryBaseline_mm + "\n" +
+      "    transverseSymmetry_pct: " + transverseSymmetry_pct + "\n" +
+      "    transverseSymmetryBaseline_pct: " + transverseSymmetryBaseline_pct + "\n" +
       "    transverseSymmetryStatus: " + transverseSymmetryStatus + "\n" +
-      "    flatness_mm: " + flatness_mm + "\n" +
-      "    flatnessBaseline_mm: " + flatnessBaseline_mm + "\n" +
-      "    flatnessStatus: " + flatnessStatus + "\n"
+      "    flatness_pct: " + flatness_pct + "\n" +
+      "    flatnessBaseline_pct: " + flatnessBaseline_pct + "\n" +
+      "    flatnessStatus: " + flatnessStatus + "\n" +
+      "    top_cu: " + top_cu + "\n" +
+      "    bottom_cu: " + bottom_cu + "\n" +
+      "    left_cu: " + left_cu + "\n" +
+      "    right_cu: " + right_cu + "\n" +
+      "    center_cu: " + center_cu + "\n"
   }
 }
 
@@ -64,30 +76,40 @@ object SymmetryAndFlatness extends ProcedureOutput {
     def outputPK = column[Long]("outputPK")
     def SOPInstanceUID = column[String]("SOPInstanceUID")
     def beamName = column[String]("beamName")
-    def axialSymmetry_mm = column[Double]("axialSymmetry_mm")
-    def axialSymmetryBaseline_mm = column[Double]("axialSymmetryBaseline_mm")
+    def axialSymmetry_pct = column[Double]("axialSymmetry_pct")
+    def axialSymmetryBaseline_pct = column[Double]("axialSymmetryBaseline_pct")
     def axialSymmetryStatus = column[String]("axialSymmetryStatus")
-    def transverseSymmetry_mm = column[Double]("transverseSymmetry_mm")
-    def transverseSymmetryBaseline_mm = column[Double]("transverseSymmetryBaseline_mm")
+    def transverseSymmetry_pct = column[Double]("transverseSymmetry_pct")
+    def transverseSymmetryBaseline_pct = column[Double]("transverseSymmetryBaseline_pct")
     def transverseSymmetryStatus = column[String]("transverseSymmetryStatus")
-    def flatness_mm = column[Double]("flatness_mm")
-    def flatnessBaseline_mm = column[Double]("flatnessBaseline_mm")
+    def flatness_pct = column[Double]("flatness_pct")
+    def flatnessBaseline_pct = column[Double]("flatnessBaseline_pct")
     def flatnessStatus = column[String]("flatnessStatus")
+    def top_cu = column[Double]("top_cu")
+    def bottom_cu = column[Double]("bottom_cu")
+    def left_cu = column[Double]("left_cu")
+    def right_cu = column[Double]("right_cu")
+    def center_cu = column[Double]("center_cu")
 
     def * = (
       symmetryAndFlatnessPK.?,
       outputPK,
       SOPInstanceUID,
       beamName,
-      axialSymmetry_mm,
-      axialSymmetryBaseline_mm,
+      axialSymmetry_pct,
+      axialSymmetryBaseline_pct,
       axialSymmetryStatus,
-      transverseSymmetry_mm,
-      transverseSymmetryBaseline_mm,
+      transverseSymmetry_pct,
+      transverseSymmetryBaseline_pct,
       transverseSymmetryStatus,
-      flatness_mm,
-      flatnessBaseline_mm,
-      flatnessStatus) <> ((SymmetryAndFlatness.apply _)tupled, SymmetryAndFlatness.unapply _)
+      flatness_pct,
+      flatnessBaseline_pct,
+      flatnessStatus,
+      top_cu,
+      bottom_cu,
+      left_cu,
+      right_cu,
+      center_cu) <> ((SymmetryAndFlatness.apply _)tupled, SymmetryAndFlatness.unapply _)
 
     def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }

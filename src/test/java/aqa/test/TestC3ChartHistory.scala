@@ -17,6 +17,9 @@ import java.sql.Timestamp
 import java.awt.Color
 import akka.Main
 import org.aqa.db.MaintenanceCategory
+import org.aqa.web.C3Chart
+import org.aqa.db.Baseline
+import org.aqa.db.BaselineSetup
 
 /**
  * Test the Config.
@@ -68,10 +71,13 @@ class TestC3ChartHistory extends FlatSpec with Matchers {
     val yMax = yValues.flatten.max
     val yDiff = yMax - yMin
     val pmiList = Seq[PMI]()
-    val baselineSpec = new C3ChartHistory.BaselineSpec(yValues.head(3), Color.green)
+    val baselineSpec = new Baseline(None, -1, XpmiList(1).creationTime, Some("1.2.3.4.5.6.7.8.9"), "baseline ID", yValues.head(3).toString, BaselineSetup.byDefault.toString)
 
-    val minMax = Some((yDiff * .2) + yMin, (yDiff * .8) + yMin)
-    val chart = new C3ChartHistory(pmiList, Some(600), Some(200), xLabel, xDateList, Some(baselineSpec), minMax, yAxisLabels, yDataLabel, yValues, yValues.head.size / 2, yFormat, yColorList)
+    //yValues.head(3), Color.green)
+
+    val tolerance = new C3Chart.Tolerance((yDiff * .2) + yMin, (yDiff * .8) + yMin)
+
+    val chart = new C3ChartHistory(pmiList, Some(600), Some(200), xLabel, xDateList, Some(baselineSpec), Some(tolerance), yAxisLabels, yDataLabel, yValues, yValues.head.size / 2, yFormat, yColorList)
     //val chart = new C3ChartHistory(pmiList, xAxisLabel: String, xDataLabel, xDateList, xFormat, None, yAxisLabels, yDataLabel, yValues, yFormat, yColorList)
 
     val sep = Seq.fill(60)("-").reduce(_ + _)

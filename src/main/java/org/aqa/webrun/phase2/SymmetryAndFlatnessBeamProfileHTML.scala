@@ -38,15 +38,13 @@ import java.text.Format
 object SymmetryAndFlatnessBeamProfileHTML extends Logging {
 
   private def makeContent(subDir: File, extendedData: ExtendedData, result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult, status: ProcedureStatus.Value, runReq: RunReq): (Elem, String) = {
-    //    val graphTransverse = graph("Transverse " + result.beamName, result.transverseProfile, result.transverse_mm)
-    //    val graphAxial = graph("Axial " + result.beamName, result.axialProfile, result.axial_mm)
 
     val graphTransverse = new C3Chart(None, None,
-      "Position mm", "Position mm", result.transverse_mm, ".4g",
+      "Position mm", "Position mm", result.transverse_pct, ".4g",
       Seq("Level"), "Level", Seq(result.transverseProfile), ".4g", Seq(new Color(0x4477BB)))
 
     val graphAxial = new C3Chart(None, None,
-      "Position mm", "Position mm", result.axial_mm, ".4g",
+      "Position mm", "Position mm", result.axial_pct, ".4g",
       Seq("Level"), "Level", Seq(result.axialProfile), ".4g", Seq(new Color(0x4477BB)))
 
     def fmt(value: Double): Elem = {

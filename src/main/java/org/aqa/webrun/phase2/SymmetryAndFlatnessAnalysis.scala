@@ -50,8 +50,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     transverseSymmetryStatus: ProcedureStatus.Value,
     flatnessStatus: ProcedureStatus.Value,
     annotatedImage: BufferedImage,
-    transverseProfile: Seq[Double], transverse_mm: IndexedSeq[Double],
-    axialProfile: Seq[Double], axial_mm: IndexedSeq[Double]) {
+    transverseProfile: Seq[Double], transverse_pct: IndexedSeq[Double],
+    axialProfile: Seq[Double], axial_pct: IndexedSeq[Double]) {
 
     /** True if everything is ok. */
     val pass = Seq(axialSymmetryStatus, transverseSymmetryStatus, flatnessStatus).filter(s => !(s.toString.equals(ProcedureStatus.pass.toString))).isEmpty
@@ -109,7 +109,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   private def analyzeSymmetry(maxPoint: SymmetryAndFlatnessPoint, minPoint: SymmetryAndFlatnessPoint, pointMap: Map[SymmetryAndFlatnessPoint, Double]): Double = {
     val max = pointMap(maxPoint)
     val min = pointMap(minPoint)
-    (max - min) / min
+    ((max - min) / min) * 100
   }
 
   /**
@@ -119,13 +119,17 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val min = pointMap.values.min
     val max = pointMap.values.max
     val flatness = (max - min) / (max + min)
-    flatness
+    flatness * 100
   }
+
+  //  private case class PointSet(top: Double, bottom: Double, right: Double, left: Double, center: Double) {
+  //    val list = Seq(top, bottom, right, left)
+  //  }
 
   /**
    * For each point (circle) on the image, make a list of pixels that are included in it.
    */
-  private def makePointMap(dicomImage: DicomImage, attributeList: AttributeList, RescaleSlope: Double, RescaleIntercept: Double) = {
+  private def makePointMap(dicomImage: DicomImage, attributeList: AttributeList, RescaleSlope: Double, RescaleIntercept: Double): Map[SymmetryAndFlatnessPoint, Double] = {
     val pixMap = SymmetryAndFlatnessAnalysisPixelMap.getPixelMap(attributeList)
 
     /**
@@ -143,7 +147,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
   case class PMIBaseline(pmi: Option[PMI], baseline: Baseline);
 
-  case class BeamResultBaseline(result: SymmetryAndFlatnessBeamResult, pmiBaseline: Seq[PMIBaseline]);
+  case class BeamResultBaseline(result: SymmetryAndFlatnessBeamResult, pmiBaseline: Seq[PMIBaseline], pointMap: Map[SymmetryAndFlatnessPoint, Double]);
 
   private def getBaseline(machinePK: Long, beamName: String, dataName: String, attributeList: AttributeList, value: Double): PMIBaseline = {
     val id = makeBaselineName(beamName, dataName)
@@ -188,8 +192,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       dicomImage.getSubimage(rectangle).rowSums.map(c => ((c / widthOfBand) * RescaleSlope) + RescaleIntercept)
     }
 
-    val transverse_mm = (0 until translator.width).map(x => translator.pix2Iso(x, 0).getX)
-    val axial_mm = (0 until translator.height).map(y => translator.pix2Iso(0, y).getY)
+    val transverse_pct = (0 until translator.width).map(x => translator.pix2Iso(x, 0).getX)
+    val axial_pct = (0 until translator.height).map(y => translator.pix2Iso(0, y).getY)
 
     val machinePK = extendedData.machine.machinePK.get
     val axialSymmetryBaseline = getBaseline(machinePK, beamName, axialSymmetryName, attributeList, axialSymmetry)
@@ -197,7 +201,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val flatnessBaseline = getBaseline(machinePK, beamName, flatnessName, attributeList, flatness)
 
     def checkPercent(value: Double, baseline: Double, limit: Double) = {
-      val diff = 100 * (value - baseline)
+      val diff = value - baseline
       if (limit >= (diff.abs)) ProcedureStatus.pass else ProcedureStatus.fail
     }
 
@@ -218,16 +222,21 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       transverseSymmetryStatus,
       flatnessStatus,
       annotatedImage,
-      transverseProfile, transverse_mm,
+      transverseProfile, transverse_pct,
       axialProfile,
-      axial_mm)
+      axial_pct)
 
-    new BeamResultBaseline(result, pmiBaselineList)
+    new BeamResultBaseline(result, pmiBaselineList, pointMap)
   }
 
   private def storeResultsInDb(resultList: List[SymmetryAndFlatnessAnalysis.BeamResultBaseline], outputPK: Long): Unit = {
 
     def toSymmetryAndFlatnessDB(sf: SymmetryAndFlatnessBeamResult): SymmetryAndFlatness = {
+
+      def valOf(point: SymmetryAndFlatnessPoint): Double = {
+        sf.pointMap.filter(p => p._1.name.equals(point.name)).head._2
+      }
+
       new SymmetryAndFlatness(
         None,
         outputPK,
@@ -244,7 +253,13 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
         sf.flatness,
         sf.flatnessBaseline,
-        sf.flatnessStatus.toString)
+        sf.flatnessStatus.toString,
+
+        valOf(Config.SymmetryPointTop),
+        valOf(Config.SymmetryPointBottom),
+        valOf(Config.SymmetryPointLeft),
+        valOf(Config.SymmetryPointRight),
+        valOf(Config.SymmetryPointCenter))
     }
 
     val list = resultList.map(r => toSymmetryAndFlatnessDB(r.result))
