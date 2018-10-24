@@ -151,6 +151,11 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     }
   }
 
+  // TODO make a better error message
+  private def beamMatchingProblem(basicData: BasicData): String = {
+    ???
+  }
+
   /**
    * Check beam definitions, existence of flood field, and organize inputs into <code>RunReq</code> to facilitate further processing.
    */
@@ -159,7 +164,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     val flood = basicData.rtimageListByBeam.filter(rl => rl._1.isDefined && (rl._1.get.equals(Config.FloodFieldBeamName)))
 
     0 match {
-      case _ if ((rtimageMap.size + 1) != basicData.rtimageListByBeam.size) => formErr("RTIMAGE duplicate beam reference or missing (from plan) beam reference")
+      case _ if ((rtimageMap.size + 1) != basicData.rtimageListByBeam.size) => formErr("RTIMAGE duplicate beam reference or missing (from plan) beam reference") // TODO make a better error message
       case _ if (flood.isEmpty) => formErr("Flood field beam is missing")
       case _ => Right(new RunReq(basicData.rtplan, basicData.machine, rtimageMap, flood.head._2))
     }
