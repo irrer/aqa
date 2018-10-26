@@ -39,7 +39,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   case class SymmetryAndFlatnessBeamResult(
     beamName: String,
     SOPInstanceUID: String,
-    pointMap: Map[SymmetryAndFlatnessPoint, Double],
+    pointSet: PointSet,
     axialSymmetry: Double,
     axialSymmetryBaseline: Double,
     transverseSymmetry: Double,
@@ -62,7 +62,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     Trace.trace("status: " + status)
   }
 
-  private def makeAnnotatedImage(dicomImage: DicomImage, attributeList: AttributeList, pointMap: Map[SymmetryAndFlatnessPoint, Double]): BufferedImage = {
+  private def makeAnnotatedImage(dicomImage: DicomImage, attributeList: AttributeList, pointSet: PointSet): BufferedImage = {
     val image = dicomImage.toDeepColorBufferedImage
     val graphics = ImageUtil.getGraphics(image)
 
@@ -79,9 +79,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
     def dbl2Text(d: Double): String = if (d.round.toInt == d) d.toInt.toString else d.toString
 
-    def annotatePoint(point: SymmetryAndFlatnessPoint) = {
+    def annotatePoint(point: SymmetryAndFlatnessPoint, value: Double) = {
       graphics.setColor(Color.black)
-      val value = pointMap(point)
       val center = translator.iso2Pix(point.asPoint)
       graphics.drawOval((center.getX - radius).round.toInt, (center.getY - radius).round.toInt, circleSize, circleSize)
       val description = point.name + " " + dbl2Text(point.x_mm) + ", " + dbl2Text(point.y_mm)
@@ -89,7 +88,11 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       ImageText.drawTextOffsetFrom(graphics, center.getX, center.getY + radius, value.formatted("%6.4f"), 270)
     }
 
-    pointMap.keys.map(p => annotatePoint(p))
+    annotatePoint(Config.SymmetryPointTop, pointSet.top)
+    annotatePoint(Config.SymmetryPointBottom, pointSet.bottom)
+    annotatePoint(Config.SymmetryPointRight, pointSet.right)
+    annotatePoint(Config.SymmetryPointLeft, pointSet.left)
+    annotatePoint(Config.SymmetryPointCenter, pointSet.center)
 
     image
   }
@@ -106,30 +109,28 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     else runReq.derivedMap(beamName).dicomFile.attributeList.get
   }
 
-  private def analyzeSymmetry(maxPoint: SymmetryAndFlatnessPoint, minPoint: SymmetryAndFlatnessPoint, pointMap: Map[SymmetryAndFlatnessPoint, Double]): Double = {
-    val max = pointMap(maxPoint)
-    val min = pointMap(minPoint)
+  private def analyzeSymmetry(max: Double, min: Double): Double = {
     ((max - min) / min) * 100
   }
 
   /**
    * Get the flatness
    */
-  private def analyzeFlatness(pointMap: Map[SymmetryAndFlatnessPoint, Double]): Double = {
-    val min = pointMap.values.min
-    val max = pointMap.values.max
+  private def analyzeFlatness(pointSet: PointSet): Double = {
+    val min = pointSet.list.min
+    val max = pointSet.list.max
     val flatness = (max - min) / (max + min)
     flatness * 100
   }
 
-  //  private case class PointSet(top: Double, bottom: Double, right: Double, left: Double, center: Double) {
-  //    val list = Seq(top, bottom, right, left)
-  //  }
+  case class PointSet(top: Double, bottom: Double, right: Double, left: Double, center: Double) {
+    val list = Seq(top, bottom, right, left, center)
+  }
 
   /**
    * For each point (circle) on the image, make a list of pixels that are included in it.
    */
-  private def makePointMap(dicomImage: DicomImage, attributeList: AttributeList, RescaleSlope: Double, RescaleIntercept: Double): Map[SymmetryAndFlatnessPoint, Double] = {
+  private def makePointSet(dicomImage: DicomImage, attributeList: AttributeList, RescaleSlope: Double, RescaleIntercept: Double): PointSet = {
     val pixMap = SymmetryAndFlatnessAnalysisPixelMap.getPixelMap(attributeList)
 
     /**
@@ -140,14 +141,17 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       val avg = pixList.map(p => dicomImage.get(p.getX.toInt, p.getY.toInt)).sum / pixList.size
       (avg * RescaleSlope) + RescaleIntercept // convert
     }
-    pixMap.keys.toSeq.map(p => (p, evalPoint(p))).toMap
+
+    new PointSet(evalPoint(Config.SymmetryPointTop), evalPoint(Config.SymmetryPointBottom),
+      evalPoint(Config.SymmetryPointLeft), evalPoint(Config.SymmetryPointRight),
+      evalPoint(Config.SymmetryPointTop))
   }
 
   def makeBaselineName(beamName: String, dataName: String): String = beamName + " " + dataName
 
   case class PMIBaseline(pmi: Option[PMI], baseline: Baseline);
 
-  case class BeamResultBaseline(result: SymmetryAndFlatnessBeamResult, pmiBaseline: Seq[PMIBaseline], pointMap: Map[SymmetryAndFlatnessPoint, Double]);
+  case class BeamResultBaseline(result: SymmetryAndFlatnessBeamResult, pmiBaseline: Seq[PMIBaseline], pointSet: PointSet);
 
   private def getBaseline(machinePK: Long, beamName: String, dataName: String, attributeList: AttributeList, value: Double): PMIBaseline = {
     val id = makeBaselineName(beamName, dataName)
@@ -171,14 +175,14 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val translator = new IsoImagePlaneTranslator(attributeList)
     val widthOfBand = translator.circleRadiusInPixels.round.toInt
 
-    val pointMap = makePointMap(dicomImage, attributeList, RescaleSlope, RescaleIntercept)
+    val pointSet = makePointSet(dicomImage, attributeList, RescaleSlope, RescaleIntercept)
 
-    val axialSymmetry = analyzeSymmetry(Config.SymmetryPointTop, Config.SymmetryPointBottom, pointMap)
-    val transverseSymmetry = analyzeSymmetry(Config.SymmetryPointRight, Config.SymmetryPointLeft, pointMap)
+    val axialSymmetry = analyzeSymmetry(pointSet.top, pointSet.bottom)
+    val transverseSymmetry = analyzeSymmetry(pointSet.right, pointSet.left)
 
-    val flatness = analyzeFlatness(pointMap)
+    val flatness = analyzeFlatness(pointSet)
 
-    val annotatedImage = makeAnnotatedImage(dicomImage, attributeList, pointMap)
+    val annotatedImage = makeAnnotatedImage(dicomImage, attributeList, pointSet)
 
     val transverseProfile = {
       val y = ((translator.height - widthOfBand) / 2.0).round.toInt
@@ -200,6 +204,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val transverseSymmetryBaseline = getBaseline(machinePK, beamName, transverseSymmetryName, attributeList, transverseSymmetry)
     val flatnessBaseline = getBaseline(machinePK, beamName, flatnessName, attributeList, flatness)
 
+    //  val topBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointTop.name, attributeList, pointSet)
+
     def checkPercent(value: Double, baseline: Double, limit: Double) = {
       val diff = value - baseline
       if (limit >= (diff.abs)) ProcedureStatus.pass else ProcedureStatus.fail
@@ -211,7 +217,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
     val pmiBaselineList = Seq(axialSymmetryBaseline, transverseSymmetryBaseline, flatnessBaseline)
 
-    val result = new SymmetryAndFlatnessBeamResult(beamName, Util.sopOfAl(attributeList), pointMap,
+    val result = new SymmetryAndFlatnessBeamResult(beamName, Util.sopOfAl(attributeList), pointSet,
       axialSymmetry,
       axialSymmetryBaseline.baseline.value.toDouble,
       transverseSymmetry,
@@ -226,16 +232,12 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       axialProfile,
       axial_pct)
 
-    new BeamResultBaseline(result, pmiBaselineList, pointMap)
+    new BeamResultBaseline(result, pmiBaselineList, pointSet)
   }
 
   private def storeResultsInDb(resultList: List[SymmetryAndFlatnessAnalysis.BeamResultBaseline], outputPK: Long): Unit = {
 
     def toSymmetryAndFlatnessDB(sf: SymmetryAndFlatnessBeamResult): SymmetryAndFlatness = {
-
-      def valOf(point: SymmetryAndFlatnessPoint): Double = {
-        sf.pointMap.filter(p => p._1.name.equals(point.name)).head._2
-      }
 
       new SymmetryAndFlatness(
         None,
@@ -255,11 +257,11 @@ object SymmetryAndFlatnessAnalysis extends Logging {
         sf.flatnessBaseline,
         sf.flatnessStatus.toString,
 
-        valOf(Config.SymmetryPointTop),
-        valOf(Config.SymmetryPointBottom),
-        valOf(Config.SymmetryPointLeft),
-        valOf(Config.SymmetryPointRight),
-        valOf(Config.SymmetryPointCenter))
+        sf.pointSet.top,
+        sf.pointSet.bottom,
+        sf.pointSet.right,
+        sf.pointSet.left,
+        sf.pointSet.center)
     }
 
     val list = resultList.map(r => toSymmetryAndFlatnessDB(r.result))

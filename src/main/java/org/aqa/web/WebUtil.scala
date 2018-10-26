@@ -52,6 +52,8 @@ object WebUtil extends Logging {
   val nl = "@@nl@@"
   val nbsp = "@@nbsp@@"
 
+  val titleNewline = "@@amp@@#10;"
+
   def snglQuote(text: String): String = singleQuote + text + singleQuote
 
   def dblQuote(text: String): String = doubleQuote + text + doubleQuote

@@ -46,6 +46,7 @@ import scala.util.Try
 import java.awt.geom.Point2D
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import org.aqa.web.WebUtil
 
 object Phase2 {
   val parametersFileName = "parameters.xml"
@@ -70,7 +71,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   private val runButton = makeButton("Run", true, ButtonType.BtnDefault)
   private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
 
-  private def form = new WebForm(procedure.webUrl, Some("Phase2"), List(List(machineSelector), List(runButton, cancelButton)), 6)
+  private def form = new WebForm(procedure.webUrl, Some("Phase2"), List(List(machineSelector), List(runButton, cancelButton)), 10)
 
   private def formErr(msg: String) = Left(Error.make(form.uploadFileInput.get, msg))
 
@@ -93,7 +94,21 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     result
   }
 
-  private case class BasicData(rtplan: DicomFile, machine: Machine, rtimageListByBeam: Seq[(Option[String], DicomFile)])
+  private case class BasicData(rtplan: DicomFile, machine: Machine, rtimageListByBeam: Seq[(Option[String], DicomFile)]) {
+
+    private def dfToString(dicomFile: DicomFile) = {
+      val sop = { if (dicomFile.attributeList.isDefined) Util.sopOfAl(dicomFile.attributeList.get) else "NoAttributelist" }
+      val modality = { if (dicomFile.attributeList.isDefined) Util.modalityOfAl(dicomFile.attributeList.get) else "" }
+      sop + "    " + modality + "    " + dicomFile.file.getName
+    }
+
+    private def beamOf(beamName: Option[String]) = if (beamName.isDefined) beamName.get else "NoBeamName"
+
+    override def toString =
+      "machine: " + dfToString(rtplan) + "\n" +
+        "machine id: " + machine.id + "    serial number: " + machine.serialNumber + "    machinePK: " + machine.machinePK + "\n" +
+        "rtimageListByBeam:\n    " + rtimageListByBeam.map(r => beamOf(r._1) + "  " + dfToString(r._2)).mkString("\n    ")
+  }
 
   /**
    * Check that there is a single plan, single machine, and some images.
@@ -151,9 +166,24 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     }
   }
 
-  // TODO make a better error message
-  private def beamMatchingProblem(basicData: BasicData): String = {
-    ???
+  /**
+   *  determine if there are undefined beams
+   */
+  private def beamNotDefinedProblem(basicData: BasicData): Option[String] = {
+    // check for beams that are not in the plan
+    val undefFileNameList = basicData.rtimageListByBeam.filter(b => b._1.isEmpty).map(b => b._2.file.getName)
+    if (undefFileNameList.nonEmpty) {
+      Some("The image set is probably referencing the wrong plan." + WebUtil.titleNewline + "There were " + undefFileNameList.size + " files that references a beam  that was not in the plan:" + WebUtil.titleNewline + undefFileNameList.mkString(WebUtil.titleNewline))
+    } else None
+  }
+
+  /**
+   *  determine if there is more than one image that reference/define the same beam
+   */
+  private def beamMultiRefProblem(basicData: BasicData): Option[String] = {
+    val multiRefList = basicData.rtimageListByBeam.filter(b => b._1.isDefined).groupBy(b => b._1.get.toUpperCase).map(g => g._2).filter(g => g.size > 1)
+    if (multiRefList.isEmpty) None
+    else Some("Same beam is referenced by multiple files:" + WebUtil.titleNewline + multiRefList.map(mr => mr.map(r => r._1.get.trim + "-->" + r._2.file.getName.trim).mkString(WebUtil.titleNewline)).mkString(WebUtil.titleNewline))
   }
 
   /**
@@ -163,10 +193,11 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     val rtimageMap = basicData.rtimageListByBeam.filter(rl => rl._1.isDefined && (!rl._1.get.equals(Config.FloodFieldBeamName))).map(rl => (rl._1.get, rl._2)).toMap
     val flood = basicData.rtimageListByBeam.filter(rl => rl._1.isDefined && (rl._1.get.equals(Config.FloodFieldBeamName)))
 
-    0 match {
-      case _ if ((rtimageMap.size + 1) != basicData.rtimageListByBeam.size) => formErr("RTIMAGE duplicate beam reference or missing (from plan) beam reference") // TODO make a better error message
+    (beamNotDefinedProblem(basicData), beamMultiRefProblem(basicData)) match {
+      case (Some(errorMessage), _) => formErr(errorMessage)
+      case (_, Some(errorMessage)) => formErr(errorMessage)
       case _ if (flood.isEmpty) => formErr("Flood field beam is missing")
-      case _ => Right(new RunReq(basicData.rtplan, basicData.machine, rtimageMap, flood.head._2))
+      case _ => Right(new RunReq(basicData.rtplan, basicData.machine, rtimageMap, flood.head._2)) // success
     }
   }
 
@@ -177,6 +208,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     basicValidation(valueMap) match {
       case Left(fail) => Left(fail)
       case Right(basicData) => {
+        logger.info("Received file list: " + basicData)
         val basicBeamValid = basicBeamValidation(valueMap, basicData)
         if (basicBeamValid.isLeft) basicBeamValid
         else {

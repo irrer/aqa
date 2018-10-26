@@ -93,7 +93,7 @@ class C3ChartHistory(
   }
 
   private def gridLine(clss: String, value: Double, title: String): String = {
-    "{ position: 'start', class: '" + clss + "', value:  " + value.toString + ", text: ' \\0 \\0 \\0 \\0 \\0 \\0 \\0 " + title + " " + Util.fmtDbl(value) + "' }"
+    "{ position: 'start', class: '" + clss + "', value:  " + value.toString + ", text: '  \\032 \\032 \\032 \\032 \\032 \\032  " + title + " " + Util.fmtDbl(value) + "' }"
   }
 
   private val grid = {

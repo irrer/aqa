@@ -130,6 +130,14 @@ object Util extends Logging {
     if (at == null) "" else al.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
   }
 
+  /**
+   * Get the Modality of an attribute list.
+   */
+  def modalityOfAl(al: AttributeList): String = {
+    val at = al.get(TagFromName.Modality)
+    if (at == null) "" else al.get(TagFromName.Modality).getSingleStringValueOrEmptyString
+  }
+
   def collimatorAngle(al: AttributeList): Double = {
     val at = al.get(TagFromName.BeamLimitingDeviceAngle)
     if (at == null) 0 else at.getDoubleValues.head
@@ -660,7 +668,7 @@ object Util extends Logging {
 
   /**
    * Format a double with enough precision for most needs and not using the exponential format.  This works for numbers in
-   * of the magnitude range of e+8 to e-8.  Beyond that and they start to be annoyingly long strings. 
+   * of the magnitude range of e+8 to e-8.  Beyond that and they start to be annoyingly long strings.
    */
   def fmtDbl(dbl: Double): String = dbl.formatted("%6.3e").toDouble.formatted("%32.16f").replaceAll("0*$", "").trim
 

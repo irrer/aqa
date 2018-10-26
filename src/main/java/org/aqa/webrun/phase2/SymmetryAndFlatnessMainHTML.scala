@@ -125,12 +125,12 @@ object SymmetryAndFlatnessMainHTML extends Logging {
 
   private def axialSymmetryBaselineColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
     <td style="text-align: center;">
-      { (result.axialSymmetryBaseline * 100).formatted("%14.6f") }
+      { result.axialSymmetryBaseline.formatted("%14.6f") }
     </td>
   }
 
   private def axialSymmetryBaselinePercentColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
-    val pct = 100 * (result.axialSymmetry - result.axialSymmetryBaseline)
+    val pct = result.axialSymmetry - result.axialSymmetryBaseline
     <td style="text-align: center;" class={ classOfStatus(result.axialSymmetryStatus) }>
       { pctRounded(pct).formatted("%5.2f") }
     </td>
@@ -146,12 +146,12 @@ object SymmetryAndFlatnessMainHTML extends Logging {
 
   private def transverseSymmetryBaselineColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
     <td style="text-align: center;">
-      { (result.transverseSymmetryBaseline * 100).formatted("%14.6f") }
+      { result.transverseSymmetryBaseline.formatted("%14.6f") }
     </td>
   }
 
   private def transverseSymmetryBaselinePercentColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
-    val pct = 100 * (result.transverseSymmetry - result.transverseSymmetryBaseline)
+    val pct = result.transverseSymmetry - result.transverseSymmetryBaseline
     <td style="text-align: center;" class={ classOfStatus(result.transverseSymmetryStatus) }>
       { pctRounded(pct).formatted("%5.2f") }
     </td>
@@ -167,12 +167,12 @@ object SymmetryAndFlatnessMainHTML extends Logging {
 
   private def flatnessBaselineColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
     <td style="text-align: center;">
-      { (result.flatnessBaseline * 100).formatted("%14.6f") }
+      { result.flatnessBaseline.formatted("%14.6f") }
     </td>
   }
 
   private def flatnessBaselinePercentColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
-    val pct = 100 * (result.flatness - result.flatnessBaseline)
+    val pct = result.flatness - result.flatnessBaseline
     <td style="text-align: center;" class={ classOfStatus(result.flatnessStatus) }>
       { pctRounded(pct).formatted("%5.2f") }
     </td>
