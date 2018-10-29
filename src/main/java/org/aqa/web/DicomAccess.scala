@@ -111,6 +111,39 @@ object DicomAccess extends Logging {
     </div>
   }
 
+  private class GraphHistogram(hist: Seq[(Float, Int)]) {
+    private val xValues = hist.map(vc => vc._1.toDouble)
+    private val yValues = hist.map(vc => vc._2.toDouble)
+    val chart = new C3Chart(
+      None, // width:
+      None, // height
+      "Pixel Value", "Pixel Value", xValues, ".d",
+      Seq("Count"), "Count", Seq(yValues), ".d", Seq(Color.DARK_GRAY))
+  }
+
+  /**
+   * Remove the outlier pixels at the high end of the histogram.  Use a 5% change as a cutoff.
+   */
+  private def trimHistogram(h: Seq[(Float, Int)]): Seq[(Float, Int)] = {
+    val start = h.lastIndexWhere(vc => vc._2 > 5)
+
+    val pct = 5.0.toFloat
+
+    val left = h.take(start + 1)
+    val right = h.takeRight(h.size - left.size)
+
+    val rVal = right.map(vc => vc._1)
+    val rr = rVal.zip(rVal.tail :+ rVal.last)
+
+    def tooMuchDelta(a: Float, b: Float) = { (((b - a) / a).abs * 100) > pct }
+    val lastGood = {
+      val lg = rr.indexWhere(pn => tooMuchDelta(pn._1, pn._2))
+      if (lg < 0) 0 else lg
+    }
+
+    left ++ right.take(lastGood + 1)
+  }
+
   private def makeImagePage(title: String, pngFile: File, outputDir: File, fileBaseName: String, dicomImage: DicomImage, bufferedImage: BufferedImage, badPixelList: IndexedSeq[Point]): Elem = {
 
     val pngUrl = WebServer.urlOfResultsFile(pngFile)
@@ -122,6 +155,10 @@ object DicomAccess extends Logging {
 
     val badPixelVisualizationList = badPixelList.map(badPixel => badPixelToHtml(badPixel, dicomImage, fileBaseName, bufferedImage, badPixelDir))
     val rowList = (0 until ((badPixelVisualizationList.size + pixRow - 1) / pixRow)).map(row => badPixelVisualizationList.drop(row * pixRow).take(pixRow))
+
+    val hist = dicomImage.histogram
+    val graphHistogramRaw = new GraphHistogram(hist)
+    val graphHistogramTrimmed = new GraphHistogram(trimHistogram(hist))
 
     def rowToHtml(row: IndexedSeq[Elem]): Elem = {
       { <div class="row">{ row }</div> }
@@ -135,6 +172,13 @@ object DicomAccess extends Logging {
         <h2 title="Zoomed view of bad pixels (centered in each) and raw values with immediate neighbors.">Bad Pixels : { badPixelList.size }</h2>
         <p/>
         { allRows }
+        <p/>
+        <h2 title="Shows how many times each pixel value occurs.  Pixel values are from the original image.">Histogram of Original Pixel Values verses Count</h2>
+        { graphHistogramRaw.chart.html }
+        <p/>
+        <h2 title="Shows how many times each pixel value occurs.  Pixel values have had the high-end outliers culled.">Histogram of Trimmed Pixel Values verses Count</h2>
+        { graphHistogramTrimmed.chart.html }
+        <p/>
       </div>
     }
 
@@ -145,7 +189,9 @@ object DicomAccess extends Logging {
       </div>
     }
 
-    val imagePageText = WebUtil.wrapBody(mainImagePage, title)
+    val script = { """<script>""" + graphHistogramRaw.chart.javascript + graphHistogramTrimmed.chart.javascript + """</script>""" }
+
+    val imagePageText = WebUtil.wrapBody(mainImagePage, title, None, true, Some(script))
     val imagePageOutStream = new FileOutputStream(imagePageFile)
     imagePageOutStream.write(imagePageText.getBytes)
     imagePageOutStream.close

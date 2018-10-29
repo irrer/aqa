@@ -24,6 +24,9 @@ import java.awt.Point
 import org.aqa.db.MachineType
 import org.aqa.web.WebServer
 
+/**
+ * Utilities for Phase 2.
+ */
 object Phase2Util extends Logging {
 
   /**

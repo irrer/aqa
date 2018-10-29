@@ -96,7 +96,8 @@ object BadPixelAnalysis extends Logging {
   /**
    * Make the DICOM files web viewable.
    */
-  private def makeDicomViews(extendedData: ExtendedData, runReq: RunReq, badPixelList: Seq[BadPixel]): Unit = {
+  private val makeDicomViewsSync = 0
+  private def makeDicomViews(extendedData: ExtendedData, runReq: RunReq, badPixelList: Seq[BadPixel]): Unit = makeDicomViewsSync.synchronized({
     val outputDir = extendedData.output.dir
     val colorMap = ImageUtil.rgbColorMap(Color.cyan)
     val smallImageWidth = 100.toString
@@ -104,6 +105,7 @@ object BadPixelAnalysis extends Logging {
     val viewDir = new File(extendedData.output.dir, "view")
     def dicomView(beamName: String): Option[String] = {
       logger.info("Making DICOM view for beam " + beamName)
+      println("Making DICOM view for beam " + beamName) // TODO rm
       val rtimage = runReq.rtimageMap(beamName)
       val derived = runReq.derivedMap(beamName)
       val angles = gantryCollAngles(rtimage.attributeList.get)
@@ -276,7 +278,7 @@ object BadPixelAnalysis extends Logging {
     val text = Phase2Util.wrapSubProcedure(extendedData, content, "View Dicom", ProcedureStatus.pass, None, runReq)
     val file = new File(outputDir, fileName)
     Util.writeBinaryFile(file, text.getBytes)
-  }
+  })
 
   private val subProcedureName = "Bad Pixel"
 

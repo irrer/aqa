@@ -33,6 +33,44 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
 
   val floodCorrectedImage = floodOriginalImage.correctBadPixels(floodBadPixelList)
 
+  if (false) { // TODO rm
+    println("=================================")
+    val lo = 50
+    val hi = 4000
+    val worst = for (
+      x <- (0 until floodOriginalImage.width);
+      y <- (0 until floodOriginalImage.height);
+      if ((floodOriginalImage.get(x, y) < lo) || (floodOriginalImage.get(x, y) > hi))
+    ) yield {
+      (x, y)
+    }
+
+    worst.map(xy => println("bad " + xy._1.formatted("%4d") + ", " + xy._2.formatted("%4d") + " : " + floodOriginalImage.get(xy._1, xy._2)))
+    println("=================================")
+    def showHist(name: String, di: DicomImage) = {
+      val hist = di.histogram
+      def toStr(h: Seq[(Float, Int)]) = {
+        h.map(vc => { vc._1 + ", " + vc._2 }).mkString("\n")
+      }
+      println(name + ": ==========\n" + toStr(hist.take(10)) + "\n--------\n" + toStr(hist.takeRight(10)) + "\n=======")
+    }
+
+    def badPixToString(di: DicomImage, list: Seq[Point]) = {
+      "size: " + list.size + " :: " + list.map(p => di.get(p.getX.toInt, p.getY.toInt).toInt).sorted.mkString("   ")
+    }
+
+    val fc2bad = Phase2Util.identifyBadPixels(floodCorrectedImage)
+    val fc2 = floodCorrectedImage.correctBadPixels(fc2bad)
+    showHist("floodOriginalImage", floodOriginalImage)
+    showHist("floodCorrectedImage", floodCorrectedImage)
+    showHist("fc2", fc2)
+
+    println("floodBadPixelList before: " + badPixToString(floodOriginalImage, floodBadPixelList))
+    println("floodBadPixelList after: " + badPixToString(floodCorrectedImage, floodBadPixelList))
+    println("fc2bad before: " + badPixToString(floodCorrectedImage, fc2bad))
+    println("fc2bad after: " + badPixToString(fc2, fc2bad))
+    println("hey")
+  }
   val ImagePlanePixelSpacing = Phase2Util.getImagePlanePixelSpacing(flood.attributeList.get)
 
   val imageSize = new Point(floodOriginalImage.width, floodOriginalImage.height)
