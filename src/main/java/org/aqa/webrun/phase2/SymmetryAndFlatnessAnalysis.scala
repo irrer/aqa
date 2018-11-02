@@ -32,6 +32,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   val axialSymmetryName = "Axial Symmetry"
   val transverseSymmetryName = "Transverse Symmetry"
   val flatnessName = "Flatness"
+  val profileConstancyName = "Profile Constancy"
 
   /**
    * Encapsulate data for generating a report.
@@ -40,18 +41,27 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     beamName: String,
     SOPInstanceUID: String,
     pointSet: PointSet,
+
     axialSymmetry: Double,
     axialSymmetryBaseline: Double,
+    axialSymmetryStatus: ProcedureStatus.Value,
+
     transverseSymmetry: Double,
     transverseSymmetryBaseline: Double,
+    transverseSymmetryStatus: ProcedureStatus.Value,
+
     flatness: Double,
     flatnessBaseline: Double,
-    axialSymmetryStatus: ProcedureStatus.Value,
-    transverseSymmetryStatus: ProcedureStatus.Value,
     flatnessStatus: ProcedureStatus.Value,
+
+    profileConstancy: Double,
+    profileConstancyBaseline: Double,
+    profileConstancyStatus: ProcedureStatus.Value,
+
     annotatedImage: BufferedImage,
     transverseProfile: Seq[Double], transverse_pct: IndexedSeq[Double],
-    axialProfile: Seq[Double], axial_pct: IndexedSeq[Double]) {
+    axialProfile: Seq[Double], axial_pct: IndexedSeq[Double],
+    baselinePointSet: PointSet) {
 
     /** True if everything is ok. */
     val pass = Seq(axialSymmetryStatus, transverseSymmetryStatus, flatnessStatus).filter(s => !(s.toString.equals(ProcedureStatus.pass.toString))).isEmpty
@@ -125,6 +135,19 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
   case class PointSet(top: Double, bottom: Double, right: Double, left: Double, center: Double) {
     val list = Seq(top, bottom, right, left, center)
+  }
+
+  private def analyzeProfileConstancy(pointSet: PointSet, baselinePointSet: PointSet): Double = {
+    def pointSetOverCenter(ps: PointSet) = {
+      Seq(ps.top, ps.right, ps.bottom, ps.left).map(p => p / ps.center)
+    }
+
+    val baselineOffAxisFactors = pointSetOverCenter(baselinePointSet)
+    val offAxisFactors = pointSetOverCenter(pointSet)
+
+    val profileConstancy = ((0 until 4).map(i => (offAxisFactors(i) - baselineOffAxisFactors(i)) / baselineOffAxisFactors(i)).sum * 100) / 4
+
+    profileConstancy
   }
 
   /**
@@ -203,6 +226,21 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val axialSymmetryBaseline = getBaseline(machinePK, beamName, axialSymmetryName, attributeList, axialSymmetry)
     val transverseSymmetryBaseline = getBaseline(machinePK, beamName, transverseSymmetryName, attributeList, transverseSymmetry)
     val flatnessBaseline = getBaseline(machinePK, beamName, flatnessName, attributeList, flatness)
+    val topBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointTop.name, attributeList, pointSet.top)
+    val bottomBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointBottom.name, attributeList, pointSet.bottom)
+    val leftBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointLeft.name, attributeList, pointSet.left)
+    val rightBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointRight.name, attributeList, pointSet.right)
+    val centerBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointCenter.name, attributeList, pointSet.center)
+    val profileConstancyBaseline = getBaseline(machinePK, beamName, profileConstancyName, attributeList, 0)
+
+    val baselinePointSet = new PointSet(
+      topBaseline.baseline.value.toDouble,
+      bottomBaseline.baseline.value.toDouble,
+      leftBaseline.baseline.value.toDouble,
+      rightBaseline.baseline.value.toDouble,
+      centerBaseline.baseline.value.toDouble)
+
+    val profileConstancy = analyzeProfileConstancy(pointSet, baselinePointSet)
 
     //  val topBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointTop.name, attributeList, pointSet)
 
@@ -214,23 +252,29 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val axialSymmetryStatus = checkPercent(axialSymmetry, axialSymmetryBaseline.baseline.value.toDouble, Config.SymmetryPercentLimit)
     val transverseSymmetryStatus = checkPercent(transverseSymmetry, transverseSymmetryBaseline.baseline.value.toDouble, Config.SymmetryPercentLimit)
     val flatnessStatus = checkPercent(flatness, flatnessBaseline.baseline.value.toDouble, Config.FlatnessPercentLimit)
+    val profileConstancyStatus = checkPercent(profileConstancy, profileConstancyBaseline.baseline.value.toDouble, Config.ProfileConstancyPercentLimit)
 
-    val pmiBaselineList = Seq(axialSymmetryBaseline, transverseSymmetryBaseline, flatnessBaseline)
+    val pmiBaselineList = Seq(axialSymmetryBaseline, transverseSymmetryBaseline, flatnessBaseline, profileConstancyBaseline,
+      topBaseline, bottomBaseline, leftBaseline, rightBaseline, centerBaseline)
 
     val result = new SymmetryAndFlatnessBeamResult(beamName, Util.sopOfAl(attributeList), pointSet,
       axialSymmetry,
       axialSymmetryBaseline.baseline.value.toDouble,
+      axialSymmetryStatus,
       transverseSymmetry,
       transverseSymmetryBaseline.baseline.value.toDouble,
+      transverseSymmetryStatus,
       flatness,
       flatnessBaseline.baseline.value.toDouble,
-      axialSymmetryStatus,
-      transverseSymmetryStatus,
       flatnessStatus,
+      profileConstancy,
+      profileConstancyBaseline.baseline.value.toDouble,
+      profileConstancyStatus,
       annotatedImage,
       transverseProfile, transverse_pct,
       axialProfile,
-      axial_pct)
+      axial_pct,
+      baselinePointSet)
 
     new BeamResultBaseline(result, pmiBaselineList, pointSet)
   }
@@ -256,6 +300,10 @@ object SymmetryAndFlatnessAnalysis extends Logging {
         sf.flatness,
         sf.flatnessBaseline,
         sf.flatnessStatus.toString,
+
+        sf.profileConstancy,
+        sf.profileConstancyBaseline,
+        sf.profileConstancyStatus.toString,
 
         sf.pointSet.top,
         sf.pointSet.bottom,

@@ -108,7 +108,7 @@ class C3ChartHistory(
 
     val gridBaseline: Seq[String] = {
       if (baseline.isDefined) {
-        val fmt = new SimpleDateFormat("YYYY MMM D hh:mm")
+        val fmt = new SimpleDateFormat("YYYY MMM d hh:mm")
         Seq(gridLine("baseline", baseline.get.value.toDouble, "Baseline " + fmt.format(baseline.get.acquisitionDate)))
       } else Seq[String]()
     }

@@ -37,7 +37,7 @@ class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Se
       "Date", sortedHistory.map(h => h.date),
       None, // BaselineSpec
       None, // minMax
-      Seq(units), units, Seq(sortedHistory.map(h => h.dose)), index, ".g5", Seq(new Color(102, 136, 187)))
+      Seq(units), units, Seq(sortedHistory.map(h => h.dose)), index, ".5g", Seq(new Color(102, 136, 187)))
   }
 
   def refOfBeam(beamName: String) = beamRefMap(beamName)

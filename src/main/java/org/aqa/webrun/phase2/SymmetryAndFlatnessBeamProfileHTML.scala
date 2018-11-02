@@ -51,9 +51,84 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
       <small title='Value calculated by this analysis.  Shows up as orange dot in chart.'><font color='orange'> { value.formatted("%9.6f") } </font></small>
     }
 
+    def resultTable: Elem = {
+        <div style="margin:20px;">
+          <center><h3>Results</h3></center>
+          <table class="table table-bordered" title={ "Results of this analysis and baseline values" + WebUtil.titleNewline + "for comparison.  All values are in percent." }>
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th>Transverse Symmetry %</th>
+                <th>Axial Symmetry %</th>
+                <th>Flatness %</th>
+                <th>Profile Constancy %</th>
+              </tr>
+            </thead>
+            <tr>
+              <td>Analysis</td>
+              <td>{ Util.fmtDbl(result.transverseSymmetry) }</td>
+              <td>{ Util.fmtDbl(result.axialSymmetry) }</td>
+              <td>{ Util.fmtDbl(result.flatness) }</td>
+              <td>{ Util.fmtDbl(result.profileConstancy) }</td>
+            </tr>
+            <tr>
+              <td>Baseline</td>
+              <td>{ Util.fmtDbl(result.transverseSymmetryBaseline) }</td>
+              <td>{ Util.fmtDbl(result.axialSymmetryBaseline) }</td>
+              <td>{ Util.fmtDbl(result.flatnessBaseline) }</td>
+              <td>{ Util.fmtDbl(result.profileConstancyBaseline) }</td>
+            </tr>
+          </table>
+        </div>
+    }
+
+    def inputTable: Elem = {
+      <div style="margin:20px;">
+        <center><h3>Inputs</h3></center>
+        <table class="table table-bordered" title="Input values from this data set and from baseline.">
+          <thead>
+            <tr>
+              <th>Source</th>
+              <th>Top CU</th>
+              <th>Bottom CU</th>
+              <th>Left CU</th>
+              <th>Right CU</th>
+              <th>Center CU</th>
+            </tr>
+          </thead>
+          <tr>
+            <td>Analysis</td>
+            <td>{ Util.fmtDbl(result.pointSet.top) }</td>
+            <td>{ Util.fmtDbl(result.pointSet.bottom) }</td>
+            <td>{ Util.fmtDbl(result.pointSet.left) }</td>
+            <td>{ Util.fmtDbl(result.pointSet.right) }</td>
+            <td>{ Util.fmtDbl(result.pointSet.center) }</td>
+          </tr>
+          <tr>
+            <td>Baseline</td>
+            <td>{ Util.fmtDbl(result.baselinePointSet.top) }</td>
+            <td>{ Util.fmtDbl(result.baselinePointSet.bottom) }</td>
+            <td>{ Util.fmtDbl(result.baselinePointSet.left) }</td>
+            <td>{ Util.fmtDbl(result.baselinePointSet.right) }</td>
+            <td>{ Util.fmtDbl(result.baselinePointSet.center) }</td>
+          </tr>
+        </table>
+      </div>
+    }
+
     val graphHistory = new SymmetryAndFlatnessBeamHistoryHTML(result.beamName, extendedData)
     val content = {
       <div class="row">
+        <div class="row">
+          <div class="col-md-4 col-md-offset-4">
+            { resultTable }
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-4 col-md-offset-4">
+            { inputTable }
+          </div>
+        </div>
         <div class="row">
           <div class="col-md-5 col-md-offset-1">
             { <img class="img-responsive" src={ WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.beamName)) }/> }
@@ -81,6 +156,10 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
               <h2>Flatness History</h2>
               { graphHistory.htmlFlatness }
             </div>
+            <div class="row">
+              <h2>Profile Constancy History</h2>
+              { graphHistory.htmlProfileConstancy }
+            </div>
           </div>
         </div>
         <p> </p>
@@ -92,7 +171,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
 
   def makeDisplay(subDir: File, extendedData: ExtendedData, result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult, status: ProcedureStatus.Value, runReq: RunReq) = {
     val elemJavascript = makeContent(subDir, extendedData, result, status, runReq)
-    val html = Phase2Util.wrapSubProcedure(extendedData, elemJavascript._1, "Symmetry and Flatness Beam " + result.beamName, result.status, Some(elemJavascript._2), runReq)
+    val html = Phase2Util.wrapSubProcedure(extendedData, elemJavascript._1, "Symmetry and Flatness " + result.beamName, result.status, Some(elemJavascript._2), runReq)
     Util.writeBinaryFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, result.beamName), html.getBytes)
   }
 }

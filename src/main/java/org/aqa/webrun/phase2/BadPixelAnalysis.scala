@@ -52,8 +52,8 @@ object BadPixelAnalysis extends Logging {
 
     val outputPK = extendedData.output.outputPK.get
 
-    def beamToBadPixels(beamName: String, SOPInstanceUID: String, badPixelList: IndexedSeq[Point], originalImage: DicomImage): Seq[BadPixel] = {
-      badPixelList.map(bp => {
+    def beamToBadPixels(beamName: String, SOPInstanceUID: String, badPixels: DicomImage.BadPixelSet, originalImage: DicomImage): Seq[BadPixel] = {
+      badPixels.list.map(bp => {
         val x = bp.getX.round.toInt
         val y = bp.getY.round.toInt
         val j = new BadPixel(None, extendedData.output.outputPK.get, x, y, SOPInstanceUID, beamName, makeCsv(x, y, originalImage))
@@ -64,7 +64,7 @@ object BadPixelAnalysis extends Logging {
     val beamList = runReq.rtimageMap.keys.par.map(beamName =>
       {
         val SOPInstanceUID = runReq.rtimageMap(beamName).attributeList.get.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull
-        beamToBadPixels(beamName, SOPInstanceUID, runReq.derivedMap(beamName).badPixelList, runReq.derivedMap(beamName).originalImage)
+        beamToBadPixels(beamName, SOPInstanceUID, runReq.derivedMap(beamName).badPixels, runReq.derivedMap(beamName).originalImage)
       }).flatten.toList
 
     val floodSOPInstanceUID = runReq.flood.attributeList.get.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull
@@ -112,7 +112,9 @@ object BadPixelAnalysis extends Logging {
 
       val bufImage = derived.originalImage.toDeepColorBufferedImage(derived.pixelCorrectedImage.min, derived.pixelCorrectedImage.max)
       val url = WebServer.urlOfResultsFile(rtimage.file)
-      val result = DicomAccess.write(rtimage, url, angles + " : " + beamName, viewDir, Phase2Util.dicomViewBaseName(beamName, rtimage.attributeList.get), Some(bufImage), Some(derived.originalImage), derived.badPixelList)
+      val result = DicomAccess.write(rtimage, url, angles + " : " + beamName, viewDir, 
+          Phase2Util.dicomViewBaseName(beamName, rtimage.attributeList.get), 
+          Some(bufImage), Some(derived.originalImage), derived.badPixels)
       logger.info("Finished making DICOM view for beam " + beamName)
       result
     }
@@ -121,7 +123,7 @@ object BadPixelAnalysis extends Logging {
     val planLink = Phase2Util.dicomViewHref(runReq.rtplan.attributeList.get, extendedData, runReq)
     val rtPlanAl = runReq.rtplan.attributeList.get
     val planBaseName = Phase2Util.dicomViewBaseName(runReq.beamNameOfAl(rtPlanAl), rtPlanAl)
-    DicomAccess.write(runReq.rtplan, planLink, "RTPLAN", viewDir, planBaseName, None, None, IndexedSeq[Point]())
+    DicomAccess.write(runReq.rtplan, planLink, "RTPLAN", viewDir, planBaseName, None, None, new DicomImage.BadPixelSet(IndexedSeq[DicomImage.PixelRating](), 0, 0))
 
     val floodLink = Phase2Util.dicomViewHref(runReq.flood.attributeList.get, extendedData, runReq)
     val floodBufImage = runReq.floodOriginalImage.toDeepColorBufferedImage(runReq.floodCorrectedImage.min, runReq.floodCorrectedImage.max)
@@ -291,6 +293,7 @@ object BadPixelAnalysis extends Logging {
     try {
       logger.info("Starting analysis of BadPixel")
       val badPixelList = storeToDb(extendedData, runReq)
+      logger.info("Finished analysis of BadPixel, generating Bad Pixel reports")
       makeDicomViews(extendedData, runReq, badPixelList)
 
       val maxAllowedBadPixels = ((runReq.floodOriginalImage.Rows * runReq.floodOriginalImage.Columns) / 1000000.0) * Config.MaxAllowedBadPixelsPerMillion

@@ -49,8 +49,8 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
     println("=================================")
     def showHist(name: String, di: DicomImage) = {
       val hist = di.histogram
-      def toStr(h: Seq[(Float, Int)]) = {
-        h.map(vc => { vc._1 + ", " + vc._2 }).mkString("\n")
+      def toStr(h: Seq[DicomImage.HistPoint]) = {
+        h.map(vc => { vc.value + ", " + vc.count }).mkString("\n")
       }
       println(name + ": ==========\n" + toStr(hist.take(10)) + "\n--------\n" + toStr(hist.takeRight(10)) + "\n=======")
     }
@@ -65,10 +65,10 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
     showHist("floodCorrectedImage", floodCorrectedImage)
     showHist("fc2", fc2)
 
-    println("floodBadPixelList before: " + badPixToString(floodOriginalImage, floodBadPixelList))
-    println("floodBadPixelList after: " + badPixToString(floodCorrectedImage, floodBadPixelList))
-    println("fc2bad before: " + badPixToString(floodCorrectedImage, fc2bad))
-    println("fc2bad after: " + badPixToString(fc2, fc2bad))
+    println("floodBadPixelList before: " + badPixToString(floodOriginalImage, floodBadPixelList.list))
+    println("floodBadPixelList after: " + badPixToString(floodCorrectedImage, floodBadPixelList.list))
+    println("fc2bad before: " + badPixToString(floodCorrectedImage, fc2bad.list))
+    println("fc2bad after: " + badPixToString(fc2, fc2bad.list))
     println("hey")
   }
   val ImagePlanePixelSpacing = Phase2Util.getImagePlanePixelSpacing(flood.attributeList.get)
@@ -105,8 +105,8 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
 
   case class Derived(dicomFile: DicomFile) {
     lazy val originalImage = new DicomImage(dicomFile.attributeList.get)
-    lazy val badPixelList = Phase2Util.identifyBadPixels(originalImage)
-    lazy val pixelCorrectedImage = originalImage.correctBadPixels(badPixelList)
+    lazy val badPixels = Phase2Util.identifyBadPixels(originalImage)
+    lazy val pixelCorrectedImage = originalImage.correctBadPixels(badPixels)
     lazy val pixelCorrectedCroppedImage = pixelCorrectedImage.getSubimage(floodRectangle)
     lazy val biasAndPixelCorrectedCroppedImage = pixelCorrectedCroppedImage.biasCorrect(floodPixelCorrectedAndCroppedImage)
   }

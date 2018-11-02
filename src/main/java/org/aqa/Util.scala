@@ -670,6 +670,9 @@ object Util extends Logging {
    * Format a double with enough precision for most needs and not using the exponential format.  This works for numbers in
    * of the magnitude range of e+8 to e-8.  Beyond that and they start to be annoyingly long strings.
    */
-  def fmtDbl(dbl: Double): String = dbl.formatted("%6.3e").toDouble.formatted("%32.16f").replaceAll("0*$", "").trim
+  def fmtDbl(dbl: Double): String = {
+    val text = dbl.formatted("%6.3e").toDouble.formatted("%32.16f").replaceAll("0*$", "").trim
+    if (text.endsWith(".")) text + "0" else text
+  }
 
 }

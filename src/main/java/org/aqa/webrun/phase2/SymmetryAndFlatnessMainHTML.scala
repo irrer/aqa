@@ -40,6 +40,8 @@ object SymmetryAndFlatnessMainHTML extends Logging {
   private def titleAxialSymmetry = "Axial symmetry from top to bottom: (top-bottom)/bottom.  Max percent limit is " + Config.SymmetryPercentLimit
   private def titleTransverseSymmetry = "Transverse symmetry from right to left: (right-left)/left.  Max percent limit is " + Config.SymmetryPercentLimit
   private def titleFlatness = "Flatness: (max-min)/(max+min).  Max percent limit is " + Config.FlatnessPercentLimit
+  private def titleProfileConstancy = "Profile Constancy.  Max percent limit is " + Config.ProfileConstancyPercentLimit
+
   //  private val passImg = { <img title="Passed" src={ Config.passImageUrl } width="30"/> }
   //  private val failImg = { <img title="Failed" src={ Config.failImageUrl } width="30"/> }
 
@@ -85,7 +87,7 @@ object SymmetryAndFlatnessMainHTML extends Logging {
     }
 
     val detailUrl = WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, beamName))
-    <td style="vertical-align: middle;" title={ titleDetails } rowspan="3"><a href={ detailUrl }>{ beamName }<br/>{ Phase2Util.jawDescription(al) }<br/>{ Phase2Util.angleDescription(al) }</a></td>
+    <td style="vertical-align: middle;" title={ titleDetails } rowspan="4"><a href={ detailUrl }>{ beamName }<br/>{ Phase2Util.jawDescription(al) }<br/>{ Phase2Util.angleDescription(al) }</a></td>
   }
 
   private def imageColumn(subDir: File, beamName: String, extendedData: ExtendedData, runReq: RunReq): Elem = {
@@ -94,7 +96,7 @@ object SymmetryAndFlatnessMainHTML extends Logging {
     val imgUrl = WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, beamName))
     val imgSmall = { <img src={ imgUrl } width="100"/> }
     val ref = { <a href={ dicomHref }>{ imgSmall }</a> }
-    <td style="text-align: center;vertical-align: middle;" title={ titleImage } rowspan="3">{ ref }</td>
+    <td style="text-align: center;vertical-align: middle;" title={ titleImage } rowspan="4">{ ref }</td>
   }
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -108,6 +110,12 @@ object SymmetryAndFlatnessMainHTML extends Logging {
   private val flatnessPercentLimitColumn = {
     <td style="text-align: center;">
       { Config.FlatnessPercentLimit.formatted("%5.2f") }
+    </td>
+  }
+
+  private val profileConstancyPercentLimitColumn = {
+    <td style="text-align: center;">
+      { Config.ProfileConstancyPercentLimit.formatted("%5.2f") }
     </td>
   }
 
@@ -180,6 +188,27 @@ object SymmetryAndFlatnessMainHTML extends Logging {
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+  private def profileConstancyColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
+    <td style="text-align: center;" title={ titleProfileConstancy }>
+      { result.profileConstancy.formatted("%14.6f") }
+    </td>
+  }
+
+  private def profileConstancyBaselineColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
+    <td style="text-align: center;">
+      { result.profileConstancyBaseline.formatted("%14.6f") }
+    </td>
+  }
+
+  private def profileConstancyBaselinePercentColumn(result: SymmetryAndFlatnessBeamResult): Elem = {
+    val pct = result.profileConstancy - result.profileConstancyBaseline
+    <td style="text-align: center;" class={ classOfStatus(result.profileConstancyStatus) }>
+      { pctRounded(pct).formatted("%5.2f") }
+    </td>
+  }
+
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
   private def makeRow(subDir: File, extendedData: ExtendedData, resultBaseline: BeamResultBaseline, runReq: RunReq): Seq[Elem] = {
     val result = resultBaseline.result
     Seq(
@@ -211,6 +240,15 @@ object SymmetryAndFlatnessMainHTML extends Logging {
           { flatnessPercentLimitColumn }
           { flatnessColumn(result) }
         </tr>
+      },
+      {
+        <tr>
+          <td style="text-align: center;">Profile Constancy</td>
+          { profileConstancyBaselineColumn(result) }
+          { profileConstancyBaselinePercentColumn(result) }
+          { profileConstancyPercentLimitColumn }
+          { profileConstancyColumn(result) }
+        </tr>
       })
   }
 
@@ -227,8 +265,6 @@ object SymmetryAndFlatnessMainHTML extends Logging {
 
     val content = {
       <div class="col-md-6 col-md-offset-3">
-        <br/>
-        Note: Symmetry is calculated as (max - min) / max + min and has no units.  Flatness is calculated as max - min and is in mm.
         <br/>
         <table class="table table-bordered">
           { tableHead }

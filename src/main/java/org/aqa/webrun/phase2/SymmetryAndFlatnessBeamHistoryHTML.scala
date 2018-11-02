@@ -67,11 +67,13 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, extendedData: Extende
   private val chartAxial = makeChart("Axial Symmetry", getBaseline(SymmetryAndFlatnessAnalysis.axialSymmetryName), Config.SymmetryPercentLimit, history.map(h => h.symmetryAndFlatness.axialSymmetry_pct))
   private val chartTransverse = makeChart("Transverse Symmetry", getBaseline(SymmetryAndFlatnessAnalysis.transverseSymmetryName), Config.SymmetryPercentLimit, history.map(h => h.symmetryAndFlatness.transverseSymmetry_pct))
   private val chartFlatness = makeChart("Flatness", getBaseline(SymmetryAndFlatnessAnalysis.flatnessName), Config.FlatnessPercentLimit, history.map(h => h.symmetryAndFlatness.flatness_pct))
+  private val chartProfileConstancy = makeChart("Profile Constancy", getBaseline(SymmetryAndFlatnessAnalysis.profileConstancyName), Config.ProfileConstancyPercentLimit, history.map(h => h.symmetryAndFlatness.profileConstancy_pct))
 
-  val javascript = chartAxial.javascript + chartTransverse.javascript + chartFlatness.javascript
+  val javascript = chartAxial.javascript + chartTransverse.javascript + chartFlatness.javascript + chartProfileConstancy.javascript
 
   val htmlAxial = chartAxial.html
   val htmlTransverse = chartTransverse.html
   val htmlFlatness = chartFlatness.html
+  val htmlProfileConstancy = chartProfileConstancy.html
 
 }

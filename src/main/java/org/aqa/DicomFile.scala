@@ -70,14 +70,14 @@ case class DicomFile(file: File) extends Logging {
     }
   }
 
-  lazy val badPixelList: Option[IndexedSeq[DicomImage.PixelRating]] = {
+  lazy val badPixelList: Option[DicomImage.BadPixelSet] = {
     originalDicomImage match {
       case Some(odi) => {
         val numPixels = odi.width * odi.height
         val sampleSize = ((Config.BadPixelSamplePerMillion / 1000000.0) * numPixels).round.toInt
         val maxBadPixels = ((Config.MaxEstimatedBadPixelPerMillion / 1000000.0) * numPixels).round.toInt
-        val badPixelList = odi.identifyBadPixels(sampleSize, maxBadPixels, Config.BadPixelStdDev)
-        Some(badPixelList)
+        val badPixels = odi.identifyBadPixels(sampleSize, maxBadPixels, Config.BadPixelStdDev)
+        Some(badPixels)
       }
       case _ => None
     }

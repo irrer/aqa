@@ -30,6 +30,10 @@ case class SymmetryAndFlatness(
   flatnessBaseline_pct: Double,
   flatnessStatus: String,
 
+  profileConstancy_pct: Double,
+  profileConstancyBaseline_pct: Double,
+  profileConstancyStatus: String,
+
   top_cu: Double, // average value of top point pixels
   bottom_cu: Double, // average value of bottom point pixels
   left_cu: Double, // average value of left point pixels
@@ -61,6 +65,9 @@ case class SymmetryAndFlatness(
       "    flatness_pct: " + flatness_pct + "\n" +
       "    flatnessBaseline_pct: " + flatnessBaseline_pct + "\n" +
       "    flatnessStatus: " + flatnessStatus + "\n" +
+      "    profileConstancy_pct: " + profileConstancy_pct + "\n" +
+      "    profileConstancyBaseline_pct: " + profileConstancyBaseline_pct + "\n" +
+      "    profileConstancyStatus: " + profileConstancyStatus + "\n" +
       "    top_cu: " + top_cu + "\n" +
       "    bottom_cu: " + bottom_cu + "\n" +
       "    left_cu: " + left_cu + "\n" +
@@ -85,6 +92,9 @@ object SymmetryAndFlatness extends ProcedureOutput {
     def flatness_pct = column[Double]("flatness_pct")
     def flatnessBaseline_pct = column[Double]("flatnessBaseline_pct")
     def flatnessStatus = column[String]("flatnessStatus")
+    def profileConstancy_pct = column[Double]("profileConstancy_pct")
+    def profileConstancyBaseline_pct = column[Double]("profileConstancyBaseline_pct")
+    def profileConstancyStatus = column[String]("profileConstancyStatus")
     def top_cu = column[Double]("top_cu")
     def bottom_cu = column[Double]("bottom_cu")
     def left_cu = column[Double]("left_cu")
@@ -105,6 +115,9 @@ object SymmetryAndFlatness extends ProcedureOutput {
       flatness_pct,
       flatnessBaseline_pct,
       flatnessStatus,
+      profileConstancy_pct,
+      profileConstancyBaseline_pct,
+      profileConstancyStatus,
       top_cu,
       bottom_cu,
       left_cu,
@@ -186,55 +199,38 @@ object SymmetryAndFlatness extends ProcedureOutput {
     import org.joda.time.{ DateTime, LocalDate, LocalTime, DateTimeZone }
     import org.joda.time.format._
 
-    Trace.trace(limit)
-    Trace.trace(machinePK)
-    Trace.trace(procedurePK)
-    Trace.trace(beamName)
-    Trace.trace(date.get)
     implicit def jodaTimeMapping: BaseColumnType[DateTime] = MappedColumnType.base[DateTime, Timestamp](
       dateTime => new Timestamp(dateTime.getMillis),
       timeStamp => new DateTime(timeStamp.getTime))
 
-    Trace.trace
     val ts = if (date.isDefined) date.get else new Timestamp(Long.MaxValue)
-    Trace.trace
-
+    
     val before = {
-      Trace.trace
       val search = for {
         output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate.get.toString <= ts.toString)).map(o => (o.outputPK, o.dataDate, o.machinePK))
         symmetryAndFlatness <- SymmetryAndFlatness.query.filter(c => c.outputPK === output._1 && c.beamName === beamName)
       } yield ((output._2, symmetryAndFlatness))
 
-      Trace.trace
       val sorted = search.distinct.sortBy(_._1.desc).take(limit)
       val result = Db.run(sorted.result)
-      Trace.trace
       result
     }
 
     def after = {
-      Trace.trace
       val search = for {
         output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate.get.toString > ts.toString)).map(o => (o.outputPK, o.dataDate, o.machinePK))
         symmetryAndFlatness <- SymmetryAndFlatness.query.filter(c => c.outputPK === output._1 && c.beamName === beamName)
       } yield ((output._2, symmetryAndFlatness))
-      Trace.trace
 
       val sorted = search.distinct.sortBy(_._1.asc).take(limit)
-      Trace.trace
       val result = Db.run(sorted.result)
-      Trace.trace
       result
     }
-    Trace.trace
 
     val all = if (before.size >= limit) before else (before ++ after).take(limit)
-    Trace.trace
 
     // Convert to class and make sure that they are temporally ordered.
     val result = all.map(h => new SymmetryAndFlatnessHistory(h._1.get, h._2)).sortWith((a, b) => a.date.getTime < b.date.getTime)
-    Trace.trace
     result
   }
 }

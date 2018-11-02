@@ -23,6 +23,7 @@ import java.awt.geom.Point2D
 import java.awt.Point
 import org.aqa.db.MachineType
 import org.aqa.web.WebServer
+import java.text.SimpleDateFormat
 
 /**
  * Utilities for Phase 2.
@@ -173,26 +174,23 @@ object Phase2Util extends Logging {
    */
   def wrapSubProcedure(extendedData: ExtendedData, content: Elem, title: String, status: ProcedureStatus.Value, runScript: Option[String], runReq: RunReq): String = {
 
-    def wrap(col: Int, name: String, value: String): Elem = {
-      <div class={ "col-md-" + col }><em>{ name }:</em><br/>{ value }</div>
-    }
-
     def mainReport: Elem = {
       val href = WebServer.urlOfResultsFile(extendedData.output.dir) + "/" + Output.displayFilePrefix + ".html"
       <div class="col-md-1 col-md-offset-1" title='Return to main (overview) report'><a href={ href }>Main Report</a></div>
     }
 
-    val analysisDate: String = {
+    val analysisDate: Date = {
       val date = extendedData.output.analysisDate match {
         case Some(d) => d
         case _ => extendedData.output.startDate
       }
-      Util.timeHumanFriendly(date)
+      date
     }
 
     def dateToString(date: Option[Date]): String = {
+      val dateFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss")
       date match {
-        case Some(date) => Util.timeHumanFriendly(date)
+        case Some(date) => dateFormat.format(date)
         case _ => "unknown"
       }
     }
@@ -226,6 +224,19 @@ object Phase2Util extends Logging {
         runReq.ImagePlanePixelSpacing.getX.formatted("%5.3f") + " * " + runReq.ImagePlanePixelSpacing.getY.formatted("%5.3f") + " mm"
     }
 
+    def wrap(col: Int, name: String, value: String): Elem = {
+      val valueList = value.split("\n")
+      val html = { <span>{ valueList.head }{ valueList.tail.map(line => { <span><br/> { line } </span> }) }</span> }
+      { <div class={ "col-md-" + col }><em>{ name }:</em><br/>{ html }</div> }
+    }
+
+    val twoLineDate = new SimpleDateFormat("MMM dd yyyy\nHH:mm")
+
+    val dataAcquisitionDate = {
+      if (extendedData.output.dataDate.isDefined) twoLineDate.format(extendedData.output.dataDate.get)
+      else "unknown"
+    }
+
     val div = {
       <div class="row">
         <div class="row">
@@ -245,13 +256,12 @@ object Phase2Util extends Logging {
         </div>
         <div class="row">
           { mainReport }
-          { wrap(1, "Main Report", extendedData.institution.name) }
           { wrap(2, "Institution", extendedData.institution.name) }
-          { wrap(2, "Data Acquisition", dateToString(extendedData.output.dataDate)) }
-          { wrap(2, "Analysis", analysisDate) }
+          { wrap(1, "Data Acquisition", dataAcquisitionDate) }
+          { wrap(1, "Analysis", twoLineDate.format(analysisDate)) }
           { wrap(1, "User", userId) }
           { wrap(1, "Elapsed", elapsed) }
-          { wrap(3, "Procedure", procedureDesc) }
+          { wrap(1, "Procedure", procedureDesc) }
         </div>
         <div class="row">
           { content }
@@ -267,12 +277,12 @@ object Phase2Util extends Logging {
   /**
    * Get a list of bad pixels in the given image according to the configuration for Phase 2.
    */
-  def identifyBadPixels(originalImage: DicomImage): IndexedSeq[Point] = {
+  def identifyBadPixels(originalImage: DicomImage): DicomImage.BadPixelSet = {
     val numPixels = originalImage.width * originalImage.height
     val sampleSize = ((Config.BadPixelSamplePerMillion / 1000000.0) * numPixels).round.toInt
     val maxBadPixels = ((Config.MaxEstimatedBadPixelPerMillion / 1000000.0) * numPixels).round.toInt
-    val badPixelList = originalImage.identifyBadPixels(sampleSize, maxBadPixels, Config.BadPixelStdDev)
-    badPixelList
+    val badPixels = originalImage.identifyBadPixels(sampleSize, maxBadPixels, Config.BadPixelStdDev)
+    badPixels
   }
 
   //  /**

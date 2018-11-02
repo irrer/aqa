@@ -127,10 +127,10 @@ Note that when building a package for release, the Maven build process uses the 
     <BadPixelSamplePerMillion>250</BadPixelSamplePerMillion>
 
     <!-- Number of standard deviations that a pixel must be from it's 8 neighbors to be considered a bad pixel. -->
-    <BadPixelStdDev>1.0</BadPixelStdDev>
+    <BadPixelStdDev>3.0</BadPixelStdDev>
     
     <!-- Maximum number of bad pixel tolerated before considering the image to be of such poor quality that it should be rejected for processing.  Must be a positive integer. -->
-    <MaxAllowedBadPixelsPerMillion>500</MaxAllowedBadPixelsPerMillion>
+    <MaxAllowedBadPixelsPerMillion>50</MaxAllowedBadPixelsPerMillion>
 
     <!-- Radius in mm (floating point) centered in an image defining the pixels to be used to determine dose. -->
     <CenterDoseRadius_mm>5.0</CenterDoseRadius_mm>
@@ -197,6 +197,9 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Maximum allowed value for difference in flatness from baseline in percent. -->
     <FlatnessPercentLimit>2.0</FlatnessPercentLimit>
+    
+    <!-- Maximum allowed value for difference in profile constancy from baseline in percent. -->
+    <ProfileConstancyPercentLimit>2.0</ProfileConstancyPercentLimit>
 
     <SymmetryAndFlatnessBeamList>
         <BeamName>Flood 6X</BeamName>

@@ -497,6 +497,7 @@ object Config extends Logging {
 
   val SymmetryPercentLimit = logMainText("SymmetryPercentLimit").toDouble
   val FlatnessPercentLimit = logMainText("FlatnessPercentLimit").toDouble
+  val ProfileConstancyPercentLimit = logMainText("ProfileConstancyPercentLimit").toDouble
 
   val SymmetryAndFlatnessBeamList = getSymmetryAndFlatnessBeamList
 
