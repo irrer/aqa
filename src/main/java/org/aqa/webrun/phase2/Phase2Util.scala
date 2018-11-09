@@ -277,11 +277,11 @@ object Phase2Util extends Logging {
   /**
    * Get a list of bad pixels in the given image according to the configuration for Phase 2.
    */
-  def identifyBadPixels(originalImage: DicomImage): DicomImage.BadPixelSet = {
+  def identifyBadPixels(originalImage: DicomImage, jjjjj: Int): Seq[DicomImage.PixelRating] = {
     val numPixels = originalImage.width * originalImage.height
     val sampleSize = ((Config.BadPixelSamplePerMillion / 1000000.0) * numPixels).round.toInt
     val maxBadPixels = ((Config.MaxEstimatedBadPixelPerMillion / 1000000.0) * numPixels).round.toInt
-    val badPixels = originalImage.identifyBadPixels(sampleSize, maxBadPixels, Config.BadPixelStdDev)
+    val badPixels = originalImage.identifyBadPixels(maxBadPixels, Config.BadPixelStdDev, 5)
     badPixels
   }
 

@@ -466,6 +466,7 @@ object Config extends Logging {
   val MaxEstimatedBadPixelPerMillion = logMainText("MaxEstimatedBadPixelPerMillion").toInt
   val BadPixelSamplePerMillion = logMainText("BadPixelSamplePerMillion").toInt
   val BadPixelStdDev = logMainText("BadPixelStdDev").toDouble
+  val BadPixelRadius_mm = logMainText("BadPixelRadius_mm").toDouble
   val MaxAllowedBadPixelsPerMillion = logMainText("MaxAllowedBadPixelsPerMillion").toInt
 
   val MaxProcedureDuration = logMainText("MaxProcedureDuration").toDouble

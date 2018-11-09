@@ -52,8 +52,8 @@ object BadPixelAnalysis extends Logging {
 
     val outputPK = extendedData.output.outputPK.get
 
-    def beamToBadPixels(beamName: String, SOPInstanceUID: String, badPixels: DicomImage.BadPixelSet, originalImage: DicomImage): Seq[BadPixel] = {
-      badPixels.list.map(bp => {
+    def beamToBadPixels(beamName: String, SOPInstanceUID: String, badPixels: Seq[DicomImage.PixelRating], originalImage: DicomImage): Seq[BadPixel] = {
+      badPixels.map(bp => {
         val x = bp.getX.round.toInt
         val y = bp.getY.round.toInt
         val j = new BadPixel(None, extendedData.output.outputPK.get, x, y, SOPInstanceUID, beamName, makeCsv(x, y, originalImage))
@@ -112,9 +112,9 @@ object BadPixelAnalysis extends Logging {
 
       val bufImage = derived.originalImage.toDeepColorBufferedImage(derived.pixelCorrectedImage.min, derived.pixelCorrectedImage.max)
       val url = WebServer.urlOfResultsFile(rtimage.file)
-      val result = DicomAccess.write(rtimage, url, angles + " : " + beamName, viewDir, 
-          Phase2Util.dicomViewBaseName(beamName, rtimage.attributeList.get), 
-          Some(bufImage), Some(derived.originalImage), derived.badPixels)
+      val result = DicomAccess.write(rtimage, url, angles + " : " + beamName, viewDir,
+        Phase2Util.dicomViewBaseName(beamName, rtimage.attributeList.get),
+        Some(bufImage), Some(derived.originalImage), derived.badPixels)
       logger.info("Finished making DICOM view for beam " + beamName)
       result
     }
@@ -123,7 +123,7 @@ object BadPixelAnalysis extends Logging {
     val planLink = Phase2Util.dicomViewHref(runReq.rtplan.attributeList.get, extendedData, runReq)
     val rtPlanAl = runReq.rtplan.attributeList.get
     val planBaseName = Phase2Util.dicomViewBaseName(runReq.beamNameOfAl(rtPlanAl), rtPlanAl)
-    DicomAccess.write(runReq.rtplan, planLink, "RTPLAN", viewDir, planBaseName, None, None, new DicomImage.BadPixelSet(IndexedSeq[DicomImage.PixelRating](), 0, 0))
+    DicomAccess.write(runReq.rtplan, planLink, "RTPLAN", viewDir, planBaseName, None, None, Seq[DicomImage.PixelRating]())
 
     val floodLink = Phase2Util.dicomViewHref(runReq.flood.attributeList.get, extendedData, runReq)
     val floodBufImage = runReq.floodOriginalImage.toDeepColorBufferedImage(runReq.floodCorrectedImage.min, runReq.floodCorrectedImage.max)
