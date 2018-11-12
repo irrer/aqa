@@ -84,7 +84,7 @@ case class DicomFile(file: File) extends Logging {
         val million = 1000.0 * 1000
         val sampleSize = ((Config.BadPixelSamplePerMillion / million) * numPixels).round.toInt
         val maxBadPixels = ((Config.MaxEstimatedBadPixelPerMillion / million) * numPixels).round.toInt
-        val badPixels = odi.identifyBadPixels(maxBadPixels, Config.BadPixelStdDev, badPixelRadius)
+        val badPixels = odi.identifyBadPixels(maxBadPixels, Config.BadPixelStdDev, Config.BadPixelMaximumPercentChange, badPixelRadius, Config.BadPixelMinimumDeviation_CU)
         Some(badPixels)
       }
       case _ => None

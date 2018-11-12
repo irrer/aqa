@@ -11,6 +11,7 @@ import java.awt.geom.Point2D
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
 import com.pixelmed.dicom.AttributeList
+import org.aqa.Logging
 
 /**
  * @param rtplan: RTPLAN file
@@ -19,7 +20,7 @@ import com.pixelmed.dicom.AttributeList
  *
  * @param flood: Flood field file
  */
-case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, DicomFile], flood: DicomFile) {
+case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, DicomFile], flood: DicomFile) extends Logging {
 
   def reDir(dir: File): RunReq = {
     val rtiMap = rtimageMap.toSeq.map(ni => (ni._1, ni._2.reDir(dir))).toMap
@@ -28,6 +29,8 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
   }
 
   val floodOriginalImage = new DicomImage(flood.attributeList.get)
+
+  logger.info("Bad pixel radius (in pixels) for flood image of: " + flood.badPixelRadius)
 
   val floodBadPixelList = Phase2Util.identifyBadPixels(floodOriginalImage, flood.badPixelRadius)
 
@@ -55,8 +58,8 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
       println(name + ": ==========\n" + toStr(hist.take(10)) + "\n--------\n" + toStr(hist.takeRight(10)) + "\n=======")
     }
 
-    def badPixToString(di: DicomImage, list: Seq[Point]) = {
-      "size: " + list.size + " :: " + list.map(p => di.get(p.getX.toInt, p.getY.toInt).toInt).sorted.mkString("   ")
+    def badPixToString(di: DicomImage, list: Seq[DicomImage.PixelRating]) = {
+      "size: " + list.size + " :: " + list.map(p => di.get(p.x, p.y).toInt).sorted.mkString("   ")
     }
 
     val fc2bad = Phase2Util.identifyBadPixels(floodCorrectedImage, flood.badPixelRadius)

@@ -136,6 +136,13 @@ Note that when building a package for release, the Maven build process uses the 
     defining it's neighborhood size, and determining replacement values for bad pixels. -->
     <BadPixelRadius_mm>3.5</BadPixelRadius_mm>
 
+    <!-- When determining whether or not a pixel is bad, require it to be at this many CU's different than it's neighbors' average.   This is
+    an absolute value (not a percent) and is a floating point number.-->
+    <BadPixelMinimumDeviation_CU>10.0</BadPixelMinimumDeviation_CU>
+
+    <!-- When determining whether or not a pixel is bad, require there to be pixel values within this percent of each other.-->
+    <BadPixelMaximumPercentChange>10.0</BadPixelMaximumPercentChange>
+
     <!-- Radius in mm (floating point) centered in an image defining the pixels to be used to determine dose. -->
     <CenterDoseRadius_mm>5.0</CenterDoseRadius_mm>
 

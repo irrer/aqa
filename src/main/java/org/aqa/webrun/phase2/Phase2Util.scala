@@ -136,10 +136,6 @@ object Phase2Util extends Logging {
       val beam = Util.seq2Attr(plan.attributeList.get, TagFromName.BeamSequence).find(bs => bs.get(TagFromName.BeamNumber).getIntegerValues().head == ReferencedBeamNumber).get
       val BeamName = beam.get(TagFromName.BeamName).getSingleStringValueOrNull
       val bn = if (BeamName == null) None else Some(BeamName.trim)
-      println("getBeamNameOfRtimage  file: " + rtimage.file.getName +
-        "    ReferencedBeamNumber: " + ReferencedBeamNumber +
-        "    bn: " + bn +
-        "    beam: " + beam.toString.replace('\0', ' ') + "\n")
       bn
     } catch {
       case t: Throwable => None
@@ -277,11 +273,11 @@ object Phase2Util extends Logging {
   /**
    * Get a list of bad pixels in the given image according to the configuration for Phase 2.
    */
-  def identifyBadPixels(originalImage: DicomImage, jjjjj: Int): Seq[DicomImage.PixelRating] = {
+  def identifyBadPixels(originalImage: DicomImage, radius: Int): Seq[DicomImage.PixelRating] = {
     val numPixels = originalImage.width * originalImage.height
     val sampleSize = ((Config.BadPixelSamplePerMillion / 1000000.0) * numPixels).round.toInt
     val maxBadPixels = ((Config.MaxEstimatedBadPixelPerMillion / 1000000.0) * numPixels).round.toInt
-    val badPixels = originalImage.identifyBadPixels(maxBadPixels, Config.BadPixelStdDev, 5)
+    val badPixels = originalImage.identifyBadPixels(maxBadPixels, Config.BadPixelStdDev, Config.BadPixelMaximumPercentChange, radius, Config.BadPixelMinimumDeviation_CU)
     badPixels
   }
 

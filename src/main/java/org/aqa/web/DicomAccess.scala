@@ -48,9 +48,7 @@ object DicomAccess extends Logging {
   private val naColor = Color.lightGray
   private val naStroke = new BasicStroke(5, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, Array(1), 0)
 
-  def badPixelToPng(badPixel: Point, dicomImage: DicomImage, fileBaseName: String, bufferedImage: BufferedImage, badPixelDir: File): File = {
-    val x = badPixel.getX.round.toInt
-    val y = badPixel.getY.round.toInt
+  def badPixelToPng(badPixel: DicomImage.PixelRating, dicomImage: DicomImage, fileBaseName: String, bufferedImage: BufferedImage, badPixelDir: File): File = {
 
     // create a buffered image and set it all to white
     val imgSize = (pixelSize + 1) * ((BadPixel.radius * 2) + 1) + 1
@@ -63,8 +61,8 @@ object DicomAccess extends Logging {
       val xi = (bufX + BadPixel.radius) * (pixelSize + 1)
       val yi = (bufY + BadPixel.radius) * (pixelSize + 1)
 
-      val xx = x + bufX
-      val yy = y + bufY
+      val xx = badPixel.x + bufX
+      val yy = badPixel.y + bufY
       if (dicomImage.validPoint(xx, yy)) {
         val rbg = bufferedImage.getRGB(xx, yy)
         val color = new Color(rbg)
@@ -90,22 +88,19 @@ object DicomAccess extends Logging {
     def range = -BadPixel.radius to BadPixel.radius
     for (bufX <- range; bufY <- range) fmtPoint(bufX, bufY)
 
-    val fileName = fileBaseName + "_" + x.toString + "-" + y.toString + ".png"
+    val fileName = fileBaseName + "_" + badPixel.x.toString + "-" + badPixel.y.toString + ".png"
     val pngFile = new File(badPixelDir, fileName)
     Util.writePng(bufImg, pngFile)
     // TODO rm ImageIO.write(bufImg, "png", pngFile)
     pngFile
   }
 
-  private def badPixelToHtml(badPixel: Point, dicomImage: DicomImage, fileBaseName: String, bufferedImage: BufferedImage, badPixelDir: File): Elem = {
+  private def badPixelToHtml(badPixel: DicomImage.PixelRating, dicomImage: DicomImage, fileBaseName: String, bufferedImage: BufferedImage, badPixelDir: File): Elem = {
     val pngFile = badPixelToPng(badPixel, dicomImage, fileBaseName, bufferedImage, badPixelDir)
-
-    val x = badPixel.getX.round.toInt
-    val y = badPixel.getY.round.toInt
 
     <div class="col-md-2" style="margin:8px;">
       <center>
-        <h4 title="Pixel coordinates">{ x.toString + ", " + y.toString }</h4>
+        <h4 title="Pixel coordinates">{ badPixel.x.toString + ", " + badPixel.y.toString }</h4>
       </center>
       <img src={ WebServer.urlOfResultsFile(pngFile) }/>
     </div>
@@ -230,7 +225,7 @@ object DicomAccess extends Logging {
     Util.writeBinaryFile(htmlFile, htmlText.getBytes)
 
     if (bufferedImage.isDefined) {
-      badPixels.map(bp => ImageUtil.annotatePixel(bufferedImage.get, bp.getX, bp.getY, bp.getX.toInt + ", " + bp.getY.toInt, true))
+      badPixels.map(bp => ImageUtil.annotatePixel(bufferedImage.get, bp.x, bp.y, bp.x + ", " + bp.y, true))
       Util.writePng(bufferedImage.get, pngFile)
     }
 

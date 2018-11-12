@@ -54,9 +54,7 @@ object BadPixelAnalysis extends Logging {
 
     def beamToBadPixels(beamName: String, SOPInstanceUID: String, badPixels: Seq[DicomImage.PixelRating], originalImage: DicomImage): Seq[BadPixel] = {
       badPixels.map(bp => {
-        val x = bp.getX.round.toInt
-        val y = bp.getY.round.toInt
-        val j = new BadPixel(None, extendedData.output.outputPK.get, x, y, SOPInstanceUID, beamName, makeCsv(x, y, originalImage))
+        val j = new BadPixel(None, extendedData.output.outputPK.get, bp.x, bp.y, SOPInstanceUID, beamName, makeCsv(bp.x, bp.y, originalImage))
         j
       })
     }
@@ -110,7 +108,7 @@ object BadPixelAnalysis extends Logging {
       val derived = runReq.derivedMap(beamName)
       val angles = gantryCollAngles(rtimage.attributeList.get)
 
-      val bufImage = derived.originalImage.toDeepColorBufferedImage(derived.pixelCorrectedImage.min, derived.pixelCorrectedImage.max)
+      val bufImage = derived.originalImage.toDeepColorBufferedImage(derived.pixelCorrectedImage.minPixelValue, derived.pixelCorrectedImage.maxPixelValue)
       val url = WebServer.urlOfResultsFile(rtimage.file)
       val result = DicomAccess.write(rtimage, url, angles + " : " + beamName, viewDir,
         Phase2Util.dicomViewBaseName(beamName, rtimage.attributeList.get),
@@ -126,7 +124,7 @@ object BadPixelAnalysis extends Logging {
     DicomAccess.write(runReq.rtplan, planLink, "RTPLAN", viewDir, planBaseName, None, None, Seq[DicomImage.PixelRating]())
 
     val floodLink = Phase2Util.dicomViewHref(runReq.flood.attributeList.get, extendedData, runReq)
-    val floodBufImage = runReq.floodOriginalImage.toDeepColorBufferedImage(runReq.floodCorrectedImage.min, runReq.floodCorrectedImage.max)
+    val floodBufImage = runReq.floodOriginalImage.toDeepColorBufferedImage(runReq.floodCorrectedImage.minPixelValue, runReq.floodCorrectedImage.maxPixelValue)
     val floodBaseName = Phase2Util.dicomViewBaseName(Config.FloodFieldBeamName, runReq.flood.attributeList.get)
     val floodPngHref = DicomAccess.write(runReq.flood, floodLink, Config.FloodFieldBeamName, viewDir, floodBaseName, Some(floodBufImage), Some(runReq.floodOriginalImage), runReq.floodBadPixelList).get
 

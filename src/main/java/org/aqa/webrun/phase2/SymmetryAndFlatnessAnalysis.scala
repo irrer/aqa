@@ -72,8 +72,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     Trace.trace("status: " + status)
   }
 
-  private def makeAnnotatedImage(dicomImage: DicomImage, attributeList: AttributeList, pointSet: PointSet): BufferedImage = {
-    val image = dicomImage.toDeepColorBufferedImage
+  private def makeAnnotatedImage(correctedImage: DicomImage, attributeList: AttributeList, pointSet: PointSet): BufferedImage = {
+    val image = correctedImage.toDeepColorBufferedImage
     val graphics = ImageUtil.getGraphics(image)
 
     val translator = new IsoImagePlaneTranslator(attributeList)
@@ -205,7 +205,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
     val flatness = analyzeFlatness(pointSet)
 
-    val annotatedImage = makeAnnotatedImage(dicomImage, attributeList, pointSet)
+    val correctedImage = runReq.rtimageMap(beamName).correctedDicomImage.get
+    val annotatedImage = makeAnnotatedImage(correctedImage, attributeList, pointSet)
 
     val transverseProfile = {
       val y = ((translator.height - widthOfBand) / 2.0).round.toInt
