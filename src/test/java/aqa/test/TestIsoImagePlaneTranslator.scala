@@ -11,7 +11,7 @@ import com.pixelmed.dicom.AttributeFactory
 import java.awt.geom.Point2D
 import org.scalactic.source.Position.apply
 import scala.collection.Seq
-import org.aqa.webrun.phase2.IsoImagePlaneTranslator
+import org.aqa.IsoImagePlaneTranslator
 import com.pixelmed.dicom.ValueRepresentation
 import edu.umro.ScalaUtil.Trace._
 

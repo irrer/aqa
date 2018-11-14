@@ -1,10 +1,10 @@
-package org.aqa.webrun.phase2
+package org.aqa
 
 import com.pixelmed.dicom.AttributeList
 import java.awt.geom.Point2D
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.TagFromName
-import org.aqa.Config
+import org.aqa.webrun.phase2.Phase2Util
 
 /**
  * Support mapping points between the isoplane and the image plane.  Isoplane values are in mm with

@@ -502,11 +502,14 @@ object Util extends Logging {
     })
   }
 
+  /**
+   * Add graticules to the given image.
+   */
   def addGraticules(
     image: BufferedImage,
     x2Pix: (Double) => Double, y2Pix: (Double) => Double,
     pix2X: (Double) => Double, pix2Y: (Double) => Double,
-    color: Color) = {
+    color: Color): Unit = {
 
     val graphics = ImageUtil.getGraphics(image)
 
@@ -607,6 +610,22 @@ object Util extends Logging {
       ImageText.drawTextOffsetFrom(graphics, xMiddle + gratMajorLength + offset, y, text, 0) // draw number corresponding to major graticule off to the right
     }
 
+  }
+
+  /**
+   * Add graticules to the given image.
+   */
+  def addGraticules(
+    image: BufferedImage,
+    translator: IsoImagePlaneTranslator,
+    color: Color): Unit = {
+
+    def x2Pix(xIso: Double) = translator.iso2Pix(xIso, 0).getX.round.toInt
+    def y2Pix(yIso: Double) = translator.iso2Pix(0, yIso).getY.round.toInt
+    def pix2X(xPix: Double) = translator.pix2Iso(xPix, 0).getX.round.toInt
+    def pix2Y(yPix: Double) = translator.pix2Iso(0, yPix).getY.round.toInt
+
+    Util.addGraticules(image, x2Pix _, y2Pix _, pix2X _, pix2Y _, Color.gray)
   }
 
   /**

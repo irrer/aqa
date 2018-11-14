@@ -80,6 +80,7 @@ object DbSetup extends Logging {
     CenterDose.query,
     CollimatorPosition.query,
     Wedge.query,
+    WedgePoint.query,
     Rect.query,
     SymmetryAndFlatness.query)
 

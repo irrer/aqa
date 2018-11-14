@@ -10,6 +10,7 @@ import scala.xml.Elem
 import org.aqa.procedures.ProcedureOutput
 import java.sql.Timestamp
 import java.util.Date
+import java.awt.geom.Rectangle2D
 
 /**
  * Rectangle describing an area in an EPID image and it's average intensity.
@@ -46,6 +47,8 @@ case class Rect(
       "    x_mm:" + x_mm +
       "    height_mm:" + height_mm
   }
+
+  def toRectangle = new Rectangle2D.Double(x_mm, y_mm, width_mm, height_mm)
 }
 
 object Rect extends ProcedureOutput {

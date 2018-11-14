@@ -27,63 +27,19 @@ import org.aqa.Logging
 
 object CenterDoseAnalysis extends Logging {
 
-  private def makePointList(attributeList: AttributeList): Seq[Point] = {
-    val spacing = Phase2Util.getImagePlanePixelSpacing(attributeList)
-    val width = attributeList.get(TagFromName.Columns).getIntegerValues().head
-    val height = attributeList.get(TagFromName.Rows).getIntegerValues().head
-
-    // get center of image, accounting for 1/2 pixel offset
-    val xCenter = (width / 2.0) + 0.5 // in pixels
-    val yCenter = (height / 2.0) + 0.5 // in pixels
-
-    // center of image in mm
-    val center = new Point2D.Double(xCenter * spacing.getX, yCenter * spacing.getY)
-
-    val xRadius = (Config.CenterDoseRadius_mm / spacing.getX).toInt + 2 // in pixels
-    val yRadius = (Config.CenterDoseRadius_mm / spacing.getY).toInt + 2 // in pixels
-
-    val xRange = (xCenter - xRadius).floor.toInt to (xCenter + xRadius).ceil.toInt // pixel range
-    val yRange = (yCenter - yRadius).floor.toInt to (yCenter + yRadius).ceil.toInt // pixel range
-
-    // step through pixels and see which are close enough.  Both x and y are in pixels.
-    def nearCenter(x: Int, y: Int): Boolean = center.distance(x * spacing.getX, y * spacing.getY) <= Config.CenterDoseRadius_mm
-
-    val pointList = for (x <- xRange; y <- yRange; if nearCenter(x, y)) yield { new Point(x, y) }
-    pointList
-  }
-
   private def analyse(extendedData: ExtendedData, runReq: RunReq): Seq[CenterDose] = {
-    val pointList = makePointList(runReq.flood.attributeList.get)
+    val pointList = Phase2Util.makeCenterDosePointList(runReq.flood.attributeList.get)
     val outputPK = extendedData.output.outputPK.get
 
-    /**
-     * Average the pixels at the given points.
-     */
-    def avg(dicomImage: DicomImage): Double = {
-      pointList.map(p => dicomImage.get(p.getX.toInt, p.getY.toInt)).sum / pointList.size
-    }
-
-    /**
-     * Construct a CenterDose
-     */
-    def measure(beamName: String, dicomImage: DicomImage, attributeList: AttributeList): CenterDose = {
-      val m = attributeList.get(TagFromName.RescaleSlope).getDoubleValues().head
-      val b = attributeList.get(TagFromName.RescaleIntercept).getDoubleValues().head
-      val dose = (avg(dicomImage) * m) + b
-      val SOPInstanceUID = attributeList.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
-      val units = attributeList.get(TagFromName.RescaleType).getSingleStringValueOrEmptyString
-      new CenterDose(None, outputPK, SOPInstanceUID, beamName, dose, units)
-    }
-
-    val centerDoseFlood = measure(Config.FloodFieldBeamName, runReq.floodOriginalImage, runReq.flood.attributeList.get)
+    val centerDoseFlood = Phase2Util.measureCenterDose(Config.FloodFieldBeamName, outputPK, runReq.floodOriginalImage, runReq.flood.attributeList.get)
     val availableBeamList = Config.CenterDoseBeamNameList.filter(beamName => runReq.derivedMap.contains(beamName))
-    val centerDoseList = availableBeamList.map(beamName => measure(beamName, runReq.derivedMap(beamName).originalImage, runReq.rtimageMap(beamName).attributeList.get))
+    val centerDoseList = availableBeamList.map(beamName => Phase2Util.measureCenterDose(beamName, outputPK, runReq.derivedMap(beamName).originalImage, runReq.rtimageMap(beamName).attributeList.get))
     centerDoseFlood +: centerDoseList
   }
 
   private val subProcedureName = "Center Dose"
 
-  class CenterDoseResult(summary: Elem, status: ProcedureStatus.Value, resultList: Seq[CenterDose]) extends SubProcedureResult(summary, status, subProcedureName)
+  case class CenterDoseResult(summry: Elem, stats: ProcedureStatus.Value, resultList: Seq[CenterDose]) extends SubProcedureResult(summry, stats, subProcedureName)
 
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, CenterDoseResult] = {
     try {

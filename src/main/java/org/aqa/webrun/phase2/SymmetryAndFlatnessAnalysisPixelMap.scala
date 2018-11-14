@@ -6,6 +6,7 @@ import java.awt.geom.Point2D
 import org.aqa.Config
 import java.awt.Point
 import scala.collection.mutable.ArrayBuffer
+import org.aqa.IsoImagePlaneTranslator
 
 /**
  * Analyze DICOM files for symmetry and flatness.

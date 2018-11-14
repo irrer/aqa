@@ -24,6 +24,7 @@ import java.awt.Point
 import org.aqa.db.MachineType
 import org.aqa.web.WebServer
 import java.text.SimpleDateFormat
+import org.aqa.db.CenterDose
 
 /**
  * Utilities for Phase 2.
@@ -361,6 +362,51 @@ object Phase2Util extends Logging {
 
   def dicomViewImageHtmlHref(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): String = {
     WebServer.urlOfResultsFile(dicomViewImageHtmlFile(al, extendedData, runReq))
+  }
+
+  def makeCenterDosePointList(attributeList: AttributeList): Seq[Point] = {
+    val spacing = Phase2Util.getImagePlanePixelSpacing(attributeList)
+    val width = attributeList.get(TagFromName.Columns).getIntegerValues().head
+    val height = attributeList.get(TagFromName.Rows).getIntegerValues().head
+
+    // get center of image, accounting for 1/2 pixel offset
+    val xCenter = (width / 2.0) + 0.5 // in pixels
+    val yCenter = (height / 2.0) + 0.5 // in pixels
+
+    // center of image in mm
+    val center = new Point2D.Double(xCenter * spacing.getX, yCenter * spacing.getY)
+
+    val xRadius = (Config.CenterDoseRadius_mm / spacing.getX).toInt + 2 // in pixels
+    val yRadius = (Config.CenterDoseRadius_mm / spacing.getY).toInt + 2 // in pixels
+
+    val xRange = (xCenter - xRadius).floor.toInt to (xCenter + xRadius).ceil.toInt // pixel range
+    val yRange = (yCenter - yRadius).floor.toInt to (yCenter + yRadius).ceil.toInt // pixel range
+
+    // step through pixels and see which are close enough.  Both x and y are in pixels.
+    def nearCenter(x: Int, y: Int): Boolean = center.distance(x * spacing.getX, y * spacing.getY) <= Config.CenterDoseRadius_mm
+
+    val pointList = for (x <- xRange; y <- yRange; if nearCenter(x, y)) yield { new Point(x, y) }
+    pointList
+  }
+
+  /**
+   * Construct a CenterDose
+   */
+  def measureCenterDose(beamName: String, outputPK: Long, dicomImage: DicomImage, attributeList: AttributeList): CenterDose = {
+    val pointList = makeCenterDosePointList(attributeList)
+    /**
+     * Average the pixels at the given points.
+     */
+    def avg(dicomImage: DicomImage): Double = {
+      pointList.map(p => dicomImage.get(p.getX.toInt, p.getY.toInt)).sum / pointList.size
+    }
+
+    val m = attributeList.get(TagFromName.RescaleSlope).getDoubleValues().head
+    val b = attributeList.get(TagFromName.RescaleIntercept).getDoubleValues().head
+    val dose = (avg(dicomImage) * m) + b
+    val SOPInstanceUID = attributeList.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
+    val units = attributeList.get(TagFromName.RescaleType).getSingleStringValueOrEmptyString
+    new CenterDose(None, outputPK, SOPInstanceUID, beamName, dose, units)
   }
 
 }

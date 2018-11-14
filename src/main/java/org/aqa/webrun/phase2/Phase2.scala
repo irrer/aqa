@@ -276,7 +276,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
                     // TODO run in parallel
                     val list = Seq(
                       CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
-                      WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
+                      WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result, centerDose.resultList),
                       SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq))
 
                     val summaryList = prevSummaryList ++ list.map(r => if (r.isLeft) r.left.get else r.right.get.summary)

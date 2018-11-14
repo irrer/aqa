@@ -494,6 +494,7 @@ object Config extends Logging {
 
   val MaintenanceCategoryList = getMaintenanceCategoryList
 
+  val WedgeProfileThickness_mm =  logMainText("WedgeProfileThickness_mm").toDouble
   val WedgeBeamList = getWedgeBeamList
 
   val SymmetryAndFlatnessDiameter_mm = logMainText("SymmetryAndFlatnessDiameter_mm").toDouble

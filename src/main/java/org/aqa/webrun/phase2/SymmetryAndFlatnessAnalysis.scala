@@ -21,6 +21,7 @@ import org.aqa.db.PMI
 import org.aqa.db.SymmetryAndFlatness
 import java.sql.Timestamp
 import org.aqa.db.MaintenanceCategory
+import org.aqa.IsoImagePlaneTranslator
 
 /**
  * Analyze DICOM files for symmetry and flatness.
