@@ -81,12 +81,10 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val radius = translator.circleRadiusInPixels
     val circleSize = (radius * 2).round.toInt
 
-    //    addGraticules(img, translator)
-    def x2Pix(xIso: Double) = translator.iso2Pix(xIso, 0).getX.round.toInt
-    def y2Pix(yIso: Double) = translator.iso2Pix(0, yIso).getY.round.toInt
-    def pix2X(xPix: Double) = translator.pix2Iso(xPix, 0).getX.round.toInt
-    def pix2Y(yPix: Double) = translator.pix2Iso(0, yPix).getY.round.toInt
-    Util.addGraticules(image, x2Pix _, y2Pix _, pix2X _, pix2Y _, Color.gray)
+    // addGraticules(img, translator)
+    Util.addGraticules(image, translator, Color.gray)
+
+    Util.addAxialAndTransverse(image)
 
     def dbl2Text(d: Double): String = if (d.round.toInt == d) d.toInt.toString else d.toString
 

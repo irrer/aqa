@@ -2,6 +2,7 @@ package org.aqa.web
 
 import org.aqa.Logging
 import java.awt.Color
+import edu.umro.ScalaUtil.Trace
 
 object C3Chart {
 
@@ -86,15 +87,17 @@ class C3Chart(
   private val minY = allY.min
   private val maxY = allY.max
 
-  val idTag = "ChartId_" + C3Chart.getId
+  private val idTag = "ChartId_" + C3Chart.getId
+  Trace.trace("idTag: " + idTag) // TODO rm
 
   private def column(label: String, valueList: Seq[Double]): String = {
     "[ '" + label + "', " + valueList.mkString(", ") + "]"
   }
 
-  val html = { <div id={ idTag }>filler</div> }
+  val html = { <div id={ idTag }>{ idTag }</div> }
 
   val javascript = {
+    Trace.trace("idTag: " + idTag)
     """      
 var """ + idTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) + """
     data: {

@@ -51,7 +51,7 @@ object WedgeAnalysis extends Logging {
       new WedgePoint(None, outputPK, centerDose.SOPInstanceUID, centerDose.beamName, centerDose.dose, flood.dose, (centerDose.dose * 100) / flood.dose)
     }
 
-    val validBeamNameList = Config.WedgeBeamList.filter(b => centerDoseList.find(c => c.beamName.equals(b)).isDefined)
+    val validBeamNameList = Config.WedgeBeamList.filter(b => centerDoseList.find(c => c.beamName.equals(b.wedge)).isDefined)
     validBeamNameList.map(b => centerDoseToWedgePoint(b))
   }
 

@@ -8,6 +8,7 @@ import org.aqa.db.MaintenanceCategory
 import java.awt.Color
 import org.aqa.db.Baseline
 import java.text.SimpleDateFormat
+import edu.umro.ScalaUtil.Trace
 
 /**
  * @param pmiList: List of PMI records that fall chronologically in the displayed range
@@ -36,10 +37,16 @@ class C3ChartHistory(
   pmiList: Seq[PMI],
   width: Option[Int],
   height: Option[Int],
-  xLabel: String, xDateList: Seq[Date],
+  xLabel: String,
+  xDateList: Seq[Date],
   baseline: Option[Baseline],
   tolerance: Option[C3Chart.Tolerance],
-  yAxisLabels: Seq[String], yDataLabel: String, yValues: Seq[Seq[Double]], yIndex: Int, yFormat: String, yColorList: Seq[Color]) extends Logging {
+  yAxisLabels: Seq[String], 
+  yDataLabel: String,
+  yValues: Seq[Seq[Double]],
+  yIndex: Int,
+  yFormat: String,
+  yColorList: Seq[Color]) extends Logging {
 
   if (yAxisLabels.size != yValues.size) throw new RuntimeException("Must be same number of Y labels as Y data sets.  yAxisLabels.size: " + yAxisLabels.size + "    yValues.size: " + yValues.size)
 
@@ -47,6 +54,7 @@ class C3ChartHistory(
   if (yMaxSize > xDateList.size) throw new RuntimeException("Size of at least one of the yValues is " + yMaxSize + " and is greater than size of xDateList " + xDateList.size)
 
   private val idTag = "ChartId_" + C3Chart.getId
+  Trace.trace("idTag: " + idTag) // TODO rm
 
   private def column(label: String, valueList: Seq[Double]): String = {
     "[ '" + label + "', " + valueList.mkString(", ") + "]"
@@ -80,7 +88,7 @@ class C3ChartHistory(
   private val pmiColorList = textColumn(pmiList.map(pmi => MaintenanceCategory.findMaintenanceCategoryMatch(pmi.category).Color))
   private val pmiCategoryList = textColumn(pmiList.map(pmi => pmi.category))
 
-  val html = { <div id={ idTag }>filler</div> }
+  val html = { <div id={ idTag }>{ idTag }</div> }
 
   private val yLabels = {
     val yOnly = yAxisLabels.map(y => "'" + y + "' : '" + xLabel + "',")

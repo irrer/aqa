@@ -24,6 +24,7 @@ import edu.umro.ImageUtil.ImageUtil
 import java.awt.BasicStroke
 import edu.umro.ImageUtil.ImageText
 import com.pixelmed.dicom.TransferSyntax
+import java.awt.Point
 
 object Util extends Logging {
 
@@ -626,6 +627,65 @@ object Util extends Logging {
     def pix2Y(yPix: Double) = translator.pix2Iso(0, yPix).getY.round.toInt
 
     Util.addGraticules(image, x2Pix _, y2Pix _, pix2X _, pix2Y _, Color.gray)
+  }
+
+  def addAxialAndTransverse(image: BufferedImage): Unit = {
+    val fromEdge = 40 // number of pixels from edge to put arrows.
+    val lineThickness: Float = 3
+    val arrowLength = 5
+    val arw = 3
+    val textPointSize = 16
+    val offset = 3
+
+    val graphics = ImageUtil.getGraphics(image)
+    graphics.setColor(Color.gray)
+    ImageUtil.setSolidLine(graphics)
+
+    graphics.setStroke(new BasicStroke(lineThickness))
+    ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
+
+    def trans = {
+      val leftX = image.getWidth / 4
+      val rightX = leftX * 3
+      val y = image.getHeight - fromEdge
+
+      graphics.drawLine(leftX, y, rightX, y) // main line
+      // arrow heads
+      graphics.drawLine(leftX, y, leftX + arrowLength, y - arw)
+      graphics.drawLine(leftX, y, leftX + arrowLength, y + arw)
+      graphics.drawLine(rightX, y, rightX - arrowLength, y - arw)
+      graphics.drawLine(rightX, y, rightX - arrowLength, y + arw)
+
+      val text = "Transverse"
+      val yText = {
+        val textDim = ImageText.getTextDimensions(graphics, text)
+        image.getHeight - fromEdge - (textDim.getHeight / 2 + 3)
+      }
+      ImageText.drawTextCenteredAt(graphics, image.getWidth / 3, yText, text)
+    }
+
+    def axial = {
+      val topY = image.getHeight / 4
+      val bottomY = topY * 3
+      val x = fromEdge
+
+      graphics.drawLine(x, topY, x, bottomY) // main line
+      // arrow heads
+      graphics.drawLine(x, topY, x + arw, topY + arrowLength)
+      graphics.drawLine(x, topY, x - arw, topY + arrowLength)
+      graphics.drawLine(x, bottomY, x - arw, bottomY - arrowLength)
+      graphics.drawLine(x, bottomY, x + arw, bottomY - arrowLength)
+
+      val text = "Axial"
+      val textDim = ImageText.getTextDimensions(graphics, text)
+      val xText = fromEdge + offset
+
+      val yText = image.getHeight / 3
+      graphics.drawString(text, xText, yText)
+    }
+
+    trans
+    axial
   }
 
   /**

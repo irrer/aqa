@@ -344,12 +344,6 @@ object Config extends Logging {
     list.distinct
   }
 
-  private def getWedgeBeamList = {
-    val list = (document \ "WedgeBeamList" \ "BeamName").map(n => n.head.text.toString.trim).toList
-    logText("WedgeBeamList", list.mkString("\n        ", "\n        ", "\n"))
-    list.distinct
-  }
-
   private def getSymmetryAndFlatnessBeamList = {
     val list = (document \ "SymmetryAndFlatnessBeamList" \ "BeamName").map(n => n.head.text.toString.trim).toList
     logText("SymmetryAndFlatnessBeamList", list.mkString("\n        ", "\n        ", "\n"))
@@ -410,6 +404,32 @@ object Config extends Logging {
     }
     val list = (document \ "CollimatorPositionBeamList" \ "BeamName").map(node => nodeToCollimatorPositionBeam(node)).toList
     logText("CollimatorPositionBeamNameList", list.mkString("\n        ", "\n        ", "\n"))
+    list
+  }
+
+  /**
+   * wedge: Beam name for wedge
+   * background: Beam name for background beam for comparison.  (percent calculation).
+   */
+  case class WedgeBeamPair(wedge: String, background: String) {
+    override def toString = "Wedge: " + wedge + "    background: " + background
+  }
+
+  private def getWedgeBeamList = {
+
+    def nodeToWedgePair(node: Node) = {
+      val beamName = node.head.text.toString.trim
+      val background = {
+        try {
+          (node \ "@background").head.text.toString
+        } catch {
+          case t: Throwable => "not found"
+        }
+      }
+      new WedgeBeamPair(beamName, background)
+    }
+    val list = (document \ "WedgeBeamList" \ "BeamName").map(node => nodeToWedgePair(node)).toList
+    logText("WedgeBeamList", list.mkString("\n        ", "\n        ", "\n"))
     list
   }
 
@@ -494,7 +514,7 @@ object Config extends Logging {
 
   val MaintenanceCategoryList = getMaintenanceCategoryList
 
-  val WedgeProfileThickness_mm =  logMainText("WedgeProfileThickness_mm").toDouble
+  val WedgeProfileThickness_mm = logMainText("WedgeProfileThickness_mm").toDouble
   val WedgeBeamList = getWedgeBeamList
 
   val SymmetryAndFlatnessDiameter_mm = logMainText("SymmetryAndFlatnessDiameter_mm").toDouble

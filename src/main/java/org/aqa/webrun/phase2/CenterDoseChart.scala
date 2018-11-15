@@ -31,7 +31,7 @@ class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Se
     val index = sortedHistory.indexWhere(sh => sopSet.contains(sh.SOPInstanceUID))
 
     new C3ChartHistory(
-      pmiList: Seq[PMI],
+      pmiList,
       None, // width
       None, // height
       "Date", sortedHistory.map(h => h.date),
