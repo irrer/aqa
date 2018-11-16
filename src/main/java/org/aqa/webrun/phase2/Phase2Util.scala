@@ -25,6 +25,8 @@ import org.aqa.db.MachineType
 import org.aqa.web.WebServer
 import java.text.SimpleDateFormat
 import org.aqa.db.CenterDose
+import org.aqa.db.PMI
+import org.aqa.db.Baseline
 
 /**
  * Utilities for Phase 2.
@@ -364,6 +366,9 @@ object Phase2Util extends Logging {
     WebServer.urlOfResultsFile(dicomViewImageHtmlFile(al, extendedData, runReq))
   }
 
+  /**
+   * Create a list of points whose sum can be used to measure the center dose of an image.
+   */
   def makeCenterDosePointList(attributeList: AttributeList): Seq[Point] = {
     val spacing = Phase2Util.getImagePlanePixelSpacing(attributeList)
     val width = attributeList.get(TagFromName.Columns).getIntegerValues().head
@@ -390,23 +395,18 @@ object Phase2Util extends Logging {
   }
 
   /**
-   * Construct a CenterDose
+   * Measure dose as specified by the list of points and return it in the proper units.
    */
-  def measureCenterDose(beamName: String, outputPK: Long, dicomImage: DicomImage, attributeList: AttributeList): CenterDose = {
-    val pointList = makeCenterDosePointList(attributeList)
-    /**
-     * Average the pixels at the given points.
-     */
-    def avg(dicomImage: DicomImage): Double = {
-      pointList.map(p => dicomImage.get(p.getX.toInt, p.getY.toInt)).sum / pointList.size
-    }
+  def measureDose(pointList: Seq[Point], dicomImage: DicomImage, attributeList: AttributeList): Double = {
+    // average value raw pixel values
+    val rawAverage = pointList.map(p => dicomImage.get(p.getX.toInt, p.getY.toInt)).sum / pointList.size
 
     val m = attributeList.get(TagFromName.RescaleSlope).getDoubleValues().head
     val b = attributeList.get(TagFromName.RescaleIntercept).getDoubleValues().head
-    val dose = (avg(dicomImage) * m) + b
-    val SOPInstanceUID = attributeList.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
-    val units = attributeList.get(TagFromName.RescaleType).getSingleStringValueOrEmptyString
-    new CenterDose(None, outputPK, SOPInstanceUID, beamName, dose, units)
+    val dose = (rawAverage * m) + b
+    dose
   }
+
+  case class PMIBaseline(pmi: Option[PMI], baseline: Baseline);
 
 }

@@ -170,7 +170,8 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- When determining whether or not a pixel is bad, require there to be pixel values within this percent of each other.-->
     <BadPixelMaximumPercentChange>10.0</BadPixelMaximumPercentChange>
 
-    <!-- Radius in mm (floating point) centered in an image defining the pixels to be used to determine dose. -->
+    <!-- Radius in mm (floating point) centered in an image defining the pixels to be used to determine dose.   Note that
+    the center dose is also used in calculating wedge values. -->
     <CenterDoseRadius_mm>5.0</CenterDoseRadius_mm>
 
     <!-- Number of historical entries to show in the HTML page.  Must be integer value 1 or greater. -->
@@ -225,6 +226,9 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- The thickness of the band in mm in the isoplane across the center of the image used for drawing the wedge profile. -->
     <WedgeProfileThickness_mm>5.0</WedgeProfileThickness_mm>
+
+    <!-- The amount in percent that wedge reading should vary from baseline to be valid. -->
+    <WedgeTolerance_pct>2.0</WedgeTolerance_pct>
 
     <WedgeBeamList>
         <BeamName background="J10G0C90-6X">J10G0C90EDW45-6X</BeamName>

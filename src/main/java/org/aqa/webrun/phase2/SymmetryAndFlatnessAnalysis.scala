@@ -22,6 +22,7 @@ import org.aqa.db.SymmetryAndFlatness
 import java.sql.Timestamp
 import org.aqa.db.MaintenanceCategory
 import org.aqa.IsoImagePlaneTranslator
+import org.aqa.webrun.phase2.Phase2Util.PMIBaseline
 
 /**
  * Analyze DICOM files for symmetry and flatness.
@@ -115,7 +116,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   private def getAttributeList(beamName: String, runReq: RunReq): AttributeList = {
     val isFlood = beamName.equalsIgnoreCase(Config.FloodFieldBeamName)
     if (isFlood) runReq.flood.attributeList.get
-    else runReq.derivedMap(beamName).dicomFile.attributeList.get
+    else runReq.derivedMap(beamName).attributeList
   }
 
   private def analyzeSymmetry(max: Double, min: Double): Double = {
@@ -170,8 +171,6 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   }
 
   def makeBaselineName(beamName: String, dataName: String): String = beamName + " " + dataName
-
-  case class PMIBaseline(pmi: Option[PMI], baseline: Baseline);
 
   case class BeamResultBaseline(result: SymmetryAndFlatnessBeamResult, pmiBaseline: Seq[PMIBaseline], pointSet: PointSet);
 
@@ -317,7 +316,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     logger.info("Stored " + list.size + " SymmetryAndFlatness records")
   }
 
-  private def storePmiInDB(resultList: List[BeamResultBaseline], machinePK: Long, userPK: Long, outputPK: Long): Unit = {
+  private def storePmiInDB(resultList: List[BeamResultBaseline], machinePK: Long, userPK: Long, outputPK: Long, analysisTime: Timestamp): Unit = {
 
     // make list of baselines that need to be saved
     val baselineList = resultList.map(r => r.pmiBaseline).flatten.filter(p => p.pmi.isEmpty).map(p => p.baseline)
@@ -328,8 +327,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       val preamble = "Symmetry and Flatness baseline values are created automatically if they have not been established for the given machine.  The following is a list of the values:\n\n"
       val valueText = baselineList.map(bl => "    " + bl.id + " : " + bl.value).mkString("\n")
 
-      val creationTime = new Timestamp(System.currentTimeMillis)
-      val pmi = new PMI(None, MaintenanceCategory.setBaseline, machinePK, creationTime, userPK, Some(outputPK), summary, preamble + valueText)
+      val pmi = new PMI(None, MaintenanceCategory.setBaseline, machinePK, analysisTime, userPK, Some(outputPK), summary, preamble + valueText)
       val insertedPmi = pmi.insert
       val newPmiPK = insertedPmi.pmiPK.get
       logger.info("Created PMI record for Symmetry and Flatness: " + insertedPmi)
@@ -359,7 +357,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       val pass = resultList.map(rb => rb.result.status.toString.equals(ProcedureStatus.pass.toString)).reduce(_ && _)
       val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
-      storePmiInDB(resultList, extendedData.machine.machinePK.get, extendedData.user.userPK.get, extendedData.output.outputPK.get)
+      storePmiInDB(resultList, extendedData.machine.machinePK.get, extendedData.user.userPK.get, extendedData.output.outputPK.get, extendedData.output.startDate)
       storeResultsInDb(resultList, extendedData.output.outputPK.get)
 
       val summary = SymmetryAndFlatnessHTML.makeDisplay(extendedData, resultList, boolToStatus(pass), runReq)

@@ -27,13 +27,23 @@ import org.aqa.Logging
 
 object CenterDoseAnalysis extends Logging {
 
+  /**
+   * Construct a CenterDose
+   */
+  def constructCenterDose(beamName: String, pointList: Seq[Point], outputPK: Long, dicomImage: DicomImage, attributeList: AttributeList): CenterDose = {
+    val dose = Phase2Util.measureDose(pointList, dicomImage, attributeList)
+    val SOPInstanceUID = attributeList.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
+    val units = attributeList.get(TagFromName.RescaleType).getSingleStringValueOrEmptyString
+    new CenterDose(None, outputPK, SOPInstanceUID, beamName, dose, units)
+  }
+
   private def analyse(extendedData: ExtendedData, runReq: RunReq): Seq[CenterDose] = {
     val pointList = Phase2Util.makeCenterDosePointList(runReq.flood.attributeList.get)
     val outputPK = extendedData.output.outputPK.get
 
-    val centerDoseFlood = Phase2Util.measureCenterDose(Config.FloodFieldBeamName, outputPK, runReq.floodOriginalImage, runReq.flood.attributeList.get)
+    val centerDoseFlood = constructCenterDose(Config.FloodFieldBeamName, pointList, outputPK, runReq.floodOriginalImage, runReq.flood.attributeList.get)
     val availableBeamList = Config.CenterDoseBeamNameList.filter(beamName => runReq.derivedMap.contains(beamName))
-    val centerDoseList = availableBeamList.map(beamName => Phase2Util.measureCenterDose(beamName, outputPK, runReq.derivedMap(beamName).originalImage, runReq.rtimageMap(beamName).attributeList.get))
+    val centerDoseList = availableBeamList.map(beamName => constructCenterDose(beamName, pointList, outputPK, runReq.derivedMap(beamName).originalImage, runReq.rtimageMap(beamName).attributeList.get))
     centerDoseFlood +: centerDoseList
   }
 

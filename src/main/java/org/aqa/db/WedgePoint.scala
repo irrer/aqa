@@ -14,12 +14,18 @@ import java.sql.Timestamp
 case class WedgePoint(
   wedgePointPK: Option[Long], // primary key
   outputPK: Long, // output primary key
-  SOPInstanceUID: String, // UID of source image
-  beamName: String, // name of beam in plan
-  value_cu: Double, // value of wedge point in CU : Calibrated Units
-  floodValue_cu: Double, // corresponding value of flood field point in CU : Calibrated Units
-  percentOfFlood_pct: Double) { // (value_cu * 100) / floodValue_cu
 
+  wedgeSOPInstanceUID: String, // UID of wedge source image
+  wedgeBeamName: String, // name of wedge beam in plan
+  wedgeValue_cu: Double, // value of wedge point in CU : Calibrated Units
+
+  backgroundSOPInstanceUID: String, // UID of background source image
+  backgroundBeamName: String, // name of background beam in plan
+  backgroundValue_cu: Double, // corresponding value of background field point in CU : Calibrated Units
+
+  percentOfBackground_pct: Double, // (wedgeValue_cu * 100) / backgroundValue_cu
+  baselinePercentOfBackground_pct: Double) // baseline for percentOfBackground_pct
+  {
   def insert: WedgePoint = {
     val insertQuery = WedgePoint.query returning WedgePoint.query.map(_.wedgePointPK) into
       ((wedgePoint, wedgePointPK) => wedgePoint.copy(wedgePointPK = Some(wedgePointPK)))
@@ -34,12 +40,17 @@ case class WedgePoint(
   override def toString: String = {
     "    wedgePointPK: " + wedgePointPK + "\n" +
       "    outputPK: " + outputPK + "\n" +
-      "    SOPInstanceUID: " + SOPInstanceUID + "\n" +
-      "    beamName: " + beamName + "\n" +
-      "    value_cu: " + value_cu + "\n" +
-      "    floodValue_cu: " + floodValue_cu + "\n" +
-      "    percentOfFlood_pct: " + percentOfFlood_pct + "\n"
+      "    wedgeSOPInstanceUID: " + wedgeSOPInstanceUID + "\n" +
+      "    wedgeBeamName: " + wedgeBeamName + "\n" +
+      "    wedgeValue_cu: " + wedgeValue_cu + "\n" +
+      "    backgroundSOPInstanceUID: " + backgroundSOPInstanceUID + "\n" +
+      "    backgroundBeamName: " + backgroundBeamName + "\n" +
+      "    backgroundValue_cu: " + backgroundValue_cu + "\n" +
+      "    percentOfBackground_pct: " + percentOfBackground_pct + "\n" +
+      "    baselinePercentOfBackground_pct: " + baselinePercentOfBackground_pct + "\n"
   }
+
+  lazy val wedgePair = new Config.WedgeBeamPair(wedgeBeamName, backgroundBeamName)
 }
 
 object WedgePoint extends ProcedureOutput {
@@ -47,20 +58,26 @@ object WedgePoint extends ProcedureOutput {
 
     def wedgePointPK = column[Long]("wedgePointPK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
-    def SOPInstanceUID = column[String]("SOPInstanceUID")
-    def beamName = column[String]("beamName")
-    def value_cu = column[Double]("value_cu")
-    def floodValue_cu = column[Double]("floodValue_cu")
-    def percentOfFlood_pct = column[Double]("percentOfFlood_pct")
+    def wedgeSOPInstanceUID = column[String]("wedgeSOPInstanceUID")
+    def wedgeBeamName = column[String]("wedgeBeamName")
+    def wedgeValue_cu = column[Double]("wedgeValue_cu")
+    def backgroundSOPInstanceUID = column[String]("backgroundSOPInstanceUID")
+    def backgroundBeamName = column[String]("backgroundBeamName")
+    def backgroundValue_cu = column[Double]("backgroundValue_cu")
+    def percentOfBackground_pct = column[Double]("percentOfBackground_pct")
+    def baselinePercentOfBackground_pct = column[Double]("baselinePercentOfBackground_pct")
 
     def * = (
       wedgePointPK.?,
       outputPK,
-      SOPInstanceUID,
-      beamName,
-      value_cu,
-      floodValue_cu,
-      percentOfFlood_pct) <> ((WedgePoint.apply _)tupled, WedgePoint.unapply _)
+      wedgeSOPInstanceUID,
+      wedgeBeamName,
+      wedgeValue_cu,
+      backgroundSOPInstanceUID,
+      backgroundBeamName,
+      backgroundValue_cu,
+      percentOfBackground_pct,
+      baselinePercentOfBackground_pct) <> ((WedgePoint.apply _)tupled, WedgePoint.unapply _)
 
     def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -112,7 +129,7 @@ object WedgePoint extends ProcedureOutput {
     Db.perform(ops)
   }
 
-  case class WedgePointHistory(date: Date, beamName: String, SOPInstanceUID: String, value_cu: Double, floodValue_cu: Double, percentOfFlood_pct: Double)
+  case class WedgePointHistory(date: Date, wedgeBeamName: String, backgroundBeamName: String, percentOfBackground_pct: Double)
 
   /**
    * Get the CenterBeam results that are nearest in time to the given date, preferring those that have an earlier date.
@@ -141,9 +158,13 @@ object WedgePoint extends ProcedureOutput {
 
     val before = {
       val search = for {
-        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate.get.toString <= ts.toString)).map(o => (o.outputPK, o.dataDate, o.machinePK))
-        wedgePoint <- WedgePoint.query.filter(c => c.outputPK === output._1).map(c => (c.beamName, c.SOPInstanceUID, c.value_cu, c.floodValue_cu, c.percentOfFlood_pct))
-      } yield ((output._2, wedgePoint._1, wedgePoint._2, wedgePoint._3, wedgePoint._4, wedgePoint._5))
+        output <- Output.query.
+          filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate.get.toString <= ts.toString)).
+          map(o => (o.outputPK, o.dataDate))
+        wedgePoint <- WedgePoint.query.
+          filter(w => w.outputPK === output._1).
+          map(c => (c.wedgeBeamName, c.backgroundBeamName, c.percentOfBackground_pct))
+      } yield ((output._2, wedgePoint._1, wedgePoint._2, wedgePoint._3))
 
       val sorted = search.distinct.sortBy(_._1.desc).take(limit)
       Db.run(sorted.result)
@@ -151,9 +172,13 @@ object WedgePoint extends ProcedureOutput {
 
     def after = {
       val search = for {
-        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate.get.toString > ts.toString)).map(o => (o.outputPK, o.dataDate, o.machinePK))
-        wedgePoint <- WedgePoint.query.filter(c => c.outputPK === output._1).map(c => (c.beamName, c.SOPInstanceUID, c.value_cu, c.floodValue_cu, c.percentOfFlood_pct))
-      } yield ((output._2, wedgePoint._1, wedgePoint._2, wedgePoint._3, wedgePoint._4, wedgePoint._5))
+        output <- Output.query.
+          filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate.get.toString > ts.toString)).
+          map(o => (o.outputPK, o.dataDate))
+        wedgePoint <- WedgePoint.query.
+          filter(w => w.outputPK === output._1).
+          map(c => (c.wedgeBeamName, c.backgroundBeamName, c.percentOfBackground_pct))
+      } yield ((output._2, wedgePoint._1, wedgePoint._2, wedgePoint._3))
 
       val sorted = search.distinct.sortBy(_._1.asc).take(limit)
       Db.run(sorted.result)
@@ -161,7 +186,7 @@ object WedgePoint extends ProcedureOutput {
 
     val all = if (before.size >= limit) before else (before ++ after).take(limit)
 
-    val result = all.map(h => new WedgePointHistory(h._1.get, h._2, h._3, h._4, h._5, h._6)).sortWith((a, b) => a.date.getTime < b.date.getTime)
+    val result = all.map(h => new WedgePointHistory(h._1.get, h._2, h._3, h._4)).sortWith((a, b) => a.date.getTime < b.date.getTime)
     result
   }
 }

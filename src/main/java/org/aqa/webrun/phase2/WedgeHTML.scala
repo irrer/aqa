@@ -22,8 +22,9 @@ import org.aqa.web.WebUtil
 import org.aqa.web.WebServer
 import org.aqa.web.C3ChartHistory
 import org.aqa.db.PMI
-import org.aqa.web.C3ChartHistory
 import com.pixelmed.dicom.TagFromName
+import org.aqa.db.Baseline
+import org.aqa.web.C3Chart.Tolerance
 
 object WedgeHTML {
 
@@ -109,16 +110,16 @@ object WedgeHTML {
   /**
    * Create the beam image, write it to disk, and return the HTML to reference and display it.
    */
-  private def beamImage(wedgePoint: WedgePoint, runReq: RunReq, wedgeDir: File): Elem = {
-    val bufferedImage = annotateImage(wedgePoint.beamName, runReq)
-    val pngFile = new File(wedgeDir, "Wedge_" + WebUtil.stringToUrlSafe(wedgePoint.beamName) + ".png")
+  private def beamImage(beamName: String, runReq: RunReq, wedgeDir: File): Elem = {
+    val bufferedImage = annotateImage(beamName, runReq)
+    val pngFile = new File(wedgeDir, "Wedge_" + WebUtil.stringToUrlSafe(beamName) + ".png")
     Util.writePng(bufferedImage, pngFile)
     <img class="img-responsive" src={ pngFile.getName }/>
   }
 
-  private def histChart(beamName: String, extendedData: ExtendedData, history: Seq[WedgePoint.WedgePointHistory]): C3ChartHistory = {
-    val beamHistory = history.filter(h => h.beamName.equals(beamName)).sortBy(_.date)
-    val percentHistory = beamHistory.map(h => h.percentOfFlood_pct)
+  private def histChart(wedgePoint: WedgePoint, extendedData: ExtendedData, history: Seq[WedgePoint.WedgePointHistory]): C3ChartHistory = {
+    val beamHistory = history.filter(h => h.wedgeBeamName.equals(wedgePoint.wedgeBeamName) && h.backgroundBeamName.equals(wedgePoint.backgroundBeamName)).sortBy(_.date)
+    val percentHistory = beamHistory.map(h => h.percentOfBackground_pct)
     val dateHistory = beamHistory.map(h => h.date)
 
     val pmiList = PMI.getRange(extendedData.machine.machinePK.get, dateHistory.head, dateHistory.last)
@@ -127,15 +128,27 @@ object WedgeHTML {
       Math.max(0, i)
     }
 
+    val baseline: Option[Baseline] = {
+      val pmiBaseline = Baseline.findLatest(extendedData.machine.machinePK.get, WedgeAnalysis.makeBaselineName(wedgePoint.wedgePair))
+      if (pmiBaseline.isDefined) Some(pmiBaseline.get._2) else None
+    }
+
+    val tolerance: Option[C3Chart.Tolerance] = {
+      if (baseline.isDefined) {
+        val value = baseline.get.value.toDouble
+        Some(new Tolerance(value - Config.WedgeTolerance_pct, value + Config.WedgeTolerance_pct))
+      } else None
+    }
+
     val historyChart = new C3ChartHistory(
       pmiList,
       None, None, // chart width, height
       "Date", // x axis label
       dateHistory,
-      None, // baseline
-      None, // tolerance
-      Seq("Percent of Flood"), // y axis labels
-      "Percent of Flood", // y data label
+      baseline, // baseline
+      tolerance, // tolerance
+      Seq("Percent of Background"), // y axis labels
+      "Percent of Background", // y data label
       Seq(percentHistory), // y values to plot
       yNew, // index of y value that is new
       ".4g", // y number format
@@ -146,32 +159,36 @@ object WedgeHTML {
   }
 
   private def beamToDisplay(wedgePoint: WedgePoint, extendedData: ExtendedData, runReq: RunReq, wedgeDir: File, history: Seq[WedgePoint.WedgePointHistory]): (Elem, String) = {
-    val historyChart = histChart(wedgePoint.beamName, extendedData, history)
+    val historyChart = histChart(wedgePoint, extendedData, history)
 
-    val isTransverse = WedgeAnalysis.wedgeOrientationTransverse(wedgePoint.beamName, runReq.rtplan.attributeList.get)
-    val dicomImage = runReq.rtimageMap(wedgePoint.beamName).correctedDicomImage.get
-    val translator = new IsoImagePlaneTranslator(runReq.rtimageMap(wedgePoint.beamName).attributeList.get)
+    val isTransverse = WedgeAnalysis.wedgeOrientationTransverse(wedgePoint.wedgeBeamName, runReq.rtplan.attributeList.get)
+    val dicomImage = runReq.rtimageMap(wedgePoint.wedgeBeamName).correctedDicomImage.get
+    val translator = new IsoImagePlaneTranslator(runReq.rtimageMap(wedgePoint.wedgeBeamName).attributeList.get)
 
-    val wedgeProfile = profile(dicomImage, translator, isTransverse, runReq, runReq.rtimageMap(wedgePoint.beamName).attributeList.get)
+    val wedgeProfile = profile(dicomImage, translator, isTransverse, runReq, runReq.rtimageMap(wedgePoint.wedgeBeamName).attributeList.get)
     val valueChart = new C3Chart(None, None,
       "Position mm", "Position mm", wedgeProfile.map(p => p.position), ".3g",
       Seq("Level"), "Level", Seq(wedgeProfile.map(p => p.value)), ".3g", Seq(lineColor))
 
-    val floodProfile = profile(runReq.floodCorrectedImage, translator, isTransverse, runReq, runReq.flood.attributeList.get)
-    val percentProfile = wedgeProfile.zip(floodProfile).map(wf => new ProfilePoint(wf._1.position, (wf._1.value * 100) / wf._2.value))
+    val backgroundDerived = runReq.rtimageMap(wedgePoint.backgroundBeamName)
+    val backgroundProfile = profile(backgroundDerived.correctedDicomImage.get, translator, isTransverse, runReq, backgroundDerived.attributeList.get)
+    val percentProfile = wedgeProfile.zip(backgroundProfile).map(wb => new ProfilePoint(wb._1.position, (wb._1.value * 100) / wb._2.value))
     val percentChart = new C3Chart(None, None,
       "Position mm", "Position mm", percentProfile.map(p => p.position), ".3g",
       Seq("Percent"), "Percent", Seq(percentProfile.map(p => p.value)), ".3g", Seq(lineColor))
+    val backgroundChart = new C3Chart(None, None,
+      "Position mm", "Position mm", backgroundProfile.map(p => p.position), ".3g",
+      Seq("Level"), "Level", Seq(backgroundProfile.map(p => p.value)), ".3g", Seq(lineColor))
 
     val elem = {
       <div class="row">
         <div class="row">
           <div class="col-md-12">
             <h2>
-              { wedgePoint.beamName + " : " }
-              <font color="orange" title="Center value from image">{ Util.fmtDbl(wedgePoint.floodValue_cu) } CU</font>
+              { wedgePoint.wedgeBeamName + " : " }
+              <font color="orange" title="Center value from image">{ Util.fmtDbl(wedgePoint.backgroundValue_cu) } CU</font>
               /
-              <font color="orange" title="Center value from image as percent of flood"> { Util.fmtDbl(wedgePoint.percentOfFlood_pct) } %</font>
+              <font color="orange" title="Center value from image as percent of background"> { Util.fmtDbl(wedgePoint.percentOfBackground_pct) } %</font>
             </h2>
           </div>
         </div>
@@ -181,24 +198,36 @@ object WedgeHTML {
         </div>
         <div class="row">
           <div class="col-md-5">
-            { beamImage(wedgePoint, runReq, wedgeDir) }
+            <h3>Wedge { wedgePoint.wedgeBeamName }</h3>
+            { beamImage(wedgePoint.wedgeBeamName, runReq, wedgeDir) }
           </div>
           <div class="col-md-5">
             <div class="row">
-              <h3>Wedge as Percent of Flood</h3>
+              <h3>Wedge Profile as Percent of Background</h3>
               { percentChart.html }
             </div>
             <div class="row">
-              <h3>Wedge profile</h3>
-              { percentChart.html }
+              <h3>Wedge Profile</h3>
               { valueChart.html }
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-5">
+            <h3>Background { wedgePoint.backgroundBeamName }</h3>
+            { beamImage(wedgePoint.backgroundBeamName, runReq, wedgeDir) }
+          </div>
+          <div class="col-md-5">
+            <div class="row">
+              <h3>Background Profile</h3>
+              { backgroundChart.html }
             </div>
           </div>
         </div>
       </div>
     }
 
-    val js = historyChart.javascript + valueChart.javascript + percentChart.javascript
+    val js = historyChart.javascript + valueChart.javascript + percentChart.javascript + backgroundChart.javascript
     (elem, js)
   }
 

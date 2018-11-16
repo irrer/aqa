@@ -19,6 +19,10 @@ import java.awt.Point
 import java.awt.geom.Point2D
 import org.aqa.db.CenterDose
 import org.aqa.db.WedgePoint
+import org.aqa.db.Baseline
+import org.aqa.webrun.phase2.Phase2Util.PMIBaseline
+import org.aqa.db.MaintenanceCategory
+import org.aqa.db.PMI
 
 /**
  * Analyze DICOM files for Wedge Analysis.
@@ -37,22 +41,103 @@ object WedgeAnalysis extends Logging {
     horiz
   }
 
+  def makeBaselineName(wedgePair: Config.WedgeBeamPair): String = wedgePair.wedge + " / " + wedgePair.background + " Wedge"
+
+  /**
+   * Either get the existing baseline or
+   */
+  private def getBaseline(machinePK: Long, wedgePair: Config.WedgeBeamPair, attributeList: AttributeList, value: Double): PMIBaseline = {
+    val id = makeBaselineName(wedgePair)
+    Baseline.findLatest(machinePK, id) match {
+      case Some((pmi, baseline)) => new PMIBaseline(Some(pmi), baseline)
+      case _ => new PMIBaseline(None, Baseline.makeBaseline(-1, attributeList, id, value))
+    }
+  }
+
+  /**
+   * Given the list of wedge points, determine if any of them need to have a baseline value created, and if so, create
+   * them.  If any baseline values are created, then create the corresponding PMI record.
+   */
+  private def updateBaselineAndPMI(wedgePointList: Seq[WedgePoint], extendedData: ExtendedData, runReq: RunReq): Unit = {
+
+    def constructOneBaseline(wedgePoint: WedgePoint): Option[Baseline] = {
+      val id = makeBaselineName(wedgePoint.wedgePair)
+      Baseline.findLatest(extendedData.machine.machinePK.get, id) match {
+        case Some((pmi, baseline)) => None
+        case _ => Some(Baseline.makeBaseline(-1, runReq.rtimageMap(wedgePoint.wedgeBeamName).attributeList.get, id, wedgePoint.percentOfBackground_pct))
+      }
+    }
+
+    val newBaselineList = wedgePointList.map(wp => constructOneBaseline(wp)).flatten
+    if (newBaselineList.nonEmpty) {
+      logger.info("Automatically creating new PMI and " + newBaselineList.size + "default Wedge baseline(s) for " + extendedData.institution.name + " : " + extendedData.machine.id)
+
+      val summary = "Automatically created baseline value for Wedge."
+      val preamble = "Wedge baseline values are created automatically if they have not been established for the given machine.  The following is a list of the values:\n\n"
+      val valueText = newBaselineList.map(bl => "    " + bl.id + " : " + bl.value).mkString("\n")
+      val analysisTime = extendedData.output.startDate
+      val pmiOrig = new PMI(
+        None,
+        MaintenanceCategory.setBaseline,
+        extendedData.machine.machinePK.get,
+        analysisTime,
+        extendedData.user.userPK.get,
+        extendedData.output.outputPK,
+        summary,
+        preamble + valueText)
+      val pmi = pmiOrig.insert
+
+      val list = newBaselineList.map(bl => bl.copy(pmiPK = pmi.pmiPK.get))
+      Baseline.insert(list)
+      logger.info("Wedge PMI and baseline inserted")
+    }
+  }
+
+  private def analyzeWedgePair(wedgePair: Config.WedgeBeamPair, pointList: Seq[Point], extendedData: ExtendedData, runReq: RunReq): WedgePoint = {
+
+    def measure(beamName: String) = {
+      val derived = runReq.derivedMap(beamName)
+      Phase2Util.measureDose(pointList, derived.originalImage, derived.attributeList)
+    }
+
+    val baselineId = makeBaselineName(wedgePair)
+    val pmiBaseline = Baseline.findLatest(extendedData.machine.machinePK.get, baselineId)
+
+    val derivedWedge = runReq.derivedMap(wedgePair.wedge)
+    val derivedBackground = runReq.derivedMap(wedgePair.background)
+
+    val wedgeDose = measure(wedgePair.wedge)
+    val backgroundDose = measure(wedgePair.background)
+    val percent = (wedgeDose * 100) / backgroundDose
+
+    // if the baseline has been established, then use it, otherwise use the new value
+    val baselineValue: Double = {
+      if (pmiBaseline.isDefined) pmiBaseline.get._2.value.toDouble
+      else percent
+    }
+
+    val wedgePoint = new WedgePoint(None, extendedData.output.outputPK.get,
+      Util.sopOfAl(derivedWedge.attributeList), wedgePair.wedge, wedgeDose,
+      Util.sopOfAl(derivedBackground.attributeList), wedgePair.background, backgroundDose,
+      percent,
+      baselineValue)
+
+    wedgePoint
+  }
+
   val subProcedureName = "Wedge"
 
   /**
    * Use the center dose and flood CenterDose points to calculate the WedgePoints.
    */
   private def analyze(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering, centerDoseList: Seq[CenterDose]): Seq[WedgePoint] = {
-    val flood = centerDoseList.find(b => b.beamName.equals(Config.FloodFieldBeamName)).get
     val outputPK = extendedData.output.outputPK.get
 
-    def centerDoseToWedgePoint(beamName: String): WedgePoint = {
-      val centerDose = centerDoseList.find(c => c.beamName.equals(beamName)).get
-      new WedgePoint(None, outputPK, centerDose.SOPInstanceUID, centerDose.beamName, centerDose.dose, flood.dose, (centerDose.dose * 100) / flood.dose)
-    }
+    val pointList = Phase2Util.makeCenterDosePointList(runReq.flood.attributeList.get)
 
-    val validBeamNameList = Config.WedgeBeamList.filter(b => centerDoseList.find(c => c.beamName.equals(b.wedge)).isDefined)
-    validBeamNameList.map(b => centerDoseToWedgePoint(b))
+    val beamSet = runReq.rtimageMap.keySet
+    val validBeamNameList = Config.WedgeBeamList.filter(b => beamSet.contains(b.wedge) && beamSet.contains(b.background))
+    validBeamNameList.map(b => analyzeWedgePair(b, pointList, extendedData, runReq))
   }
 
   class WedgeResult(summary: Elem, status: ProcedureStatus.Value, wedgePointList: Seq[WedgePoint]) extends SubProcedureResult(summary, status, subProcedureName)
@@ -66,6 +151,7 @@ object WedgeAnalysis extends Logging {
 
       val wedgePointList = analyze(extendedData, runReq, collimatorCentering, centerDoseList)
       WedgePoint.insert(wedgePointList)
+      updateBaselineAndPMI(wedgePointList, extendedData, runReq)
       val status = ProcedureStatus.done
       val summary = WedgeHTML.makeDisplay(extendedData, status, runReq, wedgePointList)
       val result = new WedgeResult(summary, status, wedgePointList)
