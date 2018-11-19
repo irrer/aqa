@@ -170,7 +170,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       evalPoint(Config.SymmetryPointTop))
   }
 
-  def makeBaselineName(beamName: String, dataName: String): String = beamName + " " + dataName
+  def makeBaselineName(beamName: String, dataName: String): String = dataName + " " + beamName
 
   case class BeamResultBaseline(result: SymmetryAndFlatnessBeamResult, pmiBaseline: Seq[PMIBaseline], pointSet: PointSet);
 

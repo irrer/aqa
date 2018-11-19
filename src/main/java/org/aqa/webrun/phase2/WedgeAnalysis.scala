@@ -41,7 +41,11 @@ object WedgeAnalysis extends Logging {
     horiz
   }
 
-  def makeBaselineName(wedgePair: Config.WedgeBeamPair): String = wedgePair.wedge + " / " + wedgePair.background + " Wedge"
+  def makeBaselineName(wedgeBeamName: String, backgroundBeamName: String): String = "Wedge " + wedgeBeamName + " / " + backgroundBeamName
+
+  def makeBaselineName(wedgePair: Config.WedgeBeamPair): String = makeBaselineName(wedgePair.wedge, wedgePair.background)
+
+  def makeBaselineName(wedgePoint: WedgePoint): String = makeBaselineName(wedgePoint.wedgeBeamName, wedgePoint.backgroundBeamName)
 
   /**
    * Either get the existing baseline or

@@ -243,15 +243,17 @@ object WedgeHTML {
       wedgePointList.map(wp => beamToDisplay(wp, extendedData, runReq, wedgeDir, history))
     }
 
-    def wedgeHtml(wedgeList: Seq[Wedge]): Elem = {
-      <div class="row">
-        <h3>Beam { wedgeList.head.beamName } </h3>
-        <div id={ WedgeProfileChart.beamRef(wedgeList.head.beamName) }>filler</div>
-      </div>
+    val useAsBaselineButton = {
+      val href = "/run/WedgeUseAsBaseline?outputPK=" + extendedData.output.outputPK.get
+      val title = "Use the values for the " + wedgePointList.size + " beam(s) listed below" + WebUtil.titleNewline + "as the baseline for future wedge analysis"
+      <a class="btn btn-primary" href={ href } role="button" title={ title }>
+        Use As Baseline
+      </a>
     }
 
     val content = {
       <div class="col-md-10 col-md-offset-1">
+        { useAsBaselineButton }
         { htmlJs.map(ej => ej._1) }
       </div>
     }

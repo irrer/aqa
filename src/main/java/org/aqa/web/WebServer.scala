@@ -34,6 +34,7 @@ import org.aqa.db.CachedUser
 import org.aqa.db.Output
 import org.aqa.db.Input
 import org.aqa.webrun.phase2.SymmetryAndFlatnessUseAsBaseline
+import org.aqa.webrun.phase2.WedgeUseAsBaseline
 
 object WebServer {
   val challengeScheme = ChallengeScheme.HTTP_BASIC
@@ -448,6 +449,7 @@ class WebServer extends Application with Logging {
         new ServiceInfo,
         new ServiceInstance,
         new SymmetryAndFlatnessUseAsBaseline,
+        new WedgeUseAsBaseline,
         termsOfUse,
         outputList,
         webRunIndex,
