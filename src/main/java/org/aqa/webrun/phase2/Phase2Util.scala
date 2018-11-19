@@ -27,6 +27,9 @@ import java.text.SimpleDateFormat
 import org.aqa.db.CenterDose
 import org.aqa.db.PMI
 import org.aqa.db.Baseline
+import org.aqa.web.PMIList
+import org.aqa.web.MachineList
+import org.aqa.web.MachineUpdate
 
 /**
  * Utilities for Phase 2.
@@ -241,8 +244,8 @@ object Phase2Util extends Logging {
         <div class="row">
           <div class="col-md-1 col-md-offset-1">{ passFailImage }</div>
           <div class="col-md-3" title={ title }><h2>{ title }</h2></div>
-          <div class="col-md-1" title="Machine"> <h2>{ machineId }</h2></div>
-          <div class="col-md-2">
+          <div class="col-md-1" title="Treatment machine. Click to view and modify machine configuration."> <h2><a href={ "/" + SubUrl.admin + "/" + "MachineUpdate" + "?" + MachineUpdate.machinePKTag + "=" + extendedData.machine.machinePK.get }>{ machineId }</a></h2></div>
+          <div class="col-md-1">
             <span title="Machine Type">{ machType }</span>
             <br/>
             <span title="Multileaf Collimator">{ extendedData.multileafCollimator.model }</span>
@@ -251,6 +254,9 @@ object Phase2Util extends Logging {
             <span title="EPID (electronic portal imaging device)">{ extendedData.epid.model }</span>
             <br/>
             <span title="X*Y pixel size in mm">{ pixelSpacing }</span>
+          </div>
+          <div class="col-md-1">
+            <a href={ PMIList.path + "?machinePK=" + extendedData.machine.machinePK.get } title="View and modify maintenance events for this machine">Maintenance</a>
           </div>
         </div>
         <div class="row">
