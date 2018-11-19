@@ -258,20 +258,30 @@ object SymmetryAndFlatnessMainHTML extends Logging {
       val href = SymmetryAndFlatnessUseAsBaseline.path + "?outputPK=" + extendedData.output.outputPK.get
       val title = "Use the values here as the baseline for future symmetry and flatness analysis"
       val button = {
-        <a class="btn btn-primary" href={ href } role="button" title={ title }>Use As Baseline</a>
+        <a class="btn btn-primary" href={ href } role="button" title={ title } style="margin:20px;">Use As Baseline</a>
       }
       button
     }
 
+    val j = resultList.map(br => br.result)
+
+    SymmetryAndFlatnessCSV.makeCsvFile(extendedData, runReq, resultList, subDir)
+
+    val csv: Elem = {
+      val file = new File(subDir, SymmetryAndFlatnessCSV.csvFileName)
+      <a href={ WebServer.urlOfResultsFile(file) } title="Download Symmetry and Flatness as a CSV viewable in a spreadsheet." style="margin:20px;">CSV</a>
+    }
+
     val content = {
       <div class="col-md-6 col-md-offset-3">
+        { useAsBaselineButton }
+        { csv }
         <br/>
         <table class="table table-bordered">
           { tableHead }
           { resultList.map(rb => makeRow(subDir, extendedData, rb, runReq: RunReq)) }
         </table>
         <p/>
-        { useAsBaselineButton }
       </div>
 
     }
