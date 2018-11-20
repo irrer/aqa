@@ -354,7 +354,13 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       //val resultList = beamNameList.par.map(beamName => analyze(beamName, extendedData, runReq)).toList
       val resultList = beamNameList.map(beamName => analyze(beamName, extendedData, runReq)).toList // change back to 'par' when debugged
 
-      val pass = resultList.map(rb => rb.result.status.toString.equals(ProcedureStatus.pass.toString)).reduce(_ && _)
+      val pass = {
+        0 match {
+          case _ if resultList.size == 1 => resultList.head.result.status.toString.equals(ProcedureStatus.pass.toString)
+          case _ if resultList.isEmpty => true
+          case _ => resultList.map(rb => rb.result.status.toString.equals(ProcedureStatus.pass.toString)).reduce(_ && _)
+        }
+      }
       val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
       storePmiInDB(resultList, extendedData.machine.machinePK.get, extendedData.user.userPK.get, extendedData.output.outputPK.get, extendedData.output.startDate)
