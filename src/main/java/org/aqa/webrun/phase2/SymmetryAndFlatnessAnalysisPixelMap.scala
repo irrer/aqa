@@ -7,6 +7,7 @@ import org.aqa.Config
 import java.awt.Point
 import scala.collection.mutable.ArrayBuffer
 import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Analyze DICOM files for symmetry and flatness.
@@ -23,8 +24,8 @@ object SymmetryAndFlatnessAnalysisPixelMap extends Logging {
 
       val circleRadiusInPixels = translator.circleRadiusInPixels
 
-      def pixelMapOfPoint(point: SymmetryAndFlatnessPoint) = {
-        val centerInPixels = translator.iso2Pix(point.asPoint)
+      def pixelMapOfPoint(symFlatPoint: SymmetryAndFlatnessPoint) = {
+        val centerInPixels = translator.iso2Pix(symFlatPoint.asPoint)
 
         val expandedRadiusInPixels = circleRadiusInPixels + 2
         val xLo = Math.max((centerInPixels.getX - expandedRadiusInPixels).round.toInt, 0)

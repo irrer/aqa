@@ -135,6 +135,15 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
   case class PointSet(top: Double, bottom: Double, right: Double, left: Double, center: Double) {
     val list = Seq(top, bottom, right, left, center)
+
+    override def toString = {
+      def fmt(d: Double) = d.formatted("%10f")
+      "top: " + fmt(top) +
+        "    bottom: " + fmt(bottom) +
+        "    right: " + fmt(right) +
+        "    left: " + fmt(left) +
+        "    center: " + fmt(center)
+    }
   }
 
   private def analyzeProfileConstancy(pointSet: PointSet, baselinePointSet: PointSet): Double = {
@@ -167,7 +176,14 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
     new PointSet(evalPoint(Config.SymmetryPointTop), evalPoint(Config.SymmetryPointBottom),
       evalPoint(Config.SymmetryPointLeft), evalPoint(Config.SymmetryPointRight),
-      evalPoint(Config.SymmetryPointTop))
+      evalPoint(Config.SymmetryPointCenter))
+  }
+
+  /**
+   * public version of function to allow testing
+   */
+  def testMakePointSet(dicomImage: DicomImage, attributeList: AttributeList, RescaleSlope: Double, RescaleIntercept: Double): PointSet = {
+    makePointSet(dicomImage, attributeList, RescaleSlope, RescaleIntercept)
   }
 
   def makeBaselineName(beamName: String, dataName: String): String = dataName + " " + beamName
