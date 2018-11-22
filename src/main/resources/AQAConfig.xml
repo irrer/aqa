@@ -234,6 +234,7 @@ Note that when building a package for release, the Maven build process uses the 
         <!-- <BeamName background="J20G0-6X">J10G0C90EDW45-6X</BeamName> -->  <!-- For Cedars-Sinia -->
         <BeamName background="J10G0C90-6X">J10G0C90EDW45-6X</BeamName>  <!-- For UMich -->
         <BeamName background="J20G0C90-6X">J20G0C90EDW60-6X</BeamName>
+        <BeamName background="J20G0-6X">J20G0C90EDW60-6X</BeamName>  <!-- experimental -->
     </WedgeBeamList>
 
     <!-- Diameter of sample spots in mm. -->
