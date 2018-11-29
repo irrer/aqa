@@ -165,7 +165,7 @@ object BadPixelAnalysis extends Logging {
 
     def beamRef(beamName: String, dicomFile: DicomFile): (Option[Long], Elem) = {
       val al = dicomFile.attributeList.get
-      def angleOf(tag: AttributeTag) = Util.angleRoundedTo90(al.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head).toString
+      def angleOf(tag: AttributeTag) = Util.angleRoundedTo90(al.get(tag).getDoubleValues.head).toString
 
       val relativeTime = timeOf(al)
 
