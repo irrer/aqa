@@ -1,6 +1,8 @@
-package org.aqa.webrun.phase2
+package org.aqa.webrun.phase2.collimatorCentering
 
 import org.aqa.Config
+import org.aqa.webrun.phase2.Phase2Validation
+import org.aqa.webrun.phase2.RunReq
 
 /**
  * Validate the inputs for CollimatorCentering.  Require the 90 and 270 files to exist.

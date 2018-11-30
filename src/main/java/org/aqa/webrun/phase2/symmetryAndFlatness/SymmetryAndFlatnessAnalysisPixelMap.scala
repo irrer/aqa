@@ -1,4 +1,4 @@
-package org.aqa.webrun.phase2
+package org.aqa.webrun.phase2.symmetryAndFlatness
 
 import org.aqa.Logging
 import com.pixelmed.dicom.AttributeList
@@ -7,7 +7,6 @@ import org.aqa.Config
 import java.awt.Point
 import scala.collection.mutable.ArrayBuffer
 import org.aqa.IsoImagePlaneTranslator
-import edu.umro.ScalaUtil.Trace
 
 /**
  * Analyze DICOM files for symmetry and flatness.

@@ -47,6 +47,13 @@ import java.awt.geom.Point2D
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.aqa.web.WebUtil
+import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessAnalysis
+import org.aqa.webrun.phase2.wedge.WedgeAnalysis
+import org.aqa.webrun.phase2.collimatorPosition.CollimatorPositionAnalysis
+import org.aqa.webrun.phase2.collimatorCentering.CollimatorCenteringAnalysis
+import org.aqa.webrun.phase2.centerDose.CenterDoseAnalysis
+import org.aqa.webrun.phase2.metadataCheck.MetadataCheckAnalysis
+import org.aqa.webrun.phase2.metadataCheck.MetadataCheckValidation
 
 object Phase2 {
   val parametersFileName = "parameters.xml"

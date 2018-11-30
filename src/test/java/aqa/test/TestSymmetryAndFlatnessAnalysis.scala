@@ -8,12 +8,12 @@ import java.io.File
 import edu.umro.util.Utility
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.FileUtil
-import org.aqa.webrun.phase2.SymmetryAndFlatnessAnalysis
 import edu.umro.ImageUtil.DicomImage
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import org.aqa.Config
 import org.scalactic.TolerantNumerics
+import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessAnalysis
 
 /**
  * Test Sym+Flat function.

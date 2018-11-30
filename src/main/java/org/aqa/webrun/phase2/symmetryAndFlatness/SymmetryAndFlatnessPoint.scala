@@ -1,9 +1,6 @@
-package org.aqa.webrun.phase2
+package org.aqa.webrun.phase2.symmetryAndFlatness
 
 import org.aqa.Logging
-import org.aqa.db.CenterDose
-import java.text.SimpleDateFormat
-import org.aqa.Util
 import java.awt.geom.Point2D
 
 /**

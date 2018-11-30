@@ -1,4 +1,4 @@
-package org.aqa.webrun.phase2
+package org.aqa.webrun.phase2.metadataCheck
 
 import scala.xml.Elem
 import org.aqa.db.Output
@@ -18,6 +18,9 @@ import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.run.ProcedureStatus
 import java.io.File
 import org.aqa.Config
+import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.phase2.RunReq
+import org.aqa.webrun.phase2.Phase2Util
 
 object MetadataCheckHTML {
   val htmlFileName = "MetadataCheck.html"

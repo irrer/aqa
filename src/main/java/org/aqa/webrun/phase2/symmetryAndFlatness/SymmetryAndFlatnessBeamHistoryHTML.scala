@@ -1,18 +1,16 @@
-package org.aqa.webrun.phase2
+package org.aqa.webrun.phase2.symmetryAndFlatness
 
 import org.aqa.Logging
 import org.aqa.db.SymmetryAndFlatness
-import scala.xml.Elem
-import org.aqa.web.WebUtil
-import java.sql.Timestamp
 import org.aqa.Util
 import org.aqa.web.C3ChartHistory
 import java.awt.Color
 import org.aqa.db.PMI
 import org.aqa.db.Baseline
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.web.C3Chart
+import org.aqa.webrun.phase2.ExtendedData
+import scala.collection.Seq
 
 /**
  * Analyze DICOM files for symmetry and flatness.

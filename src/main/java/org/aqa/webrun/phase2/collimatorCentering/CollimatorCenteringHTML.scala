@@ -1,4 +1,4 @@
-package org.aqa.webrun.phase2
+package org.aqa.webrun.phase2.collimatorCentering
 
 import org.aqa.db.Output
 import scala.xml.Elem
@@ -11,6 +11,10 @@ import org.aqa.run.ProcedureStatus
 import org.aqa.Util
 import org.aqa.db.CollimatorCentering
 import java.awt.geom.Point2D
+import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.phase2.MeasureTBLREdges
+import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.webrun.phase2.RunReq
 
 object CollimatorCenteringHTML {
 

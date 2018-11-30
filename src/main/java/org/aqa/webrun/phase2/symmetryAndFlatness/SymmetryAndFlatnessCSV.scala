@@ -1,14 +1,10 @@
-package org.aqa.webrun.phase2
+package org.aqa.webrun.phase2.symmetryAndFlatness
 
-import org.aqa.db.SymmetryAndFlatness
 import org.aqa.Util
 import java.io.File
-import org.aqa.db.Output
-import org.aqa.db.Machine
-import org.aqa.db.Institution
-import org.aqa.db.Procedure
-import org.aqa.db.Input
-import org.aqa.db.User
+import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.phase2.RunReq
+import scala.collection.Seq
 
 object SymmetryAndFlatnessCSV {
 

@@ -17,7 +17,7 @@ import scala.xml.NodeSeq
 import java.net.InetAddress
 import java.util.Properties
 import edu.umro.util.Utility
-import org.aqa.webrun.phase2.SymmetryAndFlatnessPoint
+import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessPoint
 import java.awt.geom.Point2D
 import org.aqa.db.MaintenanceCategory
 

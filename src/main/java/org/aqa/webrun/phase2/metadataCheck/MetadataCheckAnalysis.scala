@@ -1,4 +1,4 @@
-package org.aqa.webrun.phase2
+package org.aqa.webrun.phase2.metadataCheck
 
 import org.aqa.Logging
 import org.aqa.db.MetadataCheck
@@ -12,6 +12,11 @@ import org.aqa.db.Output
 import org.aqa.run.ProcedureStatus
 import org.aqa.Config
 import edu.umro.ScalaUtil.Trace
+import org.aqa.webrun.phase2.SubProcedureResult
+import org.aqa.webrun.phase2.RunReq
+import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.webrun.phase2.SubProcedureResult
 
 /**
  * Analyze DICOM files for ImageAnalysis.

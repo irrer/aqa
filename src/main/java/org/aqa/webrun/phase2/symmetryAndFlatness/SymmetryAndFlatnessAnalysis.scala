@@ -1,4 +1,4 @@
-package org.aqa.webrun.phase2
+package org.aqa.webrun.phase2.symmetryAndFlatness
 
 import org.aqa.Logging
 import com.pixelmed.dicom.AttributeList
@@ -23,6 +23,10 @@ import java.sql.Timestamp
 import org.aqa.db.MaintenanceCategory
 import org.aqa.IsoImagePlaneTranslator
 import org.aqa.webrun.phase2.Phase2Util.PMIBaseline
+import org.aqa.webrun.phase2.RunReq
+import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.phase2.SubProcedureResult
+import org.aqa.webrun.phase2.Phase2Util
 
 /**
  * Analyze DICOM files for symmetry and flatness.

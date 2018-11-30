@@ -33,8 +33,8 @@ import edu.umro.ScalaUtil.Trace._
 import org.aqa.db.CachedUser
 import org.aqa.db.Output
 import org.aqa.db.Input
-import org.aqa.webrun.phase2.SymmetryAndFlatnessUseAsBaseline
-import org.aqa.webrun.phase2.WedgeUseAsBaseline
+import org.aqa.webrun.phase2.wedge.WedgeUseAsBaseline
+import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessUseAsBaseline
 
 object WebServer {
   val challengeScheme = ChallengeScheme.HTTP_BASIC

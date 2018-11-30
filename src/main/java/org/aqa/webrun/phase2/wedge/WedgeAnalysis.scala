@@ -1,4 +1,4 @@
-package org.aqa.webrun.phase2
+package org.aqa.webrun.phase2.wedge
 
 import org.aqa.Logging
 import org.aqa.db.MetadataCheck
@@ -23,6 +23,10 @@ import org.aqa.db.Baseline
 import org.aqa.webrun.phase2.Phase2Util.PMIBaseline
 import org.aqa.db.MaintenanceCategory
 import org.aqa.db.PMI
+import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.phase2.RunReq
+import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.webrun.phase2.SubProcedureResult
 
 /**
  * Analyze DICOM files for Wedge Analysis.

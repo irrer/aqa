@@ -1,4 +1,4 @@
-package org.aqa.webrun.phase2
+package org.aqa.webrun.phase2.centerDose
 
 import scala.xml.Elem
 import org.aqa.db.Output
@@ -24,6 +24,10 @@ import com.pixelmed.dicom.AttributeList
 import java.awt.Point
 import com.pixelmed.dicom.TagFromName
 import org.aqa.Logging
+import org.aqa.webrun.phase2.RunReq
+import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.phase2.SubProcedureResult
+import org.aqa.webrun.phase2.Phase2Util
 
 object CenterDoseHTML extends Logging {
   private val htmlFileName = "CenterDose.html"

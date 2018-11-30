@@ -1,7 +1,6 @@
 package aqa.test
 
 import java.io.File
-import org.aqa.webrun.phase2.CollimatorCenteringAnalysis
 import org.aqa.DicomFile
 import edu.umro.ImageUtil.ImageUtil
 import javax.imageio.ImageIO

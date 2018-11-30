@@ -14,7 +14,7 @@ import scala.collection.Seq
 import org.aqa.IsoImagePlaneTranslator
 import com.pixelmed.dicom.ValueRepresentation
 import edu.umro.ScalaUtil.Trace._
-import org.aqa.webrun.phase2.SymmetryAndFlatnessAnalysisPixelMap
+import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessAnalysisPixelMap
 import edu.umro.ImageUtil.ImageUtil
 import java.awt.Color
 

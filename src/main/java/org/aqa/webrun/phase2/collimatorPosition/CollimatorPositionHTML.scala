@@ -1,4 +1,4 @@
-package org.aqa.webrun.phase2
+package org.aqa.webrun.phase2.collimatorPosition
 
 import scala.xml.Elem
 import org.aqa.db.Output
@@ -19,6 +19,9 @@ import org.aqa.run.ProcedureStatus
 import java.io.File
 import org.aqa.Config
 import java.awt.image.BufferedImage
+import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.phase2.RunReq
+import org.aqa.webrun.phase2.Phase2Util
 
 object CollimatorPositionHTML {
   val htmlFileName = "CollimatorPosition.html"

@@ -1,4 +1,4 @@
-package org.aqa.webrun.phase2
+package org.aqa.webrun.phase2.wedge
 
 import org.aqa.db.Output
 import scala.xml.Elem
@@ -25,6 +25,9 @@ import org.aqa.db.PMI
 import com.pixelmed.dicom.TagFromName
 import org.aqa.db.Baseline
 import org.aqa.web.C3Chart.Tolerance
+import org.aqa.webrun.phase2.RunReq
+import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.phase2.Phase2Util
 
 object WedgeHTML {
 

@@ -1,4 +1,4 @@
-package org.aqa.webrun.phase2
+package org.aqa.webrun.phase2.centerDose
 
 import org.aqa.Logging
 import org.aqa.db.CenterDose
@@ -7,6 +7,7 @@ import org.aqa.Util
 import org.aqa.web.C3ChartHistory
 import org.aqa.db.PMI
 import java.awt.Color
+import org.aqa.webrun.phase2.ExtendedData
 
 class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Seq[CenterDose.CenterDoseHistory], units: String, extendedData: ExtendedData) extends Logging {
 

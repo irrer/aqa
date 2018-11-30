@@ -1,4 +1,4 @@
-package org.aqa.webrun.phase2
+package org.aqa.webrun.phase2.wedge
 
 import org.aqa.web.WebUtil.SubUrlRun
 import org.restlet.Restlet
