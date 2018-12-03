@@ -29,10 +29,16 @@ class IsoImagePlaneTranslator(al: AttributeList) {
   private val expansionFactorX = beamExpansionRatio / ImagePlanePixelSpacing.getX
   private val expansionFactorY = beamExpansionRatio / ImagePlanePixelSpacing.getY
 
-  def iso2Pix(x: Double, y: Double): Point2D.Double = new Point2D.Double((x * expansionFactorX) + imageCenter.getX, (y * expansionFactorY) + imageCenter.getY)
+  def iso2PixX(x: Double) = (x * expansionFactorX) + imageCenter.getX
+  def iso2PixY(y: Double) = (y * expansionFactorY) + imageCenter.getY
+
+  def iso2Pix(x: Double, y: Double): Point2D.Double = new Point2D.Double(iso2PixX(x), iso2PixY(y))
   def iso2Pix(isoPoint: Point2D.Double): Point2D.Double = iso2Pix(isoPoint.getX, isoPoint.getY)
 
-  def pix2Iso(x: Double, y: Double): Point2D.Double = new Point2D.Double((x - imageCenter.getX) / expansionFactorX, (y - imageCenter.getY) / expansionFactorY)
+  def pix2IsoX(x: Double) = (x - imageCenter.getX) / expansionFactorX
+  def pix2IsoY(y: Double) = (y - imageCenter.getY) / expansionFactorY
+
+  def pix2Iso(x: Double, y: Double): Point2D.Double = new Point2D.Double(pix2IsoX(x), pix2IsoY(y))
   def pix2Iso(isoPoint: Point2D.Double): Point2D.Double = pix2Iso(isoPoint.getX, isoPoint.getY)
 
   def equalTo(other: IsoImagePlaneTranslator) = {

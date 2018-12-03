@@ -1,42 +1,25 @@
-package org.aqa.webrun.phase2.leafPosition
 
-import org.aqa.Logging
-import scala.xml.Elem
-import org.aqa.run.ProcedureStatus
-import org.aqa.webrun.phase2.SubProcedureResult
-import org.aqa.webrun.phase2.ExtendedData
-import org.aqa.webrun.phase2.RunReq
-import org.aqa.db.LeafPosition
-import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.TagFromName
+package aqa.test;
+
+import org.aqa.Config
+import org.scalatest.FlatSpec
+import org.scalatest.Matchers
+import java.io.File
 import org.aqa.Util
 import edu.umro.ImageUtil.DicomImage
-import org.aqa.IsoImagePlaneTranslator
-import java.awt.geom.Point2D
-import org.aqa.webrun.phase2.MeasureTBLREdges
 
-object LeafPositionAnalysis extends Logging {
+/**
+ * Test the LeafPositionAnalysis.
+ *
+ */
 
-  case class LeafPositionResult(sum: Elem, sts: ProcedureStatus.Value, result: Seq[LeafPosition]) extends SubProcedureResult(sum, sts, subProcedureName)
-
-  val subProcedureName = "Leaf Position"
-
-  /**
-   * Get a list of the precisely located sides of the collimator leaves.  Values are in pixels and are ordered by position.
-   */
-  private def leafSides(horizontal: Boolean, attributeList: AttributeList, dicomImage: DicomImage): Seq[Double] = {
-
-    val profile = if (horizontal) dicomImage.columnSums else dicomImage.rowSums
-    val translator = new IsoImagePlaneTranslator(attributeList)
-
-    // distance in pixels from the furthest sides of the leaves
-    val leafSideRange = {
-      val x1x2y1y2 = MeasureTBLREdges.imageCollimatorPositions(attributeList)
-      val point1 = translator.iso2Pix(new Point2D.Double(x1x2y1y2.X1, x1x2y1y2.Y1))
-      val point2 = translator.iso2Pix(new Point2D.Double(x1x2y1y2.X2, x1x2y1y2.Y2))
-      val pair = if (horizontal) Seq(point1.getY, point2.getY) else Seq(point1.getX, point2.getX)
-      pair.sorted
-    }
+class TestLeafPositionAnalysis extends FlatSpec with Matchers {
+  "LeafPositionAnalysis" should "measure leaf positions" in {
+    val dir = new File("""src\test\resources""")
+    val file = new File(dir, """TestLeafPositionAnalysis.dcm""")
+    val al = Util.readDicomFile(file).right.get
+    val dicomImage = new DicomImage(al)
+    val profile = dicomImage.rowSums
 
     object Shape extends Enumeration {
       val peak = Value
@@ -111,28 +94,6 @@ object LeafPositionAnalysis extends Logging {
     val validValleyPeakList = dropAfterLastPeak(lo.reverse).reverse ++ dropAfterLastPeak(hi)
     println("validValleyPeakList:\n    " + validValleyPeakList.mkString("\n    "))
 
-    // TODO continue here
-    //   - localized enter of mass?
-    //   - LocateRidge for each leaf side
-
-    ???
+    true should be(true)
   }
-
-  private def measureBeam(beamName: String, outputPK: Long, attributeList: AttributeList, image: DicomImage): LeafPosition = {
-
-    // true if collimator is horizontal
-    val horizontal = (Util.angleRoundedTo90(attributeList.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head).toInt % 180) == 0
-
-    ???
-  }
-
-  /**
-   * Hook for testing
-   */
-  def testMeasureBeam(beamName: String, outputPK: Long, attributeList: AttributeList, image: DicomImage): LeafPosition = measureBeam(beamName, outputPK, attributeList, image)
-
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, LeafPositionResult] = {
-    ???
-  }
-
 }
