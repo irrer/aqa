@@ -209,7 +209,7 @@ object LeafPositionAnalysis extends Logging {
       if (horizontal) {
         val width = maxEnd - minEnd
         val boundingRectangle = new Rectangle2D.Double(minEnd, leafSide - searchDistance, width, searchDistance * 2)
-        val ridge = LocateRidge.locateVertical(pixelArray, boundingRectangle)
+        val ridge = LocateRidge.locateHorizontal(pixelArray, boundingRectangle)
         ridge
       } else {
         val height = maxEnd - minEnd
