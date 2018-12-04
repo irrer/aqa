@@ -23,20 +23,6 @@ import org.aqa.webrun.phase2.SubProcedureResult
  */
 object MetadataCheckAnalysis extends Logging {
 
-  /**
-   * Determine if the given attribute list references the given beam number.
-   */
-  private def matchesBeam(beamNumber: Int, al: AttributeList): Boolean = {
-    (al.get(TagFromName.BeamNumber).getIntegerValues.head == beamNumber)
-  }
-
-  /**
-   * Look through the BeamSequence and find the ReferencedBeamSequence that matches the given beam.
-   */
-  private def getBeamSequence(plan: AttributeList, beamNumber: Int): AttributeList = {
-    Util.seq2Attr(plan, TagFromName.BeamSequence).find(bs => matchesBeam(beamNumber, bs)).get
-  }
-
   private val JAW_NAME_X = "ASYMX"
   private val JAW_NAME_Y = "ASYMY"
   private val jawNameSeq = Seq(JAW_NAME_X, JAW_NAME_Y)
@@ -72,7 +58,7 @@ object MetadataCheckAnalysis extends Logging {
 
     try {
       val imageBeamNumber = image.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head
-      val planBeamSeq = getBeamSequence(plan, imageBeamNumber)
+      val planBeamSeq = Phase2Util.getBeamSequence(plan, imageBeamNumber)
       val planCtrlPointSeq = Util.seq2Attr(planBeamSeq, TagFromName.ControlPointSequence).head
       val imageExposureSeq = Util.seq2Attr(image, TagFromName.ExposureSequence).head
 

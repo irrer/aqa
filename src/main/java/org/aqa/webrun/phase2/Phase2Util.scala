@@ -415,4 +415,23 @@ object Phase2Util extends Logging {
 
   case class PMIBaseline(pmi: Option[PMI], baseline: Baseline);
 
+  /**
+   * Look through the BeamSequence and find the ReferencedBeamSequence that matches the given beam.
+   */
+  def getBeamSequence(plan: AttributeList, beamNumber: Int): AttributeList = {
+    // Determine if the given attribute list references the given beam number.
+    def matchesBeam(beamNumber: Int, al: AttributeList): Boolean = (al.get(TagFromName.BeamNumber).getIntegerValues.head == beamNumber)
+
+    Util.seq2Attr(plan, TagFromName.BeamSequence).find(bs => matchesBeam(beamNumber, bs)).get
+  }
+
+  /**
+   * Return true if the collimator in the image is oriented horizontally, false for vertically.
+   *
+   * This is based on whether the rounded collimator angle is 0 or 180 for horizontal, 90 or 270 for vertical.
+   *
+   * Other collimator angles such as 45 degrees may give unexpected results.
+   */
+  def isHorizontal(image: AttributeList): Boolean = (Util.angleRoundedTo90(image.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head).toInt % 180) == 0
+
 }

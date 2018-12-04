@@ -280,4 +280,12 @@ Note that when building a package for release, the Maven build process uses the 
     <SymmetryPointLeft    name='Left'/>
     <SymmetryPointRight   name='Right'/>
 
+    <!-- Maximum allowed error for leaf positions in mm. -->
+    <LeafPositionSearchDistance_mm>2.0</LeafPositionSearchDistance_mm>
+
+    <!-- To get an accurate measurement of the end of collimator leaves, a buffer space is left between leaves, at the sides of the
+    leaves.  This keeps adjacent leaves' positions from interfering with each other.  This number specifies how large that space should
+    be.  It is given as the distance between the edge of the bounding rectangle used to find the edge's position and the measured
+    position of the side of the leaf in mm. -->
+    <LeafPositionIsolationDistance_mm>0.5</LeafPositionIsolationDistance_mm>
 </AQAConfig>
