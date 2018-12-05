@@ -36,7 +36,7 @@ object LeafPositionAnalysis extends Logging {
     // used when considering how precisely leaves need to be spaced to determine whether ridges are classified as leaf sides or not.
     val marginOfError_pct = 15.0
 
-    val profile = if (horizontal) dicomImage.columnSums else dicomImage.rowSums
+    val profile = if (horizontal) dicomImage.rowSums else dicomImage.columnSums
     val translator = new IsoImagePlaneTranslator(attributeList)
 
     object Shape extends Enumeration {
@@ -52,22 +52,21 @@ object LeafPositionAnalysis extends Logging {
     }
 
     val posValList = profile.zipWithIndex.map(pi => new PosVal(pi._2, pi._1))
-    println("posValList:\n    " + posValList.mkString("\n    "))
 
     // leaves must be at least this wide to be considered leaves
     val minLeafWidth_pix = {
-      val m = if (horizontal) translator.iso2PixY(minLeafWidth_mm) else translator.iso2PixX(minLeafWidth_mm)
+      val m = if (horizontal) translator.iso2PixDistY(minLeafWidth_mm) else translator.iso2PixDistX(minLeafWidth_mm)
       m / (1 + marginOfError_pct / 100)
     }
 
-    // leaves must be no widerd than this to be considered leaves
+    // leaves must be no wider than this to be considered leaves
     val maxLeafWidth_pix = {
-      val m = if (horizontal) translator.iso2PixY(maxLeafWidth_mm) else translator.iso2PixX(maxLeafWidth_mm)
+      val m = if (horizontal) translator.iso2PixDistY(maxLeafWidth_mm) else translator.iso2PixDistX(maxLeafWidth_mm)
       m * (1 + marginOfError_pct / 100)
     }
 
     val searchDistance_pix = (minLeafWidth_pix / 3).round.toInt
-    println("distance: " + searchDistance_pix)
+    Trace.trace("searchDistance_pix: " + searchDistance_pix)
 
     /**
      * Return true if the given profile point is smaller than any of its neighbors within the search distance.
@@ -135,17 +134,18 @@ object LeafPositionAnalysis extends Logging {
     val lo = peakValleyList.take(half) // lower half
     val hi = peakValleyList.drop(half) // upper half
 
-    println("lo:\n    " + lo.mkString("\n    "))
-    println("hi:\n    " + hi.mkString("\n    "))
-
     // start evaluating at the middle of the image and search in both directions for the extent of the
     // valid leaves.  Note the double reverse for the lower half of peak/valleys.
     val validValleyPeakList = dropAfterLastPeak(lo.reverse).reverse ++ dropAfterLastPeak(hi)
-    println("validValleyPeakList:\n    " + validValleyPeakList.mkString("\n    "))
 
     // filter to only get peaks, and convert to Double's
-    validValleyPeakList.filter(pv => pv.shape == Shape.peak).map(pv => pv.position.toDouble)
+    val peakList = validValleyPeakList.filter(pv => pv.shape == Shape.peak).map(pv => pv.position.toDouble)
+    peakList
   }
+
+  /** Hook for testing. */
+  def testCoarseLeafSides(horizontal: Boolean, attributeList: AttributeList, minLeafWidth_mm: Double, maxLeafWidth_mm: Double, dicomImage: DicomImage): Seq[Double] =
+    coarseLeafSides(horizontal, attributeList, minLeafWidth_mm, maxLeafWidth_mm, dicomImage)
 
   /**
    * Get a sorted list of all the distinct leaf ends in mm as isoplane coordinates.
@@ -172,7 +172,6 @@ object LeafPositionAnalysis extends Logging {
     val BeamLimitingDeviceSequence = Util.seq2Attr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagFromName.BeamLimitingDeviceSequence)
     //val BeamLimitingDevicePositionSequence = BeamLimitingDeviceSequence.map(cps => Util.seq2Attr(cps, TagFromName.BeamLimitingDevicePositionSequence)).flatten
     def getLeafPositionBoundaries(bldps: AttributeList): Seq[Double] = {
-      Trace.trace("\n" + bldps)
       val at = bldps.get(TagFromName.LeafPositionBoundaries)
       if (at == null)
         Seq[Double]()
@@ -183,43 +182,43 @@ object LeafPositionAnalysis extends Logging {
     LeafPositionBoundaries
   }
 
-  /**
-   * Hook for testing
-   */
+  /** Hook for testing */
   def testLeafEnds(horizontal: Boolean, beamName: String, plan: AttributeList): Seq[Double] = leafEnds(horizontal, beamName, plan)
 
   private def leafSides(horizontal: Boolean, beamName: String, imageAttrList: AttributeList, dicomImage: DicomImage, plan: AttributeList): Seq[Double] = {
 
-    val leafSides_mm = LeafPositionBoundaries(horizontal, beamName, plan)
-    val leafWidthList_mm = leafSides_mm.dropRight(1).zip(leafSides_mm.drop(1)).map(ab => (ab._1 - ab._2).abs).distinct.sorted
-    val minLeafWidth_mm = leafWidthList_mm.head
-    val maxLeafWidth_mm = leafWidthList_mm.last
+    val leafWidthList_mm = {
+      val leafSideList_mm = LeafPositionBoundaries(horizontal, beamName, plan)
+      leafSideList_mm.dropRight(1).zip(leafSideList_mm.drop(1)).map(ab => (ab._1 - ab._2).abs).distinct.sorted
+    }
 
-    val coarse = coarseLeafSides(horizontal, imageAttrList, minLeafWidth_mm, maxLeafWidth_mm, dicomImage)
+    val coarseList_pix = coarseLeafSides(horizontal, imageAttrList, leafWidthList_mm.head, leafWidthList_mm.last, dicomImage)
 
     val translator = new IsoImagePlaneTranslator(imageAttrList)
-    val leafEndList_mm = LeafPositionBoundaries(horizontal, beamName, plan)
-    val leafEndList_pix = leafEndList_mm.map(le => if (horizontal) translator.iso2PixX(le) else translator.iso2PixY(le))
-    val searchDistance = (if (horizontal) translator.iso2PixY(minLeafWidth_mm) else translator.iso2PixX(minLeafWidth_mm)) / 2
+
+    val leafEndList_mm = leafEnds(horizontal, beamName, plan)
+    val leafEndList_pix = leafEndList_mm.map(le => if (horizontal) translator.iso2Pix(le, 0.0).x else translator.iso2Pix(0.0, le).y)
+    val searchDistance = (if (horizontal) translator.iso2PixDistY(leafWidthList_mm.head) else translator.iso2PixDistX(leafWidthList_mm.head)) / 2
     val minEnd = leafEndList_pix.min - searchDistance
     val maxEnd = leafEndList_pix.max + searchDistance
     val pixelArray = dicomImage.getSubArray(new Rectangle(0, 0, dicomImage.width, dicomImage.height))
+    Trace.trace("at 400, 400  => 420, 400: " + (400 until 420).map(x => pixelArray(400)(x).round.toInt).mkString("   "))
 
-    def locateRidge(leafSide: Double): Double = {
+    def locateRidge(leafSide_pix: Double): Double = {
       if (horizontal) {
         val width = maxEnd - minEnd
-        val boundingRectangle = new Rectangle2D.Double(minEnd, leafSide - searchDistance, width, searchDistance * 2)
+        val boundingRectangle = new Rectangle2D.Double(minEnd, leafSide_pix - searchDistance, width, searchDistance * 2)
         val ridge = LocateRidge.locateHorizontal(pixelArray, boundingRectangle)
         ridge
       } else {
         val height = maxEnd - minEnd
-        val boundingRectangle = new Rectangle2D.Double(leafSide - searchDistance, minEnd, searchDistance * 2, height)
+        val boundingRectangle = new Rectangle2D.Double(leafSide_pix - searchDistance, minEnd, searchDistance * 2, height)
         val ridge = LocateRidge.locateVertical(pixelArray, boundingRectangle)
         ridge
       }
     }
 
-    val precise = leafSides_mm.map(ls => locateRidge(ls))
+    val precise = coarseList_pix.map(ls => locateRidge(ls))
 
     precise
   }

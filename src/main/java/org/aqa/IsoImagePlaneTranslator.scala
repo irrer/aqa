@@ -29,16 +29,34 @@ class IsoImagePlaneTranslator(al: AttributeList) {
   private val expansionFactorX = beamExpansionRatio / ImagePlanePixelSpacing.getX
   private val expansionFactorY = beamExpansionRatio / ImagePlanePixelSpacing.getY
 
-  def iso2PixX(x: Double) = (x * expansionFactorX) + imageCenter.getX
-  def iso2PixY(y: Double) = (y * expansionFactorY) + imageCenter.getY
+  /** convert x distance in mm from isoplane to pixel plane. */
+  def iso2PixDistX(x: Double) = x * expansionFactorX
+  /** convert y distance in mm from isoplane to pixel plane. */
+  def iso2PixDistY(y: Double) = y * expansionFactorY
 
-  def iso2Pix(x: Double, y: Double): Point2D.Double = new Point2D.Double(iso2PixX(x), iso2PixY(y))
+  /** convert x coordinate from isoplane in mm to pixel plane. */
+  def iso2PixCoordX(x: Double) = (x * expansionFactorX) + imageCenter.getX
+  /** convert y coordinate from isoplane in mm to pixel plane. */
+  def iso2PixCoordY(y: Double) = (y * expansionFactorY) + imageCenter.getY
+
+  /** convert a coordinate pair from isoplane in mm to pixel plane. */
+  def iso2Pix(x: Double, y: Double): Point2D.Double = new Point2D.Double(iso2PixCoordX(x), iso2PixCoordY(y))
+  /** convert a coordinate from isoplane in mm to pixel plane. */
   def iso2Pix(isoPoint: Point2D.Double): Point2D.Double = iso2Pix(isoPoint.getX, isoPoint.getY)
 
-  def pix2IsoX(x: Double) = (x - imageCenter.getX) / expansionFactorX
-  def pix2IsoY(y: Double) = (y - imageCenter.getY) / expansionFactorY
+  /** convert x distance from pixel plane to isoplane in mm. */
+  def pix2IsoDistX(x: Double) = x / expansionFactorX
+  /** convert y distance from pixel plane to isoplane in mm. */
+  def pix2IsoDistY(y: Double) = y / expansionFactorY
 
-  def pix2Iso(x: Double, y: Double): Point2D.Double = new Point2D.Double(pix2IsoX(x), pix2IsoY(y))
+  /** convert x coordinate from pixel plane to isoplane in mm. */
+  def pix2IsoCoordX(x: Double) = (x - imageCenter.getX) / expansionFactorX
+  /** convert y coordinate from pixel plane to isoplane in mm. */
+  def pix2IsoCoordY(y: Double) = (y - imageCenter.getY) / expansionFactorY
+
+  /** convert a coordinate pair from pixel plane to isoplane in mm. */
+  def pix2Iso(x: Double, y: Double): Point2D.Double = new Point2D.Double(pix2IsoCoordX(x), pix2IsoCoordY(y))
+  /** convert a coordinate from pixel plane to isoplane in mm. */
   def pix2Iso(isoPoint: Point2D.Double): Point2D.Double = pix2Iso(isoPoint.getX, isoPoint.getY)
 
   def equalTo(other: IsoImagePlaneTranslator) = {
