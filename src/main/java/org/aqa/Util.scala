@@ -718,7 +718,7 @@ object Util extends Logging {
   }
 
   /**
-   * Given two colors and a pallette size, return a list of colors of the
+   * Given two colors and a palette size, return a list of colors of the
    * given size that steps between the given colors.
    */
   def colorPallette(colorA: Color, colorB: Color, size: Int): IndexedSeq[Color] = {
@@ -754,4 +754,14 @@ object Util extends Logging {
     if (text.endsWith(".")) text + "0" else text
   }
 
+  /**
+   * Calculate the standard deviation of a list of values.
+   */
+  def stdDev(list: Seq[Double]): Double = {
+    val mean = list.sum / list.size
+    val sum = list.map(d => (d - mean) * (d - mean)).sum
+    val variance = sum / mean
+    val sd = Math.sqrt(variance)
+    sd
+  }
 }
