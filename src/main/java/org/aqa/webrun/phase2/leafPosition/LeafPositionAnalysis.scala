@@ -19,6 +19,7 @@ import edu.umro.ImageUtil.LocateRidge
 import java.awt.geom.Rectangle2D
 import java.awt.Rectangle
 import edu.umro.ScalaUtil.Trace
+import edu.umro.ImageUtil.ImageUtil
 
 object LeafPositionAnalysis extends Logging {
 
@@ -185,6 +186,33 @@ object LeafPositionAnalysis extends Logging {
   /** Hook for testing */
   def testLeafEnds(horizontal: Boolean, beamName: String, plan: AttributeList): Seq[Double] = leafEnds(horizontal, beamName, plan)
 
+  /**
+   * Given the coarsely approximated leaf side positions, locate them more precisely using cubic interpolation.
+   *
+   * @return Values returned are in pixels.
+   */
+  private def preciseLeafSides(coarseList_pix: Seq[Double], dicomImage: DicomImage): Seq[Double] = {
+
+    val searchDistance_pix = {
+      val minWidth = coarseList_pix.tail.zip(coarseList_pix.dropRight(1)).map(ab => (ab._1 - ab._2).abs).min
+      (minWidth / 3).round.toInt
+    }
+
+    val rowSums = dicomImage.rowSums
+
+    def coarseToPrecise(coarse_pix: Double): Double = {
+      val y = coarse_pix.toInt
+      val range = (y - searchDistance_pix until y + searchDistance_pix)
+      val indicies = range.map(y => y.toDouble).toArray
+      val data = range.map(y => rowSums(y).toDouble).toArray
+      val max = ImageUtil.profileMaxCubic(indicies, data)
+      max
+    }
+
+    val comList = coarseList_pix.map(cp => coarseToPrecise(cp))
+    comList
+  }
+
   private def leafSides(horizontal: Boolean, beamName: String, imageAttrList: AttributeList, dicomImage: DicomImage, plan: AttributeList): Seq[Double] = {
 
     val leafWidthList_mm = {
@@ -194,32 +222,7 @@ object LeafPositionAnalysis extends Logging {
 
     val coarseList_pix = coarseLeafSides(horizontal, imageAttrList, leafWidthList_mm.head, leafWidthList_mm.last, dicomImage)
 
-    val translator = new IsoImagePlaneTranslator(imageAttrList)
-
-    val leafEndList_mm = leafEnds(horizontal, beamName, plan)
-    val leafEndList_pix = leafEndList_mm.map(le => if (horizontal) translator.iso2Pix(le, 0.0).x else translator.iso2Pix(0.0, le).y)
-    val searchDistance = (if (horizontal) translator.iso2PixDistY(leafWidthList_mm.head) else translator.iso2PixDistX(leafWidthList_mm.head)) / 2
-    val minEnd = leafEndList_pix.min - searchDistance
-    val maxEnd = leafEndList_pix.max + searchDistance
-    val pixelArray = dicomImage.getSubArray(new Rectangle(0, 0, dicomImage.width, dicomImage.height))
-    Trace.trace("at 400, 400  => 420, 400: " + (400 until 420).map(x => pixelArray(400)(x).round.toInt).mkString("   "))
-
-    def locateRidge(leafSide_pix: Double): Double = {
-      if (horizontal) {
-        val width = maxEnd - minEnd
-        val boundingRectangle = new Rectangle2D.Double(minEnd, leafSide_pix - searchDistance, width, searchDistance * 2)
-        val ridge = LocateRidge.locateHorizontal(pixelArray, boundingRectangle)
-        ridge
-      } else {
-        val height = maxEnd - minEnd
-        val boundingRectangle = new Rectangle2D.Double(leafSide_pix - searchDistance, minEnd, searchDistance * 2, height)
-        val ridge = LocateRidge.locateVertical(pixelArray, boundingRectangle)
-        ridge
-      }
-    }
-
-    val precise = coarseList_pix.map(ls => locateRidge(ls))
-
+    val precise = preciseLeafSides(coarseList_pix, dicomImage)
     precise
   }
 
