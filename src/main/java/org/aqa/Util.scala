@@ -759,8 +759,8 @@ object Util extends Logging {
    */
   def stdDev(list: Seq[Double]): Double = {
     val mean = list.sum / list.size
-    val sum = list.map(d => (d - mean) * (d - mean)).sum
-    val variance = sum / mean
+    val sumSq = list.map(d => (d - mean) * (d - mean)).sum
+    val variance = sumSq / mean
     val sd = Math.sqrt(variance)
     sd
   }
