@@ -13,7 +13,7 @@ import org.aqa.webrun.phase2.leafPosition.LeafPositionAnalysis
  * Test the LeafPositionAnalysis.leafEnds method.
  */
 
-class TestLeafPositionAnalysis_LeafEnds extends FlatSpec with Matchers {
+class TestLeafPositionAnalysis_LeafEnds_Planned extends FlatSpec with Matchers {
   "LeafPositionAnalysis" should "show leaf end positions in isoplan in mm" in {
     val dir = new File("""src\test\resources""")
 

@@ -12,6 +12,7 @@ import edu.umro.ImageUtil.ImageUtil
 import java.awt.Color
 import edu.umro.ScalaUtil.Trace
 import org.opensourcephysics.numerics.CubicSpline
+import org.aqa.webrun.phase2.leafPosition.LeafPositionCoarseLeafSides
 
 /**
  * Test the LeafPositionAnalysis.leafEnds method.
@@ -34,9 +35,11 @@ class TestLeafPositionAnalysis_leafSides extends FlatSpec with Matchers {
     val planFile = new File(dir, """TestLeafPositionAnalysisPlan.dcm""")
     val planAl = Util.readDicomFile(planFile).right.get
     val beamName = "PF Stat 0"
-    val preciseLeafSideList_pix = LeafPositionAnalysis.testLeafSides(true, beamName, imageAttrList, dicomImage, planAl)
+    val horizontal = true
+    val profile = if (horizontal) dicomImage.rowSums else dicomImage.columnSums
+    val preciseLeafSideList_pix = LeafPositionAnalysis.testLeafSides(horizontal, beamName, imageAttrList, dicomImage, planAl)
 
-    val coarseList_pix = LeafPositionAnalysis.testCoarseLeafSides(true, imageAttrList, 5, 10, dicomImage)
+    val coarseList_pix = LeafPositionCoarseLeafSides.coarseLeafSides(horizontal, profile, imageAttrList, 5, 10, dicomImage)
     println("Number of coarse ridges found: " + coarseList_pix.size)
     println("list of coarse ridges:\n    " + coarseList_pix.map(l => l.formatted("%8.4f")).mkString("  "))
 

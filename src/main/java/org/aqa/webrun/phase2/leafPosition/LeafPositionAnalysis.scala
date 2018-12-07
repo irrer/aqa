@@ -28,127 +28,6 @@ object LeafPositionAnalysis extends Logging {
   val subProcedureName = "Leaf Position"
 
   /**
-   * Get a list of the coarsely (to the nearest pixel) located sides of the collimator leaves.  Values are in pixels and are ordered by position.
-   *
-   * The general approach is to take the profile of the entire image and look for the peaks and valleys formed by the side edges of the leaves.
-   */
-  private def coarseLeafSides(horizontal: Boolean, attributeList: AttributeList, minLeafWidth_mm: Double, maxLeafWidth_mm: Double, dicomImage: DicomImage): Seq[Double] = {
-
-    // used when considering how precisely leaves need to be spaced to determine whether ridges are classified as leaf sides or not.
-    val marginOfError_pct = 15.0
-
-    val profile = if (horizontal) dicomImage.rowSums else dicomImage.columnSums
-    val translator = new IsoImagePlaneTranslator(attributeList)
-
-    object Shape extends Enumeration {
-      val peak = Value
-      val valley = Value
-      val flat = Value
-    }
-
-    case class PosVal(position: Int, value: Float, shape: Shape.Value) {
-      def this(position: Int, value: Float) = this(position, value, Shape.flat)
-      def this(pv: PosVal, shape: Shape.Value) = this(pv.position, pv.value, shape)
-      override def toString = "pos: " + position.formatted("%4d") + "  value: " + value.formatted("%7.0f") + "   shape: " + shape.toString.format("%-6s")
-    }
-
-    val posValList = profile.zipWithIndex.map(pi => new PosVal(pi._2, pi._1))
-
-    // leaves must be at least this wide to be considered leaves
-    val minLeafWidth_pix = {
-      val m = if (horizontal) translator.iso2PixDistY(minLeafWidth_mm) else translator.iso2PixDistX(minLeafWidth_mm)
-      m / (1 + marginOfError_pct / 100)
-    }
-
-    // leaves must be no wider than this to be considered leaves
-    val maxLeafWidth_pix = {
-      val m = if (horizontal) translator.iso2PixDistY(maxLeafWidth_mm) else translator.iso2PixDistX(maxLeafWidth_mm)
-      m * (1 + marginOfError_pct / 100)
-    }
-
-    val searchDistance_pix = (minLeafWidth_pix / 3).round.toInt
-    Trace.trace("searchDistance_pix: " + searchDistance_pix)
-
-    /**
-     * Return true if the given profile point is smaller than any of its neighbors within the search distance.
-     */
-    def isValley(pos: Int): Boolean = {
-      (pos > searchDistance_pix) &&
-        (pos < profile.size - searchDistance_pix) &&
-        (profile(pos) != profile(pos + 1)) && // handle the highly unlikely but possible case where there are two (or more) consecutive points at the bottom of the valley with the same value.
-        (pos - searchDistance_pix until pos + searchDistance_pix).map(p => profile(p) >= profile(pos)).reduce(_ && _)
-    }
-
-    /**
-     * Return true if the given profile point is larger than any of its neighbors within the search distance.
-     */
-    def isPeak(pos: Int): Boolean = {
-      (pos > searchDistance_pix) &&
-        (pos < profile.size - searchDistance_pix) &&
-        (profile(pos) != profile(pos + 1)) && // handle the highly unlikely but possible case where there are two (or more) consecutive points at the top of the peak with the same value.
-        (pos - searchDistance_pix until pos + searchDistance_pix).map(p => profile(pos) >= profile(p)).reduce(_ && _)
-    }
-
-    def classify(pos: Int): PosVal = {
-      0 match {
-        case _ if isPeak(pos) => new PosVal(pos, profile(pos), Shape.peak)
-        case _ if isValley(pos) => new PosVal(pos, profile(pos), Shape.valley)
-        case _ => new PosVal(pos, profile(pos), Shape.flat)
-      }
-    }
-
-    // classify all points as to their shape
-    val classified = (searchDistance_pix until profile.size - searchDistance_pix).map(pos => classify(pos))
-
-    // make list of only peaks and valleys
-    val peakValleyList = classified.filter(posVal => posVal.shape != Shape.flat).sortBy(_.position)
-
-    /**
-     * Trim the list and remove any peaks and valleys at the end that do not meet the criteria for
-     * leaf edge.  Points should alternate between peak and valley, ending in a peak.  They should
-     * also not be too close together or too far apart.
-     */
-    def dropAfterLastPeak(list: IndexedSeq[PosVal]): IndexedSeq[PosVal] = {
-
-      // decide whether 3 consecutive points describe two leaf side separated by a valley, or just noise.
-      def getMore(pos: Int) = {
-        def width = (list(pos).position - list(pos + 2).position).abs
-        ((pos + 3) <= list.size) &&
-          (list(pos).shape == Shape.peak) &&
-          (list(pos + 1).shape == Shape.valley) &&
-          (list(pos + 2).shape == Shape.peak) &&
-          (width > minLeafWidth_pix) &&
-          (width < maxLeafWidth_pix)
-      }
-
-      def search(pos: Int): Int = {
-        if (getMore(pos)) search(pos + 2)
-        else pos
-      }
-
-      val start = list.indexWhere(posVal => posVal.shape == Shape.peak)
-      val lastPeak = search(start)
-      list.take(lastPeak + 1)
-    }
-
-    val half = peakValleyList.size / 2 // roughly half of the values
-    val lo = peakValleyList.take(half) // lower half
-    val hi = peakValleyList.drop(half) // upper half
-
-    // start evaluating at the middle of the image and search in both directions for the extent of the
-    // valid leaves.  Note the double reverse for the lower half of peak/valleys.
-    val validValleyPeakList = dropAfterLastPeak(lo.reverse).reverse ++ dropAfterLastPeak(hi)
-
-    // filter to only get peaks, and convert to Double's
-    val peakList = validValleyPeakList.filter(pv => pv.shape == Shape.peak).map(pv => pv.position.toDouble)
-    peakList
-  }
-
-  /** Hook for testing. */
-  def testCoarseLeafSides(horizontal: Boolean, attributeList: AttributeList, minLeafWidth_mm: Double, maxLeafWidth_mm: Double, dicomImage: DicomImage): Seq[Double] =
-    coarseLeafSides(horizontal, attributeList, minLeafWidth_mm, maxLeafWidth_mm, dicomImage)
-
-  /**
    * Get a sorted list of all the distinct leaf ends in mm as isoplane coordinates.
    */
   private def leafEnds(horizontal: Boolean, beamName: String, plan: AttributeList): Seq[Double] = {
@@ -191,20 +70,18 @@ object LeafPositionAnalysis extends Logging {
    *
    * @return Values returned are in pixels.
    */
-  private def preciseLeafSides(coarseList_pix: Seq[Double], dicomImage: DicomImage): Seq[Double] = {
+  private def preciseLeafSides(coarseList_pix: Seq[Double], horizontal: Boolean, profile: IndexedSeq[Float], dicomImage: DicomImage): Seq[Double] = {
 
     val searchDistance_pix = {
       val minWidth = coarseList_pix.tail.zip(coarseList_pix.dropRight(1)).map(ab => (ab._1 - ab._2).abs).min
       (minWidth / 3).round.toInt
     }
 
-    val rowSums = dicomImage.rowSums
-
     def coarseToPrecise(coarse_pix: Double): Double = {
       val y = coarse_pix.toInt
       val range = (y - searchDistance_pix until y + searchDistance_pix)
       val indicies = range.map(y => y.toDouble).toArray
-      val data = range.map(y => rowSums(y).toDouble).toArray
+      val data = range.map(y => profile(y).toDouble).toArray
       val max = ImageUtil.profileMaxCubic(indicies, data)
       max
     }
@@ -220,9 +97,10 @@ object LeafPositionAnalysis extends Logging {
       leafSideList_mm.dropRight(1).zip(leafSideList_mm.drop(1)).map(ab => (ab._1 - ab._2).abs).distinct.sorted
     }
 
-    val coarseList_pix = coarseLeafSides(horizontal, imageAttrList, leafWidthList_mm.head, leafWidthList_mm.last, dicomImage)
+    val profile = if (horizontal) dicomImage.rowSums else dicomImage.columnSums
+    val coarseList_pix = LeafPositionCoarseLeafSides.coarseLeafSides(horizontal, profile, imageAttrList, leafWidthList_mm.head, leafWidthList_mm.last, dicomImage)
 
-    val precise = preciseLeafSides(coarseList_pix, dicomImage)
+    val precise = preciseLeafSides(coarseList_pix, horizontal, profile, dicomImage)
     precise
   }
 
@@ -232,20 +110,87 @@ object LeafPositionAnalysis extends Logging {
   def testLeafSides(horizontal: Boolean, beamName: String, imageAttrList: AttributeList, dicomImage: DicomImage, plan: AttributeList): Seq[Double] =
     leafSides(horizontal, beamName, imageAttrList, dicomImage, plan)
 
-  private def measureBeam(beamName: String, outputPK: Long, imageAttrList: AttributeList, image: DicomImage, plan: AttributeList): LeafPosition = {
+  /**
+   * Get a precise measurement of the given end.  All parameters are in pixel coordinates.
+   *
+   * @param topSide: Top side of leaf.
+   *
+   * @param bottomSide: Bottom side of leaf.
+   *
+   * @param end: Expected leaf position.
+   */
+  private def measureEnd(minorSide: Double, majorSide: Double, horizontal: Boolean, end: Double, pixelArray: IndexedSeq[IndexedSeq[Float]]): Double = {
+    val minLeafWidth = 22.0 // TODO
+    // make a rectangle around the area of interest
+    val measuredEndPosition_pix: Double = {
+      if (horizontal) {
+        val rectangle = new Rectangle2D.Double(end - minLeafWidth / 2, minorSide, minLeafWidth, majorSide - minorSide)
+        LocateRidge.locateVertical(pixelArray, rectangle)
+      } else {
+        val rectangle = new Rectangle2D.Double(minorSide, end - minLeafWidth / 2, majorSide - minorSide, minLeafWidth)
+        LocateRidge.locateHorizontal(pixelArray, rectangle)
+      }
+    }
+    measuredEndPosition_pix
+  }
+
+  /**
+   * Calculate the leaf end positions in the given beam.
+   */
+  private def measureBeam(beamName: String, outputPK: Long, imageAttrList: AttributeList, dicomImage: DicomImage, plan: AttributeList): Seq[LeafPosition] = {
 
     // true if collimator is horizontal
     val horizontal = Phase2Util.isHorizontal(imageAttrList)
     val translator = new IsoImagePlaneTranslator(imageAttrList)
+    val SOPInstanceUID = Util.sopOfAl(imageAttrList)
 
-    val leafEndList = leafEnds(horizontal, beamName, plan)
-    ???
+    val leafSideList = leafSides(horizontal, beamName, imageAttrList, dicomImage, plan).sorted // sort just to make sure
+    val leafEndList_mm = leafEnds(horizontal, beamName, plan)
+    val leafEndList_pix = leafEndList_mm.map(e => if (horizontal) translator.iso2PixCoordX(e) else translator.iso2PixCoordY(e))
+
+    def x2mm(pix: Double) = if (horizontal) translator.pix2IsoCoordX(pix) else translator.pix2IsoCoordY(pix)
+    def y2mm(pix: Double) = if (horizontal) translator.pix2IsoCoordY(pix) else translator.pix2IsoCoordX(pix)
+
+    /**
+     * Make a row for the database
+     */
+    def makeLeafPosition(measuredEndPosition_pix: Double, leafPositionIndex: Int, leafIndex: Int): LeafPosition = {
+
+      val measuredEndPosition_mm = x2mm(measuredEndPosition_pix)
+      val expectedEndPosition_mm = leafEndList_mm(leafPositionIndex)
+      val offset_mm = measuredEndPosition_mm - expectedEndPosition_mm
+      val measuredMinorSide_mm = y2mm(leafSideList(leafIndex))
+      val measuredMajorSide_mm = y2mm(leafSideList(leafIndex + 1))
+
+      val lp = new LeafPosition(
+        None, //   leafPositionPK
+        outputPK,
+        SOPInstanceUID,
+        beamName,
+        leafIndex,
+        leafPositionIndex,
+        offset_mm, // difference from expected location: measuredEndPosition_mm - expectedEndPosition_mm
+        measuredEndPosition_mm,
+        expectedEndPosition_mm,
+        measuredMinorSide_mm,
+        measuredMajorSide_mm)
+
+      lp
+    }
+
+    val pixelArray = dicomImage.getSubArray(new Rectangle(0, 0, dicomImage.width, dicomImage.height))
+
+    val leafPositionList = for (leafIndex <- leafSideList.indices.dropRight(1); leafPositionIndex <- leafEndList_pix.indices) yield {
+      val measuredEndPosition_pix = measureEnd(leafSideList(leafIndex), leafSideList(leafIndex + 1), horizontal, leafEndList_pix(leafPositionIndex), pixelArray)
+      makeLeafPosition(measuredEndPosition_pix, leafPositionIndex, leafIndex)
+    }
+    leafPositionList
   }
 
   /**
    * Hook for testing
    */
-  def testMeasureBeam(beamName: String, outputPK: Long, attributeList: AttributeList, image: DicomImage, plan: AttributeList): LeafPosition =
+  def testMeasureBeam(beamName: String, outputPK: Long, attributeList: AttributeList, image: DicomImage, plan: AttributeList): Seq[LeafPosition]  =
     measureBeam(beamName, outputPK, attributeList, image, plan)
 
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, LeafPositionResult] = {

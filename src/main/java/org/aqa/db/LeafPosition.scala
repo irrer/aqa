@@ -14,12 +14,13 @@ case class LeafPosition(
   outputPK: Long, // output primary key
   SOPInstanceUID: String, // UID of source image
   beamName: String, // name of beam in plan
-  leafIndex: Int, // leaf number
-  offset_mm: Double, // difference from expected location: measured - expected
+  leafIndex: Int, // leaf number starting at 1
+  leafPositionIndex: Int, // leaf position number as it moves across the field
+  offset_mm: Double, // difference from expected location: measuredEndPosition_mm - expectedEndPosition_mm
   measuredEndPosition_mm: Double, // measured position of leaf end
   expectedEndPosition_mm: Double, // expected position of leaf end
-  measuredLowSide_mm: Double, // measured position of low side of leaf
-  measuredHighSide_mm: Double // measured position of low side of leaf
+  measuredMinorSide_mm: Double, // measured position of top side of leaf, or left side if collimator is vertical
+  measuredMajorSide_mm: Double // measured position of bottom side of leaf, or right side if collimator is vertical
 ) {
 
   def insert: LeafPosition = {
@@ -42,11 +43,12 @@ object LeafPosition extends ProcedureOutput {
     def SOPInstanceUID = column[String]("SOPInstanceUID")
     def beamName = column[String]("beamName")
     def leafIndex = column[Int]("leafIndex")
+    def leafPositionIndex = column[Int]("leafPositionIndex")
     def offset_mm = column[Double]("offset_mm")
     def measuredEndPosition_mm = column[Double]("measuredEndPosition_mm")
     def expectedEndPosition_mm = column[Double]("expectedEndPosition_mm")
-    def measuredLowSide_mm = column[Double]("measuredLowSide_mm")
-    def measuredHighSide_mm = column[Double]("measuredHighSide_mm")
+    def measuredMinorSide_mm = column[Double]("measuredLowSide_mm")
+    def measuredMajorSide_mm = column[Double]("measuredHighSide_mm")
 
     def * = (
       leafPositionPK.?,
@@ -54,11 +56,12 @@ object LeafPosition extends ProcedureOutput {
       SOPInstanceUID,
       beamName,
       leafIndex,
+      leafPositionIndex,
       offset_mm,
       measuredEndPosition_mm,
       expectedEndPosition_mm,
-      measuredLowSide_mm,
-      measuredHighSide_mm) <> ((LeafPosition.apply _)tupled, LeafPosition.unapply _)
+      measuredMinorSide_mm,
+      measuredMajorSide_mm) <> ((LeafPosition.apply _)tupled, LeafPosition.unapply _)
 
     def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
