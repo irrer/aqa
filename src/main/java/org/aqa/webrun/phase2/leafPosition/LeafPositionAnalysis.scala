@@ -90,12 +90,16 @@ object LeafPositionAnalysis extends Logging {
     comList
   }
 
+  /**
+   * Get the list of leaf widths.  If all leaves are the same width, then this will return a list with one member.
+   */
+  def getLeafWidthList_mm(leafSideList_mm: Seq[Double]) = {
+    leafSideList_mm.dropRight(1).zip(leafSideList_mm.drop(1)).map(ab => (ab._1 - ab._2).abs).distinct.sorted
+  }
+
   private def leafSides(horizontal: Boolean, beamName: String, imageAttrList: AttributeList, dicomImage: DicomImage, plan: AttributeList): Seq[Double] = {
 
-    val leafWidthList_mm = {
-      val leafSideList_mm = LeafPositionBoundaries(horizontal, beamName, plan)
-      leafSideList_mm.dropRight(1).zip(leafSideList_mm.drop(1)).map(ab => (ab._1 - ab._2).abs).distinct.sorted
-    }
+    val leafWidthList_mm = getLeafWidthList_mm(LeafPositionBoundaries(horizontal, beamName, plan))
 
     val profile = if (horizontal) dicomImage.rowSums else dicomImage.columnSums
     val coarseList_pix = LeafPositionCoarseLeafSides.coarseLeafSides(horizontal, profile, imageAttrList, leafWidthList_mm.head, leafWidthList_mm.last, dicomImage)
@@ -119,15 +123,15 @@ object LeafPositionAnalysis extends Logging {
    *
    * @param end: Expected leaf position.
    */
-  private def measureEnd(minorSide: Double, majorSide: Double, horizontal: Boolean, end: Double, pixelArray: IndexedSeq[IndexedSeq[Float]]): Double = {
-    val minLeafWidth = 22.0 // TODO
+  private def measureEnd(minorSide: Double, majorSide: Double, horizontal: Boolean, end: Double, pixelArray: IndexedSeq[IndexedSeq[Float]], XminLeafWidth_pix: Double): Double = {
+    val minLeafWidth_pix = 22.0 * 2 // TODO
     // make a rectangle around the area of interest
     val measuredEndPosition_pix: Double = {
       if (horizontal) {
-        val rectangle = new Rectangle2D.Double(end - minLeafWidth / 2, minorSide, minLeafWidth, majorSide - minorSide)
+        val rectangle = new Rectangle2D.Double(end - minLeafWidth_pix / 2, minorSide, minLeafWidth_pix, majorSide - minorSide)
         LocateRidge.locateVertical(pixelArray, rectangle)
       } else {
-        val rectangle = new Rectangle2D.Double(minorSide, end - minLeafWidth / 2, majorSide - minorSide, minLeafWidth)
+        val rectangle = new Rectangle2D.Double(minorSide, end - minLeafWidth_pix / 2, majorSide - minorSide, minLeafWidth_pix)
         LocateRidge.locateHorizontal(pixelArray, rectangle)
       }
     }
@@ -180,8 +184,9 @@ object LeafPositionAnalysis extends Logging {
 
     val pixelArray = dicomImage.getSubArray(new Rectangle(0, 0, dicomImage.width, dicomImage.height))
 
+    val minLeafWidth_mm = 5.0 // TODO
     val leafPositionList = for (leafIndex <- leafSideList.indices.dropRight(1); leafPositionIndex <- leafEndList_pix.indices) yield {
-      val measuredEndPosition_pix = measureEnd(leafSideList(leafIndex), leafSideList(leafIndex + 1), horizontal, leafEndList_pix(leafPositionIndex), pixelArray)
+      val measuredEndPosition_pix = measureEnd(leafSideList(leafIndex), leafSideList(leafIndex + 1), horizontal, leafEndList_pix(leafPositionIndex), pixelArray, minLeafWidth_mm)
       makeLeafPosition(measuredEndPosition_pix, leafPositionIndex, leafIndex)
     }
     leafPositionList
@@ -190,7 +195,7 @@ object LeafPositionAnalysis extends Logging {
   /**
    * Hook for testing
    */
-  def testMeasureBeam(beamName: String, outputPK: Long, attributeList: AttributeList, image: DicomImage, plan: AttributeList): Seq[LeafPosition]  =
+  def testMeasureBeam(beamName: String, outputPK: Long, attributeList: AttributeList, image: DicomImage, plan: AttributeList): Seq[LeafPosition] =
     measureBeam(beamName, outputPK, attributeList, image, plan)
 
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, LeafPositionResult] = {
