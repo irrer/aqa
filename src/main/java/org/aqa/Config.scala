@@ -536,7 +536,7 @@ object Config extends Logging {
   val SymmetryPointRight = getSymPoint("SymmetryPointRight")
   val SymmetryPointCenter = getSymPoint("SymmetryPointCenter")
 
-  val LeafPositionSearchDistance_mm = logMainText("LeafPositionSearchDistance_mm").toDouble
+  val LeafPositionMaxError_mm = logMainText("LeafPositionMaxError_mm").toDouble
   val LeafPositionIsolationDistance_mm = logMainText("LeafPositionIsolationDistance_mm").toDouble
 
   /** If this is defined, then the configuration was successfully initialized. */

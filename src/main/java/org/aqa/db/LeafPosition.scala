@@ -33,10 +33,11 @@ case class LeafPosition(
   def insertOrUpdate = Db.run(LeafPosition.query.insertOrUpdate(this))
 
   override def toString: String = "Beam: " + beamName +
-    "  Leaf: " + leafIndex +
-    "  offset_mm: " + offset_mm +
-    "  expectedEndPosition_mm: " + expectedEndPosition_mm +
-    "  measuredEndPosition_mm: " + measuredEndPosition_mm
+    "  Leaf Index: " + leafIndex.formatted("%2d") +
+    "  Leaf Position Index: " + leafPositionIndex.formatted("%2d") +
+    "  offset_mm: " + offset_mm.formatted("%9.5f") +
+    "  expectedEndPosition_mm: " + expectedEndPosition_mm.formatted("%6.2f") +
+    "  measuredEndPosition_mm: " + measuredEndPosition_mm.formatted("%10.5f")
 }
 
 object LeafPosition extends ProcedureOutput {

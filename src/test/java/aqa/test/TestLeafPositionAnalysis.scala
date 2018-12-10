@@ -22,7 +22,7 @@ class TestLeafPositionAnalysis extends FlatSpec with Matchers {
     val dir = new File("""src\test\resources""")
     val file = new File(dir, """TestLeafPositionAnalysis.dcm""")
 
-    val outDir = new File("""target\TestLeafPositionAnalysis2""")
+    val outDir = new File("""target\TestLeafPositionAnalysisOverview""")
     Util.deleteFileTreeSafely(outDir)
     outDir.mkdirs
 
@@ -46,6 +46,9 @@ class TestLeafPositionAnalysis extends FlatSpec with Matchers {
     val leafPositionList = LeafPositionAnalysis.testMeasureBeam(beamName, outputPK, imageAl, dicomImage, planAl)
 
     leafPositionList.map(lp => println(lp))
+
+    val avg = leafPositionList.map(lp => lp.offset_mm.abs).sum / leafPositionList.size
+    println("LeafPositionIsolationDistance_mm: " + Config.LeafPositionIsolationDistance_mm + "    Average (absolute value of) offset: " + avg)
 
     val translator = new IsoImagePlaneTranslator(imageAl)
     val horizontal = true
