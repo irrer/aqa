@@ -54,6 +54,7 @@ import org.aqa.webrun.phase2.collimatorCentering.CollimatorCenteringAnalysis
 import org.aqa.webrun.phase2.centerDose.CenterDoseAnalysis
 import org.aqa.webrun.phase2.metadataCheck.MetadataCheckAnalysis
 import org.aqa.webrun.phase2.metadataCheck.MetadataCheckValidation
+import org.aqa.webrun.phase2.leafPosition.LeafPositionAnalysis
 
 object Phase2 {
   val parametersFileName = "parameters.xml"
@@ -284,7 +285,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
                     val list = Seq(
                       CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
                       WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result, centerDose.resultList),
-                      SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq))
+                      SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq),
+                      LeafPositionAnalysis.runProcedure(extendedData, runReq))
 
                     val summaryList = prevSummaryList ++ list.map(r => if (r.isLeft) r.left.get else r.right.get.summary)
                     val pass = (list.find(r => r.isLeft).isEmpty) && list.filter(s => !Phase2Util.statusOk(s.right.get.status)).isEmpty

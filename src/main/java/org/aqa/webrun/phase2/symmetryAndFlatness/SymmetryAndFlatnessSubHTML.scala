@@ -37,7 +37,7 @@ import org.aqa.webrun.phase2.Phase2Util
 /**
  * Analyze DICOM files for symmetry and flatness.
  */
-object SymmetryAndFlatnessMainHTML extends Logging {
+object SymmetryAndFlatnessSubHTML extends Logging {
 
   private def titleDetails = "Click to view graphs and other details"
   private def titleImage = "Click to view DICOM metadata"
@@ -267,7 +267,7 @@ object SymmetryAndFlatnessMainHTML extends Logging {
       button
     }
 
-    val j = resultList.map(br => br.result)
+    //val j = resultList.map(br => br.result)
 
     SymmetryAndFlatnessCSV.makeCsvFile(extendedData, runReq, resultList, subDir)
 

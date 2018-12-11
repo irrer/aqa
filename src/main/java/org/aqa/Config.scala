@@ -350,6 +350,12 @@ object Config extends Logging {
     list.distinct
   }
 
+  private def getLeafPositionBeamNameList = {
+    val list = (document \ "LeafPositionBeamNameList" \ "BeamName").map(n => n.head.text.toString.trim).toList
+    logText("LeafPositionBeamNameList", list.mkString("\n        ", "\n        ", "\n"))
+    list.distinct
+  }
+
   private def getSymmetryAndFlatnessPointList: Seq[SymmetryAndFlatnessPoint] = {
     def makePoint(node: Node): SymmetryAndFlatnessPoint = {
       val name = (node \ "@name").head.text.toString
@@ -538,6 +544,7 @@ object Config extends Logging {
 
   val LeafPositionMaxError_mm = logMainText("LeafPositionMaxError_mm").toDouble
   val LeafPositionIsolationDistance_mm = logMainText("LeafPositionIsolationDistance_mm").toDouble
+  val LeafPositionBeamNameList = getLeafPositionBeamNameList
 
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true

@@ -17,6 +17,7 @@ case class LeafPosition(
   leafIndex: Int, // leaf number starting at 1
   leafPositionIndex: Int, // leaf position number as it moves across the field
   offset_mm: Double, // difference from expected location: measuredEndPosition_mm - expectedEndPosition_mm
+  status: String, // termination status
   measuredEndPosition_mm: Double, // measured position of leaf end
   expectedEndPosition_mm: Double, // expected position of leaf end
   measuredMinorSide_mm: Double, // measured position of top side of leaf, or left side if collimator is vertical
@@ -50,6 +51,7 @@ object LeafPosition extends ProcedureOutput {
     def leafIndex = column[Int]("leafIndex")
     def leafPositionIndex = column[Int]("leafPositionIndex")
     def offset_mm = column[Double]("offset_mm")
+    def status = column[String]("status")
     def measuredEndPosition_mm = column[Double]("measuredEndPosition_mm")
     def expectedEndPosition_mm = column[Double]("expectedEndPosition_mm")
     def measuredMinorSide_mm = column[Double]("measuredLowSide_mm")
@@ -63,6 +65,7 @@ object LeafPosition extends ProcedureOutput {
       leafIndex,
       leafPositionIndex,
       offset_mm,
+      status,
       measuredEndPosition_mm,
       expectedEndPosition_mm,
       measuredMinorSide_mm,

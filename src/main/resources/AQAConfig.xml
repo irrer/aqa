@@ -249,6 +249,7 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Maximum allowed value for difference in profile constancy from baseline in percent. -->
     <ProfileConstancyPercentLimit>2.0</ProfileConstancyPercentLimit>
 
+    <!-- List of names of beams to be evaluated for Symmetry, Flatness and Constancy. -->
     <SymmetryAndFlatnessBeamList>
         <BeamName>Flood 6X</BeamName>
         <BeamName>J20G0-6X</BeamName>
@@ -281,12 +282,24 @@ Note that when building a package for release, the Maven build process uses the 
     <SymmetryPointRight   name='Right'/>
 
     <!-- Maximum allowed error for leaf positions in mm. -->
-    <LeafPositionMaxError_mm>2.0</LeafPositionMaxError_mm>
+    <LeafPositionMaxError_mm>1.0</LeafPositionMaxError_mm>
 
     <!-- To get an accurate measurement of the end of collimator leaves, a buffer space is left between leaves, at the sides of the
     leaves.  This keeps adjacent leaves' positions from interfering with each other.  This number specifies how large that space should
     be.  It is given as the distance between the edge of the bounding rectangle used to find the edge's position and the measured
     position of the side of the leaf in mm. -->
     <LeafPositionIsolationDistance_mm>1.0</LeafPositionIsolationDistance_mm>
+    
+    <!-- List of names of beams to be evaluated for leaf positioning (picket fence). -->
+    <LeafPositionBeamNameList>
+        <BeamName>PF Stat 0</BeamName>
+        <BeamName>PF Stat 180</BeamName>
+        <BeamName>T2-DG-RS</BeamName>
+        <BeamName>PF Stat 90</BeamName>
+        <BeamName>T3MLCSpeed</BeamName>
+        <BeamName>PF Stat 270</BeamName>
+        <BeamName>T1 PF ARC</BeamName>
+        <BeamName>T1 PF ARC ERROR</BeamName>
+    </LeafPositionBeamNameList>
     
 </AQAConfig>

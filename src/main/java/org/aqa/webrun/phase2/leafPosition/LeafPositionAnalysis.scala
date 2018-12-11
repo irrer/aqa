@@ -12,21 +12,17 @@ import com.pixelmed.dicom.TagFromName
 import org.aqa.Util
 import edu.umro.ImageUtil.DicomImage
 import org.aqa.IsoImagePlaneTranslator
-import java.awt.geom.Point2D
-import org.aqa.webrun.phase2.MeasureTBLREdges
+//import java.awt.geom.Point2D
+//import org.aqa.webrun.phase2.MeasureTBLREdges
 import org.aqa.webrun.phase2.Phase2Util
 import edu.umro.ImageUtil.LocateRidge
 import java.awt.geom.Rectangle2D
 import java.awt.Rectangle
-import edu.umro.ScalaUtil.Trace
+//import edu.umro.ScalaUtil.Trace
 import edu.umro.ImageUtil.ImageUtil
 import org.aqa.Config
 
 object LeafPositionAnalysis extends Logging {
-
-  case class LeafPositionResult(sum: Elem, sts: ProcedureStatus.Value, result: Seq[LeafPosition]) extends SubProcedureResult(sum, sts, subProcedureName)
-
-  val subProcedureName = "Leaf Position"
 
   /**
    * Get a sorted list of all the distinct leaf ends in mm as isoplane coordinates.
@@ -98,7 +94,7 @@ object LeafPositionAnalysis extends Logging {
     leafSideList_mm.dropRight(1).zip(leafSideList_mm.drop(1)).map(ab => (ab._1 - ab._2).abs).distinct.sorted
   }
 
-  private def leafSides(horizontal: Boolean, beamName: String, imageAttrList: AttributeList, dicomImage: DicomImage, plan: AttributeList): Seq[Double] = {
+  def leafSides(horizontal: Boolean, beamName: String, imageAttrList: AttributeList, dicomImage: DicomImage, plan: AttributeList): Seq[Double] = {
 
     val leafWidthList_mm = getLeafWidthList_mm(LeafPositionBoundaries_mm(horizontal, beamName, plan))
 
@@ -108,12 +104,6 @@ object LeafPositionAnalysis extends Logging {
     val precise = preciseLeafSides(coarseList_pix, horizontal, profile, dicomImage)
     precise
   }
-
-  /**
-   * Hook for testing
-   */
-  def testLeafSides(horizontal: Boolean, beamName: String, imageAttrList: AttributeList, dicomImage: DicomImage, plan: AttributeList): Seq[Double] =
-    leafSides(horizontal, beamName, imageAttrList, dicomImage, plan)
 
   /**
    * Get a precise measurement of the given end.  All parameters are in pixel coordinates.
@@ -141,15 +131,6 @@ object LeafPositionAnalysis extends Logging {
         LocateRidge.locateHorizontal(pixelArray, rectangle)
       }
     }
-    //    val measuredEndPosition_pix: Double = {
-    //      if (horizontal) {
-    //        val rectangle = new Rectangle2D.Double(end - minLeafWidth_pix / 2, minorSide, minLeafWidth_pix, majorSide - minorSide)
-    //        LocateRidge.locateVertical(pixelArray, rectangle)
-    //      } else {
-    //        val rectangle = new Rectangle2D.Double(minorSide, end - minLeafWidth_pix / 2, majorSide - minorSide, minLeafWidth_pix)
-    //        LocateRidge.locateHorizontal(pixelArray, rectangle)
-    //      }
-    //    }
     measuredEndPosition_pix
   }
 
@@ -181,6 +162,7 @@ object LeafPositionAnalysis extends Logging {
       val measuredEndPosition_mm = x2mm(measuredEndPosition_pix)
       val expectedEndPosition_mm = leafEndList_mm(leafPositionIndex)
       val offset_mm = measuredEndPosition_mm - expectedEndPosition_mm
+      val status = if (offset_mm.abs > Config.LeafPositionMaxError_mm) ProcedureStatus.fail else ProcedureStatus.pass
       val measuredMinorSide_mm = y2mm(leafSideList_pix(leafIndex))
       val measuredMajorSide_mm = y2mm(leafSideList_pix(leafIndex + 1))
 
@@ -192,6 +174,7 @@ object LeafPositionAnalysis extends Logging {
         leafIndex + 1, // +1 for 1 relative indexing
         leafPositionIndex + 1, // +1 for 1 relative indexing
         offset_mm, // difference from expected location: measuredEndPosition_mm - expectedEndPosition_mm
+        status.toString,
         measuredEndPosition_mm,
         expectedEndPosition_mm,
         measuredMinorSide_mm,
@@ -220,8 +203,46 @@ object LeafPositionAnalysis extends Logging {
   def testMeasureBeam(beamName: String, outputPK: Long, attributeList: AttributeList, image: DicomImage, plan: AttributeList): Seq[LeafPosition] =
     measureBeam(beamName, outputPK, attributeList, image, plan)
 
+  case class LeafPositionResult(sum: Elem, sts: ProcedureStatus.Value, result: Seq[LeafPosition]) extends SubProcedureResult(sum, sts, subProcedureName)
+
+  val subProcedureName = "Leaf Position"
+
+  case class BeamResults(beamName: String, resultList: Seq[LeafPosition]);
+
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, LeafPositionResult] = {
-    ???
+
+    try {
+      logger.info("Starting analysis of " + subProcedureName)
+      val planAttrList = runReq.rtplan.attributeList.get
+
+      val outputPK = extendedData.output.outputPK.get
+
+      // val beamNameRtimageList = runReq.derivedMap.filter(img => Config.LeafPositionBeamNameList.contains(img._1)).toList
+      val beamNameList = Config.LeafPositionBeamNameList.filter(beamName => runReq.derivedMap.contains(beamName))
+
+      val beamResultList = beamNameList.map(beamName =>
+        new BeamResults(beamName, measureBeam(beamName, outputPK, runReq.derivedMap(beamName).attributeList, runReq.derivedMap(beamName).pixelCorrectedImage, planAttrList)))
+
+      val resultList = beamResultList.map(_.resultList).flatten
+
+      logger.info("Analyzed " + beamResultList.size + " beams producing " + resultList.size + " leaf position measurements.")
+
+      LeafPosition.insertSeq(resultList)
+
+      // make sure all were processed and that they all passed
+      val pass = resultList.map(_.status).find(sts => !sts.equals(ProcedureStatus.pass)).isEmpty
+      val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
+
+      val elem = LeafPositionHTML.makeDisplay(extendedData, runReq, beamResultList, pass)
+      val pcr = Right(new LeafPositionResult(elem, procedureStatus, resultList))
+      logger.info("Finished analysis of " + subProcedureName)
+      pcr
+    } catch {
+      case t: Throwable => {
+        logger.warn("Unexpected error in analysis of Metadata: " + t + fmtEx(t))
+        Left(Phase2Util.procedureCrash(subProcedureName))
+      }
+    }
   }
 
 }

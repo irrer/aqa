@@ -82,7 +82,8 @@ object DbSetup extends Logging {
     Wedge.query,
     WedgePoint.query,
     Rect.query,
-    SymmetryAndFlatness.query)
+    SymmetryAndFlatness.query,
+    LeafPosition.query)
 
   /**
    * Initialize database by creating tables in dependency order.

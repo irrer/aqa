@@ -414,6 +414,15 @@ object Util extends Logging {
   }
 
   /**
+   * Write a JPG / JPEG file in a thread safe way.
+   */
+  def writeJpg(im: RenderedImage, pngFile: File): Unit = {
+    val stream = new ByteOutputStream
+    ImageIO.write(im, "jpg", stream)
+    writeBinaryFile(pngFile, stream.getBytes)
+  }
+
+  /**
    * Round the angle to the closest 90 degree angle.
    */
   def angleRoundedTo90(angleInDegrees: Double): Int = {

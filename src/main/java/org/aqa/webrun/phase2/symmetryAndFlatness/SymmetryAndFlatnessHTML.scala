@@ -36,7 +36,7 @@ import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.Phase2Util
 
 /**
- * Analyze DICOM files for symmetry and flatness.
+ * Make HTML for symmetry and flatness.
  */
 object SymmetryAndFlatnessHTML extends Logging {
 
@@ -80,7 +80,7 @@ object SymmetryAndFlatnessHTML extends Logging {
     val mainHtmlFile = new File(subDir, htmlFileName)
     resultList.par.map(rb => Util.writePng(rb.result.annotatedImage, annotatedImageFile(subDir, rb.result.beamName)))
 
-    val html = Phase2Util.wrapSubProcedure(extendedData, SymmetryAndFlatnessMainHTML.makeContent(subDir, extendedData, resultList, status, runReq), "Symmetry and Flatness", status, None, runReq)
+    val html = Phase2Util.wrapSubProcedure(extendedData, SymmetryAndFlatnessSubHTML.makeContent(subDir, extendedData, resultList, status, runReq), "Symmetry and Flatness", status, None, runReq)
     Util.writeFile(mainHtmlFile, html)
 
     resultList.map(rb => SymmetryAndFlatnessBeamProfileHTML.makeDisplay(subDir, extendedData, rb.result, status, runReq))

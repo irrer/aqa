@@ -372,6 +372,8 @@ object Phase2Util extends Logging {
     WebServer.urlOfResultsFile(dicomViewImageHtmlFile(al, extendedData, runReq))
   }
 
+  def beamNameToId(beamName: String) = beamName.replaceAll("[# \"'@<>]", "_")
+
   /**
    * Create a list of points whose sum can be used to measure the center dose of an image.
    */
