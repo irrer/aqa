@@ -95,7 +95,7 @@ object LeafPositionHTML extends Logging {
         </div>
         <div class="row">
           <div class="col-md-6" id={ imageId }>
-            Hover over image to zoom in:<br/>
+            Hover over image to zoom in.  Dotted lines show expected position, solid lines are messured  Values in mm.<br/>
             <img class="img-responsive" src={ imageUrl }/>
           </div>
           <div class="col-md-6">
@@ -134,7 +134,7 @@ object LeafPositionHTML extends Logging {
   private def makeMainHtml(subDir: File, extendedData: ExtendedData, runReq: RunReq, beamResultList: Seq[LeafPositionAnalysis.BeamResults], pass: Boolean): Elem = {
 
     val tdList = beamResultList.map(br => makeRow(subDir, extendedData, runReq, br))
-    val groupedTdList = tdList.zipWithIndex.groupBy(_._2 / 4).values.map(group => group.map(tdi => tdi._1))
+    val groupedTdList = tdList.zipWithIndex.groupBy(_._2 / 4).toList.sortBy(_._1).map(ig => ig._2.map(_._1))
     val csvUrl = LeafPositionCSV.makeCsvFile(extendedData, runReq, beamResultList, subDir)
 
     val content = {

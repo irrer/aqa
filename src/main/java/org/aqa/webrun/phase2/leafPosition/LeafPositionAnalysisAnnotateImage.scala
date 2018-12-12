@@ -43,6 +43,12 @@ object LeafPositionAnalysisAnnotateImage extends Logging {
     def i2pX(x: Double) = (translator.iso2PixCoordX(x) * zoom).round.toInt
     def i2pY(y: Double) = (translator.iso2PixCoordY(y) * zoom).round.toInt
 
+    /** Show the leaf indexes. */
+    def annotateLeaves = {
+      graphics.setColor(Color.black)
+      
+    }
+    
     def annotateExpectedPositions = {
       graphics.setColor(Color.black)
       graphics.setStroke(dashedLine)
@@ -98,6 +104,7 @@ object LeafPositionAnalysisAnnotateImage extends Logging {
       leafPositionList.map(lp => annotateLeafPosition(lp))
     }
 
+    annotateLeaves
     annotateExpectedPositions // put this on the bottom layer, may be overwritten by measured positions
     annotateEnds
 
