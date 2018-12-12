@@ -5,12 +5,15 @@ import java.io.File
 import org.aqa.webrun.phase2.ExtendedData
 import org.aqa.webrun.phase2.RunReq
 import scala.collection.Seq
+import org.aqa.webrun.phase2.leafPosition.LeafPositionAnalysis
+import org.aqa.db.LeafPosition
+import org.aqa.web.WebServer
 
 object LeafPositionCSV {
 
   val csvFileName = "LeafPosition.csv"
 
-  def makeCsvFile(extendedData: ExtendedData, runReq: RunReq, symmetryAndFlatnessSeq: Seq[SymmetryAndFlatnessAnalysis.BeamResultBaseline], subDir: File) = {
+  def makeCsvFile(extendedData: ExtendedData, runReq: RunReq, beamResultsSeq: Seq[LeafPositionAnalysis.BeamResults], subDir: File): String = {
 
     // format lots of meta-information for the CSV header
 
@@ -24,46 +27,36 @@ object LeafPositionCSV {
 
     val procedureDesc: String = extendedData.procedure.name + " : " + extendedData.procedure.version
 
+    val institutionName = extendedData.institution.name
     val machineId = extendedData.machine.id
     val userId = extendedData.user.id
     val acquisitionDate = if (extendedData.output.dataDate.isDefined) Util.standardDateFormat.format(extendedData.output.dataDate.get) else "none"
 
-    type SF = SymmetryAndFlatnessAnalysis.BeamResultBaseline
+    type LP = LeafPosition
 
-    val columns: Seq[(String, (SF) => Any)] = Seq(
-      ("beamName", (sf: SF) => sf.result.beamName),
-      ("SOPInstanceUID", (sf: SF) => sf.result.SOPInstanceUID),
+    val columns: Seq[(String, (LP) => Any)] = Seq(
+      ("Beam Name", (lp: LP) => lp.beamName),
+      ("SOPInstanceUID", (lp: LP) => lp.SOPInstanceUID),
+      ("Leaf Index", (lp: LP) => lp.leafIndex),
+      ("Leaf Position Index", (lp: LP) => lp.leafPositionIndex),
+      ("Offset mm", (lp: LP) => lp.offset_mm),
+      ("Pass/Fail", (lp: LP) => lp.status),
+      ("Measured End Position", (lp: LP) => lp.measuredEndPosition_mm),
+      ("Expected End Position", (lp: LP) => lp.expectedEndPosition_mm),
+      ("Measured Minor Side", (lp: LP) => lp.measuredMinorSide_mm),
+      ("Measured Major Side", (lp: LP) => lp.measuredMajorSide_mm),
+      ("Machine ID", (lp: LP) => machineId),
+      ("Institution", (lp: LP) => institutionName),
+      ("Acquistion Date", (lp: LP) => acquisitionDate))
 
-      ("axialSymmetry CU", (sf: SF) => sf.result.axialSymmetry),
-      ("axialSymmetryBaseline CU", (sf: SF) => sf.result.axialSymmetryBaseline),
-      ("axialSymmetryStatus", (sf: SF) => sf.result.axialSymmetryStatus),
-
-      ("transverseSymmetry CU", (sf: SF) => sf.result.transverseSymmetry),
-      ("transverseSymmetryBaseline CU", (sf: SF) => sf.result.transverseSymmetryBaseline),
-      ("transverseSymmetryStatus", (sf: SF) => sf.result.transverseSymmetryStatus),
-
-      ("flatness CU", (sf: SF) => sf.result.flatness),
-      ("flatnessBaseline CU", (sf: SF) => sf.result.flatnessBaseline),
-      ("flatnessStatus", (sf: SF) => sf.result.flatnessStatus),
-
-      ("profileConstancy CU", (sf: SF) => sf.result.profileConstancy),
-      ("profileConstancyBaseline CU", (sf: SF) => sf.result.profileConstancyBaseline),
-      ("profileConstancyStatus", (sf: SF) => sf.result.profileConstancyStatus),
-
-      ("top CU", (sf: SF) => sf.pointSet.top),
-      ("bottom CU", (sf: SF) => sf.pointSet.bottom),
-      ("left CU", (sf: SF) => sf.pointSet.left),
-      ("right CU", (sf: SF) => sf.pointSet.right),
-      ("center CU", (sf: SF) => sf.pointSet.center))
-
-    def symmetryAndFlatnessToCsv(sf: SymmetryAndFlatnessAnalysis.BeamResultBaseline): String = {
+    def beamResultsToCsv(lp: LeafPosition): String = {
       def fmt(any: Any): String = {
         any match {
           case d: Double => d.formatted("%14.11e")
           case _ => Util.textToCsv(any.toString)
         }
       }
-      columns.map(c => fmt(c._2(sf))).mkString(",")
+      columns.map(c => fmt(c._2(lp))).mkString(",")
     }
 
     val metaData = {
@@ -82,11 +75,21 @@ object LeafPositionCSV {
 
     val header = Seq(columns.map(c => c._1).mkString(","))
 
-    val data = symmetryAndFlatnessSeq.map(positionCheck => symmetryAndFlatnessToCsv(positionCheck))
+    def leafSorter(a: LeafPosition, b: LeafPosition): Boolean = {
+      if (!a.beamName.equals(b.beamName))
+        a.beamName.compare(b.beamName) < 0
+      else {
+        if (a.leafIndex != b.leafIndex) a.leafIndex.compare(b.leafIndex) < 0
+        else a.leafPositionIndex.compare(b.leafPositionIndex) < 0
+      }
+    }
+
+    val data = beamResultsSeq.map(_.resultList).flatten.sortWith(leafSorter).map(lp => beamResultsToCsv(lp))
 
     val text = (metaData ++ header ++ data).mkString("", "\r\n", "\r\n")
-    val file = new File(subDir, csvFileName)
-    Util.writeFile(file, text)
+    val csvFile = new File(subDir, csvFileName)
+    Util.writeFile(csvFile, text)
+    WebServer.urlOfResultsFile(csvFile)
   }
 
 }

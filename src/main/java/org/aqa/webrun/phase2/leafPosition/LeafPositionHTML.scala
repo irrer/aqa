@@ -12,14 +12,13 @@ import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.run.ProcedureStatus
 import org.aqa.IsoImagePlaneTranslator
 import org.aqa.db.LeafPosition
+import org.aqa.webrun.phase2.symmetryAndFlatness.LeafPositionCSV
 
 object LeafPositionHTML extends Logging {
 
   private val subDirName = "LeafPosition"
 
   private val mainHtmlFileName = subDirName + ".html"
-
-  private def csv = "Put CSV here" // TODO
 
   private val imageId = "LeafPosition"
   private val zoomScript = {
@@ -136,9 +135,11 @@ object LeafPositionHTML extends Logging {
 
     val tdList = beamResultList.map(br => makeRow(subDir, extendedData, runReq, br))
     val groupedTdList = tdList.zipWithIndex.groupBy(_._2 / 4).values.map(group => group.map(tdi => tdi._1))
+    val csvUrl = LeafPositionCSV.makeCsvFile(extendedData, runReq, beamResultList, subDir)
+
     val content = {
       <div class="col-md-2 col-md-offset-3">
-        { csv }
+        <a href={ csvUrl }>CSV</a>
         <br/>
         <table class="table table-bordered">
           { groupedTdList.map(g => <tr> { g } </tr>) }
