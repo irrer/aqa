@@ -284,6 +284,7 @@ object WebUtil extends Logging {
           <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-timeago/1.5.4/jquery.timeago.min.js"></script>
           <script src="/static/tooltip/tooltip.js"></script>
           { c3Refs /* only include c3 when needed */ }
+          <script src="/static/zoom/jquery.zoom.js"></script>
           <script src="/static/AQA.js"></script>
         </head>
         <body>

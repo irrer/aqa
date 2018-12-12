@@ -207,7 +207,10 @@ object LeafPositionAnalysis extends Logging {
 
   val subProcedureName = "Leaf Position"
 
-  case class BeamResults(beamName: String, resultList: Seq[LeafPosition]);
+  case class BeamResults(beamName: String, resultList: Seq[LeafPosition]) {
+    val pass = resultList.find(! _.pass).isEmpty
+    val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
+  }
 
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, LeafPositionResult] = {
 
@@ -230,7 +233,7 @@ object LeafPositionAnalysis extends Logging {
       LeafPosition.insertSeq(resultList)
 
       // make sure all were processed and that they all passed
-      val pass = resultList.map(_.status).find(sts => !sts.equals(ProcedureStatus.pass)).isEmpty
+      val pass = beamResultList.map(_.pass).reduce(_ && _)
       val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
       val elem = LeafPositionHTML.makeDisplay(extendedData, runReq, beamResultList, pass)

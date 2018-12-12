@@ -8,6 +8,7 @@ import scala.xml.XML
 import scala.xml.Node
 import scala.xml.Elem
 import org.aqa.procedures.ProcedureOutput
+import org.aqa.run.ProcedureStatus
 
 case class LeafPosition(
   leafPositionPK: Option[Long], // primary key
@@ -39,6 +40,8 @@ case class LeafPosition(
     "  offset_mm: " + offset_mm.formatted("%9.5f") +
     "  expectedEndPosition_mm: " + expectedEndPosition_mm.formatted("%6.2f") +
     "  measuredEndPosition_mm: " + measuredEndPosition_mm.formatted("%10.5f")
+
+  def pass = status.equalsIgnoreCase(ProcedureStatus.pass.toString)
 }
 
 object LeafPosition extends ProcedureOutput {

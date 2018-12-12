@@ -11,6 +11,7 @@ import org.aqa.Util
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.run.ProcedureStatus
 import org.aqa.IsoImagePlaneTranslator
+import org.aqa.db.LeafPosition
 
 object LeafPositionHTML extends Logging {
 
@@ -18,18 +19,59 @@ object LeafPositionHTML extends Logging {
 
   private val mainHtmlFileName = subDirName + ".html"
 
-  private def csv = "" // TODO
+  private def csv = "Put CSV here" // TODO
 
-  private def tableHead = {
-    <thead>
-      <tr>
-        <th style="text-align: center;" title="Click to view details"> Beam </th>
-        <th style="text-align: center;" title="Largest deviation of measured leaf position from expected.">Max Offset</th>
-      </tr>
-    </thead>
+  private val imageId = "LeafPosition"
+  private val zoomScript = {
+    """
+    <script>
+      $(document).ready(function(){ $('#""" + imageId + """').zoom(); });
+    </script>
+"""
   }
 
-  private def makeBeamHtml(subDir: File, extendedData: ExtendedData, runReq: RunReq, beamResult: LeafPositionAnalysis.BeamResults): String = {
+  /**
+   * Make a table showing each leaf position.
+   */
+  private def resultsTable(resultList: Seq[LeafPosition]): Elem = {
+    val posList = resultList.map(_.expectedEndPosition_mm).distinct.sorted
+    val leafList = resultList.map(_.leafIndex).distinct.sorted
+    def posHeader(pos: Double) = {
+      <th>{ Util.fmtDbl(pos) + " mm" }</th>
+    }
+
+    def offsetRow(leafIndex: Int) = {
+
+      def fmtCell(lp: LeafPosition) = {
+        val text = Util.fmtDbl(lp.offset_mm)
+        if (lp.pass) {
+          <td>{ text }</td>
+        } else {
+          <td class="danger">{ text }</td>
+        }
+      }
+      <tr><td>{ leafIndex.toString }</td>{ resultList.filter(lp => lp.leafIndex == leafIndex).sortBy(_.expectedEndPosition_mm).map(lp => { fmtCell(lp) }) }</tr>
+    }
+
+    val header = {
+      <thead>
+        <tr>
+          <th>Leaf<br/>Index</th>
+          { posList.map(pos => posHeader(pos)) }
+        </tr>
+        { leafList.map(leafIndex => offsetRow(leafIndex)) }
+      </thead>
+    }
+
+    <table class="table table-bordered">
+      { header }
+    </table>
+  }
+
+  /**
+   * Generate the details page for the given beam and return URLs to the HTML page and image.  Also write the HTML page to disk.
+   */
+  private def makeBeamHtml(subDir: File, extendedData: ExtendedData, runReq: RunReq, beamResult: LeafPositionAnalysis.BeamResults): (String, String) = {
     val beamName = beamResult.beamName
     val htmlFileName = Phase2Util.beamNameToId(beamName) + ".html"
     val htmlFile = new File(subDir, htmlFileName)
@@ -44,7 +86,7 @@ object LeafPositionHTML extends Logging {
     val image = LeafPositionAnalysisAnnotateImage.annotateImage(beamResult.resultList, horizontal, derived.pixelCorrectedImage, leafWidthList_mm, translator)
     val imageFileName = Phase2Util.beamNameToId(beamName) + ".jpg"
     val imageFile = new File(subDir, imageFileName)
-    Util.writePng(image, imageFile)
+    Util.writeJpg(image, imageFile)
     val imageUrl = WebServer.urlOfResultsFile(imageFile)
 
     val content = {
@@ -53,44 +95,53 @@ object LeafPositionHTML extends Logging {
           <h2>Beam { beamName + " Max offset: " + Util.fmtDbl(maxOffset) } </h2>
         </div>
         <div class="row">
-          <div class="col-md-5 col-md-offset-1">
+          <div class="col-md-6" id={ imageId }>
+            Hover over image to zoom in:<br/>
             <img class="img-responsive" src={ imageUrl }/>
           </div>
-          <div class="col-md-5 col-md-offset-1">
-            Table Table Table // TODO
+          <div class="col-md-6">
+            { resultsTable(beamResult.resultList) }
           </div>
         </div>
       </div>
     }
 
-    url
+    val html = Phase2Util.wrapSubProcedure(extendedData, content, LeafPositionAnalysis.subProcedureName, beamResult.status, Some(zoomScript), runReq)
+    Util.writeFile(htmlFile, html)
+
+    (url, imageUrl)
   }
 
   private def makeRow(subDir: File, extendedData: ExtendedData, runReq: RunReq, beamResult: LeafPositionAnalysis.BeamResults): Elem = {
 
-    val beamHtmlUrl = makeBeamHtml(subDir, extendedData, runReq, beamResult)
+    val htmlUrlAndImageUrl = makeBeamHtml(subDir, extendedData, runReq, beamResult)
 
     val dicomFile = runReq.rtimageMap(beamResult.beamName)
     val dicomImageHref = Phase2Util.dicomViewImageHref(dicomFile.attributeList.get, extendedData, runReq)
+    val maxOffsetText = "Max Offset " + Util.fmtDbl(beamResult.resultList.map(_.offset_mm).maxBy(_.abs)) + " mm"
 
-    <tr align="center">
-      <td style="vertical-align: middle;" title="Click to view graphs and other details" rowspan="4">
-        <a href={ beamHtmlUrl }>{ beamResult.beamName }<img src={ dicomImageHref } width="128"/></a>
+    val clss = if (beamResult.pass) "" else "danger"
+    val td = {
+      <td class={ clss } align="center" style="vertical-align: middle;" title="Click to view details">
+        <div style="margin:20px;">
+          <a href={ htmlUrlAndImageUrl._1 }><h4>{ beamResult.beamName }</h4><br/>{ maxOffsetText }<br/><img src={ htmlUrlAndImageUrl._2 } width="160"/></a>
+        </div>
       </td>
-      <td align="center">
-        { Util.fmtDbl(beamResult.resultList.map(_.offset_mm).maxBy(_.abs)) }
-      </td>
-    </tr>
+    }
+
+    td
   }
 
   private def makeMainHtml(subDir: File, extendedData: ExtendedData, runReq: RunReq, beamResultList: Seq[LeafPositionAnalysis.BeamResults], pass: Boolean): Elem = {
+
+    val tdList = beamResultList.map(br => makeRow(subDir, extendedData, runReq, br))
+    val groupedTdList = tdList.zipWithIndex.groupBy(_._2 / 4).values.map(group => group.map(tdi => tdi._1))
     val content = {
-      <div class="col-md-6 col-md-offset-3">
+      <div class="col-md-2 col-md-offset-3">
         { csv }
         <br/>
         <table class="table table-bordered">
-          { tableHead }
-          { beamResultList.map(br => makeRow(subDir, extendedData, runReq, br)) }
+          { groupedTdList.map(g => <tr> { g } </tr>) }
         </table>
         <p/>
       </div>
@@ -111,7 +162,7 @@ object LeafPositionHTML extends Logging {
     elem
   }
 
-  def makeDisplay(extendedData: ExtendedData, runReq: RunReq, beamResultList: Seq[LeafPositionAnalysis.BeamResults], pass: Boolean) = {
+  def makeDisplay(extendedData: ExtendedData, runReq: RunReq, beamResultList: Seq[LeafPositionAnalysis.BeamResults], pass: Boolean): Elem = {
     val subDir = new File(extendedData.output.dir, subDirName)
     subDir.mkdirs
     val mainHtmlFile = new File(subDir, mainHtmlFileName)
@@ -123,7 +174,7 @@ object LeafPositionHTML extends Logging {
 
     val maxOffset = beamResultList.map(br => br.resultList).flatten.map(_.offset_mm).maxBy(_.abs)
     val sum = summary(mainHtmlFile, maxOffset, pass)
-    ???
+    sum
   }
 
 }

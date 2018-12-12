@@ -11,11 +11,14 @@ import java.awt.Color
 import org.aqa.Config
 import edu.umro.ImageUtil.ImageText
 import org.aqa.Util
+import java.awt.BasicStroke
 
 object LeafPositionAnalysisAnnotateImage extends Logging {
 
   /** Zoom factor to use when enlarging image. */
-  private val zoom = 5
+  private val zoom = 4
+
+  private val dashedLine = new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, Array(3, 6), 0)
 
   private def makeZoomedImage(dicomImage: DicomImage): BufferedImage = {
     val bufImg = new BufferedImage(dicomImage.width * zoom, dicomImage.height * zoom, BufferedImage.TYPE_INT_RGB)
@@ -42,7 +45,7 @@ object LeafPositionAnalysisAnnotateImage extends Logging {
 
     def annotateExpectedPositions = {
       graphics.setColor(Color.black)
-      ImageUtil.setSolidLine(graphics)
+      graphics.setStroke(dashedLine)
 
       val expectedList = leafPositionList.map(lp => lp.expectedEndPosition_mm).distinct.sorted
       val minEnd = expectedList.head
@@ -69,7 +72,7 @@ object LeafPositionAnalysisAnnotateImage extends Logging {
     }
 
     def annotateEnds = {
-      graphics.setColor(Color.white)
+      graphics.setColor(Color.black)
       ImageUtil.setSolidLine(graphics)
 
       val isol = Config.LeafPositionIsolationDistance_mm
