@@ -139,7 +139,7 @@ object LeafPositionHTML extends Logging {
 
     val content = {
       <div class="col-md-2 col-md-offset-3">
-        <a href={ csvUrl }>CSV</a>
+        <a href={ csvUrl } title="Click to download a spreadsheet of this data">CSV</a>
         <br/>
         <table class="table table-bordered">
           { groupedTdList.map(g => <tr> { g } </tr>) }
