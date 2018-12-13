@@ -43,21 +43,53 @@ object LeafPositionAnalysisAnnotateImage extends Logging {
     def i2pX(x: Double) = (translator.iso2PixCoordX(x) * zoom).round.toInt
     def i2pY(y: Double) = (translator.iso2PixCoordY(y) * zoom).round.toInt
 
+    val expectedEndList = leafPositionList.map(lp => lp.expectedEndPosition_mm).distinct.sorted
+    val minExpectedEnd = expectedEndList.head
+    val maxExpectedEnd = expectedEndList.last
+
+    val sideList = (leafPositionList.map(_.measuredMinorSide_mm) ++ leafPositionList.map(_.measuredMajorSide_mm)).distinct.sorted
+    val minSide = sideList.min
+    val maxSide = sideList.max
+
     /** Show the leaf indexes. */
     def annotateLeaves = {
       graphics.setColor(Color.black)
-      
+      val margin = (maxExpectedEnd - minExpectedEnd) / (expectedEndList.size - 1)
+      val lo = minExpectedEnd - margin
+      val hi = maxExpectedEnd + margin
+
+      def annotateSideLine(side: Double): Unit = {
+        val sideIndex = sideList.indexOf(side)
+        val positionText = Util.fmtDbl(side) + " mm"
+        val indexText = "Leaf " + sideList.indexOf(side)
+        if (horizontal) {
+          graphics.drawLine(i2pX(lo), i2pY(side), i2pX(hi), i2pY(side))
+          ImageText.drawTextOffsetFrom(graphics, i2pX(lo), i2pY(side), positionText, 180)
+          ImageText.drawTextOffsetFrom(graphics, i2pX(hi), i2pY(side), positionText, 0)
+          if (sideIndex != 0) {
+            val y = i2pY((sideList(sideIndex - 1) + sideList(sideIndex)) / 2)
+            ImageText.drawTextOffsetFrom(graphics, i2pX(lo), y, indexText, 0)
+            ImageText.drawTextOffsetFrom(graphics, i2pX(hi), y, indexText, 180)
+          }
+        } else {
+          // vertical
+          graphics.drawLine(i2pX(side), i2pY(lo), i2pX(side), i2pY(hi))
+          ImageText.drawTextOffsetFrom(graphics, i2pX(side), i2pY(lo), positionText, 90)
+          ImageText.drawTextOffsetFrom(graphics, i2pX(side), i2pY(hi), positionText, 270)
+          if (sideIndex != 0) {
+            val x = i2pX((sideList(sideIndex - 1) + sideList(sideIndex)) / 2)
+            ImageText.drawTextOffsetFrom(graphics, x, i2pX(lo), indexText, 0)
+            ImageText.drawTextOffsetFrom(graphics, x, i2pX(hi), indexText, 180)
+          }
+        }
+      }
+
+      sideList.map(s => annotateSideLine(s))
     }
-    
+
     def annotateExpectedPositions = {
       graphics.setColor(Color.black)
       graphics.setStroke(dashedLine)
-
-      val expectedList = leafPositionList.map(lp => lp.expectedEndPosition_mm).distinct.sorted
-      val minEnd = expectedList.head
-      val maxEnd = expectedList.last
-      val minSide = leafPositionList.map(_.measuredMinorSide_mm).min
-      val maxSide = leafPositionList.map(_.measuredMajorSide_mm).max
 
       def drawExpected(exp_mm: Double) = {
         val x1 = if (horizontal) exp_mm else minSide
@@ -74,7 +106,7 @@ object LeafPositionAnalysisAnnotateImage extends Logging {
         ImageText.drawTextOffsetFrom(graphics, i2pX(x2), i2pY(y2), text, degreesMajor)
       }
 
-      expectedList.map(exp_mm => drawExpected(exp_mm))
+      expectedEndList.map(exp_mm => drawExpected(exp_mm))
     }
 
     def annotateEnds = {

@@ -36,7 +36,7 @@ object LeafPositionHTML extends Logging {
     val posList = resultList.map(_.expectedEndPosition_mm).distinct.sorted
     val leafList = resultList.map(_.leafIndex).distinct.sorted
     def posHeader(pos: Double) = {
-      <th>{ Util.fmtDbl(pos) + " mm" }</th>
+      <th>{ Util.fmtDbl(pos) }<br/>mm</th>
     }
 
     def offsetRow(leafIndex: Int) = {
@@ -83,19 +83,20 @@ object LeafPositionHTML extends Logging {
 
     val translator = new IsoImagePlaneTranslator(derived.attributeList)
     val image = LeafPositionAnalysisAnnotateImage.annotateImage(beamResult.resultList, horizontal, derived.pixelCorrectedImage, leafWidthList_mm, translator)
-    val imageFileName = Phase2Util.beamNameToId(beamName) + ".jpg"
+    val imageFileName = Phase2Util.beamNameToId(beamName) + ".png"
     val imageFile = new File(subDir, imageFileName)
-    Util.writeJpg(image, imageFile)
+    Util.writePng(image, imageFile)
     val imageUrl = WebServer.urlOfResultsFile(imageFile)
+    val dicomHtmlHref = Phase2Util.dicomViewHref(derived.attributeList, extendedData, runReq)
 
     val content = {
       <div class="col-md-10 col-md-offset-1">
         <div class="row">
-          <h2>Beam { beamName + " Max offset: " + Util.fmtDbl(maxOffset) } </h2>
+          <h2>Beam  <a href={ dicomHtmlHref } title="View DICOM">{ beamName }</a> Max offset: { Util.fmtDbl(maxOffset) } </h2>
         </div>
         <div class="row">
           <div class="col-md-6" id={ imageId }>
-            Hover over image to zoom in.  Dotted lines show expected position, solid lines are messured  Values in mm.<br/>
+            Hover over image to zoom in.  Dotted lines show expected position, solid lines are measured values in mm.<br/>
             <img class="img-responsive" src={ imageUrl }/>
           </div>
           <div class="col-md-6">

@@ -92,4 +92,12 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
     }
 
   }
+
+  /** List of all attribute lists. */
+  val attributeListSeq = derivedMap.values.map(_.attributeList) ++ Seq(flood.attributeList.get, rtplan.attributeList.get)
+
+  val sopToPatientIdMap = attributeListSeq.map(al => (Util.sopOfAl(al), Util.patientIdOfAl(al))).toMap
+
+  /** Given the SOPInstanceUID, return the patient ID. */
+  def patientIdOfSop(sopUid: String) = sopToPatientIdMap(sopUid)
 }

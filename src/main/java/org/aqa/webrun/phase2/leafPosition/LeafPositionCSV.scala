@@ -47,7 +47,8 @@ object LeafPositionCSV {
       ("Measured Major Side", (lp: LP) => lp.measuredMajorSide_mm),
       ("Machine ID", (lp: LP) => machineId),
       ("Institution", (lp: LP) => institutionName),
-      ("Acquistion Date", (lp: LP) => acquisitionDate))
+      ("Acquistion Date", (lp: LP) => acquisitionDate),
+      ("Patient ID", (lp: LP) => runReq.patientIdOfSop(lp.SOPInstanceUID)))
 
     def beamResultsToCsv(lp: LeafPosition): String = {
       def fmt(any: Any): String = {

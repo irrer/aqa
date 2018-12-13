@@ -132,6 +132,14 @@ object Util extends Logging {
   }
 
   /**
+   * Get the PatientID of an attribute list.
+   */
+  def patientIdOfAl(al: AttributeList): String = {
+    val at = al.get(TagFromName.PatientID)
+    if (at == null) "" else al.get(TagFromName.PatientID).getSingleStringValueOrEmptyString
+  }
+
+  /**
    * Get the Modality of an attribute list.
    */
   def modalityOfAl(al: AttributeList): String = {
