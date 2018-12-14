@@ -51,9 +51,10 @@ object LeafPositionAnalysisAnnotateImage extends Logging {
     val minSide = sideList.min
     val maxSide = sideList.max
 
-    /** Show the leaf indexes. */
+    /** Show the leaf sides and indexes. */
     def annotateLeaves = {
       graphics.setColor(Color.black)
+      graphics.setStroke(dashedLine)
       val margin = (maxExpectedEnd - minExpectedEnd) / (expectedEndList.size - 1)
       val lo = minExpectedEnd - margin
       val hi = maxExpectedEnd + margin

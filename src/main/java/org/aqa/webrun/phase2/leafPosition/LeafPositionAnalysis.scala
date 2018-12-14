@@ -27,32 +27,10 @@ import org.aqa.Config
  */
 object LeafPositionAnalysis extends Logging {
 
-  //  /**
-  //   * Given the coarsely approximated leaf side positions, locate them more precisely using cubic interpolation.
-  //   *
-  //   * @return Values returned are in pixels.
-  //   */
-  //  private def preciseLeafSides(coarseList_pix: Seq[Double], horizontal: Boolean, profile: IndexedSeq[Float], dicomImage: DicomImage): Seq[Double] = {
-  //
-  //    val searchDistance_pix = {
-  //      val minWidth = coarseList_pix.tail.zip(coarseList_pix.dropRight(1)).map(ab => (ab._1 - ab._2).abs).min
-  //      (minWidth / 3).round.toInt
-  //    }
-  //
-  //    def coarseToPrecise(coarse_pix: Double): Double = {
-  //      val y = coarse_pix.toInt
-  //      val range = (y - searchDistance_pix until y + searchDistance_pix)
-  //      val indicies = range.map(y => y.toDouble).toArray
-  //      val data = range.map(y => profile(y).toDouble).toArray
-  //      val max = ImageUtil.profileMaxCubic(indicies, data)
-  //      max
-  //    }
-  //
-  //    val comList = coarseList_pix.map(cp => coarseToPrecise(cp))
-  //    comList
-  //  }
-
-  def leafSides(horizontal: Boolean, beamName: String, imageAttrList: AttributeList, dicomImage: DicomImage,
+  /**
+   * Locate the sides of the leaves in the given image and return a sorted list.  Values are in pixels.
+   */
+  def XleafSides_pix(horizontal: Boolean, beamName: String, imageAttrList: AttributeList, dicomImage: DicomImage,
     plan: AttributeList, translator: IsoImagePlaneTranslator,
     leafEndList_pix: Seq[Double]): Seq[Double] = {
 
@@ -101,6 +79,24 @@ object LeafPositionAnalysis extends Logging {
   }
 
   /**
+   * Locate the sides of the leaves in the given image and return a sorted list.  Values are in pixels.
+   */
+  def leafSides_pix(horizontal: Boolean, beamName: String, imageAttrList: AttributeList, dicomImage: DicomImage,
+    plan: AttributeList, translator: IsoImagePlaneTranslator,
+    leafEndList_pix: Seq[Double]): Seq[Double] = {
+
+    val sideListPlan = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, plan).sorted
+
+    val sideListPix = {
+      if (horizontal)
+        sideListPlan.map(side => translator.iso2PixCoordY(side))
+      else
+        sideListPlan.map(side => translator.iso2PixCoordY(side))
+    }
+    sideListPix
+  }
+
+  /**
    * Get a precise measurement of the given end.  All parameters are in pixel coordinates.
    *
    * @param topSide: Top side of leaf.
@@ -142,7 +138,7 @@ object LeafPositionAnalysis extends Logging {
     val leafEndList_mm = LeafPositionUtil.leafEnds(horizontal, beamName, plan)
     val leafEndList_pix = leafEndList_mm.map(e => if (horizontal) translator.iso2PixCoordX(e) else translator.iso2PixCoordY(e))
 
-    val leafSideList_pix = leafSides(horizontal, beamName, imageAttrList, dicomImage, plan, translator, leafEndList_pix).sorted // sort just to make sure
+    val leafSideList_pix = leafSides_pix(horizontal, beamName, imageAttrList, dicomImage, plan, translator, leafEndList_pix).sorted // sort just to make sure
 
     //    getLeafWidthList_mm(leafSideList_mm)
 
@@ -231,6 +227,7 @@ object LeafPositionAnalysis extends Logging {
       val pass = beamResultList.map(_.pass).reduce(_ && _)
       val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
+      logger.info("Making HTML for " + subProcedureName)
       val elem = LeafPositionHTML.makeDisplay(extendedData, runReq, beamResultList, pass)
       val pcr = Right(new LeafPositionResult(elem, procedureStatus, resultList))
       logger.info("Finished analysis of " + subProcedureName)

@@ -32,10 +32,9 @@ object LeafPositionUtil extends Logging {
   }
 
   /**
-   * Get a list of all the leaf sides (not ends) defined in the plan (in isoplane mm) that are not obscured by the jaws.
+   * Get the jaw boundaries parallel to the sides of the collimator leaves.
    */
-  def listOfLeafPositionBoundariesInPlan_mm(horizontal: Boolean, beamName: String, plan: AttributeList): Seq[Double] = {
-
+  private def jawBoundaries(horizontal: Boolean, beamName: String, plan: AttributeList): (Double, Double) = {
     val ControlPointSequence = Util.seq2Attr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagFromName.ControlPointSequence)
     val BeamLimitingDevicePositionSequence = ControlPointSequence.map(cps => Util.seq2Attr(cps, TagFromName.BeamLimitingDevicePositionSequence)).flatten
 
@@ -48,10 +47,18 @@ object LeafPositionUtil extends Logging {
     val jawList = BeamLimitingDevicePositionSequence.filter(bldp => isJaw(bldp))
     val LeafJawPositions = jawList.map(jl => jl.get(TagFromName.LeafJawPositions).getDoubleValues).flatten
 
-    val min = LeafJawPositions.min
-    val max = LeafJawPositions.max
+    (LeafJawPositions.min, LeafJawPositions.max)
+  }
+
+  /**
+   * Get a list of all the leaf sides (not ends) defined in the plan (in isoplane mm) that are not obscured by the jaws.
+   */
+  def listOfLeafPositionBoundariesInPlan_mm(horizontal: Boolean, beamName: String, plan: AttributeList): Seq[Double] = {
 
     val all = allLeafPositionBoundaries_mm(horizontal, beamName, plan)
+    val jawBounds = jawBoundaries(horizontal, beamName, plan)
+    val min = jawBounds._1
+    val max = jawBounds._2
     val exposed = all.filter(side => (side > min) && (side < max)).distinct.sorted
     exposed
   }

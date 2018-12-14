@@ -13,7 +13,6 @@ import org.aqa.run.ProcedureStatus
 import org.aqa.IsoImagePlaneTranslator
 import org.aqa.db.LeafPosition
 import org.aqa.webrun.phase2.symmetryAndFlatness.LeafPositionCSV
-import org.aqa.webrun.phase2.symmetryAndFlatness.LeafPositionCSV
 
 object LeafPositionHTML extends Logging {
 
@@ -135,7 +134,7 @@ object LeafPositionHTML extends Logging {
 
   private def makeMainHtml(subDir: File, extendedData: ExtendedData, runReq: RunReq, beamResultList: Seq[LeafPositionAnalysis.BeamResults], pass: Boolean): Elem = {
 
-    val tdList = beamResultList.map(br => makeRow(subDir, extendedData, runReq, br))
+    val tdList = beamResultList.par.map(br => makeRow(subDir, extendedData, runReq, br)).toList
     val groupedTdList = tdList.zipWithIndex.groupBy(_._2 / 4).toList.sortBy(_._1).map(ig => ig._2.map(_._1))
     val csvUrl = LeafPositionCSV.makeCsvFile(extendedData, runReq, beamResultList, subDir)
 
