@@ -8,6 +8,7 @@ import java.io.File
 import org.aqa.Util
 import edu.umro.ImageUtil.DicomImage
 import org.aqa.webrun.phase2.leafPosition.LeafPositionAnalysis
+import org.aqa.webrun.phase2.leafPosition.LeafPositionUtil
 
 /**
  * Test the LeafPositionAnalysis.leafEnds method.
@@ -19,7 +20,7 @@ class TestLeafPositionAnalysis_LeafEnds_Planned extends FlatSpec with Matchers {
 
     val planFile = new File(dir, """TestLeafPositionAnalysisPlan.dcm""")
     val planAl = Util.readDicomFile(planFile).right.get
-    val leafEndList = LeafPositionAnalysis.testLeafEnds(true, "PF Stat 0", planAl)
+    val leafEndList = LeafPositionUtil.leafEnds(true, "PF Stat 0", planAl)
 
     val expectedLeafEndList = Seq(
       -60.0,

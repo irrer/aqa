@@ -22,87 +22,82 @@ import java.awt.Rectangle
 import edu.umro.ImageUtil.ImageUtil
 import org.aqa.Config
 
+/**
+ * Perform analysis of leaf position (picket fence).
+ */
 object LeafPositionAnalysis extends Logging {
 
-  /**
-   * Get a sorted list of all the distinct leaf ends in mm as isoplane coordinates.
-   */
-  private def leafEnds(horizontal: Boolean, beamName: String, plan: AttributeList): Seq[Double] = {
-    val ControlPointSequence = Util.seq2Attr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagFromName.ControlPointSequence)
-    val withEnergy = ControlPointSequence.filter(cp => cp.get(TagFromName.CumulativeMetersetWeight).getDoubleValues.head != 0)
-    val BeamLimitingDevicePositionSequence = withEnergy.map(cps => Util.seq2Attr(cps, TagFromName.BeamLimitingDevicePositionSequence)).flatten
+  //  /**
+  //   * Given the coarsely approximated leaf side positions, locate them more precisely using cubic interpolation.
+  //   *
+  //   * @return Values returned are in pixels.
+  //   */
+  //  private def preciseLeafSides(coarseList_pix: Seq[Double], horizontal: Boolean, profile: IndexedSeq[Float], dicomImage: DicomImage): Seq[Double] = {
+  //
+  //    val searchDistance_pix = {
+  //      val minWidth = coarseList_pix.tail.zip(coarseList_pix.dropRight(1)).map(ab => (ab._1 - ab._2).abs).min
+  //      (minWidth / 3).round.toInt
+  //    }
+  //
+  //    def coarseToPrecise(coarse_pix: Double): Double = {
+  //      val y = coarse_pix.toInt
+  //      val range = (y - searchDistance_pix until y + searchDistance_pix)
+  //      val indicies = range.map(y => y.toDouble).toArray
+  //      val data = range.map(y => profile(y).toDouble).toArray
+  //      val max = ImageUtil.profileMaxCubic(indicies, data)
+  //      max
+  //    }
+  //
+  //    val comList = coarseList_pix.map(cp => coarseToPrecise(cp))
+  //    comList
+  //  }
 
-    def isMlc(BeamLimitingDevicePosition: AttributeList): Boolean = {
-      val deviceType = BeamLimitingDevicePosition.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString
-      val requiredType = if (horizontal) "MLCX" else "MLCY"
-      deviceType.equalsIgnoreCase(requiredType)
-    }
+  def leafSides(horizontal: Boolean, beamName: String, imageAttrList: AttributeList, dicomImage: DicomImage,
+    plan: AttributeList, translator: IsoImagePlaneTranslator,
+    leafEndList_pix: Seq[Double]): Seq[Double] = {
 
-    val endList = BeamLimitingDevicePositionSequence.filter(bldp => isMlc(bldp)).map(bldp => bldp.get(TagFromName.LeafJawPositions).getDoubleValues.head).distinct.sorted
-    endList
-  }
+    val sideListPlan = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, plan).sorted
 
-  /**
-   * Get the sorted, distinct leaf position boundaries (positions of sides of leaves) from the plan for this beam in isoplane mm.
-   */
-  private def LeafPositionBoundaries_mm(horizontal: Boolean, beamName: String, plan: AttributeList): Seq[Double] = {
-    val BeamLimitingDeviceSequence = Util.seq2Attr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagFromName.BeamLimitingDeviceSequence)
-    //val BeamLimitingDevicePositionSequence = BeamLimitingDeviceSequence.map(cps => Util.seq2Attr(cps, TagFromName.BeamLimitingDevicePositionSequence)).flatten
-    def getLeafPositionBoundaries(bldps: AttributeList): Seq[Double] = {
-      val at = bldps.get(TagFromName.LeafPositionBoundaries)
-      if (at == null)
-        Seq[Double]()
+    val sideListPix = {
+      if (horizontal)
+        sideListPlan.map(side => translator.iso2PixCoordY(side))
       else
-        at.getDoubleValues.toSeq
-    }
-    val LeafPositionBoundaries_mm = BeamLimitingDeviceSequence.map(bldps => getLeafPositionBoundaries(bldps)).flatten.distinct.sorted
-    LeafPositionBoundaries_mm
-  }
-
-  /** Hook for testing */
-  def testLeafEnds(horizontal: Boolean, beamName: String, plan: AttributeList): Seq[Double] = leafEnds(horizontal, beamName, plan)
-
-  /**
-   * Given the coarsely approximated leaf side positions, locate them more precisely using cubic interpolation.
-   *
-   * @return Values returned are in pixels.
-   */
-  private def preciseLeafSides(coarseList_pix: Seq[Double], horizontal: Boolean, profile: IndexedSeq[Float], dicomImage: DicomImage): Seq[Double] = {
-
-    val searchDistance_pix = {
-      val minWidth = coarseList_pix.tail.zip(coarseList_pix.dropRight(1)).map(ab => (ab._1 - ab._2).abs).min
-      (minWidth / 3).round.toInt
+        sideListPlan.map(side => translator.iso2PixCoordY(side))
     }
 
-    def coarseToPrecise(coarse_pix: Double): Double = {
-      val y = coarse_pix.toInt
-      val range = (y - searchDistance_pix until y + searchDistance_pix)
-      val indicies = range.map(y => y.toDouble).toArray
-      val data = range.map(y => profile(y).toDouble).toArray
-      val max = ImageUtil.profileMaxCubic(indicies, data)
-      max
+    val minLeafWidth = sideListPix.indices.tail.map(i => sideListPix(i) - sideListPix(i - 1)).min
+    val searchMargin = minLeafWidth / 2
+
+    val lo = (leafEndList_pix.head - searchMargin).round.toInt
+    val hi = (leafEndList_pix.last + searchMargin).round.toInt
+    val narrow = minLeafWidth.round.toInt
+    val wide = (leafEndList_pix.last - leafEndList_pix.head + searchMargin).round.toInt
+
+    def positionOf(side: Int): Double = {
+      if (horizontal) {
+        val x = lo
+        val y = (side - searchMargin).round.toInt
+        val rect = new Rectangle(x, y, wide, narrow)
+        val profile = dicomImage.getSubArray(rect).map(row => row.sum).map(f => f.toDouble).toArray
+        val indicies = (0 until narrow).map(i => i.toDouble + y).toArray
+        val max = ImageUtil.profileMaxCubic(indicies, profile)
+        max
+      } else {
+        val y = lo
+        val x = (side - searchMargin).round.toInt
+        val rect = new Rectangle(lo, y, wide, narrow)
+        val pixelMatrix = dicomImage.getSubArray(rect)
+        def colSum(x: Int) = { for (y <- pixelMatrix.indices) yield { pixelMatrix(y)(x) } }.sum
+        val profile = (0 until wide).map(x => colSum(x)).map(f => f.toDouble).toArray
+        val indicies = (0 until narrow).map(i => i.toDouble + x).toArray
+        val max = ImageUtil.profileMaxCubic(indicies, profile)
+        max
+      }
     }
 
-    val comList = coarseList_pix.map(cp => coarseToPrecise(cp))
-    comList
-  }
+    val sideList = sideListPix.map(side => positionOf(side.round.toInt))
 
-  /**
-   * Get the list of leaf widths.  If all leaves are the same width, then this will return a list with one member.
-   */
-  def getLeafWidthList_mm(leafSideList_mm: Seq[Double]) = {
-    leafSideList_mm.dropRight(1).zip(leafSideList_mm.drop(1)).map(ab => (ab._1 - ab._2).abs).distinct.sorted
-  }
-
-  def leafSides(horizontal: Boolean, beamName: String, imageAttrList: AttributeList, dicomImage: DicomImage, plan: AttributeList): Seq[Double] = {
-
-    val leafWidthList_mm = getLeafWidthList_mm(LeafPositionBoundaries_mm(horizontal, beamName, plan))
-
-    val profile = if (horizontal) dicomImage.rowSums else dicomImage.columnSums
-    val coarseList_pix = LeafPositionCoarseLeafSides.coarseLeafSides(horizontal, profile, imageAttrList, leafWidthList_mm.head, leafWidthList_mm.last, dicomImage)
-
-    val precise = preciseLeafSides(coarseList_pix, horizontal, profile, dicomImage)
-    precise
+    sideList
   }
 
   /**
@@ -144,12 +139,12 @@ object LeafPositionAnalysis extends Logging {
     val translator = new IsoImagePlaneTranslator(imageAttrList)
     val SOPInstanceUID = Util.sopOfAl(imageAttrList)
 
-    val leafSideList_pix = leafSides(horizontal, beamName, imageAttrList, dicomImage, plan).sorted // sort just to make sure
+    val leafEndList_mm = LeafPositionUtil.leafEnds(horizontal, beamName, plan)
+    val leafEndList_pix = leafEndList_mm.map(e => if (horizontal) translator.iso2PixCoordX(e) else translator.iso2PixCoordY(e))
+
+    val leafSideList_pix = leafSides(horizontal, beamName, imageAttrList, dicomImage, plan, translator, leafEndList_pix).sorted // sort just to make sure
 
     //    getLeafWidthList_mm(leafSideList_mm)
-
-    val leafEndList_mm = leafEnds(horizontal, beamName, plan)
-    val leafEndList_pix = leafEndList_mm.map(e => if (horizontal) translator.iso2PixCoordX(e) else translator.iso2PixCoordY(e))
 
     def x2mm(pix: Double) = if (horizontal) translator.pix2IsoCoordX(pix) else translator.pix2IsoCoordY(pix)
     def y2mm(pix: Double) = if (horizontal) translator.pix2IsoCoordY(pix) else translator.pix2IsoCoordX(pix)
@@ -184,7 +179,7 @@ object LeafPositionAnalysis extends Logging {
     }
 
     val pixelArray = dicomImage.getSubArray(new Rectangle(0, 0, dicomImage.width, dicomImage.height))
-    val minLeafWidth_mm = getLeafWidthList_mm(LeafPositionBoundaries_mm(horizontal, beamName, plan)).min
+    val minLeafWidth_mm = LeafPositionUtil.getLeafWidthList_mm(LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, plan)).min
     val minLeafWidth_pix = if (horizontal) translator.iso2PixDistY(minLeafWidth_mm) else translator.iso2PixDistY(minLeafWidth_mm)
 
     val interleafIsolation_pix = if (horizontal) translator.iso2PixDistY(Config.LeafPositionIsolationDistance_mm) else translator.iso2PixDistX(Config.LeafPositionIsolationDistance_mm)
@@ -208,7 +203,7 @@ object LeafPositionAnalysis extends Logging {
   val subProcedureName = "Leaf Position"
 
   case class BeamResults(beamName: String, resultList: Seq[LeafPosition]) {
-    val pass = resultList.find(! _.pass).isEmpty
+    val pass = resultList.find(!_.pass).isEmpty
     val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
   }
 
