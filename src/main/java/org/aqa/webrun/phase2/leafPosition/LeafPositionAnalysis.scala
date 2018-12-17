@@ -12,13 +12,10 @@ import com.pixelmed.dicom.TagFromName
 import org.aqa.Util
 import edu.umro.ImageUtil.DicomImage
 import org.aqa.IsoImagePlaneTranslator
-//import java.awt.geom.Point2D
-//import org.aqa.webrun.phase2.MeasureTBLREdges
 import org.aqa.webrun.phase2.Phase2Util
 import edu.umro.ImageUtil.LocateRidge
 import java.awt.geom.Rectangle2D
 import java.awt.Rectangle
-//import edu.umro.ScalaUtil.Trace
 import edu.umro.ImageUtil.ImageUtil
 import org.aqa.Config
 
@@ -99,9 +96,11 @@ object LeafPositionAnalysis extends Logging {
   /**
    * Get a precise measurement of the given end.  All parameters are in pixel coordinates.
    *
-   * @param topSide: Top side of leaf.
+   * @param minorSide: Top side of leaf.
    *
-   * @param bottomSide: Bottom side of leaf.
+   * @param majorSide: Bottom side of leaf.
+   *
+   * @param horizontal: Collimator orientation.  Horizontal means leaves move left <-> right.
    *
    * @param end: Expected leaf position.
    *
@@ -116,7 +115,11 @@ object LeafPositionAnalysis extends Logging {
     val measuredEndPosition_pix: Double = {
       if (horizontal) {
         val rectangle = new Rectangle2D.Double(end - minLeafWidth_pix / 2, minorSide + interleafIsolation_pix, minLeafWidth_pix, majorSide - minorSide - interleafIsolation_pix * 2)
-        LocateRidge.locateVertical(pixelArray, rectangle)
+        val j = LocateRidge.locateVertical(pixelArray, rectangle) // TODO rm j
+        val j1 = (j - end).abs
+        if (j1 > 10)
+          println("big change: " + j1)
+        j
       } else {
         val rectangle = new Rectangle2D.Double(minorSide + interleafIsolation_pix, end - minLeafWidth_pix / 2, majorSide - minorSide - interleafIsolation_pix * 2, minLeafWidth_pix)
         LocateRidge.locateHorizontal(pixelArray, rectangle)

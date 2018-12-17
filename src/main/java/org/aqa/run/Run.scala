@@ -46,6 +46,7 @@ import org.aqa.db.MachineBeamEnergy
 import java.util.function.ToDoubleBiFunction
 import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.TagFromName
+import edu.umro.ScalaUtil.FileUtil
 
 /**
  * Run a procedure.
@@ -59,11 +60,14 @@ object Run extends Logging {
   /** Procedure must supply a cmd, bat, or exe file with this name. */
   private val runCommandName = "run"
 
-  private def appendPK(text: String, pk: Long): String = text + "_" + pk.toString
+  /**
+   * Make the string nice for using as a file name, replacing invalid characters (like /) with _, and all blanks with _, and appending the given primary key.
+   */
+  private def niceifyAndAppendPK(text: String, pk: Long): String = FileUtil.replaceInvalidFileNameCharacters(text + "_" + pk.toString, '_').replace(' ', '_')
 
   private def institutionFileName(machine: Machine): String = {
     val institution = Institution.get(machine.institutionPK)
-    if (institution.isDefined) appendPK(institution.get.fileName, institution.get.institutionPK.get)
+    if (institution.isDefined) niceifyAndAppendPK(institution.get.fileName, institution.get.institutionPK.get)
     else {
       logger.warn("Run.dir Could not find institution for machine " + machine.toString)
       "unknown_institution_" + machine.fileName
@@ -76,9 +80,9 @@ object Run extends Logging {
   private def makeInputDir(machine: Machine, procedure: Procedure, inputPK: Long): File = {
     def nameHierarchy = List(
       institutionFileName(machine),
-      appendPK(machine.fileName, machine.machinePK.get),
-      appendPK(procedure.fileName, procedure.procedurePK.get),
-      appendPK(Util.currentTimeAsFileName, inputPK))
+      niceifyAndAppendPK(machine.fileName, machine.machinePK.get),
+      niceifyAndAppendPK(procedure.fileName, procedure.procedurePK.get),
+      niceifyAndAppendPK(Util.currentTimeAsFileName, inputPK))
 
     val inputDir: File = nameHierarchy.foldLeft(Config.resultsDirFile)((d, name) => new File(d, name))
 
