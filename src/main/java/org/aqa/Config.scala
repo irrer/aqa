@@ -20,6 +20,9 @@ import edu.umro.util.Utility
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessPoint
 import java.awt.geom.Point2D
 import org.aqa.db.MaintenanceCategory
+import edu.umro.ImageUtil.Watermark
+import javax.imageio.ImageIO
+import java.awt.image.BufferedImage
 
 /**
  * This class extracts configuration information from the configuration file.  Refer
@@ -453,6 +456,24 @@ object Config extends Logging {
   }
 
   /**
+   * Directory containing the definitive static files.
+   */
+  val staticDirFile: File = {
+    val locations = List(""".\""", """src\main\resources\""").map(name => new File(name + Config.staticDirName))
+
+    val dirList = locations.filter(f => f.isDirectory)
+
+    if (dirList.isEmpty) {
+      val fileNameList = locations.foldLeft("")((t, f) => t + "    " + f.getAbsolutePath)
+      val msg = "Unable to find static directory in " + fileNameList
+      logger.error(msg)
+      throw new RuntimeException(msg)
+    }
+    logger.info("Using static directory " + dirList.head.getAbsolutePath)
+    dirList.head
+  }
+
+  /**
    * Get the PenumbraThresholdPercent.  If it is not valid in the configuration, then assume the default.
    */
   private def getPenumbraThresholdPercent = {
@@ -462,6 +483,42 @@ object Config extends Logging {
     else {
       logText(name, "Invalid value, must be greater than 0 and less than 100.  Assuming default value of " + PenumbraThresholdPercentDefault)
       PenumbraThresholdPercentDefault
+    }
+  }
+
+  private def getWatermark: Option[Watermark] = {
+    val tag = "Watermark"
+    try {
+      (document \ tag) match {
+        case wm if (wm.isEmpty) => {
+          logText("Watermark", "No watermark tag found in configuration.")
+          None
+        }
+        case wm => {
+          val imageName = (wm \ "@image").head.text.toString
+          val top = (wm \ "@top").head.text.toString.toBoolean
+          val left = (wm \ "@left").head.text.toString.toBoolean
+          val percentWidth = (wm \ "@percentWidth").head.text.toString.toDouble
+          val percentChange = (wm \ "@percentChange").head.text.toString.toDouble
+          val imagesDir = new File(staticDirFile, "images")
+          val watermarkImageFile = new File(imagesDir, imageName)
+          val watermarkImage = ImageIO.read(watermarkImageFile)
+          val watermark = new Watermark(watermarkImage, top, left, percentWidth, percentChange)
+          logText(
+            "Watermark",
+            "image:  " + watermarkImageFile.getAbsolutePath +
+              "    top: " + top +
+              "    left: " + left + "    percentWidth: " + percentWidth +
+              "    percentChange: " + percentChange)
+          Some(watermark)
+        }
+      }
+    } catch {
+      case t: Throwable => {
+        logText("Watermark", "Unable to create watermark: " + t)
+        None
+      }
+
     }
   }
 
@@ -500,6 +557,10 @@ object Config extends Logging {
   val MaxProcedureDuration = logMainText("MaxProcedureDuration").toDouble
 
   val TermsOfUse = logMainText("TermsOfUse")
+
+  private val watermark = getWatermark
+  /** If a watermark has been configured, then apply it to the given image> */
+  def applyWatermark(image: BufferedImage) = if (watermark.isDefined) watermark.get.mark(image)
 
   private def requireReadableDirectory(name: String, dir: File) = {
     if (!dir.canRead) fail("Directory " + name + " is not readable: " + dir)

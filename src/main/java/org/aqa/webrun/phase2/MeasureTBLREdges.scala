@@ -275,6 +275,7 @@ object MeasureTBLREdges extends Logging {
     topRect: Rectangle, bottomRect: Rectangle, rightRect: Rectangle, leftRect: Rectangle, floodOffset: Point, ImagePlanePixelSpacing: Point2D.Double): BufferedImage = {
     //val bufImg = image.toBufferedImage(imageColor)
     val bufImg = image.toDeepColorBufferedImage
+    Config.applyWatermark(bufImg)
     val graphics = ImageUtil.getGraphics(bufImg)
     graphics.setColor(annotationColor)
 

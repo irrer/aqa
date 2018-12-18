@@ -80,6 +80,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
   private def makeAnnotatedImage(correctedImage: DicomImage, attributeList: AttributeList, pointSet: PointSet): BufferedImage = {
     val image = correctedImage.toDeepColorBufferedImage
+    Config.applyWatermark(image)
     val graphics = ImageUtil.getGraphics(image)
 
     val translator = new IsoImagePlaneTranslator(attributeList)

@@ -97,24 +97,6 @@ class WebServer extends Application with Logging {
   }
 
   /**
-   * Directory containing the definitive static files.
-   */
-  private lazy val staticDirFile: File = {
-    val locations = List(""".\""", """src\main\resources\""").map(name => new File(name + Config.staticDirName))
-
-    val dirList = locations.filter(f => f.isDirectory)
-
-    if (dirList.isEmpty) {
-      val fileNameList = locations.foldLeft("")((t, f) => t + "    " + f.getAbsolutePath)
-      val msg = "Unable to find static directory in " + fileNameList
-      logger.error(msg)
-      throw new RuntimeException(msg)
-    }
-    logger.info("Using static directory " + dirList.head.getAbsolutePath)
-    dirList.head
-  }
-
-  /**
    * If the static directory is different from the install directory, then delete it
    * and copy the latest install directory.
    * private def initStaticContentDir = {
@@ -139,7 +121,7 @@ class WebServer extends Application with Logging {
     r
   }
 
-  private lazy val staticDirRestlet = makeDirectory(staticDirFile)
+  private lazy val staticDirRestlet = makeDirectory(Config.staticDirFile)
 
   private lazy val machineConfigurationDirRestlet = makeDirectory(Config.machineConfigurationDirFile)
 
@@ -220,7 +202,7 @@ class WebServer extends Application with Logging {
 
   private lazy val termsOfUse = new TermsOfUse
 
-  private lazy val mainIndex = new MainIndex(staticDirFile)
+  private lazy val mainIndex = new MainIndex(Config.staticDirFile)
 
   /**
    * Determine the role (authorization level) that the request is for.  This is the rules are

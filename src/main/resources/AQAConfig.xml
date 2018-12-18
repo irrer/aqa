@@ -5,7 +5,8 @@ Note that when building a package for release, the Maven build process uses the 
 
 <AQAConfig>
     <!-- Database parameters. -->
-    <SlickDbsDefaultDbUrl HostIp='141.214.125.209'>jdbc:postgresql://141.214.125.209:5432/AQATest</SlickDbsDefaultDbUrl>
+    <SlickDbsDefaultDbUrl HostIp='141.214.125.209'>jdbc:postgresql://141.214.125.209:5432/AQATest
+    </SlickDbsDefaultDbUrl>
     <SlickDbsDefaultDriver>slick.driver.PostgresDriver$</SlickDbsDefaultDriver>
     <SlickDbsDefaultDbDriver>org.postgresql.Driver</SlickDbsDefaultDbDriver>
 
@@ -62,6 +63,23 @@ Note that when building a package for release, the Maven build process uses the 
 
         To Be Determined
     </TermsOfUse>
+    
+    <!-- If defined, watermark images with the given image.  If not defined, then do not perform watermarking.
+    
+        image: Source image in static directory.
+        
+        top: If true put watermark at top edge of image, otherwise put it at the bottom.
+        
+        left: If true put watermark at left edge of image, otherwise put it at the right.
+        
+        percentWidth: The floating point percent (0-100) of the width of the image to be watermarked (larger
+            numbers make a bigger watermark).
+            
+        percentChange: The floating point percent value to control the degree of contrast.  A value of 0.0 would
+            be no contrast (invisible), 100 would be full contrast.
+            
+    -->
+    <Watermark image="watermark.png" top="false" left="false" percentWidth="5.0" percentChange="5.0"></Watermark>
 
     <!-- Maximum amount of time in minutes that a procedure should take.  This is used when
     examining the input files to determine if they are from different sessions. -->
@@ -77,14 +95,21 @@ Note that when building a package for release, the Maven build process uses the 
         The content of the category element is free text that describes the category.
         -->
     <MaintenanceCategoryList>
-        <MaintenanceCategory Name='Maintenance'            Color='#aaaaaa'   >General Maintenance</MaintenanceCategory>
-        <MaintenanceCategory Name='PMI'                    Color='#80FF9F'   >Preventive Maintenance Inspection</MaintenanceCategory>
-        <MaintenanceCategory Name='Set Baseline'           Color='lightgreen'>New baseline values set</MaintenanceCategory>
-        <MaintenanceCategory Name='Firmware Update'        Color='#33aa33'   >New treatment machine firmware</MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Jaws'        Color='#aa3322'   >Maintenance performed on jaws</MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Collimator'  Color='#aa3322'   >Maintenance performed on Collimator</MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Gantry'      Color='#aa3322'   >Maintenance performed on Gantry</MaintenanceCategory>
-        <MaintenanceCategory Name='Electrical'             Color='#aa3322'   >Maintenance performed due to electrical issue(s)</MaintenanceCategory>
+        <MaintenanceCategory Name='Maintenance' Color='#aaaaaa'>General Maintenance
+        </MaintenanceCategory>
+        <MaintenanceCategory Name='PMI' Color='#80FF9F'>Preventive Maintenance Inspection
+        </MaintenanceCategory>
+        <MaintenanceCategory Name='Set Baseline' Color='lightgreen'>New baseline values set</MaintenanceCategory>
+        <MaintenanceCategory Name='Firmware Update' Color='#33aa33'>New treatment machine firmware
+        </MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Jaws' Color='#aa3322'>Maintenance performed on jaws
+        </MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Collimator' Color='#aa3322'>Maintenance performed on
+            Collimator</MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Gantry' Color='#aa3322'>Maintenance performed on
+            Gantry</MaintenanceCategory>
+        <MaintenanceCategory Name='Electrical' Color='#aa3322'>Maintenance performed due to
+            electrical issue(s)</MaintenanceCategory>
     </MaintenanceCategoryList>
 
     <!-- List of beam names used by Phase2 MetadataCheck -->
@@ -119,7 +144,7 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>T1 PF ARC ERROR</BeamName>
         <BeamName>PF Stat 270</BeamName>
         <BeamName>T1 PF ARC</BeamName>
-        
+
     </MetadataCheckBeamNameList>
 
     <!-- Beam name for flood field. -->
@@ -261,11 +286,11 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Coordinates of centers of sampling points.  All are in mm, relative to the center of the image, and in the isoplane. -->
     <SymmetryAndFlatnessPointList>
-        <SymmetryAndFlatnessPoint name='Top'       x_mm=  '0.0'   y_mm= '-75.0'/>
-        <SymmetryAndFlatnessPoint name='Bottom'    x_mm=  '0.0'   y_mm=  '75.0'/>
-        <SymmetryAndFlatnessPoint name='Left'      x_mm='-75.0'   y_mm=   '0.0'/>
-        <SymmetryAndFlatnessPoint name='Right'     x_mm= '75.0'   y_mm=   '0.0'/>
-        <SymmetryAndFlatnessPoint name='Center'    x_mm=  '0.0'   y_mm=   '0.0'/>
+        <SymmetryAndFlatnessPoint name='Top' x_mm='0.0' y_mm='-75.0' />
+        <SymmetryAndFlatnessPoint name='Bottom' x_mm='0.0' y_mm='75.0' />
+        <SymmetryAndFlatnessPoint name='Left' x_mm='-75.0' y_mm='0.0' />
+        <SymmetryAndFlatnessPoint name='Right' x_mm='75.0' y_mm='0.0' />
+        <SymmetryAndFlatnessPoint name='Center' x_mm='0.0' y_mm='0.0' />
         <!--
         <SymmetryAndFlatnessPoint name='Energy 1'  x_mm='-37.5'   y_mm=   '0.0'/>
         <SymmetryAndFlatnessPoint name='Energy 2'  x_mm= '37.5'   y_mm=   '0.0'/>
@@ -274,12 +299,12 @@ Note that when building a package for release, the Maven build process uses the 
         -->
     </SymmetryAndFlatnessPointList>
 
-    <SymmetryPointCenter  name='Center'/>
+    <SymmetryPointCenter name='Center' />
     <!-- Names of opposing points (see <SymmetryAndFlatnessPointList>) used to calculate symmetry. -->
-    <SymmetryPointTop     name='Top'/>
-    <SymmetryPointBottom  name='Bottom'/>
-    <SymmetryPointLeft    name='Left'/>
-    <SymmetryPointRight   name='Right'/>
+    <SymmetryPointTop name='Top' />
+    <SymmetryPointBottom name='Bottom' />
+    <SymmetryPointLeft name='Left' />
+    <SymmetryPointRight name='Right' />
 
     <!-- Maximum allowed error for leaf positions in mm. -->
     <LeafPositionMaxError_mm>1.0</LeafPositionMaxError_mm>
@@ -301,5 +326,5 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>T1 PF ARC</BeamName>
         <BeamName>T1 PF ARC ERROR</BeamName>
     </LeafPositionBeamNameList>
-    
+
 </AQAConfig>

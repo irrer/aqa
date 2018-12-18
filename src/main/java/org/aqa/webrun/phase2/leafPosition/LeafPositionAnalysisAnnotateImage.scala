@@ -30,6 +30,7 @@ object LeafPositionAnalysisAnnotateImage extends Logging {
 
       for (xx <- 0 until zoom; yy <- 0 until zoom) bufImg.setRGB(x * zoom + xx, y * zoom + yy, rgb)
     }
+    Config.applyWatermark(bufImg)
     bufImg
   }
 

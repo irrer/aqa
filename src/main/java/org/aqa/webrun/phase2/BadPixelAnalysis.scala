@@ -21,6 +21,8 @@ import com.pixelmed.dicom.TimeAttribute
 import org.aqa.DicomFile
 import java.text.SimpleDateFormat
 import java.util.Date
+import javax.imageio.ImageIO
+import edu.umro.ImageUtil.Watermark
 
 /**
  * Store bad pixels in the database and generate HTML.
@@ -109,6 +111,7 @@ object BadPixelAnalysis extends Logging {
       val angles = gantryCollAngles(rtimage.attributeList.get)
 
       val bufImage = derived.originalImage.toDeepColorBufferedImage(derived.pixelCorrectedImage.minPixelValue, derived.pixelCorrectedImage.maxPixelValue)
+      Config.applyWatermark(bufImage)
       val url = WebServer.urlOfResultsFile(rtimage.file)
       val result = DicomAccess.write(rtimage, url, angles + " : " + beamName, viewDir,
         Phase2Util.dicomViewBaseName(beamName, rtimage.attributeList.get),
@@ -125,6 +128,7 @@ object BadPixelAnalysis extends Logging {
 
     val floodLink = Phase2Util.dicomViewHref(runReq.flood.attributeList.get, extendedData, runReq)
     val floodBufImage = runReq.floodOriginalImage.toDeepColorBufferedImage(runReq.floodCorrectedImage.minPixelValue, runReq.floodCorrectedImage.maxPixelValue)
+    Config.applyWatermark(floodBufImage)
     val floodBaseName = Phase2Util.dicomViewBaseName(Config.FloodFieldBeamName, runReq.flood.attributeList.get)
     val floodPngHref = DicomAccess.write(runReq.flood, floodLink, Config.FloodFieldBeamName, viewDir, floodBaseName, Some(floodBufImage), Some(runReq.floodOriginalImage), runReq.floodBadPixelList).get
 
