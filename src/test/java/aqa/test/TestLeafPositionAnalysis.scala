@@ -8,7 +8,7 @@ import java.io.File
 import org.aqa.Util
 import edu.umro.ImageUtil.DicomImage
 import org.aqa.webrun.phase2.leafPosition.LeafPositionAnalysis
-import org.aqa.webrun.phase2.leafPosition.LeafPositionAnalysisAnnotateImage
+import org.aqa.webrun.phase2.leafPosition.LeafPositionAnnotateImage
 import org.aqa.IsoImagePlaneTranslator
 import edu.umro.ImageUtil.ImageUtil
 
@@ -53,7 +53,7 @@ class TestLeafPositionAnalysis extends FlatSpec with Matchers {
     val translator = new IsoImagePlaneTranslator(imageAl)
     val horizontal = true
     val leafWidthList_mm = Seq(5.0)
-    val bufImg = LeafPositionAnalysisAnnotateImage.annotateImage(leafPositionList, horizontal, dicomImage, leafWidthList_mm, translator)
+    val bufImg = LeafPositionAnnotateImage.annotateImage(leafPositionList, horizontal, dicomImage, leafWidthList_mm, translator)
 
     val pngFile = new File(outDir, "TestLeafPositionAnalysis.png")
     pngFile.delete

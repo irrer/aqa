@@ -29,7 +29,7 @@ object CollimatorCenteringHTML {
     <div>
       <center>
         <a href={ fn }>
-          <img src={ fn } align="middle" width="400"/>
+          <img src={ fn } class="img-responsive"/>
         </a>
       </center>
     </div>
@@ -99,7 +99,7 @@ object CollimatorCenteringHTML {
 
     def imageTitle(name: String, ar: MeasureTBLREdges.AnalysisResult): Elem = {
       val err = fmt(ar.measurementSet.center.getX - imageCenter.getX) + ", " + fmt(ar.measurementSet.center.getY - imageCenter.getY)
-      <h3 title="Gantry Angle and center minus image center." style="text-align:center;">{ name + " : " + err }</h3>
+      <h3 title="Collimator Angle : center minus image center." style="text-align:center;">{ name + " : " + err }</h3>
     }
 
     val content = {
@@ -111,13 +111,13 @@ object CollimatorCenteringHTML {
           <h3 title='X, Y difference from image center in mm'>{ resultSummary } mm</h3>
           { makeTable(collimatorCentering) }
         </div>
-        <div class="row" title="Click images for full sized view">
-          <div class="col-md-5" align="middle">
+        <div class="row" style="margin:30px;" title="Click images for full sized view">
+          <div class="col-md-5 col-md-offset-1" align="middle">
             { imageTitle("90", image090) }
             <a title='Click for DICOM details' href={ href090 }>{ Config.CollimatorCentering090BeamName }<br/></a>
             { showImage("CollimatorCentering090_" + Config.CollimatorCentering090BeamName + ".png", outputDir, image090.bufferedImage) }
           </div>
-          <div class="col-md-5 col-md-offset-1" align="middle">
+          <div class="col-md-5" align="middle">
             { imageTitle("270", image270) }
             <a title='Click for DICOM details' href={ href270 }>{ Config.CollimatorCentering270BeamName }<br/></a>
             { showImage("CollimatorCentering270_" + Config.CollimatorCentering270BeamName + ".png", outputDir, image270.bufferedImage) }

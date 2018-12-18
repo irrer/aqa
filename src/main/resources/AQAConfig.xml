@@ -79,7 +79,7 @@ Note that when building a package for release, the Maven build process uses the 
             be no contrast (invisible), 100 would be full contrast.
             
     -->
-    <Watermark image="watermark.png" top="false" left="false" percentWidth="5.0" percentChange="5.0"></Watermark>
+    <Watermark image="watermark.png" top="false" left="false" percentWidth="10.0" percentChange="5.0"></Watermark>
 
     <!-- Maximum amount of time in minutes that a procedure should take.  This is used when
     examining the input files to determine if they are from different sessions. -->

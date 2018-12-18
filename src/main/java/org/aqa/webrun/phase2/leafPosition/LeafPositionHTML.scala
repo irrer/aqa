@@ -82,7 +82,7 @@ object LeafPositionHTML extends Logging {
       LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, runReq.rtplan.attributeList.get))
 
     val translator = new IsoImagePlaneTranslator(derived.attributeList)
-    val image = LeafPositionAnalysisAnnotateImage.annotateImage(beamResult.resultList, horizontal, derived.pixelCorrectedImage, leafWidthList_mm, translator)
+    val image = LeafPositionAnnotateImage.annotateImage(beamResult.resultList, horizontal, derived.pixelCorrectedImage, leafWidthList_mm, translator)
     val imageFileName = Phase2Util.beamNameToId(beamName) + ".png"
     val imageFile = new File(subDir, imageFileName)
     Util.writePng(image, imageFile)

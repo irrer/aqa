@@ -13,7 +13,7 @@ import edu.umro.ImageUtil.ImageText
 import org.aqa.Util
 import java.awt.BasicStroke
 
-object LeafPositionAnalysisAnnotateImage extends Logging {
+object LeafPositionAnnotateImage extends Logging {
 
   /** Zoom factor to use when enlarging image. */
   private val zoom = 4
