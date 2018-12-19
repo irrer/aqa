@@ -25,6 +25,8 @@ import java.awt.BasicStroke
 import edu.umro.ImageUtil.ImageText
 import com.pixelmed.dicom.TransferSyntax
 import java.awt.Point
+import java.security.InvalidParameterException
+import gnu.crypto.cipher.IBlockCipher
 
 object Util extends Logging {
 
@@ -260,6 +262,48 @@ object Util extends Logging {
     val words = (0 until 100).map(i => rand.nextLong.toString)
     val text = words.foldLeft(System.currentTimeMillis.toString)((t, l) => t + l)
     secureHash(text)
+  }
+
+  def byteArrayToHex(bytes: Array[Byte]) = {
+    bytes.map(b => (b & 0xff).formatted("%02x")).mkString("")
+  }
+
+  def hexToByteArray(text: String): Array[Byte] = {
+
+    //val g =  text.indices.groupBy(i => i & 3).keys.sorted.map(k => text(k*2) + text(k*2+1))
+    ???
+
+  }
+
+  def getCipher(key: Array[Byte]): IBlockCipher = {
+    import gnu.crypto.cipher.IBlockCipher
+    import gnu.crypto.cipher.BaseCipher
+    import gnu.crypto.cipher.CipherFactory
+    import gnu.crypto.Registry
+    import java.util.HashMap
+
+    val blockSize = 256 / 8
+    val keySize = 256 / 8
+
+    if (key.size != keySize) throw new InvalidParameterException("Key must be " + keySize + " bytes but was actually " + key.size)
+
+    val cipher = CipherFactory.getInstance(Registry.RIJNDAEL_CIPHER)
+
+    val attributes = new HashMap[String, Object]()
+    attributes.put(IBlockCipher.CIPHER_BLOCK_SIZE.toString, new Integer(blockSize))
+    attributes.put(IBlockCipher.KEY_MATERIAL, key)
+    cipher.init(attributes)
+
+    cipher
+  }
+
+  def encrypt(clearText: Array[Byte], key: Array[Byte]): Array[Byte] = {
+
+    val cipher = getCipher(key)
+
+    val out = new Array[Byte](clearText.size)
+    cipher.encryptBlock(clearText, 0, out, 0)
+    out
   }
 
   /**

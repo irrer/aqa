@@ -25,4 +25,14 @@ class TestUtil extends FlatSpec with Matchers {
     val list = (0 until size).map(i => Util.randomSecureHash).distinct
     list.size should be(size)
   }
+
+  "encrypt" should "be encrypt" in {
+    val key = "98uasjsad8asfjasdf9jas9fkksjjHHj".getBytes
+    val message = "captain midnight decoder ring v2"
+    println("message.size: " + message.size)
+    val encrypted = Util.encrypt(message.getBytes, key)
+    println("encrypted: " + encrypted.map(b => (b & 0xff).formatted("%02x")).mkString("  "))
+    true should be(true)
+  }
+
 }
