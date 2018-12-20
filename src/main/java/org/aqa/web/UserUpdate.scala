@@ -29,6 +29,7 @@ import org.aqa.db.Institution
 import org.aqa.db.UserRole
 import org.aqa.Util
 import org.aqa.db.CachedUser
+import org.aqa.Crypto
 
 object UserUpdate {
   val userPKTag = "userPK"
@@ -151,7 +152,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
 
     val institutionPK = valueMap.get(institution.label).get.toLong
 
-    val passwordSalt = Util.randomSecureHash
+    val passwordSalt = Crypto.randomSecureHash
     val hashedPassword = AuthenticationVerifier.hashPassword(passwordText, passwordSalt)
     val roleText = valueMap.get(role.label).get
     new User(None, idText, fullNameText, emailText, institutionPK, hashedPassword, passwordSalt, roleText, None)

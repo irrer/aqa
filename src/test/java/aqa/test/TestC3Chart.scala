@@ -10,6 +10,7 @@ import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.web.C3Chart
 import java.awt.Color
+import org.aqa.Crypto
 
 /**
  * Test the Config.
@@ -40,7 +41,7 @@ class TestC3Chart extends FlatSpec with Matchers {
 
   "randomSecureHash" should "be different each time" in {
     val size = 100
-    val list = (0 until size).map(i => Util.randomSecureHash).distinct
+    val list = (0 until size).map(i => Crypto.randomSecureHash).distinct
     list.size should be(size)
   }
 }

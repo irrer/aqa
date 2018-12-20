@@ -20,6 +20,7 @@ import org.aqa.db.MaintenanceCategory
 import org.aqa.web.C3Chart
 import org.aqa.db.Baseline
 import org.aqa.db.BaselineSetup
+import org.aqa.Crypto
 
 /**
  * Test the Config.
@@ -90,7 +91,7 @@ class TestC3ChartHistory extends FlatSpec with Matchers {
 
   "randomSecureHash" should "be different each time" in {
     val size = 100
-    val list = (0 until size).map(i => Util.randomSecureHash).distinct
+    val list = (0 until size).map(i => Crypto.randomSecureHash).distinct
     list.size should be(size)
   }
 }

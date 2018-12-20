@@ -20,6 +20,7 @@ import org.aqa.Config
 import scala.collection.mutable.HashMap
 import java.sql.Timestamp
 import org.aqa.run.ProcedureStatus
+import org.aqa.Crypto
 
 /**
  * Version of Output that only has immutable fields.  Useful for caching.
@@ -139,7 +140,7 @@ object ViewOutput {
   }
 
   /** Calculate a secure hash of the time stamps of the child files of a directory. */
-  private def secureHashOfDirTime(dir: File): String = Util.secureHash(dir.listFiles.foldLeft("")((t, f) => t + f.lastModified.toString))
+  private def secureHashOfDirTime(dir: File): String = Crypto.secureHash(dir.listFiles.foldLeft("")((t, f) => t + f.lastModified.toString))
 
   /** Cache of output directories.  Once established, they are immutable, so caching works. */
   private val outputDirCache = HashMap[Long, ImmutableOutput]();

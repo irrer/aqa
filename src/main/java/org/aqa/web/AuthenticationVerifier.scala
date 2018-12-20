@@ -13,6 +13,7 @@ import org.aqa.Logging
 import org.restlet.engine.header.ChallengeWriter
 import org.aqa.db.UserRole
 import org.aqa.db.CachedUser
+import org.aqa.Crypto
 
 class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.Value) extends Verifier with Logging {
 
@@ -100,7 +101,7 @@ object AuthenticationVerifier {
   //        })
   //    }
 
-  def hashPassword(secret: String, passwordSalt: String): String = Util.secureHash(passwordSalt + secret)
+  def hashPassword(secret: String, passwordSalt: String): String = Crypto.secureHash(passwordSalt + secret)
 
   /** Check the password against the hashed password. */
   def validatePassword(secret: String, hashedPassword: String, passwordSalt: String): Boolean = {

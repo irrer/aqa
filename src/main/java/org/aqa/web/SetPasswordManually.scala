@@ -7,6 +7,7 @@ import org.aqa.db.User
 import org.aqa.db.DbSetup
 import org.aqa.db.UserRole
 import scala.io.StdIn
+import org.aqa.Crypto
 
 object SetPasswordManually {
 
@@ -27,7 +28,7 @@ object SetPasswordManually {
       System.exit(1)
     }
 
-    val newSalt = Util.randomSecureHash
+    val newSalt = Crypto.randomSecureHash
     val newHashedPW = AuthenticationVerifier.hashPassword(password, newSalt)
     println("newSalt     : " + newSalt)
     println("newHashedPW : " + newHashedPW)

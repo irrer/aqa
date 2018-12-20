@@ -22,6 +22,7 @@ import org.restlet.util.Series
 import org.aqa.Util
 import org.aqa.db.UserRole
 import org.aqa.db.CachedUser
+import org.aqa.Crypto
 
 object SetPassword {
   val path = "/SetPassword"
@@ -111,7 +112,7 @@ class SetPassword extends Restlet with SubUrlRoot {
     if (styleMap.isEmpty) {
       val pkOpt = valueMap.get(userPK.label)
       if (pkOpt.isDefined) {
-        val newSalt = Util.randomSecureHash
+        val newSalt = Crypto.randomSecureHash
         val newHashedPW = AuthenticationVerifier.hashPassword(password.getValOrEmpty(valueMap), newSalt)
 
         val usr = User.get(pkOpt.get.toLong)

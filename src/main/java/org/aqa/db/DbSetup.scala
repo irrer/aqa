@@ -14,6 +14,7 @@ import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.FileUtil
 import java.io.File
 import edu.umro.util.Utility
+import org.aqa.Crypto
 
 /** Establish connection to the database and ensure that tables are created. */
 
@@ -35,7 +36,7 @@ object DbSetup extends Logging {
     val defaultPassword = "admin"
 
     val email = defaultUser + "@" + Util.aqaDomain
-    val passwordSalt = Util.randomSecureHash
+    val passwordSalt = Crypto.randomSecureHash
     val hashedPassword = AuthenticationVerifier.hashPassword(defaultPassword, passwordSalt)
 
     val institutionPK = ensureAtLeastOneInstitution.institutionPK.get
@@ -170,7 +171,7 @@ object DbSetup extends Logging {
       }
 
       case class ConfigFile(file: File) {
-        val hash = Util.secureHash(Utility.readBinFile(file)).toList
+        val hash = Crypto.secureHash(Utility.readBinFile(file)).toList
       }
 
       val knownMachConfig: Map[List[Byte], ConfigFile] = {
