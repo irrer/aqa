@@ -9,6 +9,7 @@ import edu.umro.util.Utility
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Crypto
+import scala.util.Random
 
 /**
  * Test the Config.
@@ -16,6 +17,8 @@ import org.aqa.Crypto
  */
 
 class TestUtil_Cipher extends FlatSpec with Matchers {
+
+  val rand = new Random
 
   "randomSecureHash" should "make hash" in {
     (Crypto.randomSecureHash.size > 10) should be(true)
@@ -28,14 +31,32 @@ class TestUtil_Cipher extends FlatSpec with Matchers {
   }
 
   "encrypt" should "be encrypt" in {
-    val key = "98uasjsad8asfjasdf9jas9fkksjjHHj".getBytes
-    val message = "TB_9"
-    println("message.size: " + message.size)
-    val encrypted = Crypto.encrypt(message, key)
-    println("encrypted: " + encrypted.map(b => (b & 0xff).formatted("%02x")).mkString("  "))
+    val key = Crypto.makeRandomCipherKey
+    val original = "TB_9"
+    println("original content size: " + original.size)
+    println("message.size: " + original.size)
+    val encrypted = Crypto.encrypt(original, key)
+    println("encrypted: " + encrypted)
     val decrypted = Crypto.decrypt(encrypted, key)
     println("decrypted message: " + decrypted)
-    true should be(true)
+
+    (decrypted.equals(original)) should be(true)
+
+    // Each time a string is encrypted it should be different.
+    val encrypted2 = Crypto.encrypt(original, key)
+    (encrypted2.equals(encrypted)) should be(false)
+
+    // encrypt different lengths of strings
+
+    print("Testing string lengths: ")
+    for (i <- 0 until 100) {
+      val orig = (0 to i).map(ii => rand.nextInt(10)).mkString("")
+      print(" " + i)
+      val roundTrip = Crypto.decrypt(Crypto.encrypt(orig, key), key)
+      (orig.equals(roundTrip)) should be(true)
+    }
+    println
+
   }
 
 }

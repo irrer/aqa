@@ -49,17 +49,29 @@ object Crypto extends Logging {
     secureHash(text)
   }
 
+  private def emptyBlock = new Array[Byte](cipherBlockSize)
+
+  private def makeRandBlock = {
+    val r = emptyBlock
+    rand.nextBytes(r)
+    r
+  }
+
+  /** Make a random cipher key. */
+  def makeRandomCipherKey: String = byteArrayToHex(makeRandBlock)
+
   /**
    * Create cipher that can be used to encrypt and decrypt.
    *
-   * @param key: Secret password, must be 32 characters long.
+   * @param key: Secret password, original value must be 32 characters long
    */
-  def getCipher(key: Array[Byte]): IBlockCipher = {
+  def getCipher(keyAsHex: String): IBlockCipher = {
     import gnu.crypto.cipher.IBlockCipher
     import gnu.crypto.cipher.BaseCipher
     import gnu.crypto.cipher.CipherFactory
     import java.util.HashMap
 
+    val key = hexToByteArray(keyAsHex)
     if (key.size != cipherKeySize) throw new InvalidParameterException("Key must be " + cipherKeySize + " bytes but was actually " + key.size)
 
     val cipher = CipherFactory.getInstance(cipherType)
@@ -72,29 +84,57 @@ object Crypto extends Logging {
     cipher
   }
 
+  /**
+   * Copy all bytes from source into destination starting at the destination offset.
+   *
+   * This is necessarily mutable, but that is due to the support functions used.
+   */
+  private def byteCopy(src: Array[Byte], dest: Array[Byte], destOffset: Int) = {
+    src.indices.map(i => dest(destOffset + i) = src(i))
+  }
+
+  /**
+   * Encrypt and produce a string that is a string representation of the hex output.
+   *
+   * The encryption algorithm requires that the input be broken into fixed sized blocks,
+   * each of which is encrypted separately.  To make each block unique, the first half of
+   * each is filled with the input text, and the second half is randomized.
+   *
+   * @param clearText: Text to be encrypted.
+   *
+   * @param cipher: Cipher to be used.
+   */
   def encrypt(clearText: String, cipher: IBlockCipher): String = {
 
     // prepend the text with its length and a blank.
     val fullText = clearText.size.toString.getBytes ++ " ".getBytes ++ clearText.getBytes
-
     val half = cipherBlockSize / 2 // characters per block
+
+    def crpt(in: Array[Byte]) = {
+      val out = emptyBlock
+      cipher.encryptBlock(in, 0, out, 0)
+      out
+    }
+
     val numBlock = (fullText.size / half) + 1
     val out = new Array[Byte](numBlock * cipherBlockSize)
     rand.nextBytes(out)
 
-    for (b <- 0 until numBlock) {
-      val block = new Array[Byte](cipherBlockSize)
-      rand.nextBytes(block)
-      val textToEncrypt = fullText.drop(half * b).take(b)
-      (0 until textToEncrypt.size).map(i => block(i) = textToEncrypt(i))
-      cipher.encryptBlock(block, 0, out, b * cipherBlockSize)
-    }
-    byteArrayToHex(out)
+    val textChunks = (0 until numBlock).map(b => fullText.drop(half * b).take(half))
+
+    val chunkAndRand = textChunks.map(chunk => (chunk ++ makeRandBlock).take(cipherBlockSize))
+
+    val allChunksEncrypted = chunkAndRand.map(car => crpt(car)).flatten
+
+    byteArrayToHex(allChunksEncrypted.toArray)
   }
 
   /** Convenience where only one encryption is done with the given key. */
-  def encrypt(clearText: String, key: Array[Byte]): String = encrypt(clearText, getCipher(key))
+  def encrypt(clearText: String, key: String): String = encrypt(clearText, getCipher(key))
 
+  /**
+   * Decrypt text encrypted by <code>encrypt</code>.
+   */
   def decrypt(encryptedTextAsHex: String, cipher: IBlockCipher): String = {
 
     val encryptedText = hexToByteArray(encryptedTextAsHex)
@@ -111,6 +151,6 @@ object Crypto extends Logging {
   }
 
   /** Convenience where only one decryption is done with the given key. */
-  def decrypt(encryptedText: String, key: Array[Byte]): String = decrypt(encryptedText, getCipher(key))
+  def decrypt(encryptedText: String, key: String): String = decrypt(encryptedText, getCipher(key))
 
 }
