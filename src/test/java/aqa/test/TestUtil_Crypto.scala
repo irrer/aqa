@@ -16,7 +16,7 @@ import scala.util.Random
  *
  */
 
-class TestUtil_Cipher extends FlatSpec with Matchers {
+class TestUtil_Crypto extends FlatSpec with Matchers {
 
   val rand = new Random
 
