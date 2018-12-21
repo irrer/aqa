@@ -34,7 +34,7 @@ object SetPasswordManually {
     println("newHashedPW : " + newHashedPW)
 
     val ou = user.get
-    val newUser = new User(ou.userPK, ou.id, ou.fullName, ou.email, ou.institutionPK, newHashedPW, newSalt, ou.role, None)
+    val newUser = new User(ou.userPK, ou.id, None, ou.fullName_real, ou.email_real, ou.institutionPK, newHashedPW, newSalt, ou.role, None)
     val count = newUser.insertOrUpdate
     println("newSalt     : " + newSalt)
     println("newHashedPW : " + newHashedPW)

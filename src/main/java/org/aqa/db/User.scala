@@ -9,9 +9,10 @@ import java.sql.Timestamp
 
 case class User(
   userPK: Option[Long], // primary key
-  id: String, // login name
-  fullName: String, // full name, as in 'Louis Pasteur'
-  email: String, // email for contacting
+  id: String, // alias login name
+  id_real: Option[String], // alias login name, encrypted
+  fullName_real: String, // full name, as in 'Louis Pasteur', encrypted
+  email_real: String, // email for contacting, encrypted
   institutionPK: Long, // institution that this user belongs to
   hashedPassword: String, // cryptographically hashed password
   passwordSalt: String, // salt used for hashing password
@@ -43,8 +44,9 @@ object User extends Logging {
 
     def userPK = column[Long]("userPK", O.PrimaryKey, O.AutoInc)
     def id = column[String]("id")
-    def fullName = column[String]("fullName")
-    def email = column[String]("email")
+    def id_real = column[Option[String]]("id_real")
+    def fullName_real = column[String]("fullName_real")
+    def email_real = column[String]("email_real")
     def institutionPK = column[Long]("institutionPK")
     def hashedPassword = column[String]("hashedPassword")
     def passwordSalt = column[String]("passwordSalt")
@@ -54,8 +56,9 @@ object User extends Logging {
     def * = (
       userPK.?,
       id,
-      fullName,
-      email,
+      id_real,
+      fullName_real,
+      email_real,
       institutionPK,
       hashedPassword,
       passwordSalt,
@@ -73,20 +76,6 @@ object User extends Logging {
     } yield (user)
     val list = Db.run(action.result)
     if (list.isEmpty) None else Some(list.head)
-  }
-
-  /**
-   * Given their email, determine whether the given user is in the database.
-   */
-  def findUserByEmail(emailRaw: String): Option[User] = {
-    val email = emailRaw.trim.toLowerCase
-    val action = query.filter(_.email.toLowerCase === email)
-    val seq = Db.run(action.result)
-
-    val user = if (seq.size > 0) Some(seq(0)) else None
-    val textResult: String = if (user.isDefined) user.get.toString else "None"
-    logger.info("findUserByEmail search for user with email " + emailRaw + " + found " + textResult)
-    user
   }
 
   /**

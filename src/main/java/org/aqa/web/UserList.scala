@@ -18,9 +18,9 @@ class UserList extends GenericList[UserInstitution] with WebUtil.SubUrlAdmin {
 
   private val idCol = new Column[UserInstitution]("Name", _.user.id, (ui) => makePrimaryKeyHtml(ui.user.id, ui.user.userPK))
 
-  private val nameCol = new Column[UserInstitution]("Name", _.user.fullName)
+  private val nameCol = new Column[UserInstitution]("Name", _.user.fullName_real)
 
-  private val emailCol = new Column[UserInstitution]("Email", _.user.email)
+  private val emailCol = new Column[UserInstitution]("Email", _.user.email_real)
 
   private val institutionCol = new Column[UserInstitution]("Institution", _.institution.name)
 

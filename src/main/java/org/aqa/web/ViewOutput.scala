@@ -114,7 +114,7 @@ object ViewOutput {
           { reload }
           <div class="row">
             <div class="col-md-4">Procedure: { procedure.fullName }</div>
-            <div class="col-md-2">User: { if (user.isDefined) user.get.fullName else "none" }</div>
+            <div class="col-md-2">User: { if (user.isDefined) user.get.fullName_real else "none" }</div>
             { statusElem }
           </div>
           <div class="row">

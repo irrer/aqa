@@ -19,21 +19,21 @@ class InstitutionList extends GenericList[Institution] with WebUtil.SubUrlAdmin 
   }
 
   private def urlHTML(institution: Institution): Elem = {
-    val url = institution.url.trim
+    val url = institution.url_real.trim
     if (url.size > 0)
       <a href={ url } target="_blank" title={ url }>{ humanReadableURL(url) }</a>
     else <div></div>
   }
 
   private def descriptionHTML(institution: Institution): Elem = {
-    <div> { WebUtil.firstPartOf(institution.description, 60) } </div>
+    <div> { WebUtil.firstPartOf(institution.description_real, 60) } </div>
   }
 
   private val idCol = new Column[Institution]("Name", _.name, (inst) => makePrimaryKeyHtml(inst.name, inst.institutionPK))
 
-  private val urlCol = new Column[Institution]("URL", _.url, urlHTML)
+  private val urlCol = new Column[Institution]("URL", _.url_real, urlHTML)
 
-  private val descriptionCol = new Column[Institution]("Description", _.description, descriptionHTML)
+  private val descriptionCol = new Column[Institution]("Description", _.description_real, descriptionHTML)
 
   override def listName = "Institution"
 

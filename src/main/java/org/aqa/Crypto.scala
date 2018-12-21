@@ -153,4 +153,24 @@ object Crypto extends Logging {
   /** Convenience where only one decryption is done with the given key. */
   def decrypt(encryptedText: String, key: String): String = decrypt(encryptedText, getCipher(key))
 
+  /** Minimum number of characters to be occupied by alias number. */
+  private val aliasMinNumLength = 4
+
+  /** Character to be used to prefix alias numbers that are less than the required number of digits. */
+  private val aliasNumPrefixChar = "_"
+
+  /** Convenience prefix used for constructing alias numbers. */
+  private val aliasMinNumPrefix = Seq.fill(aliasMinNumLength)(aliasNumPrefixChar).mkString
+
+  /**
+   * Construct an alias from the given prefix and number.
+   */
+  def aliasify(aliasPrefix: String, number: Long): String = {
+    val numText = {
+      val t = number.toString
+      if (t.size < aliasMinNumLength) (aliasMinNumPrefix + t).takeRight(aliasMinNumLength) else t
+    }
+
+    aliasPrefix + numText
+  }
 }

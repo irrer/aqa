@@ -9,13 +9,15 @@ import edu.umro.util.Utility
 
 case class Machine(
   machinePK: Option[Long], // primary key
-  id: String, // uniquely identifying name within hosting institution
+  id: String, // alias identifying name
+  id_real: Option[String], // real name uniquely identifying name within hosting institution
   machineTypePK: Long, // type of machine foreign key
   configurationDirectory: Option[String], // directory containing configuration files unique to this machine
   multileafCollimatorPK: Long, // collimator
   epidPK: Long, // EPID
   institutionPK: Long, // institution that this machine belongs to
   serialNumber: Option[String],
+  serialNumber_real: Option[String], // real serial number of machine, encrypted
   imagingBeam2_5_mv: Boolean,
   onboardImager: Boolean,
   sixDimTabletop: Boolean,
@@ -39,10 +41,18 @@ case class Machine(
 }
 
 object Machine extends Logging {
+
+  /** Used to generate alias id. */
+  val aliasPrefixId = "MACH"
+
+  /** Used to generate alias device serial number. */
+  val aliasPrefixSerialNumber = "MACH_SER"
+
   class MachineTable(tag: Tag) extends Table[Machine](tag, "machine") {
 
     def machinePK = column[Long]("machinePK", O.PrimaryKey, O.AutoInc)
     def id = column[String]("id")
+    def id_real = column[Option[String]]("id_real")
     def machineTypePK = column[Long]("machineTypePK")
     def configurationDirectory = column[Option[String]]("configurationDirectory")
     def multileafCollimatorPK = column[Long]("multileafCollimatorPK")
@@ -50,6 +60,7 @@ object Machine extends Logging {
     def institutionPK = column[Long]("institutionPK")
     def notes = column[String]("notes")
     def serialNumber = column[Option[String]]("serialNumber")
+    def serialNumber_real = column[Option[String]]("serialNumber_real")
     def imagingBeam2_5_mv = column[Boolean]("imagingBeam2_5_mv")
     def onboardImager = column[Boolean]("onboardImager")
     def sixDimTabletop = column[Boolean]("sixDimTabletop")
@@ -59,12 +70,14 @@ object Machine extends Logging {
     def * = (
       machinePK.?,
       id,
+      id_real,
       machineTypePK,
       configurationDirectory,
       multileafCollimatorPK,
       epidPK,
       institutionPK,
       serialNumber,
+      serialNumber_real,
       imagingBeam2_5_mv,
       onboardImager,
       sixDimTabletop,

@@ -21,7 +21,7 @@ class ProcedureList extends GenericList[Procedure.ProcedureUser] with WebUtil.Su
 
   private val idCol = new Column[PU]("Name", _.procedure.name, (inst) => makePrimaryKeyHtml(inst.procedure.name, inst.procedure.procedurePK))
 
-  private val supportedByCol = new Column[PU]("Supported By", _.user.fullName)
+  private val supportedByCol = new Column[PU]("Supported By", _.user.fullName_real)
 
   private val versionCol = new Column[PU]("Version", _.procedure.version)
 

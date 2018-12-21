@@ -56,7 +56,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     }
   }
 
-  private def user(output: Output): String = User.get(output.userPK.get).get.fullName
+  private def user(output: Output): String = User.get(output.userPK.get).get.fullName_real
 
   private val startTimeFormat = new SimpleDateFormat("yyyy MM dd HH:mm:ss")
 

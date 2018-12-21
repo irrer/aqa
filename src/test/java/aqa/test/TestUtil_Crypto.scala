@@ -59,4 +59,9 @@ class TestUtil_Crypto extends FlatSpec with Matchers {
 
   }
 
+  Crypto.aliasify("HEY", 4) should be("HEY___4")
+  Crypto.aliasify("HEY", 56) should be("HEY__56")
+  Crypto.aliasify("HO", 123456) should be("HO123456")
+  Crypto.aliasify("HO", 3456) should be("HO3456")
+
 }

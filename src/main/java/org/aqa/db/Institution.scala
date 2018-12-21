@@ -8,9 +8,10 @@ import org.aqa.Util
 
 case class Institution(
   institutionPK: Option[Long], // primary key
-  name: String, // name of institution
-  url: String, // web address
-  description: String // any extra information
+  name: String, // alias name of institution
+  name_real: Option[String], // real name of institution, encrypted
+  url_real: String, // web address, encrypted
+  description_real: String // any extra information, encrypted
 ) {
 
   def insert: Institution = {
@@ -30,10 +31,11 @@ object Institution extends Logging {
 
     def institutionPK = column[Long]("institutionPK", O.PrimaryKey, O.AutoInc)
     def name = column[String]("name")
-    def url = column[String]("url")
-    def description = column[String]("description")
+    def name_real = column[Option[String]]("name_real")
+    def url_real = column[String]("url_real")
+    def description_real = column[String]("description_real")
 
-    def * = (institutionPK.?, name, url, description) <> ((Institution.apply _)tupled, Institution.unapply _)
+    def * = (institutionPK.?, name, name_real, url_real, description_real) <> ((Institution.apply _)tupled, Institution.unapply _)
   }
 
   val query = TableQuery[InstitutionTable]

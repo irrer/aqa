@@ -108,7 +108,7 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
     val urlText = valueMap.get(url.label).get.trim
     val descriptionText = valueMap.get(description.label).get.trim
 
-    new Institution(institutionPK, nameText, urlText, descriptionText)
+    new Institution(institutionPK, nameText, None, urlText, descriptionText)
   }
 
   private def emptyForm(response: Response) = {
@@ -133,7 +133,7 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
 
   private def edit(inst: Institution, response: Response) = {
     val pk = inst.institutionPK.get.toString
-    val valueMap = Map((institutionPK.label, pk), (name.label, inst.name), (url.label, inst.url), (description.label, inst.description))
+    val valueMap = Map((institutionPK.label, pk), (name.label, inst.name), (url.label, inst.url_real), (description.label, inst.description_real))
     val err = deleteErr(Map((institutionPK.label, pk)))
     formEdit.setFormResponse(valueMap, err, pageTitleEdit, response, Status.SUCCESS_OK)
   }

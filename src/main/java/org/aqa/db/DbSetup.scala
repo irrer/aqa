@@ -20,7 +20,7 @@ import org.aqa.Crypto
 
 object DbSetup extends Logging {
 
-  private def makeDummyInstitution: Institution = new Institution(None, "AQA", Util.aqaUrl, "Automated Quality Assurance")
+  private def makeDummyInstitution: Institution = new Institution(None, "AQA", None, Util.aqaUrl, "Automated Quality Assurance")
 
   private def ensureAtLeastOneInstitution: Institution = {
     Institution.list.headOption match {
@@ -40,7 +40,7 @@ object DbSetup extends Logging {
     val hashedPassword = AuthenticationVerifier.hashPassword(defaultPassword, passwordSalt)
 
     val institutionPK = ensureAtLeastOneInstitution.institutionPK.get
-    val adminUser = new User(None, "admin", "An Administrator", email, institutionPK, hashedPassword, passwordSalt, UserRole.admin.toString, None)
+    val adminUser = new User(None, "admin", None, "An Administrator", email, institutionPK, hashedPassword, passwordSalt, UserRole.admin.toString, None)
     adminUser.insert
   }
 

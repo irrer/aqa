@@ -104,21 +104,15 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
    *
    * An email must be provided.
    *
-   * Multiple users may not have the same email (ignore case, white space trimmed)
+   * Should be of the form: user@url
+   *
    */
   private def validateEmail(valueMap: ValueMapT): StyleMapT = {
     val emailText = email.getValOrEmpty(valueMap).trim
-    val pk = userPK.getValOrEmpty(valueMap)
-    val user = if (emailText.size > 0) User.findUserByEmail(emailText) else None
 
-    val pkSame = user.isDefined && user.get.userPK.get.toString.equals(pk)
-    val emailSame = user.isDefined && user.get.email.equalsIgnoreCase(emailText)
+    if (emailText.matches("..*@..*")) styleNone
+    else Error.make(email, "Invalid email format.  Must be of the form: user@url")
 
-    0 match {
-      case _ if (emailText.size == 0) => Error.make(email, "Name can not be empty")
-      case _ if ((!pkSame) && emailSame) => Error.make(email, "That email is used by " + user.get.fullName)
-      case _ => styleNone
-    }
   }
 
   private def updateUser(user: User): Unit = {
@@ -155,7 +149,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
     val passwordSalt = Crypto.randomSecureHash
     val hashedPassword = AuthenticationVerifier.hashPassword(passwordText, passwordSalt)
     val roleText = valueMap.get(role.label).get
-    new User(None, idText, fullNameText, emailText, institutionPK, hashedPassword, passwordSalt, roleText, None)
+    new User(None, idText, None, fullNameText, emailText, institutionPK, hashedPassword, passwordSalt, roleText, None)
   }
 
   /**
@@ -173,7 +167,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
     val passwordSalt = user.passwordSalt
     val hashedPassword = user.hashedPassword
     val roleText = valueMap.get(role.label).get
-    new User(Some(userPK), idText, fullNameText, emailText, institutionPK, hashedPassword, passwordSalt, roleText, user.termsOfUseAcknowledgment)
+    new User(Some(userPK), idText, None, fullNameText, emailText, institutionPK, hashedPassword, passwordSalt, roleText, user.termsOfUseAcknowledgment)
   }
 
   /**
@@ -212,8 +206,8 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
     val valueMap = Map(
       (userPK.label, user.userPK.get.toString),
       (id.label, user.id),
-      (fullName.label, user.fullName),
-      (email.label, user.email),
+      (fullName.label, user.fullName_real),
+      (email.label, user.email_real),
       (role.label, user.role),
       (institution.label, user.institutionPK.toString))
     formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)

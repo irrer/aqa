@@ -48,7 +48,7 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
 
   private val webInterface = new WebInputSelect("Interface", 4, 0, webInterfaceList)
 
-  def listSupportingUser() = User.list.map(u => (u.userPK.get.toString, u.fullName))
+  def listSupportingUser() = User.list.map(u => (u.userPK.get.toString, u.fullName_real))
   private val supportingUserPK = new WebInputSelect("Author", 4, 0, listSupportingUser)
 
   private val notes = new WebInputTextArea("Notes", 6, 0, "")
