@@ -30,7 +30,7 @@ object Institution extends Logging {
   class InstitutionTable(tag: Tag) extends Table[Institution](tag, "institution") {
 
     def institutionPK = column[Long]("institutionPK", O.PrimaryKey, O.AutoInc)
-    def name = column[String]("name")
+    def name = column[String]("name", O.Unique)
     def name_real = column[Option[String]]("name_real")
     def url_real = column[String]("url_real")
     def description_real = column[String]("description_real")

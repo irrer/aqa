@@ -10,10 +10,17 @@ Note that when building a package for release, the Maven build process uses the 
     <SlickDbsDefaultDriver>slick.driver.PostgresDriver$</SlickDbsDefaultDriver>
     <SlickDbsDefaultDbDriver>org.postgresql.Driver</SlickDbsDefaultDbDriver>
 
-    <!-- At start up, the database is examined for any items that need to be anonymized, and if they exist,
+    <!-- This flag exists as a way to gently transition from non-anonymized to anonymized.  In the future
+    it should be phased out. 
+    
+    At start up, the database is examined for any items that need to be anonymized, and if they exist,
     they are listed in the log.  If this flag is true, then those items are anonymized.  If false, then no
     changes to the database are made.   If specified, must be either true or false.  If not specified, then
-    assume false.  If neither true or false (invalid boolean) then false is assumed. -->
+    assume false.  If neither true or false (invalid boolean) then false is assumed.
+    
+    Also, if the credential files do not exist, they will be created, whether or not this flag is true or false,
+    but this can be undone by deleting them.
+    -->
     <ConvertToAnonymousDatabase>false</ConvertToAnonymousDatabase>
 
     <!-- Port number for the Secure ReST service.   Port 443 is the default for HTTPS.

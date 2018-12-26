@@ -51,7 +51,7 @@ object Machine extends Logging {
   class MachineTable(tag: Tag) extends Table[Machine](tag, "machine") {
 
     def machinePK = column[Long]("machinePK", O.PrimaryKey, O.AutoInc)
-    def id = column[String]("id")
+    def id = column[String]("id") // TODO add O.Unique constraint
     def id_real = column[Option[String]]("id_real")
     def machineTypePK = column[Long]("machineTypePK")
     def configurationDirectory = column[Option[String]]("configurationDirectory")

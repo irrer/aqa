@@ -43,7 +43,7 @@ object User extends Logging {
   class UserTable(tag: Tag) extends Table[User](tag, "user") {
 
     def userPK = column[Long]("userPK", O.PrimaryKey, O.AutoInc)
-    def id = column[String]("id")
+    def id = column[String]("id") // TODO add O.Unique constraint
     def id_real = column[Option[String]]("id_real")
     def fullName_real = column[String]("fullName_real")
     def email_real = column[String]("email_real")

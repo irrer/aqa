@@ -57,7 +57,7 @@ object Crypto extends Logging {
     r
   }
 
-  /** Make a random cipher key. */
+  /** Make a random cipher key of the size required by this service. */
   def makeRandomCipherKey: String = byteArrayToHex(makeRandBlock)
 
   /**
