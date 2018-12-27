@@ -27,6 +27,7 @@ case class Institution(
 }
 
 object Institution extends Logging {
+
   class InstitutionTable(tag: Tag) extends Table[Institution](tag, "institution") {
 
     def institutionPK = column[Long]("institutionPK", O.PrimaryKey, O.AutoInc)

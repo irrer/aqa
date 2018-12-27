@@ -11,11 +11,21 @@ import org.aqa.Util
 import org.aqa.web.WebUtil
 import edu.umro.ScalaUtil.FileUtil
 
-//import slick.profile.FixedSqlAction   // TODO fix
-
-/** Anonymize Database. */
+/** Utilities to support database anonymization. */
 
 object DbAnonymize extends Logging {
+
+  /** Used to generate alias ids for institutions. */
+  val institutionAliasPrefixId = "INST"
+
+  /** Used to generate alias ids for machines. */
+  val machineAliasPrefixId = "MACH"
+
+  /** Used to generate alias device serial number. */
+  val machineAliasPrefixSerialNumber = machineAliasPrefixId + "_SER"
+
+  /** Used to generate alias ids for users. */
+  val userAliasPrefixId = "USER"
 
   /** Name of directory where security credentials are kept. */
   private val securityDirName = "security"
@@ -53,15 +63,20 @@ object DbAnonymize extends Logging {
 
     def this(name: String, key: String) = this(Institution.getInstitutionByName(name).get, key)
 
+    val aliasName = {
+      if (institution.name.startsWith(institutionAliasPrefixId)) institution.name
+      else Crypto.aliasify(institutionAliasPrefixId, institution.institutionPK.get)
+    }
+
     private lazy val cipher = Crypto.getCipher(key)
 
-    lazy val name_real = Crypto.decrypt(institution.name_real.get, cipher)
-    lazy val url_real = Crypto.decrypt(institution.url_real, cipher)
-    lazy val description_real = Crypto.decrypt(institution.description_real, cipher)
+    lazy val name_real = if (institution.name_real.isDefined) Crypto.decrypt(institution.name_real.get, cipher) else institution.name
 
     /** To avoid keeping credentials in memory longer than necessary, give them an expiration time when they are removed from memory. */
     private val timeout = System.currentTimeMillis + cacheTimeout
-    def isValid = timeout < System.currentTimeMillis
+    def isValid = {
+      timeout >= System.currentTimeMillis
+    }
 
     def encrypt(clearText: String): String = Crypto.encrypt(clearText, cipher)
 
@@ -69,11 +84,14 @@ object DbAnonymize extends Logging {
      * Save as XML file.
      */
     def persist = {
-      val file = credentialFile(institution.name)
+      val file = credentialFile(aliasName)
       try {
+        if (!securityDir.isDirectory) securityDir.mkdirs
         val xml = {
           <InstitutionCredentials>
-            <name>{ institution.name }</name>
+            <name>{ aliasName }</name>
+            <name_real>{ name_real }</name_real>
+            <creationTime>{ Util.standardDateFormat.format(System.currentTimeMillis) }</creationTime>
             <key>{ key }</key>
           </InstitutionCredentials>
         }
@@ -140,71 +158,32 @@ object DbAnonymize extends Logging {
     }
   }
 
-  /**
-   * Constructing this class starts a thread that will run in the future and remove expired credentials.
-   */
-  private class ExpireCache extends Runnable {
-    def run = {
-      Thread.sleep(cacheTimeout)
-      institutionCache.synchronized({
-        val valid = institutionCache.filter(ic => ic.isValid)
-        institutionCache.clear
-        institutionCache.insertAll(0, valid)
-      })
+  def scheduleCacheExpiration: Unit = {
+    /**
+     * Constructing this class starts a thread that will run in the future and remove expired credentials.
+     */
+    class ExpireCache extends Runnable {
+      def run = {
+        // add a little extra time to ensure that the operation that cached the credential is done
+        Thread.sleep(cacheTimeout + 1000)
+        if (institutionCache.nonEmpty) {
+          institutionCache.synchronized({
+            val before = institutionCache.size
+            val valid = institutionCache.filter(ic => ic.isValid)
+            institutionCache.clear
+            institutionCache.insertAll(0, valid)
+            logger.info("Cleared anonymizing security cache from size " + before + " to size " + institutionCache.size)
+          })
+        }
+      }
+      (new Thread(this)).start
     }
-    (new Thread(this)).start
+    new ExpireCache
   }
 
   def encrypt(institutionPK: Long, text: String): String = {
-    getInstitutionCredentials(institutionPK).encrypt(text)
-  }
-
-  private def anonymizeMachines = {
-    val list = Machine.list
-
-    def anon(machine: Machine) = {
-      val aliasId = Crypto.aliasify(Machine.aliasPrefixId, machine.machinePK.get)
-      val aliasSerNum = Some(Crypto.aliasify(Machine.aliasPrefixSerialNumber, machine.machinePK.get))
-      def id_real = Some(encrypt(machine.institutionPK, machine.id))
-      def serNum_real = Some(encrypt(machine.institutionPK, machine.serialNumber.get))
-
-      def anonId(m: Machine) = m.copy(id_real = id_real).copy(id = aliasId)
-
-      def anonSerialNum(m: Machine) = m.copy(serialNumber = aliasSerNum).copy(serialNumber_real = serNum_real)
-
-      val encryptId = machine.id_real.isEmpty
-
-      val encryptSerNo = machine.serialNumber.isDefined && machine.serialNumber_real.isEmpty
-
-      def update(m: Machine) = {
-        def show(mch: Machine) = {
-          "    id: " + mch.id.formatted("%-16s") + 
-          "    mch.id_real: " + mch.id_real.toString.formatted("%-70s") + 
-          "    mch.serialNumber: " + mch.serialNumber.toString.formatted("%-18s") + 
-          "    mch.serialNumber_real: " + mch.serialNumber_real.toString.formatted("%-70s")
-    }
-        val both = show(machine) + " ==>\n" + show(m)
-        logger.info("ConvertToAnonymousDatabase Need to convert machine from :\n" + both)
-        if (Config.ConvertToAnonymousDatabase) {
-          m.insertOrUpdate
-          logger.info("ConvertToAnonymousDatabase Updating machine from :\n" + both)
-        }
-      }
-
-      (encryptId, encryptSerNo) match {
-        case (true, true) => update(anonId(anonSerialNum(machine)))
-        case (true, false) => update(anonId(machine))
-        case (false, true) => update(anonSerialNum(machine))
-        case (false, false) => ; // nothing needs changing
-      }
-
-    }
-
-    list.map(m => anon(m))
-  }
-
-  def init = {
-    if (!securityDir.isDirectory) securityDir.mkdirs
-    anonymizeMachines
+    val institutionCredentials = getInstitutionCredentials(institutionPK).encrypt(text)
+    scheduleCacheExpiration
+    institutionCredentials
   }
 }

@@ -11,18 +11,19 @@ import edu.umro.ScalaUtil.FileUtil
 import org.aqa.db.DbAnonymize
 import org.aqa.Config
 import org.aqa.db.DbSetup
+import org.aqa.db.DbTransitionToAnonymize
 
 /**
  * Test DbAnonymize.
  *
  */
 
-class TestDbAnonymize extends FlatSpec with Matchers {
+class TestDbTransitionToAnonymize extends FlatSpec with Matchers {
 
   println("Starting...")
   Config.validate
   DbSetup.init
 
-  DbAnonymize.init
+  DbTransitionToAnonymize.transition
   println("Done")
 }

@@ -40,6 +40,7 @@ case class User(
 }
 
 object User extends Logging {
+
   class UserTable(tag: Tag) extends Table[User](tag, "user") {
 
     def userPK = column[Long]("userPK", O.PrimaryKey, O.AutoInc)

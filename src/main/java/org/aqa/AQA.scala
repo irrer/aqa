@@ -6,6 +6,7 @@ import org.aqa.run.Run
 import edu.umro.ScalaUtil.PeriodicRestart
 import java.io.File
 import java.util.Date
+import org.aqa.db.DbTransitionToAnonymize
 
 /**
  * Main service entry point.  Start up major portions of
@@ -23,6 +24,7 @@ object AQA extends Logging {
         DbSetup.init
         DbSetup.smokeTest
         DbSetup.storeFilesInDatabase // TODO remove when migration is complete
+        DbTransitionToAnonymize.transition // TODO remove when transition is complete
         Run.handleRunningProcedureList
         new WebServer
         new PeriodicRestart(Config.RestartTime)

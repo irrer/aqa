@@ -42,12 +42,6 @@ case class Machine(
 
 object Machine extends Logging {
 
-  /** Used to generate alias id. */
-  val aliasPrefixId = "MACH"
-
-  /** Used to generate alias device serial number. */
-  val aliasPrefixSerialNumber = "MACH_SER"
-
   class MachineTable(tag: Tag) extends Table[Machine](tag, "machine") {
 
     def machinePK = column[Long]("machinePK", O.PrimaryKey, O.AutoInc)
