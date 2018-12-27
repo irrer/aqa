@@ -65,7 +65,7 @@ object DbAnonymize extends Logging {
 
     val aliasName = {
       if (institution.name.startsWith(institutionAliasPrefixId)) institution.name
-      else Crypto.aliasify(institutionAliasPrefixId, institution.institutionPK.get)
+      else aliasify(institutionAliasPrefixId, institution.institutionPK.get)
     }
 
     private lazy val cipher = Crypto.getCipher(key)
@@ -185,5 +185,26 @@ object DbAnonymize extends Logging {
     val institutionCredentials = getInstitutionCredentials(institutionPK).encrypt(text)
     scheduleCacheExpiration
     institutionCredentials
+  }
+
+  /** Minimum number of characters to be occupied by alias number. */
+  private val aliasMinNumLength = 4
+
+  /** Character to be used to prefix alias numbers that are less than the required number of digits. */
+  private val aliasNumPrefixChar = "_"
+
+  /**
+   * Construct an alias from the given prefix and number.
+   */
+  def aliasify(aliasPrefix: String, number: Long): String = {
+
+    /** Convenience prefix used for constructing alias numbers. */
+    val aliasMinNumPrefix = Seq.fill(aliasMinNumLength)(aliasNumPrefixChar).mkString
+    val numText = {
+      val t = number.toString
+      if (t.size < aliasMinNumLength) (aliasMinNumPrefix + t).takeRight(aliasMinNumLength) else t
+    }
+
+    aliasPrefix + numText
   }
 }

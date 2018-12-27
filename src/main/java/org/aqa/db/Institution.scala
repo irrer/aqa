@@ -63,7 +63,7 @@ object Institution extends Logging {
     val list = Db.run(action.result)
 
     val inst = if (list.isEmpty) None else Some(list.head)
-    logger.info("Institution with " + trimmedName + " : " + inst)
+    logger.debug("Institution with " + trimmedName + " : " + inst)
     inst
   }
 

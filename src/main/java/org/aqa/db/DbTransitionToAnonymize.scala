@@ -15,12 +15,54 @@ import edu.umro.ScalaUtil.FileUtil
 
 object DbTransitionToAnonymize extends Logging {
 
+  private def fmt(maxLen: Int, any: Any) = {
+    val txt = any.toString
+    val t = if (txt.size > (maxLen - 3)) txt.take(maxLen - 3) + "..." else txt.take(maxLen)
+    t.formatted("%-" + maxLen + "s")
+  }
+
+  private def fmt20(any: Any) = fmt(20, any)
+  private def fmt12(any: Any) = fmt(12, any)
+
+  private def anonymizeInstitutions = {
+
+    def anon(institution: Institution) = {
+      if (institution.name_real.isEmpty) {
+        val pk = institution.institutionPK.get
+        def encrypt(text: String): String = DbAnonymize.encrypt(pk, text)
+
+        val newInst = new Institution(
+          Some(pk),
+          DbAnonymize.aliasify(DbAnonymize.institutionAliasPrefixId, institution.institutionPK.get),
+          Some(encrypt(institution.name)),
+          encrypt(institution.url_real),
+          encrypt(institution.description_real))
+
+        def show(inst: Institution) = {
+          "    name: " + fmt12(inst.name) +
+            "    name_real: " + fmt20(inst.name_real) +
+            "    url_real: " + fmt20(inst.url_real) +
+            "    description_real: " + fmt20(inst.description_real)
+        }
+
+        val both = show(institution) + " ==>\n" + show(newInst)
+
+        logger.info("ConvertToAnonymousDatabase Need to convert institution from :\n" + both)
+        if (Config.ConvertToAnonymousDatabase) {
+          newInst.insertOrUpdate
+          logger.info("ConvertToAnonymousDatabase Updating institution from :\n" + both)
+        }
+      }
+    }
+
+    Institution.list.map(inst => anon(inst))
+  }
+
   private def anonymizeMachines = {
-    val list = Machine.list
 
     def anon(machine: Machine) = {
-      val aliasId = Crypto.aliasify(DbAnonymize.machineAliasPrefixId, machine.machinePK.get)
-      val aliasSerNum = Some(Crypto.aliasify(DbAnonymize.machineAliasPrefixSerialNumber, machine.machinePK.get))
+      val aliasId = DbAnonymize.aliasify(DbAnonymize.machineAliasPrefixId, machine.machinePK.get)
+      val aliasSerNum = Some(DbAnonymize.aliasify(DbAnonymize.machineAliasPrefixSerialNumber, machine.machinePK.get))
       def id_real = Some(DbAnonymize.encrypt(machine.institutionPK, machine.id))
       def serNum_real = Some(DbAnonymize.encrypt(machine.institutionPK, machine.serialNumber.get))
 
@@ -34,10 +76,10 @@ object DbTransitionToAnonymize extends Logging {
 
       def update(m: Machine) = {
         def show(mch: Machine) = {
-          "    id: " + mch.id.formatted("%-16s") +
-            "    mch.id_real: " + mch.id_real.toString.formatted("%-70s") +
-            "    mch.serialNumber: " + mch.serialNumber.toString.formatted("%-18s") +
-            "    mch.serialNumber_real: " + mch.serialNumber_real.toString.formatted("%-70s")
+          "    id: " + fmt12(mch.id) +
+            "    mch.id_real: " + fmt20(mch.id_real) +
+            "    mch.serialNumber: " + fmt20(mch.serialNumber) +
+            "    mch.serialNumber_real: " + fmt20(mch.serialNumber_real)
         }
         val both = show(machine) + " ==>\n" + show(m)
         logger.info("ConvertToAnonymousDatabase Need to convert machine from :\n" + both)
@@ -53,14 +95,47 @@ object DbTransitionToAnonymize extends Logging {
         case (false, true) => update(anonSerialNum(machine))
         case (false, false) => ; // nothing needs changing
       }
-
     }
 
-    list.map(m => anon(m))
+    Machine.list.map(m => anon(m))
+  }
+
+  private def anonymizeUsers = {
+
+    def anon(user: User) = {
+      if (user.id_real.isEmpty) {
+        def encrypt(text: String): String = DbAnonymize.encrypt(user.institutionPK, text)
+
+        val newUser = user.copy(
+          id = DbAnonymize.aliasify(DbAnonymize.userAliasPrefixId, user.userPK.get),
+          id_real = Some(encrypt(user.id)),
+          fullName_real = encrypt(user.fullName_real),
+          email_real = encrypt(user.email_real))
+
+        def show(user: User) = {
+          "    id: " + fmt12(user.id) +
+            "    id_real: " + fmt20(user.id_real) +
+            "    url_real: " + fmt20(user.fullName_real) +
+            "    description_real: " + fmt20(user.email_real)
+        }
+
+        val both = show(user) + " ==>\n" + show(newUser)
+
+        logger.info("ConvertToAnonymousDatabase Need to convert user from :\n" + both)
+        if (Config.ConvertToAnonymousDatabase) {
+          newUser.insertOrUpdate
+          logger.info("ConvertToAnonymousDatabase Updating user from :\n" + both)
+        }
+      }
+    }
+
+    User.list.map(user => anon(user))
   }
 
   def transition = {
+    anonymizeInstitutions
     anonymizeMachines
+    anonymizeUsers
     logger.info("finished transition of anonymization security")
   }
 }
