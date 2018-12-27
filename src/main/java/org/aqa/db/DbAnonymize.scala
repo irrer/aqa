@@ -1,21 +1,9 @@
 package org.aqa.db
 
-//import slick.backend.DatabaseConfig
-import slick.driver.PostgresDriver
-import scala.concurrent.duration.DurationInt
-import slick.driver.PostgresDriver.api._
-import slick.jdbc.meta.MTable
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.{ Success, Failure }
-import com.mchange.v2.c3p0.ComboPooledDataSource
-import scala.xml.Elem
-import org.aqa.run.ProcedureStatus
 import org.aqa.Logging
 import java.io.File
 import org.aqa.Config
 import scala.xml.XML
-import slick.sql.FixedSqlAction
 import org.aqa.Crypto
 import edu.umro.ScalaUtil.Trace
 import scala.collection.mutable.ArrayBuffer
@@ -189,11 +177,17 @@ object DbAnonymize extends Logging {
       val encryptSerNo = machine.serialNumber.isDefined && machine.serialNumber_real.isEmpty
 
       def update(m: Machine) = {
-        def show(mch: Machine) = "id: " + mch.id + "    mch.id_real: " + mch.id_real + "    mch.serialNumber: " + mch.serialNumber + "    mch.serialNumber_real: " + mch.serialNumber_real
-        Trace.trace("ConvertToAnonymousDatabase Need to convert machine from : " + show(machine) + " ==> " + show(m))
+        def show(mch: Machine) = {
+          "    id: " + mch.id.formatted("%-16s") + 
+          "    mch.id_real: " + mch.id_real.toString.formatted("%-70s") + 
+          "    mch.serialNumber: " + mch.serialNumber.toString.formatted("%-18s") + 
+          "    mch.serialNumber_real: " + mch.serialNumber_real.toString.formatted("%-70s")
+    }
+        val both = show(machine) + " ==>\n" + show(m)
+        logger.info("ConvertToAnonymousDatabase Need to convert machine from :\n" + both)
         if (Config.ConvertToAnonymousDatabase) {
           m.insertOrUpdate
-          Trace.trace("ConvertToAnonymousDatabase Updating machine from : " + show(machine) + " ==> " + show(m))
+          logger.info("ConvertToAnonymousDatabase Updating machine from :\n" + both)
         }
       }
 
