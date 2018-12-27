@@ -24,6 +24,9 @@ class TestDbTransitionToAnonymize extends FlatSpec with Matchers {
   Config.validate
   DbSetup.init
 
-  DbTransitionToAnonymize.transition
+  "transition" should "be transitioning" in {
+    DbTransitionToAnonymize.transition
+    true should be(true)
+  }
   println("Done")
 }
