@@ -80,6 +80,8 @@ object DbAnonymize extends Logging {
 
     def encrypt(clearText: String): String = Crypto.encrypt(clearText, cipher)
 
+    def decrypt(clearText: String): String = Crypto.decrypt(clearText, cipher)
+
     /**
      * Save as XML file.
      */
@@ -183,6 +185,12 @@ object DbAnonymize extends Logging {
 
   def encrypt(institutionPK: Long, text: String): String = {
     val institutionCredentials = getInstitutionCredentials(institutionPK).encrypt(text)
+    scheduleCacheExpiration
+    institutionCredentials
+  }
+
+  def decrypt(institutionPK: Long, text: String): String = {
+    val institutionCredentials = getInstitutionCredentials(institutionPK).decrypt(text)
     scheduleCacheExpiration
     institutionCredentials
   }
