@@ -24,6 +24,7 @@ import edu.umro.ImageUtil.ImageText
 import com.pixelmed.dicom.TransferSyntax
 import java.awt.Point
 import java.security.InvalidParameterException
+import com.pixelmed.dicom.DicomDictionary
 
 object Util extends Logging {
 
@@ -754,4 +755,5 @@ object Util extends Logging {
     val sd = Math.sqrt(variance)
     sd
   }
+
 }
