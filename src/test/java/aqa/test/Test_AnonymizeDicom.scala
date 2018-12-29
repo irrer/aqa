@@ -34,7 +34,7 @@ class Test_AnonymizeDicom extends FlatSpec with Matchers {
     val history = Map[AttributeTag, Map[String, String]]()
     val phi = Map[AttributeTag, String]()
 
-    val anonymizeDicom = new AnonymizeDicom(uidHistory, history, phi)
+    val anonymizeDicom = new AnonymizeDicom(history, phi)
 
     val dest = anonymizeDicom.anonymize(source)
     val destAsText = DicomUtil.attributeListToString(dest) // for debugging
@@ -49,12 +49,13 @@ class Test_AnonymizeDicom extends FlatSpec with Matchers {
 
     val PatientID = (TagFromName.PatientID, Map(("$JM_AQA_phase2_v000", "PAT___5"), ("bert", "ernie")))
     val PatientName = (TagFromName.PatientName, Map(("$JM_AQA_phase2_v000", "PAT___5"), ("bert", "ernie")))
-    val history = Map(PatientID, PatientName)
+    val FrameOfReferenceUID = (TagFromName.FrameOfReferenceUID, Map(("1.2.246.352.62.3.5253998828285979696.5369156955102472089", "12345.FrameOfReferenceUID")))
+    val history = Map(PatientID, PatientName, FrameOfReferenceUID)
 
     val phi = Map[AttributeTag, String](
       (TagFromName.ReferringPhysicianName, "big Al"))
 
-    val anonymizeDicom = new AnonymizeDicom(uidHistory, history, phi)
+    val anonymizeDicom = new AnonymizeDicom(history, phi)
 
     val dest = anonymizeDicom.anonymize(source)
     val destAsText = DicomUtil.attributeListToString(dest) // for debugging

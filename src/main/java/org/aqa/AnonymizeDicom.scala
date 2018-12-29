@@ -13,7 +13,7 @@ object AnonymizeDicom {
 
 import AnonymizeDicom.Replacement
 
-class AnonymizeDicom(uidHistory: Replacement, history: Map[AttributeTag, Replacement], phi: Map[AttributeTag, String]) extends Logging {
+class AnonymizeDicom(history: Map[AttributeTag, Replacement], phi: Map[AttributeTag, String]) extends Logging {
 
   def anonymize(source: AttributeList): AttributeList = {
     val dest = DicomUtil.clone(source)
@@ -28,7 +28,7 @@ class AnonymizeDicom(uidHistory: Replacement, history: Map[AttributeTag, Replace
        *
        * Finally, if the attribute has not shown up on any of these lists, then it is not PHI, so do nothing.
        */
-      def replaceOrdinaryTag = {
+      def replaceOrdinaryAttribute = {
         val oldValue = at.getSingleStringValueOrEmptyString
 
         def isReplaceableByHistory = {
@@ -49,24 +49,6 @@ class AnonymizeDicom(uidHistory: Replacement, history: Map[AttributeTag, Replace
         }
       }
 
-      /**
-       * Look to see if this attribute should have a new UID based on the old UID, and if so, replace it.
-       *
-       * If it does not have an old UID, then make a replacement and put it in the attribute, and add it to the uidHistory.
-       *
-       */
-      def replaceUid = {
-
-        val oldValue = at.getSingleStringValueOrEmptyString
-
-        if (uidHistory.get(oldValue).isDefined) {
-          val newValue = uidHistory(oldValue)
-          at.removeValues
-          at.addValue(new String(newValue))
-        } else {
-        }
-      }
-
       def isUid = {
         val vr = DicomUtil.dictionary.getValueRepresentationFromTag(tag)
         (vr != null) && ValueRepresentation.isUniqueIdentifierVR(vr)
@@ -78,8 +60,7 @@ class AnonymizeDicom(uidHistory: Replacement, history: Map[AttributeTag, Replace
           val list = (0 until seq.getNumberOfItems).map(i => seq.getItem(i).getAttributeList)
           list.map(al => anonAl(al))
         }
-        case _ if isUid => replaceUid
-        case _ => replaceOrdinaryTag
+        case _ => replaceOrdinaryAttribute
       }
     }
 
