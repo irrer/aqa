@@ -30,7 +30,7 @@ object DbTransitionToAnonymize extends Logging {
     def anon(institution: Institution) = {
       if (institution.name_real.isEmpty) {
         val pk = institution.institutionPK.get
-        def encrypt(text: String): String = AnonymizeUtil.encrypt(pk, text)
+        def encrypt(text: String): String = AnonymizeUtil.encryptWithNonce(pk, text)
 
         val newInst = new Institution(
           Some(pk),
@@ -64,8 +64,8 @@ object DbTransitionToAnonymize extends Logging {
     def anon(machine: Machine) = {
       val aliasId = AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasPrefixId, machine.machinePK.get)
       val aliasSerNum = Some(AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasPrefixSerialNumber, machine.machinePK.get))
-      def id_real = Some(AnonymizeUtil.encrypt(machine.institutionPK, machine.id))
-      def serNum_real = Some(AnonymizeUtil.encrypt(machine.institutionPK, machine.serialNumber.get))
+      def id_real = Some(AnonymizeUtil.encryptWithNonce(machine.institutionPK, machine.id))
+      def serNum_real = Some(AnonymizeUtil.encryptWithNonce(machine.institutionPK, machine.serialNumber.get))
 
       def anonId(m: Machine) = m.copy(id_real = id_real).copy(id = aliasId)
 
@@ -105,7 +105,7 @@ object DbTransitionToAnonymize extends Logging {
 
     def anon(user: User) = {
       if (user.id_real.isEmpty) {
-        def encrypt(text: String): String = AnonymizeUtil.encrypt(user.institutionPK, text)
+        def encrypt(text: String): String = AnonymizeUtil.encryptWithNonce(user.institutionPK, text)
 
         val newUser = user.copy(
           id = AnonymizeUtil.aliasify(AnonymizeUtil.userAliasPrefixId, user.userPK.get),

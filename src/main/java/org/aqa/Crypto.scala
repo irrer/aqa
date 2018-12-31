@@ -104,7 +104,7 @@ object Crypto extends Logging {
    *
    * @param cipher: Cipher to be used.
    */
-  def encrypt(clearText: String, cipher: IBlockCipher): String = {
+  def encryptWithNonce(clearText: String, cipher: IBlockCipher): String = {
 
     // prepend the text with its length and a blank.
     val fullText = clearText.size.toString.getBytes ++ " ".getBytes ++ clearText.getBytes
@@ -130,12 +130,12 @@ object Crypto extends Logging {
   }
 
   /** Convenience where only one encryption is done with the given key. */
-  def encrypt(clearText: String, key: String): String = encrypt(clearText, getCipher(key))
+  def encryptWithNonce(clearText: String, key: String): String = encryptWithNonce(clearText, getCipher(key))
 
   /**
    * Decrypt text encrypted by <code>encrypt</code>.
    */
-  def decrypt(encryptedTextAsHex: String, cipher: IBlockCipher): String = {
+  def decryptWithNonce(encryptedTextAsHex: String, cipher: IBlockCipher): String = {
 
     val encryptedText = hexToByteArray(encryptedTextAsHex)
     val j = encryptedText.size
@@ -151,7 +151,23 @@ object Crypto extends Logging {
   }
 
   /** Convenience where only one decryption is done with the given key. */
-  def decrypt(encryptedText: String, key: String): String = decrypt(encryptedText, getCipher(key))
+  def decryptWithNonce(encryptedText: String, key: String): String = decryptWithNonce(encryptedText, getCipher(key))
 
+  /**
+   * Encrypt the given text (without nonce) and then calculate and return a secure hash of the result.
+   */
+  def encryptAndHash(text: String, cipher: IBlockCipher): String = {
+    val numBlock = (text.size / cipherBlockSize) + 1
+    val empty = new String(Array.fill(cipherBlockSize)(0.asInstanceOf[Byte]))
+    val blocksConcatenated = (text + empty).take(numBlock * cipherBlockSize).getBytes
+    val encrypted = Array.fill(numBlock * cipherBlockSize)(0.asInstanceOf[Byte])
+
+    (0 until numBlock).map(b => cipher.encryptBlock(blocksConcatenated, b * cipherBlockSize, encrypted, b * cipherBlockSize))
+
+    val hash = byteArrayToHex(secureHash(encrypted))
+    hash
+  }
+
+  def encryptAndHash(text: String, key: String): String = encryptAndHash(text, getCipher(key))
 
 }

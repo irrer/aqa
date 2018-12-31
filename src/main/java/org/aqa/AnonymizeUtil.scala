@@ -70,7 +70,7 @@ object AnonymizeUtil extends Logging {
 
     private lazy val cipher = Crypto.getCipher(key)
 
-    lazy val name_real = if (institution.name_real.isDefined) Crypto.decrypt(institution.name_real.get, cipher) else institution.name
+    lazy val name_real = if (institution.name_real.isDefined) Crypto.decryptWithNonce(institution.name_real.get, cipher) else institution.name
 
     /** To avoid keeping credentials in memory longer than necessary, give them an expiration time when they are removed from memory. */
     private val timeout = System.currentTimeMillis + cacheTimeout
@@ -78,9 +78,9 @@ object AnonymizeUtil extends Logging {
       timeout >= System.currentTimeMillis
     }
 
-    def encrypt(clearText: String): String = Crypto.encrypt(clearText, cipher)
+    def encrypt(clearText: String): String = Crypto.encryptWithNonce(clearText, cipher)
 
-    def decrypt(clearText: String): String = Crypto.decrypt(clearText, cipher)
+    def decrypt(clearText: String): String = Crypto.decryptWithNonce(clearText, cipher)
 
     /**
      * Save as XML file.
@@ -183,13 +183,13 @@ object AnonymizeUtil extends Logging {
     new ExpireCache
   }
 
-  def encrypt(institutionPK: Long, text: String): String = {
+  def encryptWithNonce(institutionPK: Long, text: String): String = {
     val institutionCredentials = getInstitutionCredentials(institutionPK).encrypt(text)
     scheduleCacheExpiration
     institutionCredentials
   }
 
-  def decrypt(institutionPK: Long, text: String): String = {
+  def decryptWithNonce(institutionPK: Long, text: String): String = {
     val institutionCredentials = getInstitutionCredentials(institutionPK).decrypt(text)
     scheduleCacheExpiration
     institutionCredentials
@@ -216,9 +216,10 @@ object AnonymizeUtil extends Logging {
     aliasPrefix + numText
   }
 
-  def anonymize(source: AttributeList): AttributeList = {
-    val dest = DicomUtil.clone(source)
-    ???
+  def anonymize(institutionPK: Long, source: AttributeList): AttributeList = {
+    val dest = DicomUtil.clone(source) // do not modify the input
+    val tagSet = Config.ToBeAnonymizedList.map(tba => tba.AttrTag).toSet
+    val attrList = DicomUtil.findAll(dest, tagSet)
     dest
   }
 }

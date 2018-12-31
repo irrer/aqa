@@ -122,7 +122,7 @@ Note that when building a package for release, the Maven build process uses the 
      -->
     <ToBeAnonymizedList>
         <ToBeAnonymized Name='PatientID'          Tag='0010,0020'  />  <!-- Example of how Tag is used. -->
-        <ToBeAnonymized           Tag='0010,0010'              />
+        <ToBeAnonymized                           Tag='0010,0010'  />  <!-- Example of how just a Tag is used, equivalent to Name='PatientName' -->
         <ToBeAnonymized Name='PatientBirthDate'                    />
         <ToBeAnonymized Name='PatientBirthTime'                    />
         <ToBeAnonymized Name='PatientSex'                          />
