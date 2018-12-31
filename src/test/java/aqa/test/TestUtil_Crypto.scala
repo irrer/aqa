@@ -36,15 +36,15 @@ class TestUtil_Crypto extends FlatSpec with Matchers {
     val original = "TB_9"
     println("original content size: " + original.size)
     println("message.size: " + original.size)
-    val encrypted = Crypto.encrypt(original, key)
+    val encrypted = Crypto.encryptWithNonce(original, key)
     println("encrypted: " + encrypted)
-    val decrypted = Crypto.decrypt(encrypted, key)
+    val decrypted = Crypto.decryptWithNonce(encrypted, key)
     println("decrypted message: " + decrypted)
 
     (decrypted.equals(original)) should be(true)
 
     // Each time a string is encrypted it should be different.
-    val encrypted2 = Crypto.encrypt(original, key)
+    val encrypted2 = Crypto.encryptWithNonce(original, key)
     (encrypted2.equals(encrypted)) should be(false)
 
     // encrypt different lengths of strings
@@ -53,7 +53,7 @@ class TestUtil_Crypto extends FlatSpec with Matchers {
     for (i <- 0 until 100) {
       val orig = (0 to i).map(ii => rand.nextInt(10)).mkString("")
       print(" " + i)
-      val roundTrip = Crypto.decrypt(Crypto.encrypt(orig, key), key)
+      val roundTrip = Crypto.decryptWithNonce(Crypto.encryptWithNonce(orig, key), key)
       (orig.equals(roundTrip)) should be(true)
     }
     println
