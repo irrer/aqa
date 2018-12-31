@@ -9,6 +9,7 @@ import org.aqa.webrun.phase2.Phase2Util
 import com.pixelmed.dicom.TagFromName
 import org.aqa.Util
 import edu.umro.ScalaUtil.Trace
+import edu.umro.ScalaUtil.DicomUtil
 
 /**
  * General utilities for leaf position.
@@ -19,7 +20,7 @@ object LeafPositionUtil extends Logging {
    * Get the sorted, distinct of all leaf position boundaries (positions of sides of leaves) from the plan for this beam in isoplane mm.
    */
   private def allLeafPositionBoundaries_mm(horizontal: Boolean, beamName: String, plan: AttributeList): Seq[Double] = {
-    val BeamLimitingDeviceSequence = Util.seq2Attr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagFromName.BeamLimitingDeviceSequence)
+    val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagFromName.BeamLimitingDeviceSequence)
     def getLeafPositionBoundaries(bldps: AttributeList): Seq[Double] = {
       val at = bldps.get(TagFromName.LeafPositionBoundaries)
       if (at == null)
@@ -35,8 +36,8 @@ object LeafPositionUtil extends Logging {
    * Get the jaw boundaries parallel to the sides of the collimator leaves.
    */
   private def jawBoundaries(horizontal: Boolean, beamName: String, plan: AttributeList): (Double, Double) = {
-    val ControlPointSequence = Util.seq2Attr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagFromName.ControlPointSequence)
-    val BeamLimitingDevicePositionSequence = ControlPointSequence.map(cps => Util.seq2Attr(cps, TagFromName.BeamLimitingDevicePositionSequence)).flatten
+    val ControlPointSequence = DicomUtil.seqToAttr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagFromName.ControlPointSequence)
+    val BeamLimitingDevicePositionSequence = ControlPointSequence.map(cps => DicomUtil.seqToAttr(cps, TagFromName.BeamLimitingDevicePositionSequence)).flatten
 
     def isJaw(BeamLimitingDevicePosition: AttributeList): Boolean = {
       val deviceType = BeamLimitingDevicePosition.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString
@@ -74,9 +75,9 @@ object LeafPositionUtil extends Logging {
    * Get a sorted list of all the distinct leaf ends in mm as isoplane coordinates.
    */
   def leafEnds(horizontal: Boolean, beamName: String, plan: AttributeList): Seq[Double] = {
-    val ControlPointSequence = Util.seq2Attr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagFromName.ControlPointSequence)
+    val ControlPointSequence = DicomUtil.seqToAttr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagFromName.ControlPointSequence)
     val withEnergy = ControlPointSequence.filter(cp => cp.get(TagFromName.CumulativeMetersetWeight).getDoubleValues.head != 0)
-    val BeamLimitingDevicePositionSequence = withEnergy.map(cps => Util.seq2Attr(cps, TagFromName.BeamLimitingDevicePositionSequence)).flatten
+    val BeamLimitingDevicePositionSequence = withEnergy.map(cps => DicomUtil.seqToAttr(cps, TagFromName.BeamLimitingDevicePositionSequence)).flatten
 
     def isMlc(BeamLimitingDevicePosition: AttributeList): Boolean = {
       val deviceType = BeamLimitingDevicePosition.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString

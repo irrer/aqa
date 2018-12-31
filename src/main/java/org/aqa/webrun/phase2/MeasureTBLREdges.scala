@@ -24,6 +24,7 @@ import java.awt.BasicStroke
 import java.awt.Point
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ImageUtil.ImageText
+import edu.umro.ScalaUtil.DicomUtil
 
 /**
  * Measure the four edges in an image (TBLR : top, bottom, left, right).
@@ -93,15 +94,15 @@ object MeasureTBLREdges extends Logging {
   }
 
   def planCollimatorPositions(beamName: String, plan: AttributeList): X1X2Y1Y2 = {
-    val beamSeq = Util.seq2Attr(plan, TagFromName.BeamSequence).find(bs => bs.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.equals(beamName)).get
-    val controlPtSeq = Util.seq2Attr(beamSeq, TagFromName.ControlPointSequence).head
-    val BeamLimitingDeviceSequence = Util.seq2Attr(controlPtSeq, TagFromName.BeamLimitingDevicePositionSequence)
+    val beamSeq = DicomUtil.seqToAttr(plan, TagFromName.BeamSequence).find(bs => bs.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.equals(beamName)).get
+    val controlPtSeq = DicomUtil.seqToAttr(beamSeq, TagFromName.ControlPointSequence).head
+    val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(controlPtSeq, TagFromName.BeamLimitingDevicePositionSequence)
     getCollimatorPositions(BeamLimitingDeviceSequence)
   }
 
   def imageCollimatorPositions(al: AttributeList): MeasureTBLREdges.X1X2Y1Y2 = {
-    val ExposureSequence = Util.seq2Attr(al, TagFromName.ExposureSequence).head
-    val BeamLimitingDeviceSequence = Util.seq2Attr(ExposureSequence, TagFromName.BeamLimitingDeviceSequence)
+    val ExposureSequence = DicomUtil.seqToAttr(al, TagFromName.ExposureSequence).head
+    val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(ExposureSequence, TagFromName.BeamLimitingDeviceSequence)
     getCollimatorPositions(BeamLimitingDeviceSequence)
   }
 

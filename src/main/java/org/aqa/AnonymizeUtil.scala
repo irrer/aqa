@@ -1,19 +1,19 @@
-package org.aqa.db
+package org.aqa
 
-import org.aqa.Logging
 import java.io.File
-import org.aqa.Config
 import scala.xml.XML
-import org.aqa.Crypto
-import edu.umro.ScalaUtil.Trace
 import scala.collection.mutable.ArrayBuffer
-import org.aqa.Util
 import org.aqa.web.WebUtil
 import edu.umro.ScalaUtil.FileUtil
+import org.aqa.db.Institution
+import scala.collection.Seq
+import com.pixelmed.dicom.AttributeList
+import edu.umro.ScalaUtil.DicomUtil
+import com.pixelmed.dicom.AttributeList
 
 /** Utilities to support database anonymization. */
 
-object DbAnonymize extends Logging {
+object AnonymizeUtil extends Logging {
 
   /** Used to generate alias ids for institutions. */
   val institutionAliasPrefixId = "INST"
@@ -214,5 +214,11 @@ object DbAnonymize extends Logging {
     }
 
     aliasPrefix + numText
+  }
+
+  def anonymize(source: AttributeList): AttributeList = {
+    val dest = DicomUtil.clone(source)
+    ???
+    dest
   }
 }

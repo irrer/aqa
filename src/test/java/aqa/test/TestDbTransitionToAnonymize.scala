@@ -8,7 +8,6 @@ import java.io.File
 import edu.umro.util.Utility
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.FileUtil
-import org.aqa.db.DbAnonymize
 import org.aqa.Config
 import org.aqa.db.DbSetup
 import org.aqa.db.DbTransitionToAnonymize

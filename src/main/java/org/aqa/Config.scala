@@ -23,6 +23,9 @@ import org.aqa.db.MaintenanceCategory
 import edu.umro.ImageUtil.Watermark
 import javax.imageio.ImageIO
 import java.awt.image.BufferedImage
+import com.pixelmed.dicom.AttributeTag
+import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.Trace
 
 /**
  * This class extracts configuration information from the configuration file.  Refer
@@ -544,6 +547,74 @@ object Config extends Logging {
 
   }
 
+  private object ToBeAnonymized {
+    private def fmtTag(tag: AttributeTag) = {
+      tag.getGroup.formatted("%04x") + "," + tag.getElement.formatted("%04x")
+    }
+
+    private def tagFromName(name: String): AttributeTag = {
+      try {
+        DicomUtil.dictionary.getTagFromName(name)
+      } catch {
+        case t: java.lang.Throwable => {
+          val msg = "Unable to find ToBeAnonymized name in Pixelmed library: " + name
+          logger.error(msg)
+          throw new RuntimeException(msg)
+        }
+      }
+    }
+  }
+
+  case class ToBeAnonymized(Name: String, AttrTag: AttributeTag) {
+    def this(Name: String) = this(Name, ToBeAnonymized.tagFromName(Name))
+    def this(attrTag: AttributeTag) = this(ToBeAnonymized.fmtTag(attrTag), attrTag)
+
+    override def toString = ToBeAnonymized.fmtTag(AttrTag) + " : " + Name
+  }
+
+  def getToBeAnonymizedList: List[ToBeAnonymized] = {
+    def makeToBeAnon(node: Node): ToBeAnonymized = {
+      val Name: Option[String] = {
+        val ns = node \ "@Name"
+        if (ns.nonEmpty) Some(ns.head.text.trim) else None
+      }
+      val Tag: Option[AttributeTag] = {
+        val ns = node \ "@Tag"
+        if (ns.isEmpty) None
+        else {
+          try {
+            val text = ns.head.text
+            val intList = text.trim.toLowerCase.replace("x", "").split(",").map(t => Integer.parseInt(t, 16))
+            Some(new AttributeTag(intList(0), intList(1)))
+          } catch {
+            case t: Throwable =>
+              logger.warn("Ignoring unparsable ToBeAnonymized configuration tag (should be pair of hex values): " + ns)
+              None
+          }
+        }
+      }
+
+      (Name, Tag) match {
+        case (Some(n), Some(t)) => new ToBeAnonymized(n, t)
+        case (Some(n), _) => new ToBeAnonymized(n)
+        case (_, Some(t)) => {
+          val nm = DicomUtil.dictionary.getNameFromTag(t)  // try to get the name from the dictionary
+          if (nm == null)
+            new ToBeAnonymized(t)
+          else
+            new ToBeAnonymized(nm, t)
+        }
+        case _ => throw new RuntimeException("Ignoring unparsable ToBeAnonymized configuration value: " + node)
+      }
+    }
+
+    val configTag = "ToBeAnonymizedList"
+    logger.info("Getting " + configTag + "  ...")
+    val list = (document \ configTag \ "ToBeAnonymized").toList.map(node => makeToBeAnon(node))
+    logText(configTag, "\n        " + list.mkString("\n        "))
+    list
+  }
+
   val SlickDbsDefaultDbUrl = logMainText("SlickDbsDefaultDbUrl")
   val SlickDbsDefaultDbUser = getDbUser
   val SlickDbsDefaultDbPassword = getDbPassword
@@ -579,6 +650,8 @@ object Config extends Logging {
   val MaxAllowedBadPixelsPerMillion = logMainText("MaxAllowedBadPixelsPerMillion").toInt
 
   val MaxProcedureDuration = logMainText("MaxProcedureDuration").toDouble
+
+  val ToBeAnonymizedList = getToBeAnonymizedList
 
   val TermsOfUse = logMainText("TermsOfUse")
 

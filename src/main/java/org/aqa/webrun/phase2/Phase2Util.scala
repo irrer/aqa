@@ -30,6 +30,7 @@ import org.aqa.db.Baseline
 import org.aqa.web.PMIList
 import org.aqa.web.MachineList
 import org.aqa.web.MachineUpdate
+import edu.umro.ScalaUtil.DicomUtil
 
 /**
  * Utilities for Phase 2.
@@ -40,7 +41,7 @@ object Phase2Util extends Logging {
    * Get the plan that this image references.  If it does not reference exactly one it will throw an exception.
    */
   def referencedPlanUID(rtimage: DicomFile): String = {
-    val planSeqList = Util.seq2Attr(rtimage.attributeList.get, TagFromName.ReferencedRTPlanSequence)
+    val planSeqList = DicomUtil.seqToAttr(rtimage.attributeList.get, TagFromName.ReferencedRTPlanSequence)
     val planUidList = planSeqList.map(al => al.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrNull).filter(uid => uid != null).distinct
     if (planUidList.size != 1) throw new RuntimeException("RTIMAGE file should reference exactly one plan, but actually references " + planUidList.size)
     planUidList.head
@@ -57,7 +58,7 @@ object Phase2Util extends Logging {
         val j = imgRef.equals(planUID)
         imgRef.equals(planUID)
       }
-      val j1 = Util.seq2Attr(image.attributeList.get, TagFromName.ReferencedRTPlanSequence).filter(al => doesRef(al)).nonEmpty
+      val j1 = DicomUtil.seqToAttr(image.attributeList.get, TagFromName.ReferencedRTPlanSequence).filter(al => doesRef(al)).nonEmpty
       j1
     } catch {
       case t: Throwable => false
@@ -139,7 +140,7 @@ object Phase2Util extends Logging {
   def getBeamNameOfRtimage(plan: DicomFile, rtimage: DicomFile): Option[String] = {
     try {
       val ReferencedBeamNumber = rtimage.attributeList.get.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head
-      val beam = Util.seq2Attr(plan.attributeList.get, TagFromName.BeamSequence).find(bs => bs.get(TagFromName.BeamNumber).getIntegerValues().head == ReferencedBeamNumber).get
+      val beam = DicomUtil.seqToAttr(plan.attributeList.get, TagFromName.BeamSequence).find(bs => bs.get(TagFromName.BeamNumber).getIntegerValues().head == ReferencedBeamNumber).get
       val BeamName = beam.get(TagFromName.BeamName).getSingleStringValueOrNull
       val bn = if (BeamName == null) None else Some(BeamName.trim)
       bn
@@ -152,7 +153,7 @@ object Phase2Util extends Logging {
    * Given an RTPLAN and a beam name, get the beam sequence.
    */
   def getBeamSequenceOfPlan(beamName: String, plan: AttributeList): AttributeList = {
-    val bs = Util.seq2Attr(plan, TagFromName.BeamSequence).filter(b => b.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.equals(beamName.trim)).head
+    val bs = DicomUtil.seqToAttr(plan, TagFromName.BeamSequence).filter(b => b.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.equals(beamName.trim)).head
     bs
   }
 
@@ -424,7 +425,7 @@ object Phase2Util extends Logging {
     // Determine if the given attribute list references the given beam number.
     def matchesBeam(beamNumber: Int, al: AttributeList): Boolean = (al.get(TagFromName.BeamNumber).getIntegerValues.head == beamNumber)
 
-    Util.seq2Attr(plan, TagFromName.BeamSequence).find(bs => matchesBeam(beamNumber, bs)).get
+    DicomUtil.seqToAttr(plan, TagFromName.BeamSequence).find(bs => matchesBeam(beamNumber, bs)).get
   }
 
   /**

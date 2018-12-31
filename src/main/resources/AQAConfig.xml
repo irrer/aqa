@@ -98,6 +98,79 @@ Note that when building a package for release, the Maven build process uses the 
     examining the input files to determine if they are from different sessions. -->
     <MaxProcedureDuration>120.0</MaxProcedureDuration>
 
+    <!-- List of DICOM attributes to be anonymized to protect institutional identities.  The Name and
+    Tag allow the configuration of both standard and private tags.
+    
+         Name: The name by which the attribute is referenced.
+         
+         Tag:  The hex numeric tag of the attribute.
+         
+     At least one of Name or Tag must be specified.
+     
+     If both Name and Tag are given, then the Name will be associated with the Tag.
+     
+     If just Name is given, Pixelmed's standard dictionary will be used to look up the tag.
+     
+     If just the Tag is given and the tag is in Pixelmed's standard dictionary, then the Pixelmed name
+     will be used.
+     
+     If just the Tag is given and the tag is not in Pixelmed's standard dictionary, then tag will also
+     be used as the Name.
+     
+     Warning: If a Name value is not in the standard dictionary, then the server will halt with
+     a java.lang.ExceptionInInitializerError error.
+     -->
+    <ToBeAnonymizedList>
+        <ToBeAnonymized Name='PatientID'          Tag='0010,0020'  />  <!-- Example of how Tag is used. -->
+        <ToBeAnonymized           Tag='0010,0010'              />
+        <ToBeAnonymized Name='PatientBirthDate'                    />
+        <ToBeAnonymized Name='PatientBirthTime'                    />
+        <ToBeAnonymized Name='PatientSex'                          />
+        <ToBeAnonymized Name='OtherPatientIDs'                     />
+        <ToBeAnonymized Name='OtherPatientNames'                   />
+        <ToBeAnonymized Name='PatientAge'                          />
+        <ToBeAnonymized Name='PatientSize'                         />
+        <ToBeAnonymized Name='PatientWeight'                       />
+        <ToBeAnonymized Name='InstanceCreatorUID'                  />
+        <ToBeAnonymized Name='SOPInstanceUID'                      />
+        <ToBeAnonymized Name='AccessionNumber'                     />
+        <ToBeAnonymized Name='InstitutionName'                     />
+        <ToBeAnonymized Name='InstitutionAddress'                  />
+        <ToBeAnonymized Name='ReferringPhysicianName'              />
+        <ToBeAnonymized Name='ReferringPhysicianAddress'           />
+        <ToBeAnonymized Name='ReferringPhysicianTelephoneNumbers'  />
+        <ToBeAnonymized Name='StationName'                         />
+        <ToBeAnonymized Name='InstitutionalDepartmentName'         />
+        <ToBeAnonymized Name='PhysiciansOfRecord'                  />
+        <ToBeAnonymized Name='PerformingPhysicianName'             />
+        <ToBeAnonymized Name='NameOfPhysiciansReadingStudy'        />
+        <ToBeAnonymized Name='OperatorsName'                       />
+        <ToBeAnonymized Name='ReferencedSOPInstanceUID'            />
+        <ToBeAnonymized Name='MedicalRecordLocator'                />
+        <ToBeAnonymized Name='EthnicGroup'                         />
+        <ToBeAnonymized Name='Occupation'                          />
+        <ToBeAnonymized Name='AdditionalPatientHistory'            />
+        <ToBeAnonymized Name='PatientComments'                     />
+        <ToBeAnonymized Name='DeviceSerialNumber'                  />
+        <ToBeAnonymized Name='ProtocolName'                        />
+        <ToBeAnonymized Name='StudyInstanceUID'                    />
+        <ToBeAnonymized Name='SeriesInstanceUID'                   />
+        <ToBeAnonymized Name='StudyID'                             />
+        <ToBeAnonymized Name='FrameOfReferenceUID'                 />
+        <ToBeAnonymized Name='SynchronizationFrameOfReferenceUID'  />
+        <ToBeAnonymized Name='ImageComments'                       />
+        <ToBeAnonymized Name='UID'                                 />
+        <ToBeAnonymized Name='StorageMediaFileSetUID'              />
+        <ToBeAnonymized Name='ReferencedFrameOfReferenceUID'       />
+        <ToBeAnonymized Name='RelatedFrameOfReferenceUID'          />
+        <ToBeAnonymized Name='SourceFrameOfReferenceUID'           />
+        <ToBeAnonymized Name='RTPlanName'                          />
+        <ToBeAnonymized Name='DoseReferenceUID'                    />
+     <!--  <ToBeAnonymized Name='ReferencedPrimaryDoseRefUID'         />   -->
+    </ToBeAnonymizedList>
+
+
+
     <!-- List of categories of maintenance, as referenced in the PMI database table.  If a category is in
         the database whose name does not match one of these, then the first category is used as a default.
         

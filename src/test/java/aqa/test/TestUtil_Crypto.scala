@@ -10,7 +10,7 @@ import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Crypto
 import scala.util.Random
-import org.aqa.db.DbAnonymize
+import org.aqa.AnonymizeUtil
 
 /**
  * Test the Config.
@@ -60,9 +60,9 @@ class TestUtil_Crypto extends FlatSpec with Matchers {
 
   }
 
-  DbAnonymize.aliasify("HEY", 4) should be("HEY___4")
-  DbAnonymize.aliasify("HEY", 56) should be("HEY__56")
-  DbAnonymize.aliasify("HO", 123456) should be("HO123456")
-  DbAnonymize.aliasify("HO", 3456) should be("HO3456")
+  AnonymizeUtil.aliasify("HEY", 4) should be("HEY___4")
+  AnonymizeUtil.aliasify("HEY", 56) should be("HEY__56")
+  AnonymizeUtil.aliasify("HO", 123456) should be("HO123456")
+  AnonymizeUtil.aliasify("HO", 3456) should be("HO3456")
 
 }

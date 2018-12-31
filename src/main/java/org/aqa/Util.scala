@@ -337,14 +337,6 @@ object Util extends Logging {
   }
 
   /**
-   * Get the attribute lists of a sequence attribute.
-   */
-  def seq2Attr(al: AttributeList, tag: AttributeTag): Seq[AttributeList] = {
-    val seq = (al.get(tag)).asInstanceOf[SequenceAttribute]
-    (0 until seq.getNumberOfItems).map(i => seq.getItem(i).getAttributeList)
-  }
-
-  /**
    * Given the text for a single CVS cell, return the properly formatted text for CSV.
    */
   def textToCsv(text: String): String = {

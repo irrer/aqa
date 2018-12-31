@@ -10,7 +10,6 @@ import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Crypto
 import scala.util.Random
-import org.aqa.db.DbAnonymize
 import com.pixelmed.dicom.AttributeList
 import org.aqa.AnonymizeDicom
 import com.pixelmed.dicom.AttributeTag
