@@ -117,20 +117,29 @@ Note that when building a package for release, the Maven build process uses the 
      If just the Tag is given and the tag is not in Pixelmed's standard dictionary, then tag will also
      be used as the Name.
      
+     The 'Value' XML attribute is used when a constant value is to be used for anonymizing the original
+     value.  This is used when it is not important to be able to recover the original contents, and the
+     field has specific formatting requirements (such as time or date). 
+     
+     If the 'Value' XML attribute is not given, then the DICOM attribute will be anonymized to either:
+         - for UIDs: To a new unique UID
+         - for non-UIDs: To the 'Name' XML attribute followed by an underscore and a unique integer.  For
+           example, StationName might be anonymized to StationName_43
+     
      Warning: If a Name value is not in the standard dictionary, then the server will halt with
      a java.lang.ExceptionInInitializerError error.
      -->
     <ToBeAnonymizedList>
         <ToBeAnonymized Name='PatientID'          Tag='0010,0020'  />  <!-- Example of how Tag is used. -->
         <ToBeAnonymized                           Tag='0010,0010'  />  <!-- Example of how just a Tag is used, equivalent to Name='PatientName' -->
-        <ToBeAnonymized Name='PatientBirthDate'                    />
-        <ToBeAnonymized Name='PatientBirthTime'                    />
-        <ToBeAnonymized Name='PatientSex'                          />
+        <ToBeAnonymized Name='PatientBirthDate'                    Value='18000101'/>
+        <ToBeAnonymized Name='PatientBirthTime'                    Value='000000'/>
+        <ToBeAnonymized Name='PatientSex'                          Value='O'/>
         <ToBeAnonymized Name='OtherPatientIDs'                     />
         <ToBeAnonymized Name='OtherPatientNames'                   />
-        <ToBeAnonymized Name='PatientAge'                          />
-        <ToBeAnonymized Name='PatientSize'                         />
-        <ToBeAnonymized Name='PatientWeight'                       />
+        <ToBeAnonymized Name='PatientAge'                          Value='0'/>
+        <ToBeAnonymized Name='PatientSize'                         Value='0'/>
+        <ToBeAnonymized Name='PatientWeight'                       Value='0'/>
         <ToBeAnonymized Name='InstanceCreatorUID'                  />
         <ToBeAnonymized Name='SOPInstanceUID'                      />
         <ToBeAnonymized Name='AccessionNumber'                     />

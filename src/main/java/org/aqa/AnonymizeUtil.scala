@@ -10,6 +10,8 @@ import scala.collection.Seq
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ScalaUtil.DicomUtil
 import com.pixelmed.dicom.AttributeList
+import com.pixelmed.dicom.Attribute
+import org.aqa.db.DicomAnonymous
 
 /** Utilities to support database anonymization. */
 
@@ -183,6 +185,11 @@ object AnonymizeUtil extends Logging {
     new ExpireCache
   }
 
+  /**
+   * Get the key of the given institution.
+   */
+  def getInstitutionKey(institutionPK: Long): String = getInstitutionCredentials(institutionPK).key
+
   def encryptWithNonce(institutionPK: Long, text: String): String = {
     val institutionCredentials = getInstitutionCredentials(institutionPK).encrypt(text)
     scheduleCacheExpiration
@@ -216,10 +223,29 @@ object AnonymizeUtil extends Logging {
     aliasPrefix + numText
   }
 
-  def anonymize(institutionPK: Long, source: AttributeList): AttributeList = {
+  def anonymizeDicom(institutionPK: Long, source: AttributeList): AttributeList = {
     val dest = DicomUtil.clone(source) // do not modify the input
-    val tagSet = Config.ToBeAnonymizedList.map(tba => tba.AttrTag).toSet
+    val tagSet = Config.ToBeAnonymizedList.keys.toSet
     val attrList = DicomUtil.findAll(dest, tagSet)
+    val institutionKey = getInstitutionKey(institutionPK)
+
+    //    def hashAttr(attr: Attribute): String = {
+    //      val text = institutionKey + DicomUtil.formatAttrTag(attr.getTag) + attr.getSingleStringValueOrEmptyString
+    //      Crypto.byteArrayToHex(Crypto.secureHash(text.getBytes))
+    //    }
+
+    val prev = DicomAnonymous.getAttributes(institutionPK, attrList).map(p => (p.attributeHash, p)).toMap
+    def wasPrevAnonyimized(a: Attribute): Boolean = {
+      val p = prev.get(DicomAnonymous.makeAttributeHash(institutionKey, a))
+      p.isDefined && p.get.attributeTag.equals(DicomUtil.formatAttrTag(a.getTag))
+    }
+    val both = attrList.partition(a => wasPrevAnonyimized(a))
+
+    val oldAttr = both._1
+    val newAttr = both._2
+
+    ??? // TODO just, TODO
+
     dest
   }
 }

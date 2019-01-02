@@ -66,6 +66,7 @@ object DbSetup extends Logging {
     PMI.query,
     Output.query,
     OutputFiles.query,
+    DicomAnonymous.query,
     Baseline.query,
     BaselineContent.query,
     CentralAxis.query,
