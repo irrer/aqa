@@ -119,7 +119,7 @@ Note that when building a package for release, the Maven build process uses the 
      
      The 'Value' XML attribute is used when a constant value is to be used for anonymizing the original
      value.  This is used when it is not important to be able to recover the original contents, and the
-     field has specific formatting requirements (such as time or date). 
+     field has specific formatting requirements (such as time or date).  
      
      If the 'Value' XML attribute is not given, then the DICOM attribute will be anonymized to either:
          - for UIDs: To a new unique UID
@@ -142,7 +142,7 @@ Note that when building a package for release, the Maven build process uses the 
         <ToBeAnonymized Name='PatientWeight'                       Value='0'/>
         <ToBeAnonymized Name='InstanceCreatorUID'                  />
         <ToBeAnonymized Name='SOPInstanceUID'                      />
-        <ToBeAnonymized Name='AccessionNumber'                     />
+        <ToBeAnonymized Name='AccessionNumber'                     Value='0'/>
         <ToBeAnonymized Name='InstitutionName'                     />
         <ToBeAnonymized Name='InstitutionAddress'                  />
         <ToBeAnonymized Name='ReferringPhysicianName'              />

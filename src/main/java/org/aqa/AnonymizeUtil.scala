@@ -12,6 +12,7 @@ import edu.umro.ScalaUtil.DicomUtil
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.Attribute
 import org.aqa.db.DicomAnonymous
+import edu.umro.ScalaUtil.Trace
 
 /** Utilities to support database anonymization. */
 
@@ -62,8 +63,6 @@ object AnonymizeUtil extends Logging {
    * @param key: Secret key as a hexadecimal string.
    */
   private case class InstitutionCredentials(institution: Institution, key: String) {
-
-    def this(name: String, key: String) = this(Institution.getInstitutionByName(name).get, key)
 
     val aliasName = {
       if (institution.name.startsWith(institutionAliasPrefixId)) institution.name
@@ -118,12 +117,24 @@ object AnonymizeUtil extends Logging {
         val doc = XML.loadFile(file)
         val name = (doc \ "name").head.text.toString
         val key = (doc \ "key").head.text.toString
-        Some(new InstitutionCredentials(name, key))
+
+        Institution.getInstitutionByName(name) match {
+          case Some(institution) => Some(new InstitutionCredentials(institution, key))
+          case _ => {
+            // TODO this code will be obsolete when anonymization is complete, but until then
+            // assume that the primary key was used to construct the institution's alias.
+
+            val instPK = name.replaceAll(".*_", "").toLong
+            val institution = Institution.get(instPK).get
+            Some(new InstitutionCredentials(institution, key))
+          }
+        }
       } catch {
         case t: Throwable => None
       }
     }
-    securityDir.listFiles.filter(f => isCredentialFile(f)).map(f => readCredentialFile(f)).flatten.toList
+    val list = securityDir.listFiles.filter(f => isCredentialFile(f)).map(f => readCredentialFile(f)).flatten.toList
+    list
   }
 
   /**
@@ -223,29 +234,54 @@ object AnonymizeUtil extends Logging {
     aliasPrefix + numText
   }
 
-  def anonymizeDicom(institutionPK: Long, source: AttributeList): AttributeList = {
-    val dest = DicomUtil.clone(source) // do not modify the input
+  private def getListOfAttributesNeedingAnonymization(al: AttributeList): Seq[Attribute] = {
     val tagSet = Config.ToBeAnonymizedList.keys.toSet
-    val attrList = DicomUtil.findAll(dest, tagSet)
+    DicomUtil.findAll(al, tagSet)
+  }
+
+  /**
+   * Given the list of attributes that need to be anonymized, return a list of DicomAnonymous entries that
+   * address them.  If the entries do not already exist in the database, then create and insert them.
+   */
+  private def makeDicomAnonymousList(institutionPK: Long, attrList: Seq[Attribute]): Seq[DicomAnonymous] = {
     val institutionKey = getInstitutionKey(institutionPK)
+    val previouslyAnonymized = DicomAnonymous.getAttributes(institutionPK, attrList) //.map(da => da.unencrypt)
 
-    //    def hashAttr(attr: Attribute): String = {
-    //      val text = institutionKey + DicomUtil.formatAttrTag(attr.getTag) + attr.getSingleStringValueOrEmptyString
-    //      Crypto.byteArrayToHex(Crypto.secureHash(text.getBytes))
-    //    }
-
-    val prev = DicomAnonymous.getAttributes(institutionPK, attrList).map(p => (p.attributeHash, p)).toMap
-    def wasPrevAnonyimized(a: Attribute): Boolean = {
-      val p = prev.get(DicomAnonymous.makeAttributeHash(institutionKey, a))
-      p.isDefined && p.get.attributeTag.equals(DicomUtil.formatAttrTag(a.getTag))
+    def alreadyHasBeenAnonyimized(prev: Seq[DicomAnonymous], attr: Attribute): Boolean = {
+      val attrHash = DicomAnonymous.makeAttributeHash(institutionKey, attr)
+      val attrText = DicomAnonymous.formatAnonAttributeTag(attr.getTag)
+      prev.find(da => da.attributeHash.equals(attrHash) && da.attributeTag.equals(attrText)).isDefined
     }
-    val both = attrList.partition(a => wasPrevAnonyimized(a))
 
-    val oldAttr = both._1
-    val newAttr = both._2
+    def addIfNeeded(list: Seq[DicomAnonymous], attr: Attribute): Seq[DicomAnonymous] = {
+      if (alreadyHasBeenAnonyimized(list, attr))
+        list
+      else {
+        val da = DicomAnonymous.insert(institutionPK, attr)
+        list :+ da
+      }
+    }
 
-    ??? // TODO just, TODO
+    val updated = attrList.foldLeft(previouslyAnonymized)((list, attr) => addIfNeeded(list, attr))
+    updated
+  }
 
+  def anonymizeDicom(institutionPK: Long, source: AttributeList): AttributeList = {
+    val institutionKey = getInstitutionKey(institutionPK)
+    val dest = DicomUtil.clone(source) // do not modify the input
+
+    val attrList = getListOfAttributesNeedingAnonymization(dest)
+    val updatedDicomAnonymousList = makeDicomAnonymousList(institutionPK, attrList)
+
+    def anonymizeAttribute(attr: Attribute): Unit = {
+      val attrHash = DicomAnonymous.makeAttributeHash(institutionKey, attr)
+      val attrText = DicomAnonymous.formatAnonAttributeTag(attr.getTag)
+      val anonValue = updatedDicomAnonymousList.find(da => da.attributeHash.equals(attrHash) && da.attributeTag.equals(attrText)).get.value
+      attr.removeValues
+      attr.addValue(anonValue)
+    }
+
+    attrList.map(a => anonymizeAttribute(a))
     dest
   }
 }

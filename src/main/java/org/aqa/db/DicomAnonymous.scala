@@ -14,6 +14,7 @@ import org.aqa.Crypto
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.ValueRepresentation
 import edu.umro.util.UMROGUID
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Support the anonymization of DICOM by providing a way to store previously anonymized values in the database.
@@ -26,6 +27,15 @@ case class DicomAnonymous(
   attributeHash: String, // secure hash of tag and value to allow searches on this row.
   value_real: String // actual non-anonymized value encrypted
 ) {
+
+  override def toString = {
+    "PK: " + { if (dicomAnonymousPK.isDefined) dicomAnonymousPK.get else "none" } +
+      "    instPK: " + institutionPK +
+      "    tag: " + attributeTag +
+      "    value: " + value +
+      "    attrHash: " + attributeHash.take(10) + "..." +
+      "    value_real: " + value_real.take(10) + "..."
+  }
 
   /* This probably should never be used due to the special nature of generating anonymized values using
    * the primary key which is generated as the entry is inserted.
@@ -41,6 +51,14 @@ case class DicomAnonymous(
   */
 
   def insertOrUpdate = Db.run(DicomAnonymous.query.insertOrUpdate(this))
+
+  /**
+   * Return a copy of this with the <code>value_real</code> set to the original value.
+   */
+  def unencrypt = {
+    val vReal = AnonymizeUtil.encryptWithNonce(institutionPK, value_real)
+    this.copy(value_real = vReal)
+  }
 }
 
 object DicomAnonymous extends Logging {
@@ -92,7 +110,7 @@ object DicomAnonymous extends Logging {
     } else 0
   }
 
-  private def formatAnonAttributeTag(tag: AttributeTag): String = {
+  def formatAnonAttributeTag(tag: AttributeTag): String = {
     val hex = DicomUtil.formatAttrTag(tag)
     val name = {
       val n = DicomUtil.dictionary.getNameFromTag(tag)
@@ -111,7 +129,8 @@ object DicomAnonymous extends Logging {
    * The institution key and tag make the hash unique across institutions and tags.
    */
   def makeAttributeHash(institutionKey: String, attr: Attribute): String = {
-    val text = institutionKey + DicomUtil.formatAttrTag(attr.getTag) + attr.getSingleStringValueOrEmptyString
+    val text = institutionKey + formatAnonAttributeTag(attr.getTag) + attr.getSingleStringValueOrEmptyString
+    Trace.trace(text)
     Crypto.byteArrayToHex(Crypto.secureHash(text.getBytes))
   }
 
@@ -156,8 +175,10 @@ object DicomAnonymous extends Logging {
       if (anonymousValue.isDefined) anonymousValue.get else "dummyValue",
       makeAttributeHash(institutionKey, attr),
       AnonymizeUtil.encryptWithNonce(institutionPK, valu))
+    Trace.trace(da)
 
     val insertQuery = {
+      Trace.trace
       DicomAnonymous.query returning
         DicomAnonymous.query.map(_.dicomAnonymousPK) into
         ((dicomAnonymous, dicomAnonymousPK) => dicomAnonymous.copy(dicomAnonymousPK = Some(dicomAnonymousPK)))
@@ -165,10 +186,18 @@ object DicomAnonymous extends Logging {
 
     val action = insertQuery += da
     val result = Db.run(action)
+    Trace.trace
 
     if (anonymousValue.isEmpty) {
+      Trace.trace
       val revised = result.copy(value = tba.Name + "_" + result.dicomAnonymousPK.get.toString)
-      Db.run(query.update(revised))
+      Trace.trace(revised)
+
+      //      Db.run(query.filter(_.dicomAnonymousPK === result.dicomAnonymousPK.get).
+      //        map(da => (da.anonymousValue).update(revised.anonymousValue))
+
+      Db.run(query.insertOrUpdate(revised))
+      Trace.trace(revised)
       revised
     } else
       result
