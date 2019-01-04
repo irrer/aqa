@@ -166,6 +166,9 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
     value.isDefined && value.get.toString.equals(button.label)
   }
 
+  /**
+   * Main entry point of web interface.
+   */
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
 

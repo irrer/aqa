@@ -39,6 +39,11 @@ import org.restlet.data.Protocol
 import org.aqa.Util
 import org.aqa.db.Machine.MMI
 import org.aqa.DicomFile
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import com.pixelmed.dicom.DicomInputStream
+import org.aqa.AnonymizeUtil
+import edu.umro.ScalaUtil.DicomUtil
 
 object WebUtil extends Logging {
 
@@ -94,7 +99,7 @@ object WebUtil extends Logging {
   /**
    * Write the input stream to the file.
    */
-  private def saveFile(inputStream: InputStream, file: File) = {
+  private def XsaveFile(inputStream: InputStream, file: File) = { // TODO rm?
     file.getParentFile.mkdirs
     file.delete
     file.createNewFile
@@ -108,6 +113,58 @@ object WebUtil extends Logging {
     }
     outputStream.flush
     outputStream.close
+  }
+
+  /**
+   * Convert the given stream to DICOM and return the attribute list.  If it
+   * is not DICOM, then return None.
+   */
+  private def isDicom(inputStream: InputStream): Option[AttributeList] = {
+    try {
+      val al = new AttributeList
+      val dicomInStream = new DicomInputStream(inputStream)
+      al.read(dicomInStream)
+      // require it to have an SOPInstanceUID to be valid DICOM.  Throws an exception if it does not have one
+      al.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull.trim
+      Some(al)
+    } catch {
+      case t: Throwable => None
+    }
+  }
+
+  /**
+   * Write the input stream to the file.
+   */
+  private def saveFile(inputStream: InputStream, file: File) = {
+    file.getParentFile.mkdirs
+
+    val outputStream = new ByteArrayOutputStream
+
+    val buffer = Array.ofDim[Byte](16 * 1024)
+    var size = inputStream.read(buffer)
+    while (size != -1) {
+      outputStream.write(buffer, 0, size)
+      size = inputStream.read(buffer)
+    }
+    outputStream.flush
+    outputStream.close
+
+    val byteInStream = new ByteArrayInputStream(outputStream.toByteArray)
+
+    isDicom(byteInStream) match {
+      case Some(al) => {
+        val anon = AnonymizeUtil.anonymizeDicom(2, al) // TODO change 2 to institutionPK
+        DicomUtil.writeAttributeList(anon, file)
+      }
+      case _ => {
+        file.delete
+        file.createNewFile
+        val fileOutStream = new FileOutputStream(file)
+        fileOutStream.write(outputStream.toByteArray)
+        fileOutStream.flush
+        fileOutStream.close
+      }
+    }
   }
 
   def sessionDir(valueMap: ValueMapT): Option[File] = {

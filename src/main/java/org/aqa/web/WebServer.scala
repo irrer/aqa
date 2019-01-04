@@ -432,6 +432,7 @@ class WebServer extends Application with Logging {
         new ServiceInstance,
         new SymmetryAndFlatnessUseAsBaseline,
         new WedgeUseAsBaseline,
+        new AnonymousTranslate,
         termsOfUse,
         outputList,
         webRunIndex,

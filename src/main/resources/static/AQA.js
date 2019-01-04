@@ -64,7 +64,7 @@ $(document).ready(function() {
  * so the user can easily find it. 
  */
 var jsonhttp = new XMLHttpRequest();
-var aliasToRealUrl = "aliasToRealList.json";  // defines the URL for getting the alias to real table
+var aliasToRealUrl = "/AnonymousTranslate/translateTable.json";  // defines the URL for getting the alias to real table
 
 jsonhttp.onreadystatechange = function() {
   if (this.readyState == 4 && this.status == 200) {

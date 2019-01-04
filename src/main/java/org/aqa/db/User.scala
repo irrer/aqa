@@ -118,6 +118,11 @@ object User extends Logging {
     Db.run(action)
   }
 
+  def listUsersFromInstitution(institutionPK: Long): Seq[User] = {
+    val action = query.filter(u => u.institutionPK === institutionPK)
+    Db.run(action.result)
+  }
+
   /**
    * Get the number of users that belong to the given institution.
    */

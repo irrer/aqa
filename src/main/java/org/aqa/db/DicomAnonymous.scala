@@ -130,7 +130,6 @@ object DicomAnonymous extends Logging {
    */
   def makeAttributeHash(institutionKey: String, attr: Attribute): String = {
     val text = institutionKey + formatAnonAttributeTag(attr.getTag) + attr.getSingleStringValueOrEmptyString
-    Trace.trace(text)
     Crypto.byteArrayToHex(Crypto.secureHash(text.getBytes))
   }
 
@@ -175,10 +174,8 @@ object DicomAnonymous extends Logging {
       if (anonymousValue.isDefined) anonymousValue.get else "dummyValue",
       makeAttributeHash(institutionKey, attr),
       AnonymizeUtil.encryptWithNonce(institutionPK, valu))
-    Trace.trace(da)
 
     val insertQuery = {
-      Trace.trace
       DicomAnonymous.query returning
         DicomAnonymous.query.map(_.dicomAnonymousPK) into
         ((dicomAnonymous, dicomAnonymousPK) => dicomAnonymous.copy(dicomAnonymousPK = Some(dicomAnonymousPK)))
@@ -186,18 +183,14 @@ object DicomAnonymous extends Logging {
 
     val action = insertQuery += da
     val result = Db.run(action)
-    Trace.trace
 
     if (anonymousValue.isEmpty) {
-      Trace.trace
       val revised = result.copy(value = tba.Name + "_" + result.dicomAnonymousPK.get.toString)
-      Trace.trace(revised)
 
       //      Db.run(query.filter(_.dicomAnonymousPK === result.dicomAnonymousPK.get).
       //        map(da => (da.anonymousValue).update(revised.anonymousValue))
 
       Db.run(query.insertOrUpdate(revised))
-      Trace.trace(revised)
       revised
     } else
       result
