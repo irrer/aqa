@@ -44,6 +44,7 @@ import java.io.ByteArrayOutputStream
 import com.pixelmed.dicom.DicomInputStream
 import org.aqa.AnonymizeUtil
 import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.db.CachedUser
 
 object WebUtil extends Logging {
 
@@ -893,7 +894,12 @@ object WebUtil extends Logging {
   def getUser(request: Request): Option[User] = {
     val cr = request.getChallengeResponse
     if (cr == null) None
-    else User.getUserById(cr.getIdentifier)
+    else {
+      val u = User.getUserById(cr.getIdentifier) // backwards compatible with non-anonymized database
+      if (u.isDefined) u
+      else
+        CachedUser.get(cr.getIdentifier)
+    }
   }
 
   def getUserIdOrDefault(request: Request, dflt: String): String = {

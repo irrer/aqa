@@ -272,7 +272,6 @@ class WebServer extends Application with Logging {
                 logger.warn("Authorization violation.  User " + user.id +
                   " attempted to access " + request.toString + " that requires role " + requestedRole + " but their role is only " + user.getRole)
                 response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
-                //response.redirectSeeOther("/NotAuthorized")   // TODO rm
                 response.redirectSeeOther(notAuthorized.pathOf)
               } else
                 response.setStatus(Status.SUCCESS_OK)
@@ -289,10 +288,6 @@ class WebServer extends Application with Logging {
           response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
         }
       }
-
-      val j = response.getStatus // TODO rm
-      Trace.trace(j) // TODO rm
-      response.setStatus(Status.SUCCESS_OK) // TODO rm - authorizes everyone
     }
 
     def needsToAgreeToTerms(id: String): Boolean = {
@@ -308,7 +303,6 @@ class WebServer extends Application with Logging {
         // If there are no credentials, then let the authenticator decide whether to
         // accept or reject the request.  If rejected (not publik), then it will
         // send a challenge request to the client.
-        val j = request.getChallengeResponse // TODO rm
         request.getChallengeResponse match {
           case null => Filter.CONTINUE
           case cr => {

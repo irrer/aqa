@@ -30,6 +30,7 @@ object CachedUser {
    */
   def get(id: String): Option[User] = {
     clean
+    val canonId = id.toLowerCase.trim
     getFromCache(id) match {
       case Some(cu) => Some(cu.user)
       case _ => {
