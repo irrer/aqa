@@ -35,6 +35,8 @@ import org.aqa.db.Output
 import org.aqa.db.Input
 import org.aqa.webrun.phase2.wedge.WedgeUseAsBaseline
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessUseAsBaseline
+import org.aqa.AnonymizeUtil
+import edu.umro.ScalaUtil.Trace
 
 object WebServer {
   val challengeScheme = ChallengeScheme.HTTP_BASIC
@@ -241,29 +243,56 @@ class WebServer extends Application with Logging {
     challAuthn.setVerifier(new AuthenticationVerifier(getRequestedRole _))
     challAuthn.setNext(restlet)
 
-    case class UserAndRole(user: User, role: UserRole.Value);
+    // case class UserAndRole(user: User, role: UserRole.Value);
 
-    def checkAuthorization(request: Request, response: Response, challResp: ChallengeResponse): Unit = {
-      val requestedRole = getRequestedRole(request, response)
-
-      if (requestedRole.id != UserRole.publik.id) { // let anyone into public areas
-        val userAndRole = { for (u <- User.getUserById(challResp.getIdentifier); r <- UserRole.stringToUserRole(u.role)) yield new UserAndRole(u, r) }
-        userAndRole match {
-          case Some(uar) => {
-            if (uar.role.id < requestedRole.id) {
-              logger.warn("Authorization violation.  User " + uar.user.id +
-                " attempted to access " + request.toString + " that requires role " + requestedRole + " but their role is only " + uar.role)
-              response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
-              //response.redirectSeeOther("/NotAuthorized")   // TODO rm
-              response.redirectSeeOther(notAuthorized.pathOf)
-            } else response.setStatus(Status.SUCCESS_OK)
-          }
+    def getRequestingUser(challRespId: String): Option[User] = {
+      try {
+        User.getUserById(challRespId) match {
+          case Some(nonEncrypted) => Some(nonEncrypted)
           case _ => {
-            logger.warn("Internal authorization error.  Can not identify user.")
-            response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
+            CachedUser.get(challRespId.toLowerCase.trim)
           }
         }
+      } catch {
+        case t: Throwable => None
       }
+    }
+
+    def checkAuthorization(request: Request, response: Response, challResp: ChallengeResponse): Unit = {
+      try {
+        val requestedRole = getRequestedRole(request, response)
+
+        if (requestedRole.id != UserRole.publik.id) { // let anyone into public areas
+          val userOpt = getRequestingUser(challResp.getIdentifier)
+          userOpt match {
+            case Some(user) => {
+              val j1 = user.getRole.get.id
+              val j2 = requestedRole.id
+              if (user.getRole.get.id < requestedRole.id) {
+                logger.warn("Authorization violation.  User " + user.id +
+                  " attempted to access " + request.toString + " that requires role " + requestedRole + " but their role is only " + user.getRole)
+                response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
+                //response.redirectSeeOther("/NotAuthorized")   // TODO rm
+                response.redirectSeeOther(notAuthorized.pathOf)
+              } else
+                response.setStatus(Status.SUCCESS_OK)
+            }
+            case _ => {
+              logger.warn("Internal authorization error.  Can not identify user.")
+              response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
+            }
+          }
+        }
+      } catch {
+        case t: Throwable => {
+          logger.warn("Unexpected exception during authentical.  Can not identify user from request: " + request.toString + " :\n" + fmtEx(t))
+          response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
+        }
+      }
+
+      val j = response.getStatus // TODO rm
+      Trace.trace(j) // TODO rm
+      response.setStatus(Status.SUCCESS_OK) // TODO rm - authorizes everyone
     }
 
     def needsToAgreeToTerms(id: String): Boolean = {
@@ -279,6 +308,7 @@ class WebServer extends Application with Logging {
         // If there are no credentials, then let the authenticator decide whether to
         // accept or reject the request.  If rejected (not publik), then it will
         // send a challenge request to the client.
+        val j = request.getChallengeResponse // TODO rm
         request.getChallengeResponse match {
           case null => Filter.CONTINUE
           case cr => {
@@ -287,8 +317,10 @@ class WebServer extends Application with Logging {
               Filter.SKIP
             } else {
               checkAuthorization(request, response, cr)
-              if (response.getStatus.getCode != Status.SUCCESS_OK.getCode) Filter.SKIP
-              else Filter.CONTINUE
+              if (response.getStatus.getCode == Status.SUCCESS_OK.getCode)
+                Filter.CONTINUE
+              else
+                Filter.SKIP
             }
           }
         }
@@ -331,6 +363,8 @@ class WebServer extends Application with Logging {
     class ResolveToRefererFilter extends Filter {
 
       override def afterHandle(request: Request, response: Response): Unit = {
+        val j1 = response.getStatus
+        val j2 = request.getReferrerRef
         if ((response.getStatus == Status.REDIRECTION_SEE_OTHER) && (request.getReferrerRef != null)) {
           val locRef = response.getLocationRef
           val desiredHost = request.getReferrerRef.getHostIdentifier

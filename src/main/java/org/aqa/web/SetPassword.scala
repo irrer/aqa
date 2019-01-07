@@ -123,7 +123,8 @@ class SetPassword extends Restlet with SubUrlRoot {
           // remove old credentials so that the old password will not work
           CachedUser.remove(ou.id)
           // replace the users' credentials in the cache
-          CachedUser.put(newUser)
+          val userId = request.getChallengeResponse.getIdentifier.toLowerCase.trim
+          CachedUser.put(userId, newUser)
           val content = {
             <div>
               The password for{ ou.id }

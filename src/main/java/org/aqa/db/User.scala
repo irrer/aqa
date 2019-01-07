@@ -37,6 +37,7 @@ case class User(
     Db.run(User.query.filter(_.userPK === userPK.get).map(u => (u.termsOfUseAcknowledgment)).update((timestamp)))
   }
 
+  def getRole = UserRole.stringToUserRole(role)
 }
 
 object User extends Logging {

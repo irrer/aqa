@@ -336,7 +336,6 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       epidPKVal,
       institutionPKVal,
       serialNumberVal,
-      None,
       valueMap.get(imagingBeam2_5_mv.label).isDefined,
       valueMap.get(onboardImager.label).isDefined,
       valueMap.get(sixDimTabletop.label).isDefined,

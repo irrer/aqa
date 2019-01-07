@@ -24,9 +24,6 @@ object AnonymizeUtil extends Logging {
   /** Used to generate alias ids for machines. */
   val machineAliasPrefixId = "MACH"
 
-  /** Used to generate alias device serial number. */
-  val machineAliasPrefixSerialNumber = machineAliasPrefixId + "_SER"
-
   /** Used to generate alias ids for users. */
   val userAliasPrefixId = "USER"
 
@@ -245,7 +242,7 @@ object AnonymizeUtil extends Logging {
    */
   private def makeDicomAnonymousList(institutionPK: Long, attrList: Seq[Attribute]): Seq[DicomAnonymous] = {
     val institutionKey = getInstitutionKey(institutionPK)
-    val previouslyAnonymized = DicomAnonymous.getAttributes(institutionPK, attrList) //.map(da => da.unencrypt)
+    val previouslyAnonymized = DicomAnonymous.getAttributes(institutionPK, attrList)
 
     def alreadyHasBeenAnonyimized(prev: Seq[DicomAnonymous], attr: Attribute): Boolean = {
       val attrHash = DicomAnonymous.makeAttributeHash(institutionKey, attr)

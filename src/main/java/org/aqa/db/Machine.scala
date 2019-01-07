@@ -17,7 +17,6 @@ case class Machine(
   epidPK: Long, // EPID
   institutionPK: Long, // institution that this machine belongs to
   serialNumber: Option[String],
-  serialNumber_real: Option[String], // real serial number of machine, encrypted
   imagingBeam2_5_mv: Boolean,
   onboardImager: Boolean,
   sixDimTabletop: Boolean,
@@ -54,7 +53,6 @@ object Machine extends Logging {
     def institutionPK = column[Long]("institutionPK")
     def notes = column[String]("notes")
     def serialNumber = column[Option[String]]("serialNumber")
-    def serialNumber_real = column[Option[String]]("serialNumber_real")
     def imagingBeam2_5_mv = column[Boolean]("imagingBeam2_5_mv")
     def onboardImager = column[Boolean]("onboardImager")
     def sixDimTabletop = column[Boolean]("sixDimTabletop")
@@ -71,7 +69,6 @@ object Machine extends Logging {
       epidPK,
       institutionPK,
       serialNumber,
-      serialNumber_real,
       imagingBeam2_5_mv,
       onboardImager,
       sixDimTabletop,

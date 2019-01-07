@@ -19,12 +19,13 @@ import org.aqa.db.DbTransitionToAnonymize
 
 class TestDbTransitionToAnonymize extends FlatSpec with Matchers {
 
-  println("Starting...")
   Config.validate
   DbSetup.init
 
   "transition" should "be transitioning" in {
+    println("Starting...")
     DbTransitionToAnonymize.transition
+    println("Done.")
     true should be(true)
   }
   println("Done")

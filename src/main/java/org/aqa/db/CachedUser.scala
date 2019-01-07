@@ -2,6 +2,7 @@ package org.aqa.db
 
 import org.aqa.Config
 import org.restlet.Request
+import org.aqa.AnonymizeUtil
 
 class CachedUser(val user: User) {
   val timeout = System.currentTimeMillis + Config.AuthenticationTimeoutInMs
@@ -10,9 +11,9 @@ class CachedUser(val user: User) {
 object CachedUser {
   private val cache = scala.collection.mutable.HashMap[String, CachedUser]()
 
-  def put(user: User): Unit = {
+  def put(id: String, user: User): Unit = {
     cache.synchronized({
-      cache.put(user.id, new CachedUser(user))
+      cache.put(id, new CachedUser(user))
     })
   }
 
@@ -34,10 +35,16 @@ object CachedUser {
       case _ => {
         User.getUserById(id) match {
           case Some(user) => {
-            put(user)
+            put(id, user)
             Some(user)
           }
-          case _ => None
+          case _ => {
+            val userList = User.list.filter(u => AnonymizeUtil.decryptWithNonce(u.institutionPK, u.id_real.get).equals(id))
+            if (userList.nonEmpty) {
+              put(id, userList.head)
+            }
+            userList.headOption
+          }
         }
       }
     }

@@ -11,6 +11,8 @@ import org.aqa.Util
 import org.aqa.web.WebUtil
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.AnonymizeUtil
+import com.pixelmed.dicom.AttributeFactory
+import com.pixelmed.dicom.TagFromName
 
 /** Transition to an anonymized database. */
 
@@ -59,43 +61,63 @@ object DbTransitionToAnonymize extends Logging {
     Institution.list.map(inst => anon(inst))
   }
 
+  /**
+   * Anonymize and insert the given device serial number attribute into the database and return the alias value.
+   */
+  def insertDeviceSerialNumber(institutionPK: Long, deviceSerialNumber: String): String = {
+
+    // determine if it is already in the database.
+    val attr = AttributeFactory.newAttribute(TagFromName.DeviceSerialNumber)
+    attr.addValue(deviceSerialNumber)
+    val daList = DicomAnonymous.getAttributes(institutionPK, Seq(attr))
+
+    // If it is already in the database, then do nothing.
+    if (daList.nonEmpty)
+      daList.head.value // already in database.
+    else {
+      logger.info("ConvertToAnonymousDatabase Need to insert DeviceSerialNumber attribute for: " + deviceSerialNumber)
+      if (Config.ConvertToAnonymousDatabase) {
+        val da = DicomAnonymous.insert(institutionPK, attr)
+        logger.info("ConvertToAnonymousDatabase Inserting DeviceSerialNumber attribute for: " + deviceSerialNumber)
+        da.value
+      } else {
+        "notAnonYet"
+      }
+    }
+  }
+
   private def anonymizeMachines = {
 
     def anon(machine: Machine) = {
       val aliasId = AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasPrefixId, machine.machinePK.get)
-      val aliasSerNum = Some(AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasPrefixSerialNumber, machine.machinePK.get))
       def id_real = Some(AnonymizeUtil.encryptWithNonce(machine.institutionPK, machine.id))
-      def serNum_real = Some(AnonymizeUtil.encryptWithNonce(machine.institutionPK, machine.serialNumber.get))
 
-      def anonId(m: Machine) = m.copy(id_real = id_real).copy(id = aliasId)
+      def anonId(m: Machine) = {
 
-      def anonSerialNum(m: Machine) = m.copy(serialNumber = aliasSerNum).copy(serialNumber_real = serNum_real)
+        val anonSerNo: Option[String] = if (machine.serialNumber.isDefined) {
+          val anonSer = insertDeviceSerialNumber(machine.institutionPK, machine.serialNumber.get)
+          Some(anonSer)
+        } else None
 
-      val encryptId = machine.id_real.isEmpty
-
-      val encryptSerNo = machine.serialNumber.isDefined && machine.serialNumber_real.isEmpty
+        m.copy(id_real = id_real).copy(id = aliasId, serialNumber = anonSerNo)
+      }
 
       def update(m: Machine) = {
         def show(mch: Machine) = {
           "    id: " + fmt12(mch.id) +
             "    mch.id_real: " + fmt20(mch.id_real) +
-            "    mch.serialNumber: " + fmt20(mch.serialNumber) +
-            "    mch.serialNumber_real: " + fmt20(mch.serialNumber_real)
+            "    mch.serialNumber: " + fmt20(mch.serialNumber)
         }
         val both = show(machine) + " ==>\n" + show(m)
         logger.info("ConvertToAnonymousDatabase Need to convert machine from :\n" + both)
+
         if (Config.ConvertToAnonymousDatabase) {
           m.insertOrUpdate
           logger.info("ConvertToAnonymousDatabase Updating machine from :\n" + both)
         }
       }
 
-      (encryptId, encryptSerNo) match {
-        case (true, true) => update(anonId(anonSerialNum(machine)))
-        case (true, false) => update(anonId(machine))
-        case (false, true) => update(anonSerialNum(machine))
-        case (false, false) => ; // nothing needs changing
-      }
+      if (machine.id_real.isEmpty) update(anonId(machine))
     }
 
     Machine.list.map(m => anon(m))
