@@ -81,7 +81,6 @@ function myFunction(aliasToRealList) {
   var arMap = new Map();
   aliasToRealList.map(ar => arMap.set(ar.alias.trim(), ar.real.trim()));
 
-  var s = arMap.get("MACH_2");
   var p;
 
   for (p = 0; p < publicList.length; p++) {

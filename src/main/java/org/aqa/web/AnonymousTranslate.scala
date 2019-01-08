@@ -49,8 +49,8 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
 
   private val emptyTable = "[]"
 
-  private case class Translate(alias: String, real: String) {
-    def toJson = "{ \"alias\": \"" + alias + "\", \"real\": \"" + real + "\" }"
+  private case class Translate(institutionPK: Long, alias: String, real: String) {
+    def toJson = "{ \"alias\": \"" + alias + "\", \"real\": \"" + AnonymizeUtil.decryptWithNonce(institutionPK, real) + "\" }"
   }
 
   private val emptyList = Seq[Translate]()
@@ -59,8 +59,10 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
     Institution.get(institutionPK) match {
       case Some(inst) => {
         if (inst.name_real.isDefined) {
-          val translate = new Translate(inst.name, AnonymizeUtil.decryptWithNonce(institutionPK, inst.name_real.get))
-          Seq(translate)
+          val name = new Translate(institutionPK, inst.name, inst.name_real.get)
+          val url = new Translate(institutionPK, inst.name, inst.url_real)
+          val description = new Translate(institutionPK, inst.name, inst.description_real)
+          Seq(name)
         } else emptyList
       }
       case _ => emptyList
@@ -68,11 +70,24 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
   }
 
   private def getMachine(institutionPK: Long): Seq[Translate] = {
-    Machine.listMachinesFromInstitution(institutionPK).filter(m => m.id_real.isDefined).map(mach => new Translate(mach.id, mach.id_real.get))
+    def doMach(mach: Machine) = {
+      val name = new Translate(institutionPK, mach.id, mach.id_real.get)
+      val url = new Translate(institutionPK, AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasNotesPrefixId, mach.machinePK.get), mach.notes)
+      Seq(name, url)
+    }
+    Machine.listMachinesFromInstitution(institutionPK).filter(m => m.id_real.isDefined).map(mach => doMach(mach)).flatten
   }
 
   private def getUser(institutionPK: Long): Seq[Translate] = {
-    User.listUsersFromInstitution(institutionPK).filter(m => m.id_real.isDefined).map(mach => new Translate(mach.id, mach.id_real.get))
+
+    def doUser(user: User) = {
+      val id = new Translate(institutionPK, user.id, user.id_real.get)
+      val fullName = new Translate(institutionPK, AnonymizeUtil.aliasify(AnonymizeUtil.userAliasFullNamePrefixId, user.userPK.get), user.fullName_real)
+      val email = new Translate(institutionPK, AnonymizeUtil.aliasify(AnonymizeUtil.userAliasEmailPrefixId, user.userPK.get), user.email_real)
+      Seq(id, fullName, email)
+    }
+
+    User.listUsersFromInstitution(institutionPK).filter(m => m.id_real.isDefined).map(user => doUser(user)).flatten
   }
 
   override def handle(request: Request, response: Response): Unit = {
@@ -88,13 +103,6 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
         }
         case _ => emptyTable
       }
-
-      //      val text =
-      //        """[
-      //{ "alias": "MACH_1", "real": "TX_5" },
-      //{ "alias": "MACH_2", "real": "TB_1" }
-      //]
-      //"""
 
       response.setEntity(jsonTable, MediaType.APPLICATION_JSON)
       response.setStatus(Status.SUCCESS_OK)

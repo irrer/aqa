@@ -4,6 +4,7 @@ import org.restlet.Response
 import org.aqa.db.Machine
 import org.aqa.web.WebUtil._
 import scala.xml.Elem
+import org.aqa.AnonymizeUtil
 
 object MachineList {
   private val path = new String((new MachineList).pathOf)
@@ -21,9 +22,7 @@ class MachineList extends GenericList[Machine.MMI] with WebUtil.SubUrlAdmin {
 
   private def machineTypeHTML(mmi: MMI): Elem = <div> { WebUtil.firstPartOf(mmi.machineType.toName, 40) } </div>
 
-  private def notesHTML(mmi: MMI): Elem = <div> { WebUtil.firstPartOf(mmi.machine.notes, 60) } </div>
-
-  private val idCol = new Column[MMI]("Name", _.machine.id, (mmi) => makePrimaryKeyHtml(mmi.machine.id, mmi.machine.machinePK))
+  private val idCol = new Column[MMI]("Name", _.machine.id, (mmi) => makePrimaryKeyHtmlWithAQAAlias(mmi.machine.id, mmi.machine.machinePK))
 
   private val typeCol = new Column[MMI]("Machine Type", _.machineType.toName, machineTypeHTML)
 
@@ -33,9 +32,13 @@ class MachineList extends GenericList[Machine.MMI] with WebUtil.SubUrlAdmin {
 
   private val serialNoCol = new Column[MMI]("Serial No.", _.machine.serialNumber match { case Some(text) => text; case _ => "not defined" })
 
-  private val institutionCol = new Column[MMI]("Institution", _.institution.name)
+  private val institutionCol = new Column[MMI]("Institution", _.institution.name, (mmi) => wrapAlias(mmi.institution.name))
 
-  private val notesCol = new Column[MMI]("Notes", _.machine.notes, notesHTML)
+  private def machNotesHtml(mmi: MMI): Elem = {
+    wrapAlias(AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasNotesPrefixId, mmi.machine.machinePK.get))
+  }
+
+  private val notesCol = new Column[MMI]("Notes", _.machine.id, machNotesHtml _)
 
   override val columnList = Seq(idCol, institutionCol, typeCol, mlcCol, epidCol, serialNoCol, notesCol)
 }

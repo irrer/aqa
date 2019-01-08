@@ -137,17 +137,24 @@ object Crypto extends Logging {
    */
   def decryptWithNonce(encryptedTextAsHex: String, cipher: IBlockCipher): String = {
 
-    val encryptedText = hexToByteArray(encryptedTextAsHex)
-    val j = encryptedText.size
+    try {
+      val encryptedText = hexToByteArray(encryptedTextAsHex)
+      val j = encryptedText.size
 
-    val clear = new Array[Byte](encryptedText.size)
-    val numBlock = encryptedText.size / cipherBlockSize
-    (0 until numBlock).map(b => cipher.decryptBlock(encryptedText, b * cipherBlockSize, clear, b * cipherBlockSize))
-    val justText = (0 until numBlock).map(b => clear.drop(b * cipherBlockSize).take(cipherBlockSize / 2)).flatten.toArray
-    val separator = justText.indexOf(' '.toByte)
-    val lengthOfOriginalText = (new String(justText.take(separator))).toInt
-    val originalText = justText.drop(separator + 1).take(lengthOfOriginalText)
-    new String(originalText)
+      val clear = new Array[Byte](encryptedText.size)
+      val numBlock = encryptedText.size / cipherBlockSize
+      (0 until numBlock).map(b => cipher.decryptBlock(encryptedText, b * cipherBlockSize, clear, b * cipherBlockSize))
+      val justText = (0 until numBlock).map(b => clear.drop(b * cipherBlockSize).take(cipherBlockSize / 2)).flatten.toArray
+      val separator = justText.indexOf(' '.toByte)
+      val lengthOfOriginalText = (new String(justText.take(separator))).toInt
+      val originalText = justText.drop(separator + 1).take(lengthOfOriginalText)
+      new String(originalText)
+    } catch {
+      case t: Throwable => {
+        logger.warn("Failure to decrypt string: " + encryptedTextAsHex + " : " + fmtEx(t))        
+        "decryption failure"
+      }
+    }
   }
 
   /** Convenience where only one decryption is done with the given key. */

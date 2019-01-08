@@ -20,12 +20,17 @@ object AnonymizeUtil extends Logging {
 
   /** Used to generate alias ids for institutions. */
   val institutionAliasPrefixId = "INST"
+  val institutionAliasUrlPrefixId = institutionAliasPrefixId + "_URL"
+  val institutionAliasDescriptionPrefixId = institutionAliasPrefixId + "_DESCRIPTION"
 
   /** Used to generate alias ids for machines. */
   val machineAliasPrefixId = "MACH"
+  val machineAliasNotesPrefixId = machineAliasPrefixId + "_NOTES"
 
   /** Used to generate alias ids for users. */
   val userAliasPrefixId = "USER"
+  val userAliasFullNamePrefixId = userAliasPrefixId + "_FULLNAME"
+  val userAliasEmailPrefixId = userAliasPrefixId + "_EMAIL"
 
   /** Name of directory where security credentials are kept. */
   private val securityDirName = "security"

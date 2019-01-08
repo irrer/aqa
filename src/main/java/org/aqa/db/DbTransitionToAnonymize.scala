@@ -90,7 +90,8 @@ object DbTransitionToAnonymize extends Logging {
 
     def anon(machine: Machine) = {
       val aliasId = AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasPrefixId, machine.machinePK.get)
-      def id_real = Some(AnonymizeUtil.encryptWithNonce(machine.institutionPK, machine.id))
+      val id_real = Some(AnonymizeUtil.encryptWithNonce(machine.institutionPK, machine.id))
+      val notes_encrypted = AnonymizeUtil.encryptWithNonce(machine.institutionPK, machine.notes)
 
       def anonId(m: Machine) = {
 
@@ -99,14 +100,15 @@ object DbTransitionToAnonymize extends Logging {
           Some(anonSer)
         } else None
 
-        m.copy(id_real = id_real).copy(id = aliasId, serialNumber = anonSerNo)
+        m.copy(id_real = id_real).copy(id = aliasId, serialNumber = anonSerNo, notes = notes_encrypted)
       }
 
       def update(m: Machine) = {
         def show(mch: Machine) = {
           "    id: " + fmt12(mch.id) +
             "    mch.id_real: " + fmt20(mch.id_real) +
-            "    mch.serialNumber: " + fmt20(mch.serialNumber)
+            "    mch.serialNumber: " + fmt20(mch.serialNumber) +
+            "    mch.notes: " + fmt20(mch.notes)
         }
         val both = show(machine) + " ==>\n" + show(m)
         logger.info("ConvertToAnonymousDatabase Need to convert machine from :\n" + both)
@@ -160,5 +162,42 @@ object DbTransitionToAnonymize extends Logging {
     anonymizeMachines
     anonymizeUsers
     logger.info("finished transition of anonymization security")
+  }
+
+  def fixMachineNotes = {
+    def fixMachNotes(machine: Machine) = {
+
+      def show(mch: Machine) = {
+        "    id: " + fmt12(mch.id) +
+          "    mch.id_real: " + fmt20(mch.id_real) +
+          "    mch.serialNumber: " + fmt20(mch.serialNumber) +
+          "    mch.notes: " + fmt20(mch.notes)
+      }
+
+      /**
+       * Test to see if the field needs encrypting by making sure that it is not already
+       * encrypted.  If it was encrypted, then it is long enough and all hex.
+       */
+      val needsEncrypting: Boolean = {
+        try {
+          if (machine.notes.size < 64) throw new RuntimeException
+          Crypto.hexToByteArray(machine.notes)
+          false
+        } catch {
+          case t: Throwable => true
+        }
+      }
+
+      if (needsEncrypting) {
+        val notes_encrypted = AnonymizeUtil.encryptWithNonce(machine.institutionPK, machine.notes)
+        val fixed = machine.copy(notes = notes_encrypted)
+        logger.info("would fix mach note from\n    " + show(machine) + " ==>\n    " + show(fixed))
+
+        if (Config.ConvertToAnonymousDatabase) {
+          fixed.insertOrUpdate
+        }
+      }
+    }
+    Machine.list.map(m => fixMachNotes(m))
   }
 }

@@ -90,6 +90,13 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
 
   protected def makePrimaryKeyHtml(name: String, pk: Option[Long]): Elem = makePrimaryKeyHtml(name, pk.get.toString)
 
+
+  protected def makePrimaryKeyHtmlWithAQAAlias(name: String, pk: String): Elem = {
+    <a href={ updatePath + "?" + getPKName + "=" + pk } AQAAlias="">{ name }</a>
+  }
+
+  protected def makePrimaryKeyHtmlWithAQAAlias(name: String, pk: Option[Long]): Elem = makePrimaryKeyHtmlWithAQAAlias(name, pk.get.toString)
+
   private def td(elem: Elem): Elem = { <td>{ elem }</td> }
 
   private def makeRow(value: VL): Elem = {
@@ -140,6 +147,9 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
 
   protected def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Unit = {
   }
+
+  protected def wrapAlias(text: String) = <span AQAAlias="">{ text }</span>
+  protected def wrapAlias(elem: Elem) = <span AQAAlias="">{ elem }</span>
 
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)

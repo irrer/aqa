@@ -25,6 +25,8 @@ class TestDbTransitionToAnonymize extends FlatSpec with Matchers {
   "transition" should "be transitioning" in {
     println("Starting...")
     DbTransitionToAnonymize.transition
+    println("\n\n\n")
+    DbTransitionToAnonymize.fixMachineNotes
     println("Done.")
     true should be(true)
   }
