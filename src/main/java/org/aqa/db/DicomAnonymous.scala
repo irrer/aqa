@@ -15,9 +15,14 @@ import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.ValueRepresentation
 import edu.umro.util.UMROGUID
 import edu.umro.ScalaUtil.Trace
+import com.pixelmed.dicom.TagFromName
 
 /**
  * Support the anonymization of DICOM by providing a way to store previously anonymized values in the database.
+ *
+ * Note: All UID's are anonymized with the generic UID tag instead of their own (like 0008,0018:SOPInstanceUID or
+ * 0008,1155:ReferencedSOPInstanceUID).  This is because the same value is used by different attributes, and the
+ * lookup is really under the context of UID.
  */
 case class DicomAnonymous(
   dicomAnonymousPK: Option[Long], // primary key
@@ -111,9 +116,15 @@ object DicomAnonymous extends Logging {
   }
 
   def formatAnonAttributeTag(tag: AttributeTag): String = {
-    val hex = DicomUtil.formatAttrTag(tag)
+    val workingTag =
+      if (ValueRepresentation.isUniqueIdentifierVR(DicomUtil.dictionary.getValueRepresentationFromTag(tag)))
+        TagFromName.UID
+      else
+        tag
+
+    val hex = DicomUtil.formatAttrTag(workingTag)
     val name = {
-      val n = DicomUtil.dictionary.getNameFromTag(tag)
+      val n = DicomUtil.dictionary.getNameFromTag(workingTag)
       if (n == null) "" else " " + n
     }
     hex + name

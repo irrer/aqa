@@ -227,10 +227,17 @@ object Phase2Util extends Logging {
         runReq.ImagePlanePixelSpacing.getX.formatted("%5.3f") + " * " + runReq.ImagePlanePixelSpacing.getY.formatted("%5.3f") + " mm"
     }
 
-    def wrap(col: Int, name: String, value: String): Elem = {
-      val valueList = value.split("\n")
-      val html = { <span>{ valueList.head }{ valueList.tail.map(line => { <span><br/> { line } </span> }) }</span> }
+    def wrap(col: Int, name: String, value: String, asAlias: Boolean): Elem = {
+      val html =
+        if (asAlias) {
+          <span AQAAlias="">{ value }</span>
+        } else {
+          val valueList = value.split("\n");
+          { <span>{ valueList.head }{ valueList.tail.map(line => { <span><br/> { line } </span> }) }</span> }
+        }
+
       { <div class={ "col-md-" + col }><em>{ name }:</em><br/>{ html }</div> }
+
     }
 
     val twoLineDate = new SimpleDateFormat("MMM dd yyyy\nHH:mm")
@@ -245,7 +252,11 @@ object Phase2Util extends Logging {
         <div class="row">
           <div class="col-md-1 col-md-offset-1">{ passFailImage }</div>
           <div class="col-md-3" title={ title }><h2>{ title }</h2></div>
-          <div class="col-md-1" title="Treatment machine. Click to view and modify machine configuration."> <h2><a href={ "/" + SubUrl.admin + "/" + "MachineUpdate" + "?" + MachineUpdate.machinePKTag + "=" + extendedData.machine.machinePK.get }>{ machineId }</a></h2></div>
+          <div class="col-md-1" title="Treatment machine. Click to view and modify machine configuration.">
+            <h2>
+              <a href={ "/" + SubUrl.admin + "/" + "MachineUpdate" + "?" + MachineUpdate.machinePKTag + "=" + extendedData.machine.machinePK.get } AQAAlias="">{ machineId }</a>
+            </h2>
+          </div>
           <div class="col-md-1">
             <span title="Machine Type">{ machType }</span>
             <br/>
@@ -262,12 +273,12 @@ object Phase2Util extends Logging {
         </div>
         <div class="row">
           { mainReport }
-          { wrap(2, "Institution", extendedData.institution.name) }
-          { wrap(1, "Data Acquisition", dataAcquisitionDate) }
-          { wrap(1, "Analysis", twoLineDate.format(analysisDate)) }
-          { wrap(1, "User", userId) }
-          { wrap(1, "Elapsed", elapsed) }
-          { wrap(1, "Procedure", procedureDesc) }
+          { wrap(2, "Institution", extendedData.institution.name, true) }
+          { wrap(1, "Data Acquisition", dataAcquisitionDate, false) }
+          { wrap(1, "Analysis", twoLineDate.format(analysisDate), false) }
+          { wrap(1, "User", userId, true) }
+          { wrap(1, "Elapsed", elapsed, false) }
+          { wrap(1, "Procedure", procedureDesc, false) }
         </div>
         <div class="row">
           { content }

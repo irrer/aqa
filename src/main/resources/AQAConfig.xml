@@ -142,6 +142,7 @@ Note that when building a package for release, the Maven build process uses the 
         <ToBeAnonymized Name='PatientWeight'                       Value='0'/>
         <ToBeAnonymized Name='InstanceCreatorUID'                  />
         <ToBeAnonymized Name='SOPInstanceUID'                      />
+        <ToBeAnonymized Name='MediaStorageSOPInstanceUID'          />
         <ToBeAnonymized Name='AccessionNumber'                     Value='0'/>
         <ToBeAnonymized Name='InstitutionName'                     />
         <ToBeAnonymized Name='InstitutionAddress'                  />
@@ -165,7 +166,7 @@ Note that when building a package for release, the Maven build process uses the 
         <ToBeAnonymized Name='StudyInstanceUID'                    />
         <ToBeAnonymized Name='SeriesInstanceUID'                   />
         <ToBeAnonymized Name='StudyID'                             />
-        <ToBeAnonymized Name='RadiationMachineName'                />  <!-- Note: This is not generally anonymized, but in this case it protects the identity of the institution. -->
+        <ToBeAnonymized Name='RadiationMachineName'                />  <!-- Note: This is not generally anonymized, but in this case it could protect the identity of the institution. -->
         <ToBeAnonymized Name='FrameOfReferenceUID'                 />
         <ToBeAnonymized Name='SynchronizationFrameOfReferenceUID'  />
         <ToBeAnonymized Name='ImageComments'                       />
