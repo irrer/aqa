@@ -189,7 +189,7 @@ object AnonymizeUtil extends Logging {
             val valid = institutionCache.filter(ic => ic.isValid)
             institutionCache.clear
             institutionCache.insertAll(0, valid)
-            logger.info("Cleared anonymizing security cache from size " + before + " to size " + institutionCache.size)
+            //logger.info("Cleared anonymizing security cache from size " + before + " to size " + institutionCache.size)
           })
         }
       }

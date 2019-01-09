@@ -60,9 +60,13 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
       case Some(inst) => {
         if (inst.name_real.isDefined) {
           val name = new Translate(institutionPK, inst.name, inst.name_real.get)
-          val url = new Translate(institutionPK, inst.name, inst.url_real)
-          val description = new Translate(institutionPK, inst.name, inst.description_real)
-          Seq(name)
+          val url = new Translate(
+            institutionPK,
+            AnonymizeUtil.aliasify(AnonymizeUtil.institutionAliasUrlPrefixId, inst.institutionPK.get), inst.url_real)
+          val description = new Translate(
+            institutionPK,
+            AnonymizeUtil.aliasify(AnonymizeUtil.institutionAliasDescriptionPrefixId, inst.institutionPK.get), inst.description_real)
+          Seq(name, url, description)
         } else emptyList
       }
       case _ => emptyList

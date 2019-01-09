@@ -45,6 +45,7 @@ import com.pixelmed.dicom.DicomInputStream
 import org.aqa.AnonymizeUtil
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.db.CachedUser
+import org.aqa.Config
 
 object WebUtil extends Logging {
 
@@ -899,6 +900,18 @@ object WebUtil extends Logging {
       if (u.isDefined) u
       else
         CachedUser.get(cr.getIdentifier)
+    }
+  }
+
+  /**
+   * Return true if the user is whitelisted in the configuration.
+   */
+  def userIsWhitelisted(request: Request): Boolean = {
+    val cr = request.getChallengeResponse
+    if (cr == null) false
+    else {
+      val userId = request.getChallengeResponse.getIdentifier.toLowerCase.trim
+      Config.UserWhiteList.contains(userId)
     }
   }
 

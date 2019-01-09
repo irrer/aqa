@@ -79,7 +79,7 @@ class ChallAuth(context: Context, optional: Boolean, challengeScheme: ChallengeS
         case _ => Filter.CONTINUE
       }
     }
-    Filter.CONTINUE // set to disable security.  TODO rm
+    //Filter.CONTINUE // set to disable security.  TODO rm
   }
 
   override def afterHandle(request: Request, response: Response): Unit = {

@@ -4,6 +4,7 @@ import org.restlet.Response
 import scala.xml.Elem
 import org.aqa.db.Institution
 import org.aqa.web.WebUtil._
+import org.aqa.AnonymizeUtil
 
 object InstitutionList {
   private val path = new String((new InstitutionList).pathOf)
@@ -29,11 +30,13 @@ class InstitutionList extends GenericList[Institution] with WebUtil.SubUrlAdmin 
     <div> { WebUtil.firstPartOf(institution.description_real, 60) } </div>
   }
 
-  private val idCol = new Column[Institution]("Name", _.name, (inst) => makePrimaryKeyHtml(inst.name, inst.institutionPK))
+  private val idCol = new Column[Institution]("Name", _.name, (inst) => makePrimaryKeyHtmlWithAQAAlias(inst.name, inst.institutionPK))
 
-  private val urlCol = new Column[Institution]("URL", _.url_real, urlHTML)
+  private val urlCol = encryptedColumn("URL", AnonymizeUtil.institutionAliasUrlPrefixId, (inst) => inst.institutionPK.get)
 
-  private val descriptionCol = new Column[Institution]("Description", _.description_real, descriptionHTML)
+  new Column[Institution]("URL", _.url_real, urlHTML)
+
+  private val descriptionCol = encryptedColumn("Description", AnonymizeUtil.institutionAliasDescriptionPrefixId, (inst) => inst.institutionPK.get)
 
   override def listName = "Institution"
 
