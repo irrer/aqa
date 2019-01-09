@@ -247,7 +247,7 @@ class WebServer extends Application with Logging {
 
     def getRequestingUser(challRespId: String): Option[User] = {
       try {
-        User.getUserById(challRespId) match {
+        CachedUser.get(challRespId) match {
           case Some(nonEncrypted) => Some(nonEncrypted)
           case _ => {
             CachedUser.get(challRespId.toLowerCase.trim)
@@ -291,7 +291,7 @@ class WebServer extends Application with Logging {
     }
 
     def needsToAgreeToTerms(id: String): Boolean = {
-      User.getUserById(id) match {
+      CachedUser.get(id) match {
         case Some(user) => user.termsOfUseAcknowledgment.isEmpty
         case _ => false
       }

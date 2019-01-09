@@ -10,6 +10,7 @@ import org.aqa.db.User
 import org.restlet.routing.Filter
 import org.restlet.data.ChallengeRequest
 import org.restlet.data.Status
+import org.aqa.db.CachedUser
 
 /**
  * Handle authentication and authorization.  In general, allow open access to public content, but
@@ -50,7 +51,7 @@ class ChallAuth(context: Context, optional: Boolean, challengeScheme: ChallengeS
         if (chalResp == null)
           None
         else
-          User.getUserById(chalResp.getIdentifier)
+          CachedUser.get(chalResp.getIdentifier)
       }
 
       // true if user exists and is authenticated
@@ -78,7 +79,7 @@ class ChallAuth(context: Context, optional: Boolean, challengeScheme: ChallengeS
         case _ => Filter.CONTINUE
       }
     }
-    //Filter.CONTINUE // set to disable security.  TODO rm
+    Filter.CONTINUE // set to disable security.  TODO rm
   }
 
   override def afterHandle(request: Request, response: Response): Unit = {

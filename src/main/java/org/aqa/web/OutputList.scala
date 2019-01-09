@@ -92,9 +92,9 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   type ColT = Output.ExtendedValues // Column Type
 
-  private val institutionCol = new Column[ColT]("Institution", _.institution_name)
+  private val institutionCol = new Column[ColT]("Institution", _.institution_name, (colT) => wrapAlias(colT.institution_name))
 
-  private val userCol = new Column[ColT]("User", _.user_id)
+  private val userCol = new Column[ColT]("User", _.user_id, (colT) => wrapAlias(colT.user_id))
 
   private val startTimeCol = new Column[ColT]("Analysis", compareByStartTime _, startTimeUrl _)
 
@@ -104,7 +104,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   private val procedureCol = new Column[ColT]("Procedure", (d) => d.procedure_name + " " + d.procedure_version)
 
-  private val machineCol = new Column[ColT]("Machine", _.machine_id)
+  private val machineCol = new Column[ColT]("Machine", _.machine_id, (colT) => wrapAlias(colT.machine_id))
 
   override val columnList = Seq(startTimeCol, inputFileCol, procedureCol, machineCol, institutionCol, userCol, deleteCol)
 

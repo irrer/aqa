@@ -8,6 +8,7 @@ import org.aqa.db.User
 import org.restlet.Restlet
 import org.restlet.routing.Router
 import org.restlet.data.Status
+import org.aqa.db.CachedUser
 
 class Authorize(
   publicList: List[Restlet],
@@ -18,7 +19,7 @@ class Authorize(
   router: Router) extends Filter {
 
   private def getUserRole(id: String): Option[UserRole.Value] = {
-    val user = User.getUserById(id)
+    val user = CachedUser.get(id)
     if (user.isDefined) UserRole.stringToUserRole(user.get.role)
     else None
   }

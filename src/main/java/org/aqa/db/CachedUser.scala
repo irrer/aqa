@@ -40,7 +40,7 @@ object CachedUser {
             Some(user)
           }
           case _ => {
-            val userList = User.list.filter(u => AnonymizeUtil.decryptWithNonce(u.institutionPK, u.id_real.get).equals(id))
+            val userList = User.list.filter(u => u.id_real.nonEmpty).filter(u => AnonymizeUtil.decryptWithNonce(u.institutionPK, u.id_real.get).equals(id))
             if (userList.nonEmpty) {
               put(id, userList.head)
             }

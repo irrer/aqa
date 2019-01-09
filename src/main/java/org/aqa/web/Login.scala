@@ -20,6 +20,7 @@ import org.restlet.engine.header.ChallengeWriter
 import org.restlet.data.Header
 import org.restlet.util.Series
 import org.restlet.security.SecretVerifier
+import org.aqa.db.CachedUser
 
 object Login {
   val path = "/Login"
@@ -60,7 +61,7 @@ class Login extends Restlet with SubUrlRoot {
 
   private def validateUser(valueMap: ValueMapT): StyleMapT = {
     val idText = valueMap.get(id.label).get
-    val user = User.getUserById(idText)
+    val user = CachedUser.get(idText)
     if (user.isDefined) styleNone else Error.make(id, "No such user")
   }
 
@@ -69,7 +70,7 @@ class Login extends Restlet with SubUrlRoot {
    */
   private def validatePassword(valueMap: ValueMapT): StyleMapT = {
     val idText = valueMap.get(id.label).get
-    val user = User.getUserById(idText).get
+    val user = CachedUser.get(idText).get
     val enteredPasswordText = valueMap.get(password.label).get
 
     val ok = AuthenticationVerifier.validatePassword(enteredPasswordText, user.hashedPassword, user.passwordSalt)

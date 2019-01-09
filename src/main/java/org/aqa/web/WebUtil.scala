@@ -895,7 +895,7 @@ object WebUtil extends Logging {
     val cr = request.getChallengeResponse
     if (cr == null) None
     else {
-      val u = User.getUserById(cr.getIdentifier) // backwards compatible with non-anonymized database
+      val u = CachedUser.get(cr.getIdentifier) // backwards compatible with non-anonymized database
       if (u.isDefined) u
       else
         CachedUser.get(cr.getIdentifier)

@@ -8,6 +8,7 @@ import org.aqa.db.DbSetup
 import org.aqa.db.UserRole
 import scala.io.StdIn
 import org.aqa.Crypto
+import org.aqa.db.CachedUser
 
 object SetPasswordManually {
 
@@ -22,7 +23,7 @@ object SetPasswordManually {
     val id = StdIn.readLine
     print("Enter password (no restrictions): ")
     val password = StdIn.readLine
-    val user = User.getUserById(id)
+    val user = CachedUser.get(id)
     if (user.isEmpty) {
       println("No such user " + id)
       System.exit(1)
