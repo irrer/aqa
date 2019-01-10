@@ -32,7 +32,7 @@ class UploadAndChooseMachine_1(procedure: Procedure) extends WebRunProcedure(pro
   /** Maximum tongue and groove offset in mm.  Exceeding this value probably indicates a user error. */
   private val maxTongueAndGrooveOffset = 10.0
 
-  def machineList() = Machine.list.toList.map(m => (m.machinePK.get.toString, m.id))
+  def machineList(response: Option[Response]) = Machine.list.toList.map(m => (m.machinePK.get.toString, m.id))
 
   private val machine = new WebInputSelect("Machine", 6, 0, machineList)
 

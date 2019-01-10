@@ -28,7 +28,7 @@ class WinstonLutz_1(procedure: Procedure) extends WebRunProcedure(procedure) {
 
   private val pageTitle = "Winston Lutz"
 
-  def machineList() = Machine.list.toList.map(m => (m.machinePK.get.toString, m.id))
+  def machineList(response: Option[Response]) = Machine.list.toList.map(m => (m.machinePK.get.toString, m.id))
 
   private val machine = new WebInputSelect("Machine", 6, 0, machineList)
 

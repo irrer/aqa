@@ -43,13 +43,13 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   private val id = new WebInputText("Id", 6, 0, "Name of machine (required)")
 
-  private def typeName() = MachineType.list.toList.map(mt => (mt.machineTypePK.get.toString, mt.toName))
+  private def typeName(response: Option[Response]) = MachineType.list.toList.map(mt => (mt.machineTypePK.get.toString, mt.toName))
 
   private val machineTypePK = new WebInputSelect("Type", 6, 0, typeName)
 
-  private def collimatorName() = MultileafCollimator.list.toList.map(mlc => (mlc.multileafCollimatorPK.get.toString, mlc.toName))
+  private def collimatorName(response: Option[Response]) = MultileafCollimator.list.toList.map(mlc => (mlc.multileafCollimatorPK.get.toString, mlc.toName))
 
-  private def epidName() = EPID.list.toList.map(e => (e.epidPK.get.toString, e.toName))
+  private def epidName(response: Option[Response]) = EPID.list.toList.map(e => (e.epidPK.get.toString, e.toName))
 
   private def getConfigUrl(valueMap: ValueMapT): Elem = {
     val notDef = { <div>Configuration directory not defined</div> }
@@ -94,7 +94,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   private val developerMode = new WebInputCheckbox("Developer Mode", 2, 0)
   private val respiratoryManagement = new WebInputCheckbox("Respiratory Management", 3, 0)
 
-  private def institutionList() = Institution.list.toList.sortBy(_.name).map(i => (i.institutionPK.get.toString, i.name))
+  private def institutionList(response: Option[Response]) = Institution.list.toList.sortBy(_.name).map(i => (i.institutionPK.get.toString, i.name))
 
   private val institutionPK = new WebInputSelect("Institution", 6, 0, institutionList)
 

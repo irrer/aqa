@@ -62,7 +62,7 @@ class PMIUpdate extends Restlet with SubUrlAdmin {
 
   private val summary = new WebInputText("Summary", 6, 0, "")
 
-  private val category = new WebInputSelect("Category", 6, 0, () => Config.MaintenanceCategoryList.map(m => (m.Name, m.Name)))
+  private val category = new WebInputSelect("Category", 6, 0, (response: Option[Response]) => Config.MaintenanceCategoryList.map(m => (m.Name, m.Name)))
 
   private val description = new WebInputTextArea("Description", 6, 0, "")
 

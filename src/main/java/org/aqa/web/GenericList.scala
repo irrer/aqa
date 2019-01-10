@@ -92,7 +92,7 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
   protected def makePrimaryKeyHtml(name: String, pk: Option[Long]): Elem = makePrimaryKeyHtml(name, pk.get.toString)
 
   protected def makePrimaryKeyHtmlWithAQAAlias(name: String, pk: String): Elem = {
-    <a href={ updatePath + "?" + getPKName + "=" + pk } AQAAlias="">{ name }</a>
+    <a href={ updatePath + "?" + getPKName + "=" + pk } aqaalias="">{ name }</a>
   }
 
   protected def makePrimaryKeyHtmlWithAQAAlias(name: String, pk: Option[Long]): Elem = makePrimaryKeyHtmlWithAQAAlias(name, pk.get.toString)
@@ -148,8 +148,8 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
   protected def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Unit = {
   }
 
-  protected def wrapAlias(text: String) = <span AQAAlias="">{ text }</span>
-  protected def wrapAlias(elem: Elem) = <span AQAAlias="">{ elem }</span>
+  protected def wrapAlias(text: String) = <span aqaalias="">{ text }</span>
+  protected def wrapAlias(elem: Elem) = <span aqaalias="">{ elem }</span>
 
   protected def encryptedColumn(title: String, prefix: String, primaryKey: (VL) => (Long)) = {
     new Column[VL](

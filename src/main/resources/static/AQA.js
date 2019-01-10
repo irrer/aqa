@@ -53,7 +53,7 @@ $(document).ready(function() {
  * Retrieve the list of aliased entities (machines, users, 
  * etc.) that the current user is allowed to view along with 
  * their real names as a table.  Find all HTML elements with 
- * the special attribute "AQAAlias", and replace their contents 
+ * the special attribute "aqaalias", and replace their contents 
  * (the alias) with the real name.   
  *  
  * If the contents of an element do not match a real name, then 
@@ -76,7 +76,7 @@ jsonhttp.open("GET", aliasToRealUrl, true);
 jsonhttp.send();
 
 function myFunction(aliasToRealList) {
-  var publicList = $( "[AQAAlias]" ); // defines the attribute for showing real names
+  var publicList = $( "[aqaalias]" ); // defines the attribute for showing real names
 
   var arMap = new Map();
   aliasToRealList.map(ar => arMap.set(ar.alias.trim(), ar.real.trim()));
