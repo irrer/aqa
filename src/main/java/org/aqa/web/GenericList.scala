@@ -148,9 +148,6 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
   protected def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Unit = {
   }
 
-  protected def wrapAlias(text: String) = <span aqaalias="">{ text }</span>
-  protected def wrapAlias(elem: Elem) = <span aqaalias="">{ elem }</span>
-
   protected def encryptedColumn(title: String, prefix: String, primaryKey: (VL) => (Long)) = {
     new Column[VL](
       title,

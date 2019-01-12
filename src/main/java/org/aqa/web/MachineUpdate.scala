@@ -30,6 +30,7 @@ import edu.umro.ScalaUtil.Trace._
 import org.aqa.db.MultileafCollimator
 import org.aqa.db.EPID
 import org.aqa.db.MachineBeamEnergy
+import org.aqa.AnonymizeUtil
 
 object MachineUpdate {
   val machinePKTag = "machinePK"
@@ -41,11 +42,11 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   private val pageTitleEdit = "Edit Machine"
 
-  private val id = new WebInputText("Id", 6, 0, "Name of machine (required)")
+  private val id = new WebInputText("Id", 3, 0, "Name of machine (required)")
 
   private def typeName(response: Option[Response]) = MachineType.list.toList.map(mt => (mt.machineTypePK.get.toString, mt.toName))
 
-  private val machineTypePK = new WebInputSelect("Type", 6, 0, typeName)
+  private val machineTypePK = new WebInputSelect("Type", 3, 0, typeName)
 
   private def collimatorName(response: Option[Response]) = MultileafCollimator.list.toList.map(mlc => (mlc.multileafCollimatorPK.get.toString, mlc.toName))
 
@@ -79,9 +80,9 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   private val configurationDirectory = new WebPlainText("Configuration", false, 6, 0, getConfigUrl _)
 
-  private val multileafCollimatorPK = new WebInputSelect("Collimator", 6, 0, collimatorName)
+  private val multileafCollimatorPK = new WebInputSelect("Collimator", 3, 0, collimatorName)
 
-  private val epidPK = new WebInputSelect("EPID", 6, 0, epidName)
+  private val epidPK = new WebInputSelect("EPID", 3, 0, epidName)
 
   private val serialNumber = new WebPlainText("Serial Number", false, 3, 0, getSerialNo _)
 
@@ -162,11 +163,9 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   def fieldList(valueMap: ValueMapT): List[WebRow] = {
     val listA: List[WebRow] = List(
-      List(id),
-      List(machineTypePK),
-      List(multileafCollimatorPK),
+      List(id, machineTypePK),
+      List(multileafCollimatorPK, epidPK),
       List(configurationDirectory),
-      List(epidPK),
       List(institutionPK),
       List(serialNumber, serialNumberReset),
       List(onboardImager, sixDimTabletop, developerMode),
@@ -196,8 +195,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   private def emptyId(valueMap: ValueMapT): StyleMapT = {
     val idText = valueMap.get(id.label).get.trim
-    val isEmpty = idText.trim.size == 0
-    if (isEmpty) {
+    if (idText.trim.isEmpty) {
       Error.make(id, "Id can not be empty")
     } else styleNone
   }
@@ -304,22 +302,23 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
    * Create a new machine
    */
   private def constructMachineFromParameters(valueMap: ValueMapT): Unit = {
+    val institutionPKVal = valueMap.get(institutionPK.label).get.trim.toLong
     val pk: Option[Long] = {
       val e = valueMap.get(machinePK.label)
       if (e.isDefined) Some(e.get.toLong) else None
     }
-    val idVal = valueMap.get(id.label).get.trim
+    val idVal = (if (pk.isDefined) AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasPrefixId, pk.get) else "None")
+    val id_realVal = Some(AnonymizeUtil.encryptWithNonce(institutionPKVal, valueMap.get(id.label).get.trim))
     val machineTypePKVal = valueMap.get(machineTypePK.label).get.trim.toLong
     val multilefCollimatorPKVal = valueMap.get(multileafCollimatorPK.label).get.trim.toLong
     val epidPKVal = valueMap.get(epidPK.label).get.trim.toLong
-    val institutionPKVal = valueMap.get(institutionPK.label).get.trim.toLong
 
     val serialNumberVal = {
       if (pk.isDefined && (valueMap.get(serialNumberReset.label).isEmpty)) Machine.get(pk.get).get.serialNumber
       else None
     }
 
-    val notesVal = valueMap.get(notes.label).get.trim
+    val notesVal = AnonymizeUtil.encryptWithNonce(institutionPKVal, valueMap.get(notes.label).get.trim)
 
     val configDir: Option[String] = {
       if (pk.isDefined) Machine.get(pk.get).get.configurationDirectory
@@ -329,7 +328,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     val machine = new Machine(
       pk,
       idVal,
-      None,
+      id_realVal,
       machineTypePKVal,
       configDir,
       multilefCollimatorPKVal,
@@ -347,7 +346,10 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       machine.insertOrUpdate
       updateBeamEnergies(machine, valueMap)
     } else {
-      val newMachine = machine.insert
+      val machineWithoutId = machine.insert
+      val newMachine = machineWithoutId.copy(id = AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasPrefixId, machineWithoutId.machinePK.get))
+      newMachine.insertOrUpdate
+
       updateBeamEnergies(newMachine, valueMap)
     }
   }
@@ -414,7 +416,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     }
 
     val valueMap = Map(
-      (id.label, mach.id),
+      (id.label, AnonymizeUtil.decryptWithNonce(mach.institutionPK, mach.id_real.get)),
       (machineTypePK.label, mach.machineTypePK.toString),
       (institutionPK.label, mach.institutionPK.toString),
       (multileafCollimatorPK.label, mach.multileafCollimatorPK.toString),
@@ -425,7 +427,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       (sixDimTabletop.label, mach.sixDimTabletop.toString),
       (respiratoryManagement.label, mach.respiratoryManagement.toString),
       (developerMode.label, mach.developerMode.toString),
-      (notes.label, mach.notes),
+      (notes.label, AnonymizeUtil.decryptWithNonce(mach.institutionPK, mach.notes)),
       (machinePK.label, pk.toString)) ++ getBeamEnergyListAsValueMap(mach.machinePK.get)
 
     formEdit(valueMap).setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)

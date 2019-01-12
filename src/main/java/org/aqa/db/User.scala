@@ -38,6 +38,20 @@ case class User(
   }
 
   def getRole = UserRole.stringToUserRole(role)
+
+  override def toString = {
+    def fmt(text: String) = text.take(6) + "..."
+    "userPK: " + (if (userPK.isDefined) userPK.get else "None") +
+      "  id: " + id +
+      "  id_real: " + (if (id_real.isDefined) fmt(id_real.get) else "None") +
+      "  fullName_real: " + fmt(fullName_real) +
+      "  email_real: " + fmt(email_real) +
+      "  instPK: " + institutionPK +
+      "  hashedPswd: " + fmt(hashedPassword) +
+      "  pswdSalt: " + fmt(passwordSalt) +
+      "  role: " + role +
+      "  useAck: " + (if (termsOfUseAcknowledgment.isDefined) termsOfUseAcknowledgment.get else "None")
+  }
 }
 
 object User extends Logging {

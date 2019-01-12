@@ -36,7 +36,7 @@ class SetPassword extends Restlet with SubUrlRoot {
   private def getTargetUserId(valueMap: ValueMapT): Elem = {
     val pk = valueMap.get(userPK.label)
     val usrId = if (pk.isDefined) User.get(pk.get.toLong).get.id else "unknown"
-    <div>{ usrId }</div>
+    WebUtil.wrapAlias(usrId )
   }
 
   private val id = new WebPlainText("Id", true, 4, 0, getTargetUserId _)
@@ -117,17 +117,17 @@ class SetPassword extends Restlet with SubUrlRoot {
 
         val usr = User.get(pkOpt.get.toLong)
         if (usr.isDefined) {
-          val ou = usr.get
-          val newUser = new User(ou.userPK, ou.id, None, ou.fullName_real, ou.email_real, ou.institutionPK, newHashedPW, newSalt, ou.role, ou.termsOfUseAcknowledgment)
+          val origUser = usr.get
+          val newUser = origUser.copy(hashedPassword = newHashedPW, passwordSalt = newSalt)
           newUser.insertOrUpdate
           // remove old credentials so that the old password will not work
-          CachedUser.remove(ou.id)
+          CachedUser.remove(origUser.id)
           // replace the users' credentials in the cache
           val userId = request.getChallengeResponse.getIdentifier.toLowerCase.trim
           CachedUser.put(userId, newUser)
           val content = {
             <div>
-              The password for{ ou.id }
+              The password for{ origUser.id }
               has been changed.
               <p></p>
               You will need to re-login.

@@ -9,6 +9,7 @@ import org.aqa.db.UserRole
 import scala.io.StdIn
 import org.aqa.Crypto
 import org.aqa.db.CachedUser
+import org.aqa.AnonymizeUtil
 
 object SetPasswordManually {
 
@@ -24,6 +25,17 @@ object SetPasswordManually {
     print("Enter password (no restrictions): ")
     val password = StdIn.readLine
     val user = CachedUser.get(id)
+    if (true) {
+
+      def testPassword(u: User) = {
+        val hashed = AuthenticationVerifier.hashPassword(password, u.passwordSalt)
+        if (hashed.equals(u.hashedPassword)) {
+          println("User matches: " + u.id)
+          println("    " + AnonymizeUtil.decryptWithNonce(u.institutionPK, u.id_real.get))
+        }
+      }
+      User.list.map(u => testPassword(u))
+    }
     if (user.isEmpty) {
       println("No such user " + id)
       System.exit(1)

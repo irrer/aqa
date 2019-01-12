@@ -138,14 +138,14 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
    * Construct a user from parameters, changing only the fields that the user modified.
    */
   private def updateExistingUserFromParameters(user: User, valueMap: ValueMapT): User = {
-    val institutionPK = valueMap.get(institution.label).get.toLong
+    val newInstPK = valueMap.get(institution.label).get.toLong
 
-    def decry(encrypted: String) = AnonymizeUtil.decryptWithNonce(institutionPK, encrypted)
-    def encry(clearText: String) = AnonymizeUtil.encryptWithNonce(institutionPK, clearText)
+    def decry(encrypted: String) = AnonymizeUtil.decryptWithNonce(user.institutionPK, encrypted)
+    def encry(clearText: String) = AnonymizeUtil.encryptWithNonce(newInstPK, clearText)
 
     val user1 = {
       val newId = valueMap.get(id.label).get.trim
-      if (decry(user.id_real.get).equals(newId))
+      if (decry(user.id_real.get).equals(newId) && (newInstPK == user.institutionPK))
         user
       else
         user.copy(id_real = Some(encry(newId)))
@@ -153,7 +153,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
 
     val user2 = {
       val newfullName = valueMap.get(fullName.label).get.trim
-      if (decry(user.fullName_real).equals(newfullName))
+      if (decry(user.fullName_real).equals(newfullName) && (newInstPK == user.institutionPK))
         user1
       else
         user1.copy(fullName_real = encry(newfullName))
@@ -161,7 +161,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
 
     val user3 = {
       val newEmail = valueMap.get(email.label).get.trim
-      if (decry(user.email_real).equals(newEmail))
+      if (decry(user.email_real).equals(newEmail) && (newInstPK == user.institutionPK))
         user2
       else
         user2.copy(email_real = encry(newEmail))
@@ -169,7 +169,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
 
     val roleText = valueMap.get(role.label).get
 
-    val user4 = user3.copy(role = roleText)
+    val user4 = user3.copy(role = roleText, institutionPK = newInstPK)
 
     user4
   }

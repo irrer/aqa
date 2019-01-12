@@ -207,7 +207,7 @@ object WedgeHTML {
           </div>
           <div class="col-md-5">
             <div class="row">
-              <h3>Wedge Profile as Percent of Background</h3>
+              <h3 title="Wedge profile as percent of background">Wedge Factor</h3>
               { percentChart.html }
             </div>
             <div class="row">

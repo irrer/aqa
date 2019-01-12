@@ -1111,5 +1111,8 @@ object WebUtil extends Logging {
 
   def stringToUrlSafe(text: String): String = text.replaceAll("[^a-zA-Z0-9]", "_")
 
+  def wrapAlias(text: String) = <span aqaalias="">{ text }</span>
+  def wrapAlias(elem: Elem) = <span aqaalias="">{ elem }</span>
+
 }
 

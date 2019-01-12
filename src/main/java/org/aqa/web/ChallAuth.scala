@@ -36,8 +36,6 @@ class ChallAuth(context: Context, optional: Boolean, challengeScheme: ChallengeS
   }
 
   override def beforeHandle(request: Request, response: Response): Int = {
-    println("beforeHandle 1") // TODO rm
-
     val requestedRole = getRequestedRole(request, response)
 
     if (requestedRole == UserRole.publik)
