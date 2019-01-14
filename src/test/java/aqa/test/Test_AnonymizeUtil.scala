@@ -18,6 +18,8 @@ import org.aqa.AnonymizeUtil
 import org.aqa.Config
 import org.aqa.db.DbSetup
 import org.aqa.db.DicomAnonymous
+import org.aqa.db.Machine
+import org.aqa.db.Institution
 
 /**
  * Test AnonymizeUtil.
@@ -28,6 +30,24 @@ class Test_AnonymizeUtil extends FlatSpec with Matchers {
 
   Config.validate
   DbSetup.init
+  if (true) {
+    val mach = Machine.get(11).get
+    println
+    println("mach: " + mach)
+    val instList = Institution.list
+
+    val j = instList.map(i => {
+      AnonymizeUtil.decryptWithNonce(i.institutionPK.get, mach.id_real.get)
+    })
+
+    println(j.mkString("\n"))
+
+    println(Machine.list.mkString("Machine List:\n    ", "\n    ", ""))
+
+    //    val machId = AnonymizeUtil.decryptWithNonce(mach.institutionPK, mach.id_real.get)
+    //    println("machId: " + machId)
+    System.exit(99)
+  }
   val original = new AttributeList
   original.read(new File("""src\test\resources\AnonymizeDicom.dcm"""))
   val originalAsText = DicomUtil.attributeListToString(original) // for debugging

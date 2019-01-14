@@ -87,6 +87,17 @@ object Input extends Logging {
   }
 
   /**
+   * Get a list of inputs that reference the given machine.
+   */
+  def getByMachine(machinePK: Long): Seq[Input] = {
+    val action = for {
+      input <- query if input.machinePK === machinePK
+    } yield (input)
+    val list = Db.run(action.result)
+    list
+  }
+
+  /**
    * Given the input directory, return the text for the relative path of the directory.  This path is
    * used so that files will be independent of the configuration.
    */

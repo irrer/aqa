@@ -37,6 +37,27 @@ case class Machine(
   def fileName = Machine.fileName(id)
 
   def configDir: Option[File] = if (configurationDirectory.isDefined) Some(Machine.getConfigDir(configurationDirectory.get)) else None
+
+  override def toString = {
+    def fmt(text: String) = text.take(8) + "..."
+    def fmtB(boo: Boolean) = boo.toString.subSequence(0, 1)
+    "machinePK: " + (if (machinePK.isDefined) machinePK.get else "None") +
+      "  id: " + id +
+      "  id_real: " + (if (id_real.isDefined) fmt(id_real.get) else "None") +
+      "  machineTypePK: " + machineTypePK +
+      "  config dir : " + (if (configurationDirectory.isDefined) fmt(configurationDirectory.get) else "None") +
+      "  MLC PK: " + multileafCollimatorPK +
+      "  epidPK: " + epidPK +
+      "  institutionPK: " + institutionPK +
+      "  serialNumber: " + (if (serialNumber.isDefined) serialNumber.get else "None") +
+      "  image 2_5_mv: " + fmtB(imagingBeam2_5_mv) +
+      "  onboardImager: " + fmtB(onboardImager) +
+      "  6D Tabletop: " + fmtB(sixDimTabletop) +
+      "  resp mgmt: " + fmtB(respiratoryManagement) +
+      "  dev mode: " + fmtB(developerMode) +
+      "  notes: " + fmt(notes)
+  }
+
 }
 
 object Machine extends Logging {

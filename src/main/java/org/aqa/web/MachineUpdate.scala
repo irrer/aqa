@@ -31,6 +31,8 @@ import org.aqa.db.MultileafCollimator
 import org.aqa.db.EPID
 import org.aqa.db.MachineBeamEnergy
 import org.aqa.AnonymizeUtil
+import org.aqa.db.Input
+import org.aqa.db.PMI
 
 object MachineUpdate {
   val machinePKTag = "machinePK"
@@ -95,6 +97,19 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   private val developerMode = new WebInputCheckbox("Developer Mode", 2, 0)
   private val respiratoryManagement = new WebInputCheckbox("Respiratory Management", 3, 0)
 
+  private def showConfirmDelete(valueMap: ValueMapT): Elem = {
+    val machPK = valueMap.get(machinePK.label).get.toLong
+    val mach = Machine.get(machPK).get
+    val inputList = Input.getByMachine(machPK)
+    val pmiList = PMI.getByMachine(machPK)
+    val html = {
+      <div>If machine <span aqaalias="">{ mach.id }</span> is deleted then { inputList.size } data sets and { pmiList.size } maintenance records will also be deleted. </div>
+    }
+    html
+  }
+
+  private val confirDeleteMessage = new WebPlainText("Confirm Delete", true, 6, 0, showConfirmDelete)
+
   private def institutionList(response: Option[Response]) = Institution.list.toList.sortBy(_.name).map(i => (i.institutionPK.get.toString, i.name))
 
   private val institutionPK = new WebInputSelect("Institution", 6, 0, institutionList)
@@ -108,6 +123,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
   private val saveButton = makeButton("Save", true, ButtonType.BtnPrimary)
   private val deleteButton = makeButton("Delete", false, ButtonType.BtnDanger)
+  private val confirmDeleteButton = makeButton("Confirm Delete", false, ButtonType.BtnDanger)
   private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
   private val maintenanceButton = makeButton("PMI Records", false, ButtonType.BtnDefault)
   private val machinePK = new WebInputHidden(MachineUpdate.machinePKTag)
@@ -180,10 +196,18 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   val createButtonList: WebRow = List(createButton, cancelButton)
   val editButtonList: WebRow = List(saveButton, cancelButton, deleteButton, maintenanceButton, machinePK)
+  val confirmDeleteButtonList: WebRow = List(cancelButton, confirmDeleteButton, machinePK)
+
+  def confirmDeleteFieldList(valueMap: ValueMapT): List[WebRow] = {
+    val list: List[WebRow] = List(List(confirDeleteMessage))
+    list
+  }
 
   private def formCreate(valueMap: ValueMapT) = new WebForm(pathOf, fieldList(valueMap) :+ createButtonList)
 
   private def formEdit(valueMap: ValueMapT) = new WebForm(pathOf, fieldList(valueMap) :+ editButtonList)
+
+  private def formConfirmDelete(valueMap: ValueMapT) = new WebForm(pathOf, confirmDeleteFieldList(valueMap) :+ confirmDeleteButtonList)
 
   //    private def redirect(response: Response, valueMap: ValueMapT) = {
   //        val pk = machinePK.getValOrEmpty(valueMap)
@@ -434,7 +458,23 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   }
 
   private def delete(valueMap: ValueMapT, response: Response): Unit = {
-    Machine.delete(valueMap.get(machinePK.label).get.toLong)
+    val machPK = valueMap.get(machinePK.label).get.toLong
+    val inputList = Input.getByMachine(machPK)
+    val pmiList = PMI.getByMachine(machPK)
+    if (inputList.isEmpty && pmiList.isEmpty) {
+      Machine.delete(machPK)
+      MachineList.redirect(response)
+    }
+    formConfirmDelete(valueMap).setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
+  }
+
+  private def confirmDelete(valueMap: ValueMapT, response: Response): Unit = {
+    val machPK = valueMap.get(machinePK.label).get.toLong
+    val inputList = Input.getByMachine(machPK)
+    val pmiList = PMI.getByMachine(machPK)
+    pmiList.map(pmi => PMI.delete(pmi.pmiPK.get))
+    inputList.map(input => Input.delete(input.inputPK.get))
+    Machine.delete(machPK)
     MachineList.redirect(response)
   }
 
@@ -498,6 +538,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
         case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
         case _ if buttonIs(valueMap, saveButton) => save(valueMap, response)
         case _ if buttonIs(valueMap, deleteButton) => delete(valueMap, response)
+        case _ if buttonIs(valueMap, confirmDeleteButton) => confirmDelete(valueMap, response)
         case _ if buttonIs(valueMap, maintenanceButton) => maintRec(valueMap, response)
         case _ if isEdit(valueMap) => edit(valueMap, response)
         case _ => emptyForm(response)
