@@ -44,7 +44,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   private val pageTitleEdit = "Edit Machine"
 
-  private val id = new WebInputText("Id", 3, 0, "Name of machine (required)")
+  private val id = new WebInputText("Id", true, 3, 0, "Name of machine (required)", true)
 
   private def typeName(response: Option[Response]) = MachineType.list.toList.map(mt => (mt.machineTypePK.get.toString, mt.toName))
 
@@ -108,11 +108,14 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     html
   }
 
-  private val confirDeleteMessage = new WebPlainText("Confirm Delete", true, 6, 0, showConfirmDelete)
+  private val confirmDeleteMessage = new WebPlainText("Confirm Delete", true, 6, 0, showConfirmDelete)
 
-  private def institutionList(response: Option[Response]) = Institution.list.toList.sortBy(_.name).map(i => (i.institutionPK.get.toString, i.name))
+  private def institutionList(response: Option[Response]): Seq[(String, String)] = {
+    def instToChoice(inst: Institution) = (inst.institutionPK.get.toString, inst.name)
+    Institution.list.toSeq.sortBy(_.name).map(instToChoice _)
+  }
 
-  private val institutionPK = new WebInputSelect("Institution", 6, 0, institutionList)
+  private val institutionPK = new WebInputSelect("Institution", 6, 0, institutionList, true)
 
   private val notes = new WebInputTextArea("Notes", 6, 0, "")
 
@@ -199,7 +202,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   val confirmDeleteButtonList: WebRow = List(cancelButton, confirmDeleteButton, machinePK)
 
   def confirmDeleteFieldList(valueMap: ValueMapT): List[WebRow] = {
-    val list: List[WebRow] = List(List(confirDeleteMessage))
+    val list: List[WebRow] = List(List(confirmDeleteMessage))
     list
   }
 
@@ -440,7 +443,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     }
 
     val valueMap = Map(
-      (id.label, AnonymizeUtil.decryptWithNonce(mach.institutionPK, mach.id_real.get)),
+      (id.label, mach.id),
       (machineTypePK.label, mach.machineTypePK.toString),
       (institutionPK.label, mach.institutionPK.toString),
       (multileafCollimatorPK.label, mach.multileafCollimatorPK.toString),

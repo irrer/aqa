@@ -61,6 +61,11 @@ object WebUtil extends Logging {
 
   val titleNewline = "@@amp@@#10;"
 
+  val aqaAliasAttr = { <div aqaalias=""/> }.attributes
+  def ifAqaAliasAttr(elem: Elem, aqaAlias: Boolean) = if (aqaAlias) { elem % aqaAliasAttr } else elem
+  def wrapAlias(text: String) = <span aqaalias="">{ text }</span>
+  def wrapAlias(elem: Elem) = <span aqaalias="">{ elem }</span>
+
   def snglQuote(text: String): String = singleQuote + text + singleQuote
 
   def dblQuote(text: String): String = doubleQuote + text + doubleQuote
@@ -469,7 +474,7 @@ object WebUtil extends Logging {
       val titleHtml: Elem = {
         title match {
           case Some(t) => <h2>{ t }</h2>
-          case _ => <div/>
+          case _ => <span></span>
         }
       }
 
@@ -653,13 +658,15 @@ object WebUtil extends Logging {
     def getDouble(valueMap: ValueMapT): Option[Double] = stringToDouble(getValOrEmpty(valueMap).trim)
   }
 
-  class WebInputText(override val label: String, showLabel: Boolean, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
-
+  class WebInputText(override val label: String, showLabel: Boolean, col: Int, offset: Int, placeholder: String, aqaAlias: Boolean) extends IsInput(label) with ToHtml {
+    def this(label: String, showLabel: Boolean, col: Int, offset: Int, placeholder: String) = this(label, showLabel, col, offset, placeholder, false)
     def this(label: String, col: Int, offset: Int, placeholder: String) = this(label, true, col, offset, placeholder)
 
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
+      val j = label
       val html = <input type="text"/> % idNameClassValueAsAttr(label, valueMap) % placeholderAsAttr(placeholder)
-      wrapInput(label, showLabel, html, col, offset, errorMap)
+      val htmlAlias = ifAqaAliasAttr(html, aqaAlias)
+      wrapInput(label, showLabel, htmlAlias, col, offset, errorMap)
     }
   }
 
@@ -704,7 +711,6 @@ object WebUtil extends Logging {
       val curValue: Option[String] = if (valueMap.get(label).isDefined) valueMap.get(label) else None
 
       def toOption(value: String, text: String): Elem = {
-        val aqaAttr = { <div aqaalias=""/> }.attributes
 
         val opt = if (curValue.isDefined && curValue.get.equals(value)) {
           <option selected="selected" value={ value }>{ text }</option>
@@ -712,10 +718,7 @@ object WebUtil extends Logging {
           <option value={ value }>{ text }</option>
         }
 
-        if (aqaAlias)
-          (opt % aqaAttr)
-        else
-          opt
+        ifAqaAliasAttr(opt, aqaAlias)
       }
 
       val list = selectList(response).map(v => toOption(v._1, v._2))
@@ -832,7 +835,8 @@ object WebUtil extends Logging {
     }
   }
 
-  class WebInputTextArea(label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
+  class WebInputTextArea(label: String, col: Int, offset: Int, placeholder: String, aqaAlias: Boolean) extends IsInput(label) with ToHtml {
+    def this(label: String, col: Int, offset: Int, placeholder: String) = this(label, col, offset, placeholder, false)
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
       val value = valueMap.get(label)
       val common = { <input class="form-control" id={ label } name={ label }/> }
@@ -845,7 +849,8 @@ object WebUtil extends Logging {
       val html = // must not allow embedded blanks
         <textarea rows={ rowCount.toString }>{ if (value.isDefined) markLiteralValue(label) else "" }</textarea> % idNameClassAsAttr(label) % placeholderAsAttr(placeholder)
 
-      wrapInput(label, true, html, col, offset, errorMap)
+      val htmlAlias = ifAqaAliasAttr(html, aqaAlias)
+      wrapInput(label, true, htmlAlias, col, offset, errorMap)
     }
   }
 
@@ -1110,9 +1115,5 @@ object WebUtil extends Logging {
   }
 
   def stringToUrlSafe(text: String): String = text.replaceAll("[^a-zA-Z0-9]", "_")
-
-  def wrapAlias(text: String) = <span aqaalias="">{ text }</span>
-  def wrapAlias(elem: Elem) = <span aqaalias="">{ elem }</span>
-
 }
 

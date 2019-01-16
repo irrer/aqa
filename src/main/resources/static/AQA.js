@@ -84,10 +84,39 @@ function myFunction(aliasToRealList) {
   var p;
 
   for (p = 0; p < publicList.length; p++) {
+      
+    var j0 = publicList[p];
+    var j1 = j0.getAttribute("value");
+    var j2 = j0.id;
+    var j3 = j0.tagName;
+    var j4 = j0.hasAttribute("value");
+    var j5 = j0.tagName.toLowerCase().localeCompare("input") == 0;
+    
+    if (j2.toLowerCase().localeCompare("id") == 0) {
+      var foo = "found it";
+    }
+
     var alias = publicList[p].innerHTML.trim();
+    
+    var isInputText = false;
+    
+    if (publicList[p].hasAttribute("value") &&
+      (publicList[p].tagName.toLowerCase().localeCompare("input") == 0) &&
+      publicList[p].hasAttribute("type") &&
+      (publicList[p].getAttribute("type").toLowerCase().localeCompare("text") == 0)
+      ) {
+        alias = publicList[p].getAttribute("value"); 
+        isInputText = true;
+    }
+
     var real = arMap.get(alias);
     if (real != null) {
-      publicList[p].innerHTML = real;
+      
+      if (isInputText) {
+          publicList[p].setAttribute("value", real);
+      } else {
+          publicList[p].innerHTML = real;
+      }
 
       var title = publicList[p].getAttribute("title");
       var showAlias = "Alias: " + alias;
@@ -98,6 +127,10 @@ function myFunction(aliasToRealList) {
         publicList[p].setAttribute("title", title + " " + showAlias);
       }
     }
+    
+    //document.getElementById("Id").setAttribute("value", "Foofles");
+    
   }
+  
 
 }

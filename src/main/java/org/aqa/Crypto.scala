@@ -146,12 +146,16 @@ object Crypto extends Logging {
       (0 until numBlock).map(b => cipher.decryptBlock(encryptedText, b * cipherBlockSize, clear, b * cipherBlockSize))
       val justText = (0 until numBlock).map(b => clear.drop(b * cipherBlockSize).take(cipherBlockSize / 2)).flatten.toArray
       val separator = justText.indexOf(' '.toByte)
-      val lengthOfOriginalText = (new String(justText.take(separator))).toInt
-      val originalText = justText.drop(separator + 1).take(lengthOfOriginalText)
-      new String(originalText)
+      val intText = new String(justText.take(separator))
+      if (intText.matches("[0-9][0-9]*")) {
+        val lengthOfOriginalText = intText.toInt
+        val originalText = justText.drop(separator + 1).take(lengthOfOriginalText)
+        new String(originalText)
+      } else
+        "Could not decrypt"
     } catch {
       case t: Throwable => {
-        logger.warn("Failure to decrypt string: " + encryptedTextAsHex + " : " + fmtEx(t))        
+        logger.warn("Failure to decrypt string: " + encryptedTextAsHex + " : " + fmtEx(t))
         "decryption failure"
       }
     }
