@@ -31,21 +31,36 @@ class Test_AnonymizeUtil extends FlatSpec with Matchers {
   Config.validate
   DbSetup.init
   if (true) {
-    val mach = Machine.get(11).get
-    println
-    println("mach: " + mach)
-    val instList = Institution.list
 
-    val j = instList.map(i => {
-      AnonymizeUtil.decryptWithNonce(i.institutionPK.get, mach.id_real.get)
-    })
+    if (true) {
+      val instList = Institution.list
 
-    println(j.mkString("\n"))
+      val machList = Machine.list
 
-    println(Machine.list.mkString("Machine List:\n    ", "\n    ", ""))
+      for (inst <- instList; mach <- machList) {
+        val id = AnonymizeUtil.decryptWithNonce(inst.institutionPK.get, mach.id_real.get)
+        if (!id.equals("Could not decrypt")) {
+          println("decrypted machine " + mach.machinePK.get +
+            " : " + mach.id +
+            "  machInst: " + mach.institutionPK +
+            " with inst " + inst.name +
+            " to " + id +
+            "    mach notes " + AnonymizeUtil.decryptWithNonce(inst.institutionPK.get, mach.notes))
+        }
+      }
+    }
 
-    //    val machId = AnonymizeUtil.decryptWithNonce(mach.institutionPK, mach.id_real.get)
-    //    println("machId: " + machId)
+    for (machPK <- Seq(14, 16, 18, 19)) {
+      println("Fixing machine " + machPK)
+      val machine = Machine.get(machPK).get
+      val id_r = AnonymizeUtil.aliasify("TXM_", machine.machinePK.get)
+
+      val id_enc = AnonymizeUtil.encryptWithNonce(machine.institutionPK, id_r)
+      val note_enc = AnonymizeUtil.encryptWithNonce(machine.institutionPK, "")
+      val mach2 = machine.copy(id_real = Some(id_enc), notes = note_enc)
+      mach2.insertOrUpdate
+    }
+
     System.exit(99)
   }
   val original = new AttributeList

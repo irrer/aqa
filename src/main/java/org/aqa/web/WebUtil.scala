@@ -787,7 +787,7 @@ object WebUtil extends Logging {
     }
   }
 
-  trait SubUrlTrait {
+  trait SubUrlTrait extends Logging {
     def subUrl: SubUrl.Value
 
     def url(name: String): String = SubUrl.url(subUrl, name)
@@ -801,7 +801,7 @@ object WebUtil extends Logging {
     override def subUrl = SubUrl.root
   }
 
-  trait SubUrlAdmin extends SubUrlTrait {
+  trait SubUrlAdmin extends SubUrlTrait  {
     override def subUrl = SubUrl.admin
   }
 

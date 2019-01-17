@@ -216,7 +216,7 @@ object Run extends Logging {
       ("machine_serialNumber" -> serNoText),
       ("machine_imagingBeam2_5_mv" -> machine.imagingBeam2_5_mv),
       ("machine_onboardImager" -> machine.onboardImager),
-      ("machine_sixDimTabletop" -> machine.sixDimTabletop),
+      ("machine_sixDimTabletop" -> machine.table6DOF),
       ("machine_respiratoryManagement" -> machine.respiratoryManagement),
       ("machine_developerMode" -> machine.developerMode),
       ("machine_notes" -> machine.notes))

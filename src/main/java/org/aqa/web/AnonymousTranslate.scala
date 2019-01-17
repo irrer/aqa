@@ -49,8 +49,13 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
 
   private val emptyTable = "[]"
 
-  private case class Translate(institutionPK: Long, alias: String, real: String) {
-    def toJson = "{ \"alias\": \"" + alias + "\", \"real\": \"" + AnonymizeUtil.decryptWithNonce(institutionPK, real) + "\" }"
+  private case class Translate(institutionPK: Long, alias: String, real: String, use: String) {
+    def toJson: String = "{ \"alias\": \"" + alias + "\", \"real\": \"" + AnonymizeUtil.decryptWithNonce(institutionPK, real) + "\" }"
+
+    def toHtml: Elem = {
+      val j = { <tr><td>{ use }</td><td>{ alias }</td><td>{ AnonymizeUtil.decryptWithNonce(institutionPK, real) }</td></tr> }
+      j
+    }
   }
 
   private val emptyList = Seq[Translate]()
@@ -58,13 +63,13 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
   private def getInstitution(institutionPK: Long, isWhitelisted: Boolean): Seq[Translate] = {
 
     def doInst(inst: Institution) = {
-      val name = new Translate(inst.institutionPK.get, inst.name, inst.name_real.get)
+      val name = new Translate(inst.institutionPK.get, inst.name, inst.name_real.get, "Institution Name")
       val url = new Translate(
         inst.institutionPK.get,
-        AnonymizeUtil.aliasify(AnonymizeUtil.institutionAliasUrlPrefixId, inst.institutionPK.get), inst.url_real)
+        AnonymizeUtil.aliasify(AnonymizeUtil.institutionAliasUrlPrefixId, inst.institutionPK.get), inst.url_real, "Institution URL")
       val description = new Translate(
         inst.institutionPK.get,
-        AnonymizeUtil.aliasify(AnonymizeUtil.institutionAliasDescriptionPrefixId, inst.institutionPK.get), inst.description_real)
+        AnonymizeUtil.aliasify(AnonymizeUtil.institutionAliasDescriptionPrefixId, inst.institutionPK.get), inst.description_real, "Institution Description")
       Seq(name, url, description)
     }
 
@@ -75,8 +80,8 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
 
   private def getMachine(institutionPK: Long, isWhitelisted: Boolean): Seq[Translate] = {
     def doMach(mach: Machine) = {
-      val name = new Translate(mach.institutionPK, mach.id, mach.id_real.get)
-      val url = new Translate(mach.institutionPK, AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasNotesPrefixId, mach.machinePK.get), mach.notes)
+      val name = new Translate(mach.institutionPK, mach.id, mach.id_real.get, "Machine ID")
+      val url = new Translate(mach.institutionPK, AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasNotesPrefixId, mach.machinePK.get), mach.notes, "Machine Notes")
       Seq(name, url)
     }
 
@@ -87,9 +92,9 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
   private def getUser(institutionPK: Long, isWhitelisted: Boolean): Seq[Translate] = {
 
     def doUser(user: User) = {
-      val id = new Translate(user.institutionPK, user.id, user.id_real.get)
-      val fullName = new Translate(user.institutionPK, AnonymizeUtil.aliasify(AnonymizeUtil.userAliasFullNamePrefixId, user.userPK.get), user.fullName_real)
-      val email = new Translate(user.institutionPK, AnonymizeUtil.aliasify(AnonymizeUtil.userAliasEmailPrefixId, user.userPK.get), user.email_real)
+      val id = new Translate(user.institutionPK, user.id, user.id_real.get, "User ID")
+      val fullName = new Translate(user.institutionPK, AnonymizeUtil.aliasify(AnonymizeUtil.userAliasFullNamePrefixId, user.userPK.get), user.fullName_real, "User Name")
+      val email = new Translate(user.institutionPK, AnonymizeUtil.aliasify(AnonymizeUtil.userAliasEmailPrefixId, user.userPK.get), user.email_real, "User Email")
       Seq(id, fullName, email)
     }
 
@@ -98,23 +103,56 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
     userList.map(user => doUser(user)).flatten
   }
 
+  private def getJson(list: Seq[Translate], response: Response) = {
+    val jsonTable = list.map(t => t.toJson).mkString("[\n", ",\n", "\n]\n")
+    response.setEntity(jsonTable, MediaType.APPLICATION_JSON)
+    response.setStatus(Status.SUCCESS_OK)
+  }
+
+  private def getHtml(list: Seq[Translate], userId: String, response: Response) = {
+    val content = {
+      <div class="row col-md-10 col-md-offset-1">
+        <h2>List of Aliases and Values Viewable by User <i>{ userId }</i></h2>
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>Used As</th>
+              <th>Alias</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          { list.map(t => t.toHtml) }
+        </table>
+      </div>
+    }
+
+    val text = WebUtil.wrapBody(content, "Translation of Aliased Values")
+
+    response.setEntity(text, MediaType.TEXT_HTML)
+    response.setStatus(Status.SUCCESS_OK)
+  }
+
+  private def getTranslationList(request: Request): Seq[Translate] = {
+    WebUtil.getUser(request) match {
+      case Some(user) => {
+        val isWhitelisted = WebUtil.userIsWhitelisted(request)
+        getInstitution(user.institutionPK, isWhitelisted) ++ getMachine(user.institutionPK, isWhitelisted) ++ getUser(user.institutionPK, isWhitelisted)
+      }
+      case _ => Seq[Translate]()
+    }
+  }
+
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
     val valueMap = getValueMap(request)
+    val userId = WebUtil.getUserIdOrDefault(request, "guest")
+    val user = WebUtil.getUser(request)
     try {
-
-      val jsonTable: String = WebUtil.getUser(request) match {
-        case Some(user) => {
-          val isWhitelisted = WebUtil.userIsWhitelisted(request)
-          val list = getInstitution(user.institutionPK, isWhitelisted) ++ getMachine(user.institutionPK, isWhitelisted) ++ getUser(user.institutionPK, isWhitelisted)
-          list.map(t => t.toJson).mkString("[\n", ",\n", "\n]\n")
-        }
-        case _ => emptyTable
-      }
-
-      response.setEntity(jsonTable, MediaType.APPLICATION_JSON)
-      response.setStatus(Status.SUCCESS_OK)
-      logger.info("request: " + request) // TODO
+      val list = getTranslationList(request)
+      if (valueMap.get("html").isDefined)
+        getHtml(list, userId, response)
+      else
+        getJson(list, response)
 
     } catch {
       case t: Throwable => {

@@ -93,7 +93,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   private val imagingBeam2_5_mv = new WebInputCheckbox("Has 2.5 mv imaging beam", 3, 0)
 
   private val onboardImager = new WebInputCheckbox("Onboard Imager", 2, 0)
-  private val sixDimTabletop = new WebInputCheckbox("Six Dim Tabletop", 2, 0)
+  private val table6DOF = new WebInputCheckbox("6DOF Table", 2, 0)
   private val developerMode = new WebInputCheckbox("Developer Mode", 2, 0)
   private val respiratoryManagement = new WebInputCheckbox("Respiratory Management", 3, 0)
 
@@ -117,7 +117,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   private val institutionPK = new WebInputSelect("Institution", 6, 0, institutionList, true)
 
-  private val notes = new WebInputTextArea("Notes", 6, 0, "")
+  private val notes = new WebInputTextArea("Notes", 6, 0, "", true)
 
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
     new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
@@ -187,7 +187,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       List(configurationDirectory),
       List(institutionPK),
       List(serialNumber, serialNumberReset),
-      List(onboardImager, sixDimTabletop, developerMode),
+      List(onboardImager, table6DOF, developerMode),
       List(respiratoryManagement, imagingBeam2_5_mv),
       List(photonEnergyHeader, maxDoseRateHeader, fffEnergyHeader, addBeamEnergyButton))
 
@@ -284,16 +284,29 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     beamList.map(i => checkBeam(i)).reduce(_ ++ _)
   }
 
-  private def validateAll(valueMap: ValueMapT, form: WebForm): StyleMapT = emptyId(valueMap) ++ validateUniqueness(valueMap) ++ validateBeamEnergies(valueMap, form)
+  private def validateAuthentication(valueMap: ValueMapT, request: Request): StyleMapT = {
+    val instPK = valueMap.get(institutionPK.label).get.trim.toLong
+    if (isAuthorized(request, instPK)) styleNone
+    else Error.make(institutionPK, "You are not allowed to modify machines from other institutions.")
+  }
+
+  private def validateAll(valueMap: ValueMapT, request: Request, form: WebForm): StyleMapT =
+    emptyId(valueMap) ++
+      validateAuthentication(valueMap, request) ++
+      validateUniqueness(valueMap) ++
+      validateBeamEnergies(valueMap, form)
 
   /**
    * Save changes made to form.
    */
   private def save(valueMap: ValueMapT, response: Response): Unit = {
     val form = formEdit(valueMap)
-    val styleMap = validateAll(valueMap, form)
+    val styleMap = validateAll(valueMap, response.getRequest, form)
     if (styleMap.isEmpty) {
-      constructMachineFromParameters(valueMap)
+      val machine = constructMachineFromParameters(valueMap)
+      machine.insertOrUpdate
+      logger.info("Updating machine " + machine)
+      updateBeamEnergies(machine, valueMap)
       MachineList.redirect(response)
     } else {
       form.setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
@@ -326,14 +339,35 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
+   * If the user is authorized to modify the machine in this way then return true.
+   *
+   * The two allowed cases are:
+   *
+   *     - user is whitelisted
+   *
+   *     - user is modifying a machine that is in their institution
+   */
+  private def isAuthorized(request: Request, institutionPK: Long): Boolean = {
+    val ok = WebUtil.userIsWhitelisted(request) ||
+      {
+        getUser(request) match {
+          case Some(user) => user.institutionPK == institutionPK
+          case _ => false
+        }
+      }
+    ok
+  }
+
+  /**
    * Create a new machine
    */
-  private def constructMachineFromParameters(valueMap: ValueMapT): Unit = {
+  private def constructMachineFromParameters(valueMap: ValueMapT): Machine = {
     val institutionPKVal = valueMap.get(institutionPK.label).get.trim.toLong
     val pk: Option[Long] = {
       val e = valueMap.get(machinePK.label)
       if (e.isDefined) Some(e.get.toLong) else None
     }
+    val j = valueMap.get(id.label).get.trim // TODO rm
     val idVal = (if (pk.isDefined) AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasPrefixId, pk.get) else "None")
     val id_realVal = Some(AnonymizeUtil.encryptWithNonce(institutionPKVal, valueMap.get(id.label).get.trim))
     val machineTypePKVal = valueMap.get(machineTypePK.label).get.trim.toLong
@@ -364,21 +398,12 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       serialNumberVal,
       valueMap.get(imagingBeam2_5_mv.label).isDefined,
       valueMap.get(onboardImager.label).isDefined,
-      valueMap.get(sixDimTabletop.label).isDefined,
+      valueMap.get(table6DOF.label).isDefined,
       valueMap.get(respiratoryManagement.label).isDefined,
       valueMap.get(developerMode.label).isDefined,
       notesVal)
 
-    if (pk.isDefined) {
-      machine.insertOrUpdate
-      updateBeamEnergies(machine, valueMap)
-    } else {
-      val machineWithoutId = machine.insert
-      val newMachine = machineWithoutId.copy(id = AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasPrefixId, machineWithoutId.machinePK.get))
-      newMachine.insertOrUpdate
-
-      updateBeamEnergies(newMachine, valueMap)
-    }
+    machine
   }
 
   /**
@@ -395,11 +420,25 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   private def create(valueMap: ValueMapT, response: Response) = {
     val form = formCreate(valueMap)
 
-    val styleMap = validateAll(valueMap, form)
+    val styleMap = validateAll(valueMap, response.getRequest, form)
 
     if (styleMap.isEmpty) {
-      constructMachineFromParameters(valueMap)
-      MachineList.redirect(response)
+      val machine = constructMachineFromParameters(valueMap)
+      logger.info("Creating machine " + machine)
+
+      if (machine.machinePK.isDefined) {
+        machine.insertOrUpdate
+        updateBeamEnergies(machine, valueMap)
+        MachineList.redirect(response)
+      } else {
+        val machineWithoutId = machine.insert
+        val newMachine = machineWithoutId.copy(id = AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasPrefixId, machineWithoutId.machinePK.get))
+        newMachine.insertOrUpdate
+
+        updateBeamEnergies(newMachine, valueMap)
+        MachineList.redirect(response)
+      }
+
     } else {
       form.setFormResponse(valueMap, styleMap, pageTitleCreate, response, Status.CLIENT_ERROR_BAD_REQUEST)
     }
@@ -451,10 +490,10 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       (serialNumber.label, mach.serialNumber.toString),
       (imagingBeam2_5_mv.label, mach.imagingBeam2_5_mv.toString),
       (onboardImager.label, mach.onboardImager.toString),
-      (sixDimTabletop.label, mach.sixDimTabletop.toString),
+      (table6DOF.label, mach.table6DOF.toString),
       (respiratoryManagement.label, mach.respiratoryManagement.toString),
       (developerMode.label, mach.developerMode.toString),
-      (notes.label, AnonymizeUtil.decryptWithNonce(mach.institutionPK, mach.notes)),
+      (notes.label, AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasNotesPrefixId, pk)),
       (machinePK.label, pk.toString)) ++ getBeamEnergyListAsValueMap(mach.machinePK.get)
 
     formEdit(valueMap).setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
@@ -464,11 +503,17 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     val machPK = valueMap.get(machinePK.label).get.toLong
     val inputList = Input.getByMachine(machPK)
     val pmiList = PMI.getByMachine(machPK)
-    if (inputList.isEmpty && pmiList.isEmpty) {
-      Machine.delete(machPK)
-      MachineList.redirect(response)
+
+    val styleMap = validateAuthentication(valueMap, response.getRequest)
+
+    if (styleMap.isEmpty) {
+      if (inputList.isEmpty && pmiList.isEmpty) {
+        Machine.delete(machPK)
+        MachineList.redirect(response)
+      } else formConfirmDelete(valueMap).setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
+    } else {
+      formEdit(valueMap).setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.SUCCESS_OK)
     }
-    formConfirmDelete(valueMap).setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
   }
 
   private def confirmDelete(valueMap: ValueMapT, response: Response): Unit = {

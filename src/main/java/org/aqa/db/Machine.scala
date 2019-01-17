@@ -19,7 +19,7 @@ case class Machine(
   serialNumber: Option[String],
   imagingBeam2_5_mv: Boolean,
   onboardImager: Boolean,
-  sixDimTabletop: Boolean,
+  table6DOF: Boolean,
   respiratoryManagement: Boolean,
   developerMode: Boolean,
   notes: String // optional further information
@@ -52,7 +52,7 @@ case class Machine(
       "  serialNumber: " + (if (serialNumber.isDefined) serialNumber.get else "None") +
       "  image 2_5_mv: " + fmtB(imagingBeam2_5_mv) +
       "  onboardImager: " + fmtB(onboardImager) +
-      "  6D Tabletop: " + fmtB(sixDimTabletop) +
+      "  6DOF Table: " + fmtB(table6DOF) +
       "  resp mgmt: " + fmtB(respiratoryManagement) +
       "  dev mode: " + fmtB(developerMode) +
       "  notes: " + fmt(notes)
@@ -76,7 +76,7 @@ object Machine extends Logging {
     def serialNumber = column[Option[String]]("serialNumber")
     def imagingBeam2_5_mv = column[Boolean]("imagingBeam2_5_mv")
     def onboardImager = column[Boolean]("onboardImager")
-    def sixDimTabletop = column[Boolean]("sixDimTabletop")
+    def table6DOF = column[Boolean]("table6DOF")
     def respiratoryManagement = column[Boolean]("respiratoryManagement")
     def developerMode = column[Boolean]("developerMode")
 
@@ -92,7 +92,7 @@ object Machine extends Logging {
       serialNumber,
       imagingBeam2_5_mv,
       onboardImager,
-      sixDimTabletop,
+      table6DOF,
       respiratoryManagement,
       developerMode,
 
