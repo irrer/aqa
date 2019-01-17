@@ -69,13 +69,13 @@ var aliasToRealUrl = "/AnonymousTranslate/translateTable.json";  // defines the 
 jsonhttp.onreadystatechange = function() {
   if (this.readyState == 4 && this.status == 200) {
     var aliasToRealList = JSON.parse(this.responseText);
-    myFunction(aliasToRealList);
+    translateAliases(aliasToRealList);
   }
 };
 jsonhttp.open("GET", aliasToRealUrl, true);
 jsonhttp.send();
 
-function myFunction(aliasToRealList) {
+function translateAliases(aliasToRealList) {
   var publicList = $( "[aqaalias]" ); // defines the attribute for showing real names
 
   var arMap = new Map();
@@ -84,22 +84,10 @@ function myFunction(aliasToRealList) {
   var p;
 
   for (p = 0; p < publicList.length; p++) {
-      
-    var j0 = publicList[p];
-    var j1 = j0.getAttribute("value");
-    var j2 = j0.id;
-    var j3 = j0.tagName;
-    var j4 = j0.hasAttribute("value");
-    var j5 = j0.tagName.toLowerCase().localeCompare("input") == 0;
-    
-    if (j2.toLowerCase().localeCompare("id") == 0) {
-      var foo = "found it";
-    }
-
     var alias = publicList[p].innerHTML.trim();
-    
     var isInputText = false;
     
+    // determine if this is a text form input field.  If so, then set the 'value' attribute instead of the inner HTML
     if (publicList[p].hasAttribute("value") &&
       (publicList[p].tagName.toLowerCase().localeCompare("input") == 0) &&
       publicList[p].hasAttribute("type") &&
@@ -118,6 +106,7 @@ function myFunction(aliasToRealList) {
           publicList[p].innerHTML = real;
       }
 
+      // modify the 'title' attribute to show the user what the alias is.  If there is already a title, then append it.
       var title = publicList[p].getAttribute("title");
       var showAlias = "Alias: " + alias;
       if (title == null) {
@@ -127,8 +116,6 @@ function myFunction(aliasToRealList) {
         publicList[p].setAttribute("title", title + " " + showAlias);
       }
     }
-    
-    //document.getElementById("Id").setAttribute("value", "Foofles");
     
   }
   
