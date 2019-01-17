@@ -367,7 +367,6 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       val e = valueMap.get(machinePK.label)
       if (e.isDefined) Some(e.get.toLong) else None
     }
-    val j = valueMap.get(id.label).get.trim // TODO rm
     val idVal = (if (pk.isDefined) AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasPrefixId, pk.get) else "None")
     val id_realVal = Some(AnonymizeUtil.encryptWithNonce(institutionPKVal, valueMap.get(id.label).get.trim))
     val machineTypePKVal = valueMap.get(machineTypePK.label).get.trim.toLong

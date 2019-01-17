@@ -60,7 +60,7 @@ class PMIList extends GenericList[PMI] with WebUtil.SubUrlAdmin {
     "Date/Time",
     (a, b) => (a.creationTime.getTime < b.creationTime.getTime), (mr: PMI) => makePrimaryKeyHtml(WebInputDateTime.dateTimeFormat.format(mr.creationTime), mr.pmiPK))
 
-  private val userCol = new Column[PMI]("User", mr => User.get(mr.userPK).get.id)
+  private val userCol = new Column[PMI]("User", mr => User.get(mr.userPK).get.id, mr => wrapAlias(User.get(mr.userPK).get.id))
 
   private val summaryCol = new Column[PMI]("Summary", _.summary)
 

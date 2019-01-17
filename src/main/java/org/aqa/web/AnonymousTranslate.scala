@@ -41,7 +41,7 @@ object AnonymousTranslate {
 }
 
 /**
- * Generate a json table that translates between alias id's and real id's.  The
+ * Generate a json or html table that translates between alias id's and real id's.  The
  * contents of the table are based on the user's credentials, which is what ever
  * belongs to the user's institution.
  */

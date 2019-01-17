@@ -95,11 +95,46 @@ class PMIUpdate extends Restlet with SubUrlAdmin {
     response.redirectSeeOther(path)
   }
 
+  /**
+   * If the user is authorized to modify the machine in this way then return true.
+   *
+   * The two allowed cases are:
+   *
+   *     - user is whitelisted
+   *
+   *     - user is modifying a machine that is in their institution
+   */
+  private def isAuthorized(request: Request, institutionPK: Long): Boolean = {
+    val ok = WebUtil.userIsWhitelisted(request) ||
+      {
+        getUser(request) match {
+          case Some(user) => user.institutionPK == institutionPK
+          case _ => false
+        }
+      }
+    ok
+  }
+
   private def emptySummary(valueMap: ValueMapT): StyleMapT = {
     val summaryText = valueMap.get(summary.label).get.trim
     val isEmpty = summaryText.trim.size == 0
     if (isEmpty) Error.make(summary, summary.label + " can not be empty")
     else styleNone
+  }
+
+  private def validateAuthentication(valueMap: ValueMapT, request: Request): StyleMapT = {
+
+    val machPK = {
+      if (valueMap.get(machinePK.label).isDefined) {
+        valueMap.get(machinePK.label).get.toLong
+      } else {
+        (PMI.get(valueMap.get(pmiPK.label).get.toLong).get).machinePK
+      }
+    }
+    val instPK = Machine.get(machPK).get.institutionPK
+
+    if (isAuthorized(request, instPK)) styleNone
+    else Error.make(summary, "You are not allowed to modify maintenance records for machines from other institutions.")
   }
 
   private def dateIsInvalid(valueMap: ValueMapT): StyleMapT = {
@@ -111,7 +146,7 @@ class PMIUpdate extends Restlet with SubUrlAdmin {
     PMI.query.insertOrUpdate(inst)
   }
 
-  private def checkFields(valueMap: ValueMapT): StyleMapT = emptySummary(valueMap) ++ dateIsInvalid(valueMap)
+  private def checkFields(valueMap: ValueMapT, request: Request): StyleMapT = validateAuthentication(valueMap, request) ++ emptySummary(valueMap) ++ dateIsInvalid(valueMap)
 
   /**
    * Create a new pmi
@@ -150,7 +185,7 @@ class PMIUpdate extends Restlet with SubUrlAdmin {
    * Save changes made to form.
    */
   private def save(valueMap: ValueMapT, pageTitle: String, response: Response): Unit = {
-    val styleMap = checkFields(valueMap)
+    val styleMap = checkFields(valueMap, response.getRequest)
     if (styleMap.isEmpty) {
       (createPMIFromParameters(valueMap, response.getRequest)).insertOrUpdate
       redirectToList(response, valueMap)
@@ -158,7 +193,7 @@ class PMIUpdate extends Restlet with SubUrlAdmin {
   }
 
   private def create(valueMap: ValueMapT, pageTitle: String, response: Response) = {
-    val styleMap = checkFields(valueMap)
+    val styleMap = checkFields(valueMap, response.getRequest)
     if (styleMap.isEmpty) {
       createPMIFromParameters(valueMap, response.getRequest).insert
       redirectToList(response, valueMap)
@@ -193,11 +228,16 @@ class PMIUpdate extends Restlet with SubUrlAdmin {
   }
 
   private def isDelete(valueMap: ValueMapT, response: Response): Boolean = {
+    val styleMap = validateAuthentication(valueMap, response.getRequest)
     if (buttonIs(valueMap, deleteButton)) {
       val value = valueMap.get(PMIUpdate.pmiPKTag)
       if (value.isDefined) {
-        PMI.delete(value.get.toLong)
-        redirectToList(response, valueMap)
+        if (styleMap.isEmpty) {
+          PMI.delete(value.get.toLong)
+          redirectToList(response, valueMap)
+        } else {
+          formEdit.setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.SUCCESS_OK)
+        }
         true
       } else
         false
