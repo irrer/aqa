@@ -461,6 +461,7 @@ class WebServer extends Application with Logging {
         new SymmetryAndFlatnessUseAsBaseline,
         new WedgeUseAsBaseline,
         new AnonymousTranslate,
+        new CustomizeRtPlan,
         termsOfUse,
         outputList,
         webRunIndex,
