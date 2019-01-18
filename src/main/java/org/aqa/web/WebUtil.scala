@@ -424,6 +424,10 @@ object WebUtil extends Logging {
 
   def markLiteralValue(label: String): String = "@@@@" + label + "@@@@"
 
+  def makeAlertBox(text: String): String = {
+    "alert(\"" + text.replaceAllLiterally(singleQuote, "\\'").replaceAllLiterally(doubleQuote, "\\\"") + "\");"
+  }
+
   val sessionLabel = "session"
 
   class WebForm(action: String, title: Option[String], rowList: List[WebRow], fileUpload: Int) extends ToHtml {
@@ -522,8 +526,31 @@ object WebUtil extends Logging {
       </div>
     }
 
+    def makeFormAlertBox(errorMap: StyleMapT): Option[String] = {
+      val quote = "\""
+      val back = """\"""
+      val replace = back + quote
+      def textOfError(style: Style): Option[String] = {
+        if (style.isInstanceOf[Error]) {
+          val text = style.asInstanceOf[Error].inputTitle.replaceAll("'", singleQuote).replaceAll("\"", doubleQuote)
+          Some(text)
+        } else
+          None
+      }
+
+      val textErrorList = errorMap.values.map(s => textOfError(s)).flatten
+
+      if (textErrorList.isEmpty)
+        None
+      else
+        Some("<script>" + makeAlertBox(textErrorList.mkString("\n\n")) + "</script>")
+    }
+
     def setFormResponse(valueMap: ValueMapT, errorMap: StyleMapT, pageTitle: String, response: Response, status: Status): Unit = {
-      val text = wrapBody(toHtml(valueMap, errorMap, Some(response)), pageTitle)
+
+      val text = wrapBody(toHtml(valueMap, errorMap, Some(response)), pageTitle, None, false, makeFormAlertBox(errorMap))
+
+      //val text = wrapBody(toHtml(valueMap, errorMap, Some(response)), pageTitle)
       def replace(origText: String, col: Any): String = {
         if (col.isInstanceOf[IsInput]) {
           val input = col.asInstanceOf[IsInput]
@@ -578,7 +605,7 @@ object WebUtil extends Logging {
     }
   }
 
-  class Error(inputTitle: String) extends Style {
+  class Error(val inputTitle: String) extends Style {
     override def divAttributes(metaData: MetaData): MetaData = {
       val clss = metaData.get("class")
       val clssText = (if (clss.isDefined) clss.get.toString + " " else "") + "has-error"
@@ -801,7 +828,7 @@ object WebUtil extends Logging {
     override def subUrl = SubUrl.root
   }
 
-  trait SubUrlAdmin extends SubUrlTrait  {
+  trait SubUrlAdmin extends SubUrlTrait {
     override def subUrl = SubUrl.admin
   }
 
