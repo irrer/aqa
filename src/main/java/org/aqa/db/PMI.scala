@@ -69,8 +69,15 @@ object PMI {
 
   def getByMachine(machinePK: Long): Seq[PMI] = {
     val action = for {
-      inst <- PMI.query if (inst.machinePK === machinePK)
-    } yield (inst)
+      pmi <- PMI.query if (pmi.machinePK === machinePK)
+    } yield (pmi)
+    Db.run(action.result)
+  }
+
+  def getByUser(userPK: Long): Seq[PMI] = {
+    val action = for {
+      pmi <- PMI.query if (pmi.userPK === userPK)
+    } yield (pmi)
     Db.run(action.result)
   }
 
@@ -85,7 +92,7 @@ object PMI {
       inst <- PMI.query if (inst.machinePK === machinePK) && (inst.creationTime >= loTs) && (inst.creationTime <= hiTs)
     } yield (inst)
     val list = Db.run(action.result)
-    list.sortWith((a,b) => a.creationTime.getTime < b.creationTime.getTime)
+    list.sortWith((a, b) => a.creationTime.getTime < b.creationTime.getTime)
   }
 
   /**

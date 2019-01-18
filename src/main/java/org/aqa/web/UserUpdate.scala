@@ -31,6 +31,7 @@ import org.aqa.Util
 import org.aqa.db.CachedUser
 import org.aqa.Crypto
 import org.aqa.AnonymizeUtil
+import org.aqa.db.PMI
 
 object UserUpdate {
   val userPKTag = "userPK"
@@ -48,19 +49,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
   private val email = new WebInputEmail("Email", 4, 0, "Email address (required)")
 
   def listInst(response: Option[Response]): Seq[(String, String)] = {
-    if (userIsWhitelisted(response.get.getRequest)) {
-      // Institution.list.toList.map(i => (i.institutionPK.get.toString, AnonymizeUtil.decryptWithNonce(i.institutionPK.get, i.name_real.get)))
-      Institution.list.toList.map(i => (i.institutionPK.get.toString, i.name))
-    } else {
-      val user = CachedUser.get(response.get.getRequest)
-      if (user.isDefined) {
-        val institutionPK = user.get.institutionPK
-        val inst = Institution.get(institutionPK).get
-        Seq((institutionPK.toString, inst.name))
-      } else
-        Seq[(String, String)](); // if no user defined, then no access to institutions
-    }
-
+    Institution.list.map(inst => (inst.institutionPK.get.toString, inst.name))
   }
 
   private val institution = new WebInputSelect("Institution", 2, 0, listInst, true)
@@ -128,6 +117,22 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
     if (emailText.matches("..*@..*")) styleNone
     else Error.make(email, "Invalid email format.  Must be of the form: user@url")
 
+  }
+
+  private def validateAuthentication(valueMap: ValueMapT, request: Request): StyleMapT = {
+    val webUser = CachedUser.get(request)
+    val instPK = valueMap.get(institution.label).get.toLong
+    val existingUserInstitutionPK: Option[Long] = {
+      try {
+        Some(User.get(valueMap.get(userPK.label).get.toLong).get.institutionPK)
+      } catch { case t: Throwable => None }
+    }
+    val sameInstitution = (webUser.get.institutionPK == instPK) && (existingUserInstitutionPK.isEmpty || (existingUserInstitutionPK.get == instPK))
+
+    if (sameInstitution || WebUtil.userIsWhitelisted(request)) styleNone
+    else {
+      Error.make(institution, "You are not allowed to modify users from other institutions")
+    }
   }
 
   private def updateUser(user: User): Unit = {
@@ -207,43 +212,17 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
   }
 
   /**
-   * Check to see if the user is authorized to create a user in the given institution, and if so, return true.
-   *
-   * If not, then set the response.
-   */
-  private def checkAuthorization(response: Response, institutionPK: Long): Boolean = {
-    val user = getUser(response.getRequest)
-    val ok = user.isDefined &&
-      ((user.get.institutionPK == institutionPK) || WebUtil.userIsWhitelisted(response.getRequest))
-
-    if (!ok) {
-      val content = {
-        <div>
-          <h2>You are not authorized to make this change.</h2>
-          To make changes to users you must be a member of the same institution as that user.
-        </div>
-      }
-      val text = WebUtil.wrapBody(content, "Not Authorized")
-      WebUtil.setResponse(text, response, Status.CLIENT_ERROR_UNAUTHORIZED)
-    }
-
-    ok
-  }
-
-  /**
    * Save changes made to form.
    */
   private def save(valueMap: ValueMapT, response: Response): Unit = {
-    val errMap = emptyId(valueMap) ++ emptyName(valueMap) ++ validateEmail(valueMap)
+    val errMap = emptyId(valueMap) ++ emptyName(valueMap) ++ validateEmail(valueMap) ++ validateAuthentication(valueMap, response.getRequest)
     if (errMap.isEmpty) {
       val existingUser = User.get(valueMap.get(userPK.label).get.toLong).get
       val user = updateExistingUserFromParameters(existingUser, valueMap)
-      if (checkAuthorization(response, user.institutionPK)) {
-        // remove old credentials just in case the user role was changed.
-        CachedUser.remove(user.id)
-        user.insertOrUpdate
-        UserList.redirect(response)
-      }
+      // remove old credentials just in case the user role was changed.
+      CachedUser.remove(user.id)
+      user.insertOrUpdate
+      UserList.redirect(response)
     } else {
       formEdit.setFormResponse(valueMap, errMap, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
     }
@@ -254,16 +233,14 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
    * otherwise show the same screen and communicate the error.
    */
   private def create(valueMap: ValueMapT, response: Response) = {
-    val errMap = emptyName(valueMap) ++ validateEmail(valueMap) ++ validatePasswords(valueMap)
+    val errMap = emptyName(valueMap) ++ validateEmail(valueMap) ++ validatePasswords(valueMap) ++ validateAuthentication(valueMap, response.getRequest)
 
     if (errMap.isEmpty) {
       val user = constructNewUserFromParameters(valueMap)
-      if (checkAuthorization(response, user.institutionPK)) {
-        val userWithPk = user.insert
-        val aliasId = AnonymizeUtil.aliasify(AnonymizeUtil.userAliasPrefixId, userWithPk.userPK.get)
-        userWithPk.copy(id = aliasId).insertOrUpdate
-        UserList.redirect(response)
-      }
+      val userWithPk = user.insert
+      val aliasId = AnonymizeUtil.aliasify(AnonymizeUtil.userAliasPrefixId, userWithPk.userPK.get)
+      userWithPk.copy(id = aliasId).insertOrUpdate
+      UserList.redirect(response)
     } else {
       formCreate.setFormResponse(valueMap, errMap, pageTitleCreate, response, Status.CLIENT_ERROR_BAD_REQUEST)
     }
@@ -299,18 +276,26 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
     }
   }
 
-  private def isDelete(valueMap: ValueMapT, response: Response): Boolean = {
-    if (buttonIs(valueMap, deleteButton)) {
-      val value = valueMap.get(UserUpdate.userPKTag)
-      if (value.isDefined) {
-        User.delete(value.get.toLong)
-        UserList.redirect(response)
-        true
-      } else
-        false
-    } else
-      false
+  private def userHasPMI(valueMap: ValueMapT): StyleMapT = {
+    val user = getReference(valueMap)
+    val pmiList = PMI.getByUser(user.get.userPK.get)
+    if (pmiList.isEmpty) styleNone
+    else Error.make(id, "User has " + pmiList.size + " maintenance records and can not be deleted")
+  }
 
+  private def delete(valueMap: ValueMapT, response: Response): Unit = {
+    val user = getReference(valueMap)
+    val pmiList = PMI.getByUser(user.get.userPK.get)
+
+    val errMap = validateAuthentication(valueMap, response.getRequest) ++ userHasPMI(valueMap)
+
+    if (errMap.nonEmpty) {
+      formEdit.setFormResponse(valueMap, errMap, pageTitleEdit, response, Status.SUCCESS_OK)
+    } else {
+      val userPK = valueMap.get(UserUpdate.userPKTag).get.toLong
+      User.delete(userPK)
+      UserList.redirect(response)
+    }
   }
 
   private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
@@ -350,7 +335,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
         case _ if buttonIs(valueMap, changePasswordButton) => changePassword(valueMap, response)
         case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
         case _ if buttonIs(valueMap, saveButton) => save(valueMap, response)
-        case _ if isDelete(valueMap, response) => Nil
+        case _ if buttonIs(valueMap, deleteButton) => delete(valueMap, response)
         case _ if isEdit(valueMap, response) => Nil
         case _ => emptyForm(response)
       }
