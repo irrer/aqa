@@ -729,9 +729,9 @@ object WebUtil extends Logging {
     }
   }
 
-  class WebInputSelect(override val label: String, col: Int, offset: Int, selectList: (Option[Response]) => Seq[(String, String)], aqaAlias: Boolean) extends IsInput(label) with ToHtml {
+  class WebInputSelect(override val label: String, val showLabel: Boolean, col: Int, offset: Int, selectList: (Option[Response]) => Seq[(String, String)], aqaAlias: Boolean) extends IsInput(label) with ToHtml {
 
-    def this(label: String, col: Int, offset: Int, selList: (Option[Response]) => Seq[(String, String)]) = this(label, col, offset, selList, false)
+    def this(label: String, col: Int, offset: Int, selList: (Option[Response]) => Seq[(String, String)]) = this(label, false, col, offset, selList, false)
 
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
 

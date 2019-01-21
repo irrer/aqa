@@ -115,7 +115,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     Institution.list.toSeq.sortBy(_.name).map(instToChoice _)
   }
 
-  private val institutionPK = new WebInputSelect("Institution", 6, 0, institutionList, true)
+  private val institutionPK = new WebInputSelect("Institution", true, 6, 0, institutionList, true)
 
   private val notes = new WebInputTextArea("Notes", 6, 0, "", true)
 

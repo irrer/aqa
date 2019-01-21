@@ -52,7 +52,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
     Institution.list.map(inst => (inst.institutionPK.get.toString, inst.name))
   }
 
-  private val institution = new WebInputSelect("Institution", 2, 0, listInst, true)
+  private val institution = new WebInputSelect("Institution", true, 2, 0, listInst, true)
 
   private val password = new WebInputPassword("Password", 4, 0, "")
   private val verifyPassword = new WebInputPassword("Verify Password", 4, 0, "")

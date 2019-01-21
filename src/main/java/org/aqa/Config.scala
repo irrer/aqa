@@ -628,6 +628,37 @@ object Config extends Logging {
     list.map(tba => (tba.AttrTag, tba)).toMap
   }
 
+  case class Phase2PlanFileConfig(manufacturer: String, model: String, file: File);
+
+  private def getPhase2PlanFileList = {
+    def makePhase2PlanFileConfig(node: Node): Phase2PlanFileConfig = {
+      val manufacturer = (node \ "@manufacturer").head.text
+      val model = (node \ "@model").head.text
+      val fileName = node.head.text
+
+      val file = new File(staticDirFile, fileName)
+      new Phase2PlanFileConfig(manufacturer, model, file)
+    }
+
+    val list = (document \ "Phase2PlanFileList" \ "Phase2PlanFile").toList.map(node => makePhase2PlanFileConfig(node))
+    list
+  }
+
+  case class PlanAttributeOverride(tag: AttributeTag, value: String) {
+    override def toString = DicomUtil.dictionary.getNameFromTag(tag) + " : " + value
+  }
+
+  private def getPhase2PlanAttributeOverrideList: Seq[PlanAttributeOverride] = {
+    def makeOverride(node: Node): PlanAttributeOverride = {
+      val name = (node \ "@Name").head.text
+      val value = (node \ "@Value").head.text
+
+      new PlanAttributeOverride(DicomUtil.dictionary.getTagFromName(name), value)
+    }
+    val list = (document \ "Phase2PlanAttributeOverrideList" \ "Phase2PlanAttributeOverride").toList.map(node => makeOverride(node))
+    list
+  }
+
   val SlickDbsDefaultDbUrl = logMainText("SlickDbsDefaultDbUrl")
   val SlickDbsDefaultDbUser = getDbUser
   val SlickDbsDefaultDbPassword = getDbPassword
@@ -667,6 +698,9 @@ object Config extends Logging {
   /** Lookup table for finding DICOM attributes to be anonymized and how to anonymize them.  */
 
   val ToBeAnonymizedList = getToBeAnonymizedList
+
+  val Phase2PlanFileList = getPhase2PlanFileList
+  val Phase2PlanAttributeOverrideList = getPhase2PlanAttributeOverrideList
 
   val TermsOfUse = logMainText("TermsOfUse")
 
