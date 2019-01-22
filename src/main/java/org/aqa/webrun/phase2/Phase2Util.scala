@@ -447,7 +447,5 @@ object Phase2Util extends Logging {
    * Other collimator angles such as 45 degrees may give unexpected results.
    */
   def isHorizontal(image: AttributeList): Boolean = (Util.angleRoundedTo90(image.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head).toInt % 180) == 0
-
-  lazy val phase2Plan =  new DicomFile(Config.Phase2PlanFile)
   
 }

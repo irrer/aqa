@@ -624,11 +624,17 @@ object Config extends Logging {
     val configTag = "ToBeAnonymizedList"
     logger.info("Getting " + configTag + "  ...")
     val list = (document \ configTag \ "ToBeAnonymized").toList.map(node => makeToBeAnon(node))
-    logText(configTag, "\n        " + list.mkString("\n        "))
+    logText(configTag, "\n            " + list.mkString("\n            "))
     list.map(tba => (tba.AttrTag, tba)).toMap
   }
 
-  case class Phase2PlanFileConfig(manufacturer: String, model: String, file: File);
+  /**
+   * A standard Phase 2 plan used as a basis for a customized plan.
+   */
+  case class Phase2PlanFileConfig(manufacturer: String, model: String, file: File) {
+    val dicomFile = new DicomFile(file)
+    override def toString = "manufacturer: " + manufacturer + "  model: " + model.formatted("%-12s") + "  file: " + file.getName
+  }
 
   private def getPhase2PlanFileList = {
     def makePhase2PlanFileConfig(node: Node): Phase2PlanFileConfig = {
@@ -640,10 +646,15 @@ object Config extends Logging {
       new Phase2PlanFileConfig(manufacturer, model, file)
     }
 
-    val list = (document \ "Phase2PlanFileList" \ "Phase2PlanFile").toList.map(node => makePhase2PlanFileConfig(node))
+    val configTag = "Phase2PlanFileList"
+    val list = (document \ configTag \ "Phase2PlanFile").toList.map(node => makePhase2PlanFileConfig(node))
+    logText(configTag, list.mkString("\n        ", "\n        ", ""))
     list
   }
 
+  /**
+   * When customizing a plan, override this DICOM attribute with the given value.
+   */
   case class PlanAttributeOverride(tag: AttributeTag, value: String) {
     override def toString = DicomUtil.dictionary.getNameFromTag(tag) + " : " + value
   }
@@ -655,7 +666,9 @@ object Config extends Logging {
 
       new PlanAttributeOverride(DicomUtil.dictionary.getTagFromName(name), value)
     }
-    val list = (document \ "Phase2PlanAttributeOverrideList" \ "Phase2PlanAttributeOverride").toList.map(node => makeOverride(node))
+    val configTag = "Phase2PlanAttributeOverrideList"
+    val list = (document \ configTag \ "Phase2PlanAttributeOverride").toList.map(node => makeOverride(node))
+    logText(configTag, list.mkString("\n        ", "\n        ", ""))
     list
   }
 

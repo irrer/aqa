@@ -120,7 +120,8 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   private val notes = new WebInputTextArea("Notes", 6, 0, "", true)
 
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
-    new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
+    val columns = (name.size / 15) + 1
+    new FormButton(name, columns, 0, subUrl, pathOf, buttonType)
   }
 
   private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
@@ -128,7 +129,8 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   private val deleteButton = makeButton("Delete", false, ButtonType.BtnDanger)
   private val confirmDeleteButton = makeButton("Confirm Delete", false, ButtonType.BtnDanger)
   private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
-  private val maintenanceButton = makeButton("PMI Records", false, ButtonType.BtnDefault)
+  private val maintenanceButton = makeButton("Maintenance Records", false, ButtonType.BtnDefault)
+  private val customizePlanButton = makeButton("Customize Plan", false, ButtonType.BtnDefault)
   private val machinePK = new WebInputHidden(MachineUpdate.machinePKTag)
 
   private val machineBeamEnergyPKTag = "machineBeamEnergyPK"
@@ -198,7 +200,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   }
 
   val createButtonList: WebRow = List(createButton, cancelButton)
-  val editButtonList: WebRow = List(saveButton, cancelButton, deleteButton, maintenanceButton, machinePK)
+  val editButtonList: WebRow = List(saveButton, cancelButton, deleteButton, maintenanceButton, customizePlanButton, machinePK)
   val confirmDeleteButtonList: WebRow = List(cancelButton, confirmDeleteButton, machinePK)
 
   def confirmDeleteFieldList(valueMap: ValueMapT): List[WebRow] = {
@@ -531,6 +533,12 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     response.redirectSeeOther(path)
   }
 
+  private def customizePlan(valueMap: ValueMapT, response: Response): Unit = {
+    val j = valueMap(machinePK.label)
+    val path = CustomizeRtPlan.path + "?machinePK=" + valueMap(machinePK.label)
+    response.redirectSeeOther(path)
+  }
+
   private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
     val value = valueMap.get(button.label)
     value.isDefined && value.get.toString.equals(button.label)
@@ -587,6 +595,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
         case _ if buttonIs(valueMap, deleteButton) => delete(valueMap, response)
         case _ if buttonIs(valueMap, confirmDeleteButton) => confirmDelete(valueMap, response)
         case _ if buttonIs(valueMap, maintenanceButton) => maintRec(valueMap, response)
+        case _ if buttonIs(valueMap, customizePlanButton) => customizePlan(valueMap, response)
         case _ if isEdit(valueMap) => edit(valueMap, response)
         case _ => emptyForm(response)
       }

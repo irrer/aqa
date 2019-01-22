@@ -14,9 +14,10 @@ import org.aqa.webrun.phase2.Phase2Util
 import edu.umro.ScalaUtil.DicomUtil
 import com.pixelmed.dicom.TagFromName
 import org.aqa.Util
+import org.aqa.db.MultileafCollimator
 
 object CustomizeRtPlan {
-  private val path = new String((new CustomizeRtPlan).pathOf)
+  val path = new String((new CustomizeRtPlan).pathOf)
 
   def redirect(response: Response) = response.redirectSeeOther(path)
 }
@@ -28,17 +29,16 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
 
   private val pageTitleSelect = "Select Plan Parameters"
 
-  def selectMachineName(response: Option[Response]): Seq[(String, String)] = {
-    CachedUser.get(response.get.getRequest) match {
-      case Some(user) => {
-        val machList = Machine.listMachinesFromInstitution(user.institutionPK)
-        machList.map(mach => (mach.machinePK.get.toString, mach.id))
-      }
-      case _ => Seq[(String, String)]()
-    }
+  private val machineIdTag = "MachineId"
+
+  private val machinePK = new WebInputHidden(MachineUpdate.machinePKTag)
+
+  private def machineIdHtml(valueMap: ValueMapT): Elem = {
+    val machine = Machine.get(valueMap(machineIdTag).toLong).get
+    <h4 aqaalias="">Machine: { machine.id }</h4>
   }
 
-  private def machineSelector = new WebInputSelect("Machine", true, 3, 0, selectMachineName, true)
+  val machineId = new WebPlainText(machineIdTag, false, 3, 0, machineIdHtml)
 
   private def toleranceTable = new WebInputText("Tolerance Table Name", true, 3, 0, "Should match name in planning system", false)
 
@@ -46,11 +46,18 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
 
   private def patientName = new WebInputText("Patient Name", true, 3, 0, "")
 
-  private val row1 = List(machineSelector, toleranceTable)
+  private val row1 = List(machineId, toleranceTable)
   private val row2 = List(patientID, patientName)
 
-  private lazy val planEnergyList: Seq[Double] = {
-    val attrList = DicomUtil.findAll(Phase2Util.phase2Plan.attributeList.get, TagFromName.NominalBeamEnergy)
+  private def getCollimatorCompatiblePlanForMachine(machine: Machine) = {
+    val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
+    val planFile = Config.Phase2PlanFileList.filter(pf => pf.manufacturer.equalsIgnoreCase(collimator.manufacturer) && pf.model.equalsIgnoreCase(collimator.model)).head
+    planFile
+  }
+
+  private def getPlanEnergyList(machine: Machine): Seq[Double] = {
+    val planAttrList = getCollimatorCompatiblePlanForMachine(machine).dicomFile.attributeList.get
+    val attrList = DicomUtil.findAll(planAttrList, TagFromName.NominalBeamEnergy)
     val list = attrList.map(a => a.getDoubleValues.head).distinct.sorted
     logger.info("Energy list found in plan: " + list.mkString("  "))
     list
@@ -64,11 +71,16 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     ???
   }
 
-  val energyRowList = {
+  private def machEnergyTag(index: Int) = "MachEnergy" + index
+
+  private def energyRowList(machine: Machine) = {
+    val planEnergyList = getPlanEnergyList(machine)
     planEnergyList.indices.map(i => {
       val label = "Plan energy " + Util.fmtDbl(planEnergyList(i)) + " : "
       val energyPlan = new WebPlainText(label, false, 2, 0, (ValueMapT) => { <span>{ label }</span> })
-
+      val energyMach = new WebInputSelect(machEnergyTag(i), false, 2, 0, machEnergyOf, false)
+      val row = List(energyPlan, energyMach)
+      row
     })
   }
 
@@ -80,12 +92,12 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
   private val energyPlanE = new WebPlainText("Plan E", false, 2, 0, planEnergyOf)
   private val energyPlanF = new WebPlainText("Plan F", false, 2, 0, planEnergyOf)
 
-  private val energyMachA = new WebInputSelect("Mach A", 2, 0, machEnergyOf)
-  private val energyMachB = new WebInputSelect("Mach B", 2, 0, machEnergyOf)
-  private val energyMachC = new WebInputSelect("Mach C", 2, 0, machEnergyOf)
-  private val energyMachD = new WebInputSelect("Mach D", 2, 0, machEnergyOf)
-  private val energyMachE = new WebInputSelect("Mach E", 2, 0, machEnergyOf)
-  private val energyMachF = new WebInputSelect("Mach F", 2, 0, machEnergyOf)
+  private val energyMachA = new WebInputSelect("Mach A", false, 2, 0, machEnergyOf, false)
+  private val energyMachB = new WebInputSelect("Mach B", false, 2, 0, machEnergyOf, false)
+  private val energyMachC = new WebInputSelect("Mach C", false, 2, 0, machEnergyOf, false)
+  private val energyMachD = new WebInputSelect("Mach D", false, 2, 0, machEnergyOf, false)
+  private val energyMachE = new WebInputSelect("Mach E", false, 2, 0, machEnergyOf, false)
+  private val energyMachF = new WebInputSelect("Mach F", false, 2, 0, machEnergyOf, false)
 
   private val row3 = List(energyPlanA, energyMachA)
   private val row4 = List(energyPlanB, energyMachB)
@@ -98,23 +110,26 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
   }
 
-  private val nextButton = makeButton("Next", true, ButtonType.BtnPrimary)
+  private val createButton = makeButton("Create", false, ButtonType.BtnPrimary)
   private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
 
-  private val selectButtonList: WebRow = List(nextButton, cancelButton)
+  private val assignButtonList: WebRow = List(createButton, cancelButton)
 
-  private val createButtonList: WebRow = List(nextButton, cancelButton)
-
-  private def formSelect(valueMap: ValueMapT) = new WebForm(pathOf, List(row1, row2, selectButtonList))
+  private def formSelect(valueMap: ValueMapT, response: Response) = {
+    val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
+    energyRowList(machine)
+    val form = new WebForm(pathOf, List(row1, row2, assignButtonList))
+    form.setFormResponse(valueMap, styleNone, pageTitleSelect, response, Status.SUCCESS_OK)
+  }
 
   private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
     val value = valueMap.get(button.label)
     value.isDefined && value.get.toString.equals(button.label)
   }
 
-  private def emptyForm(response: Response): Unit = {
-    formSelect(emptyValueMap).setFormResponse(emptyValueMap, styleNone, pageTitleSelect, response, Status.SUCCESS_OK)
-  }
+  //  private def emptyForm(valueMap: ValueMapT, response: Response): Unit = {
+  //    formSelect(valueMap).setFormResponse(valueMap, styleNone, pageTitleSelect, response, Status.SUCCESS_OK)
+  //  }
 
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
@@ -124,7 +139,8 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     try {
       0 match {
         case _ if buttonIs(valueMap, cancelButton) => MachineList.redirect(response)
-        case _ => emptyForm(response)
+        case _ if buttonIs(valueMap, createButton) => formSelect(valueMap, response)
+        case _ => formSelect(valueMap, response)
       }
     } catch {
       case t: Throwable => {

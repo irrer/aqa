@@ -750,7 +750,7 @@ object WebUtil extends Logging {
 
       val list = selectList(response).map(v => toOption(v._1, v._2))
       val html = <select>{ list }</select> % idNameClassValueAsAttr(label, valueMap)
-      wrapInput(label, true, html, col, offset, errorMap)
+      wrapInput(label, showLabel, html, col, offset, errorMap)
     }
   }
 
