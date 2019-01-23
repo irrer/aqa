@@ -254,7 +254,7 @@ object Phase2Util extends Logging {
           <div class="col-md-3" title={ title }><h2>{ title }</h2></div>
           <div class="col-md-1" title="Treatment machine. Click to view and modify machine configuration.">
             <h2>
-              <a href={ "/" + SubUrl.admin + "/" + "MachineUpdate" + "?" + MachineUpdate.machinePKTag + "=" + extendedData.machine.machinePK.get } AQAAlias="">{ machineId }</a>
+              { MachineUpdate.linkToMachineUpdate(extendedData.machine.machinePK.get, machineId) }
             </h2>
           </div>
           <div class="col-md-1">
@@ -447,5 +447,5 @@ object Phase2Util extends Logging {
    * Other collimator angles such as 45 degrees may give unexpected results.
    */
   def isHorizontal(image: AttributeList): Boolean = (Util.angleRoundedTo90(image.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head).toInt % 180) == 0
-  
+
 }

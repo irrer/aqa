@@ -36,6 +36,16 @@ import org.aqa.db.PMI
 
 object MachineUpdate {
   val machinePKTag = "machinePK"
+
+  def machineReference(machinePK: Long) = { "/" + SubUrl.admin + "/" + "MachineUpdate" + "?" + MachineUpdate.machinePKTag + "=" + machinePK }
+
+  def linkToMachineUpdate(machinePK: Long, machineId: String): Elem = {
+    <a href={ machineReference(machinePK) } aqaalias="">{ machineId }</a>
+  }
+
+  def redirect(machinePK: Long, response: Response) = {
+    response.redirectSeeOther(machineReference(machinePK))
+  }
 }
 
 class MachineUpdate extends Restlet with SubUrlAdmin {
@@ -534,9 +544,8 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   }
 
   private def customizePlan(valueMap: ValueMapT, response: Response): Unit = {
-    val j = valueMap(machinePK.label)
-    val path = CustomizeRtPlan.path + "?machinePK=" + valueMap(machinePK.label)
-    response.redirectSeeOther(path)
+    val machinePK = valueMap(MachineUpdate.machinePKTag).toLong
+    CustomizeRtPlan.redirect(machinePK, response)
   }
 
   private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {

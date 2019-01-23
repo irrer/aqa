@@ -543,7 +543,7 @@ object WebUtil extends Logging {
       if (textErrorList.isEmpty)
         None
       else
-        Some("<script>" + makeAlertBox(textErrorList.mkString("\n\n")) + "</script>")
+        Some("<script>" + makeAlertBox(textErrorList.mkString("\\n\\n")) + "</script>")
     }
 
     def setFormResponse(valueMap: ValueMapT, errorMap: StyleMapT, pageTitle: String, response: Response, status: Status): Unit = {
