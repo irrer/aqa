@@ -52,16 +52,21 @@ object WebServer {
   def urlOfPath(baseUrl: String, filePath: String): String = (baseUrl + "/" + filePath.replace('\\', '/')).replaceAll("///*", "/")
 
   def urlOfResultsPath(filePath: String): String = urlOfPath(resultsDirBaseUrl, filePath)
+  def urlOfTmpPath(filePath: String): String = urlOfPath(tmpDirBaseUrl, filePath)
 
   def urlOfMachineConfigurationPath(filePath: String): String = urlOfPath(machineConfigurationDirBaseUrl, filePath)
 
   def urlOfResultsFile(file: File): String = urlOfResultsPath(fileToResultsPath(file))
+
+  def urlOfTmpFile(file: File): String = urlOfTmpPath(fileToTmpPath(file))
 
   def urlOfMachineConfigurationFile(file: File): String = urlOfMachineConfigurationPath(fileToMachineConfigurationPath(file))
 
   def fileOfResultsPath(filePath: String): File = new File(Config.resultsDirFile, filePath)
 
   def fileToResultsPath(file: File): String = file.getAbsolutePath.substring(Config.resultsDirFile.getAbsolutePath.size)
+
+  def fileToTmpPath(file: File): String = file.getAbsolutePath.substring(Config.tmpDirFile.getAbsolutePath.size)
 
   def fileToMachineConfigurationPath(file: File): String = file.getAbsolutePath.substring(Config.machineConfigurationDir.getAbsolutePath.size)
 

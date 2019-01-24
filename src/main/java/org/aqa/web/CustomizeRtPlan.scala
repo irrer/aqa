@@ -18,6 +18,11 @@ import org.aqa.db.MultileafCollimator
 import org.aqa.db.MachineBeamEnergy
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.Attribute
+import org.aqa.AnonymizeUtil
+import com.pixelmed.dicom.ValueRepresentation
+import com.pixelmed.dicom.AttributeTag
+import edu.umro.util.UMROGUID
+import java.io.File
 
 object CustomizeRtPlan {
   def reference(machinePK: Long) = { (new CustomizeRtPlan).pathOf + "?" + MachineUpdate.machinePKTag + "=" + machinePK }
@@ -56,12 +61,14 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
 
   private def toleranceTable = new WebInputText("Tolerance Table Name", true, 3, 0, "Should match name in planning system", false)
 
+  private def machineName = new WebInputText("Machine Name", true, 2, 0, "To match planning system", false)
+
   private def patientID = new WebInputText("Patient ID", true, 2, 0, "")
 
   private def patientName = new WebInputText("Patient Name", true, 3, 0, "")
 
   private val row0: WebRow = List(machineId)
-  private val row2: WebRow = List(toleranceTable)
+  private val row2: WebRow = List(toleranceTable, machineName)
   private val row1: WebRow = List(patientID, patientName)
 
   private def getCollimatorCompatiblePlanForMachine(machine: Machine) = {
@@ -72,7 +79,7 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
 
   private def getPlanEnergyList(machine: Machine): Seq[Double] = {
     val planAttrList = getCollimatorCompatiblePlanForMachine(machine).dicomFile.attributeList.get
-    val attrList = DicomUtil.findAll(planAttrList, TagFromName.NominalBeamEnergy)
+    val attrList = DicomUtil.findAllSingle(planAttrList, TagFromName.NominalBeamEnergy)
     val list = attrList.map(a => a.getDoubleValues.head).distinct.sorted
     logger.info("Energy list found in plan: " + list.mkString("  "))
     list
@@ -110,6 +117,7 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
 
   private val createButton = makeButton("Create", false, ButtonType.BtnPrimary)
   private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+  private val backButton = makeButton("Back", false, ButtonType.BtnDefault)
 
   private val assignButtonList: WebRow = List(createButton, cancelButton, machinePK)
 
@@ -136,11 +144,14 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
 
     val defaultPatient = "$AQA_" + machine.machinePK.get
 
+    def getRealMachineId = AnonymizeUtil.decryptWithNonce(machine.institutionPK, machine.id_real.get)
+
     val assignValMap = if (empty(machEnergyTag(0))) automaticEnergyAssignments(valueMap, machineEnergyList, planEnergyList) else emptyValueMap
     val patientIdMap = if (empty(patientID.label)) Map((patientID.label, defaultPatient)) else emptyValueMap
     val patientNameMap = if (empty(patientName.label)) Map((patientName.label, defaultPatient)) else emptyValueMap
+    val machineNameMap = if (empty(machineName.label)) Map((machineName.label, getRealMachineId)) else emptyValueMap
 
-    val valMap = valueMap ++ assignValMap ++ patientIdMap ++ patientNameMap
+    val valMap = valueMap ++ assignValMap ++ patientIdMap ++ patientNameMap ++ machineNameMap
     form.setFormResponse(valMap, styleNone, pageTitleSelect, response, Status.SUCCESS_OK)
   }
 
@@ -152,27 +163,62 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     def empty(label: String) = valueMap.get(label).isEmpty || (valueMap(label).trim.size == 0)
 
     val tolErr = if (empty(toleranceTable.label)) Error.make(toleranceTable, "A tolerance table name must be given.") else styleNone
+    val machErr = if (empty(machineName.label)) Error.make(machineName, "A machine name must be given.") else styleNone
     val patIdErr = if (empty(patientID.label)) Error.make(patientID, "A patient ID must be given.") else styleNone
     val patNameErr = if (empty(patientName.label)) Error.make(patientName, "A patient name must be given.") else styleNone
+    val machineNameErr = if (empty(machineName.label)) Error.make(machineName, "A machine name must be given.") else styleNone
 
     (tolErr ++ patIdErr ++ patNameErr)
   }
 
+  private def replaceAllUids(attributeList: AttributeList) = {
+    // get list of attributes that are UIDs
+    val uidSet = Config.ToBeAnonymizedList.keySet.filter(tag => ValueRepresentation.isUniqueIdentifierVR(DicomUtil.dictionary.getValueRepresentationFromTag(tag)))
+    val attrList = DicomUtil.findAll(attributeList, uidSet)
+    val replaceMap = attrList.map(at => at.getSingleStringValueOrEmptyString).distinct.map(uid => (uid, UMROGUID.getUID)).toMap
+    def replace(at: Attribute) = {
+      val uid = replaceMap(at.getSingleStringValueOrEmptyString)
+      at.removeValues
+      at.addValue(uid)
+    }
+    attrList.map(at => replace(at))
+  }
+
+  private def showDownload(rtplan: AttributeList, valueMap: ValueMapT, machine: Machine, response: Response) = {
+
+    val sopuid = Util.sopOfAl(rtplan)
+    val file = new File(Config.tmpDirFile, sopuid + ".dcm")
+    DicomUtil.writeAttributeList(rtplan, file)
+    val downloadUrl = WebServer.urlOfTmpFile(file)
+
+    val downloadLink = new WebPlainText("Download", false, 3, 0, (ValueMapT) => { <h4> <a href={ downloadUrl } title="Click to download DICOM RTPLAN file.">Download</a></h4> })
+
+    val dicomViewHtml = { <span><h4><p/>Preview</h4><p/><pre title="DICOM meta-data">{ WebUtil.nl + DicomUtil.attributeListToString(rtplan) }</pre></span> }
+    val dicomView = new WebPlainText("Download", false, 10, 0, (ValueMapT) => dicomViewHtml)
+
+    val r1: WebRow = List(downloadLink, backButton, machinePK)
+    val r2: WebRow = List(dicomView)
+    val form = new WebForm(pathOf, List(row0, r1, r2))
+
+    form.setFormResponse(valueMap, styleNone, "Download RTPLAN", response, Status.SUCCESS_OK)
+  }
+
   private def makePlan(valueMap: ValueMapT, response: Response, machine: Machine, planEnergyList: Seq[Double], machineEnergyList: Seq[Double]) = {
 
-    val basePlan = DicomUtil.clone(getCollimatorCompatiblePlanForMachine(machine).dicomFile.attributeList.get)
-    ??? // TODO change UIDs
+    val rtplan = DicomUtil.clone(getCollimatorCompatiblePlanForMachine(machine).dicomFile.attributeList.get)
+    replaceAllUids(rtplan) // change UIDs so that this plan will be considered new and unique from all others.
 
     new Config.PlanAttributeOverride(TagFromName.ToleranceTableLabel, valueMap(toleranceTable.label))
 
     val overrideList = Config.Phase2PlanAttributeOverrideList ++ Seq(
       new Config.PlanAttributeOverride(TagFromName.ToleranceTableLabel, valueMap(toleranceTable.label)),
       new Config.PlanAttributeOverride(TagFromName.PatientID, valueMap(patientID.label).trim),
-      new Config.PlanAttributeOverride(TagFromName.PatientName, valueMap(patientName.label).trim))
+      new Config.PlanAttributeOverride(TagFromName.PatientName, valueMap(patientName.label).trim),
+      new Config.PlanAttributeOverride(TagFromName.TreatmentMachineName, valueMap(machineName.label).trim))
 
     // modify all attributes that get a constant value
     overrideList.map(ov => {
-      DicomUtil.findAll(basePlan, ov.tag).map(at => { at.removeValues; at.addValue(ov.value) })
+      DicomUtil.findAllSingle(rtplan, ov.tag).map(at => { at.removeValues; at.addValue(ov.value) })
     })
 
     def indexToEnergyPair(key: String) = {
@@ -188,12 +234,9 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
       at.removeValues
       at.addValue(energy)
     }
-    DicomUtil.findAll(basePlan, TagFromName.NominalBeamEnergy).map(at => changeEnergy(at))
+    DicomUtil.findAllSingle(rtplan, TagFromName.NominalBeamEnergy).map(at => changeEnergy(at))
 
-    println("hey")
-    ??? // TODO Allow user to download non-anonymized plan.   Anonymize plan and save for later runs.
-    //    setBeamEnergies
-
+    showDownload(rtplan, valueMap, machine, response)
   }
 
   private def createPlan(valueMap: ValueMapT, response: Response) = {
@@ -217,11 +260,19 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
     val valueMap = getValueMap(request)
-    val userId = WebUtil.getUserIdOrDefault(request, "guest")
-    val user = WebUtil.getUser(request)
+
     try {
+      val user = CachedUser.get(request)
+      val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong)
+
+      def updateMach = MachineUpdate.redirect(valueMap(machinePK.label).toLong, response)
+
       0 match {
-        case _ if buttonIs(valueMap, cancelButton) => MachineUpdate.redirect(valueMap(machinePK.label).toLong, response) // return to editing machine
+        case _ if user.isEmpty => updateMach
+        case _ if machine.isEmpty => updateMach
+        case _ if (user.get.institutionPK != machine.get.institutionPK) => updateMach
+        case _ if buttonIs(valueMap, cancelButton) => updateMach
+        case _ if buttonIs(valueMap, backButton) => formSelect(valueMap, response)
         case _ if buttonIs(valueMap, createButton) => createPlan(valueMap, response)
         case _ => formSelect(valueMap, response) // first time viewing the form.  Set defaults
       }

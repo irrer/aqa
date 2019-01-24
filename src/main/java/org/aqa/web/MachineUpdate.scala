@@ -33,6 +33,7 @@ import org.aqa.db.MachineBeamEnergy
 import org.aqa.AnonymizeUtil
 import org.aqa.db.Input
 import org.aqa.db.PMI
+import org.aqa.db.CachedUser
 
 object MachineUpdate {
   val machinePKTag = "machinePK"
@@ -543,9 +544,18 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     response.redirectSeeOther(path)
   }
 
+  /**
+   * If the user is authorized, go to the page for creating customized plans.
+   */
   private def customizePlan(valueMap: ValueMapT, response: Response): Unit = {
     val machinePK = valueMap(MachineUpdate.machinePKTag).toLong
-    CustomizeRtPlan.redirect(machinePK, response)
+    val machine = Machine.get(machinePK).get
+    val user = CachedUser.get(response.getRequest).get
+    if (user.institutionPK == machine.institutionPK) CustomizeRtPlan.redirect(machinePK, response)
+    else {
+      val styleMap = Error.make(institutionPK, "Only people from the machine's institution are allowed to create customized plans")
+      formEdit(valueMap).setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.SUCCESS_OK)
+    }
   }
 
   private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
