@@ -34,6 +34,7 @@ import org.aqa.AnonymizeUtil
 import org.aqa.db.Input
 import org.aqa.db.PMI
 import org.aqa.db.CachedUser
+import org.aqa.Config
 
 object MachineUpdate {
   val machinePKTag = "machinePK"
@@ -364,7 +365,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     val ok = WebUtil.userIsWhitelisted(request) ||
       {
         getUser(request) match {
-          case Some(user) => user.institutionPK == institutionPK
+          case Some(user) => (user.institutionPK == institutionPK) || WebUtil.userIsWhitelisted(request)
           case _ => false
         }
       }
