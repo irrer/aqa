@@ -16,7 +16,7 @@ import org.aqa.Util
  */
 case class Baseline(
   baselinePK: Option[Long], // primary key
-  pmiPK: Long, // refers to maintenance for which to use this value
+  maintenanceRecordPK: Long, // refers to maintenance for which to use this value
   acquisitionDate: Timestamp, // when data was acquired at the treatment machine.  Different from when this record was created.
   SOPInstanceUID: Option[String], // UID of DICOM image.  May be empty if not applicable.
   id: String, // unique identifier for data.  Can contain the concatenation of values such as beam name, energy level, jaw position, energy level, etc.  Should be human readable / user friendly
@@ -39,7 +39,7 @@ object Baseline extends Logging {
   class BaselineTable(tag: Tag) extends Table[Baseline](tag, "baseline") {
 
     def baselinePK = column[Long]("baselinePK", O.PrimaryKey, O.AutoInc)
-    def pmiPK = column[Long]("pmiPK")
+    def maintenanceRecordPK = column[Long]("maintenanceRecordPK")
     def acquisitionDate = column[Timestamp]("acquisitionDate")
     def SOPInstanceUID = column[Option[String]]("SOPInstanceUID")
     def id = column[String]("id")
@@ -48,14 +48,14 @@ object Baseline extends Logging {
 
     def * = (
       baselinePK.?,
-      pmiPK,
+      maintenanceRecordPK,
       acquisitionDate,
       SOPInstanceUID,
       id,
       value,
       setup) <> ((Baseline.apply _)tupled, Baseline.unapply _)
 
-    def pmiFK = foreignKey("pmiPK", pmiPK, PMI.query)(_.pmiPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def maintenanceRecordFK = foreignKey("maintenanceRecordPK", maintenanceRecordPK, MaintenanceRecord.query)(_.maintenanceRecordPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[BaselineTable]
@@ -71,12 +71,12 @@ object Baseline extends Logging {
   /**
    * Given a machine and Baseline id, get the latest value if it exists.
    */
-  def findLatest(machinePK: Long, id: String): Option[(PMI, Baseline)] = {
+  def findLatest(machinePK: Long, id: String): Option[(MaintenanceRecord, Baseline)] = {
     val action = {
       for {
-        pmi <- PMI.query if (pmi.machinePK === machinePK)
-        baseline <- Baseline.query if (baseline.id === id) && (baseline.pmiPK === pmi.pmiPK)
-      } yield (pmi, baseline)
+        maintenanceRecord <- MaintenanceRecord.query if (maintenanceRecord.machinePK === machinePK)
+        baseline <- Baseline.query if (baseline.id === id) && (baseline.maintenanceRecordPK === maintenanceRecord.maintenanceRecordPK)
+      } yield (maintenanceRecord, baseline)
     } sortBy (_._1.creationTime.desc)
 
     Db.run(action.result.headOption)
@@ -97,9 +97,9 @@ object Baseline extends Logging {
   /**
    * Construct a baseline object using an attribute list.
    */
-  def makeBaseline(pmiPK: Long, attributeList: AttributeList, id: String, value: Double): Baseline = {
+  def makeBaseline(maintenanceRecordPK: Long, attributeList: AttributeList, id: String, value: Double): Baseline = {
     val date = Util.extractDateTimeAndPatientIdFromDicom(attributeList)._1.head
     val SOPInstanceUID = Util.sopOfAl(attributeList)
-    new Baseline(None, pmiPK, new Timestamp(date.getTime), Some(SOPInstanceUID), id, value.toString, BaselineSetup.byDefault.toString)
+    new Baseline(None, maintenanceRecordPK, new Timestamp(date.getTime), Some(SOPInstanceUID), id, value.toString, BaselineSetup.byDefault.toString)
   }
 }

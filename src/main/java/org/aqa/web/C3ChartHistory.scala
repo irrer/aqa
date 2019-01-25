@@ -3,7 +3,7 @@ package org.aqa.web
 import org.aqa.Logging
 import java.util.Date
 import org.aqa.Util
-import org.aqa.db.PMI
+import org.aqa.db.MaintenanceRecord
 import org.aqa.db.MaintenanceCategory
 import java.awt.Color
 import org.aqa.db.Baseline
@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 import edu.umro.ScalaUtil.Trace
 
 /**
- * @param pmiList: List of PMI records that fall chronologically in the displayed range
+ * @param maintList: List of maintenance records that fall chronologically in the displayed range
  *
  * @param width: Optional width of chart in pixels.
  *
@@ -34,14 +34,14 @@ import edu.umro.ScalaUtil.Trace
  * @param yFormat: Formatting for y values.   Examples: .3g .4g  Reference: http://bl.ocks.org/zanarmstrong/05c1e95bf7aa16c4768e
  */
 class C3ChartHistory(
-  pmiList: Seq[PMI],
+  maintList: Seq[MaintenanceRecord],
   width: Option[Int],
   height: Option[Int],
   xLabel: String,
   xDateList: Seq[Date],
   baseline: Option[Baseline],
   tolerance: Option[C3Chart.Tolerance],
-  yAxisLabels: Seq[String], 
+  yAxisLabels: Seq[String],
   yDataLabel: String,
   yValues: Seq[Seq[Double]],
   yIndex: Int,
@@ -66,13 +66,13 @@ class C3ChartHistory(
     "[ '" + label + "', " + valueList.map(d => "'" + Util.standardDateFormat.format(d) + "'").mkString(", ") + "]"
   }
 
-  private val pmiColor = if (pmiList.isEmpty) Seq[Color]() else Seq(Color.white)
-  private val yColorNameList = textColumn((yColorList ++ pmiColor).map(c => (c.getRGB & 0xffffff).formatted("#%06x")))
+  private val maintColor = if (maintList.isEmpty) Seq[Color]() else Seq(Color.white)
+  private val yColorNameList = textColumn((yColorList ++ maintColor).map(c => (c.getRGB & 0xffffff).formatted("#%06x")))
 
   private val minDate = xDateList.minBy(d => d.getTime)
   private val maxDate = xDateList.maxBy(d => d.getTime)
 
-  private val pmiDateList = dateColumn("pmiDateList", pmiList.map(pmi => Seq(pmi.creationTime, pmi.creationTime)).flatten)
+  private val maintDateList = dateColumn("maintDateList", maintList.map(maint => Seq(maint.creationTime, maint.creationTime)).flatten)
 
   private val allY = {
     val all = yValues.flatten
@@ -83,10 +83,10 @@ class C3ChartHistory(
   private val minY = allY.min
   private val maxY = allY.max
 
-  private val pmiValueList = column("PMI", Seq.fill(pmiList.size)(Seq(minY, maxY)).flatten)
-  private val pmiSummaryList = textColumn(pmiList.map(pmi => pmi.summary))
-  private val pmiColorList = textColumn(pmiList.map(pmi => MaintenanceCategory.findMaintenanceCategoryMatch(pmi.category).Color))
-  private val pmiCategoryList = textColumn(pmiList.map(pmi => pmi.category))
+  private val maintValueList = column("Maintenance", Seq.fill(maintList.size)(Seq(minY, maxY)).flatten)
+  private val maintSummaryList = textColumn(maintList.map(maint => maint.summary))
+  private val maintColorList = textColumn(maintList.map(maint => MaintenanceCategory.findMaintenanceCategoryMatch(maint.category).Color))
+  private val maintCategoryList = textColumn(maintList.map(maint => maint.category))
 
   val html = { <div id={ idTag }>{ idTag }</div> }
 
@@ -143,13 +143,13 @@ var """ + idTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) 
     tooltip: {
       format: {
         value: function (value, ratio, id, index) {
-          var pmiSummaryList = """ + pmiSummaryList + """;
-          if (id === 'PMI') return pmiSummaryList[index/2];
+          var maintSummaryList = """ + maintSummaryList + """;
+          if (id === 'MaintenanceRecord') return pMaintenanceRecordummaryList[index/2];
           return d3.format('""" + yFormat + """')(value);
           },
           name: function (name, ratio, id, index) {
-            var pmiCategoryList = """ + pmiCategoryList + """;
-              if (id === 'PMI') return pmiCategoryList[index/2];
+            var maintCategoryList = """ + maintCategoryList + """;
+              if (id === 'MaintenanceRecord') return maintCategoryList[index/2];
               return id;
               },
           title: function (value) { 
@@ -160,22 +160,22 @@ var """ + idTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) 
     data: {
       xs: {
         """ + yLabels + """
-        'PMI': 'pmiDateList'
+        'MaintenanceRecord': 'maintDateList'
         },
         xFormat: standardDateFormat,
         columns: [
           """ + dateColumn(xLabel, xDateList) + """,
           """ + yText + """,
-          """ + pmiDateList + """,
-          """ + pmiValueList + """
+          """ + maintDateList + """,
+          """ + maintValueList + """
         ],
         types: {
           """ + yAxisLabels.map(label => "'" + label + "' : 'line'").mkString(",\n          ") + """,
-          'PMI': 'bar'
+          'MaintenanceRecord': 'bar'
         },
         color: function (color, d) {
-          var pmiColorList = """ + pmiColorList + """;
-          if (d.id === 'PMI') return pmiColorList[d.index % pmiColorList.length];
+          var maintColorList = """ + maintColorList + """;
+          if (d.id === 'MaintenanceRecord') return maintColorList[d.index % maintColorList.length];
           if (d.index == """ + yIndex + """) return 'orange';
           return color;
         }

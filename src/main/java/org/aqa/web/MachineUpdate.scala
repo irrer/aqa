@@ -32,7 +32,7 @@ import org.aqa.db.EPID
 import org.aqa.db.MachineBeamEnergy
 import org.aqa.AnonymizeUtil
 import org.aqa.db.Input
-import org.aqa.db.PMI
+import org.aqa.db.MaintenanceRecord
 import org.aqa.db.CachedUser
 import org.aqa.Config
 
@@ -113,9 +113,9 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     val machPK = valueMap.get(machinePK.label).get.toLong
     val mach = Machine.get(machPK).get
     val inputList = Input.getByMachine(machPK)
-    val pmiList = PMI.getByMachine(machPK)
+    val maintList = MaintenanceRecord.getByMachine(machPK)
     val html = {
-      <div>If machine <span aqaalias="">{ mach.id }</span> is deleted then { inputList.size } data sets and { pmiList.size } maintenance records will also be deleted. </div>
+      <div>If machine <span aqaalias="">{ mach.id }</span> is deleted then { inputList.size } data sets and { maintList.size } maintenance records will also be deleted. </div>
     }
     html
   }
@@ -515,12 +515,12 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   private def delete(valueMap: ValueMapT, response: Response): Unit = {
     val machPK = valueMap.get(machinePK.label).get.toLong
     val inputList = Input.getByMachine(machPK)
-    val pmiList = PMI.getByMachine(machPK)
+    val maintList = MaintenanceRecord.getByMachine(machPK)
 
     val styleMap = validateAuthentication(valueMap, response.getRequest)
 
     if (styleMap.isEmpty) {
-      if (inputList.isEmpty && pmiList.isEmpty) {
+      if (inputList.isEmpty && maintList.isEmpty) {
         Machine.delete(machPK)
         MachineList.redirect(response)
       } else formConfirmDelete(valueMap).setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
@@ -532,8 +532,8 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   private def confirmDelete(valueMap: ValueMapT, response: Response): Unit = {
     val machPK = valueMap.get(machinePK.label).get.toLong
     val inputList = Input.getByMachine(machPK)
-    val pmiList = PMI.getByMachine(machPK)
-    pmiList.map(pmi => PMI.delete(pmi.pmiPK.get))
+    val maintList = MaintenanceRecord.getByMachine(machPK)
+    maintList.map(maint => MaintenanceRecord.delete(maint.maintenanceRecordPK.get))
     inputList.map(input => Input.delete(input.inputPK.get))
     Machine.delete(machPK)
     MachineList.redirect(response)
@@ -541,7 +541,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   private def maintRec(valueMap: ValueMapT, response: Response): Unit = {
     val j = valueMap(machinePK.label)
-    val path = PMIList.path + "?machinePK=" + valueMap(machinePK.label)
+    val path = MaintenanceRecordList.path + "?machinePK=" + valueMap(machinePK.label)
     response.redirectSeeOther(path)
   }
 

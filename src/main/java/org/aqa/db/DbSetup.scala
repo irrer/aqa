@@ -63,7 +63,7 @@ object DbSetup extends Logging {
     MachineBeamEnergy.query,
     Input.query,
     InputFiles.query,
-    PMI.query,
+    MaintenanceRecord.query,
     Output.query,
     OutputFiles.query,
     DicomAnonymous.query,

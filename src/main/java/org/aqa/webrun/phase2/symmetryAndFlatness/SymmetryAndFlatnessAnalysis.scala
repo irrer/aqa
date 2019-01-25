@@ -17,12 +17,12 @@ import edu.umro.ImageUtil.ImageText
 import java.awt.BasicStroke
 import org.aqa.Util
 import org.aqa.db.Baseline
-import org.aqa.db.PMI
+import org.aqa.db.MaintenanceRecord
 import org.aqa.db.SymmetryAndFlatness
 import java.sql.Timestamp
 import org.aqa.db.MaintenanceCategory
 import org.aqa.IsoImagePlaneTranslator
-import org.aqa.webrun.phase2.Phase2Util.PMIBaseline
+import org.aqa.webrun.phase2.Phase2Util.MaintenanceRecordBaseline
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.ExtendedData
 import org.aqa.webrun.phase2.SubProcedureResult
@@ -193,13 +193,13 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
   def makeBaselineName(beamName: String, dataName: String): String = dataName + " " + beamName
 
-  case class BeamResultBaseline(result: SymmetryAndFlatnessBeamResult, pmiBaseline: Seq[PMIBaseline], pointSet: PointSet);
+  case class BeamResultBaseline(result: SymmetryAndFlatnessBeamResult, maintenanceRecordBaseline: Seq[MaintenanceRecordBaseline], pointSet: PointSet);
 
-  private def getBaseline(machinePK: Long, beamName: String, dataName: String, attributeList: AttributeList, value: Double): PMIBaseline = {
+  private def getBaseline(machinePK: Long, beamName: String, dataName: String, attributeList: AttributeList, value: Double): MaintenanceRecordBaseline = {
     val id = makeBaselineName(beamName, dataName)
     Baseline.findLatest(machinePK, id) match {
-      case Some((pmi, baseline)) => new PMIBaseline(Some(pmi), baseline)
-      case _ => new PMIBaseline(None, Baseline.makeBaseline(-1, attributeList, id, value))
+      case Some((maintenanceRecord, baseline)) => new MaintenanceRecordBaseline(Some(maintenanceRecord), baseline)
+      case _ => new MaintenanceRecordBaseline(None, Baseline.makeBaseline(-1, attributeList, id, value))
     }
   }
 
@@ -274,7 +274,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val flatnessStatus = checkPercent(flatness, flatnessBaseline.baseline.value.toDouble, Config.FlatnessPercentLimit)
     val profileConstancyStatus = checkPercent(profileConstancy, profileConstancyBaseline.baseline.value.toDouble, Config.ProfileConstancyPercentLimit)
 
-    val pmiBaselineList = Seq(axialSymmetryBaseline, transverseSymmetryBaseline, flatnessBaseline, profileConstancyBaseline,
+    val maintenanceRecordBaselineList = Seq(axialSymmetryBaseline, transverseSymmetryBaseline, flatnessBaseline, profileConstancyBaseline,
       topBaseline, bottomBaseline, leftBaseline, rightBaseline, centerBaseline)
 
     val result = new SymmetryAndFlatnessBeamResult(beamName, Util.sopOfAl(attributeList), pointSet,
@@ -296,7 +296,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       axial_pct,
       baselinePointSet)
 
-    new BeamResultBaseline(result, pmiBaselineList, pointSet)
+    new BeamResultBaseline(result, maintenanceRecordBaselineList, pointSet)
   }
 
   private def storeResultsInDb(resultList: List[SymmetryAndFlatnessAnalysis.BeamResultBaseline], outputPK: Long): Unit = {
@@ -337,24 +337,24 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     logger.info("Stored " + list.size + " SymmetryAndFlatness records")
   }
 
-  private def storePmiInDB(resultList: List[BeamResultBaseline], machinePK: Long, userPK: Long, outputPK: Long, analysisTime: Timestamp): Unit = {
+  private def storeMaintenanceRecordInDB(resultList: List[BeamResultBaseline], machinePK: Long, userPK: Long, outputPK: Long, analysisTime: Timestamp): Unit = {
 
     // make list of baselines that need to be saved
-    val baselineList = resultList.map(r => r.pmiBaseline).flatten.filter(p => p.pmi.isEmpty).map(p => p.baseline)
+    val baselineList = resultList.map(r => r.maintenanceRecordBaseline).flatten.filter(p => p.maintenanceRecord.isEmpty).map(p => p.baseline)
 
     if (baselineList.nonEmpty) {
-      logger.info("Creating PMI record for Symmetry and Flatness")
+      logger.info("Creating MaintenanceRecord record for Symmetry and Flatness")
       val summary = "Automatically created baseline values for Symmetry and Flatness."
       val preamble = "Symmetry and Flatness baseline values are created automatically if they have not been established for the given machine.  The following is a list of the values:\n\n"
       val valueText = baselineList.map(bl => "    " + bl.id + " : " + bl.value).mkString("\n")
 
-      val pmi = new PMI(None, MaintenanceCategory.setBaseline, machinePK, analysisTime, userPK, Some(outputPK), summary, preamble + valueText)
-      val insertedPmi = pmi.insert
-      val newPmiPK = insertedPmi.pmiPK.get
-      logger.info("Created PMI record for Symmetry and Flatness: " + insertedPmi)
+      val maintenanceRecord = new MaintenanceRecord(None, MaintenanceCategory.setBaseline, machinePK, analysisTime, userPK, Some(outputPK), summary, preamble + valueText)
+      val insertedMaintenanceRecord = maintenanceRecord.insert
+      val newMaintenanceRecordPK = insertedMaintenanceRecord.maintenanceRecordPK.get
+      logger.info("Created MaintenanceRecord record for Symmetry and Flatness: " + insertedMaintenanceRecord)
 
-      Baseline.insert(baselineList.map(bl => bl.copy(pmiPK = newPmiPK)))
-      logger.info("Created " + baselineList.size + " new baseline records for Symmetry and Flatness")
+      Baseline.insert(baselineList.map(bl => bl.copy(maintenanceRecordPK = newMaintenanceRecordPK)))
+        logger.info("Created " + baselineList.size + " new baseline records for Symmetry and Flatness")
     }
   }
 
@@ -384,7 +384,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       }
       val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
-      storePmiInDB(resultList, extendedData.machine.machinePK.get, extendedData.user.userPK.get, extendedData.output.outputPK.get, extendedData.output.startDate)
+      storeMaintenanceRecordInDB(resultList, extendedData.machine.machinePK.get, extendedData.user.userPK.get, extendedData.output.outputPK.get, extendedData.output.startDate)
       storeResultsInDb(resultList, extendedData.output.outputPK.get)
 
       val summary = SymmetryAndFlatnessHTML.makeDisplay(extendedData, resultList, boolToStatus(pass), runReq)

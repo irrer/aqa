@@ -11,7 +11,7 @@ import edu.umro.ScalaUtil.FileUtil
 import org.aqa.web.C3ChartHistory
 import scala.util.Random
 import java.util.Date
-import org.aqa.db.PMI
+import org.aqa.db.MaintenanceRecord
 import org.aqa.Config
 import java.sql.Timestamp
 import java.awt.Color
@@ -42,8 +42,8 @@ class TestC3ChartHistory extends FlatSpec with Matchers {
     val machinePK = -1
     val userPK = -1
     val outputPK = None
-    new PMI(
-      None, // pmiPK
+    new MaintenanceRecord(
+      None, // maintenanceRecordPK
       categoryName,
       machinePK,
       new Timestamp(offsetDate(day).getTime),
@@ -64,22 +64,22 @@ class TestC3ChartHistory extends FlatSpec with Matchers {
     val yValues = yRange.map(yy => (0 until xDateList.size).map(y => (rand.nextDouble + 1) * 25346.331))
     val yFormat = ".5"
     val yColorList = Util.colorPallette(new Color(0x4477BB), new Color(0x44AAFF), yValues.size)
-    val XpmiList = Seq(
+    val XmaintenanceRecordList = Seq(
       makePmi(2, MaintenanceCategory.firmwareUpdate),
       makePmi(9, MaintenanceCategory.setBaseline))
 
     val yMin = yValues.flatten.min
     val yMax = yValues.flatten.max
     val yDiff = yMax - yMin
-    val pmiList = Seq[PMI]()
-    val baselineSpec = new Baseline(None, -1, XpmiList(1).creationTime, Some("1.2.3.4.5.6.7.8.9"), "baseline ID", yValues.head(3).toString, BaselineSetup.byDefault.toString)
+    val maintenanceRecordList = Seq[MaintenanceRecord]()
+    val baselineSpec = new Baseline(None, -1, XmaintenanceRecordList(1).creationTime, Some("1.2.3.4.5.6.7.8.9"), "baseline ID", yValues.head(3).toString, BaselineSetup.byDefault.toString)
 
     //yValues.head(3), Color.green)
 
     val tolerance = new C3Chart.Tolerance((yDiff * .2) + yMin, (yDiff * .8) + yMin)
 
-    val chart = new C3ChartHistory(pmiList, Some(600), Some(200), xLabel, xDateList, Some(baselineSpec), Some(tolerance), yAxisLabels, yDataLabel, yValues, yValues.head.size / 2, yFormat, yColorList)
-    //val chart = new C3ChartHistory(pmiList, xAxisLabel: String, xDataLabel, xDateList, xFormat, None, yAxisLabels, yDataLabel, yValues, yFormat, yColorList)
+    val chart = new C3ChartHistory(maintenanceRecordList, Some(600), Some(200), xLabel, xDateList, Some(baselineSpec), Some(tolerance), yAxisLabels, yDataLabel, yValues, yValues.head.size / 2, yFormat, yColorList)
+    //val chart = new C3ChartHistory(maintenanceRecordList, xAxisLabel: String, xDataLabel, xDateList, xFormat, None, yAxisLabels, yDataLabel, yValues, yFormat, yColorList)
 
     val sep = Seq.fill(60)("-").reduce(_ + _)
     println(sep)

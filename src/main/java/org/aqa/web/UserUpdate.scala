@@ -31,7 +31,7 @@ import org.aqa.Util
 import org.aqa.db.CachedUser
 import org.aqa.Crypto
 import org.aqa.AnonymizeUtil
-import org.aqa.db.PMI
+import org.aqa.db.MaintenanceRecord
 
 object UserUpdate {
   val userPKTag = "userPK"
@@ -276,18 +276,18 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
     }
   }
 
-  private def userHasPMI(valueMap: ValueMapT): StyleMapT = {
+  private def userHasMaintenanceRecord(valueMap: ValueMapT): StyleMapT = {
     val user = getReference(valueMap)
-    val pmiList = PMI.getByUser(user.get.userPK.get)
-    if (pmiList.isEmpty) styleNone
-    else Error.make(id, "User has " + pmiList.size + " maintenance records and can not be deleted")
+    val maintenanceRecordList = MaintenanceRecord.getByUser(user.get.userPK.get)
+    if (maintenanceRecordList.isEmpty) styleNone
+    else Error.make(id, "User has " + maintenanceRecordList.size + " maintenance records and can not be deleted")
   }
 
   private def delete(valueMap: ValueMapT, response: Response): Unit = {
     val user = getReference(valueMap)
-    val pmiList = PMI.getByUser(user.get.userPK.get)
+    val maintenanceRecordList = MaintenanceRecord.getByUser(user.get.userPK.get)
 
-    val errMap = validateAuthentication(valueMap, response.getRequest) ++ userHasPMI(valueMap)
+    val errMap = validateAuthentication(valueMap, response.getRequest) ++ userHasMaintenanceRecord(valueMap)
 
     if (errMap.nonEmpty) {
       formEdit.setFormResponse(valueMap, errMap, pageTitleEdit, response, Status.SUCCESS_OK)

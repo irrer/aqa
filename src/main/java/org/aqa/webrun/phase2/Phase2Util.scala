@@ -25,9 +25,9 @@ import org.aqa.db.MachineType
 import org.aqa.web.WebServer
 import java.text.SimpleDateFormat
 import org.aqa.db.CenterDose
-import org.aqa.db.PMI
+import org.aqa.db.MaintenanceRecord
 import org.aqa.db.Baseline
-import org.aqa.web.PMIList
+import org.aqa.web.MaintenanceRecordList
 import org.aqa.web.MachineList
 import org.aqa.web.MachineUpdate
 import edu.umro.ScalaUtil.DicomUtil
@@ -268,7 +268,7 @@ object Phase2Util extends Logging {
             <span title="X*Y pixel size in mm">{ pixelSpacing }</span>
           </div>
           <div class="col-md-1">
-            <a href={ PMIList.path + "?machinePK=" + extendedData.machine.machinePK.get } title="View and modify maintenance events for this machine">Maintenance</a>
+            <a href={ MaintenanceRecordList.path + "?machinePK=" + extendedData.machine.machinePK.get } title="View and modify maintenance events for this machine">Maintenance</a>
           </div>
         </div>
         <div class="row">
@@ -427,7 +427,7 @@ object Phase2Util extends Logging {
     dose
   }
 
-  case class PMIBaseline(pmi: Option[PMI], baseline: Baseline);
+  case class MaintenanceRecordBaseline(maintenanceRecord: Option[MaintenanceRecord], baseline: Baseline);
 
   /**
    * Look through the BeamSequence and find the ReferencedBeamSequence that matches the given beam.

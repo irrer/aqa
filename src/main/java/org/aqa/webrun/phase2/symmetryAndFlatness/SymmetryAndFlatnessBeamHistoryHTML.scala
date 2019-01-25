@@ -5,7 +5,7 @@ import org.aqa.db.SymmetryAndFlatness
 import org.aqa.Util
 import org.aqa.web.C3ChartHistory
 import java.awt.Color
-import org.aqa.db.PMI
+import org.aqa.db.MaintenanceRecord
 import org.aqa.db.Baseline
 import org.aqa.Config
 import org.aqa.web.C3Chart
@@ -24,8 +24,8 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, extendedData: Extende
   // index of the entry being charted.
   private val yIndex = history.indexWhere(h => h.symmetryAndFlatness.outputPK == extendedData.output.outputPK.get)
 
-  // list of all PMIs in this time interval
-  private val pmiList = PMI.getRange(extendedData.machine.machinePK.get, history.head.date, history.last.date)
+  // list of all MaintenanceRecords in this time interval
+  private val MaintenanceRecordList = MaintenanceRecord.getRange(extendedData.machine.machinePK.get, history.head.date, history.last.date)
 
   private def getBaseline(dataName: String): Baseline = {
     val baselineName = SymmetryAndFlatnessAnalysis.makeBaselineName(beamName, dataName)
@@ -51,7 +51,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, extendedData: Extende
 
     val tolerance = new C3Chart.Tolerance(baseline.value.toDouble - limit, baseline.value.toDouble + limit)
     val chart = new C3ChartHistory(
-      pmiList,
+      MaintenanceRecordList,
       width,
       height,
       xLabel, xDateList,

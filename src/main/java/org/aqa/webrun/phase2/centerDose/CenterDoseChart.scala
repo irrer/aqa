@@ -5,7 +5,7 @@ import org.aqa.db.CenterDose
 import java.text.SimpleDateFormat
 import org.aqa.Util
 import org.aqa.web.C3ChartHistory
-import org.aqa.db.PMI
+import org.aqa.db.MaintenanceRecord
 import java.awt.Color
 import org.aqa.webrun.phase2.ExtendedData
 
@@ -13,7 +13,7 @@ class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Se
 
   private val allDates = (resultList ++ history).map(cd => cd.date)
 
-  private val pmiList = PMI.getRange(extendedData.machine.machinePK.get, allDates.min, allDates.max)
+  private val maintenanceRecordList = MaintenanceRecord.getRange(extendedData.machine.machinePK.get, allDates.min, allDates.max)
 
   /* List of SOPInstanceUID's for data set that was just calculated. */
   private val sopSet = resultList.map(cd => cd.SOPInstanceUID).toSet
@@ -32,7 +32,7 @@ class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Se
     val index = sortedHistory.indexWhere(sh => sopSet.contains(sh.SOPInstanceUID))
 
     new C3ChartHistory(
-      pmiList,
+      maintenanceRecordList,
       None, // width
       None, // height
       "Date", sortedHistory.map(h => h.date),

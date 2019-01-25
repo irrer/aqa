@@ -9,14 +9,14 @@ import org.aqa.web.WebUtil
 import org.aqa.db.Output
 import org.aqa.db.Machine
 import org.aqa.Logging
-import org.aqa.db.PMI
+import org.aqa.db.MaintenanceRecord
 import java.sql.Timestamp
 import WedgeUseAsBaseline._
 import org.aqa.db.Baseline
 import org.aqa.db.BaselineSetup
 import org.aqa.db.Input
 import scala.xml.Elem
-import org.aqa.web.PMIUpdate
+import org.aqa.web.MaintenanceRecordUpdate
 import org.restlet.data.Status
 import org.aqa.db.MaintenanceCategory
 import org.aqa.Config
@@ -35,11 +35,11 @@ class WedgeUseAsBaseline extends Restlet with SubUrlRun with Logging {
     "    " + WedgeAnalysis.makeBaselineName(wedgePoint) + " : " + Util.fmtDbl(wedgePoint.percentOfBackground_pct)
   }
 
-  private def wedgePointToBaselineList(wedgePoint: WedgePoint, pmiPK: Long, acquisitionDate: Timestamp): Baseline = {
-    new Baseline(None, pmiPK, acquisitionDate, Some(wedgePoint.wedgeSOPInstanceUID), WedgeAnalysis.makeBaselineName(wedgePoint), wedgePoint.percentOfBackground_pct.toString, BaselineSetup.chosen.toString)
+  private def wedgePointToBaselineList(wedgePoint: WedgePoint, maintenanceRecordPK: Long, acquisitionDate: Timestamp): Baseline = {
+    new Baseline(None, maintenanceRecordPK, acquisitionDate, Some(wedgePoint.wedgeSOPInstanceUID), WedgeAnalysis.makeBaselineName(wedgePoint), wedgePoint.percentOfBackground_pct.toString, BaselineSetup.chosen.toString)
   }
 
-  private def makeBaseline(request: Request, outputPK: Long): PMI = {
+  private def makeBaseline(request: Request, outputPK: Long): MaintenanceRecord = {
     val output = Output.get(outputPK).get
     val machine = Machine.get(output.machinePK.get).get
     val input = Input.get(output.inputPK).get
@@ -62,25 +62,25 @@ class WedgeUseAsBaseline extends Restlet with SubUrlRun with Logging {
 
     val wedgePointList = WedgePoint.getByOutput(outputPK)
 
-    logger.info("User " + userId + " requested creation of PMI baseline record for Wedge from output " + output.outputPK.get)
+    logger.info("User " + userId + " requested creation of MaintenanceRecord baseline record for Wedge from output " + output.outputPK.get)
     val summary = "User " + userId + " created baseline values for Wedge from measured values."
     val preamble = "List of new Wedge baseline values:\n\n"
     val valueText = wedgePointList.map(saf => wedgeToDesc(saf)).mkString("\n")
     val creationTime = new Timestamp(System.currentTimeMillis)
     val acquisitionDate = if (input.dataDate.isDefined) input.dataDate.get else creationTime
 
-    val pmi = { new PMI(None, MaintenanceCategory.setBaseline, machine.machinePK.get, creationTime, userPK, Some(outputPK), summary, preamble + valueText) }.insert
-    val baselineList = wedgePointList.map(saf => wedgePointToBaselineList(saf, pmi.pmiPK.get, acquisitionDate))
+    val maintenanceRecord = { new MaintenanceRecord(None, MaintenanceCategory.setBaseline, machine.machinePK.get, creationTime, userPK, Some(outputPK), summary, preamble + valueText) }.insert
+    val baselineList = wedgePointList.map(saf => wedgePointToBaselineList(saf, maintenanceRecord.maintenanceRecordPK.get, acquisitionDate))
     Baseline.insert(baselineList)
-    logger.info("User " + userId + " created PMI record for Wedge " + pmi)
-    pmi
+    logger.info("User " + userId + " created MaintenanceRecord record for Wedge " + maintenanceRecord)
+    maintenanceRecord
   }
 
   private def setBaseline(request: Request, outputPK: Long): Elem = {
-    val pmi = makeBaseline(request, outputPK)
+    val maintenanceRecord = makeBaseline(request, outputPK)
 
     val viewEditButton = {
-      <a class="btn btn-default" href={ "/admin/PMIUpdate?pmiPK=" + pmi.pmiPK.get } role="button" title="View, edit or delete the PMI record">View/Edit/Delete PMI</a>
+      <a class="btn btn-default" href={ "/admin/MaintenanceRecordUpdate?maintenanceRecordPK=" + maintenanceRecord.maintenanceRecordPK.get } role="button" title="View, edit or delete the record">View/Edit/Delete MaintenanceRecord</a>
     }
 
     val returnToOutputButton = {
@@ -91,13 +91,13 @@ class WedgeUseAsBaseline extends Restlet with SubUrlRun with Logging {
       <div class="row">
         <div class="col-md-6 col-md-offset-2">
           <div class="row" style="margin-bottom:60px;">
-            The following PMI record has been created along with the corresponding baseline values:
+            The following record has been created along with the corresponding baseline values:
             <p></p>
-            <b>Summary:</b>{ pmi.summary }
+            <b>Summary:</b>{ maintenanceRecord.summary }
             <p></p>
-            <b>Description:</b><br/>{ pmi.summary }
+            <b>Description:</b><br/>{ maintenanceRecord.summary }
             <p></p>
-            <em>Note that you may undo the setting of baseline values by deleting this PMI record.</em>
+            <em>Note that you may undo the setting of baseline values by deleting this record.</em>
           </div>
           <div class="row">
             <div class="col-md-3">
@@ -124,7 +124,7 @@ class WedgeUseAsBaseline extends Restlet with SubUrlRun with Logging {
             Please either confirm or cancel the setting of<br/>
             the baseline values for symmetry and flatness.
             <p></p>
-            <em>Note that you may undo the setting of baseline values<br/>by deleting this PMI record.</em>
+            <em>Note that you may undo the setting of baseline values<br/>by deleting this record.</em>
           </div>
           <div class="row">
             <div class="col-md-3">

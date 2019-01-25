@@ -10,8 +10,8 @@ import java.util.Date
  * Record of Preventive Maintenance Inspection.
  */
 
-case class PMI(
-  pmiPK: Option[Long], // primary key
+case class MaintenanceRecord(
+  maintenanceRecordPK: Option[Long], // primary key
   category: String, // type of maintenance
   machinePK: Long, // machine that was maintained
   creationTime: Timestamp, // when this record was created
@@ -21,20 +21,20 @@ case class PMI(
   description: String // description of maintenance
 ) {
 
-  def insert: PMI = {
-    val insertQuery = PMI.query returning PMI.query.map(_.pmiPK) into ((pmi, pmiPK) => pmi.copy(pmiPK = Some(pmiPK)))
+  def insert: MaintenanceRecord = {
+    val insertQuery = MaintenanceRecord.query returning MaintenanceRecord.query.map(_.maintenanceRecordPK) into ((maintenanceRecord, maintenanceRecordPK) => maintenanceRecord.copy(maintenanceRecordPK = Some(maintenanceRecordPK)))
     val action = insertQuery += this
     val result = Db.run(action)
     result
   }
 
-  def insertOrUpdate = Db.run(PMI.query.insertOrUpdate(this))
+  def insertOrUpdate = Db.run(MaintenanceRecord.query.insertOrUpdate(this))
 }
 
-object PMI {
-  class PMITable(tag: Tag) extends Table[PMI](tag, "pmi") {
+object MaintenanceRecord {
+  class MaintenanceRecordTable(tag: Tag) extends Table[MaintenanceRecord](tag, "maintenanceRecord") {
 
-    def pmiPK = column[Long]("pmiPK", O.PrimaryKey, O.AutoInc)
+    def maintenanceRecordPK = column[Long]("maintenanceRecordPK", O.PrimaryKey, O.AutoInc)
     def category = column[String]("category")
     def machinePK = column[Long]("machinePK")
     def creationTime = column[Timestamp]("creationTime")
@@ -44,64 +44,64 @@ object PMI {
     def description = column[String]("description")
 
     def * = (
-      pmiPK.?,
+      maintenanceRecordPK.?,
       category,
       machinePK,
       creationTime,
       userPK,
       outputPK,
       summary,
-      description) <> ((PMI.apply _)tupled, PMI.unapply _)
+      description) <> ((MaintenanceRecord.apply _)tupled, MaintenanceRecord.unapply _)
 
     def machineFK = foreignKey("machinePK", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
     def userFK = foreignKey("userPK", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
   }
 
-  val query = TableQuery[PMITable]
+  val query = TableQuery[MaintenanceRecordTable]
 
-  def get(pmiPK: Long): Option[PMI] = {
+  def get(maintenanceRecordPK: Long): Option[MaintenanceRecord] = {
     val action = for {
-      inst <- PMI.query if inst.pmiPK === pmiPK
+      inst <- MaintenanceRecord.query if inst.maintenanceRecordPK === maintenanceRecordPK
     } yield (inst)
     val list = Db.run(action.result)
     if (list.isEmpty) None else Some(list.head)
   }
 
-  def getByMachine(machinePK: Long): Seq[PMI] = {
+  def getByMachine(machinePK: Long): Seq[MaintenanceRecord] = {
     val action = for {
-      pmi <- PMI.query if (pmi.machinePK === machinePK)
-    } yield (pmi)
+      maintenanceRecord <- MaintenanceRecord.query if (maintenanceRecord.machinePK === machinePK)
+    } yield (maintenanceRecord)
     Db.run(action.result)
   }
 
-  def getByUser(userPK: Long): Seq[PMI] = {
+  def getByUser(userPK: Long): Seq[MaintenanceRecord] = {
     val action = for {
-      pmi <- PMI.query if (pmi.userPK === userPK)
-    } yield (pmi)
+      maintenanceRecord <- MaintenanceRecord.query if (maintenanceRecord.userPK === userPK)
+    } yield (maintenanceRecord)
     Db.run(action.result)
   }
 
   /**
-   * Get the list of PMI's that have a creation time between the given limits (inclusive), which
+   * Get the list of MaintenanceRecord's that have a creation time between the given limits (inclusive), which
    * may be given in either order.  The list returned is ordered by creation time.
    */
-  def getRange(machinePK: Long, lo: Date, hi: Date): Seq[PMI] = {
+  def getRange(machinePK: Long, lo: Date, hi: Date): Seq[MaintenanceRecord] = {
     val loTs = new Timestamp(Math.min(lo.getTime, hi.getTime))
     val hiTs = new Timestamp(Math.max(lo.getTime, hi.getTime))
     val action = for {
-      inst <- PMI.query if (inst.machinePK === machinePK) && (inst.creationTime >= loTs) && (inst.creationTime <= hiTs)
+      inst <- MaintenanceRecord.query if (inst.machinePK === machinePK) && (inst.creationTime >= loTs) && (inst.creationTime <= hiTs)
     } yield (inst)
     val list = Db.run(action.result)
     list.sortWith((a, b) => a.creationTime.getTime < b.creationTime.getTime)
   }
 
   /**
-   * Get a list of all PMI's.
+   * Get a list of all MaintenanceRecord's.
    */
   def list = Db.run(query.result)
 
-  def delete(pmiPK: Long): Int = {
-    val q = query.filter(_.pmiPK === pmiPK)
+  def delete(maintenanceRecordPK: Long): Int = {
+    val q = query.filter(_.maintenanceRecordPK === maintenanceRecordPK)
     val action = q.delete
     Db.run(action)
   }

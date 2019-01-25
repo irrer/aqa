@@ -20,9 +20,9 @@ import java.awt.geom.Point2D
 import org.aqa.db.CenterDose
 import org.aqa.db.WedgePoint
 import org.aqa.db.Baseline
-import org.aqa.webrun.phase2.Phase2Util.PMIBaseline
+import org.aqa.webrun.phase2.Phase2Util.MaintenanceRecordBaseline
 import org.aqa.db.MaintenanceCategory
-import org.aqa.db.PMI
+import org.aqa.db.MaintenanceRecord
 import org.aqa.webrun.phase2.ExtendedData
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.Phase2Util
@@ -55,37 +55,37 @@ object WedgeAnalysis extends Logging {
   /**
    * Either get the existing baseline or
    */
-  private def getBaseline(machinePK: Long, wedgePair: Config.WedgeBeamPair, attributeList: AttributeList, value: Double): PMIBaseline = {
+  private def getBaseline(machinePK: Long, wedgePair: Config.WedgeBeamPair, attributeList: AttributeList, value: Double): MaintenanceRecordBaseline = {
     val id = makeBaselineName(wedgePair)
     Baseline.findLatest(machinePK, id) match {
-      case Some((pmi, baseline)) => new PMIBaseline(Some(pmi), baseline)
-      case _ => new PMIBaseline(None, Baseline.makeBaseline(-1, attributeList, id, value))
+      case Some((maintenanceRecord, baseline)) => new MaintenanceRecordBaseline(Some(maintenanceRecord), baseline)
+      case _ => new MaintenanceRecordBaseline(None, Baseline.makeBaseline(-1, attributeList, id, value))
     }
   }
 
   /**
    * Given the list of wedge points, determine if any of them need to have a baseline value created, and if so, create
-   * them.  If any baseline values are created, then create the corresponding PMI record.
+   * them.  If any baseline values are created, then create the corresponding MaintenanceRecord record.
    */
-  private def updateBaselineAndPMI(wedgePointList: Seq[WedgePoint], extendedData: ExtendedData, runReq: RunReq): Unit = {
+  private def updateBaselineAndMaintenanceRecord(wedgePointList: Seq[WedgePoint], extendedData: ExtendedData, runReq: RunReq): Unit = {
 
     def constructOneBaseline(wedgePoint: WedgePoint): Option[Baseline] = {
       val id = makeBaselineName(wedgePoint.wedgePair)
       Baseline.findLatest(extendedData.machine.machinePK.get, id) match {
-        case Some((pmi, baseline)) => None
+        case Some((maintenanceRecord, baseline)) => None
         case _ => Some(Baseline.makeBaseline(-1, runReq.rtimageMap(wedgePoint.wedgeBeamName).attributeList.get, id, wedgePoint.percentOfBackground_pct))
       }
     }
 
     val newBaselineList = wedgePointList.map(wp => constructOneBaseline(wp)).flatten
     if (newBaselineList.nonEmpty) {
-      logger.info("Automatically creating new PMI and " + newBaselineList.size + "default Wedge baseline(s) for " + extendedData.institution.name + " : " + extendedData.machine.id)
+      logger.info("Automatically creating new MaintenanceRecord and " + newBaselineList.size + "default Wedge baseline(s) for " + extendedData.institution.name + " : " + extendedData.machine.id)
 
       val summary = "Automatically created baseline value for Wedge."
       val preamble = "Wedge baseline values are created automatically if they have not been established for the given machine.  The following is a list of the values:\n\n"
       val valueText = newBaselineList.map(bl => "    " + bl.id + " : " + bl.value).mkString("\n")
       val analysisTime = extendedData.output.startDate
-      val pmiOrig = new PMI(
+      val maintenanceRecordOrig = new MaintenanceRecord(
         None,
         MaintenanceCategory.setBaseline,
         extendedData.machine.machinePK.get,
@@ -94,11 +94,11 @@ object WedgeAnalysis extends Logging {
         extendedData.output.outputPK,
         summary,
         preamble + valueText)
-      val pmi = pmiOrig.insert
+      val maintenanceRecord = maintenanceRecordOrig.insert
 
-      val list = newBaselineList.map(bl => bl.copy(pmiPK = pmi.pmiPK.get))
+      val list = newBaselineList.map(bl => bl.copy(maintenanceRecordPK = maintenanceRecord.maintenanceRecordPK.get))
       Baseline.insert(list)
-      logger.info("Wedge PMI and baseline inserted")
+      logger.info("Wedge MaintenanceRecord and baseline inserted")
     }
   }
 
@@ -110,7 +110,7 @@ object WedgeAnalysis extends Logging {
     }
 
     val baselineId = makeBaselineName(wedgePair)
-    val pmiBaseline = Baseline.findLatest(extendedData.machine.machinePK.get, baselineId)
+    val maintenanceRecordBaseline = Baseline.findLatest(extendedData.machine.machinePK.get, baselineId)
 
     val derivedWedge = runReq.derivedMap(wedgePair.wedge)
     val derivedBackground = runReq.derivedMap(wedgePair.background)
@@ -121,7 +121,7 @@ object WedgeAnalysis extends Logging {
 
     // if the baseline has been established, then use it, otherwise use the new value
     val baselineValue: Double = {
-      if (pmiBaseline.isDefined) pmiBaseline.get._2.value.toDouble
+      if (maintenanceRecordBaseline.isDefined) maintenanceRecordBaseline.get._2.value.toDouble
       else percent
     }
 
@@ -160,7 +160,7 @@ object WedgeAnalysis extends Logging {
 
       val wedgePointList = analyze(extendedData, runReq, collimatorCentering, centerDoseList)
       WedgePoint.insert(wedgePointList)
-      updateBaselineAndPMI(wedgePointList, extendedData, runReq)
+      updateBaselineAndMaintenanceRecord(wedgePointList, extendedData, runReq)
       val status = ProcedureStatus.done
       val summary = WedgeHTML.makeDisplay(extendedData, status, runReq, wedgePointList)
       val result = new WedgeResult(summary, status, wedgePointList)

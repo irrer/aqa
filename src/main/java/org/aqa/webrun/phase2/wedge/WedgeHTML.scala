@@ -21,7 +21,7 @@ import org.aqa.IsoImagePlaneTranslator
 import org.aqa.web.WebUtil
 import org.aqa.web.WebServer
 import org.aqa.web.C3ChartHistory
-import org.aqa.db.PMI
+import org.aqa.db.MaintenanceRecord
 import com.pixelmed.dicom.TagFromName
 import org.aqa.db.Baseline
 import org.aqa.web.C3Chart.Tolerance
@@ -126,15 +126,15 @@ object WedgeHTML {
     val percentHistory = beamHistory.map(h => h.percentOfBackground_pct)
     val dateHistory = beamHistory.map(h => h.date)
 
-    val pmiList = PMI.getRange(extendedData.machine.machinePK.get, dateHistory.head, dateHistory.last)
+    val maintenanceRecordList = MaintenanceRecord.getRange(extendedData.machine.machinePK.get, dateHistory.head, dateHistory.last)
     val yNew = {
       val i = beamHistory.indexWhere(h => h.date.getTime == extendedData.output.dataDate.get.getTime)
       Math.max(0, i)
     }
 
     val baseline: Option[Baseline] = {
-      val pmiBaseline = Baseline.findLatest(extendedData.machine.machinePK.get, WedgeAnalysis.makeBaselineName(wedgePoint.wedgePair))
-      if (pmiBaseline.isDefined) Some(pmiBaseline.get._2) else None
+      val maintenanceRecordBaseline = Baseline.findLatest(extendedData.machine.machinePK.get, WedgeAnalysis.makeBaselineName(wedgePoint.wedgePair))
+      if (maintenanceRecordBaseline.isDefined) Some(maintenanceRecordBaseline.get._2) else None
     }
 
     val tolerance: Option[C3Chart.Tolerance] = {
@@ -145,7 +145,7 @@ object WedgeHTML {
     }
 
     val historyChart = new C3ChartHistory(
-      pmiList,
+      maintenanceRecordList,
       None, None, // chart width, height
       "Date", // x axis label
       dateHistory,
