@@ -82,15 +82,75 @@ object LeafPositionAnalysis extends Logging {
     plan: AttributeList, translator: IsoImagePlaneTranslator,
     leafEndList_pix: Seq[Double]): Seq[Double] = {
 
-    val sideListPlan = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, plan).sorted
-
-    val sideListPix = {
+    val sideListPlan_mm = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, plan).sorted
+    val sideListPlanned_pix = {
       if (horizontal)
-        sideListPlan.map(side => translator.iso2PixCoordY(side))
+        sideListPlan_mm.map(side => translator.iso2PixCoordY(side))
       else
-        sideListPlan.map(side => translator.iso2PixCoordY(side))
+        sideListPlan_mm.map(side => translator.iso2PixCoordX(side))
     }
-    sideListPix
+
+    val planIndices = sideListPlanned_pix.indices
+
+    if (true) {
+      val profile = if (horizontal) dicomImage.rowSums else dicomImage.columnSums
+      val leafWidthList_mm = LeafPositionUtil.getLeafWidthList_mm(LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, plan))
+
+      val coarseSideList_pix = LeafPositionCoarseLeafSides.coarseLeafSides(horizontal, profile, imageAttrList, leafWidthList_mm.min, leafWidthList_mm.max, dicomImage)
+      case class LeafSide(coarse_pix: Double) {
+        val planIndex = planIndices.minBy(i => (sideListPlanned_pix(i) - coarse_pix).abs)
+        val planned = sideListPlanned_pix(planIndex)
+
+        private def indexOf(offset: Int) = ((planned + sideListPlanned_pix(planIndex + offset)) / 2).round.toInt
+
+        private def htOf(offset: Int) = coarseSideList_pix(indexOf(offset))
+
+        private val inferiorValleyIndex = indexOf(-1)
+        private val superiorValleyIndex = indexOf(1)
+
+        private val inferiorValleyHeight = coarseSideList_pix(indexOf(inferiorValleyIndex))
+        private val superiorValleyHeight = coarseSideList_pix(indexOf(superiorValleyIndex))
+
+        /**
+         * The score indicates how well defined the peak is, which is the difference between the height of this peak and the height of
+         * the adjacent valleys.  There must be a peak on either side of this peak or it will get a score of -1.
+         */
+        val score: Double = {
+          if ((planIndex == 0) || (planIndex >= planIndices.last)) -1
+          else {
+            val s = (coarse_pix * 2) - (inferiorValleyHeight + superiorValleyHeight)
+            s
+          }
+        }
+
+        lazy val precisePosition = 1.0 // TODO : ImageUtil.profileMaxCubic
+
+        def adjustToNearest(bestList: Seq[LeafSide]): Double = {
+          val byCloseness = bestList.sortBy(b => (b.planned - planned).abs).take(2)
+          val ca = byCloseness(0)
+          val cb = byCloseness(1)
+
+          /** Determine scale by looking at measured vs planned distance. */
+          val scale = {
+            val measuredDst = ca.precisePosition - cb.precisePosition
+            val plannedDst = ca.planned - cb.planned
+            (measuredDst / plannedDst).abs
+          }
+
+          val plannedDist = ca.planned - planned
+          val calculatedDist = plannedDist * scale
+
+          val calculatedPosition = ca.precisePosition - calculatedDist
+
+          calculatedPosition
+        }
+      }
+
+      val bestList = sideListPlanned_pix.map(p => new LeafSide(p)).sortBy(_.score).reverse.take(coarseSideList_pix.size / 4)
+
+    }
+
+    sideListPlanned_pix
   }
 
   /**
