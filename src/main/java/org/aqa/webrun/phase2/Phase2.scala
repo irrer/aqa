@@ -84,7 +84,9 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   private def formErr(msg: String) = Left(Error.make(form.uploadFileInput.get, msg))
 
   private def emptyForm(valueMap: ValueMapT, response: Response) = {
+    Trace.trace // TODO rm
     form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
+    Trace.trace // TODO rm
   }
 
   private def validateMachineSelection(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, Machine] = {
@@ -384,8 +386,10 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     super.handle(request, response)
 
     val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
+    Trace.trace(valueMap) // TODO rm
 
     try {
+      Trace.trace // TODO rm
       0 match {
         //case _ if (!sessionDefined(valueMap)) => redirectWithNewSession(response);
         case _ if buttonIs(valueMap, cancelButton) => cancel(valueMap, response)
@@ -397,6 +401,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
         internalFailure(response, "Unexpected failure: " + fmtEx(t))
       }
     }
+    Trace.trace // TODO rm
   }
 
 }

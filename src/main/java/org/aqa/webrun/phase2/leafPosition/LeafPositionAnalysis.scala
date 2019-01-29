@@ -18,6 +18,7 @@ import java.awt.geom.Rectangle2D
 import java.awt.Rectangle
 import edu.umro.ImageUtil.ImageUtil
 import org.aqa.Config
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Perform analysis of leaf position (picket fence).
@@ -82,75 +83,112 @@ object LeafPositionAnalysis extends Logging {
     plan: AttributeList, translator: IsoImagePlaneTranslator,
     leafEndList_pix: Seq[Double]): Seq[Double] = {
 
-    val sideListPlan_mm = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, plan).sorted
     val sideListPlanned_pix = {
+      val sideListPlan_mm = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, plan).sorted
       if (horizontal)
         sideListPlan_mm.map(side => translator.iso2PixCoordY(side))
       else
         sideListPlan_mm.map(side => translator.iso2PixCoordX(side))
     }
 
-    val planIndices = sideListPlanned_pix.indices
+    val planIndices = sideListPlanned_pix.indices.toList
 
-    if (true) {
-      val profile = if (horizontal) dicomImage.rowSums else dicomImage.columnSums
-      val leafWidthList_mm = LeafPositionUtil.getLeafWidthList_mm(LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, plan))
+    val profile = if (horizontal) dicomImage.rowSums else dicomImage.columnSums
+    val leafWidthList_mm = LeafPositionUtil.getLeafWidthList_mm(LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, plan))
 
-      val coarseSideList_pix = LeafPositionCoarseLeafSides.coarseLeafSides(horizontal, profile, imageAttrList, leafWidthList_mm.min, leafWidthList_mm.max, dicomImage)
-      case class LeafSide(coarse_pix: Double) {
-        val planIndex = planIndices.minBy(i => (sideListPlanned_pix(i) - coarse_pix).abs)
-        val planned = sideListPlanned_pix(planIndex)
+    val coarseSideList_pix = LeafPositionCoarseLeafSides.coarseLeafSides(horizontal, profile, imageAttrList, leafWidthList_mm.min, leafWidthList_mm.max, dicomImage)
+    case class LeafSide(coarse_pix: Double) {
+      val planIndex = planIndices.minBy(i => (sideListPlanned_pix(i) - coarse_pix).abs)
+      val planned = sideListPlanned_pix(planIndex)
 
-        private def indexOf(offset: Int) = ((planned + sideListPlanned_pix(planIndex + offset)) / 2).round.toInt
+      val isBetweenPeaks = (planIndex > 0) && (planIndex < planIndices.last)
 
-        private def htOf(offset: Int) = coarseSideList_pix(indexOf(offset))
-
-        private val inferiorValleyIndex = indexOf(-1)
-        private val superiorValleyIndex = indexOf(1)
-
-        private val inferiorValleyHeight = coarseSideList_pix(indexOf(inferiorValleyIndex))
-        private val superiorValleyHeight = coarseSideList_pix(indexOf(superiorValleyIndex))
-
-        /**
-         * The score indicates how well defined the peak is, which is the difference between the height of this peak and the height of
-         * the adjacent valleys.  There must be a peak on either side of this peak or it will get a score of -1.
-         */
-        val score: Double = {
-          if ((planIndex == 0) || (planIndex >= planIndices.last)) -1
-          else {
-            val s = (coarse_pix * 2) - (inferiorValleyHeight + superiorValleyHeight)
-            s
-          }
-        }
-
-        lazy val precisePosition = 1.0 // TODO : ImageUtil.profileMaxCubic
-
-        def adjustToNearest(bestList: Seq[LeafSide]): Double = {
-          val byCloseness = bestList.sortBy(b => (b.planned - planned).abs).take(2)
-          val ca = byCloseness(0)
-          val cb = byCloseness(1)
-
-          /** Determine scale by looking at measured vs planned distance. */
-          val scale = {
-            val measuredDst = ca.precisePosition - cb.precisePosition
-            val plannedDst = ca.planned - cb.planned
-            (measuredDst / plannedDst).abs
-          }
-
-          val plannedDist = ca.planned - planned
-          val calculatedDist = plannedDist * scale
-
-          val calculatedPosition = ca.precisePosition - calculatedDist
-
-          calculatedPosition
-        }
+      private def indexOf(offset: Int) = {
+        //        Trace.trace("offset: " + offset)
+        //        Trace.trace("planned: " + planned)
+        //        Trace.trace("planIndex: " + planIndex)
+        //        val j = ((planned + sideListPlanned_pix(planIndex + offset)) / 2).round.toInt
+        //        Trace.trace("j: " + j)
+        ((planned + sideListPlanned_pix(planIndex + offset)) / 2).round.toInt
       }
 
-      val bestList = sideListPlanned_pix.map(p => new LeafSide(p)).sortBy(_.score).reverse.take(coarseSideList_pix.size / 4)
+      private def minorValleyIndex = indexOf(-1)
+      private def majorValleyIndex = indexOf(1)
 
+      private def minorValleyHeight = {
+        val j = minorValleyIndex // TODO rm
+        val j1 = coarseSideList_pix // TODO rm
+        profile(minorValleyIndex)
+      }
+      private def majorValleyHeight = profile(majorValleyIndex)
+
+      /**
+       * The score indicates how well defined the peak is, which is the difference between the height of this peak and the height of
+       * the adjacent valleys.  There must be a peak on either side of this peak or it will get a score of -1.
+       */
+      val score: Double = {
+        if (isBetweenPeaks) {
+          //          println; Trace.trace("isBetweenPeaks: " + isBetweenPeaks)
+          //          Trace.trace("planIndex: " + planIndex)
+          //          Trace.trace("coarse_pix: " + coarse_pix)
+          //          Trace.trace("profile(coarse_pix.round.toInt): " + profile(coarse_pix.round.toInt))
+          //          Trace.trace("minorValleyHeight: " + minorValleyHeight)
+          //          Trace.trace("majorValleyHeight: " + majorValleyHeight)
+
+          val coarsePixHeight = profile(coarse_pix.round.toInt)
+          val s = (coarsePixHeight * 2) - (minorValleyHeight + majorValleyHeight)
+          //          Trace.trace("s: " + s)
+          s
+        } else -1
+      }
+
+      lazy val precisePosition = {
+        val xList = profile.indices.drop(minorValleyIndex).take(majorValleyIndex - minorValleyIndex).map(i => i.toDouble)
+        val yList = profile.drop(minorValleyIndex).take(majorValleyIndex - minorValleyIndex).map(y => y.toDouble)
+
+        ImageUtil.profileMaxCubic(xList.toList.toArray, yList.toList.toArray)
+      }
+
+      def adjustToNearest(bestList: Seq[LeafSide]): Double = {
+        val byCloseness = bestList.sortBy(b => (b.planned - planned).abs).take(2)
+        val ca = byCloseness(0)
+        val cb = byCloseness(1)
+
+        /** Determine scale by looking at measured vs planned distance. */
+        val scale = {
+          val measuredDst = ca.precisePosition - cb.precisePosition
+          val plannedDst = ca.planned - cb.planned
+          (measuredDst / plannedDst).abs
+        }
+
+        val plannedDist = planned - ca.planned
+        val calculatedDist = plannedDist * scale
+
+        val calculatedPosition = calculatedDist + ca.precisePosition
+
+        calculatedPosition
+      }
+
+      override def toString = {
+        planIndex.formatted("%2d") + " planned: " + Util.fmtDbl(planned) + "    score: " + Util.fmtDbl(score)
+      }
     }
 
-    sideListPlanned_pix
+    val leafSidesList = sideListPlanned_pix.map(p => new LeafSide(p)).sortBy(_.score)
+
+    Trace.trace("leafSidesList:\n    " + leafSidesList.mkString("\n    "))
+
+    val bestSize = coarseSideList_pix.size / 4
+    // use the 1/4 best leaf sides to define the rest
+    val bestList = leafSidesList.takeRight(bestSize)
+    val worstList = leafSidesList.dropRight(bestSize)
+
+    val ipBestList = bestList.map(b => (b.planIndex, b.precisePosition))
+
+    val ipWorstList = worstList.map(w => (w.planIndex, w.adjustToNearest(bestList)))
+
+    val preciseList = (ipBestList ++ ipWorstList).sortBy(_._1).map(_._2)
+    preciseList
   }
 
   /**
@@ -175,11 +213,7 @@ object LeafPositionAnalysis extends Logging {
     val measuredEndPosition_pix: Double = {
       if (horizontal) {
         val rectangle = new Rectangle2D.Double(end - minLeafWidth_pix / 2, minorSide + interleafIsolation_pix, minLeafWidth_pix, majorSide - minorSide - interleafIsolation_pix * 2)
-        val j = LocateRidge.locateVertical(pixelArray, rectangle) // TODO rm j
-        val j1 = (j - end).abs
-        if (j1 > 10)
-          println("big change: " + j1)
-        j
+        LocateRidge.locateVertical(pixelArray, rectangle)
       } else {
         val rectangle = new Rectangle2D.Double(minorSide + interleafIsolation_pix, end - minLeafWidth_pix / 2, majorSide - minorSide - interleafIsolation_pix * 2, minLeafWidth_pix)
         LocateRidge.locateHorizontal(pixelArray, rectangle)

@@ -483,19 +483,23 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         <div class={ "col-md-" + col }><em>{ name }:</em><br/>{ value }</div>
       }
 
+      def wrap2Anon(col: Int, name: String, value: String): Elem = {
+        <div class={ "col-md-" + col }><em>{ name }:</em><br/><span aqaalias="">{ value }</span></div>
+      } 
+
       val div = {
         <div class="row col-md-10 col-md-offset-1">
           <div class="row">
             <div class="col-md-1" title="Leaf Offset Constancy and Transmission"><h2>LOC</h2></div>
-            <div class="col-md-2 col-md-offset-1" title="Machine"><h2>{ machineId }</h2></div>
+            <div class="col-md-2 col-md-offset-1" title="Machine"><h2 aqaalias="">{ machineId }</h2></div>
             <div class="col-md-3 col-md-offset-1">EPID Center Correction in mm: { epidCenterCorrection }</div>
           </div>
           <div class="row" style="margin:20px;">
             { wrap2(1, "Institution", institutionName) }
             { wrap2(2, "Data Acquisition", dateToString(output.dataDate)) }
             { wrap2(2, "Analysis", analysisDate) }
-            { wrap2(1, "Analysis by", userId) }
-            { wrap2(1, "Institution", elapsed) }
+            { wrap2Anon(1, "Analysis by", userId) }
+            { wrap2Anon(1, "Institution", elapsed) }
             { wrap2(3, "Procedure", procedureDesc) }
           </div>
           <div class="row" style="margin:20px;">

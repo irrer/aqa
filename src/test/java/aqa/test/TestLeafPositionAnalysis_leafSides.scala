@@ -42,13 +42,30 @@ class TestLeafPositionAnalysis_leafSides extends FlatSpec with Matchers {
     val translator = new IsoImagePlaneTranslator(imageAttrList)
     val leafEndList_pix = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, planAl).map(s => translator.iso2PixCoordY(s))
     val preciseLeafSideList_pix = LeafPositionAnalysis.leafSides_pix(horizontal, beamName, imageAttrList, dicomImage, planAl, translator, leafEndList_pix)
+    val sideListPlan_mm = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, planAl).sorted
 
     val coarseList_pix = LeafPositionCoarseLeafSides.coarseLeafSides(horizontal, profile, imageAttrList, 5, 10, dicomImage)
     println("Number of coarse ridges found: " + coarseList_pix.size)
     println("list of coarse ridges:\n    " + coarseList_pix.map(l => l.formatted("%8.4f")).mkString("  "))
 
     println("Number of precise ridges found: " + preciseLeafSideList_pix.size)
-    println("list of precise leaf ridges:\n    " + preciseLeafSideList_pix.map(l => l.formatted("%8.4f")).mkString("  "))
+
+    def i2t(i: Int): String = {
+      "index: " + i.formatted("%3d") +
+      "    planned: " + translator.iso2PixCoordY(sideListPlan_mm(i)).formatted("%8.4f") +
+        "    measured: " + preciseLeafSideList_pix(i).formatted("%8.4f") +
+        {
+          if (i == 0) ""
+          else
+            "    dist to prev: " + (preciseLeafSideList_pix(i) - preciseLeafSideList_pix(i - 1)).formatted("%8.4f")
+        }
+
+    }
+
+    println("list of precise leaf ridges with distance to prev:\n    " +
+      preciseLeafSideList_pix.indices.map(i => i2t(i)).mkString("\n    "))
+
+    //   preciseLeafSideList_pix.map(l => l.formatted("%8.4f")).mkString("\n    "))
 
     val correctRadius = 5
     val correctedImage = dicomImage.correctBadPixels(dicomImage.identifyBadPixels(100, 2.0, 50, correctRadius, 100), correctRadius)
