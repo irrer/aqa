@@ -19,7 +19,6 @@ import java.awt.Rectangle
 import edu.umro.ImageUtil.LocateEdge
 import java.awt.image.BufferedImage
 import java.awt.Color
-import java.awt.Graphics2D
 import java.awt.BasicStroke
 import edu.umro.ScalaUtil.Trace
 import scala.collection.parallel.ParSeq
@@ -30,6 +29,7 @@ import org.aqa.webrun.phase2.ExtendedData
 import org.aqa.webrun.phase2.MeasureTBLREdges
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.SubProcedureResult
+import org.aqa.IsoImagePlaneTranslator
 
 /**
  * Analyze DICOM files for ImageAnalysis.
@@ -50,10 +50,11 @@ object CollimatorPositionAnalysis extends Logging {
       def dbl(tag: AttributeTag): Double = al.get(tag).getDoubleValues.head
 
       val edges = {
+        val translator = new IsoImagePlaneTranslator(al)        
         if (FloodCompensation)
-          MeasureTBLREdges.measure(derived.biasAndPixelCorrectedCroppedImage, runReq.ImagePlanePixelSpacing, collimatorAngle, derived.originalImage, runReq.floodOffset, Config.PenumbraThresholdPercent / 100)
+          MeasureTBLREdges.measure(derived.biasAndPixelCorrectedCroppedImage, translator, collimatorAngle, derived.originalImage, runReq.floodOffset, Config.PenumbraThresholdPercent / 100)
         else
-          MeasureTBLREdges.measure(derived.pixelCorrectedImage, runReq.ImagePlanePixelSpacing, collimatorAngle, derived.originalImage, new Point(0, 0), Config.PenumbraThresholdPercent / 100)
+          MeasureTBLREdges.measure(derived.pixelCorrectedImage, translator, collimatorAngle, derived.originalImage, new Point(0, 0), Config.PenumbraThresholdPercent / 100)
       }
 
       val spacing = Phase2Util.getImagePlanePixelSpacing(al)
@@ -70,7 +71,6 @@ object CollimatorPositionAnalysis extends Logging {
         (edges.measurementSet.left - center.getX) / divergence,
         (edges.measurementSet.right - center.getX) / divergence)
 
-      // TODO val orientedScaledEdges = MeasureTBLREdges.TBLRtoX1X2Y1Y2(collimatorAngle, scaledEdges)
       val orientedScaledEdges = MeasureTBLREdges.TBLRtoX1X2Y1Y2(scaledEdges) // TODO always use the 'do nothing' angle?
 
       val expectedEdges = MeasureTBLREdges.imageCollimatorPositions(al) //   planCollimatorPositions(beamName, runReq.rtplan.attributeList.get)

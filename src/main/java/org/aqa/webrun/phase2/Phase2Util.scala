@@ -31,6 +31,7 @@ import org.aqa.web.MaintenanceRecordList
 import org.aqa.web.MachineList
 import org.aqa.web.MachineUpdate
 import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.IsoImagePlaneTranslator
 
 /**
  * Utilities for Phase 2.
@@ -223,8 +224,9 @@ object Phase2Util extends Logging {
     val machType = extendedData.machineType.manufacturer + " " + extendedData.machineType.model + " " + extendedData.machineType.version
 
     val pixelSpacing = {
-      runReq.imageSize.getX.round.toInt.toString + " * " + runReq.imageSize.getY.round.toInt.toString + " pixels " +
-        runReq.ImagePlanePixelSpacing.getX.formatted("%5.3f") + " * " + runReq.ImagePlanePixelSpacing.getY.formatted("%5.3f") + " mm"
+      runReq.imageSize.getX.round.toInt.toString + " * " + runReq.imageSize.getY.round.toInt.toString +
+        " pixels " + runReq.floodTranslator.pix2IsoDistX(1).formatted("%5.3f") + " * " + runReq.floodTranslator.pix2IsoDistY(1).formatted("%5.3f") +
+        " mm"
     }
 
     def wrap(col: Int, name: String, value: String, asAlias: Boolean): Elem = {
@@ -390,7 +392,8 @@ object Phase2Util extends Logging {
    * Create a list of points whose sum can be used to measure the center dose of an image.
    */
   def makeCenterDosePointList(attributeList: AttributeList): Seq[Point] = {
-    val spacing = Phase2Util.getImagePlanePixelSpacing(attributeList)
+    val translator = new IsoImagePlaneTranslator(attributeList)
+
     val width = attributeList.get(TagFromName.Columns).getIntegerValues().head
     val height = attributeList.get(TagFromName.Rows).getIntegerValues().head
 
@@ -398,19 +401,22 @@ object Phase2Util extends Logging {
     val xCenter = (width / 2.0) + 0.5 // in pixels
     val yCenter = (height / 2.0) + 0.5 // in pixels
 
-    // center of image in mm
-    val center = new Point2D.Double(xCenter * spacing.getX, yCenter * spacing.getY)
+    // center of image in isoplane in mm
+    val center = new Point2D.Double(0, 0)
 
-    val xRadius = (Config.CenterDoseRadius_mm / spacing.getX).toInt + 2 // in pixels
-    val yRadius = (Config.CenterDoseRadius_mm / spacing.getY).toInt + 2 // in pixels
+    val xRadius = translator.iso2PixDistX(Config.CenterDoseRadius_mm) // in pixels
+    val yRadius = translator.iso2PixDistY(Config.CenterDoseRadius_mm) // in pixels
 
-    val xRange = (xCenter - xRadius).floor.toInt to (xCenter + xRadius).ceil.toInt // pixel range
-    val yRange = (yCenter - yRadius).floor.toInt to (yCenter + yRadius).ceil.toInt // pixel range
+    val xMaxPix = (translator.iso2PixDistX(Config.CenterDoseRadius_mm) + 1).ceil.toInt
+    val yMaxPix = (translator.iso2PixDistY(Config.CenterDoseRadius_mm) + 1).ceil.toInt
 
-    // step through pixels and see which are close enough.  Both x and y are in pixels.
-    def nearCenter(x: Int, y: Int): Boolean = center.distance(x * spacing.getX, y * spacing.getY) <= Config.CenterDoseRadius_mm
+    val xPixRange = (-xMaxPix until xMaxPix)
+    val yPixRange = (-yMaxPix until yMaxPix)
 
-    val pointList = for (x <- xRange; y <- yRange; if nearCenter(x, y)) yield { new Point(x, y) }
+    // step through pixels and see which are close enough.
+    def nearCenter(xPix: Int, yPix: Int): Boolean = { center.distance(translator.pix2Iso(xPix, yPix)) <= Config.CenterDoseRadius_mm }
+
+    val pointList = for (xPix <- xPixRange; yPix <- yPixRange; if nearCenter(xPix, yPix)) yield { new Point(xPix, yPix) }
     pointList
   }
 

@@ -25,9 +25,11 @@ import java.awt.Point
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ImageUtil.ImageText
 import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.IsoImagePlaneTranslator
+import org.aqa.IsoImagePlaneTranslator
 
 /**
- * Measure the four edges in an image (TBLR : top, bottom, left, right).
+ * Measure the four edges in an image (TBLR : top, bottom, left, right) in pixels.
  */
 object MeasureTBLREdges extends Logging {
 
@@ -39,6 +41,14 @@ object MeasureTBLREdges extends Logging {
       X2 - other.X2)
 
     def toSeq = Seq(X1, X2, Y1, Y2)
+
+    def pix2iso(translator: IsoImagePlaneTranslator): X1X2Y1Y2 = {
+      new X1X2Y1Y2(
+        translator.pix2IsoCoordX(X1),
+        translator.pix2IsoCoordX(X2),
+        translator.pix2IsoCoordY(Y1),
+        translator.pix2IsoCoordY(Y2))
+    }
 
     def toString(fmt: String) = {
       "X1: " + X1.formatted(fmt) + "    X2: " + X2.formatted(fmt) + "    Y1: " + Y1.formatted(fmt) + "    Y2: " + Y2.formatted(fmt)
@@ -68,18 +78,26 @@ object MeasureTBLREdges extends Logging {
     }
   }
 
-  case class TBLR(top: Double, bottom: Double, left: Double, right: Double) {
+  case class TBLR(top: Double, bottom: Double, left: Double, right: Double) { // , translator: IsoImagePlaneTranslator) {
     val center = new Point2D.Double((right + left) / 2, (top + bottom) / 2)
     val width = (right - left).abs
     val height = (bottom - top).abs
 
-    def translate(floodOffset: Point, ImagePlanePixelSpacing: Point2D.Double) = {
-      def transX(x: Double) = (x + floodOffset.getX) * ImagePlanePixelSpacing.getX
-      def transY(y: Double) = (y + floodOffset.getY) * ImagePlanePixelSpacing.getY
+    def floodRelative(floodOffset: Point) = {
+      def transX(x: Double) = x + floodOffset.getX
+      def transY(y: Double) = y + floodOffset.getY
       new TBLR(transY(top), transY(bottom), transX(left), transX(right))
     }
 
     def toX1X2Y1Y2(collimatorAngle: Double) = TBLRtoX1X2Y1Y2(collimatorAngle, this)
+
+    def pix2iso(translator: IsoImagePlaneTranslator): TBLR = {
+      new TBLR(
+        translator.pix2IsoCoordX(left),
+        translator.pix2IsoCoordX(right),
+        translator.pix2IsoCoordY(top),
+        translator.pix2IsoCoordY(bottom))
+    }
   }
 
   def getCollimatorPositions(BeamLimitingDeviceSequence: Seq[AttributeList]): X1X2Y1Y2 = {
@@ -108,28 +126,28 @@ object MeasureTBLREdges extends Logging {
 
   case class AnalysisResult(measurementSet: TBLR, bufferedImage: BufferedImage)
 
-  private def getCoarseTopRectangle(image: DicomImage, cntrOfMass: Point2D, ImagePlanePixelSpacing: Point2D.Double): Rectangle = {
-    val width = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / ImagePlanePixelSpacing.getX).toInt
+  private def getCoarseTopRectangle(image: DicomImage, cntrOfMass: Point2D, translator: IsoImagePlaneTranslator): Rectangle = {
+    val width = Math.ceil(translator.pix2IsoDistX(Config.CollimatorCenteringCoarseBandWidth_mm)).toInt
     val x = (cntrOfMass.getX - (width / 2.0)).round.toInt
     new Rectangle(x, 0, width, image.height / 2)
   }
 
-  private def getCoarseBottomRectangle(image: DicomImage, cntrOfMass: Point2D, ImagePlanePixelSpacing: Point2D.Double): Rectangle = {
-    val width = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / ImagePlanePixelSpacing.getX).toInt
+  private def getCoarseBottomRectangle(image: DicomImage, cntrOfMass: Point2D, translator: IsoImagePlaneTranslator): Rectangle = {
+    val width = Math.ceil(translator.pix2IsoDistX(Config.CollimatorCenteringCoarseBandWidth_mm)).toInt
     val x = (cntrOfMass.getX - (width / 2.0)).round.toInt
     new Rectangle(x, image.height / 2, width, image.height / 2)
   }
 
   //
 
-  private def getCoarseLeftRectangle(image: DicomImage, cntrOfMass: Point2D, ImagePlanePixelSpacing: Point2D.Double): Rectangle = {
-    val height = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / ImagePlanePixelSpacing.getY).toInt
+  private def getCoarseLeftRectangle(image: DicomImage, cntrOfMass: Point2D, translator: IsoImagePlaneTranslator): Rectangle = {
+    val height = Math.ceil(translator.pix2IsoDistY(Config.CollimatorCenteringCoarseBandWidth_mm)).toInt
     val y = (cntrOfMass.getY - (height / 2.0)).round.toInt
     new Rectangle(0, y, image.width / 2, height)
   }
 
-  private def getCoarseRightRectangle(image: DicomImage, cntrOfMass: Point2D, ImagePlanePixelSpacing: Point2D.Double): Rectangle = {
-    val height = Math.ceil(Config.CollimatorCenteringCoarseBandWidth_mm / ImagePlanePixelSpacing.getY).toInt
+  private def getCoarseRightRectangle(image: DicomImage, cntrOfMass: Point2D, translator: IsoImagePlaneTranslator): Rectangle = {
+    val height = Math.ceil(translator.pix2IsoDistY(Config.CollimatorCenteringCoarseBandWidth_mm)).toInt
     val y = (cntrOfMass.getY - (height / 2.0)).round.toInt
     new Rectangle(image.width / 2, y, image.width / 2, height)
   }
@@ -158,31 +176,32 @@ object MeasureTBLREdges extends Logging {
     pctThresh
   }
 
-  private def coarseMeasure(image: DicomImage, halfwayPixelValue: Double, ImagePlanePixelSpacing: Point2D.Double, floodOffset: Point2D): TBLR = {
+  private def coarseMeasure(image: DicomImage, halfwayPixelValue: Double, translator: IsoImagePlaneTranslator, floodOffset: Point2D): TBLR = {
     val cntrOfMass = new Point2D.Double(ImageUtil.centerOfMass(image.columnSums), ImageUtil.centerOfMass(image.rowSums))
 
-    val coarseTopRectangle = getCoarseTopRectangle(image, cntrOfMass, ImagePlanePixelSpacing)
+    val coarseTopRectangle = getCoarseTopRectangle(image, cntrOfMass, translator)
     val coarseTopEdge = LocateEdge.locateEdge(image.getSubimage(coarseTopRectangle).rowSums, halfwayPixelValue * coarseTopRectangle.getWidth)
 
-    val coarseBottomRectangle = getCoarseBottomRectangle(image, cntrOfMass, ImagePlanePixelSpacing)
+    val coarseBottomRectangle = getCoarseBottomRectangle(image, cntrOfMass, translator)
     val coarseBottomEdge = LocateEdge.locateEdge(image.getSubimage(coarseBottomRectangle).rowSums, halfwayPixelValue * coarseBottomRectangle.getWidth) + coarseBottomRectangle.getY
 
-    val coarseLeftRectangle = getCoarseLeftRectangle(image, cntrOfMass, ImagePlanePixelSpacing)
+    val coarseLeftRectangle = getCoarseLeftRectangle(image, cntrOfMass, translator)
     val coarseLeftEdge = LocateEdge.locateEdge(image.getSubimage(coarseLeftRectangle).columnSums, halfwayPixelValue * coarseLeftRectangle.getHeight)
 
-    val coarseRightRectangle = getCoarseRightRectangle(image, cntrOfMass, ImagePlanePixelSpacing)
+    val coarseRightRectangle = getCoarseRightRectangle(image, cntrOfMass, translator)
     val coarseRightEdge = LocateEdge.locateEdge(image.getSubimage(coarseRightRectangle).columnSums, halfwayPixelValue * coarseRightRectangle.getHeight) + coarseRightRectangle.getX
 
     new TBLR(coarseTopEdge, coarseBottomEdge, coarseLeftEdge, coarseRightEdge)
   }
 
   private val imageColor = Color.green
-  private val annotationColor = Color.gray
+  private val annotationColor = Color.black
 
   private val dashedLine = new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, Array(1, 4), 0)
   private val solidLine = new BasicStroke
 
-  private def annotateTopBottom(bufImg: BufferedImage, graphics: Graphics2D, pixelEdge: Double, name: String, scaledEdge: Double, rect: Rectangle, floodOffset: Point) = {
+  private def annotateTopBottom(bufImg: BufferedImage, graphics: Graphics2D, pixelEdge: Double, name: String,
+    scaledEdge: Double, rect: Rectangle, floodOffset: Point) = {
 
     val xOff = floodOffset.getX.round.toInt
     val yOff = floodOffset.getY.round.toInt
@@ -236,10 +255,9 @@ object MeasureTBLREdges extends Logging {
     ImageText.drawTextCenteredAt(graphics, xText, yMid, text)
   }
 
-  private def annotateCenter(bufImg: BufferedImage, graphics: Graphics2D, pixelEdges: TBLR, transMeasurementSet: TBLR, ImagePlanePixelSpacing: Point2D.Double) = {
+  private def annotateCenter(bufImg: BufferedImage, graphics: Graphics2D, transMeasurementSet: TBLR, translator: IsoImagePlaneTranslator) = {
     // center of image (not center of edges)
     val pixelImageCenter = new Point2D.Double(bufImg.getWidth / 2.0, bufImg.getHeight / 2.0)
-    val scaledImageCenter = new Point2D.Double(pixelImageCenter.getX * ImagePlanePixelSpacing.getX, pixelImageCenter.getY * ImagePlanePixelSpacing.getY)
 
     def fmt(d: Double) = d.formatted("%7.2f").trim
 
@@ -265,15 +283,13 @@ object MeasureTBLREdges extends Logging {
     }
 
     drawText("Collimator Center: " + fmt(transMeasurementSet.center.getX) + ", " + fmt(transMeasurementSet.center.getY), 0)
-    drawText("Image Center: " + fmt(scaledImageCenter.getX) + ", " + fmt(scaledImageCenter.getY), 1)
-    drawText("Off Center: " + fmt(transMeasurementSet.center.getX - scaledImageCenter.getX) + ", " + fmt(transMeasurementSet.center.getY - scaledImageCenter.getY), 2)
   }
 
   /**
    * Make an annotated image that illustrates the edges.
    */
   private def makeAnnotatedImage(image: DicomImage, measurementSet: TBLR, transMeasurementSet: TBLR, collimatorAngle: Double,
-    topRect: Rectangle, bottomRect: Rectangle, rightRect: Rectangle, leftRect: Rectangle, floodOffset: Point, ImagePlanePixelSpacing: Point2D.Double): BufferedImage = {
+    topRect: Rectangle, bottomRect: Rectangle, rightRect: Rectangle, leftRect: Rectangle, floodOffset: Point, translator: IsoImagePlaneTranslator): BufferedImage = {
     //val bufImg = image.toBufferedImage(imageColor)
     val bufImg = image.toDeepColorBufferedImage
     Config.applyWatermark(bufImg)
@@ -286,7 +302,7 @@ object MeasureTBLREdges extends Logging {
     annotateRightLeft(bufImg, graphics, measurementSet.right, names(2), transMeasurementSet.right, rightRect, floodOffset)
     annotateRightLeft(bufImg, graphics, measurementSet.left, names(3), transMeasurementSet.left, leftRect, floodOffset)
 
-    annotateCenter(bufImg, graphics, measurementSet, transMeasurementSet, ImagePlanePixelSpacing)
+    annotateCenter(bufImg, graphics, transMeasurementSet, translator)
     bufImg
   }
 
@@ -315,18 +331,18 @@ object MeasureTBLREdges extends Logging {
    *
    * @param image: Image to analyze.  Should have already been corrected for flood field if necessary.
    *
-   * @param ImagePlanePixelSpacing: Size of X and Y pixels in mm.
+   * @param translator: IsoImagePlaneTranslator.
    *
    * @param annotate: Image containing pixels to be annotated.
    *
    * @param floodOffset: XY offset of image to annotate.
    */
-  def measure(image: DicomImage, ImagePlanePixelSpacing: Point2D.Double, collimatorAngle: Double, annotate: DicomImage, floodOffset: Point, thresholdPercent: Double): AnalysisResult = {
+  def measure(image: DicomImage, translator: IsoImagePlaneTranslator, collimatorAngle: Double, annotate: DicomImage, floodOffset: Point, thresholdPercent: Double): AnalysisResult = {
     val threshold = calcPercentPixelValue(image, thresholdPercent)
-    val coarse = coarseMeasure(image, threshold, ImagePlanePixelSpacing, floodOffset)
+    val coarse = coarseMeasure(image, threshold, translator, floodOffset)
 
-    val penumbraX = Config.PenumbraThickness_mm / ImagePlanePixelSpacing.getX // penumbra thickness in pixels
-    val penumbraY = Config.PenumbraThickness_mm / ImagePlanePixelSpacing.getY // penumbra thickness in pixels
+    val penumbraX = translator.iso2PixDistX(Config.PenumbraThickness_mm) // penumbra thickness in pixels X
+    val penumbraY = translator.iso2PixDistY(Config.PenumbraThickness_mm) // penumbra thickness in pixels Y
 
     val nsRect = topBottomRectangles(coarse, penumbraX, penumbraY)
     val ewRect = leftRightRectangles(coarse, penumbraX, penumbraY)
@@ -337,14 +353,14 @@ object MeasureTBLREdges extends Logging {
     val rightEdge = LocateEdge.locateEdge(image.getSubimage(ewRect._2).columnSums, threshold * ewRect._2.height) + ewRect._2.x
 
     val measurementSet = new TBLR(topEdge, bottomEdge, leftEdge, rightEdge)
-    val transMeasurementSet = measurementSet.translate(floodOffset, ImagePlanePixelSpacing)
+    val transMeasurementSet = measurementSet.floodRelative(floodOffset).pix2iso(translator)
 
-    val bufferedImage = makeAnnotatedImage(annotate, measurementSet, transMeasurementSet, collimatorAngle, nsRect._1, nsRect._2, ewRect._1, ewRect._2, floodOffset, ImagePlanePixelSpacing)
+    val bufferedImage = makeAnnotatedImage(annotate, measurementSet, transMeasurementSet, collimatorAngle, nsRect._1, nsRect._2, ewRect._1, ewRect._2, floodOffset, translator)
     new AnalysisResult(transMeasurementSet, bufferedImage)
   }
 
-  def measure(image: DicomImage, ImagePlanePixelSpacing: Point2D.Double, collimatorAngle: Double, annotate: DicomImage, floodOffset: Point): AnalysisResult = {
-    measure(image, ImagePlanePixelSpacing, collimatorAngle, annotate, floodOffset, 0.5)
+  def measure(image: DicomImage, translator: IsoImagePlaneTranslator, collimatorAngle: Double, annotate: DicomImage, floodOffset: Point): AnalysisResult = {
+    measure(image, translator, collimatorAngle, annotate, floodOffset, 0.5)
   }
 
 }

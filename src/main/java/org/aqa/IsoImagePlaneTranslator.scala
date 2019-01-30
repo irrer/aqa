@@ -16,7 +16,7 @@ class IsoImagePlaneTranslator(al: AttributeList) {
   private def dblOf(tag: AttributeTag): Double = al.get(tag).getDoubleValues.head
   private def intOf(tag: AttributeTag): Int = al.get(tag).getIntegerValues.head
 
-  private val ImagePlanePixelSpacing = Phase2Util.getImagePlanePixelSpacing(al)
+  //private val ImagePlanePixelSpacing = Phase2Util.getImagePlanePixelSpacing(al)
   val width = intOf(TagFromName.Columns)
   val height = intOf(TagFromName.Rows)
 
@@ -25,9 +25,14 @@ class IsoImagePlaneTranslator(al: AttributeList) {
 
   val beamExpansionRatio = dblOf(TagFromName.RTImageSID) / dblOf(TagFromName.RadiationMachineSAD)
 
+  private val ImagePlanePixelSpacing = al.get(TagFromName.ImagePlanePixelSpacing).getDoubleValues
+
+  val pixelSizeX = ImagePlanePixelSpacing(0)
+  val pixelSizeY = ImagePlanePixelSpacing(1)
+
   // Multiply this value by a measurement in mm in the isoplane to get the corresponding value in pixels in the image plane.
-  private val expansionFactorX = beamExpansionRatio / ImagePlanePixelSpacing.getX
-  private val expansionFactorY = beamExpansionRatio / ImagePlanePixelSpacing.getY
+  private val expansionFactorX = beamExpansionRatio / pixelSizeX
+  private val expansionFactorY = beamExpansionRatio / pixelSizeY
 
   /** convert x distance in mm from isoplane to pixel plane. */
   def iso2PixDistX(x: Double) = x * expansionFactorX
@@ -63,15 +68,15 @@ class IsoImagePlaneTranslator(al: AttributeList) {
     (height == other.height) &&
       (width == other.width) &&
       (beamExpansionRatio == other.beamExpansionRatio) &&
-      (ImagePlanePixelSpacing.getX == other.ImagePlanePixelSpacing.getX) &&
-      (ImagePlanePixelSpacing.getY == other.ImagePlanePixelSpacing.getY)
+      (pixelSizeX == other.pixelSizeX) &&
+      (pixelSizeY == other.pixelSizeY)
   }
 
   override def toString = {
     "SID/SAD" + beamExpansionRatio.formatted("%12.8f") +
       "    SID: " + dblOf(TagFromName.RTImageSID).formatted("%7.5f") + "    SAD: " + dblOf(TagFromName.RadiationMachineSAD).formatted("%7.5f") +
       "    height: " + height + ", " + "    width: " + width + ", " +
-      "    ImagePlanePixelSpacing: " + ImagePlanePixelSpacing.getX.formatted("%7.5f") + ", " + ImagePlanePixelSpacing.getY.formatted("%7.5f")
+      "    ImagePlanePixelSpacing: " + pixelSizeX.formatted("%7.5f") + ", " + pixelSizeY.formatted("%7.5f")
   }
 
   def circleRadiusInPixels = {

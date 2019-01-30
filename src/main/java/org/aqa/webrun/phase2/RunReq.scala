@@ -12,6 +12,7 @@ import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
 import com.pixelmed.dicom.AttributeList
 import org.aqa.Logging
+import org.aqa.IsoImagePlaneTranslator
 
 /**
  * @param rtplan: RTPLAN file
@@ -36,11 +37,11 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
 
   val floodCorrectedImage = floodOriginalImage.correctBadPixels(floodBadPixelList, flood.badPixelRadius)
 
-  val ImagePlanePixelSpacing = Phase2Util.getImagePlanePixelSpacing(flood.attributeList.get)
-
   val imageSize = new Point(floodOriginalImage.width, floodOriginalImage.height)
 
-  private val floodMeasurementAndImage = MeasureTBLREdges.measure(floodCorrectedImage, ImagePlanePixelSpacing, Util.collimatorAngle(flood.attributeList.get), floodCorrectedImage, new Point(0, 0))
+  val floodTranslator = new IsoImagePlaneTranslator(flood.attributeList.get)
+
+  private val floodMeasurementAndImage = MeasureTBLREdges.measure(floodCorrectedImage, floodTranslator, Util.collimatorAngle(flood.attributeList.get), floodCorrectedImage, new Point(0, 0))
 
   val floodMeasurement = floodMeasurementAndImage.measurementSet
 
@@ -49,10 +50,11 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
    * be done within the confines of this rectangle.
    */
   val floodRectangle = {
-    val pnX = (Config.PenumbraThickness_mm / ImagePlanePixelSpacing.getX) / 2
-    val pnY = (Config.PenumbraThickness_mm / ImagePlanePixelSpacing.getY) / 2
 
-    val fPix = floodMeasurement.translate(new Point(0, 0), new Point2D.Double(1 / ImagePlanePixelSpacing.getX, 1 / ImagePlanePixelSpacing.getY))
+    val pnX = floodTranslator.iso2PixDistX(Config.PenumbraThickness_mm / 2)
+    val pnY = floodTranslator.iso2PixDistY(Config.PenumbraThickness_mm / 2)
+
+    val fPix = floodMeasurement.floodRelative(new Point(0, 0))
 
     val x = Math.round(fPix.left + pnX).toInt
     val y = Math.round(fPix.top + pnY).toInt

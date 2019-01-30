@@ -93,7 +93,7 @@ object CollimatorCenteringHTML {
 
     val outputDir = extendedData.output.dir
 
-    val imageCenter = new Point2D.Double(runReq.floodOriginalImage.width * runReq.ImagePlanePixelSpacing.getX / 2, runReq.floodOriginalImage.height * runReq.ImagePlanePixelSpacing.getY / 2)
+    val imageCenter = runReq.floodTranslator.iso2Pix(0, 0)
 
     val resultSummary = collimatorCentering.xCollimatorCenterMinusImageCenter_mm.formatted("%5.2f") + ", " + collimatorCentering.yCollimatorCenterMinusImageCenter_mm.formatted("%5.2f")
 

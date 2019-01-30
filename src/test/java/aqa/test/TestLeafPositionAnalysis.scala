@@ -43,7 +43,7 @@ class TestLeafPositionAnalysis extends FlatSpec with Matchers {
 
     val outputPK = -1.toLong
 
-    val leafPositionList = LeafPositionAnalysis.testMeasureBeam(beamName, outputPK, imageAl, dicomImage, planAl)
+    val leafPositionList = LeafPositionAnalysis.testMeasureBeam(beamName, outputPK, imageAl, dicomImage, planAl, None)
 
     leafPositionList.map(lp => println(lp))
 

@@ -19,62 +19,65 @@ import java.awt.Rectangle
 import edu.umro.ImageUtil.ImageUtil
 import org.aqa.Config
 import edu.umro.ScalaUtil.Trace
+import org.aqa.webrun.phase2.collimatorPosition.CollimatorPositionAnalysis.CollimatorPositionResult
+import org.aqa.webrun.phase2.collimatorCentering.CollimatorCenteringAnalysis.CollimatorCenteringResult
+import org.aqa.db.CollimatorCentering
 
 /**
  * Perform analysis of leaf position (picket fence).
  */
 object LeafPositionAnalysis extends Logging {
 
-  /**
-   * Locate the sides of the leaves in the given image and return a sorted list.  Values are in pixels.
-   */
-  def XleafSides_pix(horizontal: Boolean, beamName: String, imageAttrList: AttributeList, dicomImage: DicomImage,
-    plan: AttributeList, translator: IsoImagePlaneTranslator,
-    leafEndList_pix: Seq[Double]): Seq[Double] = {
-
-    val sideListPlan = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, plan).sorted
-
-    val sideListPix = {
-      if (horizontal)
-        sideListPlan.map(side => translator.iso2PixCoordY(side))
-      else
-        sideListPlan.map(side => translator.iso2PixCoordY(side))
-    }
-
-    val minLeafWidth = sideListPix.indices.tail.map(i => sideListPix(i) - sideListPix(i - 1)).min
-    val searchMargin = minLeafWidth / 2
-
-    val lo = (leafEndList_pix.head - searchMargin).round.toInt
-    val hi = (leafEndList_pix.last + searchMargin).round.toInt
-    val narrow = minLeafWidth.round.toInt
-    val wide = (leafEndList_pix.last - leafEndList_pix.head + searchMargin).round.toInt
-
-    def positionOf(side: Int): Double = {
-      if (horizontal) {
-        val x = lo
-        val y = (side - searchMargin).round.toInt
-        val rect = new Rectangle(x, y, wide, narrow)
-        val profile = dicomImage.getSubArray(rect).map(row => row.sum).map(f => f.toDouble).toArray
-        val indicies = (0 until narrow).map(i => i.toDouble + y).toArray
-        val max = ImageUtil.profileMaxCubic(indicies, profile)
-        max
-      } else {
-        val y = lo
-        val x = (side - searchMargin).round.toInt
-        val rect = new Rectangle(lo, y, wide, narrow)
-        val pixelMatrix = dicomImage.getSubArray(rect)
-        def colSum(x: Int) = { for (y <- pixelMatrix.indices) yield { pixelMatrix(y)(x) } }.sum
-        val profile = (0 until wide).map(x => colSum(x)).map(f => f.toDouble).toArray
-        val indicies = (0 until narrow).map(i => i.toDouble + x).toArray
-        val max = ImageUtil.profileMaxCubic(indicies, profile)
-        max
-      }
-    }
-
-    val sideList = sideListPix.map(side => positionOf(side.round.toInt))
-
-    sideList
-  }
+  //  /**
+  //   * Locate the sides of the leaves in the given image and return a sorted list.  Values are in pixels.
+  //   */
+  //  def XleafSides_pix(horizontal: Boolean, beamName: String, imageAttrList: AttributeList, dicomImage: DicomImage,
+  //    plan: AttributeList, translator: IsoImagePlaneTranslator,
+  //    leafEndList_pix: Seq[Double]): Seq[Double] = {
+  //
+  //    val sideListPlan = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, plan).sorted
+  //
+  //    val sideListPix = {
+  //      if (horizontal)
+  //        sideListPlan.map(side => translator.iso2PixCoordY(side))
+  //      else
+  //        sideListPlan.map(side => translator.iso2PixCoordY(side))
+  //    }
+  //
+  //    val minLeafWidth = sideListPix.indices.tail.map(i => sideListPix(i) - sideListPix(i - 1)).min
+  //    val searchMargin = minLeafWidth / 2
+  //
+  //    val lo = (leafEndList_pix.head - searchMargin).round.toInt
+  //    val hi = (leafEndList_pix.last + searchMargin).round.toInt
+  //    val narrow = minLeafWidth.round.toInt
+  //    val wide = (leafEndList_pix.last - leafEndList_pix.head + searchMargin).round.toInt
+  //
+  //    def positionOf(side: Int): Double = {
+  //      if (horizontal) {
+  //        val x = lo
+  //        val y = (side - searchMargin).round.toInt
+  //        val rect = new Rectangle(x, y, wide, narrow)
+  //        val profile = dicomImage.getSubArray(rect).map(row => row.sum).map(f => f.toDouble).toArray
+  //        val indicies = (0 until narrow).map(i => i.toDouble + y).toArray
+  //        val max = ImageUtil.profileMaxCubic(indicies, profile)
+  //        max
+  //      } else {
+  //        val y = lo
+  //        val x = (side - searchMargin).round.toInt
+  //        val rect = new Rectangle(lo, y, wide, narrow)
+  //        val pixelMatrix = dicomImage.getSubArray(rect)
+  //        def colSum(x: Int) = { for (y <- pixelMatrix.indices) yield { pixelMatrix(y)(x) } }.sum
+  //        val profile = (0 until wide).map(x => colSum(x)).map(f => f.toDouble).toArray
+  //        val indicies = (0 until narrow).map(i => i.toDouble + x).toArray
+  //        val max = ImageUtil.profileMaxCubic(indicies, profile)
+  //        max
+  //      }
+  //    }
+  //
+  //    val sideList = sideListPix.map(side => positionOf(side.round.toInt))
+  //
+  //    sideList
+  //  }
 
   /**
    * Locate the sides of the leaves in the given image and return a sorted list.  Values are in pixels.
@@ -104,11 +107,6 @@ object LeafPositionAnalysis extends Logging {
       val isBetweenPeaks = (planIndex > 0) && (planIndex < planIndices.last)
 
       private def indexOf(offset: Int) = {
-        //        Trace.trace("offset: " + offset)
-        //        Trace.trace("planned: " + planned)
-        //        Trace.trace("planIndex: " + planIndex)
-        //        val j = ((planned + sideListPlanned_pix(planIndex + offset)) / 2).round.toInt
-        //        Trace.trace("j: " + j)
         ((planned + sideListPlanned_pix(planIndex + offset)) / 2).round.toInt
       }
 
@@ -128,16 +126,8 @@ object LeafPositionAnalysis extends Logging {
        */
       val score: Double = {
         if (isBetweenPeaks) {
-          //          println; Trace.trace("isBetweenPeaks: " + isBetweenPeaks)
-          //          Trace.trace("planIndex: " + planIndex)
-          //          Trace.trace("coarse_pix: " + coarse_pix)
-          //          Trace.trace("profile(coarse_pix.round.toInt): " + profile(coarse_pix.round.toInt))
-          //          Trace.trace("minorValleyHeight: " + minorValleyHeight)
-          //          Trace.trace("majorValleyHeight: " + majorValleyHeight)
-
           val coarsePixHeight = profile(coarse_pix.round.toInt)
           val s = (coarsePixHeight * 2) - (minorValleyHeight + majorValleyHeight)
-          //          Trace.trace("s: " + s)
           s
         } else -1
       }
@@ -225,7 +215,7 @@ object LeafPositionAnalysis extends Logging {
   /**
    * Calculate the leaf end positions in the given beam.
    */
-  private def measureBeam(beamName: String, outputPK: Long, imageAttrList: AttributeList, dicomImage: DicomImage, plan: AttributeList): Seq[LeafPosition] = {
+  private def measureBeam(beamName: String, outputPK: Long, imageAttrList: AttributeList, dicomImage: DicomImage, plan: AttributeList, collimatorCentering: CollimatorCentering): Seq[LeafPosition] = {
 
     // true if collimator is horizontal
     val horizontal = Phase2Util.isHorizontal(imageAttrList)
@@ -288,8 +278,10 @@ object LeafPositionAnalysis extends Logging {
   /**
    * Hook for testing
    */
-  def testMeasureBeam(beamName: String, outputPK: Long, attributeList: AttributeList, image: DicomImage, plan: AttributeList): Seq[LeafPosition] =
-    measureBeam(beamName, outputPK, attributeList, image, plan)
+  def testMeasureBeam(beamName: String, outputPK: Long, attributeList: AttributeList, image: DicomImage, plan: AttributeList, collimatorCentering: Option[CollimatorCentering]): Seq[LeafPosition] = {
+    if (collimatorCentering.isDefined) measureBeam(beamName, outputPK, attributeList, image, plan, collimatorCentering.get)
+    else Seq[LeafPosition]()
+  }
 
   case class LeafPositionResult(sum: Elem, sts: ProcedureStatus.Value, result: Seq[LeafPosition]) extends SubProcedureResult(sum, sts, subProcedureName)
 
@@ -300,7 +292,7 @@ object LeafPositionAnalysis extends Logging {
     val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
   }
 
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, LeafPositionResult] = {
+  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, LeafPositionResult] = {
 
     try {
       logger.info("Starting analysis of " + subProcedureName)
@@ -308,11 +300,10 @@ object LeafPositionAnalysis extends Logging {
 
       val outputPK = extendedData.output.outputPK.get
 
-      // val beamNameRtimageList = runReq.derivedMap.filter(img => Config.LeafPositionBeamNameList.contains(img._1)).toList
       val beamNameList = Config.LeafPositionBeamNameList.filter(beamName => runReq.derivedMap.contains(beamName))
 
       val beamResultList = beamNameList.map(beamName =>
-        new BeamResults(beamName, measureBeam(beamName, outputPK, runReq.derivedMap(beamName).attributeList, runReq.derivedMap(beamName).pixelCorrectedImage, planAttrList)))
+        new BeamResults(beamName, measureBeam(beamName, outputPK, runReq.derivedMap(beamName).attributeList, runReq.derivedMap(beamName).pixelCorrectedImage, planAttrList, collimatorCentering)))
 
       val resultList = beamResultList.map(_.resultList).flatten
 

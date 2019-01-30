@@ -288,7 +288,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
                       CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
                       WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result, centerDose.resultList),
                       SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq),
-                      LeafPositionAnalysis.runProcedure(extendedData, runReq))
+                      LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result))
 
                     val summaryList = prevSummaryList ++ list.map(r => if (r.isLeft) r.left.get else r.right.get.summary)
                     val pass = (list.find(r => r.isLeft).isEmpty) && list.filter(s => !Phase2Util.statusOk(s.right.get.status)).isEmpty

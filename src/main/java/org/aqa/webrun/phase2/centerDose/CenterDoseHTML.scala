@@ -28,6 +28,7 @@ import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.ExtendedData
 import org.aqa.webrun.phase2.SubProcedureResult
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.IsoImagePlaneTranslator
 
 object CenterDoseHTML extends Logging {
   private val htmlFileName = "CenterDose.html"
@@ -144,33 +145,8 @@ object CenterDoseHTML extends Logging {
     makeSummary
   }
 
-  private def makePointList(attributeList: AttributeList): Seq[Point] = {
-    val spacing = Phase2Util.getImagePlanePixelSpacing(attributeList)
-    val width = attributeList.get(TagFromName.Columns).getIntegerValues().head
-    val height = attributeList.get(TagFromName.Rows).getIntegerValues().head
-
-    // get center of image, accounting for 1/2 pixel offset
-    val xCenter = (width / 2.0) + 0.5 // in pixels
-    val yCenter = (height / 2.0) + 0.5 // in pixels
-
-    // center of image in mm
-    val center = new Point2D.Double(xCenter * spacing.getX, yCenter * spacing.getY)
-
-    val xRadius = (Config.CenterDoseRadius_mm / spacing.getX).toInt + 2 // in pixels
-    val yRadius = (Config.CenterDoseRadius_mm / spacing.getY).toInt + 2 // in pixels
-
-    val xRange = (xCenter - xRadius).floor.toInt to (xCenter + xRadius).ceil.toInt // pixel range
-    val yRange = (yCenter - yRadius).floor.toInt to (yCenter + yRadius).ceil.toInt // pixel range
-
-    // step through pixels and see which are close enough.  Both x and y are in pixels.
-    def nearCenter(x: Int, y: Int): Boolean = center.distance(x * spacing.getX, y * spacing.getY) <= Config.CenterDoseRadius_mm
-
-    val pointList = for (x <- xRange; y <- yRange; if nearCenter(x, y)) yield { new Point(x, y) }
-    pointList
-  }
-
   private def analyse(extendedData: ExtendedData, runReq: RunReq): Seq[CenterDose] = {
-    val pointList = makePointList(runReq.flood.attributeList.get)
+    val pointList = Phase2Util.makeCenterDosePointList(runReq.flood.attributeList.get)
     val outputPK = extendedData.output.outputPK.get
 
     /**

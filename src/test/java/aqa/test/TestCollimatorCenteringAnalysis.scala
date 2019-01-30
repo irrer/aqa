@@ -8,6 +8,7 @@ import org.aqa.webrun.phase2.MeasureTBLREdges
 import java.awt.Point
 import org.aqa.webrun.phase2.Phase2Util
 import edu.umro.ImageUtil.DicomImage
+import org.aqa.IsoImagePlaneTranslator
 
 object TestCollimatorCenteringAnalysis {
 
@@ -23,7 +24,8 @@ object TestCollimatorCenteringAnalysis {
     def processFile(file: File) = {
       val dicomFile = new DicomFile(file)
       val image = new DicomImage(dicomFile.attributeList.get)
-      val results = MeasureTBLREdges.measure(image, Phase2Util.getImagePlanePixelSpacing(dicomFile.attributeList.get), 270, image, new Point(0, 0))
+      val translator = new IsoImagePlaneTranslator(dicomFile.attributeList.get)
+      val results = MeasureTBLREdges.measure(image, translator, 270, image, new Point(0, 0))
 
       val bufImg = results.bufferedImage
       val meas = results.measurementSet
@@ -33,7 +35,7 @@ object TestCollimatorCenteringAnalysis {
       val pngFile = new File(new File("target"), pngFileName)
       pngFile.delete
       ImageIO.write(bufImg, "png", pngFile)
-      println("created file: " + pngFile)
+      println("created file: " + pngFile.getAbsolutePath)
     }
 
     fileList.map(file => processFile(file))
