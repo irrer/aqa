@@ -46,7 +46,6 @@ import org.aqa.AnonymizeUtil
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.db.CachedUser
 import org.aqa.Config
-import edu.umro.ScalaUtil.Trace
 
 object WebUtil extends Logging {
 
@@ -87,41 +86,6 @@ object WebUtil extends Logging {
     response.getRequest.getReferrerRef.getHostIdentifier + path
   }
 
-  /**
-   * Extract name/value parameters from request.
-   * def getValueMap(request: Request, dir: Option[File]): ValueMapT = {
-   * val objList = (new Form(request.getEntity)).toArray().toList
-   * val formMap = objList.filter(o => o.isInstanceOf[Parameter]).map(o => o.asInstanceOf[Parameter]).map(p => (p.getName, p.getValue)).toMap
-   *
-   * val getList: List[Option[(String, String)]] = request.getResourceRef.getQueryAsForm.toArray.toList.map(s => s match {
-   * case s: Parameter => Some((s.getName, s.getValue))
-   * case _ => None;
-   * })
-   * val getMap = getList.filter(p1 => p1.isDefined).map(p2 => p2.get).toMap
-   *
-   * val all = formMap ++ getMap
-   * all
-   * }
-   */
-
-  /**
-   * Write the input stream to the file.
-   */
-  private def XsaveFile(inputStream: InputStream, file: File) = { // TODO rm?
-    file.getParentFile.mkdirs
-    file.delete
-    file.createNewFile
-    val outputStream = new FileOutputStream(file)
-
-    val buffer = Array.ofDim[Byte](16 * 1024)
-    var size = inputStream.read(buffer)
-    while (size != -1) {
-      outputStream.write(buffer, 0, size)
-      size = inputStream.read(buffer)
-    }
-    outputStream.flush
-    outputStream.close
-  }
 
   /**
    * Convert the given stream to DICOM and return the attribute list.  If it
@@ -143,7 +107,7 @@ object WebUtil extends Logging {
   /**
    * Write the input stream to the file.
    */
-  private def saveFile(inputStream: InputStream, file: File) = {
+  private def saveFile(inputStream: InputStream, file: File,request: Request) = {
     file.getParentFile.mkdirs
 
     val outputStream = new ByteArrayOutputStream
@@ -161,22 +125,20 @@ object WebUtil extends Logging {
 
     isDicom(byteInStream) match {
       case Some(al) => {
-        val anon = AnonymizeUtil.anonymizeDicom(2, al) // TODO change 2 to institutionPK
+        val user = CachedUser.get(request)
+        val institution = user.get.institutionPK
+        val anon = AnonymizeUtil.anonymizeDicom(institution, al)
         DicomUtil.writeAttributeList(anon, file)
-        Trace.trace // TODO rm
       }
       case _ => {
-        Trace.trace // TODO rm
         file.delete
         file.createNewFile
         val fileOutStream = new FileOutputStream(file)
         fileOutStream.write(outputStream.toByteArray)
         fileOutStream.flush
         fileOutStream.close
-        Trace.trace // TODO rm
       }
     }
-    Trace.trace // TODO rm
   }
 
   def sessionDir(valueMap: ValueMapT): Option[File] = {
@@ -222,7 +184,7 @@ object WebUtil extends Logging {
           if (!ii.isFormField) {
             val file = new File(dir, ii.getName)
             logger.info("Uploading file from user " + userId + " to " + file.getAbsolutePath)
-            saveFile(ii.openStream, file)
+            saveFile(ii.openStream, file, request)
           }
         }
       }
@@ -417,7 +379,6 @@ object WebUtil extends Logging {
 
   implicit class WebRow(val colList: List[ToHtml]) extends ToHtml {
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
-      Trace.trace
       <div class="form-group">
         <div class="row">
           { colList.map(c => c.toHtml(valueMap, errorMap, response)) }
@@ -450,24 +411,12 @@ object WebUtil extends Logging {
     }
 
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
-      Trace.trace
       val valueMapWithSession = if (valueMap.get(sessionLabel).isDefined) valueMap else (Map((sessionLabel, Session.makeUniqueId)) ++ valueMap)
-      Trace.trace
-      if (true) { // TODO rm
-        rowListWithSession.map(r => {
-          Trace.trace(r)
-          val j = r.toHtml(valueMapWithSession, errorMap, response)
-          Trace.trace(j)
-        })
-      }
-
-      Trace.trace
 
       val mainForm =
         <form action={ action } method={ Method.POST.toString } class="form-horizontal" role="form">
           { rowListWithSession.map(r => r.toHtml(valueMapWithSession, errorMap, response)) }
         </form>;
-      Trace.trace
 
       val alreadyUploadedFiles: Elem = {
 
@@ -480,9 +429,7 @@ object WebUtil extends Logging {
           text
         }
 
-        Trace.trace
         val dir = Session.idToFile(valueMapWithSession(sessionLabel))
-        Trace.trace
 
         val text: String = if (dir.isDirectory && dir.list.nonEmpty) {
           val dz = "var uploadFile = new Dropzone(\"#uploadFile\");" + nl
@@ -490,11 +437,9 @@ object WebUtil extends Logging {
           val fileText = dir.listFiles.toSeq.zipWithIndex.map(fi => fileToText(fi._1, fi._2)).mkString(" ")
           (dz + fileText).replaceAllLiterally("\"", doubleQuote).replaceAllLiterally("'", singleQuote)
         } else ""
-        Trace.trace
 
         <script>{ text }</script>
       }
-      Trace.trace
 
       val titleHtml: Elem = {
         title match {
@@ -502,10 +447,8 @@ object WebUtil extends Logging {
           case _ => <span></span>
         }
       }
-      Trace.trace
 
       val html = {
-        Trace.trace
         if (validCol(fileUpload)) {
           val sessionId: String = valueMapWithSession.get(sessionLabel).get
           val formClass = "dropzone row " + colToName(fileUpload, 0) + " has-error"
@@ -516,7 +459,6 @@ object WebUtil extends Logging {
               case _ => new Style
             }
           }
-          Trace.trace
 
           val uploadHtml: Elem = {
             val hasError = errorMap.get(uploadFileInput.get.label).isDefined
@@ -531,7 +473,6 @@ object WebUtil extends Logging {
             } else uploadForm
           }
 
-          Trace.trace
           val uploadForm = {
             <div class="row">
               { uploadHtml }
@@ -544,7 +485,6 @@ object WebUtil extends Logging {
           uploadForm
         } else mainForm
       }
-      Trace.trace
 
       val elem = {
         <div class={ "row " + colToName(10, 1) }>
@@ -552,7 +492,6 @@ object WebUtil extends Logging {
           { html }
         </div>
       }
-      Trace.trace
       elem
     }
 
@@ -578,29 +517,7 @@ object WebUtil extends Logging {
 
     def setFormResponse(valueMap: ValueMapT, errorMap: StyleMapT, pageTitle: String, response: Response, status: Status): Unit = {
 
-      if (true) { // TODO rm
-        println("Fake Trace  | Restlet-1204370409 | (web.WebUtil.scala:570) saveFile")
-        println("Fake Trace  | Restlet-1204370409 | (WebUtil.scala:570) saveFile")
-        val se = Thread.currentThread.getStackTrace()(1)
-        val cn = se.getClassName
-        Trace.trace("se.getClassName: " + cn)
-        val cls = cn.subSequence(0, cn.lastIndexOf("."))
-        println("Fake Trace  | Restlet-1204370409 | (org.aqa.web.WebUtil.scala:570) saveFile")
-        val fake = "hey(" + cls + ".WebUtil.scala:570"
-        Trace.trace(fake)
-        Trace.trace
-      }
-
-      Trace.trace // TODO rm
-      val j1 = toHtml(valueMap, errorMap, Some(response))
-      Trace.trace // TODO rm
-      val j2 = makeFormAlertBox(errorMap)
-      Trace.trace // TODO rm
-      val j3 = wrapBody(j1, pageTitle, None, false, j2)
-      Trace.trace // TODO rm
-
       val text = wrapBody(toHtml(valueMap, errorMap, Some(response)), pageTitle, None, false, makeFormAlertBox(errorMap))
-      Trace.trace // TODO rm
 
       //val text = wrapBody(toHtml(valueMap, errorMap, Some(response)), pageTitle)
       def replace(origText: String, col: Any): String = {
@@ -612,14 +529,10 @@ object WebUtil extends Logging {
           } else origText
         } else origText
       }
-      Trace.trace // TODO rm
       val colList = rowList.map(row => row.colList).flatten
-      Trace.trace // TODO rm
       val finalText = colList.foldLeft(text)((txt, col) => replace(txt, col))
-      Trace.trace // TODO rm
 
       setResponse(finalText, response, status)
-      Trace.trace // TODO rm
     }
   }
 
@@ -746,8 +659,6 @@ object WebUtil extends Logging {
     def this(label: String, col: Int, offset: Int, placeholder: String) = this(label, true, col, offset, placeholder)
 
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
-      Trace.trace
-      val j = label
       val html = <input type="text"/> % idNameClassValueAsAttr(label, valueMap) % placeholderAsAttr(placeholder)
       val htmlAlias = ifAqaAliasAttr(html, aqaAlias)
       wrapInput(label, showLabel, htmlAlias, col, offset, errorMap)
@@ -761,14 +672,12 @@ object WebUtil extends Logging {
     def this(label: String, col: Int, offset: Int, content: String) = this(label, true, col, offset, ((Null)) => <div>{ content }</div>)
     def this(label: String, col: Int, offset: Int, content: Elem) = this(label, true, col, offset, ((Null)) => content)
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
-      Trace.trace
       wrapInput(label, showLabel, html(valueMap), col, offset, errorMap)
     }
   }
 
   class WebInputURL(override val label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
-      Trace.trace
       val html = <input type="url"/> % idNameClassValueAsAttr(label, valueMap) % placeholderAsAttr(placeholder)
       wrapInput(label, true, html, col, offset, errorMap)
     }
@@ -776,7 +685,6 @@ object WebUtil extends Logging {
 
   class WebInputEmail(override val label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
-      Trace.trace
       val html = <input type="email"/> % idNameClassValueAsAttr(label, valueMap) % placeholderAsAttr(placeholder)
       wrapInput(label, true, html, col, offset, errorMap)
     }
@@ -784,7 +692,6 @@ object WebUtil extends Logging {
 
   class WebInputPassword(override val label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
-      Trace.trace
       val html = <input type="password"/> % idNameClassAsAttr(label) % placeholderAsAttr(placeholder)
       wrapInput(label, true, html, col, offset, errorMap)
     }
@@ -795,7 +702,6 @@ object WebUtil extends Logging {
     def this(label: String, col: Int, offset: Int, selList: (Option[Response]) => Seq[(String, String)]) = this(label, false, col, offset, selList, false)
 
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
-      Trace.trace
 
       val curValue: Option[String] = if (valueMap.get(label).isDefined) valueMap.get(label) else None
 
@@ -821,9 +727,7 @@ object WebUtil extends Logging {
    */
   class WebInputSelectOption(override val label: String, col: Int, offset: Int, selectList: (Option[Response]) => Seq[(String, String)], show: (ValueMapT) => Boolean) extends WebInputSelect(label, col, offset, selectList) {
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
-      Trace.trace
       if (show(valueMap)) {
-        Trace.trace
         super.toHtml(valueMap, errorMap, response)
       } else { <div></div> }
     }
@@ -832,7 +736,6 @@ object WebUtil extends Logging {
   class WebInputCheckbox(override val label: String, col: Int, offset: Int) extends IsInput(label) with ToHtml {
 
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
-      Trace.trace
       val input = <input type="checkbox"/> % idNameClassValueAsAttr(label, valueMap)
       val inputWithValue: Elem = {
         if (valueMap.get(label).isDefined && valueMap.get(label).get.equals("true")) input % (<input checked="true"/>).attributes
@@ -923,7 +826,6 @@ object WebUtil extends Logging {
     def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String) = this(label, col, offset, subUrl, action: String, ButtonType.BtnDefault, label)
 
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
-      Trace.trace
       val button = { <button type="submit" class={ "btn " + buttonType.toString } action={ action(valueMap) } value={ value } name={ label }>{ label }</button> }
       wrapInput(label, false, button, col, offset, errorMap)
     }
@@ -932,7 +834,6 @@ object WebUtil extends Logging {
   class WebInputTextArea(label: String, col: Int, offset: Int, placeholder: String, aqaAlias: Boolean) extends IsInput(label) with ToHtml {
     def this(label: String, col: Int, offset: Int, placeholder: String) = this(label, col, offset, placeholder, false)
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
-      Trace.trace
       val value = valueMap.get(label)
       val common = { <input class="form-control" id={ label } name={ label }/> }
 
@@ -951,7 +852,6 @@ object WebUtil extends Logging {
 
   class WebInputDateTime(label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
-      Trace.trace
       val html = <input type="datetime-local"/> % idNameClassValueAsAttr(label, valueMap) % placeholderAsAttr(placeholder)
       wrapInput(label, true, html, col, offset, errorMap)
     }
@@ -994,11 +894,8 @@ object WebUtil extends Logging {
 
   class WebInputHidden(override val label: String) extends IsInput(label) with ToHtml {
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
-      Trace.trace(label)
       val html = <input type="text" class="hidden"/> % idNameClassValueAsAttr(label, valueMap)
-      Trace.trace(label)
       val elem = { <span class="hidden">{ html }</span> }
-      Trace.trace(label)
       elem
     }
   }
