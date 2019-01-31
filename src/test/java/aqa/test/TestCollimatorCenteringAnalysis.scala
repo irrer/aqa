@@ -14,12 +14,10 @@ object TestCollimatorCenteringAnalysis {
 
   def main(args: Array[String]): Unit = {
 
-    val fileNames = Seq(
-      """D:\tmp\aqa\Phase2\$JM_AQA_phase2_v000\RI.$JM_AQA_phase2_v000.MV_90_0a.dcm""",
-      """D:\tmp\aqa\Phase2\$JM_AQA_phase2_v000\RI.$JM_AQA_phase2_v000.MV_270_0a1.dcm""",
-      """D:\tmp\aqa\Phase2\$JM_AQA_phase2_v000\RI.$JM_AQA_phase2_v000.MV_0_0a5.dcm""")
+    val inDir = new File("""D:\pf\eclipse\workspaceOxygen\aqa\src\test\resources""")
+    val fileNames = Seq("TestCollimatorCenteringAnalysis_1.dcm", "TestCollimatorCenteringAnalysis_2.dcm", "TestCollimatorCenteringAnalysis_3.dcm")
 
-    val fileList = fileNames.map(name => new File(name))
+    val fileList = fileNames.map(name => new File(inDir, name))
 
     def processFile(file: File) = {
       val dicomFile = new DicomFile(file)
