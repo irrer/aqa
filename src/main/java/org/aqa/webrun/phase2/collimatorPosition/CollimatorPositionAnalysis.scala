@@ -56,10 +56,13 @@ object CollimatorPositionAnalysis extends Logging {
       }
 
       val expectedEdges = MeasureTBLREdges.imageCollimatorPositions(al) //   planCollimatorPositions(beamName, runReq.rtplan.attributeList.get)
-
       val measured = edges.measurementSet.toX1X2Y1Y2(collimatorAngle)
+
       val expMinusMeasured = expectedEdges.minus(measured)
-      logger.info("Beam " + beamName + "\n    expected edges: " + expectedEdges.toString("%6.1f") + "\n    measured edges: " + measured.toString("%6.1f") + "\n    expected - measured: " + expMinusMeasured.toString("%7.3f"))
+      logger.info("Beam " + beamName + " flood Comp: " + FloodCompensation +
+        "\n    expected edges: " + expectedEdges.toString("%6.1f") +
+        "\n    measured edges: " + measured.toString("%6.1f") +
+        "\n    expected - measured: " + expMinusMeasured.toString("%7.3f"))
 
       val worst = expMinusMeasured.toSeq.map(m => m.abs).max
 
@@ -100,7 +103,8 @@ object CollimatorPositionAnalysis extends Logging {
     try {
       logger.info("Starting analysis of CollimatorPosition")
       val posnBeams = Config.CollimatorPositionBeamList.filter(cp => runReq.derivedMap.contains(cp.beamName))
-      val resultList = posnBeams.par.map(cp => measureImage(
+      //val resultList = posnBeams.par.map(cp => measureImage(  // TODO put back in after debug
+      val resultList = posnBeams.map(cp => measureImage(
         cp.beamName,
         cp.FloodCompensation,
         runReq.derivedMap(cp.beamName).biasAndPixelCorrectedCroppedImage,

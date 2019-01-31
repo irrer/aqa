@@ -43,6 +43,7 @@ object CollimatorPositionCSV {
       ("SOPInstanceUID", (ii: II) => ii.SOPInstanceUID),
       ("gantryAngle_deg", (ii: II) => ii.gantryAngle_deg),
       ("collimatorAngle_deg", (ii: II) => ii.collimatorAngle_deg),
+      ("FloodCompensation", (ii: II) => ii.FloodCompensation),
       ("X1_mm", (ii: II) => ii.X1_mm),
       ("X2_mm", (ii: II) => ii.X2_mm),
       ("Y1_mm", (ii: II) => ii.Y1_mm),

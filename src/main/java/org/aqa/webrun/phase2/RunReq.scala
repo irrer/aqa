@@ -54,12 +54,10 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
     val pnX = floodTranslator.iso2PixDistX(Config.PenumbraThickness_mm / 2)
     val pnY = floodTranslator.iso2PixDistY(Config.PenumbraThickness_mm / 2)
 
-    val fPix = floodMeasurement.floodRelative(new Point(0, 0))
-
-    val x = Math.round(fPix.left + pnX).toInt
-    val y = Math.round(fPix.top + pnY).toInt
-    val width = Math.round((fPix.right - fPix.left) - (pnX * 2)).toInt
-    val height = Math.round((fPix.bottom - fPix.top) - (pnY * 2)).toInt
+    val x = Math.round(floodMeasurement.left + pnX).toInt
+    val y = Math.round(floodMeasurement.top + pnY).toInt
+    val width = Math.round((floodMeasurement.right - floodMeasurement.left) - (pnX * 2)).toInt
+    val height = Math.round((floodMeasurement.bottom - floodMeasurement.top) - (pnY * 2)).toInt
 
     new Rectangle(x, y, width, height)
   }

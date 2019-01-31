@@ -22,9 +22,12 @@ import java.awt.image.BufferedImage
 import org.aqa.webrun.phase2.ExtendedData
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.web.WebUtil
 
 object CollimatorPositionHTML {
   val htmlFileName = "CollimatorPosition.html"
+
+  val subDirName = "CollimatorPosition"
 
   /**
    * Generate a detailed report and write it to the output directory.  Also write a CSV file.  Return an
@@ -65,12 +68,17 @@ object CollimatorPositionHTML {
 
     class ColStatus(override val title: String, name: String, override val get: (CollimatorPosition, BufferedImage) => String) extends Col(title, name, get) {
       override def toRow(collimatorPosition: CollimatorPosition, bufImg: BufferedImage) = {
-        val pngFileName = CollimatorPositionAnalysis.subProcedureName + "_" + collimatorPosition.beamName.replace(" ", "_") + ".png"
-        val pngFile = new File(extendedData.output.dir, pngFileName)
+        val pngFileName = {
+          val floodComp = if (collimatorPosition.FloodCompensation) "_with_flood_comp" else ""
+          collimatorPosition.beamName.replace(" ", "_") + floodComp + ".png"
+        }
+        val subDir = new File(extendedData.output.dir, subDirName)
+        subDir.mkdirs
+        val pngFile = new File(subDir, pngFileName)
         Util.writePng(bufImg, pngFile)
         val pngUrl = WebServer.urlOfResultsFile(pngFile)
         val text = if (collimatorPosition.status.toString.equals(ProcedureStatus.pass.toString)) "Pass" else "Fail"
-        val elem = { <td title={ title + ".  Follow link to view edge measurements" }><a href={ pngUrl }>{ text }</a></td> }
+        val elem = { <td title={ title + ".  Follow link to view " + WebUtil.titleNewline + " image with annotated edge measurements" }><a href={ pngUrl }>{ text }</a></td> }
         elem
       }
     }

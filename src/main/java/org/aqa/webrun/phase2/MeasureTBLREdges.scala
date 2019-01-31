@@ -59,9 +59,9 @@ object MeasureTBLREdges extends Logging {
 
   def TBLRtoX1X2Y1Y2(collimatorAngle: Double, tblr: TBLR) = {
     Util.angleRoundedTo90(collimatorAngle) match {
-      case 0 => new X1X2Y1Y2(tblr.left, tblr.right, tblr.top, tblr.bottom)
+      case 0 => new X1X2Y1Y2(tblr.left, tblr.right, tblr.bottom, tblr.top)
       case 90 => new X1X2Y1Y2(tblr.bottom, tblr.top, tblr.right, tblr.left)
-      case 180 => new X1X2Y1Y2(tblr.right, tblr.left, tblr.bottom, tblr.top)
+      case 180 => new X1X2Y1Y2(tblr.right, tblr.left, tblr.top, tblr.bottom)
       case 270 => new X1X2Y1Y2(tblr.top, tblr.bottom, tblr.left, tblr.right)
     }
   }
@@ -78,7 +78,7 @@ object MeasureTBLREdges extends Logging {
     }
   }
 
-  case class TBLR(top: Double, bottom: Double, left: Double, right: Double) { // , translator: IsoImagePlaneTranslator) {
+  case class TBLR(top: Double, bottom: Double, left: Double, right: Double) {
     val center = new Point2D.Double((right + left) / 2, (top + bottom) / 2)
     val width = (right - left).abs
     val height = (bottom - top).abs
@@ -127,13 +127,13 @@ object MeasureTBLREdges extends Logging {
   case class AnalysisResult(measurementSet: TBLR, bufferedImage: BufferedImage)
 
   private def getCoarseTopRectangle(image: DicomImage, cntrOfMass: Point2D, translator: IsoImagePlaneTranslator): Rectangle = {
-    val width = Math.ceil(translator.pix2IsoDistX(Config.CollimatorCenteringCoarseBandWidth_mm)).toInt
+    val width = Math.ceil(translator.iso2PixDistX(Config.CollimatorCenteringCoarseBandWidth_mm)).toInt
     val x = (cntrOfMass.getX - (width / 2.0)).round.toInt
     new Rectangle(x, 0, width, image.height / 2)
   }
 
   private def getCoarseBottomRectangle(image: DicomImage, cntrOfMass: Point2D, translator: IsoImagePlaneTranslator): Rectangle = {
-    val width = Math.ceil(translator.pix2IsoDistX(Config.CollimatorCenteringCoarseBandWidth_mm)).toInt
+    val width = Math.ceil(translator.iso2PixDistX(Config.CollimatorCenteringCoarseBandWidth_mm)).toInt
     val x = (cntrOfMass.getX - (width / 2.0)).round.toInt
     new Rectangle(x, image.height / 2, width, image.height / 2)
   }
@@ -141,13 +141,13 @@ object MeasureTBLREdges extends Logging {
   //
 
   private def getCoarseLeftRectangle(image: DicomImage, cntrOfMass: Point2D, translator: IsoImagePlaneTranslator): Rectangle = {
-    val height = Math.ceil(translator.pix2IsoDistY(Config.CollimatorCenteringCoarseBandWidth_mm)).toInt
+    val height = Math.ceil(translator.iso2PixDistY(Config.CollimatorCenteringCoarseBandWidth_mm)).toInt
     val y = (cntrOfMass.getY - (height / 2.0)).round.toInt
     new Rectangle(0, y, image.width / 2, height)
   }
 
   private def getCoarseRightRectangle(image: DicomImage, cntrOfMass: Point2D, translator: IsoImagePlaneTranslator): Rectangle = {
-    val height = Math.ceil(translator.pix2IsoDistY(Config.CollimatorCenteringCoarseBandWidth_mm)).toInt
+    val height = Math.ceil(translator.iso2PixDistY(Config.CollimatorCenteringCoarseBandWidth_mm)).toInt
     val y = (cntrOfMass.getY - (height / 2.0)).round.toInt
     new Rectangle(image.width / 2, y, image.width / 2, height)
   }
@@ -339,7 +339,11 @@ object MeasureTBLREdges extends Logging {
    */
   def measure(image: DicomImage, translator: IsoImagePlaneTranslator, collimatorAngle: Double, annotate: DicomImage, floodOffset: Point, thresholdPercent: Double): AnalysisResult = {
     val threshold = calcPercentPixelValue(image, thresholdPercent)
-    val coarse = coarseMeasure(image, threshold, translator, floodOffset)
+    val coarse = {
+      val j = coarseMeasure(image, threshold, translator, floodOffset)
+      val k = j.floodRelative(floodOffset)
+      k
+    }
 
     val penumbraX = translator.iso2PixDistX(Config.PenumbraThickness_mm) // penumbra thickness in pixels X
     val penumbraY = translator.iso2PixDistY(Config.PenumbraThickness_mm) // penumbra thickness in pixels Y
@@ -356,7 +360,7 @@ object MeasureTBLREdges extends Logging {
     val transMeasurementSet = measurementSet.floodRelative(floodOffset).pix2iso(translator)
 
     val bufferedImage = makeAnnotatedImage(annotate, measurementSet, transMeasurementSet, collimatorAngle, nsRect._1, nsRect._2, ewRect._1, ewRect._2, floodOffset, translator)
-    new AnalysisResult(transMeasurementSet, bufferedImage)
+    new AnalysisResult(measurementSet, bufferedImage)
   }
 
   def measure(image: DicomImage, translator: IsoImagePlaneTranslator, collimatorAngle: Double, annotate: DicomImage, floodOffset: Point): AnalysisResult = {

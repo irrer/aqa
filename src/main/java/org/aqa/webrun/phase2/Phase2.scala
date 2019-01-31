@@ -386,7 +386,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     super.handle(request, response)
 
     val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
-    Trace.trace(valueMap) // TODO rm
 
     try {
       Trace.trace // TODO rm

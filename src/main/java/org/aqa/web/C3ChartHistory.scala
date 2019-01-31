@@ -54,7 +54,6 @@ class C3ChartHistory(
   if (yMaxSize > xDateList.size) throw new RuntimeException("Size of at least one of the yValues is " + yMaxSize + " and is greater than size of xDateList " + xDateList.size)
 
   private val idTag = "ChartId_" + C3Chart.getId
-  Trace.trace("idTag: " + idTag) // TODO rm
 
   private def column(label: String, valueList: Seq[Double]): String = {
     "[ '" + label + "', " + valueList.mkString(", ") + "]"

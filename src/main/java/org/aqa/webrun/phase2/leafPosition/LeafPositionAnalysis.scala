@@ -28,57 +28,6 @@ import org.aqa.db.CollimatorCentering
  */
 object LeafPositionAnalysis extends Logging {
 
-  //  /**
-  //   * Locate the sides of the leaves in the given image and return a sorted list.  Values are in pixels.
-  //   */
-  //  def XleafSides_pix(horizontal: Boolean, beamName: String, imageAttrList: AttributeList, dicomImage: DicomImage,
-  //    plan: AttributeList, translator: IsoImagePlaneTranslator,
-  //    leafEndList_pix: Seq[Double]): Seq[Double] = {
-  //
-  //    val sideListPlan = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, plan).sorted
-  //
-  //    val sideListPix = {
-  //      if (horizontal)
-  //        sideListPlan.map(side => translator.iso2PixCoordY(side))
-  //      else
-  //        sideListPlan.map(side => translator.iso2PixCoordY(side))
-  //    }
-  //
-  //    val minLeafWidth = sideListPix.indices.tail.map(i => sideListPix(i) - sideListPix(i - 1)).min
-  //    val searchMargin = minLeafWidth / 2
-  //
-  //    val lo = (leafEndList_pix.head - searchMargin).round.toInt
-  //    val hi = (leafEndList_pix.last + searchMargin).round.toInt
-  //    val narrow = minLeafWidth.round.toInt
-  //    val wide = (leafEndList_pix.last - leafEndList_pix.head + searchMargin).round.toInt
-  //
-  //    def positionOf(side: Int): Double = {
-  //      if (horizontal) {
-  //        val x = lo
-  //        val y = (side - searchMargin).round.toInt
-  //        val rect = new Rectangle(x, y, wide, narrow)
-  //        val profile = dicomImage.getSubArray(rect).map(row => row.sum).map(f => f.toDouble).toArray
-  //        val indicies = (0 until narrow).map(i => i.toDouble + y).toArray
-  //        val max = ImageUtil.profileMaxCubic(indicies, profile)
-  //        max
-  //      } else {
-  //        val y = lo
-  //        val x = (side - searchMargin).round.toInt
-  //        val rect = new Rectangle(lo, y, wide, narrow)
-  //        val pixelMatrix = dicomImage.getSubArray(rect)
-  //        def colSum(x: Int) = { for (y <- pixelMatrix.indices) yield { pixelMatrix(y)(x) } }.sum
-  //        val profile = (0 until wide).map(x => colSum(x)).map(f => f.toDouble).toArray
-  //        val indicies = (0 until narrow).map(i => i.toDouble + x).toArray
-  //        val max = ImageUtil.profileMaxCubic(indicies, profile)
-  //        max
-  //      }
-  //    }
-  //
-  //    val sideList = sideListPix.map(side => positionOf(side.round.toInt))
-  //
-  //    sideList
-  //  }
-
   /**
    * Locate the sides of the leaves in the given image and return a sorted list.  Values are in pixels.
    */
@@ -165,8 +114,6 @@ object LeafPositionAnalysis extends Logging {
     }
 
     val leafSidesList = sideListPlanned_pix.map(p => new LeafSide(p)).sortBy(_.score)
-
-    Trace.trace("leafSidesList:\n    " + leafSidesList.mkString("\n    "))
 
     val bestSize = coarseSideList_pix.size / 4
     // use the 1/4 best leaf sides to define the rest
