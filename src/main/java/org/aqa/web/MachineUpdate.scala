@@ -60,7 +60,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   private def typeName(response: Option[Response]) = MachineType.list.toList.map(mt => (mt.machineTypePK.get.toString, mt.toName))
 
-  private val machineTypePK = new WebInputSelect("Type", 3, 0, typeName)
+  private val machineTypePK = new WebInputSelect("Type", true, 3, 0, typeName, false)
 
   private def collimatorName(response: Option[Response]) = MultileafCollimator.list.toList.map(mlc => (mlc.multileafCollimatorPK.get.toString, mlc.toName))
 
@@ -94,9 +94,9 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   private val configurationDirectory = new WebPlainText("Configuration", false, 6, 0, getConfigUrl _)
 
-  private val multileafCollimatorPK = new WebInputSelect("Collimator", 3, 0, collimatorName)
+  private val multileafCollimatorPK = new WebInputSelect("Collimator", true, 3, 0, collimatorName, false)
 
-  private val epidPK = new WebInputSelect("EPID", 3, 0, epidName)
+  private val epidPK = new WebInputSelect("EPID", true, 3, 0, epidName, false)
 
   private val serialNumber = new WebPlainText("Serial Number", false, 3, 0, getSerialNo _)
 
@@ -267,7 +267,8 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   /**
    * Check that the beam energies specified by the user are valid.  All photon energies must be specified, but
-   * max dose and FFF may be blank.  All must be floating point values greater than 0.
+   * max dose and FFF may be blank.  All must be floating point values greater than 0.  At least one energy must
+   * be specified.
    */
   private def validateBeamEnergies(valueMap: ValueMapT, form: WebForm): StyleMapT = {
 
@@ -285,6 +286,14 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       }
     }
 
+    def isEmpty(index: Int): Boolean = {
+      val phoLabel = photonEnergyColName + index
+      val maxLabel = maxDoseRateColName + index
+      val fffLabel = fffEnergyColName + index
+
+      (valueMap(phoLabel).trim + valueMap(phoLabel).trim + valueMap(phoLabel).trim).isEmpty
+    }
+
     def checkBeam(index: Int): StyleMapT = {
       val phoLabel = photonEnergyColName + index
       val maxLabel = maxDoseRateColName + index
@@ -295,7 +304,9 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       else checkEnergy(phoLabel, true) ++ checkEnergy(maxLabel, false) ++ checkEnergy(fffLabel, false)
     }
 
-    beamList.map(i => checkBeam(i)).reduce(_ ++ _)
+    val allEmpty = beamList.map(i => isEmpty(i)).reduce(_ && _)
+    if (allEmpty) Error.make(addBeamEnergyButton, "At least one energy level is required")
+    else beamList.map(i => checkBeam(i)).reduce(_ ++ _)
   }
 
   private def validateAuthentication(valueMap: ValueMapT, request: Request): StyleMapT = {
@@ -310,6 +321,13 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       validateUniqueness(valueMap) ++
       validateBeamEnergies(valueMap, form)
 
+  private def updateMachineInDatabase(valueMap: ValueMapT) = {
+    val machine = constructMachineFromParameters(valueMap)
+    machine.insertOrUpdate
+    logger.info("Updating machine " + machine)
+    updateBeamEnergies(machine, valueMap)
+  }
+
   /**
    * Save changes made to form.
    */
@@ -317,10 +335,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     val form = formEdit(valueMap)
     val styleMap = validateAll(valueMap, response.getRequest, form)
     if (styleMap.isEmpty) {
-      val machine = constructMachineFromParameters(valueMap)
-      machine.insertOrUpdate
-      logger.info("Updating machine " + machine)
-      updateBeamEnergies(machine, valueMap)
+      updateMachineInDatabase(valueMap)
       MachineList.redirect(response)
     } else {
       form.setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
@@ -552,8 +567,16 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     val machinePK = valueMap(MachineUpdate.machinePKTag).toLong
     val machine = Machine.get(machinePK).get
     val user = CachedUser.get(response.getRequest).get
-    if (user.institutionPK == machine.institutionPK) CustomizeRtPlan.redirect(machinePK, response)
-    else {
+    if ((user.institutionPK == machine.institutionPK) || (WebUtil.userIsWhitelisted(response.getRequest))) {
+      val form = formEdit(valueMap)
+      val styleMap = validateAll(valueMap, response.getRequest, form)
+      if (styleMap.nonEmpty) {
+        form.setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
+      } else {
+        updateMachineInDatabase(valueMap) // in case user has made changes  TODO
+        CustomizeRtPlan.redirect(machinePK, response)
+      }
+    } else {
       val styleMap = Error.make(institutionPK, "Only people from the machine's institution are allowed to create customized plans")
       formEdit(valueMap).setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.SUCCESS_OK)
     }

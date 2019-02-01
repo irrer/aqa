@@ -71,18 +71,22 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
   private val row2: WebRow = List(toleranceTable, machineName)
   private val row1: WebRow = List(patientID, patientName)
 
-  private def getCollimatorCompatiblePlanForMachine(machine: Machine) = {
+  private def getCollimatorCompatiblePlanForMachine(machine: Machine): Option[Config.Phase2PlanFileConfig] = {
     val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
-    val planFile = Config.Phase2PlanFileList.filter(pf => pf.manufacturer.equalsIgnoreCase(collimator.manufacturer) && pf.model.equalsIgnoreCase(collimator.model)).head
+    val planFile = Config.Phase2PlanFileList.filter(pf => pf.manufacturer.equalsIgnoreCase(collimator.manufacturer) && pf.model.equalsIgnoreCase(collimator.model)).headOption
     planFile
   }
 
   private def getPlanEnergyList(machine: Machine): Seq[Double] = {
-    val planAttrList = getCollimatorCompatiblePlanForMachine(machine).dicomFile.attributeList.get
-    val attrList = DicomUtil.findAllSingle(planAttrList, TagFromName.NominalBeamEnergy)
-    val list = attrList.map(a => a.getDoubleValues.head).distinct.sorted
-    logger.info("Energy list found in plan: " + list.mkString("  "))
-    list
+    val plan = getCollimatorCompatiblePlanForMachine(machine)
+    if (plan.isDefined) {
+      val planAttrList = plan.get.dicomFile.attributeList.get
+      val attrList = DicomUtil.findAllSingle(planAttrList, TagFromName.NominalBeamEnergy)
+      val list = attrList.map(a => a.getDoubleValues.head).distinct.sorted
+      logger.info("Energy list found in plan: " + list.mkString("  "))
+      list
+    } else Seq[Double]()
+
   }
 
   private def getMachineEnergyList(machinePK: Long): Seq[Double] = {
@@ -133,8 +137,7 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     energyMap
   }
 
-  private def formSelect(valueMap: ValueMapT, response: Response) = {
-    val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
+  private def formSelect(valueMap: ValueMapT, response: Response, machine: Machine) = {
     val machineEnergyList = getMachineEnergyList(machine.machinePK.get)
     val planEnergyList = getPlanEnergyList(machine).toList
     val form = new WebForm(pathOf, List(row0, row1, row2) ++ energyRowList(machine, machineEnergyList, planEnergyList) ++ List(assignButtonList))
@@ -166,9 +169,11 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     val machErr = if (empty(machineName.label)) Error.make(machineName, "A machine name must be given.") else styleNone
     val patIdErr = if (empty(patientID.label)) Error.make(patientID, "A patient ID must be given.") else styleNone
     val patNameErr = if (empty(patientName.label)) Error.make(patientName, "A patient name must be given.") else styleNone
-    val machineNameErr = if (empty(machineName.label)) Error.make(machineName, "A machine name must be given.") else styleNone
 
-    (tolErr ++ patIdErr ++ patNameErr)
+    val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong)
+    val collimatorErr = if (getCollimatorCompatiblePlanForMachine(machine.get).isEmpty) Error.make(createButton, "There is no pre-defined plan to support this machine's collimator.") else styleNone
+
+    (tolErr ++ machErr ++ patIdErr ++ patNameErr ++ collimatorErr)
   }
 
   private def replaceAllUids(attributeList: AttributeList) = {
@@ -215,7 +220,7 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
 
   private def makePlan(valueMap: ValueMapT, response: Response, machine: Machine, planEnergyList: Seq[Double], machineEnergyList: Seq[Double]) = {
 
-    val rtplan = DicomUtil.clone(getCollimatorCompatiblePlanForMachine(machine).dicomFile.attributeList.get)
+    val rtplan = DicomUtil.clone(getCollimatorCompatiblePlanForMachine(machine).get.dicomFile.attributeList.get)
     replaceAllUids(rtplan) // change UIDs so that this plan will be considered new and unique from all others.
 
     new Config.PlanAttributeOverride(TagFromName.ToleranceTableLabel, valueMap(toleranceTable.label))
@@ -277,16 +282,17 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
       val user = CachedUser.get(request)
       val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong)
 
-      def updateMach = MachineUpdate.redirect(valueMap(machinePK.label).toLong, response)
+      def updateMach =
+        MachineUpdate.redirect(valueMap(machinePK.label).toLong, response)
 
       0 match {
         case _ if user.isEmpty => updateMach
         case _ if machine.isEmpty => updateMach
-        case _ if (user.get.institutionPK != machine.get.institutionPK) => updateMach
+        case _ if (user.get.institutionPK != machine.get.institutionPK) && (!WebUtil.userIsWhitelisted(request)) => updateMach
         case _ if buttonIs(valueMap, cancelButton) => updateMach
-        case _ if buttonIs(valueMap, backButton) => formSelect(valueMap, response)
+        case _ if buttonIs(valueMap, backButton) => formSelect(valueMap, response, machine.get)
         case _ if buttonIs(valueMap, createButton) => createPlan(valueMap, response)
-        case _ => formSelect(valueMap, response) // first time viewing the form.  Set defaults
+        case _ => formSelect(valueMap, response, machine.get) // first time viewing the form.  Set defaults
       }
     } catch {
       case t: Throwable => {
