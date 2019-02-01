@@ -79,9 +79,13 @@ function translateAliases(aliasToRealList) {
   var publicList = $( "[aqaalias]" ); // defines the attribute for showing real names
 
   var arMap = new Map();
-  aliasToRealList.map(ar => arMap.set(ar.alias.trim(), ar.real.trim()));
 
   var p;
+
+  for (p = 0; p < aliasToRealList.length; p++) {
+    var ar = aliasToRealList[p];
+    arMap.set(ar.alias.trim(), ar.real.trim());
+  }
 
   for (p = 0; p < publicList.length; p++) {
     var alias = publicList[p].innerHTML.trim();
