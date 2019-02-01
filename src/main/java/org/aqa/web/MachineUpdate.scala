@@ -170,7 +170,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   def makeBeamRow(index: Int): WebRow = {
     val photonEnergyCol = new WebInputText("Photon Energy_" + index, false, 1, 1, "In Mev")
     val maxDoseRateCol = new WebInputText("Max Dose Rate_" + index, false, 1, 0, "In MU / minute")
-    val fffEnergyCol = new WebInputText(fffEnergyColName + index, false, 1, 0, "In Mev")
+    val fffEnergyCol = new WebInputCheckbox(fffEnergyColName + index, 1, 0)
     val action = pathOf + "?beamIndex=" + index
     val beamDeleteButton = new FormButton("X", 1, 0, subUrl, action, ButtonType.BtnDefault, beamEnergyButtonColName + index)
     val indexCol = new WebInputHidden(index.toString)
@@ -179,7 +179,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   }
 
   def getBeamList(valueMap: ValueMapT): List[Int] = {
-    valueMap.keySet.filter { k => k.startsWith(fffEnergyColName) }.map(k => k.replaceAll(".*_", "").toInt).toList.sorted
+    valueMap.keySet.filter { k => k.startsWith(photonEnergyColName) }.map(k => k.replaceAll(".*_", "").toInt).toList.sorted
   }
 
   private def beamEnergyRows(valueMap: ValueMapT): List[WebRow] = {
@@ -289,9 +289,8 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     def isEmpty(index: Int): Boolean = {
       val phoLabel = photonEnergyColName + index
       val maxLabel = maxDoseRateColName + index
-      val fffLabel = fffEnergyColName + index
 
-      (valueMap(phoLabel).trim + valueMap(phoLabel).trim + valueMap(phoLabel).trim).isEmpty
+      (valueMap(phoLabel).trim + valueMap(maxLabel).trim).isEmpty
     }
 
     def checkBeam(index: Int): StyleMapT = {
@@ -301,7 +300,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
       // if all values are empty, then ignore it
       if ((valueMap(phoLabel).trim + valueMap(phoLabel).trim + valueMap(phoLabel).trim).isEmpty) styleNone
-      else checkEnergy(phoLabel, true) ++ checkEnergy(maxLabel, false) ++ checkEnergy(fffLabel, false)
+      else checkEnergy(phoLabel, true) ++ checkEnergy(maxLabel, false)
     }
 
     val allEmpty = beamList.map(i => isEmpty(i)).reduce(_ && _)
@@ -347,13 +346,14 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     def makeBeam(index: Int): Option[MachineBeamEnergy] = {
       val pho = valueMap(photonEnergyColName + index)
       val max = valueMap(maxDoseRateColName + index)
-      val fff = valueMap(fffEnergyColName + index)
+      val fffVal = if (valueMap.get(fffEnergyColName + index).isDefined) 1.0 else 0.0
 
-      val valList = Seq(pho, max, fff)
-      val viable = valList.find { x => x.trim.size > 0 }
-      if (viable.isDefined)
-        Some(new MachineBeamEnergy(None, machine.machinePK.get, stringToDouble(pho), stringToDouble(max), stringToDouble(fff)))
-      else
+      val valList = Seq(pho, max)
+      val viable = valList.find { x => x.trim.size > 0 }.isDefined || (fffVal != 0.0)
+
+      if (viable) {
+        Some(new MachineBeamEnergy(None, machine.machinePK.get, stringToDouble(pho), stringToDouble(max), Some(fffVal)))
+      } else
         None
     }
 
@@ -487,11 +487,15 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     }
 
     def beToValueMap(be: MachineBeamEnergy, index: Int): ValueMapT = {
-      Map(
+      //val fff = (be.fffEnergy_MeV.isDefined && be.fffEnergy_MeV.get != 0).toString
+      val fff = be.fffEnergy_MeV.isDefined && (be.fffEnergy_MeV.get.toDouble != 0)
+
+      val map = Map(
         (photonEnergyColName + index, sf(be.photonEnergy_MeV)),
         (maxDoseRateColName + index, sf(be.maxDoseRate_MUperMin)),
-        (fffEnergyColName + index, sf(be.fffEnergy_MeV)),
         (beamEnergyButtonColName + index, index.toString))
+
+      if (fff) map ++ Map((fffEnergyColName + index, "true")) else map
     }
 
     beList.zipWithIndex.map(beIndex => beToValueMap(beIndex._1, beIndex._2)).flatten.toMap

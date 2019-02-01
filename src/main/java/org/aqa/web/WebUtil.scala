@@ -86,7 +86,6 @@ object WebUtil extends Logging {
     response.getRequest.getReferrerRef.getHostIdentifier + path
   }
 
-
   /**
    * Convert the given stream to DICOM and return the attribute list.  If it
    * is not DICOM, then return None.
@@ -107,7 +106,7 @@ object WebUtil extends Logging {
   /**
    * Write the input stream to the file.
    */
-  private def saveFile(inputStream: InputStream, file: File,request: Request) = {
+  private def saveFile(inputStream: InputStream, file: File, request: Request) = {
     file.getParentFile.mkdirs
 
     val outputStream = new ByteArrayOutputStream
@@ -207,6 +206,15 @@ object WebUtil extends Logging {
 
   private def parseForm(form: Form): ValueMapT = {
     val paramList = form.toArray().toList.filter(_.isInstanceOf[Parameter]).map(_.asInstanceOf[Parameter])
+
+    paramList.map(p => { // TODO rm
+      val j = p.getName
+      val j1 = p.getValue
+      if (j.contains("FFF")) {
+        println("j: " + j + " : " + j1)
+      }
+    })
+
     paramList.map(p => (p.getName, p.getValue)).toMap
   }
 
@@ -741,6 +749,8 @@ object WebUtil extends Logging {
         if (valueMap.get(label).isDefined && valueMap.get(label).get.equals("true")) input % (<input checked="true"/>).attributes
         else input
       }
+
+      println("label: " + label + " : " + inputWithValue) // TODO rm
 
       val html = {
         <table>
