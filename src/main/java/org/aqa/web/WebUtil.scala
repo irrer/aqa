@@ -207,14 +207,6 @@ object WebUtil extends Logging {
   private def parseForm(form: Form): ValueMapT = {
     val paramList = form.toArray().toList.filter(_.isInstanceOf[Parameter]).map(_.asInstanceOf[Parameter])
 
-    paramList.map(p => { // TODO rm
-      val j = p.getName
-      val j1 = p.getValue
-      if (j.contains("FFF")) {
-        println("j: " + j + " : " + j1)
-      }
-    })
-
     paramList.map(p => (p.getName, p.getValue)).toMap
   }
 
@@ -749,8 +741,6 @@ object WebUtil extends Logging {
         if (valueMap.get(label).isDefined && valueMap.get(label).get.equals("true")) input % (<input checked="true"/>).attributes
         else input
       }
-
-      println("label: " + label + " : " + inputWithValue) // TODO rm
 
       val html = {
         <table>

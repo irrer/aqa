@@ -487,8 +487,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     }
 
     def beToValueMap(be: MachineBeamEnergy, index: Int): ValueMapT = {
-      //val fff = (be.fffEnergy_MeV.isDefined && be.fffEnergy_MeV.get != 0).toString
-      val fff = be.fffEnergy_MeV.isDefined && (be.fffEnergy_MeV.get.toDouble != 0)
+            val fff = be.fffEnergy_MeV.isDefined && (be.fffEnergy_MeV.get.toDouble != 0)
 
       val map = Map(
         (photonEnergyColName + index, sf(be.photonEnergy_MeV)),
@@ -577,7 +576,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       if (styleMap.nonEmpty) {
         form.setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
       } else {
-        updateMachineInDatabase(valueMap) // in case user has made changes  TODO
+        updateMachineInDatabase(valueMap) // in case user has made changes
         CustomizeRtPlan.redirect(machinePK, response)
       }
     } else {
