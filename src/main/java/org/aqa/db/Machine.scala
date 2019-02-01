@@ -188,6 +188,12 @@ object Machine extends Logging {
     seq
   }
 
+  def listMachinesWithCollimator(multileafCollimatorPK: Long): Seq[Machine] = {
+    val action = query.filter(m => m.multileafCollimatorPK === multileafCollimatorPK)
+    val seq = Db.run(action.result)
+    seq
+  }
+
   def findMachinesBySerialNumber(serNo: String): Seq[Machine] = {
     val sn = serNo.trim
     val action = query.filter(m => m.serialNumber === sn)

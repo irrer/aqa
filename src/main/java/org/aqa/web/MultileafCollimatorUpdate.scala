@@ -23,6 +23,7 @@ import org.restlet.data.MediaType
 import WebUtil._
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
+import org.aqa.db.Machine
 
 object MultileafCollimatorUpdate {
   val multileafCollimatorPKTag = "multileafCollimatorPK"
@@ -257,18 +258,19 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
     }
   }
 
-  private def isDelete(valueMap: ValueMapT, response: Response): Boolean = {
-    if (buttonIs(valueMap, deleteButton)) {
-      val value = valueMap.get(MultileafCollimatorUpdate.multileafCollimatorPKTag)
-      if (value.isDefined) {
+  private def delete(valueMap: ValueMapT, response: Response) = {
+    val value = valueMap.get(MultileafCollimatorUpdate.multileafCollimatorPKTag)
+    if (value.isDefined) {
+      val multileafCollimatorPK = value.get.toLong
+      val machCount = Machine.listMachinesWithCollimator(multileafCollimatorPK).size
+      if (machCount == 0) {
         MultileafCollimator.delete(value.get.toLong)
         MultileafCollimatorList.redirect(response)
-        true
-      } else
-        false
-    } else
-      false
-
+      } else {
+        val err = Error.make(model, "This multileaf collimator type is in use by " + machCount + " machines and can not be deleted.")
+        formCreate.setFormResponse(valueMap, err, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
+      }
+    }
   }
 
   private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
@@ -297,7 +299,7 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
         case _ if buttonIs(valueMap, cancelButton) => MultileafCollimatorList.redirect(response)
         case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
         case _ if buttonIs(valueMap, saveButton) => save(valueMap, pageTitleEdit, response)
-        case _ if isDelete(valueMap, response) => Nil
+        case _ if buttonIs(valueMap, deleteButton) => delete(valueMap, response)
         case _ if isEdit(valueMap, response) => Nil
         case _ => emptyForm(response)
       }
