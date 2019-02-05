@@ -23,6 +23,7 @@ import com.pixelmed.dicom.ValueRepresentation
 import com.pixelmed.dicom.AttributeTag
 import edu.umro.util.UMROGUID
 import java.io.File
+import edu.umro.ScalaUtil.Trace
 
 object CustomizeRtPlan {
   def reference(machinePK: Long) = { (new CustomizeRtPlan).pathOf + "?" + MachineUpdate.machinePKTag + "=" + machinePK }
@@ -77,36 +78,97 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     planFile
   }
 
-  private def getPlanEnergyList(machine: Machine): Seq[Double] = {
+  /**
+   * Represent a plan beam.  This class is public only to support testing.
+   */
+  case class PlanBeam(energy: Double, name: String, fff: Boolean) {
+    override def toString = {
+      name + " : " + Util.fmtDbl(energy) + { if (fff) " FFF" else "" }
+    }
+  }
+
+  private def getPlanBeamList(machine: Machine): List[PlanBeam] = {
     val plan = getCollimatorCompatiblePlanForMachine(machine)
     if (plan.isDefined) {
       val planAttrList = plan.get.dicomFile.attributeList.get
+
+      DicomUtil.seqToAttr(planAttrList, TagFromName.BeamSequence)
+
+      def beamSeqToPlanBeam(beamSeq: AttributeList): PlanBeam = {
+        val name = beamSeq.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.trim
+        val energy = DicomUtil.findAllSingle(beamSeq, TagFromName.NominalBeamEnergy).head.getDoubleValues.head
+        val fff = {
+          val FluenceModeID = DicomUtil.findAllSingle(beamSeq, TagFromName.FluenceModeID)
+          if (FluenceModeID.isEmpty) false
+          else FluenceModeID.map(fmi => fmi.getSingleStringValueOrEmptyString.toUpperCase.contains("FFF")).reduce(_ || _)
+        }
+        new PlanBeam(energy, name, fff)
+      }
+
       val attrList = DicomUtil.findAllSingle(planAttrList, TagFromName.NominalBeamEnergy)
       val list = attrList.map(a => a.getDoubleValues.head).distinct.sorted
-      logger.info("Energy list found in plan: " + list.mkString("  "))
-      list
-    } else Seq[Double]()
+
+      val planBeamList = DicomUtil.seqToAttr(planAttrList, TagFromName.BeamSequence).map(beamSeq => beamSeqToPlanBeam(beamSeq)).sortBy(_.energy)
+
+      logger.info("Energy list found in plan for machine " + machine.id + " :\n    " + planBeamList.mkString("\n    "))
+      planBeamList.toList
+    } else List[PlanBeam]()
 
   }
 
-  private def getMachineEnergyList(machinePK: Long): Seq[Double] = {
-    val list = MachineBeamEnergy.getByMachine(machinePK).map(mbe => mbe.photonEnergy_MeV).flatten.sorted
+  /**
+   * For testing only
+   */
+  def testGetPlanBeamList(machine: Machine): Seq[PlanBeam] = {
+    getPlanBeamList(machine)
+  }
+
+  private def getMachineEnergyList(machinePK: Long): Seq[MachineBeamEnergy] = {
+    def compareMBE(a: MachineBeamEnergy, b: MachineBeamEnergy): Boolean = {
+
+      val cmpr = (a.photonEnergy_MeV, b.photonEnergy_MeV, a.fffEnergy_MeV, b.fffEnergy_MeV) match {
+        case (Some(aPho), Some(bPho), _, _) if aPho != bPho => aPho < bPho
+        case (Some(aPho), _, _, _) => true
+        case (_, Some(bPho), _, _) => false
+        case (_, _, Some(afff), Some(bfff)) if afff != bfff => afff < bfff
+        case (_, _, Some(afff), _) => true
+        case (_, _, _, Some(bfff)) => false
+        case _ => true
+      }
+      cmpr
+    }
+
+    val list = MachineBeamEnergy.getByMachine(machinePK).sortWith(compareMBE)
     list
   }
 
-  private def getMachineEnergySelections(machineEnergyList: Seq[Double]): Seq[(String, String)] = {
-    val pairs = machineEnergyList.zipWithIndex.map(ei => (ei._2.toString, Util.fmtDbl(ei._1)))
-    pairs
+  /**
+   * Make the content for the machine energy selector.
+   */
+  private def getMachineEnergySelections(machineEnergyList: Seq[MachineBeamEnergy]): Seq[(String, String)] = {
+
+    def machEnergyToString(machEnergy: MachineBeamEnergy): String = {
+      val e = if (machEnergy.photonEnergy_MeV.isDefined) Util.fmtDbl(machEnergy.photonEnergy_MeV.get) else "0"
+      val fff = if (machEnergy.fffEnergy_MeV.isDefined && machEnergy.fffEnergy_MeV.get != 0) " FFF" else ""
+      e + fff
+    }
+
+    val pairs = machineEnergyList.zipWithIndex.map(ei => (ei._2.toString, machEnergyToString(ei._1)))
+    pairs :+ (pairs.size.toString, "Do not deliver")
   }
 
   private val machEnergyPrefix = "MachEnergy"
   private def machEnergyTag(index: Int) = machEnergyPrefix + index
 
-  private def energyRowList(machine: Machine, machineEnergyList: Seq[Double], planEnergyList: Seq[Double]): List[WebRow] = {
+  private def energyRowList(machine: Machine, machineEnergyList: Seq[MachineBeamEnergy], planBeamList: Seq[PlanBeam]): List[WebRow] = {
     val machineEnergySelectionList = getMachineEnergySelections(machineEnergyList)
-    val planEnergyList = getPlanEnergyList(machine).toList
-    val rowList = planEnergyList.indices.toList.map(i => {
-      val label = "For plan energy " + Util.fmtDbl(planEnergyList(i)) + " use machine energy: "
+
+    val energyList = planBeamList.map(pb => pb.energy).distinct.sorted
+
+    val rowList = energyList.indices.toList.map(i => {
+      val label = "For plan energy " + Util.fmtDbl(energyList(i)) + " use machine energy: " + {
+        planBeamList.filter(pb => pb.energy == energyList(i))
+      }
       val energyPlan = new WebPlainText(label, false, 3, 0, (ValueMapT) => { <span title="Choose the machine energy to use for the planned energy">{ label }</span> })
       val energyMach = new WebInputSelect(machEnergyTag(i), false, 1, 0, (_) => machineEnergySelectionList, false)
       val row: WebRow = List(energyPlan, energyMach)
@@ -128,18 +190,30 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
   /**
    * Find the machine energy value closest to each plan energy value and assign it.
    */
-  private def automaticEnergyAssignments(valueMap: ValueMapT, machineEnergyList: Seq[Double], planEnergyList: Seq[Double]) = {
-    def closestMachine(planEnergy: Double) = {
-      val closest = machineEnergyList.minBy(machEnergy => (machEnergy - planEnergy).abs)
-      machineEnergyList.indexOf(closest)
+  private def automaticEnergyAssignments(valueMap: ValueMapT, machineEnergyList: Seq[MachineBeamEnergy], planEnergyList: Seq[PlanBeam]) = {
+    def closestMachineEnergy(planEnergy: PlanBeam): String = {
+      val machEnergyDefined = machineEnergyList.filter(me => me.photonEnergy_MeV.isDefined)
+      if (machEnergyDefined.isEmpty) "0"
+      else {
+        val machMatchingFFF = if (planEnergy.fff)
+          machEnergyDefined.filter(me => me.fffEnergy_MeV.isDefined && me.fffEnergy_MeV.get != 0)
+        else
+          machEnergyDefined.filter(me => me.fffEnergy_MeV.isEmpty || me.fffEnergy_MeV.get == 0)
+
+        if (machMatchingFFF.isEmpty) "0"
+        else {
+          val closest = machMatchingFFF.minBy(me => (me.photonEnergy_MeV.get - planEnergy.energy).abs)
+          machineEnergyList.indexOf(closest).toString
+        }
+      }
     }
-    val energyMap = planEnergyList.indices.map(p => (machEnergyTag(p), closestMachine(planEnergyList(p)).toString)).toMap
+    val energyMap = planEnergyList.indices.map(p => (machEnergyTag(p), closestMachineEnergy(planEnergyList(p)))).toMap
     energyMap
   }
 
   private def formSelect(valueMap: ValueMapT, response: Response, machine: Machine) = {
     val machineEnergyList = getMachineEnergyList(machine.machinePK.get)
-    val planEnergyList = getPlanEnergyList(machine).toList
+    val planEnergyList = getPlanBeamList(machine).toList
     val form = new WebForm(pathOf, List(row0, row1, row2) ++ energyRowList(machine, machineEnergyList, planEnergyList) ++ List(assignButtonList))
 
     // if field is empty
@@ -218,7 +292,10 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     DicomUtil.writeAttributeList(anon, file)
   }
 
-  private def makePlan(valueMap: ValueMapT, response: Response, machine: Machine, planEnergyList: Seq[Double], machineEnergyList: Seq[Double]) = {
+  /**
+   * Given all the required information, create a plan that is compatible with the given machine.
+   */
+  private def makePlan(valueMap: ValueMapT, response: Response, machine: Machine, planEnergyList: Seq[PlanBeam], machineEnergyList: Seq[MachineBeamEnergy]) = {
 
     val rtplan = DicomUtil.clone(getCollimatorCompatiblePlanForMachine(machine).get.dicomFile.attributeList.get)
     replaceAllUids(rtplan) // change UIDs so that this plan will be considered new and unique from all others.
@@ -244,12 +321,13 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
 
     val energyMap = valueMap.keys.filter(key => key.startsWith(machEnergyPrefix)).map(key => indexToEnergyPair(key)).toMap
 
-    def changeEnergy(at: Attribute) = {
-      val energy = energyMap(at.getDoubleValues.head)
-      at.removeValues
-      at.addValue(energy)
-    }
-    DicomUtil.findAllSingle(rtplan, TagFromName.NominalBeamEnergy).map(at => changeEnergy(at))
+    // TODO
+    //    def changeEnergy(at: Attribute) = {
+    //      val energy = energyMap(at.getDoubleValues.head)
+    //      at.removeValues
+    //      at.addValue(energy)
+    //    }
+    //    DicomUtil.findAllSingle(rtplan, TagFromName.NominalBeamEnergy).map(at => changeEnergy(at))
 
     saveAnonymizedDicom(machine.institutionPK, rtplan)
 
@@ -260,7 +338,7 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     val styleMap = validate(valueMap)
     val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
     val machineEnergyList = getMachineEnergyList(machine.machinePK.get)
-    val planEnergyList = getPlanEnergyList(machine).toList
+    val planEnergyList = getPlanBeamList(machine).toList
     if (styleMap.nonEmpty) {
       val form = new WebForm(pathOf, List(row0, row1, row2) ++ energyRowList(machine, machineEnergyList, planEnergyList) ++ List(assignButtonList))
       form.setFormResponse(valueMap, styleMap, pageTitleSelect, response, Status.SUCCESS_OK)
