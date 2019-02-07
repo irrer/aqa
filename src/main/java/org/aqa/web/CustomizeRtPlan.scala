@@ -24,6 +24,8 @@ import com.pixelmed.dicom.AttributeTag
 import edu.umro.util.UMROGUID
 import java.io.File
 import edu.umro.ScalaUtil.Trace
+import com.pixelmed.dicom.SequenceAttribute
+import com.pixelmed.dicom.SequenceItem
 
 object CustomizeRtPlan {
   def reference(machinePK: Long) = { (new CustomizeRtPlan).pathOf + "?" + MachineUpdate.machinePKTag + "=" + machinePK }
@@ -183,7 +185,7 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
       val planTable = {
         val matching = planBeamList.filter(pb => ((pb.energy == distinctList(i).energy) && pb.fff == distinctList(i).fff))
 
-        val tableContents = matching.map(pb => <tr><td>{ pb.name }</td></tr>)
+        val tableContents = edu.umro.ScalaUtil.Util.sizedGroups(matching.map(pb => <td>{ pb.name }</td>), 3).map(row => <tr>{ row }</tr>)
 
         <table class="table table-bordered">
           { tableContents }
@@ -323,10 +325,85 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     DicomUtil.writeAttributeList(anon, file)
   }
 
+  private def deleteBeamFromPlan(rtplan: AttributeList, beamName: String) = {
+
+    def deleteBeamSeq: Int = {
+      // remove the beam from the BeamSequence
+      val beamSeq = DicomUtil.seqToAttr(rtplan, TagFromName.BeamSequence)
+      val toDelete = beamSeq.indices.filter(bi => beamSeq(bi).get(TagFromName.BeamName).getSingleStringValueOrEmptyString.equals(beamName)).head
+      val beamNumber = beamSeq(toDelete).get(TagFromName.BeamNumber).getIntegerValues.head
+      val withoutDeleted = beamSeq.indices.filter(i => i != toDelete).map(i => beamSeq(i))
+      val bsAttr = rtplan.get(TagFromName.BeamSequence).asInstanceOf[SequenceAttribute]
+      bsAttr.removeValues
+      withoutDeleted.map(b => bsAttr.addItem(new SequenceItem(b)))
+      //withoutDeleted.map(b => bsAttr.addItem(b))
+      beamNumber
+    }
+
+    def deleteFractSeq(beamNumber: Int): Unit = {
+      // remove the beam from the FractionGroupSequence
+      val fractSeq = DicomUtil.seqToAttr(rtplan, TagFromName.FractionGroupSequence)
+      val toDelete = fractSeq.indices.filter(fi => fractSeq(fi).get(TagFromName.ReferencedBeamNumber).getIntegerValues.head == beamNumber).head
+      val withoutDeleted = fractSeq.indices.filter(i => i != toDelete).map(i => fractSeq(i))
+      val fractAttr = rtplan.get(TagFromName.FractionGroupSequence).asInstanceOf[SequenceAttribute]
+      fractAttr.removeValues
+      withoutDeleted.map(b => fractAttr.addItem(b))
+    }
+
+    val beamNumber = deleteBeamSeq
+    deleteFractSeq(beamNumber)
+  }
+
+  private def reassignPlanEnergies(rtplan: AttributeList, valueMap: ValueMapT, planBeamList: Seq[PlanBeam], machineEnergyList: Seq[MachineBeamEnergy]): Unit = {
+    val distinctList = planBeamListToDistinct(planBeamList)
+
+    def rowOf(planBeam: PlanBeam): Int = {
+      val rowIndex = distinctList.indices.filter(i => {
+        val d = distinctList(i)
+        (d.energy == planBeam.energy) && (d.fff == planBeam.fff)
+      }).head
+      rowIndex
+    }
+
+    def machEnergyForBeam(planBeam: PlanBeam): Option[MachineBeamEnergy] = {
+      val row = rowOf(planBeamList.head)
+      val machEnergyIndex = valueMap(machEnergyTag(row)).toInt
+      if (machEnergyIndex < machineEnergyList.size) {
+        val machEnergy = machineEnergyList(machEnergyIndex)
+        Some(machEnergy)
+      } else None
+    }
+
+    def reassignOnePlanEnergy(planBeam: PlanBeam): Unit = {
+      val machEnergy = machEnergyForBeam(planBeam)
+      if (machEnergy.isEmpty) {
+        deleteBeamFromPlan(rtplan, planBeam.name)
+      } else {
+        // change the energy of the beam
+        println("hey") // TODO rm
+      }
+    }
+
+    planBeamList.map(pb => reassignOnePlanEnergy(pb))
+  }
+
+  private def removeVarianPrivateTagAttributes(rtplan: AttributeList): Unit = {
+
+    val privateTagGroupElementList = Seq(
+      (0x3253, 0x0010),
+      (0x3253, 0x1000),
+      (0x3253, 0x1001),
+      (0x3253, 0x1002),
+      (0x3287, 0x0010),
+      (0x3287, 0x1000))
+
+    privateTagGroupElementList.map(ge => rtplan.remove(new AttributeTag(ge._1, ge._2)))
+  }
+
   /**
    * Given all the required information, create a plan that is compatible with the given machine.
    */
-  private def makePlan(valueMap: ValueMapT, response: Response, machine: Machine, planEnergyList: Seq[PlanBeam], machineEnergyList: Seq[MachineBeamEnergy]) = {
+  private def makePlan(valueMap: ValueMapT, response: Response, machine: Machine, planBeamList: Seq[PlanBeam], machineEnergyList: Seq[MachineBeamEnergy]) = {
 
     val rtplan = DicomUtil.clone(getCollimatorCompatiblePlanForMachine(machine).get.dicomFile.attributeList.get)
     replaceAllUids(rtplan) // change UIDs so that this plan will be considered new and unique from all others.
@@ -344,13 +421,15 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
       DicomUtil.findAllSingle(rtplan, ov.tag).map(at => { at.removeValues; at.addValue(ov.value) })
     })
 
-    def indexToEnergyPair(key: String) = {
-      val plan = planEnergyList(key.replace(machEnergyPrefix, "").toInt)
-      val mach = machineEnergyList(valueMap(key).toInt)
-      (plan, mach)
-    }
+    reassignPlanEnergies(rtplan, valueMap, planBeamList, machineEnergyList)
 
-    val energyMap = valueMap.keys.filter(key => key.startsWith(machEnergyPrefix)).map(key => indexToEnergyPair(key)).toMap
+    //    def indexToEnergyPair(key: String) = {
+    //      val plan = planBeamList(key.replace(machEnergyPrefix, "").toInt)
+    //      val mach = machineEnergyList(valueMap(key).toInt)
+    //      (plan, mach)
+    //    }
+
+    //    val energyMap = valueMap.keys.filter(key => key.startsWith(machEnergyPrefix)).map(key => indexToEnergyPair(key)).toMap
 
     // TODO
     //    def changeEnergy(at: Attribute) = {
@@ -401,7 +480,7 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
         case _ if machine.isEmpty => updateMach
         case _ if (user.get.institutionPK != machine.get.institutionPK) && (!WebUtil.userIsWhitelisted(request)) => updateMach
         case _ if buttonIs(valueMap, cancelButton) => updateMach
-        case _ if buttonIs(valueMap, backButton) => formSelect(valueMap, response, machine.get)
+        case _ if buttonIs(valueMap, backButton) => updateMach
         case _ if buttonIs(valueMap, createButton) => createPlan(valueMap, response)
         case _ => formSelect(valueMap, response, machine.get) // first time viewing the form.  Set defaults
       }
