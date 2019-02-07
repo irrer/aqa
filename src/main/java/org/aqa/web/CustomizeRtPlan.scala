@@ -82,8 +82,10 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
    * Represent a plan beam.  This class is public only to support testing.
    */
   case class PlanBeam(energy: Double, name: String, fff: Boolean) {
+    def fffAsText = { if (fff) " FFF" else "" }
+
     override def toString = {
-      name + " : " + Util.fmtDbl(energy) + { if (fff) " FFF" else "" }
+      name + " : " + Util.fmtDbl(energy) + fffAsText
     }
   }
 
@@ -160,21 +162,44 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
   private val machEnergyPrefix = "MachEnergy"
   private def machEnergyTag(index: Int) = machEnergyPrefix + index
 
+  /**
+   * get list of beams in plan that are distinct (disregarding beam names)
+   */
+  private def planBeamListToDistinct(planBeamList: Seq[PlanBeam]): Seq[PlanBeam] = {
+    val energyList = planBeamList.map(pb => new PlanBeam(pb.energy, "", pb.fff)).toSet.toList
+    energyList.sortWith((a, b) => if (a.energy != b.energy) a.energy < b.energy else b.fff)
+  }
+
   private def energyRowList(machine: Machine, machineEnergyList: Seq[MachineBeamEnergy], planBeamList: Seq[PlanBeam]): List[WebRow] = {
     val machineEnergySelectionList = getMachineEnergySelections(machineEnergyList)
 
-    val energyList = planBeamList.map(pb => pb.energy).distinct.sorted
+    val distinctList = planBeamListToDistinct(planBeamList)
 
-    val rowList = energyList.indices.toList.map(i => {
-      val label = "For plan energy " + Util.fmtDbl(energyList(i)) + " use machine energy: " + {
-        planBeamList.filter(pb => pb.energy == energyList(i))
+    val rowList = distinctList.indices.map(i => {
+      val fff = if (distinctList(i).fff) " FFF" else ""
+
+      val label = "For plan beams below with energy " + Util.fmtDbl(distinctList(i).energy) + fff + " use machine energy: "
+
+      val planTable = {
+        val matching = planBeamList.filter(pb => ((pb.energy == distinctList(i).energy) && pb.fff == distinctList(i).fff))
+
+        val tableContents = matching.map(pb => <tr><td>{ pb.name }</td></tr>)
+
+        <table class="table table-bordered">
+          { tableContents }
+        </table>
       }
-      val energyPlan = new WebPlainText(label, false, 3, 0, (ValueMapT) => { <span title="Choose the machine energy to use for the planned energy">{ label }</span> })
-      val energyMach = new WebInputSelect(machEnergyTag(i), false, 1, 0, (_) => machineEnergySelectionList, false)
+
+      val elem = {
+        <span title="Choose the machine energy to use for the planned energy">{ <label class="control-label">{ label }</label> }<br></br>{ planTable }</span>
+      }
+
+      val energyPlan = new WebPlainText(label, false, 4, 0, (ValueMapT) => elem)
+      val energyMach = new WebInputSelect(machEnergyTag(i), false, 2, 0, (_) => machineEnergySelectionList, false)
       val row: WebRow = List(energyPlan, energyMach)
       row
     })
-    rowList
+    rowList.toList
   }
 
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
@@ -190,24 +215,30 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
   /**
    * Find the machine energy value closest to each plan energy value and assign it.
    */
-  private def automaticEnergyAssignments(valueMap: ValueMapT, machineEnergyList: Seq[MachineBeamEnergy], planEnergyList: Seq[PlanBeam]) = {
+  private def automaticEnergyAssignments(valueMap: ValueMapT, machineEnergyList: Seq[MachineBeamEnergy], planBeamList: Seq[PlanBeam]) = {
+
+    val distinctList = planBeamListToDistinct(planBeamList)
+
     def closestMachineEnergy(planEnergy: PlanBeam): String = {
       val machEnergyDefined = machineEnergyList.filter(me => me.photonEnergy_MeV.isDefined)
-      if (machEnergyDefined.isEmpty) "0"
+      if (machEnergyDefined.isEmpty)
+        "0"
       else {
-        val machMatchingFFF = if (planEnergy.fff)
-          machEnergyDefined.filter(me => me.fffEnergy_MeV.isDefined && me.fffEnergy_MeV.get != 0)
-        else
-          machEnergyDefined.filter(me => me.fffEnergy_MeV.isEmpty || me.fffEnergy_MeV.get == 0)
-
-        if (machMatchingFFF.isEmpty) "0"
+        val machMatchingFFF = {
+          if (planEnergy.fff)
+            machEnergyDefined.filter(me => me.fffEnergy_MeV.isDefined && me.fffEnergy_MeV.get != 0)
+          else
+            machEnergyDefined.filter(me => me.fffEnergy_MeV.isEmpty || me.fffEnergy_MeV.get == 0)
+        }
+        if (machMatchingFFF.isEmpty)
+          "0"
         else {
           val closest = machMatchingFFF.minBy(me => (me.photonEnergy_MeV.get - planEnergy.energy).abs)
           machineEnergyList.indexOf(closest).toString
         }
       }
     }
-    val energyMap = planEnergyList.indices.map(p => (machEnergyTag(p), closestMachineEnergy(planEnergyList(p)))).toMap
+    val energyMap = distinctList.indices.map(p => (machEnergyTag(p), closestMachineEnergy(distinctList(p)))).toMap
     energyMap
   }
 
@@ -328,6 +359,8 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     //      at.addValue(energy)
     //    }
     //    DicomUtil.findAllSingle(rtplan, TagFromName.NominalBeamEnergy).map(at => changeEnergy(at))
+
+    // changeBeams(rtplan
 
     saveAnonymizedDicom(machine.institutionPK, rtplan)
 
