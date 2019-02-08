@@ -28,6 +28,8 @@ case class MachineBeamEnergy(
       maxDoseRate_MUperMin.equals(other.maxDoseRate_MUperMin) &&
       fffEnergy_MeV.equals(other.fffEnergy_MeV)
   }
+
+  def isFFF = fffEnergy_MeV.isDefined && (fffEnergy_MeV.get > 0)
 }
 
 object MachineBeamEnergy {

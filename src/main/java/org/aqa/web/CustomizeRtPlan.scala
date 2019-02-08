@@ -325,33 +325,44 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     DicomUtil.writeAttributeList(anon, file)
   }
 
-  private def deleteBeamFromPlan(rtplan: AttributeList, beamName: String) = {
+  private def deleteBeamFromPlan(rtplan: AttributeList, beamName: String): Unit = {
 
-    def deleteBeamSeq: Int = {
-      // remove the beam from the BeamSequence
-      val beamSeq = DicomUtil.seqToAttr(rtplan, TagFromName.BeamSequence)
-      val toDelete = beamSeq.indices.filter(bi => beamSeq(bi).get(TagFromName.BeamName).getSingleStringValueOrEmptyString.equals(beamName)).head
-      val beamNumber = beamSeq(toDelete).get(TagFromName.BeamNumber).getIntegerValues.head
-      val withoutDeleted = beamSeq.indices.filter(i => i != toDelete).map(i => beamSeq(i))
-      val bsAttr = rtplan.get(TagFromName.BeamSequence).asInstanceOf[SequenceAttribute]
-      bsAttr.removeValues
-      withoutDeleted.map(b => bsAttr.addItem(new SequenceItem(b)))
-      //withoutDeleted.map(b => bsAttr.addItem(b))
-      beamNumber
+    def deleteFractSeq(BeamNumber: Int): Unit = {
+      val FractionGroupSequence = DicomUtil.seqToAttr(rtplan, TagFromName.FractionGroupSequence).head
+      val ReferencedBeamSequence = DicomUtil.seqToAttr(FractionGroupSequence, TagFromName.ReferencedBeamSequence)
+      DicomUtil.removeSeq(FractionGroupSequence, TagFromName.ReferencedBeamSequence, (al: AttributeList) => al.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head == BeamNumber)
     }
 
-    def deleteFractSeq(beamNumber: Int): Unit = {
-      // remove the beam from the FractionGroupSequence
-      val fractSeq = DicomUtil.seqToAttr(rtplan, TagFromName.FractionGroupSequence)
-      val toDelete = fractSeq.indices.filter(fi => fractSeq(fi).get(TagFromName.ReferencedBeamNumber).getIntegerValues.head == beamNumber).head
-      val withoutDeleted = fractSeq.indices.filter(i => i != toDelete).map(i => fractSeq(i))
-      val fractAttr = rtplan.get(TagFromName.FractionGroupSequence).asInstanceOf[SequenceAttribute]
-      fractAttr.removeValues
-      withoutDeleted.map(b => fractAttr.addItem(b))
+    def deletePatientSetup(PatientSetupNumber: Int): Unit = {
+      DicomUtil.removeSeq(rtplan, TagFromName.PatientSetupSequence, (al: AttributeList) => al.get(TagFromName.PatientSetupNumber).getIntegerValues.head == PatientSetupNumber)
     }
 
-    val beamNumber = deleteBeamSeq
-    deleteFractSeq(beamNumber)
+    // remove the beam from the BeamSequence
+    def deleteBeamSeq: Unit = {
+      val removed = DicomUtil.removeSeq(rtplan, TagFromName.BeamSequence, (al: AttributeList) => al.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.equals(beamName))
+
+      val BeamNumber = removed.head.get(TagFromName.BeamNumber).getIntegerValues.head
+      val PatientSetupNumber = removed.head.get(TagFromName.ReferencedPatientSetupNumber).getIntegerValues.head
+
+      deleteFractSeq(BeamNumber)
+      deletePatientSetup(PatientSetupNumber)
+    }
+
+    deleteBeamSeq
+    logger.info("CustomizeRtPlan removed beam " + beamName)
+  }
+
+  /**
+   * Ensure that the number of beams in the FractionGroupSequence is correct.
+   */
+  private def setNumberOfBeamsInFractionGroupSequence(rtplan: AttributeList): Unit = {
+    val noOfBeams = DicomUtil.seqToAttr(rtplan, TagFromName.BeamSequence).size
+    def setNumberOfBeams(al: AttributeList) = {
+      val NumberOfBeams = al.get(TagFromName.NumberOfBeams)
+      NumberOfBeams.removeValues
+      NumberOfBeams.addValue(noOfBeams)
+    }
+    DicomUtil.seqToAttr(rtplan, TagFromName.FractionGroupSequence).map(al => setNumberOfBeams(al))
   }
 
   private def reassignPlanEnergies(rtplan: AttributeList, valueMap: ValueMapT, planBeamList: Seq[PlanBeam], machineEnergyList: Seq[MachineBeamEnergy]): Unit = {
@@ -366,12 +377,65 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     }
 
     def machEnergyForBeam(planBeam: PlanBeam): Option[MachineBeamEnergy] = {
-      val row = rowOf(planBeamList.head)
+      val row = rowOf(planBeam)
       val machEnergyIndex = valueMap(machEnergyTag(row)).toInt
       if (machEnergyIndex < machineEnergyList.size) {
         val machEnergy = machineEnergyList(machEnergyIndex)
         Some(machEnergy)
-      } else None
+      } else
+        None
+    }
+
+    def changePlanEnergyToMachineEnergy(planBeam: PlanBeam, machEnergy: MachineBeamEnergy): Unit = {
+      val beamAl = DicomUtil.seqToAttr(rtplan, TagFromName.BeamSequence).filter(al => al.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.equals(planBeam.name)).head
+      val controlPtSeq = DicomUtil.seqToAttr(beamAl, TagFromName.ControlPointSequence)
+
+      def isFFFBeam: Boolean = {
+        val PrimaryFluenceModeSequence = DicomUtil.seqToAttr(beamAl, TagFromName.PrimaryFluenceModeSequence)
+        val fff = PrimaryFluenceModeSequence.map(pfms => pfms.get(TagFromName.FluenceModeID).getSingleStringValueOrEmptyString).mkString("").toLowerCase.contains("fff")
+        fff
+      }
+
+      def changeToFluenceFFF = {
+
+        /*
+         * /cygdrive/d/tmp/aqa
+         *
+         * fluence_standard.txt
+         * fluence_fff.txt
+         */
+
+        ??? // TODO
+      }
+
+      def changeToFluenceStandard = {
+
+        /*
+         * /cygdrive/d/tmp/aqa
+         *
+         * fluence_standard.txt
+         * fluence_fff.txt
+         */
+
+        ??? // TODO
+      }
+
+      def changeOne(cpt: AttributeList): Unit = {
+        val NominalBeamEnergy = cpt.get(TagFromName.NominalBeamEnergy)
+
+        NominalBeamEnergy.removeValues
+        NominalBeamEnergy.addValue(machEnergy.photonEnergy_MeV.get)
+
+      }
+
+      controlPtSeq.map(cpt => changeOne(cpt))
+
+      if (isFFFBeam != machEnergy.isFFF) {
+        if (machEnergy.isFFF)
+          changeToFluenceFFF
+        else
+          changeToFluenceStandard
+      }
     }
 
     def reassignOnePlanEnergy(planBeam: PlanBeam): Unit = {
@@ -380,13 +444,19 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
         deleteBeamFromPlan(rtplan, planBeam.name)
       } else {
         // change the energy of the beam
-        println("hey") // TODO rm
+        changePlanEnergyToMachineEnergy(planBeam, machEnergy.get)
       }
     }
 
     planBeamList.map(pb => reassignOnePlanEnergy(pb))
+    setNumberOfBeamsInFractionGroupSequence(rtplan)
   }
 
+  /**
+   * There are some Varian private tags that are in a proprietary format that is not possible to
+   * duplicate.  The tags are not necessary for treatment so they are deleted so that they do not
+   * invalidate the plan.
+   */
   private def removeVarianPrivateTagAttributes(rtplan: AttributeList): Unit = {
 
     val privateTagGroupElementList = Seq(
@@ -422,27 +492,7 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     })
 
     reassignPlanEnergies(rtplan, valueMap, planBeamList, machineEnergyList)
-
-    //    def indexToEnergyPair(key: String) = {
-    //      val plan = planBeamList(key.replace(machEnergyPrefix, "").toInt)
-    //      val mach = machineEnergyList(valueMap(key).toInt)
-    //      (plan, mach)
-    //    }
-
-    //    val energyMap = valueMap.keys.filter(key => key.startsWith(machEnergyPrefix)).map(key => indexToEnergyPair(key)).toMap
-
-    // TODO
-    //    def changeEnergy(at: Attribute) = {
-    //      val energy = energyMap(at.getDoubleValues.head)
-    //      at.removeValues
-    //      at.addValue(energy)
-    //    }
-    //    DicomUtil.findAllSingle(rtplan, TagFromName.NominalBeamEnergy).map(at => changeEnergy(at))
-
-    // changeBeams(rtplan
-
     saveAnonymizedDicom(machine.institutionPK, rtplan)
-
     showDownload(rtplan, valueMap, machine, response)
   }
 
