@@ -26,6 +26,10 @@ import java.io.File
 import edu.umro.ScalaUtil.Trace
 import com.pixelmed.dicom.SequenceAttribute
 import com.pixelmed.dicom.SequenceItem
+import org.aqa.VarianPrivateTag
+import com.pixelmed.dicom.AttributeFactory
+import com.pixelmed.dicom.LongStringAttribute
+import com.pixelmed.dicom.CodeStringAttribute
 
 object CustomizeRtPlan {
   def reference(machinePK: Long) = { (new CustomizeRtPlan).pathOf + "?" + MachineUpdate.machinePKTag + "=" + machinePK }
@@ -392,40 +396,85 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
 
       def isFFFBeam: Boolean = {
         val PrimaryFluenceModeSequence = DicomUtil.seqToAttr(beamAl, TagFromName.PrimaryFluenceModeSequence)
-        val fff = PrimaryFluenceModeSequence.map(pfms => pfms.get(TagFromName.FluenceModeID).getSingleStringValueOrEmptyString).mkString("").toLowerCase.contains("fff")
+        def isFFF(pfms: AttributeList): Boolean = {
+          val FluenceModeID = pfms.get(TagFromName.FluenceModeID)
+          (FluenceModeID != null) && FluenceModeID.getSingleStringValueOrEmptyString.toLowerCase.contains("fff")
+        }
+        val fff = PrimaryFluenceModeSequence.map(pfms => isFFF(pfms)).reduce(_ || _)
         fff
       }
 
-      def changeToFluenceFFF = {
+      /**
+       * Remove both the DICOM standard and Varian fluence references.
+       */
+      def removeFluence = {
+        val PrimaryFluenceModeSequence = beamAl.get(TagFromName.PrimaryFluenceModeSequence)
+        if (PrimaryFluenceModeSequence != null) beamAl.remove(TagFromName.PrimaryFluenceModeSequence)
 
-        /*
-         * /cygdrive/d/tmp/aqa
-         *
-         * fluence_standard.txt
-         * fluence_fff.txt
-         */
-
-        ??? // TODO
+        val VarianPrimaryFluenceModeSequence = beamAl.get(VarianPrivateTag.PrimaryFluenceModeSequence)
+        if (VarianPrimaryFluenceModeSequence != null) beamAl.remove(VarianPrivateTag.PrimaryFluenceModeSequence)
       }
 
+      /**
+       * Add a sequence to the current beam.
+       */
+      def addSequence(tag: AttributeTag): AttributeList = {
+        val seq = new SequenceAttribute(tag)
+        beamAl.put(seq)
+        val al = new AttributeList
+        seq.addItem(al)
+        al
+      }
+
+      def addFluenceMode(al: AttributeList, value: String) = {
+        val FluenceMode = AttributeFactory.newAttribute(TagFromName.FluenceMode)
+        FluenceMode.addValue(value)
+        al.put(FluenceMode)
+      }
+
+      def addFluenceModeID(al: AttributeList, value: String) = {
+        val FluenceModeID = AttributeFactory.newAttribute(TagFromName.FluenceModeID)
+        FluenceModeID.addValue(value)
+        al.put(FluenceModeID)
+      }
+
+      def addVarianCreator3285(al: AttributeList) = al.put(VarianPrivateTag.newVarianCreator3285("Varian Medical Systems VISION 3285"))
+      def addVarianFluenceMode(al: AttributeList, mode: String) = al.put(VarianPrivateTag.newFluenceMode(mode))
+      def addVarianFluenceModeID(al: AttributeList, mode: String) = al.put(VarianPrivateTag.newFluenceModeID(mode))
+
       def changeToFluenceStandard = {
+        removeFluence
+        // standard attributes
+        val al = addSequence(TagFromName.PrimaryFluenceModeSequence)
+        addFluenceMode(al, "STANDARD")
 
-        /*
-         * /cygdrive/d/tmp/aqa
-         *
-         * fluence_standard.txt
-         * fluence_fff.txt
-         */
+        // Varian attributes
+        val alv = addSequence(VarianPrivateTag.PrimaryFluenceModeSequence)
+        addVarianCreator3285(alv)
+        addVarianFluenceMode(alv, "STANDARD")
+      }
 
-        ??? // TODO
+      def changeToFluenceFFF = {
+        removeFluence
+        // standard attributes
+        val al = addSequence(TagFromName.PrimaryFluenceModeSequence)
+        addFluenceMode(al, "NON_STANDARD")
+        addFluenceModeID(al, "FFF")
+
+        // Varian attributes
+        val alv = addSequence(VarianPrivateTag.PrimaryFluenceModeSequence)
+        addVarianCreator3285(alv)
+        addVarianFluenceMode(alv, "NON_STANDARD")
+        addVarianFluenceModeID(alv, "FFF")
       }
 
       def changeOne(cpt: AttributeList): Unit = {
         val NominalBeamEnergy = cpt.get(TagFromName.NominalBeamEnergy)
 
-        NominalBeamEnergy.removeValues
-        NominalBeamEnergy.addValue(machEnergy.photonEnergy_MeV.get)
-
+        if (NominalBeamEnergy != null) {
+          NominalBeamEnergy.removeValues
+          NominalBeamEnergy.addValue(machEnergy.photonEnergy_MeV.get)
+        }
       }
 
       controlPtSeq.map(cpt => changeOne(cpt))
@@ -459,15 +508,15 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
    */
   private def removeVarianPrivateTagAttributes(rtplan: AttributeList): Unit = {
 
-    val privateTagGroupElementList = Seq(
-      (0x3253, 0x0010),
-      (0x3253, 0x1000),
-      (0x3253, 0x1001),
-      (0x3253, 0x1002),
-      (0x3287, 0x0010),
-      (0x3287, 0x1000))
+    val privateTagList = Seq(
+      VarianPrivateTag.VarianCreator3253,
+      VarianPrivateTag.ExtendedInterfaceData,
+      VarianPrivateTag.ExtendedInterfaceLength,
+      VarianPrivateTag.ExtendedInterfaceFormat,
+      VarianPrivateTag.VarianCreator3287,
+      VarianPrivateTag.PlanIntegritySequence)
 
-    privateTagGroupElementList.map(ge => rtplan.remove(new AttributeTag(ge._1, ge._2)))
+    privateTagList.map(tag => rtplan.remove(tag))
   }
 
   /**
@@ -491,6 +540,7 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
       DicomUtil.findAllSingle(rtplan, ov.tag).map(at => { at.removeValues; at.addValue(ov.value) })
     })
 
+    removeVarianPrivateTagAttributes(rtplan)
     reassignPlanEnergies(rtplan, valueMap, planBeamList, machineEnergyList)
     saveAnonymizedDicom(machine.institutionPK, rtplan)
     showDownload(rtplan, valueMap, machine, response)
