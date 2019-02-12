@@ -689,6 +689,8 @@ object Config extends Logging {
   val MetadataCheckBeamNameList: List[String] = getMetadataCheckBeamNameList
 
   val FloodFieldBeamName = logMainText("FloodFieldBeamName")
+  
+  val PrefixForMachineDependentBeamName = logMainText("PrefixForMachineDependentBeamName")
 
   val CollimatorCenteringTolerence_mm = logMainText("CollimatorCenteringTolerence_mm").toDouble
   val CollimatorCentering090BeamName = logMainText("CollimatorCentering090BeamName")

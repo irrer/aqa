@@ -37,6 +37,8 @@ object CustomizeRtPlan {
   def redirect(machinePK: Long, response: Response): Unit = response.redirectSeeOther(reference(machinePK))
 
   def redirect(valueMap: ValueMapT, response: Response): Unit = redirect(valueMap(MachineUpdate.machinePKTag).toLong, response)
+
+  private val standardBeamEnergy = 6.0
 }
 
 /**
@@ -100,8 +102,6 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     if (plan.isDefined) {
       val planAttrList = plan.get.dicomFile.attributeList.get
 
-      DicomUtil.seqToAttr(planAttrList, TagFromName.BeamSequence)
-
       def beamSeqToPlanBeam(beamSeq: AttributeList): PlanBeam = {
         val name = beamSeq.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.trim
         val energy = DicomUtil.findAllSingle(beamSeq, TagFromName.NominalBeamEnergy).head.getDoubleValues.head
@@ -150,64 +150,6 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     list
   }
 
-  /**
-   * Make the content for the machine energy selector.
-   */
-  private def getMachineEnergySelections(machineEnergyList: Seq[MachineBeamEnergy]): Seq[(String, String)] = {
-
-    def machEnergyToString(machEnergy: MachineBeamEnergy): String = {
-      val e = if (machEnergy.photonEnergy_MeV.isDefined) Util.fmtDbl(machEnergy.photonEnergy_MeV.get) else "0"
-      val fff = if (machEnergy.fffEnergy_MeV.isDefined && machEnergy.fffEnergy_MeV.get != 0) " FFF" else ""
-      e + fff
-    }
-
-    val pairs = machineEnergyList.zipWithIndex.map(ei => (ei._2.toString, machEnergyToString(ei._1)))
-    pairs :+ (pairs.size.toString, "Do not deliver")
-  }
-
-  private val machEnergyPrefix = "MachEnergy"
-  private def machEnergyTag(index: Int) = machEnergyPrefix + index
-
-  /**
-   * get list of beams in plan that are distinct (disregarding beam names)
-   */
-  private def planBeamListToDistinct(planBeamList: Seq[PlanBeam]): Seq[PlanBeam] = {
-    val energyList = planBeamList.map(pb => new PlanBeam(pb.energy, "", pb.fff)).toSet.toList
-    energyList.sortWith((a, b) => if (a.energy != b.energy) a.energy < b.energy else b.fff)
-  }
-
-  private def energyRowList(machine: Machine, machineEnergyList: Seq[MachineBeamEnergy], planBeamList: Seq[PlanBeam]): List[WebRow] = {
-    val machineEnergySelectionList = getMachineEnergySelections(machineEnergyList)
-
-    val distinctList = planBeamListToDistinct(planBeamList)
-
-    val rowList = distinctList.indices.map(i => {
-      val fff = if (distinctList(i).fff) " FFF" else ""
-
-      val label = "For plan beams below with energy " + Util.fmtDbl(distinctList(i).energy) + fff + " use machine energy: "
-
-      val planTable = {
-        val matching = planBeamList.filter(pb => ((pb.energy == distinctList(i).energy) && pb.fff == distinctList(i).fff))
-
-        val tableContents = edu.umro.ScalaUtil.Util.sizedGroups(matching.map(pb => <td>{ pb.name }</td>), 3).map(row => <tr>{ row }</tr>)
-
-        <table class="table table-bordered">
-          { tableContents }
-        </table>
-      }
-
-      val elem = {
-        <span title="Choose the machine energy to use for the planned energy">{ <label class="control-label">{ label }</label> }<br></br>{ planTable }</span>
-      }
-
-      val energyPlan = new WebPlainText(label, false, 4, 0, (ValueMapT) => elem)
-      val energyMach = new WebInputSelect(machEnergyTag(i), false, 2, 0, (_) => machineEnergySelectionList, false)
-      val row: WebRow = List(energyPlan, energyMach)
-      row
-    })
-    rowList.toList
-  }
-
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
     new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
   }
@@ -218,40 +160,8 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
 
   private val assignButtonList: WebRow = List(createButton, cancelButton, machinePK)
 
-  /**
-   * Find the machine energy value closest to each plan energy value and assign it.
-   */
-  private def automaticEnergyAssignments(valueMap: ValueMapT, machineEnergyList: Seq[MachineBeamEnergy], planBeamList: Seq[PlanBeam]) = {
-
-    val distinctList = planBeamListToDistinct(planBeamList)
-
-    def closestMachineEnergy(planEnergy: PlanBeam): String = {
-      val machEnergyDefined = machineEnergyList.filter(me => me.photonEnergy_MeV.isDefined)
-      if (machEnergyDefined.isEmpty)
-        "0"
-      else {
-        val machMatchingFFF = {
-          if (planEnergy.fff)
-            machEnergyDefined.filter(me => me.fffEnergy_MeV.isDefined && me.fffEnergy_MeV.get != 0)
-          else
-            machEnergyDefined.filter(me => me.fffEnergy_MeV.isEmpty || me.fffEnergy_MeV.get == 0)
-        }
-        if (machMatchingFFF.isEmpty)
-          "0"
-        else {
-          val closest = machMatchingFFF.minBy(me => (me.photonEnergy_MeV.get - planEnergy.energy).abs)
-          machineEnergyList.indexOf(closest).toString
-        }
-      }
-    }
-    val energyMap = distinctList.indices.map(p => (machEnergyTag(p), closestMachineEnergy(distinctList(p)))).toMap
-    energyMap
-  }
-
   private def formSelect(valueMap: ValueMapT, response: Response, machine: Machine) = {
-    val machineEnergyList = getMachineEnergyList(machine.machinePK.get)
-    val planEnergyList = getPlanBeamList(machine).toList
-    val form = new WebForm(pathOf, List(row0, row1, row2) ++ energyRowList(machine, machineEnergyList, planEnergyList) ++ List(assignButtonList))
+    val form = new WebForm(pathOf, List(row0, row1, row2) ++ List(assignButtonList))
 
     // if field is empty
     def empty(label: String) = valueMap.get(label).isEmpty || (valueMap(label).trim.size == 0)
@@ -260,12 +170,11 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
 
     def getRealMachineId = AnonymizeUtil.decryptWithNonce(machine.institutionPK, machine.id_real.get)
 
-    val assignValMap = if (empty(machEnergyTag(0))) automaticEnergyAssignments(valueMap, machineEnergyList, planEnergyList) else emptyValueMap
     val patientIdMap = if (empty(patientID.label)) Map((patientID.label, defaultPatient)) else emptyValueMap
     val patientNameMap = if (empty(patientName.label)) Map((patientName.label, defaultPatient)) else emptyValueMap
     val machineNameMap = if (empty(machineName.label)) Map((machineName.label, getRealMachineId)) else emptyValueMap
 
-    val valMap = valueMap ++ assignValMap ++ patientIdMap ++ patientNameMap ++ machineNameMap
+    val valMap = valueMap ++ patientIdMap ++ patientNameMap ++ machineNameMap
     form.setFormResponse(valMap, styleNone, pageTitleSelect, response, Status.SUCCESS_OK)
   }
 
@@ -369,135 +278,223 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     DicomUtil.seqToAttr(rtplan, TagFromName.FractionGroupSequence).map(al => setNumberOfBeams(al))
   }
 
+  private def changeNominalBeamEnergy(beamAl: AttributeList, energy: Double): Unit = {
+    val controlPtSeq = DicomUtil.seqToAttr(beamAl, TagFromName.ControlPointSequence)
+
+    def changeOne(cpt: AttributeList): Unit = {
+      val NominalBeamEnergy = cpt.get(TagFromName.NominalBeamEnergy)
+
+      if (NominalBeamEnergy != null) {
+        NominalBeamEnergy.removeValues
+        NominalBeamEnergy.addValue(energy)
+      }
+    }
+
+    controlPtSeq.map(cpt => changeOne(cpt))
+  }
+
+  /**
+   * Get the energy of a beam.
+   */
+  private def getEnergy(beamAl: AttributeList): Double = {
+
+    def cpsEnergy(cpal: AttributeList): Option[Double] = {
+      val NominalBeamEnergy = cpal.get(TagFromName.NominalBeamEnergy)
+      if (NominalBeamEnergy == null) None
+      else Some(NominalBeamEnergy.getDoubleValues.head)
+    }
+
+    val cps = DicomUtil.seqToAttr(beamAl, TagFromName.ControlPointSequence).map(cpal => cpsEnergy(cpal)).flatten.max
+    cps
+  }
+
+  private def getFractionReference(rtplan: AttributeList, BeamNumber: Int): AttributeList = {
+    val FractionGroupSequence = DicomUtil.seqToAttr(rtplan, TagFromName.FractionGroupSequence)
+    val ReferencedBeamSequence = FractionGroupSequence.map(fractAl => DicomUtil.seqToAttr(fractAl, TagFromName.ReferencedBeamSequence)).flatten
+
+    def beamNumberMatches(fractAl: AttributeList): Boolean = {
+      val ReferencedBeamNumber = fractAl.get(TagFromName.ReferencedBeamNumber)
+      (ReferencedBeamNumber != null) && (ReferencedBeamNumber.getIntegerValues.head == BeamNumber)
+    }
+
+    ReferencedBeamSequence.filter(fractAl => beamNumberMatches(fractAl)).head
+  }
+
+  private case class BeamReference(beam: AttributeList, fractionReference: AttributeList);
+
+  /**
+   * Determine if the beam is non-standard
+   */
+  private def isNonStd(beamAl: AttributeList): Boolean = {
+    beamAl.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.startsWith(Config.PrefixForMachineDependentBeamName)
+  }
+
+  /**
+   * Get the beam to be copied and modified to make non-standard beams.  It is chosen by selecting the
+   * beams names starting with <code>Config.PrefixForMachineDependentBeamName</code> and of those selecting
+   * the one with the highest energy.
+   */
+  private def getPrototypeNonStandardBeam(rtplan: AttributeList): AttributeList = {
+    val beamList = DicomUtil.seqToAttr(rtplan, TagFromName.BeamSequence)
+    val proto = beamList.filter(b => isNonStd(b)).maxBy(getEnergy _)
+    proto
+  }
+
+  /**
+   * Remove beams from the plan that do not have the standard energy level.  Also remove their ControlPoint counterparts.
+   */
+  private def removeNonStandardBeams(rtplan: AttributeList): Unit = {
+    val beamNameList = DicomUtil.seqToAttr(rtplan, TagFromName.BeamSequence).filter(beamAl => isNonStd(beamAl)).map(beamAl => beamAl.get(TagFromName.BeamName).getSingleStringValueOrEmptyString)
+    beamNameList.map(beamName => deleteBeamFromPlan(rtplan, beamName))
+  }
+
+  /**
+   * Get an unused beam number.
+   */
+  private def getAvailableBeamNumber(rtplan: AttributeList): Int = {
+    val all = DicomUtil.seqToAttr(rtplan, TagFromName.BeamSequence).map(beamAl => beamAl.get(TagFromName.BeamNumber).getIntegerValues.head)
+    val available = (1 to (all.max + 1)).find(i => !(all.contains(i)))
+    available.get
+  }
+
+  private def setFluence(beamAl: AttributeList, fff: Boolean) {
+
+    def isFFFBeam(beamAl: AttributeList): Boolean = {
+      val PrimaryFluenceModeSequence = DicomUtil.seqToAttr(beamAl, TagFromName.PrimaryFluenceModeSequence)
+      def isFFF(pfms: AttributeList): Boolean = {
+        val FluenceModeID = pfms.get(TagFromName.FluenceModeID)
+        (FluenceModeID != null) && FluenceModeID.getSingleStringValueOrEmptyString.toLowerCase.contains("fff")
+      }
+      val fff = PrimaryFluenceModeSequence.map(pfms => isFFF(pfms)).reduce(_ || _)
+      fff
+    }
+
+    /**
+     * Remove both the DICOM standard and Varian fluence references.
+     */
+    def removeFluence = {
+      val PrimaryFluenceModeSequence = beamAl.get(TagFromName.PrimaryFluenceModeSequence)
+      if (PrimaryFluenceModeSequence != null) beamAl.remove(TagFromName.PrimaryFluenceModeSequence)
+
+      val VarianPrimaryFluenceModeSequence = beamAl.get(VarianPrivateTag.PrimaryFluenceModeSequence)
+      if (VarianPrimaryFluenceModeSequence != null) beamAl.remove(VarianPrivateTag.PrimaryFluenceModeSequence)
+    }
+
+    /**
+     * Add a sequence to the current beam.
+     */
+    def addSequence(tag: AttributeTag): AttributeList = {
+      val seq = new SequenceAttribute(tag)
+      beamAl.put(seq)
+      val al = new AttributeList
+      seq.addItem(al)
+      al
+    }
+
+    def addFluenceMode(al: AttributeList, value: String) = {
+      val FluenceMode = AttributeFactory.newAttribute(TagFromName.FluenceMode)
+      FluenceMode.addValue(value)
+      al.put(FluenceMode)
+    }
+
+    def addFluenceModeID(al: AttributeList, value: String) = {
+      val FluenceModeID = AttributeFactory.newAttribute(TagFromName.FluenceModeID)
+      FluenceModeID.addValue(value)
+      al.put(FluenceModeID)
+    }
+
+    def addVarianCreator3285(al: AttributeList) = al.put(VarianPrivateTag.newVarianCreator3285("Varian Medical Systems VISION 3285"))
+    def addVarianFluenceMode(al: AttributeList, mode: String) = al.put(VarianPrivateTag.newFluenceMode(mode))
+    def addVarianFluenceModeID(al: AttributeList, mode: String) = al.put(VarianPrivateTag.newFluenceModeID(mode))
+
+    def changeToFluenceStandard = {
+      removeFluence
+      // standard attributes
+      val al = addSequence(TagFromName.PrimaryFluenceModeSequence)
+      addFluenceMode(al, "STANDARD")
+
+      // Varian attributes
+      val alv = addSequence(VarianPrivateTag.PrimaryFluenceModeSequence)
+      addVarianCreator3285(alv)
+      addVarianFluenceMode(alv, "STANDARD")
+    }
+
+    def changeToFluenceFFF = {
+      removeFluence
+      // standard attributes
+      val al = addSequence(TagFromName.PrimaryFluenceModeSequence)
+      addFluenceMode(al, "NON_STANDARD")
+      addFluenceModeID(al, "FFF")
+
+      // Varian attributes
+      val alv = addSequence(VarianPrivateTag.PrimaryFluenceModeSequence)
+      addVarianCreator3285(alv)
+      addVarianFluenceMode(alv, "NON_STANDARD")
+      addVarianFluenceModeID(alv, "FFF")
+    }
+
+    (isFFFBeam(beamAl), fff) match {
+      case (true, true) => ; // no change necessary
+      case (false, false) => ; // no change necessary
+      case (true, false) => changeToFluenceStandard
+      case (false, true) => changeToFluenceFFF
+    }
+  }
+
+  /**
+   * Add a beam that supports the given machine energy.  Do it by copying and modifying both prototypes.  The original prototypes are
+   * not changed, but rtplan is changed.
+   */
+  private def addBeam(rtplan: AttributeList, machineEnergy: MachineBeamEnergy, prototypeBeam: AttributeList, prototypeFractionReference: AttributeList): Unit = {
+    val BeamNumber = getAvailableBeamNumber(rtplan)
+    val beamAl = DicomUtil.clone(prototypeBeam)
+    val fraction = DicomUtil.clone(prototypeFractionReference)
+
+    // modify the fraction
+    val ReferencedBeamNumber = fraction.get(TagFromName.ReferencedBeamNumber)
+    ReferencedBeamNumber.removeValues
+    ReferencedBeamNumber.addValue(BeamNumber)
+
+    // modify the beam
+
+    val beamNum = beamAl.get(TagFromName.BeamNumber)
+    beamNum.removeValues
+    beamNum.addValue(BeamNumber)
+
+    val beamNameText = {
+      val energy = machineEnergy.photonEnergy_MeV.get
+      val numText = if (energy.round == energy) energy.round.toLong.toString else Util.fmtDbl(energy)
+      val fffText = if (machineEnergy.isFFF) "F" else ""
+      Config.PrefixForMachineDependentBeamName + numText + fffText
+    }
+
+    val BeamName = beamAl.get(TagFromName.BeamName)
+    BeamName.removeValues
+    BeamName.addValue(beamNameText)
+
+    setFluence(beamAl, machineEnergy.isFFF)
+    changeNominalBeamEnergy(beamAl, machineEnergy.photonEnergy_MeV.get)
+
+    val beamSeq = rtplan.get(TagFromName.BeamSequence).asInstanceOf[SequenceAttribute]
+    beamSeq.addItem(beamAl)
+
+    val FractionGroupSequence = DicomUtil.seqToAttr(rtplan, TagFromName.FractionGroupSequence).head
+    val ReferencedBeamSequence = FractionGroupSequence.get(TagFromName.ReferencedBeamSequence).asInstanceOf[SequenceAttribute]
+    ReferencedBeamSequence.addItem(fraction)
+  }
+
   private def reassignPlanEnergies(rtplan: AttributeList, valueMap: ValueMapT, planBeamList: Seq[PlanBeam], machineEnergyList: Seq[MachineBeamEnergy]): Unit = {
-    val distinctList = planBeamListToDistinct(planBeamList)
+    // use this beam and its fraction reference to make non-standard beams
+    val prototypeBeam = getPrototypeNonStandardBeam(rtplan)
 
-    def rowOf(planBeam: PlanBeam): Int = {
-      val rowIndex = distinctList.indices.filter(i => {
-        val d = distinctList(i)
-        (d.energy == planBeam.energy) && (d.fff == planBeam.fff)
-      }).head
-      rowIndex
-    }
+    val prototypeFractionReference = getFractionReference(rtplan, prototypeBeam.get(TagFromName.BeamNumber).getIntegerValues.head)
 
-    def machEnergyForBeam(planBeam: PlanBeam): Option[MachineBeamEnergy] = {
-      val row = rowOf(planBeam)
-      val machEnergyIndex = valueMap(machEnergyTag(row)).toInt
-      if (machEnergyIndex < machineEnergyList.size) {
-        val machEnergy = machineEnergyList(machEnergyIndex)
-        Some(machEnergy)
-      } else
-        None
-    }
+    removeNonStandardBeams(rtplan)
 
-    def changePlanEnergyToMachineEnergy(planBeam: PlanBeam, machEnergy: MachineBeamEnergy): Unit = {
-      val beamAl = DicomUtil.seqToAttr(rtplan, TagFromName.BeamSequence).filter(al => al.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.equals(planBeam.name)).head
-      val controlPtSeq = DicomUtil.seqToAttr(beamAl, TagFromName.ControlPointSequence)
+    val supportedNonStandardEnergyList = machineEnergyList.filter(me => me.photonEnergy_MeV.get != CustomizeRtPlan.standardBeamEnergy)
 
-      def isFFFBeam: Boolean = {
-        val PrimaryFluenceModeSequence = DicomUtil.seqToAttr(beamAl, TagFromName.PrimaryFluenceModeSequence)
-        def isFFF(pfms: AttributeList): Boolean = {
-          val FluenceModeID = pfms.get(TagFromName.FluenceModeID)
-          (FluenceModeID != null) && FluenceModeID.getSingleStringValueOrEmptyString.toLowerCase.contains("fff")
-        }
-        val fff = PrimaryFluenceModeSequence.map(pfms => isFFF(pfms)).reduce(_ || _)
-        fff
-      }
+    supportedNonStandardEnergyList.map(me => addBeam(rtplan, me, prototypeBeam, prototypeFractionReference))
 
-      /**
-       * Remove both the DICOM standard and Varian fluence references.
-       */
-      def removeFluence = {
-        val PrimaryFluenceModeSequence = beamAl.get(TagFromName.PrimaryFluenceModeSequence)
-        if (PrimaryFluenceModeSequence != null) beamAl.remove(TagFromName.PrimaryFluenceModeSequence)
-
-        val VarianPrimaryFluenceModeSequence = beamAl.get(VarianPrivateTag.PrimaryFluenceModeSequence)
-        if (VarianPrimaryFluenceModeSequence != null) beamAl.remove(VarianPrivateTag.PrimaryFluenceModeSequence)
-      }
-
-      /**
-       * Add a sequence to the current beam.
-       */
-      def addSequence(tag: AttributeTag): AttributeList = {
-        val seq = new SequenceAttribute(tag)
-        beamAl.put(seq)
-        val al = new AttributeList
-        seq.addItem(al)
-        al
-      }
-
-      def addFluenceMode(al: AttributeList, value: String) = {
-        val FluenceMode = AttributeFactory.newAttribute(TagFromName.FluenceMode)
-        FluenceMode.addValue(value)
-        al.put(FluenceMode)
-      }
-
-      def addFluenceModeID(al: AttributeList, value: String) = {
-        val FluenceModeID = AttributeFactory.newAttribute(TagFromName.FluenceModeID)
-        FluenceModeID.addValue(value)
-        al.put(FluenceModeID)
-      }
-
-      def addVarianCreator3285(al: AttributeList) = al.put(VarianPrivateTag.newVarianCreator3285("Varian Medical Systems VISION 3285"))
-      def addVarianFluenceMode(al: AttributeList, mode: String) = al.put(VarianPrivateTag.newFluenceMode(mode))
-      def addVarianFluenceModeID(al: AttributeList, mode: String) = al.put(VarianPrivateTag.newFluenceModeID(mode))
-
-      def changeToFluenceStandard = {
-        removeFluence
-        // standard attributes
-        val al = addSequence(TagFromName.PrimaryFluenceModeSequence)
-        addFluenceMode(al, "STANDARD")
-
-        // Varian attributes
-        val alv = addSequence(VarianPrivateTag.PrimaryFluenceModeSequence)
-        addVarianCreator3285(alv)
-        addVarianFluenceMode(alv, "STANDARD")
-      }
-
-      def changeToFluenceFFF = {
-        removeFluence
-        // standard attributes
-        val al = addSequence(TagFromName.PrimaryFluenceModeSequence)
-        addFluenceMode(al, "NON_STANDARD")
-        addFluenceModeID(al, "FFF")
-
-        // Varian attributes
-        val alv = addSequence(VarianPrivateTag.PrimaryFluenceModeSequence)
-        addVarianCreator3285(alv)
-        addVarianFluenceMode(alv, "NON_STANDARD")
-        addVarianFluenceModeID(alv, "FFF")
-      }
-
-      def changeOne(cpt: AttributeList): Unit = {
-        val NominalBeamEnergy = cpt.get(TagFromName.NominalBeamEnergy)
-
-        if (NominalBeamEnergy != null) {
-          NominalBeamEnergy.removeValues
-          NominalBeamEnergy.addValue(machEnergy.photonEnergy_MeV.get)
-        }
-      }
-
-      controlPtSeq.map(cpt => changeOne(cpt))
-
-      if (isFFFBeam != machEnergy.isFFF) {
-        if (machEnergy.isFFF)
-          changeToFluenceFFF
-        else
-          changeToFluenceStandard
-      }
-    }
-
-    def reassignOnePlanEnergy(planBeam: PlanBeam): Unit = {
-      val machEnergy = machEnergyForBeam(planBeam)
-      if (machEnergy.isEmpty) {
-        deleteBeamFromPlan(rtplan, planBeam.name)
-      } else {
-        // change the energy of the beam
-        changePlanEnergyToMachineEnergy(planBeam, machEnergy.get)
-      }
-    }
-
-    planBeamList.map(pb => reassignOnePlanEnergy(pb))
     setNumberOfBeamsInFractionGroupSequence(rtplan)
   }
 
@@ -552,7 +549,7 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     val machineEnergyList = getMachineEnergyList(machine.machinePK.get)
     val planEnergyList = getPlanBeamList(machine).toList
     if (styleMap.nonEmpty) {
-      val form = new WebForm(pathOf, List(row0, row1, row2) ++ energyRowList(machine, machineEnergyList, planEnergyList) ++ List(assignButtonList))
+      val form = new WebForm(pathOf, List(row0, row1, row2) ++ List(assignButtonList))
       form.setFormResponse(valueMap, styleMap, pageTitleSelect, response, Status.SUCCESS_OK)
     } else {
       makePlan(valueMap, response, machine, planEnergyList, machineEnergyList)

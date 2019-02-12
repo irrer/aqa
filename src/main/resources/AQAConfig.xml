@@ -421,6 +421,11 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Maximum allowed error for leaf positions in mm. -->
     <LeafPositionMaxError_mm>1.0</LeafPositionMaxError_mm>
 
+    <!-- When a machine does not support some energy levels in a plan, then a custom (via CustomizeRtPlan) plan can be created for those
+    energy levels.  This is done by creating beams to match the machine's energy level.  The new beam names are given this prefix, followed
+    by the energy level and optionally 'F' for FFF. -->
+    <PrefixForMachineDependentBeamName>J18G0-</PrefixForMachineDependentBeamName>
+
     <!-- To get an accurate measurement of the end of collimator leaves, a buffer space is left between leaves, at the sides of the
     leaves.  This keeps adjacent leaves' positions from interfering with each other.  This number specifies how large that space should
     be.  It is given as the distance between the edge of the bounding rectangle used to find the edge's position and the measured
