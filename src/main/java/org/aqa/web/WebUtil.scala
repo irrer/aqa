@@ -733,7 +733,8 @@ object WebUtil extends Logging {
     }
   }
 
-  class WebInputCheckbox(override val label: String, col: Int, offset: Int) extends IsInput(label) with ToHtml {
+  class WebInputCheckbox(override val label: String, val showLabel: Boolean, col: Int, offset: Int) extends IsInput(label) with ToHtml {
+    def this(label: String, col: Int, offset: Int) = this(label, true, col, offset)
 
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
       val input = <input type="checkbox"/> % idNameClassValueAsAttr(label, valueMap)
@@ -746,7 +747,7 @@ object WebUtil extends Logging {
         <table>
           <tr>
             <td>{ inputWithValue }</td>
-            <td> <label style="vertical-align:middle; margin: 5px;"> { label }</label></td>
+            <td> <label style="vertical-align:middle; margin: 5px;"> { if (showLabel) label else "" }</label></td>
           </tr>
         </table>
       }

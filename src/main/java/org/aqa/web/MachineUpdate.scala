@@ -149,9 +149,9 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   //   class WebPlainText(override val label: String, val showLabel: Boolean, col: Int, offset: Int, html: (Any) => Elem) extends IsInput(label) with ToHtml {
 
-  private val photonEnergyHeader = new WebPlainText("Photon Energy", true, 1, 1, _ => { <div></div> })
-  private val maxDoseRateHeader = new WebPlainText("Max Dose Rate", true, 1, 0, _ => { <div></div> })
-  private val fffEnergyHeader = new WebPlainText("FFF energy", true, 1, 0, _ => { <div></div> })
+  private val photonEnergyHeader = new WebPlainText("Photon Energy", true, 1, 1, _ => { <div title="In MeV"></div> })
+  private val maxDoseRateHeader = new WebPlainText("Max Dose Rate", true, 1, 0, _ => { <div title="In MU / minute"></div> })
+  private val fffEnergyHeader = new WebPlainText("FFF energy", true, 1, 0, _ => { <div title={ "Check to indicate that this is an" + WebUtil.titleNewline + " FFF (Flattening Free Filter) beam" }></div> })
   val addBeamEnergyButton = new FormButton("Add Beam Energy", 1, 0, subUrl, pathOf + "?addBeam=1", ButtonType.BtnPrimary)
 
   val photonEnergyColName = "Photon Energy_"
@@ -170,7 +170,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   def makeBeamRow(index: Int): WebRow = {
     val photonEnergyCol = new WebInputText("Photon Energy_" + index, false, 1, 1, "In Mev")
     val maxDoseRateCol = new WebInputText("Max Dose Rate_" + index, false, 1, 0, "In MU / minute")
-    val fffEnergyCol = new WebInputCheckbox(fffEnergyColName + index, 1, 0)
+    val fffEnergyCol = new WebInputCheckbox(fffEnergyColName + index, false, 1, 0)
     val action = pathOf + "?beamIndex=" + index
     val beamDeleteButton = new FormButton("X", 1, 0, subUrl, action, ButtonType.BtnDefault, beamEnergyButtonColName + index)
     val indexCol = new WebInputHidden(index.toString)
@@ -487,7 +487,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     }
 
     def beToValueMap(be: MachineBeamEnergy, index: Int): ValueMapT = {
-            val fff = be.fffEnergy_MeV.isDefined && (be.fffEnergy_MeV.get.toDouble != 0)
+      val fff = be.fffEnergy_MeV.isDefined && (be.fffEnergy_MeV.get.toDouble != 0)
 
       val map = Map(
         (photonEnergyColName + index, sf(be.photonEnergy_MeV)),
@@ -567,6 +567,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
    * If the user is authorized, go to the page for creating customized plans.
    */
   private def customizePlan(valueMap: ValueMapT, response: Response): Unit = {
+    save(valueMap, response) // in case user made changes
     val machinePK = valueMap(MachineUpdate.machinePKTag).toLong
     val machine = Machine.get(machinePK).get
     val user = CachedUser.get(response.getRequest).get
