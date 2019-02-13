@@ -394,27 +394,23 @@ object Phase2Util extends Logging {
   def makeCenterDosePointList(attributeList: AttributeList): Seq[Point] = {
     val translator = new IsoImagePlaneTranslator(attributeList)
 
-    val width = attributeList.get(TagFromName.Columns).getIntegerValues().head
-    val height = attributeList.get(TagFromName.Rows).getIntegerValues().head
+    val radius_mm = Config.CenterDoseRadius_mm
+    val lo = translator.iso2Pix(new Point2D.Double(-radius_mm, -radius_mm))
+    val hi = translator.iso2Pix(new Point2D.Double(radius_mm, radius_mm))
 
-    // get center of image, accounting for 1/2 pixel offset
-    val xCenter = (width / 2.0) + 0.5 // in pixels
-    val yCenter = (height / 2.0) + 0.5 // in pixels
+    val loX = (Math.min(lo.getX, hi.getX) - 2).round.toInt
+    val loY = (Math.min(lo.getY, hi.getY) - 2).round.toInt
+    val hiX = (Math.max(lo.getX, hi.getX) + 2).round.toInt
+    val hiY = (Math.max(lo.getY, hi.getY) + 2).round.toInt
 
-    // center of image in isoplane in mm
-    val center = new Point2D.Double(0, 0)
-
-    val xRadius = translator.iso2PixDistX(Config.CenterDoseRadius_mm) // in pixels
-    val yRadius = translator.iso2PixDistY(Config.CenterDoseRadius_mm) // in pixels
-
-    val xMaxPix = (translator.iso2PixDistX(Config.CenterDoseRadius_mm) + 1).ceil.toInt
-    val yMaxPix = (translator.iso2PixDistY(Config.CenterDoseRadius_mm) + 1).ceil.toInt
-
-    val xPixRange = (-xMaxPix until xMaxPix)
-    val yPixRange = (-yMaxPix until yMaxPix)
+    val xPixRange = (loX until hiX)
+    val yPixRange = (loY until hiY)
 
     // step through pixels and see which are close enough.
-    def nearCenter(xPix: Int, yPix: Int): Boolean = { center.distance(translator.pix2Iso(xPix, yPix)) <= Config.CenterDoseRadius_mm }
+    val center = new Point2D.Double(0, 0)
+    def nearCenter(xPix: Int, yPix: Int): Boolean = {
+      center.distance(translator.pix2Iso(xPix, yPix)) <= Config.CenterDoseRadius_mm
+    }
 
     val pointList = for (xPix <- xPixRange; yPix <- yPixRange; if nearCenter(xPix, yPix)) yield { new Point(xPix, yPix) }
     pointList
