@@ -323,10 +323,23 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
   private case class BeamReference(beam: AttributeList, fractionReference: AttributeList);
 
   /**
+   * Determine if this is an FFF beam.
+   */
+  private def isFFFBeam(beamAl: AttributeList): Boolean = {
+    val PrimaryFluenceModeSequence = DicomUtil.seqToAttr(beamAl, TagFromName.PrimaryFluenceModeSequence)
+    def isFFF(pfms: AttributeList): Boolean = {
+      val FluenceModeID = pfms.get(TagFromName.FluenceModeID)
+      (FluenceModeID != null) && FluenceModeID.getSingleStringValueOrEmptyString.toLowerCase.contains("fff")
+    }
+    val fff = PrimaryFluenceModeSequence.map(pfms => isFFF(pfms)).reduce(_ || _)
+    fff
+  }
+
+  /**
    * Determine if the beam is non-standard
    */
-  private def isNonStd(beamAl: AttributeList): Boolean = {
-    beamAl.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.startsWith(Config.PrefixForMachineDependentBeamName)
+  private def isNonStandard(beamAl: AttributeList): Boolean = {
+    beamAl.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.startsWith(Config.PrefixForMachineDependentBeamName) || isFFFBeam(beamAl)
   }
 
   /**
@@ -336,7 +349,7 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
    */
   private def getPrototypeNonStandardBeam(rtplan: AttributeList): AttributeList = {
     val beamList = DicomUtil.seqToAttr(rtplan, TagFromName.BeamSequence)
-    val proto = beamList.filter(b => isNonStd(b)).maxBy(getEnergy _)
+    val proto = beamList.filter(b => isNonStandard(b)).maxBy(getEnergy _)
     proto
   }
 
@@ -344,7 +357,7 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
    * Remove beams from the plan that do not have the standard energy level.  Also remove their ControlPoint counterparts.
    */
   private def removeNonStandardBeams(rtplan: AttributeList): Unit = {
-    val beamNameList = DicomUtil.seqToAttr(rtplan, TagFromName.BeamSequence).filter(beamAl => isNonStd(beamAl)).map(beamAl => beamAl.get(TagFromName.BeamName).getSingleStringValueOrEmptyString)
+    val beamNameList = DicomUtil.seqToAttr(rtplan, TagFromName.BeamSequence).filter(beamAl => isNonStandard(beamAl)).map(beamAl => beamAl.get(TagFromName.BeamName).getSingleStringValueOrEmptyString)
     beamNameList.map(beamName => deleteBeamFromPlan(rtplan, beamName))
   }
 
@@ -358,16 +371,6 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
   }
 
   private def setFluence(beamAl: AttributeList, fff: Boolean) {
-
-    def isFFFBeam(beamAl: AttributeList): Boolean = {
-      val PrimaryFluenceModeSequence = DicomUtil.seqToAttr(beamAl, TagFromName.PrimaryFluenceModeSequence)
-      def isFFF(pfms: AttributeList): Boolean = {
-        val FluenceModeID = pfms.get(TagFromName.FluenceModeID)
-        (FluenceModeID != null) && FluenceModeID.getSingleStringValueOrEmptyString.toLowerCase.contains("fff")
-      }
-      val fff = PrimaryFluenceModeSequence.map(pfms => isFFF(pfms)).reduce(_ || _)
-      fff
-    }
 
     /**
      * Remove both the DICOM standard and Varian fluence references.
@@ -442,6 +445,18 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
   }
 
   /**
+   * Add another entry with the given number to the PatientSetupSequence.
+   */
+  private def addPatientSetup(rtplan: AttributeList, PatientSetupNumber: Int): Unit = {
+    val patientSetup = DicomUtil.clone(DicomUtil.seqToAttr(rtplan, TagFromName.PatientSetupSequence).head)
+    val PatientSetupSequence = rtplan.get(TagFromName.PatientSetupSequence).asInstanceOf[SequenceAttribute]
+
+    patientSetup.get(TagFromName.PatientSetupNumber).removeValues
+    patientSetup.get(TagFromName.PatientSetupNumber).addValue(PatientSetupNumber)
+    PatientSetupSequence.addItem(patientSetup)
+  }
+
+  /**
    * Add a beam that supports the given machine energy.  Do it by copying and modifying both prototypes.  The original prototypes are
    * not changed, but rtplan is changed.
    */
@@ -460,6 +475,10 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     val beamNum = beamAl.get(TagFromName.BeamNumber)
     beamNum.removeValues
     beamNum.addValue(BeamNumber)
+
+    val refPatSetupNumber = beamAl.get(TagFromName.ReferencedPatientSetupNumber)
+    refPatSetupNumber.removeValues
+    refPatSetupNumber.addValue(BeamNumber)
 
     val beamNameText = {
       val energy = machineEnergy.photonEnergy_MeV.get
@@ -481,6 +500,7 @@ class CustomizeRtPlan extends Restlet with SubUrlRoot with Logging {
     val FractionGroupSequence = DicomUtil.seqToAttr(rtplan, TagFromName.FractionGroupSequence).head
     val ReferencedBeamSequence = FractionGroupSequence.get(TagFromName.ReferencedBeamSequence).asInstanceOf[SequenceAttribute]
     ReferencedBeamSequence.addItem(fraction)
+    addPatientSetup(rtplan, BeamNumber)
   }
 
   private def reassignPlanEnergies(rtplan: AttributeList, valueMap: ValueMapT, planBeamList: Seq[PlanBeam], machineEnergyList: Seq[MachineBeamEnergy]): Unit = {
