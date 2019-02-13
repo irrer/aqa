@@ -34,7 +34,7 @@ object CenterDoseAnalysis extends Logging {
   /**
    * Construct a CenterDose
    */
-  def constructCenterDose(beamName: String, pointList: Seq[Point], outputPK: Long, dicomImage: DicomImage, attributeList: AttributeList): CenterDose = {
+  private def constructCenterDose(beamName: String, pointList: Seq[Point], outputPK: Long, dicomImage: DicomImage, attributeList: AttributeList): CenterDose = {
     val dose = Phase2Util.measureDose(pointList, dicomImage, attributeList)
     val SOPInstanceUID = attributeList.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
     val units = attributeList.get(TagFromName.RescaleType).getSingleStringValueOrEmptyString
@@ -49,6 +49,16 @@ object CenterDoseAnalysis extends Logging {
     val availableBeamList = Config.CenterDoseBeamNameList.filter(beamName => runReq.derivedMap.contains(beamName))
     val centerDoseList = availableBeamList.map(beamName => constructCenterDose(beamName, pointList, outputPK, runReq.derivedMap(beamName).originalImage, runReq.rtimageMap(beamName).attributeList.get))
     centerDoseFlood +: centerDoseList
+  }
+
+  /**
+   * For testing only.
+   */
+  def testConstructCenterDose(beamName: String, dicomFile: DicomFile): CenterDose = {
+    val attributeList = dicomFile.attributeList.get
+    val pointList = Phase2Util.makeCenterDosePointList(attributeList)
+    val outputPK = -1
+    constructCenterDose(beamName, pointList, outputPK, new DicomImage(attributeList), attributeList)
   }
 
   private val subProcedureName = "Center Dose"
