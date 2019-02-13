@@ -103,11 +103,6 @@ object CenterDoseHTML extends Logging {
 
     val tbody = resultList.map(psnChk => centerDoseToTableRow(psnChk))
 
-    //              <table class="table table-striped">
-    //                { centerDoseTableHeader }
-    //                <tbody>{ tbody }</tbody>
-    //              </table>
-
     val content = {
       <div>
         <div class="row" style="margin:50px;">
@@ -144,59 +139,4 @@ object CenterDoseHTML extends Logging {
     }
     makeSummary
   }
-
-  private def analyse(extendedData: ExtendedData, runReq: RunReq): Seq[CenterDose] = {
-    val pointList = Phase2Util.makeCenterDosePointList(runReq.flood.attributeList.get)
-    val outputPK = extendedData.output.outputPK.get
-
-    /**
-     * Average the pixels at the given points.
-     */
-    def avg(dicomImage: DicomImage): Double = {
-      pointList.map(p => dicomImage.get(p.getX.toInt, p.getY.toInt)).sum / pointList.size
-    }
-
-    /**
-     * Construct a CenterDose
-     */
-    def measure(beamName: String, dicomImage: DicomImage, attributeList: AttributeList): CenterDose = {
-      val m = attributeList.get(TagFromName.RescaleSlope).getDoubleValues().head
-      val b = attributeList.get(TagFromName.RescaleIntercept).getDoubleValues().head
-      val dose = (avg(dicomImage) * m) + b
-      val SOPInstanceUID = attributeList.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
-      val units = attributeList.get(TagFromName.RescaleType).getSingleStringValueOrEmptyString
-      new CenterDose(None, outputPK, SOPInstanceUID, beamName, dose, units)
-    }
-
-    val centerDoseFlood = measure(Config.FloodFieldBeamName, runReq.floodOriginalImage, runReq.flood.attributeList.get)
-    val availableBeamList = Config.CenterDoseBeamNameList.filter(beamName => runReq.derivedMap.contains(beamName))
-    val centerDoseList = availableBeamList.map(beamName => measure(beamName, runReq.derivedMap(beamName).originalImage, runReq.rtimageMap(beamName).attributeList.get))
-    centerDoseFlood +: centerDoseList
-  }
-
-  private val subProcedureName = "Center Dose"
-
-  class CenterDoseResult(summary: Elem, status: ProcedureStatus.Value, resultList: Seq[CenterDose]) extends SubProcedureResult(summary, status, subProcedureName)
-
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, CenterDoseResult] = {
-    try {
-      // This code only reports values without making judgment as to pass or fail.
-      logger.info("Starting analysis of CenterDose")
-      val status = ProcedureStatus.done
-      val resultList = analyse(extendedData, runReq)
-      logger.info("Storing results for " + resultList.size + " CenterDose rows")
-      logger.info("CenterDose results: " + resultList.mkString("\n"))
-      CenterDose.insert(resultList)
-      val summary = makeDisplay(extendedData, runReq, resultList, status)
-      val result = Right(new CenterDoseResult(summary, status, resultList))
-      logger.info("Finished analysis of CenterDose")
-      result
-    } catch {
-      case t: Throwable => {
-        logger.warn("Unexpected error in analysis of CenterDose: " + t + fmtEx(t))
-        Left(Phase2Util.procedureCrash(subProcedureName))
-      }
-    }
-  }
-
 }
