@@ -82,7 +82,7 @@ class C3ChartHistory(
   private val minY = allY.min
   private val maxY = allY.max
 
-  private val maintValueList = column("Maintenance", Seq.fill(maintList.size)(Seq(minY, maxY)).flatten)
+  private val maintValueList = column("MaintenanceRecord", Seq.fill(maintList.size)(Seq(minY, maxY)).flatten)
   private val maintSummaryList = textColumn(maintList.map(maint => maint.summary))
   private val maintColorList = textColumn(maintList.map(maint => MaintenanceCategory.findMaintenanceCategoryMatch(maint.category).Color))
   private val maintCategoryList = textColumn(maintList.map(maint => maint.category))
@@ -143,7 +143,7 @@ var """ + idTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) 
       format: {
         value: function (value, ratio, id, index) {
           var maintSummaryList = """ + maintSummaryList + """;
-          if (id === 'MaintenanceRecord') return pMaintenanceRecordummaryList[index/2];
+          if (id === 'MaintenanceRecord') return maintSummaryList[index/2];
           return d3.format('""" + yFormat + """')(value);
           },
           name: function (name, ratio, id, index) {

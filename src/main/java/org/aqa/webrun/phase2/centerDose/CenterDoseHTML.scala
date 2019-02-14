@@ -130,7 +130,7 @@ object CenterDoseHTML extends Logging {
       val elem = {
         <div title="Click for details.">
           <a href={ htmlFileName }>
-            Center Dose.  Images:{ resultList.size }<br/>
+            Center Dose.<br></br>Beams:{ resultList.size }<br/>
             <img src={ Config.passImageUrl } height="32"/>
           </a>
         </div>
