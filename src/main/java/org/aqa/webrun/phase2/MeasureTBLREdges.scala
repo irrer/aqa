@@ -28,6 +28,37 @@ import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.IsoImagePlaneTranslator
 import org.aqa.IsoImagePlaneTranslator
 
+/*
+
+A multiple choice question;  In the EPID image below the four sides are
+labeled North, South, East, and West, but they should be X1,X2,Y1,Y2.  
+Could you tell me which is which for collimator angle 270 and gantry angle 0:
+
+North : X1
+South : X2
+East : Y2
+West : Y1
+
+Part 2 of the multiple choice question:  If the collimator angle is 360 and
+the gantry angle 360, then please verify my guess of:
+
+Close but no. Collimator 360 == 0
+North: Y2
+South:T1
+East:X2
+West:X1
+
+North : Y1
+South : Y2
+East : X2
+West : X1
+
+My understanding is that the gantry angle does not matter in regards to labeling the edges. Correct.
+
+*/
+
+
+
 /**
  * Measure the four edges in an image (TBLR : top, bottom, left, right) in pixels.
  */
@@ -90,13 +121,14 @@ object MeasureTBLREdges extends Logging {
     }
 
     def toX1X2Y1Y2(collimatorAngle: Double) = TBLRtoX1X2Y1Y2(collimatorAngle, this)
+    def toX1X2Y1Y2 = TBLRtoX1X2Y1Y2(270, this)
 
     def pix2iso(translator: IsoImagePlaneTranslator): TBLR = {
       new TBLR(
-        translator.pix2IsoCoordX(top),
-        translator.pix2IsoCoordX(bottom),
-        translator.pix2IsoCoordY(left),
-        translator.pix2IsoCoordY(right))
+        translator.pix2IsoCoordY(top),
+        translator.pix2IsoCoordY(bottom),
+        translator.pix2IsoCoordX(left),
+        translator.pix2IsoCoordX(right))
     }
 
     override def toString = {
@@ -106,6 +138,13 @@ object MeasureTBLREdges extends Logging {
         "    right: " + Util.fmtDbl(right)
     }
 
+    def minus(tblr: TBLR) = {
+      new TBLR(
+          top - tblr.top,
+          bottom - tblr.bottom,
+          left - tblr.left,
+          right - tblr.right)
+    }
   }
 
   def getCollimatorPositions(BeamLimitingDeviceSequence: Seq[AttributeList]): X1X2Y1Y2 = {

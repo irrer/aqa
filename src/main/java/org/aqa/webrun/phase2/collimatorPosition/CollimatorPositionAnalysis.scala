@@ -39,7 +39,7 @@ object CollimatorPositionAnalysis extends Logging {
   /**
    * Measure the four collimator edges.  Function is public to make it testable.
    */
-  def measureImage(beamName: String, FloodCompensation: Boolean, biasAndPixelCorrectedCroppedImage: DicomImage, pixelCorrectedImage: DicomImage,
+  private def measureImage(beamName: String, FloodCompensation: Boolean, biasAndPixelCorrectedCroppedImage: DicomImage, pixelCorrectedImage: DicomImage,
     al: AttributeList, originalImage: DicomImage, outputPK: Long, floodOffset: Point): Either[String, (CollimatorPosition, BufferedImage)] = {
     try {
       val collimatorAngle = Util.collimatorAngle(al)
@@ -56,7 +56,7 @@ object CollimatorPositionAnalysis extends Logging {
       }
 
       val expectedEdges = MeasureTBLREdges.imageCollimatorPositions(al) //   planCollimatorPositions(beamName, runReq.rtplan.attributeList.get)
-      val measured = edges.measurementSet.toX1X2Y1Y2(collimatorAngle)
+      val measured = edges.measurementSet.toX1X2Y1Y2.pix2iso(translator)
 
       val expMinusMeasured = expectedEdges.minus(measured)
       logger.info("Beam " + beamName + " flood Comp: " + FloodCompensation +
@@ -90,6 +90,14 @@ object CollimatorPositionAnalysis extends Logging {
       }
     }
 
+  }
+
+  /**
+   *  For testing only.
+   */
+  def testMeasureImage(beamName: String, FloodCompensation: Boolean, biasAndPixelCorrectedCroppedImage: DicomImage, pixelCorrectedImage: DicomImage,
+    al: AttributeList, originalImage: DicomImage, outputPK: Long, floodOffset: Point): Either[String, (CollimatorPosition, BufferedImage)] = {
+    measureImage(beamName, FloodCompensation, biasAndPixelCorrectedCroppedImage, pixelCorrectedImage, al, originalImage, outputPK, floodOffset)
   }
 
   val subProcedureName = "Collimator Position"
