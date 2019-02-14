@@ -55,14 +55,11 @@ object CollimatorCenteringAnalysis extends Logging {
       val pointZero = new Point(0, 0)
       def m090 = MeasureTBLREdges.measure(image090, translator, Util.collimatorAngle(al090), image090, pointZero)
       def m270 = MeasureTBLREdges.measure(image270, translator, Util.collimatorAngle(al270), image270, pointZero)
-      //val rp = ParSeq(m090 _, m270 _).map(f => f()).toList  TODO put back in
-      val rp = Seq(m090 _, m270 _).map(f => f()).toList
+      val rp = ParSeq(m090 _, m270 _).map(f => f()).toList
       rp
     }
     val result090 = resultPair(0)
     val result270 = resultPair(1)
-
-    Trace.trace("result090: " + result090) // TODO rm
 
     val m090 = result090.measurementSet // in pixels
     val m270 = result270.measurementSet // in pixels

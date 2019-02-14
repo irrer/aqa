@@ -22,12 +22,12 @@ object CollimatorCenteringHTML {
 
   private def fmt(d: Double): String = d.formatted("%8.2f")
 
-  private def showImage(fileName: String, outputDir: File, bufImg: BufferedImage): Elem = {
+  private def showImage(fileName: String, outputDir: File, bufImg: BufferedImage, id: String): Elem = {
     val fn = FileUtil.replaceInvalidFileNameCharacters(fileName, '_')
     val pngFile = new File(outputDir, fn)
     Util.writePng(bufImg, pngFile)
     <div>
-      <center>
+      <center id={ id }>
         <a href={ fn }>
           <img src={ fn } class="img-responsive"/>
         </a>
@@ -102,6 +102,18 @@ object CollimatorCenteringHTML {
       <h3 title="Collimator Angle : center minus image center." style="text-align:center;">{ name + " : " + err }</h3>
     }
 
+    val image090Name = "image090"
+    val image270Name = "image270"
+
+    val script = {
+      """
+    <script>
+      $(document).ready(function(){ $('#""" + image090 + """').zoom(); });
+      $(document).ready(function(){ $('#""" + image270 + """').zoom(); });
+    </script>
+"""
+    }
+
     val content = {
       val href090 = Phase2Util.dicomViewHref(runReq.rtimageMap(Config.CollimatorCentering090BeamName).attributeList.get, extendedData, runReq)
       val href270 = Phase2Util.dicomViewHref(runReq.rtimageMap(Config.CollimatorCentering270BeamName).attributeList.get, extendedData, runReq)
@@ -109,24 +121,26 @@ object CollimatorCenteringHTML {
       <div>
         <div class="col-md-4 col-md-offset-4" align="middle">
           <h3 title='X, Y difference from image center in mm'>{ resultSummary } mm</h3>
-          { makeTable(collimatorCentering) }
         </div>
-        <div class="row" style="margin:30px;" title="Click images for full sized view">
+        <div class="row" style="margin:30px;">
           <div class="col-md-5 col-md-offset-1" align="middle">
             { imageTitle("90", image090) }
             <a title='Click for DICOM details' href={ href090 }>{ Config.CollimatorCentering090BeamName }<br/></a>
-            { showImage("CollimatorCentering090_" + Config.CollimatorCentering090BeamName + ".png", outputDir, image090.bufferedImage) }
+            { showImage("CollimatorCentering090_" + Config.CollimatorCentering090BeamName + ".png", outputDir, image090.bufferedImage, image090Name) }
           </div>
           <div class="col-md-5" align="middle">
             { imageTitle("270", image270) }
             <a title='Click for DICOM details' href={ href270 }>{ Config.CollimatorCentering270BeamName }<br/></a>
-            { showImage("CollimatorCentering270_" + Config.CollimatorCentering270BeamName + ".png", outputDir, image270.bufferedImage) }
+            { showImage("CollimatorCentering270_" + Config.CollimatorCentering270BeamName + ".png", outputDir, image270.bufferedImage, image270Name) }
           </div>
+        </div>
+        <div class="col-md-4 col-md-offset-4" align="middle">
+          { makeTable(collimatorCentering) }
         </div>
       </div>
     }
 
-    val html = Phase2Util.wrapSubProcedure(extendedData, content, "Collimator Centering", status, None, runReq)
+    val html = Phase2Util.wrapSubProcedure(extendedData, content, "Collimator Centering", status, Some(script), runReq)
     val outFile = new File(outputDir, htmlFileName)
     Util.writeFile(outFile, html)
 
