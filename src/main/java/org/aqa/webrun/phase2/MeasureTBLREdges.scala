@@ -93,11 +93,19 @@ object MeasureTBLREdges extends Logging {
 
     def pix2iso(translator: IsoImagePlaneTranslator): TBLR = {
       new TBLR(
-        translator.pix2IsoCoordX(left),
-        translator.pix2IsoCoordX(right),
-        translator.pix2IsoCoordY(top),
-        translator.pix2IsoCoordY(bottom))
+        translator.pix2IsoCoordX(top),
+        translator.pix2IsoCoordX(bottom),
+        translator.pix2IsoCoordY(left),
+        translator.pix2IsoCoordY(right))
     }
+
+    override def toString = {
+      "top: " + Util.fmtDbl(top) +
+        "    bottom: " + Util.fmtDbl(bottom) +
+        "    left: " + Util.fmtDbl(left) +
+        "    right: " + Util.fmtDbl(right)
+    }
+
   }
 
   def getCollimatorPositions(BeamLimitingDeviceSequence: Seq[AttributeList]): X1X2Y1Y2 = {

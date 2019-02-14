@@ -60,6 +60,7 @@ class TestChase2Util_makeCenterDosePointList extends FlatSpec with Matchers {
 
       pointList.map(p => bufImage.setRGB(p.x, p.y, 0))
       val pngFile = new File(outDir, fileName.replace("dcm", "png"))
+      pngFile.delete      
       println("Writing image file " + pngFile.getAbsolutePath)
       ImageUtil.writePngFile(bufImage, pngFile)
     }
