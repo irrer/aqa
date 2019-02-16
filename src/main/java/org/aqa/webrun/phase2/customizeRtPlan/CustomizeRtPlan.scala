@@ -1,9 +1,9 @@
-package org.aqa.web
+package org.aqa.webrun.phase2.customizeRtPlan
 
 import org.restlet.Restlet
 import org.restlet.Request
 import org.restlet.Response
-import WebUtil._
+import org.aqa.web.WebUtil._
 import org.aqa.Logging
 import org.aqa.db.Machine
 import org.aqa.db.CachedUser
@@ -30,6 +30,9 @@ import org.aqa.VarianPrivateTag
 import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.LongStringAttribute
 import com.pixelmed.dicom.CodeStringAttribute
+import org.aqa.web.MachineUpdate
+import org.aqa.web.WebUtil
+import org.aqa.web.WebServer
 
 object CustomizeRtPlan {
   def reference(machinePK: Long) = { (new CustomizeRtPlan).pathOf + "?" + MachineUpdate.machinePKTag + "=" + machinePK }

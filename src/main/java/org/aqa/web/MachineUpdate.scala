@@ -35,6 +35,7 @@ import org.aqa.db.Input
 import org.aqa.db.MaintenanceRecord
 import org.aqa.db.CachedUser
 import org.aqa.Config
+import org.aqa.webrun.phase2.customizeRtPlan.CustomizeRtPlan
 
 object MachineUpdate {
   val machinePKTag = "machinePK"

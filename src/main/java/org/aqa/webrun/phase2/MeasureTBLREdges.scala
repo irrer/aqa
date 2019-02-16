@@ -31,7 +31,7 @@ import org.aqa.IsoImagePlaneTranslator
 /*
 
 A multiple choice question;  In the EPID image below the four sides are
-labeled North, South, East, and West, but they should be X1,X2,Y1,Y2.  
+labeled North, South, East, and West, but they should be X1,X2,Y1,Y2.
 Could you tell me which is which for collimator angle 270 and gantry angle 0:
 
 North : X1
@@ -56,8 +56,6 @@ West : X1
 My understanding is that the gantry angle does not matter in regards to labeling the edges. Correct.
 
 */
-
-
 
 /**
  * Measure the four edges in an image (TBLR : top, bottom, left, right) in pixels.
@@ -140,10 +138,10 @@ object MeasureTBLREdges extends Logging {
 
     def minus(tblr: TBLR) = {
       new TBLR(
-          top - tblr.top,
-          bottom - tblr.bottom,
-          left - tblr.left,
-          right - tblr.right)
+        top - tblr.top,
+        bottom - tblr.bottom,
+        left - tblr.left,
+        right - tblr.right)
     }
   }
 
@@ -386,11 +384,12 @@ object MeasureTBLREdges extends Logging {
    */
   def measure(image: DicomImage, translator: IsoImagePlaneTranslator, collimatorAngle: Double, annotate: DicomImage, floodOffset: Point, thresholdPercent: Double): AnalysisResult = {
     val threshold = calcPercentPixelValue(image, thresholdPercent)
-    val coarse = {
-      val j = coarseMeasure(image, threshold, translator, floodOffset)
-      val k = j.floodRelative(floodOffset)
-      k
-    }
+    //    val coarse = {
+    //      val j = coarseMeasure(image, threshold, translator, floodOffset)
+    //      val k = j.floodRelative(floodOffset)
+    //      k
+    //    }
+    val coarse = coarseMeasure(image, threshold, translator, floodOffset)
 
     val penumbraX = translator.iso2PixDistX(Config.PenumbraThickness_mm) // penumbra thickness in pixels X
     val penumbraY = translator.iso2PixDistY(Config.PenumbraThickness_mm) // penumbra thickness in pixels Y

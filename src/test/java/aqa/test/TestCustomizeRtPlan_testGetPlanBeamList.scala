@@ -5,8 +5,8 @@ import org.aqa.Config
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import org.aqa.db.Machine
-import org.aqa.web.CustomizeRtPlan
 import org.aqa.db.DbSetup
+import org.aqa.webrun.phase2.customizeRtPlan.CustomizeRtPlan
 
 /**
  * Test CustomizeRtPlan.testGetPlanBeamList.  Note that this test is not real portable because it depends on a machine, collimator, and plan being set up as it expects.

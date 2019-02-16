@@ -56,7 +56,7 @@ object CollimatorPositionAnalysis extends Logging {
       }
 
       val expectedEdges = MeasureTBLREdges.imageCollimatorPositions(al) //   planCollimatorPositions(beamName, runReq.rtplan.attributeList.get)
-      val measured = edges.measurementSet.toX1X2Y1Y2.pix2iso(translator)
+      val measured = edges.measurementSet.floodRelative(floodOffset).toX1X2Y1Y2.pix2iso(translator)
 
       val expMinusMeasured = expectedEdges.minus(measured)
       logger.info("Beam " + beamName + " flood Comp: " + FloodCompensation +

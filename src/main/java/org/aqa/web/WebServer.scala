@@ -37,6 +37,7 @@ import org.aqa.webrun.phase2.wedge.WedgeUseAsBaseline
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessUseAsBaseline
 import org.aqa.AnonymizeUtil
 import edu.umro.ScalaUtil.Trace
+import org.aqa.webrun.phase2.customizeRtPlan.CustomizeRtPlan
 
 object WebServer {
   val challengeScheme = ChallengeScheme.HTTP_BASIC
