@@ -24,9 +24,8 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
 
   val dir = new File("""src\test\resources""")
   val fileNameList = Seq(
-      "TestCollimatorPositionAnalysis_measureImage1.dcm",
-      "TestCollimatorPositionAnalysis_measureImage2.dcm",
-      "TestCollimatorPositionAnalysis_measureImage3.dcm")
+    "TestCollimatorPositionAnalysis_measureImage1.dcm",
+    "TestCollimatorPositionAnalysis_measureImage2.dcm")
 
   val outDir = new File("""target\TestCollimatorPositionAnalysis_measureImage""")
   outDir.mkdirs
@@ -75,7 +74,7 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
       val dicomFile = new DicomFile(file)
       val al = dicomFile.attributeList.get
       val dicomImage = new DicomImage(al)
-      val floodOffset = new Point(77, 211)
+      val floodOffset = new Point(77, 100)
       val floodRectangle = new Rectangle(floodOffset.x, floodOffset.y, dicomImage.width - (floodOffset.x * 2), dicomImage.height - (floodOffset.y * 2))
       val biasAndPixelCorrectedCroppedImage = dicomImage.getSubimage(floodRectangle)
       val pixelCorrectedImage = dicomImage
