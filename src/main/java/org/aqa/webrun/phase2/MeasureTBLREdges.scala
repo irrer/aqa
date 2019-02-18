@@ -30,30 +30,52 @@ import org.aqa.IsoImagePlaneTranslator
 
 /*
 
-A multiple choice question;  In the EPID image below the four sides are
-labeled North, South, East, and West, but they should be X1,X2,Y1,Y2.
-Could you tell me which is which for collimator angle 270 and gantry angle 0:
 
-North : X1
-South : X2
-East : Y2
-West : Y1
+  The diagrams below show how collimator labels should appear for different collimator
+  angles.  The labeling is independent of gantry angle.
 
-Part 2 of the multiple choice question:  If the collimator angle is 360 and
-the gantry angle 360, then please verify my guess of:
-
-Close but no. Collimator 360 == 0
-North: Y2
-South:T1
-East:X2
-West:X1
-
-North : Y1
-South : Y2
-East : X2
-West : X1
-
-My understanding is that the gantry angle does not matter in regards to labeling the edges. Correct.
+.....................................................................................
+                                        .
+                                        .
+                0 / 360                 .                       90
+                                        .
+                                        .
+                   Y2                   .                       X2
+          --------------------          .              --------------------
+          |                  |          .              |                  |
+          |                  |          .              |                  |
+          |                  |          .              |                  |
+       X1 |                  | X2       .           Y2 |                  | Y1
+          |                  |          .              |                  |
+          |                  |          .              |                  |
+          |                  |          .              |                  |
+          --------------------          .              --------------------
+                   Y1                   .                       X1
+                                        .
+                                        .
+                                        .
+.....................................................................................
+                                        .
+                                        .
+                                        .
+                  180                   .                    270
+                                        .
+                                        .
+                   Y1                   .                     X1
+          --------------------          .            --------------------
+          |                  |          .            |                  |
+          |                  |          .            |                  |
+          |                  |          .            |                  |
+       X2 |                  | X1       .         Y1 |                  | Y2
+          |                  |          .            |                  |
+          |                  |          .            |                  |
+          |                  |          .            |                  |
+          --------------------          .            --------------------
+                   Y2                   .                     X2
+                                        .
+                                        .
+                                        .
+.....................................................................................
 
 */
 
@@ -344,8 +366,8 @@ object MeasureTBLREdges extends Logging {
     val names = edgeNames(collimatorAngle)
     annotateTopBottom(bufImg, graphics, measurementSet.top, names(0), transMeasurementSet.top, topRect, floodOffset)
     annotateTopBottom(bufImg, graphics, measurementSet.bottom, names(1), transMeasurementSet.bottom, bottomRect, floodOffset)
-    annotateRightLeft(bufImg, graphics, measurementSet.right, names(2), transMeasurementSet.right, rightRect, floodOffset)
-    annotateRightLeft(bufImg, graphics, measurementSet.left, names(3), transMeasurementSet.left, leftRect, floodOffset)
+    annotateRightLeft(bufImg, graphics, measurementSet.left, names(2), transMeasurementSet.left, leftRect, floodOffset)
+    annotateRightLeft(bufImg, graphics, measurementSet.right, names(3), transMeasurementSet.right, rightRect, floodOffset)
 
     annotateCenter(bufImg, graphics, transMeasurementSet, translator)
     bufImg

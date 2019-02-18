@@ -22,7 +22,7 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
 
   Config.validate
 
-  val dir = new File("""src\test\resources""")
+  val dir = new File("""src\test\resources\TestCollimatorPositionAnalysis_measureImage""")
   val fileNameList = Seq(
     "TestCollimatorPositionAnalysis_measureImage1.dcm",
     "TestCollimatorPositionAnalysis_measureImage2.dcm")
@@ -32,8 +32,7 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
 
   "TestCollimatorPositionAnalysis_measureImage" should "match expected values" in {
 
-    def doTest(fileName: String): Unit = {
-      val file = new File(dir, fileName)
+    def doTest(file: File): Unit = {
       println("Processing file " + file.getAbsolutePath)
       val dicomFile = new DicomFile(file)
       val al = dicomFile.attributeList.get
@@ -41,7 +40,7 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
       val biasAndPixelCorrectedCroppedImage = dicomImage
       val pixelCorrectedImage = dicomImage
       val originalImage = dicomImage
-      val beamName = fileName
+      val beamName = file.getName
       val FloodCompensation = false
       val outputPK = -1.toLong
       val floodOffset = new Point(0, 0)
@@ -55,7 +54,7 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
 
       println("collimatorPosition: " + collimatorPosition)
 
-      val imageFile = new File(outDir, fileName.replace("dcm", "png"))
+      val imageFile = new File(outDir, file.getName.replace("dcm", "png"))
       imageFile.delete
       println("Writing image file: " + imageFile.getAbsolutePath)
       ImageUtil.writePngFile(image, imageFile)
@@ -68,8 +67,7 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
       }
     }
 
-    def doTestWithFlood(fileName: String): Unit = {
-      val file = new File(dir, fileName)
+    def doTestWithFlood(file: File): Unit = {
       println("Processing file " + file.getAbsolutePath)
       val dicomFile = new DicomFile(file)
       val al = dicomFile.attributeList.get
@@ -79,7 +77,7 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
       val biasAndPixelCorrectedCroppedImage = dicomImage.getSubimage(floodRectangle)
       val pixelCorrectedImage = dicomImage
       val originalImage = dicomImage
-      val beamName = fileName
+      val beamName = file.getName
       val FloodCompensation = true
       val outputPK = -1.toLong
 
@@ -93,7 +91,7 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
 
       println("collimatorPosition: " + collimatorPosition)
 
-      val imageFile = new File(outDir, (fileName + "_flood.png").replace(".dcm", ""))
+      val imageFile = new File(outDir, (file.getName + "_flood.png").replace(".dcm", ""))
       imageFile.delete
       println("Writing image file: " + imageFile.getAbsolutePath)
       ImageUtil.writePngFile(image, imageFile)
@@ -105,9 +103,11 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
         (collimatorPosition.Y2_ExpectedMinusImage_mm.abs < 2) should be(true)
       }
     }
-    fileNameList.map(fn => doTest(fn))
 
-    fileNameList.map(fn => doTestWithFlood(fn))
+    val fileList = dir.listFiles.sortBy(_.getName)
+    fileList.map(f => doTest(f))
+
+    fileList.map(f => doTestWithFlood(f))
   }
 
 }
