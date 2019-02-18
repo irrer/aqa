@@ -101,16 +101,26 @@ object MeasureTBLREdges extends Logging {
         translator.pix2IsoCoordY(Y2))
     }
 
-    def toString(fmt: String) = {
+    override def toString = {
+      val fmt = "%8.3f"
       "X1: " + X1.formatted(fmt) + "    X2: " + X2.formatted(fmt) + "    Y1: " + Y1.formatted(fmt) + "    Y2: " + Y2.formatted(fmt)
+    }
+
+    def toTBLR(collimatorAngle: Double): TBLR = {
+      Util.angleRoundedTo90(collimatorAngle) match {
+        case 0 => new TBLR(-Y2, -Y1, X1, X2)
+        case 90 => new TBLR(-X2, -X1, -Y2, -Y1)
+        case 180 => new TBLR(Y1, Y2, -X2, -X1)
+        case 270 => new TBLR(X1, X2, Y1, Y2)
+      }
     }
   }
 
   def TBLRtoX1X2Y1Y2(collimatorAngle: Double, tblr: TBLR) = {
     Util.angleRoundedTo90(collimatorAngle) match {
-      case 0 => new X1X2Y1Y2(tblr.left, tblr.right, tblr.bottom, tblr.top)
-      case 90 => new X1X2Y1Y2(tblr.bottom, tblr.top, tblr.right, tblr.left)
-      case 180 => new X1X2Y1Y2(tblr.right, tblr.left, tblr.top, tblr.bottom)
+      case 0 => new X1X2Y1Y2(tblr.left, tblr.right, -tblr.bottom, -tblr.top)
+      case 90 => new X1X2Y1Y2(-tblr.bottom, -tblr.top, -tblr.right, -tblr.left)
+      case 180 => new X1X2Y1Y2(-tblr.right, -tblr.left, tblr.top, tblr.bottom)
       case 270 => new X1X2Y1Y2(tblr.top, tblr.bottom, tblr.left, tblr.right)
     }
   }
@@ -138,8 +148,14 @@ object MeasureTBLREdges extends Logging {
       new TBLR(transY(top), transY(bottom), transX(left), transX(right))
     }
 
+    def minus(other: TBLR) = new TBLR(
+      top - other.top,
+      bottom - other.bottom,
+      left - other.left,
+      right - other.right)
+
     def toX1X2Y1Y2(collimatorAngle: Double) = TBLRtoX1X2Y1Y2(collimatorAngle, this)
-    def toX1X2Y1Y2 = TBLRtoX1X2Y1Y2(270, this)
+    //def toX1X2Y1Y2 = TBLRtoX1X2Y1Y2(270, this)
 
     def pix2iso(translator: IsoImagePlaneTranslator): TBLR = {
       new TBLR(
@@ -155,14 +171,6 @@ object MeasureTBLREdges extends Logging {
         "    left: " + Util.fmtDbl(left) +
         "    right: " + Util.fmtDbl(right)
     }
-
-    def minus(tblr: TBLR) = {
-      new TBLR(
-        top - tblr.top,
-        bottom - tblr.bottom,
-        left - tblr.left,
-        right - tblr.right)
-    }
   }
 
   def getCollimatorPositions(BeamLimitingDeviceSequence: Seq[AttributeList]): X1X2Y1Y2 = {
@@ -173,7 +181,7 @@ object MeasureTBLREdges extends Logging {
     val xPair = getPair(Util.xOrientation)
     val yPair = getPair(Util.yOrientation)
 
-    new X1X2Y1Y2(xPair.min, xPair.max, yPair.min, yPair.max)
+    new X1X2Y1Y2(xPair(0), xPair(1), yPair(0), yPair(1))
   }
 
   def planCollimatorPositions(beamName: String, plan: AttributeList): X1X2Y1Y2 = {

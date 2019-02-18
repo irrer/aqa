@@ -55,14 +55,17 @@ object CollimatorPositionAnalysis extends Logging {
           MeasureTBLREdges.measure(pixelCorrectedImage, translator, collimatorAngle, originalImage, new Point(0, 0), Config.PenumbraThresholdPercent / 100)
       }
 
-      val expectedEdges = MeasureTBLREdges.imageCollimatorPositions(al) //   planCollimatorPositions(beamName, runReq.rtplan.attributeList.get)
-      val measured = edges.measurementSet.floodRelative(floodOffset).toX1X2Y1Y2.pix2iso(translator)
+      val expectedEdgesX1X2Y1Y2 = MeasureTBLREdges.imageCollimatorPositions(al)
+      val expectedEdgesTBLR = expectedEdgesX1X2Y1Y2.toTBLR(collimatorAngle)
+      val floodOff = if (FloodCompensation) floodOffset else new Point(0, 0)
+      val measuredTBLR = edges.measurementSet.floodRelative(floodOff).pix2iso(translator)
+      val measuredX1X2Y1Y2 = measuredTBLR.toX1X2Y1Y2(collimatorAngle)
 
-      val expMinusMeasured = expectedEdges.minus(measured)
+      val expMinusMeasured = expectedEdgesTBLR.minus(measuredTBLR).toX1X2Y1Y2(collimatorAngle)
       logger.info("Beam " + beamName + " flood Comp: " + FloodCompensation +
-        "\n    expected edges: " + expectedEdges.toString("%6.1f") +
-        "\n    measured edges: " + measured.toString("%6.1f") +
-        "\n    expected - measured: " + expMinusMeasured.toString("%7.3f"))
+        "\n    expected edges: " + expectedEdgesX1X2Y1Y2 +
+        "\n    measured edges: " + measuredX1X2Y1Y2 +
+        "\n    expected - measured: " + expMinusMeasured)
 
       val worst = expMinusMeasured.toSeq.map(m => m.abs).max
 
@@ -71,15 +74,17 @@ object CollimatorPositionAnalysis extends Logging {
       val uid = al.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
 
       val colPosn = new CollimatorPosition(None, outputPK, status.toString, uid, beamName, FloodCompensation,
-        measured.X1,
-        measured.X2,
-        measured.Y1,
-        measured.Y2,
+        measuredX1X2Y1Y2.X1,
+        measuredX1X2Y1Y2.X2,
+        measuredX1X2Y1Y2.Y1,
+        measuredX1X2Y1Y2.Y2,
         expMinusMeasured.X1,
         expMinusMeasured.X2,
         expMinusMeasured.Y1,
         expMinusMeasured.Y2,
         gantryAngle, collimatorAngle)
+
+      logger.info("CollimatorPosition\n" + colPosn)
 
       Right(colPosn, edges.bufferedImage)
     } catch {
@@ -111,8 +116,7 @@ object CollimatorPositionAnalysis extends Logging {
     try {
       logger.info("Starting analysis of CollimatorPosition")
       val posnBeams = Config.CollimatorPositionBeamList.filter(cp => runReq.derivedMap.contains(cp.beamName))
-      //val resultList = posnBeams.par.map(cp => measureImage(  // TODO put back in after debug
-      val resultList = posnBeams.map(cp => measureImage(
+      val resultList = posnBeams.par.map(cp => measureImage(
         cp.beamName,
         cp.FloodCompensation,
         runReq.derivedMap(cp.beamName).biasAndPixelCorrectedCroppedImage,
@@ -133,8 +137,7 @@ object CollimatorPositionAnalysis extends Logging {
       CollimatorPosition.insert(doneDataList) // save to database
       logger.info("Inserted  " + doneList.size + " + CollimatorPosition rows.")
 
-      // TODO currently buffered images are created but not used.  Not sure it is worth it to show them to the user or not.  Also they
-      //     do not have the X1X2Y1Y2 labels, nor the difference between measured and expected.
+      // TODO Should make nice HTML for each buffered images.
       val elem = CollimatorPositionHTML.makeDisplay(extendedData, runReq, doneList, crashList, procedureStatus)
       val result = Right(new CollimatorPositionResult(elem, procedureStatus, doneDataList, crashList))
       logger.info("Finished analysis of CollimatorPosition.  Status: " + procedureStatus)

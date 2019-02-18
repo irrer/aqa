@@ -108,8 +108,8 @@ object CollimatorCenteringHTML {
     val script = {
       """
     <script>
-      $(document).ready(function(){ $('#""" + image090 + """').zoom(); });
-      $(document).ready(function(){ $('#""" + image270 + """').zoom(); });
+      $(document).ready(function(){ $('#""" + image090Name + """').zoom(); });
+      $(document).ready(function(){ $('#""" + image270Name + """').zoom(); });
     </script>
 """
     }
@@ -123,12 +123,12 @@ object CollimatorCenteringHTML {
           <h3 title='X, Y difference from image center in mm'>{ resultSummary } mm</h3>
         </div>
         <div class="row" style="margin:30px;">
-          <div class="col-md-5 col-md-offset-1" align="middle">
+          <div class="col-md-4 col-md-offset-1" align="middle">
             { imageTitle("90", image090) }
             <a title='Click for DICOM details' href={ href090 }>{ Config.CollimatorCentering090BeamName }<br/></a>
             { showImage("CollimatorCentering090_" + Config.CollimatorCentering090BeamName + ".png", outputDir, image090.bufferedImage, image090Name) }
           </div>
-          <div class="col-md-5" align="middle">
+          <div class="col-md-4" align="middle">
             { imageTitle("270", image270) }
             <a title='Click for DICOM details' href={ href270 }>{ Config.CollimatorCentering270BeamName }<br/></a>
             { showImage("CollimatorCentering270_" + Config.CollimatorCentering270BeamName + ".png", outputDir, image270.bufferedImage, image270Name) }

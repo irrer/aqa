@@ -73,8 +73,8 @@ object CollimatorCenteringAnalysis extends Logging {
     val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
     logger.info("CollimatorCentering error in mm: " + errDistance + "    Status: " + procedureStatus)
 
-    val xy090 = m090.toX1X2Y1Y2(Util.collimatorAngle(al090)).pix2iso(translator)
-    val xy270 = m270.toX1X2Y1Y2(Util.collimatorAngle(al270)).pix2iso(translator)
+    val xy090 = m090.pix2iso(translator).toX1X2Y1Y2(Util.collimatorAngle(al090))
+    val xy270 = m270.pix2iso(translator).toX1X2Y1Y2(Util.collimatorAngle(al270))
 
     val collimatorCentering = new CollimatorCentering(None, outputPK, procedureStatus.name,
       Util.sopOfAl(al090), Util.sopOfAl(al270), // SOPInstanceUID090, SOPInstanceUID270

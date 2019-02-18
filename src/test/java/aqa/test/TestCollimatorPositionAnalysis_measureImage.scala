@@ -12,6 +12,10 @@ import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageUtil
 import org.aqa.Config
 import java.awt.Rectangle
+import org.aqa.run.ProcedureStatus
+import org.aqa.webrun.phase2.MeasureTBLREdges
+import com.pixelmed.dicom.TagFromName
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Test the Config.
@@ -43,6 +47,9 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
       val beamName = file.getName
       val FloodCompensation = false
       val outputPK = -1.toLong
+      val collimatorAngle = al.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head
+      println("collimatorAngle: " + collimatorAngle)
+
       val floodOffset = new Point(0, 0)
       val results = CollimatorPositionAnalysis.testMeasureImage(beamName, FloodCompensation, biasAndPixelCorrectedCroppedImage, pixelCorrectedImage,
         al, originalImage, outputPK, floodOffset)
@@ -52,6 +59,9 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
       val collimatorPosition = results.right.get._1
       val image = results.right.get._2
 
+      val x1x2y2y2Expected = MeasureTBLREdges.imageCollimatorPositions(al)
+      println("Expected: " + x1x2y2y2Expected)
+
       println("collimatorPosition: " + collimatorPosition)
 
       val imageFile = new File(outDir, file.getName.replace("dcm", "png"))
@@ -59,12 +69,7 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
       println("Writing image file: " + imageFile.getAbsolutePath)
       ImageUtil.writePngFile(image, imageFile)
 
-      if (false) { // TODO - causes exit
-        (collimatorPosition.X1_ExpectedMinusImage_mm.abs < 2) should be(true)
-        (collimatorPosition.X2_ExpectedMinusImage_mm.abs < 2) should be(true)
-        (collimatorPosition.Y1_ExpectedMinusImage_mm.abs < 2) should be(true)
-        (collimatorPosition.Y2_ExpectedMinusImage_mm.abs < 2) should be(true)
-      }
+      (collimatorPosition.status) should be(ProcedureStatus.pass.toString)
     }
 
     def doTestWithFlood(file: File): Unit = {
@@ -80,6 +85,8 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
       val beamName = file.getName
       val FloodCompensation = true
       val outputPK = -1.toLong
+      val collimatorAngle = al.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head
+      println("collimatorAngle: " + collimatorAngle)
 
       val results = CollimatorPositionAnalysis.testMeasureImage(beamName, FloodCompensation, biasAndPixelCorrectedCroppedImage, pixelCorrectedImage,
         al, originalImage, outputPK, floodOffset)
@@ -89,6 +96,9 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
       val collimatorPosition = results.right.get._1
       val image = results.right.get._2
 
+      val x1x2y2y2Expected = MeasureTBLREdges.imageCollimatorPositions(al)
+      println("Expected: " + x1x2y2y2Expected)
+
       println("collimatorPosition: " + collimatorPosition)
 
       val imageFile = new File(outDir, (file.getName + "_flood.png").replace(".dcm", ""))
@@ -96,18 +106,16 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
       println("Writing image file: " + imageFile.getAbsolutePath)
       ImageUtil.writePngFile(image, imageFile)
 
-      if (false) { // TODO - causes exit
-        (collimatorPosition.X1_ExpectedMinusImage_mm.abs < 2) should be(true)
-        (collimatorPosition.X2_ExpectedMinusImage_mm.abs < 2) should be(true)
-        (collimatorPosition.Y1_ExpectedMinusImage_mm.abs < 2) should be(true)
-        (collimatorPosition.Y2_ExpectedMinusImage_mm.abs < 2) should be(true)
-      }
+      (collimatorPosition.status) should be(ProcedureStatus.pass.toString)
     }
 
     val fileList = dir.listFiles.sortBy(_.getName)
+    println("Files to test: " + fileList.map(f => f.getAbsolutePath).mkString("    "))
+
     fileList.map(f => doTest(f))
 
     fileList.map(f => doTestWithFlood(f))
+    println("TestCollimatorPositionAnalysis_measureImage Done")
   }
 
 }
