@@ -106,8 +106,6 @@ object MeasureTBLREdges extends Logging {
     }
   }
 
-  def TBLRtoX1X2Y1Y2(tblr: TBLR) = new X1X2Y1Y2(tblr.left, tblr.right, tblr.top, tblr.bottom)
-
   def TBLRtoX1X2Y1Y2(collimatorAngle: Double, tblr: TBLR) = {
     Util.angleRoundedTo90(collimatorAngle) match {
       case 0 => new X1X2Y1Y2(tblr.left, tblr.right, tblr.bottom, tblr.top)
