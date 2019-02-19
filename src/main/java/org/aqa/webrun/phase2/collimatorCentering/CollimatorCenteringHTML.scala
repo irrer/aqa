@@ -20,7 +20,7 @@ object CollimatorCenteringHTML {
 
   private val htmlFileName = "CollimatorCentering.html"
 
-  private def fmt(d: Double): String = d.formatted("%8.2f")
+  private def fmt(d: Double): String = d.formatted("%8.3f")
 
   private def showImage(fileName: String, outputDir: File, bufImg: BufferedImage, id: String): Elem = {
     val fn = FileUtil.replaceInvalidFileNameCharacters(fileName, '_')
@@ -40,8 +40,6 @@ object CollimatorCenteringHTML {
     case class CCRow(title: String, value: Double)
 
     val rowList = Seq(
-      new CCRow("X collimator center - image center", cc.xCollimatorCenterMinusImageCenter_mm),
-      new CCRow("Y collimator center - image center", cc.yCollimatorCenterMinusImageCenter_mm),
       new CCRow("X collimator center", cc.xCollimatorCenter_mm),
       new CCRow("Y collimator center", cc.yCollimatorCenter_mm),
       new CCRow("X1 90 degrees", cc.X1_090_mm),
@@ -95,7 +93,7 @@ object CollimatorCenteringHTML {
 
     val imageCenter = runReq.floodTranslator.iso2Pix(0, 0)
 
-    val resultSummary = collimatorCentering.xCollimatorCenterMinusImageCenter_mm.formatted("%5.2f") + ", " + collimatorCentering.yCollimatorCenterMinusImageCenter_mm.formatted("%5.2f")
+    val resultSummary = fmt(collimatorCentering.xCollimatorCenter_mm) + ", " + fmt(collimatorCentering.yCollimatorCenter_mm)
 
     def imageTitle(name: String, ar: MeasureTBLREdges.AnalysisResult): Elem = {
       val err = fmt(ar.measurementSet.center.getX - imageCenter.getX) + ", " + fmt(ar.measurementSet.center.getY - imageCenter.getY)
@@ -119,8 +117,8 @@ object CollimatorCenteringHTML {
       val href270 = Phase2Util.dicomViewHref(runReq.rtimageMap(Config.CollimatorCentering270BeamName).attributeList.get, extendedData, runReq)
 
       <div>
-        <div class="col-md-4 col-md-offset-4" align="middle">
-          <h3 title='X, Y difference from image center in mm'>{ resultSummary } mm</h3>
+        <div class="col-md-4 col-md-offset-3" align="middle">
+          <h3 title='X, Y difference from isoplane center in mm'>{ resultSummary } mm</h3>
         </div>
         <div class="row" style="margin:30px;">
           <div class="col-md-4 col-md-offset-1" align="middle">

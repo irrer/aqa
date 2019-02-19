@@ -232,7 +232,7 @@ object Phase2Util extends Logging {
     def wrap(col: Int, name: String, value: String, asAlias: Boolean): Elem = {
       val html =
         if (asAlias) {
-          <span AQAAlias="">{ value }</span>
+          <span aqaalias="">{ value }</span>
         } else {
           val valueList = value.split("\n");
           { <span>{ valueList.head }{ valueList.tail.map(line => { <span><br/> { line } </span> }) }</span> }

@@ -63,23 +63,25 @@ object CollimatorCenteringAnalysis extends Logging {
 
     val m090 = result090.measurementSet // in pixels
     val m270 = result270.measurementSet // in pixels
-    val xCntrPix = (m090.center.getX + m270.center.getX) / 2 // in pixels
-    val yCntrPix = (m090.center.getY + m270.center.getY) / 2 // in pixels
-    val measuredCntrIso = translator.pix2Iso(xCntrPix, yCntrPix) // place in isoplane that is measured by collimator centering
-    val plannedCntrIso = new Point2D.Double(0, 0)
-
-    val errDistance = plannedCntrIso.distance(measuredCntrIso)
-    val pass: Boolean = errDistance <= Config.CollimatorCenteringTolerence_mm
-    val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
-    logger.info("CollimatorCentering error in mm: " + errDistance + "    Status: " + procedureStatus)
 
     val xy090 = m090.pix2iso(translator).toX1X2Y1Y2(Util.collimatorAngle(al090))
     val xy270 = m270.pix2iso(translator).toX1X2Y1Y2(Util.collimatorAngle(al270))
 
+    // note that for collimator angles of 90 and 270, X1 and X2 are the horizontal edges, and Y1 and Y2 are the vertical edges
+    val xCenter = (xy090.Y1 + xy090.Y2 + xy270.Y1 + xy270.Y2) / 4
+    val yCenter = (xy090.X1 + xy090.X2 + xy270.X1 + xy270.X2) / 4
+
+    val measuredCntrIso = new Point2D.Double(xCenter, yCenter) // place in isoplane that is measured by collimator centering
+    val zero = new Point2D.Double(0, 0)
+
+    val errDistance = zero.distance(measuredCntrIso)
+    val pass: Boolean = errDistance <= Config.CollimatorCenteringTolerence_mm
+    val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
+    logger.info("CollimatorCentering error in mm: " + errDistance + "    Status: " + procedureStatus)
+
     val collimatorCentering = new CollimatorCentering(None, outputPK, procedureStatus.name,
       Util.sopOfAl(al090), Util.sopOfAl(al270), // SOPInstanceUID090, SOPInstanceUID270
-      measuredCntrIso.getX - plannedCntrIso.getX, measuredCntrIso.getY - plannedCntrIso.getY, // xCollimatorCenterMinusImageCenter_mm, yCollimatorCenterMinusImageCenter_mm
-      measuredCntrIso.getX, measuredCntrIso.getY, // xCollimatorCenter_mm, yCollimatorCenter_mm
+      xCenter, yCenter, // xCollimatorCenter_mm, yCollimatorCenter_mm
       xy090.X1, xy090.X2, xy090.Y1, xy090.Y2,
       xy270.X1, xy270.X2, xy270.Y1, xy270.Y2)
 

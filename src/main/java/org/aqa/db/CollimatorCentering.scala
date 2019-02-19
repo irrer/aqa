@@ -17,11 +17,8 @@ case class CollimatorCentering(
   SOPInstanceUID090: String, // UID of 90 degree DICOM image
   SOPInstanceUID270: String, // UID of 270 degree DICOM image
 
-  xCollimatorCenterMinusImageCenter_mm: Double, // X center the collimator minus the center of the image in mm
-  yCollimatorCenterMinusImageCenter_mm: Double, // Y center the collimator minus the center of the image in mm
-
-  xCollimatorCenter_mm: Double, // X collimator center in mm
-  yCollimatorCenter_mm: Double, // Y collimator center in mm
+  xCollimatorCenter_mm: Double, // X collimator isoplane center in mm
+  yCollimatorCenter_mm: Double, // Y collimator isoplane center in mm
 
   X1_090_mm: Double, // X1 position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
   X2_090_mm: Double, // X2 position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
@@ -51,8 +48,6 @@ case class CollimatorCentering(
       "    status: " + status + "\n" +
       "    SOPInstanceUID090: " + SOPInstanceUID090 + "\n" +
       "    SOPInstanceUID270: " + SOPInstanceUID270 + "\n" +
-      "    xCollimatorCenterMinusImageCenter_mm: " + xCollimatorCenterMinusImageCenter_mm + "\n" +
-      "    yCollimatorCenterMinusImageCenter_mm: " + yCollimatorCenterMinusImageCenter_mm + "\n" +
       "    xCollimatorCenter_mm: " + xCollimatorCenter_mm + "\n" +
       "    yCollimatorCenter_mm: " + yCollimatorCenter_mm + "\n" +
       "    X1_090_mm: " + X1_090_mm + "\n" +
@@ -74,8 +69,6 @@ object CollimatorCentering extends ProcedureOutput {
     def status = column[String]("status")
     def SOPInstanceUID090 = column[String]("SOPInstanceUID090")
     def SOPInstanceUID270 = column[String]("SOPInstanceUID270")
-    def xCollimatorCenterMinusImageCenter_mm = column[Double]("xCollimatorCenterMinusImageCenter_mm")
-    def yCollimatorCenterMinusImageCenter_mm = column[Double]("yCollimatorCenterMinusImageCenter_mm")
     def xCollimatorCenter_mm = column[Double]("xCollimatorCenter_mm")
     def yCollimatorCenter_mm = column[Double]("yCollimatorCenter_mm")
     def X1_090_mm = column[Double]("X1_090_mm")
@@ -93,8 +86,6 @@ object CollimatorCentering extends ProcedureOutput {
       status,
       SOPInstanceUID090,
       SOPInstanceUID270,
-      xCollimatorCenterMinusImageCenter_mm,
-      yCollimatorCenterMinusImageCenter_mm,
       xCollimatorCenter_mm,
       yCollimatorCenter_mm,
       X1_090_mm,
