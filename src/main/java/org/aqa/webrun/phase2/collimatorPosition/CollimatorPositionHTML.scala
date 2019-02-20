@@ -47,26 +47,33 @@ object CollimatorPositionHTML {
       <a title="View RT Plan DICOM file" href={ planHref }>RT Plan</a>
     }
 
-    class Col(val title: String, name: String, val get: (CollimatorPosition, BufferedImage) => String) {
+    class Col(val title: String, name: String, val get: (CollimatorPosition, BufferedImage) => Any) {
       def toHeader = <th title={ title }>{ name }</th>
-      def toRow(psnChk: CollimatorPosition, bufImg: BufferedImage) = <td title={ title }>{ get(psnChk, bufImg) }</td>
+      def toRow(psnChk: CollimatorPosition, bufImg: BufferedImage) = <td title={ title }>{ get(psnChk, bufImg).toString }</td>
     }
 
     def degree(deg: Double): String = (Util.modulo360(deg).round.toInt % 360).formatted("%4d")
 
     def leaf(diff: Double): String = diff.formatted("%8.3f")
 
-    class ColBeamName(override val title: String, name: String, override val get: (CollimatorPosition, BufferedImage) => String) extends Col(title, name, get) {
+    class ColSide(override val title: String, name: String, override val get: (CollimatorPosition, BufferedImage) => Double) extends Col(title, name, get) {
       override def toRow(collimatorPosition: CollimatorPosition, bufImg: BufferedImage) = {
 
-        val dicomFile = runReq.rtimageMap(collimatorPosition.beamName)
-        val href = Phase2Util.dicomViewHref(dicomFile.attributeList.get, extendedData, runReq)
-        val elem = { <td title={ title + ".  Follow link to view DICOM" }><a href={ href }>{ get(collimatorPosition, bufImg) }</a></td> }
+        val value = get(collimatorPosition, bufImg)
+        val pass = Config.CollimatorCenteringTolerence_mm >= value.abs
+        val text = value.formatted("%8.3f")
+
+        val elem = {
+          if (pass)
+            <td title={ title }>{ text }</td>
+          else
+            <td title={ title } class="danger">{ text }</td>
+        }
         elem
       }
     }
 
-    class ColStatus(override val title: String, name: String, override val get: (CollimatorPosition, BufferedImage) => String) extends Col(title, name, get) {
+    class ColBeamName(override val title: String, name: String, override val get: (CollimatorPosition, BufferedImage) => String) extends Col(title, name, get) {
       override def toRow(collimatorPosition: CollimatorPosition, bufImg: BufferedImage) = {
         val pngFileName = {
           val floodComp = if (collimatorPosition.FloodCompensation) "_with_flood_comp" else ""
@@ -77,33 +84,33 @@ object CollimatorPositionHTML {
         val pngFile = new File(subDir, pngFileName)
         Util.writePng(bufImg, pngFile)
         val pngUrl = WebServer.urlOfResultsFile(pngFile)
-        val text = if (collimatorPosition.status.toString.equals(ProcedureStatus.pass.toString)) "Pass" else "Fail"
-        val elem = { <td title={ title + ".  Follow link to view " + WebUtil.titleNewline + " image with annotated edge measurements" }><a href={ pngUrl }>{ text }</a></td> }
+        val pass = collimatorPosition.status.toString.equals(ProcedureStatus.pass.toString)
+        val text = " " + collimatorPosition.beamName + " : " + (if (pass) "Pass" else "Fail")
+        val link = { <a href={ pngUrl }>{ text }</a> }
+        val elem = {
+          if (pass) { <td title={ title }>{ link }</td> }
+          else { <td class="danger" title={ title }>{ link }</td> }
+        }
         elem
       }
     }
 
     val rowList = Seq(
-      new ColBeamName("Name of beam in plan", "Beam", (psnChk: CollimatorPosition, bufImg: BufferedImage) => psnChk.beamName),
+      new ColBeamName("Name of beam in plan.  Follow link to view " + WebUtil.titleNewline + " image with annotated edge measurements", "Beam", (psnChk: CollimatorPosition, bufImg: BufferedImage) => psnChk.beamName),
       new Col("Flood field compensation used: True/False", "Flood Comp.", (psnChk: CollimatorPosition, bufImg: BufferedImage) => (if (psnChk.FloodCompensation) "T" else "F")),
       new Col("Gantry Angle in degrees", "Gantry", (psnChk: CollimatorPosition, bufImg: BufferedImage) => degree(psnChk.gantryAngle_deg)),
       new Col("Collimator Angle in degrees", "Collimator", (psnChk: CollimatorPosition, bufImg: BufferedImage) => degree(psnChk.collimatorAngle_deg)),
-      new Col("Expected X1 - X1 edge in image, in mm", "X1 mm", (psnChk: CollimatorPosition, bufImg: BufferedImage) => leaf(psnChk.X1_ExpectedMinusImage_mm)),
-      new Col("Expected X2 - X2 edge in image, in mm", "X2 mm", (psnChk: CollimatorPosition, bufImg: BufferedImage) => leaf(psnChk.X2_ExpectedMinusImage_mm)),
-      new Col("Expected Y1 - Y1 edge in image, in mm", "Y1 mm", (psnChk: CollimatorPosition, bufImg: BufferedImage) => leaf(psnChk.Y1_ExpectedMinusImage_mm)),
-      new Col("Expected Y2 - Y2 edge in image, in mm", "Y2 mm", (psnChk: CollimatorPosition, bufImg: BufferedImage) => leaf(psnChk.Y2_ExpectedMinusImage_mm)),
-      new ColStatus("Pass if angles within tolerences", "Status", (psnChk: CollimatorPosition, bufImg: BufferedImage) => if (psnChk.status.toString.equals(ProcedureStatus.pass.toString)) "Pass" else "Fail"))
+      new ColSide("Expected X1 - X1 edge in image, in mm", "X1 mm", (psnChk: CollimatorPosition, bufImg: BufferedImage) => psnChk.X1_ExpectedMinusImage_mm),
+      new ColSide("Expected X2 - X2 edge in image, in mm", "X2 mm", (psnChk: CollimatorPosition, bufImg: BufferedImage) => psnChk.X2_ExpectedMinusImage_mm),
+      new ColSide("Expected Y1 - Y1 edge in image, in mm", "Y1 mm", (psnChk: CollimatorPosition, bufImg: BufferedImage) => psnChk.Y1_ExpectedMinusImage_mm),
+      new ColSide("Expected Y2 - Y2 edge in image, in mm", "Y2 mm", (psnChk: CollimatorPosition, bufImg: BufferedImage) => psnChk.Y2_ExpectedMinusImage_mm))
 
     def collimatorPositionTableHeader: Elem = {
       <thead><tr>{ rowList.map(row => row.toHeader) }</tr></thead>
     }
 
     def collimatorPositionToTableRow(collimatorPosition: CollimatorPosition, bufImg: BufferedImage): Elem = {
-      if (collimatorPosition.status.toString.equals(ProcedureStatus.pass.toString)) {
-        <tr>{ rowList.map(row => row.toRow(collimatorPosition, bufImg)) }</tr>
-      } else {
-        <tr class="danger">{ rowList.map(row => row.toRow(collimatorPosition, bufImg)) }</tr>
-      }
+      <tr>{ rowList.map(row => row.toRow(collimatorPosition, bufImg)) }</tr>
     }
 
     val tbody = resultList.map(psnChk => collimatorPositionToTableRow(psnChk._1, psnChk._2))
