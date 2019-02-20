@@ -118,11 +118,18 @@ object CollimatorPositionHTML {
       </div>
     }
 
+    val collimatorCenterOfRotation = {
+      def fmt(d: Double) = d.formatted("%7.3f")
+      val text = fmt(resultList.head._1.XCollimatorCenterOfRotation_mm) + ", " + fmt(resultList.head._1.YCollimatorCenterOfRotation_mm)
+      <span title="X,Y coordinates of collimator center of rotation">Collimator center of rotation { text }</span>
+    }
+
     val content = {
       <div class="col-md-10 col-md-offset-1">
         <div class="row" style="margin:20px;">
           <div class="col-md-1">{ csvFileReference }</div>
           <div class="col-md-1">{ viewRtPlan }</div>
+          <div class="col-md-2">   { collimatorCenterOfRotation }</div>
         </div>
         <div class="row" style="margin:20px;">
           <table class="table table-striped">

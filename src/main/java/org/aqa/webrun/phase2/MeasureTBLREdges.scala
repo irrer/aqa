@@ -154,6 +154,12 @@ object MeasureTBLREdges extends Logging {
       left - other.left,
       right - other.right)
 
+    def addOffset(point: Point2D.Double) = new TBLR(
+      top + point.getY,
+      bottom + point.getY,
+      left + point.getX,
+      right + point.getX)
+
     def toX1X2Y1Y2(collimatorAngle: Double) = TBLRtoX1X2Y1Y2(collimatorAngle, this)
     //def toX1X2Y1Y2 = TBLRtoX1X2Y1Y2(270, this)
 

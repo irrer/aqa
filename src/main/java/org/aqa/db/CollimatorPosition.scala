@@ -24,6 +24,8 @@ case class CollimatorPosition(
   X2_ExpectedMinusImage_mm: Double, //  X2 jaw plan minus west position of collimator  (X axis) in mm
   Y1_ExpectedMinusImage_mm: Double, //  Y1 jaw plan minus north position of collimator (Y axis) in mm
   Y2_ExpectedMinusImage_mm: Double, //  Y2 jaw plan minus south position of collimator (Y axis) in mm
+  XCollimatorCenterOfRotation_mm: Double, // X position of the collimator's center of rotation
+  YCollimatorCenterOfRotation_mm: Double, // Y position of the collimator's center of rotation
   gantryAngle_deg: Double, // gantry angle in degrees
   collimatorAngle_deg: Double // collimator angle in degrees
 ) {
@@ -54,6 +56,8 @@ case class CollimatorPosition(
       "    X2_ExpectedMinusImage_mm: " + X2_ExpectedMinusImage_mm + "\n" +
       "    Y1_ExpectedMinusImage_mm: " + Y1_ExpectedMinusImage_mm + "\n" +
       "    Y2_ExpectedMinusImage_mm: " + Y2_ExpectedMinusImage_mm + "\n" +
+      "    XCollimatorCenterOfRotation_mm: " + XCollimatorCenterOfRotation_mm + "\n" +
+      "    YCollimatorCenterOfRotation_mm: " + YCollimatorCenterOfRotation_mm + "\n" +
       "    gantryAngle_deg: " + gantryAngle_deg + "\n" +
       "    collimatorAngle_deg: " + collimatorAngle_deg + "\n"
   }
@@ -76,6 +80,8 @@ object CollimatorPosition extends ProcedureOutput {
     def X2_ExpectedMinusImage_mm = column[Double]("X2_ExpectedMinusImage_mm")
     def Y1_ExpectedMinusImage_mm = column[Double]("Y1_ExpectedMinusImage_mm")
     def Y2_ExpectedMinusImage_mm = column[Double]("Y2_ExpectedMinusImage_mm")
+    def XCollimatorCenterOfRotation_mm = column[Double]("XCollimatorCenterOfRotation_mm")
+    def YCollimatorCenterOfRotation_mm = column[Double]("YCollimatorCenterOfRotation_mm")
     def gantryAngle_deg = column[Double]("gantryAngle_deg")
     def collimatorAngle_deg = column[Double]("collimatorAngle_deg")
 
@@ -94,6 +100,8 @@ object CollimatorPosition extends ProcedureOutput {
       X2_ExpectedMinusImage_mm,
       Y1_ExpectedMinusImage_mm,
       Y2_ExpectedMinusImage_mm,
+      XCollimatorCenterOfRotation_mm,
+      YCollimatorCenterOfRotation_mm,
       gantryAngle_deg,
       collimatorAngle_deg) <> ((CollimatorPosition.apply _)tupled, CollimatorPosition.unapply _)
 

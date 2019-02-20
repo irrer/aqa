@@ -44,6 +44,8 @@ object CollimatorPositionCSV {
       ("gantryAngle_deg", (ii: II) => ii.gantryAngle_deg),
       ("collimatorAngle_deg", (ii: II) => ii.collimatorAngle_deg),
       ("FloodCompensation", (ii: II) => ii.FloodCompensation),
+      ("XCollimatorCenterOfRotation_mm", (ii: II) => ii.XCollimatorCenterOfRotation_mm),
+      ("YCollimatorCenterOfRotation_mm", (ii: II) => ii.YCollimatorCenterOfRotation_mm),
       ("X1_mm", (ii: II) => ii.X1_mm),
       ("X2_mm", (ii: II) => ii.X2_mm),
       ("Y1_mm", (ii: II) => ii.Y1_mm),
@@ -75,7 +77,10 @@ object CollimatorPositionCSV {
         ("Institution", extendedData.institution.name),
         ("Acquisition Date", acquisitionDate),
         ("Analysis Date", analysisDate),
-        ("User", userId))
+        ("User", userId),
+        ("XCollimatorCenterOfRotation_mm", collimatorPositionSeq.head.XCollimatorCenterOfRotation_mm.toString),
+        ("YCollimatorCenterOfRotation_mm", collimatorPositionSeq.head.YCollimatorCenterOfRotation_mm.toString)
+      )
 
       Seq(
         info.map(s => Util.textToCsv(s._1)).mkString(","),
