@@ -63,8 +63,6 @@ object LeafPositionAnalysis extends Logging {
       private def majorValleyIndex = indexOf(1)
 
       private def minorValleyHeight = {
-        val j = minorValleyIndex // TODO rm
-        val j1 = coarseSideList_pix // TODO rm
         profile(minorValleyIndex)
       }
       private def majorValleyHeight = profile(majorValleyIndex)
@@ -169,7 +167,8 @@ object LeafPositionAnalysis extends Logging {
     val translator = new IsoImagePlaneTranslator(imageAttrList)
     val SOPInstanceUID = Util.sopOfAl(imageAttrList)
 
-    val leafEndList_mm = LeafPositionUtil.leafEnds(horizontal, beamName, plan)
+    val collCenterOffset = if (horizontal) collimatorCentering.xCollimatorCenter_mm else collimatorCentering.yCollimatorCenter_mm
+    val leafEndList_mm = LeafPositionUtil.leafEnds(horizontal, beamName, plan).map(le => le + collCenterOffset)
     val leafEndList_pix = leafEndList_mm.map(e => if (horizontal) translator.iso2PixCoordX(e) else translator.iso2PixCoordY(e))
 
     val leafSideList_pix = leafSides_pix(horizontal, beamName, imageAttrList, dicomImage, plan, translator, leafEndList_pix).sorted // sort just to make sure
