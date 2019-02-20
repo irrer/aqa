@@ -60,7 +60,7 @@ object LeafPositionUtil extends Logging {
     val jawBounds = jawBoundaries(horizontal, beamName, plan)
     val min = jawBounds._1
     val max = jawBounds._2
-    val exposed = all.filter(side => (side > min) && (side < max)).distinct.sorted
+    val exposed = all.filter(side => (side >= min) && (side <= max)).distinct.sorted
     exposed
   }
 
