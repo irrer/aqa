@@ -96,7 +96,7 @@ object CollimatorPositionHTML {
     }
 
     val rowList = Seq(
-      new ColBeamName("Name of beam in plan.  Follow link to view " + WebUtil.titleNewline + " image with annotated edge measurements", "Beam", (psnChk: CollimatorPosition, bufImg: BufferedImage) => psnChk.beamName),
+      new ColBeamName("View image with annotated " + WebUtil.titleNewline + " edge measurements", "Beam", (psnChk: CollimatorPosition, bufImg: BufferedImage) => psnChk.beamName),
       new Col("Flood field compensation used: True/False", "Flood Comp.", (psnChk: CollimatorPosition, bufImg: BufferedImage) => (if (psnChk.FloodCompensation) "T" else "F")),
       new Col("Gantry Angle in degrees", "Gantry", (psnChk: CollimatorPosition, bufImg: BufferedImage) => degree(psnChk.gantryAngle_deg)),
       new Col("Collimator Angle in degrees", "Collimator", (psnChk: CollimatorPosition, bufImg: BufferedImage) => degree(psnChk.collimatorAngle_deg)),
