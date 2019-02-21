@@ -36,6 +36,7 @@ import org.aqa.db.MaintenanceRecord
 import org.aqa.db.CachedUser
 import org.aqa.Config
 import org.aqa.webrun.phase2.customizeRtPlan.CustomizeRtPlan
+import org.aqa.webrun.phase2.customizeRtPlan.CustomizeRtPlanInterface
 
 object MachineUpdate {
   val machinePKTag = "machinePK"
@@ -579,7 +580,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
         form.setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
       } else {
         updateMachineInDatabase(valueMap) // in case user has made changes
-        CustomizeRtPlan.redirect(machinePK, response)
+        CustomizeRtPlanInterface.redirect(machinePK, response)
       }
     } else {
       val styleMap = Error.make(institutionPK, "Only people from the machine's institution are allowed to create customized plans")

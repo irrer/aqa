@@ -690,6 +690,7 @@ object Config extends Logging {
 
   val FloodFieldBeamName = logMainText("FloodFieldBeamName")
   
+  val PrototypeCustomBeamName = logMainText("PrototypeCustomBeamName")
   val PrefixForMachineDependentBeamName = logMainText("PrefixForMachineDependentBeamName")
 
   val CollimatorCenteringTolerence_mm = logMainText("CollimatorCenteringTolerence_mm").toDouble

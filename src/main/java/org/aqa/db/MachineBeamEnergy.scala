@@ -30,6 +30,16 @@ case class MachineBeamEnergy(
   }
 
   def isFFF = fffEnergy_MeV.isDefined && (fffEnergy_MeV.get > 0)
+
+  override def toString = {
+    def show(d: Option[Double]) = if (d.isDefined) Util.fmtDbl(d.get) else "none"
+
+    "PK: " + machineBeamEnergyPK +
+      "    machinePK: " + machinePK +
+      "    photonEnergy_MeV: " + show(photonEnergy_MeV) +
+      "    maxDoseRate_MUperMin: " + show(maxDoseRate_MUperMin) +
+      "    fff: " + isFFF
+  }
 }
 
 object MachineBeamEnergy {

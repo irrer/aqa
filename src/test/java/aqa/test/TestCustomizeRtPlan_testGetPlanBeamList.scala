@@ -23,9 +23,7 @@ class TestCustomizeRtPlan_testGetPlanBeamList extends FlatSpec with Matchers {
     val mlcPK = 3.toLong // hard coded 3 for PK makes code brittle
     val machine = new Machine(None, "id", Some("id_real"), 1, None, mlcPK, -1, -1, None, false, false, false, false, false, "notes")
 
-    val customizeRtPlan = new CustomizeRtPlan
-
-    val list = customizeRtPlan.testGetPlanBeamList(machine)
+    val list = CustomizeRtPlan.testGetPlanBeamList(machine)
 
     (list.size) should be(22)
     (list.filter(_.fff).size) should be(2)

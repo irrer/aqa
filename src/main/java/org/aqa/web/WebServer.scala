@@ -37,7 +37,7 @@ import org.aqa.webrun.phase2.wedge.WedgeUseAsBaseline
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessUseAsBaseline
 import org.aqa.AnonymizeUtil
 import edu.umro.ScalaUtil.Trace
-import org.aqa.webrun.phase2.customizeRtPlan.CustomizeRtPlan
+import org.aqa.webrun.phase2.customizeRtPlan.CustomizeRtPlanInterface
 
 object WebServer {
   val challengeScheme = ChallengeScheme.HTTP_BASIC
@@ -467,7 +467,7 @@ class WebServer extends Application with Logging {
         new SymmetryAndFlatnessUseAsBaseline,
         new WedgeUseAsBaseline,
         new AnonymousTranslate,
-        new CustomizeRtPlan,
+        new CustomizeRtPlanInterface,
         termsOfUse,
         outputList,
         webRunIndex,
