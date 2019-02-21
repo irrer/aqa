@@ -14,7 +14,6 @@ import scala.collection.Seq
 import org.aqa.IsoImagePlaneTranslator
 import com.pixelmed.dicom.ValueRepresentation
 import edu.umro.ScalaUtil.Trace._
-import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessAnalysisPixelMap
 import edu.umro.ImageUtil.ImageUtil
 import java.awt.Color
 
@@ -57,36 +56,36 @@ class TestSymmetryAndFlatnessAnalysisPixelMap extends FlatSpec with Matchers {
 
     val translator = new IsoImagePlaneTranslator(al)
 
-    val pixMap = SymmetryAndFlatnessAnalysisPixelMap.getPixelMap(al)
-    trace
-
-    // setting this to true shows an image
-    if (false) {
-
-      import java.awt.FlowLayout
-      import java.awt.image.BufferedImage
-      import java.io.File
-      import java.io.IOException
-      import javax.imageio.ImageIO
-      import javax.swing.ImageIcon
-      import javax.swing.JFrame
-      import javax.swing.JLabel
-
-      val img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
-      val rgb = Color.CYAN.getRGB
-
-      pixMap.values.flatten.map(p => img.setRGB(p.getX.round.toInt, p.getY.round.toInt, rgb))
-      val icon = new ImageIcon(img)
-      val frame = new JFrame()
-      frame.setLayout(new FlowLayout)
-      frame.setSize(width + 20, height + 20)
-      val lbl = new JLabel
-      lbl.setIcon(icon)
-      frame.add(lbl)
-      frame.setVisible(true)
-      frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE)
-      trace
-    }
+    //    val pixMap = SymmetryAndFlatnessAnalysisPixelMap.getPixelMap(al)
+    //    trace
+    //
+    //    // setting this to true shows an image
+    //    if (false) {
+    //
+    //      import java.awt.FlowLayout
+    //      import java.awt.image.BufferedImage
+    //      import java.io.File
+    //      import java.io.IOException
+    //      import javax.imageio.ImageIO
+    //      import javax.swing.ImageIcon
+    //      import javax.swing.JFrame
+    //      import javax.swing.JLabel
+    //
+    //      val img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
+    //      val rgb = Color.CYAN.getRGB
+    //
+    //      pixMap.values.flatten.map(p => img.setRGB(p.getX.round.toInt, p.getY.round.toInt, rgb))
+    //      val icon = new ImageIcon(img)
+    //      val frame = new JFrame()
+    //      frame.setLayout(new FlowLayout)
+    //      frame.setSize(width + 20, height + 20)
+    //      val lbl = new JLabel
+    //      lbl.setIcon(icon)
+    //      frame.add(lbl)
+    //      frame.setVisible(true)
+    //      frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE)
+    //      trace
+    //    }
   }
 
   val j = 5

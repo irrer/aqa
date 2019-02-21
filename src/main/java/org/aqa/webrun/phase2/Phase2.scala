@@ -275,19 +275,18 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
         BadPixelAnalysis.runProcedure(extendedData, runReq) match {
           case Left(fail) => Left(Seq(metadataCheck.summary, fail))
           case Right(badPixel) => {
-            CenterDoseAnalysis.runProcedure(extendedData, runReq) match {
+            CollimatorCenteringAnalysis.runProcedure(extendedData, runReq) match {
               case Left(fail) => Left(Seq(metadataCheck.summary, badPixel.summary, fail))
-              case Right(centerDose) => {
-                CollimatorCenteringAnalysis.runProcedure(extendedData, runReq) match {
-                  case Left(fail) => Left(Seq(metadataCheck.summary, badPixel.summary, centerDose.summary, fail))
-                  case Right(collimatorCentering) => {
-
+              case Right(collimatorCentering) => {
+                CenterDoseAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result) match {
+                  case Left(fail) => Left(Seq(metadataCheck.summary, badPixel.summary, collimatorCentering.summary, fail))
+                  case Right(centerDose) => {
                     val prevSummaryList = Seq(metadataCheck, badPixel, centerDose, collimatorCentering).map(r => r.summary)
                     // TODO run in parallel
                     val list = Seq(
                       CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
                       WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result, centerDose.resultList),
-                      SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq),
+                      SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
                       LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result))
 
                     val summaryList = prevSummaryList ++ list.map(r => if (r.isLeft) r.left.get else r.right.get.summary)

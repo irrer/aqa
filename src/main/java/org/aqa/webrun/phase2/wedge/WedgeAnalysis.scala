@@ -142,7 +142,7 @@ object WedgeAnalysis extends Logging {
   private def analyze(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering, centerDoseList: Seq[CenterDose]): Seq[WedgePoint] = {
     val outputPK = extendedData.output.outputPK.get
 
-    val pointList = Phase2Util.makeCenterDosePointList(runReq.flood.attributeList.get)
+    val pointList = Phase2Util.makeCenterDosePointList(runReq.flood.attributeList.get, collimatorCentering.center)
 
     val beamSet = runReq.rtimageMap.keySet
     val validBeamNameList = Config.WedgeBeamList.filter(b => beamSet.contains(b.wedge) && beamSet.contains(b.background))

@@ -8,6 +8,7 @@ import scala.xml.XML
 import scala.xml.Node
 import scala.xml.Elem
 import org.aqa.procedures.ProcedureOutput
+import java.awt.geom.Point2D
 
 case class CollimatorCentering(
   collimatorCenteringPK: Option[Long], // primary key
@@ -59,6 +60,8 @@ case class CollimatorCentering(
       "    Y1_270_mm: " + Y1_270_mm + "\n" +
       "    Y2_270_mm: " + Y2_270_mm + "\n"
   }
+
+  val center = new Point2D.Double(xCollimatorCenter_mm, yCollimatorCenter_mm)
 }
 
 object CollimatorCentering extends ProcedureOutput {

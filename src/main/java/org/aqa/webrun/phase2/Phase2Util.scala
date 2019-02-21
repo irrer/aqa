@@ -391,7 +391,7 @@ object Phase2Util extends Logging {
   /**
    * Create a list of points whose sum can be used to measure the center dose of an image.
    */
-  def makeCenterDosePointList(attributeList: AttributeList): Seq[Point] = {
+  def makeCenterDosePointList(attributeList: AttributeList, collimatorCenterOfRotation: Point2D.Double): Seq[Point] = {
     val translator = new IsoImagePlaneTranslator(attributeList)
 
     val radius_mm = Config.CenterDoseRadius_mm
@@ -407,9 +407,8 @@ object Phase2Util extends Logging {
     val yPixRange = (loY until hiY)
 
     // step through pixels and see which are close enough.
-    val center = new Point2D.Double(0, 0)
     def nearCenter(xPix: Int, yPix: Int): Boolean = {
-      center.distance(translator.pix2Iso(xPix, yPix)) <= Config.CenterDoseRadius_mm
+      collimatorCenterOfRotation.distance(translator.pix2Iso(xPix, yPix)) <= Config.CenterDoseRadius_mm
     }
 
     val pointList = for (xPix <- xPixRange; yPix <- yPixRange; if nearCenter(xPix, yPix)) yield { new Point(xPix, yPix) }

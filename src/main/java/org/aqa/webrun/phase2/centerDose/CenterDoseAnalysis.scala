@@ -28,6 +28,7 @@ import org.aqa.webrun.phase2.ExtendedData
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.SubProcedureResult
+import org.aqa.db.CollimatorCentering
 
 object CenterDoseAnalysis extends Logging {
 
@@ -41,8 +42,8 @@ object CenterDoseAnalysis extends Logging {
     new CenterDose(None, outputPK, SOPInstanceUID, beamName, dose, units)
   }
 
-  private def analyse(extendedData: ExtendedData, runReq: RunReq): Seq[CenterDose] = {
-    val pointList = Phase2Util.makeCenterDosePointList(runReq.flood.attributeList.get)
+  private def analyse(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Seq[CenterDose] = {
+    val pointList = Phase2Util.makeCenterDosePointList(runReq.flood.attributeList.get, collimatorCentering.center)
     val outputPK = extendedData.output.outputPK.get
 
     val centerDoseFlood = constructCenterDose(Config.FloodFieldBeamName, pointList, outputPK, runReq.floodOriginalImage, runReq.flood.attributeList.get)
@@ -56,7 +57,7 @@ object CenterDoseAnalysis extends Logging {
    */
   def testConstructCenterDose(beamName: String, dicomFile: DicomFile): CenterDose = {
     val attributeList = dicomFile.attributeList.get
-    val pointList = Phase2Util.makeCenterDosePointList(attributeList)
+    val pointList = Phase2Util.makeCenterDosePointList(attributeList, new Point2D.Double(0, 0))
     val outputPK = -1
     constructCenterDose(beamName, pointList, outputPK, new DicomImage(attributeList), attributeList)
   }
@@ -65,12 +66,12 @@ object CenterDoseAnalysis extends Logging {
 
   case class CenterDoseResult(summry: Elem, stats: ProcedureStatus.Value, resultList: Seq[CenterDose]) extends SubProcedureResult(summry, stats, subProcedureName)
 
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, CenterDoseResult] = {
+  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, CenterDoseResult] = {
     try {
       // This code only reports values without making judgment as to pass or fail.
       logger.info("Starting analysis of CenterDose")
       val status = ProcedureStatus.done
-      val resultList = analyse(extendedData, runReq)
+      val resultList = analyse(extendedData, runReq, collimatorCentering)
       logger.info("Storing results for " + resultList.size + " CenterDose rows")
       logger.info("CenterDose results: " + resultList.mkString("\n"))
       CenterDose.insert(resultList)

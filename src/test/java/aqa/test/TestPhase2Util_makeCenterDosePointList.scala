@@ -19,6 +19,7 @@ import org.aqa.webrun.phase2.centerDose.CenterDoseAnalysis
 import org.aqa.DicomFile
 import org.aqa.webrun.phase2.Phase2Util
 import java.awt.Point
+import java.awt.geom.Point2D
 
 /**
  * Test the TestChase2Util.makeCenterDosePointList function.  Lists the points found and
@@ -44,7 +45,7 @@ class TestChase2Util_makeCenterDosePointList extends FlatSpec with Matchers {
       println("\n\nfile: " + dicomFile.file.getAbsolutePath)
       val attributeList = dicomFile.attributeList.get
       val start = System.currentTimeMillis
-      val pointList = Phase2Util.makeCenterDosePointList(attributeList)
+      val pointList = Phase2Util.makeCenterDosePointList(attributeList, new Point2D.Double(0, 0))
       println("Elapsed time in ms: " + (System.currentTimeMillis - start))
 
       val pointGroups = edu.umro.ScalaUtil.Util.sizedGroups(pointList, 20)
@@ -60,7 +61,7 @@ class TestChase2Util_makeCenterDosePointList extends FlatSpec with Matchers {
 
       pointList.map(p => bufImage.setRGB(p.x, p.y, 0))
       val pngFile = new File(outDir, fileName.replace("dcm", "png"))
-      pngFile.delete      
+      pngFile.delete
       println("Writing image file " + pngFile.getAbsolutePath)
       ImageUtil.writePngFile(bufImage, pngFile)
     }

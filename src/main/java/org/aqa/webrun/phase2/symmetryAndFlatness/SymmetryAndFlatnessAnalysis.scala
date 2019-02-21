@@ -27,6 +27,8 @@ import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.ExtendedData
 import org.aqa.webrun.phase2.SubProcedureResult
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.db.CollimatorCentering
+import java.awt.geom.Point2D
 
 /**
  * Analyze DICOM files for symmetry and flatness.
@@ -165,16 +167,15 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   }
 
   /**
-   * For each point (circle) on the image, make a list of pixels that are included in it.
+   * For each point (circle) on the image, make a list of average value of the pixels that are included in it.
    */
-  private def makePointSet(dicomImage: DicomImage, attributeList: AttributeList, RescaleSlope: Double, RescaleIntercept: Double): PointSet = {
-    val pixMap = SymmetryAndFlatnessAnalysisPixelMap.getPixelMap(attributeList)
-
+  private def makePointSet(dicomImage: DicomImage, attributeList: AttributeList, RescaleSlope: Double, RescaleIntercept: Double, collimatorCenterOfRotation: Point2D.Double): PointSet = {
     /**
      * Get the average pixel value for one spot in HU or CU or whatever units the image is using.
      */
     def evalPoint(point: SymmetryAndFlatnessPoint): Double = {
-      val pixList = pixMap(point)
+      val center = new Point2D.Double(point.x_mm + collimatorCenterOfRotation.getX, point.y_mm + collimatorCenterOfRotation.getY)
+      val pixList = Phase2Util.makeCenterDosePointList(attributeList, center)
       val avg = pixList.map(p => dicomImage.get(p.getX.toInt, p.getY.toInt)).sum / pixList.size
       (avg * RescaleSlope) + RescaleIntercept // convert
     }
@@ -188,7 +189,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
    * public version of function to allow testing
    */
   def testMakePointSet(dicomImage: DicomImage, attributeList: AttributeList, RescaleSlope: Double, RescaleIntercept: Double): PointSet = {
-    makePointSet(dicomImage, attributeList, RescaleSlope, RescaleIntercept)
+    makePointSet(dicomImage, attributeList, RescaleSlope, RescaleIntercept, new Point2D.Double(0, 0))
   }
 
   def makeBaselineName(beamName: String, dataName: String): String = dataName + " " + beamName
@@ -208,7 +209,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
    * the database and generating a report.
    *
    */
-  private def analyze(beamName: String, extendedData: ExtendedData, runReq: RunReq): BeamResultBaseline = {
+  private def analyze(beamName: String, extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): BeamResultBaseline = {
     val image = getDicomImage(beamName, runReq)
     val attributeList: AttributeList = getAttributeList(beamName, runReq)
     val dicomImage = new DicomImage(attributeList)
@@ -217,7 +218,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val translator = new IsoImagePlaneTranslator(attributeList)
     val widthOfBand = translator.circleRadiusInPixels.round.toInt
 
-    val pointSet = makePointSet(dicomImage, attributeList, RescaleSlope, RescaleIntercept)
+    val pointSet = makePointSet(dicomImage, attributeList, RescaleSlope, RescaleIntercept, collimatorCentering.center)
 
     val axialSymmetry = analyzeSymmetry(pointSet.top, pointSet.bottom)
     val transverseSymmetry = analyzeSymmetry(pointSet.right, pointSet.left)
@@ -354,7 +355,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       logger.info("Created MaintenanceRecord record for Symmetry and Flatness: " + insertedMaintenanceRecord)
 
       Baseline.insert(baselineList.map(bl => bl.copy(maintenanceRecordPK = newMaintenanceRecordPK)))
-        logger.info("Created " + baselineList.size + " new baseline records for Symmetry and Flatness")
+      logger.info("Created " + baselineList.size + " new baseline records for Symmetry and Flatness")
     }
   }
 
@@ -365,7 +366,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   /**
    * Run the CollimatorPosition sub-procedure, save results in the database, return right for proper execution or left for crash.
    */
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, SymmetryAndFlatnessResult] = {
+  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, SymmetryAndFlatnessResult] = {
     try {
       logger.info("Starting analysis of SymmetryAndFlatness")
 
@@ -373,7 +374,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
       // only process beams that are both configured and have been uploaded
       //val resultList = beamNameList.par.map(beamName => analyze(beamName, extendedData, runReq)).toList
-      val resultList = beamNameList.map(beamName => analyze(beamName, extendedData, runReq)).toList // change back to 'par' when debugged
+      val resultList = beamNameList.map(beamName => analyze(beamName, extendedData, runReq, collimatorCentering)).toList // change back to 'par' when debugged
 
       val pass = {
         0 match {
