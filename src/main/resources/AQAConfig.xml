@@ -234,9 +234,19 @@ Note that when building a package for release, the Maven build process uses the 
          -->
         <BeamName>J10G0C90-6X</BeamName>
         <BeamName>J10G0C90EDW45-6X</BeamName>
+        <BeamName>J18C270EDW60-6X</BeamName>
         <BeamName>J10G0C270-6X</BeamName>
         <BeamName>J24G0C270-6X</BeamName>
         <BeamName>Flood 6X</BeamName>
+        <BeamName>J18G0-10F</BeamName>
+        <BeamName>J18G0-16X</BeamName>
+        <BeamName>J18G0-6F</BeamName>
+        <BeamName>J18G0-6X</BeamName>
+        <BeamName>J18G180</BeamName>
+        <BeamName>J18G270</BeamName>
+        <BeamName>J18G90</BeamName>
+        <BeamName>T2-DR-GS</BeamName>
+        <BeamName>T2_DR_GS</BeamName>
         <BeamName>J20G0-6X</BeamName>
         <BeamName>J20G0-10X</BeamName>
         <BeamName>J20G0-10F</BeamName>
@@ -327,6 +337,14 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>T3 Open</BeamName>
         <BeamName>J10G0C90-6X</BeamName>
         <BeamName>J10G0C90EDW45-6X</BeamName>
+        <BeamName>J18C270EDW60-6X</BeamName>
+        <BeamName>J18G0-10F</BeamName>
+        <BeamName>J18G0-16X</BeamName>
+        <BeamName>J18G0-6F</BeamName>
+        <BeamName>J18G0-6X</BeamName>
+        <BeamName>J18G180</BeamName>
+        <BeamName>J18G270</BeamName>
+        <BeamName>J18G90</BeamName>
     </CenterDoseBeamNameList>
     
     <!-- Allowed error in mm when measuring collimator positions measured in the image to planned positions. -->
@@ -359,6 +377,11 @@ Note that when building a package for release, the Maven build process uses the 
 
         <BeamName FloodCompensation='false'>T2 Open</BeamName>
         <BeamName FloodCompensation='false'>T3 Open</BeamName>
+        <BeamName FloodCompensation='false'>J18G0-16X</BeamName>
+        <BeamName FloodCompensation='false'>J18G0-6X</BeamName>
+        <BeamName FloodCompensation='false'>J18G180</BeamName>
+        <BeamName FloodCompensation='false'>J18G270</BeamName>
+        <BeamName FloodCompensation='false'>J18G90</BeamName>
     </CollimatorPositionBeamList>
 
     <!-- The thickness of the band in mm in the isoplane across the center of the image used for drawing the wedge profile. -->
@@ -372,6 +395,7 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName background="J10G0C90-6X">J10G0C90EDW45-6X</BeamName>  <!-- For UMich -->
         <BeamName background="J20G0C90-6X">J20G0C90EDW60-6X</BeamName>
         <BeamName background="J20G0-6X">J20G0C90EDW60-6X</BeamName>  <!-- experimental -->
+        <BeamName background="J18G0-6F">J18C270EDW60-6X</BeamName>
     </WedgeBeamList>
 
     <!-- Diameter of sample spots in mm. -->
@@ -394,6 +418,13 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>J20G0-10X</BeamName>
         <BeamName>J20G0-10F</BeamName>
         <BeamName>J20G0-16X</BeamName>
+        <BeamName>J18G0-10F</BeamName>
+        <BeamName>J18G0-16X</BeamName>
+        <BeamName>J18G0-6F</BeamName>
+        <BeamName>J18G0-6X</BeamName>
+        <BeamName>J18G180</BeamName>
+        <BeamName>J18G270</BeamName>
+        <BeamName>J18G90</BeamName>
     </SymmetryAndFlatnessBeamList>
 
     <!-- Coordinates of centers of sampling points.  All are in mm, relative to the center of the image, and in the isoplane. -->
@@ -422,7 +453,7 @@ Note that when building a package for release, the Maven build process uses the 
     <LeafPositionMaxError_mm>1.0</LeafPositionMaxError_mm>
 
     <!-- When creating a custom plan, use this beam as the prototype for constructing beams. -->
-    <PrototypeCustomBeamName>J18G0-6X</PrototypeCustomBeamName>
+    <PrototypeCustomBeamName>J18G0-6F</PrototypeCustomBeamName>
 
     <!-- When a machine does not support some energy levels in a plan, then a custom (via CustomizeRtPlan) plan can be created for those
     energy levels.  This is done by creating beams to match the machine's energy level.  The new beam names are given this prefix, followed
@@ -445,6 +476,8 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>PF Stat 270</BeamName>
         <BeamName>T1 PF ARC</BeamName>
         <BeamName>T1 PF ARC ERROR</BeamName>
+        <BeamName>T2-DR-GS</BeamName>
+        <BeamName>T2_DR_GS</BeamName>
     </LeafPositionBeamNameList>
 
 </AQAConfig>
