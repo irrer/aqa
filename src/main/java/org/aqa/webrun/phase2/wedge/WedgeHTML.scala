@@ -7,7 +7,6 @@ import edu.umro.ScalaUtil.FileUtil
 import java.io.File
 import org.aqa.run.ProcedureStatus
 import org.aqa.Util
-import org.aqa.db.Wedge
 import java.awt.geom.Point2D
 import org.aqa.db.CenterDose
 import com.pixelmed.dicom.AttributeList
