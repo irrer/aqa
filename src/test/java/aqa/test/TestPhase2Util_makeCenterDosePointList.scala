@@ -47,6 +47,7 @@ class TestChase2Util_makeCenterDosePointList extends FlatSpec with Matchers {
       val start = System.currentTimeMillis
       val pointList = Phase2Util.makeCenterDosePointList(attributeList, new Point2D.Double(0, 0))
       println("Elapsed time in ms: " + (System.currentTimeMillis - start))
+      val pointListOffset = Phase2Util.makeCenterDosePointList(attributeList, new Point2D.Double(100, 50))
 
       val pointGroups = edu.umro.ScalaUtil.Util.sizedGroups(pointList, 20)
       def p2s(p: Point) = {
@@ -60,6 +61,7 @@ class TestChase2Util_makeCenterDosePointList extends FlatSpec with Matchers {
       val bufImage = image.toDeepColorBufferedImage
 
       pointList.map(p => bufImage.setRGB(p.x, p.y, 0))
+      pointListOffset.map(p => bufImage.setRGB(p.x, p.y, 0))
       val pngFile = new File(outDir, fileName.replace("dcm", "png"))
       pngFile.delete
       println("Writing image file " + pngFile.getAbsolutePath)

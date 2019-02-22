@@ -394,21 +394,25 @@ object Phase2Util extends Logging {
   def makeCenterDosePointList(attributeList: AttributeList, collimatorCenterOfRotation: Point2D.Double): Seq[Point] = {
     val translator = new IsoImagePlaneTranslator(attributeList)
 
-    val radius_mm = Config.CenterDoseRadius_mm
-    val lo = translator.iso2Pix(new Point2D.Double(-radius_mm, -radius_mm))
-    val hi = translator.iso2Pix(new Point2D.Double(radius_mm, radius_mm))
+    // inspect this many pixels outside the calculated radius to account for roundoff errors
+    val pad = 2
 
-    val loX = (Math.min(lo.getX, hi.getX) - 2).round.toInt
-    val loY = (Math.min(lo.getY, hi.getY) - 2).round.toInt
-    val hiX = (Math.max(lo.getX, hi.getX) + 2).round.toInt
-    val hiY = (Math.max(lo.getY, hi.getY) + 2).round.toInt
+    val mmX = collimatorCenterOfRotation.getX
+    val mmY = collimatorCenterOfRotation.getY
+
+    val radius_mm = Config.CenterDoseRadius_mm
+
+    val loX = (translator.iso2PixCoordX(mmX - radius_mm) - pad).round.toInt
+    val hiX = (translator.iso2PixCoordX(mmX + radius_mm) + pad).round.toInt
+    val loY = (translator.iso2PixCoordY(mmY - radius_mm) - pad).round.toInt
+    val hiY = (translator.iso2PixCoordY(mmY + radius_mm) + pad).round.toInt
 
     val xPixRange = (loX until hiX)
     val yPixRange = (loY until hiY)
 
     // step through pixels and see which are close enough.
     def nearCenter(xPix: Int, yPix: Int): Boolean = {
-      collimatorCenterOfRotation.distance(translator.pix2Iso(xPix, yPix)) <= Config.CenterDoseRadius_mm
+      collimatorCenterOfRotation.distance(translator.pix2Iso(xPix, yPix)) <= radius_mm
     }
 
     val pointList = for (xPix <- xPixRange; yPix <- yPixRange; if nearCenter(xPix, yPix)) yield { new Point(xPix, yPix) }
