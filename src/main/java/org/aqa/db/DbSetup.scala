@@ -81,7 +81,6 @@ object DbSetup extends Logging {
     BadPixel.query,
     CenterDose.query,
     CollimatorPosition.query,
-    Wedge.query,
     WedgePoint.query,
     Rect.query,
     SymmetryAndFlatness.query,

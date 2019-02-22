@@ -12,7 +12,6 @@ import org.aqa.db.Output
 import org.aqa.run.ProcedureStatus
 import org.aqa.Config
 import edu.umro.ScalaUtil.Trace
-import org.aqa.db.Wedge
 import java.awt.Rectangle
 import org.aqa.db.CollimatorCentering
 import java.awt.Point
