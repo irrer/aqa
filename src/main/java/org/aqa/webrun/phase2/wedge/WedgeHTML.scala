@@ -64,7 +64,7 @@ object WedgeHTML {
 
   private case class ProfilePoint(position: Double, value: Double);
 
-  private def profile(dicomImage: DicomImage, translator: IsoImagePlaneTranslator, isTransverse: Boolean, runReq: RunReq, attributeList: AttributeList): Seq[ProfilePoint] = {
+  private def profile(dicomImage: DicomImage, translator: IsoImagePlaneTranslator, isTransverse: Boolean, runReq: RunReq, attributeList: AttributeList, collimatorCenterOfRotation: Point2D.Double): Seq[ProfilePoint] = {
 
     val RescaleSlope = attributeList.get(TagFromName.RescaleSlope).getDoubleValues.head
     val RescaleIntercept = attributeList.get(TagFromName.RescaleIntercept).getDoubleValues.head
@@ -77,7 +77,7 @@ object WedgeHTML {
       val sums = dicomImage.getSubimage(rect).columnSums
 
       def indexToProfilePoint(i: Int) = {
-        val position = translator.pix2Iso(i, 0).getX
+        val position = translator.pix2Iso(i, 0).getX + collimatorCenterOfRotation.getX
         val value = sums(i) / height
         new ProfilePoint(position, value)
       }
@@ -91,7 +91,7 @@ object WedgeHTML {
       val sums = dicomImage.getSubimage(rect).rowSums
 
       def indexToProfilePoint(i: Int) = {
-        val position = translator.pix2Iso(0, i).getY
+        val position = translator.pix2Iso(0, i).getY + collimatorCenterOfRotation.getY
         val value = sums(i) / width
         new ProfilePoint(position, value)
       }
@@ -161,20 +161,20 @@ object WedgeHTML {
     historyChart
   }
 
-  private def beamToDisplay(wedgePoint: WedgePoint, extendedData: ExtendedData, runReq: RunReq, wedgeDir: File, history: Seq[WedgePoint.WedgePointHistory]): (Elem, String) = {
+  private def beamToDisplay(wedgePoint: WedgePoint, extendedData: ExtendedData, runReq: RunReq, wedgeDir: File, history: Seq[WedgePoint.WedgePointHistory], collimatorCenterOfRotation: Point2D.Double): (Elem, String) = {
     val historyChart = histChart(wedgePoint, extendedData, history)
 
     val isTransverse = WedgeAnalysis.wedgeOrientationTransverse(wedgePoint.wedgeBeamName, runReq.rtplan.attributeList.get)
     val dicomImage = runReq.rtimageMap(wedgePoint.wedgeBeamName).correctedDicomImage.get
     val translator = new IsoImagePlaneTranslator(runReq.rtimageMap(wedgePoint.wedgeBeamName).attributeList.get)
 
-    val wedgeProfile = profile(dicomImage, translator, isTransverse, runReq, runReq.rtimageMap(wedgePoint.wedgeBeamName).attributeList.get)
+    val wedgeProfile = profile(dicomImage, translator, isTransverse, runReq, runReq.rtimageMap(wedgePoint.wedgeBeamName).attributeList.get, collimatorCenterOfRotation)
     val valueChart = new C3Chart(None, None,
       "Position mm", "Position mm", wedgeProfile.map(p => p.position), ".3g",
       Seq("Level"), "Level", Seq(wedgeProfile.map(p => p.value)), ".3g", Seq(lineColor))
 
     val backgroundDerived = runReq.rtimageMap(wedgePoint.backgroundBeamName)
-    val backgroundProfile = profile(backgroundDerived.correctedDicomImage.get, translator, isTransverse, runReq, backgroundDerived.attributeList.get)
+    val backgroundProfile = profile(backgroundDerived.correctedDicomImage.get, translator, isTransverse, runReq, backgroundDerived.attributeList.get, collimatorCenterOfRotation)
     val percentProfile = wedgeProfile.zip(backgroundProfile).map(wb => new ProfilePoint(wb._1.position, (wb._1.value * 100) / wb._2.value))
     val percentChart = new C3Chart(None, None,
       "Position mm", "Position mm", percentProfile.map(p => p.position), ".3g",
@@ -234,7 +234,7 @@ object WedgeHTML {
     (elem, js)
   }
 
-  def makeDisplay(extendedData: ExtendedData, status: ProcedureStatus.Value, runReq: RunReq, wedgePointList: Seq[WedgePoint]): Elem = {
+  def makeDisplay(extendedData: ExtendedData, status: ProcedureStatus.Value, runReq: RunReq, wedgePointList: Seq[WedgePoint], collimatorCenterOfRotation: Point2D.Double): Elem = {
 
     val outputDir = extendedData.output.dir
     val wedgeDir = new File(outputDir, "wedge")
@@ -243,7 +243,7 @@ object WedgeHTML {
     val history = WedgePoint.recentHistory(50, extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get, extendedData.output.dataDate)
 
     val htmlJs = {
-      wedgePointList.map(wp => beamToDisplay(wp, extendedData, runReq, wedgeDir, history))
+      wedgePointList.map(wp => beamToDisplay(wp, extendedData, runReq, wedgeDir, history, collimatorCenterOfRotation))
     }
 
     val useAsBaselineButton = {

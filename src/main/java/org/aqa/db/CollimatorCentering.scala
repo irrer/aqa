@@ -18,8 +18,8 @@ case class CollimatorCentering(
   SOPInstanceUID090: String, // UID of 90 degree DICOM image
   SOPInstanceUID270: String, // UID of 270 degree DICOM image
 
-  xCollimatorCenter_mm: Double, // X collimator isoplane center in mm
-  yCollimatorCenter_mm: Double, // Y collimator isoplane center in mm
+  xCollimatorCenter_mm: Double, // X collimator isoplane center of rotation in mm
+  yCollimatorCenter_mm: Double, // Y collimator isoplane center of rotation in mm
 
   X1_090_mm: Double, // X1 position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
   X2_090_mm: Double, // X2 position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
@@ -61,6 +61,7 @@ case class CollimatorCentering(
       "    Y2_270_mm: " + Y2_270_mm + "\n"
   }
 
+  // collimator center of rotation in mm
   val center = new Point2D.Double(xCollimatorCenter_mm, yCollimatorCenter_mm)
 }
 

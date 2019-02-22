@@ -162,7 +162,7 @@ object WedgeAnalysis extends Logging {
       WedgePoint.insert(wedgePointList)
       updateBaselineAndMaintenanceRecord(wedgePointList, extendedData, runReq)
       val status = ProcedureStatus.done
-      val summary = WedgeHTML.makeDisplay(extendedData, status, runReq, wedgePointList)
+      val summary = WedgeHTML.makeDisplay(extendedData, status, runReq, wedgePointList, collimatorCentering.center)
       val result = new WedgeResult(summary, status, wedgePointList)
       logger.info("Finished analysis of " + subProcedureName)
       Right(result)
