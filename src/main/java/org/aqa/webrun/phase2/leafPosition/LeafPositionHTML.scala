@@ -96,7 +96,7 @@ object LeafPositionHTML extends Logging {
         </div>
         <div class="row">
           <div class="col-md-6" id={ imageId }>
-            Hover over image to zoom in.  Dotted lines show expected position, solid lines are measured values in mm.<br/>
+            Hover over image to zoom in.  Dashed lines show expected position, solid lines are measured position. All values in mm in the isoplane.<br/>
             <img class="img-responsive" src={ imageUrl }/>
           </div>
           <div class="col-md-6">

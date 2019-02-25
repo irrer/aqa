@@ -60,14 +60,15 @@ object Run extends Logging {
   /** Procedure must supply a cmd, bat, or exe file with this name. */
   private val runCommandName = "run"
 
+  private def makeValidName(text: String): String = FileUtil.replaceInvalidFileNameCharacters(text, '_').replace(' ', '_')
   /**
    * Make the string nice for using as a file name, replacing invalid characters (like /) with _, and all blanks with _, and appending the given primary key.
    */
-  private def niceifyAndAppendPK(text: String, pk: Long): String = FileUtil.replaceInvalidFileNameCharacters(text + "_" + pk.toString, '_').replace(' ', '_')
+  private def niceifyAndAppendPK(text: String, pk: Long): String = makeValidName(text + "_" + pk.toString)
 
   private def institutionFileName(machine: Machine): String = {
     val institution = Institution.get(machine.institutionPK)
-    if (institution.isDefined) niceifyAndAppendPK(institution.get.fileName, institution.get.institutionPK.get)
+    if (institution.isDefined) makeValidName(institution.get.fileName)
     else {
       logger.warn("Run.dir Could not find institution for machine " + machine.toString)
       "unknown_institution_" + machine.fileName
@@ -80,7 +81,7 @@ object Run extends Logging {
   private def makeInputDir(machine: Machine, procedure: Procedure, inputPK: Long): File = {
     def nameHierarchy = List(
       institutionFileName(machine),
-      niceifyAndAppendPK(machine.fileName, machine.machinePK.get),
+      makeValidName(machine.fileName),
       niceifyAndAppendPK(procedure.fileName, procedure.procedurePK.get),
       niceifyAndAppendPK(Util.currentTimeAsFileName, inputPK))
 
