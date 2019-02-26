@@ -49,8 +49,26 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
 
   private val emptyTable = "[]"
 
+  private val specialCharList = {
+    Seq(
+      ("\b", "\\b"),
+      ("\f", "\\f"),
+      ("\n", "\\n"),
+      ("\r", "\\r"),
+      ("\t", "\\t"),
+      ("\"", "\\\""),
+      ("\\", "\\\\"))
+
+  }
+
+  private def escapeSpecialCharacters(text: String): String = { // TODO
+    //specialCharList.map(sc => 4)
+    ???
+    ""
+  }
+
   private case class Translate(institutionPK: Long, alias: String, real: String, use: String) {
-    def toJson: String = "{ \"alias\": \"" + alias + "\", \"real\": \"" + AnonymizeUtil.decryptWithNonce(institutionPK, real) + "\" }"
+    def toJson: String = "{ \"alias\": \"" + alias + "\", \"real\": \"" + escapeSpecialCharacters(AnonymizeUtil.decryptWithNonce(institutionPK, real)) + "\" }"
 
     def toHtml: Elem = {
       val j = { <tr><td>{ use }</td><td>{ alias }</td><td>{ AnonymizeUtil.decryptWithNonce(institutionPK, real) }</td></tr> }

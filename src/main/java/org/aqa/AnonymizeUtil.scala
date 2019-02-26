@@ -35,6 +35,12 @@ object AnonymizeUtil extends Logging {
   /** Name of directory where security credentials are kept. */
   private val securityDirName = "security"
 
+  private val makeSecurityDir = {
+    try {
+      securityDir.mkdirs
+    } catch { case t: Throwable => println("Unable to create security directory " + securityDir + " : " + fmtEx(t)) }
+  }
+
   /** Directory where security credentials are kept. */
   private lazy val securityDir = new File(Config.DataDir, securityDirName)
 

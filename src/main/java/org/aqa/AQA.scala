@@ -23,7 +23,7 @@ object AQA extends Logging {
       if (Config.validate) {
         DbSetup.init
         DbSetup.smokeTest
-        DbSetup.storeFilesInDatabase // TODO remove when migration is complete
+        //DbSetup.storeFilesInDatabase // TODO remove when migration is complete
         DbTransitionToAnonymize.transition // TODO remove when transition is complete
         Run.handleRunningProcedureList
         new WebServer

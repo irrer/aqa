@@ -134,6 +134,7 @@ object DbSetup extends Logging {
       }
 
       tableQueryList.map(q => readOne(q.asInstanceOf[TableQuery[Table[_]]]))
+      logger.info("Database smoke test completed without error")
 
       true
 

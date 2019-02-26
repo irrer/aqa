@@ -157,10 +157,42 @@ object DbTransitionToAnonymize extends Logging {
     User.list.map(user => anon(user))
   }
 
+  /**
+   * Save the current user list in a restorable format.  This is useful for restoring passwords.
+   */
+  private def saveUserInfo = {
+    val userList = User.list.sortBy(_.userPK.get)
+
+    def userToElem(user: User) = {
+      <User>
+        <userPK>{ user.userPK.get }</userPK>
+        <id>{ user.id }</id>
+        <id_real>{ if (user.id_real.isDefined) AnonymizeUtil.decryptWithNonce(user.institutionPK, user.id_real.get) else "none" }</id_real>
+        <hashedPassword>{ user.hashedPassword }</hashedPassword>
+        <passwordSalt>{ user.passwordSalt }</passwordSalt>
+        <id>{ user.id }</id>
+      </User>
+    }
+
+    val xml = {
+      <UserList>
+        { userList.map(user => userToElem(user)) }
+      </UserList>
+    }
+
+    val text = WebUtil.xmlToText(xml)
+
+    val fileName = "UserList_" + Util.currentTimeAsFileName + ".xml"
+    val file = new File(Config.tmpDirFile, fileName)
+    Util.writeFile(file, text)
+    println("Saved user info to file: " + file.getAbsolutePath)
+  }
+
   def transition = {
     anonymizeInstitutions
     anonymizeMachines
     anonymizeUsers
+    saveUserInfo
     logger.info("finished transition of anonymization security")
   }
 
