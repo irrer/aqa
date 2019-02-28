@@ -38,6 +38,35 @@ object AnonymousTranslate {
   private val path = new String((new AnonymousTranslate).pathOf)
 
   def redirect(response: Response) = response.redirectSeeOther(path)
+
+  /**
+   * List of special characters that, when constructing a JavaScript string, have to be properly escaped.  The
+   * map is between the character in the original string and the corresponding string it must be replaced with.  
+   */
+  private val specialCharMap = {
+    List(
+      ("\\", "\\\\"),
+      ("\b", "\\b"),
+      ("\f", "\\f"),
+      ("\n", "\\n"),
+      ("\r", "\\r"),
+      ("\t", "\\t"),
+      ("\"", "\\\"")).toMap
+  }
+
+  /**
+   * Escape characters that are considered special characters in JavaScript for use in JavaScript strings.
+   */
+  def escapeSpecialJsChars(text: String): String = {
+    def fix(c: String) = {
+      if (specialCharMap.contains(c))
+        specialCharMap(c)
+      else
+        c
+    }
+    val fixed = text.map(c => c.toString).map(c => fix(c)).mkString("")
+    fixed
+  }
 }
 
 /**
@@ -49,26 +78,8 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
 
   private val emptyTable = "[]"
 
-  private val specialCharList = {
-    Seq(
-      ("\b", "\\b"),
-      ("\f", "\\f"),
-      ("\n", "\\n"),
-      ("\r", "\\r"),
-      ("\t", "\\t"),
-      ("\"", "\\\""),
-      ("\\", "\\\\"))
-
-  }
-
-  private def escapeSpecialCharacters(text: String): String = { // TODO
-    //specialCharList.map(sc => 4)
-    ???
-    ""
-  }
-
   private case class Translate(institutionPK: Long, alias: String, real: String, use: String) {
-    def toJson: String = "{ \"alias\": \"" + alias + "\", \"real\": \"" + escapeSpecialCharacters(AnonymizeUtil.decryptWithNonce(institutionPK, real)) + "\" }"
+    def toJson: String = "{ \"alias\": \"" + alias + "\", \"real\": \"" + AnonymousTranslate.escapeSpecialJsChars(AnonymizeUtil.decryptWithNonce(institutionPK, real)) + "\" }"
 
     def toHtml: Elem = {
       val j = { <tr><td>{ use }</td><td>{ alias }</td><td>{ AnonymizeUtil.decryptWithNonce(institutionPK, real) }</td></tr> }
