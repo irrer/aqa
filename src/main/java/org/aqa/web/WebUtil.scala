@@ -46,6 +46,7 @@ import org.aqa.AnonymizeUtil
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.db.CachedUser
 import org.aqa.Config
+import org.aqa.db.Institution
 
 object WebUtil extends Logging {
 
@@ -725,11 +726,55 @@ object WebUtil extends Logging {
   /**
    * Optionally show a selection list based on evaluating a function.
    */
-  class WebInputSelectOption(override val label: String, col: Int, offset: Int, selectList: (Option[Response]) => Seq[(String, String)], show: (ValueMapT) => Boolean) extends WebInputSelect(label, col, offset, selectList) {
+  class WebInputSelectOption(override val label: String, col: Int, offset: Int, selectList: (Option[Response]) => Seq[(String, String)], show: (ValueMapT) => Boolean) extends WebInputSelect(label, true, col, offset, selectList, true) {
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
       if (show(valueMap)) {
         super.toHtml(valueMap, errorMap, response)
       } else { <div></div> }
+    }
+  }
+
+  /**
+   * Optionally show a selection list based on evaluating a function.
+   */
+  class WebInputSelectMachine(override val label: String, col: Int, offset: Int) extends IsInput(label) with ToHtml {
+
+    override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
+
+      val curValue: Option[String] = if (valueMap.get(label).isDefined) valueMap.get(label) else None
+
+      def toOption(value: String, choice: String): Elem = {
+
+        val opt = if (curValue.isDefined && curValue.get.equals(value)) {
+          <option selected="selected" value={ value }>{ choice }</option>
+        } else {
+          <option value={ value }>{ choice }</option>
+        }
+        opt
+      }
+
+      val selectList: Seq[(String, String)] = {
+        if (response.isEmpty) Seq[(String, String)]()
+        else {
+          val machList = if (userIsWhitelisted(response.get.getRequest))
+            Machine.list
+          else {
+            val user = CachedUser.get(response.get.getRequest)
+            Machine.listMachinesFromInstitution(user.get.institutionPK)
+          }
+          def machToDescription(m: Machine): String = {
+            val instName = AnonymizeUtil.decryptWithNonce(m.institutionPK, Institution.get(m.institutionPK).get.name_real.get)
+            val machId = AnonymizeUtil.decryptWithNonce(m.institutionPK, m.id_real.get)
+            instName + " : " + machId
+          }
+          val pair = machList.map(m => (m.machinePK.get.toString, machToDescription(m)))
+          pair
+        }
+      }
+
+      val list = selectList.map(v => toOption(v._1, v._2))
+      val html = <select>{ list }</select> % idNameClassValueAsAttr(label, valueMap)
+      wrapInput(label, true, html, col, offset, errorMap)
     }
   }
 
@@ -1106,10 +1151,21 @@ object WebUtil extends Logging {
         case _ => "unknown"
       }
     }
-    def mmiToText(mmi: MMI) = mmi.institution.name + " - " + mmi.machine.id
+
+    def mmiToText(mmi: MMI) = {
+      val instName = if (mmi.institution.name_real.isEmpty) mmi.institution.name else AnonymizeUtil.decryptWithNonce(mmi.machine.institutionPK, mmi.institution.name_real.get)
+      val machId = if (mmi.machine.id_real.isEmpty) mmi.machine.id else AnonymizeUtil.decryptWithNonce(mmi.machine.institutionPK, mmi.machine.id_real.get)
+      instName + " : " + machId
+    }
+
     def mmiToTuple(mmi: MMI) = (mmiToMachPK(mmi), mmiToText(mmi))
     def sortMMI(a: MMI, b: MMI): Boolean = { mmiToText(a).compareTo(mmiToText(b)) < 0 }
-    ("-1", "None") +: Machine.listWithDependencies.filter(mmi => mmi.machine.serialNumber.isEmpty).sortWith(sortMMI).map(mmi => mmiToTuple(mmi))
+    val userIsWhitLst = response.isDefined && userIsWhitelisted(response.get.getRequest)
+    val instPK = if (response.isDefined) CachedUser.get(response.get.getRequest).get.institutionPK else -2
+    def shouldShow(mmi: MMI): Boolean = {
+      mmi.machine.serialNumber.isEmpty && (userIsWhitLst || (instPK == mmi.machine.institutionPK))
+    }
+    ("-1", "None") +: Machine.listWithDependencies.filter(mmi => shouldShow(mmi)).sortWith(sortMMI).map(mmi => mmiToTuple(mmi))
   }
 
   def stringToUrlSafe(text: String): String = text.replaceAll("[^a-zA-Z0-9]", "_")

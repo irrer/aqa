@@ -17,13 +17,14 @@ class ProcedureList extends GenericList[Procedure.ProcedureUser] with WebUtil.Su
 
   type PU = Procedure.ProcedureUser
 
-  private def notesHTML(pu: PU): Elem = <div>{ WebUtil.firstPartOf(pu.procedure.notes, 60) }</div>
-
   private val idCol = new Column[PU]("Name", _.procedure.name, (inst) => makePrimaryKeyHtml(inst.procedure.name, inst.procedure.procedurePK))
 
-  private val supportedByCol = new Column[PU]("Supported By", _.user.fullName_real)
+  private def userToHtml(pu: PU) = <span aqaalias="">{ pu.user.id }</span>
+  private val supportedByCol = new Column[PU]("Supported By", _.user.fullName_real, userToHtml)
 
   private val versionCol = new Column[PU]("Version", _.procedure.version)
+
+  private def notesHTML(pu: PU): Elem = { <div>{ WebUtil.firstPartOf(pu.procedure.notes, 60) }</div> }
 
   private val notesCol = new Column[PU]("Notes", _.procedure.notes, notesHTML)
 
