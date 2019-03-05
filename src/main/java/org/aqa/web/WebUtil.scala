@@ -48,6 +48,7 @@ import org.aqa.db.CachedUser
 import org.aqa.Config
 import org.aqa.db.Institution
 import edu.umro.ScalaUtil.Trace
+import com.pixelmed.dicom.SOPClass
 
 object WebUtil extends Logging {
 
@@ -775,19 +776,31 @@ object WebUtil extends Logging {
         }
       }
 
-      val shouldShow = {
-        val attrListList = dicomFilesInSession(valueMap).filter(d => d.attributeList.isDefined)
-        if (attrListList.isEmpty)
-          false
-        else {
-          val serialNumbers = attrListList.
-            map(d => d.attributeList.get.get(TagFromName.DeviceSerialNumber)).
-            filter(a => a != null).
-            map(a => a.getSingleStringValueOrEmptyString).distinct
+      val shouldShow: Boolean = {
+        val attrListList = dicomFilesInSession(valueMap).map(df => df.attributeList).flatten
 
-          val machList = serialNumbers.map(sn => Machine.findMachinesBySerialNumber(sn)).flatten
-          machList.isEmpty
+        def isRtplan(al: AttributeList): Boolean = {
+          val attr = al.get(TagFromName.SOPClassUID)
+          if (attr == null) false
+          else
+            attr.getSingleStringValueOrEmptyString.equals(SOPClass.RTPlanStorage)
         }
+
+        def serialNumberOf(al: AttributeList): Option[String] = {
+          val attr = al.get(TagFromName.DeviceSerialNumber)
+          if (attr == null) None
+          else Some(attr.getSingleStringValueOrEmptyString)
+        }
+
+        def isMatchingMachine = {
+          val serialNumbers = attrListList.map(al => serialNumberOf(al)).flatten.distinct
+          val machList = serialNumbers.map(sn => Machine.findMachinesBySerialNumber(sn)).flatten
+          machList.nonEmpty
+        }
+
+        val ss = attrListList.nonEmpty && (!isMatchingMachine)
+
+        ss
       }
 
       logger.info("shouldShow: " + shouldShow) // TODO rm
@@ -804,6 +817,7 @@ object WebUtil extends Logging {
           }
         }
       }
+
       html
     }
   }

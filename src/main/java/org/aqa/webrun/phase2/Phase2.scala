@@ -103,7 +103,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       case _ if (referencedMachines.size == 1) => Right(referencedMachines.head)
       case _ if (chosenMachine.isDefined) => Right(chosenMachine.get)
       case _ if (referencedMachines.size > 1) => formErr("Files come from more than one machine; please go back and try again.  Machines: " + referencedMachines.map(m => m.id).mkString("  "))
-      case _ => formErr("Unknown machine.  Please choose from the 'Machine' list below or use the Administration interface to add it.")
+      case _ => formErr("Unknown machine.  Please choose from the 'Machine' list below or click Cancel and then use the Administration interface to add it.")
     }
     result
   }

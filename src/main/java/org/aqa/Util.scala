@@ -748,4 +748,36 @@ object Util extends Logging {
     sd
   }
 
+  /**
+   * Show which jar file is being used to ensure that we have the right version of the software.
+   */
+  def showJarFile(any: Any) = {
+
+    def description(file: File): String = {
+      val fullPath = file.getAbsolutePath
+      val exists = file.exists
+      val isNormal = file.isFile
+      val len = if (file.exists) file.length.toString else "not available"
+      val modified = if (exists) (new Date(file.lastModified)).toString else "not available";
+      val desc = {
+        "jar file " +
+          "\n    path: " + fullPath +
+          "\n    exists: " + exists +
+          "\n    normal file: " + isNormal +
+          "\n    file modification date: " + modified +
+          "\n    length: " + len
+      }
+      desc
+    }
+
+    val msg = try {
+      description(edu.umro.ScalaUtil.Util.getJarFile(any).get)
+    } catch {
+      case t: Throwable => "Could not determine jar file being used."
+    }
+
+    println(msg)
+    logger.info(msg)
+  }
+
 }
