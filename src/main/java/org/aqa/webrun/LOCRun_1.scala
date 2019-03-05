@@ -96,7 +96,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
   /** Defines precision - Format to use when showing numbers. */
   val outputFormat = "%7.5e"
 
-  def machineList() = ("-1", "None") +: Machine.list.toList.map(m => (m.machinePK.get.toString, m.id))
+  //def machineList() = ("-1", "None") +: Machine.list.toList.map(m => (m.machinePK.get.toString, m.id))
 
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
     val action = procedure.webUrl + "?" + name + "=" + name
@@ -124,12 +124,16 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
     lazy val mach = machList.headOption
 
     def formErr(msg: String) = Left(Error.make(form.uploadFileInput.get, msg))
+    logger.info("the machList.isEmpty: " + machList.isEmpty) // TODO rm
 
     sessionDir(valueMap) match {
       case Some(dir) if (!dir.isDirectory) => formErr("No files have been uploaded")
       case _ if (alList.isEmpty) => formErr("No DICOM files have been uploaded.")
       case _ if (machList.size > 1) => formErr("Files from more than one machine were found.  Click Cancel to start over.")
-      case _ if (machList.isEmpty) => formErr("These files do not have a serial number of a known machine.  Click Cancel and use the baseline LOC upload procedure.")
+      case _ if (machList.isEmpty) => {
+        logger.info("machList.isEmpty: " + machList.isEmpty) // TODO rm
+        formErr("These files do not have a serial number of a known machine.  Click Cancel and use the baseline LOC upload procedure.")
+      }
       case _ if (!LOCUploadBaseFiles_1.ensureBaseline(mach.get.machinePK.get)) => formErr("There are no baseline files for machine " + mach.get.id + ".  Click Cancel and use the baseline LOC upload procedure.")
       case Some(dir) => Right(new RunRequirementsLOC(mach.get, dir, alList))
     }
@@ -485,7 +489,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
       def wrap2Anon(col: Int, name: String, value: String): Elem = {
         <div class={ "col-md-" + col }><em>{ name }:</em><br/><span aqaalias="">{ value }</span></div>
-      } 
+      }
 
       val div = {
         <div class="row col-md-10 col-md-offset-1">

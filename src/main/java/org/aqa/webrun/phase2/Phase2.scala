@@ -69,7 +69,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   /** Defines precision - Format to use when showing numbers. */
   private val outputFormat = "%7.5e"
 
-  private val machineSelector = new WebInputSelectOption("Machine", 6, 0, machineList, showMachineSelector)
+  //private val machineSelector = new WebInputSelectOption("Machine", 6, 0, machineList, showMachineSelector)
+  private val machineSelector = new WebInputSelectMachine("Machine", 6, 0)
 
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
     val action = procedure.webUrl + "?" + name + "=" + name
@@ -93,7 +94,10 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
     // machines that DICOM files reference (based on device serial numbers)
     val referencedMachines = rtimageList.map(df => attributeListToMachine(df.attributeList.get)).flatten.distinct
+    logger.info("referencedMachines.size: " + referencedMachines.size) // TODO rm
+    logger.info("referencedMachines: " + referencedMachines) // TODO rm
     val chosenMachine = for (pkTxt <- valueMap.get(machineSelector.label); pk <- Util.stringToLong(pkTxt); m <- Machine.get(pk)) yield m
+    logger.info("chosenMachine: " + chosenMachine) // TODO rm
 
     val result: Either[StyleMapT, Machine] = 0 match {
       case _ if (referencedMachines.size == 1) => Right(referencedMachines.head)
@@ -156,6 +160,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       val idList = dstnct.map(serNo => Machine.findMachinesBySerialNumber(serNo)).flatten.distinct.map(mach => mach.id).mkString("  ")
       dstnct.mkString("Serial Numbers: " + dstnct.mkString("  ")) + "    Machines: " + idList
     }
+    logger.info("machineCheck: " + machineCheck) // TODO rm
 
     0 match {
       case _ if (rtplanList.isEmpty) => formErr("No RTPLANS found")
@@ -329,6 +334,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     validate(valueMap, dicomFileList) match {
       case Left(errMap) => {
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
+        logger.info("Bad news: " + valueMap) // TODO rm
+        logger.info("procedure.name: " + procedure.name) // TODO rm
       }
       case Right(runReq) => {
         // only consider the RTIMAGE files for the date-time stamp.  The plan could have been from months ago.

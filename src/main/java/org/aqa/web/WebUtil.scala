@@ -47,6 +47,7 @@ import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.db.CachedUser
 import org.aqa.Config
 import org.aqa.db.Institution
+import edu.umro.ScalaUtil.Trace
 
 object WebUtil extends Logging {
 
@@ -756,25 +757,54 @@ object WebUtil extends Logging {
       val selectList: Seq[(String, String)] = {
         if (response.isEmpty) Seq[(String, String)]()
         else {
-          val machList = if (userIsWhitelisted(response.get.getRequest))
+          val machListAll = if (userIsWhitelisted(response.get.getRequest))
             Machine.list
           else {
             val user = CachedUser.get(response.get.getRequest)
             Machine.listMachinesFromInstitution(user.get.institutionPK)
           }
+
+          val machListAvail = machListAll.filter(m => m.serialNumber.isEmpty)
           def machToDescription(m: Machine): String = {
             val instName = AnonymizeUtil.decryptWithNonce(m.institutionPK, Institution.get(m.institutionPK).get.name_real.get)
             val machId = AnonymizeUtil.decryptWithNonce(m.institutionPK, m.id_real.get)
             instName + " : " + machId
           }
-          val pair = machList.map(m => (m.machinePK.get.toString, machToDescription(m)))
+          val pair = machListAvail.map(m => (m.machinePK.get.toString, machToDescription(m)))
           pair
         }
       }
 
-      val list = selectList.map(v => toOption(v._1, v._2))
-      val html = <select>{ list }</select> % idNameClassValueAsAttr(label, valueMap)
-      wrapInput(label, true, html, col, offset, errorMap)
+      val shouldShow = {
+        val attrListList = dicomFilesInSession(valueMap).filter(d => d.attributeList.isDefined)
+        if (attrListList.isEmpty)
+          false
+        else {
+          val serialNumbers = attrListList.
+            map(d => d.attributeList.get.get(TagFromName.DeviceSerialNumber)).
+            filter(a => a != null).
+            map(a => a.getSingleStringValueOrEmptyString).distinct
+
+          val machList = serialNumbers.map(sn => Machine.findMachinesBySerialNumber(sn)).flatten
+          machList.isEmpty
+        }
+      }
+
+      logger.info("shouldShow: " + shouldShow) // TODO rm
+      logger.info("selectListF: " + selectList) // TODO rm
+
+      val html = {
+        if (shouldShow) {
+          val list = selectList.map(v => toOption(v._1, v._2))
+          val input = { <select>{ list }</select> % idNameClassValueAsAttr(label, valueMap) }
+          wrapInput(label, true, input, col, offset, errorMap)
+        } else {
+          {
+            <div></div>
+          }
+        }
+      }
+      html
     }
   }
 
@@ -1136,6 +1166,10 @@ object WebUtil extends Logging {
 
     lazy val machList = alList.map(al => attributeListToMachine(al)).flatten
 
+    logger.info("fileList.isEmpty: " + fileList.isEmpty) // TODO rm
+    logger.info("alList.isEmpty: " + alList.isEmpty) // TODO rm
+    logger.info("machList.nonEmpty: " + machList.nonEmpty) // TODO rm
+
     alList match {
       case _ if fileList.isEmpty => false
       case _ if alList.isEmpty => false
@@ -1165,7 +1199,10 @@ object WebUtil extends Logging {
     def shouldShow(mmi: MMI): Boolean = {
       mmi.machine.serialNumber.isEmpty && (userIsWhitLst || (instPK == mmi.machine.institutionPK))
     }
-    ("-1", "None") +: Machine.listWithDependencies.filter(mmi => shouldShow(mmi)).sortWith(sortMMI).map(mmi => mmiToTuple(mmi))
+    logger.info("userIsWhitLst: " + userIsWhitLst) // TODO rm
+    val machList = ("-1", "None") +: Machine.listWithDependencies.filter(mmi => shouldShow(mmi)).sortWith(sortMMI).map(mmi => mmiToTuple(mmi))
+    logger.info("machList: \n    " + machList.map(m => m._1 + " : " + m._2).mkString("\n    ")) // TODO rm
+    machList
   }
 
   def stringToUrlSafe(text: String): String = text.replaceAll("[^a-zA-Z0-9]", "_")

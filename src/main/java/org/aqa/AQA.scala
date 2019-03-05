@@ -7,6 +7,7 @@ import edu.umro.ScalaUtil.PeriodicRestart
 import java.io.File
 import java.util.Date
 import org.aqa.db.DbTransitionToAnonymize
+import edu.umro.ScalaUtil.Trace // TODO rm
 
 /**
  * Main service entry point.  Start up major portions of
@@ -20,6 +21,7 @@ object AQA extends Logging {
 
     try {
       println("AQA Service starting at " + Util.timeHumanFriendly(new Date(serviceStartTime)))
+      Trace.trace("Hello from trace starting AQA") // TODO rm
       if (Config.validate) {
         DbSetup.init
         DbSetup.smokeTest
@@ -29,6 +31,7 @@ object AQA extends Logging {
         new WebServer
         new PeriodicRestart(Config.RestartTime)
         logger.info("Service started")
+        logger.info("Service REALLY started") // TODO rm
       }
     } catch {
       // Exceptions thrown to this level should not happen, and if they do it probably means that something
