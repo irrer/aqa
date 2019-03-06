@@ -20,19 +20,6 @@ import org.aqa.db.MachineBeamEnergy
 import edu.umro.util.UMROGUID
 import edu.umro.ScalaUtil.Trace
 
-//import edu.umro.util.UMROGUID
-//import java.io.File
-//import edu.umro.ScalaUtil.Trace
-//import com.pixelmed.dicom.SequenceAttribute
-//import com.pixelmed.dicom.SequenceItem
-//import org.aqa.VarianPrivateTag
-//import com.pixelmed.dicom.AttributeFactory
-//import com.pixelmed.dicom.LongStringAttribute
-//import com.pixelmed.dicom.CodeStringAttribute
-//import org.aqa.web.MachineUpdate
-//import org.aqa.web.WebUtil
-//import org.aqa.web.WebServer
-
 object CustomizeRtPlan extends Logging {
 
   private val standardBeamEnergy = 6.0
