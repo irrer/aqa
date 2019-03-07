@@ -1,0 +1,43 @@
+Creating a Custom Plan
+
+To run the Phase 2 tests, you must submit a set of EPID images created by a compatible RTPLAN.
+
+Often simply copying an RTPLAN from another institution does not work because of incompatibilities with
+machine name, beam energies, and tolerance table names.  The Customize Plan feature addresses this.
+
+The steps are:
+
+Navigate to Administration --> Machines
+
+Select the machine from the list that you wish to make the plan for.  If it does not exist, use Create new Machine to create it.
+
+Make sure that the list of beam energies that your machine supports is correct.
+
+Click the Customize Plan button
+
+The following screen shot shows an example for a machine named Foo.
+
+
+
+
+Fill in the fields:
+
+    Patient ID: This will be filled with a default value but you may override it with something that will make it easy for you to track in your system.
+    
+    Patient Name: Similar to Patient ID
+    
+    Tolerance Table Name: Initially empty, this must be filled with a tolerance table that your system supports.
+    
+    Machine Name: The name that your planning system expects.  Some planning systems have different values for machine ID and machine name.
+    
+Click the Create button and the following will be shown:
+
+
+
+
+Click Download to download a DICOM version of the RTPLAN.
+
+The RTPLAN may be imported into your planning system.
+
+
+Note: The AQA keeps track of custom made plans, so it is not necessary to upload them later.
