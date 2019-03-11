@@ -21,7 +21,7 @@ class UserList extends GenericList[UserInstitution] with WebUtil.SubUrlAdmin {
 
   private val nameCol = encryptedColumn("Name", AnonymizeUtil.userAliasFullNamePrefixId, (ui) => ui.user.userPK.get)
 
-  private val emailCol = encryptedColumn("Name", AnonymizeUtil.userAliasEmailPrefixId, (ui) => ui.user.userPK.get)
+  private val emailCol = encryptedColumn("Email", AnonymizeUtil.userAliasEmailPrefixId, (ui) => ui.user.userPK.get)
 
   private val institutionCol = new Column[UserInstitution]("Institution", _.institution.name, (ui) => wrapAlias(ui.institution.name))
 
