@@ -8,14 +8,18 @@ import scala.xml.XML
 import scala.xml.Node
 import scala.xml.Elem
 import org.aqa.procedures.ProcedureOutput
+import org.aqa.Logging
 
-case class LeafTransmission(
-  leafTransmissionPK: Option[Long], // primary key
-  outputPK: Long, // output primary key
-  section: String, // arbitrary section name.  May be used to associate this section with input data such as UID
-  leafIndex: Int, // leaf number
-  transmission_fract: Double // transmission fraction
-) {
+case
+
+class LeafTransmission(leafTransmissionPK:Option[Long], // primary key
+outputPK:Long, // output primary key
+section:String, // arbitrary section name. May be used to associate this section with input data
+				// such as UID
+leafIndex:Int, // leaf number
+transmission_fract:Double // transmission fraction
+)
+{
 
   def insert: LeafTransmission = {
     val insertQuery = LeafTransmission.query returning LeafTransmission.query.map(_.leafTransmissionPK) into ((leafTransmission, leafTransmissionPK) => leafTransmission.copy(leafTransmissionPK = Some(leafTransmissionPK)))
@@ -29,7 +33,9 @@ case class LeafTransmission(
   override def toString: String = (transmission_fract.toString).trim
 }
 
-object LeafTransmission extends ProcedureOutput {
+	object LeafTransmission extends
+	ProcedureOutput with Logging
+	{
   class LeafTransmissionTable(tag: Tag) extends Table[LeafTransmission](tag, "leafTransmission") {
 
     def leafTransmissionPK = column[Long]("leafTransmissionPK", O.PrimaryKey, O.AutoInc)
@@ -68,6 +74,7 @@ object LeafTransmission extends ProcedureOutput {
       inst <- LeafTransmission.query if inst.outputPK === outputPK
     } yield (inst)
     val list = Db.run(action.result)
+    logger.info("Number of rows: " + list.size)
     list
   }
 
@@ -80,7 +87,9 @@ object LeafTransmission extends ProcedureOutput {
   def deleteByOutputPK(outputPK: Long): Int = {
     val q = query.filter(_.outputPK === outputPK)
     val action = q.delete
-    Db.run(action)
+    val count = Db.run(action)
+    logger.info("Number of rows deleted: " + count)
+    count
   }
 
   def xmlToList(elem: Elem, outputPK: Long): Seq[LeafTransmission] = {
@@ -89,10 +98,13 @@ object LeafTransmission extends ProcedureOutput {
       (leaf \ "Value").map(n => n.text.toDouble).zipWithIndex.map(di => new LeafTransmission(None, outputPK, (di._2 + 1).toString, leafIndex, di._1))
     }
 
-    (elem \ topXmlLabel).headOption match {
+    val list = (elem \ topXmlLabel).headOption match {
       case Some(node) => (node \ "LeafList" \ "Leaf").map(leaf => leafNodeToTransList(leaf)).flatten
       case None => Seq[LeafTransmission]()
     }
+    logger.info("Number of rows constructed: " + list.size)
+
+    list
   }
 
   override def insert(elem: Elem, outputPK: Long): Int = {

@@ -197,7 +197,6 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
   private def makeDisplay(output: Output, outputPK: Long, locXml: LOCXml, fileWorkbookList: Seq[FileWorkbook]): String = {
 
     val machine = for (machPK <- output.machinePK; mach <- Machine.get(machPK)) yield (mach)
-    logger.info("trace")
 
     val machineId = machine match {
       case Some(mach) => mach.id
@@ -205,7 +204,6 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
     }
 
     val institution = for (mach <- machine; inst <- Institution.get(mach.institutionPK)) yield (inst)
-    logger.info("trace")
 
     val institutionName = institution match {
       case Some(inst) => inst.name
@@ -218,16 +216,13 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         case _ => "not available"
       }
     }
-    logger.info("trace")
 
     val user = for (userPK <- output.userPK; u <- User.get(userPK)) yield (u)
-    logger.info("trace")
 
     val userId = user match {
       case Some(u) => u.id
       case _ => ""
     }
-    logger.info("trace")
 
     val elapsed: String = {
       val fin = output.finishDate match {
@@ -237,7 +232,6 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
       val elapsed = fin - output.startDate.getTime
       Util.elapsedTimeHumanFriendly(elapsed)
     }
-    logger.info("trace")
 
     val analysisDate: String = {
       val date = output.analysisDate match {
@@ -247,7 +241,6 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
       Util.timeHumanFriendly(date)
     }
 
-    logger.info("trace")
     def dateToString(date: Option[Date]): String = {
       date match {
         case Some(date) => Util.timeHumanFriendly(date)
@@ -255,7 +248,6 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
       }
     }
 
-    logger.info("trace")
     val procedureDesc: String = {
       Procedure.get(output.procedurePK) match {
         case Some(proc) =>
@@ -263,7 +255,6 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         case _ => ""
       }
     }
-    logger.info("trace")
 
     case class LeafValue(section: String, leafIndex: Int, value: Double);
 
@@ -279,17 +270,12 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
       "            ['Leaf'," + leaves.mkString(", ") + "]"
     }
 
-    logger.info("trace")
     val transData = LeafTransmission.getByOutput(outputPK).map(v => new LeafValue(v.section, v.leafIndex, v.transmission_fract))
-    logger.info("trace")
     val transLeaves = transData.map(_.section).distinct.sorted
-    logger.info("trace")
     val leavesText = locXml.leafIndexList.distinct.sorted.mkString("            ['Leaf', ", ", ", "]")
-    logger.info("trace")
 
     def twoD2Text(data: Seq[Seq[Double]]): String = {
       def sec2String(s: Int): String = {
-        logger.info("trace")
         val textNums = data.map(v => v(s)).map(d => fmt(d))
         textNums.mkString("            ['Position" + (s + 1) + "', ", ", ", "]")
       }
@@ -301,40 +287,34 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
       "            ['" + name + "', " + data.map(m => fmt(m)).mkString(", ") + " ]"
     }
 
-    logger.info("trace")
     val offsetDataText: String = {
       val values = twoD2Text(locXml.LeafOffsetConstancyValue)
       val mean = oneD2Text("Mean", locXml.LeafOffsetConstancyMean) // "            ['Mean', " + locXml.LeafOffsetConstancyMean.map(m => fmt(m)).mkString(", ") + " ],\n"
       val range = oneD2Text("Range", locXml.LeafOffsetConstancyRange) // "            ['Range', " + locXml.LeafOffsetConstancyRange.map(m => fmt(m)).mkString(", ") + " ]\n"
       Seq(leavesText, values, mean, range).mkString(",\n")
     }
-    logger.info("trace")
 
     val transDataText: String = {
       val values = twoD2Text(locXml.LeafOffsetTransmissionValue)
       val mean = oneD2Text("Mean", locXml.LeafOffsetTransmissionMean) // "            ['Mean', " + locXml.LeafOffsetConstancyMean.map(m => fmt(m)).mkString(", ") + " ],\n"
       Seq(leavesText, values, mean).mkString(",\n")
     }
-    logger.info("trace")
 
     val rSquaredText: String = {
       val values = twoD2Text(locXml.LOCRSquared)
       Seq(leavesText, values).mkString(",\n")
     }
-    logger.info("trace")
 
     val differenceFromBaselineOpenText: String = {
       val values = twoD2Text(locXml.LOCDifferenceFromBaselineOpen)
       Seq(leavesText, values).mkString(",\n")
     }
-    logger.info("trace")
 
     val differenceFromBaselineTransText: String = {
       val values = twoD2Text(locXml.LOCDifferenceFromBaselineTrans)
       Seq(leavesText, values).mkString(",\n")
     }
 
-    logger.info("trace")
     val linkToFiles: Elem = {
       val url = ViewOutput.path + "?outputPK=" + outputPK + "&summary=true"
       <a href={ url }>Files</a>
@@ -344,7 +324,6 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
       val spaces = nbsp + " " + nbsp + " " + nbsp + " " + nbsp + " " + nbsp
 
       def links(fs: FileWorkbook) = {
-        logger.info("trace")
         val base = Util.fileBaseName(fs.file)
         Seq(
           { <div><a href={ base + ".html" } title="View HTML version of spreadsheet">View { base }</a>{ spaces }</div> },
@@ -355,23 +334,19 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         IndexedSeq({ <div title="There were not spreadsheets found.  Check the log for possible errors.">No Spreadsheets</div> })
       } else fileWorkbookList.map(fw => links(fw)).flatten.toIndexedSeq
     }
-    logger.info("trace")
 
     val viewLog: Elem = {
       <a href={ StdLogger.LOG_TEXT_FILE_NAME }>View Log</a>
     }
 
-    logger.info("trace")
     val viewXml: Elem = {
       <a href={ ProcedureOutputUtil.outputFileName }>View XML</a>
     }
-    logger.info("trace")
 
     /**
      * Javascript to display the graphs.
      */
     def runScript = {
-      logger.info("trace")
       """
             <script>
             var LocChart = c3.generate({
@@ -490,7 +465,6 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
             </script>
 """
     }
-    logger.info("trace")
 
     def make: String = {
       def wrap(col: Int, elem: Elem): Elem = {
@@ -504,7 +478,6 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
       def wrap2Anon(col: Int, name: String, value: String): Elem = {
         <div class={ "col-md-" + col }><em>{ name }:</em><br/><span aqaalias="">{ value }</span></div>
       }
-      logger.info("trace")
 
       val div = {
         <div class="row col-md-10 col-md-offset-1">
@@ -518,7 +491,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
             { wrap2(2, "Data Acquisition", dateToString(output.dataDate)) }
             { wrap2(2, "Analysis", analysisDate) }
             { wrap2Anon(1, "Analysis by", userId) }
-            { wrap2Anon(1, "Institution", elapsed) }
+            { wrap2Anon(1, "Elapsed", elapsed) }
             { wrap2(3, "Procedure", procedureDesc) }
           </div>
           <div class="row" style="margin:20px;">
@@ -561,7 +534,6 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
           </div>
         </div>
       }
-      logger.info("trace")
 
       wrapBody(div, "LOC", None, true, Some(runScript))
     }
@@ -570,22 +542,17 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
   }
 
   private def insertIntoDatabase(dir: File, outputPK: Long) = {
-    logger.info("trace")
     val elem = XML.loadFile(new File(dir, ProcedureOutputUtil.outputFileName))
-    logger.info("trace")
     ProcedureOutputUtil.insertIntoDatabase(elem, Some(outputPK))
-    logger.info("trace")
   }
 
   private def getExcelWorkbookList(dir: File): Seq[FileWorkbook] = {
-    logger.info("trace")
     val fileList = dir.listFiles.filter { f => f.getName.toLowerCase.contains(".xls") }
     logger.info("Number Excel spreadsheets found: " + fileList.size + fileList.map(f => "\n    " + f.getAbsolutePath).mkString)
     fileList.map(f => (f, ExcelUtil.read(f))).filter { fWb => fWb._2.isRight }.map(fWb => (fWb._1, fWb._2.right.get)).toSeq.map(fWb => new FileWorkbook(fWb._1, fWb._2))
   }
 
   private def makeSpreadsheet(dir: File, locXml: LOCXml, response: Response): Unit = {
-    logger.info("trace")
     try {
       (new LOCSpreadsheet(dir, locXml, response)).write
     } catch {
@@ -595,39 +562,35 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
   def excelToHtml(file: File, workbook: Workbook) = {
     try {
-      logger.info("trace")
       val html = WebUtil.excelToHtml(workbook)
       val htmlFile = new File(file.getParentFile, Util.fileBaseName(file) + ".html")
       logger.info("Writing html version of spreadsheet to " + htmlFile.getAbsolutePath)
       Util.writeFile(htmlFile, html)
-      logger.info("trace")
     } catch {
       case t: Throwable => logger.warn("Unable to write workbook for file " + file.getAbsolutePath + " : " + fmtEx(t))
     }
   }
 
   override def postPerform(activeProcess: ActiveProcess): Unit = {
-    logger.info("trace")
     activeProcess.output.outputPK match {
       case Some(outputPK) => {
-        logger.info("trace")
+        logger.info("Starting post-processing")
         val output = Output.get(outputPK).get
+        logger.info("Extracting output from XML file in " + output.dir.getAbsolutePath)
         val locXml = new LOCXml(output.dir)
-        logger.info("trace")
+        logger.info("Inserting into database")
         insertIntoDatabase(activeProcess.output.dir, outputPK)
-        logger.info("trace")
+        logger.info("Creating spreadsheet")
         makeSpreadsheet(activeProcess.output.dir, locXml, activeProcess.response)
-        logger.info("trace")
         val excelWorkbookList = getExcelWorkbookList(activeProcess.output.dir)
-        logger.info("trace")
         excelWorkbookList.map(fWb => excelToHtml(fWb.file, fWb.workbook))
-        logger.info("trace")
+        logger.info("Finished spreadsheets")
         val file = new File(activeProcess.output.dir, Output.displayFilePrefix + ".html")
         logger.info("Creating content for file " + file.getAbsolutePath)
         val content = makeDisplay(output, outputPK, locXml, excelWorkbookList)
         logger.info("Writing file " + file.getAbsolutePath)
         Util.writeFile(file, content)
-        logger.info("trace")
+        logger.info("Finished post-processing")
       }
       case None => ;
     }

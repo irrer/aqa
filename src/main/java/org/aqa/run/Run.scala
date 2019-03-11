@@ -473,7 +473,8 @@ object Run extends Logging {
         machinePK = machine.machinePK,
         status = ProcedureStatus.running.toString,
         dataValidity = DataValidity.valid.toString)
-      tempOutput.insert
+      val out = tempOutput.insert
+      out
     }
 
     /*

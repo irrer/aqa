@@ -8,14 +8,18 @@ import scala.xml.XML
 import scala.xml.Node
 import scala.xml.Elem
 import org.aqa.procedures.ProcedureOutput
+import org.aqa.Logging
 
-case class LOCRSquared(
-  rSquaredPK: Option[Long], // primary key
-  outputPK: Long, // output primary key
-  section: String, // arbitrary section name.  May be used to associate this section with input data such as UID
-  leafIndex: Int, // leaf number
-  rSquared_mmsq: Double // R squared value
-) {
+case
+
+class LOCRSquared(rSquaredPK:Option[Long], // primary key
+outputPK:Long, // output primary key
+section:String, // arbitrary section name. May be used to associate this section with input data
+				// such as UID
+leafIndex:Int, // leaf number
+rSquared_mmsq:Double // R squared value
+)
+{
 
   def insert: LOCRSquared = {
     val insertQuery = LOCRSquared.query returning LOCRSquared.query.map(_.rSquaredPK) into
@@ -31,7 +35,9 @@ case class LOCRSquared(
   override def toString: String = (rSquared_mmsq.toString).trim
 }
 
-object LOCRSquared extends ProcedureOutput {
+	object LOCRSquared extends
+	ProcedureOutput with Logging
+	{
   class LOCRSquaredTable(tag: Tag) extends Table[LOCRSquared](tag, "rSquared") {
 
     def rSquaredPK = column[Long]("rSquaredPK", O.PrimaryKey, O.AutoInc)
@@ -91,10 +97,12 @@ object LOCRSquared extends ProcedureOutput {
       (leaf \ "Value").map(n => n.text.toDouble).zipWithIndex.map(di => new LOCRSquared(None, outputPK, (di._2 + 1).toString, leafIndex, di._1))
     }
 
-    (elem \ topXmlLabel).headOption match {
+    val list = (elem \ topXmlLabel).headOption match {
       case Some(node) => (node \ "Leaf").map(leaf => leafNodeToLocList(leaf)).flatten
       case None => Seq[LOCRSquared]()
     }
+    logger.info("Number of items constructed: " + list.size)
+    list
   }
 
   override def insert(elem: Elem, outputPK: Long): Int = {
@@ -104,8 +112,10 @@ object LOCRSquared extends ProcedureOutput {
   }
 
   def insertSeq(list: Seq[LOCRSquared]): Unit = {
+    logger.info("Number of rows to insert: " + list.size)
     val ops = list.map { loc => LOCRSquared.query.insertOrUpdate(loc) }
     Db.perform(ops)
+    logger.info("Number of rows inserted: " + list.size)
   }
 
   /** For testing only. */
