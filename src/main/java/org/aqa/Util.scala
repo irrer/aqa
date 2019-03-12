@@ -749,6 +749,32 @@ object Util extends Logging {
   }
 
   /**
+   * Remove a possible artificial beam prefix.
+   */
+  def normalizeBeamName(name: String): String = {
+    val norm = if (name.matches("^[0-9][0-9]:.*"))
+      name.substring(3)
+    else
+      name
+    norm.trim
+  }
+
+  /**
+   * Get the normalized beam name from the given attribute list.  Beam names are sometimes prefixed with "NN:", where NN is
+   * a pair of digits that cause the beams to be sorted by the Eclipse planning system in the preferred delivery order.
+   */
+  def normalizedBeamName(al: AttributeList): String = {
+    normalizeBeamName(al.get(TagFromName.BeamName).getSingleStringValueOrEmptyString)
+  }
+
+  //  /**
+  //   * Determine if two beam names are equal.
+  //   */
+  //  def beamNamesEqual(a: String, b: String): Boolean = {
+  //    normalizeBeamName(a).equalsIgnoreCase(normalizeBeamName(b))
+  //  }
+
+  /**
    * Show which jar file is being used to ensure that we have the right version of the software.
    */
   def showJarFile(any: Any) = {

@@ -142,8 +142,8 @@ object Phase2Util extends Logging {
     try {
       val ReferencedBeamNumber = rtimage.attributeList.get.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head
       val beam = DicomUtil.seqToAttr(plan.attributeList.get, TagFromName.BeamSequence).find(bs => bs.get(TagFromName.BeamNumber).getIntegerValues().head == ReferencedBeamNumber).get
-      val BeamName = beam.get(TagFromName.BeamName).getSingleStringValueOrNull
-      val bn = if (BeamName == null) None else Some(BeamName.trim)
+      val BeamName = Util.normalizedBeamName(beam)
+      val bn = if (BeamName == "") None else Some(BeamName.trim)
       bn
     } catch {
       case t: Throwable => None
@@ -154,7 +154,7 @@ object Phase2Util extends Logging {
    * Given an RTPLAN and a beam name, get the beam sequence.
    */
   def getBeamSequenceOfPlan(beamName: String, plan: AttributeList): AttributeList = {
-    val bs = DicomUtil.seqToAttr(plan, TagFromName.BeamSequence).filter(b => b.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.equals(beamName.trim)).head
+    val bs = DicomUtil.seqToAttr(plan, TagFromName.BeamSequence).filter(b => Util.normalizedBeamName(b).equals(beamName.trim)).head
     bs
   }
 

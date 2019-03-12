@@ -85,19 +85,14 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   private def formErr(msg: String) = Left(Error.make(form.uploadFileInput.get, msg))
 
   private def emptyForm(valueMap: ValueMapT, response: Response) = {
-    Trace.trace // TODO rm
     form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
-    Trace.trace // TODO rm
   }
 
   private def validateMachineSelection(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, Machine] = {
     val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
     // machines that DICOM files reference (based on device serial numbers)
     val referencedMachines = rtimageList.map(df => attributeListToMachine(df.attributeList.get)).flatten.distinct
-    logger.info("referencedMachines.size: " + referencedMachines.size) // TODO rm
-    logger.info("referencedMachines: " + referencedMachines) // TODO rm
     val chosenMachine = for (pkTxt <- valueMap.get(machineSelector.label); pk <- Util.stringToLong(pkTxt); m <- Machine.get(pk)) yield m
-    logger.info("chosenMachine: " + chosenMachine) // TODO rm
 
     val result: Either[StyleMapT, Machine] = 0 match {
       case _ if (referencedMachines.size == 1) => Right(referencedMachines.head)
@@ -161,13 +156,17 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       dstnct.mkString("Serial Numbers: " + dstnct.mkString("  ")) + "    Machines: " + idList
     }
     logger.info("machineCheck: " + machineCheck) // TODO rm
+    Trace.trace("rtimageList\n    " + rtimageList.map(r => Util.sopOfAl(r.attributeList.get)).sorted.mkString("\n    ")) // TODO rm
+    Trace.trace("planGroups\n    " + planGroups.head._2.map(r => Util.sopOfAl(r.attributeList.get)).sorted.mkString("\n    ")) // TODO rm
 
     0 match {
       case _ if (rtplanList.isEmpty) => formErr("No RTPLANS found")
       case _ if (rtimageList.isEmpty) => formErr("No RTIMAGEs given")
       case _ if (planGroups.isEmpty) => formErr("No RTPLAN found for RTIMAGEs")
       case _ if (planGroups.size > 1) => formErr("The RTIMAGEs reference multiple plans.  Only one plan per run is permitted.")
-      case _ if (planGroups.head._2.size < rtimageList.size) => formErr("There are " + rtimageList.size + " images but only " + planGroups.head._2.size + " reference this plan")
+      case _ if (planGroups.head._2.size < rtimageList.size) => {
+        formErr("There are " + rtimageList.size + " images but only " + planGroups.head._2.size + " reference this plan")
+      }
       case _ if (machineCheck.isLeft) => Left(machineCheck.left.get)
       case _ if (machineSerialNumberList.distinct.size != 1) => formErr("There are RTIMAGEs from more than one machine: " + machineList)
       case _ if (nullSerialNumber) => formErr("At least one RTIMAGE has no serial number.")

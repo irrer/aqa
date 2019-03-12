@@ -191,7 +191,7 @@ object MeasureTBLREdges extends Logging {
   }
 
   def planCollimatorPositions(beamName: String, plan: AttributeList): X1X2Y1Y2 = {
-    val beamSeq = DicomUtil.seqToAttr(plan, TagFromName.BeamSequence).find(bs => bs.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.equals(beamName)).get
+    val beamSeq = DicomUtil.seqToAttr(plan, TagFromName.BeamSequence).find(bs => Util.normalizedBeamName(bs).equals(beamName)).get
     val controlPtSeq = DicomUtil.seqToAttr(beamSeq, TagFromName.ControlPointSequence).head
     val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(controlPtSeq, TagFromName.BeamLimitingDevicePositionSequence)
     getCollimatorPositions(BeamLimitingDeviceSequence)

@@ -180,13 +180,16 @@
         <Phase2PlanFile manufacturer='Varian' model='Millenium'>rtplan_millenium.dcm</Phase2PlanFile>
     </Phase2PlanFileList>
 
+    <!-- When creating a custom plan, override the following attributes with their corresponding values. -->
     <Phase2PlanAttributeOverrideList>
+    <!--
         <Phase2PlanAttributeOverride Name='TableTopEccentricAngle'       Value='0'   />
         <Phase2PlanAttributeOverride Name='TableTopLateralPosition'      Value='0'   />
-        <Phase2PlanAttributeOverride Name='TableTopLongitudinalPosition' Value='20' />
+        <Phase2PlanAttributeOverride Name='TableTopLongitudinalPosition' Value='200' />
         <Phase2PlanAttributeOverride Name='TableTopPitchAngle'           Value='0'   />
         <Phase2PlanAttributeOverride Name='TableTopRollAngle'            Value='0'   />
-        <Phase2PlanAttributeOverride Name='TableTopVerticalPosition'     Value='0' />
+        <Phase2PlanAttributeOverride Name='TableTopVerticalPosition'     Value='-60' />
+    -->
     </Phase2PlanAttributeOverrideList>
     
 

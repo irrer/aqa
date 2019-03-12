@@ -68,7 +68,7 @@ object MetadataCheckAnalysis extends Logging {
       val planJawPosns = getPlanJawPositions(plan, imageBeamNumber)
       val imageJawPosns = getImageJawPositions(image)
 
-      val beamName = planBeamSeq.get(TagFromName.BeamName).getSingleStringValueOrNull
+      val beamName = Util.normalizedBeamName(planBeamSeq)
 
       val gantryAnglePlan_deg = aDbl(planCtrlPointSeq, TagFromName.GantryAngle)
       val collimatorAnglePlan_deg = aDbl(planCtrlPointSeq, TagFromName.BeamLimitingDeviceAngle)

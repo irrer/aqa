@@ -223,7 +223,7 @@ object CustomizeRtPlan extends Logging {
    * Get the name of the given beam specified by its attribute list.
    */
   private def beamNameOf(beamAl: AttributeList): String = {
-    beamAl.get(TagFromName.BeamName).getSingleStringValueOrEmptyString.trim
+    Util.normalizedBeamName(beamAl)
   }
 
   /**
@@ -389,9 +389,9 @@ object CustomizeRtPlan extends Logging {
       Config.PrefixForMachineDependentBeamName + numText + fffText
     }
 
-    val BeamName = beamAl.get(TagFromName.BeamName)
-    BeamName.removeValues
-    BeamName.addValue(beamNameText)
+    val BeamNameAttr = beamAl.get(TagFromName.BeamName)
+    BeamNameAttr.removeValues
+    BeamNameAttr.addValue(beamNameText)
 
     setFluence(beamAl, machineEnergy.isFFF)
     changeNominalBeamEnergy(beamAl, machineEnergy.photonEnergy_MeV.get)
@@ -424,6 +424,7 @@ object CustomizeRtPlan extends Logging {
     "Number of beams: " + beamAlList.size + "\n    " + beamAlList.map(beamAl => showBeam(beamAl)).mkString("\n    ")
   }
 
+  /*
   private def addExtendedInterfaceData(rtplan: AttributeList) = {
     val template = """<?xml version="1.0" encoding="Windows-1252"?><ExtendedVAPlanInterface Version="1"><Beams>@beamText@</Beams><ToleranceTables><ToleranceTable><ReferencedToleranceTableNumber>1</ReferencedToleranceTableNumber><ToleranceTableExtension><GantryRtnSetup>Remote</GantryRtnSetup><CollRtnSetup>Remote</CollRtnSetup><CollXSetup>Remote</CollXSetup><CollYSetup>Remote</CollYSetup><PatientSupportAngleSetup>Manual</PatientSupportAngleSetup><CouchLngSetup>Manual</CouchLngSetup><CouchVrtSetup>Manual</CouchVrtSetup><CouchLatSetup>Manual</CouchLatSetup></ToleranceTableExtension></ToleranceTable></ToleranceTables><DoseReferences><DoseReference><ReferencedDoseReferenceNumber>1</ReferencedDoseReferenceNumber><DoseReferenceExtension><DailyDoseLimit>6.4</DailyDoseLimit><SessionDoseLimit>6.4</SessionDoseLimit></DoseReferenceExtension></DoseReference></DoseReferences></ExtendedVAPlanInterface>"""
     val beamTemplate = """<Beam><ReferencedBeamNumber>@beamNumber@</ReferencedBeamNumber><BeamExtension><FieldOrder>@fieldOrder@</FieldOrder><GantryRtnExtendedStart>false</GantryRtnExtendedStart><GantryRtnExtendedStop>false</GantryRtnExtendedStop></BeamExtension></Beam>"""
@@ -448,6 +449,22 @@ object CustomizeRtPlan extends Logging {
     attr.setValues(text.getBytes)
     rtplan.put(attr)
   }
+  */
+
+  private def orderBeamsByRenaming(rtplan: AttributeList) = {
+
+    val beamList = DicomUtil.seqToAttr(rtplan, TagFromName.BeamSequence)
+
+    def updateBeamName(bi: Int) = {
+      val attr = beamList(bi).get(TagFromName.BeamName)
+      val name = attr.getSingleStringValueOrEmptyString
+      val newName = (bi + 1).formatted("%02d") + ":" + name
+      attr.removeValues
+      attr.addValue(newName)
+    }
+
+    beamList.indices.map(bi => updateBeamName(bi))
+  }
 
   private def reassignPlanEnergies(rtplan: AttributeList, planBeamList: Seq[PlanBeam], machineEnergyList: Seq[MachineBeamEnergy]): Unit = {
     // use this beam and its fraction reference to make non-standard beams
@@ -467,8 +484,8 @@ object CustomizeRtPlan extends Logging {
     logger.info("customized rtplan\n" + showBeamList(rtplan))
 
     setNumberOfBeamsInFractionGroupSequence(rtplan)
-
-    addExtendedInterfaceData(rtplan)
+    orderBeamsByRenaming(rtplan)
+    // addExtendedInterfaceData(rtplan)
   }
 
   /**
