@@ -168,7 +168,8 @@ object CustomizeRtPlan extends Logging {
     toleranceTable: String,
     patientID: String,
     patientName: String,
-    machineName: String);
+    machineName: String,
+    planName: String);
 
   def getPlanBeamList(machine: Machine): List[PlanBeam] = {
     val plan = getCollimatorCompatiblePlanForMachine(machine)
@@ -514,13 +515,13 @@ object CustomizeRtPlan extends Logging {
     val rtplan = DicomUtil.clone(getCollimatorCompatiblePlanForMachine(machine).get.dicomFile.attributeList.get)
     replaceAllUids(rtplan) // change UIDs so that this plan will be considered new and unique from all others.
 
-    new Config.PlanAttributeOverride(TagFromName.ToleranceTableLabel, planSpecification.toleranceTable)
-
     val overrideList = Config.Phase2PlanAttributeOverrideList ++ Seq(
       new Config.PlanAttributeOverride(TagFromName.ToleranceTableLabel, planSpecification.toleranceTable),
       new Config.PlanAttributeOverride(TagFromName.PatientID, planSpecification.patientID),
       new Config.PlanAttributeOverride(TagFromName.PatientName, planSpecification.patientName),
-      new Config.PlanAttributeOverride(TagFromName.TreatmentMachineName, planSpecification.machineName))
+      new Config.PlanAttributeOverride(TagFromName.TreatmentMachineName, planSpecification.machineName),
+      new Config.PlanAttributeOverride(TagFromName.RTPlanLabel, planSpecification.planName),
+      new Config.PlanAttributeOverride(TagFromName.TableTopVerticalPosition, 0.toString))
 
     // modify all attributes that get a constant value
     overrideList.map(ov => {

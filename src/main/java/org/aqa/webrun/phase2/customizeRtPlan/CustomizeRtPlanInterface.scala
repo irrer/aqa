@@ -51,6 +51,8 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
 
   private val machineIdTag = "MachineId"
 
+  private val defaultPlanName = "AQA Phase 2"
+
   private val machinePK = new WebInputHidden(MachineUpdate.machinePKTag)
 
   private def machineFromValueMap(valueMap: ValueMapT): Machine = {
@@ -69,16 +71,18 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
 
   val machineId = new WebPlainText(machineIdTag, false, 6, 0, machineIdHtml)
 
-  private def toleranceTable = new WebInputText("Tolerance Table Name", true, 3, 0, "Should match name in planning system", false)
+  private def toleranceTable = new WebInputText("Tolerance Table Name", true, 2, 0, "Should match name in planning system", false)
+
+  private def planName = new WebInputText("Plan Name", true, 2, 0, "Name to distinguish this plan from others", false)
 
   private def machineName = new WebInputText("Machine Name", true, 2, 0, "To match planning system", false)
 
-  private def patientID = new WebInputText("Patient ID", true, 2, 0, "")
+  private def patientID = new WebInputText("Patient ID", true, 3, 0, "")
 
   private def patientName = new WebInputText("Patient Name", true, 3, 0, "")
 
   private val row0: WebRow = List(machineId)
-  private val row2: WebRow = List(toleranceTable, machineName)
+  private val row2: WebRow = List(toleranceTable, planName, machineName)
   private val row1: WebRow = List(patientID, patientName)
 
   private def getMachineEnergyList(machinePK: Long): Seq[MachineBeamEnergy] = {
@@ -123,8 +127,9 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     val patientIdMap = if (empty(patientID.label)) Map((patientID.label, defaultPatient)) else emptyValueMap
     val patientNameMap = if (empty(patientName.label)) Map((patientName.label, defaultPatient)) else emptyValueMap
     val machineNameMap = if (empty(machineName.label)) Map((machineName.label, getRealMachineId)) else emptyValueMap
+    val planNameMap = if (empty(planName.label)) Map((planName.label, defaultPlanName)) else emptyValueMap
 
-    val valMap = valueMap ++ patientIdMap ++ patientNameMap ++ machineNameMap
+    val valMap = valueMap ++ patientIdMap ++ patientNameMap ++ machineNameMap ++ planNameMap
     form.setFormResponse(valMap, styleNone, pageTitleSelect, response, Status.SUCCESS_OK)
   }
 
@@ -136,6 +141,7 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     def empty(label: String) = valueMap.get(label).isEmpty || (valueMap(label).trim.size == 0)
 
     val tolErr = if (empty(toleranceTable.label)) Error.make(toleranceTable, "A tolerance table name must be given.") else styleNone
+    val planNameErr = if (empty(planName.label)) Error.make(planName, "A plan name must be given.") else styleNone
     val machErr = if (empty(machineName.label)) Error.make(machineName, "A machine name must be given.") else styleNone
     val patIdErr = if (empty(patientID.label)) Error.make(patientID, "A patient ID must be given.") else styleNone
     val patNameErr = if (empty(patientName.label)) Error.make(patientName, "A patient name must be given.") else styleNone
@@ -143,9 +149,9 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong)
     val collimatorErr = if (CustomizeRtPlan.getCollimatorCompatiblePlanForMachine(machine.get).isEmpty) Error.make(createButton, "There is no pre-defined plan to support this machine's collimator.") else styleNone
 
-    (tolErr ++ machErr ++ patIdErr ++ patNameErr ++ collimatorErr)
+    (tolErr ++ planNameErr ++ machErr ++ patIdErr ++ patNameErr ++ collimatorErr)
   }
-  
+
   private def showDownload(rtplan: AttributeList, valueMap: ValueMapT, machine: Machine, response: Response) = {
 
     val sopuid = Util.sopOfAl(rtplan)
@@ -185,7 +191,8 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
         valueMap(toleranceTable.label),
         valueMap(patientID.label),
         valueMap(patientName.label),
-        valueMap(machineName.label))
+        valueMap(machineName.label),
+        valueMap(planName.label))
       val rtplan = CustomizeRtPlan.makePlan(machine, planEnergyList, planSpecification, machineEnergyList)
       showDownload(rtplan, valueMap, machine, response)
     }
