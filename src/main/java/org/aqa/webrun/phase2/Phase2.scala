@@ -124,8 +124,10 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
    */
   private def basicValidation(valueMap: ValueMapT): Either[StyleMapT, BasicData] = {
     val dicomFileList = dicomFilesInSession(valueMap)
+    logger.info("Number of DICOM files downloaded: " + dicomFileList.size)
     val rtplanList = Phase2Util.getPlanList(dicomFileList)
     val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
+    logger.info("Number of RTIMAGE files downloaded: " + rtimageList.size)
     val machineSerialNumberListOpt = rtimageList.map(rtimage => Util.getAttrValue(rtimage.attributeList.get, TagFromName.DeviceSerialNumber))
     val machineSerialNumberList = machineSerialNumberListOpt.flatten
     val nullSerialNumber = machineSerialNumberList.size != machineSerialNumberListOpt.size
@@ -142,11 +144,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     // associate each image with a plan
     val planGroups = rtplanList.map(plan => (plan, rtimageList.filter(img => Phase2Util.imageReferencesPlan(plan, img)))).filter(pi => pi._2.nonEmpty).toMap
 
-    if (true) { // TODO rm
-      planGroups.keys.map(plan => println("\n\nPlan: " + plan.file.getName + "    size: " + planGroups(plan).size +
-        "\n    " + planGroups(plan).map(d => d.file.getName).mkString("\n    ")))
-      println
-    }
     /**
      * Make a human readable list of machines
      */
@@ -155,9 +152,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       val idList = dstnct.map(serNo => Machine.findMachinesBySerialNumber(serNo)).flatten.distinct.map(mach => mach.id).mkString("  ")
       dstnct.mkString("Serial Numbers: " + dstnct.mkString("  ")) + "    Machines: " + idList
     }
-    logger.info("machineCheck: " + machineCheck) // TODO rm
-    Trace.trace("rtimageList\n    " + rtimageList.map(r => Util.sopOfAl(r.attributeList.get)).sorted.mkString("\n    ")) // TODO rm
-    Trace.trace("planGroups\n    " + planGroups.head._2.map(r => Util.sopOfAl(r.attributeList.get)).sorted.mkString("\n    ")) // TODO rm
 
     0 match {
       case _ if (rtplanList.isEmpty) => formErr("No RTPLANS found")
@@ -333,15 +327,15 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     validate(valueMap, dicomFileList) match {
       case Left(errMap) => {
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
-        logger.info("Bad news: " + valueMap) // TODO rm
-        logger.info("procedure.name: " + procedure.name) // TODO rm
       }
       case Right(runReq) => {
         // only consider the RTIMAGE files for the date-time stamp.  The plan could have been from months ago.
         val dtp = dateTimePatId(rtimageList)
 
         val sessDir = sessionDir(valueMap).get
+        Trace.trace("Run.preRun takes a long time")
         val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime) // TODO This takes a long time.  Optimize?
+        Trace.trace("Run.preRun done")
         val input = inputOutput._1
         val output = inputOutput._2
 
@@ -393,7 +387,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
 
     try {
-      Trace.trace // TODO rm
       0 match {
         //case _ if (!sessionDefined(valueMap)) => redirectWithNewSession(response);
         case _ if buttonIs(valueMap, cancelButton) => cancel(valueMap, response)
@@ -405,7 +398,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
         internalFailure(response, "Unexpected failure: " + fmtEx(t))
       }
     }
-    Trace.trace // TODO rm
   }
 
 }

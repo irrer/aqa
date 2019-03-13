@@ -260,7 +260,12 @@ object AnonymizeUtil extends Logging {
     updated
   }
 
-  def anonymizeDicom(institutionPK: Long, source: AttributeList): AttributeList = {
+  private val anonymizeDicomSync = ""
+  /**
+   * Anonymize an attribute list.  This must be synchronized to ensure that consistency of anonymized values.
+   */
+  def anonymizeDicom(institutionPK: Long, source: AttributeList): AttributeList = anonymizeDicomSync.synchronized {
+    // TODO: Make a version that can take Seq[AttributeList] to exploit caching recent values.  But hey, first see if this is a bottleneck.
     val institutionKey = getInstitutionKey(institutionPK)
     val dest = DicomUtil.clone(source) // do not modify the input
 
