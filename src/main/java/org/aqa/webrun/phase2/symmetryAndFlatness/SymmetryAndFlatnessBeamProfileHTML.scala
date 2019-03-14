@@ -56,34 +56,34 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
     }
 
     def resultTable: Elem = {
-        <div style="margin:20px;">
-          <center><h3>Results</h3></center>
-          <table class="table table-bordered" title={ "Results of this analysis and baseline values" + WebUtil.titleNewline + "for comparison.  All values are in percent." }>
-            <thead>
-              <tr>
-                <th>Source</th>
-                <th>Transverse Symmetry %</th>
-                <th>Axial Symmetry %</th>
-                <th>Flatness %</th>
-                <th>Profile Constancy %</th>
-              </tr>
-            </thead>
+      <div style="margin:20px;">
+        <center><h3>Results</h3></center>
+        <table class="table table-bordered" title={ "Results of this analysis and baseline values" + WebUtil.titleNewline + "for comparison.  All values are in percent." }>
+          <thead>
             <tr>
-              <td>Analysis</td>
-              <td>{ Util.fmtDbl(result.transverseSymmetry) }</td>
-              <td>{ Util.fmtDbl(result.axialSymmetry) }</td>
-              <td>{ Util.fmtDbl(result.flatness) }</td>
-              <td>{ Util.fmtDbl(result.profileConstancy) }</td>
+              <th>Source</th>
+              <th>Transverse Symmetry %</th>
+              <th>Axial Symmetry %</th>
+              <th>Flatness %</th>
+              <th>Profile Constancy %</th>
             </tr>
-            <tr>
-              <td>Baseline</td>
-              <td>{ Util.fmtDbl(result.transverseSymmetryBaseline) }</td>
-              <td>{ Util.fmtDbl(result.axialSymmetryBaseline) }</td>
-              <td>{ Util.fmtDbl(result.flatnessBaseline) }</td>
-              <td>{ Util.fmtDbl(result.profileConstancyBaseline) }</td>
-            </tr>
-          </table>
-        </div>
+          </thead>
+          <tr>
+            <td>Analysis</td>
+            <td>{ Util.fmtDbl(result.transverseSymmetry) }</td>
+            <td>{ Util.fmtDbl(result.axialSymmetry) }</td>
+            <td>{ Util.fmtDbl(result.flatness) }</td>
+            <td>{ Util.fmtDbl(result.profileConstancy) }</td>
+          </tr>
+          <tr>
+            <td>Baseline</td>
+            <td>{ Util.fmtDbl(result.transverseSymmetryBaseline) }</td>
+            <td>{ Util.fmtDbl(result.axialSymmetryBaseline) }</td>
+            <td>{ Util.fmtDbl(result.flatnessBaseline) }</td>
+            <td>{ Util.fmtDbl(result.profileConstancyBaseline) }</td>
+          </tr>
+        </table>
+      </div>
     }
 
     def inputTable: Elem = {
@@ -135,7 +135,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
         </div>
         <div class="row">
           <div class="col-md-5 col-md-offset-1">
-            { <img class="img-responsive" src={ WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.beamName)) }/> }
+            { <center id="beamImage"><img class="img-responsive" src={ WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.beamName)) }/> </center> }
           </div>
           <div class="col-md-5">
             <div class="row">
@@ -169,7 +169,12 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
         <p> </p>
       </div>
     }
-    val javascript = "<script>\n" + graphTransverse.javascript + graphAxial.javascript + graphHistory.javascript + "\n</script>\n"
+
+    val zoomScript = """
+    $(document).ready(function(){ $('#beamImage').zoom(); });
+"""
+
+    val javascript = "<script>\n" + graphTransverse.javascript + graphAxial.javascript + graphHistory.javascript + zoomScript + "\n</script>\n"
     (content, javascript)
   }
 

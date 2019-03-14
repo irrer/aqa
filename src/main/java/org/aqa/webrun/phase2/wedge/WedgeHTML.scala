@@ -113,11 +113,11 @@ object WedgeHTML {
   /**
    * Create the beam image, write it to disk, and return the HTML to reference and display it.
    */
-  private def beamImage(beamName: String, runReq: RunReq, wedgeDir: File): Elem = {
+  private def beamImage(beamName: String, id: String, runReq: RunReq, wedgeDir: File): Elem = {
     val bufferedImage = annotateImage(beamName, runReq)
     val pngFile = new File(wedgeDir, "Wedge_" + WebUtil.stringToUrlSafe(beamName) + ".png")
     Util.writePng(bufferedImage, pngFile)
-    <img class="img-responsive" src={ pngFile.getName }/>
+    <center id={ id }><img class="img-responsive" src={ pngFile.getName }/></center>
   }
 
   private def histChart(wedgePoint: WedgePoint, extendedData: ExtendedData, history: Seq[WedgePoint.WedgePointHistory]): C3ChartHistory = {
@@ -202,7 +202,7 @@ object WedgeHTML {
         <div class="row">
           <div class="col-md-5">
             <h3>Wedge { wedgePoint.wedgeBeamName }</h3>
-            { beamImage(wedgePoint.wedgeBeamName, runReq, wedgeDir) }
+            { beamImage(wedgePoint.wedgeBeamName, "wedge", runReq, wedgeDir) }
           </div>
           <div class="col-md-5">
             <div class="row">
@@ -218,7 +218,7 @@ object WedgeHTML {
         <div class="row">
           <div class="col-md-5">
             <h3>Background { wedgePoint.backgroundBeamName }</h3>
-            { beamImage(wedgePoint.backgroundBeamName, runReq, wedgeDir) }
+            { beamImage(wedgePoint.backgroundBeamName, "background", runReq, wedgeDir) }
           </div>
           <div class="col-md-5">
             <div class="row">
@@ -230,7 +230,11 @@ object WedgeHTML {
       </div>
     }
 
-    val js = historyChart.javascript + valueChart.javascript + percentChart.javascript + backgroundChart.javascript
+    val zoomScript = """
+      $(document).ready(function(){ $('#wedge').zoom(); });
+      $(document).ready(function(){ $('#background').zoom(); });
+"""
+    val js = historyChart.javascript + valueChart.javascript + percentChart.javascript + backgroundChart.javascript + zoomScript
     (elem, js)
   }
 
