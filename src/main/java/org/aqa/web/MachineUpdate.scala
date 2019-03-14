@@ -569,11 +569,11 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
    * If the user is authorized, go to the page for creating customized plans.
    */
   private def customizePlan(valueMap: ValueMapT, response: Response): Unit = {
-    save(valueMap, response) // in case user made changes
     val machinePK = valueMap(MachineUpdate.machinePKTag).toLong
     val machine = Machine.get(machinePK).get
     val user = CachedUser.get(response.getRequest).get
     if ((user.institutionPK == machine.institutionPK) || (WebUtil.userIsWhitelisted(response.getRequest))) {
+      save(valueMap, response) // in case user made changes
       val form = formEdit(valueMap)
       val styleMap = validateAll(valueMap, response.getRequest, form)
       if (styleMap.nonEmpty) {
