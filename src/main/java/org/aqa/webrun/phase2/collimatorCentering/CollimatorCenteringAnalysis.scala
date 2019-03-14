@@ -48,13 +48,19 @@ object CollimatorCenteringAnalysis extends Logging {
   private def analyze(dicomFile090: DicomFile, dicomFile270: DicomFile, image090: DicomImage, image270: DicomImage, outputPK: Long): (CollimatorCentering, MeasureTBLREdges.AnalysisResult, MeasureTBLREdges.AnalysisResult) = {
     val al090 = dicomFile090.attributeList.get
     val al270 = dicomFile270.attributeList.get
+
+    val collAngle090 = Util.collimatorAngle(al090)
+    val collAngle270 = Util.collimatorAngle(al270)
     val translator = new IsoImagePlaneTranslator(al090)
+
+    val expected_mm090 = MeasureTBLREdges.imageCollimatorPositions(al090).toTBLR(collAngle090)
+    val expected_mm270 = MeasureTBLREdges.imageCollimatorPositions(al270).toTBLR(collAngle270)
 
     // Calculate edges in parallel for efficiency.
     val resultPair = {
       val pointZero = new Point(0, 0)
-      def m090 = MeasureTBLREdges.measure(image090, translator, Util.collimatorAngle(al090), image090, pointZero)
-      def m270 = MeasureTBLREdges.measure(image270, translator, Util.collimatorAngle(al270), image270, pointZero)
+      def m090 = MeasureTBLREdges.measure(image090, translator, Some(expected_mm090), collAngle090, image090, pointZero, 0.5)
+      def m270 = MeasureTBLREdges.measure(image270, translator, Some(expected_mm270), collAngle270, image270, pointZero, 0.5)
       val rp = ParSeq(m090 _, m270 _).map(f => f()).toList
       rp
     }

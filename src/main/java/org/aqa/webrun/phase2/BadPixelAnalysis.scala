@@ -191,7 +191,7 @@ object BadPixelAnalysis extends Logging {
           <td style="text-align: center;" title="Click for full size image"><a href={ Phase2Util.dicomViewImageHtmlHref(al, extendedData, runReq) }><img src={ pngHref } width={ smallImageWidth }/></a></td>
           <td style="text-align: center;" title="Gantry Angle deg">{ angleOf(TagFromName.GantryAngle) }</td>
           <td style="text-align: center;" title="Collimator Angle deg">{ angleOf(TagFromName.BeamLimitingDeviceAngle) }</td>
-          <td style="text-align: center;" title="Jaw opening in CM">{ Phase2Util.jawDescription(al) }</td>
+          <td style="text-align: center;" title="Collimator opening in CM">{ Phase2Util.jawDescription(al) }</td>
           <td style="text-align: center;" title="Time since first image capture (mm:ss)">{ relativeTimeText }</td>
           <td style="text-align: center;" title="Metadata Check">{ boolToString(Config.MetadataCheckBeamNameList.contains(beamName)) }</td>
           <td style="text-align: center;" title="Collimator Centering">{ boolToString(Config.CollimatorCentering090BeamName.equals(beamName) || Config.CollimatorCentering270BeamName.equals(beamName)) }</td>

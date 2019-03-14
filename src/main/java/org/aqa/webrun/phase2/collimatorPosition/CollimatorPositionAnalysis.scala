@@ -55,12 +55,19 @@ object CollimatorPositionAnalysis extends Logging {
 
       def dbl(tag: AttributeTag): Double = al.get(tag).getDoubleValues.head
 
+      val expected_mm = MeasureTBLREdges.imageCollimatorPositions(al).toTBLR(collimatorAngle)
+
       val translator = new IsoImagePlaneTranslator(al)
       val edges = {
-        if (FloodCompensation)
-          MeasureTBLREdges.measure(biasAndPixelCorrectedCroppedImage, translator, collimatorAngle, originalImage, floodOffset, Config.PenumbraThresholdPercent / 100)
-        else
-          MeasureTBLREdges.measure(pixelCorrectedImage, translator, collimatorAngle, originalImage, new Point(0, 0), Config.PenumbraThresholdPercent / 100)
+        if (FloodCompensation) {
+          val exp_mm = new MeasureTBLREdges.TBLR(
+            expected_mm.top - translator.pix2IsoDistY(floodOffset.getY),
+            expected_mm.bottom - translator.pix2IsoDistY(floodOffset.getY),
+            expected_mm.left - translator.pix2IsoDistX(floodOffset.getX),
+            expected_mm.right - translator.pix2IsoDistX(floodOffset.getX))
+          MeasureTBLREdges.measure(biasAndPixelCorrectedCroppedImage, translator, Some(exp_mm), collimatorAngle, originalImage, floodOffset, Config.PenumbraThresholdPercent / 100)
+        } else
+          MeasureTBLREdges.measure(pixelCorrectedImage, translator, Some(expected_mm), collimatorAngle, originalImage, new Point(0, 0), Config.PenumbraThresholdPercent / 100)
       }
 
       // expected edge values compensated with collimator centering.

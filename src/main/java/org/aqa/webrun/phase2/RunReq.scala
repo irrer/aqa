@@ -29,7 +29,8 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
     new RunReq(rtplanRedirred, machine, rtiMap, flood.reDir(dir))
   }
 
-  val floodOriginalImage = new DicomImage(flood.attributeList.get)
+  private val floodAttributeList = flood.attributeList.get
+  val floodOriginalImage = new DicomImage(floodAttributeList)
 
   logger.info("Bad pixel radius (in pixels) for flood image of: " + flood.badPixelRadius)
 
@@ -39,9 +40,11 @@ case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, D
 
   val imageSize = new Point(floodOriginalImage.width, floodOriginalImage.height)
 
-  val floodTranslator = new IsoImagePlaneTranslator(flood.attributeList.get)
+  val floodTranslator = new IsoImagePlaneTranslator(floodAttributeList)
 
-  private val floodMeasurementAndImage = MeasureTBLREdges.measure(floodCorrectedImage, floodTranslator, Util.collimatorAngle(flood.attributeList.get), floodCorrectedImage, new Point(0, 0))
+  private val floodExpected_mm = MeasureTBLREdges.imageCollimatorPositions(floodAttributeList).toTBLR(Util.collimatorAngle(flood.attributeList.get))
+
+  private val floodMeasurementAndImage = MeasureTBLREdges.measure(floodCorrectedImage, floodTranslator, Some(floodExpected_mm), Util.collimatorAngle(floodAttributeList), floodCorrectedImage, new Point(0, 0), Config.PenumbraThresholdPercent / 100)
 
   val floodMeasurement = floodMeasurementAndImage.measurementSet
 

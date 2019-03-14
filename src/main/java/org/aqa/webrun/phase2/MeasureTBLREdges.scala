@@ -412,18 +412,26 @@ object MeasureTBLREdges extends Logging {
    *
    * @param translator: IsoImagePlaneTranslator.
    *
+   * @param expected_mm: Expected edge position in mm in isoplane.
+   *
    * @param annotate: Image containing pixels to be annotated.
    *
    * @param floodOffset: XY offset of image to annotate.
    */
-  def measure(image: DicomImage, translator: IsoImagePlaneTranslator, collimatorAngle: Double, annotate: DicomImage, floodOffset: Point, thresholdPercent: Double): AnalysisResult = {
+  def measure(image: DicomImage, translator: IsoImagePlaneTranslator, expected_mm: Option[TBLR], collimatorAngle: Double, annotate: DicomImage, floodOffset: Point, thresholdPercent: Double): AnalysisResult = {
     val threshold = calcPercentPixelValue(image, thresholdPercent)
-    //    val coarse = {
-    //      val j = coarseMeasure(image, threshold, translator, floodOffset)
-    //      val k = j.floodRelative(floodOffset)
-    //      k
-    //    }
-    val coarse = coarseMeasure(image, threshold, translator, floodOffset)
+
+    val coarse = {
+      if (expected_mm.isEmpty) coarseMeasure(image, threshold, translator, floodOffset)
+      else {
+
+        new TBLR(
+          translator.iso2PixCoordY(expected_mm.get.top),
+          translator.iso2PixCoordY(expected_mm.get.bottom),
+          translator.iso2PixCoordX(expected_mm.get.left),
+          translator.iso2PixCoordX(expected_mm.get.right))
+      }
+    }
 
     val penumbraX = translator.iso2PixDistX(Config.PenumbraThickness_mm) // penumbra thickness in pixels X
     val penumbraY = translator.iso2PixDistY(Config.PenumbraThickness_mm) // penumbra thickness in pixels Y
@@ -443,8 +451,8 @@ object MeasureTBLREdges extends Logging {
     new AnalysisResult(measurementSet, bufferedImage)
   }
 
-  def measure(image: DicomImage, translator: IsoImagePlaneTranslator, collimatorAngle: Double, annotate: DicomImage, floodOffset: Point): AnalysisResult = {
-    measure(image, translator, collimatorAngle, annotate, floodOffset, 0.5)
-  }
+  //  def measure(image: DicomImage, translator: IsoImagePlaneTranslator, expected_mm: Option[TBLR], collimatorAngle: Double, annotate: DicomImage, floodOffset: Point): AnalysisResult = {
+  //    measure(image, translator, expected_mm, collimatorAngle, annotate, floodOffset, 0.5)
+  //  }
 
 }
