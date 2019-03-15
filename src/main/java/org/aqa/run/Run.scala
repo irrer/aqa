@@ -47,6 +47,7 @@ import java.util.function.ToDoubleBiFunction
 import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.FileUtil
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Run a procedure.
@@ -114,7 +115,10 @@ object Run extends Logging {
     }
   }
 
-  def removeRedundantOutput(outputPK: Option[Long]) = {
+  /**
+   * Remove the output, which removes data pointing to it.  Also remove the corresponding output directory.
+   */
+  def removeRedundantOutput(outputPK: Option[Long]): Unit = {
     def del(output: Output) = {
       try {
         Output.delete(output.outputPK.get)
@@ -139,6 +143,17 @@ object Run extends Logging {
       case t: Throwable =>
         logger.warn("removeRedundantOutput Unexpected error cleaning up redundant output.  outputPK: " + outputPK + " : " + t.getMessage)
     }
+  }
+
+  /**
+   * Wrap <code>removeRedundantOutput</code> in a Future.
+   */
+  def removeRedundantOutputFuture(outputPK: Option[Long]): Future[Unit] = {
+    val later = Future {
+      val future = removeRedundantOutput(outputPK)
+      future
+    }
+    later
   }
 
   /**
@@ -433,33 +448,46 @@ object Run extends Logging {
   }
 
   def preRun(procedure: Procedure, machine: Machine, sessionDir: File, user: Option[User], patientId: Option[String], acquisitionDate: Option[Long]): (Input, Output) = {
+    val startDate = new Date(System.currentTimeMillis)
+    Trace.trace
     val userPK = if (user.isDefined) user.get.userPK else None
+    Trace.trace
 
     // create DB Input
     val acq = if (acquisitionDate.isDefined) Some(new Timestamp(acquisitionDate.get)) else None
+    Trace.trace
     val inputWithoutDir = (new Input(None, None, new Timestamp(now.getTime), userPK, machine.machinePK, patientId, acq)).insert
+    Trace.trace
 
     // The input PK is needed to make the input directory, which creates a circular definition when making an
     // input row, but this is part of the compromise of creating a file hierarchy that has a consistent (as
     // practical) link to the database.
     val inputDir = makeInputDir(machine, procedure, inputWithoutDir.inputPK.get)
+    Trace.trace
 
     // move input files to their final resting place
     inputDir.getParentFile.mkdirs
+    Trace.trace
     renameFileTryingPersistently(sessionDir, inputDir)
+    Trace.trace
     if (!inputDir.exists)
       throw new RuntimeException("Unable to rename temporary directory " + sessionDir.getAbsolutePath + " to input directory " + inputDir.getAbsolutePath)
+    Trace.trace
 
     inputWithoutDir.updateDirectory(inputDir)
+    Trace.trace
     val input = Input.get(inputWithoutDir.inputPK.get).get // update the directory
-    input.putFilesInDatabase(inputDir)
-
-    val startDate = new Date(System.currentTimeMillis)
+    Trace.trace
+    input.putFilesInDatabaseFuture(inputDir) // TODO this takes a long time.  Do in separate thread?
+    Trace.trace
 
     val outputDir = new File(inputDir, outputSubdirNamePrefix + Util.timeAsFileName(startDate))
+    Trace.trace
     outputDir.mkdirs // create output directory
+    Trace.trace
 
     val output = {
+      Trace.trace
       val tempOutput = new Output(
         outputPK = None,
         inputPK = input.inputPK.get,
@@ -473,14 +501,19 @@ object Run extends Logging {
         machinePK = machine.machinePK,
         status = ProcedureStatus.running.toString,
         dataValidity = DataValidity.valid.toString)
+      Trace.trace
       val out = tempOutput.insert
+      Trace.trace
       out
     }
+    Trace.trace
 
     /*
      * Remove previous versions of this output so that there will be no conflict.
      */
-    removeRedundantOutput(output.outputPK)
+    Trace.trace
+    removeRedundantOutputFuture(output.outputPK)
+    Trace.trace
     (input, output)
   }
 

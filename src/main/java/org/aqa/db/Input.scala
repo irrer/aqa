@@ -7,6 +7,8 @@ import java.sql.Timestamp
 import java.io.File
 import org.aqa.web.WebServer
 import edu.umro.ScalaUtil.FileUtil
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class Input(
   inputPK: Option[Long], // primary key
@@ -47,6 +49,17 @@ case class Input(
     val zippedContent = FileUtil.readFileTreeToZipByteArray(Seq(inputDir), Seq[String](), outputDirList)
     InputFiles.deleteByInputPK(inputPK.get)
     (new InputFiles(inputPK.get, inputPK.get, zippedContent)).insert
+  }
+
+  /**
+   * Update content in parallel thread.
+   */
+  def putFilesInDatabaseFuture(inputDir: File): Future[InputFiles] = {
+    val later = Future {
+      val future = putFilesInDatabase(inputDir)
+      future
+    }
+    later
   }
 
 }
