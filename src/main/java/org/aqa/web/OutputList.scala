@@ -15,9 +15,11 @@ import org.restlet.Request
 import org.aqa.web.WebUtil._
 import org.aqa.db.CentralAxis
 import edu.umro.util.Utility
+import org.aqa.webrun.phase2.Phase2
 
 object OutputList {
   val deleteTag = "delete"
+  val redoTag = "redo"
 
   private val path = new String((new OutputList).pathOf)
 
@@ -90,6 +92,10 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     <a title="Click to delete.  Can NOT be undone" href={ OutputList.path + "?" + OutputList.deleteTag + "=" + extendedValues.output_outputPK }>Delete</a>
   }
 
+  private def redoUrl(extendedValues: Output.ExtendedValues): Elem = {
+    <a title="Click to re-run analysis.  Results will replace previous results." href={ OutputList.path + "?" + OutputList.redoTag + "=" + extendedValues.output_outputPK }>Redo</a>
+  }
+
   type ColT = Output.ExtendedValues // Column Type
 
   private val institutionCol = new Column[ColT]("Institution", _.institution_name, (colT) => wrapAlias(colT.institution_name))
@@ -100,13 +106,15 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   private val inputFileCol = new Column[ColT]("Acquisition", inputTime _)
 
+  private val redoCol = new Column[ColT]("Redo", _ => "Redo", redoUrl)
+
   private val deleteCol = new Column[ColT]("Delete", _ => "Delete", deleteUrl)
 
   private val procedureCol = new Column[ColT]("Procedure", (d) => d.procedure_name + " " + d.procedure_version)
 
   private val machineCol = new Column[ColT]("Machine", _.machine_id, (colT) => wrapAlias(colT.machine_id))
 
-  override val columnList = Seq(startTimeCol, inputFileCol, procedureCol, machineCol, institutionCol, userCol, deleteCol)
+  override val columnList = Seq(startTimeCol, inputFileCol, redoCol, procedureCol, machineCol, institutionCol, userCol, deleteCol)
 
   val entriesPerPage = 1000
 
@@ -135,6 +143,18 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     OutputList.redirect(response)
   }
 
+  private def redoOutput(outputPK: Long, response: Response): Unit = {
+    Output.get(outputPK) match {
+      case None => ;
+      case Some(output) => {
+        val procedure = Procedure.get(output.procedurePK).get
+        if (procedure.name.toLowerCase.contains("phase")) {
+          Phase2.redo(outputPK, response.getRequest, response)
+        }
+      }
+    }
+  }
+
   override def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Unit = {
     try {
       val delete = valueMap.get(OutputList.deleteTag)
@@ -147,4 +167,15 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
       case t: Throwable => internalFailure(response, "Unexpected error in OutputList: " + fmtEx(t))
     }
   }
+
+  override def handle(request: Request, response: Response): Unit = {
+    val valueMap = getValueMap(request)
+
+    val redo = valueMap.get(OutputList.redoTag)
+    if (redo.isDefined)
+      redoOutput(redo.get.toLong, response)
+    else
+      super.handle(request, response)
+  }
+
 }

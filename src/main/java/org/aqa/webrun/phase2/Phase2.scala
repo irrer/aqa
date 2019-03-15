@@ -55,10 +55,171 @@ import org.aqa.webrun.phase2.centerDose.CenterDoseAnalysis
 import org.aqa.webrun.phase2.metadataCheck.MetadataCheckAnalysis
 import org.aqa.webrun.phase2.metadataCheck.MetadataCheckValidation
 import org.aqa.webrun.phase2.leafPosition.LeafPositionAnalysis
+import org.aqa.web.Session
 
-object Phase2 {
+object Phase2 extends Logging {
   val parametersFileName = "parameters.xml"
   val Phase2RunPKTag = "Phase2RunPK"
+
+  /**
+   * Create a list of the RTIMAGEs mapped by beam name.
+   */
+  private def constructRtimageMap(plan: DicomFile, rtimageList: Seq[DicomFile]) = {
+    rtimageList.map(rtimage => (Phase2Util.getBeamNameOfRtimage(plan, rtimage), rtimage)).filter(ni => ni._1.isDefined).map(ni => (ni._1.get, ni._2)).toMap
+  }
+
+  private def makeHtml(extendedData: ExtendedData, procedureStatus: ProcedureStatus.Value, elemList: Seq[Elem], runReq: RunReq) = {
+    def table = {
+      <div class="col-md-10 col-md-offset-1">
+        <table class="table table-responsive">
+          <tr>
+            { elemList.map(e => <td>{ e }</td>) }
+          </tr>
+        </table>
+      </div>
+    }
+
+    val text = Phase2Util.wrapSubProcedure(extendedData, table, "Phase 2", procedureStatus, None, runReq)
+    val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
+    Util.writeBinaryFile(file, text.getBytes)
+  }
+
+  /**
+   * Run the sub-procedures.
+   */
+  private def runPhase2(extendedData: ExtendedData, rtimageMap: Map[String, DicomFile], runReq: RunReq): ProcedureStatus.Value = {
+    logger.info("Starting Phase2 analysis")
+
+    val summaryList: Either[Seq[Elem], Seq[Elem]] = MetadataCheckAnalysis.runProcedure(extendedData, runReq) match {
+      case Left(fail) => Left(Seq(fail))
+      case Right(metadataCheck) => {
+        BadPixelAnalysis.runProcedure(extendedData, runReq) match {
+          case Left(fail) => Left(Seq(metadataCheck.summary, fail))
+          case Right(badPixel) => {
+            CollimatorCenteringAnalysis.runProcedure(extendedData, runReq) match {
+              case Left(fail) => Left(Seq(metadataCheck.summary, badPixel.summary, fail))
+              case Right(collimatorCentering) => {
+                CenterDoseAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result) match {
+                  case Left(fail) => Left(Seq(metadataCheck.summary, badPixel.summary, collimatorCentering.summary, fail))
+                  case Right(centerDose) => {
+                    val prevSummaryList = Seq(metadataCheck, badPixel, centerDose, collimatorCentering).map(r => r.summary)
+                    // TODO run in parallel
+                    val list = Seq(
+                      CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
+                      WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result, centerDose.resultList),
+                      SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
+                      LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result))
+
+                    val summaryList = prevSummaryList ++ list.map(r => if (r.isLeft) r.left.get else r.right.get.summary)
+                    val pass = (list.find(r => r.isLeft).isEmpty) && list.filter(s => !Phase2Util.statusOk(s.right.get.status)).isEmpty
+                    if (pass) Right(summaryList) else Left(summaryList)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    logger.info("Finished all Phase2 analysis")
+
+    val status = summaryList match {
+      case Left(_) => ProcedureStatus.fail
+      case Right(_) => ProcedureStatus.pass
+    }
+
+    val sumList = summaryList match {
+      case Left(list) => list
+      case Right(list) => list
+    }
+
+    logger.info("Generating Phase2 HTML")
+    makeHtml(extendedData, status, sumList, runReq)
+    logger.info("Done generating Phase2 HTML")
+
+    status
+  }
+
+  /**
+   * Given a Phase 2 output, redo the analysis.
+   */
+  def redo(outputPK: Long, request: Request, response: Response) = {
+    try {
+      Output.get(outputPK) match {
+        case None => logger.info("Requested redo of output " + outputPK + " not possible because output does not exist")
+        case Some(outputOrig) => {
+          Input.get(outputOrig.inputPK) match {
+            case None => logger.info("Requested redo of output " + outputPK + " not possible because input does not exist")
+            case Some(inputOrig) => {
+              val sessionId = Session.makeUniqueId
+              val sessionDir = Session.idToFile(sessionId)
+              sessionDir.mkdirs
+              def copyToSessionDir(file: File) = {
+                val newFile = new File(sessionDir, file.getName)
+                newFile.createNewFile
+                val data = Util.readBinaryFile(file).right.get
+                Util.writeBinaryFile(newFile, data)
+              }
+              val inputFileList = Util.listDirFiles(inputOrig.dir).filter(f => f.isFile)
+              inputFileList.map(copyToSessionDir)
+
+              val dicomFileList = Util.listDirFiles(sessionDir).map(f => new DicomFile(f)).filter(df => df.attributeList.nonEmpty)
+              val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
+
+              logger.info("Copied input files from " + inputOrig.dir.getAbsolutePath + " --> " + sessionDir.getAbsolutePath)
+
+              val acquisitionDate = inputOrig.dataDate match {
+                case None => None
+                case Some(timestamp) => Some(timestamp.getTime)
+              }
+
+              val runReq = {
+                val rtplanFile = new File(Config.sharedDir, Phase2Util.referencedPlanUID(rtimageList.head) + Util.dicomFileNameSuffix)
+                val rtplan = new DicomFile(rtplanFile)
+                val machine = Machine.get(outputOrig.machinePK.get).get
+                val rtimageMap = constructRtimageMap(rtplan, rtimageList)
+                val flood = rtimageMap(Config.FloodFieldBeamName)
+
+                new RunReq(rtplan, machine, rtimageMap, flood)
+              }
+
+              val procedure = Procedure.get(outputOrig.procedurePK).get
+
+              val inputOutput = Run.preRun(procedure, runReq.machine, sessionDir, getUser(request), inputOrig.patientId, acquisitionDate)
+              val input = inputOutput._1
+              val output = inputOutput._2
+
+              Future {
+                val extendedData = ExtendedData.get(output)
+                val runReqFinal = runReq.reDir(input.dir)
+
+                val rtplan = runReqFinal.rtplan
+                val machine = runReqFinal.machine
+                Phase2Util.saveRtplan(rtplan)
+
+                val rtimageMap = constructRtimageMap(rtplan, rtimageList)
+
+                val finalStatus = Phase2.runPhase2(extendedData, rtimageMap, runReqFinal)
+                val finDate = new Timestamp(System.currentTimeMillis)
+                val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
+
+                Phase2Util.setMachineSerialNumber(machine, runReqFinal.flood.attributeList.get)
+                outputFinal.insertOrUpdate
+                outputFinal.updateData(outputFinal.makeZipOfFiles)
+                Run.removeRedundantOutput(outputFinal.outputPK)
+              }
+
+              val suffix = "?" + ViewOutput.outputPKTag + "=" + output.outputPK.get
+              response.redirectSeeOther(ViewOutput.path + suffix)
+            }
+          }
+        }
+      }
+    } catch {
+      case t: Throwable => logger.warn("Unable to redo output " + outputPK + " : " + fmtEx(t))
+    }
+  }
+
 }
 
 /**
@@ -237,86 +398,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     else list.minBy(dt => dt.dateTime)
   }
 
-  private def makeHtml(extendedData: ExtendedData, procedureStatus: ProcedureStatus.Value, elemList: Seq[Elem], runReq: RunReq) = {
-
-    def table = {
-      <div class="col-md-10 col-md-offset-1">
-        <table class="table table-responsive">
-          <tr>
-            { elemList.map(e => <td>{ e }</td>) }
-          </tr>
-        </table>
-      </div>
-    }
-
-    val text = Phase2Util.wrapSubProcedure(extendedData, table, "Phase 2", procedureStatus, None, runReq)
-    val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
-    Util.writeBinaryFile(file, text.getBytes)
-  }
-
-  /**
-   * Create a list of the RTIMAGEs mapped by beam name.
-   */
-  private def constructRtimageMap(plan: DicomFile, rtimageList: Seq[DicomFile]) = {
-    rtimageList.map(rtimage => (Phase2Util.getBeamNameOfRtimage(plan, rtimage), rtimage)).filter(ni => ni._1.isDefined).map(ni => (ni._1.get, ni._2)).toMap
-  }
-
-  /**
-   * Run the sub-procedures.
-   */
-  private def runPhase2(extendedData: ExtendedData, rtimageMap: Map[String, DicomFile], runReq: RunReq): ProcedureStatus.Value = {
-    logger.info("Starting Phase2 analysis")
-
-    val summaryList: Either[Seq[Elem], Seq[Elem]] = MetadataCheckAnalysis.runProcedure(extendedData, runReq) match {
-      case Left(fail) => Left(Seq(fail))
-      case Right(metadataCheck) => {
-        BadPixelAnalysis.runProcedure(extendedData, runReq) match {
-          case Left(fail) => Left(Seq(metadataCheck.summary, fail))
-          case Right(badPixel) => {
-            CollimatorCenteringAnalysis.runProcedure(extendedData, runReq) match {
-              case Left(fail) => Left(Seq(metadataCheck.summary, badPixel.summary, fail))
-              case Right(collimatorCentering) => {
-                CenterDoseAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result) match {
-                  case Left(fail) => Left(Seq(metadataCheck.summary, badPixel.summary, collimatorCentering.summary, fail))
-                  case Right(centerDose) => {
-                    val prevSummaryList = Seq(metadataCheck, badPixel, centerDose, collimatorCentering).map(r => r.summary)
-                    // TODO run in parallel
-                    val list = Seq(
-                      CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
-                      WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result, centerDose.resultList),
-                      SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
-                      LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result))
-
-                    val summaryList = prevSummaryList ++ list.map(r => if (r.isLeft) r.left.get else r.right.get.summary)
-                    val pass = (list.find(r => r.isLeft).isEmpty) && list.filter(s => !Phase2Util.statusOk(s.right.get.status)).isEmpty
-                    if (pass) Right(summaryList) else Left(summaryList)
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    logger.info("Finished all Phase2 analysis")
-
-    val status = summaryList match {
-      case Left(_) => ProcedureStatus.fail
-      case Right(_) => ProcedureStatus.pass
-    }
-
-    val sumList = summaryList match {
-      case Left(list) => list
-      case Right(list) => list
-    }
-
-    logger.info("Generating Phase2 HTML")
-    makeHtml(extendedData, status, sumList, runReq)
-    logger.info("Done generating Phase2 HTML")
-
-    status
-  }
-
   /**
    * Respond to the 'Run' button.
    */
@@ -331,15 +412,14 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       case Right(runReq) => {
         // only consider the RTIMAGE files for the date-time stamp.  The plan could have been from months ago.
         val dtp = dateTimePatId(rtimageList)
+        Trace.trace
 
         val sessDir = sessionDir(valueMap).get
-        Trace.trace("Run.preRun takes a long time")
-        val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime) // TODO This takes a long time.  Optimize?
-        Trace.trace("Run.preRun done")
+        val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
         val input = inputOutput._1
         val output = inputOutput._2
 
-        val later = Future {
+        Future {
           val extendedData = ExtendedData.get(output)
           val runReqFinal = runReq.reDir(input.dir)
 
@@ -347,9 +427,9 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
           val machine = runReqFinal.machine
           Phase2Util.saveRtplan(plan)
 
-          val rtimageMap = constructRtimageMap(plan, rtimageList)
+          val rtimageMap = Phase2.constructRtimageMap(plan, rtimageList)
 
-          val finalStatus = runPhase2(extendedData, rtimageMap, runReqFinal)
+          val finalStatus = Phase2.runPhase2(extendedData, rtimageMap, runReqFinal)
           val finDate = new Timestamp(System.currentTimeMillis)
           val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
 
