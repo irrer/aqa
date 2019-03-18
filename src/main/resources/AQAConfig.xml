@@ -308,12 +308,12 @@ Note that when building a package for release, the Maven build process uses the 
     
     <!-- Maximum number of bad pixel tolerated before considering the image to be of such poor quality that it should be rejected for processing.  Must be a positive integer. -->
     <MaxAllowedBadPixelsPerMillion>50</MaxAllowedBadPixelsPerMillion>
-    
+
     <!-- Use pixels this many mm square to find and correct bad pixels.  This is used both in the determination of whether a pixel is bad by
     defining it's neighborhood size, and determining replacement values for bad pixels. -->
     <BadPixelRadius_mm>3.5</BadPixelRadius_mm>
 
-    <!-- When determining whether or not a pixel is bad, require it to be at this many CU's different than it's neighbors' average.   This is
+    <!-- When determining whether or not a pixel is bad, require it to be at least this many CU's different than it's neighbors' average.   This is
     an absolute value (not a percent) and is a floating point number.-->
     <BadPixelMinimumDeviation_CU>10.0</BadPixelMinimumDeviation_CU>
 
