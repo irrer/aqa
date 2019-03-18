@@ -102,7 +102,7 @@ object Phase2 extends Logging {
                 CenterDoseAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result) match {
                   case Left(fail) => Left(Seq(metadataCheck.summary, badPixel.summary, collimatorCentering.summary, fail))
                   case Right(centerDose) => {
-                    val prevSummaryList = Seq(metadataCheck, badPixel, centerDose, collimatorCentering).map(r => r.summary)
+                    val prevSummaryList = Seq(metadataCheck, badPixel, collimatorCentering, centerDose).map(r => r.summary)
                     // TODO run in parallel
                     val list = Seq(
                       CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
