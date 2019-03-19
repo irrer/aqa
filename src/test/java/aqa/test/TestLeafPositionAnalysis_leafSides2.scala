@@ -69,7 +69,7 @@ class TestLeafPositionAnalysis_leafSides2 extends FlatSpec with Matchers {
 
     def makeCoarseImage = {
 
-      val bufImageCoarse = correctedImage.toDeepColorBufferedImage
+      val bufImageCoarse = correctedImage.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
       val graphics = ImageUtil.getGraphics(bufImageCoarse)
       graphics.setColor(Color.black)
       coarseList_pix.map(ls => graphics.drawLine(0, ls.round.toInt, dicomImage.width - 1, ls.round.toInt))
@@ -79,7 +79,7 @@ class TestLeafPositionAnalysis_leafSides2 extends FlatSpec with Matchers {
     }
 
     def makePreciseImage = {
-      val bufImagePrecise = correctedImage.toDeepColorBufferedImage
+      val bufImagePrecise = correctedImage.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
       val graphics = ImageUtil.getGraphics(bufImagePrecise)
       graphics.setColor(Color.white)
       preciseLeafSideList_pix.map(ls => graphics.drawLine(0, ls.round.toInt, dicomImage.width - 1, ls.round.toInt))

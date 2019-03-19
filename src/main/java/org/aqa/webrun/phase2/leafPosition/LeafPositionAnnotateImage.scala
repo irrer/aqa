@@ -23,7 +23,7 @@ object LeafPositionAnnotateImage extends Logging {
   private def makeZoomedImage(dicomImage: DicomImage): BufferedImage = {
     val bufImg = new BufferedImage(dicomImage.width * zoom, dicomImage.height * zoom, BufferedImage.TYPE_INT_RGB)
 
-    val originalImage = dicomImage.toDeepColorBufferedImage
+    val originalImage = dicomImage.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
 
     for (x <- 0 until dicomImage.width; y <- 0 until dicomImage.height) {
       val rgb = originalImage.getRGB(x, y)

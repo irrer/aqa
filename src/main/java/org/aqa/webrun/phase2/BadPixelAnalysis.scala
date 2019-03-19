@@ -110,7 +110,7 @@ object BadPixelAnalysis extends Logging {
       val derived = runReq.derivedMap(beamName)
       val angles = gantryCollAngles(rtimage.attributeList.get)
 
-      val bufImage = derived.originalImage.toDeepColorBufferedImage(derived.pixelCorrectedImage.minPixelValue, derived.pixelCorrectedImage.maxPixelValue)
+      val bufImage = derived.originalImage.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
       Config.applyWatermark(bufImage)
       val url = WebServer.urlOfResultsFile(rtimage.file)
       val result = DicomAccess.write(rtimage, url, angles + " : " + beamName, viewDir,
@@ -127,7 +127,7 @@ object BadPixelAnalysis extends Logging {
     DicomAccess.write(runReq.rtplan, planLink, "RTPLAN", viewDir, planBaseName, None, None, Seq[DicomImage.PixelRating]())
 
     val floodLink = Phase2Util.dicomViewHref(runReq.flood.attributeList.get, extendedData, runReq)
-    val floodBufImage = runReq.floodOriginalImage.toDeepColorBufferedImage(runReq.floodCorrectedImage.minPixelValue, runReq.floodCorrectedImage.maxPixelValue)
+    val floodBufImage = runReq.floodOriginalImage.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
     Config.applyWatermark(floodBufImage)
     val floodBaseName = Phase2Util.dicomViewBaseName(Config.FloodFieldBeamName, runReq.flood.attributeList.get)
     val floodPngHref = DicomAccess.write(runReq.flood, floodLink, Config.FloodFieldBeamName, viewDir, floodBaseName, Some(floodBufImage), Some(runReq.floodOriginalImage), runReq.floodBadPixelList).get

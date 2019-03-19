@@ -370,7 +370,7 @@ object MeasureTBLREdges extends Logging {
   private def makeAnnotatedImage(image: DicomImage, measurementSet: TBLR, transMeasurementSet: TBLR, collimatorAngle: Double,
     topRect: Rectangle, bottomRect: Rectangle, rightRect: Rectangle, leftRect: Rectangle, floodOffset: Point, translator: IsoImagePlaneTranslator): BufferedImage = {
     //val bufImg = image.toBufferedImage(imageColor)
-    val bufImg = image.toDeepColorBufferedImage
+    val bufImg = image.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
     Config.applyWatermark(bufImg)
     val graphics = ImageUtil.getGraphics(bufImg)
     graphics.setColor(annotationColor)

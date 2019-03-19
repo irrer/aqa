@@ -58,7 +58,7 @@ class TestChase2Util_makeCenterDosePointList extends FlatSpec with Matchers {
       println("Number of points: " + pointList.size)
 
       val image = new DicomImage(attributeList)
-      val bufImage = image.toDeepColorBufferedImage
+      val bufImage = image.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
 
       pointList.map(p => bufImage.setRGB(p.x, p.y, 0))
       pointListOffset.map(p => bufImage.setRGB(p.x, p.y, 0))

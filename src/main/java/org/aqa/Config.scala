@@ -689,7 +689,7 @@ object Config extends Logging {
   val MetadataCheckBeamNameList: List[String] = getMetadataCheckBeamNameList
 
   val FloodFieldBeamName = logMainText("FloodFieldBeamName")
-  
+
   val PrototypeCustomBeamName = logMainText("PrototypeCustomBeamName")
   val PrefixForMachineDependentBeamName = logMainText("PrefixForMachineDependentBeamName")
 
@@ -708,6 +708,7 @@ object Config extends Logging {
   val BadPixelMinimumDeviation_CU = logMainText("BadPixelMinimumDeviation_CU").toDouble
   val BadPixelMaximumPercentChange = logMainText("BadPixelMaximumPercentChange").toDouble
   val MaxAllowedBadPixelsPerMillion = logMainText("MaxAllowedBadPixelsPerMillion").toInt
+  val DeepColorPercentDrop = logMainText("DeepColorPercentDrop").toDouble
 
   val MaxProcedureDuration = logMainText("MaxProcedureDuration").toDouble
 

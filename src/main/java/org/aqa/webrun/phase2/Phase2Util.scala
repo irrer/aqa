@@ -301,7 +301,7 @@ object Phase2Util extends Logging {
     val sampleSize = ((Config.BadPixelSamplePerMillion / 1000000.0) * numPixels).round.toInt
     val maxBadPixels = ((Config.MaxEstimatedBadPixelPerMillion / 1000000.0) * numPixels).round.toInt
     val badPixels = originalImage.identifyBadPixels(maxBadPixels, Config.BadPixelStdDev, Config.BadPixelMaximumPercentChange, radius, Config.BadPixelMinimumDeviation_CU)
-    badPixels
+    badPixels.filter(bp => bp.rating > 100) // TODO filter?
   }
 
   //  /**

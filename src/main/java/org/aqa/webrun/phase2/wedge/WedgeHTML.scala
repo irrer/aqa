@@ -103,7 +103,7 @@ object WedgeHTML {
   }
 
   private def annotateImage(beamName: String, runReq: RunReq): BufferedImage = {
-    val image = runReq.rtimageMap(beamName).correctedDicomImage.get.toDeepColorBufferedImage
+    val image = runReq.rtimageMap(beamName).correctedDicomImage.get.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
     Config.applyWatermark(image)
     val translator = new IsoImagePlaneTranslator(runReq.rtimageMap(beamName).attributeList.get)
     Util.addGraticules(image, translator, lineColor)
