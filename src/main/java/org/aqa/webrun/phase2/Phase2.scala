@@ -352,7 +352,11 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   private def beamMultiRefProblem(basicData: BasicData): Option[String] = {
     val multiRefList = basicData.rtimageListByBeam.filter(b => b._1.isDefined).groupBy(b => b._1.get.toUpperCase).map(g => g._2).filter(g => g.size > 1)
     if (multiRefList.isEmpty) None
-    else Some("Same beam is referenced by multiple files:" + WebUtil.titleNewline + multiRefList.map(mr => mr.map(r => r._1.get.trim + "-->" + r._2.file.getName.trim).mkString(WebUtil.titleNewline)).mkString(WebUtil.titleNewline))
+    else {
+      val sep = "\\n    "
+      val text = "Same beam is referenced by multiple files:" + sep + multiRefList.map(mr => mr.map(r => r._1.get.trim + "-->" + r._2.file.getName.trim).mkString(sep)).mkString(sep)
+      Some(text)
+    }
   }
 
   /**
