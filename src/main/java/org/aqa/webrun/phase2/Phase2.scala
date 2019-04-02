@@ -431,7 +431,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
    */
   private def run(valueMap: ValueMapT, request: Request, response: Response) = {
     val dicomFileList = dicomFilesInSession(valueMap)
-    val rtplanList = dicomFileList.filter(df => df.isModality(SOPClass.RTPlanStorage))
+    val rtplanList = Phase2Util.getPlanList(dicomFileList)
     val rtimageList = cullRedundantBeamReferences(dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage)))
 
     validate(valueMap, rtplanList, rtimageList) match {
