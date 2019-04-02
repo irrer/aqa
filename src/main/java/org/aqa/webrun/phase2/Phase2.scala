@@ -283,11 +283,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   /**
    * Check that there is a single plan, single machine, and some images.
    */
-  private def basicValidation(valueMap: ValueMapT): Either[StyleMapT, BasicData] = {
-    val dicomFileList = dicomFilesInSession(valueMap)
-    logger.info("Number of DICOM files downloaded: " + dicomFileList.size)
-    val rtplanList = Phase2Util.getPlanList(dicomFileList)
-    val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
+  private def basicValidation(valueMap: ValueMapT, rtplanList: Seq[DicomFile], rtimageList: Seq[DicomFile]): Either[StyleMapT, BasicData] = {
+    logger.info("Number of RTPLAN files downloaded: " + rtplanList.size)
     logger.info("Number of RTIMAGE files downloaded: " + rtimageList.size)
     val machineSerialNumberListOpt = rtimageList.map(rtimage => Util.getAttrValue(rtimage.attributeList.get, TagFromName.DeviceSerialNumber))
     val machineSerialNumberList = machineSerialNumberListOpt.flatten
@@ -377,8 +374,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   /**
    * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
    */
-  private def validate(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, RunReq] = {
-    basicValidation(valueMap) match {
+  private def validate(valueMap: ValueMapT, rtplanList: Seq[DicomFile], rtimageList: Seq[DicomFile]): Either[StyleMapT, RunReq] = {
+    basicValidation(valueMap, rtplanList: Seq[DicomFile], rtimageList: Seq[DicomFile]) match {
       case Left(fail) => Left(fail)
       case Right(basicData) => {
         logger.info("Received file list: " + basicData)
@@ -403,13 +400,41 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   }
 
   /**
+   * If more than one RTIMAGE reference the same beam, then remove all but the one with the the latest date/time.
+   */
+  private def cullRedundantBeamReferences(rtimageList: Seq[DicomFile]): Seq[DicomFile] = {
+    val groupList = rtimageList.groupBy(df => df.attributeList.get.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head).values
+
+    def latestDateTime(al: AttributeList): Long = {
+      Util.extractDateTimeAndPatientIdFromDicom(al)._1.map(dt => dt.getTime).max
+    }
+
+    def minGroup(g: Seq[DicomFile]): DicomFile = {
+      if (g.size == 1) g.head
+      else {
+        val sorted = g.map(df => (latestDateTime(df.attributeList.get), df)).sortBy(_._1)
+        val latestDicomFile = sorted.last._2
+        val text = sorted.dropRight(1).map(df => Util.sopOfAl(df._2.attributeList.get)).mkString("\n    ")
+        logger.info("Ignoring RTIMAGE files that redundantly reference the same beam.  Keeping the chronologically newest one:\n    " + text +
+          "\nKeeping " + Util.sopOfAl(latestDicomFile.attributeList.get))
+        latestDicomFile
+      }
+    }
+
+    val culled = groupList.map(g => minGroup(g))
+    logger.info("Number of RTIMAGE files culled due to redundant beam references: ", (rtimageList.size - culled.size))
+    culled.toSeq
+  }
+
+  /**
    * Respond to the 'Run' button.
    */
   private def run(valueMap: ValueMapT, request: Request, response: Response) = {
     val dicomFileList = dicomFilesInSession(valueMap)
-    val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
+    val rtplanList = dicomFileList.filter(df => df.isModality(SOPClass.RTPlanStorage))
+    val rtimageList = cullRedundantBeamReferences(dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage)))
 
-    validate(valueMap, dicomFileList) match {
+    validate(valueMap, rtplanList, rtimageList) match {
       case Left(errMap) => {
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
