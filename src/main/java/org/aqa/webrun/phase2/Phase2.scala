@@ -103,13 +103,13 @@ object Phase2 extends Logging {
                   case Left(fail) => Left(Seq(metadataCheck.summary, badPixel.summary, collimatorCentering.summary, fail))
                   case Right(centerDose) => {
                     val prevSummaryList = Seq(metadataCheck, badPixel, collimatorCentering, centerDose).map(r => r.summary)
-                    // TODO run in parallel
-                    val list = Seq(
-                      CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
-                      WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result, centerDose.resultList),
-                      SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
-                      LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result))
+                    val seq = Seq(
+                      () => CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
+                      () => WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result, centerDose.resultList),
+                      () => SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
+                      () => LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result))
 
+                    val list = seq.par.map(f => f()).toSeq
                     val summaryList = prevSummaryList ++ list.map(r => if (r.isLeft) r.left.get else r.right.get.summary)
                     val pass = (list.find(r => r.isLeft).isEmpty) && list.filter(s => !Phase2Util.statusOk(s.right.get.status)).isEmpty
                     if (pass) Right(summaryList) else Left(summaryList)
