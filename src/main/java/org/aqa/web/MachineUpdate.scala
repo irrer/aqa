@@ -124,6 +124,9 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   private val confirmDeleteMessage = new WebPlainText("Confirm Delete", true, 6, 0, showConfirmDelete)
 
+  /**
+   * Get the list of institutions that the user may choose from.
+   */
   private def institutionList(response: Option[Response]): Seq[(String, String)] = {
     def instToChoice(inst: Institution) = (inst.institutionPK.get.toString, inst.name)
     Institution.list.toSeq.sortBy(_.name).map(instToChoice _)
