@@ -256,7 +256,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     val machPK = valueMap.get(machinePK.label)
 
     val machList = {
-      val sameIDList = Machine.listMachinesFromInstitution(instPK).filter(m => m.id.equalsIgnoreCase(machID))
+      val sameIDList = Machine.listMachinesFromInstitution(instPK).filter(m => AnonymizeUtil.decryptWithNonce(instPK, m.id_real.get).equalsIgnoreCase(machID))
       if (machPK.isDefined)
         sameIDList.filter(m => m.machinePK.get != machPK.get.toInt)
       else
@@ -316,11 +316,14 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     else Error.make(institutionPK, "You are not allowed to modify machines from other institutions.")
   }
 
-  private def validateAll(valueMap: ValueMapT, request: Request, form: WebForm): StyleMapT =
-    emptyId(valueMap) ++
-      validateAuthentication(valueMap, request) ++
-      validateUniqueness(valueMap) ++
-      validateBeamEnergies(valueMap, form)
+  private def validateAll(valueMap: ValueMapT, request: Request, form: WebForm): StyleMapT = {
+    val auth = validateAuthentication(valueMap, request)
+    if (auth.isEmpty) {
+      emptyId(valueMap) ++
+        validateUniqueness(valueMap) ++
+        validateBeamEnergies(valueMap, form)
+    } else { emptyId(valueMap) ++ auth }
+  }
 
   private def updateMachineInDatabase(valueMap: ValueMapT) = {
     val machine = constructMachineFromParameters(valueMap)

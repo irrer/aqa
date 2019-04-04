@@ -60,8 +60,8 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- List of users that should have permissions to everything. -->
     <UserWhiteList>
-        <User>root</User>
-        <User>irrer</User>
+        <User>admin</User>
+        <User>Xirrer</User>
         <User>Xjmmoran</User>
         <User>Xjusmikel</User>
     </UserWhiteList>
