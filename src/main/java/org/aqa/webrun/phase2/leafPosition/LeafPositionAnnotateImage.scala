@@ -19,6 +19,7 @@ object LeafPositionAnnotateImage extends Logging {
   private val zoom = 4
 
   private val dashedLine = new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, Array(3, 6), 0)
+  private val solidLine = new BasicStroke
 
   private def makeZoomedImage(dicomImage: DicomImage): BufferedImage = {
     val bufImg = new BufferedImage(dicomImage.width * zoom, dicomImage.height * zoom, BufferedImage.TYPE_INT_RGB)
@@ -55,7 +56,7 @@ object LeafPositionAnnotateImage extends Logging {
     /** Show the leaf sides and indexes. */
     def annotateLeaves = {
       graphics.setColor(Color.black)
-      graphics.setStroke(dashedLine)
+      graphics.setStroke(solidLine)
       val margin = (maxExpectedEnd - minExpectedEnd) / (expectedEndList.size - 1)
       val lo = minExpectedEnd - margin
       val hi = maxExpectedEnd + margin
