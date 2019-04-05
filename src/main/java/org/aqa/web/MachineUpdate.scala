@@ -288,7 +288,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     }
 
     if (machList.isEmpty) styleNone
-    else Error.make(id, "There is already a machine with that name at this institution")
+    else Error.make(id, "There is already a machine with named " + machID + " at this institution")
   }
 
   /**
