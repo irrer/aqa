@@ -48,11 +48,36 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
 
   private val email = new WebInputEmail("Email", 4, 0, "Email address (required)")
 
-  def listInst(response: Option[Response]): Seq[(String, String)] = {
-    Institution.list.map(inst => (inst.institutionPK.get.toString, inst.name))
+  /**
+   * Get the list of institutions that the user may choose from.
+   */
+  private def institutionList(response: Option[Response]): Seq[(String, String)] = {
+    val request = if (response.isDefined) Some(response.get.getRequest) else None
+    val isWhitelisted = request.isDefined && userIsWhitelisted(request.get)
+
+    def instToChoice(inst: Institution) = (inst.institutionPK.get.toString, inst.name)
+    if (isWhitelisted) Institution.list.toSeq.sortBy(_.name).map(instToChoice _)
+    else {
+      if (request.isDefined) {
+        val valueMap = getValueMap(request.get)
+        val usrPK = valueMap.get(userPK.label)
+        if (usrPK.isDefined) {
+          // this is an update of an existing user
+          val instPK = User.get(usrPK.get.toLong).get.institutionPK
+          Seq((instPK.toString, Institution.get(instPK).get.name))
+        } else {
+          // this is the creation of a new user.  The only choice they have is their own institution.
+          val instPK = getUser(request.get).get.institutionPK
+          Seq((instPK.toString, Institution.get(instPK).get.name))
+        }
+      } else {
+        // Could not determine what the user was authorized to see or what the user was or the institution, so give them no choices
+        Seq[(String, String)]()
+      }
+    }
   }
 
-  private val institution = new WebInputSelect("Institution", true, 2, 0, listInst, true)
+  private val institution = new WebInputSelect("Institution", true, 2, 0, institutionList, true)
 
   private val password = new WebInputPassword("Password", 4, 0, "")
   private val verifyPassword = new WebInputPassword("Verify Password", 4, 0, "")
@@ -202,6 +227,29 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
     formCreate.setFormResponse(emptyValueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
   }
 
+  /**
+   * Check that id is unique within institution
+   */
+  /**
+   * Check that id is unique within institution
+   */
+  private def validateUniqueness(valueMap: ValueMapT): StyleMapT = {
+    val instPK = valueMap.get(institution.label).get.toLong
+    val userID = valueMap.get(id.label).get.trim
+    val usrPK = valueMap.get(userPK.label)
+
+    val userList = {
+      val sameIDList = User.listUsersFromInstitution(instPK).filter(u => AnonymizeUtil.decryptWithNonce(instPK, u.id_real.get).equalsIgnoreCase(userID))
+      if (usrPK.isDefined)
+        sameIDList.filter(u => u.userPK.get != usrPK.get.toInt)
+      else
+        sameIDList
+    }
+
+    if (userList.isEmpty) styleNone
+    else Error.make(id, "There is already a user with Id " + userID + " at this institution")
+  }
+
   private def validatePasswords(valueMap: ValueMapT): StyleMapT = {
     val err = AuthenticationVerifier.judgePassword(valueMap.get(password.label).get)
     if (err.isDefined) Error.make(password, err.get)
@@ -215,7 +263,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
    * Save changes made to form.
    */
   private def save(valueMap: ValueMapT, response: Response): Unit = {
-    val errMap = emptyId(valueMap) ++ emptyName(valueMap) ++ validateEmail(valueMap) ++ validateAuthentication(valueMap, response.getRequest)
+    val errMap = emptyId(valueMap) ++ emptyName(valueMap) ++ validateEmail(valueMap) ++ validateUniqueness(valueMap) ++ validateAuthentication(valueMap, response.getRequest)
     if (errMap.isEmpty) {
       val existingUser = User.get(valueMap.get(userPK.label).get.toLong).get
       val user = updateExistingUserFromParameters(existingUser, valueMap)
@@ -233,7 +281,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
    * otherwise show the same screen and communicate the error.
    */
   private def create(valueMap: ValueMapT, response: Response) = {
-    val errMap = emptyName(valueMap) ++ validateEmail(valueMap) ++ validatePasswords(valueMap) ++ validateAuthentication(valueMap, response.getRequest)
+    val errMap = emptyName(valueMap) ++ validateEmail(valueMap) ++ validatePasswords(valueMap) ++ validateUniqueness(valueMap) ++ validateAuthentication(valueMap, response.getRequest)
 
     if (errMap.isEmpty) {
       val user = constructNewUserFromParameters(valueMap)
