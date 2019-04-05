@@ -129,16 +129,23 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
    */
   private def institutionList(response: Option[Response]): Seq[(String, String)] = {
     val request = if (response.isDefined) Some(response.get.getRequest) else None
+    val isWhitelisted = request.isDefined && userIsWhitelisted(request.get)
 
     def instToChoice(inst: Institution) = (inst.institutionPK.get.toString, inst.name)
-    val isWhitelisted = request.isDefined && userIsWhitelisted(request.get)
     if (isWhitelisted) Institution.list.toSeq.sortBy(_.name).map(instToChoice _)
     else {
       if (request.isDefined) {
         val valueMap = getValueMap(request.get)
-        val machPK = valueMap.get(machinePK.label).get.toLong
-        val instPK = Machine.get(machPK).get.institutionPK
-        Seq((instPK.toString, Institution.get(instPK).get.name))
+        val machPK = valueMap.get(machinePK.label)
+        if (machPK.isDefined) {
+          // this is an update of an existing machine
+          val instPK = Machine.get(machPK.get.toLong).get.institutionPK
+          Seq((instPK.toString, Institution.get(instPK).get.name))
+        } else {
+          // this is the creation of a new machine.  The only choice they have is their own institution.
+          val instPK = getUser(request.get).get.institutionPK
+          Seq((instPK.toString, Institution.get(instPK).get.name))
+        }
       } else {
         // Could not determine what the user was authorized to see or what the machine was or the institution, so give them no choices
         Seq[(String, String)]()
