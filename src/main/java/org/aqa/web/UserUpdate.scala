@@ -228,10 +228,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
   }
 
   /**
-   * Check that id is unique within institution
-   */
-  /**
-   * Check that id is unique within institution
+   * Check that id is unique globally.
    */
   private def validateUniqueness(valueMap: ValueMapT): StyleMapT = {
     val instPK = valueMap.get(institution.label).get.toLong
@@ -239,7 +236,8 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
     val usrPK = valueMap.get(userPK.label)
 
     val userList = {
-      val sameIDList = User.listUsersFromInstitution(instPK).filter(u => AnonymizeUtil.decryptWithNonce(instPK, u.id_real.get).equalsIgnoreCase(userID))
+      val sameIDList = User.list.filter(u => AnonymizeUtil.decryptWithNonce(u.institutionPK, u.id_real.get).equalsIgnoreCase(userID))
+      val xameIDList = User.listUsersFromInstitution(instPK).filter(u => AnonymizeUtil.decryptWithNonce(instPK, u.id_real.get).equalsIgnoreCase(userID))
       if (usrPK.isDefined)
         sameIDList.filter(u => u.userPK.get != usrPK.get.toInt)
       else
@@ -247,7 +245,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
     }
 
     if (userList.isEmpty) styleNone
-    else Error.make(id, "There is already a user with Id " + userID + " at this institution")
+    else Error.make(id, "There is already a user with Id " + userID)
   }
 
   private def validatePasswords(valueMap: ValueMapT): StyleMapT = {
