@@ -84,12 +84,23 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   }
 
   private def getSerialNo(valueMap: ValueMapT): Elem = {
-    val notDef = <div>Serial number <em>not defined</em></div>
+    val notDefTitle =
+      "The DICOM device serial number (0018,1000) has not been " + titleNewline +
+        "determined for this machine because no tests have been " + titleNewline +
+        "run against it.  It is established when a test is run and " + titleNewline +
+        "this machine is chosen to be associated with the uploaded DICOM" + titleNewline +
+        "file(s). This option is only available to administrators."
+    val defTitle =
+      "The DICOM device serial number (0018,1000) has been " + titleNewline +
+        "determined for this machine because it was chosen from" + titleNewline +
+        "a list of machines when running a test.  This option is only available" + titleNewline +
+        "to administrators."
+    val notDef = <div title={ notDefTitle }>{ nbsp + " " + nbsp + " " + nbsp + " " + nbsp + " " }Serial number <em>not defined</em></div>
     val machPk = valueMap.get(machinePK.label)
     if (machPk.isDefined) {
       val mach = Machine.get(machPk.get.toLong)
       if (mach.isDefined && mach.get.serialNumber.isDefined) {
-        <div>Serial Number { mach.get.serialNumber.get }</div>
+        <div title={ defTitle }>Serial Number { mach.get.serialNumber.get }</div>
       } else notDef
     } else notDef
   }
@@ -100,16 +111,21 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   private val epidPK = new WebInputSelect("EPID", true, 3, 0, epidName, false)
 
-  private val serialNumber = new WebPlainText("Serial Number", false, 3, 0, getSerialNo _)
+  private val serialNumber = new WebPlainText("Serial Number", false, 2, 0, getSerialNo _)
 
-  private val serialNumberReset = new WebInputCheckbox("Reset Serial Number", 3, 0)
+  private val serialNumberReset = {
+    val title = "If this is checked, then when you click Save," + titleNewline +
+      "the device serial number that is stored in the database" + titleNewline +
+      "for this machine will be reset.  It will be set again the" + titleNewline +
+      "next time a test is run and this machine is selected."
+    new WebInputCheckbox("Reset Serial Number", true, Some(title), 3, 0)
+  }
 
-  private val imagingBeam2_5_mv = new WebInputCheckbox("Has 2.5 mv imaging beam", 3, 0)
-
-  private val onboardImager = new WebInputCheckbox("Onboard Imager", 2, 0)
-  private val table6DOF = new WebInputCheckbox("6DOF Table", 2, 0)
-  private val developerMode = new WebInputCheckbox("Developer Mode", 2, 0)
-  private val respiratoryManagement = new WebInputCheckbox("Respiratory Management", 3, 0)
+  private val onboardImager = new WebInputCheckbox("Onboard Imager", true, Some("Check to indicate that the machine " + titleNewline + "has an onboard imager"), 3, 0)
+  private val table6DOF = new WebInputCheckbox("6DOF Table", true, Some("Check to indicate that the machine" + titleNewline + "has a 6 degrees of freedom table"), 3, 0)
+  private val developerMode = new WebInputCheckbox("Developer Mode", true, Some("Check to indicate that the machine" + titleNewline + " supports developer mode"), 3, 0)
+  private val respiratoryManagement = new WebInputCheckbox("Respiratory Management", true, Some("Check to indicate that the machine supports" + titleNewline + " respiratory management"), 3, 0)
+  private val imagingBeam2_5_mv = new WebInputCheckbox("Has 2.5 mv imaging beam", true, Some("Check to indicate that the machine " + titleNewline + "has a 2.5 mv imaging beam"), 3, 0)
 
   private def showConfirmDelete(valueMap: ValueMapT): Elem = {
     val machPK = valueMap.get(machinePK.label).get.toLong
@@ -220,21 +236,25 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     beamList.map(b => makeBeamRow(b))
   }
 
-  def fieldList(valueMap: ValueMapT): List[WebRow] = {
+  def fieldList(valueMap: ValueMapT, isAdmin: Boolean): List[WebRow] = {
+    val listSerNo: List[WebRow] = {
+      if (isAdmin) List(List(serialNumber, serialNumberReset))
+      else List[WebRow]()
+    }
     val listA: List[WebRow] = List(
       List(id, machineTypePK),
       List(multileafCollimatorPK, epidPK),
       List(configurationDirectory),
       List(institutionPK),
-      List(serialNumber, serialNumberReset),
-      List(onboardImager, table6DOF, developerMode),
-      List(respiratoryManagement, imagingBeam2_5_mv),
+      List(onboardImager, table6DOF),
+      List(developerMode, respiratoryManagement),
+      List(imagingBeam2_5_mv),
       List(photonEnergyHeader, maxDoseRateHeader, fffEnergyHeader, addBeamEnergyButton))
 
     val listB: List[WebRow] = beamEnergyRows(valueMap)
     val listC: List[WebRow] = List(List(notes))
 
-    listA ++ listB ++ listC
+    listA ++ listB ++ listC ++ listSerNo
   }
 
   val createButtonList: WebRow = List(createButton, cancelButton)
@@ -246,9 +266,9 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     list
   }
 
-  private def formCreate(valueMap: ValueMapT) = new WebForm(pathOf, fieldList(valueMap) :+ createButtonList)
+  private def formCreate(valueMap: ValueMapT, isAdmin: Boolean) = new WebForm(pathOf, fieldList(valueMap, isAdmin) :+ createButtonList)
 
-  private def formEdit(valueMap: ValueMapT) = new WebForm(pathOf, fieldList(valueMap) :+ editButtonList)
+  private def formEdit(valueMap: ValueMapT, isAdmin: Boolean) = new WebForm(pathOf, fieldList(valueMap, isAdmin) :+ editButtonList)
 
   private def formConfirmDelete(valueMap: ValueMapT) = new WebForm(pathOf, confirmDeleteFieldList(valueMap) :+ confirmDeleteButtonList)
 
@@ -356,11 +376,15 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     updateBeamEnergies(machine, valueMap)
   }
 
+  private def userIsAdmin(response: Response): Boolean = {
+    getUserIdOrDefault(response.getRequest, "").toLowerCase.contains("admin")
+  }
+
   /**
    * Save changes made to form.
    */
   private def save(valueMap: ValueMapT, response: Response): Unit = {
-    val form = formEdit(valueMap)
+    val form = formEdit(valueMap, userIsAdmin(response))
     val styleMap = validateAll(valueMap, response.getRequest, form)
     if (styleMap.isEmpty) {
       updateMachineInDatabase(valueMap)
@@ -467,7 +491,9 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
    * Show this when machine asks to create a new machine from machine list.
    */
   private def emptyForm(response: Response) = {
-    formCreate(emptyValueMap).setFormResponse(emptyValueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
+    val isAdmin = getUserIdOrDefault(response.getRequest, "").toLowerCase.contains("admin")
+
+    formCreate(emptyValueMap, userIsAdmin(response)).setFormResponse(emptyValueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
   }
 
   /**
@@ -475,7 +501,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
    * otherwise show the same screen and communicate the error.
    */
   private def create(valueMap: ValueMapT, response: Response) = {
-    val form = formCreate(valueMap)
+    val form = formCreate(valueMap, userIsAdmin(response))
 
     val styleMap = validateAll(valueMap, response.getRequest, form)
 
@@ -556,7 +582,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       (notes.label, AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasNotesPrefixId, pk)),
       (machinePK.label, pk.toString)) ++ getBeamEnergyListAsValueMap(mach.machinePK.get)
 
-    formEdit(valueMap).setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
+    formEdit(valueMap, userIsAdmin(response)).setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
   }
 
   private def delete(valueMap: ValueMapT, response: Response): Unit = {
@@ -572,7 +598,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
         MachineList.redirect(response)
       } else formConfirmDelete(valueMap).setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
     } else {
-      formEdit(valueMap).setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.SUCCESS_OK)
+      formEdit(valueMap, userIsAdmin(response)).setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.SUCCESS_OK)
     }
   }
 
@@ -601,7 +627,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     val user = CachedUser.get(response.getRequest).get
     if ((user.institutionPK == machine.institutionPK) || (WebUtil.userIsWhitelisted(response.getRequest))) {
       save(valueMap, response) // in case user made changes
-      val form = formEdit(valueMap)
+      val form = formEdit(valueMap, userIsAdmin(response))
       val styleMap = validateAll(valueMap, response.getRequest, form)
       if (styleMap.nonEmpty) {
         form.setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
@@ -611,7 +637,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       }
     } else {
       val styleMap = Error.make(institutionPK, "Only people from the machine's institution are allowed to create customized plans")
-      formEdit(valueMap).setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.SUCCESS_OK)
+      formEdit(valueMap, userIsAdmin(response)).setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.SUCCESS_OK)
     }
   }
 
@@ -622,9 +648,9 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   private def reload(valueMap: ValueMapT, response: Response): Unit = {
     if (valueMap.get(createButton.label).isDefined) {
-      formCreate(valueMap).setFormResponse(valueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
+      formCreate(valueMap, userIsAdmin(response)).setFormResponse(valueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
     } else {
-      formEdit(valueMap).setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
+      formEdit(valueMap, userIsAdmin(response)).setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
     }
   }
 
