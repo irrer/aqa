@@ -237,7 +237,6 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
 
     val userList = {
       val sameIDList = User.list.filter(u => AnonymizeUtil.decryptWithNonce(u.institutionPK, u.id_real.get).equalsIgnoreCase(userID))
-      val xameIDList = User.listUsersFromInstitution(instPK).filter(u => AnonymizeUtil.decryptWithNonce(instPK, u.id_real.get).equalsIgnoreCase(userID))
       if (usrPK.isDefined)
         sameIDList.filter(u => u.userPK.get != usrPK.get.toInt)
       else

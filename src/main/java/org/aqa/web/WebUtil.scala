@@ -1016,7 +1016,7 @@ object WebUtil extends Logging {
    * Return true if the user is whitelisted in the configuration.
    */
   def userIsWhitelisted(userId: String): Boolean = {
-    Config.UserWhiteList.contains(userId)
+    Config.UserWhiteList.map(u => u.toLowerCase.trim).contains(userId.toLowerCase.trim)
   }
 
   /**
@@ -1027,7 +1027,7 @@ object WebUtil extends Logging {
     if (cr == null) false
     else {
       val userId = request.getChallengeResponse.getIdentifier.toLowerCase.trim
-      Config.UserWhiteList.contains(userId)
+      userIsWhitelisted(userId)
     }
   }
 
