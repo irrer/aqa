@@ -144,6 +144,7 @@ object Phase2 extends Logging {
    * Given a Phase 2 output, redo the analysis.
    */
   def redo(outputPK: Long, request: Request, response: Response) = {
+    // TODO add check that user is from this institution or whitelisted.  If whitelisted, then anonymize with proper institution.
     try {
       Output.get(outputPK) match {
         case None => logger.info("Requested redo of output " + outputPK + " not possible because output does not exist")
