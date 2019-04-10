@@ -87,6 +87,10 @@ object LeafPositionAnalysis extends Logging {
       }
 
       def adjustToNearest(bestList: Seq[LeafSide]): Double = {
+        if (bestList.size < 2) { // TODO rm
+          println("hey")
+        }
+
         val byCloseness = bestList.sortBy(b => (b.planned - planned).abs).take(2)
         val ca = byCloseness(0)
         val cb = byCloseness(1)
@@ -113,7 +117,7 @@ object LeafPositionAnalysis extends Logging {
 
     val leafSidesList = sideListPlanned_pix.map(p => new LeafSide(p)).sortBy(_.score)
 
-    val bestSize = coarseSideList_pix.size / 4
+    val bestSize = Math.max(coarseSideList_pix.size / 4, 2) // TODO if there are less than 2 leaf sides, then ... what?
     // use the 1/4 best leaf sides to define the rest
     val bestList = leafSidesList.takeRight(bestSize)
     val worstList = leafSidesList.dropRight(bestSize)
@@ -262,7 +266,7 @@ object LeafPositionAnalysis extends Logging {
       val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
       logger.info("Making HTML for " + subProcedureName)
-      val elem = LeafPositionHTML.makeDisplay(extendedData, runReq, beamResultList, pass)
+      val elem = LeafPositionHTML.makeDisplay(extendedData, runReq, beamResultList, pass)  // TODO this takes 13 seconds.  Run in parallel?
       val pcr = Right(new LeafPositionResult(elem, procedureStatus, resultList))
       logger.info("Finished analysis of " + subProcedureName)
       pcr
