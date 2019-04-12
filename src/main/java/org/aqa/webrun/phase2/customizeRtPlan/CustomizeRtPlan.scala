@@ -334,6 +334,21 @@ object CustomizeRtPlan extends Logging {
     controlPtSeq.map(cpt => changeOne(cpt))
   }
 
+  private def changeDoseRate(beamAl: AttributeList, energy: Double): Unit = {
+    val controlPtSeq = DicomUtil.seqToAttr(beamAl, TagFromName.ControlPointSequence)
+
+    def changeOne(cpt: AttributeList): Unit = {
+      val DoseRateSet = cpt.get(TagFromName.DoseRateSet)
+
+      if (DoseRateSet != null) {
+        DoseRateSet.removeValues
+        DoseRateSet.addValue(energy)
+      }
+    }
+
+    controlPtSeq.map(cpt => changeOne(cpt))
+  }
+
   /**
    * Add another entry with the given number to the PatientSetupSequence.
    */
@@ -396,6 +411,7 @@ object CustomizeRtPlan extends Logging {
 
     setFluence(beamAl, machineEnergy.isFFF)
     changeNominalBeamEnergy(beamAl, machineEnergy.photonEnergy_MeV.get)
+    changeDoseRate(beamAl, machineEnergy.maxDoseRate_MUperMin.get)
 
     insertBeam(rtplan, beamAl)
 
