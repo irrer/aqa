@@ -56,6 +56,8 @@ import org.aqa.webrun.phase2.metadataCheck.MetadataCheckAnalysis
 import org.aqa.webrun.phase2.metadataCheck.MetadataCheckValidation
 import org.aqa.webrun.phase2.leafPosition.LeafPositionAnalysis
 import org.aqa.web.Session
+import org.aqa.db.CachedUser
+import org.aqa.web.OutputList
 
 object Phase2 extends Logging {
   val parametersFileName = "parameters.xml"
@@ -141,78 +143,128 @@ object Phase2 extends Logging {
   }
 
   /**
+   * Determine if user is authorized to perform redo.  To be authorized, the user must be from the
+   * same institution as the original user.
+   *
+   * Being whitelisted is not sufficient, because things just get weird in terms of viewing and
+   * ownership of the data.
+   */
+  private def userAuthorizedToModify(request: Request, response: Response, input: Input): Boolean = {
+    val user = CachedUser.get(request).get
+
+    val mach = Machine.get(input.machinePK.get).get
+    val dataInstitution = mach.institutionPK
+    val requestorsInstitution = user.institutionPK
+    val same = dataInstitution == requestorsInstitution
+    logger.info("user requesting redo.  Authorized: " + same)
+    same
+  }
+
+  private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output) = {
+
+    val sessionId = Session.makeUniqueId
+    val sessionDir = Session.idToFile(sessionId)
+    sessionDir.mkdirs
+    def copyToSessionDir(file: File) = {
+      val newFile = new File(sessionDir, file.getName)
+      newFile.createNewFile
+      val data = Util.readBinaryFile(file).right.get
+      Util.writeBinaryFile(newFile, data)
+    }
+    val inputFileList = Util.listDirFiles(inputOrig.dir).filter(f => f.isFile)
+    inputFileList.map(copyToSessionDir)
+
+    val dicomFileList = Util.listDirFiles(sessionDir).map(f => new DicomFile(f)).filter(df => df.attributeList.nonEmpty)
+    val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
+
+    logger.info("Copied input files from " + inputOrig.dir.getAbsolutePath + " --> " + sessionDir.getAbsolutePath)
+
+    val acquisitionDate = inputOrig.dataDate match {
+      case None => None
+      case Some(timestamp) => Some(timestamp.getTime)
+    }
+
+    val runReq = {
+      val rtplanFile = new File(Config.sharedDir, Phase2Util.referencedPlanUID(rtimageList.head) + Util.dicomFileNameSuffix)
+      val rtplan = new DicomFile(rtplanFile)
+      val machine = Machine.get(outputOrig.machinePK.get).get
+      val rtimageMap = constructRtimageMap(rtplan, rtimageList)
+      val flood = rtimageMap(Config.FloodFieldBeamName)
+
+      new RunReq(rtplan, machine, rtimageMap, flood)
+    }
+
+    val procedure = Procedure.get(outputOrig.procedurePK).get
+
+    val inputOutput = Run.preRun(procedure, runReq.machine, sessionDir, getUser(request), inputOrig.patientId, acquisitionDate)
+    val input = inputOutput._1
+    val output = inputOutput._2
+
+    Future {
+      val extendedData = ExtendedData.get(output)
+      val runReqFinal = runReq.reDir(input.dir)
+
+      val rtplan = runReqFinal.rtplan
+      val machine = runReqFinal.machine
+      Phase2Util.saveRtplan(rtplan)
+
+      val rtimageMap = constructRtimageMap(rtplan, rtimageList)
+
+      val finalStatus = Phase2.runPhase2(extendedData, rtimageMap, runReqFinal)
+      val finDate = new Timestamp(System.currentTimeMillis)
+      val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
+
+      Phase2Util.setMachineSerialNumber(machine, runReqFinal.flood.attributeList.get)
+      outputFinal.insertOrUpdate
+      outputFinal.updateData(outputFinal.makeZipOfFiles)
+      Run.removeRedundantOutput(outputFinal.outputPK)
+    }
+
+    val suffix = "?" + ViewOutput.outputPKTag + "=" + output.outputPK.get
+    response.redirectSeeOther(ViewOutput.path + suffix)
+  }
+
+  /**
+   * Tell the user that the redo is forbidden and why.  Also give them a redirect back to the list of results.
+   */
+  private def forbidRedo(response: Response, msg: String, outputPK: Option[Long]) {
+    val content = {
+      <div class="row">
+        <div class="col-md-4 col-md-offset-2">
+          { msg }
+          <p></p>
+          <a href={ OutputList.path } class="btn btn-default" role="button">Back</a>
+        </div>
+      </div>
+    }
+
+    logger.info(msg + "  ouputPK: " + outputPK)
+    val text = wrapBody(content, "Redo not permitted")
+    setResponse(text, response, Status.CLIENT_ERROR_FORBIDDEN)
+  }
+
+  /**
    * Given a Phase 2 output, redo the analysis.
    */
   def redo(outputPK: Long, request: Request, response: Response) = {
-    // TODO add check that user is from this institution or whitelisted.  If whitelisted, then anonymize with proper institution.
     try {
       Output.get(outputPK) match {
-        case None => logger.info("Requested redo of output " + outputPK + " not possible because output does not exist")
+        case None => {
+          logger.info("Redo of output " + outputPK + " not possible because output does not exist")
+          val msg = "Redo not possible because output does not exist"
+          forbidRedo(response, msg, None)
+        }
         case Some(outputOrig) => {
           Input.get(outputOrig.inputPK) match {
-            case None => logger.info("Requested redo of output " + outputPK + " not possible because input does not exist")
-            case Some(inputOrig) => {
-              val sessionId = Session.makeUniqueId
-              val sessionDir = Session.idToFile(sessionId)
-              sessionDir.mkdirs
-              def copyToSessionDir(file: File) = {
-                val newFile = new File(sessionDir, file.getName)
-                newFile.createNewFile
-                val data = Util.readBinaryFile(file).right.get
-                Util.writeBinaryFile(newFile, data)
-              }
-              val inputFileList = Util.listDirFiles(inputOrig.dir).filter(f => f.isFile)
-              inputFileList.map(copyToSessionDir)
-
-              val dicomFileList = Util.listDirFiles(sessionDir).map(f => new DicomFile(f)).filter(df => df.attributeList.nonEmpty)
-              val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
-
-              logger.info("Copied input files from " + inputOrig.dir.getAbsolutePath + " --> " + sessionDir.getAbsolutePath)
-
-              val acquisitionDate = inputOrig.dataDate match {
-                case None => None
-                case Some(timestamp) => Some(timestamp.getTime)
-              }
-
-              val runReq = {
-                val rtplanFile = new File(Config.sharedDir, Phase2Util.referencedPlanUID(rtimageList.head) + Util.dicomFileNameSuffix)
-                val rtplan = new DicomFile(rtplanFile)
-                val machine = Machine.get(outputOrig.machinePK.get).get
-                val rtimageMap = constructRtimageMap(rtplan, rtimageList)
-                val flood = rtimageMap(Config.FloodFieldBeamName)
-
-                new RunReq(rtplan, machine, rtimageMap, flood)
-              }
-
-              val procedure = Procedure.get(outputOrig.procedurePK).get
-
-              val inputOutput = Run.preRun(procedure, runReq.machine, sessionDir, getUser(request), inputOrig.patientId, acquisitionDate)
-              val input = inputOutput._1
-              val output = inputOutput._2
-
-              Future {
-                val extendedData = ExtendedData.get(output)
-                val runReqFinal = runReq.reDir(input.dir)
-
-                val rtplan = runReqFinal.rtplan
-                val machine = runReqFinal.machine
-                Phase2Util.saveRtplan(rtplan)
-
-                val rtimageMap = constructRtimageMap(rtplan, rtimageList)
-
-                val finalStatus = Phase2.runPhase2(extendedData, rtimageMap, runReqFinal)
-                val finDate = new Timestamp(System.currentTimeMillis)
-                val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
-
-                Phase2Util.setMachineSerialNumber(machine, runReqFinal.flood.attributeList.get)
-                outputFinal.insertOrUpdate
-                outputFinal.updateData(outputFinal.makeZipOfFiles)
-                Run.removeRedundantOutput(outputFinal.outputPK)
-              }
-
-              val suffix = "?" + ViewOutput.outputPKTag + "=" + output.outputPK.get
-              response.redirectSeeOther(ViewOutput.path + suffix)
+            case None => {
+              val msg = "Redo not possible because input does not exist"
+              forbidRedo(response, msg, outputOrig.outputPK)
             }
+            case Some(inputOrig) if (!userAuthorizedToModify(request, response, inputOrig)) => {
+              val msg = "Redo not permitted because user is from a different institution."
+              forbidRedo(response, msg, outputOrig.outputPK)
+            }
+            case Some(inputOrig) => processRedoRequest(request, response, inputOrig, outputOrig)
           }
         }
       }

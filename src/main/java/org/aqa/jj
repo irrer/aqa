@@ -1,0 +1,329 @@
+web/Documentation.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+web/Documentation.scala:    new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
+web/Documentation.scala:  private val loginButton = makeButton("Login", true, ButtonType.BtnPrimary)
+web/Documentation.scala:  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+web/Documentation.scala:  private val form = new WebForm(pathOf, List(List(id), List(password), List(message), List(continueUrl), List(loginButton, cancelButton)))
+web/Documentation.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+web/Documentation.scala:    val value = valueMap.get(button.label)
+web/Documentation.scala:    value.isDefined && value.get.toString.equals(button.label)
+web/Documentation.scala:        case _ if buttonIs(valueMap, loginButton) => login(valueMap, request, response)
+web/Documentation.scala:        case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
+web/EPIDUpdate.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+web/EPIDUpdate.scala:    new FormButton(name, 1, 0, subUrl, action, buttonType)
+web/EPIDUpdate.scala:  private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
+web/EPIDUpdate.scala:  private val saveButton = makeButton("Save", true, ButtonType.BtnPrimary)
+web/EPIDUpdate.scala:  private val deleteButton = makeButton("Delete", false, ButtonType.BtnDanger)
+web/EPIDUpdate.scala:  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+web/EPIDUpdate.scala:  val createButtonList: List[WebRow] = List(List(createButton, cancelButton))
+web/EPIDUpdate.scala:  val editButtonList: List[WebRow] = List(List(saveButton, cancelButton, deleteButton, epidPK))
+web/EPIDUpdate.scala:  private val formCreate = new WebForm(pathOf, fieldList ++ createButtonList)
+web/EPIDUpdate.scala:  private val formEdit = new WebForm(pathOf, fieldList ++ editButtonList)
+web/EPIDUpdate.scala:    if (buttonIs(valueMap, deleteButton)) {
+web/EPIDUpdate.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+web/EPIDUpdate.scala:    val value = valueMap.get(button.label)
+web/EPIDUpdate.scala:    value.isDefined && value.get.toString.equals(button.label)
+web/EPIDUpdate.scala:        case _ if buttonIs(valueMap, cancelButton) => EPIDList.redirect(response)
+web/EPIDUpdate.scala:        case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
+web/EPIDUpdate.scala:        case _ if buttonIs(valueMap, saveButton) => save(valueMap, pageTitleEdit, response)
+web/InstitutionUpdate.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+web/InstitutionUpdate.scala:    new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
+web/InstitutionUpdate.scala:  private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
+web/InstitutionUpdate.scala:  private val saveButton = makeButton("Save", true, ButtonType.BtnPrimary)
+web/InstitutionUpdate.scala:  private val deleteButton = makeButton("Delete", false, ButtonType.BtnDanger)
+web/InstitutionUpdate.scala:  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+web/InstitutionUpdate.scala:  private val formCreate = new WebForm(pathOf, List(List(name), List(url), List(description), List(createButton, cancelButton)))
+web/InstitutionUpdate.scala:  private val formEdit = new WebForm(pathOf, List(List(name), List(url), List(description), List(saveButton, cancelButton, deleteButton, institutionPK)))
+web/InstitutionUpdate.scala:  private val formNotAuthorized = new WebForm(pathOf, List(List(notAuthorizedField), List(cancelButton)))
+web/InstitutionUpdate.scala:      if (deleteMessage.isDefined) DisableWithTitle.make(deleteButton, "Can not delete: " + deleteMessage.get)
+web/InstitutionUpdate.scala:        val err = Error.make(deleteButton, "Can not delete: " + deleteMessage)
+web/InstitutionUpdate.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+web/InstitutionUpdate.scala:    val value = valueMap.get(button.label)
+web/InstitutionUpdate.scala:    value.isDefined && value.get.toString.equals(button.label)
+web/InstitutionUpdate.scala:        case _ if buttonIs(valueMap, cancelButton) => InstitutionList.redirect(response)
+web/InstitutionUpdate.scala:        case _ if buttonIs(valueMap, createButton) && isWhitelisted => create(valueMap, response)
+web/InstitutionUpdate.scala:        case _ if buttonIs(valueMap, saveButton) => if (authorized) save(valueMap, response) else showNotAuthorized(response)
+web/InstitutionUpdate.scala:        case _ if buttonIs(valueMap, deleteButton) => if (isWhitelisted) delete(valueMap, response) else showNotAuthorized(response)
+web/Login.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+web/Login.scala:    new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
+web/Login.scala:  private val loginButton = makeButton("Login", true, ButtonType.BtnPrimary)
+web/Login.scala:  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+web/Login.scala:  private val form = new WebForm(pathOf, List(List(id), List(password), List(message), List(continueUrl), List(loginButton, cancelButton)))
+web/Login.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+web/Login.scala:    val value = valueMap.get(button.label)
+web/Login.scala:    value.isDefined && value.get.toString.equals(button.label)
+web/Login.scala:        case _ if buttonIs(valueMap, loginButton) => login(valueMap, request, response)
+web/Login.scala:        case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
+web/MachineTypeUpdate.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+web/MachineTypeUpdate.scala:    new FormButton(name, 1, 0, subUrl, action, buttonType)
+web/MachineTypeUpdate.scala:  private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
+web/MachineTypeUpdate.scala:  private val saveButton = makeButton("Save", true, ButtonType.BtnPrimary)
+web/MachineTypeUpdate.scala:  private val deleteButton = makeButton("Delete", false, ButtonType.BtnDanger)
+web/MachineTypeUpdate.scala:  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+web/MachineTypeUpdate.scala:  private val formCreate = new WebForm(pathOf, List(List(manufacturer), List(model), List(version), List(notes), List(createButton, cancelButton)))
+web/MachineTypeUpdate.scala:  private val formEdit = new WebForm(pathOf, List(List(manufacturer), List(model), List(version), List(notes), List(saveButton, cancelButton, deleteButton, machineTypePK)))
+web/MachineTypeUpdate.scala:    if (buttonIs(valueMap, deleteButton)) {
+web/MachineTypeUpdate.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+web/MachineTypeUpdate.scala:    val value = valueMap.get(button.label)
+web/MachineTypeUpdate.scala:    value.isDefined && value.get.toString.equals(button.label)
+web/MachineTypeUpdate.scala:        case _ if buttonIs(valueMap, cancelButton) => MachineTypeList.redirect(response)
+web/MachineTypeUpdate.scala:        case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
+web/MachineTypeUpdate.scala:        case _ if buttonIs(valueMap, saveButton) => saveEdits(valueMap, pageTitleEdit, response)
+web/MachineUpdate.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+web/MachineUpdate.scala:    new FormButton(name, columns, 0, subUrl, pathOf, buttonType)
+web/MachineUpdate.scala:  private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
+web/MachineUpdate.scala:  private val saveButton = makeButton("Save", true, ButtonType.BtnPrimary)
+web/MachineUpdate.scala:  private val deleteButton = makeButton("Delete", false, ButtonType.BtnDanger)
+web/MachineUpdate.scala:  private val confirmDeleteButton = makeButton("Confirm Delete", false, ButtonType.BtnDanger)
+web/MachineUpdate.scala:  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+web/MachineUpdate.scala:  private val maintenanceButton = makeButton("Maintenance Records", false, ButtonType.BtnDefault)
+web/MachineUpdate.scala:  private val customizePlanButton = makeButton("Customize Plan", false, ButtonType.BtnDefault)
+web/MachineUpdate.scala:  val addBeamEnergyButton = new FormButton("Add Beam Energy", 1, 0, subUrl, pathOf + "?addBeam=1", ButtonType.BtnPrimary)
+web/MachineUpdate.scala:  val beamEnergyButtonColName = "X_"
+web/MachineUpdate.scala:      (beamEnergyButtonColName + index.toString, index.toString))
+web/MachineUpdate.scala:    val beamDeleteButton = new FormButton("X", 1, 0, subUrl, action, ButtonType.BtnDefault, beamEnergyButtonColName + index)
+web/MachineUpdate.scala:    List(photonEnergyCol, maxDoseRateCol, fffEnergyCol, beamDeleteButton, indexCol)
+web/MachineUpdate.scala:      List(photonEnergyHeader, maxDoseRateHeader, fffEnergyHeader, addBeamEnergyButton))
+web/MachineUpdate.scala:  val createButtonList: WebRow = List(createButton, cancelButton)
+web/MachineUpdate.scala:  val editButtonList: WebRow = List(saveButton, cancelButton, deleteButton, maintenanceButton, customizePlanButton, machinePK)
+web/MachineUpdate.scala:  val confirmDeleteButtonList: WebRow = List(cancelButton, confirmDeleteButton, machinePK)
+web/MachineUpdate.scala:  private def formCreate(valueMap: ValueMapT, isAdmin: Boolean) = new WebForm(pathOf, fieldList(valueMap, isAdmin) :+ createButtonList)
+web/MachineUpdate.scala:  private def formEdit(valueMap: ValueMapT, isAdmin: Boolean) = new WebForm(pathOf, fieldList(valueMap, isAdmin) :+ editButtonList)
+web/MachineUpdate.scala:  private def formConfirmDelete(valueMap: ValueMapT) = new WebForm(pathOf, confirmDeleteFieldList(valueMap) :+ confirmDeleteButtonList)
+web/MachineUpdate.scala:    if (allEmpty) Error.make(addBeamEnergyButton, "At least one energy level is required")
+web/MachineUpdate.scala:   * Call this when machine has clicked create button.  If everything is ok, then create the new machine,
+web/MachineUpdate.scala:        (beamEnergyButtonColName + index, index.toString))
+web/MachineUpdate.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+web/MachineUpdate.scala:    val value = valueMap.get(button.label)
+web/MachineUpdate.scala:    value.isDefined && value.get.toString.equals(button.label)
+web/MachineUpdate.scala:    if (valueMap.get(createButton.label).isDefined) {
+web/MachineUpdate.scala:    val index = valueMap.values.filter(k => k.startsWith(beamEnergyButtonColName)).head.replace(beamEnergyButtonColName, "").toInt
+web/MachineUpdate.scala:      beamEnergyButtonColName).map(n => n + index.toString)
+web/MachineUpdate.scala:  def buttonIsDeleteBeamEnergyButton(valueMap: ValueMapT): Boolean = {
+web/MachineUpdate.scala:    !(valueMap.values.filter(k => k.startsWith(beamEnergyButtonColName)).isEmpty)
+web/MachineUpdate.scala:        case _ if buttonIs(valueMap, cancelButton) => MachineList.redirect(response)
+web/MachineUpdate.scala:        case _ if buttonIs(valueMap, addBeamEnergyButton) => addBeam(valueMap, response)
+web/MachineUpdate.scala:        case _ if buttonIsDeleteBeamEnergyButton(valueMap) => deleteBeam(valueMap, response)
+web/MachineUpdate.scala:        case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
+web/MachineUpdate.scala:        case _ if buttonIs(valueMap, saveButton) => save(valueMap, response)
+web/MachineUpdate.scala:        case _ if buttonIs(valueMap, deleteButton) => delete(valueMap, response)
+web/MachineUpdate.scala:        case _ if buttonIs(valueMap, confirmDeleteButton) => confirmDelete(valueMap, response)
+web/MachineUpdate.scala:        case _ if buttonIs(valueMap, maintenanceButton) => maintRec(valueMap, response)
+web/MachineUpdate.scala:        case _ if buttonIs(valueMap, customizePlanButton) => customizePlan(valueMap, response)
+web/MaintenanceRecordUpdate.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+web/MaintenanceRecordUpdate.scala:    new FormButton(name, 1, 0, subUrl, action, buttonType)
+web/MaintenanceRecordUpdate.scala:  private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
+web/MaintenanceRecordUpdate.scala:  private val saveButton = makeButton("Save", true, ButtonType.BtnPrimary)
+web/MaintenanceRecordUpdate.scala:  private val deleteButton = makeButton("Delete", false, ButtonType.BtnDanger)
+web/MaintenanceRecordUpdate.scala:  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+web/MaintenanceRecordUpdate.scala:  val createButtonList: WebRow = List(createButton, cancelButton, machinePK)
+web/MaintenanceRecordUpdate.scala:  val editButtonList: WebRow = List(saveButton, cancelButton, deleteButton, machinePK, maintenanceRecordPK)
+web/MaintenanceRecordUpdate.scala:  private val formCreate = new WebForm(pathOf, fieldList :+ createButtonList)
+web/MaintenanceRecordUpdate.scala:  private val formEdit = new WebForm(pathOf, fieldList :+ editButtonList)
+web/MaintenanceRecordUpdate.scala:    if (buttonIs(valueMap, deleteButton)) {
+web/MaintenanceRecordUpdate.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+web/MaintenanceRecordUpdate.scala:    val value = valueMap.get(button.label)
+web/MaintenanceRecordUpdate.scala:    value.isDefined && value.get.toString.equals(button.label)
+web/MaintenanceRecordUpdate.scala:        case _ if buttonIs(valueMap, cancelButton) => redirectToList(response, valueMap)
+web/MaintenanceRecordUpdate.scala:        case _ if buttonIs(valueMap, createButton) => create(valueMap, pageTitleEdit, response)
+web/MaintenanceRecordUpdate.scala:        case _ if buttonIs(valueMap, saveButton) => save(valueMap, pageTitleEdit, response)
+web/MultileafCollimatorUpdate.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+web/MultileafCollimatorUpdate.scala:    new FormButton(name, 1, 0, subUrl, action, buttonType)
+web/MultileafCollimatorUpdate.scala:  private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
+web/MultileafCollimatorUpdate.scala:  private val saveButton = makeButton("Save", true, ButtonType.BtnPrimary)
+web/MultileafCollimatorUpdate.scala:  private val deleteButton = makeButton("Delete", false, ButtonType.BtnDanger)
+web/MultileafCollimatorUpdate.scala:  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+web/MultileafCollimatorUpdate.scala:  val createButtonList: List[WebRow] = List(List(createButton, cancelButton))
+web/MultileafCollimatorUpdate.scala:  val editButtonList: List[WebRow] = List(List(saveButton, cancelButton, deleteButton, multileafCollimatorPK))
+web/MultileafCollimatorUpdate.scala:  private val formCreate = new WebForm(pathOf, fieldList ++ createButtonList)
+web/MultileafCollimatorUpdate.scala:  private val formEdit = new WebForm(pathOf, fieldList ++ editButtonList)
+web/MultileafCollimatorUpdate.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+web/MultileafCollimatorUpdate.scala:    val value = valueMap.get(button.label)
+web/MultileafCollimatorUpdate.scala:    value.isDefined && value.get.toString.equals(button.label)
+web/MultileafCollimatorUpdate.scala:        case _ if buttonIs(valueMap, cancelButton) => MultileafCollimatorList.redirect(response)
+web/MultileafCollimatorUpdate.scala:        case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
+web/MultileafCollimatorUpdate.scala:        case _ if buttonIs(valueMap, saveButton) => save(valueMap, pageTitleEdit, response)
+web/MultileafCollimatorUpdate.scala:        case _ if buttonIs(valueMap, deleteButton) => delete(valueMap, response)
+web/NotAuthenticated.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+web/NotAuthenticated.scala:    new FormButton(name, 1, 0, subUrl, action, buttonType)
+web/NotAuthenticated.scala:  private val homeButton = makeButton("Home", true, ButtonType.BtnPrimary)
+web/NotAuthenticated.scala:  private val form = new WebForm(pathOf, List(List(message), List(homeButton)))
+web/NotAuthenticated.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+web/NotAuthenticated.scala:    val value = valueMap.get(button.label)
+web/NotAuthenticated.scala:    value.isDefined && value.get.toString.equals(button.label)
+web/NotAuthenticated.scala:        case _ if buttonIs(valueMap, homeButton) => response.redirectSeeOther("/")
+web/NotAuthorized.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+web/NotAuthorized.scala:    new FormButton(name, 1, 0, subUrl, action, buttonType)
+web/NotAuthorized.scala:  private val homeButton = makeButton("Home", true, ButtonType.BtnPrimary)
+web/NotAuthorized.scala:  private val form = new WebForm(pathOf, List(List(message), List(homeButton)))
+web/NotAuthorized.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+web/NotAuthorized.scala:    val value = valueMap.get(button.label)
+web/NotAuthorized.scala:    value.isDefined && value.get.toString.equals(button.label)
+web/NotAuthorized.scala:        case _ if buttonIs(valueMap, homeButton) => response.redirectSeeOther("/")
+web/ProcedureUpdate.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+web/ProcedureUpdate.scala:    new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
+web/ProcedureUpdate.scala:  private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
+web/ProcedureUpdate.scala:  private val saveButton = makeButton("Save", true, ButtonType.BtnPrimary)
+web/ProcedureUpdate.scala:  private val deleteButton = makeButton("Delete", false, ButtonType.BtnDanger)
+web/ProcedureUpdate.scala:  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+web/ProcedureUpdate.scala:  val createButtonList: List[WebRow] = List(List(createButton, cancelButton))
+web/ProcedureUpdate.scala:  val editButtonList: List[WebRow] = List(List(saveButton, cancelButton, deleteButton, procedurePK))
+web/ProcedureUpdate.scala:  private val formCreate = new WebForm(pathOf, fieldList ++ createButtonList)
+web/ProcedureUpdate.scala:  private val formEdit = new WebForm(pathOf, fieldList ++ editButtonList)
+web/ProcedureUpdate.scala:   * Call this when procedure has clicked create button.  If everything is ok, then create the new procedure,
+web/ProcedureUpdate.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+web/ProcedureUpdate.scala:    val value = valueMap.get(button.label)
+web/ProcedureUpdate.scala:    value.isDefined && value.get.toString.equals(button.label)
+web/ProcedureUpdate.scala:        case _ if buttonIs(valueMap, cancelButton) => ProcedureList.redirect(response)
+web/ProcedureUpdate.scala:        case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
+web/ProcedureUpdate.scala:        case _ if buttonIs(valueMap, saveButton) => save(valueMap, response)
+web/ProcedureUpdate.scala:        case _ if buttonIs(valueMap, deleteButton) => delete(valueMap, response)
+web/ServiceInfo.scala:    <a class="btn btn-danger" href={ href } role="button" title="Shut down and restart service.
+web/ServiceInfo.scala:    <a class="btn btn-default" href={ href } role="button">Cancel</a>
+web/ServiceInfo.scala:    <a class="btn btn-default" href={ href } role="button" title="Shut down and restart. Jobs in progress will be aborted.">Restart Service</a>
+web/SetPassword.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+web/SetPassword.scala:    new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
+web/SetPassword.scala:  private val saveButton = makeButton("Save", true, ButtonType.BtnPrimary)
+web/SetPassword.scala:  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+web/SetPassword.scala:  private val form = new WebForm(pathOf, List(List(id), List(password), List(verifyPassword), List(saveButton, cancelButton, userPK)))
+web/SetPassword.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+web/SetPassword.scala:    val value = valueMap.get(button.label)
+web/SetPassword.scala:    value.isDefined && value.get.toString.equals(button.label)
+web/SetPassword.scala:      case _ if buttonIs(valueMap, saveButton) => save(valueMap, request, response)
+web/SetPassword.scala:      case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
+web/TermsOfUse.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+web/TermsOfUse.scala:    new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
+web/TermsOfUse.scala:  private val agreeButton = makeButton("Agree", true, ButtonType.BtnPrimary)
+web/TermsOfUse.scala:  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+web/TermsOfUse.scala:    else new WebForm(pathOf, List(List(message), List(agreeButton, cancelButton)))
+web/TermsOfUse.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+web/TermsOfUse.scala:    val value = valueMap.get(button.label)
+web/TermsOfUse.scala:    value.isDefined && value.get.toString.equals(button.label)
+web/TermsOfUse.scala:        case _ if buttonIs(valueMap, agreeButton) => agree(request, response)
+web/TermsOfUse.scala:        case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
+web/UserUpdate.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+web/UserUpdate.scala:    new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
+web/UserUpdate.scala:  private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
+web/UserUpdate.scala:  private val changePasswordButton = makeButton("Change Password", true, ButtonType.BtnPrimary)
+web/UserUpdate.scala:  private val saveButton = makeButton("Save", true, ButtonType.BtnPrimary)
+web/UserUpdate.scala:  private val deleteButton = makeButton("Delete", false, ButtonType.BtnDanger)
+web/UserUpdate.scala:  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+web/UserUpdate.scala:  private val formCreate = new WebForm(pathOf, List(List(id, fullName), List(email, institution), List(role), List(password), List(verifyPassword), List(createButton, cancelButton)))
+web/UserUpdate.scala:  private val formEdit = new WebForm(pathOf, List(List(id, fullName), List(email, institution), List(role), List(saveButton, cancelButton, deleteButton, changePasswordButton, userPK)))
+web/UserUpdate.scala:   * Call this when user has clicked create button.  If everything is ok, then create the new user,
+web/UserUpdate.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+web/UserUpdate.scala:    val value = valueMap.get(button.label)
+web/UserUpdate.scala:    value.isDefined && value.get.toString.equals(button.label)
+web/UserUpdate.scala:        case _ if buttonIs(valueMap, cancelButton) => UserList.redirect(response)
+web/UserUpdate.scala:        case _ if buttonIs(valueMap, changePasswordButton) => changePassword(valueMap, response)
+web/UserUpdate.scala:        case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
+web/UserUpdate.scala:        case _ if buttonIs(valueMap, saveButton) => save(valueMap, response)
+web/UserUpdate.scala:        case _ if buttonIs(valueMap, deleteButton) => delete(valueMap, response)
+web/ViewOutput.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+web/ViewOutput.scala:    new FormButton(name, 1, 0, subUrl, action, buttonType)
+web/ViewOutput.scala:  private val abortButton = makeButton("Abort", true, ButtonType.BtnPrimary)
+web/ViewOutput.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+web/ViewOutput.scala:    val value = valueMap.get(button.label)
+web/ViewOutput.scala:    value.isDefined && value.get.toString.equals(button.label)
+web/WebUtil.scala:   * Standard Twitter bootstrap button types.
+web/WebUtil.scala:  object ButtonType extends Enumeration {
+web/WebUtil.scala:    type ButtonType = Value
+web/WebUtil.scala:   * An HTML button.
+web/WebUtil.scala:   * @param label Name and id of button.
+web/WebUtil.scala:   * @param primary True if this button is primary
+web/WebUtil.scala:  class FormButton(override val label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: (ValueMapT) => String, buttonType: ButtonType.Value, value: String) extends IsInput(label) with ToHtml {
+web/WebUtil.scala:    def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String, buttonType: ButtonType.Value, value: String) = this(label, col, offset, subUrl, (_) => action, buttonType, value)
+web/WebUtil.scala:    def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String, buttonType: ButtonType.Value) = this(label, col, offset, subUrl, action: String, buttonType, label)
+web/WebUtil.scala:    def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String) = this(label, col, offset, subUrl, action: String, ButtonType.BtnDefault, label)
+web/WebUtil.scala:      val button = { <button type="submit" class={ "btn " + buttonType.toString } action={ action(valueMap) } value={ value } name={ label }>{ label }</button> }
+web/WebUtil.scala:      wrapInput(label, false, button, col, offset, errorMap)
+webrun/LOCRun_1.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+webrun/LOCRun_1.scala:    new FormButton(name, 1, 0, SubUrl.run, action, buttonType)
+webrun/LOCRun_1.scala:  private val runButton = makeButton("Run", true, ButtonType.BtnDefault)
+webrun/LOCRun_1.scala:  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+webrun/LOCRun_1.scala:  private def form = new WebForm(procedure.webUrl, Some("LOC"), List(List(runButton, cancelButton)), 6)
+webrun/LOCRun_1.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+webrun/LOCRun_1.scala:    val value = valueMap.get(button.label)
+webrun/LOCRun_1.scala:    value.isDefined && value.get.toString.equals(button.label)
+webrun/LOCRun_1.scala:        case _ if buttonIs(valueMap, cancelButton) => cancel(valueMap, response)
+webrun/LOCRun_1.scala:        case _ if buttonIs(valueMap, runButton) => run(valueMap, request, response)
+webrun/LOCUploadBaseFiles_1.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+webrun/LOCUploadBaseFiles_1.scala:    new FormButton(name, 1, 0, SubUrl.run, action, buttonType)
+webrun/LOCUploadBaseFiles_1.scala:  private val runButton = makeButton("Run", true, ButtonType.BtnDefault)
+webrun/LOCUploadBaseFiles_1.scala:  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+webrun/LOCUploadBaseFiles_1.scala:  private def form = new WebForm(procedure.webUrl, Some("Upload LOC Baseline"), List(List(instructions), List(machine), List(runButton, cancelButton)), 6)
+webrun/LOCUploadBaseFiles_1.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+webrun/LOCUploadBaseFiles_1.scala:    val value = valueMap.get(button.label)
+webrun/LOCUploadBaseFiles_1.scala:    value.isDefined && value.get.toString.equals(button.label)
+webrun/LOCUploadBaseFiles_1.scala:        case _ if buttonIs(valueMap, cancelButton) => cancel(valueMap, response)
+webrun/LOCUploadBaseFiles_1.scala:        case _ if buttonIs(valueMap, runButton) => run(valueMap, request, response)
+webrun/phase2/customizeRtPlan/CustomizeRtPlanInterface.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+webrun/phase2/customizeRtPlan/CustomizeRtPlanInterface.scala:    new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
+webrun/phase2/customizeRtPlan/CustomizeRtPlanInterface.scala:  private val createButton = makeButton("Create", false, ButtonType.BtnPrimary)
+webrun/phase2/customizeRtPlan/CustomizeRtPlanInterface.scala:  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+webrun/phase2/customizeRtPlan/CustomizeRtPlanInterface.scala:  private val backButton = makeButton("Back", false, ButtonType.BtnDefault)
+webrun/phase2/customizeRtPlan/CustomizeRtPlanInterface.scala:  private val assignButtonList: WebRow = List(createButton, cancelButton, machinePK)
+webrun/phase2/customizeRtPlan/CustomizeRtPlanInterface.scala:    val form = new WebForm(pathOf, List(row0, row1, row2) ++ List(assignButtonList))
+webrun/phase2/customizeRtPlan/CustomizeRtPlanInterface.scala:    val collimatorErr = if (CustomizeRtPlan.getCollimatorCompatiblePlanForMachine(machine.get).isEmpty) Error.make(createButton, "There is no pre-defined plan to support this machine's collimator.") else styleNone
+webrun/phase2/customizeRtPlan/CustomizeRtPlanInterface.scala:    val r1: WebRow = List(downloadLink, backButton, machinePK)
+webrun/phase2/customizeRtPlan/CustomizeRtPlanInterface.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+webrun/phase2/customizeRtPlan/CustomizeRtPlanInterface.scala:    val value = valueMap.get(button.label)
+webrun/phase2/customizeRtPlan/CustomizeRtPlanInterface.scala:    value.isDefined && value.get.toString.equals(button.label)
+webrun/phase2/customizeRtPlan/CustomizeRtPlanInterface.scala:      val form = new WebForm(pathOf, List(row0, row1, row2) ++ List(assignButtonList))
+webrun/phase2/customizeRtPlan/CustomizeRtPlanInterface.scala:        case _ if buttonIs(valueMap, cancelButton) => updateMach
+webrun/phase2/customizeRtPlan/CustomizeRtPlanInterface.scala:        case _ if buttonIs(valueMap, backButton) => updateMach
+webrun/phase2/customizeRtPlan/CustomizeRtPlanInterface.scala:        case _ if buttonIs(valueMap, createButton) => validateAndMakePlan(valueMap, response)
+webrun/phase2/Phase2.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+webrun/phase2/Phase2.scala:    new FormButton(name, 1, 0, SubUrl.run, action, buttonType)
+webrun/phase2/Phase2.scala:  private val runButton = makeButton("Run", true, ButtonType.BtnDefault)
+webrun/phase2/Phase2.scala:  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+webrun/phase2/Phase2.scala:  private def form = new WebForm(procedure.webUrl, Some("Phase2"), List(List(machineSelector), List(runButton, cancelButton)), 10)
+webrun/phase2/Phase2.scala:   * Respond to the 'Run' button.
+webrun/phase2/Phase2.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+webrun/phase2/Phase2.scala:    val value = valueMap.get(button.label)
+webrun/phase2/Phase2.scala:    value.isDefined && value.get.toString.equals(button.label)
+webrun/phase2/Phase2.scala:        case _ if buttonIs(valueMap, cancelButton) => cancel(valueMap, response)
+webrun/phase2/Phase2.scala:        case _ if buttonIs(valueMap, runButton) => run(valueMap, request, response)
+webrun/phase2/symmetryAndFlatness/SymmetryAndFlatnessSubHTML.scala:    val useAsBaselineButton: Elem = {
+webrun/phase2/symmetryAndFlatness/SymmetryAndFlatnessSubHTML.scala:      val button = {
+webrun/phase2/symmetryAndFlatness/SymmetryAndFlatnessSubHTML.scala:        <a class="btn btn-primary" href={ href } role="button" title={ title } style="margin:20px;">Use As Baseline</a>
+webrun/phase2/symmetryAndFlatness/SymmetryAndFlatnessSubHTML.scala:      button
+webrun/phase2/symmetryAndFlatness/SymmetryAndFlatnessSubHTML.scala:        { useAsBaselineButton }
+webrun/phase2/symmetryAndFlatness/SymmetryAndFlatnessUseAsBaseline.scala:    val buttonContent = {
+webrun/phase2/symmetryAndFlatness/SymmetryAndFlatnessUseAsBaseline.scala:          <a class="btn btn-default" href={ "/admin/MaintenanceRecordUpdate?maintenanceRecordPK=" + maintenanceRecord.maintenanceRecordPK.get } role="button" title="View, edit or delete the MaintenanceRecord record">View/Edit/Delete MaintenanceRecord</a>
+webrun/phase2/symmetryAndFlatness/SymmetryAndFlatnessUseAsBaseline.scala:          <a class="btn btn-default" href={ "/view/ViewOutput?outputPK=" + outputPK } role="button" title="View the report generated by the output that defined the baseline values.">Return to Output</a>
+webrun/phase2/symmetryAndFlatness/SymmetryAndFlatnessUseAsBaseline.scala:        { buttonContent }
+webrun/phase2/symmetryAndFlatness/SymmetryAndFlatnessUseAsBaseline.scala:          <a class="btn btn-primary" href={ path + "?outputPK=" + outputPK + "&" + confirmTag + "=true" } role="button">Confirm</a>
+webrun/phase2/symmetryAndFlatness/SymmetryAndFlatnessUseAsBaseline.scala:          <a class="btn btn-default" href={ "/view/ViewOutput?outputPK=" + outputPK } role="button">Cancel</a>
+webrun/phase2/symmetryAndFlatness/SymmetryAndFlatnessUseAsBaseline.scala:      No reference was provided.  Use your browser's Back button to return to the previous page.
+webrun/phase2/wedge/WedgeHTML.scala:    val useAsBaselineButton = {
+webrun/phase2/wedge/WedgeHTML.scala:      <a class="btn btn-primary" href={ href } role="button" title={ title }>
+webrun/phase2/wedge/WedgeHTML.scala:        { useAsBaselineButton }
+webrun/phase2/wedge/WedgeUseAsBaseline.scala:    val viewEditButton = {
+webrun/phase2/wedge/WedgeUseAsBaseline.scala:      <a class="btn btn-default" href={ "/admin/MaintenanceRecordUpdate?maintenanceRecordPK=" + maintenanceRecord.maintenanceRecordPK.get } role="button" title="View, edit or delete the record">View/Edit/Delete MaintenanceRecord</a>
+webrun/phase2/wedge/WedgeUseAsBaseline.scala:    val returnToOutputButton = {
+webrun/phase2/wedge/WedgeUseAsBaseline.scala:      <a class="btn btn-default" href={ "/view/ViewOutput?outputPK=" + outputPK } role="button" title="View the report generated by the output that defined the baseline values.">Return to Output</a>
+webrun/phase2/wedge/WedgeUseAsBaseline.scala:              { viewEditButton }
+webrun/phase2/wedge/WedgeUseAsBaseline.scala:              { returnToOutputButton }
+webrun/phase2/wedge/WedgeUseAsBaseline.scala:              <a class="btn btn-primary" href={ path + "?outputPK=" + outputPK + "&" + confirmTag + "=true" } role="button">Confirm</a>
+webrun/phase2/wedge/WedgeUseAsBaseline.scala:              <a class="btn btn-default" href={ "/view/ViewOutput?outputPK=" + outputPK } role="button">Cancel</a>
+webrun/phase2/wedge/WedgeUseAsBaseline.scala:      No reference was provided.  Use your browser's Back button to return to the previous page.
+webrun/UploadAndChooseMachine_1.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+webrun/UploadAndChooseMachine_1.scala:    new FormButton(name, 1, 0, SubUrl.run, action, buttonType)
+webrun/UploadAndChooseMachine_1.scala:  private val runButton = makeButton("Run", true, ButtonType.BtnDefault)
+webrun/UploadAndChooseMachine_1.scala:  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+webrun/UploadAndChooseMachine_1.scala:  private val form = new WebForm(procedure.webUrl, List(List(machine), List(runButton, cancelButton)), 6)
+webrun/UploadAndChooseMachine_1.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+webrun/UploadAndChooseMachine_1.scala:    val value = valueMap.get(button.label)
+webrun/UploadAndChooseMachine_1.scala:    value.isDefined && value.get.toString.equals(button.label)
+webrun/UploadAndChooseMachine_1.scala:        case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
+webrun/UploadAndChooseMachine_1.scala:        case _ if buttonIs(valueMap, runButton) => run(valueMap, request, response)
+webrun/WinstonLutz_1.scala:  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
+webrun/WinstonLutz_1.scala:    new FormButton(name, 1, 0, SubUrl.run, action, buttonType)
+webrun/WinstonLutz_1.scala:  private val runButton = makeButton("Run", true, ButtonType.BtnPrimary)
+webrun/WinstonLutz_1.scala:  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+webrun/WinstonLutz_1.scala:    List(List(machine), List(tongueAndGrooveX, tongueAndGrooveY), List(runButton, cancelButton)),
+webrun/WinstonLutz_1.scala:  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+webrun/WinstonLutz_1.scala:    val value = valueMap.get(button.label)
+webrun/WinstonLutz_1.scala:    value.isDefined && value.get.toString.equals(button.label)
+webrun/WinstonLutz_1.scala:        case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
+webrun/WinstonLutz_1.scala:        case _ if buttonIs(valueMap, runButton) => run(valueMap, request, response)
