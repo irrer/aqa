@@ -133,8 +133,12 @@ object Input extends Logging {
   def delete(inputPK: Long): Int = {
     val q = query.filter(_.inputPK === inputPK)
     logger.info("deleting input " + inputPK)
+    val start = System.currentTimeMillis
     val action = q.delete
-    Db.run(action)
+    val count = Db.run(action)
+    val elapsed = System.currentTimeMillis - start
+    logger.info("input has been deleted: " + inputPK + "    Elapsed ms: " + elapsed)
+    count
   }
 
   /**
