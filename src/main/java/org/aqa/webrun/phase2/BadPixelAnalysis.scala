@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import javax.imageio.ImageIO
 import edu.umro.ImageUtil.Watermark
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Store bad pixels in the database and generate HTML.
@@ -301,8 +302,10 @@ object BadPixelAnalysis extends Logging {
       makeDicomViews(extendedData, runReq, badPixelList)
 
       val maxAllowedBadPixels = ((runReq.floodOriginalImage.Rows * runReq.floodOriginalImage.Columns) / 1000000.0) * Config.MaxAllowedBadPixelsPerMillion
-      val maxBadInSingleImage = badPixelList.groupBy(b => b.SOPInstanceUID).values.map(list => list.size).max
-      val pass = maxBadInSingleImage <= maxAllowedBadPixels
+      val pass = {
+        val badPerImage = badPixelList.groupBy(b => b.SOPInstanceUID).values.map(list => list.size)
+        badPerImage.isEmpty || badPerImage.max <= maxAllowedBadPixels
+      }
       val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
       val summary = {
