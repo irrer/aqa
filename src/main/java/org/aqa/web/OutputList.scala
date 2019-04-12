@@ -41,7 +41,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   private def procedureName(output: Output): String = Procedure.get(output.procedurePK).get.fullName
 
-  private def machineName(output: Output): String = { // TODO probably a nice place to use a monad
+  private def machineName(output: Output): String = {
     try {
       val input = Input.get(output.outputPK.get)
       val machine = Machine.get(input.get.machinePK.get)
