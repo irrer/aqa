@@ -1,0 +1,18 @@
+Projection
+
+While all test results are reported in the isoplane in mm,
+measurements are performed in the image plane.
+
+Positions are calculated by using pixels' dimension and
+center position in the image plane and using the SID and SAD
+of the RTIMAGE.  Note that the SID and SAD might vary
+between images within a series.  The variation is generally
+very small, but is taken into account.  Also, image pixel
+coordinates are start at 0,0 for the upper left hand side of
+the image, while isoplane coordinates 0,0 are at the center
+of the image.
+
+The following example shows the conversion of an edge
+position found in image plane converted to the corresponding
+position in the isoplane.
+

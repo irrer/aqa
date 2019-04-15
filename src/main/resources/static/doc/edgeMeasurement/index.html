@@ -1,0 +1,32 @@
+
+
+
+
+
+Edge Measurement
+
+The AQA algorithm is to use the expected position of an edge
+to form a bounding rectangle around it.  For a vertical
+edge, the columns in the region are summed, providing a
+profile that uses as many pixels as possible.  A cubic
+spline is drawn through the profile, and then a point is
+chosen on that spline to determine the edge's location.  The
+percent is a configurable parameter which is set to %80.
+
+Note that for the example shown, the upper and lower ends of
+the edge are not considered, because there is interference
+with the horizontal edge.
+
+
+TODO : how do I determine the ceiling and floor?
+
+
+A number of edge detection algorithms (such as TODO) are
+designed to find an edge in a visually noisey scene, but
+they do not yield answers to a high degree of sub-pixel
+accuracy.  For treatment machine quality assurance, the
+approximate location of the edge is known, as well as it's
+shape, so this can be leveraged to use methods that are
+highly accurate but do not do well with noisy images.  If
+the edge is not approximately where it is expected to be,
+then the test will be failing anyway so the point is moot.

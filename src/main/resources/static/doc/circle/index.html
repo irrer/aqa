@@ -1,0 +1,31 @@
+Circles
+
+Circles are used to sample circular regions of the EPID as
+an measurement of dose.  They are used by the center dose,
+wedge and symmetry/flatness/constancy tests.
+
+The dose from a circle is calculated by calculating the
+average CU (calibrated units) of all pixels that lie within
+a 10 mm diameter circle as measured in the isoplane.
+
+To determine the center of the circle in the isoplane, the
+expected center (determined by the test) is added to the
+collimator's center of rotation, as determined in the
+Collimator Centering test.
+
+To determine the pixels that should be averaged, the
+positions of pixels in the image plane are projected back to
+the isoplane (LINK: using SID and SAD).  All pixels whose
+centers fall within the radius of the circle are used.
+
+Because a circle is being projected onto a rectangular
+pixel array, pixels on the edge of the circle will only have
+part of their area within the circle.  If the center of the
+pixel is inside the circle or not, then the entire pixel is
+used or not; no attempt is made to partially weight the
+pixel's influence.
+
+Also note that although the collimator's center of rotation
+is generally a small number, even smaller than the width of
+the pixels, it may cause some pixels to be include or not
+included that otherwise would be.
