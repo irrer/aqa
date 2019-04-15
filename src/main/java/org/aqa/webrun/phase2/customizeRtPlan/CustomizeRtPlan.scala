@@ -468,16 +468,38 @@ object CustomizeRtPlan extends Logging {
   }
   */
 
+  private def setRtplanDateTimeToNow(rtplan: AttributeList) = {
+    val now = System.currentTimeMillis
+
+    val InstanceCreationDate = rtplan.get(TagFromName.InstanceCreationDate)
+    if (InstanceCreationDate != null) {
+      InstanceCreationDate.removeValues
+      InstanceCreationDate.addValue(DicomUtil.dicomDateFormat.format(now))
+    }
+
+    val InstanceCreationTime = rtplan.get(TagFromName.InstanceCreationTime)
+    if (InstanceCreationTime != null) {
+      InstanceCreationTime.removeValues
+      InstanceCreationTime.addValue(DicomUtil.dicomTimeFormat.format(now))
+    }
+  }
+
   private def orderBeamsByRenaming(rtplan: AttributeList) = {
 
     val beamList = DicomUtil.seqToAttr(rtplan, TagFromName.BeamSequence)
 
     def updateBeamName(bi: Int) = {
-      val attr = beamList(bi).get(TagFromName.BeamName)
-      val name = attr.getSingleStringValueOrEmptyString
+      val BeamName = beamList(bi).get(TagFromName.BeamName)
+      Trace.trace("BeamName  before: " + BeamName)
+
+      val name = BeamName.getSingleStringValueOrEmptyString
       val newName = (bi + 1).formatted("%02d") + ":" + name
-      attr.removeValues
-      attr.addValue(newName)
+      BeamName.removeValues
+      BeamName.addValue(newName)
+
+      beamList(bi).put(VarianPrivateTag.newBeamSecondaryName(newName))
+
+      Trace.trace("          after: " + BeamName)
     }
 
     beamList.indices.map(bi => updateBeamName(bi))
@@ -502,6 +524,7 @@ object CustomizeRtPlan extends Logging {
 
     setNumberOfBeamsInFractionGroupSequence(rtplan)
     orderBeamsByRenaming(rtplan)
+    setRtplanDateTimeToNow(rtplan)
     // addExtendedInterfaceData(rtplan)
   }
 
