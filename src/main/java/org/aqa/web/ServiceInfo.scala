@@ -210,14 +210,23 @@ setTimeout(watchStatus, WebRefreshTime);
   private def showServiceInfo(response: Response): Unit = {
     val content = {
       <div class="row">
-        <div class="col-md-10 col-sm-offset-1">
-          <h2>{ pageTitle }</h2>
-          <div class="col-md-4 col-sm-offset-1">
-            { configInfo }
+        <div class="row">
+          <div class="col-md-5 col-md-offset-1">
+            <h2>{ pageTitle }</h2>
           </div>
-          <div class="col-md-4 col-sm-offset-1">
+        </div>
+        <div class="row">
+          <div class="col-md-5 col-md-offset-1">
             { basicInfo }
+          </div>
+          <div class="col-md-4 col-md-offset-1">
             { showLogFileList }
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-10 col-md-offset-1">
+            <p></p><br> </br>
+            { configInfo }
           </div>
         </div>
       </div>

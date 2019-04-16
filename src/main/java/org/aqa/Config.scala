@@ -50,6 +50,14 @@ object Config extends Logging {
   /** Root directory name for temporary files. */
   val tmpDirName = "tmp"
 
+  /** For indenting sub-content. */
+  private val indent1 = "\n                  "
+
+  /** For indenting sub-sub-content. */
+  private val indent2 = indent1 + "    "
+
+  private def indentList[T](list: Seq[T]): String = list.mkString(indent1, indent1, "\n")
+
   /** Root directory name for machine configuration files. */
   val machineConfigurationDirName = "MachineConfiguration"
 
@@ -127,7 +135,7 @@ object Config extends Logging {
    * is toast, so log an error and exit with a failed status.
    */
   private def epicFail(name: String) = {
-    val tried = directoryList.foldLeft("")((l, f) => l + "\n    " + f.getAbsolutePath)
+    val tried = indentList(directoryList.map(d => d.getAbsolutePath))
 
     logger.error("Could not find a usable configuration file.  Using file name " + name + " , tried directories: " + tried + "\nShutting down...")
     System.exit(1)
@@ -341,25 +349,25 @@ object Config extends Logging {
 
   private def getMetadataCheckBeamNameList = {
     val list = (document \ "MetadataCheckBeamNameList" \ "BeamName").map(n => n.head.text.toString.trim).toList
-    logText("MetadataCheckBeamNameList", list.mkString("\n        ", "\n        ", "\n"))
+    logText("MetadataCheckBeamNameList", indentList(list))
     list.distinct
   }
 
   private def getCenterDoseBeamNameList = {
     val list = (document \ "CenterDoseBeamNameList" \ "BeamName").map(n => n.head.text.toString.trim).toList
-    logText("CenterDoseBeamNameList", list.mkString("\n        ", "\n        ", "\n"))
+    logText("CenterDoseBeamNameList", indentList(list))
     list.distinct
   }
 
   private def getSymmetryAndFlatnessBeamList = {
-    val list = (document \ "SymmetryAndFlatnessBeamList" \ "BeamName").map(n => n.head.text.toString.trim).toList
-    logText("SymmetryAndFlatnessBeamList", list.mkString("\n        ", "\n        ", "\n"))
+    val list = (document \ "SymmetryAndFlatnessBeamList" \ "BeamName").map(n => n.head.text.toString.trim)
+    logText("SymmetryAndFlatnessBeamList", indentList(list))
     list.distinct
   }
 
   private def getLeafPositionBeamNameList = {
     val list = (document \ "LeafPositionBeamNameList" \ "BeamName").map(n => n.head.text.toString.trim).toList
-    logText("LeafPositionBeamNameList", list.mkString("\n        ", "\n        ", "\n"))
+    logText("LeafPositionBeamNameList", indentList(list))
     list.distinct
   }
 
@@ -372,7 +380,7 @@ object Config extends Logging {
     }
 
     val list = (document \ "SymmetryAndFlatnessPointList" \ "SymmetryAndFlatnessPoint").map(n => makePoint(n)).toList.toSeq
-    logText("SymmetryAndFlatnessPointList", list.mkString("\n        ", "\n        ", "\n"))
+    logText("SymmetryAndFlatnessPointList", indentList(list))
     list
   }
 
@@ -387,7 +395,7 @@ object Config extends Logging {
     }
 
     val list = for (a <- SymmetryAndFlatnessPointList; b <- SymmetryAndFlatnessPointList; if isPair(a, b)) yield { (a, b) }
-    val listText = list.map(pair => pair._1.name + "   " + pair._2.name).mkString("\n        ", "\n        ", "\n")
+    val listText = indentList(list.map(pair => pair._1.name + "   " + pair._2.name))
     logText("SymmetryAndFlatnessPointList", listText)
     list
   }
@@ -416,7 +424,7 @@ object Config extends Logging {
       new CollimatorPositionBeamConfig(beamName, FloodCompensation)
     }
     val list = (document \ "CollimatorPositionBeamList" \ "BeamName").map(node => nodeToCollimatorPositionBeam(node)).toList
-    logText("CollimatorPositionBeamNameList", list.mkString("\n        ", "\n        ", "\n"))
+    logText("CollimatorPositionBeamNameList", indentList(list))
     list
   }
 
@@ -448,7 +456,7 @@ object Config extends Logging {
       new WedgeBeam(beamName, background)
     }
     val list = (document \ "WedgeBeamList" \ "WedgeBeam").map(node => nodeToWedgeBeamSet(node)).toList
-    logText("WedgeBeamList", list.mkString("\n        ", "\n        ", "\n"))
+    logText("WedgeBeamList", indentList(list))
     list
   }
 
@@ -461,7 +469,7 @@ object Config extends Logging {
     }
 
     val list = (document \ "MaintenanceCategoryList" \ "MaintenanceCategory").map(node => nodeToMaintCat(node)).toList
-    logText("MaintenanceCategoryList", list.mkString("\n        ", "\n        ", "\n"))
+    logText("MaintenanceCategoryList", indentList(list))
     list
   }
 
@@ -630,7 +638,7 @@ object Config extends Logging {
     val configTag = "ToBeAnonymizedList"
     logger.info("Getting " + configTag + "  ...")
     val list = (document \ configTag \ "ToBeAnonymized").toList.map(node => makeToBeAnon(node))
-    logText(configTag, "\n            " + list.mkString("\n            "))
+    logText(configTag, "\n            " + indentList(list))
     list.map(tba => (tba.AttrTag, tba)).toMap
   }
 
@@ -654,7 +662,7 @@ object Config extends Logging {
 
     val configTag = "Phase2PlanFileList"
     val list = (document \ configTag \ "Phase2PlanFile").toList.map(node => makePhase2PlanFileConfig(node))
-    logText(configTag, list.mkString("\n        ", "\n        ", ""))
+    logText(configTag, indentList(list))
     list
   }
 
@@ -674,7 +682,7 @@ object Config extends Logging {
     }
     val configTag = "Phase2PlanAttributeOverrideList"
     val list = (document \ configTag \ "Phase2PlanAttributeOverride").toList.map(node => makeOverride(node))
-    logText(configTag, list.mkString("\n        ", "\n        ", ""))
+    logText(configTag, indentList(list))
     list
   }
 
@@ -784,7 +792,7 @@ object Config extends Logging {
   override def toString: String = valueText.foldLeft("Configuration values:")((b, t) => b + "\n    " + t)
 
   def toHtml = {
-    { valueText.map(line => <br>{ line } </br>) }.toSeq
+    <pre>{ valueText }</pre>
   }
 
   logger.info("Configuration has been validated.")
