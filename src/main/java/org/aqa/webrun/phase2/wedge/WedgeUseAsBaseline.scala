@@ -32,11 +32,11 @@ object WedgeUseAsBaseline {
 class WedgeUseAsBaseline extends Restlet with SubUrlRun with Logging {
 
   private def wedgeToDesc(wedgePoint: WedgePoint): String = {
-    "    " + WedgeAnalysis.makeBaselineName(wedgePoint) + " : " + Util.fmtDbl(wedgePoint.percentOfBackground_pct)
+    "    " + WedgeAnalysis.makeWedgeBaselineName(wedgePoint) + " : " + Util.fmtDbl(wedgePoint.percentOfBackground_pct)
   }
 
   private def wedgePointToBaselineList(wedgePoint: WedgePoint, maintenanceRecordPK: Long, acquisitionDate: Timestamp): Baseline = {
-    new Baseline(None, maintenanceRecordPK, acquisitionDate, Some(wedgePoint.wedgeSOPInstanceUID), WedgeAnalysis.makeBaselineName(wedgePoint), wedgePoint.percentOfBackground_pct.toString, BaselineSetup.chosen.toString)
+    new Baseline(None, maintenanceRecordPK, acquisitionDate, Some(wedgePoint.wedgeSOPInstanceUID), WedgeAnalysis.makeWedgeBaselineName(wedgePoint), wedgePoint.percentOfBackground_pct.toString, BaselineSetup.chosen.toString)
   }
 
   private def makeBaseline(request: Request, outputPK: Long): MaintenanceRecord = {

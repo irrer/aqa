@@ -396,12 +396,37 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- The amount in percent that wedge reading should vary from baseline to be valid. -->
     <WedgeTolerance_pct>2.0</WedgeTolerance_pct>
 
+    <!-- List of wedge beams.  Each entry gives the BeamName of the wedge, and a list of BackgroundBeamName's that
+    are compatible as background for the wedge beam.  In general, the background must have a collimator and jaw opening that
+    is as large or larger than the wedge, it must be flattened (not FFF), and must have the same beam energy.
+    -->
     <WedgeBeamList>
-        <!-- <BeamName background="J20G0-6X">J10G0C90EDW45-6X</BeamName> -->  <!-- For Cedars-Sinia -->
-        <BeamName background="J10G0C90-6X">J10G0C90EDW45-6X</BeamName>  <!-- For UMich -->
-        <BeamName background="J20G0C90-6X">J20G0C90EDW60-6X</BeamName>
-        <BeamName background="J20G0-6X">J20G0C90EDW60-6X</BeamName>  <!-- experimental -->
-        <BeamName background="J18G0-6F">J18C270EDW60-6X</BeamName>
+      <WedgeBeam BeamName="J18C270EDW60-6X">
+        <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
+        <BackgroundBeamName>J18G270</BackgroundBeamName>
+        <BackgroundBeamName>J18G90</BackgroundBeamName>
+        <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+      </WedgeBeam>
+    
+      <WedgeBeam BeamName="J18C270EDW60-">  <!-- This is really a duplicate of J18C270EDW60-6X but is here because sometimes the beam name is truncated. -->
+        <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
+        <BackgroundBeamName>J18G270</BackgroundBeamName>
+        <BackgroundBeamName>J18G90</BackgroundBeamName>
+        <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+      </WedgeBeam>
+    
+      <WedgeBeam BeamName="J10G0C90EDW45-6X">
+        <BackgroundBeamName>J10G0C270-6X</BackgroundBeamName>
+        <BackgroundBeamName>J10G180</BackgroundBeamName>
+        <BackgroundBeamName>J10G90</BackgroundBeamName>
+        <BackgroundBeamName>J10G270</BackgroundBeamName>
+        <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+      </WedgeBeam>
+    
+      <WedgeBeam BeamName="J20G0C90EDW60-6X">
+        <BackgroundBeamName>J20G0-6X</BackgroundBeamName>
+        <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+      </WedgeBeam>
     </WedgeBeamList>
 
     <!-- Diameter of sample spots in mm. -->

@@ -421,27 +421,33 @@ object Config extends Logging {
   }
 
   /**
+   * Give the name of a wedge beam and a list of beams that are compatible for being the background of the wedge beam.
+   *
    * wedge: Beam name for wedge
-   * background: Beam name for background beam for comparison.  (percent calculation).
+   *
+   * background: List of beam names for background beam for comparison (percent calculation).  The beams are searched in
+   * the order given, and the first one found (is present in the input data) is used as the background.
    */
-  case class WedgeBeamPair(wedge: String, background: String) {
-    override def toString = "Wedge: " + wedge + "    background: " + background
+  case class WedgeBeam(wedge: String, backgroundList: Seq[String]) {
+    override def toString = "Wedge: " + wedge + "    background: " + backgroundList.mkString("    ")
   }
 
   private def getWedgeBeamList = {
 
-    def nodeToWedgePair(node: Node) = {
-      val beamName = node.head.text.toString.trim
+    def nodeToWedgeBeamSet(node: Node) = {
+      val beamName = (node \ "@BeamName").head.text.toString.trim
       val background = {
         try {
-          (node \ "@background").head.text.toString
+          (node \ "BackgroundBeamName").map(n => n.head.text.toString)
         } catch {
-          case t: Throwable => "not found"
+          case t: Throwable => {
+            Seq("not found")
+          }
         }
       }
-      new WedgeBeamPair(beamName, background)
+      new WedgeBeam(beamName, background)
     }
-    val list = (document \ "WedgeBeamList" \ "BeamName").map(node => nodeToWedgePair(node)).toList
+    val list = (document \ "WedgeBeamList" \ "WedgeBeam").map(node => nodeToWedgeBeamSet(node)).toList
     logText("WedgeBeamList", list.mkString("\n        ", "\n        ", "\n"))
     list
   }

@@ -49,8 +49,6 @@ case class WedgePoint(
       "    percentOfBackground_pct: " + percentOfBackground_pct + "\n" +
       "    baselinePercentOfBackground_pct: " + baselinePercentOfBackground_pct + "\n"
   }
-
-  lazy val wedgePair = new Config.WedgeBeamPair(wedgeBeamName, backgroundBeamName)
 }
 
 object WedgePoint extends ProcedureOutput {

@@ -132,7 +132,7 @@ object WedgeHTML {
     }
 
     val baseline: Option[Baseline] = {
-      val maintenanceRecordBaseline = Baseline.findLatest(extendedData.machine.machinePK.get, WedgeAnalysis.makeBaselineName(wedgePoint.wedgePair))
+      val maintenanceRecordBaseline = Baseline.findLatest(extendedData.machine.machinePK.get, WedgeAnalysis.makeWedgeBaselineName(wedgePoint))
       if (maintenanceRecordBaseline.isDefined) Some(maintenanceRecordBaseline.get._2) else None
     }
 
