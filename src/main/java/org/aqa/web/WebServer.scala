@@ -98,6 +98,7 @@ class WebServer extends Application with Logging {
   private def getRelativeName(dir: File): String = dir.getAbsolutePath.substring(Config.DataDir.getCanonicalPath.size).replace('\\', '/')
 
   private def makeDirectory(dir: File): Directory = {
+    val j = dir.getCanonicalPath  // TODO rm
     val uri = ("file:///" + dir.getCanonicalPath).replace('\\', '/') + "/"
     val directory = new Directory(getContext.createChildContext, uri)
     directory.setListingAllowed(true)

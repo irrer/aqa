@@ -873,6 +873,7 @@ object WebUtil extends Logging {
     val admin = Value("admin")
     val run = Value("run")
     val view = Value("view")
+    val doc = Value("doc")
 
     def url(subUrl: SubUrl.Value, name: String): String = {
       ("/" + subUrl + "/" + name).replace("//", "/")
@@ -903,6 +904,10 @@ object WebUtil extends Logging {
 
   trait SubUrlView extends SubUrlTrait {
     override def subUrl = SubUrl.view
+  }
+
+  trait SubUrlDoc extends SubUrlTrait {
+    override def subUrl = SubUrl.doc
   }
 
   /**
