@@ -1,22 +1,122 @@
-<div title="Symmetry, Flatness, and Constancy">
+<div title="Symmetry, Flatness, and Constancy" class="col-md-6">
+
+<!-- 
+
+Note: Data is from https://automatedqualityassurance.org/results/INST_2/MACH_21/Phase2_0.1_4/2019-03-12T19-11-11-943_326/output_2019-03-12T19-11-20-117/SymmetryAndFlatness/SymmetryAndFlatness.html
+
+This was done with a 20 cm field because that was all that was available at the time.
+
+ -->
+
     <h2>@@title@@</h2>
     This test characterizes the beam's general shape. It starts by sampling the image in 5
     <a href="doc/circle">circles</a>
-    as shown in the following image (click for larger image):
+    as shown in the following image and reporting them in CU (Calibrated Units) Click image for larger image):
 
     <br />
-    <a href="Sym_Flat_J18G0_16X.png">
-     <img src="Sym_Flat_J18G0_16X.png" width="500" />  
+    <a href="Sym_Flat_J20G0_6X.png">
+        <img src="Sym_Flat_J20G0_6X.png" width="500" />
     </a>
 
-    <hr/>
-    Symmetry is calculated both axially and transversely as a percentage with:
+<!-- ---------------------------------------------------------------------------------- -->
 
-    <pre>axial = ((top - bottom) / bottom) * 100</pre>
-    <pre>transverse = ((right - left) / left) * 100</pre>
+    <br />
+    For the examples, the following values are used:
 
-    As an example, using the the above diagram:
+    <div style="margin:20px;">
+        <center>
+            <h3>Inputs</h3>
+        </center>
+        <table class="table table-bordered" title="Input values from this data set and from baseline.">
+            <thead>
+                <tr>
+                    <th>Source</th>
+                    <th>Top CU</th>
+                    <th>Bottom CU</th>
+                    <th>Left CU</th>
+                    <th>Right CU</th>
+                    <th>Center CU</th>
+                </tr>
+            </thead>
+            <tr>
+                <td>Analysis</td>
+                <td>0.2195</td>
+                <td>0.2195</td>
+                <td>0.2195</td>
+                <td>0.2209</td>
+                <td>0.2288</td>
+            </tr>
+            <tr>
+                <td>Baseline</td>
+                <td>0.2206</td>
+                <td>0.2209</td>
+                <td>0.2220</td>
+                <td>0.2210</td>
+                <td>0.2301</td>
+            </tr>
+        </table>
+    </div>
 
-    <pre> axial = ((0.2349 - 0.2349) / 0.2349) * 100 = 0.0   </pre>
-    <pre>transverse = ((0.2352 - 0.2348) / 0.2348) * 100 = 0.1704</pre>
+<!-- ---------------------------------------------------------------------------------- -->
+
+    <div title="Calculation of Symmetry">
+        <hr />
+        <h3>Calculation of Symmetry</h3>
+        Symmetry is calculated both axially and transversely as a percentage with:
+        <pre>axial      = ((top   - bottom) / bottom) * 100</pre>
+        <pre>transverse = ((right - left  ) / left  ) * 100</pre>
+
+
+        As an example, using the the above diagram:
+
+        <pre>axial      = ((0.2195 - 0.2195) / 0.2195) * 100 = 0.0</pre>
+        <pre>transverse = ((0.2209 - 0.2195) / 0.2195) * 100 = 0.6378</pre>
+
+    </div>
+    
+<!-- ---------------------------------------------------------------------------------- -->
+
+    <div title="Calculation of Flatness">
+        <hr />
+        <h3>Calculation of Flatness</h3>
+        Flatness is calculated over the image as a percentage using the maximum and minimum values of the 5 measured
+        circles:
+        <pre>(max - min) / (max + min) * 100</pre>
+
+        As an example, using the the above diagram:
+
+        <pre>flatness = ((0.2288 - 0.2195) / (0.2288 + 0.2195)) * 100 = 2.0745</pre>
+
+    </div>
+    
+<!-- ---------------------------------------------------------------------------------- -->
+
+
+    <div title="Calculation of Constancy">
+        <hr />
+        <h3>Calculation of Constancy</h3>
+        Constancy is calculated over the image by dividing each of the outer values by the
+        center value then subtracting each from the baseline values, processed similarly:
+
+        <pre>t = (top    / center) - (baseline top    / baseline center)</pre>
+        <pre>b = (bottom / center) - (baseline bottom / baseline center)</pre>
+        <pre>l = (left   / center) - (baseline left   / baseline center)</pre>
+        <pre>r = (right  / center) - (baseline right  / baseline center)</pre>
+
+        The sum of these is taken, multiplied by 100 and averaged:
+
+        <pre>((t + r + b + l) * 100) / 4</pre>
+
+        <p style="margin:25px;"/> 
+
+        An example, using the the above values:
+
+        <pre>t = (0.2195 / 0.2288) - (0.2206 / 0.2301) =  0.0006395</pre>
+        <pre>b = (0.2195 / 0.2288) - (0.2209 / 0.2301) = -0.0006642</pre>
+        <pre>l = (0.2195 / 0.2288) - (0.2220 / 0.2301) = -0.005445</pre>
+        <pre>r = (0.2209 / 0.2288) - (0.2210 / 0.2301) =  0.005020</pre>
+        <p style="margin:25px;"/> 
+        <pre>((0.0006395 + -0.0006642 + -0.005445 + 0.005020) * 100) / 4 = -0.01124</pre>
+    </div>
+
 </div>
