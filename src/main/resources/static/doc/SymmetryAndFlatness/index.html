@@ -4,7 +4,7 @@
 
 Note: Data is from https://automatedqualityassurance.org/results/INST_2/MACH_21/Phase2_0.1_4/2019-03-12T19-11-11-943_326/output_2019-03-12T19-11-20-117/SymmetryAndFlatness/SymmetryAndFlatness.html
 
-This was done with a 20 cm field because that was all that was available at the time.
+This was done with a 20 cm field because at the time 18 cm did not have enough data.
 
  -->
 
@@ -55,7 +55,18 @@ This was done with a 20 cm field because that was all that was available at the 
                 <td>0.2301</td>
             </tr>
         </table>
+        
+        <b>Note on baseline values:</b> <em> Some tests are better evaluated when they can be compared to
+        previous values.  For these tests, AQA allows users to establish baseline values.  When
+        a test is run, the results are compared to the baseline values.  The first time a test is run
+        there are no baseline values, so the platform uses the results of the current test to
+        establish them.
+        <p/> <br/>
+        Users may override this default by using the "Use As Baseline" button, which will establish
+        a new baseline going forward.
+        </em>
     </div>
+
 
 <!-- ---------------------------------------------------------------------------------- -->
 
@@ -63,14 +74,14 @@ This was done with a 20 cm field because that was all that was available at the 
         <hr />
         <h3>Calculation of Symmetry</h3>
         Symmetry is calculated both axially and transversely as a percentage with:
-        <pre>axial      = ((top   - bottom) / bottom) * 100</pre>
-        <pre>transverse = ((right - left  ) / left  ) * 100</pre>
+        <pre>axial      = ((top   - bottom) / bottom) * 100
+transverse = ((right - left  ) / left  ) * 100</pre>
 
 
         As an example, using the the above diagram:
 
-        <pre>axial      = ((0.2195 - 0.2195) / 0.2195) * 100 = 0.0</pre>
-        <pre>transverse = ((0.2209 - 0.2195) / 0.2195) * 100 = 0.6378</pre>
+        <pre>axial      = ((0.2195 - 0.2195) / 0.2195) * 100 = 0.0
+transverse = ((0.2209 - 0.2195) / 0.2195) * 100 = 0.6378</pre>
 
     </div>
     
@@ -98,10 +109,11 @@ This was done with a 20 cm field because that was all that was available at the 
         Constancy is calculated over the image by dividing each of the outer values by the
         center value then subtracting each from the baseline values, processed similarly:
 
-        <pre>t = (top    / center) - (baseline top    / baseline center)</pre>
-        <pre>b = (bottom / center) - (baseline bottom / baseline center)</pre>
-        <pre>l = (left   / center) - (baseline left   / baseline center)</pre>
-        <pre>r = (right  / center) - (baseline right  / baseline center)</pre>
+        <pre>
+t = (top    / center) - (baseline top    / baseline center)
+b = (bottom / center) - (baseline bottom / baseline center)
+l = (left   / center) - (baseline left   / baseline center)
+r = (right  / center) - (baseline right  / baseline center)</pre>
 
         The sum of these is taken, multiplied by 100 and averaged:
 
@@ -111,12 +123,13 @@ This was done with a 20 cm field because that was all that was available at the 
 
         An example, using the the above values:
 
-        <pre>t = (0.2195 / 0.2288) - (0.2206 / 0.2301) =  0.0006395</pre>
-        <pre>b = (0.2195 / 0.2288) - (0.2209 / 0.2301) = -0.0006642</pre>
-        <pre>l = (0.2195 / 0.2288) - (0.2220 / 0.2301) = -0.005445</pre>
-        <pre>r = (0.2209 / 0.2288) - (0.2210 / 0.2301) =  0.005020</pre>
+        <pre>
+t = (0.2195 / 0.2288) - (0.2206 / 0.2301) =  0.0006395
+b = (0.2195 / 0.2288) - (0.2209 / 0.2301) = -0.0006642
+l = (0.2195 / 0.2288) - (0.2220 / 0.2301) = -0.0054450
+r = (0.2209 / 0.2288) - (0.2210 / 0.2301) =  0.0050200</pre>
         <p style="margin:25px;"/> 
-        <pre>((0.0006395 + -0.0006642 + -0.005445 + 0.005020) * 100) / 4 = -0.01124</pre>
+        <pre>((0.0006395 + -0.0006642 + -0.0054450 + 0.0050200) * 100) / 4 = -0.01124</pre>
     </div>
 
 </div>
