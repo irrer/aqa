@@ -332,6 +332,8 @@ object WebUtil extends Logging {
                   <a href="/view/OutputList">Results</a>
                   <br/>
                   <a href="/static/admin.html">Administration</a>
+                  <br/>
+                  <a href="/static/doc/index/index.html">User Guides</a>
                 </strong>
               </div>
               <div class="col-md-2">
