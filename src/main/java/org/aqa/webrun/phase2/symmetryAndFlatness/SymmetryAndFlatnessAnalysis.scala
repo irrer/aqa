@@ -126,8 +126,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     else runReq.derivedMap(beamName).attributeList
   }
 
-  private def analyzeSymmetry(max: Double, min: Double): Double = {
-    ((max - min) / min) * 100
+  private def analyzeSymmetry(major: Double, minor: Double): Double = {
+    ((major - minor) / minor) * 100
   }
 
   /**
