@@ -137,6 +137,8 @@ class WebServer extends Application with Logging {
     doc
   }
 
+  private lazy val anonymousTranslate = new AnonymousTranslate
+
   private lazy val machineConfigurationDirRestlet = makeDirectory(Config.machineConfigurationDirFile)
 
   /*
@@ -229,6 +231,7 @@ class WebServer extends Application with Logging {
 
     val role: UserRole.Value = restlet match {
       case `staticDirRestlet` => UserRole.publik
+      case `anonymousTranslate` => UserRole.publik
       case `mainIndex` => UserRole.publik
       case `login` => UserRole.publik
       case `notAuthorized` => UserRole.publik
@@ -472,7 +475,7 @@ class WebServer extends Application with Logging {
         new ServiceInstance,
         new SymmetryAndFlatnessUseAsBaseline,
         new WedgeUseAsBaseline,
-        new AnonymousTranslate,
+        anonymousTranslate,
         new CustomizeRtPlanInterface,
         termsOfUse,
         outputList,

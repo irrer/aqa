@@ -11,6 +11,8 @@ import java.io.File
 import org.aqa.Config
 import org.restlet.routing.Filter
 import edu.umro.ScalaUtil.Trace
+import scala.xml.XML
+import scala.xml.Elem
 
 /**
  * Support for internal documentation.  HTML files in the static/doc directory are wrapped with
@@ -42,18 +44,21 @@ object Doc {
   lazy val wrapperFile = new File(docDir, "wrapper.html")
 
   lazy val wrapperContent: String = {
-    Util.readTextFile(wrapperFile) match {
-      case Right(stuff) => stuff
-      case _ => {
-        val content = { <div>{ contentTag }</div> }
-        WebUtil.wrapBody(content, defaultTitle)
-      }
-    }
+    val content = { <div>{ contentTag }</div> }
+    WebUtil.wrapBody(content, titleTag)
+
+    //    Util.readTextFile(wrapperFile) match {
+    //      case Right(stuff) => stuff
+    //      case _ => {
+    //        val content = { <div>{ contentTag }</div> }
+    //        WebUtil.wrapBody(content, defaultTitle)
+    //      }
+    //    }
   }
 
 }
 
-class Doc extends Filter with SubUrlAdmin with Logging {
+class Doc extends Filter with SubUrlDoc with Logging {
 
   /**
    * Get the title from the HTML text by finding the first HTML title attribute and using
@@ -79,13 +84,34 @@ class Doc extends Filter with SubUrlAdmin with Logging {
     }
   }
 
+  private def processXml(doc: Elem): String = {
+    val pageTitle = {
+      (doc \ "@title").headOption match {
+        case Some(node) => node.text
+        case _ => Doc.defaultTitle
+      }
+    }
+    WebUtil.wrapBody(doc, pageTitle).replace(Doc.titleTag, pageTitle)
+  }
+
   override def afterHandle(request: Request, response: Response): Unit = {
     val remaining = request.getResourceRef.getRemainingPart
-    if (remaining.toLowerCase.startsWith("/doc/") && remaining.toLowerCase.endsWith(".html")) {
+    val rem = remaining.toLowerCase
+    if (rem.startsWith("/doc/") && (rem.endsWith(".xml") || rem.endsWith(".html"))) {
       super.afterHandle(request, response)
-      val oldText = response.getEntityAsText
+      val sourceText = response.getEntityAsText
 
-      val newText = Doc.wrapperContent.replace(Doc.contentTag, oldText).replaceAll(Doc.titleTag, getTitleFromText(oldText))
+      val newText = Util.loadXml(sourceText) match {
+        case Right(doc) => processXml(doc)
+        case Left(msg) => {
+          logger.warn("User requested doc " + remaining + " but was not valid XML: " + msg)
+          val j = Doc.wrapperContent
+          Doc.wrapperContent.replace(Doc.contentTag, sourceText).replaceAll(Doc.titleTag, getTitleFromText(sourceText))
+        }
+      }
+
+      response.getEntity.exhaust // not totally sure if this is required or not
+      response.getEntity.release // not totally sure if this is required or not
       response.setEntity(newText, MediaType.TEXT_HTML)
     }
   }

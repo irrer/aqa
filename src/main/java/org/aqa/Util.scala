@@ -25,6 +25,8 @@ import com.pixelmed.dicom.TransferSyntax
 import java.awt.Point
 import java.security.InvalidParameterException
 import com.pixelmed.dicom.DicomDictionary
+import scala.xml.Elem
+import scala.xml.XML
 
 object Util extends Logging {
 
@@ -806,4 +808,16 @@ object Util extends Logging {
     logger.info(msg)
   }
 
+  /**
+   * Load XML from a string.
+   */
+  def loadXml(xmlText: String): Either[String, Elem] = {
+    try {
+      val doc = XML.loadString(xmlText)
+      Right(doc)
+    } catch {
+      case t: Throwable => Left("XML error: " + t.toString)
+    }
+
+  }
 }
