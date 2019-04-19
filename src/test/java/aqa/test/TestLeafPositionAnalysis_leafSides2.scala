@@ -29,6 +29,7 @@ class TestLeafPositionAnalysis_leafSides2 extends FlatSpec with Matchers {
     outDir.mkdirs
 
     val file = new File(dir, """TestLeafPositionAnalysis.dcm""")
+    //val file = new File("""D:\downloads\LUHS.dcm""")
     println("Reading DICOM file : " + file.getAbsolutePath)
     val imageAttrList = Util.readDicomFile(file).right.get
     val dicomImage = new DicomImage(imageAttrList)
@@ -39,6 +40,7 @@ class TestLeafPositionAnalysis_leafSides2 extends FlatSpec with Matchers {
     val beamName = "PF Stat 0"
     val horizontal = true
     val profile = if (horizontal) dicomImage.rowSums else dicomImage.columnSums
+    println("leaf profile\n" + profile.mkString("\n    ", "\n    ", "\n    "))
     val translator = new IsoImagePlaneTranslator(imageAttrList)
     val leafEndList_pix = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, planAl).map(s => translator.iso2PixCoordY(s))
     val preciseLeafSideList_pix = LeafPositionAnalysis.leafSides_pix(horizontal, beamName, imageAttrList, dicomImage, planAl, translator, leafEndList_pix)

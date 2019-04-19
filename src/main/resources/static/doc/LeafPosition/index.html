@@ -1,0 +1,51 @@
+<div title="Leaf Position / Picket Fence" class="col-md-8 col-md-offset-1">
+
+    <h2>@@title@@</h2>
+    This test determines the position error of each collimator leaf at a variety of positions. For each leaf position,
+    the expected (from RTPLAN) position is subtracted from the observed position and the error reported in mm in the
+    isoplane:
+
+    <h4 style="margin: 40px;">
+        <code>error = observed - expected</code>
+    </h4>
+    
+    <p>The following example shows the measured positions of the leaf ends and sides (as dashed lines) as well as the
+    expected (planned) positions, compensated with the results from the collimator centering, shown as solid lines.</p>
+
+    <a href="LeafPositionExample.png"
+        title="Example of Millenium analysis.  Click for full sized image.">
+        <img src="LeafPositionExample.png" width="800px" />
+    </a>
+
+
+
+    <h3>Leaf Sides</h3>
+    <p>
+        A better measurement of the leaf ends can be made if the position of the leaf sides is known. The image below
+        shows
+        that leaf ends are close together, so there is a risk that the position of a leaf end may be influenced by
+        its
+        neighbors:
+    </p>
+    <br />
+    <img src="LeafPositionZoomed.png" />
+
+    <p>To measure the leaf sides, the sum of each row (or columns if the collimator were turned 90 degrees) of pixels in
+        the entire image is taken, which yields a profile. The following graph shows an example taken from a Millenium
+        collimator:
+    </p>
+
+    <a href="LeafSideProfileWellDefined.png"
+        title="Example of Millenium leaf side profile.  Click for full sized image.">
+        <img src="LeafSideProfileWellDefined.png" width="800px" />
+    </a>
+
+    <p>And an example from an HD MCL c</p>
+    <a href="LeafSideProfilePartsUnclear.png"
+        title="Example of HD MLC leaf side profile.  Click for full sized image.">
+        <img src="LeafSideProfilePartsUnclear.png" width="800px" />
+    </a>
+
+<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+</div>
