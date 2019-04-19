@@ -1,0 +1,114 @@
+<div title="Creating a Custom Plan" class="col-md-6 col-md-offset-1">
+    <h2 style="margin:30px;">Creating a Custom Plan</h2>
+    <p>To run the Phase 2 tests, you must submit a set of EPID images created by a compatible RTPLAN.</p>
+
+    <p>Often simply copying an RTPLAN from another institution does not work because of incompatibilities
+        with machine
+        name, beam energies, and tolerance table names. The Customize Plan feature
+        addresses this.
+    </p>
+
+    <p>
+        The steps are:
+
+        <ul>
+            <li>Navigate to Administration --> Machines</li>
+
+            <li>Select the machine from the list that you wish to make the plan for. If it does not exist, use Create
+                new
+                Machine
+                to create
+                it.
+            </li>
+
+            <li>Make sure that the list of beam energies that your machine supports is correct.</li>
+
+            <li>Click the Customize Plan button</li>
+        </ul>
+    </p>
+
+
+    <p>The following screen shot shows an example for a machine named Foo.</p>
+
+    <div style="margin:30px; border: 1px solid lightgrey;">
+        <img src="CustomizePlanUI.png" style="margin:30px;" />
+    </div>
+
+    <p>Fill in the fields:</p>
+
+    <div style="margin:30px;">
+        <p>
+            <b>Patient ID:</b>
+            This will be filled with a default value but you may override it with something that
+            will make it convenient
+            for
+            you to track in your system.
+        </p>
+
+        <p>
+            <b>Patient Name:</b>
+            Similar to Patient ID
+        </p>
+
+        <p>
+            <b>Tolerance Table Name:</b>
+            Initially empty, this must be filled with a tolerance table that your treatment planning system supports.
+        </p>
+
+        <p>
+            <b>Plan Name:</b>
+            Set by default, this can be overridden, often reflecting a version of the plan.
+        </p>
+
+        <p>
+            <b>Machine Name:</b>
+            The name that your planning system expects. Some planning systems have different values for machine ID and
+            machine name.
+        </p>
+    </div>
+
+    <p>Click the Create button and the following will be shown:</p>
+
+    <div style="margin:30px; border: 1px solid lightgrey;">
+        <img src="CustomizePlanDownload.png" style="margin:30px;" />
+    </div>
+
+    <p>Click Download to download a DICOM version of the RTPLAN.</p>
+
+    <p>The RTPLAN may then be imported into your planning system.</p>
+
+    <p>Note: The AQA keeps track of custom made plans, so it is not necessary to upload them later.</p>
+
+    <h4>Technical Notes</h4>
+    <ul>
+        <li>Custom plans are created by taking a master plan and modifying it. The collimator and beam energies in
+            machine configuration parameters are used, so it is important that they be correct.
+        </li>
+        <li>
+            There is a master plan for each of the Millenium and HD MLC collimators. The choice of which to start from
+            is
+            determined by the
+            <b>Collimator</b>
+            choice in machine configuration.
+        </li>
+
+        <li>All treatment machines are expected to support 6 MeV, and that is the energy that most beams in Phase 2 use.
+            Beyond that, machines may be set up to handle different energies. The master plans have a J18G0-6F beam
+            which is copied for the other beam energies that a machine may support. For example, if a machine support 16
+            Mev, then a J18G0-16F beam will be added to the custom plan.
+        </li>
+
+        <li>The order of the beams in the plan was chosen to optimize delivery time by minimizing mechanical movement.
+            When a plan is created, each beam name is prefixed with a number that, when sorted, will preserve this
+            order.
+        </li>
+
+        <li>When a plan is created, it uses all new UIDs. This is so it will be entirely separate from other versions of
+            the plan and can be imported into a treatment planning system without conflicts.
+        </li>
+
+        <li>The instance creation date and time of the plan are automatically set to the current time to help keep track
+            of plans.
+        </li>
+    </ul>
+</div>

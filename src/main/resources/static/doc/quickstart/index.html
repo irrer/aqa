@@ -1,61 +1,111 @@
-<div title="Quick Start Guide" class="col-md-6">
-
-
+<div title="Quick Start Guide" class="col-md-6 col-md-offset-1">
 
     <h2>@@title@@</h2>
 
-    To run a test on the AQA platform a machine and RTPLAN must first be created (account required, contact
-    Jim Irrer (irrer@med.umich.edu) or Natalie Baughan (nbaughan@med.umich.edu)).  This is only done once, and
-    subsequently tests may be run against the machine many times by repeating steps 3 and 4.</p>
-    
-    <p>a. Each institution will receive user accounts that will have access to run files and create additional accounts. This account
-    must be created by, please contact them to get set
-    up. They will send you your account details.</p>
-    
+    To run a test on the AQA platform a machine and RTPLAN must first be created ( account required, contact
+    <a href="mailto:irrer@med.umich.edu">Jim Irrer</a>
+    or
+    <a href="mailto:nbaughan@med.umich.edu">Natalie Baughan</a>
+    )
+    . This is only done once, and
+    subsequently tests may be run against the machine many times by repeating steps 3 and
+    4.
+
+    <p>a. Each institution will receive user accounts that will have access to run files and create additional accounts.
+        This account
+        must be created by, please contact them to get set
+        up. They will send you your account details.
+    </p>
+
     <h4 style="margin-top: 35px;">1: Create Machine</h4>
-    
-   
+
+
     <p style="margin-left: 40px">
-    <b>Administration</b>  &#8594;  <b>Machines</b>  &#8594;  <img src="CreateNewMachine.png" width="200px"/>
+        <b>Administration</b>
+        &#8594;
+        <b>Machines</b>
+        &#8594;
 
-    <p>Fill fields to reflect your machine, and click <b>Create</b>, which will return to the list of machines.</p>
-    
-    
-    <h4 style="margin-top: 35px;">2: Create RTPLAN</h4>
-    <p>Click the name of the newly created machine, then the "Customize Plan" button at the bottom.</p>
-    
-    
-    <p>The <b>Patient ID</b>, <b>Patient Name</b>, and <b>Plan Name</b> are arbitrary, but can be helpful for tracking the machine's test activity.</p>
-    
-    <p>The <b>Tolerance Table Name</b> should be one that exists in your treatment planning system.   The <b>Machine Name</b> is given
-    a default, but may need to be changed to match the name expected by the treatment machine.</p>
-    
-    <p>Click <b>Create</b> to create the RTPLAN.  This will bring up another page with a link to download the just-created RTPLAN.</p>
-    
-    <h4 style="margin-top: 35px;">3: Run the RTPLAN</h4>
-    
+        <div style="margin:10px; border: 1px solid lightgrey;">
+            <img src="CreateNewMachine.png" style="margin:30px;" width="250px" />
+        </div>
+
+        <p>
+            Fill fields to reflect your machine, and click
+            <b>Create</b>
+            , which will return to the list of machines.
+        </p>
+
+        <h4 style="margin-top: 35px;">
+            2:
+            <a href="/static/doc/CustomizePlan/index.html" title="Click for more detailed guide">Create RTPLAN</a>
+        </h4>
+        <p>Click the name of the newly created machine, then the "Customize Plan" button at the bottom.</p>
+
+        <p>
+            The
+            <b>Patient ID</b>
+            ,
+            <b>Patient Name</b>
+            , and
+            <b>Plan Name</b>
+            are arbitrary, but can be helpful for tracking the machine's test activity.
+        </p>
+
+        <p>
+            The
+            <b>Tolerance Table Name</b>
+            should be one that exists in your treatment planning system. The
+            <b>Machine Name</b>
+            is given
+            a default, but may need to be changed to match the name expected by the treatment machine.
+        </p>
+
+        <p>
+            Click
+            <b>Create</b>
+            to create the RTPLAN. This will bring up another page with a link to download the just-created RTPLAN.
+        </p>
+
+        <h4 style="margin-top: 35px;">3: Run the RTPLAN</h4>
+
         <p>Import the RTPLAN into your treatment system.</p>
-        
-        <p>Verify the couch coordinates are correct for your machine. 
-                The couch needs to be retracted so it won't be on imager,
-                but still in a position to beam on.</p>
 
-        <p>Schedule sessions and add integrated image template in scheduling. 
-        The plan needs to run as integrated, not continuous.</p>
-        
+        <p>Verify the couch coordinates are correct for your machine.
+            The couch needs to be retracted so it won't be on
+            imager,
+            but still in a position to beam on.
+        </p>
+
+        <p>Schedule sessions and add integrated image template in scheduling.
+            The plan needs to run as integrated, not
+            continuous.
+        </p>
+
         <p>Imager should be at 1500 mm (not at ISO)</p>
-        
+
         <p>Schedule at machine, deliver in QA mode, and export the RTIMAGE files.</p>
 
-    <h4 style="margin-top: 35px;">4: Run the Test</h4>
+        <h4 style="margin-top: 35px;">4: Run the Test</h4>
 
-    <p>On the AQA site, click <b>Run Procedure</b> &#8594; <b>Phase2</b></p>
-    
-    <p>Drag and drop the RTIMAGE files into the upload box.</p>
-    
-    <p>Click the <b>Run</b> button to start the analysis, which takes less than 2 minutes.</p>
-    
-    <p>Results will be displayed automatically, showing an overview of results.  Click on the tests for more details.</p>
+        <p>
+            On the AQA site, click
+            <b>Run Procedure</b>
+            &#8594;
+            <b>Phase2</b>
+        </p>
 
-    <p style="margin-top: 35px;"> </p>
+        <p>Drag and drop the RTIMAGE files into the upload box.</p>
+
+        <p>
+            Click the
+            <b>Run</b>
+            button to start the analysis, which takes less than 2 minutes.
+        </p>
+
+        <p>Results will be displayed automatically, showing an overview of results. Click on the tests for more details.
+        </p>
+
+        <p style="margin-top: 35px;">
+        </p>
 </div>
