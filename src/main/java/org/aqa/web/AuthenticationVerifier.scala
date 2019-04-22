@@ -14,6 +14,7 @@ import org.restlet.engine.header.ChallengeWriter
 import org.aqa.db.UserRole
 import org.aqa.db.CachedUser
 import org.aqa.Crypto
+import edu.umro.ScalaUtil.Trace
 
 class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.Value) extends Verifier with Logging {
 

@@ -175,7 +175,6 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
     super.handle(request, response)
     val valueMap = getValueMap(request)
     val userId = WebUtil.getUserIdOrDefault(request, "guest")
-    val user = WebUtil.getUser(request)
     try {
       val list = getTranslationList(request)
       if (valueMap.get("html").isDefined)

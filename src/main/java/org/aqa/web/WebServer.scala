@@ -42,8 +42,6 @@ import org.aqa.webrun.phase2.customizeRtPlan.CustomizeRtPlanInterface
 object WebServer {
   val challengeScheme = ChallengeScheme.HTTP_BASIC
 
-  //  lazy val resultsDir = new File(Config.DataDir, Config.resultsDirName)
-
   val staticDirBaseUrl = "/" + Config.staticDirName
 
   val resultsDirBaseUrl = "/" + Config.resultsDirName
@@ -98,7 +96,6 @@ class WebServer extends Application with Logging {
   private def getRelativeName(dir: File): String = dir.getAbsolutePath.substring(Config.DataDir.getCanonicalPath.size).replace('\\', '/')
 
   private def makeDirectory(dir: File): Directory = {
-    val j = dir.getCanonicalPath // TODO rm
     val uri = ("file:///" + dir.getCanonicalPath).replace('\\', '/') + "/"
     val directory = new Directory(getContext.createChildContext, uri)
     directory.setListingAllowed(true)
@@ -131,10 +128,16 @@ class WebServer extends Application with Logging {
   }
 
   private lazy val staticDirRestlet = {
+    logger.info("staticDirRestlet being constructed")
     val staticDir = makeDirectory(Config.staticDirFile)
-    val doc = new Doc
-    doc.setNext(staticDir)
-    doc
+
+    if (true) { // TODO should be doc
+      val doc = new Doc
+      doc.setNext(staticDir)
+      doc
+    } else {
+      staticDir
+    }
   }
 
   private lazy val anonymousTranslate = new AnonymousTranslate
@@ -226,12 +229,13 @@ class WebServer extends Application with Logging {
    * to use it?
    */
   private def getRequestedRole(request: Request, response: Response): UserRole.Value = {
+    Trace.trace("requested by user " + WebUtil.getUserIdOrDefault(request, "unknown")) // TODO rm
     val templateRoute = router.getNext(request, response).asInstanceOf[TemplateRoute]
     val restlet = templateRoute.getNext
 
     val role: UserRole.Value = restlet match {
       case `staticDirRestlet` => UserRole.publik
-      case `anonymousTranslate` => UserRole.publik
+      //case `anonymousTranslate` => UserRole.publik
       case `mainIndex` => UserRole.publik
       case `login` => UserRole.publik
       case `notAuthorized` => UserRole.publik
@@ -310,7 +314,7 @@ class WebServer extends Application with Logging {
         case Some(user) => user.termsOfUseAcknowledgment.isEmpty
         case _ => false
       }
-      false // TODO remove this when we figure out how to fix 'aggree to terms of use'
+      false // TODO remove this when we figure out how to fix 'agree to terms of use'
     }
 
     class RedirectUnauthorizedToLogin extends Filter {
@@ -372,8 +376,6 @@ class WebServer extends Application with Logging {
     class ResolveToRefererFilter extends Filter {
 
       override def afterHandle(request: Request, response: Response): Unit = {
-        val j1 = response.getStatus
-        val j2 = request.getReferrerRef
         if ((response.getStatus == Status.REDIRECTION_SEE_OTHER) && (request.getReferrerRef != null)) {
           val locRef = response.getLocationRef
           val desiredHost = request.getReferrerRef.getHostIdentifier
@@ -503,7 +505,9 @@ class WebServer extends Application with Logging {
       resolveToReferer(auth)
     } catch {
       case t: Throwable => {
-        println("WebServer.createInboundRoot unexpected error: " + t) // TODO extreme badness
+        val msg = "WebServer.createInboundRoot unexpected error: " + fmtEx(t)
+        println(msg)
+        logger.error(msg)
         router
       }
     }
@@ -528,6 +532,7 @@ class WebServer extends Application with Logging {
     component.getDefaultHost.attach(this)
     component.start
     waitForWebServiceToStart
+    if (staticDirRestlet == null) println("null") // TODO rm
   }
 
   init

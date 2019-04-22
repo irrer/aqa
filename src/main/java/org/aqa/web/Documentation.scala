@@ -22,8 +22,8 @@ import org.restlet.util.Series
 import org.restlet.security.SecretVerifier
 import org.aqa.db.CachedUser
 
-object Documentation {
-  val path = "/Login"
+object XDocumentation {
+  val path = "/XLogin"
   val messageTag = "Message"
 }
 
@@ -114,42 +114,42 @@ class Documentation extends Restlet with SubUrlRoot {
       println("hey ho")
     }
 
-    if (true) { //   TODO put back if (styleMap.isEmpty) {
-      // TODO should send credentials to client for further use
-      // TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-
-      if (false) {
-        val chalResp = new ChallengeResponse(WebServer.challengeScheme)
-        chalResp.setIdentifier(id.getValOrEmpty(valueMap))
-        chalResp.setSecret(password.getValOrEmpty(valueMap))
-        val cw = new ChallengeWriter
-        val basicHelper = new HttpBasicHelper()
-        val httpHeaders: Series[Header] = null
-        basicHelper.formatResponse(cw, chalResp, request, httpHeaders)
-      }
-
-      if (false) {
-        val chalReq = new ChallengeRequest(WebServer.challengeScheme, "Hiya there")
-
-        val challengeRequests = new java.util.ArrayList[ChallengeRequest]()
-        challengeRequests.add(chalReq)
-        response.setChallengeRequests(challengeRequests)
-
-        val entity = response.getEntity
-        val authnHelper = new org.restlet.engine.security.HttpBasicHelper()
-        //val authnHelperx = new org.restlet.data.AuthenticationHelper ()
-
-        redirect(valueMap, response)
-      }
-
-      if (false) {
-        val challengeRequest = new ChallengeRequest(WebServer.challengeScheme, "Hiya there")
-        val challengeResponse = new ChallengeResponse(challengeRequest, response, "irrer", "foo")
-        request.setChallengeResponse(challengeResponse)
-      }
-    } else {
-      form.setFormResponse(valueMap, styleMap, pageTitle, response, Status.CLIENT_ERROR_UNAUTHORIZED)
-    }
+//    if (true) { //   TODO put back if (styleMap.isEmpty) {
+//      // TODO should send credentials to client for further use
+//      // TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
+//
+//      if (false) {
+//        val chalResp = new ChallengeResponse(WebServer.challengeScheme)
+//        chalResp.setIdentifier(id.getValOrEmpty(valueMap))
+//        chalResp.setSecret(password.getValOrEmpty(valueMap))
+//        val cw = new ChallengeWriter
+//        val basicHelper = new HttpBasicHelper()
+//        val httpHeaders: Series[Header] = null
+//        basicHelper.formatResponse(cw, chalResp, request, httpHeaders)
+//      }
+//
+//      if (false) {
+//        val chalReq = new ChallengeRequest(WebServer.challengeScheme, "Hiya there")
+//
+//        val challengeRequests = new java.util.ArrayList[ChallengeRequest]()
+//        challengeRequests.add(chalReq)
+//        response.setChallengeRequests(challengeRequests)
+//
+//        val entity = response.getEntity
+//        val authnHelper = new org.restlet.engine.security.HttpBasicHelper()
+//        //val authnHelperx = new org.restlet.data.AuthenticationHelper ()
+//
+//        redirect(valueMap, response)
+//      }
+//
+//      if (false) {
+//        val challengeRequest = new ChallengeRequest(WebServer.challengeScheme, "Hiya there")
+//        val challengeResponse = new ChallengeResponse(challengeRequest, response, "irrer", "foo")
+//        request.setChallengeResponse(challengeResponse)
+//      }
+//    } else {
+//      form.setFormResponse(valueMap, styleMap, pageTitle, response, Status.CLIENT_ERROR_UNAUTHORIZED)
+//    }
   }
 
   private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {

@@ -18,7 +18,7 @@ import org.aqa.db.CachedUser
  * honor requests if the client has the proper authorization level.
  *
  */
-class ChallAuth(context: Context, optional: Boolean, challengeScheme: ChallengeScheme, getRequestedRole: (Request, Response) => UserRole.Value)
+class XChallAuth(context: Context, optional: Boolean, challengeScheme: ChallengeScheme, getRequestedRole: (Request, Response) => UserRole.Value)
   extends ChallengeAuthenticator(context, optional, challengeScheme, "Enter your AQA password") {
 
   private def redirectToLogin(response: Response) = {

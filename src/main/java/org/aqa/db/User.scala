@@ -101,7 +101,7 @@ object User extends Logging {
     val id = idRaw.trim.toLowerCase
     val action = query.filter(_.id.toLowerCase === id)
     val seq = Db.run(action.result)
-    logger.info("getUserById search for user with id " + idRaw + " + found " + seq.size + " matches.")
+    logger.info("getUserById search for user with id " + idRaw + " found " + seq.size + " matches.")
     seq.headOption
   }
 

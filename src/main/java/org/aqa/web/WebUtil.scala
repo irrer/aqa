@@ -377,7 +377,7 @@ object WebUtil extends Logging {
 
   trait ToHtml {
     def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem;
-    def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = toHtml(valueMap, errorMap, None) // TODO ?
+    //def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = toHtml(valueMap, errorMap, None) // TODO ?
     def toHtml(valueMap: ValueMapT): Elem = toHtml(valueMap, styleNone, None)
     def toHtml: Elem = toHtml(emptyValueMap, styleNone, None)
   }
@@ -805,9 +805,6 @@ object WebUtil extends Logging {
         ss
       }
 
-      logger.info("shouldShow: " + shouldShow) // TODO rm
-      logger.info("selectListF: " + selectList) // TODO rm
-
       val html = {
         if (shouldShow) {
           val list = selectList.map(v => toOption(v._1, v._2))
@@ -1040,6 +1037,7 @@ object WebUtil extends Logging {
 
   def getUserIdOrDefault(request: Request, dflt: String): String = {
     val cr = request.getChallengeResponse
+    logger.info("challenge response given: " + (cr != null) + "    request: " + request.getResourceRef.getRemainingPart) // TODO rm
     if (cr == null) dflt else cr.getIdentifier
   }
 
@@ -1193,10 +1191,6 @@ object WebUtil extends Logging {
 
     lazy val machList = alList.map(al => attributeListToMachine(al)).flatten
 
-    logger.info("fileList.isEmpty: " + fileList.isEmpty) // TODO rm
-    logger.info("alList.isEmpty: " + alList.isEmpty) // TODO rm
-    logger.info("machList.nonEmpty: " + machList.nonEmpty) // TODO rm
-
     alList match {
       case _ if fileList.isEmpty => false
       case _ if alList.isEmpty => false
@@ -1226,9 +1220,8 @@ object WebUtil extends Logging {
     def shouldShow(mmi: MMI): Boolean = {
       mmi.machine.serialNumber.isEmpty && (userIsWhitLst || (instPK == mmi.machine.institutionPK))
     }
-    logger.info("userIsWhitLst: " + userIsWhitLst) // TODO rm
+    logger.info("userIsWhitLst: " + userIsWhitLst)
     val machList = ("-1", "None") +: Machine.listWithDependencies.filter(mmi => shouldShow(mmi)).sortWith(sortMMI).map(mmi => mmiToTuple(mmi))
-    logger.info("machList: \n    " + machList.map(m => m._1 + " : " + m._2).mkString("\n    ")) // TODO rm
     machList
   }
 

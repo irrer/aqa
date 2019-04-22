@@ -110,8 +110,8 @@ class Doc extends Filter with SubUrlDoc with Logging {
         }
       }
 
-      response.getEntity.exhaust // not totally sure if this is required or not
-      response.getEntity.release // not totally sure if this is required or not
+      //      response.getEntity.exhaust // not totally sure if this is required or not
+      //      response.getEntity.release // not totally sure if this is required or not
       response.setEntity(newText, MediaType.TEXT_HTML)
     }
   }
