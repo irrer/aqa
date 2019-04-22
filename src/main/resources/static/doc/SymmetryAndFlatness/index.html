@@ -75,14 +75,14 @@ This was done with a 20 cm field because at the time 18 cm did not have enough d
         <hr />
         <h3>Calculation of Symmetry</h3>
         Symmetry is calculated both axially and transversely as a percentage with:
-        <pre>axial      = ((top   - bottom) / bottom) * 100
-transverse = ((right - left  ) / left  ) * 100</pre>
+        <pre>axial      = ((top   - bottom) / bottom) * 100</pre>
+        <pre>transverse = ((right - left  ) / left  ) * 100</pre>
 
 
         As an example, using the the above diagram:
 
-        <pre>axial      = ((0.2195 - 0.2195) / 0.2195) * 100 = 0.0
-transverse = ((0.2209 - 0.2195) / 0.2195) * 100 = 0.6378</pre>
+        <pre>axial      = ((0.2195 - 0.2195) / 0.2195) * 100 = 0.0</pre>
+        <pre>transverse = ((0.2209 - 0.2195) / 0.2195) * 100 = 0.6378</pre>
 
     </div>
     
@@ -110,11 +110,10 @@ transverse = ((0.2209 - 0.2195) / 0.2195) * 100 = 0.6378</pre>
         Constancy is calculated over the image by dividing each of the outer values by the
         center value then subtracting each from the baseline values, processed similarly:
 
-        <pre>
-t = (top    / center) - (baseline top    / baseline center)
-b = (bottom / center) - (baseline bottom / baseline center)
-l = (left   / center) - (baseline left   / baseline center)
-r = (right  / center) - (baseline right  / baseline center)</pre>
+        <pre>t = (top    / center) - (baseline top    / baseline center)</pre>
+        <pre>b = (bottom / center) - (baseline bottom / baseline center)</pre>
+        <pre>l = (left   / center) - (baseline left   / baseline center)</pre>
+        <pre>r = (right  / center) - (baseline right  / baseline center)</pre>
 
         The sum of these is taken, multiplied by 100 and averaged:
 
@@ -124,11 +123,10 @@ r = (right  / center) - (baseline right  / baseline center)</pre>
 
         An example, using the the above values:
 
-        <pre>
-t = (0.2195 / 0.2288) - (0.2206 / 0.2301) =  0.0006395
-b = (0.2195 / 0.2288) - (0.2209 / 0.2301) = -0.0006642
-l = (0.2195 / 0.2288) - (0.2220 / 0.2301) = -0.0054450
-r = (0.2209 / 0.2288) - (0.2210 / 0.2301) =  0.0050200</pre>
+        <pre>t = (0.2195 / 0.2288) - (0.2206 / 0.2301) =  0.0006395</pre>
+        <pre>b = (0.2195 / 0.2288) - (0.2209 / 0.2301) = -0.0006642</pre>
+        <pre>l = (0.2195 / 0.2288) - (0.2220 / 0.2301) = -0.0054450</pre>
+        <pre>r = (0.2209 / 0.2288) - (0.2210 / 0.2301) =  0.0050200</pre>
         <p style="margin:25px;"/> 
         <pre>((0.0006395 + -0.0006642 + -0.0054450 + 0.0050200) * 100) / 4 = -0.01124</pre>
     </div>
