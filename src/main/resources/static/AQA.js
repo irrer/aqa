@@ -67,13 +67,19 @@ var jsonhttp = new XMLHttpRequest();
 var aliasToRealUrl = "/AnonymousTranslate/translateTable.json";  // defines the URL for getting the alias to real table
 
 jsonhttp.onreadystatechange = function() {
-  if (this.readyState == 4 && this.status == 200) {
-    var aliasToRealList = JSON.parse(this.responseText);
-    translateAliases(aliasToRealList);
+    if (this.readyState == 4 && this.status == 200) {
+      var aliasToRealList = JSON.parse(this.responseText);
+      translateAliases(aliasToRealList);
   }
 };
-jsonhttp.open("GET", aliasToRealUrl, true);
-jsonhttp.send();
+
+// If this is a reference to the static area, then do not get the translateTable.json .  It is actually a bad thing to get
+// it, because public users (not logged in, so no credentials) get an annoying little prompt to log in, which they can
+// ignore, but is a little confusing and definitely unnecessary.
+if (!(window.location.pathname.toLowerCase().startsWith("/static/"))) {
+  jsonhttp.open("GET", aliasToRealUrl, true);
+  jsonhttp.send();
+}
 
 function translateAliases(aliasToRealList) {
   var publicList = $( "[aqaalias]" ); // defines the attribute for showing real names

@@ -46,14 +46,6 @@ object Doc {
   lazy val wrapperContent: String = {
     val content = { <div>{ contentTag }</div> }
     WebUtil.wrapBody(content, titleTag)
-
-    //    Util.readTextFile(wrapperFile) match {
-    //      case Right(stuff) => stuff
-    //      case _ => {
-    //        val content = { <div>{ contentTag }</div> }
-    //        WebUtil.wrapBody(content, defaultTitle)
-    //      }
-    //    }
   }
 
 }
@@ -110,8 +102,9 @@ class Doc extends Filter with SubUrlDoc with Logging {
         }
       }
 
-      //      response.getEntity.exhaust // not totally sure if this is required or not
-      //      response.getEntity.release // not totally sure if this is required or not
+      response.getEntity.exhaust // not totally sure if this is required or not
+      response.getEntity.release // not totally sure if this is required or not
+      Trace.trace(newText.substring(0, 500)) // TODO rm
       response.setEntity(newText, MediaType.TEXT_HTML)
     }
   }

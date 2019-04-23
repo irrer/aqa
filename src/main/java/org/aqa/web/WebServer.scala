@@ -126,19 +126,14 @@ class WebServer extends Application with Logging {
     val redirector = new Redirector(getContext, "/target?referer={fi}", Redirector.MODE_CLIENT_SEE_OTHER)
     r
   }
-  
-  lazy val docRestlet = new Doc
 
   private lazy val staticDirRestlet = {
     logger.info("staticDirRestlet being constructed")
+    lazy val docRestlet = new Doc
     val staticDir = makeDirectory(Config.staticDirFile)
 
-    if (true) { // TODO should be doc
-      docRestlet.setNext(staticDir)
-      docRestlet
-    } else {
-      staticDir
-    }
+    docRestlet.setNext(staticDir)
+    docRestlet
   }
 
   private lazy val anonymousTranslate = new AnonymousTranslate
@@ -230,7 +225,6 @@ class WebServer extends Application with Logging {
   private lazy val forceConstruction = {
 
     val list = Seq(
-      docRestlet,
       staticDirRestlet,
       anonymousTranslate,
       mainIndex,
@@ -254,24 +248,22 @@ class WebServer extends Application with Logging {
    * Determine the role (authorization level) that the request is for.  This is the rules are
    * defined for authorization, or in other words, given a request, what UserRole is required
    * to use it?
-   * 
+   *
    * This function is related to <code>forceConstruction</code>, which forces the construction of restlets.
    */
   private def getRequestedRole(request: Request, response: Response): UserRole.Value = {
-    Trace.trace("requested by user " + WebUtil.getUserIdOrDefault(request, "unknown")) // TODO rm
     val templateRoute = router.getNext(request, response).asInstanceOf[TemplateRoute]
     val restlet = templateRoute.getNext
 
     val role: UserRole.Value = restlet match {
       case `staticDirRestlet` => UserRole.publik
-      case `anonymousTranslate` => UserRole.publik
+      case `anonymousTranslate` => UserRole.guest // tough lesson: This MUST be privileged to at least require a password.
       case `mainIndex` => UserRole.publik
       case `login` => UserRole.publik
       case `notAuthorized` => UserRole.publik
       case `notAuthenticated` => UserRole.publik
       case `termsOfUse` => UserRole.publik
       case `setPassword` => UserRole.guest
-      case `docRestlet` => UserRole.publik
       case `resultsDirectoryRestlet` => UserRole.guest
       case `webRunIndex` => UserRole.user
       case `viewOutput` => UserRole.user
