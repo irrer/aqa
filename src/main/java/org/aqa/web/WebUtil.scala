@@ -279,10 +279,6 @@ object WebUtil extends Logging {
 
     val refreshMeta = Seq(refresh).flatten.filter(r => r > 0).map(r => { <meta http-equiv='refresh' content={ r.toString }/> })
 
-    //                    <link href="/static/standard/c3.min.css" rel="stylesheet"/>,
-    //                    <script src="/static/standard/d3.min.js"></script>,
-    //                    <script src="/static/standard/c3.min.js"></script>)
-
     val c3Refs: Seq[Elem] = {
       if (c3) {
         // There are newer versions of these files but they don't seem to work in AQA.
@@ -295,19 +291,12 @@ object WebUtil extends Logging {
 
     val runScriptTag = "@@script@@"
 
-    //                    <link rel="stylesheet" href="/static/standard/bootstrap.min.css"/>
-    //                    <link rel="stylesheet" href="/static/standard/bootstrap-theme.min.css"/>
-    //                    <script src="/static/jquery/standard/jquery.min.js"></script>
-    //                    <script src="/static/standard/bootstrap.min.js"></script>
-    //                    <script src="/static/standard/dropzone.min.js"></script>
-    //                    <script src="/static/standard/jquery.timeago-1.5.3.js"></script>
-    //                    <link rel="stylesheet" href="/static/standard/dropzone.min.css"/>
-
     val page = {
       <html lang="en">
         <head>
           <title>{ pageTitle }</title>
           { refreshMeta }
+          <!--  <link rel="icon" href="/favicon.ico" type="image/x-icon"/> -->
           <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"/>
           <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap-theme.min.css"/>
           <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/dropzone.min.css"/>
