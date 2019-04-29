@@ -76,7 +76,7 @@ jsonhttp.onreadystatechange = function() {
 // If this is a reference to the static area, then do not get the translateTable.json .  It is actually a bad thing to get
 // it, because public users (not logged in, so no credentials) get an annoying little prompt to log in, which they can
 // ignore, but is a little confusing and definitely unnecessary.
-if (!(window.location.pathname.toLowerCase().includes("/static/"))) {
+if (window.location.pathname.toLowerCase().indexOf("/static/") == -1) {
   jsonhttp.open("GET", aliasToRealUrl, true);
   jsonhttp.send();
 }
