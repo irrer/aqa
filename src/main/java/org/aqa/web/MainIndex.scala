@@ -26,11 +26,12 @@ class MainIndex(staticDir: File) extends Restlet {
 
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
-    response.setStatus(Status.SUCCESS_OK)
 
     if (request.getResourceRef.getRemainingPart.toLowerCase.endsWith("favicon.ico"))
       response.setEntity(favicon)
     else
       response.setEntity(index, MediaType.TEXT_HTML)
+
+    response.setStatus(Status.SUCCESS_OK)
   }
 }
