@@ -194,7 +194,6 @@ object BadPixelAnalysis extends Logging {
           <td style="text-align: center;" title="Collimator Angle deg">{ angleOf(TagFromName.BeamLimitingDeviceAngle) }</td>
           <td style="text-align: center;" title="Collimator opening in CM">{ Phase2Util.jawDescription(al) }</td>
           <td style="text-align: center;" title="Time since first image capture (mm:ss)">{ relativeTimeText }</td>
-          <td style="text-align: center;" title="Metadata Check">{ boolToString(Config.MetadataCheckBeamNameList.contains(beamName)) }</td>
           <td style="text-align: center;" title="Collimator Centering">{ boolToString(Config.CollimatorCentering090BeamName.equals(beamName) || Config.CollimatorCentering270BeamName.equals(beamName)) }</td>
           <td style="text-align: center;" title="Center Dose">{ boolToString(Config.CenterDoseBeamNameList.contains(beamName)) }</td>
           <td style="text-align: center;" title="Collimator Position">{ boolToString(Config.CollimatorPositionBeamList.contains(beamName)) }</td>
@@ -231,7 +230,6 @@ object BadPixelAnalysis extends Logging {
             <th style="text-align: center;" title='Collimator angle rounded to nearest 90 degrees'>Collimator Angle<br/>degrees</th>
             <th style="text-align: center;" title='Width times height of field in cm'>Field Size<br/>cm</th>
             <th style="text-align: center;" title='Time since first image capture (mm:ss)'>Acquisition<br/>Time</th>
-            <th style="text-align: center;" title='"yes" if used in Metadata Check'>Metadata<br/>Check</th>
             <th style="text-align: center;" title='"yes" if used in Collimator Centering'>Collimator<br/>Centering</th>
             <th style="text-align: center;" title='"yes" if used in Center Dose'>Center<br/>Dose</th>
             <th style="text-align: center;" title='"yes" if used in Collimator Position'>Collimator<br/>Position</th>

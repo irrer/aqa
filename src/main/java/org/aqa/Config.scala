@@ -347,12 +347,6 @@ object Config extends Logging {
     }
   }
 
-  private def getMetadataCheckBeamNameList = {
-    val list = (document \ "MetadataCheckBeamNameList" \ "BeamName").map(n => n.head.text.toString.trim).toList
-    logText("MetadataCheckBeamNameList", indentList(list))
-    list.distinct
-  }
-
   private def getCenterDoseBeamNameList = {
     val list = (document \ "CenterDoseBeamNameList" \ "BeamName").map(n => n.head.text.toString.trim).toList
     logText("CenterDoseBeamNameList", indentList(list))
@@ -699,8 +693,6 @@ object Config extends Logging {
   /** Symbols for pass and fail. */
   val passImageUrl = "/static/images/pass.png"
   val failImageUrl = "/static/images/fail.png"
-
-  val MetadataCheckBeamNameList: List[String] = getMetadataCheckBeamNameList
 
   val FloodFieldBeamName = logMainText("FloodFieldBeamName")
 

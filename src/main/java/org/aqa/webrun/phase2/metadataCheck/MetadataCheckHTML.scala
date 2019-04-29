@@ -87,11 +87,22 @@ object MetadataCheckHTML {
 
     val tbody = resultList.map(psnChk => metadataCheckToTableRow(psnChk))
 
+    val missingBeamHtml = {
+      // list of beams that were uploaded but there is no metadata for
+      val missingBeamList = runReq.rtimageMap.keySet.diff(resultList.map(_.beamName).toSet).toSeq.sorted
+
+      if (missingBeamList.isEmpty) { <div></div> }
+      else { <h3 class="p-3 mb-2 bg-danger text-white">Uploaded beams missing metadata results: { missingBeamList.mkString(", ") } </h3> }
+    }
+
     val content = {
       <div class="col-md-10 col-md-offset-1">
         <div class="row" style="margin:20px;">
           <div class="col-md-1">{ csvFileReference }</div>
           <div class="col-md-1">{ viewRtPlan }</div>
+        </div>
+        <div class="row" style="margin:20px;">
+          { missingBeamHtml }
         </div>
         <div class="row" style="margin:20px;">
           <table class="table table-striped">

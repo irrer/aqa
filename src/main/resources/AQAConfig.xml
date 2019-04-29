@@ -227,51 +227,6 @@ Note that when building a package for release, the Maven build process uses the 
             electrical issue(s)</MaintenanceCategory>
     </MaintenanceCategoryList>
 
-    <!-- List of beam names used by Phase2 MetadataCheck -->
-    <MetadataCheckBeamNameList>
-        <!-- 
-        <BeamName>J10G0C270-6X</BeamName>
-        <BeamName>T2 Open</BeamName>
-        <BeamName>J10G270</BeamName>
-        <BeamName>T3 Open</BeamName>
-         -->
-        <BeamName>J10G0C90-6X</BeamName>
-        <BeamName>J10G0C90EDW45-6X</BeamName>
-        <BeamName>J18C270EDW60-6X</BeamName>
-        <BeamName>J10G0C270-6X</BeamName>
-        <BeamName>J24G0C270-6X</BeamName>
-        <BeamName>Flood 6X</BeamName>
-        <BeamName>J18G0-10F</BeamName>
-        <BeamName>J18G0-16X</BeamName>
-        <BeamName>J18G0-6F</BeamName>
-        <BeamName>J18G0-6X</BeamName>
-        <BeamName>J18G180</BeamName>
-        <BeamName>J18G270</BeamName>
-        <BeamName>J18G90</BeamName>
-        <BeamName>T2-DR-GS</BeamName>
-        <BeamName>T2_DR_GS</BeamName>
-        <BeamName>J20G0-6X</BeamName>
-        <BeamName>J20G0-10X</BeamName>
-        <BeamName>J20G0-10F</BeamName>
-        <BeamName>J20G0-16X</BeamName>
-        <BeamName>MABG0</BeamName>
-        <BeamName>PF Stat 0</BeamName>
-        <BeamName>T2 Open</BeamName>
-        <BeamName>J10G180</BeamName>
-        <BeamName>PF Stat 180</BeamName>
-        <BeamName>T2-DG-RS</BeamName>
-        <BeamName>T3 Open</BeamName>
-        <BeamName>J10G90</BeamName>
-        <BeamName>J10G270</BeamName>
-        <BeamName>MABG90</BeamName>
-        <BeamName>PF Stat 90</BeamName>
-        <BeamName>T3MLCSpeed</BeamName>
-        <BeamName>T1 PF ARC ERROR</BeamName>
-        <BeamName>PF Stat 270</BeamName>
-        <BeamName>T1 PF ARC</BeamName>
-
-    </MetadataCheckBeamNameList>
-
     <!-- Beam name for flood field. -->
     <FloodFieldBeamName>Flood 6X</FloodFieldBeamName>
 

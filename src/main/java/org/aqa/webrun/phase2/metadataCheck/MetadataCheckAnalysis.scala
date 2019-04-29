@@ -60,34 +60,39 @@ object MetadataCheckAnalysis extends Logging {
     try {
       val imageBeamNumber = image.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head
       val planBeamSeq = Phase2Util.getBeamSequence(plan, imageBeamNumber)
-      val planCtrlPointSeq = DicomUtil.seqToAttr(planBeamSeq, TagFromName.ControlPointSequence).head
+      val planCtrlPointSeqList = DicomUtil.seqToAttr(planBeamSeq, TagFromName.ControlPointSequence)
       val imageExposureSeq = DicomUtil.seqToAttr(image, TagFromName.ExposureSequence).head
 
-      def aDbl(al: AttributeList, dblTag: AttributeTag): Double = doubleArrayOps(al.get(dblTag).getDoubleValues).head
+      def allPlanCtrlPtDbl(dblTag: AttributeTag): Seq[Double] = planCtrlPointSeqList.filter(al => al.get(dblTag) != null).map(al => al.get(dblTag).getDoubleValues.head)
+      def aDblSeq(al: AttributeList, dblTag: AttributeTag): Seq[Double] = al.get(dblTag).getDoubleValues.toArray.toSeq
+      def aDblHead(al: AttributeList, dblTag: AttributeTag): Double = aDblSeq(al, dblTag).head
 
       val planJawPosns = getPlanJawPositions(plan, imageBeamNumber)
       val imageJawPosns = getImageJawPositions(image)
 
       val beamName = Util.normalizedBeamName(planBeamSeq)
 
-      val gantryAnglePlan_deg = aDbl(planCtrlPointSeq, TagFromName.GantryAngle)
-      val collimatorAnglePlan_deg = aDbl(planCtrlPointSeq, TagFromName.BeamLimitingDeviceAngle)
-      val energyPlan_kev = aDbl(planCtrlPointSeq, TagFromName.NominalBeamEnergy) * 1000.0 //   Convert from MeV to KeV
+      val gantryAnglePlan_deg = allPlanCtrlPtDbl(TagFromName.GantryAngle).last
+      val collimatorAnglePlan_deg = aDblHead(planCtrlPointSeqList.head, TagFromName.BeamLimitingDeviceAngle)
+      val energyPlan_kev = aDblHead(planCtrlPointSeqList.head, TagFromName.NominalBeamEnergy) * 1000.0 //   Convert from MeV to KeV
 
-      val gantryAngleImage_deg = aDbl(image, TagFromName.GantryAngle)
-      val collimatorAngleImage_deg = aDbl(image, TagFromName.BeamLimitingDeviceAngle)
-      val energyImage_kev = aDbl(imageExposureSeq, TagFromName.KVP)
+      val gantryAngleImage_deg = aDblHead(image, TagFromName.GantryAngle)
+      val collimatorAngleImage_deg = aDblHead(image, TagFromName.BeamLimitingDeviceAngle)
+      val energyImage_kev = aDblHead(imageExposureSeq, TagFromName.KVP)
 
       val gantryAnglePlanMinusImage_deg = angleDiff(gantryAnglePlan_deg, gantryAngleImage_deg)
       val collimatorAnglePlanMinusImage_deg = angleDiff(collimatorAnglePlan_deg, collimatorAngleImage_deg)
 
       val toleranceTable = DicomUtil.seqToAttr(plan, TagFromName.ToleranceTableSequence).head
 
-      val tolGantryAngle = aDbl(toleranceTable, TagFromName.GantryAngleTolerance)
-      val tolCollimatorAngle = aDbl(toleranceTable, TagFromName.BeamLimitingDeviceAngleTolerance)
+      val tolGantryAngle = aDblHead(toleranceTable, TagFromName.GantryAngleTolerance)
+      val tolCollimatorAngle = aDblHead(toleranceTable, TagFromName.BeamLimitingDeviceAngleTolerance)
       val tolJaw = DicomUtil.seqToAttr(toleranceTable, TagFromName.BeamLimitingDeviceToleranceSequence)
-      val tolJawX = aDbl(findBldpt(tolJaw, JAW_NAME_X), TagFromName.BeamLimitingDevicePositionTolerance)
-      val tolJawY = aDbl(findBldpt(tolJaw, JAW_NAME_Y), TagFromName.BeamLimitingDevicePositionTolerance)
+      val tolJawX = aDblHead(findBldpt(tolJaw, JAW_NAME_X), TagFromName.BeamLimitingDevicePositionTolerance)
+      val tolJawY = aDblHead(findBldpt(tolJaw, JAW_NAME_Y), TagFromName.BeamLimitingDevicePositionTolerance)
+
+      // If this is a wedge, then do not consider jaw errors as errors.
+      val isWedge = (planBeamSeq.get(TagFromName.NumberOfWedges) != null) && (planBeamSeq.get(TagFromName.NumberOfWedges).getIntegerValues.head > 0)
 
       val x1JawPlan_mm = planJawPosns(0)(0)
       val x1JawPlanMinusImage_mm = planJawPosns(0)(0) - imageJawPosns(0)(0)
@@ -101,10 +106,11 @@ object MetadataCheckAnalysis extends Logging {
       val pass = {
         (gantryAnglePlanMinusImage_deg.abs < tolGantryAngle) &&
           (collimatorAnglePlanMinusImage_deg.abs < tolCollimatorAngle) &&
-          (x1JawPlanMinusImage_mm.abs < tolJawX) &&
-          (x2JawPlanMinusImage_mm.abs < tolJawX) &&
-          (y1JawPlanMinusImage_mm.abs < tolJawY) &&
-          (y2JawPlanMinusImage_mm.abs < tolJawY)
+          (isWedge ||
+            (x1JawPlanMinusImage_mm.abs < tolJawX) &&
+            (x2JawPlanMinusImage_mm.abs < tolJawX) &&
+            (y1JawPlanMinusImage_mm.abs < tolJawY) &&
+            (y2JawPlanMinusImage_mm.abs < tolJawY))
       }
 
       // image (independent of plan) uses flattening filter free
@@ -153,11 +159,11 @@ object MetadataCheckAnalysis extends Logging {
       logger.info("Starting analysis of " + subProcedureName)
       val planAttrList = runReq.rtplan.attributeList.get
 
-      val rtimageList = runReq.rtimageMap.filter(img => Config.MetadataCheckBeamNameList.contains(img._1)).map(img => img._2).toList
+      val rtimageList = runReq.rtimageMap.values.toList
       val resultList = rtimageList.map(rtimage => makeMetadata(extendedData.output.outputPK.get, planAttrList, rtimage.attributeList.get)).flatten
 
       // make sure all were processed and that they all passed
-      val pass = (resultList.size == Config.MetadataCheckBeamNameList.size) && resultList.map(pc => pc.pass).reduce(_ && _)
+      val pass = (resultList.size == rtimageList.size) && resultList.map(pc => pc.pass).reduce(_ && _)
       val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
       MetadataCheck.insert(resultList)
