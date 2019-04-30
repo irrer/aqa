@@ -21,6 +21,7 @@ import org.aqa.Config
 import org.aqa.webrun.phase2.ExtendedData
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.Phase2Util
+import com.pixelmed.dicom.TagFromName
 
 object MetadataCheckHTML {
   val htmlFileName = "MetadataCheck.html"
@@ -61,8 +62,17 @@ object MetadataCheckHTML {
       }
     }
 
+    val originalBeamNameList = {
+      DicomUtil.seqToAttr(runReq.rtplan.attributeList.get, TagFromName.BeamSequence).map(bs => bs.get(TagFromName.BeamName).getSingleStringValueOrEmptyString).filter(bn => bn.size > 0)
+    }
+
+    def originalBeamName(psnChk: MetadataCheck): String = {
+      val beamName = psnChk.beamName.trim
+      originalBeamNameList.find(orig => Util.normalizeBeamName(orig).equalsIgnoreCase(beamName)).get
+    }
+
     val rowList = Seq(
-      new ColBeamName("Name of beam in plan", "Beam Name", (psnChk: MetadataCheck) => psnChk.beamName),
+      new ColBeamName("Name of beam in plan", "Beam Name", originalBeamName),
       new Col("Gantry Angle plan minus image in degrees", "Gantry Angle", (psnChk: MetadataCheck) => degree(psnChk.gantryAnglePlanMinusImage_deg)),
       new Col("Collimator Angle plan minus image in degrees", "Collimator Angle", (psnChk: MetadataCheck) => degree(psnChk.collimatorAnglePlanMinusImage_deg)),
       new Col("X1 Jaw plan minus image in mm", "X1 Jaw", (psnChk: MetadataCheck) => jaw(psnChk.x1JawPlanMinusImage_mm)),
@@ -85,7 +95,7 @@ object MetadataCheckHTML {
       }
     }
 
-    val tbody = resultList.map(psnChk => metadataCheckToTableRow(psnChk))
+    val tbody = resultList.sortBy(psnChk => originalBeamName(psnChk)).map(psnChk => metadataCheckToTableRow(psnChk))
 
     val missingBeamHtml = {
       // list of beams that were uploaded but there is no metadata for

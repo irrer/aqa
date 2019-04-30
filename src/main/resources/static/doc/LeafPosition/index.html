@@ -1,50 +1,182 @@
 <div title="Leaf Position / Picket Fence" class="col-md-8 col-md-offset-1">
 
     <h2>@@title@@</h2>
-    This test determines the position error of each collimator leaf at a variety of positions. For each leaf position,
-    the expected (from RTPLAN) position is subtracted from the observed position and the error reported in mm in the
-    isoplane:
+    <p>This test determines the position error of each collimator leaf at a variety of positions. For each leaf
+        position, the expected (from RTPLAN with collimator center position added) position is subtracted from the
+        measured position and the error reported in mm in the isoplane:
+    </p>
 
     <h4 style="margin: 40px;">
-        <code>error = observed - expected</code>
+        <pre>error = measured - expected</pre>
     </h4>
-    
-    <p>The following example shows the measured positions of the leaf ends and sides (as dashed lines) as well as the
-    expected (planned) positions, compensated with the results from the collimator centering, shown as solid lines.</p>
 
-    <a href="LeafPositionExample.png"
-        title="Example of Millenium analysis.  Click for full sized image.">
-        <img src="LeafPositionExample.png" width="800px" />
+    <h3>Image Processing: Leaf Sides</h3>
+    <p>The first step in the analysis is to measure the positions of the leaf sides. Accurate measurements are necessary
+        to isolate the positions of a leaf end from the adjacent leaves.
+    </p>
+    <p style="margin: 10px;">
+    </p>
+    <p>The following example from a Millenium collimator shows the measured positions of the leaf ends and sides (as
+        dashed lines) as well as the
+        expected (planned) positions, compensated with the results from the collimator
+        centering, shown as solid lines.
+    </p>
+
+    <b>
+        <center>Millenium Collimator (click for full sized image)</center>
+    </b>
+    <a href="LeafPositionMillenium.png" title="Example of Millenium analysis.  Click for full sized image.">
+        <img src="LeafPositionMillenium.png" width="800px" />
     </a>
 
-
-
-    <h3>Leaf Sides</h3>
-    <p>
-        A better measurement of the leaf ends can be made if the position of the leaf sides is known. The image below
-        shows
-        that leaf ends are close together, so there is a risk that the position of a leaf end may be influenced by
-        its
-        neighbors:
+    <p style="margin: 30px;">
     </p>
-    <br />
-    <img src="LeafPositionZoomed.png" />
-
     <p>To measure the leaf sides, the sum of each row (or columns if the collimator were turned 90 degrees) of pixels in
         the entire image is taken, which yields a profile. The following graph shows an example taken from a Millenium
+        collimator showing a peak for each leaf side (click for full size image):
+    </p>
+
+    <b>
+        <center>Millenium Collimator Leaf-side Profile (a valley for each leaf)</center>
+    </b>
+    <a href="LeafSideProfileMillenium.png"
+        title="Example of Millenium leaf side profile.  Click for full sized image.">
+        <img src="LeafSideProfileMillenium.png" width="800px" />
+    </a>
+
+    <p>Using the expected widths of the leaves, the profile is traversed to obtain a rough estimate of the
+        difference in
+        height between the peaks and valleys. A qualitative measurement is
+        made for each peak. A well
+        defined peak is one
+        that shows an adjacent valley at the expected distance on either side.
+    </p>
+
+    <p>While the above profile shows well-defined peaks and valleys, images from HD MLC collimators can be less so.
+        Below is an example of the image from an HD MLC collimator followed by a leaf-side profile for an HD MLC
         collimator:
     </p>
 
-    <a href="LeafSideProfileWellDefined.png"
-        title="Example of Millenium leaf side profile.  Click for full sized image.">
-        <img src="LeafSideProfileWellDefined.png" width="800px" />
+    <p style="margin: 30px;">
+    </p>
+    <p>An example from an HD MLC collimator (click for full size image):</p>
+    <b>
+        <center>HD MLC Collimator</center>
+    </b>
+    <a href="LeafPositionHDMLC.png" title="Example of HD MLC image.  Click for full sized image.">
+        <img src="LeafPositionHDMLC.png" width="800px" />
+    </a>
+    <p style="margin: 10px;">
+    </p>
+    <b>
+        <center>HD MLC Leaf Side Profile (a valley for each leaf)</center>
+    </b>
+    <a href="LeafSideProfileHDMLC.png" title="Example of HD MLC leaf side profile.  Click for full sized image.">
+        <img src="LeafSideProfileHDMLC.png" width="800px" />
     </a>
 
-    <p>And an example from an HD MCL c</p>
-    <a href="LeafSideProfilePartsUnclear.png"
-        title="Example of HD MLC leaf side profile.  Click for full sized image.">
-        <img src="LeafSideProfilePartsUnclear.png" width="800px" />
-    </a>
+    <p style="margin: 30px;">
+    </p>
+
+    <p>Because the positions of some leaf sides can be difficult to discriminate, only the best (in terms of peak-valley
+        rise and fall) defined leaf sides are used. The assumption is made that at least two leaf sides will be well
+        defined.
+    </p>
+    <p style="margin: 10px;">
+    </p>
+    <p>Given the best defined leaf sides, a cubic spline is mathematically calculated over the peaks using the profile.
+        The resulting cubic spline function is searched for the highest point, which is the exact position
+        of the peak.
+    </p>
+    <p style="margin: 10px;">
+    </p>
+    <p>The exact peak positions are matched with their nearest expected leaf sides to determine which leaves they are
+        identifying.
+    </p>
+
+    <p style="margin: 10px;">
+    </p>
+    <p>
+        Given the collimator is a rigid body with known dimensions, the remaining leaf sides are linearly extrapolated
+        by using their nearest precisely located neighbors. These values, added to
+        <a href="/static/doc/CollimatorCentering/index.html">collimator centering,</a>
+        yield the measured position of the leaf sides. These are displayed as the solid horizontal lines in the images
+        above.
+    </p>
+
+    <h3>Image Processing: Leaf Ends</h3>
+    <p style="margin: 10px;">
+    </p>
+
+    <p>
+        Each leaf end is measured by first placing a bounding box (shown in white) around the expected position as shown
+        in the image below.
+    </p>
+    <center>
+        <p>
+            <b>
+                Leaf End Analysis Enlarged. White box shows leaf end search area.
+                <br />
+                0.1247 mm error is the difference of measured - expected.
+            </b>
+        </p>
+        <img src="LeafPositionEnlarged.png" />
+    </center>
+
+    <p style="margin: 20px;">
+    </p>
+    <p>The box is centered horizontally around the expected leaf position (vertical dashed line) The vertical top and
+        bottom of the box are 0.5 mm (a configurable value) from the measured leaf sides (horizontal solid lines). The
+        0.5 mm space isolates the measurement of this leaf end from the vertically adjacent leaf ends. Note that the
+        vertical solid lines (the measured leaf ends) also show this 0.5 mm gap.
+    </p>
+
+    <p>The average pixel value is found For each row of pixels in the box. All pixels that are above the average are
+        processed to find their horizontal center of mass:
+    </p>
+
+    <pre>center of mass = (sum of value * position) / (number of pixels)</pre>
+
+
+    <p>
+        The center of masses of each pixel row are averaged to find the center of the leaf end. This value is then
+        added
+        to the
+        <a href="/static/doc/CollimatorCentering/index.html">collimator centering</a>
+        value, yielding the final result.
+    </p>
+
+    <p>Some justifications for the algorithm:</p>
+
+    <ul>
+        <li>Each row of pixels is evaluated separately (as opposed to performing a center of mass on the entire area) so
+            that the pixels in the middle of the edge (centered vertically) will have the same influence as those near
+            the sides. In fact, an argument can be made that because the pixels in the (vertical) center of the edge are
+            influenced the least by the sides and adjacent ends and so will most accurately reflect the true end of the
+            leaf.
+        </li>
+        <p style="margin: 10px;">
+        </p>
+        <li>Only above-average pixels are used to diminish the weight of the background should the bounding
+            box be placed
+            in a highly horizontally skewed position.
+        </li>
+        <p style="margin: 10px;">
+        </p>
+        <li>Center of mass (as opposed to fitting a cubic spline) is used because edge profiles are often not smoothly
+            defined peaks, and can be very irregular.
+        </li>
+    </ul>
+
+    <p>Note that the edges of the bounding box will usually not be at pixel boundaries. To accommodate this, pixels that
+        are only partially included in the box are weighted accordingly. For example, if a row of pixels is 40% inside
+        the box, then the row would be given a 40% weight.
+    </p>
+
+
+    
+    
+    
 
 <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 

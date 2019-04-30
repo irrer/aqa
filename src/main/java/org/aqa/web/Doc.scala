@@ -13,6 +13,7 @@ import org.restlet.routing.Filter
 import edu.umro.ScalaUtil.Trace
 import scala.xml.XML
 import scala.xml.Elem
+import org.restlet.data.Status
 
 /**
  * Support for internal documentation.  HTML files in the static/doc directory are wrapped with
@@ -44,7 +45,7 @@ object Doc {
   lazy val wrapperFile = new File(docDir, "wrapper.html")
 
   lazy val wrapperContent: String = {
-    val content = { <div>{ contentTag }</div> }
+    val content = { <div class="col-md-8 col-md-offset-1">{ contentTag }</div> }
     WebUtil.wrapBody(content, titleTag)
   }
 
@@ -83,7 +84,8 @@ class Doc extends Filter with SubUrlDoc with Logging {
         case _ => Doc.defaultTitle
       }
     }
-    WebUtil.wrapBody(doc, pageTitle).replace(Doc.titleTag, pageTitle)
+    val indented = { <div class="col-md-8 col-md-offset-1">{ doc }</div> }
+    WebUtil.wrapBody(indented, pageTitle).replace(Doc.titleTag, pageTitle)
   }
 
   override def afterHandle(request: Request, response: Response): Unit = {
@@ -97,15 +99,14 @@ class Doc extends Filter with SubUrlDoc with Logging {
         case Right(doc) => processXml(doc)
         case Left(msg) => {
           logger.warn("User requested doc " + remaining + " but was not valid XML: " + msg)
-          val j = Doc.wrapperContent
           Doc.wrapperContent.replace(Doc.contentTag, sourceText).replaceAll(Doc.titleTag, getTitleFromText(sourceText))
         }
       }
 
       response.getEntity.exhaust // not totally sure if this is required or not
       response.getEntity.release // not totally sure if this is required or not
-      Trace.trace(newText.substring(0, 500)) // TODO rm
       response.setEntity(newText, MediaType.TEXT_HTML)
+      response.setStatus(Status.SUCCESS_OK)
     }
   }
 

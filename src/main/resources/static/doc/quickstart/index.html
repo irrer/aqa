@@ -1,4 +1,4 @@
-<div title="Quick Start Guide" class="col-md-6 col-md-offset-1">
+<div title="Quick Start Guide">
 
     <h2>@@title@@</h2>
 
@@ -19,93 +19,122 @@
 
     <h4 style="margin-top: 35px;">1: Create Machine</h4>
 
-        <b>Administration</b>
-        &#8594;
-        <b>Machines</b>
-        &#8594;
-        <b>Create new Machine</b>
-        &#8594;
+    <b>Administration</b>
+    &#8594;
+    <b>Machines</b>
+    &#8594;
+    <b>Create new Machine</b>
+    &#8594;
 
-        <div style="margin:10px; border: 1px solid lightgrey;">
-            <img src="CreateNewMachine.png" style="margin:30px;" width="250px" />
-        </div>
+    <div style="margin:10px; border: 1px solid lightgrey;">
+        <img src="CreateNewMachine.png" style="margin:30px;" width="250px" />
+    </div>
 
-        <p>
-            Fill fields to reflect your machine, and click
-            <b>Create</b>
-            , which will return to the list of machines.
-        </p>
+    <p>
+        Fill fields to reflect your machine, and click
+        <b>Create</b>
+        , which will return to the list of machines.
+    </p>
 
-        <h4 style="margin-top: 35px;">
-            2:
-            <a href="/static/doc/CustomizePlan/index.html" title="Click for more detailed guide">Create RTPLAN</a>
-        </h4>
-        <p>Click the name of the newly created machine, then the "Customize Plan" button at the bottom.</p>
+    <h4 style="margin-top: 35px;">
+        2:
+        <a href="/static/doc/CustomizePlan/index.html" title="Click for more detailed guide">Create RTPLAN</a>
+    </h4>
+    <p>Click the name of the newly created machine, then the "Customize Plan" button at the bottom.</p>
 
-        <p>
-            The
-            <b>Patient ID</b>
-            ,
-            <b>Patient Name</b>
-            , and
-            <b>Plan Name</b>
-            are arbitrary, but can be helpful for tracking the machine's test activity.
-        </p>
+    <p>
+        The
+        <b>Patient ID</b>
+        ,
+        <b>Patient Name</b>
+        , and
+        <b>Plan Name</b>
+        are arbitrary, but can be helpful for tracking the machine's test activity.
+    </p>
 
-        <p>
-            The
-            <b>Tolerance Table Name</b>
-            should be one that exists in your treatment planning system. The
-            <b>Machine Name</b>
-            is given
-            a default, but may need to be changed to match the name expected by the treatment machine.
-        </p>
+    <p>
+        The
+        <b>Tolerance Table Name</b>
+        should be one that exists in your treatment planning system. The
+        <b>Machine Name</b>
+        is given
+        a default, but may need to be changed to match the name expected by the treatment machine.
+    </p>
 
-        <p>
-            Click
-            <b>Create</b>
-            to create the RTPLAN. This will bring up another page with a link to download the just-created RTPLAN.
-        </p>
+    <p>
+        Click
+        <b>Create</b>
+        to create the RTPLAN. This will bring up another page with a link to download the just-created RTPLAN.
+    </p>
 
-        <h4 style="margin-top: 35px;">3: Treat With the RTPLAN</h4>
+    <h4 style="margin-top: 35px;">3: Treat With the RTPLAN</h4>
 
-        <p>Import the RTPLAN into your treatment system.</p>
+    <ul>
+        <li>
+            Import the RTPLAN into your treatment system.
+            <p />
+        </li>
 
-        <p>Verify the couch coordinates are correct for your machine.
+        <li>
+            Verify the couch coordinates are correct for your machine.
             The couch needs to be retracted so it won't be on
             imager,
             but still in a position to beam on.
-        </p>
+            <p />
+        </li>
 
-        <p>Schedule sessions and add integrated image template in scheduling.
+        <li>
+            Schedule sessions and add integrated image template in scheduling.
             The plan needs to run as integrated, not
             continuous.
-        </p>
+            <p />
+        </li>
 
-        <p>Imager should be at 1500 mm (not at ISO)</p>
+        <li>
+            Imager should be at 1500 mm (not at ISO)
+            <p />
+        </li>
 
-        <p>Schedule at machine, deliver in QA mode, and export the RTIMAGE files.</p>
+        <li>
+            Schedule at machine, deliver in QA mode, and export the RTIMAGE files.
+            <p />
+        </li>
 
-        <h4 style="margin-top: 35px;">4: Run the Test</h4>
+        <li>
+            Manually enter the imager coordinates: 50cm, 0, 0
+            <p />
+        </li>
+    </ul>
 
-        <p>
+    <h4 style="margin-top: 35px;">4: Run the Test</h4>
+    <ul>
+        <li>
             On the AQA site, click
             <b>Run Procedure</b>
             &#8594;
             <b>Phase2</b>
-        </p>
+            <p> </p>
+        </li>
 
-        <p>Drag and drop the RTIMAGE files into the upload box.</p>
+        <li>
+            Drag and drop the RTIMAGE files into the upload box.
+            <p> </p>
+        </li>
 
-        <p>
+        <li>
             Click the
             <b>Run</b>
             button to start the analysis, which takes less than 2 minutes.
-        </p>
+            <p> </p>
+        </li>
 
-        <p>Results will be displayed automatically, showing an overview of results. Click on the tests for more details.
-        </p>
+        <li>
+            Results will be displayed automatically, showing an overview of results. Click on the tests for more
+            details.
+            <p> </p>
+        </li>
 
         <p style="margin-top: 35px;">
-        </p>
+            </p>
+    </ul>
 </div>
