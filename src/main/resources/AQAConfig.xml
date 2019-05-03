@@ -435,7 +435,8 @@ Note that when building a package for release, the Maven build process uses the 
     <SymmetryPointLeft name='Left' />
     <SymmetryPointRight name='Right' />
 
-    <!-- Maximum allowed error for leaf positions in mm. -->
+    <!-- Maximum allowed error for leaf positions in mm.  If leaf ends are farther than this from
+    their expected positions then they are considered 'failed'.-->
     <LeafPositionMaxError_mm>1.0</LeafPositionMaxError_mm>
 
     <!-- When creating a custom plan, use this beam as the prototype for constructing beams. -->
@@ -456,14 +457,14 @@ Note that when building a package for release, the Maven build process uses the 
     <LeafPositionBeamNameList>
         <BeamName>PF Stat 0</BeamName>
         <BeamName>PF Stat 180</BeamName>
-        <BeamName>T2-DG-RS</BeamName>
+   <!-- <BeamName>T2-DG-RS</BeamName> -->
         <BeamName>PF Stat 90</BeamName>
-        <BeamName>T3MLCSpeed</BeamName>
+   <!-- <BeamName>T3MLCSpeed</BeamName> -->
         <BeamName>PF Stat 270</BeamName>
         <BeamName>T1 PF ARC</BeamName>
         <BeamName>T1 PF ARC ERROR</BeamName>
-        <BeamName>T2-DR-GS</BeamName>
-        <BeamName>T2_DR_GS</BeamName>
+   <!-- <BeamName>T2-DR-GS</BeamName> -->
+   <!-- <BeamName>T2_DR_GS</BeamName> -->
     </LeafPositionBeamNameList>
 
 </AQAConfig>
