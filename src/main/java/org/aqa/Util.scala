@@ -15,7 +15,6 @@ import edu.umro.util.Utility
 import com.pixelmed.dicom.SequenceAttribute
 import java.awt.image.RenderedImage
 import javax.imageio.ImageIO
-import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream
 import java.awt.image.BufferedImage
 import java.awt.Color
 import edu.umro.ImageUtil.ImageUtil
@@ -27,6 +26,7 @@ import java.security.InvalidParameterException
 import com.pixelmed.dicom.DicomDictionary
 import scala.xml.Elem
 import scala.xml.XML
+import java.io.ByteArrayOutputStream
 
 object Util extends Logging {
 
@@ -67,7 +67,13 @@ object Util extends Logging {
     fmt.format(new Date(elapsedMs))
   }
 
-  def writeBinaryFile(file: File, data: Array[Byte]): Unit = (writeBinaryFile _).synchronized({
+  /**
+   * Global lock for synchronizing all file writes so that only one write is being done at
+   *  a time (as opposed to being done in parallel).
+   */
+  private val fileSystemWriteSync = "sync"
+
+  def writeBinaryFile(file: File, data: Array[Byte]): Unit = fileSystemWriteSync.synchronized({
     val fos = new FileOutputStream(file)
     fos.write(data)
     fos.flush
@@ -383,20 +389,16 @@ object Util extends Logging {
   /**
    * Write a PNG file in a thread safe way.
    */
-  def writePng(im: RenderedImage, pngFile: File): Unit = {
-    val stream = new ByteOutputStream
-    ImageIO.write(im, "png", stream)
-    writeBinaryFile(pngFile, stream.getBytes)
-  }
+  def writePng(im: RenderedImage, pngFile: File): Unit = fileSystemWriteSync.synchronized({
+    ImageIO.write(im, "png", new FileOutputStream(pngFile))
+  })
 
   /**
    * Write a JPG / JPEG file in a thread safe way.
    */
-  def writeJpg(im: RenderedImage, pngFile: File): Unit = {
-    val stream = new ByteOutputStream
-    ImageIO.write(im, "jpg", stream)
-    writeBinaryFile(pngFile, stream.getBytes)
-  }
+  def writeJpg(im: RenderedImage, pngFile: File): Unit = fileSystemWriteSync.synchronized({
+    ImageIO.write(im, "jpg", new FileOutputStream(pngFile))
+  })
 
   /**
    * Round the angle to the closest 90 degree angle.
@@ -688,10 +690,10 @@ object Util extends Logging {
         } else deflt
       }
 
-      val bos = new ByteOutputStream
-      attributeList.write(bos, transferSyntax, true, true)
-      bos.flush
-      Right(bos.getBytes)
+      val baos = new ByteArrayOutputStream
+      attributeList.write(baos, transferSyntax, true, true)
+      baos.flush
+      Right(baos.toByteArray)
     } catch {
       case t: Throwable => {
         val msg = "Error converting DICOM to bytes: " + fmtEx(t)
