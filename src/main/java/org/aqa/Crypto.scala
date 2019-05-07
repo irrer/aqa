@@ -25,8 +25,29 @@ object Crypto extends Logging {
   /** Convert byte array to printable hex text */
   def byteArrayToHex(bytes: Array[Byte]): String = bytes.foldLeft("")((t, b) => t + b.formatted("%02x"))
 
-  /** Convert string of hex characters to byte array. */
-  def hexToByteArray(text: String): Array[Byte] = javax.xml.bind.DatatypeConverter.parseHexBinary(text)
+  /**
+   * Convert string of hex characters to byte array.  There is a standard java
+   *  library javax.xml.bind.DatatypeConverter.parseHexBinary that does this but
+   *  in Java 12 it requires pulling in an extra jar which creates an extra dependency.
+   *  This is only a few lines of code.
+   */
+  def hexToByteArray(text: String): Array[Byte] = {
+
+    def oneByte(array: Array[Byte], index: Int): Array[Byte] = {
+      array :+ java.lang.Integer.parseInt(text.substring(index, index + 2), 16).toByte
+    }
+
+    try {
+      val array = text.indices.filter(i => (i % 2) == 0).foldLeft(Array[Byte]())(oneByte)
+      array
+    } catch {
+      case t: Throwable => {
+        val msg = "unable to convert HEX string '" + text + "' to bytes: " + fmtEx(t)
+        logger.error(msg)
+        throw new IllegalArgumentException(msg)
+      }
+    }
+  }
 
   def secureHash(data: Array[Byte]): Array[Byte] = {
     val md = HashFactory.getInstance(DIGEST_NAME)

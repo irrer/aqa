@@ -165,7 +165,13 @@ object Util extends Logging {
     if (at == null) 0 else at.getDoubleValues.head
   }
 
-  case class DateTimeAndPatientId(val dateTime: Option[Long], val PatientID: Option[String]);
+  case class DateTimeAndPatientId(val dateTime: Option[Long], val PatientID: Option[String]) {
+    override def toString = {
+      val dt = if (dateTime.isDefined) new Date(dateTime.get) else "none"
+      val p = if (PatientID.isDefined) PatientID.get else "none"
+      "dateTime: " + dt + "    PatientID: " + p
+    }
+  }
 
   private def getTimeAndDate(al: AttributeList, dateTag: AttributeTag, timeTag: AttributeTag): Option[Date] = {
     try {

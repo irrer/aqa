@@ -187,7 +187,14 @@ object Phase2 extends Logging {
     val runReq = {
       val rtplanFile = new File(Config.sharedDir, Phase2Util.referencedPlanUID(rtimageList.head) + Util.dicomFileNameSuffix)
       val rtplan = new DicomFile(rtplanFile)
-      val machine = Machine.get(outputOrig.machinePK.get).get
+      val machine = {
+        if (outputOrig.machinePK.isDefined && Machine.get(outputOrig.machinePK.get).isDefined)
+          Machine.get(outputOrig.machinePK.get).get
+        else {
+          val serNo = rtimageList.map(df => df.attributeList).flatten.head.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrEmptyString
+          Machine.findMachinesBySerialNumber(serNo).head
+        }
+      }
       val rtimageMap = constructRtimageMap(rtplan, rtimageList)
       val flood = rtimageMap(Config.FloodFieldBeamName)
 
@@ -218,6 +225,8 @@ object Phase2 extends Logging {
       outputFinal.insertOrUpdate
       outputFinal.updateData(outputFinal.makeZipOfFiles)
       Run.removeRedundantOutput(outputFinal.outputPK)
+      // remove the original input and all associated outputs to clean up any possible redundant data
+      Input.delete(inputOrig.inputPK.get)
     }
 
     val suffix = "?" + ViewOutput.outputPKTag + "=" + output.outputPK.get
@@ -446,10 +455,16 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     }
   }
 
-  private def dateTimePatId(rtimageList: Seq[DicomFile]) = {
-    val list = rtimageList.map(df => Util.dateTimeAndPatientIdFromDicom(df.file))
-    if (list.isEmpty) new Util.DateTimeAndPatientId(None, None)
-    else list.minBy(dt => dt.dateTime)
+  /**
+   * Given an image list, find the one with the earliest date/time.
+   */
+  private def dateTimePatId(rtimageList: Seq[DicomFile]): Util.DateTimeAndPatientId = {
+    val list = rtimageList.map(df => Util.dateTimeAndPatientIdFromDicom(df.file)).filter(dt => dt.dateTime.isDefined)
+    val dtap =
+      if (list.isEmpty) new Util.DateTimeAndPatientId(None, None)
+      else list.minBy(dt => dt.dateTime.get)
+    logger.info("DateTime and PatientId: " + dtap)
+    dtap
   }
 
   /**
@@ -494,7 +509,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       case Right(runReq) => {
         // only consider the RTIMAGE files for the date-time stamp.  The plan could have been from months ago.
         val dtp = dateTimePatId(rtimageList)
-        Trace.trace
 
         val sessDir = sessionDir(valueMap).get
         val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
