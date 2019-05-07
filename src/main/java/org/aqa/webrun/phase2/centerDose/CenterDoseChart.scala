@@ -8,6 +8,7 @@ import org.aqa.web.C3ChartHistory
 import org.aqa.db.MaintenanceRecord
 import java.awt.Color
 import org.aqa.webrun.phase2.ExtendedData
+import edu.umro.ScalaUtil.Trace
 
 class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Seq[CenterDose.CenterDoseHistory], units: String, extendedData: ExtendedData) extends Logging {
 
@@ -54,6 +55,8 @@ class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Se
     </script>
 """
   }
+
+  Trace.trace("Center Dose char data:\n    " + resultList.mkString(("\n    "))) // TODO rm
 
   private val chartList = resultList.map(cd => chartOfBeam(cd.beamName))
 

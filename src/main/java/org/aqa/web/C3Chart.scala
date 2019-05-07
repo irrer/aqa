@@ -8,10 +8,11 @@ object C3Chart {
 
   private var id = 0
 
+  private val idLock = "lock"
   /**
    * Get an id that guaranteed to be unique for a given web page.
    */
-  def getId: Int = id.synchronized({
+  def getId: Int = idLock.synchronized({
     id = id + 1
     id
   })

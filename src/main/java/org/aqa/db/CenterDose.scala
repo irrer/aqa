@@ -108,7 +108,11 @@ object CenterDose extends ProcedureOutput {
     Db.perform(ops)
   }
 
-  case class CenterDoseHistory(date: Date, beamName: String, dose: Double, SOPInstanceUID: String)
+  case class CenterDoseHistory(date: Date, beamName: String, dose: Double, SOPInstanceUID: String) {
+    override def toString = {
+      "date: " + date + "    beamName: " + beamName + "    dose: " + Util.fmtDbl(dose) + "  SOP UID: " + SOPInstanceUID
+    }
+  }
 
   /**
    * Get the CenterBeam results that are nearest in time to the given date, preferring those that have an earlier date.

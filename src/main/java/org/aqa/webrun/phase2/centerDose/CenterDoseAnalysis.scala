@@ -46,10 +46,11 @@ object CenterDoseAnalysis extends Logging {
     val pointList = Phase2Util.makeCenterDosePointList(runReq.flood.attributeList.get, collimatorCentering.center)
     val outputPK = extendedData.output.outputPK.get
 
-    val centerDoseFlood = constructCenterDose(Config.FloodFieldBeamName, pointList, outputPK, runReq.floodOriginalImage, runReq.flood.attributeList.get)
     val availableBeamList = Config.CenterDoseBeamNameList.filter(beamName => runReq.derivedMap.contains(beamName))
-    val centerDoseList = availableBeamList.map(beamName => constructCenterDose(beamName, pointList, outputPK, runReq.derivedMap(beamName).originalImage, runReq.rtimageMap(beamName).attributeList.get))
-    centerDoseFlood +: centerDoseList
+    val resultList = availableBeamList.map(beamName => constructCenterDose(beamName, pointList, outputPK, runReq.derivedMap(beamName).originalImage, runReq.rtimageMap(beamName).attributeList.get))
+    logger.info("Number of CenterDose results for " + resultList.size)
+    logger.info("CenterDose results: " + resultList.mkString("\n"))
+    resultList
   }
 
   /**
@@ -72,8 +73,6 @@ object CenterDoseAnalysis extends Logging {
       logger.info("Starting analysis of CenterDose")
       val status = ProcedureStatus.done
       val resultList = analyse(extendedData, runReq, collimatorCentering)
-      logger.info("Storing results for " + resultList.size + " CenterDose rows")
-      logger.info("CenterDose results: " + resultList.mkString("\n"))
       CenterDose.insert(resultList)
       val summary = CenterDoseHTML.makeDisplay(extendedData, runReq, resultList, status)
       val result = Right(new CenterDoseResult(summary, status, resultList))
