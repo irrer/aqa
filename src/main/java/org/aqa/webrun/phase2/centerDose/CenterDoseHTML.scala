@@ -49,8 +49,11 @@ object CenterDoseHTML extends Logging {
      */
     val history = {
       val uidSet = resultList.map(cd => cd.SOPInstanceUID).toSet
-      CenterDose.recentHistory(Config.CenterDoseReportedHistoryLimit, extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get, extendedData.output.dataDate).
+      val j = CenterDose.recentHistory(Config.CenterDoseReportedHistoryLimit, extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get, extendedData.output.dataDate).toArray
+      val j1 = j.size
+      val hist = CenterDose.recentHistory(Config.CenterDoseReportedHistoryLimit, extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get, extendedData.output.dataDate).
         filter(cd => !uidSet.contains(cd.SOPInstanceUID))
+      hist
     }
 
     val resultListAsHistory = resultList.map(cd => new CenterDose.CenterDoseHistory(extendedData.output.dataDate.get, cd.beamName, cd.dose, cd.SOPInstanceUID))

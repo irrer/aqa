@@ -48,8 +48,8 @@ object CenterDoseAnalysis extends Logging {
 
     val availableBeamList = Config.CenterDoseBeamNameList.filter(beamName => runReq.derivedMap.contains(beamName))
     val resultList = availableBeamList.map(beamName => constructCenterDose(beamName, pointList, outputPK, runReq.derivedMap(beamName).originalImage, runReq.rtimageMap(beamName).attributeList.get))
-    logger.info("Number of CenterDose results for " + resultList.size)
-    logger.info("CenterDose results: " + resultList.mkString("\n"))
+    logger.info("Number of CenterDose results " + resultList.size)
+    logger.info("CenterDose results:\n" + resultList.mkString("\n"))
     resultList
   }
 
