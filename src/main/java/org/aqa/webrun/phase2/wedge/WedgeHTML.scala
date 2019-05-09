@@ -27,6 +27,7 @@ import org.aqa.web.C3Chart.Tolerance
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
+import edu.umro.ScalaUtil.Trace
 
 object WedgeHTML {
 
@@ -121,9 +122,12 @@ object WedgeHTML {
   }
 
   private def histChart(wedgePoint: WedgePoint, extendedData: ExtendedData, history: Seq[WedgePoint.WedgePointHistory]): C3ChartHistory = {
-    val beamHistory = history.filter(h => h.wedgeBeamName.equals(wedgePoint.wedgeBeamName) && h.backgroundBeamName.equals(wedgePoint.backgroundBeamName)).sortBy(_.date)
-    val percentHistory = beamHistory.map(h => h.percentOfBackground_pct)
-    val dateHistory = beamHistory.map(h => h.date)
+    Trace.trace("Wedge point being graphed: " + wedgePoint)
+    Trace.trace("\n\nAll wedge history:\n----------\n" + history.mkString("\n----------\n"))
+    val beamHistory = history.filter(h => Util.beamNamesEqual(h.wedgeBeamName, wedgePoint.wedgeBeamName)).sortBy(_.date)
+    Trace.trace("\n\nGraphing wedge history:\n----------\n" + beamHistory.mkString("\n----------\n"))
+    val percentHistory = beamHistory.map(_.percentOfBackground_pct)
+    val dateHistory = beamHistory.map(_.date)
 
     val maintenanceRecordList = MaintenanceRecord.getRange(extendedData.machine.machinePK.get, dateHistory.head, dateHistory.last)
     val yNew = {
@@ -244,7 +248,7 @@ object WedgeHTML {
     val wedgeDir = new File(outputDir, "wedge")
     wedgeDir.mkdirs
 
-    val history = WedgePoint.recentHistory(50, extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get, extendedData.output.dataDate)
+    val history = WedgePoint.recentHistory(Config.WedgeHistoryRange, extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get, extendedData.output.dataDate)
 
     val htmlJs = {
       wedgePointList.map(wp => beamToDisplay(wp, extendedData, runReq, wedgeDir, history, collimatorCenterOfRotation))

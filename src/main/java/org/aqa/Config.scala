@@ -753,6 +753,7 @@ object Config extends Logging {
   val WedgeProfileThickness_mm = logMainText("WedgeProfileThickness_mm").toDouble
   val WedgeBeamList = getWedgeBeamList
   val WedgeTolerance_pct = logMainText("WedgeTolerance_pct").toDouble
+  val WedgeHistoryRange = logMainText("WedgeHistoryRange").toInt
 
   val SymmetryAndFlatnessDiameter_mm = logMainText("SymmetryAndFlatnessDiameter_mm").toDouble
 

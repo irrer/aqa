@@ -777,12 +777,18 @@ object Util extends Logging {
     normalizeBeamName(al.get(TagFromName.BeamName).getSingleStringValueOrEmptyString)
   }
 
-  //  /**
-  //   * Determine if two beam names are equal.
-  //   */
-  //  def beamNamesEqual(a: String, b: String): Boolean = {
-  //    normalizeBeamName(a).equalsIgnoreCase(normalizeBeamName(b))
-  //  }
+  /**
+   * Determine if two beam names are equal.  Both do normalization and consider that one or both were truncated.  Some
+   * treatment planning systems truncates them from 16 characters to 13.
+   */
+  def beamNamesEqual(a: String, b: String): Boolean = {
+    val aa = normalizeBeamName(a)
+    val bb = normalizeBeamName(b)
+    val len = Math.min(aa.size, bb.size)
+    def subStr(text: String) = text.substring(0, Math.min(text.size, len))
+
+    subStr(aa).equalsIgnoreCase(subStr(bb))
+  }
 
   /**
    * Show which jar file is being used to ensure that we have the right version of the software.
@@ -826,6 +832,5 @@ object Util extends Logging {
     } catch {
       case t: Throwable => Left("XML error: " + t.toString)
     }
-
   }
 }

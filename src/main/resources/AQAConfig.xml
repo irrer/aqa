@@ -351,6 +351,10 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- The amount in percent that wedge reading should vary from baseline to be valid. -->
     <WedgeTolerance_pct>2.0</WedgeTolerance_pct>
 
+    <!-- Used for graphing wedge history, a positive integer indicating the number of values to display before and after (if
+    they exist) the current point being plotted.. -->
+    <WedgeHistoryRange>25</WedgeHistoryRange>
+
     <!-- List of wedge beams.  Each entry gives the BeamName of the wedge, and a list of BackgroundBeamName's that
     are compatible as background for the wedge beam.  In general, the background must have a collimator and jaw opening that
     is as large or larger than the wedge, it must be flattened (not FFF), and must have the same beam energy.
