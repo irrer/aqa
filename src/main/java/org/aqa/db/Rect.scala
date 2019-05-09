@@ -122,66 +122,6 @@ object Rect extends ProcedureOutput {
     Db.perform(ops)
   }
 
-  case class RectHistory(date: Date, rect: Rect)
-
-  /**
-   * Get the Rect results that are nearest in time to the given date, preferring those that have an earlier date.
-   *
-   * Implementation note: Two DB queries are performed, one for data before and including the time stamp given, and another query for after.
-   *
-   * @param limit: Only get this many results.  First get all the results that are at or before the given time.  If there
-   * are <code>limit</code> or more values, then return those.  Otherwise, also get values after the given time
-   *
-   * @param machinePK: For this machine
-   *
-   * @param name: With this name
-   *
-   * @param procedurePK: For this procedure
-   *
-   * @param date: Relative to this date.  If None, then use current date.
-   */
-  def recentHistory(limit: Int, machinePK: Long, procedurePK: Long, name: String, date: Option[Timestamp]) = {
-
-    import java.sql.{ Timestamp, Date, Time }
-    import org.joda.time.DateTime
-    import org.joda.time.{ DateTime, LocalDate, LocalTime, DateTimeZone }
-    import org.joda.time.format._
-
-    implicit def jodaTimeMapping: BaseColumnType[DateTime] = MappedColumnType.base[DateTime, Timestamp](
-      dateTime => new Timestamp(dateTime.getMillis),
-      timeStamp => new DateTime(timeStamp.getTime))
-
-    val ts = if (date.isDefined) date.get else new Timestamp(Long.MaxValue)
-
-    val before = {
-      val search = for {
-        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate.get.toString <= ts.toString)).map(o => (o.outputPK, o.dataDate, o.machinePK))
-        symmetryAndFlatness <- Rect.query.filter(c => c.outputPK === output._1 && c.name === name)
-      } yield ((output._2, symmetryAndFlatness))
-
-      val sorted = search.distinct.sortBy(_._1.desc).take(limit)
-      val result = Db.run(sorted.result)
-      result
-    }
-
-    def after = {
-      val search = for {
-        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate.get.toString > ts.toString)).map(o => (o.outputPK, o.dataDate, o.machinePK))
-        symmetryAndFlatness <- Rect.query.filter(c => c.outputPK === output._1 && c.name === name)
-      } yield ((output._2, symmetryAndFlatness))
-
-      val sorted = search.distinct.sortBy(_._1.asc).take(limit)
-      val result = Db.run(sorted.result)
-      result
-    }
-
-    val all = if (before.size >= limit) before else (before ++ after).take(limit)
-
-    // Convert to class and make sure that they are temporally ordered.
-    val result = all.map(h => new RectHistory(h._1.get, h._2)).sortWith((a, b) => a.date.getTime < b.date.getTime)
-    result
-  }
-
   /** For testing only. */
   def main(args: Array[String]): Unit = {
     val valid = Config.validate

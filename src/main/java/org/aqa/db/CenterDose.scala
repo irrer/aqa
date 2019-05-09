@@ -147,7 +147,7 @@ object CenterDose extends ProcedureOutput {
         output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate < dt)).
           distinct.
           sortBy(_.dataDate.desc).take(limit).
-          map(o => (o.outputPK, o.dataDate, o.machinePK))
+          map(o => (o.outputPK, o.dataDate))
         centerDose <- CenterDose.query.filter(c => c.outputPK === output._1).map(c => (c.beamName, c.dose, c.SOPInstanceUID))
       } yield ((output._2, centerDose._1, centerDose._2, centerDose._3))
 
@@ -161,7 +161,7 @@ object CenterDose extends ProcedureOutput {
         output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate >= dt)).
           distinct.
           sortBy(_.dataDate).take(limit).
-          map(o => (o.outputPK, o.dataDate, o.machinePK))
+          map(o => (o.outputPK, o.dataDate))
         centerDose <- CenterDose.query.filter(c => c.outputPK === output._1).map(c => (c.beamName, c.dose, c.SOPInstanceUID))
       } yield ((output._2, centerDose._1, centerDose._2, centerDose._3))
 

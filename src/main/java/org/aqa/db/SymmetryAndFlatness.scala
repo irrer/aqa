@@ -181,8 +181,10 @@ object SymmetryAndFlatness extends ProcedureOutput {
    *
    * Implementation note: Two DB queries are performed, one for data before and including the time stamp given, and another query for after.
    *
-   * @param limit: Only get this many results.  First get all the results that are at or before the given time.  If there
-   * are <code>limit</code> or more values, then return those.  Otherwise, also get values after the given time
+   * @param limit: Get up to this many sets of results before and after the given date.  If a
+   * limit of 10 is given then get up to 10 sets of results that occurred before and up to
+   * 10 that occurred at or after.  This means that up to 20 sets of results could be returned.
+   * A set of results is all the center dose values recorded from the beams of a single output.
    *
    * @param machinePK: For this machine
    *
@@ -203,31 +205,39 @@ object SymmetryAndFlatness extends ProcedureOutput {
       dateTime => new Timestamp(dateTime.getMillis),
       timeStamp => new DateTime(timeStamp.getTime))
 
-    val ts = if (date.isDefined) date.get else new Timestamp(Long.MaxValue)
-    
+    val dt = if (date.isDefined) date.get else new Timestamp(Long.MaxValue)
+
     val before = {
       val search = for {
-        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate.get.toString <= ts.toString)).map(o => (o.outputPK, o.dataDate, o.machinePK))
+        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate < dt)).
+          distinct.
+          sortBy(_.dataDate.desc).take(limit).
+          map(o => (o.outputPK, o.dataDate))
         symmetryAndFlatness <- SymmetryAndFlatness.query.filter(c => c.outputPK === output._1 && c.beamName === beamName)
       } yield ((output._2, symmetryAndFlatness))
 
-      val sorted = search.distinct.sortBy(_._1.desc).take(limit)
+      val sorted = search.distinct.sortBy(_._1.desc)
       val result = Db.run(sorted.result)
       result
     }
 
     def after = {
       val search = for {
-        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate.get.toString > ts.toString)).map(o => (o.outputPK, o.dataDate, o.machinePK))
+        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate >= dt)).
+          distinct.
+          sortBy(_.dataDate).take(limit).
+          map(o => (o.outputPK, o.dataDate))
         symmetryAndFlatness <- SymmetryAndFlatness.query.filter(c => c.outputPK === output._1 && c.beamName === beamName)
       } yield ((output._2, symmetryAndFlatness))
 
-      val sorted = search.distinct.sortBy(_._1.asc).take(limit)
+      val sorted = search.distinct.sortBy(_._1.asc)
       val result = Db.run(sorted.result)
       result
     }
 
-    val all = if (before.size >= limit) before else (before ++ after).take(limit)
+    //    println("\nbefore:\n    " + before.map(_._1.get).mkString("\n    "))
+    //    println("\nafter:\n    " + after.map(_._1.get).mkString("\n    "))
+    val all = before ++ after
 
     // Convert to class and make sure that they are temporally ordered.
     val result = all.map(h => new SymmetryAndFlatnessHistory(h._1.get, h._2)).sortWith((a, b) => a.date.getTime < b.date.getTime)

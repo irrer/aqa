@@ -17,6 +17,9 @@ import java.util.Date
 
 /**
  * Test the TestCenter_recentHistory method.
+ *
+ * This is highly dependent on the contents of the database on Jim's desktop.
+ *
  */
 
 class TestCenterDose_recentHistory extends FlatSpec with Matchers {

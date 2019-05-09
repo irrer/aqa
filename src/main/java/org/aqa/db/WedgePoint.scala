@@ -152,37 +152,39 @@ object WedgePoint extends ProcedureOutput {
       dateTime => new Timestamp(dateTime.getMillis),
       timeStamp => new DateTime(timeStamp.getTime))
 
-    val ts = if (date.isDefined) date.get else new Timestamp(Long.MaxValue)
+    val dt = if (date.isDefined) date.get else new Timestamp(Long.MaxValue)
 
     val before = {
       val search = for {
-        output <- Output.query.
-          filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate.get.toString <= ts.toString)).
+        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate < dt)).
+          distinct.
+          sortBy(_.dataDate.desc).take(limit).
           map(o => (o.outputPK, o.dataDate))
         wedgePoint <- WedgePoint.query.
           filter(w => w.outputPK === output._1).
           map(c => (c.wedgeBeamName, c.backgroundBeamName, c.percentOfBackground_pct))
       } yield ((output._2, wedgePoint._1, wedgePoint._2, wedgePoint._3))
 
-      val sorted = search.distinct.sortBy(_._1.desc).take(limit)
+      val sorted = search.distinct.sortBy(_._1.desc)
       Db.run(sorted.result)
     }
 
     def after = {
       val search = for {
-        output <- Output.query.
-          filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate.get.toString > ts.toString)).
+        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate >= dt)).
+          distinct.
+          sortBy(_.dataDate).take(limit).
           map(o => (o.outputPK, o.dataDate))
         wedgePoint <- WedgePoint.query.
           filter(w => w.outputPK === output._1).
           map(c => (c.wedgeBeamName, c.backgroundBeamName, c.percentOfBackground_pct))
       } yield ((output._2, wedgePoint._1, wedgePoint._2, wedgePoint._3))
 
-      val sorted = search.distinct.sortBy(_._1.asc).take(limit)
+      val sorted = search.distinct.sortBy(_._1.asc)
       Db.run(sorted.result)
     }
 
-    val all = if (before.size >= limit) before else (before ++ after).take(limit)
+    val all = before ++ after
 
     val result = all.map(h => new WedgePointHistory(h._1.get, h._2, h._3, h._4)).sortWith((a, b) => a.date.getTime < b.date.getTime)
     result
