@@ -296,7 +296,7 @@ object WebUtil extends Logging {
         <head>
           <title>{ pageTitle }</title>
           { refreshMeta }
-          <link rel="icon" href="/favicon.ico" type="image/x-icon"/>
+          <link rel="icon" href="/static/images/favicon.ico?" type="image/x-icon"/>
           <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"/>
           <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap-theme.min.css"/>
           <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/dropzone.min.css"/>

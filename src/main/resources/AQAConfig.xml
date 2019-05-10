@@ -243,7 +243,7 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Width of band of pixels in isoplane mm to use for initial finding of edge. -->
     <CollimatorCenteringCoarseBandWidth_mm>5.0</CollimatorCenteringCoarseBandWidth_mm>
     <!-- Thickness in isoplane in mm of the penumbra of an edge. -->
-    <PenumbraThickness_mm>10.0</PenumbraThickness_mm>
+    <PenumbraThickness_mm>20.0</PenumbraThickness_mm>
     <!-- Number of pixels per million to use as the sets of largest and smallest pixels in
     the image.   These pixels are selected after bad pixels have been removed.  -->
     <PenumbraPlateauPixelsPerMillion>500</PenumbraPlateauPixelsPerMillion>

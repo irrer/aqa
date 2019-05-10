@@ -15,6 +15,7 @@ import org.aqa.webrun.phase2.ExtendedData
 import org.aqa.webrun.phase2.MeasureTBLREdges
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
+import org.aqa.IsoImagePlaneTranslator
 
 object CollimatorCenteringHTML {
 
@@ -89,15 +90,23 @@ object CollimatorCenteringHTML {
 
   def makeDisplay(extendedData: ExtendedData, collimatorCentering: CollimatorCentering, status: ProcedureStatus.Value, image090: MeasureTBLREdges.AnalysisResult, image270: MeasureTBLREdges.AnalysisResult, runReq: RunReq): Elem = {
 
-    val outputDir = extendedData.output.dir
+    val attr090 = runReq.rtimageMap(Config.CollimatorCentering090BeamName).attributeList.get
+    val attr270 = runReq.rtimageMap(Config.CollimatorCentering270BeamName).attributeList.get
 
-    val imageCenter = runReq.floodTranslator.iso2Pix(0, 0)
+    val translator090 = new IsoImagePlaneTranslator(attr090)
+    val translator270 = new IsoImagePlaneTranslator(attr270)
+
+    val isoCenter090 = translator090.pix2Iso(image090.measurementSet.center)
+    val isoCenter270 = translator270.pix2Iso(image270.measurementSet.center)
+
+    val outputDir = extendedData.output.dir
 
     val resultSummary = fmt(collimatorCentering.xCollimatorCenter_mm) + ", " + fmt(collimatorCentering.yCollimatorCenter_mm)
 
-    def imageTitle(name: String, ar: MeasureTBLREdges.AnalysisResult): Elem = {
-      val err = fmt(ar.measurementSet.center.getX - imageCenter.getX) + ", " + fmt(ar.measurementSet.center.getY - imageCenter.getY)
-      <h3 title="Collimator Angle : center minus image center." style="text-align:center;">{ name + " : " + err }</h3>
+    def imageTitle(collAngle: Int, isoCenter: Point2D.Double): Elem = {
+      val isoCenterText = fmt(isoCenter.getX) + ", " + fmt(isoCenter.getY)
+      val title = "Collimator Angle " + collAngle + " : image center in isoplane " + isoCenterText
+      <h3 title={ title } style="text-align:center;">{ collAngle.toString + " : " + isoCenterText }</h3>
     }
 
     val image090Name = "image090"
@@ -113,8 +122,8 @@ object CollimatorCenteringHTML {
     }
 
     val content = {
-      val href090 = Phase2Util.dicomViewHref(runReq.rtimageMap(Config.CollimatorCentering090BeamName).attributeList.get, extendedData, runReq)
-      val href270 = Phase2Util.dicomViewHref(runReq.rtimageMap(Config.CollimatorCentering270BeamName).attributeList.get, extendedData, runReq)
+      val href090 = Phase2Util.dicomViewHref(attr090, extendedData, runReq)
+      val href270 = Phase2Util.dicomViewHref(attr270, extendedData, runReq)
 
       <div>
         <div class="col-md-4 col-md-offset-3" align="middle">
@@ -122,12 +131,12 @@ object CollimatorCenteringHTML {
         </div>
         <div class="row" style="margin:30px;">
           <div class="col-md-4 col-md-offset-1" align="middle">
-            { imageTitle("90", image090) }
+            { imageTitle(90, isoCenter090) }
             <a title='Click for DICOM details' href={ href090 }>{ Config.CollimatorCentering090BeamName }<br/></a>
             { showImage("CollimatorCentering090_" + Config.CollimatorCentering090BeamName + ".png", outputDir, image090.bufferedImage, image090Name) }
           </div>
           <div class="col-md-4" align="middle">
-            { imageTitle("270", image270) }
+            { imageTitle(270, isoCenter270) }
             <a title='Click for DICOM details' href={ href270 }>{ Config.CollimatorCentering270BeamName }<br/></a>
             { showImage("CollimatorCentering270_" + Config.CollimatorCentering270BeamName + ".png", outputDir, image270.bufferedImage, image270Name) }
           </div>
