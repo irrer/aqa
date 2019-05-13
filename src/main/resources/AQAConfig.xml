@@ -249,7 +249,7 @@ Note that when building a package for release, the Maven build process uses the 
     <PenumbraPlateauPixelsPerMillion>500</PenumbraPlateauPixelsPerMillion>
 
     <!-- Percent value of penumbra that is considered to be the actual edge of the collimator or jaw.  -->
-    <PenumbraThresholdPercent>80.0</PenumbraThresholdPercent>
+    <PenumbraThresholdPercent>50.0</PenumbraThresholdPercent>
 
     <!-- An maximum estimate of how many bad pixels (integer >= 0) to expect per million pixels.  A good
     estimate can marginally improve results, but a bad estimate will probably still be acceptable. -->
