@@ -664,8 +664,6 @@ object Config extends Logging {
   val SlickDbsDefaultDriver = logMainText("SlickDbsDefaultDriver")
   val SlickDbsDefaultDbDriver = logMainText("SlickDbsDefaultDbDriver")
 
-  val SiteMessage = logMainText("SiteMessage")
-
   val UserWhiteList: List[String] = (document \ "UserWhiteList" \ "User").toList.map(node => node.head.text.trim.toLowerCase)
 
   /** Symbols for pass and fail. */

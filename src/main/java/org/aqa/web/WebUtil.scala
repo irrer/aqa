@@ -289,7 +289,6 @@ object WebUtil extends Logging {
       } else Seq[Elem]()
     }
 
-    val SiteMessageTag = "@@SiteMessage@@"
     val runScriptTag = "@@script@@"
 
     val page = {
@@ -329,7 +328,6 @@ object WebUtil extends Logging {
               <div class="col-md-2">
                 <h1 class="fill">
                   <a href="/"><img src="/static/images/logo.png" width="128"/></a>
-                  @@SiteMessage@@
                 </h1>
               </div>
             </div>
@@ -345,7 +343,7 @@ object WebUtil extends Logging {
       case _ => ""
     }
 
-    val text = HTML_PREFIX + xmlToText(page).replaceAllLiterally(runScriptTag, runScriptContent).replaceAllLiterally(SiteMessageTag, Config.SiteMessage)
+    val text = HTML_PREFIX + xmlToText(page).replaceAllLiterally(runScriptTag, runScriptContent)
 
     logger.debug("HTML delivered:\n" + text)
     text
