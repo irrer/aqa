@@ -289,6 +289,7 @@ object WebUtil extends Logging {
       } else Seq[Elem]()
     }
 
+    val SiteMessageTag = "@@SiteMessage@@"
     val runScriptTag = "@@script@@"
 
     val page = {
@@ -310,7 +311,7 @@ object WebUtil extends Logging {
           <script src="/static/zoom/jquery.zoom.js"></script>
           <script src="/static/AQA.js"></script>
         </head>
-        <body>
+        <body style='background-image: url("/static/images/Watermark.png"); background-repeat: repeat-x;'>
           <header class="topbar">
             <div class="row">
               <div class="col-md-1 col-md-offset-9">
@@ -328,6 +329,7 @@ object WebUtil extends Logging {
               <div class="col-md-2">
                 <h1 class="fill">
                   <a href="/"><img src="/static/images/logo.png" width="128"/></a>
+                  @@SiteMessage@@
                 </h1>
               </div>
             </div>
@@ -343,7 +345,7 @@ object WebUtil extends Logging {
       case _ => ""
     }
 
-    val text = HTML_PREFIX + xmlToText(page).replaceAllLiterally(runScriptTag, runScriptContent)
+    val text = HTML_PREFIX + xmlToText(page).replaceAllLiterally(runScriptTag, runScriptContent).replaceAllLiterally(SiteMessageTag, Config.SiteMessage)
 
     logger.debug("HTML delivered:\n" + text)
     text
