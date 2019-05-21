@@ -534,28 +534,6 @@ object Config extends Logging {
     }
   }
 
-  private def getConvertToAnonymousDatabase: Boolean = {
-    val tagName = "ConvertToAnonymousDatabase"
-    getMainTextOption(tagName) match {
-      case Some(convert) => {
-        try {
-          logText(tagName, convert.toBoolean.toString)
-          convert.toBoolean
-        } catch {
-          case t: Throwable => {
-            logText(tagName, "Invalid value: '" + convert + "'.  Assuming false")
-            false
-          }
-        }
-      }
-      case None => {
-        logText(tagName, "Not specified, defaulted to false")
-        false
-      }
-    }
-
-  }
-
   private object ToBeAnonymized {
     private def fmtTag(tag: AttributeTag) = {
       tag.getGroup.formatted("%04x") + "," + tag.getElement.formatted("%04x")
@@ -686,7 +664,7 @@ object Config extends Logging {
   val SlickDbsDefaultDriver = logMainText("SlickDbsDefaultDriver")
   val SlickDbsDefaultDbDriver = logMainText("SlickDbsDefaultDbDriver")
 
-  val ConvertToAnonymousDatabase = getConvertToAnonymousDatabase
+  val SiteMessage = logMainText("SiteMessage")
 
   val UserWhiteList: List[String] = (document \ "UserWhiteList" \ "User").toList.map(node => node.head.text.trim.toLowerCase)
 

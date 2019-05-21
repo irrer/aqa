@@ -10,7 +10,6 @@ import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Config
 import org.aqa.db.DbSetup
-import org.aqa.db.DbTransitionToAnonymize
 import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.TagFromName
 import org.aqa.db.DicomAnonymous
