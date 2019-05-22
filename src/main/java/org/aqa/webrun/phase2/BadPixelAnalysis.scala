@@ -24,6 +24,7 @@ import java.util.Date
 import javax.imageio.ImageIO
 import edu.umro.ImageUtil.Watermark
 import edu.umro.ScalaUtil.Trace
+import edu.umro.ScalaUtil.DicomUtil
 
 /**
  * Store bad pixels in the database and generate HTML.
@@ -136,12 +137,12 @@ object BadPixelAnalysis extends Logging {
     val pngImageMap = runReq.rtimageMap.keys.par.map(beamName => (beamName, dicomView(beamName).get)).toList.toMap
 
     def timeOf(al: AttributeList): Option[Long] = {
-      val timeAttr = Seq(TagFromName.ContentTime, TagFromName.AcquisitionTime, TagFromName.InstanceCreationTime).
+      val timeAttr = Seq(TagFromName.AcquisitionTime, TagFromName.ContentTime, TagFromName.InstanceCreationTime).
         map(tag => al.get(tag)).filter(at => (at != null) && at.isInstanceOf[TimeAttribute] && (at.asInstanceOf[TimeAttribute].getDoubleValues.nonEmpty)).
         map(at => at.asInstanceOf[TimeAttribute]).headOption
 
       timeAttr match {
-        case Some(at) => Some((at.getDoubleValues.head * 1000).round.toLong)
+        case Some(at) => DicomUtil.parseDicomTime(at.getStringValues().head)
         case _ => None
       }
     }
@@ -161,10 +162,12 @@ object BadPixelAnalysis extends Logging {
 
     val elapsedTimeFormat = new SimpleDateFormat("m:ss")
 
-    val earliestTime = {
-      val floodTime = Seq(timeOf(runReq.flood.attributeList.get))
-      (floodTime ++ runReq.rtimageMap.values.map(df => df.attributeList).flatten.map(al => timeOf(al))).flatten.min
+    val allImageTimes = {
+      val allAttrLists = Seq(runReq.flood.attributeList.get) ++ runReq.derivedMap.values.map(_.attributeList)
+      allAttrLists.map(al => timeOf(al)).flatten.sorted
     }
+
+    val earliestTime = allImageTimes.head
 
     def sortBeams = runReq.rtimageMap.keys.toList.sortWith(orderBeams _)
 
@@ -172,10 +175,9 @@ object BadPixelAnalysis extends Logging {
       val al = dicomFile.attributeList.get
       def angleOf(tag: AttributeTag) = Util.angleRoundedTo90(al.get(tag).getDoubleValues.head).toString
 
-      val relativeTime = timeOf(al)
-
+      val imageTime = timeOf(al)
       val relativeTimeText = {
-        relativeTime match {
+        imageTime match {
           case Some(t) => elapsedTimeFormat.format(new Date(t - earliestTime))
           case _ => ""
         }
@@ -202,7 +204,7 @@ object BadPixelAnalysis extends Logging {
           <td style="text-align: center;" title="Leaf Position">{ boolToString(Config.LeafPositionBeamNameList.contains(beamName)) }</td>
         </tr>
       }
-      (relativeTime, elem)
+      (imageTime, elem)
     }
 
     val content = {
@@ -265,6 +267,9 @@ object BadPixelAnalysis extends Logging {
             </td>
             <td>
               Distinct bad pixels:{ distinctBadPixelCount.toString }
+            </td>
+            <td title='Elapsed time on treatment machine between first and last images.'>
+              Elapsed Treatment:{ elapsedTimeFormat.format(new Date(allImageTimes.last - allImageTimes.head)) }
             </td>
           </tr>
         </table>

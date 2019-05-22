@@ -310,7 +310,7 @@ object WebUtil extends Logging {
           <script src="/static/zoom/jquery.zoom.js"></script>
           <script src="/static/AQA.js"></script>
         </head>
-        <body style='background-image: url("/static/images/Watermark.png"); background-repeat: repeat-x;'>
+        <body style='background-image: url("/static/images/restrictions.png"); background-repeat: repeat-x;'>
           <header class="topbar">
             <div class="row">
               <div class="col-md-1 col-md-offset-9">
