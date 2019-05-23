@@ -1,87 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<title>Administration</title>
-<link rel="icon" href="/static/images/favicon.ico?" type="image/x-icon"/>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"/>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap-theme.min.css"/>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/dropzone.min.css"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/dropzone.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-timeago/1.5.4/jquery.timeago.min.js"></script>
-<style>
-body {
-	max-width: 1024px;
-}
+    <head>
+        <title>Administration</title>
+        <link rel="icon" href="/static/images/favicon.ico?" type="image/x-icon" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap-theme.min.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/dropzone.min.css" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/dropzone.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-timeago/1.5.4/jquery.timeago.min.js"></script>
+        <style>
+            body {
+            max-width: 1024px;
+            }
 
-@media ( min-width : 768px) {
-	.sidebar-nav .navbar .navbar-collapse {
-		padding: 0;
-		max-height: none;
-	}
-	.sidebar-nav .navbar ul {
-		float: none;
-		display: block;
-	}
-	.sidebar-nav .navbar li {
-		float: none;
-		display: block;
-	}
-	.sidebar-nav .navbar li a {
-		padding-top: 12px;
-		padding-bottom: 12px;
-	}
-}
-</style>
-</head>
-<body>
-	<div class="row">
-		<div class="col-md-10 col-md-offset-1">
-			<div class="row">
-				<h1 class="fill">
-					<a href="/"> <img src="/static/images/banner.png"  height="256"/>
-					</a>
-          <img src="/static/images/restrictions.png"/>
-				</h1>
-			</div>
-			<div class="col-md-3">
-				<div class="sidebar-nav">
-					<div class="navbar navbar-default" role="navigation">
-						<div class="navbar-header">
-							<button type="button" class="navbar-toggle"
-								data-toggle="collapse" data-target=".sidebar-navbar-collapse">
-								<span class="sr-only">Toggle navigation</span> <span
-									class="icon-bar"></span> <span class="icon-bar"></span> <span
-									class="icon-bar"></span>
-							</button>
-							<span class="visible-xs navbar-brand">Sidebar menu</span>
-						</div>
-						<div class="navbar-collapse collapse sidebar-navbar-collapse">
-							<ul class="nav navbar-nav">
-                                <!-- <li class="active"><a href="/InstitutionList">Institutions</a></li> -->
-                                <li><a href="/admin/InstitutionList">Institutions</a></li>
-                                <li><a href="/admin/UserList">Users</a></li>
-                                <li><a href="/admin/MachineList">Machines</a></li>
-                                <li><a href="/admin/MachineTypeList">Machine Types</a></li>
-                                <li><a href="/admin/MultileafCollimatorList">Collimator Models</a></li>
-                                <li><a href="/admin/EPIDList">EPID Models</a></li>
-                                <li><a href="/admin/ProcedureList">Procedures</a></li>
-                                <li><a href="/AnonymousTranslate?html=1">Alias Values</a></li>
-                                <li><a href="/admin/ServiceInfo">Service Info</a></li>
-							</ul>
-						</div>
-						<!--/.nav-collapse -->
-					</div>
-				</div>
-			</div>
-			<div class="col-md-9">
-				<h2>Administration</h2>
-				This page is to view and modify the configuration.
-				<p></p>
-                Administrative privileges are required.
-			</div>
-		</div>
-	</div>
-</body>
+            @media ( min-width : 768px) {
+            .sidebar-nav .navbar .navbar-collapse {
+            padding: 0;
+            max-height: none;
+            }
+            .sidebar-nav .navbar ul {
+            float: none;
+            display: block;
+            }
+            .sidebar-nav .navbar li {
+            float: none;
+            display: block;
+            }
+            .sidebar-nav .navbar li a {
+            padding-top: 12px;
+            padding-bottom: 12px;
+            }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="row">
+            <div class="col-md-10 col-md-offset-1">
+                <div class="row">
+                    <h1 class="fill">
+                        <a href="/">
+                            <img src="/static/images/banner.png" height="256" />
+                        </a>
+                        <img src="/static/images/restrictions.png" />
+                    </h1>
+                </div>
+                <div class="col-md-3">
+                    <div class="sidebar-nav">
+                        <div class="navbar navbar-default" role="navigation">
+                            <div class="navbar-header">
+                                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".sidebar-navbar-collapse">
+                                    <span class="sr-only">Toggle navigation</span>
+                                    <span class="icon-bar"></span>
+                                    <span class="icon-bar"></span>
+                                    <span class="icon-bar"></span>
+                                </button>
+                                <span class="visible-xs navbar-brand">Sidebar menu</span>
+                            </div>
+                            <div class="navbar-collapse collapse sidebar-navbar-collapse">
+                                <ul class="nav navbar-nav">
+                                    <li>
+                                        <a href="/admin/InstitutionList">Institutions</a>
+                                    </li>
+                                    <li>
+                                        <a href="/admin/UserList">Users</a>
+                                    </li>
+                                    <li>
+                                        <a href="/admin/MachineList">Machines</a>
+                                    </li>
+                                    <li>
+                                        <a href="/admin/MachineTypeList">Machine Types</a>
+                                    </li>
+                                    <li>
+                                        <a href="/admin/MultileafCollimatorList">Collimator Models</a>
+                                    </li>
+                                    <li>
+                                        <a href="/admin/EPIDList">EPID Models</a>
+                                    </li>
+                                    <li>
+                                        <a href="/admin/ProcedureList">Procedures</a>
+                                    </li>
+                                    <li>
+                                        <a href="/AnonymousTranslate?html=1">Alias Values</a>
+                                    </li>
+                                    <li>
+                                        <a href="/admin/ServiceInfo">Service Info</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-9">
+                    <h2>Administration</h2>
+                    This page is to view and modify the configuration.
+                    <p></p>
+                    Administrative privileges are required.
+                </div>
+            </div>
+        </div>
+    </body>
 </html>
