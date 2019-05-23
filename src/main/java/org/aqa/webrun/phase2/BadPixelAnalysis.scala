@@ -25,6 +25,7 @@ import javax.imageio.ImageIO
 import edu.umro.ImageUtil.Watermark
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.web.WebUtil
 
 /**
  * Store bad pixels in the database and generate HTML.
@@ -137,7 +138,7 @@ object BadPixelAnalysis extends Logging {
     val pngImageMap = runReq.rtimageMap.keys.par.map(beamName => (beamName, dicomView(beamName).get)).toList.toMap
 
     def timeOf(al: AttributeList): Option[Long] = {
-      val timeAttr = Seq(TagFromName.AcquisitionTime, TagFromName.ContentTime, TagFromName.InstanceCreationTime).
+      val timeAttr = Seq(TagFromName.ContentTime, TagFromName.AcquisitionTime, TagFromName.InstanceCreationTime).
         map(tag => al.get(tag)).filter(at => (at != null) && at.isInstanceOf[TimeAttribute] && (at.asInstanceOf[TimeAttribute].getDoubleValues.nonEmpty)).
         map(at => at.asInstanceOf[TimeAttribute]).headOption
 
@@ -253,6 +254,7 @@ object BadPixelAnalysis extends Logging {
       val badPixelCount = badPixelList.size
       val distinctBadPixelCount = badPixelList.map(bp => (bp.x, bp.y)).distinct.size
 
+      val elapsedTitle = "Elapsed time (mm:ss) on treatment machine between" + WebUtil.titleNewline + "time stamp of first and last images."
       val subTitle = {
         <table class="table table-responsive">
           <tr>
@@ -262,14 +264,14 @@ object BadPixelAnalysis extends Logging {
             <td>
               Images:{ imageCount.toString }
             </td>
+            <td title={ elapsedTitle }>
+              Delivery Time:{ elapsedTimeFormat.format(new Date(allImageTimes.last - allImageTimes.head)) }
+            </td>
             <td>
               Total bad pixels:{ badPixelCount.toString }
             </td>
             <td>
               Distinct bad pixels:{ distinctBadPixelCount.toString }
-            </td>
-            <td title='Elapsed time on treatment machine between first and last images.'>
-              Elapsed Treatment:{ elapsedTimeFormat.format(new Date(allImageTimes.last - allImageTimes.head)) }
             </td>
           </tr>
         </table>
