@@ -7,6 +7,7 @@ import org.aqa.webrun.phase2.MeasureTBLREdges
 import org.aqa.IsoImagePlaneTranslator
 import java.awt.Point
 import org.aqa.Util
+import edu.umro.ScalaUtil.Trace
 
 object TestTBLR {
 
@@ -29,9 +30,31 @@ object TestTBLR {
     val tblr090 = MeasureTBLREdges.measure(image090, translator090, Some(expected), 90, image090, pointZero, edgePercent)
     val tblr270 = MeasureTBLREdges.measure(image270, translator270, Some(expected), 270, image270, pointZero, edgePercent)
 
+    def fmt(d: Double) = d.formatted("%10.7f")
+
+    def show(m: MeasureTBLREdges.AnalysisResult, trans: IsoImagePlaneTranslator): String = {
+      val tblr = m.measurementSet.pix2iso(trans)
+
+      "top: " + fmt(tblr.top) +
+        "    bottom: " + fmt(tblr.bottom) +
+        "    left: " + fmt(tblr.left) +
+        "    right: " + fmt(tblr.right) +
+        "    center X, Y: " + fmt(tblr.center.getX) +
+        ", " + fmt(tblr.center.getY)
+    }
     println("------------------------------------------------------------------")
-    println("tblr090 iso: " + tblr090.measurementSet.pix2iso(translator090) + "    center: " + tblr090.measurementSet.pix2iso(translator090).center)
-    println("tblr270 iso: " + tblr270.measurementSet.pix2iso(translator270) + "    center: " + tblr270.measurementSet.pix2iso(translator270).center)
+
+    println("tblr090 iso: " + show(tblr090, translator090))
+    println("tblr270 iso: " + show(tblr270, translator270))
+
+    val cx =
+      (tblr090.measurementSet.pix2iso(translator090).center.getX +
+        tblr270.measurementSet.pix2iso(translator270).center.getX) / 2
+    val cy =
+      (tblr090.measurementSet.pix2iso(translator090).center.getY +
+        tblr270.measurementSet.pix2iso(translator270).center.getY) / 2
+
+    println("Center of rotation: " + fmt(cx) + ", " + fmt(cy))
 
     val png090 = new File(dir, "090.png")
     png090.delete
