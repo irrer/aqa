@@ -29,7 +29,6 @@ object Db extends Logging {
    * Default timeout for general database overhead operations.  This includes operations like
    *  CREATE or DROP that should happen quickly, but does not include SELECT or other operations that could take longer.
    */
-  //val TIMEOUT = new DurationInt(5).seconds   // TODO put back?
   val TIMEOUT = new DurationInt(60).seconds
 
   //private val dbConfig: DatabaseConfig[PostgresDriver] = DatabaseConfig.forConfig("slick.dbs.default")
