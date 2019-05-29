@@ -265,7 +265,7 @@ https://mvnrepository.com/artifact/org.scalatest/scalatest
             <url>http://maven.restlet.org</url>
         </repository>
     </repositories>
-    <!--  -->
+    <!-- 
     <distributionManagement>
         <repository>
             <id>releases</id>
@@ -278,6 +278,6 @@ https://mvnrepository.com/artifact/org.scalatest/scalatest
             <url>http://141.214.124.203:8081/nexus/content/repositories/snapshots</url>
         </snapshotRepository>
     </distributionManagement>
-        
+    -->
   
 </project>

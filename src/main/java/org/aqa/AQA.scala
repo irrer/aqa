@@ -18,7 +18,7 @@ object AQA extends Logging {
   def main(args: Array[String]): Unit = {
 
     try {
-      println("AQA Service starting at " + Util.timeHumanFriendly(new Date(serviceStartTime)))
+      println("AQA service starting at " + Util.timeHumanFriendly(new Date(serviceStartTime)))
       Util.showJarFile(this)
 
       if (Config.validate) {
@@ -28,7 +28,7 @@ object AQA extends Logging {
         Run.handleRunningProcedureList
         new WebServer
         new PeriodicRestart(Config.RestartTime)
-        logger.info("Service started")
+        logger.info("AQA service started")
       }
     } catch {
       // Exceptions thrown to this level should not happen, and if they do it probably means that something
