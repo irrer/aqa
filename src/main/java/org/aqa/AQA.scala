@@ -24,7 +24,6 @@ object AQA extends Logging {
       if (Config.validate) {
         DbSetup.init
         DbSetup.smokeTest
-        //DbSetup.storeFilesInDatabase // TODO remove when migration is complete
         Run.handleRunningProcedureList
         new WebServer
         new PeriodicRestart(Config.RestartTime)
