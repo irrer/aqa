@@ -1,36 +1,104 @@
 <div title="Edge Measurement" class="col-md-8 col-md-offset-1">
 
     <h2>@@title@@</h2>
-    <p>Edges measurement is used by Collimator Centering and Collimator Position 
+    <p>Edges measurement is used by multiple tests, including Collimator Centering and Collimator Position
     </p>
 
+    <p>Generally, sets of four edges of a rectangle are found, as shown in example below:
+    </p>
+
+    <div style="margin:30px;">
+        <center>
+            <a href='exampleOfFourEdges.png' title='Example of finding four edges.  Dashed lines show edge location. Click for full sized image.'>
+                <img width='512' src='exampleOfFourEdges.png' />
+            </a>
+            <br />
+            <i>Example of finding four edges.  Dashed lines show edge location. Click for full sized image.
+            </i>
+        </center>
+    </div>
+
+    <p>The first step is to use the associated RTPLAN to determine the expected position and length of the edge.
+        As an example, consider the left in the image above. The horizontal position is given by
+        the RTPLAN, and the expected vertical length is given by top and bottom edges.
+    </p>
+
+    <p>
+        Given the expected position, a bounding box is created, using the penumbra width. The penumbra width is
+        defined as the configuration value
+        <b>PenumbraThickness_mm</b>
+        . For the left edge, the bounding box
+        is centered horizontally around the the expected position, and the width is the penumbra width.
+    </p>
+
+    <p>To improve the accuracy of the measurement of the left edge, interference from the intersecting top and
+        bottom edges must be removed. This is done by limiting the top and bottom of the bounding
+        box by 1/2 the
+        penumbra width from the top and bottom edges.
+    </p>
+
+    <p>The bounding box is indicated by the black lines, and annotated in the detail below with the white lines
+        and arrows.
+    </p>
+
+    <div style="margin:30px;">
+        <center>
+            <a href='leftEdgeDetail.png' title='Detail of bounding box.  Click for image.'>
+                <img src='leftEdgeDetail.png' />
+            </a>
+            <br />
+            <i>Left edge detail.
+            </i>
+        </center>
+    </div>
+
+    <p>A profile of the edge is then created by summing each column of pixel. In the case of a horizontal edge,
+        the rows would be summed. The resulting profile is then smoothed using a cubic spline as
+        shown below:
+    </p>
+
+    <div style="margin:30px;">
+        <p style="margin:10px; border: 1px solid lightgrey;">
+            <a href='rawToCubic.png' title='Raw profile and corresponding cubic spline.  Click for image.'>
+                <img src='rawToCubic.png' />
+            </a>
+            <center>
+                <i>Note: The above image is an approximation of real data. The ends have been trimmed and coarseness
+                    has been exaggerated in the above image for illustration purposes.
+                </i>
+            </center>
+        </p>
+    </div>
+
+    <p>Using the cubic spline, a binary search is used to find the horizontal position where the curve is halfway (<b>50%</b>) between
+        the upper and lower bounds.
+    </p>
+
+    <p>
+        Notes:
+
+        <ul>
+            <li>The bounding box approach is designed to use the maximum possible number of pixels. This reduces the influence of any aberrant pixels.</li>
+
+            <li>The cubic spline is implemented in double precision floating point and yields sub-pixel accuracy.</li>
+
+            <li>It is expected that the penumbra value is chosen to be large enough such that the upper and lower bounds plateau.</li>
+
+            <li>
+                While there are edge detection algorithms such as
+                <a href='https://en.wikipedia.org/wiki/Canny_edge_detector'>Canny</a>
+                , the purpose
+                here is not to detect whether there is an edge, but to measure where the edge is.
+            </li>
 
 
-The AQA algorithm is to use the expected position of an edge
-to form a bounding rectangle around it.  For a vertical
-edge, the columns in the region are summed, providing a
-profile that uses as many pixels as possible.  A cubic
-spline is drawn through the profile, and then a point is
-chosen on that spline to determine the edge's location.  The
-percent is a configurable parameter which is set to %80.
+            <li>In the event that the edge is not in the bounding box predicted by the RTPLAN, the algorithm will fail.</li>
 
-Note that for the example shown, the upper and lower ends of
-the edge are not considered, because there is interference
-with the horizontal edge.
+        </ul>
 
+    </p>
 
-TODO : how do I determine the ceiling and floor?
-
-
-A number of edge detection algorithms (such as TODO) are
-designed to find an edge in a visually noisey scene, but
-they do not yield answers to a high degree of sub-pixel
-accuracy.  For treatment machine quality assurance, the
-approximate location of the edge is known, as well as it's
-shape, so this can be leveraged to use methods that are
-highly accurate but do not do well with noisy images.  If
-the edge is not approximately where it is expected to be,
-then the test will be failing anyway so the point is moot.
+ 
 
 
 <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
