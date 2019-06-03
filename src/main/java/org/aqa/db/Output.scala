@@ -133,7 +133,7 @@ object Output extends Logging {
   /**
    * Get a list of all outputs.
    */
-  def list: Seq[Output] = Db.run(query.result) // TODO long
+  def list: Seq[Output] = Db.run(query.result)
 
   case class ExtendedValues(
     input_dataDate: Option[Timestamp],
@@ -149,7 +149,7 @@ object Output extends Logging {
   /**
    * Get an extended list of all outputs.
    */
-  def extendedList(procedure: Option[Procedure], machine: Option[Machine], maxSize: Int): Seq[ExtendedValues] = { // TODO long
+  def extendedList(procedure: Option[Procedure], machine: Option[Machine], maxSize: Int): Seq[ExtendedValues] = {
 
     val search = for {
       output <- Output.query.map(o => (o.outputPK, o.startDate, o.inputPK, o.procedurePK, o.userPK))
@@ -166,7 +166,7 @@ object Output extends Logging {
     result
   }
 
-  // can pass sorting function in using this horrendous type:   // TODO
+  // can pass sorting function in using this horrendous type:
   //
   //    val k: jType = null
   //    k._5.description.reverse
@@ -187,7 +187,7 @@ object Output extends Logging {
   /**
    * Get a list of all outputs with the given status and their associated procedures.
    */
-  def listWithStatus(status: ProcedureStatus.Value): Seq[(Output, Procedure)] = { // TODO long
+  def listWithStatus(status: ProcedureStatus.Value): Seq[(Output, Procedure)] = {
     val statusText = status.toString
     val action = for {
       output <- Output.query if output.status === statusText

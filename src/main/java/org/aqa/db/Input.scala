@@ -68,13 +68,13 @@ object Input extends Logging {
 
   class InputTable(tag: Tag) extends Table[Input](tag, "input") {
 
-    def inputPK = column[Long]("inputPK", O.PrimaryKey, O.AutoInc)
-    def directory = column[Option[String]]("directory")
-    def uploadDate = column[Timestamp]("uploadDate")
-    def userPK = column[Option[Long]]("userPK")
-    def machinePK = column[Option[Long]]("machinePK")
-    def patientId = column[Option[String]]("patientId")
-    def dataDate = column[Option[Timestamp]]("dataDate")
+    def inputPK = column[Long]("inputPK", O.PrimaryKey, O.AutoInc) // primary key
+    def directory = column[Option[String]]("directory") // directory where files reside
+    def uploadDate = column[Timestamp]("uploadDate") // when files were uploaded
+    def userPK = column[Option[Long]]("userPK") // user that uploaded files
+    def machinePK = column[Option[Long]]("machinePK") // associated machine
+    def patientId = column[Option[String]]("patientId") // patient ID for potential tracking
+    def dataDate = column[Option[Timestamp]]("dataDate") // when data was generated
 
     def * = (
       inputPK.?,
