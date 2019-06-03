@@ -1,0 +1,34 @@
+<div title="Center Dose" class="col-md-8 col-md-offset-1">
+
+    <h2>@@title@@</h2>
+    <p>This test measures the dose in CU in the center of the image. The measurement is obtained by
+        defining a 5 mm (configurable as CenterDoseRadius_mm) radius circle in the isoplane and calculating
+        the average CU of the pixels within that circle, as shown below:
+    </p>
+    <div style="margin:30px;">
+        <center>
+            <a title="Center dose taken by defining a 5 mm radius circle in the center of an FFF image. Click for full sized image." href="CenterDoseFFFExample.png">
+                <img src="CenterDoseFFFExample.png" width="512" />
+            </a>
+            <br />
+            <i>Center dose taken by defining a 5 mm radius circle in the center of an FFF image.</i>
+        </center>
+    </div>
+    <h4 style="margin: 40px;">
+        <pre>error = measured - expected</pre>
+    </h4>
+
+    <p>
+        The center of the circle is defined with the coordinates obtained by
+        <a href='../CollimatorCentering/index.html'>Collimator Centering</a>
+        . Because a circle is being mapped onto a rectangular grid of pixels,
+        sub-pixel variations in collimator centering can change which pixels
+        are considered within the circle.
+    </p>
+
+    <p>A pixel is considered to be inside the circle if the center of the pixel
+        is equal to or less than the configured radius.
+    </p>
+
+
+</div>
