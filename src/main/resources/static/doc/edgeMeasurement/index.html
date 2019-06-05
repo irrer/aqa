@@ -13,7 +13,7 @@
                 <img width='512' src='exampleOfFourEdges.png' />
             </a>
             <br />
-            <i>Example of finding four edges.  Dashed lines show edge location. Click for full sized image.
+            <i>Example of finding four edges. Dashed lines show edge location. Click for full sized image.
             </i>
         </center>
     </div>
@@ -70,8 +70,11 @@
         </p>
     </div>
 
-    <p>Using the cubic spline, a binary search is used to find the horizontal position where the curve is halfway (<b>50%</b>) between
-        the upper and lower bounds.
+    <p>
+        Using the cubic spline, a binary search which tries different horizontal inputs is used to find the vertical position where the curve is halfway (
+        <b>50%</b>
+        ) between
+        the upper and lower bounds. The resulting horizontal position is used as the edge measurement.
     </p>
 
     <p>
@@ -88,17 +91,20 @@
                 While there are edge detection algorithms such as
                 <a href='https://en.wikipedia.org/wiki/Canny_edge_detector'>Canny</a>
                 , the purpose
-                here is not to detect whether there is an edge, but to measure where the edge is.
+                here is not to detect whether there is an edge, but to measure as precisely as feasible where the edge is.
             </li>
 
-
-            <li>In the event that the edge is not in the bounding box predicted by the RTPLAN, the algorithm will fail.</li>
+            <li>In the event that a single well defined edge is not in the bounding box predicted by the RTPLAN, the algorithm can produce unpredictable results. Examples would be an area where there
+                were multiple edges or an area that was featureless.
+            </li>
 
         </ul>
 
     </p>
 
- 
+
+    <p style="margin:10px;"> &nbsp; 
+    </p>
 
 
 <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
