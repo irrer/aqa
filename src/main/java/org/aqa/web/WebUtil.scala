@@ -313,7 +313,7 @@ object WebUtil extends Logging {
         <body style='background-image: url("/static/images/restrictions.png"); background-repeat: repeat-x;'>
           <header class="topbar">
             <div class="row">
-              <div class="col-md-1 col-md-offset-9">
+              <div class="col-md-1 col-md-offset-9" style="background-color: white;">
                 <strong>
                   <br/>
                   <a href="/run/WebRunIndex">Run Procedure</a>
