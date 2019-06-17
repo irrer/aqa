@@ -373,8 +373,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       val beamNameList = Config.SymmetryAndFlatnessBeamList.filter(beamName => runReq.derivedMap.contains(beamName))
 
       // only process beams that are both configured and have been uploaded
-      //val resultList = beamNameList.par.map(beamName => analyze(beamName, extendedData, runReq, collimatorCentering)).toList  // TODO put back
-      val resultList = beamNameList.map(beamName => analyze(beamName, extendedData, runReq, collimatorCentering)).toList
+      val resultList = beamNameList.par.map(beamName => analyze(beamName, extendedData, runReq, collimatorCentering)).toList
 
       val pass = {
         0 match {

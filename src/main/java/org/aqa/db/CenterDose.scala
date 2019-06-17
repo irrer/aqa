@@ -109,9 +109,9 @@ object CenterDose extends ProcedureOutput {
     Db.perform(ops)
   }
 
-  case class CenterDoseHistory(date: Date, beamName: String, dose: Double, SOPInstanceUID: String) {
+  case class CenterDoseHistory(date: Date, centerDose: CenterDose) {
     override def toString = {
-      "date: " + date + "    beamName: " + beamName + "    dose: " + Util.fmtDbl(dose) + "  SOP UID: " + SOPInstanceUID
+      "date: " + date + "    " + centerDose
     }
   }
 
@@ -148,8 +148,8 @@ object CenterDose extends ProcedureOutput {
           distinct.
           sortBy(_.dataDate.desc).take(limit).
           map(o => (o.outputPK, o.dataDate))
-        centerDose <- CenterDose.query.filter(c => c.outputPK === output._1).map(c => (c.beamName, c.dose, c.SOPInstanceUID))
-      } yield ((output._2, centerDose._1, centerDose._2, centerDose._3))
+        centerDose <- CenterDose.query.filter(c => c.outputPK === output._1)
+      } yield ((output._2, centerDose))
 
       val sorted = search.distinct.sortBy(_._1.desc)
       //println(sorted.result.statements.mkString("\n    "))
@@ -162,20 +162,17 @@ object CenterDose extends ProcedureOutput {
           distinct.
           sortBy(_.dataDate).take(limit).
           map(o => (o.outputPK, o.dataDate))
-        centerDose <- CenterDose.query.filter(c => c.outputPK === output._1).map(c => (c.beamName, c.dose, c.SOPInstanceUID))
-      } yield ((output._2, centerDose._1, centerDose._2, centerDose._3))
+        centerDose <- CenterDose.query.filter(c => c.outputPK === output._1)
+      } yield ((output._2, centerDose))
 
       val sorted = search.distinct.sortBy(_._1.asc)
       //println(sorted.result.statements.mkString("\n    "))
       Db.run(sorted.result)
     }
 
-    // println("before:\n    " + before.mkString("\n    "))
-    // println("after:\n    " + after.mkString("\n    "))
-
     val all = before ++ after
 
-    val result = all.map(h => new CenterDoseHistory(h._1.get, h._2, h._3, h._4)).sortWith((a, b) => a.date.getTime < b.date.getTime)
+    val result = all.map(h => new CenterDoseHistory(h._1.get, h._2)).sortWith((a, b) => a.date.getTime < b.date.getTime)
     result
   }
 }

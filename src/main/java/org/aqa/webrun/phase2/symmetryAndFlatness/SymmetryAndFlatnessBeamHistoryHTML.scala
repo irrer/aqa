@@ -51,6 +51,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, extendedData: Extende
 
     val tolerance = new C3Chart.Tolerance(baseline.value.toDouble - limit, baseline.value.toDouble + limit)
     val chart = new C3ChartHistory(
+      None,
       MaintenanceRecordList,
       width,
       height,

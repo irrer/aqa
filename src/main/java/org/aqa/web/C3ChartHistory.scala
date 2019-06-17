@@ -34,6 +34,7 @@ import edu.umro.ScalaUtil.Trace
  * @param yFormat: Formatting for y values.   Examples: .3g .4g  Reference: http://bl.ocks.org/zanarmstrong/05c1e95bf7aa16c4768e
  */
 class C3ChartHistory(
+  chartIdOpt: Option[String],
   maintList: Seq[MaintenanceRecord],
   width: Option[Int],
   height: Option[Int],
@@ -53,7 +54,9 @@ class C3ChartHistory(
   private val yMaxSize = yValues.map(yy => yy.size).max
   if (yMaxSize > xDateList.size) throw new RuntimeException("Size of at least one of the yValues is " + yMaxSize + " and is greater than size of xDateList " + xDateList.size)
 
-  private val idTag = "ChartId_" + C3Chart.getId
+  private val chartIdTag: String = {
+    if (chartIdOpt.isDefined) chartIdOpt.get else C3Chart.makeUniqueChartIdTag
+  }
 
   private def column(label: String, valueList: Seq[Double]): String = {
     "[ '" + label + "', " + valueList.mkString(", ") + "]"
@@ -87,7 +90,7 @@ class C3ChartHistory(
   private val maintColorList = textColumn(maintList.map(maint => MaintenanceCategory.findMaintenanceCategoryMatch(maint.category).Color))
   private val maintCategoryList = textColumn(maintList.map(maint => maint.category))
 
-  val html = { <div id={ idTag }>{ idTag }</div> }
+  val html = { <div id={ chartIdTag }>{ chartIdTag }</div> }
 
   private val yLabels = {
     val yOnly = yAxisLabels.map(y => "'" + y + "' : '" + xLabel + "',")
@@ -138,7 +141,7 @@ class C3ChartHistory(
 
   val javascript = {
     """
-var """ + idTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) + """
+var """ + chartIdTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) + """
     tooltip: {
       format: {
         value: function (value, ratio, id, index) {
@@ -187,7 +190,7 @@ var """ + idTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) 
             }
         }
     },
-    bindto : '#""" + idTag + """',
+    bindto : '#""" + chartIdTag + """',
     axis: {
        x: {
          label: 'Date',

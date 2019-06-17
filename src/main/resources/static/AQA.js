@@ -54,14 +54,14 @@ $(document).ready(function() {
  * etc.) that the current user is allowed to view along with 
  * their real names as a table.  Find all HTML elements with 
  * the special attribute "aqaalias", and replace their contents 
- * (the alias) with the real name.   
+ * (the alias) with the real name.
  *  
  * If the contents of an element do not match a real name, then 
  * ignore it.  This is usually because the user is viewing a 
  * page with entities that they should not be allowed to see. 
  *  
  * Finally, set or append to the title of the element its alias 
- * so the user can easily find it. 
+ * so the user can easily find it.
  */
 var jsonhttp = new XMLHttpRequest();
 var aliasToRealUrl = "/AnonymousTranslate/translateTable.json";  // defines the URL for getting the alias to real table
@@ -128,6 +128,29 @@ function translateAliases(aliasToRealList) {
     }
     
   }
-  
 
 }
+
+/*
+var furl = "/static/foo.js";
+var jh = new XMLHttpRequest();
+var ChartId_27 = "fillmeup";
+
+jh.open("GET", url, true);
+jh.send();
+
+jh.onreadystatechange = function() {
+  if (this.readyState == 4 && this.status == 200) {
+    var text = this.responseText;
+    var parsedText = JSON.parse(text);
+    ChartId_27 = c3.generate(parsedText);
+    var good = 2;
+  }
+};
+
+$.ajax({
+  url: furl,
+  dataType: "script",
+  success: success
+});
+*/

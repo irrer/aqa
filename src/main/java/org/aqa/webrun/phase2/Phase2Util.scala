@@ -386,7 +386,10 @@ object Phase2Util extends Logging {
     WebServer.urlOfResultsFile(dicomViewImageHtmlFile(al, extendedData, runReq))
   }
 
-  def beamNameToId(beamName: String) = beamName.replaceAll("[# \"'@<>]", "_")
+  /**
+   * Given a beam name, replace all special characters with underscore so it can be used as a JavaScript or XML identifier.
+   */
+  def beamNameToId(beamName: String) = beamName.replaceAll("[^0-9a-zA-Z]", "_").replaceAll("__*", "_")
 
   /**
    * Create a list of points whose sum can be used to measure the center dose of an image.

@@ -108,7 +108,6 @@ object BadPixelAnalysis extends Logging {
     val viewDir = new File(extendedData.output.dir, "view")
     def dicomView(beamName: String): Option[String] = {
       logger.info("Making DICOM view for beam " + beamName)
-      println("Making DICOM view for beam " + beamName) // TODO rm
       val rtimage = runReq.rtimageMap(beamName)
       val derived = runReq.derivedMap(beamName)
       val angles = gantryCollAngles(rtimage.attributeList.get)

@@ -29,6 +29,7 @@ import org.aqa.webrun.phase2.ExtendedData
 import org.aqa.webrun.phase2.SubProcedureResult
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.IsoImagePlaneTranslator
+import org.aqa.web.CenterDoseChartHistory
 
 object CenterDoseHTML extends Logging {
   private val htmlFileName = "CenterDose.html"
@@ -47,19 +48,19 @@ object CenterDoseHTML extends Logging {
     /**
      * Get the history of results from previous runs of this procedure.  Exclude results that were run on this exact data.
      */
-    val history = {
-      val uidSet = resultList.map(cd => cd.SOPInstanceUID).toSet
-      val j = CenterDose.recentHistory(Config.CenterDoseReportedHistoryLimit, extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get, extendedData.output.dataDate).toArray
-      val j1 = j.size
-      val hist = CenterDose.recentHistory(Config.CenterDoseReportedHistoryLimit, extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get, extendedData.output.dataDate).
-        filter(cd => !uidSet.contains(cd.SOPInstanceUID))
-      hist
-    }
+    //    val history = {
+    //      val uidSet = resultList.map(cd => cd.SOPInstanceUID).toSet
+    //      val j = CenterDose.recentHistory(Config.CenterDoseReportedHistoryLimit, extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get, extendedData.output.dataDate).toArray
+    //      val j1 = j.size
+    //      val hist = CenterDose.recentHistory(Config.CenterDoseReportedHistoryLimit, extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get, extendedData.output.dataDate).
+    //        filter(cd => !uidSet.contains(cd.SOPInstanceUID))
+    //      hist
+    //    }
+    //
+    //    val resultListAsHistory = resultList.map(cd => new CenterDose.CenterDoseHistory(extendedData.output.dataDate.get, cd.beamName, cd.dose, cd.SOPInstanceUID))
+    //    val units = runReq.flood.attributeList.get.get(TagFromName.RescaleType).getSingleStringValueOrDefault("CU")
 
-    val resultListAsHistory = resultList.map(cd => new CenterDose.CenterDoseHistory(extendedData.output.dataDate.get, cd.beamName, cd.dose, cd.SOPInstanceUID))
-    val units = runReq.flood.attributeList.get.get(TagFromName.RescaleType).getSingleStringValueOrDefault("CU")
-
-    val chart = new CenterDoseChart(resultListAsHistory, history, units, extendedData)
+    val chart = new CenterDoseChart(extendedData.output.outputPK.get)
 
     class Column(val title: String, columnName: String, val get: (CenterDose) => String) {
       def toHeader = <th title={ title }>{ columnName }</th>
@@ -81,7 +82,7 @@ object CenterDoseHTML extends Logging {
 
     class ColumnChart(override val title: String, columnName: String, override val get: (CenterDose) => String) extends Column(title, columnName, get) {
       override def toHeader = <th title={ title }>History</th>
-      override def toRow(cntrDose: CenterDose) = <td title={ title } id={ chart.refOfBeam(cntrDose.beamName) }/>
+      override def toRow(cntrDose: CenterDose) = <td title={ title } id={ chart.chartIdOfBeam(cntrDose.beamName) }/>
     }
 
     val rowList = Seq(
@@ -97,10 +98,12 @@ object CenterDoseHTML extends Logging {
       <tr>{ rowList.map(row => row.toRow(centerDose)) }</tr>
     }
 
+    val units: String = resultList.head.units
+
     def imageToHtml(centerDose: CenterDose): Elem = {
       <div class="row">
         <h3>{ centerDose.beamName + " : " }<font color='orange'>{ centerDose.dose.formatted("%6.4f") }</font> { units }</h3>
-        { chart.refOfBeam(centerDose.beamName) }
+        { chart.chartReferenceToBeam(centerDose.beamName) }
       </div>
     }
 
@@ -122,7 +125,7 @@ object CenterDoseHTML extends Logging {
     }
 
     // write the report to the output directory
-    val text = Phase2Util.wrapSubProcedure(extendedData, content, "Center Dose", status, Some(chart.chartScript), runReq)
+    val text = Phase2Util.wrapSubProcedure(extendedData, content, "Center Dose", status, Some(CenterDoseChartHistory.makeReference(extendedData.output.outputPK.get)), runReq)
     val file = new File(extendedData.output.dir, htmlFileName)
     Util.writeBinaryFile(file, text.getBytes)
 

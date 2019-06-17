@@ -148,6 +148,7 @@ object WedgeHTML {
     }
 
     val historyChart = new C3ChartHistory(
+      None,
       maintenanceRecordList,
       None, None, // chart width, height
       "Date", // x axis label

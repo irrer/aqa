@@ -3,22 +3,34 @@ package org.aqa.web
 import org.aqa.Logging
 import java.awt.Color
 import edu.umro.ScalaUtil.Trace
+import org.aqa.webrun.phase2.Phase2Util
 
 object C3Chart {
 
   private var id = 0
 
   private val idLock = "lock"
+
+  val idTagPrefix = "ChartId_"
+
+  def textToChartId(text: String): String = {
+    idTagPrefix + Phase2Util.beamNameToId(text)
+  }
+
   /**
    * Get an id that guaranteed to be unique for a given web page.
    */
-  def getId: Int = idLock.synchronized({
+  def makeUniqueChartIdTag: String = idLock.synchronized({
     id = id + 1
-    id
+    textToChartId(id.toString)
   })
 
   val scriptPrefix = """\n<script>\n"""
   val scriptSuffix = """\n</script>\n"""
+
+  def html(idTag: String) = {
+    <div id={ idTag }>{ idTag }</div>
+  }
 
   /**
    * Make the C3 chart snippet to set the chart width and height if specified.
@@ -88,19 +100,19 @@ class C3Chart(
   private val minY = allY.min
   private val maxY = allY.max
 
-  private val idTag = "ChartId_" + C3Chart.getId
-  Trace.trace("idTag: " + idTag) // TODO rm
+  private val chartIdTag = C3Chart.makeUniqueChartIdTag
+  Trace.trace("idTag: " + chartIdTag) // TODO rm
 
   private def column(label: String, valueList: Seq[Double]): String = {
     "[ '" + label + "', " + valueList.mkString(", ") + "]"
   }
 
-  val html = { <div id={ idTag }>{ idTag }</div> }
+  val html = { <div id={ chartIdTag }>{ chartIdTag }</div> }
 
   val javascript = {
-    Trace.trace("idTag: " + idTag)
+    Trace.trace("idTag: " + chartIdTag)
     """      
-var """ + idTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) + """
+var """ + chartIdTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) + """
     data: {
         x: '""" + xAxisLabel + """',
         columns: [
@@ -116,7 +128,7 @@ var """ + idTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) 
             }
         }
     },
-    bindto : '#""" + idTag + """',
+    bindto : '#""" + chartIdTag + """',
     axis: {
         x: {
             label: '""" + xDataLabel + """',

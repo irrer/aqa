@@ -9,59 +9,67 @@ import org.aqa.db.MaintenanceRecord
 import java.awt.Color
 import org.aqa.webrun.phase2.ExtendedData
 import edu.umro.ScalaUtil.Trace
+import org.aqa.db.Output
+import org.aqa.db.Input
+import org.aqa.db.Machine
+import org.aqa.db.Procedure
+import org.aqa.Config
+import org.aqa.web.C3Chart
+import org.aqa.webrun.phase2.Phase2Util
 
-class CenterDoseChart(resultList: Seq[CenterDose.CenterDoseHistory], history: Seq[CenterDose.CenterDoseHistory], units: String, extendedData: ExtendedData) extends Logging {
+object CenterDoseChart extends Logging {
 
-  private val allDates = (resultList ++ history).map(cd => cd.date)
+}
 
-  private val maintenanceRecordList = MaintenanceRecord.getRange(extendedData.machine.machinePK.get, allDates.min, allDates.max)
+class CenterDoseChart(outputPK: Long) extends Logging {
+
+  val output = Output.get(outputPK).get
+  val procedure = Procedure.get(output.procedurePK).get
+  val input = Input.get(output.inputPK).get
+  val machine = Machine.get(output.machinePK.get).get
+  val history = CenterDose.recentHistory(Config.CenterDoseReportedHistoryLimit, machine.machinePK.get, procedure.procedurePK.get, output.dataDate)
+
+  private val allDates = history.map(cd => cd.date)
+
+  private val maintenanceRecordList = MaintenanceRecord.getRange(machine.machinePK.get, allDates.min, allDates.max)
 
   /* List of SOPInstanceUID's for data set that was just calculated. */
-  private val sopSet = resultList.map(cd => cd.SOPInstanceUID).toSet
+  //private val sopSet = resultList.map(cd => cd.SOPInstanceUID).toSet
 
+  /**
+   * Filter the history to get only center doses for the given beam, and sort by increasing date.
+   */
   private def sortedHistoryForBeam(beamName: String) = {
-    val realHistory = (resultList ++ history).filter(h => h.beamName.equals(beamName)).sortWith((a, b) => (a.date.getTime < b.date.getTime))
-    realHistory
+    val sortedBeamHistory = history.filter(h => h.centerDose.beamName.equals(beamName)).sortWith((a, b) => (a.date.getTime < b.date.getTime))
+    sortedBeamHistory
   }
 
-  private def beamRefOf(index: Int): String = {
-    "HistoryChart_" + index + "_" + resultList(index).beamName.replaceAll("[^a-zA-Z0-9]", "_")
+  def chartIdOfBeam(beamName: String) = C3Chart.idTagPrefix + Phase2Util.beamNameToId(beamName)
+
+  def chartReferenceToBeam(beamName: String) = {
+    val ciob = chartIdOfBeam(beamName)
+    <div id={ ciob }>{ ciob }</div>
   }
 
   private def chartOfBeam(beamName: String): C3ChartHistory = {
     val sortedHistory = sortedHistoryForBeam(beamName)
-    val index = sortedHistory.indexWhere(sh => sopSet.contains(sh.SOPInstanceUID))
+    val index = sortedHistory.indexWhere(sh => sh.centerDose.outputPK == output.outputPK.get)
+    val units = sortedHistory(index).centerDose.units
 
     new C3ChartHistory(
+      Some(chartIdOfBeam(beamName)),
       maintenanceRecordList,
       None, // width
       None, // height
       "Date", sortedHistory.map(h => h.date),
       None, // BaselineSpec
       None, // minMax
-      Seq(units), units, Seq(sortedHistory.map(h => h.dose)), index, ".5g", Seq(new Color(102, 136, 187)))
+      Seq(units), units, Seq(sortedHistory.map(h => h.centerDose.dose)), index, ".5g", Seq(new Color(102, 136, 187)))
   }
 
-  def refOfBeam(beamName: String) = beamRefMap(beamName)
+  private val beamList = history.filter(h => h.centerDose.outputPK == outputPK).map(_.centerDose.beamName).distinct
+  private val chartList = beamList.map(beamName => chartOfBeam(beamName))
 
-  private val scriptPrefix = {
-    """
-<script>
-"""
-  }
-
-  private val scriptSuffix = {
-    """
-    </script>
-"""
-  }
-
-  Trace.trace("Center Dose char data:\n    " + resultList.mkString(("\n    "))) // TODO rm
-
-  private val chartList = resultList.map(cd => chartOfBeam(cd.beamName))
-
-  private val beamRefMap = resultList.indices.map(i => (resultList(i).beamName, chartList(i).html)).toMap
-
-  val chartScript = chartList.map(c => c.javascript).mkString(scriptPrefix, "\n", scriptSuffix)
+  val chartScript = chartList.map(c => c.javascript).mkString("\n")
 
 }
