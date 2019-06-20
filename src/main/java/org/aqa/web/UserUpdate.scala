@@ -32,6 +32,7 @@ import org.aqa.db.CachedUser
 import org.aqa.Crypto
 import org.aqa.AnonymizeUtil
 import org.aqa.db.MaintenanceRecord
+import edu.umro.ScalaUtil.Trace
 
 object UserUpdate {
   val userPKTag = "userPK"
@@ -306,11 +307,14 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
 
     def decrypt(text: String): String = AnonymizeUtil.decryptWithNonce(user.institutionPK, text)
 
+    val clientUser = getUser(response.getRequest)
+    val authOk = userIsWhitelisted(response) || (clientUser.isDefined && (clientUser.get.institutionPK == user.institutionPK))
+
     val valueMap = Map(
       (userPK.label, user.userPK.get.toString),
-      (id.label, decrypt(user.id_real.get)),
-      (fullName.label, decrypt(user.fullName_real)),
-      (email.label, decrypt(user.email_real)),
+      (id.label, if (authOk) decrypt(user.id_real.get) else user.id),
+      (fullName.label, if (authOk) decrypt(user.fullName_real) else "not authorized"),
+      (email.label, if (authOk) decrypt(user.email_real) else "not authorized"),
       (role.label, user.role),
       (institution.label, user.institutionPK.toString))
     formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)

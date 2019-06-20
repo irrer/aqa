@@ -36,7 +36,7 @@ class SetPassword extends Restlet with SubUrlRoot {
   private def getTargetUserId(valueMap: ValueMapT): Elem = {
     val pk = valueMap.get(userPK.label)
     val usrId = if (pk.isDefined) User.get(pk.get.toLong).get.id else "unknown"
-    WebUtil.wrapAlias(usrId )
+    WebUtil.wrapAlias(usrId)
   }
 
   private val id = new WebPlainText("Id", true, 4, 0, getTargetUserId _)
@@ -55,6 +55,9 @@ class SetPassword extends Restlet with SubUrlRoot {
   private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
 
   private val form = new WebForm(pathOf, List(List(id), List(password), List(verifyPassword), List(saveButton, cancelButton, userPK)))
+
+  private val forbiddenMessage = new WebPlainText("Password reset forbidden", false, 3, 0, _ => { <div>You may not reset passwords from other institutions.</div> })
+  private val formChangeForbidden = new WebForm(pathOf, List(List(forbiddenMessage), List(cancelButton)))
 
   /**
    * Only permit high quality passwords.
@@ -161,8 +164,16 @@ class SetPassword extends Restlet with SubUrlRoot {
   }
 
   private def processRequest(valueMap: ValueMapT, request: Request, response: Response): Unit = {
+    val clientUser = getUser(response.getRequest)
+    val user = {
+      val pk = valueMap.get(userPK.label)
+      if (pk.isDefined) User.get(pk.get.toLong) else None
+    }
+
+    val authOk = userIsWhitelisted(response) || (clientUser.isDefined && user.isDefined && (clientUser.get.institutionPK == user.get.institutionPK))
     0 match {
-      case _ if buttonIs(valueMap, saveButton) => save(valueMap, request, response)
+      case _ if buttonIs(valueMap, saveButton) && authOk => save(valueMap, request, response)
+      case _ if buttonIs(valueMap, saveButton) => formChangeForbidden.setFormResponse(valueMap, styleNone, pageTitle, response, Status.CLIENT_ERROR_UNAUTHORIZED)
       case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
       case _ => emptyForm(valueMap, response)
     }
