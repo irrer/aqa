@@ -2,19 +2,24 @@
 
     <h2>@@title@@</h2>
 
-    To run a test on the AQA platform a machine and RTPLAN must first be created ( account required, contact
-    <a href="mailto:irrer@med.umich.edu?subject=AQA Account request">Jim Irrer</a>
-    or
-    <a href="mailto:nbaughan@med.umich.edu?subject=AQA Account request">Natalie Baughan</a>
-    )
-    . This is only done once, and
-    subsequently tests may be run against the machine many times by repeating steps 3 and
-    4.
+    <p>
+        To analyze data on the AQA platform, a user must define a machine and create the RTPLAN
+        file ( account required, contact
+        <a href="mailto:irrer@med.umich.edu?subject=AQA Account request">Jim Irrer</a>
+        ). This step is only done once, and subsequent
+        tests may be run against the defined machine repeatedly. The steps involved are:
+    </p>
+    <ol>
+        <li>Deliver the planned fields on the machine defined in the AQA platform</li>
+        <li>Export the images</li>
+        <li>Upload the images and plan to the AQA website on AWS</li>
+        <li>Run the tests on the images on AWS. </li>
+    </ol>
 
-    <p>a. Each institution will receive user accounts that will have access to run files and create additional accounts.
-        This account
-        must be created by, please contact them to get set
-        up. They will send you your account details.
+    <p>Each institution will receive user accounts that will have access to run files and create
+        additional accounts. This account must be created by Jim Irrer, please contact Jim at
+        irrer@med.umich.edu
+        to request up to 2 active accounts for your institution. Jim will send you your account details.
     </p>
 
     <h4 style="margin-top: 35px;">1: Create Machine</h4>
@@ -31,9 +36,11 @@
     </div>
 
     <p>
-        Fill fields to reflect your machine, and click
+        Fill out the requested information to reflect your machine, and click
         <b>Create</b>
-        , which will return to the list of machines.
+        . This leads to the
+        creation of your machine and the screen will return to the list of machines. Each Linear accelerator
+        is referred to as a Machine in the software.
     </p>
 
     <h4 style="margin-top: 35px;">
@@ -55,10 +62,13 @@
     <p>
         The
         <b>Tolerance Table Name</b>
-        should be one that exists in your treatment planning system. The
+        should be one that exists in your treatment planning system.
+    </p>
+
+    <p>
+        The
         <b>Machine Name</b>
-        is given
-        a default, but may need to be changed to match the name expected by the treatment machine.
+        should be one that exists in your treatment planning and management systems.
     </p>
 
     <p>
@@ -67,81 +77,90 @@
         to create the RTPLAN. This will bring up another page with a link to download the just-created RTPLAN.
     </p>
 
-    <h4 style="margin-top: 35px;">3: Treat With the RTPLAN</h4>
+    <h4 style="margin-top: 35px;">3: Import RTPLAN into your Treatment Management System and make minor modifications to plan</h4>
 
     <ul>
-        <li>
-            Import the RTPLAN into your treatment system.
-            <p />
-        </li>
-        
-        <li>
-            If the AQA configuration of the machine contains a high beam energy (eg: 15) then verify that your
-            EPID is capable of supporting it.  If it is not, then then you may opt to not deliver that particular
-            beam.
-            <p />
-        </li>
 
-        <li>
-            Verify the couch coordinates are correct for your machine.
-            The couch needs to be retracted so it won't be on
-            imager,
-            but still in a position to beam on.
-            <p />
+        <li>Import the RTPLAN into your treatment system.</li>
+        <ul>
+            <li>Note any errors/warnings you receive during import</li>
+        </ul>
+        <li>Verify the couch coordinates are correct for your machine. The couch needs to be retracted so
+            it won't be on imager, but still in a position to beam on. (At UM, we use couch long of
+            +20 cm)
         </li>
-
+        <li>Schedule sessions and add integrated image template in scheduling.</li>
+        <ul>
+            <li>
+                The plan needs to acquire
+                <b>integrated images</b>
+                , not continuous.
+            </li>
+        </ul>
+        <ul>
+            <li>At UM, we perform the couch position and imager position in Treatment Preparation</li>
+        </ul>
+        <li>Source to Imager distance should be 150 cm for each field (not at ISOCENTER)</li>
+        in Aria.
         <li>
-            Schedule sessions and add integrated image template in scheduling.
-            The plan needs to run as integrated, not
-            continuous.
-            <p />
-        </li>
-
-        <li>
-            Imager should be at 1500 mm (not at ISO)
-            <p />
-        </li>
-
-        <li>
-            Schedule at machine, deliver in QA mode, and export the RTIMAGE files.
-            <p />
-        </li>
-
-        <li>
-            Manually enter the imager coordinates: 50cm, 0, 0
-            <p />
+            The imported plan will have a 3
+            <sup>rd</sup>
+            party approval, thus plan approval will need to
+            be performed at your institution.
         </li>
     </ul>
 
-    <h4 style="margin-top: 35px;">4: Run the Test</h4>
+    <h4 style="margin-top: 35px;">4a: Acquire dark field for each energy and run Isocal verification. [DF update should be performed prior to AQA delivery]</h4>
+
     <ul>
+        <li>Enter service mode with sufficient rights to update dark field and run Isocal verification.</li>
+        <li>PVA calibrations.</li>
+        <li>Select Imaging Technique you are using, typically Dosimetry. </li>
+        <ul>
+            <li>It is beneficial to use a dosimetry mode because the QA for this mode may differ from that used for modes that are solely used for patient imaging.</li>
+        </ul>
+        <li>Perform calibration for the dark field for each energy.</li>
+        <li>Export the MV dosimetry correction files from the XI node. </li>
+        <ul>
+            <li>[This will be useful in correcting subsequent images back to a known point in time if any of the correction files have changed]</li>
+        </ul>
+        <li>Perform IsoCal Verification</li>
+        <li>Export the results for tracking, since phantomless AQA will rely on the corrections. </li>
+    </ul>
+
+    <h4 style="margin-top: 35px;">4: Deliver planned fields at the linac in QA mode</h4>
+    <ul>
+        <li>Schedule at machine, open the plan in QA mode</li>
+        <li>Double check the source to image distance is correct. </li>
+        <ul>
+            <li>Typical image coordinates at UM are (+50 cm vertical, 0 lat, 0 long)</li>
+        </ul>
+        <li>Deliver the plan in QA mode (should take &lt; 20 minutes)</li>
+    </ul>
+
+    <h4 style="margin-top: 35px;">
+        5: Export &amp; Upload Images, and Run the Test on
+        <a href="https://automatedqualityassurance.org">https://automatedqualityassurance.org</a>
+    </h4>
+    <ul>
+
+        <li>Export the RTIMAGE files to a known location.</li>
+        <ul>
+            <li>For example, go to Image Browser in Aria, select the last N images acquired, and export using the DICOM media file filter.</li>
+        </ul>
         <li>
             On the AQA site, click
             <b>Run Procedure</b>
             &#8594;
             <b>Phase2</b>
-            <p> </p>
         </li>
-
-        <li>
-            Drag and drop the RTIMAGE files into the upload box.
-            <p> </p>
-        </li>
-
+        <li>Drag and drop the RTIMAGE files into the upload box.</li>
         <li>
             Click the
             <b>Run</b>
             button to start the analysis, which takes less than 2 minutes.
-            <p> </p>
         </li>
-
-        <li>
-            Results will be displayed automatically, showing an overview of results. Click on the tests for more
-            details.
-            <p> </p>
-        </li>
-
-        <p style="margin-top: 35px;">
-            </p>
+        <li>Results will be displayed automatically, showing an overview of results. Click on the tests for more details.</li>
     </ul>
+
 </div>
