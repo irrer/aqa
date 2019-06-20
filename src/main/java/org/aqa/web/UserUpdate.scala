@@ -48,6 +48,8 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
 
   private val email = new WebInputEmail("Email", 4, 0, "Email address (required)")
 
+  private val createForbidden = new WebPlainText("Create Forbidden", false, 3, 0, _ => { <div>Only the site administrator can create user accounts.</div> })
+
   /**
    * Get the list of institutions that the user may choose from.
    */
@@ -98,6 +100,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
   private val userPK = new WebInputHidden(UserUpdate.userPKTag)
 
   private val formCreate = new WebForm(pathOf, List(List(id, fullName), List(email, institution), List(role), List(password), List(verifyPassword), List(createButton, cancelButton)))
+  private val formCreateForbidden = new WebForm(pathOf, List(List(createForbidden), List(cancelButton)))
 
   private val formEdit = new WebForm(pathOf, List(List(id, fullName), List(email, institution), List(role), List(saveButton, cancelButton, deleteButton, changePasswordButton, userPK)))
 
@@ -224,7 +227,10 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
    * Show this when user asks to create a new user from user list.
    */
   private def emptyForm(response: Response) = {
-    formCreate.setFormResponse(emptyValueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
+    if (userIsWhitelisted(response))
+      formCreate.setFormResponse(emptyValueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
+    else
+      formCreateForbidden.setFormResponse(emptyValueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
   }
 
   /**
@@ -278,17 +284,22 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
    * otherwise show the same screen and communicate the error.
    */
   private def create(valueMap: ValueMapT, response: Response) = {
-    val errMap = emptyName(valueMap) ++ validateEmail(valueMap) ++ validatePasswords(valueMap) ++ validateUniqueness(valueMap) ++ validateAuthentication(valueMap, response.getRequest)
 
-    if (errMap.isEmpty) {
-      val user = constructNewUserFromParameters(valueMap)
-      val userWithPk = user.insert
-      val aliasId = AnonymizeUtil.aliasify(AnonymizeUtil.userAliasPrefixId, userWithPk.userPK.get)
-      userWithPk.copy(id = aliasId).insertOrUpdate
-      UserList.redirect(response)
-    } else {
-      formCreate.setFormResponse(valueMap, errMap, pageTitleCreate, response, Status.CLIENT_ERROR_BAD_REQUEST)
-    }
+    if (userIsWhitelisted(response)) {
+      val errMap = emptyName(valueMap) ++ validateEmail(valueMap) ++ validatePasswords(valueMap) ++ validateUniqueness(valueMap) ++ validateAuthentication(valueMap, response.getRequest)
+
+      if (errMap.isEmpty) {
+        val user = constructNewUserFromParameters(valueMap)
+        val userWithPk = user.insert
+        val aliasId = AnonymizeUtil.aliasify(AnonymizeUtil.userAliasPrefixId, userWithPk.userPK.get)
+        userWithPk.copy(id = aliasId).insertOrUpdate
+        UserList.redirect(response)
+      } else {
+        formCreate.setFormResponse(valueMap, errMap, pageTitleCreate, response, Status.CLIENT_ERROR_BAD_REQUEST)
+      }
+    } else
+      formCreateForbidden.setFormResponse(emptyValueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
+
   }
 
   private def edit(user: User, response: Response) = {

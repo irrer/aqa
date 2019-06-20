@@ -1024,6 +1024,13 @@ object WebUtil extends Logging {
     }
   }
 
+  /**
+   * Return true if the user is whitelisted in the configuration.
+   */
+  def userIsWhitelisted(response: Response): Boolean = {
+    userIsWhitelisted(response.getRequest)
+  }
+
   def getUserIdOrDefault(request: Request, dflt: String): String = {
     val cr = request.getChallengeResponse
     logger.info("challenge response given: " + (cr != null) + "    request: " + request.getResourceRef.getRemainingPart) // TODO rm
