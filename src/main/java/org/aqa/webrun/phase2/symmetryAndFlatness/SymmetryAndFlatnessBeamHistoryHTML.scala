@@ -29,7 +29,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, extendedData: Extende
 
   private def getBaseline(dataName: String): Baseline = {
     val baselineName = SymmetryAndFlatnessAnalysis.makeBaselineName(beamName, dataName)
-    Baseline.findLatest(extendedData.machine.machinePK.get, baselineName).get._2
+    Baseline.findLatest(extendedData.machine.machinePK.get, baselineName, extendedData.output.dataDate.get).get._2
   }
 
   private def makeChart(id: String, baseline: Baseline, limit: Double, valueList: Seq[Double]): C3ChartHistory = {

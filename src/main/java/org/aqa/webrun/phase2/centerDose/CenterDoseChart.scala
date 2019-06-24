@@ -16,6 +16,7 @@ import org.aqa.db.Procedure
 import org.aqa.Config
 import org.aqa.web.C3Chart
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.db.MaintenanceCategory
 
 object CenterDoseChart extends Logging {
 
@@ -31,7 +32,10 @@ class CenterDoseChart(outputPK: Long) extends Logging {
 
   private val allDates = history.map(cd => cd.date)
 
-  private val maintenanceRecordList = MaintenanceRecord.getRange(machine.machinePK.get, allDates.min, allDates.max)
+  /** All maintenance records for the entire history interval for all beams except for 'Set Baseline' to reduce clutter. */
+  private val maintenanceRecordList = MaintenanceRecord.
+    getRange(machine.machinePK.get, allDates.min, allDates.max).
+    filter(m => !(m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline.toString)))
 
   /* List of SOPInstanceUID's for data set that was just calculated. */
   //private val sopSet = resultList.map(cd => cd.SOPInstanceUID).toSet

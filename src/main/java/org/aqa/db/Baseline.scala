@@ -5,6 +5,7 @@ import org.aqa.Logging
 import java.sql.Timestamp
 import com.pixelmed.dicom.AttributeList
 import org.aqa.Util
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Define values associated with specific machines that are established when the
@@ -69,17 +70,24 @@ object Baseline extends Logging {
   }
 
   /**
-   * Given a machine and Baseline id, get the latest value if it exists.
+   * Given a machine and Baseline id, get the latest value on or before the given time stamp if it exists.
    */
-  def findLatest(machinePK: Long, id: String): Option[(MaintenanceRecord, Baseline)] = {
+  def findLatest(machinePK: Long, id: String, timestamp: Timestamp): Option[(MaintenanceRecord, Baseline)] = {
     val action = {
       for {
-        maintenanceRecord <- MaintenanceRecord.query if (maintenanceRecord.machinePK === machinePK)
-        baseline <- Baseline.query if (baseline.id === id) && (baseline.maintenanceRecordPK === maintenanceRecord.maintenanceRecordPK)
-      } yield (maintenanceRecord, baseline)
-    } sortBy (_._1.creationTime.desc)
+        maintenanceRecord <- MaintenanceRecord.query.filter(m => m.machinePK === machinePK)
+        output <- Output.query.filter(o => maintenanceRecord.outputPK === o.outputPK)
+        baseline <- Baseline.query.filter(b => (b.id === id) && (b.maintenanceRecordPK === maintenanceRecord.maintenanceRecordPK) && (output.dataDate <= timestamp))
+      } yield (maintenanceRecord, baseline, output)
+    } sortBy (_._3.dataDate.desc)
 
-    Db.run(action.result.headOption)
+    // Trace.trace(action.result.statements.mkString("\n"))
+
+    val list = Db.run(action.result.headOption)
+    if (list.isDefined)
+      Some((list.get._1, list.get._2))
+    else
+      None
   }
 
   def delete(baselinePK: Long): Int = {

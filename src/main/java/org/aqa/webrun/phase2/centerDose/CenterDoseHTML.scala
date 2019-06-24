@@ -29,7 +29,6 @@ import org.aqa.webrun.phase2.ExtendedData
 import org.aqa.webrun.phase2.SubProcedureResult
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.IsoImagePlaneTranslator
-import org.aqa.web.CenterDoseChartHistory
 
 object CenterDoseHTML extends Logging {
   private val htmlFileName = "CenterDose.html"
@@ -125,7 +124,7 @@ object CenterDoseHTML extends Logging {
     }
 
     // write the report to the output directory
-    val text = Phase2Util.wrapSubProcedure(extendedData, content, "Center Dose", status, Some(CenterDoseChartHistory.makeReference(extendedData.output.outputPK.get)), runReq)
+    val text = Phase2Util.wrapSubProcedure(extendedData, content, "Center Dose", status, Some(CenterDoseChartHistoryRestlet.makeReference(extendedData.output.outputPK.get)), runReq)
     val file = new File(extendedData.output.dir, htmlFileName)
     Util.writeBinaryFile(file, text.getBytes)
 

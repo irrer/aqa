@@ -196,9 +196,9 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
   case class BeamResultBaseline(result: SymmetryAndFlatnessBeamResult, maintenanceRecordBaseline: Seq[MaintenanceRecordBaseline], pointSet: PointSet);
 
-  private def getBaseline(machinePK: Long, beamName: String, dataName: String, attributeList: AttributeList, value: Double): MaintenanceRecordBaseline = {
+  private def getBaseline(machinePK: Long, beamName: String, dataName: String, attributeList: AttributeList, value: Double, dataDate: Timestamp): MaintenanceRecordBaseline = {
     val id = makeBaselineName(beamName, dataName)
-    Baseline.findLatest(machinePK, id) match {
+    Baseline.findLatest(machinePK, id, dataDate) match {
       case Some((maintenanceRecord, baseline)) => new MaintenanceRecordBaseline(Some(maintenanceRecord), baseline)
       case _ => new MaintenanceRecordBaseline(None, Baseline.makeBaseline(-1, attributeList, id, value))
     }
@@ -244,15 +244,16 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val axial_pct = (0 until translator.height).map(y => translator.pix2Iso(0, y).getY)
 
     val machinePK = extendedData.machine.machinePK.get
-    val axialSymmetryBaseline = getBaseline(machinePK, beamName, axialSymmetryName, attributeList, axialSymmetry)
-    val transverseSymmetryBaseline = getBaseline(machinePK, beamName, transverseSymmetryName, attributeList, transverseSymmetry)
-    val flatnessBaseline = getBaseline(machinePK, beamName, flatnessName, attributeList, flatness)
-    val topBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointTop.name, attributeList, pointSet.top)
-    val bottomBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointBottom.name, attributeList, pointSet.bottom)
-    val leftBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointLeft.name, attributeList, pointSet.left)
-    val rightBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointRight.name, attributeList, pointSet.right)
-    val centerBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointCenter.name, attributeList, pointSet.center)
-    val profileConstancyBaseline = getBaseline(machinePK, beamName, profileConstancyName, attributeList, 0)
+    val timestamp = extendedData.output.dataDate.get
+    val axialSymmetryBaseline = getBaseline(machinePK, beamName, axialSymmetryName, attributeList, axialSymmetry, timestamp)
+    val transverseSymmetryBaseline = getBaseline(machinePK, beamName, transverseSymmetryName, attributeList, transverseSymmetry, timestamp)
+    val flatnessBaseline = getBaseline(machinePK, beamName, flatnessName, attributeList, flatness, timestamp)
+    val topBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointTop.name, attributeList, pointSet.top, timestamp)
+    val bottomBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointBottom.name, attributeList, pointSet.bottom, timestamp)
+    val leftBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointLeft.name, attributeList, pointSet.left, timestamp)
+    val rightBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointRight.name, attributeList, pointSet.right, timestamp)
+    val centerBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointCenter.name, attributeList, pointSet.center, timestamp)
+    val profileConstancyBaseline = getBaseline(machinePK, beamName, profileConstancyName, attributeList, 0, timestamp)
 
     val baselinePointSet = new PointSet(
       topBaseline.baseline.value.toDouble,

@@ -33,7 +33,7 @@ object WedgeHTML {
 
   private val htmlFileName = "Wedge.html"
 
-  private val lineColor = new Color(0x6688bb)
+  val lineColor = new Color(0x6688bb)
 
   private val scriptPrefix = {
     """
@@ -121,53 +121,7 @@ object WedgeHTML {
     <center id={ id }><img class="img-responsive" src={ pngFile.getName }/></center>
   }
 
-  private def histChart(wedgePoint: WedgePoint, extendedData: ExtendedData, history: Seq[WedgePoint.WedgePointHistory]): C3ChartHistory = {
-    Trace.trace("Wedge point being graphed: " + wedgePoint)
-    Trace.trace("\n\nAll wedge history:\n----------\n" + history.mkString("\n----------\n"))
-    val beamHistory = history.filter(h => Util.beamNamesEqual(h.wedgeBeamName, wedgePoint.wedgeBeamName)).sortBy(_.date)
-    Trace.trace("\n\nGraphing wedge history:\n----------\n" + beamHistory.mkString("\n----------\n"))
-    val percentHistory = beamHistory.map(_.percentOfBackground_pct)
-    val dateHistory = beamHistory.map(_.date)
-
-    val maintenanceRecordList = MaintenanceRecord.getRange(extendedData.machine.machinePK.get, dateHistory.head, dateHistory.last)
-    val yNew = {
-      val i = beamHistory.indexWhere(h => h.date.getTime == extendedData.output.dataDate.get.getTime)
-      Math.max(0, i)
-    }
-
-    val baseline: Option[Baseline] = {
-      val maintenanceRecordBaseline = Baseline.findLatest(extendedData.machine.machinePK.get, WedgeAnalysis.makeWedgeBaselineName(wedgePoint))
-      if (maintenanceRecordBaseline.isDefined) Some(maintenanceRecordBaseline.get._2) else None
-    }
-
-    val tolerance: Option[C3Chart.Tolerance] = {
-      if (baseline.isDefined) {
-        val value = baseline.get.value.toDouble
-        Some(new Tolerance(value - Config.WedgeTolerance_pct, value + Config.WedgeTolerance_pct))
-      } else None
-    }
-
-    val historyChart = new C3ChartHistory(
-      None,
-      maintenanceRecordList,
-      None, None, // chart width, height
-      "Date", // x axis label
-      dateHistory,
-      baseline, // baseline
-      tolerance, // tolerance
-      Seq("Percent of Background"), // y axis labels
-      "Percent of Background", // y data label
-      Seq(percentHistory), // y values to plot
-      yNew, // index of y value that is new
-      ".4g", // y number format
-      Seq(lineColor) // y line colors
-    )
-
-    historyChart
-  }
-
   private def beamToDisplay(wedgePoint: WedgePoint, extendedData: ExtendedData, runReq: RunReq, wedgeDir: File, history: Seq[WedgePoint.WedgePointHistory], collimatorCenterOfRotation: Point2D.Double): (Elem, String) = {
-    val historyChart = histChart(wedgePoint, extendedData, history)
 
     val isTransverse = WedgeAnalysis.wedgeOrientationTransverse(wedgePoint.wedgeBeamName, runReq.rtplan.attributeList.get)
     val dicomImage = runReq.rtimageMap(wedgePoint.wedgeBeamName).correctedDicomImage.get
@@ -202,7 +156,7 @@ object WedgeHTML {
         </div>
         <div class="row">
           <h4>History of Wedge Point</h4>
-          { historyChart.html }
+          { C3Chart.html(C3Chart.idTagPrefix + Phase2Util.beamNameToId(wedgePoint.wedgeBeamName)) }
         </div>
         <div class="row">
           <div class="col-md-5">
@@ -239,7 +193,7 @@ object WedgeHTML {
       $(document).ready(function(){ $('#wedge').zoom(); });
       $(document).ready(function(){ $('#background').zoom(); });
 """
-    val js = historyChart.javascript + valueChart.javascript + percentChart.javascript + backgroundChart.javascript + zoomScript
+    val js = valueChart.javascript + percentChart.javascript + backgroundChart.javascript + zoomScript
     (elem, js)
   }
 
@@ -270,7 +224,7 @@ object WedgeHTML {
       </div>
     }
 
-    val javascript = "<script>\n" + htmlJs.map(ej => ej._2).mkString("\n") + "</script>\n"
+    val javascript = "<script>\n" + htmlJs.map(ej => ej._2).mkString("\n") + "</script>\n" + WedgeChartHistoryRestlet.makeReference(extendedData.output.outputPK.get)
 
     val html = Phase2Util.wrapSubProcedure(extendedData, content, WedgeAnalysis.subProcedureName, status, Some(javascript), runReq)
     val outFile = new File(wedgeDir, htmlFileName)

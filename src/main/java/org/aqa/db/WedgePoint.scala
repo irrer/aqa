@@ -127,13 +127,13 @@ object WedgePoint extends ProcedureOutput {
     Db.perform(ops)
   }
 
-  case class WedgePointHistory(date: Date, wedgeBeamName: String, backgroundBeamName: String, percentOfBackground_pct: Double)
+  case class WedgePointHistory(date: Date, wedgeBeamName: String, backgroundBeamName: String, percentOfBackground_pct: Double, outputPK: Long)
 
   /**
    * Get the CenterBeam results that are nearest in time to the given date, preferring those that have an earlier date.
    *
-   * @param limit: Only get this many results.  First get all the results that are at or before the given time.  If there
-   * are <code>limit</code> or more values, then return those.  Otherwise, also get values after the given time
+   * @param limit: Only get up to this many results preceding and following the given date.  This means that for a
+   * limit L, up to L+1+L results may be returned (one more than 2*L).
    *
    * @param machinePK: For this machine
    *
@@ -163,7 +163,7 @@ object WedgePoint extends ProcedureOutput {
         wedgePoint <- WedgePoint.query.
           filter(w => w.outputPK === output._1).
           map(c => (c.wedgeBeamName, c.backgroundBeamName, c.percentOfBackground_pct))
-      } yield ((output._2, wedgePoint._1, wedgePoint._2, wedgePoint._3))
+      } yield ((output._2, wedgePoint._1, wedgePoint._2, wedgePoint._3, output._1))
 
       val sorted = search.distinct.sortBy(_._1.desc)
       Db.run(sorted.result)
@@ -178,7 +178,7 @@ object WedgePoint extends ProcedureOutput {
         wedgePoint <- WedgePoint.query.
           filter(w => w.outputPK === output._1).
           map(c => (c.wedgeBeamName, c.backgroundBeamName, c.percentOfBackground_pct))
-      } yield ((output._2, wedgePoint._1, wedgePoint._2, wedgePoint._3))
+      } yield ((output._2, wedgePoint._1, wedgePoint._2, wedgePoint._3, output._1))
 
       val sorted = search.distinct.sortBy(_._1.asc)
       Db.run(sorted.result)
@@ -186,7 +186,7 @@ object WedgePoint extends ProcedureOutput {
 
     val all = before ++ after
 
-    val result = all.map(h => new WedgePointHistory(h._1.get, h._2, h._3, h._4)).sortWith((a, b) => a.date.getTime < b.date.getTime)
+    val result = all.map(h => new WedgePointHistory(h._1.get, h._2, h._3, h._4, h._5)).sortBy(_.date.getTime)
     result
   }
 }

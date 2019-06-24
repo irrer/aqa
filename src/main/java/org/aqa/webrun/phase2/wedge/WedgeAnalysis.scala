@@ -59,7 +59,7 @@ object WedgeAnalysis extends Logging {
 
     def constructOneBaseline(wedgePoint: WedgePoint): Option[Baseline] = {
       val id = makeWedgeBaselineName(wedgePoint.wedgeBeamName, wedgePoint.backgroundBeamName)
-      Baseline.findLatest(extendedData.machine.machinePK.get, id) match {
+      Baseline.findLatest(extendedData.machine.machinePK.get, id, extendedData.output.dataDate.get) match {
         case Some((maintenanceRecord, baseline)) => None
         case _ => Some(Baseline.makeBaseline(-1, runReq.rtimageMap(wedgePoint.wedgeBeamName).attributeList.get, id, wedgePoint.percentOfBackground_pct))
       }
@@ -100,7 +100,7 @@ object WedgeAnalysis extends Logging {
     }
 
     val baselineId = makeWedgeBaselineName(wedgePair)
-    val maintenanceRecordBaseline = Baseline.findLatest(extendedData.machine.machinePK.get, baselineId)
+    val maintenanceRecordBaseline = Baseline.findLatest(extendedData.machine.machinePK.get, baselineId, extendedData.output.dataDate.get)
 
     val derivedWedge = runReq.derivedMap(wedgePair.beamName)
     val derivedBackground = runReq.derivedMap(wedgePair.backgroundBeamName)
