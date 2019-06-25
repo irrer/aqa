@@ -387,9 +387,9 @@ object Phase2Util extends Logging {
   }
 
   /**
-   * Given a beam name, replace all special characters with underscore so it can be used as a JavaScript or XML identifier.
+   * Given arbitrary text, replace all special characters with underscore so it can be used as a JavaScript or XML identifier.
    */
-  def beamNameToId(beamName: String) = beamName.replaceAll("[^0-9a-zA-Z]", "_").replaceAll("__*", "_")
+  def textToId(text: String) = text.replaceAll("[^0-9a-zA-Z]", "_").replaceAll("__*", "_")
 
   /**
    * Create a list of points whose sum can be used to measure the center dose of an image.

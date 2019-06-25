@@ -35,7 +35,6 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.TagFromName
 import org.aqa.db.Machine
-import org.restlet.data.Protocol
 import org.aqa.Util
 import org.aqa.db.Machine.MMI
 import org.aqa.DicomFile

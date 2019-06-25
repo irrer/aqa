@@ -14,7 +14,7 @@ object C3Chart {
   val idTagPrefix = "ChartId_"
 
   def textToChartId(text: String): String = {
-    idTagPrefix + Phase2Util.beamNameToId(text)
+    idTagPrefix + Phase2Util.textToId(text)
   }
 
   /**
@@ -101,7 +101,6 @@ class C3Chart(
   private val maxY = allY.max
 
   private val chartIdTag = C3Chart.makeUniqueChartIdTag
-  Trace.trace("idTag: " + chartIdTag) // TODO rm
 
   private def column(label: String, valueList: Seq[Double]): String = {
     "[ '" + label + "', " + valueList.mkString(", ") + "]"
@@ -110,7 +109,6 @@ class C3Chart(
   val html = { <div id={ chartIdTag }>{ chartIdTag }</div> }
 
   val javascript = {
-    Trace.trace("idTag: " + chartIdTag)
     """      
 var """ + chartIdTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) + """
     data: {

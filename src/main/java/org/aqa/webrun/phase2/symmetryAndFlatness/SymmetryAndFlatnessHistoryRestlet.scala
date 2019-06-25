@@ -18,7 +18,7 @@ object SymmetryAndFlatnessHistoryRestlet {
   private val beamNameTag = "beamName"
 
   def makeReference(beamName: String, outputPK: Long) = {
-    "<script src='" + path + "?" + outputPKTag + "=" + outputPK + "&" + beamNameTag + "=" + beamName + "'></script>"
+    "<script src='" + path + "?" + outputPKTag + "=" + outputPK + "&amp;" + beamNameTag + "=" + beamName + "'></script>"
   }
 }
 

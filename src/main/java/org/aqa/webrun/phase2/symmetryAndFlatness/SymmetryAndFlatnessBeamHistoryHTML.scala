@@ -11,32 +11,42 @@ import org.aqa.Config
 import org.aqa.web.C3Chart
 import org.aqa.webrun.phase2.ExtendedData
 import scala.collection.Seq
+import org.aqa.db.Output
+import org.aqa.db.MaintenanceCategory
+import org.aqa.webrun.phase2.Phase2Util
 
 /**
  * Analyze DICOM files for symmetry and flatness.
  */
-class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, extendedData: ExtendedData) extends Logging {
+class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) extends Logging {
 
-  private val history = SymmetryAndFlatness.recentHistory(50, extendedData.machine.machinePK.get, extendedData.output.procedurePK, beamName, extendedData.output.dataDate)
+  val output = Output.get(outputPK).get
+  val machinePK = output.machinePK.get
+
+  private val history = SymmetryAndFlatness.recentHistory(25, machinePK, output.procedurePK, beamName, output.dataDate)
   private val dateList = history.map(h => h.date)
   private val dateListFormatted = dateList.map(d => Util.standardDateFormat.format(d))
 
   // index of the entry being charted.
-  private val yIndex = history.indexWhere(h => h.symmetryAndFlatness.outputPK == extendedData.output.outputPK.get)
+  private val yIndex = history.indexWhere(h => h.symmetryAndFlatness.outputPK == output.outputPK.get)
 
   // list of all MaintenanceRecords in this time interval
-  private val MaintenanceRecordList = MaintenanceRecord.getRange(extendedData.machine.machinePK.get, history.head.date, history.last.date)
+  private val MaintenanceRecordList = MaintenanceRecord.
+    getRange(machinePK, history.head.date, history.last.date).
+    filter(m => !(m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline.toString)))
 
   private def getBaseline(dataName: String): Baseline = {
     val baselineName = SymmetryAndFlatnessAnalysis.makeBaselineName(beamName, dataName)
-    Baseline.findLatest(extendedData.machine.machinePK.get, baselineName, extendedData.output.dataDate.get).get._2
+    Baseline.findLatest(machinePK, baselineName, output.dataDate.get).get._2
   }
 
-  private def makeChart(id: String, baseline: Baseline, limit: Double, valueList: Seq[Double]): C3ChartHistory = {
+  private def makeChart(id: String, limit: Double, valueList: Seq[Double]): C3ChartHistory = {
 
-    val currentDateIndex = dateList.indexWhere(d => extendedData.output.dataDate.get.getTime == d.getTime)
+    val baseline = getBaseline(id)
+    val currentDateIndex = dateList.indexWhere(d => output.dataDate.get.getTime == d.getTime)
     val minDateTag = dateListFormatted.head
     val maxDateTag = dateListFormatted.last
+    val chartId = C3Chart.idTagPrefix + Phase2Util.textToId(id)
 
     val width = None
     val height = None
@@ -51,7 +61,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, extendedData: Extende
 
     val tolerance = new C3Chart.Tolerance(baseline.value.toDouble - limit, baseline.value.toDouble + limit)
     val chart = new C3ChartHistory(
-      None,
+      Some(chartId),
       MaintenanceRecordList,
       width,
       height,
@@ -63,16 +73,15 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, extendedData: Extende
     chart
   }
 
-  private val chartAxial = makeChart("Axial Symmetry", getBaseline(SymmetryAndFlatnessAnalysis.axialSymmetryName), Config.SymmetryPercentLimit, history.map(h => h.symmetryAndFlatness.axialSymmetry_pct))
-  private val chartTransverse = makeChart("Transverse Symmetry", getBaseline(SymmetryAndFlatnessAnalysis.transverseSymmetryName), Config.SymmetryPercentLimit, history.map(h => h.symmetryAndFlatness.transverseSymmetry_pct))
-  private val chartFlatness = makeChart("Flatness", getBaseline(SymmetryAndFlatnessAnalysis.flatnessName), Config.FlatnessPercentLimit, history.map(h => h.symmetryAndFlatness.flatness_pct))
-  private val chartProfileConstancy = makeChart("Profile Constancy", getBaseline(SymmetryAndFlatnessAnalysis.profileConstancyName), Config.ProfileConstancyPercentLimit, history.map(h => h.symmetryAndFlatness.profileConstancy_pct))
+  val javascript = {
+    import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessAnalysis._
 
-  val javascript = chartAxial.javascript + chartTransverse.javascript + chartFlatness.javascript + chartProfileConstancy.javascript
+    val chartAxial = makeChart(axialSymmetryName, Config.SymmetryPercentLimit, history.map(h => h.symmetryAndFlatness.axialSymmetry_pct))
+    val chartTransverse = makeChart(transverseSymmetryName, Config.SymmetryPercentLimit, history.map(h => h.symmetryAndFlatness.transverseSymmetry_pct))
+    val chartFlatness = makeChart(flatnessName, Config.FlatnessPercentLimit, history.map(h => h.symmetryAndFlatness.flatness_pct))
+    val chartProfileConstancy = makeChart(profileConstancyName, Config.ProfileConstancyPercentLimit, history.map(h => h.symmetryAndFlatness.profileConstancy_pct))
 
-  val htmlAxial = chartAxial.html
-  val htmlTransverse = chartTransverse.html
-  val htmlFlatness = chartFlatness.html
-  val htmlProfileConstancy = chartProfileConstancy.html
+    chartAxial.javascript + chartTransverse.javascript + chartFlatness.javascript + chartProfileConstancy.javascript
+  }
 
 }

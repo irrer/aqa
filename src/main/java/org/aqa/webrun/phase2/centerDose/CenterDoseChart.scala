@@ -48,7 +48,7 @@ class CenterDoseChart(outputPK: Long) extends Logging {
     sortedBeamHistory
   }
 
-  def chartIdOfBeam(beamName: String) = C3Chart.idTagPrefix + Phase2Util.beamNameToId(beamName)
+  def chartIdOfBeam(beamName: String) = C3Chart.idTagPrefix + Phase2Util.textToId(beamName)
 
   def chartReferenceToBeam(beamName: String) = {
     val ciob = chartIdOfBeam(beamName)

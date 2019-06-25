@@ -120,7 +120,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
       </div>
     }
 
-    val graphHistory = new SymmetryAndFlatnessBeamHistoryHTML(result.beamName, extendedData)
+    // val graphHistory = new SymmetryAndFlatnessBeamHistoryHTML(result.beamName, extendedData.output.outputPK.get)  TODO rm
     val content = {
       <div class="row">
         <div class="row">
@@ -150,19 +150,19 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
           <div class="col-md-10 col-md-offset-1">
             <div class="row">
               <h2>Transverse Symmetry History</h2>
-              { graphHistory.htmlTransverse }
+              { C3Chart.html(C3Chart.idTagPrefix + Phase2Util.textToId(SymmetryAndFlatnessAnalysis.transverseSymmetryName)) }
             </div>
             <div class="row">
               <h2>Axial Symmetry History</h2>
-              { graphHistory.htmlAxial }
+              { C3Chart.html(C3Chart.idTagPrefix + Phase2Util.textToId(SymmetryAndFlatnessAnalysis.axialSymmetryName)) }
             </div>
             <div class="row">
               <h2>Flatness History</h2>
-              { graphHistory.htmlFlatness }
+              { C3Chart.html(C3Chart.idTagPrefix + Phase2Util.textToId(SymmetryAndFlatnessAnalysis.flatnessName)) }
             </div>
             <div class="row">
               <h2>Profile Constancy History</h2>
-              { graphHistory.htmlProfileConstancy }
+              { C3Chart.html(C3Chart.idTagPrefix + Phase2Util.textToId(SymmetryAndFlatnessAnalysis.profileConstancyName)) }
             </div>
           </div>
         </div>
@@ -174,7 +174,9 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
     $(document).ready(function(){ $('#beamImage').zoom(); });
 """
 
-    val javascript = "<script>\n" + graphTransverse.javascript + graphAxial.javascript + graphHistory.javascript + zoomScript + "\n</script>\n"
+    val historyScriptRef = SymmetryAndFlatnessHistoryRestlet.makeReference(result.beamName, extendedData.output.outputPK.get)
+
+    val javascript = "<script>\n" + graphTransverse.javascript + graphAxial.javascript + zoomScript + "\n</script>\n" + historyScriptRef
     (content, javascript)
   }
 

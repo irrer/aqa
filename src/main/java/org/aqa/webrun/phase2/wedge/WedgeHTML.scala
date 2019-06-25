@@ -156,7 +156,7 @@ object WedgeHTML {
         </div>
         <div class="row">
           <h4>History of Wedge Point</h4>
-          { C3Chart.html(C3Chart.idTagPrefix + Phase2Util.beamNameToId(wedgePoint.wedgeBeamName)) }
+          { C3Chart.html(C3Chart.idTagPrefix + Phase2Util.textToId(wedgePoint.wedgeBeamName)) }
         </div>
         <div class="row">
           <div class="col-md-5">

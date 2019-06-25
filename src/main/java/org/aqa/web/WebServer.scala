@@ -40,6 +40,7 @@ import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.phase2.customizeRtPlan.CustomizeRtPlanInterface
 import org.aqa.webrun.phase2.wedge.WedgeChartHistoryRestlet
 import org.aqa.webrun.phase2.centerDose.CenterDoseChartHistoryRestlet
+import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessHistoryRestlet
 
 object WebServer {
   val challengeScheme = ChallengeScheme.HTTP_BASIC
@@ -503,6 +504,7 @@ class WebServer extends Application with Logging {
         new WedgeUseAsBaseline,
         new CenterDoseChartHistoryRestlet,
         new WedgeChartHistoryRestlet,
+        new SymmetryAndFlatnessHistoryRestlet,
         anonymousTranslate,
         new CustomizeRtPlanInterface,
         termsOfUse,

@@ -54,7 +54,7 @@ class WedgeChartHistory(outputPK: Long) {
   }
 
   def historyChart(wedgePoint: WedgePoint) = {
-    val chartId = C3Chart.idTagPrefix + Phase2Util.beamNameToId(wedgePoint.wedgeBeamName)
+    val chartId = C3Chart.idTagPrefix + Phase2Util.textToId(wedgePoint.wedgeBeamName)
     val beamHistory = allHistory.filter(h => h.wedgeBeamName.equalsIgnoreCase(wedgePoint.wedgeBeamName)).sortBy(_.date)
     val maintenanceRecordList = {
       val min = beamHistory.head.date.getTime
