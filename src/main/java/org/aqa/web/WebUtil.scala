@@ -49,6 +49,10 @@ import org.aqa.Config
 import org.aqa.db.Institution
 import edu.umro.ScalaUtil.Trace
 import com.pixelmed.dicom.SOPClass
+import java.net.URLDecoder
+import org.restlet.representation.Representation
+import org.restlet.data.CharacterSet
+import java.nio.charset.StandardCharsets
 
 object WebUtil extends Logging {
 
@@ -207,12 +211,6 @@ object WebUtil extends Logging {
     if (valueMap.get(sessionLabel).isDefined) valueMap else (valueMap ++ (Map((sessionLabel, Session.makeUniqueId))))
   }
 
-  private def parseForm(form: Form): ValueMapT = {
-    val paramList = form.toArray().toList.filter(_.isInstanceOf[Parameter]).map(_.asInstanceOf[Parameter])
-
-    paramList.map(p => (p.getName, p.getValue)).toMap
-  }
-
   /**
    * Return true if the request is an upload
    */
@@ -233,11 +231,18 @@ object WebUtil extends Logging {
 
   val styleNone = Map[String, Style]()
 
+  private def parseAsForm(request: Request): ValueMapT = {
+    val url = URLDecoder.decode(request.getOriginalRef.toString, StandardCharsets.UTF_8.name)
+    val form = new Form(url, CharacterSet.UTF_8)
+    val paramList = form.toArray().toList.filter(_.isInstanceOf[Parameter]).map(_.asInstanceOf[Parameter])
+    paramList.map(p => (p.getName, p.getValue)).toMap
+  }
+
   def getValueMap(request: Request): ValueMapT = {
     if (requestIsUpload(request))
       saveFileList(request)
     else
-      ensureSessionId(parseOriginalReference(request) ++ parseForm(new Form(request.getEntity)))
+      ensureSessionId(parseOriginalReference(request) ++ parseAsForm(request))
   }
 
   def simpleWebPage(content: Elem, status: Status, title: String, response: Response) = {

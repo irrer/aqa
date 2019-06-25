@@ -23,6 +23,7 @@ import scala.concurrent.Await
 import org.aqa.db.Institution
 import org.aqa.db.User
 import org.aqa.AnonymizeUtil
+import edu.umro.ScalaUtil.Trace
 
 case class Column[VL](columnName: String, compare: (VL, VL) => Boolean, makeHTML: (VL) => Elem) {
 
@@ -124,9 +125,6 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
   }
 
   protected def makeForm(valueMap: ValueMapT): Elem = {
-
-    //val j0 = getSortColumn(valueMap)   // TODO rm
-    //val j1 = columnList(j0)   // TODO rm
 
     <div class="row col-md-10 col-md-offset-1">
       <h1>{ pageTitle }</h1>
