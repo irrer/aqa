@@ -18,6 +18,9 @@ import org.aqa.web.C3Chart
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.db.MaintenanceCategory
 
+/**
+ * Make a history chart for center dose.
+ */
 class CenterDoseChart(outputPK: Long) extends Logging {
 
   val output = Output.get(outputPK).get
