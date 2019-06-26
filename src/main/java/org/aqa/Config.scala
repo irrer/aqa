@@ -240,6 +240,23 @@ object Config extends Logging {
     value
   }
 
+  /**
+   * Get the value matching the given name.  If it does not exist or there is
+   * some sort of other problem then return the default.
+   */
+  private def logMainText(name: String, default: String): String = {
+    getMainTextOption(name) match {
+      case Some(value: String) => {
+        logText(name, value)
+        value
+      }
+      case _ => {
+        logText(name, default)
+        default
+      }
+    }
+  }
+
   private def getDir(name: String): File = {
     val dir = new File(getMainText(name))
     logText(name, dir.getAbsolutePath)
@@ -718,7 +735,7 @@ object Config extends Logging {
   requireReadableDirectory("machineConfigurationDirFile", machineConfigurationDirFile)
 
   val CenterDoseRadius_mm = logMainText("CenterDoseRadius_mm").toDouble
-  val CenterDoseReportedHistoryLimit = logMainText("CenterDoseReportedHistoryLimit").toInt
+  val CenterDoseHistoryRange = logMainText("CenterDoseHistoryRange", "25").toInt
   val CenterDoseBeamNameList = getCenterDoseBeamNameList
 
   val CollimatorPositionTolerance_mm = logMainText("CollimatorPositionTolerance_mm").toDouble
@@ -729,12 +746,13 @@ object Config extends Logging {
   val WedgeProfileThickness_mm = logMainText("WedgeProfileThickness_mm").toDouble
   val WedgeBeamList = getWedgeBeamList
   val WedgeTolerance_pct = logMainText("WedgeTolerance_pct").toDouble
-  val WedgeHistoryRange = logMainText("WedgeHistoryRange").toInt
+  val WedgeHistoryRange = logMainText("WedgeHistoryRange", "25").toInt
 
   val SymmetryAndFlatnessDiameter_mm = logMainText("SymmetryAndFlatnessDiameter_mm").toDouble
 
   val SymmetryPercentLimit = logMainText("SymmetryPercentLimit").toDouble
   val FlatnessPercentLimit = logMainText("FlatnessPercentLimit").toDouble
+  val SymFlatConstHistoryRange = logMainText("SymFlatConstHistoryRange", "25").toInt
   val ProfileConstancyPercentLimit = logMainText("ProfileConstancyPercentLimit").toDouble
 
   val SymmetryAndFlatnessBeamList = getSymmetryAndFlatnessBeamList

@@ -23,7 +23,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
   val output = Output.get(outputPK).get
   val machinePK = output.machinePK.get
 
-  private val history = SymmetryAndFlatness.recentHistory(25, machinePK, output.procedurePK, beamName, output.dataDate)
+  private val history = SymmetryAndFlatness.recentHistory(Config.SymFlatConstHistoryRange, machinePK, output.procedurePK, beamName, output.dataDate)
   private val dateList = history.map(h => h.date)
   private val dateListFormatted = dateList.map(d => Util.standardDateFormat.format(d))
 
