@@ -125,9 +125,6 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
 
   protected def makeForm(valueMap: ValueMapT): Elem = {
 
-    //val j0 = getSortColumn(valueMap)   // TODO rm
-    //val j1 = columnList(j0)   // TODO rm
-
     <div class="row col-md-10 col-md-offset-1">
       <h1>{ pageTitle }</h1>
       { if (canCreate) createNew(valueMap) }
