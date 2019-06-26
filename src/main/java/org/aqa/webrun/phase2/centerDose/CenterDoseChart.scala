@@ -18,17 +18,13 @@ import org.aqa.web.C3Chart
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.db.MaintenanceCategory
 
-object CenterDoseChart extends Logging {
-
-}
-
 class CenterDoseChart(outputPK: Long) extends Logging {
 
   val output = Output.get(outputPK).get
   val procedure = Procedure.get(output.procedurePK).get
   val input = Input.get(output.inputPK).get
   val machine = Machine.get(output.machinePK.get).get
-  val history = CenterDose.recentHistory(Config.CenterDoseReportedHistoryLimit, machine.machinePK.get, procedure.procedurePK.get, output.dataDate)
+  val history = CenterDose.recentHistory(Config.CenterDoseHistoryRange, machine.machinePK.get, procedure.procedurePK.get, output.dataDate)
 
   private val allDates = history.map(cd => cd.date)
 
@@ -36,9 +32,6 @@ class CenterDoseChart(outputPK: Long) extends Logging {
   private val maintenanceRecordList = MaintenanceRecord.
     getRange(machine.machinePK.get, allDates.min, allDates.max).
     filter(m => !(m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline.toString)))
-
-  /* List of SOPInstanceUID's for data set that was just calculated. */
-  //private val sopSet = resultList.map(cd => cd.SOPInstanceUID).toSet
 
   /**
    * Filter the history to get only center doses for the given beam, and sort by increasing date.
