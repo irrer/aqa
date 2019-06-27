@@ -2,7 +2,7 @@ AQA Installation and development notes
 
 Create directory C:\Program Files\AQA
 
-Copy installation files to C:\Program Files\AQA , which should create a directory something like 
+Copy installation files to C:\Program Files\AQA , which should create a directory something like
 
     C:\Program Files\AQA\AQA-0.0.1
 
@@ -16,3 +16,4 @@ and as administrator run the installService.bat file
 
 The service may be started by either running startService.bat or by by using Windows 'Services' GUI.
 
+Should be tracked by git.  Really.  Really!

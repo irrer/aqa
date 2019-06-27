@@ -20,6 +20,10 @@ import org.aqa.db.CachedUser
 import org.restlet.data.Status
 import edu.umro.ScalaUtil.Trace
 
+/**
+ * List the outputs to let users re-visit results.
+ */
+
 object OutputList {
   val deleteTag = "delete"
   val redoTag = "redo"
