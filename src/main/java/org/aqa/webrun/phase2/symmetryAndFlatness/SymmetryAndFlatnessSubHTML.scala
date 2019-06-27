@@ -29,7 +29,6 @@ import edu.umro.ImageUtil.ImageText
 import java.io.File
 import org.aqa.web.WebServer
 import SymmetryAndFlatnessAnalysis._
-import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessCSV
 import org.aqa.webrun.phase2.ExtendedData
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.Phase2Util
