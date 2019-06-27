@@ -39,6 +39,10 @@ case class Column[VL](columnName: String, compare: (VL, VL) => Boolean, makeHTML
       makeHTML)
 }
 
+/**
+ * Abstract class for web list support.
+ */
+
 abstract class GenericList[VL] extends Restlet with SubUrlTrait {
 
   protected def listName: String;
