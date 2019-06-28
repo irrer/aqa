@@ -22,7 +22,7 @@ class MaintenanceRecordList extends GenericList[MaintenanceRecord] with WebUtil.
   /**
    * If a machinePK is given, then filter on that, otherwise list maintenance records for all machines.
    */
-  override def getData(valueMap: ValueMapT) = {
+  override def getData(valueMap: ValueMapT, response: Response) = {
     valueMap.get(MachineUpdate.machinePKTag) match {
       case Some(machinePK) => MaintenanceRecord.getByMachine(machinePK.toLong)
       case _ => MaintenanceRecord.list

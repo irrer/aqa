@@ -14,7 +14,7 @@ object MultileafCollimatorList {
 class MultileafCollimatorList extends GenericList[MultileafCollimator] with WebUtil.SubUrlAdmin {
   override def listName = "MultileafCollimator"
 
-  override def getData(valueMap: ValueMapT) = MultileafCollimator.list
+  override def getData(valueMap: ValueMapT, response: Response) = MultileafCollimator.list
 
   override def getPK(value: MultileafCollimator): Long = value.multileafCollimatorPK.get
 

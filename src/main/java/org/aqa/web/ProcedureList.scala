@@ -30,7 +30,7 @@ class ProcedureList extends GenericList[Procedure.ProcedureUser] with WebUtil.Su
 
   override val columnList = Seq(idCol, supportedByCol, versionCol, notesCol)
 
-  override def getData(valueMap: ValueMapT) = Procedure.listWithDependencies
+  override def getData(valueMap: ValueMapT, response: Response) = Procedure.listWithDependencies
 
   override def getPK(value: PU): Long = value.procedure.procedurePK.get
 }

@@ -28,7 +28,7 @@ class XRunProcedureList extends GenericList[Procedure.ProcedureUser] with WebUti
 
   override val columnList = Seq(idCol, versionCol, notesCol)
 
-  override def getData(valueMap: ValueMapT) = Procedure.listWithDependencies
+  override def getData(valueMap: ValueMapT, response: Response) = Procedure.listWithDependencies
 
   override def getPK(value: PU): Long = value.procedure.procedurePK.get
 }

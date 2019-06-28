@@ -19,7 +19,7 @@ class WebRunIndex extends GenericList[Procedure.ProcedureUser] with WebUtil.SubU
 
   override val canCreate = false
 
-  override def getData(valueMap: ValueMapT) = Procedure.listWithDependencies
+  override def getData(valueMap: ValueMapT, response: Response) = Procedure.listWithDependencies
   override val listName = "Procedure"
 
   type PU = Procedure.ProcedureUser

@@ -42,7 +42,7 @@ class InstitutionList extends GenericList[Institution] with WebUtil.SubUrlAdmin 
 
   override val columnList = Seq(idCol, urlCol, descriptionCol)
 
-  override def getData(valueMap: ValueMapT) = Institution.list
+  override def getData(valueMap: ValueMapT, response: Response) = Institution.list
 
   override def getPK(value: Institution): Long = value.institutionPK.get
 }

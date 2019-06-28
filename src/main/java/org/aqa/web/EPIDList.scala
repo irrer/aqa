@@ -16,7 +16,7 @@ class EPIDList extends GenericList[EPID] with WebUtil.SubUrlAdmin {
 
   override def getPKName = "epidPK"
 
-  override def getData(valueMap: ValueMapT) = EPID.list
+  override def getData(valueMap: ValueMapT, response: Response) = EPID.list
 
   override def getPK(value: EPID): Long = value.epidPK.get
 

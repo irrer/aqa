@@ -33,7 +33,7 @@ class UserList extends GenericList[UserInstitution] with WebUtil.SubUrlAdmin {
 
   override val columnList = Seq(idCol, nameCol, emailCol, institutionCol, roleCol)
 
-  override def getData(valueMap: ValueMapT) = User.listWithDependencies
+  override def getData(valueMap: ValueMapT, response: Response) = User.listWithDependencies
 
   override def getPK(value: UserInstitution): Long = value.user.userPK.get
 }

@@ -14,7 +14,7 @@ object MachineTypeList {
 class MachineTypeList extends GenericList[MachineType] with WebUtil.SubUrlAdmin {
   override def listName = "MachineType"
 
-  override def getData(valueMap: ValueMapT) = MachineType.list
+  override def getData(valueMap: ValueMapT, response: Response) = MachineType.list
 
   override def getPK(value: MachineType): Long = value.machineTypePK.get
 

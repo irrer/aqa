@@ -73,7 +73,7 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
   /**
    * Retrieve data, usually from the database.
    */
-  protected def getData(valueMap: ValueMapT): Seq[VL]; // must be overridden
+  protected def getData(valueMap: ValueMapT, response: Response): Seq[VL]; // must be overridden
 
   def columnToHeader(index: Int, column: Column[VL]): Elem = {
     <th class={ "col" + index + " header" }>
@@ -127,7 +127,7 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
     </div>;
   }
 
-  protected def makeForm(valueMap: ValueMapT): Elem = {
+  protected def makeForm(valueMap: ValueMapT, response: Response): Elem = {
 
     <div class="row col-md-10 col-md-offset-1">
       <h1>{ pageTitle }</h1>
@@ -135,14 +135,14 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
       <table class="table table-striped">
         <tbody>
           { tableHead }
-          { getData(valueMap).sortWith(columnList(getSortColumn(valueMap)).compare).map(value => makeRow(value)) }
+          { getData(valueMap, response).sortWith(columnList(getSortColumn(valueMap)).compare).map(value => makeRow(value)) }
         </tbody>
       </table>
     </div>;
   }
 
   protected def get(valueMap: ValueMapT, response: Response) = {
-    val text = wrapBody(makeForm(valueMap), pageTitle, defaultPageRefreshTime)
+    val text = wrapBody(makeForm(valueMap, response), pageTitle, defaultPageRefreshTime)
     setResponse(text, response, Status.SUCCESS_OK)
   }
 
