@@ -126,7 +126,9 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   val entriesPerPage = 1000
 
-  override def getData(valueMap: ValueMapT, response: Response) = Output.extendedList(None, None, entriesPerPage)
+  override def getData(valueMap: ValueMapT, response: Response) = {
+    Output.extendedList(None, None, Set[Long](), entriesPerPage)
+  }
 
   override def getPK(extendedValues: Output.ExtendedValues): Long = extendedValues.output_outputPK
 
