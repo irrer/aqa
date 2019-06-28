@@ -42,6 +42,6 @@
 ##.springBeans
 ##.settings/
 ##.cache
-##.cache-main
-##.cache-tests
+.cache-main
+.cache-tests
 ##hs_err_pid*.log
