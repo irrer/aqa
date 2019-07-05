@@ -467,10 +467,10 @@ Note that when building a package for release, the Maven build process uses the 
    <!-- <BeamName>T2_DR_GS</BeamName> -->
     </LeafPositionBeamNameList>
 
-    <!-- The distance in floating point in mm from center to search for the BB in the daily phantom. -->
+   <!-- The distance in floating point in mm from center to search for the BB in the daily phantom. -->
    <DailyPhantomSearchDistance_mm>50.0</DailyPhantomSearchDistance_mm>
 
-    <!-- The diameter in floating point in mm of the BB in the daily phantom. -->
-   <DailyPhantomBBDiameter_mm>3.0</DailyPhantomBBDiameter_mm>
+   <!-- The diameter in floating point in mm of the BB in the daily phantom. -->
+   <DailyPhantomBBDiameter_mm>2.0</DailyPhantomBBDiameter_mm>
 
 </AQAConfig>
