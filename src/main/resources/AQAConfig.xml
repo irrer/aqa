@@ -467,6 +467,9 @@ Note that when building a package for release, the Maven build process uses the 
    <!-- <BeamName>T2_DR_GS</BeamName> -->
     </LeafPositionBeamNameList>
 
+   <!-- The maximum tolerance of error in floating point in mm for daily QA.  Exceeding this means failure. -->
+   <DailyQATolerance_mm>1.5</DailyQATolerance_mm>
+
    <!-- The distance in floating point in mm from center to search for the BB in the daily phantom. -->
    <DailyPhantomSearchDistance_mm>50.0</DailyPhantomSearchDistance_mm>
 

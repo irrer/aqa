@@ -773,6 +773,7 @@ object Config extends Logging {
 
   val DailyPhantomSearchDistance_mm = logMainText("DailyPhantomSearchDistance_mm", "50.0").toDouble
   val DailyPhantomBBDiameter_mm = logMainText("DailyPhantomBBDiameter_mm", "3.0").toDouble
+  val DailyQATolerance_mm = logMainText("DailyQATolerance_mm", "1.5").toDouble
 
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true
