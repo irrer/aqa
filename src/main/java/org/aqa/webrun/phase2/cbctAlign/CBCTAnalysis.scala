@@ -16,6 +16,7 @@ import org.aqa.Config
 import edu.umro.ImageUtil.DicomImage
 import java.awt.Rectangle
 import org.aqa.Util
+import edu.umro.ImageUtil.LocateMax
 
 case class CBCTAlign(x: Double, y: Double, z: Double) {
   // TODO
@@ -43,12 +44,6 @@ object CBCTAnalysis extends Logging {
   private def coarseCenter(sorted: Seq[AttributeList], voxSize: Point3d): Either[String, Point3d] = {
 
     ???
-  }
-
-  private case class VolumeOfInterest(volume: Seq[DicomImage], offset: Point3d) {
-    val xSize = volume.head.width
-    val ySize = volume.head.height
-    val zSize = volume.size
   }
 
   /**
@@ -88,6 +83,10 @@ object CBCTAnalysis extends Logging {
   }
 
   /**
+   * Ensure that the profile contains a BB.
+   */
+
+  /**
    * Get the point of the volume that is the highest pixel intensity.  Result is in units of voxels.
    */
   private def getMaxPoint(volOfInt: VolumeOfInterest): Point3d = {
@@ -100,13 +99,9 @@ object CBCTAnalysis extends Logging {
     val yMax = yPlaneProfile.indexOf(yPlaneProfile.max)
     val zMax = zPlaneProfile.indexOf(zPlaneProfile.max)
 
-    def centerOf(profile: Seq[Float], voxSize: Double): Double = {
-      ???
-    }
-
-    val xPosn = centerOf(xPlaneProfile, volOfInt.xSize)
-    val yPosn = centerOf(yPlaneProfile, volOfInt.ySize)
-    val zPosn = centerOf(zPlaneProfile, volOfInt.zSize)
+    val xPosn = LocateMax.locateMax(xPlaneProfile)
+    val yPosn = LocateMax.locateMax(yPlaneProfile)
+    val zPosn = LocateMax.locateMax(zPlaneProfile)
 
     new Point3d(xPosn, yPosn, zPosn)
   }
