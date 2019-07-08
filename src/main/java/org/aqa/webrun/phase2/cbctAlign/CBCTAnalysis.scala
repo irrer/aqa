@@ -87,6 +87,7 @@ object CBCTAnalysis extends Logging {
    * Ensure that the profile contains a BB.
    */
 
+  // TODO
   /**
    * Get the point of the volume that is the highest pixel intensity.  Result is in units of voxels.
    */
