@@ -17,6 +17,7 @@ import edu.umro.ImageUtil.DicomImage
 import java.awt.Rectangle
 import org.aqa.Util
 import edu.umro.ImageUtil.LocateMax
+import edu.umro.ImageUtil.DicomVolume
 
 case class CBCTAlign(x: Double, y: Double, z: Double) {
   // TODO
@@ -79,7 +80,7 @@ object CBCTAnalysis extends Logging {
 
     val offset = new Point3d(xyRect.getX, xyRect.getY, zOffset)
 
-    new VolumeOfInterest(imageList, offset)
+    new DicomVolume(imageList, offset)
   }
 
   /**
