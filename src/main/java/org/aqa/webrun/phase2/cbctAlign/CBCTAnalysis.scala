@@ -1,7 +1,6 @@
 package org.aqa.webrun.phase2.centerDose
 
 import scala.xml.Elem
-
 import javax.vecmath.Point3d
 import org.aqa.Logging
 import org.aqa.run.ProcedureStatus
@@ -18,6 +17,8 @@ import java.awt.Rectangle
 import org.aqa.Util
 import edu.umro.ImageUtil.LocateMax
 import edu.umro.ImageUtil.DicomVolume
+import javax.vecmath.Point3i
+import edu.umro.ScalaUtil.Trace
 
 case class CBCTAlign(x: Double, y: Double, z: Double) {
   // TODO
@@ -35,22 +36,27 @@ object CBCTAnalysis extends Logging {
    * Find the slice spacing by looking at the distance between consecutive sclices.  Use a few of
    * the smaller ones just in case there is a spacial discontinuity.
    */
-  private def sliceSpacing(sorted: Seq[AttributeList]) = {
+  private def getSliceSpacing(sorted: Seq[AttributeList]) = {
     val sampleSize = 5
     val smallest = sorted.indices.tail.map(i => (slicePosition(sorted(i)) - slicePosition(sorted(i - 1))).abs).sorted.take(sampleSize)
     val size = smallest.sum / smallest.size
     size
   }
 
-  private def coarseCenter(sorted: Seq[AttributeList], voxSize: Point3d): Either[String, Point3d] = {
-
-    ???
+  /**
+   * Get the size of a voxel in mm
+   */
+  def getVoxSize_mm(sorted: Seq[AttributeList]) = {
+    val xSize = sorted.head.get(TagFromName.PixelSpacing).getDoubleValues()(0)
+    val ySize = sorted.head.get(TagFromName.PixelSpacing).getDoubleValues()(1)
+    val zSize = getSliceSpacing(sorted)
+    Seq(xSize, ySize, zSize)
   }
 
   /**
    * Get the volume that needs to be searched for the BB.
    */
-  private def getVolumeOfInterest(sorted: Seq[AttributeList], voxSize_mm: Point3d): VolumeOfInterest = {
+  private def getVolumeOfInterest(sorted: Seq[AttributeList], voxSize_mm: Point3d): DicomVolume = {
     val rows = sorted.head.get(TagFromName.Rows).getIntegerValues().head
     val columns = sorted.head.get(TagFromName.Columns).getIntegerValues().head
     // centers of volume in mm
@@ -80,7 +86,7 @@ object CBCTAnalysis extends Logging {
 
     val offset = new Point3d(xyRect.getX, xyRect.getY, zOffset)
 
-    new DicomVolume(imageList, offset)
+    new DicomVolume(imageList)
   }
 
   /**
@@ -88,10 +94,11 @@ object CBCTAnalysis extends Logging {
    */
 
   // TODO
+
   /**
    * Get the point of the volume that is the highest pixel intensity.  Result is in units of voxels.
    */
-  private def getMaxPoint(volOfInt: VolumeOfInterest): Point3d = {
+  private def getMaxPoint(volOfInt: DicomVolume): Point3d = {
 
     val xPlaneProfile = volOfInt.volume.map(img => img.rowSums).map(voxel => voxel.sum)
     val yPlaneProfile = volOfInt.volume.map(img => img.columnSums).map(voxel => voxel.sum)
@@ -109,24 +116,82 @@ object CBCTAnalysis extends Logging {
   }
 
   /**
+   * Get the corner of the search volume closest to the origin in voxels.
+   */
+  private def startOfSearch(entireVolume: DicomVolume, voxSize_mm: Seq[Double]): Point3i = {
+    def toStart(dimension: Int, size_mm: Double): Int = {
+      val center = dimension / 2.0
+      val offset = (Config.DailyPhantomSearchDistance_mm / size_mm) / 2.0
+      (center - offset).round.toInt
+    }
+
+    val seq = entireVolume.volSize.zip(voxSize_mm).map(dimScl => toStart(dimScl._1, dimScl._2))
+
+    new Point3i(seq.toArray)
+  }
+
+  /**
+   * Get the size of the search volume in voxels.
+   */
+  private def sizeOfSearch(voxSize_mm: Seq[Double]): Point3i = {
+    val seq = voxSize_mm.map(size_mm => (Config.DailyPhantomSearchDistance_mm / size_mm).ceil.toInt)
+    new Point3i(seq.toArray)
+  }
+
+  /**
    * Look in a center cubic volume of the CBCT set for the BB.
    *
    * The BB must be within a certain distance or the test fails.  Taking advantage of this
    * requirement greatly speeds the algorithm because it has fewer voxels to search.
    */
   private def analyze(cbctSeries: Seq[AttributeList]): Either[String, Point3d] = {
+    Trace.trace
     val sorted = cbctSeries.sortBy(al => slicePosition(al))
-    val xSize = cbctSeries.head.get(TagFromName.PixelSpacing).getDoubleValues()(0)
-    val ySize = cbctSeries.head.get(TagFromName.PixelSpacing).getDoubleValues()(1)
-    val zSize = sliceSpacing(sorted)
+    Trace.trace
 
-    val voxSize_mm = new Point3d(xSize, ySize, zSize)
+    val voxSize_mm = getVoxSize_mm(sorted)
+    Trace.trace(voxSize_mm)
+    val entireVolume = DicomVolume.constructDicomVolume(sorted)
+    Trace.trace(entireVolume.volSize)
 
-    val volOfIntr = getVolumeOfInterest(sorted, voxSize_mm)
+    val searchStart = startOfSearch(entireVolume, voxSize_mm)
+    Trace.trace(searchStart)
+    val searchSize = sizeOfSearch(voxSize_mm)
+    Trace.trace(searchSize)
 
-    //val maxPoint getMaxPoint (volOfIntr)
+    // sub-volume of the CBCT volume to be searched for the BB.
+    val searchVolume = entireVolume.getSubVolume(searchStart, searchSize)
+    Trace.trace
 
-    ???
+    // coarse location relative to entire volume
+    val coarseLocation = {
+      val rel = searchVolume.getMaxPoint // relative to search volume
+      Trace.trace(rel)
+      Seq(rel.getX + searchStart.getX, rel.getY + searchStart.getY, rel.getZ + searchStart.getZ)
+    }
+    Trace.trace(coarseLocation)
+
+    val bbVolumeStart = coarseLocation.zip(voxSize_mm).map(cs => (cs._1 - (Config.DailyPhantomBBPenumbra_mm / cs._2)).round.toInt)
+    Trace.trace(bbVolumeStart)
+
+    // sub-volume of the entire volume that contains just the BB according to the coarse location.
+    val bbVolume = {
+      val bbVolumeSize = voxSize_mm.map(s => ((Config.DailyPhantomBBPenumbra_mm * 2) / s).round.toInt)
+      Trace.trace(bbVolumeSize)
+      entireVolume.getSubVolume(new Point3i(bbVolumeStart.toArray), new Point3i(bbVolumeSize.toArray))
+    }
+    Trace.trace
+
+    val fineLocation = {
+      val rel = bbVolume.getMaxPoint
+      val fl = new Point3d(rel.getX + bbVolumeStart(0), rel.getY + bbVolumeStart(1), rel.getZ + bbVolumeStart(2))
+      val foo = 5
+      fl
+    }
+
+    Trace.trace(fineLocation)
+
+    Right(fineLocation)
   }
 
   /**

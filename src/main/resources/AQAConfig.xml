@@ -473,7 +473,8 @@ Note that when building a package for release, the Maven build process uses the 
    <!-- The distance in floating point in mm from center to search for the BB in the daily phantom. -->
    <DailyPhantomSearchDistance_mm>50.0</DailyPhantomSearchDistance_mm>
 
-   <!-- The diameter in floating point in mm of the BB in the daily phantom. -->
-   <DailyPhantomBBDiameter_mm>2.0</DailyPhantomBBDiameter_mm>
+   <!-- Distance in mm in floating point that the penumbra extends in one direction from the BB.  A
+   volume of (2x)^3 this is used to measure the BB's location. ( 10 would yield 20x20x20 ) -->
+   <DailyPhantomBBPenumbra_mm>10.0</DailyPhantomBBPenumbra_mm>
 
 </AQAConfig>

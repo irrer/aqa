@@ -23,19 +23,25 @@ import org.aqa.Config
 class TestCBCTAnalysis extends FlatSpec with Matchers {
 
   Config.validate
-  
+  println("-----------------------------------------------------------------------------------------------------")
+
   // list of directories that contain a CBCT set for analysis
   val dirList = (new File("""src\test\resources\TestCBCTAlign""")).listFiles
+  println("List of CBCT directories used as input:\n    " + dirList.map(dir => dir.getAbsolutePath).mkString("\n    "))
 
   "TestCBCTAnalysis" should "find BB" in {
 
     def testDir(dir: File) = {
+      println("Processing directory " + dir.getAbsolutePath)
       val attrListSeq = dir.listFiles.map(f => (new DicomFile(f)).attributeList.get).toSeq
       val result = CBCTAnalysis.testAnalyze(attrListSeq)
-      (result.isRight) should be(true)
+      Trace.trace(result)
+      (result.isRight) should be(true) // Expected voxel coordinates: 246, 262, 42
     }
 
+    Trace.trace
     dirList.map(dir => testDir(dir))
+    Trace.trace
 
     (11 > 10) should be(true)
   }
