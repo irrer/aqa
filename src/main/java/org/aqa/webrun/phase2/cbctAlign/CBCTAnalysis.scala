@@ -1,4 +1,4 @@
-package org.aqa.webrun.phase2.centerDose
+package org.aqa.webrun.phase2.cbctAlign
 
 import scala.xml.Elem
 import javax.vecmath.Point3d
@@ -145,9 +145,7 @@ object CBCTAnalysis extends Logging {
    * requirement greatly speeds the algorithm because it has fewer voxels to search.
    */
   private def analyze(cbctSeries: Seq[AttributeList]): Either[String, Point3d] = {
-    Trace.trace
     val sorted = cbctSeries.sortBy(al => slicePosition(al))
-    Trace.trace
 
     val voxSize_mm = getVoxSize_mm(sorted)
     Trace.trace(voxSize_mm)
@@ -164,12 +162,25 @@ object CBCTAnalysis extends Logging {
     Trace.trace
 
     // coarse location relative to entire volume
-    val coarseLocation = {
-      val rel = searchVolume.getMaxPoint // relative to search volume
-      Trace.trace(rel)
-      Seq(rel.getX + searchStart.getX, rel.getY + searchStart.getY, rel.getZ + searchStart.getZ)
+    //    val coarseLocation = {
+    //      val rel = searchVolume.getMaxPoint // relative to search volume
+    //      Trace.trace(rel)
+    //      Seq(rel.getX + searchStart.getX, rel.getY + searchStart.getY, rel.getZ + searchStart.getZ)
+    //    }
+    //    Trace.trace(coarseLocation)
+
+    val coarse2 = {
+      val size = new Point3i(4, 4, 2)
+      val high = searchVolume.getHighest(size)
+      Trace.trace(high)
+      high.add(searchStart)
+      Trace.trace(high)
+      high.add(new Point3i(-2, -2, -1))
+      Trace.trace(high)
+      high
     }
-    Trace.trace(coarseLocation)
+    Trace.trace(coarse2)
+    val coarseLocation = Seq(coarse2.getX.toDouble, coarse2.getY.toDouble, coarse2.getZ.toDouble)
 
     val bbVolumeStart = coarseLocation.zip(voxSize_mm).map(cs => (cs._1 - (Config.DailyPhantomBBPenumbra_mm / cs._2)).round.toInt)
     Trace.trace(bbVolumeStart)
@@ -212,5 +223,5 @@ object CBCTAnalysis extends Logging {
       }
     }
   }
-
 }
+

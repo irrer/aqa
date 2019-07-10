@@ -11,7 +11,7 @@ import edu.umro.ScalaUtil.FileUtil
 import org.aqa.web.C3Chart
 import java.awt.Color
 import org.aqa.Crypto
-import org.aqa.webrun.phase2.centerDose.CBCTAnalysis
+import org.aqa.webrun.phase2.cbctAlign.CBCTAnalysis
 import org.aqa.DicomFile
 import org.aqa.Config
 
@@ -34,6 +34,7 @@ class TestCBCTAnalysis extends FlatSpec with Matchers {
     def testDir(dir: File) = {
       println("Processing directory " + dir.getAbsolutePath)
       val attrListSeq = dir.listFiles.map(f => (new DicomFile(f)).attributeList.get).toSeq
+      println("Number of slices in series: " + attrListSeq.size)
       val result = CBCTAnalysis.testAnalyze(attrListSeq)
       Trace.trace(result)
       (result.isRight) should be(true) // Expected voxel coordinates: 246, 262, 42
@@ -46,9 +47,4 @@ class TestCBCTAnalysis extends FlatSpec with Matchers {
     (11 > 10) should be(true)
   }
 
-  "randomSecureHash" should "be different each time" in {
-    val size = 100
-    val list = (0 until size).map(i => Crypto.randomSecureHash).distinct
-    list.size should be(size)
-  }
 }
