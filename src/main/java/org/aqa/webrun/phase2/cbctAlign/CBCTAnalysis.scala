@@ -23,7 +23,7 @@ import java.io.File
 import edu.umro.ImageUtil.ImageUtil
 
 case class CBCTAlign(x: Double, y: Double, z: Double) {
-  // TODO
+  //  TODO
 }
 
 object CBCTAnalysis extends Logging {
