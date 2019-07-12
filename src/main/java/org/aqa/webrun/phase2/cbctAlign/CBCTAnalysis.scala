@@ -19,6 +19,8 @@ import edu.umro.ImageUtil.LocateMax
 import edu.umro.ImageUtil.DicomVolume
 import javax.vecmath.Point3i
 import edu.umro.ScalaUtil.Trace
+import java.io.File
+import edu.umro.ImageUtil.ImageUtil
 
 case class CBCTAlign(x: Double, y: Double, z: Double) {
   // TODO
@@ -138,6 +140,60 @@ object CBCTAnalysis extends Logging {
     new Point3i(seq.toArray)
   }
 
+  private def makeImagesXYZ(entireVolume: DicomVolume, fineLocation: Point3d, voxSize: Seq[Double]) = {
+
+    val mm = Config.DailyPhantomBBPenumbra_mm
+    val start = new Point3i(
+      (fineLocation.getX - (mm / voxSize(0))).ceil.toInt,
+      (fineLocation.getY - (mm / voxSize(1))).ceil.toInt,
+      (fineLocation.getZ - (mm / voxSize(2))).ceil.toInt)
+
+    val size = new Point3i(
+      ((mm * 2) / voxSize(0)).ceil.toInt,
+      ((mm * 2) / voxSize(1)).ceil.toInt,
+      ((mm * 2) / voxSize(2)).ceil.toInt)
+
+    val yVol = entireVolume.getSubVolume(new Point3i(0, start.getY, 0), new Point3i(entireVolume.xSize, size.getY, entireVolume.zSize))
+    val zVol = entireVolume.getSubVolume(new Point3i(0, 0, start.getZ), new Point3i(entireVolume.xSize, entireVolume.ySize, size.getZ))
+
+    val xImage = {
+      val xVol = entireVolume.getSubVolume(new Point3i(start.getX, 0, 0), new Point3i(size.getX, entireVolume.ySize, entireVolume.zSize))
+      def xSum(y: Int, z: Int): Float = {
+        if (true) { // TODO rm
+          try {
+            val j = for (x <- 0 until xVol.xSize) yield (xVol.getXYZ(x, y, z))
+          } catch {
+            case t: Throwable => {
+              0.0
+            }
+          }
+        }
+        val xx = for (x <- 0 until xVol.xSize) yield (xVol.getXYZ(x, y, z))
+        (xx.sum) / xVol.xSize
+      }
+
+      def xRow(y: Int): IndexedSeq[Float] = {
+        for (z <- 0 until xVol.zSize) yield (xSum(y, z))
+      }
+
+      val grid = for (y <- 0 until xVol.ySize) yield (xRow(y)).toIndexedSeq
+      val image = new DicomImage(grid)
+
+      if (true) { // TODO rm
+        val name = System.currentTimeMillis + "_x.png"
+        val outFile = new File("""D:\tmp\aqa\CBCT\perspectives\""" + name)
+        outFile.getParentFile.mkdirs
+        outFile.delete
+        val bufImg = image.toDeepColorBufferedImage(0)
+        ImageUtil.writePngFile(bufImg, outFile)
+        println("wrote file: " + outFile.getAbsolutePath)
+      }
+
+    }
+
+    //???
+  }
+
   /**
    * Look in a center cubic volume of the CBCT set for the BB.
    *
@@ -195,13 +251,13 @@ object CBCTAnalysis extends Logging {
 
     val fineLocation = {
       val rel = bbVolume.getMaxPoint
-      val fl = new Point3d(rel.getX + bbVolumeStart(0), rel.getY + bbVolumeStart(1), rel.getZ + bbVolumeStart(2))
-      val foo = 5
-      fl
+      val finloc = new Point3d(rel.getX + bbVolumeStart(0), rel.getY + bbVolumeStart(1), rel.getZ + bbVolumeStart(2))
+      finloc
     }
 
     Trace.trace(fineLocation)
 
+    makeImagesXYZ(entireVolume, fineLocation, voxSize_mm)
     Right(fineLocation)
   }
 
