@@ -140,58 +140,119 @@ object CBCTAnalysis extends Logging {
     new Point3i(seq.toArray)
   }
 
-  private def makeImagesXYZ(entireVolume: DicomVolume, fineLocation: Point3d, voxSize: Seq[Double]) = {
+  /**
+   * Get image from the perspective of the X-axis.
+   */
+  def xImage(entireVolume: DicomVolume, start: Point3i, size: Point3i): DicomImage = {
+    val vol = entireVolume.getSubVolume(new Point3i(start.getX, 0, 0), new Point3i(size.getX, entireVolume.ySize, entireVolume.zSize))
+    def sumOf(y: Int, z: Int): Float = {
+      val xx = for (x <- 0 until vol.xSize) yield (vol.getXYZ(x, y, z))
+      (xx.sum) / vol.xSize
+    }
+
+    def rowOf(y: Int): IndexedSeq[Float] = {
+      for (z <- 0 until vol.zSize) yield (sumOf(y, z))
+    }
+
+    val grid = for (y <- 0 until vol.ySize) yield (rowOf(y)).toIndexedSeq
+    val image = new DicomImage(grid)
+    image
+  }
+
+  /**
+   * Get image from the perspective of the Y-axis.
+   */
+  def yImage(entireVolume: DicomVolume, start: Point3i, size: Point3i): DicomImage = {
+    val vol = entireVolume.getSubVolume(new Point3i(0, start.getY, 0), new Point3i(entireVolume.xSize, size.getY, entireVolume.zSize))
+
+    def sumOf(x: Int, z: Int): Float = {
+      val yy = for (y <- 0 until vol.ySize) yield (vol.getXYZ(x, y, z))
+      (yy.sum) / vol.xSize
+    }
+
+    def rowOf(x: Int): IndexedSeq[Float] = {
+      for (z <- 0 until vol.zSize) yield (sumOf(x, z))
+    }
+
+    val grid = for (x <- 0 until vol.xSize) yield (rowOf(x)).toIndexedSeq
+    val image = new DicomImage(grid)
+    image
+  }
+
+  /**
+   * Get image from the perspective of the Z-axis.
+   */
+  def zImage(entireVolume: DicomVolume, start: Point3i, size: Point3i): DicomImage = {
+    val vol = entireVolume.getSubVolume(new Point3i(0, 0, start.getZ), new Point3i(entireVolume.xSize, entireVolume.ySize, size.getZ))
+    def sumOf(x: Int, y: Int): Float = {
+      val zz = for (z <- 0 until vol.zSize) yield (vol.getXYZ(x, y, z))
+      (zz.sum) / vol.xSize
+    }
+
+    def rowOf(y: Int): IndexedSeq[Float] = {
+      for (x <- 0 until vol.xSize) yield (sumOf(x, y))
+    }
+
+    val grid = for (y <- 0 until vol.xSize) yield (rowOf(y)).toIndexedSeq
+    val image = new DicomImage(grid)
+
+    image
+  }
+
+  /**
+   * Make images that show the BB from the X, Y and Z axis by taking a slice a 4 times thicker than
+   * the BB in the given direction that encompass the BB.  The point is to be able to generate
+   * images that show the BB but minimizing noise by eliminating the volume in front of and behind
+   * the BB (from the 3 orthogonal axis).   The voxels are averaged in along the relevant axis to
+   * produce a 2-D image.
+   */
+  private def makeImagesXYZ(entireVolume: DicomVolume, fineLocation: Point3d, voxSize: Seq[Double]): Seq[DicomImage] = {
 
     val mm = Config.DailyPhantomBBPenumbra_mm
+
+    // point closest to origin for each sub-volume
     val start = new Point3i(
       (fineLocation.getX - (mm / voxSize(0))).ceil.toInt,
       (fineLocation.getY - (mm / voxSize(1))).ceil.toInt,
       (fineLocation.getZ - (mm / voxSize(2))).ceil.toInt)
 
+    // number of planes in each sub-volume
     val size = new Point3i(
       ((mm * 2) / voxSize(0)).ceil.toInt,
       ((mm * 2) / voxSize(1)).ceil.toInt,
       ((mm * 2) / voxSize(2)).ceil.toInt)
 
-    val yVol = entireVolume.getSubVolume(new Point3i(0, start.getY, 0), new Point3i(entireVolume.xSize, size.getY, entireVolume.zSize))
-    val zVol = entireVolume.getSubVolume(new Point3i(0, 0, start.getZ), new Point3i(entireVolume.xSize, entireVolume.ySize, size.getZ))
+    if (true) { // TODO rm
+      def write(axis: String, image: DicomImage, aspectRatio: Double) = {
+        val baseName = System.currentTimeMillis + "_" + axis
 
-    val xImage = {
-      val xVol = entireVolume.getSubVolume(new Point3i(start.getX, 0, 0), new Point3i(size.getX, entireVolume.ySize, entireVolume.zSize))
-      def xSum(y: Int, z: Int): Float = {
-        if (true) { // TODO rm
-          try {
-            val j = for (x <- 0 until xVol.xSize) yield (xVol.getXYZ(x, y, z))
-          } catch {
-            case t: Throwable => {
-              0.0
-            }
-          }
+        if (true) {
+          val name = baseName + ".png"
+          val outFile = new File("""D:\tmp\aqa\CBCT\perspectives\""" + name)
+          outFile.getParentFile.mkdirs
+          outFile.delete
+          val bufImg = image.toDeepColorBufferedImage(0)
+          ImageUtil.writePngFile(bufImg, outFile)
+          println("wrote file: " + outFile.getAbsolutePath)
         }
-        val xx = for (x <- 0 until xVol.xSize) yield (xVol.getXYZ(x, y, z))
-        (xx.sum) / xVol.xSize
+
+        if (true) {
+          val name = baseName + "_aspect.png"
+          val outFile = new File("""D:\tmp\aqa\CBCT\perspectives\""" + name)
+          outFile.getParentFile.mkdirs
+          outFile.delete
+          val bufImg = image.renderPixelsToSquare(aspectRatio).toDeepColorBufferedImage(0)
+          ImageUtil.writePngFile(bufImg, outFile)
+          println("wrote file: " + outFile.getAbsolutePath)
+        }
       }
 
-      def xRow(y: Int): IndexedSeq[Float] = {
-        for (z <- 0 until xVol.zSize) yield (xSum(y, z))
-      }
-
-      val grid = for (y <- 0 until xVol.ySize) yield (xRow(y)).toIndexedSeq
-      val image = new DicomImage(grid)
-
-      if (true) { // TODO rm
-        val name = System.currentTimeMillis + "_x.png"
-        val outFile = new File("""D:\tmp\aqa\CBCT\perspectives\""" + name)
-        outFile.getParentFile.mkdirs
-        outFile.delete
-        val bufImg = image.toDeepColorBufferedImage(0)
-        ImageUtil.writePngFile(bufImg, outFile)
-        println("wrote file: " + outFile.getAbsolutePath)
-      }
-
+      write("X", xImage(entireVolume, start, size), voxSize(0) / voxSize(2))
+      write("Y", yImage(entireVolume, start, size), voxSize(1) / voxSize(2))
+      write("Z", zImage(entireVolume, start, size), voxSize(1) / voxSize(0))
     }
 
-    //???
+    Seq(xImage(entireVolume, start, size), yImage(entireVolume, start, size), zImage(entireVolume, start, size))
   }
 
   /**
@@ -203,51 +264,30 @@ object CBCTAnalysis extends Logging {
   private def analyze(cbctSeries: Seq[AttributeList]): Either[String, Point3d] = {
     val sorted = cbctSeries.sortBy(al => slicePosition(al))
 
-    val voxSize_mm = getVoxSize_mm(sorted)
-    Trace.trace(voxSize_mm)
-    val entireVolume = DicomVolume.constructDicomVolume(sorted)
-    Trace.trace(entireVolume.volSize)
+    val voxSize_mm = getVoxSize_mm(sorted) // the size of a voxel in mm
+    val entireVolume = DicomVolume.constructDicomVolume(sorted) // all CBCT voxels as a volume
 
-    val searchStart = startOfSearch(entireVolume, voxSize_mm)
-    Trace.trace(searchStart)
-    val searchSize = sizeOfSearch(voxSize_mm)
-    Trace.trace(searchSize)
+    val searchStart = startOfSearch(entireVolume, voxSize_mm) // point of search volume closest to origin
+    val searchSize = sizeOfSearch(voxSize_mm) // size of search volume
 
-    // sub-volume of the CBCT volume to be searched for the BB.
-    val searchVolume = entireVolume.getSubVolume(searchStart, searchSize)
-    Trace.trace
-
-    // coarse location relative to entire volume
-    //    val coarseLocation = {
-    //      val rel = searchVolume.getMaxPoint // relative to search volume
-    //      Trace.trace(rel)
-    //      Seq(rel.getX + searchStart.getX, rel.getY + searchStart.getY, rel.getZ + searchStart.getZ)
-    //    }
-    //    Trace.trace(coarseLocation)
+    val searchVolume = entireVolume.getSubVolume(searchStart, searchSize) // sub-volume of the CBCT volume to be searched for the BB.
 
     val coarse2 = {
       val size = new Point3i(4, 4, 2)
       val high = searchVolume.getHighest(size)
-      Trace.trace(high)
       high.add(searchStart)
-      Trace.trace(high)
       high.add(new Point3i(-2, -2, -1))
-      Trace.trace(high)
       high
     }
-    Trace.trace(coarse2)
     val coarseLocation = Seq(coarse2.getX.toDouble, coarse2.getY.toDouble, coarse2.getZ.toDouble)
 
     val bbVolumeStart = coarseLocation.zip(voxSize_mm).map(cs => (cs._1 - (Config.DailyPhantomBBPenumbra_mm / cs._2)).round.toInt)
-    Trace.trace(bbVolumeStart)
 
     // sub-volume of the entire volume that contains just the BB according to the coarse location.
     val bbVolume = {
       val bbVolumeSize = voxSize_mm.map(s => ((Config.DailyPhantomBBPenumbra_mm * 2) / s).round.toInt)
-      Trace.trace(bbVolumeSize)
       entireVolume.getSubVolume(new Point3i(bbVolumeStart.toArray), new Point3i(bbVolumeSize.toArray))
     }
-    Trace.trace
 
     val fineLocation = {
       val rel = bbVolume.getMaxPoint
@@ -255,9 +295,8 @@ object CBCTAnalysis extends Logging {
       finloc
     }
 
-    Trace.trace(fineLocation)
+    val imageXYZ = makeImagesXYZ(entireVolume, fineLocation, voxSize_mm)
 
-    makeImagesXYZ(entireVolume, fineLocation, voxSize_mm)
     Right(fineLocation)
   }
 
