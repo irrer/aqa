@@ -223,7 +223,7 @@ object CBCTAnalysis extends Logging {
       ((mm * 2) / voxSize(2)).ceil.toInt)
 
     if (true) { // TODO rm
-      def write(axis: String, image: DicomImage, aspectRatio: Double) = {
+      def write(axis: String, image: DicomImage, pixelWidth: Double, pixelHeight: Double) = {
         val baseName = System.currentTimeMillis + "_" + axis
 
         if (true) {
@@ -241,15 +241,18 @@ object CBCTAnalysis extends Logging {
           val outFile = new File("""D:\tmp\aqa\CBCT\perspectives\""" + name)
           outFile.getParentFile.mkdirs
           outFile.delete
-          val bufImg = image.renderPixelsToSquare(aspectRatio).toDeepColorBufferedImage(0)
+          val bufImg = image.renderPixelsToSquare(pixelWidth, pixelHeight).toDeepColorBufferedImage(0)
           ImageUtil.writePngFile(bufImg, outFile)
           println("wrote file: " + outFile.getAbsolutePath)
         }
       }
 
-      write("X", xImage(entireVolume, start, size), voxSize(0) / voxSize(2))
-      write("Y", yImage(entireVolume, start, size), voxSize(1) / voxSize(2))
-      write("Z", zImage(entireVolume, start, size), voxSize(1) / voxSize(0))
+      Trace.trace("x AR: " + voxSize(0) / voxSize(2))
+      Trace.trace("y AR: " + voxSize(1) / voxSize(2))
+      Trace.trace("z AR: " + voxSize(1) / voxSize(0))
+      write("X", xImage(entireVolume, start, size), voxSize(2), voxSize(1))
+      write("Y", yImage(entireVolume, start, size), voxSize(2), voxSize(0))
+      write("Z", zImage(entireVolume, start, size), voxSize(0), voxSize(1))
     }
 
     Seq(xImage(entireVolume, start, size), yImage(entireVolume, start, size), zImage(entireVolume, start, size))
@@ -266,6 +269,7 @@ object CBCTAnalysis extends Logging {
 
     val voxSize_mm = getVoxSize_mm(sorted) // the size of a voxel in mm
     val entireVolume = DicomVolume.constructDicomVolume(sorted) // all CBCT voxels as a volume
+    Trace.trace("voxSize_mm: " + voxSize_mm + "    XYZ: " + entireVolume.xSize + " " + entireVolume.ySize + " " + entireVolume.zSize)
 
     val searchStart = startOfSearch(entireVolume, voxSize_mm) // point of search volume closest to origin
     val searchSize = sizeOfSearch(voxSize_mm) // size of search volume
