@@ -198,7 +198,7 @@ object Phase2 extends Logging {
       val rtimageMap = constructRtimageMap(rtplan, rtimageList)
       val flood = rtimageMap(Config.FloodFieldBeamName)
 
-      new RunReq(rtplan, machine, rtimageMap, flood)
+      new RunReq(rtplan, None, machine, rtimageMap, flood) // TODO handle rtplanCBCT
     }
 
     val procedure = Procedure.get(outputOrig.procedurePK).get
@@ -429,7 +429,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       case (Some(errorMessage), _) => formErr(errorMessage)
       case (_, Some(errorMessage)) => formErr(errorMessage)
       case _ if (flood.isEmpty) => formErr("Flood field beam is missing")
-      case _ => Right(new RunReq(basicData.rtplan, basicData.machine, rtimageMap, flood.head._2)) // success
+      case _ => Right(new RunReq(basicData.rtplan, None, basicData.machine, rtimageMap, flood.head._2)) // success // TODO handle rtplanCBCT
     }
   }
 

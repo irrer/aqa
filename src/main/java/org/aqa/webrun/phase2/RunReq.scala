@@ -21,12 +21,17 @@ import org.aqa.IsoImagePlaneTranslator
  *
  * @param flood: Flood field file
  */
-case class RunReq(rtplan: DicomFile, machine: Machine, rtimageMap: Map[String, DicomFile], flood: DicomFile) extends Logging {
+case class RunReq(rtplan: DicomFile, rtplanCBCT: Option[DicomFile], machine: Machine, rtimageMap: Map[String, DicomFile], flood: DicomFile) extends Logging {
 
   def reDir(dir: File): RunReq = {
     val rtiMap = rtimageMap.toSeq.map(ni => (ni._1, ni._2.reDir(dir))).toMap
     val rtplanRedirred = if (rtplan.file.getParentFile.getAbsolutePath.equals(Config.sharedDir.getAbsolutePath)) rtplan else rtplan.reDir(dir)
-    new RunReq(rtplanRedirred, machine, rtiMap, flood.reDir(dir))
+    val rtplanCBCTRedirred = {
+      if (rtplanCBCT.isDefined)
+        if (rtplanCBCT.get.file.getParentFile.getAbsolutePath.equals(Config.sharedDir.getAbsolutePath)) rtplanCBCT else Some(rtplanCBCT.get.reDir(dir))
+      else None
+    }
+    new RunReq(rtplanRedirred, rtplanCBCTRedirred, machine, rtiMap, flood.reDir(dir))
   }
 
   private val floodAttributeList = flood.attributeList.get

@@ -833,4 +833,37 @@ object Util extends Logging {
       case t: Throwable => Left("XML error: " + t.toString)
     }
   }
+
+  /** Get the Z position of a slice. */
+  def slicePosition(attributeList: AttributeList): Double = attributeList.get(TagFromName.ImagePositionPatient).getDoubleValues()(2)
+
+  /**
+   * Find the slice spacing by looking at the distance between consecutive slices.  Use a few of
+   * the smaller ones just in case there is a spacial discontinuity.
+   */
+  private def getSliceSpacing(sorted: Seq[AttributeList]) = {
+    if (sorted.size < 2) throw new IllegalArgumentException("Volume must contain at least 2 slices but actually has " + sorted.size)
+    val sampleSize = 5
+    val smallest = sorted.indices.tail.map(i => (slicePosition(sorted(i)) - slicePosition(sorted(i - 1))).abs).sorted.take(sampleSize)
+    val size = smallest.sum / smallest.size
+    size
+  }
+
+  /**
+   * Sort series by Z position ascending.
+   */
+  def sortByZ(attrListList: Seq[AttributeList]): Seq[AttributeList] = {
+    attrListList.sortBy(al => slicePosition(al))
+  }
+
+  /**
+   * Get the size of a voxel in mm.  Requires that multiple slices be given.
+   */
+  def getVoxSize_mm(attrListList: Seq[AttributeList]) = {
+    val sorted = sortByZ(attrListList)
+    val xSize = sorted.head.get(TagFromName.PixelSpacing).getDoubleValues()(0)
+    val ySize = sorted.head.get(TagFromName.PixelSpacing).getDoubleValues()(1)
+    val zSize = getSliceSpacing(sorted)
+    Seq(xSize, ySize, zSize)
+  }
 }

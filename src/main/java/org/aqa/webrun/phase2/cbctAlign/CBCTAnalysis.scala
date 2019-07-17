@@ -21,6 +21,9 @@ import javax.vecmath.Point3i
 import edu.umro.ScalaUtil.Trace
 import java.io.File
 import edu.umro.ImageUtil.ImageUtil
+import java.awt.image.BufferedImage
+import java.awt.geom.Point2D
+import org.aqa.VolumeTranslator
 
 case class CBCTAlign(x: Double, y: Double, z: Double) {
   //  TODO
@@ -30,30 +33,7 @@ object CBCTAnalysis extends Logging {
 
   private val subProcedureName = "CBCT Alignment"
 
-  case class CBCTAlignResult(summry: Elem, stats: ProcedureStatus.Value, resultList: Seq[Point3d]) extends SubProcedureResult(summry, stats, subProcedureName)
-
-  private def slicePosition(attributeList: AttributeList): Double = attributeList.get(TagFromName.ImagePositionPatient).getDoubleValues()(2)
-
-  /**
-   * Find the slice spacing by looking at the distance between consecutive sclices.  Use a few of
-   * the smaller ones just in case there is a spacial discontinuity.
-   */
-  private def getSliceSpacing(sorted: Seq[AttributeList]) = {
-    val sampleSize = 5
-    val smallest = sorted.indices.tail.map(i => (slicePosition(sorted(i)) - slicePosition(sorted(i - 1))).abs).sorted.take(sampleSize)
-    val size = smallest.sum / smallest.size
-    size
-  }
-
-  /**
-   * Get the size of a voxel in mm
-   */
-  def getVoxSize_mm(sorted: Seq[AttributeList]) = {
-    val xSize = sorted.head.get(TagFromName.PixelSpacing).getDoubleValues()(0)
-    val ySize = sorted.head.get(TagFromName.PixelSpacing).getDoubleValues()(1)
-    val zSize = getSliceSpacing(sorted)
-    Seq(xSize, ySize, zSize)
-  }
+  case class CBCTResult(summry: Elem, sts: ProcedureStatus.Value, position: Seq[Point3d], images: Seq[BufferedImage]) extends SubProcedureResult(summry, sts, subProcedureName)
 
   /**
    * Get the volume that needs to be searched for the BB.
@@ -64,10 +44,10 @@ object CBCTAnalysis extends Logging {
     // centers of volume in mm
     val xCenter_mm = ((rows - 1) * voxSize_mm.getX) / 2
     val yCenter_mm = ((columns - 1) * voxSize_mm.getY) / 2
-    val zCenter_mm = (slicePosition(sorted.head) + slicePosition(sorted.head)) / 2.0
+    val zCenter_mm = (Util.slicePosition(sorted.last) + Util.slicePosition(sorted.head)) / 2.0
 
     // consider only slices that are sufficiently close to the center of the volume.
-    val zSlices = sorted.filter(al => (slicePosition(al) - zCenter_mm).abs <= Config.DailyPhantomSearchDistance_mm)
+    val zSlices = sorted.filter(al => (Util.slicePosition(al) - zCenter_mm).abs <= Config.DailyPhantomSearchDistance_mm)
 
     // rectangle within a slice in voxels
     val xyRect = {
@@ -143,7 +123,7 @@ object CBCTAnalysis extends Logging {
   /**
    * Get image from the perspective of the X-axis.
    */
-  def xImage(entireVolume: DicomVolume, start: Point3i, size: Point3i): DicomImage = {
+  private def xImage(entireVolume: DicomVolume, start: Point3i, size: Point3i): DicomImage = {
     val vol = entireVolume.getSubVolume(new Point3i(start.getX, 0, 0), new Point3i(size.getX, entireVolume.ySize, entireVolume.zSize))
     def sumOf(y: Int, z: Int): Float = {
       val xx = for (x <- 0 until vol.xSize) yield (vol.getXYZ(x, y, z))
@@ -162,7 +142,7 @@ object CBCTAnalysis extends Logging {
   /**
    * Get image from the perspective of the Y-axis.
    */
-  def yImage(entireVolume: DicomVolume, start: Point3i, size: Point3i): DicomImage = {
+  private def yImage(entireVolume: DicomVolume, start: Point3i, size: Point3i): DicomImage = {
     val vol = entireVolume.getSubVolume(new Point3i(0, start.getY, 0), new Point3i(entireVolume.xSize, size.getY, entireVolume.zSize))
 
     def sumOf(x: Int, z: Int): Float = {
@@ -182,7 +162,7 @@ object CBCTAnalysis extends Logging {
   /**
    * Get image from the perspective of the Z-axis.
    */
-  def zImage(entireVolume: DicomVolume, start: Point3i, size: Point3i): DicomImage = {
+  private def zImage(entireVolume: DicomVolume, start: Point3i, size: Point3i): DicomImage = {
     val vol = entireVolume.getSubVolume(new Point3i(0, 0, start.getZ), new Point3i(entireVolume.xSize, entireVolume.ySize, size.getZ))
     def sumOf(x: Int, y: Int): Float = {
       val zz = for (z <- 0 until vol.zSize) yield (vol.getXYZ(x, y, z))
@@ -200,21 +180,71 @@ object CBCTAnalysis extends Logging {
   }
 
   /**
+   * Establish the min and max values by removing the outliers.  This is used for choosing the
+   * color range of the images.
+   *
+   * Note that the images will be presented together, so the aggregate range of the pixels should be
+   * considered so that the images will be colored similarly.
+   */
+  private def getMinMax(imageList: Seq[DicomImage]): (Float, Float) = {
+    val allHist = imageList.map(img => img.histogram).flatten.groupBy(hp => hp.value)
+    val histogram = allHist.map(vhp => new DicomImage.HistPoint(vhp._1, vhp._2.map(hp => hp.count).sum)).toSeq.sortBy(_.value)
+    val totalSize = histogram.map(_.count).sum
+    val numDrop = {
+      if (histogram.size < 1000)
+        0
+      else
+        (totalSize * 0.05).round.toInt
+    }
+
+    /**
+     * Keep removing members until the requisite number has been dropped.
+     */
+    def trim(total: Int, hist: Seq[DicomImage.HistPoint]): Float = {
+      if (total < numDrop)
+        trim(total + hist.head.count, hist.tail)
+      else hist.head.value
+    }
+
+    val minPix = trim(0, histogram)
+    val maxPix = trim(0, histogram.reverse)
+
+    (minPix, maxPix)
+  }
+
+  /**
+   * Make an annotated image.
+   *
+   * @param dicomImage Raw image, not corrected for aspect ratio.
+   *
+   * @param location Position of BB.
+   *
+   * @param pixelSize Dimensions of pixels in mm.
+   *
+   * @param minMax Minimum and maximum values to be used for rendering deep color.
+   */
+  private def makeImage(dicomImage: DicomImage, location: Point2D.Double, pixelSize: Point2D.Double, minMax: (Float, Float)): BufferedImage = {
+    val aspectCorrected = dicomImage.renderPixelsToSquare(pixelSize.getX, pixelSize.getY)
+    val bufImg = aspectCorrected.toDeepColorBufferedImage(minMax._1, minMax._2)
+    bufImg
+  }
+
+  /**
    * Make images that show the BB from the X, Y and Z axis by taking a slice a 4 times thicker than
    * the BB in the given direction that encompass the BB.  The point is to be able to generate
    * images that show the BB but minimizing noise by eliminating the volume in front of and behind
    * the BB (from the 3 orthogonal axis).   The voxels are averaged in along the relevant axis to
    * produce a 2-D image.
    */
-  private def makeImagesXYZ(entireVolume: DicomVolume, fineLocation: Point3d, voxSize: Seq[Double]): Seq[DicomImage] = {
+  private def makeImagesXYZ(entireVolume: DicomVolume, fineLocation_vox: Point3d, fineLocation_mm: Point3d, voxSize: Seq[Double]): Seq[BufferedImage] = {
 
     val mm = Config.DailyPhantomBBPenumbra_mm
 
     // point closest to origin for each sub-volume
     val start = new Point3i(
-      (fineLocation.getX - (mm / voxSize(0))).ceil.toInt,
-      (fineLocation.getY - (mm / voxSize(1))).ceil.toInt,
-      (fineLocation.getZ - (mm / voxSize(2))).ceil.toInt)
+      (fineLocation_vox.getX - (mm / voxSize(0))).ceil.toInt,
+      (fineLocation_vox.getY - (mm / voxSize(1))).ceil.toInt,
+      (fineLocation_vox.getZ - (mm / voxSize(2))).ceil.toInt)
 
     // number of planes in each sub-volume
     val size = new Point3i(
@@ -222,40 +252,18 @@ object CBCTAnalysis extends Logging {
       ((mm * 2) / voxSize(1)).ceil.toInt,
       ((mm * 2) / voxSize(2)).ceil.toInt)
 
-    if (true) { // TODO rm
-      def write(axis: String, image: DicomImage, pixelWidth: Double, pixelHeight: Double) = {
-        val baseName = System.currentTimeMillis + "_" + axis
+    val diX = xImage(entireVolume, start, size)
+    val diY = yImage(entireVolume, start, size)
+    val diZ = zImage(entireVolume, start, size)
 
-        if (true) {
-          val name = baseName + ".png"
-          val outFile = new File("""D:\tmp\aqa\CBCT\perspectives\""" + name)
-          outFile.getParentFile.mkdirs
-          outFile.delete
-          val bufImg = image.toDeepColorBufferedImage(0)
-          ImageUtil.writePngFile(bufImg, outFile)
-          println("wrote file: " + outFile.getAbsolutePath)
-        }
+    val minMaxPixels = getMinMax(Seq(diX, diY, diZ))
 
-        if (true) {
-          val name = baseName + "_aspect.png"
-          val outFile = new File("""D:\tmp\aqa\CBCT\perspectives\""" + name)
-          outFile.getParentFile.mkdirs
-          outFile.delete
-          val bufImg = image.renderPixelsToSquare(pixelWidth, pixelHeight).toDeepColorBufferedImage(0)
-          ImageUtil.writePngFile(bufImg, outFile)
-          println("wrote file: " + outFile.getAbsolutePath)
-        }
-      }
+    val bufImgList = Seq(
+      makeImage(diX, new Point2D.Double(fineLocation_vox.getZ, fineLocation_vox.getY), new Point2D.Double(voxSize(2), voxSize(1)), minMaxPixels),
+      makeImage(diY, new Point2D.Double(fineLocation_vox.getZ, fineLocation_vox.getX), new Point2D.Double(voxSize(2), voxSize(0)), minMaxPixels),
+      makeImage(diZ, new Point2D.Double(fineLocation_vox.getX, fineLocation_vox.getY), new Point2D.Double(voxSize(0), voxSize(1)), minMaxPixels))
 
-      Trace.trace("x AR: " + voxSize(0) / voxSize(2))
-      Trace.trace("y AR: " + voxSize(1) / voxSize(2))
-      Trace.trace("z AR: " + voxSize(1) / voxSize(0))
-      write("X", xImage(entireVolume, start, size), voxSize(2), voxSize(1))
-      write("Y", yImage(entireVolume, start, size), voxSize(2), voxSize(0))
-      write("Z", zImage(entireVolume, start, size), voxSize(0), voxSize(1))
-    }
-
-    Seq(xImage(entireVolume, start, size), yImage(entireVolume, start, size), zImage(entireVolume, start, size))
+    bufImgList
   }
 
   /**
@@ -264,10 +272,10 @@ object CBCTAnalysis extends Logging {
    * The BB must be within a certain distance or the test fails.  Taking advantage of this
    * requirement greatly speeds the algorithm because it has fewer voxels to search.
    */
-  private def analyze(cbctSeries: Seq[AttributeList]): Either[String, Point3d] = {
-    val sorted = cbctSeries.sortBy(al => slicePosition(al))
+  private def analyze(cbctSeries: Seq[AttributeList]): Either[String, (Point3d, Seq[BufferedImage])] = {
+    val sorted = Util.sortByZ(cbctSeries)
 
-    val voxSize_mm = getVoxSize_mm(sorted) // the size of a voxel in mm
+    val voxSize_mm = Util.getVoxSize_mm(sorted) // the size of a voxel in mm
     val entireVolume = DicomVolume.constructDicomVolume(sorted) // all CBCT voxels as a volume
     Trace.trace("voxSize_mm: " + voxSize_mm + "    XYZ: " + entireVolume.xSize + " " + entireVolume.ySize + " " + entireVolume.zSize)
 
@@ -293,15 +301,20 @@ object CBCTAnalysis extends Logging {
       entireVolume.getSubVolume(new Point3i(bbVolumeStart.toArray), new Point3i(bbVolumeSize.toArray))
     }
 
-    val fineLocation = {
+    // fine location in voxel coordinates
+    val fineLocation_vox = {
       val rel = bbVolume.getMaxPoint
       val finloc = new Point3d(rel.getX + bbVolumeStart(0), rel.getY + bbVolumeStart(1), rel.getZ + bbVolumeStart(2))
       finloc
     }
 
-    val imageXYZ = makeImagesXYZ(entireVolume, fineLocation, voxSize_mm)
+    val volTrans = new VolumeTranslator(sorted)
+    // fine location in mm coordinates
+    val fineLocation_mm = volTrans.vox2mm(fineLocation_vox)
 
-    Right(fineLocation)
+    val imageXYZ = makeImagesXYZ(entireVolume, fineLocation_vox, fineLocation_mm, voxSize_mm)
+
+    Right(fineLocation_mm, imageXYZ)
   }
 
   /**
@@ -309,7 +322,7 @@ object CBCTAnalysis extends Logging {
    */
   def testAnalyze(cbctSeries: Seq[AttributeList]) = analyze(cbctSeries)
 
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, CBCTAlignResult] = {
+  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, CBCTResult] = {
     try {
       // This code only reports values without making judgment as to pass or fail.
       logger.info("Starting analysis of CBCT Alignment")
