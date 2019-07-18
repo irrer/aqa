@@ -26,9 +26,10 @@ import java.awt.geom.Point2D
 import org.aqa.VolumeTranslator
 import java.awt.Color
 
-object CBCTAnalysis extends Logging {
 
-  private val subProcedureName = "CBCT Alignment"
+object BBCenteringEPIDAnalysis extends Logging {
+
+  private val subProcedureName = "EPID BB Centering"
 
   case class CBCTResult(summry: Elem, sts: ProcedureStatus.Value, position: Seq[Point3d], images: Seq[BufferedImage]) extends SubProcedureResult(summry, sts, subProcedureName)
 
@@ -73,6 +74,26 @@ object CBCTAnalysis extends Logging {
    */
 
   // TODO
+
+  /**
+   * Get the point of the volume that is the highest pixel intensity.  Result is in units of voxels.
+   */
+  private def getMaxPoint(volOfInt: DicomVolume): Point3d = {
+
+    val xPlaneProfile = volOfInt.volume.map(img => img.rowSums).map(voxel => voxel.sum)
+    val yPlaneProfile = volOfInt.volume.map(img => img.columnSums).map(voxel => voxel.sum)
+    val zPlaneProfile = volOfInt.volume.map(img => img.rowSums.sum)
+
+    val xMax = xPlaneProfile.indexOf(xPlaneProfile.max)
+    val yMax = yPlaneProfile.indexOf(yPlaneProfile.max)
+    val zMax = zPlaneProfile.indexOf(zPlaneProfile.max)
+
+    val xPosn = LocateMax.locateMax(xPlaneProfile)
+    val yPosn = LocateMax.locateMax(yPlaneProfile)
+    val zPosn = LocateMax.locateMax(zPlaneProfile)
+
+    new Point3d(xPosn, yPosn, zPosn)
+  }
 
   /**
    * Get the corner of the search volume closest to the origin in voxels.

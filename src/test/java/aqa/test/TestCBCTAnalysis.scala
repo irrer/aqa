@@ -15,6 +15,7 @@ import org.aqa.webrun.phase2.cbctAlign.CBCTAnalysis
 import org.aqa.DicomFile
 import org.aqa.Config
 import edu.umro.ImageUtil.DicomImage
+import java.awt.image.BufferedImage
 
 /**
  * Test the Config.
@@ -24,42 +25,20 @@ import edu.umro.ImageUtil.DicomImage
 class TestCBCTAnalysis extends FlatSpec with Matchers {
 
   Config.validate
-  println("-----------------------------------------------------------------------------------------------------")
 
-  //  def writeImages() = {
-  //      if (true) { // TODO rm
-  //      def write(axis: String, image: DicomImage, pixelWidth: Double, pixelHeight: Double) = {
-  //        val baseName = System.currentTimeMillis + "_" + axis
-  //
-  //        if (true) {
-  //          val name = baseName + ".png"
-  //          val outFile = new File("""D:\tmp\aqa\CBCT\perspectives\""" + name)
-  //          outFile.getParentFile.mkdirs
-  //          outFile.delete
-  //          val bufImg = image.toDeepColorBufferedImage(0)
-  //          ImageUtil.writePngFile(bufImg, outFile)
-  //          println("wrote file: " + outFile.getAbsolutePath)
-  //        }
-  //
-  //        if (true) {
-  //          val name = baseName + "_aspect.png"
-  //          val outFile = new File("""D:\tmp\aqa\CBCT\perspectives\""" + name)
-  //          outFile.getParentFile.mkdirs
-  //          outFile.delete
-  //          val bufImg = image.renderPixelsToSquare(pixelWidth, pixelHeight).toDeepColorBufferedImage(0)
-  //          ImageUtil.writePngFile(bufImg, outFile)
-  //          println("wrote file: " + outFile.getAbsolutePath)
-  //        }
-  //      }
-  //
-  //      Trace.trace("x AR: " + voxSize(0) / voxSize(2))
-  //      Trace.trace("y AR: " + voxSize(1) / voxSize(2))
-  //      Trace.trace("z AR: " + voxSize(1) / voxSize(0))
-  //      write("X", xImage(entireVolume, start, size), voxSize(2), voxSize(1))
-  //      write("Y", yImage(entireVolume, start, size), voxSize(2), voxSize(0))
-  //      write("Z", zImage(entireVolume, start, size), voxSize(0), voxSize(1))
-  //    }
-  //  }
+  println("-----------------------------------------------------------------------------------------------------")
+  val outDir = new File("""target\TestCBCTAnalysis""")
+  Utility.deleteFileTree(outDir)
+  outDir.mkdirs
+
+  def writeImages(name: String, bufImgList: Seq[BufferedImage]) = {
+    val dir = new File(outDir, name)
+    dir.mkdirs
+    println("Writing CBCT png files to " + dir.getAbsolutePath)
+    Util.writePng(bufImgList(0), new File(dir, "x-axis-view.png"))
+    Util.writePng(bufImgList(1), new File(dir, "y-axis-view.png"))
+    Util.writePng(bufImgList(2), new File(dir, "z-axis-view.png"))
+  }
 
   // list of directories that contain a CBCT set for analysis
   val dirList = (new File("""src\test\resources\TestCBCTAlign""")).listFiles
@@ -74,14 +53,14 @@ class TestCBCTAnalysis extends FlatSpec with Matchers {
       val result = CBCTAnalysis.testAnalyze(attrListSeq)
 
       val point = result.right.get._1
-      val bufImg = result.right.get._2
-      Trace.trace(dir.getName + " : " + point)
+      val bufImgList = result.right.get._2
+      writeImages(dir.getName, bufImgList)
+      def fmt(d: Double) = d.formatted("%12.7f")
+      println("BB coordinates of " + fmt(point.getX) + " " + fmt(point.getY) + " " + fmt(point.getZ) + "  " + dir.getName)
       (result.isRight) should be(true) // Expected voxel coordinates: 246, 262, 42
     }
 
-    Trace.trace
     dirList.map(dir => testDir(dir))
-    Trace.trace
 
     (11 > 10) should be(true)
   }

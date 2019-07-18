@@ -30,7 +30,7 @@ class Test_AnonymizeUtil extends FlatSpec with Matchers {
 
   Config.validate
   DbSetup.init
-  if (true) {
+  if (false) {
 
     if (true) {
       val instList = Institution.list
