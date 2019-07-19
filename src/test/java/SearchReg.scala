@@ -60,14 +60,21 @@ object SearchReg {
 
     def doit(regFile: File) = new Reg(regFile)
 
-    Trace.trace("Number of files: " + list.size)
-    val stuff = list.map(regFile => doit(regFile))
-    Trace.trace("Number of reg: " + stuff.size)
+    val allReg = list.map(regFile => doit(regFile)).toList
 
-    val series = stuff.groupBy(reg => reg.mySeries).values.map(s => s.sortBy(_.dateTime))
-    Trace.trace("Number of series: " + series.size)
+    val series = allReg.groupBy(reg => reg.mySeries).values.map(s => s.sortBy(_.dateTime))
 
-    println(series.map(s => s.mkString("\n")).mkString("\n\n--------\n\n"))
+    def matrixOf(series: List[Reg]): String = {
+      val uniq = series.map(reg => reg.matrixList).flatten.distinct
+      "Unique matrixes: " + uniq.size
+    }
+
+    println(series.map(s => s.mkString("\n") + "\n" + matrixOf(s)).mkString("\n\n--------\n\n"))
+
+    println
+    println("Number of files: " + list.size)
+    println("Number of reg: " + allReg.size)
+    println("Number of series: " + series.size)
     println("done.")
   }
 
