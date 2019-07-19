@@ -747,16 +747,17 @@ object Util extends Logging {
     if (text.endsWith(".")) text + "0" else text
   }
 
-  /**
-   * Calculate the standard deviation of a list of values.
-   */
-  def stdDev(list: Seq[Double]): Double = {
-    val mean = list.sum / list.size
-    val sumSq = list.map(d => (d - mean) * (d - mean)).sum
-    val variance = sumSq / mean
-    val sd = Math.sqrt(variance)
-    sd
-  }
+  //  /**
+  //   * Calculate the standard deviation of a list of values.
+  //   */
+  //  def stdDev(list: Seq[Double]): Double = {
+  //    val mean = list.sum / list.size
+  //    val sumSq = list.map(d => (d - mean) * (d - mean)).sum
+  //    //val variance = sumSq / mean
+  //    val variance = sumSq / list.size
+  //    val sd = Math.sqrt(variance)
+  //    sd
+  //  }
 
   /**
    * Remove a possible artificial beam prefix.

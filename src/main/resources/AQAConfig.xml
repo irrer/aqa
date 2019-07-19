@@ -470,6 +470,12 @@ Note that when building a package for release, the Maven build process uses the 
    <!-- The maximum tolerance of error in floating point in mm for daily QA.  Exceeding this means failure. -->
    <DailyQATolerance_mm>1.5</DailyQATolerance_mm>
 
+   <!-- The minimum number of standard deviations that the BB must deviate in brightness to be considered
+   legitimate.  This check is done to ensure that if there is no BB, then the algorithm will not settle for
+   the brightest bit of white noise from the background.  The 1.75 number given was arrived at
+   empirically after running several tests. -->
+   <BBMinimumStandardDeviation>1.75</BBMinimumStandardDeviation>
+
    <!-- The distance in floating point in mm from center to search for the BB in the daily phantom. -->
    <DailyPhantomSearchDistance_mm>50.0</DailyPhantomSearchDistance_mm>
 

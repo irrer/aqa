@@ -281,18 +281,23 @@ object CBCTAnalysis extends Logging {
 
     // fine location in voxel coordinates
     val fineLocation_vox = {
-      val rel = bbVolume.getMaxPoint
-      val finloc = new Point3d(rel.getX + bbVolumeStart(0), rel.getY + bbVolumeStart(1), rel.getZ + bbVolumeStart(2))
-      finloc
+      val relOpt = bbVolume.getMaxPoint(Config.BBMinimumStandardDeviation)
+      if (relOpt.isDefined) {
+        val rel = relOpt.get
+        val finloc = new Point3d(rel.getX + bbVolumeStart(0), rel.getY + bbVolumeStart(1), rel.getZ + bbVolumeStart(2))
+        Some(finloc)
+      } else None
     }
 
     val volTrans = new VolumeTranslator(sorted)
     // fine location in mm coordinates
-    val fineLocation_mm = volTrans.vox2mm(fineLocation_vox)
-
-    val imageXYZ = makeImagesXYZ(entireVolume, fineLocation_vox, fineLocation_mm, voxSize_mm)
-
-    Right(fineLocation_mm, imageXYZ)
+    if (fineLocation_vox.isDefined) {
+      val fineLocation_mm = volTrans.vox2mm(fineLocation_vox.get)
+      val imageXYZ = makeImagesXYZ(entireVolume, fineLocation_vox.get, fineLocation_mm, voxSize_mm)
+      Right(fineLocation_mm, imageXYZ)
+    } else {
+      Left("No BB found")
+    }
   }
 
   /**

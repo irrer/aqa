@@ -771,9 +771,10 @@ object Config extends Logging {
   val LeafPositionIsolationDistance_mm = logMainText("LeafPositionIsolationDistance_mm").toDouble
   val LeafPositionBeamNameList = getLeafPositionBeamNameList
 
+  val DailyQATolerance_mm = logMainText("DailyQATolerance_mm", "1.5").toDouble
+  val BBMinimumStandardDeviation = logMainText("BBMinimumStandardDeviation", "1.75").toDouble
   val DailyPhantomSearchDistance_mm = logMainText("DailyPhantomSearchDistance_mm", "50.0").toDouble
   val DailyPhantomBBPenumbra_mm = logMainText("DailyPhantomBBPenumbra_mm", "10.0").toDouble
-  val DailyQATolerance_mm = logMainText("DailyQATolerance_mm", "1.5").toDouble
 
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true

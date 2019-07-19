@@ -26,7 +26,6 @@ import java.awt.geom.Point2D
 import org.aqa.VolumeTranslator
 import java.awt.Color
 
-
 object BBCenteringEPIDAnalysis extends Logging {
 
   private val subProcedureName = "EPID BB Centering"
@@ -302,7 +301,7 @@ object BBCenteringEPIDAnalysis extends Logging {
 
     // fine location in voxel coordinates
     val fineLocation_vox = {
-      val rel = bbVolume.getMaxPoint
+      val rel = bbVolume.getMaxPoint(1.0).get
       val finloc = new Point3d(rel.getX + bbVolumeStart(0), rel.getY + bbVolumeStart(1), rel.getZ + bbVolumeStart(2))
       finloc
     }
