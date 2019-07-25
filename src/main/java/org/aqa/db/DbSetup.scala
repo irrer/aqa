@@ -66,6 +66,7 @@ object DbSetup extends Logging {
     MaintenanceRecord.query,
     Output.query,
     OutputFiles.query,
+    DicomSeries.query,
     DicomAnonymous.query,
     Baseline.query,
     BaselineContent.query,

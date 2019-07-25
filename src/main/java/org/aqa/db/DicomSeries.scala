@@ -23,7 +23,7 @@ case class DicomSeries(
   machinePK: Option[Long], // referenced machine, if available
   sopInstanceUID: String, // DICOM SOPInstanceUID of first file in series.  First is defined by the one with the earliest <code>date</code>.
   seriesInstanceUID: String, // DICOM SeriesInstanceUID
-  frameOfReferenceUID: Option[String], // DICOM FrameOfReferenceUID
+  frameOfReferenceUID: Option[String], // DICOM FrameOfReferenceUID.  For registration files, this is the FrameOfReferenceUID that they convert from (take as input).
   modality: String, // DICOM Modality
   sopClassUID: String, // DICOM SOPClassUID of first file.  A more rigorous definition of modality.
   date: Timestamp, // when data was acquired at the treatment machine.  Value from first file found by checking for (in this order): ContentDate, InstanceCreationDate, AcquisitionDate, CreationDate, SeriesDate
@@ -78,22 +78,15 @@ object DicomSeries extends Logging {
       size,
       content) <> ((DicomSeries.apply _)tupled, DicomSeries.unapply _)
 
-    def dicomSeriesFK = foreignKey("dicomSeriesPK", dicomSeriesPK, DicomSeries.query)(_.dicomSeriesPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
-    def institutionFK = foreignKey("userPK", userPK, DicomSeries.query)(_.userPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
-    def machineFK = foreignKey("machinePK", machinePK, DicomSeries.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    /* Note that accidental data deletion is protected by attempts to remove a machine.  If the
+       user does confirm that they want a machine deleted, then the associated DicomSeries will be deleted automatically. */
+    def userFK = foreignKey("userPK", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def machineFK = foreignKey("machinePK", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[DicomSeriesTable]
 
   def get(dicomSeriesPK: Long): Option[DicomSeries] = {
-    val action = for {
-      outputFiles <- query if outputFiles.dicomSeriesPK === dicomSeriesPK
-    } yield (outputFiles)
-    val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
-  }
-
-  def getByOutput(dicomSeriesPK: Long): Option[DicomSeries] = {
     val action = for {
       outputFiles <- query if outputFiles.dicomSeriesPK === dicomSeriesPK
     } yield (outputFiles)
@@ -130,14 +123,17 @@ object DicomSeries extends Logging {
       if (s == null) None else Some(s)
     }
 
-    def getInputPK = inpPK
-
-    def getMachinePK = {
+    val derivedMachinePK = {
       (machPK.isDefined, inpPK.isDefined) match {
         case (true, _) => machPK
         case (_, true) => Input.get(inpPK.get).get.machinePK
         case _ => None
       }
+    }
+
+    if (inpPK.isDefined) {
+      val input = Input.get(inpPK.get).get
+      if (input.userPK.get != usrPK) throw new IllegalArgumentException("User PK " + usrPK + " passed as parameter is different from that referenced by inputPK " + inpPK.get + " --> " + input.userPK.get)
     }
 
     def getSopInstanceUID = byTag(TagFromName.SOPInstanceUID).get
@@ -154,7 +150,7 @@ object DicomSeries extends Logging {
       None,
       usrPK,
       inpPK,
-      getMachinePK,
+      derivedMachinePK,
       getSopInstanceUID,
       getSeriesInstanceUID,
       getFrameOfReferenceUID,
