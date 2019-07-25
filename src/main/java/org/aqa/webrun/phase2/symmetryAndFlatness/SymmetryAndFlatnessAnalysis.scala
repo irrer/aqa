@@ -24,7 +24,7 @@ import org.aqa.db.MaintenanceCategory
 import org.aqa.IsoImagePlaneTranslator
 import org.aqa.webrun.phase2.Phase2Util.MaintenanceRecordBaseline
 import org.aqa.webrun.phase2.RunReq
-import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.SubProcedureResult
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.db.CollimatorCentering

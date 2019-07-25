@@ -14,7 +14,7 @@ import org.aqa.Config
 import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.phase2.SubProcedureResult
 import org.aqa.webrun.phase2.RunReq
-import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.SubProcedureResult
 import edu.umro.ScalaUtil.DicomUtil

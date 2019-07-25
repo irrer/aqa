@@ -9,7 +9,7 @@ import org.aqa.db.Institution
 import org.aqa.db.Procedure
 import org.aqa.db.Input
 import org.aqa.db.User
-import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.RunReq
 
 object CollimatorPositionCSV {

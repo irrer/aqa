@@ -2,7 +2,7 @@ package org.aqa.webrun.phase2.leafPosition
 
 import org.aqa.Logging
 import scala.xml.Elem
-import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.RunReq
 import java.io.File
 import org.aqa.Config

@@ -19,7 +19,7 @@ import org.aqa.run.ProcedureStatus
 import java.io.File
 import org.aqa.Config
 import java.awt.image.BufferedImage
-import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.web.WebUtil

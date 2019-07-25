@@ -7,7 +7,7 @@ import org.aqa.Util
 import org.aqa.web.C3ChartHistory
 import org.aqa.db.MaintenanceRecord
 import java.awt.Color
-import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.ExtendedData
 import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Output
 import org.aqa.db.Input

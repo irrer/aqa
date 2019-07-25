@@ -4,7 +4,7 @@ import org.aqa.Logging
 import scala.xml.Elem
 import org.aqa.run.ProcedureStatus
 import org.aqa.webrun.phase2.SubProcedureResult
-import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.db.LeafPosition
 import com.pixelmed.dicom.AttributeList

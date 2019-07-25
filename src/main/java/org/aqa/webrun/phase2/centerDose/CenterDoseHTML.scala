@@ -25,7 +25,7 @@ import java.awt.Point
 import com.pixelmed.dicom.TagFromName
 import org.aqa.Logging
 import org.aqa.webrun.phase2.RunReq
-import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.SubProcedureResult
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.IsoImagePlaneTranslator

@@ -5,7 +5,7 @@ import org.aqa.Logging
 import org.aqa.run.ProcedureStatus
 import javax.vecmath.Point3d
 import java.awt.image.BufferedImage
-import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 import scala.Left
 

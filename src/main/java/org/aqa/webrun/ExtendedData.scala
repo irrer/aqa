@@ -1,4 +1,4 @@
-package org.aqa.webrun.phase2
+package org.aqa.webrun
 
 import org.aqa.db.Machine
 import org.aqa.db.Output

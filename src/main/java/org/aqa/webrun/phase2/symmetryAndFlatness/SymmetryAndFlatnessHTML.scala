@@ -30,7 +30,7 @@ import java.io.File
 import org.aqa.web.WebServer
 import org.aqa.web.WebUtil
 import org.aqa.db.Baseline
-import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.Phase2Util
 

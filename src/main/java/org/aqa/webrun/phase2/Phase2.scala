@@ -58,6 +58,7 @@ import org.aqa.webrun.phase2.leafPosition.LeafPositionAnalysis
 import org.aqa.web.Session
 import org.aqa.db.CachedUser
 import org.aqa.web.OutputList
+import org.aqa.webrun.ExtendedData
 
 object Phase2 extends Logging {
   val parametersFileName = "parameters.xml"

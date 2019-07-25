@@ -5,7 +5,7 @@ import javax.vecmath.Point3d
 import org.aqa.Logging
 import org.aqa.run.ProcedureStatus
 import org.aqa.webrun.phase2.SubProcedureResult
-import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.RunReq
 import com.pixelmed.dicom.AttributeList
 import org.aqa.db.CollimatorCentering

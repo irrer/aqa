@@ -22,7 +22,7 @@ import org.aqa.db.Baseline
 import org.aqa.webrun.phase2.Phase2Util.MaintenanceRecordBaseline
 import org.aqa.db.MaintenanceCategory
 import org.aqa.db.MaintenanceRecord
-import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.SubProcedureResult

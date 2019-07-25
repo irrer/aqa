@@ -23,7 +23,7 @@ import java.awt.Graphics2D
 import java.awt.BasicStroke
 import edu.umro.ScalaUtil.Trace
 import scala.collection.parallel.ParSeq
-import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.MeasureTBLREdges
 import org.aqa.webrun.phase2.Phase2Util

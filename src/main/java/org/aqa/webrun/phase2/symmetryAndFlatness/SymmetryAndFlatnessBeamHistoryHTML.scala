@@ -9,7 +9,7 @@ import org.aqa.db.MaintenanceRecord
 import org.aqa.db.Baseline
 import org.aqa.Config
 import org.aqa.web.C3Chart
-import org.aqa.webrun.phase2.ExtendedData
+import org.aqa.webrun.ExtendedData
 import scala.collection.Seq
 import org.aqa.db.Output
 import org.aqa.db.MaintenanceCategory
