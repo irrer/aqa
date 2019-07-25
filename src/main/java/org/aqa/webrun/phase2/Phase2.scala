@@ -347,8 +347,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
    * Check that there is a single plan, single machine, and some images.
    */
   private def basicValidation(valueMap: ValueMapT, rtplanList: Seq[DicomFile], rtimageList: Seq[DicomFile]): Either[StyleMapT, BasicData] = {
-    logger.info("Number of RTPLAN files downloaded: " + rtplanList.size)
-    logger.info("Number of RTIMAGE files downloaded: " + rtimageList.size)
+    logger.info("Number of RTPLAN files uploaded: " + rtplanList.size)
+    logger.info("Number of RTIMAGE files duploaded: " + rtimageList.size)
     val machineSerialNumberListOpt = rtimageList.map(rtimage => Util.getAttrValue(rtimage.attributeList.get, TagFromName.DeviceSerialNumber))
     val machineSerialNumberList = machineSerialNumberListOpt.flatten
     val nullSerialNumber = machineSerialNumberList.size != machineSerialNumberListOpt.size
