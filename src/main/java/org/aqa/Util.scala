@@ -27,6 +27,7 @@ import com.pixelmed.dicom.DicomDictionary
 import scala.xml.Elem
 import scala.xml.XML
 import java.io.ByteArrayOutputStream
+import edu.umro.ScalaUtil.DicomUtil
 
 object Util extends Logging {
 
@@ -867,4 +868,14 @@ object Util extends Logging {
     val zSize = getSliceSpacing(sorted)
     Seq(xSize, ySize, zSize)
   }
+
+  case class RegInfo(attrList: AttributeList) {
+    val frameOfRefUID = attrList.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
+    val otherFrameOfRefUID = {
+      val regSeq = DicomUtil.seqToAttr(attrList, TagFromName.RegistrationSequence)
+      val frmUid = regSeq.map(rs => rs.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString).filterNot(fu => fu.equalsIgnoreCase(frameOfRefUID))
+      frmUid
+    }
+  }
+
 }

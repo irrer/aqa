@@ -88,19 +88,21 @@ object DicomSeries extends Logging {
 
   def get(dicomSeriesPK: Long): Option[DicomSeries] = {
     val action = for {
-      outputFiles <- query if outputFiles.dicomSeriesPK === dicomSeriesPK
-    } yield (outputFiles)
+      dicomSeries <- query if dicomSeries.dicomSeriesPK === dicomSeriesPK
+    } yield (dicomSeries)
     val list = Db.run(action.result)
     if (list.isEmpty) None else Some(list.head)
   }
 
-  def delete(dicomSeriesPK: Long): Int = {
-    val q = query.filter(_.dicomSeriesPK === dicomSeriesPK)
-    val action = q.delete
-    Db.run(action)
+  def getByFrameUIDAndSOPClass(frameUIDSet: Set[String], sopClassUID: String): Seq[DicomSeries] = {
+    val action = for {
+      dicomSeries <- query if (dicomSeries.frameOfReferenceUID.inSet(frameUIDSet) && (dicomSeries.sopClassUID === sopClassUID))
+    } yield (dicomSeries)
+    val list = Db.run(action.result)
+    list
   }
 
-  def deleteByOutputPK(dicomSeriesPK: Long): Int = {
+  def delete(dicomSeriesPK: Long): Int = {
     val q = query.filter(_.dicomSeriesPK === dicomSeriesPK)
     val action = q.delete
     Db.run(action)
