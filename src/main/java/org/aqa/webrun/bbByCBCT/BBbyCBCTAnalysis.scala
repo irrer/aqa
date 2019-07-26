@@ -1,4 +1,4 @@
-package org.aqa.webrun.phase2.cbctAlign
+package org.aqa.webrun.bbByCBCT
 
 import scala.xml.Elem
 import javax.vecmath.Point3d
@@ -26,7 +26,7 @@ import java.awt.geom.Point2D
 import org.aqa.VolumeTranslator
 import java.awt.Color
 
-object CBCTAnalysis extends Logging {
+object BBbyCBCTAnalysis extends Logging {
 
   private val subProcedureName = "CBCT Alignment"
 
@@ -250,7 +250,7 @@ object CBCTAnalysis extends Logging {
    * The BB must be within a certain distance or the test fails.  Taking advantage of this
    * requirement greatly speeds the algorithm because it has fewer voxels to search.
    */
-  private def analyze(cbctSeries: Seq[AttributeList]): Either[String, (Point3d, Seq[BufferedImage])] = {
+  private def volumeAnalysis(cbctSeries: Seq[AttributeList]): Either[String, (Point3d, Seq[BufferedImage])] = {
     val sorted = Util.sortByZ(cbctSeries)
 
     val voxSize_mm = Util.getVoxSize_mm(sorted) // the size of a voxel in mm
@@ -299,18 +299,34 @@ object CBCTAnalysis extends Logging {
       Left("No BB found")
     }
   }
+  
+  private def showFailure(message: String, extendedData: ExtendedData) = {
+    // TODO
+    ???
+  }
+  
+  
 
   /**
    * For testing only.
    */
-  def testAnalyze(cbctSeries: Seq[AttributeList]) = analyze(cbctSeries)
+  def testAnalyze(cbctSeries: Seq[AttributeList]) = volumeAnalysis(cbctSeries)
 
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, CBCTResult] = {
+  def runProcedure(extendedData: ExtendedData, runReq: BBbyCBCTRunReq, collimatorCentering: CollimatorCentering): Either[Elem, CBCTResult] = {
     try {
       // This code only reports values without making judgment as to pass or fail.
       logger.info("Starting analysis of CBCT Alignment")
+      val result = volumeAnalysis(runReq.cbct)
+      if (result.isRight) {
+        val volumePoint = result.right.get._1
+        val imageXYZ = result.right.get._2
+        
+        
+        
+      } else {
+        showFailure(result.left.get, extendedData)
+      }
       logger.info("Finished analysis of CBCT Alignment")
-      ???
     } catch {
       case t: Throwable => {
         logger.warn("Unexpected error in analysis of " + subProcedureName + ": " + t + fmtEx(t))

@@ -56,7 +56,7 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.ImageRegistration
 import org.aqa.db.DicomSeries
 
-object BBbyCBCT extends Logging {
+object BBbyCBCTRun extends Logging {
   val parametersFileName = "parameters.xml"
   val Phase2RunPKTag = "Phase2RunPK"
 
@@ -87,41 +87,10 @@ object BBbyCBCT extends Logging {
   /**
    * Run the sub-procedures.
    */
-  private def runPhase2(extendedData: ExtendedData, rtimageMap: Map[String, DicomFile], runReq: BBbyCBCTRunReq): ProcedureStatus.Value = {
-    logger.info("Starting Phase2 analysis")
+  private def runAnalysis(extendedData: ExtendedData, runReq: BBbyCBCTRunReq): ProcedureStatus.Value = {
+    logger.info("Starting BB by CBCT analysis")
 
-    val summaryList: Either[Seq[Elem], Seq[Elem]] = MetadataCheckAnalysis.runProcedure(extendedData, runReq) match {
-      case Left(fail) => Left(Seq(fail))
-      case Right(metadataCheck) => {
-        BadPixelAnalysis.runProcedure(extendedData, runReq) match {
-          case Left(fail) => Left(Seq(metadataCheck.summary, fail))
-          case Right(badPixel) => {
-            CollimatorCenteringAnalysis.runProcedure(extendedData, runReq) match {
-              case Left(fail) => Left(Seq(metadataCheck.summary, badPixel.summary, fail))
-              case Right(collimatorCentering) => {
-                CenterDoseAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result) match {
-                  case Left(fail) => Left(Seq(metadataCheck.summary, badPixel.summary, collimatorCentering.summary, fail))
-                  case Right(centerDose) => {
-                    val prevSummaryList = Seq(metadataCheck, badPixel, collimatorCentering, centerDose).map(r => r.summary)
-                    val seq = Seq(
-                      () => CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
-                      () => WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result, centerDose.resultList),
-                      () => SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
-                      () => LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result))
-
-                    val list = seq.par.map(f => f()).toSeq
-                    val summaryList = prevSummaryList ++ list.map(r => if (r.isLeft) r.left.get else r.right.get.summary)
-                    val pass = (list.find(r => r.isLeft).isEmpty) && list.filter(s => !Phase2Util.statusOk(s.right.get.status)).isEmpty
-                    if (pass) Right(summaryList) else Left(summaryList)
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    logger.info("Finished all Phase2 analysis")
+    logger.info("Finished all BB by CBCT analysis")
 
     val status = summaryList match {
       case Left(_) => ProcedureStatus.fail
@@ -133,9 +102,9 @@ object BBbyCBCT extends Logging {
       case Right(list) => list
     }
 
-    logger.info("Generating Phase2 HTML")
+    logger.info("Generating BB by CBCT HTML")
     makeHtml(extendedData, status, sumList, runReq)
-    logger.info("Done generating Phase2 HTML")
+    logger.info("Done generating BB by CBCT HTML")
 
     status
   }
@@ -158,79 +127,79 @@ object BBbyCBCT extends Logging {
     same
   }
 
-  private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output) = {
-
-    val sessionId = Session.makeUniqueId
-    val sessionDir = Session.idToFile(sessionId)
-    sessionDir.mkdirs
-    def copyToSessionDir(file: File) = {
-      val newFile = new File(sessionDir, file.getName)
-      newFile.createNewFile
-      val data = Util.readBinaryFile(file).right.get
-      Util.writeBinaryFile(newFile, data)
-    }
-    val inputFileList = Util.listDirFiles(inputOrig.dir).filter(f => f.isFile)
-    inputFileList.map(copyToSessionDir)
-
-    val dicomFileList = Util.listDirFiles(sessionDir).map(f => new DicomFile(f)).filter(df => df.attributeList.nonEmpty)
-    val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
-
-    logger.info("Copied input files from " + inputOrig.dir.getAbsolutePath + " --> " + sessionDir.getAbsolutePath)
-
-    val acquisitionDate = inputOrig.dataDate match {
-      case None => None
-      case Some(timestamp) => Some(timestamp.getTime)
-    }
-
-    val runReq = {
-      val rtplanFile = new File(Config.sharedDir, Phase2Util.referencedPlanUID(rtimageList.head) + Util.dicomFileNameSuffix)
-      val rtplan = new DicomFile(rtplanFile)
-      val machine = {
-        if (outputOrig.machinePK.isDefined && Machine.get(outputOrig.machinePK.get).isDefined)
-          Machine.get(outputOrig.machinePK.get).get
-        else {
-          val serNo = rtimageList.map(df => df.attributeList).flatten.head.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrEmptyString
-          Machine.findMachinesBySerialNumber(serNo).head
-        }
-      }
-      val rtimageMap = constructRtimageMap(rtplan, rtimageList)
-      val flood = rtimageMap(Config.FloodFieldBeamName)
-
-      //new BBbyCBCTRunReq(rtplan, None, machine, rtimageMap, flood) // TODO handle rtplanCBCT
-      ???
-    }
-
-    val procedure = Procedure.get(outputOrig.procedurePK).get
-
-    val inputOutput = Run.preRun(procedure, runReq.machine, sessionDir, getUser(request), inputOrig.patientId, acquisitionDate)
-    val input = inputOutput._1
-    val output = inputOutput._2
-
-    Future {
-      val extendedData = ExtendedData.get(output)
-      val runReqFinal = runReq.reDir(input.dir)
-
-      val rtplan = runReqFinal.rtplan
-      val machine = runReqFinal.machine
-      Phase2Util.saveRtplan(rtplan)
-
-      val rtimageMap = constructRtimageMap(rtplan, rtimageList)
-
-      val finalStatus = Phase2.runPhase2(extendedData, rtimageMap, runReqFinal)
-      val finDate = new Timestamp(System.currentTimeMillis)
-      val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
-
-      Phase2Util.setMachineSerialNumber(machine, runReqFinal.flood.attributeList.get)
-      outputFinal.insertOrUpdate
-      outputFinal.updateData(outputFinal.makeZipOfFiles)
-      Run.removeRedundantOutput(outputFinal.outputPK)
-      // remove the original input and all associated outputs to clean up any possible redundant data
-      Input.delete(inputOrig.inputPK.get)
-    }
-
-    val suffix = "?" + ViewOutput.outputPKTag + "=" + output.outputPK.get
-    response.redirectSeeOther(ViewOutput.path + suffix)
-  }
+  //  private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output) = {
+  //
+  //    val sessionId = Session.makeUniqueId
+  //    val sessionDir = Session.idToFile(sessionId)
+  //    sessionDir.mkdirs
+  //    def copyToSessionDir(file: File) = {
+  //      val newFile = new File(sessionDir, file.getName)
+  //      newFile.createNewFile
+  //      val data = Util.readBinaryFile(file).right.get
+  //      Util.writeBinaryFile(newFile, data)
+  //    }
+  //    val inputFileList = Util.listDirFiles(inputOrig.dir).filter(f => f.isFile)
+  //    inputFileList.map(copyToSessionDir)
+  //
+  //    val dicomFileList = Util.listDirFiles(sessionDir).map(f => new DicomFile(f)).filter(df => df.attributeList.nonEmpty)
+  //    val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
+  //
+  //    logger.info("Copied input files from " + inputOrig.dir.getAbsolutePath + " --> " + sessionDir.getAbsolutePath)
+  //
+  //    val acquisitionDate = inputOrig.dataDate match {
+  //      case None => None
+  //      case Some(timestamp) => Some(timestamp.getTime)
+  //    }
+  //
+  //    val runReq = {
+  //      val rtplanFile = new File(Config.sharedDir, Phase2Util.referencedPlanUID(rtimageList.head) + Util.dicomFileNameSuffix)
+  //      val rtplan = new DicomFile(rtplanFile)
+  //      val machine = {
+  //        if (outputOrig.machinePK.isDefined && Machine.get(outputOrig.machinePK.get).isDefined)
+  //          Machine.get(outputOrig.machinePK.get).get
+  //        else {
+  //          val serNo = rtimageList.map(df => df.attributeList).flatten.head.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrEmptyString
+  //          Machine.findMachinesBySerialNumber(serNo).head
+  //        }
+  //      }
+  //      val rtimageMap = constructRtimageMap(rtplan, rtimageList)
+  //      val flood = rtimageMap(Config.FloodFieldBeamName)
+  //
+  //      //new BBbyCBCTRunReq(rtplan, None, machine, rtimageMap, flood) // TODO handle rtplanCBCT
+  //      ???
+  //    }
+  //
+  //    val procedure = Procedure.get(outputOrig.procedurePK).get
+  //
+  //    val inputOutput = Run.preRun(procedure, runReq.machine, sessionDir, getUser(request), inputOrig.patientId, acquisitionDate)
+  //    val input = inputOutput._1
+  //    val output = inputOutput._2
+  //
+  //    Future {
+  //      val extendedData = ExtendedData.get(output)
+  //      val runReqFinal = runReq.reDir(input.dir)
+  //
+  //      val rtplan = runReqFinal.rtplan
+  //      val machine = runReqFinal.machine
+  //      Phase2Util.saveRtplan(rtplan)
+  //
+  //      val rtimageMap = constructRtimageMap(rtplan, rtimageList)
+  //
+  //      val finalStatus = Phase2.runPhase2(extendedData, rtimageMap, runReqFinal)
+  //      val finDate = new Timestamp(System.currentTimeMillis)
+  //      val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
+  //
+  //      Phase2Util.setMachineSerialNumber(machine, runReqFinal.flood.attributeList.get)
+  //      outputFinal.insertOrUpdate
+  //      outputFinal.updateData(outputFinal.makeZipOfFiles)
+  //      Run.removeRedundantOutput(outputFinal.outputPK)
+  //      // remove the original input and all associated outputs to clean up any possible redundant data
+  //      Input.delete(inputOrig.inputPK.get)
+  //    }
+  //
+  //    val suffix = "?" + ViewOutput.outputPKTag + "=" + output.outputPK.get
+  //    response.redirectSeeOther(ViewOutput.path + suffix)
+  //  }
 
   /**
    * Tell the user that the redo is forbidden and why.  Also give them a redirect back to the list of results.
@@ -252,7 +221,7 @@ object BBbyCBCT extends Logging {
   }
 
   /**
-   * Given a Phase 2 output, redo the analysis.
+   * Given an output, redo the analysis.
    */
   def redo(outputPK: Long, request: Request, response: Response) = {
     try {
@@ -272,7 +241,7 @@ object BBbyCBCT extends Logging {
               val msg = "Redo not permitted because user is from a different institution."
               forbidRedo(response, msg, outputOrig.outputPK)
             }
-            case Some(inputOrig) => processRedoRequest(request, response, inputOrig, outputOrig)
+          //  case Some(inputOrig) => processRedoRequest(request, response, inputOrig, outputOrig) TODO
           }
         }
       }
@@ -420,25 +389,34 @@ class BBbyCBCT(procedure: Procedure) extends WebRunProcedure(procedure) with Log
   /**
    * Check beam definitions, existence of flood field, and organize inputs into <code>BBbyCBCTRunReq</code> to facilitate further processing.
    *
-   * @return plan and image registration, if none found, None.
+   * @return rtplan and image registration if found, else None.
    */
-  private def findRtplanAndReg(rtplanList: Seq[AttributeList], regList: Seq[AttributeList], cbctList: Seq[AttributeList]): Option[(AttributeList, ImageRegistration)] = {
+  private def findRtplanAndReg(rtplanList: Seq[DicomFile], regList: Seq[DicomFile], cbctList: Seq[DicomFile]): Option[(DicomFile, DicomFile)] = {
 
     def getFrUid(al: AttributeList) = al.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
+    def toIR(df: DicomFile) = new ImageRegistration(df.attributeList.get)
 
-    val cbctFrameUID = cbctList.head.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
-    val matchingRegList = regList.map(reg => new ImageRegistration(reg)).filter(reg => reg.otherFrameOfRefUID.equals(cbctFrameUID))
+    val cbctFrameUID = cbctList.head.attributeList.get.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
+    val matchingRegList = regList.filter(reg => new ImageRegistration(reg.attributeList.get).otherFrameOfRefUID.equals(cbctFrameUID))
 
-    val compatUploaded = for (rtplan <- rtplanList; reg <- matchingRegList; if (reg.worksWith(rtplan))) yield { (rtplan, reg) }
+    val compatUploaded = for (rtplan <- rtplanList; reg <- matchingRegList; if (toIR(reg).worksWith(rtplan.attributeList.get))) yield { (rtplan, reg) }
 
-    val pair: Option[(AttributeList, ImageRegistration)] = {
+    val pair: Option[(DicomFile, DicomFile)] = {
       if (compatUploaded.nonEmpty)
         compatUploaded.headOption
       else {
-        val regFrUidSet = matchingRegList.map(ir => ir.otherFrameOfRefUID).toSet
-        val fromDb = DicomSeries.getByFrameUIDAndSOPClass(regFrUidSet, SOPClass.RTPlanStorage).map(dicomSeries => dicomSeries.attributeListList.head)
-        val compatFromDb = for (fromDb <- rtplanList; reg <- matchingRegList; if (reg.worksWith(fromDb))) yield { (fromDb, reg) }
-        compatFromDb.headOption
+        val regFrUidSet = matchingRegList.map(reg => toIR(reg).otherFrameOfRefUID).toSet
+        val rtPlanListFromDb = DicomSeries.getByFrameUIDAndSOPClass(regFrUidSet, SOPClass.RTPlanStorage).map(dicomSeries => dicomSeries.attributeListList.head)
+        val compatFromDb = for (fromDb <- rtPlanListFromDb; reg <- matchingRegList; if (toIR(reg).worksWith(fromDb))) yield { (fromDb, reg) }
+        if (compatFromDb.isEmpty)
+          None
+        else {
+          val rtplanAl = compatFromDb.head._1
+          val fileName = Util.sopOfAl(rtplanAl) + ".dcm"
+          val rtplanTmpFile = new File(Config.tmpDirFile, fileName)
+          DicomUtil.writeAttributeList(rtplanAl, rtplanTmpFile)
+          Some(new DicomFile(rtplanTmpFile), compatFromDb.head._2)
+        }
       }
     }
 
@@ -448,22 +426,24 @@ class BBbyCBCT(procedure: Procedure) extends WebRunProcedure(procedure) with Log
   /**
    * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
    */
-  private def validate(valueMap: ValueMapT, rtplanList: Seq[AttributeList], regList: Seq[AttributeList], cbctList: Seq[AttributeList]): Either[StyleMapT, BBbyCBCTRunReq] = {
+  private def validate(valueMap: ValueMapT, rtplanList: Seq[DicomFile], regList: Seq[DicomFile], cbctList: Seq[DicomFile]): Either[StyleMapT, BBbyCBCTRunReq] = {
     logger.info("Number of files uploaded:  RTPLAN: " + rtplanList.size + "    REG: " + regList.size + "    CBCT: " + cbctList.size)
 
-    def numSeries(dfList: Seq[AttributeList]): Int = dfList.map(df => df.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString).distinct.sorted.size
+    def numSeries(dfList: Seq[DicomFile]): Int = dfList.map(df => df.attributeList.get.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString).distinct.sorted.size
+    val machineCheck = validateMachineSelection(valueMap, cbctList)
 
     val result = 0 match {
       case _ if cbctList.isEmpty => formErr("No CBCT files uploaded")
       case _ if regList.isEmpty => formErr("No REG files uploaded")
       case _ if (numSeries(cbctList) > 1) => formErr("CBCT files should all be from the same series, but are from " + numSeries(cbctList) + " different series")
+      case _ if (machineCheck.isLeft) => Left(machineCheck.left.get)
       case _ => {
         val rtplanAndReg = findRtplanAndReg(rtplanList, regList, cbctList)
 
         if (rtplanAndReg.isEmpty)
           formErr("Can not find RTPLAN for given CBCT and REG files")
         else {
-          val runReq = new BBbyCBCTRunReq(rtplanAndReg.get._1, rtplanAndReg.get._2, cbctList)
+          val runReq = new BBbyCBCTRunReq(rtplanAndReg.get._1, rtplanAndReg.get._2, cbctList, machineCheck.right.get)
           Right(runReq)
         }
       }
@@ -484,42 +464,58 @@ class BBbyCBCT(procedure: Procedure) extends WebRunProcedure(procedure) with Log
   }
 
   /**
+   * Add this series to the database if it is not already in.  Use the SOPInstanceUID to determine if it is already in the database.
+   */
+  private def insertIfNew(alList: Seq[AttributeList], extendedData: ExtendedData) = {
+    val sopUID = Util.sopOfAl(alList.head)
+
+    val current = DicomSeries.getBySopInstanceUID(sopUID)
+    if (current.isEmpty) {
+      val ds = DicomSeries.makeDicomSeries(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, alList)
+      logger.info("inserted DicomSeries in to database: " + ds)
+      ds.insert
+    }
+  }
+
+  /**
    * Respond to the 'Run' button.
    */
-  private def run(valueMap: ValueMapT, request: Request, response: Response) = {
+  private def runIfDataValid(valueMap: ValueMapT, request: Request, response: Response) = {
     val dicomFileList = dicomFilesInSession(valueMap)
-    val regList = dicomFileList.filter(df => df.isModality(SOPClass.SpatialRegistrationStorage)).map(df => df.attributeList.get)
-    val cbctList = dicomFileList.filter(df => df.isModality(SOPClass.CTImageStorage)).sortBy(df => Util.slicePosition(df.attributeList.get)).map(df => df.attributeList.get)
-    val rtplanList = Phase2Util.getPlanList(dicomFileList).map(df => df.attributeList.get)
+    val regList = dicomFileList.filter(df => df.isModality(SOPClass.SpatialRegistrationStorage))
+    val cbctList = dicomFileList.filter(df => df.isModality(SOPClass.CTImageStorage)).sortBy(df => Util.slicePosition(df.attributeList.get))
+    val rtplanList = Phase2Util.getPlanList(dicomFileList)
+    val machineCheck = validateMachineSelection(valueMap, cbctList)
 
     validate(valueMap, rtplanList, regList, cbctList) match {
       case Left(errMap) => {
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
       case Right(runReq) => {
-        // only consider the RTIMAGE files for the date-time stamp.  The plan could have been from months ago.
-        val dtp = dateTimePatId(rtimageList)
+        // only consider the CBCT files for the date-time stamp.  The plan could have been from months ago.
+        val dtp = dateTimePatId(cbctList)
 
         val sessDir = sessionDir(valueMap).get
-        val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
+        val inputOutput = Run.preRun(procedure, machineCheck.right.get, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
         val input = inputOutput._1
         val output = inputOutput._2
 
         Future {
           val extendedData = ExtendedData.get(output)
+          insertIfNew(Seq(runReq.rtplan), extendedData)
           val runReqFinal = runReq.reDir(input.dir)
 
-          val plan = runReqFinal.rtplan
-          val machine = runReqFinal.machine
-          Phase2Util.saveRtplan(plan)
+          //          val plan = runReqFinal.rtplan
+          //          val machine = machineCheck.right.get
+          //          Phase2Util.saveRtplanAsDicomSeries(runReq.rtplan)
 
-          val rtimageMap = Phase2.constructRtimageMap(plan, rtimageList)
+          //          val rtimageMap = Phase2.constructRtimageMap(plan, rtimageList)
 
-          val finalStatus = Phase2.runPhase2(extendedData, rtimageMap, runReqFinal)
+          val finalStatus = BBbyCBCT.runAnalysis(extendedData, runReqFinal)
           val finDate = new Timestamp(System.currentTimeMillis)
           val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
 
-          Phase2Util.setMachineSerialNumber(machine, runReqFinal.flood.attributeList.get)
+          Phase2Util.setMachineSerialNumber(extendedData.machine, runReq.cbct.head)
           outputFinal.insertOrUpdate
           outputFinal.updateData(outputFinal.makeZipOfFiles)
           Run.removeRedundantOutput(outputFinal.outputPK)
@@ -556,7 +552,7 @@ class BBbyCBCT(procedure: Procedure) extends WebRunProcedure(procedure) with Log
       0 match {
         //case _ if (!sessionDefined(valueMap)) => redirectWithNewSession(response);
         case _ if buttonIs(valueMap, cancelButton) => cancel(valueMap, response)
-        case _ if buttonIs(valueMap, runButton) => run(valueMap, request, response)
+        case _ if buttonIs(valueMap, runButton) => runIfDataValid(valueMap, request, response)
         case _ => emptyForm(valueMap, response)
       }
     } catch {

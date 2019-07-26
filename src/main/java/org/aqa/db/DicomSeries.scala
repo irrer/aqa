@@ -21,7 +21,7 @@ case class DicomSeries(
   userPK: Long, // user that uploaded or created this series
   inputPK: Option[Long], // referenced input, if available
   machinePK: Option[Long], // referenced machine, if available
-  sopInstanceUID: String, // DICOM SOPInstanceUID of first file in series.  First is defined by the one with the earliest <code>date</code>.
+  sopInstanceUIDList: String, // DICOM SOPInstanceUID of all files in series.
   seriesInstanceUID: String, // DICOM SeriesInstanceUID
   frameOfReferenceUID: Option[String], // DICOM FrameOfReferenceUID.  For registration files, this is the FrameOfReferenceUID that they convert from (take as input).
   modality: String, // DICOM Modality
@@ -44,6 +44,22 @@ case class DicomSeries(
   }
 
   lazy val attributeListList = DicomUtil.zippedByteArrayToDicom(content)
+
+  override def toString = {
+    "\n    dicomSeriesPK: " + dicomSeriesPK +
+      "\n    userPK: " + userPK +
+      "\n    inputPK: " + inputPK +
+      "\n    machinePK: " + machinePK +
+      "\n    sopInstanceUIDList: " + sopInstanceUIDList +
+      "\n    seriesInstanceUID: " + seriesInstanceUID +
+      "\n    frameOfReferenceUID: " + frameOfReferenceUID +
+      "\n    modality: " + modality +
+      "\n    sopClassUID: " + sopClassUID +
+      "\n    date: " + date +
+      "\n    patientID: " + patientID +
+      "\n    size: " + size +
+      "\n    content size: " + content.size
+  }
 }
 
 object DicomSeries extends Logging {
@@ -53,7 +69,7 @@ object DicomSeries extends Logging {
     def userPK = column[Long]("userPK")
     def inputPK = column[Option[Long]]("inputPK")
     def machinePK = column[Option[Long]]("machinePK")
-    def sopInstanceUID = column[String]("sopInstanceUID")
+    def sopInstanceUIDList = column[String]("sopInstanceUIDList")
     def seriesInstanceUID = column[String]("seriesInstanceUID")
     def frameOfReferenceUID = column[Option[String]]("frameOfReferenceUID")
     def modality = column[String]("modality")
@@ -68,7 +84,7 @@ object DicomSeries extends Logging {
       userPK,
       inputPK,
       machinePK,
-      sopInstanceUID,
+      sopInstanceUIDList,
       seriesInstanceUID,
       frameOfReferenceUID,
       modality,
@@ -97,6 +113,14 @@ object DicomSeries extends Logging {
   def getByFrameUIDAndSOPClass(frameUIDSet: Set[String], sopClassUID: String): Seq[DicomSeries] = {
     val action = for {
       dicomSeries <- query if (dicomSeries.frameOfReferenceUID.inSet(frameUIDSet) && (dicomSeries.sopClassUID === sopClassUID))
+    } yield (dicomSeries)
+    val list = Db.run(action.result)
+    list
+  }
+
+  def getBySopInstanceUID(sopInstUID: String): Seq[DicomSeries] = {
+    val action = for {
+      dicomSeries <- query if ((dicomSeries.sopInstanceUIDList === sopInstUID))
     } yield (dicomSeries)
     val list = Db.run(action.result)
     list
@@ -138,7 +162,7 @@ object DicomSeries extends Logging {
       if (input.userPK.get != usrPK) throw new IllegalArgumentException("User PK " + usrPK + " passed as parameter is different from that referenced by inputPK " + inpPK.get + " --> " + input.userPK.get)
     }
 
-    def getSopInstanceUID = byTag(TagFromName.SOPInstanceUID).get
+    def getSopInstanceUIDlist = alList.map(al => Util.sopOfAl(al)).mkString(" ")
     def getSeriesInstanceUID = byTag(TagFromName.SeriesInstanceUID).get
     def getFrameOfReferenceUID = byTag(TagFromName.FrameOfReferenceUID)
     def getModality = byTag(TagFromName.Modality).get
@@ -153,7 +177,7 @@ object DicomSeries extends Logging {
       usrPK,
       inpPK,
       derivedMachinePK,
-      getSopInstanceUID,
+      getSopInstanceUIDlist,
       getSeriesInstanceUID,
       getFrameOfReferenceUID,
       getModality,

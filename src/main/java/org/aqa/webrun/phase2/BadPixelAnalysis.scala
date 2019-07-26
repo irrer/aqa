@@ -26,6 +26,7 @@ import edu.umro.ImageUtil.Watermark
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.web.WebUtil
+import org.aqa.webrun.ExtendedData
 
 /**
  * Store bad pixels in the database and generate HTML.

@@ -32,6 +32,7 @@ import org.aqa.web.MachineList
 import org.aqa.web.MachineUpdate
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.IsoImagePlaneTranslator
+import org.aqa.webrun.ExtendedData
 
 /**
  * Utilities for Phase 2.

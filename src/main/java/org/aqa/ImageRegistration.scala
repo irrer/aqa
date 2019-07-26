@@ -35,10 +35,10 @@ case class ImageRegistration(attrList: AttributeList) {
   }
 
   /**
-   * Transform a point by this matrix.
+   * Transform a point by this matrix and create a new point.
    */
   def transform(point: Point3d): Point3d = {
-    val x = new Point3d(point.getX + 0, point.getY + 0, point.getZ + 0)
+    val x = point.clone.asInstanceOf[Point3d]
     matrix.transform(x)
     x
   }
