@@ -28,6 +28,7 @@ import scala.xml.Elem
 import scala.xml.XML
 import java.io.ByteArrayOutputStream
 import edu.umro.ScalaUtil.DicomUtil
+import javax.vecmath.Point3d
 
 object Util extends Logging {
 
@@ -876,6 +877,30 @@ object Util extends Logging {
       val frmUid = regSeq.map(rs => rs.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString).filterNot(fu => fu.equalsIgnoreCase(frameOfRefUID))
       frmUid
     }
+  }
+
+  /**
+   * Get the list of isocenters in the given RTPLAN.
+   */
+  def getPlanIsocenterList(rtplan: AttributeList): Seq[Point3d] = {
+
+    def controlPointSeqToIsocenter(cps: AttributeList): Option[Point3d] = {
+      try {
+        val IsocenterPosition = cps.get(TagFromName.IsocenterPosition)
+        Some(new Point3d(IsocenterPosition.getDoubleValues))
+      } catch {
+        case t: Throwable => None
+      }
+    }
+
+    def beamSeqToIsocenter(beamSeq: AttributeList) = {
+      val ControlPointSequence = DicomUtil.seqToAttr(beamSeq, TagFromName.ControlPointSequence)
+      ControlPointSequence.map(cps => controlPointSeqToIsocenter(cps))
+    }
+
+    val BeamSequence = DicomUtil.seqToAttr(rtplan, TagFromName.BeamSequence)
+    val list = BeamSequence.map(bs => beamSeqToIsocenter(bs)).flatten.flatten
+    list
   }
 
 }

@@ -1,4 +1,4 @@
-package org.aqa.webrun.phase2
+package org.aqa.webrun.bbByCBCT
 
 import org.restlet.Request
 import org.restlet.Response
@@ -55,59 +55,37 @@ import org.aqa.webrun.bbByCBCT.BBbyCBCTRunReq
 import org.aqa.webrun.ExtendedData
 import org.aqa.ImageRegistration
 import org.aqa.db.DicomSeries
+import org.aqa.webrun.bbByCBCT.BBbyCBCTExecute
+import org.aqa.webrun.phase2.Phase2Util
 
 object BBbyCBCTRun extends Logging {
   val parametersFileName = "parameters.xml"
   val Phase2RunPKTag = "Phase2RunPK"
 
   /**
-   * Create a list of the RTIMAGEs mapped by beam name.
-   */
-  private def constructRtimageMap(plan: DicomFile, rtimageList: Seq[DicomFile]) = {
-    rtimageList.map(rtimage => (Phase2Util.getBeamNameOfRtimage(plan, rtimage), rtimage)).filter(ni => ni._1.isDefined).map(ni => (ni._1.get, ni._2)).toMap
-  }
-
-  private def makeHtml(extendedData: ExtendedData, procedureStatus: ProcedureStatus.Value, elemList: Seq[Elem], runReq: RunReq) = {
-    def table = {
-      <div class="col-md-10 col-md-offset-1">
-        <table class="table table-responsive">
-          <tr>
-            { elemList.map(e => <td>{ e }</td>) }
-          </tr>
-        </table>
-      </div>
-    }
-
-    TagFromName.FrameOfReferenceUID
-    val text = Phase2Util.wrapSubProcedure(extendedData, table, "Phase 2", procedureStatus, None, runReq)
-    val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
-    Util.writeBinaryFile(file, text.getBytes)
-  }
-
-  /**
    * Run the sub-procedures.
    */
-  private def runAnalysis(extendedData: ExtendedData, runReq: BBbyCBCTRunReq): ProcedureStatus.Value = {
-    logger.info("Starting BB by CBCT analysis")
-
-    logger.info("Finished all BB by CBCT analysis")
-
-    val status = summaryList match {
-      case Left(_) => ProcedureStatus.fail
-      case Right(_) => ProcedureStatus.pass
-    }
-
-    val sumList = summaryList match {
-      case Left(list) => list
-      case Right(list) => list
-    }
-
-    logger.info("Generating BB by CBCT HTML")
-    makeHtml(extendedData, status, sumList, runReq)
-    logger.info("Done generating BB by CBCT HTML")
-
-    status
-  }
+  //  private def runAnalysis(extendedData: ExtendedData, runReq: BBbyCBCTRunReq): ProcedureStatus.Value = {
+  //    logger.info("Starting BB by CBCT analysis")
+  //
+  //    logger.info("Finished all BB by CBCT analysis")
+  //
+  //    val status = summaryList match {
+  //      case Left(_) => ProcedureStatus.fail
+  //      case Right(_) => ProcedureStatus.pass
+  //    }
+  //
+  //    val sumList = summaryList match {
+  //      case Left(list) => list
+  //      case Right(list) => list
+  //    }
+  //
+  //    logger.info("Generating BB by CBCT HTML")
+  //    makeHtml(extendedData, status, sumList, runReq)
+  //    logger.info("Done generating BB by CBCT HTML")
+  //
+  //    status
+  //  }
 
   /**
    * Determine if user is authorized to perform redo.  To be authorized, the user must be from the
@@ -241,7 +219,7 @@ object BBbyCBCTRun extends Logging {
               val msg = "Redo not permitted because user is from a different institution."
               forbidRedo(response, msg, outputOrig.outputPK)
             }
-          //  case Some(inputOrig) => processRedoRequest(request, response, inputOrig, outputOrig) TODO
+            //  case Some(inputOrig) => processRedoRequest(request, response, inputOrig, outputOrig) TODO
           }
         }
       }
@@ -255,7 +233,7 @@ object BBbyCBCTRun extends Logging {
 /**
  * Run BBbyCBCT code.
  */
-class BBbyCBCT(procedure: Procedure) extends WebRunProcedure(procedure) with Logging {
+class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with Logging {
 
   /** Defines precision - Format to use when showing numbers. */
   private val outputFormat = "%7.5e"
@@ -313,7 +291,7 @@ class BBbyCBCT(procedure: Procedure) extends WebRunProcedure(procedure) with Log
   /**
    * Check that there is a single plan, single machine, and some images.
    */
-  private def basicValidation(valueMap: ValueMapT, rtplanList: Seq[DicomFile], rtimageList: Seq[DicomFile]): Either[StyleMapT, BasicData] = {
+  private def XbasicValidation(valueMap: ValueMapT, rtplanList: Seq[DicomFile], rtimageList: Seq[DicomFile]): Either[StyleMapT, BasicData] = {
     logger.info("Number of RTPLAN files downloaded: " + rtplanList.size)
     logger.info("Number of RTIMAGE files downloaded: " + rtimageList.size)
     val machineSerialNumberListOpt = rtimageList.map(rtimage => Util.getAttrValue(rtimage.attributeList.get, TagFromName.DeviceSerialNumber))
@@ -511,7 +489,7 @@ class BBbyCBCT(procedure: Procedure) extends WebRunProcedure(procedure) with Log
 
           //          val rtimageMap = Phase2.constructRtimageMap(plan, rtimageList)
 
-          val finalStatus = BBbyCBCT.runAnalysis(extendedData, runReqFinal)
+          val finalStatus = BBbyCBCTExecute.runProcedure(extendedData, runReqFinal)
           val finDate = new Timestamp(System.currentTimeMillis)
           val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
 
@@ -545,8 +523,12 @@ class BBbyCBCT(procedure: Procedure) extends WebRunProcedure(procedure) with Log
 
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
+    Trace.trace
 
     val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
+    Trace.trace(valueMap)
+    if (true) // TODO rm
+      Trace.trace("hey there")
 
     try {
       0 match {

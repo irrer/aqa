@@ -10,6 +10,7 @@ import org.aqa.web.ProcedureUpdate
 import scala.xml.Elem
 import org.aqa.web.Session
 import org.aqa.webrun.phase2.Phase2
+import org.aqa.webrun.bbByCBCT.BBbyCBCTRun
 
 /**
  * Web interface for running the procedures.
@@ -42,6 +43,7 @@ object WebRun {
   private val interfaceList: Map[String, ConstructInterfaceT] = Map(
     ("LOCRun_1", procedure => new LOCRun_1(procedure)),
     ("Phase2", procedure => new Phase2(procedure)),
+    ("BBbyCBCT", procedure => new BBbyCBCTRun(procedure)),
     ("LOCUploadBaseFiles_1", procedure => new LOCUploadBaseFiles_1(procedure)),
     ("UploadAndChooseMachine_1", procedure => new UploadAndChooseMachine_1(procedure)),
     ("WinstonLutz_1", procedure => new WinstonLutz_1(procedure)))

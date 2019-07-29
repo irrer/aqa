@@ -11,11 +11,11 @@ import edu.umro.ScalaUtil.FileUtil
 import org.aqa.web.C3Chart
 import java.awt.Color
 import org.aqa.Crypto
-import org.aqa.webrun.phase2.cbctAlign.CBCTAnalysis
 import org.aqa.DicomFile
 import org.aqa.Config
 import edu.umro.ImageUtil.DicomImage
 import java.awt.image.BufferedImage
+import org.aqa.webrun.bbByCBCT.BBbyCBCTAnalysis
 
 /**
  * Test the Config.
@@ -50,7 +50,7 @@ class TestCBCTAnalysis extends FlatSpec with Matchers {
       println("Processing directory " + dir.getAbsolutePath)
       val attrListSeq = dir.listFiles.map(f => (new DicomFile(f)).attributeList.get).toSeq
       println("Number of slices in series: " + attrListSeq.size)
-      val result = CBCTAnalysis.testAnalyze(attrListSeq)
+      val result = BBbyCBCTAnalysis.volumeAnalysis(attrListSeq)
 
       val point = result.right.get._1
       val bufImgList = result.right.get._2

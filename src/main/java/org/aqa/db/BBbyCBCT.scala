@@ -9,6 +9,7 @@ import scala.xml.Node
 import scala.xml.Elem
 import org.aqa.procedures.ProcedureOutput
 import org.aqa.run.ProcedureStatus
+import javax.vecmath.Point3d
 
 case class BBbyCBCT(
   bbByCBCTPK: Option[Long], // primary key
@@ -17,9 +18,9 @@ case class BBbyCBCT(
   cbctSeriesInstanceUid: String, // series instance UID of CBCT
   offset_mm: Double, // distance between measured CBCT position and expected (plan) location (aka: positioning error)
   status: String, // termination status
-  planX_mm: Double, // expected X position in plan
-  planY_mm: Double, // expected Y position in plan
-  planZ_mm: Double, // expected Z position in plan
+  rtplanX_mm: Double, // expected X position in rtplan
+  rtplanY_mm: Double, // expected Y position in rtplan
+  rtplanZ_mm: Double, // expected Z position in rtplan
   cbctX_mm: Double, // expected X position in cbct
   cbctY_mm: Double, // expected Y position in cbct
   cbctZ_mm: Double // expected Z position in cbct
@@ -41,10 +42,16 @@ case class BBbyCBCT(
       "\n    cbctSeriesInstanceUid : " + cbctSeriesInstanceUid +
       "\n    offset_mm : " + Util.fmtDbl(offset_mm) +
       "\n    status : " + status +
-      "\n    plan X,Y,Z : " + Util.fmtDbl(planX_mm) + ", " + Util.fmtDbl(planY_mm) + ", " + Util.fmtDbl(planZ_mm) +
+      "\n    plan X,Y,Z : " + Util.fmtDbl(rtplanX_mm) + ", " + Util.fmtDbl(rtplanY_mm) + ", " + Util.fmtDbl(rtplanZ_mm) +
       "\n    cbct X,Y,Z : " + Util.fmtDbl(cbctX_mm) + ", " + Util.fmtDbl(cbctY_mm) + ", " + Util.fmtDbl(cbctZ_mm)
 
-  def pass = status.equalsIgnoreCase(ProcedureStatus.pass.toString)
+  //def pass = status.equalsIgnoreCase(ProcedureStatus.done.toString)
+
+  val rtplan = new Point3d(rtplanX_mm, rtplanY_mm, rtplanZ_mm)
+
+  val cbct = new Point3d(cbctX_mm, cbctY_mm, cbctZ_mm)
+
+  val err = new Point3d(rtplanX_mm - cbctX_mm, rtplanY_mm - cbctY_mm, rtplanZ_mm - cbctZ_mm)
 }
 
 object BBbyCBCT extends ProcedureOutput {
