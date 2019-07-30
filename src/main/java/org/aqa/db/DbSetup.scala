@@ -83,6 +83,7 @@ object DbSetup extends Logging {
     CenterDose.query,
     CollimatorPosition.query,
     WedgePoint.query,
+    BBbyCBCT.query,
     Rect.query,
     SymmetryAndFlatness.query,
     LeafPosition.query)

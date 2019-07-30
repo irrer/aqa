@@ -11,12 +11,13 @@ import java.text.SimpleDateFormat
 import scala.xml.Elem
 import org.aqa.web.WebUtil
 import org.aqa.db.Output
+import org.aqa.web.MachineUpdate
 
 object BBbyCBCTHTML {
 
-  private val axisNameList = Seq("X", "Y", "Z")
-  private def idOf(index: Int) = axisNameList(index) + "axisView"
-  private def fileNameOf(index: Int) = axisNameList(index) + "axisView.png"
+  private val axisNameList = Seq("X side", "Y top", "Z longitudinal")
+  private def idOf(index: Int) = axisNameList(index).replaceAll(" ", "_") + "axisView"
+  private def fileNameOf(index: Int) = axisNameList(index).replaceAll(" ", "_") + "axisView.png"
   private def titleOf(index: Int) = axisNameList(index) + "View from " + axisNameList(index) + " axis"
 
   def generateHtml(extendedData: ExtendedData, bbByCBCT: BBbyCBCT, imageXYZ: Seq[BufferedImage], status: ProcedureStatus.Value) = {
@@ -30,32 +31,53 @@ object BBbyCBCTHTML {
 
     imageXYZ.indices.map(i => writeImg(i))
 
-    val errText = Util.fmtDbl(bbByCBCT.err.getX) + ", " + Util.fmtDbl(bbByCBCT.err.getY) + ", " + Util.fmtDbl(bbByCBCT.err.getZ)
+    val numberText = {
+      def fmt(d: Double) = d.formatted("%5.2f")
+
+      def dataCol(name: String, title: String, value: Double, cols: Int) = {
+        <div title={ title } class={ "col-md-" + cols }>
+          <h3>{ name } : { fmt(value) }</h3>
+        </div>
+      }
+
+      val errxText = {
+        "X: " + fmt(bbByCBCT.err.getX) + " Y: " + fmt(bbByCBCT.err.getY) + "   Z: " + fmt(bbByCBCT.err.getZ)
+
+      }
+
+      val elem = {
+        <div class="row">
+          <div title="Test performed" class="col-md-3">
+            <h2>CBCT BB Location</h2>
+          </div>
+          { dataCol("Offset(mm)", "Distance in mm between plan isocenter and position of BB", bbByCBCT.offset_mm, 2) }
+          { dataCol("X", "Plan X position - BB X position in mm", (bbByCBCT.rtplanX_mm - bbByCBCT.cbctX_mm), 1) }
+          { dataCol("Y", "Plan Y position - BB Y position in mm", (bbByCBCT.rtplanY_mm - bbByCBCT.cbctY_mm), 1) }
+          { dataCol("Z", "Plan Z position - BB Z position in mm", (bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm), 1) }
+        </div>
+      }
+      elem
+    }
 
     def imageHtml(index: Int) = {
-      <tr>
-        <td>
-          <center id={ idOf(index) }>
-            { axisNameList(index) }
-            View
-            <a href={ fileNameOf(index) }>
-              <img src={ fileNameOf(index) } class="img-responsive"/>
-            </a>
-          </center>
-        </td>
-      </tr>
+      <td>
+        <center id={ idOf(index) }>
+          { axisNameList(index) }
+          View
+          <a href={ fileNameOf(index) }>
+            <img src={ fileNameOf(index) } class="img-responsive"/>
+          </a>
+        </center>
+      </td>
     }
 
     def content = {
       <div class="row">
-        <h2>CBCT BB Location</h2>
-        Distance from isocenter:{}
-        (mm)
-        <div title="Isocenter position minus BB position">
-          X, Y, Z:{ errText }
-        </div>
+        { numberText }
         <table class="table table-responsive">
-          { imageXYZ.indices.map(index => imageHtml(index)) }
+          <tr>
+            { imageXYZ.indices.map(index => imageHtml(index)) }
+          </tr>
         </table>
       </div>
     }
@@ -91,27 +113,43 @@ object BBbyCBCTHTML {
 
       val procedureDesc: String = extendedData.procedure.name + " : " + extendedData.procedure.version
 
-      <div class="row">
-        <div class="row">
-          { wrapElement(2, "Institution", extendedData.institution.name, true) }
-          { wrapElement(1, "Data Acquisition", dataAcquisitionDate, false) }
-          { wrapElement(1, "Analysis", twoLineDate.format(extendedData.output.analysisDate), false) }
-          { wrapElement(1, "User", extendedData.user.id, true) }
-          { wrapElement(1, "Elapsed", elapsed, false) }
-          { wrapElement(1, "Procedure", procedureDesc, false) }
+      val showMachine = {
+        val href = "/admin/MachineUpdate?machinePK=22"
+        <div class="col-md-1">
+          <h2 title="Treatment machine.  Click for details.">{ MachineUpdate.linkToMachineUpdate(extendedData.machine.machinePK.get, extendedData.machine.id) }</h2>
         </div>
+      }
+
+      val elem = {
         <div class="row">
-          { content }
+          <div class="row">
+            <div class="col-md-10 col-md-offset-1">
+              { showMachine }
+              { wrapElement(2, "Institution", extendedData.institution.name, true) }
+              { wrapElement(1, "Data Acquisition", dataAcquisitionDate, false) }
+              { wrapElement(1, "Analysis Started", twoLineDate.format(extendedData.output.startDate), false) }
+              { wrapElement(1, "User", extendedData.user.id, true) }
+              { wrapElement(1, "Elapsed", elapsed, false) }
+              { wrapElement(1, "Procedure", procedureDesc, false) }
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-10 col-md-offset-1">
+              { content }
+            </div>
+          </div>
         </div>
-      </div>
+      }
+
+      elem
     }
 
     val runScript = {
-      def zoomy(index: Int) = { """$(document).ready(function(){ $('""" + idOf(index) + """').zoom(); });""" }
-      """\n<script>\n      """ + imageXYZ.indices.map(index => zoomy(index)).mkString("\n      ") + """\n</script>\n"""
+      def zoomy(index: Int) = { "$(document).ready(function(){ $('#" + idOf(index) + "').zoom(); });" }
+      "\n<script>\n      " + imageXYZ.indices.map(index => zoomy(index)).mkString("\n      ") + "\n</script>\n"
     }
 
-    val text = WebUtil.wrapBody(content, "BB Location by CBCT", None, false, Some(runScript))
+    val text = WebUtil.wrapBody(wrap, "BB Location by CBCT", None, false, Some(runScript))
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(file, text)
   }

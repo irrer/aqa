@@ -47,45 +47,17 @@ import java.awt.geom.Point2D
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.aqa.web.WebUtil
-
 import org.aqa.web.Session
 import org.aqa.db.CachedUser
 import org.aqa.web.OutputList
-import org.aqa.webrun.bbByCBCT.BBbyCBCTRunReq
 import org.aqa.webrun.ExtendedData
 import org.aqa.ImageRegistration
 import org.aqa.db.DicomSeries
-import org.aqa.webrun.bbByCBCT.BBbyCBCTExecute
 import org.aqa.webrun.phase2.Phase2Util
 
 object BBbyCBCTRun extends Logging {
   val parametersFileName = "parameters.xml"
   val Phase2RunPKTag = "Phase2RunPK"
-
-  /**
-   * Run the sub-procedures.
-   */
-  //  private def runAnalysis(extendedData: ExtendedData, runReq: BBbyCBCTRunReq): ProcedureStatus.Value = {
-  //    logger.info("Starting BB by CBCT analysis")
-  //
-  //    logger.info("Finished all BB by CBCT analysis")
-  //
-  //    val status = summaryList match {
-  //      case Left(_) => ProcedureStatus.fail
-  //      case Right(_) => ProcedureStatus.pass
-  //    }
-  //
-  //    val sumList = summaryList match {
-  //      case Left(list) => list
-  //      case Right(list) => list
-  //    }
-  //
-  //    logger.info("Generating BB by CBCT HTML")
-  //    makeHtml(extendedData, status, sumList, runReq)
-  //    logger.info("Done generating BB by CBCT HTML")
-  //
-  //    status
-  //  }
 
   /**
    * Determine if user is authorized to perform redo.  To be authorized, the user must be from the
@@ -120,7 +92,7 @@ object BBbyCBCTRun extends Logging {
   //    inputFileList.map(copyToSessionDir)
   //
   //    val dicomFileList = Util.listDirFiles(sessionDir).map(f => new DicomFile(f)).filter(df => df.attributeList.nonEmpty)
-  //    val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
+  //    val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage) || df.isModality(SOPClass.CTImageStorage))
   //
   //    logger.info("Copied input files from " + inputOrig.dir.getAbsolutePath + " --> " + sessionDir.getAbsolutePath)
   //
@@ -258,9 +230,9 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   }
 
   private def validateMachineSelection(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, Machine] = {
-    val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
+    val imageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage) || df.isModality(SOPClass.CTImageStorage))
     // machines that DICOM files reference (based on device serial numbers)
-    val referencedMachines = rtimageList.map(df => attributeListToMachine(df.attributeList.get)).flatten.distinct
+    val referencedMachines = imageList.map(df => attributeListToMachine(df.attributeList.get)).flatten.distinct
     val chosenMachine = for (pkTxt <- valueMap.get(machineSelector.label); pk <- Util.stringToLong(pkTxt); m <- Machine.get(pk)) yield m
 
     val result: Either[StyleMapT, Machine] = 0 match {
@@ -375,9 +347,10 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     def toIR(df: DicomFile) = new ImageRegistration(df.attributeList.get)
 
     val cbctFrameUID = cbctList.head.attributeList.get.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
-    val matchingRegList = regList.filter(reg => new ImageRegistration(reg.attributeList.get).otherFrameOfRefUID.equals(cbctFrameUID))
+    val j = new ImageRegistration(regList.head.attributeList.get) // TODO rm
 
-    val compatUploaded = for (rtplan <- rtplanList; reg <- matchingRegList; if (toIR(reg).worksWith(rtplan.attributeList.get))) yield { (rtplan, reg) }
+    val matchingRegList = regList.filter(reg => new ImageRegistration(reg.attributeList.get).otherFrameOfRefUID.equals(cbctFrameUID))
+    val compatUploaded = for (rtplan <- rtplanList; reg <- matchingRegList; if (toIR(reg).sameFrameOfRef(rtplan.attributeList.get))) yield { (rtplan, reg) }
 
     val pair: Option[(DicomFile, DicomFile)] = {
       if (compatUploaded.nonEmpty)
@@ -385,7 +358,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       else {
         val regFrUidSet = matchingRegList.map(reg => toIR(reg).otherFrameOfRefUID).toSet
         val rtPlanListFromDb = DicomSeries.getByFrameUIDAndSOPClass(regFrUidSet, SOPClass.RTPlanStorage).map(dicomSeries => dicomSeries.attributeListList.head)
-        val compatFromDb = for (fromDb <- rtPlanListFromDb; reg <- matchingRegList; if (toIR(reg).worksWith(fromDb))) yield { (fromDb, reg) }
+        val compatFromDb = for (fromDb <- rtPlanListFromDb; reg <- matchingRegList; if (toIR(reg).sameFrameOfRef(fromDb))) yield { (fromDb, reg) }
         if (compatFromDb.isEmpty)
           None
         else {
@@ -462,7 +435,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     val dicomFileList = dicomFilesInSession(valueMap)
     val regList = dicomFileList.filter(df => df.isModality(SOPClass.SpatialRegistrationStorage))
     val cbctList = dicomFileList.filter(df => df.isModality(SOPClass.CTImageStorage)).sortBy(df => Util.slicePosition(df.attributeList.get))
-    val rtplanList = Phase2Util.getPlanList(dicomFileList)
+    val rtplanList = dicomFileList.filter(df => df.isModality(SOPClass.RTPlanStorage))
     val machineCheck = validateMachineSelection(valueMap, cbctList)
 
     validate(valueMap, rtplanList, regList, cbctList) match {
@@ -523,12 +496,8 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
-    Trace.trace
 
     val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
-    Trace.trace(valueMap)
-    if (true) // TODO rm
-      Trace.trace("hey there")
 
     try {
       0 match {

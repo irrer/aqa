@@ -78,8 +78,7 @@ object BBbyCBCTExecute extends Logging {
         val bbPointInRtplan = runReq.reg.transform(volumePoint)
         val rtplanIsocenter = Util.getPlanIsocenterList(runReq.rtplan).head
         val bbByCBCT = saveToDb(extendedData, runReq, bbPointInRtplan)
-        //        val html = BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, imageXYZ)
-        //        html
+        val html = BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, imageXYZ, ProcedureStatus.done)
         logger.info("Finished analysis of CBCT Alignment")
         ProcedureStatus.done
       } else {
