@@ -65,7 +65,7 @@ object BBbyCBCTHTML {
           { axisNameList(index) }
           View
           <a href={ fileNameOf(index) }>
-            <img src={ fileNameOf(index) } class="img-responsive"/>
+            <img src={ fileNameOf(index) } class="img-responsive" height="512px"/>
           </a>
         </center>
       </td>

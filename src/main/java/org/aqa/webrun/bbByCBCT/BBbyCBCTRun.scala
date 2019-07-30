@@ -55,6 +55,10 @@ import org.aqa.ImageRegistration
 import org.aqa.db.DicomSeries
 import org.aqa.webrun.phase2.Phase2Util
 
+/**
+ * Provide the user interface and verify that the data provided is sufficient to do the analysis.
+ */
+
 object BBbyCBCTRun extends Logging {
   val parametersFileName = "parameters.xml"
   val Phase2RunPKTag = "Phase2RunPK"

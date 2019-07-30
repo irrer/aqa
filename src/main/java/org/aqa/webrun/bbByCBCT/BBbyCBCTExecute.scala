@@ -27,6 +27,11 @@ import org.aqa.VolumeTranslator
 import java.awt.Color
 import org.aqa.db.BBbyCBCT
 
+/**
+ * After the data has has been validated as sufficient to do the analysis, perform the
+ * various processing steps, including finding the BB in 3D, saving results to the
+ * database, and generating an HTML report.
+ */
 object BBbyCBCTExecute extends Logging {
 
   private val subProcedureName = "CBCT Alignment"
@@ -78,6 +83,7 @@ object BBbyCBCTExecute extends Logging {
         val bbPointInRtplan = runReq.reg.transform(volumePoint)
         val rtplanIsocenter = Util.getPlanIsocenterList(runReq.rtplan).head
         val bbByCBCT = saveToDb(extendedData, runReq, bbPointInRtplan)
+        val annotatedImages = BBbyCBCTAnnotateImages.annotate(bbByCBCT, imageXYZ, runReq, volumePoint) // TODO do something with images
         val html = BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, imageXYZ, ProcedureStatus.done)
         logger.info("Finished analysis of CBCT Alignment")
         ProcedureStatus.done

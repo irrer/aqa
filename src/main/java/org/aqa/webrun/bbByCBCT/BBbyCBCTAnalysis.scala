@@ -35,38 +35,38 @@ object BBbyCBCTAnalysis extends Logging {
   /**
    * Get the volume that needs to be searched for the BB.
    */
-  private def getVolumeOfInterest(sorted: Seq[AttributeList], voxSize_mm: Point3d): DicomVolume = {
-    val rows = sorted.head.get(TagFromName.Rows).getIntegerValues().head
-    val columns = sorted.head.get(TagFromName.Columns).getIntegerValues().head
-    // centers of volume in mm
-    val xCenter_mm = ((rows - 1) * voxSize_mm.getX) / 2
-    val yCenter_mm = ((columns - 1) * voxSize_mm.getY) / 2
-    val zCenter_mm = (Util.slicePosition(sorted.last) + Util.slicePosition(sorted.head)) / 2.0
-
-    // consider only slices that are sufficiently close to the center of the volume.
-    val zSlices = sorted.filter(al => (Util.slicePosition(al) - zCenter_mm).abs <= Config.DailyPhantomSearchDistance_mm)
-
-    // rectangle within a slice in voxels
-    val xyRect = {
-      val x = (xCenter_mm - Config.DailyPhantomSearchDistance_mm) / voxSize_mm.getX
-      val y = (yCenter_mm - Config.DailyPhantomSearchDistance_mm) / voxSize_mm.getY
-      val width = (Config.DailyPhantomSearchDistance_mm * 2) / voxSize_mm.getX
-      val height = (Config.DailyPhantomSearchDistance_mm * 2) / voxSize_mm.getY
-      val rect = new Rectangle(x.round.toInt, y.round.toInt, width.round.toInt, height.round.toInt)
-      rect
-    }
-
-    val imageList = zSlices.map(al => (new DicomImage(al)).getSubimage(xyRect))
-
-    def zOffset = {
-      val firstSop = Util.sopOfAl(zSlices.head)
-      sorted.map(al => Util.sopOfAl(al)).indexOf(firstSop)
-    }
-
-    val offset = new Point3d(xyRect.getX, xyRect.getY, zOffset)
-
-    new DicomVolume(imageList)
-  }
+  //  private def getVolumeOfInterest(sorted: Seq[AttributeList], voxSize_mm: Point3d): DicomVolume = {
+  //    val rows = sorted.head.get(TagFromName.Rows).getIntegerValues().head
+  //    val columns = sorted.head.get(TagFromName.Columns).getIntegerValues().head
+  //    // centers of volume in mm
+  //    val xCenter_mm = ((rows - 1) * voxSize_mm.getX) / 2
+  //    val yCenter_mm = ((columns - 1) * voxSize_mm.getY) / 2
+  //    val zCenter_mm = (Util.slicePosition(sorted.last) + Util.slicePosition(sorted.head)) / 2.0
+  //
+  //    // consider only slices that are sufficiently close to the center of the volume.
+  //    val zSlices = sorted.filter(al => (Util.slicePosition(al) - zCenter_mm).abs <= Config.DailyPhantomSearchDistance_mm)
+  //
+  //    // rectangle within a slice in voxels
+  //    val xyRect = {
+  //      val x = (xCenter_mm - Config.DailyPhantomSearchDistance_mm) / voxSize_mm.getX
+  //      val y = (yCenter_mm - Config.DailyPhantomSearchDistance_mm) / voxSize_mm.getY
+  //      val width = (Config.DailyPhantomSearchDistance_mm * 2) / voxSize_mm.getX
+  //      val height = (Config.DailyPhantomSearchDistance_mm * 2) / voxSize_mm.getY
+  //      val rect = new Rectangle(x.round.toInt, y.round.toInt, width.round.toInt, height.round.toInt)
+  //      rect
+  //    }
+  //
+  //    val imageList = zSlices.map(al => (new DicomImage(al)).getSubimage(xyRect))
+  //
+  //    def zOffset = {
+  //      val firstSop = Util.sopOfAl(zSlices.head)
+  //      sorted.map(al => Util.sopOfAl(al)).indexOf(firstSop)
+  //    }
+  //
+  //    val offset = new Point3d(xyRect.getX, xyRect.getY, zOffset)
+  //
+  //    new DicomVolume(imageList)
+  //  }
 
   /**
    * Get the corner of the search volume closest to the origin in voxels.

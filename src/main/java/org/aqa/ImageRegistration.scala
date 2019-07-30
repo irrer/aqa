@@ -40,6 +40,11 @@ case class ImageRegistration(attrList: AttributeList) {
     val fortm = ms.get(TagFromName.FrameOfReferenceTransformationMatrix)
     new Matrix4d(fortm.getDoubleValues)
   }
+  
+  /**
+   * Get a copy of the matrix.  Use clone because matrixes are mutable.  Wish they weren't.
+   */
+  def getMatrix = matrix.clone.asInstanceOf[Matrix4d]
 
   /**
    * Transform a point by this matrix and create a new point.
