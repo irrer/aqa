@@ -347,7 +347,6 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     def toIR(df: DicomFile) = new ImageRegistration(df.attributeList.get)
 
     val cbctFrameUID = cbctList.head.attributeList.get.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
-    val j = new ImageRegistration(regList.head.attributeList.get) // TODO rm
 
     val matchingRegList = regList.filter(reg => new ImageRegistration(reg.attributeList.get).otherFrameOfRefUID.equals(cbctFrameUID))
     val compatUploaded = for (rtplan <- rtplanList; reg <- matchingRegList; if (toIR(reg).sameFrameOfRef(rtplan.attributeList.get))) yield { (rtplan, reg) }
@@ -443,6 +442,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
       case Right(runReq) => {
+        logger.info("Validating data")
         // only consider the CBCT files for the date-time stamp.  The plan could have been from months ago.
         val dtp = dateTimePatId(cbctList)
 
