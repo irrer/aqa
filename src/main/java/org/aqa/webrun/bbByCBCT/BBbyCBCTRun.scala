@@ -261,58 +261,6 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   }
 
   /**
-   * Check that there is a single plan, single machine, and some images.
-   */
-  private def XbasicValidation(valueMap: ValueMapT, rtplanList: Seq[DicomFile], rtimageList: Seq[DicomFile]): Either[StyleMapT, BasicData] = {
-    logger.info("Number of RTPLAN files downloaded: " + rtplanList.size)
-    logger.info("Number of RTIMAGE files downloaded: " + rtimageList.size)
-    val machineSerialNumberListOpt = rtimageList.map(rtimage => Util.getAttrValue(rtimage.attributeList.get, TagFromName.DeviceSerialNumber))
-    val machineSerialNumberList = machineSerialNumberListOpt.flatten
-    val nullSerialNumber = machineSerialNumberList.size != machineSerialNumberListOpt.size
-
-    def rtimageDate(rtimage: DicomFile): Long = {
-      Util.extractDateTimeAndPatientIdFromDicom(rtimage.attributeList.get)._1.map(d => d.getTime).distinct.sorted.last
-    }
-
-    val dateTimeList = rtimageList.map(rtimage => rtimageDate(rtimage)).sorted
-    val maxDuration = Math.round(Config.MaxProcedureDuration * 60 * 1000).toLong
-
-    val machineCheck = validateMachineSelection(valueMap, rtimageList)
-
-    // associate each image with a plan
-    val planGroups = rtplanList.map(plan => (plan, rtimageList.filter(img => Phase2Util.imageReferencesPlan(plan, img)))).filter(pi => pi._2.nonEmpty).toMap
-
-    /**
-     * Make a human readable list of machines
-     */
-    def machineList: String = {
-      val dstnct = machineSerialNumberList.distinct
-      val idList = dstnct.map(serNo => Machine.findMachinesBySerialNumber(serNo)).flatten.distinct.map(mach => mach.id).mkString("  ")
-      dstnct.mkString("Serial Numbers: " + dstnct.mkString("  ")) + "    Machines: " + idList
-    }
-
-    0 match {
-      case _ if (rtplanList.isEmpty) => formErr("No RTPLANS found")
-      case _ if (rtimageList.isEmpty) => formErr("No RTIMAGEs given")
-      case _ if (planGroups.isEmpty) => formErr("No RTPLAN found for RTIMAGEs")
-      case _ if (planGroups.size > 1) => formErr("The RTIMAGEs reference multiple plans.  Only one plan per run is permitted.")
-      case _ if (planGroups.head._2.size < rtimageList.size) => {
-        formErr("There are " + rtimageList.size + " images but only " + planGroups.head._2.size + " reference this plan")
-      }
-      case _ if (machineCheck.isLeft) => Left(machineCheck.left.get)
-      case _ if (machineSerialNumberList.distinct.size != 1) => formErr("There are RTIMAGEs from more than one machine: " + machineList)
-      case _ if (nullSerialNumber) => formErr("At least one RTIMAGE has no serial number.")
-      case _ if ((dateTimeList.last - dateTimeList.head) > maxDuration) =>
-        formErr("Over " + Config.MaxProcedureDuration + " minutes from first to last image.  These RTIMAGE files were not from the same session")
-      case _ => {
-        val rtplan = planGroups.head._1
-        val rtimageByBeam = rtimageList.map(rtimage => (Phase2Util.getBeamNameOfRtimage(rtplan, rtimage), rtimage))
-        Right(new BasicData(rtplan, machineCheck.right.get, rtimageByBeam))
-      }
-    }
-  }
-
-  /**
    *  determine if there are undefined beams
    */
   private def beamNotDefinedProblem(basicData: BasicData): Option[String] = {
