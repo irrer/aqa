@@ -197,7 +197,7 @@ object BBbyCBCTAnalysis extends Logging {
   private def makeImage(dicomImage: DicomImage, location: Point2D.Double, pixelSize: Point2D.Double, minMax: (Float, Float)): BufferedImage = {
     val aspectCorrected = dicomImage.renderPixelsToSquare(pixelSize.getX, pixelSize.getY)
     //val bufImg = aspectCorrected.toDeepColorBufferedImage(minMax._1, minMax._2)
-    val bufImg = aspectCorrected.toBufferedImage(Color.yellow)
+    val bufImg = aspectCorrected.toBufferedImage(Color.blue)
     bufImg
   }
 
