@@ -75,7 +75,7 @@ object BBbyCBCTAnnotateImages {
       fmt(bbByCBCT.rtplanY_mm - bbByCBCT.cbctY_mm) + ", " +
       fmt(bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm)
 
-    ImageText.setFont(graphics, ImageText.DefaultFont, 45)
+    ImageText.setFont(graphics, ImageText.DefaultFont, 40)
     ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix - (height / 2) + 10, bbText, 90)
 
     // ---------------------------------------------------------------------------------

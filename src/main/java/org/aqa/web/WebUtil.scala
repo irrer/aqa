@@ -219,6 +219,13 @@ object WebUtil extends Logging {
     val methodIsUpload = (request.getMethod == Method.POST) || (request.getMethod == Method.PUT)
     def entity = request.getEntity
     def mediaType = request.getEntity.getMediaType
+    //    if (mediaType != null) { // TODO rm
+    //      Trace.trace(mediaType)
+    //      Trace.trace(mediaType.getMainType)
+    //      Trace.trace(mediaType.getSubType)
+    //      Trace.trace(mediaType.getParent)
+    //      Trace.trace(mediaType.getParameters)
+    //    }
     def mediaTypeIsUpload = MediaType.MULTIPART_FORM_DATA.equals(mediaType, true)
 
     methodIsUpload && (entity != null) && (mediaType != null) && mediaTypeIsUpload
