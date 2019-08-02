@@ -249,7 +249,6 @@ object BBbyCBCTAnalysis extends Logging {
 
     val voxSize_mm = Util.getVoxSize_mm(sorted) // the size of a voxel in mm
     val entireVolume = DicomVolume.constructDicomVolume(sorted) // all CBCT voxels as a volume
-    //Trace.trace("voxSize_mm: " + voxSize_mm + "    XYZ: " + entireVolume.xSize + " " + entireVolume.ySize + " " + entireVolume.zSize)
 
     val searchStart = startOfSearch(entireVolume, voxSize_mm) // point of search volume closest to origin
     val searchSize = sizeOfSearch(voxSize_mm) // size of search volume
