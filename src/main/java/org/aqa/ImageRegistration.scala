@@ -15,7 +15,6 @@ import edu.umro.ScalaUtil.Trace
 case class ImageRegistration(attrList: AttributeList) {
 
   private def getFrUid(al: AttributeList) = {
-    val j = al.get(TagFromName.FrameOfReferenceUID)
     al.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
   }
 
@@ -24,7 +23,6 @@ case class ImageRegistration(attrList: AttributeList) {
 
   private val otherImageSeq = {
     val regSeq = DicomUtil.seqToAttr(attrList, TagFromName.RegistrationSequence)
-    val j = regSeq.filterNot(rs => getFrUid(rs).equals(frameOfRefUID)) // TODO rm
     regSeq.filterNot(rs => getFrUid(rs).equals(frameOfRefUID)).head
   }
 
