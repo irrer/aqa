@@ -13,6 +13,7 @@ import edu.umro.ScalaUtil.Trace
  */
 
 case class ImageRegistration(attrList: AttributeList) {
+  def this(dicomFile: DicomFile) = this(dicomFile.attributeList.get)
 
   private def getFrUid(al: AttributeList) = {
     al.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
@@ -38,7 +39,7 @@ case class ImageRegistration(attrList: AttributeList) {
     val fortm = ms.get(TagFromName.FrameOfReferenceTransformationMatrix)
     new Matrix4d(fortm.getDoubleValues)
   }
-  
+
   /**
    * Get a copy of the matrix.  Use clone because matrixes are mutable.  Wish they weren't.
    */

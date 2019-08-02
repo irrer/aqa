@@ -214,6 +214,9 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   /** Defines precision - Format to use when showing numbers. */
   private val outputFormat = "%7.5e"
 
+  private def getFrameOfRef(al: AttributeList): String = al.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
+  private def getFrameOfRef(dicomFile: DicomFile): String = getFrameOfRef(dicomFile.attributeList.get)
+
   //private val machineSelector = new WebInputSelectOption("Machine", 6, 0, machineList, showMachineSelector)
   private val machineSelector = new WebInputSelectMachine("Machine", 6, 0)
 
@@ -289,37 +292,85 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   }
 
   /**
-   * Check beam definitions, existence of flood field, and organize inputs into <code>BBbyCBCTRunReq</code> to facilitate further processing.
-   *
-   * @return rtplan and image registration if found, else None.
+   * Save an attribute list in the tmp directory.
    */
-  private def findRtplanAndReg(rtplanList: Seq[DicomFile], regList: Seq[DicomFile], cbctList: Seq[DicomFile]): Option[(DicomFile, DicomFile)] = {
+  private def saveDbRtplan(al: AttributeList): DicomFile = {
+    val fileName = Util.sopOfAl(al) + ".dcm"
+    val tmpFile = new File(Config.tmpDirFile, fileName)
+    DicomUtil.writeAttributeList(al, tmpFile)
+    new DicomFile(tmpFile)
+  }
 
-    def getFrUid(al: AttributeList) = al.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
+  /**
+   * Search the uploaded plans and reg files to see if there is a set with compatible frames of reference
+   */
+  private def searchUploadedPlans(rtplanList: Seq[DicomFile], regList: Seq[DicomFile]): Option[(DicomFile, Option[DicomFile])] = {
     def toIR(df: DicomFile) = new ImageRegistration(df.attributeList.get)
+    val compatUploaded = for (rtplan <- rtplanList; reg <- regList; if (toIR(reg).sameFrameOfRef(rtplan.attributeList.get))) yield { (rtplan, Some(reg)) }
+    if (compatUploaded.isEmpty) None else compatUploaded.headOption
+  }
 
-    val cbctFrameUID = cbctList.head.attributeList.get.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
+  /**
+   * Search uploaded plans that have the same frame of reference as the CBCT, in which case a REG file is not needed.
+   */
+  private def searchUploadedPlansWithoutReg(rtplanList: Seq[DicomFile], cbctFrameOfRef: String): Option[(DicomFile, Option[DicomFile])] = {
+    val compatPlan = rtplanList.filter(rtplan => getFrameOfRef(rtplan).equals(cbctFrameOfRef))
+    if (compatPlan.isEmpty) None else Some(compatPlan.head, None)
+  }
 
-    val matchingRegList = regList.filter(reg => new ImageRegistration(reg.attributeList.get).otherFrameOfRefUID.equals(cbctFrameUID))
-    val compatUploaded = for (rtplan <- rtplanList; reg <- matchingRegList; if (toIR(reg).sameFrameOfRef(rtplan.attributeList.get))) yield { (rtplan, reg) }
+  /**
+   * Search database plans that work with one of the uploaded REG files.
+   */
+  private def searchDbPlanWithReg(regList: Seq[DicomFile]): Option[(DicomFile, Option[DicomFile])] = {
+    val regFrUidSet = regList.map(reg => getFrameOfRef(reg)).toSet
+    val rtPlanListFromDb = DicomSeries.getByFrameUIDAndSOPClass(regFrUidSet, SOPClass.RTPlanStorage).map(dicomSeries => dicomSeries.attributeListList.head)
+    val compatUploaded = for (rtplan <- rtPlanListFromDb; reg <- regList; if (new ImageRegistration(reg).sameFrameOfRef(rtplan))) yield { (rtplan, Some(reg)) }
 
-    val pair: Option[(DicomFile, DicomFile)] = {
-      if (compatUploaded.nonEmpty)
-        compatUploaded.headOption
-      else {
-        val regFrUidSet = matchingRegList.map(reg => toIR(reg).frameOfRefUID).toSet
-        val rtPlanListFromDb = DicomSeries.getByFrameUIDAndSOPClass(regFrUidSet, SOPClass.RTPlanStorage).map(dicomSeries => dicomSeries.attributeListList.head)
-        val compatFromDb = for (fromDb <- rtPlanListFromDb; reg <- matchingRegList; if (toIR(reg).sameFrameOfRef(fromDb))) yield { (fromDb, reg) }
-        if (compatFromDb.isEmpty)
-          None
-        else {
-          val rtplanAl = compatFromDb.head._1
-          val fileName = Util.sopOfAl(rtplanAl) + ".dcm"
-          val rtplanTmpFile = new File(Config.tmpDirFile, fileName)
-          DicomUtil.writeAttributeList(rtplanAl, rtplanTmpFile)
-          Some(new DicomFile(rtplanTmpFile), compatFromDb.head._2)
-        }
-      }
+    val compat = if (compatUploaded.isEmpty)
+      None
+    else {
+      val rtplanDicomFile = saveDbRtplan(compatUploaded.head._1)
+      Some(rtplanDicomFile, compatUploaded.head._2)
+    }
+    compat
+  }
+
+  /**
+   * Search database plans that have the same frame of reference as the CBCT, so no REG file required.
+   */
+  private def searchDbPlanWithoutReg(cbctFrameOfRef: String): Option[(DicomFile, Option[DicomFile])] = {
+    val rtPlanListFromDb = DicomSeries.getByFrameUIDAndSOPClass(Set(cbctFrameOfRef), SOPClass.RTPlanStorage).map(dicomSeries => dicomSeries.attributeListList.head)
+
+    val compat = if (rtPlanListFromDb.isEmpty)
+      None
+    else {
+      val rtplanDicomFile = saveDbRtplan(rtPlanListFromDb.head)
+      Some(rtplanDicomFile, None)
+    }
+    compat
+  }
+
+  /**
+   * Find a compatible set of RTPLAN and REG files.  If the plan has the same frame of reference as the
+   * CBCT, then no REG file is required.  If a compatible plan was uploaded, then use that, otherwise
+   * try to get one from the database.
+   *
+   * @return (RTPLAN, REG)
+   */
+  private def findRtplanAndReg(rtplanList: Seq[DicomFile], regList: Seq[DicomFile], cbctList: Seq[DicomFile]): Option[(DicomFile, Option[DicomFile])] = {
+    val cbctFrameOfRef = getFrameOfRef(cbctList.head)
+    val uploadedPlans = searchUploadedPlans(rtplanList, regList)
+    val uploadedPlansWithoutReg = searchUploadedPlansWithoutReg(rtplanList, cbctFrameOfRef)
+
+    lazy val dbPlanWithReg = searchDbPlanWithReg(regList)
+    lazy val dbPlanWithoutReg = searchDbPlanWithoutReg(cbctFrameOfRef)
+
+    val pair = 0 match {
+      case _ if uploadedPlans.isDefined => uploadedPlans
+      case _ if uploadedPlansWithoutReg.isDefined => uploadedPlansWithoutReg
+      case _ if dbPlanWithReg.isDefined => dbPlanWithReg
+      case _ if dbPlanWithoutReg.isDefined => dbPlanWithoutReg
+      case _ => None
     }
 
     pair
@@ -336,7 +387,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
     val result = 0 match {
       case _ if cbctList.isEmpty => formErr("No CBCT files uploaded")
-      case _ if regList.isEmpty => formErr("No REG files uploaded")
+      //case _ if regList.isEmpty => formErr("No REG files uploaded")
       case _ if (numSeries(cbctList) > 1) => formErr("CBCT files should all be from the same series, but are from " + numSeries(cbctList) + " different series")
       case _ if (machineCheck.isLeft) => Left(machineCheck.left.get)
       case _ => {
@@ -384,8 +435,11 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
    */
   private def runIfDataValid(valueMap: ValueMapT, request: Request, response: Response) = {
     val dicomFileList = dicomFilesInSession(valueMap)
-    val regList = dicomFileList.filter(df => df.isModality(SOPClass.SpatialRegistrationStorage))
     val cbctList = dicomFileList.filter(df => df.isModality(SOPClass.CTImageStorage)).sortBy(df => Util.slicePosition(df.attributeList.get))
+    // CBCT frame of reference.  If there is more than one CBCT series, then the data will be rejected anyway
+    val cbctFrameOfRef = getFrameOfRef(cbctList.head.attributeList.get)
+    // Make a list of REG files that support the CBCT's frame of reference.  We don't care about the other REG files.
+    val regList = dicomFileList.filter(df => df.isModality(SOPClass.SpatialRegistrationStorage) && new ImageRegistration(df.attributeList.get).otherFrameOfRefUID.equals(cbctFrameOfRef))
     val rtplanList = dicomFileList.filter(df => df.isModality(SOPClass.RTPlanStorage))
     val machineCheck = validateMachineSelection(valueMap, cbctList)
 

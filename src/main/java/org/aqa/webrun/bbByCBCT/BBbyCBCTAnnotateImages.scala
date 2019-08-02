@@ -82,23 +82,48 @@ object BBbyCBCTAnnotateImages {
 
     graphics.setColor(Color.red)
 
-    val invMatrix = {
-      val m = runReq.reg.getMatrix.clone.asInstanceOf[Matrix4d]
-      m.invert
-      m
+    if (false) {
+      val invMatrix = {
+        val m = runReq.reg.get.getMatrix.clone.asInstanceOf[Matrix4d]
+        ??? // TODO account for Option reg
+        m.invert
+        m
+      }
+
+      val planInCBCTFrame = {
+        val p = new Point3d(bbByCBCT.rtplanX_mm, bbByCBCT.rtplanY_mm, bbByCBCT.rtplanX_mm)
+        invMatrix.transform(p)
+        p
+      }
+
+      val plan_vox = volTrans.mm2vox(planInCBCTFrame)
+
+      val plan_vox_scaled = new Point3d(plan_vox.getX * scale, plan_vox.getY * scale, plan_vox.getZ * scale)
+      graphics.drawLine(
+        rnd(plan_vox_scaled.getX), rnd(plan_vox_scaled.getY - scale),
+        rnd(plan_vox_scaled.getX), rnd(plan_vox_scaled.getY + scale))
+      graphics.drawLine(
+        rnd(plan_vox_scaled.getX - scale), rnd(plan_vox_scaled.getY),
+        rnd(plan_vox_scaled.getX + scale), rnd(plan_vox_scaled.getY))
+    } else {
+
+      val planXcenter = {
+        val diff = (bbByCBCT.cbctX_mm - bbByCBCT.rtplanX_mm) / voxSize_mm(0)
+        centerX_pix + (diff * scale)
+      }
+
+      val planYcenter = {
+        val diff = (bbByCBCT.cbctY_mm - bbByCBCT.rtplanY_mm) / voxSize_mm(1)
+        centerY_pix + (diff * scale)
+      }
+
+      graphics.drawLine(
+        rnd(planXcenter), rnd(planYcenter - scale),
+        rnd(planXcenter), rnd(planYcenter + scale))
+      graphics.drawLine(
+        rnd(planXcenter - scale), rnd(planYcenter),
+        rnd(planXcenter + scale), rnd(planYcenter))
     }
-
-    val planInCBCTFrame = {
-      val p = new Point3d(bbByCBCT.rtplanX_mm, bbByCBCT.rtplanY_mm, bbByCBCT.rtplanX_mm)
-      invMatrix.transform(p)
-      p
-    }
-
-    val plan_vox = volTrans.mm2vox(planInCBCTFrame)
-
-    val plan_vox_scaled = new Point3d(plan_vox.getX * scale, plan_vox.getY * scale, plan_vox.getZ * scale)
-    graphics.drawLine(rnd(plan_vox_scaled.getX), rnd(plan_vox_scaled.getY - scale), rnd(plan_vox_scaled.getX), rnd(plan_vox_scaled.getY + scale))
-    graphics.drawLine(rnd(plan_vox_scaled.getX - scale), rnd(plan_vox_scaled.getY), rnd(plan_vox_scaled.getX + scale), rnd(plan_vox_scaled.getY))
 
     // ---------------------------------------------------------------------------------
 

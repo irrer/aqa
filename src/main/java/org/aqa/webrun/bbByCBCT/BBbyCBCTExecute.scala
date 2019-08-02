@@ -80,7 +80,12 @@ object BBbyCBCTExecute extends Logging {
         logger.info("Found BB in CBCT volume.  XYZ Coordinates in original CBCT space: " +
           Util.fmtDbl(volumePoint.getX) + ", " + Util.fmtDbl(volumePoint.getY) + ", " + Util.fmtDbl(volumePoint.getZ))
 
-        val bbPointInRtplan = runReq.reg.transform(volumePoint)
+        // transform the cbct point if necessary.  If it is already in the same frame of reference, then it is not necessary
+        val bbPointInRtplan = {
+          if (runReq.reg.isDefined) runReq.reg.get.transform(volumePoint)
+          else volumePoint
+        }
+
         val rtplanIsocenter = Util.getPlanIsocenterList(runReq.rtplan).head
         val bbByCBCT = saveToDb(extendedData, runReq, bbPointInRtplan)
         val annotatedImages = BBbyCBCTAnnotateImages.annotate(bbByCBCT, imageXYZ, runReq, volumePoint) // TODO do something with images
