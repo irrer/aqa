@@ -307,7 +307,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       if (compatUploaded.nonEmpty)
         compatUploaded.headOption
       else {
-        val regFrUidSet = matchingRegList.map(reg => toIR(reg).otherFrameOfRefUID).toSet
+        val regFrUidSet = matchingRegList.map(reg => toIR(reg).frameOfRefUID).toSet
         val rtPlanListFromDb = DicomSeries.getByFrameUIDAndSOPClass(regFrUidSet, SOPClass.RTPlanStorage).map(dicomSeries => dicomSeries.attributeListList.head)
         val compatFromDb = for (fromDb <- rtPlanListFromDb; reg <- matchingRegList; if (toIR(reg).sameFrameOfRef(fromDb))) yield { (fromDb, reg) }
         if (compatFromDb.isEmpty)
