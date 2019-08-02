@@ -251,46 +251,6 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     result
   }
 
-  private case class BasicData(rtplan: DicomFile, machine: Machine, rtimageListByBeam: Seq[(Option[String], DicomFile)]) {
-
-    private def dfToString(dicomFile: DicomFile) = {
-      val sop = { if (dicomFile.attributeList.isDefined) Util.sopOfAl(dicomFile.attributeList.get) else "NoAttributelist" }
-      val modality = { if (dicomFile.attributeList.isDefined) Util.modalityOfAl(dicomFile.attributeList.get) else "" }
-      sop + "    " + modality + "    " + dicomFile.file.getName
-    }
-
-    private def beamOf(beamName: Option[String]) = if (beamName.isDefined) beamName.get else "NoBeamName"
-
-    override def toString =
-      "machine: " + dfToString(rtplan) + "\n" +
-        "machine id: " + machine.id + "    serial number: " + machine.serialNumber + "    machinePK: " + machine.machinePK + "\n" +
-        "rtimageListByBeam:\n    " + rtimageListByBeam.map(r => beamOf(r._1) + "  " + dfToString(r._2)).mkString("\n    ")
-  }
-
-  /**
-   *  determine if there are undefined beams
-   */
-  private def beamNotDefinedProblem(basicData: BasicData): Option[String] = {
-    // check for beams that are not in the plan
-    val undefFileNameList = basicData.rtimageListByBeam.filter(b => b._1.isEmpty).map(b => b._2.file.getName)
-    if (undefFileNameList.nonEmpty) {
-      Some("The image set is probably referencing the wrong plan." + WebUtil.titleNewline + "There were " + undefFileNameList.size + " files that references a beam  that was not in the plan:" + WebUtil.titleNewline + undefFileNameList.mkString(WebUtil.titleNewline))
-    } else None
-  }
-
-  /**
-   *  determine if there is more than one image that reference/define the same beam
-   */
-  private def beamMultiRefProblem(basicData: BasicData): Option[String] = {
-    val multiRefList = basicData.rtimageListByBeam.filter(b => b._1.isDefined).groupBy(b => b._1.get.toUpperCase).map(g => g._2).filter(g => g.size > 1)
-    if (multiRefList.isEmpty) None
-    else {
-      val sep = "\\n    "
-      val text = "Same beam is referenced by multiple files:" + sep + multiRefList.map(mr => mr.map(r => r._1.get.trim + "-->" + r._2.file.getName.trim).mkString(sep)).mkString(sep)
-      Some(text)
-    }
-  }
-
   /**
    * Save an attribute list in the tmp directory.
    */
