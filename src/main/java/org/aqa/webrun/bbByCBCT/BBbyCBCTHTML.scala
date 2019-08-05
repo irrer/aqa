@@ -17,19 +17,23 @@ object BBbyCBCTHTML {
 
   private val axisNameList = Seq("X side", "Y top", "Z longitudinal")
   private def idOf(index: Int) = axisNameList(index).replaceAll(" ", "_") + "axisView"
-  private def fileNameOf(index: Int) = axisNameList(index).replaceAll(" ", "_") + "axisView.png"
+  private def fileNameOfFull(index: Int) = axisNameList(index).replaceAll(" ", "_") + "axisViewFull.png"
+  private def fileNameOfAreaOfInterest(index: Int) = axisNameList(index).replaceAll(" ", "_") + "axisViewAOI.png"
   private def titleOf(index: Int) = axisNameList(index) + "View from " + axisNameList(index) + " axis"
 
-  def generateHtml(extendedData: ExtendedData, bbByCBCT: BBbyCBCT, imageXYZ: Seq[BufferedImage], status: ProcedureStatus.Value) = {
+  def generateHtml(extendedData: ExtendedData, bbByCBCT: BBbyCBCT, imageSet: BBbyCBCTAnnotateImages.ImageSet, status: ProcedureStatus.Value) = {
 
     val outputDir = extendedData.output.dir
 
     def writeImg(index: Int) = {
-      val pngFile = new File(outputDir, fileNameOf(index))
-      Util.writePng(imageXYZ(index), pngFile)
+      val pngFileFull = new File(outputDir, fileNameOfFull(index))
+      Util.writePng(imageSet.fullImage(index), pngFileFull)
+
+      val pngFileAoi = new File(outputDir, fileNameOfAreaOfInterest(index))
+      Util.writePng(imageSet.areaOfInterest(index), pngFileAoi)
     }
 
-    imageXYZ.indices.map(i => writeImg(i))
+    Seq(0, 1, 2).map(i => writeImg(i))
 
     val numberText = {
       def fmt(d: Double) = d.formatted("%5.2f")
@@ -64,8 +68,8 @@ object BBbyCBCTHTML {
         <center id={ idOf(index) }>
           { axisNameList(index) }
           View
-          <a href={ fileNameOf(index) }>
-            <img src={ fileNameOf(index) } class="img-responsive" height="512px"/>
+          <a href={ fileNameOfFull(index) }>
+            <img src={ fileNameOfAreaOfInterest(index) } class="img-responsive" height="512px"/>
           </a>
         </center>
       </td>
@@ -76,7 +80,7 @@ object BBbyCBCTHTML {
         { numberText }
         <table class="table table-responsive">
           <tr>
-            { imageXYZ.indices.map(index => imageHtml(index)) }
+            { Seq(0, 1, 2).map(index => imageHtml(index)) }
           </tr>
         </table>
       </div>
@@ -146,7 +150,7 @@ object BBbyCBCTHTML {
 
     val runScript = {
       def zoomy(index: Int) = { "$(document).ready(function(){ $('#" + idOf(index) + "').zoom(); });" }
-      "\n<script>\n      " + imageXYZ.indices.map(index => zoomy(index)).mkString("\n      ") + "\n</script>\n"
+      "\n<script>\n      " + Seq(0, 1, 2).map(index => zoomy(index)).mkString("\n      ") + "\n</script>\n"
     }
 
     val text = WebUtil.wrapBody(wrap, "BB Location by CBCT", None, false, Some(runScript))
