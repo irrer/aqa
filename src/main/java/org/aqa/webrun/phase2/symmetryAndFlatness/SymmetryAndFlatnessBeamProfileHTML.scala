@@ -149,19 +149,19 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
           <div class="col-md-10 col-md-offset-1">
             <div class="row">
               <h2>Transverse Symmetry History</h2>
-              { C3Chart.html(C3Chart.idTagPrefix + Phase2Util.textToId(SymmetryAndFlatnessAnalysis.transverseSymmetryName)) }
+              { C3Chart.html(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.transverseSymmetryName)) }
             </div>
             <div class="row">
               <h2>Axial Symmetry History</h2>
-              { C3Chart.html(C3Chart.idTagPrefix + Phase2Util.textToId(SymmetryAndFlatnessAnalysis.axialSymmetryName)) }
+              { C3Chart.html(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.axialSymmetryName)) }
             </div>
             <div class="row">
               <h2>Flatness History</h2>
-              { C3Chart.html(C3Chart.idTagPrefix + Phase2Util.textToId(SymmetryAndFlatnessAnalysis.flatnessName)) }
+              { C3Chart.html(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.flatnessName)) }
             </div>
             <div class="row">
               <h2>Profile Constancy History</h2>
-              { C3Chart.html(C3Chart.idTagPrefix + Phase2Util.textToId(SymmetryAndFlatnessAnalysis.profileConstancyName)) }
+              { C3Chart.html(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.profileConstancyName)) }
             </div>
           </div>
         </div>

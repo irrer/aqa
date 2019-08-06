@@ -15,10 +15,10 @@ import org.aqa.web.MachineUpdate
 
 object BBbyCBCTHTML {
 
-  private val axisNameList = Seq("X side", "Y top", "Z longitudinal")
-  private def idOf(index: Int) = axisNameList(index).replaceAll(" ", "_") + "axisView"
-  private def fileNameOfFull(index: Int) = axisNameList(index).replaceAll(" ", "_") + "axisViewFull.png"
-  private def fileNameOfAreaOfInterest(index: Int) = axisNameList(index).replaceAll(" ", "_") + "axisViewAOI.png"
+  private val axisNameList = Seq("X Axis : side", "Y Axis : top", "Z Axis : longitudinal")
+  //private def idOf(index: Int) = axisNameList(index).replaceAll(" ", "_") + "axisView"
+  private def fileNameOfFull(index: Int) = Util.textToId(axisNameList(index)) + "axisViewFull.png"
+  private def fileNameOfAreaOfInterest(index: Int) = Util.textToId(axisNameList(index)) + "axisViewAOI.png"
   private def titleOf(index: Int) = axisNameList(index) + "View from " + axisNameList(index) + " axis"
 
   def generateHtml(extendedData: ExtendedData, bbByCBCT: BBbyCBCT, imageSet: BBbyCBCTAnnotateImages.ImageSet, status: ProcedureStatus.Value) = {
@@ -63,14 +63,30 @@ object BBbyCBCTHTML {
       elem
     }
 
-    def imageHtml(index: Int) = {
+    def viewTitle(index: Int) = {
+      <div>
+        { axisNameList(index) }
+        View
+      </div>
+    }
+
+    def imageHtml(index: Int, getImageFileName: Int => String, title: String) = {
+      val name = getImageFileName(index)
+      <div id={ Util.textToId(name) } title={ title }>
+        <a href={ name }>
+          <img src={ name } class="img-responsive"/>
+        </a>
+      </div>
+    }
+
+    def makeSet(index: Int): Elem = {
       <td>
-        <center id={ idOf(index) }>
-          { axisNameList(index) }
-          View
-          <a href={ fileNameOfFull(index) }>
-            <img src={ fileNameOfAreaOfInterest(index) } class="img-responsive" height="512px"/>
-          </a>
+        <center style="margin:50px;">
+          { viewTitle(index) }
+          <br/>
+          { imageHtml(index, fileNameOfAreaOfInterest, "Area of Interest") }
+          <br/>
+          { imageHtml(index, fileNameOfFull, "Full Image") }
         </center>
       </td>
     }
@@ -80,7 +96,7 @@ object BBbyCBCTHTML {
         { numberText }
         <table class="table table-responsive">
           <tr>
-            { Seq(0, 1, 2).map(index => imageHtml(index)) }
+            { Seq(0, 1, 2).map(index => makeSet(index)) }
           </tr>
         </table>
       </div>
@@ -149,7 +165,11 @@ object BBbyCBCTHTML {
     }
 
     val runScript = {
-      def zoomy(index: Int) = { "$(document).ready(function(){ $('#" + idOf(index) + "').zoom(); });" }
+      def zoomy(index: Int) = {
+        "\n" +
+          "      $(document).ready(function(){ $('#" + Util.textToId(fileNameOfAreaOfInterest(index)) + "').zoom(); });\n" +
+          "      $(document).ready(function(){ $('#" + Util.textToId(fileNameOfFull(index)) + "').zoom(); });"
+      }
       "\n<script>\n      " + Seq(0, 1, 2).map(index => zoomy(index)).mkString("\n      ") + "\n</script>\n"
     }
 

@@ -4,6 +4,7 @@ import org.aqa.Logging
 import java.awt.Color
 import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.Util
 
 object C3Chart {
 
@@ -14,7 +15,7 @@ object C3Chart {
   val idTagPrefix = "ChartId_"
 
   def textToChartId(text: String): String = {
-    idTagPrefix + Phase2Util.textToId(text)
+    idTagPrefix + Util.textToId(text)
   }
 
   /**

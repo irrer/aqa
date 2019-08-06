@@ -46,7 +46,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
     val currentDateIndex = dateList.indexWhere(d => output.dataDate.get.getTime == d.getTime)
     val minDateTag = dateListFormatted.head
     val maxDateTag = dateListFormatted.last
-    val chartId = C3Chart.idTagPrefix + Phase2Util.textToId(id)
+    val chartId = C3Chart.idTagPrefix + Util.textToId(id)
 
     val width = None
     val height = None

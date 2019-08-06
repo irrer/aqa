@@ -388,11 +388,6 @@ object Phase2Util extends Logging {
   }
 
   /**
-   * Given arbitrary text, replace all special characters with underscore so it can be used as a JavaScript or XML identifier.
-   */
-  def textToId(text: String) = text.replaceAll("[^0-9a-zA-Z]", "_").replaceAll("__*", "_")
-
-  /**
    * Create a list of points whose sum can be used to measure the center dose of an image.
    */
   def makeCenterDosePointList(attributeList: AttributeList, collimatorCenterOfRotation: Point2D.Double): Seq[Point] = {

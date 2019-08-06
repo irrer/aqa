@@ -18,7 +18,7 @@ import java.awt.BasicStroke
 object BBbyCBCTAnnotateImages {
 
   /** Factor to magnify area of interest image. */
-  private val scaleAoi = 32
+  private val scaleAoi = 16
 
   /** Factor to magnify full sized image. */
   private val scaleFullSized = 8
@@ -36,15 +36,14 @@ object BBbyCBCTAnnotateImages {
     val center_vox = volTrans.mm2vox(origPosition)
 
     // ---------------------------------------------------------------------------------
+    val centerX_pix = (center_vox.getX + 0.5) * scaleAoi
+    val centerY_pix = (center_vox.getY + 0.5) * scaleAoi
 
-    def drawAreaOfInterest = {
+    def makeImage = {
       val zImage = ImageUtil.magnify(originalImage, scaleAoi)
 
       val width = ((Config.DailyPhantomBBPenumbra_mm * 0.5) / voxSize_mm(0)) * scaleAoi
       val height = ((Config.DailyPhantomBBPenumbra_mm * 0.5) / voxSize_mm(1)) * scaleAoi
-
-      val centerX_pix = (center_vox.getX + 0.5) * scaleAoi
-      val centerY_pix = (center_vox.getY + 0.5) * scaleAoi
 
       /**
        * draw circle around BB
@@ -71,7 +70,7 @@ object BBbyCBCTAnnotateImages {
           fmt(bbByCBCT.rtplanY_mm - bbByCBCT.cbctY_mm) + ", " +
           fmt(bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm)
 
-        ImageText.setFont(graphics, ImageText.DefaultFont, 40)
+        ImageText.setFont(graphics, ImageText.DefaultFont, 30)
         ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix - (height / 2) + 10, bbText, 90)
       }
 
@@ -99,44 +98,26 @@ object BBbyCBCTAnnotateImages {
           rnd(planXcenter + scaleAoi), rnd(planYcenter))
       }
 
-      def cropImage(zImage: BufferedImage) = {
-        val xRadius = (Config.DailyPhantomSearchDistance_mm / voxSize_mm(0)) * scaleAoi
-        val yRadius = (Config.DailyPhantomSearchDistance_mm / voxSize_mm(1)) * scaleAoi
-
-        val aoi = zImage.getSubimage(rnd(centerX_pix - xRadius), rnd(centerY_pix - yRadius), rnd(xRadius * 2), rnd(yRadius * 2))
-        aoi
-      }
-
       drawCircle(zImage)
       drawOffsetNumbers(zImage)
       drawPlanCenter(zImage)
-      val aoi = cropImage(zImage)
-      aoi
-    }
-
-    /**
-     * Make an enlarged version of the image with a circle centered around the BB.  If the user
-     * wants more detail they should refer to the area of interest image.
-     */
-    def drawFullSizedImage = {
-      val zImage = ImageUtil.magnify(originalImage, scaleFullSized)
-
-      val width = ((Config.DailyPhantomBBPenumbra_mm * 1.0) / voxSize_mm(0)) * scaleFullSized
-      val height = ((Config.DailyPhantomBBPenumbra_mm * 1.0) / voxSize_mm(1)) * scaleFullSized
-
-      val centerX_pix = (center_vox.getX + 0.5) * scaleFullSized
-      val centerY_pix = (center_vox.getY + 0.5) * scaleFullSized
-
-      val graphics = ImageUtil.getGraphics(zImage)
-      graphics.setColor(Color.white)
-      graphics.setStroke(new BasicStroke(3.toFloat))
-
-      graphics.drawOval(rnd(centerX_pix - (width / 2)), rnd(centerY_pix - (height / 2)), rnd(width), rnd(height))
-
       zImage
     }
 
-    new ImagePair(drawFullSizedImage, drawAreaOfInterest)
+    def cropImage(image: BufferedImage) = {
+      val xRadius = ((Config.DailyPhantomSearchDistance_mm / 3.0) / voxSize_mm(0)) * scaleAoi
+      val yRadius = ((Config.DailyPhantomSearchDistance_mm / 3.0) / voxSize_mm(1)) * scaleAoi
+
+      val aoi = image.getSubimage(rnd(centerX_pix - xRadius), rnd(centerY_pix - yRadius), rnd(xRadius * 2), rnd(yRadius * 2))
+      aoi
+    }
+
+    val full = makeImage
+    val aoi = cropImage(full)
+
+    Util.addAxisLabels(aoi, "X Axis", "Y Axis", Color.white)
+
+    new ImagePair(full, aoi)
   }
 
   /**

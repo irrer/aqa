@@ -72,7 +72,7 @@ object LeafPositionHTML extends Logging {
    */
   private def makeBeamHtml(subDir: File, extendedData: ExtendedData, runReq: RunReq, beamResult: LeafPositionAnalysis.BeamResults): (String, String) = {
     val beamName = beamResult.beamName
-    val htmlFileName = Phase2Util.textToId(beamName) + ".html"
+    val htmlFileName = Util.textToId(beamName) + ".html"
     val htmlFile = new File(subDir, htmlFileName)
     val url = WebServer.urlOfResultsFile(htmlFile)
     val maxOffset = beamResult.resultList.map(_.offset_mm).maxBy(_.abs)
@@ -83,7 +83,7 @@ object LeafPositionHTML extends Logging {
 
     val translator = new IsoImagePlaneTranslator(derived.attributeList)
     val image = LeafPositionAnnotateImage.annotateImage(beamResult.resultList, horizontal, derived.pixelCorrectedImage, leafWidthList_mm, translator)
-    val imageFileName = Phase2Util.textToId(beamName) + ".png"
+    val imageFileName = Util.textToId(beamName) + ".png"
     val imageFile = new File(subDir, imageFileName)
     Util.writePng(image, imageFile)
     val imageUrl = WebServer.urlOfResultsFile(imageFile)

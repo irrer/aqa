@@ -624,7 +624,8 @@ object Util extends Logging {
     Util.addGraticules(image, x2Pix _, y2Pix _, pix2X _, pix2Y _, Color.gray)
   }
 
-  def addAxialAndTransverse(image: BufferedImage): Unit = {
+  def addAxisLabels(image: BufferedImage, horzLabel: String, vertLabel: String, color: Color) = {
+
     val fromEdge = 40 // number of pixels from edge to put arrows.
     val lineThickness: Float = 3
     val arrowLength = 5
@@ -633,7 +634,7 @@ object Util extends Logging {
     val offset = 3
 
     val graphics = ImageUtil.getGraphics(image)
-    graphics.setColor(Color.gray)
+    graphics.setColor(color)
     ImageUtil.setSolidLine(graphics)
 
     graphics.setStroke(new BasicStroke(lineThickness))
@@ -651,12 +652,11 @@ object Util extends Logging {
       graphics.drawLine(rightX, y, rightX - arrowLength, y - arw)
       graphics.drawLine(rightX, y, rightX - arrowLength, y + arw)
 
-      val text = "Transverse"
       val yText = {
-        val textDim = ImageText.getTextDimensions(graphics, text)
+        val textDim = ImageText.getTextDimensions(graphics, horzLabel)
         image.getHeight - fromEdge - (textDim.getHeight / 2 + 3)
       }
-      ImageText.drawTextCenteredAt(graphics, image.getWidth / 3, yText, text)
+      ImageText.drawTextCenteredAt(graphics, image.getWidth / 3, yText, horzLabel)
     }
 
     def axial = {
@@ -671,16 +671,19 @@ object Util extends Logging {
       graphics.drawLine(x, bottomY, x - arw, bottomY - arrowLength)
       graphics.drawLine(x, bottomY, x + arw, bottomY - arrowLength)
 
-      val text = "Axial"
-      val textDim = ImageText.getTextDimensions(graphics, text)
+      val textDim = ImageText.getTextDimensions(graphics, vertLabel)
       val xText = fromEdge + offset
 
       val yText = image.getHeight / 3
-      graphics.drawString(text, xText, yText)
+      graphics.drawString(vertLabel, xText, yText)
     }
 
     trans
     axial
+  }
+
+  def addAxialAndTransverse(image: BufferedImage): Unit = {
+    addAxisLabels(image, "Transverse", "Axial", Color.gray)
   }
 
   /**
@@ -902,5 +905,10 @@ object Util extends Logging {
     val list = BeamSequence.map(bs => beamSeqToIsocenter(bs)).flatten.flatten
     list
   }
+
+  /**
+   * Given arbitrary text, replace all special characters with underscore so it can be used as a JavaScript or XML identifier.
+   */
+  def textToId(text: String) = text.replaceAll("[^0-9a-zA-Z]", "_").replaceAll("__*", "_")
 
 }
