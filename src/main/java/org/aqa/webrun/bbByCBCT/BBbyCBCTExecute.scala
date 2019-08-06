@@ -73,23 +73,32 @@ object BBbyCBCTExecute extends Logging {
     try {
       // This code only reports values without making judgment as to pass or fail.
       logger.info("Starting analysis of CBCT Alignment")
+      Trace.trace
       val result = BBbyCBCTAnalysis.volumeAnalysis(runReq.cbct)
+      Trace.trace
       if (result.isRight) {
+        Trace.trace
         val volumePoint = result.right.get._1
         val imageXYZ = result.right.get._2
         logger.info("Found BB in CBCT volume.  XYZ Coordinates in original CBCT space: " +
           Util.fmtDbl(volumePoint.getX) + ", " + Util.fmtDbl(volumePoint.getY) + ", " + Util.fmtDbl(volumePoint.getZ))
 
         // transform the cbct point if necessary.  If it is already in the same frame of reference, then it is not necessary
+        Trace.trace
         val bbPointInRtplan = {
           if (runReq.reg.isDefined) runReq.reg.get.transform(volumePoint)
           else volumePoint
         }
 
+        Trace.trace
         val rtplanIsocenter = Util.getPlanIsocenterList(runReq.rtplan).head
+        Trace.trace
         val bbByCBCT = saveToDb(extendedData, runReq, bbPointInRtplan)
+        Trace.trace
         val annotatedImages = BBbyCBCTAnnotateImages.annotate(bbByCBCT, imageXYZ, runReq, volumePoint) // TODO do something with images
+        Trace.trace
         val html = BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, annotatedImages, ProcedureStatus.done)
+        Trace.trace
         logger.info("Finished analysis of CBCT Alignment")
         ProcedureStatus.done
       } else {
