@@ -115,10 +115,10 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
   private case class RunRequirementsLOC(machine: Machine, sessionDir: File, alList: Seq[AttributeList]);
 
   private def validate(valueMap: ValueMapT): Either[StyleMapT, RunRequirementsLOC] = {
-    lazy val alList = attributeListsInSession(valueMap)
+    lazy val alList = dicomFilesInSession(valueMap).map(df => df.attributeList).flatten
 
     // machines that DICOM files reference (based on device serial numbers)
-    lazy val machList = alList.map(al => attributeListToMachine(al)).flatten.distinct
+    lazy val machList = alList.map(al => Machine.attributeListToMachine(al)).flatten.distinct
 
     // The machine to use
     lazy val mach = machList.headOption
