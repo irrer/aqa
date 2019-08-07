@@ -18,32 +18,45 @@ import java.awt.BasicStroke
 object BBbyCBCTAnnotateImages {
 
   /** Factor to magnify area of interest image. */
-  private val scaleAoi = 32
+  private val scale = 32
 
-  /** Factor to magnify full sized image. */
-  private val scaleFullSized = 8
-
-  private def fmt(d: Double) = d.formatted("%8.3f")
+  private val textPointSize = 30
 
   case class ImageSet(fullImage: Seq[BufferedImage], areaOfInterest: Seq[BufferedImage]);
 
   private case class ImagePair(fullImage: BufferedImage, areaOfInterest: BufferedImage);
 
-  private def xMakePair(bbByCBCT: BBbyCBCT, voxSize_mm: Seq[Double], volTrans: VolumeTranslator, originalImage: BufferedImage, origPosition: Point3d): ImagePair = {
+  /**
+   * Make a pair of images for a single axis orientation.
+   *
+   * @param bbByCBCT Results of analysis, stored in database
+   *
+   * @param voxSizeX_mm, voxSizeY_mm Size of X and Y voxels in generated image for this orientation
+   *
+   * @param centerX_pix, centerY_pix Center of X and Y voxels in generated image for this orientation
+   *
+   * @param xAxisName, yAxisName Names of X and Y axis
+   *
+   * @param originalImage Image for this orientation
+   */
+  private def makePair(
+    bbByCBCT: BBbyCBCT,
+    voxSizeX_mm: Double, voxSizeY_mm: Double,
+    centerX_pix: Double, centerY_pix: Double,
+    xAxisName: String, yAxisName: String,
+    originalImage: BufferedImage): ImagePair = {
 
     def rnd(d: Double) = d.round.toInt
 
-    val center_vox = volTrans.mm2vox(origPosition)
-
     // ---------------------------------------------------------------------------------
-    val centerX_pix = (center_vox.getZ + 0.5) * scaleAoi
-    val centerY_pix = (center_vox.getY + 0.5) * scaleAoi
 
-    def makeImage = {
-      val zImage = ImageUtil.magnify(originalImage, scaleAoi)
+    def makeFullImage = {
+      val image = ImageUtil.magnify(originalImage, scale)
 
-      val width = ((Config.DailyPhantomBBPenumbra_mm * 0.5) / voxSize_mm(2)) * scaleAoi * (voxSize_mm(2) / voxSize_mm(1))
-      val height = ((Config.DailyPhantomBBPenumbra_mm * 0.5) / voxSize_mm(1)) * scaleAoi
+      val maxVoxSize = Math.max(voxSizeX_mm, voxSizeY_mm) // larger voxel dimension
+      val minVoxSize = Math.min(voxSizeX_mm, voxSizeY_mm) // smaller voxel dimension
+      val width = ((Config.DailyPhantomBBPenumbra_mm * 0.5) / voxSizeX_mm) * scale * (maxVoxSize / minVoxSize)
+      val height = ((Config.DailyPhantomBBPenumbra_mm * 0.5) / voxSizeY_mm) * scale
 
       /**
        * draw circle around BB
@@ -62,15 +75,17 @@ object BBbyCBCTAnnotateImages {
       // ---------------------------------------------------------------------------------
 
       def drawOffsetNumbers(zImage: BufferedImage) = {
+        def fmt(d: Double) = d.formatted("%8.2f")
         val graphics = ImageUtil.getGraphics(zImage)
         graphics.setColor(Color.white)
         // show BB offset from plan
-        val bbText = "Offset: " +
+        val bbText = (
+          "Offset: " +
           fmt(bbByCBCT.rtplanX_mm - bbByCBCT.cbctX_mm) + ", " +
           fmt(bbByCBCT.rtplanY_mm - bbByCBCT.cbctY_mm) + ", " +
-          fmt(bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm)
+          fmt(bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm)).replaceAll("  *", " ")
 
-        ImageText.setFont(graphics, ImageText.DefaultFont, 30)
+        ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
         ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix - (height / 2) + 10, bbText, 90)
       }
 
@@ -81,32 +96,47 @@ object BBbyCBCTAnnotateImages {
         graphics.setColor(Color.red)
 
         val planXcenter = {
-          val diff = (bbByCBCT.cbctZ_mm - bbByCBCT.rtplanZ_mm) / voxSize_mm(2)
-          centerX_pix + (diff * scaleAoi)
+          val diff = (bbByCBCT.cbctZ_mm - bbByCBCT.rtplanZ_mm) / voxSizeX_mm
+          centerX_pix + (diff * scale)
         }
 
         val planYcenter = {
-          val diff = (bbByCBCT.cbctY_mm - bbByCBCT.rtplanY_mm) / voxSize_mm(1)
-          centerY_pix + (diff * scaleAoi)
+          val diff = (bbByCBCT.cbctY_mm - bbByCBCT.rtplanY_mm) / voxSizeY_mm
+          centerY_pix + (diff * scale)
         }
 
         graphics.drawLine(
-          rnd(planXcenter), rnd(planYcenter - scaleAoi),
-          rnd(planXcenter), rnd(planYcenter + scaleAoi))
+          rnd(planXcenter), rnd(planYcenter - scale),
+          rnd(planXcenter), rnd(planYcenter + scale))
         graphics.drawLine(
-          rnd(planXcenter - scaleAoi), rnd(planYcenter),
-          rnd(planXcenter + scaleAoi), rnd(planYcenter))
+          rnd(planXcenter - scale), rnd(planYcenter),
+          rnd(planXcenter + scale), rnd(planYcenter))
       }
 
-      drawCircle(zImage)
-      drawOffsetNumbers(zImage)
-      drawPlanCenter(zImage)
-      zImage
+      // ---------------------------------------------------------------------------------
+
+      def drawPlanText(zImage: BufferedImage) = {
+        val graphics = ImageUtil.getGraphics(zImage)
+        graphics.setColor(Color.red)
+        // show BB offset from plan
+        val text = "'+' is Plan Center"
+
+        ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
+        ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix + (height / 2) + scale, text, 90)
+      }
+
+      drawCircle(image)
+      drawOffsetNumbers(image)
+      drawPlanCenter(image)
+      drawPlanText(image)
+      image
     }
 
+    // ---------------------------------------------------------------------------------
+
     def cropImage(image: BufferedImage) = {
-      val xRadius = ((Config.DailyPhantomSearchDistance_mm / 3.0) / voxSize_mm(2)) * scaleAoi
-      val yRadius = ((Config.DailyPhantomSearchDistance_mm / 3.0) / voxSize_mm(1)) * scaleAoi
+      val xRadius = ((Config.DailyPhantomSearchDistance_mm / 3.0) / voxSizeX_mm) * scale
+      val yRadius = ((Config.DailyPhantomSearchDistance_mm / 3.0) / voxSizeY_mm) * scale
 
       val x = Math.max(0, rnd(centerX_pix - xRadius))
       val y = Math.max(0, rnd(centerY_pix - yRadius))
@@ -122,202 +152,12 @@ object BBbyCBCTAnnotateImages {
       aoi
     }
 
-    val full = makeImage
-    val aoi = cropImage(full)
-
-    Util.addAxisLabels(aoi, "Z Axis", "Y Axis", Color.white)
-
-    new ImagePair(full, aoi)
-  }
-
-  private def yMakePair(bbByCBCT: BBbyCBCT, voxSize_mm: Seq[Double], volTrans: VolumeTranslator, originalImage: BufferedImage, origPosition: Point3d): ImagePair = {
-
-    def rnd(d: Double) = d.round.toInt
-
-    val center_vox = volTrans.mm2vox(origPosition)
-
     // ---------------------------------------------------------------------------------
-    val centerX_pix = (center_vox.getZ + 0.5) * scaleAoi
-    val centerY_pix = (center_vox.getX + 0.5) * scaleAoi
 
-    def makeImage = {
-      val zImage = ImageUtil.magnify(originalImage, scaleAoi)
-
-      val width = ((Config.DailyPhantomBBPenumbra_mm * 0.5) / voxSize_mm(2)) * scaleAoi * (voxSize_mm(2) / voxSize_mm(0))
-      val height = ((Config.DailyPhantomBBPenumbra_mm * 0.5) / voxSize_mm(0)) * scaleAoi
-
-      /**
-       * draw circle around BB
-       */
-      def drawCircle(zImage: BufferedImage) = {
-        val graphics = ImageUtil.getGraphics(zImage)
-        graphics.setColor(Color.white)
-
-        graphics.drawOval(rnd(centerX_pix - (width / 2)), rnd(centerY_pix - (height / 2)), rnd(width), rnd(height))
-
-        val radius = Math.sqrt((width * width) + (height * height)) / 4
-        graphics.drawLine(rnd(centerX_pix - radius + 1), rnd(centerY_pix - radius), rnd(centerX_pix + radius), rnd(centerY_pix + radius))
-        graphics.drawLine(rnd(centerX_pix + radius - 1), rnd(centerY_pix - radius), rnd(centerX_pix - radius), rnd(centerY_pix + radius))
-      }
-
-      // ---------------------------------------------------------------------------------
-
-      def drawOffsetNumbers(zImage: BufferedImage) = {
-        val graphics = ImageUtil.getGraphics(zImage)
-        graphics.setColor(Color.white)
-        // show BB offset from plan
-        val bbText = "Offset: " +
-          fmt(bbByCBCT.rtplanX_mm - bbByCBCT.cbctX_mm) + ", " +
-          fmt(bbByCBCT.rtplanY_mm - bbByCBCT.cbctY_mm) + ", " +
-          fmt(bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm)
-
-        ImageText.setFont(graphics, ImageText.DefaultFont, 30)
-        ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix - (height / 2) + 10, bbText, 90)
-      }
-
-      // ---------------------------------------------------------------------------------
-
-      def drawPlanCenter(zImage: BufferedImage) = {
-        val graphics = ImageUtil.getGraphics(zImage)
-        graphics.setColor(Color.red)
-
-        val planXcenter = {
-          val diff = (bbByCBCT.cbctZ_mm - bbByCBCT.rtplanZ_mm) / voxSize_mm(2)
-          centerX_pix + (diff * scaleAoi)
-        }
-
-        val planYcenter = {
-          val diff = (bbByCBCT.cbctX_mm - bbByCBCT.rtplanX_mm) / voxSize_mm(0)
-          centerY_pix + (diff * scaleAoi)
-        }
-
-        graphics.drawLine(
-          rnd(planXcenter), rnd(planYcenter - scaleAoi),
-          rnd(planXcenter), rnd(planYcenter + scaleAoi))
-        graphics.drawLine(
-          rnd(planXcenter - scaleAoi), rnd(planYcenter),
-          rnd(planXcenter + scaleAoi), rnd(planYcenter))
-      }
-
-      drawCircle(zImage)
-      drawOffsetNumbers(zImage)
-      drawPlanCenter(zImage)
-      zImage
-    }
-
-    def cropImage(image: BufferedImage) = {
-      val xRadius = ((Config.DailyPhantomSearchDistance_mm / 3.0) / voxSize_mm(2)) * scaleAoi
-      val yRadius = ((Config.DailyPhantomSearchDistance_mm / 3.0) / voxSize_mm(0)) * scaleAoi
-
-      val x = Math.max(0, rnd(centerX_pix - xRadius))
-      val y = Math.max(0, rnd(centerY_pix - yRadius))
-      val width = {
-        val w = rnd(xRadius * 2)
-        if ((w + x) > image.getWidth) image.getWidth else w
-      }
-      val height = {
-        val h = rnd(yRadius * 2)
-        if ((h + y) > image.getHeight) image.getHeight else h
-      }
-      val aoi = image.getSubimage(x, y, width, height)
-      aoi
-    }
-
-    val full = makeImage
+    val full = makeFullImage
     val aoi = cropImage(full)
 
-    Util.addAxisLabels(aoi, "Z Axis", "X Axis", Color.white)
-
-    new ImagePair(full, aoi)
-  }
-
-  private def zMakePair(bbByCBCT: BBbyCBCT, voxSize_mm: Seq[Double], volTrans: VolumeTranslator, originalImage: BufferedImage, origPosition: Point3d): ImagePair = {
-
-    def rnd(d: Double) = d.round.toInt
-
-    val center_vox = volTrans.mm2vox(origPosition)
-
-    // ---------------------------------------------------------------------------------
-    val centerX_pix = (center_vox.getX + 0.5) * scaleAoi
-    val centerY_pix = (center_vox.getY + 0.5) * scaleAoi
-
-    def makeImage = {
-      val zImage = ImageUtil.magnify(originalImage, scaleAoi)
-
-      val width = ((Config.DailyPhantomBBPenumbra_mm * 0.5) / voxSize_mm(0)) * scaleAoi
-      val height = ((Config.DailyPhantomBBPenumbra_mm * 0.5) / voxSize_mm(1)) * scaleAoi
-
-      /**
-       * draw circle around BB
-       */
-      def drawCircle(zImage: BufferedImage) = {
-        val graphics = ImageUtil.getGraphics(zImage)
-        graphics.setColor(Color.white)
-
-        graphics.drawOval(rnd(centerX_pix - (width / 2)), rnd(centerY_pix - (height / 2)), rnd(width), rnd(height))
-
-        val radius = Math.sqrt((width * width) + (height * height)) / 4
-        graphics.drawLine(rnd(centerX_pix - radius + 1), rnd(centerY_pix - radius), rnd(centerX_pix + radius), rnd(centerY_pix + radius))
-        graphics.drawLine(rnd(centerX_pix + radius - 1), rnd(centerY_pix - radius), rnd(centerX_pix - radius), rnd(centerY_pix + radius))
-      }
-
-      // ---------------------------------------------------------------------------------
-
-      def drawOffsetNumbers(zImage: BufferedImage) = {
-        val graphics = ImageUtil.getGraphics(zImage)
-        graphics.setColor(Color.white)
-        // show BB offset from plan
-        val bbText = "Offset: " +
-          fmt(bbByCBCT.rtplanX_mm - bbByCBCT.cbctX_mm) + ", " +
-          fmt(bbByCBCT.rtplanY_mm - bbByCBCT.cbctY_mm) + ", " +
-          fmt(bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm)
-
-        ImageText.setFont(graphics, ImageText.DefaultFont, 30)
-        ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix - (height / 2) + 10, bbText, 90)
-      }
-
-      // ---------------------------------------------------------------------------------
-
-      def drawPlanCenter(zImage: BufferedImage) = {
-        val graphics = ImageUtil.getGraphics(zImage)
-        graphics.setColor(Color.red)
-
-        val planXcenter = {
-          val diff = (bbByCBCT.cbctX_mm - bbByCBCT.rtplanX_mm) / voxSize_mm(0)
-          centerX_pix + (diff * scaleAoi)
-        }
-
-        val planYcenter = {
-          val diff = (bbByCBCT.cbctY_mm - bbByCBCT.rtplanY_mm) / voxSize_mm(1)
-          centerY_pix + (diff * scaleAoi)
-        }
-
-        graphics.drawLine(
-          rnd(planXcenter), rnd(planYcenter - scaleAoi),
-          rnd(planXcenter), rnd(planYcenter + scaleAoi))
-        graphics.drawLine(
-          rnd(planXcenter - scaleAoi), rnd(planYcenter),
-          rnd(planXcenter + scaleAoi), rnd(planYcenter))
-      }
-
-      drawCircle(zImage)
-      drawOffsetNumbers(zImage)
-      drawPlanCenter(zImage)
-      zImage
-    }
-
-    def cropImage(image: BufferedImage) = {
-      val xRadius = ((Config.DailyPhantomSearchDistance_mm / 3.0) / voxSize_mm(0)) * scaleAoi
-      val yRadius = ((Config.DailyPhantomSearchDistance_mm / 3.0) / voxSize_mm(1)) * scaleAoi
-
-      val aoi = image.getSubimage(rnd(centerX_pix - xRadius), rnd(centerY_pix - yRadius), rnd(xRadius * 2), rnd(yRadius * 2))
-      aoi
-    }
-
-    val full = makeImage
-    val aoi = cropImage(full)
-
-    Util.addAxisLabels(aoi, "X Axis", "Y Axis", Color.white)
+    Util.addAxisLabels(aoi, xAxisName, yAxisName, Color.white)
 
     new ImagePair(full, aoi)
   }
@@ -341,11 +181,32 @@ object BBbyCBCTAnnotateImages {
     val volTrans = new VolumeTranslator(runReq.cbct)
     Trace.trace
 
-    val xImagePair = xMakePair(bbByCBCT, voxSize_mm, volTrans, imageXYZ(0), origPosition)
+    val center_vox = volTrans.mm2vox(origPosition)
+    val centerX_pix = (center_vox.getX + 0.5) * scale
+    val centerY_pix = (center_vox.getY + 0.5) * scale
+    val centerZ_pix = (center_vox.getZ + 0.5) * scale
     Trace.trace
-    val yImagePair = yMakePair(bbByCBCT, voxSize_mm, volTrans, imageXYZ(1), origPosition)
+
+    val xImagePair = makePair(
+      bbByCBCT,
+      voxSize_mm(2), voxSize_mm(1),
+      centerZ_pix, centerY_pix,
+      "Z axis", "Y axis", imageXYZ(0))
     Trace.trace
-    val zImagePair = zMakePair(bbByCBCT, voxSize_mm, volTrans, imageXYZ(2), origPosition)
+
+    val yImagePair = makePair(
+      bbByCBCT,
+      voxSize_mm(2), voxSize_mm(0),
+      centerZ_pix, centerX_pix,
+      "Z axis", "X axis", imageXYZ(1))
+    Trace.trace
+
+    val zImagePair = makePair(
+      bbByCBCT,
+      voxSize_mm(0), voxSize_mm(1),
+      centerX_pix, centerY_pix,
+      "X axis", "Y axis", imageXYZ(2))
+
     Trace.trace
 
     val imageSet = new ImageSet(
