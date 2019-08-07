@@ -6,6 +6,8 @@ import org.aqa.Config
 import edu.umro.ScalaUtil.FileUtil
 import java.io.File
 import edu.umro.util.Utility
+import com.pixelmed.dicom.AttributeList
+import org.aqa.Util
 
 case class Machine(
   machinePK: Option[Long], // primary key
@@ -215,6 +217,20 @@ object Machine extends Logging {
     } else 0
   }
 
+  /**
+   * Given an attribute list, determine which machines' DICOM files match according to DeviceSerialNumber.
+   */
+  def attributeListToMachine(attributeList: AttributeList): Option[Machine] = {
+    try {
+      Util.attributeListToDeviceSerialNumber(attributeList) match {
+        case Some(serNo) => Machine.findMachinesBySerialNumber(serNo).headOption
+        case _ => None
+      }
+    } catch {
+      case t: Throwable =>
+        None
+    }
+  }
   def main(args: Array[String]): Unit = {
     val valid = Config.validate
     DbSetup.init

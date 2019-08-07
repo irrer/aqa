@@ -315,7 +315,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   private def validateMachineSelection(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, Machine] = {
     val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
     // machines that DICOM files reference (based on device serial numbers)
-    val referencedMachines = rtimageList.map(df => attributeListToMachine(df.attributeList.get)).flatten.distinct
+    val referencedMachines = rtimageList.map(df => Machine.attributeListToMachine(df.attributeList.get)).flatten.distinct
     val chosenMachine = for (pkTxt <- valueMap.get(machineSelector.label); pk <- Util.stringToLong(pkTxt); m <- Machine.get(pk)) yield m
 
     val result: Either[StyleMapT, Machine] = 0 match {

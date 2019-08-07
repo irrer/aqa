@@ -776,13 +776,6 @@ object WebUtil extends Logging {
       val shouldShow: Boolean = {
         val attrListList = dicomFilesInSession(valueMap).map(df => df.attributeList).flatten
 
-        def isRtplan(al: AttributeList): Boolean = {
-          val attr = al.get(TagFromName.SOPClassUID)
-          if (attr == null) false
-          else
-            attr.getSingleStringValueOrEmptyString.equals(SOPClass.RTPlanStorage)
-        }
-
         def serialNumberOf(al: AttributeList): Option[String] = {
           val attr = al.get(TagFromName.DeviceSerialNumber)
           if (attr == null) None
@@ -1135,36 +1128,12 @@ object WebUtil extends Logging {
     }
   }
 
-  def attributeListToDeviceSerialNumber(al: AttributeList): Option[String] = {
-    val at = al.get(TagFromName.DeviceSerialNumber)
-    if (at == null) None
-    else {
-      val ser = at.getSingleStringValueOrNull
-      if ((ser != null) && ser.trim.nonEmpty) Some(ser.trim) else None
-    }
-  }
-
-  /**
-   * Given a value map, determine which machines' DICOM files have been uploaded to the session.
-   */
-  def attributeListToMachine(attributeList: AttributeList): Option[Machine] = {
-    try {
-      attributeListToDeviceSerialNumber(attributeList) match {
-        case Some(serNo) => Machine.findMachinesBySerialNumber(serNo).headOption
-        case _ => None
-      }
-    } catch {
-      case t: Throwable =>
-        None
-    }
-  }
-
   /**
    * Given a value map, determine which machines' DICOM files have been uploaded to the session.
    */
   def machinesInSession(valueMap: ValueMapT): Seq[Machine] = {
     try {
-      attributeListsInSession(valueMap).map(al => attributeListToMachine(al)).flatten
+      attributeListsInSession(valueMap).map(al => Machine.attributeListToMachine(al)).flatten
     } catch {
       case t: Throwable =>
         Seq[Machine]()
@@ -1191,7 +1160,7 @@ object WebUtil extends Logging {
     }
     lazy val alList = attributeListsInSession(valueMap)
 
-    lazy val machList = alList.map(al => attributeListToMachine(al)).flatten
+    lazy val machList = alList.map(al => Machine.attributeListToMachine(al)).flatten
 
     alList match {
       case _ if fileList.isEmpty => false

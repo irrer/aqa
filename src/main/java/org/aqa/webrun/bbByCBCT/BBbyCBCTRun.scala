@@ -105,6 +105,8 @@ object BBbyCBCTRun extends Logging {
   //      case Some(timestamp) => Some(timestamp.getTime)
   //    }
   //
+  //              val runReq = new BBbyCBCTRunReq(rtplanAndReg.get._1, rtplanAndReg.get._2, cbctList, machineCheck.right.get)
+  //
   //    val runReq = {
   //      val rtplanFile = new File(Config.sharedDir, Phase2Util.referencedPlanUID(rtimageList.head) + Util.dicomFileNameSuffix)
   //      val rtplan = new DicomFile(rtplanFile)
@@ -237,9 +239,16 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   }
 
   private def validateMachineSelection(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, Machine] = {
-    val imageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage) || df.isModality(SOPClass.CTImageStorage))
+    val machineRelatedList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage) || df.isModality(SOPClass.CTImageStorage) || df.isModality(SOPClass.SpatialRegistrationStorage))
     // machines that DICOM files reference (based on device serial numbers)
-    val referencedMachines = imageList.map(df => attributeListToMachine(df.attributeList.get)).flatten.distinct
+    if (true) { // TODO rm
+      val j1 = dicomFileList.size
+      val j2 = machineRelatedList.size
+      val j = machineRelatedList.map(al => al.attributeList.get.get(TagFromName.DeviceSerialNumber)).filterNot(_ == null).map(a => a.getSingleStringValueOrEmptyString).distinct
+      val j3 = dicomFileList.filter(df => df.isModality(SOPClass.SpatialRegistrationStorage))
+      Trace.trace("dicomFileList.size: " + dicomFileList.size + "    machineRelatedList.size: " + machineRelatedList.size + "   DeviceSerialNumber: " + j)
+    }
+    val referencedMachines = machineRelatedList.map(df => Machine.attributeListToMachine(df.attributeList.get)).flatten.distinct
     val chosenMachine = for (pkTxt <- valueMap.get(machineSelector.label); pk <- Util.stringToLong(pkTxt); m <- Machine.get(pk)) yield m
 
     val result: Either[StyleMapT, Machine] = 0 match {
@@ -339,7 +348,16 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   /**
    * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
    */
-  private def validate(valueMap: ValueMapT, rtplanList: Seq[DicomFile], regList: Seq[DicomFile], cbctList: Seq[DicomFile]): Either[StyleMapT, BBbyCBCTRunReq] = {
+  private def validate(valueMap: ValueMapT): Either[StyleMapT, BBbyCBCTRunReq] = {
+    val dicomFileList = dicomFilesInSession(valueMap)
+    val cbctList = dicomFileList.filter(df => df.isModality(SOPClass.CTImageStorage)).sortBy(df => Util.slicePosition(df.attributeList.get))
+    // CBCT frame of reference.  If there is more than one CBCT series, then the data will be rejected anyway
+    val cbctFrameOfRef = getFrameOfRef(cbctList.head.attributeList.get)
+    // Make a list of REG files that support the CBCT's frame of reference.  We don't care about the other REG files.
+    val regList = dicomFileList.filter(df => df.isModality(SOPClass.SpatialRegistrationStorage) && new ImageRegistration(df.attributeList.get).otherFrameOfRefUID.equals(cbctFrameOfRef))
+    val rtplanList = dicomFileList.filter(df => df.isModality(SOPClass.RTPlanStorage))
+    val machineCheck = validateMachineSelection(valueMap, cbctList)
+
     logger.info("Number of files uploaded:  RTPLAN: " + rtplanList.size + "    REG: " + regList.size + "    CBCT: " + cbctList.size)
 
     def numSeries(dfList: Seq[DicomFile]): Int = dfList.map(df => df.attributeList.get.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString).distinct.sorted.size
@@ -367,8 +385,11 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   /**
    * Given an image list, find the one with the earliest date/time.
    */
-  private def dateTimePatId(rtimageList: Seq[DicomFile]): Util.DateTimeAndPatientId = {
-    val list = rtimageList.map(df => Util.dateTimeAndPatientIdFromDicom(df.file)).filter(dt => dt.dateTime.isDefined)
+  private def dateTimePatId(rtimageList: Seq[AttributeList]): Util.DateTimeAndPatientId = {
+    val list = rtimageList.map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al)).filter(dt => dt._1.nonEmpty && dt._2.isDefined)
+    val date = list.map(dp => dp._1.head).minBy(d => d.getTime)
+    val patient = list.map(dp => dp._2).flatten.headOption
+    ???
     val dtap =
       if (list.isEmpty) new Util.DateTimeAndPatientId(None, None)
       else list.minBy(dt => dt.dateTime.get)
@@ -394,23 +415,15 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
    * Respond to the 'Run' button.
    */
   private def runIfDataValid(valueMap: ValueMapT, request: Request, response: Response) = {
-    val dicomFileList = dicomFilesInSession(valueMap)
-    val cbctList = dicomFileList.filter(df => df.isModality(SOPClass.CTImageStorage)).sortBy(df => Util.slicePosition(df.attributeList.get))
-    // CBCT frame of reference.  If there is more than one CBCT series, then the data will be rejected anyway
-    val cbctFrameOfRef = getFrameOfRef(cbctList.head.attributeList.get)
-    // Make a list of REG files that support the CBCT's frame of reference.  We don't care about the other REG files.
-    val regList = dicomFileList.filter(df => df.isModality(SOPClass.SpatialRegistrationStorage) && new ImageRegistration(df.attributeList.get).otherFrameOfRefUID.equals(cbctFrameOfRef))
-    val rtplanList = dicomFileList.filter(df => df.isModality(SOPClass.RTPlanStorage))
-    val machineCheck = validateMachineSelection(valueMap, cbctList)
 
-    validate(valueMap, rtplanList, regList, cbctList) match {
+    validate(valueMap) match {
       case Left(errMap) => {
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
       case Right(runReq) => {
         logger.info("Validating data")
         // only consider the CBCT files for the date-time stamp.  The plan could have been from months ago.
-        val dtp = dateTimePatId(cbctList)
+        val dtp = dateTimePatId(runReq.cbct)
 
         val sessDir = sessionDir(valueMap).get
         val inputOutput = Run.preRun(procedure, machineCheck.right.get, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)

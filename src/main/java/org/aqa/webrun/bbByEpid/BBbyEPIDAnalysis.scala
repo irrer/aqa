@@ -15,11 +15,14 @@ object BBbyEPIDAnalysis extends Logging {
 
   case class BBbyEPIDResult(summry: Elem, sts: ProcedureStatus.Value, position: Seq[Point3d], images: Seq[BufferedImage])
 
+  
+  
+  
   def runProcedure(extendedData: ExtendedData, bbByEpidData: BBbyEPIDData): Either[Elem, BBbyEPIDResult] = {
     try {
       // This code only reports values without making judgment as to pass or fail.
-      logger.info("Starting analysis of CBCT Alignment")
-      logger.info("Finished analysis of CBCT Alignment")
+      logger.info("Starting analysis of EPID Alignment")
+      logger.info("Finished analysis of EPID Alignment")
       ???
     } catch {
       case t: Throwable => {

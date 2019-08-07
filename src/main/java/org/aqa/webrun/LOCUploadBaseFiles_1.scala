@@ -133,10 +133,10 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
   private def validate(valueMap: ValueMapT): Either[StyleMapT, RunRequirements] = {
     val alList = attributeListsInSession(valueMap)
 
-    val serNoList = alList.map(al => WebUtil.attributeListToDeviceSerialNumber(al)).flatten.distinct
+    val serNoList = alList.map(al => Util.attributeListToDeviceSerialNumber(al)).flatten.distinct
 
     // machines that DICOM files reference (based on device serial numbers)
-    val machList = alList.map(al => attributeListToMachine(al)).flatten.distinct
+    val machList = alList.map(al => Machine.attributeListToMachine(al)).flatten.distinct
 
     // machine that user chose
     val chosenMach = for (pkTxt <- valueMap.get(machine.label); pk <- Util.stringToLong(pkTxt); mach <- Machine.get(pk)) yield mach

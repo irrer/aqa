@@ -29,6 +29,7 @@ import scala.xml.XML
 import java.io.ByteArrayOutputStream
 import edu.umro.ScalaUtil.DicomUtil
 import javax.vecmath.Point3d
+import edu.umro.ScalaUtil.Trace
 
 object Util extends Logging {
 
@@ -127,7 +128,14 @@ object Util extends Logging {
 
   def isModality(al: AttributeList, sopClassUID: String): Boolean = {
     try {
-      al.get(TagFromName.MediaStorageSOPClassUID).getSingleStringValueOrEmptyString.equals(sopClassUID)
+      if (true) {  // TODO rm
+        val j = al.get(TagFromName.SOPClassUID)
+        val j1 = j.getSingleStringValueOrEmptyString.equals(sopClassUID)
+        Trace.trace(j)
+        Trace.trace(j1)
+        Trace.trace
+      }
+      al.get(TagFromName.SOPClassUID).getSingleStringValueOrEmptyString.equals(sopClassUID)
     } catch {
       case t: Throwable => false
     }
@@ -194,7 +202,7 @@ object Util extends Logging {
   /**
    * Get dates and patient ID from attribute list.
    */
-  def extractDateTimeAndPatientIdFromDicom(attributeList: AttributeList): (Seq[Date], Option[String]) = {
+  def extractDateTimeAndPatientIdFromDicomAl(attributeList: AttributeList): (Seq[Date], Option[String]) = {
 
     val PatientID = getAttrValue(attributeList, TagFromName.PatientID)
 
@@ -220,7 +228,7 @@ object Util extends Logging {
   def extractDateTimeAndPatientIdFromDicom(file: File): (Seq[Date], Option[String]) = {
     val al = new AttributeList
     al.read(file)
-    extractDateTimeAndPatientIdFromDicom(al)
+    extractDateTimeAndPatientIdFromDicomAl(al)
   }
 
   private def dateTimeAndPatientIdFromDicom(file: File, dateList: Seq[Date], patientIdList: Seq[String]): (Seq[Date], Seq[String]) = {
@@ -910,5 +918,17 @@ object Util extends Logging {
    * Given arbitrary text, replace all special characters with underscore so it can be used as a JavaScript or XML identifier.
    */
   def textToId(text: String) = text.replaceAll("[^0-9a-zA-Z]", "_").replaceAll("__*", "_")
+
+  
+  def attributeListToDeviceSerialNumber(al: AttributeList): Option[String] = {
+    val at = al.get(TagFromName.DeviceSerialNumber)
+    if (at == null) None
+    else {
+      val ser = at.getSingleStringValueOrNull
+      if ((ser != null) && ser.trim.nonEmpty) Some(ser.trim) else None
+    }
+  }
+
+
 
 }
