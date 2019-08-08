@@ -219,6 +219,9 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   private def getFrameOfRef(al: AttributeList): String = al.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
   private def getFrameOfRef(dicomFile: DicomFile): String = getFrameOfRef(dicomFile.attributeList.get)
 
+  private def getSeries(al: AttributeList): String = al.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString
+  private def getSeries(dicomFile: DicomFile): String = getSeries(dicomFile.attributeList.get)
+
   //private val machineSelector = new WebInputSelectOption("Machine", 6, 0, machineList, showMachineSelector)
   private val machineSelector = new WebInputSelectMachine("Machine", 6, 0)
 
@@ -319,31 +322,31 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     compat
   }
 
-  /**
-   * Find a compatible set of RTPLAN and REG files.  If the plan has the same frame of reference as the
-   * CBCT, then no REG file is required.  If a compatible plan was uploaded, then use that, otherwise
-   * try to get one from the database.
-   *
-   * @return (RTPLAN, REG)
-   */
-  private def findRtplanAndReg(rtplanList: Seq[DicomFile], regList: Seq[DicomFile], cbctList: Seq[DicomFile]): Option[(DicomFile, Option[DicomFile])] = {
-    val cbctFrameOfRef = getFrameOfRef(cbctList.head)
-    val uploadedPlans = searchUploadedPlans(rtplanList, regList)
-    val uploadedPlansWithoutReg = searchUploadedPlansWithoutReg(rtplanList, cbctFrameOfRef)
-
-    lazy val dbPlanWithReg = searchDbPlanWithReg(regList)
-    lazy val dbPlanWithoutReg = searchDbPlanWithoutReg(cbctFrameOfRef)
-
-    val pair = 0 match {
-      case _ if uploadedPlans.isDefined => uploadedPlans
-      case _ if uploadedPlansWithoutReg.isDefined => uploadedPlansWithoutReg
-      case _ if dbPlanWithReg.isDefined => dbPlanWithReg
-      case _ if dbPlanWithoutReg.isDefined => dbPlanWithoutReg
-      case _ => None
-    }
-
-    pair
-  }
+  //  /**
+  //   * Find a compatible set of RTPLAN and REG files.  If the plan has the same frame of reference as the
+  //   * CBCT, then no REG file is required.  If a compatible plan was uploaded, then use that, otherwise
+  //   * try to get one from the database.
+  //   *
+  //   * @return (RTPLAN, REG)
+  //   */
+  //  private def findRtplanAndReg(rtplanList: Seq[DicomFile], regList: Seq[DicomFile], cbctList: Seq[DicomFile]): Option[(DicomFile, Option[DicomFile])] = {
+  //    val cbctFrameOfRef = getFrameOfRef(cbctList.head)
+  //    val uploadedPlans = searchUploadedPlans(rtplanList, regList)
+  //    val uploadedPlansWithoutReg = searchUploadedPlansWithoutReg(rtplanList, cbctFrameOfRef)
+  //
+  //    lazy val dbPlanWithReg = searchDbPlanWithReg(regList)
+  //    lazy val dbPlanWithoutReg = searchDbPlanWithoutReg(cbctFrameOfRef)
+  //
+  //    val pair = 0 match {
+  //      case _ if uploadedPlans.isDefined => uploadedPlans
+  //      case _ if uploadedPlansWithoutReg.isDefined => uploadedPlansWithoutReg
+  //      case _ if dbPlanWithReg.isDefined => dbPlanWithReg
+  //      case _ if dbPlanWithoutReg.isDefined => dbPlanWithoutReg
+  //      case _ => None
+  //    }
+  //
+  //    pair
+  //  }
 
   /**
    * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
@@ -351,32 +354,81 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   private def validate(valueMap: ValueMapT): Either[StyleMapT, BBbyCBCTRunReq] = {
     val dicomFileList = dicomFilesInSession(valueMap)
     val cbctList = dicomFileList.filter(df => df.isModality(SOPClass.CTImageStorage)).sortBy(df => Util.slicePosition(df.attributeList.get))
-    // CBCT frame of reference.  If there is more than one CBCT series, then the data will be rejected anyway
-    val cbctFrameOfRef = getFrameOfRef(cbctList.head.attributeList.get)
-    // Make a list of REG files that support the CBCT's frame of reference.  We don't care about the other REG files.
-    val regList = dicomFileList.filter(df => df.isModality(SOPClass.SpatialRegistrationStorage) && new ImageRegistration(df.attributeList.get).otherFrameOfRefUID.equals(cbctFrameOfRef))
+    val regList = dicomFileList.filter(df => df.isModality(SOPClass.SpatialRegistrationStorage))
     val rtplanList = dicomFileList.filter(df => df.isModality(SOPClass.RTPlanStorage))
-    val machineCheck = validateMachineSelection(valueMap, cbctList)
+
+    def cbctSeriesList = cbctList.map(cbct => getSeries(cbct)).distinct
+    def cbctFrameOfRefList = cbctList.map(cbct => getFrameOfRef(cbct)).distinct
+
+    // Make a list of REG files that support the CBCT's frame of reference.  We don't care about the other REG files.
+    def getQualifiedRegList = {
+      val cbctFrameOfRef = cbctFrameOfRefList.head
+      regList.filter(df => new ImageRegistration(df.attributeList.get).otherFrameOfRefUID.equals(cbctFrameOfRef))
+    }
+
+    def machineCheck = validateMachineSelection(valueMap, cbctList ++ getQualifiedRegList)
 
     logger.info("Number of files uploaded:  RTPLAN: " + rtplanList.size + "    REG: " + regList.size + "    CBCT: " + cbctList.size)
 
     def numSeries(dfList: Seq[DicomFile]): Int = dfList.map(df => df.attributeList.get.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString).distinct.sorted.size
-    val machineCheck = validateMachineSelection(valueMap, cbctList)
+
+    /** return list of plans (either uploaded or from DB) whose frame of reference match the CBCT exactly (no REG file involved) */
+    def rtplanMatchingCbct: Seq[AttributeList] = {
+      val cbctFramOfRef = cbctFrameOfRefList.head
+      val dbPlan = DicomSeries.getByFrameUIDAndSOPClass(Set(cbctFramOfRef), SOPClass.RTPlanStorage).map(db => db.attributeListList).flatten
+      val uploadedRtplanList = rtplanList.map(df => df.attributeList).flatten
+
+      (dbPlan ++ uploadedRtplanList).filter(plan => cbctFrameOfRefList.head.equals(cbctFramOfRef))
+    }
+
+    /**
+     * Get the list of possible plan and reg pairs, preferring the uploaded plan(s) but also searching the plans in the database.
+     */
+    def getPlanAndReg: Seq[(AttributeList, AttributeList)] = {
+      val qualRegList = getQualifiedRegList
+      val uploadedPairList = for (plan <- rtplanList; reg <- qualRegList; if (getFrameOfRef(plan).equals(getFrameOfRef(reg)))) yield (plan.attributeList.get, reg.attributeList.get)
+      if (uploadedPairList.nonEmpty)
+        uploadedPairList
+      else {
+        val qualRegFrameOfRefList = qualRegList.map(df => getFrameOfRef(df)).toSet
+        val dbPlanList = DicomSeries.getByFrameUIDAndSOPClass(qualRegFrameOfRefList, SOPClass.RTPlanStorage).map(db => db.attributeListList).flatten
+
+        val dbPairList = for (plan <- dbPlanList; reg <- qualRegList; if (getFrameOfRef(plan).equals(getFrameOfRef(reg)))) yield (plan, reg.attributeList.get)
+        dbPairList
+      }
+    }
+
+    /** Return true if the CBCT frame of reference matches a plan, or, if there is a CBCT-REG-RTPLAN combination that works. */
+    def isMatchingFrameOfRef = getPlanAndReg.nonEmpty || rtplanMatchingCbct.nonEmpty
 
     val result = 0 match {
       case _ if cbctList.isEmpty => formErr("No CBCT files uploaded")
-      //case _ if regList.isEmpty => formErr("No REG files uploaded")
-      case _ if (numSeries(cbctList) > 1) => formErr("CBCT files should all be from the same series, but are from " + numSeries(cbctList) + " different series")
+      case _ if cbctSeriesList.size > 1 => formErr("CBCT slices are from " + numSeries(cbctList) + " different series.")
+      case _ if cbctFrameOfRefList.isEmpty => formErr("CBCT series are unusable: They do not specify a frame of reference.")
+      case _ if cbctFrameOfRefList.size > 1 => formErr("CBCT series uses more than one frame of reference.")
+      case _ if !isMatchingFrameOfRef => formErr("Can not find a CBCT + REG + RTPLAN with compatible frame of reference.")
       case _ if (machineCheck.isLeft) => Left(machineCheck.left.get)
       case _ => {
-        val rtplanAndReg = findRtplanAndReg(rtplanList, regList, cbctList)
+        val rtplanAndReg = getPlanAndReg.head
 
-        if (rtplanAndReg.isEmpty)
-          formErr("Can not find RTPLAN for given CBCT and REG files")
-        else {
-          val runReq = new BBbyCBCTRunReq(rtplanAndReg.get._1, rtplanAndReg.get._2, cbctList, machineCheck.right.get)
-          Right(runReq)
+        val plan = {
+          val planAl = rtplanAndReg._1
+          val planSop = Util.sopOfAl(planAl)
+          val uploaded = rtplanList.find(df => Util.sopOfAl(df.attributeList.get).equals(planSop))
+          if (uploaded.isDefined)
+            Left(uploaded.get)
+          else
+            Right(planAl)
         }
+
+        val reg = {
+          val regSop = Util.sopOfAl(rtplanAndReg._2)
+          regList.find(r => Util.sopOfAl(r.attributeList.get).equals(regSop))
+        }
+
+        val runReq = new BBbyCBCTRunReq(plan, reg, cbctList, machineCheck.right.get)
+        Right(runReq)
+
       }
     }
     result
@@ -385,16 +437,14 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   /**
    * Given an image list, find the one with the earliest date/time.
    */
-  private def dateTimePatId(rtimageList: Seq[AttributeList]): Util.DateTimeAndPatientId = {
+  private def dateTimePatId(rtimageList: Seq[AttributeList]): (Option[Long], Option[String]) = {
     val list = rtimageList.map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al)).filter(dt => dt._1.nonEmpty && dt._2.isDefined)
-    val date = list.map(dp => dp._1.head).minBy(d => d.getTime)
-    val patient = list.map(dp => dp._2).flatten.headOption
-    ???
-    val dtap =
-      if (list.isEmpty) new Util.DateTimeAndPatientId(None, None)
-      else list.minBy(dt => dt.dateTime.get)
-    logger.info("DateTime and PatientId: " + dtap)
-    dtap
+    val date: Option[Long] = {
+      val dateList = list.map(dp => dp._1.headOption).flatten
+      if (dateList.isEmpty) None else Some(dateList.map(d => d.getTime).min)
+    }
+    val patient: Option[String] = list.map(dp => dp._2).flatten.headOption
+    (date, patient)
   }
 
   /**
@@ -426,7 +476,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
         val dtp = dateTimePatId(runReq.cbct)
 
         val sessDir = sessionDir(valueMap).get
-        val inputOutput = Run.preRun(procedure, machineCheck.right.get, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
+        val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp._2, dtp._1)
         val input = inputOutput._1
         val output = inputOutput._2
 

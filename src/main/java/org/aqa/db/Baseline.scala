@@ -106,7 +106,7 @@ object Baseline extends Logging {
    * Construct a baseline object using an attribute list.
    */
   def makeBaseline(maintenanceRecordPK: Long, attributeList: AttributeList, id: String, value: Double): Baseline = {
-    val date = Util.extractDateTimeAndPatientIdFromDicom(attributeList)._1.head
+    val date = Util.extractDateTimeAndPatientIdFromDicomAl(attributeList)._1.head
     val SOPInstanceUID = Util.sopOfAl(attributeList)
     new Baseline(None, maintenanceRecordPK, new Timestamp(date.getTime), Some(SOPInstanceUID), id, value.toString, BaselineSetup.byDefault.toString)
   }

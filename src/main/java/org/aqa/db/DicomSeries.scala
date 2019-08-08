@@ -134,10 +134,10 @@ object DicomSeries extends Logging {
 
   def makeDicomSeries(usrPK: Long, inpPK: Option[Long], machPK: Option[Long], alList: Seq[AttributeList]): DicomSeries = {
 
-    val datePatID = alList.map(al => Util.extractDateTimeAndPatientIdFromDicom(al))
+    val datePatID = alList.map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al))
 
     case class DPAl(al: AttributeList) {
-      private val dp = Util.extractDateTimeAndPatientIdFromDicom(al)
+      private val dp = Util.extractDateTimeAndPatientIdFromDicomAl(al)
       val date = dp._1.head
       val patId = dp._2
     }

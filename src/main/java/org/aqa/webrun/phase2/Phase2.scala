@@ -354,7 +354,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     val nullSerialNumber = machineSerialNumberList.size != machineSerialNumberListOpt.size
 
     def rtimageDate(rtimage: DicomFile): Long = {
-      Util.extractDateTimeAndPatientIdFromDicom(rtimage.attributeList.get)._1.map(d => d.getTime).distinct.sorted.last
+      Util.extractDateTimeAndPatientIdFromDicomAl(rtimage.attributeList.get)._1.map(d => d.getTime).distinct.sorted.last
     }
 
     val dateTimeList = rtimageList.map(rtimage => rtimageDate(rtimage)).sorted
@@ -475,7 +475,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     val groupList = rtimageList.groupBy(df => df.attributeList.get.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head).values
 
     def latestDateTime(al: AttributeList): Long = {
-      Util.extractDateTimeAndPatientIdFromDicom(al)._1.map(dt => dt.getTime).max
+      Util.extractDateTimeAndPatientIdFromDicomAl(al)._1.map(dt => dt.getTime).max
     }
 
     def minGroup(g: Seq[DicomFile]): DicomFile = {
