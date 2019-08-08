@@ -16,6 +16,7 @@ import org.aqa.Config
 import edu.umro.ImageUtil.DicomImage
 import java.awt.image.BufferedImage
 import org.aqa.webrun.bbByCBCT.BBbyCBCTAnalysis
+import org.aqa.VolumeTranslator
 
 /**
  * Test the Config.
@@ -56,7 +57,11 @@ class TestCBCTAnalysis extends FlatSpec with Matchers {
       val bufImgList = result.right.get._2
       writeImages(dir.getName, bufImgList)
       def fmt(d: Double) = d.formatted("%12.7f")
-      println("BB coordinates of " + fmt(point.getX) + " " + fmt(point.getY) + " " + fmt(point.getZ) + "  " + dir.getName)
+      println("BB    coordinates of " + fmt(point.getX) + " " + fmt(point.getY) + " " + fmt(point.getZ) + "  " + dir.getName)
+      val voxCoords = (new VolumeTranslator(attrListSeq)).mm2vox(point)
+      if (true) { // TODO rm
+      println("Voxel coordinates of " + fmt(voxCoords.getX) + " " + fmt(voxCoords.getY) + " " + fmt(voxCoords.getZ) + "  " + dir.getName)
+      }
       (result.isRight) should be(true) // Expected voxel coordinates: 246, 262, 42
     }
 

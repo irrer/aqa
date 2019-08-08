@@ -68,18 +68,19 @@ object BBbyCBCTHTML {
 
     def viewTitle(index: Int) = {
       <div>
-        { axisNameList(index) }
-        View
+        <h4>{ axisNameList(index) } View</h4>
       </div>
     }
 
     def imageHtml(index: Int, getImageFileName: Int => String, title: String) = {
       val name = getImageFileName(index)
-      <div id={ Util.textToId(name) } title={ title }>
-        <a href={ name }>
-          <img src={ name } class="img-responsive"/>
-        </a>
-      </div>
+      <a href={ name } title={ title }>
+        <div id={ Util.textToId(name) }>
+          <a href={ name }>
+            <img src={ name } class="img-responsive"/>
+          </a>
+        </div>
+      </a>
     }
 
     def makeSet(index: Int): Elem = {
@@ -99,7 +100,7 @@ object BBbyCBCTHTML {
         { numberText }
         <table class="table table-responsive">
           <tr>
-            { Seq(0, 1, 2).map(index => makeSet(index)) }
+            { Seq(2, 1, 0).map(index => makeSet(index)) }
           </tr>
         </table>
       </div>

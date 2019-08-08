@@ -18,7 +18,7 @@ import java.awt.BasicStroke
 object BBbyCBCTAnnotateImages {
 
   /** Factor to magnify area of interest image. */
-  private val scale = 32
+  private val scale = 1 // 32
 
   private val textPointSize = 30
 
@@ -41,12 +41,41 @@ object BBbyCBCTAnnotateImages {
    */
   private def makePair(
     bbByCBCT: BBbyCBCT,
-    voxSizeX_mm: Double, voxSizeY_mm: Double,
-    centerX_pix: Double, centerY_pix: Double,
+    voxSizeX_mmOrig: Double, voxSizeY_mmOrig: Double,
+    centerX_pixOrig: Double, centerY_pixOrig: Double,
     xAxisName: String, yAxisName: String,
     originalImage: BufferedImage): ImagePair = {
 
     def rnd(d: Double) = d.round.toInt
+
+    val min_pix = Math.min(voxSizeX_mmOrig, voxSizeY_mmOrig)
+    val max_pix = Math.max(voxSizeX_mmOrig, voxSizeY_mmOrig)
+
+    val voxSizeX_mm = {
+      //if (voxSizeX_mmOrig > voxSizeY_mmOrig) voxSizeX_mmOrig / voxSizeY_mmOrig else voxSizeX_mmOrig
+      Math.min(voxSizeX_mmOrig, voxSizeY_mmOrig)
+    }
+
+    val voxSizeY_mm = {
+      //if (voxSizeX_mmOrig > voxSizeY_mmOrig) voxSizeX_mmOrig else voxSizeX_mmOrig / voxSizeY_mmOrig
+      voxSizeX_mm
+    }
+
+    val centerX_pix = {
+      val xc = if (voxSizeX_mmOrig > voxSizeY_mmOrig)
+        centerX_pixOrig / (voxSizeX_mmOrig / voxSizeY_mmOrig)
+      else
+        centerX_pixOrig
+      (xc + 0.5) * scale
+    }
+
+    val centerY_pix = {
+      val yc = if (voxSizeY_mmOrig > voxSizeX_mmOrig)
+        centerY_pixOrig / (voxSizeY_mmOrig / voxSizeX_mmOrig)
+      else
+        centerY_pixOrig
+      (yc + 0.5) * scale
+    }
 
     // ---------------------------------------------------------------------------------
 
@@ -55,8 +84,12 @@ object BBbyCBCTAnnotateImages {
 
       val maxVoxSize = Math.max(voxSizeX_mm, voxSizeY_mm) // larger voxel dimension
       val minVoxSize = Math.min(voxSizeX_mm, voxSizeY_mm) // smaller voxel dimension
-      val width = ((Config.DailyPhantomBBPenumbra_mm * 0.5) / voxSizeX_mm) * scale * (maxVoxSize / minVoxSize)
-      val height = ((Config.DailyPhantomBBPenumbra_mm * 0.5) / voxSizeY_mm) * scale
+      val widthCircle_pix = {
+        ((Config.DailyPhantomBBPenumbra_mm * 0.5) / voxSizeX_mm) * scale //* (maxVoxSize / minVoxSize)
+      }
+      val heightCircle_pix = {
+        ((Config.DailyPhantomBBPenumbra_mm * 0.5) / voxSizeY_mm) * scale //* (maxVoxSize / minVoxSize)
+      }
 
       /**
        * draw circle around BB
@@ -65,9 +98,9 @@ object BBbyCBCTAnnotateImages {
         val graphics = ImageUtil.getGraphics(zImage)
         graphics.setColor(Color.white)
 
-        graphics.drawOval(rnd(centerX_pix - (width / 2)), rnd(centerY_pix - (height / 2)), rnd(width), rnd(height))
+        graphics.drawOval(rnd(centerX_pix - (widthCircle_pix / 2)), rnd(centerY_pix - (heightCircle_pix / 2)), rnd(widthCircle_pix), rnd(heightCircle_pix))
 
-        val radius = Math.sqrt((width * width) + (height * height)) / 4
+        val radius = Math.sqrt((widthCircle_pix * widthCircle_pix) + (heightCircle_pix * heightCircle_pix)) / 4
         graphics.drawLine(rnd(centerX_pix - radius + 1), rnd(centerY_pix - radius), rnd(centerX_pix + radius), rnd(centerY_pix + radius))
         graphics.drawLine(rnd(centerX_pix + radius - 1), rnd(centerY_pix - radius), rnd(centerX_pix - radius), rnd(centerY_pix + radius))
       }
@@ -86,7 +119,7 @@ object BBbyCBCTAnnotateImages {
           fmt(bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm)).replaceAll("  *", " ")
 
         ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
-        ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix - (height / 2) + 10, bbText, 90)
+        ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix - (heightCircle_pix / 2) + 10, bbText, 90)
       }
 
       // ---------------------------------------------------------------------------------
@@ -122,7 +155,7 @@ object BBbyCBCTAnnotateImages {
         val text = "'+' is Plan Center"
 
         ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
-        ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix + (height / 2) + scale, text, 90)
+        ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix + (heightCircle_pix / 2) + scale, text, 90)
       }
 
       drawCircle(image)
@@ -182,29 +215,30 @@ object BBbyCBCTAnnotateImages {
     Trace.trace
 
     val center_vox = volTrans.mm2vox(origPosition)
-    val centerX_pix = (center_vox.getX + 0.5) * scale
-    val centerY_pix = (center_vox.getY + 0.5) * scale
-    val centerZ_pix = (center_vox.getZ + 0.5) * scale
+    //    val centerX_pix = (center_vox.getX + 0.5) * scale
+    //    val centerY_pix = (center_vox.getY + 0.5) * scale
+    //    val centerZ_pix = (center_vox.getZ + 0.5) * scale
     Trace.trace
+    Trace.trace(imageXYZ.map(img => img.getWidth + ", " + img.getHeight).mkString("Image sizes\n    ", "\n    ", "\n"))
 
     val xImagePair = makePair(
       bbByCBCT,
       voxSize_mm(2), voxSize_mm(1),
-      centerZ_pix, centerY_pix,
+      center_vox.getZ, center_vox.getY,
       "Z axis", "Y axis", imageXYZ(0))
     Trace.trace
 
     val yImagePair = makePair(
       bbByCBCT,
       voxSize_mm(2), voxSize_mm(0),
-      centerZ_pix, centerX_pix,
+      center_vox.getZ, center_vox.getX,
       "Z axis", "X axis", imageXYZ(1))
     Trace.trace
 
     val zImagePair = makePair(
       bbByCBCT,
       voxSize_mm(0), voxSize_mm(1),
-      centerX_pix, centerY_pix,
+      center_vox.getX, center_vox.getY,
       "X axis", "Y axis", imageXYZ(2))
 
     Trace.trace

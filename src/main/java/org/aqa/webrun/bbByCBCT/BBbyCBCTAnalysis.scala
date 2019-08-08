@@ -249,6 +249,10 @@ object BBbyCBCTAnalysis extends Logging {
     val volTrans = new VolumeTranslator(sorted)
     // fine location in mm coordinates
     if (fineLocation_vox.isDefined) {
+      if (true) { // TODO rm
+        def fmt(d: Double) = d.formatted("%12.7f")
+        println("Voxel coordinates " + fmt(fineLocation_vox.get.getX) + " " + fmt(fineLocation_vox.get.getY) + " " + fmt(fineLocation_vox.get.getZ))
+      }
       val fineLocation_mm = volTrans.vox2mm(fineLocation_vox.get)
       val imageXYZ = makeImagesXYZ(entireVolume, fineLocation_vox.get, fineLocation_mm, voxSize_mm)
       Right(fineLocation_mm, imageXYZ)
