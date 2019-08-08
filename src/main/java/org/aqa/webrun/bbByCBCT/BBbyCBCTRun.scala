@@ -244,13 +244,6 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   private def validateMachineSelection(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, Machine] = {
     val machineRelatedList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage) || df.isModality(SOPClass.CTImageStorage) || df.isModality(SOPClass.SpatialRegistrationStorage))
     // machines that DICOM files reference (based on device serial numbers)
-    if (true) { // TODO rm
-      val j1 = dicomFileList.size
-      val j2 = machineRelatedList.size
-      val j = machineRelatedList.map(al => al.attributeList.get.get(TagFromName.DeviceSerialNumber)).filterNot(_ == null).map(a => a.getSingleStringValueOrEmptyString).distinct
-      val j3 = dicomFileList.filter(df => df.isModality(SOPClass.SpatialRegistrationStorage))
-      Trace.trace("dicomFileList.size: " + dicomFileList.size + "    machineRelatedList.size: " + machineRelatedList.size + "   DeviceSerialNumber: " + j)
-    }
     val referencedMachines = machineRelatedList.map(df => Machine.attributeListToMachine(df.attributeList.get)).flatten.distinct
     val chosenMachine = for (pkTxt <- valueMap.get(machineSelector.label); pk <- Util.stringToLong(pkTxt); m <- Machine.get(pk)) yield m
 
