@@ -159,6 +159,8 @@ object BBbyCBCTAnalysis extends Logging {
    * @param minMax Minimum and maximum values to be used for rendering deep color.
    */
   private def makeImage(dicomImage: DicomImage, location: Point2D.Double, pixelSize: Point2D.Double, minMax: (Float, Float)): BufferedImage = {
+    // TODO fix me
+    ???
     val aspectCorrected = dicomImage.renderPixelsToSquare(pixelSize.getX, pixelSize.getY)
     val bufImg = aspectCorrected.toBufferedImage(Color.green)
     //val bufImg = aspectCorrected.toDeepColorBufferedImage(0.0)
