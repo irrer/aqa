@@ -40,8 +40,8 @@ class VolumeTranslator(alList: Seq[AttributeList]) {
 
   def mm2vox(point: Point3d): Point3d = {
     val x = (point.getX - ImagePositionPatient(0)) / voxSize(0)
-    val y = (point.getY - ImagePositionPatient(1)) / voxSize(0)
-    val z = (point.getZ - ImagePositionPatient(2)) / voxSize(0)
+    val y = (point.getY - ImagePositionPatient(1)) / voxSize(1)
+    val z = (point.getZ - ImagePositionPatient(2)) / voxSize(2)
     new Point3d(x, y, z)
   }
 
