@@ -17,6 +17,10 @@ import edu.umro.ScalaUtil.Trace
 object BBbyCBCTHTML {
 
   private val axisNameList = Seq("X Axis : side", "Y Axis : top", "Z Axis : longitudinal")
+  private val axisTitleList = Seq(
+    "View as seen while standing by the side of the couch and looking horizontally.",
+    "View as seen from above the couch and looking down.",
+    "View as seen while standing at the foot of the couch horizontally.")
   //private def idOf(index: Int) = axisNameList(index).replaceAll(" ", "_") + "axisView"
   private def fileNameOfFull(index: Int) = Util.textToId(axisNameList(index)) + "axisViewFull.png"
   private def fileNameOfAreaOfInterest(index: Int) = Util.textToId(axisNameList(index)) + "axisViewAOI.png"
@@ -67,7 +71,7 @@ object BBbyCBCTHTML {
     }
 
     def viewTitle(index: Int) = {
-      <div>
+      <div title={ axisTitleList(index) }>
         <h4>{ axisNameList(index) } View</h4>
       </div>
     }
@@ -83,14 +87,27 @@ object BBbyCBCTHTML {
       </a>
     }
 
+    def imageHtmlWithZoom(index: Int, getImageFileName: Int => String, title: String, width: Int) = {
+      val name = getImageFileName(index)
+      <a href={ name } title={ title }>
+        <div id={ Util.textToId(name) }>
+          <a href={ name }>
+            <img src={ name } class="img-responsive" width={ width.toString }/>
+          </a>
+        </div>
+      </a>
+    }
+
     def makeSet(index: Int): Elem = {
+      val imageWidth = imageSet.areaOfInterest(index).getWidth
+
       <td>
         <center style="margin:50px;">
           { viewTitle(index) }
           <br/>
           { imageHtml(index, fileNameOfAreaOfInterest, "Area of Interest") }
           <br/>
-          { imageHtml(index, fileNameOfFull, "Full Image") }
+          { imageHtmlWithZoom(index, fileNameOfFull, "Full Image", imageWidth) }
         </center>
       </td>
     }

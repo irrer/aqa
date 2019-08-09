@@ -18,7 +18,7 @@ import java.awt.BasicStroke
 object BBbyCBCTAnnotateImages {
 
   /** Factor to magnify area of interest image. */
-  private val scale = 32
+  private val scale = 16
 
   private val textPointSize = 30
 
@@ -107,19 +107,26 @@ object BBbyCBCTAnnotateImages {
 
       // ---------------------------------------------------------------------------------
 
-      def drawOffsetNumbers(zImage: BufferedImage) = {
-        def fmt(d: Double) = d.formatted("%8.2f")
+      /**
+       * Draw the offset above the BB.
+       */
+      def drawOffsetNumbers(zImage: BufferedImage): Int = {
         val graphics = ImageUtil.getGraphics(zImage)
         graphics.setColor(Color.white)
         // show BB offset from plan
-        val bbText = (
-          "Offset: " +
-          fmt(bbByCBCT.rtplanX_mm - bbByCBCT.cbctX_mm) + ", " +
-          fmt(bbByCBCT.rtplanY_mm - bbByCBCT.cbctY_mm) + ", " +
-          fmt(bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm)).replaceAll("  *", " ")
+        val offsetText = {
+          def fmt(d: Double) = d.formatted("%8.2f")
+          (
+            "XYZ Offset: " +
+            fmt(bbByCBCT.rtplanX_mm - bbByCBCT.cbctX_mm) + ", " +
+            fmt(bbByCBCT.rtplanY_mm - bbByCBCT.cbctY_mm) + ", " +
+            fmt(bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm)).replaceAll("  *", " ")
+        }
 
         ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
-        ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix - (heightCircle_pix / 2) + 10, bbText, 90)
+        val textRect = ImageText.getTextDimensions(graphics, offsetText)
+        ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix - (heightCircle_pix / 2), offsetText, 90)
+        textRect.getWidth.round.toInt
       }
 
       // ---------------------------------------------------------------------------------
@@ -155,40 +162,56 @@ object BBbyCBCTAnnotateImages {
         val text = "'+' is Plan Center"
 
         ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
-        ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix + (heightCircle_pix / 2) + scale, text, 90)
+        val textRect = ImageText.getTextDimensions(graphics, text)
+
+        ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix + (heightCircle_pix / 2) + textRect.getHeight, text, 90)
       }
 
       drawCircle(image)
-      drawOffsetNumbers(image)
+      val textWidth = drawOffsetNumbers(image)
       drawPlanCenter(image)
       drawPlanText(image)
-      image
+      (image, textWidth)
     }
 
     // ---------------------------------------------------------------------------------
 
-    def cropImage(image: BufferedImage) = {
-      val xRadius = ((Config.DailyPhantomSearchDistance_mm / 3.0) / voxSizeX_mm) * scale
-      val yRadius = ((Config.DailyPhantomSearchDistance_mm / 3.0) / voxSizeY_mm) * scale
+    //    def cropImageX(image: BufferedImage) = {
+    //      val xRadius = (Config.DailyPhantomBBPenumbra_mm / voxSizeX_mm) * scale * 1.5
+    //      val yRadius = (Config.DailyPhantomBBPenumbra_mm / voxSizeY_mm) * scale * 1.5
+    //
+    //      val x = Math.max(0, rnd(centerX_pix - xRadius))
+    //      val y = Math.max(0, rnd(centerY_pix - yRadius))
+    //      val width = {
+    //        val w = rnd(xRadius * 2)
+    //        if ((w + x) > image.getWidth) image.getWidth else w
+    //      }
+    //      val height = {
+    //        val h = rnd(yRadius * 2)
+    //        if ((h + y) > image.getHeight) image.getHeight else h
+    //      }
+    //      val aoi = image.getSubimage(x, y, width, height)
+    //      aoi
+    //    }
 
-      val x = Math.max(0, rnd(centerX_pix - xRadius))
-      val y = Math.max(0, rnd(centerY_pix - yRadius))
-      val width = {
-        val w = rnd(xRadius * 2)
-        if ((w + x) > image.getWidth) image.getWidth else w
-      }
-      val height = {
-        val h = rnd(yRadius * 2)
-        if ((h + y) > image.getHeight) image.getHeight else h
-      }
-      val aoi = image.getSubimage(x, y, width, height)
+    def cropImage(image: BufferedImage, textWidth: Int) = {
+      val radius = ((textWidth * 1.3) / 2).round.toInt
+      val xRadius = (Config.DailyPhantomBBPenumbra_mm / voxSizeX_mm) * scale * 1.5
+      val yRadius = (Config.DailyPhantomBBPenumbra_mm / voxSizeY_mm) * scale * 1.5
+
+      val x = Math.max(0, rnd(centerX_pix - radius))
+      val y = Math.max(0, rnd(centerY_pix - radius))
+
+      val aoi = image.getSubimage(x, y, radius * 2, radius * 2)
       aoi
     }
 
     // ---------------------------------------------------------------------------------
 
-    val full = makeFullImage
-    val aoi = cropImage(full)
+    val fullAndTextWidth = makeFullImage
+    val full = fullAndTextWidth._1
+    val textWidth = fullAndTextWidth._2
+    val aoi = cropImage(full, textWidth)
 
     Util.addAxisLabels(aoi, xAxisName, yAxisName, Color.white)
 
