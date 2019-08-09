@@ -19,7 +19,7 @@ object BBbyCBCTHTML {
   private val axisNameList = Seq("X Axis : side", "Y Axis : top", "Z Axis : longitudinal")
   private val axisTitleList = Seq(
     "View as seen while standing by the side of the couch and looking horizontally.",
-    "View as seen from above the couch and looking down.",
+    "View as seen from leaning over the side of the couch and looking down.",
     "View as seen while standing at the foot of the couch horizontally.")
   //private def idOf(index: Int) = axisNameList(index).replaceAll(" ", "_") + "axisView"
   private def fileNameOfFull(index: Int) = Util.textToId(axisNameList(index)) + "axisViewFull.png"
