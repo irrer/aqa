@@ -54,6 +54,7 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.ImageRegistration
 import org.aqa.db.DicomSeries
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.db.BBbyCBCT
 
 /**
  * Provide the user interface and verify that the data provided is sufficient to do the analysis.
@@ -81,81 +82,79 @@ object BBbyCBCTRun extends Logging {
     same
   }
 
-  //  private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output) = {
-  //
-  //    val sessionId = Session.makeUniqueId
-  //    val sessionDir = Session.idToFile(sessionId)
-  //    sessionDir.mkdirs
-  //    def copyToSessionDir(file: File) = {
-  //      val newFile = new File(sessionDir, file.getName)
-  //      newFile.createNewFile
-  //      val data = Util.readBinaryFile(file).right.get
-  //      Util.writeBinaryFile(newFile, data)
-  //    }
-  //    val inputFileList = Util.listDirFiles(inputOrig.dir).filter(f => f.isFile)
-  //    inputFileList.map(copyToSessionDir)
-  //
-  //    val dicomFileList = Util.listDirFiles(sessionDir).map(f => new DicomFile(f)).filter(df => df.attributeList.nonEmpty)
-  //    val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage) || df.isModality(SOPClass.CTImageStorage))
-  //
-  //    logger.info("Copied input files from " + inputOrig.dir.getAbsolutePath + " --> " + sessionDir.getAbsolutePath)
-  //
-  //    val acquisitionDate = inputOrig.dataDate match {
-  //      case None => None
-  //      case Some(timestamp) => Some(timestamp.getTime)
-  //    }
-  //
-  //              val runReq = new BBbyCBCTRunReq(rtplanAndReg.get._1, rtplanAndReg.get._2, cbctList, machineCheck.right.get)
-  //
-  //    val runReq = {
-  //      val rtplanFile = new File(Config.sharedDir, Phase2Util.referencedPlanUID(rtimageList.head) + Util.dicomFileNameSuffix)
-  //      val rtplan = new DicomFile(rtplanFile)
-  //      val machine = {
-  //        if (outputOrig.machinePK.isDefined && Machine.get(outputOrig.machinePK.get).isDefined)
-  //          Machine.get(outputOrig.machinePK.get).get
-  //        else {
-  //          val serNo = rtimageList.map(df => df.attributeList).flatten.head.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrEmptyString
-  //          Machine.findMachinesBySerialNumber(serNo).head
-  //        }
-  //      }
-  //      val rtimageMap = constructRtimageMap(rtplan, rtimageList)
-  //      val flood = rtimageMap(Config.FloodFieldBeamName)
-  //
-  //      //new BBbyCBCTRunReq(rtplan, None, machine, rtimageMap, flood) // TODO handle rtplanCBCT
-  //      ???
-  //    }
-  //
-  //    val procedure = Procedure.get(outputOrig.procedurePK).get
-  //
-  //    val inputOutput = Run.preRun(procedure, runReq.machine, sessionDir, getUser(request), inputOrig.patientId, acquisitionDate)
-  //    val input = inputOutput._1
-  //    val output = inputOutput._2
-  //
-  //    Future {
-  //      val extendedData = ExtendedData.get(output)
-  //      val runReqFinal = runReq.reDir(input.dir)
-  //
-  //      val rtplan = runReqFinal.rtplan
-  //      val machine = runReqFinal.machine
-  //      Phase2Util.saveRtplan(rtplan)
-  //
-  //      val rtimageMap = constructRtimageMap(rtplan, rtimageList)
-  //
-  //      val finalStatus = Phase2.runPhase2(extendedData, rtimageMap, runReqFinal)
-  //      val finDate = new Timestamp(System.currentTimeMillis)
-  //      val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
-  //
-  //      Phase2Util.setMachineSerialNumber(machine, runReqFinal.flood.attributeList.get)
-  //      outputFinal.insertOrUpdate
-  //      outputFinal.updateData(outputFinal.makeZipOfFiles)
-  //      Run.removeRedundantOutput(outputFinal.outputPK)
-  //      // remove the original input and all associated outputs to clean up any possible redundant data
-  //      Input.delete(inputOrig.inputPK.get)
-  //    }
-  //
-  //    val suffix = "?" + ViewOutput.outputPKTag + "=" + output.outputPK.get
-  //    response.redirectSeeOther(ViewOutput.path + suffix)
-  //  }
+  private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output) = {
+
+    val sessionId = Session.makeUniqueId
+    val sessionDir = Session.idToFile(sessionId)
+    sessionDir.mkdirs
+    def copyToSessionDir(file: File) = {
+      val newFile = new File(sessionDir, file.getName)
+      newFile.createNewFile
+      val data = Util.readBinaryFile(file).right.get
+      Util.writeBinaryFile(newFile, data)
+    }
+    val inputFileList = Util.listDirFiles(inputOrig.dir).filter(f => f.isFile)
+    inputFileList.map(copyToSessionDir)
+    logger.info("Copied input files from " + inputOrig.dir.getAbsolutePath + " --> " + sessionDir.getAbsolutePath)
+
+    val dicomFileList = Util.listDirFiles(sessionDir).map(f => new DicomFile(f)).filter(df => df.attributeList.nonEmpty)
+    val cbctList = dicomFileList.filter(df => df.isModality(SOPClass.CTImageStorage))
+    val regList = dicomFileList.filter(df => df.isModality(SOPClass.SpatialRegistrationStorage))
+
+    val acquisitionDate = inputOrig.dataDate match {
+      case None => None
+      case Some(timestamp) => Some(timestamp.getTime)
+    }
+
+    val bbByCBCT = BBbyCBCT.getByOutput(outputOrig.outputPK.get).head
+
+    val rtplan = {
+      val series = DicomSeries.getBySopInstanceUID(bbByCBCT.rtplanSOPInstanceUID).head
+      series.attributeListList.head
+    }
+
+    val reg = {
+      def getFrameOfRef(al: AttributeList): String = al.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
+
+      val cbctFrmRef = getFrameOfRef(cbctList.head.attributeList.get)
+      val planFrmRef = getFrameOfRef(rtplan)
+      def regWorks(r: AttributeList): Boolean = {
+        val ir = new ImageRegistration(r)
+        ir.frameOfRefUID.equals(planFrmRef) && ir.otherFrameOfRefUID.equals(cbctFrmRef)
+      }
+      regList.find(r => regWorks(r.attributeList.get))
+    }
+
+    val runReq = new BBbyCBCTRunReq(Right(rtplan), reg, cbctList, Machine.get(outputOrig.machinePK.get).get)
+
+    val procedure = Procedure.get(outputOrig.procedurePK).get
+
+    val inputOutput = Run.preRun(procedure, runReq.machine, sessionDir, getUser(request), inputOrig.patientId, acquisitionDate)
+    val input = inputOutput._1
+    val output = inputOutput._2
+
+    Future {
+      val extendedData = ExtendedData.get(output)
+      val runReqFinal = runReq.reDir(input.dir)
+
+      val rtplan = runReqFinal.rtplan
+      val machine = runReqFinal.machine
+
+      val finalStatus = Phase2.runPhase2(extendedData, rtimageMap, runReqFinal)
+      val finDate = new Timestamp(System.currentTimeMillis)
+      val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
+
+      Phase2Util.setMachineSerialNumber(machine, runReqFinal.flood.attributeList.get)
+      outputFinal.insertOrUpdate
+      outputFinal.updateData(outputFinal.makeZipOfFiles)
+      Run.removeRedundantOutput(outputFinal.outputPK)
+      // remove the original input and all associated outputs to clean up any possible redundant data
+      Input.delete(inputOrig.inputPK.get)
+    }
+
+    val suffix = "?" + ViewOutput.outputPKTag + "=" + output.outputPK.get
+    response.redirectSeeOther(ViewOutput.path + suffix)
+  }
 
   /**
    * Tell the user that the redo is forbidden and why.  Also give them a redirect back to the list of results.
