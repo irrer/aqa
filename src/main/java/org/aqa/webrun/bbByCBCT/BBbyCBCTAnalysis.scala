@@ -159,11 +159,12 @@ object BBbyCBCTAnalysis extends Logging {
    * @param minMax Minimum and maximum values to be used for rendering deep color.
    */
   private def makeImage(dicomImage: DicomImage, location: Point2D.Double, pixelSize: Point2D.Double, minMax: (Float, Float)): BufferedImage = {
-    // TODO fix me
-    ???
     val aspectCorrected = dicomImage.renderPixelsToSquare(pixelSize.getX, pixelSize.getY)
-    val bufImg = aspectCorrected.toBufferedImage(Color.green)
-    //val bufImg = aspectCorrected.toDeepColorBufferedImage(0.0)
+    //Trace.trace("pixel sizes: " + pixelSize.getX + ", " + pixelSize.getY + "    Dimensions before aspect correction: " + dicomImage.width + ", " + dicomImage.height + "    after: " + aspectCorrected.width + ", " + aspectCorrected.height)
+    val bufImg = if (Config.CBCTImageColor.getRGB == 0)
+      aspectCorrected.toDeepColorBufferedImage(0.0)
+    else
+      aspectCorrected.toBufferedImage(Config.CBCTImageColor)
     bufImg
   }
 
@@ -201,6 +202,16 @@ object BBbyCBCTAnalysis extends Logging {
       makeImage(diY, new Point2D.Double(fineLocation_vox.getZ, fineLocation_vox.getX), new Point2D.Double(voxSize(2), voxSize(0)), minMaxPixels),
       makeImage(diZ, new Point2D.Double(fineLocation_vox.getX, fineLocation_vox.getY), new Point2D.Double(voxSize(0), voxSize(1)), minMaxPixels))
 
+//    if (true) { // TODO rm
+//      Trace.trace("fineLocation_vox: " + fineLocation_vox.getX + ", " + fineLocation_vox.getY + ", " + fineLocation_vox.getZ)
+//      Trace.trace("voxSize: " + voxSize.mkString(", "))
+//      val dir = new File("""D:\tmp\aqa\tmp\aspect""")
+//      val t = (System.currentTimeMillis % 100000).toString
+//      ImageUtil.writePngFile(bufImgList(0), new File(dir, t + "_X2.png"))
+//      ImageUtil.writePngFile(bufImgList(1), new File(dir, t + "_Y2.png"))
+//      ImageUtil.writePngFile(bufImgList(2), new File(dir, t + "_Z2.png"))
+//      Trace.trace("wrote image files to: " + dir.getAbsolutePath)
+//    }
     bufImgList
   }
 
@@ -251,12 +262,22 @@ object BBbyCBCTAnalysis extends Logging {
     val volTrans = new VolumeTranslator(sorted)
     // fine location in mm coordinates
     if (fineLocation_vox.isDefined) {
-      if (true) { // TODO rm
-        def fmt(d: Double) = d.formatted("%12.7f")
-        println("Voxel coordinates " + fmt(fineLocation_vox.get.getX) + " " + fmt(fineLocation_vox.get.getY) + " " + fmt(fineLocation_vox.get.getZ))
-      }
       val fineLocation_mm = volTrans.vox2mm(fineLocation_vox.get)
       val imageXYZ = makeImagesXYZ(entireVolume, fineLocation_vox.get, fineLocation_mm, voxSize_mm)
+      if (true) { // TODO rm
+        def fmt(d: Double) = d.formatted("%12.7f")
+        Trace.trace("coordinates in mm  in original frame of ref:  " + fmt(fineLocation_mm.getX) + " " + fmt(fineLocation_mm.getY) + " " + fmt(fineLocation_mm.getZ))
+        Trace.trace("coordinates in vox in original frame of ref:  " + fmt(fineLocation_vox.get.getX) + " " + fmt(fineLocation_vox.get.getY) + " " + fmt(fineLocation_vox.get.getZ))
+        val roundTrip = volTrans.mm2vox(fineLocation_mm)
+        Trace.trace("coordinates in vox round tripped frm of ref:  " + fmt(roundTrip.getX) + " " + fmt(roundTrip.getY) + " " + fmt(roundTrip.getZ))
+        def scl(v: Double, vs: Double, vsOther: Double): String = {
+          val r = if (vs > vsOther) v * (vs / vsOther) else v
+          r.formatted("%12.7f")
+        }
+        Trace.trace("x BB: " + scl(roundTrip.getZ, voxSize_mm(2), voxSize_mm(1)) + ", " + scl(roundTrip.getY, voxSize_mm(1), voxSize_mm(2)))
+        Trace.trace("y BB: " + scl(roundTrip.getZ, voxSize_mm(2), voxSize_mm(0)) + ", " + scl(roundTrip.getX, voxSize_mm(0), voxSize_mm(2)))
+        Trace.trace("z BB: " + scl(roundTrip.getX, voxSize_mm(0), voxSize_mm(1)) + ", " + scl(roundTrip.getY, voxSize_mm(1), voxSize_mm(0)))
+      }
       Right(fineLocation_mm, imageXYZ)
     } else {
       Left("No BB found")

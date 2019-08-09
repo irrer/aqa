@@ -128,7 +128,7 @@ object Util extends Logging {
 
   def isModality(al: AttributeList, sopClassUID: String): Boolean = {
     try {
-      if (true) {  // TODO rm
+      if (true) { // TODO rm
         val j = al.get(TagFromName.SOPClassUID)
         val j1 = j.getSingleStringValueOrEmptyString.equals(sopClassUID)
         Trace.trace(j)
@@ -919,7 +919,6 @@ object Util extends Logging {
    */
   def textToId(text: String) = text.replaceAll("[^0-9a-zA-Z]", "_").replaceAll("__*", "_")
 
-  
   def attributeListToDeviceSerialNumber(al: AttributeList): Option[String] = {
     val at = al.get(TagFromName.DeviceSerialNumber)
     if (at == null) None
@@ -929,6 +928,11 @@ object Util extends Logging {
     }
   }
 
-
+  /**
+   * Convert a hex string to an AWT color.
+   */
+  def hexToColor(hex: String): Color = {
+    new Color(Integer.parseInt(hex, 16))
+  }
 
 }

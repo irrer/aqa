@@ -18,7 +18,7 @@ import java.awt.BasicStroke
 object BBbyCBCTAnnotateImages {
 
   /** Factor to magnify area of interest image. */
-  private val scale = 1 // 32
+  private val scale = 32
 
   private val textPointSize = 30
 
@@ -42,7 +42,7 @@ object BBbyCBCTAnnotateImages {
   private def makePair(
     bbByCBCT: BBbyCBCT,
     voxSizeX_mmOrig: Double, voxSizeY_mmOrig: Double,
-    centerX_pixOrig: Double, centerY_pixOrig: Double,
+    centerUnscaledX_pix: Double, centerUnscaledY_pix: Double,
     xAxisName: String, yAxisName: String,
     originalImage: BufferedImage): ImagePair = {
 
@@ -63,17 +63,17 @@ object BBbyCBCTAnnotateImages {
 
     val centerX_pix = {
       val xc = if (voxSizeX_mmOrig > voxSizeY_mmOrig)
-        centerX_pixOrig / (voxSizeX_mmOrig / voxSizeY_mmOrig)
+        centerUnscaledX_pix * (voxSizeX_mmOrig / voxSizeY_mmOrig)
       else
-        centerX_pixOrig
+        centerUnscaledX_pix
       (xc + 0.5) * scale
     }
 
     val centerY_pix = {
       val yc = if (voxSizeY_mmOrig > voxSizeX_mmOrig)
-        centerY_pixOrig / (voxSizeY_mmOrig / voxSizeX_mmOrig)
+        centerUnscaledY_pix * (voxSizeY_mmOrig / voxSizeX_mmOrig)
       else
-        centerY_pixOrig
+        centerUnscaledY_pix
       (yc + 0.5) * scale
     }
 
@@ -214,7 +214,7 @@ object BBbyCBCTAnnotateImages {
     val volTrans = new VolumeTranslator(runReq.cbct)
     Trace.trace
 
-    val center_vox = volTrans.mm2vox(origPosition)
+    val centerUnscaled_vox = volTrans.mm2vox(origPosition)
     //    val centerX_pix = (center_vox.getX + 0.5) * scale
     //    val centerY_pix = (center_vox.getY + 0.5) * scale
     //    val centerZ_pix = (center_vox.getZ + 0.5) * scale
@@ -224,21 +224,21 @@ object BBbyCBCTAnnotateImages {
     val xImagePair = makePair(
       bbByCBCT,
       voxSize_mm(2), voxSize_mm(1),
-      center_vox.getZ, center_vox.getY,
+      centerUnscaled_vox.getZ, centerUnscaled_vox.getY,
       "Z axis", "Y axis", imageXYZ(0))
     Trace.trace
 
     val yImagePair = makePair(
       bbByCBCT,
       voxSize_mm(2), voxSize_mm(0),
-      center_vox.getZ, center_vox.getX,
+      centerUnscaled_vox.getZ, centerUnscaled_vox.getX,
       "Z axis", "X axis", imageXYZ(1))
     Trace.trace
 
     val zImagePair = makePair(
       bbByCBCT,
       voxSize_mm(0), voxSize_mm(1),
-      center_vox.getX, center_vox.getY,
+      centerUnscaled_vox.getX, centerUnscaled_vox.getY,
       "X axis", "Y axis", imageXYZ(2))
 
     Trace.trace
