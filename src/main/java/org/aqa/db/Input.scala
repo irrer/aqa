@@ -150,6 +150,7 @@ object Input extends Logging {
   def getFilesFromDatabase(inputPK: Long, dir: File) = {
     // Steps are done on separate lines so that if there is an error/exception it can be precisely
     // tracked.  It is up to the caller to catch any exceptions and act accordingly.
+    dir.mkdirs
     val inputFilesOption = InputFiles.getByInput(inputPK)
     val inputFiles = inputFilesOption.get
     FileUtil.writeByteArrayZipToFileTree(inputFiles.zippedContent, dir)

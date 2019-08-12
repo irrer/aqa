@@ -1197,5 +1197,6 @@ object WebUtil extends Logging {
   }
 
   def stringToUrlSafe(text: String): String = text.replaceAll("[^a-zA-Z0-9]", "_")
+
 }
 

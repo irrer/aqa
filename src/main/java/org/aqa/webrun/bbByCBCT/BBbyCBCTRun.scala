@@ -82,8 +82,23 @@ object BBbyCBCTRun extends Logging {
     same
   }
 
+  /**
+   * Add this series to the database if it is not already in.  Use the SOPInstanceUID to determine if it is already in the database.
+   */
+  private def insertIfNew(alList: Seq[AttributeList], extendedData: ExtendedData) = {
+    val sopUID = Util.sopOfAl(alList.head)
+
+    val current = DicomSeries.getBySopInstanceUID(sopUID)
+    if (current.isEmpty) {
+      val ds = DicomSeries.makeDicomSeries(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, alList)
+      logger.info("inserted DicomSeries in to database: " + ds)
+      ds.insert
+    }
+  }
+
   private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output) = {
 
+    Output.ensureInputAndOutputFilesExist(outputOrig)
     val sessionId = Session.makeUniqueId
     val sessionDir = Session.idToFile(sessionId)
     sessionDir.mkdirs
@@ -135,16 +150,17 @@ object BBbyCBCTRun extends Logging {
 
     Future {
       val extendedData = ExtendedData.get(output)
+      insertIfNew(Seq(runReq.rtplan), extendedData)
       val runReqFinal = runReq.reDir(input.dir)
 
       val rtplan = runReqFinal.rtplan
       val machine = runReqFinal.machine
 
-      val finalStatus = Phase2.runPhase2(extendedData, rtimageMap, runReqFinal)
+      val finalStatus = BBbyCBCTExecute.runProcedure(extendedData, runReqFinal)
       val finDate = new Timestamp(System.currentTimeMillis)
       val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
 
-      Phase2Util.setMachineSerialNumber(machine, runReqFinal.flood.attributeList.get)
+      Phase2Util.setMachineSerialNumber(machine, runReq.cbct.head)
       outputFinal.insertOrUpdate
       outputFinal.updateData(outputFinal.makeZipOfFiles)
       Run.removeRedundantOutput(outputFinal.outputPK)
@@ -196,7 +212,7 @@ object BBbyCBCTRun extends Logging {
               val msg = "Redo not permitted because user is from a different institution."
               forbidRedo(response, msg, outputOrig.outputPK)
             }
-            //  case Some(inputOrig) => processRedoRequest(request, response, inputOrig, outputOrig) TODO
+            case Some(inputOrig) => BBbyCBCTRun.processRedoRequest(request, response, inputOrig, outputOrig) 
           }
         }
       }
@@ -440,30 +456,17 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   }
 
   /**
-   * Add this series to the database if it is not already in.  Use the SOPInstanceUID to determine if it is already in the database.
-   */
-  private def insertIfNew(alList: Seq[AttributeList], extendedData: ExtendedData) = {
-    val sopUID = Util.sopOfAl(alList.head)
-
-    val current = DicomSeries.getBySopInstanceUID(sopUID)
-    if (current.isEmpty) {
-      val ds = DicomSeries.makeDicomSeries(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, alList)
-      logger.info("inserted DicomSeries in to database: " + ds)
-      ds.insert
-    }
-  }
-
-  /**
    * Respond to the 'Run' button.
    */
   private def runIfDataValid(valueMap: ValueMapT, request: Request, response: Response) = {
 
+    logger.info("Validating data")
     validate(valueMap) match {
       case Left(errMap) => {
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
       case Right(runReq) => {
-        logger.info("Validating data")
+        logger.info("Dat is valid.  Preparing to analyze data.")
         // only consider the CBCT files for the date-time stamp.  The plan could have been from months ago.
         val dtp = dateTimePatId(runReq.cbct)
 
@@ -474,7 +477,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
         Future {
           val extendedData = ExtendedData.get(output)
-          insertIfNew(Seq(runReq.rtplan), extendedData)
+          BBbyCBCTRun.insertIfNew(Seq(runReq.rtplan), extendedData)
           val runReqFinal = runReq.reDir(input.dir)
 
           //          val plan = runReqFinal.rtplan
@@ -519,6 +522,8 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     super.handle(request, response)
 
     val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
+    val redo = valueMap.get(OutputList.redoTag)
+    val del = valueMap.get(OutputList.deleteTag)
 
     try {
       0 match {

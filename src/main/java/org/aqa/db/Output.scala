@@ -251,6 +251,23 @@ object Output extends Logging {
   }
 
   /**
+   * Ensure that the output files and related input files are in the file system.  If
+   * not, then get them from the database.
+   */
+  def ensureInputAndOutputFilesExist(output: Output) = {
+    val inputDir = output.dir.getParentFile
+
+    if (!inputDir.isDirectory) {
+      Input.getFilesFromDatabase(output.inputPK, inputDir.getParentFile)
+    }
+
+    if (!output.dir.isDirectory) {
+      Output.getFilesFromDatabase(output.outputPK.get, inputDir)
+    }
+
+  }
+
+  /**
    * Return the list of redundant outputs, keeping the ones that users would want. The rules are:
    *
    *     Keep the latest successful output, even if there are newer ones that were not successful.
@@ -344,6 +361,7 @@ object Output extends Logging {
    *
    */
   def getFilesFromDatabase(outputPK: Long, dir: File) = {
+    dir.mkdirs
     // Steps are done on separate lines so that if there is an error/exception it can be precisely
     // tracked.  It is up to the caller to catch any exceptions and act accordingly.
     val outputFilesOption = OutputFiles.getByOutput(outputPK)

@@ -19,6 +19,7 @@ import org.aqa.webrun.phase2.Phase2
 import org.aqa.db.CachedUser
 import org.restlet.data.Status
 import edu.umro.ScalaUtil.Trace
+import org.aqa.webrun.bbByCBCT.BBbyCBCTRun
 
 /**
  * List the outputs to let users re-visit results.
@@ -236,6 +237,9 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
         if (procedure.name.toLowerCase.contains("phase")) {
           Phase2.redo(outputPK, response.getRequest, response)
         }
+        if (procedure.name.toLowerCase.contains("cbct")) {
+          BBbyCBCTRun.redo(outputPK, response.getRequest, response)
+        }
       }
     }
   }
@@ -258,9 +262,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
     val redo = valueMap.get(OutputList.redoTag)
     val del = valueMap.get(OutputList.deleteTag)
-    def getOutput = {
 
-    }
     if (redo.isDefined)
       redoOutput(redo.get.toLong, response)
     else {

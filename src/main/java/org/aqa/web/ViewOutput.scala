@@ -213,21 +213,32 @@ class ViewOutput extends Restlet with SubUrlView {
         else None
       }
 
-      val outputFile: Option[File] = {
+      if (output.isDefined) {
+        Output.ensureInputAndOutputFilesExist(Output.get(output.get.outputPK).get)
+      }
+
+      //      val outputFile: Option[File] = {
+      //        if (output.isDefined) {
+      //          if (!output.get.dir.isDirectory) {
+      //            val inputDir = output.get.dir.getParentFile
+      //            Output.getFilesFromDatabase(output.get.outputPK, inputDir)
+      //            Input.getFilesFromDatabase(output.get.inputPK, inputDir.getParentFile)
+      //          }
+      //          Output.outputFile(output.get.dir)
+      //        } else None
+      //      }
+
+      def displayFile: Option[File] = {
         if (output.isDefined) {
-          if (!output.get.dir.isDirectory) {
-            val inputDir = output.get.dir.getParentFile
-            Output.getFilesFromDatabase(output.get.outputPK, inputDir)
-            Input.getFilesFromDatabase(output.get.inputPK, inputDir.getParentFile)
-          }
-          Output.outputFile(output.get.dir)
+          val display = new File(output.get.dir, Output.displayFilePrefix + ".html")
+          if (display.canRead) Some(display) else None
         } else None
       }
 
       0 match {
         case _ if (output.isDefined && checksum.isDefined) => ViewOutput.giveStatus(output.get.outputPK, checksum.get, response)
         case _ if (output.isDefined && showSummary) => ViewOutput.showSummary(output.get.outputPK, response)
-        case _ if (outputFile.isDefined) => setResponseWithOutputFile(outputFile.get, response)
+        case _ if displayFile.isDefined => setResponseWithOutputFile(displayFile.get, response)
         case _ if (output.isDefined) => ViewOutput.showSummary(output.get.outputPK, response)
         case _ => ViewOutput.noOutput(response)
       }
