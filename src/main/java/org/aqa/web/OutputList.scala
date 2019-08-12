@@ -233,6 +233,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     Output.get(outputPK) match {
       case None => ;
       case Some(output) => {
+        Output.ensureInputAndOutputFilesExist(output)
         val procedure = Procedure.get(output.procedurePK).get
         if (procedure.name.toLowerCase.contains("phase")) {
           Phase2.redo(outputPK, response.getRequest, response)
