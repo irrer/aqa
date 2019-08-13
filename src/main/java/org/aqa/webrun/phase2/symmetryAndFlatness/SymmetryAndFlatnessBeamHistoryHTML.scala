@@ -32,8 +32,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
 
   // list of all MaintenanceRecords in this time interval
   private val MaintenanceRecordList = MaintenanceRecord.
-    getRange(machinePK, history.head.date, history.last.date).
-    filter(m => !(m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline.toString)))
+    getRange(machinePK, history.head.date, history.last.date) //.filter(m => !(m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline.toString)))
 
   private def getBaseline(dataName: String): Baseline = {
     val baselineName = SymmetryAndFlatnessAnalysis.makeBaselineName(beamName, dataName)

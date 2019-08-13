@@ -29,8 +29,7 @@ class WedgeChartHistory(outputPK: Long) {
 
   /** All maintenance records for the entire history interval for all beams except for 'Set Baseline' to reduce clutter. */
   val allMaintenanceRecordList = MaintenanceRecord.
-    getRange(machinePK, allHistory.head.date, allHistory.last.date).
-    filter(m => !(m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline.toString)))
+    getRange(machinePK, allHistory.head.date, allHistory.last.date) //.filter(m => !(m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline.toString)))
 
   def indexOfThis(beamHistory: Seq[WedgePoint.WedgePointHistory]): Int = {
     val i = beamHistory.indexWhere(h => h.outputPK == output.outputPK.get)
@@ -59,7 +58,11 @@ class WedgeChartHistory(outputPK: Long) {
     val maintenanceRecordList = {
       val min = beamHistory.head.date.getTime
       val max = beamHistory.last.date.getTime
-      allMaintenanceRecordList.filter(m => (m.creationTime.getTime >= min) && (m.creationTime.getTime <= max))
+      val inTimeRange = allMaintenanceRecordList.filter(m => (m.creationTime.getTime >= min) && (m.creationTime.getTime <= max))
+
+      val releventBaseline = Baseline.filterOutUnrelatedBaselines(inTimeRange.map(itr => itr.maintenanceRecordPK.get).toSet, Set("wedge")).map(_.maintenanceRecordPK.get).toSet
+
+      inTimeRange.filter(itr => releventBaseline.contains(itr.maintenanceRecordPK.get) || (!itr.category.equals(MaintenanceCategory.setBaseline)))
     }
     val xDateList = beamHistory.map(_.date)
     val baseline = getBaseline(wedgePoint)
