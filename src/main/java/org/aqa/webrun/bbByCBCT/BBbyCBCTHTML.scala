@@ -30,6 +30,8 @@ object BBbyCBCTHTML {
 
     val outputDir = extendedData.output.dir
 
+    val chart = new BBbyCBCTChart(extendedData.output.outputPK.get)
+
     def writeImg(index: Int) = {
       val pngFileFull = new File(outputDir, fileNameOfFull(index))
       Util.writePng(imageSet.fullImage(index), pngFileFull)
@@ -115,6 +117,7 @@ object BBbyCBCTHTML {
     def content = {
       <div class="row">
         { numberText }
+        { chart.chartReference }
         <table class="table table-responsive">
           <tr>
             { Seq(2, 1, 0).map(index => makeSet(index)) }
@@ -191,10 +194,10 @@ object BBbyCBCTHTML {
           "      $(document).ready(function(){ $('#" + Util.textToId(fileNameOfAreaOfInterest(index)) + "').zoom(); });\n" +
           "      $(document).ready(function(){ $('#" + Util.textToId(fileNameOfFull(index)) + "').zoom(); });"
       }
-      "\n<script>\n      " + Seq(0, 1, 2).map(index => zoomy(index)).mkString("\n      ") + "\n</script>\n"
+      "\n<script>\n      " + Seq(0, 1, 2).map(index => zoomy(index)).mkString("\n      ") + "\n" + chart.chartScript + "\n</script>\n"
     }
 
-    val text = WebUtil.wrapBody(wrap, "BB Location by CBCT", None, false, Some(runScript))
+    val text = WebUtil.wrapBody(wrap, "BB Location by CBCT", None, true, Some(runScript))
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(file, text)
   }
