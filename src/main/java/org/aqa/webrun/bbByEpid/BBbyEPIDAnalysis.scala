@@ -8,6 +8,8 @@ import java.awt.image.BufferedImage
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 import scala.Left
+import com.pixelmed.dicom.AttributeList
+import org.aqa.Config
 
 object BBbyEPIDAnalysis extends Logging {
 
@@ -15,10 +17,11 @@ object BBbyEPIDAnalysis extends Logging {
 
   case class BBbyEPIDResult(summry: Elem, sts: ProcedureStatus.Value, position: Seq[Point3d], images: Seq[BufferedImage])
 
-  
-  
-  
-  def runProcedure(extendedData: ExtendedData, bbByEpidData: BBbyEPIDData): Either[Elem, BBbyEPIDResult] = {
+  private def findBB(al: AttributeList) = {
+    Config.BBbyEPIDSearchDistance_mm
+  }
+
+  def runProcedure(extendedData: ExtendedData, imageList: Seq[AttributeList]): Either[Elem, BBbyEPIDResult] = {
     try {
       // This code only reports values without making judgment as to pass or fail.
       logger.info("Starting analysis of EPID Alignment")

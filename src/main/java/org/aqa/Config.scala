@@ -778,6 +778,8 @@ object Config extends Logging {
   val CBCTImageColor = Util.hexToColor(logMainText("CBCTImageColor", "FFFFFF"))
   val BBbyCBCTHistoryRange = logMainText("BBbyCBCTHistoryRange", "25").toInt
 
+  val BBbyEPIDSearchDistance_mm = logMainText("BBbyEPIDSearchDistance_mm", "15.0").toDouble
+  
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true
 
