@@ -194,7 +194,12 @@ object BBbyCBCTHTML {
           "      $(document).ready(function(){ $('#" + Util.textToId(fileNameOfAreaOfInterest(index)) + "').zoom(); });\n" +
           "      $(document).ready(function(){ $('#" + Util.textToId(fileNameOfFull(index)) + "').zoom(); });"
       }
-      "\n<script>\n      " + Seq(0, 1, 2).map(index => zoomy(index)).mkString("\n      ") + "\n" + chart.chartScript + "\n</script>\n"
+
+      val zoomList = Seq(0, 1, 2).map(index => zoomy(index))
+      val zoomScript = zoomList.mkString("\n<script>\n      ", "\n      ", "\n</script>")
+      val chartRef = BBbyCBCTChartHistoryRestlet.makeReference(extendedData.output.outputPK.get)
+
+      zoomScript + "\n" + chartRef
     }
 
     val text = WebUtil.wrapBody(wrap, "BB Location by CBCT", None, true, Some(runScript))

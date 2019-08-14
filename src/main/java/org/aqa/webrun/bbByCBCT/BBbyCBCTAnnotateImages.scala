@@ -44,6 +44,7 @@ object BBbyCBCTAnnotateImages {
     voxSizeX_mmOrig: Double, voxSizeY_mmOrig: Double,
     centerUnscaledX_pix: Double, centerUnscaledY_pix: Double,
     xAxisName: String, yAxisName: String,
+    xPlanOffset_mm: Double, yPlanOffset_mm: Double,
     originalImage: BufferedImage): ImagePair = {
 
     def rnd(d: Double) = d.round.toInt
@@ -136,12 +137,12 @@ object BBbyCBCTAnnotateImages {
         graphics.setColor(Color.red)
 
         val planXcenter = {
-          val diff = (bbByCBCT.cbctZ_mm - bbByCBCT.rtplanZ_mm) / voxSizeX_mm
+          val diff = xPlanOffset_mm / voxSizeX_mm
           centerX_pix + (diff * scale)
         }
 
         val planYcenter = {
-          val diff = (bbByCBCT.cbctY_mm - bbByCBCT.rtplanY_mm) / voxSizeY_mm
+          val diff = yPlanOffset_mm / voxSizeY_mm
           centerY_pix + (diff * scale)
         }
 
@@ -175,24 +176,6 @@ object BBbyCBCTAnnotateImages {
     }
 
     // ---------------------------------------------------------------------------------
-
-    //    def cropImageX(image: BufferedImage) = {
-    //      val xRadius = (Config.DailyPhantomBBPenumbra_mm / voxSizeX_mm) * scale * 1.5
-    //      val yRadius = (Config.DailyPhantomBBPenumbra_mm / voxSizeY_mm) * scale * 1.5
-    //
-    //      val x = Math.max(0, rnd(centerX_pix - xRadius))
-    //      val y = Math.max(0, rnd(centerY_pix - yRadius))
-    //      val width = {
-    //        val w = rnd(xRadius * 2)
-    //        if ((w + x) > image.getWidth) image.getWidth else w
-    //      }
-    //      val height = {
-    //        val h = rnd(yRadius * 2)
-    //        if ((h + y) > image.getHeight) image.getHeight else h
-    //      }
-    //      val aoi = image.getSubimage(x, y, width, height)
-    //      aoi
-    //    }
 
     def cropImage(image: BufferedImage, textWidth: Int) = {
       val radius = ((textWidth * 1.3) / 2).round.toInt
@@ -230,46 +213,45 @@ object BBbyCBCTAnnotateImages {
    * @param origPosition Original XYZ position in mm in the original frame of reference.
    */
   def annotate(bbByCBCT: BBbyCBCT, imageXYZ: Seq[BufferedImage], runReq: BBbyCBCTRunReq, origPosition: Point3d): ImageSet = {
-    Trace.trace
     val voxSize_mm = Util.getVoxSize_mm(runReq.cbct) // the size of a voxel in mm
-    Trace.trace
 
     val volTrans = new VolumeTranslator(runReq.cbct)
-    Trace.trace
 
     val centerUnscaled_vox = volTrans.mm2vox(origPosition)
-    //    val centerX_pix = (center_vox.getX + 0.5) * scale
-    //    val centerY_pix = (center_vox.getY + 0.5) * scale
-    //    val centerZ_pix = (center_vox.getZ + 0.5) * scale
-    Trace.trace
-    Trace.trace(imageXYZ.map(img => img.getWidth + ", " + img.getHeight).mkString("Image sizes\n    ", "\n    ", "\n"))
 
-    val xImagePair = makePair(
+    def xImagePair = makePair(
       bbByCBCT,
       voxSize_mm(2), voxSize_mm(1),
       centerUnscaled_vox.getZ, centerUnscaled_vox.getY,
-      "Z axis", "Y axis", imageXYZ(0))
-    Trace.trace
+      "Z axis", "Y axis",
+      bbByCBCT.cbctZ_mm - bbByCBCT.rtplanZ_mm, bbByCBCT.cbctY_mm - bbByCBCT.rtplanY_mm,
+      imageXYZ(0))
 
-    val yImagePair = makePair(
+    def yImagePair = makePair(
       bbByCBCT,
       voxSize_mm(2), voxSize_mm(0),
       centerUnscaled_vox.getZ, centerUnscaled_vox.getX,
-      "Z axis", "X axis", imageXYZ(1))
-    Trace.trace
+      "Z axis", "X axis",
+      bbByCBCT.cbctZ_mm - bbByCBCT.rtplanZ_mm, bbByCBCT.cbctX_mm - bbByCBCT.rtplanX_mm,
+      imageXYZ(1))
 
-    val zImagePair = makePair(
+    bbByCBCT.cbctZ_mm - bbByCBCT.rtplanZ_mm
+
+    def zImagePair = makePair(
       bbByCBCT,
       voxSize_mm(0), voxSize_mm(1),
       centerUnscaled_vox.getX, centerUnscaled_vox.getY,
-      "X axis", "Y axis", imageXYZ(2))
+      "X axis", "Y axis",
+      bbByCBCT.cbctX_mm - bbByCBCT.rtplanX_mm, bbByCBCT.cbctY_mm - bbByCBCT.rtplanY_mm,
+      imageXYZ(2))
 
-    Trace.trace
+    val pairList = Seq(xImagePair _, yImagePair _, zImagePair _).par.map(f => f()).toList
 
     val imageSet = new ImageSet(
-      Seq(xImagePair.fullImage, yImagePair.fullImage, zImagePair.fullImage),
-      Seq(xImagePair.areaOfInterest, yImagePair.areaOfInterest, zImagePair.areaOfInterest))
-    Trace.trace
+      pairList.map(p => p.fullImage),
+      pairList.map(p => p.areaOfInterest))
+    //  Seq(xImagePair.fullImage, yImagePair.fullImage, zImagePair.fullImage),
+    //  Seq(xImagePair.areaOfInterest, yImagePair.areaOfInterest, zImagePair.areaOfInterest))
     imageSet
   }
 }
