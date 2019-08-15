@@ -119,53 +119,53 @@ Note that when building a package for release, the Maven build process uses the 
      a java.lang.ExceptionInInitializerError error.
      -->
     <ToBeAnonymizedList>
-        <ToBeAnonymized Name='PatientID'          Tag='0010,0020'  />  <!-- Example of how Tag is used. -->
-        <ToBeAnonymized                           Tag='0010,0010'  />  <!-- Example of how just a Tag is used, equivalent to Name='PatientName' -->
-        <ToBeAnonymized Name='PatientBirthDate'                    Value='18000101'/>
-        <ToBeAnonymized Name='PatientBirthTime'                    Value='000000'/>
-        <ToBeAnonymized Name='PatientSex'                          Value='O'/>
-        <ToBeAnonymized Name='OtherPatientIDs'                     />
-        <ToBeAnonymized Name='OtherPatientNames'                   />
-        <ToBeAnonymized Name='PatientAge'                          Value='0'/>
-        <ToBeAnonymized Name='PatientSize'                         Value='0'/>
-        <ToBeAnonymized Name='PatientWeight'                       Value='0'/>
-        <ToBeAnonymized Name='InstanceCreatorUID'                  />
-        <ToBeAnonymized Name='SOPInstanceUID'                      />
-        <ToBeAnonymized Name='MediaStorageSOPInstanceUID'          />
-        <ToBeAnonymized Name='AccessionNumber'                     Value='0'/>
-        <ToBeAnonymized Name='InstitutionName'                     />
-        <ToBeAnonymized Name='InstitutionAddress'                  />
-        <ToBeAnonymized Name='ReferringPhysicianName'              />
-        <ToBeAnonymized Name='ReferringPhysicianAddress'           />
-        <ToBeAnonymized Name='ReferringPhysicianTelephoneNumbers'  />
-        <ToBeAnonymized Name='StationName'                         />
-        <ToBeAnonymized Name='InstitutionalDepartmentName'         />
-        <ToBeAnonymized Name='PhysiciansOfRecord'                  />
-        <ToBeAnonymized Name='PerformingPhysicianName'             />
-        <ToBeAnonymized Name='NameOfPhysiciansReadingStudy'        />
-        <ToBeAnonymized Name='OperatorsName'                       />
-        <ToBeAnonymized Name='ReferencedSOPInstanceUID'            />
-        <ToBeAnonymized Name='MedicalRecordLocator'                />
-        <ToBeAnonymized Name='EthnicGroup'                         />
-        <ToBeAnonymized Name='Occupation'                          />
-        <ToBeAnonymized Name='AdditionalPatientHistory'            />
-        <ToBeAnonymized Name='PatientComments'                     />
-        <ToBeAnonymized Name='DeviceSerialNumber'                  />
-        <ToBeAnonymized Name='ProtocolName'                        />
-        <ToBeAnonymized Name='StudyInstanceUID'                    />
-        <ToBeAnonymized Name='SeriesInstanceUID'                   />
-        <ToBeAnonymized Name='StudyID'                             />
-        <ToBeAnonymized Name='RadiationMachineName'                />  <!-- Note: This is not generally anonymized, but in this case it could protect the identity of the institution. -->
-        <ToBeAnonymized Name='FrameOfReferenceUID'                 />
-        <ToBeAnonymized Name='SynchronizationFrameOfReferenceUID'  />
-        <ToBeAnonymized Name='ImageComments'                       />
-        <ToBeAnonymized Name='UID'                                 />
-        <ToBeAnonymized Name='StorageMediaFileSetUID'              />
-        <ToBeAnonymized Name='ReferencedFrameOfReferenceUID'       />
-        <ToBeAnonymized Name='RelatedFrameOfReferenceUID'          />
-        <ToBeAnonymized Name='SourceFrameOfReferenceUID'           />
-        <ToBeAnonymized Name='RTPlanName'                          />
-        <ToBeAnonymized Name='DoseReferenceUID'                    />
+        <ToBeAnonymized Name='PatientID' Tag='0010,0020' />  <!-- Example of how Tag is used. -->
+        <ToBeAnonymized Tag='0010,0010' />  <!-- Example of how just a Tag is used, equivalent to Name='PatientName' -->
+        <ToBeAnonymized Name='PatientBirthDate' Value='18000101' />
+        <ToBeAnonymized Name='PatientBirthTime' Value='000000' />
+        <ToBeAnonymized Name='PatientSex' Value='O' />
+        <ToBeAnonymized Name='OtherPatientIDs' />
+        <ToBeAnonymized Name='OtherPatientNames' />
+        <ToBeAnonymized Name='PatientAge' Value='0' />
+        <ToBeAnonymized Name='PatientSize' Value='0' />
+        <ToBeAnonymized Name='PatientWeight' Value='0' />
+        <ToBeAnonymized Name='InstanceCreatorUID' />
+        <ToBeAnonymized Name='SOPInstanceUID' />
+        <ToBeAnonymized Name='MediaStorageSOPInstanceUID' />
+        <ToBeAnonymized Name='AccessionNumber' Value='0' />
+        <ToBeAnonymized Name='InstitutionName' />
+        <ToBeAnonymized Name='InstitutionAddress' />
+        <ToBeAnonymized Name='ReferringPhysicianName' />
+        <ToBeAnonymized Name='ReferringPhysicianAddress' />
+        <ToBeAnonymized Name='ReferringPhysicianTelephoneNumbers' />
+        <ToBeAnonymized Name='StationName' />
+        <ToBeAnonymized Name='InstitutionalDepartmentName' />
+        <ToBeAnonymized Name='PhysiciansOfRecord' />
+        <ToBeAnonymized Name='PerformingPhysicianName' />
+        <ToBeAnonymized Name='NameOfPhysiciansReadingStudy' />
+        <ToBeAnonymized Name='OperatorsName' />
+        <ToBeAnonymized Name='ReferencedSOPInstanceUID' />
+        <ToBeAnonymized Name='MedicalRecordLocator' />
+        <ToBeAnonymized Name='EthnicGroup' />
+        <ToBeAnonymized Name='Occupation' />
+        <ToBeAnonymized Name='AdditionalPatientHistory' />
+        <ToBeAnonymized Name='PatientComments' />
+        <ToBeAnonymized Name='DeviceSerialNumber' />
+        <ToBeAnonymized Name='ProtocolName' />
+        <ToBeAnonymized Name='StudyInstanceUID' />
+        <ToBeAnonymized Name='SeriesInstanceUID' />
+        <ToBeAnonymized Name='StudyID' />
+        <ToBeAnonymized Name='RadiationMachineName' />  <!-- Note: This is not generally anonymized, but in this case it could protect the identity of the institution. -->
+        <ToBeAnonymized Name='FrameOfReferenceUID' />
+        <ToBeAnonymized Name='SynchronizationFrameOfReferenceUID' />
+        <ToBeAnonymized Name='ImageComments' />
+        <ToBeAnonymized Name='UID' />
+        <ToBeAnonymized Name='StorageMediaFileSetUID' />
+        <ToBeAnonymized Name='ReferencedFrameOfReferenceUID' />
+        <ToBeAnonymized Name='RelatedFrameOfReferenceUID' />
+        <ToBeAnonymized Name='SourceFrameOfReferenceUID' />
+        <ToBeAnonymized Name='RTPlanName' />
+        <ToBeAnonymized Name='DoseReferenceUID' />
      <!--  <ToBeAnonymized Name='ReferencedPrimaryDoseRefUID'         />   -->
     </ToBeAnonymizedList>
 
@@ -209,11 +209,14 @@ Note that when building a package for release, the Maven build process uses the 
         <MaintenanceCategory Name='Mechanical Jaws' Color='#aa3322'>Maintenance performed on jaws
         </MaintenanceCategory>
         <MaintenanceCategory Name='Mechanical Collimator' Color='#aa3322'>Maintenance performed on
-            Collimator</MaintenanceCategory>
+            Collimator
+        </MaintenanceCategory>
         <MaintenanceCategory Name='Mechanical Gantry' Color='#aa3322'>Maintenance performed on
-            Gantry</MaintenanceCategory>
+            Gantry
+        </MaintenanceCategory>
         <MaintenanceCategory Name='Electrical' Color='#aa3322'>Maintenance performed due to
-            electrical issue(s)</MaintenanceCategory>
+            electrical issue(s)
+        </MaintenanceCategory>
     </MaintenanceCategoryList>
 
     <!-- Beam name for flood field. -->
@@ -352,32 +355,32 @@ Note that when building a package for release, the Maven build process uses the 
     is as large or larger than the wedge, it must be flattened (not FFF), and must have the same beam energy.
     -->
     <WedgeBeamList>
-      <WedgeBeam BeamName="J18C270EDW60-6X">
-        <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
-        <BackgroundBeamName>J18G270</BackgroundBeamName>
-        <BackgroundBeamName>J18G90</BackgroundBeamName>
-        <BackgroundBeamName>Flood 6X</BackgroundBeamName>
-      </WedgeBeam>
-    
-      <WedgeBeam BeamName="J18C270EDW60-">  <!-- This is really a duplicate of J18C270EDW60-6X but is here because sometimes the beam name is truncated. -->
-        <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
-        <BackgroundBeamName>J18G270</BackgroundBeamName>
-        <BackgroundBeamName>J18G90</BackgroundBeamName>
-        <BackgroundBeamName>Flood 6X</BackgroundBeamName>
-      </WedgeBeam>
-    
-      <WedgeBeam BeamName="J10G0C90EDW45-6X">
-        <BackgroundBeamName>J10G0C270-6X</BackgroundBeamName>
-        <BackgroundBeamName>J10G180</BackgroundBeamName>
-        <BackgroundBeamName>J10G90</BackgroundBeamName>
-        <BackgroundBeamName>J10G270</BackgroundBeamName>
-        <BackgroundBeamName>Flood 6X</BackgroundBeamName>
-      </WedgeBeam>
-    
-      <WedgeBeam BeamName="J20G0C90EDW60-6X">
-        <BackgroundBeamName>J20G0-6X</BackgroundBeamName>
-        <BackgroundBeamName>Flood 6X</BackgroundBeamName>
-      </WedgeBeam>
+        <WedgeBeam BeamName="J18C270EDW60-6X">
+            <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>J18G270</BackgroundBeamName>
+            <BackgroundBeamName>J18G90</BackgroundBeamName>
+            <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+        </WedgeBeam>
+
+        <WedgeBeam BeamName="J18C270EDW60-">  <!-- This is really a duplicate of J18C270EDW60-6X but is here because sometimes the beam name is truncated. -->
+            <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>J18G270</BackgroundBeamName>
+            <BackgroundBeamName>J18G90</BackgroundBeamName>
+            <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+        </WedgeBeam>
+
+        <WedgeBeam BeamName="J10G0C90EDW45-6X">
+            <BackgroundBeamName>J10G0C270-6X</BackgroundBeamName>
+            <BackgroundBeamName>J10G180</BackgroundBeamName>
+            <BackgroundBeamName>J10G90</BackgroundBeamName>
+            <BackgroundBeamName>J10G270</BackgroundBeamName>
+            <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+        </WedgeBeam>
+
+        <WedgeBeam BeamName="J20G0C90EDW60-6X">
+            <BackgroundBeamName>J20G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+        </WedgeBeam>
     </WedgeBeamList>
 
     <!-- Diameter of sample spots in mm. -->
@@ -458,11 +461,11 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>PF Stat 0</BeamName>
         <BeamName>PF Stat 180</BeamName>
     <!-- <BeamName>T2-DG-RS</BeamName> -->
-         <BeamName>PF Stat 90</BeamName>
+        <BeamName>PF Stat 90</BeamName>
     <!-- <BeamName>T3MLCSpeed</BeamName> -->
-         <BeamName>PF Stat 270</BeamName>
-         <BeamName>T1 PF ARC</BeamName>
-         <BeamName>T1 PF ARC ERROR</BeamName>
+        <BeamName>PF Stat 270</BeamName>
+        <BeamName>T1 PF ARC</BeamName>
+        <BeamName>T1 PF ARC ERROR</BeamName>
     <!-- <BeamName>T2-DR-GS</BeamName> -->
     <!-- <BeamName>T2_DR_GS</BeamName> -->
     </LeafPositionBeamNameList>
@@ -492,6 +495,6 @@ Note that when building a package for release, the Maven build process uses the 
     <BBbyCBCTHistoryRange>25</BBbyCBCTHistoryRange>
 
     <!-- The distance in floating point in mm from center to search for the BB in EPID images in the isoplane. -->
-    <BBbyEPIDSearchDistance_mm>10.0</BBbyEPIDSearchDistance_mm>
+    <BBbyEPIDSearchDistance_mm>4.0</BBbyEPIDSearchDistance_mm>
 
 </AQAConfig>

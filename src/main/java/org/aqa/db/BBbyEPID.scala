@@ -13,12 +13,16 @@ import javax.vecmath.Point3d
 import java.sql.Timestamp
 import java.util.Date
 
+/**
+ * Store the analysis results for one EPID image containing a BB.
+ */
 case class BBbyEPID(
   bbByEPIDPK: Option[Long], // primary key
   outputPK: Long, // output primary key
   rtplanSOPInstanceUID: String, // UID of rtplan
-  epidSeriesInstanceUid: String, // series instance UID of EPID
+  epidSOPInstanceUid: String, // SOP instance UID of EPID image
   offset_mm: Double, // distance between measured EPID position and expected (plan) location (aka: positioning error)
+  gantryAngle_deg: Double, // gantry angle in degrees
   status: String, // termination status
   rtplanX_mm: Double, // expected X position in rtplan
   rtplanY_mm: Double, // expected Y position in rtplan
@@ -41,8 +45,9 @@ case class BBbyEPID(
     "bbByEPIDPK : " + bbByEPIDPK +
       "\n    outputPK : " + outputPK +
       "\n    rtplanSOPInstanceUID : " + rtplanSOPInstanceUID +
-      "\n    epidSeriesInstanceUid : " + epidSeriesInstanceUid +
+      "\n    epidSOPInstanceUid : " + epidSOPInstanceUid +
       "\n    offset_mm : " + Util.fmtDbl(offset_mm) +
+      "\n    gantryAngle_deg : " + Util.fmtDbl(gantryAngle_deg) +
       "\n    status : " + status +
       "\n    plan X,Y,Z : " + Util.fmtDbl(rtplanX_mm) + ", " + Util.fmtDbl(rtplanY_mm) + ", " + Util.fmtDbl(rtplanZ_mm) +
       "\n    epid X,Y,Z : " + Util.fmtDbl(epidX_mm) + ", " + Util.fmtDbl(epidY_mm) + ", " + Util.fmtDbl(epidZ_mm)
@@ -62,8 +67,9 @@ object BBbyEPID extends ProcedureOutput {
     def bbByEPIDPK = column[Long]("bbByEPIDPK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
     def rtplanSOPInstanceUID = column[String]("rtplanSOPInstanceUID")
-    def epidSeriesInstanceUid = column[String]("epidSeriesInstanceUid")
+    def epidSOPInstanceUid = column[String]("epidSOPInstanceUid")
     def offset_mm = column[Double]("offset_mm")
+    def gantryAngle_deg = column[Double]("gantryAngle_deg")
     def status = column[String]("status")
     def planX_mm = column[Double]("planX_mm")
     def planY_mm = column[Double]("planY_mm")
@@ -76,8 +82,9 @@ object BBbyEPID extends ProcedureOutput {
       bbByEPIDPK.?,
       outputPK,
       rtplanSOPInstanceUID,
-      epidSeriesInstanceUid,
+      epidSOPInstanceUid,
       offset_mm,
+      gantryAngle_deg,
       status,
       planX_mm,
       planY_mm,
