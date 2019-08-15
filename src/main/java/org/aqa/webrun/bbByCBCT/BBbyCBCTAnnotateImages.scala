@@ -109,25 +109,25 @@ object BBbyCBCTAnnotateImages {
       // ---------------------------------------------------------------------------------
 
       /**
-       * Draw the offset above the BB.
+       * Draw the offset for each axis.
        */
-      def drawOffsetNumbers(zImage: BufferedImage): Int = {
+      def drawOffsetNumbers(zImage: BufferedImage): Unit = {
         val graphics = ImageUtil.getGraphics(zImage)
         graphics.setColor(Color.white)
+        def fmt(d: Double) = d.formatted("%8.2f")
+        def deblank(text: String) = text.replaceAll("   *", " ")
         // show BB offset from plan
-        val offsetText = {
-          def fmt(d: Double) = d.formatted("%8.2f")
-          (
-            "XYZ Offset: " +
-            fmt(bbByCBCT.rtplanX_mm - bbByCBCT.cbctX_mm) + ", " +
-            fmt(bbByCBCT.rtplanY_mm - bbByCBCT.cbctY_mm) + ", " +
-            fmt(bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm)).replaceAll("  *", " ")
-        }
 
         ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
-        val textRect = ImageText.getTextDimensions(graphics, offsetText)
-        ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix - (heightCircle_pix / 2), offsetText, 90)
-        textRect.getWidth.round.toInt
+        val textRect = ImageText.getTextDimensions(graphics, "X")
+
+        val xText = deblank(xAxisName + " " + fmt(xPlanOffset_mm) + " mm")
+        ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix + (heightCircle_pix / 2) + textRect.getHeight + 5, xText, 90)
+
+        val yText = deblank(yAxisName + " " + fmt(yPlanOffset_mm) + " mm")
+        val yRect = ImageText.getTextDimensions(graphics, yText)
+        val yTextXPos = (centerX_pix - ((yRect.getWidth + widthCircle_pix) / 2 + 5).round.toInt)
+        ImageText.drawTextCenteredAt(graphics, yTextXPos, centerY_pix, yText)
       }
 
       // ---------------------------------------------------------------------------------
@@ -164,15 +164,14 @@ object BBbyCBCTAnnotateImages {
 
         ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
         val textRect = ImageText.getTextDimensions(graphics, text)
-
-        ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix + (heightCircle_pix / 2) + textRect.getHeight, text, 90)
+        ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix - (heightCircle_pix / 2), text, 90)
       }
 
       drawCircle(image)
-      val textWidth = drawOffsetNumbers(image)
+      drawOffsetNumbers(image)
       drawPlanCenter(image)
       drawPlanText(image)
-      (image, textWidth)
+      (image, 24 * scale)
     }
 
     // ---------------------------------------------------------------------------------
@@ -196,7 +195,7 @@ object BBbyCBCTAnnotateImages {
     val textWidth = fullAndTextWidth._2
     val aoi = cropImage(full, textWidth)
 
-    Util.addAxisLabels(aoi, xAxisName, yAxisName, Color.white)
+    Util.addAxisLabels(aoi, xAxisName + " axis", yAxisName, Color.white)
 
     new ImagePair(full, aoi)
   }
@@ -223,7 +222,7 @@ object BBbyCBCTAnnotateImages {
       bbByCBCT,
       voxSize_mm(2), voxSize_mm(1),
       centerUnscaled_vox.getZ, centerUnscaled_vox.getY,
-      "Z axis", "Y axis",
+      "Z", "Y",
       bbByCBCT.cbctZ_mm - bbByCBCT.rtplanZ_mm, bbByCBCT.cbctY_mm - bbByCBCT.rtplanY_mm,
       imageXYZ(0))
 
@@ -231,7 +230,7 @@ object BBbyCBCTAnnotateImages {
       bbByCBCT,
       voxSize_mm(2), voxSize_mm(0),
       centerUnscaled_vox.getZ, centerUnscaled_vox.getX,
-      "Z axis", "X axis",
+      "Z", "X",
       bbByCBCT.cbctZ_mm - bbByCBCT.rtplanZ_mm, bbByCBCT.cbctX_mm - bbByCBCT.rtplanX_mm,
       imageXYZ(1))
 
@@ -241,7 +240,7 @@ object BBbyCBCTAnnotateImages {
       bbByCBCT,
       voxSize_mm(0), voxSize_mm(1),
       centerUnscaled_vox.getX, centerUnscaled_vox.getY,
-      "X axis", "Y axis",
+      "X", "Y",
       bbByCBCT.cbctX_mm - bbByCBCT.rtplanX_mm, bbByCBCT.cbctY_mm - bbByCBCT.rtplanY_mm,
       imageXYZ(2))
 
