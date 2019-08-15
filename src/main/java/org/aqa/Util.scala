@@ -128,13 +128,6 @@ object Util extends Logging {
 
   def isModality(al: AttributeList, sopClassUID: String): Boolean = {
     try {
-      if (true) { // TODO rm
-        val j = al.get(TagFromName.SOPClassUID)
-        val j1 = j.getSingleStringValueOrEmptyString.equals(sopClassUID)
-        Trace.trace(j)
-        Trace.trace(j1)
-        Trace.trace
-      }
       al.get(TagFromName.SOPClassUID).getSingleStringValueOrEmptyString.equals(sopClassUID)
     } catch {
       case t: Throwable => false
