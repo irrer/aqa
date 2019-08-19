@@ -226,7 +226,7 @@ order by
           <h4>List Outputs</h4>
           <pre>
 
--- List up to 10 outputs (runs of procedures) ordered by data acquisition date for procedure 'LOC'
+-- List up to 10 outputs (runs of procedures) ordered by data acquisition date for procedure 'Phase2'
 
 select
     "output"."dataDate",
@@ -243,7 +243,7 @@ from
 where
     ( "output"."machinePK" = "machine"."machinePK")              and
     ( "output"."procedurePK" = "procedure"."procedurePK")        and
-    ( "procedure"."name" = 'LOC')                                and
+    ( "procedure"."name" = 'Phase2')                             and
     ( "institution"."institutionPK" = "machine"."institutionPK") and
     (
         ( "output"."status" = 'pass' ) or
@@ -258,11 +258,11 @@ limit 10;
 
           Results of query in pgAdmin from command line:
           <p></p>
-          <img style="margin:20px;" src='/static/images/db_LOC_output.png' />
+          <img style="margin:20px;" src='/static/images/db_Phase2_output.png' />
 
           <p style="margin:80px;"></p><hr></hr>
           <p></p>
-          <h4>List LOC Data</h4>
+          <h4>List LOC Leaf Data</h4>
           <pre>
 
 -- List the transmission values for one run of procedure 'LOC' for one leaf
@@ -274,7 +274,6 @@ select
 from
     "leafTransmission"
 where
-     "leafTransmission"."outputPK" = 63   and
      "leafTransmission"."leafIndex" = 21
 order by
     "leafTransmission"."section", "leafTransmission"."leafIndex"
