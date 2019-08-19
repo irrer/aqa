@@ -51,7 +51,11 @@ class ServiceInfo extends Restlet with SubUrlAdmin with Logging {
   }
 
   private def allFiles: Seq[File] = {
-    Util.listDirFiles(logDir).filter(f => !f.getName.contains("lck")).sortWith((a, b) => a.lastModified > b.lastModified).toSeq
+    try {
+      Util.listDirFiles(logDir).filter(f => !f.getName.contains("lck")).sortBy(_.lastModified).toSeq
+    } catch {
+      case t: Throwable => Seq[File]()
+    }
   }
 
   private def fileRef(file: File): Elem = {
@@ -61,7 +65,10 @@ class ServiceInfo extends Restlet with SubUrlAdmin with Logging {
   }
 
   private def showList = {
-    allFiles.map(f => { <div class="row"><div class="col-sm-11 col-sm-offset-1" style="margin-top:10px">  { fileRef(f) }</div></div> })
+    if (allFiles.isEmpty) {
+      <div class="row"><div class="col-sm-11 col-sm-offset-1" style="margin-top:10px">No log files</div></div>
+    } else
+      allFiles.map(f => { <div class="row"><div class="col-sm-11 col-sm-offset-1" style="margin-top:10px">  { fileRef(f) }</div></div> })
   }
 
   private def showFileContents(valueMap: ValueMapT, response: Response): Boolean = {
