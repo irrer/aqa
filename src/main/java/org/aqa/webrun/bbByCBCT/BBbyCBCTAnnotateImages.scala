@@ -86,10 +86,10 @@ object BBbyCBCTAnnotateImages {
       val maxVoxSize = Math.max(voxSizeX_mm, voxSizeY_mm) // larger voxel dimension
       val minVoxSize = Math.min(voxSizeX_mm, voxSizeY_mm) // smaller voxel dimension
       val widthCircle_pix = {
-        ((Config.DailyPhantomBBPenumbra_mm * 0.5) / voxSizeX_mm) * scale //* (maxVoxSize / minVoxSize)
+        ((Config.CBCTBBPenumbra_mm * 2) / voxSizeX_mm) * scale //* (maxVoxSize / minVoxSize)
       }
       val heightCircle_pix = {
-        ((Config.DailyPhantomBBPenumbra_mm * 0.5) / voxSizeY_mm) * scale //* (maxVoxSize / minVoxSize)
+        ((Config.CBCTBBPenumbra_mm * 2) / voxSizeY_mm) * scale //* (maxVoxSize / minVoxSize)
       }
 
       /**
@@ -178,8 +178,8 @@ object BBbyCBCTAnnotateImages {
 
     def cropImage(image: BufferedImage, textWidth: Int) = {
       val radius = ((textWidth * 1.3) / 2).round.toInt
-      val xRadius = (Config.DailyPhantomBBPenumbra_mm / voxSizeX_mm) * scale * 1.5
-      val yRadius = (Config.DailyPhantomBBPenumbra_mm / voxSizeY_mm) * scale * 1.5
+      val xRadius = (Config.CBCTZoomSize_mm / voxSizeX_mm) * scale * 1.5
+      val yRadius = (Config.CBCTZoomSize_mm / voxSizeY_mm) * scale * 1.5
 
       val x = Math.max(0, rnd(centerX_pix - radius))
       val y = Math.max(0, rnd(centerY_pix - radius))
@@ -195,7 +195,7 @@ object BBbyCBCTAnnotateImages {
     val textWidth = fullAndTextWidth._2
     val aoi = cropImage(full, textWidth)
 
-    Util.addAxisLabels(aoi, xAxisName + " axis", yAxisName, Color.white)
+    Util.addAxisLabels(aoi, xAxisName, yAxisName, Color.white)
 
     new ImagePair(full, aoi)
   }

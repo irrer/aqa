@@ -177,7 +177,7 @@ object BBbyCBCTAnalysis extends Logging {
    */
   private def makeImagesXYZ(entireVolume: DicomVolume, fineLocation_vox: Point3d, fineLocation_mm: Point3d, voxSize: Seq[Double]): Seq[BufferedImage] = {
 
-    val mm = Config.DailyPhantomBBPenumbra_mm
+    val mm = Config.CBCTBBPenumbra_mm * 4
 
     // point closest to origin for each sub-volume
     val start = new Point3i(
@@ -241,11 +241,11 @@ object BBbyCBCTAnalysis extends Logging {
     }
     val coarseLocation = Seq(coarse2.getX.toDouble, coarse2.getY.toDouble, coarse2.getZ.toDouble)
 
-    val bbVolumeStart = coarseLocation.zip(voxSize_mm).map(cs => (cs._1 - (Config.DailyPhantomBBPenumbra_mm / cs._2)).round.toInt)
+    val bbVolumeStart = coarseLocation.zip(voxSize_mm).map(cs => (cs._1 - ((Config.CBCTBBPenumbra_mm * 4) / cs._2)).round.toInt)
 
     // sub-volume of the entire volume that contains just the BB according to the coarse location.
     val bbVolume = {
-      val bbVolumeSize = voxSize_mm.map(s => ((Config.DailyPhantomBBPenumbra_mm * 2) / s).round.toInt)
+      val bbVolumeSize = voxSize_mm.map(s => ((Config.CBCTBBPenumbra_mm * 8) / s).round.toInt)
       entireVolume.getSubVolume(new Point3i(bbVolumeStart.toArray), new Point3i(bbVolumeSize.toArray))
     }
 

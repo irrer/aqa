@@ -774,12 +774,13 @@ object Config extends Logging {
   val DailyQATolerance_mm = logMainText("DailyQATolerance_mm", "1.5").toDouble
   val BBMinimumStandardDeviation = logMainText("BBMinimumStandardDeviation", "1.75").toDouble
   val DailyPhantomSearchDistance_mm = logMainText("DailyPhantomSearchDistance_mm", "50.0").toDouble
-  val DailyPhantomBBPenumbra_mm = logMainText("DailyPhantomBBPenumbra_mm", "10.0").toDouble
+  val CBCTBBPenumbra_mm = logMainText("CBCTBBPenumbra_mm", "2.5").toDouble
+  val CBCTZoomSize_mm = logMainText("CBCTZoomSize_mm", "30.0").toDouble
   val CBCTImageColor = Util.hexToColor(logMainText("CBCTImageColor", "FFFFFF"))
   val BBbyCBCTHistoryRange = logMainText("BBbyCBCTHistoryRange", "25").toInt
 
   val BBbyEPIDSearchDistance_mm = logMainText("BBbyEPIDSearchDistance_mm", "10.0").toDouble
-  
+
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true
 

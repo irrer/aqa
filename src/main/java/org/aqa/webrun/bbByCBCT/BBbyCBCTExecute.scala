@@ -26,6 +26,8 @@ import java.awt.geom.Point2D
 import org.aqa.VolumeTranslator
 import java.awt.Color
 import org.aqa.db.BBbyCBCT
+import org.aqa.web.WebUtil
+import org.aqa.db.Output
 
 /**
  * After the data has has been validated as sufficient to do the analysis, perform the
@@ -37,8 +39,19 @@ object BBbyCBCTExecute extends Logging {
   private val subProcedureName = "CBCT Alignment"
 
   private def showFailure(message: String, extendedData: ExtendedData) = {
-    // TODO
-    ???
+    val content = {
+      <div class="row col-md-10 col-md-offset-1">
+        <h4>
+          Failed to process CBCT images:<br></br>
+          <div class="row col-md-10 col-md-offset-1">
+            <i>{ message }</i>
+          </div>
+        </h4>
+      </div>
+    }
+    val text = WebUtil.wrapBody(content, "CBCT Analysis Failed")
+    val display = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
+    Util.writeFile(display, text)
   }
 
   /**

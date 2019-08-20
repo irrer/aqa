@@ -484,7 +484,10 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Distance in mm in floating point that the penumbra extends in one direction from the BB.  A
     volume of (2x)^3 this is used to measure the BB's location. ( 10 would yield 20x20x20 ) -->
-    <DailyPhantomBBPenumbra_mm>10.0</DailyPhantomBBPenumbra_mm>
+    <CBCTBBPenumbra_mm>2.5</CBCTBBPenumbra_mm>
+   
+    <!-- When making the zoomed version of the CBCT images, make them this size of a square in mm.-->
+    <CBCTZoomSize_mm>27.5</CBCTZoomSize_mm>
    
     <!-- Color to use when making CBCT images in HEX notation specifying red+green+blue.  Set
     to 000000 (black) to use deep (multi) coloring.-->
