@@ -487,7 +487,7 @@ Note that when building a package for release, the Maven build process uses the 
     <CBCTBBPenumbra_mm>2.5</CBCTBBPenumbra_mm>
    
     <!-- When making the zoomed version of the CBCT images, make them this size of a square in mm.-->
-    <CBCTZoomSize_mm>27.5</CBCTZoomSize_mm>
+    <CBCTZoomSize_mm>40.0</CBCTZoomSize_mm>
    
     <!-- Color to use when making CBCT images in HEX notation specifying red+green+blue.  Set
     to 000000 (black) to use deep (multi) coloring.-->
@@ -500,4 +500,8 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- The distance in floating point in mm from center to search for the BB in EPID images in the isoplane. -->
     <BBbyEPIDSearchDistance_mm>4.0</BBbyEPIDSearchDistance_mm>
 
+    <!-- Distance in mm in floating point that the penumbra extends in one direction from the BB for the EPID.  Different
+    from CBCT, which has different imaging characteristics. -->
+    <EPIDBBPenumbra_mm>2.0</EPIDBBPenumbra_mm>
+   
 </AQAConfig>

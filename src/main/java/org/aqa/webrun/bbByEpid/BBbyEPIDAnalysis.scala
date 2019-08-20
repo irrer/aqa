@@ -26,34 +26,44 @@ object BBbyEPIDAnalysis extends Logging {
   case class BBbyEPIDResult(summry: Elem, sts: ProcedureStatus.Value, position: Seq[Point3d], images: Seq[BufferedImage])
 
   /**
-   * Obtain the sub-area of the image to be searched for the BB.  Using a sub-area eliminates the
-   * need for having to deal with other objects, such as the couch rails.
+   * Obtain the sub-area of the image to be searched for the BB.
    */
-  private def searchArea(trans: IsoImagePlaneTranslator): Rectangle = {
-    val corner = trans.iso2Pix(-Config.BBbyEPIDSearchDistance_mm, -Config.BBbyEPIDSearchDistance_mm)
-    val w = trans.iso2PixDistX(Config.BBbyEPIDSearchDistance_mm * 2)
-    val h = trans.iso2PixDistY(Config.BBbyEPIDSearchDistance_mm * 2)
+  private def searchArea(trans: IsoImagePlaneTranslator, center_mm: Point2D.Double, distance_mm: Double): Rectangle = {
+    val corner = trans.iso2Pix(center_mm.getX - distance_mm, center_mm.getY - distance_mm)
+    val w = trans.iso2PixDistX(distance_mm * 2)
+    val h = trans.iso2PixDistY(distance_mm * 2)
     val rect = new Rectangle(di(corner.getX), di(corner.getY), di(w), di(h))
     rect
+  }
+
+  /**
+   * Find the maximu point in the given search area.
+   * 
+   * @param al: Contains image.
+   * 
+   * @param center_mm: Center of search area
+   * 
+   * @param distance: Distance in all four directions from center to search.
+   */
+  private def locMax(al: AttributeList, center_mm: Point2D.Double, distance_mm: Double): Option[Point2D.Double] = {
+    val image = new DicomImage(al)
+    val trans = new IsoImagePlaneTranslator(al)
+    val rect = searchArea(trans, center_mm, Config.BBbyEPIDSearchDistance_mm)
+    val subImage = image.getSubimage(rect)
+
+    val max = subImage.getMaxPoint(Config.BBMinimumStandardDeviation) match {
+      case Some(max) => Some(new Point2D.Double(max.getX + rect.getX, max.getY + rect.getY))
+      case _ => None
+    }
+    max
   }
 
   private def findBB(al: AttributeList) = {
     val image = new DicomImage(al)
     val trans = new IsoImagePlaneTranslator(al)
-    val rect = searchArea(trans)
+    // Using a sub-area eliminates the need for having to deal with other objects, such as the couch rails.
+    val rect = searchArea(trans, new Point2D.Double(0, 0), Config.BBbyEPIDSearchDistance_mm)
     val subImage = image.getSubimage(rect)
-    if (true) { // TODO rm
-      val min = subImage.minPixelValue.round.toInt
-      val max = subImage.maxPixelValue.round.toInt
-      val off = (max + min) / 2
-      println
-      for (y <- (0 until subImage.height)) {
-        for (x <- (0 until subImage.width)) {
-          print((subImage.get(x, y) - off).round.toInt.formatted(" %4d"))
-        }
-        println
-      }
-    }
     val xPos_pix = rect.getX + LocateMax.locateMax(subImage.columnSums)
     val yPos_pix = rect.getY + LocateMax.locateMax(subImage.rowSums)
     Trace.trace("xPos_pix: " + xPos_pix + "    yPos_pix: " + yPos_pix)

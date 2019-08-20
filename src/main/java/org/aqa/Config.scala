@@ -780,6 +780,7 @@ object Config extends Logging {
   val BBbyCBCTHistoryRange = logMainText("BBbyCBCTHistoryRange", "25").toInt
 
   val BBbyEPIDSearchDistance_mm = logMainText("BBbyEPIDSearchDistance_mm", "10.0").toDouble
+  val EPIDBBPenumbra_mm = logMainText("EPIDBBPenumbra_mm", "2.0").toDouble
 
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true

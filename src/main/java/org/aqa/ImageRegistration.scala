@@ -30,6 +30,9 @@ case class ImageRegistration(attrList: AttributeList) {
   /** Frame of reference UID that this image registration allows you to transform points to. */
   val otherFrameOfRefUID = getFrUid(otherImageSeq)
 
+  def supportsFrameOfRef(frameOfRef: String) = frameOfRef.equals(otherFrameOfRefUID)
+  def supportsFrameOfRef(al: AttributeList) = getFrUid(al).equals(otherFrameOfRefUID)
+
   /** True if this can translates to the frame of reference of the given attribute list. */
   def sameFrameOfRef(al: AttributeList): Boolean = getFrUid(al).equals(frameOfRefUID)
 

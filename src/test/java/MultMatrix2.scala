@@ -7,6 +7,9 @@ import com.pixelmed.dicom.SOPClass
 import org.aqa.ImageRegistration
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
+import org.aqa.Util
+import edu.umro.ScalaUtil.DicomUtil
+import com.pixelmed.dicom.TagFromName
 
 /**
  * Compare position of BB in CBCT to RTPLAN isocenter.
@@ -23,6 +26,9 @@ object MultMatrix2 {
     attrListList
   }
 
+  private def c2s(d: Double) = d.formatted("%8.2f")
+  def p2s(p: Point3d) = c2s(p.getX) + ", " + c2s(p.getY) + ", " + c2s(p.getZ)
+
   def main(args: Array[String]): Unit = {
     val start = System.currentTimeMillis
     val all = getAttrListList
@@ -30,23 +36,43 @@ object MultMatrix2 {
     val rtimageList = all.filter(al => Util.isModality(al, SOPClass.RTImageStorage))
 
     def tryRtimage(rtimage: AttributeList): String = {
+      val DeviceSerialNumber = rtimage.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrEmptyString
+
+      val DevSerNo = DeviceSerialNumber.formatted("%6s")
       val frameOfRef = Util.getAttrValue(rtimage, TagFromName.FrameOfReferenceUID).get
       val PatientID = Util.getAttrValue(rtimage, TagFromName.PatientID).get
-      val DevSerNo = rtimage.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrEmptyString.formatted("%16s")
+      val date = Util.standardDateFormat.format(Util.extractDateTimeAndPatientIdFromDicomAl(rtimage)._1.head)
+      val planUID = DicomUtil.seqToAttr(rtimage, TagFromName.ReferencedRTPlanSequence).
+        head.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrEmptyString
+
+      val isoPoint = new Point3d(rtimage.get(TagFromName.IsocenterPosition).getDoubleValues)
+      val XRayImageReceptorTranslation = new Point3d(rtimage.get(TagFromName.XRayImageReceptorTranslation).getDoubleValues)
       //val reg = regList.find(reg => reg.frameOfRefUID.equals(frameOfRef))
-      val reg = regList.find(reg => reg.sameFrameOfRef(rtimage))
+
+      val okReg = regList.filter(reg => reg.frameOfRefUID.equals(frameOfRef))
+
+      val reg = regList.find(reg => reg.frameOfRefUID.equals(frameOfRef))
       if (reg.isDefined) {
-        val isoPoint = new Point3d(rtimage.get(TagFromName.IsocenterPosition).getDoubleValues)
-        val after = reg.get.transform(isoPoint)
+        def p2sT(p: Point3d) = p2s(p) + " --> " + p2s(reg.get.transform(p))
+        //    "    planUID: " + planUID.formatted("%-60s") +
+
         PatientID +
           "    DevSerNo: " + DevSerNo +
-          "    isoPoint: " + isoPoint +
-          "    transformed: " + after
+          "    date: " + date +
+          "    num reg: " + okReg.size.formatted("%4d") +
+          "    isoPoint: " + p2sT(isoPoint) +
+          "    XRayImageReceptorTranslation: " + p2s(XRayImageReceptorTranslation)
       } else
-        PatientID + "    DevSerNo: " + DevSerNo + "    No reg for " + frameOfRef
+        PatientID +
+          "    DevSerNo: " + DevSerNo +
+          "    date: " + date +
+          "    No reg for " + frameOfRef.formatted("%-60s") +
+          "    isoPoint: " + p2s(isoPoint) +
+          "    XRayImgRcptrTrans: " + p2s(XRayImageReceptorTranslation)
+
     }
 
-    val results = rtimageList.map(rtimage => tryRtimage(rtimage))
+    val results = rtimageList.map(rtimage => tryRtimage(rtimage)).filterNot(s => s.contains(" DevSerNo: 824327626427 "))
     val passed = results.filter(r => r.contains("isoPoint"))
     val numWithReg = passed.size
     println(results.sorted.mkString("\n"))
