@@ -22,6 +22,8 @@ import edu.umro.ImageUtil.ImageUtil
 import java.awt.Rectangle
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
+import java.awt.geom.Point2D
+import org.aqa.webrun.bbByEpid.BBbyEPIDAnnotate
 
 /**
  * Test the Config.
@@ -89,17 +91,44 @@ class TestBBbyEPIDAnalysis extends FlatSpec with Matchers {
       println("result: " + iso)
       val di = new DicomImage(al)
       val trans = new IsoImagePlaneTranslator(al)
-      val pix = trans.iso2Pix(iso)
-      val bufImg = di.toDeepColorBufferedImage(0.001)
-      val graphics = ImageUtil.getGraphics(bufImg)
-      graphics.setColor(Color.white)
-      def rnd(d: Double) = d.round.toInt
-      val radius = 4
-      val rect = new Rectangle(rnd(pix.getX - radius), rnd(pix.getY - radius), radius * 2, radius * 2)
-      graphics.drawOval(rnd(pix.getX - radius), rnd(pix.getY - radius), radius * 2, radius * 2)
+      val pix = trans.iso2Pix(iso.get)
+
+      val annotatedImages = BBbyEPIDAnnotate.annotate(al, iso.get)
       val pngFile = new File(outDir, (file.getName.replace(".dcm", ".png")))
-      ImageUtil.writePngFile(bufImg, pngFile)
+      ImageUtil.writePngFile(annotatedImages.fullSize, pngFile)
       println("Wrote image to " + pngFile.getAbsolutePath)
+
+      if (false) {
+        //val bufImg = di.toDeepColorBufferedImage(0.001)
+        val bufImg = di.toBufferedImage(Color.yellow)
+        val graphics = ImageUtil.getGraphics(bufImg)
+        graphics.setColor(Color.white)
+        def rnd(d: Double) = d.round.toInt
+        val radius = 6
+        graphics.drawOval(rnd(pix.getX - radius), rnd(pix.getY - radius), radius * 2, radius * 2)
+        val pngFile = new File(outDir, (file.getName.replace(".dcm", ".png")))
+        ImageUtil.writePngFile(bufImg, pngFile)
+        println("Wrote image to " + pngFile.getAbsolutePath)
+      }
+
+      if (false) {
+        val scale = 20
+        def d2i(d: Double) = d.round.toInt
+        val sz = 16
+        val rect = new Rectangle(d2i(pix.getX - (sz / 2)), d2i(pix.getY - (sz / 2)), sz, sz)
+        val subImage = di.getSubimage(rect)
+        val bufImg = ImageUtil.magnify(subImage.toBufferedImage(Color.white), scale)
+        val graphics = ImageUtil.getGraphics(bufImg)
+        graphics.setColor(Color.red)
+        val radius = 6 * scale
+        val pixScaled = new Point2D.Double(pix.getX * scale, pix.getX * scale)
+        graphics.drawOval(d2i((pixScaled.getX * scale) - (radius + rect.getX)), d2i(pixScaled.getY - (radius + rect.getY)), radius * 2, radius * 2)
+        //graphics.drawOval(d2i(pixScaled.getX - radius), d2i(pixScaled.getY - radius), radius * 2, radius * 2)
+        val pngFile = new File(outDir, (file.getName.replace(".dcm", "w.png")))
+        ImageUtil.writePngFile(bufImg, pngFile)
+        println("Wrote image to " + pngFile.getAbsolutePath)
+      }
+
       (true) should be(true)
     }
 

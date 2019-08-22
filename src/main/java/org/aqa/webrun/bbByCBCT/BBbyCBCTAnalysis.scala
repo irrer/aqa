@@ -251,7 +251,7 @@ object BBbyCBCTAnalysis extends Logging {
 
     // fine location in voxel coordinates
     val fineLocation_vox = {
-      val relOpt = bbVolume.getMaxPoint(Config.BBMinimumStandardDeviation)
+      val relOpt = bbVolume.getMaxPoint(Config.CBCTBBMinimumStandardDeviation)
       if (relOpt.isDefined) {
         val rel = relOpt.get
         val finloc = new Point3d(rel.getX + bbVolumeStart(0), rel.getY + bbVolumeStart(1), rel.getZ + bbVolumeStart(2))

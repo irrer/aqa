@@ -477,7 +477,7 @@ Note that when building a package for release, the Maven build process uses the 
     legitimate.  This check is done to ensure that if there is no BB, then the algorithm will not settle for
     the brightest bit of white noise from the background.  The 1.75 number given was arrived at
     empirically after running several tests. -->
-    <BBMinimumStandardDeviation>1.75</BBMinimumStandardDeviation>
+    <CBCTBBMinimumStandardDeviation>1.75</CBCTBBMinimumStandardDeviation>
 
     <!-- The distance in floating point in mm from center to search for the BB in the daily phantom. -->
     <DailyPhantomSearchDistance_mm>50.0</DailyPhantomSearchDistance_mm>
@@ -502,6 +502,18 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Distance in mm in floating point that the penumbra extends in one direction from the BB for the EPID.  Different
     from CBCT, which has different imaging characteristics. -->
-    <EPIDBBPenumbra_mm>2.0</EPIDBBPenumbra_mm>
+    <EPIDBBPenumbra_mm>1.0</EPIDBBPenumbra_mm>
+    
+    <!-- The minimum number of standard deviations that the BB must deviate in brightness to be considered
+    legitimate.  This check is done to ensure that if there is no BB, then the algorithm will not settle for
+    the brightest bit of white noise from the background.  The 1.75 number given was arrived at
+    empirically after running several tests. -->
+    <EPIDBBMinimumStandardDeviation>2.0</EPIDBBMinimumStandardDeviation>
+
+    <!-- Color to use when making EPID images in HEX notation specifying red+green+blue.  Set
+    to 000000 (black) to use deep (multi) coloring.-->
+    <EPIDImageColor>FFFF00</EPIDImageColor>
    
+    <!-- When making the zoomed version of the EPID images, make them this size of a square in mm.-->
+    <EPIDZoomSize_mm>90.0</EPIDZoomSize_mm>
 </AQAConfig>

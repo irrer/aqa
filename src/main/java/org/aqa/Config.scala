@@ -772,7 +772,7 @@ object Config extends Logging {
   val LeafPositionBeamNameList = getLeafPositionBeamNameList
 
   val DailyQATolerance_mm = logMainText("DailyQATolerance_mm", "1.5").toDouble
-  val BBMinimumStandardDeviation = logMainText("BBMinimumStandardDeviation", "1.75").toDouble
+  val CBCTBBMinimumStandardDeviation = logMainText("CBCTBBMinimumStandardDeviation", "1.75").toDouble
   val DailyPhantomSearchDistance_mm = logMainText("DailyPhantomSearchDistance_mm", "50.0").toDouble
   val CBCTBBPenumbra_mm = logMainText("CBCTBBPenumbra_mm", "2.5").toDouble
   val CBCTZoomSize_mm = logMainText("CBCTZoomSize_mm", "30.0").toDouble
@@ -781,6 +781,9 @@ object Config extends Logging {
 
   val BBbyEPIDSearchDistance_mm = logMainText("BBbyEPIDSearchDistance_mm", "10.0").toDouble
   val EPIDBBPenumbra_mm = logMainText("EPIDBBPenumbra_mm", "2.0").toDouble
+  val EPIDBBMinimumStandardDeviation = logMainText("EPIDBBMinimumStandardDeviation", "1.25").toDouble
+  val EPIDImageColor = Util.hexToColor(logMainText("EPIDImageColor", "FFFFFF"))
+  val EPIDZoomSize_mm = logMainText("EPIDZoomSize_mm", "90.0").toDouble
 
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true
