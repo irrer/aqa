@@ -515,5 +515,5 @@ Note that when building a package for release, the Maven build process uses the 
     <EPIDImageColor>FFFF00</EPIDImageColor>
    
     <!-- When making the zoomed version of the EPID images, make them this size of a square in mm.-->
-    <EPIDZoomSize_mm>90.0</EPIDZoomSize_mm>
+    <EPIDZoomSize_mm>60.0</EPIDZoomSize_mm>
 </AQAConfig>

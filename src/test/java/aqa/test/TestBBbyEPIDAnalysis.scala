@@ -24,6 +24,7 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import java.awt.geom.Point2D
 import org.aqa.webrun.bbByEpid.BBbyEPIDAnnotateImages
+import org.aqa.webrun.bbByEpid.BBbyEPIDAnnotateImages
 
 /**
  * Test the Config.
@@ -66,8 +67,8 @@ class TestBBbyEPIDAnalysis extends FlatSpec with Matchers {
 
   println("-----------------------------------------------------------------------------------------------------")
   val outDir = new File("""target\TestBBbyEPIDAnalysis""")
-  Utility.deleteFileTree(outDir)
   outDir.mkdirs
+  outDir.listFiles.map(f => Utility.deleteFileTree(f))
 
   def writeImages(name: String, bufImgList: Seq[BufferedImage]) = {
     val dir = new File(outDir, name)
@@ -93,10 +94,15 @@ class TestBBbyEPIDAnalysis extends FlatSpec with Matchers {
       val trans = new IsoImagePlaneTranslator(al)
       val pix = trans.iso2Pix(iso.get)
 
-      val annotatedImages = BBbyEPIDAnnotateImages.annotate(al, iso.get)
-      val pngFile = new File(outDir, (file.getName.replace(".dcm", ".png")))
-      ImageUtil.writePngFile(annotatedImages.fullSize, pngFile)
-      println("Wrote image to " + pngFile.getAbsolutePath)
+      val annotatedImages = new BBbyEPIDAnnotateImages(al, iso.get)
+
+      val pngFileFull = new File(outDir, (file.getName.replace(".dcm", "_full.png")))
+      ImageUtil.writePngFile(annotatedImages.fullBufImg, pngFileFull)
+      println("Wrote image to " + pngFileFull.getAbsolutePath)
+
+      val pngFileDetail = new File(outDir, (file.getName.replace(".dcm", "_detail.png")))
+      ImageUtil.writePngFile(annotatedImages.detailBufImg, pngFileDetail)
+      println("Wrote image to " + pngFileDetail.getAbsolutePath)
 
       if (false) {
         //val bufImg = di.toDeepColorBufferedImage(0.001)
