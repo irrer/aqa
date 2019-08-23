@@ -23,7 +23,7 @@ import java.awt.Rectangle
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import java.awt.geom.Point2D
-import org.aqa.webrun.bbByEpid.BBbyEPIDAnnotate
+import org.aqa.webrun.bbByEpid.BBbyEPIDAnnotateImages
 
 /**
  * Test the Config.
@@ -93,7 +93,7 @@ class TestBBbyEPIDAnalysis extends FlatSpec with Matchers {
       val trans = new IsoImagePlaneTranslator(al)
       val pix = trans.iso2Pix(iso.get)
 
-      val annotatedImages = BBbyEPIDAnnotate.annotate(al, iso.get)
+      val annotatedImages = BBbyEPIDAnnotateImages.annotate(al, iso.get)
       val pngFile = new File(outDir, (file.getName.replace(".dcm", ".png")))
       ImageUtil.writePngFile(annotatedImages.fullSize, pngFile)
       println("Wrote image to " + pngFile.getAbsolutePath)
