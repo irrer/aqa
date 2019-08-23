@@ -65,8 +65,8 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Point2D.Double) {
       d2i(psX + lineOffset), d2i(psY - lineOffset),
       d2i(psX - lineOffset), d2i(psY + lineOffset))
 
-    //ImageText.drawTextCenteredAt(graphics, psX, y - lineOffset + textPointSize, "X is BB center")
-    ImageText.drawTextOffsetFrom(graphics, psX, y - lineOffset + textPointSize, "X is BB center", 90)
+    ImageText.drawTextCenteredAt(graphics, psX, y - circleRadius_pix(scale), "X is BB center")
+    //ImageText.drawTextOffsetFrom(graphics, psX, y - lineOffset + textPointSize * 1.5, "X is BB center", 90)
   }
 
   /**
@@ -120,7 +120,34 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Point2D.Double) {
     detailImage
   }
 
+  private def makeCloseupBufImg: BufferedImage = {
+    /** Magnify the image by this scale. */
+    val scale = 32
+
+    val closeupScale = 5.0
+
+    val upperLeftCorner = trans.iso2Pix(bbLoc_mm.getX - Config.EPIDBBPenumbra_mm * closeupScale, bbLoc_mm.getY - Config.EPIDBBPenumbra_mm * closeupScale)
+
+    // define rectangle for copying just the middle of the image
+    val closeupRect = {
+      val x = d2i(upperLeftCorner.getX)
+      val y = d2i(upperLeftCorner.getY)
+      val w = d2i(trans.iso2PixDistX(Config.EPIDBBPenumbra_mm * closeupScale * 2))
+      val h = d2i(trans.iso2PixDistY(Config.EPIDBBPenumbra_mm * closeupScale * 2))
+      new Rectangle(x, y, w, h)
+    }
+
+    //val closeupImage = ImageUtil.magnify(fullImage.getSubimage(closeupRect).toDeepColorBufferedImage(0), scale)
+    val closeupImage = ImageUtil.magnify(fullImage.getSubimage(closeupRect).toBufferedImage(Config.EPIDImageColor), scale)
+
+    drawCircleWithXAtCenterOfBB(upperLeftCorner, closeupImage, scale)
+    drawPlusAtCenterOfPlan(upperLeftCorner, closeupImage, scale)
+
+    closeupImage
+  }
+
   val fullBufImg = makeFullBufImg
   val detailBufImg = makeDetailBufImg
+  val closeupBufImg = makeCloseupBufImg
 
 }

@@ -104,6 +104,10 @@ class TestBBbyEPIDAnalysis extends FlatSpec with Matchers {
       ImageUtil.writePngFile(annotatedImages.detailBufImg, pngFileDetail)
       println("Wrote image to " + pngFileDetail.getAbsolutePath)
 
+      val pngFileCloseup = new File(outDir, (file.getName.replace(".dcm", "_closeup.png")))
+      ImageUtil.writePngFile(annotatedImages.closeupBufImg, pngFileCloseup)
+      println("Wrote image to " + pngFileCloseup.getAbsolutePath)
+
       if (false) {
         //val bufImg = di.toDeepColorBufferedImage(0.001)
         val bufImg = di.toBufferedImage(Color.yellow)
