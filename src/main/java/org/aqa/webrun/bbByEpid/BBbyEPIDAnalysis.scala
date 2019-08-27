@@ -70,6 +70,8 @@ object BBbyEPIDAnalysis extends Logging {
       // should be considered when calculating the center of mass to find the center of the BB.
       val bbCount = Math.PI * ((bbSizeX_pix * bbSizeY_pix) / 4)
 
+      Trace.trace("bbCount: " + bbCount)  // TODO
+
       def takeLargest(hist: Seq[DicomImage.HistPoint]): Float = {
         if (hist.map(h => h.count).sum > bbCount)
           takeLargest(hist.tail)

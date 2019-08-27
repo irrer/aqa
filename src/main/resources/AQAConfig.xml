@@ -500,7 +500,7 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- The distance in floating point in mm from center to search for the BB in EPID images in the isoplane. -->
     <BBbyEPIDSearchDistance_mm>4.0</BBbyEPIDSearchDistance_mm>
 
-    <!-- Distance in mm in floating point that the penumbra extends in one direction from the BB for the EPID.  Different
+    <!-- Radius in mm in floating point of the EPID BB penumbra.  Different
     from CBCT, which has different imaging characteristics. -->
     <EPIDBBPenumbra_mm>1.0</EPIDBBPenumbra_mm>
     

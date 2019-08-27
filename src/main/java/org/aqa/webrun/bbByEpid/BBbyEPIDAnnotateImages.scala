@@ -21,7 +21,7 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Point2D.Double) {
   private def d2i(d: Double) = d.round.toInt
 
   // the circle drawn around the BB should be this many times its size
-  private val circleRadiusScale = 3.0
+  private val circleRadiusScale = 2.0
 
   private val trans = new IsoImagePlaneTranslator(al)
   private val bbLoc_pix = trans.iso2Pix(bbLoc_mm) // location of BB in pixels
