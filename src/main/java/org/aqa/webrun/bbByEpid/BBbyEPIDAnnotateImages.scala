@@ -76,10 +76,18 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Point2D.Double) {
     val graphics = ImageUtil.getGraphics(bufImage)
     ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
     // draw a + in the middle of the image
-    graphics.setColor(Color.black)
+
     val radH = d2i((radius_pix / 2) * scale)
     val xCenter = d2i(((fullImage.width / 2) - offset.getX) * scale)
     val yCenter = d2i(((fullImage.height / 2) - offset.getY) * scale)
+
+    graphics.setColor(Color.white)
+    graphics.drawLine(xCenter - 1, yCenter - radH, xCenter - 1, yCenter + radH)
+    graphics.drawLine(xCenter + 1, yCenter - radH, xCenter + 1, yCenter + radH)
+    graphics.drawLine(xCenter - radH, yCenter - 1, xCenter + radH, yCenter - 1)
+    graphics.drawLine(xCenter - radH, yCenter + 1, xCenter + radH, yCenter + 1)
+
+    graphics.setColor(Color.black)
     graphics.drawLine(xCenter, yCenter - radH, xCenter, yCenter + radH)
     graphics.drawLine(xCenter - radH, yCenter, xCenter + radH, yCenter)
 
@@ -92,8 +100,8 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Point2D.Double) {
 
     val fullSize = ImageUtil.magnify(fullImage.toDeepColorBufferedImage(0.05), scale)
 
-    drawCircleWithXAtCenterOfBB(new Point2D.Double(0, 0), fullSize, scale)
     drawPlusAtCenterOfPlan(new Point2D.Double(0, 0), fullSize, scale)
+    drawCircleWithXAtCenterOfBB(new Point2D.Double(0, 0), fullSize, scale)
     fullSize
   }
 
@@ -137,7 +145,6 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Point2D.Double) {
       new Rectangle(x, y, w, h)
     }
 
-    //val closeupImage = ImageUtil.magnify(fullImage.getSubimage(closeupRect).toDeepColorBufferedImage(0), scale)
     val closeupImage = ImageUtil.magnify(fullImage.getSubimage(closeupRect).toBufferedImage(Config.EPIDImageColor), scale)
 
     drawCircleWithXAtCenterOfBB(upperLeftCorner, closeupImage, scale)
