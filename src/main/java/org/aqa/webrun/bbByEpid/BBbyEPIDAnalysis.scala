@@ -17,6 +17,8 @@ import edu.umro.ImageUtil.LocateMax
 import edu.umro.ScalaUtil.Trace
 import java.awt.geom.Point2D
 import edu.umro.ImageUtil.ImageUtil
+import java.awt.Point
+import javax.vecmath.Point2i
 
 object BBbyEPIDAnalysis extends Logging {
 
@@ -40,6 +42,13 @@ object BBbyEPIDAnalysis extends Logging {
     rect
   }
 
+  /**
+   * Determine the center of the BB to a precise degree.
+   *
+   * @param al image to process
+   *
+   * @return Position of bb in mm in the isoplane.
+   */
   private def findBB(al: AttributeList): Option[Point2D.Double] = {
     val wholeImage = new DicomImage(al)
     val trans = new IsoImagePlaneTranslator(al)
@@ -64,53 +73,67 @@ object BBbyEPIDAnalysis extends Logging {
     // make an image of the BB
     val bbImage = wholeImage.getSubimage(bbRect)
 
-    // the minimum value of a pixel to be counted as part of the BB
-    val minPixValue = {
-      // number of pixels that BB should cover pi-r^2.  This is the number of pixels in the image that
-      // should be considered when calculating the center of mass to find the center of the BB.
-      val bbCount = Math.PI * ((bbSizeX_pix * bbSizeY_pix) / 4)
+    // Number of pixels that occupy BB area.
+    val bbCount = Math.PI * ((bbSizeX_pix * bbSizeY_pix) / 4)
+    def pixList = for (y <- 0 until bbImage.height; x <- 0 until bbImage.width) yield { new Point2i(x, y) }
 
-      Trace.trace("bbCount: " + bbCount)  // TODO
-
-      def takeLargest(hist: Seq[DicomImage.HistPoint]): Float = {
-        if (hist.map(h => h.count).sum > bbCount)
-          takeLargest(hist.tail)
-        else
-          hist.head.value
-      }
-      takeLargest(bbImage.histogram)
+    // Get a very small group of pixels that will be assumed be be at the core of the BB.
+    val bbCorePix = {
+      val coreSize = 2 // just a 2x2 area of pixels
+      val corner = bbImage.getMaxRect(coreSize, coreSize)
+      for (x <- 0 until coreSize; y <- 0 until coreSize) yield { new Point2i(x + corner.getX, y + corner.getY) }
     }
 
-    // make an image of the BB with the non-BB pixels set to zero.
-    val bbImageEnhanced = {
-      def ifOk(x: Int, y: Int) = {
-        val p = bbImage.get(x, y)
-        if (p >= minPixValue) p else 0.toFloat
-      }
-      val pixels = (0 until bbImage.height).map(y => (0 until bbImage.width).map(x => ifOk(x, y)))
-      new DicomImage(pixels)
+    val inOut = pixList.groupBy(p => bbCorePix.contains(p))
+
+    /**
+     * Get the list of pixels that are in the BB by finding the largest that are adjacent to the core pixels.
+     */
+    def getListOfPixInBB(inOut: Map[Boolean, Seq[Point2i]]): Map[Boolean, Seq[Point2i]] = {
+      val minDist = Math.sqrt(2) * 1.001
+
+      // true if adjacent
+      def adjacentTo(p1: Point2i, p2: Point2i) = ((p1.getX - p2.getX).abs < 2) && ((p1.getY - p2.getY).abs < 2)
+      val adjacentList = inOut(false).filter(pOut => inOut(true).filter(pIn => adjacentTo(pIn, pOut)).nonEmpty)
+      val maxAdjacent = adjacentList.maxBy(p => bbImage.get(p.getX, p.getY))
+      val in = inOut(true) :+ maxAdjacent
+      val out = inOut(false).diff(Seq(maxAdjacent))
+      val newInOut = Map((true, in), (false, out))
+      if (in.size >= bbCount) newInOut else getListOfPixInBB(newInOut)
     }
 
-    // find the exact center within the enhanced image using center of mass
-    val xPos_pix = ImageUtil.centerOfMass(bbImageEnhanced.columnSums) + bbRect.getX
-    val yPos_pix = ImageUtil.centerOfMass(bbImageEnhanced.rowSums) + bbRect.getY
+    val in = getListOfPixInBB(inOut)(true)
 
-    Trace.trace("xPos_pix: " + xPos_pix + "    yPos_pix: " + yPos_pix)
+    val sumMass = in.map(p => bbImage.get(p.getX, p.getY)).sum
+
+    val xPos_pix = (in.map(p => p.getX * bbImage.get(p.getX, p.getY)).sum / sumMass) + bbRect.getX
+    val yPos_pix = (in.map(p => p.getY * bbImage.get(p.getX, p.getY)).sum / sumMass) + bbRect.getY
+
     val bbCenter_pix = new Point2D.Double(xPos_pix, yPos_pix)
     val bbCenter_mm = trans.pix2Iso(xPos_pix, yPos_pix)
-    Trace.trace("bbCenter_mm: " + bbCenter_mm)
 
     val valid = {
       val searchImagePix = searchImage.pixelData.flatten
       val searchImageMean = searchImagePix.sum / searchImagePix.size
       val searchStdDev = ImageUtil.stdDev(searchImagePix)
-      val bbPixValueList = bbImageEnhanced.pixelData.flatten.filter(p => p != 0)
-      val bbMean = bbPixValueList.sum / bbPixValueList.size
+      val bbMean = sumMass / in.size
       val bbStdDevFactor = (bbMean - searchImageMean).abs / searchStdDev
       val ok = bbStdDevFactor >= Config.EPIDBBMinimumStandardDeviation
       logger.info("EPID bbStdDevFactor: " + bbStdDevFactor + "    valid: " + ok)
       ok
     }
+
+    //    val valid = {
+    //      val searchImagePix = searchImage.pixelData.flatten
+    //      val searchImageMean = searchImagePix.sum / searchImagePix.size
+    //      val searchStdDev = ImageUtil.stdDev(searchImagePix)
+    //      val bbPixValueList = bbImageEnhanced.pixelData.flatten.filter(p => p != 0)
+    //      val bbMean = bbPixValueList.sum / bbPixValueList.size
+    //      val bbStdDevFactor = (bbMean - searchImageMean).abs / searchStdDev
+    //      val ok = bbStdDevFactor >= Config.EPIDBBMinimumStandardDeviation
+    //      logger.info("EPID bbStdDevFactor: " + bbStdDevFactor + "    valid: " + ok)
+    //      ok
+    //    }
 
     if (valid)
       Some(bbCenter_mm)

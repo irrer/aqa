@@ -25,6 +25,7 @@ import com.pixelmed.dicom.TagFromName
 import java.awt.geom.Point2D
 import org.aqa.webrun.bbByEpid.BBbyEPIDAnnotateImages
 import org.aqa.webrun.bbByEpid.BBbyEPIDAnnotateImages
+import org.aqa.IsoImagePlaneTranslator
 
 /**
  * Test the Config.
@@ -34,6 +35,8 @@ import org.aqa.webrun.bbByEpid.BBbyEPIDAnnotateImages
 class TestBBbyEPIDAnalysis extends FlatSpec with Matchers {
 
   println("-----------------------------------------------------------------------------------------------------")
+
+  private def d2i(d: Double) = d.round.toInt
 
   if (false) {
     val inDirList = (new File("""D:\tmp\aqa\CBCT""")).listFiles.filter(f => f.getName.startsWith("MQATX"))
@@ -65,6 +68,7 @@ class TestBBbyEPIDAnalysis extends FlatSpec with Matchers {
 
   Config.validate
 
+  (0 to 10).map(_ => println)
   println("-----------------------------------------------------------------------------------------------------")
   val outDir = new File("""target\TestBBbyEPIDAnalysis""")
   outDir.mkdirs
@@ -77,6 +81,21 @@ class TestBBbyEPIDAnalysis extends FlatSpec with Matchers {
     Util.writePng(bufImgList(0), new File(dir, "x-axis-view.png"))
     Util.writePng(bufImgList(1), new File(dir, "y-axis-view.png"))
     Util.writePng(bufImgList(2), new File(dir, "z-axis-view.png"))
+  }
+
+  private def showPixValues(center_pix: Point2D.Double, trans: IsoImagePlaneTranslator, image: DicomImage) = {
+    val range = trans.iso2PixDistX(Config.EPIDBBPenumbra_mm * 2).ceil.toInt
+
+    def get(x: Int, y: Int) = image.get(d2i(x + center_pix.getX), d2i(y + center_pix.getY)).round.toInt
+    val pixVals = for (y <- (-range to range); x <- (-range to range)) yield { get(x, y) }
+    val minPix = pixVals.min
+
+    for (y <- (-range to range)) {
+      for (x <- (-range to range)) {
+        print((get(x, y) - minPix).formatted("%5d"))
+      }
+      println
+    }
   }
 
   // list of directories that contain a EPID sets for analysis
@@ -93,6 +112,8 @@ class TestBBbyEPIDAnalysis extends FlatSpec with Matchers {
       val di = new DicomImage(al)
       val trans = new IsoImagePlaneTranslator(al)
       val pix = trans.iso2Pix(iso.get)
+
+      showPixValues(pix, trans, di)
 
       val annotatedImages = new BBbyEPIDAnnotateImages(al, iso.get)
 
