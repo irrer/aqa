@@ -330,32 +330,6 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     compat
   }
 
-  //  /**
-  //   * Find a compatible set of RTPLAN and REG files.  If the plan has the same frame of reference as the
-  //   * CBCT, then no REG file is required.  If a compatible plan was uploaded, then use that, otherwise
-  //   * try to get one from the database.
-  //   *
-  //   * @return (RTPLAN, REG)
-  //   */
-  //  private def findRtplanAndReg(rtplanList: Seq[DicomFile], regList: Seq[DicomFile], cbctList: Seq[DicomFile]): Option[(DicomFile, Option[DicomFile])] = {
-  //    val cbctFrameOfRef = getFrameOfRef(cbctList.head)
-  //    val uploadedPlans = searchUploadedPlans(rtplanList, regList)
-  //    val uploadedPlansWithoutReg = searchUploadedPlansWithoutReg(rtplanList, cbctFrameOfRef)
-  //
-  //    lazy val dbPlanWithReg = searchDbPlanWithReg(regList)
-  //    lazy val dbPlanWithoutReg = searchDbPlanWithoutReg(cbctFrameOfRef)
-  //
-  //    val pair = 0 match {
-  //      case _ if uploadedPlans.isDefined => uploadedPlans
-  //      case _ if uploadedPlansWithoutReg.isDefined => uploadedPlansWithoutReg
-  //      case _ if dbPlanWithReg.isDefined => dbPlanWithReg
-  //      case _ if dbPlanWithoutReg.isDefined => dbPlanWithoutReg
-  //      case _ => None
-  //    }
-  //
-  //    pair
-  //  }
-
   /**
    * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
    */
