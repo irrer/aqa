@@ -466,7 +466,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
       case Right(runReq) => {
-        logger.info("Dat is valid.  Preparing to analyze data.")
+        logger.info("Data is valid.  Preparing to analyze data.")
         // only consider the CBCT files for the date-time stamp.  The plan could have been from months ago.
         val dtp = dateTimePatId(runReq.cbct)
 
