@@ -20,6 +20,21 @@ import edu.umro.ImageUtil.ImageUtil
 import java.awt.Point
 import javax.vecmath.Point2i
 
+/**
+ * Locate the BB in the EPID image.  The following steps are taken:
+ *
+ * - Limit the search to a square in the center of the image.  This allows the algorithm to ignore unrelated objects like couch rails.
+ *
+ * - Make a template rectangle the width and height of the BB and search the search area for the rectangle that has the largest sum of pixel values.
+ *
+ * - Make a template rectangle twice the width and height of the BB and find the brightest small cluster of pixels.  Use that as the core of the BB.
+ *
+ * - Determine the number of pixels that the BB should cover.
+ *
+ * - Recursively add to the core pixels, the brightest adjacent pixels, until there are enough to account for the area of the BB.
+ *
+ * - Perform a center of mass calculation on the core pixels and use the result as the final value.
+ */
 object BBbyEPIDAnalysis extends Logging {
 
   private val subProcedureName = "BB by EPID"
