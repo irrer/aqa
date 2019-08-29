@@ -168,6 +168,8 @@ object Util extends Logging {
     if (at == null) 0 else at.getDoubleValues.head
   }
 
+  def gantryAngle(df: DicomFile): Double = gantryAngle(df.attributeList.get)
+
   case class DateTimeAndPatientId(val dateTime: Option[Long], val PatientID: Option[String]) {
     override def toString = {
       val dt = if (dateTime.isDefined) new Date(dateTime.get) else "none"
@@ -213,6 +215,19 @@ object Util extends Logging {
     val dateList = (AcquisitionDateTime +: dateTimePairs).filter(dt => dt.isDefined).map(dtd => dtd.get).distinct
 
     (dateList, PatientID)
+  }
+
+  /**
+   * Sort a list attribute lists in ascending order by date-time.
+   */
+  def sortByDateTime(alList: Seq[AttributeList]): Seq[AttributeList] = {
+
+    def compar(a: AttributeList, b: AttributeList): Boolean = {
+      def dt(al: AttributeList) = extractDateTimeAndPatientIdFromDicomAl(al)._1.head.getTime
+      dt(a) < dt(b)
+    }
+
+    alList.sortWith(compar _)
   }
 
   /**

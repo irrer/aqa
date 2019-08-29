@@ -65,6 +65,39 @@ object BBbyEPIDRun extends Logging {
   val Phase2RunPKTag = "Phase2RunPK"
 
   /**
+   * For classifying angles.
+   */
+  object AngleType extends Enumeration {
+    val horizontal = Value
+    val vertical = Value
+  }
+
+  /**
+   * Only allow angles that are within 5 degrees of right angles.
+   */
+  def classifyAngle(angle: Double): Option[AngleType.Value] = {
+    val rounded = Util.angleRoundedTo90(angle)
+    val canonicalAngle = ((angle.round.toInt + 3600) % 360)
+    (((rounded - canonicalAngle).abs < 5), canonicalAngle) match {
+      case (true, 0) => Some(AngleType.vertical)
+      case (true, 180) => Some(AngleType.vertical)
+      case (true, 90) => Some(AngleType.vertical)
+      case (true, 270) => Some(AngleType.vertical)
+      case _ => None
+    }
+  }
+
+  /**
+   * Return true if the attribute list's gantry angle is of the specified type.
+   */
+  def isAngleType(al: AttributeList, angleType: AngleType.Value): Boolean = {
+    classifyAngle(Util.gantryAngle(al)) match {
+      case Some(at) => at.toString.equals(angleType.toString())
+      case _ => false
+    }
+  }
+
+  /**
    * Determine if user is authorized to perform redo.  To be authorized, the user must be from the
    * same institution as the original user.
    *
@@ -114,7 +147,6 @@ object BBbyEPIDRun extends Logging {
 
     val dicomFileList = Util.listDirFiles(sessionDir).map(f => new DicomFile(f)).filter(df => df.attributeList.nonEmpty)
     val epidList = dicomFileList.filter(df => df.isModality(SOPClass.CTImageStorage))
-    val regList = dicomFileList.filter(df => df.isModality(SOPClass.SpatialRegistrationStorage))
 
     val acquisitionDate = inputOrig.dataDate match {
       case None => None
@@ -123,24 +155,7 @@ object BBbyEPIDRun extends Logging {
 
     val bbByEPID = BBbyEPID.getByOutput(outputOrig.outputPK.get).head
 
-    val rtplan = {
-      val series = DicomSeries.getBySopInstanceUID(bbByEPID.rtplanSOPInstanceUID).head
-      series.attributeListList.head
-    }
-
-    val reg = {
-      def getFrameOfRef(al: AttributeList): String = al.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
-
-      val epidFrmRef = getFrameOfRef(epidList.head.attributeList.get)
-      val planFrmRef = getFrameOfRef(rtplan)
-      def regWorks(r: AttributeList): Boolean = {
-        val ir = new ImageRegistration(r)
-        ir.frameOfRefUID.equals(planFrmRef) && ir.otherFrameOfRefUID.equals(epidFrmRef)
-      }
-      regList.find(r => regWorks(r.attributeList.get))
-    }
-
-    val runReq = new BBbyEPIDRunReq(Right(rtplan), reg, epidList, Machine.get(outputOrig.machinePK.get).get)
+    val runReq = new BBbyEPIDRunReq(epidList, Machine.get(outputOrig.machinePK.get).get)
 
     val procedure = Procedure.get(outputOrig.procedurePK).get
 
@@ -150,17 +165,15 @@ object BBbyEPIDRun extends Logging {
 
     Future {
       val extendedData = ExtendedData.get(output)
-      insertIfNew(Seq(runReq.rtplan), extendedData)
       val runReqFinal = runReq.reDir(input.dir)
 
-      val rtplan = runReqFinal.rtplan
       val machine = runReqFinal.machine
 
-      val finalStatus = BBbyEPIDExecute.runProcedure(extendedData, runReqFinal)
+      val finalStatus = BBbyEPIDAnalyse.runProcedure(extendedData, runReqFinal)
       val finDate = new Timestamp(System.currentTimeMillis)
       val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
 
-      Phase2Util.setMachineSerialNumber(machine, runReq.epid.head)
+      Phase2Util.setMachineSerialNumber(machine, runReq.epidList.head)
       outputFinal.insertOrUpdate
       outputFinal.updateData(outputFinal.makeZipOfFiles)
       Run.removeRedundantOutput(outputFinal.outputPK)
@@ -228,12 +241,6 @@ object BBbyEPIDRun extends Logging {
  */
 class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with Logging {
 
-  /** Defines precision - Format to use when showing numbers. */
-  private val outputFormat = "%7.5e"
-
-  private def getFrameOfRef(al: AttributeList): String = al.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
-  private def getFrameOfRef(dicomFile: DicomFile): String = getFrameOfRef(dicomFile.attributeList.get)
-
   private def getSeries(al: AttributeList): String = al.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString
   private def getSeries(dicomFile: DicomFile): String = getSeries(dicomFile.attributeList.get)
 
@@ -257,7 +264,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   }
 
   private def validateMachineSelection(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, Machine] = {
-    val machineRelatedList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage) || df.isModality(SOPClass.CTImageStorage) || df.isModality(SOPClass.SpatialRegistrationStorage))
+    val machineRelatedList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
     // machines that DICOM files reference (based on device serial numbers)
     val referencedMachines = machineRelatedList.map(df => Machine.attributeListToMachine(df.attributeList.get)).flatten.distinct
     val chosenMachine = for (pkTxt <- valueMap.get(machineSelector.label); pk <- Util.stringToLong(pkTxt); m <- Machine.get(pk)) yield m
@@ -272,140 +279,33 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   }
 
   /**
-   * Save an attribute list in the tmp directory.
-   */
-  private def saveDbRtplan(al: AttributeList): DicomFile = {
-    val fileName = Util.sopOfAl(al) + ".dcm"
-    val tmpFile = new File(Config.tmpDirFile, fileName)
-    DicomUtil.writeAttributeList(al, tmpFile)
-    new DicomFile(tmpFile)
-  }
-
-  /**
-   * Search the uploaded plans and reg files to see if there is a set with compatible frames of reference
-   */
-  private def searchUploadedPlans(rtplanList: Seq[DicomFile], regList: Seq[DicomFile]): Option[(DicomFile, Option[DicomFile])] = {
-    def toIR(df: DicomFile) = new ImageRegistration(df.attributeList.get)
-    val compatUploaded = for (rtplan <- rtplanList; reg <- regList; if (toIR(reg).sameFrameOfRef(rtplan.attributeList.get))) yield { (rtplan, Some(reg)) }
-    if (compatUploaded.isEmpty) None else compatUploaded.headOption
-  }
-
-  /**
-   * Search uploaded plans that have the same frame of reference as the EPID, in which case a REG file is not needed.
-   */
-  private def searchUploadedPlansWithoutReg(rtplanList: Seq[DicomFile], epidFrameOfRef: String): Option[(DicomFile, Option[DicomFile])] = {
-    val compatPlan = rtplanList.filter(rtplan => getFrameOfRef(rtplan).equals(epidFrameOfRef))
-    if (compatPlan.isEmpty) None else Some(compatPlan.head, None)
-  }
-
-  /**
-   * Search database plans that work with one of the uploaded REG files.
-   */
-  private def searchDbPlanWithReg(regList: Seq[DicomFile]): Option[(DicomFile, Option[DicomFile])] = {
-    val regFrUidSet = regList.map(reg => getFrameOfRef(reg)).toSet
-    val rtPlanListFromDb = DicomSeries.getByFrameUIDAndSOPClass(regFrUidSet, SOPClass.RTPlanStorage).map(dicomSeries => dicomSeries.attributeListList.head)
-    val compatUploaded = for (rtplan <- rtPlanListFromDb; reg <- regList; if (new ImageRegistration(reg).sameFrameOfRef(rtplan))) yield { (rtplan, Some(reg)) }
-
-    val compat = if (compatUploaded.isEmpty)
-      None
-    else {
-      val rtplanDicomFile = saveDbRtplan(compatUploaded.head._1)
-      Some(rtplanDicomFile, compatUploaded.head._2)
-    }
-    compat
-  }
-
-  /**
-   * Search database plans that have the same frame of reference as the EPID, so no REG file required.
-   */
-  private def searchDbPlanWithoutReg(epidFrameOfRef: String): Option[(DicomFile, Option[DicomFile])] = {
-    val rtPlanListFromDb = DicomSeries.getByFrameUIDAndSOPClass(Set(epidFrameOfRef), SOPClass.RTPlanStorage).map(dicomSeries => dicomSeries.attributeListList.head)
-
-    val compat = if (rtPlanListFromDb.isEmpty)
-      None
-    else {
-      val rtplanDicomFile = saveDbRtplan(rtPlanListFromDb.head)
-      Some(rtplanDicomFile, None)
-    }
-    compat
-  }
-
-  /**
-   * Get the SOP of the plan referenced by the given epid.
-   */
-  private def getPlanRef(epid: DicomFile): String = {
-    val seq = DicomUtil.seqToAttr(epid.attributeList.get, TagFromName.ReferencedRTPlanSequence)
-    seq.head.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrEmptyString
-  }
-
-  private def getGantryAngle(epid: DicomFile): Double = {
-    epid.attributeList.get.get(TagFromName.GantryAngle).getDoubleValues.head
-  }
-
-  /**
-   * Only allow angles that are within 5 degrees of right angles.
-   */
-  private def isValidAngle(angle: Double) = {
-    val rounded = Util.angleRoundedTo90(angle)
-    val canonicalAngle = ((angle.round.toInt + 360) % 360)
-    (rounded - canonicalAngle).abs < 5
-  }
-
-  /**
    * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
    */
   private def validate(valueMap: ValueMapT): Either[StyleMapT, BBbyEPIDRunReq] = {
     val dicomFileList = dicomFilesInSession(valueMap)
-    val epidList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
-    val rtplanList = dicomFileList.filter(df => df.isModality(SOPClass.RTPlanStorage))
-    val angleList = epidList.map(epid => getGantryAngle(epid))
+    val epidListDf = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
+    val epidList = epidListDf.map(df => df.attributeList).flatten
+    val angleList = epidList.map(epid => Util.gantryAngle(epid))
+    def angleTextList = angleList.map(a => Util.fmtDbl(a)).mkString("  ")
     // true if all angles are valid
-    val anglesValid = angleList.map(angle => isValidAngle(angle)).reduce(_ && _)
+    val anglesTypeList = angleList.map(angle => BBbyEPIDRun.classifyAngle(angle)).flatten
 
     def epidSeriesList = epidList.map(epid => getSeries(epid)).distinct
-    def referencedUploadedPlanList = epidList.map(epid => getPlanRef(epid)).distinct
 
-    def machineCheck = validateMachineSelection(valueMap, epidList)
+    def machineCheck = validateMachineSelection(valueMap, epidListDf)
 
-    logger.info("Number of files uploaded:  RTPLAN: " + rtplanList.size + "    EPID: " + epidList.size)
+    logger.info("Number of RTIMAGE files uploaded: " + epidList.size)
 
-    def numSeries(dfList: Seq[DicomFile]): Int = dfList.map(df => df.attributeList.get.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString).distinct.sorted.size
+    val numSeries = epidList.map(epid => epid.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString).distinct.sorted.size
 
-    /** return the SOP of the plan (either uploaded or from DB) that is referenced by the EPID, or none if it can not be found. */
-    def rtplanRefencedByEpid: Option[String] = {
-      rtplanList.find(plan => Util.sopOfAl(plan.attributeList.get).equals(referencedUploadedPlanList.head)) match {
-        case Some(rtplanDf) => Some(Util.sopOfAl(rtplanDf.attributeList.get))
-        case _ => {
-          // check in database
-          DicomSeries.getBySopInstanceUID(referencedUploadedPlanList.head) match {
-            case (ds) => Some(ds.head.sopInstanceUIDList)
-            case _ => None
-          }
-        }
-      }
-    }
-
-    val result = 0 match {
+    val result: Either[WebUtil.StyleMapT, BBbyEPIDRunReq] = 0 match {
       case _ if epidList.isEmpty => formErr("No EPID files uploaded")
-      case _ if !anglesValid => ("EPID angles must be either vertical or horizontal (0, 90, 180, 270).  Found: " + angleList.mkString("  "))
-      case _ if epidSeriesList.size > 1 => formErr("EPID slices are from " + numSeries(epidList) + " different series.")
-      case _ if referencedUploadedPlanList.size > 1 => formErr("EPID series references more than one RTPLAN.")
-      case _ if rtplanRefencedByEpid.isEmpty => formErr("Can not find the RTPLAN referenced by the EPID files.")
+      case _ if !anglesTypeList.contains(BBbyEPIDRun.AngleType.horizontal) => formErr("No EPID image with horizontal gantry angle (0 or 180) present.  Angles uploaded: " + angleTextList)
+      case _ if !anglesTypeList.contains(BBbyEPIDRun.AngleType.vertical) => formErr("No EPID image with vertical gantry angle (90 or 270) present.  Angles uploaded: " + angleTextList)
+      case _ if epidSeriesList.size > 1 => formErr("EPID slices are from " + numSeries + " different series.")
       case _ if (machineCheck.isLeft) => Left(machineCheck.left.get)
       case _ => {
-
-        val plan: Either[DicomFile, AttributeList] = {
-          val planSop = referencedUploadedPlanList.head
-          rtplanList.find(plan => Util.sopOfAl(plan.attributeList.get).equals(planSop)) match {
-            case Some(planDicomFile) => Left(planDicomFile)
-            case _ => {
-              Right(DicomSeries.getBySopInstanceUID(planSop).head.attributeListList.head)
-            }
-          }
-
-        }
-
-        val runReq = new BBbyEPIDRunReq(plan, epidList, machineCheck.right.get)
+        val runReq = new BBbyEPIDRunReq(epidListDf, machineCheck.right.get)
         Right(runReq)
       }
     }
@@ -437,8 +337,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       }
       case Right(runReq) => {
         logger.info("Data is valid.  Preparing to analyze data.")
-        // only consider the EPID files for the date-time stamp.  The plan could have been from months ago.
-        val dtp = dateTimePatId(runReq.epidList.map(df => df.attributeList.get))
+        val dtp = dateTimePatId(runReq.epidList)
 
         val sessDir = sessionDir(valueMap).get
         val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp._2, dtp._1)
@@ -447,20 +346,13 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
         Future {
           val extendedData = ExtendedData.get(output)
-          BBbyEPIDRun.insertIfNew(Seq(runReq.rtplan), extendedData)
           val runReqFinal = runReq.reDir(input.dir)
-
-          //          val plan = runReqFinal.rtplan
-          //          val machine = machineCheck.right.get
-          //          Phase2Util.saveRtplanAsDicomSeries(runReq.rtplan)
-
-          //          val rtimageMap = Phase2.constructRtimageMap(plan, rtimageList)
-
-          val finalStatus = BBbyEPIDExecute.runProcedure(extendedData, runReqFinal)
+          BBbyEPIDRun.insertIfNew(runReqFinal.epidList, extendedData)
+          val finalStatus = BBbyEPIDAnalyse.runProcedure(extendedData, runReqFinal)
           val finDate = new Timestamp(System.currentTimeMillis)
           val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
 
-          Phase2Util.setMachineSerialNumber(extendedData.machine, runReq.epid.head)
+          Phase2Util.setMachineSerialNumber(extendedData.machine, runReq.epidList.head)
           outputFinal.insertOrUpdate
           outputFinal.updateData(outputFinal.makeZipOfFiles)
           Run.removeRedundantOutput(outputFinal.outputPK)

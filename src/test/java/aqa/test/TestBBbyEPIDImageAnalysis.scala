@@ -16,7 +16,7 @@ import org.aqa.Config
 import edu.umro.ImageUtil.DicomImage
 import java.awt.image.BufferedImage
 import org.aqa.VolumeTranslator
-import org.aqa.webrun.bbByEpid.BBbyEPIDAnalysis
+import org.aqa.webrun.bbByEpid.BBbyEPIDImageAnalysis
 import org.aqa.IsoImagePlaneTranslator
 import edu.umro.ImageUtil.ImageUtil
 import java.awt.Rectangle
@@ -32,7 +32,7 @@ import org.aqa.IsoImagePlaneTranslator
  *
  */
 
-class TestBBbyEPIDAnalysis extends FlatSpec with Matchers {
+class TestBBbyEPIDImageAnalysis extends FlatSpec with Matchers {
 
   println("-----------------------------------------------------------------------------------------------------")
 
@@ -70,7 +70,7 @@ class TestBBbyEPIDAnalysis extends FlatSpec with Matchers {
 
   (0 to 10).map(_ => println)
   println("-----------------------------------------------------------------------------------------------------")
-  val outDir = new File("""target\TestBBbyEPIDAnalysis""")
+  val outDir = new File("""target\TestBBbyEPIDImageAnalysis""")
   outDir.mkdirs
   outDir.listFiles.map(f => Utility.deleteFileTree(f))
 
@@ -99,23 +99,24 @@ class TestBBbyEPIDAnalysis extends FlatSpec with Matchers {
   }
 
   // list of directories that contain a EPID sets for analysis
-  val fileList = (new File("""src\test\resources\TestBBbyEPIDAnalysis""")).listFiles
+  val fileList = (new File("""src\test\resources\TestBBbyEPIDImageAnalysis""")).listFiles
   println("List of EPID files used as input:\n    " + fileList.map(file => file.getAbsolutePath).mkString("\n    "))
 
-  "TestBBbyEPIDAnalysis" should "find BB" in {
+  "TestBBbyEPIDImageAnalysis" should "find BB" in {
 
     def testDir(file: File) = {
       println("Processing file " + file.getAbsolutePath)
       val al = (new DicomFile(file)).attributeList.get
-      val iso = BBbyEPIDAnalysis.testFindBB(al)
+      val iso = BBbyEPIDImageAnalysis.findBB(al)
       println("result: " + iso)
       val di = new DicomImage(al)
       val trans = new IsoImagePlaneTranslator(al)
-      val pix = trans.iso2Pix(iso.get)
+      val isoAs2D = new Point2D.Double(iso.right.get.getX, iso.right.get.getY)
+      val pix = trans.iso2Pix(isoAs2D)
 
       showPixValues(pix, trans, di)
 
-      val annotatedImages = new BBbyEPIDAnnotateImages(al, iso.get)
+      val annotatedImages = new BBbyEPIDAnnotateImages(al, isoAs2D)
 
       val pngFileFull = new File(outDir, (file.getName.replace(".dcm", "_full.png")))
       ImageUtil.writePngFile(annotatedImages.fullBufImg, pngFileFull)

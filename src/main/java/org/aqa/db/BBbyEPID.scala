@@ -24,12 +24,11 @@ case class BBbyEPID(
   offset_mm: Double, // distance between measured EPID position and expected (plan) location (aka: positioning error)
   gantryAngle_deg: Double, // gantry angle in degrees
   status: String, // termination status
-  rtplanX_mm: Double, // expected X position in rtplan
-  rtplanY_mm: Double, // expected Y position in rtplan
-  rtplanZ_mm: Double, // expected Z position in rtplan
-  epidX_mm: Double, // expected X position in epid
-  epidY_mm: Double, // expected Y position in epid
-  epidZ_mm: Double // expected Z position in epid
+  epidImageX_mm: Double, // X position in EPID image
+  epidImageY_mm: Double, // Y position in EPID image
+  epid3DX_mm: Double, // X position in EPID in 3D plan space
+  epid3DY_mm: Double, // Y position in EPID in 3D plan space
+  epid3DZ_mm: Double // Z position in EPID in 3D plan space
 ) {
 
   def insert: BBbyEPID = {
@@ -49,16 +48,10 @@ case class BBbyEPID(
       "\n    offset_mm : " + Util.fmtDbl(offset_mm) +
       "\n    gantryAngle_deg : " + Util.fmtDbl(gantryAngle_deg) +
       "\n    status : " + status +
-      "\n    plan X,Y,Z : " + Util.fmtDbl(rtplanX_mm) + ", " + Util.fmtDbl(rtplanY_mm) + ", " + Util.fmtDbl(rtplanZ_mm) +
-      "\n    epid X,Y,Z : " + Util.fmtDbl(epidX_mm) + ", " + Util.fmtDbl(epidY_mm) + ", " + Util.fmtDbl(epidZ_mm)
+      "\n    epid image X,Y : " + Util.fmtDbl(epidImageX_mm) + ", " + Util.fmtDbl(epidImageY_mm) +
+      "\n    epid 3D X,Y,Z : " + Util.fmtDbl(epid3DX_mm) + ", " + Util.fmtDbl(epid3DY_mm) + ", " + Util.fmtDbl(epid3DZ_mm)
 
-  //def pass = status.equalsIgnoreCase(ProcedureStatus.done.toString)
-
-  val rtplan = new Point3d(rtplanX_mm, rtplanY_mm, rtplanZ_mm)
-
-  val epid = new Point3d(epidX_mm, epidY_mm, epidZ_mm)
-
-  val err = new Point3d(rtplanX_mm - epidX_mm, rtplanY_mm - epidY_mm, rtplanZ_mm - epidZ_mm)
+  val epid = new Point3d(epid3DX_mm, epid3DY_mm, epid3DZ_mm)
 }
 
 object BBbyEPID extends ProcedureOutput {
@@ -71,12 +64,11 @@ object BBbyEPID extends ProcedureOutput {
     def offset_mm = column[Double]("offset_mm")
     def gantryAngle_deg = column[Double]("gantryAngle_deg")
     def status = column[String]("status")
-    def planX_mm = column[Double]("planX_mm")
-    def planY_mm = column[Double]("planY_mm")
-    def planZ_mm = column[Double]("planZ_mm")
-    def epidX_mm = column[Double]("epidX_mm")
-    def epidY_mm = column[Double]("epidY_mm")
-    def epidZ_mm = column[Double]("epidZ_mm")
+    def epidImageX_mm = column[Double]("epidImageX_mm")
+    def epidImageY_mm = column[Double]("epidImageY_mm")
+    def epid3DX_mm = column[Double]("epid3DX_mm")
+    def epid3DY_mm = column[Double]("epid3DY_mm")
+    def epid3DZ_mm = column[Double]("epid3DZ_mm")
 
     def * = (
       bbByEPIDPK.?,
@@ -86,12 +78,11 @@ object BBbyEPID extends ProcedureOutput {
       offset_mm,
       gantryAngle_deg,
       status,
-      planX_mm,
-      planY_mm,
-      planZ_mm,
-      epidX_mm,
-      epidY_mm,
-      epidZ_mm) <> ((BBbyEPID.apply _)tupled, BBbyEPID.unapply _)
+      epidImageX_mm,
+      epidImageY_mm,
+      epid3DX_mm,
+      epid3DY_mm,
+      epid3DZ_mm) <> ((BBbyEPID.apply _)tupled, BBbyEPID.unapply _)
 
     def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }

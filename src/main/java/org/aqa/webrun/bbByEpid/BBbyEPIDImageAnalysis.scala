@@ -1,24 +1,16 @@
 package org.aqa.webrun.bbByEpid
 
-import scala.xml.Elem
 import org.aqa.Logging
 import org.aqa.run.ProcedureStatus
-import javax.vecmath.Point3d
-import java.awt.image.BufferedImage
-import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.phase2.Phase2Util
 import com.pixelmed.dicom.AttributeList
 import org.aqa.Config
 import edu.umro.ImageUtil.DicomImage
-import com.pixelmed.dicom.TagFromName
 import org.aqa.IsoImagePlaneTranslator
 import java.awt.Rectangle
-import edu.umro.ImageUtil.LocateMax
-import edu.umro.ScalaUtil.Trace
-import java.awt.geom.Point2D
 import edu.umro.ImageUtil.ImageUtil
-import java.awt.Point
 import javax.vecmath.Point2i
+import org.aqa.Util
+import javax.vecmath.Point2d
 
 /**
  * Locate the BB in the EPID image.  The following steps are taken:
@@ -35,7 +27,7 @@ import javax.vecmath.Point2i
  *
  * - Perform a center of mass calculation on the core pixels and use the result as the final value.
  */
-object BBbyEPIDAnalysis extends Logging {
+object BBbyEPIDImageAnalysis extends Logging {
 
   private val subProcedureName = "BB by EPID"
 
@@ -44,12 +36,10 @@ object BBbyEPIDAnalysis extends Logging {
    */
   private def d2i(d: Double) = d.round.toInt
 
-  case class BBbyEPIDResult(summry: Elem, sts: ProcedureStatus.Value, position: Seq[Point3d], images: Seq[BufferedImage])
-
   /**
    * Obtain the sub-area of the image to be searched for the BB.
    */
-  private def searchArea(trans: IsoImagePlaneTranslator, center_mm: Point2D.Double, distance_mm: Double): Rectangle = {
+  private def searchArea(trans: IsoImagePlaneTranslator, center_mm: Point2d, distance_mm: Double): Rectangle = {
     val corner = trans.iso2Pix(center_mm.getX - distance_mm, center_mm.getY - distance_mm)
     val w = trans.iso2PixDistX(distance_mm * 2)
     val h = trans.iso2PixDistY(distance_mm * 2)
@@ -62,13 +52,13 @@ object BBbyEPIDAnalysis extends Logging {
    *
    * @param al image to process
    *
-   * @return Position of bb in mm in the isoplane.
+   * @return Position of BB in mm in the isoplane.
    */
-  private def findBB(al: AttributeList): Option[Point2D.Double] = {
+  def findBB(al: AttributeList): Either[String, Point2d] = {
     val wholeImage = new DicomImage(al)
     val trans = new IsoImagePlaneTranslator(al)
     // Using a sub-area eliminates the need for having to deal with other objects, such as the couch rails.
-    val searchRect = searchArea(trans, new Point2D.Double(0, 0), Config.BBbyEPIDSearchDistance_mm)
+    val searchRect = searchArea(trans, new Point2d(0, 0), Config.BBbyEPIDSearchDistance_mm)
     // image that contains the area to search
     val searchImage = wholeImage.getSubimage(searchRect)
 
@@ -124,7 +114,7 @@ object BBbyEPIDAnalysis extends Logging {
     val xPos_pix = (in.map(p => p.getX * bbImage.get(p.getX, p.getY)).sum / sumMass) + bbRect.getX
     val yPos_pix = (in.map(p => p.getY * bbImage.get(p.getX, p.getY)).sum / sumMass) + bbRect.getY
 
-    val bbCenter_pix = new Point2D.Double(xPos_pix, yPos_pix)
+    val bbCenter_pix = new Point2d(xPos_pix, yPos_pix)
     val bbCenter_mm = trans.pix2Iso(xPos_pix, yPos_pix)
 
     val valid = {
@@ -138,40 +128,14 @@ object BBbyEPIDAnalysis extends Logging {
       ok
     }
 
-    //    val valid = {
-    //      val searchImagePix = searchImage.pixelData.flatten
-    //      val searchImageMean = searchImagePix.sum / searchImagePix.size
-    //      val searchStdDev = ImageUtil.stdDev(searchImagePix)
-    //      val bbPixValueList = bbImageEnhanced.pixelData.flatten.filter(p => p != 0)
-    //      val bbMean = bbPixValueList.sum / bbPixValueList.size
-    //      val bbStdDevFactor = (bbMean - searchImageMean).abs / searchStdDev
-    //      val ok = bbStdDevFactor >= Config.EPIDBBMinimumStandardDeviation
-    //      logger.info("EPID bbStdDevFactor: " + bbStdDevFactor + "    valid: " + ok)
-    //      ok
-    //    }
-
     if (valid)
-      Some(bbCenter_mm)
+      Right(new Point2d(bbCenter_mm.getX, bbCenter_mm.getY))
     else {
-      logger.warn("Failed to find image of BB in EPID image with sufficient contrast to background.")
-      None
+      val msg = "Failed to find image of BB in EPID image with sufficient contrast to background. for gantry angle " + Util.gantryAngle(al)
+      logger.warn(msg)
+      Left(msg)
     }
   }
 
-  def testFindBB(al: AttributeList) = findBB(al)
-
-  def runProcedure(extendedData: ExtendedData, imageList: Seq[AttributeList]): Either[Elem, BBbyEPIDResult] = {
-    try {
-      // This code only reports values without making judgment as to pass or fail.
-      logger.info("Starting analysis of EPID Alignment")
-      logger.info("Finished analysis of EPID Alignment")
-      ???
-    } catch {
-      case t: Throwable => {
-        logger.warn("Unexpected error in analysis of " + subProcedureName + ": " + t + fmtEx(t))
-        Left(Phase2Util.procedureCrash(subProcedureName))
-      }
-    }
-  }
 }
 

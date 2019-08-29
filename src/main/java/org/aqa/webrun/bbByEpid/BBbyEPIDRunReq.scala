@@ -6,19 +6,14 @@ import org.aqa.ImageRegistration
 import org.aqa.webrun.bbByCBCT.BBbyCBCTRunReq
 import java.io.File
 import org.aqa.db.Machine
+import org.aqa.Util
 
-case class BBbyEPIDRunReq(rtplanDicomFile: Either[DicomFile, AttributeList], epidList: Seq[DicomFile], machine: Machine) {
+class BBbyEPIDRunReq(epidListDicomFile: Seq[DicomFile], val machine: Machine) {
 
-  val rtplan = if (rtplanDicomFile.isLeft) rtplanDicomFile.left.get.attributeList.get else rtplanDicomFile.right.get
+  val epidList = Util.sortByDateTime(epidListDicomFile.map(df => df.attributeList).flatten)
 
   def reDir(dir: File): BBbyEPIDRunReq = {
-    val imageReg2 = epidList.map(image => image.reDir(dir))
-
-    val plan2 = if (rtplanDicomFile.isLeft)
-      Left(rtplanDicomFile.left.get.reDir(dir))
-    else
-      Right(rtplan)
-
-    new BBbyEPIDRunReq(plan2, imageReg2, machine)
+    val imageReg2 = epidListDicomFile.map(image => image.reDir(dir))
+    new BBbyEPIDRunReq(imageReg2, machine)
   }
 }
