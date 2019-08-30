@@ -1,9 +1,6 @@
 package org.aqa.webrun.bbByEpid
 
 import org.aqa.DicomFile
-import com.pixelmed.dicom.AttributeList
-import org.aqa.ImageRegistration
-import org.aqa.webrun.bbByCBCT.BBbyCBCTRunReq
 import java.io.File
 import org.aqa.db.Machine
 import org.aqa.Util
