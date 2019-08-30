@@ -10,6 +10,7 @@ import javax.vecmath.Point2d
 import org.aqa.db.BBbyEPID
 import javax.vecmath.Point3d
 import org.aqa.run.ProcedureStatus
+import org.aqa.db.BBbyEPIDComposite
 
 /**
  * Given validated data, process it.
@@ -57,11 +58,42 @@ object BBbyEPIDAnalyse extends Logging {
       None
   }
 
-  def runProcedure(extendedData: ExtendedData, runReq: BBbyEPIDRunReq): ProcedureStatus.Value = {
+  private def constructComposite(bbByEPIDList: Seq[BBbyEPID], extendedData: ExtendedData, runReq: BBbyEPIDRunReq): BBbyEPIDComposite = {
 
-    def getAngleIndex(angleType: BBbyEPIDRun.AngleType.Value) = {
-      runReq.epidList.indexWhere(epid => BBbyEPIDRun.isAngleType(epid, angleType))
+    def getByAngleType(angleType: BBbyEPIDRun.AngleType.Value) = {
+      val at = angleType.toString
+      def sameType(bbByEPID: BBbyEPID): Boolean = {
+        val angTyp = BBbyEPIDRun.classifyAngle(bbByEPID.gantryAngle_deg)
+        angTyp.isDefined && angTyp.get.toString.equals(at)
+      }
+
+      bbByEPIDList.filter(bbByEPID => sameType(bbByEPID))
     }
+
+    val vert = getByAngleType(BBbyEPIDRun.AngleType.vertical)
+    val horz = getByAngleType(BBbyEPIDRun.AngleType.horizontal)
+
+    val x_mm = vert.map(bb => bb.epid3DX_mm).sum / vert.size
+    val y_mm = horz.map(bb => bb.epid3DY_mm).sum / horz.size
+    val z_mm = bbByEPIDList.map(bb => bb.epid3DZ_mm).sum / bbByEPIDList.size
+    val offset_mm = (new Point3d(x_mm, y_mm, z_mm)).distance(new Point3d(0, 0, 0))
+
+    val SeriesInstanceUID = runReq.epidList.head.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString
+
+    val bbByEPIDComposite = new BBbyEPIDComposite(
+      bbByEPIDCompositePK = None,
+      outputPK = extendedData.output.outputPK.get,
+      rtplanSOPInstanceUID = getPlanRef(runReq.epidList.head),
+      epidSeriesInstanceUID = SeriesInstanceUID,
+      offset_mm,
+      x_mm,
+      y_mm,
+      z_mm)
+
+    bbByEPIDComposite
+  }
+
+  def runProcedure(extendedData: ExtendedData, runReq: BBbyEPIDRunReq): ProcedureStatus.Value = {
 
     try {
       logger.info("Starting analysis of EPID Alignment")
@@ -73,9 +105,12 @@ object BBbyEPIDAnalyse extends Logging {
       logger.info("Inserting EPID records into database")
       BBbyEPID.insertSeq(dbList.flatten)
 
-      val horzIndex = getAngleIndex(BBbyEPIDRun.AngleType.horizontal)
-      val vertIndex = getAngleIndex(BBbyEPIDRun.AngleType.vertical)
+      logger.info("Calculating composite result.")
+      val bbByEPIDComposite = constructComposite(dbList.flatten, extendedData, runReq) // TODO this can fail if BB not found
+      logger.info("Inserting composite EPID record into database: " + bbByEPIDComposite)
+      bbByEPIDComposite.insert
 
+      BBbyEPIDHTML.generateHtml(extendedData, dbList, Some(bbByEPIDComposite), runReq, ProcedureStatus.done) // TODO status should be real
       logger.info("Finished analysis of EPID Alignment")
       ProcedureStatus.done
     } catch {

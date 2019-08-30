@@ -85,6 +85,7 @@ object DbSetup extends Logging {
     WedgePoint.query,
     BBbyCBCT.query,
     BBbyEPID.query,
+    BBbyEPIDComposite.query,
     Rect.query,
     SymmetryAndFlatness.query,
     LeafPosition.query)

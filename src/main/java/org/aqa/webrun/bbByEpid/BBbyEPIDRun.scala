@@ -78,13 +78,14 @@ object BBbyEPIDRun extends Logging {
   def classifyAngle(angle: Double): Option[AngleType.Value] = {
     val rounded = Util.angleRoundedTo90(angle)
     val canonicalAngle = ((angle.round.toInt + 3600) % 360)
-    (((rounded - canonicalAngle).abs < 5), canonicalAngle) match {
+    val angTyp = (((rounded - canonicalAngle).abs < 5), canonicalAngle) match {
       case (true, 0) => Some(AngleType.vertical)
       case (true, 180) => Some(AngleType.vertical)
       case (true, 90) => Some(AngleType.horizontal)
       case (true, 270) => Some(AngleType.horizontal)
       case _ => None
     }
+    angTyp
   }
 
   /**
