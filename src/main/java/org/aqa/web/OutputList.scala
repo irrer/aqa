@@ -20,6 +20,7 @@ import org.aqa.db.CachedUser
 import org.restlet.data.Status
 import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.bbByCBCT.BBbyCBCTRun
+import org.aqa.webrun.bbByEpid.BBbyEPIDRun
 
 /**
  * List the outputs to let users re-visit results.
@@ -240,6 +241,9 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
         }
         if (procedure.name.toLowerCase.contains("cbct")) {
           BBbyCBCTRun.redo(outputPK, response.getRequest, response)
+        }
+        if (procedure.name.toLowerCase.contains("epid")) {
+          BBbyEPIDRun.redo(outputPK, response.getRequest, response)
         }
       }
     }

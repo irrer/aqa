@@ -11,6 +11,7 @@ import scala.xml.Elem
 import org.aqa.web.Session
 import org.aqa.webrun.phase2.Phase2
 import org.aqa.webrun.bbByCBCT.BBbyCBCTRun
+import org.aqa.webrun.bbByEpid.BBbyEPIDRun
 
 /**
  * Web interface for running the procedures.
@@ -44,6 +45,7 @@ object WebRun {
     ("LOCRun_1", procedure => new LOCRun_1(procedure)),
     ("Phase2", procedure => new Phase2(procedure)),
     ("BBbyCBCT", procedure => new BBbyCBCTRun(procedure)),
+    ("BBbyEPID", procedure => new BBbyEPIDRun(procedure)),
     ("LOCUploadBaseFiles_1", procedure => new LOCUploadBaseFiles_1(procedure)),
     ("UploadAndChooseMachine_1", procedure => new UploadAndChooseMachine_1(procedure)),
     ("WinstonLutz_1", procedure => new WinstonLutz_1(procedure)))

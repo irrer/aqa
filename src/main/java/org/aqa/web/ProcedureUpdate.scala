@@ -136,7 +136,9 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
   private def save(valueMap: ValueMapT, response: Response): Unit = {
     val errMap = emptyName(valueMap) ++ validateVersion(valueMap) ++ validateUniqueness(valueMap)
     if (errMap.isEmpty) {
-      (createProcedureFromParameters(valueMap)).insertOrUpdate
+      val procedure = createProcedureFromParameters(valueMap)
+      procedure.insertOrUpdate
+      logger.info("Updated procedure to: " + procedure.toString)
       ProcedureList.redirect(response)
     } else {
       formEdit.setFormResponse(valueMap, errMap, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
@@ -197,6 +199,7 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
         (version.label, procedure.version),
         (timeout.label, procedure.timeout.toString),
         (supportingUserPK.label, procedure.supportingUserPK.toString),
+        (webInterface.label, procedure.webInterface.toString),
         (notes.label, procedure.notes))
 
       formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)

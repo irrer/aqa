@@ -81,8 +81,8 @@ object BBbyEPIDRun extends Logging {
     (((rounded - canonicalAngle).abs < 5), canonicalAngle) match {
       case (true, 0) => Some(AngleType.vertical)
       case (true, 180) => Some(AngleType.vertical)
-      case (true, 90) => Some(AngleType.vertical)
-      case (true, 270) => Some(AngleType.vertical)
+      case (true, 90) => Some(AngleType.horizontal)
+      case (true, 270) => Some(AngleType.horizontal)
       case _ => None
     }
   }
@@ -146,7 +146,7 @@ object BBbyEPIDRun extends Logging {
     logger.info("Copied input files from " + inputOrig.dir.getAbsolutePath + " --> " + sessionDir.getAbsolutePath)
 
     val dicomFileList = Util.listDirFiles(sessionDir).map(f => new DicomFile(f)).filter(df => df.attributeList.nonEmpty)
-    val epidList = dicomFileList.filter(df => df.isModality(SOPClass.CTImageStorage))
+    val epidList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
 
     val acquisitionDate = inputOrig.dataDate match {
       case None => None

@@ -16,7 +16,7 @@ case class Procedure(
   name: String, // human readable identifier
   version: String, // code version, should be in numeric+dot format, as in 1.2.3
   timeout: Float, // For 'runaway' programs.  Timeout in minutes after which the procedure should be terminated
-  created: Date, // time that this record was created
+  created: Date, // time that this record was last modified
   supportingUserPK: Long, // id of user that supports this procedure, usually the author
   webInterface: String, // Class name of Restlet for running procedure
   notes: String // Additional information on usage, inputs, limitations, etc.
@@ -54,6 +54,18 @@ case class Procedure(
 
   /** Get the directory containing the executables for this procedure. */
   def execDir = new File(Config.ProcedureDir, fileName)
+
+  override def toString = {
+    "\n    procedurePK: " + procedurePK +
+      "\n    name: " + name +
+      "\n    version: " + version +
+      "\n    timeout: " + timeout +
+      "\n    created: " + created +
+      "\n    supportingUserPK: " + supportingUserPK +
+      "\n    webInterface: " + webInterface +
+      "\n    notes: " + notes
+
+  }
 }
 
 object Procedure {
