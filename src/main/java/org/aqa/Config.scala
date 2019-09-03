@@ -784,6 +784,7 @@ object Config extends Logging {
   val EPIDBBMinimumStandardDeviation = logMainText("EPIDBBMinimumStandardDeviation", "1.25").toDouble
   val EPIDImageColor = Util.hexToColor(logMainText("EPIDImageColor", "FFFFFF"))
   val EPIDZoomSize_mm = logMainText("EPIDZoomSize_mm", "90.0").toDouble
+  val BBbyEPIDHistoryRange = logMainText("BBbyEPIDHistoryRange", "25").toInt
 
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true

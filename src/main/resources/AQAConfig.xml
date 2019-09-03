@@ -513,6 +513,10 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Color to use when making EPID images in HEX notation specifying red+green+blue.  Set
     to 000000 (black) to use deep (multi) coloring.-->
     <EPIDImageColor>FFFF00</EPIDImageColor>
+
+    <!-- Used for graphing EPID BB history, a positive integer indicating the number of values to display before and after (if
+    they exist) the current point being plotted. -->
+    <BBbyEPIDHistoryRange>25</BBbyEPIDHistoryRange>
    
     <!-- When making the zoomed version of the EPID images, make them this size of a square in mm.-->
     <EPIDZoomSize_mm>60.0</EPIDZoomSize_mm>

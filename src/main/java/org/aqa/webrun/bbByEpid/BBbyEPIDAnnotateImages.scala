@@ -14,7 +14,7 @@ import edu.umro.ImageUtil.ImageText
 /**
  * Create user friendly images and annotate them.
  */
-class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Point2D.Double) {
+class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]) {
 
   private val textPointSize = 30
 
@@ -24,7 +24,7 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Point2D.Double) {
   private val circleRadiusScale = 2.0
 
   private val trans = new IsoImagePlaneTranslator(al)
-  private val bbLoc_pix = trans.iso2Pix(bbLoc_mm) // location of BB in pixels
+  private def bbLoc_pix = trans.iso2Pix(bbLoc_mm.get) // location of BB in pixels
   private val fullImage = new DicomImage(al)
   private val radius_pix = trans.iso2PixDistX(Config.EPIDBBPenumbra_mm) // radius of the BB in pixels
 
@@ -40,39 +40,41 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Point2D.Double) {
    *  @scale Scale of bufImage compared to original
    */
   private def drawCircleWithXAtCenterOfBB(offset: Point2D.Double, bufImage: BufferedImage, scale: Int) = {
-    val graphics = ImageUtil.getGraphics(bufImage)
-    graphics.setColor(Color.white)
-    ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
+    if (bbLoc_mm.isDefined) {
+      val graphics = ImageUtil.getGraphics(bufImage)
+      graphics.setColor(Color.white)
+      ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
 
-    val psX = ((bbLoc_pix.getX - offset.getX + 0.5) * scale)
-    val psY = ((bbLoc_pix.getY - offset.getY + 0.5) * scale)
-    val x = psX - circleRadius_pix(scale)
-    val y = psY - circleRadius_pix(scale)
-    val w = circleRadius_pix(scale) * 2
-    val h = w
+      val psX = ((bbLoc_pix.getX - offset.getX + 0.5) * scale)
+      val psY = ((bbLoc_pix.getY - offset.getY + 0.5) * scale)
+      val x = psX - circleRadius_pix(scale)
+      val y = psY - circleRadius_pix(scale)
+      val w = circleRadius_pix(scale) * 2
+      val h = w
 
-    val lineOffset = circleRadius_pix(scale) / Math.sqrt(2.0)
+      val lineOffset = circleRadius_pix(scale) / Math.sqrt(2.0)
 
-    ImageUtil.setLineThickness(graphics, 8.0)
-    graphics.drawOval(d2i(x), d2i(y), d2i(w), d2i(h))
-    ImageUtil.setLineThickness(graphics, 1.0)
+      ImageUtil.setLineThickness(graphics, 8.0)
+      graphics.drawOval(d2i(x), d2i(y), d2i(w), d2i(h))
+      ImageUtil.setLineThickness(graphics, 1.0)
 
-    graphics.drawLine(
-      d2i(psX - lineOffset), d2i(psY - lineOffset),
-      d2i(psX + lineOffset), d2i(psY + lineOffset))
+      graphics.drawLine(
+        d2i(psX - lineOffset), d2i(psY - lineOffset),
+        d2i(psX + lineOffset), d2i(psY + lineOffset))
 
-    graphics.drawLine(
-      d2i(psX + lineOffset), d2i(psY - lineOffset),
-      d2i(psX - lineOffset), d2i(psY + lineOffset))
+      graphics.drawLine(
+        d2i(psX + lineOffset), d2i(psY - lineOffset),
+        d2i(psX - lineOffset), d2i(psY + lineOffset))
 
-    ImageText.drawTextCenteredAt(graphics, psX, y - circleRadius_pix(scale), "X is BB center")
-    //ImageText.drawTextOffsetFrom(graphics, psX, y - lineOffset + textPointSize * 1.5, "X is BB center", 90)
+      ImageText.drawTextCenteredAt(graphics, psX, y - circleRadius_pix(scale), "X is BB center")
+      //ImageText.drawTextOffsetFrom(graphics, psX, y - lineOffset + textPointSize * 1.5, "X is BB center", 90)
+    }
   }
 
   /**
    * Draw a + at the center showing where the plan isocenter is.
    */
-  def drawPlusAtCenterOfPlan(offset: Point2D.Double, bufImage: BufferedImage, scale: Int) = {
+  private def drawPlusAtCenterOfPlan(offset: Point2D.Double, bufImage: BufferedImage, scale: Int) = {
     val graphics = ImageUtil.getGraphics(bufImage)
     ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
     // draw a + in the middle of the image
@@ -134,7 +136,7 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Point2D.Double) {
 
     val closeupScale = 5.0
 
-    val upperLeftCorner = trans.iso2Pix(bbLoc_mm.getX - Config.EPIDBBPenumbra_mm * closeupScale, bbLoc_mm.getY - Config.EPIDBBPenumbra_mm * closeupScale)
+    val upperLeftCorner = trans.iso2Pix(bbLoc_mm.get.getX - Config.EPIDBBPenumbra_mm * closeupScale, bbLoc_mm.get.getY - Config.EPIDBBPenumbra_mm * closeupScale)
 
     // define rectangle for copying just the middle of the image
     val closeupRect = {
@@ -155,6 +157,6 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Point2D.Double) {
 
   val fullBufImg = makeFullBufImg
   val detailBufImg = makeDetailBufImg
-  val closeupBufImg = makeCloseupBufImg
+  val closeupBufImg: Option[BufferedImage] = if (bbLoc_mm.isDefined) Some(makeCloseupBufImg) else None
 
 }
