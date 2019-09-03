@@ -40,9 +40,7 @@ object BBbyCBCTHTML {
       Util.writePng(imageSet.areaOfInterest(index), pngFileAoi)
     }
 
-    Trace.trace
     Seq(0, 1, 2).par.map(i => writeImg(i))
-    Trace.trace
 
     val numberText = {
       def fmt(d: Double) = d.formatted("%5.2f")
