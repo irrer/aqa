@@ -77,6 +77,7 @@ object Util extends Logging {
   private val fileSystemWriteSync = "sync"
 
   def writeBinaryFile(file: File, data: Array[Byte]): Unit = fileSystemWriteSync.synchronized({
+    file.delete
     val fos = new FileOutputStream(file)
     fos.write(data)
     fos.flush
@@ -414,14 +415,16 @@ object Util extends Logging {
    * Write a PNG file in a thread safe way.
    */
   def writePng(im: RenderedImage, pngFile: File): Unit = fileSystemWriteSync.synchronized({
+    pngFile.delete
     ImageIO.write(im, "png", new FileOutputStream(pngFile))
   })
 
   /**
    * Write a JPG / JPEG file in a thread safe way.
    */
-  def writeJpg(im: RenderedImage, pngFile: File): Unit = fileSystemWriteSync.synchronized({
-    ImageIO.write(im, "jpg", new FileOutputStream(pngFile))
+  def writeJpg(im: RenderedImage, jpegFile: File): Unit = fileSystemWriteSync.synchronized({
+    jpegFile.delete
+    ImageIO.write(im, "jpg", new FileOutputStream(jpegFile))
   })
 
   /**

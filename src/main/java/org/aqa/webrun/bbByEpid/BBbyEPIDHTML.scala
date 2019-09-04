@@ -29,62 +29,99 @@ object BBbyEPIDHTML {
     class ImageSet(index: Int) {
       val al = runReq.epidList(index)
       val SOPInstanceUID = Util.sopOfAl(al)
-      val bbByEpid = bbByEPIDList.flatten.find(b => b.epidSOPInstanceUid.equals(SOPInstanceUID)
-          
+      val bbByEpid = bbByEPIDList.flatten.find(b => b.epidSOPInstanceUid.equals(SOPInstanceUID))
+      val bbLoc_mm = if (bbByEpid.isDefined) Some(new Point2D.Double(bbByEpid.get.epidImageX_mm, bbByEpid.get.epidImageY_mm)) else None
+      val gantryAngle = Util.angleRoundedTo90(Util.gantryAngle(al))
+      val gantryAngleRounded = Util.angleRoundedTo90(gantryAngle)
+
+      val suffix = "_" + gantryAngleRounded + "_" + (index + 1) + ".png"
+      val closeUpImageFileName = closeUpImagePrefix + suffix
+      val detailImageFileName = detailImagePrefix + suffix
+      val fullImageFileName = fullImagePrefix + suffix
+
+      def name2File(name: String) = new File(extendedData.output.dir, name)
+
+      val imageSet = new BBbyEPIDAnnotateImages(al, bbLoc_mm)
+
+      Util.writePng(imageSet.closeupBufImg, name2File(closeUpImageFileName))
+      Util.writePng(imageSet.detailBufImg, name2File(detailImageFileName))
+      Util.writePng(imageSet.fullBufImg, name2File(fullImageFileName))
+      val html: Elem = {
+
+        def imgRef(name: String, title: String) = {
+          <a href={ name }>
+            <div class='zoom' id={ Util.textToId(name) }>
+              <img width='400' src={ name }/>
+            </div>
+          </a>
+        }
+
+        <td>
+          <center>
+            <h3 title={ "Gantry angle in degrees: " + gantryAngle }>
+              { "Gantry " + gantryAngleRounded }
+            </h3>
+            <br/>
+            { imgRef(closeUpImageFileName, "Close Up of BB") }
+            <br/>
+            { imgRef(detailImageFileName, "Detail of BB") }
+            <br/>
+            { imgRef(fullImageFileName, "Full image") }
+          </center>
+        </td>
+      }
+
+      val script = {
+        Seq(closeUpImageFileName, detailImageFileName, fullImageFileName).
+          map(fn => "      $(document).ready(function(){ $('#" + Util.textToId(fn) + "').zoom(); });\n").
+          mkString("\n      ")
+      }
     }
+
     val outputDir = extendedData.output.dir
 
     val chart = new BBbyEPIDChart(extendedData.output.outputPK.get)
 
-    def writeImg(index: Int) = {
-      val pngFileFull = new File(outputDir, fileNameOfFull(index))
-      Util.writePng(imageSet.fullImage(index), pngFileFull)
-
-      val pngFileAoi = new File(outputDir, fileNameOfAreaOfInterest(index))
-      Util.writePng(imageSet.areaOfInterest(index), pngFileAoi)
-    }
-
-    def writeImageSet(bbByEPID: BBbyEPID) = {
-      val sop = bbByEPID.epidSOPInstanceUid
-      val al = runReq.epidList.find(epidAl => Util.sopOfAl(epidAl).equals(bbByEPID.epidSOPInstanceUid)).get
-
-      val annotatedImageSet = new BBbyEPIDAnnotateImages(al, new Point2D.Double(bbByEPID.epidImageX_mm, bbByEPID.epidImageY_mm))
-
-      Seq(0, 1, 2).par.map(i => writeImg(i))
-    }
+    // make all of the images and get their names
+    val imageSetList = runReq.epidList.indices.par.map(index => new ImageSet(index)).toList
 
     val numberText = {
       def fmt(d: Double) = d.formatted("%5.2f")
 
       def dataCol(name: String, title: String, value: Double, cols: Int) = {
-        <div title={ title } class={ "col-md-" + cols }>
-          <h3>{ name } : { fmt(value) }</h3>
-        </div>
+        <span title={ title } class={ "col-md-" + cols }>
+          { name + " : " + fmt(value) }
+        </span>
       }
 
-      val errxText = {
-        "X: " + fmt(bbByCBCT.err.getX) + " Y: " + fmt(bbByCBCT.err.getY) + "   Z: " + fmt(bbByCBCT.err.getZ)
-
+      val numbers = {
+        val sp = WebUtil.nbsp + " " + WebUtil.nbsp + " " + WebUtil.nbsp
+        if (composite.isDefined) {
+          <h3 title="Composite results.  Distance in mm between plan isocenter and position of BB">
+            {
+              "Total Offset(mm)" + fmt(composite.get.offset_mm) + sp +
+                "X:" + fmt(composite.get.x_mm) + sp +
+                "Y:" + fmt(composite.get.y_mm) + sp +
+                "Z:" + fmt(composite.get.z_mm)
+            }
+          </h3>
+        } else {
+          <div>
+            <h3>Final analysis not available.  Usually due to BB not found.</h3>
+          </div>
+        }
       }
 
       val elem = {
         <div class="row">
-          <div title="Test performed" class="col-md-3">
-            <h2>EPID BB Location</h2>
+          <div class="col-md-6">
+            <h2 title="Procedure performed">EPID BB Location</h2>
+            <br/>
+            { numbers }
           </div>
-          { dataCol("Offset(mm)", "Distance in mm between plan isocenter and position of BB", composite.get.offset_mm, 2) }
-          { dataCol("X", "BB X position in mm", composite.get.x_mm, 1) }
-          { dataCol("Y", "BB Y position in mm", composite.get.y_mm, 1) }
-          { dataCol("Z", "BB Z position in mm", composite.get.z_mm, 1) }
         </div>
       }
       elem
-    }
-
-    def viewTitle(index: Int) = {
-      <div title={ axisTitleList(index) }>
-        <h4>{ axisNameList(index) } View</h4>
-      </div>
     }
 
     def imageHtml(index: Int, getImageFileName: Int => String, title: String) = {
@@ -109,27 +146,13 @@ object BBbyEPIDHTML {
       </a>
     }
 
-    def makeSet(index: Int): Elem = {
-      val imageWidth = imageSet.areaOfInterest(index).getWidth
-
-      <td>
-        <center style="margin:50px;">
-          { viewTitle(index) }
-          <br/>
-          { imageHtml(index, fileNameOfAreaOfInterest, "Area of Interest") }
-          <br/>
-          { imageHtmlWithZoom(index, fileNameOfFull, "Full Image", imageWidth) }
-        </center>
-      </td>
-    }
-
     def content = {
       <div class="row">
         { numberText }
         { chart.chartReference }
         <table class="table table-responsive">
           <tr>
-            { Seq(2, 1, 0).map(index => makeSet(index)) }
+            { imageSetList.map(imageSet => imageSet.html) }
           </tr>
         </table>
       </div>
@@ -198,15 +221,9 @@ object BBbyEPIDHTML {
     }
 
     val runScript = {
-      def zoomy(index: Int) = {
-        "\n" +
-          "      $(document).ready(function(){ $('#" + Util.textToId(fileNameOfAreaOfInterest(index)) + "').zoom(); });\n" +
-          "      $(document).ready(function(){ $('#" + Util.textToId(fileNameOfFull(index)) + "').zoom(); });"
-      }
-
-      val zoomList = Seq(0, 1, 2).map(index => zoomy(index))
+      val zoomList = imageSetList.map(imageSet => imageSet.script)
       val zoomScript = zoomList.mkString("\n<script>\n      ", "\n      ", "\n</script>")
-      val chartRef = BBbyCBCTChartHistoryRestlet.makeReference(extendedData.output.outputPK.get)
+      val chartRef = BBbyEPIDChartHistoryRestlet.makeReference(extendedData.output.outputPK.get)
 
       zoomScript + "\n" + chartRef
     }

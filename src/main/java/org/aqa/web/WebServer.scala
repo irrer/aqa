@@ -42,6 +42,7 @@ import org.aqa.webrun.phase2.wedge.WedgeChartHistoryRestlet
 import org.aqa.webrun.phase2.centerDose.CenterDoseChartHistoryRestlet
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessHistoryRestlet
 import org.aqa.webrun.bbByCBCT.BBbyCBCTChartHistoryRestlet
+import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryRestlet
 
 object WebServer {
   val challengeScheme = ChallengeScheme.HTTP_BASIC
@@ -505,6 +506,7 @@ class WebServer extends Application with Logging {
         new WedgeUseAsBaseline,
         new CenterDoseChartHistoryRestlet,
         new BBbyCBCTChartHistoryRestlet,
+        new BBbyEPIDChartHistoryRestlet,
         new WedgeChartHistoryRestlet,
         new SymmetryAndFlatnessHistoryRestlet,
         anonymousTranslate,

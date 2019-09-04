@@ -10,6 +10,7 @@ import java.awt.Rectangle
 import org.aqa.Config
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.ImageText
+import org.aqa.Util
 
 /**
  * Create user friendly images and annotate them.
@@ -27,6 +28,13 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
   private def bbLoc_pix = trans.iso2Pix(bbLoc_mm.get) // location of BB in pixels
   private val fullImage = new DicomImage(al)
   private val radius_pix = trans.iso2PixDistX(Config.EPIDBBPenumbra_mm) // radius of the BB in pixels
+
+  val offsetText = {
+    if (bbLoc_mm.isDefined)
+      "Offset " + Util.fmtDbl(bbLoc_mm.get.getX) + ", " + Util.fmtDbl(bbLoc_mm.get.getY)
+    else
+      "Offset Not Available"
+  }
 
   private def circleRadius_pix(scale: Int) = radius_pix * circleRadiusScale * scale
 
@@ -68,6 +76,9 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
 
       ImageText.drawTextCenteredAt(graphics, psX, y - circleRadius_pix(scale), "X is BB center")
       //ImageText.drawTextOffsetFrom(graphics, psX, y - lineOffset + textPointSize * 1.5, "X is BB center", 90)
+
+      val offsetText = ("Offset " + bbLoc_mm.get.getX.formatted("%7.4f") + ", " + bbLoc_mm.get.getY.formatted("%7.4f") + " mm").replaceAll("  *", " ")
+      ImageText.drawTextCenteredAt(graphics, psX, y - circleRadius_pix(scale) + textPointSize, offsetText)
     }
   }
 
@@ -136,7 +147,14 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
 
     val closeupScale = 5.0
 
-    val upperLeftCorner = trans.iso2Pix(bbLoc_mm.get.getX - Config.EPIDBBPenumbra_mm * closeupScale, bbLoc_mm.get.getY - Config.EPIDBBPenumbra_mm * closeupScale)
+    val upperLeftCorner = {
+      if (bbLoc_mm.isDefined) {
+        trans.iso2Pix(bbLoc_mm.get.getX - Config.EPIDBBPenumbra_mm * closeupScale, -Config.EPIDBBPenumbra_mm * closeupScale)
+      } else {
+        // if no BB found, then just make a close up of the center of the image
+        trans.iso2Pix(-Config.EPIDBBPenumbra_mm * closeupScale, -Config.EPIDBBPenumbra_mm * closeupScale)
+      }
+    }
 
     // define rectangle for copying just the middle of the image
     val closeupRect = {
@@ -157,6 +175,6 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
 
   val fullBufImg = makeFullBufImg
   val detailBufImg = makeDetailBufImg
-  val closeupBufImg: Option[BufferedImage] = if (bbLoc_mm.isDefined) Some(makeCloseupBufImg) else None
+  val closeupBufImg = makeCloseupBufImg
 
 }

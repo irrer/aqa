@@ -24,7 +24,6 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import java.awt.geom.Point2D
 import org.aqa.webrun.bbByEpid.BBbyEPIDAnnotateImages
-import org.aqa.webrun.bbByEpid.BBbyEPIDAnnotateImages
 import org.aqa.IsoImagePlaneTranslator
 
 /**
@@ -116,7 +115,7 @@ class TestBBbyEPIDImageAnalysis extends FlatSpec with Matchers {
 
       showPixValues(pix, trans, di)
 
-      val annotatedImages = new BBbyEPIDAnnotateImages(al, isoAs2D)
+      val annotatedImages = new BBbyEPIDAnnotateImages(al, Some(isoAs2D))
 
       val pngFileFull = new File(outDir, (file.getName.replace(".dcm", "_full.png")))
       ImageUtil.writePngFile(annotatedImages.fullBufImg, pngFileFull)
