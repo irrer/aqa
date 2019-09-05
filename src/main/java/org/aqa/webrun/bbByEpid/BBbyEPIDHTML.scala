@@ -50,6 +50,7 @@ object BBbyEPIDHTML {
 
         def imgRef(name: String, title: String) = {
           <a href={ name }>
+            <h4>{ title }</h4>
             <div class='zoom' id={ Util.textToId(name) }>
               <img width='400' src={ name }/>
             </div>
@@ -62,9 +63,9 @@ object BBbyEPIDHTML {
               { "Gantry " + gantryAngleRounded }
             </h3>
             <br/>
-            { imgRef(closeUpImageFileName, "Close Up of BB") }
+            { imgRef(closeUpImageFileName, "Closeup of BB") }
             <br/>
-            { imgRef(detailImageFileName, "Detail of BB") }
+            { imgRef(detailImageFileName, "Detail of BB Area") }
             <br/>
             { imgRef(fullImageFileName, "Full image") }
           </center>
