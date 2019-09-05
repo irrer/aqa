@@ -228,7 +228,7 @@ object BBbyEPIDHTML {
       zoomScript + "\n" + chartRef
     }
 
-    val text = WebUtil.wrapBody(wrap, "BB Location by CBCT", None, true, Some(runScript))
+    val text = WebUtil.wrapBody(wrap, "BB Location by EPID", None, true, Some(runScript))
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(file, text)
   }

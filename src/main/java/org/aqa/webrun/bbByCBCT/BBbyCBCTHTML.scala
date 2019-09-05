@@ -76,36 +76,34 @@ object BBbyCBCTHTML {
       </div>
     }
 
-    def imageHtml(index: Int, getImageFileName: Int => String, title: String) = {
-      val name = getImageFileName(index)
-      <a href={ name } title={ title }>
-        <div id={ Util.textToId(name) }>
-          <a href={ name }>
-            <img src={ name } class="img-responsive"/>
-          </a>
-        </div>
-      </a>
-    }
-
     def imageHtmlWithZoom(index: Int, getImageFileName: Int => String, title: String, width: Int) = {
       val name = getImageFileName(index)
-      <a href={ name } title={ title }>
-        <div id={ Util.textToId(name) }>
-          <a href={ name }>
-            <img src={ name } class="img-responsive" width={ width.toString }/>
-          </a>
+
+      if (false) {
+        <a href={ name } title={ title }>
+          <div id={ Util.textToId(name) }>
+            <a href={ name }>
+              <img src={ name } class="img-responsive" width={ width.toString }/>
+            </a>
+          </div>
+        </a>
+      }
+
+      <a href={ name }>
+        <div class='zoom' id={ Util.textToId(name) }>
+          <img width={ width.toString } src={ name }/>
         </div>
       </a>
     }
 
     def makeSet(index: Int): Elem = {
-      val imageWidth = imageSet.areaOfInterest(index).getWidth
+      val imageWidth = 350 // imageSet.areaOfInterest(index).getWidth
 
       <td>
         <center style="margin:50px;">
           { viewTitle(index) }
           <br/>
-          { imageHtml(index, fileNameOfAreaOfInterest, "Area of Interest") }
+          { imageHtmlWithZoom(index, fileNameOfAreaOfInterest, "Area of Interest", imageWidth) }
           <br/>
           { imageHtmlWithZoom(index, fileNameOfFull, "Full Image", imageWidth) }
         </center>
