@@ -51,7 +51,7 @@ object MakeCBCT {
 
       val name = ("CBCT_" + (index + 1).formatted("%3d") + ".dcm").replace(' ', '_')
       val file = new File(outDir, name)
-      DicomUtil.writeAttributeList(al, file)
+      DicomUtil.writeAttributeList(al, file, "AQA")
       println("wrote: " + file.getAbsolutePath)
     }
 

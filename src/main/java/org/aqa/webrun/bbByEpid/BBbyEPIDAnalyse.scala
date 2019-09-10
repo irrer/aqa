@@ -58,7 +58,7 @@ object BBbyEPIDAnalyse extends Logging {
       None
   }
 
-  private def constructComposite(bbByEPIDList: Seq[BBbyEPID], extendedData: ExtendedData, runReq: BBbyEPIDRunReq): BBbyEPIDComposite = {
+  private def constructComposite(bbByEPIDList: Seq[BBbyEPID], extendedData: ExtendedData, runReq: BBbyEPIDRunReq): Either[String, BBbyEPIDComposite] = {
 
     def getByAngleType(angleType: BBbyEPIDRun.AngleType.Value) = {
       val at = angleType.toString
@@ -73,24 +73,31 @@ object BBbyEPIDAnalyse extends Logging {
     val vert = getByAngleType(BBbyEPIDRun.AngleType.vertical)
     val horz = getByAngleType(BBbyEPIDRun.AngleType.horizontal)
 
-    val x_mm = vert.map(bb => bb.epid3DX_mm).sum / vert.size
-    val y_mm = horz.map(bb => bb.epid3DY_mm).sum / horz.size
-    val z_mm = bbByEPIDList.map(bb => bb.epid3DZ_mm).sum / bbByEPIDList.size
-    val offset_mm = (new Point3d(x_mm, y_mm, z_mm)).distance(new Point3d(0, 0, 0))
+    if ((vert.nonEmpty && horz.nonEmpty)) {
+      val x_mm = vert.map(bb => bb.epid3DX_mm).sum / vert.size
+      val y_mm = horz.map(bb => bb.epid3DY_mm).sum / horz.size
+      val z_mm = bbByEPIDList.map(bb => bb.epid3DZ_mm).sum / bbByEPIDList.size
+      val offset_mm = (new Point3d(x_mm, y_mm, z_mm)).distance(new Point3d(0, 0, 0))
 
-    val SeriesInstanceUID = runReq.epidList.head.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString
+      val SeriesInstanceUID = runReq.epidList.head.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString
 
-    val bbByEPIDComposite = new BBbyEPIDComposite(
-      bbByEPIDCompositePK = None,
-      outputPK = extendedData.output.outputPK.get,
-      rtplanSOPInstanceUID = getPlanRef(runReq.epidList.head),
-      epidSeriesInstanceUID = SeriesInstanceUID,
-      offset_mm,
-      x_mm,
-      y_mm,
-      z_mm)
+      val bbByEPIDComposite = new BBbyEPIDComposite(
+        bbByEPIDCompositePK = None,
+        outputPK = extendedData.output.outputPK.get,
+        rtplanSOPInstanceUID = getPlanRef(runReq.epidList.head),
+        epidSeriesInstanceUID = SeriesInstanceUID,
+        offset_mm,
+        x_mm,
+        y_mm,
+        z_mm)
 
-    bbByEPIDComposite
+      Right(bbByEPIDComposite)
+    } else {
+      if (vert.isEmpty)
+        Left("No images with BB with vertical gantry angle.")
+      else
+        Left("No images with BB with horizontal gantry angle.")
+    }
   }
 
   def runProcedure(extendedData: ExtendedData, runReq: BBbyEPIDRunReq): ProcedureStatus.Value = {
@@ -107,10 +114,15 @@ object BBbyEPIDAnalyse extends Logging {
 
       logger.info("Calculating composite result.")
       val bbByEPIDComposite = constructComposite(dbList.flatten, extendedData, runReq) // TODO this can fail if BB not found
-      logger.info("Inserting composite EPID record into database: " + bbByEPIDComposite)
-      bbByEPIDComposite.insert
+      if (bbByEPIDComposite.isRight) {
+        logger.info("Inserting composite EPID record into database: " + bbByEPIDComposite.right.get)
+        bbByEPIDComposite.right.get.insert
+      } else
+        logger.info("No composite EPID record created.  Reported error: " + bbByEPIDComposite.left.get)
 
-      BBbyEPIDHTML.generateHtml(extendedData, dbList, Some(bbByEPIDComposite), runReq, ProcedureStatus.done) // TODO status should be real
+      val procedureStatus = if (bbByEPIDComposite.isRight) ProcedureStatus.done else ProcedureStatus.fail
+
+      BBbyEPIDHTML.generateHtml(extendedData, dbList, bbByEPIDComposite, runReq, ProcedureStatus.done) // TODO status should be real
       logger.info("Finished analysis of EPID Alignment")
       ProcedureStatus.done
     } catch {

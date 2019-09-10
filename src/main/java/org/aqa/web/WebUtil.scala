@@ -48,6 +48,8 @@ import org.aqa.Config
 import org.aqa.db.Institution
 import edu.umro.ScalaUtil.Trace
 import com.pixelmed.dicom.SOPClass
+import com.pixelmed.dicom.FileMetaInformation
+import com.pixelmed.dicom.TransferSyntax
 
 object WebUtil extends Logging {
 
@@ -129,7 +131,17 @@ object WebUtil extends Logging {
         val user = CachedUser.get(request)
         val institution = user.get.institutionPK
         val anon = AnonymizeUtil.anonymizeDicom(institution, al)
-        DicomUtil.writeAttributeList(anon, file)
+        if (true) { // TODO rm
+          val text = DicomUtil.attributeListToString(anon)
+          Trace.trace(text)
+        }
+        val transferSyntax: String = {
+          val ts = anon.get(TagFromName.TransferSyntaxUID)
+          if ((ts != null) && (ts.getSingleStringValueOrNull != null)) ts.getSingleStringValueOrNull
+          else TransferSyntax.ImplicitVRLittleEndian
+        }
+
+        DicomUtil.writeAttributeList(anon, file, "AQA")
       }
       case _ => {
         file.delete

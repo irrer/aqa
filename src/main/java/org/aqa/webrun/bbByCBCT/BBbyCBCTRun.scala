@@ -123,6 +123,7 @@ object BBbyCBCTRun extends Logging {
 
     val bbByCBCT = BBbyCBCT.getByOutput(outputOrig.outputPK.get).head
 
+    // TODO : If the previous run crashed, then the DicomSeries was never stored, so this will crash with an empty head.
     val rtplan = {
       val series = DicomSeries.getBySopInstanceUID(bbByCBCT.rtplanSOPInstanceUID).head
       series.attributeListList.head
@@ -277,7 +278,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   private def saveDbRtplan(al: AttributeList): DicomFile = {
     val fileName = Util.sopOfAl(al) + ".dcm"
     val tmpFile = new File(Config.tmpDirFile, fileName)
-    DicomUtil.writeAttributeList(al, tmpFile)
+    DicomUtil.writeAttributeList(al, tmpFile, "AQA_CBCT")
     new DicomFile(tmpFile)
   }
 

@@ -38,7 +38,7 @@ object CustomizeRtPlan extends Logging {
   private def saveAnonymizedDicom(institutionPK: Long, rtplan: AttributeList) = {
     val anon = AnonymizeUtil.anonymizeDicom(institutionPK, rtplan)
     val file = new File(Config.sharedDir, Util.sopOfAl(anon) + ".dcm")
-    DicomUtil.writeAttributeList(anon, file)
+    DicomUtil.writeAttributeList(anon, file, "AQA")
   }
 
   private def replaceAllUids(attributeList: AttributeList) = {

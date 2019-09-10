@@ -301,8 +301,9 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
     val result: Either[WebUtil.StyleMapT, BBbyEPIDRunReq] = 0 match {
       case _ if epidList.isEmpty => formErr("No EPID files uploaded")
-      case _ if !anglesTypeList.contains(BBbyEPIDRun.AngleType.horizontal) => formErr("No EPID image with horizontal gantry angle (0 or 180) present.  Angles uploaded: " + angleTextList)
-      case _ if !anglesTypeList.contains(BBbyEPIDRun.AngleType.vertical) => formErr("No EPID image with vertical gantry angle (90 or 270) present.  Angles uploaded: " + angleTextList)
+      // TODO: Should an incomplete set of angles be accepted to support the odd test?
+      //      case _ if !anglesTypeList.contains(BBbyEPIDRun.AngleType.horizontal) => formErr("No EPID image with horizontal gantry angle (0 or 180) present.  Angles uploaded: " + angleTextList)
+      //      case _ if !anglesTypeList.contains(BBbyEPIDRun.AngleType.vertical) => formErr("No EPID image with vertical gantry angle (90 or 270) present.  Angles uploaded: " + angleTextList)
       case _ if epidSeriesList.size > 1 => formErr("EPID slices are from " + numSeries + " different series.")
       case _ if (machineCheck.isLeft) => Left(machineCheck.left.get)
       case _ => {

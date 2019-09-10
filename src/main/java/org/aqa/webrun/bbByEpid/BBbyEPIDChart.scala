@@ -28,9 +28,14 @@ class BBbyEPIDChart(outputPK: Long) extends Logging {
   private val allDates = history.map(cd => cd.date)
 
   /** All maintenance records for the entire history interval for all beams except for 'Set Baseline' to reduce clutter. */
-  private val maintenanceRecordList = MaintenanceRecord.
-    getRange(machine.machinePK.get, allDates.min, allDates.max).
-    filter(m => !(m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline.toString)))
+  private val maintenanceRecordList = {
+    if (history.isEmpty)
+      Seq[MaintenanceRecord]()
+    else
+      MaintenanceRecord.
+        getRange(machine.machinePK.get, allDates.min, allDates.max).
+        filter(m => !(m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline.toString)))
+  }
 
   def chartId = C3Chart.idTagPrefix + Util.textToId(machine.id)
 
@@ -39,8 +44,7 @@ class BBbyEPIDChart(outputPK: Long) extends Logging {
     <div id={ ciob }>{ ciob }</div>
   }
 
-  private def chartOf: C3ChartHistory = {
-    val index = history.indexWhere(sh => sh.bbByEPIDComposite.outputPK == output.outputPK.get)
+  private def chartOf(index: Int): C3ChartHistory = {
     val units = "mm"
     val dataToBeGraphed = Seq(
       history.map(h => h.bbByEPIDComposite.offset_mm),
@@ -65,8 +69,17 @@ class BBbyEPIDChart(outputPK: Long) extends Logging {
       Seq("Total offset", "X offset", "Y offset", "Z offset"), units, dataToBeGraphed, index, ".3r", colorList)
   }
 
-  private val chart = chartOf
+  private val chart = {
+    val index = history.indexWhere(sh => sh.bbByEPIDComposite.outputPK == output.outputPK.get)
+    if (index == -1)
+      None
+    else
+      Some(chartOf(index))
+  }
 
-  val chartScript = chart.javascript
+  val chartScript = {
+    if (chart.isDefined) chart.get.javascript
+    else ""
+  }
 
 }

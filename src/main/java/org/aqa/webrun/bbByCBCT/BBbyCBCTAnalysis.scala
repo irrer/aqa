@@ -129,16 +129,19 @@ object BBbyCBCTAnalysis extends Logging {
       if (histogram.size < 1000)
         0
       else
-        (totalSize * 0.05).round.toInt
+        (totalSize * 0.005).round.toInt
     }
 
     /**
      * Keep removing members until the requisite number has been dropped.
      */
     def trim(total: Int, hist: Seq[DicomImage.HistPoint]): Float = {
-      if (total < numDrop)
-        trim(total + hist.head.count, hist.tail)
-      else hist.head.value
+      if (hist.size == 1) hist.head.value
+      else {
+        if (total < numDrop)
+          trim(total + hist.head.count, hist.tail)
+        else hist.head.value
+      }
     }
 
     val minPix = trim(0, histogram)

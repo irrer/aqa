@@ -24,7 +24,7 @@ object BBbyEPIDHTML {
   private val detailImagePrefix = "Detail"
   private val fullImagePrefix = "Full"
 
-  def generateHtml(extendedData: ExtendedData, bbByEPIDList: Seq[Option[BBbyEPID]], composite: Option[BBbyEPIDComposite], runReq: BBbyEPIDRunReq, status: ProcedureStatus.Value) = {
+  def generateHtml(extendedData: ExtendedData, bbByEPIDList: Seq[Option[BBbyEPID]], composite: Either[String, BBbyEPIDComposite], runReq: BBbyEPIDRunReq, status: ProcedureStatus.Value) = {
 
     class ImageSet(index: Int) {
       val al = runReq.epidList(index)
@@ -97,18 +97,18 @@ object BBbyEPIDHTML {
 
       val numbers = {
         val sp = WebUtil.nbsp + " " + WebUtil.nbsp + " " + WebUtil.nbsp
-        if (composite.isDefined) {
+        if (composite.isRight) {
           <h3 title="Composite results.  Distance in mm between plan isocenter and position of BB">
             {
-              "Total Offset(mm)" + fmt(composite.get.offset_mm) + sp +
-                "X:" + fmt(composite.get.x_mm) + sp +
-                "Y:" + fmt(composite.get.y_mm) + sp +
-                "Z:" + fmt(composite.get.z_mm)
+              "Total Offset(mm)" + fmt(composite.right.get.offset_mm) + sp +
+                "X:" + fmt(composite.right.get.x_mm) + sp +
+                "Y:" + fmt(composite.right.get.y_mm) + sp +
+                "Z:" + fmt(composite.right.get.z_mm)
             }
           </h3>
         } else {
-          <div>
-            <h3>Final analysis not available.  Usually due to BB not found.</h3>
+          <div title="Common causes are BB not found or there were not two images with perpendicular gantry angles.">
+            <h3>Error: { composite.left.get }</h3>
           </div>
         }
       }
