@@ -156,7 +156,7 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
 
     val sopuid = Util.sopOfAl(rtplan)
     val file = new File(Config.tmpDirFile, sopuid + ".dcm")
-    DicomUtil.writeAttributeList(rtplan, file, "AQA")
+    DicomUtil.writeAttributeListToFile(rtplan, file, "AQA")
     val downloadUrl = WebServer.urlOfTmpFile(file)
 
     val downloadLink = new WebPlainText("Download", false, 3, 0, (ValueMapT) => { <h4> <a href={ downloadUrl } title="Click to download DICOM RTPLAN file.">Download</a></h4> })

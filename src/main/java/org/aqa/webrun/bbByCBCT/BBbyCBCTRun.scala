@@ -278,7 +278,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   private def saveDbRtplan(al: AttributeList): DicomFile = {
     val fileName = Util.sopOfAl(al) + ".dcm"
     val tmpFile = new File(Config.tmpDirFile, fileName)
-    DicomUtil.writeAttributeList(al, tmpFile, "AQA_CBCT")
+    DicomUtil.writeAttributeListToFile(al, tmpFile, "AQA_CBCT")
     new DicomFile(tmpFile)
   }
 

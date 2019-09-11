@@ -131,17 +131,7 @@ object WebUtil extends Logging {
         val user = CachedUser.get(request)
         val institution = user.get.institutionPK
         val anon = AnonymizeUtil.anonymizeDicom(institution, al)
-        if (true) { // TODO rm
-          val text = DicomUtil.attributeListToString(anon)
-          Trace.trace(text)
-        }
-        val transferSyntax: String = {
-          val ts = anon.get(TagFromName.TransferSyntaxUID)
-          if ((ts != null) && (ts.getSingleStringValueOrNull != null)) ts.getSingleStringValueOrNull
-          else TransferSyntax.ImplicitVRLittleEndian
-        }
-
-        DicomUtil.writeAttributeList(anon, file, "AQA")
+        DicomUtil.writeAttributeListToFile(anon, file, "AQA")
       }
       case _ => {
         file.delete
