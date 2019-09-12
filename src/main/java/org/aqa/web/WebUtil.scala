@@ -50,6 +50,7 @@ import edu.umro.ScalaUtil.Trace
 import com.pixelmed.dicom.SOPClass
 import com.pixelmed.dicom.FileMetaInformation
 import com.pixelmed.dicom.TransferSyntax
+import org.aqa.db.DicomSeries
 
 object WebUtil extends Logging {
 
@@ -778,14 +779,29 @@ object WebUtil extends Logging {
       val shouldShow: Boolean = {
         val attrListList = dicomFilesInSession(valueMap).map(df => df.attributeList).flatten
 
-        def serialNumberOf(al: AttributeList): Option[String] = {
-          val attr = al.get(TagFromName.DeviceSerialNumber)
-          if (attr == null) None
-          else Some(attr.getSingleStringValueOrEmptyString)
+        /**
+         * Get all <code>DeviceSerialNumber</code> from DICOM files, but ignore any RTPLAN (primary) serial numbers because
+         * they reference the planning system, not a treatment machine.
+         */
+        def serialNumberOf(al: AttributeList): IndexedSeq[String] = {
+          val all = DicomUtil.findAllSingle(al, TagFromName.DeviceSerialNumber).map(attr => attr.getSingleStringValueOrEmptyString).filterNot(_.equals("")).distinct
+          val planDsn = {
+            val dsn = {
+              val attr = al.get(TagFromName.DeviceSerialNumber)
+              if (attr == null) "" else attr.getSingleStringValueOrEmptyString
+            }
+
+            if ((!dsn.equals("")) && Util.isModality(al, SOPClass.RTPlanStorage))
+              Seq(dsn)
+            else
+              Seq[String]()
+          }
+          all.diff(planDsn)
         }
 
         def isMatchingMachine = {
-          val serialNumbers = attrListList.map(al => serialNumberOf(al)).flatten.distinct
+          // get all non-plan serial numbers, but do not allow serial numbers from previously uploaded plans
+          val serialNumbers = attrListList.map(al => serialNumberOf(al)).flatten.distinct.diff(DicomSeries.planDeviceSerialNumberList)
           val machList = serialNumbers.map(sn => Machine.findMachinesBySerialNumber(sn)).flatten
           machList.nonEmpty
         }

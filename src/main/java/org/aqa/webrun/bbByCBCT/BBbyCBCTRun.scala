@@ -213,7 +213,7 @@ object BBbyCBCTRun extends Logging {
               val msg = "Redo not permitted because user is from a different institution."
               forbidRedo(response, msg, outputOrig.outputPK)
             }
-            case Some(inputOrig) => BBbyCBCTRun.processRedoRequest(request, response, inputOrig, outputOrig) 
+            case Some(inputOrig) => BBbyCBCTRun.processRedoRequest(request, response, inputOrig, outputOrig)
           }
         }
       }
@@ -238,7 +238,6 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   private def getSeries(al: AttributeList): String = al.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString
   private def getSeries(dicomFile: DicomFile): String = getSeries(dicomFile.attributeList.get)
 
-  //private val machineSelector = new WebInputSelectOption("Machine", 6, 0, machineList, showMachineSelector)
   private val machineSelector = new WebInputSelectMachine("Machine", 6, 0)
 
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
@@ -257,19 +256,33 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
   }
 
-  private def validateMachineSelection(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, Machine] = {
-    val machineRelatedList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage) || df.isModality(SOPClass.CTImageStorage) || df.isModality(SOPClass.SpatialRegistrationStorage))
-    // machines that DICOM files reference (based on device serial numbers)
-    val referencedMachines = machineRelatedList.map(df => Machine.attributeListToMachine(df.attributeList.get)).flatten.distinct
-    val chosenMachine = for (pkTxt <- valueMap.get(machineSelector.label); pk <- Util.stringToLong(pkTxt); m <- Machine.get(pk)) yield m
+  private def validateMachineSelection(valueMap: ValueMapT, dicomFileList: Seq[DicomFile], rtplan: Option[AttributeList]): Either[StyleMapT, Machine] = {
+    if (rtplan.isEmpty)
+      formErr("No plan found that is connected to this series")
+    else {
+      val planDsn = rtplan.get.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrNull
 
-    val result: Either[StyleMapT, Machine] = 0 match {
-      case _ if (referencedMachines.size == 1) => Right(referencedMachines.head)
-      case _ if (chosenMachine.isDefined) => Right(chosenMachine.get)
-      case _ if (referencedMachines.size > 1) => formErr("Files come from more than one machine; please go back and try again.  Machines: " + referencedMachines.map(m => m.id).mkString("  "))
-      case _ => formErr("Unknown machine.  Please choose from the 'Machine' list below or click Cancel and then use the Administration interface to add it.")
+      val dsnList = DicomUtil.findAllSingle(rtplan.get, TagFromName.DeviceSerialNumber).map(at => at.getSingleStringValueOrNull).distinct.diff(Seq(planDsn))
+
+      val machList = dsnList.map(dsn => Machine.findMachinesBySerialNumber(dsn)).flatten
+      if (machList.isEmpty) {
+        val machPkText = valueMap.get(machineSelector.label)
+        if (machPkText.isEmpty)
+          formErr("Unknown machine.  Please pick from list below.  If empty, you may need to create a new machine.")
+        else {
+          val machPk = Util.stringToLong(machPkText)
+          if (machPk.isEmpty)
+            formErr("Unknown machine.  If the list below is empty, ou may need to create a new machine.")
+          else {
+            val mach = Machine.get(machPk.get)
+            if (mach.isEmpty)
+              formErr("Can not find a matching treatment machine.  If the list below is empty, ou may need to create a new machine.")
+            else
+              Right(mach.get)
+          }
+        }
+      } else Right(machList.head)
     }
-    result
   }
 
   /**
@@ -349,14 +362,12 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       regList.filter(df => new ImageRegistration(df.attributeList.get).otherFrameOfRefUID.equals(cbctFrameOfRef))
     }
 
-    def machineCheck = validateMachineSelection(valueMap, cbctList ++ getQualifiedRegList)
-
     logger.info("Number of files uploaded:  RTPLAN: " + rtplanList.size + "    REG: " + regList.size + "    CBCT: " + cbctList.size)
 
     def numSeries(dfList: Seq[DicomFile]): Int = dfList.map(df => df.attributeList.get.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString).distinct.sorted.size
 
     /** return list of plans (either uploaded or from DB) whose frame of reference match the CBCT exactly (no REG file involved) */
-    def rtplanMatchingCbct: Seq[AttributeList] = {
+    val rtplanMatchingCbct: Seq[AttributeList] = {
       val cbctFramOfRef = cbctFrameOfRefList.head
       val dbPlan = DicomSeries.getByFrameUIDAndSOPClass(Set(cbctFramOfRef), SOPClass.RTPlanStorage).map(db => db.attributeListList).flatten
       val uploadedRtplanList = rtplanList.map(df => df.attributeList).flatten
@@ -384,18 +395,27 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     /** Return true if the CBCT frame of reference matches a plan, or, if there is a CBCT-REG-RTPLAN combination that works. */
     def isMatchingFrameOfRef = getPlanAndReg.nonEmpty || rtplanMatchingCbct.nonEmpty
 
+    /** Get the plan to use, if there is one. */
+    val rtplan: Option[AttributeList] = {
+      0 match {
+        case _ if (getPlanAndReg.nonEmpty) => Some(getPlanAndReg.head._1)
+        case _ if (rtplanMatchingCbct.nonEmpty) => Some(rtplanMatchingCbct.head)
+        case _ => None
+      }
+    }
+
+    def machineCheck = validateMachineSelection(valueMap, cbctList ++ getQualifiedRegList, rtplan)
+
     val result = 0 match {
       case _ if cbctList.isEmpty => formErr("No CBCT files uploaded")
       case _ if cbctSeriesList.size > 1 => formErr("CBCT slices are from " + numSeries(cbctList) + " different series.")
       case _ if cbctFrameOfRefList.isEmpty => formErr("CBCT series are unusable: They do not specify a frame of reference.")
       case _ if cbctFrameOfRefList.size > 1 => formErr("CBCT series uses more than one frame of reference.")
-      case _ if !isMatchingFrameOfRef => formErr("Can not find a CBCT + REG + RTPLAN with compatible frame of reference.")
+      case _ if rtplan.isEmpty => formErr("Can not find a CBCT + REG + RTPLAN with compatible frame of reference.")
       case _ if (machineCheck.isLeft) => Left(machineCheck.left.get)
       case _ => {
-        val rtplanAndReg = getPlanAndReg.head
-
         val plan = {
-          val planAl = rtplanAndReg._1
+          val planAl = rtplan.get
           val planSop = Util.sopOfAl(planAl)
           val uploaded = rtplanList.find(df => Util.sopOfAl(df.attributeList.get).equals(planSop))
           if (uploaded.isDefined)
@@ -404,10 +424,13 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
             Right(planAl)
         }
 
-        val reg = {
-          val regSop = Util.sopOfAl(rtplanAndReg._2)
-          regList.find(r => Util.sopOfAl(r.attributeList.get).equals(regSop))
-        }
+        val reg =
+          if (rtplanMatchingCbct.nonEmpty)
+            None
+          else {
+            val regSop = Util.sopOfAl(getPlanAndReg.head._2)
+            regList.find(r => Util.sopOfAl(r.attributeList.get).equals(regSop))
+          }
 
         val runReq = new BBbyCBCTRunReq(plan, reg, cbctList, machineCheck.right.get)
         Right(runReq)
@@ -451,9 +474,13 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
         val output = inputOutput._2
 
         Future {
+          Trace.trace
           val extendedData = ExtendedData.get(output)
+          Trace.trace
           BBbyCBCTRun.insertIfNew(Seq(runReq.rtplan), extendedData)
+          Trace.trace
           val runReqFinal = runReq.reDir(input.dir)
+          Trace.trace
 
           //          val plan = runReqFinal.rtplan
           //          val machine = machineCheck.right.get

@@ -11,6 +11,7 @@ import com.pixelmed.dicom.TagFromName
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import edu.umro.ScalaUtil.DicomUtil
+import com.pixelmed.dicom.SOPClass
 
 /**
  * Store the contents of a DICOM series.
@@ -26,6 +27,7 @@ case class DicomSeries(
   frameOfReferenceUID: Option[String], // DICOM FrameOfReferenceUID.  For registration files, this is the FrameOfReferenceUID that they convert from (take as input).
   modality: String, // DICOM Modality
   sopClassUID: String, // DICOM SOPClassUID of first file.  A more rigorous definition of modality.
+  deviceSerialNumber: Option[String], // DICOM DeviceSerialNumber found in top-level attribute list, if present.
   date: Timestamp, // when data was acquired at the treatment machine.  Value from first file found by checking for (in this order): ContentDate, InstanceCreationDate, AcquisitionDate, CreationDate, SeriesDate
   patientID: Option[String], // Patient ID, if available
   size: Int, // Number of files in series
@@ -55,6 +57,7 @@ case class DicomSeries(
       "\n    frameOfReferenceUID: " + frameOfReferenceUID +
       "\n    modality: " + modality +
       "\n    sopClassUID: " + sopClassUID +
+      "\n    deviceSerialNumber: " + deviceSerialNumber +
       "\n    date: " + date +
       "\n    patientID: " + patientID +
       "\n    size: " + size +
@@ -74,6 +77,7 @@ object DicomSeries extends Logging {
     def frameOfReferenceUID = column[Option[String]]("frameOfReferenceUID")
     def modality = column[String]("modality")
     def sopClassUID = column[String]("sopClassUID")
+    def deviceSerialNumber = column[Option[String]]("deviceSerialNumber")
     def date = column[Timestamp]("date")
     def patientID = column[Option[String]]("patientID")
     def size = column[Int]("size")
@@ -89,6 +93,7 @@ object DicomSeries extends Logging {
       frameOfReferenceUID,
       modality,
       sopClassUID,
+      deviceSerialNumber,
       date,
       patientID,
       size,
@@ -167,6 +172,7 @@ object DicomSeries extends Logging {
     def getFrameOfReferenceUID = byTag(TagFromName.FrameOfReferenceUID)
     def getModality = byTag(TagFromName.Modality).get
     def getSopClassUID = byTag(TagFromName.SOPClassUID).get
+    def deviceSerialNumber = byTag(TagFromName.SOPClassUID)
     def getDate = new Timestamp(sorted.head.date.getTime)
     def getPatientID = sorted.map(_.patId).flatten.headOption
     def getSize = sorted.size
@@ -182,10 +188,21 @@ object DicomSeries extends Logging {
       getFrameOfReferenceUID,
       getModality,
       getSopClassUID,
+      deviceSerialNumber,
       getDate,
       getPatientID,
       getSize,
       getContent)
   }
 
+  /**
+   * Get a list of all known RTPLAN device serial numbers
+   */
+  def planDeviceSerialNumberList = {
+    val action = for {
+      dicomSeries <- query if ((dicomSeries.sopClassUID === SOPClass.RTPlanStorage))
+    } yield (dicomSeries.deviceSerialNumber)
+    val list = Db.run(action.result)
+    list.flatten.distinct
+  }
 }
