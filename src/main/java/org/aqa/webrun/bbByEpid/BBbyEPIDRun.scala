@@ -99,6 +99,14 @@ object BBbyEPIDRun extends Logging {
   }
 
   /**
+   * Get the SOP of the plan referenced by the given EPID.
+   */
+  def getPlanRef(epid: AttributeList): String = {
+    val seq = DicomUtil.seqToAttr(epid, TagFromName.ReferencedRTPlanSequence)
+    seq.head.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrEmptyString
+  }
+
+  /**
    * Determine if user is authorized to perform redo.  To be authorized, the user must be from the
    * same institution as the original user.
    *
@@ -264,16 +272,40 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
   }
 
+  /**
+   * Get the serial numbers of machines referenced by the plans (plans are referenced by the rtimage files).  Do not include the
+   * serial numbers of the plans themselves, as they reference the planning system.  This includes previously uploaded plans.
+   */
+  private def getRtplansSerNo(dicomFileList: Seq[DicomFile]): Seq[String] = {
+    val uploaded = dicomFileList.filter(df => df.isModality(SOPClass.RTPlanStorage)).map(df => df.attributeList.get)
+    val plansReferenced = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage)).map(df => BBbyEPIDRun.getPlanRef(df.attributeList.get)).distinct
+    val plansFromDb = plansReferenced.map(sopInstUID => DicomSeries.getBySopInstanceUID(sopInstUID)).flatten.map(ds => ds.attributeListList).flatten
+    val planSerNo = (uploaded ++ plansFromDb).map(plan => plan.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrEmptyString).distinct
+
+    val planRefSerNo = (uploaded ++ plansFromDb).map(rtplan => DicomUtil.findAllSingle(rtplan, TagFromName.DeviceSerialNumber)).flatten.map(at => at.getSingleStringValueOrEmptyString).distinct
+    planRefSerNo.diff(planSerNo)
+  }
+
   private def validateMachineSelection(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, Machine] = {
-    val machineRelatedList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
-    // machines that DICOM files reference (based on device serial numbers)
-    val referencedMachines = machineRelatedList.map(df => Machine.attributeListToMachine(df.attributeList.get)).flatten.distinct
+    val serNoByImage = {
+      dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage)).
+        map(df => DicomUtil.findAllSingle(df.attributeList.get, TagFromName.DeviceSerialNumber)).flatten.
+        map(serNo => serNo.getSingleStringValueOrEmptyString).distinct
+    }
+
+    val planSerNoList = getRtplansSerNo(dicomFileList)
+    val machList = (serNoByImage ++ planSerNoList).distinct.map(serNo => Machine.findMachinesBySerialNumber(serNo)).flatten
+
+    val distinctMachListSerNo = machList.map(mach => mach.machinePK).flatten.distinct
+
+    // machine user chose from list
     val chosenMachine = for (pkTxt <- valueMap.get(machineSelector.label); pk <- Util.stringToLong(pkTxt); m <- Machine.get(pk)) yield m
 
     val result: Either[StyleMapT, Machine] = 0 match {
-      case _ if (referencedMachines.size == 1) => Right(referencedMachines.head)
+      case _ if (distinctMachListSerNo.size == 1) => Right(machList.head)
       case _ if (chosenMachine.isDefined) => Right(chosenMachine.get)
-      case _ if (referencedMachines.size > 1) => formErr("Files come from more than one machine; please go back and try again.  Machines: " + referencedMachines.map(m => m.id).mkString("  "))
+      case _ if (distinctMachListSerNo.size > 1) => formErr("Files come from more than one machine; please Cancel and try again.")
+      case _ if (planSerNoList.isEmpty) => formErr("Unable to identify the machine.  Try again, this time uploading the RTPLAN as well.")
       case _ => formErr("Unknown machine.  Please choose from the 'Machine' list below or click Cancel and then use the Administration interface to add it.")
     }
     result
@@ -293,7 +325,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
     def epidSeriesList = epidList.map(epid => getSeries(epid)).distinct
 
-    def machineCheck = validateMachineSelection(valueMap, epidListDf)
+    def machineCheck = validateMachineSelection(valueMap, dicomFileList)
 
     logger.info("Number of RTIMAGE files uploaded: " + epidList.size)
 

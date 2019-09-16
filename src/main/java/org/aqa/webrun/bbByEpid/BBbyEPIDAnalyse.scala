@@ -17,14 +17,6 @@ import org.aqa.db.BBbyEPIDComposite
  */
 object BBbyEPIDAnalyse extends Logging {
 
-  /**
-   * Get the SOP of the plan referenced by the given EPID.
-   */
-  private def getPlanRef(epid: AttributeList): String = {
-    val seq = DicomUtil.seqToAttr(epid, TagFromName.ReferencedRTPlanSequence)
-    seq.head.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrEmptyString
-  }
-
   private def toBBbyEPID(epid: AttributeList, bbLocation: Either[String, Point2d], extendedData: ExtendedData): Option[BBbyEPID] = {
     if (bbLocation.isRight) {
       val bbLoc = bbLocation.right.get
@@ -43,7 +35,7 @@ object BBbyEPIDAnalyse extends Logging {
       val bbByEPID = new BBbyEPID(
         bbByEPIDPK = None,
         outputPK = extendedData.output.outputPK.get,
-        rtplanSOPInstanceUID = getPlanRef(epid),
+        rtplanSOPInstanceUID = BBbyEPIDRun.getPlanRef(epid),
         epidSOPInstanceUid = Util.sopOfAl(epid),
         offset_mm = (new Point3d(epid3DX_mm, epid3DY_mm, epid3DZ_mm)).distance(origin),
         gantryAngle_deg = gantryAngle_deg,
@@ -84,7 +76,7 @@ object BBbyEPIDAnalyse extends Logging {
       val bbByEPIDComposite = new BBbyEPIDComposite(
         bbByEPIDCompositePK = None,
         outputPK = extendedData.output.outputPK.get,
-        rtplanSOPInstanceUID = getPlanRef(runReq.epidList.head),
+        rtplanSOPInstanceUID = BBbyEPIDRun.getPlanRef(runReq.epidList.head),
         epidSeriesInstanceUID = SeriesInstanceUID,
         offset_mm,
         x_mm,
