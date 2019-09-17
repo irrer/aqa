@@ -126,8 +126,13 @@ object BBbyCBCTAnnotateImages {
 
         val yText = deblank(yAxisName + " " + fmt(yPlanOffset_mm) + " mm")
         val yRect = ImageText.getTextDimensions(graphics, yText)
-        val yTextXPos = (centerX_pix - ((yRect.getWidth + widthCircle_pix) / 2 + 5).round.toInt)
-        ImageText.drawTextCenteredAt(graphics, yTextXPos, centerY_pix, yText)
+        //val yTextXPos = (centerX_pix - ((yRect.getWidth + widthCircle_pix) / 2 + 5).round.toInt)
+        //ImageText.drawTextCenteredAt(graphics, yTextXPos, centerY_pix, yText)
+
+        val yTextXPos = (centerX_pix - (widthCircle_pix / 2)).round.toInt
+        val yTextYPos = (centerY_pix - (heightCircle_pix / 2) + textPointSize).round.toInt
+
+        graphics.drawString(yText, yTextXPos, yTextYPos)
       }
 
       // ---------------------------------------------------------------------------------
@@ -195,7 +200,7 @@ object BBbyCBCTAnnotateImages {
     val textWidth = fullAndTextWidth._2
     val aoi = cropImage(full, textWidth)
 
-    Util.addAxisLabels(aoi, xAxisName, yAxisName, Color.white)
+    Util.addAxisLabels(aoi, "", "", Color.white, true, false, false, true) // top, bottom, left, right arrow heads
 
     new ImagePair(full, aoi)
   }
@@ -223,7 +228,7 @@ object BBbyCBCTAnnotateImages {
       voxSize_mm(2), voxSize_mm(1),
       centerUnscaled_vox.getZ, centerUnscaled_vox.getY,
       "Z", "Y",
-      bbByCBCT.cbctZ_mm - bbByCBCT.rtplanZ_mm, bbByCBCT.cbctY_mm - bbByCBCT.rtplanY_mm,
+      bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm, bbByCBCT.rtplanY_mm - bbByCBCT.cbctY_mm,
       imageXYZ(0))
 
     def yImagePair = makePair(
@@ -231,7 +236,7 @@ object BBbyCBCTAnnotateImages {
       voxSize_mm(2), voxSize_mm(0),
       centerUnscaled_vox.getZ, centerUnscaled_vox.getX,
       "Z", "X",
-      bbByCBCT.cbctZ_mm - bbByCBCT.rtplanZ_mm, bbByCBCT.cbctX_mm - bbByCBCT.rtplanX_mm,
+      bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm, bbByCBCT.rtplanX_mm - bbByCBCT.cbctX_mm,
       imageXYZ(1))
 
     bbByCBCT.cbctZ_mm - bbByCBCT.rtplanZ_mm
@@ -241,7 +246,7 @@ object BBbyCBCTAnnotateImages {
       voxSize_mm(0), voxSize_mm(1),
       centerUnscaled_vox.getX, centerUnscaled_vox.getY,
       "X", "Y",
-      bbByCBCT.cbctX_mm - bbByCBCT.rtplanX_mm, bbByCBCT.cbctY_mm - bbByCBCT.rtplanY_mm,
+      bbByCBCT.rtplanX_mm - bbByCBCT.cbctX_mm, bbByCBCT.rtplanY_mm - bbByCBCT.cbctY_mm,
       imageXYZ(2))
 
     val pairList = Seq(xImagePair _, yImagePair _, zImagePair _).par.map(f => f()).toList

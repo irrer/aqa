@@ -643,7 +643,7 @@ object Util extends Logging {
     Util.addGraticules(image, x2Pix _, y2Pix _, pix2X _, pix2Y _, Color.gray)
   }
 
-  def addAxisLabels(image: BufferedImage, horzLabel: String, vertLabel: String, color: Color) = {
+  def addAxisLabels(image: BufferedImage, horzLabel: String, vertLabel: String, color: Color, top: Boolean = true, bottom: Boolean = true, left: Boolean = true, right: Boolean = true) = {
 
     val fromEdge = 40 // number of pixels from edge to put arrows.
     val lineThickness: Float = 3
@@ -666,10 +666,14 @@ object Util extends Logging {
 
       graphics.drawLine(leftX, y, rightX, y) // main line
       // arrow heads
-      graphics.drawLine(leftX, y, leftX + arrowLength, y - arw)
-      graphics.drawLine(leftX, y, leftX + arrowLength, y + arw)
-      graphics.drawLine(rightX, y, rightX - arrowLength, y - arw)
-      graphics.drawLine(rightX, y, rightX - arrowLength, y + arw)
+      if (left) {
+        graphics.drawLine(leftX, y, leftX + arrowLength, y - arw)
+        graphics.drawLine(leftX, y, leftX + arrowLength, y + arw)
+      }
+      if (right) {
+        graphics.drawLine(rightX, y, rightX - arrowLength, y - arw)
+        graphics.drawLine(rightX, y, rightX - arrowLength, y + arw)
+      }
 
       val yText = {
         val textDim = ImageText.getTextDimensions(graphics, horzLabel)
@@ -685,10 +689,15 @@ object Util extends Logging {
 
       graphics.drawLine(x, topY, x, bottomY) // main line
       // arrow heads
-      graphics.drawLine(x, topY, x + arw, topY + arrowLength)
-      graphics.drawLine(x, topY, x - arw, topY + arrowLength)
-      graphics.drawLine(x, bottomY, x - arw, bottomY - arrowLength)
-      graphics.drawLine(x, bottomY, x + arw, bottomY - arrowLength)
+      if (top) {
+        graphics.drawLine(x, topY, x + arw, topY + arrowLength)
+        graphics.drawLine(x, topY, x - arw, topY + arrowLength)
+      }
+
+      if (bottom) {
+        graphics.drawLine(x, bottomY, x - arw, bottomY - arrowLength)
+        graphics.drawLine(x, bottomY, x + arw, bottomY - arrowLength)
+      }
 
       val textDim = ImageText.getTextDimensions(graphics, vertLabel)
       val xText = fromEdge + offset
