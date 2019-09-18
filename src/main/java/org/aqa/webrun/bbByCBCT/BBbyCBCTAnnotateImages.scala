@@ -47,7 +47,7 @@ object BBbyCBCTAnnotateImages {
     xPlanOffset_mm: Double, yPlanOffset_mm: Double,
     originalImage: BufferedImage): ImagePair = {
 
-    def rnd(d: Double) = d.round.toInt
+    def d2i(d: Double) = d.round.toInt
 
     val min_pix = Math.min(voxSizeX_mmOrig, voxSizeY_mmOrig)
     val max_pix = Math.max(voxSizeX_mmOrig, voxSizeY_mmOrig)
@@ -102,11 +102,11 @@ object BBbyCBCTAnnotateImages {
         val graphics = ImageUtil.getGraphics(zImage)
         graphics.setColor(Color.white)
 
-        graphics.drawOval(rnd(centerX_pix - (widthCircle_pix / 2)), rnd(centerY_pix - (heightCircle_pix / 2)), rnd(widthCircle_pix), rnd(heightCircle_pix))
+        graphics.drawOval(d2i(centerX_pix - (widthCircle_pix / 2)), d2i(centerY_pix - (heightCircle_pix / 2)), d2i(widthCircle_pix), d2i(heightCircle_pix))
 
         val radius = Math.sqrt((widthCircle_pix * widthCircle_pix) + (heightCircle_pix * heightCircle_pix)) / 4
-        graphics.drawLine(rnd(centerX_pix - radius + 1), rnd(centerY_pix - radius), rnd(centerX_pix + radius), rnd(centerY_pix + radius))
-        graphics.drawLine(rnd(centerX_pix + radius - 1), rnd(centerY_pix - radius), rnd(centerX_pix - radius), rnd(centerY_pix + radius))
+        graphics.drawLine(d2i(centerX_pix - radius + 1), d2i(centerY_pix - radius), d2i(centerX_pix + radius), d2i(centerY_pix + radius))
+        graphics.drawLine(d2i(centerX_pix + radius - 1), d2i(centerY_pix - radius), d2i(centerX_pix - radius), d2i(centerY_pix + radius))
       }
 
       // ---------------------------------------------------------------------------------
@@ -128,19 +128,19 @@ object BBbyCBCTAnnotateImages {
           val textRect = ImageText.getTextDimensions(graphics, text)
 
           val x_pix = centerX_pix - (textRect.getWidth / 2)
-          val y_pix = centerY_pix + (cropSize_pix / 2) - 55
+          val y_pix = centerY_pix + (cropSize_pix / 2) - (Util.axisOffsetFromEdge + 15)
 
-          graphics.drawString(text, rnd(x_pix), rnd(y_pix))
+          graphics.drawString(text, d2i(x_pix), d2i(y_pix))
         }
 
         def drawY = {
           val text = deblank(yAxisName + " " + fmt(yPlanOffset_mm) + " mm")
           val textRect = ImageText.getTextDimensions(graphics, text)
 
-          val x_pix = (centerX_pix - (cropSize_pix / 2) + 10).round.toInt
-          val y_pix = (centerY_pix - (cropSize_pix / 3)).round.toInt
+          val x_pix = centerX_pix - (cropSize_pix / 2) + 10
+          val y_pix = centerY_pix - (cropSize_pix / 3)
 
-          graphics.drawString(text, rnd(x_pix), rnd(y_pix))
+          graphics.drawString(text, d2i(x_pix), d2i(y_pix))
         }
 
         drawX
@@ -164,11 +164,11 @@ object BBbyCBCTAnnotateImages {
         }
 
         graphics.drawLine(
-          rnd(planXcenter), rnd(planYcenter - scale),
-          rnd(planXcenter), rnd(planYcenter + scale))
+          d2i(planXcenter), d2i(planYcenter - scale),
+          d2i(planXcenter), d2i(planYcenter + scale))
         graphics.drawLine(
-          rnd(planXcenter - scale), rnd(planYcenter),
-          rnd(planXcenter + scale), rnd(planYcenter))
+          d2i(planXcenter - scale), d2i(planYcenter),
+          d2i(planXcenter + scale), d2i(planYcenter))
       }
 
       // ---------------------------------------------------------------------------------
@@ -194,8 +194,8 @@ object BBbyCBCTAnnotateImages {
     // ---------------------------------------------------------------------------------
 
     def cropImage(image: BufferedImage) = {
-      val x = Math.max(0, rnd(centerX_pix - (cropSize_pix / 2)))
-      val y = Math.max(0, rnd(centerY_pix - (cropSize_pix / 2)))
+      val x = Math.max(0, d2i(centerX_pix - (cropSize_pix / 2)))
+      val y = Math.max(0, d2i(centerY_pix - (cropSize_pix / 2)))
 
       val aoi = image.getSubimage(x, y, cropSize_pix, cropSize_pix)
       aoi

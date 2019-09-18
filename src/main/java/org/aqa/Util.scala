@@ -643,9 +643,13 @@ object Util extends Logging {
     Util.addGraticules(image, x2Pix _, y2Pix _, pix2X _, pix2Y _, Color.gray)
   }
 
+  /**
+   * Number f pixels from edge to put axis arrows.
+   */
+  val axisOffsetFromEdge = 40
+
   def addAxisLabels(image: BufferedImage, horzLabel: String, vertLabel: String, color: Color, top: Boolean = true, bottom: Boolean = true, left: Boolean = true, right: Boolean = true) = {
 
-    val fromEdge = 40 // number of pixels from edge to put arrows.
     val lineThickness: Float = 3
     val arrowLength = 5
     val arw = 3
@@ -662,7 +666,7 @@ object Util extends Logging {
     def trans = {
       val leftX = image.getWidth / 4
       val rightX = leftX * 3
-      val y = image.getHeight - fromEdge
+      val y = image.getHeight - axisOffsetFromEdge
 
       graphics.drawLine(leftX, y, rightX, y) // main line
       // arrow heads
@@ -677,7 +681,7 @@ object Util extends Logging {
 
       val yText = {
         val textDim = ImageText.getTextDimensions(graphics, horzLabel)
-        image.getHeight - fromEdge - (textDim.getHeight / 2 + 3)
+        image.getHeight - axisOffsetFromEdge - (textDim.getHeight / 2 + 3)
       }
       ImageText.drawTextCenteredAt(graphics, image.getWidth / 3, yText, horzLabel)
     }
@@ -685,7 +689,7 @@ object Util extends Logging {
     def axial = {
       val topY = image.getHeight / 4
       val bottomY = topY * 3
-      val x = fromEdge
+      val x = axisOffsetFromEdge
 
       graphics.drawLine(x, topY, x, bottomY) // main line
       // arrow heads
@@ -700,7 +704,7 @@ object Util extends Logging {
       }
 
       val textDim = ImageText.getTextDimensions(graphics, vertLabel)
-      val xText = fromEdge + offset
+      val xText = axisOffsetFromEdge + offset
 
       val yText = image.getHeight / 3
       graphics.drawString(vertLabel, xText, yText)
