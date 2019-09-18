@@ -310,6 +310,7 @@ object WebUtil extends Logging {
           <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap-theme.min.css"/>
           <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/dropzone.min.css"/>
           <link rel="stylesheet" href="/static/AQA.css"/>
+          <link href="/static/bootstrap/datetime/bootstrap-datetimepicker.min.css" rel="stylesheet" media="screen"/>
           <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
           <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
           <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/dropzone.min.js"></script>
@@ -317,6 +318,7 @@ object WebUtil extends Logging {
           <script src="/static/tooltip/tooltip.js"></script>
           { c3Refs /* only include c3 when needed */ }
           <script src="/static/zoom/jquery.zoom.js"></script>
+          <script type="text/javascript" src="/static/bootstrap/datetime/bootstrap-datetimepicker.js" charset="UTF-8"></script>
           <script src="/static/AQA.js"></script>
         </head>
         <body style='background-image: url("/static/images/restrictions.png"); background-repeat: repeat-x;'>
