@@ -371,9 +371,13 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   private def updateMachineInDatabase(valueMap: ValueMapT) = {
     val machine = constructMachineFromParameters(valueMap)
-    machine.insertOrUpdate
-    logger.info("Updating machine " + machine)
-    updateBeamEnergies(machine, valueMap)
+    val mach: Machine = if (machine.machinePK.isDefined) {
+      machine.insertOrUpdate
+      machine
+    } else
+      machine.insert
+    logger.info("Updating machine " + mach)
+    updateBeamEnergies(mach, valueMap)
   }
 
   private def userIsAdmin(response: Response): Boolean = {
