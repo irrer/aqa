@@ -62,6 +62,8 @@ object WebUtil extends Logging {
   private val doubleQuote = "@@quote2@@"
   val amp = "@@amp@@"
   val nl = "@@nl@@"
+  val openCurly = "@@openCurly@@"
+  val closeCurly = "@@closeCurly@@"
   val nbsp = "@@nbsp@@"
 
   val titleNewline = "@@amp@@#10;"
@@ -75,7 +77,16 @@ object WebUtil extends Logging {
 
   def dblQuote(text: String): String = doubleQuote + text + doubleQuote
 
-  def xmlToText(document: Node): String = new PrettyPrinter(1024, 2).format(document).replace(singleQuote, "'").replace(doubleQuote, "\"").replace(amp, "&").replace(nl, "\n").replace(nbsp, "&nbsp")
+  def xmlToText(document: Node): String = {
+    new PrettyPrinter(1024, 2).format(document).
+      replace(singleQuote, "'").
+      replace(doubleQuote, "\"").
+      replace(amp, "&").
+      replace(nl, "\n").
+      replace(openCurly, "{").
+      replace(closeCurly, "}").
+      replace(nbsp, "&nbsp")
+  }
 
   def cleanClassName(className: String) = className.substring(className.lastIndexOf('.') + 1).replace("$", "")
 
@@ -943,7 +954,6 @@ object WebUtil extends Logging {
     def this(label: String, col: Int, offset: Int, placeholder: String) = this(label, col, offset, placeholder, false)
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
       val value = valueMap.get(label)
-      val common = { <input class="form-control" id={ label } name={ label }/> }
 
       val rowCount: Int = {
         val s = if (value.isDefined) { value.get.split("\n").size + 1 } else 3
@@ -955,6 +965,46 @@ object WebUtil extends Logging {
 
       val htmlAlias = ifAqaAliasAttr(html, aqaAlias)
       wrapInput(label, true, htmlAlias, col, offset, errorMap)
+    }
+  }
+
+  class WebInputDatePicker(override val label: String, col: Int, offset: Int) extends IsInput(label) with ToHtml {
+
+    val dateFormat = new SimpleDateFormat("yyyy M dd")
+
+    override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
+
+      val value: String = valueMap.get(label) match {
+        case Some(v) => v
+        case _ => dateFormat.format((new Date).getTime)
+      }
+
+      val html =
+        {
+          <div class="input-group date form_date col-md-5" data-date="" data-date-format="yyyy MM dd" data-link-field={ label } data-link-format="yyyy MM dd">
+            <input class="form-control" size="16" type="text" id={ label } name={ label } value={ value }/>
+            <span class="input-group-addon">
+              <span class="glyphicon glyphicon-remove"></span>
+            </span>
+            <span class="input-group-addon">
+              <span class="glyphicon glyphicon-calendar"></span>
+            </span>
+            <script type="text/javascript">
+              $('.form_date').datetimepicker({ openCurly }
+              weekStart: 1,
+                todayBtn:  1,
+                autoclose: 1,
+                todayHighlight: 1,
+                startView: 2,
+                minView: 2,
+               forceParse: 0
+              { closeCurly }
+              );
+            </script>
+          </div>
+        }
+
+      wrapInput(label, true, html, col, offset, errorMap)
     }
   }
 
