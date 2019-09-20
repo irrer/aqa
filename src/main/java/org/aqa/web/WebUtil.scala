@@ -939,7 +939,8 @@ object WebUtil extends Logging {
    *
    * @param primary True if this button is primary
    */
-  class FormButton(override val label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: (ValueMapT) => String, buttonType: ButtonType.Value, value: String) extends IsInput(label) with ToHtml {
+  class FormButton(override val label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: (ValueMapT) => String, buttonType: ButtonType.Value, value: String, title: Option[String]) extends IsInput(label) with ToHtml {
+    def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: (ValueMapT) => String, buttonType: ButtonType.Value, value: String) = this(label, col, offset, subUrl, action, buttonType, value, None)
     def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String, buttonType: ButtonType.Value, value: String) = this(label, col, offset, subUrl, (_) => action, buttonType, value)
     def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String, buttonType: ButtonType.Value) = this(label, col, offset, subUrl, action: String, buttonType, label)
     def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String) = this(label, col, offset, subUrl, action: String, ButtonType.BtnDefault, label)
@@ -995,7 +996,7 @@ object WebUtil extends Logging {
             </span>
             <script type="text/javascript">
               $('.form_date').datetimepicker({ openCurly }
-                weekStart: 0,          /* first day is Sunday */
+              weekStart: 0,          /* first day is Sunday */
                 todayBtn:  1,          /* show button to go quickly to today */
                 autoclose: 1,          /* close when date selected */
                 todayHighlight: 1,     /* today is highlighted */
