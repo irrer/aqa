@@ -995,7 +995,7 @@ object WebUtil extends Logging {
             </span>
             <script type="text/javascript">
               $('.form_date').datetimepicker({ openCurly }
-              weekStart: 0,          /* first day is Sunday */
+                weekStart: 0,          /* first day is Sunday */
                 todayBtn:  1,          /* show button to go quickly to today */
                 autoclose: 1,          /* close when date selected */
                 todayHighlight: 1,     /* today is highlighted */
@@ -1189,19 +1189,15 @@ object WebUtil extends Logging {
     }
   }
 
-  @deprecated("should use WebUtil.dicomFilesInSession")
-  def attributeListsInSession(valueMap: ValueMapT): Seq[AttributeList] = {
-    sessionDir(valueMap) match {
-      case Some(dir) if (dir.isDirectory) => Util.listDirFiles(dir).map(f => fileToDicom(f)).flatten
-      case _ => Seq[AttributeList]()
-    }
-  }
-
   def dicomFilesInSession(valueMap: ValueMapT): Seq[DicomFile] = {
     sessionDir(valueMap) match {
       case Some(dir) if (dir.isDirectory) => DicomFile.readDicomInDir(dir)
       case _ => Seq[DicomFile]()
     }
+  }
+
+  def attributeListsInSession(valueMap: ValueMapT): Seq[AttributeList] = {
+    dicomFilesInSession(valueMap).map(df => df.attributeList).flatten
   }
 
   /**
