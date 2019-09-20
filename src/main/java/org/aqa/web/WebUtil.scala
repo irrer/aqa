@@ -970,7 +970,11 @@ object WebUtil extends Logging {
 
   class WebInputDatePicker(override val label: String, col: Int, offset: Int) extends IsInput(label) with ToHtml {
 
-    val dateFormat = new SimpleDateFormat("yyyy M dd")
+    /** For converting between <code>String</code> and <code>Date</code>. */
+    val dateFormat = new SimpleDateFormat("yyyy MMM d")
+
+    /** javascript date format */
+    private val jsFormat = "yyyy M d"
 
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
 
@@ -981,7 +985,7 @@ object WebUtil extends Logging {
 
       val html =
         {
-          <div class="input-group date form_date col-md-5" data-date="" data-date-format="yyyy MM dd" data-link-field={ label } data-link-format="yyyy MM dd">
+          <div class="input-group date form_date col-md-5" data-date="" data-date-format={ jsFormat } data-link-field={ label } data-link-format={ jsFormat }>
             <input class="form-control" size="16" type="text" id={ label } name={ label } value={ value }/>
             <span class="input-group-addon">
               <span class="glyphicon glyphicon-remove"></span>
@@ -991,13 +995,14 @@ object WebUtil extends Logging {
             </span>
             <script type="text/javascript">
               $('.form_date').datetimepicker({ openCurly }
-              weekStart: 1,
-                todayBtn:  1,
-                autoclose: 1,
-                todayHighlight: 1,
-                startView: 2,
-                minView: 2,
-               forceParse: 0
+              weekStart: 0,          /* first day is Sunday */
+                todayBtn:  1,          /* show button to go quickly to today */
+                autoclose: 1,          /* close when date selected */
+                todayHighlight: 1,     /* today is highlighted */
+                startView: 2,          /* pick day of month (level of granularity) */
+                minView: 2,            /* minimum granularity of viewing mode */
+                startDate: '2010/1/1', /* minimum selectable date */
+                forceParse: true       /* fix: parse to supported form */
               { closeCurly }
               );
             </script>
@@ -1014,6 +1019,7 @@ object WebUtil extends Logging {
       wrapInput(label, true, html, col, offset, errorMap)
     }
 
+    /** For converting between <code>String</code> and <code>Date</code>. */
     val dateTimeFormat = WebInputDateTime.dateTimeFormat
 
     def validateDateTime(text: String): Option[Date] = {
