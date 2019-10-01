@@ -21,14 +21,30 @@ case class MaintenanceRecord(
   description: String // description of maintenance
 ) {
 
+  /**
+   * Return true of the user is from the same institution as the machine.
+   * 
+   * Note that this check was added because there was an instance on the AWS system of a user
+   * creating a maintenance event in a machine that belonged to a different institution.
+   */
+  private def checkUser: Boolean = {
+    val machInst = Machine.get(machinePK).get.institutionPK
+    val userInst = User.get(userPK).get.institutionPK
+    machInst == userInst
+  }
+
   def insert: MaintenanceRecord = {
+    if (!checkUser) throw new RuntimeException("User is not authorized to insert maintenance record because they are from a different institution than the machine.")
     val insertQuery = MaintenanceRecord.query returning MaintenanceRecord.query.map(_.maintenanceRecordPK) into ((maintenanceRecord, maintenanceRecordPK) => maintenanceRecord.copy(maintenanceRecordPK = Some(maintenanceRecordPK)))
     val action = insertQuery += this
     val result = Db.run(action)
     result
   }
 
-  def insertOrUpdate = Db.run(MaintenanceRecord.query.insertOrUpdate(this))
+  def insertOrUpdate = {
+    if (!checkUser) throw new RuntimeException("User is not authorized to insert or update maintenance record because they are from a different institution than the machine.")
+    Db.run(MaintenanceRecord.query.insertOrUpdate(this))
+  }
 }
 
 object MaintenanceRecord {

@@ -96,16 +96,12 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * If the user is authorized to modify the machine in this way then return true.
-   *
-   * The two allowed cases are:
-   *
-   *     - user is whitelisted
-   *
-   *     - user is modifying a machine that is in their institution
+   * Make sure that the user is authorized.  They must be from the same institution as the machine.
+   * 
+   * Allowing a whitelisted user is probably not a good idea because the user's ID is recorded.
    */
   private def isAuthorized(request: Request, institutionPK: Long): Boolean = {
-    val ok = WebUtil.userIsWhitelisted(request) ||
+    val ok =
       {
         getUser(request) match {
           case Some(user) => user.institutionPK == institutionPK
