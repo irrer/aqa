@@ -1014,6 +1014,51 @@ object WebUtil extends Logging {
     }
   }
 
+  class WebInputDateTimePicker(override val label: String, col: Int, offset: Int) extends IsInput(label) with ToHtml {
+
+    /** For converting between <code>String</code> and <code>Date</code>. */
+    val dateFormat = new SimpleDateFormat("yyyy MMM d H:mm a")
+
+    /** javascript date format */
+    private val jsFormat = "yyyy M d H:ii P"
+
+    override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
+
+      val value: String = valueMap.get(label) match {
+        case Some(v) => v
+        case _ => dateFormat.format((new Date).getTime)
+      }
+
+      val html =
+        {
+          <div class="input-group date form_datetime col-md-5" data-date="" data-date-format={ jsFormat } data-link-field={ label } data-link-format={ jsFormat }>
+            <input class="form-control" size="16" type="text" id={ label } name={ label } value={ value }/>
+            <span class="input-group-addon">
+              <span class="glyphicon glyphicon-remove"></span>
+            </span>
+            <span class="input-group-addon">
+              <span class="glyphicon glyphicon-calendar"></span>
+            </span>
+            <script type="text/javascript">
+              $('.form_datetime').datetimepicker({ openCurly }
+              weekStart: 0,            /* first day is Sunday */
+                todayBtn:  1,          /* show button to go quickly to today */
+                autoclose: 1,          /* close when date selected */
+                todayHighlight: 1,     /* today is highlighted */
+                startView: 2,          /* pick day of month (level of granularity) */
+                minView: 0,            /* minimum granularity of viewing mode */
+                startDate: '2010/1/1', /* minimum selectable date */
+                forceParse: true       /* fix: parse to supported form */
+              { closeCurly }
+              );
+            </script>
+          </div>
+        }
+
+      wrapInput(label, true, html, col, offset, errorMap)
+    }
+  }
+
   class WebInputDateTime(label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
       val html = <input type="datetime-local"/> % idNameClassValueAsAttr(label, valueMap) % placeholderAsAttr(placeholder)

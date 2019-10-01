@@ -45,7 +45,8 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
 
   val buttonList: WebRow = List(prevButton, refreshButton, nextButton)
 
-  private val dateField = new WebInputDatePicker("Date", 5, 1)
+  //private val dateField = new WebInputDatePicker("Date", 5, 1) // TODO just the date
+  private val dateField = new WebInputDateTimePicker("Date", 5, 1) // TODO just the date
 
   private val report = new WebPlainText("report", false, 10, 1, makeReport _)
 
@@ -120,7 +121,8 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
     }
 
     def getPairList: List[Pair] = {
-      ??? // TODO
+      //??? // TODO
+      List[Pair]()
     }
 
     val content = {
@@ -146,11 +148,17 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
     /** Midnight of current date.  Facilitates searching the entire day. */
     def now: Date = {
       val text = Util.standardDateFormat.format((new Date).getTime)
-      Util.standardDateFormat.parse(text.replaceAll("T.*", "T:00:00:00"))
+      Trace.trace(text + " ==> " + text.replaceAll("T.*", "T00:00:00")) // TODO rm
+      val tt = text.replaceAll("T.*", "T00:00:00") // TODO rm
+      val jj = Util.standardDateFormat.parse(tt) // TODO rm
+      val date = Util.standardDateFormat.parse(text.replaceAll("T.*", "T00:00:00"))
+      Trace.trace(text + " ==> " + date) // TODO rm
+      date
     }
 
     try {
-      dateField.dateFormat.parse(valueMap(dateField.label))
+      val date = dateField.dateFormat.parse(valueMap(dateField.label))
+      date
     } catch {
       case t: Throwable => now
     }
@@ -164,7 +172,7 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
       }
     }
     formCreate(valueMap).setFormResponse(valueMap ++ userPkValue, styleNone, DailyQARestlet.pageTitle, response, Status.SUCCESS_OK)
-    val selectedDate = getSelectedDate(valueMap)
+    Trace.trace(getSelectedDate(valueMap))
   }
 
   override def handle(request: Request, response: Response): Unit = {
