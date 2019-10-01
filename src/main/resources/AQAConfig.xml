@@ -408,7 +408,9 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>J20G0-10F</BeamName>
         <BeamName>J20G0-16X</BeamName>
         <BeamName>J18G0-10F</BeamName>
+        <BeamName>J18G0-10X</BeamName>
         <BeamName>J18G0-16X</BeamName>
+        <BeamName>J18G0-16F</BeamName>
         <BeamName>J18G0-6F</BeamName>
         <BeamName>J18G0-6X</BeamName>
         <BeamName>J18G180</BeamName>
