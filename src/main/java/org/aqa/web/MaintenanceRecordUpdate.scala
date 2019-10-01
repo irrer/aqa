@@ -98,7 +98,7 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
   /**
    * Make sure that the user is authorized.  They must be from the same institution as the machine.
    * 
-   * Allowing a whitelisted user is probably not a good idea because the user's ID is recorded.
+   * Allowing a whitelisted user is probably not a good idea because the ue
    */
   private def isAuthorized(request: Request, institutionPK: Long): Boolean = {
     val ok =
