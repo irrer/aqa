@@ -159,6 +159,7 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
           case Some(m) => serNoList.headOption
           case _ => None
         }
+        logger.info("LOCUploadBaseFiles_1 newSerialNumber: " + newSerialNumber)
         Right(new RunRequirements(mach.get, newSerialNumber, dir, alList))
       }
     }
@@ -172,6 +173,8 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
       case Right(runReq) => {
         val machPK = runReq.machine.machinePK.get
         // set the machine's serial number (and config dir) if necessary
+        logger.info("runReq.serialNumber: " + runReq.serialNumber)
+        logger.info("runReq.machine.serialNumber: " + runReq.machine.serialNumber)
         (runReq.serialNumber, runReq.machine.serialNumber) match {
           case (Some(newSer), Some(oldSer)) if (newSer != oldSer) => Machine.setSerialNumber(machPK, newSer)
           case (Some(newSer), _) => Machine.setSerialNumber(runReq.machine.machinePK.get, newSer)

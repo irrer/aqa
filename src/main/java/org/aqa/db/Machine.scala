@@ -144,6 +144,7 @@ object Machine extends Logging {
     try {
       val machine = Machine.get(machPK).get
       val cfgDirName = initConfigDir(machine, sr)
+      logger.info("Setting serial number to " + sr + " for machine " + machine.id)
       Db.run(Machine.query.filter(_.machinePK === machPK).map(m => (m.configurationDirectory, m.serialNumber)).update(Some(cfgDirName), Some(sr))) match {
         case 1 => true
         case _ => false

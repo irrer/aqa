@@ -300,12 +300,27 @@ object Util extends Logging {
   }
 
   val buildProperties: Properties = {
+
+    def wrapperByJar: Seq[String] = {
+      try {
+        val aqaInstallDir = (new File(System.getenv("AQAJAR"))).getParentFile
+        val yajswDir = aqaInstallDir.listFiles.toSeq.filter(f => f.getName.toLowerCase.startsWith("yajsw")).head
+        val confDir = new File(yajswDir, "conf")
+        val wrapperFile = new File(confDir, "wrapper.conf")
+        val wrapperFileName = wrapperFile.getAbsolutePath
+        logger.info("Found wrapper file via AQAJAR environment variable at: " + wrapperFileName)
+        Seq(wrapperFileName)
+      } catch {
+        case t: Throwable => Seq[String]()
+      }
+    }
+
     val prop = new Properties
     val fileNameList = Seq(
       """wrapper.conf""",
       """yajsw-stable-12.12\conf\wrapper.conf""",
       """src\main\resources\wrapper.conf""",
-      """..\..\main\resources\wrapper.conf""")
+      """..\..\main\resources\wrapper.conf""") ++ wrapperByJar
 
     val fileList = fileNameList.map(name => new File(name))
 
