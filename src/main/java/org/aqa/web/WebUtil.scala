@@ -349,7 +349,7 @@ object WebUtil extends Logging {
               </div>
               <div class="col-md-2">
                 <h1 class="fill">
-                  <a href="/"><img src="/static/images/logo.png" width="128"/></a>
+                  <a href="/"><img src="/static/images/logo.png" width="158" style="border-style:solid; border-color:white; border-width:0px 15px;"/></a>
                 </h1>
               </div>
             </div>
