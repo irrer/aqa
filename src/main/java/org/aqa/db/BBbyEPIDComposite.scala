@@ -20,12 +20,17 @@ import java.util.Date
 case class BBbyEPIDComposite(
   bbByEPIDCompositePK: Option[Long], // primary key
   outputPK: Long, // output primary key
-  rtplanSOPInstanceUID: String, // UID of rtplan
+  rtplanSOPInstanceUID: String, // UID of RTPLAN
   epidSeriesInstanceUID: String, // SOP series instance UID of EPID image
   offset_mm: Double, // distance between measured EPID position and expected (plan) location (aka: positioning error)
   x_mm: Double, // X position in EPID in 3D plan space
   y_mm: Double, // Y position in EPID in 3D plan space
-  z_mm: Double // Z position in EPID in 3D plan space
+  z_mm: Double, // Z position in EPID in 3D plan space
+  bbByCBCTPK: Option[Long], // referenced CBCT measurement
+  offsetAdjusted_mm: Option[Double], // total distance in 3D plan space adjusted for corresponding CBCT location
+  xAdjusted_mm: Option[Double], // X position in 3D plan space adjusted for corresponding CBCT location
+  yAdjusted_mm: Option[Double], // Y position in 3D plan space adjusted for corresponding CBCT location
+  zAdjusted_mm: Option[Double] //  Z position in 3D plan space adjusted for corresponding CBCT location
 ) {
 
   def insert: BBbyEPIDComposite = {
@@ -37,13 +42,23 @@ case class BBbyEPIDComposite(
 
   def insertOrUpdate = Db.run(BBbyEPIDComposite.query.insertOrUpdate(this))
 
-  override def toString: String =
+  override def toString: String = {
+
+    val refCbct = {
+      if (bbByCBCTPK.isEmpty) "CBCT : None"
+      else {
+        "CBCT : " + bbByCBCTPK.get + " : " + Util.fmtDbl(offsetAdjusted_mm.get) + " : " + Util.fmtDbl(xAdjusted_mm.get) + ", " + Util.fmtDbl(yAdjusted_mm.get) + ", " + Util.fmtDbl(zAdjusted_mm.get)
+      }
+    }
+
     "bbByEPIDCompositePK : " + bbByEPIDCompositePK +
       "\n    outputPK : " + outputPK +
       "\n    rtplanSOPInstanceUID : " + rtplanSOPInstanceUID +
       "\n    epidSeriesInstanceUID : " + epidSeriesInstanceUID +
       "\n    offset_mm : " + Util.fmtDbl(offset_mm) +
-      "\n    epid 3D X,Y,Z : " + Util.fmtDbl(x_mm) + ", " + Util.fmtDbl(y_mm) + ", " + Util.fmtDbl(z_mm)
+      "\n    epid 3D X,Y,Z : " + Util.fmtDbl(x_mm) + ", " + Util.fmtDbl(y_mm) + ", " + Util.fmtDbl(z_mm) +
+      "\n    " + refCbct
+  }
 
   val epid = new Point3d(x_mm, y_mm, z_mm)
 }
@@ -59,6 +74,11 @@ object BBbyEPIDComposite extends ProcedureOutput {
     def x_mm = column[Double]("x_mm")
     def y_mm = column[Double]("y_mm")
     def z_mm = column[Double]("z_mm")
+    def bbByCBCTPK = column[Option[Long]]("bbByCBCTPK")
+    def offsetAdjusted_mm = column[Option[Double]]("offsetAdjusted_mm")
+    def xAdjusted_mm = column[Option[Double]]("xAdjusted_mm")
+    def yAdjusted_mm = column[Option[Double]]("yAdjusted_mm")
+    def zAdjusted_mm = column[Option[Double]]("zAdjusted_mm")
 
     def * = (
       bbByEPIDCompositePK.?,
@@ -68,9 +88,15 @@ object BBbyEPIDComposite extends ProcedureOutput {
       offset_mm,
       x_mm,
       y_mm,
-      z_mm) <> ((BBbyEPIDComposite.apply _)tupled, BBbyEPIDComposite.unapply _)
+      z_mm,
+      bbByCBCTPK,
+      offsetAdjusted_mm,
+      xAdjusted_mm,
+      yAdjusted_mm,
+      zAdjusted_mm) <> ((BBbyEPIDComposite.apply _)tupled, BBbyEPIDComposite.unapply _)
 
     def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def bbByCBCTFK = foreignKey("bbByCBCTPK", bbByCBCTPK, BBbyCBCT.query)(_.bbByCBCTPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[BBbyEPIDCompositeTable]
@@ -130,7 +156,8 @@ object BBbyEPIDComposite extends ProcedureOutput {
   }
 
   /**
-   * Get the BBbyEPIDComposite results that are nearest in time to the given date.
+   * Get the BBbyEPIDComposite results that are nearest in time to the given date.  The rows must
+   * have valid bbByCBCTPK and associated values.
    *
    * @param limit: Get up to this many sets of results before and after the given date.  If a
    * limit of 10 is given then get up to 10 sets of results that occurred before and up to
@@ -162,7 +189,7 @@ object BBbyEPIDComposite extends ProcedureOutput {
           distinct.
           sortBy(_.dataDate.desc).take(limit).
           map(o => (o.outputPK, o.dataDate))
-        bbByEPIDComposite <- BBbyEPIDComposite.query.filter(c => c.outputPK === output._1)
+        bbByEPIDComposite <- BBbyEPIDComposite.query.filter(c => (c.outputPK === output._1) && c.bbByCBCTPK.isDefined)
       } yield ((output._2, bbByEPIDComposite))
 
       val sorted = search.distinct.sortBy(_._1.desc)
@@ -176,7 +203,7 @@ object BBbyEPIDComposite extends ProcedureOutput {
           distinct.
           sortBy(_.dataDate).take(limit).
           map(o => (o.outputPK, o.dataDate))
-        bbByEPIDComposite <- BBbyEPIDComposite.query.filter(c => c.outputPK === output._1)
+        bbByEPIDComposite <- BBbyEPIDComposite.query.filter(c => (c.outputPK === output._1) && c.bbByCBCTPK.isDefined)
       } yield ((output._2, bbByEPIDComposite))
 
       val sorted = search.distinct.sortBy(_._1.asc)

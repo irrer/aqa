@@ -14,6 +14,7 @@ import org.aqa.db.Output
 import java.awt.geom.Point2D
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
+import org.aqa.db.BBbyCBCT
 
 /**
  * Generate and write HTML for EPID BB analysis.
@@ -25,6 +26,20 @@ object BBbyEPIDHTML {
   private val fullImagePrefix = "Full"
 
   def generateHtml(extendedData: ExtendedData, bbByEPIDList: Seq[Option[BBbyEPID]], composite: Either[String, BBbyEPIDComposite], runReq: BBbyEPIDRunReq, status: ProcedureStatus.Value) = {
+
+    val bbByCBCT: Option[BBbyCBCT] = {
+      if ((composite.isRight) && (composite.right.get.bbByCBCTPK.isDefined))
+        BBbyCBCT.get(composite.right.get.bbByCBCTPK.get)
+      else
+        None
+    }
+
+    val cbctOutput: Option[Output] = {
+      if (bbByCBCT.isDefined)
+        Output.get(bbByCBCT.get.outputPK)
+      else
+        None
+    }
 
     class ImageSet(index: Int) {
       val al = runReq.epidList(index)
@@ -95,30 +110,62 @@ object BBbyEPIDHTML {
         </span>
       }
 
+      val numbersWithCbct = {
+        val sp = WebUtil.nbsp + " " + WebUtil.nbsp + " " + WebUtil.nbsp
+
+        if (composite.isRight) {
+          if (cbctOutput.isDefined) {
+            val cbctTime = {
+              val timeText = new SimpleDateFormat("K:mm a").format(cbctOutput.get.dataDate.get)
+              "CBCT at " + timeText
+            }
+            <h3 title="Composite results.  Distance in mm between plan isocenter and position of BB compensated by CBCT (difference of EPID - CBCT)">
+              {
+                "With CBCT Offset (mm):" + fmt(composite.right.get.offsetAdjusted_mm.get) + sp +
+                  "X:" + fmt(composite.right.get.x_mm) + sp +
+                  "Y:" + fmt(composite.right.get.y_mm) + sp +
+                  "Z:" + fmt(composite.right.get.z_mm) + sp +
+                  cbctTime
+              }
+            </h3>
+          } else {
+            <div title="There was no corresponding CBCT.  CBCT must be taken earlier than the EPID and on the same day.">
+              <h3>No CBCT results corresponding to these EPID images.</h3>
+            </div>
+          }
+        } else {
+          <div title="Common causes are BB not found or there were not two images with perpendicular gantry angles.">
+            <h3>Error: { composite.left.get }</h3>
+          </div>
+
+        }
+      }
+
+      /*
       val numbers = {
         val sp = WebUtil.nbsp + " " + WebUtil.nbsp + " " + WebUtil.nbsp
         if (composite.isRight) {
           <h3 title="Composite results.  Distance in mm between plan isocenter and position of BB">
             {
+              val epid = composite.right.get
               "Total Offset(mm)" + fmt(composite.right.get.offset_mm) + sp +
-                "X:" + fmt(composite.right.get.x_mm) + sp +
-                "Y:" + fmt(composite.right.get.y_mm) + sp +
-                "Z:" + fmt(composite.right.get.z_mm)
+                "X:" + fmt(epid.x_mm) + sp +
+                "Y:" + fmt(epid.y_mm) + sp +
+                "Z:" + fmt(epid.z_mm)
             }
           </h3>
         } else {
-          <div title="Common causes are BB not found or there were not two images with perpendicular gantry angles.">
-            <h3>Error: { composite.left.get }</h3>
-          </div>
+          <div>  </div>
         }
       }
+      */
 
       val elem = {
         <div class="row">
-          <div class="col-md-6">
+          <div class="col-md-8">
             <h2 title="Procedure performed">EPID BB Location</h2>
             <br/>
-            { numbers }
+            { numbersWithCbct }
           </div>
         </div>
       }
@@ -147,9 +194,59 @@ object BBbyEPIDHTML {
       </a>
     }
 
+    val numberTable = {
+      if (bbByCBCT.isDefined && composite.isRight) {
+        val cbct = bbByCBCT.get
+        val epid = composite.right.get
+        def fmt(d: Double) = { <td>{ d.formatted("%12.6f").trim }</td> }
+
+        <div>
+          <h3><center>Raw Values</center></h3>
+          <table class="table table-responsive">
+            <thead>
+              <tr>
+                <th>Dimension</th>
+                <th>EPID</th>
+                <th>CBCT</th>
+                <th>PLAN</th>
+                <th>PLAN - CBCT</th>
+                <th>EPID - (PLAN - CBCT)</th>
+              </tr>
+            </thead>
+            <tr>
+              <td>X</td>
+              { fmt(epid.x_mm) }
+              { fmt(cbct.cbctX_mm) }
+              { fmt(cbct.rtplanX_mm) }
+              { fmt(cbct.rtplanX_mm - cbct.cbctX_mm) }
+              { fmt(epid.x_mm - (cbct.rtplanX_mm - cbct.cbctX_mm)) }
+            </tr>
+            <tr>
+              <td>Y</td>
+              { fmt(epid.y_mm) }
+              { fmt(cbct.cbctY_mm) }
+              { fmt(cbct.rtplanY_mm) }
+              { fmt(cbct.rtplanY_mm - cbct.cbctY_mm) }
+              { fmt(epid.y_mm - (cbct.rtplanY_mm - cbct.cbctY_mm)) }
+            </tr>
+            <tr>
+              <td>Z</td>
+              { fmt(epid.z_mm) }
+              { fmt(cbct.cbctZ_mm) }
+              { fmt(cbct.rtplanZ_mm) }
+              { fmt(cbct.rtplanZ_mm - cbct.cbctZ_mm) }
+              { fmt(epid.z_mm - (cbct.rtplanZ_mm - cbct.cbctZ_mm)) }
+            </tr>
+          </table>
+        </div>
+      } else
+        <div></div>
+    }
+
     def content = {
       <div class="row">
         { numberText }
+        { numberTable }
         { chart.chartReference }
         <table class="table table-responsive">
           <tr>

@@ -41,16 +41,16 @@ class BBbyEPIDChart(outputPK: Long) extends Logging {
 
   def chartReference = {
     val ciob = chartId
-    <div id={ ciob }>{ ciob }</div>
+    <div id={ ciob }></div>
   }
 
   private def chartOf(index: Int): C3ChartHistory = {
     val units = "mm"
     val dataToBeGraphed = Seq(
-      history.map(h => h.bbByEPIDComposite.offset_mm),
-      history.map(h => h.bbByEPIDComposite.x_mm),
-      history.map(h => h.bbByEPIDComposite.y_mm),
-      history.map(h => h.bbByEPIDComposite.z_mm))
+      history.map(h => h.bbByEPIDComposite.offsetAdjusted_mm.get),
+      history.map(h => h.bbByEPIDComposite.xAdjusted_mm.get),
+      history.map(h => h.bbByEPIDComposite.yAdjusted_mm.get),
+      history.map(h => h.bbByEPIDComposite.zAdjusted_mm.get))
 
     val colorList = Seq(
       new Color(102, 136, 187),

@@ -17,16 +17,16 @@ import edu.umro.ScalaUtil.Trace
 case class BBbyCBCT(
   bbByCBCTPK: Option[Long], // primary key
   outputPK: Long, // output primary key
-  rtplanSOPInstanceUID: String, // UID of rtplan
+  rtplanSOPInstanceUID: String, // UID of RTPLAN
   cbctSeriesInstanceUid: String, // series instance UID of CBCT
   offset_mm: Double, // distance between measured CBCT position and expected (plan) location (aka: positioning error)
   status: String, // termination status
-  rtplanX_mm: Double, // expected X position in rtplan
-  rtplanY_mm: Double, // expected Y position in rtplan
-  rtplanZ_mm: Double, // expected Z position in rtplan
-  cbctX_mm: Double, // expected X position in cbct
-  cbctY_mm: Double, // expected Y position in cbct
-  cbctZ_mm: Double // expected Z position in cbct
+  rtplanX_mm: Double, // expected X position in RTPLAN
+  rtplanY_mm: Double, // expected Y position in RTPLAN
+  rtplanZ_mm: Double, // expected Z position in RTPLAN
+  cbctX_mm: Double, // expected X position in CBCT
+  cbctY_mm: Double, // expected Y position in CBCT
+  cbctZ_mm: Double // expected Z position in CBCT
 ) {
 
   def insert: BBbyCBCT = {
@@ -209,4 +209,18 @@ object BBbyCBCT extends ProcedureOutput {
     result
   }
 
+  /**
+   * Get the procedure PK for the BBbyCBCT procedure.
+   */
+  def getProcedurePK: Option[Long] = {
+    Db.run(query.result.headOption) match {
+      case Some(cbct) => {
+        Output.get(cbct.outputPK) match {
+          case Some(output) => Some(output.procedurePK)
+          case _ => None
+        }
+      }
+      case _ => None
+    }
+  }
 }
