@@ -373,6 +373,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
         logger.info("Data is valid.  Preparing to analyze data.")
         val dtp = dateTimePatId(runReq.epidList)
 
+
         val sessDir = sessionDir(valueMap).get
         val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp._2, dtp._1)
         val input = inputOutput._1

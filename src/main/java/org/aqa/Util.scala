@@ -30,6 +30,7 @@ import java.io.ByteArrayOutputStream
 import edu.umro.ScalaUtil.DicomUtil
 import javax.vecmath.Point3d
 import edu.umro.ScalaUtil.Trace
+import java.util.TimeZone
 
 object Util extends Logging {
 
@@ -213,7 +214,7 @@ object Util extends Logging {
 
     val dateTimePairs = dateTimeTagPairList.map(dt => getTimeAndDate(attributeList, dt._1, dt._2))
 
-    val dateList = (AcquisitionDateTime +: dateTimePairs).filter(dt => dt.isDefined).map(dtd => dtd.get).distinct
+    val dateList = (AcquisitionDateTime +: dateTimePairs).flatten.distinct.map(dt => adjustDicomDateByLocalTimeZone(dt))
 
     (dateList, PatientID)
   }
@@ -267,6 +268,22 @@ object Util extends Logging {
       else Some(pdt._2.distinct.sortWith(bestPatId).head)
     }
     new DateTimeAndPatientId(dateTime, patientId)
+  }
+
+  /**
+   * Given a DICOM date/time, adjust it by the local time zone amount.
+   */
+  def adjustDicomDateByLocalTimeZone(date: Date) = {
+    val tz = TimeZone.getDefault
+    new Date(date.getTime - (tz.getRawOffset + tz.getDSTSavings))
+  }
+
+  /**
+   * Given a DICOM date/time, adjust it by the local time zone amount.
+   */
+  def adjustDicomDateByLocalTimeZone(ms: Long) = {
+    val tz = TimeZone.getDefault
+    ms - (tz.getRawOffset + tz.getDSTSavings)
   }
 
   /**

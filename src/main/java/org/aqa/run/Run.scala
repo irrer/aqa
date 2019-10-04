@@ -482,7 +482,7 @@ object Run extends Logging {
         userPK,
         new Timestamp(startDate.getTime),
         finishDate = None,
-        dataDate = for (a <- acquisitionDate) yield new Timestamp(a),
+        dataDate = acq,
         analysisDate = None,
         machinePK = machine.machinePK,
         status = ProcedureStatus.running.toString,
