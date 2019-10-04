@@ -217,4 +217,21 @@ object BBbyEPIDComposite extends ProcedureOutput {
     result
   }
 
+  case class DailyDataSet(epid: BBbyEPIDComposite, cbct: BBbyCBCT, machine: Machine, output: Output);
+
+  def getReportingDataSet(date: Date, institutionPK: Long): Seq[DailyDataSet] = {
+
+    val beginDate = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(date).replaceAll("T.*", "T00:00:00")).getTime)
+    val endDate = new Timestamp(beginDate.getTime + (24 * 60 * 60 * 1000))
+
+    val search = for {
+      output <- Output.query.filter(o => o.dataDate.isDefined && (o.dataDate >= beginDate) && (o.dataDate < endDate))
+      bbByEPIDComposite <- BBbyEPIDComposite.query.filter(c => (c.outputPK === output.outputPK) && c.bbByCBCTPK.isDefined)
+      machine <- Machine.query.filter(m => (m.machinePK === output.machinePK))
+      cbct <- BBbyCBCT.query.filter(c => c.bbByCBCTPK === bbByEPIDComposite.bbByCBCTPK)
+    } yield (bbByEPIDComposite, cbct, machine, output)
+
+    val list = Db.run(search.distinct.result)
+    list.map(l => new DailyDataSet(l._1, l._2, l._3, l._4))
+  }
 }

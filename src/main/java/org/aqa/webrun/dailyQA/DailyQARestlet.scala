@@ -17,6 +17,8 @@ import org.aqa.db.BBbyCBCT
 import org.aqa.db.BBbyEPID
 import org.aqa.db.Output
 import org.aqa.db.Machine
+import java.text.SimpleDateFormat
+import org.aqa.db.BBbyEPIDComposite
 
 /**
  * Support for generating JS scripts on request.
@@ -41,21 +43,24 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
   private val prevButton = makeButton("Previous", false, ButtonType.BtnDefault)
   private val refreshButton = makeButton("Refresh", false, ButtonType.BtnDefault)
   private val nextButton = makeButton("Next", false, ButtonType.BtnDefault)
-  private val allInstitutions = new WebInputCheckbox("Show All Institutions", true, Some("Check to see data from all institions."), 3, 0)
 
   val buttonList: WebRow = List(prevButton, refreshButton, nextButton)
 
-  //private val dateField = new WebInputDatePicker("Date", 5, 1) // TODO just the date
-  private val dateField = new WebInputDateTimePicker("Date", 5, 1) // TODO just the date
+  // let user choose date to display
+  private val dateField = new WebInputDatePicker("Date", 5, 1)
 
+  // bulk of the displayed information
   private val report = new WebPlainText("report", false, 10, 1, makeReport _)
+  // override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
 
-  private def formCreate(valueMap: ValueMapT) = new WebForm(pathOf, List(dateField ++ List(buttonList, allInstitutions), List(report)))
+  private def formCreate(valueMap: ValueMapT) = new WebForm(pathOf, List(dateField ++ List(buttonList), List(report)))
 
   private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
     val value = valueMap.get(button.label)
     value.isDefined && value.get.toString.equals(button.label)
   }
+
+  private val dateFormat = new SimpleDateFormat("EEE MMM dd HH:mm")
 
   private def makeReport(valueMap: ValueMapT): Elem = {
 
@@ -67,13 +72,6 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
       }
     }
 
-    val isWhiteListed = {
-      user match {
-        case Some(u) => userIsWhitelisted(u.id)
-        case _ => false
-      }
-    }
-
     val institution: Option[Institution] = {
       user match {
         case Some(u) => Institution.get(u.institutionPK)
@@ -81,48 +79,52 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
       }
     }
 
-    val showAllInst: Boolean = valueMap.get(allInstitutions.label) match {
-      case Some(value) => value.equalsIgnoreCase(true.toString)
-      case _ => false
-    }
-
-    case class Col(name: String, title: String, toElem: (Pair) => Elem) {
+    case class Col(name: String, title: String, toElem: (DataSet) => Elem) {
       def toHeader = <th title={ title }>{ name }</th>
     }
 
-    case class Pair(cbct: Option[BBbyCBCT], epid: Option[BBbyEPID]);
+    case class DataSet(epid: BBbyEPIDComposite, cbct: BBbyCBCT, machine: Machine, output: Output);
 
-    def getMachine(pair: Pair): Elem = {
-      def getMachId(outputPK: Long): String = {
-        val output = Output.get(outputPK).get
-        val mach = Machine.get(output.machinePK.get).get
-        mach.id
-      }
+    def colMachine(dataSet: DataSet): Elem = {
+      wrapAlias(<div title="Machine Name">{ dataSet.machine.id }</div>)
+    }
 
-      def machHtml(outputPK: Long): Elem = {
-        wrapAlias(<div title="Machine Name">{ getMachId(outputPK) }</div>)
-      }
+    def colPatient(dataSet: DataSet): Elem = { // TODO
+      <div>Patient</div>
+    }
 
-      val elem = (pair.cbct, pair.epid) match {
-        case (Some(c), _) => machHtml(c.outputPK)
-        case (_, Some(e)) => machHtml(e.outputPK)
-        case _ => <div title="Could not determine source machine">Unknown</div>
-      }
-      elem
+    def colDateTime(dataSet: DataSet): Elem = {
+      <div>{ dateFormat.format(dataSet.output.dataDate.get) }</div>
+    }
+
+    def colXYZ(dataSet: DataSet): Elem = { // TODO
+      <div>{ "Helloooooo" }</div>
     }
 
     val colList: List[Col] = List(
-      new Col("Machine", "Name of treatment machine", getMachine _)
+      new Col("Machine", "Name of treatment machine", colMachine _),
+      new Col("Patient", "Name of test patient", colPatient _),
+      new Col("Date+Time", "Time of EPID acquisition", colDateTime _)
     // TODO NEXT: make more columns.  RE: Justin's email (flagged) from Sep 9.
     )
 
-    def pairToRow(pair: Pair) = {
-      colList.map(col => col.toElem(pair))
+    def dataSetToRow(dataSet: DataSet) = {
+      colList.map(col => col.toElem(dataSet))
     }
 
-    def getPairList: List[Pair] = {
+    def getDataSetList: List[DataSet] = {
+      val date = {
+        if (valueMap.get(dateField.label).isDefined)
+          dateField.dateFormat.parse(valueMap(dateField.label))
+        else
+          dateField.dateFormat.parse(dateField.dateFormat.format(new Date)) // today rounded off to midnight
+      }
+
+      // val list = BBbyEPIDComposite.getReportingDataSet(date, institution.get.institutionPK.get)  // TODO
+      val fakeDate = Util.standardDateFormat.parse("2019-05-24T00:00:00")
+      val list = BBbyEPIDComposite.getReportingDataSet(fakeDate, 1)
       //??? // TODO
-      List[Pair]()
+      List[DataSet]()
     }
 
     val content = {
@@ -130,7 +132,7 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
         <div class="col-md-10 col-md-offset-1">
           <table class="table table-responsive">
             <thead><tr>{ colList.map(col => col.toHeader) }</tr></thead>
-            { getPairList.map(pair => pairToRow(pair)) }
+            { getDataSetList.map(dataSet => dataSetToRow(dataSet)) }
           </table>
         </div>
       </div>
@@ -148,11 +150,7 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
     /** Midnight of current date.  Facilitates searching the entire day. */
     def now: Date = {
       val text = Util.standardDateFormat.format((new Date).getTime)
-      Trace.trace(text + " ==> " + text.replaceAll("T.*", "T00:00:00")) // TODO rm
-      val tt = text.replaceAll("T.*", "T00:00:00") // TODO rm
-      val jj = Util.standardDateFormat.parse(tt) // TODO rm
       val date = Util.standardDateFormat.parse(text.replaceAll("T.*", "T00:00:00"))
-      Trace.trace(text + " ==> " + date) // TODO rm
       date
     }
 
