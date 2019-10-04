@@ -468,7 +468,7 @@ object Run extends Logging {
 
     inputWithoutDir.updateDirectory(inputDir)
     val input = Input.get(inputWithoutDir.inputPK.get).get // update the directory
-    input.putFilesInDatabaseFuture(inputDir) // TODO this takes a long time.  Do in separate thread?
+    input.putFilesInDatabaseFuture(inputDir)
 
     val outputDir = new File(inputDir, outputSubdirNamePrefix + Util.timeAsFileName(startDate))
     outputDir.mkdirs // create output directory
@@ -482,8 +482,8 @@ object Run extends Logging {
         userPK,
         new Timestamp(startDate.getTime),
         finishDate = None,
-        dataDate = for (a <- acquisitionDate) yield new Timestamp(a), // TODO get from output.xml file
-        analysisDate = None, // TODO get from output.xml file
+        dataDate = for (a <- acquisitionDate) yield new Timestamp(a),
+        analysisDate = None,
         machinePK = machine.machinePK,
         status = ProcedureStatus.running.toString,
         dataValidity = DataValidity.valid.toString)
