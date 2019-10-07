@@ -16,6 +16,7 @@ import com.pixelmed.dicom.ValueRepresentation
 import edu.umro.util.UMROGUID
 import edu.umro.ScalaUtil.Trace
 import com.pixelmed.dicom.TagFromName
+import org.aqa.Util
 
 /**
  * Support the anonymization of DICOM by providing a way to store previously anonymized values in the database.
@@ -64,6 +65,12 @@ case class DicomAnonymous(
     val vReal = AnonymizeUtil.encryptWithNonce(institutionPK, value_real)
     this.copy(value_real = vReal)
   }
+
+  /**
+   * Alias of this that gets presented to a user that is not allowed to see the real value.
+   */
+  def aliasOf(institionName: String): String = Util.textToId(institionName + " " + dicomAnonymousPK.get + " " + attributeTag)
+  //def aliasOf: String = aliasOf(Institution.get(institutionPK).get.name)
 }
 
 object DicomAnonymous extends Logging {
@@ -217,6 +224,38 @@ object DicomAnonymous extends Logging {
 
     val action = {
       DicomAnonymous.query.filter(da => (da.institutionPK === institutionPK) && da.attributeHash.inSet(hashSet))
+    }
+
+    // show database statement
+    // action.result.statements.foreach(println)
+
+    val list = Db.run(action.result)
+    list
+  }
+
+  /**
+   * Get previously anonymized values by tag for all institutions.
+   */
+  def getAttributesByTag(tagList: Seq[AttributeTag]): Seq[DicomAnonymous] = {
+    val tagSet = tagList.toSet.map(tag => formatAnonAttributeTag(tag))
+    val action = {
+      DicomAnonymous.query.filter(da => da.attributeTag.inSet(tagSet))
+    }
+
+    // show database statement
+    // action.result.statements.foreach(println)
+
+    val list = Db.run(action.result)
+    list
+  }
+
+  /**
+   * Get previously anonymized values by tag for the given institution.
+   */
+  def getAttributesByTag(institutionPK: Long, tagList: Seq[AttributeTag]): Seq[DicomAnonymous] = {
+    val tagSet = tagList.toSet.map(tag => formatAnonAttributeTag(tag))
+    val action = {
+      DicomAnonymous.query.filter(da => (da.institutionPK === institutionPK) && da.attributeTag.inSet(tagSet))
     }
 
     // show database statement

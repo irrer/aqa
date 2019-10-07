@@ -34,7 +34,7 @@ object DailyQARestlet {
 
 class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
 
-  private val userPkTag = "userPkTag"
+  private def fmt(d: Double) = d.formatted("%10.3f").trim
 
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
     new FormButton(name, 2, 0, subUrl, pathOf, buttonType)
@@ -64,13 +64,7 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
 
   private def makeReport(valueMap: ValueMapT): Elem = {
 
-    val user: Option[User] = {
-      valueMap.get(userPkTag) match {
-        case Some(userPkText) =>
-          User.get(userPkText.toLong)
-          None
-      }
-    }
+    val user = getUser(valueMap)
 
     val institution: Option[Institution] = {
       user match {
@@ -79,40 +73,52 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
       }
     }
 
-    case class Col(name: String, title: String, toElem: (DataSet) => Elem) {
+    case class Col(name: String, title: String, toElem: (BBbyEPIDComposite.DailyDataSet) => Elem) {
       def toHeader = <th title={ title }>{ name }</th>
     }
 
-    case class DataSet(epid: BBbyEPIDComposite, cbct: BBbyCBCT, machine: Machine, output: Output);
-
-    def colMachine(dataSet: DataSet): Elem = {
-      wrapAlias(<div title="Machine Name">{ dataSet.machine.id }</div>)
+    def colMachine(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+      <td title="Machine Name">{ wrapAlias(dataSet.machine.id) }</td>
     }
 
-    def colPatient(dataSet: DataSet): Elem = { // TODO
-      <div>Patient</div>
+    def colPatient(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = { // TODO
+      <td>Patient</td>
     }
 
-    def colDateTime(dataSet: DataSet): Elem = {
-      <div>{ dateFormat.format(dataSet.output.dataDate.get) }</div>
+    def colDateTime(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+      <td>{ dateFormat.format(dataSet.output.dataDate.get) }</td>
     }
 
-    def colXYZ(dataSet: DataSet): Elem = { // TODO
-      <div>{ "Helloooooo" }</div>
+    def colCbctX(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+      val x = dataSet.cbct.cbctX_mm - dataSet.cbct.rtplanX_mm
+      <td>{ fmt(x) }</td>
+    }
+
+    def colCbctY(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+      val y = dataSet.cbct.cbctY_mm - dataSet.cbct.rtplanY_mm
+      <td>{ fmt(y) }</td>
+    }
+
+    def colCbctZ(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+      val z = dataSet.cbct.cbctZ_mm - dataSet.cbct.rtplanZ_mm
+      <td>{ fmt(z) }</td>
     }
 
     val colList: List[Col] = List(
       new Col("Machine", "Name of treatment machine", colMachine _),
       new Col("Patient", "Name of test patient", colPatient _),
-      new Col("Date+Time", "Time of EPID acquisition", colDateTime _)
+      new Col("Date+Time", "Time of EPID acquisition", colDateTime _),
+      new Col("X CBCT-PLAN mm", "(plan X) - (plan X) in mm", colCbctX _),
+      new Col("Y CBCT-PLAN mm", "(plan Y) - (plan Y) in mm", colCbctY _),
+      new Col("Z CBCT-PLAN mm", "(plan Z) - (plan Z) in mm", colCbctZ _)
     // TODO NEXT: make more columns.  RE: Justin's email (flagged) from Sep 9.
     )
 
-    def dataSetToRow(dataSet: DataSet) = {
-      colList.map(col => col.toElem(dataSet))
+    def dataSetToRow(dataSet: BBbyEPIDComposite.DailyDataSet) = {
+      <tr>{ colList.map(col => col.toElem(dataSet)) }</tr>
     }
 
-    def getDataSetList: List[DataSet] = {
+    def getDataSetList: Seq[BBbyEPIDComposite.DailyDataSet] = {
       val date = {
         if (valueMap.get(dateField.label).isDefined)
           dateField.dateFormat.parse(valueMap(dateField.label))
@@ -120,11 +126,8 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
           dateField.dateFormat.parse(dateField.dateFormat.format(new Date)) // today rounded off to midnight
       }
 
-      // val list = BBbyEPIDComposite.getReportingDataSet(date, institution.get.institutionPK.get)  // TODO
-      val fakeDate = Util.standardDateFormat.parse("2019-05-24T00:00:00")
-      val list = BBbyEPIDComposite.getReportingDataSet(fakeDate, 1)
-      //??? // TODO
-      List[DataSet]()
+      val list = BBbyEPIDComposite.getReportingDataSet(date, institution.get.institutionPK.get)
+      list
     }
 
     val content = {
@@ -132,7 +135,9 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
         <div class="col-md-10 col-md-offset-1">
           <table class="table table-responsive">
             <thead><tr>{ colList.map(col => col.toHeader) }</tr></thead>
-            { getDataSetList.map(dataSet => dataSetToRow(dataSet)) }
+            {
+              getDataSetList.map(dataSet => dataSetToRow(dataSet))
+            }
           </table>
         </div>
       </div>
@@ -163,13 +168,7 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
   }
 
   private def show(response: Response, valueMap: ValueMapT) = {
-    val userPkValue = {
-      getUser(response.getRequest) match {
-        case Some(user) => Map((userPkTag, user.userPK.get.toString))
-        case _ => Map[String, String]()
-      }
-    }
-    formCreate(valueMap).setFormResponse(valueMap ++ userPkValue, styleNone, DailyQARestlet.pageTitle, response, Status.SUCCESS_OK)
+    formCreate(valueMap).setFormResponse(valueMap, styleNone, DailyQARestlet.pageTitle, response, Status.SUCCESS_OK)
     Trace.trace(getSelectedDate(valueMap))
   }
 

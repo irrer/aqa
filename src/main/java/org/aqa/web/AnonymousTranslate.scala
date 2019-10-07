@@ -33,6 +33,8 @@ import org.aqa.db.Institution
 import org.aqa.AnonymizeUtil
 import org.aqa.db.Machine
 import org.aqa.db.User
+import com.pixelmed.dicom.TagFromName
+import org.aqa.db.DicomAnonymous
 
 object AnonymousTranslate {
   private val path = new String((new AnonymousTranslate).pathOf)
@@ -41,7 +43,7 @@ object AnonymousTranslate {
 
   /**
    * List of special characters that, when constructing a JavaScript string, have to be properly escaped.  The
-   * map is between the character in the original string and the corresponding string it must be replaced with.  
+   * map is between the character in the original string and the corresponding string it must be replaced with.
    */
   private val specialCharMap = {
     List(
@@ -132,6 +134,23 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
     userList.map(user => doUser(user)).flatten
   }
 
+  private val attributesToTranslate = Seq(TagFromName.PatientName, TagFromName.DeviceSerialNumber)
+
+  private def getDicomAttributes(institutionPK: Long, isWhitelisted: Boolean): Seq[Translate] = {
+    val dicomAnonList: Seq[DicomAnonymous] = {
+      if (isWhitelisted) DicomAnonymous.getAttributesByTag(attributesToTranslate)
+      else DicomAnonymous.getAttributesByTag(institutionPK, attributesToTranslate)
+    }
+
+    val instMap = Institution.list.map(inst => (inst.institutionPK.get, inst.name)).toMap
+
+    dicomAnonList.map(da => new Translate(
+      da.institutionPK,
+      da.aliasOf(instMap(da.institutionPK)),
+      da.value_real,
+      "DICOM Attr " + da.attributeTag))
+  }
+
   private def getJson(list: Seq[Translate], response: Response) = {
     val jsonTable = list.map(t => t.toJson).mkString("[\n", ",\n", "\n]\n")
     response.setEntity(jsonTable, MediaType.APPLICATION_JSON)
@@ -165,7 +184,10 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
     WebUtil.getUser(request) match {
       case Some(user) => {
         val isWhitelisted = WebUtil.userIsWhitelisted(request)
-        getInstitution(user.institutionPK, isWhitelisted) ++ getMachine(user.institutionPK, isWhitelisted) ++ getUser(user.institutionPK, isWhitelisted)
+        getInstitution(user.institutionPK, isWhitelisted) ++
+          getMachine(user.institutionPK, isWhitelisted) ++
+          getUser(user.institutionPK, isWhitelisted) ++
+          getDicomAttributes(user.institutionPK, isWhitelisted)
       }
       case _ => Seq[Translate]()
     }
