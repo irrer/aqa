@@ -257,7 +257,7 @@ object WebUtil extends Logging {
     if (requestIsUpload(request))
       saveFileList(request)
     else
-      ensureSessionId(parseOriginalReference(request) ++ parseForm(new Form(request.getEntity)))
+      ensureSessionId(parseOriginalReference(request) ++ parseForm(new Form(request.getEntity)) ++ userToValueMap(request))
   }
 
   def simpleWebPage(content: Elem, status: Status, title: String, response: Response) = {
@@ -1119,10 +1119,21 @@ object WebUtil extends Logging {
     val cr = request.getChallengeResponse
     if (cr == null) None
     else {
-      val u = CachedUser.get(cr.getIdentifier) // backwards compatible with non-anonymized database
-      if (u.isDefined) u
-      else
-        CachedUser.get(cr.getIdentifier)
+      val u = CachedUser.get(cr.getIdentifier)
+      u
+    }
+  }
+
+  /**
+   * Given a value map, extract the user from it.
+   */
+  def getUser(valueMap: ValueMapT): Option[User] = {
+    val v = valueMap.get(userIdRealTag)
+    if (v.isEmpty)
+      None
+    else {
+      val u = CachedUser.get(v.get)
+      u
     }
   }
 
@@ -1150,6 +1161,21 @@ object WebUtil extends Logging {
    */
   def userIsWhitelisted(response: Response): Boolean = {
     userIsWhitelisted(response.getRequest)
+  }
+
+  /** Tag that identifies the user's real ID in the value map.  If not present, then the user has not logged in. */
+  val userIdRealTag = "userIdReal"
+
+  /**
+   * If the user is logged in, then create a value map that contains their real ID.
+   */
+  def userToValueMap(request: Request): ValueMapT = {
+    val cr = request.getChallengeResponse
+    if (cr == null) emptyValueMap
+    else {
+      val userId = request.getChallengeResponse.getIdentifier.toLowerCase.trim
+      Seq((userIdRealTag, userId)).toMap
+    }
   }
 
   def getUserIdOrDefault(request: Request, dflt: String): String = {
