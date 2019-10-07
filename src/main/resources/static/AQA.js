@@ -7,6 +7,12 @@ var baseUrl = 'empty';
 var monthList = [ 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ];
 var standardDateFormat = '%Y-%m-%dT%H:%M:%S';
 
+/* Wait this number of ms between refreshing the alias values. */
+var aliasRefreshTime = 500;
+/* Try refreshing the alias values this many times. */
+var refreshAliasCount = 4;
+
+
 function formatDate(date) { 
   return (date.getYear() + 1900) + ' ' + monthList[date.getMonth()] + ' ' + date.getDate();
 };
@@ -16,33 +22,33 @@ function formatTime(date) {
 };
       
 function watchChecksum() {
-	$.ajax({
-		url : baseUrl,
-		success : function(result) {
-			if (checksum == result) {
-				setTimeout(watchChecksum, WebRefreshTime);
-			} else {
-				location.reload();
-			}
-		},
-		error : function(result) {
-			setTimeout(watchChecksum, WebRefreshTime);
-		}
-	});
+  $.ajax({
+    url : baseUrl,
+    success : function(result) {
+      if (checksum == result) {
+        setTimeout(watchChecksum, WebRefreshTime);
+      } else {
+        location.reload();
+      }
+    },
+    error : function(result) {
+      setTimeout(watchChecksum, WebRefreshTime);
+    }
+  });
 }
 
 function reloadOn(outputPK, initialChecksum) {
-	baseUrl = "/ViewOutput?outputPK=" + outputPK + "&checksum="
-			+ initialChecksum;
-	checksum = initialChecksum;
-	setTimeout(watchChecksum, WebRefreshTime);
+  baseUrl = "/ViewOutput?outputPK=" + outputPK + "&checksum="
+      + initialChecksum;
+  checksum = initialChecksum;
+  setTimeout(watchChecksum, WebRefreshTime);
 }
 
 $(document).ready(function() {
-	$.ajaxSetup({
-		cache : false
-	});
-	jQuery('time.timeago').timeago();
+  $.ajaxSetup({
+    cache : false
+  });
+  jQuery('time.timeago').timeago();
 });
 
 
@@ -66,10 +72,11 @@ $(document).ready(function() {
 var jsonhttp = new XMLHttpRequest();
 var aliasToRealUrl = "/AnonymousTranslate/translateTable.json";  // defines the URL for getting the alias to real table
 
+var aliasToRealList;
 jsonhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
-      var aliasToRealList = JSON.parse(this.responseText);
-      translateAliases(aliasToRealList);
+      aliasToRealList = JSON.parse(this.responseText);
+      translateAliases();
   }
 };
 
@@ -81,7 +88,7 @@ if (window.location.pathname.toLowerCase().indexOf("/static/") == -1) {
   jsonhttp.send();
 }
 
-function translateAliases(aliasToRealList) {
+function translateAliases() {
   var publicList = $( "[aqaalias]" ); // defines the attribute for showing real names
 
   var arMap = new Map();
@@ -109,7 +116,6 @@ function translateAliases(aliasToRealList) {
 
     var real = arMap.get(alias);
     if (real != null) {
-      
       if (isInputText) {
           publicList[p].setAttribute("value", real);
       } else {
@@ -129,28 +135,9 @@ function translateAliases(aliasToRealList) {
     
   }
 
-}
-
-/*
-var furl = "/static/foo.js";
-var jh = new XMLHttpRequest();
-var ChartId_27 = "fillmeup";
-
-jh.open("GET", url, true);
-jh.send();
-
-jh.onreadystatechange = function() {
-  if (this.readyState == 4 && this.status == 200) {
-    var text = this.responseText;
-    var parsedText = JSON.parse(text);
-    ChartId_27 = c3.generate(parsedText);
-    var good = 2;
+  if (refreshAliasCount > 0) {
+    refreshAliasCount = refreshAliasCount - 1;
+    setTimeout(translateAliases, aliasRefreshTime);
   }
-};
 
-$.ajax({
-  url: furl,
-  dataType: "script",
-  success: success
-});
-*/
+}
