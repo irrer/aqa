@@ -69,7 +69,7 @@ case class DicomAnonymous(
   /**
    * Alias of this that gets presented to a user that is not allowed to see the real value.
    */
-  def aliasOf(institionName: String): String = Util.textToId(institionName + " " + dicomAnonymousPK.get + " " + attributeTag)
+  def aliasOf(institionName: String): String = Util.textToId(institionName + " " + attributeTag + " " + dicomAnonymousPK.get)
   //def aliasOf: String = aliasOf(Institution.get(institutionPK).get.name)
 }
 

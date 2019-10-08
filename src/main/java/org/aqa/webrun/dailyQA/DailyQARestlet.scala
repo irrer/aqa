@@ -19,6 +19,8 @@ import org.aqa.db.Output
 import org.aqa.db.Machine
 import java.text.SimpleDateFormat
 import org.aqa.db.BBbyEPIDComposite
+import org.aqa.db.DicomSeries
+import com.pixelmed.dicom.TagFromName
 
 /**
  * Support for generating JS scripts on request.
@@ -82,7 +84,15 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
     }
 
     def colPatient(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = { // TODO
-      <td>Patient</td>
+
+      val patientName: Elem = DicomSeries.getBySeriesInstanceUID(dataSet.epid.epidSeriesInstanceUID).headOption match {
+        case Some(ds) => {
+          val pn = ds.attributeListList.head.get(TagFromName.PatientName).getSingleStringValueOrEmptyString
+          <td>{ wrapAlias(pn) }</td>
+        }
+        case _ => <td>Unknown</td>
+      }
+      patientName
     }
 
     def colDateTime(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {

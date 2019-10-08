@@ -131,6 +131,14 @@ object DicomSeries extends Logging {
     list
   }
 
+  def getBySeriesInstanceUID(seriesInstanceUID: String): Seq[DicomSeries] = {
+    val action = for {
+      dicomSeries <- query if ((dicomSeries.seriesInstanceUID === seriesInstanceUID))
+    } yield (dicomSeries)
+    val list = Db.run(action.result)
+    list
+  }
+
   def delete(dicomSeriesPK: Long): Int = {
     val q = query.filter(_.dicomSeriesPK === dicomSeriesPK)
     val action = q.delete
