@@ -1,43 +1,50 @@
 <?xml version='1.0' encoding='utf-8'?>
 
-<!-- Development Configuration for AQA.
-Note that when building a package for release, the Maven build process uses the AQAConfigProd.xml file. -->
+<!-- Production Configuration for AQA -->
 
 <AQAConfig>
+
+    <!-- Note concerning the attribute HostIp='******'
+         
+         If given, then only that host will use that value, and that host will not use any alternative value.
+         
+         If not given, then it is considered the default and any host may use that value.
+     -->
+
     <!-- Database parameters. -->
-    <!-- <SlickDbsDefaultDbUrl HostIp='141.214.125.10'>jdbc:postgresql://141.214.125.10:5432/AQATest&amp;user=postgres&amp;password=</SlickDbsDefaultDbUrl> -->
+    <SlickDbsDefaultDbUrl HostIp='172.31.43.98'>jdbc:postgresql://aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA?sslmode=require</SlickDbsDefaultDbUrl>
     <SlickDbsDefaultDbUrl HostIp='141.214.125.209'>jdbc:postgresql://141.214.125.209:5432/AQATest</SlickDbsDefaultDbUrl>
+    <SlickDbsDefaultDbUrl>jdbc:postgresql://aqatest.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA?sslmode=require</SlickDbsDefaultDbUrl>
+    <SlickDbsDefaultDbUser>aqa</SlickDbsDefaultDbUser>
+    <SlickDbsDefaultDbPassword>Kwalitee_1</SlickDbsDefaultDbPassword>
     <SlickDbsDefaultDriver>slick.driver.PostgresDriver$</SlickDbsDefaultDriver>
     <SlickDbsDefaultDbDriver>org.postgresql.Driver</SlickDbsDefaultDbDriver>
-    <SlickDbsDefaultDbUser>postgres</SlickDbsDefaultDbUser>
-    <SlickDbsDefaultDbPassword>postgresjim</SlickDbsDefaultDbPassword>
 
-    <!-- Port number for the Secure ReST service.   Port 443 is the default for HTTPS.
-    If this is missing or commented out, then the server will instead use HTTP on port 80.   Alternately,
-    if this is specified, then the JavaKeyStoreFileList and JavaKeyStorePassword must be given. -->
-    <!-- <HTTPSPort>9443</HTTPSPort> -->
-
-    <!-- Location of file that contains Java Key Store for HTTPS.  If multiple names are given, then they are
-    each tried in the order given until a readable file is found. -->
-    <JavaKeyStoreFileList>
-        <JavaKeyStoreFile>keystore.jks</JavaKeyStoreFile>
-        <JavaKeyStoreFile>C:\Program Files\UMRO\keystore.jks</JavaKeyStoreFile>
-        <JavaKeyStoreFile>src\main\resources\keystore.jks</JavaKeyStoreFile>
-    </JavaKeyStoreFileList>
-
-    <!-- The password to access the Java Key Store file. -->
-    <JavaKeyStorePassword>9c067233b07c7b04025989a197fad9b12cf4c19006678e2b18b121289bd1635a2d395a603122a6e6
-    </JavaKeyStorePassword> <!-- rodicom11dev -->
-    <!-- <JavaKeyStorePassword>44d18166c66bed60b6394e6625c63dea713dbe465ddc960a7cd109514bc0d2bd</JavaKeyStorePassword> -->     <!-- irrer -->
+    <!-- Message that is shown across the entire site for branding, licensing, or legal restrictions.  The
+    contents are interpreted as HTML and displayed on all pages. -->
+    <SiteMessage><![CDATA[<h5 title="This software has not been approved for clinical use.">Not for Clinical Use</h5>]]></SiteMessage>
+ 
+    <!-- This flag exists as a way to gently transition from non-anonymized to anonymized.  In the future
+    it should be phased out. 
+    
+    At start up, the database is examined for any items that need to be anonymized, and if they exist,
+    they are listed in the log.  If this flag is true, then those items are anonymized.  If false, then no
+    changes to the database are made.   If specified, must be either true or false.  If not specified, then
+    assume false.  If neither true or false (invalid boolean) then false is assumed.
+    
+    Also, if the credential files do not exist, they will be created, whether or not this flag is true or false,
+    but this can be undone by deleting them.
+    -->
+    <ConvertToAnonymousDatabase>true</ConvertToAnonymousDatabase>
 
     <!-- Directory containing executables and configuration files to run procedures. -->
     <ProgramDir>C:\Program Files\AQA</ProgramDir>
 
     <!-- Directory containing procedures' executable code. -->
-    <ProcedureDir>D:\AQA_Procedures</ProcedureDir>
+    <ProcedureDir>C:\Program Files\AQA\AQA_Procedures</ProcedureDir>
 
     <!-- Directory containing input and output data consumed by and produced by procedures. -->
-    <DataDir>D:\AQA_Data</DataDir>
+    <DataDir>C:\Program Files\AQA\AQA_Data</DataDir>
 
     <!-- Authentication timeout.  Number of seconds for a user id+password pair to be cached before re-checking with database. -->
     <AuthenticationTimeout>7200.0</AuthenticationTimeout>
@@ -178,14 +185,12 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- When creating a custom plan, override the following attributes with their corresponding values. -->
     <Phase2PlanAttributeOverrideList>
-    <!--
         <Phase2PlanAttributeOverride Name='TableTopEccentricAngle'       Value='0'   />
         <Phase2PlanAttributeOverride Name='TableTopLateralPosition'      Value='0'   />
         <Phase2PlanAttributeOverride Name='TableTopLongitudinalPosition' Value='200' />
         <Phase2PlanAttributeOverride Name='TableTopPitchAngle'           Value='0'   />
         <Phase2PlanAttributeOverride Name='TableTopRollAngle'            Value='0'   />
         <Phase2PlanAttributeOverride Name='TableTopVerticalPosition'     Value='-60' />
-    -->
     </Phase2PlanAttributeOverrideList>
     
 
@@ -209,14 +214,11 @@ Note that when building a package for release, the Maven build process uses the 
         <MaintenanceCategory Name='Mechanical Jaws' Color='#aa3322'>Maintenance performed on jaws
         </MaintenanceCategory>
         <MaintenanceCategory Name='Mechanical Collimator' Color='#aa3322'>Maintenance performed on
-            Collimator
-        </MaintenanceCategory>
+            Collimator</MaintenanceCategory>
         <MaintenanceCategory Name='Mechanical Gantry' Color='#aa3322'>Maintenance performed on
-            Gantry
-        </MaintenanceCategory>
+            Gantry</MaintenanceCategory>
         <MaintenanceCategory Name='Electrical' Color='#aa3322'>Maintenance performed due to
-            electrical issue(s)
-        </MaintenanceCategory>
+            electrical issue(s)</MaintenanceCategory>
     </MaintenanceCategoryList>
 
     <!-- Beam name for flood field. -->
@@ -355,32 +357,38 @@ Note that when building a package for release, the Maven build process uses the 
     is as large or larger than the wedge, it must be flattened (not FFF), and must have the same beam energy.
     -->
     <WedgeBeamList>
-        <WedgeBeam BeamName="J18C270EDW60-6X">
-            <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
-            <BackgroundBeamName>J18G270</BackgroundBeamName>
-            <BackgroundBeamName>J18G90</BackgroundBeamName>
-            <BackgroundBeamName>Flood 6X</BackgroundBeamName>
-        </WedgeBeam>
+      <WedgeBeam BeamName="J18C270EDW60-6X">
+        <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
+        <BackgroundBeamName>J18G270</BackgroundBeamName>
+        <BackgroundBeamName>J18G90</BackgroundBeamName>
+        <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+      </WedgeBeam>
 
-        <WedgeBeam BeamName="J18C270EDW60-">  <!-- This is really a duplicate of J18C270EDW60-6X but is here because sometimes the beam name is truncated. -->
-            <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
-            <BackgroundBeamName>J18G270</BackgroundBeamName>
-            <BackgroundBeamName>J18G90</BackgroundBeamName>
-            <BackgroundBeamName>Flood 6X</BackgroundBeamName>
-        </WedgeBeam>
+      <WedgeBeam BeamName="J18C270EDW60-">  <!-- This is really a duplicate of J18C270EDW60-6X but is here because sometimes the beam name is truncated. -->
+        <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
+        <BackgroundBeamName>J18G270</BackgroundBeamName>
+        <BackgroundBeamName>J18G90</BackgroundBeamName>
+        <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+      </WedgeBeam>
 
-        <WedgeBeam BeamName="J10G0C90EDW45-6X">
-            <BackgroundBeamName>J10G0C270-6X</BackgroundBeamName>
-            <BackgroundBeamName>J10G180</BackgroundBeamName>
-            <BackgroundBeamName>J10G90</BackgroundBeamName>
-            <BackgroundBeamName>J10G270</BackgroundBeamName>
-            <BackgroundBeamName>Flood 6X</BackgroundBeamName>
-        </WedgeBeam>
+      <WedgeBeam BeamName="J10G0C90EDW45-6X">
+        <BackgroundBeamName>J10G0C270-6X</BackgroundBeamName>
+        <BackgroundBeamName>J10G180</BackgroundBeamName>
+        <BackgroundBeamName>J10G90</BackgroundBeamName>
+        <BackgroundBeamName>J10G270</BackgroundBeamName>
+        <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+      </WedgeBeam>
 
-        <WedgeBeam BeamName="J20G0C90EDW60-6X">
-            <BackgroundBeamName>J20G0-6X</BackgroundBeamName>
-            <BackgroundBeamName>Flood 6X</BackgroundBeamName>
-        </WedgeBeam>
+      <WedgeBeam BeamName="J20G0C90EDW60-6X">
+        <BackgroundBeamName>J20G0-6X</BackgroundBeamName>
+        <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+      </WedgeBeam>
+
+        <!-- <BeamName background="J20G0-6X">J10G0C90EDW45-6X</BeamName> -->  <!-- For Cedars-Sinai -->
+        <BeamName background="J10G0C90-6X">J10G0C90EDW45-6X</BeamName>  <!-- For UMich -->
+        <BeamName background="J20G0C90-6X">J20G0C90EDW60-6X</BeamName>
+        <BeamName background="J20G0-6X">J20G0C90EDW60-6X</BeamName>  <!-- experimental -->
+        <BeamName background="J18G0-6X">J18C270EDW60-6X</BeamName>
     </WedgeBeamList>
 
     <!-- Diameter of sample spots in mm. -->
