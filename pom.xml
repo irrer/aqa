@@ -203,14 +203,19 @@ https://mvnrepository.com/artifact/org.scalatest/scalatest
                       <copy toDir="${dest.dir}">
                         <fileset includes="static/**" dir="${resource.dir}"/>
                       </copy>
-                      <copy toDir="${dest.dir}/${yajsw}/conf" file="${resource.dir}/wrapper.conf"/>
+                      <echo>Copying README.txt ...</echo>
                       <copy toDir="${dest.dir}" file="README.txt"/>
+                      <delete file="${dest.dir}/${yajsw}/conf/wrapper.conf"/> <!-- Must force delete to handle case where destination is newer than source.  -->
+                      <echo>Copying wrapper.conf ... ${resource.dir}/wrapper.conf to ${dest.dir}/${yajsw}/conf </echo>
+                      <copy toDir="${dest.dir}/${yajsw}/conf" file="${resource.dir}/wrapper.conf"/>
                       <tstamp>
                         <format locale="en,US" pattern="yyyy-MMM-dd hh:mm:ss aa" property="TIMESTAMP"/>
                       </tstamp>
+                     
                       <replace value="${project.version}" token="@@VERSION@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
                       <replace value="${TIMESTAMP}" token="@@BUILD_DATE@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
                       <replace value="${user.name}" token="@@BUILDER@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
+                    
                       <!-- <replace value="${user_login}" token="@@USER_LOGIN@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/> -->
                       <!-- <replace value="${user_password}" token="@@USER_PASSWORD@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/> -->
                       <zip destfile="${project.dir}/${project.artifactId}-${project.version}.zip" basedir="${project.dir}"/>
