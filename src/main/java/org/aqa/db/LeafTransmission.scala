@@ -9,17 +9,16 @@ import scala.xml.Node
 import scala.xml.Elem
 import org.aqa.procedures.ProcedureOutput
 import org.aqa.Logging
+import org.aqa.webrun.LOCXml
 
-case
-
-class LeafTransmission(leafTransmissionPK:Option[Long], // primary key
-outputPK:Long, // output primary key
-section:String, // arbitrary section name. May be used to associate this section with input data
-				// such as UID
-leafIndex:Int, // leaf number
-transmission_fract:Double // transmission fraction
-)
-{
+case class LeafTransmission(
+  leafTransmissionPK: Option[Long], // primary key
+  outputPK: Long, // output primary key
+  section: String, // arbitrary section name. May be used to associate this section with input data
+  // such as UID
+  leafIndex: Int, // leaf number
+  transmission_fract: Double // transmission fraction
+) {
 
   def insert: LeafTransmission = {
     val insertQuery = LeafTransmission.query returning LeafTransmission.query.map(_.leafTransmissionPK) into ((leafTransmission, leafTransmissionPK) => leafTransmission.copy(leafTransmissionPK = Some(leafTransmissionPK)))
@@ -33,9 +32,7 @@ transmission_fract:Double // transmission fraction
   override def toString: String = (transmission_fract.toString).trim
 }
 
-	object LeafTransmission extends
-	ProcedureOutput with Logging
-	{
+object LeafTransmission extends ProcedureOutput with Logging {
   class LeafTransmissionTable(tag: Tag) extends Table[LeafTransmission](tag, "leafTransmission") {
 
     def leafTransmissionPK = column[Long]("leafTransmissionPK", O.PrimaryKey, O.AutoInc)
@@ -95,7 +92,7 @@ transmission_fract:Double // transmission fraction
   def xmlToList(elem: Elem, outputPK: Long): Seq[LeafTransmission] = {
     def leafNodeToTransList(leaf: Node): Seq[LeafTransmission] = {
       val leafIndex = (leaf \ "leafIndex").head.text.toInt
-      (leaf \ "Value").map(n => n.text.toDouble).zipWithIndex.map(di => new LeafTransmission(None, outputPK, (di._2 + 1).toString, leafIndex, di._1))
+      (leaf \ "Value").map(n => LOCXml.textToDouble(n.text)).zipWithIndex.map(di => new LeafTransmission(None, outputPK, (di._2 + 1).toString, leafIndex, di._1))
     }
 
     val list = (elem \ topXmlLabel).headOption match {

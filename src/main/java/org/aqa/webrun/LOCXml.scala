@@ -15,7 +15,7 @@ class LOCXml(dir: File) {
   private val elem = XML.loadFile(file)
 
   private def nodeSeqToDouble(ns: NodeSeq): Seq[Double] = {
-    ns.map(n => n.head.text.toDouble)
+    ns.map(n => LOCXml.textToDouble(n.head.text))
   }
 
   private val constancy = elem \ "LeafOffsetConstancy"
@@ -53,8 +53,21 @@ class LOCXml(dir: File) {
 }
 
 object LOCXml {
+
+  private def okDbl(d: Double) = { (d < Double.MaxValue) && (d > Double.MinValue) }
+
+  def textToDouble(text: String): Double = {
+    try {
+      val d = text.trim.toDouble
+      if (okDbl(d)) d else Double.NaN
+    } catch {
+      case t: Throwable => Double.NaN
+    }
+  }
+
   def main(args: Array[String]): Unit = {
-    val dir = new File("""D:\AQA_Data\results\TBD_2\CHIC2_12\Leaf_Offset_and_Transmission_1.0.0_2\2017-05-10T14-41-53-929_107\output_2017-05-10T14-41-54-056""")
+    // val dir = new File("""D:\AQA_Data\results\TBD_2\CHIC2_12\Leaf_Offset_and_Transmission_1.0.0_2\2017-05-10T14-41-53-929_107\output_2017-05-10T14-41-54-056""")
+    val dir = new File("""D:\tmp\aqa\tmp\mario\bad""")
     val locXml = new LOCXml(dir)
 
     def show(seq: Seq[Double], name: String) = {

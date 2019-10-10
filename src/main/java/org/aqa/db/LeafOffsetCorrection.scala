@@ -8,6 +8,7 @@ import scala.xml.XML
 import scala.xml.Node
 import scala.xml.Elem
 import org.aqa.procedures.ProcedureOutput
+import org.aqa.webrun.LOCXml
 
 case class LeafOffsetCorrection(
   leafOffsetCorrectionPK: Option[Long], // primary key
@@ -88,7 +89,7 @@ object LeafOffsetCorrection extends ProcedureOutput {
   private def xmlToList(elem: Elem, outputPK: Long): Seq[LeafOffsetCorrection] = {
     def leafNodeToLocList(leaf: Node): Seq[LeafOffsetCorrection] = {
       val leafIndex = (leaf \ "leafIndex").head.text.toInt
-      (leaf \ "Value").map(n => n.text.toDouble).zipWithIndex.map(di => new LeafOffsetCorrection(None, outputPK, (di._2 + 1).toString, leafIndex, di._1))
+      (leaf \ "Value").map(n => LOCXml.textToDouble(n.text)).zipWithIndex.map(di => new LeafOffsetCorrection(None, outputPK, (di._2 + 1).toString, leafIndex, di._1))
     }
 
     (elem \ topXmlLabel).headOption match {

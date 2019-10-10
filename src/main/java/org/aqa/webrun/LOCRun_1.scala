@@ -61,6 +61,14 @@ object LOCRun_1 {
     println("Starting")
 
     if (true) {
+      val dir = new File("""D:\tmp\aqa\tmp\mario\bad""")
+      val locXml = new LOCXml(dir)
+      println("locXml: " + locXml)
+      println("Done")
+      System.exit(99)
+    }
+
+    if (true) {
       val inFile = new File("""D:\AQA_Data\results\TBD_2\CHIC1_11\Leaf_Offset_and_Transmission_1.0.0_2\2017-05-16T12-16-11-212_118\output_2017-05-16T12-16-11-261\spreadsheet.xlsx""")
       val workbook = ExcelUtil.read(inFile).right.get
       val html = excelToHtml(workbook)
@@ -95,6 +103,8 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
   /** Defines precision - Format to use when showing numbers. */
   val outputFormat = "%7.5e"
+
+  private def okDbl(d: Double) = { (d < Double.MaxValue) && (d > Double.MinValue) }
 
   //def machineList() = ("-1", "None") +: Machine.list.toList.map(m => (m.machinePK.get.toString, m.id))
 
@@ -203,6 +213,27 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
       case _ => ""
     }
 
+    val numberOfBadValues = {
+      val all = locXml.LeafOffsetConstancyMean ++
+        locXml.LeafOffsetConstancyRange ++
+        locXml.LeafOffsetConstancySectionMean ++
+        locXml.LeafOffsetConstancySectionSTD ++
+        locXml.LeafOffsetConstancySectionCoeffOfVar ++
+        locXml.LeafOffsetConstancySectionRange ++
+        locXml.LeafOffsetTransmissionMean ++
+        locXml.LeafOffsetTransmissionSectionMean ++
+        locXml.LeafOffsetTransmissionSectionSTD ++
+        locXml.LeafOffsetTransmissionSectionCoeffOfVar ++
+        locXml.LeafOffsetTransmissionSectionRange ++
+        locXml.LeafOffsetTransmissionValue.flatten ++
+        locXml.LOCRSquared.flatten ++
+        locXml.LOCDifferenceFromBaselineOpen.flatten ++
+        locXml.LOCDifferenceFromBaselineTrans.flatten ++
+        locXml.LeafOffsetConstancyValue.flatten
+
+      all.filter(d => !okDbl(d)).size
+    }
+
     val institution = for (mach <- machine; inst <- Institution.get(mach.institutionPK)) yield (inst)
 
     val institutionName = institution match {
@@ -287,31 +318,39 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
       "            ['" + name + "', " + data.map(m => fmt(m)).mkString(", ") + " ]"
     }
 
+    def fixSeq(seq: Seq[Double]): Seq[Double] = {
+      val good = seq.filter(d => okDbl(d))
+      val avg = good.sum / good.size
+      seq.map(d => if (okDbl(d)) d else avg)
+    }
+
+    def fixSeqSeq(seqSeq: Seq[Seq[Double]]): Seq[Seq[Double]] = seqSeq.map(seq => fixSeq(seq))
+
     val offsetDataText: String = {
-      val values = twoD2Text(locXml.LeafOffsetConstancyValue)
-      val mean = oneD2Text("Mean", locXml.LeafOffsetConstancyMean) // "            ['Mean', " + locXml.LeafOffsetConstancyMean.map(m => fmt(m)).mkString(", ") + " ],\n"
-      val range = oneD2Text("Range", locXml.LeafOffsetConstancyRange) // "            ['Range', " + locXml.LeafOffsetConstancyRange.map(m => fmt(m)).mkString(", ") + " ]\n"
+      val values = twoD2Text(fixSeqSeq(locXml.LeafOffsetConstancyValue))
+      val mean = oneD2Text("Mean", fixSeq(locXml.LeafOffsetConstancyMean)) // "       ['Mean', " + locXml.LeafOffsetConstancyMean.map(m => fmt(m)).mkString(", ") + " ],\n"
+      val range = oneD2Text("Range", fixSeq(locXml.LeafOffsetConstancyRange)) // "  ['Range', " + locXml.LeafOffsetConstancyRange.map(m => fmt(m)).mkString(", ") + " ]\n"
       Seq(leavesText, values, mean, range).mkString(",\n")
     }
 
     val transDataText: String = {
-      val values = twoD2Text(locXml.LeafOffsetTransmissionValue)
-      val mean = oneD2Text("Mean", locXml.LeafOffsetTransmissionMean) // "            ['Mean', " + locXml.LeafOffsetConstancyMean.map(m => fmt(m)).mkString(", ") + " ],\n"
+      val values = twoD2Text(fixSeqSeq(locXml.LeafOffsetTransmissionValue))
+      val mean = oneD2Text("Mean", fixSeq(locXml.LeafOffsetTransmissionMean)) // "   ['Mean', " + locXml.LeafOffsetConstancyMean.map(m => fmt(m)).mkString(", ") + " ],\n"
       Seq(leavesText, values, mean).mkString(",\n")
     }
 
     val rSquaredText: String = {
-      val values = twoD2Text(locXml.LOCRSquared)
+      val values = twoD2Text(fixSeqSeq(locXml.LOCRSquared))
       Seq(leavesText, values).mkString(",\n")
     }
 
     val differenceFromBaselineOpenText: String = {
-      val values = twoD2Text(locXml.LOCDifferenceFromBaselineOpen)
+      val values = twoD2Text(fixSeqSeq(locXml.LOCDifferenceFromBaselineOpen))
       Seq(leavesText, values).mkString(",\n")
     }
 
     val differenceFromBaselineTransText: String = {
-      val values = twoD2Text(locXml.LOCDifferenceFromBaselineTrans)
+      val values = twoD2Text(fixSeqSeq(locXml.LOCDifferenceFromBaselineTrans))
       Seq(leavesText, values).mkString(",\n")
     }
 
@@ -503,6 +542,28 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
             { wrap(2, viewXml) }
           </div>
           <div class="row">
+            {
+              if (numberOfBadValues > 0) {
+                <div style="color:red">
+                  <h3>Caution: There were { numberOfBadValues } invalid values in the results</h3>
+                  <p>
+                    Invalid values are caused by unchecked arithmetic calculations, such as
+                    division by zero.  Examples are<b>NaN</b>
+                    and<b>Infinity</b>
+                  </p>
+                  <p>
+                    The values do not show up in the graphs below because they have been replaced by
+                    the average of the others.  This is done so the graphs will still be of some use.
+                  </p>
+                  <p>
+                    Download or view the online spreadsheet to determine the precise location where they occurred.
+                    They will be displayed as <b>#NUM!</b>.
+                  </p>
+                </div>
+              }
+            }
+          </div>
+          <div class="row">
             <h4>Leaf Offset in mm</h4>
           </div>
           <div class="row">
@@ -572,27 +633,33 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
   }
 
   override def postPerform(activeProcess: ActiveProcess): Unit = {
-    activeProcess.output.outputPK match {
-      case Some(outputPK) => {
-        logger.info("Starting post-processing")
-        val output = Output.get(outputPK).get
-        logger.info("Extracting output from XML file in " + output.dir.getAbsolutePath)
-        val locXml = new LOCXml(output.dir)
-        logger.info("Inserting into database")
-        insertIntoDatabase(activeProcess.output.dir, outputPK)
-        logger.info("Creating spreadsheet")
-        makeSpreadsheet(activeProcess.output.dir, locXml, activeProcess.response)
-        val excelWorkbookList = getExcelWorkbookList(activeProcess.output.dir)
-        excelWorkbookList.map(fWb => excelToHtml(fWb.file, fWb.workbook))
-        logger.info("Finished spreadsheets")
-        val file = new File(activeProcess.output.dir, Output.displayFilePrefix + ".html")
-        logger.info("Creating content for file " + file.getAbsolutePath)
-        val content = makeDisplay(output, outputPK, locXml, excelWorkbookList)
-        logger.info("Writing file " + file.getAbsolutePath)
-        Util.writeFile(file, content)
-        logger.info("Finished post-processing")
+    try {
+      activeProcess.output.outputPK match {
+        case Some(outputPK) => {
+          logger.info("Starting post-processing")
+          val output = Output.get(outputPK).get
+          logger.info("Extracting output from XML file in " + output.dir.getAbsolutePath)
+          val locXml = new LOCXml(output.dir)
+          logger.info("Inserting into database")
+          insertIntoDatabase(activeProcess.output.dir, outputPK)
+          logger.info("Creating spreadsheet")
+          makeSpreadsheet(activeProcess.output.dir, locXml, activeProcess.response)
+          val excelWorkbookList = getExcelWorkbookList(activeProcess.output.dir)
+          excelWorkbookList.map(fWb => excelToHtml(fWb.file, fWb.workbook))
+          logger.info("Finished spreadsheets")
+          val file = new File(activeProcess.output.dir, Output.displayFilePrefix + ".html")
+          logger.info("Creating content for file " + file.getAbsolutePath)
+          val content = makeDisplay(output, outputPK, locXml, excelWorkbookList)
+          logger.info("Writing file " + file.getAbsolutePath)
+          Util.writeFile(file, content)
+          logger.info("Finished post-processing")
+        }
+        case None => ;
       }
-      case None => ;
+    } catch {
+      case t: Throwable => {
+        logger.warn("Unexpected error in LOC postPerform: " + fmtEx(t))
+      }
     }
   }
 }

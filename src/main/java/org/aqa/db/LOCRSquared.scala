@@ -9,17 +9,16 @@ import scala.xml.Node
 import scala.xml.Elem
 import org.aqa.procedures.ProcedureOutput
 import org.aqa.Logging
+import org.aqa.webrun.LOCXml
 
-case
-
-class LOCRSquared(rSquaredPK:Option[Long], // primary key
-outputPK:Long, // output primary key
-section:String, // arbitrary section name. May be used to associate this section with input data
-				// such as UID
-leafIndex:Int, // leaf number
-rSquared_mmsq:Double // R squared value
-)
-{
+case class LOCRSquared(
+  rSquaredPK: Option[Long], // primary key
+  outputPK: Long, // output primary key
+  section: String, // arbitrary section name. May be used to associate this section with input data
+  // such as UID
+  leafIndex: Int, // leaf number
+  rSquared_mmsq: Double // R squared value
+) {
 
   def insert: LOCRSquared = {
     val insertQuery = LOCRSquared.query returning LOCRSquared.query.map(_.rSquaredPK) into
@@ -35,9 +34,7 @@ rSquared_mmsq:Double // R squared value
   override def toString: String = (rSquared_mmsq.toString).trim
 }
 
-	object LOCRSquared extends
-	ProcedureOutput with Logging
-	{
+object LOCRSquared extends ProcedureOutput with Logging {
   class LOCRSquaredTable(tag: Tag) extends Table[LOCRSquared](tag, "rSquared") {
 
     def rSquaredPK = column[Long]("rSquaredPK", O.PrimaryKey, O.AutoInc)
@@ -94,7 +91,7 @@ rSquared_mmsq:Double // R squared value
   private def xmlToList(elem: Elem, outputPK: Long): Seq[LOCRSquared] = {
     def leafNodeToLocList(leaf: Node): Seq[LOCRSquared] = {
       val leafIndex = (leaf \ "leafIndex").head.text.toInt
-      (leaf \ "Value").map(n => n.text.toDouble).zipWithIndex.map(di => new LOCRSquared(None, outputPK, (di._2 + 1).toString, leafIndex, di._1))
+      (leaf \ "Value").map(n => LOCXml.textToDouble(n.text)).zipWithIndex.map(di => new LOCRSquared(None, outputPK, (di._2 + 1).toString, leafIndex, di._1))
     }
 
     val list = (elem \ topXmlLabel).headOption match {
