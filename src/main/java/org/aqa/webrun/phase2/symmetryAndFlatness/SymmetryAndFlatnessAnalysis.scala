@@ -73,11 +73,11 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
     /** True if everything is ok. */
     val pass = Seq(axialSymmetryStatus, transverseSymmetryStatus, flatnessStatus).filter(s => !(s.toString.equals(ProcedureStatus.pass.toString))).isEmpty
-    Trace.trace("pass: " + pass)
+    logger.info("sym+flatness pass: " + pass)
 
     /** Aggregate status. */
     val status = boolToStatus(pass)
-    Trace.trace("status: " + status)
+    logger.info("sym+flatness aggregate status: " + status)
   }
 
   private def makeAnnotatedImage(correctedImage: DicomImage, attributeList: AttributeList, pointSet: PointSet): BufferedImage = {
@@ -210,6 +210,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
    *
    */
   private def analyze(beamName: String, extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): BeamResultBaseline = {
+    logger.info("Begin analysis of beam " + beamName)
     val image = getDicomImage(beamName, runReq)
     val attributeList: AttributeList = getAttributeList(beamName, runReq)
     val dicomImage = new DicomImage(attributeList)
@@ -220,20 +221,27 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
     val pointSet = makePointSet(dicomImage, attributeList, RescaleSlope, RescaleIntercept, collimatorCentering.center)
 
+    logger.info("Calculating axial symmetry of beam " + beamName)
     val axialSymmetry = analyzeSymmetry(pointSet.top, pointSet.bottom)
+    logger.info("Calculating transverse symmetry of beam " + beamName)
     val transverseSymmetry = analyzeSymmetry(pointSet.right, pointSet.left)
 
+    logger.info("Calculating flatness of beam " + beamName)
     val flatness = analyzeFlatness(pointSet)
 
+    logger.info("Making corrected image of beam " + beamName)
     val correctedImage = runReq.rtimageMap(beamName).correctedDicomImage.get
+    logger.info("Making annotated image of beam " + beamName)
     val annotatedImage = makeAnnotatedImage(correctedImage, attributeList, pointSet)
 
+    logger.info("Making transverse profile of beam " + beamName)
     val transverseProfile = {
       val y = ((translator.height - widthOfBand) / 2.0).round.toInt
       val rectangle = new Rectangle(0, y, translator.width, widthOfBand)
       dicomImage.getSubimage(rectangle).columnSums.map(c => ((c / widthOfBand) * RescaleSlope) + RescaleIntercept)
     }
 
+    logger.info("Making axial profile of beam " + beamName)
     val axialProfile = {
       val x = ((translator.width - widthOfBand) / 2.0).round.toInt
       val rectangle = new Rectangle(x, 0, widthOfBand, translator.height)
@@ -243,6 +251,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val transverse_pct = (0 until translator.width).map(x => translator.pix2Iso(x, 0).getX)
     val axial_pct = (0 until translator.height).map(y => translator.pix2Iso(0, y).getY)
 
+    logger.info("Getting baseline values for beam " + beamName)
     val machinePK = extendedData.machine.machinePK.get
     val timestamp = extendedData.output.dataDate.get
     val axialSymmetryBaseline = getBaseline(machinePK, beamName, axialSymmetryName, attributeList, axialSymmetry, timestamp)
@@ -262,6 +271,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       rightBaseline.baseline.value.toDouble,
       centerBaseline.baseline.value.toDouble)
 
+    logger.info("Calculating profile constancy for beam " + beamName)
     val profileConstancy = analyzeProfileConstancy(pointSet, baselinePointSet)
 
     //  val topBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointTop.name, attributeList, pointSet)
@@ -271,6 +281,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       if (limit >= (diff.abs)) ProcedureStatus.pass else ProcedureStatus.fail
     }
 
+    logger.info("Checking percentages for beam " + beamName)
     val axialSymmetryStatus = checkPercent(axialSymmetry, axialSymmetryBaseline.baseline.value.toDouble, Config.SymmetryPercentLimit)
     val transverseSymmetryStatus = checkPercent(transverseSymmetry, transverseSymmetryBaseline.baseline.value.toDouble, Config.SymmetryPercentLimit)
     val flatnessStatus = checkPercent(flatness, flatnessBaseline.baseline.value.toDouble, Config.FlatnessPercentLimit)
@@ -279,6 +290,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val maintenanceRecordBaselineList = Seq(axialSymmetryBaseline, transverseSymmetryBaseline, flatnessBaseline, profileConstancyBaseline,
       topBaseline, bottomBaseline, leftBaseline, rightBaseline, centerBaseline)
 
+    logger.info("Assembling result for beam " + beamName)
     val result = new SymmetryAndFlatnessBeamResult(beamName, Util.sopOfAl(attributeList), pointSet,
       axialSymmetry,
       axialSymmetryBaseline.baseline.value.toDouble,
@@ -297,6 +309,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       axialProfile,
       axial_pct,
       baselinePointSet)
+
+    logger.info("Finished analysis of beam " + beamName)
 
     new BeamResultBaseline(result, maintenanceRecordBaselineList, pointSet)
   }
@@ -374,7 +388,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       val beamNameList = Config.SymmetryAndFlatnessBeamList.filter(beamName => runReq.derivedMap.contains(beamName))
 
       // only process beams that are both configured and have been uploaded
-      val resultList = beamNameList.par.map(beamName => analyze(beamName, extendedData, runReq, collimatorCentering)).toList
+      // val resultList = beamNameList.par.map(beamName => analyze(beamName, extendedData, runReq, collimatorCentering)).toList  // TODO put back in
+      val resultList = beamNameList.map(beamName => analyze(beamName, extendedData, runReq, collimatorCentering)).toList // TODO rm
 
       val pass = {
         0 match {
