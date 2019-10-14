@@ -105,6 +105,7 @@ object Phase2Util extends Logging {
     if (machine.serialNumber.isEmpty) {
       try {
         val DeviceSerialNumber = rtimage.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrNull
+        logger.info("Saving machine " + machine.id + "'s serial number " + DeviceSerialNumber)
         if (DeviceSerialNumber != null) Machine.setSerialNumber(machine.machinePK.get, DeviceSerialNumber)
       } catch {
         case t: Throwable => logger.warn("Unable to update machine serial number " + machine + " : " + t)
