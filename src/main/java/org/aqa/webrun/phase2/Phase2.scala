@@ -522,6 +522,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
 
           val plan = runReqFinal.rtplan
           val machine = runReqFinal.machine
+          // save serial number now in case analysis crashes with an exception
+          Phase2Util.setMachineSerialNumber(machine, runReqFinal.flood.attributeList.get)
           Phase2Util.saveRtplan(plan)
 
           val rtimageMap = Phase2.constructRtimageMap(plan, rtimageList)
@@ -530,7 +532,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
           val finDate = new Timestamp(System.currentTimeMillis)
           val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
 
-          Phase2Util.setMachineSerialNumber(machine, runReqFinal.flood.attributeList.get)
           outputFinal.insertOrUpdate
           outputFinal.updateData(outputFinal.makeZipOfFiles)
           Run.removeRedundantOutput(outputFinal.outputPK)
