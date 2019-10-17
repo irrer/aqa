@@ -313,8 +313,6 @@ class WebServer extends Application with Logging {
           val userOpt = getRequestingUser(challResp.getIdentifier)
           userOpt match {
             case Some(user) => {
-              val j1 = user.getRole.get.id
-              val j2 = requestedRole.id
               if (user.getRole.get.id < requestedRole.id) {
                 logger.warn("Authorization violation.  User " + user.id +
                   " attempted to access " + request.toString + " that requires role " + requestedRole + " but their role is only " + user.getRole)
@@ -540,7 +538,6 @@ class WebServer extends Application with Logging {
     } catch {
       case t: Throwable => {
         val msg = "WebServer.createInboundRoot unexpected error: " + fmtEx(t)
-        println(msg)
         logger.error(msg)
         router
       }

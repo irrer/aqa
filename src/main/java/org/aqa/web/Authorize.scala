@@ -66,7 +66,16 @@ class Authorize(
     }
   }
 
+  private def showUser(request: Request) = { // TODO rm
+    val cr = request.getChallengeResponse
+    if (cr == null)
+      println("User: none")
+    else
+      println("User: " + cr.getIdentifier)
+  }
+
   override def beforeHandle(request: Request, response: Response): Int = {
+    showUser(request)
     if (authorized(request, response))
       Filter.CONTINUE
     else
@@ -74,6 +83,7 @@ class Authorize(
   }
 
   override def afterHandle(request: Request, response: Response) = {
+    showUser(request)
     if (!authorized(request, response))
       WebUtil.setResponse(notAuthorizedPage(getRequestedRole(request, response)), response, Status.CLIENT_ERROR_UNAUTHORIZED)
   }

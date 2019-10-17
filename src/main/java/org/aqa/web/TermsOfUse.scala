@@ -71,7 +71,7 @@ class TermsOfUse extends Restlet with SubUrlRoot {
   private def agree(request: Request, response: Response) = {
     CachedUser.get(response.getRequest) match {
       case Some(user) => {
-        CachedUser.remove(user.id)
+        CachedUser.clear
         val timestamp = new Timestamp(System.currentTimeMillis)
         user.updateTermsOfUseAcknowledgment(Some(timestamp))
         response.redirectSeeOther(pathOf + "?" + agreeTag + "=1")

@@ -272,7 +272,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
       val existingUser = User.get(valueMap.get(userPK.label).get.toLong).get
       val user = updateExistingUserFromParameters(existingUser, valueMap)
       // remove old credentials just in case the user role was changed.
-      CachedUser.remove(user.id)
+      CachedUser.clear
       user.insertOrUpdate
       UserList.redirect(response)
     } else {

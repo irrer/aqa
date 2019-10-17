@@ -40,6 +40,16 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
   }
 
   override def verify(request: Request, response: Response): Int = {
+    if (true) { // TODO rm
+      val cr = request.getChallengeResponse
+      if (cr == null)
+        Trace.trace("no user")
+      else {
+        val id = cr.getIdentifier
+        val pw = cr.getSecret.mkString("")
+        Trace.trace("User: " + id + "  password: " + pw)
+      }
+    }
     val requestedRole = getRequestedRole(request, response)
     if (requestedRole.id == UserRole.publik.id) Verifier.RESULT_VALID // let anyone into public areas
     else {

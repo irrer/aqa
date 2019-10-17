@@ -3,15 +3,27 @@ package org.aqa.db
 import org.aqa.Config
 import org.restlet.Request
 import org.aqa.AnonymizeUtil
+import edu.umro.ScalaUtil.Trace
 
 class CachedUser(val user: User) {
   val timeout = System.currentTimeMillis + Config.AuthenticationTimeoutInMs
+
+  override def toString = {
+    val timeLeft = timeout - System.currentTimeMillis
+    timeLeft + " : " + user.id
+  }
 }
 
 object CachedUser {
   private val cache = scala.collection.mutable.HashMap[String, CachedUser]()
 
-  def put(id: String, user: User): Unit = {
+  private def cacheToString = {
+    cache.synchronized({
+      "cache size: " + cache.size + "\n    " + cache.keySet.map(k => k + " : " + cache(k)).mkString("\n    ")
+    })
+  }
+
+  private def put(id: String, user: User): Unit = {
     cache.synchronized({
       cache.put(id, new CachedUser(user))
     })
@@ -29,7 +41,7 @@ object CachedUser {
    * put it in the cache.
    */
   def get(id: String): Option[User] = {
-    clean
+    removeExpired
     val canonId = id.toLowerCase.trim
     getFromCache(id) match {
       case Some(cu) => Some(cu.user)
@@ -63,7 +75,7 @@ object CachedUser {
   /**
    * Remove expired entries from cache.
    */
-  def clean: Unit = {
+  private def removeExpired: Unit = {
     cache.synchronized({
       val now = System.currentTimeMillis
       val expired = cache.filter(c => c._2.timeout < now).map(c1 => c1._1)
@@ -71,9 +83,12 @@ object CachedUser {
     })
   }
 
-  def remove(id: String): Option[CachedUser] = {
+  /**
+   * Remove all entries from cache.
+   */
+  def clear: Unit = {
     cache.synchronized({
-      cache.remove(id)
+      cache.clear
     })
   }
 

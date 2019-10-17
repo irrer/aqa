@@ -124,21 +124,22 @@ class SetPassword extends Restlet with SubUrlRoot {
           val newUser = origUser.copy(hashedPassword = newHashedPW, passwordSalt = newSalt)
           newUser.insertOrUpdate
           // remove old credentials so that the old password will not work
-          CachedUser.remove(origUser.id)
+          CachedUser.clear
           // replace the users' credentials in the cache
           val userId = request.getChallengeResponse.getIdentifier.toLowerCase.trim
-          CachedUser.put(userId, newUser)
+          //CachedUser.put(userId, newUser)
           val content = {
             <div>
               The password for{ origUser.id }
               has been changed.
               <p></p>
-              You will need to re-login.
+              You will need to login again with the new password.
               <p></p>
               <a href="/">Home</a>
             </div>
           }
           simpleWebPage(content, Status.SUCCESS_OK, "Password Changed", response)
+          //response.redirectSeeOther("/")
         }
       }
     } else {
