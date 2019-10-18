@@ -70,6 +70,10 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
    */
   protected def getPK(value: VL): Long; // must be overridden
 
+//  protected val filterForm: Option[WebForm] = None  TODO
+//
+//  protected def filter[VL](row: VL): Boolean = true
+
   /**
    * Retrieve data, usually from the database.
    */
