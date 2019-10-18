@@ -83,7 +83,7 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
       <td title="Machine Name">{ wrapAlias(dataSet.machine.id) }</td>
     }
 
-    def colPatient(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = { // TODO
+    def colPatient(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
 
       val patientName: Elem = DicomSeries.getBySeriesInstanceUID(dataSet.epid.epidSeriesInstanceUID).headOption match {
         case Some(ds) => {
@@ -112,6 +112,39 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
     def colCbctZ(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
       val z = dataSet.cbct.cbctZ_mm - dataSet.cbct.rtplanZ_mm
       <td>{ fmt(z) }</td>
+    }
+
+    def colVertGantryAngle(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+      dataSet.epid.bbByCBCTPK
+      ???
+    }
+
+    def colVertXCax(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+      ???
+    }
+
+    def colVertZCax(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+      ???
+    }
+
+    def colHorzGantryAngle(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+      ???
+    }
+
+    def colHorzYCax(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+      ???
+    }
+
+    def colHorzZCax(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+      ???
+    }
+
+    def colCbctImages(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+      ???
+    }
+
+    def colEpidImages(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+      ???
     }
 
     val colList: List[Col] = List(

@@ -217,7 +217,7 @@ object BBbyEPIDComposite extends ProcedureOutput {
     result
   }
 
-  case class DailyDataSet(epid: BBbyEPIDComposite, cbct: BBbyCBCT, machine: Machine, output: Output);
+  case class DailyDataSet(epid: BBbyEPIDComposite, cbct: BBbyCBCT, machine: Machine, output: Output, bbByEpid: Seq[BBbyEPID]);
 
   def getReportingDataSet(date: Date, institutionPK: Long): Seq[DailyDataSet] = {
 
@@ -229,9 +229,11 @@ object BBbyEPIDComposite extends ProcedureOutput {
       bbByEPIDComposite <- BBbyEPIDComposite.query.filter(c => (c.outputPK === output.outputPK) && c.bbByCBCTPK.isDefined)
       machine <- Machine.query.filter(m => (m.machinePK === output.machinePK))
       cbct <- BBbyCBCT.query.filter(c => c.bbByCBCTPK === bbByEPIDComposite.bbByCBCTPK)
-    } yield (bbByEPIDComposite, cbct, machine, output)
+      bbByEpid <- BBbyEPID.query.filter(b => b.outputPK === output.outputPK)
+    } yield (bbByEPIDComposite, cbct, machine, output, bbByEpid)
 
     val list = Db.run(search.distinct.result)
-    list.map(l => new DailyDataSet(l._1, l._2, l._3, l._4))
+    val dailyQA = list.groupBy(ga => ga._1.outputPK).map(gb => gb._2).map(g => new DailyDataSet(g.head._1, g.head._2, g.head._3, g.head._4, g.map(gg => gg._5)))
+    dailyQA.toSeq
   }
 }
