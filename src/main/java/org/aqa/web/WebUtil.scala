@@ -1017,10 +1017,10 @@ object WebUtil extends Logging {
   class WebInputDateTimePicker(override val label: String, col: Int, offset: Int) extends IsInput(label) with ToHtml {
 
     /** For converting between <code>String</code> and <code>Date</code>. */
-    val dateFormat = new SimpleDateFormat("yyyy MMM d H:mm a")
+    val dateFormat = new SimpleDateFormat("yyyy MMM d HH:mm")
 
     /** javascript date format */
-    private val jsFormat = "yyyy M d H:ii P"
+    private val jsFormat = "yyyy M d hh:ii"
 
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
 

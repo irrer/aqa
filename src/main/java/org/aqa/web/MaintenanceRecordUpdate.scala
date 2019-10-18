@@ -41,7 +41,7 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
 
   private val machinePK = new WebInputHidden(MachineUpdate.machinePKTag)
 
-  private val dateTime = new WebInputDateTime("Date / Time", 6, 0, "Format: Month/Day/Year Hour:Minute")
+  private val dateTime = new WebInputDateTimePicker("Date / Time", 6, 0)
 
   private def getOutputReference(valueMap: ValueMapT): Elem = {
     try {
@@ -97,7 +97,7 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
 
   /**
    * Make sure that the user is authorized.  They must be from the same institution as the machine.
-   * 
+   *
    * Allowing a whitelisted user is probably not a good idea because the ue
    */
   private def isAuthorized(request: Request, institutionPK: Long): Boolean = {
@@ -133,16 +133,11 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
     else Error.make(summary, "You are not allowed to modify maintenance records for machines from other institutions.")
   }
 
-  private def dateIsInvalid(valueMap: ValueMapT): StyleMapT = {
-    if (dateTime.validateDateTime(valueMap.get(dateTime.label).get).isDefined) styleNone
-    else Error.make(dateTime, dateTime.label + " is invalid.  Expected format: MM/DD/YYYY hh:mm")
-  }
-
   private def updateMaintenanceRecord(inst: MaintenanceRecord): Unit = {
     MaintenanceRecord.query.insertOrUpdate(inst)
   }
 
-  private def checkFields(valueMap: ValueMapT, request: Request): StyleMapT = validateAuthentication(valueMap, request) ++ emptySummary(valueMap) ++ dateIsInvalid(valueMap)
+  private def checkFields(valueMap: ValueMapT, request: Request): StyleMapT = validateAuthentication(valueMap, request) ++ emptySummary(valueMap)
 
   /**
    * Create a new maintenanceRecord
@@ -154,7 +149,7 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
     }
 
     val machPK = machinePK.getValOrEmpty(valueMap).trim.toLong
-    val dt = new Timestamp(dateTime.validateDateTime(dateTime.getValOrEmpty(valueMap)).get.getTime)
+    val dt = new Timestamp(dateTime.dateFormat.parse(dateTime.getValOrEmpty(valueMap)).getTime)
     val uPK = getUser(request).get.userPK.get
     val cat = valueMap.get(category.label).get
 
@@ -173,7 +168,7 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
   private def emptyForm(response: Response, valueMap: ValueMapT) = {
     val vm = Map(
       (machinePK.label, valueMap(machinePK.label)),
-      (dateTime.label, dateTime.dateTimeFormat.format(System.currentTimeMillis)))
+      (dateTime.label, dateTime.dateFormat.format(new Date)))
     formCreate.setFormResponse(vm, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
   }
 
@@ -201,7 +196,7 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
       (maintenanceRecordPK.label, inst.maintenanceRecordPK.get.toString),
       (category.label, inst.category),
       (machinePK.label, inst.machinePK.toString),
-      (dateTime.label, dateTime.dateTimeFormat.format(inst.creationTime)),
+      (dateTime.label, dateTime.dateFormat.format(inst.creationTime)),
       (summary.label, inst.summary),
       (description.label, inst.description))
     formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
