@@ -49,6 +49,11 @@ object ViewOutput {
   val summaryTag = "summary"
   val checksumTag = "checksum"
 
+  def viewOutputUrl(outputPK: Long) = {
+    val url = ViewOutput.path + "?" + outputPKTag + "=" + outputPK
+    url
+  }
+
   private def shouldShowSummary(outputFileExists: Boolean, procedureIsRunning: Boolean, summaryRequested: Boolean, clientOnPendingList: Boolean): Boolean = {
     (outputFileExists, procedureIsRunning, summaryRequested, clientOnPendingList) match {
       case (false, _, _, _) => true

@@ -55,6 +55,7 @@ import org.aqa.ImageRegistration
 import org.aqa.db.DicomSeries
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.db.BBbyEPID
+import org.aqa.AngleType
 
 /**
  * Provide the user interface and verify that the data provided is sufficient to do the analysis.
@@ -63,40 +64,6 @@ import org.aqa.db.BBbyEPID
 object BBbyEPIDRun extends Logging {
   val parametersFileName = "parameters.xml"
   val Phase2RunPKTag = "Phase2RunPK"
-
-  /**
-   * For classifying angles.
-   */
-  object AngleType extends Enumeration {
-    val horizontal = Value
-    val vertical = Value
-  }
-
-  /**
-   * Only allow angles that are within 5 degrees of right angles.
-   */
-  def classifyAngle(angle: Double): Option[AngleType.Value] = {
-    val rounded = Util.angleRoundedTo90(angle)
-    val canonicalAngle = ((angle.round.toInt + 3600) % 360)
-    val angTyp = (((rounded - canonicalAngle).abs < 5), canonicalAngle) match {
-      case (true, 0) => Some(AngleType.vertical)
-      case (true, 180) => Some(AngleType.vertical)
-      case (true, 90) => Some(AngleType.horizontal)
-      case (true, 270) => Some(AngleType.horizontal)
-      case _ => None
-    }
-    angTyp
-  }
-
-  /**
-   * Return true if the attribute list's gantry angle is of the specified type.
-   */
-  def isAngleType(al: AttributeList, angleType: AngleType.Value): Boolean = {
-    classifyAngle(Util.gantryAngle(al)) match {
-      case Some(at) => at.toString.equals(angleType.toString())
-      case _ => false
-    }
-  }
 
   /**
    * Get the SOP of the plan referenced by the given EPID.
@@ -321,7 +288,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     val angleList = epidList.map(epid => Util.gantryAngle(epid))
     def angleTextList = angleList.map(a => Util.fmtDbl(a)).mkString("  ")
     // true if all angles are valid
-    val anglesTypeList = angleList.map(angle => BBbyEPIDRun.classifyAngle(angle)).flatten
+    val anglesTypeList = angleList.map(angle => AngleType.classifyAngle(angle)).flatten
 
     def epidSeriesList = epidList.map(epid => getSeries(epid)).distinct
 
@@ -372,7 +339,6 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       case Right(runReq) => {
         logger.info("Data is valid.  Preparing to analyze data.")
         val dtp = dateTimePatId(runReq.epidList)
-
 
         val sessDir = sessionDir(valueMap).get
         val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp._2, dtp._1)

@@ -12,6 +12,7 @@ import org.aqa.run.ProcedureStatus
 import javax.vecmath.Point3d
 import java.sql.Timestamp
 import java.util.Date
+import org.aqa.AngleType
 
 /**
  * Store the analysis results for a set of EPID images containing a BB.  This is derived from
@@ -217,7 +218,11 @@ object BBbyEPIDComposite extends ProcedureOutput {
     result
   }
 
-  case class DailyDataSet(epid: BBbyEPIDComposite, cbct: BBbyCBCT, machine: Machine, output: Output, bbByEpid: Seq[BBbyEPID]);
+  case class DailyDataSet(epid: BBbyEPIDComposite, cbct: BBbyCBCT, machine: Machine, output: Output, bbByEpid: Seq[BBbyEPID]) {
+    private def byType(angleType: AngleType.Value) = bbByEpid.filter(b => AngleType.isAngleType(b.gantryAngle_deg, angleType))
+    val vertList = byType(AngleType.vertical)
+    val horzList = byType(AngleType.horizontal)
+  }
 
   def getReportingDataSet(date: Date, institutionPK: Long): Seq[DailyDataSet] = {
 

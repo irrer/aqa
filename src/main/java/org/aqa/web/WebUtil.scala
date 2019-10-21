@@ -969,7 +969,7 @@ object WebUtil extends Logging {
     }
   }
 
-  class WebInputDatePicker(override val label: String, col: Int, offset: Int) extends IsInput(label) with ToHtml {
+  class WebInputDatePicker(override val label: String, col: Int, offset: Int, showLabel: Boolean) extends IsInput(label) with ToHtml {
 
     /** For converting between <code>String</code> and <code>Date</code>. */
     val dateFormat = new SimpleDateFormat("yyyy MMM d")
@@ -1010,7 +1010,7 @@ object WebUtil extends Logging {
           </div>
         }
 
-      wrapInput(label, true, html, col, offset, errorMap)
+      wrapInput(label, showLabel, html, col, offset, errorMap)
     }
   }
 

@@ -15,6 +15,7 @@ import org.aqa.db.BBbyCBCT
 import java.util.Date
 import java.text.SimpleDateFormat
 import gnu.crypto.mode.CBC
+import org.aqa.AngleType
 
 /**
  * Given validated data, process it.
@@ -56,18 +57,18 @@ object BBbyEPIDAnalyse extends Logging {
 
   private def constructComposite(bbByEPIDList: Seq[BBbyEPID], extendedData: ExtendedData, runReq: BBbyEPIDRunReq): Either[String, BBbyEPIDComposite] = {
 
-    def getByAngleType(angleType: BBbyEPIDRun.AngleType.Value) = {
+    def getByAngleType(angleType: AngleType.Value) = {
       val at = angleType.toString
       def sameType(bbByEPID: BBbyEPID): Boolean = {
-        val angTyp = BBbyEPIDRun.classifyAngle(bbByEPID.gantryAngle_deg)
+        val angTyp = AngleType.classifyAngle(bbByEPID.gantryAngle_deg)
         angTyp.isDefined && angTyp.get.toString.equals(at)
       }
 
       bbByEPIDList.filter(bbByEPID => sameType(bbByEPID))
     }
 
-    val vert = getByAngleType(BBbyEPIDRun.AngleType.vertical)
-    val horz = getByAngleType(BBbyEPIDRun.AngleType.horizontal)
+    val vert = getByAngleType(AngleType.vertical)
+    val horz = getByAngleType(AngleType.horizontal)
 
     if ((vert.nonEmpty && horz.nonEmpty)) {
       val x_mm = vert.map(bb => bb.epid3DX_mm).sum / vert.size
