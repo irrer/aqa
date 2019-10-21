@@ -146,7 +146,7 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
 
     dicomAnonList.map(da => new Translate(
       da.institutionPK,
-      da.aliasOf(instMap(da.institutionPK)),
+      da.value,
       da.value_real,
       "DICOM Attr " + da.attributeTag))
   }
