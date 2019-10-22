@@ -8,7 +8,7 @@ import org.aqa.Util
 /**
  * Data needed to run an EPID BB analysis.
  */
-class BBbyEPIDRunReq(epidListDicomFile: Seq[DicomFile], val machine: Machine) {
+case class BBbyEPIDRunReq(epidListDicomFile: Seq[DicomFile], val machine: Machine) {
 
   val epidList = Util.sortByDateTime(epidListDicomFile.map(df => df.attributeList).flatten)
 
