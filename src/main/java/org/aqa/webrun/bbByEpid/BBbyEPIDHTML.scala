@@ -134,15 +134,29 @@ object BBbyEPIDHTML {
         val dicomFile = runReq.epidListDicomFile.find(df => Util.sopOfAl(df.attributeList.get).equals(sop)).get
 
         val content = {
-          <div class="row">
-            <h2>Gantry Angle { gantryAngle.toString } </h2>
-            <a href={ mainReportFileName } title="Return to main EPID report">Main Report</a>
-            <br></br>
-            <a href={ WebServer.urlOfResultsFile(dicomFile.file) } title="Download anonymized DICOM">Download DICOM</a>
-            <pre>
-              { WebUtil.nl + DicomUtil.attributeListToString(al) }
-            </pre>
-            <p> </p>
+          <div>
+            <div class="row">
+              <div class="col-md-3 col-md-offset-1">
+                <h2>Gantry Angle { gantryAngle.toString } </h2>
+              </div>
+              <div class="col-md-2">
+                <div style="margin-top:24px;">
+                  <a href={ mainReportFileName } title="Return to main EPID report">Main Report</a>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <div style="margin-top:24px;">
+                  <a href={ "../" + dicomFile.file.getName } title="Download anonymized DICOM">Download DICOM</a>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <pre>
+                { WebUtil.nl + DicomUtil.attributeListToString(al) }
+              </pre>
+              { WebUtil.nl }
+              <p> </p>
+            </div>
           </div>
         }
 
