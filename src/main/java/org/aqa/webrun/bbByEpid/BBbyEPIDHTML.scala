@@ -140,14 +140,10 @@ object BBbyEPIDHTML {
                 <h2>Gantry Angle { gantryAngle.toString } </h2>
               </div>
               <div class="col-md-2">
-                <div style="margin-top:24px;">
-                  <a href={ mainReportFileName } title="Return to main EPID report">Main Report</a>
-                </div>
+                <h2> </h2><a href={ mainReportFileName } title="Return to main EPID report">Main Report</a>
               </div>
               <div class="col-md-2">
-                <div style="margin-top:24px;">
-                  <a href={ "../" + dicomFile.file.getName } title="Download anonymized DICOM">Download DICOM</a>
-                </div>
+                <h2> </h2><a href={ "../" + dicomFile.file.getName } title="Download anonymized DICOM">Download DICOM</a>
               </div>
             </div>
             <div class="row">
