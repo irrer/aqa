@@ -377,7 +377,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     0 match {
       case _ if (rtplanList.isEmpty) => formErr("No RTPLANS found")
       case _ if (rtimageList.isEmpty) => formErr("No RTIMAGEs given")
-      case _ if (planGroups.isEmpty) => formErr("No RTPLAN found for RTIMAGEs")
+      case _ if (planGroups.isEmpty) => formErr("No RTPLAN found for RTIMAGEs.  Try uploading the RTPLAN with the RTIMAGE files.")
       case _ if (planGroups.size > 1) => formErr("The RTIMAGEs reference multiple plans.  Only one plan per run is permitted.")
       case _ if (planGroups.head._2.size < rtimageList.size) => {
         formErr("There are " + rtimageList.size + " images but only " + planGroups.head._2.size + " reference this plan")
