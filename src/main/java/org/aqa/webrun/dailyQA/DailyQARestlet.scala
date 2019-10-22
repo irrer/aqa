@@ -169,11 +169,11 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
       new Col("Y CBCT - PLAN mm", "(plan Y) - (plan Y) in mm", colCbctY _),
       new Col("Z CBCT - PLAN mm", "(plan Z) - (plan Z) in mm", colCbctZ _),
 
-      new Col("Vert Angle deg", "Angle of gantry for vertical image in degrees", colVertGantryAngle _),
+      new Col("Gantry Angle for XZ", "Angle of gantry for vertical image in degrees used to calculate values for Y and Z", colVertGantryAngle _),
       new Col("Vert EPID - CAX(X) mm", "X offset Vertical EPID image - CAX in mm", colVertXCax _),
       new Col("Vert EPID - CAX(Z) mm", "Z offset Vertical EPID image - CAX in mm", colVertZCax _),
 
-      new Col("Horz Angle deg", "Angle of gantry for horizontal image in degrees", colHorzGantryAngle _),
+      new Col("Gantry Angle for YZ", "Angle of gantry for horizontal image in degrees used to calculate values for X and Z", colHorzGantryAngle _),
       new Col("Horz EPID - CAX(Y) mm", "Y offset Horizontal EPID image - CAX in mm", colHorzYCax _),
       new Col("Horz EPID - CAX(Z) mm", "Z offset Horizontal EPID image - CAX in mm", colHorzZCax _),
 
