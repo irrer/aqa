@@ -106,8 +106,8 @@ object BBbyCBCTHTML {
       val subDir = new File(extendedData.output.dir, cbctDirName)
 
       def descriptionOf(al: AttributeList) = "Z : " + Util.fmtDbl(getZ(al))
-      def fileNameOfPng(al: AttributeList) = Util.textToId(descriptionOf(al)) + ".png"
-      def fileNameOfHtml(al: AttributeList) = Util.textToId(descriptionOf(al)) + ".html"
+      def fileNameOfPng(al: AttributeList) = Util.textToId(descriptionOf(al).replace("-", "neg")) + ".png"
+      def fileNameOfHtml(al: AttributeList) = Util.textToId(descriptionOf(al).replace("-", "neg")) + ".html"
 
       def writeDicomImage(al: AttributeList) = {
         val image = ConsumerFormatImageMaker.makeEightBitImage(al)
@@ -134,6 +134,7 @@ object BBbyCBCTHTML {
               <img src={ fileNameOfPng(al) }/>
             </div>
             <div class="row">
+              <p> </p>
               <pre>
                 { WebUtil.nl + DicomUtil.attributeListToString(al) }
               </pre>
