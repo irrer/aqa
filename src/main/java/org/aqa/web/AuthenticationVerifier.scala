@@ -47,7 +47,6 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
       else {
         val id = cr.getIdentifier
         val pw = cr.getSecret.mkString("")
-        Trace.trace("User: " + id + "  password: " + pw)
       }
     }
     val requestedRole = getRequestedRole(request, response)
