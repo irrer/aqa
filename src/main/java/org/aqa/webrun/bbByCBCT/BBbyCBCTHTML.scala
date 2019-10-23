@@ -134,7 +134,7 @@ object BBbyCBCTHTML {
               <img src={ fileNameOfPng(al) }/>
             </div>
             <div class="row">
-              <p> </p>
+              <p> </p><br> </br>
               <pre>
                 { WebUtil.nl + DicomUtil.attributeListToString(al) }
               </pre>
@@ -164,7 +164,7 @@ object BBbyCBCTHTML {
 
         def alToHtml(al: AttributeList) = {
           <td>
-            <a href={ fileNameOfHtml(al) } class="screenshot" rel={ fileNameOfPng(al) }>
+            <a href={ fileNameOfHtml(al) } class="screenshot" title={ descriptionOf(al) } rel={ fileNameOfPng(al) }>
               <img src={ fileNameOfPng(al) } height="64"/>
             </a>
           </td>
@@ -176,6 +176,8 @@ object BBbyCBCTHTML {
           </tr>
         }
 
+        // Note that the margin-bottom for the table has to be large to create space so
+        // that the tooltip images can be viewed in their entirety.
         val content = {
           <div>
             <div class="row">
@@ -191,11 +193,12 @@ object BBbyCBCTHTML {
               </div>
               <div class="row">
                 <p> </p>
-                <table>
+                <table style="margin-bottom: 600px">
                   { groupedByLine.map(line => lineToHtml(line)) }
                 </table>
               </div>
             </div>
+            <p style="margin=400px;"> </p>
           </div>
         }
         content
