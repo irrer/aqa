@@ -349,9 +349,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   private def basicValidation(valueMap: ValueMapT, rtplanList: Seq[DicomFile], rtimageList: Seq[DicomFile]): Either[StyleMapT, BasicData] = {
     logger.info("Number of RTPLAN files uploaded: " + rtplanList.size)
     logger.info("Number of RTIMAGE files duploaded: " + rtimageList.size)
-    val machineSerialNumberListOpt = rtimageList.map(rtimage => Util.getAttrValue(rtimage.attributeList.get, TagFromName.DeviceSerialNumber))
-    val machineSerialNumberList = machineSerialNumberListOpt.flatten
-    val nullSerialNumber = machineSerialNumberList.size != machineSerialNumberListOpt.size
+    val machineSerialNumberList = rtimageList.map(rtimage => Util.getAttrValue(rtimage.attributeList.get, TagFromName.DeviceSerialNumber)).flatten
 
     def rtimageDate(rtimage: DicomFile): Long = {
       Util.extractDateTimeAndPatientIdFromDicomAl(rtimage.attributeList.get)._1.map(d => d.getTime).distinct.sorted.last
@@ -382,9 +380,23 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       case _ if (planGroups.head._2.size < rtimageList.size) => {
         formErr("There are " + rtimageList.size + " images but only " + planGroups.head._2.size + " reference this plan")
       }
+
+      case _ if (machineSerialNumberList.isEmpty) => {
+        formErr("None of the " + rtimageList.size +
+          " RTIMAGEs have a device serial number (0018,1000) tag.  " +
+          "This can happen on a new machine or one that has been serviced.  " +
+          "The device serial number is required by this software to identify the instance of the machine.")
+      }
+
+      case _ if (machineSerialNumberList.size != rtimageList.size) => {
+        formErr("Only " + machineSerialNumberList.size + " of the " + rtimageList.size +
+          " RTIMAGEs have a device serial number (0018,1000) tag.  " +
+          "This can happen on a new machine or one that has been serviced.  " +
+          "The device serial number is required by this software to identify the instance of the machine.")
+      }
       case _ if (machineCheck.isLeft) => Left(machineCheck.left.get)
-      case _ if (machineSerialNumberList.distinct.size != 1) => formErr("There are RTIMAGEs from more than one machine: " + machineList)
-      case _ if (nullSerialNumber) => formErr("At least one RTIMAGE has no serial number.")
+      case _ if (machineSerialNumberList.distinct.size != 1) => formErr("There are RTIMAGEs from more than one machine: " + machineList + "  Only one machine's data can be analyzed.")
+
       case _ if ((dateTimeList.last - dateTimeList.head) > maxDuration) =>
         formErr("Over " + Config.MaxProcedureDuration + " minutes from first to last image.  These RTIMAGE files were not from the same session")
       case _ => {
