@@ -151,8 +151,8 @@ object BBbyCBCTHTML {
       subDir.mkdirs
 
       val sortedCbct = runReq.cbct.sortBy(al => getZ(al))
-      sortedCbct.map(al => writeDicomImage(al))
-      runReq.cbctDicomFile.sortBy(df => getZ(df.attributeList.get)).map(df => writeDicomMetaData(df))
+      sortedCbct.par.map(al => writeDicomImage(al))
+      runReq.cbctDicomFile.sortBy(df => getZ(df.attributeList.get)).par.map(df => writeDicomMetaData(df))
 
       def sizedGroups(seq: Seq[AttributeList], grp: Seq[Seq[AttributeList]]): Seq[Seq[AttributeList]] = {
         if (seq.isEmpty) grp
@@ -182,14 +182,15 @@ object BBbyCBCTHTML {
               <div class="col-md-3 col-md-offset-1">
                 <h2>View CBCT Slices</h2>
               </div>
-              <div class="col-md-2">
+              <div class="col-md-1">
                 <h2> </h2><a href={ mainReportFileName } title="Return to main EPID report">Main Report</a>
               </div>
-              <div class="col-md-2">
+              <div class="col-md-5">
                 <h2> </h2>
                 Hover over images for larger view.  Click to see metadata or download.
               </div>
               <div class="row">
+                <p> </p>
                 <table>
                   { groupedByLine.map(line => lineToHtml(line)) }
                 </table>
