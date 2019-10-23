@@ -501,6 +501,7 @@ class WebServer extends Application with Logging {
         new ProcedureList,
         new ServiceInfo,
         new ServiceInstance,
+        new PlatformUpdateList,
         new SymmetryAndFlatnessUseAsBaseline,
         new WedgeUseAsBaseline,
         new CenterDoseChartHistoryRestlet,
