@@ -373,7 +373,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     }
 
     0 match {
-      case _ if (rtplanList.isEmpty) => formErr("No RTPLANS found")
+      case _ if (rtplanList.isEmpty) => formErr("No RTPLANS found.  Try uploading the RTPLAN with the images to get it into the system.")
       case _ if (rtimageList.isEmpty) => formErr("No RTIMAGEs given")
       case _ if (planGroups.isEmpty) => formErr("No RTPLAN found for RTIMAGEs.  Try uploading the RTPLAN with the RTIMAGE files.")
       case _ if (planGroups.size > 1) => formErr("The RTIMAGEs reference multiple plans.  Only one plan per run is permitted.")
@@ -383,15 +383,15 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
 
       case _ if (machineSerialNumberList.isEmpty) => {
         formErr("None of the " + rtimageList.size +
-          " RTIMAGEs have a device serial number (0018,1000) tag.  " +
-          "This can happen on a new machine or one that has been serviced.  " +
+          " RTIMAGEs have a device serial number (0018,1000) tag.\\n" +
+          "This can happen on a new machine or one that has been recently serviced.\\n" +
           "The device serial number is required by this software to identify the instance of the machine.")
       }
 
       case _ if (machineSerialNumberList.size != rtimageList.size) => {
         formErr("Only " + machineSerialNumberList.size + " of the " + rtimageList.size +
-          " RTIMAGEs have a device serial number (0018,1000) tag.  " +
-          "This can happen on a new machine or one that has been serviced.  " +
+          " RTIMAGEs have a device serial number (0018,1000) tag.\\n" +
+          "This can happen on a new machine or one that has been recently serviced.\\n" +
           "The device serial number is required by this software to identify the instance of the machine.")
       }
       case _ if (machineCheck.isLeft) => Left(machineCheck.left.get)

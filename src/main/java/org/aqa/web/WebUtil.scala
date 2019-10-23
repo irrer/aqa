@@ -54,7 +54,7 @@ import org.aqa.db.DicomSeries
 
 object WebUtil extends Logging {
 
-  val bs = "\n.bs-example{ margin: 20px; }" // .bs-example{ margin: 20px;  }
+  val bs = "\n.bs-example{ margin: 20px; }"
 
   val spacer = "\n.spacer {  margin-top: 40px; }"
 
@@ -594,7 +594,7 @@ object WebUtil extends Logging {
     override def divAttributes(metaData: MetaData): MetaData = {
       val clss = metaData.get("class")
       val clssText = (if (clss.isDefined) clss.get.toString + " " else "") + "has-error"
-      val attr = ((<x/> % metaData) % (<x class={ clssText } title={ inputTitle }/>.attributes)).attributes
+      val attr = ((<x/> % metaData) % (<x class={ clssText } title={ inputTitle.replace("\\n", "\n").toString }/>.attributes)).attributes
       attr
     }
   }
