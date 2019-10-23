@@ -124,7 +124,10 @@ object BBbyCBCTHTML {
                 <h2>CBCT { descriptionOf(al) }</h2>
               </div>
               <div class="col-md-2">
-                <h2> </h2><a href={ "../" + mainReportFileName } title="Return to main EPID report">Main Report</a>
+                <h2> </h2><a href={ "../" + mainReportFileName } title="Return to main CBCT report">Main Report</a>
+              </div>
+              <div class="col-md-2">
+                <h2> </h2><a href={ cbctMainFileName } title="View thumbnails of all slices">Return to Thumbnails</a>
               </div>
               <div class="col-md-2">
                 <h2> </h2><a href={ "../../" + df.file.getName } title="Download anonymized DICOM">Download DICOM</a>
@@ -185,18 +188,18 @@ object BBbyCBCTHTML {
                 <h2>View CBCT Slices</h2>
               </div>
               <div class="col-md-1">
-                <h2> </h2><a href={ mainReportFileName } title="Return to main EPID report">Main Report</a>
+                <h2> </h2><a href={ "../" + mainReportFileName } title="Return to main CBCT report">Main Report</a>
               </div>
               <div class="col-md-5">
                 <h2> </h2>
-                Hover over images for larger view.  Click to see metadata or download.
               </div>
-              <div class="row">
-                <p> </p>
-                <table style="margin-bottom: 600px">
-                  { groupedByLine.map(line => lineToHtml(line)) }
-                </table>
-              </div>
+            </div>
+            <div class="row" style="margin-top: 20px;">
+              Hover over images for larger view.  Click to see metadata or download.
+              <br></br>
+              <table style="margin-bottom: 600px; ">
+                { groupedByLine.map(line => lineToHtml(line)) }
+              </table>
             </div>
             <p style="margin=400px;"> </p>
           </div>
