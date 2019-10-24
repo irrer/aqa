@@ -56,6 +56,7 @@ object DbSetup extends Logging {
     Institution.query,
     User.query,
     Procedure.query,
+    SystemModification.query,
     MachineType.query,
     MultileafCollimator.query,
     EPID.query,

@@ -47,6 +47,8 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
 
   protected def listName: String;
 
+  def listNameNoBlank = listName.replace(" ", "")
+
   protected val columnList: Seq[Column[VL]];
 
   /** Default time in seconds for page refresh. */
@@ -54,8 +56,8 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
 
   def pageTitle = "List " + listName + "s"
 
-  def updatePath = SubUrl.url(subUrl, listName + "Update")
-  def listPath = SubUrl.url(subUrl, listName + "List")
+  def updatePath = SubUrl.url(subUrl, listNameNoBlank + "Update")
+  def listPath = SubUrl.url(subUrl, listNameNoBlank + "List")
 
   /** Override with false to prevent showing 'Create new' */
   protected val canCreate: Boolean = true
@@ -63,16 +65,16 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
   /**
    * Get the name of the primary key to be used in directing user to the update page.
    */
-  def getPKName: String = listName.toString.substring(0, 1).toLowerCase + listName.substring(1) + "PK"
+  def getPKName: String = listNameNoBlank.toString.substring(0, 1).toLowerCase + listNameNoBlank.substring(1) + "PK"
 
   /**
    * Get the primary key used to direct the user to the corresponding update page.
    */
   protected def getPK(value: VL): Long; // must be overridden
 
-//  protected val filterForm: Option[WebForm] = None  TODO
-//
-//  protected def filter[VL](row: VL): Boolean = true
+  //  protected val filterForm: Option[WebForm] = None  TODO
+  //
+  //  protected def filter[VL](row: VL): Boolean = true
 
   /**
    * Retrieve data, usually from the database.
