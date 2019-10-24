@@ -188,13 +188,18 @@ class SystemModificationUpdate extends Restlet with SubUrlAdmin {
 
     val sysMod = SystemModification.get(sysModPK).get
 
+    val descriptionAsHtml = {
+      val lines = sysMod.description.split("\n").toSeq.map(s => <p>{ s }</p>)
+      <div>{ lines }</div>
+    }
+
     val content = {
       <div>
         <div class="row">
           <div class="col-md-3">
             <b>Date: </b>{ date.dateFormat.format(sysMod.date) }
           </div>
-          <div class="col-md-9">
+          <div class="col-md-6">
             <b>Summary: </b>{ sysMod.summary }
           </div>
         </div>
@@ -204,8 +209,8 @@ class SystemModificationUpdate extends Restlet with SubUrlAdmin {
           </div>
         </div>
         <div class="row">
-          <div class="col-md-10 col-md-offset-1">
-            <br></br>{ sysMod.description }
+          <div class="col-md-6 col-md-offset-1">
+            <br></br>{ descriptionAsHtml }
           </div>
         </div>
         <div class="row" style="margin-top:30px">
