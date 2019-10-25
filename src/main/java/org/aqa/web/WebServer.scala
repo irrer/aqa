@@ -215,6 +215,8 @@ class WebServer extends Application with Logging {
 
   private lazy val setPassword = new SetPassword
 
+  private lazy val systemModificationUpdate = new SystemModificationUpdate
+
   private lazy val webRunIndex = new WebRunIndex
 
   private lazy val outputList = new OutputList
@@ -239,6 +241,7 @@ class WebServer extends Application with Logging {
       notAuthenticated,
       termsOfUse,
       setPassword,
+      systemModificationUpdate,
       resultsDirectoryRestlet,
       webRunIndex,
       viewOutput,
@@ -270,6 +273,7 @@ class WebServer extends Application with Logging {
       case `notAuthenticated` => UserRole.publik
       case `termsOfUse` => UserRole.publik
       case `setPassword` => UserRole.guest
+      case `systemModificationUpdate` => UserRole.publik
       case `resultsDirectoryRestlet` => UserRole.guest
       case `webRunIndex` => UserRole.user
       case `viewOutput` => UserRole.user
@@ -502,7 +506,7 @@ class WebServer extends Application with Logging {
         new ServiceInfo,
         new ServiceInstance,
         new SystemModificationList,
-        new SystemModificationUpdate,
+        systemModificationUpdate,
         new SymmetryAndFlatnessUseAsBaseline,
         new WedgeUseAsBaseline,
         new CenterDoseChartHistoryRestlet,

@@ -25,11 +25,14 @@ import scala.concurrent.duration.DurationInt
 import org.aqa.db.SystemModification
 import java.sql.Timestamp
 import scala.xml.XML
+import java.text.SimpleDateFormat
 
 object SystemModificationUpdate {
   val systemModificationPKTag = "systemModificationPK"
 
   val dateFormat = (new WebInputDateTimePicker("Date", 6, 0)).dateFormat
+
+  val latestTag = "latest"
 }
 
 class SystemModificationUpdate extends Restlet with SubUrlAdmin {
@@ -239,12 +242,35 @@ class SystemModificationUpdate extends Restlet with SubUrlAdmin {
     }
   }
 
+  private def showLatest(response: Response) = {
+    val dateFormat = new SimpleDateFormat("EEE dd MMM yyyy")
+
+    val size = SystemModification.getSize
+
+    val elem = if (size == 0) {
+      <a href="/admin/SystemModificationList">System Modifications</a>
+    } else {
+      val dateText = dateFormat.format(SystemModification.getLatest.get.date)
+      val withMods = {
+        <a href="/admin/SystemModificationList">
+          System Modifications
+          <span class="badge badge-secondary" title="Number of system modifications">{ size.toString }</span>
+          <span title="Date of latest system modification">{ dateText }</span>
+        </a>
+      }
+      withMods
+    }
+    val text = xmlToText(elem)
+    setResponse(text, response, Status.SUCCESS_OK)
+  }
+
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
     val valueMap = getValueMap(request)
 
     try {
       0 match {
+        case _ if valueMap.get(SystemModificationUpdate.latestTag).isDefined => showLatest(response)
         case _ if !userIsWhitelisted(request) => readOnly(valueMap, response)
         case _ if buttonIs(valueMap, cancelButton) => SystemModificationList.redirect(response)
         case _ if buttonIs(valueMap, createButton) => create(valueMap, response)

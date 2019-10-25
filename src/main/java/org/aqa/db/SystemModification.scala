@@ -77,6 +77,19 @@ object SystemModification extends Logging {
    */
   def list: Seq[SystemModification] = Db.run(query.result)
 
+  /**
+   * Get the one with the largest time stamp if it exists.
+   */
+  def getLatest: Option[SystemModification] = {
+    val latest = Db.run(query.sortBy(_.date.reverse).take(1).result)
+    latest.headOption
+  }
+
+  /**
+   * Get the number of rows.
+   */
+  def getSize = Db.run(query.size.result)
+
   def delete(systemModificationPK: Long): Int = {
     val q = query.filter(_.systemModificationPK === systemModificationPK)
     val action = q.delete
