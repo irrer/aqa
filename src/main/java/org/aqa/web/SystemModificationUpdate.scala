@@ -24,6 +24,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import org.aqa.db.SystemModification
 import java.sql.Timestamp
+import scala.xml.XML
 
 object SystemModificationUpdate {
   val systemModificationPKTag = "systemModificationPK"
@@ -184,13 +185,20 @@ class SystemModificationUpdate extends Restlet with SubUrlAdmin {
     simpleWebPage(content, Status.CLIENT_ERROR_FORBIDDEN, "Modification of System Modification Forbidden", response)
   }
 
-  private def sysModToHtml(sysModPK: Long, response: Response) = {
+  private def sysModToHtml(sysModPK: Long, response: Response): Elem = {
 
     val sysMod = SystemModification.get(sysModPK).get
 
     val descriptionAsHtml = {
-      val lines = sysMod.description.split("\n").toSeq.map(s => <p>{ s }</p>)
-      <div>{ lines }</div>
+      try {
+        val elem = XML.loadString(sysMod.description)
+        elem
+      } catch {
+        case t: Throwable => {
+          val lines = sysMod.description.split("\n").toSeq.map(s => <p>{ s }</p>)
+          <div>{ lines }</div>
+        }
+      }
     }
 
     val content = {
@@ -221,12 +229,12 @@ class SystemModificationUpdate extends Restlet with SubUrlAdmin {
       </div>
     }
 
-    simpleWebPage(content, Status.SUCCESS_OK, "System Modification", response)
+    content
   }
 
   private def readOnly(valueMap: ValueMapT, response: Response) = {
     valueMap.get(systemModificationPK.label) match {
-      case Some(pkText) => sysModToHtml(pkText.toLong, response)
+      case Some(pkText) => simpleWebPage(sysModToHtml(pkText.toLong, response), Status.SUCCESS_OK, "System Modification", response)
       case _ => forbidden(response)
     }
   }
