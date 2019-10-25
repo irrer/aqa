@@ -23,6 +23,7 @@ import scala.concurrent.Await
 import org.aqa.db.Institution
 import org.aqa.db.User
 import org.aqa.AnonymizeUtil
+import edu.umro.ScalaUtil.Trace
 
 case class Column[VL](columnName: String, compare: (VL, VL) => Boolean, makeHTML: (VL) => Elem) {
 
@@ -72,9 +73,9 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
    */
   protected def getPK(value: VL): Long; // must be overridden
 
-  //  protected val filterForm: Option[WebForm] = None  TODO
-  //
-  //  protected def filter[VL](row: VL): Boolean = true
+  protected val filterForm: Option[WebForm] = None
+
+  protected def filterList(vl: VL, valueMap: ValueMapT): Boolean = true
 
   /**
    * Retrieve data, usually from the database.
@@ -138,10 +139,14 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
     <div class="row col-md-10 col-md-offset-1">
       <h1>{ pageTitle }</h1>
       { if (canCreate) createNew(valueMap) }
+      {
+        if (filterForm.isDefined) filterForm.get.toHtml(valueMap, styleNone, Some(response))
+        else <div></div>
+      }
       <table class="table table-striped">
         <tbody>
           { tableHead }
-          { getData(valueMap, response).sortWith(columnList(getSortColumn(valueMap)).compare).map(value => makeRow(value)) }
+          { getData(valueMap, response).filter(mmi => filterList(mmi, valueMap)).sortWith(columnList(getSortColumn(valueMap)).compare).map(value => makeRow(value)) }
         </tbody>
       </table>
     </div>;
@@ -165,9 +170,11 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
     val valueMap = getValueMap(request)
+    Trace.trace("valueMap: " + valueMap)
     beforeHandle(valueMap, request, response)
     request.getMethod match {
       case Method.GET => get(valueMap, response)
+      case Method.POST => get(valueMap, response)
       case _ => WebUtil.notFound(response)
     }
     response.getEntity.setExpirationDate(new Date(0))

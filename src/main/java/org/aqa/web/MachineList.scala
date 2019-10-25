@@ -16,6 +16,25 @@ class MachineList extends GenericList[Machine.MMI] with WebUtil.SubUrlAdmin {
 
   type MMI = Machine.MMI
 
+  private def makeButton(name: String, buttonType: ButtonType.Value): FormButton = {
+    val action = pathOf + "?" + name + "=" + name
+    new FormButton(name, 1, 0, subUrl, action, buttonType)
+  }
+
+  val checkbox = new WebInputCheckbox("All", true, Some("Show all institutions"), 2, 0)
+  val refresh = makeButton("Refresh", ButtonType.BtnPrimary)
+
+  override val filterForm: Option[WebForm] = {
+    val form = new WebForm(pathOf, List(List(checkbox, refresh)))
+    Some(form)
+  }
+
+  override def filterList(mmi: MMI, valueMap: ValueMapT): Boolean = {
+    val all = valueMap.get(checkbox.label).isDefined && valueMap(checkbox.label).equalsIgnoreCase("on")
+    val ok = all || mmi.institution.institutionPK.get == 1
+    ok
+  }
+
   override def listName = "Machine"
   override def getData(valueMap: ValueMapT, response: Response) = Machine.listWithDependencies
   override def getPK(value: Machine.MMI): Long = value.machine.machinePK.get
@@ -41,4 +60,5 @@ class MachineList extends GenericList[Machine.MMI] with WebUtil.SubUrlAdmin {
   private val notesCol = new Column[MMI]("Notes", _.machine.id, machNotesHtml _)
 
   override val columnList = Seq(idCol, institutionCol, typeCol, mlcCol, epidCol, serialNoCol, notesCol)
+
 }
