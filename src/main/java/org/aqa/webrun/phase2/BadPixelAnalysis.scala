@@ -184,10 +184,12 @@ object BadPixelAnalysis extends Logging {
         }
       }
 
-      def boolToString(b: Boolean) = if (b) "yes" else ""
+      def boolToName(name: String, b: Boolean) = if (b) name else ""
 
       val dicomHref = Phase2Util.dicomViewHref(al, extendedData, runReq)
       val pngHref = Phase2Util.dicomViewImageHref(al, extendedData, runReq)
+
+      val j = Config.CollimatorPositionBeamList.head.beamName.equalsIgnoreCase(beamName)
 
       val elem = {
         <tr align="center">
@@ -197,12 +199,12 @@ object BadPixelAnalysis extends Logging {
           <td style="text-align: center;" title="Collimator Angle deg">{ angleOf(TagFromName.BeamLimitingDeviceAngle) }</td>
           <td style="text-align: center;" title="Collimator opening in CM">{ Phase2Util.jawDescription(al) }</td>
           <td style="text-align: center;" title="Time since first image capture (mm:ss)">{ relativeTimeText }</td>
-          <td style="text-align: center;" title="Collimator Centering">{ boolToString(Config.CollimatorCentering090BeamName.equals(beamName) || Config.CollimatorCentering270BeamName.equals(beamName)) }</td>
-          <td style="text-align: center;" title="Center Dose">{ boolToString(Config.CenterDoseBeamNameList.contains(beamName)) }</td>
-          <td style="text-align: center;" title="Collimator Position">{ boolToString(Config.CollimatorPositionBeamList.contains(beamName)) }</td>
-          <td style="text-align: center;" title="Wedge">{ boolToString(Config.WedgeBeamList.contains(beamName)) }</td>
-          <td style="text-align: center;" title="Symmetry and Flatness">{ boolToString(Config.SymmetryAndFlatnessBeamList.contains(beamName)) }</td>
-          <td style="text-align: center;" title="Leaf Position">{ boolToString(Config.LeafPositionBeamNameList.contains(beamName)) }</td>
+          <td style="text-align: center;" title="Collimator Centering">{ boolToName("Col Cntr", Config.CollimatorCentering090BeamName.equals(beamName) || Config.CollimatorCentering270BeamName.equals(beamName)) }</td>
+          <td style="text-align: center;" title="Center Dose">{ boolToName("Cntr Dose", Config.CenterDoseBeamNameList.contains(beamName)) }</td>
+          <td style="text-align: center;" title="Collimator Position">{ boolToName("Col Posn", Config.CollimatorPositionBeamList.find(cp => cp.beamName.equalsIgnoreCase(beamName)).isDefined) }</td>
+          <td style="text-align: center;" title="Wedge">{ boolToName("Wedge", Config.WedgeBeamList.contains(beamName)) }</td>
+          <td style="text-align: center;" title="Symmetry and Flatness">{ boolToName("Sym+Flat+Const", Config.SymmetryAndFlatnessBeamList.contains(beamName)) }</td>
+          <td style="text-align: center;" title="Leaf Position">{ boolToName("Leaf Posn", Config.LeafPositionBeamNameList.contains(beamName)) }</td>
         </tr>
       }
       (imageTime, elem)
@@ -233,12 +235,12 @@ object BadPixelAnalysis extends Logging {
             <th style="text-align: center;" title='Collimator angle rounded to nearest 90 degrees'>Collimator Angle<br/>degrees</th>
             <th style="text-align: center;" title='Width times height of field in cm'>Field Size<br/>cm</th>
             <th style="text-align: center;" title='Time since first image capture (mm:ss)'>Acquisition<br/>Time</th>
-            <th style="text-align: center;" title='"yes" if used in Collimator Centering'>Collimator<br/>Centering</th>
-            <th style="text-align: center;" title='"yes" if used in Center Dose'>Center<br/>Dose</th>
-            <th style="text-align: center;" title='"yes" if used in Collimator Position'>Collimator<br/>Position</th>
-            <th style="text-align: center;" title='"yes" if used in Wedge'>Wedge</th>
-            <th style="text-align: center;" title='"yes" if used in Symmetry and Flatness'>Symmetry and Flatness</th>
-            <th style="text-align: center;" title='"yes" if used in Leaf Position (Picket Fence)'>Leaf Position</th>
+            <th style="text-align: center;" title='if used in Collimator Centering'>Collimator<br/>Centering</th>
+            <th style="text-align: center;" title='if used in Center Dose'>Center<br/>Dose</th>
+            <th style="text-align: center;" title='if used in Collimator Position'>Collimator<br/>Position</th>
+            <th style="text-align: center;" title='if used in Wedge'>Wedge</th>
+            <th style="text-align: center;" title='if used in Symmetry and Flatness'>Symmetry and Flatness</th>
+            <th style="text-align: center;" title='if used in Leaf Position (Picket Fence)'>Leaf Position</th>
           </tr>
         </thead>
       }
