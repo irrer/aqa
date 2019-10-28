@@ -57,9 +57,10 @@ case class DicomFile(file: File) extends Logging {
     }
   }
 
-  def isModality(sopClassUID: String): Boolean = {
-    valid && Util.isModality(attributeList.get, sopClassUID)
-  }
+  def isRtplan: Boolean = valid && Util.isRtplan(attributeList.get)
+  def isRtimage: Boolean = valid && Util.isRtimage(attributeList.get)
+  def isCt: Boolean = valid && Util.isCt(attributeList.get)
+  def isReg: Boolean = valid && Util.isReg(attributeList.get)
 
   def reDir(dir: File) = new DicomFile(Util.reDir(file, dir))
 

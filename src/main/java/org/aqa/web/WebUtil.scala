@@ -804,7 +804,7 @@ object WebUtil extends Logging {
               if (attr == null) "" else attr.getSingleStringValueOrEmptyString
             }
 
-            if ((!dsn.equals("")) && Util.isModality(al, SOPClass.RTPlanStorage))
+            if ((!dsn.equals("")) && Util.isRtplan(al))
               Seq(dsn)
             else
               Seq[String]()

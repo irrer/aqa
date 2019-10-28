@@ -128,12 +128,24 @@ object Util extends Logging {
     }
   }
 
-  def isModality(al: AttributeList, sopClassUID: String): Boolean = {
-    try {
-      al.get(TagFromName.SOPClassUID).getSingleStringValueOrEmptyString.equals(sopClassUID)
-    } catch {
-      case t: Throwable => false
-    }
+  def isRtplan(al: AttributeList) = {
+    val a = al.get(TagFromName.Modality)
+    (a != null) && (a.getSingleStringValueOrEmptyString.trim.equalsIgnoreCase("RTPLAN"))
+  }
+
+  def isRtimage(al: AttributeList) = {
+    val a = al.get(TagFromName.Modality)
+    (a != null) && (a.getSingleStringValueOrEmptyString.trim.equalsIgnoreCase("RTIMAGE"))
+  }
+
+  def isCt(al: AttributeList) = {
+    val a = al.get(TagFromName.Modality)
+    (a != null) && (a.getSingleStringValueOrEmptyString.trim.equalsIgnoreCase("CT"))
+  }
+
+  def isReg(al: AttributeList) = {
+    val a = al.get(TagFromName.Modality)
+    (a != null) && (a.getSingleStringValueOrEmptyString.trim.equalsIgnoreCase("REG"))
   }
 
   /**

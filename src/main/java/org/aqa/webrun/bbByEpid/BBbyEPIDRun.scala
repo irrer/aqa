@@ -122,7 +122,7 @@ object BBbyEPIDRun extends Logging {
     logger.info("Copied input files from " + inputOrig.dir.getAbsolutePath + " --> " + sessionDir.getAbsolutePath)
 
     val dicomFileList = Util.listDirFiles(sessionDir).map(f => new DicomFile(f)).filter(df => df.attributeList.nonEmpty)
-    val epidList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
+    val epidList = dicomFileList.filter(df => df.isRtimage)
 
     val acquisitionDate = inputOrig.dataDate match {
       case None => None
@@ -244,8 +244,8 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
    * serial numbers of the plans themselves, as they reference the planning system.  This includes previously uploaded plans.
    */
   private def getRtplansSerNo(dicomFileList: Seq[DicomFile]): Seq[String] = {
-    val uploaded = dicomFileList.filter(df => df.isModality(SOPClass.RTPlanStorage)).map(df => df.attributeList.get)
-    val plansReferenced = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage)).map(df => BBbyEPIDRun.getPlanRef(df.attributeList.get)).distinct
+    val uploaded = dicomFileList.filter(df => df.isRtplan).map(df => df.attributeList.get)
+    val plansReferenced = dicomFileList.filter(df => df.isRtimage).map(df => BBbyEPIDRun.getPlanRef(df.attributeList.get)).distinct
     val plansFromDb = plansReferenced.map(sopInstUID => DicomSeries.getBySopInstanceUID(sopInstUID)).flatten.map(ds => ds.attributeListList).flatten
     val planSerNo = (uploaded ++ plansFromDb).map(plan => plan.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrEmptyString).distinct
 
@@ -255,7 +255,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
   private def validateMachineSelection(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, Machine] = {
     val serNoByImage = {
-      dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage)).
+      dicomFileList.filter(df => df.isRtimage).
         map(df => DicomUtil.findAllSingle(df.attributeList.get, TagFromName.DeviceSerialNumber)).flatten.
         map(serNo => serNo.getSingleStringValueOrEmptyString).distinct
     }
@@ -283,7 +283,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
    */
   private def validate(valueMap: ValueMapT): Either[StyleMapT, BBbyEPIDRunReq] = {
     val dicomFileList = dicomFilesInSession(valueMap)
-    val epidListDf = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
+    val epidListDf = dicomFileList.filter(df => df.isRtimage)
     val epidList = epidListDf.map(df => df.attributeList).flatten
     val angleList = epidList.map(epid => Util.gantryAngle(epid))
     def angleTextList = angleList.map(a => Util.fmtDbl(a)).mkString("  ")

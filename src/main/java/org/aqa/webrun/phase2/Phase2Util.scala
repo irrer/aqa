@@ -76,7 +76,7 @@ object Phase2Util extends Logging {
   def getPlanList(dicomList: Seq[DicomFile]): Seq[DicomFile] = {
     val configuredPlans: Seq[DicomFile] = {
       try {
-        DicomFile.readDicomInDir(Config.sharedDir).filter(df => df.isModality(SOPClass.RTPlanStorage))
+        DicomFile.readDicomInDir(Config.sharedDir).filter(df => df.isRtplan)
       } catch {
         case t: Throwable => {
           logger.warn("Unexpected problem while getting pre-configured RTPLANs: " + t)
@@ -87,7 +87,7 @@ object Phase2Util extends Logging {
 
     val downloadedPlans: Seq[DicomFile] = try {
       val configSopList = configuredPlans.map(c => Util.sopOfAl(c.attributeList.get))
-      dicomList.filter(df => df.isModality(SOPClass.RTPlanStorage)).filter(d => !configSopList.contains(Util.sopOfAl(d.attributeList.get)))
+      dicomList.filter(df => df.isRtplan).filter(d => !configSopList.contains(Util.sopOfAl(d.attributeList.get)))
     } catch {
       case t: Throwable => {
         logger.warn("Unexpected problem while getting RTPLAN: " + t)

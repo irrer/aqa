@@ -176,7 +176,7 @@ object Phase2 extends Logging {
     inputFileList.map(copyToSessionDir)
 
     val dicomFileList = Util.listDirFiles(sessionDir).map(f => new DicomFile(f)).filter(df => df.attributeList.nonEmpty)
-    val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
+    val rtimageList = dicomFileList.filter(df => df.isRtimage)
 
     logger.info("Copied input files from " + inputOrig.dir.getAbsolutePath + " --> " + sessionDir.getAbsolutePath)
 
@@ -313,7 +313,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   }
 
   private def validateMachineSelection(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, Machine] = {
-    val rtimageList = dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage))
+    val rtimageList = dicomFileList.filter(df => df.isRtimage)
     // machines that DICOM files reference (based on device serial numbers)
     val referencedMachines = rtimageList.map(df => Machine.attributeListToMachine(df.attributeList.get)).flatten.distinct
     val chosenMachine = for (pkTxt <- valueMap.get(machineSelector.label); pk <- Util.stringToLong(pkTxt); m <- Machine.get(pk)) yield m
@@ -503,7 +503,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     }
 
     val culled = groupList.map(g => minGroup(g))
-    logger.info("Number of RTIMAGE files culled due to redundant beam references: ", (rtimageList.size - culled.size))
+    logger.info("Number of RTIMAGE files culled due to redundant beam references: " + (rtimageList.size - culled.size))
     culled.toSeq
   }
 
@@ -513,7 +513,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
   private def run(valueMap: ValueMapT, request: Request, response: Response) = {
     val dicomFileList = dicomFilesInSession(valueMap)
     val rtplanList = Phase2Util.getPlanList(dicomFileList)
-    val rtimageList = cullRedundantBeamReferences(dicomFileList.filter(df => df.isModality(SOPClass.RTImageStorage)))
+    val rtimageList = cullRedundantBeamReferences(dicomFileList.filter(df => df.isRtimage))
 
     validate(valueMap, rtplanList, rtimageList) match {
       case Left(errMap) => {

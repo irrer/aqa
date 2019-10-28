@@ -113,8 +113,8 @@ object BBbyCBCTRun extends Logging {
     logger.info("Copied input files from " + inputOrig.dir.getAbsolutePath + " --> " + sessionDir.getAbsolutePath)
 
     val dicomFileList = Util.listDirFiles(sessionDir).map(f => new DicomFile(f)).filter(df => df.attributeList.nonEmpty)
-    val cbctList = dicomFileList.filter(df => df.isModality(SOPClass.CTImageStorage))
-    val regList = dicomFileList.filter(df => df.isModality(SOPClass.SpatialRegistrationStorage))
+    val cbctList = dicomFileList.filter(df => df.isCt)
+    val regList = dicomFileList.filter(df => df.isReg)
 
     val acquisitionDate = inputOrig.dataDate match {
       case None => None
@@ -349,9 +349,9 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
    */
   private def validate(valueMap: ValueMapT): Either[StyleMapT, BBbyCBCTRunReq] = {
     val dicomFileList = dicomFilesInSession(valueMap)
-    val cbctList = dicomFileList.filter(df => df.isModality(SOPClass.CTImageStorage)).sortBy(df => Util.slicePosition(df.attributeList.get))
-    val regList = dicomFileList.filter(df => df.isModality(SOPClass.SpatialRegistrationStorage))
-    val rtplanList = dicomFileList.filter(df => df.isModality(SOPClass.RTPlanStorage))
+    val cbctList = dicomFileList.filter(df => df.isCt).sortBy(df => Util.slicePosition(df.attributeList.get))
+    val regList = dicomFileList.filter(df => df.isReg)
+    val rtplanList = dicomFileList.filter(df => df.isRtplan)
 
     def cbctSeriesList = cbctList.map(cbct => getSeries(cbct)).distinct
     def cbctFrameOfRefList = cbctList.map(cbct => getFrameOfRef(cbct)).distinct

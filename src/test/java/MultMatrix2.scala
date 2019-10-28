@@ -32,8 +32,8 @@ object MultMatrix2 {
   def main(args: Array[String]): Unit = {
     val start = System.currentTimeMillis
     val all = getAttrListList
-    val regList = all.filter(al => Util.isModality(al, SOPClass.SpatialRegistrationStorage)).map(al => new ImageRegistration(al))
-    val rtimageList = all.filter(al => Util.isModality(al, SOPClass.RTImageStorage))
+    val regList = all.filter(al => Util.isReg(al)).map(al => new ImageRegistration(al))
+    val rtimageList = all.filter(al => Util.isRtimage(al))
 
     def tryRtimage(rtimage: AttributeList): String = {
       val DeviceSerialNumber = rtimage.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrEmptyString
