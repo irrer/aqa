@@ -445,7 +445,7 @@ object Util extends Logging {
   /**
    * Specified by 300A,00B8  RTBeamLimitingDeviceType.
    */
-  val xOrientation = Seq("X", "ASYMX", "MLCX")
+  val xOrientation = Seq("X", "ASYMX", "MLCX", "MLCX1", "MLCX2")
 
   /**
    * Specified by 300A,00B8  RTBeamLimitingDeviceType.
