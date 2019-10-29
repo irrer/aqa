@@ -181,7 +181,9 @@ object MeasureTBLREdges extends Logging {
 
   def getCollimatorPositions(BeamLimitingDeviceSequence: Seq[AttributeList]): X1X2Y1Y2 = {
     def getPair(nameList: Seq[String]): Array[Double] = {
-      BeamLimitingDeviceSequence.filter(s => nameList.contains(s.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString)).head.get(TagFromName.LeafJawPositions).getDoubleValues
+      def filterByName(s: AttributeList) = nameList.contains(s.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString)
+      val list = BeamLimitingDeviceSequence.filter(s => filterByName(s)).head.get(TagFromName.LeafJawPositions).getDoubleValues
+      list
     }
 
     val xPair = getPair(Util.xOrientation)
