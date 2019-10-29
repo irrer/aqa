@@ -184,14 +184,12 @@ object BadPixelAnalysis extends Logging {
         }
       }
 
-      def boolToName(name: String, b: Boolean) = if (b) name else ""
-
       val dicomHref = Phase2Util.dicomViewHref(al, extendedData, runReq)
       val pngHref = Phase2Util.dicomViewImageHref(al, extendedData, runReq)
 
-      val j = Config.CollimatorPositionBeamList.head.beamName.equalsIgnoreCase(beamName)
-
       val elem = {
+        def boolToName(name: String, b: Boolean) = if (b) name else ""
+
         <tr align="center">
           <td style="text-align: center;" title="Click for DICOM metadata"><a href={ dicomHref }>{ beamName }</a></td>
           <td style="text-align: center;" title="Click for full size image"><a href={ Phase2Util.dicomViewImageHtmlHref(al, extendedData, runReq) }><img src={ pngHref } width={ smallImageWidth }/></a></td>
