@@ -73,7 +73,7 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
    */
   protected def getPK(value: VL): Long; // must be overridden
 
-  protected val filterForm: Option[WebForm] = None
+  protected def filterForm(valueMap: ValueMapT): Option[WebForm] = None
 
   protected def filterList(vl: VL, valueMap: ValueMapT): Boolean = true
 
@@ -140,8 +140,13 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
       <h1>{ pageTitle }</h1>
       { if (canCreate) createNew(valueMap) }
       {
-        if (filterForm.isDefined) filterForm.get.toHtml(valueMap, styleNone, Some(response))
-        else <div></div>
+        filterForm(valueMap) match {
+          case Some(ff) => {
+            ff.toHtml(valueMap, styleNone, Some(response))
+          }
+          case _ =>
+            <div></div>
+        }
       }
       <table class="table table-striped">
         <tbody>
@@ -153,6 +158,8 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
   }
 
   protected def get(valueMap: ValueMapT, response: Response) = {
+    //    val form = makeForm(valueMap, response)
+    //    form.setFormResponse(valueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
     val text = wrapBody(makeForm(valueMap, response), pageTitle, defaultPageRefreshTime)
     setResponse(text, response, Status.SUCCESS_OK)
   }

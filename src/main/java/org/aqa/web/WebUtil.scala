@@ -535,7 +535,6 @@ object WebUtil extends Logging {
 
       val text = wrapBody(toHtml(valueMap, errorMap, Some(response)), pageTitle, None, false, makeFormAlertBox(errorMap))
 
-      //val text = wrapBody(toHtml(valueMap, errorMap, Some(response)), pageTitle)
       def replace(origText: String, col: Any): String = {
         if (col.isInstanceOf[IsInput]) {
           val input = col.asInstanceOf[IsInput]
@@ -848,8 +847,10 @@ object WebUtil extends Logging {
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
       val input = <input type="checkbox"/> % idNameClassValueAsAttr(label, valueMap)
       val inputWithValue: Elem = {
-        if (valueMap.get(label).isDefined && valueMap.get(label).get.equals("true")) input % (<input checked="true"/>).attributes
-        else input
+        if (valueMap.get(label).isDefined && (valueMap(label).equals("true") || valueMap(label).equals("on")))
+          input % (<input checked="true"/>).attributes
+        else
+          input
       }
 
       val html = {
@@ -1173,7 +1174,7 @@ object WebUtil extends Logging {
     val cr = request.getChallengeResponse
     if (cr == null) emptyValueMap
     else {
-      val userId = request.getChallengeResponse.getIdentifier.toLowerCase.trim
+      val userId = request.getChallengeResponse.getIdentifier.trim
       Seq((userIdRealTag, userId)).toMap
     }
   }

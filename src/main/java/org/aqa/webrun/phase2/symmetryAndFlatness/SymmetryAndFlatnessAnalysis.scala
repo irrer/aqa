@@ -198,6 +198,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
   private def getBaseline(machinePK: Long, beamName: String, dataName: String, attributeList: AttributeList, value: Double, dataDate: Timestamp): MaintenanceRecordBaseline = {
     val id = makeBaselineName(beamName, dataName)
+    val j = Baseline.findLatest(machinePK, id, dataDate) // TODO rm
     Baseline.findLatest(machinePK, id, dataDate) match {
       case Some((maintenanceRecord, baseline)) => new MaintenanceRecordBaseline(Some(maintenanceRecord), baseline)
       case _ => new MaintenanceRecordBaseline(None, Baseline.makeBaseline(-1, attributeList, id, value))

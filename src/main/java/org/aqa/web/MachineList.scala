@@ -5,6 +5,7 @@ import org.aqa.db.Machine
 import org.aqa.web.WebUtil._
 import scala.xml.Elem
 import org.aqa.AnonymizeUtil
+import org.aqa.db.CachedUser
 
 object MachineList {
   private val path = new String((new MachineList).pathOf)
@@ -21,18 +22,32 @@ class MachineList extends GenericList[Machine.MMI] with WebUtil.SubUrlAdmin {
     new FormButton(name, 1, 0, subUrl, action, buttonType)
   }
 
-  val checkbox = new WebInputCheckbox("All", true, Some("Show all institutions"), 2, 0)
+  val checkbox = new WebInputCheckbox("All", true, Some("Show machines from all institutions"), 2, 0)
   val refresh = makeButton("Refresh", ButtonType.BtnPrimary)
 
-  override val filterForm: Option[WebForm] = {
-    val form = new WebForm(pathOf, List(List(checkbox, refresh)))
-    Some(form)
-  }
+  //  override def filterForm(valueMap: ValueMapT): Option[WebForm] = {
+  //    val form = new WebForm(pathOf, List(List(checkbox, refresh)))
+  //    Some(form)
+  //  }
+  //
+  //  override def filterList(mmi: MMI, valueMap: ValueMapT): Boolean = {
+  //    val all = valueMap.get(checkbox.label).isDefined && valueMap(checkbox.label).equalsIgnoreCase("on")
+  //    val ok = all || mmi.institution.institutionPK.get == CachedUser.get(valueMap(userIdRealTag)).get.institutionPK
+  //    ok
+  //  }
 
   override def filterList(mmi: MMI, valueMap: ValueMapT): Boolean = {
-    val all = valueMap.get(checkbox.label).isDefined && valueMap(checkbox.label).equalsIgnoreCase("on")
-    val ok = all || mmi.institution.institutionPK.get == 1
-    ok
+    try {
+      val userIdReal = valueMap(userIdRealTag)
+      val user = CachedUser.get(valueMap(userIdRealTag)).get
+      val ok = userIsWhitelisted(userIdReal) || (mmi.institution.institutionPK.get == user.institutionPK)
+      ok
+    } catch {
+      case t: Throwable => {
+        logger.warn("Error filtering machine list: " + fmtEx(t))
+        true
+      }
+    }
   }
 
   override def listName = "Machine"
@@ -49,7 +64,21 @@ class MachineList extends GenericList[Machine.MMI] with WebUtil.SubUrlAdmin {
 
   private val epidCol = new Column[MMI]("EPID", _.epid.model)
 
-  private val serialNoCol = new Column[MMI]("Serial No.", _.machine.serialNumber match { case Some(text) => text; case _ => "not defined" })
+  private def compareDevSerNo(mmiA: MMI, mmiB: MMI): Boolean = {
+    val a = mmiA.machine.serialNumber
+    val b = mmiB.machine.serialNumber
+    val cmpr = (a.isDefined, b.isDefined) match {
+      case (true, true) => a.get.compareTo(b.get) < 0
+      case (false, false) => false
+      case (true, false) => false
+      case (false, true) => true
+    }
+    cmpr
+  }
+
+  private def devSerNo(mmi: MMI) = mmi.machine.serialNumber match { case Some(text) => wrapAlias(text); case _ => (<div>not defined</div>) }
+
+  private val serialNoCol = new Column[MMI]("Serial No.", compareDevSerNo _, devSerNo _)
 
   private val institutionCol = new Column[MMI]("Institution", _.institution.name, (mmi) => wrapAlias(mmi.institution.name))
 

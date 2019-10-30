@@ -42,7 +42,7 @@ object CachedUser {
    */
   def get(id: String): Option[User] = {
     removeExpired
-    val canonId = id.toLowerCase.trim
+    //val canonId = id.toLowerCase.trim
     getFromCache(id) match {
       case Some(cu) => Some(cu.user)
       case _ => {

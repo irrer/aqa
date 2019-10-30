@@ -76,12 +76,11 @@ object Baseline extends Logging {
     val action = {
       for {
         maintenanceRecord <- MaintenanceRecord.query.filter(m => m.machinePK === machinePK)
-        output <- Output.query.filter(o => maintenanceRecord.outputPK === o.outputPK)
-        baseline <- Baseline.query.filter(b => (b.id === id) && (b.maintenanceRecordPK === maintenanceRecord.maintenanceRecordPK) && (output.dataDate <= timestamp))
-      } yield (maintenanceRecord, baseline, output)
-    } sortBy (_._3.dataDate.desc)
+        baseline <- Baseline.query.filter(b => (b.id === id) && (b.maintenanceRecordPK === maintenanceRecord.maintenanceRecordPK) && (b.acquisitionDate <= timestamp))
+      } yield (maintenanceRecord, baseline)
+    } sortBy (_._2.acquisitionDate.desc)
 
-    // Trace.trace(action.result.statements.mkString("\n"))
+    Trace.trace(action.result.statements.mkString("\n"))
 
     val list = Db.run(action.result.headOption)
     if (list.isDefined)
@@ -106,7 +105,7 @@ object Baseline extends Logging {
    * Given a set of maintenance records, only allow that are baselines and are referenced by baseline
    * values that have an ID that have text in the <code>requiredText</code> list.  Text
    * comparisons are case-insensitive.
-   * 
+   *
    * Note that this will filter out non-baseline maintenance events.
    */
   def filterOutUnrelatedBaselines(maintRecPKset: Set[Long], requiredText: Set[String]): Seq[MaintenanceRecord] = {

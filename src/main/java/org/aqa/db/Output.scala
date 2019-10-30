@@ -138,6 +138,7 @@ object Output extends Logging {
   case class ExtendedValues(
     input_dataDate: Option[Timestamp],
     input_directory: Option[String],
+    institutionPK: Long,
     institution_name: String,
     machine_id: String,
     output_outputPK: Long,
@@ -155,21 +156,14 @@ object Output extends Logging {
       output <- Output.query.map(o => (o.outputPK, o.startDate, o.inputPK, o.procedurePK, o.userPK))
       input <- Input.query.filter(i => i.inputPK === output._3).map(i => (i.dataDate, i.directory, i.machinePK))
       mach <- Machine.query.filter(m => m.machinePK === input._3).map(m => (m.id, m.institutionPK))
-      inst <- Institution.query.filter(i => i.institutionPK === mach._2).map(i => i.name)
+      inst <- Institution.query.filter(i => i.institutionPK === mach._2).map(i => (i.institutionPK, i.name))
       proc <- Procedure.query.filter(p => p.procedurePK === output._4).map(p => (p.name, p.version))
       user <- User.query.filter(u => u.userPK === output._5).map(u => u.id)
     } yield ((input._1, input._2, inst, mach._1, output._1, output._2, proc._1, proc._2, user))
 
-    if (false) { // TODO rm
-      //val j0 = search.map(s => s._3.institutionPK.get)
-      val j1 = search.take(1)
-      //j1.map(j => j.
-      val j2 = search.filter(s => s._3 === "")
-      //search.filter(s => institution.contains(s._3))
-    }
     val sorted = search.sortBy(_._1).take(maxSize)
 
-    val result = Db.run(sorted.result).map(a => new ExtendedValues(a._1, a._2, a._3, a._4, a._5, a._6, a._7, a._8, a._9))
+    val result = Db.run(sorted.result).map(a => new ExtendedValues(a._1, a._2, a._3._1, a._3._2, a._4, a._5, a._6, a._7, a._8, a._9))
     result
   }
 
