@@ -150,7 +150,7 @@ object Output extends Logging {
   /**
    * Get an extended list of all outputs.
    */
-  def extendedList(procedure: Option[Procedure], machine: Option[Machine], institution: Set[Long], maxSize: Int): Seq[ExtendedValues] = {
+  def extendedList(procedure: Set[Procedure], machine: Set[Machine], instPK: Option[Long], maxSize: Int): Seq[ExtendedValues] = {
 
     val search = for {
       output <- Output.query.map(o => (o.outputPK, o.startDate, o.inputPK, o.procedurePK, o.userPK))
@@ -161,7 +161,12 @@ object Output extends Logging {
       user <- User.query.filter(u => u.userPK === output._5).map(u => u.id)
     } yield ((input._1, input._2, inst, mach._1, output._1, output._2, proc._1, proc._2, user))
 
-    val sorted = search.sortBy(_._1).take(maxSize)
+    val filtered = {
+      if (instPK.isDefined) search.filter(c => c._3._1 === instPK.get)
+      else search
+    }
+
+    val sorted = filtered.sortBy(_._1).take(maxSize)
 
     val result = Db.run(sorted.result).map(a => new ExtendedValues(a._1, a._2, a._3._1, a._3._2, a._4, a._5, a._6, a._7, a._8, a._9))
     result

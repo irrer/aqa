@@ -193,8 +193,6 @@ object Machine extends Logging {
       else action
     }
 
-    //  val j =  action.filter(c => c._3.institutionPK === 5)
-
     Db.run(filtered.result).map(mmi => new MMI(mmi._1, mmi._2, mmi._3, mmi._4, mmi._5))
   }
 

@@ -129,12 +129,18 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
   /** Override this to customize the path (link) to follow to create a new list item. */
   protected def createNewPath(valueMap: ValueMapT): String = updatePath
 
+  /**
+   * Optionally show a link that lets users create a new item.
+   */
   protected def createNew(valueMap: ValueMapT): Elem = {
     <div class="row col-md-2 col-md-offset-10">
       <strong><a href={ createNewPath(valueMap) }>Create new { listName }</a><p> </p></strong>
     </div>;
   }
 
+  /**
+   * Translate the rows to HTML.
+   */
   private def tableElem(valueMap: ValueMapT, response: Response): Elem = {
     <table class="table table-striped">
       <tbody>
@@ -144,17 +150,26 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
     </table>
   }
 
+  /**
+   * Field row that contains main table.
+   */
+  private def tableRow(valueMap: ValueMapT, response: Response): List[WebRow] = {
+    val col = new WebPlainText("tableContent", false, 12, 0, (valueMap) => tableElem(valueMap, response))
+    List(new WebRow(List(col)))
+  }
+
+  /**
+   * Field row that shows title and optionally 'can create' link.
+   */
   private def titleRow(valueMap: ValueMapT): List[WebRow] = {
     val title = Some(new WebPlainText("pageTitle", false, 9, 0, (_) => { <h1>{ pageTitle }</h1> }))
     val canCr = if (canCreate) Some(new WebPlainText("canCreate", 3, 0, createNew(valueMap))) else None
     List(new WebRow(List(title, canCr).flatten))
   }
 
-  private def tableRow(valueMap: ValueMapT, response: Response): List[WebRow] = {
-    val col = new WebPlainText("tableContent", false, 12, 0, (valueMap) => tableElem(valueMap, response))
-    List(new WebRow(List(col)))
-  }
-
+  /**
+   * Evaluate form fields, retrieve and filter list entries, and format into HTML.
+   */
   protected def get(valueMap: ValueMapT, response: Response) = {
     val form = new WebForm(listPath, List(new WebRow(titleRow(valueMap)) ++ htmlFieldList(valueMap) ++ new WebRow(tableRow(valueMap, response))))
     form.setFormResponse(valueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
@@ -173,7 +188,7 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
     val valueMap = getValueMap(request)
-    Trace.trace("valueMap: " + valueMap)
+    // Trace.trace("valueMap: " + valueMap)
     beforeHandle(valueMap, request, response)
     request.getMethod match {
       case Method.GET => get(valueMap, response)

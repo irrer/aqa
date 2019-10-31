@@ -46,6 +46,7 @@ class MachineList extends GenericList[Machine.MMI] with WebUtil.SubUrlAdmin {
     }
     Machine.listWithDependencies(instPK)
   }
+  
   override def getPK(value: Machine.MMI): Long = value.machine.machinePK.get
 
   private def machineTypeHTML(mmi: MMI): Elem = <div> { WebUtil.firstPartOf(mmi.machineType.toName, 40) } </div>

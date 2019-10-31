@@ -9,11 +9,8 @@ import java.text.SimpleDateFormat
 import org.aqa.db.Input
 import org.aqa.db.Machine
 import org.aqa.db.Institution
-import java.io.File
-import org.aqa.db.DataValidity
 import org.restlet.Request
 import org.aqa.web.WebUtil._
-import org.aqa.db.CentralAxis
 import edu.umro.util.Utility
 import org.aqa.webrun.phase2.Phase2
 import org.aqa.db.CachedUser
@@ -45,31 +42,13 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     new FormButton(name, 1, 0, subUrl, action, buttonType)
   }
 
-  val checkbox = new WebInputCheckbox("All", true, Some("Show output from all institutions"), 2, 0)
+  val checkbox = new WebInputCheckbox("All Institutions", true, Some("Check to show output from all institutions, then click 'Refresh'"), 2, 0)
   val refresh = makeButton("Refresh", ButtonType.BtnPrimary)
 
-  //  override def filterForm(valueMap: ValueMapT): Option[WebForm] = {
-  //    val form = new WebForm(pathOf, List(List(checkbox, refresh)))
-  //    Some(form)
-  //  }
-  //
-  //  override def filterList(oex: Output.ExtendedValues, valueMap: ValueMapT): Boolean = {
-  //    try {
-  //      val all = valueMap.get(checkbox.label).isDefined && valueMap(checkbox.label).equalsIgnoreCase("on")
-  //      val j0 = oex.institutionPK // TODO rm
-  //      val userIdReal = valueMap(userIdRealTag)
-  //      val j1 = CachedUser.get(userIdReal) // TODO rm
-  //      val user = CachedUser.get(valueMap(userIdRealTag)).get
-  //      //val ok = all || (oex.institutionPK == user.institutionPK)
-  //      val ok = userIsWhitelisted(userIdReal) || (oex.institutionPK == user.institutionPK)
-  //      ok
-  //    } catch {
-  //      case t: Throwable => {
-  //        logger.warn("Error filtering output: " + fmtEx(t))
-  //        true
-  //      }
-  //    }
-  //  }
+  override def htmlFieldList(valueMap: ValueMapT): List[WebRow] = {
+    val webRow = new WebRow(List(checkbox, refresh))
+    List(webRow);
+  }
 
   private def humanReadableURL(url: String): String = {
     val small = url.replaceAll("^https://", "").replaceAll("^http://", "").replaceAll("^www\\.", "")
@@ -160,7 +139,19 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   val entriesPerPage = 1000
 
   override def getData(valueMap: ValueMapT, response: Response) = {
-    Output.extendedList(None, None, Set[Long](), entriesPerPage)
+
+    val v = valueMap.get(checkbox.label)
+    val all = v.isDefined && (v.get.equalsIgnoreCase("true") || v.get.equalsIgnoreCase("on"))
+    val instPK = {
+      if (all) None
+      else {
+        val userIdReal = valueMap(userIdRealTag)
+        val user = CachedUser.get(valueMap(userIdRealTag)).get
+        Some(user.institutionPK)
+      }
+    }
+
+    Output.extendedList(Set[Procedure](), Set[Machine](), instPK, entriesPerPage)
   }
 
   override def getPK(extendedValues: Output.ExtendedValues): Long = extendedValues.output_outputPK
