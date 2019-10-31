@@ -73,9 +73,10 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
    */
   protected def getPK(value: VL): Long; // must be overridden
 
-  protected def filterForm(valueMap: ValueMapT): Option[WebForm] = None
-
-  protected def filterList(vl: VL, valueMap: ValueMapT): Boolean = true
+  /**
+   * Optional list of HTML fields customized by the type of list.
+   */
+  protected def htmlFieldList(valueMap: ValueMapT): List[WebRow] = List[WebRow]();
 
   /**
    * Retrieve data, usually from the database.
@@ -134,34 +135,29 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
     </div>;
   }
 
-  protected def makeForm(valueMap: ValueMapT, response: Response): Elem = {
+  private def tableElem(valueMap: ValueMapT, response: Response): Elem = {
+    <table class="table table-striped">
+      <tbody>
+        { tableHead }
+        { getData(valueMap, response).sortWith(columnList(getSortColumn(valueMap)).compare).map(value => makeRow(value)) }
+      </tbody>
+    </table>
+  }
 
-    <div class="row col-md-10 col-md-offset-1">
-      <h1>{ pageTitle }</h1>
-      { if (canCreate) createNew(valueMap) }
-      {
-        filterForm(valueMap) match {
-          case Some(ff) => {
-            ff.toHtml(valueMap, styleNone, Some(response))
-          }
-          case _ =>
-            <div></div>
-        }
-      }
-      <table class="table table-striped">
-        <tbody>
-          { tableHead }
-          { getData(valueMap, response).filter(mmi => filterList(mmi, valueMap)).sortWith(columnList(getSortColumn(valueMap)).compare).map(value => makeRow(value)) }
-        </tbody>
-      </table>
-    </div>;
+  private def titleRow(valueMap: ValueMapT): List[WebRow] = {
+    val title = Some(new WebPlainText("pageTitle", false, 9, 0, (_) => { <h1>{ pageTitle }</h1> }))
+    val canCr = if (canCreate) Some(new WebPlainText("canCreate", 3, 0, createNew(valueMap))) else None
+    List(new WebRow(List(title, canCr).flatten))
+  }
+
+  private def tableRow(valueMap: ValueMapT, response: Response): List[WebRow] = {
+    val col = new WebPlainText("tableContent", false, 12, 0, (valueMap) => tableElem(valueMap, response))
+    List(new WebRow(List(col)))
   }
 
   protected def get(valueMap: ValueMapT, response: Response) = {
-    //    val form = makeForm(valueMap, response)
-    //    form.setFormResponse(valueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
-    val text = wrapBody(makeForm(valueMap, response), pageTitle, defaultPageRefreshTime)
-    setResponse(text, response, Status.SUCCESS_OK)
+    val form = new WebForm(listPath, List(new WebRow(titleRow(valueMap)) ++ htmlFieldList(valueMap) ++ new WebRow(tableRow(valueMap, response))))
+    form.setFormResponse(valueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
   }
 
   protected def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Unit = {

@@ -22,36 +22,30 @@ class MachineList extends GenericList[Machine.MMI] with WebUtil.SubUrlAdmin {
     new FormButton(name, 1, 0, subUrl, action, buttonType)
   }
 
-  val checkbox = new WebInputCheckbox("All", true, Some("Show machines from all institutions"), 2, 0)
+  val checkbox = new WebInputCheckbox("All Institutions", true, Some("Check to show machines from all institutions, then click 'Refresh'"), 2, 0)
   val refresh = makeButton("Refresh", ButtonType.BtnPrimary)
 
-  //  override def filterForm(valueMap: ValueMapT): Option[WebForm] = {
-  //    val form = new WebForm(pathOf, List(List(checkbox, refresh)))
-  //    Some(form)
-  //  }
-  //
-  //  override def filterList(mmi: MMI, valueMap: ValueMapT): Boolean = {
-  //    val all = valueMap.get(checkbox.label).isDefined && valueMap(checkbox.label).equalsIgnoreCase("on")
-  //    val ok = all || mmi.institution.institutionPK.get == CachedUser.get(valueMap(userIdRealTag)).get.institutionPK
-  //    ok
-  //  }
-
-  override def filterList(mmi: MMI, valueMap: ValueMapT): Boolean = {
-    try {
-      val userIdReal = valueMap(userIdRealTag)
-      val user = CachedUser.get(valueMap(userIdRealTag)).get
-      val ok = userIsWhitelisted(userIdReal) || (mmi.institution.institutionPK.get == user.institutionPK)
-      ok
-    } catch {
-      case t: Throwable => {
-        logger.warn("Error filtering machine list: " + fmtEx(t))
-        true
-      }
-    }
+  override def htmlFieldList(valueMap: ValueMapT): List[WebRow] = {
+    val webRow = new WebRow(List(checkbox, refresh))
+    List(webRow);
   }
 
   override def listName = "Machine"
-  override def getData(valueMap: ValueMapT, response: Response) = Machine.listWithDependencies
+
+  override def getData(valueMap: ValueMapT, response: Response) = {
+
+    val v = valueMap.get(checkbox.label)
+    val all = v.isDefined && (v.get.equalsIgnoreCase("true") || v.get.equalsIgnoreCase("on"))
+    val instPK = {
+      if (all) None
+      else {
+        val userIdReal = valueMap(userIdRealTag)
+        val user = CachedUser.get(valueMap(userIdRealTag)).get
+        Some(user.institutionPK)
+      }
+    }
+    Machine.listWithDependencies(instPK)
+  }
   override def getPK(value: Machine.MMI): Long = value.machine.machinePK.get
 
   private def machineTypeHTML(mmi: MMI): Elem = <div> { WebUtil.firstPartOf(mmi.machineType.toName, 40) } </div>

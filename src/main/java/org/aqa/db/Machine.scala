@@ -173,7 +173,13 @@ object Machine extends Logging {
   /** Dependent types */
   case class MMI(machine: Machine, machineType: MachineType, institution: Institution, mlc: MultileafCollimator, epid: EPID)
 
-  def listWithDependencies: Seq[MMI] = {
+  /**
+   * Get machine related info.
+   *
+   * @param instPK: If defined, only get machines from this institution, otherwise get from all institutions.
+   */
+  def listWithDependencies(instPK: Option[Long]): Seq[MMI] = {
+
     val action = for {
       machine <- query
       machineType <- MachineType.query if machineType.machineTypePK === machine.machineTypePK
@@ -182,7 +188,14 @@ object Machine extends Logging {
       epid <- EPID.query if epid.epidPK === machine.epidPK
     } yield (machine, machineType, institution, mlc, epid)
 
-    Db.run(action.result).map(mmi => new MMI(mmi._1, mmi._2, mmi._3, mmi._4, mmi._5))
+    val filtered = {
+      if (instPK.isDefined) action.filter(c => c._3.institutionPK === instPK.get)
+      else action
+    }
+
+    //  val j =  action.filter(c => c._3.institutionPK === 5)
+
+    Db.run(filtered.result).map(mmi => new MMI(mmi._1, mmi._2, mmi._3, mmi._4, mmi._5))
   }
 
   def listMachinesFromInstitution(institutionPK: Long): Seq[Machine] = {

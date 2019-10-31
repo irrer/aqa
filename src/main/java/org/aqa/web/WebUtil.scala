@@ -1337,7 +1337,7 @@ object WebUtil extends Logging {
       mmi.machine.serialNumber.isEmpty && (userIsWhitLst || (instPK == mmi.machine.institutionPK))
     }
     logger.info("userIsWhitLst: " + userIsWhitLst)
-    val machList = ("-1", "None") +: Machine.listWithDependencies.filter(mmi => shouldShow(mmi)).sortWith(sortMMI).map(mmi => mmiToTuple(mmi))
+    val machList = ("-1", "None") +: Machine.listWithDependencies(None).filter(mmi => shouldShow(mmi)).sortWith(sortMMI).map(mmi => mmiToTuple(mmi))
     machList
   }
 

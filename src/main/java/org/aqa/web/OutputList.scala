@@ -53,23 +53,23 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   //    Some(form)
   //  }
   //
-  override def filterList(oex: Output.ExtendedValues, valueMap: ValueMapT): Boolean = {
-    try {
-      val all = valueMap.get(checkbox.label).isDefined && valueMap(checkbox.label).equalsIgnoreCase("on")
-      val j0 = oex.institutionPK // TODO rm
-      val userIdReal = valueMap(userIdRealTag)
-      val j1 = CachedUser.get(userIdReal) // TODO rm
-      val user = CachedUser.get(valueMap(userIdRealTag)).get
-      //val ok = all || (oex.institutionPK == user.institutionPK)
-      val ok = userIsWhitelisted(userIdReal) || (oex.institutionPK == user.institutionPK)
-      ok
-    } catch {
-      case t: Throwable => {
-        logger.warn("Error filtering output: " + fmtEx(t))
-        true
-      }
-    }
-  }
+  //  override def filterList(oex: Output.ExtendedValues, valueMap: ValueMapT): Boolean = {
+  //    try {
+  //      val all = valueMap.get(checkbox.label).isDefined && valueMap(checkbox.label).equalsIgnoreCase("on")
+  //      val j0 = oex.institutionPK // TODO rm
+  //      val userIdReal = valueMap(userIdRealTag)
+  //      val j1 = CachedUser.get(userIdReal) // TODO rm
+  //      val user = CachedUser.get(valueMap(userIdRealTag)).get
+  //      //val ok = all || (oex.institutionPK == user.institutionPK)
+  //      val ok = userIsWhitelisted(userIdReal) || (oex.institutionPK == user.institutionPK)
+  //      ok
+  //    } catch {
+  //      case t: Throwable => {
+  //        logger.warn("Error filtering output: " + fmtEx(t))
+  //        true
+  //      }
+  //    }
+  //  }
 
   private def humanReadableURL(url: String): String = {
     val small = url.replaceAll("^https://", "").replaceAll("^http://", "").replaceAll("^www\\.", "")
