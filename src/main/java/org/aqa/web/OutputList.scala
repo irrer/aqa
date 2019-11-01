@@ -294,21 +294,4 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
         Filter.STOP
     }
   }
-
-  //  override def handle(request: Request, response: Response): Unit = {
-  //    val valueMap = getValueMap(request)
-  //
-  //    val redo = valueMap.get(OutputList.redoTag)
-  //    val del = valueMap.get(OutputList.deleteTag)
-  //
-  //    if (redo.isDefined)
-  //      redoOutput(redo.get.toLong, response)
-  //    else {
-  //      if (del.isDefined)
-  //        handleDelete(valueMap, request, response)
-  //      else
-  //        super.handle(request, response)
-  //    }
-  //  }
-
 }
