@@ -24,6 +24,7 @@ import org.aqa.db.Institution
 import org.aqa.db.User
 import org.aqa.AnonymizeUtil
 import edu.umro.ScalaUtil.Trace
+import org.restlet.routing.Filter
 
 case class Column[VL](columnName: String, compare: (VL, VL) => Boolean, makeHTML: (VL) => Elem) {
 
@@ -133,9 +134,7 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
    * Optionally show a link that lets users create a new item.
    */
   protected def createNew(valueMap: ValueMapT): Elem = {
-    <div class="row col-md-2 col-md-offset-10">
-      <strong><a href={ createNewPath(valueMap) }>Create new { listName }</a><p> </p></strong>
-    </div>;
+    <strong><a href={ createNewPath(valueMap) }>Create new { listName }</a><p> </p></strong>
   }
 
   /**
@@ -163,7 +162,7 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
    */
   private def titleRow(valueMap: ValueMapT): List[WebRow] = {
     val title = Some(new WebPlainText("pageTitle", false, 9, 0, (_) => { <h1>{ pageTitle }</h1> }))
-    val canCr = if (canCreate) Some(new WebPlainText("canCreate", 3, 0, createNew(valueMap))) else None
+    val canCr = if (canCreate) Some(new WebPlainText("canCreate", false, 3, 0, createNew _)) else None
     List(new WebRow(List(title, canCr).flatten))
   }
 
@@ -175,7 +174,8 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
     form.setFormResponse(valueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
   }
 
-  protected def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Unit = {
+  protected def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Int = {
+    Filter.CONTINUE
   }
 
   protected def encryptedColumn(title: String, prefix: String, primaryKey: (VL) => (Long)) = {
@@ -189,12 +189,13 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
     super.handle(request, response)
     val valueMap = getValueMap(request)
     // Trace.trace("valueMap: " + valueMap)
-    beforeHandle(valueMap, request, response)
-    request.getMethod match {
-      case Method.GET => get(valueMap, response)
-      case Method.POST => get(valueMap, response)
-      case _ => WebUtil.notFound(response)
+    if (beforeHandle(valueMap, request, response) == Filter.CONTINUE) {
+      request.getMethod match {
+        case Method.GET => get(valueMap, response)
+        case Method.POST => get(valueMap, response)
+        case _ => WebUtil.notFound(response)
+      }
+      response.getEntity.setExpirationDate(new Date(0))
     }
-    response.getEntity.setExpirationDate(new Date(0))
   }
 }

@@ -260,7 +260,7 @@ object WebUtil extends Logging {
       ensureSessionId(parseOriginalReference(request) ++ parseForm(new Form(request.getEntity)) ++ userToValueMap(request))
   }
 
-  def simpleWebPage(content: Elem, status: Status, title: String, response: Response) = {
+  def simpleWebPage(content: Elem, status: Status, title: String, response: Response): Unit = {
     val indentedContent = {
       <div class="row col-md-10 col-md-offset-1">
         { content }
@@ -269,6 +269,8 @@ object WebUtil extends Logging {
     response.setEntity(wrapBody(indentedContent, title), MediaType.TEXT_HTML)
     response.setStatus(status)
   }
+
+  def simpleWebPage(content: Elem, title: String, response: Response): Unit = simpleWebPage(content, Status.SUCCESS_OK, title, response)
 
   def notFound(response: Response) = {
     val status = Status.CLIENT_ERROR_NOT_FOUND
@@ -536,15 +538,28 @@ object WebUtil extends Logging {
       val text = wrapBody(toHtml(valueMap, errorMap, Some(response)), pageTitle, None, false, makeFormAlertBox(errorMap))
 
       def replace(origText: String, col: Any): String = {
-        if (col.isInstanceOf[IsInput]) {
+        val txt = if (col.isInstanceOf[IsInput]) {
+          Trace.trace("col: " + col.asInstanceOf[IsInput].label)
           val input = col.asInstanceOf[IsInput]
           val markedLiteral = markLiteralValue(input.label)
           if (valueMap.get(input.label).isDefined && text.contains(markedLiteral)) {
             origText.replace(markedLiteral, valueMap.get(input.label).get)
           } else origText
         } else origText
+        txt
       }
       val colList = rowList.map(row => row.colList).flatten
+
+      def whut(col: ToHtml) = { // TODO rm
+        Trace.trace("col: " + col.getClass)
+        if (col.isInstanceOf[WebRow]) {
+          val wr = col.asInstanceOf[WebRow]
+          wr.colList.map(c =>
+            println("    c: " + c.getClass))
+        }
+      }
+      colList.map(col => whut(col)) // TODO rm
+      Trace.trace("colList:\n    " + colList.mkString("\n    ")) // TODO rm
       val finalText = colList.foldLeft(text)((txt, col) => replace(txt, col))
 
       setResponse(finalText, response, status)
@@ -667,6 +682,8 @@ object WebUtil extends Logging {
     }
 
     def getDouble(valueMap: ValueMapT): Option[Double] = stringToDouble(getValOrEmpty(valueMap).trim)
+
+    override def toString = "class: " + this.getClass.getName + " label: " + label
   }
 
   class WebInputText(override val label: String, showLabel: Boolean, col: Int, offset: Int, placeholder: String, aqaAlias: Boolean) extends IsInput(label) with ToHtml {
@@ -843,6 +860,8 @@ object WebUtil extends Logging {
 
     def this(label: String, showLabel: Boolean, col: Int, offset: Int) = this(label, showLabel, None, col, offset)
     def this(label: String, col: Int, offset: Int) = this(label, true, None, col, offset)
+
+    override def toString = "class: " + this.getClass.getName + " label: " + label
 
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
       val input = <input type="checkbox"/> % idNameClassValueAsAttr(label, valueMap)

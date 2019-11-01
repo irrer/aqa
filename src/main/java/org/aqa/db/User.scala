@@ -117,14 +117,23 @@ object User extends Logging {
   case class UserInstitution(user: User, institution: Institution);
 
   /**
-   * Get a list of all users with institution name.
+   * Get a list of all users with institution.
+   * 
+   * @param instPK: If defined, get only from this institution, otherwise get all.
    */
-  def listWithDependencies: Seq[UserInstitution] = {
+  def listWithDependencies(instPK: Option[Long]): Seq[UserInstitution] = {
     val action = for {
       user <- query
       institution <- Institution.query if user.institutionPK === institution.institutionPK
     } yield (user, institution)
-    Db.run(action.result).map(ui => new UserInstitution(ui._1, ui._2))
+
+    val filtered = {
+      if (instPK.isDefined) {
+        action.filter(ui => ui._1.institutionPK === instPK.get)
+      } else action
+    }
+
+    Db.run(filtered.result).map(ui => new UserInstitution(ui._1, ui._2))
   }
 
   def delete(userPK: Long): Int = {

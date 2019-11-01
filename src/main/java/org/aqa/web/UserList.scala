@@ -6,6 +6,7 @@ import org.restlet.Response
 import org.aqa.db.User.UserInstitution
 import org.aqa.web.WebUtil._
 import org.aqa.AnonymizeUtil
+import org.aqa.db.CachedUser
 
 object UserList {
   private val path = new String((new UserList).pathOf)
@@ -33,7 +34,32 @@ class UserList extends GenericList[UserInstitution] with WebUtil.SubUrlAdmin {
 
   override val columnList = Seq(idCol, nameCol, emailCol, institutionCol, roleCol)
 
-  override def getData(valueMap: ValueMapT, response: Response) = User.listWithDependencies
+  override def getData(valueMap: ValueMapT, response: Response) = {
+    val v = valueMap.get(checkbox.label)
+    val all = v.isDefined && (v.get.equalsIgnoreCase("true") || v.get.equalsIgnoreCase("on"))
+    val instPK = {
+      if (all) None
+      else {
+        val userIdReal = valueMap(userIdRealTag)
+        val user = CachedUser.get(valueMap(userIdRealTag)).get
+        Some(user.institutionPK)
+      }
+    }
+    User.listWithDependencies(instPK)
+  }
 
   override def getPK(value: UserInstitution): Long = value.user.userPK.get
+
+  private def makeButton(name: String, buttonType: ButtonType.Value): FormButton = {
+    val action = pathOf + "?" + name + "=" + name
+    new FormButton(name, 1, 0, subUrl, action, buttonType)
+  }
+
+  val checkbox = new WebInputCheckbox("All Institutions", true, Some("Check to show users from all institutions, then click 'Refresh'"), 2, 0)
+  val refresh = makeButton("Refresh", ButtonType.BtnPrimary)
+
+  override def htmlFieldList(valueMap: ValueMapT): List[WebRow] = {
+    val webRow = new WebRow(List(checkbox, refresh))
+    List(webRow);
+  }
 }

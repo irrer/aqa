@@ -18,6 +18,7 @@ import org.restlet.data.Status
 import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.bbByCBCT.BBbyCBCTRun
 import org.aqa.webrun.bbByEpid.BBbyEPIDRun
+import org.restlet.routing.Filter
 
 /**
  * List the outputs to let users re-visit results.
@@ -271,33 +272,43 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     }
   }
 
-  override def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Unit = {
+  override def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Int = {
     try {
       val delete = valueMap.get(OutputList.deleteTag)
+      val redo = valueMap.get(OutputList.redoTag)
 
       0 match {
-        case _ if (delete.isDefined) => deleteOutput(delete.get.toLong, response)
-        case _ => ;
+        case _ if (delete.isDefined) => {
+          handleDelete(valueMap, request, response)
+          Filter.SKIP
+        }
+        case _ if (redo.isDefined) => {
+          redoOutput(redo.get.toLong, response)
+          Filter.SKIP
+        }
+        case _ => Filter.CONTINUE
       }
     } catch {
-      case t: Throwable => internalFailure(response, "Unexpected error in OutputList: " + fmtEx(t))
+      case t: Throwable =>
+        internalFailure(response, "Unexpected error in OutputList: " + fmtEx(t))
+        Filter.STOP
     }
   }
 
-  override def handle(request: Request, response: Response): Unit = {
-    val valueMap = getValueMap(request)
-
-    val redo = valueMap.get(OutputList.redoTag)
-    val del = valueMap.get(OutputList.deleteTag)
-
-    if (redo.isDefined)
-      redoOutput(redo.get.toLong, response)
-    else {
-      if (del.isDefined)
-        handleDelete(valueMap, request, response)
-      else
-        super.handle(request, response)
-    }
-  }
+  //  override def handle(request: Request, response: Response): Unit = {
+  //    val valueMap = getValueMap(request)
+  //
+  //    val redo = valueMap.get(OutputList.redoTag)
+  //    val del = valueMap.get(OutputList.deleteTag)
+  //
+  //    if (redo.isDefined)
+  //      redoOutput(redo.get.toLong, response)
+  //    else {
+  //      if (del.isDefined)
+  //        handleDelete(valueMap, request, response)
+  //      else
+  //        super.handle(request, response)
+  //    }
+  //  }
 
 }
