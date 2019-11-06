@@ -16,6 +16,8 @@ import org.aqa.run.ProcedureStatus
 import org.aqa.webrun.phase2.MeasureTBLREdges
 import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.Trace
+import edu.umro.ScalaUtil.DicomUtil
+import com.pixelmed.dicom.AttributeList
 
 /**
  * Test the Config.
@@ -33,6 +35,12 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
 
   val outDir = new File("""target\TestCollimatorPositionAnalysis_measureImage""")
   outDir.mkdirs
+
+  val rtplan = {
+    val al = new AttributeList
+    al.read(new File(dir, "rtplan.dcm"))
+    al
+  }
 
   "TestCollimatorPositionAnalysis_measureImage" should "match expected values" in {
 
@@ -52,14 +60,14 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
 
       val floodOffset = new Point(0, 0)
       val results = CollimatorPositionAnalysis.testMeasureImage(beamName, FloodCompensation, biasAndPixelCorrectedCroppedImage, pixelCorrectedImage,
-        al, originalImage, outputPK, floodOffset)
+        al, originalImage, outputPK, floodOffset, rtplan)
 
       (results.isRight) should be(true)
 
       val collimatorPosition = results.right.get._1
       val image = results.right.get._2
 
-      val x1x2y2y2Expected = MeasureTBLREdges.imageCollimatorPositions(al)
+      val x1x2y2y2Expected = MeasureTBLREdges.imageCollimatorPositions(al, rtplan)
       println("Expected: " + x1x2y2y2Expected)
 
       println("collimatorPosition: " + collimatorPosition)
@@ -89,14 +97,14 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
       println("collimatorAngle: " + collimatorAngle)
 
       val results = CollimatorPositionAnalysis.testMeasureImage(beamName, FloodCompensation, biasAndPixelCorrectedCroppedImage, pixelCorrectedImage,
-        al, originalImage, outputPK, floodOffset)
+        al, originalImage, outputPK, floodOffset, rtplan)
 
       (results.isRight) should be(true)
 
       val collimatorPosition = results.right.get._1
       val image = results.right.get._2
 
-      val x1x2y2y2Expected = MeasureTBLREdges.imageCollimatorPositions(al)
+      val x1x2y2y2Expected = MeasureTBLREdges.imageCollimatorPositions(al, rtplan)
       println("Expected: " + x1x2y2y2Expected)
 
       println("collimatorPosition: " + collimatorPosition)

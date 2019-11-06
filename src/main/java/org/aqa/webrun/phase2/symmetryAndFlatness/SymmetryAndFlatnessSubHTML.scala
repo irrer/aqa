@@ -90,7 +90,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     }
 
     val detailUrl = WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, beamName))
-    <td style="vertical-align: middle;" title={ titleDetails } rowspan="4"><a href={ detailUrl }>{ beamName }<br/>{ Phase2Util.jawDescription(al) }<br/>{ Phase2Util.angleDescription(al) }</a></td>
+    <td style="vertical-align: middle;" title={ titleDetails } rowspan="4"><a href={ detailUrl }>{ beamName }<br/>{ Phase2Util.jawDescription(al, runReq.rtplan.attributeList.get) }<br/>{ Phase2Util.angleDescription(al) }</a></td>
   }
 
   private def imageColumn(subDir: File, beamName: String, extendedData: ExtendedData, runReq: RunReq): Elem = {

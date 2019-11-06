@@ -233,13 +233,6 @@ object WebUtil extends Logging {
     val methodIsUpload = (request.getMethod == Method.POST) || (request.getMethod == Method.PUT)
     def entity = request.getEntity
     def mediaType = request.getEntity.getMediaType
-    //    if (mediaType != null) { // TODO rm
-    //      Trace.trace(mediaType)
-    //      Trace.trace(mediaType.getMainType)
-    //      Trace.trace(mediaType.getSubType)
-    //      Trace.trace(mediaType.getParent)
-    //      Trace.trace(mediaType.getParameters)
-    //    }
     def mediaTypeIsUpload = MediaType.MULTIPART_FORM_DATA.equals(mediaType, true)
 
     methodIsUpload && (entity != null) && (mediaType != null) && mediaTypeIsUpload
@@ -390,7 +383,6 @@ object WebUtil extends Logging {
 
   trait ToHtml {
     def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem;
-    //def toHtml(valueMap: ValueMapT, errorMap: StyleMapT): Elem = toHtml(valueMap, errorMap, None) // TODO ?
     def toHtml(valueMap: ValueMapT): Elem = toHtml(valueMap, styleNone, None)
     def toHtml: Elem = toHtml(emptyValueMap, styleNone, None)
   }
@@ -550,16 +542,6 @@ object WebUtil extends Logging {
       }
       val colList = rowList.map(row => row.colList).flatten
 
-      def whut(col: ToHtml) = { // TODO rm
-        Trace.trace("col: " + col.getClass)
-        if (col.isInstanceOf[WebRow]) {
-          val wr = col.asInstanceOf[WebRow]
-          wr.colList.map(c =>
-            println("    c: " + c.getClass))
-        }
-      }
-      colList.map(col => whut(col)) // TODO rm
-      Trace.trace("colList:\n    " + colList.mkString("\n    ")) // TODO rm
       val finalText = colList.foldLeft(text)((txt, col) => replace(txt, col))
 
       setResponse(finalText, response, status)

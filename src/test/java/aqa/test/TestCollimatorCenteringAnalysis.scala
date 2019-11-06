@@ -10,22 +10,30 @@ import org.aqa.webrun.phase2.Phase2Util
 import edu.umro.ImageUtil.DicomImage
 import org.aqa.IsoImagePlaneTranslator
 import org.aqa.Util
+import edu.umro.ScalaUtil.DicomUtil
+import com.pixelmed.dicom.AttributeList
 
 object TestCollimatorCenteringAnalysis {
 
   def main(args: Array[String]): Unit = {
 
-    val inDir = new File("""D:\pf\eclipse\workspaceOxygen\aqa\src\test\resources""")
+    val inDir = new File("""D:\pf\eclipse\workspaceOxygen\aqa\src\test\resources\TestCollimatorCenteringAnalysis""")
     val fileNames = Seq("TestCollimatorCenteringAnalysis_1.dcm", "TestCollimatorCenteringAnalysis_2.dcm", "TestCollimatorCenteringAnalysis_3.dcm")
 
     val fileList = fileNames.map(name => new File(inDir, name))
 
+    val rtplan = {
+      val al = new AttributeList
+      al.read(new File(inDir, "TestCollimatorCenteringAnalysisRtplan.dcm"))
+      al
+    }
+
     def processFile(file: File) = {
       val dicomFile = new DicomFile(file)
-      val al = dicomFile.attributeList.get
-      val image = new DicomImage(al)
-      val translator = new IsoImagePlaneTranslator(al)
-      val expected_mm = MeasureTBLREdges.imageCollimatorPositions(al).toTBLR(Util.collimatorAngle(al))
+      val rtimage = dicomFile.attributeList.get
+      val image = new DicomImage(rtimage)
+      val translator = new IsoImagePlaneTranslator(rtimage)
+      val expected_mm = MeasureTBLREdges.imageCollimatorPositions(rtimage, rtplan).toTBLR(Util.collimatorAngle(rtimage))
 
       val results = MeasureTBLREdges.measure(image, translator, Some(expected_mm), 270, image, new Point(0, 0), 0.5)
 

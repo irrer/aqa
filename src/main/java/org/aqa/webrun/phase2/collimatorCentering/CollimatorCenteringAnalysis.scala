@@ -32,6 +32,7 @@ import org.aqa.IsoImagePlaneTranslator
 import org.aqa.IsoImagePlaneTranslator
 import org.aqa.IsoImagePlaneTranslator
 import java.awt.Point
+import edu.umro.ScalaUtil.DicomUtil
 
 /**
  * Analyze DICOM files for ImageAnalysis.
@@ -45,7 +46,7 @@ object CollimatorCenteringAnalysis extends Logging {
   /**
    * Perform actual analysis.
    */
-  private def analyze(dicomFile090: DicomFile, dicomFile270: DicomFile, image090: DicomImage, image270: DicomImage, outputPK: Long): (CollimatorCentering, MeasureTBLREdges.AnalysisResult, MeasureTBLREdges.AnalysisResult) = {
+  private def analyze(dicomFile090: DicomFile, dicomFile270: DicomFile, image090: DicomImage, image270: DicomImage, outputPK: Long, rtplan:AttributeList): (CollimatorCentering, MeasureTBLREdges.AnalysisResult, MeasureTBLREdges.AnalysisResult) = {
     val al090 = dicomFile090.attributeList.get
     val al270 = dicomFile270.attributeList.get
 
@@ -53,8 +54,8 @@ object CollimatorCenteringAnalysis extends Logging {
     val collAngle270 = Util.collimatorAngle(al270)
     val translator = new IsoImagePlaneTranslator(al090)
 
-    val expected_mm090 = MeasureTBLREdges.imageCollimatorPositions(al090).toTBLR(collAngle090)
-    val expected_mm270 = MeasureTBLREdges.imageCollimatorPositions(al270).toTBLR(collAngle270)
+    val expected_mm090 = MeasureTBLREdges.imageCollimatorPositions(al090, rtplan).toTBLR(collAngle090)
+    val expected_mm270 = MeasureTBLREdges.imageCollimatorPositions(al270, rtplan).toTBLR(collAngle270)
 
     // Calculate edges in parallel for efficiency.
     val resultPair = {
@@ -97,8 +98,8 @@ object CollimatorCenteringAnalysis extends Logging {
   /**
    * For testing only
    */
-  def testAnalyze(dicomFile090: DicomFile, dicomFile270: DicomFile, image090: DicomImage, image270: DicomImage, outputPK: Long): (CollimatorCentering, MeasureTBLREdges.AnalysisResult, MeasureTBLREdges.AnalysisResult) = {
-    analyze(dicomFile090, dicomFile270, image090, image270, outputPK)
+  def testAnalyze(dicomFile090: DicomFile, dicomFile270: DicomFile, image090: DicomImage, image270: DicomImage, outputPK: Long, rtplan: AttributeList): (CollimatorCentering, MeasureTBLREdges.AnalysisResult, MeasureTBLREdges.AnalysisResult) = {
+    analyze(dicomFile090, dicomFile270, image090, image270, outputPK, rtplan)
   }
 
   /**
@@ -116,7 +117,7 @@ object CollimatorCenteringAnalysis extends Logging {
 
       val analysisResult = analyze(runReq.rtimageMap(Config.CollimatorCentering090BeamName), runReq.rtimageMap(Config.CollimatorCentering270BeamName),
         image090.pixelCorrectedImage, image270.pixelCorrectedImage,
-        extendedData.output.outputPK.get)
+        extendedData.output.outputPK.get, runReq.rtplan.attributeList.get)
 
       val collimatorCentering = analysisResult._1
       val result090 = analysisResult._2

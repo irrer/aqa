@@ -21,6 +21,8 @@ import org.aqa.db.CollimatorCentering
 import org.aqa.webrun.phase2.collimatorCentering.CollimatorCenteringAnalysis
 import org.aqa.webrun.phase2.Phase2Util
 import java.awt.image.BufferedImage
+import edu.umro.ScalaUtil.DicomUtil
+import com.pixelmed.dicom.AttributeList
 
 /**
  * Test the LeafPositionAnalysis.leafEnds method.
@@ -30,13 +32,20 @@ class TestCollimatorCenteringAnalysis_analyze extends FlatSpec with Matchers {
 
   Config.validate
 
-  val dir = new File("""src\test\resources""")
+  val dir = new File("""src\test\resources\TestCollimatorCentering""")
   val fileNameList = Seq(
     ("TestCollimatorCentering090a.dcm", "TestCollimatorCentering270a.dcm"),
     ("TestCollimatorCentering090b.dcm", "TestCollimatorCentering270b.dcm"))
 
   val outDir = new File("""target\TestCollimatorCenteringAnalysis""")
   outDir.mkdirs
+  
+  val rtplan = {
+    val file = new File(dir, "TestCollimatorCenteringRtplan.dcm")
+    val al = new AttributeList
+    al.read(file)
+    al
+  }
 
   "TestCollimatorCenteringAnalysis_analyze" should "calculate collimator center" in {
 
@@ -64,7 +73,7 @@ class TestCollimatorCenteringAnalysis_analyze extends FlatSpec with Matchers {
       val image090 = correctBadPix(dicomFile090)
       val image270 = correctBadPix(dicomFile270)
 
-      val analysisResult = CollimatorCenteringAnalysis.testAnalyze(dicomFile090, dicomFile270, image090, image270, -1)
+      val analysisResult = CollimatorCenteringAnalysis.testAnalyze(dicomFile090, dicomFile270, image090, image270, -1, rtplan)
 
       val collimatorCentering = analysisResult._1
       val bufImage090 = analysisResult._2

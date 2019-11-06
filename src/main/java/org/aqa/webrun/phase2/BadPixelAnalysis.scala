@@ -117,7 +117,7 @@ object BadPixelAnalysis extends Logging {
       Config.applyWatermark(bufImage)
       val url = WebServer.urlOfResultsFile(rtimage.file)
       val result = DicomAccess.write(rtimage, url, angles + " : " + beamName, viewDir,
-        Phase2Util.dicomViewBaseName(beamName, rtimage.attributeList.get),
+        Phase2Util.dicomViewBaseName(beamName, rtimage.attributeList.get, runReq.rtplan.attributeList.get),
         Some(bufImage), Some(derived.originalImage), derived.badPixels)
       logger.info("Finished making DICOM view for beam " + beamName)
       result
@@ -126,13 +126,13 @@ object BadPixelAnalysis extends Logging {
     // write the RTPLAN
     val planLink = Phase2Util.dicomViewHref(runReq.rtplan.attributeList.get, extendedData, runReq)
     val rtPlanAl = runReq.rtplan.attributeList.get
-    val planBaseName = Phase2Util.dicomViewBaseName(runReq.beamNameOfAl(rtPlanAl), rtPlanAl)
+    val planBaseName = Phase2Util.dicomViewBaseName(runReq.beamNameOfAl(rtPlanAl), rtPlanAl, runReq.rtplan.attributeList.get)
     DicomAccess.write(runReq.rtplan, planLink, "RTPLAN", viewDir, planBaseName, None, None, Seq[DicomImage.PixelRating]())
 
     val floodLink = Phase2Util.dicomViewHref(runReq.flood.attributeList.get, extendedData, runReq)
     val floodBufImage = runReq.floodOriginalImage.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
     Config.applyWatermark(floodBufImage)
-    val floodBaseName = Phase2Util.dicomViewBaseName(Config.FloodFieldBeamName, runReq.flood.attributeList.get)
+    val floodBaseName = Phase2Util.dicomViewBaseName(Config.FloodFieldBeamName, runReq.flood.attributeList.get, runReq.rtplan.attributeList.get)
     val floodPngHref = DicomAccess.write(runReq.flood, floodLink, Config.FloodFieldBeamName, viewDir, floodBaseName, Some(floodBufImage), Some(runReq.floodOriginalImage), runReq.floodBadPixelList).get
 
     val pngImageMap = runReq.rtimageMap.keys.par.map(beamName => (beamName, dicomView(beamName).get)).toList.toMap
@@ -195,7 +195,7 @@ object BadPixelAnalysis extends Logging {
           <td style="text-align: center;" title="Click for full size image"><a href={ Phase2Util.dicomViewImageHtmlHref(al, extendedData, runReq) }><img src={ pngHref } width={ smallImageWidth }/></a></td>
           <td style="text-align: center;" title="Gantry Angle deg">{ angleOf(TagFromName.GantryAngle) }</td>
           <td style="text-align: center;" title="Collimator Angle deg">{ angleOf(TagFromName.BeamLimitingDeviceAngle) }</td>
-          <td style="text-align: center;" title="Collimator opening in CM">{ Phase2Util.jawDescription(al) }</td>
+          <td style="text-align: center;" title="Collimator opening in CM">{ Phase2Util.jawDescription(al, runReq.rtplan.attributeList.get) }</td>
           <td style="text-align: center;" title="Time since first image capture (mm:ss)">{ relativeTimeText }</td>
           <td style="text-align: center;" title="Collimator Centering">{ boolToName("Col Cntr", Config.CollimatorCentering090BeamName.equals(beamName) || Config.CollimatorCentering270BeamName.equals(beamName)) }</td>
           <td style="text-align: center;" title="Center Dose">{ boolToName("Cntr Dose", Config.CenterDoseBeamNameList.contains(beamName)) }</td>

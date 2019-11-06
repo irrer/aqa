@@ -13,6 +13,7 @@ import org.aqa.Util
 import com.pixelmed.dicom.AttributeList
 import org.aqa.Logging
 import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ScalaUtil.DicomUtil
 
 /**
  * @param rtplan: RTPLAN file
@@ -46,8 +47,10 @@ case class RunReq(rtplan: DicomFile, rtplanCBCT: Option[DicomFile], machine: Mac
   val imageSize = new Point(floodOriginalImage.width, floodOriginalImage.height)
 
   val floodTranslator = new IsoImagePlaneTranslator(floodAttributeList)
+  
+  val treatmentMachineType = DicomUtil.TreatmentMachineType.attrListToTreatmentMachineType(rtplan.attributeList.get)
 
-  private val floodExpected_mm = MeasureTBLREdges.imageCollimatorPositions(floodAttributeList).toTBLR(Util.collimatorAngle(flood.attributeList.get))
+  private val floodExpected_mm = MeasureTBLREdges.imageCollimatorPositions(floodAttributeList, rtplan.attributeList.get).toTBLR(Util.collimatorAngle(flood.attributeList.get))
 
   private val floodMeasurementAndImage = MeasureTBLREdges.measure(floodCorrectedImage, floodTranslator, Some(floodExpected_mm), Util.collimatorAngle(floodAttributeList), floodCorrectedImage, new Point(0, 0), Config.PenumbraThresholdPercent / 100)
 

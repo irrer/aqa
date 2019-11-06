@@ -179,7 +179,105 @@ object MeasureTBLREdges extends Logging {
     }
   }
 
-  def getCollimatorPositions(BeamLimitingDeviceSequence: Seq[AttributeList]): X1X2Y1Y2 = {
+  private def getCollimatorPositionsFromPlan(rtimage: AttributeList, rtplan: AttributeList): X1X2Y1Y2 = {
+
+    val BeamSequence = Phase2Util.getBeamSequence(rtplan, rtimage.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head)
+    val ControlPoint = DicomUtil.seqToAttr(BeamSequence, TagFromName.ControlPointSequence).head
+    val BeamLimitingDeviceAngle = ControlPoint.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head
+    val BeamLimitingDevicePositionSequence = DicomUtil.seqToAttr(ControlPoint, TagFromName.BeamLimitingDevicePositionSequence)
+
+    def getLeafPositionBoundaries(deviceTypeName: String): Seq[Double] = {
+      val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(BeamSequence, TagFromName.BeamLimitingDeviceSequence)
+      def nameMatch(blds: AttributeList): Boolean = blds.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString.equals(deviceTypeName)
+
+      val LeafPositionBoundaries = BeamLimitingDeviceSequence.find(blds => nameMatch(blds)).get.get(TagFromName.LeafPositionBoundaries).getDoubleValues
+      LeafPositionBoundaries.toSeq
+    }
+
+    case class Colmtr(deviceTypeName: String, xleafPositionBoundaries: Seq[Double]) {
+      def this(name: String) = this(name, getLeafPositionBoundaries(name))
+
+      val LeafPositionBoundaries = {
+        val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(BeamSequence, TagFromName.BeamLimitingDeviceSequence)
+        def nameMatch(blds: AttributeList): Boolean = blds.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString.equals(deviceTypeName)
+
+        val lpb = BeamLimitingDeviceSequence.find(blds => nameMatch(blds)).get.get(TagFromName.LeafPositionBoundaries).getDoubleValues
+        lpb.toSeq
+      }
+
+      val leafPairCount = LeafPositionBoundaries.size - 1
+      val LeafJawPositions = {
+        val BeamLimitingDevicePosition = BeamLimitingDevicePositionSequence.find(blds => blds.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString.equals(deviceTypeName)).get
+        val ljp = BeamLimitingDevicePosition.get(TagFromName.LeafJawPositions).getDoubleValues
+        ljp.toSeq
+      }
+
+      private def boundsCheck(index: Int): Unit = {
+        if ((index < 0) || (index >= leafPairCount)) throw new IllegalArgumentException("index " + index + " out of bounds")
+      }
+
+      def posnLeft(index: Int): Double = {
+        boundsCheck(index)
+        LeafJawPositions(index)
+      }
+
+      def posnRight(index: Int): Double = {
+        boundsCheck(index)
+        LeafJawPositions(index + leafPairCount)
+      }
+
+      def posnTop(index: Int): Double = {
+        boundsCheck(index)
+        LeafPositionBoundaries(index)
+      }
+
+      def posnBottom(index: Int): Double = {
+        boundsCheck(index)
+        LeafPositionBoundaries(index + 1)
+      }
+
+      def leafGap(index: Int) = (posnRight(index) - posnLeft(index)).abs
+
+      val zeroLimit = 0.001
+
+      val zeroLeafGapIndexList = (0 until leafPairCount).filter(lp => leafGap(lp) < zeroLimit)
+      val nonZeroLeafGapIndexList = (0 until leafPairCount).filter(lp => leafGap(lp) > zeroLimit)
+
+      /** Sorted list of indexes of leaves that have the most frequently occurring leaf gap. */
+      val sortedIndexListOfMostFrequentNonZeroLeafGap = nonZeroLeafGapIndexList.groupBy(i => (leafGap(i) * 10).round.toInt).toList.sortBy(_._2.size).last._2.sorted
+    }
+
+    /**
+     * Get the most often occurring non-zero leaf gap
+     */
+    def rectangleWidth(colmtr: Colmtr): Double = {
+      val nonZero = (0 until colmtr.leafPairCount).map(leafIndex => colmtr.leafGap(leafIndex)).filter(gap => gap > 0.0001)
+      val width = nonZero.groupBy(gap => gap.round.toInt).values.toSeq.sortBy(group => group.size).last.head
+      width
+    }
+
+    val mlcx1 = new Colmtr("MLCX1")
+    val mlcx2 = new Colmtr("MLCX2")
+    val indexOfMostFrequentNonZeroLeafGap = mlcx1.sortedIndexListOfMostFrequentNonZeroLeafGap.head
+
+    val x1 = mlcx1.posnLeft(indexOfMostFrequentNonZeroLeafGap)
+    val x2 = mlcx1.posnRight(indexOfMostFrequentNonZeroLeafGap)
+
+    val y1 = Seq(mlcx1.posnTop(mlcx1.sortedIndexListOfMostFrequentNonZeroLeafGap.head), mlcx2.posnTop(mlcx2.sortedIndexListOfMostFrequentNonZeroLeafGap.head)).max
+    val y2 = Seq(mlcx1.posnBottom(mlcx1.sortedIndexListOfMostFrequentNonZeroLeafGap.last), mlcx2.posnBottom(mlcx2.sortedIndexListOfMostFrequentNonZeroLeafGap.last)).min
+
+    val x1x2y1y2 = new X1X2Y1Y2(x1, x2, y1, y2)
+
+    x1x2y1y2
+  }
+
+  /**
+   * Get the collimator (jaw) positions from the image.  This assumes that the positions given in the image are valid.
+   */
+  private def getCollimatorPositionsFromImage(rtimage: AttributeList): X1X2Y1Y2 = {
+    val ExposureSequence = DicomUtil.seqToAttr(rtimage, TagFromName.ExposureSequence).head
+    val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(ExposureSequence, TagFromName.BeamLimitingDeviceSequence)
+
     def getPair(nameList: Seq[String]): Array[Double] = {
       def filterByName(s: AttributeList) = nameList.contains(s.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString)
       val list = BeamLimitingDeviceSequence.filter(s => filterByName(s)).head.get(TagFromName.LeafJawPositions).getDoubleValues
@@ -190,19 +288,28 @@ object MeasureTBLREdges extends Logging {
     val yPair = getPair(Util.yOrientation)
 
     new X1X2Y1Y2(xPair(0), xPair(1), yPair(0), yPair(1))
+
   }
 
-  def planCollimatorPositions(beamName: String, plan: AttributeList): X1X2Y1Y2 = {
-    val beamSeq = DicomUtil.seqToAttr(plan, TagFromName.BeamSequence).find(bs => Util.normalizedBeamName(bs).equals(beamName)).get
-    val controlPtSeq = DicomUtil.seqToAttr(beamSeq, TagFromName.ControlPointSequence).head
-    val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(controlPtSeq, TagFromName.BeamLimitingDevicePositionSequence)
-    getCollimatorPositions(BeamLimitingDeviceSequence)
-  }
+  //  def planCollimatorPositions(beamName: String, plan: AttributeList): X1X2Y1Y2 = {
+  //    val tmt = DicomUtil.TreatmentMachineType.attrListToTreatmentMachineType(plan)
+  //    val beamSeq = DicomUtil.seqToAttr(plan, TagFromName.BeamSequence).find(bs => Util.normalizedBeamName(bs).equals(beamName)).get
+  //    val controlPtSeq = DicomUtil.seqToAttr(beamSeq, TagFromName.ControlPointSequence).head
+  //    val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(controlPtSeq, TagFromName.BeamLimitingDevicePositionSequence)
+  //    getCollimatorPositions(BeamLimitingDeviceSequence, tmt)
+  //  }
 
-  def imageCollimatorPositions(al: AttributeList): MeasureTBLREdges.X1X2Y1Y2 = {
-    val ExposureSequence = DicomUtil.seqToAttr(al, TagFromName.ExposureSequence).head
-    val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(ExposureSequence, TagFromName.BeamLimitingDeviceSequence)
-    getCollimatorPositions(BeamLimitingDeviceSequence)
+  def imageCollimatorPositions(rtimage: AttributeList, rtplan: AttributeList): MeasureTBLREdges.X1X2Y1Y2 = {
+    val treatmentMachineType: Option[DicomUtil.TreatmentMachineType.Value] = DicomUtil.TreatmentMachineType.attrListToTreatmentMachineType(rtplan)
+
+    val isHalcyon = treatmentMachineType.isDefined && treatmentMachineType.get.toString.equals(DicomUtil.TreatmentMachineType.Halcyon.toString)
+
+    val colPosn = if (isHalcyon)
+      getCollimatorPositionsFromPlan(rtimage, rtplan)
+    else
+      getCollimatorPositionsFromImage(rtimage)
+
+    colPosn
   }
 
   case class AnalysisResult(measurementSet: TBLR, bufferedImage: BufferedImage)

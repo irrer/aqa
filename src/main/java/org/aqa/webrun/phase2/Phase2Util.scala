@@ -140,10 +140,10 @@ object Phase2Util extends Logging {
   /**
    * Given an RTPLAN and an RTIMAGE, get the name of the beam that the RTIMAGE is referencing in the plan.
    */
-  def getBeamNameOfRtimage(plan: DicomFile, rtimage: DicomFile): Option[String] = {
+  def getBeamNameOfRtimage(plan: AttributeList, rtimage: AttributeList): Option[String] = {
     try {
-      val ReferencedBeamNumber = rtimage.attributeList.get.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head
-      val beam = DicomUtil.seqToAttr(plan.attributeList.get, TagFromName.BeamSequence).find(bs => bs.get(TagFromName.BeamNumber).getIntegerValues().head == ReferencedBeamNumber).get
+      val ReferencedBeamNumber = rtimage.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head
+      val beam = DicomUtil.seqToAttr(plan, TagFromName.BeamSequence).find(bs => bs.get(TagFromName.BeamNumber).getIntegerValues().head == ReferencedBeamNumber).get
       val BeamName = Util.normalizedBeamName(beam)
       val bn = if (BeamName == "") None else Some(BeamName.trim)
       bn
@@ -151,6 +151,11 @@ object Phase2Util extends Logging {
       case t: Throwable => None
     }
   }
+
+  /**
+   * Given an RTPLAN and an RTIMAGE, get the name of the beam that the RTIMAGE is referencing in the plan.
+   */
+  def getBeamNameOfRtimage(plan: DicomFile, rtimage: DicomFile): Option[String] = getBeamNameOfRtimage(plan.attributeList.get, rtimage.attributeList.get)
 
   /**
    * Given an RTPLAN and a beam name, get the beam sequence.
@@ -332,9 +337,9 @@ object Phase2Util extends Logging {
     </div>
   }
 
-  def jawDescription(al: AttributeList): String = {
+  def jawDescription(rtimage: AttributeList, rtplan: AttributeList): String = {
     try {
-      val jaws = MeasureTBLREdges.imageCollimatorPositions(al)
+      val jaws = MeasureTBLREdges.imageCollimatorPositions(rtimage, rtplan)
       val width = ((jaws.X1.abs + jaws.X2.abs) / 10).round.toInt
       val height = ((jaws.Y1.abs + jaws.Y2.abs) / 10).round.toInt
       width + " x " + height + " cm"
@@ -354,24 +359,24 @@ object Phase2Util extends Logging {
     }
   }
 
-  def dicomViewBaseName(beamName: String, al: AttributeList): String = {
-    (beamName.trim + "_" + jawDescription(al)).replaceAll("[^a-zA-Z0-9]", "_").replaceAll("__*", "_").replaceAll("_$", "").replaceAll("^_", "")
+  def dicomViewBaseName(beamName: String, rtimage: AttributeList, rtplan: AttributeList): String = {
+    (beamName.trim + "_" + jawDescription(rtimage, rtplan)).replaceAll("[^a-zA-Z0-9]", "_").replaceAll("__*", "_").replaceAll("_$", "").replaceAll("^_", "")
   }
 
   def dicomViewHtmlFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
-    val htmlFile = dicomViewBaseName(runReq.beamNameOfAl(al), al) + ".html"
+    val htmlFile = dicomViewBaseName(runReq.beamNameOfAl(al), al, runReq.rtplan.attributeList.get) + ".html"
     val viewDir = new File(extendedData.output.dir, "view")
     new File(viewDir, htmlFile)
   }
 
   def dicomViewImageHtmlFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
-    val htmlFile = dicomViewBaseName(runReq.beamNameOfAl(al), al) + "_image.html"
+    val htmlFile = dicomViewBaseName(runReq.beamNameOfAl(al), al, runReq.rtplan.attributeList.get) + "_image.html"
     val viewDir = new File(extendedData.output.dir, "view")
     new File(viewDir, htmlFile)
   }
 
   def dicomViewImageFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
-    val pngFile = dicomViewBaseName(runReq.beamNameOfAl(al), al) + ".png"
+    val pngFile = dicomViewBaseName(runReq.beamNameOfAl(al), al, runReq.rtplan.attributeList.get) + ".png"
     val viewDir = new File(extendedData.output.dir, "view")
     new File(viewDir, pngFile)
   }
