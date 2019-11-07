@@ -22,6 +22,7 @@ import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.phase2.collimatorPosition.CollimatorPositionAnalysis.CollimatorPositionResult
 import org.aqa.webrun.phase2.collimatorCentering.CollimatorCenteringAnalysis.CollimatorCenteringResult
 import org.aqa.db.CollimatorCentering
+import edu.umro.ScalaUtil.DicomUtil
 
 /**
  * Perform analysis of leaf position (picket fence).
@@ -147,18 +148,42 @@ object LeafPositionAnalysis extends Logging {
    */
   private def measureEnd(minorSide: Double, majorSide: Double, horizontal: Boolean, end: Double,
     pixelArray: IndexedSeq[IndexedSeq[Float]], minLeafWidth_pix: Double, interleafIsolation_pix: Double): Double = {
+    val width = pixelArray.head.size
+    val height = pixelArray.size
     // make a rectangle around the area of interest
     val searchDistancePix = minLeafWidth_pix * 2
     val measuredEndPosition_pix: Double = {
       if (horizontal) {
-        val rectangle = new Rectangle2D.Double(end - minLeafWidth_pix / 2, minorSide + interleafIsolation_pix, minLeafWidth_pix, majorSide - minorSide - interleafIsolation_pix * 2)
+        val rectangle = new Rectangle2D.Double(
+          end - minLeafWidth_pix / 2,
+          Seq(0.0, minorSide + interleafIsolation_pix).max,
+          minLeafWidth_pix,
+          Seq(height - 1.0, majorSide - minorSide - interleafIsolation_pix * 2).min)
         LocateRidge.locateVertical(pixelArray, rectangle)
       } else {
-        val rectangle = new Rectangle2D.Double(minorSide + interleafIsolation_pix, end - minLeafWidth_pix / 2, majorSide - minorSide - interleafIsolation_pix * 2, minLeafWidth_pix)
+        val rectangle = new Rectangle2D.Double(
+          Seq(0.0, minorSide + interleafIsolation_pix).max,
+          end - minLeafWidth_pix / 2,
+          Seq(width - 1.0, majorSide - minorSide - interleafIsolation_pix * 2).min,
+          minLeafWidth_pix)
         LocateRidge.locateHorizontal(pixelArray, rectangle)
       }
     }
     measuredEndPosition_pix
+  }
+
+  private def getLeafSidesFromPlanAsPix(rtplan: AttributeList, translator: IsoImagePlaneTranslator): Seq[Double] = {
+    def hasMLCX2Type(blds: AttributeList) = {
+      val t = blds.get(TagFromName.RTBeamLimitingDeviceType)
+      (t != null) && t.getSingleStringValueOrEmptyString.equals("MLCX2")
+    }
+
+    val BeamSequence = DicomUtil.seqToAttr(rtplan, TagFromName.BeamSequence)
+    val BeamLimitingDeviceSequence = BeamSequence.map(bs => DicomUtil.seqToAttr(bs, TagFromName.BeamLimitingDeviceSequence)).flatten
+    val leafBoundaryList_mm = BeamLimitingDeviceSequence.filter(hasMLCX2Type _).head.get(TagFromName.LeafPositionBoundaries).getDoubleValues.toSeq
+
+    val leafBoundaryList_pix = leafBoundaryList_mm.map(lb_mm => translator.iso2PixCoordY(lb_mm)).sorted
+    leafBoundaryList_pix
   }
 
   /**
@@ -175,7 +200,13 @@ object LeafPositionAnalysis extends Logging {
     val leafEndList_mm = LeafPositionUtil.leafEnds(horizontal, beamName, plan).map(le => le + collCenterOffset)
     val leafEndList_pix = leafEndList_mm.map(e => if (horizontal) translator.iso2PixCoordX(e) else translator.iso2PixCoordY(e))
 
-    val leafSideList_pix = leafSides_pix(horizontal, beamName, imageAttrList, dicomImage, plan, translator, leafEndList_pix).sorted // sort just to make sure
+    val leafSideList_pix = {
+      if (DicomUtil.isHalcyon(plan)) {
+        val sideOffset = if (horizontal) collimatorCentering.yCollimatorCenter_mm else collimatorCentering.xCollimatorCenter_mm
+        getLeafSidesFromPlanAsPix(plan, translator).map(ls => ls + sideOffset)
+      } else
+        leafSides_pix(horizontal, beamName, imageAttrList, dicomImage, plan, translator, leafEndList_pix).sorted // sort just to make sure
+    }
 
     //    getLeafWidthList_mm(leafSideList_mm)
 

@@ -75,18 +75,38 @@ object LeafPositionUtil extends Logging {
    * Get a sorted list of all the distinct leaf ends in mm as isoplane coordinates.
    */
   def leafEnds(horizontal: Boolean, beamName: String, plan: AttributeList): Seq[Double] = {
-    val ControlPointSequence = DicomUtil.seqToAttr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagFromName.ControlPointSequence)
-    val withEnergy = ControlPointSequence.filter(cp => cp.get(TagFromName.CumulativeMetersetWeight).getDoubleValues.head != 0)
-    val BeamLimitingDevicePositionSequence = withEnergy.map(cps => DicomUtil.seqToAttr(cps, TagFromName.BeamLimitingDevicePositionSequence)).flatten
 
-    def isMlc(BeamLimitingDevicePosition: AttributeList): Boolean = {
-      val deviceType = BeamLimitingDevicePosition.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString
-      val requiredType = if (horizontal) "MLCX" else "MLCY"
-      deviceType.equalsIgnoreCase(requiredType)
+    def meterWeightSetNonZero(ctrlPtSeq: AttributeList): Boolean = {
+      val CumulativeMetersetWeight = ctrlPtSeq.get(TagFromName.CumulativeMetersetWeight).getDoubleValues.head
+      CumulativeMetersetWeight > 0
     }
 
-    val endList = BeamLimitingDevicePositionSequence.filter(bldp => isMlc(bldp)).map(bldp => bldp.get(TagFromName.LeafJawPositions).getDoubleValues.head).distinct.sorted
-    endList
+    val ControlPointSequence = DicomUtil.seqToAttr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagFromName.ControlPointSequence).
+      filter(cps => meterWeightSetNonZero(cps))
+
+    def isMLCX1(ctrlPtSeq: AttributeList): Boolean = {
+      ctrlPtSeq.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString.equals("MLCX1")
+    }
+
+    if (DicomUtil.isHalcyon(plan)) {
+      val bldsList = ControlPointSequence.map(cps => DicomUtil.seqToAttr(cps, TagFromName.BeamLimitingDevicePositionSequence)).
+        flatten.
+        filter(cps => isMLCX1(cps))
+      val endList = bldsList.map(m => m.get(TagFromName.LeafJawPositions).getDoubleValues.head).distinct.sorted
+      endList
+    } else {
+      val withEnergy = ControlPointSequence.filter(cp => cp.get(TagFromName.CumulativeMetersetWeight).getDoubleValues.head != 0)
+      val BeamLimitingDevicePositionSequence = withEnergy.map(cps => DicomUtil.seqToAttr(cps, TagFromName.BeamLimitingDevicePositionSequence)).flatten
+
+      def isMlc(BeamLimitingDevicePosition: AttributeList): Boolean = {
+        val deviceType = BeamLimitingDevicePosition.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString
+        val requiredType = if (horizontal) "MLCX" else "MLCY"
+        deviceType.equalsIgnoreCase(requiredType)
+      }
+
+      val endList = BeamLimitingDevicePositionSequence.filter(bldp => isMlc(bldp)).map(bldp => bldp.get(TagFromName.LeafJawPositions).getDoubleValues.head).distinct.sorted
+      endList
+    }
   }
 
 }

@@ -300,14 +300,11 @@ object MeasureTBLREdges extends Logging {
   //  }
 
   def imageCollimatorPositions(rtimage: AttributeList, rtplan: AttributeList): MeasureTBLREdges.X1X2Y1Y2 = {
-    val treatmentMachineType: Option[DicomUtil.TreatmentMachineType.Value] = DicomUtil.TreatmentMachineType.attrListToTreatmentMachineType(rtplan)
-
-    val isHalcyon = treatmentMachineType.isDefined && treatmentMachineType.get.toString.equals(DicomUtil.TreatmentMachineType.Halcyon.toString)
-
-    val colPosn = if (isHalcyon)
-      getCollimatorPositionsFromPlan(rtimage, rtplan)
-    else
-      getCollimatorPositionsFromImage(rtimage)
+    val colPosn =
+      if (DicomUtil.isHalcyon(rtplan))
+        getCollimatorPositionsFromPlan(rtimage, rtplan)
+      else
+        getCollimatorPositionsFromImage(rtimage)
 
     colPosn
   }
