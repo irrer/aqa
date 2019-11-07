@@ -144,7 +144,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     val v = valueMap.get(checkbox.label)
     val all = v.isDefined && (v.get.equalsIgnoreCase("true") || v.get.equalsIgnoreCase("on"))
     val instPK = {
-      if (all) None
+      if (all || userIsWhitelisted(response)) None
       else {
         val userIdReal = valueMap(userIdRealTag)
         val user = CachedUser.get(valueMap(userIdRealTag)).get
