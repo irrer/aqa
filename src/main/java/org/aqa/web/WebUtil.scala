@@ -255,7 +255,7 @@ object WebUtil extends Logging {
 
   def simpleWebPage(content: Elem, status: Status, title: String, response: Response): Unit = {
     val indentedContent = {
-      <div class="row col-md-10 col-md-offset-1">
+      <div class="row col-md-10 col-md-offset-1 col-sm-8 col-sm-offset-2">
         { content }
       </div>
     }
@@ -330,7 +330,7 @@ object WebUtil extends Logging {
         <body style='background-image: url("/static/images/restrictions.png"); background-repeat: repeat-x;'>
           <header class="topbar">
             <div class="row">
-              <div class="col-md-1 col-md-offset-9" style="background-color: white;">
+              <div class="col-md-1 col-md-offset-9 col-sm-2 col-sm-offset-8" style="background-color: white;">
                 <strong>
                   <br/>
                   <a href="/run/WebRunIndex">Run Procedure</a>
@@ -342,7 +342,7 @@ object WebUtil extends Logging {
                   <a href="/static/doc/index/index.html">User Guides</a>
                 </strong>
               </div>
-              <div class="col-md-2">
+              <div class="col-md-2 col-sm-3">
                 <h1 class="fill">
                   <a href="/"><img src="/static/images/logo.png" width="158" style="border-style:solid; border-color:white; border-width:0px 15px;"/></a>
                 </h1>
@@ -497,7 +497,7 @@ object WebUtil extends Logging {
       }
 
       val elem = {
-        <div class={ "row " + colToName(10, 1) }>
+        <div class="row col-md-10 col-md-offset-1 col-sm-8 col-sm-offset-2">
           { titleHtml }
           { html }
         </div>
