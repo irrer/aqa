@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<AQAClientConfig>
+
+    <!-- Port number for the Secure ReST service.   Port 443 is the default for HTTPS.
+    If this is missing or commented out, then the server will instead use HTTP on port 80.   Alternately,
+    if this is specified, then the JavaKeyStoreFileList and JavaKeyStorePassword must be given. -->
+    <!-- <HTTPSPort>9443</HTTPSPort> -->
+
+    <!-- Location of file that contains Java Key Store for HTTPS.  If multiple names are given, then they are
+    each tried in the order given until a readable file is found. -->
+    <JavaKeyStoreFileList>
+        <JavaKeyStoreFile>keystore.jks</JavaKeyStoreFile>
+        <JavaKeyStoreFile>E:\Program Files\UMRO\keystore.jks</JavaKeyStoreFile>
+        <JavaKeyStoreFile>C:\Program Files\UMRO\keystore.jks</JavaKeyStoreFile>
+        <JavaKeyStoreFile>src\main\resources\keystore.jks</JavaKeyStoreFile>
+    </JavaKeyStoreFileList>
+
+    <!-- The password to access the Java Key Store file. -->
+    <JavaKeyStorePassword>9c067233b07c7b04025989a197fad9b12cf4c19006678e2b18b121289bd1635a2d395a603122a6e6
+    </JavaKeyStorePassword> <!-- rodicom11dev -->
+    <!-- <JavaKeyStorePassword>44d18166c66bed60b6394e6625c63dea713dbe465ddc960a7cd109514bc0d2bd</JavaKeyStorePassword> -->     <!-- irrer -->
+
+    <!-- Directory containing data files. -->
+    <DataDir>D:\AQA_Data</DataDir>
+
+    <!-- Time of day as hours and minutes (HH:MM) that program will restart
+    itself. This is done to avoid errors that build up over time.  The time is
+    formatted as a 24 hour clock, so 23:00 is eleven PM. -->
+    <RestartTime>3:30</RestartTime>
+
+</AQAClientConfig>
