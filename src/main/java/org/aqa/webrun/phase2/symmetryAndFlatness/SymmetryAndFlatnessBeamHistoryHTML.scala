@@ -14,6 +14,7 @@ import scala.collection.Seq
 import org.aqa.db.Output
 import org.aqa.db.MaintenanceCategory
 import org.aqa.webrun.phase2.Phase2Util
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Analyze DICOM files for symmetry and flatness.
@@ -37,14 +38,19 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
     inTimeRange.filter(itr => releventBaseline.contains(itr.maintenanceRecordPK.get) || (!itr.category.equals(MaintenanceCategory.setBaseline)))
   }
 
-  private def getBaseline(dataName: String): Baseline = {
+  private def getBaseline(dataName: String): Option[Baseline] = {
     val baselineName = SymmetryAndFlatnessAnalysis.makeBaselineName(beamName, dataName)
-    Baseline.findLatest(machinePK, baselineName, output.dataDate.get).get._2
+    Baseline.findLatest(machinePK, baselineName, output.dataDate.get) match {
+      case Some(maintAndBaseline) => Some(maintAndBaseline._2)
+      case _ => None
+    }
   }
 
   private def makeChart(id: String, limit: Double, valueList: Seq[Double]): C3ChartHistory = {
 
     val baseline = getBaseline(id)
+    if (baseline.isEmpty) // TODO rm
+      logger.info("No baseline found for beam " + beamName) // TODO rm
     val currentDateIndex = dateList.indexWhere(d => output.dataDate.get.getTime == d.getTime)
     val minDateTag = dateListFormatted.head
     val maxDateTag = dateListFormatted.last
@@ -61,15 +67,15 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
     val yFormat = ".4g"
     val yColorList = Util.colorPallette(new Color(0x4477BB), new Color(0x44AAFF), yValues.size)
 
-    val tolerance = new C3Chart.Tolerance(baseline.value.toDouble - limit, baseline.value.toDouble + limit)
+    val tolerance = if (baseline.isDefined) Some(new C3Chart.Tolerance(baseline.get.value.toDouble - limit, baseline.get.value.toDouble + limit)) else None
     val chart = new C3ChartHistory(
       Some(chartId),
       MaintenanceRecordList,
       width,
       height,
       xLabel, xDateList,
-      Some(baseline),
-      Some(tolerance),
+      baseline,
+      tolerance,
       yAxisLabels, yDataLabel, yValues, yIndex, yFormat, yColorList)
 
     chart
