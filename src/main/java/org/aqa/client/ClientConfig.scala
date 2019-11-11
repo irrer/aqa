@@ -29,6 +29,7 @@ import edu.umro.ScalaUtil.Trace
 import com.pixelmed.dicom.ValueRepresentation
 import org.aqa.Logging
 import org.aqa.Util
+import edu.umro.ScalaUtil.PACS
 
 /**
  * This class extracts configuration information from the configuration file.  Refer
@@ -233,21 +234,6 @@ object ClientConfig extends Logging {
     }
   }
 
-  val HTTPSPort: Option[Int] = {
-    val name = "HTTPSPort"
-    try {
-      val securePort = getMainText(name).toInt
-      logText(name, securePort.toString)
-      Some(securePort)
-    } catch {
-      case _: Throwable => {
-        logTextNotSpecified(name)
-        None
-      }
-    }
-
-  }
-
   val JavaKeyStorePassword = getJavaKeyStorePassword
   val JavaKeyStoreFileList = getJavaKeyStoreFileList
 
@@ -288,23 +274,40 @@ object ClientConfig extends Logging {
     dirList.head
   }
 
+  private def getPacs(tag: String): PACS = {
+    new PACS((document \ tag).head)
+  }
+
+  private def getAMQPBroker = None // TODO
+
+  private def getPatientIDList = {
+    val list = (document \ "PatientIDList" \ "PatientID").map(node => node.head.text.toString.trim)
+    list
+  }
+
   private def requireReadableDirectory(name: String, dir: File) = {
     if (!dir.canRead) fail("Directory " + name + " is not readable: " + dir)
     if (!dir.isDirectory) fail("Directory " + name + " is required but is not a directory: " + dir)
   }
-
-  val DataDir = getDir("DataDir")
-
-  /** If this is defined, then the configuration was successfully initialized. */
-  val validated = true
-
-  def validate = validated
 
   override def toString: String = valueText.foldLeft("Configuration values:")((b, t) => b + "\n    " + t)
 
   def toHtml = {
     <pre>{ valueText }</pre>
   }
+
+  val DataDir = getDir("DataDir")
+  val PatientIDList = getPatientIDList
+  val DICOMClient = getPacs("DICOMClient")
+  val DICOMSource = getPacs("DICOMSource")
+  val AQAURL = getMainText("AQAURL")
+  val HTTPSPort = logMainText("HTTPSPort", "443").toInt
+  val AMQPBroker = getAMQPBroker
+
+  /** If this is defined, then the configuration was successfully initialized. */
+  val validated = true
+
+  def validate = validated
 
   logger.info("Configuration has been validated.")
   logger.info(toString)

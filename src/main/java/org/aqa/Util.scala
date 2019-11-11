@@ -31,6 +31,7 @@ import edu.umro.ScalaUtil.DicomUtil
 import javax.vecmath.Point3d
 import edu.umro.ScalaUtil.Trace
 import java.util.TimeZone
+import scala.xml.Node
 
 object Util extends Logging {
 
@@ -1002,5 +1003,10 @@ object Util extends Logging {
   def hexToColor(hex: String): Color = {
     new Color(Integer.parseInt(hex, 16))
   }
+
+  /**
+   * Get an attribute of a node as text.
+   */
+  def getAttr(node: Node, name: String) = (node \ ("@" + name)).text.toString
 
 }

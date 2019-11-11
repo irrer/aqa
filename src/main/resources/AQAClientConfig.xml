@@ -1,9 +1,26 @@
 <?xml version='1.0' encoding='utf-8'?>
 <AQAClientConfig>
 
-    <!-- Port number for the Secure ReST service.   Port 443 is the default for HTTPS.
-    If this is missing or commented out, then the server will instead use HTTP on port 80.   Alternately,
-    if this is specified, then the JavaKeyStoreFileList and JavaKeyStorePassword must be given. -->
+    <!-- Search these patients for DICOM files. -->
+    <PatientIDList>
+        <PatientID>MQATX1OBIQA2019Q3</PatientID>
+        <PatientID>MQATX2OBIQA2019Q3</PatientID>
+        <PatientID>MQATX3OBIQA2019Q3</PatientID>
+        <PatientID>MQATX5OBIQA2019Q3</PatientID>
+    </PatientIDList>
+
+    <!-- Directory containing data files. -->
+    <DataDir>D:\AQA_Data</DataDir>
+
+    <!-- PACS connection settings for this service. -->
+    <DICOMClient AETitle='WLQA_TEST' Host='141.214.125.209' Port='15678' />
+
+    <!-- Get DICOM files from here. -->
+    <DICOMSource AETitle='VMSDBD' Host='VMSDBD' Port='105' />
+    
+    <!-- Port number for the HTTPS service.   Port 443 is the default for HTTPS.
+    If this is missing then the server will use port 443.  The reason to use a non-standard
+    port is that the standard one is already taken on the host machine. -->
     <!-- <HTTPSPort>9443</HTTPSPort> -->
 
     <!-- Location of file that contains Java Key Store for HTTPS.  If multiple names are given, then they are
@@ -20,8 +37,16 @@
     </JavaKeyStorePassword> <!-- rodicom11dev -->
     <!-- <JavaKeyStorePassword>44d18166c66bed60b6394e6625c63dea713dbe465ddc960a7cd109514bc0d2bd</JavaKeyStorePassword> -->     <!-- irrer -->
 
-    <!-- Directory containing data files. -->
-    <DataDir>D:\AQA_Data</DataDir>
+    <!-- Send files here for analysis. -->
+    <AQAURL>http://localhost</AQAURL>
+
+    <!-- AMQP broker.  If not defined, then it will be ignored and EventNet will not be supported.  If the
+    AMQB broker can not be contacted, then an error will be logged and EventNet support will not be provided. -->
+    <AMQPBroker Host="localhost" Port="5672" />
+    
+    <!-- Poll this frequently for new data.  Generally this is used if EventNet is not available.  To
+    disable polling, comment this out. -->
+    <PollingInterval></PollingInterval>
 
     <!-- Time of day as hours and minutes (HH:MM) that program will restart
     itself. This is done to avoid errors that build up over time.  The time is
