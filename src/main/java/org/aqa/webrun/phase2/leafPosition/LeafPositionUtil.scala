@@ -10,6 +10,7 @@ import com.pixelmed.dicom.TagFromName
 import org.aqa.Util
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.IsoImagePlaneTranslator
 
 /**
  * General utilities for leaf position.
@@ -52,12 +53,15 @@ object LeafPositionUtil extends Logging {
   }
 
   /**
-   * Get a list of all the leaf sides (not ends) defined in the plan (in isoplane mm) that are not obscured by the jaws.
+   * Get a list of all the leaf sides (not ends) defined in the plan (in isoplane mm) that are not obscured by the jaws and appear on the imager.
    */
-  def listOfLeafPositionBoundariesInPlan_mm(horizontal: Boolean, beamName: String, plan: AttributeList): Seq[Double] = {
+  def listOfLeafPositionBoundariesInPlan_mm(horizontal: Boolean, beamName: String, plan: AttributeList, trans: IsoImagePlaneTranslator): Seq[Double] = {
 
     val all = allLeafPositionBoundaries_mm(horizontal, beamName, plan)
     val jawBounds = jawBoundaries(horizontal, beamName, plan)
+    // TODO exploring how to reject Halcyon leaves that are outside the field of view.
+    //    val min = Math.max(jawBounds._1, trans.minImage_mm.getX)
+    //    val max = Math.min(jawBounds._2, trans.maxImage_mm.getX)
     val min = jawBounds._1
     val max = jawBounds._2
     val exposed = all.filter(side => (side >= min) && (side <= max)).distinct.sorted
@@ -89,10 +93,15 @@ object LeafPositionUtil extends Logging {
     }
 
     if (DicomUtil.isHalcyon(plan)) {
+      def centerOfLeafJaw(al: AttributeList): Double = {
+        val all = al.get(TagFromName.LeafJawPositions).getDoubleValues
+        (all.min + all.max) / 2.0
+      }
       val bldsList = ControlPointSequence.map(cps => DicomUtil.seqToAttr(cps, TagFromName.BeamLimitingDevicePositionSequence)).
         flatten.
         filter(cps => isMLCX1(cps))
-      val endList = bldsList.map(m => m.get(TagFromName.LeafJawPositions).getDoubleValues.head).distinct.sorted
+
+      val endList = bldsList.map(m => centerOfLeafJaw(m)).distinct.sorted
       endList
     } else {
       val withEnergy = ControlPointSequence.filter(cp => cp.get(TagFromName.CumulativeMetersetWeight).getDoubleValues.head != 0)

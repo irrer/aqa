@@ -64,6 +64,11 @@ class IsoImagePlaneTranslator(al: AttributeList) {
   /** convert a coordinate from pixel plane to isoplane in mm. */
   def pix2Iso(isoPoint: Point2D.Double): Point2D.Double = pix2Iso(isoPoint.getX, isoPoint.getY)
 
+  /** Minimum point in the isoplane that is still in the image plane (can appear on the imager). */
+  val minImage_mm = pix2Iso(0, 0)
+  /** Maximum point in the isoplane that is still in the image plane (can appear on the imager). */
+  val maxImage_mm = pix2Iso(width - 1, height - 1)
+
   def equalTo(other: IsoImagePlaneTranslator) = {
     (height == other.height) &&
       (width == other.width) &&

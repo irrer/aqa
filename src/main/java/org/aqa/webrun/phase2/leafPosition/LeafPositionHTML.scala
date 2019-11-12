@@ -12,7 +12,6 @@ import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.run.ProcedureStatus
 import org.aqa.IsoImagePlaneTranslator
 import org.aqa.db.LeafPosition
-import org.aqa.webrun.phase2.symmetryAndFlatness.LeafPositionCSV
 
 object LeafPositionHTML extends Logging {
 
@@ -78,10 +77,10 @@ object LeafPositionHTML extends Logging {
     val maxOffset = beamResult.resultList.map(_.offset_mm).maxBy(_.abs)
     val derived = runReq.derivedMap(beamName)
     val horizontal = Phase2Util.isHorizontal(derived.attributeList)
-    val leafWidthList_mm = LeafPositionUtil.getLeafWidthList_mm(
-      LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, runReq.rtplan.attributeList.get))
-
     val translator = new IsoImagePlaneTranslator(derived.attributeList)
+    val leafWidthList_mm = LeafPositionUtil.getLeafWidthList_mm(
+      LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, runReq.rtplan.attributeList.get, translator))
+
     val image = LeafPositionAnnotateImage.annotateImage(beamResult.resultList, horizontal, derived.pixelCorrectedImage, leafWidthList_mm, translator)
     val imageFileName = Util.textToId(beamName) + ".png"
     val imageFile = new File(subDir, imageFileName)

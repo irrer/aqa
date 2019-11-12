@@ -1,11 +1,10 @@
-package org.aqa.webrun.phase2.symmetryAndFlatness
+package org.aqa.webrun.phase2.leafPosition
 
 import org.aqa.Util
 import java.io.File
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.RunReq
 import scala.collection.Seq
-import org.aqa.webrun.phase2.leafPosition.LeafPositionAnalysis
 import org.aqa.db.LeafPosition
 import org.aqa.web.WebServer
 

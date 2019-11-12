@@ -7,6 +7,7 @@ import org.scalatest.Matchers
 import java.io.File
 import org.aqa.DicomFile
 import org.aqa.webrun.phase2.leafPosition.LeafPositionUtil
+import org.aqa.IsoImagePlaneTranslator
 
 /**
  * Test TestLeafPositionUtil.
@@ -16,6 +17,8 @@ class TestLeafPositionUtil extends FlatSpec with Matchers {
 
   private val dir = new File("""src\test\resources\TestLeafPositionUtil""")
   private val beamName = "PF Stat 180"
+
+  val translator = new IsoImagePlaneTranslator(new DicomFile(new File("""src\test\resources\TestLeafPositionAnalysis.dcm""")).attributeList.get)
 
   val valid = Seq(
     Seq(-90.0, -85.0, -80.0, -75.0, -70.0, -65.0, -60.0, -55.0, -50.0, -45.0, -40.0, -37.5, -35.0, -32.5,
@@ -29,7 +32,7 @@ class TestLeafPositionUtil extends FlatSpec with Matchers {
   private def testPlan(file: File) = {
     val plan = (new DicomFile(file)).attributeList.get
 
-    val leafEdgeList = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(true, beamName, plan)
+    val leafEdgeList = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(true, beamName, plan, translator)
 
     println("leafEdgeList size: " + leafEdgeList.size)
     println("leafEdgeList: " + leafEdgeList.map(le => Util.fmtDbl(le)).mkString("  "))
