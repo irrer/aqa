@@ -33,10 +33,13 @@ import edu.umro.ScalaUtil.PACS
 
 /**
  * Utilities to support configuration.
+ *
+ * @param configFileName: Name of configuration file
+ *
+ * @param directoryList: directoryList Search these directories in the order given to find the configuration file.
  */
-trait ClientConfigUtil extends Logging {
+class ClientConfigUtil(configFileName: String, directoryList: Seq[File]) extends Logging {
 
-  private val configFileName = "AQAClientConfig.xml";
   private val DEFAULT_RESTART_TIME = "1:30"
 
   /** Root directory name for static directory. */
@@ -48,13 +51,11 @@ trait ClientConfigUtil extends Logging {
   /** Directory name for temporary files. */
   protected val tmpDirName = "tmp"
 
-  /** For indenting sub-content. */
-  private val indent1 = "\n                  "
-
-  /** For indenting sub-sub-content. */
-  private val indent2 = indent1 + "    "
-
-  private def indentList[T](list: Seq[T]): String = list.mkString(indent1, indent1, "\n")
+  private def indentList[T](list: Seq[T]): String = {
+    val indent1 = "\n                  "
+    val indent2 = indent1 + "    "
+    list.mkString(indent1, indent1, "\n")
+  }
 
   private def fail(msg: String) {
     logger.error(msg)
@@ -78,18 +79,6 @@ trait ClientConfigUtil extends Logging {
   private var configFile: File = null
 
   def getConfigFile = configFile
-
-  // Search these directories in the order given to find the configuration file.
-  private lazy val directoryList: List[File] = {
-
-    val resourceDirName = """src\main\resources"""
-    List(
-      Util.thisJarFile.getParentFile, // same directory as jar
-      new File(System.getProperty("user.dir")), // current directory
-      new File(Util.thisJarFile.getParentFile.getParentFile, resourceDirName), // for development
-      new File(resourceDirName) // for development
-    )
-  }
 
   /**
    * Read the configuration file.
@@ -131,7 +120,7 @@ trait ClientConfigUtil extends Logging {
     System.exit(1)
   }
 
-  private def getDoc(dirList: List[File], name: String): Option[Elem] = {
+  private def getDoc(dirList: Seq[File], name: String): Option[Elem] = {
     if (dirList.length < 1) None
     val elem = readFile(dirList.head, name)
     elem match {
@@ -140,8 +129,7 @@ trait ClientConfigUtil extends Logging {
     }
   }
 
-  protected def getJavaKeyStorePassword: String = {
-    val name = "JavaKeyStorePassword"
+  protected def getPassword(name: String): String = {
     try {
       val value = getMainText(name)
       logText(name, "[redacted]")

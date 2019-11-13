@@ -36,9 +36,16 @@ import edu.umro.ScalaUtil.PACS
  * to <code>ClientConfig.xml</code> for details indicating what the different
  * configuration values are used for.
  */
-object ClientConfig extends ClientConfigUtil with Logging {
+object ClientConfig extends ClientConfigUtil( "AQAClientConfig.xml",
+    Seq(
+      Util.thisJarFile.getParentFile, // same directory as jar
+      new File(System.getProperty("user.dir")), // current directory
+      new File(Util.thisJarFile.getParentFile.getParentFile, """src\main\resources"""), // for development
+      new File("""src\main\resources""") // for development
+    )) {
+ 
 
-  val JavaKeyStorePassword = getJavaKeyStorePassword
+  val JavaKeyStorePassword = getPassword("JavaKeyStorePassword")
   val JavaKeyStoreFileList = getJavaKeyStoreFileList
 
   /** Number of minutes into a 24 hour day at which time service should be restarted. */
