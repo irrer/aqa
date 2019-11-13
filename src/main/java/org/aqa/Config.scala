@@ -312,7 +312,6 @@ object Config extends Logging {
   val machineConfigurationDir = new File(DataDir, machineConfigurationDirName)
   machineConfigurationDir.mkdirs
 
-  val RestletLogLevel = logMainText("RestletLogLevel")
   val AuthenticationTimeout = logMainText("AuthenticationTimeout").toDouble
   val AuthenticationTimeoutInMs = (AuthenticationTimeout * 1000).toLong
 
