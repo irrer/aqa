@@ -76,9 +76,15 @@ class ClientConfigUtil(configFileName: String, directoryList: Seq[File]) extends
     childDir
   }
 
+  //  protected def getChildFile(parentDir: File, fileName: String): File = {
+  //    val file = new File(parentDir, fileName)
+  //    logText("Using file: ", file.getAbsolutePath)
+  //    file
+  //  }
+
   private var configFile: File = null
 
-  def getConfigFile = configFile
+  protected def getConfigFile = configFile
 
   /**
    * Read the configuration file.
@@ -237,7 +243,7 @@ class ClientConfigUtil(configFileName: String, directoryList: Seq[File]) extends
   /**
    * Search for the given directory (which should already exist) in the given list of parent directories..
    */
-  def getExistingDir(dirName: String, parentPathList: Seq[String]): File = {
+  protected def getExistingDir(dirName: String, parentPathList: Seq[String]): File = {
     def toDir(parentName: String): File = {
       val parentDir = new File(parentName)
       val dir = new File(parentDir, dirName)
@@ -278,7 +284,7 @@ class ClientConfigUtil(configFileName: String, directoryList: Seq[File]) extends
 
   override def toString: String = valueText.foldLeft("Configuration values:")((b, t) => b + "\n    " + t)
 
-  def toHtml = {
+  protected def toHtml = {
     <pre>{ valueText }</pre>
   }
 

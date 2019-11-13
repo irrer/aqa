@@ -37,10 +37,6 @@
     </JavaKeyStorePassword> <!-- rodicom11dev -->
     <!-- <JavaKeyStorePassword>44d18166c66bed60b6394e6625c63dea713dbe465ddc960a7cd109514bc0d2bd</JavaKeyStorePassword> -->     <!-- irrer -->
 
-    <!-- Logging level for Restlet.  Messages at or above this severity level will be logged.
-    Possible values are: OFF FINE FINER FINEST INFO WARNING SEVERE ALL -->
-    <RestletLogLevel>WARNING</RestletLogLevel>
-
     <!-- Send files here for analysis. -->
     <AQAURL>http://localhost</AQAURL>
 

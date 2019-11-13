@@ -36,14 +36,14 @@ import edu.umro.ScalaUtil.PACS
  * to <code>ClientConfig.xml</code> for details indicating what the different
  * configuration values are used for.
  */
-object ClientConfig extends ClientConfigUtil( "AQAClientConfig.xml",
-    Seq(
-      Util.thisJarFile.getParentFile, // same directory as jar
-      new File(System.getProperty("user.dir")), // current directory
-      new File(Util.thisJarFile.getParentFile.getParentFile, """src\main\resources"""), // for development
-      new File("""src\main\resources""") // for development
-    )) {
- 
+object ClientConfig extends ClientConfigUtil(
+  "AQAClientConfig.xml",
+  Seq(
+    Util.thisJarFile.getParentFile, // same directory as jar
+    new File(System.getProperty("user.dir")), // current directory
+    new File(Util.thisJarFile.getParentFile.getParentFile, """src\main\resources"""), // for development
+    new File("""src\main\resources""") // for development
+  )) {
 
   val JavaKeyStorePassword = getPassword("JavaKeyStorePassword")
   val JavaKeyStoreFileList = getJavaKeyStoreFileList
@@ -58,8 +58,6 @@ object ClientConfig extends ClientConfigUtil( "AQAClientConfig.xml",
   lazy val tmpDir = makeChildDir(DataDir, tmpDirName)
 
   val staticDirFile = getExistingDir("static", Seq(""".\""", """src\main\resources\"""))
-
-  val PatientIDList = getPatientIDList
 
   val DICOMClient = getPacs("DICOMClient")
 

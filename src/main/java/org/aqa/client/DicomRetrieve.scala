@@ -62,7 +62,7 @@ object DicomRetrieve extends Logging {
   }
 
   def update = {
-    ClientConfig.PatientIDList.map(patientID => updatePatient(patientID))
+    PatientIDList.getPatientIDList.map(patientID => updatePatient(patientID))
   }
 
   def init = {
