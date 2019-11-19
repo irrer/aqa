@@ -158,6 +158,14 @@ object Util extends Logging {
   }
 
   /**
+   * Get the SeriesInstanceUID of an attribute list.
+   */
+  def serInstOfAl(al: AttributeList): String = {
+    val at = al.get(TagFromName.SeriesInstanceUID)
+    if (at == null) "" else al.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString
+  }
+
+  /**
    * Get the PatientID of an attribute list.
    */
   def patientIdOfAl(al: AttributeList): String = {

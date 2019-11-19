@@ -139,6 +139,14 @@ object DicomSeries extends Logging {
     list
   }
 
+  def getByPatientID(patientID: String): Seq[DicomSeries] = {
+    val action = for {
+      dicomSeries <- query if ((dicomSeries.patientID === patientID))
+    } yield (dicomSeries)
+    val list = Db.run(action.result)
+    list
+  }
+
   def delete(dicomSeriesPK: Long): Int = {
     val q = query.filter(_.dicomSeriesPK === dicomSeriesPK)
     val action = q.delete
@@ -180,7 +188,7 @@ object DicomSeries extends Logging {
     def getFrameOfReferenceUID = byTag(TagFromName.FrameOfReferenceUID)
     def getModality = byTag(TagFromName.Modality).get
     def getSopClassUID = byTag(TagFromName.SOPClassUID).get
-    def deviceSerialNumber = byTag(TagFromName.SOPClassUID)
+    def deviceSerialNumber = byTag(TagFromName.DeviceSerialNumber)
     def getDate = new Timestamp(sorted.head.date.getTime)
     def getPatientID = sorted.map(_.patId).flatten.headOption
     def getSize = sorted.size

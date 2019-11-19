@@ -144,6 +144,8 @@ class WebServer extends Application with Logging {
 
   private lazy val anonymousTranslate = new AnonymousTranslate
 
+  private lazy val getSeries = new GetSeries
+
   private lazy val machineConfigurationDirRestlet = makeDirectory(Config.machineConfigurationDirFile)
 
   /*
@@ -235,6 +237,7 @@ class WebServer extends Application with Logging {
     val list = Seq(
       staticDirRestlet,
       anonymousTranslate,
+      getSeries,
       mainIndex,
       login,
       notAuthorized,
@@ -276,6 +279,7 @@ class WebServer extends Application with Logging {
       case `systemModificationUpdate` => UserRole.publik
       case `resultsDirectoryRestlet` => UserRole.guest
       case `webRunIndex` => UserRole.user
+      case `getSeries` => UserRole.user
       case `viewOutput` => UserRole.user
       case `outputList` => UserRole.user
       case `tmpDirectoryRestlet` => UserRole.user
@@ -516,6 +520,7 @@ class WebServer extends Application with Logging {
         new SymmetryAndFlatnessHistoryRestlet,
         new DailyQARestlet,
         anonymousTranslate,
+        getSeries,
         new CustomizeRtPlanInterface,
         termsOfUse,
         outputList,

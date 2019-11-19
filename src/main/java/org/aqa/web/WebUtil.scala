@@ -273,6 +273,16 @@ object WebUtil extends Logging {
     simpleWebPage(content, status, "Not Found", response)
   }
 
+  def badRequest(response: Response, message: String, status: Status): Unit = {
+    val messageAsHtml = message.split('\n').map(line => <br>{ line }</br>)
+
+    val content = {
+      <div>{ status.toString } <p/> { messageAsHtml }</div>
+    }
+    logger.warn(status.toString + " shown to user " + getUserIdOrDefault(response.getRequest, "unknown") + " : " + message)
+    simpleWebPage(content, status, "Bad Request", response)
+  }
+
   def internalFailure(response: Response, message: String): Unit = {
     val status = Status.SERVER_ERROR_INTERNAL
     val messageAsHtml = message.split('\n').map(line => <br>{ line }</br>)

@@ -92,12 +92,10 @@ object BBbyEPIDRun extends Logging {
   }
 
   /**
-   * Add this series to the database if it is not already in.  Use the SOPInstanceUID to determine if it is already in the database.
+   * Add this series to the database if it is not already in.  Use the SeriesInstanceUID to determine if it is already in the database.
    */
   private def insertIfNew(alList: Seq[AttributeList], extendedData: ExtendedData) = {
-    val sopUID = Util.sopOfAl(alList.head)
-
-    val current = DicomSeries.getBySopInstanceUID(sopUID)
+    val current = DicomSeries.getBySeriesInstanceUID(Util.serInstOfAl(alList.head))
     if (current.isEmpty) {
       val ds = DicomSeries.makeDicomSeries(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, alList)
       logger.info("inserted DicomSeries in to database: " + ds)

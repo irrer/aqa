@@ -227,7 +227,7 @@ object DicomAnonymous extends Logging {
     }
 
     // show database statement
-    // action.result.statements.foreach(println)
+    action.result.statements.foreach(println)
 
     val list = Db.run(action.result)
     list

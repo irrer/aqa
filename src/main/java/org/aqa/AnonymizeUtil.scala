@@ -237,7 +237,8 @@ object AnonymizeUtil extends Logging {
    * Given the list of attributes that need to be anonymized, return a list of DicomAnonymous entries that
    * address them.  If the entries do not already exist in the database, then create and insert them.
    */
-  private def makeDicomAnonymousList(institutionPK: Long, attrList: Seq[Attribute]): Seq[DicomAnonymous] = {
+  private val makeDicomAnonymousListSync = ""
+  def makeDicomAnonymousList(institutionPK: Long, attrList: Seq[Attribute]): Seq[DicomAnonymous] = makeDicomAnonymousListSync.synchronized {
     val institutionKey = getInstitutionKey(institutionPK)
     val previouslyAnonymized = DicomAnonymous.getAttributes(institutionPK, attrList)
 
