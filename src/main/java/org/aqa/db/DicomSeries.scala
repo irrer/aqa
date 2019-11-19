@@ -12,6 +12,7 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import edu.umro.ScalaUtil.DicomUtil
 import com.pixelmed.dicom.SOPClass
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Store the contents of a DICOM series.
@@ -166,8 +167,12 @@ object DicomSeries extends Logging {
     val sorted = alList.map(al => new DPAl(al)).sortBy(_.date.getTime)
 
     def byTag(tag: AttributeTag): Option[String] = {
-      val s = sorted.head.al.get(tag).getSingleStringValueOrEmptyString
-      if (s == null) None else Some(s)
+      Trace.trace
+      val s = if (sorted.nonEmpty && (sorted.head.al.get(tag) != null))
+        Some(sorted.head.al.get(tag).getSingleStringValueOrEmptyString)
+      else
+        None
+      s
     }
 
     val derivedMachinePK = {
