@@ -43,6 +43,7 @@ import scala.xml.XML
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Output
+import org.aqa.db.Procedure
 
 object GetSeries {}
 
@@ -67,17 +68,21 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
 
     val relatedOutputList = Output.getByInputPKSet(dicomSeriesList.map(ds => ds.inputPK).flatten.toSet)
 
-    def urlOfDicomSeries(dicomSeries: DicomSeries): Option[String] = {
-      if (dicomSeries.inputPK.isDefined) {
-        relatedOutputList.filter(o => o.inputPK == dicomSeries.inputPK.get).headOption match {
-          case Some(output) => {
-            val file = new File(output.dir, Output.displayFilePrefix + ".html")
-            Some(WebServer.urlOfResultsFile(file))
-          }
-          case _ => None
-        }
-      } else
+    def outputOfDicomSeries(dicomSeries: DicomSeries): Option[Output] = {
+      if (dicomSeries.inputPK.isDefined)
+        relatedOutputList.filter(o => o.inputPK == dicomSeries.inputPK.get).headOption
+      else
         None
+    }
+
+    def urlOfDicomSeries(dicomSeries: DicomSeries): Option[String] = {
+      outputOfDicomSeries(dicomSeries) match {
+        case Some(output) => {
+          val file = new File(output.dir, Output.displayFilePrefix + ".html")
+          Some(WebServer.urlOfResultsFile(file))
+        }
+        case _ => None
+      }
     }
 
     val tagList = Seq(TagFromName.SeriesInstanceUID, TagFromName.FrameOfReferenceUID, TagFromName.PatientID, TagFromName.DeviceSerialNumber)
@@ -89,6 +94,19 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
       dicomAnonList.find(an => an.attributeTag.equals(tagText) && anonValue.equals(an.value)) match {
         case Some(dicomAnonymous) => Some(AnonymizeUtil.decryptWithNonce(institutionPK, dicomAnonymous.value_real))
         case _ => None
+      }
+    }
+
+    // get list of all procedures once
+    val procedureList = Procedure.list
+
+    /**
+     * Lookup the name+version of a procedure
+     */
+    def nameOfProcedure(procedurePK: Long) = {
+      procedureList.find(p => p.procedurePK.get == procedurePK) match {
+        case Some(proc) => proc.name + " " + proc.version
+        case _ => "unknown"
       }
     }
 
@@ -107,12 +125,26 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
         }
       }
 
+      val output = outputOfDicomSeries(dicomSeries)
+
       val serInstUid = getOpt(Some(dicomSeries.seriesInstanceUID), TagFromName.SeriesInstanceUID)
       val frmOfRef = getOpt(dicomSeries.frameOfReferenceUID, TagFromName.FrameOfReferenceUID)
       val modality = Some(<Modality>{ dicomSeries.modality }</Modality>)
       val sopClassUid = Some(<SOPClassUID>{ dicomSeries.sopClassUID }</SOPClassUID>)
       val devSerNo = getOpt(dicomSeries.deviceSerialNumber, TagFromName.DeviceSerialNumber)
       val patId = getOpt(dicomSeries.patientID, TagFromName.PatientID)
+      val startDate = {
+        if (output.isDefined) Some(<AnalysisStartDate>{ Util.standardDateFormat.format(output.get.startDate) }</AnalysisStartDate>)
+        else None
+      }
+      val procedure = {
+        if (output.isDefined) Some(<Procedure>{ nameOfProcedure(output.get.procedurePK) }</Procedure>)
+        else None
+      }
+      val status = {
+        if (output.isDefined) Some(<Status>{ output.get.status }</Status>)
+        else None
+      }
       val url = {
         urlOfDicomSeries(dicomSeries) match {
           case Some(u) => Some(<URL>{ u }</URL>)
@@ -127,13 +159,16 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
         modality,
         sopClassUid,
         patId,
-        url).flatten
+        url,
+        procedure,
+        status,
+        startDate).flatten
 
       val seriesXml = {
         <Series>
           { elemList }
-          <dataDate>{ Util.standardDateFormat.format(dicomSeries.date) }</dataDate>
-          <numberOfSlices>{ dicomSeries.size }</numberOfSlices>
+          <DataDate>{ Util.standardDateFormat.format(dicomSeries.date) }</DataDate>
+          <NumberOfSlices>{ dicomSeries.size }</NumberOfSlices>
         </Series>
       }
 
