@@ -35,7 +35,7 @@ class TestDicomSeries extends FlatSpec with Matchers {
     val input = Input.getByMachine(machine.machinePK.get).head
     val userPK = input.userPK.get
 
-    val dicomSeriesBefore = DicomSeries.makeDicomSeries(userPK, input.inputPK, machine.machinePK, alList)
+    val dicomSeriesBefore = DicomSeries.makeDicomSeries(userPK, input.inputPK, machine.machinePK, alList).get
 
     val roundTrip = dicomSeriesBefore.attributeListList
 

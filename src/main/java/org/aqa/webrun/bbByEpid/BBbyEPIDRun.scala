@@ -91,18 +91,6 @@ object BBbyEPIDRun extends Logging {
     same
   }
 
-  /**
-   * Add this series to the database if it is not already in.  Use the SeriesInstanceUID to determine if it is already in the database.
-   */
-  private def insertIfNew(alList: Seq[AttributeList], extendedData: ExtendedData): Unit = {
-    val current = DicomSeries.getBySeriesInstanceUID(Util.serInstOfAl(alList.head))
-    if (current.isEmpty) {
-      val ds = DicomSeries.makeDicomSeries(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, alList)
-      ds.insert
-      logger.info("inserted DicomSeries in to database: " + ds)
-    }
-  }
-
   private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output) = {
 
     Output.ensureInputAndOutputFilesExist(outputOrig)
@@ -346,7 +334,8 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
         Future {
           val extendedData = ExtendedData.get(output)
           val runReqFinal = runReq.reDir(input.dir)
-          BBbyEPIDRun.insertIfNew(runReqFinal.epidList, extendedData)
+          DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, runReqFinal.epidList)
+
           val finalStatus = BBbyEPIDAnalyse.runProcedure(extendedData, runReqFinal)
           val finDate = new Timestamp(System.currentTimeMillis)
           val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))

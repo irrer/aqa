@@ -42,6 +42,7 @@ import com.pixelmed.dicom.Attribute
 import scala.xml.XML
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
+import org.aqa.db.Output
 
 object GetSeries {}
 
@@ -64,28 +65,24 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
     }
     val dicomSeriesList = DicomSeries.getByPatientID(anonPatientId)
 
-    //    def seriesToAttrList(series: DicomSeries): Seq[Attribute] = {
-    //      def makeAttr(tag: AttributeTag, value: String) = {
-    //        val attr = AttributeFactory.newAttribute(tag)
-    //        attr.addValue(value)
-    //        attr
-    //      }
-    //
-    //      val pairList: Seq[(AttributeTag, Option[String])] = Seq(
-    //        (TagFromName.SeriesInstanceUID, Some(series.seriesInstanceUID)),
-    //        (TagFromName.FrameOfReferenceUID, series.frameOfReferenceUID),
-    //        (TagFromName.DeviceSerialNumber, series.deviceSerialNumber),
-    //        (TagFromName.PatientID, series.patientID))
-    //
-    //      val attrList = pairList.filter(p => p._2.isDefined).map(p => makeAttr(p._1, p._2.get))
-    //      attrList
-    //    }
+    val relatedOutputList = Output.getByInputPKSet(dicomSeriesList.map(ds => ds.inputPK).flatten.toSet)
+
+    def urlOfDicomSeries(dicomSeries: DicomSeries): Option[String] = {
+      if (dicomSeries.inputPK.isDefined) {
+        relatedOutputList.filter(o => o.inputPK == dicomSeries.inputPK.get).headOption match {
+          case Some(output) => {
+            val file = new File(output.dir, Output.displayFilePrefix + ".html")
+            Some(WebServer.urlOfResultsFile(file))
+          }
+          case _ => None
+        }
+      } else
+        None
+    }
 
     val tagList = Seq(TagFromName.SeriesInstanceUID, TagFromName.FrameOfReferenceUID, TagFromName.PatientID, TagFromName.DeviceSerialNumber)
 
     val dicomAnonList = DicomAnonymous.getAttributesByTag(institutionPK, tagList)
-
-    Trace.trace
 
     def lookup(tag: AttributeTag, anonValue: String): Option[String] = {
       val tagText = DicomAnonymous.formatAnonAttributeTag(tag)
@@ -116,14 +113,21 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
       val sopClassUid = Some(<SOPClassUID>{ dicomSeries.sopClassUID }</SOPClassUID>)
       val devSerNo = getOpt(dicomSeries.deviceSerialNumber, TagFromName.DeviceSerialNumber)
       val patId = getOpt(dicomSeries.patientID, TagFromName.PatientID)
+      val url = {
+        urlOfDicomSeries(dicomSeries) match {
+          case Some(u) => Some(<URL>{ u }</URL>)
+          case _ => None
+        }
+      }
 
-      val elemList = Seq(
+      val elemList: Seq[Elem] = Seq(
         serInstUid,
         devSerNo,
         frmOfRef,
         modality,
         sopClassUid,
-        patId).flatten
+        patId,
+        url).flatten
 
       val seriesXml = {
         <Series>

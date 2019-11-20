@@ -82,18 +82,6 @@ object BBbyCBCTRun extends Logging {
     same
   }
 
-  /**
-   * Add this series to the database if it is not already in.  Use the SeriesInstanceUID to determine if it is already in the database.
-   */
-  private def insertIfNew(alList: Seq[AttributeList], extendedData: ExtendedData): Unit = {
-    val current = DicomSeries.getBySeriesInstanceUID(Util.serInstOfAl(alList.head))
-    if (current.isEmpty) {
-      val ds = DicomSeries.makeDicomSeries(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, alList)
-      ds.insert
-      logger.info("inserted DicomSeries in to database: " + ds)
-    }
-  }
-
   private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output) = {
 
     Output.ensureInputAndOutputFilesExist(outputOrig)
@@ -149,8 +137,9 @@ object BBbyCBCTRun extends Logging {
 
     Future {
       val extendedData = ExtendedData.get(output)
-      insertIfNew(Seq(runReq.rtplan), extendedData)
-      insertIfNew(runReq.cbct, extendedData)
+      DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, Seq(runReq.rtplan))
+      DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, runReq.cbct)
+
       val runReqFinal = runReq.reDir(input.dir)
 
       val rtplan = runReqFinal.rtplan
@@ -473,19 +462,9 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
         val output = inputOutput._2
 
         Future {
-          Trace.trace
           val extendedData = ExtendedData.get(output)
-          Trace.trace
-          BBbyCBCTRun.insertIfNew(Seq(runReq.rtplan), extendedData)
-          Trace.trace
+          DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, Seq(runReq.rtplan))
           val runReqFinal = runReq.reDir(input.dir)
-          Trace.trace
-
-          //          val plan = runReqFinal.rtplan
-          //          val machine = machineCheck.right.get
-          //          Phase2Util.saveRtplanAsDicomSeries(runReq.rtplan)
-
-          //          val rtimageMap = Phase2.constructRtimageMap(plan, rtimageList)
 
           val finalStatus = BBbyCBCTExecute.runProcedure(extendedData, runReqFinal)
           val finDate = new Timestamp(System.currentTimeMillis)

@@ -208,6 +208,17 @@ object Output extends Logging {
     Db.run(q.result)
   }
 
+  /**
+   * Get a list of all outputs that have an input in the set.
+   */
+  def getByInputPKSet(inputPKSet: Set[Long]): Seq[Output] = {
+    val action = for {
+      output <- query if (output.inputPK.inSet(inputPKSet))
+    } yield (output)
+    val list = Db.run(action.result)
+    list
+  }
+
   def delete(outputPK: Long): Int = {
     val q = query.filter(_.outputPK === outputPK)
     val action = q.delete

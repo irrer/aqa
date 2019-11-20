@@ -89,27 +89,16 @@ object Phase2 extends Logging {
   }
 
   /**
-   * Add this series to the database if it is not already in.  Use the SeriesInstanceUID to determine if it is already in the database.
-   */
-  private def insertIfNew(alList: Seq[AttributeList], extendedData: ExtendedData): Unit = {
-    Trace.trace("sopList:\n    " + alList.map(al => Util.sopOfAl(al)).sorted.mkString("\n    "))
-    val current = DicomSeries.getBySeriesInstanceUID(Util.serInstOfAl(alList.head))
-    if (current.isEmpty) {
-      val ds = DicomSeries.makeDicomSeries(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, alList)
-      ds.insert
-      logger.info("inserted DicomSeries in to database: " + ds)
-    }
-  }
-
-  /**
    * Run the sub-procedures.
    */
   private def runPhase2(extendedData: ExtendedData, rtimageMap: Map[String, DicomFile], runReq: RunReq): ProcedureStatus.Value = {
     logger.info("Starting Phase2 analysis")
 
     val alList = (runReq.rtimageMap.map(df => df._2.attributeList)).flatten.toSeq
-    insertIfNew(alList, extendedData)
-    if (runReq.rtplan.attributeList.isDefined) insertIfNew(Seq(runReq.rtplan.attributeList.get), extendedData)
+
+    DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, alList)
+    if (runReq.rtplan.attributeList.isDefined)
+      DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, Seq(runReq.rtplan.attributeList.get))
 
     val summaryList: Either[Seq[Elem], Seq[Elem]] = MetadataCheckAnalysis.runProcedure(extendedData, runReq) match {
       case Left(fail) => Left(Seq(fail))

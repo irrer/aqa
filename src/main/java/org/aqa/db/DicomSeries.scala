@@ -154,66 +154,92 @@ object DicomSeries extends Logging {
     Db.run(action)
   }
 
-  def makeDicomSeries(usrPK: Long, inpPK: Option[Long], machPK: Option[Long], alList: Seq[AttributeList]): DicomSeries = {
+  /**
+   * Construct a DicomSeries from an attribute list and some other required fields.
+   */
+  def makeDicomSeries(usrPK: Long, inpPK: Option[Long], machPK: Option[Long], alList: Seq[AttributeList]): Option[DicomSeries] = {
+    // Doing a lot of things with undependable data so wrap this in a try-catch to cover all the bases
+    try {
+      val datePatID = alList.map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al))
 
-    val datePatID = alList.map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al))
+      case class DPAl(al: AttributeList) {
+        private val dp = Util.extractDateTimeAndPatientIdFromDicomAl(al)
+        val date = dp._1.head
+        val patId = dp._2
+      }
 
-    case class DPAl(al: AttributeList) {
-      private val dp = Util.extractDateTimeAndPatientIdFromDicomAl(al)
-      val date = dp._1.head
-      val patId = dp._2
-    }
+      val sorted = alList.map(al => new DPAl(al)).sortBy(_.date.getTime)
 
-    val sorted = alList.map(al => new DPAl(al)).sortBy(_.date.getTime)
+      def byTag(tag: AttributeTag): Option[String] = {
+        Trace.trace
+        val s = if (sorted.nonEmpty && (sorted.head.al.get(tag) != null))
+          Some(sorted.head.al.get(tag).getSingleStringValueOrEmptyString)
+        else
+          None
+        s
+      }
 
-    def byTag(tag: AttributeTag): Option[String] = {
-      Trace.trace
-      val s = if (sorted.nonEmpty && (sorted.head.al.get(tag) != null))
-        Some(sorted.head.al.get(tag).getSingleStringValueOrEmptyString)
-      else
+      val derivedMachinePK = {
+        (machPK.isDefined, inpPK.isDefined) match {
+          case (true, _) => machPK
+          case (_, true) => Input.get(inpPK.get).get.machinePK
+          case _ => None
+        }
+      }
+
+      if (inpPK.isDefined) {
+        val input = Input.get(inpPK.get).get
+        if (input.userPK.get != usrPK) throw new IllegalArgumentException("User PK " + usrPK + " passed as parameter is different from that referenced by inputPK " + inpPK.get + " --> " + input.userPK.get)
+      }
+
+      def getSopInstanceUIDlist = alList.map(al => Util.sopOfAl(al)).mkString(" ")
+      def getSeriesInstanceUID = byTag(TagFromName.SeriesInstanceUID).get
+      def getFrameOfReferenceUID = byTag(TagFromName.FrameOfReferenceUID)
+      def getModality = byTag(TagFromName.Modality).get
+      def getSopClassUID = byTag(TagFromName.SOPClassUID).get
+      def deviceSerialNumber = byTag(TagFromName.DeviceSerialNumber)
+      def getDate = new Timestamp(sorted.head.date.getTime)
+      def getPatientID = sorted.map(_.patId).flatten.headOption
+      def getSize = sorted.size
+      def getContent: Array[Byte] = DicomUtil.dicomToZippedByteArray(alList)
+
+      val ds = new DicomSeries(
+        None,
+        usrPK,
+        inpPK,
+        derivedMachinePK,
+        getSopInstanceUIDlist,
+        getSeriesInstanceUID,
+        getFrameOfReferenceUID,
+        getModality,
+        getSopClassUID,
+        deviceSerialNumber,
+        getDate,
+        getPatientID,
+        getSize,
+        getContent)
+      Some(ds)
+    } catch {
+      case t: Throwable => {
+        logger.warn("Unexpected error while creating DicomSeries: " + fmtEx(t))
         None
-      s
-    }
-
-    val derivedMachinePK = {
-      (machPK.isDefined, inpPK.isDefined) match {
-        case (true, _) => machPK
-        case (_, true) => Input.get(inpPK.get).get.machinePK
-        case _ => None
       }
     }
+  }
 
-    if (inpPK.isDefined) {
-      val input = Input.get(inpPK.get).get
-      if (input.userPK.get != usrPK) throw new IllegalArgumentException("User PK " + usrPK + " passed as parameter is different from that referenced by inputPK " + inpPK.get + " --> " + input.userPK.get)
+  /**
+   * Add this series to the database if it is not already in.  Use the SeriesInstanceUID to determine if it is already in the database.
+   */
+  def insertIfNew(userPK: Long, inputPK: Option[Long], machinePK: Option[Long], alList: Seq[AttributeList]): Unit = {
+    val current = DicomSeries.getBySeriesInstanceUID(Util.serInstOfAl(alList.head))
+    if (current.isEmpty) {
+      val ds = DicomSeries.makeDicomSeries(userPK, inputPK, machinePK, alList)
+      if (ds.isDefined) {
+        ds.get.insert
+        logger.info("inserted DicomSeries in to database: " + ds)
+      } else
+        logger.warn("Failed to insert new DicomSeries.  userPK: " + userPK + "    inputPK: " + inputPK + "    machinePK: " + machinePK)
     }
-
-    def getSopInstanceUIDlist = alList.map(al => Util.sopOfAl(al)).mkString(" ")
-    def getSeriesInstanceUID = byTag(TagFromName.SeriesInstanceUID).get
-    def getFrameOfReferenceUID = byTag(TagFromName.FrameOfReferenceUID)
-    def getModality = byTag(TagFromName.Modality).get
-    def getSopClassUID = byTag(TagFromName.SOPClassUID).get
-    def deviceSerialNumber = byTag(TagFromName.DeviceSerialNumber)
-    def getDate = new Timestamp(sorted.head.date.getTime)
-    def getPatientID = sorted.map(_.patId).flatten.headOption
-    def getSize = sorted.size
-    def getContent: Array[Byte] = DicomUtil.dicomToZippedByteArray(alList)
-
-    new DicomSeries(
-      None,
-      usrPK,
-      inpPK,
-      derivedMachinePK,
-      getSopInstanceUIDlist,
-      getSeriesInstanceUID,
-      getFrameOfReferenceUID,
-      getModality,
-      getSopClassUID,
-      deviceSerialNumber,
-      getDate,
-      getPatientID,
-      getSize,
-      getContent)
   }
 
   /**
