@@ -156,6 +156,39 @@ object WebUtil extends Logging {
     }
   }
 
+  /**
+   * Unpack data uploaded via HTTP POST.  Received as a byte array, they are actually a zip file.
+   * Put the files into the session directory so they can be processed.
+   */
+  def unpackPost(valueMap: ValueMapT, request: Request): ValueMapT = {
+    val entity = request.getEntity
+    val baos = new ByteArrayOutputStream
+    val size = entity.getSize
+
+    val buf = new Array[Byte](32 * 1024)
+    val stream = entity.getStream
+
+    def readIt: Unit = {
+      stream.read(buf) match {
+        case -1 => ;
+        case 0 => {
+          Thread.sleep(50)
+          readIt
+        }
+        case len => {
+          baos.write(buf.take(len))
+          readIt
+        }
+      }
+    }
+
+    readIt
+    stream.close
+
+    val data = baos.toByteArray
+    ??? // TODO
+  }
+
   def sessionDir(valueMap: ValueMapT): Option[File] = {
     valueMap.get(sessionLabel) match {
       case Some(sessionId) => Some(Session.idToFile(sessionId))

@@ -55,6 +55,7 @@ import org.aqa.ImageRegistration
 import org.aqa.db.DicomSeries
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.db.BBbyCBCT
+import org.restlet.data.Method
 
 /**
  * Provide the user interface and verify that the data provided is sufficient to do the analysis.
@@ -510,6 +511,10 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
         //case _ if (!sessionDefined(valueMap)) => redirectWithNewSession(response);
         case _ if buttonIs(valueMap, cancelButton) => cancel(valueMap, response)
         case _ if buttonIs(valueMap, runButton) => runIfDataValid(valueMap, request, response)
+        case _ if request.getMethod.equals(Method.POST) => {
+          val valueMapWithFiles = unpackPost(valueMap, request)
+          runIfDataValid(valueMapWithFiles, request, response)
+        }
         case _ => emptyForm(valueMap, response)
       }
     } catch {
