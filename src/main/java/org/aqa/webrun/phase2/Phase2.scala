@@ -96,7 +96,12 @@ object Phase2 extends Logging {
 
     val alList = (runReq.rtimageMap.map(df => df._2.attributeList)).flatten.toSeq
 
-    DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, alList)
+    // Save DICOM series to the database if they are not already there.  It is possible that the RTIMAGE files are
+    // from different series, so make sure to split them by series and store them separately.  This is important for
+    // the automatic client that will ask this server if a given series has been processed or not.  This actually
+    // happened once.
+    val seriesList = alList.groupBy(al => Util.serInstOfAl(al)).map(series => series._2)
+    seriesList.map(series => DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, series))
     if (runReq.rtplan.attributeList.isDefined)
       DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, Seq(runReq.rtplan.attributeList.get))
 
