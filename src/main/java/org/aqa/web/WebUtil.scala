@@ -51,6 +51,11 @@ import com.pixelmed.dicom.SOPClass
 import com.pixelmed.dicom.FileMetaInformation
 import com.pixelmed.dicom.TransferSyntax
 import org.aqa.db.DicomSeries
+import edu.umro.ScalaUtil.FileUtil
+import resource.managed
+import scala.annotation.tailrec
+import java.util.zip.ZipInputStream
+import java.io.OutputStream
 
 object WebUtil extends Logging {
 
@@ -103,13 +108,48 @@ object WebUtil extends Logging {
   }
 
   /**
+   * Number of digits to use when constructing anonymized file names.
+   */
+  private val writeUploadedFileDigits = 4
+
+  private case class UniquelyNamedFile(parentDir: File) {
+    private val used = scala.collection.mutable.HashSet[String]()
+
+    /**
+     * Get a unique (within directory) file name.
+     *
+     * @param parentDir File is to be put here.
+     *
+     * @param suffix Suffix without '.'.
+     */
+    def getUniquelyNamedFile(suffix: String): File = {
+      parentDir.mkdirs
+      def pickBaseName: String = {
+        lazy val fileList = parentDir.listFiles.map(f => f.getName.take(writeUploadedFileDigits)).toSet
+        def tryName(count: Int): String = {
+          val name = count.formatted("%0" + writeUploadedFileDigits + "d")
+          if (used.contains(name) || fileList.contains(name)) tryName(count + 1)
+          else name
+        }
+        tryName(1)
+      }
+
+      val baseName = pickBaseName
+      used += baseName
+      val fullName = baseName + "." + suffix
+      val file = new File(parentDir, fullName)
+      file
+    }
+  }
+
+  /**
    * Convert the given stream to DICOM and return the attribute list.  If it
    * is not DICOM, then return None.
    */
-  private def isDicom(inputStream: InputStream): Option[AttributeList] = {
+  private def isDicom(data: Array[Byte]): Option[AttributeList] = {
     try {
       val al = new AttributeList
-      val dicomInStream = new DicomInputStream(inputStream)
+      val dicomInStream = new DicomInputStream(new ByteArrayInputStream(data))
       al.read(dicomInStream)
       // require it to have an SOPInstanceUID to be valid DICOM.  Throws an exception if it does not have one
       al.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull.trim
@@ -120,73 +160,83 @@ object WebUtil extends Logging {
   }
 
   /**
-   * Write the input stream to the file.
+   * Anonymized and write the given attribute list.
    */
-  private def saveFile(inputStream: InputStream, file: File, request: Request) = {
-    file.getParentFile.mkdirs
+  private def writeAnonymizedDicom(al: AttributeList, unique: UniquelyNamedFile, request: Request) = {
+    val user = CachedUser.get(request)
+    val institution = user.get.institutionPK
+    val anonAl = AnonymizeUtil.anonymizeDicom(institution, al)
+    val anonFile = unique.getUniquelyNamedFile("dcm")
+    val os = new ByteArrayOutputStream
+    DicomUtil.writeAttributeList(anonAl, os, "AQA")
+    Util.writeBinaryFile(anonFile, os.toByteArray)
+  }
 
-    val outputStream = new ByteArrayOutputStream
-
-    val buffer = Array.ofDim[Byte](16 * 1024)
-    var size = inputStream.read(buffer)
-    while (size != -1) {
-      outputStream.write(buffer, 0, size)
-      size = inputStream.read(buffer)
-    }
-    outputStream.flush
-    outputStream.close
-
-    val byteInStream = new ByteArrayInputStream(outputStream.toByteArray)
-
-    isDicom(byteInStream) match {
-      case Some(al) => {
-        val user = CachedUser.get(request)
-        val institution = user.get.institutionPK
-        val anon = AnonymizeUtil.anonymizeDicom(institution, al)
-        DicomUtil.writeAttributeListToFile(anon, file, "AQA")
+  /**
+   * Attempt to interpret as a zip file.  Return true on success.
+   */
+  private def writeZip(data: Array[Byte], unique: UniquelyNamedFile, request: Request): Unit = {
+    try {
+      val inputStream = new ByteArrayInputStream(data)
+      managed(new ZipInputStream(inputStream)) acquireAndGet {
+        zipIn =>
+          {
+            @tailrec
+            def next: Unit = {
+              val entry = zipIn.getNextEntry
+              if (entry != null) {
+                if (!entry.isDirectory) {
+                  val data = {
+                    val baos = new ByteArrayOutputStream
+                    FileUtil.copyStream(zipIn, baos)
+                    baos.toByteArray
+                  }
+                  val file = new File(unique.parentDir, entry.getName.replace("/", File.separator))
+                  saveData(data, file, "", unique, request)
+                }
+                next
+              }
+            }
+            // Start processing
+            next
+          }
       }
+    } catch {
+      case t: Throwable => logger.warn("Unexpected error writing uploaded zip: " + fmtEx(t))
+    }
+  }
+
+  private def saveData(data: Array[Byte], file: File, contentType: String, unique: UniquelyNamedFile, request: Request): Unit = {
+    isDicom(data) match {
+      case Some(al) => writeAnonymizedDicom(al, unique: UniquelyNamedFile, request: Request)
+
+      case _ if (contentType.equalsIgnoreCase(MediaType.APPLICATION_ZIP.getName)) => writeZip(data, unique, request)
+
+      // We don't know what kind of file this is.  Just save it.
       case _ => {
-        file.delete
-        file.createNewFile
-        val fileOutStream = new FileOutputStream(file)
-        fileOutStream.write(outputStream.toByteArray)
-        fileOutStream.flush
-        fileOutStream.close
+        val anonFile = unique.getUniquelyNamedFile(FileUtil.getFileSuffix(file.getName))
+        Util.writeBinaryFile(anonFile, data)
       }
     }
   }
 
   /**
-   * Unpack data uploaded via HTTP POST.  Received as a byte array, they are actually a zip file.
-   * Put the files into the session directory so they can be processed.
+   * Write the input stream to the file.
    */
-  def unpackPost(valueMap: ValueMapT, request: Request): ValueMapT = {
-    val entity = request.getEntity
-    val baos = new ByteArrayOutputStream
-    val size = entity.getSize
+  private def saveFile(inputStream: InputStream, file: File, contentType: String, request: Request) = writeUploadedFileDigits.synchronized {
+    val parentDir = file.getParentFile
+    parentDir.mkdirs
 
-    val buf = new Array[Byte](32 * 1024)
-    val stream = entity.getStream
+    val unique = new UniquelyNamedFile(parentDir)
 
-    def readIt: Unit = {
-      stream.read(buf) match {
-        case -1 => ;
-        case 0 => {
-          Thread.sleep(50)
-          readIt
-        }
-        case len => {
-          baos.write(buf.take(len))
-          readIt
-        }
-      }
-    }
+    val outputStream = new ByteArrayOutputStream
 
-    readIt
-    stream.close
+    val fileSize = FileUtil.copyStream(inputStream, outputStream)
+    logger.info("Size of uploaded file in bytes: " + fileSize)
 
-    val data = baos.toByteArray
-    ??? // TODO
+    val data = outputStream.toByteArray
+
+    saveData(data, file, contentType, unique, request)
   }
 
   def sessionDir(valueMap: ValueMapT): Option[File] = {
@@ -218,7 +268,7 @@ object WebUtil extends Logging {
   }
 
   private def saveFileList(request: Request): ValueMapT = {
-    val valueMap = parseOriginalReference(request)
+    val valueMap = ensureSessionId(parseOriginalReference(request))
 
     val dir = sessionDir(valueMap) match {
       case Some(dir) => {
@@ -231,8 +281,9 @@ object WebUtil extends Logging {
           val ii = itemIterator.next
           if (!ii.isFormField) {
             val file = new File(dir, ii.getName)
+            Trace.trace("ContentType: " + ii.getContentType)
             logger.info("Uploading file from user " + userId + " to " + file.getAbsolutePath)
-            saveFile(ii.openStream, file, request)
+            saveFile(ii.openStream, file, ii.getContentType, request)
           }
         }
       }
