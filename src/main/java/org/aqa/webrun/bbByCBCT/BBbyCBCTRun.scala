@@ -356,7 +356,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     def numSeries(dfList: Seq[DicomFile]): Int = dfList.map(df => df.attributeList.get.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString).distinct.sorted.size
 
     /** return list of plans (either uploaded or from DB) whose frame of reference match the CBCT exactly (no REG file involved) */
-    val rtplanMatchingCbct: Seq[AttributeList] = {
+    def rtplanMatchingCbct: Seq[AttributeList] = {
       val cbctFramOfRef = cbctFrameOfRefList.head
       val dbPlan = DicomSeries.getByFrameUIDAndSOPClass(Set(cbctFramOfRef), SOPClass.RTPlanStorage).map(db => db.attributeListList).flatten
       val uploadedRtplanList = rtplanList.map(df => df.attributeList).flatten
@@ -385,7 +385,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     def isMatchingFrameOfRef = getPlanAndReg.nonEmpty || rtplanMatchingCbct.nonEmpty
 
     /** Get the plan to use, if there is one. */
-    val rtplan: Option[AttributeList] = {
+    def rtplan: Option[AttributeList] = {
       0 match {
         case _ if (getPlanAndReg.nonEmpty) => Some(getPlanAndReg.head._1)
         case _ if (rtplanMatchingCbct.nonEmpty) => Some(rtplanMatchingCbct.head)
@@ -496,7 +496,8 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
   private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
     val value = valueMap.get(button.label)
-    value.isDefined && value.get.toString.equals(button.label)
+    val is = value.isDefined && value.get.toString.equals(button.label)
+    is
   }
 
   override def handle(request: Request, response: Response): Unit = {
@@ -511,10 +512,6 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
         //case _ if (!sessionDefined(valueMap)) => redirectWithNewSession(response);
         case _ if buttonIs(valueMap, cancelButton) => cancel(valueMap, response)
         case _ if buttonIs(valueMap, runButton) => runIfDataValid(valueMap, request, response)
-        case _ if request.getMethod.equals(Method.POST) => {
-          val valueMapWithFiles = unpackPost(valueMap, request)
-          runIfDataValid(valueMapWithFiles, request, response)
-        }
         case _ => emptyForm(valueMap, response)
       }
     } catch {

@@ -22,7 +22,6 @@ import org.restlet.ext.fileupload.RestletFileUpload
 import java.io.InputStream
 import java.io.FileOutputStream
 import java.lang.Class
-import edu.umro.ScalaUtil.Trace._
 import org.aqa.db.User
 import edu.umro.MSOfficeUtil.Excel.ExcelUtil
 import org.apache.poi.ss.usermodel.Workbook
@@ -273,15 +272,15 @@ object WebUtil extends Logging {
     val dir = sessionDir(valueMap) match {
       case Some(dir) => {
 
-        val upload = new RestletFileUpload(new DiskFileItemFactory(500, dir)) // TODO change size to -1 ?
-        val itemIterator = upload.getItemIterator(request.getEntity);
+        val upload = new RestletFileUpload(new DiskFileItemFactory(500, dir))
+        val itemIterator = upload.getItemIterator(request.getEntity)
 
         val userId: String = getUser(request) match { case Some(user) => user.id; case _ => "unknown" }
         while (itemIterator.hasNext) {
           val ii = itemIterator.next
+          val j = ii.isFormField
           if (!ii.isFormField) {
             val file = new File(dir, ii.getName)
-            Trace.trace("ContentType: " + ii.getContentType)
             logger.info("Uploading file from user " + userId + " to " + file.getAbsolutePath)
             saveFile(ii.openStream, file, ii.getContentType, request)
           }
@@ -289,7 +288,7 @@ object WebUtil extends Logging {
       }
       case _ => throw new RuntimeException("Unexpected internal error. None in WebUtil.saveFileList")
     }
-    valueMap
+    valueMap ++ parseForm(new Form(request.getEntity))
   }
 
   def firstPartOf(text: String, maxLen: Int): String = {
@@ -331,10 +330,13 @@ object WebUtil extends Logging {
   val styleNone = Map[String, Style]()
 
   def getValueMap(request: Request): ValueMapT = {
-    if (requestIsUpload(request))
+    val vm = if (requestIsUpload(request))
       saveFileList(request)
     else
-      ensureSessionId(parseOriginalReference(request) ++ parseForm(new Form(request.getEntity)) ++ userToValueMap(request))
+      emptyValueMap
+
+    val valueMap = ensureSessionId(vm ++ parseOriginalReference(request) ++ parseForm(new Form(request.getEntity)) ++ userToValueMap(request))
+    valueMap
   }
 
   def simpleWebPage(content: Elem, status: Status, title: String, response: Response): Unit = {
@@ -625,7 +627,6 @@ object WebUtil extends Logging {
 
       def replace(origText: String, col: Any): String = {
         val txt = if (col.isInstanceOf[IsInput]) {
-          Trace.trace("col: " + col.asInstanceOf[IsInput].label)
           val input = col.asInstanceOf[IsInput]
           val markedLiteral = markLiteralValue(input.label)
           if (valueMap.get(input.label).isDefined && text.contains(markedLiteral)) {
@@ -1276,7 +1277,6 @@ object WebUtil extends Logging {
 
   def getUserIdOrDefault(request: Request, dflt: String): String = {
     val cr = request.getChallengeResponse
-    logger.info("challenge response given: " + (cr != null) + "    request: " + request.getResourceRef.getRemainingPart) // TODO rm
     if (cr == null) dflt else cr.getIdentifier
   }
 
