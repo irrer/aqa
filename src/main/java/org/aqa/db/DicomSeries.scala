@@ -26,12 +26,14 @@ case class DicomSeries(
   sopInstanceUIDList: String, // DICOM SOPInstanceUID of all files in series.
   seriesInstanceUID: String, // DICOM SeriesInstanceUID
   frameOfReferenceUID: Option[String], // DICOM FrameOfReferenceUID.  For registration files, this is the FrameOfReferenceUID that they convert from (take as input).
+  mappedFrameOfReferenceUID: Option[String], // For REG modality only.  DICOM FrameOfReferenceUID that can be mapped to.
   modality: String, // DICOM Modality
   sopClassUID: String, // DICOM SOPClassUID of first file.  A more rigorous definition of modality.
   deviceSerialNumber: Option[String], // DICOM DeviceSerialNumber found in top-level attribute list, if present.
   date: Timestamp, // when data was acquired at the treatment machine.  Value from first file found by checking for (in this order): ContentDate, InstanceCreationDate, AcquisitionDate, CreationDate, SeriesDate
   patientID: Option[String], // Patient ID, if available
   size: Int, // Number of files in series
+  referencedRtplanUID: Option[String], // referenced RTPLAN UID if one is referenced
   content: Array[Byte]) // files in zip form
   {
 
@@ -56,12 +58,14 @@ case class DicomSeries(
       "\n    sopInstanceUIDList: " + sopInstanceUIDList +
       "\n    seriesInstanceUID: " + seriesInstanceUID +
       "\n    frameOfReferenceUID: " + frameOfReferenceUID +
+      "\n    mappedFrameOfReferenceUID: " + mappedFrameOfReferenceUID +
       "\n    modality: " + modality +
       "\n    sopClassUID: " + sopClassUID +
       "\n    deviceSerialNumber: " + deviceSerialNumber +
       "\n    date: " + date +
       "\n    patientID: " + patientID +
       "\n    size: " + size +
+      "\n    referencedRtplanUID: " + referencedRtplanUID +
       "\n    content size: " + content.size
   }
 }
@@ -76,12 +80,14 @@ object DicomSeries extends Logging {
     def sopInstanceUIDList = column[String]("sopInstanceUIDList")
     def seriesInstanceUID = column[String]("seriesInstanceUID")
     def frameOfReferenceUID = column[Option[String]]("frameOfReferenceUID")
+    def mappedFrameOfReferenceUID = column[Option[String]]("mappedFrameOfReferenceUID")
     def modality = column[String]("modality")
     def sopClassUID = column[String]("sopClassUID")
     def deviceSerialNumber = column[Option[String]]("deviceSerialNumber")
     def date = column[Timestamp]("date")
     def patientID = column[Option[String]]("patientID")
     def size = column[Int]("size")
+    def referencedRtplanUID = column[Option[String]]("referencedRtplanUID")
     def content = column[Array[Byte]]("content")
 
     def * = (
@@ -92,12 +98,14 @@ object DicomSeries extends Logging {
       sopInstanceUIDList,
       seriesInstanceUID,
       frameOfReferenceUID,
+      mappedFrameOfReferenceUID,
       modality,
       sopClassUID,
       deviceSerialNumber,
       date,
       patientID,
       size,
+      referencedRtplanUID,
       content) <> ((DicomSeries.apply _)tupled, DicomSeries.unapply _)
 
     /* Note that accidental data deletion is protected by attempts to remove a machine.  If the
@@ -171,12 +179,19 @@ object DicomSeries extends Logging {
       val sorted = alList.map(al => new DPAl(al)).sortBy(_.date.getTime)
 
       def byTag(tag: AttributeTag): Option[String] = {
-        Trace.trace
         val s = if (sorted.nonEmpty && (sorted.head.al.get(tag) != null))
           Some(sorted.head.al.get(tag).getSingleStringValueOrEmptyString)
         else
           None
         s
+      }
+
+      def getReferencedRtplanUID: Option[String] = {
+        val seqList = alList.filter(al => al.get(TagFromName.ReferencedRTPlanSequence) != null)
+        val refList = seqList.map(seq => DicomUtil.seqToAttr(seq, TagFromName.ReferencedRTPlanSequence)).flatten
+        val uidList = refList.filter(ref => ref.get(TagFromName.ReferencedSOPInstanceUID) != null).map(ref => ref.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrNull)
+        val rtplanUid = uidList.filter(uid => uid != null).headOption
+        rtplanUid
       }
 
       val derivedMachinePK = {
@@ -203,6 +218,17 @@ object DicomSeries extends Logging {
       def getSize = sorted.size
       def getContent: Array[Byte] = DicomUtil.dicomToZippedByteArray(alList)
 
+      def getMappedFrameOfReferenceUID: Option[String] = {
+        if (getFrameOfReferenceUID.isDefined){
+          val mainFrmOfRef = getFrameOfReferenceUID.get
+          val allFrmOfRef = alList.map(al =>  DicomUtil.findAllSingle(al, TagFromName.FrameOfReferenceUID)).flatten.map(a => a.getSingleStringValueOrNull).filterNot(uid => uid == null).distinct
+          val mapped = allFrmOfRef.filterNot(frmOfRef => frmOfRef.equals(mainFrmOfRef)).headOption
+          mapped
+        }
+        else
+          None
+      }
+
       val ds = new DicomSeries(
         None,
         usrPK,
@@ -211,12 +237,14 @@ object DicomSeries extends Logging {
         getSopInstanceUIDlist,
         getSeriesInstanceUID,
         getFrameOfReferenceUID,
+        getMappedFrameOfReferenceUID,
         getModality,
         getSopClassUID,
         deviceSerialNumber,
         getDate,
         getPatientID,
         getSize,
+        getReferencedRtplanUID,
         getContent)
       Some(ds)
     } catch {

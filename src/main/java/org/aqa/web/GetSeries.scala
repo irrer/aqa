@@ -112,12 +112,15 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
 
     def toXml(dicomSeries: DicomSeries): Elem = {
 
-      def getOpt(textOpt: Option[String], tag: AttributeTag): Option[Elem] = {
-        val xmlTag = DicomUtil.dictionary.getNameFromTag(tag)
+      def getOpt(textOpt: Option[String], tag: AttributeTag, tagName: Option[String] = None): Option[Elem] = {
+        val xmlTag = if (tagName.isDefined) tagName.get else DicomUtil.dictionary.getNameFromTag(tag)
         textOpt match {
           case Some(text) => {
             lookup(tag, text) match {
-              case Some(text) => Some(XML.loadString("<" + xmlTag + ">" + text + "</" + xmlTag + ">"))
+              case Some(text) => {
+                val xml = "<" + xmlTag + ">" + edu.umro.util.XML.escapeSpecialChars(text) + "</" + xmlTag + ">"
+                Some(XML.loadString(xml))
+              }
               case _ => None
             }
           }
@@ -129,10 +132,12 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
 
       val serInstUid = getOpt(Some(dicomSeries.seriesInstanceUID), TagFromName.SeriesInstanceUID)
       val frmOfRef = getOpt(dicomSeries.frameOfReferenceUID, TagFromName.FrameOfReferenceUID)
+      val mappedFrameOfReferenceUID = getOpt(dicomSeries.mappedFrameOfReferenceUID, TagFromName.FrameOfReferenceUID, Some("mappedFrameOfReferenceUID"))
       val modality = Some(<Modality>{ dicomSeries.modality }</Modality>)
       val sopClassUid = Some(<SOPClassUID>{ dicomSeries.sopClassUID }</SOPClassUID>)
       val devSerNo = getOpt(dicomSeries.deviceSerialNumber, TagFromName.DeviceSerialNumber)
       val patId = getOpt(dicomSeries.patientID, TagFromName.PatientID)
+      val referencedRtplanUID = getOpt(dicomSeries.referencedRtplanUID, TagFromName.ReferencedSOPInstanceUID, Some("referencedRtplanUID"))
       val startDate = {
         if (output.isDefined) Some(<AnalysisStartDate>{ Util.standardDateFormat.format(output.get.startDate) }</AnalysisStartDate>)
         else None
@@ -156,9 +161,11 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
         serInstUid,
         devSerNo,
         frmOfRef,
+        mappedFrameOfReferenceUID,
         modality,
         sopClassUid,
         patId,
+        referencedRtplanUID,
         url,
         procedure,
         status,

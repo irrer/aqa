@@ -140,6 +140,9 @@ object BBbyCBCTRun extends Logging {
       val extendedData = ExtendedData.get(output)
       DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, Seq(runReq.rtplan))
       DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, runReq.cbct)
+      if (runReq.regDicomFile.isDefined && runReq.regDicomFile.get.attributeList.isDefined) {
+        DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, Seq(runReq.regDicomFile.get.attributeList.get))
+      }
 
       val runReqFinal = runReq.reDir(input.dir)
 
