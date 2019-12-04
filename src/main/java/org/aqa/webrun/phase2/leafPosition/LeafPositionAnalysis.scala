@@ -112,22 +112,22 @@ object LeafPositionAnalysis extends Logging {
       }
 
       override def toString = {
-        planIndex.formatted("%2d") + " planned: " + Util.fmtDbl(planned) + "    score: " + Util.fmtDbl(score)
+        "leaf " + planIndex.formatted("%2d") +
+          " isBetween: " + isBetweenPeaks.toString.formatted("%1s") +
+          " planned: " + Util.fmtDbl(planned) +
+          "    score: " + Util.fmtDbl(score)
       }
     }
 
     val leafSidesList = sideListPlanned_pix.map(p => new LeafSide(p)).sortBy(_.score)
 
-    val bestSize = Math.max(coarseSideList_pix.size / 4, 2) // TODO if there are less than 2 leaf sides, then ... what?
-    // use the 1/4 best leaf sides to define the rest
-    val bestList = leafSidesList.takeRight(bestSize)
-    val worstList = leafSidesList.dropRight(bestSize)
+    val usable = leafSidesList.sortBy(_.coarse_pix).filter(_.isBetweenPeaks)
+    val groupSize = usable.size / 3
+    val bestLower = usable.take(groupSize).sortBy(_.score).last
+    val bestUpper = usable.takeRight(groupSize).sortBy(_.score).last
+    val bestList = Seq(bestLower, bestUpper)
 
-    val ipBestList = bestList.map(b => (b.planIndex, b.precisePosition))
-
-    val ipWorstList = worstList.map(w => (w.planIndex, w.adjustToNearest(bestList)))
-
-    val preciseList = (ipBestList ++ ipWorstList).sortBy(_._1).map(_._2)
+    val preciseList = leafSidesList.sortBy(_.coarse_pix).map(leaf => leaf.adjustToNearest(bestList))
     preciseList
   }
 
