@@ -209,19 +209,16 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
   }
 
   /**
-   * Construct a user from parameters
+   * Construct a user from valueMap parameters
    */
   private def constructNewUserFromParameters(valueMap: ValueMapT): User = {
-    val institutionPK = valueMap.get(institution.label).get.toLong
-    val id_realText = AnonymizeUtil.encryptWithNonce(institutionPK, valueMap.get(id.label).get.trim)
-    val fullName_realText = AnonymizeUtil.encryptWithNonce(institutionPK, valueMap.get(fullName.label).get.trim)
-    val email_realText = AnonymizeUtil.encryptWithNonce(institutionPK, valueMap.get(email.label).get.trim)
-    val passwordText = valueMap.get(password.label).get.trim
-
-    val passwordSalt = Crypto.randomSecureHash
-    val hashedPassword = AuthenticationVerifier.hashPassword(passwordText, passwordSalt)
-    val roleText = valueMap.get(role.label).get
-    new User(None, "unknown", Some(id_realText), fullName_realText, email_realText, institutionPK, hashedPassword, passwordSalt, roleText, None)
+    User.insertNewUser(
+      valueMap(institution.label).toLong,
+      valueMap(id.label).trim,
+      valueMap(fullName.label).trim,
+      valueMap(email.label).trim,
+      valueMap(password.label),
+      valueMap(role.label))
   }
 
   /**
@@ -291,9 +288,6 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
 
       if (errMap.isEmpty) {
         val user = constructNewUserFromParameters(valueMap)
-        val userWithPk = user.insert
-        val aliasId = AnonymizeUtil.aliasify(AnonymizeUtil.userAliasPrefixId, userWithPk.userPK.get)
-        userWithPk.copy(id = aliasId).insertOrUpdate
         UserList.redirect(response)
       } else {
         formCreate.setFormResponse(valueMap, errMap, pageTitleCreate, response, Status.CLIENT_ERROR_BAD_REQUEST)

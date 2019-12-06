@@ -6,6 +6,8 @@ import org.aqa.Config
 import org.aqa.Util
 import org.aqa.web.AuthenticationVerifier
 import java.sql.Timestamp
+import org.aqa.Crypto
+import org.aqa.AnonymizeUtil
 
 case class User(
   userPK: Option[Long], // primary key
@@ -105,6 +107,36 @@ object User extends Logging {
     seq.headOption
   }
 
+  /**
+   * Construct a user from parameters.
+   *
+   * @param institutionPK Institution PK
+   *
+   * @param id user id (not encrypted)
+   *
+   * @param fullName user's full name (not encrypted)
+   *
+   * @param email user's email (not encrypted)
+   *
+   * @param passwordText user's email (not encrypted)
+   *
+   * @param roleText User role (admin, guest, etc) as text
+   */
+  def insertNewUser(institutionPK: Long, id: String, fullName: String, email: String, passwordText: String, roleText: String): User = {
+    val passwordSalt = Crypto.randomSecureHash
+    val hashedPassword = AuthenticationVerifier.hashPassword(passwordText, passwordSalt)
+    val id_realText = AnonymizeUtil.encryptWithNonce(institutionPK, id)
+    val fullName_realText = AnonymizeUtil.encryptWithNonce(institutionPK, fullName)
+    val email_realText = AnonymizeUtil.encryptWithNonce(institutionPK, email)
+
+    val tmpUser = new User(None, "unknown", Some(id_realText), fullName_realText, email_realText, institutionPK, hashedPassword, passwordSalt, roleText, None)
+    val userWithPk = tmpUser.insert
+    val aliasId = AnonymizeUtil.aliasify(AnonymizeUtil.userAliasPrefixId, userWithPk.userPK.get)
+    userWithPk.copy(id = aliasId).insertOrUpdate
+    val finalUser = User.get(userWithPk.userPK.get).get
+    finalUser
+  }
+
   /** Get the list of users with the given role. */
   def getUserListByRole(role: UserRole.Value): Seq[User] = {
     val action = query.filter(_.role === role.toString)
@@ -118,7 +150,7 @@ object User extends Logging {
 
   /**
    * Get a list of all users with institution.
-   * 
+   *
    * @param instPK: If defined, get only from this institution, otherwise get all.
    */
   def listWithDependencies(instPK: Option[Long]): Seq[UserInstitution] = {
