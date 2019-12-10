@@ -73,10 +73,17 @@ object Baseline extends Logging {
    * Given a machine and Baseline id, get the latest value on or before the given time stamp if it exists.
    */
   def findLatest(machinePK: Long, id: String, timestamp: Timestamp): Option[(MaintenanceRecord, Baseline)] = {
+    // Special note: New baselines use the dataDate of the output.  Older baselines use the dataDate
+    // of the individual slice.  The problem with the old way is that when searching for a baseline
+    // with a timestamp, the only time available is the output time.  So a baseline will not be available
+    // for the first data set.  Adding one hour should fix this (assuming that the treatment time was less
+    // than one hour).
+    val shiftedTimestamp = new Timestamp(timestamp.getTime + (60 * 60 * 1000))
+
     val action = {
       for {
         maintenanceRecord <- MaintenanceRecord.query.filter(m => m.machinePK === machinePK)
-        baseline <- Baseline.query.filter(b => (b.id === id) && (b.maintenanceRecordPK === maintenanceRecord.maintenanceRecordPK) && (b.acquisitionDate <= timestamp))
+        baseline <- Baseline.query.filter(b => (b.id === id) && (b.maintenanceRecordPK === maintenanceRecord.maintenanceRecordPK) && (b.acquisitionDate <= shiftedTimestamp))
       } yield (maintenanceRecord, baseline)
     } sortBy (_._2.acquisitionDate.desc)
 
