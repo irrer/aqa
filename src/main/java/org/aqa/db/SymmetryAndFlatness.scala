@@ -127,6 +127,37 @@ object SymmetryAndFlatness extends ProcedureOutput {
     def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
+  case class PointSet(top: Double, bottom: Double, right: Double, left: Double, center: Double) {
+    private val list = Seq(top, bottom, right, left, center)
+
+    private val min = list.min
+    private val max = list.max
+
+    val axialSymmetry = ((top - bottom) / bottom) * 100
+    val transverseSymmetry = ((right - left) / left) * 100
+    val flatness = ((max - min) / (max + min)) * 100
+
+    def profileConstancy(baseline: PointSet) = {
+      val t = (top / center) - (baseline.top / baseline.center)
+      val b = (bottom / center) - (baseline.bottom / baseline.center)
+      val l = (left / center) - (baseline.left / baseline.center)
+      val r = (right / center) - (baseline.right / baseline.center)
+
+      val profConst = ((t + b + l + r) * 100) / 4
+
+      profConst
+    }
+
+    override def toString = {
+      def fmt(d: Double) = d.formatted("%10f")
+      "top: " + fmt(top) +
+        "    bottom: " + fmt(bottom) +
+        "    right: " + fmt(right) +
+        "    left: " + fmt(left) +
+        "    center: " + fmt(center)
+    }
+  }
+
   val query = TableQuery[SymmetryAndFlatnessTable]
 
   override val topXmlLabel = "SymmetryAndFlatness"

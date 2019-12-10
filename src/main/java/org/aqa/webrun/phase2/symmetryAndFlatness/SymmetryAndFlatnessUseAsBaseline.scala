@@ -43,13 +43,14 @@ class SymmetryAndFlatnessUseAsBaseline extends Restlet with SubUrlRun with Loggi
     val axial = make(SymmetryAndFlatnessAnalysis.axialSymmetryName, saf.axialSymmetry_pct)
     val transverse = make(SymmetryAndFlatnessAnalysis.transverseSymmetryName, saf.transverseSymmetry_pct)
     val flatness = make(SymmetryAndFlatnessAnalysis.flatnessName, saf.flatness_pct)
+    val constancy = make(SymmetryAndFlatnessAnalysis.profileConstancyName, saf.profileConstancy_pct) // TODO
     val top = make(Config.SymmetryPointTop.name, saf.top_cu)
     val bottom = make(Config.SymmetryPointBottom.name, saf.bottom_cu)
     val left = make(Config.SymmetryPointLeft.name, saf.left_cu)
     val right = make(Config.SymmetryPointRight.name, saf.right_cu)
     val center = make(Config.SymmetryPointCenter.name, saf.center_cu)
 
-    Seq(axial, transverse, flatness, top, bottom, left, right, center)
+    Seq(axial, transverse, flatness, constancy, top, bottom, left, right, center)
   }
 
   private def makeBaseline(request: Request, outputPK: Long): MaintenanceRecord = {
