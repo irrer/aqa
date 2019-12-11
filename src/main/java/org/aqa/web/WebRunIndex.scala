@@ -6,6 +6,8 @@ import org.aqa.db.Procedure
 import org.restlet.Request
 import org.aqa.web.WebUtil._
 import java.util.Date
+import org.restlet.data.Status
+import org.restlet.data.MediaType
 
 object WebRunIndex {
   private val path = new String((new WebRunIndex).pathOf)
@@ -51,13 +53,40 @@ class WebRunIndex extends GenericList[Procedure.ProcedureUser] with WebUtil.SubU
     else None
   }
 
+  /**
+   * Respond to the client by giving an XML list of procedure URLs.
+   */
+  private def respondWithXmlList(response: Response) = {
+    def puToXml(pu: PU): Elem = {
+      <Run Version={ pu.procedure.version } Name={ pu.procedure.name } URL={ SubUrl.url(subUrl, pu.procedure.webUrl) }/>
+    }
+    val data = getData(emptyValueMap, response)
+
+    val xml = {
+      <RunList>
+        { data.map(pu => puToXml(pu)) }
+      </RunList>
+    }
+
+    response.setStatus(Status.SUCCESS_OK)
+    response.setEntity(xmlToText(xml), MediaType.APPLICATION_XML)
+  }
+
+  
+  /**
+   * Show a list of procedures to run.
+   * 
+   * If the value : list=true is in the URL, then an XML list of procedures with
+   * their URLS will be returned.  This is to support the AQA client.
+   */
   override def handle(request: Request, response: Response): Unit = {
-    super.handle(request, response)
-    val valueMap = getValueMap(request)
-    val procedure = getProcedure(valueMap)
-    //if (procedure.isDefined) WebRun.getWebRun(procedure.get).handle(valueMap, request, response)
-    //else
-    get(valueMap, response)
+    if (request.getOriginalRef.toString.toLowerCase.contains("list="))
+      respondWithXmlList(response)
+    else
+      super.handle(request, response)
+    //    val valueMap = getValueMap(request)
+    //    val procedure = getProcedure(valueMap)
+    //    get(valueMap, response)
   }
 
 }
