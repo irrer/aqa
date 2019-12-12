@@ -135,6 +135,8 @@ object BBbyEPIDRun extends Logging {
       val finDate = new Timestamp(System.currentTimeMillis)
       val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
 
+      DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, runReqFinal.epidList)
+
       Phase2Util.setMachineSerialNumber(machine, runReq.epidList.head)
       outputFinal.insertOrUpdate
       outputFinal.updateData(outputFinal.makeZipOfFiles)
