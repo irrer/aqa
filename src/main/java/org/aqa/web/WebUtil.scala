@@ -206,10 +206,17 @@ object WebUtil extends Logging {
   }
 
   private def saveData(data: Array[Byte], file: File, contentType: String, unique: UniquelyNamedFile, request: Request): Unit = {
-    isDicom(data) match {
-      case Some(al) => writeAnonymizedDicom(al, unique: UniquelyNamedFile, request: Request)
+    def isZip: Boolean = {
+      contentType.equalsIgnoreCase(MediaType.APPLICATION_ZIP.getName) ||
+        contentType.equalsIgnoreCase(MediaType.APPLICATION_GNU_ZIP.getName) ||
+        contentType.equalsIgnoreCase("application/x-zip-compressed") ||
+        contentType.toLowerCase.matches(".*application.*zip.*")
+    }
 
-      case _ if (contentType.equalsIgnoreCase(MediaType.APPLICATION_ZIP.getName)) => writeZip(data, unique, request)
+    isDicom(data) match {
+      case Some(al) => writeAnonymizedDicom(al, unique, request)
+
+      case _ if isZip => writeZip(data, unique, request)
 
       // We don't know what kind of file this is.  Just save it.
       case _ => {
