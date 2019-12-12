@@ -19,6 +19,7 @@ import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.bbByCBCT.BBbyCBCTRun
 import org.aqa.webrun.bbByEpid.BBbyEPIDRun
 import org.restlet.routing.Filter
+import org.aqa.Util
 
 /**
  * List the outputs to let users re-visit results.
@@ -210,9 +211,14 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
         <div class="col-md-4 col-md-offset-2">
           Click Confirm to delete, Cancel to return to the list without deleting.
           <p></p>
-          <a href={ OutputList.path } class="btn btn-default" role="button">Cancel</a>
-          <p></p>
-          <a href={ OutputList.path + "?" + OutputList.deleteTag + "=" + outputPK + "&" + OutputList.confirmTag + "=true" } class="btn btn-danger" role="button">Confirm</a>
+          <div class="row">
+            <div class="col-md-2 col-md-offset-2">
+              <a href={ OutputList.path } class="btn btn-default" role="button">Cancel</a>
+            </div>
+            <div class="col-md-2">
+              <a href={ OutputList.path + "?" + OutputList.deleteTag + "=" + outputPK + "&" + OutputList.confirmTag + "=true" } class="btn btn-danger" role="button">Confirm</a>
+            </div>
+          </div>
         </div>
       </div>
     }
@@ -232,8 +238,8 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
       if (list.size == 0) {
         val input = Input.get(output.get.inputPK)
         Input.delete(input.get.inputPK.get)
-        Utility.deleteFileTree(input.get.dir)
-      } else Utility.deleteFileTree(output.get.dir)
+        Util.deleteFileTreeSafely(input.get.dir)
+      } else Util.deleteFileTreeSafely(output.get.dir)
       OutputList.redirect(response)
     } catch {
       case t: Throwable => internalFailure(response, "Unexpected error in OutputList.deleteOutput: " + fmtEx(t))
