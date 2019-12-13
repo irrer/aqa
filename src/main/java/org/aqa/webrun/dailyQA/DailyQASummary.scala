@@ -27,16 +27,16 @@ import org.aqa.web.ViewOutput
 /**
  * Support for generating JS scripts on request.
  */
-object DailyQARestlet {
+object DailyQASummary {
 
   private val pageTitle = "Daily QA Summary"
-  private val path = new String((new DailyQARestlet).pathOf)
+  private val path = new String((new DailyQASummary).pathOf)
   def makeReference(outputPK: Long) = {
     "<script src='" + path + "?date=" + outputPK + "'></script>"
   }
 }
 
-class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
+class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
   private def fmt(d: Double) = d.formatted("%10.3f").trim
 
@@ -49,7 +49,9 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
   // let user choose date to display
   private val dateField = new WebInputDatePicker("Date", 4, 0, false)
 
-  val controlRow: WebRow = List(refreshButton, dateField)
+  private val csvField = new WebInputURL("CSV", 2, 0, DailyQASummary.path + "?CSV=true")
+
+  val controlRow: WebRow = List(refreshButton, dateField, csvField)
 
   // bulk of the displayed information
   private val report = new WebPlainText("report", false, 12, 0, makeReport _)
@@ -232,7 +234,7 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
   }
 
   private def show(response: Response, valueMap: ValueMapT) = {
-    formCreate(valueMap).setFormResponse(valueMap, styleNone, DailyQARestlet.pageTitle, response, Status.SUCCESS_OK)
+    formCreate(valueMap).setFormResponse(valueMap, styleNone, DailyQASummary.pageTitle, response, Status.SUCCESS_OK)
     Trace.trace(getSelectedDate(valueMap))
   }
 
@@ -240,6 +242,7 @@ class DailyQARestlet extends Restlet with SubUrlRoot with Logging {
     try {
       super.handle(request, response)
       val valueMap = getValueMap(request)
+      // if (valueMap.get(csvField.label).isDefined) DailyQACSV.getCsv(response) else  // TODO
       show(response, valueMap)
     } catch {
       case t: Throwable => {

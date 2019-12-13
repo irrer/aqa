@@ -213,15 +213,17 @@ object WebUtil extends Logging {
         contentType.toLowerCase.matches(".*application.*zip.*")
     }
 
-    isDicom(data) match {
-      case Some(al) => writeAnonymizedDicom(al, unique, request)
+    if (isZip)
+      writeZip(data, unique, request)
+    else {
+      isDicom(data) match {
+        case Some(al) => writeAnonymizedDicom(al, unique, request)
 
-      case _ if isZip => writeZip(data, unique, request)
-
-      // We don't know what kind of file this is.  Just save it.
-      case _ => {
-        val anonFile = unique.getUniquelyNamedFile(FileUtil.getFileSuffix(file.getName))
-        Util.writeBinaryFile(anonFile, data)
+        // We don't know what kind of file this is.  Just save it.
+        case _ => {
+          val anonFile = unique.getUniquelyNamedFile(FileUtil.getFileSuffix(file.getName))
+          Util.writeBinaryFile(anonFile, data)
+        }
       }
     }
   }

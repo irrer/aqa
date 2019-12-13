@@ -221,7 +221,10 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
   private def form = new WebForm(procedure.webUrl, Some("BBbyEPID"), List(List(machineSelector), List(runButton, cancelButton)), 10)
 
-  private def formErr(msg: String) = Left(Error.make(form.uploadFileInput.get, msg))
+  private def formErr(msg: String) = {
+    logger.info("User error: " + msg)
+    Left(Error.make(form.uploadFileInput.get, msg))
+  }
 
   private def emptyForm(valueMap: ValueMapT, response: Response) = {
     form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
@@ -260,7 +263,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       case _ if (distinctMachListSerNo.size == 1) => Right(machList.head)
       case _ if (chosenMachine.isDefined) => Right(chosenMachine.get)
       case _ if (distinctMachListSerNo.size > 1) => formErr("Files come from more than one machine; please Cancel and try again.")
-      case _ if (planSerNoList.isEmpty) => formErr("Unable to identify the machine.  Try again, this time uploading the RTPLAN as well.")
+      case _ if (planSerNoList.isEmpty) => formErr("Unable to identify the machine.  Try again, and if possible, upload the RTPLAN as well, which might help identify the machine.")
       case _ => formErr("Unknown machine.  Please choose from the 'Machine' list below or click Cancel and then use the Administration interface to add it.")
     }
     result
@@ -322,6 +325,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     logger.info("Validating data")
     validate(valueMap) match {
       case Left(errMap) => {
+        logger.info("Bad request: " + errMap.keys.map(k => k + " : " + valueMap.get(k)).mkString("\n    "))
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
       case Right(runReq) => {
