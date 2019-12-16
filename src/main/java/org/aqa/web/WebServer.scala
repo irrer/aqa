@@ -519,6 +519,7 @@ class WebServer extends Application with Logging {
         new WedgeChartHistoryRestlet,
         new SymmetryAndFlatnessHistoryRestlet,
         new DailyQASummary,
+        new DataCollectionSummary,
         anonymousTranslate,
         getSeries,
         new CustomizeRtPlanInterface,
