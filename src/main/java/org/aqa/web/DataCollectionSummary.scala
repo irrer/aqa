@@ -13,6 +13,7 @@ import org.aqa.db.Procedure
 import scala.xml.Elem
 import org.aqa.Util
 import java.util.Date
+import java.text.SimpleDateFormat
 
 //import org.restlet.security.Verifier
 //import org.restlet.security.ChallengeAuthenticator
@@ -44,22 +45,42 @@ class DataCollectionSummary extends Restlet with SubUrlRoot {
 
   def quote(text: String) = "'" + text + "'"
 
-  private def fmtDate(date: Date): String = quote(Util.standardDateFormat.format(date))
+  val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
+  def fmt(date: Date) = dateFormat.format(date)
 
-  private def makeZeroTable(instList: Seq[Institution], machList: Seq[Machine], outputList: Seq[Output]): Elem = {
+  private def fmtDate(date: Date): String = quote(fmt(date))
 
+  private def makeCountTable(instList: Seq[Institution], machList: Seq[Machine], outputList: Seq[Output]): Elem = {
+
+    def lookupInstName(instPK: Long): String = instList.find(i => i.institutionPK.get == instPK).get.name_real.get
+
+    /**
+     * Given an output, return the institutionPK.
+     */
     def instOfOutput(output: Output) = {
-      val j = machList.find(mach => mach.machinePK.get == output.machinePK.get)
-      j.get.institutionPK
+      machList.find(mach => mach.machinePK.get == output.machinePK.get).get.institutionPK
     }
 
-    val haveData = outputList.map(output => instOfOutput(output)).distinct
-    val noData = instList.map(_.institutionPK.get).diff(haveData).map(instPK => instList.find(inst => inst.institutionPK.get == instPK)).flatten.map(inst => inst.name_real).flatten
+    val instPkList = outputList.map(output => instOfOutput(output))
 
-    <div>
-      <h3>List of Institutions with No Data</h3>
-      <table>
-        { noData.map(instName => <tr><td>{ instName }</td></tr>) }
+    val haveData = instPkList.distinct
+    val noData = instList.map(_.institutionPK.get).diff(haveData).
+      map(instPK => instList.find(inst => inst.institutionPK.get == instPK)).
+      flatten.map(inst => inst.name_real).flatten.map(name => (name, 0))
+
+    val count = instPkList.groupBy(i => i).map(ic => (lookupInstName(ic._1), ic._2.size)).toList.sortBy(ic => ic._2)
+
+    val all = count ++ noData
+    <div class="col-md-4 col-md-offset-2">
+      <h3>List of Institutions</h3>
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th title="Name of Institution">Name</th>
+            <th title="Number of Phase 2 Data Sets">Phase 2 Count</th>
+          </tr>
+        </thead>
+        { all.map(instNameCount => <tr><td>{ instNameCount._1 }</td><td>{ instNameCount._2.toString }</td></tr>) }
       </table>
     </div>
   }
@@ -67,10 +88,12 @@ class DataCollectionSummary extends Restlet with SubUrlRoot {
   private def makeMainChart(instList: Seq[Institution], machList: Seq[Machine], outputList: Seq[Output]): String = {
 
     case class Row(name: String, data: Seq[String], index: Int) {
-      def toXs = quote(name) + ": " + quote(name + "Data") + ","
+      def toXs = quote(name) + ": " + quote(name + "Data")
       def toColumn = {
-        "[" + quote(name) + "," + data.mkString(",") + "],\n" +
-        "[" + quote(name + "Data") + "," + data.map(_ => index).mkString(",") + "]"
+        val allX = quote(name + "Data") +: data
+        val allY = quote(name) +: data.map(_ => index.toString)
+        def bracket(seq: Seq[String]) = seq.mkString("[", ",", "]")
+        bracket(allX) + ",\n" + bracket(allY)
       }
     }
 
@@ -94,16 +117,33 @@ class DataCollectionSummary extends Restlet with SubUrlRoot {
     val script =
 
       """
-var chart = c3.generate({
+var SummaryChart = c3.generate({
     data: {
         xs: {
-            """ + rowList.map(row => row.toXs).mkString(",\n") +  """ 
+            """ + rowList.map(row => row.toXs).mkString(",\n") + """ 
         },
         columns: [
-            """ + rowList.map(row => row.toColumn).mkString(",\n") +  """ 
+            """ + rowList.map(row => row.toColumn).mkString(",\n") + """ 
         ]
+    },
+  bindto : '#SummaryChart',
+//  size: {
+//    height: 800
+//  },
+  axis: {
+    x: {
+      type: 'timeseries',
+      min: '2019-04-01',
+      //max: '2019-12-31',
+    tick: { format: '%Y-%m-%d' },
+    },
+    y: {
+      // min: 2,
+      // max: 30
     }
+  }
 });
+
 """
 
     script
@@ -118,20 +158,48 @@ var chart = c3.generate({
 
     val outputList = Output.list.filter(output => output.procedurePK == phase2PK && output.machinePK.isDefined)
 
-    val zeroTable = makeZeroTable(instList, machList, outputList)
     val mainChart = makeMainChart(instList, machList, outputList)
 
     val content = {
       <div>
-        { zeroTable }
-        <h3>Main Chart</h3>
-        <pre>
-          { mainChart }
-        </pre>
+        <div class="row">
+          <div class="col-md-6 col-md-offset-2">
+            <h2>Phase 2 Collection Summary</h2>
+            { (new Date).toString }
+            <br/>
+            The graph below shows when data was collected for each of the respective institutions and machine.<br/>
+            Hover over each dot to show<i>Inst Name : Machine : Number of Data Sets</i>
+            .<br/>
+            The vertical scale is meaningless, and is only used to separate the different institutions vertically.  Use the image snippet at the bottom of this web page as a guide.<br/>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-10 col-md-offset-1">
+            <h3>Summary Chart</h3>
+            <div id="SummaryChart" style="height: 800px;"></div>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            { makeCountTable(instList, machList, outputList) }
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-8 col-md-offset-2">
+            <hr/>
+            <h4>Image snippet showing what the values shown on mouse hover mean:</h4>
+            <div style="margin:30px; border: 1px solid lightgrey;">
+              <img style="margin:30px;" src="/static/images/DataCollectionSummaryDetail.png" height="342"/>
+            </div>
+          </div>
+        </div>
       </div>
     }
 
-    simpleWebPage(content, Status.SUCCESS_OK, "Data Collection Summary", response)
+    val refresh = None
+    val c3 = true
+    val htmlText = wrapBody(content, "Data Collection Summary", refresh, c3, Some("<script>\n" + mainChart + "\n</script>"))
+    setResponse(htmlText, response, Status.SUCCESS_OK)
   }
 
   override def handle(request: Request, response: Response): Unit = {
