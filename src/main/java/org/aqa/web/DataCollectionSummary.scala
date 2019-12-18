@@ -14,6 +14,7 @@ import scala.xml.Elem
 import org.aqa.Util
 import java.util.Date
 import java.text.SimpleDateFormat
+import java.sql.Timestamp
 
 //import org.restlet.security.Verifier
 //import org.restlet.security.ChallengeAuthenticator
@@ -41,7 +42,7 @@ object DataCollectionSummary {
   val messageTag = "Message"
 }
 
-class DataCollectionSummary extends Restlet with SubUrlRoot {
+class DataCollectionSummary extends Restlet with SubUrlAdmin {
 
   def quote(text: String) = "'" + text + "'"
 
@@ -52,25 +53,47 @@ class DataCollectionSummary extends Restlet with SubUrlRoot {
 
   private def makeCountTable(instList: Seq[Institution], machList: Seq[Machine], outputList: Seq[Output]): Elem = {
 
-    def lookupInstName(instPK: Long): String = instList.find(i => i.institutionPK.get == instPK).get.name_real.get
+    val instMap = instList.map(inst => (inst.institutionPK.get, inst)).toMap
 
     /**
      * Given an output, return the institutionPK.
      */
-    def instOfOutput(output: Output) = {
+    def outputToInst(output: Output) = {
       machList.find(mach => mach.machinePK.get == output.machinePK.get).get.institutionPK
     }
 
-    val instPkList = outputList.map(output => instOfOutput(output))
+    // map of institutionPKs to their data
+    val instOutputMap = outputList.groupBy(output => outputToInst(output))
 
-    val haveData = instPkList.distinct
-    val noData = instList.map(_.institutionPK.get).diff(haveData).
-      map(instPK => instList.find(inst => inst.institutionPK.get == instPK)).
-      flatten.map(inst => inst.name_real).flatten.map(name => (name, 0))
+    def outputCount(instPK: Long) = {
+      instOutputMap.get(instPK) match {
+        case Some(outList) => outList.size
+        case _ => 0
+      }
+    }
 
-    val count = instPkList.groupBy(i => i).map(ic => (lookupInstName(ic._1), ic._2.size)).toList.sortBy(ic => ic._2)
+    def timeOfMostRecent(instPK: Long) = {
+      instOutputMap.get(instPK) match {
+        case Some(outList) => outList.sortBy(_.dataDate.get.getTime).last.dataDate.get.getTime
+        case _ => 0
+      }
+    }
+    
+    /**
+     * Convert an institution to a row in the table.
+     */
+    def instToRow(inst: Institution): Elem = {
+      val nameElem = { <td>{ inst.name_real.get }</td> }
+      val outList = instOutputMap.get(inst.institutionPK.get)
+      val count = outputCount(inst.institutionPK.get)
+      val countElem = { <td>{ count.toString }</td> }
+      val latest: Option[Timestamp] = if (outList.isDefined) outList.get.sortBy(o => o.dataDate.get.getTime).last.dataDate else None
+      val latestElem = { <td>{ if (latest.isDefined) WebUtil.timeAgo(latest.get) else "NA" }</td> }
+      <tr>{ nameElem }{ countElem }{ latestElem }</tr>
+    }
 
-    val all = count ++ noData
+    val instSortedByMostRecent = instList.map(inst => (inst, timeOfMostRecent(inst.institutionPK.get))).sortBy(_._2).map(_._1).reverse
+
     <div class="col-md-4 col-md-offset-2">
       <h3>List of Institutions</h3>
       <table class="table table-bordered">
@@ -78,9 +101,10 @@ class DataCollectionSummary extends Restlet with SubUrlRoot {
           <tr>
             <th title="Name of Institution">Name</th>
             <th title="Number of Phase 2 Data Sets">Phase 2 Count</th>
+            <th title="The date of the most recent data acquistion.">Most Recent</th>
           </tr>
         </thead>
-        { all.map(instNameCount => <tr><td>{ instNameCount._1 }</td><td>{ instNameCount._2.toString }</td></tr>) }
+        { instSortedByMostRecent.map(inst => instToRow(inst)) }
       </table>
     </div>
   }
