@@ -562,8 +562,7 @@ object Run extends Logging {
 
     // show default summary as web page
     val clientId = OutputPending.add(request, output)
-    val suffix = "?" + ViewOutput.outputPKTag + "=" + output.outputPK.get
-    response.redirectSeeOther(ViewOutput.path + suffix)
+    ViewOutput.redirectToViewRunProgress(response, WebUtil.emptyValueMap, output.outputPK.get)
   }
 
   /** Fix-up procedures that were running when the server went down. */

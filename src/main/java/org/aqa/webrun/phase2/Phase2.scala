@@ -242,8 +242,7 @@ object Phase2 extends Logging {
       Input.delete(inputOrig.inputPK.get)
     }
 
-    val suffix = "?" + ViewOutput.outputPKTag + "=" + output.outputPK.get
-    response.redirectSeeOther(ViewOutput.path + suffix)
+    ViewOutput.redirectToViewRunProgress(response, emptyValueMap, output.outputPK.get)
   }
 
   /**
@@ -561,8 +560,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
           Run.removeRedundantOutput(outputFinal.outputPK)
         }
 
-        val suffix = "?" + ViewOutput.outputPKTag + "=" + output.outputPK.get
-        response.redirectSeeOther(ViewOutput.path + suffix)
+        ViewOutput.redirectToViewRunProgress(response, emptyValueMap, output.outputPK.get)
       }
     }
   }

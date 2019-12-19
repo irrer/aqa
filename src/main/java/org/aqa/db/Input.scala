@@ -156,14 +156,37 @@ object Input extends Logging {
     FileUtil.writeByteArrayZipToFileTree(inputFiles.zippedContent, dir)
   }
 
+  private def fixUp = {
+
+    def getAllInputPK = {
+      val action = for { input <- Input.query } yield (input.inputPK)
+      val list = Db.run(action.result)
+      list
+    }
+
+    def getAllDicomSeries = {
+      val action = for { ds <- DicomSeries.query } yield (ds.dicomSeriesPK, ds.inputPK)
+      val list = Db.run(action.result)
+      list.filter(dsi => dsi._2.isDefined).map(dsi => (dsi._1, dsi._2.get))
+    }
+
+    val allInputPK = getAllInputPK.toSet
+    val allDicomSeries = getAllDicomSeries
+
+    val toDelete = allDicomSeries.filterNot(dsi => allInputPK.contains(dsi._2))
+    println("toDelete: " + toDelete.mkString("    "))
+  }
+
   def main(args: Array[String]): Unit = {
     val valid = Config.validate
     DbSetup.init
-    val input = new Input(None, Some("input_dir"), new Timestamp(System.currentTimeMillis), Some(6), Some(2), None, None)
 
-    input.insert
-
-    println("======== input: " + get(5))
+    // val input = new Input(None, Some("input_dir"), new Timestamp(System.currentTimeMillis), Some(6), Some(2), None, None)
+    // input.insert
+    // println("======== input: " + get(5))
     //println("======== input delete: " + delete(5))
+
+    fixUp
+
   }
 }

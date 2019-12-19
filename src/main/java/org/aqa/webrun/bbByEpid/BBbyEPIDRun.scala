@@ -145,8 +145,7 @@ object BBbyEPIDRun extends Logging {
       Input.delete(inputOrig.inputPK.get)
     }
 
-    val suffix = "?" + ViewOutput.outputPKTag + "=" + output.outputPK.get
-    response.redirectSeeOther(ViewOutput.path + suffix)
+    ViewOutput.redirectToViewRunProgress(response, emptyValueMap, output.outputPK.get)
   }
 
   /**
@@ -352,8 +351,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
           Run.removeRedundantOutput(outputFinal.outputPK)
         }
 
-        val suffix = "?" + ViewOutput.outputPKTag + "=" + output.outputPK.get
-        response.redirectSeeOther(ViewOutput.path + suffix)
+        ViewOutput.redirectToViewRunProgress(response, valueMap, output.outputPK.get)
       }
     }
   }

@@ -72,6 +72,11 @@ object WebUtil extends Logging {
 
   val titleNewline = "@@amp@@#10;"
 
+  /**
+   * Tag used to indicate that this is coming from an automatic upload client, as opposed to a human using a web browser.
+   */
+ private val autoUploadTag = "AutoUpload"
+
   val aqaAliasAttr = { <div aqaalias=""/> }.attributes
   def ifAqaAliasAttr(elem: Elem, aqaAlias: Boolean) = if (aqaAlias) { elem % aqaAliasAttr } else elem
   def wrapAlias(text: String) = <span aqaalias="">{ text }</span>
@@ -347,6 +352,8 @@ object WebUtil extends Logging {
     val valueMap = ensureSessionId(vm ++ parseOriginalReference(request) ++ parseForm(new Form(request.getEntity)) ++ userToValueMap(request))
     valueMap
   }
+ 
+ def isAutoUpload(valueMap: ValueMapT) = valueMap.get(autoUploadTag).isDefined 
 
   def simpleWebPage(content: Elem, status: Status, title: String, response: Response): Unit = {
     val indentedContent = {
@@ -630,25 +637,55 @@ object WebUtil extends Logging {
         Some("<script>" + makeAlertBox(textErrorList.mkString("\\n\\n")) + "</script>")
     }
 
+    /**
+     * Respond to an automatic upload client in a form it can digest (as text, not HTML).
+     * Differences
+     *
+     *     if successful, then return an empty message and SUCCESS_OK
+     *
+     *     if failure, then return an error message as text and SUCCESS_OK.
+     */
+    private def setFormResponseAutoUpload(valueMap: ValueMapT, errorMap: StyleMapT, response: Response, status: Status) = {
+
+      val statusIsOk = status.toString.equals(Status.SUCCESS_OK)
+      if (errorMap.isEmpty && statusIsOk) {
+        response.setStatus(status)
+        response.setEntity("", MediaType.TEXT_PLAIN)
+      } else {
+        val msg =
+          if (errorMap.isEmpty)
+            "Error"
+          else
+            errorMap.toList.map(ss => ss._1 + " : " + ss._2.toString).mkString("\n\n")
+        val sts = if (statusIsOk) Status.SUCCESS_OK else status // vague, but
+        response.setStatus(sts)
+        response.setEntity(msg, MediaType.TEXT_PLAIN)
+      }
+    }
+
     def setFormResponse(valueMap: ValueMapT, errorMap: StyleMapT, pageTitle: String, response: Response, status: Status): Unit = {
 
-      val text = wrapBody(toHtml(valueMap, errorMap, Some(response)), pageTitle, None, false, makeFormAlertBox(errorMap))
+      if (isAutoUpload(valueMap)) {
+        setFormResponseAutoUpload(valueMap, errorMap, response, Status.SUCCESS_OK)
+      } else {
+        val text = wrapBody(toHtml(valueMap, errorMap, Some(response)), pageTitle, None, false, makeFormAlertBox(errorMap))
 
-      def replace(origText: String, col: Any): String = {
-        val txt = if (col.isInstanceOf[IsInput]) {
-          val input = col.asInstanceOf[IsInput]
-          val markedLiteral = markLiteralValue(input.label)
-          if (valueMap.get(input.label).isDefined && text.contains(markedLiteral)) {
-            origText.replace(markedLiteral, valueMap.get(input.label).get)
+        def replace(origText: String, col: Any): String = {
+          val txt = if (col.isInstanceOf[IsInput]) {
+            val input = col.asInstanceOf[IsInput]
+            val markedLiteral = markLiteralValue(input.label)
+            if (valueMap.get(input.label).isDefined && text.contains(markedLiteral)) {
+              origText.replace(markedLiteral, valueMap.get(input.label).get)
+            } else origText
           } else origText
-        } else origText
-        txt
+          txt
+        }
+        val colList = rowList.map(row => row.colList).flatten
+
+        val finalText = colList.foldLeft(text)((txt, col) => replace(txt, col))
+
+        setResponse(finalText, response, status)
       }
-      val colList = rowList.map(row => row.colList).flatten
-
-      val finalText = colList.foldLeft(text)((txt, col) => replace(txt, col))
-
-      setResponse(finalText, response, status)
     }
   }
 

@@ -168,6 +168,21 @@ object ViewOutput {
     response.setStatus(Status.SUCCESS_OK)
     response.setEntity(secHash, MediaType.TEXT_PLAIN)
   }
+
+  /**
+   * Redirect the user to the progress of running the procedure.
+   */
+  def redirectToViewRunProgress(response: Response, valueMap: ValueMapT, outputPK: Long) = {
+    if (isAutoUpload(valueMap)) {
+      // set the response to indicate that processing has been successfully started
+      response.setStatus(Status.SUCCESS_OK)
+      response.setEntity("", MediaType.TEXT_PLAIN)
+    } else {
+      val suffix = "?" + ViewOutput.outputPKTag + "=" + outputPK
+      response.redirectSeeOther(ViewOutput.path + suffix)
+    }
+  }
+
 }
 
 /**

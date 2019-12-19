@@ -39,11 +39,19 @@ case class DicomSeries(
 
   /**
    * Insert, returning the row that was inserted.  Note that dicomSeriesPK in the return value is defined.
+   * 
+   * If this is an RTPLAN, then it should not be 'owned' by any particular input, so set the inputPK to None.
    */
   def insert: DicomSeries = {
+    val ds = {
+      if (modality.trim.equalsIgnoreCase("RTPLAN"))
+        this.copy(inputPK = None)
+      else
+        this
+    }
     val insertQuery = DicomSeries.query returning DicomSeries.query.map(_.dicomSeriesPK) into ((dicomSeries, dicomSeriesPK) => dicomSeries.copy(dicomSeriesPK = Some(dicomSeriesPK)))
 
-    val action = insertQuery += this
+    val action = insertQuery += ds
     val result = Db.run(action)
     result
   }
@@ -111,6 +119,7 @@ object DicomSeries extends Logging {
     /* Note that accidental data deletion is protected by attempts to remove a machine.  If the
        user does confirm that they want a machine deleted, then the associated DicomSeries will be deleted automatically. */
     def userFK = foreignKey("userPK", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def inputFK = foreignKey("inputPK", inputPK, Input.query)(_.inputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
     def machineFK = foreignKey("machinePK", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
@@ -219,13 +228,12 @@ object DicomSeries extends Logging {
       def getContent: Array[Byte] = DicomUtil.dicomToZippedByteArray(alList)
 
       def getMappedFrameOfReferenceUID: Option[String] = {
-        if (getFrameOfReferenceUID.isDefined){
+        if (getFrameOfReferenceUID.isDefined) {
           val mainFrmOfRef = getFrameOfReferenceUID.get
-          val allFrmOfRef = alList.map(al =>  DicomUtil.findAllSingle(al, TagFromName.FrameOfReferenceUID)).flatten.map(a => a.getSingleStringValueOrNull).filterNot(uid => uid == null).distinct
+          val allFrmOfRef = alList.map(al => DicomUtil.findAllSingle(al, TagFromName.FrameOfReferenceUID)).flatten.map(a => a.getSingleStringValueOrNull).filterNot(uid => uid == null).distinct
           val mapped = allFrmOfRef.filterNot(frmOfRef => frmOfRef.equals(mainFrmOfRef)).headOption
           mapped
-        }
-        else
+        } else
           None
       }
 
