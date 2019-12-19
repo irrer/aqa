@@ -1389,8 +1389,6 @@ object WebUtil extends Logging {
     }
   }
 
-  //val humanDateFormat = new SimpleDateFormat("EEE d MMM yyyy  HH:mm:ss")
-
   private def timeAgoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
 
   private val timeHumanFriendlyTimeAgoFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss Z")
