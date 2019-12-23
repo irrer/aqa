@@ -13,18 +13,16 @@ import com.pixelmed.dicom.AttributeTag
 import edu.umro.ScalaUtil.DicomUtil
 import com.pixelmed.dicom.SOPClass
 import edu.umro.ScalaUtil.Trace
+import org.aqa.DicomFile
 
 /**
- * Store the contents of a DICOM series.
- *
+ * Reference the contents of a DICOM series to allow lookup by DICOM features.
  */
-case class DicomSeries(
-  dicomSeriesPK: Option[Long], // primary key
-  userPK: Long, // user that uploaded or created this series
-  inputPK: Option[Long], // referenced input, if available
-  machinePK: Option[Long], // referenced machine, if available
-  sopInstanceUIDList: String, // DICOM SOPInstanceUID of all files in series.
+case class DicomSeriesRef(
+  dicomSeriesRefPK: Option[Long], // primary key
+  inputFilesPK: Long, //  InputFiles that contains the content
   seriesInstanceUID: String, // DICOM SeriesInstanceUID
+  sopInstanceUIDList: String, // DICOM SOPInstanceUID of all files in series.
   frameOfReferenceUID: Option[String], // DICOM FrameOfReferenceUID.  For registration files, this is the FrameOfReferenceUID that they convert from (take as input).
   mappedFrameOfReferenceUID: Option[String], // For REG modality only.  DICOM FrameOfReferenceUID that can be mapped to.
   modality: String, // DICOM Modality
@@ -33,38 +31,39 @@ case class DicomSeries(
   date: Timestamp, // when data was acquired at the treatment machine.  Value from first file found by checking for (in this order): ContentDate, InstanceCreationDate, AcquisitionDate, CreationDate, SeriesDate
   patientID: Option[String], // Patient ID, if available
   size: Int, // Number of files in series
-  referencedRtplanUID: Option[String], // referenced RTPLAN UID if one is referenced
-  content: Array[Byte]) // files in zip form
+  referencedRtplanUID: Option[String],
+  IsocenterPosition: Option[String]) // blank separated X Y Z list of isocenter position.  Only present if attribute is present in series. 
   {
 
   /**
-   * Insert, returning the row that was inserted.  Note that dicomSeriesPK in the return value is defined.
-   * 
-   * If this is an RTPLAN, then it should not be 'owned' by any particular input, so set the inputPK to None.
+   * Insert, returning the row that was inserted.
+   *
    */
-  def insert: DicomSeries = {
-    val ds = {
-      if (modality.trim.equalsIgnoreCase("RTPLAN"))
-        this.copy(inputPK = None)
-      else
-        this
-    }
-    val insertQuery = DicomSeries.query returning DicomSeries.query.map(_.dicomSeriesPK) into ((dicomSeries, dicomSeriesPK) => dicomSeries.copy(dicomSeriesPK = Some(dicomSeriesPK)))
+  def insert: DicomSeriesRef = {
+    val insertQuery = DicomSeriesRef.query returning DicomSeriesRef.query.map(_.dicomSeriesRefPK) into ((dicomSeriesRef, dicomSeriesRefPK) => dicomSeriesRef.copy(dicomSeriesRefPK = Some(dicomSeriesRefPK)))
 
-    val action = insertQuery += ds
-    val result = Db.run(action)
+    val result = Db.run(insertQuery += this)
     result
   }
 
-  lazy val attributeListList = DicomUtil.zippedByteArrayToDicom(content)
+  /**
+   * Get the seq of attribute lists that belong to this series.  Fetch them from the file system, reinstantiating them from disk if necessary.
+   */
+  lazy val attributeListList: Seq[AttributeList] = {
+    val inputFiles = InputFiles.get(inputFilesPK).get
+    val input = Input.get(inputFiles.inputPK).get
+
+    if (!input.dir.isDirectory) Input.getFilesFromDatabase(inputFiles.inputPK, input.dir.getParentFile)
+    // read files from directory and only get the ones that are in this series
+    val alList = input.dir.listFiles.map(f => new DicomFile(f)).map(df => df.attributeList).flatten.filter(al => Util.serInstOfAl(al).equals(seriesInstanceUID))
+    alList.toSeq
+  }
 
   override def toString = {
-    "\n    dicomSeriesPK: " + dicomSeriesPK +
-      "\n    userPK: " + userPK +
-      "\n    inputPK: " + inputPK +
-      "\n    machinePK: " + machinePK +
-      "\n    sopInstanceUIDList: " + sopInstanceUIDList +
+    "\n    dicomSeriesRefPK: " + dicomSeriesRefPK +
+      "\n    inputFilesPK: " + inputFilesPK +
       "\n    seriesInstanceUID: " + seriesInstanceUID +
+      "\n    sopInstanceUIDList: " + sopInstanceUIDList.take(100) +
       "\n    frameOfReferenceUID: " + frameOfReferenceUID +
       "\n    mappedFrameOfReferenceUID: " + mappedFrameOfReferenceUID +
       "\n    modality: " + modality +
@@ -72,19 +71,17 @@ case class DicomSeries(
       "\n    deviceSerialNumber: " + deviceSerialNumber +
       "\n    date: " + date +
       "\n    patientID: " + patientID +
-      "\n    size: " + size +
+      "\n    size (slices): " + size +
       "\n    referencedRtplanUID: " + referencedRtplanUID +
-      "\n    content size: " + content.size
+      "\n    IsocenterPosition: " + IsocenterPosition
   }
 }
 
-object DicomSeries extends Logging {
-  class DicomSeriesTable(tag: Tag) extends Table[DicomSeries](tag, "dicomSeries") {
+object DicomSeriesRef extends Logging {
+  class DicomSeriesRefTable(tag: Tag) extends Table[DicomSeriesRef](tag, "dicomSeriesRef") {
 
-    def dicomSeriesPK = column[Long]("dicomSeriesPK", O.PrimaryKey, O.AutoInc)
-    def userPK = column[Long]("userPK")
-    def inputPK = column[Option[Long]]("inputPK")
-    def machinePK = column[Option[Long]]("machinePK")
+    def dicomSeriesRefPK = column[Long]("dicomSeriesRefPK", O.PrimaryKey, O.AutoInc)
+    def inputFilesPK = column[Long]("inputFilesPK")
     def sopInstanceUIDList = column[String]("sopInstanceUIDList")
     def seriesInstanceUID = column[String]("seriesInstanceUID")
     def frameOfReferenceUID = column[Option[String]]("frameOfReferenceUID")
@@ -96,13 +93,11 @@ object DicomSeries extends Logging {
     def patientID = column[Option[String]]("patientID")
     def size = column[Int]("size")
     def referencedRtplanUID = column[Option[String]]("referencedRtplanUID")
-    def content = column[Array[Byte]]("content")
+    def IsocenterPosition = column[Option[String]]("IsocenterPosition")
 
     def * = (
-      dicomSeriesPK.?,
-      userPK,
-      inputPK,
-      machinePK,
+      dicomSeriesRefPK.?,
+      inputFilesPK,
       sopInstanceUIDList,
       seriesInstanceUID,
       frameOfReferenceUID,
@@ -114,67 +109,63 @@ object DicomSeries extends Logging {
       patientID,
       size,
       referencedRtplanUID,
-      content) <> ((DicomSeries.apply _)tupled, DicomSeries.unapply _)
+      IsocenterPosition) <> ((DicomSeriesRef.apply _)tupled, DicomSeriesRef.unapply _)
 
-    /* Note that accidental data deletion is protected by attempts to remove a machine.  If the
-       user does confirm that they want a machine deleted, then the associated DicomSeries will be deleted automatically. */
-    def userFK = foreignKey("userPK", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
-    def inputFK = foreignKey("inputPK", inputPK, Input.query)(_.inputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
-    def machineFK = foreignKey("machinePK", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def inputFilesFK = foreignKey("inputFilesPK", inputFilesPK, InputFiles.query)(_.inputFilesPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
-  val query = TableQuery[DicomSeriesTable]
+  val query = TableQuery[DicomSeriesRefTable]
 
-  def get(dicomSeriesPK: Long): Option[DicomSeries] = {
+  def get(dicomSeriesRefPK: Long): Option[DicomSeriesRef] = {
     val action = for {
-      dicomSeries <- query if dicomSeries.dicomSeriesPK === dicomSeriesPK
-    } yield (dicomSeries)
+      dicomSeriesRef <- query if dicomSeriesRef.dicomSeriesRefPK === dicomSeriesRefPK
+    } yield (dicomSeriesRef)
     val list = Db.run(action.result)
     if (list.isEmpty) None else Some(list.head)
   }
 
-  def getByFrameUIDAndSOPClass(frameUIDSet: Set[String], sopClassUID: String): Seq[DicomSeries] = {
+  def getByFrameUIDAndSOPClass(frameUIDSet: Set[String], sopClassUID: String): Seq[DicomSeriesRef] = {
     val action = for {
-      dicomSeries <- query if (dicomSeries.frameOfReferenceUID.inSet(frameUIDSet) && (dicomSeries.sopClassUID === sopClassUID))
-    } yield (dicomSeries)
+      dicomSeriesRef <- query if (dicomSeriesRef.frameOfReferenceUID.inSet(frameUIDSet) && (dicomSeriesRef.sopClassUID === sopClassUID))
+    } yield (dicomSeriesRef)
     val list = Db.run(action.result)
     list
   }
 
-  def getBySopInstanceUID(sopInstUID: String): Seq[DicomSeries] = {
+  def getBySopInstanceUID(sopInstUID: String): Seq[DicomSeriesRef] = {
     val action = for {
-      dicomSeries <- query if ((dicomSeries.sopInstanceUIDList === sopInstUID))
-    } yield (dicomSeries)
+      dicomSeriesRef <- query if ((dicomSeriesRef.sopInstanceUIDList === sopInstUID))
+    } yield (dicomSeriesRef)
     val list = Db.run(action.result)
     list
   }
 
-  def getBySeriesInstanceUID(seriesInstanceUID: String): Seq[DicomSeries] = {
+  def getBySeriesInstanceUID(seriesInstanceUID: String): Seq[DicomSeriesRef] = {
     val action = for {
-      dicomSeries <- query if ((dicomSeries.seriesInstanceUID === seriesInstanceUID))
-    } yield (dicomSeries)
+      dicomSeriesRef <- query if ((dicomSeriesRef.seriesInstanceUID === seriesInstanceUID))
+    } yield (dicomSeriesRef)
     val list = Db.run(action.result)
     list
   }
 
-  def getByPatientID(patientID: String): Seq[DicomSeries] = {
+  def getByPatientID(patientID: String): Seq[DicomSeriesRef] = {
     val action = for {
-      dicomSeries <- query if ((dicomSeries.patientID === patientID))
-    } yield (dicomSeries)
+      dicomSeriesRef <- query if ((dicomSeriesRef.patientID === patientID))
+    } yield (dicomSeriesRef)
     val list = Db.run(action.result)
     list
   }
 
-  def delete(dicomSeriesPK: Long): Int = {
-    val q = query.filter(_.dicomSeriesPK === dicomSeriesPK)
+  def delete(dicomSeriesRefPK: Long): Int = {
+    val q = query.filter(_.dicomSeriesRefPK === dicomSeriesRefPK)
     val action = q.delete
     Db.run(action)
   }
 
   /**
-   * Construct a DicomSeries from an attribute list and some other required fields.
+   * Construct a DicomSeriesRef from an attribute list and some other required fields.
    */
-  def makeDicomSeries(usrPK: Long, inpPK: Option[Long], machPK: Option[Long], alList: Seq[AttributeList]): Option[DicomSeries] = {
+  def makeDicomSeriesRef(inpFilesPK: Long, alList: Seq[AttributeList]): Option[DicomSeriesRef] = {
     // Doing a lot of things with undependable data so wrap this in a try-catch to cover all the bases
     try {
       val datePatID = alList.map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al))
@@ -203,19 +194,6 @@ object DicomSeries extends Logging {
         rtplanUid
       }
 
-      val derivedMachinePK = {
-        (machPK.isDefined, inpPK.isDefined) match {
-          case (true, _) => machPK
-          case (_, true) => Input.get(inpPK.get).get.machinePK
-          case _ => None
-        }
-      }
-
-      if (inpPK.isDefined) {
-        val input = Input.get(inpPK.get).get
-        if (input.userPK.get != usrPK) throw new IllegalArgumentException("User PK " + usrPK + " passed as parameter is different from that referenced by inputPK " + inpPK.get + " --> " + input.userPK.get)
-      }
-
       def getSopInstanceUIDlist = alList.map(al => Util.sopOfAl(al)).mkString(" ")
       def getSeriesInstanceUID = byTag(TagFromName.SeriesInstanceUID).get
       def getFrameOfReferenceUID = byTag(TagFromName.FrameOfReferenceUID)
@@ -225,7 +203,6 @@ object DicomSeries extends Logging {
       def getDate = new Timestamp(sorted.head.date.getTime)
       def getPatientID = sorted.map(_.patId).flatten.headOption
       def getSize = sorted.size
-      def getContent: Array[Byte] = DicomUtil.dicomToZippedByteArray(alList)
 
       def getMappedFrameOfReferenceUID: Option[String] = {
         if (getFrameOfReferenceUID.isDefined) {
@@ -237,11 +214,16 @@ object DicomSeries extends Logging {
           None
       }
 
-      val ds = new DicomSeries(
+      def getIsocenterPosition: Option[String] = {
+        DicomUtil.findAllSingle(alList.head, TagFromName.IsocenterPosition).headOption match {
+          case Some(ip) => Some(ip.getDoubleValues.mkString(" "))
+          case _ => None
+        }
+      }
+
+      val ds = new DicomSeriesRef(
         None,
-        usrPK,
-        inpPK,
-        derivedMachinePK,
+        inpFilesPK,
         getSopInstanceUIDlist,
         getSeriesInstanceUID,
         getFrameOfReferenceUID,
@@ -253,28 +235,13 @@ object DicomSeries extends Logging {
         getPatientID,
         getSize,
         getReferencedRtplanUID,
-        getContent)
+        getIsocenterPosition)
       Some(ds)
     } catch {
       case t: Throwable => {
-        logger.warn("Unexpected error while creating DicomSeries: " + fmtEx(t))
+        logger.warn("Unexpected error while creating DicomSeriesRef: " + fmtEx(t))
         None
       }
-    }
-  }
-
-  /**
-   * Add this series to the database if it is not already in.  Use the SeriesInstanceUID to determine if it is already in the database.
-   */
-  def insertIfNew(userPK: Long, inputPK: Option[Long], machinePK: Option[Long], alList: Seq[AttributeList]): Unit = {
-    val current = DicomSeries.getBySeriesInstanceUID(Util.serInstOfAl(alList.head))
-    if (current.isEmpty) {
-      val ds = DicomSeries.makeDicomSeries(userPK, inputPK, machinePK, alList)
-      if (ds.isDefined) {
-        ds.get.insert
-        logger.info("inserted DicomSeries in to database: " + ds)
-      } else
-        logger.warn("Failed to insert new DicomSeries.  userPK: " + userPK + "    inputPK: " + inputPK + "    machinePK: " + machinePK)
     }
   }
 
@@ -283,8 +250,8 @@ object DicomSeries extends Logging {
    */
   def planDeviceSerialNumberList = {
     val action = for {
-      dicomSeries <- query if ((dicomSeries.sopClassUID === SOPClass.RTPlanStorage))
-    } yield (dicomSeries.deviceSerialNumber)
+      dicomSeriesRef <- query if ((dicomSeriesRef.sopClassUID === SOPClass.RTPlanStorage))
+    } yield (dicomSeriesRef.deviceSerialNumber)
     val list = Db.run(action.result)
     list.flatten.distinct
   }

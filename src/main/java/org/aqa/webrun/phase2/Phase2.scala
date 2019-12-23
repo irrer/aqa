@@ -184,6 +184,7 @@ object Phase2 extends Logging {
       val data = Util.readBinaryFile(file).right.get
       Util.writeBinaryFile(newFile, data)
     }
+    Output.ensureInputAndOutputFilesExist(outputOrig)
     val inputFileList = Util.listDirFiles(inputOrig.dir).filter(f => f.isFile)
     inputFileList.map(copyToSessionDir)
 
