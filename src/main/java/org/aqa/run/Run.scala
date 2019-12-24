@@ -54,7 +54,7 @@ import edu.umro.ScalaUtil.Trace
  */
 object Run extends Logging {
 
-  private val outputSubdirNamePrefix = "output_"
+  val outputSubdirNamePrefix = "output_"
 
   private val matlabEnvFileName = "env.m"
 
@@ -121,13 +121,9 @@ object Run extends Logging {
   def removeRedundantOutput(outputPK: Option[Long]): Unit = {
     def del(output: Output) = {
       try {
+        // this will not only delete the Output, but data that references it via database Cascade.
         Output.delete(output.outputPK.get)
-        Utility.deleteFileTree(output.dir)
-        if (Output.listByInputPK(output.inputPK).isEmpty) {
-          val input = Input.get(output.inputPK)
-          Input.delete(output.inputPK)
-          Utility.deleteFileTree(input.get.dir)
-        }
+        Util.deleteFileTreeSafely(output.dir)
         logger.info("Removed redundant output " + output)
       } catch {
         case t: Throwable =>
@@ -498,6 +494,30 @@ object Run extends Logging {
     (input, output)
   }
 
+  /**
+   * Make a new output from the given output
+   */
+  def makeRedoOutput(request: Request, response: Response, input: Input, outputOrig: Output): Output = {
+    val startDt = new Timestamp(System.currentTimeMillis)
+    val outputDir = new File(input.dir, Run.outputSubdirNamePrefix + Util.timeAsFileName(startDt))
+    outputDir.mkdirs // create output directory
+    val user = WebUtil.getUser(request).get
+
+    // construct a new output based on the old output
+    val output = {
+      outputOrig.copy(
+        outputPK = None,
+        directory = outputDir.getAbsolutePath,
+        userPK = user.userPK,
+        startDate = startDt,
+        finishDate = None,
+        analysisDate = None,
+        status = ProcedureStatus.running.toString,
+        dataValidity = DataValidity.valid.toString).insert
+    }
+    output
+  }
+
   //  def postRun(output: Output, finish: Date) = {
   //    val zippedContent = output.makeZipOfFiles
   //    // update DB Output
@@ -577,20 +597,12 @@ object Run extends Logging {
       def procedureHasTimedOut = timeoutTime > System.currentTimeMillis
 
       def updateDb(status: ProcedureStatus.Value): Unit = {
-        val updatedOutput = new Output(
-          outputPK = output.outputPK,
-          inputPK = output.inputPK,
-          directory = output.directory,
-          procedurePK = output.procedurePK,
-          userPK = output.userPK,
-          startDate = output.startDate,
+        output.copy(
           finishDate = Some(new Timestamp(latestFileChange)),
           dataDate = None, // TODO get from output.xml file
           analysisDate = None, // TODO get from output.xml file
           machinePK = None, // TODO get from output.xml file
-          status = status.toString,
-          dataValidity = output.dataValidity)
-        updatedOutput.insertOrUpdate
+          status = status.toString).insertOrUpdate
       }
 
       def updateFile(status: ProcedureStatus.Value): Unit = ProcedureStatus.writeProcedureStatus(output.dir, status)

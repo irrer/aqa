@@ -59,7 +59,8 @@ import org.aqa.web.Session
 import org.aqa.db.CachedUser
 import org.aqa.web.OutputList
 import org.aqa.webrun.ExtendedData
-import org.aqa.db.DicomSeries
+import org.aqa.db.DicomSeriesRef
+import org.aqa.db.DataValidity
 
 object Phase2 extends Logging {
   val parametersFileName = "parameters.xml"
@@ -184,6 +185,7 @@ object Phase2 extends Logging {
       val data = Util.readBinaryFile(file).right.get
       Util.writeBinaryFile(newFile, data)
     }
+    Input.ensureInputFilesExist(inputOrig)
     Output.ensureInputAndOutputFilesExist(outputOrig)
     val inputFileList = Util.listDirFiles(inputOrig.dir).filter(f => f.isFile)
     inputFileList.map(copyToSessionDir)

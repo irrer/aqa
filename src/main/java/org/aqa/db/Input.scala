@@ -156,6 +156,22 @@ object Input extends Logging {
     FileUtil.writeByteArrayZipToFileTree(inputFiles.zippedContent, dir)
   }
 
+  /**
+   * Ensure that the input files are in the file system.  If
+   * not, then get them from the database.
+   */
+  def ensureInputFilesExist(input: Input) = {
+    val inputDir = input.dir
+    // TODO could do more thorough check for each file referenced by DicomSeriesRef, but
+    // that would also require 
+    if (!inputDir.isDirectory) {
+      Input.getFilesFromDatabase(input.inputPK.get, inputDir.getParentFile)
+    }
+  }
+
+  /**
+   * For system administration only.
+   */
   private def fixUp = {
 
     def getAllInputPK = {
