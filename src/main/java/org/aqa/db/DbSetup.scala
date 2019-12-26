@@ -15,33 +15,66 @@ import edu.umro.ScalaUtil.FileUtil
 import java.io.File
 import edu.umro.util.Utility
 import org.aqa.Crypto
+import org.aqa.AnonymizeUtil
 
 /** Establish connection to the database and ensure that tables are created. */
 
 object DbSetup extends Logging {
 
-  private def makeDummyInstitution: Institution = new Institution(None, "AQA", None, Util.aqaUrl, "Automated Quality Assurance")
+  private def makeDefaultInstitution: Institution = {
+    val inst = (new Institution(None, "AQA", None, Util.aqaUrl, "Automated Quality Assurance")).insert
+    def encrypt(text: String) = AnonymizeUtil.encryptWithNonce(inst.institutionPK.get, text)
+
+    inst.copy(
+      name = AnonymizeUtil.aliasify(AnonymizeUtil.institutionAliasPrefixId, inst.institutionPK.get),
+      name_real = Some(encrypt("AQA")),
+      url_real = encrypt("https://medicine.umich.edu/dept/radiation-oncology"),
+      description_real = encrypt("to be determined"))
+    inst.insertOrUpdate
+    inst
+  }
 
   private def ensureAtLeastOneInstitution: Institution = {
     Institution.list.headOption match {
       case Some(inst) => inst
       case None => {
-        makeDummyInstitution.insert
+        makeDefaultInstitution
       }
     }
   }
 
   private def makeAdminUser: User = {
-    val defaultUser = "admin"
+    val defaultUser = {
+      if (Config.UserWhiteList.nonEmpty)
+        Config.UserWhiteList.head
+      else
+        "admin"
+    }
     val defaultPassword = "admin"
+
+    logger.info("Creating default user " + defaultUser + " with password: " + defaultPassword)
 
     val email = defaultUser + "@" + Util.aqaDomain
     val passwordSalt = Crypto.randomSecureHash
     val hashedPassword = AuthenticationVerifier.hashPassword(defaultPassword, passwordSalt)
 
     val institutionPK = ensureAtLeastOneInstitution.institutionPK.get
-    val adminUser = new User(None, "admin", None, "An Administrator", email, institutionPK, hashedPassword, passwordSalt, UserRole.admin.toString, None)
-    adminUser.insert
+    def encrypt(text: String) = AnonymizeUtil.encryptWithNonce(institutionPK, text)
+
+    val adminUser = new User(
+      None,
+      "admin",
+      Some(encrypt("admin")),
+      encrypt("An Administrator"),
+      encrypt(email),
+      institutionPK,
+      hashedPassword,
+      passwordSalt,
+      UserRole.admin.toString,
+      None)
+    val user = adminUser.insert.copy(id = AnonymizeUtil.aliasify(AnonymizeUtil.userAliasPrefixId, institutionPK))
+    user.insertOrUpdate
+    User.get(user.userPK.get).get
   }
 
   /** Ensure that the system has at least one admin user.  If there is not one, then create one. */

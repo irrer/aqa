@@ -377,10 +377,13 @@ class WebServer extends Application with Logging {
 
     val rutl = new RedirectUnauthorizedToLogin
     rutl.setNext(challAuthn)
-    val networkIpFilter = new NetworkIpFilter(getContext.createChildContext, Config.AllowedHttpIpList)
-    networkIpFilter.setNext(rutl)
-    networkIpFilter
-    //rutl
+    if (Config.AllowedHttpIpList.isEmpty)
+      rutl
+    else {
+      val networkIpFilter = new NetworkIpFilter(getContext.createChildContext, Config.AllowedHttpIpList)
+      networkIpFilter.setNext(rutl)
+      networkIpFilter
+    }
   }
 
   class ResponseToReferrer(request: Request) extends Response(request) {
