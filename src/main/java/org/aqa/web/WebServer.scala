@@ -94,7 +94,7 @@ class WebServer extends Application with Logging {
         logger.info("Using keystore file " + status.right.get.keyStoreFile.getAbsolutePath)
       }
     } else {
-      val server = component.getServers.add(Protocol.HTTP, 80)
+      val server = component.getServers.add(Protocol.HTTP, Config.HTTPPort)
       server.getProtocols.toArray.map(p => logger.info("Using protocol " + p + " on port " + server.getPort))
     }
   }

@@ -200,6 +200,7 @@ object Config extends Logging {
   private def logTextNotSpecified(name: String) = logText(name, "[not specified]")
 
   private def getMainText(name: String): String = {
+    logger.info("Getting attribute: " + name)
     val list = document \ name
     if (list.isEmpty) fail("No such XML node " + name)
 
@@ -300,8 +301,9 @@ object Config extends Logging {
         None
       }
     }
-
   }
+
+  val HTTPPort = logMainText("HTTPPort", "80").toInt
 
   val JavaKeyStorePassword = getJavaKeyStorePassword
   val JavaKeyStoreFileList = getJavaKeyStoreFileList
