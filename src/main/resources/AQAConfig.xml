@@ -23,6 +23,35 @@ Note that when building a package for release, the Maven build process uses the 
         In general, there is no PHI in this system, so some users may choose this out simplicity and convenience. -->
     <!-- <HTTPPort>80</HTTPPort> -->
     
+        
+    <!-- List of IP addresses that the HTTP or HTTPS service will honor. Using '*' for 
+    any triplet indicates a wild card.
+        
+    Note that if you have two consecutive triplets with wild cards they must
+    still use a '.' between them, as in 123.234.*.*, NOT 123.234.* .
+        
+    Note also that partial triplets are allowed as in 123.234.111.2* allows all of :
+        123.234.111.2
+        123.234.111.21
+        123.234.111.218
+        
+    If this list is empty or not specified then all incoming IP addresses are allowed.
+    -->
+    <!--
+    -->
+    <xAllowedHttpIpList>
+        <AllowedHttpIp>127.0.0.1</AllowedHttpIp>
+        <AllowedHttpIp>141.214.124.*</AllowedHttpIp>
+        <AllowedHttpIp>141.214.125.*</AllowedHttpIp>
+        <AllowedHttpIp>172.20.125.*</AllowedHttpIp>
+        <AllowedHttpIp>10.30.3.89</AllowedHttpIp>
+        <AllowedHttpIp>10.30.3.90</AllowedHttpIp>
+        <AllowedHttpIp>10.30.3.92</AllowedHttpIp>
+        <AllowedHttpIp>10.20.140.*</AllowedHttpIp>
+        <AllowedHttpIp>10.20.141.*</AllowedHttpIp>
+        <AllowedHttpIp>10.20.230.*</AllowedHttpIp>
+    </xAllowedHttpIpList>
+    
     <!-- Location of file that contains Java Key Store for HTTPS.  If multiple names are given, then they are
     each tried in the order given until a readable file is found. -->
     <JavaKeyStoreFileList>

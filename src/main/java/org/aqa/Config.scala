@@ -305,6 +305,18 @@ object Config extends Logging {
 
   val HTTPPort = logMainText("HTTPPort", "80").toInt
 
+  private def getAllowedHttpIpList: List[String] = {
+    val nodeList = document \ "AllowedHttpIpList" \ "AllowedHttpIp"
+    val allowedList = nodeList.toList.map(n => n.head.text.trim)
+    logText("AllowedHttpIpList", allowedList.mkString("\n    ", "\n    ", "\n    "))
+    if (allowedList.nonEmpty) allowedList else List("*.*.*.*")
+  }
+
+  /**
+   * List of IP addresses allowed to access this server.
+   */
+  val AllowedHttpIpList = getAllowedHttpIpList
+
   val JavaKeyStorePassword = getJavaKeyStorePassword
   val JavaKeyStoreFileList = getJavaKeyStoreFileList
 

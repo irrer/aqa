@@ -44,6 +44,7 @@ import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessHistoryRestl
 import org.aqa.webrun.bbByCBCT.BBbyCBCTChartHistoryRestlet
 import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryRestlet
 import org.aqa.webrun.dailyQA.DailyQASummary
+import edu.umro.RestletUtil.NetworkIpFilter
 
 object WebServer {
   val challengeScheme = ChallengeScheme.HTTP_BASIC
@@ -314,6 +315,9 @@ class WebServer extends Application with Logging {
     }
 
     def checkAuthorization(request: Request, response: Response, challResp: ChallengeResponse): Unit = {
+      val j = request.getClientInfo // TODO rm
+      Trace.trace(j) // TODO rm
+
       try {
         val requestedRole = getRequestedRole(request, response)
 
@@ -376,9 +380,10 @@ class WebServer extends Application with Logging {
 
     val rutl = new RedirectUnauthorizedToLogin
     rutl.setNext(challAuthn)
+    //    val networkIpFilter = new NetworkIpFilter(getContext, Config.AllowedHttpIpList)
+    //    networkIpFilter.setNext(rutl)
+    //    networkIpFilter
     rutl
-
-    //challAuthn
   }
 
   class ResponseToReferrer(request: Request) extends Response(request) {
