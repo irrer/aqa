@@ -305,6 +305,9 @@ object Config extends Logging {
 
   val HTTPPort = logMainText("HTTPPort", "80").toInt
 
+  /**
+   * Get the list of allowed IP addresses.  If empty, allow everything.
+   */
   private def getAllowedHttpIpList: List[String] = {
     val nodeList = document \ "AllowedHttpIpList" \ "AllowedHttpIp"
     val allowedList = nodeList.toList.map(n => n.head.text.trim)

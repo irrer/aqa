@@ -315,9 +315,6 @@ class WebServer extends Application with Logging {
     }
 
     def checkAuthorization(request: Request, response: Response, challResp: ChallengeResponse): Unit = {
-      val j = request.getClientInfo // TODO rm
-      Trace.trace(j) // TODO rm
-
       try {
         val requestedRole = getRequestedRole(request, response)
 
@@ -380,10 +377,10 @@ class WebServer extends Application with Logging {
 
     val rutl = new RedirectUnauthorizedToLogin
     rutl.setNext(challAuthn)
-    //    val networkIpFilter = new NetworkIpFilter(getContext, Config.AllowedHttpIpList)
-    //    networkIpFilter.setNext(rutl)
-    //    networkIpFilter
-    rutl
+    val networkIpFilter = new NetworkIpFilter(getContext.createChildContext, Config.AllowedHttpIpList)
+    networkIpFilter.setNext(rutl)
+    networkIpFilter
+    //rutl
   }
 
   class ResponseToReferrer(request: Request) extends Response(request) {
