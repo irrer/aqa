@@ -380,7 +380,7 @@ class WebServer extends Application with Logging {
     if (Config.AllowedHttpIpList.isEmpty)
       rutl
     else {
-      val networkIpFilter = new NetworkIpFilter(getContext.createChildContext, Config.AllowedHttpIpList)
+      val networkIpFilter = new NetworkIpFilter(getContext, Config.AllowedHttpIpList)
       networkIpFilter.setNext(rutl)
       networkIpFilter
     }
