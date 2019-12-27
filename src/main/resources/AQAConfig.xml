@@ -36,9 +36,9 @@ Note that when building a package for release, the Maven build process uses the 
         123.234.111.218
         
     If this list is empty or not specified then all incoming IP addresses are allowed. -->
-    <!--
+    
     <AllowedHttpIpList>
-        <AllowedHttpIp>localhost</AllowedHttpIp>
+        <AllowedHttpIp>0:0:0:0:0:0:0:1</AllowedHttpIp>   <!-- localhost as IPv6 address -->
         <AllowedHttpIp>127.0.0.1</AllowedHttpIp>
         <AllowedHttpIp>141.214.124.*</AllowedHttpIp>
         <AllowedHttpIp>141.214.125.*</AllowedHttpIp>
@@ -50,7 +50,6 @@ Note that when building a package for release, the Maven build process uses the 
         <AllowedHttpIp>10.20.141.*</AllowedHttpIp>
         <AllowedHttpIp>10.20.230.*</AllowedHttpIp>
     </AllowedHttpIpList>
-    -->
     
     <!-- Location of file that contains Java Key Store for HTTPS.  If multiple names are given, then they are
     each tried in the order given until a readable file is found. -->
