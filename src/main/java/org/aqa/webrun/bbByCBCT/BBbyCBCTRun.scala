@@ -44,8 +44,6 @@ import edu.umro.ImageUtil.ImageUtil
 import java.awt.Point
 import scala.util.Try
 import java.awt.geom.Point2D
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
 import org.aqa.web.WebUtil
 import org.aqa.web.Session
 import org.aqa.db.CachedUser
@@ -56,6 +54,11 @@ import org.aqa.db.DicomSeries
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.db.BBbyCBCT
 import org.restlet.data.Method
+import scala.concurrent.duration.FiniteDuration
+import java.util.concurrent.TimeUnit
+import scala.concurrent.{ Await, Future }
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 
 /**
  * Provide the user interface and verify that the data provided is sufficient to do the analysis.
@@ -127,6 +130,11 @@ object BBbyCBCTRun extends Logging {
       }
       regList.find(r => regWorks(r.attributeList.get))
     }
+
+    Trace.trace("outputOrig.machinePK: " + outputOrig.machinePK)
+    Trace.trace("outputOrig.machinePK.get: " + outputOrig.machinePK.get)
+    Trace.trace("Machine.get(outputOrig.machinePK.get): " + Machine.get(outputOrig.machinePK.get))
+    Trace.trace("Machine.get(outputOrig.machinePK.get).get: " + Machine.get(outputOrig.machinePK.get).get)
 
     val runReq = new BBbyCBCTRunReq(Right(rtplan), reg, cbctList, Machine.get(outputOrig.machinePK.get).get)
 
@@ -449,6 +457,37 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
    */
   private def runIfDataValid(valueMap: ValueMapT, request: Request, response: Response) = {
 
+    //    import scala.concurrent.{ ExecutionContext, ExecutionContext$, Future, Promise, Await }
+    //    import scala.concurrent.duration._
+    //    import scala.concurrent.Future
+    //    //import scala.concurrent.Await._
+    //    import java.util.concurrent.TimeUnit
+    //    import scala.concurrent.ExecutionContext.Implicits.global
+    //    import scala.concurrent.ExecutionContext.Implicits.global
+    //    import scala.concurrent.duration.Duration
+    //    import scala.concurrent.{ Await, Future }
+
+    // TODO
+    // TODO
+    // TODO
+    // TODO
+    // TODO
+    if (true) {
+
+      object Main {
+        def main(args: Array[String]): Unit = {
+          val f: Future[Int] = Future(0)
+
+          // This waits for `f` to complete but doesn't wait for the callback
+          // to finish running.
+          Await.ready(f, Duration.Inf)
+
+          val dur = new FiniteDuration(5, TimeUnit.MINUTES)
+          Await.result(f, dur)
+        }
+      }
+    }
+
     logger.info("Validating data")
     validate(valueMap) match {
       case Left(errMap) => {
@@ -464,7 +503,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
         val input = inputOutput._1
         val output = inputOutput._2
 
-        Future {
+        val future = Future {
           val extendedData = ExtendedData.get(output)
           DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, Seq(runReq.rtplan))
 
@@ -483,6 +522,12 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
           outputFinal.insertOrUpdate
           outputFinal.updateData(outputFinal.makeZipOfFiles)
           Run.removeRedundantOutput(outputFinal.outputPK)
+        }
+
+        if (isAwait(valueMap)) {
+          val procedureTimeout = (Procedure.get(inputOutput._2.procedurePK).get.timeout * 60 * 1000).round.toLong
+          val dur = new FiniteDuration(procedureTimeout, TimeUnit.MILLISECONDS)
+          Await.result(future, dur)
         }
 
         ViewOutput.redirectToViewRunProgress(response, valueMap, output.outputPK.get)

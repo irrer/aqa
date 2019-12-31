@@ -75,7 +75,12 @@ object WebUtil extends Logging {
   /**
    * Tag used to indicate that this is coming from an automatic upload client, as opposed to a human using a web browser.
    */
- private val autoUploadTag = "AutoUpload"
+  private val autoUploadTag = "AutoUpload"
+
+  /**
+   * Tag used to indicate that the call should not return until processing is complete.
+   */
+  private val awaitTag = "Await"
 
   val aqaAliasAttr = { <div aqaalias=""/> }.attributes
   def ifAqaAliasAttr(elem: Elem, aqaAlias: Boolean) = if (aqaAlias) { elem % aqaAliasAttr } else elem
@@ -352,8 +357,16 @@ object WebUtil extends Logging {
     val valueMap = ensureSessionId(vm ++ parseOriginalReference(request) ++ parseForm(new Form(request.getEntity)) ++ userToValueMap(request))
     valueMap
   }
- 
- def isAutoUpload(valueMap: ValueMapT) = valueMap.get(autoUploadTag).isDefined 
+
+  def isAutoUpload(valueMap: ValueMapT) = {
+    val v = valueMap.get(autoUploadTag)
+    v.isDefined && v.get.equalsIgnoreCase("true")
+  }
+
+  def isAwait(valueMap: ValueMapT) = {
+    val v = valueMap.get(awaitTag)
+    v.isDefined && v.get.equalsIgnoreCase("true")
+  }
 
   def simpleWebPage(content: Elem, status: Status, title: String, response: Response): Unit = {
     val indentedContent = {
