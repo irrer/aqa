@@ -96,7 +96,7 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
     isEmpty
   }
 
-  private def isPostitiveInt(valueMap: ValueMapT, pageTitle: String, response: Response, input: IsInput): Boolean = {
+  private def isPositiveInt(valueMap: ValueMapT, pageTitle: String, response: Response, input: IsInput): Boolean = {
     if (input.getInt(valueMap).isDefined) true
     else {
       val err = Error.make(input, "Must be an integer 0 or greater")
@@ -114,7 +114,7 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
     }
   }
 
-  private def isPostitiveDouble(valueMap: ValueMapT, pageTitle: String, response: Response, input: IsInput): Boolean = {
+  private def isPositiveDouble(valueMap: ValueMapT, pageTitle: String, response: Response, input: IsInput): Boolean = {
     val d = input.getDouble(valueMap)
     if (d.isDefined && (d.get >= 0)) true
     else {
@@ -198,10 +198,10 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
     0 match {
       case _ if emptyManufacturer(valueMap, pageTitle, response) => false
       case _ if emptyModel(valueMap, pageTitle, response) => false
-      case _ if !isPostitiveInt(valueMap, pageTitle, response, outerLeafPairCount) => false
-      case _ if !isPostitiveInt(valueMap, pageTitle, response, innerLeafPairCount) => false
-      case _ if !isPostitiveDouble(valueMap, pageTitle, response, outerLeafWidth_cm) => false
-      case _ if !isPostitiveDouble(valueMap, pageTitle, response, innerLeafWidth_cm) => false
+      case _ if !isPositiveInt(valueMap, pageTitle, response, outerLeafPairCount) => false
+      case _ if !isPositiveInt(valueMap, pageTitle, response, innerLeafPairCount) => false
+      case _ if !isPositiveDouble(valueMap, pageTitle, response, outerLeafWidth_cm) => false
+      case _ if !isPositiveDouble(valueMap, pageTitle, response, innerLeafWidth_cm) => false
       case _ if !isDouble(valueMap, pageTitle, response, leafTravelDistance_cm) => false
       case _ => true
     }

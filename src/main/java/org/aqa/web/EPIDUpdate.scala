@@ -92,7 +92,7 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
     isEmpty
   }
 
-  private def isPostitiveInt(valueMap: ValueMapT, pageTitle: String, response: Response, input: IsInput): Boolean = {
+  private def isPositiveInt(valueMap: ValueMapT, pageTitle: String, response: Response, input: IsInput): Boolean = {
     if (input.getInt(valueMap).isDefined) true
     else {
       val err = Error.make(input, "Must be an integer 0 or greater")
@@ -110,7 +110,7 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
     }
   }
 
-  private def isPostitiveDouble(valueMap: ValueMapT, pageTitle: String, response: Response, input: IsInput): Boolean = {
+  private def isPositiveDouble(valueMap: ValueMapT, pageTitle: String, response: Response, input: IsInput): Boolean = {
     val d = input.getDouble(valueMap)
     if (d.isDefined && (d.get >= 0)) true
     else {
@@ -193,10 +193,10 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
     0 match {
       case _ if emptyManufacturer(valueMap, pageTitle, response) => false
       case _ if emptyModel(valueMap, pageTitle, response) => false
-      case _ if !isPostitiveInt(valueMap, pageTitle, response, pixelCountX) => false
-      case _ if !isPostitiveInt(valueMap, pageTitle, response, pixelCountY) => false
-      case _ if !isPostitiveDouble(valueMap, pageTitle, response, width_cm) => false
-      case _ if !isPostitiveDouble(valueMap, pageTitle, response, height_cm) => false
+      case _ if !isPositiveInt(valueMap, pageTitle, response, pixelCountX) => false
+      case _ if !isPositiveInt(valueMap, pageTitle, response, pixelCountY) => false
+      case _ if !isPositiveDouble(valueMap, pageTitle, response, width_cm) => false
+      case _ if !isPositiveDouble(valueMap, pageTitle, response, height_cm) => false
       case _ => true
     }
   }
