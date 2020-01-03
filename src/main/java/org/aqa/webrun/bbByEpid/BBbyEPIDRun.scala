@@ -324,7 +324,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     logger.info("Validating data")
     validate(valueMap) match {
       case Left(errMap) => {
-        logger.info("Bad request: " + errMap.keys.map(k => k + " : " + valueMap.get(k)).mkString("\n    "))
+        logger.info("BBbyEPIDRun Bad request: " + errMap.keys.map(k => k + " : " + valueMap.get(k)).mkString("\n    "))
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
       case Right(runReq) => {
@@ -336,7 +336,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
         val input = inputOutput._1
         val output = inputOutput._2
 
-        Future {
+        val future = Future {
           val extendedData = ExtendedData.get(output)
           val runReqFinal = runReq.reDir(input.dir)
           DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, runReqFinal.epidList)
@@ -350,6 +350,9 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
           outputFinal.updateData(outputFinal.makeZipOfFiles)
           Run.removeRedundantOutput(outputFinal.outputPK)
         }
+
+        Util.garbageCollect
+        awaitIfRequested(future, valueMap, inputOutput._2.procedurePK)
 
         ViewOutput.redirectToViewRunProgress(response, valueMap, output.outputPK.get)
       }

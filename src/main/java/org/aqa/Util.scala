@@ -1017,4 +1017,23 @@ object Util extends Logging {
    */
   def getAttr(node: Node, name: String) = (node \ ("@" + name)).text.toString
 
+  /**
+   * Attempt to free memory by using gc.
+   */
+  def garbageCollect = {
+    val runtime = Runtime.getRuntime
+
+    val totalWait_ms = 410.toLong
+    val wait_ms = 100.toLong
+
+    val timeout = System.currentTimeMillis + totalWait_ms
+    val before = runtime.freeMemory
+    logger.info("Free memory before garbage collection hint : " + before)
+    while (timeout > System.currentTimeMillis) {
+      runtime.gc
+      Thread.sleep(wait_ms)
+    }
+    val after = runtime.freeMemory
+    logger.info("Free memory after garbage collection hint  : " + after + "    amount freed: " + (after - before))
+  }
 }

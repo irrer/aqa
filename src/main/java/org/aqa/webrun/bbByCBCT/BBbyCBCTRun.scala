@@ -457,40 +457,10 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
    */
   private def runIfDataValid(valueMap: ValueMapT, request: Request, response: Response) = {
 
-    //    import scala.concurrent.{ ExecutionContext, ExecutionContext$, Future, Promise, Await }
-    //    import scala.concurrent.duration._
-    //    import scala.concurrent.Future
-    //    //import scala.concurrent.Await._
-    //    import java.util.concurrent.TimeUnit
-    //    import scala.concurrent.ExecutionContext.Implicits.global
-    //    import scala.concurrent.ExecutionContext.Implicits.global
-    //    import scala.concurrent.duration.Duration
-    //    import scala.concurrent.{ Await, Future }
-
-    // TODO
-    // TODO
-    // TODO
-    // TODO
-    // TODO
-    if (true) {
-
-      object Main {
-        def main(args: Array[String]): Unit = {
-          val f: Future[Int] = Future(0)
-
-          // This waits for `f` to complete but doesn't wait for the callback
-          // to finish running.
-          Await.ready(f, Duration.Inf)
-
-          val dur = new FiniteDuration(5, TimeUnit.MINUTES)
-          Await.result(f, dur)
-        }
-      }
-    }
-
     logger.info("Validating data")
     validate(valueMap) match {
       case Left(errMap) => {
+        logger.info("BBbyCBCTRun Bad request: " + errMap.keys.map(k => k + " : " + valueMap.get(k)).mkString("\n    "))
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
       case Right(runReq) => {
@@ -524,12 +494,9 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
           Run.removeRedundantOutput(outputFinal.outputPK)
         }
 
-        if (isAwait(valueMap)) {
-          val procedureTimeout = (Procedure.get(inputOutput._2.procedurePK).get.timeout * 60 * 1000).round.toLong
-          val dur = new FiniteDuration(procedureTimeout, TimeUnit.MILLISECONDS)
-          Await.result(future, dur)
-        }
-
+        Util.garbageCollect
+        awaitIfRequested(future, valueMap, inputOutput._2.procedurePK)        
+        
         ViewOutput.redirectToViewRunProgress(response, valueMap, output.outputPK.get)
       }
     }

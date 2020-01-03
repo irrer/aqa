@@ -55,6 +55,11 @@ import resource.managed
 import scala.annotation.tailrec
 import java.util.zip.ZipInputStream
 import java.io.OutputStream
+import org.aqa.db.Procedure
+import scala.concurrent.duration.FiniteDuration
+import java.util.concurrent.TimeUnit
+import scala.concurrent.{ Await, Future }
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object WebUtil extends Logging {
 
@@ -1494,6 +1499,17 @@ object WebUtil extends Logging {
   }
 
   def stringToUrlSafe(text: String): String = text.replaceAll("[^a-zA-Z0-9]", "_")
+
+  /**
+   * Wait for the given future to complete if specified in the valueMap.
+   */
+  def awaitIfRequested[T](future: Future[T], valueMap: ValueMapT, procedurePK: Long) = {
+    if (isAwait(valueMap)) {
+      val procedureTimeout = (Procedure.get(procedurePK).get.timeout * 60 * 1000).round.toLong
+      val dur = new FiniteDuration(procedureTimeout, TimeUnit.MILLISECONDS)
+      Await.result(future, dur)
+    }
+  }
 
 }
 

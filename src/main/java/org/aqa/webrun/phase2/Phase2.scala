@@ -528,6 +528,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
 
     validate(valueMap, rtplanList, rtimageList) match {
       case Left(errMap) => {
+        logger.info("Phase2 Bad request: " + errMap.keys.map(k => k + " : " + valueMap.get(k)).mkString("\n    "))
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
       case Right(runReq) => {
@@ -539,7 +540,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
         val input = inputOutput._1
         val output = inputOutput._2
 
-        Future {
+        val future = Future {
           val extendedData = ExtendedData.get(output)
           val runReqFinal = runReq.reDir(input.dir)
 
@@ -560,6 +561,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
           Run.removeRedundantOutput(outputFinal.outputPK)
         }
 
+        Util.garbageCollect
+        awaitIfRequested(future, valueMap, inputOutput._2.procedurePK)
         ViewOutput.redirectToViewRunProgress(response, emptyValueMap, output.outputPK.get)
       }
     }
