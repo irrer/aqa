@@ -7,12 +7,33 @@ import com.pixelmed.dicom.TagFromName
 import org.aqa.db.DicomSeries
 import org.aqa.Util
 import org.aqa.web.ViewOutput
+import org.aqa.Crypto
+import org.aqa.AnonymizeUtil
 
 object DailyQAHTML {
 
-  def makeReport(dataSetList:  Seq[BBbyEPIDComposite.DailyDataSet]): Elem = {
+  def makeReport(dataSetList: Seq[BBbyEPIDComposite.DailyDataSet]): Elem = {
 
-    // val dataSetList: Seq[BBbyEPIDComposite.DailyDataSet]
+    def sortDataSetPair(a: BBbyEPIDComposite.DailyDataSet, b: BBbyEPIDComposite.DailyDataSet): Boolean = {
+      if (a.machine.machinePK.get == b.machine.machinePK.get) {
+        a.output.dataDate.get.getTime < b.output.dataDate.get.getTime
+      } else {
+        val aMach = AnonymizeUtil.decryptWithNonce(a.machine.institutionPK, a.machine.id_real.get)
+        val bMach = AnonymizeUtil.decryptWithNonce(b.machine.institutionPK, b.machine.id_real.get)
+        def toNum(text: String): Option[Int] = {
+          if (text.matches(".*[0-9].*"))
+            Some(text.replaceAll("[^0-9]", "").toInt)
+          else
+            None
+        }
+
+        if (toNum(aMach).isDefined && toNum(bMach).isDefined) {
+          toNum(aMach).get < toNum(bMach).get
+        } else {
+          aMach.compareTo(bMach) < 0
+        }
+      }
+    }
 
     def fmtAngle(angle: Double) = angle.formatted("%12.8f").trim
 
@@ -128,7 +149,7 @@ object DailyQAHTML {
         <table class="table table-responsive table-bordered">
           <thead><tr>{ colList.map(col => col.toHeader) }</tr></thead>
           {
-            dataSetList.map(dataSet => dataSetToRow(dataSet))
+            dataSetList.sortWith(sortDataSetPair _).map(dataSet => dataSetToRow(dataSet))
           }
         </table>
       </div>
