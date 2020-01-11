@@ -68,9 +68,18 @@ object BBbyEPIDRun extends Logging {
   /**
    * Get the SOP of the plan referenced by the given EPID.
    */
-  def getPlanRef(epid: AttributeList): String = {
-    val seq = DicomUtil.seqToAttr(epid, TagFromName.ReferencedRTPlanSequence)
-    seq.head.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrEmptyString
+  def getPlanRef(epid: AttributeList): Option[String] = {
+    try {
+      val seq = DicomUtil.seqToAttr(epid, TagFromName.ReferencedRTPlanSequence)
+      val planSop = seq.head.get(TagFromName.ReferencedSOPInstanceUID).getStringValues.head
+      logger.info("Fetched plan reference: " + planSop)
+      Some(planSop)
+    } catch {
+      case t: Throwable => {
+        logger.info("Unable to get RTPLAN reference")
+        None
+      }
+    }
   }
 
   /**
@@ -235,7 +244,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
    */
   private def getRtplansSerNo(dicomFileList: Seq[DicomFile]): Seq[String] = {
     val uploaded = dicomFileList.filter(df => df.isRtplan).map(df => df.attributeList.get)
-    val plansReferenced = dicomFileList.filter(df => df.isRtimage).map(df => BBbyEPIDRun.getPlanRef(df.attributeList.get)).distinct
+    val plansReferenced = dicomFileList.filter(df => df.isRtimage).map(df => BBbyEPIDRun.getPlanRef(df.attributeList.get)).flatten.distinct
     val plansFromDb = plansReferenced.map(sopInstUID => DicomSeries.getBySopInstanceUID(sopInstUID)).flatten.map(ds => ds.attributeListList).flatten
     val planSerNo = (uploaded ++ plansFromDb).map(plan => plan.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrEmptyString).distinct
 

@@ -66,6 +66,11 @@ object C3Chart {
     val max = Math.max(a, b)
   }
 
+  class YRange(a: Double, b: Double) {
+    val min = Math.min(a, b)
+    val max = Math.max(a, b)
+  }
+
 }
 
 /**

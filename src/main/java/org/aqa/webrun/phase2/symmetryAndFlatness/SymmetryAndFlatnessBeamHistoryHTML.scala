@@ -76,6 +76,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
       xLabel, xDateList,
       baseline,
       tolerance,
+      None, // yRange
       yAxisLabels, yDataLabel, yValues, yIndex, yFormat, yColorList)
 
     chart

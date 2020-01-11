@@ -17,6 +17,7 @@ import com.pixelmed.dicom.TagFromName
 import org.aqa.db.BBbyCBCT
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.web.WebServer
+import org.aqa.db.DicomSeries
 
 /**
  * Generate and write HTML for EPID BB analysis.
@@ -161,7 +162,7 @@ object BBbyEPIDHTML {
         val file = new File(extendedData.output.dir, fileName)
         Util.writeFile(file, text)
 
-        <a href={ fileName } title={ "View / download DICOM for gantry angle " + gantryAngle }>View Dicom</a>
+        <a href={ fileName } title={ "View / download DICOM for gantry angle " + gantryAngle }>View DICOM</a>
       }
 
       val html: Elem = {
@@ -246,24 +247,48 @@ object BBbyEPIDHTML {
         }
       }
 
-      /*
-      val numbers = {
-        val sp = WebUtil.nbsp + " " + WebUtil.nbsp + " " + WebUtil.nbsp
-        if (composite.isRight) {
-          <h3 title="Composite results.  Distance in mm between plan isocenter and position of BB">
-            {
-              val epid = composite.right.get
-              "Total Offset(mm)" + fmt(composite.right.get.offset_mm) + sp +
-                "X:" + fmt(epid.x_mm) + sp +
-                "Y:" + fmt(epid.y_mm) + sp +
-                "Z:" + fmt(epid.z_mm)
-            }
-          </h3>
+      def planReference: Elem = {
+        val planSop = runReq.epidListDicomFile.map(df => df.attributeList).flatten.map(al => BBbyEPIDRun.getPlanRef(al)).flatten.distinct.head
+
+        val dicomSeries = DicomSeries.getBySopInstanceUID(planSop)
+        if (dicomSeries.isEmpty) {
+          <div>Could not find referenced plan with UID { planSop }</div>
         } else {
-          <div>  </div>
+          val rtplanAl = dicomSeries.head.attributeListList.head
+          val dicomFile = new File(extendedData.output.dir, "rtplan.dcm")
+          DicomUtil.writeAttributeListToFile(rtplanAl, dicomFile, "AQA")
+          val htmlRtplanFileName = "rtplan.html"
+
+          val content = {
+            <div>
+              <div class="row">
+                <div class="col-md-3 col-md-offset-1">
+                  <h2>RTPLAN</h2>
+                </div>
+                <div class="col-md-2">
+                  <h2> </h2><a href={ mainReportFileName } title="Return to main EPID report">Main Report</a>
+                </div>
+                <div class="col-md-2">
+                  <h2> </h2><a href={ dicomFile.getName } title="Download anonymized DICOM">Download DICOM</a>
+                </div>
+              </div>
+              <div class="row">
+                <pre>
+                  { WebUtil.nl + DicomUtil.attributeListToString(rtplanAl) }
+                </pre>
+                { WebUtil.nl }
+                <p> </p>
+              </div>
+            </div>
+          }
+
+          val text = WebUtil.wrapBody(wrap(content), "RTPLAN for EPID", None, true, None)
+          val file = new File(extendedData.output.dir, htmlRtplanFileName)
+          Util.writeFile(file, text)
+
+          <a href={ htmlRtplanFileName } title={ "View / download RTPLAN DICOM" }>View DICOM</a>
         }
       }
-      */
 
       val elem = {
         <div class="row">
@@ -271,6 +296,9 @@ object BBbyEPIDHTML {
             <h2 title="Procedure performed">EPID BB Location</h2>
             <br/>
             { numbersWithCbct }
+          </div>
+          <div class="col-md-2">
+            { planReference }
           </div>
         </div>
       }

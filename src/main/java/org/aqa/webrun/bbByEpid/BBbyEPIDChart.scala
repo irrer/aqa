@@ -58,6 +58,9 @@ class BBbyEPIDChart(outputPK: Long) extends Logging {
       new Color(104, 187, 112),
       new Color(137, 187, 104))
 
+    val tolerance = new C3Chart.Tolerance(-Config.BBbyEPIDChartTolerance_mm, Config.BBbyEPIDChartTolerance_mm)
+    val yRange = new C3Chart.YRange(-Config.BBbyEPIDChartYRange_mm, Config.BBbyEPIDChartYRange_mm)
+
     new C3ChartHistory(
       Some(chartId),
       maintenanceRecordList,
@@ -65,7 +68,8 @@ class BBbyEPIDChart(outputPK: Long) extends Logging {
       None, // height
       "Date", history.map(h => h.date),
       None, // BaselineSpec
-      None, // minMax
+      Some(tolerance),
+      Some(yRange),
       Seq("Total offset", "X offset", "Y offset", "Z offset"), units, dataToBeGraphed, index, ".3r", colorList)
   }
 

@@ -42,6 +42,7 @@ class C3ChartHistory(
   xDateList: Seq[Date],
   baseline: Option[Baseline],
   tolerance: Option[C3Chart.Tolerance],
+  yRange: Option[C3Chart.YRange],
   yAxisLabels: Seq[String],
   yDataLabel: String,
   yValues: Seq[Seq[Double]],
@@ -82,8 +83,9 @@ class C3ChartHistory(
       all ++ Seq(tolerance.get.min, tolerance.get.max)
     else all
   }
-  private val minY = allY.min
-  private val maxY = allY.max
+
+  private val minY = if (yRange.isDefined) yRange.get.min else allY.min
+  private val maxY = if (yRange.isDefined) yRange.get.max else allY.max
 
   private val maintValueList = column("MaintenanceRecord", Seq.fill(maintList.size)(Seq(minY, maxY)).flatten)
   private val maintSummaryList = textColumn(maintList.map(maint => maint.summary))

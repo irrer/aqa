@@ -63,7 +63,8 @@ class CenterDoseChart(outputPK: Long) extends Logging {
       None, // height
       "Date", sortedHistory.map(h => h.date),
       None, // BaselineSpec
-      None, // minMax
+      None, // tolerance
+      None, // yRange
       Seq(units), units, Seq(sortedHistory.map(h => h.centerDose.dose)), index, ".5g", Seq(new Color(102, 136, 187)))
   }
 

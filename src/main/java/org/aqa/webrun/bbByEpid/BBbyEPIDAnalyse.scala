@@ -40,7 +40,7 @@ object BBbyEPIDAnalyse extends Logging {
       val bbByEPID = new BBbyEPID(
         bbByEPIDPK = None,
         outputPK = extendedData.output.outputPK.get,
-        rtplanSOPInstanceUID = BBbyEPIDRun.getPlanRef(epid),
+        rtplanSOPInstanceUID = BBbyEPIDRun.getPlanRef(epid).get,
         epidSOPInstanceUid = Util.sopOfAl(epid),
         offset_mm = (new Point3d(epid3DX_mm, epid3DY_mm, epid3DZ_mm)).distance(origin),
         gantryAngle_deg = gantryAngle_deg,
@@ -101,7 +101,7 @@ object BBbyEPIDAnalyse extends Logging {
       val bbByEPIDComposite = new BBbyEPIDComposite(
         bbByEPIDCompositePK = None,
         outputPK = extendedData.output.outputPK.get,
-        rtplanSOPInstanceUID = BBbyEPIDRun.getPlanRef(runReq.epidList.head),
+        rtplanSOPInstanceUID = runReq.epidList.map(epidAl => BBbyEPIDRun.getPlanRef(epidAl)).flatten.distinct.head,
         epidSeriesInstanceUID = SeriesInstanceUID,
         offset_mm,
         x_mm,

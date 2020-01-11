@@ -76,6 +76,7 @@ class WedgeChartHistory(outputPK: Long) {
       xDateList, // xDateList
       baseline, // baseline
       tolerance, // tolerance
+      None, // yRange
       Seq("Percent of Background"), // y axis labels
       "Percent of Background", // y data label
       Seq(beamHistory.map(_.percentOfBackground_pct)), // y values to plot

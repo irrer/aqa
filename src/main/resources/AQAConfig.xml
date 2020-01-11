@@ -552,6 +552,14 @@ Note that when building a package for release, the Maven build process uses the 
     they exist) the current point being plotted. -->
     <BBbyEPIDHistoryRange>25</BBbyEPIDHistoryRange>
    
+    <!-- Used for graphing EPID BB history, a positive floating point indicating the range of values above and below
+    zero that indicate the tolerated limits. -->
+    <BBbyEPIDChartTolerance_mm>1.0</BBbyEPIDChartTolerance_mm>
+   
+    <!-- Used for graphing EPID BB history, a positive floating point indicating the range of values above and below
+    zero.  Sometimes a single value will be wildly out of range, and make the graph look flat. -->
+    <BBbyEPIDChartYRange_mm>3</BBbyEPIDChartYRange_mm>
+   
     <!-- When making the zoomed version of the EPID images, make them this size of a square in mm.-->
     <EPIDZoomSize_mm>60.0</EPIDZoomSize_mm>
 </AQAConfig>

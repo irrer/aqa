@@ -78,7 +78,7 @@ class TestC3ChartHistory extends FlatSpec with Matchers {
 
     val tolerance = new C3Chart.Tolerance((yDiff * .2) + yMin, (yDiff * .8) + yMin)
 
-    val chart = new C3ChartHistory(Some("TestChart"), maintenanceRecordList, Some(600), Some(200), xLabel, xDateList, Some(baselineSpec), Some(tolerance), yAxisLabels, yDataLabel, yValues, yValues.head.size / 2, yFormat, yColorList)
+    val chart = new C3ChartHistory(Some("TestChart"), maintenanceRecordList, Some(600), Some(200), xLabel, xDateList, Some(baselineSpec), Some(tolerance), None, yAxisLabels, yDataLabel, yValues, yValues.head.size / 2, yFormat, yColorList)
     //val chart = new C3ChartHistory(maintenanceRecordList, xAxisLabel: String, xDataLabel, xDateList, xFormat, None, yAxisLabels, yDataLabel, yValues, yFormat, yColorList)
 
     val sep = Seq.fill(60)("-").reduce(_ + _)

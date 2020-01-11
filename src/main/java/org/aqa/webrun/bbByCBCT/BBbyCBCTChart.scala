@@ -65,7 +65,8 @@ class BBbyCBCTChart(outputPK: Long) extends Logging {
       None, // height
       "Date", history.map(h => h.date),
       None, // BaselineSpec
-      None, // minMax
+      None, // tolerance
+      None, // yRange
       Seq("Total offset", "X offset", "Y offset", "Z offset"), units, dataToBeGraphed, index, ".3r", colorList)
   }
 
