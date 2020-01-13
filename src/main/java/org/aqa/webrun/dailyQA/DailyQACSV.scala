@@ -9,6 +9,9 @@ import org.restlet.data.MediaType
 import org.restlet.data.Status
 import org.aqa.web.WebUtil
 import org.aqa.AnonymizeUtil
+import org.aqa.db.Input
+import org.aqa.db.DicomAnonymous
+import com.pixelmed.dicom.TagFromName
 
 object DailyQACSV {
 
@@ -24,13 +27,32 @@ object DailyQACSV {
       }
     }
 
+    val institutionPK = WebUtil.getUser(response.getRequest).get.institutionPK
+    val patIdMap = DicomAnonymous.getAttributesByTag(institutionPK, Seq(TagFromName.PatientID)).
+      map(da => (da.value, AnonymizeUtil.decryptWithNonce(institutionPK, da.value_real))).toMap
+
     /**
      * Build map of machine id --> real id.
      */
     val machineNameSet: Map[String, String] = {
-      val institutionPK = WebUtil.getUser(response.getRequest).get.institutionPK
       val machList = dataSetList.groupBy(_.machine.machinePK.get).map(group => group._2.head.machine)
       machList.map(mach => (mach.id, AnonymizeUtil.decryptWithNonce(institutionPK, mach.id_real.get))).toMap
+    }
+
+    def patientIdOf(dataSet: BBbyEPIDComposite.DailyDataSet): String = {
+      val unknown = "unknown"
+      val patId = try {
+        val anonPatId = Input.get(dataSet.output.inputPK).get.patientId.get
+        val p = patIdMap.get(anonPatId) match {
+          case Some(text) => text
+          case _ => unknown
+        }
+        p
+      } catch {
+        case t: Throwable => unknown
+      }
+
+      patId
     }
 
     val urlPrefix = response.getRequest.getHostRef
@@ -41,6 +63,7 @@ object DailyQACSV {
       new Col("Machine", (dataSet) => machineNameSet(dataSet.machine.id)),
       new Col("Acquired", (dataSet) => Util.standardDateFormat.format(dataSet.output.dataDate.get)),
       new Col("Analysis", (dataSet) => Util.standardDateFormat.format(dataSet.output.startDate)),
+      new Col("PatientID", (dataSet) => patientIdOf(dataSet)),
       new Col("Status", (dataSet) => dataSet.output.status),
 
       new Col("X CBCT - PLAN mm", (dataSet) => (dataSet.cbct.cbctX_mm - dataSet.cbct.rtplanX_mm).toString),
