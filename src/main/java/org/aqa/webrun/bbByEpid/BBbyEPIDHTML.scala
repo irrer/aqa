@@ -286,7 +286,7 @@ object BBbyEPIDHTML {
           val file = new File(extendedData.output.dir, htmlRtplanFileName)
           Util.writeFile(file, text)
 
-          <a href={ htmlRtplanFileName } title={ "View / download RTPLAN DICOM" }>View DICOM</a>
+          <a href={ htmlRtplanFileName } title={ "View / download RTPLAN DICOM" }>View RTPLAN DICOM</a>
         }
       }
 

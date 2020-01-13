@@ -576,6 +576,7 @@ class WebServer extends Application with Logging {
    * Initialize and start the service.
    */
   def init: Unit = {
+    logger.info("Beginning web service initialization.")
     addProtocol
     component.getDefaultHost.attach(this)
     component.start

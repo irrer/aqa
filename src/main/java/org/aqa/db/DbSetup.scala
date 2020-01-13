@@ -128,6 +128,7 @@ object DbSetup extends Logging {
    * Initialize database by creating tables in dependency order.
    */
   lazy val init: Boolean = {
+    logger.info("Initializing connection to database")
     val valid = Config.validate // force configuration to be read
 
     def setIfDefined(key: String, value: Option[String]): Unit = {
@@ -146,6 +147,7 @@ object DbSetup extends Logging {
 
     tableQueryList.map(q => Db.createTableIfNonexistent(q.asInstanceOf[TableQuery[Table[_]]]))
     ensureAdminUser
+    logger.info("Done initializing connection to database")
     true
   }
 
@@ -157,8 +159,8 @@ object DbSetup extends Logging {
    *  This test might leave garbage in the database.  Do not use it.  Need to compare schema instead.
    */
   def smokeTest: Boolean = {
-
     try {
+      logger.info("Starting database smoke test")
       init
 
       val timestamp = new Timestamp(System.currentTimeMillis)
@@ -174,6 +176,7 @@ object DbSetup extends Logging {
       tableQueryList.map(q => readOne(q.asInstanceOf[TableQuery[Table[_]]]))
       logger.info("Database smoke test completed without error")
 
+      logger.info("Finished database smoke test")
       true
 
     } catch {

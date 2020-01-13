@@ -18,6 +18,7 @@ import com.pixelmed.dicom.TagFromName
 import com.pixelmed.display.ConsumerFormatImageMaker
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.db.DicomSeries
 
 object BBbyCBCTHTML {
 
@@ -212,10 +213,54 @@ object BBbyCBCTHTML {
       Util.writeFile(file, text)
 
       val reference = {
-        <a href={ cbctDirName + "/" + cbctMainFileName }>View Dicom</a>
+        <a href={ cbctDirName + "/" + cbctMainFileName }>CBCT Dicom</a>
       }
 
       reference
+    }
+
+    def planReference: Elem = {
+
+      val planSop = Util.sopOfAl(runReq.rtplan)
+
+      val dicomSeries = DicomSeries.getBySopInstanceUID(planSop)
+      if (dicomSeries.isEmpty) {
+        <div>Could not find referenced plan with UID { planSop }</div>
+      } else {
+        val rtplanAl = dicomSeries.head.attributeListList.head
+        val dicomFile = new File(extendedData.output.dir, "rtplan.dcm")
+        DicomUtil.writeAttributeListToFile(rtplanAl, dicomFile, "AQA")
+        val htmlRtplanFileName = "rtplan.html"
+
+        val content = {
+          <div>
+            <div class="row">
+              <div class="col-md-3 col-md-offset-1">
+                <h2>RTPLAN</h2>
+              </div>
+              <div class="col-md-2">
+                <h2> </h2><a href={ mainReportFileName } title="Return to main CBCT report">Main Report</a>
+              </div>
+              <div class="col-md-2">
+                <h2> </h2><a href={ dicomFile.getName } title="Download anonymized DICOM">Download DICOM</a>
+              </div>
+            </div>
+            <div class="row">
+              <pre>
+                { WebUtil.nl + DicomUtil.attributeListToString(rtplanAl) }
+              </pre>
+              { WebUtil.nl }
+              <p> </p>
+            </div>
+          </div>
+        }
+
+        val text = WebUtil.wrapBody(wrap(content), "RTPLAN for CBCT", None, true, None)
+        val file = new File(extendedData.output.dir, htmlRtplanFileName)
+        Util.writeFile(file, text)
+
+        <a href={ htmlRtplanFileName } title={ "View / download RTPLAN DICOM" }>RTPLAN DICOM</a>
+      }
     }
 
     val chart = new BBbyCBCTChart(extendedData.output.outputPK.get)
@@ -255,6 +300,9 @@ object BBbyCBCTHTML {
           { dataCol("Z", "Plan Z position - BB Z position in mm", (bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm), 1) }
           <div title="View and download DICOM images and metadata" class="col-md-1">
             <h3> </h3>{ makeCbctSlices }
+          </div>
+          <div title="View and download DICOM RTOLAN" class="col-md-1">
+            <h3> </h3>{ planReference }
           </div>
         </div>
       }

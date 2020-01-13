@@ -6,6 +6,7 @@ import org.aqa.run.Run
 import edu.umro.ScalaUtil.PeriodicRestart
 import java.io.File
 import java.util.Date
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Main service entry point.  Start up major portions of
@@ -28,7 +29,8 @@ object AQA extends Logging {
         new WebServer
         new PeriodicRestart(Config.RestartTime)
         logger.info("AQA service started")
-      }
+      } else
+        logger.error("Could not validate configuration")
     } catch {
       // Exceptions thrown to this level should not happen, and if they do it probably means that something
       // very unexpected has happened.

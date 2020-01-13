@@ -632,7 +632,11 @@ object Run extends Logging {
   /**
    * Look for any Output's that were in running state when the server was shut down and handle them.
    */
-  def handleRunningProcedureList = Output.listWithStatus(ProcedureStatus.running).map(or => handleRunning(or._1, or._2))
+  def handleRunningProcedureList: Unit = {
+    logger.info("Starting to handle previously running procedures.")
+    Output.listWithStatus(ProcedureStatus.running).map(or => handleRunning(or._1, or._2))
+    logger.info("Done handling previously running procedures.")
+  }
 
   def main(args: Array[String]): Unit = {
 
