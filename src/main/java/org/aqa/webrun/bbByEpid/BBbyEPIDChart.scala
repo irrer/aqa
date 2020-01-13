@@ -59,7 +59,26 @@ class BBbyEPIDChart(outputPK: Long) extends Logging {
       new Color(137, 187, 104))
 
     val tolerance = new C3Chart.Tolerance(-Config.BBbyEPIDChartTolerance_mm, Config.BBbyEPIDChartTolerance_mm)
-    val yRange = new C3Chart.YRange(-Config.BBbyEPIDChartYRange_mm, Config.BBbyEPIDChartYRange_mm)
+    val yRange = {
+      val allPoints = dataToBeGraphed.flatten
+      val minPoint = allPoints.min
+      val maxPoint = allPoints.max
+      val lo = {
+        0 match {
+          case _ if (minPoint < (-Config.BBbyEPIDChartYRange_mm)) => -Config.BBbyEPIDChartYRange_mm
+          case _ if (minPoint > tolerance.min) => tolerance.min * 1.5
+          case _ => minPoint - 0.1
+        }
+      }
+      val hi = {
+        0 match {
+          case _ if (maxPoint > Config.BBbyEPIDChartYRange_mm) => Config.BBbyEPIDChartYRange_mm
+          case _ if (maxPoint < tolerance.max) => tolerance.max * 1.5
+          case _ => maxPoint + 0.1
+        }
+      }
+      new C3Chart.YRange(lo, hi)
+    }
 
     new C3ChartHistory(
       Some(chartId),

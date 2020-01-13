@@ -802,7 +802,7 @@ object Config extends Logging {
   val EPIDZoomSize_mm = logMainText("EPIDZoomSize_mm", "90.0").toDouble
   val BBbyEPIDHistoryRange = logMainText("BBbyEPIDHistoryRange", "25").toInt
   val BBbyEPIDChartTolerance_mm = logMainText("BBbyEPIDChartTolerance_mm", "1.0").toDouble.abs
-  val BBbyEPIDChartYRange_mm = logMainText("BBbyEPIDChartYRange_mm", "1.5").toDouble.abs
+  val BBbyEPIDChartYRange_mm = logMainText("BBbyEPIDChartYRange_mm", "3.0").toDouble.abs
 
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true
