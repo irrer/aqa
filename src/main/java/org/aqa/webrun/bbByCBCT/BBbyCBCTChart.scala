@@ -65,8 +65,8 @@ class BBbyCBCTChart(outputPK: Long) extends Logging {
       None, // height
       "Date", history.map(h => h.date),
       None, // BaselineSpec
-      None, // tolerance
-      None, // yRange
+      Some(new C3Chart.Tolerance(-Config.BBbyCBCTChartTolerance_mm, Config.BBbyCBCTChartTolerance_mm)), // tolerance
+      Some(new C3Chart.YRange(-Config.BBbyCBCTChartYRange_mm, Config.BBbyCBCTChartYRange_mm)), // yRange
       Seq("Total offset", "X offset", "Y offset", "Z offset"), units, dataToBeGraphed, index, ".3r", colorList)
   }
 

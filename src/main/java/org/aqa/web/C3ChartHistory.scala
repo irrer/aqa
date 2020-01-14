@@ -77,15 +77,24 @@ class C3ChartHistory(
 
   private val maintDateList = dateColumn("maintDateList", maintList.map(maint => Seq(maint.creationTime, maint.creationTime)).flatten)
 
-  private val allY = {
-    val all = yValues.flatten
-    if (tolerance.isDefined)
-      all ++ Seq(tolerance.get.min, tolerance.get.max)
-    else all
-  }
+  val all = yValues.flatten
 
-  private val minY = if (yRange.isDefined) yRange.get.min else allY.min
-  private val maxY = if (yRange.isDefined) yRange.get.max else allY.max
+  val minY = all.min
+  val maxY = all.max
+
+  val yRangeY = {
+    val minYt = if (tolerance.isDefined) Math.min(minY, tolerance.get.min) else minY
+    val maxYt = if (tolerance.isDefined) Math.max(maxY, tolerance.get.max) else maxY
+    (tolerance.isDefined, yRange.isDefined) match {
+      case (_, false) => new C3Chart.YRange(minYt, maxYt)
+      case (false, true) => new C3Chart.YRange(Math.max(minYt, yRange.get.min), Math.min(maxYt, yRange.get.max))
+      case (true, true) => {
+        val lo = if (minYt < yRange.get.min) yRange.get.min else minYt
+        val hi = if (maxYt > yRange.get.max) yRange.get.max else maxYt
+        new C3Chart.YRange(lo, hi)
+      }
+    }
+  }
 
   private val maintValueList = column("MaintenanceRecord", Seq.fill(maintList.size)(Seq(minY, maxY)).flatten)
   private val maintSummaryList = textColumn(maintList.map(maint => maint.summary))
@@ -202,7 +211,7 @@ var """ + chartIdTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, hei
          tick: { format: function(dt) { return [ formatDate(dt) , formatTime(dt) ]; } }
        },
        y: {
-         """ + C3Chart.rangeText(minY, maxY) + """         label: '""" + yDataLabel + """',
+         """ + C3Chart.rangeText(yRangeY.min, yRangeY.max) + """         label: '""" + yDataLabel + """',
          tick: {
            format: d3.format('""" + yFormat + """')
          }

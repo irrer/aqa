@@ -1036,4 +1036,12 @@ object Util extends Logging {
     val after = runtime.freeMemory
     logger.info("Free memory after garbage collection hint  : " + after + "    amount freed: " + (after - before))
   }
+  
+  /**
+   * Convert a gantry coordinate to a patient coordinate.  This does not compensate for table yaw, pitch, or roll.
+   */
+  def gantryCoordinateToPatientCoordinate(point: Point3d, gantryAngle: Double) : Point3d = {
+    
+    ???
+  }
 }

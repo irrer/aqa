@@ -552,10 +552,19 @@ Note that when building a package for release, the Maven build process uses the 
     they exist) the current point being plotted. -->
     <BBbyEPIDHistoryRange>25</BBbyEPIDHistoryRange>
    
+    <!-- Used for graphing CBCT BB history, a positive floating point indicating the range of values above and below
+    zero that indicate the tolerated limits. -->
+    <BBbyCBCTChartTolerance_mm>1.0</BBbyCBCTChartTolerance_mm>
+   
+    <!-- Used for graphing CBCT BB history, a positive floating point indicating the maximum range of values above and below
+    zero.  Sometimes a single value will be wildly out of range, and make the graph look flat, so this is the farthest that the graph
+    will be allowed to expand vertically.  If all of the values are normal, then the graph will have a range of BBbyCBCTChartTolerance_mm * 1.5 -->
+    <BBbyCBCTChartYRange_mm>3.0</BBbyCBCTChartYRange_mm>
+    
     <!-- Used for graphing EPID BB history, a positive floating point indicating the range of values above and below
     zero that indicate the tolerated limits. -->
     <BBbyEPIDChartTolerance_mm>1.0</BBbyEPIDChartTolerance_mm>
-   
+      
     <!-- Used for graphing EPID BB history, a positive floating point indicating the maximum range of values above and below
     zero.  Sometimes a single value will be wildly out of range, and make the graph look flat, so this is the farthest that the graph
     will be allowed to expand vertically.  If all of the values are normal, then the graph will have a range of BBbyEPIDChartTolerance_mm * 1.5 -->
