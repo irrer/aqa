@@ -166,7 +166,7 @@ object Output extends Logging {
       else search
     }
 
-    val sorted = filtered.sortBy(_._1).take(maxSize)
+    val sorted = filtered.sortBy(_._1.desc).take(maxSize)
 
     val result = Db.run(sorted.result).map(a => new ExtendedValues(a._1, a._2, a._3._1, a._3._2, a._4, a._5, a._6, a._7, a._8, a._9))
     result
