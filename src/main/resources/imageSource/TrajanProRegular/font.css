@@ -1,0 +1,11 @@
+@font-face {
+	font-family: 'TrajanProRegular';
+	src: url('./TrajanProRegular.eot');
+	src: local('TrajanProRegular'), url('./TrajanProRegular.woff') format('woff'), url('./TrajanProRegular.ttf') format('truetype');
+}
+/* use this class to attach this font to any element i.e. <p class="fontsforweb_fontid_13972">Text with this font applied</p> */
+.fontsforweb_fontid_13972 {
+	font-family: 'TrajanProRegular' !important;
+}
+
+/* Font downloaded from FontsForWeb.com */
