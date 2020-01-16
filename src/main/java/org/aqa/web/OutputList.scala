@@ -138,7 +138,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   override val columnList = Seq(startTimeCol, inputFileCol, redoCol, procedureCol, machineCol, institutionCol, userCol, deleteCol)
 
-  val entriesPerPage = 1000
+  val entriesPerPage = 2000 // TODO should support pagination
 
   override def getData(valueMap: ValueMapT, response: Response) = {
 
