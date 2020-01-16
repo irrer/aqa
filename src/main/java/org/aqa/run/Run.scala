@@ -385,7 +385,7 @@ object Run extends Logging {
     }
 
     def renameUsingNio: Boolean = {
-      val retryLimitMs = 10 * 1000
+      val retryLimitMs = 2 * 1000
       val timeout = System.currentTimeMillis + retryLimitMs
 
       val oldPath = java.nio.file.Paths.get(oldFile.getAbsolutePath)
