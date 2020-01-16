@@ -169,7 +169,7 @@ object BBbyCBCTHTML {
         def alToHtml(al: AttributeList) = {
           <td>
             <a href={ fileNameOfHtml(al) } class="screenshot" title={ descriptionOf(al) } rel={ fileNameOfPng(al) }>
-              <img src={ fileNameOfPng(al) } height="64"/>
+              <img src={ fileNameOfPng(al) } style="margin-right: 1px; margin-bottom: 1px;" height="64"/>
             </a>
           </td>
         }
