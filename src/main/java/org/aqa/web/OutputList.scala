@@ -47,9 +47,27 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   val checkbox = new WebInputCheckbox("All Institutions", true, Some("Check to show output from all institutions, then click 'Refresh'"), 2, 0)
   val refresh = makeButton("Refresh", ButtonType.BtnPrimary)
 
+  private def getDoneHtml(valueMap: ValueMapT): Elem = {
+    val redoSet = getRedoSet(valueMap)
+    val response: Response = null // this never gets used
+    val existing = getData(valueMap, response).map(e => e.output_outputPK).toSet
+    val donePkSet = redoSet.diff(existing)
+    val doneText = redoSet.diff(existing).toSeq.sorted.mkString("   ")
+    <div>{ doneText }</div>
+  }
+
+  val todoList = new WebInputTextArea("To Do", 3, 0, "List of Output PK's to Redo")
+  val doneList = new WebPlainText("Done", true, 3, 0, getDoneHtml)
+  val redoAll = makeButton("Redo All", ButtonType.BtnDefault)
+
   override def htmlFieldList(valueMap: ValueMapT): List[WebRow] = {
-    val webRow = new WebRow(List(checkbox, refresh))
-    List(webRow);
+    val webRow = List(checkbox, refresh)
+    def redoRow = List(todoList, doneList, redoAll)
+
+    if (userIsWhitelisted(valueMap))
+      List(webRow, redoRow)
+    else
+      List(webRow)
   }
 
   private def humanReadableURL(url: String): String = {
@@ -138,14 +156,30 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   override val columnList = Seq(startTimeCol, inputFileCol, redoCol, procedureCol, machineCol, institutionCol, userCol, deleteCol)
 
-  val entriesPerPage = 2000 // TODO should support pagination
+  val entriesPerPage = 300 // TODO should support pagination
 
-  override def getData(valueMap: ValueMapT, response: Response) = {
+  /**
+   * Get the set of outputs that user wants to redo.  Return empty set if none.  This
+   * feature is only available to whitelisted users.
+   */
+  private def getRedoSet(valueMap: ValueMapT): Set[Long] = {
+    val isWhitelisted = userIsWhitelisted(valueMap)
+    val outPkSet = if (isWhitelisted && valueMap.get(todoList.label).isDefined && valueMap(todoList.label).trim.nonEmpty) {
+      // get all integers, distinct and sorted
+      valueMap(todoList.label).replaceAll("[^0-9]", " ").split(" ").toSeq.filter(t => t.nonEmpty).map(t => t.toLong).toSet
+    } else
+      Set[Long]()
+    outPkSet
+  }
+
+  override def getData(valueMap: ValueMapT, response: Response): Seq[Output.ExtendedValues] = {
+
+    val isWhitelisted = userIsWhitelisted(valueMap)
 
     val v = valueMap.get(checkbox.label)
     val all = v.isDefined && (v.get.equalsIgnoreCase("true") || v.get.equalsIgnoreCase("on"))
     val instPK = {
-      if (all || userIsWhitelisted(response)) None
+      if (all || isWhitelisted) None
       else {
         val userIdReal = valueMap(userIdRealTag)
         val user = CachedUser.get(valueMap(userIdRealTag)).get
@@ -153,7 +187,11 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
       }
     }
 
-    Output.extendedList(Set[Procedure](), Set[Machine](), instPK, entriesPerPage)
+    val redoSet = getRedoSet(valueMap)
+    if (redoSet.nonEmpty) {
+      Output.extendedList(redoSet)
+    } else
+      Output.extendedList(instPK, entriesPerPage)
   }
 
   override def getPK(extendedValues: Output.ExtendedValues): Long = extendedValues.output_outputPK
@@ -169,7 +207,6 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     def sameInstitution: Boolean = {
       val user = CachedUser.get(request).get
       val input = Input.get(output.inputPK).get
-      val j = Machine.get(input.machinePK.get)
       val mach = Machine.get(input.machinePK.get).get
       val dataInstitution = mach.institutionPK
       val requestorsInstitution = user.institutionPK
@@ -181,6 +218,11 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     val isAuth = userIsWhitelisted(request) || sameInstitution
     isAuth
   }
+
+  //  override def get(valueMap: ValueMapT, response: Response) = {
+  //    val form = new WebForm(listPath, List(new WebRow(titleRow(valueMap)) ++ htmlFieldList(valueMap) ++ new WebRow(tableRow(valueMap, response))))
+  //    form.setFormResponse(valueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
+  //  }
 
   /**
    * Tell the user that the redo is forbidden and why.  Also give them a redirect back to the list of results.
@@ -278,6 +320,26 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     }
   }
 
+  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+    val value = valueMap.get(button.label)
+    value.isDefined && value.get.toString.equals(button.label)
+  }
+
+  private def waitForAllProceduresComplete = {
+    // TODO
+  }
+
+  private def startRedoingAll(valueMap: ValueMapT, response: Response): Unit = OutputList.path.synchronized {
+    val outputPkList = getRedoSet(valueMap).toSeq.sorted
+    logger.info("Performing bulk redo on: " + outputPkList.mkString(" "))
+    outputPkList.map(outputPK => {
+      // redoOutput(outputPK, response) // TODO put back in
+      logger.info("Performing bulk redo member: " + outputPK)
+      waitForAllProceduresComplete
+    })
+
+  }
+
   override def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Int = {
     try {
       val delete = valueMap.get(OutputList.deleteTag)
@@ -292,7 +354,12 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
           redoOutput(redo.get.toLong, response)
           Filter.SKIP
         }
-        case _ => Filter.CONTINUE
+        case _ => {
+          if (buttonIs(valueMap, redoAll)) {
+            startRedoingAll(valueMap, response)
+          }
+          Filter.CONTINUE
+        }
       }
     } catch {
       case t: Throwable =>

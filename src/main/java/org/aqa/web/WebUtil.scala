@@ -519,11 +519,14 @@ object WebUtil extends Logging {
 
   implicit class WebRow(val colList: List[ToHtml]) extends ToHtml {
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
-      <div class="form-group">
-        <div class="row">
-          { colList.map(c => c.toHtml(valueMap, errorMap, response)) }
+      val elem = {
+        <div class="form-group">
+          <div class="row">
+            { colList.map(c => c.toHtml(valueMap, errorMap, response)) }
+          </div>
         </div>
-      </div>
+      }
+      elem
     }
   }
 
@@ -1126,7 +1129,8 @@ object WebUtil extends Logging {
         <textarea rows={ rowCount.toString }>{ if (value.isDefined) markLiteralValue(label) else "" }</textarea> % idNameClassAsAttr(label) % placeholderAsAttr(placeholder)
 
       val htmlAlias = ifAqaAliasAttr(html, aqaAlias)
-      wrapInput(label, true, htmlAlias, col, offset, errorMap)
+      val elem = wrapInput(label, true, htmlAlias, col, offset, errorMap)
+      elem
     }
   }
 
@@ -1303,6 +1307,19 @@ object WebUtil extends Logging {
    */
   def userIsWhitelisted(userId: String): Boolean = {
     Config.UserWhiteList.map(u => u.toLowerCase.trim).contains(userId.toLowerCase.trim)
+  }
+
+  /**
+   * Given a value map, determine if the user is whitelisted.
+   */
+  def userIsWhitelisted(valueMap: ValueMapT): Boolean = {
+    getUser(valueMap) match {
+      case Some(user) => {
+        user.id_real.isDefined &&
+          userIsWhitelisted(AnonymizeUtil.decryptWithNonce(user.institutionPK, user.id_real.get))
+      }
+      case _ => false
+    }
   }
 
   /**

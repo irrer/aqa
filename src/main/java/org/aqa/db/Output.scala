@@ -150,7 +150,7 @@ object Output extends Logging {
   /**
    * Get an extended list of all outputs.
    */
-  def extendedList(procedure: Set[Procedure], machine: Set[Machine], instPK: Option[Long], maxSize: Int): Seq[ExtendedValues] = {
+  def extendedList(instPK: Option[Long], maxSize: Int): Seq[ExtendedValues] = {
 
     val search = for {
       output <- Output.query.map(o => (o.outputPK, o.startDate, o.inputPK, o.procedurePK, o.userPK))
@@ -167,6 +167,26 @@ object Output extends Logging {
     }
 
     val sorted = filtered.sortBy(_._1.desc).take(maxSize)
+
+    val result = Db.run(sorted.result).map(a => new ExtendedValues(a._1, a._2, a._3._1, a._3._2, a._4, a._5, a._6, a._7, a._8, a._9))
+    result
+  }
+
+  /**
+   * Get an extended list of all outputs.
+   */
+  def extendedList(outputPkSet: Set[Long]): Seq[ExtendedValues] = {
+
+    val search = for {
+      output <- Output.query.filter(o => o.outputPK.inSet(outputPkSet)).map(o => (o.outputPK, o.startDate, o.inputPK, o.procedurePK, o.userPK))
+      input <- Input.query.filter(i => i.inputPK === output._3).map(i => (i.dataDate, i.directory, i.machinePK))
+      mach <- Machine.query.filter(m => m.machinePK === input._3).map(m => (m.id, m.institutionPK))
+      inst <- Institution.query.filter(i => i.institutionPK === mach._2).map(i => (i.institutionPK, i.name))
+      proc <- Procedure.query.filter(p => p.procedurePK === output._4).map(p => (p.name, p.version))
+      user <- User.query.filter(u => u.userPK === output._5).map(u => u.id)
+    } yield ((input._1, input._2, inst, mach._1, output._1, output._2, proc._1, proc._2, user))
+
+    val sorted = search.sortBy(_._1.desc)
 
     val result = Db.run(sorted.result).map(a => new ExtendedValues(a._1, a._2, a._3._1, a._3._2, a._4, a._5, a._6, a._7, a._8, a._9))
     result

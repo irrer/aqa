@@ -152,25 +152,28 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
   /**
    * Field row that contains main table.
    */
-  private def tableRow(valueMap: ValueMapT, response: Response): List[WebRow] = {
-    val col = new WebPlainText("tableContent", false, 12, 0, (valueMap) => tableElem(valueMap, response))
-    List(new WebRow(List(col)))
+  protected def tableRow(valueMap: ValueMapT, response: Response) = {
+    val tableContent = new WebPlainText("tableContent", false, 12, 0, (valueMap) => tableElem(valueMap, response))
+    val webRow: WebRow = List(tableContent)
+    List(webRow)
   }
 
   /**
    * Field row that shows title and optionally 'can create' link.
    */
-  private def titleRow(valueMap: ValueMapT): List[WebRow] = {
+  protected def titleRow(valueMap: ValueMapT): List[WebRow] = {
     val title = Some(new WebPlainText("pageTitle", false, 9, 0, (_) => { <h1>{ pageTitle }</h1> }))
     val canCr = if (canCreate) Some(new WebPlainText("canCreate", false, 3, 0, createNew _)) else None
-    List(new WebRow(List(title, canCr).flatten))
+    val webRow = List(title, canCr).flatten.map(c => c.asInstanceOf[ToHtml]).toList
+    List(webRow)
   }
 
   /**
    * Evaluate form fields, retrieve and filter list entries, and format into HTML.
    */
   protected def get(valueMap: ValueMapT, response: Response) = {
-    val form = new WebForm(listPath, List(new WebRow(titleRow(valueMap)) ++ htmlFieldList(valueMap) ++ new WebRow(tableRow(valueMap, response))))
+    val webRowList: List[WebRow] = titleRow(valueMap) ++ htmlFieldList(valueMap) ++ tableRow(valueMap, response)
+    val form = new WebForm(listPath, webRowList)
     form.setFormResponse(valueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
   }
 
