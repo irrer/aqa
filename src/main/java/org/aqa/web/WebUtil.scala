@@ -1520,13 +1520,18 @@ object WebUtil extends Logging {
   /**
    * Wait for the given future to complete if specified in the valueMap.
    */
-  def awaitIfRequested[T](future: Future[T], valueMap: ValueMapT, procedurePK: Long) = {
-    if (isAwait(valueMap)) {
+  def awaitIfRequested[T](future: Future[T], await: Boolean, procedurePK: Long): Unit = {
+    if (await) {
       val procedureTimeout = (Procedure.get(procedurePK).get.timeout * 60 * 1000).round.toLong
       val dur = new FiniteDuration(procedureTimeout, TimeUnit.MILLISECONDS)
       Await.result(future, dur)
     }
   }
+
+  /**
+   * Wait for the given future to complete if specified in the valueMap.
+   */
+  def awaitIfRequested[T](future: Future[T], valueMap: ValueMapT, procedurePK: Long): Unit = awaitIfRequested(future, isAwait(valueMap), procedurePK)
 
 }
 

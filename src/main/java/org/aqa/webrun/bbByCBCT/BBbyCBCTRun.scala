@@ -86,7 +86,7 @@ object BBbyCBCTRun extends Logging {
     same
   }
 
-  private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output) = {
+  private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output, await: Boolean = false, isAuto: Boolean = false) = {
 
     Output.ensureInputAndOutputFilesExist(outputOrig)
     val sessionId = Session.makeUniqueId
@@ -144,7 +144,7 @@ object BBbyCBCTRun extends Logging {
     val input = inputOutput._1
     val output = inputOutput._2
 
-    Future {
+    val future = Future {
       val extendedData = ExtendedData.get(output)
       DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, Seq(runReq.rtplan))
       DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, runReq.cbct)
@@ -169,7 +169,8 @@ object BBbyCBCTRun extends Logging {
       Input.delete(inputOrig.inputPK.get)
     }
 
-    ViewOutput.redirectToViewRunProgress(response, emptyValueMap, output.outputPK.get)
+    awaitIfRequested(future, await, inputOutput._2.procedurePK)
+    ViewOutput.redirectToViewRunProgress(response, isAuto, output.outputPK.get)
   }
 
   /**
@@ -194,7 +195,7 @@ object BBbyCBCTRun extends Logging {
   /**
    * Given an output, redo the analysis.
    */
-  def redo(outputPK: Long, request: Request, response: Response) = {
+  def redo(outputPK: Long, request: Request, response: Response, await: Boolean = false, isAuto: Boolean = false) = {
     try {
       Output.get(outputPK) match {
         case None => {
@@ -212,7 +213,7 @@ object BBbyCBCTRun extends Logging {
               val msg = "Redo not permitted because user is from a different institution."
               forbidRedo(response, msg, outputOrig.outputPK)
             }
-            case Some(inputOrig) => BBbyCBCTRun.processRedoRequest(request, response, inputOrig, outputOrig)
+            case Some(inputOrig) => BBbyCBCTRun.processRedoRequest(request, response, inputOrig, outputOrig, await, isAuto)
           }
         }
       }
@@ -495,8 +496,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
         }
 
         Util.garbageCollect
-        awaitIfRequested(future, valueMap, inputOutput._2.procedurePK)        
-        
+        awaitIfRequested(future, valueMap, inputOutput._2.procedurePK)
         ViewOutput.redirectToViewRunProgress(response, valueMap, output.outputPK.get)
       }
     }

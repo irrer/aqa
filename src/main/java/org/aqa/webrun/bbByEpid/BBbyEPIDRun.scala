@@ -100,7 +100,7 @@ object BBbyEPIDRun extends Logging {
     same
   }
 
-  private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output) = {
+  private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output, await: Boolean = false, isAuto: Boolean = false) = {
 
     Output.ensureInputAndOutputFilesExist(outputOrig)
     val sessionId = Session.makeUniqueId
@@ -134,7 +134,7 @@ object BBbyEPIDRun extends Logging {
     val input = inputOutput._1
     val output = inputOutput._2
 
-    Future {
+    val future = Future {
       val extendedData = ExtendedData.get(output)
       val runReqFinal = runReq.reDir(input.dir)
 
@@ -154,7 +154,8 @@ object BBbyEPIDRun extends Logging {
       Input.delete(inputOrig.inputPK.get)
     }
 
-    ViewOutput.redirectToViewRunProgress(response, emptyValueMap, output.outputPK.get)
+    awaitIfRequested(future, await, inputOutput._2.procedurePK)
+    ViewOutput.redirectToViewRunProgress(response, isAuto, output.outputPK.get)
   }
 
   /**
@@ -179,7 +180,7 @@ object BBbyEPIDRun extends Logging {
   /**
    * Given an output, redo the analysis.
    */
-  def redo(outputPK: Long, request: Request, response: Response) = {
+  def redo(outputPK: Long, request: Request, response: Response, await: Boolean = false, isAuto: Boolean = false) = {
     try {
       Output.get(outputPK) match {
         case None => {
@@ -197,7 +198,7 @@ object BBbyEPIDRun extends Logging {
               val msg = "Redo not permitted because user is from a different institution."
               forbidRedo(response, msg, outputOrig.outputPK)
             }
-            case Some(inputOrig) => BBbyEPIDRun.processRedoRequest(request, response, inputOrig, outputOrig)
+            case Some(inputOrig) => BBbyEPIDRun.processRedoRequest(request, response, inputOrig, outputOrig, await, isAuto)
           }
         }
       }

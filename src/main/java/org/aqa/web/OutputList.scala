@@ -20,6 +20,7 @@ import org.aqa.webrun.bbByCBCT.BBbyCBCTRun
 import org.aqa.webrun.bbByEpid.BBbyEPIDRun
 import org.restlet.routing.Filter
 import org.aqa.Util
+import org.aqa.AnonymizeUtil
 
 /**
  * List the outputs to let users re-visit results.
@@ -301,7 +302,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
       showNotAuthorizedToDelete(response, outputPK)
   }
 
-  private def redoOutput(outputPK: Long, response: Response): Unit = {
+  private def redoOutput(outputPK: Long, response: Response, await: Boolean = false, isAuto: Boolean = false): Unit = {
     Output.get(outputPK) match {
       case None => ;
       case Some(output) => {
@@ -311,7 +312,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
           Phase2.redo(outputPK, response.getRequest, response)
         }
         if (procedure.name.toLowerCase.contains("cbct")) {
-          BBbyCBCTRun.redo(outputPK, response.getRequest, response)
+          BBbyCBCTRun.redo(outputPK, response.getRequest, response, await, isAuto)
         }
         if (procedure.name.toLowerCase.contains("epid")) {
           BBbyEPIDRun.redo(outputPK, response.getRequest, response)
@@ -325,17 +326,26 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     value.isDefined && value.get.toString.equals(button.label)
   }
 
-  private def waitForAllProceduresComplete = {
-    // TODO
-  }
-
-  private def startRedoingAll(valueMap: ValueMapT, response: Response): Unit = OutputList.path.synchronized {
+  private def startBulkRedo(valueMap: ValueMapT, response: Response): Unit = OutputList.path.synchronized {
     val outputPkList = getRedoSet(valueMap).toSeq.sorted
     logger.info("Performing bulk redo on: " + outputPkList.mkString(" "))
     outputPkList.map(outputPK => {
-      // redoOutput(outputPK, response) // TODO put back in
+
+      val output = Output.get(outputPK).get
+      val machine = Machine.get(output.machinePK.get).get
+      val institutionPK = machine.institutionPK
+      val user = User.getOrMakeInstitutionAdminUser(institutionPK)
+      val userId = AnonymizeUtil.decryptWithNonce(institutionPK, user.id_real.get)
+      val request = response.getRequest
+      val cr = request.getChallengeResponse
+      cr.setSecret("secret password")
+      cr.setIdentifier(userId)
+      request.setChallengeResponse(cr)
+      response.setRequest(request)
+      val effectiveUser = WebUtil.getUser(request)
+
+      redoOutput(outputPK, response, true, true) // TODO put back in
       logger.info("Performing bulk redo member: " + outputPK)
-      waitForAllProceduresComplete
     })
 
   }
@@ -356,7 +366,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
         }
         case _ => {
           if (buttonIs(valueMap, redoAll)) {
-            startRedoingAll(valueMap, response)
+            startBulkRedo(valueMap, response)
           }
           Filter.CONTINUE
         }

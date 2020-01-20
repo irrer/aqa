@@ -172,8 +172,8 @@ object ViewOutput {
   /**
    * Redirect the user to the progress of running the procedure.
    */
-  def redirectToViewRunProgress(response: Response, valueMap: ValueMapT, outputPK: Long) = {
-    if (isAutoUpload(valueMap)) {
+  def redirectToViewRunProgress(response: Response, isAuto: Boolean, outputPK: Long): Unit = {
+    if (isAuto) {
       // set the response to indicate that processing has been successfully started
       response.setStatus(Status.SUCCESS_OK)
       response.setEntity("", MediaType.TEXT_PLAIN)
@@ -182,6 +182,11 @@ object ViewOutput {
       response.redirectSeeOther(ViewOutput.path + suffix)
     }
   }
+
+  /**
+   * Redirect the user to the progress of running the procedure.
+   */
+  def redirectToViewRunProgress(response: Response, valueMap: ValueMapT, outputPK: Long): Unit = redirectToViewRunProgress(response, isAutoUpload(valueMap), outputPK)
 
 }
 

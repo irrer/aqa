@@ -54,9 +54,18 @@ case class User(
       "  role: " + role +
       "  useAck: " + (if (termsOfUseAcknowledgment.isDefined) termsOfUseAcknowledgment.get else "None")
   }
+
+  /**
+   * Determine if this user is an admin for their respective institution
+   */
+  def isAdmin: Boolean = {
+    id_real.isDefined && AnonymizeUtil.decryptWithNonce(institutionPK, id_real.get).toLowerCase.contains(User.adminIndicator)
+  }
 }
 
 object User extends Logging {
+
+  val adminIndicator = "admin"
 
   class UserTable(tag: Tag) extends Table[User](tag, "user") {
 
@@ -187,12 +196,54 @@ object User extends Logging {
     Db.run(action.result)
   }
 
+  /**
+   * Get the admin for the given institution if there is one.
+   */
+  def getInstitutionAdminUser(institutionPK: Long): Option[User] = {
+    listUsersFromInstitution(institutionPK).filter(_.isAdmin).headOption
+  }
+
+  /**
+   * Make (and insert) admin user for given institution if there is not one already.
+   *
+   * If there is already a user in the institution, then their email is used, otherwise a fake one is made with "@unknown.edu".
+   *
+   * A random password is created.
+   *
+   * The user is created as an admin.
+   */
+  def getOrMakeInstitutionAdminUser(institutionPK: Long): User = {
+    getInstitutionAdminUser(institutionPK) match {
+      case Some(user) => user // there already is one.
+      case _ => {
+        def decrypt(text: String) = AnonymizeUtil.decryptWithNonce(institutionPK, text)
+        def encrypt(text: String) = AnonymizeUtil.encryptWithNonce(institutionPK, text)
+        val institutionName = decrypt(Institution.get(institutionPK).get.name_real.get)
+        val adminId = adminIndicator + (institutionName.trim.replaceAll("[^0-9a-zA-Z]", "_")) // make an id
+        val email = {
+          listUsersFromInstitution(institutionPK).headOption match {
+            case Some(u) => AnonymizeUtil.decryptWithNonce(institutionPK, u.email_real)
+            case _ => adminId + "@unknown.edu"
+          }
+        }
+
+        val passwordText = Crypto.makeRandomCipherKey.take(32)
+
+        insertNewUser(institutionPK, adminId, adminId, email, passwordText, UserRole.admin.toString)
+      }
+    }
+  }
+
   def main(args: Array[String]): Unit = {
     val valid = Config.validate
     DbSetup.init
-    println("======== usingInstitution(1): " + numberOfUsersInInstitution(1))
-    println("======== usingInstitution(5): " + numberOfUsersInInstitution(5))
-    println("======== user: " + get(5))
-    println("======== user delete: " + delete(5))
+    //    println("======== usingInstitution(1): " + numberOfUsersInInstitution(1))
+    //    println("======== usingInstitution(5): " + numberOfUsersInInstitution(5))
+    //    println("======== user: " + get(5))
+    //    println("======== user delete: " + delete(5))
+    if (true) {
+      val adminUser = getOrMakeInstitutionAdminUser(1)
+      println("admin user: " + adminUser)
+    }
   }
 }
