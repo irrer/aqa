@@ -166,7 +166,7 @@ object Output extends Logging {
       else search
     }
 
-    val sorted = filtered.sortBy(_._1.desc).take(maxSize)
+    val sorted = filtered.sortBy(_._6.desc).take(maxSize)
 
     val result = Db.run(sorted.result).map(a => new ExtendedValues(a._1, a._2, a._3._1, a._3._2, a._4, a._5, a._6, a._7, a._8, a._9))
     result
@@ -186,7 +186,7 @@ object Output extends Logging {
       user <- User.query.filter(u => u.userPK === output._5).map(u => u.id)
     } yield ((input._1, input._2, inst, mach._1, output._1, output._2, proc._1, proc._2, user))
 
-    val sorted = search.sortBy(_._1.desc)
+    val sorted = search.sortBy(_._6.desc)
 
     val result = Db.run(sorted.result).map(a => new ExtendedValues(a._1, a._2, a._3._1, a._3._2, a._4, a._5, a._6, a._7, a._8, a._9))
     result

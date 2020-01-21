@@ -474,16 +474,17 @@ object Run extends Logging {
     outputDir.mkdirs // create output directory
 
     val output = {
+      val now = new Timestamp(startDate.getTime)
       val tempOutput = new Output(
         outputPK = None,
         inputPK = input.inputPK.get,
         directory = WebServer.fileToResultsPath(outputDir),
         procedurePK = procedure.procedurePK.get,
         userPK,
-        new Timestamp(startDate.getTime),
+        now,
         finishDate = None,
         dataDate = acq,
-        analysisDate = None,
+        analysisDate = Some(now),
         machinePK = machine.machinePK,
         status = ProcedureStatus.running.toString,
         dataValidity = DataValidity.valid.toString)

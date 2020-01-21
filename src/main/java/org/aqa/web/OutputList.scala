@@ -75,8 +75,8 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     new WebPlainText("Bulk Redo Instructions", false, 6, 0, (ValueMapT) => elem)
   }
 
-  val todoList = new WebInputTextArea("To Do", 3, 0, "List of Output PK's to Redo")
-  val doneList = new WebPlainText("Done", true, 3, 0, getDoneHtml)
+  val todoList = new WebInputTextArea("To Do", 5, 0, "List of Output PK's to Redo")
+  val doneList = new WebPlainText("Done", true, 5, 0, getDoneHtml)
   val redoAll = makeButton("Redo All", ButtonType.BtnDefault)
 
   override def htmlFieldList(valueMap: ValueMapT): List[WebRow] = {
@@ -176,7 +176,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   override val columnList = Seq(startTimeCol, inputFileCol, redoCol, procedureCol, machineCol, institutionCol, userCol, deleteCol)
 
-  val entriesPerPage = 4000 // TODO should support pagination
+  val entriesPerPage = 400 // TODO should support pagination
 
   /**
    * Get the set of outputs that user wants to redo.  Return empty set if none.  This
@@ -348,29 +348,31 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   private def startBulkRedo(valueMap: ValueMapT, response: Response): Unit = OutputList.path.synchronized {
     val outputPkList = getRedoSet(valueMap).toSeq.sorted
     logger.info("Performing bulk redo on: " + outputPkList.mkString(" "))
-    outputPkList.map(outputPK => {
 
-      val output = Output.get(outputPK).get
-      val machine = Machine.get(output.machinePK.get).get
-      val institutionPK = machine.institutionPK
-      val user = User.getOrMakeInstitutionAdminUser(institutionPK)
-      val userId = AnonymizeUtil.decryptWithNonce(institutionPK, user.id_real.get)
-      val request = response.getRequest
-      val cr = request.getChallengeResponse
-      cr.setSecret("secret password")
-      cr.setIdentifier(userId)
-      request.setChallengeResponse(cr)
-      val u1 = getUser(request) // TODO rm
-      response.setRequest(request)
-      val effectiveUser = WebUtil.getUser(request)
+    def redoOne(outputPK: Long) = {
+      try {
+        val output = Output.get(outputPK).get
+        val machine = Machine.get(output.machinePK.get).get
+        val institutionPK = machine.institutionPK
+        val user = User.getOrMakeInstitutionAdminUser(institutionPK)
+        val userId = AnonymizeUtil.decryptWithNonce(institutionPK, user.id_real.get)
+        val request = response.getRequest
+        val cr = request.getChallengeResponse
+        cr.setSecret("secret password")
+        cr.setIdentifier(userId)
+        request.setChallengeResponse(cr)
+        response.setRequest(request)
+        logger.info("Performing bulk redo member: " + outputPK)
+        val start = System.currentTimeMillis
+        redoOutput(outputPK, response, true, true)
+        val elapsed = System.currentTimeMillis - start
+        logger.info("Performed bulk redo member: " + outputPK + " in " + elapsed + " ms")
+      } catch {
+        case t: Throwable => logger.error("unexpected error redoing output " + outputPK + " : " + fmtEx(t))
+      }
+    }
 
-      val u2 = getUser(request) // TODO rm
-      logger.info("Performing bulk redo member: " + outputPK)
-      val start = System.currentTimeMillis
-      redoOutput(outputPK, response, true, true)
-      val elapsed = System.currentTimeMillis - start
-      logger.info("Performed bulk redo member: " + outputPK + " in " + elapsed + " ms")
-    })
+    outputPkList.map(outputPK => redoOne(outputPK))
 
   }
 
