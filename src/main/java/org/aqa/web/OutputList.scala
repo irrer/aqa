@@ -54,7 +54,25 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     val existing = getData(valueMap, response).map(e => e.output_outputPK).toSet
     val donePkSet = redoSet.diff(existing)
     val doneText = redoSet.diff(existing).toSeq.sorted.mkString("   ")
-    <div>{ doneText }</div>
+    <div title="List of outputPK's that no longer exist or never existed">{ doneText }</div>
+  }
+
+  def bulkRedoInstructions = {
+    val title =
+      "To perform a bulk redo, enter a list of outputPKs in the 'To Do' box." + titleNewline +
+        "Clicking the Refresh button will refresh the list containing just the 'To Do' entries." + titleNewline +
+        "outputPKs may be separated by any whitespace, comma, or non-digit." + titleNewline +
+        "If the 'To Do' list is empty then all outputs will be listed." + titleNewline +
+        "Output redo's are performed sequentially so as not to overload the server." + titleNewline +
+        "The page will refresh when all of the outputs have been performed." + titleNewline +
+        "Once started, the only way to stop processing the list is to restart the server." + titleNewline +
+        "You may monitor progress by copying and pasting list to another results" + titleNewline +
+        "page and refreshing that screen." + titleNewline
+
+    val elem = {
+      <div title={ title }>Hover here for bulk redo instructions</div>
+    }
+    new WebPlainText("Bulk Redo Instructions", false, 6, 0, (ValueMapT) => elem)
   }
 
   val todoList = new WebInputTextArea("To Do", 3, 0, "List of Output PK's to Redo")
@@ -63,10 +81,11 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   override def htmlFieldList(valueMap: ValueMapT): List[WebRow] = {
     val webRow = List(checkbox, refresh)
+    def instructRow = List(bulkRedoInstructions)
     def redoRow = List(todoList, doneList, redoAll)
 
     if (userIsWhitelisted(valueMap))
-      List(webRow, redoRow)
+      List(webRow, instructRow, redoRow)
     else
       List(webRow)
   }
@@ -157,7 +176,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   override val columnList = Seq(startTimeCol, inputFileCol, redoCol, procedureCol, machineCol, institutionCol, userCol, deleteCol)
 
-  val entriesPerPage = 300 // TODO should support pagination
+  val entriesPerPage = 4000 // TODO should support pagination
 
   /**
    * Get the set of outputs that user wants to redo.  Return empty set if none.  This
@@ -309,13 +328,13 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
         Output.ensureInputAndOutputFilesExist(output)
         val procedure = Procedure.get(output.procedurePK).get
         if (procedure.name.toLowerCase.contains("phase")) {
-          Phase2.redo(outputPK, response.getRequest, response)
+          Phase2.redo(outputPK, response.getRequest, response, await, isAuto)
         }
         if (procedure.name.toLowerCase.contains("cbct")) {
           BBbyCBCTRun.redo(outputPK, response.getRequest, response, await, isAuto)
         }
         if (procedure.name.toLowerCase.contains("epid")) {
-          BBbyEPIDRun.redo(outputPK, response.getRequest, response)
+          BBbyEPIDRun.redo(outputPK, response.getRequest, response, await, isAuto)
         }
       }
     }
@@ -341,11 +360,16 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
       cr.setSecret("secret password")
       cr.setIdentifier(userId)
       request.setChallengeResponse(cr)
+      val u1 = getUser(request) // TODO rm
       response.setRequest(request)
       val effectiveUser = WebUtil.getUser(request)
 
-      redoOutput(outputPK, response, true, true) // TODO put back in
+      val u2 = getUser(request) // TODO rm
       logger.info("Performing bulk redo member: " + outputPK)
+      val start = System.currentTimeMillis
+      redoOutput(outputPK, response, true, true)
+      val elapsed = System.currentTimeMillis - start
+      logger.info("Performed bulk redo member: " + outputPK + " in " + elapsed + " ms")
     })
 
   }

@@ -100,8 +100,8 @@ object BBbyEPIDRun extends Logging {
     same
   }
 
-  private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output, await: Boolean = false, isAuto: Boolean = false) = {
-
+  private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output, await: Boolean, isAuto: Boolean) = {
+    logger.info("Processing redo request for outputPK " + outputOrig.outputPK.get)
     Output.ensureInputAndOutputFilesExist(outputOrig)
     val sessionId = Session.makeUniqueId
     val sessionDir = Session.idToFile(sessionId)
@@ -156,6 +156,7 @@ object BBbyEPIDRun extends Logging {
 
     awaitIfRequested(future, await, inputOutput._2.procedurePK)
     ViewOutput.redirectToViewRunProgress(response, isAuto, output.outputPK.get)
+    logger.info("Finished processing redo request for outputPK " + outputOrig.outputPK.get)
   }
 
   /**
@@ -180,7 +181,7 @@ object BBbyEPIDRun extends Logging {
   /**
    * Given an output, redo the analysis.
    */
-  def redo(outputPK: Long, request: Request, response: Response, await: Boolean = false, isAuto: Boolean = false) = {
+  def redo(outputPK: Long, request: Request, response: Response, await: Boolean, isAuto: Boolean) = {
     try {
       Output.get(outputPK) match {
         case None => {

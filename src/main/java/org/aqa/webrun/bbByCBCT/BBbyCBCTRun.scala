@@ -86,7 +86,7 @@ object BBbyCBCTRun extends Logging {
     same
   }
 
-  private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output, await: Boolean = false, isAuto: Boolean = false) = {
+  private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output, await: Boolean, isAuto: Boolean) = {
 
     Output.ensureInputAndOutputFilesExist(outputOrig)
     val sessionId = Session.makeUniqueId
@@ -195,7 +195,7 @@ object BBbyCBCTRun extends Logging {
   /**
    * Given an output, redo the analysis.
    */
-  def redo(outputPK: Long, request: Request, response: Response, await: Boolean = false, isAuto: Boolean = false) = {
+  def redo(outputPK: Long, request: Request, response: Response, await: Boolean, isAuto: Boolean) = {
     try {
       Output.get(outputPK) match {
         case None => {

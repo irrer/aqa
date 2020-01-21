@@ -173,7 +173,7 @@ object Phase2 extends Logging {
     same
   }
 
-  private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output, await: Boolean = false, isAuto: Boolean = false) = {
+  private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output, await: Boolean, isAuto: Boolean) = {
 
     val sessionId = Session.makeUniqueId
     val sessionDir = Session.idToFile(sessionId)
@@ -268,7 +268,7 @@ object Phase2 extends Logging {
   /**
    * Given a Phase 2 output, redo the analysis.
    */
-  def redo(outputPK: Long, request: Request, response: Response, await: Boolean = false, isAuto: Boolean = false) = {
+  def redo(outputPK: Long, request: Request, response: Response, await: Boolean, isAuto: Boolean) = {
     try {
       Output.get(outputPK) match {
         case None => {
