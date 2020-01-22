@@ -124,8 +124,6 @@ object BBbyEPIDRun extends Logging {
       case Some(timestamp) => Some(timestamp.getTime)
     }
 
-    val bbByEPID = BBbyEPID.getByOutput(outputOrig.outputPK.get).head
-
     val runReq = new BBbyEPIDRunReq(epidList, Machine.get(outputOrig.machinePK.get).get)
 
     val procedure = Procedure.get(outputOrig.procedurePK).get

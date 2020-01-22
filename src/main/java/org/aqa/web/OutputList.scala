@@ -49,19 +49,19 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   val refresh = makeButton("Refresh", ButtonType.BtnPrimary)
 
   private def getToDoHtml(valueMap: ValueMapT): Elem = {
-    val requestSet = getRequestSet(valueMap)
+    val requestSet = getRequestedSet(valueMap)
     val todoText = if (requestSet.isEmpty)
       ""
     else {
       val response: Response = null // this never gets used
       val todoSet = getData(valueMap, response).map(e => e.output_outputPK).toSet
-      todoSet.toSeq.sorted.mkString("   ")
+      todoSet.toSeq.sorted.mkString(" ")
     }
     <div title="List of outputPK's need to be done">{ todoText }</div>
   }
 
   private def getDoneHtml(valueMap: ValueMapT): Elem = {
-    val requestSet = getRequestSet(valueMap)
+    val requestSet = getRequestedSet(valueMap)
     val response: Response = null // this never gets used
     val existing = getData(valueMap, response).map(e => e.output_outputPK).toSet
     val donePkSet = requestSet.diff(existing)
@@ -81,10 +81,24 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
         "You may monitor progress by copying and pasting list to another results" + titleNewline +
         "page and refreshing that screen." + titleNewline
 
-    val elem = {
-      <div title={ title }>Hover here for bulk redo instructions</div>
+    def elem(valueMap: ValueMapT) = {
+      val quantities: Elem = {
+        val requestList = getRequestedSet(valueMap).toSeq.sorted
+        if (requestList.isEmpty)
+          <div></div>
+        else {
+          val response: Response = null // this never gets used
+          val todoSet = getData(valueMap, response).map(e => e.output_outputPK)
+          <div class="row">
+            <div class="col-md-2">Requested: { requestList.size }</div>
+            <div class="col-md-2">To Do: { todoSet.size }</div>
+            <div class="col-md-2">Done: { (requestList.size - todoSet.size).toString }</div>
+          </div>
+        }
+      }
+      <div title={ title }>Hover here for bulk redo instructions.  { quantities }</div>
     }
-    new WebPlainText("Bulk Redo Instructions", false, 6, 0, (ValueMapT) => elem)
+    new WebPlainText("Bulk Redo Instructions", false, 6, 0, (valueMap: ValueMapT) => elem(valueMap))
   }
 
   val requestList = new WebInputTextArea("Request List", 4, 0, "List of Output PK's to Redo")
@@ -189,13 +203,13 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   override val columnList = Seq(startTimeCol, inputFileCol, redoCol, procedureCol, machineCol, institutionCol, userCol, deleteCol)
 
-  val entriesPerPage = 400 // TODO should support pagination
+  val entriesPerPage = 600 // TODO should support pagination
 
   /**
    * Get the set of outputs that user wants to redo.  Return empty set if none.  This
    * feature is only available to whitelisted users.
    */
-  private def getRequestSet(valueMap: ValueMapT): Set[Long] = {
+  private def getRequestedSet(valueMap: ValueMapT): Set[Long] = {
     val isWhitelisted = userIsWhitelisted(valueMap)
     val outPkSet = if (isWhitelisted && valueMap.get(requestList.label).isDefined && valueMap(requestList.label).trim.nonEmpty) {
       // get all integers, distinct and sorted
@@ -220,7 +234,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
       }
     }
 
-    val requestSet = getRequestSet(valueMap)
+    val requestSet = getRequestedSet(valueMap)
     if (requestSet.nonEmpty) {
       Output.extendedList(requestSet)
     } else
@@ -359,7 +373,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   }
 
   private def startBulkRedo(valueMap: ValueMapT, response: Response): Unit = OutputList.path.synchronized {
-    val outputPkList = getRequestSet(valueMap).toSeq.sorted
+    val outputPkList = getRequestedSet(valueMap).toSeq.sorted
     logger.info("Performing bulk redo on: " + outputPkList.mkString(" "))
 
     def redoOne(outputPK: Long) = {
