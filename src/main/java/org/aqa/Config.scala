@@ -150,16 +150,19 @@ object Config extends Logging {
     }
   }
 
-  private def getJavaKeyStorePassword: String = {
+  /**
+   * Get the list of possible passwords to use for the java key store for serving web pages via HTTPS.  If not configured, then return an empty list.
+   */
+  private def getJavaKeyStorePasswordList: List[String] = {
     val name = "JavaKeyStorePassword"
     try {
-      val value = getMainText(name)
+      val passwordList = (document \ name).map(n => n.head.text)
       logText(name, "[redacted]")
-      value
+      (passwordList ++ passwordList.map(pw => pw.trim)).distinct.toList
     } catch {
       case _: Throwable => {
         logText(name, "[not configured]")
-        ""
+        List[String]()
       }
     }
   }
@@ -320,7 +323,7 @@ object Config extends Logging {
    */
   val AllowedHttpIpList = getAllowedHttpIpList
 
-  val JavaKeyStorePassword = getJavaKeyStorePassword
+  val JavaKeyStorePasswordList = getJavaKeyStorePasswordList
   val JavaKeyStoreFileList = getJavaKeyStoreFileList
 
   val ProgramDir = getDir("ProgramDir")

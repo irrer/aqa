@@ -87,7 +87,8 @@ class WebServer extends Application with Logging {
    */
   private def addProtocol: Unit = {
     if (Config.HTTPSPort.isDefined) {
-      val status = RestletHttps.addHttps(component, Config.HTTPSPort.get, Config.JavaKeyStoreFileList, List(Config.JavaKeyStorePassword))
+      // Sometimes reformatting the XML config file causes the password not to work, so try it with and without whitespace.
+      val status = RestletHttps.addHttps(component, Config.HTTPSPort.get, Config.JavaKeyStoreFileList, Config.JavaKeyStorePasswordList)
       if (status.isLeft) {
         logger.error("Unable to use HTTPS.  Error: " + status.left.get)
       } else {
