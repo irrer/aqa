@@ -15,7 +15,7 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Port number for the Secure ReST service.   Port 443 is the default for HTTPS.
     If this is missing or commented out, then the server will instead use HTTP on port 80.   Alternately,
     if this is specified, then the JavaKeyStoreFileList and JavaKeyStorePassword must be given. -->
-    <!-- <HTTPSPort>9443</HTTPSPort> -->
+    <HTTPSPort>9443</HTTPSPort> <!--  -->
     
     <!-- Port number if using (non-secure) HTTP.  If not specified, defaults to 80.
     Uses for HTTP:
@@ -62,7 +62,7 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- The password to access the Java Key Store file. -->
     <JavaKeyStorePassword>9c067233b07c7b04025989a197fad9b12cf4c19006678e2b18b121289bd1635a2d395a603122a6e6
     </JavaKeyStorePassword> <!-- rodicom11dev -->
-    <!-- <JavaKeyStorePassword>44d18166c66bed60b6394e6625c63dea713dbe465ddc960a7cd109514bc0d2bd</JavaKeyStorePassword> -->     <!-- irrer -->
+    <JavaKeyStorePassword>44d18166c66bed60b6394e6625c63dea713dbe465ddc960a7cd109514bc0d2bd</JavaKeyStorePassword> <!-- -->     <!-- irrer -->
 
     <!-- Directory containing executables and configuration files to run procedures. -->
     <ProgramDir>C:\Program Files\AQA</ProgramDir>
