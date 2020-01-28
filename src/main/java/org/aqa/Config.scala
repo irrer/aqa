@@ -318,6 +318,29 @@ object Config extends Logging {
     allowedList
   }
 
+  private def getLdapUrl: Option[String] = {
+    val tag = "LdapUrl"
+    try {
+      val url = (document \ tag).head.text.toString.trim
+      logText(tag, url)
+      Some(url)
+    } catch {
+      case t: Throwable => None
+    }
+  }
+
+  private def getLdapGroupList: Seq[String] = {
+    val groupTag = "LdapGroupList"
+    val tag = "LdapGroup"
+    try {
+      val groupList = (document \ groupTag \ tag).map(n => n.text.toString.trim)
+      logText(groupTag, groupList.mkString("\n        ", "\n        ", ""))
+      groupList
+    } catch {
+      case t: Throwable => Seq[String]()
+    }
+  }
+
   /**
    * List of IP addresses allowed to access this server.
    */
@@ -325,6 +348,11 @@ object Config extends Logging {
 
   val JavaKeyStorePasswordList = getJavaKeyStorePasswordList
   val JavaKeyStoreFileList = getJavaKeyStoreFileList
+
+  val LdapUrl = getLdapUrl
+  val LdapInstitutionName = logMainText("LdapInstitutionName", "not specified")
+  val LdapRole = logMainText("LdapRole", "not specified")
+  val LdapGroupList = getLdapGroupList
 
   val ProgramDir = getDir("ProgramDir")
   val ProcedureDir = getDir("ProcedureDir")
@@ -334,6 +362,8 @@ object Config extends Logging {
 
   val AuthenticationTimeout = logMainText("AuthenticationTimeout").toDouble
   val AuthenticationTimeoutInMs = (AuthenticationTimeout * 1000).toLong
+
+  val PasswordPrompt = logMainText("PasswordPrompt", "Please enter your password")
 
   val jarFile = getThisJarFile
 

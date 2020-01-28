@@ -15,40 +15,47 @@ import org.aqa.db.UserRole
 import org.aqa.db.CachedUser
 import org.aqa.Crypto
 import edu.umro.ScalaUtil.Trace
+import edu.umro.ScalaUtil.Level2Ldap
+import org.aqa.db.Institution
 
 class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.Value) extends Verifier with Logging {
 
+  private def createUserWithLdap(id: String, secret: String) = {
+    try {
+      val institutionPK = Institution.getInstitutionByRealName(Config.LdapInstitutionName).get.institutionPK.get
+      val roleText = Config.LdapRole
+      val userInfo = Level2Ldap.getUserInfo(id, secret).right.get
+      User.insertNewUser(institutionPK, id, userInfo.firstName + " " + userInfo.lastName, userInfo.email, secret, roleText)
+    } catch {
+      case t: Throwable => logger.error("Unexpected exception while automatically creating user for LDAP: " + fmtEx(t))
+    }
+  }
+
   /**
-   * Check to see if the credentials are valid, first using the cache for efficiency and
-   * then if necessary the database.
-   *
-   * Note that an invalid result from the cache may indicate that the password has been
-   * recently changed, so it is appropriate to check the database.
-   *
-   * The usual case will be that the user enters a valid password, so execution is optimized
-   * for that.
+   * Determine if the user is valid via LDAP.  If so, then add them to the database.
    */
-  private def check(id: String, secret: String): Int = {
-    CachedUser.get(id) match {
-      case Some(user) if AuthenticationVerifier.validatePassword(secret, user.hashedPassword, user.passwordSalt) => Verifier.RESULT_VALID
-      case Some(user) => {
-        logger.warn("the password of user " + id + " failed to authenticate")
-        Verifier.RESULT_INVALID
+  private def attemptVerifyViaLdap(id: String, secret: String): Int = {
+    Level2Ldap.getGroupListOfUser(id, secret) match {
+      case Right(groupSet) => {
+        if (groupSet.toSeq.intersect(Config.LdapGroupList).isEmpty) {
+          logger.warn("Unable to authenticate user via LDAP.  User is not a member of one of the configured LdapGroupList.\n" +
+            "    User's group list: " + groupSet.mkString("    ") +
+            "    Configured group list: " + Config.LdapGroupList.mkString("    "))
+          Verifier.RESULT_UNKNOWN
+        } else {
+          // User is authenticated and authorized.  Automatically create a user using LDAP information.
+          createUserWithLdap(id, secret)
+          Verifier.RESULT_VALID
+        }
       }
-      case _ => Verifier.RESULT_UNKNOWN
+      case Left(errorMessage) => {
+        logger.warn("Unable to authenticate user via LDAP")
+        Verifier.RESULT_UNKNOWN
+      }
     }
   }
 
   override def verify(request: Request, response: Response): Int = {
-    if (true) { // TODO rm
-      val cr = request.getChallengeResponse
-      if (cr == null)
-        Trace.trace("no user")
-      else {
-        val id = cr.getIdentifier
-        val pw = cr.getSecret.mkString("")
-      }
-    }
     val requestedRole = getRequestedRole(request, response)
     if (requestedRole.id == UserRole.publik.id) Verifier.RESULT_VALID // let anyone into public areas
     else {
@@ -59,14 +66,18 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
           val secret = new String(challResp.getSecret)
 
           CachedUser.get(id) match {
+            case Some(user) if Config.LdapUrl.isDefined && Level2Ldap.getUserInfo(id, secret).isRight => Verifier.RESULT_VALID
             case Some(user) if AuthenticationVerifier.validatePassword(secret, user.hashedPassword, user.passwordSalt) => Verifier.RESULT_VALID
             case Some(user) => {
               logger.warn("Authentication violation.  The password of user " + id + " failed")
               Verifier.RESULT_INVALID
             }
             case _ => {
-              logger.warn("unknown user " + id + " failed")
-              Verifier.RESULT_UNKNOWN
+              if (Config.LdapUrl.isDefined) attemptVerifyViaLdap(id, secret)
+              else {
+                logger.warn("unknown user " + id + " failed")
+                Verifier.RESULT_UNKNOWN
+              }
             }
           }
         }
@@ -78,38 +89,6 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
 }
 
 object AuthenticationVerifier {
-
-  //    class CachedUser(val user: User) {
-  //        val timeout = System.currentTimeMillis + Config.AuthenticationTimeoutInMs
-  //    }
-  //
-  //    private val cache = scala.collection.mutable.HashMap[String, CachedUser]()
-  //
-  //    def put(id: String, secret: String, user: User): Unit = {
-  //        cache.synchronized({
-  //            cache.put(id, new CachedUser(user))
-  //        })
-  //    }
-  //
-  //    def getFromCache(id: String): Option[CachedUser] = {
-  //        cache.synchronized({
-  //            cache.get(id)
-  //        })
-  //    }
-  //
-  //    def clean: Unit = {
-  //        cache.synchronized({
-  //            val now = System.currentTimeMillis
-  //            val expired = cache.filter(c => c._2.timeout < now).map(c1 => c1._1)
-  //            cache --= expired
-  //        })
-  //    }
-  //
-  //    def remove(id: String): Option[CachedUser] = {
-  //        cache.synchronized({
-  //            cache.remove(id)
-  //        })
-  //    }
 
   def hashPassword(secret: String, passwordSalt: String): String = Crypto.secureHash(passwordSalt + secret)
 
@@ -144,14 +123,4 @@ object AuthenticationVerifier {
       case _ => None
     }
   }
-
-  def main(args: Array[String]): Unit = {
-    val confValid = Config.validate
-    DbSetup.init
-    def fakeRole(request: Request, response: Response): UserRole.Value = UserRole.admin
-    val av = new AuthenticationVerifier(fakeRole _)
-    println("check " + verifierResultToString(av.check("jim", "foo")))
-    println("check " + verifierResultToString(av.check("irrer@med.umich.edu", "aaaaa")))
-  }
-
 }

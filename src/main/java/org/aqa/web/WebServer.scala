@@ -296,7 +296,7 @@ class WebServer extends Application with Logging {
   }
 
   private def initAuthentication(restlet: Restlet): Restlet = {
-    val challAuthn = new ChallengeAuthenticator(getContext.createChildContext, ChallengeScheme.HTTP_BASIC, "Please enter your AQA password") // TODO remove when we figure out how to make a real login page
+    val challAuthn = new ChallengeAuthenticator(getContext.createChildContext, ChallengeScheme.HTTP_BASIC, Config.PasswordPrompt) // TODO remove when we figure out how to make a real login page
     challAuthn.setVerifier(new AuthenticationVerifier(getRequestedRole _))
     challAuthn.setNext(restlet)
 

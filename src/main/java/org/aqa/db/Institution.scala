@@ -5,6 +5,8 @@ import org.aqa.Logging
 import org.aqa.Config
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Util
+import org.aqa.Crypto
+import org.aqa.AnonymizeUtil
 
 case class Institution(
   institutionPK: Option[Long], // primary key
@@ -52,6 +54,11 @@ object Institution extends Logging {
   }
 
   /**
+   * Get a list of all institutions.
+   */
+  def list: Seq[Institution] = Db.run(query.result)
+
+  /**
    * Given its name, get the corresponding institution.
    */
   def getInstitutionByName(name: String): Option[Institution] = {
@@ -68,9 +75,13 @@ object Institution extends Logging {
   }
 
   /**
-   * Get a list of all institutions.
+   * Given its real name, get the corresponding institution.
    */
-  def list: Seq[Institution] = Db.run(query.result)
+  def getInstitutionByRealName(name: String): Option[Institution] = {
+    val trimmedName = name.trim
+    val inst = list.find(i => AnonymizeUtil.decryptWithNonce(i.institutionPK.get, i.name_real.get).equalsIgnoreCase(trimmedName))
+    inst
+  }
 
   def deletable(instPK: Long): Option[String] = {
     if (User.numberOfUsersInInstitution(instPK) == 0) None else Some("There are users in this institution")

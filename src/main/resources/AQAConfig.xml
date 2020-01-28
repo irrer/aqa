@@ -75,6 +75,30 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Authentication timeout.  Number of seconds for a user id+password pair to be cached before re-checking with database. -->
     <AuthenticationTimeout>7200.0</AuthenticationTimeout>
 
+    <!-- When user is asked for a password they are prompted with this. -->
+    <PasswordPrompt>Enter your AQA password here</PasswordPrompt>
+
+    <!-- Location of LDAP service that has user names and passwords.  If not configured, then the LDAP feature is not active. -->
+    <LdapUrl>ldap://ldap.ent.med.umich.edu:636/</LdapUrl>  <!-- IP: 141.214.28.71 -->
+
+    <!-- Name of institution with LDAP. -->
+    <LdapInstitutionName>U Mich</LdapInstitutionName>
+
+    <!-- User role to be used when automatically creating a user due to LDAP authentication. -->
+    <LdapRole>admin</LdapRole>
+
+    <!-- List of LDAP groups that, if you belong to at least one of them, authorizes you to use the service. -->
+    <LdapGroupList>
+        <LdapGroup>RadOnc-Physics</LdapGroup>
+        <LdapGroup>RadOnc-RadOnc Users</LdapGroup>
+        <LdapGroup>RadOnc-Argus</LdapGroup>
+        <LdapGroup>RadOnc-UM</LdapGroup>
+        <LdapGroup>RadOnc-Sharepoint-Owners</LdapGroup>
+        <LdapGroup>Physics-ACL</LdapGroup>
+        <LdapGroup>Radonc_Archive-Map</LdapGroup>
+        <LdapGroup>Physics_Archive-RO</LdapGroup>
+    </LdapGroupList>
+
     <!-- Time of day as hours and minutes (HH:MM) that program will restart
     itself. This is done to avoid errors that build up over time.  The time is
     formatted as a 24 hour clock, so 23:00 is eleven PM. -->
