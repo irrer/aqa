@@ -7,11 +7,6 @@ import org.restlet.data.Method
 import java.util.Date
 import scala.xml.Elem
 import org.restlet.data.Parameter
-import slick.lifted.TableQuery
-import slick.backend.DatabaseConfig
-import slick.driver.PostgresDriver
-import scala.concurrent.duration.DurationInt
-import slick.driver.PostgresDriver.api._
 import org.aqa.db.Institution
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api._
@@ -83,10 +78,6 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
       true
     } else
       false
-  }
-
-  private def updateInstitution(inst: Institution): Unit = {
-    Institution.query.insertOrUpdate(inst)
   }
 
   /**

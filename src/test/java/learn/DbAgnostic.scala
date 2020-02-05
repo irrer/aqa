@@ -1,9 +1,9 @@
-package org.aqa.db
+package learn
 
 //import slick.backend.DatabaseConfig
-//import slick.driver.PostgresDriver
+import slick.driver.PostgresDriver
 import scala.concurrent.duration.DurationInt
-//import Db.driver.api._
+import slick.driver.PostgresDriver.api._
 import slick.jdbc.meta.MTable
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -20,17 +20,10 @@ import slick.sql.FixedSqlAction
 
 /** Database utilities. */
 
-object Db extends Logging {
+object DbAgnostic extends Logging {
 
   /** Ensure that the the configuration has been read. */
   private val configInit = Config.validate
-
-  val driver = {
-    if (configInit) slick.driver.PostgresDriver
-    else slick.jdbc.SQLServerProfile
-  }
-
-  import Db.driver.api._
 
   /**
    * Default timeout for general database overhead operations.  This includes operations like
@@ -62,7 +55,7 @@ object Db extends Logging {
     result
   }
 
-  def perform(dbOperation: driver.ProfileAction[Unit, NoStream, Effect.Schema]): Unit = {
+  def perform(dbOperation: PostgresDriver.DriverAction[Unit, NoStream, Effect.Schema]): Unit = {
     dbOperation.statements.foreach { s => logger.info("Executing database statement: " + s) }
     run(DBIO.seq(dbOperation))
   }

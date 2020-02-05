@@ -8,12 +8,6 @@ import java.util.Date
 import scala.xml.Elem
 import org.restlet.data.Parameter
 import slick.lifted.TableQuery
-import slick.backend.DatabaseConfig
-import slick.driver.PostgresDriver
-import scala.concurrent.duration.DurationInt
-import slick.driver.PostgresDriver.api._
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.api.libs.concurrent.Execution.Implicits._
 import org.restlet.data.Form
 import scala.xml.PrettyPrinter
 import org.restlet.data.Status

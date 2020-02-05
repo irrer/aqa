@@ -7,22 +7,13 @@ import org.restlet.data.Method
 import java.util.Date
 import scala.xml.Elem
 import org.restlet.data.Parameter
-import slick.lifted.TableQuery
-import slick.backend.DatabaseConfig
-import slick.driver.PostgresDriver
-import scala.concurrent.duration.DurationInt
-import slick.driver.PostgresDriver.api._
 import org.aqa.db.User
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.api._
-import play.api.libs.concurrent.Execution.Implicits._
 import org.restlet.data.Form
 import scala.xml.PrettyPrinter
 import org.restlet.data.Status
 import org.restlet.data.MediaType
 import WebUtil._
 import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
 import org.aqa.Logging
 import org.aqa.db.Institution.InstitutionTable
 import org.aqa.db.Institution
@@ -162,10 +153,6 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
     else {
       Error.make(institution, "You are not allowed to modify users from other institutions")
     }
-  }
-
-  private def updateUser(user: User): Unit = {
-    User.query.insertOrUpdate(user)
   }
 
   /**

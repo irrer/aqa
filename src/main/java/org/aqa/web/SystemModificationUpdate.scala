@@ -7,11 +7,6 @@ import org.restlet.data.Method
 import java.util.Date
 import scala.xml.Elem
 import org.restlet.data.Parameter
-import slick.lifted.TableQuery
-import slick.backend.DatabaseConfig
-import slick.driver.PostgresDriver
-import scala.concurrent.duration.DurationInt
-import slick.driver.PostgresDriver.api._
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -69,10 +64,6 @@ class SystemModificationUpdate extends Restlet with SubUrlAdmin {
       case _ if (valueMap.get(summary.label).get.trim.isEmpty) => Error.make(summary, "Summary can not be empty")
       case _ => styleNone
     }
-  }
-
-  private def updateSystemModification(inst: SystemModification): Unit = {
-    SystemModification.query.insertOrUpdate(inst)
   }
 
   private def okToSaveEdited(valueMap: ValueMapT): StyleMapT = {

@@ -7,11 +7,6 @@ import org.restlet.data.Method
 import java.util.Date
 import scala.xml.Elem
 import org.restlet.data.Parameter
-import slick.lifted.TableQuery
-import slick.backend.DatabaseConfig
-import slick.driver.PostgresDriver
-import scala.concurrent.duration.DurationInt
-import slick.driver.PostgresDriver.api._
 import org.aqa.db.EPID
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api._
@@ -23,13 +18,13 @@ import org.restlet.data.MediaType
 import WebUtil._
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
+import org.aqa.db.Db
 
 object EPIDUpdate {
   val epidPKTag = "epidPK"
 }
 
 class EPIDUpdate extends Restlet with SubUrlAdmin {
-
   private val pageTitleCreate = "Create EPID"
 
   private val pageTitleEdit = "Edit EPID"
@@ -127,10 +122,6 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
       formCreate.setFormResponse(valueMap, err, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
     }
     ae
-  }
-
-  private def updateEPID(inst: EPID): Unit = {
-    EPID.query.insertOrUpdate(inst)
   }
 
   private def epidLookup(valueMap: ValueMapT): Option[EPID] = {

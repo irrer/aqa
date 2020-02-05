@@ -8,14 +8,7 @@ import java.util.Date
 import scala.xml.Elem
 import org.restlet.data.Parameter
 import slick.lifted.TableQuery
-import slick.backend.DatabaseConfig
-import slick.driver.PostgresDriver
-import scala.concurrent.duration.DurationInt
-import slick.driver.PostgresDriver.api._
 import org.aqa.db.MachineType
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.api._
-import play.api.libs.concurrent.Execution.Implicits._
 import org.restlet.data.Form
 import scala.xml.PrettyPrinter
 import org.restlet.data.Status
@@ -74,10 +67,6 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
   private def validateExistence(valueMap: ValueMapT): StyleMapT = {
     if (machineTypeLookup(valueMap).isDefined) Error.make(model, "Machine type already exists")
     else styleNone
-  }
-
-  private def updateMachineType(inst: MachineType): Unit = {
-    MachineType.query.insertOrUpdate(inst)
   }
 
   private def machineTypeLookup(valueMap: ValueMapT): Option[MachineType] = {

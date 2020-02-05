@@ -1,6 +1,6 @@
 package org.aqa.db
 
-import slick.driver.PostgresDriver.api._
+import Db.driver.api._
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.aqa.Logging
 import org.aqa.Config

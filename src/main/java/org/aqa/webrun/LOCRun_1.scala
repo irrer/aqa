@@ -2,7 +2,6 @@ package org.aqa.webrun
 
 import org.restlet.Request
 import org.restlet.Response
-import slick.driver.PostgresDriver.api._
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import org.restlet.data.Status

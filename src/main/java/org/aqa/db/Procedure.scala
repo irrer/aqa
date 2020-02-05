@@ -1,6 +1,6 @@
 package org.aqa.db
 
-import slick.driver.PostgresDriver.api._
+import Db.driver.api._
 import slick.lifted.{ ProvenShape, ForeignKeyQuery }
 import java.sql.Date
 import edu.umro.ScalaUtil.FileUtil

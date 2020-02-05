@@ -7,15 +7,10 @@ import org.restlet.data.Method
 import java.util.Date
 import scala.xml.Elem
 import org.restlet.data.Parameter
-import slick.lifted.TableQuery
-import slick.backend.DatabaseConfig
-import slick.driver.PostgresDriver
-import scala.concurrent.duration.DurationInt
-import slick.driver.PostgresDriver.api._
 import org.aqa.db.Machine
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.api._
-import play.api.libs.concurrent.Execution.Implicits._
+//import scala.concurrent.ExecutionContext.Implicits.global
+//import play.api._
+//import play.api.libs.concurrent.Execution.Implicits._
 import org.restlet.data.Form
 import scala.xml.PrettyPrinter
 import org.restlet.data.Status
@@ -26,7 +21,7 @@ import scala.concurrent.duration.DurationInt
 import org.aqa.db.Institution.InstitutionTable
 import org.aqa.db.Institution
 import org.aqa.db.MachineType
-import edu.umro.ScalaUtil.Trace._
+import edu.umro.ScalaUtil.Trace
 import org.aqa.db.MultileafCollimator
 import org.aqa.db.EPID
 import org.aqa.db.MachineBeamEnergy
@@ -285,10 +280,6 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     if (idText.trim.isEmpty) {
       Error.make(id, "Id can not be empty")
     } else styleNone
-  }
-
-  private def updateMachine(machine: Machine): Unit = {
-    Machine.query.insertOrUpdate(machine)
   }
 
   /**

@@ -1,8 +1,9 @@
 package org.aqa.db
 
-import slick.driver.PostgresDriver.api._
+import Db.driver.api._
 import org.aqa.Config
 import org.aqa.Util
+import edu.umro.ScalaUtil.Trace
 
 case class EPID(
   epidPK: Option[Long], // primary key
@@ -87,7 +88,9 @@ object EPID {
   def main(args: Array[String]): Unit = {
     val valid = Config.validate
     DbSetup.init
-    println("======== inst: " + get(5))
-    println("======== inst delete: " + delete(5))
+    Trace.trace(get(2))
+
+    //    println("======== inst: " + get(5))
+    //    println("======== inst delete: " + delete(5))
   }
 }

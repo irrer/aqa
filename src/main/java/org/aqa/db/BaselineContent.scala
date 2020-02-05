@@ -1,6 +1,6 @@
 package org.aqa.db
 
-import slick.driver.PostgresDriver.api._
+import Db.driver.api._
 import org.aqa.Logging
 import java.sql.Timestamp
 import com.pixelmed.dicom.AttributeList

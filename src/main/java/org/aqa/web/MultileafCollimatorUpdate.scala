@@ -7,11 +7,6 @@ import org.restlet.data.Method
 import java.util.Date
 import scala.xml.Elem
 import org.restlet.data.Parameter
-import slick.lifted.TableQuery
-import slick.backend.DatabaseConfig
-import slick.driver.PostgresDriver
-import scala.concurrent.duration.DurationInt
-import slick.driver.PostgresDriver.api._
 import org.aqa.db.MultileafCollimator
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api._
@@ -131,10 +126,6 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
       formCreate.setFormResponse(valueMap, err, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
     }
     ae
-  }
-
-  private def updateMultileafCollimator(inst: MultileafCollimator): Unit = {
-    MultileafCollimator.query.insertOrUpdate(inst)
   }
 
   private def multileafCollimatorLookup(valueMap: ValueMapT): Option[MultileafCollimator] = {

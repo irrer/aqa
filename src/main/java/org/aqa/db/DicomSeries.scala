@@ -1,6 +1,7 @@
 package org.aqa.db
 
-import slick.driver.PostgresDriver.api._
+import Db.driver.api._
+
 import org.aqa.Logging
 import org.aqa.Config
 import edu.umro.ScalaUtil.FileUtil

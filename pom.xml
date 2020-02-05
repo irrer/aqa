@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.aqa</groupId>
   <artifactId>AQA</artifactId>
-  <version>0.2.00</version>
+  <version>0.3.00</version>
   
     <packaging>jar</packaging>
     <name>${project.artifactId}</name>
@@ -44,6 +44,18 @@
         <dependency> <groupId>org.slf4j</groupId>                <artifactId>slf4j-api</artifactId>                  <version>1.7.25</version>          </dependency>
         <dependency> <groupId>pixelmed</groupId>                 <artifactId>pixelmed</artifactId>                   <version>20180401</version>        </dependency>
         <!-- https://mvnrepository.com/artifact/com.typesafe.scala-logging/scala-logging-slf4j -->
+        
+        <dependency>  <groupId>com.typesafe.play</groupId>  <artifactId>play-slick_2.12</artifactId>    <version>5.0.0</version>  </dependency>
+        <dependency>  <groupId>com.google.inject</groupId>  <artifactId>guice</artifactId>              <version>4.2.2</version>  </dependency>
+        <dependency>  <groupId>io.strongtyped</groupId>     <artifactId>active-slick_2.12</artifactId>  <version>0.3.5</version>  </dependency>
+        <dependency>  <groupId>io.strongtyped</groupId>     <artifactId>active-slick_2.12</artifactId>  <version>0.3.5</version>  </dependency>
+
+    <!-- agnostic DB
+        <dependency>  <groupId>io.strongtyped</groupId>  <artifactId>active-slick_2.12.0-M5</artifactId>  <version>0.3.5-M1</version></dependency>
+        <dependency>  <groupId>io.strongtyped</groupId>  <artifactId>active-slick_2.12.0-M5</artifactId>  <version>0.3.5-M1</version>  </dependency>
+    -->
+
+
         
     </dependencies>
 
