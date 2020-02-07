@@ -43,37 +43,19 @@
         <dependency> <groupId>org.slf4j</groupId>                <artifactId>log4j-over-slf4j</artifactId>           <version>1.7.25</version>          </dependency>
         <dependency> <groupId>org.slf4j</groupId>                <artifactId>slf4j-api</artifactId>                  <version>1.7.25</version>          </dependency>
         <dependency> <groupId>pixelmed</groupId>                 <artifactId>pixelmed</artifactId>                   <version>20180401</version>        </dependency>
-        <!-- https://mvnrepository.com/artifact/com.typesafe.scala-logging/scala-logging-slf4j -->
-        
-        <dependency>  <groupId>com.typesafe.play</groupId>  <artifactId>play-slick_2.12</artifactId>    <version>5.0.0</version>  </dependency>
-        <dependency>  <groupId>com.google.inject</groupId>  <artifactId>guice</artifactId>              <version>4.2.2</version>  </dependency>
-        <dependency>  <groupId>io.strongtyped</groupId>     <artifactId>active-slick_2.12</artifactId>  <version>0.3.5</version>  </dependency>
-        <dependency>  <groupId>io.strongtyped</groupId>     <artifactId>active-slick_2.12</artifactId>  <version>0.3.5</version>  </dependency>
-
-    <!-- agnostic DB
-        <dependency>  <groupId>io.strongtyped</groupId>  <artifactId>active-slick_2.12.0-M5</artifactId>  <version>0.3.5-M1</version></dependency>
-        <dependency>  <groupId>io.strongtyped</groupId>  <artifactId>active-slick_2.12.0-M5</artifactId>  <version>0.3.5-M1</version>  </dependency>
-    -->
-
-
-        
+        <dependency>  <groupId>com.typesafe.play</groupId>       <artifactId>play-slick_2.12</artifactId>            <version>5.0.0</version>           </dependency>
+        <dependency>  <groupId>com.google.inject</groupId>       <artifactId>guice</artifactId>                      <version>4.2.2</version>           </dependency>
+        <dependency>  <groupId>io.strongtyped</groupId>          <artifactId>active-slick_2.12</artifactId>          <version>0.3.5</version>           </dependency>
+        <dependency>  <groupId>io.strongtyped</groupId>          <artifactId>active-slick_2.12</artifactId>          <version>0.3.5</version>           </dependency>
+        <dependency>  <groupId>com.microsoft.sqlserver</groupId> <artifactId>mssql-jdbc</artifactId>                 <version>8.2.0.jre8</version>      </dependency>
     </dependencies>
 
     <!--
         <dependency> <groupId>org.apache.logging.log4j</groupId> <artifactId>log4j-jul</artifactId>                  <version>2.10.0</version> <scope>runtime</scope> </dependency>
 
-<dependency>
-    <groupId>com.typesafe.scala-logging</groupId>
-    <artifactId>scala-logging-slf4j_2.11</artifactId>
-    <version>2.1.2</version>
-</dependency>
-
-
-
-https://mvnrepository.com/artifact/com.typesafe.slick/slick-hikaricp 
-https://mvnrepository.com/artifact/com.typesafe.play/play 
-https://mvnrepository.com/artifact/com.typesafe.slick/slick
-https://mvnrepository.com/artifact/org.scalatest/scalatest
+        <dependency>  <groupId>com.microsoft.sqlserver</groupId>    <artifactId>sqljdbc4</artifactId>    <version>3.0</version>             </dependency>
+        <dependency>  <groupId>com.microsoft.sqlserver</groupId>    <artifactId>sqljdbc4</artifactId>    <version>4.0</version></dependency>
+        <dependency>  <groupId>com.microsoft.sqlserver</groupId>    <artifactId>mssql-jdbc</artifactId>  <version>8.2.0.jre13</version> </dependency>
 
         <dependency> <groupId>log4j</groupId>              <artifactId>log4j</artifactId>                      <version>1.2.17</version>          </dependency>
         <dependency> <groupId>org.scala-lang.modules</groupId>  <artifactId>scala-xml_2.12</artifactId> <version>1.0.6</version>    </dependency>

@@ -27,6 +27,7 @@ import com.pixelmed.dicom.AttributeTag
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
 import com.pixelmed.dicom.ValueRepresentation
+import com.typesafe.config.ConfigFactory
 
 /**
  * This class extracts configuration information from the configuration file.  Refer
@@ -382,35 +383,14 @@ object Config extends Logging {
     millisec
   }
 
-  private def getDbUser: Option[String] = {
-    val name = "SlickDbsDefaultDbUser"
-    getMainTextOption(name) match {
-      case Some(user) => {
-        logText(name, user)
-        Some(user)
-      }
-      case _ => {
-        logTextNotSpecified(name)
-        None
-      }
-    }
-  }
-
-  /**
-   * Get the database password if it exists.
-   */
-  private def getDbPassword: Option[String] = {
-    val name = "SlickDbsDefaultDbPassword"
-    try {
-      val password = getMainText(name)
-      logText(name, "[redacted]")
-      Some(password)
-    } catch {
-      case t: Throwable => {
-        logTextNotSpecified(name)
-        None
-      }
-    }
+  private def getSlickDb = {
+    val name = "SlickDb"
+    val configText = getMainText(name)
+    logger.info("Constucting database config")
+    val dbConfig = ConfigFactory.parseString(configText)
+    logger.info("Constucted database config")
+    logText(name, "Constucted database config")
+    dbConfig
   }
 
   private def getCenterDoseBeamNameList = {
@@ -724,11 +704,7 @@ object Config extends Logging {
     list
   }
 
-  val SlickDbsDefaultDbUrl = logMainText("SlickDbsDefaultDbUrl")
-  val SlickDbsDefaultDbUser = getDbUser
-  val SlickDbsDefaultDbPassword = getDbPassword
-  val SlickDbsDefaultDriver = logMainText("SlickDbsDefaultDriver")
-  val SlickDbsDefaultDbDriver = logMainText("SlickDbsDefaultDbDriver")
+  val SlickDb = getSlickDb
 
   val UserWhiteList: List[String] = (document \ "UserWhiteList" \ "User").toList.map(node => node.head.text.trim.toLowerCase)
 

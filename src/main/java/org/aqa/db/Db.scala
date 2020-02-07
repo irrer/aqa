@@ -1,9 +1,6 @@
 package org.aqa.db
 
-//import slick.backend.DatabaseConfig
-//import slick.driver.PostgresDriver
 import scala.concurrent.duration.DurationInt
-//import Db.driver.api._
 import slick.jdbc.meta.MTable
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -16,7 +13,7 @@ import java.io.File
 import org.aqa.Config
 import scala.xml.XML
 import slick.sql.FixedSqlAction
-//import slick.profile.FixedSqlAction   // TODO fix
+import edu.umro.ScalaUtil.Trace
 
 /** Database utilities. */
 
@@ -25,9 +22,25 @@ object Db extends Logging {
   /** Ensure that the the configuration has been read. */
   private val configInit = Config.validate
 
+  /**
+   * Look at the DB configuration to determine which driver to load.
+   */
   val driver = {
-    if (configInit) slick.driver.PostgresDriver
-    else slick.jdbc.SQLServerProfile
+    val name = Config.SlickDb.getString("db.default.driver")
+    logger.info("Using DB drive: " + name)
+    val d = 0 match {
+      case _ if name.toLowerCase.contains("postgres") => slick.driver.PostgresDriver
+      case _ if name.toLowerCase.contains("sqlserver") => slick.jdbc.SQLServerProfile
+      case _ if name.toLowerCase.contains("oracle") => slick.jdbc.OracleProfile
+      case _ if name.toLowerCase.contains("mysql") => slick.driver.MySQLDriver
+      case _ if name.toLowerCase.contains("h2") => slick.driver.H2Driver
+      case _ if name.toLowerCase.contains("sqlite") => slick.driver.SQLiteDriver
+      case _ if name.toLowerCase.contains("derby") => slick.driver.DerbyDriver
+      case _ if name.toLowerCase.contains("hsqld") => slick.driver.HsqldbDriver
+      case _ => throw new RuntimeException("Unable to recognize database driver: " + name)
+    }
+    logger.info("Using database driver " + d)
+    d
   }
 
   import Db.driver.api._
@@ -38,16 +51,27 @@ object Db extends Logging {
    */
   val TIMEOUT = new DurationInt(60).seconds
 
-  //private val dbConfig: DatabaseConfig[PostgresDriver] = DatabaseConfig.forConfig("slick.dbs.default")
-
   val db = {
-    val ds = new ComboPooledDataSource
-    ds.setDriverClass(System.getProperty("slick.dbs.default.db.driver")) //  ds.setDriverClass(Driver)
-    ds.setJdbcUrl(System.getProperty("slick.dbs.default.db.url")) //   ds.setJdbcUrl(Local)
-    ds.setUser(System.getProperty("slick.dbs.default.db.user"))
-    ds.setPassword(System.getProperty("slick.dbs.default.db.password"))
-    Database.forDataSource(ds, Some(10)) // TODO fix
-    // Database.forDataSource(ds)  // TODO fix
+    val prefix = "db.default.db"
+
+    // log meaningful information regarding the database connection
+    def fmt(key: String) = "    " + key + ": " + Config.SlickDb.getString(prefix + "." + key)
+    val keyList = Seq("host", "port", "databaseName")
+    val msg = "Database  " + keyList.map(k => fmt(k)).mkString("    ")
+    logger.info("Attempting to connect to " + msg)
+
+    // create the database from the config
+    val d = try {
+      val dd = Database.forConfig(prefix, Config.SlickDb)
+      logger.info("Was able to connect to " + msg)
+      dd
+    } catch {
+      case t: Throwable => {
+        logger.error("Unable to create database connection: " + fmtEx(t))
+        throw new RuntimeException("Unable to create database connection: " + fmtEx(t))
+      }
+    }
+    d
   }
 
   private def tableName(table: TableQuery[Table[_]]): String = table.shaped.value.tableName
@@ -96,37 +120,6 @@ object Db extends Logging {
       perform(table.schema.create)
       if (!tableExists(table)) throw new RuntimeException("Tried but failed to create table " + tableName(table))
     }
-  }
-
-  // ==========================================================================
-
-  def main(args: Array[String]): Unit = {
-    //val valid = Config.validate
-
-    val dba = {
-      val ds = new ComboPooledDataSource
-      ds.setDriverClass("slick.driver.PostgresDriver$")
-      ds.setJdbcUrl("jdbc:postgresql://aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA?sslmode=require")
-      ds.setUser("aqa")
-      ds.setPassword("Kwalitee_1")
-      Database.forDataSource(???, ???) // TODO fix
-      //Database.forDataSource(ds,  maxConnections = 5, executor, keepAliveConnection) // TODO fix
-      val maxConnections = Some(5)
-      val executor = 1
-      val keepAliveConnection = 1
-      Database.forDataSource(ds, maxConnections) // , executor, keepAliveConnection) // TODO fix
-      //Database.forDataSource(ds)   // TODO fix
-    }
-
-    val TM = new DurationInt(5).seconds
-
-    val start = System.currentTimeMillis
-    println("getting table list")
-    val tables = Await.result(dba.run(MTable.getTables), TM).toList
-
-    println("tables.size: " + tables.size)
-    println("Elapsed ms: " + (System.currentTimeMillis - start))
-    //tables.map(t => println("    " + t))
   }
 
 }

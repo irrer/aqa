@@ -140,12 +140,12 @@ object DbSetup extends Logging {
       }
     }
 
-    // Slick expects these properties to be set
-    System.setProperty("slick.dbs.default.db.url", Config.SlickDbsDefaultDbUrl.trim) // trim because sometimes XML formatter adds newline to URL
-    System.setProperty("slick.dbs.default.driver", Config.SlickDbsDefaultDriver)
-    System.setProperty("slick.dbs.default.db.driver", Config.SlickDbsDefaultDbDriver)
-    setIfDefined("slick.dbs.default.db.user", Config.SlickDbsDefaultDbUser)
-    setIfDefined("slick.dbs.default.db.password", Config.SlickDbsDefaultDbPassword)
+    if (true) { // TODO rm
+      val TIMEOUT = new scala.concurrent.duration.DurationInt(5).seconds
+      Trace.trace
+      val tables = scala.concurrent.Await.result(Db.db.run(slick.jdbc.meta.MTable.getTables), TIMEOUT).toList // TODO rm
+      Trace.trace(tables)
+    }
 
     tableQueryList.map(q => Db.createTableIfNonexistent(q.asInstanceOf[TableQuery[Table[_]]]))
     ensureAdminUser
