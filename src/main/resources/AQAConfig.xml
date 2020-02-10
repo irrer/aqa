@@ -21,17 +21,48 @@ Note that when building a package for release, the Maven build process uses the 
         }
     </SlickDb>
 <!--
+              url = "jdbc:sqlserver://NTSRODBSDV1:1433/AQAmsDV;trustServerCertificate=true;integratedSecurity=true;authenticationScheme=NativeAuthentication"
+-->
+<!-- 
           default = {
             driver = "slick.jdbc.SQLServerProfile$"
             db {
               host = NTSRODBSDV1
               port = 1433
               databaseName = AQAmsDV
+              DatabaseName = AQAmsDV
               user = irrer
               password = 45eetslp
-              numThreads = 10
-              pool = default
-              url = "jdbc:sqlserver://NTSRODBSDV1:1433/AQAmsDV;trustServerCertificate=true;integratedSecurity=true;authenticationScheme=NativeAuthentication"
+              XconnectionPool = disabled
+              driver = "slick.jdbc.SQLServerProfile$"
+              profile = "slick.jdbc.SQLServerProfile$"
+              url = "jdbc:sqlserver://10.30.3.65:1433;servername=NTSRODBSDV1;DatabaseName=AQAmsDV;trustServerCertificate=true"
+              properties = {
+                driver = "slick.jdbc.SQLServerProfile$"
+                profile = "slick.jdbc.SQLServerProfile$"
+                user = irrer
+                password = 45eetslp
+                port = 1433
+                host = 10.30.3.65
+                databaseName = AQAmsDV
+                numThreads = 10
+                trustServerCertificate = true
+                integratedSecurity = true
+                authenticationScheme = NativeAuthentication
+              }
+            }
+          }
+-->
+<!-- This works:
+          default = {
+            driver = "org.postgresql.Driver"
+            db {
+              host = 141.214.125.209
+              port = 5432
+              databaseName = AQATest
+              user = postgres
+              password = postgresjim
+              url = "jdbc:postgresql://141.214.125.209:5432/AQATest"
             }
           }
 -->

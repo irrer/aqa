@@ -389,6 +389,37 @@ object Config extends Logging {
     logger.info("Constructing database config")
     val dbConfig = ConfigFactory.parseString(configText)
     logger.info("Constructed database config")
+    logger.info("Database configuration (password redacted): " +
+      dbConfig.entrySet.toArray.map(cs => cs.toString).filterNot(cs => cs.contains("pass")).mkString("\n    ", "\n    ", ""))
+
+    if (false) {
+      class AClassLoader extends ClassLoader {
+
+        Trace.trace(System.getProperty("java.class.path").split(";").mkString("\n"))
+        //val driverClassName = "slick.jdbc.SQLServerProfile$"
+        val driverClassName = "slick.jdbc.SQLServerProfile"
+        val threadContextClassLoader = Thread.currentThread.getContextClassLoader
+
+        //threadContextClassLoader.loadClass(driverClassName)
+        //val driverClass = threadContextClassLoader.loadClass(driverClassName)
+        //val j2 = driverClass.newInstance
+        loadClass(driverClassName)
+        loadClass(driverClassName, true)
+        val driverClass = loadClass(driverClassName)
+        Trace.trace("loaded driverClass: " + driverClass)
+        try {
+          val j2 = driverClass.newInstance
+        } catch {
+          case t: Throwable => Trace.trace("Could not instantiate class " + driverClassName + " :\n" + fmtEx(t))
+        }
+
+        Trace.trace(slick.jdbc.SQLServerProfile.getClass)
+        Trace.trace(dbConfig.entrySet.toArray.head.getClass.getCanonicalName)
+        Trace.trace(dbConfig.entrySet.toArray.mkString("\n"))
+      }
+      val j = new AClassLoader
+    }
+
     logText(name, "Constructed database config")
     dbConfig
   }
