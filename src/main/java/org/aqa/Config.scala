@@ -386,10 +386,10 @@ object Config extends Logging {
   private def getSlickDb = {
     val name = "SlickDb"
     val configText = getMainText(name)
-    logger.info("Constucting database config")
+    logger.info("Constructing database config")
     val dbConfig = ConfigFactory.parseString(configText)
-    logger.info("Constucted database config")
-    logText(name, "Constucted database config")
+    logger.info("Constructed database config")
+    logText(name, "Constructed database config")
     dbConfig
   }
 
