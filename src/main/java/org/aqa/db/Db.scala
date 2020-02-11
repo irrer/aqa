@@ -91,7 +91,6 @@ object Db extends Logging {
     run(DBIO.seq(dbOperation))
   }
 
-  // def perform(ops:  Seq[FixedSqlAction[Int, NoStream, Effect.Write]]) = {   // TODO fix
   def perform(ops: Seq[FixedSqlAction[Int, NoStream, Effect.Write]]) = {
     run(DBIO.sequence(ops))
   }
