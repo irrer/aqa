@@ -140,13 +140,6 @@ object DbSetup extends Logging {
       }
     }
 
-    if (true) { // TODO rm
-      val TIMEOUT = new scala.concurrent.duration.DurationInt(5).seconds
-      Trace.trace
-      val tables = scala.concurrent.Await.result(Db.db.run(slick.jdbc.meta.MTable.getTables), TIMEOUT).toList // TODO rm
-      Trace.trace(tables)
-    }
-
     tableQueryList.map(q => Db.createTableIfNonexistent(q.asInstanceOf[TableQuery[Table[_]]]))
     ensureAdminUser
     logger.info("Done initializing connection to database")
