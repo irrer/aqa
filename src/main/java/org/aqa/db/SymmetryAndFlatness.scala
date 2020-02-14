@@ -128,6 +128,7 @@ object SymmetryAndFlatness extends ProcedureOutput {
   }
 
   case class PointSet(top: Double, bottom: Double, right: Double, left: Double, center: Double) {
+    def this(sf: SymmetryAndFlatness) = this(sf.top_cu, sf.bottom_cu, sf.right_cu, sf.left_cu, sf.center_cu)
     private val list = Seq(top, bottom, right, left, center)
 
     private val min = list.min
