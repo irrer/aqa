@@ -33,7 +33,6 @@ class BBbyCBCTChart(outputPK: Long) extends Logging {
     val onePerDay = hList.groupBy(h => edu.umro.ScalaUtil.Util.roundToDate(h.date)).map(hh => hh._2.sortBy(_.date.getTime).last)
     onePerDay.toSeq
   }
-  //  val history = BBbyCBCT.recentHistory(Config.BBbyCBCTHistoryRange, machine.machinePK.get, procedure.procedurePK.get, output.dataDate)
 
   private val allDates = history.map(cd => cd.date)
 
