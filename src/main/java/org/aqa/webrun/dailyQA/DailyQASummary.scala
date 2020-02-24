@@ -66,7 +66,13 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
   val controlRow: WebRow = List(refreshButton, dateField, csvField)
 
   // bulk of the displayed information
-  private val report = new WebPlainText("report", false, 12, 0, (valueMap: ValueMapT) => DailyQAHTML.makeReport(getDataSetListByDateAndInstitution(valueMap)))
+  private val report = {
+    new WebPlainText("report", false, 12, 0, (valueMap: ValueMapT) => {
+      val institutionPK = getUser(valueMap).get.institutionPK
+      val date = dateField.dateFormat.parse(valueMap(dateField.label))
+      DailyQAHTML.makeReport(getDataSetListByDateAndInstitution(valueMap), institutionPK, date)
+    })
+  }
 
   val contentRow: WebRow = List(report)
 

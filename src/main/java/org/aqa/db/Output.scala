@@ -6,7 +6,7 @@ import org.aqa.Logging
 import org.aqa.Config
 import org.aqa.run.ProcedureStatus
 import java.sql.Timestamp
-import java.sql.Date
+import java.util.Date
 import org.aqa.web.WebServer
 import java.io.File
 import edu.umro.ScalaUtil.FileUtil
@@ -150,7 +150,7 @@ object Output extends Logging {
   /**
    * Get an extended list of all outputs.
    */
-  def extendedList(instPK: Option[Long], maxSize: Int): Seq[ExtendedValues] = {
+  def extendedList(instPK: Option[Long], maxSize: Int, date: Option[Date] = None): Seq[ExtendedValues] = {
 
     val search = for {
       output <- Output.query.map(o => (o.outputPK, o.startDate, o.inputPK, o.procedurePK, o.userPK))
@@ -161,12 +161,20 @@ object Output extends Logging {
       user <- User.query.filter(u => u.userPK === output._5).map(u => u.id)
     } yield ((input._1, input._2, inst, mach._1, output._1, output._2, proc._1, proc._2, user))
 
-    val filtered = {
+    val filteredByInst = {
       if (instPK.isDefined) search.filter(c => c._3._1 === instPK.get)
       else search
     }
 
-    val sorted = filtered.sortBy(_._6.desc).take(maxSize)
+    val filteredByDate = {
+      if (date.isDefined) {
+        val minDate = new Timestamp(edu.umro.ScalaUtil.Util.roundToDate(date.get).getTime)
+        val maxDate = new Timestamp(minDate.getTime + (24 * 60 * 60 * 1000))
+        search.filter(c => (c._1 >= minDate) && (c._1 < maxDate))
+      } else filteredByInst
+    }
+
+    val sorted = filteredByDate.sortBy(_._6.desc).take(maxSize)
 
     val result = Db.run(sorted.result).map(a => new ExtendedValues(a._1, a._2, a._3._1, a._3._2, a._4, a._5, a._6, a._7, a._8, a._9))
     result

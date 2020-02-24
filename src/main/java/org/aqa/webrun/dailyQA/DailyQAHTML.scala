@@ -9,10 +9,11 @@ import org.aqa.Util
 import org.aqa.web.ViewOutput
 import org.aqa.Crypto
 import org.aqa.AnonymizeUtil
+import java.util.Date
 
 object DailyQAHTML {
 
-  def makeReport(dataSetList: Seq[BBbyEPIDComposite.DailyDataSet]): Elem = {
+  def makeReport(dataSetList: Seq[BBbyEPIDComposite.DailyDataSet], institutionPK: Long, date: Date): Elem = {
 
     def sortDataSetPair(a: BBbyEPIDComposite.DailyDataSet, b: BBbyEPIDComposite.DailyDataSet): Boolean = {
       if (a.machine.machinePK.get == b.machine.machinePK.get) {
@@ -153,12 +154,19 @@ object DailyQAHTML {
 
     val content = {
       <div class="row">
-        <table class="table table-responsive table-bordered">
-          <thead><tr>{ colList.map(col => col.toHeader) }</tr></thead>
-          {
-            dataSetList.sortWith(sortDataSetPair _).map(dataSet => dataSetToRow(dataSet))
-          }
-        </table>
+        <div class="row">
+          <table class="table table-responsive table-bordered">
+            <thead><tr>{ colList.map(col => col.toHeader) }</tr></thead>
+            {
+              dataSetList.sortWith(sortDataSetPair _).map(dataSet => dataSetToRow(dataSet))
+            }
+          </table>
+        </div>
+        <div class="row">
+          <div class="col-md-6 col-md-offset-3 col-sm-12">
+            { DailyQAFullResults.get(institutionPK, date) }
+          </div>
+        </div>
       </div>
     }
 
