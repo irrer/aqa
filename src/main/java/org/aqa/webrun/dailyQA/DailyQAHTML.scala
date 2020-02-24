@@ -112,6 +112,11 @@ object DailyQAHTML {
       posnRow(dataSet.epid.zAdjusted_mm.get)
     }
 
+    def colEpidPlanCbct(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+      if (dataSet.epid.offsetAdjusted_mm.isDefined) posnRow(dataSet.epid.offsetAdjusted_mm.get)
+      else <div>undefined</div>
+    }
+
     def colCbctImages(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
       <td><a href={ ViewOutput.viewOutputUrl(dataSet.cbct.outputPK) }>CBCT Details</a></td>
     }
@@ -136,6 +141,8 @@ object DailyQAHTML {
       new Col("Gantry Angle for YZ", "Angle of gantry for horizontal image in degrees used to calculate values for X and Z", colHorzGantryAngle _),
       new Col("Horz EPID - CAX(Y) mm", "Y offset Horizontal EPID image - CAX in mm", colHorzYCax _),
       new Col("Horz EPID - CAX(Z) mm", "Z offset Horizontal EPID image - CAX in mm", colHorzZCax _),
+
+      new Col("EPID - (PLAN - CBCT)", "total offset of EPID - (PLAN - CBCT)", colEpidPlanCbct _),
 
       new Col("CBCT Details", "Images and other details for CBCT", colCbctImages _),
       new Col("EPID Details", "Images and other details for EPID", colEpidImages _))
