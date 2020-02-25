@@ -67,10 +67,17 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
   // bulk of the displayed information
   private val report = {
+    def getDate(valueMap: ValueMapT): Date = {
+      try {
+        dateField.dateFormat.parse(valueMap(dateField.label))
+      } catch {
+        case t: Throwable => edu.umro.ScalaUtil.Util.roundToDate(new Date)
+      }
+    }
+
     new WebPlainText("report", false, 12, 0, (valueMap: ValueMapT) => {
       val institutionPK = getUser(valueMap).get.institutionPK
-      val date = dateField.dateFormat.parse(valueMap(dateField.label))
-      DailyQAHTML.makeReport(getDataSetListByDateAndInstitution(valueMap), institutionPK, date)
+      DailyQAHTML.makeReport(getDataSetListByDateAndInstitution(valueMap), institutionPK, getDate(valueMap))
     })
   }
 
