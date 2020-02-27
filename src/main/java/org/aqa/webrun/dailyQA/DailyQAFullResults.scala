@@ -9,6 +9,7 @@ import org.aqa.db.Procedure
 import java.text.SimpleDateFormat
 import org.aqa.web.ViewOutput
 import org.aqa.web.WebUtil
+import org.aqa.web.OutputList
 
 object DailyQAFullResults {
 
@@ -33,6 +34,7 @@ object DailyQAFullResults {
         <td><a title="View details" href={ url }>{ timeFormat.format(ext.input_dataDate.get) }</a></td>
         <td>{ ext.procedure_name }</td>
         <td>{ WebUtil.wrapAlias(ext.machine_id) }</td>
+        <td><a title="Click to re-run analysis.  Results will replace previous results." href={ OutputList.path + "?" + OutputList.redoTag + "=" + ext.output_outputPK }>Redo</a></td>
       </tr>
     }
 
@@ -44,6 +46,7 @@ object DailyQAFullResults {
               <th>Acquisition</th>
               <th>Procedure</th>
               <th>Machine</th>
+              <th>Redo</th>
             </tr>
           </thead>
           { extList.map(o => extToRow(o)) }
