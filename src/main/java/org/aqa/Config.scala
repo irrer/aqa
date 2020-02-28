@@ -798,7 +798,7 @@ object Config extends Logging {
   val LeafPositionIsolationDistance_mm = logMainText("LeafPositionIsolationDistance_mm").toDouble
   val LeafPositionBeamNameList = getLeafPositionBeamNameList
 
-  val DailyQATolerance_mm = logMainText("DailyQATolerance_mm", "1.5").toDouble
+  val DailyQATolerance_mm = logMainText("DailyQATolerance_mm", "1.0").toDouble
   val CBCTBBMinimumStandardDeviation = logMainText("CBCTBBMinimumStandardDeviation", "1.75").toDouble
   val DailyPhantomSearchDistance_mm = logMainText("DailyPhantomSearchDistance_mm", "50.0").toDouble
   val CBCTBBPenumbra_mm = logMainText("CBCTBBPenumbra_mm", "2.5").toDouble
