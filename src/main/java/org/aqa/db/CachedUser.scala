@@ -23,7 +23,7 @@ object CachedUser {
     })
   }
 
-  private def put(id: String, user: User): Unit = {
+  def put(id: String, user: User): Unit = {
     cache.synchronized({
       cache.put(id, new CachedUser(user))
     })

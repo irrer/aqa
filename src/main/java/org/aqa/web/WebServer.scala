@@ -29,7 +29,6 @@ import org.restlet.routing.Filter
 import org.aqa.db.User
 import org.aqa.db.UserRole
 import org.restlet.routing.TemplateRoute
-import edu.umro.ScalaUtil.Trace._
 import org.aqa.db.CachedUser
 import org.aqa.db.Output
 import org.aqa.db.Input
@@ -45,6 +44,7 @@ import org.aqa.webrun.bbByCBCT.BBbyCBCTChartHistoryRestlet
 import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryRestlet
 import org.aqa.webrun.dailyQA.DailyQASummary
 import edu.umro.RestletUtil.NetworkIpFilter
+import edu.umro.ScalaUtil.Level2Ldap
 
 object WebServer {
   val challengeScheme = ChallengeScheme.HTTP_BASIC
@@ -331,6 +331,11 @@ class WebServer extends Application with Logging {
               } else
                 response.setStatus(Status.SUCCESS_OK)
             }
+
+            case _ if (Config.LdapUrl.isDefined && Level2Ldap.getUserInfo(challResp.getIdentifier, challResp.getSecret.toString).isRight) => {
+              response.setStatus(Status.SUCCESS_OK)
+            }
+
             case _ => {
               logger.warn("Internal authorization error.  Can not identify user.")
               response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)

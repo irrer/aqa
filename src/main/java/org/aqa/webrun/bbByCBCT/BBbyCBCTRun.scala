@@ -467,10 +467,11 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       case Right(runReq) => {
         logger.info("Data is valid.  Preparing to analyze data.")
         // only consider the CBCT files for the date-time stamp.  The plan could have been from months ago.
-        val dtp = dateTimePatId(runReq.cbct)
+        //val dtp = dateTimePatId(runReq.cbct)
+        val dtp = Util.dateTimeAndPatientIdFromDicom(runReq.cbctDicomFile.head.file.getParentFile)
 
         val sessDir = sessionDir(valueMap).get
-        val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp._2, dtp._1)
+        val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
         val input = inputOutput._1
         val output = inputOutput._2
 

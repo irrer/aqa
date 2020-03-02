@@ -228,16 +228,24 @@ object WebUtil extends Logging {
         contentType.toLowerCase.matches(".*application.*zip.*")
     }
 
+    Trace.trace
     if (isZip)
       writeZip(data, unique, request)
     else {
       isDicom(data) match {
-        case Some(al) => writeAnonymizedDicom(al, unique, request)
+        case Some(al) => {
+          Trace.trace
+          writeAnonymizedDicom(al, unique, request)
+          Trace.trace
+        }
 
         // We don't know what kind of file this is.  Just save it.
         case _ => {
+          Trace.trace
           val anonFile = unique.getUniquelyNamedFile(FileUtil.getFileSuffix(file.getName))
+          Trace.trace
           Util.writeBinaryFile(anonFile, data)
+          Trace.trace
         }
       }
     }
@@ -299,19 +307,25 @@ object WebUtil extends Logging {
         val upload = new RestletFileUpload(new DiskFileItemFactory(500, dir))
         val itemIterator = upload.getItemIterator(request.getEntity)
 
+        Trace.trace
         val userId: String = getUser(request) match { case Some(user) => user.id; case _ => "unknown" }
+        Trace.trace
         while (itemIterator.hasNext) {
           val ii = itemIterator.next
           val j = ii.isFormField
           if (!ii.isFormField) {
             val file = new File(dir, ii.getName)
+            Trace.trace
             logger.info("Uploading file from user " + userId + " to " + file.getAbsolutePath)
+            Trace.trace
             saveFile(ii.openStream, file, ii.getContentType, request)
+            Trace.trace
           }
         }
       }
       case _ => throw new RuntimeException("Unexpected internal error. None in WebUtil.saveFileList")
     }
+    Trace.trace
     valueMap ++ parseForm(new Form(request.getEntity))
   }
 
@@ -354,9 +368,12 @@ object WebUtil extends Logging {
   val styleNone = Map[String, Style]()
 
   def getValueMap(request: Request): ValueMapT = {
-    val vm = if (requestIsUpload(request))
-      saveFileList(request)
-    else
+    val vm = if (requestIsUpload(request)) {
+      Trace.trace
+      val vm = saveFileList(request)
+      Trace.trace
+      vm
+    } else
       emptyValueMap
 
     val valueMap = ensureSessionId(vm ++ parseOriginalReference(request) ++ parseForm(new Form(request.getEntity)) ++ userToValueMap(request))

@@ -316,6 +316,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
    * Given an image list, find the one with the earliest date/time.
    */
   private def dateTimePatId(rtimageList: Seq[AttributeList]): (Option[Long], Option[String]) = {
+    //  Util.dateTimeAndPatientIdFromDicom(rtimageList.head)   fffffff   TODO
     val list = rtimageList.map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al)).filter(dt => dt._1.nonEmpty && dt._2.isDefined)
     val date: Option[Long] = {
       val dateList = list.map(dp => dp._1.headOption).flatten
@@ -338,10 +339,10 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       }
       case Right(runReq) => {
         logger.info("Data is valid.  Preparing to analyze data.")
-        val dtp = dateTimePatId(runReq.epidList)
+        val dtp = Util.dateTimeAndPatientIdFromDicom(runReq.epidListDicomFile.head.file.getParentFile)
 
         val sessDir = sessionDir(valueMap).get
-        val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp._2, dtp._1)
+        val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
         val input = inputOutput._1
         val output = inputOutput._2
 

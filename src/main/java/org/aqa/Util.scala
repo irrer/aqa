@@ -295,16 +295,14 @@ object Util extends Logging {
    * Given a DICOM date/time, adjust it by the local time zone amount.
    */
   def adjustDicomDateByLocalTimeZone(date: Date) = {
-    val tz = TimeZone.getDefault
-    new Date(date.getTime - (tz.getRawOffset + tz.getDSTSavings))
+    new Date(date.getTime - TimeZone.getDefault.getRawOffset)
   }
 
   /**
    * Given a DICOM date/time, adjust it by the local time zone amount.
    */
   def adjustDicomDateByLocalTimeZone(ms: Long) = {
-    val tz = TimeZone.getDefault
-    ms - (tz.getRawOffset + tz.getDSTSavings)
+    ms - TimeZone.getDefault.getRawOffset
   }
 
   /**
@@ -497,6 +495,24 @@ object Util extends Logging {
   def main(args: Array[String]): Unit = {
 
     if (true) {
+      val fileList = (new File("""D:\tmp\aqa\CBCT\MQATX1OBIQA2019Q3\ri_20190620""")).listFiles
+
+      def doit(file: File) = {
+        val al = new AttributeList
+        al.read(file)
+
+        val dtp = extractDateTimeAndPatientIdFromDicom(file)
+
+        println(dtp)
+
+      }
+
+      fileList.map(al => doit(al))
+
+      System.exit(99)
+    }
+
+    if (false) {
       for (i <- (-800 until 800)) println(i.formatted("%5d") + " --> " + angleRoundedTo90(i).formatted("%5d"))
       System.exit(0)
     }
@@ -1036,12 +1052,12 @@ object Util extends Logging {
     val after = runtime.freeMemory
     logger.info("Free memory after garbage collection hint  : " + after + "    amount freed: " + (after - before))
   }
-  
+
   /**
    * Convert a gantry coordinate to a patient coordinate.  This does not compensate for table yaw, pitch, or roll.
    */
-  def gantryCoordinateToPatientCoordinate(point: Point3d, gantryAngle: Double) : Point3d = {
-    
+  def gantryCoordinateToPatientCoordinate(point: Point3d, gantryAngle: Double): Point3d = {
+
     ???
   }
 }

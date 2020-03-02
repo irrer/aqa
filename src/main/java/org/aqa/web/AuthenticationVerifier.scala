@@ -17,43 +17,51 @@ import org.aqa.Crypto
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.Level2Ldap
 import org.aqa.db.Institution
+import org.aqa.AnonymizeUtil
 
 class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.Value) extends Verifier with Logging {
 
-  private def createUserWithLdap(id: String, secret: String) = {
+  private def createUserWithLdap(id: String, secret: String): Option[User] = {
     try {
       val institutionPK = Institution.getInstitutionByRealName(Config.LdapInstitutionName).get.institutionPK.get
       val roleText = Config.LdapRole
       val userInfo = Level2Ldap.getUserInfo(id, secret).right.get
-      User.insertNewUser(institutionPK, id, userInfo.firstName + " " + userInfo.lastName, userInfo.email, secret, roleText)
+      val user = User.insertNewUser(institutionPK, id, userInfo.firstName + " " + userInfo.lastName, userInfo.email, secret, roleText)
+      Some(user)
     } catch {
-      case t: Throwable => logger.error("Unexpected exception while automatically creating user for LDAP: " + fmtEx(t))
+      case t: Throwable => {
+        logger.error("Unexpected exception while automatically creating user for LDAP: " + fmtEx(t))
+        None
+      }
     }
   }
 
-  /**
-   * Determine if the user is valid via LDAP.  If so, then add them to the database.
-   */
-  private def attemptVerifyViaLdap(id: String, secret: String): Int = {
-    Level2Ldap.getGroupListOfUser(id, secret) match {
-      case Right(groupSet) => {
-        if (groupSet.toSeq.intersect(Config.LdapGroupList).isEmpty) {
-          logger.warn("Unable to authenticate user via LDAP.  User is not a member of one of the configured LdapGroupList.\n" +
-            "    User's group list: " + groupSet.mkString("    ") +
-            "    Configured group list: " + Config.LdapGroupList.mkString("    "))
-          Verifier.RESULT_UNKNOWN
-        } else {
-          // User is authenticated and authorized.  Automatically create a user using LDAP information.
-          createUserWithLdap(id, secret)
-          Verifier.RESULT_VALID
-        }
-      }
-      case Left(errorMessage) => {
-        logger.warn("Unable to authenticate user via LDAP")
-        Verifier.RESULT_UNKNOWN
-      }
-    }
-  }
+  //  /**
+  //   * Determine if the user is valid via LDAP.  If so, then add them to the database.
+  //   */
+  //  private def attemptVerifyViaLdap(id: String, secret: String): Int = {
+  //    Trace.trace
+  //    Level2Ldap.getGroupListOfUser(id, secret) match {
+  //      case Right(groupSet) => {
+  //        if (groupSet.toSeq.intersect(Config.LdapGroupList).isEmpty) {
+  //          logger.warn("Unable to authenticate user via LDAP.  User is not a member of one of the configured LdapGroupList.\n" +
+  //            "    User's group list: " + groupSet.mkString("    ") +
+  //            "    Configured group list: " + Config.LdapGroupList.mkString("    "))
+  //          Verifier.RESULT_UNKNOWN
+  //        } else {
+  //          // User is authenticated and authorized.  Automatically create a user using LDAP information.
+  //          Trace.trace
+  //          createUserWithLdap(id, secret)
+  //          Trace.trace
+  //          Verifier.RESULT_VALID
+  //        }
+  //      }
+  //      case Left(errorMessage) => {
+  //        logger.warn("Unable to authenticate user via LDAP")
+  //        Verifier.RESULT_UNKNOWN
+  //      }
+  //    }
+  //  }
 
   override def verify(request: Request, response: Response): Int = {
     val requestedRole = getRequestedRole(request, response)
@@ -65,21 +73,44 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
           val id = challResp.getIdentifier
           val secret = new String(challResp.getSecret)
 
-          CachedUser.get(id) match {
-            case Some(user) if Config.LdapUrl.isDefined && Level2Ldap.getUserInfo(id, secret).isRight => Verifier.RESULT_VALID
-            case Some(user) if AuthenticationVerifier.validatePassword(secret, user.hashedPassword, user.passwordSalt) => Verifier.RESULT_VALID
-            case Some(user) => {
-              logger.warn("Authentication violation.  The password of user " + id + " failed")
-              Verifier.RESULT_INVALID
-            }
-            case _ => {
-              if (Config.LdapUrl.isDefined) attemptVerifyViaLdap(id, secret)
+          def isValidLdapUser = {
+            Config.LdapUrl.isDefined && Level2Ldap.getUserInfo(id, secret).isRight
+          }
+
+          def addLdapUserToCache(user: User) = {
+            val encyrptedPassword = AnonymizeUtil.encryptWithNonce(user.institutionPK, secret)
+            val hashedPassword2 = AuthenticationVerifier.hashPassword(secret, user.passwordSalt)
+            val user2 = user.copy(hashedPassword = hashedPassword2)
+            CachedUser.put(id, user2)
+            Verifier.RESULT_VALID
+          }
+
+          val cachedUser = CachedUser.get(id)
+
+          val status: Int = {
+            if (cachedUser.isDefined) {
+              val user = cachedUser.get
+              if (AuthenticationVerifier.validatePassword(secret, user.hashedPassword, user.passwordSalt))
+                Verifier.RESULT_VALID
               else {
-                logger.warn("unknown user " + id + " failed")
-                Verifier.RESULT_UNKNOWN
+                if (isValidLdapUser) addLdapUserToCache(user)
+                else Verifier.RESULT_UNKNOWN
               }
+            } else {
+              if (isValidLdapUser) {
+                // This user is not in the database but is valid according to LDAP, so insert them into the database
+                createUserWithLdap(id, secret) match {
+                  case Some(user) => {
+                    CachedUser.put(id, user) // add them to the cache for next time
+                    Verifier.RESULT_VALID
+                  }
+                  case _ => Verifier.RESULT_UNKNOWN
+                }
+              } else
+                Verifier.RESULT_UNKNOWN
             }
           }
+          status
         }
       }
     }
