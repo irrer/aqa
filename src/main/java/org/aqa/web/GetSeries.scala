@@ -179,7 +179,7 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
 
     val seriesListXml = {
       <SeriesList>
-        { dicomSeriesList.map(dicomSeries => toXml(dicomSeries)) }
+        { dicomSeriesList.sortBy(ds => ds.date.getTime).map(dicomSeries => toXml(dicomSeries)) }
       </SeriesList>
     }
     seriesListXml
