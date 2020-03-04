@@ -3,44 +3,26 @@ package org.aqa.web
 import org.restlet.Restlet
 import org.restlet.Request
 import org.restlet.Response
-import org.restlet.data.Method
-import java.util.Date
 import scala.xml.Elem
-import org.restlet.data.Parameter
-import org.aqa.db.EPID
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.api._
-import play.api.libs.concurrent.Execution.Implicits._
-import org.restlet.data.Form
 import scala.xml.PrettyPrinter
 import org.restlet.data.Status
 import org.restlet.data.MediaType
 import WebUtil._
-import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
 import org.aqa.Logging
 import org.aqa.Util
 import java.io.File
-import org.aqa.AQA
-import org.aqa.Config
-import edu.umro.util.OpSys
-import org.aqa.db.Institution
 import org.aqa.AnonymizeUtil
-import org.aqa.db.Machine
 import org.aqa.db.User
 import com.pixelmed.dicom.TagFromName
 import org.aqa.db.DicomAnonymous
 import com.pixelmed.dicom.AttributeFactory
 import org.aqa.db.DicomSeries
 import com.pixelmed.dicom.AttributeTag
-import com.pixelmed.dicom.Attribute
 import scala.xml.XML
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Output
 import org.aqa.db.Procedure
-
-object GetSeries {}
 
 /**
  * Generate XML that lists DICOM series associated with the given patient ID.
@@ -59,18 +41,18 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
       val patIdDicomAnonList = AnonymizeUtil.makeDicomAnonymousList(institutionPK, Seq(attribute))
       patIdDicomAnonList.head.value // anonymized patient ID
     }
-    val dicomSeriesList = DicomSeries.getByPatientID(anonPatientId)
+    val dicomSeriesList: Seq[DicomSeries.DicomSeriesWithoutContent] = DicomSeries.getByPatientID(anonPatientId)
 
     val relatedOutputList = Output.getByInputPKSet(dicomSeriesList.map(ds => ds.inputPK).flatten.toSet)
 
-    def outputOfDicomSeries(dicomSeries: DicomSeries): Option[Output] = {
+    def outputOfDicomSeries(dicomSeries: DicomSeries.DicomSeriesWithoutContent): Option[Output] = {
       if (dicomSeries.inputPK.isDefined)
         relatedOutputList.filter(o => o.inputPK == dicomSeries.inputPK.get).headOption
       else
         None
     }
 
-    def urlOfDicomSeries(dicomSeries: DicomSeries): Option[String] = {
+    def urlOfDicomSeries(dicomSeries: DicomSeries.DicomSeriesWithoutContent): Option[String] = {
       outputOfDicomSeries(dicomSeries) match {
         case Some(output) => {
           val file = new File(output.dir, Output.displayFilePrefix + ".html")
@@ -105,7 +87,7 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
       }
     }
 
-    def toXml(dicomSeries: DicomSeries): Elem = {
+    def toXml(dicomSeries: DicomSeries.DicomSeriesWithoutContent): Elem = {
 
       def getOpt(textOpt: Option[String], tag: AttributeTag, tagName: Option[String] = None): Option[Elem] = {
         val xmlTag = if (tagName.isDefined) tagName.get else DicomUtil.dictionary.getNameFromTag(tag)

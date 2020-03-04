@@ -40,7 +40,7 @@ case class DicomSeries(
 
   /**
    * Insert, returning the row that was inserted.  Note that dicomSeriesPK in the return value is defined.
-   * 
+   *
    * If this is an RTPLAN, then it should not be 'owned' by any particular input, so set the inputPK to None.
    */
   def insert: DicomSeries = {
@@ -158,12 +158,60 @@ object DicomSeries extends Logging {
     list
   }
 
-  def getByPatientID(patientID: String): Seq[DicomSeries] = {
+  case class DicomSeriesWithoutContent(
+    dicomSeriesPK: Long,
+    userPK: Long,
+    inputPK: Option[Long],
+    machinePK: Option[Long],
+    sopInstanceUIDList: String,
+    seriesInstanceUID: String,
+    frameOfReferenceUID: Option[String],
+    mappedFrameOfReferenceUID: Option[String],
+    modality: String,
+    sopClassUID: String,
+    deviceSerialNumber: Option[String],
+    date: Timestamp,
+    patientID: Option[String],
+    size: Int,
+    referencedRtplanUID: Option[String]) {}
+
+  def getByPatientID(patientID: String): Seq[DicomSeriesWithoutContent] = {
     val action = for {
-      dicomSeries <- query if ((dicomSeries.patientID === patientID))
-    } yield (dicomSeries)
+      ds <- query if ((ds.patientID === patientID))
+    } yield (
+      ds.dicomSeriesPK,
+      ds.userPK,
+      ds.inputPK,
+      ds.machinePK,
+      ds.sopInstanceUIDList,
+      ds.seriesInstanceUID,
+      ds.frameOfReferenceUID,
+      ds.mappedFrameOfReferenceUID,
+      ds.modality,
+      ds.sopClassUID,
+      ds.deviceSerialNumber,
+      ds.date,
+      ds.patientID,
+      ds.size,
+      ds.referencedRtplanUID)
     val list = Db.run(action.result)
-    list
+    val dsLite = list.map(ds => new DicomSeriesWithoutContent(
+      ds._1,
+      ds._2,
+      ds._3,
+      ds._4,
+      ds._5,
+      ds._6,
+      ds._7,
+      ds._8,
+      ds._9,
+      ds._10,
+      ds._11,
+      ds._12,
+      ds._13,
+      ds._14,
+      ds._15))
+    dsLite
   }
 
   def delete(dicomSeriesPK: Long): Int = {
