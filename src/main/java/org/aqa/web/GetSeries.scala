@@ -41,7 +41,7 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
       val patIdDicomAnonList = AnonymizeUtil.makeDicomAnonymousList(institutionPK, Seq(attribute))
       patIdDicomAnonList.head.value // anonymized patient ID
     }
-    val dicomSeriesList: Seq[DicomSeries.DicomSeriesWithoutContent] = DicomSeries.getByPatientID(anonPatientId)
+    val dicomSeriesList: Seq[DicomSeries.DicomSeriesWithoutContent] = DicomSeries.getByPatientID(anonPatientId).sortBy(ds => ds.date.getTime)
 
     val relatedOutputList = Output.getByInputPKSet(dicomSeriesList.map(ds => ds.inputPK).flatten.toSet)
 
@@ -66,9 +66,14 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
 
     val dicomAnonList = DicomAnonymous.getAttributesByTag(institutionPK, tagList)
 
+    def daKey(institutionPK: Long, attributeTag: String, value: String): String = institutionPK + " " + attributeTag + " " + value
+
+    val daList = dicomAnonList.map(da => (daKey(da.institutionPK, da.attributeTag, da.value), da)).toMap
+
     def lookup(tag: AttributeTag, anonValue: String): Option[String] = {
       val tagText = DicomAnonymous.formatAnonAttributeTag(tag)
-      dicomAnonList.find(an => an.attributeTag.equals(tagText) && anonValue.equals(an.value)) match {
+
+      daList.get(daKey(institutionPK, DicomAnonymous.formatAnonAttributeTag(tag), anonValue)) match {
         case Some(dicomAnonymous) => Some(AnonymizeUtil.decryptWithNonce(institutionPK, dicomAnonymous.value_real))
         case _ => None
       }
@@ -89,8 +94,8 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
 
     def toXml(dicomSeries: DicomSeries.DicomSeriesWithoutContent): Elem = {
 
-      def getOpt(textOpt: Option[String], tag: AttributeTag, tagName: Option[String] = None): Option[Elem] = {
-        val xmlTag = if (tagName.isDefined) tagName.get else DicomUtil.dictionary.getNameFromTag(tag)
+      def getOpt(textOpt: Option[String], tag: AttributeTag, xmlTag: String): Option[Elem] = {
+
         textOpt match {
           case Some(text) => {
             lookup(tag, text) match {
@@ -107,14 +112,14 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
 
       val output = outputOfDicomSeries(dicomSeries)
 
-      val serInstUid = getOpt(Some(dicomSeries.seriesInstanceUID), TagFromName.SeriesInstanceUID)
-      val frmOfRef = getOpt(dicomSeries.frameOfReferenceUID, TagFromName.FrameOfReferenceUID)
-      val mappedFrameOfReferenceUID = getOpt(dicomSeries.mappedFrameOfReferenceUID, TagFromName.FrameOfReferenceUID, Some("mappedFrameOfReferenceUID"))
+      val serInstUid = getOpt(Some(dicomSeries.seriesInstanceUID), TagFromName.SeriesInstanceUID, "SeriesInstanceUID")
+      val frmOfRef = getOpt(dicomSeries.frameOfReferenceUID, TagFromName.FrameOfReferenceUID, "FrameOfReferenceUID")
+      val mappedFrameOfReferenceUID = getOpt(dicomSeries.mappedFrameOfReferenceUID, TagFromName.FrameOfReferenceUID, "mappedFrameOfReferenceUID")
       val modality = Some(<Modality>{ dicomSeries.modality }</Modality>)
       val sopClassUid = Some(<SOPClassUID>{ dicomSeries.sopClassUID }</SOPClassUID>)
-      val devSerNo = getOpt(dicomSeries.deviceSerialNumber, TagFromName.DeviceSerialNumber)
-      val patId = getOpt(dicomSeries.patientID, TagFromName.PatientID)
-      val referencedRtplanUID = getOpt(dicomSeries.referencedRtplanUID, TagFromName.ReferencedSOPInstanceUID, Some("referencedRtplanUID"))
+      val devSerNo = getOpt(dicomSeries.deviceSerialNumber, TagFromName.DeviceSerialNumber, "DeviceSerialNumber")
+      val patId = getOpt(dicomSeries.patientID, TagFromName.PatientID, "PatientID")
+      val referencedRtplanUID = getOpt(dicomSeries.referencedRtplanUID, TagFromName.ReferencedSOPInstanceUID, "referencedRtplanUID")
       val startDate = {
         if (output.isDefined) Some(<AnalysisStartDate>{ Util.standardDateFormat.format(output.get.startDate) }</AnalysisStartDate>)
         else None
@@ -161,7 +166,11 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
 
     val seriesListXml = {
       <SeriesList>
-        { dicomSeriesList.sortBy(ds => ds.date.getTime).map(dicomSeries => toXml(dicomSeries)) }
+        {
+          val partitioned = edu.umro.ScalaUtil.Util.sizedGroups(dicomSeriesList, dicomSeriesList.size / 8);
+          partitioned.par.map(sub => sub.map(ds => toXml(ds))).toList.flatten
+          //dicomSeriesList.map(dicomSeries => toXml(dicomSeries))
+        }
       </SeriesList>
     }
     seriesListXml
@@ -169,6 +178,7 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
 
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
+    Trace.traceE("%%%%Start")
     val valueMap = getValueMap(request)
     try {
       val user = getUser(request)
@@ -178,6 +188,7 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
         case _ if (user.isEmpty) => badRequest(response, "User not logged in or user can not be identified", Status.CLIENT_ERROR_BAD_REQUEST)
         case _ if (realPatientId.isEmpty) => badRequest(response, "No " + PatientIDTag + " value given", Status.CLIENT_ERROR_BAD_REQUEST)
         case _ => {
+          logger.info("Fetching list of series for PatientID " + realPatientId)
           val xml = generateXml(user.get, realPatientId.get)
           val xmlText = new PrettyPrinter(1024, 2).format(xml)
           response.setEntity(xmlText, MediaType.TEXT_XML)
@@ -189,6 +200,7 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
         WebUtil.internalFailure(response, t)
       }
     }
+    Trace.traceE("%%%%Finish")
   }
 
 }
