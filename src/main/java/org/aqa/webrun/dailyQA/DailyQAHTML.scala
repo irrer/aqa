@@ -169,7 +169,7 @@ object DailyQAHTML {
 
     val machinesMissingResults = {
       val haveData = dataSetList.map(ds => ds.machine.id).distinct
-      val allMachines = Machine.listMachinesFromInstitution(institutionPK).map(m => m.id)
+      val allMachines = Machine.listMachinesFromInstitution(institutionPK).filter(m => m.active).map(m => m.id)
       val idList = allMachines.diff(haveData)
       val title = Seq(
         "These machine do not have at least one pair",

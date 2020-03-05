@@ -21,7 +21,7 @@ class TestCustomizeRtPlan_testGetPlanBeamList extends FlatSpec with Matchers {
   "CustomizeRtPlan.testGetPlanBeamList" should "get list of plan beams" in {
     println("Starting...")
     val mlcPK = 3.toLong // hard coded 3 for PK makes code brittle
-    val machine = new Machine(None, "id", Some("id_real"), 1, None, mlcPK, -1, -1, None, false, false, false, false, false, "notes")
+    val machine = new Machine(None, "id", Some("id_real"), 1, None, mlcPK, -1, -1, None, false, false, false, false, false, true, "notes")
 
     val list = CustomizeRtPlan.testGetPlanBeamList(machine)
 

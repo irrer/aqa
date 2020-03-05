@@ -167,18 +167,19 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
     val seriesListXml = {
       <SeriesList>
         {
-          val partitioned = edu.umro.ScalaUtil.Util.sizedGroups(dicomSeriesList, dicomSeriesList.size / 8);
+          val groupSize = Math.min(5, dicomSeriesList.size / 8)
+          val partitioned = edu.umro.ScalaUtil.Util.sizedGroups(dicomSeriesList, groupSize)
           partitioned.par.map(sub => sub.map(ds => toXml(ds))).toList.flatten
-          //dicomSeriesList.map(dicomSeries => toXml(dicomSeries))
         }
       </SeriesList>
     }
+
+    logger.info("Generated XML list of " + dicomSeriesList.size + " series for patient " + PatientIDTag)
     seriesListXml
   }
 
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
-    Trace.traceE("%%%%Start")
     val valueMap = getValueMap(request)
     try {
       val user = getUser(request)
@@ -188,10 +189,11 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
         case _ if (user.isEmpty) => badRequest(response, "User not logged in or user can not be identified", Status.CLIENT_ERROR_BAD_REQUEST)
         case _ if (realPatientId.isEmpty) => badRequest(response, "No " + PatientIDTag + " value given", Status.CLIENT_ERROR_BAD_REQUEST)
         case _ => {
-          logger.info("Fetching list of series for PatientID " + realPatientId)
+          logger.info("Getting list of series for PatientID " + realPatientId.get)
           val xml = generateXml(user.get, realPatientId.get)
           val xmlText = new PrettyPrinter(1024, 2).format(xml)
           response.setEntity(xmlText, MediaType.TEXT_XML)
+          logger.info("Got list of series for PatientID " + realPatientId.get)
         }
       }
 
@@ -200,7 +202,6 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
         WebUtil.internalFailure(response, t)
       }
     }
-    Trace.traceE("%%%%Finish")
   }
 
 }

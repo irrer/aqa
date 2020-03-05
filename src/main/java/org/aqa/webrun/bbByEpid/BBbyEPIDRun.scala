@@ -338,7 +338,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
       case Right(runReq) => {
-        logger.info("Data is valid.  Preparing to analyze data.")
+        logger.info("EPID Data is valid.  Preparing to analyze data.")
         val dtp = Util.dateTimeAndPatientIdFromDicom(runReq.epidListDicomFile.head.file.getParentFile)
 
         val sessDir = sessionDir(valueMap).get
@@ -363,7 +363,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
         Util.garbageCollect
         awaitIfRequested(future, valueMap, inputOutput._2.procedurePK)
-
+        logger.info("EPID processing of future has completed")
         ViewOutput.redirectToViewRunProgress(response, valueMap, output.outputPK.get)
       }
     }

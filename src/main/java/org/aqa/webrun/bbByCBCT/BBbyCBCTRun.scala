@@ -465,9 +465,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
       case Right(runReq) => {
-        logger.info("Data is valid.  Preparing to analyze data.")
-        // only consider the CBCT files for the date-time stamp.  The plan could have been from months ago.
-        //val dtp = dateTimePatId(runReq.cbct)
+        logger.info("CBCT Data is valid.  Preparing to analyze data.")
         val dtp = Util.dateTimeAndPatientIdFromDicom(runReq.cbctDicomFile.head.file.getParentFile)
 
         val sessDir = sessionDir(valueMap).get
@@ -494,6 +492,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
           outputFinal.insertOrUpdate
           outputFinal.updateData(outputFinal.makeZipOfFiles)
           Run.removeRedundantOutput(outputFinal.outputPK)
+          logger.info("CBCT processing of future has completed")
         }
 
         Util.garbageCollect

@@ -18,12 +18,13 @@ case class Machine(
   multileafCollimatorPK: Long, // collimator
   epidPK: Long, // EPID
   institutionPK: Long, // institution that this machine belongs to
-  serialNumber: Option[String],
-  imagingBeam2_5_mv: Boolean,
-  onboardImager: Boolean,
-  table6DOF: Boolean,
-  respiratoryManagement: Boolean,
-  developerMode: Boolean,
+  serialNumber: Option[String], // encrypted version of the machine's serial number.  Becomes defined when a user associates data with it via the web interface.
+  imagingBeam2_5_mv: Boolean, // True if this is supported.  Defaults to false.
+  onboardImager: Boolean, // True if this is supported.  Defaults to false.
+  table6DOF: Boolean, // True if (six degrees of freedom table) is supported.  Defaults to false.
+  respiratoryManagement: Boolean, // True if this is supported.  Defaults to false.
+  developerMode: Boolean, // True if this is supported.  Defaults to false.
+  active: Boolean, // True if the machine is actively being used.  Defaults to true.  Setting to false may exclude this machine's data from some reports.
   notes: String // optional further information
 ) {
 
@@ -57,6 +58,7 @@ case class Machine(
       "  6DOF Table: " + fmtB(table6DOF) +
       "  resp mgmt: " + fmtB(respiratoryManagement) +
       "  dev mode: " + fmtB(developerMode) +
+      "  active: " + fmtB(active) +
       "  notes: " + fmt(notes)
   }
 
@@ -81,6 +83,7 @@ object Machine extends Logging {
     def table6DOF = column[Boolean]("table6DOF")
     def respiratoryManagement = column[Boolean]("respiratoryManagement")
     def developerMode = column[Boolean]("developerMode")
+    def active = column[Boolean]("active")
 
     def * = (
       machinePK.?,
@@ -97,7 +100,7 @@ object Machine extends Logging {
       table6DOF,
       respiratoryManagement,
       developerMode,
-
+      active,
       notes) <> ((Machine.apply _)tupled, Machine.unapply _)
 
     def machineTypeFK = foreignKey("machineTypePK", machineTypePK, MachineType.query)(_.machineTypePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)

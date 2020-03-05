@@ -1526,9 +1526,14 @@ object WebUtil extends Logging {
   def awaitIfRequested[T](future: Future[T], await: Boolean, procedurePK: Long): Unit = {
     if (await) {
       val procedureTimeout = (Procedure.get(procedurePK).get.timeout * 60 * 1000).round.toLong
+      val start = System.currentTimeMillis
+      logger.info("Awaiting for future to finish with timout of " + procedureTimeout + " ms .  Timeout at: " + edu.umro.ScalaUtil.Util.dateToText(new Date(procedureTimeout + start)))
       val dur = new FiniteDuration(procedureTimeout, TimeUnit.MILLISECONDS)
       Await.result(future, dur)
-    }
+      val elapsed = System.currentTimeMillis - start
+      logger.info("Await of future finished in " + elapsed + " ms.  Timeout was " + procedureTimeout + " ms.")
+    } else
+      logger.info("Await was not requested.")
   }
 
   /**

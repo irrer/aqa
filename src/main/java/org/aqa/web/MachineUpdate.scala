@@ -119,6 +119,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   private val onboardImager = new WebInputCheckbox("Onboard Imager", true, Some("Check to indicate that the machine " + titleNewline + "has an onboard imager"), 3, 0)
   private val table6DOF = new WebInputCheckbox("6DOF Table", true, Some("Check to indicate that the machine" + titleNewline + "has a 6 degrees of freedom table"), 3, 0)
   private val developerMode = new WebInputCheckbox("Developer Mode", true, Some("Check to indicate that the machine" + titleNewline + " supports developer mode"), 3, 0)
+  private val active = new WebInputCheckbox("Active", true, Some("Check to indicate that the machine" + titleNewline + " is in active use"), 3, 0)
   private val respiratoryManagement = new WebInputCheckbox("Respiratory Management", true, Some("Check to indicate that the machine supports" + titleNewline + " respiratory management"), 3, 0)
   private val imagingBeam2_5_mv = new WebInputCheckbox("Has 2.5 mv imaging beam", true, Some("Check to indicate that the machine " + titleNewline + "has a 2.5 mv imaging beam"), 3, 0)
 
@@ -243,7 +244,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       List(institutionPK),
       List(onboardImager, table6DOF),
       List(developerMode, respiratoryManagement),
-      List(imagingBeam2_5_mv),
+      List(imagingBeam2_5_mv, active),
       List(photonEnergyHeader, maxDoseRateHeader, fffEnergyHeader, addBeamEnergyButton))
 
     val listB: List[WebRow] = beamEnergyRows(valueMap)
@@ -477,6 +478,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       valueMap.get(table6DOF.label).isDefined,
       valueMap.get(respiratoryManagement.label).isDefined,
       valueMap.get(developerMode.label).isDefined,
+      valueMap.get(active.label).isDefined,
       notesVal)
 
     machine
@@ -574,6 +576,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       (table6DOF.label, mach.table6DOF.toString),
       (respiratoryManagement.label, mach.respiratoryManagement.toString),
       (developerMode.label, mach.developerMode.toString),
+      (active.label, mach.active.toString),
       (notes.label, AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasNotesPrefixId, pk)),
       (machinePK.label, pk.toString)) ++ getBeamEnergyListAsValueMap(mach.machinePK.get)
 
