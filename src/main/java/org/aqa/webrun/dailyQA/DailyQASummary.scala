@@ -51,19 +51,26 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
   // let user choose date to display
   private val dateField = new WebInputDatePicker("Date", 4, 0, false)
 
-  private def csvLink(valueMap: ValueMapT): Elem = {
-    val dateText =
-      valueMap.get(dateField.label) match {
-        case Some(text) => text
-        case _ => dateField.dateFormat.format(new Date)
-      }
+  private def getDateText(valueMap: ValueMapT): String = {
+    valueMap.get(dateField.label) match {
+      case Some(text) => text
+      case _ => dateField.dateFormat.format(new Date)
+    }
+  }
 
-    <a href={ DailyQASummary.path + "?CSV=" + dateText } title="Download a spreadsheet of all DailyQA data for this institution.">CSV</a>
+  private def csvLink(valueMap: ValueMapT): Elem = {
+    <a href={ DailyQASummary.path + "?CSV=" + getDateText(valueMap) } title="Download a spreadsheet of all DailyQA data for this institution.">CSV</a>
   }
 
   private val csvField = new WebPlainText("CSV", false, 2, 0, csvLink)
 
-  val controlRow: WebRow = List(refreshButton, dateField, csvField)
+  private def getDisplayedDate(valueMap: ValueMapT): Elem = {
+    <h4>Results for { getDateText(valueMap) }</h4>
+  }
+
+  private val displayedDate = new WebPlainText("DisplayedDate", false, 2, 0, getDisplayedDate)
+
+  val controlRow: WebRow = List(displayedDate, refreshButton, dateField, csvField)
 
   // bulk of the displayed information
   private val report = {
