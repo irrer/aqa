@@ -454,10 +454,54 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   }
 
   /**
+   * All the proper data is available to process.
+   */
+  private def run(valueMap: ValueMapT, runReq: BBbyCBCTRunReq, response: Response) = {
+    logger.info("CBCT Data is valid.  Preparing to analyze data.")
+    val dtp = Util.dateTimeAndPatientIdFromDicom(runReq.cbctDicomFile.head.file.getParentFile)
+
+    val sessDir = sessionDir(valueMap).get
+    val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(response.getRequest), dtp.PatientID, dtp.dateTime)
+    val input = inputOutput._1
+    val output = inputOutput._2
+
+    def perform = {
+      val extendedData = ExtendedData.get(output)
+      DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, Seq(runReq.rtplan))
+
+      DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, runReq.cbct)
+      if (runReq.regDicomFile.isDefined && runReq.regDicomFile.get.attributeList.isDefined) {
+        DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, Seq(runReq.regDicomFile.get.attributeList.get))
+      }
+
+      val runReqFinal = runReq.reDir(input.dir)
+
+      val finalStatus = BBbyCBCTExecute.runProcedure(extendedData, runReqFinal)
+      val finDate = new Timestamp(System.currentTimeMillis)
+      val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
+
+      Phase2Util.setMachineSerialNumber(extendedData.machine, runReq.cbct.head)
+      outputFinal.insertOrUpdate
+      outputFinal.updateData(outputFinal.makeZipOfFiles)
+      Run.removeRedundantOutput(outputFinal.outputPK)
+      Util.garbageCollect
+      logger.info("CBCT processing has completed")
+    }
+
+    // if awaiting, then wait for completion, otherwise do it in the background
+    if (isAwait(valueMap)) {
+      perform
+    } else {
+      Future { perform }
+    }
+    logger.info("Redirecting web client to view run progress of CBCT processing.")
+    ViewOutput.redirectToViewRunProgress(response, valueMap, output.outputPK.get)
+  }
+
+  /**
    * Respond to the 'Run' button.
    */
   private def runIfDataValid(valueMap: ValueMapT, request: Request, response: Response) = {
-
     logger.info("Validating data")
     validate(valueMap) match {
       case Left(errMap) => {
@@ -465,39 +509,8 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
       case Right(runReq) => {
-        logger.info("CBCT Data is valid.  Preparing to analyze data.")
-        val dtp = Util.dateTimeAndPatientIdFromDicom(runReq.cbctDicomFile.head.file.getParentFile)
-
-        val sessDir = sessionDir(valueMap).get
-        val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
-        val input = inputOutput._1
-        val output = inputOutput._2
-
-        val future = Future {
-          val extendedData = ExtendedData.get(output)
-          DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, Seq(runReq.rtplan))
-
-          DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, runReq.cbct)
-          if (runReq.regDicomFile.isDefined && runReq.regDicomFile.get.attributeList.isDefined) {
-            DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, Seq(runReq.regDicomFile.get.attributeList.get))
-          }
-
-          val runReqFinal = runReq.reDir(input.dir)
-
-          val finalStatus = BBbyCBCTExecute.runProcedure(extendedData, runReqFinal)
-          val finDate = new Timestamp(System.currentTimeMillis)
-          val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
-
-          Phase2Util.setMachineSerialNumber(extendedData.machine, runReq.cbct.head)
-          outputFinal.insertOrUpdate
-          outputFinal.updateData(outputFinal.makeZipOfFiles)
-          Run.removeRedundantOutput(outputFinal.outputPK)
-          logger.info("CBCT processing of future has completed")
-        }
-
-        Util.garbageCollect
-        awaitIfRequested(future, valueMap, inputOutput._2.procedurePK)
-        ViewOutput.redirectToViewRunProgress(response, valueMap, output.outputPK.get)
+        if (isAwait(valueMap)) awaitTag.synchronized(run(valueMap, runReq, response))
+        else run(valueMap, runReq, response)
       }
     }
   }

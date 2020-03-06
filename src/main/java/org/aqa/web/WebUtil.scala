@@ -85,7 +85,7 @@ object WebUtil extends Logging {
   /**
    * Tag used to indicate that the call should not return until processing is complete.
    */
-  private val awaitTag = "Await"
+  val awaitTag = "Await"
 
   val aqaAliasAttr = { <div aqaalias=""/> }.attributes
   def ifAqaAliasAttr(elem: Elem, aqaAlias: Boolean) = if (aqaAlias) { elem % aqaAliasAttr } else elem

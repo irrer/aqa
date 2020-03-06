@@ -519,10 +519,54 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
     culled.toSeq
   }
 
+  private def run(valueMap: ValueMapT, runReq: RunReq, response: Response, rtimageList: Seq[DicomFile]) = {
+
+    // only consider the RTIMAGE files for the date-time stamp.  The plan could have been from months ago.
+    val dtp = dateTimePatId(rtimageList)
+
+    val sessDir = sessionDir(valueMap).get
+    val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(response.getRequest), dtp.PatientID, dtp.dateTime)
+    val input = inputOutput._1
+    val output = inputOutput._2
+
+    def perform = {
+      val extendedData = ExtendedData.get(output)
+      val runReqFinal = runReq.reDir(input.dir)
+
+      val plan = runReqFinal.rtplan
+      val machine = runReqFinal.machine
+      // save serial number now in case analysis crashes with an exception
+      Phase2Util.setMachineSerialNumber(machine, runReqFinal.flood.attributeList.get)
+      Phase2Util.saveRtplan(plan)
+
+      val rtimageMap = Phase2.constructRtimageMap(plan, rtimageList)
+
+      val finalStatus = Phase2.runPhase2(extendedData, rtimageMap, runReqFinal)
+      val finDate = new Timestamp(System.currentTimeMillis)
+      val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
+
+      outputFinal.insertOrUpdate
+      outputFinal.updateData(outputFinal.makeZipOfFiles)
+      Run.removeRedundantOutput(outputFinal.outputPK)
+      Util.garbageCollect
+      logger.info("Phase 2 analysis has completed.")
+    }
+
+    // if awaiting, then wait for completion, otherwise do it in the background
+    if (isAwait(valueMap)) {
+      perform
+    } else {
+      Future { perform }
+    }
+    logger.info("Redirecting web client to view run progress of EPID processing.")
+    ViewOutput.redirectToViewRunProgress(response, valueMap, output.outputPK.get)
+
+  }
+
   /**
    * Respond to the 'Run' button.
    */
-  private def run(valueMap: ValueMapT, request: Request, response: Response) = {
+  private def runIfDataValid(valueMap: ValueMapT, request: Request, response: Response) = {
     val dicomFileList = dicomFilesInSession(valueMap)
     val rtplanList = Phase2Util.getPlanList(dicomFileList)
     val rtimageList = cullRedundantBeamReferences(dicomFileList.filter(df => df.isRtimage))
@@ -533,38 +577,10 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
       case Right(runReq) => {
-        // only consider the RTIMAGE files for the date-time stamp.  The plan could have been from months ago.
-        val dtp = dateTimePatId(rtimageList)
-
-        val sessDir = sessionDir(valueMap).get
-        val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
-        val input = inputOutput._1
-        val output = inputOutput._2
-
-        val future = Future {
-          val extendedData = ExtendedData.get(output)
-          val runReqFinal = runReq.reDir(input.dir)
-
-          val plan = runReqFinal.rtplan
-          val machine = runReqFinal.machine
-          // save serial number now in case analysis crashes with an exception
-          Phase2Util.setMachineSerialNumber(machine, runReqFinal.flood.attributeList.get)
-          Phase2Util.saveRtplan(plan)
-
-          val rtimageMap = Phase2.constructRtimageMap(plan, rtimageList)
-
-          val finalStatus = Phase2.runPhase2(extendedData, rtimageMap, runReqFinal)
-          val finDate = new Timestamp(System.currentTimeMillis)
-          val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
-
-          outputFinal.insertOrUpdate
-          outputFinal.updateData(outputFinal.makeZipOfFiles)
-          Run.removeRedundantOutput(outputFinal.outputPK)
+        if (isAwait(valueMap)) awaitTag.synchronized {
+          run(valueMap, runReq, response, rtimageList)
         }
-
-        Util.garbageCollect
-        awaitIfRequested(future, valueMap, inputOutput._2.procedurePK)
-        ViewOutput.redirectToViewRunProgress(response, emptyValueMap, output.outputPK.get)
+        else run(valueMap, runReq, response, rtimageList)
       }
     }
   }
@@ -594,7 +610,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with Loggi
       0 match {
         //case _ if (!sessionDefined(valueMap)) => redirectWithNewSession(response);
         case _ if buttonIs(valueMap, cancelButton) => cancel(valueMap, response)
-        case _ if buttonIs(valueMap, runButton) => run(valueMap, request, response)
+        case _ if buttonIs(valueMap, runButton) => runIfDataValid(valueMap, request, response)
         case _ => emptyForm(valueMap, response)
       }
     } catch {

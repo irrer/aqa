@@ -326,11 +326,47 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     (date, patient)
   }
 
+  private def run(valueMap: ValueMapT, runReq: BBbyEPIDRunReq, response: Response) = {
+
+    logger.info("EPID Data is valid.  Preparing to analyze data.")
+    val dtp = Util.dateTimeAndPatientIdFromDicom(runReq.epidListDicomFile.head.file.getParentFile)
+
+    val sessDir = sessionDir(valueMap).get
+    val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(response.getRequest), dtp.PatientID, dtp.dateTime)
+    val input = inputOutput._1
+    val output = inputOutput._2
+
+    def perform = {
+      val extendedData = ExtendedData.get(output)
+      val runReqFinal = runReq.reDir(input.dir)
+      DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, runReqFinal.epidList)
+
+      val finalStatus = BBbyEPIDAnalyse.runProcedure(extendedData, runReqFinal)
+      val finDate = new Timestamp(System.currentTimeMillis)
+      val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
+
+      Phase2Util.setMachineSerialNumber(extendedData.machine, runReq.epidList.head)
+      outputFinal.insertOrUpdate
+      outputFinal.updateData(outputFinal.makeZipOfFiles)
+      Run.removeRedundantOutput(outputFinal.outputPK)
+      logger.info("EPID processing has completed")
+      Util.garbageCollect
+    }
+
+    // if awaiting, then wait for completion, otherwise do it in the background
+    if (isAwait(valueMap)) {
+      perform
+    } else {
+      Future { perform }
+    }
+    logger.info("Redirecting web client to view run progress of EPID processing.")
+    ViewOutput.redirectToViewRunProgress(response, valueMap, output.outputPK.get)
+  }
+
   /**
    * Respond to the 'Run' button.
    */
   private def runIfDataValid(valueMap: ValueMapT, request: Request, response: Response) = {
-
     logger.info("Validating data")
     validate(valueMap) match {
       case Left(errMap) => {
@@ -338,33 +374,10 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
         form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
       case Right(runReq) => {
-        logger.info("EPID Data is valid.  Preparing to analyze data.")
-        val dtp = Util.dateTimeAndPatientIdFromDicom(runReq.epidListDicomFile.head.file.getParentFile)
-
-        val sessDir = sessionDir(valueMap).get
-        val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(request), dtp.PatientID, dtp.dateTime)
-        val input = inputOutput._1
-        val output = inputOutput._2
-
-        val future = Future {
-          val extendedData = ExtendedData.get(output)
-          val runReqFinal = runReq.reDir(input.dir)
-          DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, runReqFinal.epidList)
-
-          val finalStatus = BBbyEPIDAnalyse.runProcedure(extendedData, runReqFinal)
-          val finDate = new Timestamp(System.currentTimeMillis)
-          val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
-
-          Phase2Util.setMachineSerialNumber(extendedData.machine, runReq.epidList.head)
-          outputFinal.insertOrUpdate
-          outputFinal.updateData(outputFinal.makeZipOfFiles)
-          Run.removeRedundantOutput(outputFinal.outputPK)
+        if (isAwait(valueMap)) awaitTag.synchronized {
+          run(valueMap, runReq, response)
         }
-
-        Util.garbageCollect
-        awaitIfRequested(future, valueMap, inputOutput._2.procedurePK)
-        logger.info("EPID processing of future has completed")
-        ViewOutput.redirectToViewRunProgress(response, valueMap, output.outputPK.get)
+        else run(valueMap, runReq, response)
       }
     }
   }
