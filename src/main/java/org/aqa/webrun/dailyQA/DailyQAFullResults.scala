@@ -39,19 +39,22 @@ object DailyQAFullResults {
     }
 
     val content = {
-      <table class="table table-striped">
-        <tbody>
-          <thead>
-            <tr>
-              <th>Acquisition</th>
-              <th>Procedure</th>
-              <th>Machine</th>
-              <th>Redo</th>
-            </tr>
-          </thead>
-          { extList.map(o => extToRow(o)) }
-        </tbody>
-      </table>
+      <div style="margin-top:60px;">
+        <center><h4>Results for Each Image Series</h4></center>
+        <table class="table table-striped">
+          <tbody>
+            <thead>
+              <tr>
+                <th>Acquisition</th>
+                <th>Procedure</th>
+                <th>Machine</th>
+                <th>Redo</th>
+              </tr>
+            </thead>
+            { extList.map(o => extToRow(o)) }
+          </tbody>
+        </table>
+      </div>
     }
     content
   }

@@ -49,9 +49,9 @@ object DailyQAHTML {
     def colMachine(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
       val machElem = wrapAlias(dataSet.machine.id)
       if (machinePassed) {
-        <td title="Machine Name">{ machElem }</td>
+        <td title="Machine Name" style="color: #000000; background: #1dc32b;"><h4>{ machElem }<br></br>Pass</h4></td>
       } else {
-        <td class="danger" title={ "At least one value is out of tolerance" }>{ machElem }</td>
+        <td class="danger" title={ "At least one value is out of tolerance" } style="color: #000000; background: #e00034;"><h4>{ machElem }<br></br>Fail</h4></td>
       }
     }
 
@@ -183,7 +183,9 @@ object DailyQAHTML {
       if (idList.isEmpty) <span></span>
       else {
         <h4 class="p-3 mb-2 bg-danger text-light">
-          <span title={ title } style="margin: 8px;">Machines without results: { idList.map(id => idToElem(id)) }</span>
+          <div>
+            <div title={ title } style="margin: 8px;">Machines without results: { idList.map(id => idToElem(id)) }</div>
+          </div>
         </h4>
       }
     }
@@ -200,6 +202,16 @@ object DailyQAHTML {
               dataSetList.sortWith(sortDataSetPair).map(dataSet => dataSetToRow(dataSet))
             }
           </table>
+        </div>
+        <div class="row">
+          <div class="col-md-8 col-md-offset-2 col-sm-12">
+            <center>
+              Machines above that have any measurements out of tolerance by{ Util.fmtDbl(Config.DailyQATolerance_mm) }
+              mm or more are marked as failed.  To produce a final result for a single machine, there must be both CBCT
+              and EPID results.  Both must be valid (found the BB near isocenter), the CBCT must scanned before the EPID,
+              and they must be scanned on the same day.
+            </center>
+          </div>
         </div>
         <div class="row">
           <div class="col-md-6 col-md-offset-3 col-sm-12">
