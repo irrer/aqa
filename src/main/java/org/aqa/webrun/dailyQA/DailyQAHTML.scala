@@ -33,7 +33,7 @@ object DailyQAHTML {
         if (toNum(aMach).isDefined && toNum(bMach).isDefined) {
           toNum(aMach).get < toNum(bMach).get
         } else {
-          aMach.compareTo(bMach) < 0
+          aMach.compareTo(bMach) <= 0
         }
       }
     }
