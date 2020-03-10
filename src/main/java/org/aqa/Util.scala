@@ -201,9 +201,23 @@ object Util extends Logging {
     }
   }
 
+  private val dicomDateTimeFormat = new SimpleDateFormat("yyyyMMddHHmmss.SSS")
+  private val zeroDate = new Date(0)
+
+  /**
+   * Convert date and time pair into java.util.Date.  Note that time will only be accurate to the ms.  Note that
+   * the date and time must be done together so as to get the time zone and daylight savings time right.
+   */
   private def getTimeAndDate(al: AttributeList, dateTag: AttributeTag, timeTag: AttributeTag): Option[Date] = {
     try {
-      Some(DateTimeAttribute.getDateFromFormattedString(al, dateTag, timeTag))
+      val dateText = al.get(dateTag).getSingleStringValueOrNull
+      val timeText = {
+        val t = al.get(timeTag).getSingleStringValueOrNull
+        val t2 = if (t.contains('.')) t + "000"
+        else t + ".000"
+        t2.take(10)
+      }
+      Some(dicomDateTimeFormat.parse(dateText + timeText))
     } catch {
       case e: Throwable => None
     }
@@ -235,7 +249,7 @@ object Util extends Logging {
 
     val dateTimePairs = dateTimeTagPairList.map(dt => getTimeAndDate(attributeList, dt._1, dt._2))
 
-    val dateList = (AcquisitionDateTime +: dateTimePairs).flatten.distinct.map(dt => adjustDicomDateByLocalTimeZone(dt))
+    val dateList = (AcquisitionDateTime +: dateTimePairs).flatten //.distinct.map(dt => adjustDicomDateByLocalTimeZone(dt))
 
     (dateList, PatientID)
   }
