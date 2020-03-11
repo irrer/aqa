@@ -171,6 +171,14 @@ object MeasureTBLREdges extends Logging {
         translator.pix2IsoCoordX(right))
     }
 
+    def iso2Pix(translator: IsoImagePlaneTranslator): TBLR = {
+      new TBLR(
+        translator.iso2PixCoordY(top),
+        translator.iso2PixCoordY(bottom),
+        translator.iso2PixCoordX(left),
+        translator.iso2PixCoordX(right))
+    }
+
     override def toString = {
       "top: " + Util.fmtDbl(top) +
         "    bottom: " + Util.fmtDbl(bottom) +

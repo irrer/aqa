@@ -24,6 +24,7 @@ case class VMAT(
   beamNameOpen: String, // name of open beam in plan
   averageDose_cu: Double, // average dose value in CU
   averageDoseOpen_cu: Double, // average dose value of open in CU
+  beamAverage_pct: Double, // average percent dose value for all VMAT readings for this beam
   top_mm: Double, // top position of planned position of rectangle in mm
   bottom_mm: Double, // bottom position of planned position of rectangle in mm
   left_mm: Double, // left position of planned position of rectangle in mm
@@ -40,8 +41,12 @@ case class VMAT(
   }
 
   def insertOrUpdate = Db.run(VMAT.query.insertOrUpdate(this))
-  
+
+  /** Percent of DR-GS over OPEN. */
   def percent = (averageDose_cu / averageDoseOpen_cu) * 100
+
+  /** amount that this percentage differs from the average percent: percent - beamAverage_pct. */
+  def diff_pct = percent - beamAverage_pct
 
   override def toString: String = {
     "    vmatPK: " + vmatPK + "\n" +
@@ -49,9 +54,10 @@ case class VMAT(
       "    SOPInstanceUID: " + SOPInstanceUID + "\n" +
       "    beamName: " + beamName + "\n" +
       "    left,right: " + left_mm + ", " + right_mm + "\n" +
-      "    averageDose_cu: " + Util.fmtDbl(averageDose_cu) + "\n"
-      "    averageDoseOpen_cu: " + Util.fmtDbl(averageDoseOpen_cu) + "\n"
-      "    percent: " + Util.fmtDbl(percent) + "\n"
+      "    averageDose_cu: " + Util.fmtDbl(averageDose_cu) + "\n" +
+      "    averageDoseOpen_cu: " + Util.fmtDbl(averageDoseOpen_cu) + "\n" +
+      "    percent: " + Util.fmtDbl(percent) + "\n" +
+      "    diff_pct: " + Util.fmtDbl(diff_pct) + "\n"
   }
 }
 
@@ -66,6 +72,7 @@ object VMAT extends ProcedureOutput {
     def beamNameOpen = column[String]("beamNameOpen")
     def averageDose_cu = column[Double]("averageDose_cu")
     def averageDoseOpen_cu = column[Double]("averageDoseOpen_cu")
+    def beamAverage_pct = column[Double]("averageDoseOpen_cu")
     def top_mm = column[Double]("top_mm")
     def bottom_mm = column[Double]("bottom_mm")
     def left_mm = column[Double]("left_mm")
@@ -80,6 +87,7 @@ object VMAT extends ProcedureOutput {
       beamNameOpen,
       averageDose_cu,
       averageDoseOpen_cu,
+      beamAverage_pct,
       top_mm,
       bottom_mm,
       left_mm,

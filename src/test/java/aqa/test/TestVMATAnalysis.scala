@@ -13,14 +13,18 @@ import java.io.File
 //import org.aqa.Crypto
 //import org.aqa.DicomFile
 import org.aqa.Config
+import org.aqa.Util
+import org.aqa.DicomFile
+import org.aqa.webrun.phase2.vmat.VMATAnalysis
+import com.pixelmed.dicom.AttributeList
+
 //import edu.umro.ImageUtil.DicomImage
 //import java.awt.image.BufferedImage
 //import org.aqa.webrun.phase2.vmat.VMATAnalysis
 //import org.aqa.VolumeTranslator
 
 /**
- * Test the Config.
- *
+ * Test VMAT analysis.
  */
 
 class TestVMATAnalysis extends FlatSpec with Matchers {
@@ -28,6 +32,26 @@ class TestVMATAnalysis extends FlatSpec with Matchers {
   Config.validate
 
   println("-----------------------------------------------------------------------------------------------------")
+
+  def testDir(dir: File) = {
+
+    def alByName(name: String): AttributeList = {
+      val f = Util.listDirFiles(dir).filter(f => f.getName.toUpperCase().contains(name.toUpperCase())).head
+      (new DicomFile(f)).attributeList.get
+    }
+
+    println("processing directory: " + dir.getAbsolutePath)
+    val plan = alByName("RTPLAN")
+    val drgs2 = alByName("2DR-GS")
+    val open2 = alByName("2OPEN")
+
+    val j = VMATAnalysis.testGetPlanAoiList("T2-DR-GS", "T2 Open", drgs2, open2, plan)
+
+    println("AOI List: \n" + j.mkString("\n"))
+
+    (true) should be(true)
+  }
+
   val inDir = new File("""target\TestVMATAnalysis""")
 
   // list of directories that contain a VMAT set for analysis
@@ -35,10 +59,6 @@ class TestVMATAnalysis extends FlatSpec with Matchers {
   println("List of VMAT directories used as input:\n    " + dirList.map(dir => dir.getAbsolutePath).mkString("\n    "))
 
   "TestVMATAnalysis" should "find percentages" in {
-
-    def testDir(dir: File) = {
-      (true) should be(true) // Expected voxel coordinates: 246, 262, 42
-    }
 
     dirList.map(dir => testDir(dir))
 

@@ -37,20 +37,33 @@ import com.pixelmed.dicom.SequenceAttribute
 //import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.SubProcedureResult
 import org.aqa.db.CollimatorCentering
+import edu.umro.ScalaUtil.Trace
+import org.aqa.webrun.phase2.MeasureTBLREdges
+import org.aqa.IsoImagePlaneTranslator
+import org.aqa.IsoImagePlaneTranslator
 
 object VMATAnalysis extends Logging {
 
-  //private
-  def getPlanAoiList(beamName: String, beamNameOpen: String, al: AttributeList, alOpen: AttributeList, plan: AttributeList): Seq[Rectangle2D] = {
+  private def getPlanAoiList(beamName: String, beamNameOpen: String, alDrGs: AttributeList, alOpen: AttributeList, plan: AttributeList): Seq[MeasureTBLREdges.TBLR] = {
 
     val beamSeq = Phase2Util.getBeamSequenceOfPlan(beamName, plan)
-    val controlPointSeq = DicomUtil.findAllSingle(beamSeq, TagFromName.ControlPointSequence).map(s => DicomUtil.alOfSeq(s.asInstanceOf[SequenceAttribute])).flatten
-    val beamLimitList = DicomUtil.findAllSingle(beamSeq, TagFromName.BeamLimitingDeviceSequence).map(s => DicomUtil.alOfSeq(s.asInstanceOf[SequenceAttribute])).flatten
+    val j = DicomUtil.findAllSingle(beamSeq, TagFromName.ControlPointSequence)
+    val beamLimitList = DicomUtil.findAllSingle(beamSeq, TagFromName.BeamLimitingDevicePositionSequence).
+      map(bdps => bdps.asInstanceOf[SequenceAttribute]).
+      map(bdps => DicomUtil.alOfSeq(bdps)).
+      flatten
 
-    def beamLimitOfInterest(bl: AttributeList): Option[(Double, Double)] = {
+    val controlPointSeq = DicomUtil.findAllSingle(beamSeq, TagFromName.ControlPointSequence).map(s => DicomUtil.alOfSeq(s.asInstanceOf[SequenceAttribute])).flatten
+
+    /**
+     * Determine if the limits are of interest, meaning that they are
+     * MLC leaves oriented in the X direction and that the gap between
+     * them is at least 5 mm.
+     */
+    def mlcOfInterest(bl: AttributeList): Option[(Double, Double)] = {
       def isMLC = {
         val t = bl.get(TagFromName.RTBeamLimitingDeviceType)
-        (t != null) && t.getSingleStringValueOrEmptyString.toUpperCase.contains("MLC")
+        (t != null) && t.getSingleStringValueOrEmptyString.toUpperCase.contains("MLCX")
       }
 
       val ljp = bl.get(TagFromName.LeafJawPositions).getDoubleValues.distinct
@@ -64,9 +77,49 @@ object VMATAnalysis extends Logging {
       else None
     }
 
-    val xLimitList = beamLimitList.map(bl => beamLimitOfInterest(bl)).flatten.distinct.sortBy(minMax => minMax._1)
+    case class MinMax(min: Double, max: Double) {
+      val dist = max - min
+    }
 
-    val yLimits = 44
+    // list of low-high pairs
+    val xLimitList = beamLimitList.map(bl => mlcOfInterest(bl)).flatten.distinct.sortBy(minMax => minMax._1).map(minMax => new MinMax(minMax._1, minMax._2))
+
+    // single low-high pair specifying Y limits
+    val yLimits = {
+      def isJawY(bl: AttributeList) = bl.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString.trim.equalsIgnoreCase("Y")
+      val jawPos = beamLimitList.filter(bl => isJawY(bl)).head
+      val pair = jawPos.get(TagFromName.LeafJawPositions).getDoubleValues.sorted
+      new MinMax(pair(0), pair(1))
+    }
+
+    val aoiList = xLimitList.map(x => new MeasureTBLREdges.TBLR(yLimits.min, yLimits.max, x.min, x.max))
+    aoiList
+  }
+
+  /** For testing only. */
+  def testGetPlanAoiList(beamName: String, beamNameOpen: String, alDrGs: AttributeList, alOpen: AttributeList, plan: AttributeList): Seq[MeasureTBLREdges.TBLR] =
+    getPlanAoiList(beamName, beamNameOpen, alDrGs, alOpen, plan)
+
+  /**
+   * Get the collimator angle of the given beam.
+   */
+  private def getCollimatorAngle(beamName: String, plan: AttributeList): Double = {
+    val beamSeq = Phase2Util.getBeamSequenceOfPlan(beamName, plan)
+    val BeamLimitingDeviceAngle = DicomUtil.findAllSingle(beamSeq, TagFromName.BeamLimitingDeviceAngle).head
+    val collAngle = BeamLimitingDeviceAngle.getDoubleValues.head
+    collAngle
+  }
+
+  /**
+   * Top level analysis for a single pair of beams.
+   */
+  private def analyze(beamName: String, beamNameOpen: String, alDrGs: AttributeList, alOpen: AttributeList, plan: AttributeList, collimatorCentering: CollimatorCentering): Seq[VMAT] = {
+    val aoiListFromPlan = getPlanAoiList(beamName, beamNameOpen, alDrGs, alOpen, plan)
+    val translator = new IsoImagePlaneTranslator(alDrGs)
+    
+    // compensate for central axis shift and convert to pixel coordinates
+    val aoiListFromPlanPix = aoiListFromPlan.map(tblr => tblr.addOffset(collimatorCentering.center)).map(tblr => tblr.   iso2Pix(translator))
+    val collAngle = getCollimatorAngle(beamName, plan)
     ???
   }
 
