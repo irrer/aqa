@@ -93,14 +93,14 @@ object BBbyEPIDAnalyse extends Logging {
             val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
             val epidDateTime = extendedData.output.dataDate.get
             val epidDateFormatted = dateFormat.format(epidDateTime)
-            val list = BBbyCBCT.recentHistory(1, extendedData.machine.machinePK.get, cbctProcPk, Some(epidDateTime))
+            val list = BBbyCBCT.recentHistory(100, extendedData.machine.machinePK.get, cbctProcPk, Some(epidDateTime))
             /**
              * CBCT must have been acquired before EPID, and must be on the same date.
              */
             def qualifies(date: Date): Boolean = {
               (epidDateTime.getTime >= date.getTime) && dateFormat.format(date).equals(epidDateFormatted)
             }
-            list.filter(c => qualifies(c.date)).lastOption
+            list.filter(c => qualifies(c.date)).sortBy(c => c.date.getTime).lastOption
           }
           // BBbyCBCT.getProcedurePK not defined,  Must be that there are no BBbyCBCT rows.
           case _ => None
