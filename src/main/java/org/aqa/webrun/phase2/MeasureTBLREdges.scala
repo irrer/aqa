@@ -179,6 +179,18 @@ object MeasureTBLREdges extends Logging {
         translator.iso2PixCoordX(right))
     }
 
+    /**
+     * Grow (positive value) or shrink (negative value) the rectangle this
+     * describes by adding or subtracting the given amount to all four sides.
+     */
+    def resize(change: Double): TBLR = {
+      new TBLR(
+        top - change,
+        bottom + change,
+        left - change,
+        right + change)
+    }
+
     override def toString = {
       "top: " + Util.fmtDbl(top) +
         "    bottom: " + Util.fmtDbl(bottom) +

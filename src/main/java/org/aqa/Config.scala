@@ -502,6 +502,22 @@ object Config extends Logging {
     list
   }
 
+  case class VMATBeamPair(mlc: String, open: String) {
+    override def toString = "MLC: " + mlc + "    open: " + open
+  }
+
+  private def getVMATBeamPairList: Seq[VMATBeamPair] = {
+    def nodeToVMATBeamPair(node: Node) = {
+      new VMATBeamPair(
+        (node \ "@MLC").head.text,
+        (node \ "@OPEN").head.text)
+    }
+    val list = (document \ "VMATBeamPairList" \ "VMATBeamPair").map(node => nodeToVMATBeamPair(node)).toList
+    val asText = list.mkString("\n    ", "\n    ", "")
+    logText("VMATBeamPairList", asText)
+    list
+  }
+
   private def getMaintenanceCategoryList: List[MaintenanceCategory] = {
     def nodeToMaintCat(node: Node) = {
       new MaintenanceCategory(
@@ -797,6 +813,9 @@ object Config extends Logging {
   val LeafPositionMaxError_mm = logMainText("LeafPositionMaxError_mm").toDouble
   val LeafPositionIsolationDistance_mm = logMainText("LeafPositionIsolationDistance_mm").toDouble
   val LeafPositionBeamNameList = getLeafPositionBeamNameList
+
+  val VMATBeamPairList = getVMATBeamPairList
+  val VMATBorderThickness_mm = logMainText("VMATBorderThickness_mm", "2.5").toDouble
 
   val DailyQATolerance_mm = logMainText("DailyQATolerance_mm", "1.0").toDouble
   val CBCTBBMinimumStandardDeviation = logMainText("CBCTBBMinimumStandardDeviation", "1.75").toDouble
