@@ -27,6 +27,7 @@ import edu.umro.ImageUtil.ImageText
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.IsoImagePlaneTranslator
 import org.aqa.IsoImagePlaneTranslator
+import java.awt.geom.Rectangle2D
 
 /*
 
@@ -189,6 +190,13 @@ object MeasureTBLREdges extends Logging {
         bottom + change,
         left - change,
         right + change)
+    }
+
+    /**
+     * Convert to Rectangle
+     */
+    def toRectangle: Rectangle2D.Double = {
+      new Rectangle2D.Double(left, top, right - left, bottom - top)
     }
 
     override def toString = {
