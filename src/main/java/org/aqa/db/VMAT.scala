@@ -22,14 +22,25 @@ case class VMAT(
   SOPInstanceUIDOpen: String, // UID of open beam
   beamName: String, // name of beam in plan
   beamNameOpen: String, // name of open beam in plan
-  averageDose_cu: Double, // average dose value in CU
-  averageDoseOpen_cu: Double, // average dose value of open in CU
+  doseMLC_cu: Double, // average dose value in CU
+  doseOpen_cu: Double, // average dose value of open in CU
   beamAverage_pct: Double, // average percent dose value for all VMAT readings for this beam
-  top_mm: Double, // top position of planned position of rectangle in mm
-  bottom_mm: Double, // bottom position of planned position of rectangle in mm
-  left_mm: Double, // left position of planned position of rectangle in mm
-  right_mm: Double // right position of planned position of rectangle in mm
-) {
+  // The following 4 columns are the top, bottom, left, and right positions of the
+  // collimator in mm for this data as specified by the RTPLAN.
+  topRtplan_mm: Double,
+  bottomRtplan_mm: Double,
+  leftRtplan_mm: Double,
+  rightRtplan_mm: Double,
+  // The following 4 columns are the the top, bottom, left, and right positions of position of
+  // rectangle in mm used to take measurements.  This is established by:
+  //
+  // 1: Extracting the position from the RTPLAN
+  // 2: Compensating for central axis shift
+  // 3: Shrinking the rectangle by the amount specified in <code>Config.VMATBorderThickness</code> to reduce the effects of edge penumbras
+  topAOI_mm: Double,
+  bottomAOI_mm: Double,
+  leftAOI_mm: Double,
+  rightAOI_mm: Double) {
 
   def insert: VMAT = {
     val insertQuery = VMAT.query returning VMAT.query.map(_.vmatPK) into
@@ -43,7 +54,7 @@ case class VMAT(
   def insertOrUpdate = Db.run(VMAT.query.insertOrUpdate(this))
 
   /** Percent of DR-GS over OPEN. */
-  def percent = (averageDose_cu / averageDoseOpen_cu) * 100
+  def percent: Double = (doseMLC_cu / doseOpen_cu) * 100
 
   /** amount that this percentage differs from the average percent: percent - beamAverage_pct. */
   def diff_pct = percent - beamAverage_pct
@@ -53,9 +64,10 @@ case class VMAT(
       "    outputPK: " + outputPK + "\n" +
       "    SOPInstanceUID: " + SOPInstanceUID + "\n" +
       "    beamName: " + beamName + "\n" +
-      "    left,right: " + left_mm + ", " + right_mm + "\n" +
-      "    averageDose_cu: " + Util.fmtDbl(averageDose_cu) + "\n" +
-      "    averageDoseOpen_cu: " + Util.fmtDbl(averageDoseOpen_cu) + "\n" +
+      "    left,right planned: " + leftRtplan_mm + ", " + rightRtplan_mm + "\n" +
+      "    left,right measured: " + leftAOI_mm + ", " + rightAOI_mm + "\n" +
+      "    doseMLC_cu: " + Util.fmtDbl(doseMLC_cu) + "\n" +
+      "    doseOpen_cu: " + Util.fmtDbl(doseOpen_cu) + "\n" +
       "    percent: " + Util.fmtDbl(percent) + "\n" +
       "    diff_pct: " + Util.fmtDbl(diff_pct) + "\n"
   }
@@ -70,13 +82,17 @@ object VMAT extends ProcedureOutput {
     def SOPInstanceUIDOpen = column[String]("SOPInstanceUIDOpen")
     def beamName = column[String]("beamName")
     def beamNameOpen = column[String]("beamNameOpen")
-    def averageDose_cu = column[Double]("averageDose_cu")
-    def averageDoseOpen_cu = column[Double]("averageDoseOpen_cu")
-    def beamAverage_pct = column[Double]("averageDoseOpen_cu")
-    def top_mm = column[Double]("top_mm")
-    def bottom_mm = column[Double]("bottom_mm")
-    def left_mm = column[Double]("left_mm")
-    def right_mm = column[Double]("right_mm")
+    def doseMLC_cu = column[Double]("doseMLC_cu")
+    def doseOpen_cu = column[Double]("doseOpen_cu")
+    def beamAverage_pct = column[Double]("doseOpen_cu")
+    def topRtplan_mm = column[Double]("topRtplan_mm")
+    def bottomRtplan_mm = column[Double]("bottomRtplan_mm")
+    def leftRtplan_mm = column[Double]("leftRtplan_mm")
+    def rightRtplan_mm = column[Double]("rightRtplan_mm")
+    def topAOI_mm = column[Double]("topAOI_mm")
+    def bottomAOI_mm = column[Double]("bottomAOI_mm")
+    def leftAOI_mm = column[Double]("leftAOI_mm")
+    def rightAOI_mm = column[Double]("rightAOI_mm")
 
     def * = (
       vmatPK.?,
@@ -85,13 +101,17 @@ object VMAT extends ProcedureOutput {
       SOPInstanceUIDOpen,
       beamName,
       beamNameOpen,
-      averageDose_cu,
-      averageDoseOpen_cu,
+      doseMLC_cu,
+      doseOpen_cu,
       beamAverage_pct,
-      top_mm,
-      bottom_mm,
-      left_mm,
-      right_mm) <> ((VMAT.apply _)tupled, VMAT.unapply _)
+      topRtplan_mm,
+      bottomRtplan_mm,
+      leftRtplan_mm,
+      rightRtplan_mm,
+      topAOI_mm,
+      bottomAOI_mm,
+      leftAOI_mm,
+      rightAOI_mm) <> ((VMAT.apply _)tupled, VMAT.unapply _)
 
     def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }

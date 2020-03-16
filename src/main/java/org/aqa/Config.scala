@@ -503,7 +503,7 @@ object Config extends Logging {
   }
 
   case class VMATBeamPair(mlc: String, open: String) {
-    override def toString = "MLC: " + mlc + "    open: " + open
+    override def toString = "MLC: " + mlc.formatted("%-14s") + "    open: " + open.formatted("%-14s")
   }
 
   private def getVMATBeamPairList: Seq[VMATBeamPair] = {
@@ -513,7 +513,7 @@ object Config extends Logging {
         (node \ "@OPEN").head.text)
     }
     val list = (document \ "VMATBeamPairList" \ "VMATBeamPair").map(node => nodeToVMATBeamPair(node)).toList
-    val asText = list.mkString("\n    ", "\n    ", "")
+    val asText = list.mkString("\n        ", "\n        ", "")
     logText("VMATBeamPairList", asText)
     list
   }

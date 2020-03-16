@@ -2,39 +2,16 @@ package org.aqa.webrun.phase2.vmat
 
 import com.pixelmed.dicom.AttributeList
 import org.aqa.webrun.phase2.Phase2Util
-
 import scala.xml.Elem
-//import org.aqa.db.Output
-//import org.aqa.db.Machine
-//import org.aqa.db.Institution
-//import org.aqa.db.Input
-//import org.aqa.db.Procedure
-//import org.aqa.db.User
-//import org.aqa.Util
-//import java.util.Date
-//import org.aqa.web.WebServer
 import org.aqa.db.VMAT
-//import org.aqa.web.DicomAccess
-//import org.aqa.web.WebUtil._
-//import org.aqa.DicomFile
 import edu.umro.ScalaUtil.DicomUtil
 import com.pixelmed.dicom.TagFromName
-
 import org.aqa.run.ProcedureStatus
-//import java.io.File
-//import org.aqa.Config
-//import edu.umro.ImageUtil.DicomImage
-//import java.awt.geom.Point2D
-//import com.pixelmed.dicom.AttributeList
-//import java.awt.Point
-//import com.pixelmed.dicom.TagFromName
 import org.aqa.Logging
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.RunReq
 import java.awt.geom.Rectangle2D
 import com.pixelmed.dicom.SequenceAttribute
-
-//import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.SubProcedureResult
 import org.aqa.db.CollimatorCentering
 import edu.umro.ScalaUtil.Trace
@@ -50,7 +27,7 @@ object VMATAnalysis extends Logging {
   private def getPlanAoiList(beamNameMlc: String, beamNameOpen: String, alDrGs: AttributeList, alOpen: AttributeList, plan: AttributeList): Seq[MeasureTBLREdges.TBLR] = {
 
     val beamSeq = Phase2Util.getBeamSequenceOfPlan(beamNameMlc, plan)
-    val j = DicomUtil.findAllSingle(beamSeq, TagFromName.ControlPointSequence)
+
     val beamLimitList = DicomUtil.findAllSingle(beamSeq, TagFromName.BeamLimitingDevicePositionSequence).
       map(bdps => bdps.asInstanceOf[SequenceAttribute]).
       map(bdps => DicomUtil.alOfSeq(bdps)).
@@ -119,48 +96,58 @@ object VMATAnalysis extends Logging {
   private def analyze(beamNameMlc: String, beamNameOpen: String,
     alMlc: AttributeList, alOpen: AttributeList,
     plan: AttributeList, collimatorCentering: CollimatorCentering,
-    extendedData: ExtendedData, runReq: RunReq): Seq[VMAT] = {
-    val aoiSeqFromPlan = getPlanAoiList(beamNameMlc, beamNameOpen, alMlc, alOpen, plan)
+    outputPK: Long, mlcImage: DicomImage, openImage: DicomImage): Seq[VMAT] = {
+    val aoiSeqFromPlan_mm = getPlanAoiList(beamNameMlc, beamNameOpen, alMlc, alOpen, plan)
     val translator = new IsoImagePlaneTranslator(alMlc)
 
     /**
-     * Given a TBLR in rtplan coordinates, convert it to pixel coordinates.
+     * Given a TBLR in rtplan coordinates, convert it to a rectangle in the
+     * isoplane that should be used to take the measurements.
      */
-    def planToPix(tblr: MeasureTBLREdges.TBLR): MeasureTBLREdges.TBLR = {
-      Seq(tblr).
-        map(tblr => tblr.addOffset(collimatorCentering.center)). // compensate for central axis shift
-        map(tblr => tblr.resize(-Config.VMATBorderThickness_mm)). //shrink to be safely away from the penumbra of edge effects
-        map(tblr => tblr.iso2Pix(translator)). // convert to pixel coordinates
-        head
+    def planToMeasured(tblr: MeasureTBLREdges.TBLR): MeasureTBLREdges.TBLR = {
+      tblr.addOffset(collimatorCentering.center).resize(-Config.VMATBorderThickness_mm)
     }
 
-    val pixSeq = aoiSeqFromPlan.map(tblr => planToPix(tblr))
+    val measuredSeq_mm = aoiSeqFromPlan_mm.map(tblr => planToMeasured(tblr))
+    val pixSeq_pix = measuredSeq_mm.map(tblr => tblr.iso2Pix(translator))
 
-    val mlcAvgSeq = pixSeq.map(p => runReq.derivedMap(beamNameMlc).originalImage.averageOfRectangle(p.toRectangle))
-    val openAvgSeq = pixSeq.map(p => runReq.derivedMap(beamNameOpen).originalImage.averageOfRectangle(p.toRectangle))
+    val mlcAvgSeq = pixSeq_pix.map(p => mlcImage.averageOfRectangle(p.toRectangle))
+    val openAvgSeq = pixSeq_pix.map(p => openImage.averageOfRectangle(p.toRectangle))
 
-    val pctSeq = mlcAvgSeq.zip(openAvgSeq).map(mo => (100 * mo._1) / mo._2)
+    val pctSeq = (0 until mlcAvgSeq.size).map(i => (mlcAvgSeq(i) * 100) / openAvgSeq(i))
     val beamAverage_pct = pctSeq.sum / pctSeq.size
     val diffPctSeq = pctSeq.map(p => p - beamAverage_pct)
 
-    val vmatSeq = (0 until aoiSeqFromPlan.size).map(i =>
+    val vmatSeq = (0 until aoiSeqFromPlan_mm.size).map(i =>
       new VMAT(
         vmatPK = None,
-        outputPK = extendedData.output.outputPK.get,
+        outputPK,
         SOPInstanceUID = Util.sopOfAl(alMlc),
         SOPInstanceUIDOpen = Util.sopOfAl(alOpen),
         beamName = beamNameMlc,
         beamNameOpen = beamNameOpen,
-        averageDose_cu = mlcAvgSeq(i),
-        averageDoseOpen_cu = openAvgSeq(i),
+        doseMLC_cu = mlcAvgSeq(i),
+        doseOpen_cu = openAvgSeq(i),
         beamAverage_pct,
-        top_mm = aoiSeqFromPlan(i).top,
-        bottom_mm = aoiSeqFromPlan(i).bottom,
-        left_mm = aoiSeqFromPlan(i).left,
-        right_mm = aoiSeqFromPlan(i).right))
-    ??? // TODO : this has not been tested.
+        topRtplan_mm = aoiSeqFromPlan_mm(i).top,
+        bottomRtplan_mm = aoiSeqFromPlan_mm(i).bottom,
+        leftRtplan_mm = aoiSeqFromPlan_mm(i).left,
+        rightRtplan_mm = aoiSeqFromPlan_mm(i).right,
+        topAOI_mm = measuredSeq_mm(i).top,
+        bottomAOI_mm = measuredSeq_mm(i).bottom,
+        leftAOI_mm = measuredSeq_mm(i).left,
+        rightAOI_mm = measuredSeq_mm(i).right))
+    //Trace.trace("vmat seq:\n    " + vmatSeq.mkString("\n    ")) // TODO : this has not been tested.
     vmatSeq
   }
+
+  /**
+   * Hook for testing only.
+   */
+  def testAnalyze(beamNameMlc: String, beamNameOpen: String,
+    alMlc: AttributeList, alOpen: AttributeList,
+    plan: AttributeList, collimatorCentering: CollimatorCentering,
+    outputPK: Long, mlcImage: DicomImage, openImage: DicomImage): Seq[VMAT] = analyze(beamNameMlc, beamNameOpen, alMlc, alOpen, plan, collimatorCentering, outputPK, mlcImage, openImage)
 
   private val subProcedureName = "VMAT"
 
