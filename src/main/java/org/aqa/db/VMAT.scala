@@ -18,9 +18,10 @@ import edu.umro.ScalaUtil.Trace
 case class VMAT(
   vmatPK: Option[Long], // primary key
   outputPK: Long, // output primary key
-  SOPInstanceUID: String, // UID of source image
+  status: String, // termination status.  Note that all individual members of a VMAT beam pair may succeed, but the the beam still fail.
+  SOPInstanceUIDMLC: String, // UID of source image
   SOPInstanceUIDOpen: String, // UID of open beam
-  beamName: String, // name of beam in plan
+  beamNameMLC: String, // name of beam in plan
   beamNameOpen: String, // name of open beam in plan
   doseMLC_cu: Double, // average dose value in CU
   doseOpen_cu: Double, // average dose value of open in CU
@@ -62,8 +63,9 @@ case class VMAT(
   override def toString: String = {
     "    vmatPK: " + vmatPK + "\n" +
       "    outputPK: " + outputPK + "\n" +
-      "    SOPInstanceUID: " + SOPInstanceUID + "\n" +
-      "    beamName: " + beamName + "\n" +
+      "    status: " + status + "\n" +
+      "    SOPInstanceUIDMLC: " + SOPInstanceUIDMLC + "\n" +
+      "    beamNameMLC: " + beamNameMLC + "\n" +
       "    left,right planned: " + leftRtplan_mm + ", " + rightRtplan_mm + "\n" +
       "    left,right measured: " + leftAOI_mm + ", " + rightAOI_mm + "\n" +
       "    doseMLC_cu: " + Util.fmtDbl(doseMLC_cu) + "\n" +
@@ -78,9 +80,10 @@ object VMAT extends ProcedureOutput {
 
     def vmatPK = column[Long]("vmatPK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
-    def SOPInstanceUID = column[String]("SOPInstanceUID")
+    def status = column[String]("status")
+    def SOPInstanceUIDMLC = column[String]("SOPInstanceUIDMLC")
     def SOPInstanceUIDOpen = column[String]("SOPInstanceUIDOpen")
-    def beamName = column[String]("beamName")
+    def beamNameMLC = column[String]("beamNameMLC")
     def beamNameOpen = column[String]("beamNameOpen")
     def doseMLC_cu = column[Double]("doseMLC_cu")
     def doseOpen_cu = column[Double]("doseOpen_cu")
@@ -97,9 +100,10 @@ object VMAT extends ProcedureOutput {
     def * = (
       vmatPK.?,
       outputPK,
-      SOPInstanceUID,
+      status,
+      SOPInstanceUIDMLC,
       SOPInstanceUIDOpen,
-      beamName,
+      beamNameMLC,
       beamNameOpen,
       doseMLC_cu,
       doseOpen_cu,

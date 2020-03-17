@@ -60,6 +60,7 @@ import org.aqa.db.CachedUser
 import org.aqa.web.OutputList
 import org.aqa.webrun.ExtendedData
 import org.aqa.db.DicomSeries
+import org.aqa.webrun.phase2.vmat.VMATAnalysis
 
 object Phase2 extends Logging {
   val parametersFileName = "parameters.xml"
@@ -122,7 +123,8 @@ object Phase2 extends Logging {
                       () => CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
                       () => WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result, centerDose.resultList),
                       () => SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
-                      () => LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result))
+                      () => LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
+                      () => VMATAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result))
 
                     val list = seq.par.map(f => f()).toSeq
                     val summaryList = prevSummaryList ++ list.map(r => if (r.isLeft) r.left.get else r.right.get.summary)

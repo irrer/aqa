@@ -14,6 +14,7 @@ import org.aqa.db.CollimatorCentering
 import org.aqa.run.ProcedureStatus
 import edu.umro.ImageUtil.DicomImage
 import org.aqa.db.VMAT
+import java.awt.Rectangle
 
 /**
  * Test VMAT analysis.
@@ -26,6 +27,7 @@ class TestVMATAnalysis extends FlatSpec with Matchers {
   (0 to 5).map(_ => println("-----------------------------------------------------------------------------------------------------"))
 
   private def testVmatPair(vmatPair: Config.VMATBeamPair, rtplan: AttributeList, imageList: Seq[DicomFile]) = {
+    println("Testing VMAT beam pair: " + vmatPair)
     def isTheNamedBeam(img: AttributeList, name: String): Boolean = {
       val n = Phase2Util.getBeamNameOfRtimage(rtplan, img)
       n.isDefined && (n.get.equals(name))
@@ -34,9 +36,18 @@ class TestVMATAnalysis extends FlatSpec with Matchers {
     val mlc = imageList.find(df => isTheNamedBeam(df.attributeList.get, vmatPair.mlc)).get.attributeList.get
     val open = imageList.find(df => isTheNamedBeam(df.attributeList.get, vmatPair.open)).get.attributeList.get
 
+    if (false) { // TODO rm
+      println
+      println((new DicomImage(mlc).getSubimage(new Rectangle(1190 - 50, 1190 - 40, 50, 50))).pixelsToText)
+      println
+      println((new DicomImage(open).getSubimage(new Rectangle(1190 - 50, 1190 - 40, 50, 50))).pixelsToText)
+      System.exit(99)
+    }
+
     val aoiList = VMATAnalysis.testGetPlanAoiList(vmatPair.mlc, vmatPair.open, mlc, open, rtplan)
     println("AOI List: \n    " + aoiList.mkString("\n    "))
 
+    // fake centering with offsets at 0
     val collimatorCentering = new CollimatorCentering(None, -1, ProcedureStatus.running.toString,
       "sop090", "sop270",
       0, 0,
@@ -58,12 +69,7 @@ class TestVMATAnalysis extends FlatSpec with Matchers {
   private def testDir(dir: File) = {
     println("processing directory: " + dir.getAbsolutePath)
 
-    def alByName(name: String): AttributeList = {
-      val f = Util.listDirFiles(dir).filter(f => f.getName.toUpperCase().contains(name.toUpperCase())).head
-      (new DicomFile(f)).attributeList.get
-    }
-
-    val dicomFileList = Util.listDirFiles(dir).map(f => new DicomFile(f))
+    val dicomFileList = Util.listDirFiles(dir).filter(f => f.getName.toLowerCase.endsWith(".dcm")).map(f => new DicomFile(f))
 
     val rtplan = dicomFileList.find(df => Util.modalityOfAl(df.attributeList.get).equals("RTPLAN")).get.attributeList.get
     val imageList = dicomFileList.filter(df => Util.modalityOfAl(df.attributeList.get).equals("RTIMAGE"))
@@ -73,7 +79,7 @@ class TestVMATAnalysis extends FlatSpec with Matchers {
     (true) should be(true)
   }
 
-  "TestVMATAnalysis test" should "find percentages" in {
+  def runTest = {
 
     val inDir = new File("""target\TestVMATAnalysis""")
 
@@ -84,6 +90,17 @@ class TestVMATAnalysis extends FlatSpec with Matchers {
     dirList.map(dir => testDir(dir))
 
     (11 > 10) should be(true)
+
   }
 
+  "TestVMATAnalysis test" should "find percentages" in {
+    runTest
+  }
+
+}
+
+object TestVMATAnalysis {
+  def main(args: Array[String]): Unit = {
+    (new TestVMATAnalysis).runTest
+  }
 }

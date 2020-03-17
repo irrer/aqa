@@ -502,13 +502,14 @@ object Config extends Logging {
     list
   }
 
-  case class VMATBeamPair(mlc: String, open: String) {
-    override def toString = "MLC: " + mlc.formatted("%-14s") + "    open: " + open.formatted("%-14s")
+  case class VMATBeamPair(name: String, mlc: String, open: String) {
+    override def toString = name + "    MLC: " + mlc.formatted("%-14s") + "    open: " + open.formatted("%-14s")
   }
 
   private def getVMATBeamPairList: Seq[VMATBeamPair] = {
     def nodeToVMATBeamPair(node: Node) = {
       new VMATBeamPair(
+        (node \ "@Name").head.text,
         (node \ "@MLC").head.text,
         (node \ "@OPEN").head.text)
     }
@@ -814,6 +815,8 @@ object Config extends Logging {
   val LeafPositionIsolationDistance_mm = logMainText("LeafPositionIsolationDistance_mm").toDouble
   val LeafPositionBeamNameList = getLeafPositionBeamNameList
 
+  val VMATDeviationThreshold_pct = logMainText("VMATDeviationThreshold_pct", "3.0").toDouble
+  val VMATAverageOfAbsoluteDeviationThreshold_pct = logMainText("VMATAverageOfAbsoluteDeviationThreshold_pct", "1.5").toDouble
   val VMATBeamPairList = getVMATBeamPairList
   val VMATBorderThickness_mm = logMainText("VMATBorderThickness_mm", "2.5").toDouble
 

@@ -536,13 +536,23 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>T1 PF ARC ERROR</BeamName>
     </LeafPositionBeamNameList>
 
+    <!-- Maximum amount +/- as a floating point percentage that each subfield is allowed to deviate from the average of the deviations. -->
+    <VMATDeviationThreshold_pct>3.0</VMATDeviationThreshold_pct>
+
+    <!-- Maximum amount as a floating point percentage that the average of the deviations are allowed to deviate from the average. -->
+    <VMATAverageOfAbsoluteDeviationThreshold_pct>1.5</VMATAverageOfAbsoluteDeviationThreshold_pct>
+
+    <!-- Indicate the beams to be used for VMAT tests.
+        Name: Name of test
+        MLC: Beam name of MLC
+        OPEN: Beam name of open beam.-->
     <VMATBeamPairList>
-        <VMATBeamPair MLC="T2-DR-GS" OPEN="T2 Open"/>
-        <VMATBeamPair MLC="T3MLCSpeed" OPEN="T3 Open"/>
+        <VMATBeamPair Name="Dose Rate - Gantry Speed Test" MLC="T2-DG-RS" OPEN="T2 Open"/>
+        <VMATBeamPair Name="Leaf Speed Test" MLC="T3MLCSpeed" OPEN="T3 Open"/>
     </VMATBeamPairList>
     
     <!-- The amount in mm to shrink the areas of interest to avoid edge (penumbra) effects. -->
-    <VMATBorderThickness_mm>2.0</VMATBorderThickness_mm>
+    <VMATBorderThickness_mm>3.0</VMATBorderThickness_mm>
 
     <!-- The maximum tolerance of error in floating point in mm for daily QA.  Exceeding this means failure. -->
     <DailyQATolerance_mm>0.4</DailyQATolerance_mm>

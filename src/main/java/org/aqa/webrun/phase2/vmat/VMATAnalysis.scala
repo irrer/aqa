@@ -61,8 +61,26 @@ object VMATAnalysis extends Logging {
       val dist = max - min
     }
 
-    // list of low-high pairs
-    val xLimitList = beamLimitList.map(bl => mlcOfInterest(bl)).flatten.distinct.sortBy(minMax => minMax._1).map(minMax => new MinMax(minMax._1, minMax._2))
+    // list of low-high pairs specifying X limits.  For T2 it is simple, just get all pairs.  For T3, it is necessary to
+    // filter out and use only those X values that repeat, then pair them up by determining the different contiguous
+    // regions they define.  This code works with the current RTPLAN that is deployed for Phase 2, but may not work for
+    // other variations on VMAT.
+    val xLimitList = {
+      val list = beamLimitList.map(bl => mlcOfInterest(bl)).flatten.distinct.sortBy(minMax => minMax._1).map(minMax => new MinMax(minMax._1, minMax._2))
+      def grp(seq: Seq[Double]) = seq.groupBy(v => v).toList.sortBy(g => g._2.size).reverse
+      val lo = grp(list.map(lh => lh.min))
+      val hi = grp(list.map(lh => lh.max))
+
+      if ((lo.head._2.size > 1) && (hi.head._2.size > 1)) {
+        def onlyRepeatsOf(seq: Seq[(Double, Seq[Double])]) = seq.filter(v => v._2.size > 1).map(v => v._1).distinct.sorted
+
+        val loG = onlyRepeatsOf(lo)
+        val hiG = onlyRepeatsOf(hi)
+
+        val pairList = (0 until loG.size).map(i => new MinMax(loG(i), hiG(i)))
+        pairList
+      } else list
+    }
 
     // single low-high pair specifying Y limits
     val yLimits = {
@@ -111,20 +129,30 @@ object VMATAnalysis extends Logging {
     val measuredSeq_mm = aoiSeqFromPlan_mm.map(tblr => planToMeasured(tblr))
     val pixSeq_pix = measuredSeq_mm.map(tblr => tblr.iso2Pix(translator))
 
+    if (false) { // TODO rm
+      println("mlc:\n" + mlcImage.pixelsToText + "\n")
+      println("open:\n" + openImage.pixelsToText + "\n")
+    }
+    Trace.trace("Getting rectangle averages of mlc  mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm")
     val mlcAvgSeq = pixSeq_pix.map(p => mlcImage.averageOfRectangle(p.toRectangle))
+    Trace.trace("Getting rectangle averages of open ooooooooooooooooooooooooooooooooo")
     val openAvgSeq = pixSeq_pix.map(p => openImage.averageOfRectangle(p.toRectangle))
+
+    Trace.trace("mlc avg of rects: " + (mlcAvgSeq.sum / mlcAvgSeq.size) + "    open avg of rects: " + (openAvgSeq.sum / openAvgSeq.size))
 
     val pctSeq = (0 until mlcAvgSeq.size).map(i => (mlcAvgSeq(i) * 100) / openAvgSeq(i))
     val beamAverage_pct = pctSeq.sum / pctSeq.size
     val diffPctSeq = pctSeq.map(p => p - beamAverage_pct)
+    val statusSeq = pctSeq.map(pct => if ((pct - beamAverage_pct).abs >= Config.VMATDeviationThreshold_pct) ProcedureStatus.fail else ProcedureStatus.pass)
 
     val vmatSeq = (0 until aoiSeqFromPlan_mm.size).map(i =>
       new VMAT(
         vmatPK = None,
         outputPK,
-        SOPInstanceUID = Util.sopOfAl(alMlc),
+        status = statusSeq(i).toString(),
+        SOPInstanceUIDMLC = Util.sopOfAl(alMlc),
         SOPInstanceUIDOpen = Util.sopOfAl(alOpen),
-        beamName = beamNameMlc,
+        beamNameMLC = beamNameMlc,
         beamNameOpen = beamNameOpen,
         doseMLC_cu = mlcAvgSeq(i),
         doseOpen_cu = openAvgSeq(i),
@@ -153,17 +181,29 @@ object VMATAnalysis extends Logging {
 
   case class VMATResult(summry: Elem, stats: ProcedureStatus.Value, resultList: Seq[VMAT]) extends SubProcedureResult(summry, stats, subProcedureName)
 
-  /*
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, CenterDoseResult] = {
+  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, VMATResult] = {
     try {
       // This code only reports values without making judgment as to pass or fail.
-      logger.info("Starting analysis of CenterDose")
+      logger.info("Starting analysis of VMAT")
       val status = ProcedureStatus.done
-      val resultList = analyse(extendedData, runReq, collimatorCentering)
-      CenterDose.insert(resultList)
-      val summary = VMATHTML.makeDisplay(extendedData, runReq, resultList, status)
-      val result = Right(new CenterDoseResult(summary, status, resultList))
-      logger.info("Finished analysis of CenterDose")
+
+      val vmatListList = Config.VMATBeamPairList.map(vmatPair => {
+        if (runReq.rtimageMap.contains(vmatPair.mlc) && runReq.rtimageMap.contains(vmatPair.open))
+          analyze(vmatPair.mlc, vmatPair.open,
+            runReq.derivedMap(vmatPair.mlc).attributeList, runReq.derivedMap(vmatPair.open).attributeList,
+            runReq.rtplan.attributeList.get, collimatorCentering, extendedData.output.outputPK.get,
+            runReq.derivedMap(vmatPair.mlc).originalImage, runReq.derivedMap(vmatPair.open).originalImage)
+        else Seq[VMAT]()
+      }).filter(l => l.nonEmpty)
+
+      Trace.trace("vmatListList.size: " + vmatListList.size)
+
+      val summary = VMATHTML.makeDisplay(extendedData, runReq, vmatListList, status)
+      val result = Right(new VMATResult(summary, status, vmatListList.flatten))
+      logger.info("Finished analysis of VMAT")
+
+      // TODO put data in database
+      //vmatListList.flatten.map(vmat => vmat.insert)
       result
     } catch {
       case t: Throwable => {
@@ -172,5 +212,5 @@ object VMATAnalysis extends Logging {
       }
     }
   }
-*/
+
 }
