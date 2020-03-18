@@ -78,7 +78,12 @@ object Phase2 extends Logging {
       <div class="col-md-10 col-md-offset-1">
         <table class="table table-responsive">
           <tr>
-            { elemList.map(e => <td>{ e }</td>) }
+            { elemList.take(3).map(e => <td>{ e }</td>) }
+          </tr>
+        </table>
+        <table class="table table-responsive">
+          <tr>
+            { elemList.drop(3).map(e => <td>{ e }</td>) }
           </tr>
         </table>
       </div>

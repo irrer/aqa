@@ -87,7 +87,7 @@ object VMAT extends ProcedureOutput {
     def beamNameOpen = column[String]("beamNameOpen")
     def doseMLC_cu = column[Double]("doseMLC_cu")
     def doseOpen_cu = column[Double]("doseOpen_cu")
-    def beamAverage_pct = column[Double]("doseOpen_cu")
+    def beamAverage_pct = column[Double]("beamAverage_pct")
     def topRtplan_mm = column[Double]("topRtplan_mm")
     def bottomRtplan_mm = column[Double]("bottomRtplan_mm")
     def leftRtplan_mm = column[Double]("leftRtplan_mm")

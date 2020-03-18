@@ -1,0 +1,143 @@
+0002,0000 UL 1  FileMetaInformationGroupLength : 210
+0002,0001 OB 1  FileMetaInformationVersion : 0x0 0x1
+0002,0002 UI 1  MediaStorageSOPClassUID : 1.2.840.10008.5.1.4.1.1.481.1 (RT Image Storage)
+0002,0003 UI 1  MediaStorageSOPInstanceUID : 1.3.6.1.4.1.22361.7091168952785.1462009061.1582532918736.9
+0002,0010 UI 1  TransferSyntaxUID : 1.2.840.10008.1.2 (Implicit VR Little Endian)
+0002,0012 UI 1  ImplementationClassUID : 1.3.6.1.4.1.5962.99.2
+0002,0013 SH 1  ImplementationVersionName : PIXELMEDJAVA001
+0002,0016 AE 1  SourceApplicationEntityTitle : AQA
+0008,0005 CS 1-N  SpecificCharacterSet : ISO_IR 192
+0008,0008 CS 2-N  ImageType : ORIGINAL \  PRIMARY \  PORTAL \  ACQUIRED_DOSE
+0008,0012 DA 1  InstanceCreationDate : 20200224
+0008,0013 TM 1  InstanceCreationTime : 192742
+0008,0016 UI 1  SOPClassUID : 1.2.840.10008.5.1.4.1.1.481.1 (RT Image Storage)
+0008,0018 UI 1  SOPInstanceUID : 1.3.6.1.4.1.22361.7091168952785.1462009061.1582532918736.9
+0008,0020 DA 1  StudyDate : 20181004
+0008,0022 DA 1  AcquisitionDate : 20200224
+0008,0023 DA 1  ContentDate : 20200224
+0008,0030 TM 1  StudyTime : 180459.587
+0008,0032 TM 1  AcquisitionTime : 191238.177
+0008,0033 TM 1  ContentTime : 191238.177
+0008,0050 SH 1  AccessionNumber : 0
+0008,0060 CS 1  Modality : RTIMAGE
+0008,0064 CS 1  ConversionType : DI
+0008,0070 LO 1  Manufacturer : Varian Medical Systems
+0008,0090 PN 1  ReferringPhysicianName : ReferringPhysicianName_3014
+0008,1010 SH 1  StationName : StationName_193
+0008,1030 LO 1  StudyDescription : ARIA RadOnc Study
+0008,1070 PN 1-N  OperatorsName : OperatorsName_5811
+0008,1090 LO 1  ManufacturerModelName : Patient Verification
+0008,3010 UI 1  IrradiationEventUID : 1.2.246.352.62.30.4697976793543585015.15797688666272927923
+0010,0010 PN 1  PatientName : PatientName_196
+0010,0020 LO 1  PatientID : PatientID_198
+0010,0030 DA 1  PatientBirthDate : 18000101
+0010,0040 CS 1  PatientSex : O
+0018,1000 LO 1  DeviceSerialNumber : DeviceSerialNumber_2
+0018,1020 LO 1-N  SoftwareVersions : 2.21.14.0
+0018,5100 CS 1  PatientPosition : HFS
+0020,000D UI 1  StudyInstanceUID : 1.3.6.1.4.1.22361.7091168952785.159760249.1558065359207.19
+0020,000E UI 1  SeriesInstanceUID : 1.3.6.1.4.1.22361.7091168952785.1462009061.1582532918736.1
+0020,0010 SH 1  StudyID : StudyID_3043
+0020,0011 IS 1  SeriesNumber : 1
+0020,0013 IS 1  InstanceNumber : 14
+0020,0020 CS 2  PatientOrientation :
+0020,0052 UI 1  FrameOfReferenceUID : 1.3.6.1.4.1.22361.7091168952785.1462009061.1582532918736.2
+0020,1040 LO 1-N  PositionReferenceIndicator :
+0028,0002 US 1  SamplesPerPixel : 1
+0028,0004 CS 1  PhotometricInterpretation : MONOCHROME2
+0028,0010 US 1  Rows : 1190
+0028,0011 US 1  Columns : 1190
+0028,0100 US 1  BitsAllocated : 16
+0028,0101 US 1  BitsStored : 16
+0028,0102 US 1  HighBit : 15
+0028,0103 US 1  PixelRepresentation : 0
+0028,1040 CS 1  PixelIntensityRelationship : LIN
+0028,1041 SS 1  PixelIntensityRelationshipSign : 1
+0028,1050 DS 1-N  WindowCenter : 0.58257812677021
+0028,1051 DS 1-N  WindowWidth : 1.14826379877793
+0028,1052 DS 1  RescaleIntercept : 0
+0028,1053 DS 1  RescaleSlope : 3.2548082394e-05
+0028,1054 LO 1  RescaleType : CU
+3002,0002 SH 1  RTImageLabel : MV_243_0a7
+3002,0004 ST 1  RTImageDescription : 6x [MV], 600 [MU/min] 
+ ModeId: Dosimetry
+ Mode Type : Continuous
+ Offset Corr. : true
+ Gain Corr. : true
+ Pixel Corr. : true
+ Averaging : false
+ Integration : true
+ Reset Frames : 0
+ AEC : false
+ Image Median: 48
+ Histogram ROI: (2147483647,2147483647),(2147483647,2147483647)
+  
+3002,000A CS 1  ReportedValuesOrigin : ACTUAL
+3002,000C CS 1  RTImagePlane : NORMAL
+3002,000D DS 3  XRayImageReceptorTranslation : -0.0013148133607 \  0.00069843547398 \  -499.97764012364
+3002,000E DS 1  XRayImageReceptorAngle : 0
+3002,0010 DS 6  RTImageOrientation : 1 \  0 \  0 \  0 \  -1 \  0
+3002,0011 DS 2  ImagePlanePixelSpacing : 0.336 \  0.336
+3002,0012 DS 2  RTImagePosition : -199.752 \  199.752
+3002,0020 SH 1  RadiationMachineName : RadiationMachineName_245
+3002,0022 DS 1  RadiationMachineSAD : 1000
+3002,0026 DS 1  RTImageSID : 1499.97764012364
+3002,0029 IS 1  FractionNumber : 0
+3002,0030 SQ 1-N  ExposureSequence : 
+    Item: 1 / 1
+        0008,1160 IS 1-N  ReferencedFrameNumber : 1
+        0018,0060 DS 1  KVP : 6000
+        0018,1150 IS 1  ExposureTime : 25235
+        3002,0032 DS 1  MetersetExposure : 250.003049727027
+        300A,00B6 SQ 0  BeamLimitingDeviceSequence : 
+            Item: 1 / 2
+                300A,00B8 CS 1  RTBeamLimitingDeviceType : ASYMX
+                300A,00BC IS 1  NumberOfLeafJawPairs : 1
+                300A,011C DS 2-2N  LeafJawPositions : -59.9999925465 \  80.0000218320147
+            Item: 2 / 2
+                300A,00B8 CS 1  RTBeamLimitingDeviceType : ASYMY
+                300A,00BC IS 1  NumberOfLeafJawPairs : 1
+                300A,011C DS 2-2N  LeafJawPositions : -89.999986067639 \  90.0000012392409
+        300A,00F0 IS 1  NumberOfBlocks : 0
+        300A,011E DS 1  GantryAngle : 242.775576434889
+        300A,0120 DS 1  BeamLimitingDeviceAngle : 2.66606948e-05
+        300A,0122 DS 1  PatientSupportAngle : 0.001953125
+        300A,0128 DS 1  TableTopVerticalPosition : -200.03524908858
+        300A,0129 DS 1  TableTopLongitudinalPosition : 199.976149485842
+        300A,012A DS 1  TableTopLateralPosition : -0.1730806778691
+        300A,0140 FL 1  TableTopPitchAngle : 360
+        300A,0144 FL 1  TableTopRollAngle : 360
+300A,00B3 CS 1  PrimaryDosimeterUnit : MU
+300A,011E DS 1  GantryAngle : 242.775576434889
+300A,0120 DS 1  BeamLimitingDeviceAngle : 2.66606948e-05
+300A,0122 DS 1  PatientSupportAngle : 0.001953125
+300A,0128 DS 1  TableTopVerticalPosition : -200.03524908858
+300A,0129 DS 1  TableTopLongitudinalPosition : 199.976149485842
+300A,012A DS 1  TableTopLateralPosition : -0.1730806778691
+300A,012C DS 3  IsocenterPosition : 0 \  0 \  0
+300A,0140 FL 1  TableTopPitchAngle : 360
+300A,0144 FL 1  TableTopRollAngle : 360
+300C,0002 SQ 0  ReferencedRTPlanSequence : 
+    Item: 1 / 1
+        0008,1150 UI 1  ReferencedSOPClassUID : 1.2.840.10008.5.1.4.1.1.481.5 (RT Plan Storage)
+        0008,1155 UI 1  ReferencedSOPInstanceUID : 1.3.6.1.4.1.22361.7091168952785.159760249.1558065359207.18
+300C,0006 IS 1  ReferencedBeamNumber : 13
+300C,0008 DS 1  StartCumulativeMetersetWeight : 1.2329079162e-06
+300C,0009 DS 1  EndCumulativeMetersetWeight : 1.00001343181602
+300C,0022 IS 1  ReferencedFractionGroupNumber : 1
+3253,0010 LO 1  VarianCreator3253 : Varian Medical Systems VISION 3253
+3253,1000 OB 1  ExtendedInterfaceData : < R T I m a g e E x t e n d e d I n t e r f a c e > < f c : V X F i l t e r C o n f i g u r a t i o n   f c : V e r s i o n = " 1 "   x m l n s : f c = " h t t p : / / x s d . b a d e n . v a r i a n . c o m / F i l t e r C o n f i g u r a t i o n . x s d " > < f c : G r o u p I P L   f c : S h o r t - N a m e = " N o n e "   f c : L o n g - N a m e = " N o n e "   f c : S e r i a l = " 1 "   f c : E n a b l e d = " t r u e "   f c : V i s i b l e = " t r u e " > < f c : C a t e g o r i e s > < f c : C a t e g o r y > F i l t e r < / f c : C a t e g o r y > < / f c : C a t e g o r i e s > < f c : A p p l i e s T o s   / > < f c : P r o c e s s i n g s   / > < f c : O u t p u t s > < f c : O u t p u t   f c : C a t e g o r y = " V o x e l s "   f c : H a n d l i n g = " p r o c e s s e d "   / > < / f c : O u t p u t s > < / f c : G r o u p I P L > < / f c : V X F i l t e r C o n f i g u r a t i o n > < / R T I m a g e E x t e n d e d I n t e r f a c e >
+3253,1001 IS 1  ExtendedInterfaceLength : 0
+3253,1002 CS 1  ExtendedInterfaceFormat : ImageProcessing
+3273,0010 LO 1  VarianCreator3273 : Varian Medical Systems VISION 3273
+3273,1000 DS 1  RTImageIsocenterPosition : 0 \  0 \  0
+3273,1001 CS 1  RTImagePatientPosition : HFS
+5000,0005 US 1  CurveDimensions5000 : 2
+5000,0010 US 1  NumberOfPoints5000 : 4
+5000,0020 CS 1  TypeOfData5000 : ROI
+5000,0030 SH 1-N  AxisUnits5000 : PIXL \  PIXL
+5000,0040 SH 1-N  AxisLabels5000 : Plan Field Edge \  Plan Field Edge
+5000,0103 US 1  DataValueRepresentation5000 : 3
+5000,2500 LO 1  CurveLabel5000 : Field Edge (14:T
+5000,3000 OX 1  CurveData5000 : 0xf7 / 0x86 0x94 j i @ t 0xb6 0xfd " M " A @ 0x8f 0x90 0x92 0xae 0xb3 0xbd ! @ 0x8d 0xb6 0xfd " M " A @ 0x8f 0x90 0x92 0xae 0xb3 0xbd ! @ 0x8d 0x94 0xa6 0x85 c 0x17 0x1d @ h 0xf7 / 0x86 0x94 j i @ t 0x94 0xa6 0x85 c 0x17 0x1d @ h
+7FE0,0010 OX 1  PixelData : 0xf 0x8a 0xf 1 0xf 0x97 0xf 0xd9 0xe 0xb1 0xf ; 0xf + 0xf 0xa3 0xe 0xa6 0x10 [ 0xf 0x1f 0xf M 0x10 K 0xf V 0x10 0xbe 0xf 0xb9 0x10 $ 0xf 5 0x10 0x19 0xe ? 0xe 0xd0 0xe 0x83 0xf 0xbb 0x10 0x6 0x10 0xb6 0xf 0x87 0xf \ 0xf 0xb3 0x10 k 0x10 { 0x11 + 0x10 0xa8 0x10 0xd2 0x10 j 0x11 0xaa 0x10 o 0x12 0x6 0x11 6 0x11 D 0x10 r 0x10 0xf7 0x11 ] 0x10 0x92 0x11   0x12 D 0x11 0xcd 0x11 \ 0x10 0x90 0x11 ` 0x11 0x7 0x11 0xb9 0x10 0xeb 0x11 0x2 0x10 0xde 0x11 t 0x10 0xf8 0x10 O 0x10 0x8a 0x10 0xe0 0x11 0x84 0x11 0x7 0x10 N 0x11 0xd8 0x11 0x95 0x11 0x14 0x11 B 0x10 d 0x10 0xf3 0x11 0x1 0x10 ` 0x10 0x9d 0x10 i 0xf 0xf5 0x10 D 0xf p 0x11 0x9 0x10 0xba 0x10 d 0xf 0xb8 0x10 p 0x10 9 0xf 0xb7 0xf 0x85 0x10 0xc 0x10 0x9 0xf B 0xf 0xf8 0xf 0xfa 0xf 0xaf 0xf % 0xf 0xe9 0xf 8 0xf Y 0x10 0xa 0xe   0xf > 0xf u 0xf C 0xe 0x8c 0xf 0x8b 0xe 0xcd 0xe 0xb7 0xe n 0xe 0xca 0xe E 0xd 0xe8 0xe 0xab 0xd 0xef 0xd r 0xd 0x6 0xd q 0xd 0xf 0xc 0xf1 0xc 0xb0 0xc s 0xc 0x16 0xb 0xf4 0xb 0xa8 0xb 0x7 0xa 0xa9 0xa 7 0x9 0xc5 0x9 z 0x9 + 0x8 0xc9 0x8 ^ 0x7 0xed 0x7 z 0x7 0x15 0x6 0xb6 0x6 N 0x5 0xe3 0x5 0x86 0x5 ! 0x4 0xec 0x4 0xa7 0x4 g 0x3 0xd1 0x3 } 0x3 x 0x3 S 0x3 2 0x2 0xc6 0x2 0xc6 0x2 0x8b 0x2 ` 0x2 T 0x2 < 0x2 J 0x2 1 0x2 2 0x2 " 0x2 , 0x2 # 0x2 % 0x2 + 0x2 @ 0x2 ! 0x2 + 0x2 : 0x2 2 0x2 0x1d 0x2 1 0x2 @ 0x2 6 0x2 , 0x2 . 0x2 ' 0x2 4 0x2 * 0x2 ? 0x2 5 0x2 < 0x2 1 0x2 ' 0x2 @ 0x2 > 0x2 4 0x2 D 0x2 9 0x2 6 0x2 4 0x2 F 0x2 : 0x2 $ 0x2 3 0x2 G 0x2 . 0x2 8 0x2 7 0x2 1 0x2 1 0x2 F 0x2 9 0x2 4 0x2 4 0x2 - 0x2 O 0x2 * 0x2 = 0x2 @ 0x2 < 0x2 ! 0x2 , 0x2 / 0x2 ) 0x2 ( 0x2 + 0x2 . 0x2 < 0x2 I 0x2 T 0x2 B 0x2 @ 0x2 < 0x2 / 0x2 ' 0x2 * 0x2 , 0x2 7 0x2 > 0x2 4 0x2 7 0x2 6 0x2 D 0x2 < 0x2 ; 0x2 A 0x2 = 0x2 ; 0x2 I 0x2 I 0x2 5 0x2 P 0x2 E 0x2 A 0x2 ? 0x2 G 0x2 W 0x2 V 0x2 C 0x2 ; 0x2 5 0x2 U 0x2 a 0x2 _ 0x2 f 0x2 d 0x2 e 0x2 a 0x2 c 0x2 m 0x2 h 0x2 f 0x2 w 0x2 0x83 0x2 z 0x2 b 0x2 0x81 0x2 0x83 0x2 0x91 0x2 0x81 0x2 0x8a 0x2 0x85 0x2 0x86 0x2 0x94 0x2 0x9b 0x2 } 0x2 x 0x2 0x91 0x2 0x92 0x2 0x83 0x2 0x99 0x2 0x82 0x2 0xa7 ... (truncated)

@@ -123,20 +123,22 @@ object VMATAnalysis extends Logging {
      * isoplane that should be used to take the measurements.
      */
     def planToMeasured(tblr: MeasureTBLREdges.TBLR): MeasureTBLREdges.TBLR = {
-      tblr.addOffset(collimatorCentering.center).resize(-Config.VMATBorderThickness_mm)
+      tblr.addOffset(collimatorCentering.center).resize(-Config.VMATPenumbraBorderThickness_mm)
     }
 
     val measuredSeq_mm = aoiSeqFromPlan_mm.map(tblr => planToMeasured(tblr))
     val pixSeq_pix = measuredSeq_mm.map(tblr => tblr.iso2Pix(translator))
 
-    if (false) { // TODO rm
-      println("mlc:\n" + mlcImage.pixelsToText + "\n")
-      println("open:\n" + openImage.pixelsToText + "\n")
-    }
     Trace.trace("Getting rectangle averages of mlc  mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm")
-    val mlcAvgSeq = pixSeq_pix.map(p => mlcImage.averageOfRectangle(p.toRectangle))
+    val mlcAvgSeq = {
+      val pixValSeq = pixSeq_pix.map(p => mlcImage.averageOfRectangle(p.toRectangle))
+      Phase2Util.pixToDose(pixValSeq, alMlc)
+    }
     Trace.trace("Getting rectangle averages of open ooooooooooooooooooooooooooooooooo")
-    val openAvgSeq = pixSeq_pix.map(p => openImage.averageOfRectangle(p.toRectangle))
+    val openAvgSeq = {
+      val pixValSeq = pixSeq_pix.map(p => openImage.averageOfRectangle(p.toRectangle))
+      Phase2Util.pixToDose(pixValSeq, alOpen)
+    }
 
     Trace.trace("mlc avg of rects: " + (mlcAvgSeq.sum / mlcAvgSeq.size) + "    open avg of rects: " + (openAvgSeq.sum / openAvgSeq.size))
 
@@ -165,7 +167,6 @@ object VMATAnalysis extends Logging {
         bottomAOI_mm = measuredSeq_mm(i).bottom,
         leftAOI_mm = measuredSeq_mm(i).left,
         rightAOI_mm = measuredSeq_mm(i).right))
-    //Trace.trace("vmat seq:\n    " + vmatSeq.mkString("\n    ")) // TODO : this has not been tested.
     vmatSeq
   }
 
@@ -200,10 +201,11 @@ object VMATAnalysis extends Logging {
 
       val summary = VMATHTML.makeDisplay(extendedData, runReq, vmatListList, status)
       val result = Right(new VMATResult(summary, status, vmatListList.flatten))
-      logger.info("Finished analysis of VMAT")
+      logger.info("Putting " + vmatListList.flatten.size + " rows of VMAT data in database.")
 
-      // TODO put data in database
-      //vmatListList.flatten.map(vmat => vmat.insert)
+      // put data in database
+      vmatListList.flatten.map(vmat => vmat.insert)
+      logger.info("Finished analysis of VMAT")
       result
     } catch {
       case t: Throwable => {

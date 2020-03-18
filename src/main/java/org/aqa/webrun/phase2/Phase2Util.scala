@@ -425,6 +425,16 @@ object Phase2Util extends Logging {
   }
 
   /**
+   * Convert a list of pixel values to dose.
+   */
+  def pixToDose(pixValueSeq: Seq[Double], attributeList: AttributeList): Seq[Double] = {
+    val m = attributeList.get(TagFromName.RescaleSlope).getDoubleValues.head
+    val b = attributeList.get(TagFromName.RescaleIntercept).getDoubleValues.head
+
+    pixValueSeq.map(p => (p * m) + b)
+  }
+
+  /**
    * Measure dose as specified by the list of points and return it in the proper units.
    */
   def measureDose(pointList: Seq[Point], dicomImage: DicomImage, attributeList: AttributeList): Double = {

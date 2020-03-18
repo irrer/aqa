@@ -124,7 +124,8 @@ object DbSetup extends Logging {
     BBbyEPIDComposite.query,
     Rect.query,
     SymmetryAndFlatness.query,
-    LeafPosition.query)
+    LeafPosition.query,
+    VMAT.query)
 
   /**
    * Initialize database by creating tables in dependency order.

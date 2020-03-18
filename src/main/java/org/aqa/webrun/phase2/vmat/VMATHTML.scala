@@ -14,6 +14,7 @@ import java.awt.Color
 import org.aqa.Config
 import org.aqa.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.Trace
+import edu.umro.ImageUtil.DicomImage
 
 object VMATHTML {
   def makeDisplay(extendedData: ExtendedData, runReq: RunReq, resultList: Seq[Seq[VMAT]], status: ProcedureStatus.Value): Elem = {
@@ -21,12 +22,13 @@ object VMATHTML {
     val vmatDir = new File(extendedData.output.dir, "VMAT")
     vmatDir.mkdirs
 
-    def bigFont(text: String): Elem = <font size="5">{ text }</font>
+    def bigFont(text: String): Elem = <b><font size="3">{ text }</font></b>
     def bigFontDbl(d: Double): Elem = bigFont(Util.fmtDbl(d))
     def bigFontDblTd(d: Double): Elem = <td>{ bigFont(Util.fmtDbl(d)) }</td>
 
     def makeSet(vmatList: Seq[VMAT]): (Elem, String) = {
-      val id = FileUtil.replaceInvalidFileNameCharacters(vmatList.head.beamNameMLC, '_')
+      val idMLC = vmatList.head.beamNameMLC.replaceAll("[^a-zA-Z0-9]", "_").replaceAll("__*", "_")
+      val idOpen = vmatList.head.beamNameOpen.replaceAll("[^a-zA-Z0-9]", "_").replaceAll("__*", "_")
 
       def header(vmat: VMAT): Elem = {
         <th>{ Util.fmtDbl((vmat.leftRtplan_mm + vmat.rightRtplan_mm) / (2 * 10)) } cm</th>
@@ -50,12 +52,10 @@ object VMATHTML {
 
       val avgOfAbsoluteDeviations = vmatList.map(_.diff_pct.abs).sum / vmatList.size
 
-      def makeImg: Elem = {
-        val mlcDerived = runReq.derivedMap(vmatList.head.beamNameMLC)
-        val pngFile = new File(vmatDir, id + ".png")
-        val image = mlcDerived.pixelCorrectedImage.toDeepColorBufferedImage(0.001)
+      def makePng(name: String, dicomImage: DicomImage, translator: IsoImagePlaneTranslator): File = {
+        val pngFile = new File(vmatDir, name + ".png")
+        val image = dicomImage.toDeepColorBufferedImage(0.001)
         Config.applyWatermark(image)
-        val translator = new IsoImagePlaneTranslator(mlcDerived.attributeList)
         val lineColor = new Color(0x6688bb)
         Util.addGraticules(image, translator, lineColor)
 
@@ -73,51 +73,77 @@ object VMATHTML {
 
         vmatList.map(vmat => drawRectangle(vmat))
         Util.writePng(image, pngFile)
-        <center id={ id }>
-          <div class="zoom" id={ id }>
-            <img width="600" src={ pngFile.getName }/>
+        pngFile
+      }
+
+      def makeMLCImg: Elem = {
+        val mlcDerived = runReq.derivedMap(vmatList.head.beamNameMLC)
+        val translator = new IsoImagePlaneTranslator(mlcDerived.attributeList)
+        val pngFile = makePng(idMLC, mlcDerived.pixelCorrectedImage, translator)
+
+        <center id={ idMLC }>
+          <div class="zoom" id={ idMLC }>
+            <img width="280" src={ pngFile.getName }/>
           </div>
         </center>
       }
 
+      def makeOpenImg: Elem = {
+        val openDerived = runReq.derivedMap(vmatList.head.beamNameOpen)
+        val translator = new IsoImagePlaneTranslator(openDerived.attributeList)
+        val pngFile = makePng(idOpen, openDerived.pixelCorrectedImage, translator)
+
+        <a href={ pngFile.getName }>{ vmatList.head.beamNameOpen }</a>
+      }
+
       val table: Elem = {
-        <div class="row" style="margin:50px;">
-          <table class="table table-responsive table-bordered">
-            <tr>
-              <th>Band Number</th>
-              { vmatList.sortBy(_.leftRtplan_mm).map(vmat => header(vmat)) }
-            </tr>
-            <tr>
-              <td>{ bigFont("R") }LS</td>
-              { mlcValues }
-            </tr>
-            <tr>
-              <td>{ bigFont("R") }Open</td>
-              { openValues }
-            </tr>
-            <tr>
-              <td>{ bigFont("R") }corr</td>
-              { corrValues }
-            </tr>
-            <tr>
-              <td>{ bigFont("Diff(X)") }</td>
-              { diffValues }
-            </tr>
-            <tr>
-              <td colspan={ (vmatList.size + 1).toString }><p></p></td>
-            </tr>
-            <tr>
-              <td colspan={ (vmatList.size).toString }>{ bigFont("Average of absolute deviations (Diff<sub>Abs</sub>)") }</td>
-              <td>{ bigFontDbl(avgOfAbsoluteDeviations) }</td>
-            </tr>
-          </table>
-          <div>
-            { makeImg }
+        <div class="row" style="margin-bottom:60px;">
+          <div class="col-md-9">
+            <h3>{ vmatList.head.beamNameMLC }</h3>
+            <table class="table table-responsive table-bordered">
+              <tr>
+                <th>Band Center</th>
+                { vmatList.sortBy(_.leftRtplan_mm).map(vmat => header(vmat)) }
+              </tr>
+              <tr>
+                <td>{ bigFont("R") }LS</td>
+                { mlcValues }
+              </tr>
+              <tr>
+                <td>{ bigFont("R") }Open</td>
+                { openValues }
+              </tr>
+              <tr>
+                <td>{ bigFont("R") }corr</td>
+                { corrValues }
+              </tr>
+              <tr>
+                <td>{ bigFont("Diff(X)") }</td>
+                { diffValues }
+              </tr>
+              <tr>
+                <td colspan={ (vmatList.size + 1).toString }><p></p></td>
+              </tr>
+              <tr>
+                <td colspan={ (vmatList.size + 1).toString }>{ bigFont("Average of absolute deviations (Diff") }<sub>Abs</sub> { bigFont(") : ") }{ bigFontDbl(avgOfAbsoluteDeviations) }</td>
+                <td></td>
+              </tr>
+            </table>
+          </div>
+          <div class="col-md-2">
+            <center>
+              { makeMLCImg }
+              <br/>
+              { makeOpenImg }
+            </center>
           </div>
         </div>
       }
 
-      val js = """$(document).ready(function(){ $('#""" + id + """').zoom(); });"""
+      val js = """
+      $(document).ready(function(){ $('#""" + idMLC + """').zoom(); });
+      $(document).ready(function(){ $('#""" + idOpen + """').zoom(); });
+"""
 
       (table, js)
     }
@@ -129,23 +155,22 @@ object VMATHTML {
     val content: Elem = {
       <div>
         <div class="row" style="margin:50px;">
-          <div class="row" style="margin:50px;">
-            <div class="col-md-12">
-              { setList.map(setJs => setJs._1) }
-            </div>
+          <div class="col-md-12">
+            { setList.map(setJs => setJs._1) }
           </div>
         </div>
       </div>
     }
 
     val status = ProcedureStatus.pass
-    val js = "<script>" + setList.map(setJs => setJs._2).mkString("\n") + "</script>"
+    val js = "<script>" + setList.map(setJs => setJs._2).mkString("\n", "\n", "\n") + "</script>"
     val mainFile = new File(vmatDir, "VMAT.html")
     val text = Phase2Util.wrapSubProcedure(extendedData, content, "VMAT", status, Some(js), runReq)
     Util.writeBinaryFile(mainFile, text.getBytes)
     val iconImage = if (status.toString.equals(ProcedureStatus.pass.toString)) Config.passImageUrl else Config.failImageUrl
     <div>
       <a href={ vmatDir.getName + "/" + mainFile.getName }>VMAT</a>
+      <br/>
       <img src={ iconImage } height="32"/>
     </div>
   }

@@ -135,7 +135,7 @@ object CenterDoseHTML extends Logging {
       val elem = {
         <div title="Click for details.">
           <a href={ htmlFileName }>
-            Center Dose<br></br>
+            Center Dose<br/>
             <img src={ Config.passImageUrl } height="32"/>
           </a>
         </div>

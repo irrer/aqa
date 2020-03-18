@@ -818,7 +818,7 @@ object Config extends Logging {
   val VMATDeviationThreshold_pct = logMainText("VMATDeviationThreshold_pct", "3.0").toDouble
   val VMATAverageOfAbsoluteDeviationThreshold_pct = logMainText("VMATAverageOfAbsoluteDeviationThreshold_pct", "1.5").toDouble
   val VMATBeamPairList = getVMATBeamPairList
-  val VMATBorderThickness_mm = logMainText("VMATBorderThickness_mm", "2.5").toDouble
+  val VMATPenumbraBorderThickness_mm = logMainText("VMATPenumbraBorderThickness_mm", "4.0").toDouble
 
   val DailyQATolerance_mm = logMainText("DailyQATolerance_mm", "1.0").toDouble
   val CBCTBBMinimumStandardDeviation = logMainText("CBCTBBMinimumStandardDeviation", "1.75").toDouble
