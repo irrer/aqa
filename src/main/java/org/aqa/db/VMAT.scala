@@ -11,6 +11,7 @@ import org.aqa.procedures.ProcedureOutput
 import java.util.Date
 import java.sql.Timestamp
 import edu.umro.ScalaUtil.Trace
+import org.aqa.run.ProcedureStatus
 
 /**
  * Encapsulate data from a single VMAT measurement.  Each beam analyzed will have several of these.
@@ -233,4 +234,12 @@ object VMAT extends ProcedureOutput {
     val result = all.map(h => new VMATHistory(h._1.get, h._2)).sortWith((a, b) => a.date.getTime < b.date.getTime)
     result
   }
+
+  /** True if the beam as a whole passed. */
+  def beamPassed(vmatList: Seq[VMAT]) = {
+    val individualsAllPassed = vmatList.filterNot(vmat => vmat.status.equals(ProcedureStatus.pass.toString)).size == 0
+    val groupPassed = vmatList.map(vmat => Config.VMATAverageOfAbsoluteDeviationThreshold_pct >= ((vmat.percent - vmat.beamAverage_pct).abs)).reduce(_ && _)
+    individualsAllPassed && groupPassed
+  }
+
 }

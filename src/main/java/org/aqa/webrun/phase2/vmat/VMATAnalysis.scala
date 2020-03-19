@@ -186,7 +186,6 @@ object VMATAnalysis extends Logging {
     try {
       // This code only reports values without making judgment as to pass or fail.
       logger.info("Starting analysis of " + subProcedureName)
-      val status = ProcedureStatus.done
 
       val vmatListList = Config.VMATBeamPairList.map(vmatPair => {
         if (runReq.rtimageMap.contains(vmatPair.mlc) && runReq.rtimageMap.contains(vmatPair.open))
@@ -198,6 +197,11 @@ object VMATAnalysis extends Logging {
       }).filter(l => l.nonEmpty)
 
       Trace.trace("vmatListList.size: " + vmatListList.size)
+
+      val status: ProcedureStatus.Value = {
+        val j = vmatListList.map(vmatList => VMAT.beamPassed(vmatList)).reduce(_ && _)   // TODO rm
+        if (vmatListList.isEmpty || vmatListList.map(vmatList => VMAT.beamPassed(vmatList)).reduce(_ && _)) ProcedureStatus.pass else ProcedureStatus.fail
+      }
 
       val summary = VMATHTML.makeDisplay(extendedData, runReq, vmatListList, status)
       val result = Right(new VMATResult(summary, status, vmatListList.flatten))

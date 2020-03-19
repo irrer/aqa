@@ -25,10 +25,12 @@ object VMATHTML {
     def bigFont(text: String): Elem = <b><font size="3">{ text }</font></b>
     def bigFontDbl(d: Double): Elem = bigFont(Util.fmtDbl(d))
     def bigFontDblTd(d: Double): Elem = <td>{ bigFont(Util.fmtDbl(d)) }</td>
+    def bigFontDblTdDanger(d: Double): Elem = <td class="danger">{ bigFont(Util.fmtDbl(d)) }</td>
 
     def makeSet(vmatList: Seq[VMAT]): (Elem, String) = {
-      val idMLC = vmatList.head.beamNameMLC.replaceAll("[^a-zA-Z0-9]", "_").replaceAll("__*", "_")
-      val idOpen = vmatList.head.beamNameOpen.replaceAll("[^a-zA-Z0-9]", "_").replaceAll("__*", "_")
+      def textToId(text: String) = text.replaceAll("[^a-zA-Z0-9]", "_").replaceAll("__*", "_")
+      val idMLC = textToId(vmatList.head.beamNameMLC)
+      val idOpen = textToId(vmatList.head.beamNameOpen)
 
       def header(vmat: VMAT): Elem = {
         <th>{ Util.fmtDbl((vmat.leftRtplan_mm + vmat.rightRtplan_mm) / (2 * 10)) } cm</th>
@@ -47,7 +49,13 @@ object VMATHTML {
       }
 
       val diffValues = {
-        vmatList.map(vmat => bigFontDblTd(vmat.diff_pct))
+        vmatList.map(vmat => {
+          val pass = vmat.status.equals(ProcedureStatus.pass.toString)
+          if (pass)
+            bigFontDblTd(vmat.diff_pct)
+          else
+            bigFontDblTdDanger(vmat.diff_pct)
+        })
       }
 
       val avgOfAbsoluteDeviations = vmatList.map(_.diff_pct.abs).sum / vmatList.size
@@ -76,30 +84,50 @@ object VMATHTML {
         pngFile
       }
 
-      def makeMLCImg: Elem = {
+      def makeMLCImg: File = {
         val mlcDerived = runReq.derivedMap(vmatList.head.beamNameMLC)
         val translator = new IsoImagePlaneTranslator(mlcDerived.attributeList)
         val pngFile = makePng(idMLC, mlcDerived.pixelCorrectedImage, translator)
-
-        <center id={ idMLC }>
-          <div class="zoom" id={ idMLC }>
-            <img width="280" src={ pngFile.getName }/>
-          </div>
-        </center>
+        pngFile
       }
 
-      def makeOpenImg: Elem = {
+      def makeOpenImg: File = {
         val openDerived = runReq.derivedMap(vmatList.head.beamNameOpen)
         val translator = new IsoImagePlaneTranslator(openDerived.attributeList)
         val pngFile = makePng(idOpen, openDerived.pixelCorrectedImage, translator)
+        pngFile
+      }
 
-        <a href={ pngFile.getName }>{ vmatList.head.beamNameOpen }</a>
+      def makeBeamImagePair: Elem = {
+        val tabMlc = "Tab" + idMLC
+        val tabOpen = "Tab" + idOpen
+        <div class="row">
+          <div class="col-md-6">
+            <center>
+              { vmatList.head.beamNameMLC }
+              <div class="zoom" id={ idMLC }>
+                <img width="300" src={ makeMLCImg.getName }/>
+              </div>
+            </center>
+          </div>
+          <div class="col-md-6">
+            <center>
+              { vmatList.head.beamNameOpen }
+              <div class="zoom" id={ idOpen }>
+                <img width="300" src={ makeOpenImg.getName }/>
+              </div>
+            </center>
+          </div>
+        </div>
       }
 
       val table: Elem = {
+
+        val statusImage = if (VMAT.beamPassed(vmatList)) Config.passImageUrl else Config.failImageUrl
+
         <div class="row" style="margin-bottom:60px;">
-          <div class="col-md-9">
-            <h3>{ vmatList.head.beamNameMLC }</h3>
+          <div class="col-md-7">
+            <h3>{ vmatList.head.beamNameMLC } / { vmatList.head.beamNameOpen } <img src={ statusImage } width="50"/></h3>
             <table class="table table-responsive table-bordered">
               <tr>
                 <th>Band Center</th>
@@ -130,11 +158,9 @@ object VMATHTML {
               </tr>
             </table>
           </div>
-          <div class="col-md-2">
+          <div class="col-md-5">
             <center>
-              { makeMLCImg }
-              <br/>
-              { makeOpenImg }
+              { makeBeamImagePair }
             </center>
           </div>
         </div>
@@ -162,8 +188,7 @@ object VMATHTML {
       </div>
     }
 
-    val status = ProcedureStatus.pass
-    val js = "<script>" + setList.map(setJs => setJs._2).mkString("\n", "\n", "\n") + "</script>"
+    val js = "<script>" + setList.map(setJs => setJs._2).mkString("\n") + "</script>"
     val mainFile = new File(vmatDir, "VMAT.html")
     val text = Phase2Util.wrapSubProcedure(extendedData, content, "VMAT", status, Some(js), runReq)
     Util.writeBinaryFile(mainFile, text.getBytes)
