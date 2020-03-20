@@ -235,11 +235,16 @@ object VMAT extends ProcedureOutput {
     result
   }
 
+  /** True if each individual beam passed. */
+  def individualBeamsAllPassed(vmatList: Seq[VMAT]): Boolean = {
+    vmatList.filterNot(vmat => vmat.status.equals(ProcedureStatus.pass.toString)).size == 0
+  }
+
   /** True if the beam as a whole passed. */
   def beamPassed(vmatList: Seq[VMAT]) = {
-    val individualsAllPassed = vmatList.filterNot(vmat => vmat.status.equals(ProcedureStatus.pass.toString)).size == 0
+    val indiv = individualBeamsAllPassed(vmatList)
     val groupPassed = vmatList.map(vmat => Config.VMATAverageOfAbsoluteDeviationThreshold_pct >= ((vmat.percent - vmat.beamAverage_pct).abs)).reduce(_ && _)
-    individualsAllPassed && groupPassed
+    indiv && groupPassed
   }
 
 }

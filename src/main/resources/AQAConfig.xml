@@ -548,6 +548,7 @@ Note that when building a package for release, the Maven build process uses the 
         OPEN: Beam name of open beam.-->
     <VMATBeamPairList>
         <VMATBeamPair Name="Dose Rate - Gantry Speed Test" MLC="T2-DG-RS" OPEN="T2 Open"/>
+        <VMATBeamPair Name="Dose Rate - Gantry Speed Test" MLC="T2-DR-GS" OPEN="T2 Open"/>
         <VMATBeamPair Name="Leaf Speed Test" MLC="T3MLCSpeed" OPEN="T3 Open"/>
     </VMATBeamPairList>
     

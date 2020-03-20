@@ -61,12 +61,33 @@ object VMATAnalysis extends Logging {
       val dist = max - min
     }
 
+    /**
+     * The limits of the open field.  This limits the range of the MLC field.  Both fields should
+     * have the same range, but there have been instances where they did not.
+     */
+    val openLimits: MinMax = {
+      val beamSeqOpen = Phase2Util.getBeamSequenceOfPlan(beamNameOpen, plan)
+      val beamLimitListOpen = DicomUtil.findAllSingle(beamSeqOpen, TagFromName.BeamLimitingDevicePositionSequence).
+        map(bdps => bdps.asInstanceOf[SequenceAttribute]).
+        map(bdps => DicomUtil.alOfSeq(bdps)).
+        flatten
+      val xSeq = beamLimitListOpen.filter(bl => bl.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString.toUpperCase.endsWith("X")).head
+      val xLimits = xSeq.get(TagFromName.LeafJawPositions).getDoubleValues
+      new MinMax(xLimits(0), xLimits(1))
+    }
+
     // list of low-high pairs specifying X limits.  For T2 it is simple, just get all pairs.  For T3, it is necessary to
     // filter out and use only those X values that repeat, then pair them up by determining the different contiguous
     // regions they define.  This code works with the current RTPLAN that is deployed for Phase 2, but may not work for
     // other variations on VMAT.
     val xLimitList = {
-      val list = beamLimitList.map(bl => mlcOfInterest(bl)).flatten.distinct.sortBy(minMax => minMax._1).map(minMax => new MinMax(minMax._1, minMax._2))
+      val list = beamLimitList.
+        map(bl => mlcOfInterest(bl)).
+        flatten.
+        distinct.sortBy(minMax => minMax._1).
+        map(minMax => new MinMax(minMax._1, minMax._2)).
+        filter(mm => (mm.min >= openLimits.min) && (mm.max <= openLimits.max))
+
       def grp(seq: Seq[Double]) = seq.groupBy(v => v).toList.sortBy(g => g._2.size).reverse
       val lo = grp(list.map(lh => lh.min))
       val hi = grp(list.map(lh => lh.max))
@@ -199,7 +220,7 @@ object VMATAnalysis extends Logging {
       Trace.trace("vmatListList.size: " + vmatListList.size)
 
       val status: ProcedureStatus.Value = {
-        val j = vmatListList.map(vmatList => VMAT.beamPassed(vmatList)).reduce(_ && _)   // TODO rm
+        val j = vmatListList.map(vmatList => VMAT.beamPassed(vmatList)).reduce(_ && _) // TODO rm
         if (vmatListList.isEmpty || vmatListList.map(vmatList => VMAT.beamPassed(vmatList)).reduce(_ && _)) ProcedureStatus.pass else ProcedureStatus.fail
       }
 

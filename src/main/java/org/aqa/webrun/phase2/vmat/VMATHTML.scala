@@ -124,6 +124,9 @@ object VMATHTML {
       val table: Elem = {
 
         val statusImage = if (VMAT.beamPassed(vmatList)) Config.passImageUrl else Config.failImageUrl
+        val beamAverageClass = {
+          if (VMAT.individualBeamsAllPassed(vmatList) && (!VMAT.beamPassed(vmatList))) "danger" else ""
+        }
 
         <div class="row" style="margin-bottom:60px;">
           <div class="col-md-7">
@@ -153,7 +156,7 @@ object VMATHTML {
                 <td colspan={ (vmatList.size + 1).toString }><p></p></td>
               </tr>
               <tr>
-                <td colspan={ (vmatList.size + 1).toString }>{ bigFont("Average of absolute deviations (Diff") }<sub>Abs</sub> { bigFont(") : ") }{ bigFontDbl(avgOfAbsoluteDeviations) }</td>
+                <td class={ beamAverageClass } colspan={ (vmatList.size + 1).toString }>{ bigFont("Average of absolute deviations (Diff") }<sub>Abs</sub> { bigFont(") : ") }{ bigFontDbl(avgOfAbsoluteDeviations) }</td>
                 <td></td>
               </tr>
             </table>
