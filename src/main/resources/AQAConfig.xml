@@ -552,8 +552,11 @@ Note that when building a package for release, the Maven build process uses the 
         <VMATBeamPair Name="Leaf Speed Test" MLC="T3MLCSpeed" OPEN="T3 Open"/>
     </VMATBeamPairList>
     
-    <!-- The amount in mm to shrink the areas of interest to avoid edge (penumbra) effects. -->
-    <VMATPenumbraBorderThickness_mm>5.0</VMATPenumbraBorderThickness_mm>
+    <!-- The amount in mm to shrink the areas of interest to avoid edge (penumbra) effects.  Special note: If this value
+    is -1, then VMAT processing is not performed.   This is intended to be temporary until the code is approved by the
+    AQA subcommittee. 23-Mar-2020 -->
+    <VMATPenumbraBorderThickness_mm>-1</VMATPenumbraBorderThickness_mm>
+    <!-- <VMATPenumbraBorderThickness_mm>5.0</VMATPenumbraBorderThickness_mm> -->
 
     <!-- The maximum tolerance of error in floating point in mm for daily QA.  Exceeding this means failure. -->
     <DailyQATolerance_mm>0.4</DailyQATolerance_mm>

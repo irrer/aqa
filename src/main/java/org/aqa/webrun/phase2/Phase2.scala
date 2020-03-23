@@ -76,11 +76,11 @@ object Phase2 extends Logging {
   private def makeHtml(extendedData: ExtendedData, procedureStatus: ProcedureStatus.Value, elemList: Seq[Elem], runReq: RunReq) = {
     def table = {
       <div class="col-md-10 col-md-offset-1">
-        <table class="table table-responsive">
+        <div class="container-fluid" style="margin: 15px;">
           <tr>
             { elemList.take(3).map(e => <td>{ e }</td>) }
           </tr>
-        </table>
+        </div>
         <table class="table table-responsive">
           <tr>
             { elemList.drop(3).map(e => <td>{ e }</td>) }
@@ -124,12 +124,18 @@ object Phase2 extends Logging {
                   case Left(fail) => Left(Seq(metadataCheck.summary, badPixel.summary, collimatorCentering.summary, fail))
                   case Right(centerDose) => {
                     val prevSummaryList = Seq(metadataCheck, badPixel, collimatorCentering, centerDose).map(r => r.summary)
-                    val seq = Seq(
+                    val vmatFunction: Seq[() => Either[Elem, SubProcedureResult]] = { // TODO this should be incorporated into the <code>seq</code> list when VMAT is approved.
+                      if (Config.VMATPenumbraBorderThickness_mm == -1) {
+                        Seq[() => Either[Elem, SubProcedureResult]]()
+                      } else {
+                        Seq(() => VMATAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result))
+                      }
+                    }
+                    val seq: Seq[() => Either[Elem, SubProcedureResult]] = Seq(
                       () => CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
                       () => WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result, centerDose.resultList),
                       () => SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
-                      () => LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
-                      () => VMATAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result))
+                      () => LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result)) ++ vmatFunction
 
                     val list = seq.par.map(f => f()).toSeq
                     val summaryList = prevSummaryList ++ list.map(r => if (r.isLeft) r.left.get else r.right.get.summary)
