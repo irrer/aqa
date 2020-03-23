@@ -74,18 +74,18 @@ object Phase2 extends Logging {
   }
 
   private def makeHtml(extendedData: ExtendedData, procedureStatus: ProcedureStatus.Value, elemList: Seq[Elem], runReq: RunReq) = {
+
+    val sizedGroups = edu.umro.ScalaUtil.Util.sizedGroups(elemList, 4)
+
+    def showGroup(group: Seq[Elem]) = {
+      <div class="row" style="margin-top:40px; margin-left:10px; margin-right:10px;">
+        { group.map(e => <div class="col-md-3">{ e }</div>) }
+      </div>
+    }
+
     def table = {
       <div class="col-md-10 col-md-offset-1">
-        <div class="container-fluid" style="margin: 15px;">
-          <tr>
-            { elemList.take(3).map(e => <td>{ e }</td>) }
-          </tr>
-        </div>
-        <table class="table table-responsive">
-          <tr>
-            { elemList.drop(3).map(e => <td>{ e }</td>) }
-          </tr>
-        </table>
+        { sizedGroups.map(g => showGroup(g)) }
       </div>
     }
 
