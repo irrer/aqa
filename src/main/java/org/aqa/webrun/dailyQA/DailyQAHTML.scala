@@ -42,8 +42,9 @@ object DailyQAHTML {
 
     var machinePassed = true
 
-    case class Col(name: String, title: String, toElem: (BBbyEPIDComposite.DailyDataSet) => Elem) {
-      def toHeader = <th title={ title }>{ name }</th>
+    case class Col(nameElem: Elem, title: String, toElem: (BBbyEPIDComposite.DailyDataSet) => Elem) {
+      def this(name: String, title: String, toElem: (BBbyEPIDComposite.DailyDataSet) => Elem) = this(<span>{ name }</span>, title, toElem)
+      def toHeader = <th title={ title }>{ nameElem }</th>
     }
 
     def colMachine(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
@@ -79,7 +80,7 @@ object DailyQAHTML {
     }
 
     def colDateTime(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
-      <td>{ DailyQASummary.dateFormat.format(dataSet.output.dataDate.get) }</td>
+      <td>{ DailyQASummary.timeFormat.format(dataSet.output.dataDate.get) }</td>
     }
 
     def colCbctX(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
@@ -139,10 +140,18 @@ object DailyQAHTML {
       <td><a href={ ViewOutput.viewOutputUrl(dataSet.epid.outputPK) }>EPID Details</a></td>
     }
 
+    val reportDate: String = {
+      try {
+        DailyQASummary.dateFormat.format(dataSetList.head.output.dataDate.get)
+      } catch {
+        case t: Throwable => ""
+      }
+    }
+
     val colList: List[Col] = List(
       new Col("Machine", "Name of treatment machine", colMachine _),
       new Col("Patient", "Name of test patient", colPatient _),
-      new Col("Date+Time", "Time of EPID acquisition", colDateTime _),
+      new Col(<span>Time<br/>{ reportDate }</span>, "Time of EPID acquisition", colDateTime _),
 
       new Col("X CBCT - PLAN mm", "(plan X) - (plan X) in mm", colCbctX _),
       new Col("Y CBCT - PLAN mm", "(plan Y) - (plan Y) in mm", colCbctY _),
@@ -197,6 +206,9 @@ object DailyQAHTML {
         </div>
         <div class="row">
           <table class="table table-responsive table-bordered">
+            <col/>
+            <col/>
+            <col width="110"/>
             <thead><tr>{ colList.map(col => col.toHeader) }</tr></thead>
             {
               dataSetList.sortWith(sortDataSetPair).map(dataSet => dataSetToRow(dataSet))
