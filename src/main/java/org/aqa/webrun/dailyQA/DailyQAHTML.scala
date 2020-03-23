@@ -42,9 +42,8 @@ object DailyQAHTML {
 
     var machinePassed = true
 
-    case class Col(nameElem: Elem, title: String, toElem: (BBbyEPIDComposite.DailyDataSet) => Elem) {
-      def this(name: String, title: String, toElem: (BBbyEPIDComposite.DailyDataSet) => Elem) = this(<span>{ name }</span>, title, toElem)
-      def toHeader = <th title={ title }>{ nameElem }</th>
+    case class Col(name: String, title: String, toElem: (BBbyEPIDComposite.DailyDataSet) => Elem) {
+      def toHeader = <th title={ title }>{ name }</th>
     }
 
     def colMachine(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
@@ -151,7 +150,7 @@ object DailyQAHTML {
     val colList: List[Col] = List(
       new Col("Machine", "Name of treatment machine", colMachine _),
       new Col("Patient", "Name of test patient", colPatient _),
-      new Col(<span>Time<br/>{ reportDate }</span>, "Time of EPID acquisition", colDateTime _),
+      new Col("EPID Time " + reportDate, "Time of EPID acquisition", colDateTime _),
 
       new Col("X CBCT - PLAN mm", "(plan X) - (plan X) in mm", colCbctX _),
       new Col("Y CBCT - PLAN mm", "(plan Y) - (plan Y) in mm", colCbctY _),
