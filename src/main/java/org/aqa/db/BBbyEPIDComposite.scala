@@ -224,11 +224,14 @@ object BBbyEPIDComposite extends ProcedureOutput {
     val horzList = byType(AngleType.horizontal)
   }
 
+  /**
+   * Get all results for this institution.
+   */
   def getReportingDataSet(institutionPK: Long): Seq[DailyDataSet] = {
     val search = for {
       output <- Output.query.filter(o => o.dataDate.isDefined)
       bbByEPIDComposite <- BBbyEPIDComposite.query.filter(c => (c.outputPK === output.outputPK) && c.bbByCBCTPK.isDefined)
-      machine <- Machine.query.filter(m => (m.machinePK === output.machinePK))
+      machine <- Machine.query.filter(m => (m.machinePK === output.machinePK) && (m.institutionPK === institutionPK))
       cbct <- BBbyCBCT.query.filter(c => c.bbByCBCTPK === bbByEPIDComposite.bbByCBCTPK)
       bbByEpid <- BBbyEPID.query.filter(b => b.outputPK === output.outputPK)
     } yield (bbByEPIDComposite, cbct, machine, output, bbByEpid)
