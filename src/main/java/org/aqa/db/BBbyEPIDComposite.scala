@@ -238,7 +238,10 @@ object BBbyEPIDComposite extends ProcedureOutput {
     dailyQA.toSeq
   }
 
-  def getReportingDataSet(date: Date, institutionPK: Long): Seq[DailyDataSet] = {
+  /**
+   * Get all results that were acquired on one day for one institution.
+   */
+  def getForOneDay(date: Date, institutionPK: Long): Seq[DailyDataSet] = {
 
     val beginDate = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(date).replaceAll("T.*", "T00:00:00")).getTime)
     val endDate = new Timestamp(beginDate.getTime + (24 * 60 * 60 * 1000))
@@ -246,7 +249,7 @@ object BBbyEPIDComposite extends ProcedureOutput {
     val search = for {
       output <- Output.query.filter(o => o.dataDate.isDefined && (o.dataDate >= beginDate) && (o.dataDate < endDate))
       bbByEPIDComposite <- BBbyEPIDComposite.query.filter(c => (c.outputPK === output.outputPK) && c.bbByCBCTPK.isDefined)
-      machine <- Machine.query.filter(m => (m.machinePK === output.machinePK))
+      machine <- Machine.query.filter(m => (m.machinePK === output.machinePK) && (m.institutionPK === institutionPK))
       cbct <- BBbyCBCT.query.filter(c => c.bbByCBCTPK === bbByEPIDComposite.bbByCBCTPK)
       bbByEpid <- BBbyEPID.query.filter(b => b.outputPK === output.outputPK)
     } yield (bbByEPIDComposite, cbct, machine, output, bbByEpid)
