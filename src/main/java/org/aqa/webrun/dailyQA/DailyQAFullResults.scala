@@ -24,14 +24,15 @@ object DailyQAFullResults {
     // list of CBCT and EPID outputs for this date and institution
     val extList = Output.extendedList(Some(instPK), 1000, Some(date)).
       filter(e => procedureNameSet.contains(e.procedure_name)).
-      sortBy(_.input_dataDate.get.getTime)
+      sortBy(_.input_dataDate.get.getTime) // this determines the order that rows appear.  Maybe should be: <code>sortBy(_.output_startDate.getTime)</code> instead?
 
     def extToRow(ext: Output.ExtendedValues) = {
 
       val url = ViewOutput.path + "?" + ViewOutput.outputPKTag + "=" + ext.output_outputPK
 
       <tr>
-        <td><a title="View details" href={ url }>{ timeFormat.format(ext.input_dataDate.get) }</a></td>
+        <td><a title="View details" href={ url }>{ timeFormat.format(ext.output_startDate) }</a></td>
+        <td>{ timeFormat.format(ext.input_dataDate.get) }</td>
         <td>{ ext.procedure_name }</td>
         <td>{ WebUtil.wrapAlias(ext.machine_id) }</td>
         <td><a title="Click to re-run analysis.  Results will replace previous results." href={ OutputList.path + "?" + OutputList.redoTag + "=" + ext.output_outputPK }>Redo</a></td>
@@ -45,6 +46,7 @@ object DailyQAFullResults {
           <tbody>
             <thead>
               <tr>
+                <th>Analysis</th>
                 <th>Acquisition</th>
                 <th>Procedure</th>
                 <th>Machine</th>

@@ -38,13 +38,16 @@ object BBbyCBCTExecute extends Logging {
 
   private val subProcedureName = "CBCT Alignment"
 
-  private def showFailure(message: String, extendedData: ExtendedData) = {
+  private def showFailure(message: String, extendedData: ExtendedData, runReq: BBbyCBCTRunReq) = {
     val content = {
       <div class="row col-md-10 col-md-offset-1">
         <h4>
           Failed to process CBCT images:<br></br>
           <div class="row col-md-10 col-md-offset-1">
             <i>{ message }</i>
+          </div>
+          <div class="row col-md-10 col-md-offset-1">
+            { BBbyCBCTHTML.makeCbctSlices(extendedData, runReq) }
           </div>
         </h4>
       </div>
@@ -67,7 +70,7 @@ object BBbyCBCTExecute extends Logging {
       Util.sopOfAl(runReq.rtplan), // rtplanSOPInstanceUID
       runReq.cbct.head.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString, // cbctSeriesInstanceUid
       rtplanIsocenter.distance(bbPointInRtplan), // offset_mm
-      ProcedureStatus.done.toString, // status
+      ProcedureStatus.pass.toString, // status
       rtplanIsocenter.getX, // planX_mm
       rtplanIsocenter.getY, // planY_mm
       rtplanIsocenter.getZ, // planZ_mm
@@ -84,7 +87,9 @@ object BBbyCBCTExecute extends Logging {
 
   def runProcedure(extendedData: ExtendedData, runReq: BBbyCBCTRunReq): ProcedureStatus.Value = {
     try {
-      // This code only reports values without making judgment as to pass or fail.
+      // This code only reports values and considers the test to have passed if
+      // it found the BB, regardless of whether the BB was positioned within
+      // tolerance of the plan's isocenter.
       logger.info("Starting analysis of CBCT Alignment")
       val result = BBbyCBCTAnalysis.volumeAnalysis(runReq.cbct)
       if (result.isRight) {
@@ -104,9 +109,9 @@ object BBbyCBCTExecute extends Logging {
         val annotatedImages = BBbyCBCTAnnotateImages.annotate(bbByCBCT, imageXYZ, runReq, volumePoint)
         val html = BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, annotatedImages, ProcedureStatus.done, runReq)
         logger.info("Finished analysis of CBCT Alignment")
-        ProcedureStatus.done
+        ProcedureStatus.pass
       } else {
-        showFailure(result.left.get, extendedData)
+        showFailure(result.left.get, extendedData, runReq)
         ProcedureStatus.fail
       }
     } catch {

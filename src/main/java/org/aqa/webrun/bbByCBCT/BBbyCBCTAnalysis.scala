@@ -272,19 +272,6 @@ object BBbyCBCTAnalysis extends Logging {
         "\n    coordinates in voxels: " + fmtPoint(fineLocation_vox.get) +
         "\n    frame of ref coordinates in mm: " + fmtPoint(fineLocation_mm))
       val imageXYZ = makeImagesXYZ(entireVolume, fineLocation_vox.get, fineLocation_mm, voxSize_mm)
-      //      if (true) { // TODO rm
-      //        Trace.trace("coordinates in mm  in original frame of ref:  " + fmt(fineLocation_mm.getX) + " " + fmt(fineLocation_mm.getY) + " " + fmt(fineLocation_mm.getZ))
-      //        Trace.trace("coordinates in vox in original frame of ref:  " + fmt(fineLocation_vox.get.getX) + " " + fmt(fineLocation_vox.get.getY) + " " + fmt(fineLocation_vox.get.getZ))
-      //        val roundTrip = volTrans.mm2vox(fineLocation_mm)
-      //        Trace.trace("coordinates in vox round tripped frm of ref:  " + fmt(roundTrip.getX) + " " + fmt(roundTrip.getY) + " " + fmt(roundTrip.getZ))
-      //        def scl(v: Double, vs: Double, vsOther: Double): String = {
-      //          val r = if (vs > vsOther) v * (vs / vsOther) else v
-      //          r.formatted("%12.7f")
-      //        }
-      //        Trace.trace("x BB: " + scl(roundTrip.getZ, voxSize_mm(2), voxSize_mm(1)) + ", " + scl(roundTrip.getY, voxSize_mm(1), voxSize_mm(2)))
-      //        Trace.trace("y BB: " + scl(roundTrip.getZ, voxSize_mm(2), voxSize_mm(0)) + ", " + scl(roundTrip.getX, voxSize_mm(0), voxSize_mm(2)))
-      //        Trace.trace("z BB: " + scl(roundTrip.getX, voxSize_mm(0), voxSize_mm(1)) + ", " + scl(roundTrip.getY, voxSize_mm(1), voxSize_mm(0)))
-      //      }
       Right(fineLocation_mm, imageXYZ)
     } else {
       Left("No BB found")

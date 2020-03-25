@@ -37,231 +37,278 @@ object BBbyCBCTHTML {
   private val thumbnailsPerRow = 10
   private def getZ(al: AttributeList): Double = al.get(TagFromName.ImagePositionPatient).getDoubleValues()(2)
 
+  private def wrap(content: Elem, extendedData: ExtendedData) = {
+    val twoLineDate = new SimpleDateFormat("MMM dd yyyy\nHH:mm")
+    def wrapElement(col: Int, name: String, value: String, asAlias: Boolean): Elem = {
+      val html =
+        if (asAlias) {
+          <span aqaalias="">{ value }</span>
+        } else {
+          val valueList = value.split("\n");
+          { <span>{ valueList.head }{ valueList.tail.map(line => { <span><br/> { line } </span> }) }</span> }
+        }
+
+      { <div class={ "col-md-" + col }><em>{ name }:</em><br/>{ html }</div> }
+
+    }
+
+    val dataAcquisitionDate = {
+      if (extendedData.output.dataDate.isDefined) twoLineDate.format(extendedData.output.dataDate.get)
+      else "unknown"
+    }
+
+    val elapsed: String = {
+      val fin = extendedData.output.finishDate match {
+        case Some(finDate) => finDate.getTime
+        case _ => System.currentTimeMillis
+      }
+      val elapsed = fin - extendedData.output.startDate.getTime
+      Util.elapsedTimeHumanFriendly(elapsed)
+    }
+
+    val procedureDesc: String = extendedData.procedure.name + " : " + extendedData.procedure.version
+
+    val showMachine = {
+      val href = "/admin/MachineUpdate?machinePK=22"
+      <div class="col-md-1">
+        <h2 title="Treatment machine.  Click for details.">{ MachineUpdate.linkToMachineUpdate(extendedData.machine.machinePK.get, extendedData.machine.id) }</h2>
+      </div>
+    }
+
+    val elem = {
+      <div class="row">
+        <div class="row">
+          <div class="col-md-10 col-md-offset-1">
+            { showMachine }
+            { wrapElement(2, "Institution", extendedData.institution.name, true) }
+            { wrapElement(1, "Data Acquisition", dataAcquisitionDate, false) }
+            { wrapElement(1, "Analysis Started", twoLineDate.format(extendedData.output.startDate), false) }
+            { wrapElement(1, "User", extendedData.user.id, true) }
+            { wrapElement(1, "Elapsed", elapsed, false) }
+            { wrapElement(1, "Procedure", procedureDesc, false) }
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-10 col-md-offset-1">
+            { content }
+          </div>
+        </div>
+      </div>
+    }
+
+    elem
+  }
+  
+  /**
+   * Create a web page for viewing and downloading the CBCT files.
+   */
+  def makeCbctSlices(extendedData: ExtendedData, runReq: BBbyCBCTRunReq): Elem = {
+    val subDir = new File(extendedData.output.dir, cbctDirName)
+
+    def descriptionOf(al: AttributeList) = "Z : " + Util.fmtDbl(getZ(al))
+    def fileNameOfPng(al: AttributeList) = Util.textToId(descriptionOf(al).replace("-", "neg")) + ".png"
+    def fileNameOfHtml(al: AttributeList) = Util.textToId(descriptionOf(al).replace("-", "neg")) + ".html"
+
+    def writeDicomImage(al: AttributeList) = {
+      val image = ConsumerFormatImageMaker.makeEightBitImage(al)
+      val pngFile = new File(subDir, fileNameOfPng(al))
+      Util.writePng(image, pngFile)
+    }
+
+    def writeDicomMetaData(df: DicomFile) = {
+      val al = df.attributeList.get
+      val content = {
+        <div>
+          <div class="row">
+            <div class="col-md-3 col-md-offset-1">
+              <h2>CBCT { descriptionOf(al) }</h2>
+            </div>
+            <div class="col-md-2">
+              <h2> </h2><a href={ "../" + mainReportFileName } title="Return to main CBCT report">Main Report</a>
+            </div>
+            <div class="col-md-2">
+              <h2> </h2><a href={ cbctMainFileName } title="View thumbnails of all slices">Return to Thumbnails</a>
+            </div>
+            <div class="col-md-2">
+              <h2> </h2><a href={ "../../" + df.file.getName } title="Download anonymized DICOM">Download DICOM</a>
+            </div>
+          </div>
+          <div class="row">
+            <img src={ fileNameOfPng(al) }/>
+          </div>
+          <div class="row">
+            <p> </p><br> </br>
+            <pre>
+              { WebUtil.nl + DicomUtil.attributeListToString(al) }
+            </pre>
+            { WebUtil.nl }
+            <p> </p>
+          </div>
+        </div>
+      }
+      val text = WebUtil.wrapBody(wrap(content, extendedData), "CBCT " + descriptionOf(al), None, true, None)
+      val file = new File(subDir, fileNameOfHtml(al))
+      Util.writeFile(file, text)
+    }
+
+    subDir.mkdirs
+
+    val sortedCbct = runReq.cbct.sortBy(al => getZ(al))
+    sortedCbct.par.map(al => writeDicomImage(al))
+    runReq.cbctDicomFile.sortBy(df => getZ(df.attributeList.get)).par.map(df => writeDicomMetaData(df))
+
+    def sizedGroups(seq: Seq[AttributeList], grp: Seq[Seq[AttributeList]]): Seq[Seq[AttributeList]] = {
+      if (seq.isEmpty) grp
+      else sizedGroups(seq.drop(thumbnailsPerRow), grp :+ seq.take(thumbnailsPerRow))
+    }
+
+    val cbctThumbnail = {
+      val groupedByLine = sizedGroups(sortedCbct, Seq[Seq[AttributeList]]())
+
+      def alToHtml(al: AttributeList) = {
+        <td>
+          <a href={ fileNameOfHtml(al) } class="screenshot" title={ descriptionOf(al) } rel={ fileNameOfPng(al) }>
+            <img src={ fileNameOfPng(al) } style="margin-right: 1px; margin-bottom: 1px;" height="64"/>
+          </a>
+        </td>
+      }
+
+      def lineToHtml(line: Seq[AttributeList]) = {
+        <tr>
+          { line.map(c => alToHtml(c)) }
+        </tr>
+      }
+
+      // Note that the margin-bottom for the table has to be large to create space so
+      // that the tooltip images can be viewed in their entirety.
+      val content = {
+        <div>
+          <div class="row">
+            <div class="col-md-3 col-md-offset-1">
+              <h2>View CBCT Slices</h2>
+            </div>
+            <div class="col-md-1">
+              <h2> </h2><a href={ "../" + mainReportFileName } title="Return to main CBCT report">Main Report</a>
+            </div>
+            <div class="col-md-5">
+              <h2> </h2>
+            </div>
+          </div>
+          <div class="row" style="margin-top: 20px;">
+            Hover over images for larger view.  Click to see metadata or download.
+            <br></br>
+            <table style="margin-bottom: 600px; ">
+              { groupedByLine.map(line => lineToHtml(line)) }
+            </table>
+          </div>
+          <p style="margin=400px;"> </p>
+        </div>
+      }
+      content
+    }
+
+    val text = WebUtil.wrapBody(wrap(cbctThumbnail, extendedData), "CBCT Viewer", None, true, None)
+    val file = new File(subDir, cbctMainFileName)
+    Util.writeFile(file, text)
+
+    val reference = {
+      <a href={ cbctDirName + "/" + cbctMainFileName }>CBCT Dicom</a>
+    }
+
+    reference
+  }
+
+  /**
+   * Create a web page for viewing and downloading the registration file.
+   */
+  private def makeRegReference(extendedData: ExtendedData, runReq: BBbyCBCTRunReq): Elem = {
+
+    val regAl = runReq.regDicomFile.get.attributeList.get
+    val regSop = Util.sopOfAl(regAl)
+
+    val dicomFile = new File(extendedData.output.dir, "registration.dcm")
+    DicomUtil.writeAttributeListToFile(regAl, dicomFile, "AQA")
+    val htmlRegFileName = "registration.html"
+
+    val content = {
+      <div>
+        <div class="row">
+          <div class="col-md-3 col-md-offset-1">
+            <h2>Registration</h2>
+          </div>
+          <div class="col-md-2">
+            <h2> </h2><a href={ mainReportFileName } title="Return to main CBCT report">Main Report</a>
+          </div>
+          <div class="col-md-2">
+            <h2> </h2><a href={ dicomFile.getName } title="Download anonymized DICOM">Download DICOM</a>
+          </div>
+        </div>
+        <div class="row">
+          <pre>
+            { WebUtil.nl + DicomUtil.attributeListToString(regAl) }
+          </pre>
+          { WebUtil.nl }
+          <p> </p>
+        </div>
+      </div>
+    }
+
+    val text = WebUtil.wrapBody(wrap(content, extendedData), "Registration for CBCT", None, true, None)
+    val file = new File(extendedData.output.dir, htmlRegFileName)
+    Util.writeFile(file, text)
+
+    <a href={ htmlRegFileName } title={ "View / download Registration DICOM" }>REG DICOM</a>
+  }
+
+  /**
+   * Create a web page for viewing and downloading the RTPLAN file.
+   */
+  private def makePlanReference(extendedData: ExtendedData, runReq: BBbyCBCTRunReq): Elem = {
+
+    val planSop = Util.sopOfAl(runReq.rtplan)
+
+    val dicomSeries = DicomSeries.getBySopInstanceUID(planSop)
+    if (dicomSeries.isEmpty) {
+      <div>Could not find referenced plan with UID { planSop }</div>
+    } else {
+      val rtplanAl = dicomSeries.head.attributeListList.head
+      val dicomFile = new File(extendedData.output.dir, "rtplan.dcm")
+      DicomUtil.writeAttributeListToFile(rtplanAl, dicomFile, "AQA")
+      val htmlRtplanFileName = "rtplan.html"
+
+      val content = {
+        <div>
+          <div class="row">
+            <div class="col-md-3 col-md-offset-1">
+              <h2>RTPLAN</h2>
+            </div>
+            <div class="col-md-2">
+              <h2> </h2><a href={ mainReportFileName } title="Return to main CBCT report">Main Report</a>
+            </div>
+            <div class="col-md-2">
+              <h2> </h2><a href={ dicomFile.getName } title="Download anonymized DICOM">Download DICOM</a>
+            </div>
+          </div>
+          <div class="row">
+            <pre>
+              { WebUtil.nl + DicomUtil.attributeListToString(rtplanAl) }
+            </pre>
+            { WebUtil.nl }
+            <p> </p>
+          </div>
+        </div>
+      }
+
+      val text = WebUtil.wrapBody(wrap(content, extendedData), "RTPLAN for CBCT", None, true, None)
+      val file = new File(extendedData.output.dir, htmlRtplanFileName)
+      Util.writeFile(file, text)
+
+      <a href={ htmlRtplanFileName } title={ "View / download RTPLAN DICOM" }>RTPLAN DICOM</a>
+    }
+  }
   def generateHtml(extendedData: ExtendedData, bbByCBCT: BBbyCBCT, imageSet: BBbyCBCTAnnotateImages.ImageSet, status: ProcedureStatus.Value, runReq: BBbyCBCTRunReq) = {
 
     val outputDir = extendedData.output.dir
-
-    def wrap(content: Elem) = {
-      val twoLineDate = new SimpleDateFormat("MMM dd yyyy\nHH:mm")
-      def wrapElement(col: Int, name: String, value: String, asAlias: Boolean): Elem = {
-        val html =
-          if (asAlias) {
-            <span aqaalias="">{ value }</span>
-          } else {
-            val valueList = value.split("\n");
-            { <span>{ valueList.head }{ valueList.tail.map(line => { <span><br/> { line } </span> }) }</span> }
-          }
-
-        { <div class={ "col-md-" + col }><em>{ name }:</em><br/>{ html }</div> }
-
-      }
-
-      val dataAcquisitionDate = {
-        if (extendedData.output.dataDate.isDefined) twoLineDate.format(extendedData.output.dataDate.get)
-        else "unknown"
-      }
-
-      val elapsed: String = {
-        val fin = extendedData.output.finishDate match {
-          case Some(finDate) => finDate.getTime
-          case _ => System.currentTimeMillis
-        }
-        val elapsed = fin - extendedData.output.startDate.getTime
-        Util.elapsedTimeHumanFriendly(elapsed)
-      }
-
-      val procedureDesc: String = extendedData.procedure.name + " : " + extendedData.procedure.version
-
-      val showMachine = {
-        val href = "/admin/MachineUpdate?machinePK=22"
-        <div class="col-md-1">
-          <h2 title="Treatment machine.  Click for details.">{ MachineUpdate.linkToMachineUpdate(extendedData.machine.machinePK.get, extendedData.machine.id) }</h2>
-        </div>
-      }
-
-      val elem = {
-        <div class="row">
-          <div class="row">
-            <div class="col-md-10 col-md-offset-1">
-              { showMachine }
-              { wrapElement(2, "Institution", extendedData.institution.name, true) }
-              { wrapElement(1, "Data Acquisition", dataAcquisitionDate, false) }
-              { wrapElement(1, "Analysis Started", twoLineDate.format(extendedData.output.startDate), false) }
-              { wrapElement(1, "User", extendedData.user.id, true) }
-              { wrapElement(1, "Elapsed", elapsed, false) }
-              { wrapElement(1, "Procedure", procedureDesc, false) }
-            </div>
-          </div>
-          <div class="row">
-            <div class="col-md-10 col-md-offset-1">
-              { content }
-            </div>
-          </div>
-        </div>
-      }
-
-      elem
-    }
-
-    def makeCbctSlices: Elem = {
-      val subDir = new File(extendedData.output.dir, cbctDirName)
-
-      def descriptionOf(al: AttributeList) = "Z : " + Util.fmtDbl(getZ(al))
-      def fileNameOfPng(al: AttributeList) = Util.textToId(descriptionOf(al).replace("-", "neg")) + ".png"
-      def fileNameOfHtml(al: AttributeList) = Util.textToId(descriptionOf(al).replace("-", "neg")) + ".html"
-
-      def writeDicomImage(al: AttributeList) = {
-        val image = ConsumerFormatImageMaker.makeEightBitImage(al)
-        val pngFile = new File(subDir, fileNameOfPng(al))
-        Util.writePng(image, pngFile)
-      }
-
-      def writeDicomMetaData(df: DicomFile) = {
-        val al = df.attributeList.get
-        val content = {
-          <div>
-            <div class="row">
-              <div class="col-md-3 col-md-offset-1">
-                <h2>CBCT { descriptionOf(al) }</h2>
-              </div>
-              <div class="col-md-2">
-                <h2> </h2><a href={ "../" + mainReportFileName } title="Return to main CBCT report">Main Report</a>
-              </div>
-              <div class="col-md-2">
-                <h2> </h2><a href={ cbctMainFileName } title="View thumbnails of all slices">Return to Thumbnails</a>
-              </div>
-              <div class="col-md-2">
-                <h2> </h2><a href={ "../../" + df.file.getName } title="Download anonymized DICOM">Download DICOM</a>
-              </div>
-            </div>
-            <div class="row">
-              <img src={ fileNameOfPng(al) }/>
-            </div>
-            <div class="row">
-              <p> </p><br> </br>
-              <pre>
-                { WebUtil.nl + DicomUtil.attributeListToString(al) }
-              </pre>
-              { WebUtil.nl }
-              <p> </p>
-            </div>
-          </div>
-        }
-        val text = WebUtil.wrapBody(wrap(content), "CBCT " + descriptionOf(al), None, true, None)
-        val file = new File(subDir, fileNameOfHtml(al))
-        Util.writeFile(file, text)
-      }
-
-      subDir.mkdirs
-
-      val sortedCbct = runReq.cbct.sortBy(al => getZ(al))
-      sortedCbct.par.map(al => writeDicomImage(al))
-      runReq.cbctDicomFile.sortBy(df => getZ(df.attributeList.get)).par.map(df => writeDicomMetaData(df))
-
-      def sizedGroups(seq: Seq[AttributeList], grp: Seq[Seq[AttributeList]]): Seq[Seq[AttributeList]] = {
-        if (seq.isEmpty) grp
-        else sizedGroups(seq.drop(thumbnailsPerRow), grp :+ seq.take(thumbnailsPerRow))
-      }
-
-      val cbctThumbnail = {
-        val groupedByLine = sizedGroups(sortedCbct, Seq[Seq[AttributeList]]())
-
-        def alToHtml(al: AttributeList) = {
-          <td>
-            <a href={ fileNameOfHtml(al) } class="screenshot" title={ descriptionOf(al) } rel={ fileNameOfPng(al) }>
-              <img src={ fileNameOfPng(al) } style="margin-right: 1px; margin-bottom: 1px;" height="64"/>
-            </a>
-          </td>
-        }
-
-        def lineToHtml(line: Seq[AttributeList]) = {
-          <tr>
-            { line.map(c => alToHtml(c)) }
-          </tr>
-        }
-
-        // Note that the margin-bottom for the table has to be large to create space so
-        // that the tooltip images can be viewed in their entirety.
-        val content = {
-          <div>
-            <div class="row">
-              <div class="col-md-3 col-md-offset-1">
-                <h2>View CBCT Slices</h2>
-              </div>
-              <div class="col-md-1">
-                <h2> </h2><a href={ "../" + mainReportFileName } title="Return to main CBCT report">Main Report</a>
-              </div>
-              <div class="col-md-5">
-                <h2> </h2>
-              </div>
-            </div>
-            <div class="row" style="margin-top: 20px;">
-              Hover over images for larger view.  Click to see metadata or download.
-              <br></br>
-              <table style="margin-bottom: 600px; ">
-                { groupedByLine.map(line => lineToHtml(line)) }
-              </table>
-            </div>
-            <p style="margin=400px;"> </p>
-          </div>
-        }
-        content
-      }
-
-      val text = WebUtil.wrapBody(wrap(cbctThumbnail), "CBCT Viewer", None, true, None)
-      val file = new File(subDir, cbctMainFileName)
-      Util.writeFile(file, text)
-
-      val reference = {
-        <a href={ cbctDirName + "/" + cbctMainFileName }>CBCT Dicom</a>
-      }
-
-      reference
-    }
-
-    def planReference: Elem = {
-
-      val planSop = Util.sopOfAl(runReq.rtplan)
-
-      val dicomSeries = DicomSeries.getBySopInstanceUID(planSop)
-      if (dicomSeries.isEmpty) {
-        <div>Could not find referenced plan with UID { planSop }</div>
-      } else {
-        val rtplanAl = dicomSeries.head.attributeListList.head
-        val dicomFile = new File(extendedData.output.dir, "rtplan.dcm")
-        DicomUtil.writeAttributeListToFile(rtplanAl, dicomFile, "AQA")
-        val htmlRtplanFileName = "rtplan.html"
-
-        val content = {
-          <div>
-            <div class="row">
-              <div class="col-md-3 col-md-offset-1">
-                <h2>RTPLAN</h2>
-              </div>
-              <div class="col-md-2">
-                <h2> </h2><a href={ mainReportFileName } title="Return to main CBCT report">Main Report</a>
-              </div>
-              <div class="col-md-2">
-                <h2> </h2><a href={ dicomFile.getName } title="Download anonymized DICOM">Download DICOM</a>
-              </div>
-            </div>
-            <div class="row">
-              <pre>
-                { WebUtil.nl + DicomUtil.attributeListToString(rtplanAl) }
-              </pre>
-              { WebUtil.nl }
-              <p> </p>
-            </div>
-          </div>
-        }
-
-        val text = WebUtil.wrapBody(wrap(content), "RTPLAN for CBCT", None, true, None)
-        val file = new File(extendedData.output.dir, htmlRtplanFileName)
-        Util.writeFile(file, text)
-
-        <a href={ htmlRtplanFileName } title={ "View / download RTPLAN DICOM" }>RTPLAN DICOM</a>
-      }
-    }
 
     val chart = new BBbyCBCTChart(extendedData.output.outputPK.get)
 
@@ -299,10 +346,17 @@ object BBbyCBCTHTML {
           { dataCol("Y", "Plan Y position - BB Y position in mm", (bbByCBCT.rtplanY_mm - bbByCBCT.cbctY_mm), 1) }
           { dataCol("Z", "Plan Z position - BB Z position in mm", (bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm), 1) }
           <div title="View and download DICOM images and metadata" class="col-md-1">
-            <h3> </h3>{ makeCbctSlices }
+            <h3> </h3>{ makeCbctSlices(extendedData, runReq) }
           </div>
+          {
+            if (runReq.regDicomFile.isDefined && runReq.regDicomFile.get.attributeList.isDefined) {
+              <div title="View and download registration file" class="col-md-1">
+                <h3> </h3>{ makeRegReference(extendedData, runReq) }
+              </div>
+            }
+          }
           <div title="View and download DICOM RTOLAN" class="col-md-1">
-            <h3> </h3>{ planReference }
+            <h3> </h3>{ makePlanReference(extendedData, runReq) }
           </div>
         </div>
       }
@@ -375,10 +429,10 @@ object BBbyCBCTHTML {
       zoomScript + "\n" + chartRef
     }
 
-    val text = WebUtil.wrapBody(wrap(mainContent), "BB Location by CBCT", None, true, Some(runScript))
+    val text = WebUtil.wrapBody(wrap(mainContent, extendedData), "BB Location by CBCT", None, true, Some(runScript))
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(file, text)
 
-    makeCbctSlices
+    //makeCbctSlices(extendedData, runReq)
   }
 }

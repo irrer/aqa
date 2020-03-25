@@ -50,7 +50,7 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
   private val refreshButton = makeButton("Refresh", false, ButtonType.BtnDefault)
 
   // let user choose date to display
-  private val dateField = new WebInputDatePicker("Date", 4, 0, false)
+  private val dateField = new WebInputDatePicker("Date", 6, 0, false)
 
   private def getDateText(valueMap: ValueMapT): String = {
     valueMap.get(dateField.label) match {
@@ -63,7 +63,7 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
     <a href={ DailyQASummary.path + "?CSV=" + getDateText(valueMap) } title="Download a spreadsheet of all DailyQA data for this institution.">CSV</a>
   }
 
-  private val csvField = new WebPlainText("CSV", false, 2, 0, csvLink)
+  private val csvField = new WebPlainText("CSV", false, 1, 0, csvLink)
 
   private def getDisplayedDate(valueMap: ValueMapT): Elem = {
     <h4>Results for { getDateText(valueMap) }</h4>

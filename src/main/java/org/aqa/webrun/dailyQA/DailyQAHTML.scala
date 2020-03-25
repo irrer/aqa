@@ -16,8 +16,11 @@ import org.aqa.db.BBbyCBCT
 import org.aqa.db.BBbyEPID
 import org.aqa.db.Output
 import org.aqa.AngleType
+import org.aqa.run.ProcedureStatus
+import org.aqa.Logging
+import edu.umro.ScalaUtil.Trace
 
-object DailyQAHTML {
+object DailyQAHTML extends Logging {
 
   def makeReport(dataSetList: Seq[BBbyEPIDComposite.DailyDataSetComposite], institutionPK: Long, date: Date): Elem = {
 
@@ -258,9 +261,13 @@ object DailyQAHTML {
          * Return true if the epid was done before the CBCT.
          */
         def epidBeforeCbct = {
-          val firstCbct = cbct.minBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
-          val lastEpid = epid.maxBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
-          lastEpid < firstCbct
+          Trace.trace
+          if (cbct.nonEmpty && epid.nonEmpty) {
+            val firstCbct = cbct.minBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
+            val lastEpid = epid.maxBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
+            lastEpid < firstCbct
+          } else
+            false
         }
 
         val epidAngleSeq = epid.map(e => AngleType.classifyAngle(e.bbByEPID.gantryAngle_deg)).flatten.distinct
@@ -273,6 +280,12 @@ object DailyQAHTML {
           !(epidAngleSeq.contains(AngleType.horizontal))
         }
 
+        def cbctPassed = {
+          // older code was setting CBCT status to 'done' instead of 'pass', so the done part is to be backwards compatible.  (25 Mar 2020)          
+          val passed = cbct.find(c => c.bbByCBCT.status.equalsIgnoreCase(ProcedureStatus.pass.toString) || c.bbByCBCT.status.equalsIgnoreCase(ProcedureStatus.done.toString))
+          passed.isDefined
+        }
+
         val explanation: Elem = 0 match {
           case _ if cbct.isEmpty && epid.isEmpty => showNoData
           case _ if (cbct.size == 1) && epid.isEmpty => showWarn("There is a CBCT scan but no EPID scans.")
@@ -280,6 +293,7 @@ object DailyQAHTML {
           case _ if epidMissingVert => showFail("No BB was found in the EPID for a vertical (0 or 180 degrees) gantry angle.")
           case _ if epidMissingHorz => showFail("No BB was found in the EPID for a horizontal (90 or 270 degrees) gantry angle.")
           case _ if epidBeforeCbct => showFail("The EPID scan was done prior to CBCT.  The CBCT needs to be done first.")
+          case _ if (!cbctPassed) => showFail("Unable to find BB in CBCT.  Phantom may be mis-aligned or missing.")
           case _ => showFail("There are no results for this machine but the cause is not known")
         }
         explanation

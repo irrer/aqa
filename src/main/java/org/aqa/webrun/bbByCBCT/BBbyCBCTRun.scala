@@ -113,7 +113,6 @@ object BBbyCBCTRun extends Logging {
 
     val bbByCBCT = BBbyCBCT.getByOutput(outputOrig.outputPK.get).head
 
-    // TODO : If the previous run crashed, then the DicomSeries was never stored, so this will crash with an empty head.
     val rtplan = {
       val series = DicomSeries.getBySopInstanceUID(bbByCBCT.rtplanSOPInstanceUID).head
       series.attributeListList.head
@@ -211,6 +210,10 @@ object BBbyCBCTRun extends Logging {
             }
             case Some(inputOrig) if (!userAuthorizedToModify(request, response, inputOrig)) => {
               val msg = "Redo not permitted because user is from a different institution."
+              forbidRedo(response, msg, outputOrig.outputPK)
+            }
+            case _ if (BBbyCBCT.getByOutput(outputOrig.outputPK.get).isEmpty) => {
+              val msg = "Redo not permitted because previous run crashed before saving required data."
               forbidRedo(response, msg, outputOrig.outputPK)
             }
             case Some(inputOrig) => BBbyCBCTRun.processRedoRequest(request, response, inputOrig, outputOrig, await, isAuto)
