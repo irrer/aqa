@@ -223,4 +223,27 @@ object BBbyCBCT extends ProcedureOutput {
       case _ => None
     }
   }
+
+  /** CBCT data and related results. */
+  case class DailyDataSetCBCT(output: Output, machine: Machine, bbByCBCT: BBbyCBCT);
+
+  /**
+   * Get all results that were acquired on one day for one institution.
+   */
+  def getForOneDay(date: Date, institutionPK: Long): Seq[DailyDataSetCBCT] = {
+
+    val beginDate = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(date).replaceAll("T.*", "T00:00:00")).getTime)
+    val endDate = new Timestamp(beginDate.getTime + (24 * 60 * 60 * 1000))
+
+    val search = for {
+      output <- Output.query.filter(o => o.dataDate.isDefined && (o.dataDate >= beginDate) && (o.dataDate < endDate))
+      bbByCBCT <- BBbyCBCT.query.filter(c => (c.outputPK === output.outputPK))
+      machine <- Machine.query.filter(m => (m.machinePK === output.machinePK) && (m.institutionPK === institutionPK))
+      cbct <- BBbyCBCT.query.filter(c => c.bbByCBCTPK === bbByCBCT.bbByCBCTPK)
+    } yield (output, machine, bbByCBCT)
+
+    val seq = Db.run(search.result).map(omc => new DailyDataSetCBCT(omc._1, omc._2, omc._3))
+    seq
+  }
+
 }

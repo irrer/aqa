@@ -12,14 +12,21 @@ import org.aqa.AnonymizeUtil
 import java.util.Date
 import org.aqa.Config
 import org.aqa.db.Machine
+import org.aqa.db.BBbyCBCT
+import org.aqa.db.BBbyEPID
+import org.aqa.db.Output
+import org.aqa.AngleType
 
 object DailyQAHTML {
 
-  def makeReport(dataSetList: Seq[BBbyEPIDComposite.DailyDataSet], institutionPK: Long, date: Date): Elem = {
+  def makeReport(dataSetList: Seq[BBbyEPIDComposite.DailyDataSetComposite], institutionPK: Long, date: Date): Elem = {
 
-    def sortDataSetPair(a: BBbyEPIDComposite.DailyDataSet, b: BBbyEPIDComposite.DailyDataSet): Boolean = {
-      if (a.machine.machinePK.get == b.machine.machinePK.get) {
-        a.output.dataDate.get.getTime < b.output.dataDate.get.getTime
+    /** Local class for Machine, Output, and Elem. */
+    case class MOE(machine: Machine, output: Option[Output], elem: Elem);
+
+    def sortMOE(a: MOE, b: MOE): Boolean = {
+      if ((a.machine.machinePK.get == b.machine.machinePK.get) && a.output.isDefined && b.output.isDefined) {
+        a.output.get.dataDate.get.getTime < b.output.get.dataDate.get.getTime
       } else {
         val aMach = AnonymizeUtil.decryptWithNonce(a.machine.institutionPK, a.machine.id_real.get)
         val bMach = AnonymizeUtil.decryptWithNonce(b.machine.institutionPK, b.machine.id_real.get)
@@ -30,11 +37,13 @@ object DailyQAHTML {
             None
         }
 
-        if (toNum(aMach).isDefined && toNum(bMach).isDefined) {
-          toNum(aMach).get < toNum(bMach).get
-        } else {
-          aMach.compareTo(bMach) <= 0
-        }
+        val cmpr =
+          if (toNum(aMach).isDefined && toNum(bMach).isDefined && (toNum(aMach).get != toNum(bMach).get)) {
+            toNum(aMach).get < toNum(bMach).get
+          } else {
+            aMach.compareTo(bMach) <= 0
+          }
+        cmpr
       }
     }
 
@@ -42,20 +51,26 @@ object DailyQAHTML {
 
     var machinePassed = true
 
-    case class Col(name: String, title: String, toElem: (BBbyEPIDComposite.DailyDataSet) => Elem) {
+    case class Col(name: String, title: String, toElem: (BBbyEPIDComposite.DailyDataSetComposite) => Elem) {
       def toHeader = <th title={ title }>{ name }</th>
     }
 
-    def colMachine(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+    val stylePass = "color: #000000; background: #1dc32b;"
+    val styleFail = "color: #000000; background: #e00034;"
+    val styleNoData = "color: #000000; background: #888888;"
+    val styleWarn = "color: #000000; background: yellow;"
+    val col0Title = "Machine Name"
+
+    def colMachine(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val machElem = wrapAlias(dataSet.machine.id)
       if (machinePassed) {
-        <td title="Machine Name" style="color: #000000; background: #1dc32b;"><h4>{ machElem }<br></br>Pass</h4></td>
+        <td title={ col0Title } style={ stylePass }><h4>{ machElem }<br></br>Pass</h4></td>
       } else {
-        <td class="danger" title={ "At least one value is out of tolerance" } style="color: #000000; background: #e00034;"><h4>{ machElem }<br></br>Fail</h4></td>
+        <td class="danger" title={ "At least one value is out of tolerance" } style={ styleFail }><h4>{ machElem }<br></br>Fail</h4></td>
       }
     }
 
-    def colPatient(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+    def colPatient(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
 
       val patientName: Elem = DicomSeries.getBySeriesInstanceUID(dataSet.epid.epidSeriesInstanceUID).headOption match {
         case Some(ds) => {
@@ -78,64 +93,64 @@ object DailyQAHTML {
       }
     }
 
-    def colDateTime(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+    def colDateTime(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       <td>{ DailyQASummary.timeFormat.format(dataSet.output.dataDate.get) }</td>
     }
 
-    def colCbctX(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+    def colCbctX(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val x = dataSet.cbct.cbctX_mm - dataSet.cbct.rtplanX_mm
       posnRow(x)
     }
 
-    def colCbctY(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+    def colCbctY(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val y = dataSet.cbct.cbctY_mm - dataSet.cbct.rtplanY_mm
       posnRow(y)
     }
 
-    def colCbctZ(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+    def colCbctZ(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val z = dataSet.cbct.cbctZ_mm - dataSet.cbct.rtplanZ_mm
       posnRow(z)
     }
 
-    def colVertGantryAngle(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+    def colVertGantryAngle(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val angle = dataSet.vertList.head.gantryAngle_deg
       <td title={ fmtAngle(angle) }>{ Util.angleRoundedTo90(angle) }</td>
     }
 
-    def colVertXCax(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+    def colVertXCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       posnRow(dataSet.epid.xAdjusted_mm.get)
     }
 
-    def colVertZCax(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+    def colVertZCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val offset = dataSet.vertList.head.epid3DZ_mm - (dataSet.cbct.rtplanZ_mm - dataSet.cbct.cbctZ_mm)
       posnRow(offset)
     }
 
-    def colHorzGantryAngle(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+    def colHorzGantryAngle(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val angle = dataSet.horzList.head.gantryAngle_deg
       <td title={ fmtAngle(angle) }>{ Util.angleRoundedTo90(angle) }</td>
     }
 
-    def colHorzYCax(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+    def colHorzYCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       posnRow(dataSet.epid.yAdjusted_mm.get)
     }
 
-    def colHorzZCax(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+    def colHorzZCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val offset = dataSet.horzList.head.epid3DZ_mm - (dataSet.cbct.rtplanZ_mm - dataSet.cbct.cbctZ_mm)
       <td>{ Util.fmtDbl(dataSet.epid.xAdjusted_mm.get) }</td>
       posnRow(dataSet.epid.zAdjusted_mm.get)
     }
 
-    def colEpidPlanCbct(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+    def colEpidPlanCbct(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       if (dataSet.epid.offsetAdjusted_mm.isDefined) posnRow(dataSet.epid.offsetAdjusted_mm.get)
       else <div>undefined</div>
     }
 
-    def colCbctImages(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+    def colCbctImages(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       <td><a href={ ViewOutput.viewOutputUrl(dataSet.cbct.outputPK) }>CBCT Details</a></td>
     }
 
-    def colEpidImages(dataSet: BBbyEPIDComposite.DailyDataSet): Elem = {
+    def colEpidImages(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       <td><a href={ ViewOutput.viewOutputUrl(dataSet.epid.outputPK) }>EPID Details</a></td>
     }
 
@@ -169,16 +184,25 @@ object DailyQAHTML {
       new Col("CBCT Details", "Images and other details for CBCT", colCbctImages _),
       new Col("EPID Details", "Images and other details for EPID", colEpidImages _))
 
-    def dataSetToRow(dataSet: BBbyEPIDComposite.DailyDataSet) = {
+    def dataSetToRow(dataSet: BBbyEPIDComposite.DailyDataSetComposite): MOE = {
       machinePassed = true
       val tdList = colList.tail.map(col => col.toElem(dataSet))
-      <tr>{ colList.head.toElem(dataSet) :+ tdList }</tr>
+      val elem = <tr>{ colList.head.toElem(dataSet) :+ tdList }</tr>
+      new MOE(dataSet.machine, Some(dataSet.output), elem)
     }
 
     val machinesMissingResults = {
       val haveData = dataSetList.map(ds => ds.machine.id).distinct
+      val allMachines = Machine.listMachinesFromInstitution(institutionPK).filter(m => m.active)
+      val noData = allMachines.filterNot(m => haveData.contains(m.id))
+
+      noData
+    }
+
+    val machinesMissingResultsElem = {
+      val haveData = dataSetList.map(ds => ds.machine.id).distinct
       val allMachines = Machine.listMachinesFromInstitution(institutionPK).filter(m => m.active).map(m => m.id)
-      val idList = allMachines.diff(haveData)
+      val idList = machinesMissingResults.map(m => m.id)
       val title = Seq(
         "These machine do not have at least one pair",
         "Of CBCT and EPID image sets required to ",
@@ -198,10 +222,79 @@ object DailyQAHTML {
       }
     }
 
+    // List of reasons that each machine is missing a full set of results.
+    val missingResultsExplanations: Seq[MOE] = {
+
+      val allCbctSeq = BBbyCBCT.getForOneDay(date, institutionPK)
+      val allEpidSeq = BBbyEPID.getForOneDay(date, institutionPK)
+
+      def explain(mach: Machine): Elem = {
+        val cbct = allCbctSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
+        val epid = allEpidSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
+        val colspan = (colList.size - 1).toString
+
+        def showNoData: Elem = {
+          <tr>
+            <td title={ col0Title } style={ styleNoData }>{ wrapAlias(mach.id) }<br/>No Data</td>
+            <td colspan={ colspan }>There are no CBCT or EPID scans for this machine.</td>
+          </tr>
+        }
+
+        def showWarn(msg: String): Elem = {
+          <tr>
+            <td title={ col0Title } style={ styleWarn }>{ wrapAlias(mach.id) }<br/>Warning</td>
+            <td colspan={ colspan }>{ msg }</td>
+          </tr>
+        }
+
+        def showFail(msg: String): Elem = {
+          <tr>
+            <td title={ col0Title } style={ styleFail }>{ wrapAlias(mach.id) }<br/>Fail</td>
+            <td colspan={ colspan }>{ msg }</td>
+          </tr>
+        }
+
+        /**
+         * Return true if the epid was done before the CBCT.
+         */
+        def epidBeforeCbct = {
+          val firstCbct = cbct.minBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
+          val lastEpid = epid.maxBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
+          lastEpid < firstCbct
+        }
+
+        val epidAngleSeq = epid.map(e => AngleType.classifyAngle(e.bbByEPID.gantryAngle_deg)).flatten.distinct
+
+        def epidMissingVert = {
+          !(epidAngleSeq.contains(AngleType.vertical))
+        }
+
+        def epidMissingHorz = {
+          !(epidAngleSeq.contains(AngleType.horizontal))
+        }
+
+        val explanation: Elem = 0 match {
+          case _ if cbct.isEmpty && epid.isEmpty => showNoData
+          case _ if (cbct.size == 1) && epid.isEmpty => showWarn("There is a CBCT scan but no EPID scans.")
+          case _ if epid.isEmpty => showWarn("There are " + cbct.size + " CBCT scans but zero EPID scans.")
+          case _ if epidMissingVert => showFail("No BB was found in the EPID for a vertical (0 or 180 degrees) gantry angle.")
+          case _ if epidMissingHorz => showFail("No BB was found in the EPID for a horizontal (90 or 270 degrees) gantry angle.")
+          case _ if epidBeforeCbct => showFail("The EPID scan was done prior to CBCT.  The CBCT needs to be done first.")
+          case _ => showFail("There are no results for this machine but the cause is not known")
+        }
+        explanation
+      }
+
+      machinesMissingResults.map(mach => new MOE(mach, None, explain(mach)))
+    }
+
+    val resultSeq = dataSetList.map(dataSet => dataSetToRow(dataSet))
+    val all = (resultSeq ++ missingResultsExplanations).sortWith(sortMOE)
+
     val content = {
       <div class="row">
         <div class="row">
-          { machinesMissingResults }
+          { machinesMissingResultsElem }
         </div>
         <div class="row">
           <table class="table table-responsive table-bordered">
@@ -209,9 +302,7 @@ object DailyQAHTML {
             <col/>
             <col width="110"/>
             <thead><tr>{ colList.map(col => col.toHeader) }</tr></thead>
-            {
-              dataSetList.sortWith(sortDataSetPair).map(dataSet => dataSetToRow(dataSet))
-            }
+            { all.map(moe => moe.elem) }
           </table>
         </div>
         <div class="row">

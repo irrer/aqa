@@ -15,9 +15,9 @@ import com.pixelmed.dicom.TagFromName
 
 object DailyQACSV {
 
-  def getCsv(dataSetList: Seq[BBbyEPIDComposite.DailyDataSet], response: Response): Unit = {
+  def getCsv(dataSetList: Seq[BBbyEPIDComposite.DailyDataSetComposite], response: Response): Unit = {
 
-    def sorter(a: BBbyEPIDComposite.DailyDataSet, b: BBbyEPIDComposite.DailyDataSet): Boolean = {
+    def sorter(a: BBbyEPIDComposite.DailyDataSetComposite, b: BBbyEPIDComposite.DailyDataSetComposite): Boolean = {
       if (a.machine.machinePK.get != b.machine.machinePK.get) (a.machine.machinePK.get < b.machine.machinePK.get)
       else {
         if (a.output.dataDate.get.getTime != b.output.dataDate.get.getTime) (a.output.dataDate.get.getTime < b.output.dataDate.get.getTime)
@@ -39,7 +39,7 @@ object DailyQACSV {
       machList.map(mach => (mach.id, AnonymizeUtil.decryptWithNonce(institutionPK, mach.id_real.get))).toMap
     }
 
-    def patientIdOf(dataSet: BBbyEPIDComposite.DailyDataSet): String = {
+    def patientIdOf(dataSet: BBbyEPIDComposite.DailyDataSetComposite): String = {
       val unknown = "unknown"
       val patId = try {
         val anonPatId = Input.get(dataSet.output.inputPK).get.patientId.get
@@ -57,7 +57,7 @@ object DailyQACSV {
 
     val urlPrefix = response.getRequest.getHostRef
 
-    case class Col(header: String, toText: (BBbyEPIDComposite.DailyDataSet) => String);
+    case class Col(header: String, toText: (BBbyEPIDComposite.DailyDataSetComposite) => String);
 
     val colList = Seq[Col](
       new Col("Machine", (dataSet) => machineNameSet(dataSet.machine.id)),
@@ -83,7 +83,7 @@ object DailyQACSV {
 
     val headerList = colList.map(col => '"' + col.header + '"').mkString(",")
 
-    def makeRow(dataSet: BBbyEPIDComposite.DailyDataSet) = colList.map(col => col.toText(dataSet)).mkString(",")
+    def makeRow(dataSet: BBbyEPIDComposite.DailyDataSetComposite) = colList.map(col => col.toText(dataSet)).mkString(",")
 
     val rowList = dataSetList.sortWith(sorter _).map(dataSet => makeRow(dataSet)).mkString("\n")
 

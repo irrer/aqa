@@ -98,7 +98,7 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
     value.isDefined && value.get.toString.equals(button.label)
   }
 
-  private def getDataSetListByDateAndInstitution(valueMap: ValueMapT): Seq[BBbyEPIDComposite.DailyDataSet] = {
+  private def getDataSetListByDateAndInstitution(valueMap: ValueMapT): Seq[BBbyEPIDComposite.DailyDataSetComposite] = {
 
     val user = getUser(valueMap)
 
@@ -116,7 +116,7 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
         dateField.dateFormat.parse(dateField.dateFormat.format(new Date)) // today rounded off to midnight
     }
 
-    val list = BBbyEPIDComposite.getReportingDataSet(date, institution.get.institutionPK.get)
+    val list = BBbyEPIDComposite.getForOneDay(date, institution.get.institutionPK.get)
     list
   }
 

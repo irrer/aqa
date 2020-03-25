@@ -204,4 +204,26 @@ object BBbyEPID extends ProcedureOutput {
     result
   }
 
+  /** EPID data and related results. */
+  case class DailyDataSetEPID(output: Output, machine: Machine, bbByEPID: BBbyEPID);
+
+  /**
+   * Get all results that were acquired on one day for one institution.
+   */
+  def getForOneDay(date: Date, institutionPK: Long): Seq[DailyDataSetEPID] = {
+
+    val beginDate = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(date).replaceAll("T.*", "T00:00:00")).getTime)
+    val endDate = new Timestamp(beginDate.getTime + (24 * 60 * 60 * 1000))
+
+    val search = for {
+      output <- Output.query.filter(o => o.dataDate.isDefined && (o.dataDate >= beginDate) && (o.dataDate < endDate))
+      bbByEPID <- BBbyEPID.query.filter(c => (c.outputPK === output.outputPK))
+      machine <- Machine.query.filter(m => (m.machinePK === output.machinePK) && (m.institutionPK === institutionPK))
+      cbct <- BBbyEPID.query.filter(c => c.bbByEPIDPK === bbByEPID.bbByEPIDPK)
+    } yield (output, machine, bbByEPID)
+
+    val seq = Db.run(search.result).map(omc => new DailyDataSetEPID(omc._1, omc._2, omc._3))
+    seq
+  }
+
 }

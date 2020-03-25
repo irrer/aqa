@@ -218,7 +218,7 @@ object BBbyEPIDComposite extends ProcedureOutput {
     result
   }
 
-  case class DailyDataSet(epid: BBbyEPIDComposite, cbct: BBbyCBCT, machine: Machine, output: Output, bbByEpid: Seq[BBbyEPID]) {
+  case class DailyDataSetComposite(epid: BBbyEPIDComposite, cbct: BBbyCBCT, machine: Machine, output: Output, bbByEpid: Seq[BBbyEPID]) {
     private def byType(angleType: AngleType.Value) = bbByEpid.filter(b => AngleType.isAngleType(b.gantryAngle_deg, angleType))
     val vertList = byType(AngleType.vertical)
     val horzList = byType(AngleType.horizontal)
@@ -227,7 +227,7 @@ object BBbyEPIDComposite extends ProcedureOutput {
   /**
    * Get all results for this institution.
    */
-  def getReportingDataSet(institutionPK: Long): Seq[DailyDataSet] = {
+  def getReportingDataSet(institutionPK: Long): Seq[DailyDataSetComposite] = {
     val search = for {
       output <- Output.query.filter(o => o.dataDate.isDefined)
       bbByEPIDComposite <- BBbyEPIDComposite.query.filter(c => (c.outputPK === output.outputPK) && c.bbByCBCTPK.isDefined)
@@ -237,14 +237,14 @@ object BBbyEPIDComposite extends ProcedureOutput {
     } yield (bbByEPIDComposite, cbct, machine, output, bbByEpid)
 
     val list = Db.run(search.distinct.result)
-    val dailyQA = list.groupBy(ga => ga._1.outputPK).map(gb => gb._2).map(g => new DailyDataSet(g.head._1, g.head._2, g.head._3, g.head._4, g.map(gg => gg._5)))
+    val dailyQA = list.groupBy(ga => ga._1.outputPK).map(gb => gb._2).map(g => new DailyDataSetComposite(g.head._1, g.head._2, g.head._3, g.head._4, g.map(gg => gg._5)))
     dailyQA.toSeq
   }
 
   /**
    * Get all results that were acquired on one day for one institution.
    */
-  def getForOneDay(date: Date, institutionPK: Long): Seq[DailyDataSet] = {
+  def getForOneDay(date: Date, institutionPK: Long): Seq[DailyDataSetComposite] = {
 
     val beginDate = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(date).replaceAll("T.*", "T00:00:00")).getTime)
     val endDate = new Timestamp(beginDate.getTime + (24 * 60 * 60 * 1000))
@@ -258,7 +258,7 @@ object BBbyEPIDComposite extends ProcedureOutput {
     } yield (bbByEPIDComposite, cbct, machine, output, bbByEpid)
 
     val list = Db.run(search.distinct.result)
-    val dailyQA = list.groupBy(ga => ga._1.outputPK).map(gb => gb._2).map(g => new DailyDataSet(g.head._1, g.head._2, g.head._3, g.head._4, g.map(gg => gg._5)))
+    val dailyQA = list.groupBy(ga => ga._1.outputPK).map(gb => gb._2).map(g => new DailyDataSetComposite(g.head._1, g.head._2, g.head._3, g.head._4, g.map(gg => gg._5)))
     dailyQA.toSeq
   }
 }
