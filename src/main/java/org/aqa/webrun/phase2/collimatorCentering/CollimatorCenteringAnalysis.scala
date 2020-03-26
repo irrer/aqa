@@ -107,7 +107,7 @@ object CollimatorCenteringAnalysis extends Logging {
    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, CollimatorCenteringResult] = {
     try {
-      logger.info("Starting analysis of CollimatorCentering")
+      logger.info("Starting analysis of CollimatorCentering for machine " + extendedData.machine.id)
       val al090 = runReq.rtimageMap(Config.CollimatorCentering090BeamName).attributeList.get
       val al270 = runReq.rtimageMap(Config.CollimatorCentering270BeamName).attributeList.get
       val translator = new IsoImagePlaneTranslator(al090)
@@ -131,7 +131,7 @@ object CollimatorCenteringAnalysis extends Logging {
       val elem = CollimatorCenteringHTML.makeDisplay(extendedData, collimatorCentering, procedureStatus, result090, result270, runReq)
       logger.info("Finished processing for " + subProcedureName)
       val result = Right(new CollimatorCenteringResult(elem, procedureStatus, collimatorCentering))
-      logger.info("Finished analysis of CollimatorCentering")
+      logger.info("Finished analysis of CollimatorCentering for machine " + extendedData.machine.id)
       result
     } catch {
       case t: Throwable => {

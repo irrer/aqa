@@ -70,13 +70,13 @@ object CenterDoseAnalysis extends Logging {
   def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, CenterDoseResult] = {
     try {
       // This code only reports values without making judgment as to pass or fail.
-      logger.info("Starting analysis of CenterDose")
+      logger.info("Starting analysis of CenterDose for machine " + extendedData.machine.id)
       val status = ProcedureStatus.done
       val resultList = analyse(extendedData, runReq, collimatorCentering)
       CenterDose.insert(resultList)
       val summary = CenterDoseHTML.makeDisplay(extendedData, runReq, resultList, status)
       val result = Right(new CenterDoseResult(summary, status, resultList))
-      logger.info("Finished analysis of CenterDose")
+      logger.info("Finished analysis of CenterDose for machine " + extendedData.machine.id)
       result
     } catch {
       case t: Throwable => {

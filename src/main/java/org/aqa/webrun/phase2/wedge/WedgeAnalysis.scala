@@ -164,7 +164,7 @@ object WedgeAnalysis extends Logging {
    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering, centerDoseList: Seq[CenterDose]): Either[Elem, WedgeResult] = {
     try {
-      logger.info("Starting analysis of " + subProcedureName)
+      logger.info("Starting analysis of " + subProcedureName + " for machine " + extendedData.machine.id)
 
       val wedgePointList = analyze(extendedData, runReq, collimatorCentering, centerDoseList)
       WedgePoint.insert(wedgePointList)
@@ -174,7 +174,7 @@ object WedgeAnalysis extends Logging {
       val summary = WedgeHTML.makeDisplay(extendedData, status, runReq, wedgePointList, collimatorCentering.center)
       logger.info("Finished HTML generation for " + subProcedureName)
       val result = new WedgeResult(summary, status, wedgePointList)
-      logger.info("Finished analysis of " + subProcedureName)
+      logger.info("Finished analysis of " + subProcedureName + " for machine " + extendedData.machine.id)
       Right(result)
     } catch {
       case t: Throwable => {

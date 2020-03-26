@@ -90,7 +90,7 @@ object BBbyCBCTExecute extends Logging {
       // This code only reports values and considers the test to have passed if
       // it found the BB, regardless of whether the BB was positioned within
       // tolerance of the plan's isocenter.
-      logger.info("Starting analysis of CBCT Alignment")
+      logger.info("Starting analysis of CBCT Alignment for machine " + extendedData.machine.id)
       val result = BBbyCBCTAnalysis.volumeAnalysis(runReq.cbct)
       if (result.isRight) {
         val volumePoint = result.right.get._1
@@ -108,7 +108,7 @@ object BBbyCBCTExecute extends Logging {
         val bbByCBCT = saveToDb(extendedData, runReq, bbPointInRtplan)
         val annotatedImages = BBbyCBCTAnnotateImages.annotate(bbByCBCT, imageXYZ, runReq, volumePoint)
         val html = BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, annotatedImages, ProcedureStatus.done, runReq)
-        logger.info("Finished analysis of CBCT Alignment")
+        logger.info("Finished analysis of CBCT Alignment for machine " + extendedData.machine.id)
         ProcedureStatus.pass
       } else {
         showFailure(result.left.get, extendedData, runReq)

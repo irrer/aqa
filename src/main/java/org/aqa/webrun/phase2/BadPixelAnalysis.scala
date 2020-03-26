@@ -301,7 +301,7 @@ object BadPixelAnalysis extends Logging {
    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, BadPixelResult] = {
     try {
-      logger.info("Starting analysis of BadPixel")
+      logger.info("Starting analysis of BadPixel for machine " + extendedData.machine.id)
       val badPixelList = storeToDb(extendedData, runReq)
       logger.info("Finished analysis of BadPixel, generating Bad Pixel reports")
       makeDicomViews(extendedData, runReq, badPixelList)
@@ -329,7 +329,7 @@ object BadPixelAnalysis extends Logging {
       }
 
       val result = Right(new BadPixelResult(summary, status, badPixelList))
-      logger.info("Finished analysis of BadPixel")
+      logger.info("Finished analysis of BadPixel for machine " + extendedData.machine.id)
       result
     } catch {
       case t: Throwable => {

@@ -206,7 +206,7 @@ object VMATAnalysis extends Logging {
   def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, VMATResult] = {
     try {
       // This code only reports values without making judgment as to pass or fail.
-      logger.info("Starting analysis of " + subProcedureName)
+      logger.info("Starting analysis of " + subProcedureName + " for machine " + extendedData.machine.id)
 
       val vmatListList = Config.VMATBeamPairList.map(vmatPair => {
         if (runReq.rtimageMap.contains(vmatPair.mlc) && runReq.rtimageMap.contains(vmatPair.open))
@@ -230,7 +230,7 @@ object VMATAnalysis extends Logging {
 
       // put data in database
       vmatListList.flatten.map(vmat => vmat.insert)
-      logger.info("Finished analysis of " + subProcedureName)
+      logger.info("Finished analysis of " + subProcedureName + " for machine " + extendedData.machine.id)
       result
     } catch {
       case t: Throwable => {

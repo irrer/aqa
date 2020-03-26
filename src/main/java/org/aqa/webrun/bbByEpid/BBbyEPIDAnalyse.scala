@@ -151,7 +151,7 @@ object BBbyEPIDAnalyse extends Logging {
   def runProcedure(extendedData: ExtendedData, runReq: BBbyEPIDRunReq): ProcedureStatus.Value = {
 
     try {
-      logger.info("Starting analysis of EPID Alignment")
+      logger.info("Starting analysis of EPID Alignment for machine " + extendedData.machine.id)
 
       val bbLocList = runReq.epidList.par.map(epid => BBbyEPIDImageAnalysis.findBB(epid)).toList
 
@@ -171,7 +171,7 @@ object BBbyEPIDAnalyse extends Logging {
       val procedureStatus = if (bbByEPIDComposite.isRight) ProcedureStatus.done else ProcedureStatus.fail
 
       BBbyEPIDHTML.generateHtml(extendedData, dbList, bbByEPIDComposite, runReq, ProcedureStatus.done) // TODO status should be real
-      logger.info("Finished analysis of EPID Alignment")
+      logger.info("Finished analysis of EPID Alignment for machine " + extendedData.machine.id)
       ProcedureStatus.done
     } catch {
       case t: Throwable => {

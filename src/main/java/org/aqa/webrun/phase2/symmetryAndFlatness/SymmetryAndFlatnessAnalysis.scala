@@ -347,7 +347,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, SymmetryAndFlatnessResult] = {
     try {
-      logger.info("Starting analysis of SymmetryAndFlatness")
+      logger.info("Starting analysis of SymmetryAndFlatness for machine " + extendedData.machine.id)
 
       val beamNameList = Config.SymmetryAndFlatnessBeamList.filter(beamName => runReq.derivedMap.contains(beamName))
 
@@ -369,6 +369,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       val summary = SymmetryAndFlatnessHTML.makeDisplay(extendedData, resultList, boolToStatus(pass), runReq)
 
       val result = new SymmetryAndFlatnessResult(summary, status)
+      logger.info("Finished analysis of SymmetryAndFlatness for machine " + extendedData.machine.id)
       if (pass) Right(result) else Left(result.summary)
     } catch {
       case t: Throwable => {

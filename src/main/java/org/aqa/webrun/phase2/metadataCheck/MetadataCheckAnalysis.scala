@@ -156,7 +156,7 @@ object MetadataCheckAnalysis extends Logging {
    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, MetadataResult] = {
     try {
-      logger.info("Starting analysis of " + subProcedureName)
+      logger.info("Starting analysis of " + subProcedureName + "  for machine " + extendedData.machine.id)
       val planAttrList = runReq.rtplan.attributeList.get
 
       val rtimageList = runReq.rtimageMap.values.toList
@@ -169,7 +169,7 @@ object MetadataCheckAnalysis extends Logging {
       MetadataCheck.insert(resultList)
       val elem = MetadataCheckHTML.makeDisplay(extendedData, runReq, resultList, procedureStatus)
       val pcr = Right(new MetadataResult(elem, procedureStatus, resultList))
-      logger.info("Finished analysis of Metadata")
+      logger.info("Finished analysis of Metadata for machine " + extendedData.machine.id)
       pcr
     } catch {
       case t: Throwable => {

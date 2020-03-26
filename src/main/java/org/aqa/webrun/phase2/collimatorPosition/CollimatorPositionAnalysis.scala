@@ -174,7 +174,7 @@ object CollimatorPositionAnalysis extends Logging {
    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, CollimatorPositionResult] = {
     try {
-      logger.info("Starting analysis of CollimatorPosition")
+      logger.info("Starting analysis of CollimatorPosition for machine " + extendedData.machine.id)
       val qualifiedImageList = runReq.derivedMap.toSeq.filter(ndf => imageQualifies(ndf._2.attributeList, runReq.rtplan.attributeList.get)).toMap.keys.toSet
 
       val posnBeams = Config.CollimatorPositionBeamList.filter(cp => qualifiedImageList.contains(cp.beamName))
@@ -205,7 +205,7 @@ object CollimatorPositionAnalysis extends Logging {
       // TODO Should make nice HTML for each buffered images.
       val elem = CollimatorPositionHTML.makeDisplay(extendedData, runReq, doneList, crashList, procedureStatus)
       val result = Right(new CollimatorPositionResult(elem, procedureStatus, doneDataList, crashList))
-      logger.info("Finished analysis of CollimatorPosition.  Status: " + procedureStatus)
+      logger.info("Finished analysis of CollimatorPosition.  Status: " + procedureStatus + " for machine " + extendedData.machine.id)
       result
     } catch {
       case t: Throwable => {

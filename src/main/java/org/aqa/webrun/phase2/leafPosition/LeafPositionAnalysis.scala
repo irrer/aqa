@@ -276,7 +276,7 @@ object LeafPositionAnalysis extends Logging {
   def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, LeafPositionResult] = {
 
     try {
-      logger.info("Starting analysis of " + subProcedureName)
+      logger.info("Starting analysis of " + subProcedureName + "  for machine " + extendedData.machine.id)
       val planAttrList = runReq.rtplan.attributeList.get
 
       val outputPK = extendedData.output.outputPK.get
@@ -299,7 +299,7 @@ object LeafPositionAnalysis extends Logging {
       logger.info("Making HTML for " + subProcedureName)
       val elem = LeafPositionHTML.makeDisplay(extendedData, runReq, beamResultList, pass) // TODO this takes 13 seconds.  Run in parallel?
       val pcr = Right(new LeafPositionResult(elem, procedureStatus, resultList))
-      logger.info("Finished analysis of " + subProcedureName)
+      logger.info("Finished analysis of " + subProcedureName + "  for machine " + extendedData.machine.id)
       pcr
     } catch {
       case t: Throwable => {
