@@ -11,9 +11,14 @@ import org.aqa.web.ViewOutput
 import org.aqa.web.WebUtil
 import org.aqa.web.OutputList
 
-object DailyQAFullResults {
+/**
+ * Report the individual results for all EPID and CBCT analysis on the given day.  This
+ * is generally more of a diagnostic tool than for daily use.
+ */
+object DailyQAIndividualResults {
 
-  private val timeFormat = new SimpleDateFormat("yyyy MM dd HH:mm:ss")
+  private val dateFormat = new SimpleDateFormat("EEE MMM dd, YYYY")
+  private val timeFormat = new SimpleDateFormat("H:mm:ss a")
 
   def get(instPK: Long, date: Date): Elem = {
 
@@ -41,7 +46,7 @@ object DailyQAFullResults {
 
     val content = {
       <div style="margin-top:60px;">
-        <center><h4>Results for Each Image Series</h4></center>
+        <center><h4>Results for Each Image Series { dateFormat.format(date) }</h4></center>
         <table class="table table-striped">
           <tbody>
             <thead>

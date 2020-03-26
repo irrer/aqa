@@ -331,7 +331,7 @@ object DailyQAHTML extends Logging {
         </div>
         <div class="row">
           <div class="col-md-6 col-md-offset-3 col-sm-12">
-            { DailyQAFullResults.get(institutionPK, date) }
+            { DailyQAIndividualResults.get(institutionPK, date) }
           </div>
         </div>
       </div>

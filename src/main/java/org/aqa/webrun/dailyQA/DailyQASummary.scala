@@ -33,7 +33,7 @@ object DailyQASummary {
   private val path = new String((new DailyQASummary).pathOf)
 
   val dateFormat = new SimpleDateFormat("EEE MMM dd")
-  val timeFormat = new SimpleDateFormat("HH:mm a")
+  val timeFormat = new SimpleDateFormat("H:mm a")
   def makeReference(outputPK: Long) = {
     "<script src='" + path + "?date=" + outputPK + "'></script>"
   }
