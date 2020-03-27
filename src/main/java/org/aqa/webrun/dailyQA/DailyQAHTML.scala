@@ -243,14 +243,14 @@ object DailyQAHTML extends Logging {
           </tr>
         }
 
-        def showWarn(msg: String): Elem = {
+        def showWarn(msg: String): Elem = { // show links to CBCT and EPID outputs
           <tr>
             <td title={ col0Title } style={ styleWarn }>{ wrapAlias(mach.id) }<br/>Warning</td>
             <td colspan={ colspan }>{ msg }</td>
           </tr>
         }
 
-        def showFail(msg: String): Elem = {
+        def showFail(msg: String): Elem = { // show links to CBCT and EPID outputs
           <tr>
             <td title={ col0Title } style={ styleFail }>{ wrapAlias(mach.id) }<br/>Fail</td>
             <td colspan={ colspan }>{ msg }</td>
@@ -281,7 +281,7 @@ object DailyQAHTML extends Logging {
         }
 
         def cbctPassed = {
-          // older code was setting CBCT status to 'done' instead of 'pass', so the done part is to be backwards compatible.  (25 Mar 2020)          
+          // older code was setting CBCT status to 'done' instead of 'pass', so the done part is to be backwards compatible.  (25 Mar 2020)
           val passed = cbct.find(c => c.bbByCBCT.status.equalsIgnoreCase(ProcedureStatus.pass.toString) || c.bbByCBCT.status.equalsIgnoreCase(ProcedureStatus.done.toString))
           passed.isDefined
         }
@@ -289,7 +289,9 @@ object DailyQAHTML extends Logging {
         val explanation: Elem = 0 match {
           case _ if cbct.isEmpty && epid.isEmpty => showNoData
           case _ if (cbct.size == 1) && epid.isEmpty => showWarn("There is a CBCT scan but no EPID scans.")
-          case _ if epid.isEmpty => showWarn("There are " + cbct.size + " CBCT scans but zero EPID scans.")
+          case _ if cbct.isEmpty && (epid.size == 1) => showFail("There is an EPID scan but no CBCT scans.")
+          case _ if cbct.isEmpty && epid.nonEmpty => showFail("There are " + epid.size + " EPID scans but no CBCT scans.")
+          case _ if cbct.nonEmpty && epid.isEmpty => showWarn("There are " + cbct.size + " CBCT scans but zero EPID scans.")
           case _ if epidMissingVert => showFail("No BB was found in the EPID for a vertical (0 or 180 degrees) gantry angle.")
           case _ if epidMissingHorz => showFail("No BB was found in the EPID for a horizontal (90 or 270 degrees) gantry angle.")
           case _ if epidBeforeCbct => showFail("The EPID scan was done prior to CBCT.  The CBCT needs to be done first.")
@@ -320,12 +322,15 @@ object DailyQAHTML extends Logging {
           </table>
         </div>
         <div class="row">
-          <div class="col-md-8 col-md-offset-2 col-sm-12">
+          <div class="col-md-8 col-md-offset-2 col-sm-12"> 
             <center>
               Machines above that have any measurements out of tolerance by{ Util.fmtDbl(Config.DailyQATolerance_mm) }
               mm or more are marked as failed.  To produce a final result for a single machine, there must be both CBCT
               and EPID results.  Both must be valid (found the BB near isocenter), the CBCT must scanned before the EPID,
               and they must be scanned on the same day.
+              <p></p>
+              A warning or failure may be cleared by re-doing the Daily QA for that machine.  If there there at least
+              one set of data that passed for a machine, then that machine is marked as passed.
             </center>
           </div>
         </div>

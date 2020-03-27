@@ -105,37 +105,53 @@ object BBbyCBCTRun extends Logging {
     val dicomFileList = Util.listDirFiles(sessionDir).map(f => new DicomFile(f)).filter(df => df.attributeList.nonEmpty)
     val cbctList = dicomFileList.filter(df => df.isCt)
     val regList = dicomFileList.filter(df => df.isReg)
+    val rtplanList = dicomFileList.filter(df => df.isRtplan)
 
     val acquisitionDate = inputOrig.dataDate match {
       case None => None
       case Some(timestamp) => Some(timestamp.getTime)
     }
 
-    val bbByCBCT = BBbyCBCT.getByOutput(outputOrig.outputPK.get).head
+    /** return the plan (either uploaded or from DB) whose frame of reference match the CBCT exactly (no REG file involved) */
+    val rtplanFrmOfRefRMatchesCBCT: Option[AttributeList] = {
+      def cbctFrameOfRefList = cbctList.map(cbct => Util.getFrameOfRef(cbct)).distinct
 
-    val rtplan = {
-      val series = DicomSeries.getBySopInstanceUID(bbByCBCT.rtplanSOPInstanceUID).head
-      series.attributeListList.head
+      val cbctFramOfRef = cbctFrameOfRefList.head
+      val dbPlan = DicomSeries.getByFrameUIDAndSOPClass(Set(cbctFramOfRef), SOPClass.RTPlanStorage).map(db => db.attributeListList).flatten
+      val uploadedRtplanList = rtplanList.map(df => df.attributeList).flatten
+
+      val seq = (dbPlan ++ uploadedRtplanList).filter(plan => cbctFrameOfRefList.head.equals(cbctFramOfRef))
+      seq.headOption
     }
 
-    val reg = {
-      def getFrameOfRef(al: AttributeList): String = al.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
+    val runReq =
+      if (rtplanFrmOfRefRMatchesCBCT.isDefined) {
+        // no REG required
+        new BBbyCBCTRunReq(Right(rtplanFrmOfRefRMatchesCBCT.get), None, cbctList, Machine.get(outputOrig.machinePK.get).get)
+      } else {
+        // REG is required
+        val cbctFrmRef = Util.getFrameOfRef(cbctList.head.attributeList.get)
+        val irList = regList.map(r => new ImageRegistration(r.attributeList.get))
+        val regFrmOfRefSeq = regList.map(r => new ImageRegistration(r.attributeList.get).frameOfRefUID)
+        val rtplanListFromDb = DicomSeries.getByFrameUIDAndSOPClass(regFrmOfRefSeq.toSet, SOPClass.RTPlanStorage)
 
-      val cbctFrmRef = getFrameOfRef(cbctList.head.attributeList.get)
-      val planFrmRef = getFrameOfRef(rtplan)
-      def regWorks(r: AttributeList): Boolean = {
-        val ir = new ImageRegistration(r)
-        ir.frameOfRefUID.equals(planFrmRef) && ir.otherFrameOfRefUID.equals(cbctFrmRef)
+        val pairList = for (
+          ir <- irList;
+          p <- rtplanListFromDb;
+          if ((ir.otherFrameOfRefUID.equals(cbctFrmRef) && ir.frameOfRefUID.equals(p.frameOfReferenceUID.get)))
+        ) yield (ir.attrList, p.attributeListList.head)
+
+        val regAl = pairList.head._1
+        val planAl = pairList.head._2
+        val regDf = regList.find(df => Util.sopOfAl(df.attributeList.get).equals(Util.sopOfAl(regAl))).get
+
+        new BBbyCBCTRunReq(Right(planAl), Some(regDf), cbctList, Machine.get(outputOrig.machinePK.get).get)
       }
-      regList.find(r => regWorks(r.attributeList.get))
-    }
 
     Trace.trace("outputOrig.machinePK: " + outputOrig.machinePK)
     Trace.trace("outputOrig.machinePK.get: " + outputOrig.machinePK.get)
     Trace.trace("Machine.get(outputOrig.machinePK.get): " + Machine.get(outputOrig.machinePK.get))
     Trace.trace("Machine.get(outputOrig.machinePK.get).get: " + Machine.get(outputOrig.machinePK.get).get)
-
-    val runReq = new BBbyCBCTRunReq(Right(rtplan), reg, cbctList, Machine.get(outputOrig.machinePK.get).get)
 
     val procedure = Procedure.get(outputOrig.procedurePK).get
 
@@ -144,6 +160,8 @@ object BBbyCBCTRun extends Logging {
     val output = inputOutput._2
 
     val future = Future {
+      Trace.trace("In Future, fetching data for CBCT processing.")
+      logger.info("In Future, fetching data for CBCT processing.")
       val extendedData = ExtendedData.get(output)
       DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, Seq(runReq.rtplan))
       DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, runReq.cbct)
@@ -166,6 +184,8 @@ object BBbyCBCTRun extends Logging {
       Run.removeRedundantOutput(outputFinal.outputPK)
       // remove the original input and all associated outputs to clean up any possible redundant data
       Input.delete(inputOrig.inputPK.get)
+      logger.info("In Future, finished CBCT processing.")
+      Trace.trace("In Future, finished CBCT processing.")
     }
 
     awaitIfRequested(future, await, inputOutput._2.procedurePK)
@@ -212,10 +232,6 @@ object BBbyCBCTRun extends Logging {
               val msg = "Redo not permitted because user is from a different institution."
               forbidRedo(response, msg, outputOrig.outputPK)
             }
-            case _ if (BBbyCBCT.getByOutput(outputOrig.outputPK.get).isEmpty) => {
-              val msg = "Redo not permitted because previous run crashed before saving required data."
-              forbidRedo(response, msg, outputOrig.outputPK)
-            }
             case Some(inputOrig) => BBbyCBCTRun.processRedoRequest(request, response, inputOrig, outputOrig, await, isAuto)
           }
         }
@@ -234,9 +250,6 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
   /** Defines precision - Format to use when showing numbers. */
   private val outputFormat = "%7.5e"
-
-  private def getFrameOfRef(al: AttributeList): String = al.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
-  private def getFrameOfRef(dicomFile: DicomFile): String = getFrameOfRef(dicomFile.attributeList.get)
 
   private def getSeries(al: AttributeList): String = al.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString
   private def getSeries(dicomFile: DicomFile): String = getSeries(dicomFile.attributeList.get)
@@ -311,7 +324,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
    * Search uploaded plans that have the same frame of reference as the CBCT, in which case a REG file is not needed.
    */
   private def searchUploadedPlansWithoutReg(rtplanList: Seq[DicomFile], cbctFrameOfRef: String): Option[(DicomFile, Option[DicomFile])] = {
-    val compatPlan = rtplanList.filter(rtplan => getFrameOfRef(rtplan).equals(cbctFrameOfRef))
+    val compatPlan = rtplanList.filter(rtplan => Util.getFrameOfRef(rtplan).equals(cbctFrameOfRef))
     if (compatPlan.isEmpty) None else Some(compatPlan.head, None)
   }
 
@@ -319,7 +332,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
    * Search database plans that work with one of the uploaded REG files.
    */
   private def searchDbPlanWithReg(regList: Seq[DicomFile]): Option[(DicomFile, Option[DicomFile])] = {
-    val regFrUidSet = regList.map(reg => getFrameOfRef(reg)).toSet
+    val regFrUidSet = regList.map(reg => Util.getFrameOfRef(reg)).toSet
     val rtPlanListFromDb = DicomSeries.getByFrameUIDAndSOPClass(regFrUidSet, SOPClass.RTPlanStorage).map(dicomSeries => dicomSeries.attributeListList.head)
     val compatUploaded = for (rtplan <- rtPlanListFromDb; reg <- regList; if (new ImageRegistration(reg).sameFrameOfRef(rtplan))) yield { (rtplan, Some(reg)) }
 
@@ -357,7 +370,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     val rtplanList = dicomFileList.filter(df => df.isRtplan)
 
     def cbctSeriesList = cbctList.map(cbct => getSeries(cbct)).distinct
-    def cbctFrameOfRefList = cbctList.map(cbct => getFrameOfRef(cbct)).distinct
+    def cbctFrameOfRefList = cbctList.map(cbct => Util.getFrameOfRef(cbct)).distinct
 
     // Make a list of REG files that support the CBCT's frame of reference.  We don't care about the other REG files.
     def getQualifiedRegList = {
@@ -383,14 +396,14 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
      */
     def getPlanAndReg: Seq[(AttributeList, AttributeList)] = {
       val qualRegList = getQualifiedRegList
-      val uploadedPairList = for (plan <- rtplanList; reg <- qualRegList; if (getFrameOfRef(plan).equals(getFrameOfRef(reg)))) yield (plan.attributeList.get, reg.attributeList.get)
+      val uploadedPairList = for (plan <- rtplanList; reg <- qualRegList; if (Util.getFrameOfRef(plan).equals(Util.getFrameOfRef(reg)))) yield (plan.attributeList.get, reg.attributeList.get)
       if (uploadedPairList.nonEmpty)
         uploadedPairList
       else {
-        val qualRegFrameOfRefList = qualRegList.map(df => getFrameOfRef(df)).toSet
+        val qualRegFrameOfRefList = qualRegList.map(df => Util.getFrameOfRef(df)).toSet
         val dbPlanList = DicomSeries.getByFrameUIDAndSOPClass(qualRegFrameOfRefList, SOPClass.RTPlanStorage).map(db => db.attributeListList).flatten
 
-        val dbPairList = for (plan <- dbPlanList; reg <- qualRegList; if (getFrameOfRef(plan).equals(getFrameOfRef(reg)))) yield (plan, reg.attributeList.get)
+        val dbPairList = for (plan <- dbPlanList; reg <- qualRegList; if (Util.getFrameOfRef(plan).equals(Util.getFrameOfRef(reg)))) yield (plan, reg.attributeList.get)
         dbPairList
       }
     }

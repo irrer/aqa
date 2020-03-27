@@ -212,7 +212,7 @@ object BBbyCBCTHTML {
     Util.writeFile(file, text)
 
     val reference = {
-      <a href={ cbctDirName + "/" + cbctMainFileName }>CBCT Dicom</a>
+      <a href={ cbctDirName + "/" + cbctMainFileName }>View CBCT</a>
     }
 
     reference

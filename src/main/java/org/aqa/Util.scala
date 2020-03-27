@@ -1074,4 +1074,8 @@ object Util extends Logging {
 
     ???
   }
+
+  def getFrameOfRef(al: AttributeList): String = al.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
+  def getFrameOfRef(dicomFile: DicomFile): String = getFrameOfRef(dicomFile.attributeList.get)
+
 }
