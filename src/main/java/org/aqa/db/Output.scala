@@ -423,6 +423,18 @@ object Output extends Logging {
     Db.run(sorted.result).lastOption
   }
 
+  /**
+   * Get a list of outputs from the given institution whose data is >= begin and < end.
+   */
+  def getOutputByDateRange(institutionPK: Long, dataDateBegin: Timestamp, dataDateEnd: Timestamp): Seq[Output] = {
+    val search = for {
+      machPK <- Machine.query.filter(m => m.institutionPK === institutionPK).map(m => m.machinePK)
+      output <- Output.query.filter(o => (o.machinePK === machPK) && o.dataDate.isDefined && (o.dataDate >= dataDateBegin) && (o.dataDate < dataDateEnd))
+    } yield (output)
+    val seq = Db.run(search.result)
+    seq
+  }
+
   def main(args: Array[String]): Unit = {
     println("Starting Output.main")
     val valid = Config.validate

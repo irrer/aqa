@@ -19,6 +19,9 @@ import org.aqa.AngleType
 import org.aqa.run.ProcedureStatus
 import org.aqa.Logging
 import edu.umro.ScalaUtil.Trace
+import org.aqa.db.Procedure
+import java.sql.Timestamp
+import java.text.SimpleDateFormat
 
 object DailyQAHTML extends Logging {
 
@@ -225,6 +228,20 @@ object DailyQAHTML extends Logging {
       }
     }
 
+    /** Procedures that we are interested in. */
+    val procedureSeq = Procedure.list.filter(p => p.isBBbyCBCT || p.isBBbyEPID)
+    val cbctProc = procedureSeq.find(p => p.isBBbyCBCT).get
+    val epidProc = procedureSeq.find(p => p.isBBbyEPID).get
+
+    /** all outputs for CBCT and EPID for all machines from this institution with data from this day sorted by data (acquisition) date. */
+    val allOutputs = {
+      val dataDateBegin = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(date).replaceAll("T.*", "T00:00:00")).getTime)
+      val dataDateEnd = new Timestamp(dataDateBegin.getTime + (24 * 60 * 60 * 1000))
+
+      val procedurePkSet = procedureSeq.map(p => p.procedurePK.get)
+      Output.getOutputByDateRange(institutionPK, dataDateBegin, dataDateEnd).filter(o => procedurePkSet.contains(o.procedurePK)).sortBy(o => o.dataDate.get.getTime)
+    }
+
     // List of reasons that each machine is missing a full set of results.
     val missingResultsExplanations: Seq[MOE] = {
 
@@ -234,12 +251,34 @@ object DailyQAHTML extends Logging {
       def explain(mach: Machine): Elem = {
         val cbct = allCbctSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
         val epid = allEpidSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
-        val colspan = (colList.size - 1).toString
+        val colspan = (colList.size - 5).toString
+        val timeFormat = new SimpleDateFormat("H:mm")
+
+        val machHistory = {
+          val outputSeq = allOutputs.filter(o => o.machinePK.get == mach.machinePK.get)
+          def ref(o: Output): Elem = {
+            val procName = if (o.procedurePK == cbctProc.procedurePK.get) "CBCT" else "EPID"
+            val url = ViewOutput.path + "?" + ViewOutput.outputPKTag + "=" + o.outputPK.get
+            <p>
+              <a title="View details" href={ url } titl="View details of scan collected at this time">{ timeFormat.format(o.dataDate.get) + " " + procName }</a>
+            </p>
+          }
+          if (outputSeq.nonEmpty) {
+            <td colspan="4">
+              <center>
+                Click to view details
+                <p/>
+                { outputSeq.map(o => ref(o)) }
+              </center>
+            </td>
+          } else { <td colspan="4"></td> }
+        }
 
         def showNoData: Elem = {
           <tr>
             <td title={ col0Title } style={ styleNoData }>{ wrapAlias(mach.id) }<br/>No Data</td>
             <td colspan={ colspan }>There are no CBCT or EPID scans for this machine.</td>
+            { machHistory }
           </tr>
         }
 
@@ -247,6 +286,7 @@ object DailyQAHTML extends Logging {
           <tr>
             <td title={ col0Title } style={ styleWarn }>{ wrapAlias(mach.id) }<br/>Warning</td>
             <td colspan={ colspan }>{ msg }</td>
+            { machHistory }
           </tr>
         }
 
@@ -254,6 +294,7 @@ object DailyQAHTML extends Logging {
           <tr>
             <td title={ col0Title } style={ styleFail }>{ wrapAlias(mach.id) }<br/>Fail</td>
             <td colspan={ colspan }>{ msg }</td>
+            { machHistory }
           </tr>
         }
 
@@ -322,7 +363,7 @@ object DailyQAHTML extends Logging {
           </table>
         </div>
         <div class="row">
-          <div class="col-md-8 col-md-offset-2 col-sm-12"> 
+          <div class="col-md-8 col-md-offset-2 col-sm-12">
             <center>
               Machines above that have any measurements out of tolerance by{ Util.fmtDbl(Config.DailyQATolerance_mm) }
               mm or more are marked as failed.  To produce a final result for a single machine, there must be both CBCT

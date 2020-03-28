@@ -66,6 +66,14 @@ case class Procedure(
       "\n    notes: " + notes
 
   }
+
+  // TODO There should be a more structured way of identifying procedure types.
+  final val isBBbyCBCT = name.toLowerCase.contains("bb") && name.toLowerCase.contains("cbct")
+  final val isBBbyEPID = name.toLowerCase.contains("bb") && name.toLowerCase.contains("epid")
+  final val isPhase2 = name.toLowerCase.contains("phase2")
+  final val isLOC = (name.toLowerCase.contains("loc") || name.toLowerCase.contains("leaf offset")) && (!name.toLowerCase.contains("base"))
+  final val isLOCBaseline = name.toLowerCase.contains("loc") && name.toLowerCase.contains("base")
+
 }
 
 object Procedure {
