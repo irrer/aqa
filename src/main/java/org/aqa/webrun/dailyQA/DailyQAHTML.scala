@@ -242,6 +242,9 @@ object DailyQAHTML extends Logging {
       Output.getOutputByDateRange(institutionPK, dataDateBegin, dataDateEnd).filter(o => procedurePkSet.contains(o.procedurePK)).sortBy(o => o.dataDate.get.getTime)
     }
 
+    def outputCBCT(machinePK: Long) = allOutputs.filter(o => ((o.machinePK.get == machinePK) && (o.procedurePK == cbctProc.procedurePK.get)))
+    def outputEPID(machinePK: Long) = allOutputs.filter(o => ((o.machinePK.get == machinePK) && (o.procedurePK == epidProc.procedurePK.get)))
+
     // List of reasons that each machine is missing a full set of results.
     val missingResultsExplanations: Seq[MOE] = {
 
@@ -249,11 +252,24 @@ object DailyQAHTML extends Logging {
       val allEpidSeq = BBbyEPID.getForOneDay(date, institutionPK)
 
       def explain(mach: Machine): Elem = {
-        val cbct = allCbctSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
-        val epid = allEpidSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
+        val cbctResults = allCbctSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
+        val epidResults = allEpidSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
+        val cbctOutput = outputCBCT(mach.machinePK.get)
+        val epidOutput = outputEPID(mach.machinePK.get)
+
         val colspan = (colList.size - 5).toString
         val timeFormat = new SimpleDateFormat("H:mm")
 
+        val cbctFailures = {
+          (cbctOutput.size - cbctResults.size) match {
+            case 0 => ""
+            case 1 => "One of the CBCT scans out of " + cbctOutput.size + " CBCT scans failed to find the BB."
+            case count => count.toString + " of the CBCT scans out of " + cbctOutput.size + " CBCT scans failed to find the BB."
+          }
+          
+        }
+        
+        
         val machHistory = {
           val outputSeq = allOutputs.filter(o => o.machinePK.get == mach.machinePK.get)
           def ref(o: Output): Elem = {
@@ -277,7 +293,7 @@ object DailyQAHTML extends Logging {
         def showNoData: Elem = {
           <tr>
             <td title={ col0Title } style={ styleNoData }>{ wrapAlias(mach.id) }<br/>No Data</td>
-            <td colspan={ colspan }>There are no CBCT or EPID scans for this machine.</td>
+            <td colspan={ colspan }>There are no CBCT or EPID scans for this machine yet.</td>
             { machHistory }
           </tr>
         }
@@ -299,19 +315,19 @@ object DailyQAHTML extends Logging {
         }
 
         /**
-         * Return true if the epid was done before the CBCT.
+         * Return true if the EPID was done before the CBCT.
          */
         def epidBeforeCbct = {
           Trace.trace
-          if (cbct.nonEmpty && epid.nonEmpty) {
-            val firstCbct = cbct.minBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
-            val lastEpid = epid.maxBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
+          if (cbctResults.nonEmpty && epidResults.nonEmpty) {
+            val firstCbct = cbctResults.minBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
+            val lastEpid = epidResults.maxBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
             lastEpid < firstCbct
           } else
             false
         }
 
-        val epidAngleSeq = epid.map(e => AngleType.classifyAngle(e.bbByEPID.gantryAngle_deg)).flatten.distinct
+        val epidAngleSeq = epidResults.map(e => AngleType.classifyAngle(e.bbByEPID.gantryAngle_deg)).flatten.distinct
 
         def epidMissingVert = {
           !(epidAngleSeq.contains(AngleType.vertical))
@@ -323,16 +339,18 @@ object DailyQAHTML extends Logging {
 
         def cbctPassed = {
           // older code was setting CBCT status to 'done' instead of 'pass', so the done part is to be backwards compatible.  (25 Mar 2020)
-          val passed = cbct.find(c => c.bbByCBCT.status.equalsIgnoreCase(ProcedureStatus.pass.toString) || c.bbByCBCT.status.equalsIgnoreCase(ProcedureStatus.done.toString))
+          val passed = cbctResults.find(c => c.bbByCBCT.status.equalsIgnoreCase(ProcedureStatus.pass.toString) || c.bbByCBCT.status.equalsIgnoreCase(ProcedureStatus.done.toString))
           passed.isDefined
         }
 
         val explanation: Elem = 0 match {
-          case _ if cbct.isEmpty && epid.isEmpty => showNoData
-          case _ if (cbct.size == 1) && epid.isEmpty => showWarn("There is a CBCT scan but no EPID scans.")
-          case _ if cbct.isEmpty && (epid.size == 1) => showFail("There is an EPID scan but no CBCT scans.")
-          case _ if cbct.isEmpty && epid.nonEmpty => showFail("There are " + epid.size + " EPID scans but no CBCT scans.")
-          case _ if cbct.nonEmpty && epid.isEmpty => showWarn("There are " + cbct.size + " CBCT scans but zero EPID scans.")
+          case _ if cbctOutput.isEmpty && epidOutput.isEmpty => showNoData
+          case _ if cbctOutput.nonEmpty && cbctResults.isEmpty => showFail("One or more CBCTs were done but the BB was not found.  Probably mis-alignment of table or phantom.  It is recommended that the CBCT scan be repeated.")
+          case _ if (cbctResults.size == 1) && epidResults.isEmpty => showWarn("There is a successful CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
+          case _ if (cbctResults.nonEmpty == 1) && epidResults.isEmpty => showWarn("There are " + cbctResults.size + " successful CBCT scans but no EPID scans.  It is recommended that an EPID scan be performed.")
+          case _ if cbctResults.isEmpty && (epidOutput.nonEmpty) => showFail("There is one or more EPID scans but no CBCT scans.")
+          case _ if cbctResults.isEmpty && epidResults.nonEmpty => showFail("There are " + epidOutput.size + " EPID scans but no successful CBCT scans.")
+          case _ if cbctResults.nonEmpty && epidResults.isEmpty => showWarn("There are " + cbctResults.size + " CBCT scans but zero EPID scans.")
           case _ if epidMissingVert => showFail("No BB was found in the EPID for a vertical (0 or 180 degrees) gantry angle.")
           case _ if epidMissingHorz => showFail("No BB was found in the EPID for a horizontal (90 or 270 degrees) gantry angle.")
           case _ if epidBeforeCbct => showFail("The EPID scan was done prior to CBCT.  The CBCT needs to be done first.")
