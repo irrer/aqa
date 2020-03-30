@@ -330,7 +330,7 @@ object DailyQAHTML extends Logging {
           if (outputSeq.nonEmpty) {
             <td colspan={ listColSpan }>
               <center>
-                Hover for more info
+                Hover for info
               </center>
               <p/>
               { outputSeq.map(o => ref(o)) }
