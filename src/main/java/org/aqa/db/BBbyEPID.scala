@@ -12,6 +12,7 @@ import org.aqa.run.ProcedureStatus
 import javax.vecmath.Point3d
 import java.sql.Timestamp
 import java.util.Date
+import org.aqa.AngleType
 
 /**
  * Store the analysis results for one EPID image containing a BB.
@@ -205,7 +206,11 @@ object BBbyEPID extends ProcedureOutput {
   }
 
   /** EPID data and related results. */
-  case class DailyDataSetEPID(output: Output, machine: Machine, bbByEPID: BBbyEPID);
+  case class DailyDataSetEPID(output: Output, machine: Machine, bbByEPID: BBbyEPID) {
+    private val angType = AngleType.classifyAngle(bbByEPID.gantryAngle_deg)
+    def isHorz = angType.isDefined && angType.get.toString.equals(AngleType.horizontal.toString)
+    def isVert = angType.isDefined && angType.get.toString.equals(AngleType.vertical.toString)
+  }
 
   /**
    * Get all results that were acquired on one day for one institution.

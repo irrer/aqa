@@ -205,29 +205,6 @@ object DailyQAHTML extends Logging {
       noData
     }
 
-    val machinesMissingResultsElem = {
-      val haveData = dataSetList.map(ds => ds.machine.id).distinct
-      val allMachines = Machine.listMachinesFromInstitution(institutionPK).filter(m => m.active).map(m => m.id)
-      val idList = machinesMissingResults.map(m => m.id)
-      val title = Seq(
-        "These machine do not have at least one pair",
-        "Of CBCT and EPID image sets required to ",
-        "calculate results.  The CBCT data must",
-        "be captured before the EPID, and",
-        "both must be captured on the same day.").mkString(titleNewline)
-      def idToElem(id: String) = {
-        <span style="margin-right: 15px;">{ wrapAlias(id) }</span>
-      }
-      if (idList.isEmpty) <span></span>
-      else {
-        <h4 class="p-3 mb-2 bg-danger text-light">
-          <div>
-            <div title={ title } style="margin: 8px;">Machines without results: { idList.map(id => idToElem(id)) }</div>
-          </div>
-        </h4>
-      }
-    }
-
     /** Procedures that we are interested in. */
     val procedureSeq = Procedure.list.filter(p => p.isBBbyCBCT || p.isBBbyEPID)
     val cbctProc = procedureSeq.find(p => p.isBBbyCBCT).get
@@ -257,43 +234,114 @@ object DailyQAHTML extends Logging {
         val cbctOutput = outputCBCT(mach.machinePK.get)
         val epidOutput = outputEPID(mach.machinePK.get)
 
-        val colspan = (colList.size - 5).toString
+        val listColSpanSize = 6
+        val listColSpan = listColSpanSize.toString
+        val messageColspan = (colList.size - (listColSpanSize + 1)).toString
         val timeFormat = new SimpleDateFormat("H:mm")
 
-        val cbctFailures = {
-          (cbctOutput.size - cbctResults.size) match {
-            case 0 => ""
-            case 1 => "One of the CBCT scans out of " + cbctOutput.size + " CBCT scans failed to find the BB."
-            case count => count.toString + " of the CBCT scans out of " + cbctOutput.size + " CBCT scans failed to find the BB."
+        def cbctBBnotFound(cOut: Output): Boolean = cbctResults.find(c => c.output.outputPK.get == cOut.outputPK.get).isEmpty
+
+        /**
+         * True if this EPID output has data for horizontal gantry angle.
+         */
+        def hasHorzAngle(output: Output): Boolean = {
+          val eSeq = epidResults.filter(e => e.bbByEPID.outputPK == output.outputPK.get)
+          val horz = eSeq.find(e => e.isHorz)
+          if (true) { // TODO rm
+            Trace.trace(output.outputPK.get)
+            Trace.trace(horz)
+            Trace.trace(eSeq.map(e => (e.bbByEPID.outputPK, Util.fmtDbl(e.bbByEPID.gantryAngle_deg))).mkString("    "))
           }
-          
+          horz.isDefined
         }
-        
-        
+
+        /**
+         * True if this EPID output has data for the vertical gantry angle.
+         */
+        def hasVertAngle(output: Output): Boolean = {
+          val eSeq = epidResults.filter(e => e.bbByEPID.outputPK == output.outputPK.get)
+          val vert = eSeq.find(e => e.isVert)
+          if (true) { // TODO rm
+            Trace.trace(output.outputPK.get)
+            Trace.trace(vert)
+            Trace.trace(eSeq.map(e => (e.bbByEPID.outputPK, Util.fmtDbl(e.bbByEPID.gantryAngle_deg))).mkString("    "))
+          }
+          vert.isDefined
+        }
+
         val machHistory = {
           val outputSeq = allOutputs.filter(o => o.machinePK.get == mach.machinePK.get)
           def ref(o: Output): Elem = {
-            val procName = if (o.procedurePK == cbctProc.procedurePK.get) "CBCT" else "EPID"
+            val isCBCT = o.procedurePK == cbctProc.procedurePK.get
+            val procName = if (isCBCT) "CBCT" else "EPID"
             val url = ViewOutput.path + "?" + ViewOutput.outputPKTag + "=" + o.outputPK.get
-            <p>
-              <a title="View details" href={ url } titl="View details of scan collected at this time">{ timeFormat.format(o.dataDate.get) + " " + procName }</a>
-            </p>
+            val text = timeFormat.format(o.dataDate.get) + " " + procName
+
+            def badCBCT: Elem = {
+              val title = {
+                "Click to view details of CBCT.  Not finding the BB is usually the result " + titleNewline +
+                  "of the phantom being mis-aligned or incorrect table height/position." + titleNewline +
+                  "The data from this scan can not be used, and the CBCT scan must" + titleNewline +
+                  "be re-done."
+              }
+              <p>
+                <a href={ url } title={ title }>{ text }<span style={ styleFail }>BB not found</span></a>
+              </p>
+            }
+
+            def missingHorzEPIDGantryAngle: Elem = {
+              val title = {
+                "Click to view details of EPID.  There is no image from the horizontal" + titleNewline +
+                  "(90 or 270 degree) gantry angle.  This can not be used to calculate" + titleNewline +
+                  "the position of the BB.  The scan must be re-done."
+              }
+              <p>
+                <a href={ url } title={ title }>{ text }<span style={ styleFail }>missing horizontal gantry angle image</span></a>
+              </p>
+            }
+
+            def missingVertEPIDGantryAngle: Elem = {
+              val title = {
+                "Click to view details of EPID.  There is no image from the vertical" + titleNewline +
+                  "(0, 360, or 180 degree) gantry angle.  This can not be used to calculate" + titleNewline +
+                  "the position of the BB.  The scan must be re-done."
+              }
+              <p>
+                <a href={ url } title={ title }>{ text }<span style={ styleFail }>missing vertical gantry angle image</span></a>
+              </p>
+            }
+
+            def scanOk = {
+              <p>
+                <a href={ url } title="View details of scan">{ text }</a>
+              </p>
+            }
+
+            val elem: Elem = 0 match {
+              case _ if (isCBCT && cbctBBnotFound(o)) => badCBCT
+              case _ if (!isCBCT) && (!hasHorzAngle(o)) => missingHorzEPIDGantryAngle
+              case _ if (!isCBCT) && (!hasVertAngle(o)) => missingVertEPIDGantryAngle
+              case _ => scanOk
+            }
+
+            elem
           }
+
           if (outputSeq.nonEmpty) {
-            <td colspan="4">
+            <td colspan={ listColSpan }>
               <center>
-                Click to view details
-                <p/>
-                { outputSeq.map(o => ref(o)) }
+                Hover for more info
               </center>
+              <p/>
+              { outputSeq.map(o => ref(o)) }
             </td>
-          } else { <td colspan="4"></td> }
+          } else { <td colspan={ listColSpan }></td> }
         }
 
         def showNoData: Elem = {
           <tr>
             <td title={ col0Title } style={ styleNoData }>{ wrapAlias(mach.id) }<br/>No Data</td>
-            <td colspan={ colspan }>There are no CBCT or EPID scans for this machine yet.</td>
+            <td colspan={ messageColspan }>There are no CBCT or EPID scans for this machine yet.</td>
             { machHistory }
           </tr>
         }
@@ -301,7 +349,7 @@ object DailyQAHTML extends Logging {
         def showWarn(msg: String): Elem = { // show links to CBCT and EPID outputs
           <tr>
             <td title={ col0Title } style={ styleWarn }>{ wrapAlias(mach.id) }<br/>Warning</td>
-            <td colspan={ colspan }>{ msg }</td>
+            <td colspan={ messageColspan }>{ msg }</td>
             { machHistory }
           </tr>
         }
@@ -309,7 +357,7 @@ object DailyQAHTML extends Logging {
         def showFail(msg: String): Elem = { // show links to CBCT and EPID outputs
           <tr>
             <td title={ col0Title } style={ styleFail }>{ wrapAlias(mach.id) }<br/>Fail</td>
-            <td colspan={ colspan }>{ msg }</td>
+            <td colspan={ messageColspan }>{ msg }</td>
             { machHistory }
           </tr>
         }
@@ -327,35 +375,16 @@ object DailyQAHTML extends Logging {
             false
         }
 
-        val epidAngleSeq = epidResults.map(e => AngleType.classifyAngle(e.bbByEPID.gantryAngle_deg)).flatten.distinct
-
-        def epidMissingVert = {
-          !(epidAngleSeq.contains(AngleType.vertical))
-        }
-
-        def epidMissingHorz = {
-          !(epidAngleSeq.contains(AngleType.horizontal))
-        }
-
-        def cbctPassed = {
-          // older code was setting CBCT status to 'done' instead of 'pass', so the done part is to be backwards compatible.  (25 Mar 2020)
-          val passed = cbctResults.find(c => c.bbByCBCT.status.equalsIgnoreCase(ProcedureStatus.pass.toString) || c.bbByCBCT.status.equalsIgnoreCase(ProcedureStatus.done.toString))
-          passed.isDefined
-        }
-
         val explanation: Elem = 0 match {
           case _ if cbctOutput.isEmpty && epidOutput.isEmpty => showNoData
           case _ if cbctOutput.nonEmpty && cbctResults.isEmpty => showFail("One or more CBCTs were done but the BB was not found.  Probably mis-alignment of table or phantom.  It is recommended that the CBCT scan be repeated.")
           case _ if (cbctResults.size == 1) && epidResults.isEmpty => showWarn("There is a successful CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
-          case _ if (cbctResults.nonEmpty == 1) && epidResults.isEmpty => showWarn("There are " + cbctResults.size + " successful CBCT scans but no EPID scans.  It is recommended that an EPID scan be performed.")
+          case _ if cbctResults.nonEmpty && epidResults.isEmpty => showWarn("There are " + cbctResults.size + " successful CBCT scans but no EPID scans.  It is recommended that an EPID scan be performed.")
           case _ if cbctResults.isEmpty && (epidOutput.nonEmpty) => showFail("There is one or more EPID scans but no CBCT scans.")
           case _ if cbctResults.isEmpty && epidResults.nonEmpty => showFail("There are " + epidOutput.size + " EPID scans but no successful CBCT scans.")
-          case _ if cbctResults.nonEmpty && epidResults.isEmpty => showWarn("There are " + cbctResults.size + " CBCT scans but zero EPID scans.")
-          case _ if epidMissingVert => showFail("No BB was found in the EPID for a vertical (0 or 180 degrees) gantry angle.")
-          case _ if epidMissingHorz => showFail("No BB was found in the EPID for a horizontal (90 or 270 degrees) gantry angle.")
+          case _ if cbctResults.nonEmpty && epidResults.isEmpty => showWarn("There are " + cbctResults.size + " CBCT scans but zero EPID scans.  The EPID scan needs to be done.")
           case _ if epidBeforeCbct => showFail("The EPID scan was done prior to CBCT.  The CBCT needs to be done first.")
-          case _ if (!cbctPassed) => showFail("Unable to find BB in CBCT.  Phantom may be mis-aligned or missing.")
-          case _ => showFail("There are no results for this machine but the cause is not known")
+          case _ => showFail("There are no results for this machine.")
         }
         explanation
       }
@@ -368,9 +397,6 @@ object DailyQAHTML extends Logging {
 
     val content = {
       <div class="row">
-        <div class="row">
-          { machinesMissingResultsElem }
-        </div>
         <div class="row">
           <table class="table table-responsive table-bordered">
             <col/>
