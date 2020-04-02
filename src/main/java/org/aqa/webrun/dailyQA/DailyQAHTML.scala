@@ -313,7 +313,7 @@ object DailyQAHTML extends Logging {
 
             def scanOk = {
               <p>
-                <a href={ url } title="View details of scan">{ text }</a>
+                <a href={ url } title="Click to view details of scan">{ text }</a>
               </p>
             }
 
