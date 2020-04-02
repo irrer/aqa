@@ -59,6 +59,8 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
+import org.aqa.db.BBbyEPID
+import org.aqa.webrun.bbByEpid.BBbyEPIDRun
 
 /**
  * Provide the user interface and verify that the data provided is sufficient to do the analysis.
@@ -67,6 +69,50 @@ import scala.concurrent.duration.Duration
 object BBbyCBCTRun extends Logging {
   val parametersFileName = "parameters.xml"
   val Phase2RunPKTag = "Phase2RunPK"
+
+  /**
+   * Look through EPID results for one that would have used this CBCT output had it been available
+   * when the EPID was processed.  If there are any such EPID results, then redo them.
+   */
+  private def checkForEpidRedo(cbctOutput: Output, response: Response): Unit = {
+    val machine = Machine.get(cbctOutput.machinePK.get).get
+    val endOfDay = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(cbctOutput.dataDate.get).replaceAll("T.*", "T00:00:00")).getTime + (24 * 60 * 60 * 1000))
+
+    // list of all output on this machine that has a data date after the cbctOutput.
+    val allOutput = Output.getOutputByDateRange(machine.institutionPK, cbctOutput.dataDate.get, endOfDay).filter(o => (o.machinePK == cbctOutput.machinePK))
+
+    // the time of the next CBCT after this one.  If there is not one after this, then midnight of today.
+    val cbctCeilingTime_ms = {
+      // midnight of the dataDate
+      val ofInterest = allOutput.
+        filter(o => (o.machinePK == cbctOutput.machinePK) &&
+          (o.procedurePK == cbctOutput.procedurePK) &&
+          (o.outputPK.get != cbctOutput.outputPK.get)).
+        sortBy(_.dataDate.get.getTime)
+
+      val date = if (ofInterest.isEmpty) endOfDay else ofInterest.head.dataDate.get
+      date.getTime
+    }
+
+    // List of EPIDs that have occurred after this CBCT but before cbctCeilingTime time
+    val allEpidDaily = BBbyEPID.getForOneDay(cbctOutput.dataDate.get, machine.institutionPK).
+      filter(dds => dds.machine.machinePK.get == machine.machinePK.get).
+      filter(dds => ((dds.output.dataDate.get.getTime < cbctCeilingTime_ms) && (dds.output.dataDate.get.getTime > cbctOutput.dataDate.get.getTime)))
+
+    // List of EPIDs to redo.  Note that because multiple BBbyEPID rows may refer to the
+    // same output, only the single output (hence the 'distinct') needs to be done.
+    val outputPKlist = allEpidDaily.map(dds => dds.output.outputPK.get).distinct
+
+    logger.info("Number of EPIDs to redo because of CBCT data at " + cbctOutput.dataDate.get + " from machine " + machine.id + " : " + outputPKlist.size)
+
+    def redo(outputPK: Long) = {
+      logger.info("BBbyCBCTRun starting redo of EPID output " + outputPK)
+      BBbyEPIDRun.redo(outputPK, response.getRequest, response, true, true)
+      logger.info("BBbyCBCTRun finished redo of EPID output " + outputPK)
+    }
+
+    outputPKlist.map(o => redo(o))
+  }
 
   /**
    * Determine if user is authorized to perform redo.  To be authorized, the user must be from the
@@ -182,8 +228,13 @@ object BBbyCBCTRun extends Logging {
       outputFinal.insertOrUpdate
       outputFinal.updateData(outputFinal.makeZipOfFiles)
       Run.removeRedundantOutput(outputFinal.outputPK)
-      // remove the original input and all associated outputs to clean up any possible redundant data
-      Input.delete(inputOrig.inputPK.get)
+      try {
+        // remove the original input and all associated outputs to clean up any possible redundant data
+        Input.delete(inputOrig.inputPK.get)
+      } catch {
+        case t: Throwable => logger.error("Could not delete input " + inputOrig.inputPK.get + " : " + t)
+      }
+      BBbyCBCTRun.checkForEpidRedo(outputFinal, response)
       logger.info("In Future, finished CBCT processing.")
       Trace.trace("In Future, finished CBCT processing.")
     }
@@ -500,6 +551,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       outputFinal.insertOrUpdate
       outputFinal.updateData(outputFinal.makeZipOfFiles)
       Run.removeRedundantOutput(outputFinal.outputPK)
+      BBbyCBCTRun.checkForEpidRedo(outputFinal, response)
       Util.garbageCollect
       logger.info("CBCT processing has completed")
     }
@@ -557,7 +609,6 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
     try {
       0 match {
-        //case _ if (!sessionDefined(valueMap)) => redirectWithNewSession(response);
         case _ if buttonIs(valueMap, cancelButton) => cancel(valueMap, response)
         case _ if buttonIs(valueMap, runButton) => runIfDataValid(valueMap, request, response)
         case _ => emptyForm(valueMap, response)
