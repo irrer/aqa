@@ -147,13 +147,12 @@ object Input extends Logging {
    * It is up to the caller to determine if the files need to be restored.
    *
    */
-  def getFilesFromDatabase(inputPK: Long, dir: File) = {
+  def getFilesFromDatabase(inputPK: Long, dir: File): Unit = {
     // Steps are done on separate lines so that if there is an error/exception it can be precisely
     // tracked.  It is up to the caller to catch any exceptions and act accordingly.
     dir.mkdirs
-    val inputFilesOption = InputFiles.getByInput(inputPK)
-    val inputFiles = inputFilesOption.get
-    FileUtil.writeByteArrayZipToFileTree(inputFiles.zippedContent, dir)
+    val inputFilesSeq = InputFiles.getByInputPK(inputPK)
+    inputFilesSeq.map(inFiles => FileUtil.writeByteArrayZipToFileTree(inFiles.zippedContent, dir))
   }
 
   private def fixUp = {

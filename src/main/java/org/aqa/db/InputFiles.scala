@@ -51,12 +51,12 @@ object InputFiles extends Logging {
     if (list.isEmpty) None else Some(list.head)
   }
 
-  def getByInput(inputPK: Long): Option[InputFiles] = {
+  def getByInputPK(inputPK: Long): Seq[InputFiles] = {
     val action = for {
       inputFiles <- query if inputFiles.inputPK === inputPK
     } yield (inputFiles)
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list
   }
 
   def delete(inputFilesPK: Long): Int = {
