@@ -70,9 +70,9 @@ object DailyQAHTML extends Logging {
     def colMachine(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val machElem = wrapAlias(dataSet.machine.id)
       if (machinePassed) {
-        <td title={ col0Title } style={ stylePass }><h4>{ machElem }<br></br>Pass</h4></td>
+        <td title={ col0Title } style={ stylePass }><h4>{ machElem }<br/>Pass</h4></td>
       } else {
-        <td class="danger" title={ "At least one value is out of tolerance" } style={ styleFail }><h4>{ machElem }<br></br>Fail</h4></td>
+        <td class="danger" title={ "At least one value is out of tolerance" } style={ styleFail }><h4>{ machElem }<br/>Fail</h4></td>
       }
     }
 
@@ -340,7 +340,7 @@ object DailyQAHTML extends Logging {
 
         def showNoData: Elem = {
           <tr>
-            <td title={ col0Title } style={ styleNoData }>{ wrapAlias(mach.id) }<br/>No Data</td>
+            <td title={ col0Title } style={ styleNoData }><h4>{ wrapAlias(mach.id) }<br/>No Data</h4></td>
             <td colspan={ messageColspan }>There are no CBCT or EPID scans for this machine yet.</td>
             { machHistory }
           </tr>
@@ -348,7 +348,7 @@ object DailyQAHTML extends Logging {
 
         def showWarn(msg: String): Elem = { // show links to CBCT and EPID outputs
           <tr>
-            <td title={ col0Title } style={ styleWarn }>{ wrapAlias(mach.id) }<br/>Warning</td>
+            <td title={ col0Title } style={ styleWarn }><h4>{ wrapAlias(mach.id) }<br/>Warning</h4></td>
             <td colspan={ messageColspan }>{ msg }</td>
             { machHistory }
           </tr>
@@ -356,7 +356,7 @@ object DailyQAHTML extends Logging {
 
         def showFail(msg: String): Elem = { // show links to CBCT and EPID outputs
           <tr>
-            <td title={ col0Title } style={ styleFail }>{ wrapAlias(mach.id) }<br/>Fail</td>
+            <td title={ col0Title } style={ styleFail }><h4>{ wrapAlias(mach.id) }<br/>Fail</h4></td>
             <td colspan={ messageColspan }>{ msg }</td>
             { machHistory }
           </tr>
