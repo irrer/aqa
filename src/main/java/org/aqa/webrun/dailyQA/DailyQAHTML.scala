@@ -341,7 +341,7 @@ object DailyQAHTML extends Logging {
         def showNoData: Elem = {
           <tr>
             <td title={ col0Title } style={ styleNoData }><h4>{ wrapAlias(mach.id) }<br/>No Data</h4></td>
-            <td colspan={ messageColspan }>There are no CBCT or EPID scans for this machine yet.</td>
+            <td colspan={ messageColspan }>There are no CBCT or EPID scans for this machine.</td>
             { machHistory }
           </tr>
         }
