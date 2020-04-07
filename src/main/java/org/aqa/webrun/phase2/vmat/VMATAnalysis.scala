@@ -24,9 +24,9 @@ import org.aqa.Util
 
 object VMATAnalysis extends Logging {
 
-  private def getPlanAoiList(beamNameMlc: String, beamNameOpen: String, alDrGs: AttributeList, alOpen: AttributeList, plan: AttributeList): Seq[MeasureTBLREdges.TBLR] = {
+  private def getPlanAoiList(beamPair: Config.VMATBeamPair, alDrGs: AttributeList, alOpen: AttributeList, plan: AttributeList): Seq[MeasureTBLREdges.TBLR] = {
 
-    val beamSeq = Phase2Util.getBeamSequenceOfPlan(beamNameMlc, plan)
+    val beamSeq = Phase2Util.getBeamSequenceOfPlan(beamPair.MLC, plan)
 
     val beamLimitList = DicomUtil.findAllSingle(beamSeq, TagFromName.BeamLimitingDevicePositionSequence).
       map(bdps => bdps.asInstanceOf[SequenceAttribute]).
@@ -66,7 +66,7 @@ object VMATAnalysis extends Logging {
      * have the same range, but there have been instances where they did not.
      */
     val openLimits: MinMax = {
-      val beamSeqOpen = Phase2Util.getBeamSequenceOfPlan(beamNameOpen, plan)
+      val beamSeqOpen = Phase2Util.getBeamSequenceOfPlan(beamPair.OPEN, plan)
       val beamLimitListOpen = DicomUtil.findAllSingle(beamSeqOpen, TagFromName.BeamLimitingDevicePositionSequence).
         map(bdps => bdps.asInstanceOf[SequenceAttribute]).
         map(bdps => DicomUtil.alOfSeq(bdps)).
@@ -116,8 +116,8 @@ object VMATAnalysis extends Logging {
   }
 
   /** For testing only. */
-  def testGetPlanAoiList(beamName: String, beamNameOpen: String, alDrGs: AttributeList, alOpen: AttributeList, plan: AttributeList): Seq[MeasureTBLREdges.TBLR] =
-    getPlanAoiList(beamName, beamNameOpen, alDrGs, alOpen, plan)
+  def testGetPlanAoiList(beamPair: Config.VMATBeamPair, alDrGs: AttributeList, alOpen: AttributeList, plan: AttributeList): Seq[MeasureTBLREdges.TBLR] =
+    getPlanAoiList(beamPair, alDrGs, alOpen, plan)
 
   /**
    * Get the collimator angle of the given beam.
@@ -132,19 +132,20 @@ object VMATAnalysis extends Logging {
   /**
    * Top level analysis for a single pair of beams.
    */
-  private def analyze(beamNameMlc: String, beamNameOpen: String,
+  private def analyze(
+    beamPair: Config.VMATBeamPair,
     alMlc: AttributeList, alOpen: AttributeList,
     plan: AttributeList, collimatorCentering: CollimatorCentering,
     outputPK: Long, mlcImage: DicomImage, openImage: DicomImage): Seq[VMAT] = {
-    val aoiSeqFromPlan_mm = getPlanAoiList(beamNameMlc, beamNameOpen, alMlc, alOpen, plan)
+    val aoiSeqFromPlan_mm = getPlanAoiList(beamPair, alMlc, alOpen, plan)
     val translator = new IsoImagePlaneTranslator(alMlc)
 
     /**
-     * Given a TBLR in rtplan coordinates, convert it to a rectangle in the
+     * Given a TBLR in RTPLAN coordinates, convert it to a rectangle in the
      * isoplane that should be used to take the measurements.
      */
     def planToMeasured(tblr: MeasureTBLREdges.TBLR): MeasureTBLREdges.TBLR = {
-      tblr.addOffset(collimatorCentering.center).resize(-Config.VMATPenumbraBorderThickness_mm)
+      tblr.addOffset(collimatorCentering.center).resize(-(beamPair.IsolationBorder_mm.abs))
     }
 
     val measuredSeq_mm = aoiSeqFromPlan_mm.map(tblr => planToMeasured(tblr))
@@ -175,8 +176,8 @@ object VMATAnalysis extends Logging {
         status = statusSeq(i).toString(),
         SOPInstanceUIDMLC = Util.sopOfAl(alMlc),
         SOPInstanceUIDOpen = Util.sopOfAl(alOpen),
-        beamNameMLC = beamNameMlc,
-        beamNameOpen = beamNameOpen,
+        beamNameMLC = beamPair.MLC,
+        beamNameOpen = beamPair.OPEN,
         doseMLC_cu = mlcAvgSeq(i),
         doseOpen_cu = openAvgSeq(i),
         beamAverage_pct,
@@ -194,10 +195,11 @@ object VMATAnalysis extends Logging {
   /**
    * Hook for testing only.
    */
-  def testAnalyze(beamNameMlc: String, beamNameOpen: String,
+  def testAnalyze(
+    beamPair: Config.VMATBeamPair,
     alMlc: AttributeList, alOpen: AttributeList,
     plan: AttributeList, collimatorCentering: CollimatorCentering,
-    outputPK: Long, mlcImage: DicomImage, openImage: DicomImage): Seq[VMAT] = analyze(beamNameMlc, beamNameOpen, alMlc, alOpen, plan, collimatorCentering, outputPK, mlcImage, openImage)
+    outputPK: Long, mlcImage: DicomImage, openImage: DicomImage): Seq[VMAT] = analyze(beamPair, alMlc, alOpen, plan, collimatorCentering, outputPK, mlcImage, openImage)
 
   private val subProcedureName = "VMAT"
 
@@ -209,11 +211,12 @@ object VMATAnalysis extends Logging {
       logger.info("Starting analysis of " + subProcedureName + " for machine " + extendedData.machine.id)
 
       val vmatListList = Config.VMATBeamPairList.map(vmatPair => {
-        if (runReq.rtimageMap.contains(vmatPair.mlc) && runReq.rtimageMap.contains(vmatPair.open))
-          analyze(vmatPair.mlc, vmatPair.open,
-            runReq.derivedMap(vmatPair.mlc).attributeList, runReq.derivedMap(vmatPair.open).attributeList,
+        if (runReq.rtimageMap.contains(vmatPair.MLC) && runReq.rtimageMap.contains(vmatPair.OPEN))
+          analyze(
+            vmatPair,
+            runReq.derivedMap(vmatPair.MLC).attributeList, runReq.derivedMap(vmatPair.OPEN).attributeList,
             runReq.rtplan.attributeList.get, collimatorCentering, extendedData.output.outputPK.get,
-            runReq.derivedMap(vmatPair.mlc).originalImage, runReq.derivedMap(vmatPair.open).originalImage)
+            runReq.derivedMap(vmatPair.MLC).originalImage, runReq.derivedMap(vmatPair.OPEN).originalImage)
         else Seq[VMAT]()
       }).filter(l => l.nonEmpty)
 

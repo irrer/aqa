@@ -125,7 +125,7 @@ object Phase2 extends Logging {
                   case Right(centerDose) => {
                     val prevSummaryList = Seq(metadataCheck, badPixel, collimatorCentering, centerDose).map(r => r.summary)
                     val vmatFunction: Seq[() => Either[Elem, SubProcedureResult]] = { // TODO this should be incorporated into the <code>seq</code> list when VMAT is approved.
-                      if (Config.VMATPenumbraBorderThickness_mm == -1) {
+                      if (Config.VMATDeviationThreshold_pct == -1) {
                         Seq[() => Either[Elem, SubProcedureResult]]()
                       } else {
                         Seq(() => VMATAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result))

@@ -517,7 +517,7 @@ Note that when building a package for release, the Maven build process uses the 
     energy levels.  This is done by creating beams to match the machine's energy level.  The new beam names are given this prefix, followed
     by the energy level and optionally 'F' for FFF. -->
     <PrefixForMachineDependentBeamName>J18G0-</PrefixForMachineDependentBeamName>
-
+    
     <!-- To get an accurate measurement of the end of collimator leaves, a buffer space is left between leaves, at the sides of the
     leaves.  This keeps adjacent leaves' positions from interfering with each other.  This number specifies how large that space should
     be.  It is given as the distance between the edge of the bounding rectangle used to find the edge's position and the measured
@@ -536,27 +536,25 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>T1 PF ARC ERROR</BeamName>
     </LeafPositionBeamNameList>
 
-    <!-- Maximum amount +/- as a floating point percentage that each subfield is allowed to deviate from the average of the deviations. -->
+    <!-- Maximum amount +/- as a floating point percentage that each subfield is allowed to deviate from the average of the deviations until it is considered a failure. -->
     <VMATDeviationThreshold_pct>3.0</VMATDeviationThreshold_pct>
+    <!-- <VMATDeviationThreshold_pct>-1.0</VMATDeviationThreshold_pct> -->   <!-- Set this to -1 to disable VMAT.  Used until VMAT is released. -->
 
-    <!-- Maximum amount as a floating point percentage that the average of the deviations are allowed to deviate from the average. -->
+    <!-- Maximum amount as a floating point percentage that the average of the deviations are allowed to deviate from the average until it is considered a failure. -->
     <VMATAverageOfAbsoluteDeviationThreshold_pct>1.5</VMATAverageOfAbsoluteDeviationThreshold_pct>
 
     <!-- Indicate the beams to be used for VMAT tests.
         Name: Name of test
         MLC: Beam name of MLC
-        OPEN: Beam name of open beam.-->
+        OPEN: Beam name of open beam
+        IsolationBorder_mm: Distance in mm from planned edge to the edge of the AOI used to capture pixels.  This distance minimizes the effects of on the final values.
+        .-->
     <VMATBeamPairList>
-        <VMATBeamPair Name="Dose Rate - Gantry Speed Test" MLC="T2-DG-RS" OPEN="T2 Open"/>
-        <VMATBeamPair Name="Dose Rate - Gantry Speed Test" MLC="T2-DR-GS" OPEN="T2 Open"/>
-        <VMATBeamPair Name="Leaf Speed Test" MLC="T3MLCSpeed" OPEN="T3 Open"/>
+        <VMATBeamPair Name="Leaf Speed Test" MLC="T3MLCSpeed" OPEN="T3 Open" IsolationBorder_mm="10.0"/>
+        <!-- Note that these two should have the same MLC name, but there was a mistake/typo made when creating the RTPLAN. -->
+        <VMATBeamPair Name="Dose Rate - Gantry Speed Test" MLC="T2-DG-RS" OPEN="T2 Open" IsolationBorder_mm="5.0"/>
+        <VMATBeamPair Name="Dose Rate - Gantry Speed Test" MLC="T2-DR-GS" OPEN="T2 Open" IsolationBorder_mm="5.0"/>
     </VMATBeamPairList>
-    
-    <!-- The amount in mm to shrink the areas of interest to avoid edge (penumbra) effects.  Special note: If this value
-    is -1, then VMAT processing is not performed.   This is intended to be temporary until the code is approved by the
-    AQA subcommittee. 23-Mar-2020 -->
-    <VMATPenumbraBorderThickness_mm>-1</VMATPenumbraBorderThickness_mm>
-    <!-- <VMATPenumbraBorderThickness_mm>5.0</VMATPenumbraBorderThickness_mm> -->
 
     <!-- The maximum tolerance of error in floating point in mm for daily QA.  Exceeding this means failure. -->
     <DailyQATolerance_mm>0.4</DailyQATolerance_mm>

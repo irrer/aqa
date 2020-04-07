@@ -33,8 +33,8 @@ class TestVMATAnalysis extends FlatSpec with Matchers {
       n.isDefined && (n.get.equals(name))
     }
 
-    val mlc = imageList.find(df => isTheNamedBeam(df.attributeList.get, vmatPair.mlc)).get.attributeList.get
-    val open = imageList.find(df => isTheNamedBeam(df.attributeList.get, vmatPair.open)).get.attributeList.get
+    val mlc = imageList.find(df => isTheNamedBeam(df.attributeList.get, vmatPair.MLC)).get.attributeList.get
+    val open = imageList.find(df => isTheNamedBeam(df.attributeList.get, vmatPair.OPEN)).get.attributeList.get
 
     if (false) { // TODO rm
       println
@@ -44,7 +44,7 @@ class TestVMATAnalysis extends FlatSpec with Matchers {
       System.exit(99)
     }
 
-    val aoiList = VMATAnalysis.testGetPlanAoiList(vmatPair.mlc, vmatPair.open, mlc, open, rtplan)
+    val aoiList = VMATAnalysis.testGetPlanAoiList(vmatPair, mlc, open, rtplan)
     println("AOI List: \n    " + aoiList.mkString("\n    "))
 
     // fake centering with offsets at 0
@@ -54,7 +54,7 @@ class TestVMATAnalysis extends FlatSpec with Matchers {
       0, 0, 0, 0,
       0, 0, 0, 0)
     val outputPK: Long = -1
-    val vmatSeq = VMATAnalysis.testAnalyze(vmatPair.mlc, vmatPair.open, mlc, open, rtplan, collimatorCentering, outputPK, new DicomImage(mlc), new DicomImage(open))
+    val vmatSeq = VMATAnalysis.testAnalyze(vmatPair, mlc, open, rtplan, collimatorCentering, outputPK, new DicomImage(mlc), new DicomImage(open))
 
     def vmatFormatted(vmat: VMAT) = {
       def fmt(d: Double) = d.formatted("%10.3f")

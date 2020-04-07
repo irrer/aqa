@@ -22,10 +22,20 @@ object VMATHTML {
     val vmatDir = new File(extendedData.output.dir, "VMAT")
     vmatDir.mkdirs
 
+    def fmt(d: Double) = {
+      val t = if (d >= 1) d.formatted("%8.2f")
+      else d.formatted("%4.3f")
+
+      val text = t.trim.replaceAll("0*$", "").trim
+      if (text.endsWith(".")) text + "0" else text
+    }
+
+    def fmtTitle(d: Double) = d.formatted("%10.6f").trim
+
     def bigFont(text: String): Elem = <b><font size="3">{ text }</font></b>
-    def bigFontDbl(d: Double): Elem = bigFont(Util.fmtDbl(d))
-    def bigFontDblTd(d: Double): Elem = <td>{ bigFont(Util.fmtDbl(d)) }</td>
-    def bigFontDblTdDanger(d: Double): Elem = <td class="danger">{ bigFont(Util.fmtDbl(d)) }</td>
+    def bigFontDbl(d: Double): Elem = <span title={ fmtTitle(d) }>{ bigFont(fmt(d)) }</span>
+    def bigFontDblTd(d: Double): Elem = <td title={ fmtTitle(d) }>{ bigFont(fmt(d)) }</td>
+    def bigFontDblTdDanger(d: Double): Elem = <td class="danger" title={ fmtTitle(d) }>{ bigFont(fmt(d)) }</td>
 
     def makeSet(vmatList: Seq[VMAT]): (Elem, String) = {
       def textToId(text: String) = text.replaceAll("[^a-zA-Z0-9]", "_").replaceAll("__*", "_")
@@ -33,7 +43,7 @@ object VMATHTML {
       val idOpen = textToId(vmatList.head.beamNameOpen)
 
       def header(vmat: VMAT): Elem = {
-        <th>{ Util.fmtDbl((vmat.leftRtplan_mm + vmat.rightRtplan_mm) / (2 * 10)) } cm</th>
+        <th>{ fmt((vmat.leftRtplan_mm + vmat.rightRtplan_mm) / (2 * 10)) } cm</th>
       }
 
       val mlcValues = {
@@ -137,19 +147,19 @@ object VMATHTML {
                 { vmatList.sortBy(_.leftRtplan_mm).map(vmat => header(vmat)) }
               </tr>
               <tr>
-                <td>{ bigFont("R") }LS</td>
+                <td>{ bigFont("R") }LS : Avg CU of { vmatList.head.beamNameMLC }</td>
                 { mlcValues }
               </tr>
               <tr>
-                <td>{ bigFont("R") }Open</td>
+                <td>{ bigFont("R") }Open : Avg CU of { vmatList.head.beamNameOpen }</td>
                 { openValues }
               </tr>
               <tr>
-                <td>{ bigFont("R") }corr</td>
+                <td>{ bigFont("R") }corr : 100 * LS / Open</td>
                 { corrValues }
               </tr>
               <tr>
-                <td>{ bigFont("Diff(X)") }</td>
+                <td>{ bigFont("Diff(X)") } : diff from avg pct</td>
                 { diffValues }
               </tr>
               <tr>
