@@ -164,7 +164,44 @@ object VMATAnalysis extends Logging {
 
     Trace.trace("mlc avg of rects: " + (mlcAvgSeq.sum / mlcAvgSeq.size) + "    open avg of rects: " + (openAvgSeq.sum / openAvgSeq.size))
 
-    val pctSeq = (0 until mlcAvgSeq.size).map(i => (mlcAvgSeq(i) * 100) / openAvgSeq(i))
+    // divide each pixel in MLC to corresponding pixel in OPEN to create a new image.
+    val ratioOfImages = {
+      val mlcSlope = alMlc.get(TagFromName.RescaleSlope).getDoubleValues.head
+      val mlcOffset = alMlc.get(TagFromName.RescaleIntercept).getDoubleValues.head
+      val openSlope = alOpen.get(TagFromName.RescaleSlope).getDoubleValues.head
+      val openOffset = alOpen.get(TagFromName.RescaleIntercept).getDoubleValues.head
+
+      /**
+       * Get the value for one pixel in the final array.  Convert each to CU, then divide MLC / OPEN.
+       */
+      def ratio(x: Int, y: Int) = {
+        val m = (mlcImage.get(x, y) + mlcOffset) * mlcSlope
+        val o = (openImage.get(x, y) + openOffset) * openSlope
+        if (o == 0) 0 else (m / o).toFloat
+      }
+
+      val pixArray = for (y <- (0 until mlcImage.height)) yield {
+        for (x <- (0 until mlcImage.width)) yield {
+          ratio(x, y)
+        }
+      }
+
+      new DicomImage(pixArray)
+    }
+
+    val pctSeqOld = (0 until mlcAvgSeq.size).map(i => (mlcAvgSeq(i) * 100) / openAvgSeq(i))
+    val pctSeq = pixSeq_pix.map(p => ratioOfImages.averageOfRectangle(p.toRectangle) * 100)
+
+    if (true) { // TODO rm
+      def toText(dSeq: Seq[Double]) = dSeq.map(p => p.formatted("%12.8f")).mkString("    ")
+
+      println("VMAT comparison " + beamPair)
+      println("old:  " + toText(pctSeqOld))
+      println("new:  " + toText(pctSeq))
+      val diff = (0 until pctSeq.size).map(i => pctSeq(i) - pctSeqOld(i))
+      println("diff: " + toText(diff))
+    }
+
     val beamAverage_pct = pctSeq.sum / pctSeq.size
     val diffPctSeq = pctSeq.map(p => p - beamAverage_pct)
     val statusSeq = pctSeq.map(pct => if ((pct - beamAverage_pct).abs >= Config.VMATDeviationThreshold_pct) ProcedureStatus.fail else ProcedureStatus.pass)

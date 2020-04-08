@@ -138,53 +138,64 @@ object VMATHTML {
           if (VMAT.individualBeamsAllPassed(vmatList) && (!VMAT.beamPassed(vmatList))) "danger" else ""
         }
 
+        val table = {
+          <table class="table table-responsive table-bordered">
+            <tr>
+              <th>Band Center</th>
+              { vmatList.sortBy(_.leftRtplan_mm).map(vmat => header(vmat)) }
+            </tr>
+            <tr>
+              <td>{ bigFont("R") }LS : Avg CU of { vmatList.head.beamNameMLC }</td>
+              { mlcValues }
+            </tr>
+            <tr>
+              <td>{ bigFont("R") }Open : Avg CU of { vmatList.head.beamNameOpen }</td>
+              { openValues }
+            </tr>
+            <tr>
+              <td>{ bigFont("R") }corr : 100 * LS / Open</td>
+              { corrValues }
+            </tr>
+            <tr>
+              <td>{ bigFont("Diff(X)") } : diff minus avg pct</td>
+              { diffValues }
+            </tr>
+            <tr>
+              <td colspan={ (vmatList.size + 1).toString }><p></p></td>
+            </tr>
+            <tr>
+              <td class={ beamAverageClass } colspan={ (vmatList.size + 1).toString }>{ bigFont("Average of absolute deviations (Diff") }<sub>Abs</sub> { bigFont(") : ") }{ bigFontDbl(avgOfAbsoluteDeviations) }</td>
+              <td></td>
+            </tr>
+          </table>
+        }
+
         <div class="row" style="margin-bottom:60px;">
-          <div class="col-md-7">
-            <h3>{ vmatList.head.beamNameMLC } / { vmatList.head.beamNameOpen } <img src={ statusImage } width="50"/></h3>
-            <table class="table table-responsive table-bordered">
-              <tr>
-                <th>Band Center</th>
-                { vmatList.sortBy(_.leftRtplan_mm).map(vmat => header(vmat)) }
-              </tr>
-              <tr>
-                <td>{ bigFont("R") }LS : Avg CU of { vmatList.head.beamNameMLC }</td>
-                { mlcValues }
-              </tr>
-              <tr>
-                <td>{ bigFont("R") }Open : Avg CU of { vmatList.head.beamNameOpen }</td>
-                { openValues }
-              </tr>
-              <tr>
-                <td>{ bigFont("R") }corr : 100 * LS / Open</td>
-                { corrValues }
-              </tr>
-              <tr>
-                <td>{ bigFont("Diff(X)") } : diff from avg pct</td>
-                { diffValues }
-              </tr>
-              <tr>
-                <td colspan={ (vmatList.size + 1).toString }><p></p></td>
-              </tr>
-              <tr>
-                <td class={ beamAverageClass } colspan={ (vmatList.size + 1).toString }>{ bigFont("Average of absolute deviations (Diff") }<sub>Abs</sub> { bigFont(") : ") }{ bigFontDbl(avgOfAbsoluteDeviations) }</td>
-                <td></td>
-              </tr>
-            </table>
+          <div class="row">
+            <div class="col-md-7">
+              <h3>{ vmatList.head.beamNameMLC } / { vmatList.head.beamNameOpen } <img src={ statusImage } width="50"/></h3>
+              { table }
+            </div>
+            <div class="col-md-5">
+              <center>
+                { makeBeamImagePair }
+              </center>
+            </div>
           </div>
-          <div class="col-md-5">
-            <center>
-              { makeBeamImagePair }
-            </center>
+          <div class="row">
+            { VMATChartHistory.chartReference(vmatList.head.beamNameMLC) }
           </div>
         </div>
       }
 
-      val js = """
+      VMATChartHistoryRestlet.makeReference(vmatList.head.outputPK)
+
+      val jsZoom = """
       $(document).ready(function(){ $('#""" + idMLC + """').zoom(); });
       $(document).ready(function(){ $('#""" + idOpen + """').zoom(); });
 """
 
-      (table, js)
+      (table, jsZoom)
     }
 
     val setList = resultList.map(vmatList => makeSet(vmatList))
@@ -201,7 +212,10 @@ object VMATHTML {
       </div>
     }
 
-    val js = "<script>" + setList.map(setJs => setJs._2).mkString("\n") + "</script>"
+    val js =
+      { "<script>" + setList.map(setJs => setJs._2).mkString("\n") + "\n      </script>" } +
+        VMATChartHistoryRestlet.makeReference(extendedData.output.outputPK.get)
+
     val mainFile = new File(vmatDir, "VMAT.html")
     val text = Phase2Util.wrapSubProcedure(extendedData, content, "VMAT", status, Some(js), runReq)
     Util.writeBinaryFile(mainFile, text.getBytes)

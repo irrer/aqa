@@ -23,7 +23,11 @@ import edu.umro.ScalaUtil.Trace
  *
  * @param baselineSpec: Optional baseline value.  If given, a horizontal line
  *
- * @param tolerance: If given, show horizontal tolerance (see AQA.css .c3-ygrid-line.tolerance) lines at the given values.
+ * @param tolerance: If given, show horizontal tolerance (see AQA.css .c3-ygrid-line.tolerance)
+ *                   lines at the given values.
+ *
+ * @param range: If given, scale the chart so that it shows values within this range.  If values
+ *               are out of range, they will be literally 'off the chart'.
  *
  * @param yAxisLabels: Labels for each individual Y value
  *
