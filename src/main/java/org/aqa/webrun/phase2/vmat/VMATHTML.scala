@@ -157,7 +157,7 @@ object VMATHTML {
               { corrValues }
             </tr>
             <tr>
-              <td>{ bigFont("Diff(X)") } : diff minus avg pct</td>
+              <td>{ bigFont("Diff(X)") } : { bigFont("R") } corr minus avg { bigFont("R") } corr</td>
               { diffValues }
             </tr>
             <tr>
@@ -183,6 +183,9 @@ object VMATHTML {
             </div>
           </div>
           <div class="row">
+            <center>
+              { bigFont("Diff(X) Trend Over Time") }
+            </center>
             { VMATChartHistory.chartReference(vmatList.head.beamNameMLC) }
           </div>
         </div>

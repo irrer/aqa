@@ -105,16 +105,38 @@ class VMATChartHistory(outputPK: Long, beamNameMLC: String) extends Logging {
     val beamHist = getBeamHist
     val colorList = if (4 >= beamHist.head.size) colorList4 else colorList7
 
-    new C3ChartHistory(
-      Some(VMATChartHistory.chartId(beamNameMLC)),
-      maintenanceRecordList,
-      None, // width
-      None, // height
-      "Date", history.map(h => h.date),
-      None, // BaselineSpec
-      None, // tolerance Some(new C3Chart.Tolerance(-Config.VMATDeviationThreshold_pct, Config.VMATDeviationThreshold_pct)),
-      None, // range
-      getLineNames, units, beamHist, index, ".3r", colorList)
+    if (true) {
+      new C3ChartHistory(
+        Some(VMATChartHistory.chartId(beamNameMLC)),
+        maintenanceRecordList,
+        None, // width
+        None, // height
+        "Date", allDates,
+        None, // BaselineSpec
+        None, // tolerance Some(new C3Chart.Tolerance(-Config.VMATDeviationThreshold_pct, Config.VMATDeviationThreshold_pct)),
+        None, // range
+        getLineNames, units, beamHist, index, ".3r", Seq[Color]())
+    } else {
+      // TODO rm
+
+      val min = history.minBy(h => h.vmat.leftRtplan_mm).vmat.leftRtplan_mm
+      val hist = history.filter(h => h.vmat.leftRtplan_mm == min).sortBy(h => h.date.getTime).map(h => h.vmat.diff_pct)
+
+      println("hist:\n    " + history.filter(h => h.vmat.leftRtplan_mm == min).sortBy(h => h.date.getTime).
+        map(h => (h.date + " : " + Util.fmtDbl(h.vmat.leftRtplan_mm) + " : " + Util.fmtDbl(h.vmat.diff_pct))).
+        mkString("\n    "))
+
+      new C3ChartHistory(
+        Some(VMATChartHistory.chartId(beamNameMLC)),
+        maintenanceRecordList,
+        None, // width
+        None, // height
+        "Date", allDates,
+        None, // BaselineSpec
+        None, // tolerance Some(new C3Chart.Tolerance(-Config.VMATDeviationThreshold_pct, Config.VMATDeviationThreshold_pct)),
+        None, // range
+        Seq("hey"), units, Seq(hist), index, ".3r", colorList)
+    }
   }
 
   private val chart = {
