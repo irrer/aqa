@@ -20,7 +20,6 @@ import org.aqa.AngleType
 case class BBbyEPID(
   bbByEPIDPK: Option[Long], // primary key
   outputPK: Long, // output primary key
-  rtplanSOPInstanceUID: String, // UID of rtplan
   epidSOPInstanceUid: String, // SOP instance UID of EPID image
   offset_mm: Double, // distance between measured EPID position and expected (plan) location (aka: positioning error)
   gantryAngle_deg: Double, // gantry angle in degrees
@@ -44,7 +43,6 @@ case class BBbyEPID(
   override def toString: String =
     "bbByEPIDPK : " + bbByEPIDPK +
       "\n    outputPK : " + outputPK +
-      "\n    rtplanSOPInstanceUID : " + rtplanSOPInstanceUID +
       "\n    epidSOPInstanceUid : " + epidSOPInstanceUid +
       "\n    offset_mm : " + Util.fmtDbl(offset_mm) +
       "\n    gantryAngle_deg : " + Util.fmtDbl(gantryAngle_deg) +
@@ -60,7 +58,6 @@ object BBbyEPID extends ProcedureOutput {
 
     def bbByEPIDPK = column[Long]("bbByEPIDPK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
-    def rtplanSOPInstanceUID = column[String]("rtplanSOPInstanceUID")
     def epidSOPInstanceUid = column[String]("epidSOPInstanceUid")
     def offset_mm = column[Double]("offset_mm")
     def gantryAngle_deg = column[Double]("gantryAngle_deg")
@@ -74,7 +71,6 @@ object BBbyEPID extends ProcedureOutput {
     def * = (
       bbByEPIDPK.?,
       outputPK,
-      rtplanSOPInstanceUID,
       epidSOPInstanceUid,
       offset_mm,
       gantryAngle_deg,

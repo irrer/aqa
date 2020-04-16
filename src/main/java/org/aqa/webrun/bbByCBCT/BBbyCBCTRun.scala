@@ -173,7 +173,8 @@ object BBbyCBCTRun extends Logging {
     val runReq =
       if (rtplanFrmOfRefRMatchesCBCT.isDefined) {
         // no REG required
-        new BBbyCBCTRunReq(Right(rtplanFrmOfRefRMatchesCBCT.get), None, cbctList, Machine.get(outputOrig.machinePK.get).get)
+        val machinePK = Seq(outputOrig.machinePK, inputOrig.machinePK).flatten.head
+        new BBbyCBCTRunReq(Right(rtplanFrmOfRefRMatchesCBCT.get), None, cbctList, Machine.get(machinePK).get)
       } else {
         // REG is required
         val cbctFrmRef = Util.getFrameOfRef(cbctList.head.attributeList.get)
@@ -193,11 +194,6 @@ object BBbyCBCTRun extends Logging {
 
         new BBbyCBCTRunReq(Right(planAl), Some(regDf), cbctList, Machine.get(outputOrig.machinePK.get).get)
       }
-
-    Trace.trace("outputOrig.machinePK: " + outputOrig.machinePK)
-    Trace.trace("outputOrig.machinePK.get: " + outputOrig.machinePK.get)
-    Trace.trace("Machine.get(outputOrig.machinePK.get): " + Machine.get(outputOrig.machinePK.get))
-    Trace.trace("Machine.get(outputOrig.machinePK.get).get: " + Machine.get(outputOrig.machinePK.get).get)
 
     val procedure = Procedure.get(outputOrig.procedurePK).get
 
@@ -525,10 +521,12 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
    */
   private def run(valueMap: ValueMapT, runReq: BBbyCBCTRunReq, response: Response) = {
     logger.info("CBCT Data is valid.  Preparing to analyze data.")
-    val dtp = Util.dateTimeAndPatientIdFromDicom(runReq.cbctDicomFile.head.file.getParentFile)
+    val dtpList = runReq.cbctDicomFile.map(c => Util.extractDateTimeAndPatientIdFromDicomAl(c.attributeList.get))
+    val PatientID = dtpList.map(dtp => dtp._2).flatten.headOption
+    val dateTime = dtpList.map(dtp => dtp._1.headOption).flatten.map(d => d.getTime).sorted.headOption
 
     val sessDir = sessionDir(valueMap).get
-    val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(response.getRequest), dtp.PatientID, dtp.dateTime)
+    val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(response.getRequest), PatientID, dateTime)
     val input = inputOutput._1
     val output = inputOutput._2
 

@@ -548,7 +548,7 @@ Note that when building a package for release, the Maven build process uses the 
         MLC: Beam name of MLC
         OPEN: Beam name of open beam
         IsolationBorder_mm: Distance in mm from planned edge to the edge of the AOI used to capture pixels.  This distance minimizes the effects of on the final values.
-        .-->
+        -->
     <VMATBeamPairList>
         <VMATBeamPair Name="Leaf Speed Test" MLC="T3MLCSpeed" OPEN="T3 Open" IsolationBorder_mm="10.0"/>
         <!-- Note that these two should have the same MLC name, but there was a mistake/typo made when creating the RTPLAN. -->

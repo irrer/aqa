@@ -21,7 +21,7 @@ import org.aqa.AngleType
 case class BBbyEPIDComposite(
   bbByEPIDCompositePK: Option[Long], // primary key
   outputPK: Long, // output primary key
-  rtplanSOPInstanceUID: String, // UID of RTPLAN
+  rtplanSOPInstanceUID: Option[String], // UID of RTPLAN
   epidSeriesInstanceUID: String, // SOP series instance UID of EPID image
   offset_mm: Double, // distance between measured EPID position and expected (plan) location (aka: positioning error)
   x_mm: Double, // X position in EPID in 3D plan space
@@ -69,7 +69,7 @@ object BBbyEPIDComposite extends ProcedureOutput {
 
     def bbByEPIDCompositePK = column[Long]("bbByEPIDCompositePK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
-    def rtplanSOPInstanceUID = column[String]("rtplanSOPInstanceUID")
+    def rtplanSOPInstanceUID = column[Option[String]]("rtplanSOPInstanceUID")
     def epidSeriesInstanceUID = column[String]("epidSeriesInstanceUID")
     def offset_mm = column[Double]("offset_mm")
     def x_mm = column[Double]("x_mm")

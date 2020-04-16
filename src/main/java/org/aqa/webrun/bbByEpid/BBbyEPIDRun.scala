@@ -66,23 +66,6 @@ object BBbyEPIDRun extends Logging {
   val Phase2RunPKTag = "Phase2RunPK"
 
   /**
-   * Get the SOP of the plan referenced by the given EPID.
-   */
-  def getPlanRef(epid: AttributeList): Option[String] = {
-    try {
-      val seq = DicomUtil.seqToAttr(epid, TagFromName.ReferencedRTPlanSequence)
-      val planSop = seq.head.get(TagFromName.ReferencedSOPInstanceUID).getStringValues.head
-      logger.info("Fetched plan reference: " + planSop)
-      Some(planSop)
-    } catch {
-      case t: Throwable => {
-        logger.info("Unable to get RTPLAN reference")
-        None
-      }
-    }
-  }
-
-  /**
    * Determine if user is authorized to perform redo.  To be authorized, the user must be from the
    * same institution as the original user.
    *
@@ -238,20 +221,6 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
   }
 
-  /**
-   * Get the serial numbers of machines referenced by the plans (plans are referenced by the rtimage files).  Do not include the
-   * serial numbers of the plans themselves, as they reference the planning system.  This includes previously uploaded plans.
-   */
-  private def getRtplansSerNo(dicomFileList: Seq[DicomFile]): Seq[String] = {
-    val uploaded = dicomFileList.filter(df => df.isRtplan).map(df => df.attributeList.get)
-    val plansReferenced = dicomFileList.filter(df => df.isRtimage).map(df => BBbyEPIDRun.getPlanRef(df.attributeList.get)).flatten.distinct
-    val plansFromDb = plansReferenced.map(sopInstUID => DicomSeries.getBySopInstanceUID(sopInstUID)).flatten.map(ds => ds.attributeListList).flatten
-    val planSerNo = (uploaded ++ plansFromDb).map(plan => plan.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrEmptyString).distinct
-
-    val planRefSerNo = (uploaded ++ plansFromDb).map(rtplan => DicomUtil.findAllSingle(rtplan, TagFromName.DeviceSerialNumber)).flatten.map(at => at.getSingleStringValueOrEmptyString).distinct
-    planRefSerNo.diff(planSerNo)
-  }
-
   private def validateMachineSelection(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, Machine] = {
     val serNoByImage = {
       dicomFileList.filter(df => df.isRtimage).
@@ -259,8 +228,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
         map(serNo => serNo.getSingleStringValueOrEmptyString).distinct
     }
 
-    val planSerNoList = getRtplansSerNo(dicomFileList)
-    val machList = (serNoByImage ++ planSerNoList).distinct.map(serNo => Machine.findMachinesBySerialNumber(serNo)).flatten
+    val machList = serNoByImage.distinct.map(serNo => Machine.findMachinesBySerialNumber(serNo)).flatten
 
     val distinctMachListSerNo = machList.map(mach => mach.machinePK).flatten.distinct
 
@@ -271,7 +239,6 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       case _ if (distinctMachListSerNo.size == 1) => Right(machList.head)
       case _ if (chosenMachine.isDefined) => Right(chosenMachine.get)
       case _ if (distinctMachListSerNo.size > 1) => formErr("Files come from more than one machine; please Cancel and try again.")
-      case _ if (planSerNoList.isEmpty) => formErr("Unable to identify the machine.  Try again, and if possible, upload the RTPLAN as well, which might help identify the machine.")
       case _ => formErr("Unknown machine.  Please choose from the 'Machine' list below or click Cancel and then use the Administration interface to add it.")
     }
     result
@@ -290,6 +257,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     val anglesTypeList = angleList.map(angle => AngleType.classifyAngle(angle)).flatten
 
     def epidSeriesList = epidList.map(epid => getSeries(epid)).distinct
+    def frameOfRefList = epidList.map(epid => epid.get(TagFromName.FrameOfReferenceUID)).filterNot(attr => attr == null).map(attr => attr.getSingleStringValueOrEmptyString).distinct
 
     def machineCheck = validateMachineSelection(valueMap, dicomFileList)
 
@@ -299,10 +267,9 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
     val result: Either[WebUtil.StyleMapT, BBbyEPIDRunReq] = 0 match {
       case _ if epidList.isEmpty => formErr("No EPID files uploaded")
-      // TODO: Should an incomplete set of angles be accepted to support the odd test?
-      //      case _ if !anglesTypeList.contains(BBbyEPIDRun.AngleType.horizontal) => formErr("No EPID image with horizontal gantry angle (0 or 180) present.  Angles uploaded: " + angleTextList)
-      //      case _ if !anglesTypeList.contains(BBbyEPIDRun.AngleType.vertical) => formErr("No EPID image with vertical gantry angle (90 or 270) present.  Angles uploaded: " + angleTextList)
-      case _ if epidSeriesList.size > 1 => formErr("EPID slices are from " + numSeries + " different series.")
+      case _ if frameOfRefList.isEmpty => formErr("EPIDs do not specify a frame of reference")
+      case _ if epidSeriesList.size > 1 => formErr("EPID images are from " + numSeries + " different series.")
+      case _ if frameOfRefList.size > 1 => formErr("EPIDs specify more than one frame of reference")
       case _ if (machineCheck.isLeft) => Left(machineCheck.left.get)
       case _ => {
         val runReq = new BBbyEPIDRunReq(epidListDf, machineCheck.right.get)

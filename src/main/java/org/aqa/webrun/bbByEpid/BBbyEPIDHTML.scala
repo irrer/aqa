@@ -248,13 +248,17 @@ object BBbyEPIDHTML {
       }
 
       def planReference: Elem = {
-        val planSop = runReq.epidListDicomFile.map(df => df.attributeList).flatten.map(al => BBbyEPIDRun.getPlanRef(al)).flatten.distinct.head
-
-        val dicomSeries = DicomSeries.getBySopInstanceUID(planSop)
-        if (dicomSeries.isEmpty) {
-          <div>Could not find referenced plan with UID { planSop }</div>
+        if (runReq.sopOfRTPlan.isEmpty || DicomSeries.getBySopInstanceUID(runReq.sopOfRTPlan.get).isEmpty) {
+          if (runReq.sopOfRTPlan.isEmpty) {
+            <div>No plan reference</div>
+          } else {
+            val title = "The actual plan that was used for these images may be different than" + WebUtil.titleNewline +
+              "the plan used for the CBCT.  The requirement is that they have the same frame of" + WebUtil.titleNewline +
+              "reference.  The SOP to capture RTIMAGEs was " + runReq.sopOfRTPlan
+            <div title={ title }>Could not find referenced plan</div>
+          }
         } else {
-          val rtplanAl = dicomSeries.head.attributeListList.head
+          val rtplanAl = DicomSeries.getBySopInstanceUID(runReq.sopOfRTPlan.get).head.attributeListList.head
           val dicomFile = new File(extendedData.output.dir, "rtplan.dcm")
           DicomUtil.writeAttributeListToFile(rtplanAl, dicomFile, "AQA")
           val htmlRtplanFileName = "rtplan.html"

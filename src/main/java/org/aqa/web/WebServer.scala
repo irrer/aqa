@@ -126,7 +126,7 @@ class WebServer extends Application with Logging {
   private def attach(router: Router, url: String, restlet: Restlet): Unit = {
     val name = restlet.getClass.getName.replaceAll(".*\\.", "")
     val rootRef = if (restlet.isInstanceOf[Directory]) (" : " + restlet.asInstanceOf[Directory].getRootRef) else ""
-    logger.info("attaching router to " + url + " ==> " + name + rootRef)
+    //logger.info("attaching router to " + url + " ==> " + name + rootRef)
     router.attach(url, restlet)
   }
 
