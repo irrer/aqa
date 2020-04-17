@@ -110,9 +110,7 @@ object BBbyCBCTHTML {
     def fileNameOfHtml(al: AttributeList) = Util.textToId(descriptionOf(al).replace("-", "neg")) + ".html"
 
     def writeDicomImage(al: AttributeList) = {
-      Trace.trace("before image") // TODO rm
       val image = ConsumerFormatImageMaker.makeEightBitImage(al)
-      Trace.trace("after image") // TODO rm
       val pngFile = new File(subDir, fileNameOfPng(al))
       Util.writePng(image, pngFile)
     }
