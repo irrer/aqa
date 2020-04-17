@@ -70,6 +70,9 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
 
     val daList = dicomAnonList.map(da => (daKey(da.institutionPK, da.attributeTag, da.value), da)).toMap
 
+    /**
+     * Given a tag and anonymized value, return the non-anonymized value.
+     */
     def lookup(tag: AttributeTag, anonValue: String): Option[String] = {
       val tagText = DicomAnonymous.formatAnonAttributeTag(tag)
 
@@ -174,7 +177,14 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
       </SeriesList>
     }
 
-    logger.info("Generated XML list of " + dicomSeriesList.size + " series for patient " + PatientIDTag)
+    val patId = {
+      val unknown = "unknown"
+      if (dicomSeriesList.nonEmpty && dicomSeriesList.head.patientID.isDefined) {
+        val pi = lookup(TagFromName.PatientID, dicomSeriesList.head.patientID.get)
+        if (pi.isDefined) pi.get else unknown
+      } else unknown
+    }
+    logger.info("Generated XML list of " + dicomSeriesList.size + " series for patient " + patId)
     seriesListXml
   }
 
