@@ -265,7 +265,7 @@ object DicomSeries extends Logging {
         if (input.userPK.get != usrPK) throw new IllegalArgumentException("User PK " + usrPK + " passed as parameter is different from that referenced by inputPK " + inpPK.get + " --> " + input.userPK.get)
       }
 
-      def getSopInstanceUIDlist = alList.map(al => Util.sopOfAl(al)).mkString(" ")
+      def getSopInstanceUIDlist = alList.map(al => Util.sopOfAl(al)).mkString(" ", " ", " ")
       def getSeriesInstanceUID = byTag(TagFromName.SeriesInstanceUID).get
       def getFrameOfReferenceUID = byTag(TagFromName.FrameOfReferenceUID)
       def getModality = byTag(TagFromName.Modality).get
