@@ -24,7 +24,7 @@ case class DicomSeries(
   userPK: Long, // user that uploaded or created this series
   inputPK: Option[Long], // referenced input, if available
   machinePK: Option[Long], // referenced machine, if available
-  sopInstanceUIDList: String, // DICOM SOPInstanceUID of all files in series.
+  sopInstanceUIDList: String, // DICOM SOPInstanceUID of all files in series, separated by a single blank, prefixed and appended with a single blank.
   seriesInstanceUID: String, // DICOM SeriesInstanceUID
   frameOfReferenceUID: Option[String], // DICOM FrameOfReferenceUID.  For registration files, this is the FrameOfReferenceUID that they convert from (take as input).
   mappedFrameOfReferenceUID: Option[String], // For REG modality only.  DICOM FrameOfReferenceUID that can be mapped to.
