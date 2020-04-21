@@ -143,8 +143,9 @@ object DicomSeries extends Logging {
   }
 
   def getBySopInstanceUID(sopInstUID: String): Seq[DicomSeries] = {
+    val withBlanks = " " + sopInstUID + " "
     val action = for {
-      dicomSeries <- query if ((dicomSeries.sopInstanceUIDList === sopInstUID))
+      dicomSeries <- query if ((dicomSeries.sopInstanceUIDList === sopInstUID) || (dicomSeries.sopInstanceUIDList === withBlanks))
     } yield (dicomSeries)
     val list = Db.run(action.result)
     list

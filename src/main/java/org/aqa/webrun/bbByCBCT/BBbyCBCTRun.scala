@@ -164,9 +164,11 @@ object BBbyCBCTRun extends Logging {
 
       val cbctFramOfRef = cbctFrameOfRefList.head
       val dbPlan = DicomSeries.getByFrameUIDAndSOPClass(Set(cbctFramOfRef), SOPClass.RTPlanStorage).map(db => db.attributeListList).flatten
+
       val uploadedRtplanList = rtplanList.map(df => df.attributeList).flatten
 
-      val seq = (dbPlan ++ uploadedRtplanList).filter(plan => cbctFrameOfRefList.head.equals(cbctFramOfRef))
+      val seq = (dbPlan ++ uploadedRtplanList).filter(plan => Util.getFrameOfRef(plan).equals(cbctFramOfRef))
+      logger.info("redo: Number of plans whose FrameOfReferenceUID matches CBCT exactly so they do not require a REG file: " + seq.size)
       seq.headOption
     }
 
@@ -435,7 +437,9 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       val dbPlan = DicomSeries.getByFrameUIDAndSOPClass(Set(cbctFramOfRef), SOPClass.RTPlanStorage).map(db => db.attributeListList).flatten
       val uploadedRtplanList = rtplanList.map(df => df.attributeList).flatten
 
-      (dbPlan ++ uploadedRtplanList).filter(plan => cbctFrameOfRefList.head.equals(cbctFramOfRef))
+      val matching = (dbPlan ++ uploadedRtplanList).filter(plan => Util.getFrameOfRef(plan).equals(cbctFramOfRef))
+      logger.info("Number of plans whose FrameOfReferenceUID matches CBCT exactly so they do not require a REG file: " + matching.size)
+      matching
     }
 
     /**
