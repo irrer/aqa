@@ -12,47 +12,86 @@ import org.aqa.db.Input
 import org.aqa.db.Machine
 import org.aqa.db.DicomSeries
 import org.aqa.Util
+import java.sql.Timestamp
+import org.aqa.db.InputFiles
+import com.pixelmed.dicom.AttributeList
+import edu.umro.ScalaUtil.FileUtil
 
 /**
  * Test InputFiles.
- *
  */
 
 class TestDicomSeries extends FlatSpec with Matchers {
 
   DbSetup.init
 
-  val dicomDir = new File("""D:\pf\eclipse\workspaceOxygen\aqa\src\test\resources\TestDicomSeries""")
+  //val dicomDir = new File("""D:\pf\eclipse\workspaceOxygen\aqa\src\test\resources\TestDicomSeries""")
+  val dicomDir = new File("""src\test\resources\TestDicomSeries""")
 
   "insert" should "add entry" in {
 
     println("Reading DICOM test files ...")
 
-    val alList = dicomDir.listFiles.map(f => (new DicomFile(f)).attributeList.get)
-    println("Number of DICOM files in series: " + alList.size)
+    val alPlanImage = dicomDir.
+      listFiles.
+      toSeq.
+      map(f => (new DicomFile(f)).attributeList.get).
+      partition(al => Util.modalityOfAl(al).equalsIgnoreCase("RTPLAN"))
+    val rtplan = alPlanImage._1.head
+    val imageList = alPlanImage._2
 
-    val machine = Machine.list.head
-    val input = Input.getByMachine(machine.machinePK.get).head
-    val userPK = input.userPK.get
+    val userPK = User.list.head.userPK.get
 
-    val dicomSeriesBefore = DicomSeries.makeDicomSeries(userPK, input.inputPK, machine.machinePK, alList).get
+    val input = {
+      new Input(
+        inputPK = None,
+        directory = Some(dicomDir.getAbsolutePath),
+        uploadDate = new Timestamp(0),
+        userPK = None,
+        machinePK = None,
+        patientId = None,
+        dataDate = None).insert
+    }
 
-    val roundTrip = dicomSeriesBefore.attributeListList
+    val inpPK = input.inputPK.get
+    println("X inputPK: " + inpPK) // X denotes item to be deleted
 
-    val sopBefore = alList.map(al => Util.sopOfAl(al)).mkString("\n")
-    val sopAfter = roundTrip.map(al => Util.sopOfAl(al)).mkString("\n")
+    val zippedContent = FileUtil.readFileTreeToZipByteArray(Seq(dicomDir))
+    val inputFiles = (new InputFiles(inpPK, inpPK, zippedContent)).insert
+    println("X inputFiles.inputFilesPK: " + inputFiles.inputFilesPK) // X denotes item to be deleted
 
-    (sopAfter) should be(sopBefore)
+    val dsRtplan = (DicomSeries.makeDicomSeries(userPK, Some(inpPK), None, Seq(rtplan)).get).insert
+    val dsImage = (DicomSeries.makeDicomSeries(userPK, Some(inpPK), None, imageList).get).insert
+    println("X dsRtplan.dicomSeriesPK: " + dsRtplan.dicomSeriesPK.get) // X denotes item to be deleted
+    println("X dsImage.dicomSeriesPK: " + dsImage.dicomSeriesPK.get) // X denotes item to be deleted
 
-    val inserted = dicomSeriesBefore.insert
+    val dsRtplan2 = DicomSeries.get(dsRtplan.dicomSeriesPK.get).get
+    val dsImage2 = DicomSeries.get(dsImage.dicomSeriesPK.get).get
 
-    val retrieved = DicomSeries.get(inserted.dicomSeriesPK.get).get
+    // check to see that the RTPLAN data is as expected
+    dsRtplan2.inputPK.isEmpty should be(true)
+    val rtplanAlList = dsRtplan2.attributeListList
+    rtplanAlList.size should be(1)
+    Util.sopOfAl(rtplanAlList.head) should be(Util.sopOfAl(rtplan))
 
-    val sopRetrieved = retrieved.attributeListList.map(al => Util.sopOfAl(al)).mkString("\n")
+    // check to see that the IMAGE data is as expected
+    dsImage2.inputPK should be(inpPK)
+    val imageAlList = dsImage.attributeListList
+    imageAlList.size should be(imageList.size)
+    Util.sopOfAl(imageAlList.head) should be(Util.sopOfAl(imageList.head))
 
-    (sopRetrieved) should be(sopBefore)
+    // remove the input both as clean up and for testing
+    Input.delete(inpPK) should be(1)
 
-    DicomSeries.delete(inserted.dicomSeriesPK.get)
+    // check to see that rows were deleted
+    Input.get(inpPK).isEmpty should be(true)
+    InputFiles.get(inputFiles.inputFilesPK).isEmpty should be(true)
+    DicomSeries.get(dsRtplan.dicomSeriesPK.get).isDefined should be(true) // not deleted
+    DicomSeries.get(dsImage.dicomSeriesPK.get).isEmpty should be(true)
+
+    // clean up plan.. This is not done automatically when input is deleted like everything else.
+    DicomSeries.delete(dsRtplan.dicomSeriesPK.get) should be(1)
+
   }
 
 }

@@ -35,7 +35,7 @@ case class DicomSeries(
   patientID: Option[String], // Patient ID, if available
   size: Int, // Number of files in series
   referencedRtplanUID: Option[String], // referenced RTPLAN UID if one is referenced
-  content: Array[Byte]) // files in zip form
+  content: Option[Array[Byte]]) // DICOM in zip form.  If empty, then DICOM must be retrieved from Input
   {
 
   /**
@@ -57,7 +57,27 @@ case class DicomSeries(
     result
   }
 
-  lazy val attributeListList = DicomUtil.zippedByteArrayToDicom(content)
+  /**
+   * Get the content as a list of <code>AttributeList</code>.
+   */
+  lazy val attributeListList: Seq[AttributeList] = {
+    0 match {
+      case _ if content.nonEmpty => {
+        val alList = DicomUtil.zippedByteArrayToDicom(content.get)
+        Trace.trace("created attributeListList from DicomSeries.content of size " + alList.size)
+        alList
+      }
+      case _ if inputPK.nonEmpty =>
+        {
+          val zippedContent = InputFiles.getByInputPK(inputPK.get).head.zippedContent
+          val alList = DicomUtil.zippedByteArrayToDicom(zippedContent).filter(al => Util.serInstOfAl(al).equals(seriesInstanceUID))
+          Trace.trace("created attributeListList from input of size " + alList.size)
+          alList
+        }
+      case _ => Seq[AttributeList]()
+    }
+
+  }
 
   override def toString = {
     "\n    dicomSeriesPK: " + dicomSeriesPK +
@@ -97,7 +117,7 @@ object DicomSeries extends Logging {
     def patientID = column[Option[String]]("patientID")
     def size = column[Int]("size")
     def referencedRtplanUID = column[Option[String]]("referencedRtplanUID")
-    def content = column[Array[Byte]]("content")
+    def content = column[Option[Array[Byte]]]("content")
 
     def * = (
       dicomSeriesPK.?,
@@ -275,7 +295,11 @@ object DicomSeries extends Logging {
       def getDate = new Timestamp(sorted.head.date.getTime)
       def getPatientID = sorted.map(_.patId).flatten.headOption
       def getSize = sorted.size
-      def getContent: Array[Byte] = DicomUtil.dicomToZippedByteArray(alList)
+      def getContent: Option[Array[Byte]] = {
+        if (getModality.equalsIgnoreCase("RTPLAN")) {
+          Some(DicomUtil.dicomToZippedByteArray(alList))
+        } else None
+      }
 
       def getMappedFrameOfReferenceUID: Option[String] = {
         if (getFrameOfReferenceUID.isDefined) {
