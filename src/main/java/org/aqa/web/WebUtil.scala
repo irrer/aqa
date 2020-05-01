@@ -560,7 +560,7 @@ object WebUtil extends Logging {
       val valueMapWithSession = if (valueMap.get(sessionLabel).isDefined) valueMap else (Map((sessionLabel, Session.makeUniqueId)) ++ valueMap)
 
       val mainForm =
-        <form action={ action } method={ Method.POST.toString } class="form-horizontal" role="form">
+        <form id="mainForm" action={ action } method={ Method.POST.toString } class="form-horizontal" role="form">
           { rowListWithSession.map(r => r.toHtml(valueMapWithSession, errorMap, response)) }
         </form>;
 
@@ -1137,7 +1137,7 @@ object WebUtil extends Logging {
     }
   }
 
-  class WebInputDatePicker(override val label: String, col: Int, offset: Int, showLabel: Boolean) extends IsInput(label) with ToHtml {
+  class WebInputDatePicker(override val label: String, col: Int, offset: Int, showLabel: Boolean, submitOnChange: Boolean = false) extends IsInput(label) with ToHtml {
 
     /** For converting between <code>String</code> and <code>Date</code>. */
     val dateFormat = new SimpleDateFormat("yyyy MMM d")
@@ -1154,6 +1154,14 @@ object WebUtil extends Logging {
 
       val html =
         {
+          val submitOnChangeText = {
+            if (submitOnChange) """.on('changeDate', function(){
+              document.getElementById('mainForm').submit();
+              }
+              )"""
+            else ""
+          }
+
           <div class="input-group date form_date col-md-5" data-date="" data-date-format={ jsFormat } data-link-field={ label } data-link-format={ jsFormat }>
             <input class="form-control" size="16" type="text" id={ label } name={ label } value={ value }/>
             <span class="input-group-addon">
@@ -1164,7 +1172,7 @@ object WebUtil extends Logging {
             </span>
             <script type="text/javascript">
               $('.form_date').datetimepicker({ openCurly }
-              weekStart: 0,          /* first day is Sunday */
+              weekStart: 0,            /* first day is Sunday */
                 todayBtn:  1,          /* show button to go quickly to today */
                 autoclose: 1,          /* close when date selected */
                 todayHighlight: 1,     /* today is highlighted */
@@ -1173,10 +1181,22 @@ object WebUtil extends Logging {
                 startDate: '2010/1/1', /* minimum selectable date */
                 forceParse: true       /* fix: parse to supported form */
               { closeCurly }
-              );
+              ){ submitOnChangeText }
+              ;
             </script>
           </div>
         }
+
+      /*
+.on('changeDate', function (){ openCurly }
+              $('#Refresh').submit();
+              { closeCurly }
+              )
+
+  .on('changeDate', function(){ openCurly }
+                        $('#form_date').submit();
+                    { closeCurly }
+       */
 
       wrapInput(label, showLabel, html, col, offset, errorMap)
     }

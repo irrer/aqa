@@ -50,7 +50,7 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
   private val refreshButton = makeButton("Refresh", false, ButtonType.BtnDefault)
 
   // let user choose date to display
-  private val dateField = new WebInputDatePicker("Date", 6, 0, false)
+  private val dateField = new WebInputDatePicker("Date", 6, 0, false, true)
 
   private def getDateText(valueMap: ValueMapT): String = {
     valueMap.get(dateField.label) match {
