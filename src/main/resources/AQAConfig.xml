@@ -628,4 +628,7 @@ Note that when building a package for release, the Maven build process uses the 
    
     <!-- When making the zoomed version of the EPID images, make them this size of a square in mm.-->
     <EPIDZoomSize_mm>60.0</EPIDZoomSize_mm>
+    
+    <!-- Set to true to clean up DicomSeries.-->
+    <DicomSeriesCleanup>false</DicomSeriesCleanup>
 </AQAConfig>

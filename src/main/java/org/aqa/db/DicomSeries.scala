@@ -14,6 +14,7 @@ import com.pixelmed.dicom.AttributeTag
 import edu.umro.ScalaUtil.DicomUtil
 import com.pixelmed.dicom.SOPClass
 import edu.umro.ScalaUtil.Trace
+import org.aqa.web.WebServer
 
 /**
  * Store the contents of a DICOM series.
@@ -151,7 +152,7 @@ object DicomSeries extends Logging {
       dicomSeries <- query if dicomSeries.dicomSeriesPK === dicomSeriesPK
     } yield (dicomSeries)
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   def getByFrameUIDAndSOPClass(frameUIDSet: Set[String], sopClassUID: String): Seq[DicomSeries] = {
@@ -361,5 +362,74 @@ object DicomSeries extends Logging {
     } yield (dicomSeries.deviceSerialNumber)
     val list = Db.run(action.result)
     list.flatten.distinct
+  }
+
+  def cleanup = {
+    def deleteOrphans: Unit = {
+
+      // get list of inputs
+      val actionInput = for { inPk <- Input.query.map(i => i.inputPK) } yield (inPk)
+      val inputPKset = Db.run(actionInput.result).toSet
+
+      // get list of DicomSeries
+      case class Ref(dicomSeriesPK: Long, inputPK: Option[Long], modality: String);
+      val action1 = for { ref <- DicomSeries.query.map(ds => (ds.dicomSeriesPK, ds.inputPK, ds.modality)) } yield (ref)
+      val listOfDicomSeries = Db.run(action1.result).map(ref => new Ref(ref._1, ref._2, ref._3))
+      Trace.trace("Number of DicomSeries found: " + listOfDicomSeries.size)
+
+      val listToDelete = listOfDicomSeries.
+        filterNot(ref => ref.modality.equalsIgnoreCase("RTPLAN")). // not interested in references to RTPLANs
+        filter(ref => ref.inputPK.isDefined).
+        filterNot(ref => inputPKset.contains(ref.inputPK.get))
+
+      println("List of " + listToDelete.size + " DicomSeries to delete:\n    " + listToDelete.mkString("    \n"))
+      if (Config.DicomSeriesCleanup) {
+        println("Deleting DicomSeries")
+        listToDelete.map(ref => DicomSeries.delete(ref.dicomSeriesPK))
+      } else
+        println("NOT Deleting DicomSeries")
+    }
+
+    def populate = {
+      println("populate DicomSeries")
+      // get list of inputs
+      val inputPKseq = {
+        val actionInput = for { inPk <- Input.query.map(i => i.inputPK) } yield (inPk)
+        Db.run(actionInput.result)
+      }
+
+      def ensureDS(inPK: Long) {
+        InputFiles.get(inPK) match {
+          case Some(inputFiles) => {
+            println("Processing files for input " + inPK)
+            val seriesList = DicomUtil.zippedByteArrayToDicom(inputFiles.zippedContent).groupBy(al => Util.serInstOfAl(al))
+            val missing = seriesList.filter(s => DicomSeries.getBySeriesInstanceUID(s._1).isEmpty).map(s => s._2)
+
+            if (missing.nonEmpty) {
+              println("For input " + inPK + " number of series missing: " + missing.size)
+              val input = Input.get(inPK).get
+              missing.map(alList => {
+                val ds = DicomSeries.makeDicomSeries(input.userPK.get, Some(inPK), input.machinePK, alList)
+                if (ds.isDefined) {
+                  if (Config.DicomSeriesCleanup) {
+                    println("Creating DicomSeries")
+                    ds.get.insert
+                  } else
+                    println("NOT Creating DicomSeries")
+                }
+              })
+
+            }
+          }
+          case _ => println("no such input " + inPK)
+        }
+      }
+
+      inputPKseq.map(inPK => ensureDS(inPK))
+
+    }
+
+    deleteOrphans
+    populate
   }
 }
