@@ -32,66 +32,98 @@ class TestDicomSeries extends FlatSpec with Matchers {
 
     println("Reading DICOM test files ...")
 
-    val alPlanImage = dicomDir.
+    val alRtplanAndImageSeq = dicomDir.
       listFiles.
       toSeq.
       map(f => (new DicomFile(f)).attributeList.get).
       partition(al => Util.modalityOfAl(al).equalsIgnoreCase("RTPLAN"))
-    val rtplan = alPlanImage._1.head
-    val imageList = alPlanImage._2
+    val rtplan = alRtplanAndImageSeq._1.head
+    val imageList = alRtplanAndImageSeq._2
 
     val userPK = User.list.head.userPK.get
 
+    var dsRtplan: Option[DicomSeries] = None
+    var dsImage: Option[DicomSeries] = None
+
     val input = {
-      new Input(
+      Some(new Input(
         inputPK = None,
         directory = Some(dicomDir.getAbsolutePath),
         uploadDate = new Timestamp(0),
-        userPK = None,
+        userPK = Some(userPK),
         machinePK = None,
         patientId = None,
-        dataDate = None).insert
+        dataDate = None).insert)
     }
 
-    val inpPK = input.inputPK.get
+    val inpPK = input.get.inputPK.get
     println("X inputPK: " + inpPK) // X denotes item to be deleted
 
-    val zippedContent = FileUtil.readFileTreeToZipByteArray(Seq(dicomDir))
-    val inputFiles = (new InputFiles(inpPK, inpPK, zippedContent)).insert
-    println("X inputFiles.inputFilesPK: " + inputFiles.inputFilesPK) // X denotes item to be deleted
+    try {
+      val zippedContent = FileUtil.readFileTreeToZipByteArray(Seq(dicomDir))
+      val inputFiles = (new InputFiles(inpPK, inpPK, zippedContent)).insert
+      println("X inputFiles.inputFilesPK: " + inputFiles.inputFilesPK) // X denotes item to be deleted
 
-    val dsRtplan = (DicomSeries.makeDicomSeries(userPK, Some(inpPK), None, Seq(rtplan)).get).insert
-    val dsImage = (DicomSeries.makeDicomSeries(userPK, Some(inpPK), None, imageList).get).insert
-    println("X dsRtplan.dicomSeriesPK: " + dsRtplan.dicomSeriesPK.get) // X denotes item to be deleted
-    println("X dsImage.dicomSeriesPK: " + dsImage.dicomSeriesPK.get) // X denotes item to be deleted
+      dsRtplan = Some((DicomSeries.makeDicomSeries(userPK, Some(inpPK), None, Seq(rtplan)).get).insert)
+      dsImage = Some((DicomSeries.makeDicomSeries(userPK, Some(inpPK), None, imageList).get).insert)
+      println("X dsRtplan.dicomSeriesPK: " + dsRtplan.get.dicomSeriesPK.get) // X denotes item to be deleted
+      println("X dsImage.dicomSeriesPK: " + dsImage.get.dicomSeriesPK.get) // X denotes item to be deleted
 
-    val dsRtplan2 = DicomSeries.get(dsRtplan.dicomSeriesPK.get).get
-    val dsImage2 = DicomSeries.get(dsImage.dicomSeriesPK.get).get
+      val dsRtplan2 = DicomSeries.get(dsRtplan.get.dicomSeriesPK.get).get
+      val dsImage2 = DicomSeries.get(dsImage.get.dicomSeriesPK.get).get
 
-    // check to see that the RTPLAN data is as expected
-    dsRtplan2.inputPK.isEmpty should be(true)
-    val rtplanAlList = dsRtplan2.attributeListList
-    rtplanAlList.size should be(1)
-    Util.sopOfAl(rtplanAlList.head) should be(Util.sopOfAl(rtplan))
+      // check to see that the RTPLAN data is as expected by round-tripping the data
+      dsRtplan2.inputPK.isEmpty should be(true)
+      val rtplanAlList = dsRtplan2.attributeListList
+      rtplanAlList.size should be(1)
+      Util.sopOfAl(rtplanAlList.head) should be(Util.sopOfAl(rtplan))
 
-    // check to see that the IMAGE data is as expected
-    dsImage2.inputPK should be(inpPK)
-    val imageAlList = dsImage.attributeListList
-    imageAlList.size should be(imageList.size)
-    Util.sopOfAl(imageAlList.head) should be(Util.sopOfAl(imageList.head))
+      // check to see that the IMAGE data is as expected by round-tripping the data
+      dsImage2.inputPK.get should be(inpPK)
+      val imageAlList = dsImage.get.attributeListList
+      imageAlList.size should be(imageList.size)
+      Util.sopOfAl(imageAlList.head) should be(Util.sopOfAl(imageList.head))
 
-    // remove the input both as clean up and for testing
-    Input.delete(inpPK) should be(1)
+      // remove the input both as clean up and for testing
+      Input.delete(inpPK) should be(1)
 
-    // check to see that rows were deleted
-    Input.get(inpPK).isEmpty should be(true)
-    InputFiles.get(inputFiles.inputFilesPK).isEmpty should be(true)
-    DicomSeries.get(dsRtplan.dicomSeriesPK.get).isDefined should be(true) // not deleted
-    DicomSeries.get(dsImage.dicomSeriesPK.get).isEmpty should be(true)
+      // check to see that rows were deleted
+      Input.get(inpPK).isEmpty should be(true)
+      InputFiles.get(inputFiles.inputFilesPK).isEmpty should be(true)
+      DicomSeries.get(dsRtplan.get.dicomSeriesPK.get).isDefined should be(true) // not deleted
+      DicomSeries.get(dsImage.get.dicomSeriesPK.get).isEmpty should be(true)
 
-    // clean up plan.. This is not done automatically when input is deleted like everything else.
-    DicomSeries.delete(dsRtplan.dicomSeriesPK.get) should be(1)
+      // clean up plan.. This is not done automatically when input is deleted like everything else.
+      println("Deleting dsRtplan " + dsRtplan.get.dicomSeriesPK.get)
+      DicomSeries.delete(dsRtplan.get.dicomSeriesPK.get) should be(1)
 
+    } catch {
+      case t: Throwable => {
+        println("Unexpected exception: " + t)
+        t.printStackTrace
+        if (input.isDefined) {
+          println("Cleaning up input " + input.get.inputPK.get)
+          Input.delete(inpPK)
+        }
+        if (dsRtplan.isDefined) {
+          val ds = DicomSeries.get(dsRtplan.get.dicomSeriesPK.get)
+          if (ds.isDefined) {
+            val pk = ds.get.dicomSeriesPK.get
+            println("Cleaning up dsRtplan " + pk)
+            DicomSeries.delete(pk)
+          }
+        }
+        if (dsImage.isDefined) {
+          val ds = DicomSeries.get(dsImage.get.dicomSeriesPK.get)
+          if (ds.isDefined) {
+            val pk = ds.get.dicomSeriesPK.get
+            println("Cleaning up dsImage " + pk)
+            DicomSeries.delete(pk)
+          }
+        }
+        true should be(false) // force test to fail
+      }
+    }
   }
 
 }
