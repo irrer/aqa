@@ -96,7 +96,7 @@ object Input extends Logging {
       input <- query if input.inputPK === inputPK
     } yield (input)
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   /**
