@@ -56,6 +56,7 @@ import org.aqa.db.DicomSeries
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.db.BBbyEPID
 import org.aqa.AngleType
+import com.pixelmed.dicom.AttributeTag
 
 /**
  * Provide the user interface and verify that the data provided is sufficient to do the analysis.
@@ -111,7 +112,9 @@ object BBbyEPIDRun extends Logging {
 
     val procedure = Procedure.get(outputOrig.procedurePK).get
 
-    val inputOutput = Run.preRun(procedure, runReq.machine, sessionDir, getUser(request), inputOrig.patientId, acquisitionDate)
+    val inputOutput = Run.preRun(procedure, runReq.machine, sessionDir, getUser(request),
+      Util.getOutputPatientId(runReq.epidList.head), Util.getOutputDateTime(runReq.epidList))
+
     val input = inputOutput._1
     val output = inputOutput._2
 
@@ -296,10 +299,17 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   private def run(valueMap: ValueMapT, runReq: BBbyEPIDRunReq, response: Response) = {
 
     logger.info("EPID Data is valid.  Preparing to analyze data.")
-    val dtp = Util.dateTimeAndPatientIdFromDicom(runReq.epidListDicomFile.head.file.getParentFile)
+    val patientId = {
+      val at = runReq.epidList.head.get(TagFromName.PatientID)
+      if ((at != null) && (at.getSingleStringValueOrNull != null))
+        Some(at.getSingleStringValueOrNull)
+      else
+        None
+    }
 
     val sessDir = sessionDir(valueMap).get
-    val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(response.getRequest), dtp.PatientID, dtp.dateTime)
+    val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(response.getRequest),
+      Util.getOutputPatientId(runReq.epidList.head), Util.getOutputDateTime(runReq.epidList))
     val input = inputOutput._1
     val output = inputOutput._2
 

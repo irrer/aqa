@@ -306,6 +306,35 @@ object Util extends Logging {
   }
 
   /**
+   * Get the date and time for building an Output.
+   */
+  def getOutputDateTime(alList: Seq[AttributeList]): Option[Long] = {
+    val dateTimeTags = Seq(
+      (TagFromName.AcquisitionDate, TagFromName.AcquisitionTime),
+      (TagFromName.ContentDate, TagFromName.ContentTime),
+      (TagFromName.InstanceCreationDate, TagFromName.InstanceCreationTime))
+
+    def earliest(dateTag: AttributeTag, timeTag: AttributeTag): Option[Long] = {
+      val seq = alList.map(al => DicomUtil.getTimeAndDate(al, dateTag, timeTag)).flatten.map(d => d.getTime)
+      if (seq.isEmpty) None else Some(seq.min)
+    }
+
+    val list = dateTimeTags.map(dt => earliest(dt._1, dt._2)).flatten
+    if (list.isEmpty) None else Some(list.head)
+  }
+
+  /**
+   * Get the patient ID for building an Output.
+   */
+  def getOutputPatientId(al: AttributeList): Option[String] = {
+    val at = al.get(TagFromName.PatientID)
+    if ((at != null) && (at.getSingleStringValueOrNull != null))
+      Some(at.getSingleStringValueOrNull)
+    else
+      None
+  }
+
+  /**
    * Given a DICOM date/time, adjust it by the local time zone amount.
    */
   def adjustDicomDateByLocalTimeZone(date: Date) = {
