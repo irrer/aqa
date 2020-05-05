@@ -630,5 +630,6 @@ Note that when building a package for release, the Maven build process uses the 
     <EPIDZoomSize_mm>60.0</EPIDZoomSize_mm>
     
     <!-- Set to true to clean up DicomSeries.-->
-    <DicomSeriesCleanup>false</DicomSeriesCleanup>
+    <DicomSeriesDeleteOrphans>false</DicomSeriesDeleteOrphans>
+    <DicomSeriesPopulate>false</DicomSeriesPopulate>
 </AQAConfig>

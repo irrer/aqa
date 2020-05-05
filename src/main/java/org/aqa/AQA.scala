@@ -24,14 +24,6 @@ object AQA extends Logging {
 
       if (Config.validate) {
         DbSetup.init
-        if (false) {  // TODO set to true to activate.  remove / move this code
-          Thread.sleep(1000)
-          Trace.trace
-          db.DicomSeries.cleanup
-          Trace.trace
-          Thread.sleep(1000)
-          System.exit(99)
-        }
         DbSetup.smokeTest
         Run.handleRunningProcedureList
         new WebServer
