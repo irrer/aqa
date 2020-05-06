@@ -830,9 +830,7 @@ object Config extends Logging {
   val VMATDeviationThreshold_pct = logMainText("VMATDeviationThreshold_pct", "3.0").toDouble
   val VMATAverageOfAbsoluteDeviationThreshold_pct = logMainText("VMATAverageOfAbsoluteDeviationThreshold_pct", "1.5").toDouble
   val VMATBeamPairList = getVMATBeamPairList
-  Trace.trace
   val VMATHistoryRange = logMainText("VMATHistoryRange", "25").toInt
-  Trace.trace
 
   val DailyQATolerance_mm = logMainText("DailyQATolerance_mm", "1.0").toDouble
   Trace.trace
