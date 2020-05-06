@@ -189,6 +189,9 @@ object BadPixelAnalysis extends Logging {
 
       val elem = {
         def boolToName(name: String, b: Boolean) = if (b) name else ""
+        def isVmat(beamName: String): Boolean = {
+          Config.VMATBeamPairList.map(p => Seq(p.MLC, p.OPEN)).flatten.find(n => n.equalsIgnoreCase(beamName)).isDefined
+        }
 
         <tr align="center">
           <td style="text-align: center;" title="Click for DICOM metadata"><a href={ dicomHref }>{ beamName }</a></td>
@@ -203,6 +206,7 @@ object BadPixelAnalysis extends Logging {
           <td style="text-align: center;" title="Wedge">{ boolToName("Wedge", Config.WedgeBeamList.contains(beamName)) }</td>
           <td style="text-align: center;" title="Symmetry and Flatness">{ boolToName("Sym+Flat+Const", Config.SymmetryAndFlatnessBeamList.contains(beamName)) }</td>
           <td style="text-align: center;" title="Leaf Position">{ boolToName("Leaf Posn", Config.LeafPositionBeamNameList.contains(beamName)) }</td>
+          <td style="text-align: center;" title="VMAT">{ boolToName("VMAT", isVmat(beamName)) }</td>
         </tr>
       }
       (imageTime, elem)
@@ -211,7 +215,6 @@ object BadPixelAnalysis extends Logging {
     val content = {
 
       val allElem = {
-        val floodRef = beamRef(Config.FloodFieldBeamName, runReq.flood)
         val rtimgRef = sortBeams.map(beamName => beamRef(beamName, runReq.rtimageMap(beamName)))
         def cmpr(a: (Option[Long], Elem), b: (Option[Long], Elem)): Boolean = {
           (a._1, b._1) match {
@@ -221,7 +224,13 @@ object BadPixelAnalysis extends Logging {
             case (_, _) => true
           }
         }
-        (rtimgRef :+ floodRef).sortWith(cmpr _).map(te => te._2)
+        val list = {
+          if (sortBeams.contains(Config.FloodFieldBeamName))
+            rtimgRef
+          else
+            rtimgRef :+ beamRef(Config.FloodFieldBeamName, runReq.flood)
+        }
+        list.sortWith(cmpr _).map(te => te._2)
       }
 
       val tableHead = {
@@ -239,6 +248,7 @@ object BadPixelAnalysis extends Logging {
             <th style="text-align: center;" title='if used in Wedge'>Wedge</th>
             <th style="text-align: center;" title='if used in Symmetry and Flatness'>Symmetry and Flatness</th>
             <th style="text-align: center;" title='if used in Leaf Position (Picket Fence)'>Leaf Position</th>
+            <th style="text-align: center;" title='if used in VMAT (RapidArc)'>VMAT</th>
           </tr>
         </thead>
       }
