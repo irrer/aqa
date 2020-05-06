@@ -171,6 +171,14 @@ object ViewOutput {
 
   /**
    * Redirect the user to the progress of running the procedure.
+   *
+   * @param response Respond to this HTTP entity.
+   * 
+   * @param isAuto If true, the client wants to be treated like an automatic process (non-human process as
+   *   opposed to human using a web browser).  Upon completion, just send the client the return status as
+   *   opposed to being redirected to a page containing the results or a progress page.
+   *   
+   * @param outputPK Output being produced. 
    */
   def redirectToViewRunProgress(response: Response, isAuto: Boolean, outputPK: Long): Unit = {
     if (isAuto) {
