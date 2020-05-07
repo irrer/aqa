@@ -53,7 +53,7 @@
 
 <!-- This was cut+pasted from the web.  The VMATReport.png shows the same thing but the titles don't work. -->
     <h3>
-        Example of VMAT Numerical Rortion of Report:
+        Example of VMAT Numerical Portion of Report:
     </h3>
     <p>
         <center style="margin-left: 20px;">
@@ -215,7 +215,7 @@
     <p style="margin: 10px;"></p>
     <h5>
         <i>
-            <b>Band Center</b>
+            <b>Band Center</b> (units: cm)
         </i>
     </i>
     </h5>
@@ -223,33 +223,33 @@
 
     <h5>
         <i>
-            <b>R LS</b>
+            <b>R LS</b> (units: CU)
         </i>
     </h5>
     <p style="margin: 10px;">Average of the pixel values for the AOI in the given MLC beam.</p>
 
     <h5>
         <i>
-            <b>R Open</b>
+            <b>R Open</b> (units: CU)
         </i>
     </h5>
     <p style="margin: 10px;">Average of the pixel values for the AOI in the given OPEN beam.</p>
 
     <h5>
         <i>
-            <b>R corr</b>
+            <b>R corr</b> (units: percent)
         </i>
     </h5>
     <p style="margin: 10px;">To calculate this, first a third virtual plane of pixels is
         created by dividing each pixel the the MLC plane by its corresponding pixel in the
-        OPEN plane. This value is the average of the
+        OPEN plane. The <b>R corr</b> value is the average of the
         pixels in the AOI of the virtual plane
-        multiplied by 100 to yield it as a percentage.
+        multiplied by 100 to convert it to a percentage.
     </p>
 
     <h5>
         <i>
-            <b>Diff(X)</b>
+            <b>Diff(X)</b> (units: percent)
         </i>
     </h5>
     <p style="margin: 10px;">
@@ -264,7 +264,7 @@
 
     <h5>
         <i>
-            <b>Average of absolute deviations</b>
+            <b>Average of absolute deviations</b> (units: percent)
         </i>
     </h5>
     <p style="margin: 10px;">
@@ -273,6 +273,7 @@
         value and then taking their average. If this value exceeds the configure limit
         (currently 3.0 percent) then the entire test is marked as failed.
     </p>
+
 
 <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
