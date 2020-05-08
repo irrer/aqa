@@ -46,19 +46,19 @@ object RunProcedure extends Logging {
   /**
    * Respond to the 'Run' button.
    */
-  private def runIfDataValid(valueMap: ValueMapT, request: Request, response: Response, runTrait: RunTrait[RunReqClass]) = {
+  private def runIfDataValid(valueMap: ValueMapT, request: Request, response: Response, runTrait: RunTrait) = {
 
     logger.info("Validating data")
     runTrait.validate(valueMap, request, response) match {
       case Left(errMap) => {
-        logger.info("BBbyEPIDRun Bad request: " + errMap.keys.map(k => k + " : " + valueMap.get(k)).mkString("\n    "))
+        logger.info("Bad request: " + errMap.keys.map(k => k + " : " + valueMap.get(k)).mkString("\n    "))
         makeForm(runTrait).setFormResponse(valueMap, errMap, runTrait.procedureName, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
       case Right(runReq) => {
         if (isAwait(valueMap)) awaitTag.synchronized {
-          run(valueMap, runReq, response)
+       runTrait.   run(valueMap, runReq, response)
         }
-        else run(valueMap, runReq, response)
+        else runTrait.run(valueMap, runReq, response)
       }
 
     }
