@@ -73,8 +73,7 @@ class C3ChartHistory(
     "[ '" + label + "', " + valueList.map(d => "'" + Util.standardDateFormat.format(d) + "'").mkString(", ") + "]"
   }
 
-  private val maintColor = if (maintList.isEmpty) Seq[Color]() else Seq(Color.white)
-  private val yColorNameList = textColumn((yColorList ++ maintColor).map(c => (c.getRGB & 0xffffff).formatted("#%06x")))
+  private val yColorNameList = textColumn(yColorList.map(c => (c.getRGB & 0xffffff).formatted("#%06x")))
 
   private val minDate = xDateList.minBy(d => d.getTime)
   private val maxDate = xDateList.maxBy(d => d.getTime)
