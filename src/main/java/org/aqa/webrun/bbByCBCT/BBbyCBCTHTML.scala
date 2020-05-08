@@ -19,6 +19,7 @@ import com.pixelmed.display.ConsumerFormatImageMaker
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.db.DicomSeries
+import org.aqa.Config
 
 object BBbyCBCTHTML {
 
@@ -111,6 +112,8 @@ object BBbyCBCTHTML {
 
     def writeDicomImage(al: AttributeList) = {
       val image = ConsumerFormatImageMaker.makeEightBitImage(al)
+      Config.applyWatermark(image)
+      Trace.trace("applying watermark to " + fileNameOfPng(al)) // TODO rm
       val pngFile = new File(subDir, fileNameOfPng(al))
       Util.writePng(image, pngFile)
     }

@@ -205,6 +205,8 @@ object BBbyCBCTAnnotateImages {
 
     val full = makeFullImage
     val aoi = cropImage(full)
+    Config.applyWatermark(full)
+    Config.applyWatermark(aoi)
 
     Util.addAxisLabels(aoi, "", "", Color.white, true, false, false, true) // top, bottom, left, right arrow heads
 

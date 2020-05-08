@@ -112,6 +112,7 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
     val scale = 4
 
     val fullSize = ImageUtil.magnify(fullImage.toDeepColorBufferedImage(0.05), scale)
+    Config.applyWatermark(fullSize)
 
     drawPlusAtCenterOfPlan(new Point2D.Double(0, 0), fullSize, scale)
     drawCircleWithXAtCenterOfBB(new Point2D.Double(0, 0), fullSize, scale)
@@ -134,6 +135,7 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
     }
 
     val detailImage = ImageUtil.magnify(fullImage.getSubimage(detailRect).toDeepColorBufferedImage(0), scale)
+    Config.applyWatermark(detailImage)
 
     drawCircleWithXAtCenterOfBB(upperLeftCorner, detailImage, scale)
     drawPlusAtCenterOfPlan(upperLeftCorner, detailImage, scale)
@@ -166,6 +168,7 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
     }
 
     val closeupImage = ImageUtil.magnify(fullImage.getSubimage(closeupRect).toBufferedImage(Config.EPIDImageColor), scale)
+    Config.applyWatermark(closeupImage)
 
     drawCircleWithXAtCenterOfBB(upperLeftCorner, closeupImage, scale)
     drawPlusAtCenterOfPlan(upperLeftCorner, closeupImage, scale)
