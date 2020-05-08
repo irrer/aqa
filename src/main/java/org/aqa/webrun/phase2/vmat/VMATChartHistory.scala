@@ -47,11 +47,6 @@ class VMATChartHistory(outputPK: Long, beamNameMLC: String) extends Logging {
       map(g => g._2).
       map(hSeq => hSeq.sortBy(vmat => vmat.date.getTime).map(h => h.vmat.diff_pct))
 
-  val j0 = getBeamHist.size // TODO rm
-  val j1 = getBeamHist.head.size // TODO rm
-  val j2 = history.groupBy(h => h.vmat.leftRtplan_mm)
-  Trace.trace // TODO rm
-
   /**
    * Get index of this output in the list of output.  Used to mark the orange dot in the chart.
    */
