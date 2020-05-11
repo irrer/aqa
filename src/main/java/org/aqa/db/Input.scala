@@ -38,6 +38,7 @@ case class Input(
    */
   def updateDirectory(inDir: File) = {
     val dirName = WebServer.fileToResultsPath(inDir)
+    if (inputPK.isEmpty) throw new RuntimeException("Attempting to search for an input using a null inputPK: " + this)
     Db.run(Input.query.filter(_.inputPK === inputPK.get).map(i => (i.directory)).update((Some(dirName))))
   }
 

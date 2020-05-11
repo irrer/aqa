@@ -21,6 +21,10 @@ import org.aqa.webrun.bbByEpid.BBbyEPIDRun
 import org.restlet.routing.Filter
 import org.aqa.Util
 import org.aqa.AnonymizeUtil
+import org.aqa.webrun.WebRun
+import org.aqa.run.RunProcedure
+import org.aqa.run.RunTrait
+import org.aqa.run.RunReqClass
 
 /**
  * List the outputs to let users re-visit results.
@@ -361,7 +365,17 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
           BBbyCBCTRun.redo(outputPK, response.getRequest, response, await, isAuto)
         }
         if (procedure.name.toLowerCase.contains("epid")) {
-          BBbyEPIDRun.redo(outputPK, response.getRequest, response, await, isAuto)
+          if (true) {
+            // TODO This handles the general case, and should be all the code that is needed once RunTrait is used exclusively.
+            val runTrait = WebRun.get(output.procedurePK).right.get.asInstanceOf[RunTrait[RunReqClass]]
+            // Seems a bit round-about to create the valueMap, but this handles the bulk redo case.
+            val valueMap = Map(
+              (OutputList.redoTag, output.outputPK.get.toString),
+              (WebUtil.awaitTag, await.toString),
+              (WebUtil.autoUploadTag, isAuto.toString))
+            RunProcedure.handle(valueMap, response.getRequest, response, runTrait)
+          } else
+            BBbyEPIDRun.redo(outputPK, response.getRequest, response, await, isAuto)
         }
       }
     }

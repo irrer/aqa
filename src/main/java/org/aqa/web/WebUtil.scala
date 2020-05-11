@@ -80,7 +80,7 @@ object WebUtil extends Logging {
   /**
    * Tag used to indicate that this is coming from an automatic upload client, as opposed to a human using a web browser.
    */
-  private val autoUploadTag = "AutoUpload"
+  val autoUploadTag = "AutoUpload"
 
   /**
    * Tag used to indicate that the call should not return until processing is complete.

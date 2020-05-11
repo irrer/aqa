@@ -57,6 +57,9 @@ import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.db.BBbyEPID
 import org.aqa.AngleType
 import com.pixelmed.dicom.AttributeTag
+import org.aqa.run.RunTrait
+import org.aqa.run.RunProcedure
+import org.aqa.Logging
 
 /**
  * Provide the user interface and verify that the data provided is sufficient to do the analysis.
@@ -197,34 +200,19 @@ object BBbyEPIDRun extends Logging {
 /**
  * Run BBbyEPID code.
  */
-class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with Logging {
+class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[BBbyEPIDRunReq] {
 
   private def getSeries(al: AttributeList): String = al.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString
   private def getSeries(dicomFile: DicomFile): String = getSeries(dicomFile.attributeList.get)
 
-  //private val machineSelector = new WebInputSelectOption("Machine", 6, 0, machineList, showMachineSelector)
-  private val machineSelector = new WebInputSelectMachine("Machine", 6, 0)
-
-  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
-    val action = procedure.webUrl + "?" + name + "=" + name
-    new FormButton(name, 1, 0, SubUrl.run, action, buttonType)
-  }
-
-  private val runButton = makeButton("Run", true, ButtonType.BtnDefault)
-  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
-
-  private def form = new WebForm(procedure.webUrl, Some("BBbyEPID"), List(List(machineSelector), List(runButton, cancelButton)), 10)
-
-  private def formErr(msg: String) = {
+  def formErr(msg: String) = {
     logger.info("User error: " + msg)
     Left(Error.make(form.uploadFileInput.get, msg))
   }
 
-  private def emptyForm(valueMap: ValueMapT, response: Response) = {
-    form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
-  }
-
-  private def validateMachineSelection(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, Machine] = {
+  override def getProcedure = procedure
+  
+  override def validateMachineSelection(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, Machine] = {
     val serNoByImage = {
       dicomFileList.filter(df => df.isRtimage).
         map(df => DicomUtil.findAllSingle(df.attributeList.get, TagFromName.DeviceSerialNumber)).flatten.
@@ -296,6 +284,10 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     (date, patient)
   }
 
+  override def run(extendedData: ExtendedData, runReq: BBbyEPIDRunReq): Unit = {
+    BBbyEPIDAnalyse.runProcedure(extendedData, runReq)
+  }
+
   private def run(valueMap: ValueMapT, runReq: BBbyEPIDRunReq, response: Response) = {
 
     logger.info("EPID Data is valid.  Preparing to analyze data.")
@@ -340,60 +332,11 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     ViewOutput.redirectToViewRunProgress(response, valueMap, output.outputPK.get)
   }
 
-  /**
-   * Respond to the 'Run' button.
-   */
-  private def runIfDataValid(valueMap: ValueMapT, request: Request, response: Response) = {
-    logger.info("Validating data")
-    validate(valueMap) match {
-      case Left(errMap) => {
-        logger.info("BBbyEPIDRun Bad request: " + errMap.keys.map(k => k + " : " + valueMap.get(k)).mkString("\n    "))
-        form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
-      }
-      case Right(runReq) => {
-        if (isAwait(valueMap)) awaitTag.synchronized {
-          run(valueMap, runReq, response)
-        }
-        else run(valueMap, runReq, response)
-      }
-    }
-  }
-
-  /**
-   * Cancel the procedure.  Remove files and redirect to procedure list.
-   */
-  private def cancel(valueMap: ValueMapT, response: Response) = {
-    sessionDir(valueMap) match {
-      case Some(dir) => Utility.deleteFileTree(dir)
-      case _ => ;
-    }
-    WebRunIndex.redirect(response)
-  }
-
-  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
-    val value = valueMap.get(button.label)
-    value.isDefined && value.get.toString.equals(button.label)
-  }
-
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
 
     val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
-    val redo = valueMap.get(OutputList.redoTag)
-    val del = valueMap.get(OutputList.deleteTag)
-
-    try {
-      0 match {
-        //case _ if (!sessionDefined(valueMap)) => redirectWithNewSession(response);
-        case _ if buttonIs(valueMap, cancelButton) => cancel(valueMap, response)
-        case _ if buttonIs(valueMap, runButton) => runIfDataValid(valueMap, request, response)
-        case _ => emptyForm(valueMap, response)
-      }
-    } catch {
-      case t: Throwable => {
-        internalFailure(response, "Unexpected failure: " + fmtEx(t))
-      }
-    }
+    RunProcedure.handle(valueMap, request, response, this)
   }
 
 }
