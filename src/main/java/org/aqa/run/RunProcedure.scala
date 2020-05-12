@@ -26,6 +26,9 @@ import org.aqa.db.DataValidity
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.aqa.db.CachedUser
+import org.aqa.db.DicomSeries
+import org.aqa.webrun.ExtendedData
+import org.aqa.web.ViewOutput
 
 object RunProcedure extends Logging {
 
@@ -33,20 +36,25 @@ object RunProcedure extends Logging {
   private val cancelButtonName = "Cancel"
 
   private val outputSubdirNamePrefix = "output_"
+  val machineSelectorLabel = "Machine"
 
   def makeForm(runTrait: RunTrait[RunReqClass]) = {
-    val machineSelector = new WebInputSelectMachine("Machine", 6, 0)
+    val machineSelector = new WebInputSelectMachine(machineSelectorLabel, 6, 0)
 
     def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
-      val action = runTrait.procedureUrl + "?" + name + "=" + name
+      val action = runTrait.getProcedure.webUrl + "?" + name + "=" + name
       new FormButton(name, 1, 0, SubUrl.run, action, buttonType)
     }
 
     val runButton = makeButton(runButtonName, true, ButtonType.BtnDefault)
     val cancelButton = makeButton(cancelButtonName, false, ButtonType.BtnDefault)
 
-    val form = new WebForm(runTrait.procedureUrl, Some("BBbyEPID"), List(List(machineSelector), List(runButton, cancelButton)), 10)
+    val form = new WebForm(runTrait.getProcedure.webUrl, Some("BBbyEPID"), List(List(machineSelector), List(runButton, cancelButton)), 10)
     form
+  }
+
+  def formError(msg: String) = {
+    makeForm(???).uploadFileInput.get.label
   }
 
   /**
@@ -215,9 +223,17 @@ object RunProcedure extends Logging {
   }
 
   /**
+   * Make sure that all of the DICOM series are saved in the database.  It is quite possible that the same series will
+   * be submitted more than once, and in those cases nothing will be done.
+   */
+  private def saveDicomSeries(userPK: Long, inputPK: Option[Long], machinePK: Option[Long], alList: Seq[AttributeList]) = {
+    alList.groupBy(al => Util.serInstOfAl(al)).map(series => DicomSeries.insertIfNew(userPK, inputPK, machinePK, series._2))
+  }
+
+  /**
    * Create input + output and start the analysis.
    */
-  private def process(valueMap: ValueMapT, request: Request, response: Response, runTrait: RunTrait[RunReqClass], runReq: RunReqClass, alList: Seq[AttributeList]) = {
+  private def process(valueMap: ValueMapT, request: Request, response: Response, runTrait: RunTrait[RunReqClass], runReq: RunReqClass, alList: Seq[AttributeList]): Unit = {
     val now = new Timestamp((new Date).getTime)
     val PatientID = runTrait.getPatientID(valueMap, alList)
     val machine = runTrait.getMachine(valueMap, alList).get // this will fail if the machine is not defined.
@@ -228,6 +244,8 @@ object RunProcedure extends Logging {
 
     // create DB Input
     val inputWithoutDir = (new Input(None, None, now, userPK, machine.machinePK, PatientID, dataDate)).insert
+    if (userPK.isDefined)
+      saveDicomSeries(userPK.get, inputWithoutDir.inputPK, machine.machinePK, alList)
 
     // The input PK is needed to make the input directory, which creates a circular definition when making an
     // input row, but this is part of the compromise of creating a file hierarchy that has a consistent (as
@@ -269,12 +287,29 @@ object RunProcedure extends Logging {
       out
     }
 
-    /*
-     * Remove previous versions of this output so that there will be no conflict.
-     */
-    removeRedundantOutputFuture(output.outputPK)
-    (input, output)
+    val extendedData = ExtendedData.get(output)
 
+    // Run the analysis safely, catching any exceptions.
+    def runAnalysis = {
+      try {
+        runTrait.run(extendedData, runReq)
+      } catch {
+        case t: Throwable => {
+        }
+      }
+    }
+
+    if (WebUtil.isAwait(valueMap)) {
+      // wait for analysis to finish
+      runAnalysis
+    } else {
+      // run in a thread instead of a Future because the debugger in the Eclipse IDE does not handle Future's.
+      class RunIt extends Runnable {
+        override def run = runAnalysis
+      }
+      (new Thread(new RunIt)).start
+    }
+    ViewOutput.redirectToViewRunProgress(response, WebUtil.isAutoUpload(valueMap), output.outputPK.get)
   }
 
   /**
@@ -287,13 +322,13 @@ object RunProcedure extends Logging {
     val dicomFileList = dicomFilesInSession(valueMap)
     val alList = dicomFileList.map(df => df.attributeList).flatten
 
-    runTrait.validate(valueMap, form, request, response) match {
+    runTrait.validate(valueMap, form, request, response, alList) match {
       case Left(errMap) => {
         logger.info("Bad request: " + errMap.keys.map(k => k + " : " + valueMap.get(k)).mkString("\n    "))
-        form.setFormResponse(valueMap, errMap, runTrait.procedureName, response, Status.CLIENT_ERROR_BAD_REQUEST)
+        form.setFormResponse(valueMap, errMap, runTrait.getProcedure.fullName, response, Status.CLIENT_ERROR_BAD_REQUEST)
       }
       case Right(runReq) => {
-        logger.info("Validated data for " + runTrait.procedureName)
+        logger.info("Validated data for " + runTrait.getProcedure.fullName)
         if (isAwait(valueMap)) awaitTag.synchronized {
           process(valueMap, request, response, runTrait, runReq, alList)
         }
@@ -366,7 +401,7 @@ object RunProcedure extends Logging {
   }
 
   private def emptyForm(valueMap: ValueMapT, response: Response, runTrait: RunTrait[RunReqClass]): Unit = {
-    makeForm(runTrait).setFormResponse(valueMap, styleNone, runTrait.procedureName, response, Status.SUCCESS_OK)
+    makeForm(runTrait).setFormResponse(valueMap, styleNone, runTrait.getProcedure.fullName, response, Status.SUCCESS_OK)
   }
 
   private def buttonIs(valueMap: ValueMapT, buttonName: String): Boolean = {
@@ -387,7 +422,7 @@ object RunProcedure extends Logging {
 
   def handle(valueMap: ValueMapT, request: Request, response: Response, runTrait: RunTrait[RunReqClass]): Unit = {
 
-    val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
+    //val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
     val redoValue = valueMap.get(OutputList.redoTag)
     val delValue = valueMap.get(OutputList.deleteTag)
 

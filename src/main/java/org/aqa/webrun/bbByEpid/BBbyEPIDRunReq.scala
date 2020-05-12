@@ -12,7 +12,7 @@ import org.aqa.run.RunReqClass
  */
 class BBbyEPIDRunReq(alList: Seq[AttributeList]) extends RunReqClass(alList) {
 
-  val epidList = alList.map(al => Util.modalityOfAl(al).equals("RTIMAGE"))
+  val epidList = alList.filter(al => Util.modalityOfAl(al).equals("RTIMAGE"))
 
   val sopOfRTPlan: Option[String] = {
     try {

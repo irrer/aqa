@@ -374,8 +374,10 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
               (WebUtil.awaitTag, await.toString),
               (WebUtil.autoUploadTag, isAuto.toString))
             RunProcedure.handle(valueMap, response.getRequest, response, runTrait)
-          } else
-            BBbyEPIDRun.redo(outputPK, response.getRequest, response, await, isAuto)
+          } else {
+            // BBbyEPIDRun.redo(outputPK, response.getRequest, response, await, isAuto)// TODO remove obsolete code
+            Trace.trace
+          }
         }
       }
     }

@@ -339,11 +339,31 @@ object DicomSeries extends Logging {
   }
 
   /**
+   * Return true if the DICOM series with the given seriesInstanceUID is in the database.
+   */
+  private def seriesExists(seriesInstanceUID: String): Boolean = {
+    val action = for {
+      dicomSeries <- query if ((dicomSeries.seriesInstanceUID === seriesInstanceUID))
+    } yield (dicomSeries.seriesInstanceUID)
+    val size = Db.run(action.length.result)
+    size > 0
+  }
+
+  /**
    * Add this series to the database if it is not already in.  Use the SeriesInstanceUID to determine if it is already in the database.
    */
   def insertIfNew(userPK: Long, inputPK: Option[Long], machinePK: Option[Long], alList: Seq[AttributeList]): Unit = {
-    val current = DicomSeries.getBySeriesInstanceUID(Util.serInstOfAl(alList.head))
-    if (current.isEmpty) {
+    if (alList.isEmpty) throw new IllegalArgumentException("List of DICOM slices is empty")
+    val uidList = alList.map(al => Util.serInstOfAl(al)).distinct
+    if (uidList.size > 1) throw new IllegalArgumentException("List of DICOM slices have more than one series UID: " + uidList.mkString("    "))
+    if (uidList.isEmpty) throw new IllegalArgumentException("List of DICOM slices has no SeriesInstanceUID's")
+
+    if (seriesExists(uidList.head)) {
+      logger.info("Not inserting series into the database because it is already in the database")
+      // TODO there are some odd cases where RTPLAN series may be created incrementally, one 'slice' at
+      // a time over months.  With this logic, the first slice would be stored, and subsequent ones would
+      // be assumed redundant and not stored.  Will have to think about how to handle this.
+    } else {
       val ds = DicomSeries.makeDicomSeries(userPK, inputPK, machinePK, alList)
       if (ds.isDefined) {
         ds.get.insert

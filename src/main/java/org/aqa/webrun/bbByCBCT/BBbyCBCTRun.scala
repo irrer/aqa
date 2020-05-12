@@ -107,7 +107,7 @@ object BBbyCBCTRun extends Logging {
 
     def redo(outputPK: Long) = {
       logger.info("BBbyCBCTRun starting redo of EPID output " + outputPK)
-      BBbyEPIDRun.redo(outputPK, response.getRequest, response, true, true)
+      // BBbyEPIDRun.redo(outputPK, response.getRequest, response, true, true)  // TODO fix after transition to run2
       logger.info("BBbyCBCTRun finished redo of EPID output " + outputPK)
     }
 
