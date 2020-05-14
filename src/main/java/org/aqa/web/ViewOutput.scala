@@ -13,7 +13,6 @@ import org.restlet.Context
 import org.restlet.data.MediaType
 import org.restlet.data.Status
 import org.aqa.Util
-import org.aqa.run.OutputPending
 import java.io.File
 import org.restlet.Restlet
 import org.aqa.Config

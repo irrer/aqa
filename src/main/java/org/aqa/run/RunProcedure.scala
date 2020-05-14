@@ -29,6 +29,12 @@ import org.aqa.db.CachedUser
 import org.aqa.db.DicomSeries
 import org.aqa.webrun.ExtendedData
 import org.aqa.web.ViewOutput
+import sys.process._
+import scala.sys.process._
+import scala.concurrent._
+import scala.concurrent.duration.Duration
+import java.util.concurrent.TimeUnit
+import org.aqa.DicomFile
 
 object RunProcedure extends Logging {
 
@@ -51,10 +57,6 @@ object RunProcedure extends Logging {
 
     val form = new WebForm(runTrait.getProcedure.webUrl, Some("BBbyEPID"), List(List(machineSelector), List(runButton, cancelButton)), 10)
     form
-  }
-
-  def formError(msg: String) = {
-    makeForm(???).uploadFileInput.get.label
   }
 
   /**
@@ -176,42 +178,29 @@ object RunProcedure extends Logging {
   /**
    * Remove the output, which removes data pointing to it.  Also remove the corresponding output directory.
    */
-  def removeRedundantOutput(outputPK: Option[Long]): Unit = {
-    def del(output: Output) = {
-      try {
-        Output.delete(output.outputPK.get)
-        Utility.deleteFileTree(output.dir)
-        if (Output.listByInputPK(output.inputPK).isEmpty) {
-          val input = Input.get(output.inputPK)
-          Input.delete(output.inputPK)
-          Utility.deleteFileTree(input.get.dir)
-        }
-        logger.info("Removed redundant output " + output)
-      } catch {
-        case t: Throwable =>
-          logger.warn("removeRedundantOutput.del Unexpected error cleaning up redundant output.  outputPK: " + outputPK + " : " + t.getMessage)
-      }
-
-    }
+  private def removeOutput(output: Output): Unit = {
     try {
-      val output = Output.get(outputPK.get).get
-      val redundant = Output.redundantWith(output)
-      redundant.map(ro => del(ro))
+      Output.delete(output.outputPK.get)
+      Util.deleteFileTreeSafely(output.dir)
+      logger.info("Removed output " + output)
     } catch {
       case t: Throwable =>
-        logger.warn("removeRedundantOutput Unexpected error cleaning up redundant output.  outputPK: " + outputPK + " : " + t.getMessage)
+        logger.warn("removeOutput Unexpected error removing output.  oldOutput: " + output + " : " + t.getMessage)
     }
   }
 
   /**
-   * Wrap <code>removeRedundantOutput</code> in a Future.
+   * Remove an input and its directory, which will include its child directories (including Output directories).
    */
-  def removeRedundantOutputFuture(outputPK: Option[Long]): Future[Unit] = {
-    val later = Future {
-      val future = removeRedundantOutput(outputPK)
-      future
+  private def removeInput(inputPK: Long): Unit = {
+    Input.get(inputPK) match {
+      case Some(input) => {
+        Util.deleteFileTreeSafely(input.dir)
+        logger.info("Deleted input dir " + input.dir + " and its child output dirs.")
+        Input.delete(inputPK)
+      }
+      case _ => ;
     }
-    later
   }
 
   /**
@@ -231,8 +220,74 @@ object RunProcedure extends Logging {
    * Make sure that all of the DICOM series are saved in the database.  It is quite possible that the same series will
    * be submitted more than once, and in those cases nothing will be done.
    */
-  private def saveDicomSeries(userPK: Long, inputPK: Option[Long], machinePK: Option[Long], alList: Seq[AttributeList]) = {
-    alList.groupBy(al => Util.serInstOfAl(al)).map(series => DicomSeries.insertIfNew(userPK, inputPK, machinePK, series._2))
+  private def saveDicomSeries(userPK: Long, inputPK: Option[Long], machinePK: Option[Long], alList: Seq[AttributeList]): Unit = {
+
+    def insertRtplanIfNew(rtplan: AttributeList): Unit = {
+      val existing = DicomSeries.getBySopInstanceUID(Util.sopOfAl(rtplan))
+      if (existing.isEmpty) {
+        DicomSeries.makeDicomSeries(userPK, inputPK, machinePK, Seq(rtplan)) match {
+          case Some(dicomSeries) => dicomSeries.insert
+          case _ => logger.warn("Unable to create RTPLAN DicomSeries")
+        }
+      }
+    }
+
+    // handle RTPLANS differently than other series
+    val rtplanAndOther = alList.partition(al => Util.modalityOfAl(al).trim.equalsIgnoreCase("RTPLAN"))
+    val rtplanList = rtplanAndOther._1
+    // list of non-RTPLAN series
+    val seriesList = rtplanAndOther._2.groupBy(al => Util.serInstOfAl(al)).map(s => s._2)
+
+    rtplanList.map(rtplan => insertRtplanIfNew(rtplan))
+
+    val insertedList = seriesList.map(series => DicomSeries.makeDicomSeries(userPK, inputPK, machinePK, series)).flatten.map(series => series.insert)
+    logger.info("Number of non-RTPLAN DicomSeries inserted: " + insertedList.size)
+  }
+
+  /**
+   * Run the analysis safely, catching any exceptions.  Enforce a timeout, and save the results.
+   * The results include the termination status, finish date, and generated files.
+   *
+   * Strictly speaking, the timeout is not enforced.  If the analysis is running in a separate
+   * thread, there is no way to kill it other than restarting the service.
+   *
+   * Restarting the service might be ok if logic was put in to wait until no analysis was being done.  TODO
+   */
+  private def runAnalysis(runTrait: RunTrait[RunReqClass], runReq: RunReqClass, extendedData: ExtendedData) = {
+    try {
+      val timeout = Duration(extendedData.procedure.timeoutInMs, TimeUnit.MILLISECONDS)
+      val future = Future[ProcedureStatus.Value] {
+        try {
+          runTrait.run(extendedData, runReq)
+        } catch {
+          case t: Throwable => {
+            ProcedureStatus.crash
+          }
+        }
+      }
+      val status = Await.result(future, timeout)
+      saveResults(status, extendedData)
+    } catch {
+      case timeout: TimeoutException => {
+        // TODO should kill the running procedure, but there is no good way to do that.
+        saveResults(ProcedureStatus.timeout, extendedData)
+      }
+    }
+  }
+
+  /**
+   * Save the process results to the database.
+   */
+  private def saveResults(newStatus: ProcedureStatus.Value, extendedData: ExtendedData) = {
+    // write the status to a little file in the output directory
+    ProcedureStatus.writeProcedureStatus(extendedData.output.dir, newStatus)
+
+    // save the finish status and finish date to the Output in the database
+    extendedData.output.updateStatusAndFinishDate(newStatus.toString, new Date)
+
+    // zip up the conents of the Output directory and save them
+    val zippedContent = extendedData.output.makeZipOfFiles
+    extendedData.output.updateData(zippedContent)
   }
 
   /**
@@ -298,23 +353,21 @@ object RunProcedure extends Logging {
 
     val extendedData = ExtendedData.get(output)
 
-    // Run the analysis safely, catching any exceptions.
-    def runAnalysis = {
-      try {
-        runTrait.run(extendedData, runReq)
-      } catch {
-        case t: Throwable => {
-        }
-      }
+    // If this is the same data being re-submitted, then remove the old version of the analysis.  The
+    // usual reasons are that the analysis was changed or the analysis aborted.
+    Future {
+      val redundantList = Output.redundantWith(output)
+      redundantList.map(o => removeOutput(o))
+      redundantList.map(o => removeInput(o.inputPK))
     }
 
     if (WebUtil.isAwait(valueMap)) {
       // wait for analysis to finish
-      runAnalysis
+      runAnalysis(runTrait, runReq, extendedData)
     } else {
-      // run in a thread instead of a Future because the debugger in the Eclipse IDE does not handle Future's.
+      // run in a thread instead of a Future because the debugger in the Eclipse IDE does not handle Future's nicely.
       class RunIt extends Runnable {
-        override def run = runAnalysis
+        override def run = runAnalysis(runTrait, runReq, extendedData)
       }
       (new Thread(new RunIt)).start
     }
@@ -364,6 +417,10 @@ object RunProcedure extends Logging {
     same
   }
 
+  /**
+   * Re-process the given data.  Input data is not touched, old Output is deleted, along with
+   * its file tree and the data that references it.
+   */
   private def redo(valueMap: ValueMapT, response: Response, runTrait: RunTrait[RunReqClass]) = {
     val request = response.getRequest
     val oldOutput = {
@@ -400,7 +457,29 @@ object RunProcedure extends Logging {
           val out = tempOutput.insert
           out
         }
-        removeRedundantOutputFuture(newOutput.outputPK)
+        // now that new Output has been created, remove any old redundant inputs and outputs.
+        Future {
+          val redundantList = Output.redundantWith(newOutput)
+          redundantList.map(o => removeOutput(o))
+        }
+
+        // instantiate the input files from originals
+        val extendedData = ExtendedData.get(newOutput)
+        val inputDir = extendedData.input.dir
+        Util.deleteFileTreeSafely(inputDir)
+        Input.getFilesFromDatabase(extendedData.input.inputPK.get, inputDir.getParentFile)
+
+        // read the DICOM files
+        val alList = Util.listDirFiles(inputDir).map(f => new DicomFile(f)).map(df => df.attributeList).flatten
+        val runReq = runTrait.makeRunReq(alList)
+
+        class RunIt extends Runnable {
+          override def run = runAnalysis(runTrait, runReq, extendedData)
+        }
+        (new Thread(new RunIt)).start
+
+        ViewOutput.redirectToViewRunProgress(response, WebUtil.isAutoUpload(valueMap), newOutput.outputPK.get)
+
       } else {
         "not authorized" // TODO
       }
@@ -431,7 +510,6 @@ object RunProcedure extends Logging {
 
   def handle(valueMap: ValueMapT, request: Request, response: Response, runTrait: RunTrait[RunReqClass]): Unit = {
 
-    //val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
     val redoValue = valueMap.get(OutputList.redoTag)
     val delValue = valueMap.get(OutputList.deleteTag)
 

@@ -562,7 +562,6 @@ object Run extends Logging {
     startProcessMonitor(actProc, procedure.timeoutInMs)
 
     // show default summary as web page
-    val clientId = OutputPending.add(request, output)
     ViewOutput.redirectToViewRunProgress(response, WebUtil.emptyValueMap, output.outputPK.get)
   }
 

@@ -265,6 +265,16 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     result
   }
 
+  
+  
+  /**
+   * Make the run requirements from the attribute lists.
+   */
+  override def makeRunReq(alList: Seq[AttributeList]): BBbyEPIDRunReq = {
+    val epidList = alList.filter(al => Util.modalityOfAl(al).trim.equalsIgnoreCase("RTIMAGE"))
+    new BBbyEPIDRunReq(epidList)
+  }
+
   /**
    * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
    */

@@ -16,15 +16,20 @@ import org.aqa.db.Procedure
 import org.aqa.web.WebUtil
 
 trait RunTrait[RunReqClassType] extends Logging {
+
+  /** Run the actual analysis.  This must create a display.html file in the output directory. */
   def run(extendedData: ExtendedData, runReq: RunReqClassType): ProcedureStatus.Value;
+
   //def redo(extendedData: ExtendedData, runReq: RunReqClassType): ProcedureStatus.Value;
-  def validate(valueMap: ValueMapT, form: WebForm, request: Request, response: Response, 
-      alList: Seq[AttributeList]): Either[StyleMapT, RunReqClass];
+  def validate(valueMap: ValueMapT, form: WebForm, request: Request, response: Response,
+    alList: Seq[AttributeList]): Either[StyleMapT, RunReqClass];
+
+  def makeRunReq(alList: Seq[AttributeList]): RunReqClass;
   def getMachine(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Machine];
   def getPatientID(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[String];
   def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp];
   def getProcedure: Procedure;
 
   /** Convenience function for constructing error messages to display to user on web page. */
-  def formError(msg: String) =  Left(WebUtil.Error.make(WebUtil.uploadFileLabel, msg))
+  def formError(msg: String) = Left(WebUtil.Error.make(WebUtil.uploadFileLabel, msg))
 }
