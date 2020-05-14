@@ -163,6 +163,7 @@ object RunProcedure extends Logging {
       }
     }
 
+    newDir.getParentFile.mkdirs
     if (renameUsingOldIo) true
     else {
       if (renameUsingNio) true
@@ -222,6 +223,10 @@ object RunProcedure extends Logging {
     file
   }
 
+  private def getMachineFromSelector: Option[Machine] = {
+    ???
+  }
+
   /**
    * Make sure that all of the DICOM series are saved in the database.  It is quite possible that the same series will
    * be submitted more than once, and in those cases nothing will be done.
@@ -236,7 +241,12 @@ object RunProcedure extends Logging {
   private def process(valueMap: ValueMapT, request: Request, response: Response, runTrait: RunTrait[RunReqClass], runReq: RunReqClass, alList: Seq[AttributeList]): Unit = {
     val now = new Timestamp((new Date).getTime)
     val PatientID = runTrait.getPatientID(valueMap, alList)
-    val machine = runTrait.getMachine(valueMap, alList).get // this will fail if the machine is not defined.
+    val machine: Machine = {
+      runTrait.getMachine(valueMap, alList) match {
+        case Some(mach) => mach
+        case _ => getMachineFromSelector.get
+      }
+    }
     val user = getUser(valueMap)
     val dataDate = runTrait.getDataDate(valueMap, alList)
 
@@ -253,7 +263,6 @@ object RunProcedure extends Logging {
     val inputDir = makeInputDir(machine, runTrait.getProcedure, inputWithoutDir.inputPK.get)
 
     // move input files to their final resting place
-    inputDir.getParentFile.mkdirs
     val oldDir = sessionDir(valueMap)
     if (oldDir.isDefined)
       renameFileTryingPersistently(oldDir.get, inputDir)
@@ -267,7 +276,7 @@ object RunProcedure extends Logging {
     input.putFilesInDatabaseFuture(inputDir)
 
     val outputDir = makeOutputDir(inputDir, now)
-    outputDir.mkdirs // create output directory
+    //outputDir.mkdirs // create output directory
 
     val output = {
       val tempOutput = new Output(

@@ -212,8 +212,10 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
   override def getMachine(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Machine] = {
     val epidList = getEpidList(alList)
+    val dsnList = epidList.map(al => al.get(TagFromName.DeviceSerialNumber)).filterNot(_ == null).map(a => a.getSingleStringValueOrNull).filterNot(_ == null).distinct
+    val machList = dsnList.map(dsn => Machine.findMachinesBySerialNumber(dsn)).flatten
 
-    ??? // TODO
+    machList.headOption
   }
 
   override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp] = {
