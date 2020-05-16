@@ -253,25 +253,38 @@ object RunProcedure extends Logging {
    *
    * Restarting the service might be ok if logic was put in to wait until no analysis was being done.  TODO
    */
-  private def runAnalysis(runTrait: RunTrait[RunReqClass], runReq: RunReqClass, extendedData: ExtendedData) = {
-    try {
-      val timeout = Duration(extendedData.procedure.timeoutInMs, TimeUnit.MILLISECONDS)
-      val future = Future[ProcedureStatus.Value] {
-        try {
-          runTrait.run(extendedData, runReq)
-        } catch {
-          case t: Throwable => {
-            ProcedureStatus.crash
+  private def runAnalysis(valueMap: ValueMapT, runTrait: RunTrait[RunReqClass], runReq: RunReqClass, extendedData: ExtendedData) = {
+    def runIt = {
+      try {
+        val timeout = Duration(extendedData.procedure.timeoutInMs, TimeUnit.MILLISECONDS)
+        val future = Future[ProcedureStatus.Value] {
+          try {
+            runTrait.run(extendedData, runReq)
+          } catch {
+            case t: Throwable => {
+              ProcedureStatus.crash
+            }
           }
         }
+        val status = Await.result(future, timeout)
+        saveResults(status, extendedData)
+      } catch {
+        case timeout: TimeoutException => {
+          // TODO should kill the running procedure, but there is no good way to do that.
+          saveResults(ProcedureStatus.timeout, extendedData)
+        }
       }
-      val status = Await.result(future, timeout)
-      saveResults(status, extendedData)
-    } catch {
-      case timeout: TimeoutException => {
-        // TODO should kill the running procedure, but there is no good way to do that.
-        saveResults(ProcedureStatus.timeout, extendedData)
+    }
+
+    if (WebUtil.isAwait(valueMap)) {
+      // wait for analysis to finish
+      runIt
+    } else {
+      // run in a thread instead of a Future because the debugger in the Eclipse IDE does not handle Future's nicely.
+      class RunIt extends Runnable {
+        override def run = runIt
       }
+      (new Thread(new RunIt)).start
     }
   }
 
@@ -285,9 +298,41 @@ object RunProcedure extends Logging {
     // save the finish status and finish date to the Output in the database
     extendedData.output.updateStatusAndFinishDate(newStatus.toString, new Date)
 
-    // zip up the conents of the Output directory and save them
+    // zip up the contents of the Output directory and save them
     val zippedContent = extendedData.output.makeZipOfFiles
     extendedData.output.updateData(zippedContent)
+  }
+
+  /**
+   * Make a new input for the incoming data.  Generally this is purely new data, but there is the possibility that data that has
+   * already been processed will be re-processed.  In that case, treat the data as new.  Afterwards the old version of the Input
+   * will be removed.  The intention is to allow a complete redo of a data set, and for there to be only one set of analysis results
+   * for a given set of data.
+   */
+  private def makeNewInput(sessionDir: Option[File], uploadDate: Timestamp, userPK: Option[Long], PatientID: Option[String],
+    dataDate: Option[Timestamp], machine: Machine, procedure: Procedure, alList: Seq[AttributeList]): Input = {
+    // create DB Input
+    val inputWithoutDir = (new Input(None, None, uploadDate, userPK, machine.machinePK, PatientID, dataDate)).insert
+    if (userPK.isDefined)
+      saveDicomSeries(userPK.get, inputWithoutDir.inputPK, machine.machinePK, alList)
+
+    // The input PK is needed to make the input directory, which creates a circular definition when making an
+    // input row, but this is part of the compromise of creating a file hierarchy that has a consistent (as
+    // practical) link to the database.
+    val inputDir = makeInputDir(machine, procedure, inputWithoutDir.inputPK.get)
+
+    // move input files to their final resting place
+    if (sessionDir.isDefined)
+      renameFileTryingPersistently(sessionDir.get, inputDir)
+    else
+      inputDir.mkdirs
+    if (!inputDir.exists)
+      throw new RuntimeException("Unable to rename temporary directory " + sessionDir + " to input directory " + inputDir.getAbsolutePath)
+
+    inputWithoutDir.updateDirectory(inputDir)
+    val input = Input.get(inputWithoutDir.inputPK.get).get // update the directory
+    input.putFilesInDatabaseFuture(inputDir)
+    input
   }
 
   /**
@@ -307,31 +352,8 @@ object RunProcedure extends Logging {
 
     val userPK = if (user.isDefined) user.get.userPK else None
 
-    // create DB Input
-    val inputWithoutDir = (new Input(None, None, now, userPK, machine.machinePK, PatientID, dataDate)).insert
-    if (userPK.isDefined)
-      saveDicomSeries(userPK.get, inputWithoutDir.inputPK, machine.machinePK, alList)
-
-    // The input PK is needed to make the input directory, which creates a circular definition when making an
-    // input row, but this is part of the compromise of creating a file hierarchy that has a consistent (as
-    // practical) link to the database.
-    val inputDir = makeInputDir(machine, runTrait.getProcedure, inputWithoutDir.inputPK.get)
-
-    // move input files to their final resting place
-    val oldDir = sessionDir(valueMap)
-    if (oldDir.isDefined)
-      renameFileTryingPersistently(oldDir.get, inputDir)
-    else
-      inputDir.mkdirs
-    if (!inputDir.exists)
-      throw new RuntimeException("Unable to rename temporary directory " + oldDir + " to input directory " + inputDir.getAbsolutePath)
-
-    inputWithoutDir.updateDirectory(inputDir)
-    val input = Input.get(inputWithoutDir.inputPK.get).get // update the directory
-    input.putFilesInDatabaseFuture(inputDir)
-
-    val outputDir = makeOutputDir(inputDir, now)
-    //outputDir.mkdirs // create output directory
+    val input = makeNewInput(sessionDir(valueMap), now, userPK, PatientID, dataDate, machine, runTrait.getProcedure, alList)
+    val outputDir = makeOutputDir(input.dir, now)
 
     val output = {
       val tempOutput = new Output(
@@ -357,20 +379,13 @@ object RunProcedure extends Logging {
     // usual reasons are that the analysis was changed or the analysis aborted.
     Future {
       val redundantList = Output.redundantWith(output)
+      logger.info("Removing old output(s): " + redundantList.map(r => "  outPK: " + r.outputPK + "  inPK: " + r.inputPK).mkString("        "))
       redundantList.map(o => removeOutput(o))
       redundantList.map(o => removeInput(o.inputPK))
     }
 
-    if (WebUtil.isAwait(valueMap)) {
-      // wait for analysis to finish
-      runAnalysis(runTrait, runReq, extendedData)
-    } else {
-      // run in a thread instead of a Future because the debugger in the Eclipse IDE does not handle Future's nicely.
-      class RunIt extends Runnable {
-        override def run = runAnalysis(runTrait, runReq, extendedData)
-      }
-      (new Thread(new RunIt)).start
-    }
+    runAnalysis(valueMap, runTrait, runReq, extendedData)
+
     ViewOutput.redirectToViewRunProgress(response, WebUtil.isAutoUpload(valueMap), output.outputPK.get)
   }
 
@@ -391,10 +406,7 @@ object RunProcedure extends Logging {
       }
       case Right(runReq) => {
         logger.info("Validated data for " + runTrait.getProcedure.fullName)
-        if (isAwait(valueMap)) awaitTag.synchronized {
-          process(valueMap, request, response, runTrait, runReq, alList)
-        }
-        else process(valueMap, request, response, runTrait, runReq, alList)
+        process(valueMap, request, response, runTrait, runReq, alList)
       }
     }
   }
@@ -440,6 +452,7 @@ object RunProcedure extends Logging {
         val now = new Timestamp((new Date).getTime)
         val user = CachedUser.get(request)
 
+        val machinePK = if (oldOutput.get.machinePK.isDefined) oldOutput.get.machinePK else input.get.machinePK
         val newOutput = {
           val tempOutput = new Output(
             outputPK = None,
@@ -451,13 +464,15 @@ object RunProcedure extends Logging {
             finishDate = None,
             dataDate = input.get.dataDate,
             analysisDate = Some(now),
-            machinePK = oldOutput.get.machinePK,
+            machinePK,
             status = ProcedureStatus.running.toString,
             dataValidity = DataValidity.valid.toString)
           val out = tempOutput.insert
           out
         }
         // now that new Output has been created, remove any old redundant inputs and outputs.
+        // Even if something goes horribly wrong after this (server crash, analysis crash),
+        // having the output in the database gives visibility to the user via the Results screen.
         Future {
           val redundantList = Output.redundantWith(newOutput)
           redundantList.map(o => removeOutput(o))
@@ -466,6 +481,8 @@ object RunProcedure extends Logging {
         // instantiate the input files from originals
         val extendedData = ExtendedData.get(newOutput)
         val inputDir = extendedData.input.dir
+        // force the contents of the input directory to be reestablished so that they are
+        // exactly the same as the first time this was run.
         Util.deleteFileTreeSafely(inputDir)
         Input.getFilesFromDatabase(extendedData.input.inputPK.get, inputDir.getParentFile)
 
@@ -473,13 +490,9 @@ object RunProcedure extends Logging {
         val alList = Util.listDirFiles(inputDir).map(f => new DicomFile(f)).map(df => df.attributeList).flatten
         val runReq = runTrait.makeRunReq(alList)
 
-        class RunIt extends Runnable {
-          override def run = runAnalysis(runTrait, runReq, extendedData)
-        }
-        (new Thread(new RunIt)).start
+        runAnalysis(valueMap, runTrait, runReq, extendedData)
 
         ViewOutput.redirectToViewRunProgress(response, WebUtil.isAutoUpload(valueMap), newOutput.outputPK.get)
-
       } else {
         "not authorized" // TODO
       }

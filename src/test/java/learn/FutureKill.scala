@@ -15,11 +15,11 @@ object FutureKill {
     def elapsed: String = (System.currentTimeMillis - start).formatted("%8d    ")
 
     val forever = Future {
-      //  while (true) {
-      println(elapsed + "I am forever ")
-      Thread.sleep(3000)
-      println(elapsed + "forever done")
-      //  }
+      while (true) {
+        println(elapsed + "I am forever ")
+        Thread.sleep(1000)
+        println(elapsed + "forever done")
+      }
     }
 
     class WaitForIt extends Runnable {
