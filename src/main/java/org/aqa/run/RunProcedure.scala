@@ -35,6 +35,9 @@ import scala.concurrent._
 import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
 import org.aqa.DicomFile
+import scala.util.Try
+import com.pixelmed.dicom.TagFromName
+import edu.umro.ScalaUtil.DicomUtil
 
 object RunProcedure extends Logging {
 
@@ -43,6 +46,9 @@ object RunProcedure extends Logging {
 
   private val outputSubdirNamePrefix = "output_"
   val machineSelectorLabel = "Machine"
+
+  /** Convenience function for constructing error messages to display to user on web page. */
+  def formError(msg: String) = Left(WebUtil.Error.make(WebUtil.uploadFileLabel, msg))
 
   def makeForm(runTrait: RunTrait[RunReqClass]) = {
     val machineSelector = new WebInputSelectMachine(machineSelectorLabel, 6, 0)
@@ -143,8 +149,8 @@ object RunProcedure extends Logging {
             Thread.sleep(20 * 1000)
             Util.deleteFileTreeSafely(f)
           }
-          if (f.exists) logger.info("Was able to remove file " + f.getAbsolutePath)
-          else logger.warn("Was not able to remove file " + f.getAbsolutePath)
+          if (f.exists) logger.info("Was able to delete file " + f.getAbsolutePath)
+          else logger.warn("Was not able to delete file " + f.getAbsolutePath)
         }
 
       }
@@ -176,23 +182,42 @@ object RunProcedure extends Logging {
   }
 
   /**
-   * Remove the output, which removes data pointing to it.  Also remove the corresponding output directory.
+   * Tell the user that the redo is forbidden and why.  Also give them a redirect back to the list of results.
    */
-  private def removeOutput(output: Output): Unit = {
+  private def forbidRedo(response: Response, msg: String, outputPK: Option[Long]) {
+    val content = {
+      <div class="row">
+        <div class="col-md-4 col-md-offset-2">
+          { msg }
+          <p></p>
+          <a href={ OutputList.path } class="btn btn-default" role="button">Back</a>
+        </div>
+      </div>
+    }
+
+    logger.info(msg + "  ouputPK: " + outputPK)
+    val text = wrapBody(content, "Redo not permitted")
+    setResponse(text, response, Status.CLIENT_ERROR_FORBIDDEN)
+  }
+
+  /**
+   * Delete the output, which deletes data pointing to it.  Also delete the corresponding output directory.
+   */
+  private def deleteOutput(output: Output): Unit = {
     try {
       Output.delete(output.outputPK.get)
       Util.deleteFileTreeSafely(output.dir)
-      logger.info("Removed output " + output)
+      logger.info("Deleted output " + output)
     } catch {
       case t: Throwable =>
-        logger.warn("removeOutput Unexpected error removing output.  oldOutput: " + output + " : " + t.getMessage)
+        logger.warn("deleteOutput Unexpected error removing output.  oldOutput: " + output + " : " + t.getMessage)
     }
   }
 
   /**
-   * Remove an input and its directory, which will include its child directories (including Output directories).
+   * Delete an input and its directory, which will include its child directories (including Output directories).
    */
-  private def removeInput(inputPK: Long): Unit = {
+  private def deleteInput(inputPK: Long): Unit = {
     Input.get(inputPK) match {
       case Some(input) => {
         Util.deleteFileTreeSafely(input.dir)
@@ -212,8 +237,26 @@ object RunProcedure extends Logging {
     file
   }
 
-  private def getMachineFromSelector: Option[Machine] = {
-    ???
+  /**
+   * Get from machine web selector list.
+   */
+  def getMachineFromSelector(valueMap: ValueMapT): Option[Machine] = {
+    val chosenMachine = for (pkTxt <- valueMap.get(machineSelectorLabel); pk <- Util.stringToLong(pkTxt); m <- Machine.get(pk)) yield m
+    chosenMachine
+  }
+
+  /**
+   * If the serial number for the machine is not already set, then set it by using the DeviceSerialNumber in the RTIMAGE.
+   */
+  def setMachineSerialNumber(machine: Machine, DeviceSerialNumber: String) = {
+    if (machine.serialNumber.isEmpty) {
+      try {
+        logger.info("Establishing machine " + machine.id + "'s DeviceSerialNumber as " + DeviceSerialNumber)
+        Machine.setSerialNumber(machine.machinePK.get, DeviceSerialNumber)
+      } catch {
+        case t: Throwable => logger.warn("Unable to update machine serial number " + machine + " : " + t)
+      }
+    }
   }
 
   /**
@@ -251,7 +294,9 @@ object RunProcedure extends Logging {
    * Strictly speaking, the timeout is not enforced.  If the analysis is running in a separate
    * thread, there is no way to kill it other than restarting the service.
    *
-   * Restarting the service might be ok if logic was put in to wait until no analysis was being done.  TODO
+   * To handle timeouts, restarting the service might be ok if logic was put in to wait until no
+   * analysis was being done.  Restarting will probably never be implemented because the better
+   * solution is to fix the analysis so that it doesn't hang.
    */
   private def runAnalysis(valueMap: ValueMapT, runTrait: RunTrait[RunReqClass], runReq: RunReqClass, extendedData: ExtendedData) = {
     def runIt = {
@@ -270,7 +315,7 @@ object RunProcedure extends Logging {
         saveResults(status, extendedData)
       } catch {
         case timeout: TimeoutException => {
-          // TODO should kill the running procedure, but there is no good way to do that.
+          // should kill the running procedure, but there is no good way to do that.
           saveResults(ProcedureStatus.timeout, extendedData)
         }
       }
@@ -306,7 +351,7 @@ object RunProcedure extends Logging {
   /**
    * Make a new input for the incoming data.  Generally this is purely new data, but there is the possibility that data that has
    * already been processed will be re-processed.  In that case, treat the data as new.  Afterwards the old version of the Input
-   * will be removed.  The intention is to allow a complete redo of a data set, and for there to be only one set of analysis results
+   * will be deleted.  The intention is to allow a complete redo of a data set, and for there to be only one set of analysis results
    * for a given set of data.
    */
   private def makeNewInput(sessionDir: Option[File], uploadDate: Timestamp, userPK: Option[Long], PatientID: Option[String],
@@ -335,21 +380,47 @@ object RunProcedure extends Logging {
     input
   }
 
+  def getDeviceSerialNumber(alList: Seq[AttributeList]): Seq[String] = {
+    val serNoByImageList = {
+      alList.
+        map(al => DicomUtil.findAllSingle(al, TagFromName.DeviceSerialNumber)).flatten.
+        map(serNo => serNo.getSingleStringValueOrEmptyString).distinct
+    }
+    serNoByImageList
+  }
+
+  /**
+   * Validate the machine selection.
+   */
+  def validateMachineSelection(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, Machine] = {
+    val serNoByImage = getDeviceSerialNumber(alList)
+
+    val machList = serNoByImage.distinct.map(serNo => Machine.findMachinesBySerialNumber(serNo)).flatten
+
+    val distinctMachListSerNo = machList.map(mach => mach.machinePK).flatten.distinct
+
+    // machine user chose from list
+    val chosenMachine = RunProcedure.getMachineFromSelector(valueMap)
+
+    val result: Either[StyleMapT, Machine] = 0 match {
+      case _ if (distinctMachListSerNo.size == 1) => Right(machList.head)
+      case _ if (chosenMachine.isDefined) => Right(chosenMachine.get)
+      case _ if (distinctMachListSerNo.size > 1) => formError("Files come from more than one machine; please Cancel and try again.")
+      case _ => formError("Unknown machine.  Please choose from the 'Machine' list below or click Cancel and then use the Administration interface to add it.")
+    }
+    result
+  }
+
   /**
    * Create input + output and start the analysis.
    */
   private def process(valueMap: ValueMapT, request: Request, response: Response, runTrait: RunTrait[RunReqClass], runReq: RunReqClass, alList: Seq[AttributeList]): Unit = {
     val now = new Timestamp((new Date).getTime)
     val PatientID = runTrait.getPatientID(valueMap, alList)
-    val machine: Machine = {
-      runTrait.getMachine(valueMap, alList) match {
-        case Some(mach) => mach
-        case _ => getMachineFromSelector.get
-      }
-    }
+    val machine = validateMachineSelection(valueMap, alList).right.get
     val user = getUser(valueMap)
     val dataDate = runTrait.getDataDate(valueMap, alList)
-
+    setMachineSerialNumber(machine, runTrait.getMachineDeviceSerialNumber(runReq))
     val userPK = if (user.isDefined) user.get.userPK else None
 
     val input = makeNewInput(sessionDir(valueMap), now, userPK, PatientID, dataDate, machine, runTrait.getProcedure, alList)
@@ -375,13 +446,13 @@ object RunProcedure extends Logging {
 
     val extendedData = ExtendedData.get(output)
 
-    // If this is the same data being re-submitted, then remove the old version of the analysis.  The
+    // If this is the same data being re-submitted, then delete the old version of the analysis.  The
     // usual reasons are that the analysis was changed or the analysis aborted.
     Future {
       val redundantList = Output.redundantWith(output)
       logger.info("Removing old output(s): " + redundantList.map(r => "  outPK: " + r.outputPK + "  inPK: " + r.inputPK).mkString("        "))
-      redundantList.map(o => removeOutput(o))
-      redundantList.map(o => removeInput(o.inputPK))
+      redundantList.map(o => deleteOutput(o))
+      redundantList.map(o => deleteInput(o.inputPK))
     }
 
     runAnalysis(valueMap, runTrait, runReq, extendedData)
@@ -453,6 +524,7 @@ object RunProcedure extends Logging {
         val user = CachedUser.get(request)
 
         val machinePK = if (oldOutput.get.machinePK.isDefined) oldOutput.get.machinePK else input.get.machinePK
+
         val newOutput = {
           val tempOutput = new Output(
             outputPK = None,
@@ -470,13 +542,11 @@ object RunProcedure extends Logging {
           val out = tempOutput.insert
           out
         }
-        // now that new Output has been created, remove any old redundant inputs and outputs.
+        // now that new Output has been created, delete the old output.
         // Even if something goes horribly wrong after this (server crash, analysis crash),
         // having the output in the database gives visibility to the user via the Results screen.
-        Future {
-          val redundantList = Output.redundantWith(newOutput)
-          redundantList.map(o => removeOutput(o))
-        }
+        if (oldOutput.isDefined)
+          deleteOutput(oldOutput.get)
 
         // instantiate the input files from originals
         val extendedData = ExtendedData.get(newOutput)
@@ -484,7 +554,8 @@ object RunProcedure extends Logging {
         // force the contents of the input directory to be reestablished so that they are
         // exactly the same as the first time this was run.
         Util.deleteFileTreeSafely(inputDir)
-        Input.getFilesFromDatabase(extendedData.input.inputPK.get, inputDir.getParentFile)
+        Try(Input.getFilesFromDatabase(extendedData.input.inputPK.get, inputDir.getParentFile))
+        val outputDir = makeOutputDir(inputDir, now)
 
         // read the DICOM files
         val alList = Util.listDirFiles(inputDir).map(f => new DicomFile(f)).map(df => df.attributeList).flatten
@@ -494,11 +565,16 @@ object RunProcedure extends Logging {
 
         ViewOutput.redirectToViewRunProgress(response, WebUtil.isAutoUpload(valueMap), newOutput.outputPK.get)
       } else {
-        "not authorized" // TODO
+        logger.info("Redo of output " + oldOutput + " not possible because user is not authorized.")
+        val msg = "Redo not possible because user is not authorized.  You must be a member of the same institution as the originating data."
+        forbidRedo(response, msg, None)
       }
 
-    } else
-      "no such output.  Has probably been deleted or redone." // TODO
+    } else {
+      logger.info("Redo of output " + oldOutput + " not possible because output or input does not exist")
+      val msg = "Redo not possible because the old output no longer exists.  Refresh the list to bring it up to date."
+      forbidRedo(response, msg, None)
+    }
   }
 
   private def emptyForm(valueMap: ValueMapT, response: Response, runTrait: RunTrait[RunReqClass]): Unit = {
@@ -511,7 +587,7 @@ object RunProcedure extends Logging {
   }
 
   /**
-   * User elected to cancel.  Remove uploaded files.
+   * User elected to cancel.  Delete uploaded files.
    */
   private def cancel(valueMap: ValueMapT, response: Response) = {
     sessionDir(valueMap) match {

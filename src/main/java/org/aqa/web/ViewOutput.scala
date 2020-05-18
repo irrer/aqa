@@ -20,6 +20,7 @@ import scala.collection.mutable.HashMap
 import java.sql.Timestamp
 import org.aqa.run.ProcedureStatus
 import org.aqa.Crypto
+import scala.util.Try
 
 /**
  * Version of Output that only has immutable fields.  Useful for caching.
@@ -140,7 +141,11 @@ object ViewOutput {
   }
 
   def noOutput(response: Response): Unit = {
-    response.setEntity("Unknown test output", MediaType.TEXT_PLAIN) // TODO
+    response.setEntity("No such output.  Most likely it has been deleted or redone.  Refresh the page for the latest list of outputs.", MediaType.TEXT_PLAIN) // TODO
+    val content = {
+      <div>No such output.  Possibly it has been deleted or redone.  Refresh the page for the latest list of outputs.</div>
+    }
+    simpleWebPage(content, Status.CLIENT_ERROR_BAD_REQUEST, "No such output", response)
   }
 
   /** Calculate a secure hash of the time stamps of the child files of a directory. */
@@ -172,12 +177,12 @@ object ViewOutput {
    * Redirect the user to the progress of running the procedure.
    *
    * @param response Respond to this HTTP entity.
-   * 
+   *
    * @param isAuto If true, the client wants to be treated like an automatic process (non-human process as
    *   opposed to human using a web browser).  Upon completion, just send the client the return status as
    *   opposed to being redirected to a page containing the results or a progress page.
-   *   
-   * @param outputPK Output being produced. 
+   *
+   * @param outputPK Output being produced.
    */
   def redirectToViewRunProgress(response: Response, isAuto: Boolean, outputPK: Long): Unit = {
     if (isAuto) {
@@ -241,24 +246,13 @@ class ViewOutput extends Restlet with SubUrlView {
 
       val output: Option[ImmutableOutput] = {
         val outputPK = valueMap.get(ViewOutput.outputPKTag)
-        if (outputPK.isDefined) Some(ViewOutput.getCachedOutput(outputPK.get.toLong))
-        else None
+        Try(Some(ViewOutput.getCachedOutput(outputPK.get.toLong))) getOrElse None
+        // else None
       }
 
       if (output.isDefined) {
         Output.ensureInputAndOutputFilesExist(Output.get(output.get.outputPK).get)
       }
-
-      //      val outputFile: Option[File] = {
-      //        if (output.isDefined) {
-      //          if (!output.get.dir.isDirectory) {
-      //            val inputDir = output.get.dir.getParentFile
-      //            Output.getFilesFromDatabase(output.get.outputPK, inputDir)
-      //            Input.getFilesFromDatabase(output.get.inputPK, inputDir.getParentFile)
-      //          }
-      //          Output.outputFile(output.get.dir)
-      //        } else None
-      //      }
 
       def displayFile: Option[File] = {
         if (output.isDefined) {

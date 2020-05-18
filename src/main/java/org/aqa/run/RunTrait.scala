@@ -30,6 +30,12 @@ trait RunTrait[RunReqClassType] extends Logging {
   def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp];
   def getProcedure: Procedure;
 
+  /**
+   * Get the machine's DeviceSerialNumber from the input files.  This is used to handle the
+   * case where a new machine needs to have it's serial number established.
+   */
+  def getMachineDeviceSerialNumber(runReq: RunReqClassType): String;
+
   /** Convenience function for constructing error messages to display to user on web page. */
   def formError(msg: String) = Left(WebUtil.Error.make(WebUtil.uploadFileLabel, msg))
 }
