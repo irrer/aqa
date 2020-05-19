@@ -374,10 +374,10 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
         if (procedure.name.toLowerCase.contains("phase")) {
           Phase2.redo(outputPK, response.getRequest, response, await, isAuto)
         }
-        if (procedure.name.toLowerCase.contains("cbct")) {
-          BBbyCBCTRun.redo(outputPK, response.getRequest, response, await, isAuto)
-        }
-        if (procedure.name.toLowerCase.contains("epid")) {
+        //        if (procedure.name.toLowerCase.contains("cbct")) {
+        //          BBbyCBCTRun.redo(outputPK, response.getRequest, response, await, isAuto)
+        //        }
+        if (procedure.name.toLowerCase.contains("epid") || procedure.name.toLowerCase.contains("cbct")) {
           if (true) {
             // TODO This handles the general case, and should be all the code that is needed once RunTrait is used exclusively.
             val runTrait = WebRun.get(output.procedurePK).right.get.asInstanceOf[RunTrait[RunReqClass]]

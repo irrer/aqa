@@ -6,29 +6,17 @@ import org.aqa.DicomFile
 import java.io.File
 import org.aqa.db.Machine
 import edu.umro.ScalaUtil.Trace
+import org.aqa.run.RunReqClass
+import org.aqa.Util
 
-case class BBbyCBCTRunReq(rtplanDicomFile: Either[DicomFile, AttributeList], regDicomFile: Option[DicomFile], cbctDicomFile: Seq[DicomFile], machine: Machine) {
+//case class BBbyCBCTRunReq(alList: Seq[AttributeList]) extends RunReqClass(alList) {
+case class BBbyCBCTRunReq(rtplan: AttributeList, reg: Option[AttributeList], cbctList: Seq[AttributeList]) extends RunReqClass {
 
-  val rtplan = if (rtplanDicomFile.isLeft) rtplanDicomFile.left.get.attributeList.get else rtplanDicomFile.right.get
-
-  val reg: Option[ImageRegistration] = {
-    if (regDicomFile.isDefined)
-      Some(new ImageRegistration(regDicomFile.get.attributeList.get))
+  val imageRegistration: Option[ImageRegistration] = {
+    if (reg.isDefined)
+      Some(new ImageRegistration(reg.get))
     else
       None
   }
-  val cbct = cbctDicomFile.map(df => df.attributeList.get)
 
-  def reDir(dir: File): BBbyCBCTRunReq = {
-    val origDirPath = cbctDicomFile.head.file.getParentFile.getAbsolutePath
-    val cbctDicomFile2 = cbctDicomFile.map(df => df.reDir(dir))
-    val regDicomFile2 = if (regDicomFile.isDefined) Some(regDicomFile.get.reDir(dir)) else None
-
-    val plan = if (rtplanDicomFile.isLeft)
-      Left(rtplanDicomFile.left.get.reDir(dir))
-    else
-      Right(rtplan)
-
-    new BBbyCBCTRunReq(plan, regDicomFile2, cbctDicomFile2, machine)
-  }
 }

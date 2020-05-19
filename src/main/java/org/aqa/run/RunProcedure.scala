@@ -383,8 +383,11 @@ object RunProcedure extends Logging {
   def getDeviceSerialNumber(alList: Seq[AttributeList]): Seq[String] = {
     val serNoByImageList = {
       alList.
-        map(al => DicomUtil.findAllSingle(al, TagFromName.DeviceSerialNumber)).flatten.
-        map(serNo => serNo.getSingleStringValueOrEmptyString).distinct
+        map(al => DicomUtil.findAllSingle(al, TagFromName.DeviceSerialNumber)).
+        flatten.
+        map(serNo => serNo.getSingleStringValueOrNull).
+        filterNot(_ == null).
+        distinct
     }
     serNoByImageList
   }
@@ -470,7 +473,7 @@ object RunProcedure extends Logging {
     val dicomFileList = dicomFilesInSession(valueMap)
     val alList = dicomFileList.map(df => df.attributeList).flatten
 
-    runTrait.validate(valueMap, form, request, response, alList) match {
+    runTrait.validate(valueMap, alList) match {
       case Left(errMap) => {
         logger.info("Bad request: " + errMap.keys.map(k => k + " : " + valueMap.get(k)).mkString("\n    "))
         form.setFormResponse(valueMap, errMap, runTrait.getProcedure.fullName, response, Status.CLIENT_ERROR_BAD_REQUEST)

@@ -63,15 +63,6 @@ import org.aqa.Logging
 import org.aqa.run.RunReqClass
 
 /**
- * Provide the user interface and verify that the data provided is sufficient to do the analysis.
- */
-
-object BBbyEPIDRun extends Logging {
-  val parametersFileName = "parameters.xml"
-  val Phase2RunPKTag = "Phase2RunPK"
-}
-
-/**
  * Run BBbyEPID code.
  */
 class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[BBbyEPIDRunReq] {
@@ -79,7 +70,6 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   private def getEpidList(alList: Seq[AttributeList]) = alList.filter(al => Util.modalityOfAl(al).trim.equalsIgnoreCase("RTIMAGE"))
 
   private def getSeries(al: AttributeList): String = al.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString
-  //  private def getSeries(dicomFile: DicomFile): String = getSeries(dicomFile.attributeList.get)
 
   override def getProcedure = procedure
 
@@ -123,14 +113,14 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
    * Make the run requirements from the attribute lists.
    */
   override def makeRunReq(alList: Seq[AttributeList]): BBbyEPIDRunReq = {
-    val epidList = alList.filter(al => Util.modalityOfAl(al).trim.equalsIgnoreCase("RTIMAGE"))
+    val epidList = alList.filter(al => Util.isRtimage(al))
     new BBbyEPIDRunReq(epidList)
   }
 
   /**
    * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
    */
-  override def validate(valueMap: ValueMapT, form: WebForm, request: Request, response: Response, alList: Seq[AttributeList]): Either[StyleMapT, BBbyEPIDRunReq] = {
+  override def validate(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, BBbyEPIDRunReq] = {
     val epidList = alList.filter(al => Util.modalityOfAl(al).trim.equalsIgnoreCase("RTIMAGE"))
     val angleList = epidList.map(epid => Util.gantryAngle(epid))
     def angleTextList = angleList.map(a => Util.fmtDbl(a)).mkString("  ")

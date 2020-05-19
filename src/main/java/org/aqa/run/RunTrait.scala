@@ -21,8 +21,7 @@ trait RunTrait[RunReqClassType] extends Logging {
   def run(extendedData: ExtendedData, runReq: RunReqClassType): ProcedureStatus.Value;
 
   //def redo(extendedData: ExtendedData, runReq: RunReqClassType): ProcedureStatus.Value;
-  def validate(valueMap: ValueMapT, form: WebForm, request: Request, response: Response,
-    alList: Seq[AttributeList]): Either[StyleMapT, RunReqClass];
+  def validate(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, RunReqClass];
 
   def makeRunReq(alList: Seq[AttributeList]): RunReqClass;
   def getMachine(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Machine];

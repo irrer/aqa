@@ -10,13 +10,11 @@ import org.aqa.run.RunReqClass
 /**
  * Data needed to run an EPID BB analysis.
  */
-class BBbyEPIDRunReq(alList: Seq[AttributeList]) extends RunReqClass(alList) {
-
-  val epidList = alList.filter(al => Util.modalityOfAl(al).equals("RTIMAGE"))
+case class BBbyEPIDRunReq(epidList: Seq[AttributeList]) extends RunReqClass {
 
   val sopOfRTPlan: Option[String] = {
     try {
-      val sop = DicomUtil.seqToAttr(alList.head, TagFromName.ReferencedRTPlanSequence).
+      val sop = DicomUtil.seqToAttr(epidList.head, TagFromName.ReferencedRTPlanSequence).
         head.
         get(TagFromName.ReferencedSOPInstanceUID).
         getSingleStringValueOrNull
