@@ -40,7 +40,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   }
 
   override def makeRunReq(alList: Seq[com.pixelmed.dicom.AttributeList]): org.aqa.run.RunReqClass = {
-    validate(emptyValueMap, alList).right.get
+    validate(emptyValueMap, alList.filter(al => Util.isCt(al))).right.get
   }
 
   override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp] = {

@@ -300,7 +300,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     val dateTimeList = rtimageList.map(rtimage => rtimageDate(rtimage)).sorted
     val maxDuration = Math.round(Config.MaxProcedureDuration * 60 * 1000).toLong
 
-    val machineCheck = validateMachineSelection(valueMap, rtimageList)
+    // val machineCheck = validateMachineSelection(valueMap, rtimageList)
+    def machineCheck = RunProcedure.validateMachineSelection(valueMap, rtimageList)
 
     // associate each image with a plan
     val planGroups = rtplanList.map(plan => (plan, rtimageList.filter(img => Phase2Util.imageReferencesPlan(plan, img)))).filter(pi => pi._2.nonEmpty).toMap
@@ -378,7 +379,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
   /**
    * Check beam definitions, existence of flood field, and organize inputs into <code>RunReq</code> to facilitate further processing.
    */
-  def basicBeamValidation(valueMap: ValueMapT, basicData: BasicData): Either[StyleMapT, RunReq] = {
+  def basicBeamValidation(basicData: BasicData): Either[StyleMapT, RunReq] = {
     val rtimageMap = basicData.rtimageListByBeam.filter(rl => rl._1.isDefined && (!rl._1.get.equals(Config.FloodFieldBeamName))).map(rl => (rl._1.get, rl._2)).toMap
     val flood = basicData.rtimageListByBeam.filter(rl => rl._1.isDefined && (rl._1.get.equals(Config.FloodFieldBeamName)))
 
@@ -398,7 +399,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
       case Left(fail) => Left(fail)
       case Right(basicData) => {
         logger.info("Received file list: " + basicData)
-        val basicBeamValid = basicBeamValidation(valueMap, basicData)
+        val basicBeamValid = basicBeamValidation(basicData)
         if (basicBeamValid.isLeft) basicBeamValid
         else {
           val runReq = basicBeamValid.right.get
@@ -626,15 +627,28 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
   //    value.isDefined && value.get.toString.equals(button.label)
   //  }
 
-  override def makeRunReq(alList: Seq[AttributeList]): RunReqClass = ???
-  override def getMachine(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Machine] = ???
-  
-  override def getPatientID(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[String] = {
-        alList.filter(al => Util.isRtimage(al)).map(al => Util.patientIdOfAl(al)).headOption
+  override def makeRunReq(alList: Seq[AttributeList]): RunReqClass = {
+    validate(emptyValueMap, alList.filter(al => Util.isRtimage(al))).right.get
   }
-  
-  override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp] = ???
-  
+
+  override def getMachine(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Machine] = {
+    val rtimageList = alList.filter(al => Util.isRtimage(al))
+
+    val dsnList = rtimageList.map(al => al.get(TagFromName.DeviceSerialNumber)).filterNot(_ == null).map(a => a.getSingleStringValueOrNull).filterNot(_ == null).distinct
+    val machList = dsnList.map(dsn => Machine.findMachinesBySerialNumber(dsn)).flatten
+
+    machList.headOption
+  }
+
+  override def getPatientID(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[String] = {
+    alList.filter(al => Util.isRtimage(al)).map(al => Util.patientIdOfAl(al)).headOption
+  }
+
+  override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp] = {
+    val min = alList.filter(al => Util.isRtimage(al)).map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al)).map(dp => dp._1.headOption).flatten.minBy(_.getTime)
+    Some(new Timestamp(min.getTime))
+  }
+
   override def getProcedure: Procedure = procedure
 
   /**
