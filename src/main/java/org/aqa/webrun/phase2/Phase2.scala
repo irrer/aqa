@@ -628,7 +628,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
   //  }
 
   override def makeRunReq(alList: Seq[AttributeList]): RunReqClass = {
-    validate(emptyValueMap, alList.filter(al => Util.isRtimage(al))).right.get
+    val result = validate(emptyValueMap, alList.filter(al => Util.isRtimage(al)))
+    result.right.get
   }
 
   override def getMachine(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Machine] = {
