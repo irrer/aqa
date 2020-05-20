@@ -52,16 +52,16 @@ object Phase2Util extends Logging {
   /**
    * Determine if the given image references the given plan.
    */
-  def imageReferencesPlan(plan: DicomFile, image: DicomFile): Boolean = {
+  def imageReferencesPlan(plan: AttributeList, image: AttributeList): Boolean = {
     try {
-      val planUID = plan.attributeList.get.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull
+      val planUID = plan.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull
       def doesRef(al: AttributeList) = {
         val imgRef = al.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrEmptyString
         val j = imgRef.equals(planUID)
         imgRef.equals(planUID)
       }
-      val j1 = DicomUtil.seqToAttr(image.attributeList.get, TagFromName.ReferencedRTPlanSequence).filter(al => doesRef(al)).nonEmpty
-      j1
+      val doesRefPlan = DicomUtil.seqToAttr(image, TagFromName.ReferencedRTPlanSequence).filter(al => doesRef(al)).nonEmpty
+      doesRefPlan
     } catch {
       case t: Throwable => false
     }
@@ -155,7 +155,7 @@ object Phase2Util extends Logging {
   /**
    * Given an RTPLAN and an RTIMAGE, get the name of the beam that the RTIMAGE is referencing in the plan.
    */
-  def getBeamNameOfRtimage(plan: DicomFile, rtimage: DicomFile): Option[String] = getBeamNameOfRtimage(plan.attributeList.get, rtimage.attributeList.get)
+  def getBeamNameOfRtimageDf(plan: DicomFile, rtimage: DicomFile): Option[String] = getBeamNameOfRtimage(plan.attributeList.get, rtimage.attributeList.get)
 
   /**
    * Given an RTPLAN and a beam name, get the beam sequence.
@@ -169,7 +169,7 @@ object Phase2Util extends Logging {
    * Given an RTPLAN, a list of RTIMAGEs, and a BeamName, return the RTIMAGE associated with BeamName.
    */
   def findRtimageByBeamName(plan: DicomFile, rtimageList: IndexedSeq[DicomFile], BeamName: String): Option[DicomFile] = {
-    val beam = rtimageList.map(rti => (rti, getBeamNameOfRtimage(plan, rti))).filter(rn => rn._2.isDefined && rn._2.get.equals(BeamName.trim))
+    val beam = rtimageList.map(rti => (rti, getBeamNameOfRtimageDf(plan, rti))).filter(rn => rn._2.isDefined && rn._2.get.equals(BeamName.trim))
     if (beam.nonEmpty) Some(beam.head._1) else None
   }
 
@@ -364,19 +364,19 @@ object Phase2Util extends Logging {
   }
 
   def dicomViewHtmlFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
-    val htmlFile = dicomViewBaseName(runReq.beamNameOfAl(al), al, runReq.rtplan.attributeList.get) + ".html"
+    val htmlFile = dicomViewBaseName(runReq.beamNameOfAl(al), al, runReq.rtplan) + ".html"
     val viewDir = new File(extendedData.output.dir, "view")
     new File(viewDir, htmlFile)
   }
 
   def dicomViewImageHtmlFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
-    val htmlFile = dicomViewBaseName(runReq.beamNameOfAl(al), al, runReq.rtplan.attributeList.get) + "_image.html"
+    val htmlFile = dicomViewBaseName(runReq.beamNameOfAl(al), al, runReq.rtplan) + "_image.html"
     val viewDir = new File(extendedData.output.dir, "view")
     new File(viewDir, htmlFile)
   }
 
   def dicomViewImageFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
-    val pngFile = dicomViewBaseName(runReq.beamNameOfAl(al), al, runReq.rtplan.attributeList.get) + ".png"
+    val pngFile = dicomViewBaseName(runReq.beamNameOfAl(al), al, runReq.rtplan) + ".png"
     val viewDir = new File(extendedData.output.dir, "view")
     new File(viewDir, pngFile)
   }

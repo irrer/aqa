@@ -32,6 +32,7 @@ import javax.vecmath.Point3d
 import edu.umro.ScalaUtil.Trace
 import java.util.TimeZone
 import scala.xml.Node
+import edu.umro.ImageUtil.DicomImage
 
 object Util extends Logging {
 
@@ -1075,6 +1076,25 @@ object Util extends Logging {
    * Get an attribute of a node as text.
    */
   def getAttr(node: Node, name: String) = (node \ ("@" + name)).text.toString
+
+  def badPixelRadius(attributeList: AttributeList): Int = {
+    val pixSize = attributeList.get(TagFromName.ImagePlanePixelSpacing).getDoubleValues.sum / 2
+    val diam = Config.BadPixelRadius_mm / pixSize
+    val r = (diam.ceil.toInt - 1) / 2
+    r
+  }
+
+  def badPixelList(al: AttributeList): Seq[DicomImage.PixelRating] = {
+    val dicomImage = new DicomImage(al)
+    val numPixels = dicomImage.width * dicomImage.height
+    val million = 1000.0 * 1000
+    val sampleSize = ((Config.BadPixelSamplePerMillion / million) * numPixels).round.toInt
+    val maxBadPixels = ((Config.MaxEstimatedBadPixelPerMillion / million) * numPixels).round.toInt
+    val badPixels = dicomImage.identifyBadPixels(
+      maxBadPixels,
+      Config.BadPixelStdDev, Config.BadPixelMaximumPercentChange, Util.badPixelRadius(al), Config.BadPixelMinimumDeviation_CU)
+    badPixels.filter(bp => bp.rating > 100) // TODO filter?
+  }
 
   /**
    * Attempt to free memory by using gc.

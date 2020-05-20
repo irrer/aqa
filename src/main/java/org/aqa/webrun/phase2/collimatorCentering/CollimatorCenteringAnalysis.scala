@@ -46,9 +46,7 @@ object CollimatorCenteringAnalysis extends Logging {
   /**
    * Perform actual analysis.
    */
-  private def analyze(dicomFile090: DicomFile, dicomFile270: DicomFile, image090: DicomImage, image270: DicomImage, outputPK: Long, rtplan:AttributeList): (CollimatorCentering, MeasureTBLREdges.AnalysisResult, MeasureTBLREdges.AnalysisResult) = {
-    val al090 = dicomFile090.attributeList.get
-    val al270 = dicomFile270.attributeList.get
+  private def analyze(al090: AttributeList, al270: AttributeList, image090: DicomImage, image270: DicomImage, outputPK: Long, rtplan: AttributeList): (CollimatorCentering, MeasureTBLREdges.AnalysisResult, MeasureTBLREdges.AnalysisResult) = {
 
     val collAngle090 = Util.collimatorAngle(al090)
     val collAngle270 = Util.collimatorAngle(al270)
@@ -98,8 +96,8 @@ object CollimatorCenteringAnalysis extends Logging {
   /**
    * For testing only
    */
-  def testAnalyze(dicomFile090: DicomFile, dicomFile270: DicomFile, image090: DicomImage, image270: DicomImage, outputPK: Long, rtplan: AttributeList): (CollimatorCentering, MeasureTBLREdges.AnalysisResult, MeasureTBLREdges.AnalysisResult) = {
-    analyze(dicomFile090, dicomFile270, image090, image270, outputPK, rtplan)
+  def testAnalyze(al090: AttributeList, al270: AttributeList, image090: DicomImage, image270: DicomImage, outputPK: Long, rtplan: AttributeList): (CollimatorCentering, MeasureTBLREdges.AnalysisResult, MeasureTBLREdges.AnalysisResult) = {
+    analyze(al090, al270, image090, image270, outputPK, rtplan)
   }
 
   /**
@@ -108,8 +106,8 @@ object CollimatorCenteringAnalysis extends Logging {
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, CollimatorCenteringResult] = {
     try {
       logger.info("Starting analysis of CollimatorCentering for machine " + extendedData.machine.id)
-      val al090 = runReq.rtimageMap(Config.CollimatorCentering090BeamName).attributeList.get
-      val al270 = runReq.rtimageMap(Config.CollimatorCentering270BeamName).attributeList.get
+      val al090 = runReq.rtimageMap(Config.CollimatorCentering090BeamName)
+      val al270 = runReq.rtimageMap(Config.CollimatorCentering270BeamName)
       val translator = new IsoImagePlaneTranslator(al090)
 
       val image090 = runReq.derivedMap(Config.CollimatorCentering090BeamName)
@@ -117,7 +115,7 @@ object CollimatorCenteringAnalysis extends Logging {
 
       val analysisResult = analyze(runReq.rtimageMap(Config.CollimatorCentering090BeamName), runReq.rtimageMap(Config.CollimatorCentering270BeamName),
         image090.pixelCorrectedImage, image270.pixelCorrectedImage,
-        extendedData.output.outputPK.get, runReq.rtplan.attributeList.get)
+        extendedData.output.outputPK.get, runReq.rtplan)
 
       val collimatorCentering = analysisResult._1
       val result090 = analysisResult._2

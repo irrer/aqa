@@ -190,28 +190,25 @@ object DicomAccess extends Logging {
     <a href={ imagePageUrl }><img src={ pngUrl } width="256"></img></a>
   }
 
-  private def makePage(dicom: DicomFile, urlOfFile: String, title: String,
+  private def makePage(al: AttributeList, title: String,
     dir: File, fileBaseName: String, bufferedImage: Option[BufferedImage],
     dicomImage: Option[DicomImage], badPixels: Seq[DicomImage.PixelRating]): Option[String] = {
 
-    val downloadLink = { <a href={ WebServer.urlOfResultsFile(dicom.file) } title="Download as DICOM">Download</a> }
     val pngFile = new File(dir, fileBaseName + ".png")
 
-    val content = if (dicom.attributeList.isDefined) {
-      val al = dicom.attributeList.get
-      val text = DicomUtil.attributeListToString(dicom.attributeList.get)
+    val content = {
+      val text = DicomUtil.attributeListToString(al)
 
       {
         <div>
-          { downloadLink }
           <br></br>
-          { if (bufferedImage.isDefined) makeImagePage(title, pngFile, dir, fileBaseName, dicomImage.get, bufferedImage.get, badPixels, dicom.badPixelRadius) }
+          { if (bufferedImage.isDefined) makeImagePage(title, pngFile, dir, fileBaseName, dicomImage.get, bufferedImage.get, badPixels, Util.badPixelRadius(al)) }
           <p>
             <pre title="DICOM meta-data">{ WebUtil.nl + text }</pre>
           </p>
         </div>
       }
-    } else { downloadLink }
+    }
 
     val html = {
       <div class="row col-md-10 col-md-offset-1">
@@ -245,10 +242,10 @@ object DicomAccess extends Logging {
    *
    * @param badPixels: List of bad pixels.  If non-empty, annotate them on the image and show a zoomed view of each.
    */
-  def write(dicom: DicomFile, urlOfFile: String, title: String, dir: File, fileBaseName: String, bufferedImage: Option[BufferedImage], dicomImage: Option[DicomImage], badPixels: Seq[DicomImage.PixelRating]): Option[String] = {
+  def write(al: AttributeList, title: String, dir: File, fileBaseName: String, bufferedImage: Option[BufferedImage], dicomImage: Option[DicomImage], badPixels: Seq[DicomImage.PixelRating]): Option[String] = {
     try {
       dir.mkdirs
-      makePage(dicom, urlOfFile, title, dir, fileBaseName, bufferedImage, dicomImage, badPixels)
+      makePage(al, title, dir, fileBaseName, bufferedImage, dicomImage, badPixels)
     } catch {
       case t: Throwable => {
         logger.warn("Unexpected error while generating DICOM view for directory " + dir.getAbsolutePath + " : " + fmtEx(t))

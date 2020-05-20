@@ -277,7 +277,7 @@ object LeafPositionAnalysis extends Logging {
 
     try {
       logger.info("Starting analysis of " + subProcedureName + "  for machine " + extendedData.machine.id)
-      val planAttrList = runReq.rtplan.attributeList.get
+      val planAttrList = runReq.rtplan
 
       val outputPK = extendedData.output.outputPK.get
 

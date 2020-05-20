@@ -1,6 +1,5 @@
 package org.aqa.webrun.phase2
 
-import org.aqa.DicomFile
 import java.io.File
 import org.aqa.Config
 import edu.umro.ImageUtil.DicomImage
@@ -14,6 +13,7 @@ import com.pixelmed.dicom.AttributeList
 import org.aqa.Logging
 import org.aqa.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.run.RunReqClass
 
 /**
  * @param rtplan: RTPLAN file
@@ -22,35 +22,37 @@ import edu.umro.ScalaUtil.DicomUtil
  *
  * @param flood: Flood field file
  */
-case class RunReq(rtplan: DicomFile, rtplanCBCT: Option[DicomFile], machine: Machine, rtimageMap: Map[String, DicomFile], flood: DicomFile) extends Logging {
+case class RunReq(rtplan: AttributeList, rtplanCBCT: Option[AttributeList], machine: Machine, rtimageMap: Map[String, AttributeList], flood: AttributeList) extends RunReqClass with Logging {
 
-  def reDir(dir: File): RunReq = {
-    val rtiMap = rtimageMap.toSeq.map(ni => (ni._1, ni._2.reDir(dir))).toMap
-    val rtplanRedirred = if (rtplan.file.getParentFile.getAbsolutePath.equals(Config.sharedDir.getAbsolutePath)) rtplan else rtplan.reDir(dir)
-    val rtplanCBCTRedirred = {
-      if (rtplanCBCT.isDefined)
-        if (rtplanCBCT.get.file.getParentFile.getAbsolutePath.equals(Config.sharedDir.getAbsolutePath)) rtplanCBCT else Some(rtplanCBCT.get.reDir(dir))
-      else None
-    }
-    new RunReq(rtplanRedirred, rtplanCBCTRedirred, machine, rtiMap, flood.reDir(dir))
-  }
+  //  def reDir(dir: File): RunReq = {
+  //    val rtiMap = rtimageMap.toSeq.map(ni => (ni._1, ni._2.reDir(dir))).toMap
+  //    val rtplanRedirred = if (rtplan.file.getParentFile.getAbsolutePath.equals(Config.sharedDir.getAbsolutePath)) rtplan else rtplan.reDir(dir)
+  //    val rtplanCBCTRedirred = {
+  //      if (rtplanCBCT.isDefined)
+  //        if (rtplanCBCT.get.file.getParentFile.getAbsolutePath.equals(Config.sharedDir.getAbsolutePath)) rtplanCBCT else Some(rtplanCBCT.get.reDir(dir))
+  //      else None
+  //    }
+  //    new RunReq(rtplanRedirred, rtplanCBCTRedirred, machine, rtiMap, flood.reDir(dir))
+  //  }
 
-  private val floodAttributeList = flood.attributeList.get
+  private val floodAttributeList = flood
   val floodOriginalImage = new DicomImage(floodAttributeList)
 
-  logger.info("Bad pixel radius (in pixels) for flood image of: " + flood.badPixelRadius)
+  private val floodBadPixelRadius = Util.badPixelRadius(flood)
 
-  val floodBadPixelList = Phase2Util.identifyBadPixels(floodOriginalImage, flood.badPixelRadius)
+  logger.info("Bad pixel radius (in pixels) for flood image of: " + floodBadPixelRadius)
 
-  val floodCorrectedImage = floodOriginalImage.correctBadPixels(floodBadPixelList, flood.badPixelRadius)
+  val floodBadPixelList = Phase2Util.identifyBadPixels(floodOriginalImage, floodBadPixelRadius)
+
+  val floodCorrectedImage = floodOriginalImage.correctBadPixels(floodBadPixelList, floodBadPixelRadius)
 
   val imageSize = new Point(floodOriginalImage.width, floodOriginalImage.height)
 
   val floodTranslator = new IsoImagePlaneTranslator(floodAttributeList)
-  
-  val treatmentMachineType = DicomUtil.TreatmentMachineType.attrListToTreatmentMachineType(rtplan.attributeList.get)
 
-  private val floodExpected_mm = MeasureTBLREdges.imageCollimatorPositions(floodAttributeList, rtplan.attributeList.get).toTBLR(Util.collimatorAngle(flood.attributeList.get))
+  val treatmentMachineType = DicomUtil.TreatmentMachineType.attrListToTreatmentMachineType(rtplan)
+
+  private val floodExpected_mm = MeasureTBLREdges.imageCollimatorPositions(floodAttributeList, rtplan).toTBLR(Util.collimatorAngle(flood))
 
   private val floodMeasurementAndImage = MeasureTBLREdges.measure(floodCorrectedImage, floodTranslator, Some(floodExpected_mm), Util.collimatorAngle(floodAttributeList), floodCorrectedImage, new Point(0, 0), Config.PenumbraThresholdPercent / 100)
 
@@ -79,13 +81,13 @@ case class RunReq(rtplan: DicomFile, rtplanCBCT: Option[DicomFile], machine: Mac
 
   lazy val floodImage = floodMeasurementAndImage.bufferedImage
 
-  case class Derived(dicomFile: DicomFile) {
-    lazy val originalImage = new DicomImage(dicomFile.attributeList.get)
-    lazy val badPixels = Phase2Util.identifyBadPixels(originalImage, dicomFile.badPixelRadius)
-    lazy val pixelCorrectedImage = originalImage.correctBadPixels(badPixels, dicomFile.badPixelRadius)
+  case class Derived(al: AttributeList) {
+    lazy val originalImage = new DicomImage(al)
+    lazy val badPixels = Phase2Util.identifyBadPixels(originalImage, Util.badPixelRadius(al))
+    lazy val pixelCorrectedImage = originalImage.correctBadPixels(badPixels, Util.badPixelRadius(al))
     lazy val pixelCorrectedCroppedImage = pixelCorrectedImage.getSubimage(floodRectangle)
     lazy val biasAndPixelCorrectedCroppedImage = pixelCorrectedCroppedImage.biasCorrect(floodPixelCorrectedAndCroppedImage)
-    val attributeList = dicomFile.attributeList.get // convenience
+    val attributeList = al // convenience
   }
 
   val derivedMap = rtimageMap.keys.par.map(beamName => (beamName, new Derived(rtimageMap(beamName)))).toList.toMap
@@ -93,19 +95,19 @@ case class RunReq(rtplan: DicomFile, rtplanCBCT: Option[DicomFile], machine: Mac
   def beamNameOfAl(al: AttributeList): String = {
     val sop = Util.sopOfAl(al)
 
-    val beamName = rtimageMap.keys.find(k => Util.sopOfAl(rtimageMap(k).attributeList.get).equals(sop))
+    val beamName = rtimageMap.keys.find(k => Util.sopOfAl(rtimageMap(k)).equals(sop))
 
     if (beamName.isDefined) beamName.get
     else {
-      if (sop.equals(Util.sopOfAl(rtplan.attributeList.get))) "RTPLAN"
-      else if (sop.equals(Util.sopOfAl(flood.attributeList.get))) Config.FloodFieldBeamName
+      if (sop.equals(Util.sopOfAl(rtplan))) "RTPLAN"
+      else if (sop.equals(Util.sopOfAl(flood))) Config.FloodFieldBeamName
       else "unknown"
     }
 
   }
 
   /** List of all attribute lists. */
-  val attributeListSeq = derivedMap.values.map(_.attributeList) ++ Seq(flood.attributeList.get, rtplan.attributeList.get)
+  val attributeListSeq = derivedMap.values.map(_.attributeList) ++ Seq(flood, rtplan)
 
   val sopToPatientIdMap = attributeListSeq.map(al => (Util.sopOfAl(al), Util.patientIdOfAl(al))).toMap
 

@@ -61,7 +61,7 @@ object WedgeAnalysis extends Logging {
       val id = makeWedgeBaselineName(wedgePoint.wedgeBeamName, wedgePoint.backgroundBeamName)
       Baseline.findLatest(extendedData.machine.machinePK.get, id, extendedData.output.dataDate.get) match {
         case Some((maintenanceRecord, baseline)) => None
-        case _ => Some(Baseline.makeBaseline(-1, extendedData.output.dataDate.get, Util.sopOfAl(runReq.rtimageMap(wedgePoint.wedgeBeamName).attributeList.get), id, wedgePoint.percentOfBackground_pct))
+        case _ => Some(Baseline.makeBaseline(-1, extendedData.output.dataDate.get, Util.sopOfAl(runReq.rtimageMap(wedgePoint.wedgeBeamName)), id, wedgePoint.percentOfBackground_pct))
       }
     }
 
@@ -133,7 +133,7 @@ object WedgeAnalysis extends Logging {
   private def analyze(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering, centerDoseList: Seq[CenterDose]): Seq[WedgePoint] = {
     val outputPK = extendedData.output.outputPK.get
 
-    val pointList = Phase2Util.makeCenterDosePointList(runReq.flood.attributeList.get, collimatorCentering.center)
+    val pointList = Phase2Util.makeCenterDosePointList(runReq.flood, collimatorCentering.center)
 
     val beamList = runReq.derivedMap.keys.toList
 

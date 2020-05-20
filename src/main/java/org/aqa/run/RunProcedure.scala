@@ -240,7 +240,7 @@ object RunProcedure extends Logging {
   /**
    * Get from machine web selector list.
    */
-  def getMachineFromSelector(valueMap: ValueMapT): Option[Machine] = {
+ private def getMachineFromSelector(valueMap: ValueMapT): Option[Machine] = {
     val chosenMachine = for (pkTxt <- valueMap.get(machineSelectorLabel); pk <- Util.stringToLong(pkTxt); m <- Machine.get(pk)) yield m
     chosenMachine
   }
@@ -248,7 +248,7 @@ object RunProcedure extends Logging {
   /**
    * If the serial number for the machine is not already set, then set it by using the DeviceSerialNumber in the RTIMAGE.
    */
-  def setMachineSerialNumber(machine: Machine, DeviceSerialNumber: String) = {
+  private def setMachineSerialNumber(machine: Machine, DeviceSerialNumber: String) = {
     if (machine.serialNumber.isEmpty) {
       try {
         logger.info("Establishing machine " + machine.id + "'s DeviceSerialNumber as " + DeviceSerialNumber)

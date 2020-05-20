@@ -175,7 +175,7 @@ object CollimatorPositionAnalysis extends Logging {
   def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, CollimatorPositionResult] = {
     try {
       logger.info("Starting analysis of CollimatorPosition for machine " + extendedData.machine.id)
-      val qualifiedImageList = runReq.derivedMap.toSeq.filter(ndf => imageQualifies(ndf._2.attributeList, runReq.rtplan.attributeList.get)).toMap.keys.toSet
+      val qualifiedImageList = runReq.derivedMap.toSeq.filter(ndf => imageQualifies(ndf._2.attributeList, runReq.rtplan)).toMap.keys.toSet
 
       val posnBeams = Config.CollimatorPositionBeamList.filter(cp => qualifiedImageList.contains(cp.beamName))
       val collCntr = new Point2D.Double(collimatorCentering.xCollimatorCenter_mm, collimatorCentering.yCollimatorCenter_mm)
@@ -189,7 +189,7 @@ object CollimatorPositionAnalysis extends Logging {
         extendedData.output.outputPK.get,
         runReq.floodOffset,
         collCntr,
-        runReq.rtplan.attributeList.get)).toList
+        runReq.rtplan)).toList
 
       val doneList = resultList.filter(r => r.isRight).map(r => r.right.get)
       val crashList = resultList.filter(l => l.isLeft).map(l => l.left.get)

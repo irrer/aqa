@@ -79,7 +79,7 @@ object LeafPositionHTML extends Logging {
     val horizontal = Phase2Util.isHorizontal(derived.attributeList)
     val translator = new IsoImagePlaneTranslator(derived.attributeList)
     val leafWidthList_mm = LeafPositionUtil.getLeafWidthList_mm(
-      LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, runReq.rtplan.attributeList.get, translator))
+      LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, runReq.rtplan, translator))
 
     val image = LeafPositionAnnotateImage.annotateImage(beamResult.resultList, horizontal, derived.pixelCorrectedImage, leafWidthList_mm, translator)
     val imageFileName = Util.textToId(beamName) + ".png"
@@ -116,7 +116,7 @@ object LeafPositionHTML extends Logging {
     val htmlUrlAndImageUrl = makeBeamHtml(subDir, extendedData, runReq, beamResult)
 
     val dicomFile = runReq.rtimageMap(beamResult.beamName)
-    val dicomImageHref = Phase2Util.dicomViewImageHref(dicomFile.attributeList.get, extendedData, runReq)
+    val dicomImageHref = Phase2Util.dicomViewImageHref(dicomFile, extendedData, runReq)
     val maxOffsetText = "Max Offset " + Util.fmtDbl(beamResult.resultList.map(_.offset_mm).maxBy(_.abs)) + " mm"
 
     val clss = if (beamResult.pass) "" else "danger"

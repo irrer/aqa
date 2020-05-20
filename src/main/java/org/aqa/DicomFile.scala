@@ -71,21 +71,14 @@ case class DicomFile(file: File) extends Logging {
     }
   }
 
-  def badPixelRadius: Int = {
-    val pixSize = attributeList.get.get(TagFromName.ImagePlanePixelSpacing).getDoubleValues.sum / 2
-    val diam = Config.BadPixelRadius_mm / pixSize
-    val r = (diam.ceil.toInt - 1) / 2
-    r
-  }
-
-  lazy val badPixelList: Option[Seq[DicomImage.PixelRating]] = {
+  private lazy val badPixelList: Option[Seq[DicomImage.PixelRating]] = {
     originalDicomImage match {
       case Some(odi) => {
         val numPixels = odi.width * odi.height
         val million = 1000.0 * 1000
         val sampleSize = ((Config.BadPixelSamplePerMillion / million) * numPixels).round.toInt
         val maxBadPixels = ((Config.MaxEstimatedBadPixelPerMillion / million) * numPixels).round.toInt
-        val badPixels = odi.identifyBadPixels(maxBadPixels, Config.BadPixelStdDev, Config.BadPixelMaximumPercentChange, badPixelRadius, Config.BadPixelMinimumDeviation_CU)
+        val badPixels = odi.identifyBadPixels(maxBadPixels, Config.BadPixelStdDev, Config.BadPixelMaximumPercentChange, Util.badPixelRadius(attributeList.get), Config.BadPixelMinimumDeviation_CU)
         Some(badPixels.filter(bp => bp.rating > 100)) // TODO filter?
       }
       case _ => None
@@ -94,7 +87,7 @@ case class DicomFile(file: File) extends Logging {
 
   lazy val correctedDicomImage: Option[DicomImage] = {
     (originalDicomImage, badPixelList) match {
-      case (Some(odi), Some(bpl)) => Some(odi.correctBadPixels(bpl, badPixelRadius))
+      case (Some(odi), Some(bpl)) => Some(odi.correctBadPixels(bpl, Util.badPixelRadius(attributeList.get)))
       case _ => None
     }
   }

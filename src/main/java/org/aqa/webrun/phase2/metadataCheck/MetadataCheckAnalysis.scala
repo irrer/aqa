@@ -157,10 +157,10 @@ object MetadataCheckAnalysis extends Logging {
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, MetadataResult] = {
     try {
       logger.info("Starting analysis of " + subProcedureName + "  for machine " + extendedData.machine.id)
-      val planAttrList = runReq.rtplan.attributeList.get
+      val planAttrList = runReq.rtplan
 
       val rtimageList = runReq.rtimageMap.values.toList
-      val resultList = rtimageList.map(rtimage => makeMetadata(extendedData.output.outputPK.get, planAttrList, rtimage.attributeList.get)).flatten
+      val resultList = rtimageList.map(rtimage => makeMetadata(extendedData.output.outputPK.get, planAttrList, rtimage)).flatten
 
       // make sure all were processed and that they all passed
       val pass = (resultList.size == rtimageList.size) && resultList.map(pc => pc.pass).reduce(_ && _)

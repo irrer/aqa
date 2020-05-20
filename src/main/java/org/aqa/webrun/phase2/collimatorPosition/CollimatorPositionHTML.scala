@@ -43,7 +43,7 @@ object CollimatorPositionHTML {
     }
 
     val viewRtPlan = {
-      val planHref = Phase2Util.dicomViewHref(runReq.rtplan.attributeList.get, extendedData, runReq)
+      val planHref = Phase2Util.dicomViewHref(runReq.rtplan, extendedData, runReq)
       <a title="View RT Plan DICOM file" href={ planHref }>RT Plan</a>
     }
 
