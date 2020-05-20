@@ -18,7 +18,7 @@ import org.aqa.web.WebUtil
 trait RunTrait[RunReqClassType] extends Logging {
 
   /** Run the actual analysis.  This must create a display.html file in the output directory. */
-  def run(extendedData: ExtendedData, runReq: RunReqClassType): ProcedureStatus.Value;
+  def run(extendedData: ExtendedData, runReq: RunReqClassType, response: Response): ProcedureStatus.Value;
 
   //def redo(extendedData: ExtendedData, runReq: RunReqClassType): ProcedureStatus.Value;
   def validate(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, RunReqClass];

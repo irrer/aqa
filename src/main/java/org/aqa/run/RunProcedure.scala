@@ -298,13 +298,13 @@ object RunProcedure extends Logging {
    * analysis was being done.  Restarting will probably never be implemented because the better
    * solution is to fix the analysis so that it doesn't hang.
    */
-  private def runAnalysis(valueMap: ValueMapT, runTrait: RunTrait[RunReqClass], runReq: RunReqClass, extendedData: ExtendedData) = {
+  private def runAnalysis(valueMap: ValueMapT, runTrait: RunTrait[RunReqClass], runReq: RunReqClass, extendedData: ExtendedData, response: Response) = {
     def runIt = {
       try {
         val timeout = Duration(extendedData.procedure.timeoutInMs, TimeUnit.MILLISECONDS)
         val future = Future[ProcedureStatus.Value] {
           try {
-            runTrait.run(extendedData, runReq)
+            runTrait.run(extendedData, runReq, response)
           } catch {
             case t: Throwable => {
               ProcedureStatus.crash
@@ -458,7 +458,7 @@ object RunProcedure extends Logging {
       redundantList.map(o => deleteInput(o.inputPK))
     }
 
-    runAnalysis(valueMap, runTrait, runReq, extendedData)
+    runAnalysis(valueMap, runTrait, runReq, extendedData, response)
 
     ViewOutput.redirectToViewRunProgress(response, WebUtil.isAutoUpload(valueMap), output.outputPK.get)
   }
@@ -564,7 +564,7 @@ object RunProcedure extends Logging {
         val alList = Util.listDirFiles(inputDir).map(f => new DicomFile(f)).map(df => df.attributeList).flatten
         val runReq = runTrait.makeRunReq(alList)
 
-        runAnalysis(valueMap, runTrait, runReq, extendedData)
+        runAnalysis(valueMap, runTrait, runReq, extendedData, response)
 
         ViewOutput.redirectToViewRunProgress(response, WebUtil.isAutoUpload(valueMap), newOutput.outputPK.get)
       } else {

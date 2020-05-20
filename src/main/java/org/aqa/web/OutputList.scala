@@ -365,12 +365,17 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     }
   }
 
-  private def redoOutput(outputPK: Long, response: Response, await: Boolean = false, isAuto: Boolean = false): Unit = {
+  /**
+   * Redo the given output.
+   */
+  def redoOutput(outputPK: Long, response: Response, await: Boolean = false, isAuto: Boolean = false): Unit = {
+    Trace.trace("============================= outputPK: " + outputPK)
     Output.get(outputPK) match {
       case None => noSuchOutput(response)
       case Some(output) => {
         Output.ensureInputAndOutputFilesExist(output)
         val procedure = Procedure.get(output.procedurePK).get
+        logger.info("Starting redo of output " + output + "    procedure: " + procedure)
         if (procedure.name.toLowerCase.contains("phase")) {
           Phase2.redo(outputPK, response.getRequest, response, await, isAuto)
         }

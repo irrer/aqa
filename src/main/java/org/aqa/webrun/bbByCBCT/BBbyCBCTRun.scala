@@ -23,6 +23,8 @@ import org.aqa.run.RunTrait
 import org.aqa.run.RunProcedure
 import org.aqa.run.RunReqClass
 import com.pixelmed.dicom.AttributeTag
+import org.aqa.web.OutputList
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Provide the user interface and verify that the data provided is sufficient to do the analysis.
@@ -65,7 +67,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
    * Look through EPID results for one that would have used this CBCT output had it been available
    * when the EPID was processed.  If there are any such EPID results, then redo them.
    */
-  private def checkForEpidRedo(cbctOutput: Output): Unit = {
+  private def checkForEpidRedo(cbctOutput: Output, response: Response): Unit = {
     val machine = Machine.get(cbctOutput.machinePK.get).get
     val endOfDay = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(cbctOutput.dataDate.get).replaceAll("T.*", "T00:00:00")).getTime + (24 * 60 * 60 * 1000))
 
@@ -85,6 +87,8 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       date.getTime
     }
 
+    Trace.trace("cbctCeilingTime_ms: " + new java.util.Date(cbctCeilingTime_ms))
+
     // List of EPIDs that have occurred after this CBCT but before cbctCeilingTime time
     val allEpidDaily = BBbyEPID.getForOneDay(cbctOutput.dataDate.get, machine.institutionPK).
       filter(dds => dds.machine.machinePK.get == machine.machinePK.get).
@@ -98,7 +102,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
     def redo(outputPK: Long) = {
       logger.info("BBbyCBCTRun starting redo of EPID output " + outputPK)
-      BBbyEPIDRun.redo(outputPK, response.getRequest, response, true, true)  // TODO fix after transition to run2
+      (new OutputList).redoOutput(outputPK, response, true, true)
       logger.info("BBbyCBCTRun finished redo of EPID output " + outputPK)
     }
 
@@ -209,9 +213,9 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     result
   }
 
-  override def run(extendedData: ExtendedData, runReq: BBbyCBCTRunReq): ProcedureStatus.Value = {
+  override def run(extendedData: ExtendedData, runReq: BBbyCBCTRunReq, response: Response): ProcedureStatus.Value = {
     val status = BBbyCBCTExecute.runProcedure(extendedData, runReq)
-    checkForEpidRedo(extendedData.output)
+    checkForEpidRedo(extendedData.output, response)
     status
   }
 

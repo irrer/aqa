@@ -10,6 +10,7 @@ import java.util.Date
 import org.aqa.web.WebServer
 import java.io.File
 import edu.umro.ScalaUtil.FileUtil
+import scala.util.Try
 
 case class Output(
   outputPK: Option[Long], // primary key
@@ -398,13 +399,19 @@ object Output extends Logging {
    * It is up to the caller to determine if the files need to be restored.
    *
    */
-  def getFilesFromDatabase(outputPK: Long, dir: File) = {
+  def getFilesFromDatabase(outputPK: Long, dir: File): Boolean = {
     dir.mkdirs
     // Steps are done on separate lines so that if there is an error/exception it can be precisely
-    // tracked.  It is up to the caller to catch any exceptions and act accordingly.
-    val outputFilesOption = OutputFiles.getByOutput(outputPK)
-    val outputFiles = outputFilesOption.get
-    FileUtil.writeByteArrayZipToFileTree(outputFiles.zippedContent, dir)
+    // tracked.
+    OutputFiles.getByOutput(outputPK) match {
+      case Some(outputFiles) => {
+        Try(FileUtil.writeByteArrayZipToFileTree(outputFiles.zippedContent, dir)).isSuccess
+      }
+      case _ => {
+        logger.info("Unable to reinstate output files for output " + outputPK + " in dir " + dir.getAbsolutePath)
+        false
+      }
+    }
   }
 
   /**
