@@ -269,7 +269,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     result
   }
 
-  private case class BasicData(rtplan: AttributeList, machine: Machine, rtimageListByBeam: Seq[(Option[String], AttributeList)]) {
+  private case class BasicData(rtplan: AttributeList, rtimageListByBeam: Seq[(Option[String], AttributeList)]) {
 
     private def dfToString(al: AttributeList) = {
       val sop = Util.sopOfAl(al)
@@ -281,7 +281,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
 
     override def toString =
       "machine: " + dfToString(rtplan) + "\n" +
-        "machine id: " + machine.id + "    serial number: " + machine.serialNumber + "    machinePK: " + machine.machinePK + "\n" +
         "rtimageListByBeam:\n    " + rtimageListByBeam.map(r => beamOf(r._1) + "  " + dfToString(r._2)).mkString("\n    ")
   }
 
@@ -300,11 +299,25 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     val dateTimeList = rtimageList.map(rtimage => rtimageDate(rtimage)).sorted
     val maxDuration = Math.round(Config.MaxProcedureDuration * 60 * 1000).toLong
 
-    // val machineCheck = validateMachineSelection(valueMap, rtimageList)
-    def machineCheck = RunProcedure.validateMachineSelection(valueMap, rtimageList)
-
     // associate each image with a plan
-    val planGroups = rtplanList.map(plan => (plan, rtimageList.filter(img => Phase2Util.imageReferencesPlan(plan, img)))).filter(pi => pi._2.nonEmpty).toMap
+    //val planGroups = rtplanList.map(plan => (plan, rtimageList.filter(img => Phase2Util.imageReferencesPlan(plan, img)))).filter(pi => pi._2.nonEmpty).toMap
+
+    val planUIDReferences = rtimageList.map(img => Phase2Util.referencedPlanUID(img)).distinct
+
+    // Look in the uploaded rtplan list and DicomSeries in the database for the plan(s) referenced.  If that fails, then try the shared directory.
+    val referencedRtplanList: Seq[AttributeList] = {
+      val matchingUploaded = rtplanList.filter(plan => planUIDReferences.contains(Util.sopOfAl(plan)))
+      val dbList = planUIDReferences.map(planUID => DicomSeries.getBySeriesInstanceUID(planUID)).flatten.map(ds => ds.attributeListList.head)
+      val list = matchingUploaded ++ dbList
+      if (list.nonEmpty)
+        list
+      else {
+        // TODO deprecate this when the shared directory is removed
+        val sharedList = DicomFile.readDicomInDir(Config.sharedDir).filter(df => df.isRtplan).map(df => df.attributeList).flatten
+        val matchingList = sharedList.filter(plan => planUIDReferences.contains(Util.sopOfAl(plan)))
+        matchingList
+      }
+    }
 
     /**
      * Make a human readable list of machines
@@ -316,13 +329,14 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     }
 
     0 match {
-      case _ if (rtplanList.isEmpty) => formErr("No RTPLANS found.  Try uploading the RTPLAN with the images to get it into the system.")
+      case _ if (planUIDReferences.size > 1) => formErr("The RTIMAGES reference more than one RTPLAN.")
+      case _ if (referencedRtplanList.isEmpty) => formErr("Can not find the referenced RTPLAN.  Retry and upload the RTPLAN with the images. ")
       case _ if (rtimageList.isEmpty) => formErr("No RTIMAGEs given")
-      case _ if (planGroups.isEmpty) => formErr("No RTPLAN found for RTIMAGEs.  Try uploading the RTPLAN with the RTIMAGE files.")
-      case _ if (planGroups.size > 1) => formErr("The RTIMAGEs reference multiple plans.  Only one plan per run is permitted.")
-      case _ if (planGroups.head._2.size < rtimageList.size) => {
-        formErr("There are " + rtimageList.size + " images but only " + planGroups.head._2.size + " reference this plan")
-      }
+      //      case _ if (planGroups.isEmpty) => formErr("No RTPLAN found for RTIMAGEs.  Try uploading the RTPLAN with the RTIMAGE files.")
+      //      case _ if (planGroups.size > 1) => formErr("The RTIMAGEs reference multiple plans.  Only one plan per run is permitted.")
+      //      case _ if (planGroups.head._2.size < rtimageList.size) => {
+      //        formErr("There are " + rtimageList.size + " images but only " + planGroups.head._2.size + " reference this plan")
+      //      }
 
       case _ if (machineSerialNumberList.isEmpty) => {
         formErr("None of the " + rtimageList.size +
@@ -337,15 +351,13 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
           "This can happen on a new machine or one that has been recently serviced.\\n" +
           "The device serial number is required by this software to identify the instance of the machine.")
       }
-      case _ if (machineCheck.isLeft) => Left(machineCheck.left.get)
-      case _ if (machineSerialNumberList.distinct.size != 1) => formErr("There are RTIMAGEs from more than one machine: " + machineList + "  Only one machine's data can be analyzed.")
 
       case _ if ((dateTimeList.last - dateTimeList.head) > maxDuration) =>
         formErr("Over " + Config.MaxProcedureDuration + " minutes from first to last image.  These RTIMAGE files were not from the same session")
       case _ => {
-        val rtplan = planGroups.head._1
+        val rtplan = referencedRtplanList.head
         val rtimageByBeam = rtimageList.map(rtimage => (Phase2Util.getBeamNameOfRtimage(rtplan, rtimage), rtimage))
-        Right(new BasicData(rtplan, machineCheck.right.get, rtimageByBeam))
+        Right(new BasicData(rtplan, rtimageByBeam)) // TODO remove machine from class?
       }
     }
   }
@@ -387,7 +399,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
       case (Some(errorMessage), _) => formErr(errorMessage)
       case (_, Some(errorMessage)) => formErr(errorMessage)
       case _ if (flood.isEmpty) => formErr("Flood field beam is missing")
-      case _ => Right(new RunReq(basicData.rtplan, None, basicData.machine, rtimageMap, flood.head._2)) // success // TODO handle rtplanCBCT
+      case _ => Right(new RunReq(basicData.rtplan, rtimageMap, flood.head._2)) // success
     }
   }
 
@@ -627,18 +639,35 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
   //    value.isDefined && value.get.toString.equals(button.label)
   //  }
 
-  override def makeRunReq(alList: Seq[AttributeList]): RunReqClass = {
-    val result = validate(emptyValueMap, alList.filter(al => Util.isRtimage(al)))
-    result.right.get
-  }
-
-  override def getMachine(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Machine] = {
+  override def makeRunReqForRedo(alList: Seq[AttributeList]): RunReqClass = {
+    //val result = validate(emptyValueMap, alList.filter(al => Util.isRtimage(al)))
     val rtimageList = alList.filter(al => Util.isRtimage(al))
 
-    val dsnList = rtimageList.map(al => al.get(TagFromName.DeviceSerialNumber)).filterNot(_ == null).map(a => a.getSingleStringValueOrNull).filterNot(_ == null).distinct
-    val machList = dsnList.map(dsn => Machine.findMachinesBySerialNumber(dsn)).flatten
+    def getRtplan = {
+      val rtplanUID = Phase2Util.referencedPlanUID(rtimageList.head)
+      DicomSeries.getBySeriesInstanceUID(rtplanUID).headOption match {
+        // get this from the database
+        case Some(ds) => ds.attributeListList.head
+        case _ => {
+          // if it was not in the database, then check in the share directory.  This code should be deprecated soon.  TODO
+          val file = new File(Config.sharedDir, rtplanUID + ".dcm")
+          val df = new DicomFile(file)
+          df.attributeList.get
+        }
+      }
+    }
 
-    machList.headOption
+    val rtplan = getRtplan
+    val rtimageMap = rtimageList.map(al => (Phase2Util.getBeamNameOfRtimage(rtplan, al).get, al)).toMap
+    val floodBeamName = rtimageMap.keys.find(_.toLowerCase.contains("flood")).get
+    val runReq = new RunReq(rtplan, rtimageMap, rtimageMap(floodBeamName))
+    runReq
+  }
+
+  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList]): Seq[String] = {
+    val rtimageList = alList.filter(al => Util.isRtimage(al))
+    val dsnList = rtimageList.map(al => Util.attributeListToDeviceSerialNumber(al)).flatten.distinct
+    dsnList
   }
 
   override def getPatientID(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[String] = {
@@ -646,19 +675,23 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
   }
 
   override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp] = {
-    val min = alList.filter(al => Util.isRtimage(al)).map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al)).map(dp => dp._1.headOption).flatten.minBy(_.getTime)
+    val min = alList.filter(al => Util.isRtimage(al)).map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al)).map(dp => dp._1).flatten.minBy(_.getTime)
     Some(new Timestamp(min.getTime))
+
+    //    the old code:
+    //  /**
+    //   * Given an image list, find the one with the earliest date/time.
+    //   */
+    //    val list = alList.filter(al => Util.isRtimage(al)).map(df => Util.dateTimeAndPatientIdFromDicom(???)).filter(dt => dt.dateTime.isDefined)
+    //    val dtap =
+    //      if (list.isEmpty) new Util.DateTimeAndPatientId(None, None)
+    //      else list.minBy(dt => dt.dateTime.get)
+    //    logger.info("DateTime and PatientId: " + dtap)
+    //    dtap
+    //
   }
 
   override def getProcedure: Procedure = procedure
-
-  /**
-   * Get the machine's DeviceSerialNumber from the input files.  This is used to handle the
-   * case where a new machine needs to have it's serial number established.
-   */
-  override def getMachineDeviceSerialNumber(runReq: RunReq): String = {
-    RunProcedure.getDeviceSerialNumber(runReq.rtimageMap.values.toSeq).head
-  }
 
   override def validate(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, RunReqClass] = {
     val rtplanList = alList.filter(al => Util.isRtplan(al))

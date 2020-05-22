@@ -42,8 +42,8 @@ object Phase2Util extends Logging {
   /**
    * Get the plan that this image references.  If it does not reference exactly one it will throw an exception.
    */
-  def referencedPlanUID(rtimage: DicomFile): String = {
-    val planSeqList = DicomUtil.seqToAttr(rtimage.attributeList.get, TagFromName.ReferencedRTPlanSequence)
+  def referencedPlanUID(rtimage: AttributeList): String = {
+    val planSeqList = DicomUtil.seqToAttr(rtimage, TagFromName.ReferencedRTPlanSequence)
     val planUidList = planSeqList.map(al => al.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrNull).filter(uid => uid != null).distinct
     if (planUidList.size != 1) throw new RuntimeException("RTIMAGE file should reference exactly one plan, but actually references " + planUidList.size)
     planUidList.head

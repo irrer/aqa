@@ -39,8 +39,20 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     alList.filter(al => Util.isCt(al)).map(al => Util.patientIdOfAl(al)).headOption
   }
 
-  override def makeRunReq(alList: Seq[com.pixelmed.dicom.AttributeList]): org.aqa.run.RunReqClass = {
-    validate(emptyValueMap, alList.filter(al => Util.isCt(al))).right.get
+  override def makeRunReqForRedo(alList: Seq[AttributeList]): org.aqa.run.RunReqClass = {
+    //validate(emptyValueMap, alList.filter(al => Util.isCt(al))).right.get
+    val cbctList = alList.filter(al => Util.isCt(al))
+    val reg = alList.filter(al => Util.isReg(al)).headOption
+    val ctFrameUID = cbctList.head.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
+    val rtplan: AttributeList = {
+      val ds = DicomSeries.getByFrameUIDAndSOPClass(Set(ctFrameUID), SOPClass.RTPlanStorage)
+      if (ds.nonEmpty) ds.head.attributeListList.head
+      else {
+        val planFrameUID = reg.get.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
+        DicomSeries.getByFrameUIDAndSOPClass(Set(planFrameUID), SOPClass.RTPlanStorage).head.attributeListList.head
+      }
+    }
+    new BBbyCBCTRunReq(rtplan, reg, cbctList)
   }
 
   override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp] = {
@@ -109,23 +121,15 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     outputPKlist.map(o => redo(o))
   }
 
-  override def getMachineDeviceSerialNumber(runReq: BBbyCBCTRunReq): String = {
-    RunProcedure.getDeviceSerialNumber(runReq.cbctList).head
-  }
-
-  override def getMachine(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Machine] = {
-    val cbctList = alList.filter(al => Util.isCt(al))
-
-    val dsnList = cbctList.map(al => al.get(TagFromName.DeviceSerialNumber)).filterNot(_ == null).map(a => a.getSingleStringValueOrNull).filterNot(_ == null).distinct
-    val machList = dsnList.map(dsn => Machine.findMachinesBySerialNumber(dsn)).flatten
-
-    machList.headOption
+  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList]): Seq[String] = {
+    val ctList = alList.filter(al => Util.isCt(al))
+    val dsnList = ctList.map(al => Util.attributeListToDeviceSerialNumber(al)).flatten.distinct
+    dsnList
   }
 
   /**
    * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
    */
-
   override def validate(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, BBbyCBCTRunReq] = {
     val cbctList = alList.filter(al => Util.isCt(al)).sortBy(al => Util.slicePosition(al))
     val regList = alList.filter(al => Util.isReg(al))
@@ -177,15 +181,12 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       }
     }
 
-    def machineCheck = RunProcedure.validateMachineSelection(valueMap, cbctList)
-
     val result = 0 match {
       case _ if cbctList.isEmpty => formError("No CBCT files uploaded")
       case _ if cbctSeriesList.size > 1 => formError("CBCT slices are from " + cbctSeriesList.size + " different series.")
       case _ if cbctFrameOfRefList.isEmpty => formError("CBCT series are unusable: They do not specify a frame of reference.")
       case _ if cbctFrameOfRefList.size > 1 => formError("CBCT series uses more than one frame of reference.")
       case _ if rtplan.isEmpty => formError("Can not find a CBCT + REG + RTPLAN with compatible frame of reference.")
-      case _ if (machineCheck.isLeft) => Left(machineCheck.left.get)
       case _ => {
         val plan = {
           val planAl = rtplan.get

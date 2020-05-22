@@ -22,7 +22,7 @@ import org.aqa.run.RunReqClass
  *
  * @param flood: Flood field file
  */
-case class RunReq(rtplan: AttributeList, rtplanCBCT: Option[AttributeList], machine: Machine, rtimageMap: Map[String, AttributeList], flood: AttributeList) extends RunReqClass with Logging {
+case class RunReq(rtplan: AttributeList, rtimageMap: Map[String, AttributeList], flood: AttributeList) extends RunReqClass with Logging {
 
   //  def reDir(dir: File): RunReq = {
   //    val rtiMap = rtimageMap.toSeq.map(ni => (ni._1, ni._2.reDir(dir))).toMap

@@ -61,7 +61,7 @@ object RunProcedure extends Logging {
     val runButton = makeButton(runButtonName, true, ButtonType.BtnDefault)
     val cancelButton = makeButton(cancelButtonName, false, ButtonType.BtnDefault)
 
-    val form = new WebForm(runTrait.getProcedure.webUrl, Some("BBbyEPID"), List(List(machineSelector), List(runButton, cancelButton)), 10)
+    val form = new WebForm(runTrait.getProcedure.webUrl, Some(runTrait.getProcedure.fullName), List(List(machineSelector), List(runButton, cancelButton)), 10)
     form
   }
 
@@ -240,7 +240,7 @@ object RunProcedure extends Logging {
   /**
    * Get from machine web selector list.
    */
- private def getMachineFromSelector(valueMap: ValueMapT): Option[Machine] = {
+  private def getMachineFromSelector(valueMap: ValueMapT): Option[Machine] = {
     val chosenMachine = for (pkTxt <- valueMap.get(machineSelectorLabel); pk <- Util.stringToLong(pkTxt); m <- Machine.get(pk)) yield m
     chosenMachine
   }
@@ -350,9 +350,9 @@ object RunProcedure extends Logging {
 
   /**
    * Make a new input for the incoming data.  Generally this is purely new data, but there is the possibility that data that has
-   * already been processed will be re-processed.  In that case, treat the data as new.  Afterwards the old version of the Input
-   * will be deleted.  The intention is to allow a complete redo of a data set, and for there to be only one set of analysis results
-   * for a given set of data.
+   * already been processed will be re-processed.  In that case, treat the data as new, except for RTPLANS, which may be used by
+   * multiple tests.  Afterwards the old version of the Input will be deleted.  The intention is to allow a complete redo of a
+   * data set, and for there to be only one set of analysis results for a given set of data.
    */
   private def makeNewInput(sessionDir: Option[File], uploadDate: Timestamp, userPK: Option[Long], PatientID: Option[String],
     dataDate: Option[Timestamp], machine: Machine, procedure: Procedure, alList: Seq[AttributeList]): Input = {
@@ -395,21 +395,23 @@ object RunProcedure extends Logging {
   /**
    * Validate the machine selection.
    */
-  def validateMachineSelection(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, Machine] = {
-    val serNoByImage = getDeviceSerialNumber(alList)
+  def validateMachineSelection(valueMap: ValueMapT, deviceSerialNumberList: Seq[String]): Either[StyleMapT, Machine] = {
 
-    val machList = serNoByImage.distinct.map(serNo => Machine.findMachinesBySerialNumber(serNo)).flatten
-
-    val distinctMachListSerNo = machList.map(mach => mach.machinePK).flatten.distinct
+    val machineByInputList = deviceSerialNumberList.
+      distinct.
+      map(dsn => Machine.findMachinesBySerialNumber(dsn)).
+      flatten.
+      groupBy(_.id).
+      map(dsnM => dsnM._2.head)
 
     // machine user chose from list
     val chosenMachine = RunProcedure.getMachineFromSelector(valueMap)
 
     val result: Either[StyleMapT, Machine] = 0 match {
-      case _ if (distinctMachListSerNo.size == 1) => Right(machList.head)
+      case _ if (machineByInputList.size > 1) => formError("Files come from more than one machine; please Cancel and try again.")
+      case _ if (machineByInputList.nonEmpty) => Right(machineByInputList.head)
       case _ if (chosenMachine.isDefined) => Right(chosenMachine.get)
-      case _ if (distinctMachListSerNo.size > 1) => formError("Files come from more than one machine; please Cancel and try again.")
-      case _ => formError("Unknown machine.  Please choose from the 'Machine' list below or click Cancel and then use the Administration interface to add it.")
+      case _ => formError("Unknown machine.  Please choose from the 'Machine' list below or click Cancel and then use the Administration interface to add a new machine.")
     }
     result
   }
@@ -420,10 +422,10 @@ object RunProcedure extends Logging {
   private def process(valueMap: ValueMapT, request: Request, response: Response, runTrait: RunTrait[RunReqClass], runReq: RunReqClass, alList: Seq[AttributeList]): Unit = {
     val now = new Timestamp((new Date).getTime)
     val PatientID = runTrait.getPatientID(valueMap, alList)
-    val machine = validateMachineSelection(valueMap, alList).right.get
+    val machine = validateMachineSelection(valueMap, runTrait.getMachineDeviceSerialNumberList(alList)).right.get
     val user = getUser(valueMap)
     val dataDate = runTrait.getDataDate(valueMap, alList)
-    setMachineSerialNumber(machine, runTrait.getMachineDeviceSerialNumber(runReq))
+    setMachineSerialNumber(machine, runTrait.getMachineDeviceSerialNumberList(alList).head)
     val userPK = if (user.isDefined) user.get.userPK else None
 
     val input = makeNewInput(sessionDir(valueMap), now, userPK, PatientID, dataDate, machine, runTrait.getProcedure, alList)
@@ -446,6 +448,8 @@ object RunProcedure extends Logging {
       val out = tempOutput.insert
       out
     }
+
+    val jo = Output.redundantWith(output) // TODO rm
 
     val extendedData = ExtendedData.get(output)
 
@@ -473,14 +477,21 @@ object RunProcedure extends Logging {
     val dicomFileList = dicomFilesInSession(valueMap)
     val alList = dicomFileList.map(df => df.attributeList).flatten
 
-    runTrait.validate(valueMap, alList) match {
-      case Left(errMap) => {
-        logger.info("Bad request: " + errMap.keys.map(k => k + " : " + valueMap.get(k)).mkString("\n    "))
-        form.setFormResponse(valueMap, errMap, runTrait.getProcedure.fullName, response, Status.CLIENT_ERROR_BAD_REQUEST)
-      }
-      case Right(runReq) => {
-        logger.info("Validated data for " + runTrait.getProcedure.fullName)
-        process(valueMap, request, response, runTrait, runReq, alList)
+    val ms = validateMachineSelection(valueMap, runTrait.getMachineDeviceSerialNumberList(alList))
+
+    if (ms.isLeft) { // handle universal case of machine not identified
+      logger.info("Unknown machine: " + ms.left.get)
+      form.setFormResponse(valueMap, ms.left.get, runTrait.getProcedure.fullName, response, Status.CLIENT_ERROR_BAD_REQUEST)
+    } else {
+      runTrait.validate(valueMap, alList) match {
+        case Left(errMap) => {
+          logger.info("Bad request: " + errMap.keys.map(k => k + " : " + valueMap.get(k)).mkString("\n    "))
+          form.setFormResponse(valueMap, errMap, runTrait.getProcedure.fullName, response, Status.CLIENT_ERROR_BAD_REQUEST)
+        }
+        case Right(runReq) => {
+          logger.info("Validated data for " + runTrait.getProcedure.fullName)
+          process(valueMap, request, response, runTrait, runReq, alList)
+        }
       }
     }
   }
@@ -562,7 +573,7 @@ object RunProcedure extends Logging {
 
         // read the DICOM files
         val alList = Util.listDirFiles(inputDir).map(f => new DicomFile(f)).map(df => df.attributeList).flatten
-        val runReq = runTrait.makeRunReq(alList)
+        val runReq = runTrait.makeRunReqForRedo(alList)
 
         runAnalysis(valueMap, runTrait, runReq, extendedData, response)
 

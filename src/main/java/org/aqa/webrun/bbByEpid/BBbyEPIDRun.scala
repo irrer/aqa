@@ -73,18 +73,6 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
   override def getProcedure = procedure
 
-  override def getMachineDeviceSerialNumber(runReq: BBbyEPIDRunReq): String = {
-    RunProcedure.getDeviceSerialNumber(runReq.epidList).head
-  }
-
-  override def getMachine(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Machine] = {
-    val epidList = getEpidList(alList)
-    val dsnList = epidList.map(al => al.get(TagFromName.DeviceSerialNumber)).filterNot(_ == null).map(a => a.getSingleStringValueOrNull).filterNot(_ == null).distinct
-    val machList = dsnList.map(dsn => Machine.findMachinesBySerialNumber(dsn)).flatten
-
-    machList.headOption
-  }
-
   override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp] = {
     val epidList = getEpidList(alList)
 
@@ -109,10 +97,16 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     list.headOption
   }
 
+  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList]): Seq[String] = {
+    val rtimageList = alList.filter(al => Util.isRtimage(al))
+    val dsnList = rtimageList.map(al => Util.attributeListToDeviceSerialNumber(al)).flatten.distinct
+    dsnList
+  }
+
   /**
    * Make the run requirements from the attribute lists.
    */
-  override def makeRunReq(alList: Seq[AttributeList]): BBbyEPIDRunReq = {
+  override def makeRunReqForRedo(alList: Seq[AttributeList]): BBbyEPIDRunReq = {
     val epidList = alList.filter(al => Util.isRtimage(al))
     new BBbyEPIDRunReq(epidList)
   }
@@ -130,8 +124,6 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     def epidSeriesList = epidList.map(epid => getSeries(epid)).distinct
     def frameOfRefList = epidList.map(epid => epid.get(TagFromName.FrameOfReferenceUID)).filterNot(attr => attr == null).map(attr => attr.getSingleStringValueOrEmptyString).distinct
 
-    def machineCheck = RunProcedure.validateMachineSelection(valueMap, epidList)
-
     logger.info("Number of RTIMAGE files uploaded: " + epidList.size)
 
     val numSeries = epidList.map(epid => epid.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString).distinct.sorted.size
@@ -141,9 +133,8 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       case _ if frameOfRefList.isEmpty => formError("EPIDs do not specify a frame of reference")
       case _ if epidSeriesList.size > 1 => formError("EPID images are from " + numSeries + " different series.")
       case _ if frameOfRefList.size > 1 => formError("EPIDs specify more than one frame of reference")
-      case _ if (machineCheck.isLeft) => Left(machineCheck.left.get)
       case _ => {
-        val runReq = new BBbyEPIDRunReq(epidList) //, machineCheck.right.get)
+        val runReq = new BBbyEPIDRunReq(epidList)
         Right(runReq)
       }
     }
