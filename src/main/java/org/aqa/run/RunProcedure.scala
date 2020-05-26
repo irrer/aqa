@@ -38,6 +38,7 @@ import org.aqa.DicomFile
 import scala.util.Try
 import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.Trace
 
 object RunProcedure extends Logging {
 
@@ -455,11 +456,15 @@ object RunProcedure extends Logging {
 
     // If this is the same data being re-submitted, then delete the old version of the analysis.  The
     // usual reasons are that the analysis was changed or the analysis aborted.
-    Future {
+    //Future { // TODO put back in
+    if (true) {
       val redundantList = Output.redundantWith(output)
       logger.info("Removing old output(s): " + redundantList.map(r => "  outPK: " + r.outputPK + "  inPK: " + r.inputPK).mkString("        "))
+      val red2 = Output.redundantWith2(output) // TODO rm
+      Trace.trace("Would rem old output(s): " + red2.map(r => "  outPK: " + r._1 + "  inPK: " + r._2).mkString("        "))
       redundantList.map(o => deleteOutput(o))
       redundantList.map(o => deleteInput(o.inputPK))
+      Trace.trace
     }
 
     runAnalysis(valueMap, runTrait, runReq, extendedData, response)

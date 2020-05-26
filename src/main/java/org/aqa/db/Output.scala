@@ -11,6 +11,7 @@ import org.aqa.web.WebServer
 import java.io.File
 import edu.umro.ScalaUtil.FileUtil
 import scala.util.Try
+import edu.umro.ScalaUtil.Trace
 
 case class Output(
   outputPK: Option[Long], // primary key
@@ -442,10 +443,52 @@ object Output extends Logging {
     seq
   }
 
+  def redundantWith2(output: Output): Seq[(Long, Long, Long, Long, String)] = {
+    Trace.trace("new output: " + output)
+    val dicomSeriesUIDSet = DicomSeries.getByInputPK(output.inputPK).map(ds => ds.seriesInstanceUID).toSet
+    val search = for {
+      out <- Output.query.filter(o => (o.machinePK === output.machinePK) && (o.procedurePK === output.procedurePK) && (o.outputPK =!= output.outputPK)).map(o => (o.outputPK, o.inputPK))
+      inputPK <- Input.query.filter(i => (i.inputPK =!= output.inputPK) && (out._2 === i.inputPK)).map(i => i.inputPK)
+      dicomSeries <- DicomSeries.query.filter(ds => (ds.seriesInstanceUID.inSet(dicomSeriesUIDSet)) && (ds.inputPK === inputPK)).map(ds => (ds.dicomSeriesPK, ds.seriesInstanceUID))
+    } yield { (out._1, out._2, inputPK, dicomSeries._1, dicomSeries._2) }
+
+    val j = search.distinctOn(_._1) // TODO rm
+    Trace.trace(j.result.statements.mkString("\n    ")) // TODO rm
+
+    val outputList = Db.run(search.result)
+    Trace.trace("outputList.size: " + outputList.size)
+    Trace.trace("outputList: " + outputList.mkString("\n    "))
+    Trace.trace("size: " + dicomSeriesUIDSet.size + " : " + dicomSeriesUIDSet.mkString("    "))
+    Trace.trace
+
+    outputList
+  }
+
   def main(args: Array[String]): Unit = {
     println("Starting Output.main")
     val valid = Config.validate
     DbSetup.init
+
+    if (true) {
+      println("\n\ntesting redundant2")
+      val start = System.currentTimeMillis
+      val outputList = Db.run(query.result)
+      println("number of outputs: " + outputList.size)
+
+      def checkRedun(output: Output) = {
+        println("Checking " + output.outputPK.get)
+        val redun = redundantWith2(output).map(r => "  Out: " + r._1 + "  In: " + r._2 + "  DS: " + r._3 + " ==> " + r._4)
+        if (redun.nonEmpty) {
+          println("found redundancy with " + output + "\n    " + redun.mkString("\n    "))
+        }
+      }
+
+      outputList.map(output => checkRedun(output))
+
+      val elapsed = System.currentTimeMillis - start
+      println("Exiting.  Elapsed ms: " + elapsed)
+      System.exit(0)
+    }
 
     if (false) {
       println("\n\ntesting redundant")
@@ -474,25 +517,5 @@ object Output extends Logging {
       System.exit(0)
     }
 
-    if (false) {
-      val output = new Output(
-        None, // primary key
-        (4).toLong, // input data
-        "dir", // directory containing data
-        1.toLong, // procedure that created this output
-        Some((6).toLong), // user that created this output
-        startDate = new Timestamp(System.currentTimeMillis), // when procedure was started
-        finishDate = Some(new Timestamp(System.currentTimeMillis + 1)), // when procedure finished
-        dataDate = None,
-        analysisDate = None,
-        machinePK = None,
-        status = "testing",
-        dataValidity = DataValidity.valid.toString) // termination status
-      println("output: " + output)
-      val result = output.insert
-      println("result: " + result)
-    }
-    // println("======== output: " + get(5))
-    // println("======== output delete: " + delete(5))
   }
 }

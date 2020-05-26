@@ -147,12 +147,26 @@ object DicomSeries extends Logging {
 
   val query = TableQuery[DicomSeriesTable]
 
+  /**
+   * Get using the primary key.
+   */
   def get(dicomSeriesPK: Long): Option[DicomSeries] = {
     val action = for {
       dicomSeries <- query if dicomSeries.dicomSeriesPK === dicomSeriesPK
     } yield (dicomSeries)
     val list = Db.run(action.result)
     list.headOption
+  }
+
+  /**
+   * Get using the input key.
+   */
+  def getByInputPK(inputPK: Long): Seq[DicomSeries] = {
+    val action = for {
+      dicomSeries <- query if dicomSeries.inputPK === inputPK
+    } yield (dicomSeries)
+    val list = Db.run(action.result)
+    list
   }
 
   def getByFrameUIDAndSOPClass(frameUIDSet: Set[String], sopClassUID: String): Seq[DicomSeries] = {
@@ -163,10 +177,20 @@ object DicomSeries extends Logging {
     list
   }
 
+  /**
+   * Get the DICOM series based on SopInstanceUID.  Each series has a blank separated
+   * list, so the list has to contain the given UID.
+   */
   def getBySopInstanceUID(sopInstUID: String): Seq[DicomSeries] = {
-    val withBlanks = " " + sopInstUID + " "
+    val withBlanks = "% " + sopInstUID + " %"
+    val withBlankPrefix = "% " + sopInstUID
+    val withBlankSuffix = sopInstUID + " %"
     val action = for {
-      dicomSeries <- query if ((dicomSeries.sopInstanceUIDList === sopInstUID) || (dicomSeries.sopInstanceUIDList === withBlanks))
+      dicomSeries <- query if (
+        (dicomSeries.sopInstanceUIDList === sopInstUID) ||
+        (dicomSeries.sopInstanceUIDList like withBlanks) ||
+        (dicomSeries.sopInstanceUIDList like withBlankPrefix) ||
+        (dicomSeries.sopInstanceUIDList like withBlankSuffix))
     } yield (dicomSeries)
     val list = Db.run(action.result)
     list
