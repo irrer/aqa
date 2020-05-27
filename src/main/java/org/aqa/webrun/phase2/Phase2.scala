@@ -94,88 +94,6 @@ object Phase2 extends Logging {
     same
   }
 
-  //  private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output, await: Boolean, isAuto: Boolean) = {
-  //
-  //    val sessionId = Session.makeUniqueId
-  //    val sessionDir = Session.idToFile(sessionId)
-  //    sessionDir.mkdirs
-  //    def copyToSessionDir(file: File) = {
-  //      val newFile = new File(sessionDir, file.getName)
-  //      newFile.createNewFile
-  //      val data = Util.readBinaryFile(file).right.get
-  //      Util.writeBinaryFile(newFile, data)
-  //    }
-  //    val inputFileList = Util.listDirFiles(inputOrig.dir).filter(f => f.isFile)
-  //    inputFileList.map(copyToSessionDir)
-  //
-  //    val dicomFileList = Util.listDirFiles(sessionDir).map(f => new DicomFile(f)).filter(df => df.attributeList.nonEmpty)
-  //    val rtimageList = dicomFileList.filter(df => df.isRtimage)
-  //
-  //    logger.info("Copied input files from " + inputOrig.dir.getAbsolutePath + " --> " + sessionDir.getAbsolutePath)
-  //
-  //    val acquisitionDate = inputOrig.dataDate match {
-  //      case None => None
-  //      case Some(timestamp) => Some(timestamp.getTime)
-  //    }
-  //
-  //    val runReq = {
-  //
-  //      val rtplan: AttributeList = {
-  //        DicomSeries.getBySeriesInstanceUID(Phase2Util.referencedPlanUID(rtimageList.head)).headOption match {
-  //          case Some(dicomSeries) => dicomSeries.attributeListList.head
-  //          case _ => { // TODO this should be phased out when the shared directory is deprecated
-  //            val rtplanFile = new File(Config.sharedDir, Phase2Util.referencedPlanUID(rtimageList.head) + Util.dicomFileNameSuffix)
-  //            (new DicomFile(rtplanFile)).attributeList.get
-  //          }
-  //        }
-  //      }
-  //
-  //      val machine = {
-  //        if (outputOrig.machinePK.isDefined && Machine.get(outputOrig.machinePK.get).isDefined)
-  //          Machine.get(outputOrig.machinePK.get).get
-  //        else {
-  //          val serNo = rtimageList.map(df => df.attributeList).flatten.head.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrEmptyString
-  //          Machine.findMachinesBySerialNumber(serNo).head
-  //        }
-  //      }
-  //      val rtimageMap = constructRtimageMap(rtplan, rtimageList)
-  //      val flood = rtimageMap(Config.FloodFieldBeamName)
-  //
-  //      new RunReq(rtplan, None, machine, rtimageMap, flood) // TODO handle rtplanCBCT
-  //    }
-  //
-  //    val procedure = Procedure.get(outputOrig.procedurePK).get
-  //
-  //    val inputOutput = Run.preRun(procedure, runReq.machine, sessionDir, getUser(request), inputOrig.patientId, acquisitionDate)
-  //    val input = inputOutput._1
-  //    val output = inputOutput._2
-  //
-  //    val future = Future {
-  //      val extendedData = ExtendedData.get(output)
-  //      val runReqFinal = runReq.reDir(input.dir)
-  //
-  //      val rtplan = runReqFinal.rtplan
-  //      val machine = runReqFinal.machine
-  //      Phase2Util.saveRtplan(rtplan)
-  //
-  //      val rtimageMap = constructRtimageMap(rtplan, rtimageList)
-  //
-  //      val finalStatus = Phase2.runPhase2(extendedData, rtimageMap, runReqFinal)
-  //      val finDate = new Timestamp(System.currentTimeMillis)
-  //      val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
-  //
-  //      Phase2Util.setMachineSerialNumber(machine, runReqFinal.flood.attributeList.get)
-  //      outputFinal.insertOrUpdate
-  //      outputFinal.updateData(outputFinal.makeZipOfFiles)
-  //      Run.removeRedundantOutput(outputFinal.outputPK)
-  //      // remove the original input and all associated outputs to clean up any possible redundant data
-  //      Input.delete(inputOrig.inputPK.get)
-  //    }
-  //
-  //    awaitIfRequested(future, await, inputOutput._2.procedurePK)
-  //    ViewOutput.redirectToViewRunProgress(response, isAuto, output.outputPK.get)
-  //  }
-
   /**
    * Tell the user that the redo is forbidden and why.  Also give them a redirect back to the list of results.
    */
@@ -194,36 +112,6 @@ object Phase2 extends Logging {
     val text = wrapBody(content, "Redo not permitted")
     setResponse(text, response, Status.CLIENT_ERROR_FORBIDDEN)
   }
-
-  //  /**
-  //   * Given a Phase 2 output, redo the analysis.
-  //   */
-  //  def redo(outputPK: Long, request: Request, response: Response, await: Boolean, isAuto: Boolean) = {
-  //    try {
-  //      Output.get(outputPK) match {
-  //        case None => {
-  //          logger.info("Redo of output " + outputPK + " not possible because output does not exist")
-  //          val msg = "Redo not possible because output does not exist"
-  //          forbidRedo(response, msg, None)
-  //        }
-  //        case Some(outputOrig) => {
-  //          Input.get(outputOrig.inputPK) match {
-  //            case None => {
-  //              val msg = "Redo not possible because input does not exist"
-  //              forbidRedo(response, msg, outputOrig.outputPK)
-  //            }
-  //            case Some(inputOrig) if (!userAuthorizedToModify(request, response, inputOrig)) => {
-  //              val msg = "Redo not permitted because user is from a different institution."
-  //              forbidRedo(response, msg, outputOrig.outputPK)
-  //            }
-  //            case Some(inputOrig) => processRedoRequest(request, response, inputOrig, outputOrig, await, isAuto)
-  //          }
-  //        }
-  //      }
-  //    } catch {
-  //      case t: Throwable => logger.warn("Unable to redo output " + outputPK + " : " + fmtEx(t))
-  //    }
-  //  }
 
 }
 
@@ -332,11 +220,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
       case _ if (planUIDReferences.size > 1) => formErr("The RTIMAGES reference more than one RTPLAN.")
       case _ if (referencedRtplanList.isEmpty) => formErr("Can not find the referenced RTPLAN.  Retry and upload the RTPLAN with the images. ")
       case _ if (rtimageList.isEmpty) => formErr("No RTIMAGEs given")
-      //      case _ if (planGroups.isEmpty) => formErr("No RTPLAN found for RTIMAGEs.  Try uploading the RTPLAN with the RTIMAGE files.")
-      //      case _ if (planGroups.size > 1) => formErr("The RTIMAGEs reference multiple plans.  Only one plan per run is permitted.")
-      //      case _ if (planGroups.head._2.size < rtimageList.size) => {
-      //        formErr("There are " + rtimageList.size + " images but only " + planGroups.head._2.size + " reference this plan")
-      //      }
 
       case _ if (machineSerialNumberList.isEmpty) => {
         formErr("None of the " + rtimageList.size +
@@ -557,88 +440,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     status
   }
 
-  //  private def runX(valueMap: ValueMapT, runReq: RunReq, response: Response, rtimageList: Seq[DicomFile]) = {
-  //
-  //    // only consider the RTIMAGE files for the date-time stamp.  The plan could have been from months ago.
-  //    val dtp = dateTimePatId(rtimageList)
-  //
-  //    val sessDir = sessionDir(valueMap).get
-  //    val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(response.getRequest), dtp.PatientID, dtp.dateTime)
-  //    val input = inputOutput._1
-  //    val output = inputOutput._2
-  //
-  //    def perform = {
-  //      val extendedData = ExtendedData.get(output)
-  //      val runReqFinal = runReq.reDir(input.dir)
-  //
-  //      val plan = runReqFinal.rtplan
-  //      val machine = runReqFinal.machine
-  //      // save serial number now in case analysis crashes with an exception
-  //      Phase2Util.setMachineSerialNumber(machine, runReqFinal.flood.attributeList.get)
-  //      Phase2Util.saveRtplan(plan)
-  //
-  //      val rtimageMap = Phase2.constructRtimageMap(plan, rtimageList)
-  //
-  //      val finalStatus = Phase2.runPhase2(extendedData, rtimageMap, runReqFinal)
-  //      val finDate = new Timestamp(System.currentTimeMillis)
-  //      val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
-  //
-  //      outputFinal.insertOrUpdate
-  //      outputFinal.updateData(outputFinal.makeZipOfFiles)
-  //      Run.removeRedundantOutput(outputFinal.outputPK)
-  //      Util.garbageCollect
-  //      logger.info("Phase 2 analysis has completed.")
-  //    }
-  //
-  //    // if awaiting, then wait for completion, otherwise do it in the background
-  //    if (isAwait(valueMap)) {
-  //      perform
-  //    } else {
-  //      Future { perform }
-  //    }
-  //    logger.info("Redirecting web client to view run progress of EPID processing.")
-  //    ViewOutput.redirectToViewRunProgress(response, valueMap, output.outputPK.get)
-  //
-  //  }
-
-  //  /**
-  //   * Respond to the 'Run' button.
-  //   */
-  //  private def runIfDataValid(valueMap: ValueMapT, request: Request, response: Response) = {
-  //    val dicomFileList = dicomFilesInSession(valueMap)
-  //    val rtplanList = Phase2Util.getPlanList(dicomFileList)
-  //    val rtimageList = cullRedundantBeamReferences(dicomFileList.filter(df => df.isRtimage))
-  //
-  //    validate(valueMap, rtplanList, rtimageList) match {
-  //      case Left(errMap) => {
-  //        logger.info("Phase2 Bad request: " + errMap.keys.map(k => k + " : " + valueMap.get(k)).mkString("\n    "))
-  //        form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
-  //      }
-  //      case Right(runReq) => {
-  //        if (isAwait(valueMap)) awaitTag.synchronized {
-  //          runX(valueMap, runReq, response, rtimageList)
-  //        }
-  //        else runX(valueMap, runReq, response, rtimageList)
-  //      }
-  //    }
-  //  }
-
-  //  /**
-  //   * Cancel the procedure.  Remove files and redirect to procedure list.
-  //   */
-  //  private def cancel(valueMap: ValueMapT, response: Response) = {
-  //    sessionDir(valueMap) match {
-  //      case Some(dir) => Utility.deleteFileTree(dir)
-  //      case _ => ;
-  //    }
-  //    WebRunIndex.redirect(response)
-  //  }
-
-  //  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
-  //    val value = valueMap.get(button.label)
-  //    value.isDefined && value.get.toString.equals(button.label)
-  //  }
-
   override def makeRunReqForRedo(alList: Seq[AttributeList]): RunReqClass = {
     //val result = validate(emptyValueMap, alList.filter(al => Util.isRtimage(al)))
     val rtimageList = alList.filter(al => Util.isRtimage(al))
@@ -677,18 +478,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
   override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp] = {
     val min = alList.filter(al => Util.isRtimage(al)).map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al)).map(dp => dp._1).flatten.minBy(_.getTime)
     Some(new Timestamp(min.getTime))
-
-    //    the old code:
-    //  /**
-    //   * Given an image list, find the one with the earliest date/time.
-    //   */
-    //    val list = alList.filter(al => Util.isRtimage(al)).map(df => Util.dateTimeAndPatientIdFromDicom(???)).filter(dt => dt.dateTime.isDefined)
-    //    val dtap =
-    //      if (list.isEmpty) new Util.DateTimeAndPatientId(None, None)
-    //      else list.minBy(dt => dt.dateTime.get)
-    //    logger.info("DateTime and PatientId: " + dtap)
-    //    dtap
-    //
   }
 
   override def getProcedure: Procedure = procedure
@@ -711,21 +500,5 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     val valueMap: ValueMapT = getValueMap(request)
     RunProcedure.handle(valueMap, request, response, this.asInstanceOf[RunTrait[RunReqClass]])
   }
-
-  //
-  //      val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
-  //
-  //    try {
-  //      0 match {
-  //        //case _ if (!sessionDefined(valueMap)) => redirectWithNewSession(response);
-  //        case _ if buttonIs(valueMap, cancelButton) => cancel(valueMap, response)
-  //        case _ if buttonIs(valueMap, runButton) => runIfDataValid(valueMap, request, response)
-  //        case _ => emptyForm(valueMap, response)
-  //      }
-  //    } catch {
-  //      case t: Throwable => {
-  //        internalFailure(response, "Unexpected failure: " + fmtEx(t))
-  //      }
-  //    }
 
 }
