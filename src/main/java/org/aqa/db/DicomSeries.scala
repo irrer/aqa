@@ -15,6 +15,8 @@ import edu.umro.ScalaUtil.DicomUtil
 import com.pixelmed.dicom.SOPClass
 import edu.umro.ScalaUtil.Trace
 import org.aqa.web.WebServer
+import scala.util.Try
+import org.aqa.DicomFile
 
 /**
  * Store the contents of a DICOM series.
@@ -58,6 +60,8 @@ case class DicomSeries(
     result
   }
 
+  def insertOrUpdate = Db.run(DicomSeries.query.insertOrUpdate(this))
+
   /**
    * Get the content as a list of <code>AttributeList</code>.
    */
@@ -81,6 +85,31 @@ case class DicomSeries(
   }
 
   override def toString = {
+
+    //    Trace.trace("dicomSeriesPK: " + dicomSeriesPK)
+    //    Trace.trace("userPK: " + userPK)
+    //    Trace.trace("inputPK: " + inputPK)
+    //    Trace.trace("machinePK: " + machinePK)
+    //    Trace.trace("sopInstanceUIDList: " + sopInstanceUIDList)
+    //    Trace.trace("seriesInstanceUID: " + seriesInstanceUID)
+    //    Trace.trace("frameOfReferenceUID: " + frameOfReferenceUID)
+    //    Trace.trace("mappedFrameOfReferenceUID: " + mappedFrameOfReferenceUID)
+    //    Trace.trace("modality: " + modality)
+    //    Trace.trace("sopClassUID: " + sopClassUID)
+    //    Trace.trace("deviceSerialNumber: " + deviceSerialNumber)
+    //    Trace.trace("date: " + date)
+    //    Trace.trace("patientID: " + patientID)
+    //    Trace.trace("size: " + size)
+    //    Trace.trace("referencedRtplanUID: " + referencedRtplanUID)
+
+    val contentText = if ((content != null) && (content.isDefined)) {
+      "\n    content size: " + content.get.size
+    } else {
+      "\n    content: null"
+    }
+
+    Trace.trace("contentText: " + contentText)
+
     "\n    dicomSeriesPK: " + dicomSeriesPK +
       "\n    userPK: " + userPK +
       "\n    inputPK: " + inputPK +
@@ -96,7 +125,7 @@ case class DicomSeries(
       "\n    patientID: " + patientID +
       "\n    size: " + size +
       "\n    referencedRtplanUID: " + referencedRtplanUID +
-      "\n    content size: " + content.size
+      contentText
   }
 }
 
@@ -410,6 +439,8 @@ object DicomSeries extends Logging {
 
   // ------------------------------------------------------------------------------------------------------------------------
   // ------------------------------------------------------------------------------------------------------------------------
+  // ------------------------------------------------------------------------------------------------------------------------
+  // ------------------------------------------------------------------------------------------------------------------------
 
   private def deleteOrphans: Unit = {
     println("deleteOrphans DicomSeries starting ...")
@@ -430,19 +461,19 @@ object DicomSeries extends Logging {
       filter(ref => ref.inputPK.isDefined).
       filterNot(ref => inputPKset.contains(ref.inputPK.get))
 
-    println("List of " + listToDelete.size + " DicomSeries to delete:\n    " + listToDelete.mkString("    \n"))
+    println("Number of orphans to delete: " + listToDelete.size + " DicomSeries to delete:\n    " + listToDelete.mkString("    \n"))
     if (Config.DicomSeriesDeleteOrphans) {
       println("Deleting DicomSeries")
       listToDelete.map(ref => DicomSeries.delete(ref.dicomSeriesPK))
     } else
-      println("NOT Deleting DicomSeries")
+      println("NOT Deleting DicomSeries " + listToDelete.map(ds => ds.dicomSeriesPK).mkString("  "))
     println("deleteOrphans DicomSeries done.  Elapsed ms: " + (System.currentTimeMillis - start))
 
   }
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  private def populate = {
+  private def populateFromInput = {
     println("populate DicomSeries starting ...")
     val start = System.currentTimeMillis
     // get list of inputs
@@ -465,11 +496,11 @@ object DicomSeries extends Logging {
             missing.map(alList => {
               val ds = DicomSeries.makeDicomSeries(input.userPK.get, Some(inPK), input.machinePK, alList)
               if (ds.isDefined) {
-                if (Config.DicomSeriesPopulate) {
-                  println("Creating DicomSeries")
+                if (Config.DicomSeriesPopulateFromInput) {
+                  println("Creating DicomSeries " + ds.get)
                   ds.get.insert
                 } else
-                  println("NOT Creating DicomSeries")
+                  println("NOT Creating DicomSeries series UID " + ds.get.seriesInstanceUID + "  " + ds.get.modality)
               }
             })
 
@@ -480,16 +511,131 @@ object DicomSeries extends Logging {
     }
 
     inputPKseq.map(inPK => ensureDS(inPK))
-    println("populate DicomSeries done.  Elapsed ms: " + (System.currentTimeMillis - start))
+    println("populateFromInput done.  Elapsed ms: " + (System.currentTimeMillis - start))
   }
+
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  /**
+   * Find DicomSeries that have content but should not.
+   */
+  private def trimOld = {
+    val start = System.currentTimeMillis
+
+    val trimList = {
+      val action = for {
+        dicomSeries <- query.filter(ds => ((ds.modality =!= "RTPLAN") && (ds.content.isDefined))).map(ds => ds.dicomSeriesPK)
+      } yield (dicomSeries)
+      val list = Db.run(action.result)
+      list
+    }
+
+    println("Number of DicomSeries rows that need content set to null: " + trimList.size)
+
+    def nullContent(dsPK: Long) = {
+      try {
+        val oldDs = DicomSeries.get(dsPK).get
+        if ((!oldDs.modality.equals("RTPLAN")) && (oldDs.content.isDefined)) {
+          val newDs = oldDs.copy(content = null)
+          if (Config.DicomSeriesTrim) {
+            newDs.insertOrUpdate
+            println("Trimmed content of " + newDs)
+          } else {
+            println("Did NOT trim content of " + newDs.dicomSeriesPK.get)
+          }
+        } else {
+          println("Unexpectedly found DicomSeries to trim that should not be trimmed: " + oldDs)
+        }
+      } catch {
+        case t: Throwable => println("Failed to trimOld for DicomSeries PK " + dsPK + " : " + fmtEx(t))
+      }
+    }
+
+    trimList.map(dsPK => nullContent(dsPK))
+    println("trimOld done.  Elapsed ms: " + (System.currentTimeMillis - start))
+  }
+
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  /**
+   * Find DicomSeries that have content but should not.
+   */
+  private def unlinkRtplan = {
+    val start = System.currentTimeMillis
+    val unlinkList = {
+      val action = for {
+        dicomSeries <- query.filter(ds => ((ds.modality === "RTPLAN") && (ds.inputPK.isDefined))).map(ds => ds.dicomSeriesPK)
+      } yield (dicomSeries)
+      val list = Db.run(action.result)
+      list
+    }
+
+    println("Number of DicomSeries rows that need to be unlinked from inputPK: " + unlinkList.size)
+
+    def unlinkInputPK(dsPK: Long) = {
+      try {
+        val oldDs = DicomSeries.get(dsPK).get
+        if ((oldDs.modality.equals("RTPLAN")) && (oldDs.inputPK.isDefined)) {
+          val newDs = oldDs.copy(inputPK = null)
+          if (Config.DicomSeriesUnlinkInputPK) {
+            newDs.insertOrUpdate
+            println("Unlinked content of " + newDs)
+          } else {
+            println("Did NOT unlink content of " + newDs.dicomSeriesPK.get)
+          }
+        } else {
+          println("Unexpectedly found DicomSeries to unlink that should not be unlinked: " + oldDs)
+        }
+      } catch {
+        case t: Throwable => println("Failed to unlinkInputPK for DicomSeries PK " + dsPK + " : " + fmtEx(t))
+      }
+    }
+
+    unlinkList.map(dsPK => unlinkInputPK(dsPK))
+    println("unlinkRtplan done.  Elapsed ms: " + (System.currentTimeMillis - start))
+  }
+
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  private def verifySharedInDicomSeries = {
+    val series = Util.listDirFiles(Config.sharedDir).map(f => (new DicomFile(f).attributeList)).flatten.groupBy(al => Util.serInstOfAl(al))
+    println("Number of series in shared: " + series.size)
+
+    def saveSeries(serUID: String, alList: Seq[AttributeList]) = {
+      val ds = DicomSeries.getBySeriesInstanceUID(serUID)
+      if (ds.nonEmpty)
+        println("Shared DicomSeries already in database: " + serUID + "    " + Util.modalityOfAl(alList.head))
+      else
+        println("Shared DicomSeries NOT in database: " + serUID + "    " + Util.modalityOfAl(alList.head))
+    }
+
+    series.map(s => saveSeries(s._1, s._2))
+
+  }
+
+  private def findOrphanOutputs = {
+    val search = Output.query.filter(o => o.machinePK.isEmpty)
+    val list = Db.run(search.result)
+    println("list of output PK's that have a null Machine reference: " + list.map(o => o.outputPK.get).mkString("    "))
+    println("Number of outputs that have a null Machine reference: " + list.size)
+  }
+
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   def main(args: Array[String]): Unit = {
     if (Config.validate) {
       DbSetup.init
       Trace.trace
-      deleteOrphans
+      //deleteOrphans
       Trace.trace
-      populate
+      //      populateFromInput
+      //      Trace.trace
+      //      trimOld
+      //      Trace.trace
+      //      unlinkRtplan
+      //      Trace.trace
+      //      verifySharedInDicomSeries
+      findOrphanOutputs
       Trace.trace
     }
   }

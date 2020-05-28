@@ -853,8 +853,12 @@ object Config extends Logging {
   val BBbyEPIDChartTolerance_mm = logMainText("BBbyEPIDChartTolerance_mm", "1.0").toDouble.abs
   val BBbyEPIDChartYRange_mm = logMainText("BBbyEPIDChartYRange_mm", "3.0").toDouble.abs
 
-  val DicomSeriesDeleteOrphans = logMainText("DicomSeriesDeleteOrphans", "false").equals("true") // TODO temporary for transition
-  val DicomSeriesPopulate = logMainText("DicomSeriesPopulate", "false").equals("true") // TODO temporary for transition
+  val DicomSeriesDeleteOrphans = logMainText("DicomSeriesDeleteOrphans", "false").equalsIgnoreCase("true") // TODO temporary for transition
+  val DicomSeriesPopulateFromInput = logMainText("DicomSeriesPopulateFromInput", "false").equalsIgnoreCase("true") // TODO temporary for transition
+  val DicomSeriesTrim = logMainText("DicomSeriesTrim", "false").equalsIgnoreCase("true") // TODO temporary for transition
+  val DicomSeriesRemoveShared = logMainText("DicomSeriesRemoveShared", "false").equalsIgnoreCase("true") // TODO temporary for transition
+  val DicomSeriesUnlinkInputPK = logMainText("DicomSeriesUnlinkInputPK", "false").equalsIgnoreCase("true") // TODO temporary for transition
+
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true
 

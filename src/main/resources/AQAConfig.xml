@@ -7,17 +7,18 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Database parameters. -->
     <SlickDb>
         db {
-          default = {
-            driver = "org.postgresql.Driver"
-            db {
-              host = 141.214.125.209
-              port = 5432
-              databaseName = AQATest
-              user = postgres
-              password = postgresjim
-              url = "jdbc:postgresql://141.214.125.209:5432/AQATest"
-            }
-          }
+        default = {
+        driver = "org.postgresql.Driver"
+        db {
+        host = 141.214.125.209
+        port = 5432
+        databaseName = AQATest
+        user = postgres
+        password = postgresjim
+        url =
+        "jdbc:postgresql://141.214.125.209:5432/AQATest"
+        }
+        }
         }
     </SlickDb>
 
@@ -45,7 +46,7 @@ Note that when building a package for release, the Maven build process uses the 
         123.234.111.218
         
     If this list is empty or not specified then all incoming IP addresses are allowed. -->
-    
+
     <AllowedHttpIpList>
         <AllowedHttpIp>0:0:0:0:0:0:0:1</AllowedHttpIp>   <!-- localhost as IPv6 address -->
         <AllowedHttpIp>127.0.0.1</AllowedHttpIp>
@@ -185,53 +186,53 @@ Note that when building a package for release, the Maven build process uses the 
      a java.lang.ExceptionInInitializerError error.
      -->
     <ToBeAnonymizedList>
-        <ToBeAnonymized Name='PatientID'          Tag='0010,0020'  />  <!-- Example of how Tag is used. -->
-        <ToBeAnonymized                           Tag='0010,0010'  />  <!-- Example of how just a Tag is used, equivalent to Name='PatientName' -->
-        <ToBeAnonymized Name='PatientBirthDate'                    Value='18000101'/>
-        <ToBeAnonymized Name='PatientBirthTime'                    Value='000000'/>
-        <ToBeAnonymized Name='PatientSex'                          Value='O'/>
-        <ToBeAnonymized Name='OtherPatientIDs'                     />
-        <ToBeAnonymized Name='OtherPatientNames'                   />
-        <ToBeAnonymized Name='PatientAge'                          Value='0'/>
-        <ToBeAnonymized Name='PatientSize'                         Value='0'/>
-        <ToBeAnonymized Name='PatientWeight'                       Value='0'/>
-        <ToBeAnonymized Name='InstanceCreatorUID'                  />
-        <ToBeAnonymized Name='SOPInstanceUID'                      />
-        <ToBeAnonymized Name='MediaStorageSOPInstanceUID'          />
-        <ToBeAnonymized Name='AccessionNumber'                     Value='0'/>
-        <ToBeAnonymized Name='InstitutionName'                     />
-        <ToBeAnonymized Name='InstitutionAddress'                  />
-        <ToBeAnonymized Name='ReferringPhysicianName'              />
-        <ToBeAnonymized Name='ReferringPhysicianAddress'           />
-        <ToBeAnonymized Name='ReferringPhysicianTelephoneNumbers'  />
-        <ToBeAnonymized Name='StationName'                         />
-        <ToBeAnonymized Name='InstitutionalDepartmentName'         />
-        <ToBeAnonymized Name='PhysiciansOfRecord'                  />
-        <ToBeAnonymized Name='PerformingPhysicianName'             />
-        <ToBeAnonymized Name='NameOfPhysiciansReadingStudy'        />
-        <ToBeAnonymized Name='OperatorsName'                       />
-        <ToBeAnonymized Name='ReferencedSOPInstanceUID'            />
-        <ToBeAnonymized Name='MedicalRecordLocator'                />
-        <ToBeAnonymized Name='EthnicGroup'                         />
-        <ToBeAnonymized Name='Occupation'                          />
-        <ToBeAnonymized Name='AdditionalPatientHistory'            />
-        <ToBeAnonymized Name='PatientComments'                     />
-        <ToBeAnonymized Name='DeviceSerialNumber'                  />
-        <ToBeAnonymized Name='ProtocolName'                        />
-        <ToBeAnonymized Name='StudyInstanceUID'                    />
-        <ToBeAnonymized Name='SeriesInstanceUID'                   />
-        <ToBeAnonymized Name='StudyID'                             />
-        <ToBeAnonymized Name='RadiationMachineName'                />  <!-- Note: This is not generally anonymized, but in this case it could protect the identity of the institution. -->
-        <ToBeAnonymized Name='FrameOfReferenceUID'                 />
-        <ToBeAnonymized Name='SynchronizationFrameOfReferenceUID'  />
-        <ToBeAnonymized Name='ImageComments'                       />
-        <ToBeAnonymized Name='UID'                                 />
-        <ToBeAnonymized Name='StorageMediaFileSetUID'              />
-        <ToBeAnonymized Name='ReferencedFrameOfReferenceUID'       />
-        <ToBeAnonymized Name='RelatedFrameOfReferenceUID'          />
-        <ToBeAnonymized Name='SourceFrameOfReferenceUID'           />
-        <ToBeAnonymized Name='RTPlanName'                          />
-        <ToBeAnonymized Name='DoseReferenceUID'                    />
+        <ToBeAnonymized Name='PatientID' Tag='0010,0020' />  <!-- Example of how Tag is used. -->
+        <ToBeAnonymized Tag='0010,0010' />  <!-- Example of how just a Tag is used, equivalent to Name='PatientName' -->
+        <ToBeAnonymized Name='PatientBirthDate' Value='18000101' />
+        <ToBeAnonymized Name='PatientBirthTime' Value='000000' />
+        <ToBeAnonymized Name='PatientSex' Value='O' />
+        <ToBeAnonymized Name='OtherPatientIDs' />
+        <ToBeAnonymized Name='OtherPatientNames' />
+        <ToBeAnonymized Name='PatientAge' Value='0' />
+        <ToBeAnonymized Name='PatientSize' Value='0' />
+        <ToBeAnonymized Name='PatientWeight' Value='0' />
+        <ToBeAnonymized Name='InstanceCreatorUID' />
+        <ToBeAnonymized Name='SOPInstanceUID' />
+        <ToBeAnonymized Name='MediaStorageSOPInstanceUID' />
+        <ToBeAnonymized Name='AccessionNumber' Value='0' />
+        <ToBeAnonymized Name='InstitutionName' />
+        <ToBeAnonymized Name='InstitutionAddress' />
+        <ToBeAnonymized Name='ReferringPhysicianName' />
+        <ToBeAnonymized Name='ReferringPhysicianAddress' />
+        <ToBeAnonymized Name='ReferringPhysicianTelephoneNumbers' />
+        <ToBeAnonymized Name='StationName' />
+        <ToBeAnonymized Name='InstitutionalDepartmentName' />
+        <ToBeAnonymized Name='PhysiciansOfRecord' />
+        <ToBeAnonymized Name='PerformingPhysicianName' />
+        <ToBeAnonymized Name='NameOfPhysiciansReadingStudy' />
+        <ToBeAnonymized Name='OperatorsName' />
+        <ToBeAnonymized Name='ReferencedSOPInstanceUID' />
+        <ToBeAnonymized Name='MedicalRecordLocator' />
+        <ToBeAnonymized Name='EthnicGroup' />
+        <ToBeAnonymized Name='Occupation' />
+        <ToBeAnonymized Name='AdditionalPatientHistory' />
+        <ToBeAnonymized Name='PatientComments' />
+        <ToBeAnonymized Name='DeviceSerialNumber' />
+        <ToBeAnonymized Name='ProtocolName' />
+        <ToBeAnonymized Name='StudyInstanceUID' />
+        <ToBeAnonymized Name='SeriesInstanceUID' />
+        <ToBeAnonymized Name='StudyID' />
+        <ToBeAnonymized Name='RadiationMachineName' />  <!-- Note: This is not generally anonymized, but in this case it could protect the identity of the institution. -->
+        <ToBeAnonymized Name='FrameOfReferenceUID' />
+        <ToBeAnonymized Name='SynchronizationFrameOfReferenceUID' />
+        <ToBeAnonymized Name='ImageComments' />
+        <ToBeAnonymized Name='UID' />
+        <ToBeAnonymized Name='StorageMediaFileSetUID' />
+        <ToBeAnonymized Name='ReferencedFrameOfReferenceUID' />
+        <ToBeAnonymized Name='RelatedFrameOfReferenceUID' />
+        <ToBeAnonymized Name='SourceFrameOfReferenceUID' />
+        <ToBeAnonymized Name='RTPlanName' />
+        <ToBeAnonymized Name='DoseReferenceUID' />
      <!--  <ToBeAnonymized Name='ReferencedPrimaryDoseRefUID'         />   -->
     </ToBeAnonymizedList>
 
@@ -550,10 +551,10 @@ Note that when building a package for release, the Maven build process uses the 
         IsolationBorder_mm: Distance in mm from planned edge to the edge of the AOI used to capture pixels.  This distance minimizes the effects of on the final values.
         -->
     <VMATBeamPairList>
-        <VMATBeamPair Name="Leaf Speed Test" MLC="T3MLCSpeed" OPEN="T3 Open" IsolationBorder_mm="10.0"/>
+        <VMATBeamPair Name="Leaf Speed Test" MLC="T3MLCSpeed" OPEN="T3 Open" IsolationBorder_mm="10.0" />
         <!-- Note that these two should have the same MLC name, but there was a mistake/typo made when creating the RTPLAN. -->
-        <VMATBeamPair Name="Dose Rate - Gantry Speed Test" MLC="T2-DG-RS" OPEN="T2 Open" IsolationBorder_mm="5.0"/>
-        <VMATBeamPair Name="Dose Rate - Gantry Speed Test" MLC="T2-DR-GS" OPEN="T2 Open" IsolationBorder_mm="5.0"/>
+        <VMATBeamPair Name="Dose Rate - Gantry Speed Test" MLC="T2-DG-RS" OPEN="T2 Open" IsolationBorder_mm="5.0" />
+        <VMATBeamPair Name="Dose Rate - Gantry Speed Test" MLC="T2-DR-GS" OPEN="T2 Open" IsolationBorder_mm="5.0" />
     </VMATBeamPairList>
 
     <!-- Used for graphing VMAT history, a positive integer indicating the number of values to display before and after (if
@@ -631,5 +632,8 @@ Note that when building a package for release, the Maven build process uses the 
     
     <!-- Set to true to clean up DicomSeries.-->
     <DicomSeriesDeleteOrphans>false</DicomSeriesDeleteOrphans>
-    <DicomSeriesPopulate>false</DicomSeriesPopulate>
+    <DicomSeriesPopulateFromInput>false</DicomSeriesPopulateFromInput>
+    <DicomSeriesTrim>false</DicomSeriesTrim>
+    <DicomSeriesUnlinkInputPK>false</DicomSeriesUnlinkInputPK>
+    <DicomSeriesRemoveShared>false</DicomSeriesRemoveShared>
 </AQAConfig>
