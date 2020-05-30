@@ -853,11 +853,35 @@ object Config extends Logging {
   val BBbyEPIDChartTolerance_mm = logMainText("BBbyEPIDChartTolerance_mm", "1.0").toDouble.abs
   val BBbyEPIDChartYRange_mm = logMainText("BBbyEPIDChartYRange_mm", "3.0").toDouble.abs
 
-  val DicomSeriesDeleteOrphans = logMainText("DicomSeriesDeleteOrphans", "false").equalsIgnoreCase("true") // TODO temporary for transition
-  val DicomSeriesPopulateFromInput = logMainText("DicomSeriesPopulateFromInput", "false").equalsIgnoreCase("true") // TODO temporary for transition
-  val DicomSeriesTrim = logMainText("DicomSeriesTrim", "false").equalsIgnoreCase("true") // TODO temporary for transition
-  val DicomSeriesRemoveShared = logMainText("DicomSeriesRemoveShared", "false").equalsIgnoreCase("true") // TODO temporary for transition
-  val DicomSeriesUnlinkInputPK = logMainText("DicomSeriesUnlinkInputPK", "false").equalsIgnoreCase("true") // TODO temporary for transition
+  // =================================================================================
+
+  object Fix extends Enumeration { // TODO temporary for transition
+    val ignore = Value
+    val check = Value
+    val fix = Value
+  }
+  private def getFixState(name: String): Fix.Value = {
+    val list = document \ name
+    val fixState = if (list.isEmpty) {
+      Fix.ignore
+    } else {
+      val state = list.head.text match {
+        case text if text.equalsIgnoreCase("check") => Fix.check
+        case text if text.equalsIgnoreCase("fix") => Fix.fix
+        case _ => Fix.ignore
+      }
+      state
+    }
+    logText(name, fixState.toString)
+    fixState
+  }
+  val DicomSeriesDeleteOrphans = getFixState("DicomSeriesDeleteOrphans") // TODO temporary for transition
+  val DicomSeriesPopulateFromInput = getFixState("DicomSeriesPopulateFromInput") // TODO temporary for transition
+  val DicomSeriesTrim = getFixState("DicomSeriesTrim") // TODO temporary for transition
+  val DicomSeriesOrphanOutputs = getFixState("DicomSeriesOrphanOutputs") // TODO temporary for transition
+  val DicomSeriesUnlinkInputPK = getFixState("DicomSeriesUnlinkInputPK") // TODO temporary for transition
+
+  // =================================================================================
 
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true

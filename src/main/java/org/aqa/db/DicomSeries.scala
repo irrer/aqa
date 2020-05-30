@@ -462,7 +462,7 @@ object DicomSeries extends Logging {
       filterNot(ref => inputPKset.contains(ref.inputPK.get))
 
     println("Number of orphans to delete: " + listToDelete.size + " DicomSeries to delete:\n    " + listToDelete.mkString("    \n"))
-    if (Config.DicomSeriesDeleteOrphans) {
+    if (Config.DicomSeriesDeleteOrphans == Config.Fix.fix) {
       println("Deleting DicomSeries")
       listToDelete.map(ref => DicomSeries.delete(ref.dicomSeriesPK))
     } else
@@ -483,6 +483,7 @@ object DicomSeries extends Logging {
     }
     println("populate DicomSeries number of inputs to process: " + inputPKseq.size)
 
+    var count = 0
     def ensureDS(inPK: Long) {
       InputFiles.get(inPK) match {
         case Some(inputFiles) => {
@@ -492,11 +493,12 @@ object DicomSeries extends Logging {
 
           if (missing.nonEmpty) {
             println("For input " + inPK + " number of series missing: " + missing.size)
+            count = count + missing.size
             val input = Input.get(inPK).get
             missing.map(alList => {
               val ds = DicomSeries.makeDicomSeries(input.userPK.get, Some(inPK), input.machinePK, alList)
               if (ds.isDefined) {
-                if (Config.DicomSeriesPopulateFromInput) {
+                if (Config.DicomSeriesPopulateFromInput == Config.Fix.fix) {
                   println("Creating DicomSeries " + ds.get)
                   ds.get.insert
                 } else
@@ -511,7 +513,7 @@ object DicomSeries extends Logging {
     }
 
     inputPKseq.map(inPK => ensureDS(inPK))
-    println("populateFromInput done.  Elapsed ms: " + (System.currentTimeMillis - start))
+    println("populateFromInput done.  Total missing: " + count + "   Elapsed ms: " + (System.currentTimeMillis - start))
   }
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -532,12 +534,14 @@ object DicomSeries extends Logging {
 
     println("Number of DicomSeries rows that need content set to null: " + trimList.size)
 
+    var trimCount = 0
     def nullContent(dsPK: Long) = {
       try {
         val oldDs = DicomSeries.get(dsPK).get
         if ((!oldDs.modality.equals("RTPLAN")) && (oldDs.content.isDefined)) {
           val newDs = oldDs.copy(content = null)
-          if (Config.DicomSeriesTrim) {
+          trimCount = trimCount + 1
+          if (Config.DicomSeriesTrim == Config.Fix.fix) {
             newDs.insertOrUpdate
             println("Trimmed content of " + newDs)
           } else {
@@ -552,13 +556,13 @@ object DicomSeries extends Logging {
     }
 
     trimList.map(dsPK => nullContent(dsPK))
-    println("trimOld done.  Elapsed ms: " + (System.currentTimeMillis - start))
+    println("trimOld done.  trimCount: " + trimCount + "  Elapsed ms: " + (System.currentTimeMillis - start))
   }
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   /**
-   * Find DicomSeries that have content but should not.
+   * Find DicomSeries that are linked to input but should not be
    */
   private def unlinkRtplan = {
     val start = System.currentTimeMillis
@@ -576,8 +580,8 @@ object DicomSeries extends Logging {
       try {
         val oldDs = DicomSeries.get(dsPK).get
         if ((oldDs.modality.equals("RTPLAN")) && (oldDs.inputPK.isDefined)) {
-          val newDs = oldDs.copy(inputPK = null)
-          if (Config.DicomSeriesUnlinkInputPK) {
+          val newDs = oldDs.copy(inputPK = None)
+          if (Config.DicomSeriesUnlinkInputPK == Config.Fix.fix) {
             newDs.insertOrUpdate
             println("Unlinked content of " + newDs)
           } else {
@@ -613,11 +617,30 @@ object DicomSeries extends Logging {
 
   }
 
-  private def findOrphanOutputs = {
+  private def deleteOrphanOutputs = {
     val search = Output.query.filter(o => o.machinePK.isEmpty)
     val list = Db.run(search.result)
     println("list of output PK's that have a null Machine reference: " + list.map(o => o.outputPK.get).mkString("    "))
     println("Number of outputs that have a null Machine reference: " + list.size)
+
+    def deleteOrphan(output: Output) = {
+      if (Config.DicomSeriesOrphanOutputs == Config.Fix.fix) {
+        try {
+          println("removing output " + output.outputPK.get + " with input " + output.inputPK)
+          val input = Input.get(output.inputPK).get
+          Input.delete(output.inputPK)
+          Util.deleteFileTreeSafely(input.dir)
+        } catch {
+          case t: Throwable => {
+            println("error removing output " + output.outputPK.get + " with input " + output.inputPK + " : " + fmtEx(t))
+          }
+        }
+      } else {
+        println("NOT removing output " + output.outputPK.get + " with input " + output.inputPK)
+      }
+    }
+
+    list.map(output => deleteOrphan(output))
   }
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -626,16 +649,16 @@ object DicomSeries extends Logging {
     if (Config.validate) {
       DbSetup.init
       Trace.trace
-      //deleteOrphans
+      if (Config.DicomSeriesDeleteOrphans != Config.Fix.ignore) deleteOrphans
       Trace.trace
-      //      populateFromInput
-      //      Trace.trace
-      //      trimOld
-      //      Trace.trace
-      //      unlinkRtplan
-      //      Trace.trace
-      //      verifySharedInDicomSeries
-      findOrphanOutputs
+      if (Config.DicomSeriesPopulateFromInput != Config.Fix.ignore) populateFromInput
+      Trace.trace
+      if (Config.DicomSeriesTrim != Config.Fix.ignore) trimOld
+      Trace.trace
+      if (Config.DicomSeriesUnlinkInputPK != Config.Fix.ignore) unlinkRtplan
+      Trace.trace
+      verifySharedInDicomSeries // always to this.  It is fast and does not change anything
+      if (Config.DicomSeriesOrphanOutputs != Config.Fix.ignore) deleteOrphanOutputs
       Trace.trace
     }
   }
