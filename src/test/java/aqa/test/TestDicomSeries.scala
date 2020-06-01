@@ -16,6 +16,10 @@ import java.sql.Timestamp
 import org.aqa.db.InputFiles
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ScalaUtil.FileUtil
+import com.pixelmed.dicom.SOPClass
+import com.pixelmed.dicom.TagFromName
+import com.pixelmed.dicom.Attribute
+import scala.util.Try
 
 /**
  * Test InputFiles.
@@ -40,10 +44,13 @@ class TestDicomSeries extends FlatSpec with Matchers {
     val rtplan = alRtplanAndImageSeq._1.head
     val imageList = alRtplanAndImageSeq._2
 
+    println("Number of image slices: " + imageList.size)
+
     val userPK = User.list.head.userPK.get
 
     var dsRtplan: Option[DicomSeries] = None
     var dsImage: Option[DicomSeries] = None
+    val imageSopClass = imageList.head.get(TagFromName.SOPClassUID).getSingleStringValueOrNull
 
     val input = {
       Some(new Input(
@@ -58,6 +65,20 @@ class TestDicomSeries extends FlatSpec with Matchers {
 
     val inpPK = input.get.inputPK.get
     println("X inputPK: " + inpPK) // X denotes item to be deleted
+
+    /**
+     * remove all relevant data from database
+     */
+    def cleanup = {
+      Try {
+        val dicomSeries = DicomSeries.getBySeriesInstanceUID(Util.serInstOfAl(rtplan)) ++ DicomSeries.getBySeriesInstanceUID(Util.serInstOfAl(imageList.head))
+
+        dicomSeries.map(ds => DicomSeries.delete(ds.dicomSeriesPK.get))
+        dicomSeries.map(ds => ds.inputPK).flatten.distinct.map(inputPK => Input.delete(inputPK))
+      }
+    }
+
+    cleanup
 
     try {
       val zippedContent = FileUtil.readFileTreeToZipByteArray(Seq(dicomDir))
@@ -83,6 +104,21 @@ class TestDicomSeries extends FlatSpec with Matchers {
       val imageAlList = dsImage.get.attributeListList
       imageAlList.size should be(imageList.size)
       Util.sopOfAl(imageAlList.head) should be(Util.sopOfAl(imageList.head))
+
+      // test the get functions for rtplan
+      DicomSeries.getBySeriesInstanceUID(Util.serInstOfAl(rtplan)).size should be(1)
+      DicomSeries.getBySopInstanceUID(Util.sopOfAl(rtplan)).size should be(1)
+      rtplan.get(TagFromName.FrameOfReferenceUID) match {
+        case at: Attribute => DicomSeries.getByFrameUIDAndSOPClass(Set(at.getSingleStringValueOrNull), SOPClass.RTPlanStorage).size should be(1)
+        case _ => ;
+      }
+
+      // test the get functions for an image series
+      imageList.map(al => {
+        DicomSeries.getBySeriesInstanceUID(Util.serInstOfAl(al)).size should be(1)
+        DicomSeries.getBySopInstanceUID(Util.sopOfAl(al)).size should be(1)
+        DicomSeries.getByFrameUIDAndSOPClass(Set(Util.getFrameOfRef(al)), imageSopClass).size should be(1)
+      })
 
       // remove the input both as clean up and for testing
       Input.delete(inpPK) should be(1)
@@ -121,6 +157,7 @@ class TestDicomSeries extends FlatSpec with Matchers {
             DicomSeries.delete(pk)
           }
         }
+        cleanup
         true should be(false) // force test to fail
       }
     }

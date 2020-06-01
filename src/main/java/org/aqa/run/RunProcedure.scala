@@ -261,8 +261,16 @@ object RunProcedure extends Logging {
   }
 
   /**
-   * Make sure that all of the DICOM series are saved in the database.  It is quite possible that the same series will
-   * be submitted more than once, and in those cases nothing will be done.
+   * Make sure that all of the DICOM series are saved in the database.
+   *
+   * There are two situations:
+   *
+   *  	1: New DICOM data (never seen by this platform) is uploaded.  The data is all stored in the database.
+   *
+   *    2: A set of DICOM data is uploaded that was uploaded previously.  In this case, a new Input will be
+   *       created, and new DicomSeries will also be created.  The rationale is that there may have been
+   *       something wrong (such as a missing slice) with the old data.  The old Input and all DicomSeries
+   *       referencing it will be deleted as redundant data.
    */
   private def saveDicomSeries(userPK: Long, inputPK: Option[Long], machinePK: Option[Long], alList: Seq[AttributeList]): Unit = {
 
