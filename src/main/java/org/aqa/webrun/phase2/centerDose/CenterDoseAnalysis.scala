@@ -43,11 +43,11 @@ object CenterDoseAnalysis extends Logging {
   }
 
   private def analyse(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Seq[CenterDose] = {
-    val pointList = Phase2Util.makeCenterDosePointList(runReq.flood.attributeList.get, collimatorCentering.center)
+    val pointList = Phase2Util.makeCenterDosePointList(runReq.flood, collimatorCentering.center)
     val outputPK = extendedData.output.outputPK.get
 
     val availableBeamList = Config.CenterDoseBeamNameList.filter(beamName => runReq.derivedMap.contains(beamName))
-    val resultList = availableBeamList.map(beamName => constructCenterDose(beamName, pointList, outputPK, runReq.derivedMap(beamName).originalImage, runReq.rtimageMap(beamName).attributeList.get))
+    val resultList = availableBeamList.map(beamName => constructCenterDose(beamName, pointList, outputPK, runReq.derivedMap(beamName).originalImage, runReq.rtimageMap(beamName)))
     logger.info("Number of CenterDose results " + resultList.size)
     logger.info("CenterDose results:\n" + resultList.mkString("\n"))
     resultList

@@ -1,18 +1,16 @@
 package org.aqa.webrun.bbByEpid
 
-import org.aqa.DicomFile
-import java.io.File
 import org.aqa.db.Machine
 import org.aqa.Util
 import edu.umro.ScalaUtil.DicomUtil
 import com.pixelmed.dicom.TagFromName
+import com.pixelmed.dicom.AttributeList
+import org.aqa.run.RunReqClass
 
 /**
  * Data needed to run an EPID BB analysis.
  */
-case class BBbyEPIDRunReq(epidListDicomFile: Seq[DicomFile], val machine: Machine) {
-
-  val epidList = Util.sortByDateTime(epidListDicomFile.map(df => df.attributeList).flatten)
+case class BBbyEPIDRunReq(epidList: Seq[AttributeList]) extends RunReqClass {
 
   val sopOfRTPlan: Option[String] = {
     try {
@@ -29,11 +27,4 @@ case class BBbyEPIDRunReq(epidListDicomFile: Seq[DicomFile], val machine: Machin
     }
   }
 
-  /**
-   * Move files to the given directory.
-   */
-  def reDir(dir: File): BBbyEPIDRunReq = {
-    val epid2 = epidListDicomFile.map(image => image.reDir(dir))
-    new BBbyEPIDRunReq(epid2, machine)
-  }
 }

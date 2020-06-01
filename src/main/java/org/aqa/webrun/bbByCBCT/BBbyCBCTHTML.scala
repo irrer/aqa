@@ -118,8 +118,7 @@ object BBbyCBCTHTML {
       Util.writePng(image, pngFile)
     }
 
-    def writeDicomMetaData(df: DicomFile) = {
-      val al = df.attributeList.get
+    def writeDicomMetaData(al: AttributeList) = {
       val content = {
         <div>
           <div class="row">
@@ -131,9 +130,6 @@ object BBbyCBCTHTML {
             </div>
             <div class="col-md-2">
               <h2> </h2><a href={ cbctMainFileName } title="View thumbnails of all slices">Return to Thumbnails</a>
-            </div>
-            <div class="col-md-2">
-              <h2> </h2><a href={ "../../" + df.file.getName } title="Download anonymized DICOM">Download DICOM</a>
             </div>
           </div>
           <div class="row">
@@ -156,9 +152,9 @@ object BBbyCBCTHTML {
 
     subDir.mkdirs
 
-    val sortedCbct = runReq.cbct.sortBy(al => getZ(al))
+    val sortedCbct = runReq.cbctList.sortBy(al => getZ(al))
     sortedCbct.par.map(al => writeDicomImage(al))
-    runReq.cbctDicomFile.sortBy(df => getZ(df.attributeList.get)).par.map(df => writeDicomMetaData(df))
+    sortedCbct.par.map(al => writeDicomMetaData(al))
 
     def sizedGroups(seq: Seq[AttributeList], grp: Seq[Seq[AttributeList]]): Seq[Seq[AttributeList]] = {
       if (seq.isEmpty) grp
@@ -224,9 +220,8 @@ object BBbyCBCTHTML {
   /**
    * Create a web page for viewing and downloading the registration file.
    */
-  private def makeRegReference(extendedData: ExtendedData, runReq: BBbyCBCTRunReq): Elem = {
+  private def makeRegReference(extendedData: ExtendedData, regAl: AttributeList): Elem = {
 
-    val regAl = runReq.regDicomFile.get.attributeList.get
     val regSop = Util.sopOfAl(regAl)
 
     val dicomFile = new File(extendedData.output.dir, "registration.dcm")
@@ -352,9 +347,9 @@ object BBbyCBCTHTML {
             <h3> </h3>{ makeCbctSlices(extendedData, runReq) }
           </div>
           {
-            if (runReq.regDicomFile.isDefined && runReq.regDicomFile.get.attributeList.isDefined) {
+            if (runReq.reg.isDefined) {
               <div title="View and download registration file" class="col-md-1">
-                <h3> </h3>{ makeRegReference(extendedData, runReq) }
+                <h3> </h3>{ makeRegReference(extendedData, runReq.reg.get) }
               </div>
             }
           }

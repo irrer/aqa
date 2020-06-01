@@ -57,203 +57,65 @@ import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.db.BBbyEPID
 import org.aqa.AngleType
 import com.pixelmed.dicom.AttributeTag
-
-/**
- * Provide the user interface and verify that the data provided is sufficient to do the analysis.
- */
-
-object BBbyEPIDRun extends Logging {
-  val parametersFileName = "parameters.xml"
-  val Phase2RunPKTag = "Phase2RunPK"
-
-  /**
-   * Determine if user is authorized to perform redo.  To be authorized, the user must be from the
-   * same institution as the original user.
-   *
-   * Being whitelisted is not sufficient, because things just get weird in terms of viewing and
-   * ownership of the data.
-   */
-  private def userAuthorizedToModify(request: Request, response: Response, input: Input): Boolean = {
-    val user = CachedUser.get(request).get
-
-    val mach = Machine.get(input.machinePK.get).get
-    val dataInstitution = mach.institutionPK
-    val requestorsInstitution = user.institutionPK
-    val same = dataInstitution == requestorsInstitution
-    logger.info("user requesting redo.  Authorized: " + same)
-    same
-  }
-
-  private def processRedoRequest(request: Request, response: Response, inputOrig: Input, outputOrig: Output, await: Boolean, isAuto: Boolean) = {
-    logger.info("Processing redo request for outputPK " + outputOrig.outputPK.get)
-    Output.ensureInputAndOutputFilesExist(outputOrig)
-    val sessionId = Session.makeUniqueId
-    val sessionDir = Session.idToFile(sessionId)
-    sessionDir.mkdirs
-    def copyToSessionDir(file: File) = {
-      val newFile = new File(sessionDir, file.getName)
-      newFile.createNewFile
-      val data = Util.readBinaryFile(file).right.get
-      Util.writeBinaryFile(newFile, data)
-    }
-    val inputFileList = Util.listDirFiles(inputOrig.dir).filter(f => f.isFile)
-    inputFileList.map(copyToSessionDir)
-    logger.info("Copied input files from " + inputOrig.dir.getAbsolutePath + " --> " + sessionDir.getAbsolutePath)
-
-    val dicomFileList = Util.listDirFiles(sessionDir).map(f => new DicomFile(f)).filter(df => df.attributeList.nonEmpty)
-    val epidList = dicomFileList.filter(df => df.isRtimage)
-
-    val acquisitionDate = inputOrig.dataDate match {
-      case None => None
-      case Some(timestamp) => Some(timestamp.getTime)
-    }
-
-    val runReq = new BBbyEPIDRunReq(epidList, Machine.get(outputOrig.machinePK.get).get)
-
-    val procedure = Procedure.get(outputOrig.procedurePK).get
-
-    val inputOutput = Run.preRun(procedure, runReq.machine, sessionDir, getUser(request),
-      Util.getOutputPatientId(runReq.epidList.head), Util.getOutputDateTime(runReq.epidList))
-
-    val input = inputOutput._1
-    val output = inputOutput._2
-
-    val future = Future {
-      val extendedData = ExtendedData.get(output)
-      val runReqFinal = runReq.reDir(input.dir)
-
-      val machine = runReqFinal.machine
-
-      val finalStatus = BBbyEPIDAnalyse.runProcedure(extendedData, runReqFinal)
-      val finDate = new Timestamp(System.currentTimeMillis)
-      val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
-
-      DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, runReqFinal.epidList)
-
-      Phase2Util.setMachineSerialNumber(machine, runReq.epidList.head)
-      outputFinal.insertOrUpdate
-      outputFinal.updateData(outputFinal.makeZipOfFiles)
-      Run.removeRedundantOutput(outputFinal.outputPK)
-      // remove the original input and all associated outputs to clean up any possible redundant data
-      Input.delete(inputOrig.inputPK.get)
-    }
-
-    awaitIfRequested(future, await, inputOutput._2.procedurePK)
-    ViewOutput.redirectToViewRunProgress(response, isAuto, output.outputPK.get)
-    logger.info("Finished processing redo request for outputPK " + outputOrig.outputPK.get)
-  }
-
-  /**
-   * Tell the user that the redo is forbidden and why.  Also give them a redirect back to the list of results.
-   */
-  private def forbidRedo(response: Response, msg: String, outputPK: Option[Long]) {
-    val content = {
-      <div class="row">
-        <div class="col-md-4 col-md-offset-2">
-          { msg }
-          <p></p>
-          <a href={ OutputList.path } class="btn btn-default" role="button">Back</a>
-        </div>
-      </div>
-    }
-
-    logger.info(msg + "  ouputPK: " + outputPK)
-    val text = wrapBody(content, "Redo not permitted")
-    setResponse(text, response, Status.CLIENT_ERROR_FORBIDDEN)
-  }
-
-  /**
-   * Given an output, redo the analysis.
-   */
-  def redo(outputPK: Long, request: Request, response: Response, await: Boolean, isAuto: Boolean) = {
-    try {
-      Output.get(outputPK) match {
-        case None => {
-          logger.info("Redo of output " + outputPK + " not possible because output does not exist")
-          val msg = "Redo not possible because output does not exist"
-          forbidRedo(response, msg, None)
-        }
-        case Some(outputOrig) => {
-          Input.get(outputOrig.inputPK) match {
-            case None => {
-              val msg = "Redo not possible because input does not exist"
-              forbidRedo(response, msg, outputOrig.outputPK)
-            }
-            case Some(inputOrig) if (!userAuthorizedToModify(request, response, inputOrig)) => {
-              val msg = "Redo not permitted because user is from a different institution."
-              forbidRedo(response, msg, outputOrig.outputPK)
-            }
-            case Some(inputOrig) => BBbyEPIDRun.processRedoRequest(request, response, inputOrig, outputOrig, await, isAuto)
-          }
-        }
-      }
-    } catch {
-      case t: Throwable => logger.warn("Unable to redo output " + outputPK + " : " + fmtEx(t))
-    }
-  }
-
-}
+import org.aqa.run.RunTrait
+import org.aqa.run.RunProcedure
+import org.aqa.Logging
+import org.aqa.run.RunReqClass
 
 /**
  * Run BBbyEPID code.
  */
-class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with Logging {
+class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[BBbyEPIDRunReq] {
+
+  private def getEpidList(alList: Seq[AttributeList]) = alList.filter(al => Util.modalityOfAl(al).trim.equalsIgnoreCase("RTIMAGE"))
 
   private def getSeries(al: AttributeList): String = al.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString
-  private def getSeries(dicomFile: DicomFile): String = getSeries(dicomFile.attributeList.get)
 
-  //private val machineSelector = new WebInputSelectOption("Machine", 6, 0, machineList, showMachineSelector)
-  private val machineSelector = new WebInputSelectMachine("Machine", 6, 0)
+  override def getProcedure = procedure
 
-  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
-    val action = procedure.webUrl + "?" + name + "=" + name
-    new FormButton(name, 1, 0, SubUrl.run, action, buttonType)
-  }
+  override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp] = {
+    val epidList = getEpidList(alList)
 
-  private val runButton = makeButton("Run", true, ButtonType.BtnDefault)
-  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
-
-  private def form = new WebForm(procedure.webUrl, Some("BBbyEPID"), List(List(machineSelector), List(runButton, cancelButton)), 10)
-
-  private def formErr(msg: String) = {
-    logger.info("User error: " + msg)
-    Left(Error.make(form.uploadFileInput.get, msg))
-  }
-
-  private def emptyForm(valueMap: ValueMapT, response: Response) = {
-    form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
-  }
-
-  private def validateMachineSelection(valueMap: ValueMapT, dicomFileList: Seq[DicomFile]): Either[StyleMapT, Machine] = {
-    val serNoByImage = {
-      dicomFileList.filter(df => df.isRtimage).
-        map(df => DicomUtil.findAllSingle(df.attributeList.get, TagFromName.DeviceSerialNumber)).flatten.
-        map(serNo => serNo.getSingleStringValueOrEmptyString).distinct
+    def getTimestamp(dateTag: AttributeTag, timeTag: AttributeTag): Option[Timestamp] = {
+      val msList = epidList.map(al => DicomUtil.getTimeAndDate(al, dateTag, timeTag)).flatten.map(dt => dt.getTime)
+      if (msList.isEmpty)
+        None
+      else
+        Some(new Timestamp(msList.min))
     }
 
-    val machList = serNoByImage.distinct.map(serNo => Machine.findMachinesBySerialNumber(serNo)).flatten
+    val contentTime = getTimestamp(TagFromName.ContentDate, TagFromName.ContentTime)
+    if (contentTime.isDefined)
+      contentTime
+    else
+      getTimestamp(TagFromName.AcquisitionDate, TagFromName.AcquisitionTime)
 
-    val distinctMachListSerNo = machList.map(mach => mach.machinePK).flatten.distinct
+  }
 
-    // machine user chose from list
-    val chosenMachine = for (pkTxt <- valueMap.get(machineSelector.label); pk <- Util.stringToLong(pkTxt); m <- Machine.get(pk)) yield m
+  override def getPatientID(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[String] = {
+    val list = getEpidList(alList).map(al => Util.patientIdOfAl(al)).distinct
+    list.headOption
+  }
 
-    val result: Either[StyleMapT, Machine] = 0 match {
-      case _ if (distinctMachListSerNo.size == 1) => Right(machList.head)
-      case _ if (chosenMachine.isDefined) => Right(chosenMachine.get)
-      case _ if (distinctMachListSerNo.size > 1) => formErr("Files come from more than one machine; please Cancel and try again.")
-      case _ => formErr("Unknown machine.  Please choose from the 'Machine' list below or click Cancel and then use the Administration interface to add it.")
-    }
-    result
+  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList]): Seq[String] = {
+    val rtimageList = alList.filter(al => Util.isRtimage(al))
+    val dsnList = rtimageList.map(al => Util.attributeListToDeviceSerialNumber(al)).flatten.distinct
+    dsnList
+  }
+
+  /**
+   * Make the run requirements from the attribute lists.
+   */
+  override def makeRunReqForRedo(alList: Seq[AttributeList]): BBbyEPIDRunReq = {
+    val epidList = alList.filter(al => Util.isRtimage(al))
+    new BBbyEPIDRunReq(epidList)
   }
 
   /**
    * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
    */
-  private def validate(valueMap: ValueMapT): Either[StyleMapT, BBbyEPIDRunReq] = {
-    val dicomFileList = dicomFilesInSession(valueMap)
-    val epidListDf = dicomFileList.filter(df => df.isRtimage)
-    val epidList = epidListDf.map(df => df.attributeList).flatten
+  override def validate(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, BBbyEPIDRunReq] = {
+    val epidList = alList.filter(al => Util.modalityOfAl(al).trim.equalsIgnoreCase("RTIMAGE"))
     val angleList = epidList.map(epid => Util.gantryAngle(epid))
     def angleTextList = angleList.map(a => Util.fmtDbl(a)).mkString("  ")
     // true if all angles are valid
@@ -262,138 +124,33 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     def epidSeriesList = epidList.map(epid => getSeries(epid)).distinct
     def frameOfRefList = epidList.map(epid => epid.get(TagFromName.FrameOfReferenceUID)).filterNot(attr => attr == null).map(attr => attr.getSingleStringValueOrEmptyString).distinct
 
-    def machineCheck = validateMachineSelection(valueMap, dicomFileList)
-
     logger.info("Number of RTIMAGE files uploaded: " + epidList.size)
 
     val numSeries = epidList.map(epid => epid.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString).distinct.sorted.size
 
     val result: Either[WebUtil.StyleMapT, BBbyEPIDRunReq] = 0 match {
-      case _ if epidList.isEmpty => formErr("No EPID files uploaded")
-      case _ if frameOfRefList.isEmpty => formErr("EPIDs do not specify a frame of reference")
-      case _ if epidSeriesList.size > 1 => formErr("EPID images are from " + numSeries + " different series.")
-      case _ if frameOfRefList.size > 1 => formErr("EPIDs specify more than one frame of reference")
-      case _ if (machineCheck.isLeft) => Left(machineCheck.left.get)
+      case _ if epidList.isEmpty => formError("No EPID files uploaded")
+      case _ if frameOfRefList.isEmpty => formError("EPIDs do not specify a frame of reference")
+      case _ if epidSeriesList.size > 1 => formError("EPID images are from " + numSeries + " different series.")
+      case _ if frameOfRefList.size > 1 => formError("EPIDs specify more than one frame of reference")
       case _ => {
-        val runReq = new BBbyEPIDRunReq(epidListDf, machineCheck.right.get)
+        val runReq = new BBbyEPIDRunReq(epidList)
         Right(runReq)
       }
     }
     result
   }
 
-  /**
-   * Given an image list, find the one with the earliest date/time.
-   */
-  private def dateTimePatId(rtimageList: Seq[AttributeList]): (Option[Long], Option[String]) = {
-    //  Util.dateTimeAndPatientIdFromDicom(rtimageList.head)   fffffff   TODO
-    val list = rtimageList.map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al)).filter(dt => dt._1.nonEmpty && dt._2.isDefined)
-    val date: Option[Long] = {
-      val dateList = list.map(dp => dp._1.headOption).flatten
-      if (dateList.isEmpty) None else Some(dateList.map(d => d.getTime).min)
-    }
-    val patient: Option[String] = list.map(dp => dp._2).flatten.headOption
-    (date, patient)
-  }
-
-  private def run(valueMap: ValueMapT, runReq: BBbyEPIDRunReq, response: Response) = {
-
-    logger.info("EPID Data is valid.  Preparing to analyze data.")
-    val patientId = {
-      val at = runReq.epidList.head.get(TagFromName.PatientID)
-      if ((at != null) && (at.getSingleStringValueOrNull != null))
-        Some(at.getSingleStringValueOrNull)
-      else
-        None
-    }
-
-    val sessDir = sessionDir(valueMap).get
-    val inputOutput = Run.preRun(procedure, runReq.machine, sessDir, getUser(response.getRequest),
-      Util.getOutputPatientId(runReq.epidList.head), Util.getOutputDateTime(runReq.epidList))
-    val input = inputOutput._1
-    val output = inputOutput._2
-
-    def perform = {
-      val extendedData = ExtendedData.get(output)
-      val runReqFinal = runReq.reDir(input.dir)
-      DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, runReqFinal.epidList)
-
-      val finalStatus = BBbyEPIDAnalyse.runProcedure(extendedData, runReqFinal)
-      val finDate = new Timestamp(System.currentTimeMillis)
-      val outputFinal = output.copy(status = finalStatus.toString).copy(finishDate = Some(finDate))
-
-      Phase2Util.setMachineSerialNumber(extendedData.machine, runReq.epidList.head)
-      outputFinal.insertOrUpdate
-      outputFinal.updateData(outputFinal.makeZipOfFiles)
-      Run.removeRedundantOutput(outputFinal.outputPK)
-      logger.info("EPID processing has completed")
-      Util.garbageCollect
-    }
-
-    // if awaiting, then wait for completion, otherwise do it in the background
-    if (isAwait(valueMap)) {
-      perform
-    } else {
-      Future { perform }
-    }
-    logger.info("Redirecting web client to view run progress of EPID processing.")
-    ViewOutput.redirectToViewRunProgress(response, valueMap, output.outputPK.get)
-  }
-
-  /**
-   * Respond to the 'Run' button.
-   */
-  private def runIfDataValid(valueMap: ValueMapT, request: Request, response: Response) = {
-    logger.info("Validating data")
-    validate(valueMap) match {
-      case Left(errMap) => {
-        logger.info("BBbyEPIDRun Bad request: " + errMap.keys.map(k => k + " : " + valueMap.get(k)).mkString("\n    "))
-        form.setFormResponse(valueMap, errMap, procedure.name, response, Status.CLIENT_ERROR_BAD_REQUEST)
-      }
-      case Right(runReq) => {
-        if (isAwait(valueMap)) awaitTag.synchronized {
-          run(valueMap, runReq, response)
-        }
-        else run(valueMap, runReq, response)
-      }
-    }
-  }
-
-  /**
-   * Cancel the procedure.  Remove files and redirect to procedure list.
-   */
-  private def cancel(valueMap: ValueMapT, response: Response) = {
-    sessionDir(valueMap) match {
-      case Some(dir) => Utility.deleteFileTree(dir)
-      case _ => ;
-    }
-    WebRunIndex.redirect(response)
-  }
-
-  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
-    val value = valueMap.get(button.label)
-    value.isDefined && value.get.toString.equals(button.label)
+  override def run(extendedData: ExtendedData, runReq: BBbyEPIDRunReq, response: Response): ProcedureStatus.Value = {
+    val status = BBbyEPIDAnalyse.runProcedure(extendedData, runReq)
+    status
   }
 
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
 
     val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
-    val redo = valueMap.get(OutputList.redoTag)
-    val del = valueMap.get(OutputList.deleteTag)
-
-    try {
-      0 match {
-        //case _ if (!sessionDefined(valueMap)) => redirectWithNewSession(response);
-        case _ if buttonIs(valueMap, cancelButton) => cancel(valueMap, response)
-        case _ if buttonIs(valueMap, runButton) => runIfDataValid(valueMap, request, response)
-        case _ => emptyForm(valueMap, response)
-      }
-    } catch {
-      case t: Throwable => {
-        internalFailure(response, "Unexpected failure: " + fmtEx(t))
-      }
-    }
+    RunProcedure.handle(valueMap, request, response, this.asInstanceOf[RunTrait[RunReqClass]])
   }
 
 }

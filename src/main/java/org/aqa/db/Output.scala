@@ -10,6 +10,8 @@ import java.util.Date
 import org.aqa.web.WebServer
 import java.io.File
 import edu.umro.ScalaUtil.FileUtil
+import scala.util.Try
+import edu.umro.ScalaUtil.Trace
 
 case class Output(
   outputPK: Option[Long], // primary key
@@ -73,6 +75,20 @@ case class Output(
 
   def makeZipOfFiles: Array[Byte] = {
     FileUtil.readFileTreeToZipByteArray(Seq(dir), Seq[String](), Seq[File]())
+  }
+
+  override def toString = {
+    "outputPK: " + outputPK +
+      "    inputPK: " + inputPK +
+      "    dir: " + dir +
+      "    procedurePK: " + procedurePK +
+      "    userPK: " + userPK +
+      "    startDate: " + startDate +
+      "    dataDate: " + dataDate +
+      "    analysisDate: " + analysisDate +
+      "    machinePK: " + machinePK +
+      "    status: " + status +
+      "    dataValidity: " + dataValidity
   }
 }
 
@@ -264,25 +280,6 @@ object Output extends Logging {
     else Some(list.head)
   }
 
-  /**
-   * Given an output, find out which other outputs it is redundant with.  Two outputs are
-   * redundant if they are the created by the same procedure with the same machine with data
-   * that has the same acquisition date.
-   */
-  def redundantWith(output: Output): Seq[Output] = {
-    output.dataDate match {
-      case Some(dataDate) => {
-        val q = query.filter(o =>
-          (o.machinePK === output.machinePK) &&
-            (o.procedurePK === output.procedurePK) &&
-            (o.outputPK =!= output.outputPK) &&
-            (o.dataDate.isDefined && (o.dataDate === dataDate)))
-        sortByStartDate(Db.run(q.result))
-      }
-      case _ => Seq[Output]()
-    }
-  }
-
   private def sortByStartDate(outputList: Seq[Output]): Seq[Output] = {
     def cmpr(a: Output, b: Output): Boolean = a.startDate.getTime < b.startDate.getTime
     outputList.sortWith(cmpr)
@@ -306,105 +303,24 @@ object Output extends Logging {
   }
 
   /**
-   * Return the list of redundant outputs, keeping the ones that users would want. The rules are:
-   *
-   *     Keep the latest successful output, even if there are newer ones that were not successful.
-   *
-   *     If the most recent output is not successful, then keep it (useful for diagnostics) but
-   *     remove all previous unsuccessful outputs.
-   *
-   *     An output is successful if it has a status of 'passed', 'failed', or 'done', because all
-   *     of these indicate that the process performed as expected, regardless of whether the data
-   *     was 'good'.
-   *
-   * Two outputs are redundant if they are the created by the same procedure with the same machine
-   * with data that has the same acquisition date.
-   *
-   * @deprecate
-   */
-  @deprecated("Not used.  This is too kind and gentle.  Remove old outputs regardless of crash status, including fail, crash, etc.. ")
-  private def listRedundant(outputListUnsorted: Seq[Output]): Seq[Output] = {
-    val outputList = sortByStartDate(outputListUnsorted)
-
-    val goodStatus = Seq(ProcedureStatus.done, ProcedureStatus.pass, ProcedureStatus.fail).map(s => s.toString)
-    def isGood(output: Output): Boolean = goodStatus.map(g => g.equals(output.status)).contains(true)
-
-    val latestGood = outputList.indexWhere(g => isGood(g))
-    val latestNotGood = outputList.indexWhere(b => !isGood(b))
-
-    // list of indexes in outputList to keep
-    val listToKeep: Seq[Int] = (latestGood, latestNotGood) match {
-      case (-1, -1) => {
-        logger.warn("removeRedundant Unexpected error, output is neither good or notGood") // nothing?
-        Seq[Int]() // remove nothing
-      }
-      case (g, -1) => Seq(g) // all outputs good.  Keep only the latest
-      case (-1, b) => Seq(b) // all outputs bad.  Keep only the latest
-      case (g, b) if (g < b) => Seq(g) // at least on each of good and bad, but good is more recent
-      case (g, b) => Seq(b, g) // at least on each of good and bad, but bad is more recent
-    }
-    val pkToKeep = listToKeep.map(k => outputList(k).outputPK.get)
-
-    outputList.filter { o => o.outputPK.isDefined && (!pkToKeep.contains(o.outputPK.get)) }
-  }
-
-  /**
-   * Make a list of all outputs that are redundant.  Two outputs are
-   * redundant if they are the created by the same procedure with the same machine with data
-   * that has the same acquisition date.
-   */
-  def redundant: Seq[Set[Output]] = {
-    val q = for {
-      (a, b) <- query join query2
-      if (a.machinePK === b.machinePK) &&
-        (a.procedurePK === b.procedurePK) &&
-        (a.outputPK < b.outputPK) &&
-        (a.dataDate.isDefined && b.dataDate.isDefined && (a.dataDate === b.dataDate))
-    } yield (a, b)
-
-    Db.run(q.result).map(p => Set(p._1, p._2))
-  }
-
-  /**
-   * Make a list of all outputs put into sets where each the members in each set are redundant.  Two outputs are
-   * redundant if they are the created by the same procedure with the same machine with data
-   * that has the same acquisition date.
-   */
-  def redundantReduced(all: Seq[Set[Output]]): Seq[Set[Output]] = {
-    def grp(seq: Seq[Set[Output]], rem: Seq[Set[Output]]): Seq[Set[Output]] = {
-      if (rem.isEmpty) seq
-      else {
-        val i = seq.indexWhere(s => s.intersect(rem.head).nonEmpty)
-        if (i < 0) {
-          grp(seq :+ rem.head, rem.tail)
-        } else {
-          grp(seq.updated(i, seq(i).union(rem.head)), rem.tail)
-        }
-      }
-    }
-
-    def grpGrp(seq: Seq[Set[Output]]): Seq[Set[Output]] = {
-      val g = grp(Seq[Set[Output]](), seq)
-      if (g.size == seq.size) g
-      else grpGrp(g)
-    }
-
-    grpGrp(all)
-  }
-
-  /**
    * Get the files from the database and restore them to the file system.  Overwrite any files that are already there.
    *
    * It is up to the caller to determine if the files need to be restored.
    *
    */
-  def getFilesFromDatabase(outputPK: Long, dir: File) = {
+  def getFilesFromDatabase(outputPK: Long, dir: File): Boolean = {
     dir.mkdirs
     // Steps are done on separate lines so that if there is an error/exception it can be precisely
-    // tracked.  It is up to the caller to catch any exceptions and act accordingly.
-    val outputFilesOption = OutputFiles.getByOutput(outputPK)
-    val outputFiles = outputFilesOption.get
-    FileUtil.writeByteArrayZipToFileTree(outputFiles.zippedContent, dir)
+    // tracked.
+    OutputFiles.getByOutput(outputPK) match {
+      case Some(outputFiles) => {
+        Try(FileUtil.writeByteArrayZipToFileTree(outputFiles.zippedContent, dir)).isSuccess
+      }
+      case _ => {
+        logger.info("Unable to reinstate output files for output " + outputPK + " in dir " + dir.getAbsolutePath)
+        false
+      }
+    }
   }
 
   /**
@@ -435,21 +351,33 @@ object Output extends Logging {
     seq
   }
 
+  def redundantWith(output: Output): Seq[Output] = {
+    val dicomSeriesUIDSet = DicomSeries.getByInputPK(output.inputPK).map(ds => ds.seriesInstanceUID).toSet
+
+    val dicomSeriesInputPKSet: Set[Long] = {
+      val search = for {
+        dsList <- DicomSeries.query.filter(ds => (ds.seriesInstanceUID.inSet(dicomSeriesUIDSet))).map(ds => ds.inputPK)
+      } yield { dsList }
+
+      val result = Db.run(search.result).flatten.toSet
+      result
+    }
+
+    val outputList = {
+      val search = for {
+        out <- Output.query.filter(o => (o.inputPK.inSet(dicomSeriesInputPKSet)) && (o.procedurePK === output.procedurePK) && (o.outputPK =!= output.outputPK))
+      } yield { out }
+      val result = Db.run(search.result)
+      result
+    }
+
+    outputList
+  }
+
   def main(args: Array[String]): Unit = {
     println("Starting Output.main")
     val valid = Config.validate
     DbSetup.init
-
-    if (false) {
-      println("\n\ntesting redundant")
-      val red = redundant
-      red.map(r => println("  r: " + r.map(r => r.outputPK.get).toSeq.sorted.mkString(", ")))
-      val redred = redundantReduced(red)
-      println("\n\ntesting redundantReduced")
-      println("redred size: " + redred.size)
-      redred.map(r => println("  rr: " + r.map(r => r.outputPK.get).toSeq.sorted.mkString(", ")))
-      System.exit(0)
-    }
 
     if (false) {
       println("testing redundantWith")
@@ -467,25 +395,5 @@ object Output extends Logging {
       System.exit(0)
     }
 
-    if (false) {
-      val output = new Output(
-        None, // primary key
-        (4).toLong, // input data
-        "dir", // directory containing data
-        1.toLong, // procedure that created this output
-        Some((6).toLong), // user that created this output
-        startDate = new Timestamp(System.currentTimeMillis), // when procedure was started
-        finishDate = Some(new Timestamp(System.currentTimeMillis + 1)), // when procedure finished
-        dataDate = None,
-        analysisDate = None,
-        machinePK = None,
-        status = "testing",
-        dataValidity = DataValidity.valid.toString) // termination status
-      println("output: " + output)
-      val result = output.insert
-      println("result: " + result)
-    }
-    // println("======== output: " + get(5))
-    // println("======== output delete: " + delete(5))
   }
 }

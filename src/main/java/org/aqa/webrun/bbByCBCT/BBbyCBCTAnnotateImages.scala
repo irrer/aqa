@@ -225,9 +225,9 @@ object BBbyCBCTAnnotateImages {
    * @param origPosition Original XYZ position in mm in the original frame of reference.
    */
   def annotate(bbByCBCT: BBbyCBCT, imageXYZ: Seq[BufferedImage], runReq: BBbyCBCTRunReq, origPosition: Point3d): ImageSet = {
-    val voxSize_mm = Util.getVoxSize_mm(runReq.cbct) // the size of a voxel in mm
+    val voxSize_mm = Util.getVoxSize_mm(runReq.cbctList) // the size of a voxel in mm
 
-    val volTrans = new VolumeTranslator(runReq.cbct)
+    val volTrans = new VolumeTranslator(runReq.cbctList)
 
     val centerUnscaled_vox = volTrans.mm2vox(origPosition)
 

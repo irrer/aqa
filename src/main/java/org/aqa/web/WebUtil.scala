@@ -80,12 +80,15 @@ object WebUtil extends Logging {
   /**
    * Tag used to indicate that this is coming from an automatic upload client, as opposed to a human using a web browser.
    */
-  private val autoUploadTag = "AutoUpload"
+  val autoUploadTag = "AutoUpload"
 
   /**
    * Tag used to indicate that the call should not return until processing is complete.
    */
   val awaitTag = "Await"
+
+  /** ID for upload file object in web page. */
+  val uploadFileLabel = "uploadFile"
 
   val aqaAliasAttr = { <div aqaalias=""/> }.attributes
   def ifAqaAliasAttr(elem: Elem, aqaAlias: Boolean) = if (aqaAlias) { elem % aqaAliasAttr } else elem
@@ -550,7 +553,7 @@ object WebUtil extends Logging {
 
     val rowListWithSession = (new WebInputSession) ++ rowList
 
-    val uploadFileInput: Option[IsInput] = if (validCol(fileUpload)) Some(new IsInput("uploadFile")) else None
+    val uploadFileInput: Option[IsInput] = if (validCol(fileUpload)) Some(new IsInput(uploadFileLabel)) else None
 
     def findInput(label: String): Option[IsInput] = {
       rowList.map(r => r.colList).flatten.filter(i => i.isInstanceOf[IsInput]).map(in => in.asInstanceOf[IsInput]).find(isIn => isIn.label.equals(label))
@@ -570,15 +573,15 @@ object WebUtil extends Logging {
           val name = "preloadedFile" + index
           val text =
             "var " + name + " = { name : '" + file.getName + "', size : " + file.length + " };" + nl +
-              "uploadFile.emit('addedfile', " + name + ");" + nl +
-              "uploadFile.emit('complete', " + name + ");" + nl
+              uploadFileLabel + ".emit('addedfile', " + name + ");" + nl +
+              uploadFileLabel + ".emit('complete', " + name + ");" + nl
           text
         }
 
         val dir = Session.idToFile(valueMapWithSession(sessionLabel))
 
         val text: String = if (dir.isDirectory && dir.list.nonEmpty) {
-          val dz = "var uploadFile = new Dropzone(\"#uploadFile\");" + nl
+          val dz = "var " + uploadFileLabel + " = new Dropzone(\"#" + uploadFileLabel + """ ");""" + nl
 
           val fileText = dir.listFiles.toSeq.zipWithIndex.map(fi => fileToText(fi._1, fi._2)).mkString(" ")
           (dz + fileText).replaceAllLiterally("\"", doubleQuote).replaceAllLiterally("'", singleQuote)
@@ -600,21 +603,21 @@ object WebUtil extends Logging {
           val formClass = "dropzone row " + colToName(fileUpload, 0) + " has-error"
 
           val uploadStyle: Style = {
-            errorMap.get(uploadFileInput.get.label) match {
+            errorMap.get(uploadFileLabel) match {
               case Some(sty) => sty
               case _ => new Style
             }
           }
 
           val uploadHtml: Elem = {
-            val hasError = errorMap.get(uploadFileInput.get.label).isDefined
+            val hasError = errorMap.get(uploadFileLabel).isDefined
             val borderColor = if (hasError) "#a94442" else "#cccccc"
             val uploadForm = {
               val cssStyle = "border-color: " + borderColor + "; border-width: 1px; border-radius: 10px; margin-bottom: 15px;"
-              <form action={ action + "?" + sessionLabel + "=" + sessionId } class={ formClass } id="uploadFile" style={ cssStyle }></form>
+              <form action={ action + "?" + sessionLabel + "=" + sessionId } class={ formClass } id={ uploadFileLabel } style={ cssStyle }></form>
             }
             if (hasError) {
-              val style: Style = errorMap.get(uploadFileInput.get.label).get
+              val style: Style = errorMap.get(uploadFileLabel).get
               uploadForm % style.divAttributes(uploadForm.attributes)
             } else uploadForm
           }
@@ -761,8 +764,12 @@ object WebUtil extends Logging {
   }
 
   object Error {
-    def make(input: IsInput, inputTitle: String) = {
-      Map((input.label, new Error(inputTitle)))
+    def make(label: String, inputTitle: String): Map[String, Error] = {
+      Map((label, new Error(inputTitle)))
+    }
+
+    def make(input: IsInput, inputTitle: String): Map[String, Error] = {
+      make(input.label, inputTitle)
     }
   }
 

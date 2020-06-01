@@ -68,7 +68,7 @@ object BBbyCBCTExecute extends Logging {
       None, // bbByCBCTPK
       extendedData.output.outputPK.get, // outputPK
       Util.sopOfAl(runReq.rtplan), // rtplanSOPInstanceUID
-      runReq.cbct.head.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString, // cbctSeriesInstanceUid
+      Util.sopOfAl(runReq.cbctList.head), // cbctSeriesInstanceUid
       rtplanIsocenter.distance(bbPointInRtplan), // offset_mm
       ProcedureStatus.pass.toString, // status
       rtplanIsocenter.getX, // planX_mm
@@ -91,7 +91,7 @@ object BBbyCBCTExecute extends Logging {
       // it found the BB, regardless of whether the BB was positioned within
       // tolerance of the plan's isocenter.
       logger.info("Starting analysis of CBCT Alignment for machine " + extendedData.machine.id)
-      val result = BBbyCBCTAnalysis.volumeAnalysis(runReq.cbct)
+      val result = BBbyCBCTAnalysis.volumeAnalysis(runReq.cbctList)
       if (result.isRight) {
         val volumePoint = result.right.get._1
         val imageXYZ = result.right.get._2
@@ -100,7 +100,7 @@ object BBbyCBCTExecute extends Logging {
 
         // transform the cbct point if necessary.  If it is already in the same frame of reference, then it is not necessary
         val bbPointInRtplan = {
-          if (runReq.reg.isDefined) runReq.reg.get.transform(volumePoint)
+          if (runReq.reg.isDefined) runReq.imageRegistration.get.transform(volumePoint)
           else volumePoint
         }
 

@@ -132,7 +132,7 @@ object BBbyEPIDHTML {
       def viewDicomMetadata = {
 
         val sop = Util.sopOfAl(al)
-        val dicomFile = runReq.epidListDicomFile.find(df => Util.sopOfAl(df.attributeList.get).equals(sop)).get
+        val dicomFile = runReq.epidList.find(al => Util.sopOfAl(al).equals(sop)).get
 
         val content = {
           <div>
@@ -142,9 +142,6 @@ object BBbyEPIDHTML {
               </div>
               <div class="col-md-2">
                 <h2> </h2><a href={ mainReportFileName } title="Return to main EPID report">Main Report</a>
-              </div>
-              <div class="col-md-2">
-                <h2> </h2><a href={ "../" + dicomFile.file.getName } title="Download anonymized DICOM">Download DICOM</a>
               </div>
             </div>
             <div class="row">

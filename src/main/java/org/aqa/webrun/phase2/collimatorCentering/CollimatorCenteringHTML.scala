@@ -90,8 +90,8 @@ object CollimatorCenteringHTML {
 
   def makeDisplay(extendedData: ExtendedData, collimatorCentering: CollimatorCentering, status: ProcedureStatus.Value, image090: MeasureTBLREdges.AnalysisResult, image270: MeasureTBLREdges.AnalysisResult, runReq: RunReq): Elem = {
 
-    val attr090 = runReq.rtimageMap(Config.CollimatorCentering090BeamName).attributeList.get
-    val attr270 = runReq.rtimageMap(Config.CollimatorCentering270BeamName).attributeList.get
+    val attr090 = runReq.rtimageMap(Config.CollimatorCentering090BeamName)
+    val attr270 = runReq.rtimageMap(Config.CollimatorCentering270BeamName)
 
     val translator090 = new IsoImagePlaneTranslator(attr090)
     val translator270 = new IsoImagePlaneTranslator(attr270)

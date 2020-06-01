@@ -85,17 +85,17 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   private def detailsColumn(subDir: File, beamName: String, extendedData: ExtendedData, runReq: RunReq): Elem = {
 
     val al = {
-      if (beamName.equals(Config.FloodFieldBeamName)) runReq.flood.attributeList.get
-      else runReq.derivedMap(beamName).dicomFile.attributeList.get
+      if (beamName.equals(Config.FloodFieldBeamName)) runReq.flood
+      else runReq.derivedMap(beamName).al
     }
 
     val detailUrl = WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, beamName))
-    <td style="vertical-align: middle;" title={ titleDetails } rowspan="4"><a href={ detailUrl }>{ beamName }<br/>{ Phase2Util.jawDescription(al, runReq.rtplan.attributeList.get) }<br/>{ Phase2Util.angleDescription(al) }</a></td>
+    <td style="vertical-align: middle;" title={ titleDetails } rowspan="4"><a href={ detailUrl }>{ beamName }<br/>{ Phase2Util.jawDescription(al, runReq.rtplan) }<br/>{ Phase2Util.angleDescription(al) }</a></td>
   }
 
   private def imageColumn(subDir: File, beamName: String, extendedData: ExtendedData, runReq: RunReq): Elem = {
     val dicomFile = runReq.rtimageMap(beamName)
-    val dicomHref = Phase2Util.dicomViewHref(dicomFile.attributeList.get, extendedData, runReq)
+    val dicomHref = Phase2Util.dicomViewHref(dicomFile, extendedData, runReq)
     val imgUrl = WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, beamName))
     val imgSmall = { <img src={ imgUrl } width="100"/> }
     val ref = { <a href={ dicomHref }>{ imgSmall }</a> }

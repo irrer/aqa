@@ -252,7 +252,7 @@ object VMATAnalysis extends Logging {
           analyze(
             vmatPair,
             runReq.derivedMap(vmatPair.MLC).attributeList, runReq.derivedMap(vmatPair.OPEN).attributeList,
-            runReq.rtplan.attributeList.get, collimatorCentering, extendedData.output.outputPK.get,
+            runReq.rtplan, collimatorCentering, extendedData.output.outputPK.get,
             runReq.derivedMap(vmatPair.MLC).originalImage, runReq.derivedMap(vmatPair.OPEN).originalImage)
         else Seq[VMAT]()
       }).filter(l => l.nonEmpty)

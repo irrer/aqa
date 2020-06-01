@@ -80,7 +80,10 @@ object WebRun {
     }
   }
 
-  private def get(procedurePK: Long): Either[String, Restlet] = {
+  /**
+   * Given a procedure, get a restlet to handle it.  On success return Right, on failure return Left(failure message).
+   */
+  def get(procedurePK: Long): Either[String, Restlet] = { // TODO should return type RunTrait instead of Restlet
     // it is important to synchronize this because even one web client often makes multiple overlapping calls, and we
     // do not want to instantiate multiple copies of the same thing.
     lookup.synchronized({

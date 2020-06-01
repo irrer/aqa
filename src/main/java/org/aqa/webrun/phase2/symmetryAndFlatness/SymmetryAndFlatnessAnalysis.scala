@@ -123,7 +123,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
   private def getAttributeList(beamName: String, runReq: RunReq): AttributeList = {
     val isFlood = beamName.equalsIgnoreCase(Config.FloodFieldBeamName)
-    if (isFlood) runReq.flood.attributeList.get
+    if (isFlood) runReq.flood
     else runReq.derivedMap(beamName).attributeList
   }
 
@@ -193,8 +193,9 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val flatness = pointSet.flatness
     logger.info("Flatness of beam " + beamName + " : " + flatness)
 
-    logger.info("Making corrected image of beam " + beamName)
-    val correctedImage = runReq.rtimageMap(beamName).correctedDicomImage.get
+    logger.info("Getting corrected image of beam " + beamName)
+    val correctedImage = runReq.derivedMap(beamName).pixelCorrectedImage
+
     logger.info("Making annotated image of beam " + beamName)
     val annotatedImage = makeAnnotatedImage(correctedImage, attributeList, pointSet)
 

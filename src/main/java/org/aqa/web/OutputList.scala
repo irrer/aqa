@@ -21,6 +21,11 @@ import org.aqa.webrun.bbByEpid.BBbyEPIDRun
 import org.restlet.routing.Filter
 import org.aqa.Util
 import org.aqa.AnonymizeUtil
+import org.aqa.webrun.WebRun
+import org.aqa.run.RunProcedure
+import org.aqa.run.RunTrait
+import org.aqa.run.RunReqClass
+import org.restlet.data.MediaType
 
 /**
  * List the outputs to let users re-visit results.
@@ -335,34 +340,49 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     }
   }
 
+  private def noSuchOutput(response: Response) = {
+    response.setEntity("No such output.  Most likely it has been deleted or redone.  Refresh the page for the latest list of outputs.", MediaType.TEXT_PLAIN) // TODO
+    val content = {
+      <div>No such output.  Possibly it has been deleted or redone.  Refresh the page for the latest list of outputs.</div>
+    }
+    simpleWebPage(content, Status.CLIENT_ERROR_BAD_REQUEST, "No such output", response)
+  }
+
   private def handleDelete(valueMap: ValueMapT, request: Request, response: Response) = {
 
     val outputPK = valueMap.get(OutputList.deleteTag).get.toLong
-    val output = Output.get(outputPK).get
-    if (userAuthorizedToDelete(response.getRequest, response, output)) {
-      if (valueMap.get(OutputList.confirmTag).isDefined) {
-        deleteOutput(outputPK, response)
-      } else
-        showConfirmDelete(response, outputPK)
-    } else
-      showNotAuthorizedToDelete(response, outputPK)
+    Output.get(outputPK) match {
+      case None => noSuchOutput(response)
+      case Some(output) => {
+        if (userAuthorizedToDelete(response.getRequest, response, output)) {
+          if (valueMap.get(OutputList.confirmTag).isDefined) {
+            deleteOutput(outputPK, response)
+          } else
+            showConfirmDelete(response, outputPK)
+        } else
+          showNotAuthorizedToDelete(response, outputPK)
+      }
+    }
   }
 
-  private def redoOutput(outputPK: Long, response: Response, await: Boolean = false, isAuto: Boolean = false): Unit = {
+  /**
+   * Redo the given output.
+   */
+  def redoOutput(outputPK: Long, response: Response, await: Boolean = false, isAuto: Boolean = false): Unit = {
+    Trace.trace("============================= outputPK: " + outputPK)
     Output.get(outputPK) match {
-      case None => ;
+      case None => noSuchOutput(response)
       case Some(output) => {
         Output.ensureInputAndOutputFilesExist(output)
         val procedure = Procedure.get(output.procedurePK).get
-        if (procedure.name.toLowerCase.contains("phase")) {
-          Phase2.redo(outputPK, response.getRequest, response, await, isAuto)
-        }
-        if (procedure.name.toLowerCase.contains("cbct")) {
-          BBbyCBCTRun.redo(outputPK, response.getRequest, response, await, isAuto)
-        }
-        if (procedure.name.toLowerCase.contains("epid")) {
-          BBbyEPIDRun.redo(outputPK, response.getRequest, response, await, isAuto)
-        }
+        logger.info("Starting redo of output " + output + "    procedure: " + procedure)
+        val runTrait = WebRun.get(output.procedurePK).right.get.asInstanceOf[RunTrait[RunReqClass]]
+        // Seems a bit round-about to create the valueMap, but this handles the bulk redo case.
+        val valueMap = Map(
+          (OutputList.redoTag, output.outputPK.get.toString),
+          (WebUtil.awaitTag, await.toString),
+          (WebUtil.autoUploadTag, isAuto.toString))
+        RunProcedure.handle(valueMap, response.getRequest, response, runTrait)
       }
     }
   }

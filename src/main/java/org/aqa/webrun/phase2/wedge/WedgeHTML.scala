@@ -104,9 +104,9 @@ object WedgeHTML {
   }
 
   private def annotateImage(beamName: String, runReq: RunReq): BufferedImage = {
-    val image = runReq.rtimageMap(beamName).correctedDicomImage.get.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
+    val image = runReq.derivedMap(beamName).pixelCorrectedImage.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
     Config.applyWatermark(image)
-    val translator = new IsoImagePlaneTranslator(runReq.rtimageMap(beamName).attributeList.get)
+    val translator = new IsoImagePlaneTranslator(runReq.rtimageMap(beamName))
     Util.addGraticules(image, translator, lineColor)
     image
   }
@@ -123,17 +123,17 @@ object WedgeHTML {
 
   private def beamToDisplay(wedgePoint: WedgePoint, extendedData: ExtendedData, runReq: RunReq, wedgeDir: File, history: Seq[WedgePoint.WedgePointHistory], collimatorCenterOfRotation: Point2D.Double): (Elem, String) = {
 
-    val isTransverse = WedgeAnalysis.wedgeOrientationTransverse(wedgePoint.wedgeBeamName, runReq.rtplan.attributeList.get)
-    val dicomImage = runReq.rtimageMap(wedgePoint.wedgeBeamName).correctedDicomImage.get
-    val translator = new IsoImagePlaneTranslator(runReq.rtimageMap(wedgePoint.wedgeBeamName).attributeList.get)
+    val isTransverse = WedgeAnalysis.wedgeOrientationTransverse(wedgePoint.wedgeBeamName, runReq.rtplan)
+    val dicomImage = runReq.derivedMap(wedgePoint.wedgeBeamName).pixelCorrectedImage
+    val translator = new IsoImagePlaneTranslator(runReq.rtimageMap(wedgePoint.wedgeBeamName))
 
-    val wedgeProfile = profile(dicomImage, translator, isTransverse, runReq, runReq.rtimageMap(wedgePoint.wedgeBeamName).attributeList.get, collimatorCenterOfRotation)
+    val wedgeProfile = profile(dicomImage, translator, isTransverse, runReq, runReq.rtimageMap(wedgePoint.wedgeBeamName), collimatorCenterOfRotation)
     val valueChart = new C3Chart(None, None,
       "Position mm", "Position mm", wedgeProfile.map(p => p.position), ".3g",
       Seq("Level"), "Level", Seq(wedgeProfile.map(p => p.value)), ".3g", Seq(lineColor))
 
-    val backgroundDerived = runReq.rtimageMap(wedgePoint.backgroundBeamName)
-    val backgroundProfile = profile(backgroundDerived.correctedDicomImage.get, translator, isTransverse, runReq, backgroundDerived.attributeList.get, collimatorCenterOfRotation)
+    val backgroundDerived = runReq.derivedMap(wedgePoint.backgroundBeamName).pixelCorrectedImage // runReq.rtimageMap(wedgePoint.backgroundBeamName)
+    val backgroundProfile = profile(backgroundDerived, translator, isTransverse, runReq, runReq.derivedMap(wedgePoint.backgroundBeamName).attributeList, collimatorCenterOfRotation)
     val percentProfile = wedgeProfile.zip(backgroundProfile).map(wb => new ProfilePoint(wb._1.position, (wb._1.value * 100) / wb._2.value))
     val percentChart = new C3Chart(None, None,
       "Position mm", "Position mm", percentProfile.map(p => p.position), ".3g",

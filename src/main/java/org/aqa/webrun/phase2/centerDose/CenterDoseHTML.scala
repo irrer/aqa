@@ -39,7 +39,7 @@ object CenterDoseHTML extends Logging {
    */
   def makeDisplay(extendedData: ExtendedData, runReq: RunReq, resultList: Seq[CenterDose], status: ProcedureStatus.Value): Elem = {
 
-    val planHref = Phase2Util.dicomViewHref(runReq.rtplan.attributeList.get, extendedData, runReq)
+    val planHref = Phase2Util.dicomViewHref(runReq.rtplan, extendedData, runReq)
     val viewRtPlan = {
       <a title="View RT Plan DICOM file" href={ planHref }>RT Plan</a>
     }
@@ -73,7 +73,7 @@ object CenterDoseHTML extends Logging {
     class ColumnBeamName(override val title: String, columnName: String, override val get: (CenterDose) => String) extends Column(title, columnName, get) {
       override def toRow(centerDose: CenterDose) = {
         val dicomFile = if (centerDose.beamName.equals(Config.FloodFieldBeamName)) runReq.flood else runReq.rtimageMap(centerDose.beamName)
-        val link = Phase2Util.dicomViewHref(dicomFile.attributeList.get, extendedData, runReq)
+        val link = Phase2Util.dicomViewHref(dicomFile, extendedData, runReq)
         val elem = { <td title={ title + ".  Follow link to view DICOM" }><a href={ link }>{ get(centerDose) }</a></td> }
         elem
       }
