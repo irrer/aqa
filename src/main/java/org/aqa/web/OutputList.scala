@@ -369,7 +369,6 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
    * Redo the given output.
    */
   def redoOutput(outputPK: Long, response: Response, await: Boolean = false, isAuto: Boolean = false): Unit = {
-    Trace.trace("============================= outputPK: " + outputPK)
     Output.get(outputPK) match {
       case None => noSuchOutput(response)
       case Some(output) => {
