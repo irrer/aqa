@@ -639,4 +639,24 @@ object RunProcedure extends Logging {
 
   }
 
+  private def handleRunningProcedure(output: Output, procedure: Procedure) = {
+    Try {
+      logger.info("Marking output running procedure " + procedure.fullName + " as " + ProcedureStatus.servershutdown.description + " : " + output)
+      val shutdown = output.copy(status = ProcedureStatus.servershutdown.toString)
+      if (shutdown.insertOrUpdate == 1)
+        logger.info("Output " + output.outputPK.get + " successfully marked as " + ProcedureStatus.servershutdown)
+      else
+        logger.warn("Failed to mark output " + output.outputPK.get + " as " + ProcedureStatus.servershutdown)
+    }
+  }
+
+  /**
+   * Look for any Output's that were in running state when the server was shut down and set their state.
+   */
+  def cleanupRunningProcedures: Unit = {
+    logger.info("Starting to handle previously running procedures.")
+    Output.listWithStatus(ProcedureStatus.running).map(or => handleRunningProcedure(or._1, or._2))
+    logger.info("Done handling previously running procedures.")
+  }
+
 }

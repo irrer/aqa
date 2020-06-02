@@ -32,6 +32,7 @@ object ProcedureStatus extends Enumeration {
   val userabort = Value("userabort", "Prematurely terminated by user.")
   val timeout = Value("timeout", "Terminated when time limit and was exceeded.")
   val crash = Value("crash", "Terminated itself in an uncontrolled fashion.")
+  val servershutdown = Value("servershutdown", "Server was shut down while the procedure was running.")
 
   class ProcedureStatus(val name: String, val description: String) extends Val(nextId, name)
 

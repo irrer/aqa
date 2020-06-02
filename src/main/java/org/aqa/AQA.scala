@@ -7,6 +7,7 @@ import edu.umro.ScalaUtil.PeriodicRestart
 import java.io.File
 import java.util.Date
 import edu.umro.ScalaUtil.Trace
+import org.aqa.run.RunProcedure
 
 /**
  * Main service entry point.  Start up major portions of
@@ -25,7 +26,8 @@ object AQA extends Logging {
       if (Config.validate) {
         DbSetup.init
         DbSetup.smokeTest
-        Run.handleRunningProcedureList
+        // Run.handleRunningProcedureList
+        RunProcedure.cleanupRunningProcedures
         new WebServer
         new PeriodicRestart(Config.RestartTime)
         logger.info("AQA service started")
