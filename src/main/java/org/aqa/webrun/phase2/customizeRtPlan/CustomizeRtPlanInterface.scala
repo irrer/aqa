@@ -187,13 +187,14 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
       val form = new WebForm(pathOf, List(row0, row1, row2) ++ List(assignButtonList))
       form.setFormResponse(valueMap, styleMap, pageTitleSelect, response, Status.SUCCESS_OK)
     } else {
+      val userPK = getUser(valueMap).get.userPK.get
       val planSpecification = new CustomizeRtPlan.PlanSpecification(
         valueMap(toleranceTable.label),
         valueMap(patientID.label),
         valueMap(patientName.label),
         valueMap(machineName.label),
         valueMap(planName.label))
-      val rtplan = CustomizeRtPlan.makePlan(machine, planEnergyList, planSpecification, machineEnergyList)
+      val rtplan = CustomizeRtPlan.makePlan(machine, userPK, planEnergyList, planSpecification, machineEnergyList)
       showDownload(rtplan, valueMap, machine, response)
     }
   }
