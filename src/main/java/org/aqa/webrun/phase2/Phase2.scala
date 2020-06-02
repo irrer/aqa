@@ -142,20 +142,20 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
   }
 
-  private def validateMachineSelection(valueMap: ValueMapT, dicomFileList: Seq[AttributeList]): Either[StyleMapT, Machine] = {
-    val rtimageList = dicomFileList.filter(al => Util.isRtimage(al))
-    // machines that DICOM files reference (based on device serial numbers)
-    val referencedMachines = rtimageList.map(al => Machine.attributeListToMachine(al)).flatten.distinct
-    val chosenMachine = for (pkTxt <- valueMap.get(machineSelector.label); pk <- Util.stringToLong(pkTxt); m <- Machine.get(pk)) yield m
-
-    val result: Either[StyleMapT, Machine] = 0 match {
-      case _ if (referencedMachines.size == 1) => Right(referencedMachines.head)
-      case _ if (chosenMachine.isDefined) => Right(chosenMachine.get)
-      case _ if (referencedMachines.size > 1) => formErr("Files come from more than one machine; please go back and try again.  Machines: " + referencedMachines.map(m => m.id).mkString("  "))
-      case _ => formErr("Unknown machine.  Please choose from the 'Machine' list below or click Cancel and then use the Administration interface to add it.")
-    }
-    result
-  }
+  //  private def validateMachineSelection(valueMap: ValueMapT, dicomFileList: Seq[AttributeList]): Either[StyleMapT, Machine] = {
+  //    val rtimageList = dicomFileList.filter(al => Util.isRtimage(al))
+  //    // machines that DICOM files reference (based on device serial numbers)
+  //    val referencedMachines = rtimageList.map(al => Machine.attributeListToMachine(al)).flatten.distinct
+  //    val chosenMachine = for (pkTxt <- valueMap.get(machineSelector.label); pk <- Util.stringToLong(pkTxt); m <- Machine.get(pk)) yield m
+  //
+  //    val result: Either[StyleMapT, Machine] = 0 match {
+  //      case _ if (referencedMachines.size == 1) => Right(referencedMachines.head)
+  //      case _ if (chosenMachine.isDefined) => Right(chosenMachine.get)
+  //      case _ if (referencedMachines.size > 1) => formErr("Files come from more than one machine; please go back and try again.  Machines: " + referencedMachines.map(m => m.id).mkString("  "))
+  //      case _ => formErr("Unknown machine.  Please choose from the 'Machine' list below or click Cancel and then use the Administration interface to add it.")
+  //    }
+  //    result
+  //  }
 
   private case class BasicData(rtplan: AttributeList, rtimageListByBeam: Seq[(Option[String], AttributeList)]) {
 
@@ -195,7 +195,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     // Look in the uploaded rtplan list and DicomSeries in the database for the plan(s) referenced.  If that fails, then try the shared directory.
     val referencedRtplanList: Seq[AttributeList] = {
       val matchingUploaded = rtplanList.filter(plan => planUIDReferences.contains(Util.sopOfAl(plan)))
-      val dbList = planUIDReferences.map(planUID => DicomSeries.getBySeriesInstanceUID(planUID)).flatten.map(ds => ds.attributeListList.head)
+      val dbList = planUIDReferences.map(planUID => DicomSeries.getBySopInstanceUID(planUID)).flatten.map(ds => ds.attributeListList.head)
       val list = matchingUploaded ++ dbList
       if (list.nonEmpty)
         list
