@@ -641,7 +641,7 @@ object RunProcedure extends Logging {
 
   private def handleRunningProcedure(output: Output, procedure: Procedure) = {
     Try {
-      logger.info("Marking output running procedure " + procedure.fullName + " as " + ProcedureStatus.servershutdown.description + " : " + output)
+      logger.info("Marking output of running procedure " + procedure.fullName + " as " + ProcedureStatus.servershutdown.description + " : " + output)
       val shutdown = output.copy(status = ProcedureStatus.servershutdown.toString)
       if (shutdown.insertOrUpdate == 1)
         logger.info("Output " + output.outputPK.get + " successfully marked as " + ProcedureStatus.servershutdown)
