@@ -880,6 +880,7 @@ object Config extends Logging {
   val DicomSeriesTrim = getFixState("DicomSeriesTrim") // TODO temporary for transition
   val DicomSeriesOrphanOutputs = getFixState("DicomSeriesOrphanOutputs") // TODO temporary for transition
   val DicomSeriesUnlinkInputPK = getFixState("DicomSeriesUnlinkInputPK") // TODO temporary for transition
+  val DicomSeriesShared = getFixState("DicomSeriesShared") // TODO temporary for transition
 
   // =================================================================================
 

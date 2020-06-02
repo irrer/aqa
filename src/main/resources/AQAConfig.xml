@@ -630,7 +630,9 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- When making the zoomed version of the EPID images, make them this size of a square in mm.-->
     <EPIDZoomSize_mm>60.0</EPIDZoomSize_mm>
     
-    <!-- Set to fix to clean up DicomSeries. Set to ignore, check, or fix.  Invalid or missing value means ignore. 
+    <!-- Set to fix to clean up DicomSeries. Set to ignore to do nothing, set to check to show what it would do but
+    actually do nothing.  Invalid or missing values are interpreted as ignore. 
+   
     Command line:
         java -cp AQA-0.3.00-jar-with-dependencies.jar org.aqa.db.DicomSeries
     -->
@@ -638,5 +640,6 @@ Note that when building a package for release, the Maven build process uses the 
     <DicomSeriesPopulateFromInput>ignore</DicomSeriesPopulateFromInput>
     <DicomSeriesTrim>ignore</DicomSeriesTrim>
     <DicomSeriesUnlinkInputPK>ignore</DicomSeriesUnlinkInputPK>
-    <DicomSeriesOrphanOutputs>check</DicomSeriesOrphanOutputs>
+    <DicomSeriesOrphanOutputs>ignore</DicomSeriesOrphanOutputs>
+    <DicomSeriesShared>fix</DicomSeriesShared>
 </AQAConfig>

@@ -17,6 +17,7 @@ import edu.umro.ScalaUtil.Trace
 import org.aqa.web.WebServer
 import scala.util.Try
 import org.aqa.DicomFile
+import com.pixelmed.dicom.TagFromName
 
 /**
  * Store the contents of a DICOM series.
@@ -228,6 +229,14 @@ object DicomSeries extends Logging {
   def getBySeriesInstanceUID(seriesInstanceUID: String): Seq[DicomSeries] = {
     val action = for {
       dicomSeries <- query if ((dicomSeries.seriesInstanceUID === seriesInstanceUID))
+    } yield (dicomSeries)
+    val list = Db.run(action.result)
+    list
+  }
+
+  def getByReferencedRtplanUID(referencedRtplanUID: String): Seq[DicomSeries] = {
+    val action = for {
+      dicomSeries <- query if ((dicomSeries.referencedRtplanUID === referencedRtplanUID))
     } yield (dicomSeries)
     val list = Db.run(action.result)
     list
@@ -609,11 +618,47 @@ object DicomSeries extends Logging {
       val ds = DicomSeries.getBySeriesInstanceUID(serUID)
       if (ds.nonEmpty)
         println("Shared DicomSeries already in database: " + serUID + "    " + Util.modalityOfAl(alList.head))
-      else
+      else {
         println("Shared DicomSeries NOT in database: " + serUID + "    " + Util.modalityOfAl(alList.head))
+        if (Config.DicomSeriesShared == Config.Fix.fix) {
+
+          val machinePK = {
+            val machByPatId = {
+              val PatientID = alList.head.get(TagFromName.PatientID).getSingleStringValueOrNull
+              val dsList = DicomSeries.getByPatientID(PatientID)
+              if (dsList.nonEmpty) dsList.head.machinePK else None
+            }
+            val machByRefPlan = {
+              val dsList = DicomSeries.getByReferencedRtplanUID(Util.sopOfAl(alList.head))
+              if (dsList.nonEmpty) dsList.head.machinePK else None
+            }
+
+            Seq(machByPatId, machByRefPlan).flatten.headOption
+          }
+
+          Trace.trace(machinePK)
+
+          if (machinePK.isDefined) {
+
+            val machine = Machine.get(machinePK.get).get
+            val user = User.getOrMakeInstitutionAdminUser(machine.institutionPK)
+
+            def putInDb(al: AttributeList) = {
+              val ds = DicomSeries.makeDicomSeries(user.userPK.get, None, machinePK, Seq(al))
+              if (ds.isDefined) {
+                val dsFinal = ds.get.insert
+                println("Shared DicomSeries has been put in database: " + dsFinal)
+              }
+            }
+
+            alList.map(al => putInDb(al))
+          } else
+            println("Could not determine machine or institution for " + serUID)
+        }
+      }
     }
 
-    series.map(s => saveSeries(s._1, s._2))
+    series.filter(_._2.nonEmpty).map(s => saveSeries(s._1, s._2))
 
   }
 
@@ -657,7 +702,8 @@ object DicomSeries extends Logging {
       Trace.trace
       if (Config.DicomSeriesUnlinkInputPK != Config.Fix.ignore) unlinkRtplan
       Trace.trace
-      verifySharedInDicomSeries // always to this.  It is fast and does not change anything
+      if (Config.DicomSeriesShared != Config.Fix.ignore) verifySharedInDicomSeries
+      Trace.trace
       if (Config.DicomSeriesOrphanOutputs != Config.Fix.ignore) deleteOrphanOutputs
       Trace.trace
     }
