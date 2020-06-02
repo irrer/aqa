@@ -446,7 +446,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
 
     def getRtplan = {
       val rtplanUID = Phase2Util.referencedPlanUID(rtimageList.head)
-      DicomSeries.getBySeriesInstanceUID(rtplanUID).headOption match {
+      DicomSeries.getBySopInstanceUID(rtplanUID).headOption match {
         // get this from the database
         case Some(ds) => ds.attributeListList.head
         case _ => {
