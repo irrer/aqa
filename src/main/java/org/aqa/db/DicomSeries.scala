@@ -715,7 +715,8 @@ object DicomSeries extends Logging {
       if (Config.DicomSeriesShared != Config.Fix.ignore) verifySharedInDicomSeries
       Trace.trace
       if (Config.DicomSeriesOrphanOutputs != Config.Fix.ignore) deleteOrphanOutputs
-      Trace.trace
+      Trace.trace("Exiting...")
+      System.exit(0)
     }
   }
 }
