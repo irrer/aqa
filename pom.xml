@@ -43,11 +43,10 @@
         <dependency> <groupId>org.slf4j</groupId>                <artifactId>log4j-over-slf4j</artifactId>           <version>1.7.25</version>          </dependency>
         <dependency> <groupId>org.slf4j</groupId>                <artifactId>slf4j-api</artifactId>                  <version>1.7.25</version>          </dependency>
         <dependency> <groupId>pixelmed</groupId>                 <artifactId>pixelmed</artifactId>                   <version>20180401</version>        </dependency>
-        <dependency>  <groupId>com.typesafe.play</groupId>       <artifactId>play-slick_2.12</artifactId>            <version>5.0.0</version>           </dependency>
-        <dependency>  <groupId>com.google.inject</groupId>       <artifactId>guice</artifactId>                      <version>4.2.2</version>           </dependency>
-        <dependency>  <groupId>io.strongtyped</groupId>          <artifactId>active-slick_2.12</artifactId>          <version>0.3.5</version>           </dependency>
-        <dependency>  <groupId>io.strongtyped</groupId>          <artifactId>active-slick_2.12</artifactId>          <version>0.3.5</version>           </dependency>
-        <dependency>  <groupId>com.microsoft.sqlserver</groupId> <artifactId>mssql-jdbc</artifactId>                 <version>8.2.0.jre8</version>      </dependency>
+        <dependency> <groupId>com.typesafe.play</groupId>        <artifactId>play-slick_2.12</artifactId>            <version>5.0.0</version>           </dependency>
+        <dependency> <groupId>com.google.inject</groupId>        <artifactId>guice</artifactId>                      <version>4.2.2</version>           </dependency>
+        <dependency> <groupId>io.strongtyped</groupId>           <artifactId>active-slick_2.12</artifactId>          <version>0.3.5</version>           </dependency>
+        <dependency> <groupId>com.microsoft.sqlserver</groupId>  <artifactId>mssql-jdbc</artifactId>                 <version>8.2.0.jre8</version>      </dependency>
     </dependencies>
 
     <!--
