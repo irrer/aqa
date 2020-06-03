@@ -122,7 +122,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   }
 
   override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList]): Seq[String] = {
-    val ctList = alList.filter(al => Util.isCt(al))
+    val ctList = alList.filter(al => Util.isCt(al) || Util.isReg(al))
     val dsnList = ctList.map(al => Util.attributeListToDeviceSerialNumber(al)).flatten.distinct
     dsnList
   }
