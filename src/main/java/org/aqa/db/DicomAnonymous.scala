@@ -265,4 +265,13 @@ object DicomAnonymous extends Logging {
     list
   }
 
+  /**
+   * Get previously anonymized values by value.
+   */
+  def getAttributeByValue(value: String): Seq[DicomAnonymous] = {
+    val action = DicomAnonymous.query.filter(da => (da.value === value))
+    val list = Db.run(action.result)
+    list
+  }
+
 }
