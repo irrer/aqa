@@ -620,41 +620,51 @@ object DicomSeries extends Logging {
         println("Shared DicomSeries already in database: " + serUID + "    " + Util.modalityOfAl(alList.head))
       else {
         println("Shared DicomSeries NOT in database: " + serUID + "    " + Util.modalityOfAl(alList.head))
-        if (Config.DicomSeriesShared == Config.Fix.fix) {
+        val PatientID = alList.head.get(TagFromName.PatientID).getSingleStringValueOrNull
 
-          val machinePK = {
-            val machByPatId = {
-              val PatientID = alList.head.get(TagFromName.PatientID).getSingleStringValueOrNull
-              val dsList = DicomSeries.getByPatientID(PatientID)
-              if (dsList.nonEmpty) dsList.head.machinePK else None
-            }
-            val machByRefPlan = {
-              val dsList = DicomSeries.getByReferencedRtplanUID(Util.sopOfAl(alList.head))
-              if (dsList.nonEmpty) dsList.head.machinePK else None
-            }
-
-            Seq(machByPatId, machByRefPlan).flatten.headOption
+        val machinePK = {
+          val machByPatId = {
+            val dsList = DicomSeries.getByPatientID(PatientID)
+            if (dsList.nonEmpty) dsList.head.machinePK else None
+          }
+          val machByRefPlan = {
+            val dsList = DicomSeries.getByReferencedRtplanUID(Util.sopOfAl(alList.head))
+            if (dsList.nonEmpty) dsList.head.machinePK else None
           }
 
-          Trace.trace(machinePK)
+          Seq(machByPatId, machByRefPlan).flatten.headOption
+        }
 
+        val institutionPK: Option[Long] = {
           if (machinePK.isDefined) {
+            Some(Machine.get(machinePK.get).get.institutionPK)
+          } else {
+            val sopList = DicomAnonymous.getAttributeByValue(Util.sopOfAl(alList.head))
+            if (sopList.size == 1) Some(sopList.head.institutionPK)
+            else None // this should never happen.  It would mean that and SOP instance UID was used multiple times
+          }
+        }
 
-            val machine = Machine.get(machinePK.get).get
-            val user = User.getOrMakeInstitutionAdminUser(machine.institutionPK)
+        if (institutionPK.isDefined) {
 
-            def putInDb(al: AttributeList) = {
-              val ds = DicomSeries.makeDicomSeries(user.userPK.get, None, machinePK, Seq(al))
-              if (ds.isDefined) {
+          // val machine = Machine.get(machinePK.get).get
+          //val user = User.getOrMakeInstitutionAdminUser(machine.institutionPK)
+          val user = User.getOrMakeInstitutionAdminUser(institutionPK.get)
+
+          def putInDb(al: AttributeList) = {
+            val ds = DicomSeries.makeDicomSeries(user.userPK.get, None, machinePK, Seq(al))
+            if (ds.isDefined) {
+              if (Config.DicomSeriesShared == Config.Fix.fix) {
                 val dsFinal = ds.get.insert
                 println("Shared DicomSeries has been put in database: " + dsFinal)
-              }
+              } else println("Shared DicomSeries would have been been put in database: " + ds)
             }
+          }
 
-            alList.map(al => putInDb(al))
-          } else
-            println("Could not determine machine or institution for " + serUID)
-        }
+          alList.map(al => putInDb(al))
+        } else
+          println("Could not determine institution for " + serUID)
+
       }
     }
 
