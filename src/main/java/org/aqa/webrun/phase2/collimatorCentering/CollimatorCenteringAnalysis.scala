@@ -28,9 +28,7 @@ import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.MeasureTBLREdges
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.SubProcedureResult
-import org.aqa.IsoImagePlaneTranslator
-import org.aqa.IsoImagePlaneTranslator
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import java.awt.Point
 import edu.umro.ScalaUtil.DicomUtil
 

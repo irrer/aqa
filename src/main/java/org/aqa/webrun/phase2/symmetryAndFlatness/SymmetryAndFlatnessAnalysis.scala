@@ -22,7 +22,7 @@ import org.aqa.db.SymmetryAndFlatness
 import org.aqa.db.SymmetryAndFlatness.PointSet
 import java.sql.Timestamp
 import org.aqa.db.MaintenanceCategory
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.webrun.phase2.Phase2Util.MaintenanceRecordBaseline
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.ExtendedData
@@ -30,6 +30,7 @@ import org.aqa.webrun.phase2.SubProcedureResult
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.db.CollimatorCentering
 import java.awt.geom.Point2D
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 
 /**
  * Analyze DICOM files for symmetry and flatness.
@@ -81,13 +82,20 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     logger.info("sym+flatness aggregate status: " + status)
   }
 
+  def circleRadiusInPixels(isoImageTrans: IsoImagePlaneTranslator) = {
+    val radius_mm = Config.SymmetryAndFlatnessDiameter_mm / 2
+    val imagePlaneCenterInPixels = isoImageTrans.iso2Pix(0, 0)
+    val radiusInPixels = isoImageTrans.iso2Pix(radius_mm, radius_mm).distance(imagePlaneCenterInPixels)
+    radiusInPixels
+  }
+
   private def makeAnnotatedImage(correctedImage: DicomImage, attributeList: AttributeList, pointSet: PointSet): BufferedImage = {
     val image = correctedImage.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
     Config.applyWatermark(image)
     val graphics = ImageUtil.getGraphics(image)
 
     val translator = new IsoImagePlaneTranslator(attributeList)
-    val radius = translator.circleRadiusInPixels
+    val radius = circleRadiusInPixels(translator)
     val circleSize = (radius * 2).round.toInt
 
     // addGraticules(img, translator)
@@ -181,7 +189,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val RescaleSlope = attributeList.get(TagFromName.RescaleSlope).getDoubleValues.head
     val RescaleIntercept = attributeList.get(TagFromName.RescaleIntercept).getDoubleValues.head
     val translator = new IsoImagePlaneTranslator(attributeList)
-    val widthOfBand = translator.circleRadiusInPixels.round.toInt
+    val widthOfBand = circleRadiusInPixels(translator).round.toInt
 
     val pointSet = makePointSet(dicomImage, attributeList, RescaleSlope, RescaleIntercept, collimatorCentering.center)
 

@@ -10,7 +10,7 @@ import org.aqa.web.WebServer
 import org.aqa.Util
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.run.ProcedureStatus
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.db.LeafPosition
 
 object LeafPositionHTML extends Logging {

@@ -33,6 +33,7 @@ import edu.umro.ScalaUtil.Trace
 import java.util.TimeZone
 import scala.xml.Node
 import edu.umro.ImageUtil.DicomImage
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 
 object Util extends Logging {
 

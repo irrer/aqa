@@ -11,7 +11,7 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import org.aqa.Util
 import edu.umro.ImageUtil.DicomImage
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import java.awt.geom.Point2D
 import org.aqa.webrun.phase2.MeasureTBLREdges
 import org.aqa.webrun.phase2.Phase2Util

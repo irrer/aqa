@@ -25,8 +25,7 @@ import java.awt.Point
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ImageUtil.ImageText
 import edu.umro.ScalaUtil.DicomUtil
-import org.aqa.IsoImagePlaneTranslator
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import java.awt.geom.Rectangle2D
 
 /*

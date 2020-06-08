@@ -13,10 +13,9 @@ import com.pixelmed.dicom.AttributeList
 import java.awt.image.BufferedImage
 import java.awt.Color
 import org.aqa.web.C3Chart
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.db.WedgePoint
 import edu.umro.ImageUtil.DicomImage
-import org.aqa.IsoImagePlaneTranslator
 import org.aqa.web.WebUtil
 import org.aqa.web.WebServer
 import org.aqa.web.C3ChartHistory

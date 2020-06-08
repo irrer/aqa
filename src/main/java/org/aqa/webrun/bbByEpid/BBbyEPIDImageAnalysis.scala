@@ -5,7 +5,7 @@ import org.aqa.run.ProcedureStatus
 import com.pixelmed.dicom.AttributeList
 import org.aqa.Config
 import edu.umro.ImageUtil.DicomImage
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import java.awt.Rectangle
 import edu.umro.ImageUtil.ImageUtil
 import javax.vecmath.Point2i

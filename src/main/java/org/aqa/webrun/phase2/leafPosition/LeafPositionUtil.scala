@@ -4,13 +4,12 @@ import org.aqa.Logging
 import scala.xml.Elem
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.webrun.phase2.Phase2Util
 import com.pixelmed.dicom.TagFromName
 import org.aqa.Util
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.DicomUtil
-import org.aqa.IsoImagePlaneTranslator
 
 /**
  * General utilities for leaf position.

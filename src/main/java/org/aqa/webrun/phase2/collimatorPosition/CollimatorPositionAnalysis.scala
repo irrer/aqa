@@ -29,10 +29,9 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.MeasureTBLREdges
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.SubProcedureResult
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.webrun.phase2.MeasureTBLREdges.TBLR
 import edu.umro.ScalaUtil.DicomUtil
-import org.aqa.IsoImagePlaneTranslator
 
 /**
  * Analyze DICOM files for ImageAnalysis.

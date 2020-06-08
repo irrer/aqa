@@ -8,7 +8,7 @@ import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
 import edu.umro.ScalaUtil.Trace
 import akka.actor._
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import com.pixelmed.dicom.AttributeList
 
 object IsoPlane {

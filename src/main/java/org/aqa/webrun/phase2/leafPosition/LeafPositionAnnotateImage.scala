@@ -5,7 +5,7 @@ import edu.umro.ScalaUtil.Trace
 import java.awt.image.BufferedImage
 import org.aqa.db.LeafPosition
 import edu.umro.ImageUtil.DicomImage
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ImageUtil.ImageUtil
 import java.awt.Color
 import org.aqa.Config

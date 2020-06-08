@@ -8,7 +8,7 @@ import org.aqa.webrun.phase2.MeasureTBLREdges
 import java.awt.Point
 import org.aqa.webrun.phase2.Phase2Util
 import edu.umro.ImageUtil.DicomImage
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.Util
 import edu.umro.ScalaUtil.DicomUtil
 import com.pixelmed.dicom.AttributeList

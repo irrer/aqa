@@ -17,14 +17,13 @@ import edu.umro.ImageUtil.DicomImage
 import java.awt.image.BufferedImage
 import org.aqa.VolumeTranslator
 import org.aqa.webrun.bbByEpid.BBbyEPIDImageAnalysis
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ImageUtil.ImageUtil
 import java.awt.Rectangle
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import java.awt.geom.Point2D
 import org.aqa.webrun.bbByEpid.BBbyEPIDAnnotateImages
-import org.aqa.IsoImagePlaneTranslator
 
 /**
  * Test the Config.

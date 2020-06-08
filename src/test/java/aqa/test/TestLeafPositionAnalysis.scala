@@ -9,7 +9,7 @@ import org.aqa.Util
 import edu.umro.ImageUtil.DicomImage
 import org.aqa.webrun.phase2.leafPosition.LeafPositionAnalysis
 import org.aqa.webrun.phase2.leafPosition.LeafPositionAnnotateImage
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ImageUtil.ImageUtil
 
 /**

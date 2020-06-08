@@ -28,7 +28,7 @@ import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.SubProcedureResult
 import org.aqa.webrun.phase2.Phase2Util
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 
 object CenterDoseHTML extends Logging {
   private val htmlFileName = "CenterDose.html"

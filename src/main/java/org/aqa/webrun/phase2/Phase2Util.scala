@@ -31,7 +31,7 @@ import org.aqa.web.MaintenanceRecordList
 import org.aqa.web.MachineList
 import org.aqa.web.MachineUpdate
 import edu.umro.ScalaUtil.DicomUtil
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.webrun.ExtendedData
 
 /**

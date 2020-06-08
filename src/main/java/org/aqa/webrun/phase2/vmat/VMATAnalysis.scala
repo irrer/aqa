@@ -16,11 +16,10 @@ import org.aqa.webrun.phase2.SubProcedureResult
 import org.aqa.db.CollimatorCentering
 import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.phase2.MeasureTBLREdges
-import org.aqa.IsoImagePlaneTranslator
-import org.aqa.IsoImagePlaneTranslator
 import org.aqa.Config
 import edu.umro.ImageUtil.DicomImage
 import org.aqa.Util
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 
 object VMATAnalysis extends Logging {
 

@@ -12,7 +12,7 @@ import edu.umro.ScalaUtil.FileUtil
 import edu.umro.ImageUtil.ImageUtil
 import java.awt.Color
 import org.aqa.Config
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ImageUtil.DicomImage
 

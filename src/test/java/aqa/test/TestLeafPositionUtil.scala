@@ -7,7 +7,7 @@ import org.scalatest.Matchers
 import java.io.File
 import org.aqa.DicomFile
 import org.aqa.webrun.phase2.leafPosition.LeafPositionUtil
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 
 /**
  * Test TestLeafPositionUtil.

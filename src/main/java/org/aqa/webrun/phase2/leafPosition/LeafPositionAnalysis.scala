@@ -11,7 +11,7 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import org.aqa.Util
 import edu.umro.ImageUtil.DicomImage
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.webrun.phase2.Phase2Util
 import edu.umro.ImageUtil.LocateRidge
 import java.awt.geom.Rectangle2D

@@ -11,7 +11,7 @@ import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
 import com.pixelmed.dicom.AttributeList
 import org.aqa.Logging
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.run.RunReqClass
 

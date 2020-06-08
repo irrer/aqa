@@ -1,6 +1,6 @@
 import java.io.File
 import org.aqa.Util
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 
 object ListTranslationParameters {
   def main(args: Array[String]): Unit = {

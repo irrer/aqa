@@ -13,7 +13,7 @@ import java.awt.Color
 import edu.umro.ScalaUtil.Trace
 import org.opensourcephysics.numerics.CubicSpline
 import org.aqa.webrun.phase2.leafPosition.LeafPositionCoarseLeafSides
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.webrun.phase2.leafPosition.LeafPositionUtil
 import org.aqa.webrun.phase2.centerDose.CenterDoseAnalysis
 import org.aqa.DicomFile

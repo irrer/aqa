@@ -4,13 +4,13 @@ import com.pixelmed.dicom.AttributeList
 import java.awt.image.BufferedImage
 import edu.umro.ImageUtil.DicomImage
 import java.awt.geom.Point2D
-import org.aqa.IsoImagePlaneTranslator
 import java.awt.Color
 import java.awt.Rectangle
 import org.aqa.Config
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.ImageText
 import org.aqa.Util
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 
 /**
  * Create user friendly images and annotate them.

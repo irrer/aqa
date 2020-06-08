@@ -4,7 +4,7 @@ import edu.umro.ImageUtil.DicomImage
 import java.io.File
 import org.aqa.DicomFile
 import org.aqa.webrun.phase2.MeasureTBLREdges
-import org.aqa.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import java.awt.Point
 import org.aqa.Util
 import edu.umro.ScalaUtil.Trace
