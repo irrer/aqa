@@ -46,10 +46,11 @@
         <dependency> <groupId>com.typesafe.play</groupId>        <artifactId>play-slick_2.12</artifactId>            <version>5.0.0</version>           </dependency>
         <dependency> <groupId>com.google.inject</groupId>        <artifactId>guice</artifactId>                      <version>4.2.2</version>           </dependency>
         <dependency> <groupId>io.strongtyped</groupId>           <artifactId>active-slick_2.12</artifactId>          <version>0.3.5</version>           </dependency>
-        <dependency> <groupId>com.microsoft.sqlserver</groupId>  <artifactId>mssql-jdbc</artifactId>                 <version>8.2.0.jre8</version>      </dependency>
+        <dependency> <groupId>com.microsoft.sqlserver</groupId> <artifactId>sqljdbc4</artifactId>       <version>3.0</version>    </dependency>
     </dependencies>
 
     <!--
+        <dependency> <groupId>com.microsoft.sqlserver</groupId>  <artifactId>mssql-jdbc</artifactId>                 <version>8.2.0.jre8</version>      </dependency>
     
         <dependency>    <groupId>com.zaxxer</groupId>    <artifactId>HikariCP</artifactId>    <version>3.2.0</version></dependency>    
         <dependency> <groupId>com.typesafe.slick</groupId>       <artifactId>slick_2.12</artifactId>                 <version>3.2.1</version>           </dependency>
