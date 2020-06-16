@@ -21,6 +21,7 @@ import slick.jdbc.meta.MTable
 import slick.jdbc.JdbcDataSource
 import slick.util.AsyncExecutor
 import scala.concurrent.duration.Duration
+import java.util.Date
 
 //import play.db.Database
 
@@ -36,9 +37,9 @@ object ByDataSource extends Logging {
 
     try {
 
-      FOO.loadDll
-      FOO.findAuthDllJlp
-      FOO.findAuthDllPath
+      //      FOO.loadDll
+      //      FOO.findAuthDllJlp
+      //      FOO.findAuthDllPath
 
       val prop = new Properties
       prop.setProperty("integratedSecurity", "true")
@@ -61,24 +62,67 @@ object ByDataSource extends Logging {
       ds.setURL("jdbc:sqlserver://ntsrodbsdv1.umhs.med.umich.edu:1433")
       ds.setDatabaseName("AQAmsDV")
       Trace.trace
-      //val con = ds.getConnection // prove that we can get a connection
+      val con = ds.getConnection // prove that we can get a connection
       Trace.trace
       val db = Database.forDataSource(ds, None, AsyncExecutor.default())
       Trace.trace
-      val result = FOO.query.result
-      Trace.trace
-      Trace.trace("statements:\n" + result.statements.mkString("\n    ", "\n    ", "\n    "))
-      Trace.trace
-      val dbAction = db.run(FOO.query.result)
-      Trace.trace
-      val out = Await.result(dbAction, TIMEOUT)
-      Trace.trace
-      dbAction.onComplete {
-        case Failure(ex) => throw (ex)
-        case Success(data) => ;
+
+      def run[R](op: DBIOAction[R, NoStream, Nothing]): R = {
+        val dbAction = db.run(op)
+        val result = Await.result(dbAction, TIMEOUT)
+        dbAction.onComplete {
+          case Failure(ex) => Trace.trace("database failure: " + ex)
+          case Success(data) => ;
+        }
+        result
       }
-      val fooList = out
-      Trace.trace("\n    ", fooList.mkString("\n    "))
+
+      if (false) { // this works
+        val result = FOO.query.result
+        Trace.trace
+        Trace.trace("statements:\n" + result.statements.mkString("\n    ", "\n    ", "\n    "))
+        Trace.trace
+        val dbAction = db.run(FOO.query.result)
+        Trace.trace
+        val out = Await.result(dbAction, TIMEOUT)
+        Trace.trace
+      }
+
+      if (false) { // this works
+        Trace.trace
+        val dbOperation = Bar.query.schema.drop
+
+        dbOperation.statements.foreach { s => logger.info("Executing database statement: " + s) }
+
+        val dbAction = db.run(dbOperation)
+        val j = Await.result(dbAction, TIMEOUT)
+        Thread.sleep(1000)
+        Trace.trace
+      }
+
+      if (false) { // this works
+        Trace.trace
+        val dbOperation = Bar.query.schema.create
+
+        dbOperation.statements.foreach { s => logger.info("Executing database statement: " + s) }
+
+        val dbAction = db.run(dbOperation)
+        val j = Await.result(dbAction, TIMEOUT)
+        Thread.sleep(1000)
+        Trace.trace
+      }
+
+      if (false) { // this works
+        Trace.trace
+        val action = sql"select TABLE_NAME from AQAmsDV.INFORMATION_SCHEMA.TABLES".as[String]
+        val dbAction = db.run(action)
+        Thread.sleep(1000)
+        val list = Await.result(dbAction, TIMEOUT)
+
+        Trace.trace("List of tables: \n    " + list.mkString("\n    "))
+
+        Trace.trace
+      }
 
       if (false) {
         val tableList = db.run(MTable.getTables)
@@ -86,46 +130,61 @@ object ByDataSource extends Logging {
         Trace.trace(tableList)
         Thread.sleep(1000)
         Trace.trace(tableList)
+        Trace.trace
+      }
+
+      if (false) {
+        Trace.trace
+        val action = MTable.getTables(Some(""), Some("public"), Some(""), Some(Seq("TABLE")))
+        db.run(MTable.getTables(Some(""), Some("public"), Some(""), Some(Seq("TABLE")))).
+          onComplete {
+            case Success(tables) => Trace.trace("\n    " + (tables.map(_.name).mkString(" - ")))
+            case Failure(f) => Trace.trace("\n    " + f)
+          }
+        Thread.sleep(1000)
+        Trace.trace
+      }
+
+      if (false) {
+
+        val foo1 = new FOO(2, "ups 2 1")
+        val result1 = run(FOO.query.insertOrUpdate(foo1))
+        Trace.trace(result1)
+
+        val foo2 = new FOO(3, "ups 3 1")
+        val result2 = run(FOO.query.insertOrUpdate(foo2))
+        Trace.trace(result2)
+
+        Trace.trace
+      }
+
+      if (false) { // this works
+        val bar = new Bar(None, System.currentTimeMillis % 1000, Some("barry"))
+
+        val action = Bar.query += bar
+        db.run(action)
+        Thread.sleep(1000)
+      }
+
+      if (false) { // this works
+        val bar = new Bar(None, System.currentTimeMillis % 1000, Some("barIns"))
+        val insertQuery = Bar.query returning Bar.query.map(_.barPK) into ((input, barPK) => input.copy(barPK = barPK))
+        val actionI = insertQuery += bar
+        val resultI = run(actionI)
+        Trace.trace(resultI)
+      }
+
+      if (true) {
+        val bar = new Bar(None, System.currentTimeMillis % 1000, Some("barUpsrtNone"))
+        val action = Bar.query.insertOrUpdate(bar)
+        val result = Await.result(db.run(action), Duration.Inf)
+        Trace.trace("statements:\n    " + result.result.statements.mkString("\n    "))
+        Trace.trace(result)
+        Trace.trace
       }
 
       Trace.trace
-      db.run(MTable.getTables(Some(""), Some("public"), Some(""), Some(Seq("TABLE")))).
-        onComplete {
-          case Success(tables) => Trace.trace("\n    " + (tables.map(_.name).mkString(" - ")))
-          case Failure(f) => Trace.trace("\n    " + f)
-        }
 
-      Thread.sleep(1000)
-
-      Trace.trace
-      //      val drv = slick.jdbc.SQLServerProfile
-      //      val j = slick.driver.SQLServer
-      //
-      //            Await.result(db.run(db.driver.defaultTables), Duration.Inf).foreach(println)
-      //            Trace.trace
-      //      val tables = Await.result(db.run(MTable.getTables), TIMEOUT).toList
-      //      Trace.trace
-      //      val slickDataSource = slick.jdbc.JdbcDataSourceFactory
-      //
-      //     val db = Database.forSource(sds)
-
-      //      Trace.trace("getting list of tables")
-      //      val tables = Await.result(db.run(MTable.getTables), TIMEOUT).toList
-      //      Trace.trace
-      //      tables.map(m => println("Found table: " + m.name.name))
-      //      Trace.trace
-      //
-      //      Trace.trace("getting list of FOOs")
-      //      val dbAction = db.run(FOO.query.result)
-      //
-      //      Trace.trace("awaiting result")
-      //      val result = Await.result(dbAction, TIMEOUT)
-      //      Trace.trace("!!!!!!!!!!!!!!!!!!!!!!!!!!!!! after result    result.isEmpty: " + result.isEmpty)
-      //      dbAction.onComplete {
-      //        case Failure(ex) => throw (ex)
-      //        case Success(data) => Trace.trace("!!!!!!!!!!!!!!!!!!!!!!!!!!!!! data: " + data)
-      //      }
-      //      Trace.trace(result.mkString("\n"))
       Trace.trace("success!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     } catch {
       case t: Throwable => {

@@ -22,6 +22,12 @@ object ByConfig extends Logging {
 
   val prefix = "db.default.db"
 
+  //slick.jdbc.SQLServerProfile
+  val ds = new com.microsoft.sqlserver.jdbc.SQLServerDataSource
+  Trace.trace(ds.getClass)
+  // System.exit(99)
+  //     driver = "slick.jdbc.SQLServerProfile$"
+
   val dbConfigText = """
         db {
           default = {
@@ -34,14 +40,22 @@ object ByConfig extends Logging {
                 url = "jdbc:sqlserver://ntsrodbsdv1.umhs.med.umich.edu:1433"
                 user = "irrer"
                 password = "45eetslp"
-                trustServerCertificate = true
+                integratedSecurity = true
             }
           }
           numThreads = 10
         }
 """
 
+  //              trustServerCertificate = true
+
   val dbConfig = ConfigFactory.parseString(dbConfigText)
+
+  Trace.trace(dbConfig.getString("db.default.driver"))
+  Trace.trace(dbConfig.getString("db.default.db.serverName"))
+  //Trace.trace(dbConfig.getString("db.default.db.trustServerCertificate"))
+  Trace.trace(dbConfig.getString("db.default.db.integratedSecurity"))
+  //System.exit(99)
 
   def configureDb = {
     val prefix = "db.default.db"

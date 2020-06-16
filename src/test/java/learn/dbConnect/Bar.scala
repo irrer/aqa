@@ -17,21 +17,29 @@ import com.microsoft.sqlserver.jdbc.SQLServerDriver
 import slick.jdbc.SQLServerProfile.api._
 
 case class Bar(
-  barPK: Int, // primary key
-  barLong: Long) {
+  barPK: Option[Int], // primary key
+  barLong: Long,
+  barString: Option[String]) {
 }
 
 object Bar extends Logging {
 
   class BarTable(tag: Tag) extends Table[Bar](tag, "Bar") {
 
-    def barPK = column[Int]("barPK", O.PrimaryKey, O.AutoInc)
+    def barPK = column[Option[Int]]("barPK", O.PrimaryKey, O.AutoInc)
     def barLong = column[Long]("barLong")
+    def barString = column[Option[String]]("barString")
 
     def * = (
       barPK,
-      barLong) <> ((Bar.apply _)tupled, Bar.unapply _)
+      barLong,
+      barString) <> ((Bar.apply _)tupled, Bar.unapply _)
   }
 
   val query = TableQuery[BarTable]
+  
+  
+  
+
+  
 }
