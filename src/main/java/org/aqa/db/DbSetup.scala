@@ -130,7 +130,7 @@ object DbSetup extends Logging {
   /**
    * Initialize database by creating tables in dependency order.
    */
-  lazy val init: Boolean = {
+  def init: Boolean = {
     logger.info("Initializing connection to database")
     val valid = Config.validate // force configuration to be read
 
@@ -141,6 +141,15 @@ object DbSetup extends Logging {
       }
     }
 
+    Trace.trace
+    Trace.trace("DbSetup.init")
+    Trace.trace
+    Trace.trace("DbSetup.init Db.driver: " + Db.driver)
+    Trace.trace
+    Trace.trace("DbSetup.init Db.db: " + Db.db)
+    Trace.trace
+    Trace.trace("DbSetup.init tableQueryList: " + tableQueryList)
+    Trace.trace
     tableQueryList.map(q => Db.createTableIfNonexistent(q.asInstanceOf[TableQuery[Table[_]]]))
     ensureAdminUser
     logger.info("Done initializing connection to database")

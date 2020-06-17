@@ -65,6 +65,9 @@ object ByDataSource extends Logging {
       val con = ds.getConnection // prove that we can get a connection
       Trace.trace
       val db = Database.forDataSource(ds, None, AsyncExecutor.default())
+      val dbTyped: Database = db
+      Trace.trace("db.getClass: " + db.getClass)
+      Trace.trace("dbTyped.getClass: " + dbTyped.getClass)
       Trace.trace
 
       def run[R](op: DBIOAction[R, NoStream, Nothing]): R = {

@@ -46,7 +46,7 @@ object SystemModification extends Logging {
       summary,
       description) <>
       ((SystemModification.apply _)tupled, SystemModification.unapply _)
-    def userFK = foreignKey("userPK", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
+    def userFK = foreignKey("userPKConstraint", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[SystemModificationTable]

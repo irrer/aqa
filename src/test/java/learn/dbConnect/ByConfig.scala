@@ -27,23 +27,25 @@ object ByConfig extends Logging {
   Trace.trace(ds.getClass)
   // System.exit(99)
   //     driver = "slick.jdbc.SQLServerProfile$"
+  //                connectionPool = disabled
+  //           numThreads = 10
+  //            driver = "slick.jdbc.SQLServerProfile$"
 
   val dbConfigText = """
         db {
           default = {
-            driver = "slick.jdbc.SQLServerProfile$"
+            driver = "com.typesafe.slick.driver.ms.SQLServerDriver"
             db {
+                driver = "com.microsoft.sqlserver.jdbc.SQLServerDriver"
                 serverName = "ntsrodbsdv1.umhs.med.umich.edu"
                 portNumber = "1433"
                 databaseName = "AQAmsDV"
-                connectionPool = disabled
                 url = "jdbc:sqlserver://ntsrodbsdv1.umhs.med.umich.edu:1433"
                 user = "irrer"
                 password = "45eetslp"
                 integratedSecurity = true
             }
           }
-          numThreads = 10
         }
 """
 

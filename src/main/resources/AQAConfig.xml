@@ -5,22 +5,45 @@ Note that when building a package for release, the Maven build process uses the 
 
 <AQAConfig>
     <!-- Database parameters. -->
+    
+    <!-- UMRO SQL Server test database.  Note that this works, but only indirectly.  A connection 
+    to SQL Server could not be created directly using the Slick DB Configuration approach, so instead it
+    reads the parameters and connects to the SQL database via a DataSource. A problem is that if the
+    supported list of configuration parameters is tightly coupled to the code, and a change in what
+    tags are defined requires a change in the code. -->
     <SlickDb>
         db {
-        default = {
-        driver = "org.postgresql.Driver"
-        db {
-        host = 141.214.125.209
-        port = 5432
-        databaseName = AQATest
-        user = postgres
-        password = postgresjim
-        url =
-        "jdbc:postgresql://141.214.125.209:5432/AQATest"
-        }
-        }
+          default = {
+            driver = "slick.jdbc.SQLServerProfile$"
+            db {
+              host = ntsrodbsdv1.umhs.med.umich.edu
+              port = 1433
+              databaseName = AQAmsDV
+              user = 'UMHS/irrer'
+              password = 45eetslp
+              url = "jdbc:sqlserver://ntsrodbsdv1.umhs.med.umich.edu:1433/AQAmsDV"
+              integratedSecurity = true
+            }
+          }
         }
     </SlickDb>
+
+    <!-- Rename tag to SlickDb to activate. -->
+    <SlickDbIrrer>
+        db {
+          default = {
+            driver = "org.postgresql.Driver"
+            db {
+              host = 141.214.125.209
+              port = 5432
+              databaseName = AQATest
+              user = postgres
+              password = postgresjim
+              url = "jdbc:postgresql://141.214.125.209:5432/AQATest"
+            }
+          }
+        }
+    </SlickDbIrrer>
 
     <!-- Port number for the Secure ReST service.   Port 443 is the default for HTTPS.
     If this is missing or commented out, then the server will instead use HTTP on port 80.   Alternately,

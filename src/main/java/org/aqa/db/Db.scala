@@ -14,13 +14,16 @@ import org.aqa.Config
 import scala.xml.XML
 import slick.sql.FixedSqlAction
 import edu.umro.ScalaUtil.Trace
+import com.typesafe.config.ConfigFactory
 
-/** Database utilities. */
+/** Schema independent database utilities. */
 
 object Db extends Logging {
 
   /** Ensure that the the configuration has been read. */
   private val configInit = Config.validate
+
+  def isSqlServer = Config.SlickDb.getString("db.default.driver").toLowerCase.contains("sqlserver")
 
   /**
    * Look at the DB configuration to determine which driver to load.
@@ -28,6 +31,10 @@ object Db extends Logging {
   val driver = {
     val name = Config.SlickDb.getString("db.default.driver")
     logger.info("Using DB drive: " + name)
+
+    // This should never be true, but forces slick.jdbc.SQLServerProfile to be loaded and resolved.
+    if (slick.jdbc.SQLServerProfile == null) logger.warn("slick.jdbc.SQLServerProfile is null")
+
     val d = 0 match {
       case _ if name.toLowerCase.contains("postgres") => slick.driver.PostgresDriver
       case _ if name.toLowerCase.contains("sqlserver") => slick.jdbc.SQLServerProfile
@@ -51,19 +58,45 @@ object Db extends Logging {
    */
   val TIMEOUT = new DurationInt(60).seconds
 
-  val db = {
+  private def initDb = {
     val prefix = "db.default.db"
-
+    Trace.trace("initializing db")
     // log meaningful information regarding the database connection
     def fmt(key: String) = "    " + key + ": " + Config.SlickDb.getString(prefix + "." + key)
     val keyList = Seq("host", "port", "databaseName")
     val msg = "Database  " + keyList.map(k => fmt(k)).mkString("    ")
     logger.info("Attempting to connect to " + msg)
 
+    val j = Config.SlickDb.getString("db.default.driver") // TODO rm
+    Trace.trace(j)
+
     // create the database from the config
     val d = try {
-      val dd = Database.forConfig(prefix, Config.SlickDb)
-      logger.info("Was able to connect to " + msg)
+      // Using a configuration for Microsoft SQL Server does not work, but it does work using a Slick DataSource.
+      val dd = if (isSqlServer) {
+        logger.info("Configured for Microsoft SQL Server")
+        val ds = new com.microsoft.sqlserver.jdbc.SQLServerDataSource
+        def get(tag: String) = Config.SlickDb.getString("db.default.db." + tag)
+        val userText = get("user").replace('/', '\\')
+        Trace.trace(userText)
+        ds.setUser(userText)
+        ds.setIntegratedSecurity(get("integratedSecurity").toBoolean)
+        ds.setPassword(get("password"))
+        ds.setPortNumber(get("port").toInt)
+        ds.setURL(get("url"))
+        ds.setDatabaseName(get("databaseName"))
+
+        // prove that we can get a connection.  If this fails, then we can not connect to the database and it is better to know right away
+        logger.info("Attempting to open connection to SQL Server database ...")
+        val connection = ds.getConnection
+        logger.info("Was able to open connection to SQL Server database: " + connection)
+
+        val dbDs = Database.forDataSource(ds, None, AsyncExecutor.default())
+        dbDs
+      } else
+        // for all the other databases that play nicely with config.
+        Database.forConfig(prefix, Config.SlickDb)
+      logger.info("Was able to configure " + msg)
       dd
     } catch {
       case t: Throwable => {
@@ -72,6 +105,14 @@ object Db extends Logging {
       }
     }
     d
+  }
+
+  private var dbValue: Database = null
+
+  def db = TIMEOUT.synchronized {
+    Trace.trace("db")
+    if (dbValue == null) dbValue = initDb
+    dbValue
   }
 
   private def tableName(table: TableQuery[Table[_]]): String = table.shaped.value.tableName
@@ -87,37 +128,77 @@ object Db extends Logging {
   }
 
   def perform(dbOperation: driver.ProfileAction[Unit, NoStream, Effect.Schema]): Unit = {
+    Trace.trace(dbOperation)
     dbOperation.statements.foreach { s => logger.info("Executing database statement: " + s) }
     run(DBIO.seq(dbOperation))
   }
 
   def perform(ops: Seq[FixedSqlAction[Int, NoStream, Effect.Write]]) = {
+    Trace.trace(ops)
     run(DBIO.sequence(ops))
   }
 
-  /**
-   * Determine if table exists in database
-   */
-  private def tableExists(table: TableQuery[Table[_]]): Boolean = {
-    val tables = Await.result(db.run(MTable.getTables), TIMEOUT).toList
-    val exists = tables.filter(m => m.name.name.equalsIgnoreCase(tableName(table))).size > 0
-    exists
+  private object TableList {
+    /** List of database tables in lower case. Do not reference this directly, instead use <code>getTableList</code> .*/
+    private var tableList: Seq[String] = null
+
+    def resetTableList = tableList = null
+
+    /**
+     * Get the latest version of the list of tables.
+     */
+    def getTableList = {
+      if (tableList == null) {
+        val tableListMixed = if (isSqlServer) {
+          //val action = sql"select TABLE_NAME from AQAmsDV.INFORMATION_SCHEMA.TABLES".as[String]
+          val action = sql"select TABLE_NAME from INFORMATION_SCHEMA.TABLES".as[String]
+          val tl = run(action).toSeq
+          tl
+          //        val dbAction = db.run(action)
+          //        Thread.sleep(1000)
+          //        val list = Await.result(dbAction, TIMEOUT)
+        } else {
+          Await.result(db.run(MTable.getTables), TIMEOUT).toSeq.map(m => m.name.name)
+        }
+        tableList = tableListMixed.map(name => name.toLowerCase)
+      }
+      tableList
+    }
+
+    /**
+     * Determine if table exists in database
+     */
+    def tableExists(table: TableQuery[Table[_]]): Boolean = {
+      Trace.trace("tableExists")
+      val exists = TableList.getTableList.contains(tableName(table))
+      exists
+    }
+
   }
 
   /**
    * If the given table exists, drop it.
    */
   def dropTableIfExists(table: TableQuery[Table[_]]): Unit = {
-    if (tableExists(table)) {
+    Trace.trace
+    if (TableList.tableExists(table)) {
       perform(table.schema.drop)
-      if (tableExists(table)) throw new RuntimeException("Tried but failed to drop table " + tableName(table))
+      TableList.resetTableList
+      if (TableList.tableExists(table)) throw new RuntimeException("Tried but failed to drop table " + tableName(table))
     }
   }
 
   def createTableIfNonexistent(table: TableQuery[Table[_]]): Unit = {
-    if (!tableExists(table)) {
+    Trace.trace
+    if (!TableList.tableExists(table)) {
+      Trace.trace(table.schema.create)
+      val j = table.schema.create // TODO rm
+      j.statements.foreach { s => Trace.trace("Executing database statement: " + s) } // TODO rm
+
       perform(table.schema.create)
-      if (!tableExists(table)) throw new RuntimeException("Tried but failed to create table " + tableName(table))
+      Thread.sleep(1000) // TODO rm
+      TableList.resetTableList
+      if (!TableList.tableExists(table)) throw new RuntimeException("Tried but failed to create table " + tableName(table))
     }
   }
 
