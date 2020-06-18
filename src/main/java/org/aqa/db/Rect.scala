@@ -75,7 +75,7 @@ object Rect extends ProcedureOutput {
       width_mm,
       height_mm) <> ((Rect.apply _)tupled, Rect.unapply _)
 
-    def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def outputFK = foreignKey("outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[RectTable]

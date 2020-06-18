@@ -56,7 +56,7 @@ object Baseline extends Logging {
       value,
       setup) <> ((Baseline.apply _)tupled, Baseline.unapply _)
 
-    def maintenanceRecordFK = foreignKey("maintenanceRecordPK", maintenanceRecordPK, MaintenanceRecord.query)(_.maintenanceRecordPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def maintenanceRecordFK = foreignKey("maintenanceRecordPKConstraint", maintenanceRecordPK, MaintenanceRecord.query)(_.maintenanceRecordPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[BaselineTable]

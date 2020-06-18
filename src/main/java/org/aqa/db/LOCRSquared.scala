@@ -50,7 +50,7 @@ object LOCRSquared extends ProcedureOutput with Logging {
       leafIndex,
       rSquared_mmsq) <> ((LOCRSquared.apply _)tupled, LOCRSquared.unapply _)
 
-    def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def outputFK = foreignKey("outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[LOCRSquaredTable]

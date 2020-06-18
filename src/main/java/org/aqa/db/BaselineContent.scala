@@ -38,7 +38,7 @@ object BaselineContent extends Logging {
       baselinePK,
       content) <> ((BaselineContent.apply _)tupled, BaselineContent.unapply _)
 
-    def baselineFK = foreignKey("baselinePK", baselinePK, Baseline.query)(_.baselinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def baselineFK = foreignKey("baselinePKConstraint", baselinePK, Baseline.query)(_.baselinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[BaselineContentTable]

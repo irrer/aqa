@@ -86,8 +86,8 @@ object Input extends Logging {
       patientId,
       dataDate) <> ((Input.apply _)tupled, Input.unapply _)
 
-    def userFK = foreignKey("userPK", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
-    def machineFK = foreignKey("machinePK", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
+    def userFK = foreignKey("userPKConstraint", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
+    def machineFK = foreignKey("machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[InputTable]

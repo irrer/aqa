@@ -118,7 +118,7 @@ object VMAT extends ProcedureOutput {
       leftAOI_mm,
       rightAOI_mm) <> ((VMAT.apply _)tupled, VMAT.unapply _)
 
-    def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def outputFK = foreignKey("outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[VMATTable]

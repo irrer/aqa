@@ -58,7 +58,7 @@ object MachineBeamEnergy {
       maxDoseRate_MUperMin,
       fffEnergy_MeV) <> ((MachineBeamEnergy.apply _)tupled, MachineBeamEnergy.unapply _)
 
-    def machineFK = foreignKey("machinePK", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def machineFK = foreignKey("machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[MachineBeamEnergyTable]

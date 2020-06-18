@@ -98,7 +98,7 @@ object Procedure {
       webInterface,
       notes) <> ((Procedure.apply _)tupled, Procedure.unapply _)
 
-    def supportingUserFK = foreignKey("userPK", supportingUserPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
+    def supportingUserFK = foreignKey("userPKConstraint", supportingUserPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[ProcedureTable]

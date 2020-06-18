@@ -92,7 +92,7 @@ object User extends Logging {
       role,
       termsOfUseAcknowledgment) <> ((User.apply _)tupled, User.unapply _)
 
-    def institutionFK = foreignKey("institutionPK", institutionPK, Institution.query)(_.institutionPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
+    def institutionFK = foreignKey("institutionPKConstraint", institutionPK, Institution.query)(_.institutionPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[UserTable]

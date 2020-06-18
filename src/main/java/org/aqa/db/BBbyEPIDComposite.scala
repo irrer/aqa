@@ -96,8 +96,8 @@ object BBbyEPIDComposite extends ProcedureOutput {
       yAdjusted_mm,
       zAdjusted_mm) <> ((BBbyEPIDComposite.apply _)tupled, BBbyEPIDComposite.unapply _)
 
-    def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
-    def bbByCBCTFK = foreignKey("bbByCBCTPK", bbByCBCTPK, BBbyCBCT.query)(_.bbByCBCTPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def outputFK = foreignKey("outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def bbByCBCTFK = foreignKey("bbByCBCTPKConstraint", bbByCBCTPK, BBbyCBCT.query)(_.bbByCBCTPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[BBbyEPIDCompositeTable]

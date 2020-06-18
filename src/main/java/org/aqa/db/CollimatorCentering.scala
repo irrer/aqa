@@ -101,7 +101,7 @@ object CollimatorCentering extends ProcedureOutput {
       Y1_270_mm,
       Y2_270_mm) <> ((CollimatorCentering.apply _)tupled, CollimatorCentering.unapply _)
 
-    def outputFK = foreignKey("outputPK", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def outputFK = foreignKey("outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[CollimatorCenteringTable]

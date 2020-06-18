@@ -92,7 +92,7 @@ object DicomAnonymous extends Logging {
       attributeHash,
       value_real) <> ((DicomAnonymous.apply _)tupled, DicomAnonymous.unapply _)
 
-    def institutionFK = foreignKey("institutionPK", institutionPK, Institution.query)(_.institutionPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
+    def institutionFK = foreignKey("institutionPKConstraint", institutionPK, Institution.query)(_.institutionPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[DicomAnonymousTable]
