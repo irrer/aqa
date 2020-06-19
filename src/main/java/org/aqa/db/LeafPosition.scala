@@ -74,7 +74,7 @@ object LeafPosition extends ProcedureOutput {
       measuredMinorSide_mm,
       measuredMajorSide_mm) <> ((LeafPosition.apply _)tupled, LeafPosition.unapply _)
 
-    def outputFK = foreignKey("outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def outputFK = foreignKey("LeafPosition_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[LeafPositionTable]

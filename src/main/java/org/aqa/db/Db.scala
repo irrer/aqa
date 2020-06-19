@@ -128,7 +128,6 @@ object Db extends Logging {
   }
 
   def perform(dbOperation: driver.ProfileAction[Unit, NoStream, Effect.Schema]): Unit = {
-    Trace.trace(dbOperation)
     dbOperation.statements.foreach { s => logger.info("Executing database statement: " + s) }
     run(DBIO.seq(dbOperation))
   }
@@ -154,9 +153,6 @@ object Db extends Logging {
           val action = sql"select TABLE_NAME from INFORMATION_SCHEMA.TABLES".as[String]
           val tl = run(action).toSeq
           tl
-          //        val dbAction = db.run(action)
-          //        Thread.sleep(1000)
-          //        val list = Await.result(dbAction, TIMEOUT)
         } else {
           Await.result(db.run(MTable.getTables), TIMEOUT).toSeq.map(m => m.name.name)
         }
@@ -169,8 +165,7 @@ object Db extends Logging {
      * Determine if table exists in database
      */
     def tableExists(table: TableQuery[Table[_]]): Boolean = {
-      Trace.trace("tableExists")
-      val exists = TableList.getTableList.contains(tableName(table))
+      val exists = TableList.getTableList.contains(tableName(table).toLowerCase)
       exists
     }
 
@@ -189,14 +184,8 @@ object Db extends Logging {
   }
 
   def createTableIfNonexistent(table: TableQuery[Table[_]]): Unit = {
-    Trace.trace
     if (!TableList.tableExists(table)) {
-      Trace.trace(table.schema.create)
-      val j = table.schema.create // TODO rm
-      j.statements.foreach { s => Trace.trace("Executing database statement: " + s) } // TODO rm
-
       perform(table.schema.create)
-      Thread.sleep(1000) // TODO rm
       TableList.resetTableList
       if (!TableList.tableExists(table)) throw new RuntimeException("Tried but failed to create table " + tableName(table))
     }

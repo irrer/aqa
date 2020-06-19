@@ -24,6 +24,7 @@ import org.aqa.Crypto
 import org.aqa.AnonymizeUtil
 import org.aqa.db.MaintenanceRecord
 import edu.umro.ScalaUtil.Trace
+import org.aqa.db.Input
 
 object UserUpdate {
   val userPKTag = "userPK"
@@ -324,11 +325,18 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
     else Error.make(id, "User has " + maintenanceRecordList.size + " maintenance records and can not be deleted")
   }
 
+  private def userHasInput(valueMap: ValueMapT): StyleMapT = {
+    val user = getReference(valueMap)
+    val inputCount = Input.getUserRefernceCount(user.get.userPK.get)
+    if (inputCount == 0) styleNone
+    else Error.make(id, "User has " + inputCount + " input data records and can not be deleted")
+  }
+
   private def delete(valueMap: ValueMapT, response: Response): Unit = {
     val user = getReference(valueMap)
     val maintenanceRecordList = MaintenanceRecord.getByUser(user.get.userPK.get)
 
-    val errMap = validateAuthentication(valueMap, response.getRequest) ++ userHasMaintenanceRecord(valueMap)
+    val errMap = validateAuthentication(valueMap, response.getRequest) ++ userHasMaintenanceRecord(valueMap) ++ userHasInput(valueMap)
 
     if (errMap.nonEmpty) {
       formEdit.setFormResponse(valueMap, errMap, pageTitleEdit, response, Status.SUCCESS_OK)

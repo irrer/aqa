@@ -141,15 +141,8 @@ object DbSetup extends Logging {
       }
     }
 
-    Trace.trace
-    Trace.trace("DbSetup.init")
-    Trace.trace
-    Trace.trace("DbSetup.init Db.driver: " + Db.driver)
-    Trace.trace
-    Trace.trace("DbSetup.init Db.db: " + Db.db)
-    Trace.trace
-    Trace.trace("DbSetup.init tableQueryList: " + tableQueryList)
-    Trace.trace
+    logger.info("List of required tables in reverse order of creation:\n    " + tableQueryList.reverse.map(table => table.shaped.value.tableName).mkString("\n    "))
+
     tableQueryList.map(q => Db.createTableIfNonexistent(q.asInstanceOf[TableQuery[Table[_]]]))
     ensureAdminUser
     logger.info("Done initializing connection to database")

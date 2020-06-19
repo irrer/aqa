@@ -109,7 +109,7 @@ object MetadataCheck extends ProcedureOutput {
       flatteningFilter,
       pass) <> ((MetadataCheck.apply _)tupled, MetadataCheck.unapply _)
 
-    def outputFK = foreignKey("outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def outputFK = foreignKey("MetadataCheck_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[MetadataCheckTable]

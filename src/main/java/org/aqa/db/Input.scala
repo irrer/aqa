@@ -86,8 +86,8 @@ object Input extends Logging {
       patientId,
       dataDate) <> ((Input.apply _)tupled, Input.unapply _)
 
-    def userFK = foreignKey("userPKConstraint", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
-    def machineFK = foreignKey("machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
+    def userFK = foreignKey("Input_userPKConstraint", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Restrict)
+    def machineFK = foreignKey("Input_machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Restrict)
   }
 
   val query = TableQuery[InputTable]
@@ -129,6 +129,15 @@ object Input extends Logging {
     val action = for { input <- Input.query if input.directory === dirName } yield (input)
     val list = Db.run(action.result)
     list.headOption
+  }
+
+  /**
+   * Find the number of inputs that reference this user.
+   */
+  def getUserRefernceCount(userPK: Long): Int = {
+    val action = Input.query.filter(input => input.userPK === userPK).size
+    val count = Db.run(action.result)
+    count
   }
 
   def delete(inputPK: Long): Int = {

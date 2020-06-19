@@ -124,7 +124,7 @@ object SymmetryAndFlatness extends ProcedureOutput {
       right_cu,
       center_cu) <> ((SymmetryAndFlatness.apply _)tupled, SymmetryAndFlatness.unapply _)
 
-    def outputFK = foreignKey("outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def outputFK = foreignKey("SymmetryAndFlatness_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   case class PointSet(top: Double, bottom: Double, right: Double, left: Double, center: Double) {

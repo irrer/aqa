@@ -77,7 +77,7 @@ object WedgePoint extends ProcedureOutput {
       percentOfBackground_pct,
       baselinePercentOfBackground_pct) <> ((WedgePoint.apply _)tupled, WedgePoint.unapply _)
 
-    def outputFK = foreignKey("outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def outputFK = foreignKey("WedgePoint_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[WedgePointTable]

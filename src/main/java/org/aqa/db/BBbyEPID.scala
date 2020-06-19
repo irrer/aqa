@@ -81,7 +81,7 @@ object BBbyEPID extends ProcedureOutput {
       epid3DY_mm,
       epid3DZ_mm) <> ((BBbyEPID.apply _)tupled, BBbyEPID.unapply _)
 
-    def outputFK = foreignKey("outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def outputFK = foreignKey("BBbyEPID_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[BBbyEPIDTable]

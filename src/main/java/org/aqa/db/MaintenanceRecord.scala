@@ -23,7 +23,7 @@ case class MaintenanceRecord(
 
   /**
    * Return true of the user is from the same institution as the machine.
-   * 
+   *
    * Note that this check was added because there was an instance on the AWS system of a user
    * creating a maintenance event in a machine that belonged to a different institution.
    */
@@ -69,8 +69,8 @@ object MaintenanceRecord {
       summary,
       description) <> ((MaintenanceRecord.apply _)tupled, MaintenanceRecord.unapply _)
 
-    def machineFK = foreignKey("machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
-    def userFK = foreignKey("userPKConstraint", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
+    def machineFK = foreignKey("MaintenanceRecord_machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def userFK = foreignKey("MaintenanceRecord_userPKConstraint", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Restrict)
   }
 
   val query = TableQuery[MaintenanceRecordTable]

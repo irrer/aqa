@@ -48,7 +48,7 @@ object DiffBaselineOpen extends ProcedureOutput {
       leafIndex,
       diffBaselineOpen_mm) <> ((DiffBaselineOpen.apply _)tupled, DiffBaselineOpen.unapply _)
 
-    def outputFK = foreignKey("outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def outputFK = foreignKey("DiffBaselineOpen_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[DiffBaselineOpenTable]

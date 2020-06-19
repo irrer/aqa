@@ -37,7 +37,7 @@ object OutputFiles extends Logging {
 
     def * = (outputFilesPK, outputPK, zippedContent) <> ((OutputFiles.apply _)tupled, OutputFiles.unapply _)
 
-    def outputFK = foreignKey("outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def outputFK = foreignKey("OutputFiles_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[OutputFilesTable]

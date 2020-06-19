@@ -1,0 +1,11 @@
+
+export f=$1
+
+echo processing $f
+
+export name=$( echo $f | sed 's/.scala//' )
+
+cat $f | sed -e 's/".*PKConstraint"/%%%%&/' -e 's/%%%%"/"'${name}'_/' > foo
+cp foo $f
+rm foo
+

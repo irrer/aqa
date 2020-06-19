@@ -87,7 +87,7 @@ object BBbyCBCT extends ProcedureOutput {
       cbctY_mm,
       cbctZ_mm) <> ((BBbyCBCT.apply _)tupled, BBbyCBCT.unapply _)
 
-    def outputFK = foreignKey("outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def outputFK = foreignKey("BBbyCBCT_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[BBbyCBCTTable]

@@ -41,7 +41,7 @@ object EPIDCenterCorrection extends ProcedureOutput {
       outputPK,
       epidCenterCorrection_mm) <> ((EPIDCenterCorrection.apply _)tupled, EPIDCenterCorrection.unapply _)
 
-    def outputFK = foreignKey("outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def outputFK = foreignKey("EPIDCenterCorrection_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[EPIDCenterCorrectionTable]
