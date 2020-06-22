@@ -19,8 +19,6 @@ import slick.ast.ColumnOption
 import slick.ast.ColumnOption.PrimaryKey
 import slick.model.PrimaryKeyOption
 import slick.ast.FieldSymbol
-import slick.lifted.TableQuery
-import Db.driver.api._
 
 //import slick.jdbc.SQLServerProfile
 
@@ -34,29 +32,45 @@ object CloneEntireDB extends Logging {
     col.options.filter(o => o.getClass.toString.equals(pkClassName)).nonEmpty
   }
 
+  object DestDb {
+    import slick.lifted.TableQuery
+
+    import slick.jdbc.SQLServerProfile.api._
+    val destDb: Database = null
+  }
+
   val all: Seq[DbTable] = Seq(Institution)
 
-  /**
-   * Get the name of the primary key of the given table.
-   */
-  private def pkOf(table: TableQuery[Table[_]]): String = {
-    val columnList = table.baseTableRow.create_* //.map(_.name)
-    val pk = columnList.filter(col => isPrimaryKey(col)).head
-    pk.name
-  }
+  object SourceDb {
+    import slick.lifted.TableQuery
 
-  private def foo = {
-    Db.createTableIfNonexistent(all.head.tableQuery)
-    val row = all.head.getByPk(5)
-    all.head.insOrUpdate(row.get)
-  }
+    import Db.driver.api._
 
-  /**
-   * Get the name of the given table.
-   */
-  private def nameOf(table: TableQuery[Table[_]]): String = {
-    val tableName = table.shaped.shaped.value.tableName
-    tableName
+    /**
+     * Get the name of the primary key of the given table.
+     */
+    private def pkOf(table: TableQuery[Table[_]]): String = {
+      val columnList = table.baseTableRow.create_* //.map(_.name)
+      val pk = columnList.filter(col => isPrimaryKey(col)).head
+      pk.name
+    }
+
+    private def foo = {
+      Db.createTableIfNonexistent(all.head.tableQuery)
+      val row = all.head.getByPk(5, Db.db)
+      all.head.insOrUpdate(row.get)
+    }
+
+    /**
+     * Get the name of the given table.
+     */
+    private def nameOf(table: TableQuery[Table[_]]): String = {
+      val tableName = table.shaped.shaped.value.tableName
+      tableName
+    }
+
+    import Db.driver.api._
+
   }
 
   def main(args: Array[String]): Unit = {

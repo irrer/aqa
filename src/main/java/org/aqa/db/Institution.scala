@@ -49,15 +49,14 @@ object Institution extends DbTable with Logging {
     val action = for {
       inst <- query if inst.institutionPK === institutionPK
     } yield (inst)
-    
-    val j = action.result
+
     val list = Db.run(action.result)
     if (list.isEmpty) None else Some(list.head)
   }
 
   override val tableQuery = query.asInstanceOf[TableQuery[Table[_]]]
-  override def getByPk(pk: Long) = get(pk)
-  override def insOrUpdate(row: Any) = query.insertOrUpdate( row.asInstanceOf[Institution])
+  override def getByPk(pk: Long, db: Database) = scala.concurrent.Await.result(db.run(query.filter(_.institutionPK === pk).result), Db.TIMEOUT).headOption
+  override def insOrUpdate(row: Any) = query.insertOrUpdate(row.asInstanceOf[Institution])
 
   /**
    * Get a list of all institutions.

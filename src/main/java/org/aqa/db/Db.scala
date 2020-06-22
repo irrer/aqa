@@ -67,9 +67,6 @@ object Db extends Logging {
     val msg = "Database  " + keyList.map(k => fmt(k)).mkString("    ")
     logger.info("Attempting to connect to " + msg)
 
-    val j = Config.SlickDb.getString("db.default.driver") // TODO rm
-    Trace.trace(j)
-
     // create the database from the config
     val d = try {
       // Using a configuration for Microsoft SQL Server does not work, but it does work using a Slick DataSource.
