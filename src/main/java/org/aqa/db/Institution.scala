@@ -28,12 +28,12 @@ case class Institution(
   def fileName = Institution.fileName(name)
 }
 
-object Institution extends Logging {
+object Institution extends DbTable with Logging {
 
   class InstitutionTable(tag: Tag) extends Table[Institution](tag, "institution") {
 
     def institutionPK = column[Long]("institutionPK", O.PrimaryKey, O.AutoInc)
-    def name = column[String]("name", O.Unique, O.Length(400))
+    def name = column[String]("name", O.Unique, O.Length(400)) // SQL Server requires that unique columns be of limited length.
     def name_real = column[Option[String]]("name_real")
     def url_real = column[String]("url_real")
     def description_real = column[String]("description_real")
@@ -49,9 +49,15 @@ object Institution extends Logging {
     val action = for {
       inst <- query if inst.institutionPK === institutionPK
     } yield (inst)
+    
+    val j = action.result
     val list = Db.run(action.result)
     if (list.isEmpty) None else Some(list.head)
   }
+
+  override val tableQuery = query.asInstanceOf[TableQuery[Table[_]]]
+  override def getByPk(pk: Long) = get(pk)
+  override def insOrUpdate(row: Any) = query.insertOrUpdate( row.asInstanceOf[Institution])
 
   /**
    * Get a list of all institutions.
