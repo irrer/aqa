@@ -87,7 +87,7 @@ object DbSetup extends Logging {
     }
   }
 
-  val tableQueryList = List(
+  private val tableQueryList = List(
     Institution.query,
     User.query,
     Procedure.query,

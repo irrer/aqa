@@ -28,7 +28,7 @@ case class Institution(
   def fileName = Institution.fileName(name)
 }
 
-object Institution extends DbTable with Logging {
+object Institution extends Logging {
 
   class InstitutionTable(tag: Tag) extends Table[Institution](tag, "institution") {
 
@@ -53,10 +53,6 @@ object Institution extends DbTable with Logging {
     val list = Db.run(action.result)
     if (list.isEmpty) None else Some(list.head)
   }
-
-  override val tableQuery = query.asInstanceOf[TableQuery[Table[_]]]
-  override def getByPk(pk: Long, db: Database) = scala.concurrent.Await.result(db.run(query.filter(_.institutionPK === pk).result), Db.TIMEOUT).headOption
-  override def insOrUpdate(row: Any) = query.insertOrUpdate(row.asInstanceOf[Institution])
 
   /**
    * Get a list of all institutions.
