@@ -4,6 +4,12 @@
 -- To list tables in SQL Server:
 --    SELECT * FROM SYSOBJECTS WHERE xtype = 'U';
 
+-- Note that when running as a service on a HITS system the service will log into the
+-- Windows DB server as UMHS\UHROAPPWEBDV1$ no matter what you configure for a user
+-- and password.  This user must be granted permissions using Microsoft SQL Server
+-- Management Studio with Database role membership including db_owner so that they can
+-- create tables on the first startup.
+
 drop table "AQAmsDV"."dbo"."vmat";
 drop table "AQAmsDV"."dbo"."leafPosition";
 drop table "AQAmsDV"."dbo"."symmetryAndFlatness";
