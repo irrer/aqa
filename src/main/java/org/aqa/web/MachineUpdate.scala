@@ -490,7 +490,8 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   private def emptyForm(response: Response) = {
     val isAdmin = getUserIdOrDefault(response.getRequest, "").toLowerCase.contains("admin")
 
-    formCreate(emptyValueMap, userIsAdmin(response)).setFormResponse(emptyValueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
+    val valueMap = Map((active.label, "true"))
+    formCreate(emptyValueMap, userIsAdmin(response)).setFormResponse(valueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
   }
 
   /**
