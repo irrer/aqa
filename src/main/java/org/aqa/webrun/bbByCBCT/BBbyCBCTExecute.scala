@@ -95,18 +95,25 @@ object BBbyCBCTExecute extends Logging {
       if (result.isRight) {
         val volumePoint = result.right.get._1
         val imageXYZ = result.right.get._2
+        Trace.trace
         logger.info("Found BB in CBCT volume.  XYZ Coordinates in original CBCT space: " +
           Util.fmtDbl(volumePoint.getX) + ", " + Util.fmtDbl(volumePoint.getY) + ", " + Util.fmtDbl(volumePoint.getZ))
+        Trace.trace
 
         // transform the cbct point if necessary.  If it is already in the same frame of reference, then it is not necessary
         val bbPointInRtplan = {
+          Trace.trace
           if (runReq.reg.isDefined) runReq.imageRegistration.get.transform(volumePoint)
           else volumePoint
         }
 
+        Trace.trace
         val rtplanIsocenter = Util.getPlanIsocenterList(runReq.rtplan).head
+        Trace.trace
         val bbByCBCT = saveToDb(extendedData, runReq, bbPointInRtplan)
+        Trace.trace
         val annotatedImages = BBbyCBCTAnnotateImages.annotate(bbByCBCT, imageXYZ, runReq, volumePoint)
+        Trace.trace
         val html = BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, annotatedImages, ProcedureStatus.done, runReq)
         logger.info("Finished analysis of CBCT Alignment for machine " + extendedData.machine.id)
         ProcedureStatus.pass

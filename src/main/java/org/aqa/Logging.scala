@@ -20,7 +20,7 @@ trait Logging {
    */
   def fmtEx(throwable: Throwable): String = {
     val textList = throwable.getStackTrace.map(ste => "\n    " + ste) // convert to text
-    textList.foldLeft(throwable.toString)((t, ste) => t + ste) // join as one string
+    textList.mkString // join as one string
   }
 }
 

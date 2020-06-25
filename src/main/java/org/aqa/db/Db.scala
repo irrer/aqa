@@ -107,7 +107,6 @@ object Db extends Logging {
   private var dbValue: Database = null
 
   def db = TIMEOUT.synchronized {
-    Trace.trace("db")
     if (dbValue == null) dbValue = initDb
     dbValue
   }
