@@ -132,6 +132,19 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
     MultileafCollimator.get(manufacturer.getValOrEmpty(valueMap).trim, model.getValOrEmpty(valueMap).trim, version.getValOrEmpty(valueMap).trim)
   }
 
+  /**
+   * Only whitelisted users may make changes to multileaf collimators.
+   */
+  private def validateAuthorization(valueMap: ValueMapT, create: Boolean, response: Response): Boolean = {
+    if (WebUtil.userIsWhitelisted(response)) true
+    else {
+      val err = Error.make(model, "Only system administrators are allowed to create, modify, or delete multileaf collimators.")
+      if (create) formCreate.setFormResponse(valueMap, err, pageTitleCreate, response, Status.CLIENT_ERROR_BAD_REQUEST)
+      else formEdit.setFormResponse(valueMap, err, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
+      false
+    }
+  }
+
   private def okToSaveAs(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
     val mt = multileafCollimatorLookup(valueMap)
     if (mt.isDefined && (mt.get.multileafCollimatorPK.get != valueMap.get(MultileafCollimatorUpdate.multileafCollimatorPKTag).get.toInt)) {
@@ -145,7 +158,7 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
     0 match {
       case _ if !fieldsAreValid(valueMap, pageTitleEdit, response) => false
       case _ if !okToSaveAs(valueMap, pageTitleEdit, response) => false
-      case _ => true
+      case _ => validateAuthorization(valueMap, false, response)
     }
   }
 
@@ -202,7 +215,7 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
     0 match {
       case _ if !fieldsAreValid(valueMap, pageTitleCreate, response) => false
       case _ if (alreadyExists(valueMap, pageTitleCreate, response)) => false
-      case _ => true
+      case _ => validateAuthorization(valueMap, true, response)
     }
   }
 
@@ -250,16 +263,18 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
   }
 
   private def delete(valueMap: ValueMapT, response: Response) = {
-    val value = valueMap.get(MultileafCollimatorUpdate.multileafCollimatorPKTag)
-    if (value.isDefined) {
-      val multileafCollimatorPK = value.get.toLong
-      val machCount = Machine.listMachinesWithCollimator(multileafCollimatorPK).size
-      if (machCount == 0) {
-        MultileafCollimator.delete(value.get.toLong)
-        MultileafCollimatorList.redirect(response)
-      } else {
-        val err = Error.make(model, "This multileaf collimator type is in use by " + machCount + " machines and can not be deleted.")
-        formCreate.setFormResponse(valueMap, err, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
+    if (validateAuthorization(valueMap, false, response)) {
+      val value = valueMap.get(MultileafCollimatorUpdate.multileafCollimatorPKTag)
+      if (value.isDefined) {
+        val multileafCollimatorPK = value.get.toLong
+        val machCount = Machine.listMachinesWithCollimator(multileafCollimatorPK).size
+        if (machCount == 0) {
+          MultileafCollimator.delete(value.get.toLong)
+          MultileafCollimatorList.redirect(response)
+        } else {
+          val err = Error.make(model, "This multileaf collimator type is in use by " + machCount + " machines and can not be deleted.")
+          formCreate.setFormResponse(valueMap, err, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
+        }
       }
     }
   }

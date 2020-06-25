@@ -137,11 +137,24 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
     } else true
   }
 
-  private def okToSave(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
+  /**
+   * Only whitelisted users may make changes to EPIDs.
+   */
+  private def validateAuthorization(valueMap: ValueMapT, create: Boolean, response: Response): Boolean = {
+    if (WebUtil.userIsWhitelisted(response)) true
+    else {
+      val err = Error.make(model, "Only system administrators are allowed to create, modify, or delete EPIDs.")
+      if (create) formCreate.setFormResponse(valueMap, err, pageTitleCreate, response, Status.CLIENT_ERROR_BAD_REQUEST)
+      else formEdit.setFormResponse(valueMap, err, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
+      false
+    }
+  }
+
+  private def okToSave(valueMap: ValueMapT, response: Response): Boolean = {
     0 match {
       case _ if !fieldsAreValid(valueMap, pageTitleEdit, response) => false
       case _ if !okToSaveAs(valueMap, pageTitleEdit, response) => false
-      case _ => true
+      case _ => validateAuthorization(valueMap, false, response)
     }
   }
 
@@ -149,7 +162,7 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
    * Save changes made to form.
    */
   private def save(valueMap: ValueMapT, pageTitle: String, response: Response): Unit = {
-    if (okToSave(valueMap, pageTitle, response)) {
+    if (okToSave(valueMap, response)) {
       (createEPIDFromParameters(valueMap)).insertOrUpdate
       EPIDList.redirect(response)
     }
@@ -196,7 +209,7 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
     0 match {
       case _ if !fieldsAreValid(valueMap, pageTitleCreate, response) => false
       case _ if (alreadyExists(valueMap, pageTitleCreate, response)) => false
-      case _ => true
+      case _ => validateAuthorization(valueMap, true, response)
     }
   }
 
@@ -241,18 +254,12 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
     }
   }
 
-  private def isDelete(valueMap: ValueMapT, response: Response): Boolean = {
-    if (buttonIs(valueMap, deleteButton)) {
-      val value = valueMap.get(EPIDUpdate.epidPKTag)
-      if (value.isDefined) {
-        EPID.delete(value.get.toLong)
-        EPIDList.redirect(response)
-        true
-      } else
-        false
-    } else
-      false
-
+  private def delete(valueMap: ValueMapT, response: Response) = {
+    val value = valueMap.get(EPIDUpdate.epidPKTag)
+    if (value.isDefined && validateAuthorization(valueMap, false, response)) {
+      EPID.delete(value.get.toLong)
+      EPIDList.redirect(response)
+    }
   }
 
   private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
@@ -281,7 +288,7 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
         case _ if buttonIs(valueMap, cancelButton) => EPIDList.redirect(response)
         case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
         case _ if buttonIs(valueMap, saveButton) => save(valueMap, pageTitleEdit, response)
-        case _ if isDelete(valueMap, response) => Nil
+        case _ if buttonIs(valueMap, deleteButton) => delete(valueMap, response)
         case _ if isEdit(valueMap, response) => Nil
         case _ => emptyForm(response)
       }

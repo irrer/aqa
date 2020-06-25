@@ -78,6 +78,14 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
     Error.make(manufacturer, msg) ++ Error.make(model, msg) ++ Error.make(version, msg)
   }
 
+  /**
+   * Only whitelisted users may make changes to procedures.
+   */
+  private def validateAuthorization(response: Response) = {
+    if (WebUtil.userIsWhitelisted(response)) styleNone
+    else Error.make(model, "Only system administrators are allowed to create, modify, or delete machine types.")
+  }
+
   private def okToSaveEdited(valueMap: ValueMapT): StyleMapT = {
     val mt = machineTypeLookup(valueMap)
     if (mt.isDefined && (mt.get.machineTypePK.get != valueMap.get(MachineTypeUpdate.machineTypePKTag).get.toInt)) alreadyExistsStyle
@@ -88,7 +96,7 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
    * Save changes made to form editing an existing machine type.
    */
   private def saveEdits(valueMap: ValueMapT, pageTitle: String, response: Response): Unit = {
-    val styleMap = validateManufacturer(valueMap) ++ validateModel(valueMap) ++ okToSaveEdited(valueMap)
+    val styleMap = validateManufacturer(valueMap) ++ validateModel(valueMap) ++ okToSaveEdited(valueMap) ++ validateAuthorization(response)
     if (styleMap.isEmpty) {
       (createMachineTypeFromParameters(valueMap)).insertOrUpdate
       MachineTypeList.redirect(response)
@@ -116,13 +124,13 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
     formCreate.setFormResponse(emptyValueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
   }
 
-  private def okToCreate(valueMap: ValueMapT): StyleMapT = {
+  private def okToCreate(valueMap: ValueMapT, response: Response): StyleMapT = {
     if (machineTypeLookup(valueMap).isDefined) alreadyExistsStyle
-    else styleNone
+    else validateAuthorization(response)
   }
 
   private def create(valueMap: ValueMapT, response: Response) = {
-    val styleMap = validateManufacturer(valueMap) ++ validateModel(valueMap) ++ okToCreate(valueMap)
+    val styleMap = validateManufacturer(valueMap) ++ validateModel(valueMap) ++ okToCreate(valueMap, response)
     if (styleMap.isEmpty) {
       val inst = createMachineTypeFromParameters(valueMap)
       inst.insert
@@ -151,18 +159,17 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
     }
   }
 
-  private def isDelete(valueMap: ValueMapT, response: Response): Boolean = {
-    if (buttonIs(valueMap, deleteButton)) {
+  private def delete(valueMap: ValueMapT, response: Response) = {
+    val auth = validateAuthorization(response)
+    if (auth.isEmpty) {
       val value = valueMap.get(MachineTypeUpdate.machineTypePKTag)
       if (value.isDefined) {
         MachineType.delete(value.get.toLong)
         MachineTypeList.redirect(response)
-        true
-      } else
-        false
-    } else
-      false
-
+      }
+    } else {
+      formEdit.setFormResponse(valueMap, auth, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
+    }
   }
 
   private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
@@ -191,7 +198,7 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
         case _ if buttonIs(valueMap, cancelButton) => MachineTypeList.redirect(response)
         case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
         case _ if buttonIs(valueMap, saveButton) => saveEdits(valueMap, pageTitleEdit, response)
-        case _ if isDelete(valueMap, response) => Nil
+        case _ if buttonIs(valueMap, deleteButton) => delete(valueMap, response)
         case _ if isEdit(valueMap, response) => Nil
         case _ => emptyForm(response)
       }

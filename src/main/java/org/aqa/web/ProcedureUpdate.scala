@@ -132,7 +132,7 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
    * Save changes made to form.
    */
   private def save(valueMap: ValueMapT, response: Response): Unit = {
-    val errMap = emptyName(valueMap) ++ validateVersion(valueMap) ++ validateUniqueness(valueMap)
+    val errMap = emptyName(valueMap) ++ validateVersion(valueMap) ++ validateUniqueness(valueMap) ++ validateAuthorization(response)
     if (errMap.isEmpty) {
       val procedure = createProcedureFromParameters(valueMap)
       procedure.insertOrUpdate
@@ -170,11 +170,19 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
+   * Only whitelisted users may make changes to procedures.
+   */
+  private def validateAuthorization(response: Response) = {
+    if (WebUtil.userIsWhitelisted(response)) styleNone
+    else Error.make(name, "Only system administrators are allowed to create, modify, or delete procedures.")
+  }
+
+  /**
    * Call this when procedure has clicked create button.  If everything is ok, then create the new procedure,
    * otherwise show the same screen and communicate the error.
    */
   private def create(valueMap: ValueMapT, response: Response) = {
-    val errMap = emptyName(valueMap) ++ validateVersion(valueMap) ++ validateTimeout(valueMap) ++ validateUniqueness(valueMap)
+    val errMap = emptyName(valueMap) ++ validateVersion(valueMap) ++ validateTimeout(valueMap) ++ validateUniqueness(valueMap) ++ validateAuthorization(response)
 
     if (errMap.isEmpty) {
       val procedure = createProcedureFromParameters(valueMap)
@@ -185,6 +193,9 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
     }
   }
 
+  /**
+   * Populate the fields with the current values so that the user can edit them.
+   */
   private def edit(valueMap: ValueMapT, response: Response) = {
 
     val procOpt = getReference(valueMap)
@@ -217,11 +228,21 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
     }
   }
 
+  /**
+   * Perform the delete.
+   */
   private def delete(valueMap: ValueMapT, response: Response): Unit = {
-    val value = valueMap.get(ProcedureUpdate.procedurePKTag)
-    if (value.isDefined) {
-      Procedure.delete(value.get.toLong)
-      ProcedureList.redirect(response)
+
+    val errMap = validateAuthorization(response)
+
+    if (errMap.isEmpty) {
+      val value = valueMap.get(ProcedureUpdate.procedurePKTag)
+      if (value.isDefined) {
+        Procedure.delete(value.get.toLong)
+        ProcedureList.redirect(response)
+      }
+    } else {
+      formEdit.setFormResponse(valueMap, errMap, pageTitleCreate, response, Status.CLIENT_ERROR_BAD_REQUEST)
     }
   }
 
