@@ -209,14 +209,7 @@ object SymmetryAndFlatness extends ProcedureOutput {
   case class SymmetryAndFlatnessHistory(date: Date, symmetryAndFlatness: SymmetryAndFlatness)
 
   /**
-   * Get the SymmetryAndFlatness results that are nearest in time to the given date, preferring those that have an earlier date.
-   *
-   * Implementation note: Two DB queries are performed, one for data before and including the time stamp given, and another query for after.
-   *
-   * @param limit: Get up to this many sets of results before and after the given date.  If a
-   * limit of 10 is given then get up to 10 sets of results that occurred before and up to
-   * 10 that occurred at or after.  This means that up to 20 sets of results could be returned.
-   * A set of results is all the center dose values recorded from the beams of a single output.
+   * Get the SymmetryAndFlatness results.
    *
    * @param machinePK: For this machine
    *
@@ -224,55 +217,16 @@ object SymmetryAndFlatness extends ProcedureOutput {
    *
    * @param procedurePK: For this procedure
    *
-   * @param date: Relative to this date.  If None, then use current date.
    */
-  def recentHistory(limit: Int, machinePK: Long, procedurePK: Long, beamName: String, date: Option[Timestamp]) = {
+  def history(machinePK: Long, procedurePK: Long, beamName: String) = {
 
-    import java.sql.{ Timestamp, Date, Time }
-    import org.joda.time.DateTime
-    import org.joda.time.{ DateTime, LocalDate, LocalTime, DateTimeZone }
-    import org.joda.time.format._
+    val search = for {
+      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
+      symmetryAndFlatness <- SymmetryAndFlatness.query.filter(c => c.outputPK === output._1 && c.beamName === beamName)
+    } yield ((output._2, symmetryAndFlatness))
 
-    implicit def jodaTimeMapping: BaseColumnType[DateTime] = MappedColumnType.base[DateTime, Timestamp](
-      dateTime => new Timestamp(dateTime.getMillis),
-      timeStamp => new DateTime(timeStamp.getTime))
+    val result = Db.run(search.result).map(h => new SymmetryAndFlatnessHistory(h._1.get, h._2)).sortBy(_.date.getTime)
 
-    val dt = if (date.isDefined) date.get else new Timestamp(Long.MaxValue)
-
-    val before = {
-      val search = for {
-        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate < dt)).
-          distinct.
-          sortBy(_.dataDate.desc).take(limit).
-          map(o => (o.outputPK, o.dataDate))
-        symmetryAndFlatness <- SymmetryAndFlatness.query.filter(c => c.outputPK === output._1 && c.beamName === beamName)
-      } yield ((output._2, symmetryAndFlatness))
-
-      val sorted = search.distinct.sortBy(_._1.desc)
-      val result = Db.run(sorted.result)
-      result
-    }
-
-    def after = {
-      val search = for {
-        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate >= dt)).
-          distinct.
-          sortBy(_.dataDate).take(limit).
-          map(o => (o.outputPK, o.dataDate))
-        symmetryAndFlatness <- SymmetryAndFlatness.query.filter(c => c.outputPK === output._1 && c.beamName === beamName)
-      } yield ((output._2, symmetryAndFlatness))
-
-      val sorted = search.distinct.sortBy(_._1.asc)
-      val result = Db.run(sorted.result)
-      result
-    }
-
-    //    println("\nbefore:\n    " + before.map(_._1.get).mkString("\n    "))
-    //    println("\nafter:\n    " + after.map(_._1.get).mkString("\n    "))
-    val all = before ++ after
-
-    // Convert to class and make sure that they are temporally ordered.
-    val result = all.map(h => new SymmetryAndFlatnessHistory(h._1.get, h._2)).sortWith((a, b) => a.date.getTime < b.date.getTime)
     result
   }
 }

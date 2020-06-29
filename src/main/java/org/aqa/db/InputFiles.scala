@@ -6,6 +6,7 @@ import org.aqa.Config
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Util
 import java.security.InvalidParameterException
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Store the zipped file contents of an Input.
@@ -22,11 +23,8 @@ case class InputFiles(
   zippedContent: Array[Byte]) // The files in zip form created by the process
   {
 
-  def insert: InputFiles = {
-    val insertQuery = InputFiles.query returning InputFiles.query.map(_.inputFilesPK) into
-      ((epidCenterCorrection, inputFilesPK) => epidCenterCorrection.copy(inputFilesPK = inputFilesPK))
-    Db.run(insertQuery += this)
-  }
+  def insert: Unit = Db.run(InputFiles.query += this)
+
 }
 
 object InputFiles extends Logging {
@@ -69,6 +67,23 @@ object InputFiles extends Logging {
     val q = query.filter(_.inputPK === inputPK)
     val action = q.delete
     Db.run(action)
+  }
+
+  def main(args: Array[String]): Unit = {
+    DbSetup.init
+    val ts = new java.sql.Timestamp(System.currentTimeMillis)
+    val inputOld = new Input(None, None, ts, None, None, None, None)
+    val inputNew = inputOld.insert
+    val pk = inputNew.inputPK.get
+    Trace.trace("pk: " + pk)
+
+    val data: Array[Byte] = Array(1, 2, 3, 4)
+    val inputFiles = new InputFiles(pk, pk, data)
+    inputFiles.insert
+    Trace.trace("inserted inputFiles")
+
+    Input.delete(pk)
+    Trace.trace("done")
   }
 
 }

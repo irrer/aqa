@@ -227,6 +227,8 @@ object DailyQAHTML extends Logging {
 
       val allCbctSeq = BBbyCBCT.getForOneDay(date, institutionPK)
       val allEpidSeq = BBbyEPID.getForOneDay(date, institutionPK)
+      Trace.trace(allCbctSeq.mkString("\n    "))
+      Trace.trace(allEpidSeq.mkString("\n    "))
 
       def explain(mach: Machine): Elem = {
         val cbctResults = allCbctSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)

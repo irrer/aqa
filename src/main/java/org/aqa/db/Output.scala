@@ -54,7 +54,9 @@ case class Output(
 
   def updateData(zippedContent: Array[Byte]): OutputFiles = {
     OutputFiles.deleteByOutputPK(outputPK.get)
-    (new OutputFiles(outputPK.get, outputPK.get, zippedContent)).insert
+    val outputFiles = new OutputFiles(outputPK.get, outputPK.get, zippedContent)
+    outputFiles.insert
+    outputFiles
   }
 
   /**

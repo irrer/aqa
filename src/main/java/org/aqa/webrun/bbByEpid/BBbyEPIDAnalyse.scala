@@ -93,7 +93,7 @@ object BBbyEPIDAnalyse extends Logging {
             val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
             val epidDateTime = extendedData.output.dataDate.get
             val epidDateFormatted = dateFormat.format(epidDateTime)
-            val list = BBbyCBCT.recentHistory(100, extendedData.machine.machinePK.get, cbctProcPk, Some(epidDateTime))
+            val list = BBbyCBCT.history(extendedData.machine.machinePK.get, cbctProcPk)
             /**
              * CBCT must have been acquired before EPID, and must be on the same date.
              */

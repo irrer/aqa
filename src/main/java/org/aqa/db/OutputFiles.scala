@@ -21,11 +21,9 @@ case class OutputFiles(
   outputPK: Long, // referenced output
   zippedContent: Array[Byte]) // The files in zip form created by the process
   {
-  def insert: OutputFiles = {
-    val insertQuery = OutputFiles.query returning OutputFiles.query.map(_.outputFilesPK) into
-      ((epidCenterCorrection, outputFilesPK) => epidCenterCorrection.copy(outputFilesPK = outputFilesPK))
-    Db.run(insertQuery += this)
-  }
+
+  def insert: Unit = Db.run(OutputFiles.query += this)
+
 }
 
 object OutputFiles extends Logging {

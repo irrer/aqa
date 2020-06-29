@@ -377,11 +377,14 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
         logger.info("Starting redo of output " + output + "    procedure: " + procedure)
         val runTrait = WebRun.get(output.procedurePK).right.get.asInstanceOf[RunTrait[RunReqClass]]
         // Seems a bit round-about to create the valueMap, but this handles the bulk redo case.
+        Trace.trace
         val valueMap = Map(
           (OutputList.redoTag, output.outputPK.get.toString),
           (WebUtil.awaitTag, await.toString),
           (WebUtil.autoUploadTag, isAuto.toString))
+        Trace.trace
         RunProcedure.handle(valueMap, response.getRequest, response, runTrait)
+        Trace.trace
       }
     }
   }

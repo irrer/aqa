@@ -49,7 +49,9 @@ case class Input(
     val outputDirList = Output.listByInputPK(inputPK.get).map(o => o.dir)
     val zippedContent = FileUtil.readFileTreeToZipByteArray(Seq(inputDir), Seq[String](), outputDirList)
     InputFiles.deleteByInputPK(inputPK.get)
-    (new InputFiles(inputPK.get, inputPK.get, zippedContent)).insert
+    val inputFiles =   new InputFiles(inputPK.get, inputPK.get, zippedContent)
+   inputFiles .insert
+   inputFiles
   }
 
   /**

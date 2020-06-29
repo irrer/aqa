@@ -24,7 +24,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
   val output = Output.get(outputPK).get
   val machinePK = output.machinePK.get
 
-  private val history = SymmetryAndFlatness.recentHistory(Config.SymFlatConstHistoryRange, machinePK, output.procedurePK, beamName, output.dataDate)
+  private val history = SymmetryAndFlatness.history(machinePK, output.procedurePK, beamName)
   private val dateList = history.map(h => h.date)
   private val dateListFormatted = dateList.map(d => Util.standardDateFormat.format(d))
 
@@ -85,7 +85,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
   val javascript = {
     import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessAnalysis._
 
-    history.head.symmetryAndFlatness.axialSymmetry_pct     // TODO rm
+    history.head.symmetryAndFlatness.axialSymmetry_pct // TODO rm
     val chartAxial = makeChart(axialSymmetryName, Config.SymmetryPercentLimit, history.map(h => h.symmetryAndFlatness.axialSymmetry_pct))
     val chartTransverse = makeChart(transverseSymmetryName, Config.SymmetryPercentLimit, history.map(h => h.symmetryAndFlatness.transverseSymmetry_pct))
     val chartFlatness = makeChart(flatnessName, Config.FlatnessPercentLimit, history.map(h => h.symmetryAndFlatness.flatness_pct))

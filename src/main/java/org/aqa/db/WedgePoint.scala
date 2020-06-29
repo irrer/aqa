@@ -130,63 +130,23 @@ object WedgePoint extends ProcedureOutput {
   case class WedgePointHistory(date: Date, wedgeBeamName: String, backgroundBeamName: String, percentOfBackground_pct: Double, outputPK: Long)
 
   /**
-   * Get the CenterBeam results that are nearest in time to the given date, preferring those that have an earlier date.
-   *
-   * @param limit: Only get up to this many results preceding and following the given date.  This means that for a
-   * limit L, up to L+1+L results may be returned (one more than 2*L).
+   * Get CenterBeam results.
    *
    * @param machinePK: For this machine
    *
    * @param procedurePK: For this procedure
    *
-   * @param date: Relative to this date.  If None, then use current date.
    */
   def recentHistory(limit: Int, machinePK: Long, procedurePK: Long, date: Option[Timestamp]) = {
 
-    import java.sql.{ Timestamp, Date, Time }
-    import org.joda.time.DateTime
-    import org.joda.time.{ DateTime, LocalDate, LocalTime, DateTimeZone }
-    import org.joda.time.format._
+    val search = for {
+      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
+      wedgePoint <- WedgePoint.query.
+        filter(w => w.outputPK === output._1).
+        map(c => (c.wedgeBeamName, c.backgroundBeamName, c.percentOfBackground_pct))
+    } yield ((output._2, wedgePoint._1, wedgePoint._2, wedgePoint._3, output._1))
 
-    implicit def jodaTimeMapping: BaseColumnType[DateTime] = MappedColumnType.base[DateTime, Timestamp](
-      dateTime => new Timestamp(dateTime.getMillis),
-      timeStamp => new DateTime(timeStamp.getTime))
-
-    val dt = if (date.isDefined) date.get else new Timestamp(Long.MaxValue)
-
-    val before = {
-      val search = for {
-        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate < dt)).
-          distinct.
-          sortBy(_.dataDate.desc).take(limit).
-          map(o => (o.outputPK, o.dataDate))
-        wedgePoint <- WedgePoint.query.
-          filter(w => w.outputPK === output._1).
-          map(c => (c.wedgeBeamName, c.backgroundBeamName, c.percentOfBackground_pct))
-      } yield ((output._2, wedgePoint._1, wedgePoint._2, wedgePoint._3, output._1))
-
-      val sorted = search.distinct.sortBy(_._1.desc)
-      Db.run(sorted.result)
-    }
-
-    def after = {
-      val search = for {
-        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate >= dt)).
-          distinct.
-          sortBy(_.dataDate).take(limit).
-          map(o => (o.outputPK, o.dataDate))
-        wedgePoint <- WedgePoint.query.
-          filter(w => w.outputPK === output._1).
-          map(c => (c.wedgeBeamName, c.backgroundBeamName, c.percentOfBackground_pct))
-      } yield ((output._2, wedgePoint._1, wedgePoint._2, wedgePoint._3, output._1))
-
-      val sorted = search.distinct.sortBy(_._1.asc)
-      Db.run(sorted.result)
-    }
-
-    val all = before ++ after
-
-    val result = all.map(h => new WedgePointHistory(h._1.get, h._2, h._3, h._4, h._5)).sortBy(_.date.getTime)
+    val result = Db.run(search.result).map(h => new WedgePointHistory(h._1.get, h._2, h._3, h._4, h._5)).sortBy(_.date.getTime)
     result
   }
 }

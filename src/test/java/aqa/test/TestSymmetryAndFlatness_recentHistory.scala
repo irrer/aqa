@@ -25,7 +25,6 @@ class TestSymmetryAndFlatness_recentHistory extends FlatSpec with Matchers {
 
   DbSetup.init
 
-  val limit = 2
   val machinePK = 22.toLong
   val procedurePK = 4
   val beamName = "J20G0-10X"
@@ -34,7 +33,7 @@ class TestSymmetryAndFlatness_recentHistory extends FlatSpec with Matchers {
   val dateTime = new Timestamp(date.getTime)
 
   println("\nStarting. Using date of:\n    " + Util.standardDateFormat.format(date))
-  val seq = SymmetryAndFlatness.recentHistory(limit, machinePK, procedurePK, beamName, Some(dateTime))
+  val seq = SymmetryAndFlatness.history(machinePK, procedurePK, beamName)
 
   println("results:\n    " + seq.map(_.date).mkString("\n    "))
   println("Number of results: " + seq.size)

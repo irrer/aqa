@@ -60,7 +60,6 @@ object Db extends Logging {
 
   private def initDb = {
     val prefix = "db.default.db"
-    Trace.trace("initializing db")
     // log meaningful information regarding the database connection
     def fmt(key: String) = "    " + key + ": " + Config.SlickDb.getString(prefix + "." + key)
     val keyList = Seq("host", "port", "databaseName")
@@ -75,7 +74,6 @@ object Db extends Logging {
         val ds = new com.microsoft.sqlserver.jdbc.SQLServerDataSource
         def get(tag: String) = Config.SlickDb.getString("db.default.db." + tag)
         val userText = get("user").replace('/', '\\')
-        Trace.trace(userText)
         ds.setUser(userText)
         ds.setIntegratedSecurity(get("integratedSecurity").toBoolean)
         ds.setPassword(get("password"))
@@ -114,13 +112,29 @@ object Db extends Logging {
   private def tableName(table: TableQuery[Table[_]]): String = table.shaped.value.tableName
 
   def run[R](op: DBIOAction[R, NoStream, Nothing]): R = {
-    val dbAction = db.run(op)
-    val result = Await.result(dbAction, TIMEOUT)
-    dbAction.onComplete {
-      case Failure(ex) => throw (ex)
-      case Success(data) => ;
+    try {
+      val dbAction = db.run(op)
+      val result = Await.result(dbAction, TIMEOUT)
+      dbAction.onComplete {
+        case Failure(ex) => {
+          val stackTrace = fmtEx(new RuntimeException("Db.run stack trace"))
+          logger.warn("Error from database: " + fmtEx(ex) + "\nAQA source stack trace:" + stackTrace)
+          throw (ex)
+        }
+        case Success(data) => {
+        }
+      }
+      result
+    } catch {
+      case ex: Throwable => {
+        val stackTrace = fmtEx(new RuntimeException("Db.run stack trace from Slick internal error"))
+        val msg = "Error from Slick: " + fmtEx(ex) + "\nAQA source stack trace:" + stackTrace
+        logger.warn(msg)
+        throw new RuntimeException(msg)
+      }
+
     }
-    result
+
   }
 
   def perform(dbOperation: driver.ProfileAction[Unit, NoStream, Effect.Schema]): Unit = {
@@ -129,7 +143,6 @@ object Db extends Logging {
   }
 
   def perform(ops: Seq[FixedSqlAction[Int, NoStream, Effect.Write]]) = {
-    Trace.trace(ops)
     run(DBIO.sequence(ops))
   }
 
@@ -171,7 +184,6 @@ object Db extends Logging {
    * If the given table exists, drop it.
    */
   def dropTableIfExists(table: TableQuery[Table[_]]): Unit = {
-    Trace.trace
     if (TableList.tableExists(table)) {
       perform(table.schema.drop)
       TableList.resetTableList

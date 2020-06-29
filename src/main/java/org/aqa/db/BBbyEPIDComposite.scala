@@ -13,6 +13,7 @@ import javax.vecmath.Point3d
 import java.sql.Timestamp
 import java.util.Date
 import org.aqa.AngleType
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Store the analysis results for a set of EPID images containing a BB.  This is derived from
@@ -171,50 +172,12 @@ object BBbyEPIDComposite extends ProcedureOutput {
    *
    * @param date: Relative to this date.  If None, then use current date.
    */
-  def recentHistory(limit: Int, machinePK: Long, procedurePK: Long, date: Option[Timestamp]) = {
-
-    import java.sql.{ Timestamp, Date, Time }
-    import org.joda.time.DateTime
-    import org.joda.time.{ DateTime, LocalDate, LocalTime, DateTimeZone }
-    import org.joda.time.format._
-
-    implicit def jodaTimeMapping: BaseColumnType[DateTime] = MappedColumnType.base[DateTime, Timestamp](
-      dateTime => new Timestamp(dateTime.getMillis),
-      timeStamp => new DateTime(timeStamp.getTime))
-
-    val dt = if (date.isDefined) date.get else new Timestamp(Long.MaxValue)
-
-    val before = {
-      val search = for {
-        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate < dt)).
-          distinct.
-          sortBy(_.dataDate.desc).take(limit).
-          map(o => (o.outputPK, o.dataDate))
-        bbByEPIDComposite <- BBbyEPIDComposite.query.filter(c => (c.outputPK === output._1) && c.bbByCBCTPK.isDefined)
-      } yield ((output._2, bbByEPIDComposite))
-
-      val sorted = search.distinct.sortBy(_._1.desc)
-      //println(sorted.result.statements.mkString("\n    "))
-      Db.run(sorted.result)
-    }
-
-    def after = {
-      val search = for {
-        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate >= dt)).
-          distinct.
-          sortBy(_.dataDate).take(limit).
-          map(o => (o.outputPK, o.dataDate))
-        bbByEPIDComposite <- BBbyEPIDComposite.query.filter(c => (c.outputPK === output._1) && c.bbByCBCTPK.isDefined)
-      } yield ((output._2, bbByEPIDComposite))
-
-      val sorted = search.distinct.sortBy(_._1.asc)
-      //println(sorted.result.statements.mkString("\n    "))
-      Db.run(sorted.result)
-    }
-
-    val all = before ++ after
-
-    val result = all.map(h => new BBbyEPIDCompositeHistory(h._1.get, h._2)).sortWith((a, b) => a.date.getTime < b.date.getTime)
+  def history(machinePK: Long, procedurePK: Long) = {
+    val search = for {
+      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
+      bbByEPIDComposite <- BBbyEPIDComposite.query.filter(c => (c.outputPK === output._1) && c.bbByCBCTPK.isDefined)
+    } yield ((output._2, bbByEPIDComposite))
+    val result = Db.run(search.result).map(h => new BBbyEPIDCompositeHistory(h._1.get, h._2)).sortWith((a, b) => a.date.getTime < b.date.getTime)
     result
   }
 
@@ -257,7 +220,7 @@ object BBbyEPIDComposite extends ProcedureOutput {
       bbByEpid <- BBbyEPID.query.filter(b => b.outputPK === output.outputPK)
     } yield (bbByEPIDComposite, cbct, machine, output, bbByEpid)
 
-    val list = Db.run(search.distinct.result)
+    val list = Db.run(search.result)
     val dailyQA = list.groupBy(ga => ga._1.outputPK).map(gb => gb._2).map(g => new DailyDataSetComposite(g.head._1, g.head._2, g.head._3, g.head._4, g.map(gg => gg._5)))
     dailyQA.toSeq
   }

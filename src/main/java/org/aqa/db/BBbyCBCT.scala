@@ -147,65 +147,24 @@ object BBbyCBCT extends ProcedureOutput {
   }
 
   /**
-   * Get the BBbyCBCT results that are nearest in time to the given date.
-   *
-   * @param limit: Get up to this many sets of results before and after the given date.  If a
-   * limit of 10 is given then get up to 10 sets of results that occurred before and up to
-   * 10 that occurred at or after.  This means that up to 20 sets of results could be returned.
-   * A set of results is all the CBCT values recorded from the beams of a single output.
+   * Get all BBbyCBCT results that are nearest in time to the given date.
    *
    * @param machinePK: For this machine
    *
    * @param procedurePK: For this procedure
    *
-   * @param date: Relative to this date.  If None, then use current date.
    */
-  def recentHistory(limit: Int, machinePK: Long, procedurePK: Long, date: Option[Timestamp]) = {
+  def history(machinePK: Long, procedurePK: Long) = {
+    Trace.trace
+    val search = for {
+      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
+      bbByCBCT <- BBbyCBCT.query.filter(c => c.outputPK === output._1)
+    } yield ((output._2, bbByCBCT))
+    //println(sorted.result.statements.mkString("\n    "))
+    Trace.trace
 
-    import java.sql.{ Timestamp, Date, Time }
-    import org.joda.time.DateTime
-    import org.joda.time.{ DateTime, LocalDate, LocalTime, DateTimeZone }
-    import org.joda.time.format._
-
-    implicit def jodaTimeMapping: BaseColumnType[DateTime] = MappedColumnType.base[DateTime, Timestamp](
-      dateTime => new Timestamp(dateTime.getMillis),
-      timeStamp => new DateTime(timeStamp.getTime))
-
-    val dt = if (date.isDefined) date.get else new Timestamp(Long.MaxValue)
-
-    val before = {
-      val search = for {
-        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate < dt)).
-          distinct.
-          sortBy(_.dataDate.desc).take(limit).
-          map(o => (o.outputPK, o.dataDate))
-        bbByCBCT <- BBbyCBCT.query.filter(c => c.outputPK === output._1)
-      } yield ((output._2, bbByCBCT))
-
-      val sorted = search.distinct.sortBy(_._1.desc)
-      //println(sorted.result.statements.mkString("\n    "))
-      Db.run(sorted.result)
-    }
-
-    def after = {
-      val search = for {
-        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK) && o.dataDate.isDefined && (o.dataDate >= dt)).
-          distinct.
-          sortBy(_.dataDate).take(limit).
-          map(o => (o.outputPK, o.dataDate))
-        bbByCBCT <- BBbyCBCT.query.filter(c => c.outputPK === output._1)
-      } yield ((output._2, bbByCBCT))
-
-      val sorted = search.distinct.sortBy(_._1.asc)
-      //println(sorted.result.statements.mkString("\n    "))
-      Db.run(sorted.result)
-    }
-
-    Trace.trace("before.size: " + before.size + "    after.size: " + after.size)
-
-    val all = before ++ after
-
-    val result = all.map(h => new BBbyCBCTHistory(h._1.get, h._2)).sortWith((a, b) => a.date.getTime < b.date.getTime)
+    val result = Db.run(search.result).map(h => new BBbyCBCTHistory(h._1.get, h._2)).sortBy(_.date.getTime)
+    Trace.trace
     result
   }
 

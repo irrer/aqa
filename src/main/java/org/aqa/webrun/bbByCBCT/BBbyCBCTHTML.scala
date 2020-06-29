@@ -305,10 +305,13 @@ object BBbyCBCTHTML {
     }
   }
   def generateHtml(extendedData: ExtendedData, bbByCBCT: BBbyCBCT, imageSet: BBbyCBCTAnnotateImages.ImageSet, status: ProcedureStatus.Value, runReq: BBbyCBCTRunReq) = {
+    Trace.trace
 
     val outputDir = extendedData.output.dir
+    Trace.trace
 
     val chart = new BBbyCBCTChart(extendedData.output.outputPK.get)
+    Trace.trace
 
     def writeImg(index: Int) = {
       val pngFileFull = new File(outputDir, fileNameOfFull(index))
@@ -319,8 +322,10 @@ object BBbyCBCTHTML {
     }
 
     Seq(0, 1, 2).par.map(i => writeImg(i))
+    Trace.trace
 
     val numberText = {
+      Trace.trace
       def fmt(d: Double) = d.formatted("%5.2f")
 
       def dataCol(name: String, title: String, value: Double, cols: Int) = {
@@ -329,12 +334,15 @@ object BBbyCBCTHTML {
         </div>
       }
 
+      Trace.trace
       val errxText = {
         "X: " + fmt(bbByCBCT.err.getX) + " Y: " + fmt(bbByCBCT.err.getY) + "   Z: " + fmt(bbByCBCT.err.getZ)
 
       }
+      Trace.trace
 
       val elem = {
+        Trace.trace
         <div class="row">
           <div title="Test performed" class="col-md-3">
             <h2>CBCT BB Location</h2>
@@ -358,8 +366,10 @@ object BBbyCBCTHTML {
           </div>
         </div>
       }
+      Trace.trace
       elem
     }
+    Trace.trace
 
     def viewTitle(index: Int) = {
       <div title={ axisTitleList(index) }>
@@ -412,6 +422,7 @@ object BBbyCBCTHTML {
         </table>
       </div>
     }
+    Trace.trace
 
     val runScript = {
       def zoomy(index: Int) = {
@@ -420,16 +431,22 @@ object BBbyCBCTHTML {
           "      $(document).ready(function(){ $('#" + Util.textToId(fileNameOfFull(index)) + "').zoom(); });"
       }
 
+      Trace.trace
       val zoomList = Seq(0, 1, 2).map(index => zoomy(index))
       val zoomScript = zoomList.mkString("\n<script>\n      ", "\n      ", "\n</script>")
       val chartRef = BBbyCBCTChartHistoryRestlet.makeReference(extendedData.output.outputPK.get)
+      Trace.trace
 
       zoomScript + "\n" + chartRef
     }
 
+    Trace.trace
     val text = WebUtil.wrapBody(wrap(mainContent, extendedData), "BB Location by CBCT", None, true, Some(runScript))
+    Trace.trace
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
+    Trace.trace
     Util.writeFile(file, text)
+    Trace.trace
 
     //makeCbctSlices(extendedData, runReq)
   }

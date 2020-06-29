@@ -23,7 +23,7 @@ class BBbyEPIDChart(outputPK: Long) extends Logging {
   val procedure = Procedure.get(output.procedurePK).get
   val input = Input.get(output.inputPK).get
   val machine = Machine.get(output.machinePK.get).get
-  val history = BBbyEPIDComposite.recentHistory(Config.BBbyEPIDHistoryRange, machine.machinePK.get, procedure.procedurePK.get, output.dataDate)
+  val history = BBbyEPIDComposite.history(machine.machinePK.get, procedure.procedurePK.get)
 
   private val allDates = history.map(cd => cd.date)
 

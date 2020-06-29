@@ -82,7 +82,8 @@ class TestDicomSeries extends FlatSpec with Matchers {
 
     try {
       val zippedContent = FileUtil.readFileTreeToZipByteArray(Seq(dicomDir))
-      val inputFiles = (new InputFiles(inpPK, inpPK, zippedContent)).insert
+      val inputFiles = new InputFiles(inpPK, inpPK, zippedContent)
+      inputFiles.insert
       println("X inputFiles.inputFilesPK: " + inputFiles.inputFilesPK) // X denotes item to be deleted
 
       dsRtplan = Some((DicomSeries.makeDicomSeries(userPK, Some(inpPK), None, Seq(rtplan)).get).insert)

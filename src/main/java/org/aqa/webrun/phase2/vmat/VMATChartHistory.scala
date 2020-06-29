@@ -33,7 +33,7 @@ class VMATChartHistory(outputPK: Long, beamNameMLC: String) extends Logging {
   private val input = Input.get(output.inputPK).get
   private val machine = Machine.get(output.machinePK.get).get
   private val history = VMAT.
-    recentHistory(Config.BBbyEPIDHistoryRange, machine.machinePK.get, procedure.procedurePK.get, output.dataDate).
+    history(machine.machinePK.get, procedure.procedurePK.get).
     filter(h => h.vmat.beamNameMLC.equals(beamNameMLC))
 
   /**

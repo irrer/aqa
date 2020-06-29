@@ -27,7 +27,7 @@ class CenterDoseChart(outputPK: Long) extends Logging {
   val procedure = Procedure.get(output.procedurePK).get
   val input = Input.get(output.inputPK).get
   val machine = Machine.get(output.machinePK.get).get
-  val history = CenterDose.recentHistory(Config.CenterDoseHistoryRange, machine.machinePK.get, procedure.procedurePK.get, output.dataDate)
+  val history = CenterDose.history(machine.machinePK.get, procedure.procedurePK.get)
 
   private val allDates = history.map(cd => cd.date)
 
