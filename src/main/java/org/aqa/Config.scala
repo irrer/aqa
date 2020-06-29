@@ -388,10 +388,10 @@ object Config extends Logging {
     logger.info("Constructing database config")
     val dbConfig = ConfigFactory.parseString(configText)
     logger.info("Constructed database config")
-    logger.info("Database configuration (password redacted): " +
-      dbConfig.entrySet.toArray.map(cs => cs.toString).filterNot(cs => cs.contains("pass")).mkString("\n    ", "\n    ", ""))
+    val content = dbConfig.entrySet.toArray.map(cs => cs.toString).filterNot(cs => cs.toLowerCase.contains("pass")).mkString("\n                  ", "\n                  ", "")
+    logger.info("Database configuration (password redacted): " + content)
 
-    logText(name, "Constructed database config")
+    logText(name, "Constructed database config:" + content)
     dbConfig
   }
 
