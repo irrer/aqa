@@ -12,7 +12,7 @@ Note that when building a package for release, the Maven build process uses the 
     supported list of configuration parameters is tightly coupled to the code, and a change in what
     tags are defined requires a change in the code. The bottom line is, if the list of tags is changed
     then the code must also be changed. The values can be changed without changing the code. -->
-    <Slickdb>
+    <SlickDb>
         db {
           default = {
             driver = "slick.jdbc.SQLServerProfile$"
@@ -27,7 +27,7 @@ Note that when building a package for release, the Maven build process uses the 
             }
           }
         }
-    </Slickdb>
+    </SlickDb>
 
     <!-- Port number for the Secure ReST service.   Port 443 is the default for HTTPS.
     If this is missing or commented out, then the server will instead use HTTP on port 80.   Alternately,
