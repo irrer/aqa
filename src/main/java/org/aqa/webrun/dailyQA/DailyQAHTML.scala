@@ -293,23 +293,25 @@ object DailyQAHTML extends Logging {
 
             def missingHorzEPIDGantryAngle: Elem = {
               val title = {
-                "Click to view details of EPID.  There is no image from the horizontal" + titleNewline +
-                  "(90 or 270 degree) gantry angle.  This can not be used to calculate" + titleNewline +
-                  "the position of the BB.  The scan must be re-done."
+                "There is no BB found in an image from the horizontal (90 or 270 degree)" + titleNewline +
+                  "gantry angle, or, there was no horizontal image captured. The BB must" + titleNewline +
+                  "be visible in both a horizontal and horizoverticalntal image to" + titleNewline +
+                  "calculate its position. The scan must be re-done. Click to view details of EPID."
               }
               <p>
-                <a href={ url } title={ title }>{ text }<span style={ styleFail }>missing horizontal gantry angle image</span></a>
+                <a href={ url } title={ title }>{ text }<span style={ styleFail }>No horizontal gantry angle image with BB found</span></a>
               </p>
             }
-
+            //  + titleNewline +
             def missingVertEPIDGantryAngle: Elem = {
               val title = {
-                "Click to view details of EPID.  There is no image from the vertical" + titleNewline +
-                  "(0, 360, or 180 degree) gantry angle.  This can not be used to calculate" + titleNewline +
-                  "the position of the BB.  The scan must be re-done."
+                "There is no BB found in an image from the vertical (0, 360, or 180 degree)" + titleNewline +
+                  "gantry angle, or, there was no vertical image captured. The BB must be " + titleNewline +
+                  "visible in both a vertical and horizontalimage to calculate its" + titleNewline +
+                  "position. The scan must be re-done. Click to view details of EPID."
               }
               <p>
-                <a href={ url } title={ title }>{ text }<span style={ styleFail }>missing vertical gantry angle image</span></a>
+                <a href={ url } title={ title }>{ text }<span style={ styleFail }>No vertical gantry angle image with BB found</span></a>
               </p>
             }
 
