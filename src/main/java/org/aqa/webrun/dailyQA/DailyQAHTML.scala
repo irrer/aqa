@@ -295,7 +295,7 @@ object DailyQAHTML extends Logging {
               val title = {
                 "There is no BB found in an image from the horizontal (90 or 270 degree)" + titleNewline +
                   "gantry angle, or, there was no horizontal image captured. The BB must" + titleNewline +
-                  "be visible in both a horizontal and horizoverticalntal image to" + titleNewline +
+                  "be visible in both a horizontal and vertical image to" + titleNewline +
                   "calculate its position. The scan must be re-done. Click to view details of EPID."
               }
               <p>
@@ -307,7 +307,7 @@ object DailyQAHTML extends Logging {
               val title = {
                 "There is no BB found in an image from the vertical (0, 360, or 180 degree)" + titleNewline +
                   "gantry angle, or, there was no vertical image captured. The BB must be " + titleNewline +
-                  "visible in both a vertical and horizontalimage to calculate its" + titleNewline +
+                  "visible in both a vertical and horizontal image to calculate its" + titleNewline +
                   "position. The scan must be re-done. Click to view details of EPID."
               }
               <p>
