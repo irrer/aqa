@@ -5,17 +5,25 @@ Note that when building a package for release, the Maven build process uses the 
 
 <AQAConfig>
     <!-- Database parameters. -->
+    
+    <!-- UMRO SQL Server test database.  Note that this works, but only indirectly.  A connection 
+    to SQL Server could not be created directly using the Slick DB Configuration approach, so instead it
+    reads the parameters and connects to the SQL database via a DataSource. A problem is that if the
+    supported list of configuration parameters is tightly coupled to the code, and a change in what
+    tags are defined requires a change in the code. The bottom line is, if the list of tags is changed
+    then the code must also be changed. The values can be changed without changing the code. -->
     <SlickDb>
         db {
           default = {
-            driver = "org.postgresql.Driver"
+            driver = "slick.jdbc.SQLServerProfile$"
             db {
-              host = 141.214.125.209
-              port = 5432
-              databaseName = AQATest
-              user = postgres
-              password = postgresjim
-              url = "jdbc:postgresql://141.214.125.209:5432/AQATest"
+              host = ntsrodbsdv1.umhs.med.umich.edu
+              port = 1433
+              databaseName = AQAmsDV
+              user = 'UMHS/irrer'
+              password = 45eetslp
+              url = "jdbc:sqlserver://ntsrodbsdv1.umhs.med.umich.edu:1433/AQAmsDV"
+              integratedSecurity = true
             }
           }
         }
@@ -79,7 +87,8 @@ Note that when building a package for release, the Maven build process uses the 
     <ProcedureDir>D:\AQA_Procedures</ProcedureDir>
 
     <!-- Directory containing input and output data consumed by and produced by procedures. -->
-    <DataDir>D:\AQA_Data</DataDir>
+    <DataDirX>D:\AQA_DataSqlServer</DataDirX>
+    <DataDir>\\hitsdv\e$\Program Files\UMRO\AQA\AQA_DataSqlServer</DataDir>
 
     <!-- Authentication timeout.  Number of seconds for a user id+password pair to be cached before re-checking with database. -->
     <AuthenticationTimeout>7200.0</AuthenticationTimeout>
@@ -561,7 +570,7 @@ Note that when building a package for release, the Maven build process uses the 
     <VMATHistoryRange>25</VMATHistoryRange>
 
     <!-- The maximum tolerance of error in floating point in mm for daily QA.  Exceeding this means failure. -->
-    <DailyQATolerance_mm>0.4</DailyQATolerance_mm>
+    <DailyQATolerance_mm>1.0</DailyQATolerance_mm>
 
     <!-- The minimum number of standard deviations that the BB must deviate in brightness to be considered
     legitimate.  This check is done to ensure that if there is no BB, then the algorithm will not settle for
