@@ -561,7 +561,7 @@ Note that when building a package for release, the Maven build process uses the 
     <VMATHistoryRange>25</VMATHistoryRange>
 
     <!-- The maximum tolerance of error in floating point in mm for daily QA.  Exceeding this means failure. -->
-    <DailyQATolerance_mm>0.4</DailyQATolerance_mm>
+    <DailyQATolerance_mm>1.0</DailyQATolerance_mm>
 
     <!-- The minimum number of standard deviations that the BB must deviate in brightness to be considered
     legitimate.  This check is done to ensure that if there is no BB, then the algorithm will not settle for
