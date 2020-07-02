@@ -103,6 +103,22 @@ object DailyQAHTML extends Logging {
       <td>{ DailyQASummary.timeFormat.format(dataSet.output.dataDate.get) }</td>
     }
 
+    def colCbctXYZ(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+      val x = dataSet.cbct.cbctX_mm - dataSet.cbct.rtplanX_mm
+      val y = dataSet.cbct.cbctY_mm - dataSet.cbct.rtplanY_mm
+      val z = dataSet.cbct.cbctZ_mm - dataSet.cbct.rtplanZ_mm
+
+      val text = x.formatted("%7.2f").trim + ", " + y.formatted("%7.2f").trim + ", " + z.formatted("%7.2f").trim
+      val title = x.formatted("%12.6f").trim + ", " + y.formatted("%12.6f").trim + ", " + z.formatted("%12.6f").trim
+
+      if ((x.abs > Config.DailyQATolerance_mm) || (y.abs > Config.DailyQATolerance_mm) || (z.abs > Config.DailyQATolerance_mm)) {
+        machinePassed = false
+        <td class="danger" title={ title + " is out of tolerance of " + Config.DailyQATolerance_mm + " mm" }>{ text }</td>
+      } else {
+        <td title={ title }>{ text }</td>
+      }
+    }
+
     def colCbctX(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val x = dataSet.cbct.cbctX_mm - dataSet.cbct.rtplanX_mm
       posnRow(x)
@@ -173,9 +189,11 @@ object DailyQAHTML extends Logging {
       new Col("Patient", "Name of test patient", colPatient _),
       new Col("EPID Time " + reportDate, "Time of EPID acquisition", colDateTime _),
 
-      new Col("X CBCT - PLAN mm", "(plan X) - (plan X) in mm", colCbctX _),
-      new Col("Y CBCT - PLAN mm", "(plan Y) - (plan Y) in mm", colCbctY _),
-      new Col("Z CBCT - PLAN mm", "(plan Z) - (plan Z) in mm", colCbctZ _),
+      new Col("X,Y,Z CBCT-PLAN mm", "(plan X) - (plan X), (plan Y) - (plan Y), (plan Z) - (plan Z) in mm", colCbctXYZ _),
+
+      //      new Col("X CBCT - PLAN mm", "(plan X) - (plan X) in mm", colCbctX _),
+      //      new Col("Y CBCT - PLAN mm", "(plan Y) - (plan Y) in mm", colCbctY _),
+      //      new Col("Z CBCT - PLAN mm", "(plan Z) - (plan Z) in mm", colCbctZ _),
 
       new Col("Gantry Angle for XZ", "Angle of gantry for vertical image in degrees used to calculate values for Y and Z", colVertGantryAngle _),
       new Col("Vert EPID - CAX(X) mm", "X offset Vertical EPID image - CAX in mm", colVertXCax _),
