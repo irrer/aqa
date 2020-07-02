@@ -87,8 +87,6 @@ object Baseline extends Logging {
       } yield (maintenanceRecord, baseline)
     } sortBy (_._2.acquisitionDate.desc)
 
-    Trace.trace(action.result.statements.mkString("\n"))
-
     val list = Db.run(action.result.headOption)
     if (list.isDefined)
       Some((list.get._1, list.get._2))
@@ -116,32 +114,25 @@ object Baseline extends Logging {
    * Note that this will filter out non-baseline maintenance events.
    */
   def filterOutUnrelatedBaselines(maintRecPKset: Set[Long], requiredText: Set[String]): Seq[MaintenanceRecord] = {
-    Trace.trace
     val action = {
       for {
         maintenanceRecord <- MaintenanceRecord.query.filter(m => m.maintenanceRecordPK.inSet(maintRecPKset));
         baseline <- Baseline.query.filter(b => (b.maintenanceRecordPK === maintenanceRecord.maintenanceRecordPK))
       } yield (maintenanceRecord, baseline.id)
     }
-    Trace.trace
 
     val reqText = requiredText.map(t => t.toLowerCase)
-    Trace.trace
 
     val list = Db.run(action.result)
 
-    Trace.trace(list.mkString("\n"))
     def idInSet(id: String) = {
       val idLo = id.toLowerCase
       val m = reqText.filter(rt => idLo.contains(rt))
       m.nonEmpty
     }
-    Trace.trace
     val acceptable = list.filter(mb => ((!mb._1.category.equals(MaintenanceCategory.setBaseline))) || (idInSet(mb._2))).map(mb => mb._1)
-    Trace.trace
 
     val result = acceptable.toList.groupBy(m => m.maintenanceRecordPK).values.map(v => v.head).toSeq.sortBy(_.creationTime.getTime)
-    Trace.trace
     result
   }
 

@@ -143,7 +143,6 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
   private def show(response: Response, valueMap: ValueMapT) = {
     formCreate(valueMap).setFormResponse(valueMap, styleNone, DailyQASummary.pageTitle, response, Status.SUCCESS_OK)
-    //Trace.trace(getSelectedDate(valueMap))
   }
 
   override def handle(request: Request, response: Response): Unit = {

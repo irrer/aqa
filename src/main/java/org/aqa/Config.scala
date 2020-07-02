@@ -514,20 +514,15 @@ object Config extends Logging {
    */
   private def getVMATBeamPairList: Seq[VMATBeamPair] = {
     def nodeToVMATBeamPair(node: Node) = {
-      Trace.trace
       new VMATBeamPair(
         (node \ "@Name").head.text,
         (node \ "@MLC").head.text,
         (node \ "@OPEN").head.text,
         (node \ "@IsolationBorder_mm").head.text.toDouble)
     }
-    Trace.trace
     val list = (document \ "VMATBeamPairList" \ "VMATBeamPair").map(node => nodeToVMATBeamPair(node)).toList
-    Trace.trace
     val asText = list.mkString("\n        ", "\n        ", "")
-    Trace.trace
     logText("VMATBeamPairList", asText)
-    Trace.trace
     list
   }
 
@@ -833,9 +828,7 @@ object Config extends Logging {
   val VMATHistoryRange = logMainText("VMATHistoryRange", "25").toInt
 
   val DailyQATolerance_mm = logMainText("DailyQATolerance_mm", "1.0").toDouble
-  Trace.trace
   val CBCTBBMinimumStandardDeviation = logMainText("CBCTBBMinimumStandardDeviation", "1.75").toDouble
-  Trace.trace
   val DailyPhantomSearchDistance_mm = logMainText("DailyPhantomSearchDistance_mm", "50.0").toDouble
   val CBCTBBPenumbra_mm = logMainText("CBCTBBPenumbra_mm", "2.5").toDouble
   val CBCTZoomSize_mm = logMainText("CBCTZoomSize_mm", "30.0").toDouble

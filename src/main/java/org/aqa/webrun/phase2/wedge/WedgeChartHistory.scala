@@ -24,9 +24,6 @@ class WedgeChartHistory(outputPK: Long) {
 
   val allHistory = WedgePoint.recentHistory(Config.WedgeHistoryRange, machinePK, output.procedurePK, output.dataDate)
 
-  Trace.trace("Wedge outputPK point being graphed: " + outputPK)
-  Trace.trace("\n\nAll wedge history:\n----------\n" + allHistory.mkString("\n----------\n"))
-
   /** All maintenance records for the entire history interval for all beams except for 'Set Baseline' to reduce clutter. */
   val allMaintenanceRecordList = MaintenanceRecord.
     getRange(machinePK, allHistory.head.date, allHistory.last.date) //.filter(m => !(m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline.toString)))

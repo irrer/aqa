@@ -70,14 +70,12 @@ case class DicomSeries(
     0 match {
       case _ if content.nonEmpty => {
         val alList = DicomUtil.zippedByteArrayToDicom(content.get)
-        Trace.trace("created attributeListList from DicomSeries.content of size " + alList.size)
         alList
       }
       case _ if inputPK.nonEmpty =>
         {
           val zippedContent = InputFiles.getByInputPK(inputPK.get).head.zippedContent
           val alList = DicomUtil.zippedByteArrayToDicom(zippedContent).filter(al => Util.serInstOfAl(al).equals(seriesInstanceUID))
-          Trace.trace("created attributeListList from input of size " + alList.size)
           alList
         }
       case _ => Seq[AttributeList]()
@@ -87,29 +85,11 @@ case class DicomSeries(
 
   override def toString = {
 
-    //    Trace.trace("dicomSeriesPK: " + dicomSeriesPK)
-    //    Trace.trace("userPK: " + userPK)
-    //    Trace.trace("inputPK: " + inputPK)
-    //    Trace.trace("machinePK: " + machinePK)
-    //    Trace.trace("sopInstanceUIDList: " + sopInstanceUIDList)
-    //    Trace.trace("seriesInstanceUID: " + seriesInstanceUID)
-    //    Trace.trace("frameOfReferenceUID: " + frameOfReferenceUID)
-    //    Trace.trace("mappedFrameOfReferenceUID: " + mappedFrameOfReferenceUID)
-    //    Trace.trace("modality: " + modality)
-    //    Trace.trace("sopClassUID: " + sopClassUID)
-    //    Trace.trace("deviceSerialNumber: " + deviceSerialNumber)
-    //    Trace.trace("date: " + date)
-    //    Trace.trace("patientID: " + patientID)
-    //    Trace.trace("size: " + size)
-    //    Trace.trace("referencedRtplanUID: " + referencedRtplanUID)
-
     val contentText = if ((content != null) && (content.isDefined)) {
       "\n    content size: " + content.get.size
     } else {
       "\n    content: null"
     }
-
-    Trace.trace("contentText: " + contentText)
 
     "\n    dicomSeriesPK: " + dicomSeriesPK +
       "\n    userPK: " + userPK +
@@ -463,7 +443,7 @@ object DicomSeries extends Logging {
     case class Ref(dicomSeriesPK: Long, inputPK: Option[Long], modality: String);
     val action1 = for { ref <- DicomSeries.query.map(ds => (ds.dicomSeriesPK, ds.inputPK, ds.modality)) } yield (ref)
     val listOfDicomSeries = Db.run(action1.result).map(ref => new Ref(ref._1, ref._2, ref._3))
-    Trace.trace("Number of DicomSeries found: " + listOfDicomSeries.size)
+    logger.info("Number of DicomSeries found: " + listOfDicomSeries.size)
 
     val listToDelete = listOfDicomSeries.
       filterNot(ref => ref.modality.equalsIgnoreCase("RTPLAN")). // not interested in references to RTPLANs
@@ -703,19 +683,12 @@ object DicomSeries extends Logging {
   def main(args: Array[String]): Unit = {
     if (Config.validate) {
       DbSetup.init
-      Trace.trace
       if (Config.DicomSeriesDeleteOrphans != Config.Fix.ignore) deleteOrphans
-      Trace.trace
       if (Config.DicomSeriesPopulateFromInput != Config.Fix.ignore) populateFromInput
-      Trace.trace
       if (Config.DicomSeriesTrim != Config.Fix.ignore) trimOld
-      Trace.trace
       if (Config.DicomSeriesUnlinkInputPK != Config.Fix.ignore) unlinkRtplan
-      Trace.trace
       if (Config.DicomSeriesShared != Config.Fix.ignore) verifySharedInDicomSeries
-      Trace.trace
       if (Config.DicomSeriesOrphanOutputs != Config.Fix.ignore) deleteOrphanOutputs
-      Trace.trace("Exiting...")
       System.exit(0)
     }
   }

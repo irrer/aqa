@@ -227,8 +227,6 @@ object DailyQAHTML extends Logging {
 
       val allCbctSeq = BBbyCBCT.getForOneDay(date, institutionPK)
       val allEpidSeq = BBbyEPID.getForOneDay(date, institutionPK)
-      Trace.trace(allCbctSeq.mkString("\n    "))
-      Trace.trace(allEpidSeq.mkString("\n    "))
 
       def explain(mach: Machine): Elem = {
         val cbctResults = allCbctSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
@@ -249,11 +247,6 @@ object DailyQAHTML extends Logging {
         def hasHorzAngle(output: Output): Boolean = {
           val eSeq = epidResults.filter(e => e.bbByEPID.outputPK == output.outputPK.get)
           val horz = eSeq.find(e => e.isHorz)
-          if (true) { // TODO rm
-            Trace.trace(output.outputPK.get)
-            Trace.trace(horz)
-            Trace.trace(eSeq.map(e => (e.bbByEPID.outputPK, Util.fmtDbl(e.bbByEPID.gantryAngle_deg))).mkString("    "))
-          }
           horz.isDefined
         }
 
@@ -263,11 +256,6 @@ object DailyQAHTML extends Logging {
         def hasVertAngle(output: Output): Boolean = {
           val eSeq = epidResults.filter(e => e.bbByEPID.outputPK == output.outputPK.get)
           val vert = eSeq.find(e => e.isVert)
-          if (true) { // TODO rm
-            Trace.trace(output.outputPK.get)
-            Trace.trace(vert)
-            Trace.trace(eSeq.map(e => (e.bbByEPID.outputPK, Util.fmtDbl(e.bbByEPID.gantryAngle_deg))).mkString("    "))
-          }
           vert.isDefined
         }
 
@@ -370,7 +358,6 @@ object DailyQAHTML extends Logging {
          * Return true if the EPID was done before the CBCT.
          */
         def epidBeforeCbct = {
-          Trace.trace
           if (cbctResults.nonEmpty && epidResults.nonEmpty) {
             val firstCbct = cbctResults.minBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
             val lastEpid = epidResults.maxBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime

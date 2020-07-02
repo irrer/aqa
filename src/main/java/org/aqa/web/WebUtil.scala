@@ -1551,29 +1551,17 @@ object WebUtil extends Logging {
    * Wait for the given future to complete if specified in the valueMap.
    */
   def awaitIfRequested[T](future: Future[T], await: Boolean, procedurePK: Long): Unit = {
-    Trace.trace
     if (await) {
-      Trace.trace
-      Trace.trace("logger: " + logger)
       logger.info("Await was not requested.")
-      Trace.trace
       val procedureTimeout = (Procedure.get(procedurePK).get.timeout * 60 * 1000).round.toLong
-      Trace.trace
       val start = System.currentTimeMillis
-      Trace.trace
       logger.info("Awaiting for future to finish with timout of " + procedureTimeout + " ms .  Timeout at: " + edu.umro.ScalaUtil.Util.dateToText(new Date(procedureTimeout + start)))
-      Trace.trace
       val dur = new FiniteDuration(procedureTimeout, TimeUnit.MILLISECONDS)
-      Trace.trace
       Await.result(future, dur)
-      Trace.trace
       val elapsed = System.currentTimeMillis - start
-      Trace.trace
       logger.info("Await of future finished in " + elapsed + " ms.  Timeout was " + procedureTimeout + " ms.")
-      Trace.trace
     } else
       logger.info("Await was not requested.")
-    Trace.trace("logger: " + logger)
   }
 
   /**

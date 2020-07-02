@@ -62,7 +62,6 @@ object LeafPositionCoarseLeafSides extends Logging {
     }
 
     val searchDistance_pix = (minLeafWidth_pix / 3).round.toInt
-    Trace.trace("searchDistance_pix: " + searchDistance_pix)
 
     /**
      * Return true if the given profile point is smaller than any of its neighbors within the search distance.

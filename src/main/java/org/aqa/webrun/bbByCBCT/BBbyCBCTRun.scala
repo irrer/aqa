@@ -99,8 +99,6 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       date.getTime
     }
 
-    Trace.trace("cbctCeilingTime_ms: " + new java.util.Date(cbctCeilingTime_ms))
-
     // List of EPIDs that have occurred after this CBCT but before cbctCeilingTime time
     val allEpidDaily = BBbyEPID.getForOneDay(cbctOutput.dataDate.get, machine.institutionPK).
       filter(dds => dds.machine.machinePK.get == machine.machinePK.get).

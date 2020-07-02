@@ -150,18 +150,16 @@ object VMATAnalysis extends Logging {
     val measuredSeq_mm = aoiSeqFromPlan_mm.map(tblr => planToMeasured(tblr))
     val pixSeq_pix = measuredSeq_mm.map(tblr => tblr.iso2Pix(translator))
 
-    Trace.trace("Getting rectangle averages of mlc  mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm")
     val mlcAvgSeq = {
       val pixValSeq = pixSeq_pix.map(p => mlcImage.averageOfRectangle(p.toRectangle))
       Phase2Util.pixToDose(pixValSeq, alMlc)
     }
-    Trace.trace("Getting rectangle averages of open ooooooooooooooooooooooooooooooooo")
     val openAvgSeq = {
       val pixValSeq = pixSeq_pix.map(p => openImage.averageOfRectangle(p.toRectangle))
       Phase2Util.pixToDose(pixValSeq, alOpen)
     }
 
-    Trace.trace("mlc avg of rects: " + (mlcAvgSeq.sum / mlcAvgSeq.size) + "    open avg of rects: " + (openAvgSeq.sum / openAvgSeq.size))
+    logger.info("mlc avg of rects: " + (mlcAvgSeq.sum / mlcAvgSeq.size) + "    open avg of rects: " + (openAvgSeq.sum / openAvgSeq.size))
 
     // divide each pixel in MLC to corresponding pixel in OPEN to create a new image.
     val ratioOfImages = {
@@ -255,8 +253,6 @@ object VMATAnalysis extends Logging {
             runReq.derivedMap(vmatPair.MLC).originalImage, runReq.derivedMap(vmatPair.OPEN).originalImage)
         else Seq[VMAT]()
       }).filter(l => l.nonEmpty)
-
-      Trace.trace("vmatListList.size: " + vmatListList.size)
 
       val status: ProcedureStatus.Value = {
         val j = vmatListList.map(vmatList => VMAT.beamPassed(vmatList)).reduce(_ && _) // TODO rm

@@ -163,7 +163,6 @@ object BBbyCBCTAnalysis extends Logging {
    */
   private def makeImage(dicomImage: DicomImage, location: Point2D.Double, pixelSize: Point2D.Double, minMax: (Float, Float)): BufferedImage = {
     val aspectCorrected = dicomImage.renderPixelsToSquare(pixelSize.getX, pixelSize.getY)
-    //Trace.trace("pixel sizes: " + pixelSize.getX + ", " + pixelSize.getY + "    Dimensions before aspect correction: " + dicomImage.width + ", " + dicomImage.height + "    after: " + aspectCorrected.width + ", " + aspectCorrected.height)
     val bufImg = if (Config.CBCTImageColor.getRGB == 0)
       aspectCorrected.toDeepColorBufferedImage(0.0)
     else
@@ -205,16 +204,6 @@ object BBbyCBCTAnalysis extends Logging {
       makeImage(diY, new Point2D.Double(fineLocation_vox.getZ, fineLocation_vox.getX), new Point2D.Double(voxSize(2), voxSize(0)), minMaxPixels),
       makeImage(diZ, new Point2D.Double(fineLocation_vox.getX, fineLocation_vox.getY), new Point2D.Double(voxSize(0), voxSize(1)), minMaxPixels))
 
-    //    if (true) { // TODO rm
-    //      Trace.trace("fineLocation_vox: " + fineLocation_vox.getX + ", " + fineLocation_vox.getY + ", " + fineLocation_vox.getZ)
-    //      Trace.trace("voxSize: " + voxSize.mkString(", "))
-    //      val dir = new File("""D:\tmp\aqa\tmp\aspect""")
-    //      val t = (System.currentTimeMillis % 100000).toString
-    //      ImageUtil.writePngFile(bufImgList(0), new File(dir, t + "_X2.png"))
-    //      ImageUtil.writePngFile(bufImgList(1), new File(dir, t + "_Y2.png"))
-    //      ImageUtil.writePngFile(bufImgList(2), new File(dir, t + "_Z2.png"))
-    //      Trace.trace("wrote image files to: " + dir.getAbsolutePath)
-    //    }
     bufImgList
   }
 

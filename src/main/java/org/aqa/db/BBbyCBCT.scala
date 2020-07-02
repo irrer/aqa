@@ -155,16 +155,13 @@ object BBbyCBCT extends ProcedureOutput {
    *
    */
   def history(machinePK: Long, procedurePK: Long) = {
-    Trace.trace
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
       bbByCBCT <- BBbyCBCT.query.filter(c => c.outputPK === output._1)
     } yield ((output._2, bbByCBCT))
     //println(sorted.result.statements.mkString("\n    "))
-    Trace.trace
 
     val result = Db.run(search.result).map(h => new BBbyCBCTHistory(h._1.get, h._2)).sortBy(_.date.getTime)
-    Trace.trace
     result
   }
 

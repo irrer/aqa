@@ -75,15 +75,15 @@ object InputFiles extends Logging {
     val inputOld = new Input(None, None, ts, None, None, None, None)
     val inputNew = inputOld.insert
     val pk = inputNew.inputPK.get
-    Trace.trace("pk: " + pk)
+    println("pk: " + pk)
 
     val data: Array[Byte] = Array(1, 2, 3, 4)
     val inputFiles = new InputFiles(pk, pk, data)
     inputFiles.insert
-    Trace.trace("inserted inputFiles")
+    println("inserted inputFiles")
 
     Input.delete(pk)
-    Trace.trace("done")
+    println("done")
   }
 
 }

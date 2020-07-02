@@ -203,8 +203,6 @@ object VMATHTML {
 
     val setList = resultList.map(vmatList => makeSet(vmatList))
 
-    Trace.trace("setList.size: " + setList.size)
-
     val content: Elem = {
       <div>
         <div class="row" style="margin:50px;">

@@ -88,9 +88,5 @@ object EPID {
   def main(args: Array[String]): Unit = {
     val valid = Config.validate
     DbSetup.init
-    Trace.trace(get(2))
-
-    //    println("======== inst: " + get(5))
-    //    println("======== inst delete: " + delete(5))
   }
 }

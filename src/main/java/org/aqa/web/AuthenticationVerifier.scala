@@ -36,33 +36,6 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
     }
   }
 
-  //  /**
-  //   * Determine if the user is valid via LDAP.  If so, then add them to the database.
-  //   */
-  //  private def attemptVerifyViaLdap(id: String, secret: String): Int = {
-  //    Trace.trace
-  //    Level2Ldap.getGroupListOfUser(id, secret) match {
-  //      case Right(groupSet) => {
-  //        if (groupSet.toSeq.intersect(Config.LdapGroupList).isEmpty) {
-  //          logger.warn("Unable to authenticate user via LDAP.  User is not a member of one of the configured LdapGroupList.\n" +
-  //            "    User's group list: " + groupSet.mkString("    ") +
-  //            "    Configured group list: " + Config.LdapGroupList.mkString("    "))
-  //          Verifier.RESULT_UNKNOWN
-  //        } else {
-  //          // User is authenticated and authorized.  Automatically create a user using LDAP information.
-  //          Trace.trace
-  //          createUserWithLdap(id, secret)
-  //          Trace.trace
-  //          Verifier.RESULT_VALID
-  //        }
-  //      }
-  //      case Left(errorMessage) => {
-  //        logger.warn("Unable to authenticate user via LDAP")
-  //        Verifier.RESULT_UNKNOWN
-  //      }
-  //    }
-  //  }
-
   override def verify(request: Request, response: Response): Int = {
     val requestedRole = getRequestedRole(request, response)
     if (requestedRole.id == UserRole.publik.id) Verifier.RESULT_VALID // let anyone into public areas

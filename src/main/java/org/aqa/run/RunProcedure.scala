@@ -464,9 +464,10 @@ object RunProcedure extends Logging {
     // usual reasons are that the analysis was changed or the analysis aborted.
     Future {
       val redundantList = Output.redundantWith(output)
-      logger.info("Removing " + redundantList.size + " old output(s) and corresponding inputs: " + redundantList.mkString("\n    ", "\n    ", "\n    "))
+      val msg = redundantList.size + " old output(s) and corresponding inputs: " + redundantList.mkString("\n    ", "\n    ", "\n    ")
+      logger.info("Removing " + msg)
       redundantList.map(o => deleteInput(o.inputPK))
-      Trace.trace
+      logger.info("Done removing " + msg)
     }
 
     runAnalysis(valueMap, runTrait, runReq, extendedData, response)
@@ -526,14 +527,11 @@ object RunProcedure extends Logging {
    * its file tree and the data that references it.
    */
   private def redo(valueMap: ValueMapT, response: Response, runTrait: RunTrait[RunReqClass]) = {
-    Trace.trace
     val request = response.getRequest
-    Trace.trace
     val oldOutput = {
       val outputPK = valueMap(OutputList.redoTag).toLong
       Output.get(outputPK)
     }
-    Trace.trace
 
     val input = {
       if (oldOutput.isDefined)
@@ -541,21 +539,15 @@ object RunProcedure extends Logging {
       else
         None
     }
-    Trace.trace
 
     if (input.isDefined) {
-      Trace.trace
       if (userAuthorizedToModify(request, response, input.get)) {
-        Trace.trace
         val now = new Timestamp((new Date).getTime)
         val user = CachedUser.get(request)
-        Trace.trace
 
         val machinePK = if (oldOutput.get.machinePK.isDefined) oldOutput.get.machinePK else input.get.machinePK
-        Trace.trace
 
         val newOutput = {
-          Trace.trace
           val tempOutput = new Output(
             outputPK = None,
             inputPK = oldOutput.get.inputPK,
@@ -569,43 +561,31 @@ object RunProcedure extends Logging {
             machinePK,
             status = ProcedureStatus.running.toString,
             dataValidity = DataValidity.valid.toString)
-          Trace.trace
           val out = tempOutput.insert
-          Trace.trace
           out
         }
         // now that new Output has been created, delete the old output.
         // Even if something goes horribly wrong after this (server crash, analysis crash),
         // having the output in the database gives visibility to the user via the Results screen.
-        Trace.trace
         if (oldOutput.isDefined)
           deleteOutput(oldOutput.get)
-        Trace.trace
 
         // instantiate the input files from originals
         val extendedData = ExtendedData.get(newOutput)
-        Trace.trace
         val inputDir = extendedData.input.dir
-        Trace.trace
         // force the contents of the input directory to be reestablished so that they are
         // exactly the same as the first time this was run.
         Util.deleteFileTreeSafely(inputDir)
-        Trace.trace
         Try(Input.getFilesFromDatabase(extendedData.input.inputPK.get, inputDir.getParentFile))
-        Trace.trace
         val outputDir = makeOutputDir(inputDir, now)
-        Trace.trace
 
         // read the DICOM files
         val alList = Util.listDirFiles(inputDir).map(f => new DicomFile(f)).map(df => df.attributeList).flatten
-        Trace.trace
         val runReq = runTrait.makeRunReqForRedo(alList)
 
         runAnalysis(valueMap, runTrait, runReq, extendedData, response)
-        Trace.trace
 
         ViewOutput.redirectToViewRunProgress(response, WebUtil.isAutoUpload(valueMap), newOutput.outputPK.get)
-        Trace.trace
       } else {
         logger.info("Redo of output " + oldOutput + " not possible because user is not authorized.")
         val msg = "Redo not possible because user is not authorized.  You must be a member of the same institution as the originating data."

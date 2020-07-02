@@ -496,7 +496,6 @@ object CustomizeRtPlan extends Logging {
 
     def updateBeamName(bi: Int) = {
       val BeamName = beamList(bi).get(TagFromName.BeamName)
-      Trace.trace("BeamName  before: " + BeamName)
 
       val name = BeamName.getSingleStringValueOrEmptyString
       val newName = (bi + 1).formatted("%02d") + ":" + name
@@ -504,8 +503,6 @@ object CustomizeRtPlan extends Logging {
       BeamName.addValue(newName)
 
       beamList(bi).put(VarianPrivateTag.newBeamSecondaryName(newName))
-
-      Trace.trace("          after: " + BeamName)
     }
 
     beamList.indices.map(bi => updateBeamName(bi))
@@ -523,7 +520,7 @@ object CustomizeRtPlan extends Logging {
 
     val unsupportedEnergyList = machineEnergyList.filter(me => !machineEnergyIsInPlan(rtplan, me))
 
-    Trace.trace("unsupportedEnergyList size: " + unsupportedEnergyList.size + "\n    " + unsupportedEnergyList.map(me => me.toString).mkString("\n    "))
+    logger.info("unsupportedEnergyList size: " + unsupportedEnergyList.size + "\n    " + unsupportedEnergyList.map(me => me.toString).mkString("\n    "))
 
     unsupportedEnergyList.map(me => addBeam(rtplan, me, prototypeBeam, prototypeFractionReference))
     logger.info("customized rtplan\n" + showBeamList(rtplan))

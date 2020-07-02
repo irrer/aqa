@@ -149,17 +149,12 @@ object BBbyEPID extends ProcedureOutput {
    * @param procedurePK: For this procedure
    */
   def history(machinePK: Long, procedurePK: Long) = {
-    Trace.trace
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
       bbByEPID <- BBbyEPID.query.filter(c => c.outputPK === output._1)
     } yield ((output._2, bbByEPID))
-    Trace.trace
     //println(sorted.result.statements.mkString("\n    "))
     val result = Db.run(search.result).map(h => new BBbyEPIDHistory(h._1.get, h._2)).sortBy(_.date.getTime)
-    Trace.trace
-    Trace.trace(result)
-    Trace.trace
     result
   }
 
