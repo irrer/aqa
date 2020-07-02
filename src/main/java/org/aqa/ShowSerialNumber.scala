@@ -7,7 +7,7 @@ import com.pixelmed.dicom.TagFromName
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.DicomFileUtilities
 
-object ShowSerialNumber {  // TODO should this be in production?
+object ShowSerialNumber { // TODO should this be in production?
 
   private def showSerialNumber(file: File): Unit = {
 
