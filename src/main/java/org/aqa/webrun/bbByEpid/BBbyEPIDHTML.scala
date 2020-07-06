@@ -18,6 +18,8 @@ import org.aqa.db.BBbyCBCT
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.web.WebServer
 import org.aqa.db.DicomSeries
+import com.pixelmed.dicom.AttributeTag
+import org.aqa.web.OutputList
 
 /**
  * Generate and write HTML for EPID BB analysis.
@@ -95,6 +97,7 @@ object BBbyEPIDHTML {
               { wrapElement(1, "User", extendedData.user.id, true) }
               { wrapElement(1, "Elapsed", elapsed, false) }
               { wrapElement(1, "Procedure", procedureDesc, false) }
+              <div class="col-md-1">{ OutputList.redoUrl(extendedData.output.outputPK.get) }</div>
             </div>
           </div>
           <div class="row">
@@ -213,6 +216,30 @@ object BBbyEPIDHTML {
         </span>
       }
 
+      def tableMovement(composite: BBbyEPIDComposite) = {
+        def fmt(d: Option[Double]) = <span title={ (d.get / 10).formatted("%8.5f").trim }>{ (d.get / 10).formatted("%4.1f") }</span>
+        fmt(composite.tableXlateral_mm) + ","
+        <div title="Table movement between CBCT and RTIMAGE, calculated with RTIMAGE - CT">
+          Table Movement X,Y,Z cm:{ fmt(composite.tableXlateral_mm) }
+          ,{ fmt(composite.tableYvertical_mm) }
+          ,{ fmt(composite.tableZlongitudinal_mm) }
+        </div>
+      }
+
+      val tablePosition = {
+        val bbByEPID = bbByEPIDList.flatten.head
+
+        def getDblCm(tag: AttributeTag) = runReq.epidList.head.get(tag).getDoubleValues.head / 10
+        val x = Util.fmtDbl(bbByEPID.tableXlateral_mm)
+        val y = Util.fmtDbl(bbByEPID.tableYvertical_mm)
+        val z = Util.fmtDbl(bbByEPID.tableZlongitudinal_mm)
+
+        <div title="Table position when CBCT was captured.">
+          <h3> </h3>
+          Table Position X,Y,Z cm:{ x + "," + y + "," + z }
+        </div>
+      }
+
       val numbersWithCbct = {
         val sp = WebUtil.nbsp + " " + WebUtil.nbsp + " " + WebUtil.nbsp
 
@@ -222,18 +249,22 @@ object BBbyEPIDHTML {
               val timeText = new SimpleDateFormat("K:mm a").format(cbctOutput.get.dataDate.get)
               "CBCT at " + timeText
             }
-            <h3 title="Composite results.  Distance in mm between plan isocenter and position of BB compensated by CBCT (difference of EPID - CBCT)">
-              {
-                "With CBCT Offset (mm):" + fmt(composite.right.get.offsetAdjusted_mm.get) + sp +
-                  "X:" + fmt(composite.right.get.x_mm) + sp +
-                  "Y:" + fmt(composite.right.get.y_mm) + sp +
-                  "Z:" + fmt(composite.right.get.z_mm) + sp +
-                  cbctTime
-              }
-            </h3>
+            <div>
+              <h3 title="Composite results.  Distance in mm between plan isocenter and position of BB compensated by CBCT (difference of EPID - CBCT)">
+                {
+                  "With CBCT Offset (mm):" + fmt(composite.right.get.offsetAdjusted_mm.get) + sp +
+                    "X:" + fmt(composite.right.get.x_mm) + sp +
+                    "Y:" + fmt(composite.right.get.y_mm) + sp +
+                    "Z:" + fmt(composite.right.get.z_mm) + sp +
+                    cbctTime
+                }
+              </h3>
+              { tableMovement(composite.right.get) }
+            </div>
           } else {
             <div title="There was no corresponding CBCT.  CBCT must be taken earlier than the EPID and on the same day.">
               <h3>No CBCT results corresponding to these EPID images.</h3>
+              { tablePosition }
             </div>
           }
         } else {

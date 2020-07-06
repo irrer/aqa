@@ -39,6 +39,11 @@ object OutputList {
   val path = new String((new OutputList).pathOf)
 
   def redirect(response: Response) = response.redirectSeeOther(path)
+
+  def redoUrl(outputPK: Long): Elem = {
+    <a title="Click to re-run analysis. New results will replace previous results." href={ path + "?" + redoTag + "=" + outputPK }>Redo</a>
+  }
+
 }
 
 class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlView {
@@ -185,7 +190,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   }
 
   private def redoUrl(extendedValues: Output.ExtendedValues): Elem = {
-    <a title="Click to re-run analysis.  Results will replace previous results." href={ OutputList.path + "?" + OutputList.redoTag + "=" + extendedValues.output_outputPK }>Redo</a>
+    OutputList.redoUrl(extendedValues.output_outputPK)
   }
 
   type ColT = Output.ExtendedValues // Column Type

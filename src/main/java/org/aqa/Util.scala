@@ -898,6 +898,10 @@ object Util extends Logging {
     if (text.endsWith(".")) text + "0" else text
   }
 
+  def fmtDbl(dbl: Option[Double]): String = {
+    if (dbl.isDefined) fmtDbl(dbl.get) else "None"
+  }
+
   //  /**
   //   * Calculate the standard deviation of a list of values.
   //   */

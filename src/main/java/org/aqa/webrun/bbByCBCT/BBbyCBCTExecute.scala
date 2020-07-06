@@ -28,6 +28,7 @@ import java.awt.Color
 import org.aqa.db.BBbyCBCT
 import org.aqa.web.WebUtil
 import org.aqa.db.Output
+import com.pixelmed.dicom.AttributeTag
 
 /**
  * After the data has has been validated as sufficient to do the analysis, perform the
@@ -37,6 +38,7 @@ import org.aqa.db.Output
 object BBbyCBCTExecute extends Logging {
 
   private val subProcedureName = "CBCT Alignment"
+  private val tableDefault = 2000000.0
 
   private def showFailure(message: String, extendedData: ExtendedData, runReq: BBbyCBCTRunReq) = {
     val content = {
@@ -64,6 +66,8 @@ object BBbyCBCTExecute extends Logging {
 
     val rtplanIsocenter = Util.getPlanIsocenterList(runReq.rtplan).head
 
+    def getDbl(tag: AttributeTag) = runReq.cbctList.head.get(tag).getDoubleValues.head
+
     val bbByCBCT = new BBbyCBCT(
       None, // bbByCBCTPK
       extendedData.output.outputPK.get, // outputPK
@@ -76,7 +80,10 @@ object BBbyCBCTExecute extends Logging {
       rtplanIsocenter.getZ, // planZ_mm
       bbPointInRtplan.getX, // cbctX_mm
       bbPointInRtplan.getY, // cbctY_mm
-      bbPointInRtplan.getZ // cbctZ_mm
+      bbPointInRtplan.getZ, // cbctZ_mm
+      getDbl(TagFromName.TableTopLateralPosition), // tableXlateral_mm
+      -getDbl(TagFromName.TableHeight), // tableYvertical_mm
+      getDbl(TagFromName.TableTopLongitudinalPosition) // tableZlongitudinal_mmf
     )
 
     logger.info("Inserting BBbyCBCT into database: " + bbByCBCT)

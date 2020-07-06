@@ -32,7 +32,10 @@ case class BBbyEPIDComposite(
   offsetAdjusted_mm: Option[Double], // total distance in 3D plan space adjusted for corresponding CBCT location
   xAdjusted_mm: Option[Double], // X position in 3D plan space adjusted for corresponding CBCT location
   yAdjusted_mm: Option[Double], // Y position in 3D plan space adjusted for corresponding CBCT location
-  zAdjusted_mm: Option[Double] //  Z position in 3D plan space adjusted for corresponding CBCT location
+  zAdjusted_mm: Option[Double], //  Z position in 3D plan space adjusted for corresponding CBCT location
+  tableXlateral_mm: Option[Double], // table position change (RTIMAGE - CT) in X dimension / lateral
+  tableYvertical_mm: Option[Double], // table position change (RTIMAGE - CT) in Y dimension / vertical
+  tableZlongitudinal_mm: Option[Double] // table position change (RTIMAGE - CT) in Z dimension / longitudinal
 ) {
 
   def insert: BBbyEPIDComposite = {
@@ -59,9 +62,10 @@ case class BBbyEPIDComposite(
       "\n    epidSeriesInstanceUID : " + epidSeriesInstanceUID +
       "\n    offset_mm : " + Util.fmtDbl(offset_mm) +
       "\n    epid 3D X,Y,Z : " + Util.fmtDbl(x_mm) + ", " + Util.fmtDbl(y_mm) + ", " + Util.fmtDbl(z_mm) +
-      "\n    " + refCbct
+      "\n    " + refCbct +
+      "\n    table Xlat,Yvert,Zlong : " + Util.fmtDbl(tableXlateral_mm) + ", " + Util.fmtDbl(tableYvertical_mm) + ", " + Util.fmtDbl(tableZlongitudinal_mm)
   }
-
+Util.fmtDbl(9)
   val epid = new Point3d(x_mm, y_mm, z_mm)
 }
 
@@ -81,6 +85,9 @@ object BBbyEPIDComposite extends ProcedureOutput {
     def xAdjusted_mm = column[Option[Double]]("xAdjusted_mm")
     def yAdjusted_mm = column[Option[Double]]("yAdjusted_mm")
     def zAdjusted_mm = column[Option[Double]]("zAdjusted_mm")
+    def tableXlateral_mm = column[Option[Double]]("tableXlateral_mm")
+    def tableYvertical_mm = column[Option[Double]]("tableYvertical_mm")
+    def tableZlongitudinal_mm = column[Option[Double]]("tableZlongitudinal_mm")
 
     def * = (
       bbByEPIDCompositePK.?,
@@ -95,7 +102,10 @@ object BBbyEPIDComposite extends ProcedureOutput {
       offsetAdjusted_mm,
       xAdjusted_mm,
       yAdjusted_mm,
-      zAdjusted_mm) <> ((BBbyEPIDComposite.apply _)tupled, BBbyEPIDComposite.unapply _)
+      zAdjusted_mm,
+      tableXlateral_mm,
+      tableYvertical_mm,
+      tableZlongitudinal_mm) <> ((BBbyEPIDComposite.apply _)tupled, BBbyEPIDComposite.unapply _)
 
     // Note that if the output row is deleted, then this row will be deleted through the reference to BBbyCBCT
     def bbByCBCTFK = foreignKey("BBbyEPIDComposite_bbByCBCTPKConstraint", bbByCBCTPK, BBbyCBCT.query)(_.bbByCBCTPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)

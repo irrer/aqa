@@ -16,11 +16,14 @@ import java.util.Date
 import java.text.SimpleDateFormat
 import gnu.crypto.mode.CBC
 import org.aqa.AngleType
+import com.pixelmed.dicom.AttributeTag
 
 /**
  * Given validated data, process it.
  */
 object BBbyEPIDAnalyse extends Logging {
+
+  private val tableDefault = 2000000.0
 
   private def toBBbyEPID(epid: AttributeList, bbLocation: Either[String, Point2d], extendedData: ExtendedData): Option[BBbyEPID] = {
     if (bbLocation.isRight) {
@@ -46,6 +49,8 @@ object BBbyEPIDAnalyse extends Logging {
       val epid3DZ_mm = bbLoc.getY + epidOffset.getY
       val origin = new Point3d(0, 0, 0)
 
+      def getDbl(tag: AttributeTag) = epid.get(tag).getDoubleValues.head
+
       val bbByEPID = new BBbyEPID(
         bbByEPIDPK = None,
         outputPK = extendedData.output.outputPK.get,
@@ -56,9 +61,11 @@ object BBbyEPIDAnalyse extends Logging {
         status = ProcedureStatus.done.toString,
         epidImageX_mm = bbLoc.getX,
         epidImageY_mm = bbLoc.getY,
-        epid3DX_mm,
-        epid3DY_mm,
-        epid3DZ_mm)
+        epid3DX_mm, epid3DY_mm, epid3DZ_mm,
+        getDbl(TagFromName.TableTopLateralPosition), // tableXlateral_mm
+        -getDbl(TagFromName.TableTopVerticalPosition), // tableYvertical_mm
+        getDbl(TagFromName.TableTopLongitudinalPosition)) // tableZlongitudinal_mm
+
       Some(bbByEPID)
     } else
       None
@@ -124,9 +131,8 @@ object BBbyEPIDAnalyse extends Logging {
         z_mm,
         None,
         None,
-        None,
-        None,
-        None)
+        None, None, None,
+        None, None, None)
 
       // if a corresponding CBCT is defined, then incorporate those values.
       val bbByEPIDCompositeFinal = {
@@ -141,7 +147,10 @@ object BBbyEPIDAnalyse extends Logging {
             offsetAdjusted_mm = Some(offset),
             xAdjusted_mm = Some(x),
             yAdjusted_mm = Some(y),
-            zAdjusted_mm = Some(z))
+            zAdjusted_mm = Some(z),
+            tableXlateral_mm = Some(bbByEPIDList.head.tableXlateral_mm - c.tableXlateral_mm),
+            tableYvertical_mm = Some(bbByEPIDList.head.tableYvertical_mm - c.tableYvertical_mm),
+            tableZlongitudinal_mm = Some(bbByEPIDList.head.tableZlongitudinal_mm - c.tableZlongitudinal_mm))
         } else bbByEPIDComposite
       }
 

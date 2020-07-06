@@ -29,7 +29,10 @@ case class BBbyEPID(
   epidImageY_mm: Double, // Y position in EPID image
   epid3DX_mm: Double, // X position in EPID in 3D plan space
   epid3DY_mm: Double, // Y position in EPID in 3D plan space
-  epid3DZ_mm: Double // Z position in EPID in 3D plan space
+  epid3DZ_mm: Double, // Z position in EPID in 3D plan space
+  tableXlateral_mm: Double, // table position in X dimension / lateral
+  tableYvertical_mm: Double, // table position in Y dimension / vertical
+  tableZlongitudinal_mm: Double // table position in Z dimension / longitudinal
 ) {
 
   def insert: BBbyEPID = {
@@ -49,7 +52,8 @@ case class BBbyEPID(
       "\n    gantryAngle_deg : " + Util.fmtDbl(gantryAngle_deg) +
       "\n    status : " + status +
       "\n    epid image X,Y : " + Util.fmtDbl(epidImageX_mm) + ", " + Util.fmtDbl(epidImageY_mm) +
-      "\n    epid 3D X,Y,Z : " + Util.fmtDbl(epid3DX_mm) + ", " + Util.fmtDbl(epid3DY_mm) + ", " + Util.fmtDbl(epid3DZ_mm)
+      "\n    epid 3D X,Y,Z : " + Util.fmtDbl(epid3DX_mm) + ", " + Util.fmtDbl(epid3DY_mm) + ", " + Util.fmtDbl(epid3DZ_mm) +
+      "\n    table Xlat,Yvert,Zlong : " + Util.fmtDbl(tableXlateral_mm) + ", " + Util.fmtDbl(tableYvertical_mm) + ", " + Util.fmtDbl(tableZlongitudinal_mm)
 
   val epid = new Point3d(epid3DX_mm, epid3DY_mm, epid3DZ_mm)
 }
@@ -68,6 +72,9 @@ object BBbyEPID extends ProcedureOutput {
     def epid3DX_mm = column[Double]("epid3DX_mm")
     def epid3DY_mm = column[Double]("epid3DY_mm")
     def epid3DZ_mm = column[Double]("epid3DZ_mm")
+    def tableXlateral_mm = column[Double]("tableXlateral_mm")
+    def tableYvertical_mm = column[Double]("tableYvertical_mm")
+    def tableZlongitudinal_mm = column[Double]("tableZlongitudinal_mm")
 
     def * = (
       bbByEPIDPK.?,
@@ -80,7 +87,10 @@ object BBbyEPID extends ProcedureOutput {
       epidImageY_mm,
       epid3DX_mm,
       epid3DY_mm,
-      epid3DZ_mm) <> ((BBbyEPID.apply _)tupled, BBbyEPID.unapply _)
+      epid3DZ_mm,
+      tableXlateral_mm,
+      tableYvertical_mm,
+      tableZlongitudinal_mm) <> ((BBbyEPID.apply _)tupled, BBbyEPID.unapply _)
 
     def outputFK = foreignKey("BBbyEPID_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }

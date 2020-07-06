@@ -40,7 +40,7 @@ object DailyQAIndividualResults {
         <td>{ timeFormat.format(ext.input_dataDate.get) }</td>
         <td>{ ext.procedure_name }</td>
         <td>{ WebUtil.wrapAlias(ext.machine_id) }</td>
-        <td><a title="Click to re-run analysis.  Results will replace previous results." href={ OutputList.path + "?" + OutputList.redoTag + "=" + ext.output_outputPK }>Redo</a></td>
+        <td>{ OutputList.redoUrl(ext.output_outputPK) }</td>
       </tr>
     }
 

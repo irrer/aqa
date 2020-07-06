@@ -33,6 +33,7 @@ import org.aqa.web.MachineUpdate
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.webrun.ExtendedData
+import org.aqa.web.OutputList
 
 /**
  * Utilities for Phase 2.
@@ -288,6 +289,7 @@ object Phase2Util extends Logging {
           { wrap(1, "User", userId, true) }
           { wrap(1, "Elapsed", elapsed, false) }
           { wrap(1, "Procedure", procedureDesc, false) }
+          <div class="col-md-1">{ OutputList.redoUrl(extendedData.output.outputPK.get) }</div>
         </div>
         <div class="row">
           { content }

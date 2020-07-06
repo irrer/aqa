@@ -57,6 +57,8 @@ object DailyQACSV {
 
     val urlPrefix = response.getRequest.getHostRef
 
+    def dblOptToString(d: Option[Double]) = if (d.isDefined) d.get.toString else "NA"
+
     case class Col(header: String, toText: (BBbyEPIDComposite.DailyDataSetComposite) => String);
 
     val colList = Seq[Col](
@@ -69,6 +71,10 @@ object DailyQACSV {
       new Col("X CBCT - PLAN mm", (dataSet) => (dataSet.cbct.cbctX_mm - dataSet.cbct.rtplanX_mm).toString),
       new Col("Y CBCT - PLAN mm", (dataSet) => (dataSet.cbct.cbctY_mm - dataSet.cbct.rtplanY_mm).toString),
       new Col("Z CBCT - PLAN mm", (dataSet) => (dataSet.cbct.cbctZ_mm - dataSet.cbct.rtplanZ_mm).toString),
+
+      new Col("X/lat Table Movement cm", (dataSet) => dblOptToString(dataSet.epid.tableXlateral_mm)),
+      new Col("X/vert Table Movement cm", (dataSet) => dblOptToString(dataSet.epid.tableYvertical_mm)),
+      new Col("X/lng Table Movement cm", (dataSet) => dblOptToString(dataSet.epid.tableZlongitudinal_mm)),
 
       new Col("Gantry Angle for XZ (vert) deg", (dataSet) => dataSet.vertList.head.gantryAngle_deg.toString),
       new Col("Vert EPID - CAX(X) mm", (dataSet) => dataSet.epid.xAdjusted_mm.get.toString),

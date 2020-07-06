@@ -20,8 +20,11 @@ import com.pixelmed.dicom.AttributeList
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.db.DicomSeries
 import org.aqa.Config
+import com.pixelmed.dicom.AttributeTag
+import org.aqa.web.OutputList
+import org.aqa.Logging
 
-object BBbyCBCTHTML {
+object BBbyCBCTHTML extends Logging {
 
   private val axisNameList = Seq("X Axis : side", "Y Axis : top", "Z Axis : longitudinal")
   private val axisTitleList = Seq(
@@ -87,6 +90,7 @@ object BBbyCBCTHTML {
             { wrapElement(1, "User", extendedData.user.id, true) }
             { wrapElement(1, "Elapsed", elapsed, false) }
             { wrapElement(1, "Procedure", procedureDesc, false) }
+            <div class="col-md-1">{ OutputList.redoUrl(extendedData.output.outputPK.get) }</div>
           </div>
         </div>
         <div class="row">
@@ -111,10 +115,14 @@ object BBbyCBCTHTML {
     def fileNameOfHtml(al: AttributeList) = Util.textToId(descriptionOf(al).replace("-", "neg")) + ".html"
 
     def writeDicomImage(al: AttributeList) = {
-      val image = ConsumerFormatImageMaker.makeEightBitImage(al)
-      Config.applyWatermark(image)
-      val pngFile = new File(subDir, fileNameOfPng(al))
-      Util.writePng(image, pngFile)
+      if (al == null) {
+        logger.warn("Internal error.  Attribute list is null")
+      } else {
+        val image = ConsumerFormatImageMaker.makeEightBitImage(al)
+        Config.applyWatermark(image)
+        val pngFile = new File(subDir, fileNameOfPng(al))
+        Util.writePng(image, pngFile)
+      }
     }
 
     def writeDicomMetaData(al: AttributeList) = {
@@ -342,22 +350,48 @@ object BBbyCBCTHTML {
           { dataCol("X", "Plan X position - BB X position in mm", (bbByCBCT.rtplanX_mm - bbByCBCT.cbctX_mm), 1) }
           { dataCol("Y", "Plan Y position - BB Y position in mm", (bbByCBCT.rtplanY_mm - bbByCBCT.cbctY_mm), 1) }
           { dataCol("Z", "Plan Z position - BB Z position in mm", (bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm), 1) }
-          <div title="View and download DICOM images and metadata" class="col-md-1">
-            <h3> </h3>{ makeCbctSlices(extendedData, runReq) }
-          </div>
-          {
-            if (runReq.reg.isDefined) {
-              <div title="View and download registration file" class="col-md-1">
-                <h3> </h3>{ makeRegReference(extendedData, runReq.reg.get) }
-              </div>
-            }
-          }
-          <div title="View and download DICOM RTOLAN" class="col-md-1">
-            <h3> </h3>{ makePlanReference(extendedData, runReq) }
-          </div>
         </div>
       }
       elem
+    }
+
+    val viewCbctSlices = {
+      <div title="View and download DICOM images and metadata" class="col-md-1">
+        <h3> </h3>{ makeCbctSlices(extendedData, runReq) }
+      </div>
+    }
+
+    val viewReg = {
+      <div title="View and download registration file" class="col-md-1">
+        <h3> </h3>{ makeRegReference(extendedData, runReq.reg.get) }
+      </div>
+    }
+
+    val viewRtplan = {
+      <div title="View and download DICOM RTPLAN" class="col-md-1">
+        <h3> </h3>{ makePlanReference(extendedData, runReq) }
+      </div>
+    }
+
+    val tablePosition = {
+      def getDblCm(tag: AttributeTag) = runReq.cbctList.head.get(tag).getDoubleValues.head / 10
+      val x = Util.fmtDbl(bbByCBCT.tableXlateral_mm)
+      val y = Util.fmtDbl(bbByCBCT.tableYvertical_mm)
+      val z = Util.fmtDbl(bbByCBCT.tableZlongitudinal_mm)
+
+      <div title="Table position when CBCT was captured.">
+        <h3> </h3>
+        Table Position X,Y,Z cm:{ x + "," + y + "," + z }
+      </div>
+    }
+
+    val details = {
+      <div class="row">
+        { viewCbctSlices }
+        { if (runReq.reg.isDefined) viewReg }
+        { viewRtplan }
+        { tablePosition }
+      </div>
     }
 
     def viewTitle(index: Int) = {
@@ -403,6 +437,7 @@ object BBbyCBCTHTML {
     def mainContent = {
       <div class="row">
         { numberText }
+        { details }
         { chart.chartReference }
         <table class="table table-responsive">
           <tr>

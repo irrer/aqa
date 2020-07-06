@@ -26,7 +26,10 @@ case class BBbyCBCT(
   rtplanZ_mm: Double, // expected Z position in RTPLAN
   cbctX_mm: Double, // expected X position in CBCT
   cbctY_mm: Double, // expected Y position in CBCT
-  cbctZ_mm: Double // expected Z position in CBCT
+  cbctZ_mm: Double, // expected Z position in CBCT
+  tableXlateral_mm: Double, // table position in X dimension / lateral
+  tableYvertical_mm: Double, // table position in Y dimension / vertical
+  tableZlongitudinal_mm: Double // table position in Z dimension / longitudinal
 ) {
 
   def insert: BBbyCBCT = {
@@ -46,9 +49,8 @@ case class BBbyCBCT(
       "\n    offset_mm : " + Util.fmtDbl(offset_mm) +
       "\n    status : " + status +
       "\n    plan X,Y,Z : " + Util.fmtDbl(rtplanX_mm) + ", " + Util.fmtDbl(rtplanY_mm) + ", " + Util.fmtDbl(rtplanZ_mm) +
-      "\n    cbct X,Y,Z : " + Util.fmtDbl(cbctX_mm) + ", " + Util.fmtDbl(cbctY_mm) + ", " + Util.fmtDbl(cbctZ_mm)
-
-  //def pass = status.equalsIgnoreCase(ProcedureStatus.done.toString)
+      "\n    cbct X,Y,Z : " + Util.fmtDbl(cbctX_mm) + ", " + Util.fmtDbl(cbctY_mm) + ", " + Util.fmtDbl(cbctZ_mm) +
+      "\n    table Xlat,Yvert,Zlong : " + Util.fmtDbl(tableXlateral_mm) + ", " + Util.fmtDbl(tableYvertical_mm) + ", " + Util.fmtDbl(tableZlongitudinal_mm)
 
   val rtplan = new Point3d(rtplanX_mm, rtplanY_mm, rtplanZ_mm)
 
@@ -72,6 +74,9 @@ object BBbyCBCT extends ProcedureOutput {
     def cbctX_mm = column[Double]("cbctX_mm")
     def cbctY_mm = column[Double]("cbctY_mm")
     def cbctZ_mm = column[Double]("cbctZ_mm")
+    def tableXlateral_mm = column[Double]("tableXlateral_mm")
+    def tableYvertical_mm = column[Double]("tableYvertical_mm")
+    def tableZlongitudinal_mm = column[Double]("tableZlongitudinal_mm")
 
     def * = (
       bbByCBCTPK.?,
@@ -85,7 +90,10 @@ object BBbyCBCT extends ProcedureOutput {
       planZ_mm,
       cbctX_mm,
       cbctY_mm,
-      cbctZ_mm) <> ((BBbyCBCT.apply _)tupled, BBbyCBCT.unapply _)
+      cbctZ_mm,
+      tableXlateral_mm,
+      tableYvertical_mm,
+      tableZlongitudinal_mm) <> ((BBbyCBCT.apply _)tupled, BBbyCBCT.unapply _)
 
     def outputFK = foreignKey("BBbyCBCT_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }

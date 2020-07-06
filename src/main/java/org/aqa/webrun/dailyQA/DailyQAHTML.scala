@@ -67,6 +67,8 @@ object DailyQAHTML extends Logging {
     val styleWarn = "color: #000000; background: yellow;"
     val col0Title = "Machine Name"
 
+    val outOfToleranceTitle = " is out of tolerance for the " + Config.DailyQATolerance_mm + " mm limit"
+
     def colMachine(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val machElem = wrapAlias(dataSet.machine.id)
       if (machinePassed) {
@@ -77,6 +79,7 @@ object DailyQAHTML extends Logging {
     }
 
     def colPatient(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+      " is out of tolerance of the " + Config.DailyQATolerance_mm + " mm limit"
 
       val patientName: Elem = DicomSeries.getBySeriesInstanceUID(dataSet.epid.epidSeriesInstanceUID).headOption match {
         case Some(ds) => {
@@ -93,7 +96,7 @@ object DailyQAHTML extends Logging {
       val title = posn.formatted("%12.6f").trim
       if (posn.abs > Config.DailyQATolerance_mm) {
         machinePassed = false
-        <td class="danger" title={ title + " is out of tolerance of " + Config.DailyQATolerance_mm + " mm" }>{ text }</td>
+        <td class="danger" title={ title + outOfToleranceTitle }>{ text }</td>
       } else {
         <td title={ title }>{ text }</td>
       }
@@ -113,26 +116,36 @@ object DailyQAHTML extends Logging {
 
       if ((x.abs > Config.DailyQATolerance_mm) || (y.abs > Config.DailyQATolerance_mm) || (z.abs > Config.DailyQATolerance_mm)) {
         machinePassed = false
-        <td class="danger" title={ title + " is out of tolerance of " + Config.DailyQATolerance_mm + " mm" }>{ text }</td>
+        <td class="danger" title={ title + outOfToleranceTitle }>{ text }</td>
       } else {
         <td title={ title }>{ text }</td>
       }
     }
 
-    def colCbctX(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      val x = dataSet.cbct.cbctX_mm - dataSet.cbct.rtplanX_mm
-      posnRow(x)
+    def colTableMovement(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+      val epid = dataSet.epid
+      def fmt(d: Option[Double]) = (d.get / 10).formatted("%4.1f")
+      if (epid.tableXlateral_mm.isDefined) {
+        <td title={ Util.fmtDbl(epid.tableXlateral_mm.get / 10) + ", " + Util.fmtDbl(epid.tableYvertical_mm.get / 10) + ", " + Util.fmtDbl(epid.tableZlongitudinal_mm.get / 10) + ", " }>
+          { fmt(epid.tableXlateral_mm) + ", " + fmt(epid.tableYvertical_mm) + ", " + fmt(epid.tableZlongitudinal_mm) }
+        </td>
+      } else <td></td>
     }
 
-    def colCbctY(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      val y = dataSet.cbct.cbctY_mm - dataSet.cbct.rtplanY_mm
-      posnRow(y)
-    }
-
-    def colCbctZ(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      val z = dataSet.cbct.cbctZ_mm - dataSet.cbct.rtplanZ_mm
-      posnRow(z)
-    }
+    //    def colCbctX(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+    //      val x = dataSet.cbct.cbctX_mm - dataSet.cbct.rtplanX_mm
+    //      posnRow(x)
+    //    }
+    //
+    //    def colCbctY(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+    //      val y = dataSet.cbct.cbctY_mm - dataSet.cbct.rtplanY_mm
+    //      posnRow(y)
+    //    }
+    //
+    //    def colCbctZ(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+    //      val z = dataSet.cbct.cbctZ_mm - dataSet.cbct.rtplanZ_mm
+    //      posnRow(z)
+    //    }
 
     def colVertGantryAngle(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val angle = dataSet.vertList.head.gantryAngle_deg
@@ -189,11 +202,8 @@ object DailyQAHTML extends Logging {
       new Col("Patient", "Name of test patient", colPatient _),
       new Col("EPID Time " + reportDate, "Time of EPID acquisition", colDateTime _),
 
-      new Col("X,Y,Z CBCT-PLAN mm", "(plan X) - (plan X), (plan Y) - (plan Y), (plan Z) - (plan Z) in mm", colCbctXYZ _),
-
-      //      new Col("X CBCT - PLAN mm", "(plan X) - (plan X) in mm", colCbctX _),
-      //      new Col("Y CBCT - PLAN mm", "(plan Y) - (plan Y) in mm", colCbctY _),
-      //      new Col("Z CBCT - PLAN mm", "(plan Z) - (plan Z) in mm", colCbctZ _),
+      new Col("X,Y,Z CBCT-PLAN mm", "cbct X - plan X, cbct  - plan Y, cbct Z - plan Z in mm", colCbctXYZ _),
+      new Col("X,Y,Z / lat,vert,lng Table Movement", "RTIMAGE - CT in cm, X,Y,Z = lat,vert,lng", colTableMovement _),
 
       new Col("Gantry Angle for XZ", "Angle of gantry for vertical image in degrees used to calculate values for Y and Z", colVertGantryAngle _),
       new Col("Vert EPID - CAX(X) mm", "X offset Vertical EPID image - CAX in mm", colVertXCax _),
