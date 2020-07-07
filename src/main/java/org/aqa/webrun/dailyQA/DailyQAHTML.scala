@@ -81,7 +81,7 @@ object DailyQAHTML extends Logging {
     def colPatient(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       " is out of tolerance of the " + Config.DailyQATolerance_mm + " mm limit"
 
-      val patientName: Elem = DicomSeries.getBySeriesInstanceUID(dataSet.epid.epidSeriesInstanceUID).headOption match {
+      val patientName: Elem = DicomSeries.getBySeriesInstanceUID(dataSet.composite.epidSeriesInstanceUID).headOption match {
         case Some(ds) => {
           val pn = ds.attributeListList.head.get(TagFromName.PatientName).getSingleStringValueOrEmptyString
           <td>{ wrapAlias(pn) }</td>
@@ -123,11 +123,11 @@ object DailyQAHTML extends Logging {
     }
 
     def colTableMovement(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      val epid = dataSet.epid
+      val composite = dataSet.composite
       def fmt(d: Option[Double]) = (d.get / 10).formatted("%4.1f")
-      if (epid.tableXlateral_mm.isDefined) {
-        <td title={ Util.fmtDbl(epid.tableXlateral_mm.get / 10) + ", " + Util.fmtDbl(epid.tableYvertical_mm.get / 10) + ", " + Util.fmtDbl(epid.tableZlongitudinal_mm.get / 10) + ", " }>
-          { fmt(epid.tableXlateral_mm) + ", " + fmt(epid.tableYvertical_mm) + ", " + fmt(epid.tableZlongitudinal_mm) }
+      if (composite.tableXlateral_mm.isDefined) {
+        <td title={ Util.fmtDbl(composite.tableXlateral_mm.get / 10) + ", " + Util.fmtDbl(composite.tableYvertical_mm.get / 10) + ", " + Util.fmtDbl(composite.tableZlongitudinal_mm.get / 10) + ", " }>
+          { fmt(composite.tableXlateral_mm) + ", " + fmt(composite.tableYvertical_mm) + ", " + fmt(composite.tableZlongitudinal_mm) }
         </td>
       } else <td></td>
     }
@@ -153,7 +153,7 @@ object DailyQAHTML extends Logging {
     }
 
     def colVertXCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      posnRow(dataSet.epid.xAdjusted_mm.get)
+      posnRow(dataSet.composite.xAdjusted_mm.get)
     }
 
     def colVertZCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
@@ -167,17 +167,17 @@ object DailyQAHTML extends Logging {
     }
 
     def colHorzYCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      posnRow(dataSet.epid.yAdjusted_mm.get)
+      posnRow(dataSet.composite.yAdjusted_mm.get)
     }
 
     def colHorzZCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val offset = dataSet.horzList.head.epid3DZ_mm - (dataSet.cbct.rtplanZ_mm - dataSet.cbct.cbctZ_mm)
-      <td>{ Util.fmtDbl(dataSet.epid.xAdjusted_mm.get) }</td>
-      posnRow(dataSet.epid.zAdjusted_mm.get)
+      <td>{ Util.fmtDbl(dataSet.composite.xAdjusted_mm.get) }</td>
+      posnRow(dataSet.composite.zAdjusted_mm.get)
     }
 
     def colEpidPlanCbct(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      if (dataSet.epid.offsetAdjusted_mm.isDefined) posnRow(dataSet.epid.offsetAdjusted_mm.get)
+      if (dataSet.composite.offsetAdjusted_mm.isDefined) posnRow(dataSet.composite.offsetAdjusted_mm.get)
       else <div>undefined</div>
     }
 
@@ -186,7 +186,7 @@ object DailyQAHTML extends Logging {
     }
 
     def colEpidImages(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      <td><a href={ ViewOutput.viewOutputUrl(dataSet.epid.outputPK) }>EPID Details</a></td>
+      <td><a href={ ViewOutput.viewOutputUrl(dataSet.composite.outputPK) }>EPID Details</a></td>
     }
 
     val reportDate: String = {
@@ -203,7 +203,7 @@ object DailyQAHTML extends Logging {
       new Col("EPID Time " + reportDate, "Time of EPID acquisition", colDateTime _),
 
       new Col("X,Y,Z CBCT-PLAN mm", "cbct X - plan X, cbct  - plan Y, cbct Z - plan Z in mm", colCbctXYZ _),
-      new Col("X,Y,Z / lat,vert,lng Table Movement", "RTIMAGE - CT in cm, X,Y,Z = lat,vert,lng", colTableMovement _),
+      new Col("X,Y,Z / lat,vert,lng Table Movement cm", "RTIMAGE - CT in cm, X,Y,Z = lat,vert,lng", colTableMovement _),
 
       new Col("Gantry Angle for XZ", "Angle of gantry for vertical image in degrees used to calculate values for Y and Z", colVertGantryAngle _),
       new Col("Vert EPID - CAX(X) mm", "X offset Vertical EPID image - CAX in mm", colVertXCax _),

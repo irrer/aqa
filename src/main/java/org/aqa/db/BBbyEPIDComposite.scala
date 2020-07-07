@@ -65,7 +65,7 @@ case class BBbyEPIDComposite(
       "\n    " + refCbct +
       "\n    table Xlat,Yvert,Zlong : " + Util.fmtDbl(tableXlateral_mm) + ", " + Util.fmtDbl(tableYvertical_mm) + ", " + Util.fmtDbl(tableZlongitudinal_mm)
   }
-Util.fmtDbl(9)
+  Util.fmtDbl(9)
   val epid = new Point3d(x_mm, y_mm, z_mm)
 }
 
@@ -191,7 +191,7 @@ object BBbyEPIDComposite extends ProcedureOutput {
     result
   }
 
-  case class DailyDataSetComposite(epid: BBbyEPIDComposite, cbct: BBbyCBCT, machine: Machine, output: Output, bbByEpid: Seq[BBbyEPID]) {
+  case class DailyDataSetComposite(composite: BBbyEPIDComposite, cbct: BBbyCBCT, machine: Machine, output: Output, bbByEpid: Seq[BBbyEPID]) {
     private def byType(angleType: AngleType.Value) = bbByEpid.filter(b => AngleType.isAngleType(b.gantryAngle_deg, angleType))
     val vertList = byType(AngleType.vertical)
     val horzList = byType(AngleType.horizontal)
@@ -209,7 +209,7 @@ object BBbyEPIDComposite extends ProcedureOutput {
       bbByEpid <- BBbyEPID.query.filter(b => b.outputPK === output.outputPK)
     } yield (bbByEPIDComposite, cbct, machine, output, bbByEpid)
 
-    val list = Db.run(search.distinct.result)
+    val list = Db.run(search.result)
     val dailyQA = list.groupBy(ga => ga._1.outputPK).map(gb => gb._2).map(g => new DailyDataSetComposite(g.head._1, g.head._2, g.head._3, g.head._4, g.map(gg => gg._5)))
     dailyQA.toSeq
   }

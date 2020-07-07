@@ -57,7 +57,7 @@ object DailyQACSV {
 
     val urlPrefix = response.getRequest.getHostRef
 
-    def dblOptToString(d: Option[Double]) = if (d.isDefined) d.get.toString else "NA"
+    def dblOptToString10(d: Option[Double]) = if (d.isDefined) (d.get / 10).toString else "NA"
 
     case class Col(header: String, toText: (BBbyEPIDComposite.DailyDataSetComposite) => String);
 
@@ -72,20 +72,28 @@ object DailyQACSV {
       new Col("Y CBCT - PLAN mm", (dataSet) => (dataSet.cbct.cbctY_mm - dataSet.cbct.rtplanY_mm).toString),
       new Col("Z CBCT - PLAN mm", (dataSet) => (dataSet.cbct.cbctZ_mm - dataSet.cbct.rtplanZ_mm).toString),
 
-      new Col("X/lat Table Movement cm", (dataSet) => dblOptToString(dataSet.epid.tableXlateral_mm)),
-      new Col("X/vert Table Movement cm", (dataSet) => dblOptToString(dataSet.epid.tableYvertical_mm)),
-      new Col("X/lng Table Movement cm", (dataSet) => dblOptToString(dataSet.epid.tableZlongitudinal_mm)),
+      new Col("X/lat Table Movement cm", (dataSet) => dblOptToString10(dataSet.composite.tableXlateral_mm)),
+      new Col("Y/vert Table Movement cm", (dataSet) => dblOptToString10(dataSet.composite.tableYvertical_mm)),
+      new Col("Z/lng Table Movement cm", (dataSet) => dblOptToString10(dataSet.composite.tableZlongitudinal_mm)),
+
+      new Col("X/lat Table Posn CBCT cm", (dataSet) => (dataSet.cbct.tableXlateral_mm / 10).toString),
+      new Col("Y/vert Table Posn CBCT cm", (dataSet) => (dataSet.cbct.tableYvertical_mm / 10).toString),
+      new Col("Z/lng Table Posn CBCT cm", (dataSet) => (dataSet.cbct.tableZlongitudinal_mm / 10).toString),
+
+      new Col("X/lat Table Posn EPID cm", (dataSet) => (dataSet.bbByEpid.head.tableXlateral_mm / 10).toString),
+      new Col("Y/vert Table Posn EPID cm", (dataSet) => (dataSet.bbByEpid.head.tableYvertical_mm / 10).toString),
+      new Col("Z/lng Table Posn EPID cm", (dataSet) => (dataSet.bbByEpid.head.tableZlongitudinal_mm / 10).toString),
 
       new Col("Gantry Angle for XZ (vert) deg", (dataSet) => dataSet.vertList.head.gantryAngle_deg.toString),
-      new Col("Vert EPID - CAX(X) mm", (dataSet) => dataSet.epid.xAdjusted_mm.get.toString),
+      new Col("Vert EPID - CAX(X) mm", (dataSet) => dataSet.composite.xAdjusted_mm.get.toString),
       new Col("Vert EPID - CAX(Z) mm", (dataSet) => (dataSet.vertList.head.epid3DZ_mm - (dataSet.cbct.rtplanZ_mm - dataSet.cbct.cbctZ_mm)).toString),
 
       new Col("Gantry Angle for YZ (horz) deg", (dataSet) => dataSet.horzList.head.gantryAngle_deg.toString),
-      new Col("Horz EPID - CAX(Y) mm", (dataSet) => dataSet.epid.yAdjusted_mm.get.toString),
+      new Col("Horz EPID - CAX(Y) mm", (dataSet) => dataSet.composite.yAdjusted_mm.get.toString),
       new Col("Horz EPID - CAX(Z) mm", (dataSet) => (dataSet.horzList.head.epid3DZ_mm - (dataSet.cbct.rtplanZ_mm - dataSet.cbct.cbctZ_mm)).toString),
 
       new Col("CBCT Details", (dataSet) => urlPrefix + ViewOutput.viewOutputUrl(dataSet.cbct.outputPK)),
-      new Col("EPID Details", (dataSet) => urlPrefix + ViewOutput.viewOutputUrl(dataSet.epid.outputPK)))
+      new Col("EPID Details", (dataSet) => urlPrefix + ViewOutput.viewOutputUrl(dataSet.composite.outputPK)))
 
     val headerList = colList.map(col => '"' + col.header + '"').mkString(",")
 

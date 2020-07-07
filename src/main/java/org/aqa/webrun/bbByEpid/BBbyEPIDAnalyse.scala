@@ -63,7 +63,7 @@ object BBbyEPIDAnalyse extends Logging {
         epidImageY_mm = bbLoc.getY,
         epid3DX_mm, epid3DY_mm, epid3DZ_mm,
         getDbl(TagFromName.TableTopLateralPosition), // tableXlateral_mm
-        -getDbl(TagFromName.TableTopVerticalPosition), // tableYvertical_mm
+        getDbl(TagFromName.TableTopVerticalPosition), // tableYvertical_mm
         getDbl(TagFromName.TableTopLongitudinalPosition)) // tableZlongitudinal_mm
 
       Some(bbByEPID)
