@@ -229,10 +229,9 @@ object BBbyEPIDHTML {
       val tablePosition = {
         val bbByEPID = bbByEPIDList.flatten.head
 
-        def getDblCm(tag: AttributeTag) = runReq.epidList.head.get(tag).getDoubleValues.head / 10
-        val x = Util.fmtDbl(bbByEPID.tableXlateral_mm)
-        val y = Util.fmtDbl(bbByEPID.tableYvertical_mm)
-        val z = Util.fmtDbl(bbByEPID.tableZlongitudinal_mm)
+        val x = Util.fmtDbl(bbByEPID.tableXlateral_mm / 10)
+        val y = Util.fmtDbl(bbByEPID.tableYvertical_mm / 10)
+        val z = Util.fmtDbl(bbByEPID.tableZlongitudinal_mm / 10)
 
         <div title="Table position when CBCT was captured.">
           <h3> </h3>

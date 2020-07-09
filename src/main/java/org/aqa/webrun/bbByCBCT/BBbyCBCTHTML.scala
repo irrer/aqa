@@ -374,10 +374,9 @@ object BBbyCBCTHTML extends Logging {
     }
 
     val tablePosition = {
-      def getDblCm(tag: AttributeTag) = runReq.cbctList.head.get(tag).getDoubleValues.head / 10
-      val x = Util.fmtDbl(bbByCBCT.tableXlateral_mm)
-      val y = Util.fmtDbl(bbByCBCT.tableYvertical_mm)
-      val z = Util.fmtDbl(bbByCBCT.tableZlongitudinal_mm)
+      val x = Util.fmtDbl(bbByCBCT.tableXlateral_mm / 10)
+      val y = Util.fmtDbl(bbByCBCT.tableYvertical_mm / 10)
+      val z = Util.fmtDbl(bbByCBCT.tableZlongitudinal_mm / 10)
 
       <div title="Table position when CBCT was captured.">
         <h3> </h3>
