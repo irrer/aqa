@@ -253,7 +253,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     val undefFileNameList = basicData.rtimageListByBeam.filter(b => b._1.isEmpty).map(b => Util.sopOfAl(b._2))
     if (undefFileNameList.nonEmpty) {
       Some("The image set is probably referencing the wrong plan." + WebUtil.titleNewline +
-        "There were " + undefFileNameList.size + " files that references a beam  that was not in the plan:" + WebUtil.titleNewline +
+        "There were " + undefFileNameList.size + " files that references a beam that was not in the plan:" + WebUtil.titleNewline +
         undefFileNameList.mkString(WebUtil.titleNewline))
     } else None
   }
