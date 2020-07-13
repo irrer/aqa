@@ -27,6 +27,7 @@ class CenterDoseChart(outputPK: Long) extends Logging {
   val procedure = Procedure.get(output.procedurePK).get
   val input = Input.get(output.inputPK).get
   val machine = Machine.get(output.machinePK.get).get
+
   val history = CenterDose.history(machine.machinePK.get, procedure.procedurePK.get)
 
   private val allDates = history.map(cd => cd.date)
@@ -40,7 +41,15 @@ class CenterDoseChart(outputPK: Long) extends Logging {
    * Filter the history to get only center doses for the given beam, and sort by increasing date.
    */
   private def sortedHistoryForBeam(beamName: String) = {
-    val sortedBeamHistory = history.filter(h => h.centerDose.beamName.equals(beamName)).sortWith((a, b) => (a.date.getTime < b.date.getTime))
+    val thisTime = output.dataDate.get.getTime
+    val all = history.filter(h => h.centerDose.beamName.equals(beamName)).sortBy(_.date.getTime)
+    val before = all.filter(cd => cd.date.getTime < thisTime).takeRight(Config.CenterDoseHistoryRange)
+    val after = all.filter(cd => cd.date.getTime >= thisTime).take(Config.CenterDoseHistoryRange + 1)
+    val sortedBeamHistory = before ++ after
+    Trace.trace(all.size)
+    Trace.trace(before.size)
+    Trace.trace(after.size)
+    Trace.trace(sortedBeamHistory.size)
     sortedBeamHistory
   }
 
