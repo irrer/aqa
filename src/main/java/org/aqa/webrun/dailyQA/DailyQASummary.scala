@@ -65,13 +65,14 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
   private val csvField = new WebPlainText("CSV", false, 1, 0, csvLink)
 
-  private def getDisplayedDate(valueMap: ValueMapT): Elem = {
-    <h4>Results for { getDateText(valueMap) }</h4>
+  private val displayedDate = {
+    def getDisplayedDate(valueMap: ValueMapT): Elem = {
+      <h4>Results for { getDateText(valueMap) }</h4>
+    }
+    new WebPlainText("DisplayedDate", false, 2, 0, getDisplayedDate)
   }
 
-  private val displayedDate = new WebPlainText("DisplayedDate", false, 2, 0, getDisplayedDate)
-
-  val controlRow: WebRow = List(displayedDate, refreshButton, dateField, csvField)
+  val controlRow: WebRow = List(displayedDate, coordinateDiagramCol(65), refreshButton, dateField, csvField)
 
   // bulk of the displayed information
   private val report = {

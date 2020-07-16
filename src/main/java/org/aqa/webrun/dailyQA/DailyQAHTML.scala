@@ -107,9 +107,9 @@ object DailyQAHTML extends Logging {
     }
 
     def colCbctXYZ(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      val x = dataSet.cbct.cbctX_mm - dataSet.cbct.rtplanX_mm
-      val y = dataSet.cbct.cbctY_mm - dataSet.cbct.rtplanY_mm
-      val z = dataSet.cbct.cbctZ_mm - dataSet.cbct.rtplanZ_mm
+      val x = dataSet.cbct.err_mm.getX
+      val y = dataSet.cbct.err_mm.getY
+      val z = dataSet.cbct.err_mm.getZ
 
       val text = x.formatted("%7.2f").trim + ", " + y.formatted("%7.2f").trim + ", " + z.formatted("%7.2f").trim
       val title = x.formatted("%12.6f").trim + ", " + y.formatted("%12.6f").trim + ", " + z.formatted("%12.6f").trim
@@ -132,21 +132,6 @@ object DailyQAHTML extends Logging {
       } else <td></td>
     }
 
-    //    def colCbctX(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-    //      val x = dataSet.cbct.cbctX_mm - dataSet.cbct.rtplanX_mm
-    //      posnRow(x)
-    //    }
-    //
-    //    def colCbctY(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-    //      val y = dataSet.cbct.cbctY_mm - dataSet.cbct.rtplanY_mm
-    //      posnRow(y)
-    //    }
-    //
-    //    def colCbctZ(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-    //      val z = dataSet.cbct.cbctZ_mm - dataSet.cbct.rtplanZ_mm
-    //      posnRow(z)
-    //    }
-
     def colVertGantryAngle(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val angle = dataSet.vertList.head.gantryAngle_deg
       <td title={ fmtAngle(angle) }>{ Util.angleRoundedTo90(angle) }</td>
@@ -157,7 +142,7 @@ object DailyQAHTML extends Logging {
     }
 
     def colVertZCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      val offset = dataSet.vertList.head.epid3DZ_mm - (dataSet.cbct.rtplanZ_mm - dataSet.cbct.cbctZ_mm)
+      val offset = dataSet.vertList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ
       posnRow(offset)
     }
 
@@ -171,9 +156,8 @@ object DailyQAHTML extends Logging {
     }
 
     def colHorzZCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      val offset = dataSet.horzList.head.epid3DZ_mm - (dataSet.cbct.rtplanZ_mm - dataSet.cbct.cbctZ_mm)
-      <td>{ Util.fmtDbl(dataSet.composite.xAdjusted_mm.get) }</td>
-      posnRow(dataSet.composite.zAdjusted_mm.get)
+      val offset = dataSet.horzList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ
+      posnRow(offset)
     }
 
     def colEpidPlanCbct(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
@@ -202,18 +186,18 @@ object DailyQAHTML extends Logging {
       new Col("Patient", "Name of test patient", colPatient _),
       new Col("EPID Time " + reportDate, "Time of EPID acquisition", colDateTime _),
 
-      new Col("X,Y,Z CBCT-PLAN mm", "cbct X - plan X, cbct  - plan Y, cbct Z - plan Z in mm", colCbctXYZ _),
-      new Col("X,Y,Z / lat,vert,lng Table Movement cm", "RTIMAGE - CT in cm, X,Y,Z = lat,vert,lng", colTableMovement _),
+      new Col("X,Y,Z CBCT-PLAN mm", "CBCT - PLAN in mm", colCbctXYZ _),
+      new Col("X,Y,Z / lat,vert,lng Table Movement cm", "RTIMAGE-CT in cm, X,Y,Z = lat,vert,lng", colTableMovement _),
 
       new Col("Gantry Angle for XZ", "Angle of gantry for vertical image in degrees used to calculate values for Y and Z", colVertGantryAngle _),
-      new Col("Vert EPID - CAX(X) mm", "X offset Vertical EPID image - CAX in mm", colVertXCax _),
-      new Col("Vert EPID - CAX(Z) mm", "Z offset Vertical EPID image - CAX in mm", colVertZCax _),
+      new Col("Vert EPID-CAX(X) mm", "X offset Vertical EPID image-CAX in mm", colVertXCax _),
+      new Col("Vert EPID-CAX(Z) mm", "Z offset Vertical EPID image-CAX in mm", colVertZCax _),
 
       new Col("Gantry Angle for YZ", "Angle of gantry for horizontal image in degrees used to calculate values for X and Z", colHorzGantryAngle _),
-      new Col("Horz EPID - CAX(Y) mm", "Y offset Horizontal EPID image - CAX in mm", colHorzYCax _),
-      new Col("Horz EPID - CAX(Z) mm", "Z offset Horizontal EPID image - CAX in mm", colHorzZCax _),
+      new Col("Horz EPID-CAX(Y) mm", "Y offset Horizontal EPID-CAX in mm", colHorzYCax _),
+      new Col("Horz EPID-CAX(Z) mm", "Z offset Horizontal EPID-CAX in mm", colHorzZCax _),
 
-      new Col("EPID - (PLAN - CBCT)", "total offset of EPID - (PLAN - CBCT)", colEpidPlanCbct _),
+      new Col("(EPID-CAX)-(PLAN-CBCT)", "total offset of (EPID-CAX)-(PLAN-CBCT)", colEpidPlanCbct _),
 
       new Col("CBCT Details", "Images and other details for CBCT", colCbctImages _),
       new Col("EPID Details", "Images and other details for EPID", colEpidImages _))

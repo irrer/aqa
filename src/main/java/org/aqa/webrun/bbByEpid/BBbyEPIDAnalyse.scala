@@ -138,9 +138,9 @@ object BBbyEPIDAnalyse extends Logging {
       val bbByEPIDCompositeFinal = {
         if (bbByCBCTHistory.isDefined) {
           val c = bbByCBCTHistory.get.bbByCBCT
-          val x = x_mm - (c.rtplanX_mm - c.cbctX_mm)
-          val y = y_mm - (c.rtplanY_mm - c.cbctY_mm)
-          val z = z_mm - (c.rtplanZ_mm - c.cbctZ_mm)
+          val x = x_mm - c.err_mm.getX
+          val y = y_mm - c.err_mm.getY
+          val z = z_mm - c.err_mm.getZ
           val offset = new Point3d(0, 0, 0).distance(new Point3d(x, y, z))
           bbByEPIDComposite.copy(
             bbByCBCTPK = bbByCBCTHistory.get.bbByCBCT.bbByCBCTPK,

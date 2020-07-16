@@ -86,11 +86,11 @@ object DailyQACSV {
 
       new Col("Gantry Angle for XZ (vert) deg", (dataSet) => dataSet.vertList.head.gantryAngle_deg.toString),
       new Col("Vert EPID - CAX(X) mm", (dataSet) => dataSet.composite.xAdjusted_mm.get.toString),
-      new Col("Vert EPID - CAX(Z) mm", (dataSet) => (dataSet.vertList.head.epid3DZ_mm - (dataSet.cbct.rtplanZ_mm - dataSet.cbct.cbctZ_mm)).toString),
+      new Col("Vert EPID - CAX(Z) mm", (dataSet) => (dataSet.vertList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ).toString),
 
       new Col("Gantry Angle for YZ (horz) deg", (dataSet) => dataSet.horzList.head.gantryAngle_deg.toString),
       new Col("Horz EPID - CAX(Y) mm", (dataSet) => dataSet.composite.yAdjusted_mm.get.toString),
-      new Col("Horz EPID - CAX(Z) mm", (dataSet) => (dataSet.horzList.head.epid3DZ_mm - (dataSet.cbct.rtplanZ_mm - dataSet.cbct.cbctZ_mm)).toString),
+      new Col("Horz EPID - CAX(Z) mm", (dataSet) => (dataSet.horzList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ).toString),
 
       new Col("CBCT Details", (dataSet) => urlPrefix + ViewOutput.viewOutputUrl(dataSet.cbct.outputPK)),
       new Col("EPID Details", (dataSet) => urlPrefix + ViewOutput.viewOutputUrl(dataSet.composite.outputPK)))

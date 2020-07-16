@@ -236,7 +236,7 @@ object BBbyCBCTAnnotateImages {
       voxSize_mm(2), voxSize_mm(1),
       centerUnscaled_vox.getZ, centerUnscaled_vox.getY,
       "Z", "Y",
-      bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm, bbByCBCT.rtplanY_mm - bbByCBCT.cbctY_mm,
+      bbByCBCT.err_mm.getZ, bbByCBCT.err_mm.getY,
       imageXYZ(0))
 
     def yImagePair = makePair(
@@ -244,7 +244,7 @@ object BBbyCBCTAnnotateImages {
       voxSize_mm(2), voxSize_mm(0),
       centerUnscaled_vox.getZ, centerUnscaled_vox.getX,
       "Z", "X",
-      bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm, bbByCBCT.rtplanX_mm - bbByCBCT.cbctX_mm,
+      bbByCBCT.err_mm.getZ, bbByCBCT.err_mm.getX,
       imageXYZ(1))
 
     bbByCBCT.cbctZ_mm - bbByCBCT.rtplanZ_mm
@@ -254,7 +254,7 @@ object BBbyCBCTAnnotateImages {
       voxSize_mm(0), voxSize_mm(1),
       centerUnscaled_vox.getX, centerUnscaled_vox.getY,
       "X", "Y",
-      bbByCBCT.rtplanX_mm - bbByCBCT.cbctX_mm, bbByCBCT.rtplanY_mm - bbByCBCT.cbctY_mm,
+      bbByCBCT.err_mm.getX, bbByCBCT.err_mm.getY,
       imageXYZ(2))
 
     val pairList = Seq(xImagePair _, yImagePair _, zImagePair _).par.map(f => f()).toList

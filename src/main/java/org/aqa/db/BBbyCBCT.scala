@@ -56,7 +56,8 @@ case class BBbyCBCT(
 
   val cbct = new Point3d(cbctX_mm, cbctY_mm, cbctZ_mm)
 
-  val err = new Point3d(rtplanX_mm - cbctX_mm, rtplanY_mm - cbctY_mm, rtplanZ_mm - cbctZ_mm)
+  /** CBCT - PLAN */
+  val err_mm = new Point3d(cbctX_mm - rtplanX_mm, cbctY_mm - rtplanY_mm, cbctZ_mm - rtplanZ_mm)
 }
 
 object BBbyCBCT extends ProcedureOutput {

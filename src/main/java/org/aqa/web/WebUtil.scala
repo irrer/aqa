@@ -1569,5 +1569,26 @@ object WebUtil extends Logging {
    */
   def awaitIfRequested[T](future: Future[T], valueMap: ValueMapT, procedurePK: Long): Unit = awaitIfRequested(future, isAwait(valueMap), procedurePK)
 
+  /**
+   * Column that can be added to a WebRow to show the coordinate diagram.
+   *
+   * @param height: Display height in pixels.
+   */
+  def coordinateDiagramElem(height: Int): Elem = {
+    val png = "/static/images/CoordinateDiagram.png"
+    <a href={ png } class="screenshot" rel={ png }><img src={ png } height={ height.toString }/></a>
+  }
+
+  /**
+   * Column that can be added to a WebRow to show the coordinate diagram.
+   *
+   * @param height: Display height in pixels.
+   */
+  def coordinateDiagramCol(height: Int) = {
+    val png = "/static/images/CoordinateDiagram.png"
+    def getElem(valueMap: ValueMapT): Elem = coordinateDiagramElem(height)
+    new WebPlainText("CoordinateDiagram", false, 1, 0, getElem)
+  }
+
 }
 

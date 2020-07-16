@@ -323,12 +323,16 @@ object BBbyEPIDHTML {
 
       val elem = {
         <div class="row">
-          <div class="col-md-8">
+          <div class="col-md-2">
             <h2 title="Procedure performed">EPID BB Location</h2>
-            <br/>
+          </div>
+          <div class="col-md-1">
+            { WebUtil.coordinateDiagramElem(80) }
+          </div>
+          <div class="col-md-8">
             { numbersWithCbct }
           </div>
-          <div class="col-md-2">
+          <div class="col-md-1">
             { planReference }
           </div>
         </div>
@@ -373,8 +377,8 @@ object BBbyEPIDHTML {
                 <th>EPID</th>
                 <th>CBCT</th>
                 <th>PLAN</th>
-                <th>PLAN - CBCT</th>
-                <th>EPID - (PLAN - CBCT)</th>
+                <th>CBCT - PLAN</th>
+                <th>EPID - (CBCT - PLAN)</th>
               </tr>
             </thead>
             <tr>
@@ -382,24 +386,24 @@ object BBbyEPIDHTML {
               { fmt(epid.x_mm) }
               { fmt(cbct.cbctX_mm) }
               { fmt(cbct.rtplanX_mm) }
-              { fmt(cbct.rtplanX_mm - cbct.cbctX_mm) }
-              { fmt(epid.x_mm - (cbct.rtplanX_mm - cbct.cbctX_mm)) }
+              { fmt(cbct.err_mm.getX) }
+              { fmt(epid.xAdjusted_mm.get) }
             </tr>
             <tr>
               <td>Y</td>
               { fmt(epid.y_mm) }
               { fmt(cbct.cbctY_mm) }
               { fmt(cbct.rtplanY_mm) }
-              { fmt(cbct.rtplanY_mm - cbct.cbctY_mm) }
-              { fmt(epid.y_mm - (cbct.rtplanY_mm - cbct.cbctY_mm)) }
+              { fmt(cbct.err_mm.getY) }
+              { fmt(epid.yAdjusted_mm.get) }
             </tr>
             <tr>
               <td>Z</td>
               { fmt(epid.z_mm) }
               { fmt(cbct.cbctZ_mm) }
               { fmt(cbct.rtplanZ_mm) }
-              { fmt(cbct.rtplanZ_mm - cbct.cbctZ_mm) }
-              { fmt(epid.z_mm - (cbct.rtplanZ_mm - cbct.cbctZ_mm)) }
+              { fmt(cbct.err_mm.getZ) }
+              { fmt(epid.zAdjusted_mm.get) }
             </tr>
           </table>
         </div>

@@ -53,9 +53,9 @@ class BBbyCBCTChart(outputPK: Long) extends Logging {
     val units = "mm"
     val dataToBeGraphed = Seq(
       history.map(h => h.bbByCBCT.offset_mm),
-      history.map(h => h.bbByCBCT.rtplanX_mm - h.bbByCBCT.cbctX_mm),
-      history.map(h => h.bbByCBCT.rtplanY_mm - h.bbByCBCT.cbctY_mm),
-      history.map(h => h.bbByCBCT.rtplanZ_mm - h.bbByCBCT.cbctZ_mm))
+      history.map(h => h.bbByCBCT.err_mm.getX),
+      history.map(h => h.bbByCBCT.err_mm.getY),
+      history.map(h => h.bbByCBCT.err_mm.getZ))
 
     val colorList = Seq(
       new Color(102, 136, 187),

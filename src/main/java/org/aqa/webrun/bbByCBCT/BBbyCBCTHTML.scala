@@ -337,19 +337,18 @@ object BBbyCBCTHTML extends Logging {
       }
 
       val errxText = {
-        "X: " + fmt(bbByCBCT.err.getX) + " Y: " + fmt(bbByCBCT.err.getY) + "   Z: " + fmt(bbByCBCT.err.getZ)
-
+        "X: " + fmt(bbByCBCT.err_mm.getX) + " Y: " + fmt(bbByCBCT.err_mm.getY) + "   Z: " + fmt(bbByCBCT.err_mm.getZ)
       }
 
       val elem = {
         <div class="row">
           <div title="Test performed" class="col-md-3">
-            <h2>CBCT BB Location</h2>
+            <h2>CBCT BB Location <span style="margin-left:40px;">{ WebUtil.coordinateDiagramElem(80) }</span></h2>
           </div>
           { dataCol("Offset(mm)", "Distance in mm between plan isocenter and position of BB", bbByCBCT.offset_mm, 2) }
-          { dataCol("X", "Plan X position - BB X position in mm", (bbByCBCT.rtplanX_mm - bbByCBCT.cbctX_mm), 1) }
-          { dataCol("Y", "Plan Y position - BB Y position in mm", (bbByCBCT.rtplanY_mm - bbByCBCT.cbctY_mm), 1) }
-          { dataCol("Z", "Plan Z position - BB Z position in mm", (bbByCBCT.rtplanZ_mm - bbByCBCT.cbctZ_mm), 1) }
+          { dataCol("X", "Plan X position - BB X position in mm", bbByCBCT.err_mm.getX, 1) }
+          { dataCol("Y", "Plan Y position - BB Y position in mm", bbByCBCT.err_mm.getY, 1) }
+          { dataCol("Z", "Plan Z position - BB Z position in mm", bbByCBCT.err_mm.getZ, 1) }
         </div>
       }
       elem
