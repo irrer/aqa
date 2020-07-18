@@ -68,9 +68,9 @@ object DailyQACSV {
       new Col("PatientID", (dataSet) => patientIdOf(dataSet)),
       new Col("Status", (dataSet) => dataSet.output.status),
 
-      new Col("X CBCT - PLAN mm", (dataSet) => (dataSet.cbct.cbctX_mm - dataSet.cbct.rtplanX_mm).toString),
-      new Col("Y CBCT - PLAN mm", (dataSet) => (dataSet.cbct.cbctY_mm - dataSet.cbct.rtplanY_mm).toString),
-      new Col("Z CBCT - PLAN mm", (dataSet) => (dataSet.cbct.cbctZ_mm - dataSet.cbct.rtplanZ_mm).toString),
+      new Col("X CBCT - ISO mm", (dataSet) => (dataSet.cbct.cbctX_mm - dataSet.cbct.rtplanX_mm).toString),
+      new Col("Y CBCT - ISO mm", (dataSet) => (dataSet.cbct.cbctY_mm - dataSet.cbct.rtplanY_mm).toString),
+      new Col("Z CBCT - ISO mm", (dataSet) => (dataSet.cbct.cbctZ_mm - dataSet.cbct.rtplanZ_mm).toString),
 
       new Col("X/lat Table Movement cm", (dataSet) => dblOptToString10(dataSet.composite.tableXlateral_mm)),
       new Col("Y/vert Table Movement cm", (dataSet) => dblOptToString10(dataSet.composite.tableYvertical_mm)),
@@ -85,12 +85,18 @@ object DailyQACSV {
       new Col("Z/lng Table Posn EPID cm", (dataSet) => (dataSet.bbByEpid.head.tableZlongitudinal_mm / 10).toString),
 
       new Col("Gantry Angle for XZ (vert) deg", (dataSet) => dataSet.vertList.head.gantryAngle_deg.toString),
-      new Col("Vert EPID - CAX(X) mm", (dataSet) => dataSet.composite.xAdjusted_mm.get.toString),
-      new Col("Vert EPID - CAX(Z) mm", (dataSet) => (dataSet.vertList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ).toString),
+      new Col("Vert (EPID-ISO) X mm", (dataSet) => dataSet.vertList.head.epid3DX_mm.toString),
+      new Col("Vert (EPID-ISO) Z mm", (dataSet) => dataSet.vertList.head.epid3DZ_mm.toString),
+      new Col("Vert (EPID-ISO) - (CBCT-ISO) X mm", (dataSet) => dataSet.composite.xAdjusted_mm.get.toString),
+      new Col("Vert (EPID-ISO) - (CBCT-ISO) Z mm", (dataSet) => (dataSet.vertList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ).toString),
 
       new Col("Gantry Angle for YZ (horz) deg", (dataSet) => dataSet.horzList.head.gantryAngle_deg.toString),
-      new Col("Horz EPID - CAX(Y) mm", (dataSet) => dataSet.composite.yAdjusted_mm.get.toString),
-      new Col("Horz EPID - CAX(Z) mm", (dataSet) => (dataSet.horzList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ).toString),
+      new Col("Horz (EPID-ISO) Y mm", (dataSet) => dataSet.horzList.head.epid3DY_mm.toString),
+      new Col("Horz (EPID-ISO) Z mm", (dataSet) => dataSet.horzList.head.epid3DZ_mm.toString),
+      new Col("Horz (EPID-ISO) - (CBCT-ISO) Y mm", (dataSet) => dataSet.composite.yAdjusted_mm.get.toString),
+      new Col("Horz (EPID-ISO) - (CBCT-ISO) Z mm", (dataSet) => (dataSet.horzList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ).toString),
+
+      new Col("Avg (EPID-ISO) - (CBCT-ISO) Z mm", (dataSet) => (dataSet.composite.zAdjusted_mm.get).toString),
 
       new Col("CBCT Details", (dataSet) => urlPrefix + ViewOutput.viewOutputUrl(dataSet.cbct.outputPK)),
       new Col("EPID Details", (dataSet) => urlPrefix + ViewOutput.viewOutputUrl(dataSet.composite.outputPK)))

@@ -20,6 +20,9 @@ import org.aqa.web.WebServer
 import org.aqa.db.DicomSeries
 import com.pixelmed.dicom.AttributeTag
 import org.aqa.web.OutputList
+import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.AngleType
+import java.util.Date
 
 /**
  * Generate and write HTML for EPID BB analysis.
@@ -369,7 +372,7 @@ object BBbyEPIDHTML {
         def fmt(d: Double) = { <td>{ d.formatted("%12.6f").trim }</td> }
 
         <div>
-          <h3><center>Raw Values</center></h3>
+          <h3><center>Values</center></h3>
           <table class="table table-responsive">
             <thead>
               <tr>
@@ -411,16 +414,121 @@ object BBbyEPIDHTML {
         <div></div>
     }
 
-    def content = {
-      <div class="row">
-        { numberText }
-        { numberTable }
-        { chart.chartReference }
-        <table class="table table-responsive">
+    val numberTable2 = {
+      if (bbByCBCT.isDefined && composite.isRight) {
+        val cbct = bbByCBCT.get
+        val epidComposite = composite.right.get
+        def fmt(d: Double) = { <td title={ d.formatted("%12.6f").trim }>{ Util.fmtDbl(d) }</td> }
+
+        def fmtTd(d: Double) = { <td title={ d.toString() }>{ Util.fmtDbl(d) }</td> }
+
+        def epidToDate(epid: BBbyEPID): Option[Date] = {
+          val dsOpt = DicomSeries.getBySopInstanceUID(epid.epidSOPInstanceUid).headOption
+          if (dsOpt.isDefined) {
+            val attrList = dsOpt.get.attributeListList.find(al => Util.sopOfAl(al).equals(epid.epidSOPInstanceUid))
+            if (attrList.isDefined)
+              DicomUtil.getTimeAndDate(attrList.get, TagFromName.ContentDate, TagFromName.ContentTime)
+            else
+              None
+          } else
+            None
+        }
+
+        val epidDateListSorted = bbByEPIDList.flatten.map(epid => (epid, epidToDate(epid))).filter(ed => ed._2.isDefined).map(ed => (ed._1, ed._2.get)).sortBy(_._2.getTime)
+
+        val msFirst = epidDateListSorted.head._2.getTime
+
+        def elapsedText(date: Date): String = {
+          val ms = date.getTime - msFirst
+          val sec = (ms / 1000) % 60
+          val minutes = (ms / (60 * 1000))
+          minutes.toString + ":" + sec.formatted("%02d")
+        }
+
+        def fmtEpidWithoutCbct(epid: BBbyEPID, date: Date) = {
+          val na = { <td>NA</td> }
+          val gantryAngle = Util.angleRoundedTo90(epid.gantryAngle_deg)
+          val isVert = AngleType.isAngleType(gantryAngle, AngleType.vertical)
+          val isHorz = !isVert
+
           <tr>
-            { imageSetList.map(imageSet => imageSet.html) }
+            <td>MV G{ gantryAngle.toString }(BB-ISO)</td>
+            <td>{ elapsedText(date) }</td>
+            { if (isVert) fmtTd(epid.epid3DX_mm) else na }
+            { if (isHorz) fmtTd(epid.epid3DY_mm) else na }
+            { fmtTd(epid.epid3DZ_mm) }
           </tr>
-        </table>
+        }
+
+        def fmtEpidWithCbct(epid: BBbyEPID, date: Date) = {
+          val na = { <td>NA</td> }
+          val gantryAngle = Util.angleRoundedTo90(epid.gantryAngle_deg)
+          val isVert = AngleType.isAngleType(gantryAngle, AngleType.vertical)
+          val isHorz = !isVert
+
+          <tr>
+            <td>MV G{ gantryAngle.toString }(BB-ISO) - CBCT(BB-ISO)</td>
+            <td>{ elapsedText(date) }</td>
+            { if (isVert) fmtTd(epid.epid3DX_mm - cbct.err_mm.getX) else na }
+            { if (isHorz) fmtTd(epid.epid3DY_mm - cbct.err_mm.getY) else na }
+            { fmtTd(epid.epid3DZ_mm - cbct.err_mm.getZ) }
+          </tr>
+        }
+
+        <div>
+          <h3><center>Detailed Values</center></h3>
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th></th>
+                <th>EPID Time</th>
+                <th>HFS PATIENT<br/>LEFT(+)/RIGHT(-) [mm]</th>
+                <th>HFS PATIENT<br/>ANT(+)/POST(-) [mm]</th>
+                <th>HFS PATIENT<br/>SUP (+)/INF(-) [mm]</th>
+              </tr>
+            </thead>
+            <tr>
+              <td>CBCT(BB – ISO)</td>
+              <td></td>
+              { fmt(cbct.err_mm.getX) }
+              { fmt(cbct.err_mm.getY) }
+              { fmt(cbct.err_mm.getZ) }
+            </tr>
+            { epidDateListSorted.map(ed => fmtEpidWithoutCbct(ed._1, ed._2)) }
+            { epidDateListSorted.map(ed => fmtEpidWithCbct(ed._1, ed._2)) }
+            <tr>
+              <td>AVERAGE MV - CBCT</td>
+              <td></td>
+              { fmt(epidComposite.xAdjusted_mm.get) }
+              { fmt(epidComposite.yAdjusted_mm.get) }
+              { fmt(epidComposite.zAdjusted_mm.get) }
+            </tr>
+          </table>
+        </div>
+      } else
+        <div></div>
+    }
+
+    def content = {
+      <div>
+        <div class="row">
+          { numberText }
+        </div>
+        <div class="row">
+          <div class="col-md-8 col-md-offset-2">
+            { numberTable2 }
+          </div>
+        </div>
+        <div class="row">
+          { chart.chartReference }
+        </div>
+        <div class="row">
+          <table class="table table-responsive">
+            <tr>
+              { imageSetList.map(imageSet => imageSet.html) }
+            </tr>
+          </table>
+        </div>
       </div>
     }
 

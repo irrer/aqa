@@ -31,10 +31,6 @@ object BBbyEPIDAnalyse extends Logging {
       val gantryAngle_deg = Util.gantryAngle(epid)
       val gantryAngle_rad = Math.toRadians(gantryAngle_deg)
 
-      //      val RadiationMachineSAD = epid.get(TagFromName.RadiationMachineSAD).getDoubleValues.head
-      //      val xGantry = sin * RadiationMachineSAD
-      //      val yGantry = cos * RadiationMachineSAD
-
       val epidOffset: Point3d = {
         val at = epid.get(TagFromName.XRayImageReceptorTranslation)
         if (at == null) new Point3d(0, 0, 0)
@@ -46,7 +42,7 @@ object BBbyEPIDAnalyse extends Logging {
 
       val epid3DX_mm = Math.cos(gantryAngle_rad) * (bbLoc.getX + epidOffset.getX)
       val epid3DY_mm = Math.sin(gantryAngle_rad) * (bbLoc.getX + epidOffset.getX)
-      val epid3DZ_mm = bbLoc.getY + epidOffset.getY
+      val epid3DZ_mm = -(bbLoc.getY + epidOffset.getY) // flip sign to directionally match coordinate system
       val origin = new Point3d(0, 0, 0)
 
       def getDbl(tag: AttributeTag) = epid.get(tag).getDoubleValues.head
@@ -87,8 +83,10 @@ object BBbyEPIDAnalyse extends Logging {
     val horz = getByAngleType(AngleType.horizontal)
 
     if ((vert.nonEmpty && horz.nonEmpty)) {
-      val x_mm = vert.map(bb => bb.epid3DX_mm).sum / vert.size
-      val y_mm = horz.map(bb => bb.epid3DY_mm).sum / horz.size
+      // Use the same number of vertical and horizontal beams to get the averages.  Handles cases where are there are many of one and few of the others.
+      val max = Math.min(vert.size, horz.size) // maximum number of images to use in each of the vertical and horizontal directions.
+      val x_mm = vert.take(max).map(bb => bb.epid3DX_mm).sum / max
+      val y_mm = horz.take(max).map(bb => bb.epid3DY_mm).sum / max
       val z_mm = bbByEPIDList.map(bb => bb.epid3DZ_mm).sum / bbByEPIDList.size
       val offset_mm = (new Point3d(x_mm, y_mm, z_mm)).distance(new Point3d(0, 0, 0))
 
