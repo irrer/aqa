@@ -23,8 +23,15 @@ import com.pixelmed.dicom.AttributeTag
  */
 object BBbyEPIDAnalyse extends Logging {
 
-  private val tableDefault = 2000000.0
-
+  /**
+   * Translate BB position in ISO plane to RTPLAN coordinates
+   * 
+   * @param epid EPID DICOM
+   * 
+   * @param bbLocation in EPID translated to mm
+   * 
+   * @param extendedData Associated DB rows
+   */
   private def toBBbyEPID(epid: AttributeList, bbLocation: Either[String, Point2d], extendedData: ExtendedData): Option[BBbyEPID] = {
     if (bbLocation.isRight) {
       val bbLoc = bbLocation.right.get
@@ -40,9 +47,9 @@ object BBbyEPIDAnalyse extends Logging {
         }
       }
 
-      val epid3DX_mm = Math.cos(gantryAngle_rad) * (bbLoc.getX + epidOffset.getX)
-      val epid3DY_mm = Math.sin(gantryAngle_rad) * (bbLoc.getX + epidOffset.getX)
-      val epid3DZ_mm = -(bbLoc.getY + epidOffset.getY) // flip sign to directionally match coordinate system
+      val epid3DX_mm = Math.cos(gantryAngle_rad) * (bbLoc.getX - epidOffset.getX)
+      val epid3DY_mm = Math.sin(gantryAngle_rad) * (bbLoc.getX - epidOffset.getX)
+      val epid3DZ_mm = -(bbLoc.getY - epidOffset.getY) // flip sign to directionally match coordinate system
       val origin = new Point3d(0, 0, 0)
 
       def getDbl(tag: AttributeTag) = epid.get(tag).getDoubleValues.head
