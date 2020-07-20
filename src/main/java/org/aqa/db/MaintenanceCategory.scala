@@ -15,6 +15,7 @@ object MaintenanceCategory {
   val maintenance = "Maintenance"
   val setBaseline = "Set Baseline"
   val firmwareUpdate = "Firmware Update"
+  val limit = "Limit"
 
   /**
    * Find the closest matching maintenance category.
