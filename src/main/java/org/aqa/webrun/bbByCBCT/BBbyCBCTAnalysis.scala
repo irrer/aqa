@@ -224,14 +224,35 @@ object BBbyCBCTAnalysis extends Logging {
 
     val searchVolume = entireVolume.getSubVolume(searchStart, searchSize) // sub-volume of the CBCT volume to be searched for the BB.
 
-    val coarse2 = {
+    val coarse = {
       val size = new Point3i(4, 4, 2)
       val high = searchVolume.getHighest(size)
       high.add(searchStart)
       high.add(new Point3i(-2, -2, -1))
       high
     }
-    val coarseLocation = Seq(coarse2.getX.toDouble, coarse2.getY.toDouble, coarse2.getZ.toDouble)
+
+    // Use a volume of BBs representative of the actual BB size.
+    def coarseExperimental = {
+      val PixelSpacing = cbctSeries.head.get(TagFromName.PixelSpacing).getDoubleValues
+      val SliceThickness = cbctSeries.head.get(TagFromName.SliceThickness).getDoubleValues
+
+      def toPixDiamtr(ps: Double) = ((Config.CBCTBBPenumbra_mm * 2) / ps).ceil.toInt
+      def toPixOffset(ps: Double) = -((Config.CBCTBBPenumbra_mm / ps).ceil.toInt)
+
+      val sizePixDiamtr = new Point3i(toPixDiamtr(PixelSpacing(0)), toPixDiamtr(PixelSpacing(1)), toPixDiamtr(SliceThickness(0)))
+      val sizePixOffset = new Point3i(toPixOffset(PixelSpacing(0)), toPixOffset(PixelSpacing(1)), toPixOffset(SliceThickness(0)))
+
+      Trace.trace(sizePixDiamtr)
+      Trace.trace(searchVolume.volSize)
+      val start = System.currentTimeMillis // TODO rm
+      val high = searchVolume.getHighest(sizePixDiamtr) // TODO the getHighest function needs to be more efficient for this to be practical
+      Trace.trace(System.currentTimeMillis - start)
+      high.add(searchStart)
+      high.add(sizePixOffset)
+      high
+    }
+    val coarseLocation = Seq(coarse.getX.toDouble, coarse.getY.toDouble, coarse.getZ.toDouble)
 
     val bbVolumeStart = coarseLocation.zip(voxSize_mm).map(cs => (cs._1 - ((Config.CBCTBBPenumbra_mm * 4) / cs._2)).round.toInt)
 
