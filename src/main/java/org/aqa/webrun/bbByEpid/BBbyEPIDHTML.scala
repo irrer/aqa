@@ -23,6 +23,7 @@ import org.aqa.web.OutputList
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.AngleType
 import java.util.Date
+import org.aqa.Config
 
 /**
  * Generate and write HTML for EPID BB analysis.
@@ -35,7 +36,7 @@ object BBbyEPIDHTML {
 
   private val mainReportFileName = Output.displayFilePrefix + ".html"
 
-  def generateHtml(extendedData: ExtendedData, bbByEPIDList: Seq[Option[BBbyEPID]], composite: Either[String, BBbyEPIDComposite], runReq: BBbyEPIDRunReq, status: ProcedureStatus.Value) = {
+  def generateHtml(extendedData: ExtendedData, bbByEPIDList: Seq[Option[BBbyEPID]], composite: Either[String, BBbyEPIDComposite], runReq: BBbyEPIDRunReq, status: ProcedureStatus.Value): Unit = {
 
     val bbByCBCT: Option[BBbyCBCT] = {
       if ((composite.isRight) && (composite.right.get.bbByCBCTPK.isDefined))
@@ -129,6 +130,19 @@ object BBbyEPIDHTML {
 
       def name2File(name: String) = new File(extendedData.output.dir, name)
 
+      //      val bbLoc_mmX: Option[Point2D] =
+      //        if (bbByEpid.isDefined) {
+      //
+      //          val x: Double = (Util.angleRoundedTo90(Util.gantryAngle(al)) % 360) match {
+      //            case 0 => new Point2D.Double(bbByEpid.get.epidImageX_mm, bbByEpid.get.epidImageZ_mm)
+      //            case 90 => new Point2D.Double(bbByEpid.get.epidImageX_mm, bbByEpid.get.epidImageZ_mm)
+      //            case 180 => ???
+      //            case 270 => ???
+      //          }
+      //          Some(new Point2D.Double(x, bbByEpid.get.epid3DZ_mm)
+      //        } else
+      //          None
+
       val imageSet = new BBbyEPIDAnnotateImages(al, bbLoc_mm)
 
       Util.writePng(imageSet.closeupBufImg, name2File(closeUpImageFileName))
@@ -210,6 +224,9 @@ object BBbyEPIDHTML {
     // make all of the images and get their names
     val imageSetList = runReq.epidList.indices.par.map(index => new ImageSet(index)).toList
 
+    def fmtApprox(d: Double) = d.formatted("%6.2f").trim
+    def fmtPrecise(d: Double) = d.formatted("%12.6f").trim
+
     val numberText = {
       def fmt(d: Double) = d.formatted("%5.2f")
 
@@ -220,7 +237,7 @@ object BBbyEPIDHTML {
       }
 
       def tableMovement(composite: BBbyEPIDComposite) = {
-        def fmt(d: Option[Double]) = <span title={ (d.get / 10).formatted("%8.5f").trim }>{ (d.get / 10).formatted("%4.1f") }</span>
+        def fmt(d: Option[Double]) = <span title={ fmtPrecise(d.get / 10) }>{ fmtApprox(d.get / 10) }</span>
         fmt(composite.tableXlateral_mm) + ","
         <div title="Table movement between CBCT and RTIMAGE, calculated with RTIMAGE - CT">
           Table Movement X,Y,Z cm:{ fmt(composite.tableXlateral_mm) }
@@ -368,59 +385,10 @@ object BBbyEPIDHTML {
     val numberTable = {
       if (bbByCBCT.isDefined && composite.isRight) {
         val cbct = bbByCBCT.get
-        val epid = composite.right.get
-        def fmt(d: Double) = { <td>{ d.formatted("%12.6f").trim }</td> }
-
-        <div>
-          <h3><center>Values</center></h3>
-          <table class="table table-responsive">
-            <thead>
-              <tr>
-                <th>Dimension</th>
-                <th>EPID</th>
-                <th>CBCT</th>
-                <th>PLAN</th>
-                <th>CBCT - PLAN</th>
-                <th>EPID - (CBCT - PLAN)</th>
-              </tr>
-            </thead>
-            <tr>
-              <td>X</td>
-              { fmt(epid.x_mm) }
-              { fmt(cbct.cbctX_mm) }
-              { fmt(cbct.rtplanX_mm) }
-              { fmt(cbct.err_mm.getX) }
-              { fmt(epid.xAdjusted_mm.get) }
-            </tr>
-            <tr>
-              <td>Y</td>
-              { fmt(epid.y_mm) }
-              { fmt(cbct.cbctY_mm) }
-              { fmt(cbct.rtplanY_mm) }
-              { fmt(cbct.err_mm.getY) }
-              { fmt(epid.yAdjusted_mm.get) }
-            </tr>
-            <tr>
-              <td>Z</td>
-              { fmt(epid.z_mm) }
-              { fmt(cbct.cbctZ_mm) }
-              { fmt(cbct.rtplanZ_mm) }
-              { fmt(cbct.err_mm.getZ) }
-              { fmt(epid.zAdjusted_mm.get) }
-            </tr>
-          </table>
-        </div>
-      } else
-        <div></div>
-    }
-
-    val numberTable2 = {
-      if (bbByCBCT.isDefined && composite.isRight) {
-        val cbct = bbByCBCT.get
         val epidComposite = composite.right.get
-        def fmt(d: Double) = { <td title={ d.formatted("%12.6f").trim }>{ Util.fmtDbl(d) }</td> }
+        def fmt(d: Double) = { <td title={ fmtPrecise(d) }>{ fmtApprox(d) }</td> }
 
-        def fmtTd(d: Double) = { <td title={ d.toString() }>{ Util.fmtDbl(d) }</td> }
+        def fmtTd(d: Double) = { <td title={ d.toString() }>{ fmtApprox(d) }</td> }
 
         def epidToDate(epid: BBbyEPID): Option[Date] = {
           val dsOpt = DicomSeries.getBySopInstanceUID(epid.epidSOPInstanceUid).headOption
@@ -438,6 +406,11 @@ object BBbyEPIDHTML {
 
         val msFirst = epidDateListSorted.head._2.getTime
 
+        def vectorLengthColumn(x: Double, y: Double, z: Double) = {
+          val d = Math.sqrt((x * x) + (y * y) + (z * z))
+          <td title={ fmtPrecise(d) }>{ fmtApprox(d) }</td>
+        }
+
         def elapsedText(date: Date): String = {
           val ms = date.getTime - msFirst
           val sec = (ms / 1000) % 60
@@ -451,12 +424,18 @@ object BBbyEPIDHTML {
           val isVert = AngleType.isAngleType(gantryAngle, AngleType.vertical)
           val isHorz = !isVert
 
-          <tr>
-            <td>MV G{ gantryAngle.toString }(BB-ISO)</td>
+          <tr style="text-align: center;">
+            <td style="text-align: right;">MV G<b>{ gantryAngle.toString }</b> (BB - DIGITAL_CAX) @ ISOCENTER PLANE</td>
             <td>{ elapsedText(date) }</td>
             { if (isVert) fmtTd(epid.epid3DX_mm) else na }
             { if (isHorz) fmtTd(epid.epid3DY_mm) else na }
             { fmtTd(epid.epid3DZ_mm) }
+            {
+              vectorLengthColumn(
+                if (isVert) epid.epid3DX_mm else 0.0,
+                if (isHorz) epid.epid3DY_mm else 0.0,
+                epid.epid3DZ_mm)
+            }
           </tr>
         }
 
@@ -466,12 +445,18 @@ object BBbyEPIDHTML {
           val isVert = AngleType.isAngleType(gantryAngle, AngleType.vertical)
           val isHorz = !isVert
 
-          <tr>
-            <td>MV G{ gantryAngle.toString }(BB-ISO) - CBCT(BB-ISO)</td>
+          <tr style="text-align: center;">
+            <td style="text-align: right;">MV G<b>{ gantryAngle.toString }</b> (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER)</td>
             <td>{ elapsedText(date) }</td>
             { if (isVert) fmtTd(epid.epid3DX_mm - cbct.err_mm.getX) else na }
             { if (isHorz) fmtTd(epid.epid3DY_mm - cbct.err_mm.getY) else na }
             { fmtTd(epid.epid3DZ_mm - cbct.err_mm.getZ) }
+            {
+              vectorLengthColumn(
+                if (isVert) epid.epid3DX_mm - cbct.err_mm.getX else 0.0,
+                if (isHorz) epid.epid3DY_mm - cbct.err_mm.getY else 0.0,
+                epid.epid3DZ_mm)
+            }
           </tr>
         }
 
@@ -479,29 +464,51 @@ object BBbyEPIDHTML {
           <h3><center>Detailed Values</center></h3>
           <table class="table table-bordered">
             <thead>
+              <td colspan="6" style="text-align: center;">
+                <b>
+                  DETAILED VALUES: signs are consistent with diagram world coordinate systems displayed. All BB, DIGITAL_CAX, and DIGITAL_PLANNED_ISO are vector results in world coordinates.
+                  <br/>
+                  DIGITAL_CAX vectors are corrected for 3002,000d XRayImageReceptorTranslation
+                </b>
+              </td>
+            </thead>
+            <thead>
               <tr>
                 <th></th>
-                <th>EPID Time</th>
-                <th>HFS PATIENT<br/>LEFT(+)/RIGHT(-) [mm]</th>
-                <th>HFS PATIENT<br/>ANT(+)/POST(-) [mm]</th>
-                <th>HFS PATIENT<br/>SUP (+)/INF(-) [mm]</th>
+                <th style="text-align: center;">EPID Time</th>
+                <th style="text-align: center;">HFS PATIENT<br/>LEFT(+)/RIGHT(-) [mm]</th>
+                <th style="text-align: center;">HFS PATIENT<br/>ANT(+)/POST(-) [mm]</th>
+                <th style="text-align: center;">HFS PATIENT<br/>SUP (+)/INF(-) [mm]</th>
+                <th style="text-align: center;">Vector Length [mm]</th>
               </tr>
             </thead>
-            <tr>
-              <td>CBCT(BB – ISO)</td>
+            <tr style="text-align: center;">
+              <td style="text-align: right;">CBCT(BB - DIGITAL_PLANNED_ISOCENTER)</td>
               <td></td>
               { fmt(cbct.err_mm.getX) }
               { fmt(cbct.err_mm.getY) }
               { fmt(cbct.err_mm.getZ) }
+              {
+                vectorLengthColumn(
+                  cbct.err_mm.getX,
+                  cbct.err_mm.getY,
+                  cbct.err_mm.getZ)
+              }
             </tr>
             { epidDateListSorted.map(ed => fmtEpidWithoutCbct(ed._1, ed._2)) }
             { epidDateListSorted.map(ed => fmtEpidWithCbct(ed._1, ed._2)) }
-            <tr>
-              <td>AVERAGE MV - CBCT</td>
+            <tr style="text-align: center;">
+              <td style="text-align: right;">AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER)</td>
               <td></td>
               { fmt(epidComposite.xAdjusted_mm.get) }
               { fmt(epidComposite.yAdjusted_mm.get) }
               { fmt(epidComposite.zAdjusted_mm.get) }
+              {
+                vectorLengthColumn(
+                  epidComposite.xAdjusted_mm.get,
+                  epidComposite.yAdjusted_mm.get,
+                  epidComposite.zAdjusted_mm.get)
+              }
             </tr>
           </table>
         </div>
@@ -515,8 +522,8 @@ object BBbyEPIDHTML {
           { numberText }
         </div>
         <div class="row">
-          <div class="col-md-8 col-md-offset-2">
-            { numberTable2 }
+          <div class="col-md-12">
+            { numberTable }
           </div>
         </div>
         <div class="row">
