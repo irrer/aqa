@@ -76,6 +76,8 @@ object WebUtil extends Logging {
   val nbsp = "@@nbsp@@"
 
   val titleNewline = "@@amp@@#10;"
+  val mathPre = "@@mathPre@@"
+  val mathSuf = "@@mathSuf@@"
 
   /**
    * Tag used to indicate that this is coming from an automatic upload client, as opposed to a human using a web browser.
@@ -107,7 +109,10 @@ object WebUtil extends Logging {
       replace(nl, "\n").
       replace(openCurly, "{").
       replace(closeCurly, "}").
-      replace(nbsp, "&nbsp")
+      replace(nbsp, "&nbsp").
+      replace(mathPre, """<math xmlns="http://www.w3.org/1998/Math/MathML">""").
+      replace(mathSuf, """</math>""")
+
   }
 
   def cleanClassName(className: String) = className.substring(className.lastIndexOf('.') + 1).replace("$", "")
@@ -426,7 +431,7 @@ object WebUtil extends Logging {
 
   val HTML_PREFIX = "<!DOCTYPE html>\n"
 
-  def wrapBody(content: Elem, pageTitle: String, refresh: Option[Int], c3: Boolean, runScript: Option[String]): String = {
+  def wrapBody(content: Elem, pageTitle: String, refresh: Option[Int] = None, c3: Boolean = false, runScript: Option[String] = None, mathjax: Boolean = false): String = {
 
     val refreshMeta = Seq(refresh).flatten.filter(r => r > 0).map(r => { <meta http-equiv='refresh' content={ r.toString }/> })
 
@@ -438,6 +443,12 @@ object WebUtil extends Logging {
           <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>,
           <script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.js"></script>)
       } else Seq[Elem]()
+    }
+
+    val mathjaxRefs = {
+      <script type="text/x-mathjax-config">{ """MathJax.Hub.Config({ tex2jax: { inlineMath: [['$','$'], ['\\(','\\)']] } });""" }</script>
+      <script type="text/x-mathjax-config">{ """MathJax.Hub.Config({ TeX: { extensions: ['autobold.js', 'AMSsymbols.js'] } });""" }</script>
+      <script type="text/javascript" src="/static/mathjax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     }
 
     val runScriptTag = "@@script@@"
@@ -459,6 +470,7 @@ object WebUtil extends Logging {
           <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-timeago/1.5.4/jquery.timeago.min.js"></script>
           <script src="/static/tooltip/tooltip.js"></script>
           { c3Refs /* only include c3 when needed */ }
+          { mathjaxRefs /* only include mathjax when needed */ }
           <script src="/static/zoom/jquery.zoom.js"></script>
           <script type="text/javascript" src="/static/bootstrap/datetime/bootstrap-datetimepicker.js" charset="UTF-8"></script>
           <script src="/static/AQA.js"></script>
@@ -496,6 +508,8 @@ object WebUtil extends Logging {
       case _ => ""
     }
 
+    val j = xmlToText(page)
+    val j1 = j.replaceAllLiterally(runScriptTag, runScriptContent)
     val text = HTML_PREFIX + xmlToText(page).replaceAllLiterally(runScriptTag, runScriptContent)
 
     logger.debug("HTML delivered:\n" + text)
