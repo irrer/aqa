@@ -42,11 +42,11 @@ object Doc {
   lazy val docDir = new File(Config.staticDirFile, docDirName)
 
   /** Wrapper to include the content. */
-  lazy val wrapperFile = new File(docDir, "wrapper.html")
+  // lazy val wrapperFile = new File(docDir, "wrapper.html")
 
   lazy val wrapperContent: String = {
     val content = { <div class="col-md-8 col-md-offset-1">{ contentTag }</div> }
-    WebUtil.wrapBody(content, titleTag)
+    WebUtil.wrapBody(content, titleTag, mathjax = true)
   }
 
 }
@@ -85,7 +85,7 @@ class Doc extends Filter with SubUrlDoc with Logging {
       }
     }
     val indented = { <div class="col-md-8 col-md-offset-1">{ doc }</div> }
-    WebUtil.wrapBody(indented, pageTitle).replace(Doc.titleTag, pageTitle)
+    WebUtil.wrapBody(indented, pageTitle, mathjax = true).replace(Doc.titleTag, pageTitle)
   }
 
   override def afterHandle(request: Request, response: Response): Unit = {

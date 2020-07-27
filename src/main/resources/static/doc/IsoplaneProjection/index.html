@@ -1,0 +1,100 @@
+<div title="Isoplane Projection" class="col-md-10 col-md-offset-1">
+
+    <h2>@@title@@</h2>
+    <p>
+        Images captured via an EPID (MV) imager mapped to the isoplane to support proper interpretation in the
+        RT planning space. Coordinates are calculated in the
+        <a href='http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.8.8.25.6.html'>IEC GANTRY coordinate system</a>
+        as shown in
+        the image below. This coordinate system rotates with the gantry; A viewer viewing from the
+        beam's eye view is looking down the Z axis. This makes all calculations independent of
+        gantry angle.
+        <br />
+        <img style="margin: 10px;" src="GantryCoordinateDiagram.png" width="500px" />
+    </p>
+
+    <h3 style="margin-top: 40px;">Input</h3>
+    The following inputs are used:
+
+    <ul>
+        <li>
+            <b>3002,0026 RTImageSID</b>
+            : Distance from radiation machine source to image plane (in mm) along radiation beam axis. Commonly close to 1500.
+        </li>
+        <li>
+            <b>3002,0022 RadiationMachineSAD</b>
+            : Radiation source to Gantry rotation axis distance of radiation machine used in acquiring or computing image (mm). Commonly close to 1000.
+        </li>
+        <li>
+            <b>3002,0011 ImagePlanePixelSpacing (ps)</b>
+            : Physical distance (in mm) between the center of each image pixel, specified by a numeric pair - adjacent row spacing (delimiter) adjacent column spacing.
+        </li>
+        <li>
+            <b>0028,0010 Rows</b>
+            : Number of rows (of pixels) in the image.
+        </li>
+        <li>
+            <b>0028,0011 Columns</b>
+            : Number of columns (of pixels) in the image.
+        </li>
+    </ul>
+
+    <h3>Projecting EPID to Isoplane</h3>
+    <p>DICOM pixel coordinates are defined at the center of individual pixels, and the origin (x=0, y=0) is at the
+        top-left corner of the image. The isoplane's origin is defined as the center of the
+        image plane. Most EPID devices
+        have an even number of rows and columns, which means that the isoplane origin is between pixels both vertically
+        and horizontally.
+    </p>
+
+
+    <p style="margin: 10px;"></p>
+
+    The scaling ratio defined by the beam's divergence is:
+    $$divergence = { RTImageSID \over RadiationMachineSAD } $$
+
+
+    The image's center in pixels is:
+    $$PixCenter = (Columns -1) / 2, (Rows - 1) / 2 $$
+
+    <p style="margin: 10px;"></p>
+
+    <p style="margin: 10px;"></p>
+
+    The X and Y isoplane positions are calculated from the X and Y pixel positions;
+
+    $$ iso_x = { { pix_x - PixCenter_x} \over { divergence / PixelSpacingX }} $$
+
+    <p style="margin: 10px;"></p>
+
+    $$ iso_y = { { pix_y - PixCenter_y} \over { divergence / PixelSpacingY }} $$
+
+    <p style="margin: 10px;"></p>
+
+    <h3>Example</h3>
+
+    Assume the following from the RTIMAGE file:
+
+    $$RTImageSID = 1500$$
+    $$RadiationMachineSAD = 1000$$
+    $$ImagePlanePixelSpacing = 0.784, 0.784$$
+    $$Rows = 384$$
+    $$Columns = 512$$
+
+    Assume the following for the X,Y position in pixels:
+    $$pix_x, pix_y = 247, 189$$
+
+    We calculate:
+    $$divergence = 1500 / 1000 = 1.5$$
+
+    $$PixCenter = (512 - 1) / 2, (384 - 1) / 2 = 255.5, 191.5$$
+
+    $$ iso_x = { { 247 - 255.5 } \over { 1.5 / 0.784 }} = -4.442667$$
+
+    <p style="margin: 10px;"></p>
+
+    $$ iso_y = { { 189 - 191.5} \over { 1.5 / 0.784 }} = -1.30667$$
+
+<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+</div>
