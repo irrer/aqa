@@ -107,12 +107,23 @@ object BBbyCBCTExecute extends Logging {
 
         // transform the cbct point if necessary.  If it is already in the same frame of reference, then it is not necessary
         val bbPointInRtplan = {
-          if (runReq.reg.isDefined) runReq.imageRegistration.get.transform(volumePoint)
-          else volumePoint
+          if (runReq.reg.isDefined) {
+            val p = runReq.imageRegistration.get.transform(volumePoint)
+            val matrix = runReq.imageRegistration.get.getMatrix
+            def f(d: Double) = d.formatted("%12.6f") //.formatted("%-10s")
+            def sp = " ".formatted("%12s")
+            val msg = Seq(
+              { f(volumePoint.getX) + " * " + f(matrix.getM00) + ", " + f(matrix.getM01) + ", " + f(matrix.getM02) + ", " + f(matrix.getM03) + " = " + f(p.getX) },
+              { f(volumePoint.getY) + " * " + f(matrix.getM10) + ", " + f(matrix.getM11) + ", " + f(matrix.getM12) + ", " + f(matrix.getM13) + " = " + f(p.getY) },
+              { f(volumePoint.getZ) + " * " + f(matrix.getM20) + ", " + f(matrix.getM21) + ", " + f(matrix.getM22) + ", " + f(matrix.getM23) + " = " + f(p.getZ) },
+              { sp + " * " + f(matrix.getM30) + ", " + f(matrix.getM31) + ", " + f(matrix.getM32) + ", " + f(matrix.getM33) + "   " + sp })
+            logger.info("Matrix transformation:\n" + msg.mkString("\n"))
+            p
+          } else volumePoint
         }
 
-        val rtplanIsocenter = Util.getPlanIsocenterList(runReq.rtplan).head
         val bbByCBCT = saveToDb(extendedData, runReq, bbPointInRtplan)
+        logger.info("err_mm: " + bbByCBCT.err_mm.toString)
         val annotatedImages = BBbyCBCTAnnotateImages.annotate(bbByCBCT, imageXYZ, runReq, volumePoint)
         val html = BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, annotatedImages, ProcedureStatus.done, runReq)
         logger.info("Finished analysis of CBCT Alignment for machine " + extendedData.machine.id)

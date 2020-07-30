@@ -228,7 +228,8 @@ object BBbyCBCTAnalysis extends Logging {
       val size = new Point3i(4, 4, 2)
       val high = searchVolume.getHighest(size)
       high.add(searchStart)
-      high.add(new Point3i(-2, -2, -1))
+      //high.add(new Point3i(-2, -2, -1))
+      high.add(new Point3i(size.getX / 2, size.getY / 2, size.getZ / 2))
       high
     }
 
@@ -253,6 +254,8 @@ object BBbyCBCTAnalysis extends Logging {
       high
     }
     val coarseLocation = Seq(coarse.getX.toDouble, coarse.getY.toDouble, coarse.getZ.toDouble)
+
+    logger.info("coarseLocation in pixels: " + coarse)
 
     val bbVolumeStart = coarseLocation.zip(voxSize_mm).map(cs => (cs._1 - ((Config.CBCTBBPenumbra_mm * 4) / cs._2)).round.toInt)
 
@@ -279,6 +282,7 @@ object BBbyCBCTAnalysis extends Logging {
       def fmt(d: Double) = d.formatted("%12.7f")
       def fmtPoint(point: Point3d): String = fmt(point.getX) + ",  " + fmt(point.getY) + ",  " + fmt(point.getZ)
       logger.info("BB found in CBCT" +
+        "\n    ImagePositionPatient first slice: " + volTrans.ImagePositionPatient +
         "\n    coordinates in voxels: " + fmtPoint(fineLocation_vox.get) +
         "\n    frame of ref coordinates in mm: " + fmtPoint(fineLocation_mm))
       val imageXYZ = makeImagesXYZ(entireVolume, fineLocation_vox.get, fineLocation_mm, voxSize_mm)
