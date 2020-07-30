@@ -25,11 +25,11 @@ object BBbyEPIDAnalyse extends Logging {
 
   /**
    * Translate BB position in ISO plane to RTPLAN coordinates
-   * 
+   *
    * @param epid EPID DICOM
-   * 
+   *
    * @param bbLocation in EPID translated to mm
-   * 
+   *
    * @param extendedData Associated DB rows
    */
   private def toBBbyEPID(epid: AttributeList, bbLocation: Either[String, Point2d], extendedData: ExtendedData): Option[BBbyEPID] = {
@@ -173,7 +173,8 @@ object BBbyEPIDAnalyse extends Logging {
     try {
       logger.info("Starting analysis of EPID Alignment for machine " + extendedData.machine.id)
 
-      val bbLocList = runReq.epidList.par.map(epid => BBbyEPIDImageAnalysis.findBB(epid)).toList
+      //val bbLocList = runReq.epidList.par.map(epid => BBbyEPIDImageAnalysis.findBB(epid)).toList  // TODO put back
+      val bbLocList = runReq.epidList.map(epid => BBbyEPIDImageAnalysis.findBB(epid)).toList // TODO rm
 
       val dbList = runReq.epidList.zip(bbLocList).map(er => toBBbyEPID(er._1, er._2, extendedData))
 
