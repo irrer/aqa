@@ -1,0 +1,247 @@
+<div title="Daily QA CBCT" class="col-md-10 col-md-offset-1">
+
+    <h2>@@title@@</h2>
+    <p>
+        The goal is to determine how closely a bb in a phantom is aligned with the plan isocenter.
+    </p>
+
+    <h3>Processing</h3>
+    <p>
+        The first step is to determine the bb's location within the CBCT volume. A 3D volume is constructed, and a VOI (volume of interest is
+        searched for the bb. The reasons for limiting the search
+        volume are:
+    </p>
+    <ul>
+        <li>The bb must be within a bounded volume or the test will fail.</li>
+        <li>Avoiding objects elsewhere in the image that would make recognizing the bb difficult if not impossible.</li>
+        <li>Computational efficiency.</li>
+    </ul>
+
+    <p>
+        All possible sub-volumes of the VOI are searched of size 4*4*2 (X*Y*Z) voxels. The sub-volume with the largest sum of voxel values
+        is assumed to be a coarse location for the bb.
+    </p>
+
+    <p>
+        Next, a sub-volume is taken that is slightly larger than the actual size of the bb (the size of the bb is a configuration value) centered
+        on the coarse location. The sub-volume is summed across
+        the 3 different axis to create 3 one-dimensional arrays. The profile of each
+        array is analyzed with a center of mass algorithm to determine the exact center of the bb in each dimension. As a
+        further check, the magnitude
+        of the 'bump' in each profile created by the bb is checked to ensure that it is above a given number (configured value) of standard deviations
+        to reject random image
+        noise.
+    </p>
+
+    <p></p>
+    <div>
+        Given the bb's location in pixels $x_{pix}, y_{pix}, z_{pix}$, the location is converted to the frame of reference $x_{for}, y_{for}, z_{for}$ in mm by multiplying the X and Y coordinates
+        by
+        the
+        <b>PixelSpacing</b>
+        for X and Y,
+        and the Z coordinate by the
+        <b>SliceThickness</b>
+        . The result is offset by the
+        <b>ImagePositionPatient</b>
+        from the slice with the lowest Z coordinate value:
+
+        $$x_{for} = x_{pix} \times PixelSpacing(0) + x_{ImagePositionPatient}$$
+        $$y_{for} = y_{pix} \times PixelSpacing(1) + y_{ImagePositionPatient}$$
+        $$z_{for} = z_{pix} \times SliceThickness + z_{ImagePositionPatient}$$
+
+        <ul>
+            <li>
+                <b>0028,0030 PixelSpacing</b>
+                : Physical distance in the patient between the center of each pixel, specified by a numeric pair - adjacent row spacing (delimiter) adjacent column spacing in mm
+            </li>
+            <li>
+                <b>0018,0050 SliceThickness</b>
+                : Nominal slice thickness, in mm.
+            </li>
+            <li>
+                <b>0020,0032 ImagePositionPatient</b>
+                : The x, y, and z coordinates of the upper left hand corner (center of the first voxel transmitted) of the image, in mm.
+            </li>
+        </ul>
+    </div>
+    <p></p>
+
+
+    <p>
+        The coordinates in mm are then translated to the RTPLAN frame of reference. To do this, a DICOM REG file is
+        found (note the DICOM uses a UID, aka unique id, to identify frames of reference)
+        that
+        references both the
+        CBCT's frame of reference and the RTPLAN's frame of reference as shown in the diagram below.
+    </p>
+
+    <div style="margin:10px; border: 1px solid lightgrey;">
+        <img src="CBCT_REG_RTPLAN.png" style="margin:30px;" />
+    </div>
+
+
+
+    <p>
+        Standard linear algebra is used to multiply
+        the vector by the $4\times4$ matrix contained in the DICOM REG file as
+        <b>FrameOfReferenceTransformationMatrix</b>
+        . The resulting vector is the bb's
+        $X,Y,Z$ location in the RTPLAN's frame of reference. The RTPLAN
+        <b>IsocenterPosition</b>
+        is subtracted from the result to get the error between CBCT and isocenter:
+
+        $$X_{error} = X_{CBCT} - X_{PLAN}$$
+        $$Y_{error} = Y_{CBCT} - Y_{PLAN}$$
+        $$Z_{error} = Z_{CBCT} - Z_{PLAN}$$
+    </p>
+
+    <div>
+        DICOM attributes used to map the CBCT's frame of reference to the RTPLAN's frame of reference:
+        <ul>
+            <li>
+                <b>0020,0052 FrameOfReferenceUID </b>
+                : The Frame of Reference UID shall be used to uniquely identify a Frame of Reference for a Series.
+                <p></p>
+            </li>
+            <li>
+                <b>3006,00C6 FrameOfReferenceTransformationMatrix</b>
+                : The Frame of Reference Transformation Matrix (in the REG file) describes
+                how to transform a point (Bx,By,Bz) into (Ax,Ay,Az) according to the
+                equation below (For REG files this is the
+                RTPLAN
+                <b>FrameOfReference</b>
+                ):
+                <br />
+                <img src="MatrixTransform.png" width="300" style="margin:20px;" />
+                <p></p>
+            </li>
+            <li>
+                <b>0070,0308 RegistrationSequence</b>
+                : A Sequence of registration Items. Each Item defines a spatial registration of the images referenced in that
+                Item to the Registered RCS established by this SOP Instance. All referenced
+                images are in the same spatial\
+                Frame of Reference or atlas. This sequence contains the CBCT
+                <b>FrameOfReference</b>
+                .
+                <p></p>
+            </li>
+            <li>
+                <b>300A,012C IsocenterPosition</b>
+                : Isocenter coordinates (x,y,z) in the Patient-Based Coordinate System. (from the RTPLAN file)
+                <p></p>
+            </li>
+        </ul>
+    </div>
+
+    <p>
+        There is a special case where the CBCT has the same frame of reference as the RTPLAN, and no matrix transformation
+        is necessary. While the analysis will be performed, the results may or may not
+        be useful. In practice this should not occur, but the software does support it.
+    </p>
+
+    <h3>Example CBCT Processing</h3>
+
+    <h4>Input Data</h4>
+    The following values were taken from actual machine values:
+
+    <p style="margin-left:40px;">
+        <br />
+        <b>PixelSpacing</b>
+        : 0.51119 \ 0.51119
+        <br />
+        <b>SliceThickness</b>
+        : 1.98972453680719
+        <br />
+        coarse location in voxels: 276, 239, 49 (calculated from volume)
+        <br />
+        fine location in voxels: 275.863, 238.8094845, 48.478 (calculated from volume)
+        <br />
+        <b>ImagePositionPatient</b>
+        of first slice: -130.2839, -130.70374936618, -91.855446207549
+        <br />
+        <b>FrameOfReferenceTransformationMatrix</b>
+        :
+        $$
+        \left[
+        \begin{array}{cccc}
+        0.999994& -0.000017& 0.003545&
+        -6.006019\\
+        0.000021& 0.999999& -0.001028& 171.213262\\
+        -0.003545& 0.001028& 0.999993& 59.937419\\
+        1.0& 0.000000& 0.000000& 1.000000
+        \end{array}
+        \right]
+        $$
+
+        <br />
+        <b>IsocenterPosition</b>
+        : 4.221317, 162.6656, 64.92423
+    </p>
+
+    <br />
+    <h4>Calculations</h4>
+    <p></p>
+    Determine coordinates of bb in CBCT frame of reference in mm:
+    $$ X = 275.863 \times 0.51119 + -130.2839 = 10.7349192 $$
+    $$ Y = 238.8094845 \times 0.51119 + -130.70374936618 = -8.6265526 $$
+    $$ Z =
+    48.478
+    \times 1.98972453680719 + -91.855446207549 = 4.6017616 $$
+
+    <br />
+    <p></p>
+
+    Transform with matrix to RTPLAN coordinates:
+
+    $$
+    \left[
+    \begin{array}{c}
+    10.7349192\\
+    -8.6265526\\
+    4.6017616\\
+    0
+    \end{array}
+    \right]
+
+    \times
+
+    \left[
+    \begin{array}{cccc}
+    0.999994& -0.000017& 0.003545&
+    -6.006019\\
+    0.000021& 0.999999& -0.001028& 171.213262\\
+    -0.003545& 0.001028& 0.999993& 59.937419\\
+    1.0& 0.000000& 0.000000& 1.000000
+    \end{array}
+    \right]
+
+    =
+
+    \left[
+    \begin{array}{c}
+    4.745294\\
+    162.582208\\
+    64.492228\\
+    1.0
+    \end{array}
+    \right]
+    $$
+
+    Subtract the RTPLAN isocenter from the CBCT coordinates to determine the error:
+
+    $$
+    X_{error} = 4.745294 - 4.221317 = 0.52398
+    $$
+    $$
+    Y_{error} = 162.582208 - 162.6656 = 0.083384
+    $$
+    $$
+    Z_{error} =
+    64.492228 - 64.92423 = -0.43202
+    $$
+
+
+<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+</div>
