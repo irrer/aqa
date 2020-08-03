@@ -53,14 +53,14 @@ class TestCBCTAnalysis extends FlatSpec with Matchers {
       println("Number of slices in series: " + attrListSeq.size)
       val result = BBbyCBCTAnalysis.volumeAnalysis(attrListSeq)
 
-      val point = result.right.get._1
-      val bufImgList = result.right.get._2
+      val point = result.right.get.cbctFrameOfRefLocation_mm
+      val bufImgList = result.right.get.imageXYZ
       writeImages(dir.getName, bufImgList)
       def fmt(d: Double) = d.formatted("%12.7f")
       println("BB    coordinates of " + fmt(point.getX) + " " + fmt(point.getY) + " " + fmt(point.getZ) + "  " + dir.getName)
       val voxCoords = (new VolumeTranslator(attrListSeq)).mm2vox(point)
       if (true) { // TODO rm
-      println("Voxel coordinates of " + fmt(voxCoords.getX) + " " + fmt(voxCoords.getY) + " " + fmt(voxCoords.getZ) + "  " + dir.getName)
+        println("Voxel coordinates of " + fmt(voxCoords.getX) + " " + fmt(voxCoords.getY) + " " + fmt(voxCoords.getZ) + "  " + dir.getName)
       }
       (result.isRight) should be(true) // Expected voxel coordinates: 246, 262, 42
     }

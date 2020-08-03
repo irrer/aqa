@@ -100,8 +100,8 @@ object BBbyCBCTExecute extends Logging {
       logger.info("Starting analysis of CBCT Alignment for machine " + extendedData.machine.id)
       val result = BBbyCBCTAnalysis.volumeAnalysis(runReq.cbctList)
       if (result.isRight) {
-        val volumePoint = result.right.get._1
-        val imageXYZ = result.right.get._2
+        val volumePoint = result.right.get.cbctFrameOfRefLocation_mm
+        val imageXYZ = result.right.get.imageXYZ
         logger.info("Found BB in CBCT volume.  XYZ Coordinates in original CBCT space: " +
           Util.fmtDbl(volumePoint.getX) + ", " + Util.fmtDbl(volumePoint.getY) + ", " + Util.fmtDbl(volumePoint.getZ))
 
@@ -125,7 +125,7 @@ object BBbyCBCTExecute extends Logging {
         val bbByCBCT = saveToDb(extendedData, runReq, bbPointInRtplan)
         logger.info("err_mm: " + bbByCBCT.err_mm.toString)
         val annotatedImages = BBbyCBCTAnnotateImages.annotate(bbByCBCT, imageXYZ, runReq, volumePoint)
-        val html = BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, annotatedImages, ProcedureStatus.done, runReq)
+        val html = BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, annotatedImages, ProcedureStatus.done, runReq, result.right.get)
         logger.info("Finished analysis of CBCT Alignment for machine " + extendedData.machine.id)
         ProcedureStatus.pass
       } else {

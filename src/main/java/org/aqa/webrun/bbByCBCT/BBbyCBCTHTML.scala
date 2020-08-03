@@ -23,10 +23,13 @@ import org.aqa.Config
 import com.pixelmed.dicom.AttributeTag
 import org.aqa.web.OutputList
 import org.aqa.Logging
+import javax.vecmath.Point3d
 
 object BBbyCBCTHTML extends Logging {
 
   private val axisNameList = Seq("X Axis : side", "Y Axis : top", "Z Axis : longitudinal")
+  private val matlabFileName = "matlab.txt"
+
   private val axisTitleList = Seq(
     "View as seen while standing by the side of the couch and looking horizontally.",
     "View as seen from leaning over the side of the couch and looking down.",
@@ -311,7 +314,89 @@ object BBbyCBCTHTML extends Logging {
       <a href={ htmlRtplanFileName } title={ "View / download RTPLAN DICOM" }>RTPLAN DICOM</a>
     }
   }
-  def generateHtml(extendedData: ExtendedData, bbByCBCT: BBbyCBCT, imageSet: BBbyCBCTAnnotateImages.ImageSet, status: ProcedureStatus.Value, runReq: BBbyCBCTRunReq) = {
+
+  /**
+   * Create a Matlab script that will do the calculations.  This is for visibility for the user.
+   */
+  private def makeMatlabScript(outputDir: File, cbctAnalysisResult: BBbyCBCTAnalysis.CBCTAnalysisResult, runReq: BBbyCBCTRunReq): Unit = {
+
+    val ls = System.lineSeparator
+    val vs = cbctAnalysisResult.volumeTranslator.voxSize
+    def d2Txt(name: String, pt: Point3d): String = {
+      name + " = [ " + pt.getX + " " + pt.getY + " " + pt.getZ + " ];"
+    }
+
+    val coarseLocation_vox = {
+      val d = new Point3d(cbctAnalysisResult.coarseLoction_vox.getX, cbctAnalysisResult.coarseLoction_vox.getY, cbctAnalysisResult.coarseLoction_vox.getZ)
+      "%% Coarse location of bb in voxel coordinates (not used in calculations)" + ls +
+        d2Txt("coarseLocation_vox", d)
+    }
+
+    val fineLocation_vox = {
+      "%% Fine location of bb in voxel coordinates" + ls +
+        d2Txt("fineLocation_vox", cbctAnalysisResult.fineLocation_vox)
+    }
+
+    val ipp = cbctAnalysisResult.volumeTranslator.ImagePositionPatient.toArray
+    //val ImagePositionPatient = d2Txt("", new Point3d(ipp))
+
+    val voxelSize = {
+      "%% XYZ dimensions of a voxel in mm" + ls +
+        "PixelSpacingX = " + cbctAnalysisResult.volumeTranslator.voxSize(0) + ";" + ls +
+        "PixelSpacingY = " + cbctAnalysisResult.volumeTranslator.voxSize(1) + ";" + ls +
+        "SliceThickness = " + cbctAnalysisResult.volumeTranslator.voxSize(2) + ";"
+    }
+
+    val cbctFor = {
+      val fl = cbctAnalysisResult.fineLocation_vox
+      "%% XYZ coordinates of bb in CBCT frame of reference in mm" + ls +
+        "xFor = fineLocation_vox(1) * " + vs(0) + " + " + ipp(0) + ";" + ls +
+        "yFor = fineLocation_vox(2) * " + vs(1) + " + " + ipp(1) + ";" + ls +
+        "zFor = fineLocation_vox(3) * " + vs(2) + " + " + ipp(2) + ";" + ls +
+        "cbctFor = [ xFor yFor zFor 1.0 ];" + ls
+    }
+
+    val matrix = {
+      val m = runReq.imageRegistration.get.getMatrix
+
+        "FrameOfReferenceTransformationMatrix = [ " + ls +
+        m.m00 + " " + m.m10 + " " + m.m20 + " " + m.m30 + ";" + ls +
+        m.m01 + " " + m.m11 + " " + m.m21 + " " + m.m31 + ";" + ls +
+        m.m02 + " " + m.m12 + " " + m.m22 + " " + m.m32 + ";" + ls +
+        m.m03 + " " + m.m13 + " " + m.m23 + " " + m.m33 + " ];"
+    }
+
+    val cbctRtplanFor = {
+      "%% Position of CBCT in RTPLAN FOR (frame of reference) in mm" + ls +
+        "cbctRtplanFor = cbctFor * FrameOfReferenceTransformationMatrix;" + ls +
+        "cbctRtplanFor = [ cbctRtplanFor(1) cbctRtplanFor(2) cbctRtplanFor(3) ];  %% Discard fourth vector value" + ls
+    }
+
+    val isocenterPositionDbl = Util.getPlanIsocenterList(runReq.rtplan).head
+    val isocenterPosition = {
+      "%% Isocenter of plan in RTPLAN frame of reference in mm" + ls +
+        d2Txt("IsocenterPosition", isocenterPositionDbl)
+    }
+
+    val error = {
+      "%% XYZ error of CBCT - PLAN isocenter" + ls +
+        "XYZerror = cbctRtplanFor - IsocenterPosition;" + ls +
+        "XYZerror"
+    }
+
+    val text = Seq(coarseLocation_vox, fineLocation_vox, voxelSize, cbctFor, matrix, cbctRtplanFor, isocenterPosition, error).mkString(ls + ls) + ls
+
+    val file = new File(outputDir, matlabFileName)
+    logger.info("Writing matlab code file: " + file.getAbsolutePath + "\n" + text)
+    Util.writeFile(file, text)
+  }
+
+  /**
+   * Make the HTML.
+   */
+  def generateHtml(extendedData: ExtendedData, bbByCBCT: BBbyCBCT,
+    imageSet: BBbyCBCTAnnotateImages.ImageSet, status: ProcedureStatus.Value,
+    runReq: BBbyCBCTRunReq, cbctAnalysisResult: BBbyCBCTAnalysis.CBCTAnalysisResult) = {
 
     val outputDir = extendedData.output.dir
 
@@ -442,6 +527,7 @@ object BBbyCBCTHTML extends Logging {
             { Seq(2, 1, 0).map(index => makeSet(index)) }
           </tr>
         </table>
+        <a href={ matlabFileName }>Matlab Script showing calculations</a>
       </div>
     }
 
@@ -462,6 +548,7 @@ object BBbyCBCTHTML extends Logging {
     val text = WebUtil.wrapBody(wrap(mainContent, extendedData), "BB Location by CBCT", None, true, Some(runScript))
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(file, text)
+    makeMatlabScript(outputDir, cbctAnalysisResult, runReq)
 
     //makeCbctSlices(extendedData, runReq)
   }

@@ -177,7 +177,7 @@ object BBbyCBCTAnalysis extends Logging {
    * the BB (from the 3 orthogonal axis).   The voxels are averaged in along the relevant axis to
    * produce a 2-D image.
    */
-  private def makeImagesXYZ(entireVolume: DicomVolume, fineLocation_vox: Point3d, fineLocation_mm: Point3d, voxSize: Seq[Double]): Seq[BufferedImage] = {
+  private def makeImagesXYZ(entireVolume: DicomVolume, fineLocation_vox: Point3d, cbctForLocation_mm: Point3d, voxSize: Seq[Double]): Seq[BufferedImage] = {
 
     val mm = Config.CBCTBBPenumbra_mm * 4
 
@@ -207,13 +207,15 @@ object BBbyCBCTAnalysis extends Logging {
     bufImgList
   }
 
+  case class CBCTAnalysisResult(coarseLoction_vox: Point3i, fineLocation_vox: Point3d, volumeTranslator: VolumeTranslator, cbctFrameOfRefLocation_mm: Point3d, imageXYZ: Seq[BufferedImage])
+
   /**
    * Look in a center cubic volume of the CBCT set for the BB.
    *
    * The BB must be within a certain distance or the test fails.  Taking advantage of this
    * requirement greatly speeds the algorithm because it has fewer voxels to search.
    */
-  def volumeAnalysis(cbctSeries: Seq[AttributeList]): Either[String, (Point3d, Seq[BufferedImage])] = {
+  def volumeAnalysis(cbctSeries: Seq[AttributeList]): Either[String, CBCTAnalysisResult] = {
     val sorted = Util.sortByZ(cbctSeries)
 
     val voxSize_mm = Util.getVoxSize_mm(sorted) // the size of a voxel in mm
@@ -224,7 +226,7 @@ object BBbyCBCTAnalysis extends Logging {
 
     val searchVolume = entireVolume.getSubVolume(searchStart, searchSize) // sub-volume of the CBCT volume to be searched for the BB.
 
-    val coarse = {
+    val coarse_vox = {
       val size = new Point3i(4, 4, 2)
       val high = searchVolume.getHighest(size)
       high.add(searchStart)
@@ -253,11 +255,13 @@ object BBbyCBCTAnalysis extends Logging {
       high.add(sizePixOffset)
       high
     }
-    val coarseLocation = Seq(coarse.getX.toDouble, coarse.getY.toDouble, coarse.getZ.toDouble)
 
-    logger.info("coarseLocation in pixels: " + coarse)
+    logger.info("coarseLocation in pixels: " + coarse_vox)
 
-    val bbVolumeStart = coarseLocation.zip(voxSize_mm).map(cs => (cs._1 - ((Config.CBCTBBPenumbra_mm * 4) / cs._2)).round.toInt)
+    val bbVolumeStart = {
+      val coarseLocation = Seq(coarse_vox.getX.toDouble, coarse_vox.getY.toDouble, coarse_vox.getZ.toDouble)
+      coarseLocation.zip(voxSize_mm).map(cs => (cs._1 - ((Config.CBCTBBPenumbra_mm * 4) / cs._2)).round.toInt)
+    }
 
     // sub-volume of the entire volume that contains just the BB according to the coarse location.
     val bbVolume = {
@@ -275,18 +279,20 @@ object BBbyCBCTAnalysis extends Logging {
       } else None
     }
 
-    val volTrans = new VolumeTranslator(sorted)
+    val volumeTranslator = new VolumeTranslator(sorted)
     // fine location in mm coordinates
     if (fineLocation_vox.isDefined) {
-      val fineLocation_mm = volTrans.vox2mm(fineLocation_vox.get)
+      val cbctForLocation_mm = volumeTranslator.vox2mm(fineLocation_vox.get)
       def fmt(d: Double) = d.formatted("%12.7f")
       def fmtPoint(point: Point3d): String = fmt(point.getX) + ",  " + fmt(point.getY) + ",  " + fmt(point.getZ)
       logger.info("BB found in CBCT" +
-        "\n    ImagePositionPatient first slice: " + volTrans.ImagePositionPatient +
+        "\n    ImagePositionPatient first slice: " + volumeTranslator.ImagePositionPatient +
         "\n    coordinates in voxels: " + fmtPoint(fineLocation_vox.get) +
-        "\n    frame of ref coordinates in mm: " + fmtPoint(fineLocation_mm))
-      val imageXYZ = makeImagesXYZ(entireVolume, fineLocation_vox.get, fineLocation_mm, voxSize_mm)
-      Right(fineLocation_mm, imageXYZ)
+        "\n    frame of ref coordinates in mm: " + fmtPoint(cbctForLocation_mm))
+      val imageXYZ = makeImagesXYZ(entireVolume, fineLocation_vox.get, cbctForLocation_mm, voxSize_mm)
+      val result = new CBCTAnalysisResult(coarse_vox, fineLocation_vox.get, volumeTranslator, cbctForLocation_mm: Point3d, imageXYZ)
+      Right(cbctForLocation_mm, imageXYZ)
+      Right(result)
     } else {
       Left("No BB found")
     }

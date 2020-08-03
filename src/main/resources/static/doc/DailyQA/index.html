@@ -1,0 +1,92 @@
+<div title="Daily QA" class="col-md-10 col-md-offset-1">
+
+    <h2>@@title@@</h2>
+    <!-- 
+    <p>
+        To perform the complete Daily QA procedure, a CBCT of the phantom with bb is
+        captured, the table is moved, and then two EPID (MV) images are captured at orthogonal angles.
+    </p>
+     -->
+
+    <h3>Processing</h3>
+    <div>
+        The
+        <a href="../DailyQACBCT/index.html">Daily QA CBCT</a>
+        procedure yields the $X,Y,Z$ for $CBCT - RTPLAN$. After the table
+        is moved, two EPID images are captured at orthogonal angles. The EPID images produce two sets of
+        <a href="../IsoplaneProjection/index.html">values in XY coordinates</a>
+        , which are converted to RTPLAN (a.k.a. world) coordinates using the following:
+        <p>
+        </p>
+        <ul>
+            <li>
+                <b>3002,000D XRayImageReceptorTranslation</b>
+                $X_{vertT}, Y_{vertT}, X_{horzT}, Y_{horzT}, $
+                :
+                Position in (x,y,z) coordinates of origin of IEC X-RAY IMAGE RECEPTOR System in the IEC GANTRY
+                coordinate system mm (from RTIMAGE). The X
+                and Y are used from both the vertical and horizontal
+                EPID images.
+                <p>
+                </p>
+            </li>
+            <li>
+                <b>300A,011E GantryAngle</b>
+                $(G_{vert}, G_{horz})$
+                :
+                Treatment machine gantry angle, i.e., orientation of IEC GANTRY coordinate system with respect to IEC FIXED REFERENCE coordinate
+                system in degrees (from RTIMAGE).
+                Angles from the vertical and horizontal EPID images are used.
+                <p>
+                </p>
+            </li>
+            <li>
+                $X_{vert}$:
+                The bb X position in from the EPID image with a vertical gantry angle in image plane coordinates.
+                <p>
+                </p>
+            </li>
+            <li>
+                $X_{horz}$:
+                The bb X position in from the EPID image with a horizontal gantry angle in image plane coordinates.
+                <p>
+                </p>
+            </li>
+            <li>
+                $Y_{vert},Y_{horz}$:
+                The bb Y positions in from each of the two EPID images in image plane coordinates.
+                <p>
+                </p>
+            </li>
+            <li>
+                $X_{CBCT},Y_{CBCT},Z_{CBCT}$:
+                The bb position in from the CBCT analysis in RTPLAN coordinates.
+                <p>
+                </p>
+            </li>
+        </ul>
+
+        <it>Image plane coordinates are the same as gantry plane coordinates except that the Y axis is in the opposite direction.</it>
+
+        <p>
+            This produces the EPID position by converting from gantry coordinates to RTPLAN coordinates.
+        </p>
+
+        $$ MV G horizontal (BB - DIGITAL_CAX) @ ISOCENTER PLANE = Y_{epid} = sin(G_{horz}) \times (X_{horz} - X_{vertT}) $$
+        $$ MV G vertical (BB - DIGITAL_CAX) @ ISOCENTER PLANE = X_{epid} =
+        cos(G_{vert}) \times (X_{vert} - X_{horzT}) $$
+        $$ Z_{epid} = { { (-Y_{vert}) - Y_{vertT} - (-Y_{horz}) - Y_{horzT} }
+        \over 2 } $$
+        <p>
+            The $Z_{epid}$ is the average of the vertical and horizontal angles. If more than two EPID images are available, then
+            $Z_{epid}$ is the average of the values such that there are the same
+            number of vertical and horizontal images. For example,
+            if there were two horizontal images and three vertical images, then it would be the average of the two horizontal images and
+            two
+            randomly chosen of the three vertical images.
+        </p>
+    </div>
+
+<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+</div>

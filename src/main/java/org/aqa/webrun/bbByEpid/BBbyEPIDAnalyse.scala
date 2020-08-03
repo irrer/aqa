@@ -49,7 +49,7 @@ object BBbyEPIDAnalyse extends Logging {
 
       val epid3DX_mm = Math.cos(gantryAngle_rad) * (bbLoc.getX - epidOffset.getX)
       val epid3DY_mm = Math.sin(gantryAngle_rad) * (bbLoc.getX - epidOffset.getX)
-      val epid3DZ_mm = -(bbLoc.getY - epidOffset.getY) // flip sign to directionally match coordinate system
+      val epid3DZ_mm = (-bbLoc.getY) - epidOffset.getY // flip sign to directionally match coordinate system
       val origin = new Point3d(0, 0, 0)
 
       def getDbl(tag: AttributeTag) = epid.get(tag).getDoubleValues.head
