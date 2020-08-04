@@ -30,6 +30,11 @@
             : Physical distance (in mm) between the center of each image pixel, specified by a numeric pair - adjacent row spacing (delimiter) adjacent column spacing.
         </li>
         <li>
+            <b>3002,0012 RTImagePosition</b>
+            : The x and y coordinates (in mm) of the upper left hand corner of the image, in the IEC X-RAY IMAGE RECEPTOR coordinate system. This is the
+            center of the first pixel transmitted.
+        </li>
+        <li>
             <b>0028,0010 Rows</b>
             : Number of rows (of pixels) in the image.
         </li>
@@ -47,15 +52,19 @@
         and horizontally.
     </p>
 
-
     <p style="margin: 10px;"></p>
 
     The scaling ratio defined by the beam's divergence is:
     $$divergence = { RTImageSID \over RadiationMachineSAD } $$
 
 
-    The image's center in pixels is:
-    $$PixCenter = (Columns -1) / 2, (Rows - 1) / 2 $$
+    The center of the image's top left corner pixel in isoplane coordinates in mm is
+    below. Note
+    that the $Y$ axis is negated to make the coordinate system more similar to RTPLAN (world)
+    coordinates, with both coordinates in the top left being negative.:
+    $$ TopLeft =
+    RTImagePosition_X /
+    divergence, -RTImagePosition_Y / divergence$$
 
     <p style="margin: 10px;"></p>
 
@@ -63,11 +72,11 @@
 
     The X and Y isoplane positions are calculated from the X and Y pixel positions;
 
-    $$ iso_x = { { pix_x - PixCenter_x} \over { divergence / PixelSpacingX }} $$
+    $$ iso_X = {{x \times ImagePlanePixelSpacing_X} \over divergence } + TopLeft_X $$
 
     <p style="margin: 10px;"></p>
 
-    $$ iso_y = { { pix_y - PixCenter_y} \over { divergence / PixelSpacingY }} $$
+    $$ iso_Y = {{y \times ImagePlanePixelSpacing_Y} \over divergence } + TopLeft_Y $$
 
     <p style="margin: 10px;"></p>
 
@@ -78,22 +87,25 @@
     $$RTImageSID = 1500$$
     $$RadiationMachineSAD = 1000$$
     $$ImagePlanePixelSpacing = 0.784, 0.784$$
+    $$RTImagePosition = -200.312, 150.136$$
     $$Rows = 384$$
     $$Columns = 512$$
 
-    Assume the following for the X,Y position in pixels:
+    Assume the following for the
+    X,Y position in pixels:
     $$pix_x, pix_y = 247, 189$$
 
     We calculate:
     $$divergence = 1500 / 1000 = 1.5$$
 
-    $$PixCenter = (512 - 1) / 2, (384 - 1) / 2 = 255.5, 191.5$$
+    $$ TopLeft = -200.312 / 1.5, -150.136 / 1.5 =
+    -133.54133, -100.090667$$
 
-    $$iso_x = { { 247 - 255.5 } \over { 1.5 / 0.784 }} = -4.44267$$
+    $$ iso_X = {{247 \times 0.784} \over 1.5 } + -133.54133 = -4.442663$$
 
     <p style="margin: 10px;"></p>
 
-    $$iso_y = { { 189 - 191.5} \over { 1.5 / 0.784 }} = -1.30667$$
+    $$ iso_Y = {{189 \times 0.784} \over 1.5 } + -100.090667 = -1.306667$$
 
 <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
