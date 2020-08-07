@@ -121,7 +121,7 @@ object BBbyEPIDAnalyse extends Logging {
     val topLeft = {
       val comment = "%% The center of the image's top left corner pixel in isoplane coordinates in mm."
       val x = "TopLeft" + name + "X = RTImagePosition" + name + "X / divergence" + name + ";"
-      val y = "TopLeft" + name + "Y = RTImagePosition" + name + "Y / divergence" + name + ";"
+      val y = "TopLeft" + name + "Y = -RTImagePosition" + name + "Y / divergence" + name + ";"
       comment + ls + x + ls + y
     }
 
@@ -145,41 +145,57 @@ object BBbyEPIDAnalyse extends Logging {
 
     val xy = {
       if (isVert(result.al))
-        "epidX = cos(deg2rad(gantryAngleVert)) * (epidIsoVertX - VertTX);"
+        "epidIsoX = cos(deg2rad(gantryAngleVert)) * (epidIsoVertX - VertTX);"
       else
-        "epidY = sin(deg2rad(gantryAngleHorz)) * (epidIsoHorzX - HorzTX);"
+        "epidIsoY = sin(deg2rad(gantryAngleHorz)) * (epidIsoHorzX - HorzTX);"
     }
 
     val z = "epid" + name + "Z = (-epidIso" + name + "Y) - " + name + "TY;"
 
+    val summary = {
+      val ga = Util.angleRoundedTo90(Util.gantryAngle(result.al))
+      if (isVert(result.al)) {
+        """fprintf("MV G %d (BB - DIGITAL_CAX) @ ISOCENTER PLANE:  %f   NA  %f  %f\n", """ + ga + ", epidIsoX, epidVertZ, sqrt(epidIsoX*epidIsoX + epidVertZ*epidVertZ));" + ls +
+          """fprintf("MV G %d (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f   NA  %f  %f\n", """ + ga + ", epidIsoX - cbctX, epidVertZ - cbctZ, sqrt((epidIsoX - cbctX)*(epidIsoX - cbctX) + (epidVertZ - cbctZ)*(epidVertZ - cbctZ)));"
+      } else {
+        """fprintf("MV G %d (BB - DIGITAL_CAX) @ ISOCENTER PLANE:  NA   %f  %f  %f\n", """ + ga + ", epidIsoY, epidHorzZ, sqrt(epidIsoY*epidIsoY + epidHorzZ*epidHorzZ));" + ls +
+          """fprintf("MV G %d (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f   NA  %f  %f\n", """ + ga + ", epidIsoY - cbctY, epidHorzZ - cbctZ, sqrt((epidIsoY - cbctY)*(epidIsoY - cbctY) + (epidHorzZ - cbctZ)*(epidHorzZ - cbctZ)));"
+      }
+    }
+
     val text = Seq(epidComment, RTImageSID, RadiationMachineSAD,
       ImagePlanePixelSpacing, RTImagePosition, pix, divergence,
       topLeft, iso, XRayImageReceptorTranslation,
-      gantryAngleText, xy, z).mkString(ls + ls)
+      gantryAngleText, xy, z, summary).mkString(ls + ls)
 
     text
   }
 
   private def constructCompositeMatlab(epidResultList: Seq[(BBbyEPID, BBbyEPIDImageAnalysis.Result)], bbByCBCT: BBbyCBCT): String = {
-    val separator = ls + "%% ------------------------------------------------------------------" + ls
+    val separator = ls + ls + "%% ------------------------------------------------------------------" + ls + ls
 
-    val epidText = epidResultList.map(er => constructEpidMatlab(er._2)).mkString(separator)
+    val epidText = epidResultList.map(er => constructEpidMatlab(er._2))
 
     val z = "epidIsoZ = (epidVertZ + epidHorzZ) / 2.0;"
 
     val cbctXYZ = {
-      "cbctX = " + bbByCBCT.cbctX_mm + " - " + bbByCBCT.rtplanX_mm + ";" + ls +
+      "%% Results from CBCT" + ls +
+        "cbctX = " + bbByCBCT.cbctX_mm + " - " + bbByCBCT.rtplanX_mm + ";" + ls +
         "cbctY = " + bbByCBCT.cbctY_mm + " - " + bbByCBCT.rtplanY_mm + ";" + ls +
         "cbctZ = " + bbByCBCT.cbctZ_mm + " - " + bbByCBCT.rtplanZ_mm + ";"
     }
 
     val answer = {
-      "epidMinuscbctX = epidIsoVertX - cbctX;" + ls +
-        "epidMinuscbctY = epidIsoHorzY - cbctY;" + ls +
-        "epidMinuscbctZ = epidIsoZ - cbctZ;"
+      "epidMinuscbctX = epidIsoX - cbctX;" + ls +
+        "epidMinuscbctY = epidIsoY - cbctY;" + ls +
+        "epidMinuscbctZ = epidIsoZ - cbctZ;" + ls + ls +
+        """fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f   %f  %f  %f\n", """ +
+        "epidIsoX - cbctX, epidIsoY - cbctY, epidIsoZ - cbctZ, sqrt((epidIsoX - cbctX)*(epidIsoX - cbctX) + (epidIsoY - cbctY)*(epidIsoY - cbctY) + (epidIsoZ - cbctZ)*(epidIsoZ - cbctZ)));"
     }
 
-    val allText = epidText + separator + z + Seq(z, cbctXYZ, answer).mkString(ls + ls) + ls
+    val textList = Seq(cbctXYZ) ++ epidText ++ Seq(z, answer)
+
+    val allText = textList.mkString(separator) + ls + ls
     allText
   }
 

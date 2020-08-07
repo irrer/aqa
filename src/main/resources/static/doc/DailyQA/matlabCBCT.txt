@@ -1,0 +1,36 @@
+%% Coarse location of bb in voxel coordinates (not used in calculations)
+coarseLocation_vox = [ 233.0 222.0 69.0 ];
+
+%% Fine location of bb in voxel coordinates
+fineLocation_vox = [ 232.264672350208 221.561191038976 68.03404063490126 ];
+
+%% XYZ dimensions of a voxel in mm
+PixelSpacingX = 0.5;
+PixelSpacingY = 0.5;
+SliceThickness = 1.0;
+
+%% XYZ coordinates of bb in CBCT frame of reference in mm
+xFor = fineLocation_vox(1) * 0.5 + -255.75;
+yFor = fineLocation_vox(2) * 0.5 + -255.75;
+zFor = fineLocation_vox(3) * 1.0 + -80.0;
+cbctFor = [ xFor yFor zFor 1.0 ];
+
+
+FrameOfReferenceTransformationMatrix = [ 
+1.0 0.0 0.0 0.0;
+0.0 1.0 0.0 0.0;
+0.0 0.0 1.0 0.0;
+143.908535045972 307.632190447291 76.9845249998087 1.0 ];
+
+%% Position of CBCT in RTPLAN FOR (frame of reference) in mm
+cbctRtplanFor = cbctFor * FrameOfReferenceTransformationMatrix;
+cbctRtplanFor = [ cbctRtplanFor(1) cbctRtplanFor(2) cbctRtplanFor(3) ];  %% Discard fourth vector value
+
+
+%% Isocenter of plan in RTPLAN frame of reference in mm
+IsocenterPosition = [ 4.25078125 162.761718750001 64.9242520210991 ];
+
+%% XYZ error of CBCT - PLAN isocenter
+XYZerror = cbctRtplanFor - IsocenterPosition;
+XYZerror
+

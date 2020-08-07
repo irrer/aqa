@@ -1,0 +1,99 @@
+%% Results from CBCT
+cbctX = 4.290871221076003 - 4.25078125;
+cbctY = 162.662785966779 - 162.761718750001;
+cbctZ = 65.01856563470996 - 64.9242520210991;
+
+%% ------------------------------------------------------------------
+
+%% Perform isoplane projection and map to RTPLAN coordinates for beam Horz
+
+RTImageSIDHorz = 1500.0;
+
+RadiationMachineSADHorz = 1000.0;
+
+ImagePlanePixelSpacingHorzX = 0.784;
+ImagePlanePixelSpacingHorzY = 0.784;
+
+RTImagePositionHorzX = -200.312;
+RTImagePositionHorzY = 150.136;
+
+%% Coordinates in pixels where the bb was found.
+epidPixHorzX = 251.5558376312256;
+epidPixHorzY = 192.79168128967285;
+
+divergenceHorz = RTImageSIDHorz / RadiationMachineSADHorz;
+
+%% The center of the image's top left corner pixel in isoplane coordinates in mm.
+TopLeftHorzX = RTImagePositionHorzX / divergenceHorz;
+TopLeftHorzY = -RTImagePositionHorzY / divergenceHorz;
+
+%% The coordinates of the bb in the isoplane in mm.
+epidIsoHorzX = ((epidPixHorzX * ImagePlanePixelSpacingHorzX) / divergenceHorz) + TopLeftHorzX;
+epidIsoHorzY = ((epidPixHorzY * ImagePlanePixelSpacingHorzY) / divergenceHorz) + TopLeftHorzY;
+
+%% XRayImageReceptorTranslation values
+HorzTX = -0.9009703236419;
+HorzTY = 0.54420276482274;
+
+gantryAngleHorz = 270.0;
+
+epidIsoY = sin(deg2rad(gantryAngleHorz)) * (epidIsoHorzX - HorzTX);
+
+epidHorzZ = (-epidIsoHorzY) - HorzTY;
+
+fprintf("MV G %d (BB - DIGITAL_CAX) @ ISOCENTER PLANE:  NA   %f  %f  %f\n", 270, epidIsoY, epidHorzZ, sqrt(epidIsoY*epidIsoY + epidHorzZ*epidHorzZ));
+fprintf("MV G %d (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f   NA  %f  %f\n", 270, epidIsoY - cbctY, epidHorzZ - cbctZ, sqrt((epidIsoY - cbctY)*(epidIsoY - cbctY) + (epidHorzZ - cbctZ)*(epidHorzZ - cbctZ)));
+
+%% ------------------------------------------------------------------
+
+%% Perform isoplane projection and map to RTPLAN coordinates for beam Vert
+
+RTImageSIDVert = 1500.0;
+
+RadiationMachineSADVert = 1000.0;
+
+ImagePlanePixelSpacingVertX = 0.784;
+ImagePlanePixelSpacingVertY = 0.784;
+
+RTImagePositionVertX = -200.312;
+RTImagePositionVertY = 150.136;
+
+%% Coordinates in pixels where the bb was found.
+epidPixVertX = 251.32074165344238;
+epidPixVertY = 191.00031757354736;
+
+divergenceVert = RTImageSIDVert / RadiationMachineSADVert;
+
+%% The center of the image's top left corner pixel in isoplane coordinates in mm.
+TopLeftVertX = RTImagePositionVertX / divergenceVert;
+TopLeftVertY = -RTImagePositionVertY / divergenceVert;
+
+%% The coordinates of the bb in the isoplane in mm.
+epidIsoVertX = ((epidPixVertX * ImagePlanePixelSpacingVertX) / divergenceVert) + TopLeftVertX;
+epidIsoVertY = ((epidPixVertY * ImagePlanePixelSpacingVertY) / divergenceVert) + TopLeftVertY;
+
+%% XRayImageReceptorTranslation values
+VertTX = -0.3009313503531;
+VertTY = 0.23710557272485;
+
+gantryAngleVert = 0.0;
+
+epidIsoX = cos(deg2rad(gantryAngleVert)) * (epidIsoVertX - VertTX);
+
+epidVertZ = (-epidIsoVertY) - VertTY;
+
+fprintf("MV G %d (BB - DIGITAL_CAX) @ ISOCENTER PLANE:  %f   NA  %f  %f\n", 0, epidIsoX, epidVertZ, sqrt(epidIsoX*epidIsoX + epidVertZ*epidVertZ));
+fprintf("MV G %d (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f   NA  %f  %f\n", 0, epidIsoX - cbctX, epidVertZ - cbctZ, sqrt((epidIsoX - cbctX)*(epidIsoX - cbctX) + (epidVertZ - cbctZ)*(epidVertZ - cbctZ)));
+
+%% ------------------------------------------------------------------
+
+epidIsoZ = (epidVertZ + epidHorzZ) / 2.0;
+
+%% ------------------------------------------------------------------
+
+epidMinuscbctX = epidIsoX - cbctX;
+epidMinuscbctY = epidIsoY - cbctY;
+epidMinuscbctZ = epidIsoZ - cbctZ;
+
+fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f   %f  %f  %f\n", epidIsoX - cbctX, epidIsoY - cbctY, epidIsoZ - cbctZ, sqrt((epidIsoX - cbctX)*(epidIsoX - cbctX) + (epidIsoY - cbctY)*(epidIsoY - cbctY) + (epidIsoZ - cbctZ)*(epidIsoZ - cbctZ)));
+

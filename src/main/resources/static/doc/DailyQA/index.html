@@ -20,12 +20,21 @@
         </p>
         <ul>
             <li>
+                $CBCT_X,CBCT_Y,CBCT_Z$:
+                The bb position in from the CBCT analysis in RTPLAN coordinates minus the RTPLAN isocenter.
+                Calculated using
+                <a href="../DailyQACBCT/index.html">Daily QA CBCT.</a>
+                <p>
+                </p>
+            </li>
+            <li>
                 <b>3002,000D XRayImageReceptorTranslation</b>
                 $vertT_X, vertT_Y, horzT_X, horzT_Y, $
                 :
                 Position in (x,y,z) coordinates of origin of IEC X-RAY IMAGE RECEPTOR System in the IEC GANTRY
                 coordinate system mm (from RTIMAGE). The X
-                and Y are used from both the vertical and horizontal
+                and Y are
+                used from both the vertical and horizontal
                 EPID images.
                 <p>
                 </p>
@@ -41,12 +50,6 @@
                 </p>
             </li>
             <li>
-                $vertPix_X, vertPix_Y, horzPix_X, horzPix_Y $ : The X,Y coordinates in pixels of
-                the bb in the vertical and horizontal images in pixels. The origin (0,0) is in the top
-                left
-                corner of the image and represents the center of that pixel.
-            </li>
-            <li>
                 $vert_X$:
                 The bb X position from the EPID image with a vertical gantry angle in
                 <a href="CoordinateSystems">isoplane coordinates</a>
@@ -58,25 +61,10 @@
             </li>
             <li>
                 $horz_X$:
-                The bb X position from the EPID image with a horizontal gantry angle in isoplane coordinates in mm.
+                The bb X position from the EPID image with a horizontal gantry angle in isoplane coordinates in mm. This will be
+                translated to the Y position in the RTPLAN coordinate system.
                 Calculated using
                 <a href="../IsoplaneProjection/index.html">Isoplane Projection.</a>
-                <p>
-                </p>
-            </li>
-            <li>
-                $vert_Y,horz_Y$:
-                The bb Y positions from each of the two EPID images in isoplane coordinates.
-                Calculated using
-                <a href="../IsoplaneProjection/index.html">Isoplane Projection.</a>
-                <p>
-                </p>
-            </li>
-            <li>
-                $CBCT_X,CBCT_Y,CBCT_Z$:
-                The bb position in from the CBCT analysis in RTPLAN coordinates minus the RTPLAN isocenter.
-                Calculated using
-                <a href="../DailyQACBCT/index.html">Daily QA CBCT.</a>
                 <p>
                 </p>
             </li>
@@ -88,15 +76,15 @@
         <center>
             MV G
             <b>vertical</b>
-            (BB - DIGITAL_CAX) @ ISOCENTER PLANE = $ epid_X = cos(vert_G) \times (vert_X - horzT_X) $
+            (BB - DIGITAL_CAX) @ ISOCENTER PLANE = $ epid_X = cos(vert_G) \times (epidIsoVert_X - vertT_X) $
             <br></br>
 
             MV G
             <b>horizontal</b>
-            (BB - DIGITAL_CAX) @ ISOCENTER PLANE = $ epid_Y = sin(horz_G) \times (horz_X - vertT_X) $
+            (BB - DIGITAL_CAX) @ ISOCENTER PLANE = $ epid_Y = sin(horz_G) \times (epidIsoHorz_X - horzT_X) $
             <br></br>
 
-            AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE = $ epid_Z = { { (-vert_Y) - vertT_Y - (-horz_Y) - horzT_Y }
+            AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE = $ epid_Z = { { (-epidIsoVert_Y) - vertT_Y - (-epidIsoHorz_Y) - horzT_Y }
             \over 2 } $
             <br></br>
 
@@ -104,12 +92,15 @@
             </p>
         </center>
         <p>
+            <b>Note:</b>
             The $epid_Z$ is the average of the vertical and horizontal angles. Normally there is exactly one horizontal and one
             vertical image. If more than two EPID images are available, then
-            $epid_Z$ is the average of the values such that there are the same
+            $epid_Z$
+            is the average of the values such that there are the same
             number of vertical and horizontal images. For example,
             if there were two horizontal images and three vertical images,
-            then it would be the average of the two horizontal images and two
+            then it would
+            be the average of the two horizontal images and two
             randomly chosen of the three vertical images.
         </p>
 
@@ -117,9 +108,13 @@
 
         <center>
             <br></br>
-            MV G 180 (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER) = $ epid_X - CBCT_X $
+            MV G
+            <b>vertical</b>
+            (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER) = $ epid_X - CBCT_X $
             <br></br>
-            MV G 270 (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER) = $ epid_Y - CBCT_Y $
+            MV G
+            <b>horizontal</b>
+            (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER) = $ epid_Y - CBCT_Y $
             <br></br>
             AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER) = $ epid_Z - CBCT_Z $
             <br></br>
@@ -166,134 +161,57 @@
 
         <center>
 
-            $ CBCT_X,CBCT_Y,CBCT_Z = 0.523976576490402, -0.083384491904383, -0.432023944183953 $
+            $ CBCT_X,CBCT_Y,CBCT_Z = 0.04008997107600276,-0.09893278322198285, 0.09431361361086488 $
             <it>
-                See
+                (See
                 <a href="../DailyQACBCT/index.html">Daily QA CBCT</a>
-                for details
+                for details)
             </it>
+
+            $$ vertT_X,vertT_Y = -0.3009313503531, 0.23710557272485 $$
+
+            $$ horzT_X,horzT_Y = -0.9009703236419, 0.54420276482274 $$
+
+            $$ vert_G = 0.0 $$
+
+            $$ horz_G = 270.0 $$
+
+            $$ epidIsoVert_X, epidIsoVert_Y =
+            -2.184359029, -0.261167348 $$
+
+            $$ epidIsoHorz_X, epidIsoHorz_Y = -2.061482198, 0.675118754 $$
 
         </center>
 
-        <div>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-            <p>blah</p>
-        </div>
+        $$ epid_X = cos(0.0) \times (-2.184359029 - -0.3009313503531) = -1.8834276786469 $$
+
+        $$ epid_Y = sin(270.0) \times (-2.061482198) - -0.9009703236419) = 1.1605116763580998 $$
+
+        $$ epidVert_Z =
+        0.261167348 - 0.23710557272485 = 0.02406177527515002 $$
+
+        $$ epidHorz_Z = -0.675118754 - 0.54420276482274 = -1.21932151882274 $$
+
+        $$ epid_Z = { 0.02406177527515002 + -1.21932151882274 \ over 2.0 }
+        = -0.597629871773795 $$
+
+        $$ epid_X - CBCT_X = -1.8834276786469 - 0.04008997107600276 = -1.9235176497229027 $$
+
+        $$ epid_Y - CBCT_Y = 1.1605116763580998 - -0.09893278322198285 = 1.2594444595800827 $$
+
+        $$ epid_Z - CBCT_Z =
+        -0.597629871773795 - 0.09431361361086488 = -0.6919434853846599 $$
 
     </div>
+
+    <p>
+    </p>
+    <a href="matlabCBCT.txt">CBCT Matlab Code</a>
+    <p>
+    </p>
+    <a href="matlabEPID.txt">EPID Matlab Code</a>
+    <p>
+    </p>
 
 <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
