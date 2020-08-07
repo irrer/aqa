@@ -36,11 +36,11 @@ object BBbyEPIDHTML {
 
   private val mainReportFileName = Output.displayFilePrefix + ".html"
 
-  def generateHtml(extendedData: ExtendedData, bbByEPIDList: Seq[Option[BBbyEPID]], composite: Either[String, BBbyEPIDComposite], runReq: BBbyEPIDRunReq, status: ProcedureStatus.Value): Unit = {
+  def generateHtml(extendedData: ExtendedData, bbByEPIDList: Seq[BBbyEPID], composite: Either[String, (BBbyEPIDComposite, Option[String])], runReq: BBbyEPIDRunReq, status: ProcedureStatus.Value): Unit = {
 
     val bbByCBCT: Option[BBbyCBCT] = {
-      if ((composite.isRight) && (composite.right.get.bbByCBCTPK.isDefined))
-        BBbyCBCT.get(composite.right.get.bbByCBCTPK.get)
+      if ((composite.isRight) && (composite.right.get._1.bbByCBCTPK.isDefined))
+        BBbyCBCT.get(composite.right.get._1.bbByCBCTPK.get)
       else
         None
     }
@@ -118,7 +118,7 @@ object BBbyEPIDHTML {
     class ImageSet(index: Int) {
       val al = runReq.epidList(index)
       val SOPInstanceUID = Util.sopOfAl(al)
-      val bbByEpid = bbByEPIDList.flatten.find(b => b.epidSOPInstanceUid.equals(SOPInstanceUID))
+      val bbByEpid = bbByEPIDList.find(b => b.epidSOPInstanceUid.equals(SOPInstanceUID))
       val bbLoc_mm = if (bbByEpid.isDefined) Some(new Point2D.Double(bbByEpid.get.epidImageX_mm, bbByEpid.get.epidImageY_mm)) else None
       val gantryAngle = Util.angleRoundedTo90(Util.gantryAngle(al))
       val gantryAngleRounded = Util.angleRoundedTo90(gantryAngle)
@@ -247,7 +247,7 @@ object BBbyEPIDHTML {
       }
 
       val tablePosition = {
-        val bbByEPID = bbByEPIDList.flatten.head
+        val bbByEPID = bbByEPIDList.head
 
         val x = Util.fmtDbl(bbByEPID.tableXlateral_mm / 10)
         val y = Util.fmtDbl(bbByEPID.tableYvertical_mm / 10)
@@ -271,14 +271,14 @@ object BBbyEPIDHTML {
             <div>
               <h3 title="Composite results.  Distance in mm between plan isocenter and position of BB compensated by CBCT (difference of EPID - CBCT)">
                 {
-                  "With CBCT Offset (mm):" + fmt(composite.right.get.offsetAdjusted_mm.get) + sp +
-                    "X:" + fmt(composite.right.get.x_mm) + sp +
-                    "Y:" + fmt(composite.right.get.y_mm) + sp +
-                    "Z:" + fmt(composite.right.get.z_mm) + sp +
+                  "With CBCT Offset (mm):" + fmt(composite.right.get._1.offsetAdjusted_mm.get) + sp +
+                    "X:" + fmt(composite.right.get._1.x_mm) + sp +
+                    "Y:" + fmt(composite.right.get._1.y_mm) + sp +
+                    "Z:" + fmt(composite.right.get._1.z_mm) + sp +
                     cbctTime
                 }
               </h3>
-              { tableMovement(composite.right.get) }
+              { tableMovement(composite.right.get._1) }
             </div>
           } else {
             <div title="There was no corresponding CBCT.  CBCT must be taken earlier than the EPID and on the same day.">
@@ -385,7 +385,7 @@ object BBbyEPIDHTML {
     val numberTable = {
       if (bbByCBCT.isDefined && composite.isRight) {
         val cbct = bbByCBCT.get
-        val epidComposite = composite.right.get
+        val epidComposite = composite.right.get._1
         def fmt(d: Double) = { <td title={ fmtPrecise(d) }>{ fmtApprox(d) }</td> }
 
         def fmtTd(d: Double) = { <td title={ d.toString() }>{ fmtApprox(d) }</td> }
@@ -402,7 +402,7 @@ object BBbyEPIDHTML {
             None
         }
 
-        val epidDateListSorted = bbByEPIDList.flatten.map(epid => (epid, epidToDate(epid))).filter(ed => ed._2.isDefined).map(ed => (ed._1, ed._2.get)).sortBy(_._2.getTime)
+        val epidDateListSorted = bbByEPIDList.map(epid => (epid, epidToDate(epid))).filter(ed => ed._2.isDefined).map(ed => (ed._1, ed._2.get)).sortBy(_._2.getTime)
 
         val msFirst = epidDateListSorted.head._2.getTime
 
@@ -516,6 +516,19 @@ object BBbyEPIDHTML {
         <div></div>
     }
 
+    def matlab: Seq[Elem] = {
+      if (composite.isRight && composite.right.get._2.isDefined) {
+        val text = composite.right.get._2.get
+        val fileName = "matlab.txt"
+        val file = new File(extendedData.output.dir, fileName)
+        Util.writeFile(file, text)
+        Seq({
+          <a href={ fileName }>Matlab Script showing calculations</a>
+        })
+      } else
+        Seq[Elem]()
+    }
+
     def content = {
       <div>
         <div class="row">
@@ -536,6 +549,7 @@ object BBbyEPIDHTML {
             </tr>
           </table>
         </div>
+        { matlab }
       </div>
     }
 

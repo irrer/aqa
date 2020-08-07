@@ -109,7 +109,7 @@ class TestBBbyEPIDImageAnalysis extends FlatSpec with Matchers {
       println("result: " + iso)
       val di = new DicomImage(al)
       val trans = new IsoImagePlaneTranslator(al)
-      val isoAs2D = new Point2D.Double(iso.right.get.getX, iso.right.get.getY)
+      val isoAs2D = new Point2D.Double(iso.right.get.pix.getX, iso.right.get.pix.getY)
       val pix = trans.iso2Pix(isoAs2D)
 
       showPixValues(pix, trans, di)

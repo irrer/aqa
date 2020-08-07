@@ -29,6 +29,8 @@ import javax.vecmath.Point2d
  */
 object BBbyEPIDImageAnalysis extends Logging {
 
+  case class Result(pix: Point2d, al: AttributeList, iso: Point2d);
+
   private val subProcedureName = "BB by EPID"
 
   /**
@@ -54,7 +56,7 @@ object BBbyEPIDImageAnalysis extends Logging {
    *
    * @return Position of BB in mm in the isoplane.
    */
-  def findBB(al: AttributeList): Either[String, Point2d] = {
+  def findBB(al: AttributeList): Either[String, Result] = {
     val wholeImage = new DicomImage(al)
     val trans = new IsoImagePlaneTranslator(al)
     // Using a sub-area eliminates the need for having to deal with other objects, such as the couch rails.
@@ -128,9 +130,10 @@ object BBbyEPIDImageAnalysis extends Logging {
       ok
     }
 
-    if (valid)
-      Right(new Point2d(bbCenter_mm.getX, bbCenter_mm.getY))
-    else {
+    if (valid) {
+      val result = new Result(bbCenter_pix, al, new Point2d(bbCenter_mm.getX, bbCenter_mm.getY))
+      Right(result)
+    } else {
       val msg = "Failed to find image of BB in EPID image with sufficient contrast to background. for gantry angle " + Util.gantryAngle(al)
       logger.warn(msg)
       Left(msg)

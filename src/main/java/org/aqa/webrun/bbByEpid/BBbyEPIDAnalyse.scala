@@ -32,49 +32,160 @@ object BBbyEPIDAnalyse extends Logging {
    *
    * @param extendedData Associated DB rows
    */
-  private def toBBbyEPID(epid: AttributeList, bbLocation: Either[String, Point2d], extendedData: ExtendedData): Option[BBbyEPID] = {
-    if (bbLocation.isRight) {
-      val bbLoc = bbLocation.right.get
-      val gantryAngle_deg = Util.gantryAngle(epid)
-      val gantryAngle_rad = Math.toRadians(gantryAngle_deg)
+  private def toBBbyEPID(epid: AttributeList, bbLocation: Point2d, extendedData: ExtendedData): BBbyEPID = {
+    val gantryAngle_deg = Util.gantryAngle(epid)
+    val gantryAngle_rad = Math.toRadians(gantryAngle_deg)
 
-      val epidOffset: Point3d = {
-        val at = epid.get(TagFromName.XRayImageReceptorTranslation)
-        if (at == null) new Point3d(0, 0, 0)
-        else {
-          val trans = at.getDoubleValues
-          new Point3d(trans(0), trans(1), trans(2))
-        }
+    val epidOffset: Point3d = {
+      val at = epid.get(TagFromName.XRayImageReceptorTranslation)
+      if (at == null) new Point3d(0, 0, 0)
+      else {
+        val trans = at.getDoubleValues
+        new Point3d(trans(0), trans(1), trans(2))
       }
+    }
 
-      val epid3DX_mm = Math.cos(gantryAngle_rad) * (bbLoc.getX - epidOffset.getX)
-      val epid3DY_mm = Math.sin(gantryAngle_rad) * (bbLoc.getX - epidOffset.getX)
-      val epid3DZ_mm = (-bbLoc.getY) - epidOffset.getY // flip sign to directionally match coordinate system
-      val origin = new Point3d(0, 0, 0)
+    val epid3DX_mm = Math.cos(gantryAngle_rad) * (bbLocation.getX - epidOffset.getX)
+    val epid3DY_mm = Math.sin(gantryAngle_rad) * (bbLocation.getX - epidOffset.getX)
+    val epid3DZ_mm = (-bbLocation.getY) - epidOffset.getY // flip sign to directionally match coordinate system
+    val origin = new Point3d(0, 0, 0)
 
-      def getDbl(tag: AttributeTag) = epid.get(tag).getDoubleValues.head
+    def getDbl(tag: AttributeTag) = epid.get(tag).getDoubleValues.head
 
-      val bbByEPID = new BBbyEPID(
-        bbByEPIDPK = None,
-        outputPK = extendedData.output.outputPK.get,
-        // rtplanSOPInstanceUID = rtplanSOP,
-        epidSOPInstanceUid = Util.sopOfAl(epid),
-        offset_mm = (new Point3d(epid3DX_mm, epid3DY_mm, epid3DZ_mm)).distance(origin),
-        gantryAngle_deg = gantryAngle_deg,
-        status = ProcedureStatus.done.toString,
-        epidImageX_mm = bbLoc.getX,
-        epidImageY_mm = bbLoc.getY,
-        epid3DX_mm, epid3DY_mm, epid3DZ_mm,
-        getDbl(TagFromName.TableTopLateralPosition), // tableXlateral_mm
-        getDbl(TagFromName.TableTopVerticalPosition), // tableYvertical_mm
-        getDbl(TagFromName.TableTopLongitudinalPosition)) // tableZlongitudinal_mm
+    val bbByEPID = new BBbyEPID(
+      bbByEPIDPK = None,
+      outputPK = extendedData.output.outputPK.get,
+      // rtplanSOPInstanceUID = rtplanSOP,
+      epidSOPInstanceUid = Util.sopOfAl(epid),
+      offset_mm = (new Point3d(epid3DX_mm, epid3DY_mm, epid3DZ_mm)).distance(origin),
+      gantryAngle_deg = gantryAngle_deg,
+      status = ProcedureStatus.done.toString,
+      epidImageX_mm = bbLocation.getX,
+      epidImageY_mm = bbLocation.getY,
+      epid3DX_mm, epid3DY_mm, epid3DZ_mm,
+      getDbl(TagFromName.TableTopLateralPosition), // tableXlateral_mm
+      getDbl(TagFromName.TableTopVerticalPosition), // tableYvertical_mm
+      getDbl(TagFromName.TableTopLongitudinalPosition)) // tableZlongitudinal_mm
 
-      Some(bbByEPID)
-    } else
-      None
+    bbByEPID
   }
 
-  private def constructComposite(bbByEPIDList: Seq[BBbyEPID], extendedData: ExtendedData, runReq: BBbyEPIDRunReq): Either[String, BBbyEPIDComposite] = {
+  private def isVert(al: AttributeList) = AngleType.isAngleType(Util.gantryAngle(al), AngleType.vertical)
+
+  private val ls = System.lineSeparator
+
+  /**
+   * Create a Matlab script that shows calculations.
+   *
+   * @param epid EPID DICOM
+   *
+   * @param bbLocation in EPID translated to mm
+   *
+   * @param extendedData Associated DB rows
+   */
+  private def constructEpidMatlab(result: BBbyEPIDImageAnalysis.Result): String = {
+
+    def getDbls(tag: AttributeTag) = result.al.get(tag).getDoubleValues
+
+    val name = if (isVert(result.al)) "Vert" else "Horz"
+
+    val epidComment = "%% Perform isoplane projection and map to RTPLAN coordinates for beam " + name
+
+    val RTImageSID = "RTImageSID" + name + " = " + getDbls(TagFromName.RTImageSID).head + ";"
+
+    val RadiationMachineSAD = "RadiationMachineSAD" + name + " = " + getDbls(TagFromName.RadiationMachineSAD).head + ";"
+
+    val ImagePlanePixelSpacing = {
+      val ipps = getDbls(TagFromName.ImagePlanePixelSpacing)
+      val x = "ImagePlanePixelSpacing" + name + "X = " + ipps(0) + ";"
+      val y = "ImagePlanePixelSpacing" + name + "Y = " + ipps(1) + ";"
+      x + ls + y
+    }
+
+    val RTImagePosition = {
+      val rtip = getDbls(TagFromName.RTImagePosition)
+      val x = "RTImagePosition" + name + "X = " + rtip(0) + ";"
+      val y = "RTImagePosition" + name + "Y = " + rtip(1) + ";"
+      x + ls + y
+    }
+
+    val pix = {
+      val comment = "%% Coordinates in pixels where the bb was found."
+      val x = "epidPix" + name + "X = " + result.pix.getX + ";"
+      val y = "epidPix" + name + "Y = " + result.pix.getY + ";"
+      comment + ls + x + ls + y
+    }
+
+    val divergence = "divergence" + name + " = RTImageSID" + name + " / RadiationMachineSAD" + name + ";"
+
+    val topLeft = {
+      val comment = "%% The center of the image's top left corner pixel in isoplane coordinates in mm."
+      val x = "TopLeft" + name + "X = RTImagePosition" + name + "X / divergence" + name + ";"
+      val y = "TopLeft" + name + "Y = RTImagePosition" + name + "Y / divergence" + name + ";"
+      comment + ls + x + ls + y
+    }
+
+    val iso = {
+      val comment = "%% The coordinates of the bb in the isoplane in mm."
+      val x = "epidIso" + name + "X = ((" + "epidPix" + name + "X * ImagePlanePixelSpacing" + name + "X) / divergence" + name + ")" + " + " + "TopLeft" + name + "X;"
+      val y = "epidIso" + name + "Y = ((" + "epidPix" + name + "Y * ImagePlanePixelSpacing" + name + "Y) / divergence" + name + ")" + " + " + "TopLeft" + name + "Y;"
+      comment + ls + x + ls + y
+    }
+
+    val XRayImageReceptorTranslation = {
+      val rtip = getDbls(TagFromName.XRayImageReceptorTranslation)
+      val comment = "%% XRayImageReceptorTranslation values"
+      val x = name + "TX = " + rtip(0) + ";"
+      val y = name + "TY = " + rtip(1) + ";"
+      comment + ls + x + ls + y
+    }
+
+    val gantryAngle = getDbls(TagFromName.GantryAngle).head
+    val gantryAngleText = "gantryAngle" + name + " = " + gantryAngle + ";"
+
+    val xy = {
+      if (isVert(result.al))
+        "epidX = cos(deg2rad(gantryAngleVert)) * (epidIsoVertX - VertTX);"
+      else
+        "epidY = sin(deg2rad(gantryAngleHorz)) * (epidIsoHorzX - HorzTX);"
+    }
+
+    val z = "epid" + name + "Z = (-epidIso" + name + "Y) - " + name + "TY;"
+
+    val text = Seq(epidComment, RTImageSID, RadiationMachineSAD,
+      ImagePlanePixelSpacing, RTImagePosition, pix, divergence,
+      topLeft, iso, XRayImageReceptorTranslation,
+      gantryAngleText, xy, z).mkString(ls + ls)
+
+    text
+  }
+
+  private def constructCompositeMatlab(epidResultList: Seq[(BBbyEPID, BBbyEPIDImageAnalysis.Result)], bbByCBCT: BBbyCBCT): String = {
+    val separator = ls + "%% ------------------------------------------------------------------" + ls
+
+    val epidText = epidResultList.map(er => constructEpidMatlab(er._2)).mkString(separator)
+
+    val z = "epidIsoZ = (epidVertZ + epidHorzZ) / 2.0;"
+
+    val cbctXYZ = {
+      "cbctX = " + bbByCBCT.cbctX_mm + " - " + bbByCBCT.rtplanX_mm + ";" + ls +
+        "cbctY = " + bbByCBCT.cbctY_mm + " - " + bbByCBCT.rtplanY_mm + ";" + ls +
+        "cbctZ = " + bbByCBCT.cbctZ_mm + " - " + bbByCBCT.rtplanZ_mm + ";"
+    }
+
+    val answer = {
+      "epidMinuscbctX = epidIsoVertX - cbctX;" + ls +
+        "epidMinuscbctY = epidIsoHorzY - cbctY;" + ls +
+        "epidMinuscbctZ = epidIsoZ - cbctZ;"
+    }
+
+    val allText = epidText + separator + z + Seq(z, cbctXYZ, answer).mkString(ls + ls) + ls
+    allText
+  }
+
+  private def constructComposite(epidResultList: Seq[(BBbyEPID, BBbyEPIDImageAnalysis.Result)], extendedData: ExtendedData, runReq: BBbyEPIDRunReq): Either[String, (BBbyEPIDComposite, Option[String])] = {
+
+    val bbByEPIDList = epidResultList.map(er => er._1)
 
     def getByAngleType(angleType: AngleType.Value) = {
       val at = angleType.toString
@@ -114,7 +225,7 @@ object BBbyEPIDAnalyse extends Logging {
             }
             list.filter(c => qualifies(c.date)).sortBy(c => c.date.getTime).lastOption
           }
-          // BBbyCBCT.getProcedurePK not defined,  Must be that there are no BBbyCBCT rows.
+          // BBbyCBCT.getProcedurePK not defined,  Must be that sthere are no BBbyCBCT rows.
           case _ => None
         }
       }
@@ -139,6 +250,8 @@ object BBbyEPIDAnalyse extends Logging {
         None, None, None,
         None, None, None)
 
+      val matlabComposite = if (bbByCBCTHistory.isDefined) Some(constructCompositeMatlab(epidResultList, bbByCBCTHistory.get.bbByCBCT)) else None
+
       // if a corresponding CBCT is defined, then incorporate those values.
       val bbByEPIDCompositeFinal = {
         if (bbByCBCTHistory.isDefined) {
@@ -159,7 +272,7 @@ object BBbyEPIDAnalyse extends Logging {
         } else bbByEPIDComposite
       }
 
-      Right(bbByEPIDCompositeFinal)
+      Right((bbByEPIDCompositeFinal, matlabComposite))
     } else {
       if (vert.isEmpty)
         Left("No images with BB with vertical gantry angle.")
@@ -176,22 +289,24 @@ object BBbyEPIDAnalyse extends Logging {
       //val bbLocList = runReq.epidList.par.map(epid => BBbyEPIDImageAnalysis.findBB(epid)).toList  // TODO put back
       val bbLocList = runReq.epidList.map(epid => BBbyEPIDImageAnalysis.findBB(epid)).toList // TODO rm
 
-      val dbList = runReq.epidList.zip(bbLocList).map(er => toBBbyEPID(er._1, er._2, extendedData))
+      val resultList = bbLocList.filter(er => er.isRight).map(er => er.right.get)
+      val epidResultList = resultList.map(result => (toBBbyEPID(result.al, result.iso, extendedData), result))
+      val epidList = epidResultList.map(er => er._1)
 
       logger.info("Inserting EPID records into database")
-      BBbyEPID.insertSeq(dbList.flatten)
+      BBbyEPID.insertSeq(epidResultList.map(er => er._1))
 
       logger.info("Calculating composite result.")
-      val bbByEPIDComposite = constructComposite(dbList.flatten, extendedData, runReq) // TODO this can fail if BB not found
+      val bbByEPIDComposite = constructComposite(epidResultList, extendedData, runReq) // TODO this can fail if BB not found
       if (bbByEPIDComposite.isRight) {
         logger.info("Inserting composite EPID record into database: " + bbByEPIDComposite.right.get)
-        bbByEPIDComposite.right.get.insert
+        bbByEPIDComposite.right.get._1.insert
       } else
         logger.info("No composite EPID record created.  Reported error: " + bbByEPIDComposite.left.get)
 
       val procedureStatus = if (bbByEPIDComposite.isRight) ProcedureStatus.done else ProcedureStatus.fail
 
-      BBbyEPIDHTML.generateHtml(extendedData, dbList, bbByEPIDComposite, runReq, ProcedureStatus.done) // TODO status should be real
+      BBbyEPIDHTML.generateHtml(extendedData, epidList, bbByEPIDComposite, runReq, ProcedureStatus.done) // TODO status should be real
       logger.info("Finished analysis of EPID Alignment for machine " + extendedData.machine.id)
       ProcedureStatus.done
     } catch {

@@ -21,7 +21,7 @@
         <ul>
             <li>
                 <b>3002,000D XRayImageReceptorTranslation</b>
-                $X_{vertT}, Y_{vertT}, X_{horzT}, Y_{horzT}, $
+                $vertT_X, vertT_Y, horzT_X, horzT_Y, $
                 :
                 Position in (x,y,z) coordinates of origin of IEC X-RAY IMAGE RECEPTOR System in the IEC GANTRY
                 coordinate system mm (from RTIMAGE). The X
@@ -32,7 +32,7 @@
             </li>
             <li>
                 <b>300A,011E GantryAngle</b>
-                $(G_{vert}, G_{horz})$
+                $(vert_G, horz_G)$
                 :
                 Treatment machine gantry angle, i.e., orientation of IEC GANTRY coordinate system with respect to IEC FIXED REFERENCE coordinate
                 system in degrees (from RTIMAGE).
@@ -41,50 +41,258 @@
                 </p>
             </li>
             <li>
-                $X_{vert}$:
-                The bb X position in from the EPID image with a vertical gantry angle in image plane coordinates.
+                $vertPix_X, vertPix_Y, horzPix_X, horzPix_Y $ : The X,Y coordinates in pixels of
+                the bb in the vertical and horizontal images in pixels. The origin (0,0) is in the top
+                left
+                corner of the image and represents the center of that pixel.
+            </li>
+            <li>
+                $vert_X$:
+                The bb X position from the EPID image with a vertical gantry angle in
+                <a href="CoordinateSystems">isoplane coordinates</a>
+                in mm.
+                Calculated using
+                <a href="../IsoplaneProjection/index.html">Isoplane Projection.</a>
                 <p>
                 </p>
             </li>
             <li>
-                $X_{horz}$:
-                The bb X position in from the EPID image with a horizontal gantry angle in image plane coordinates.
+                $horz_X$:
+                The bb X position from the EPID image with a horizontal gantry angle in isoplane coordinates in mm.
+                Calculated using
+                <a href="../IsoplaneProjection/index.html">Isoplane Projection.</a>
                 <p>
                 </p>
             </li>
             <li>
-                $Y_{vert},Y_{horz}$:
-                The bb Y positions in from each of the two EPID images in image plane coordinates.
+                $vert_Y,horz_Y$:
+                The bb Y positions from each of the two EPID images in isoplane coordinates.
+                Calculated using
+                <a href="../IsoplaneProjection/index.html">Isoplane Projection.</a>
                 <p>
                 </p>
             </li>
             <li>
-                $X_{CBCT},Y_{CBCT},Z_{CBCT}$:
-                The bb position in from the CBCT analysis in RTPLAN coordinates.
+                $CBCT_X,CBCT_Y,CBCT_Z$:
+                The bb position in from the CBCT analysis in RTPLAN coordinates minus the RTPLAN isocenter.
+                Calculated using
+                <a href="../DailyQACBCT/index.html">Daily QA CBCT.</a>
                 <p>
                 </p>
             </li>
         </ul>
 
-        <it>Image plane coordinates are the same as gantry plane coordinates except that the Y axis is in the opposite direction.</it>
-
         <p>
-            This produces the EPID position by converting from gantry coordinates to RTPLAN coordinates.
+            The following produces the EPID position by converting from gantry coordinates to RTPLAN coordinates.
         </p>
+        <center>
+            MV G
+            <b>vertical</b>
+            (BB - DIGITAL_CAX) @ ISOCENTER PLANE = $ epid_X = cos(vert_G) \times (vert_X - horzT_X) $
+            <br></br>
 
-        $$ MV G horizontal (BB - DIGITAL_CAX) @ ISOCENTER PLANE = Y_{epid} = sin(G_{horz}) \times (X_{horz} - X_{vertT}) $$
-        $$ MV G vertical (BB - DIGITAL_CAX) @ ISOCENTER PLANE = X_{epid} =
-        cos(G_{vert}) \times (X_{vert} - X_{horzT}) $$
-        $$ Z_{epid} = { { (-Y_{vert}) - Y_{vertT} - (-Y_{horz}) - Y_{horzT} }
-        \over 2 } $$
+            MV G
+            <b>horizontal</b>
+            (BB - DIGITAL_CAX) @ ISOCENTER PLANE = $ epid_Y = sin(horz_G) \times (horz_X - vertT_X) $
+            <br></br>
+
+            AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE = $ epid_Z = { { (-vert_Y) - vertT_Y - (-horz_Y) - horzT_Y }
+            \over 2 } $
+            <br></br>
+
+            <p>
+            </p>
+        </center>
         <p>
-            The $Z_{epid}$ is the average of the vertical and horizontal angles. If more than two EPID images are available, then
-            $Z_{epid}$ is the average of the values such that there are the same
+            The $epid_Z$ is the average of the vertical and horizontal angles. Normally there is exactly one horizontal and one
+            vertical image. If more than two EPID images are available, then
+            $epid_Z$ is the average of the values such that there are the same
             number of vertical and horizontal images. For example,
-            if there were two horizontal images and three vertical images, then it would be the average of the two horizontal images and
-            two
+            if there were two horizontal images and three vertical images,
+            then it would be the average of the two horizontal images and two
             randomly chosen of the three vertical images.
         </p>
+
+        <p>The CBCT results are subtracted from the EPID results to get the final answer:</p>
+
+        <center>
+            <br></br>
+            MV G 180 (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER) = $ epid_X - CBCT_X $
+            <br></br>
+            MV G 270 (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER) = $ epid_Y - CBCT_Y $
+            <br></br>
+            AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER) = $ epid_Z - CBCT_Z $
+            <br></br>
+        </center>
+
+        <br></br>
+        <div style="background-color:#ffffdd;">
+            <br></br>
+            <div id='CoordinateSystems' style="margin:20px;">
+                <i>
+                    <h4>Coordinate Systems</h4>
+                    Part of the task of calculating EPID results is to convert between coordinate systems. Each is given in mm
+                    unless specified otherwise. The following are descriptions of those used:
+                    <div style="margin:20px;">
+                        <b>Gantry Coordinate System</b>
+                        <p>
+                            Formally, the
+                            <a href='http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.8.8.25.6.html'>IEC X-RAY IMAGE RECEPTOR coordinate system,</a>
+                            this rotates with the gantry and is in the isoplane. The origin is in the center of the image.
+                        </p>
+
+                        <b>Isoplane Coordinate System</b>
+                        <p>Isoplane coordinates are the same as gantry coordinates except that the Y axis is in the opposite direction. This
+                            coordinate system is not standard. It was created by the AQA
+                            to
+                            present images in a way that was familiar to those
+                            working in radiation oncology. It this by showing an orientation similar to RTPLAN coordinates.
+                        </p>
+
+                        <b>RTPLAN (aka World) Coordinate System</b>
+                        <p>
+                            The coordinate system used in RT planning that, for purposes of this software, is fixed in space, and describes points in the patient or phantom. Formally specified as
+                            <a href="http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.2.html#sect_C.7.6.2.1.1">Image Position and Image Orientation.</a>
+                        </p>
+                    </div>
+                </i>
+            </div>
+            <br></br>
+        </div>
+
+        <h3>Example Daily QA Processing</h3>
+
+        <p>Assume the following values:</p>
+
+        <center>
+
+            $ CBCT_X,CBCT_Y,CBCT_Z = 0.523976576490402, -0.083384491904383, -0.432023944183953 $
+            <it>
+                See
+                <a href="../DailyQACBCT/index.html">Daily QA CBCT</a>
+                for details
+            </it>
+
+        </center>
+
+        <div>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+            <p>blah</p>
+        </div>
+
     </div>
 
 <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->

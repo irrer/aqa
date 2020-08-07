@@ -35,7 +35,7 @@
 
     <p></p>
     <div>
-        Given the bb's location in pixels $x_{pix}, y_{pix}, z_{pix}$, the location is converted to the frame of reference $x_{for}, y_{for}, z_{for}$ in mm by multiplying the X and Y coordinates
+        Given the bb's location in pixels $pix_X, pix_Y, pix_Z$, the location is converted to the frame of reference $for_X, for_Y, for_Z$ in mm by multiplying the X and Y coordinates
         by
         the
         <b>PixelSpacing</b>
@@ -46,10 +46,10 @@
         <b>ImagePositionPatient</b>
         from the slice with the lowest Z coordinate value:
 
-        $$x_{for} = x_{pix} \times PixelSpacing(0) + x_{ImagePositionPatient}$$
-        $$y_{for} = y_{pix} \times PixelSpacing(1) + y_{ImagePositionPatient}$$
-        $$z_{for} = z_{pix} \times SliceThickness + z_{ImagePositionPatient}$$
-
+        $$for_X = pix_X \times PixelSpacing_X + ImagePositionPatient_X$$
+        $$for_Y = pix_Y \times PixelSpacing_Y + ImagePositionPatient_Y$$
+        $$for_Z =
+        pix_Z \times SliceThickness + ImagePositionPatient_Z$$
         <ul>
             <li>
                 <b>0028,0030 PixelSpacing</b>
