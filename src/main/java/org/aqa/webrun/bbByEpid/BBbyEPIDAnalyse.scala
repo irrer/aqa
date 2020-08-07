@@ -302,8 +302,7 @@ object BBbyEPIDAnalyse extends Logging {
     try {
       logger.info("Starting analysis of EPID Alignment for machine " + extendedData.machine.id)
 
-      //val bbLocList = runReq.epidList.par.map(epid => BBbyEPIDImageAnalysis.findBB(epid)).toList  // TODO put back
-      val bbLocList = runReq.epidList.map(epid => BBbyEPIDImageAnalysis.findBB(epid)).toList // TODO rm
+      val bbLocList = runReq.epidList.par.map(epid => BBbyEPIDImageAnalysis.findBB(epid)).toList
 
       val resultList = bbLocList.filter(er => er.isRight).map(er => er.right.get)
       val epidResultList = resultList.map(result => (toBBbyEPID(result.al, result.iso, extendedData), result))
