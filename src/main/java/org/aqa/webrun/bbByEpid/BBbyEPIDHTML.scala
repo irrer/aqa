@@ -31,6 +31,7 @@ import org.aqa.Config
 object BBbyEPIDHTML {
 
   private val closeUpImagePrefix = "CloseUp"
+  private val detailImagePrefix = "Detail"
   private val fullImagePrefix = "Full"
 
   private val mainReportFileName = Output.displayFilePrefix + ".html"
@@ -124,6 +125,7 @@ object BBbyEPIDHTML {
 
       val suffix = "_" + gantryAngleRounded + "_" + (index + 1) + ".png"
       val closeUpImageFileName = closeUpImagePrefix + suffix
+      val detailImageFileName = detailImagePrefix + suffix
       val fullImageFileName = fullImagePrefix + suffix
 
       def name2File(name: String) = new File(extendedData.output.dir, name)
@@ -144,6 +146,7 @@ object BBbyEPIDHTML {
       val imageSet = new BBbyEPIDAnnotateImages(al, bbLoc_mm)
 
       Util.writePng(imageSet.closeupBufImg, name2File(closeUpImageFileName))
+      Util.writePng(imageSet.detailBufImg, name2File(detailImageFileName))
       Util.writePng(imageSet.fullBufImg, name2File(fullImageFileName))
 
       def viewDicomMetadata = {
@@ -200,13 +203,15 @@ object BBbyEPIDHTML {
             <br/>
             { imgRef(closeUpImageFileName, "Closeup of BB") }
             <br/>
+            { imgRef(detailImageFileName, "Detail of BB Area") }
+            <br/>
             { imgRef(fullImageFileName, "Full image") }
           </center>
         </td>
       }
 
       val script = {
-        Seq(closeUpImageFileName, fullImageFileName).
+        Seq(closeUpImageFileName, detailImageFileName, fullImageFileName).
           map(fn => "      $(document).ready(function(){ $('#" + Util.textToId(fn) + "').zoom(); });\n").
           mkString("\n      ")
       }
@@ -450,7 +455,7 @@ object BBbyEPIDHTML {
               vectorLengthColumn(
                 if (isVert) epid.epid3DX_mm - cbct.err_mm.getX else 0.0,
                 if (isHorz) epid.epid3DY_mm - cbct.err_mm.getY else 0.0,
-                epid.epid3DZ_mm - cbct.err_mm.getZ)
+                epid.epid3DZ_mm)
             }
           </tr>
         }
@@ -511,14 +516,14 @@ object BBbyEPIDHTML {
         <div></div>
     }
 
-    def python: Seq[Elem] = {
+    def matlab: Seq[Elem] = {
       if (composite.isRight && composite.right.get._2.isDefined) {
         val text = composite.right.get._2.get
-        val fileName = "python.txt"
+        val fileName = "matlab.txt"
         val file = new File(extendedData.output.dir, fileName)
         Util.writeFile(file, text)
         Seq({
-          <a href={ fileName }>Python Script showing calculations</a>
+          <a href={ fileName }>Matlab Script showing calculations</a>
         })
       } else
         Seq[Elem]()
@@ -544,7 +549,7 @@ object BBbyEPIDHTML {
             </tr>
           </table>
         </div>
-        { python }
+        { matlab }
       </div>
     }
 

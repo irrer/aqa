@@ -120,6 +120,10 @@ class TestBBbyEPIDImageAnalysis extends FlatSpec with Matchers {
       ImageUtil.writePngFile(annotatedImages.fullBufImg, pngFileFull)
       println("Wrote image to " + pngFileFull.getAbsolutePath)
 
+      val pngFileDetail = new File(outDir, (file.getName.replace(".dcm", "_detail.png")))
+      ImageUtil.writePngFile(annotatedImages.detailBufImg, pngFileDetail)
+      println("Wrote image to " + pngFileDetail.getAbsolutePath)
+
       val pngFileCloseup = new File(outDir, (file.getName.replace(".dcm", "_closeup.png")))
       ImageUtil.writePngFile(annotatedImages.closeupBufImg, pngFileCloseup)
       println("Wrote image to " + pngFileCloseup.getAbsolutePath)
