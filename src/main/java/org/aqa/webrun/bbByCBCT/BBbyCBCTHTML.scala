@@ -359,7 +359,7 @@ object BBbyCBCTHTML extends Logging {
     val matrix = {
       val m = runReq.imageRegistration.get.getMatrix
 
-        "FrameOfReferenceTransformationMatrix = [ " + ls +
+      "FrameOfReferenceTransformationMatrix = [ " + ls +
         m.m00 + " " + m.m10 + " " + m.m20 + " " + m.m30 + ";" + ls +
         m.m01 + " " + m.m11 + " " + m.m21 + " " + m.m31 + ";" + ls +
         m.m02 + " " + m.m12 + " " + m.m22 + " " + m.m32 + ";" + ls +
@@ -416,7 +416,7 @@ object BBbyCBCTHTML extends Logging {
       def fmt(d: Double) = d.formatted("%5.2f")
 
       def dataCol(name: String, title: String, value: Double, cols: Int) = {
-        <div title={ title } class={ "col-md-" + cols }>
+        <div title={ title + " : " + value.formatted("%9.6f") } class={ "col-md-" + cols }>
           <h3>{ name } : { fmt(value) }</h3>
         </div>
       }
