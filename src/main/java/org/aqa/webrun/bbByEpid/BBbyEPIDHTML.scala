@@ -455,7 +455,7 @@ object BBbyEPIDHTML {
               vectorLengthColumn(
                 if (isVert) epid.epid3DX_mm - cbct.err_mm.getX else 0.0,
                 if (isHorz) epid.epid3DY_mm - cbct.err_mm.getY else 0.0,
-                epid.epid3DZ_mm)
+                epid.epid3DZ_mm - cbct.err_mm.getZ)
             }
           </tr>
         }
