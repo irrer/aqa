@@ -75,7 +75,7 @@ object BBbyEPIDAnalyse extends Logging {
   private val ls = System.lineSeparator
 
   /**
-   * Create a Matlab script that shows calculations.
+   * Create a Python script that shows calculations.
    *
    * @param epid EPID DICOM
    *
@@ -83,83 +83,82 @@ object BBbyEPIDAnalyse extends Logging {
    *
    * @param extendedData Associated DB rows
    */
-  private def constructEpidMatlab(result: BBbyEPIDImageAnalysis.Result): String = {
-
+  private def constructEpidPython(result: BBbyEPIDImageAnalysis.Result): String = {
     def getDbls(tag: AttributeTag) = result.al.get(tag).getDoubleValues
 
     val name = if (isVert(result.al)) "Vert" else "Horz"
 
-    val epidComment = "%% Perform isoplane projection and map to RTPLAN coordinates for beam " + name
+    val epidComment = "# Perform isoplane projection and map to RTPLAN coordinates for beam " + name
 
-    val RTImageSID = "RTImageSID" + name + " = " + getDbls(TagFromName.RTImageSID).head + ";"
+    val RTImageSID = "RTImageSID" + name + " = " + getDbls(TagFromName.RTImageSID).head
 
-    val RadiationMachineSAD = "RadiationMachineSAD" + name + " = " + getDbls(TagFromName.RadiationMachineSAD).head + ";"
+    val RadiationMachineSAD = "RadiationMachineSAD" + name + " = " + getDbls(TagFromName.RadiationMachineSAD).head
 
     val ImagePlanePixelSpacing = {
       val ipps = getDbls(TagFromName.ImagePlanePixelSpacing)
-      val x = "ImagePlanePixelSpacing" + name + "X = " + ipps(0) + ";"
-      val y = "ImagePlanePixelSpacing" + name + "Y = " + ipps(1) + ";"
+      val x = "ImagePlanePixelSpacing" + name + "X = " + ipps(0)
+      val y = "ImagePlanePixelSpacing" + name + "Y = " + ipps(1)
       x + ls + y
     }
 
     val RTImagePosition = {
       val rtip = getDbls(TagFromName.RTImagePosition)
-      val x = "RTImagePosition" + name + "X = " + rtip(0) + ";"
-      val y = "RTImagePosition" + name + "Y = " + rtip(1) + ";"
+      val x = "RTImagePosition" + name + "X = " + rtip(0)
+      val y = "RTImagePosition" + name + "Y = " + rtip(1)
       x + ls + y
     }
 
     val pix = {
-      val comment = "%% Coordinates in pixels where the bb was found."
-      val x = "epidPix" + name + "X = " + result.pix.getX + ";"
-      val y = "epidPix" + name + "Y = " + result.pix.getY + ";"
+      val comment = "# Coordinates in pixels where the bb was found."
+      val x = "epidPix" + name + "X = " + result.pix.getX
+      val y = "epidPix" + name + "Y = " + result.pix.getY
       comment + ls + x + ls + y
     }
 
-    val divergence = "divergence" + name + " = RTImageSID" + name + " / RadiationMachineSAD" + name + ";"
+    val divergence = "divergence" + name + " = RTImageSID" + name + " / RadiationMachineSAD" + name
 
     val topLeft = {
-      val comment = "%% The center of the image's top left corner pixel in isoplane coordinates in mm."
-      val x = "TopLeft" + name + "X = RTImagePosition" + name + "X / divergence" + name + ";"
-      val y = "TopLeft" + name + "Y = -RTImagePosition" + name + "Y / divergence" + name + ";"
+      val comment = "# The center of the image's top left corner pixel in isoplane coordinates in mm."
+      val x = "TopLeft" + name + "X = RTImagePosition" + name + "X / divergence" + name
+      val y = "TopLeft" + name + "Y = -RTImagePosition" + name + "Y / divergence" + name
       comment + ls + x + ls + y
     }
 
     val iso = {
-      val comment = "%% The coordinates of the bb in the isoplane in mm."
-      val x = "epidIso" + name + "X = ((" + "epidPix" + name + "X * ImagePlanePixelSpacing" + name + "X) / divergence" + name + ")" + " + " + "TopLeft" + name + "X;"
-      val y = "epidIso" + name + "Y = ((" + "epidPix" + name + "Y * ImagePlanePixelSpacing" + name + "Y) / divergence" + name + ")" + " + " + "TopLeft" + name + "Y;"
+      val comment = "# The coordinates of the bb in the isoplane in mm."
+      val x = "epidIso" + name + "X = ((" + "epidPix" + name + "X * ImagePlanePixelSpacing" + name + "X) / divergence" + name + ")" + " + " + "TopLeft" + name + "X"
+      val y = "epidIso" + name + "Y = ((" + "epidPix" + name + "Y * ImagePlanePixelSpacing" + name + "Y) / divergence" + name + ")" + " + " + "TopLeft" + name + "Y"
       comment + ls + x + ls + y
     }
 
     val XRayImageReceptorTranslation = {
       val rtip = getDbls(TagFromName.XRayImageReceptorTranslation)
-      val comment = "%% XRayImageReceptorTranslation values"
-      val x = name + "TX = " + rtip(0) + ";"
-      val y = name + "TY = " + rtip(1) + ";"
+      val comment = "# XRayImageReceptorTranslation values"
+      val x = name + "TX = " + rtip(0)
+      val y = name + "TY = " + rtip(1)
       comment + ls + x + ls + y
     }
 
     val gantryAngle = getDbls(TagFromName.GantryAngle).head
-    val gantryAngleText = "gantryAngle" + name + " = " + gantryAngle + ";"
+    val gantryAngleText = "gantryAngle" + name + " = " + gantryAngle
 
     val xy = {
       if (isVert(result.al))
-        "epidIsoX = cos(deg2rad(gantryAngleVert)) * (epidIsoVertX - VertTX);"
+        "epidIsoX = math.cos(math.radians(gantryAngleVert)) * (epidIsoVertX - VertTX)"
       else
-        "epidIsoY = sin(deg2rad(gantryAngleHorz)) * (epidIsoHorzX - HorzTX);"
+        "epidIsoY = math.sin(math.radians(gantryAngleHorz)) * (epidIsoHorzX - HorzTX)"
     }
 
-    val z = "epid" + name + "Z = (-epidIso" + name + "Y) - " + name + "TY;"
+    val z = "epid" + name + "Z = (-epidIso" + name + "Y) - " + name + "TY"
 
     val summary = {
       val ga = Util.angleRoundedTo90(Util.gantryAngle(result.al))
       if (isVert(result.al)) {
-        """fprintf("MV G %d (BB - DIGITAL_CAX) @ ISOCENTER PLANE:  %f   NA  %f  %f\n", """ + ga + ", epidIsoX, epidVertZ, sqrt(epidIsoX*epidIsoX + epidVertZ*epidVertZ));" + ls +
-          """fprintf("MV G %d (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f   NA  %f  %f\n", """ + ga + ", epidIsoX - cbctX, epidVertZ - cbctZ, sqrt((epidIsoX - cbctX)*(epidIsoX - cbctX) + (epidVertZ - cbctZ)*(epidVertZ - cbctZ)));"
+        "print('MV G ', gantryAngle" + name + ", ' (BB - DIGITAL_CAX) @ ISOCENTER PLANE:  ', epidIsoX, '  NA  ', epidVertZ, '  ', math.sqrt(epidIsoX*epidIsoX + epidVertZ*epidVertZ))" + ls +
+          "print('MV G ', gantryAngle" + name + ", ' (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  ', epidIsoX - cbctX, '  NA  ', epidVertZ - cbctZ,  '  ', math.sqrt((epidIsoX - cbctX)*(epidIsoX - cbctX) + (epidVertZ - cbctZ)*(epidVertZ - cbctZ)))"
       } else {
-        """fprintf("MV G %d (BB - DIGITAL_CAX) @ ISOCENTER PLANE:  NA   %f  %f  %f\n", """ + ga + ", epidIsoY, epidHorzZ, sqrt(epidIsoY*epidIsoY + epidHorzZ*epidHorzZ));" + ls +
-          """fprintf("MV G %d (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f   NA  %f  %f\n", """ + ga + ", epidIsoY - cbctY, epidHorzZ - cbctZ, sqrt((epidIsoY - cbctY)*(epidIsoY - cbctY) + (epidHorzZ - cbctZ)*(epidHorzZ - cbctZ)));"
+        "print('MV G ', gantryAngle" + name + ", ' (BB - DIGITAL_CAX) @ ISOCENTER PLANE:  NA  ', epidIsoY, '  ',  epidHorzZ, '   ', math.sqrt(epidIsoY*epidIsoY + epidHorzZ*epidHorzZ))" + ls +
+          "print('MV G ', gantryAngle" + name + ", ' (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  ', epidIsoY - cbctY, '  NA  ', epidHorzZ - cbctZ, '  ',  math.sqrt((epidIsoY - cbctY)*(epidIsoY - cbctY) + (epidHorzZ - cbctZ)*(epidHorzZ - cbctZ)))"
       }
     }
 
@@ -171,29 +170,32 @@ object BBbyEPIDAnalyse extends Logging {
     text
   }
 
-  private def constructCompositeMatlab(epidResultList: Seq[(BBbyEPID, BBbyEPIDImageAnalysis.Result)], bbByCBCT: BBbyCBCT): String = {
-    val separator = ls + ls + "%% ------------------------------------------------------------------" + ls + ls
+  private def constructCompositePython(epidResultList: Seq[(BBbyEPID, BBbyEPIDImageAnalysis.Result)], bbByCBCT: BBbyCBCT): String = {
+    val separator = ls + ls + "# ------------------------------------------------------------------" + ls + ls
 
-    val epidText = epidResultList.map(er => constructEpidMatlab(er._2))
+    val importPy = "import math"
 
-    val z = "epidIsoZ = (epidVertZ + epidHorzZ) / 2.0;"
+    val epidText = epidResultList.map(er => constructEpidPython(er._2))
+
+    val z = "epidIsoZ = (epidVertZ + epidHorzZ) / 2.0"
 
     val cbctXYZ = {
-      "%% Results from CBCT" + ls +
-        "cbctX = " + bbByCBCT.cbctX_mm + " - " + bbByCBCT.rtplanX_mm + ";" + ls +
-        "cbctY = " + bbByCBCT.cbctY_mm + " - " + bbByCBCT.rtplanY_mm + ";" + ls +
-        "cbctZ = " + bbByCBCT.cbctZ_mm + " - " + bbByCBCT.rtplanZ_mm + ";"
+      "# Results from CBCT" + ls +
+        "cbctX = " + bbByCBCT.cbctX_mm + " - " + bbByCBCT.rtplanX_mm + ls +
+        "cbctY = " + bbByCBCT.cbctY_mm + " - " + bbByCBCT.rtplanY_mm + ls +
+        "cbctZ = " + bbByCBCT.cbctZ_mm + " - " + bbByCBCT.rtplanZ_mm + ls +
+        "print('CBCT(BB - DIGITAL_PLANNED_ISOCENTER): ', cbctX, '  ', cbctY, '  ', cbctZ)"
     }
 
     val answer = {
-      "epidMinuscbctX = epidIsoX - cbctX;" + ls +
-        "epidMinuscbctY = epidIsoY - cbctY;" + ls +
-        "epidMinuscbctZ = epidIsoZ - cbctZ;" + ls + ls +
-        """fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f   %f  %f  %f\n", """ +
-        "epidIsoX - cbctX, epidIsoY - cbctY, epidIsoZ - cbctZ, sqrt((epidIsoX - cbctX)*(epidIsoX - cbctX) + (epidIsoY - cbctY)*(epidIsoY - cbctY) + (epidIsoZ - cbctZ)*(epidIsoZ - cbctZ)));"
+      "epidMinuscbctX = epidIsoX - cbctX" + ls +
+        "epidMinuscbctY = epidIsoY - cbctY" + ls +
+        "epidMinuscbctZ = epidIsoZ - cbctZ" + ls + ls +
+        "print('AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER): ', " +
+        "epidIsoX - cbctX, '  ', epidIsoY - cbctY, '  ', epidIsoZ - cbctZ, '  ', math.sqrt((epidIsoX - cbctX)*(epidIsoX - cbctX) + (epidIsoY - cbctY)*(epidIsoY - cbctY) + (epidIsoZ - cbctZ)*(epidIsoZ - cbctZ)))"
     }
 
-    val textList = Seq(cbctXYZ) ++ epidText ++ Seq(z, answer)
+    val textList = Seq(importPy, cbctXYZ) ++ epidText ++ Seq(z, answer)
 
     val allText = textList.mkString(separator) + ls + ls
     allText
@@ -266,7 +268,7 @@ object BBbyEPIDAnalyse extends Logging {
         None, None, None,
         None, None, None)
 
-      val matlabComposite = if (bbByCBCTHistory.isDefined) Some(constructCompositeMatlab(epidResultList, bbByCBCTHistory.get.bbByCBCT)) else None
+      val pythonComposite = if (bbByCBCTHistory.isDefined) Some(constructCompositePython(epidResultList, bbByCBCTHistory.get.bbByCBCT)) else None
 
       // if a corresponding CBCT is defined, then incorporate those values.
       val bbByEPIDCompositeFinal = {
@@ -288,7 +290,7 @@ object BBbyEPIDAnalyse extends Logging {
         } else bbByEPIDComposite
       }
 
-      Right((bbByEPIDCompositeFinal, matlabComposite))
+      Right((bbByEPIDCompositeFinal, pythonComposite))
     } else {
       if (vert.isEmpty)
         Left("No images with BB with vertical gantry angle.")
