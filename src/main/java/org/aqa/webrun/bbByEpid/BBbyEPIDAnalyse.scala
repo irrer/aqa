@@ -182,7 +182,8 @@ object BBbyEPIDAnalyse extends Logging {
       "%% Results from CBCT" + ls +
         "cbctX = " + bbByCBCT.cbctX_mm + " - " + bbByCBCT.rtplanX_mm + ";" + ls +
         "cbctY = " + bbByCBCT.cbctY_mm + " - " + bbByCBCT.rtplanY_mm + ";" + ls +
-        "cbctZ = " + bbByCBCT.cbctZ_mm + " - " + bbByCBCT.rtplanZ_mm + ";"
+        "cbctZ = " + bbByCBCT.cbctZ_mm + " - " + bbByCBCT.rtplanZ_mm + ";" + ls +
+        """fprintf("CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f  %f  %f\n", cbctX, cbctY, cbctZ);"""
     }
 
     val answer = {
