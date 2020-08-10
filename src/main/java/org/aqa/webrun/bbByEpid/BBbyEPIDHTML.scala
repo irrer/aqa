@@ -31,7 +31,6 @@ import org.aqa.Config
 object BBbyEPIDHTML {
 
   private val closeUpImagePrefix = "CloseUp"
-  private val detailImagePrefix = "Detail"
   private val fullImagePrefix = "Full"
 
   private val mainReportFileName = Output.displayFilePrefix + ".html"
@@ -125,28 +124,13 @@ object BBbyEPIDHTML {
 
       val suffix = "_" + gantryAngleRounded + "_" + (index + 1) + ".png"
       val closeUpImageFileName = closeUpImagePrefix + suffix
-      val detailImageFileName = detailImagePrefix + suffix
       val fullImageFileName = fullImagePrefix + suffix
 
       def name2File(name: String) = new File(extendedData.output.dir, name)
 
-      //      val bbLoc_mmX: Option[Point2D] =
-      //        if (bbByEpid.isDefined) {
-      //
-      //          val x: Double = (Util.angleRoundedTo90(Util.gantryAngle(al)) % 360) match {
-      //            case 0 => new Point2D.Double(bbByEpid.get.epidImageX_mm, bbByEpid.get.epidImageZ_mm)
-      //            case 90 => new Point2D.Double(bbByEpid.get.epidImageX_mm, bbByEpid.get.epidImageZ_mm)
-      //            case 180 => ???
-      //            case 270 => ???
-      //          }
-      //          Some(new Point2D.Double(x, bbByEpid.get.epid3DZ_mm)
-      //        } else
-      //          None
-
       val imageSet = new BBbyEPIDAnnotateImages(al, bbLoc_mm)
 
       Util.writePng(imageSet.closeupBufImg, name2File(closeUpImageFileName))
-      Util.writePng(imageSet.detailBufImg, name2File(detailImageFileName))
       Util.writePng(imageSet.fullBufImg, name2File(fullImageFileName))
 
       def viewDicomMetadata = {
@@ -187,6 +171,13 @@ object BBbyEPIDHTML {
         def imgRef(name: String, title: String) = {
           <a href={ name }>
             <h4>{ title }</h4>
+            <img width='400' src={ name }/>
+          </a>
+        }
+
+        def imgRefWithZoom(name: String, title: String) = {
+          <a href={ name }>
+            <h4>{ title }</h4>
             <div class='zoom' id={ Util.textToId(name) }>
               <img width='400' src={ name }/>
             </div>
@@ -203,15 +194,13 @@ object BBbyEPIDHTML {
             <br/>
             { imgRef(closeUpImageFileName, "Closeup of BB") }
             <br/>
-            { imgRef(detailImageFileName, "Detail of BB Area") }
-            <br/>
-            { imgRef(fullImageFileName, "Full image") }
+            { imgRefWithZoom(fullImageFileName, "Full image") }
           </center>
         </td>
       }
 
       val script = {
-        Seq(closeUpImageFileName, detailImageFileName, fullImageFileName).
+        Seq(fullImageFileName).
           map(fn => "      $(document).ready(function(){ $('#" + Util.textToId(fn) + "').zoom(); });\n").
           mkString("\n      ")
       }
@@ -371,6 +360,7 @@ object BBbyEPIDHTML {
       </a>
     }
 
+    /*
     def imageHtmlWithZoom(index: Int, getImageFileName: Int => String, title: String, width: Int) = {
       val name = getImageFileName(index)
       <a href={ name } title={ title }>
@@ -381,6 +371,7 @@ object BBbyEPIDHTML {
         </div>
       </a>
     }
+    */
 
     val numberTable = {
       if (bbByCBCT.isDefined && composite.isRight) {

@@ -119,30 +119,6 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
     fullSize
   }
 
-  private def makeDetailBufImg: BufferedImage = {
-    /** Magnify the image by this scale. */
-    val scale = 16
-
-    val upperLeftCorner = trans.iso2Pix(-Config.EPIDZoomSize_mm / 2, -Config.EPIDZoomSize_mm / 2)
-
-    // define rectangle for copying just the middle of the image
-    val detailRect = {
-      val x = d2i(upperLeftCorner.getX)
-      val y = d2i(upperLeftCorner.getY)
-      val w = d2i(trans.iso2PixDistX(Config.EPIDZoomSize_mm))
-      val h = d2i(trans.iso2PixDistY(Config.EPIDZoomSize_mm))
-      new Rectangle(x, y, w, h)
-    }
-
-    val detailImage = ImageUtil.magnify(fullImage.getSubimage(detailRect).toDeepColorBufferedImage(0), scale)
-    Config.applyWatermark(detailImage)
-
-    drawCircleWithXAtCenterOfBB(upperLeftCorner, detailImage, scale)
-    drawPlusAtCenterOfPlan(upperLeftCorner, detailImage, scale)
-
-    detailImage
-  }
-
   private def makeCloseupBufImg: BufferedImage = {
     /** Magnify the image by this scale. */
     val scale = 32
@@ -177,7 +153,6 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
   }
 
   val fullBufImg = makeFullBufImg
-  val detailBufImg = makeDetailBufImg
   val closeupBufImg = makeCloseupBufImg
 
 }

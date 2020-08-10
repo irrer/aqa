@@ -381,7 +381,7 @@ object BBbyCBCTHTML extends Logging {
     val error = {
       "%% XYZ error of CBCT - PLAN isocenter" + ls +
         "XYZerror = cbctRtplanFor - IsocenterPosition;" + ls +
-        "XYZerror"
+        """fprintf("XYZerror: %f  %f  %f\n", XYZerror(1),XYZerror(2),XYZerror(3));"""
     }
 
     val text = Seq(coarseLocation_vox, fineLocation_vox, voxelSize, cbctFor, matrix, cbctRtplanFor, isocenterPosition, error).mkString(ls + ls) + ls
@@ -483,26 +483,31 @@ object BBbyCBCTHTML extends Logging {
       </div>
     }
 
+    def imageHtml(index: Int, getImageFileName: Int => String, title: String, width: Int) = {
+      val name = getImageFileName(index)
+
+      <center title={ title }>
+        <h4>{ title }</h4>
+        <a href={ name }>
+          <img width={ width.toString } src={ name }/>
+        </a>
+      </center>
+    }
+
     def imageHtmlWithZoom(index: Int, getImageFileName: Int => String, title: String, width: Int) = {
       val name = getImageFileName(index)
 
-      if (false) {
-        <a href={ name } title={ title }>
-          <div id={ Util.textToId(name.replace("-", "neg")) }>
-            <a href={ name }>
-              <img src={ name } class="img-responsive" width={ width.toString }/>
-            </a>
+      <center title={ title }>
+        <h4>{ title }</h4>
+        <a href={ name }>
+          <div class='zoom' id={ Util.textToId(name) }>
+            <img width={ width.toString } src={ name }/>
           </div>
         </a>
-      }
-
-      <a href={ name }>
-        <div class='zoom' id={ Util.textToId(name) }>
-          <img width={ width.toString } src={ name }/>
-        </div>
-      </a>
+      </center>
     }
 
+    //          { imageHtmlWithZoom(index, fileNameOfAreaOfInterest, , imageWidth) }
     def makeSet(index: Int): Elem = {
       val imageWidth = 350 // imageSet.areaOfInterest(index).getWidth
 
@@ -510,7 +515,9 @@ object BBbyCBCTHTML extends Logging {
         <center style="margin:50px;">
           { viewTitle(index) }
           <br/>
-          { imageHtmlWithZoom(index, fileNameOfAreaOfInterest, "Area of Interest", imageWidth) }
+          { imageHtml(index, fileNameOfAreaOfInterest, "Area of Interest", imageWidth) }
+          <br/>
+          <p> </p>
           <br/>
           { imageHtmlWithZoom(index, fileNameOfFull, "Full Image", imageWidth) }
         </center>
