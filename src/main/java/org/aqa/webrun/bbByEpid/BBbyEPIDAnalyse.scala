@@ -17,6 +17,8 @@ import java.text.SimpleDateFormat
 import gnu.crypto.mode.CBC
 import org.aqa.AngleType
 import com.pixelmed.dicom.AttributeTag
+import edu.umro.ScalaUtil.Trace
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 
 /**
  * Given validated data, process it.
@@ -36,11 +38,17 @@ object BBbyEPIDAnalyse extends Logging {
     val gantryAngle_deg = Util.gantryAngle(epid)
     val gantryAngle_rad = Math.toRadians(gantryAngle_deg)
 
+    /**
+     * Epid offset in isoplane in mm.
+     */
     val epidOffset: Point3d = {
+      val scale = 1.0 / (new IsoImagePlaneTranslator(epid)).beamExpansionRatio
       val at = epid.get(TagFromName.XRayImageReceptorTranslation)
       if (at == null) new Point3d(0, 0, 0)
       else {
         val trans = at.getDoubleValues
+        val eo = new Point3d(trans(0), trans(1), trans(2))
+        eo.scale(scale)
         new Point3d(trans(0), trans(1), trans(2))
       }
     }
@@ -133,10 +141,11 @@ object BBbyEPIDAnalyse extends Logging {
     }
 
     val XRayImageReceptorTranslation = {
+      val scaleText = " * (RadiationMachineSAD / RadiationMachineSAD);"
       val rtip = getDbls(TagFromName.XRayImageReceptorTranslation)
       val comment = "%% XRayImageReceptorTranslation values"
-      val x = name + "TX = " + rtip(0) + ";"
-      val y = name + "TY = " + rtip(1) + ";"
+      val x = name + "TX = " + rtip(0) + scaleText
+      val y = name + "TY = " + rtip(1) + scaleText
       comment + ls + x + ls + y
     }
 
@@ -304,6 +313,12 @@ object BBbyEPIDAnalyse extends Logging {
       logger.info("Starting analysis of EPID Alignment for machine " + extendedData.machine.id)
 
       val bbLocList = runReq.epidList.par.map(epid => BBbyEPIDImageAnalysis.findBB(epid)).toList
+
+      if (true) { // TODO rm
+        val j = bbLocList.filter(_.isRight).map(bl => bl.right.get)
+        val jj = j.map(r => "angle: " + Util.gantryAngle(r.al).toString + "     iso: " + r.iso + "     pix: " + r.pix).mkString("\n")
+        Trace.trace(jj)
+      }
 
       val resultList = bbLocList.filter(er => er.isRight).map(er => er.right.get)
       val epidResultList = resultList.map(result => (toBBbyEPID(result.al, result.iso, extendedData), result))

@@ -11,6 +11,8 @@ import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.ImageText
 import org.aqa.Util
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import com.pixelmed.dicom.TagFromName
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Create user friendly images and annotate them.
@@ -62,7 +64,7 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
 
       val lineOffset = circleRadius_pix(scale) / Math.sqrt(2.0)
 
-      ImageUtil.setLineThickness(graphics, 8.0)
+      ImageUtil.setLineThickness(graphics, 2.0)
       graphics.drawOval(d2i(x), d2i(y), d2i(w), d2i(h))
       ImageUtil.setLineThickness(graphics, 1.0)
 
@@ -84,15 +86,18 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
 
   /**
    * Draw a + at the center showing where the plan isocenter is.
+   *
+   * @param center Center of + in pixels, not scaled.
    */
-  private def drawPlusAtCenterOfPlan(offset: Point2D.Double, bufImage: BufferedImage, scale: Int) = {
+  private def drawPlusAtCenterOfPlan(center: Point2D.Double, bufImage: BufferedImage, scale: Int) = {
     val graphics = ImageUtil.getGraphics(bufImage)
     ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
-    // draw a + in the middle of the image
+    Trace.trace("center: " + center)
 
-    val radH = d2i((radius_pix / 2) * scale)
-    val xCenter = d2i(((fullImage.width / 2) - offset.getX) * scale)
-    val yCenter = d2i(((fullImage.height / 2) - offset.getY) * scale)
+    val radH = d2i(radius_pix * 1.5 * scale)
+
+    val xCenter = (center.getX * scale).round.toInt
+    val yCenter = (center.getY * scale).round.toInt
 
     graphics.setColor(Color.white)
     graphics.drawLine(xCenter - 1, yCenter - radH, xCenter - 1, yCenter + radH)
@@ -114,8 +119,10 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
     val fullSize = ImageUtil.magnify(fullImage.toDeepColorBufferedImage(0.05), scale)
     Config.applyWatermark(fullSize)
 
-    drawPlusAtCenterOfPlan(new Point2D.Double(0, 0), fullSize, scale)
+    val pixCenter = trans.iso2Pix(trans.isoCenter)
+
     drawCircleWithXAtCenterOfBB(new Point2D.Double(0, 0), fullSize, scale)
+    drawPlusAtCenterOfPlan(pixCenter, fullSize, scale)
     fullSize
   }
 
@@ -123,8 +130,10 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
     /** Magnify the image by this scale. */
     val scale = 32
 
+    // defines how much area around the bb should be used to make the close up imate
     val closeupScale = 5.0
 
+    // position of upper left corner of close up image in pixel coordinates
     val upperLeftCorner = {
       if (bbLoc_mm.isDefined) {
         trans.iso2Pix(bbLoc_mm.get.getX - Config.EPIDBBPenumbra_mm * closeupScale, -Config.EPIDBBPenumbra_mm * closeupScale)
@@ -133,6 +142,13 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
         trans.iso2Pix(-Config.EPIDBBPenumbra_mm * closeupScale, -Config.EPIDBBPenumbra_mm * closeupScale)
       }
     }
+
+    val center = {
+      val pixCenter = trans.iso2Pix(trans.isoCenter)
+      new Point2D.Double((pixCenter.getX - upperLeftCorner.getX), (pixCenter.getY - upperLeftCorner.getY))
+    }
+
+    Trace.trace("closeup center: " + center)
 
     // define rectangle for copying just the middle of the image
     val closeupRect = {
@@ -147,7 +163,7 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
     Config.applyWatermark(closeupImage)
 
     drawCircleWithXAtCenterOfBB(upperLeftCorner, closeupImage, scale)
-    drawPlusAtCenterOfPlan(upperLeftCorner, closeupImage, scale)
+    drawPlusAtCenterOfPlan(center, closeupImage, scale)
 
     closeupImage
   }
