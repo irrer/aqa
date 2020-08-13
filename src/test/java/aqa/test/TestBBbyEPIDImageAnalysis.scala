@@ -114,7 +114,7 @@ class TestBBbyEPIDImageAnalysis extends FlatSpec with Matchers {
 
       showPixValues(pix, trans, di)
 
-      val annotatedImages = new BBbyEPIDAnnotateImages(al, Some(isoAs2D))
+      val annotatedImages = new BBbyEPIDAnnotateImages(al, Some(isoAs2D), Some("numbers here"))
 
       val pngFileFull = new File(outDir, (file.getName.replace(".dcm", "_full.png")))
       ImageUtil.writePngFile(annotatedImages.fullBufImg, pngFileFull)

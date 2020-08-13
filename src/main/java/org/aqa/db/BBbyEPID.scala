@@ -56,6 +56,9 @@ case class BBbyEPID(
       "\n    table Xlat,Yvert,Zlong : " + Util.fmtDbl(tableXlateral_mm) + ", " + Util.fmtDbl(tableYvertical_mm) + ", " + Util.fmtDbl(tableZlongitudinal_mm)
 
   val epid = new Point3d(epid3DX_mm, epid3DY_mm, epid3DZ_mm)
+
+  val isVert = AngleType.isAngleType(Util.angleRoundedTo90(gantryAngle_deg), AngleType.vertical)
+  val isHorz = !isVert
 }
 
 object BBbyEPID extends ProcedureOutput {

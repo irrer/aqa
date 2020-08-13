@@ -17,7 +17,7 @@ import edu.umro.ScalaUtil.Trace
 /**
  * Create user friendly images and annotate them.
  */
-class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]) {
+class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double], description: Option[String]) {
 
   private val textPointSize = 30
 
@@ -32,8 +32,8 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
   private val radius_pix = trans.iso2PixDistX(Config.EPIDBBPenumbra_mm) // radius of the BB in pixels
 
   val offsetText = {
-    if (bbLoc_mm.isDefined)
-      "Offset " + Util.fmtDbl(bbLoc_mm.get.getX) + ", " + Util.fmtDbl(bbLoc_mm.get.getY)
+    if (description.isDefined)
+      description.get.trim
     else
       "Offset Not Available"
   }
@@ -77,9 +77,7 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
         d2i(psX - lineOffset), d2i(psY + lineOffset))
 
       ImageText.drawTextCenteredAt(graphics, psX, y - circleRadius_pix(scale), "X is BB center")
-      //ImageText.drawTextOffsetFrom(graphics, psX, y - lineOffset + textPointSize * 1.5, "X is BB center", 90)
 
-      val offsetText = ("Offset " + bbLoc_mm.get.getX.formatted("%7.4f") + ", " + bbLoc_mm.get.getY.formatted("%7.4f") + " mm").replaceAll("  *", " ")
       ImageText.drawTextCenteredAt(graphics, psX, y - circleRadius_pix(scale) + textPointSize, offsetText)
     }
   }

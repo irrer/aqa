@@ -534,7 +534,7 @@ object BBbyCBCTHTML extends Logging {
             { Seq(2, 1, 0).map(index => makeSet(index)) }
           </tr>
         </table>
-        <a href={ matlabFileName }>Matlab Script showing calculations</a>
+        <a href={ matlabFileName } style="margin:20px;">Matlab Script showing calculations</a>
       </div>
     }
 
