@@ -142,7 +142,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   }
 
   override def run(extendedData: ExtendedData, runReq: BBbyEPIDRunReq, response: Response): ProcedureStatus.Value = {
-    val status = BBbyEPIDAnalyse.runProcedure(extendedData, runReq)
+    val status = BBbyEPIDAnalyse.runProcedure(extendedData, runReq, response)
     status
   }
 

@@ -19,6 +19,8 @@ import org.aqa.AngleType
 import com.pixelmed.dicom.AttributeTag
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import org.restlet.Response
+import org.aqa.web.ViewOutput
 
 /**
  * Given validated data, process it.
@@ -77,6 +79,7 @@ object BBbyEPIDAnalyse extends Logging {
   private def isVert(al: AttributeList) = AngleType.isAngleType(Util.gantryAngle(al), AngleType.vertical)
 
   private val ls = System.lineSeparator
+  private val lsn = "@@n@@"
 
   /**
    * Create a Matlab script that shows calculations.
@@ -92,130 +95,108 @@ object BBbyEPIDAnalyse extends Logging {
     def getDbls(tag: AttributeTag) = result.al.get(tag).getDoubleValues
     val gantryAngle = getDbls(TagFromName.GantryAngle).head
     val name = if (isVert(result.al)) "Vert" else "Horz"
+    val ipps = getDbls(TagFromName.ImagePlanePixelSpacing)
+    val rtip = getDbls(TagFromName.RTImagePosition)
+    val rTrans = getDbls(TagFromName.XRayImageReceptorTranslation)
+    val gaRounded = Util.angleRoundedTo90(Util.gantryAngle(result.al))
+    val sinCos = if (isVert(result.al))
+      "epidIsoX = cos(deg2rad(gantryAngleVert)) * (epidIsoVertX - VertTX);"
+    else
+      "epidIsoY = sin(deg2rad(gantryAngleHorz)) * (epidIsoHorzX - HorzTX);"
 
-    val epidComment = "%% Perform isoplane projection and map to RTPLAN coordinates for beam " + name + " : " + Util.angleRoundedTo90(gantryAngle)
+    val fprintfVert = s"""
+fprintf("MV G ${gaRounded.formatted("%3d")} (BB - DIGITAL_CAX) @ ISOCENTER PLANE:  %f   NA  %f  %f@@n@@",  epidIsoX, epidVertZ, sqrt(epidIsoX*epidIsoX + epidVertZ*epidVertZ));
+fprintf("MV G ${gaRounded.formatted("%3d")} (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f   NA   %f   %f$lsn", epidIsoX - cbctX, epidVertZ - cbctZ, sqrt((epidIsoX - cbctX)*(epidIsoX - cbctX) + (epidVertZ - cbctZ)*(epidVertZ - cbctZ)));
+"""
 
-    val RTImageSID = "RTImageSID" + name + " = " + getDbls(TagFromName.RTImageSID).head + ";     %% From DICOM.  Distance from beam to image plane in mm"
+    val fprintfHorz = s"""
+fprintf("MV G ${gaRounded.formatted("%3d")} (BB - DIGITAL_CAX) @ ISOCENTER PLANE:  NA   %f  %f  %f$lsn", epidIsoY, epidHorzZ, sqrt(epidIsoY*epidIsoY + epidHorzZ*epidHorzZ));
+fprintf("MV G ${gaRounded.formatted("%3d")} (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  NA   %f   %f   %f$lsn", epidIsoY - cbctY, epidHorzZ - cbctZ, sqrt((epidIsoY - cbctY)*(epidIsoY - cbctY) + (epidHorzZ - cbctZ)*(epidHorzZ - cbctZ)));
+"""
 
-    val RadiationMachineSAD = "RadiationMachineSAD" + name + " = " + getDbls(TagFromName.RadiationMachineSAD).head + ";     %% From DICOM.  Distance from beam to isoplane in mm"
+    val fprintf = if (isVert(result.al)) fprintfVert else fprintfHorz
 
-    val ImagePlanePixelSpacing = {
-      val ipps = getDbls(TagFromName.ImagePlanePixelSpacing)
-      val x = "ImagePlanePixelSpacing" + name + "X = " + ipps(0) + ";     %% From DICOM.  width  of pixel in mm in image plane"
-      val y = "ImagePlanePixelSpacing" + name + "Y = " + ipps(1) + ";     %% From DICOM.  height of pixel in mm in image plane"
-      x + ls + y
-    }
+    val text = s"""
+%% Perform isoplane projection and map to RTPLAN coordinates for beam $name : ${Util.angleRoundedTo90(gantryAngle)}
 
-    val RTImagePosition = {
-      val rtip = getDbls(TagFromName.RTImagePosition)
-      val x = "RTImagePosition" + name + "X = " + rtip(0) + ";     %% From DICOM.  X Coordinate of center of leftmost pixel in mm in image plane."
-      val y = "RTImagePosition" + name + "Y = " + rtip(1) + ";     %% From DICOM.  Y Coordinate of center of topmost pixel in mm in image plane."
-      x + ls + y
-    }
+RTImageSID$name = ${getDbls(TagFromName.RTImageSID).head};     %% From DICOM.  Distance from beam to image plane in mm
 
-    val pix = {
-      val comment = "%% Coordinates in pixels in the image plane where the bb was found by AQA software.  (0,0 is upper left corner of image)"
-      val x = "epidPix" + name + "X = " + result.pix.getX + ";"
-      val y = "epidPix" + name + "Y = " + result.pix.getY + ";"
-      comment + ls + x + ls + y
-    }
+RadiationMachineSAD$name = ${getDbls(TagFromName.RadiationMachineSAD).head};     %% From DICOM.  Distance from beam to isoplane in mm
 
-    val divergence = "divergence" + name + " = RTImageSID" + name + " / RadiationMachineSAD" + name + ";   %% Beam divergence factor.  Is usually close to 1.5"
+ImagePlanePixelSpacing${name}X = ${ipps(0)};     %% From DICOM.  Width  of pixel in mm in image plane
+ImagePlanePixelSpacing${name}Y = ${ipps(1)};     %% From DICOM.  Height of pixel in mm in image plane
 
-    val iso = {
-      val comment = "%% The coordinates of the bb in the isoplane in mm, with origin in the center of the image, and X positive direction is to the right, Y positive direction is down."
-      val x = "epidIso" + name + "X = ((" + "epidPix" + name + "X * ImagePlanePixelSpacing" + name + "X) + RTImagePosition" + name + "X) / divergence" + name + ";"
-      val y = "epidIso" + name + "Y = ((" + "epidPix" + name + "Y * ImagePlanePixelSpacing" + name + "Y) - RTImagePosition" + name + "Y) / divergence" + name + ";"
-      comment + ls + x + ls + y
-    }
+RTImagePosition${name}X = ${rtip(0)};     %% From DICOM.  X Coordinate of center of leftmost pixel in mm in image plane.
+RTImagePosition${name}Y = ${rtip(1)};     %% From DICOM.  Y Coordinate of center of topmost pixel in mm in image plane.
 
-    val XRayImageReceptorTranslation = {
-      val scaleText = " / divergence" + name + ";"
-      val rtip = getDbls(TagFromName.XRayImageReceptorTranslation)
-      val comment = "%% XRayImageReceptorTranslation " + name + " values scaled from mm in the image plane to mm in the isoplane."
-      val x = name + "TX = " + rtip(0) + scaleText
-      val y = name + "TY = " + rtip(1) + scaleText
-      comment + ls + x + ls + y
-    }
+%% Coordinates in pixels in the image plane where the bb was found by AQA software.  (0,0 is upper left corner of image)
+epidPix${name}X = ${result.pix.getX};
+epidPix${name}Y = ${result.pix.getY};
 
-    val gantryAngleText = {
-      val comment = "%% From DICOM.  Gantry angle in degrees."
-      val ga = "gantryAngle" + name + " = " + gantryAngle + ";"
-      comment + ls + ga
-    }
+divergence$name = RTImageSID$name / RadiationMachineSAD${name};   %% Beam divergence factor.  Is usually close to 1.5
 
-    val xy = {
-      val comment = "%% Convert the X value in the image from gantry coordinates to RTPLAN (world) coordinates.  For vertical gantry angles, X maps to X, but for horizontal gantry angles, X maps to Y."
-      val convert = if (isVert(result.al))
-        "epidIsoX = cos(deg2rad(gantryAngleVert)) * (epidIsoVertX - VertTX);"
-      else
-        "epidIsoY = sin(deg2rad(gantryAngleHorz)) * (epidIsoHorzX - HorzTX);"
-      comment + ls + convert
-    }
+%% The coordinates of the bb in the isoplane in mm, with origin in the center of the image, and X positive direction is to the right, Y positive direction is down.
+epidIso${name}X = ((epidPix${name}X * ImagePlanePixelSpacing${name}X) + RTImagePosition${name}X) / divergence${name};
+epidIso${name}Y = ((epidPix${name}Y * ImagePlanePixelSpacing${name}Y) - RTImagePosition${name}Y) / divergence${name};
 
-    val z = {
-      val comment = "%% Convert the Y value in the image to RTPLAN (world) coordinates.  Y always maps to Z, But the sign must be flipped (negated)."
-      val convert = "epid" + name + "Z = (-epidIso" + name + "Y) - " + name + "TY;"
-      comment + ls + convert
-    }
+%% XRayImageReceptorTranslation $name values scaled from mm in the image plane to mm in the isoplane.
+${name}TX = ${rTrans(0)} / divergence${name};
+${name}TY = ${rTrans(1)} / divergence${name};
 
-    val summary = {
-      val ga = Util.angleRoundedTo90(Util.gantryAngle(result.al))
-      val comment = "%% Print the results in a format similar to the web report."
-      val fprintf = if (isVert(result.al)) {
-        """fprintf("MV G %d (BB - DIGITAL_CAX) @ ISOCENTER PLANE:  %f   NA  %f  %f\n", """ + ga + ", epidIsoX, epidVertZ, sqrt(epidIsoX*epidIsoX + epidVertZ*epidVertZ));" + ls +
-          """fprintf("MV G %d (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f   NA  %f  %f\n", """ + ga + ", epidIsoX - cbctX, epidVertZ - cbctZ, sqrt((epidIsoX - cbctX)*(epidIsoX - cbctX) + (epidVertZ - cbctZ)*(epidVertZ - cbctZ)));"
-      } else {
-        """fprintf("MV G %d (BB - DIGITAL_CAX) @ ISOCENTER PLANE:  NA   %f  %f  %f\n", """ + ga + ", epidIsoY, epidHorzZ, sqrt(epidIsoY*epidIsoY + epidHorzZ*epidHorzZ));" + ls +
-          """fprintf("MV G %d (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f   NA  %f  %f\n", """ + ga + ", epidIsoY - cbctY, epidHorzZ - cbctZ, sqrt((epidIsoY - cbctY)*(epidIsoY - cbctY) + (epidHorzZ - cbctZ)*(epidHorzZ - cbctZ)));"
-      }
-      comment + ls + fprintf
-    }
+%% From DICOM.  Gantry angle in degrees.
+gantryAngle${name} = ${gantryAngle};
 
-    val text = Seq(epidComment, RTImageSID, RadiationMachineSAD,
-      ImagePlanePixelSpacing, RTImagePosition, pix, divergence,
-      iso, XRayImageReceptorTranslation,
-      gantryAngleText, xy, z, summary).mkString(ls + ls)
+%% Convert the X value in the image from gantry coordinates to RTPLAN (world) coordinates.  For vertical gantry angles, X maps to X, but for horizontal gantry angles, X maps to Y.
+${sinCos}
+
+%% Convert the Y value in the image to RTPLAN (world) coordinates.  Y always maps to Z, But the sign must be flipped (negated).
+epid${name}Z = (-epidIso${name}Y) - ${name}TY;
+
+%% Print the results in a format similar to the web report.
+${fprintf}
+"""
 
     text
   }
 
-  private def constructCompositeMatlab(epidResultList: Seq[(BBbyEPID, BBbyEPIDImageAnalysis.Result)], bbByCBCT: BBbyCBCT): String = {
+  private def constructCompositeMatlab(epidResultList: Seq[(BBbyEPID, BBbyEPIDImageAnalysis.Result)], bbByCBCT: BBbyCBCT, response: Response): String = {
     val separator = ls + ls + "%% ------------------------------------------------------------------" + ls + ls
+
+    val header = {
+      s"""
+%% Calculate EPID results with Matlab code.
+
+%% EPID report: ${response.getRequest.getHostRef}${ViewOutput.viewOutputUrl(epidResultList.head._1.outputPK)}
+
+%% Results from CBCT
+cbctX = ${bbByCBCT.cbctX_mm} - ${bbByCBCT.rtplanX_mm};
+cbctY = ${bbByCBCT.cbctY_mm} - ${bbByCBCT.rtplanY_mm};
+cbctZ = ${bbByCBCT.cbctZ_mm} - ${bbByCBCT.rtplanZ_mm};
+fprintf("CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f  %f  %f$lsn", cbctX, cbctY, cbctZ);
+"""
+    }
 
     val epidText = epidResultList.map(er => constructEpidMatlab(er._2))
 
-    val z = {
-      val comment = "%% Calculate the Z position of the bb in RTPLAN (world) coordinates by averaging the two values from the vertical and horizontal images."
-      val avg = "epidIsoZ = (epidVertZ + epidHorzZ) / 2.0;"
-      comment + ls + avg
+    val compositeText = {
+      s"""
+%% Calculate the Z position of the bb in RTPLAN (world) coordinates by averaging the two values from the vertical and horizontal images."
+epidIsoZ = (epidVertZ + epidHorzZ) / 2.0;
+
+%% Subtract the CBCT position from the EPID position to find the distance between them.
+epidMinuscbctX = epidIsoX - cbctX;
+epidMinuscbctY = epidIsoY - cbctY;
+epidMinuscbctZ = epidIsoZ - cbctZ;
+%% Format final values similarly to web page report.
+fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f   %f  %f  %f$lsn", epidIsoX - cbctX, epidIsoY - cbctY, epidIsoZ - cbctZ, sqrt((epidIsoX - cbctX)*(epidIsoX - cbctX) + (epidIsoY - cbctY)*(epidIsoY - cbctY) + (epidIsoZ - cbctZ)*(epidIsoZ - cbctZ)));"""
     }
 
-    val cbctXYZ = {
-      "%% Results from CBCT" + ls +
-        "cbctX = " + bbByCBCT.cbctX_mm + " - " + bbByCBCT.rtplanX_mm + ";" + ls +
-        "cbctY = " + bbByCBCT.cbctY_mm + " - " + bbByCBCT.rtplanY_mm + ";" + ls +
-        "cbctZ = " + bbByCBCT.cbctZ_mm + " - " + bbByCBCT.rtplanZ_mm + ";" + ls +
-        """fprintf("CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f  %f  %f\n", cbctX, cbctY, cbctZ);"""
-    }
+    val allText = (Seq(header) ++ epidText ++ Seq(compositeText)).mkString(separator)
 
-    val answer = {
-      "%% Subtract the CBCT position from the EPID position to find the distance between them." + ls +
-        "epidMinuscbctX = epidIsoX - cbctX;" + ls +
-        "epidMinuscbctY = epidIsoY - cbctY;" + ls +
-        "epidMinuscbctZ = epidIsoZ - cbctZ;" + ls + ls +
-        "%% Format final values similarly to web page report." + ls +
-        """fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f   %f  %f  %f\n", """ +
-        "epidIsoX - cbctX, epidIsoY - cbctY, epidIsoZ - cbctZ, sqrt((epidIsoX - cbctX)*(epidIsoX - cbctX) + (epidIsoY - cbctY)*(epidIsoY - cbctY) + (epidIsoZ - cbctZ)*(epidIsoZ - cbctZ)));"
-    }
-
-    val textList = Seq(cbctXYZ) ++ epidText ++ Seq(z, answer)
-
-    val allText = textList.mkString(separator) + ls + ls
-    allText
+    allText.replaceAll(lsn, "\\\\n")
   }
 
-  private def constructComposite(epidResultList: Seq[(BBbyEPID, BBbyEPIDImageAnalysis.Result)], extendedData: ExtendedData, runReq: BBbyEPIDRunReq): Either[String, (BBbyEPIDComposite, Option[String])] = {
+  private def constructComposite(epidResultList: Seq[(BBbyEPID, BBbyEPIDImageAnalysis.Result)], extendedData: ExtendedData, runReq: BBbyEPIDRunReq, response: Response): Either[String, (BBbyEPIDComposite, Option[String])] = {
 
     val bbByEPIDList = epidResultList.map(er => er._1)
 
@@ -282,7 +263,7 @@ object BBbyEPIDAnalyse extends Logging {
         None, None, None,
         None, None, None)
 
-      val matlabComposite = if (bbByCBCTHistory.isDefined) Some(constructCompositeMatlab(epidResultList, bbByCBCTHistory.get.bbByCBCT)) else None
+      val matlabComposite = if (bbByCBCTHistory.isDefined) Some(constructCompositeMatlab(epidResultList, bbByCBCTHistory.get.bbByCBCT, response)) else None
 
       // if a corresponding CBCT is defined, then incorporate those values.
       val bbByEPIDCompositeFinal = {
@@ -313,8 +294,7 @@ object BBbyEPIDAnalyse extends Logging {
     }
   }
 
-  def runProcedure(extendedData: ExtendedData, runReq: BBbyEPIDRunReq): ProcedureStatus.Value = {
-
+  def runProcedure(extendedData: ExtendedData, runReq: BBbyEPIDRunReq, response: Response): ProcedureStatus.Value = {
     try {
       logger.info("Starting analysis of EPID Alignment for machine " + extendedData.machine.id)
 
@@ -334,7 +314,7 @@ object BBbyEPIDAnalyse extends Logging {
       BBbyEPID.insertSeq(epidResultList.map(er => er._1))
 
       logger.info("Calculating composite result.")
-      val bbByEPIDComposite = constructComposite(epidResultList, extendedData, runReq) // TODO this can fail if BB not found
+      val bbByEPIDComposite = constructComposite(epidResultList, extendedData, runReq, response) // TODO this can fail if BB not found
       if (bbByEPIDComposite.isRight) {
         logger.info("Inserting composite EPID record into database: " + bbByEPIDComposite.right.get)
         bbByEPIDComposite.right.get._1.insert
