@@ -189,14 +189,18 @@ object AnonymizeUtil extends Logging {
       def run = {
         // add a little extra time to ensure that the operation that cached the credential is done
         Thread.sleep(cacheTimeout + 1000)
-        if (institutionCache.nonEmpty) {
-          institutionCache.synchronized({
-            val before = institutionCache.size
-            val valid = institutionCache.filter(ic => ic.isValid)
-            institutionCache.clear
-            institutionCache.insertAll(0, valid)
-            //logger.info("Cleared anonymizing security cache from size " + before + " to size " + institutionCache.size)
-          })
+        try {
+          if (institutionCache.nonEmpty) {
+            institutionCache.synchronized({
+              val before = institutionCache.size
+              val valid = institutionCache.filter(ic => ic.isValid)
+              institutionCache.clear
+              institutionCache.insertAll(0, valid)
+              //logger.info("Cleared anonymizing security cache from size " + before + " to size " + institutionCache.size)
+            })
+          }
+        } catch {
+          case t: Throwable => logger.warn("Ignoring unexpected error in cache expiration: " + fmtEx(t))
         }
       }
       (new Thread(this)).start
