@@ -531,8 +531,12 @@ object DicomSeries extends Logging {
           val newDs = oldDs.copy(content = null)
           trimCount = trimCount + 1
           if (Config.DicomSeriesTrim == Config.Fix.fix) {
+            Trace.trace
+            println("Going to trim content of " + newDs.dicomSeriesPK.get)
+            Trace.trace
             newDs.insertOrUpdate
-            println("Trimmed content of " + newDs)
+            Trace.trace
+            println("Trimmed content of " + newDs.dicomSeriesPK.get)
           } else {
             println("Did NOT trim content of " + newDs.dicomSeriesPK.get)
           }
@@ -683,12 +687,19 @@ object DicomSeries extends Logging {
   def main(args: Array[String]): Unit = {
     if (Config.validate) {
       DbSetup.init
+      Trace.trace
       if (Config.DicomSeriesDeleteOrphans != Config.Fix.ignore) deleteOrphans
+      Trace.trace
       if (Config.DicomSeriesPopulateFromInput != Config.Fix.ignore) populateFromInput
+      Trace.trace
       if (Config.DicomSeriesTrim != Config.Fix.ignore) trimOld
+      Trace.trace
       if (Config.DicomSeriesUnlinkInputPK != Config.Fix.ignore) unlinkRtplan
+      Trace.trace
       if (Config.DicomSeriesShared != Config.Fix.ignore) verifySharedInDicomSeries
+      Trace.trace
       if (Config.DicomSeriesOrphanOutputs != Config.Fix.ignore) deleteOrphanOutputs
+      Trace.trace
       System.exit(0)
     }
   }
