@@ -29,6 +29,7 @@ import org.aqa.db.BBbyCBCT
 import org.aqa.web.WebUtil
 import org.aqa.db.Output
 import com.pixelmed.dicom.AttributeTag
+import org.restlet.Response
 
 /**
  * After the data has has been validated as sufficient to do the analysis, perform the
@@ -92,7 +93,7 @@ object BBbyCBCTExecute extends Logging {
     bbByCBCT
   }
 
-  def runProcedure(extendedData: ExtendedData, runReq: BBbyCBCTRunReq): ProcedureStatus.Value = {
+  def runProcedure(extendedData: ExtendedData, runReq: BBbyCBCTRunReq, response: Response): ProcedureStatus.Value = {
     try {
       // This code only reports values and considers the test to have passed if
       // it found the BB, regardless of whether the BB was positioned within
@@ -125,7 +126,7 @@ object BBbyCBCTExecute extends Logging {
         val bbByCBCT = saveToDb(extendedData, runReq, bbPointInRtplan)
         logger.info("err_mm: " + bbByCBCT.err_mm.toString)
         val annotatedImages = BBbyCBCTAnnotateImages.annotate(bbByCBCT, imageXYZ, runReq, volumePoint)
-        val html = BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, annotatedImages, ProcedureStatus.done, runReq, result.right.get)
+        val html = BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, annotatedImages, ProcedureStatus.done, runReq, result.right.get, response)
         logger.info("Finished analysis of CBCT Alignment for machine " + extendedData.machine.id)
         ProcedureStatus.pass
       } else {

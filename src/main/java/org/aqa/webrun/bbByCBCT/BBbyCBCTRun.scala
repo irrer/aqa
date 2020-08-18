@@ -213,7 +213,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   }
 
   override def run(extendedData: ExtendedData, runReq: BBbyCBCTRunReq, response: Response): ProcedureStatus.Value = {
-    val status = BBbyCBCTExecute.runProcedure(extendedData, runReq)
+    val status = BBbyCBCTExecute.runProcedure(extendedData, runReq, response)
     checkForEpidRedo(extendedData.output, response)
     status
   }

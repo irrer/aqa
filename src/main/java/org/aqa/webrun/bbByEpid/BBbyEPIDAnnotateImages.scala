@@ -17,7 +17,14 @@ import edu.umro.ScalaUtil.Trace
 /**
  * Create user friendly images and annotate them.
  */
-class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double], description: Option[String]) {
+class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.Double], description: Option[String]) {
+
+  val bbLoc_mmIso = {
+    if (bbLoc_mmGantry.isDefined) {
+      Some(new Point2D.Double(bbLoc_mmGantry.get.getX, -bbLoc_mmGantry.get.getY))
+    } else
+      None
+  }
 
   private val textPointSize = 30
 
@@ -27,7 +34,7 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
   private val circleRadiusScale = 2.0
 
   private val trans = new IsoImagePlaneTranslator(al)
-  private def bbLoc_pix = trans.iso2Pix(bbLoc_mm.get) // location of BB in pixels
+  private def bbLoc_pix = trans.iso2Pix(bbLoc_mmIso.get) // location of BB in pixels
   private val fullImage = new DicomImage(al)
   private val radius_pix = trans.iso2PixDistX(Config.EPIDBBPenumbra_mm) // radius of the BB in pixels
 
@@ -50,7 +57,7 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
    *  @scale Scale of bufImage compared to original
    */
   private def drawCircleWithXAtCenterOfBB(offset: Point2D.Double, bufImage: BufferedImage, scale: Int) = {
-    if (bbLoc_mm.isDefined) {
+    if (bbLoc_mmIso.isDefined) {
       val graphics = ImageUtil.getGraphics(bufImage)
       graphics.setColor(Color.white)
       ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
@@ -133,8 +140,8 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mm: Option[Point2D.Double]
 
     // position of upper left corner of close up image in pixel coordinates
     val upperLeftCorner = {
-      if (bbLoc_mm.isDefined) {
-        trans.iso2Pix(bbLoc_mm.get.getX - Config.EPIDBBPenumbra_mm * closeupScale, -Config.EPIDBBPenumbra_mm * closeupScale)
+      if (bbLoc_mmIso.isDefined) {
+        trans.iso2Pix(bbLoc_mmIso.get.getX - Config.EPIDBBPenumbra_mm * closeupScale, -Config.EPIDBBPenumbra_mm * closeupScale)
       } else {
         // if no BB found, then just make a close up of the center of the image
         trans.iso2Pix(-Config.EPIDBBPenumbra_mm * closeupScale, -Config.EPIDBBPenumbra_mm * closeupScale)

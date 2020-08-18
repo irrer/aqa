@@ -33,6 +33,7 @@ object BBbyEPIDHTML {
 
   private val closeUpImagePrefix = "CloseUp"
   private val fullImagePrefix = "Full"
+  val matlabFileName = "matlab.txt"
 
   private val mainReportFileName = Output.displayFilePrefix + ".html"
 
@@ -251,7 +252,6 @@ object BBbyEPIDHTML {
         val z = Util.fmtDbl(bbByEPID.tableZlongitudinal_mm / 10)
 
         <div title="Table position when CBCT was captured.">
-          <h3> </h3>
           Table Position X,Y,Z cm:{ x + "," + y + "," + z }
         </div>
       }
@@ -261,10 +261,19 @@ object BBbyEPIDHTML {
 
         if (composite.isRight) {
           if (cbctOutput.isDefined) {
-            val cbctTime = {
+            val cbctReference = {
               val timeText = new SimpleDateFormat("K:mm a").format(cbctOutput.get.dataDate.get)
-              <a href={ ViewOutput.viewOutputUrl(cbctOutput.get.outputPK.get) }>CBCT at { timeText }</a>
+              <div title="View CBCT report">
+                <a href={ ViewOutput.viewOutputUrl(cbctOutput.get.outputPK.get) }>CBCT at { timeText }</a>
+              </div>
             }
+
+            def matlabReference: Elem = {
+              <div title="Executable Matlab script showing calculations. Copy and paste to Matlab.">
+                <a href={ matlabFileName } style="margin:20px;">Matlab</a>
+              </div>
+            }
+
             val title = "Composite results.  Distance in mm between plan isocenter and position of BB compensated by CBCT (difference of EPID - CBCT) " + WebUtil.titleNewline +
               fmtPrecise(composite.right.get._1.xAdjusted_mm.get) + ", " +
               fmtPrecise(composite.right.get._1.yAdjusted_mm.get) + ", " +
@@ -281,7 +290,11 @@ object BBbyEPIDHTML {
                     " :: " + fmtApprox(composite.right.get._1.offsetAdjusted_mm.get)
                 }
               </h3>
-              { tableMovement(composite.right.get._1) }{ sp + sp }{ cbctTime }
+              <div class="row">
+                <div class="col-md-4">{ tableMovement(composite.right.get._1) }</div>
+                <div class="col-md-2">{ cbctReference }</div>
+                <div class="col-md-3">{ matlabReference }</div>
+              </div>
             </div>
           } else {
             <div title="There was no corresponding CBCT.  CBCT must be taken earlier than the EPID and on the same day.">
@@ -506,25 +519,6 @@ object BBbyEPIDHTML {
         <div></div>
     }
 
-    def matlab: Seq[Elem] = {
-      if (composite.isRight && composite.right.get._2.isDefined) {
-        val text = composite.right.get._2.get
-        val fileName = "matlab.txt"
-        val file = new File(extendedData.output.dir, fileName)
-        Util.writeFile(file, text)
-        Seq({
-          <div>
-            <a href={ fileName } style="margin:20px;">Matlab Script showing calculations</a>
-            <p> </p>
-            <br/>
-            <p> </p>
-            <br/>
-          </div>
-        })
-      } else
-        Seq[Elem]()
-    }
-
     def content = {
       <div>
         <div class="row">
@@ -545,7 +539,6 @@ object BBbyEPIDHTML {
             </tr>
           </table>
         </div>
-        { matlab }
       </div>
     }
 
@@ -557,6 +550,15 @@ object BBbyEPIDHTML {
       zoomScript + "\n" + chartRef
     }
 
+    def writeMatlabFile = {
+      if (composite.isRight && composite.right.get._2.isDefined) {
+        val text = composite.right.get._2.get
+        val file = new File(extendedData.output.dir, matlabFileName)
+        Util.writeFile(file, text)
+      }
+    }
+
+    writeMatlabFile
     val text = WebUtil.wrapBody(wrap(content), "BB Location by EPID", None, true, Some(runScript))
     val file = new File(extendedData.output.dir, mainReportFileName)
     Util.writeFile(file, text)
