@@ -32,7 +32,7 @@ object BBbyEPIDAnalyse extends Logging {
    *
    * @param epid EPID DICOM
    *
-   * @param bbLocation in EPID translated to mm
+   * @param bbLocation in EPID translated to mm in DICOM gantry coordinates.
    *
    * @param extendedData Associated DB rows
    */
@@ -49,9 +49,9 @@ object BBbyEPIDAnalyse extends Logging {
     logger.info("Using XRayImageReceptorTranslation in isoplane in mm of: " + epidOffset)
     logger.info("bbLocation in isoplane in mm: " + bbLocation)
 
-    val epid3DX_mm = Math.cos(gantryAngle_rad) * (bbLocation.getX - epidOffset.getX)
-    val epid3DY_mm = Math.sin(gantryAngle_rad) * (bbLocation.getX - epidOffset.getX)
-    val epid3DZ_mm = (-bbLocation.getY) + epidOffset.getY // flip sign to directionally match coordinate system
+    val epid3DX_mm = Math.cos(gantryAngle_rad) * (bbLocation.getX + epidOffset.getX)
+    val epid3DY_mm = Math.sin(gantryAngle_rad) * (bbLocation.getX + epidOffset.getX)
+    val epid3DZ_mm = bbLocation.getY + epidOffset.getY
     val origin = new Point3d(0, 0, 0)
 
     def getDbl(tag: AttributeTag) = epid.get(tag).getDoubleValues.head
@@ -100,9 +100,9 @@ object BBbyEPIDAnalyse extends Logging {
     val rTrans = getDbls(TagFromName.XRayImageReceptorTranslation)
     val gaRounded = Util.angleRoundedTo90(Util.gantryAngle(result.al))
     val sinCos = if (isVert(result.al))
-      "epidIsoX = cos(deg2rad(gantryAngleVert)) * (epidIsoVertX - VertTX);"
+      "epidIsoX = cos(deg2rad(gantryAngleVert)) * (epidIsoVertX + VertTX);"
     else
-      "epidIsoY = sin(deg2rad(gantryAngleHorz)) * (epidIsoHorzX - HorzTX);"
+      "epidIsoY = sin(deg2rad(gantryAngleHorz)) * (epidIsoHorzX + HorzTX);"
 
     val fprintfVert = s"""
 fprintf("MV G ${gaRounded.formatted("%3d")} (BB - DIGITAL_CAX) @ ISOCENTER PLANE:  %f   NA  %f  %f@@n@@",  epidIsoX, epidVertZ, sqrt(epidIsoX*epidIsoX + epidVertZ*epidVertZ));
@@ -135,9 +135,10 @@ epidPix${name}Y = ${result.pix.getY};
 
 divergence$name = RTImageSID$name / RadiationMachineSAD${name};   %% Beam divergence factor.  Is usually close to 1.5
 
-%% The coordinates of the bb in the isoplane in mm, with origin in the center of the image, and X positive direction is to the right, Y positive direction is down.
+%% The coordinates of the bb in the isoplane in mm, with origin in the center of the image, and X positive direction is
+%% to the right.  Y positive direction is up, which is the opposite direction of the pixel coordinate system.
 epidIso${name}X = ((epidPix${name}X * ImagePlanePixelSpacing${name}X) + RTImagePosition${name}X) / divergence${name};
-epidIso${name}Y = ((epidPix${name}Y * ImagePlanePixelSpacing${name}Y) - RTImagePosition${name}Y) / divergence${name};
+epidIso${name}Y = ((epidPix${name}Y * ImagePlanePixelSpacing${name}Y * -1) + RTImagePosition${name}Y) / divergence${name};
 
 %% XRayImageReceptorTranslation $name values scaled from mm in the image plane to mm in the isoplane.
 ${name}TX = ${rTrans(0)} / divergence${name};
@@ -150,7 +151,7 @@ gantryAngle${name} = ${gantryAngle};
 ${sinCos}
 
 %% Convert the Y value in the image to RTPLAN (world) coordinates.  Y always maps to Z, But the sign must be flipped (negated).
-epid${name}Z = (-epidIso${name}Y) - ${name}TY;
+epid${name}Z = epidIso${name}Y + ${name}TY;
 
 %% Print the results in a format similar to the web report.
 ${fprintf}
@@ -164,7 +165,12 @@ ${fprintf}
 
     val header = {
       s"""
-%% Calculate EPID results with Matlab code.
+%% Calculate EPID results with Matlab code.  This code may be run with Matlab.  This code is provided as a convenience to
+%% allow users to ascertain that calculations are being done correctly.
+%%
+%% Note that the AQA generates these values using entirely different code (written in Scala), but because the answers match,
+%% users can be assured that the calculations are equivalent.  The only difference might be in roundoff errors, but the 
+%% results will match to at least 10 significant figures.
 
 %% EPID report: ${response.getRequest.getHostRef}${ViewOutput.viewOutputUrl(epidResultList.head._1.outputPK)}
 

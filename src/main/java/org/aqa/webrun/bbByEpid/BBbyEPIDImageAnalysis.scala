@@ -29,6 +29,16 @@ import javax.vecmath.Point2d
  */
 object BBbyEPIDImageAnalysis extends Logging {
 
+  /**
+   * Represent an EPID result, with enough information to annotate and generate Matlab script.
+   *
+   * @param pix: Coordinates of center of BB in pixel space.
+   *
+   * @param al: Attribute list of EPID image.
+   *
+   * @param iso: Coordinates of center of BB in DICOM gantry space.
+   *
+   */
   case class Result(pix: Point2d, al: AttributeList, iso: Point2d);
 
   private val subProcedureName = "BB by EPID"
@@ -131,7 +141,7 @@ object BBbyEPIDImageAnalysis extends Logging {
     }
 
     if (valid) {
-      val result = new Result(bbCenter_pix, al, new Point2d(bbCenter_mm.getX, bbCenter_mm.getY))
+      val result = new Result(bbCenter_pix, al, new Point2d(bbCenter_mm.getX, -bbCenter_mm.getY)) // Convert Y to DICOM gantry coordinate system
       Right(result)
     } else {
       val msg = "Failed to find image of BB in EPID image with sufficient contrast to background. for gantry angle " + Util.gantryAngle(al)
