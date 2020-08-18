@@ -493,7 +493,7 @@ object RunProcedure extends Logging {
     } else {
       runTrait.validate(valueMap, alList) match {
         case Left(errMap) => {
-          logger.info("Bad request: " + errMap.keys.map(k => k + " : " + valueMap.get(k)).mkString("\n    "))
+          logger.info("Invalid request: " + errMap.keys.map(k => k + " : " + valueMap.get(k)).mkString("\n    ") + "\nraw errMap: " + errMap.toString)
           form.setFormResponse(valueMap, errMap, runTrait.getProcedure.fullName, response, Status.CLIENT_ERROR_BAD_REQUEST)
         }
         case Right(runReq) => {
