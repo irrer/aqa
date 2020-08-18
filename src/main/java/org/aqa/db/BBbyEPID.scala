@@ -25,8 +25,8 @@ case class BBbyEPID(
   offset_mm: Double, // distance between measured EPID position and expected (plan) location (aka: positioning error)
   gantryAngle_deg: Double, // gantry angle in degrees
   status: String, // termination status
-  epidImageX_mm: Double, // X position in EPID image
-  epidImageY_mm: Double, // Y position in EPID image
+  epidImageX_mm: Double, // X position in EPID image in DICOM gantry coordinates.  Origin (0,0) is in the center, positive direction is to the right.
+  epidImageY_mm: Double, // Y position in EPID image in DICOM gantry coordinates.  Origin (0,0) is in the center, positive direction is up.  Note the the direction is opposite to that given by <code>edu.umro.ImageUtil.IsoImagePlaneTranslator</code>.
   epid3DX_mm: Double, // X position in EPID in 3D plan space
   epid3DY_mm: Double, // Y position in EPID in 3D plan space
   epid3DZ_mm: Double, // Z position in EPID in 3D plan space
