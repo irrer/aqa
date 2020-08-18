@@ -37,7 +37,7 @@ object BBbyEPIDHTML {
   private val mainReportFileName = Output.displayFilePrefix + ".html"
 
   private def fmtApprox(d: Double) = d.formatted("%6.2f").trim
-  private def fmtPrecise(d: Double) = d.formatted("%12.5f").trim
+  private def fmtPrecise(d: Double) = d.formatted("%12.6f").trim // match precision shown in Matlab
 
   def generateHtml(extendedData: ExtendedData, bbByEPIDList: Seq[BBbyEPID], composite: Either[String, (BBbyEPIDComposite, Option[String])], runReq: BBbyEPIDRunReq, status: ProcedureStatus.Value): Unit = {
 
