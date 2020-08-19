@@ -420,7 +420,7 @@ object RunProcedure extends Logging {
       case _ if (machineByInputList.size > 1) => formError("Files come from more than one machine; please Cancel and try again.")
       case _ if (machineByInputList.nonEmpty) => Right(machineByInputList.head)
       case _ if (chosenMachine.isDefined) => Right(chosenMachine.get)
-      case _ => formError("Unknown machine.  Please choose from the 'Machine' list below or click Cancel and then use the Administration interface to add a new machine.")
+      case _ => formError("Unknown machine.  Please choose from the 'Machine' list below or click Cancel " + WebUtil.titleNewline + "and then use the Administration interface to add a new machine.")
     }
     result
   }
