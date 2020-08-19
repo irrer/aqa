@@ -66,7 +66,7 @@ case class DicomSeries(
   /**
    * Get the content as a list of <code>AttributeList</code>.
    */
-  lazy val attributeListList: Seq[AttributeList] = {
+  def attributeListList: Seq[AttributeList] = {
     0 match {
       case _ if content.nonEmpty => {
         val alList = DicomUtil.zippedByteArrayToDicom(content.get)
