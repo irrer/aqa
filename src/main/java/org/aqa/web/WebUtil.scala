@@ -101,9 +101,8 @@ object WebUtil extends Logging {
 
   def dblQuote(text: String): String = doubleQuote + text + doubleQuote
 
-  def xmlToText(document: Node): String = {
-    new PrettyPrinter(1024, 2).format(document).
-      replace(singleQuote, "'").
+  def specialCharTagsToLiteralXml(text: String): String = {
+    text.replace(singleQuote, "'").
       replace(doubleQuote, "\"").
       replace(amp, "&").
       replace(nl, "\n").
@@ -112,7 +111,22 @@ object WebUtil extends Logging {
       replace(nbsp, "&nbsp").
       replace(mathPre, """<math xmlns="http://www.w3.org/1998/Math/MathML">""").
       replace(mathSuf, """</math>""")
+  }
 
+  def specialCharTagsToLiteralJs(text: String): String = {
+    val out = text.replace(singleQuote, "\\'").replaceAllLiterally("dfasd", "").
+      replace(doubleQuote, "\\\"").
+      replace(nl, "\\n").
+      replace(titleNewline, "\\n").
+      replace(openCurly, "{").
+      replace(closeCurly, "}").
+      replace(nbsp, "&nbsp").
+      replace(amp, "&")
+    out
+  }
+
+  def xmlToText(document: Node): String = {
+    specialCharTagsToLiteralXml(new PrettyPrinter(1024, 2).format(document))
   }
 
   def cleanClassName(className: String) = className.substring(className.lastIndexOf('.') + 1).replace("$", "")
@@ -555,7 +569,9 @@ object WebUtil extends Logging {
   def markLiteralValue(label: String): String = "@@@@" + label + "@@@@"
 
   def makeAlertBox(text: String): String = {
-    "alert(\"" + text.replaceAllLiterally(singleQuote, "\\'").replaceAllLiterally(doubleQuote, "\\\"") + "\");"
+    "alert(\"" +
+      specialCharTagsToLiteralJs(text) +
+      "\");"
   }
 
   val sessionLabel = "session"
