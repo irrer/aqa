@@ -853,6 +853,7 @@ object Config extends Logging {
     val check = Value
     val fix = Value
   }
+
   private def getFixState(name: String): Fix.Value = {
     val list = document \ name
     val fixState = if (list.isEmpty) {
@@ -868,12 +869,15 @@ object Config extends Logging {
     logText(name, fixState.toString)
     fixState
   }
+
   val DicomSeriesDeleteOrphans = getFixState("DicomSeriesDeleteOrphans") // TODO temporary for transition
   val DicomSeriesPopulateFromInput = getFixState("DicomSeriesPopulateFromInput") // TODO temporary for transition
   val DicomSeriesTrim = getFixState("DicomSeriesTrim") // TODO temporary for transition
   val DicomSeriesOrphanOutputs = getFixState("DicomSeriesOrphanOutputs") // TODO temporary for transition
   val DicomSeriesUnlinkInputPK = getFixState("DicomSeriesUnlinkInputPK") // TODO temporary for transition
+  val DicomSeriesFindBadRtplans = getFixState("DicomSeriesFindBadRtplans") // TODO temporary for transition
   val DicomSeriesShared = getFixState("DicomSeriesShared") // TODO temporary for transition
+  val DicomSeriesInput = getFixState("DicomSeriesInput") // TODO temporary for transition
 
   // =================================================================================
 

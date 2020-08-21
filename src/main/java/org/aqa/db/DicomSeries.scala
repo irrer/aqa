@@ -18,6 +18,9 @@ import org.aqa.web.WebServer
 import scala.util.Try
 import org.aqa.DicomFile
 import com.pixelmed.dicom.TagFromName
+import java.io.File
+import java.io.ByteArrayInputStream
+import com.pixelmed.dicom.DicomInputStream
 
 /**
  * Store the contents of a DICOM series.
@@ -67,20 +70,30 @@ case class DicomSeries(
    * Get the content as a list of <code>AttributeList</code>.
    */
   def attributeListList: Seq[AttributeList] = {
-    0 match {
-      case _ if content.nonEmpty => {
-        val alList = DicomUtil.zippedByteArrayToDicom(content.get)
-        alList
-      }
-      case _ if inputPK.nonEmpty =>
-        {
-          val zippedContent = InputFiles.getByInputPK(inputPK.get).head.zippedContent
-          val alList = DicomUtil.zippedByteArrayToDicom(zippedContent).filter(al => Util.serInstOfAl(al).equals(seriesInstanceUID))
-          alList
+
+    def byteArrayToDicom(content: Array[Byte]): Option[AttributeList] = {
+      try {
+        val al = new AttributeList
+        val dis = new DicomInputStream(new ByteArrayInputStream(content))
+        al.read(dis)
+        Some(al)
+      } catch {
+        case t: Throwable => {
+          object LogMe extends Logging {
+            def log = logger.warn("Error reading DICOM content from DicomSeries " + dicomSeriesPK + "  seriesUID: " + seriesInstanceUID + " : " + fmtEx(t))
+          }
+          LogMe.log
+          None
         }
-      case _ => Seq[AttributeList]()
+      }
     }
 
+    if (content.nonEmpty) {
+      val contentList = FileUtil.writeZipToNamedByteArrays(new ByteArrayInputStream(content.get)).map(_._2)
+      val alList = contentList.map(content => byteArrayToDicom(content)).flatten
+      alList
+    } else
+      Seq[AttributeList]()
   }
 
   override def toString = {
@@ -477,7 +490,7 @@ object DicomSeries extends Logging {
       InputFiles.get(inPK) match {
         case Some(inputFiles) => {
           println("Processing files for input " + inPK)
-          val seriesList = DicomUtil.zippedByteArrayToDicom(inputFiles.zippedContent).groupBy(al => Util.serInstOfAl(al))
+          val seriesList = DicomUtil.zippedByteArrayToDicom(inputFiles.zippedContent).groupBy(al => Util.serInstOfAl(al)) // TODO do not use zippedByteArrayToDicom
           val missing = seriesList.filter(s => DicomSeries.getBySeriesInstanceUID(s._1).isEmpty).map(s => s._2)
 
           if (missing.nonEmpty) {
@@ -594,68 +607,6 @@ object DicomSeries extends Logging {
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  private def verifySharedInDicomSeries = {
-    val series = Util.listDirFiles(Config.sharedDir).map(f => (new DicomFile(f).attributeList)).flatten.groupBy(al => Util.serInstOfAl(al))
-    println("Number of series in shared: " + series.size)
-
-    def saveSeries(serUID: String, alList: Seq[AttributeList]) = {
-      val ds = DicomSeries.getBySeriesInstanceUID(serUID)
-      if (ds.nonEmpty)
-        println("Shared DicomSeries already in database: " + serUID + "    " + Util.modalityOfAl(alList.head))
-      else {
-        println("Shared DicomSeries NOT in database: " + serUID + "    " + Util.modalityOfAl(alList.head))
-        val PatientID = alList.head.get(TagFromName.PatientID).getSingleStringValueOrNull
-
-        val machinePK = {
-          val machByPatId = {
-            val dsList = DicomSeries.getByPatientID(PatientID)
-            if (dsList.nonEmpty) dsList.head.machinePK else None
-          }
-          val machByRefPlan = {
-            val dsList = DicomSeries.getByReferencedRtplanUID(Util.sopOfAl(alList.head))
-            if (dsList.nonEmpty) dsList.head.machinePK else None
-          }
-
-          Seq(machByPatId, machByRefPlan).flatten.headOption
-        }
-
-        val institutionPK: Option[Long] = {
-          if (machinePK.isDefined) {
-            Some(Machine.get(machinePK.get).get.institutionPK)
-          } else {
-            val sopList = DicomAnonymous.getAttributeByValue(Util.sopOfAl(alList.head))
-            if (sopList.size == 1) Some(sopList.head.institutionPK)
-            else None // this should never happen.  It would mean that and SOP instance UID was used multiple times
-          }
-        }
-
-        if (institutionPK.isDefined) {
-
-          // val machine = Machine.get(machinePK.get).get
-          //val user = User.getOrMakeInstitutionAdminUser(machine.institutionPK)
-          val user = User.getOrMakeInstitutionAdminUser(institutionPK.get)
-
-          def putInDb(al: AttributeList) = {
-            val ds = DicomSeries.makeDicomSeries(user.userPK.get, None, machinePK, Seq(al))
-            if (ds.isDefined) {
-              if (Config.DicomSeriesShared == Config.Fix.fix) {
-                val dsFinal = ds.get.insert
-                println("Shared DicomSeries has been put in database: " + dsFinal)
-              } else println("Shared DicomSeries would have been been put in database: " + ds)
-            }
-          }
-
-          alList.map(al => putInDb(al))
-        } else
-          println("Could not determine institution for " + serUID)
-
-      }
-    }
-
-    series.filter(_._2.nonEmpty).map(s => saveSeries(s._1, s._2))
-
-  }
-
   private def deleteOrphanOutputs = {
     val search = Output.query.filter(o => o.machinePK.isEmpty)
     val list = Db.run(search.result)
@@ -684,10 +635,220 @@ object DicomSeries extends Logging {
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+  private def validateContent(ds: DicomSeries): Boolean = {
+    try {
+      println("getting DICOM for " + ds.seriesInstanceUID)
+      val alList = ds.attributeListList
+      println("got DICOM for " + ds.seriesInstanceUID)
+      val count = alList.map(al => println(Util.sopOfAl(al))).size
+      true
+    } catch {
+      case t: Throwable => {
+        println("Unable to validate DICOM series for dicomSeriesPK: " + ds.dicomSeriesPK + "\n" + fmtEx(t))
+        false
+      }
+    }
+  }
+
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  /**
+   * Verify that the series is in the database.  If not, and if 'fix' is set, then put it in the database.
+   */
+  private def verifySharedInDicomSeries = {
+    Trace.trace
+    val series = Util.listDirFiles(Config.sharedDir).map(f => (new DicomFile(f).attributeList)).flatten.groupBy(al => Util.serInstOfAl(al))
+    Trace.trace("Number of series in shared: " + series.size)
+
+    def saveSeries(serUID: String, alList: Seq[AttributeList]) = {
+      val ds = DicomSeries.getBySeriesInstanceUID(serUID)
+      if (ds.nonEmpty)
+        println("Shared DicomSeries already in database: " + serUID + "    " + Util.modalityOfAl(alList.head))
+      else {
+        println("Shared DicomSeries NOT in database: " + serUID + "    " + Util.modalityOfAl(alList.head))
+
+        val machinePK = {
+
+          val machByRefPlan: Option[Long] = {
+            val dsList = DicomSeries.getByReferencedRtplanUID(Util.sopOfAl(alList.head))
+            if (dsList.nonEmpty) {
+              Trace.trace("for SOP " + Util.sopOfAl(alList.head) + "    Found machine by plan ref: " + dsList.head.machinePK)
+              dsList.head.machinePK
+            } else {
+              Trace.trace("for SOP " + Util.sopOfAl(alList.head) + "    Did not find machine by plan ref.")
+              None
+            }
+          }
+
+          val machByPatId: Option[Long] = {
+            val patId = Util.patientIdOfAl(alList.head)
+
+            val dsList = {
+              val action = for {
+                dicomSeries <- query if ((dicomSeries.patientID === patId))
+              } yield (dicomSeries)
+              val list = Db.run(action.result)
+              list
+            }
+            val machPk = dsList.map(ds => ds.machinePK).flatten.headOption
+            if (machPk.nonEmpty) {
+              Trace.trace("for SOP " + Util.sopOfAl(alList.head) + "    Found machine by patient ref: " + machPk)
+              dsList.head.machinePK
+            } else {
+              Trace.trace("for SOP " + Util.sopOfAl(alList.head) + "    Did not find machine by patient ref.")
+              None
+            }
+          }
+
+          Seq(machByRefPlan, machByPatId).flatten.headOption
+        }
+        Trace.trace("for SOP " + Util.sopOfAl(alList.head) + "    machinePK is : " + machinePK)
+
+        val institutionPK: Option[Long] = {
+          val instPkByMach: Option[Long] = if (machinePK.isDefined) Some(Machine.get(machinePK.get).get.institutionPK) else None
+
+          val sopList = DicomAnonymous.getAttributeByValue(Util.sopOfAl(alList.head))
+          val instPkBySop: Option[Long] = if (sopList.size == 1) Some(sopList.head.institutionPK) else None
+
+          val all = Seq(instPkByMach, instPkBySop).flatten.distinct
+          if (all.size > 1) {
+            Trace.trace("for series " + series.head._1 + " ambiguous as to which institution it belongs to: " + all.toString)
+            None
+          } else all.headOption
+        }
+
+        Trace.trace("for SOP " + Util.sopOfAl(alList.head) + "    institutionPK: " + institutionPK + "    machinePK: " + machinePK)
+
+        if (institutionPK.isDefined) {
+
+          // val machine = Machine.get(machinePK.get).get
+          //val user = User.getOrMakeInstitutionAdminUser(machine.institutionPK)
+          val user = User.getOrMakeInstitutionAdminUser(institutionPK.get)
+
+          def putInDb(al: AttributeList) = {
+            val ds = DicomSeries.makeDicomSeries(user.userPK.get, None, machinePK, Seq(al))
+            if (ds.isDefined) {
+              if (Config.DicomSeriesShared == Config.Fix.fix) {
+                val dsFinal = ds.get.insert
+                println("Shared DicomSeries has been put in database: " + dsFinal)
+              } else println("Shared DicomSeries would have been been put in database: " + ds)
+            }
+          }
+
+          alList.map(al => putInDb(al))
+        } else
+          println("Could not determine institution for " + serUID)
+      }
+    }
+
+    Trace.trace
+    series.filter(_._2.nonEmpty).map(s => saveSeries(s._1, s._2))
+    Trace.trace
+  }
+
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  private def putRtplansFromInputsIntoDicomSeries = {
+    Trace.trace
+    val list = {
+      val action = for { inFiles <- InputFiles.query } yield (inFiles.inputFilesPK, inFiles.inputPK)
+      Db.run(action.result)
+    }
+    Trace.trace("Number of InputFiles: " + list.size)
+
+    def putIfNeeded(ser: String, rtplan: Seq[AttributeList]) = {
+      val dsList = DicomSeries.getBySeriesInstanceUID(ser)
+      if (dsList.isEmpty) {
+        Trace.trace("Series " + ser + " is not in DicomSeries table.")
+        if (Config.DicomSeriesInput == Config.Fix.fix) {
+          Trace.trace("want to put " + ser + " in DicomSeries table.")
+          //          val user: Long ={
+          //            input.userPK match {
+          //              case Some( userPK) => userPK
+          //              case _ =>   User.getInstitutionAdminUser(input.institutionPK)
+          //            }
+          //          }
+          //
+          //          val newDs = DicomSeries.makeDicomSeries(input.userPK, None, ???, rtplan)
+          //          if (newDs.isDefined) {
+          //            Trace.trace("Did put " + ser + " in DicomSeries table with pk " + newDs.get.dicomSeriesPK)
+          //          } else {
+          //            Trace.trace("Could not make " + ser)
+          //          }
+          //        } else {
+          //          Trace.trace("Not putting " + ser + " in DicomSeries table.")
+        }
+      } else {
+        Trace.trace("Series " + ser + " is already in DicomSeries table.")
+      }
+    }
+
+    def putFp(filePk: Long, inPk: Long) = {
+      val content = InputFiles.get(filePk).get.zippedContent
+      val rtplanSeriesList = DicomUtil.zippedByteArrayToDicom(content).filter(al => Util.modalityOfAl(al) == "RTPLAN").groupBy(al => Util.serInstOfAl(al))
+      Trace.trace("Number of RTPLAN series found in " + inPk + " : " + rtplanSeriesList.size)
+      rtplanSeriesList.map(serPlan => putIfNeeded(serPlan._1, serPlan._2))
+    }
+
+    list.map(fp => putFp(fp._1, fp._2))
+    Trace.trace
+  }
+
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  /**
+   * List RTPLAN series that have bad/non-unzippable content.  If 'fix', then remove.
+   */
+  private def findBadRtplans = {
+    Trace.trace
+
+    val outDir = new File(Config.tmpDirFile, "saveDs")
+    outDir.mkdirs
+
+    val action = for {
+      ds <- query if ((ds.modality === "RTPLAN"))
+    } yield (
+      ds.dicomSeriesPK)
+    val list = Db.run(action.result)
+    Trace.trace("total RTPLANs in db: " + list.size)
+
+    def process(pk: Long) = {
+      val ds = DicomSeries.get(pk).get
+      if (ds.content.isDefined && (ds.content.get != null)) {
+        val outFile = new File(outDir, "ds-" + pk + "-" + ds.seriesInstanceUID)
+        println("writing file " + outFile.getAbsolutePath)
+        Util.writeBinaryFile(outFile, ds.content.get)
+        println("wrote file " + outFile.getAbsolutePath)
+      }
+      Trace.trace("findBadRtplans checking DicomSeries " + pk + " : " + ds.seriesInstanceUID)
+      if (validateContent(ds)) {
+        Trace.trace("content of DicomSeries is ok: " + ds.dicomSeriesPK.get)
+      } else {
+        Trace.trace("content of DicomSeries is bad: " + ds.dicomSeriesPK.get)
+
+        //        if (Config.DicomSeriesFindBadRtplans == Config.Fix.fix) {
+        //          Trace.trace("Deleting: " + ds.dicomSeriesPK.get)
+        //          val count = DicomSeries.delete(pk)
+        //          Trace.trace("content of DicomSeries Deleted: " + count)
+        //        } else {
+        //          Trace.trace("check only, not deleting: " + ds.dicomSeriesPK.get)
+        //        }
+
+      }
+    }
+
+    Trace.trace
+    list.map(pk => process(pk))
+    Trace.trace("Done with findBadRtplans")
+  }
+
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
   def main(args: Array[String]): Unit = {
     if (Config.validate) {
       DbSetup.init
-      Trace.trace
+      val start = System.currentTimeMillis
+      Trace.trace("DicomSeries cleanup starting ------------------------------------------------------------------------------")
       if (Config.DicomSeriesDeleteOrphans != Config.Fix.ignore) deleteOrphans
       Trace.trace
       if (Config.DicomSeriesPopulateFromInput != Config.Fix.ignore) populateFromInput
@@ -700,6 +861,12 @@ object DicomSeries extends Logging {
       Trace.trace
       if (Config.DicomSeriesOrphanOutputs != Config.Fix.ignore) deleteOrphanOutputs
       Trace.trace
+      if (Config.DicomSeriesFindBadRtplans != Config.Fix.ignore) findBadRtplans
+      Trace.trace
+      if (Config.DicomSeriesInput != Config.Fix.ignore) putRtplansFromInputsIntoDicomSeries
+      Trace.trace
+      val elapsed = System.currentTimeMillis - start
+      Trace.trace("DicomSeries cleanup finished.  Elapsed ms: " + elapsed + " ------------------------------------------------------------------------------")
       System.exit(0)
     }
   }
