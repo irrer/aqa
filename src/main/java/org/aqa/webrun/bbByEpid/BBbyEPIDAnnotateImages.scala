@@ -135,7 +135,7 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
     /** Magnify the image by this scale. */
     val scale = 32
 
-    // defines how much area around the bb should be used to make the close up imate
+    // defines how much area around the bb should be used to make the close up image
     val closeupScale = 5.0
 
     // position of upper left corner of close up image in pixel coordinates
