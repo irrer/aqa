@@ -557,6 +557,8 @@ object Config extends Logging {
     dirList.head
   }
 
+  val imageDirFile = new File(staticDirFile, "images")
+
   /**
    * Get the PenumbraThresholdPercent.  If it is not valid in the configuration, then assume the default.
    */
@@ -584,8 +586,7 @@ object Config extends Logging {
           val left = (wm \ "@left").head.text.toString.toBoolean
           val percentWidth = (wm \ "@percentWidth").head.text.toString.toDouble
           val percentChange = (wm \ "@percentChange").head.text.toString.toDouble
-          val imagesDir = new File(staticDirFile, "images")
-          val watermarkImageFile = new File(imagesDir, imageName)
+          val watermarkImageFile = new File(imageDirFile, imageName)
           val watermarkImage = ImageIO.read(watermarkImageFile)
           val watermark = new Watermark(watermarkImage, top, left, percentWidth, percentChange)
           logText(

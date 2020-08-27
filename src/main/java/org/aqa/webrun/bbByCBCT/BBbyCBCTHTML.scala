@@ -508,6 +508,7 @@ object BBbyCBCTHTML extends Logging {
       </div>
     }
 
+    /*
     def imageHtml(index: Int, getImageFileName: Int => String, title: String, width: Int) = {
       val name = getImageFileName(index)
 
@@ -518,20 +519,20 @@ object BBbyCBCTHTML extends Logging {
         </a>
       </center>
     }
+    */
 
-    def imageHtmlWithZoom(index: Int, getImageFileName: Int => String, title: String, width: Int) = {
-      val name = getImageFileName(index)
-
+    def imageHtmlWithZoom(imageFileName: String, title: String) = {
       <center title={ title }>
         <h4>{ title }</h4>
-        <a href={ name }>
-          <div class='zoom' id={ Util.textToId(name) }>
-            <img width={ width.toString } src={ name }/>
+        <a href={ imageFileName }>
+          <div class='zoom' id={ Util.textToId(imageFileName) }>
+            <img src={ imageFileName } class="img-responsive fit-image"/>
           </div>
         </a>
       </center>
     }
 
+    /*
     //          { imageHtmlWithZoom(index, fileNameOfAreaOfInterest, , imageWidth) }
     def makeSet(index: Int): Elem = {
       val imageWidth = 350 // imageSet.areaOfInterest(index).getWidth
@@ -548,17 +549,30 @@ object BBbyCBCTHTML extends Logging {
         </center>
       </td>
     }
+    */
+
+    def makeImages: Elem = {
+      <div class="row">
+        <div class="col-md-8">
+          { imageHtmlWithZoom(fileNameOfFull(2), "Transverse / Axial") }
+        </div>
+        <div class="col-md-4">
+          <div class="row">
+            { imageHtmlWithZoom(fileNameOfFull(0), "Sagittal") }
+          </div>
+          <div class="row">
+            { imageHtmlWithZoom(fileNameOfFull(1), "Frontal") }
+          </div>
+        </div>
+      </div>
+    }
 
     def mainContent = {
       <div class="row">
         { numberText }
         { details }
+        { makeImages }
         { chart.chartReference }
-        <table class="table table-responsive">
-          <tr>
-            { Seq(2, 1, 0).map(index => makeSet(index)) }
-          </tr>
-        </table>
       </div>
     }
 

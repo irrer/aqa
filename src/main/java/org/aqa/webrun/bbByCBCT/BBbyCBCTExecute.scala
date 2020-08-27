@@ -125,6 +125,15 @@ object BBbyCBCTExecute extends Logging {
 
         val bbByCBCT = saveToDb(extendedData, runReq, bbPointInRtplan)
         logger.info("err_mm: " + bbByCBCT.err_mm.toString)
+        if (true) { // TODO rm
+          Trace.trace("Saving original non-annotated images.")
+          imageXYZ.zipWithIndex.map(ii => {
+            val name = "orig_" + ii._2 + ".png"
+            val pngFile = new java.io.File(extendedData.output.dir, name)
+            Util.writePng(ii._1, pngFile)
+            Trace.trace("Saved original non-annotated image: " + pngFile.getAbsolutePath)
+          })
+        }
         val annotatedImages = BBbyCBCTAnnotateImages.annotate(bbByCBCT, imageXYZ, runReq, volumePoint)
         val html = BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, annotatedImages, ProcedureStatus.done, runReq, result.right.get, response)
         logger.info("Finished analysis of CBCT Alignment for machine " + extendedData.machine.id)

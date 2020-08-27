@@ -398,6 +398,7 @@ object BBbyEPIDHTML {
         def epidToDate(epid: BBbyEPID): Option[Date] = {
           val dsOpt = DicomSeries.getBySopInstanceUID(epid.epidSOPInstanceUid).headOption
           if (dsOpt.isDefined) {
+            val j = dsOpt.get.attributeListList
             val attrList = dsOpt.get.attributeListList.find(al => Util.sopOfAl(al).equals(epid.epidSOPInstanceUid))
             if (attrList.isDefined)
               DicomUtil.getTimeAndDate(attrList.get, TagFromName.ContentDate, TagFromName.ContentTime)
@@ -480,7 +481,7 @@ object BBbyEPIDHTML {
                 <th></th>
                 <th style="text-align: center;">EPID Time</th>
                 <th style="text-align: center;">HFS PATIENT<br/>LEFT(+)/RIGHT(-) [mm]</th>
-                <th style="text-align: center;">HFS PATIENT<br/>ANT(+)/POST(-) [mm]</th>
+                <th style="text-align: center;">HFS PATIENT<br/>POST(+)/ANT(-) [mm]</th>
                 <th style="text-align: center;">HFS PATIENT<br/>SUP (+)/INF(-) [mm]</th>
                 <th style="text-align: center;">Vector Length [mm]</th>
               </tr>

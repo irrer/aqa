@@ -41,7 +41,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
   override def makeRunReqForRedo(alList: Seq[AttributeList]): org.aqa.run.RunReqClass = {
     //validate(emptyValueMap, alList.filter(al => Util.isCt(al))).right.get
-    val cbctList = alList.filter(al => Util.isCt(al))
+    val cbctList = alList.filter(al => Util.isCt(al)).sortBy(al => al.get(TagFromName.ImagePositionPatient).getDoubleValues()(2))
     val reg = alList.filter(al => Util.isReg(al)).headOption
     val ctFrameUID = cbctList.head.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
     val rtplan: AttributeList = {

@@ -581,7 +581,7 @@ Note that when building a package for release, the Maven build process uses the 
    
     <!-- Color to use when making CBCT images in HEX notation specifying red+green+blue.  Set
     to 000000 (black) to use deep (multi) coloring.-->
-    <CBCTImageColor>00FF00</CBCTImageColor>
+    <CBCTImageColor>FFFFFF</CBCTImageColor>
 
     <!-- Used for graphing CBCT BB history, a positive integer indicating the number of values to display before and after (if
     they exist) the current point being plotted. -->

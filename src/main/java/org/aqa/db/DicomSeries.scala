@@ -71,29 +71,15 @@ case class DicomSeries(
    */
   def attributeListList: Seq[AttributeList] = {
 
-    def byteArrayToDicom(content: Array[Byte]): Option[AttributeList] = {
-      try {
-        val al = new AttributeList
-        val dis = new DicomInputStream(new ByteArrayInputStream(content))
-        al.read(dis)
-        Some(al)
-      } catch {
-        case t: Throwable => {
-          object LogMe extends Logging {
-            def log = logger.warn("Error reading DICOM content from DicomSeries " + dicomSeriesPK + "  seriesUID: " + seriesInstanceUID + " : " + fmtEx(t))
-          }
-          LogMe.log
-          None
-        }
-      }
-    }
-
     if (content.nonEmpty) {
       val contentList = FileUtil.writeZipToNamedByteArrays(new ByteArrayInputStream(content.get)).map(_._2)
-      val alList = contentList.map(content => byteArrayToDicom(content)).flatten
+      val alList = DicomUtil.zippedByteArrayToDicom(content.get)
       alList
-    } else
-      Seq[AttributeList]()
+    } else {
+      val inputContent = InputFiles.getByInputPK(inputPK.get).head.zippedContent
+      val alList = DicomUtil.zippedByteArrayToDicom(inputContent)
+      alList
+    }
   }
 
   override def toString = {

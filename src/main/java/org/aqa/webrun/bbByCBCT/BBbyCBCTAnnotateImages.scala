@@ -14,17 +14,27 @@ import org.aqa.ImageRegistration
 import javax.vecmath.Matrix4d
 import edu.umro.ImageUtil.ImageText
 import java.awt.BasicStroke
+import org.aqa.Logging
+import javax.vecmath.Point2d
+import javax.imageio.ImageIO
+import edu.umro.ImageUtil.Watermark
 
-object BBbyCBCTAnnotateImages {
+object BBbyCBCTAnnotateImages extends Logging {
 
   /** Factor to magnify area of interest image. */
-  private val scale = 16
+  private val scale = 8
 
-  private val textPointSize = 30
+  private val textPointSize = 16
 
   case class ImageSet(fullImage: Seq[BufferedImage], areaOfInterest: Seq[BufferedImage]);
 
   private case class ImagePair(fullImage: BufferedImage, areaOfInterest: BufferedImage);
+
+  private case class Centerlines(top: String, bottom: String, topBottomColor: Color, left: String, right: String, leftRightColor: Color);
+
+  private def rotate = {
+    ???
+  }
 
   /**
    * Make a pair of images for a single axis orientation.
@@ -42,10 +52,12 @@ object BBbyCBCTAnnotateImages {
   private def makePair(
     bbByCBCT: BBbyCBCT,
     voxSizeX_mmOrig: Double, voxSizeY_mmOrig: Double,
-    centerUnscaledX_pix: Double, centerUnscaledY_pix: Double,
+    bbCenterUnscaled_pix: Point2d,
     xAxisName: String, yAxisName: String,
     xPlanOffset_mm: Double, yPlanOffset_mm: Double,
-    originalImage: BufferedImage): ImagePair = {
+    originalImage: BufferedImage,
+    centerlines: Centerlines,
+    rotation: Int): ImagePair = {
 
     def d2i(d: Double) = d.round.toInt
 
@@ -62,29 +74,76 @@ object BBbyCBCTAnnotateImages {
       voxSizeX_mm
     }
 
-    val centerX_pix = {
-      val xc = if (voxSizeX_mmOrig > voxSizeY_mmOrig)
-        centerUnscaledX_pix * (voxSizeX_mmOrig / voxSizeY_mmOrig)
-      else
-        centerUnscaledX_pix
-      (xc + 0.5) * scale
-    }
+    val bbCenter_pix: Point2d = {
+      val bbCenterX_pix = {
+        val xc = if (voxSizeX_mmOrig > voxSizeY_mmOrig)
+          bbCenterUnscaled_pix.getX * (voxSizeX_mmOrig / voxSizeY_mmOrig)
+        else
+          bbCenterUnscaled_pix.getX
+        (xc + 0.5) * scale
+      }
 
-    val centerY_pix = {
-      val yc = if (voxSizeY_mmOrig > voxSizeX_mmOrig)
-        centerUnscaledY_pix * (voxSizeY_mmOrig / voxSizeX_mmOrig)
-      else
-        centerUnscaledY_pix
-      (yc + 0.5) * scale
+      val bbCenterY_pix = {
+        val yc = if (voxSizeY_mmOrig > voxSizeX_mmOrig)
+          bbCenterUnscaled_pix.getY * (voxSizeY_mmOrig / voxSizeX_mmOrig)
+        else
+          bbCenterUnscaled_pix.getY
+        (yc + 0.5) * scale
+      }
+
+      val bbUnrotated = new Point2d(bbCenterX_pix, bbCenterY_pix)
+
+      val rotated = rotation match {
+        case 0 => bbUnrotated
+        case 1 => new Point2d((originalImage.getHeight * scale) - 1 - bbUnrotated.getY, bbUnrotated.getX)
+        case _ => throw new RuntimeException("Unexpected rotation in makePair: " + rotation)
+      }
+      rotated
     }
 
     /** Size (width and height) of small image in pixels. */
-    val cropSize_pix = 500
+    val cropSize_pix = {
+      Config.CBCTBBPenumbra_mm * 2
+      64 * scale
+    }
+
+    val planCenter_pix: Point2d = {
+      /*
+      val x = {
+        val diff = -xPlanOffset_mm / voxSizeX_mm
+        bbCenter_pix.getX + (diff * scale)
+      }
+
+      val y = {
+        val diff = -yPlanOffset_mm / voxSizeY_mm
+        bbCenter_pix.getY + (diff * scale)
+      }
+
+      val unrotated = new Point2d(x, y)
+
+      val rotated = rotation match {
+        case 0 => unrotated
+        case 1 => new Point2d((originalImage.getHeight * scale) - 1 - unrotated.getY, unrotated.getX)
+        case _ => throw new RuntimeException("Unexpected rotation in makePair: " + rotation)
+      }
+
+      rotated
+      */
+
+      new Point2d(100, 100)
+    }
 
     // ---------------------------------------------------------------------------------
 
     def makeFullImage: BufferedImage = {
-      val image = ImageUtil.magnify(originalImage, scale)
+      val image = {
+        val i = ImageUtil.magnify(originalImage, scale)
+        rotation match {
+          case 0 => i
+          case 1 => ImageUtil.rotate90(i)
+          case _ => throw new RuntimeException("Unexpected rotation in makeFullImage: " + rotation)
+        }
+      }
 
       val maxVoxSize = Math.max(voxSizeX_mm, voxSizeY_mm) // larger voxel dimension
       val minVoxSize = Math.min(voxSizeX_mm, voxSizeY_mm) // smaller voxel dimension
@@ -95,6 +154,8 @@ object BBbyCBCTAnnotateImages {
         ((Config.CBCTBBPenumbra_mm * 2) / voxSizeY_mm) * scale //* (maxVoxSize / minVoxSize)
       }
 
+      // ---------------------------------------------------------------------------------
+
       /**
        * draw circle around BB
        */
@@ -102,11 +163,11 @@ object BBbyCBCTAnnotateImages {
         val graphics = ImageUtil.getGraphics(zImage)
         graphics.setColor(Color.white)
 
-        graphics.drawOval(d2i(centerX_pix - (widthCircle_pix / 2)), d2i(centerY_pix - (heightCircle_pix / 2)), d2i(widthCircle_pix), d2i(heightCircle_pix))
+        graphics.drawOval(d2i(bbCenter_pix.getX - (widthCircle_pix / 2)), d2i(bbCenter_pix.getY - (heightCircle_pix / 2)), d2i(widthCircle_pix), d2i(heightCircle_pix))
 
         val radius = Math.sqrt((widthCircle_pix * widthCircle_pix) + (heightCircle_pix * heightCircle_pix)) / 4
-        graphics.drawLine(d2i(centerX_pix - radius + 1), d2i(centerY_pix - radius), d2i(centerX_pix + radius), d2i(centerY_pix + radius))
-        graphics.drawLine(d2i(centerX_pix + radius - 1), d2i(centerY_pix - radius), d2i(centerX_pix - radius), d2i(centerY_pix + radius))
+        graphics.drawLine(d2i(bbCenter_pix.getX - radius + 1), d2i(bbCenter_pix.getY - radius), d2i(bbCenter_pix.getX + radius), d2i(bbCenter_pix.getY + radius))
+        graphics.drawLine(d2i(bbCenter_pix.getX + radius - 1), d2i(bbCenter_pix.getY - radius), d2i(bbCenter_pix.getX - radius), d2i(bbCenter_pix.getY + radius))
       }
 
       // ---------------------------------------------------------------------------------
@@ -127,8 +188,8 @@ object BBbyCBCTAnnotateImages {
           val text = deblank(xAxisName + " " + fmt(xPlanOffset_mm) + " mm")
           val textRect = ImageText.getTextDimensions(graphics, text)
 
-          val x_pix = centerX_pix - (textRect.getWidth / 2)
-          val y_pix = centerY_pix + (cropSize_pix / 2) - (Util.axisOffsetFromEdge + 15)
+          val x_pix = bbCenter_pix.getX - (textRect.getWidth / 2)
+          val y_pix = bbCenter_pix.getY + (cropSize_pix / 2) - (Util.axisOffsetFromEdge + 15)
 
           graphics.drawString(text, d2i(x_pix), d2i(y_pix))
         }
@@ -137,8 +198,8 @@ object BBbyCBCTAnnotateImages {
           val text = deblank(yAxisName + " " + fmt(yPlanOffset_mm) + " mm")
           val textRect = ImageText.getTextDimensions(graphics, text)
 
-          val x_pix = centerX_pix - (cropSize_pix / 2) + 10
-          val y_pix = centerY_pix - (cropSize_pix / 3)
+          val x_pix = bbCenter_pix.getX - (cropSize_pix / 2) + 10
+          val y_pix = bbCenter_pix.getY - (cropSize_pix / 3)
 
           graphics.drawString(text, d2i(x_pix), d2i(y_pix))
         }
@@ -151,37 +212,33 @@ object BBbyCBCTAnnotateImages {
 
       def drawPlanCenter(zImage: BufferedImage) = {
         val graphics = ImageUtil.getGraphics(zImage)
-        graphics.setColor(Color.red)
+        graphics.setColor(Color.green)
 
-        val planXcenter = {
-          val diff = xPlanOffset_mm / voxSizeX_mm
-          centerX_pix + (diff * scale)
-        }
+        val smallRadius = 4
+        val largeRadius = smallRadius * 2
 
-        val planYcenter = {
-          val diff = yPlanOffset_mm / voxSizeY_mm
-          centerY_pix + (diff * scale)
-        }
-
-        graphics.drawLine(
-          d2i(planXcenter), d2i(planYcenter - scale),
-          d2i(planXcenter), d2i(planYcenter + scale))
-        graphics.drawLine(
-          d2i(planXcenter - scale), d2i(planYcenter),
-          d2i(planXcenter + scale), d2i(planYcenter))
+        graphics.drawOval(
+          d2i(planCenter_pix.getX - smallRadius), d2i(planCenter_pix.getY - smallRadius),
+          d2i(smallRadius * 2), d2i(smallRadius * 2))
+        graphics.drawOval(
+          d2i(planCenter_pix.getX - largeRadius), d2i(planCenter_pix.getY - largeRadius),
+          d2i(largeRadius * 2), d2i(largeRadius * 2))
       }
 
       // ---------------------------------------------------------------------------------
 
       def drawPlanText(zImage: BufferedImage) = {
         val graphics = ImageUtil.getGraphics(zImage)
-        graphics.setColor(Color.red)
+        graphics.setColor(Color.green)
         // show BB offset from plan
-        val text = "'+' is Plan Center"
+        val text = "P"
+
+        val xOffset = if (bbCenter_pix.getX > planCenter_pix.getX) -1 else 1
+        val yOffset = if (bbCenter_pix.getY > planCenter_pix.getY) -1 else 1
 
         ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
         val textRect = ImageText.getTextDimensions(graphics, text)
-        ImageText.drawTextOffsetFrom(graphics, centerX_pix, centerY_pix - (heightCircle_pix / 2), text, 90)
+        ImageText.drawTextCenteredAt(graphics, planCenter_pix.getX + xOffset * textPointSize, planCenter_pix.getY + yOffset * textPointSize, text)
       }
 
       drawCircle(image)
@@ -194,8 +251,8 @@ object BBbyCBCTAnnotateImages {
     // ---------------------------------------------------------------------------------
 
     def cropImage(image: BufferedImage) = {
-      val x = Math.max(0, d2i(centerX_pix - (cropSize_pix / 2)))
-      val y = Math.max(0, d2i(centerY_pix - (cropSize_pix / 2)))
+      val x = Math.max(0, d2i(bbCenter_pix.getX - (cropSize_pix / 2)))
+      val y = Math.max(0, d2i(bbCenter_pix.getY - (cropSize_pix / 2)))
 
       val aoi = image.getSubimage(x, y, cropSize_pix, cropSize_pix)
       aoi
@@ -205,8 +262,6 @@ object BBbyCBCTAnnotateImages {
 
     val full = makeFullImage
     val aoi = cropImage(full)
-    Config.applyWatermark(full)
-    Config.applyWatermark(aoi)
 
     Util.addAxisLabels(aoi, "", "", Color.white, true, false, false, true) // top, bottom, left, right arrow heads
 
@@ -225,6 +280,7 @@ object BBbyCBCTAnnotateImages {
    * @param origPosition Original XYZ position in mm in the original frame of reference.
    */
   def annotate(bbByCBCT: BBbyCBCT, imageXYZ: Seq[BufferedImage], runReq: BBbyCBCTRunReq, origPosition: Point3d): ImageSet = {
+    logger.info("Annotating CBCT images for " + bbByCBCT)
     val voxSize_mm = Util.getVoxSize_mm(runReq.cbctList) // the size of a voxel in mm
 
     val volTrans = new VolumeTranslator(runReq.cbctList)
@@ -232,38 +288,75 @@ object BBbyCBCTAnnotateImages {
     val centerUnscaled_vox = volTrans.mm2vox(origPosition)
 
     def xImagePair = makePair(
-      bbByCBCT,
-      voxSize_mm(2), voxSize_mm(1),
-      centerUnscaled_vox.getZ, centerUnscaled_vox.getY,
-      "Z", "Y",
-      bbByCBCT.err_mm.getZ, bbByCBCT.err_mm.getY,
-      imageXYZ(0))
+      bbByCBCT = bbByCBCT,
+      voxSizeX_mmOrig = voxSize_mm(2), voxSizeY_mmOrig = voxSize_mm(1),
+      bbCenterUnscaled_pix = new Point2d(centerUnscaled_vox.getZ, centerUnscaled_vox.getY),
+      xAxisName = "Z", yAxisName = "Y",
+      xPlanOffset_mm = bbByCBCT.err_mm.getZ, yPlanOffset_mm = bbByCBCT.err_mm.getY,
+      originalImage = imageXYZ(0),
+      centerlines = new Centerlines("A", "P", Color.red, "R", "L", Color.green),
+      rotation = 1)
 
     def yImagePair = makePair(
       bbByCBCT,
       voxSize_mm(2), voxSize_mm(0),
-      centerUnscaled_vox.getZ, centerUnscaled_vox.getX,
+      bbCenterUnscaled_pix = new Point2d(centerUnscaled_vox.getZ, centerUnscaled_vox.getX),
       "Z", "X",
       bbByCBCT.err_mm.getZ, bbByCBCT.err_mm.getX,
-      imageXYZ(1))
-
-    bbByCBCT.cbctZ_mm - bbByCBCT.rtplanZ_mm
+      imageXYZ(1),
+      new Centerlines("A", "P", Color.red, "R", "L", Color.green),
+      rotation = 1)
 
     def zImagePair = makePair(
       bbByCBCT,
       voxSize_mm(0), voxSize_mm(1),
-      centerUnscaled_vox.getX, centerUnscaled_vox.getY,
+      bbCenterUnscaled_pix = new Point2d(centerUnscaled_vox.getX, centerUnscaled_vox.getY),
       "X", "Y",
       bbByCBCT.err_mm.getX, bbByCBCT.err_mm.getY,
-      imageXYZ(2))
+      imageXYZ(2),
+      new Centerlines("A", "P", Color.red, "R", "L", Color.green),
+      rotation = 0)
 
+    // do annotation processing in parallel
     val pairList = Seq(xImagePair _, yImagePair _, zImagePair _).par.map(f => f()).toList
 
+    val fullList = {
+      val list = pairList.map(p => p.fullImage)
+
+      val min = (list.map(i => i.getWidth) ++ list.map(i => i.getHeight)).min
+
+      def trimImage(image: BufferedImage): BufferedImage = {
+        if ((image.getWidth > min) || (image.getHeight > min)) {
+          val x = Math.max((image.getWidth - min) / 2, 0)
+          val y = Math.max((image.getHeight - min) / 2, 0)
+          val w = Math.min(min, image.getWidth)
+          val h = Math.min(min, image.getHeight)
+          image.getSubimage(x, y, w, h)
+        } else
+          image
+      }
+
+      val resizedList = list.map(i => trimImage(i))
+      resizedList.map(i => Config.applyWatermark(i))
+      resizedList(0)
+      resizedList
+    }
+
+    def applyOrientationLegend(image: BufferedImage, name: String, pctWidth: Double) = {
+      val file = new File(Config.imageDirFile, name)
+      Trace.trace("file: " + file.getAbsolutePath) // TODO rm
+      val legend = ImageIO.read(file)
+      val watermark = new Watermark(legend, false, true, pctWidth, 90.0)
+      watermark.mark(image)
+    }
+
+    applyOrientationLegend(fullList(0), "HumanSagittal.png", 5.0)
+    applyOrientationLegend(fullList(1), "HumanFrontal.png", 10.0)
+    applyOrientationLegend(fullList(2), "HumanTransversal.png", 10.0)
+
     val imageSet = new ImageSet(
-      pairList.map(p => p.fullImage),
+      fullList,
       pairList.map(p => p.areaOfInterest))
-    //  Seq(xImagePair.fullImage, yImagePair.fullImage, zImagePair.fullImage),
-    //  Seq(xImagePair.areaOfInterest, yImagePair.areaOfInterest, zImagePair.areaOfInterest))
     imageSet
   }
 }
