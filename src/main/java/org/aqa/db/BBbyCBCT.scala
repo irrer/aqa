@@ -24,9 +24,9 @@ case class BBbyCBCT(
   rtplanX_mm: Double, // expected X position in RTPLAN
   rtplanY_mm: Double, // expected Y position in RTPLAN
   rtplanZ_mm: Double, // expected Z position in RTPLAN
-  cbctX_mm: Double, // expected X position in CBCT
-  cbctY_mm: Double, // expected Y position in CBCT
-  cbctZ_mm: Double, // expected Z position in CBCT
+  cbctX_mm: Double, // measured bb X position in CBCT
+  cbctY_mm: Double, // measured bb Y position in CBCT
+  cbctZ_mm: Double, // measured bb Z position in CBCT
   tableXlateral_mm: Double, // table position in X dimension / lateral
   tableYvertical_mm: Double, // table position in Y dimension / vertical
   tableZlongitudinal_mm: Double // table position in Z dimension / longitudinal
