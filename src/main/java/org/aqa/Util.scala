@@ -34,6 +34,7 @@ import java.util.TimeZone
 import scala.xml.Node
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import javax.vecmath.Matrix4d
 
 object Util extends Logging {
 
@@ -1131,5 +1132,25 @@ object Util extends Logging {
 
   def getFrameOfRef(al: AttributeList): String = al.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
   def getFrameOfRef(dicomFile: DicomFile): String = getFrameOfRef(dicomFile.attributeList.get)
+
+  /**
+   * Transform a point by this matrix and create a new point.
+   */
+  def transform(matrix: Matrix4d, point: Point3d): Point3d = {
+    val x = point.clone.asInstanceOf[Point3d]
+    matrix.transform(x)
+    x
+  }
+
+  /**
+   * Transform a point by the inverse of the given matrix and create a new point.
+   */
+  def invTransform(matrix: Matrix4d, point: Point3d): Point3d = {
+    val invMatrix = matrix.clone.asInstanceOf[Matrix4d]
+    invMatrix.invert
+    val x = point.clone.asInstanceOf[Point3d]
+    invMatrix.transform(x)
+    x
+  }
 
 }

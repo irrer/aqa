@@ -207,6 +207,19 @@ object BBbyCBCTAnalysis extends Logging {
     bufImgList
   }
 
+  /**
+   * Container for intermediary results.
+   *
+   * @param coarseLoction_vox Initial measurement/location of bb in CBCT in voxel coordinate.
+   *
+   * @param fineLocation_vox Final measurement of location of bb in CBCT in voxel coordinates.
+   *
+   * @param volumeTranslator CBCT volume translator.  Translates between pixels and mm in CBCT frame of reference.  Provided as a convenience and because creating it consumes resources.
+   *
+   * @param cbctFrameOfRefLocation_mm Location of BB in CBCT frame of reference in mm.
+   *
+   * @param imageXYZ List of images from perspective of X, Y, and Z axis.
+   */
   case class CBCTAnalysisResult(coarseLoction_vox: Point3i, fineLocation_vox: Point3d, volumeTranslator: VolumeTranslator, cbctFrameOfRefLocation_mm: Point3d, imageXYZ: Seq[BufferedImage])
 
   /**

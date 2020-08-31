@@ -51,11 +51,12 @@ case class ImageRegistration(attrList: AttributeList) {
   /**
    * Transform a point by this matrix and create a new point.
    */
-  def transform(point: Point3d): Point3d = {
-    val x = point.clone.asInstanceOf[Point3d]
-    matrix.transform(x)
-    x
-  }
+  def transform(point: Point3d): Point3d = Util.transform(matrix, point)
+
+  /**
+   * Transform a point by an inverse of this matrix and create a new point.
+   */
+  def invTransform(point: Point3d): Point3d = Util.invTransform(matrix, point)
 
   override def toString: String = {
     "frameOfRefUID: " + frameOfRefUID + "    otherFrameOfRefUID: " + otherFrameOfRefUID

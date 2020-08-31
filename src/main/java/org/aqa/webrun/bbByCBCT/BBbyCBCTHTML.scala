@@ -26,6 +26,8 @@ import org.aqa.Logging
 import javax.vecmath.Point3d
 import org.restlet.Response
 import org.aqa.web.ViewOutput
+import edu.umro.ImageUtil.DicomImage
+import java.awt.Color
 
 object BBbyCBCTHTML extends Logging {
 
@@ -123,7 +125,8 @@ object BBbyCBCTHTML extends Logging {
       if (al == null) {
         logger.warn("Internal error.  Attribute list is null")
       } else {
-        val image = ConsumerFormatImageMaker.makeEightBitImage(al)
+        //  val image = ConsumerFormatImageMaker.makeEightBitImage(al)
+        val image = (new DicomImage(al)).toBufferedImage(Color.white)
         Config.applyWatermark(image)
         val pngFile = new File(subDir, fileNameOfPng(al))
         Util.writePng(image, pngFile)
@@ -523,7 +526,7 @@ object BBbyCBCTHTML extends Logging {
 
     def imageHtmlWithZoom(imageFileName: String, title: String) = {
       <center title={ title }>
-        <h4>{ title }</h4>
+        <br> </br>
         <a href={ imageFileName }>
           <div class='zoom' id={ Util.textToId(imageFileName) }>
             <img src={ imageFileName } class="img-responsive fit-image"/>
@@ -571,8 +574,8 @@ object BBbyCBCTHTML extends Logging {
       <div class="row">
         { numberText }
         { details }
-        { makeImages }
         { chart.chartReference }
+        { makeImages }
       </div>
     }
 

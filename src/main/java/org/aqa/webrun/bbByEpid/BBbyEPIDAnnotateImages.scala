@@ -153,8 +153,6 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
       new Point2D.Double((pixCenter.getX - upperLeftCorner.getX), (pixCenter.getY - upperLeftCorner.getY))
     }
 
-    Trace.trace("closeup center: " + center)
-
     // define rectangle for copying just the middle of the image
     val closeupRect = {
       val x = d2i(upperLeftCorner.getX)
