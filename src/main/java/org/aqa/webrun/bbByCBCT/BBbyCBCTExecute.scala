@@ -31,6 +31,7 @@ import org.aqa.db.Output
 import com.pixelmed.dicom.AttributeTag
 import org.restlet.Response
 import javax.vecmath.Matrix4d
+import edu.umro.ScalaUtil.DicomUtil
 
 /**
  * After the data has has been validated as sufficient to do the analysis, perform the
@@ -135,23 +136,6 @@ object BBbyCBCTExecute extends Logging {
 
         val bbPointInRtplan = Util.transform(transformMatrix, cbctFrameOfRefLocationBB_mm)
 
-        //        // transform the cbct point if necessary.  If it is already in the same frame of reference, then it is not necessary
-        //        val bbPointInRtplan = {
-        //          if (runReq.reg.isDefined) {
-        //            val p = runReq.imageRegistration.get.transform(cbctFrameOfRefLocationBB_mm)
-        //            val matrix = runReq.imageRegistration.get.getMatrix
-        //            def f(d: Double) = d.formatted("%12.6f")
-        //            def sp = " ".formatted("%12s")
-        //            val msg = Seq(
-        //              { f(cbctFrameOfRefLocationBB_mm.getX) + " * " + f(matrix.getM00) + ", " + f(matrix.getM01) + ", " + f(matrix.getM02) + ", " + f(matrix.getM03) + " = " + f(p.getX) },
-        //              { f(cbctFrameOfRefLocationBB_mm.getY) + " * " + f(matrix.getM10) + ", " + f(matrix.getM11) + ", " + f(matrix.getM12) + ", " + f(matrix.getM13) + " = " + f(p.getY) },
-        //              { f(cbctFrameOfRefLocationBB_mm.getZ) + " * " + f(matrix.getM20) + ", " + f(matrix.getM21) + ", " + f(matrix.getM22) + ", " + f(matrix.getM23) + " = " + f(p.getZ) },
-        //              { sp + " * " + f(matrix.getM30) + ", " + f(matrix.getM31) + ", " + f(matrix.getM32) + ", " + f(matrix.getM33) + "   " + sp })
-        //            logger.info("Matrix transformation:\n" + msg.mkString("\n"))
-        //            p
-        //          } else cbctFrameOfRefLocationBB_mm
-        //        }
-
         val bbByCBCT = saveToDb(extendedData, runReq, bbPointInRtplan)
         if (true) { // TODO rm
           logger.info("err_mm: " + bbByCBCT.err_mm.toString)
@@ -164,10 +148,18 @@ object BBbyCBCTExecute extends Logging {
           })
         }
         //  val cbctFrameOfRefLocationRtplanOrigin_mm = if (runReq.reg.isDefined)   getCbctFrameOfRefLocationRtplanOrigin_mm(  runReq.imageRegistration.get.getMatrix
-        def mm2vox(p: Point3d) = result.right.get.volumeTranslator.mm2vox(p) // .mm2vox(p)
-        val bb_vox = mm2vox(cbctFrameOfRefLocationBB_mm)
-        val rtplanOrigin_vox = mm2vox(Util.invTransform(transformMatrix, new Point3d(bbByCBCT.rtplanX_mm, bbByCBCT.rtplanY_mm, bbByCBCT.rtplanZ_mm)))
-        val annotatedImages = BBbyCBCTAnnotateImages.annotate(bbByCBCT, imageXYZ, runReq, bb_vox, rtplanOrigin_vox)
+        //def mm2vox(p: Point3d) = result.right.get.volumeTranslator.mm2vox(p) // .mm2vox(p)
+
+        def mm2vox(x: Double, y: Double, z: Double) = {
+          val pRTPLAN = new Point3d(x, y, z)
+          val pCBCT = Util.invTransform(transformMatrix, pRTPLAN)
+          result.right.get.volumeTranslator.mm2vox(pCBCT)
+        }
+
+        val bb_vox = mm2vox(bbByCBCT.cbctX_mm, bbByCBCT.cbctY_mm, bbByCBCT.cbctZ_mm)
+        val rtplanOrigin_vox = mm2vox(bbByCBCT.rtplanX_mm, bbByCBCT.rtplanY_mm, bbByCBCT.rtplanZ_mm)
+
+        val annotatedImages = BBbyCBCTAnnotateImages.annotate(bbByCBCT, imageXYZ, runReq, bb_vox, rtplanOrigin_vox, extendedData.input.dataDate.get)
         val html = BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, annotatedImages, ProcedureStatus.done, runReq, result.right.get, response)
         logger.info("Finished analysis of CBCT Alignment for machine " + extendedData.machine.id)
         ProcedureStatus.pass

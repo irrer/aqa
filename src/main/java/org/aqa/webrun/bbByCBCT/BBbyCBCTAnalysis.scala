@@ -207,6 +207,36 @@ object BBbyCBCTAnalysis extends Logging {
     bufImgList
   }
 
+  private def addVolumeMarker(entireVolume: DicomVolume, fineLocation_vox: Point3d): DicomVolume = {
+
+    val min = 4
+    val max = 20
+
+    def fineInt = new Point3i(fineLocation_vox.getX.round.toInt, fineLocation_vox.getY.round.toInt, fineLocation_vox.getZ.round.toInt)
+
+    def inX(x: Int) = (x >= min + fineInt.getX) && (x < max + fineInt.getX)
+    def inY(x: Int) = (x >= min + fineInt.getY) && (x < max + fineInt.getY)
+    def inZ(x: Int) = (x >= min + fineInt.getZ) && (x < max + fineInt.getZ)
+
+    val increase = (2.5).toFloat
+    def mark(img: DicomImage, index: Int): DicomImage = {
+      if (inZ(index)) {
+        val pd = for (y <- 0 until img.height) yield {
+          val row = for (x <- 0 until img.width) yield {
+            val p = img.get(x, y)
+            if (inX(x) && inY(y)) { p * increase } else { p }
+          }
+          row
+        }
+        new DicomImage(pd)
+      } else
+        img
+    }
+
+    val imgList = entireVolume.volume.zipWithIndex.map(di => mark(di._1, di._2))
+    new DicomVolume(imgList)
+  }
+
   /**
    * Container for intermediary results.
    *
@@ -303,6 +333,7 @@ object BBbyCBCTAnalysis extends Logging {
         "\n    coordinates in voxels: " + fmtPoint(fineLocation_vox.get) +
         "\n    frame of ref coordinates in mm: " + fmtPoint(cbctForLocation_mm))
       val imageXYZ = makeImagesXYZ(entireVolume, fineLocation_vox.get, cbctForLocation_mm, voxSize_mm)
+      //val imageXYZ = makeImagesXYZ(addVolumeMarker(entireVolume, fineLocation_vox.get), fineLocation_vox.get, cbctForLocation_mm, voxSize_mm)
       val result = new CBCTAnalysisResult(coarse_vox, fineLocation_vox.get, volumeTranslator, cbctForLocation_mm: Point3d, imageXYZ)
       Right(cbctForLocation_mm, imageXYZ)
       Right(result)

@@ -8,6 +8,7 @@ import edu.umro.ImageUtil.ImageUtil
 import java.awt.Color
 import org.aqa.Config
 import java.io.File
+import java.util.Date
 import org.aqa.VolumeTranslator
 import edu.umro.ScalaUtil.Trace
 import org.aqa.ImageRegistration
@@ -18,6 +19,7 @@ import org.aqa.Logging
 import javax.vecmath.Point2d
 import javax.imageio.ImageIO
 import edu.umro.ImageUtil.Watermark
+import java.text.SimpleDateFormat
 
 object BBbyCBCTAnnotateImages extends Logging {
 
@@ -48,6 +50,12 @@ object BBbyCBCTAnnotateImages extends Logging {
    * @param xAxisName, yAxisName Names of X and Y axis
    *
    * @param originalImage Image for this orientation
+   *
+   * @param vertCenterline Color of vertical center line.
+   *
+   * @param horzCenterline Color of horizontal center line.
+   *
+   * @param rotation Number of degrees to rotate image clockwise.
    */
   private def makePair(
     voxSizeX_mmOrig: Double, voxSizeY_mmOrig: Double,
@@ -73,8 +81,8 @@ object BBbyCBCTAnnotateImages extends Logging {
       voxSizeX_mm
     }
 
-    def scaleAndRotate(unscaledAndUnrotated: Point2d): Point2d = {
-      val bbCenterX_pix = {
+    def scaleAndRotatePoint(unscaledAndUnrotated: Point2d): Point2d = {
+      val centerX_pix = {
         val xc = if (voxSizeX_mmOrig > voxSizeY_mmOrig)
           unscaledAndUnrotated.getX * (voxSizeX_mmOrig / voxSizeY_mmOrig)
         else
@@ -82,55 +90,29 @@ object BBbyCBCTAnnotateImages extends Logging {
         (xc + 0.5) * scale
       }
 
-      val bbCenterY_pix = {
+      val centerY_pix = {
         val yc = if (voxSizeY_mmOrig > voxSizeX_mmOrig)
           unscaledAndUnrotated.getY * (voxSizeY_mmOrig / voxSizeX_mmOrig)
         else
           unscaledAndUnrotated.getY
         (yc + 0.5) * scale
       }
-      new Point2d(bbCenterX_pix, bbCenterY_pix)
 
       val rotated = rotation match {
-        case 0 => new Point2d(bbCenterX_pix, bbCenterY_pix)
-        case 1 => new Point2d((originalImage.getHeight * scale) - 1 - bbCenterY_pix, bbCenterX_pix)
+        case 0 => new Point2d(centerX_pix, centerY_pix)
+        case 90 => new Point2d((originalImage.getHeight * scale) - 1 - centerY_pix, centerX_pix)
+        case 180 => new Point2d((originalImage.getWidth * scale) - centerX_pix, (originalImage.getHeight * scale) - centerY_pix)
         case _ => throw new RuntimeException("Unexpected rotation in makePair: " + rotation)
       }
       rotated
     }
 
-    //    val bbCenterUnrotated_pix: Point2d = {
-    //      val bbCenterX_pix = {
-    //        val xc = if (voxSizeX_mmOrig > voxSizeY_mmOrig)
-    //          bb_pix.getX * (voxSizeX_mmOrig / voxSizeY_mmOrig)
-    //        else
-    //          bb_pix.getX
-    //        (xc + 0.5) * scale
-    //      }
-    //
-    //      val bbCenterY_pix = {
-    //        val yc = if (voxSizeY_mmOrig > voxSizeX_mmOrig)
-    //          bb_pix.getY * (voxSizeY_mmOrig / voxSizeX_mmOrig)
-    //        else
-    //          bb_pix.getY
-    //        (yc + 0.5) * scale
-    //      }
-    //      new Point2d(bbCenterX_pix, bbCenterY_pix)
-    //    }
+    val bbCenter_pix = scaleAndRotatePoint(bb_pix)
 
-    val bbCenter_pix = scaleAndRotate(bb_pix)
+    val planCenter_pix = scaleAndRotatePoint(rtplanOrigin_pix)
 
-    //    val bbCenter_pixJ: Point2d = {
-    //
-    //      val rotated = rotation match {
-    //        case 0 => bbCenterUnrotated_pix
-    //        case 1 => new Point2d((originalImage.getHeight * scale) - 1 - bbCenterUnrotated_pix.getY, bbCenterUnrotated_pix.getX)
-    //        case _ => throw new RuntimeException("Unexpected rotation in makePair: " + rotation)
-    //      }
-    //      rotated
-    //    }
-
-    val planCenter_pix = scaleAndRotate(rtplanOrigin_pix)
+    Trace.trace("bbCenter_pix: " + bbCenter_pix)
+    Trace.trace("planCenter_pix: " + planCenter_pix)
 
     /** Size (width and height) of small image in pixels. */
     val cropSize_pix = {
@@ -145,7 +127,8 @@ object BBbyCBCTAnnotateImages extends Logging {
         val i = ImageUtil.magnify(originalImage, scale)
         rotation match {
           case 0 => i
-          case 1 => ImageUtil.rotate90(i)
+          case 90 => ImageUtil.rotate90(i)
+          case 180 => ImageUtil.rotate180(i)
           case _ => throw new RuntimeException("Unexpected rotation in makeFullImage: " + rotation)
         }
       }
@@ -237,7 +220,12 @@ object BBbyCBCTAnnotateImages extends Logging {
       val x = Math.max(0, d2i(bbCenter_pix.getX - (cropSize_pix / 2)))
       val y = Math.max(0, d2i(bbCenter_pix.getY - (cropSize_pix / 2)))
 
-      val aoi = image.getSubimage(x, y, cropSize_pix, cropSize_pix)
+      Trace.trace("x: " + x +
+        "    y: " + y +
+        "    cropSize_pix: " + cropSize_pix +
+        "    image.getWidth: " + image.getWidth +
+        "    image.getHeight: " + image.getHeight)
+      val aoi = image.getSubimage(x, y, Math.min(cropSize_pix, image.getWidth - x - 1), Math.min(cropSize_pix, image.getHeight - y - 1)) // TODO can get exception
       aoi
     }
 
@@ -262,7 +250,7 @@ object BBbyCBCTAnnotateImages extends Logging {
    *
    * @param rtplanOrigin_vox RTPLAN origin in voxels in the the CBCT voxel space.
    */
-  def annotate(bbByCBCT: BBbyCBCT, imageXYZ: Seq[BufferedImage], runReq: BBbyCBCTRunReq, bb_vox: Point3d, rtplanOrigin_vox: Point3d): ImageSet = {
+  def annotate(bbByCBCT: BBbyCBCT, imageXYZ: Seq[BufferedImage], runReq: BBbyCBCTRunReq, bb_vox: Point3d, rtplanOrigin_vox: Point3d, date: Date): ImageSet = {
     logger.info("Annotating CBCT images for " + bbByCBCT)
     val voxSize_mm = Util.getVoxSize_mm(runReq.cbctList) // the size of a voxel in mm
     logger.info("Annotating CBCT images with voxels sized in mm: " + voxSize_mm.map(s => Util.fmtDbl(s)).mkString(", "))
@@ -281,7 +269,7 @@ object BBbyCBCTAnnotateImages extends Logging {
       rtplanOrigin_pix = new Point2d(rtplanOrigin_vox.getZ, rtplanOrigin_vox.getY),
       originalImage = imageXYZ(0),
       Color.green, Color.blue,
-      rotation = 1)
+      rotation = 90)
 
     def yImagePair = makePair(
       voxSize_mm(2), voxSize_mm(0),
@@ -289,7 +277,7 @@ object BBbyCBCTAnnotateImages extends Logging {
       rtplanOrigin_pix = new Point2d(rtplanOrigin_vox.getZ, rtplanOrigin_vox.getX),
       imageXYZ(1),
       Color.red, Color.blue,
-      rotation = 1)
+      rotation = 90)
 
     def zImagePair = makePair(
       voxSize_mm(0), voxSize_mm(1),
@@ -297,7 +285,7 @@ object BBbyCBCTAnnotateImages extends Logging {
       rtplanOrigin_pix = new Point2d(rtplanOrigin_vox.getX, rtplanOrigin_vox.getY),
       imageXYZ(2),
       Color.red, Color.green,
-      rotation = 0)
+      rotation = 180)
 
     // do annotation processing in parallel
     val pairList = Seq(xImagePair _, yImagePair _, zImagePair _).par.map(f => f()).toList
@@ -340,7 +328,7 @@ object BBbyCBCTAnnotateImages extends Logging {
       def label4sides = {
         val graphics = ImageUtil.getGraphics(image)
         graphics.setColor(Color.red)
-        val pointSize = textPointSize * 4
+        val pointSize = (textPointSize * 2.5).round.toInt
         ImageText.setFont(graphics, ImageText.DefaultFont, pointSize)
 
         ImageText.drawTextCenteredAt(graphics, image.getWidth / 2, pointSize, top)
@@ -352,9 +340,11 @@ object BBbyCBCTAnnotateImages extends Logging {
       def applyLabel = {
         val graphics = ImageUtil.getGraphics(image)
         graphics.setColor(Color.white)
-        val pointSize = textPointSize * 2
+        val pointSize = (textPointSize * 2.5).round.toInt
         ImageText.setFont(graphics, ImageText.DefaultFont, pointSize)
-        graphics.drawString(label, 3, pointSize)
+        val dateFormat = new SimpleDateFormat("M/d/yyyy h:mm aa")
+        val text = label + " - CBCT - " + dateFormat.format(date)
+        graphics.drawString(text, 3, pointSize)
       }
 
       applyLegend
