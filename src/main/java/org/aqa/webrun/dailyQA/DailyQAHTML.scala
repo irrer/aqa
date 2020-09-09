@@ -187,7 +187,7 @@ object DailyQAHTML extends Logging {
       new Col("EPID Time " + reportDate, "Time of EPID acquisition", colDateTime _),
 
       new Col("X,Y,Z CBCT-PLAN mm", "CBCT - PLAN in mm", colCbctXYZ _),
-      new Col("X,Y,Z / lat,vert,lng Table Movement cm", "RTIMAGE-CT in cm, X,Y,Z = lat,vert,lng", colTableMovement _),
+      new Col("X,Y,Z / lat,vert,long Table Movement cm", "RTIMAGE-CT in cm, X,Y,Z = lat,vert,lng", colTableMovement _),
 
       new Col("Gantry Angle for XZ", "Angle of gantry for vertical image in degrees used to calculate values for Y and Z", colVertGantryAngle _),
       new Col("Vert EPID-CAX(X) mm", "X offset Vertical EPID image-CAX in mm", colVertXCax _),
