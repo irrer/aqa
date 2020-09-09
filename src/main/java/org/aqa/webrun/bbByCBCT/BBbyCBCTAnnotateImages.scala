@@ -62,9 +62,13 @@ object BBbyCBCTAnnotateImages extends Logging {
     bb_pix: Point2d,
     rtplanOrigin_pix: Point2d,
     originalImage: BufferedImage,
+    mapImage: (BufferedImage) => BufferedImage,
+    mapPoint: (Point2d, Int, Int) => Point2d,
     vertCenterline: Color,
     horzCenterline: Color,
-    rotation: Int): ImagePair = {
+    rotation: Int): BufferedImage = {
+
+    Trace.trace("voxSizeX_mmOrig: " + voxSizeX_mmOrig + "    voxSizeY_mmOrig: " + voxSizeY_mmOrig)
 
     def d2i(d: Double) = d.round.toInt
 
@@ -98,13 +102,25 @@ object BBbyCBCTAnnotateImages extends Logging {
         (yc + 0.5) * scale
       }
 
-      val rotated = rotation match {
-        case 0 => new Point2d(centerX_pix, centerY_pix)
-        case 90 => new Point2d((originalImage.getHeight * scale) - 1 - centerY_pix, centerX_pix)
-        case 180 => new Point2d((originalImage.getWidth * scale) - centerX_pix, (originalImage.getHeight * scale) - centerY_pix)
-        case _ => throw new RuntimeException("Unexpected rotation in makePair: " + rotation)
-      }
-      rotated
+      val cntr = new Point2d(centerX_pix, centerY_pix)
+
+      //            val rotated = rotation match {
+      //              case 0 => new Point2d(centerX_pix, centerY_pix)
+      //              case 90 => new Point2d((originalImage.getHeight * scale) - 1 - centerY_pix, centerX_pix)
+      //              case 180 => new Point2d((originalImage.getWidth * scale) - centerX_pix, centerY_pix)
+      //              case _ => throw new RuntimeException("Unexpected rotation in makePair: " + rotation)
+      //            }
+      //
+      //
+      //
+      //
+      //            rotated
+
+      val p = mapPoint(cntr, originalImage.getWidth * scale, originalImage.getHeight * scale)
+      //      val xFactor = if (voxSizeX_mmOrig > voxSizeY_mmOrig) voxSizeX_mmOrig / voxSizeY_mmOrig else 1.0
+      //      val yFactor = if (voxSizeY_mmOrig > voxSizeY_mmOrig) voxSizeY_mmOrig / voxSizeX_mmOrig else 1.0
+      //      val p2 = new Point2d(p.getX * xFactor * scale, p.getY * yFactor * scale)
+      p
     }
 
     val bbCenter_pix = scaleAndRotatePoint(bb_pix)
@@ -123,15 +139,17 @@ object BBbyCBCTAnnotateImages extends Logging {
     // ---------------------------------------------------------------------------------
 
     def makeFullImage: BufferedImage = {
-      val image = {
-        val i = ImageUtil.magnify(originalImage, scale)
-        rotation match {
-          case 0 => i
-          case 90 => ImageUtil.rotate90(i)
-          case 180 => ImageUtil.rotate180(i)
-          case _ => throw new RuntimeException("Unexpected rotation in makeFullImage: " + rotation)
-        }
-      }
+      val image = ImageUtil.magnify(mapImage(originalImage), scale)
+
+      //      val image = {
+      //        val i = ImageUtil.magnify(originalImage, scale)
+      //        rotation match {
+      //          case 0 => i
+      //          case 90 => ImageUtil.rotate90(i)
+      //          case 180 => ImageUtil.mirrorHorizontally(i)
+      //          case _ => throw new RuntimeException("Unexpected rotation in makeFullImage: " + rotation)
+      //        }
+      //      }
 
       val maxVoxSize = Math.max(voxSizeX_mm, voxSizeY_mm) // larger voxel dimension
       val minVoxSize = Math.min(voxSizeX_mm, voxSizeY_mm) // smaller voxel dimension
@@ -216,25 +234,8 @@ object BBbyCBCTAnnotateImages extends Logging {
 
     // ---------------------------------------------------------------------------------
 
-    def cropImage(image: BufferedImage) = {
-      val x = Math.max(0, d2i(bbCenter_pix.getX - (cropSize_pix / 2)))
-      val y = Math.max(0, d2i(bbCenter_pix.getY - (cropSize_pix / 2)))
-
-      Trace.trace("x: " + x +
-        "    y: " + y +
-        "    cropSize_pix: " + cropSize_pix +
-        "    image.getWidth: " + image.getWidth +
-        "    image.getHeight: " + image.getHeight)
-      val aoi = image.getSubimage(x, y, Math.min(cropSize_pix, image.getWidth - x - 1), Math.min(cropSize_pix, image.getHeight - y - 1)) // TODO can get exception
-      aoi
-    }
-
-    // ---------------------------------------------------------------------------------
-
     val full = makeFullImage
-    val aoi = cropImage(full)
-
-    new ImagePair(full, aoi)
+    full
   }
 
   /**
@@ -263,37 +264,45 @@ object BBbyCBCTAnnotateImages extends Logging {
     Trace.trace(j1)
     Trace.trace
 
+    // sagittal
     def xImagePair = makePair(
       voxSizeX_mmOrig = voxSize_mm(2), voxSizeY_mmOrig = voxSize_mm(1),
       bb_pix = new Point2d(bb_vox.getZ, bb_vox.getY),
       rtplanOrigin_pix = new Point2d(rtplanOrigin_vox.getZ, rtplanOrigin_vox.getY),
       originalImage = imageXYZ(0),
+      (i: BufferedImage) => ImageUtil.mirrorVertically(ImageUtil.rotate90(i)),
+      (p: Point2d, w: Int, h: Int) => new Point2d(h - 1 - p.getY, w - 1 - p.getX),
       Color.green, Color.blue,
-      rotation = 90)
+      rotation = 0)
 
+    // frontal
     def yImagePair = makePair(
       voxSize_mm(2), voxSize_mm(0),
       bb_pix = new Point2d(bb_vox.getZ, bb_vox.getX),
       rtplanOrigin_pix = new Point2d(rtplanOrigin_vox.getZ, rtplanOrigin_vox.getX),
       imageXYZ(1),
+      (i: BufferedImage) => ImageUtil.rotate90(i),
+      (p: Point2d, w: Int, h: Int) => new Point2d(h - 1 - p.getY, p.getX),
       Color.red, Color.blue,
-      rotation = 90)
+      rotation = 0)
 
+    // transversal
     def zImagePair = makePair(
       voxSize_mm(0), voxSize_mm(1),
       bb_pix = new Point2d(bb_vox.getX, bb_vox.getY),
       rtplanOrigin_pix = new Point2d(rtplanOrigin_vox.getX, rtplanOrigin_vox.getY),
       imageXYZ(2),
+      (i: BufferedImage) => i, // ImageUtil.mirrorVertically(i),
+      (p: Point2d, w: Int, h: Int) => p, // new Point2d(p.getX, h - 1 - p.getY),
       Color.red, Color.green,
-      rotation = 180)
+      rotation = 0)
 
     // do annotation processing in parallel
-    val pairList = Seq(xImagePair _, yImagePair _, zImagePair _).par.map(f => f()).toList
+    val imageList = Seq(xImagePair _, yImagePair _, zImagePair _).par.map(f => f()).toList
 
-    val fullList = {
-      val list = pairList.map(p => p.fullImage)
+    val aoiList = {
 
-      val min = (list.map(i => i.getWidth) ++ list.map(i => i.getHeight)).min
+      val min = (imageList.map(i => i.getWidth) ++ imageList.map(i => i.getHeight)).min
 
       def trimImage(image: BufferedImage): BufferedImage = {
         if ((image.getWidth > min) || (image.getHeight > min)) {
@@ -301,12 +310,19 @@ object BBbyCBCTAnnotateImages extends Logging {
           val y = Math.max((image.getHeight - min) / 2, 0)
           val w = Math.min(min, image.getWidth)
           val h = Math.min(min, image.getHeight)
-          image.getSubimage(x, y, w, h)
+          val aoi = {
+            val tmp = image.getSubimage(x, y, w, h)
+            val img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB)
+            for (xx <- 0 until w; yy <- 0 until h)
+              img.setRGB(xx, yy, tmp.getRGB(xx, yy)) // copy the pixels so that they are not shared with the full sized image
+            img
+          }
+          aoi
         } else
           image
       }
 
-      val resizedList = list.map(i => trimImage(i))
+      val resizedList = imageList.map(i => trimImage(i))
       resizedList.map(i => Config.applyWatermark(i))
       resizedList(0)
       resizedList
@@ -352,13 +368,16 @@ object BBbyCBCTAnnotateImages extends Logging {
       applyLabel
     }
 
-    applyOrientationLegend(fullList(0), "Sagittal", "HumanSagittal.png", 5.0, "H", "F", "P", "A")
-    applyOrientationLegend(fullList(1), "Frontal", "HumanFrontal.png", 10.0, "H", "F", "R", "L")
-    applyOrientationLegend(fullList(2), "Transversal", "HumanTransversal.png", 10.0, "A", "P", "R", "L")
+    applyOrientationLegend(imageList(0), "Sagittal", "HumanSagittal.png", 5.0, "H", "F", "P", "A")
+    applyOrientationLegend(imageList(1), "Frontal", "HumanFrontal.png", 10.0, "H", "F", "R", "L")
+    applyOrientationLegend(imageList(2), "Transversal", "HumanTransversal.png", 10.0, "A", "P", "R", "L")
 
-    val imageSet = new ImageSet(
-      fullList,
-      pairList.map(p => p.areaOfInterest))
+    applyOrientationLegend(aoiList(0), "Sagittal", "HumanSagittal.png", 5.0, "H", "F", "P", "A")
+    applyOrientationLegend(aoiList(1), "Frontal", "HumanFrontal.png", 10.0, "H", "F", "R", "L")
+    applyOrientationLegend(aoiList(2), "Transversal", "HumanTransversal.png", 10.0, "A", "P", "R", "L")
+
+    val imageSet = new ImageSet(imageList, aoiList)
+
     imageSet
   }
 }

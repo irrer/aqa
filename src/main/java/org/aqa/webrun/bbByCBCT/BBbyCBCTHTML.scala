@@ -524,12 +524,12 @@ object BBbyCBCTHTML extends Logging {
     }
     */
 
-    def imageHtmlWithZoom(imageFileName: String, title: String) = {
+    def imageHtmlWithZoom(imageFileNameFull: String, imageFileNameAoi: String, title: String) = {
       <center title={ title }>
         <br> </br>
-        <a href={ imageFileName }>
-          <div class='zoom' id={ Util.textToId(imageFileName) }>
-            <img src={ imageFileName } class="img-responsive fit-image"/>
+        <a href={ imageFileNameFull }>
+          <div class='zoom' id={ Util.textToId(imageFileNameAoi) }>
+            <img src={ imageFileNameAoi } class="img-responsive fit-image"/>
           </div>
         </a>
       </center>
@@ -557,14 +557,14 @@ object BBbyCBCTHTML extends Logging {
     def makeImages: Elem = {
       <div class="row">
         <div class="col-md-8">
-          { imageHtmlWithZoom(fileNameOfFull(2), "Transverse / Axial") }
+          { imageHtmlWithZoom(fileNameOfFull(2), fileNameOfAreaOfInterest(2), "Transverse / Axial") }
         </div>
         <div class="col-md-4">
           <div class="row">
-            { imageHtmlWithZoom(fileNameOfFull(0), "Sagittal") }
+            { imageHtmlWithZoom(fileNameOfFull(0), fileNameOfAreaOfInterest(0), "Sagittal") }
           </div>
           <div class="row">
-            { imageHtmlWithZoom(fileNameOfFull(1), "Frontal") }
+            { imageHtmlWithZoom(fileNameOfFull(1), fileNameOfAreaOfInterest(1), "Frontal") }
           </div>
         </div>
       </div>
