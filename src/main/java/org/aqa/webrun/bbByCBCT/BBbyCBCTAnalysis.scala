@@ -36,25 +36,35 @@ object BBbyCBCTAnalysis extends Logging {
   /**
    * Get the corner of the search volume closest to the origin in voxels.
    */
-  private def startOfSearch(entireVolume: DicomVolume, voxSize_mm: Seq[Double]): Point3i = {
+  private def startOfSearch(entireVolume: DicomVolume, voxSize_mm: Point3d): Point3i = {
     def toStart(dimension: Int, size_mm: Double): Int = {
       val center = dimension / 2.0
       val offset = (Config.DailyPhantomSearchDistance_mm / size_mm) / 2.0
       (center - offset).round.toInt
     }
 
-    val seq = entireVolume.volSize.zip(voxSize_mm).map(dimScl => toStart(dimScl._1, dimScl._2))
-
-    new Point3i(seq.toArray)
+    val vs = entireVolume.volSize
+    new Point3i(
+      toStart(vs.getX, voxSize_mm.getX),
+      toStart(vs.getY, voxSize_mm.getY),
+      toStart(vs.getZ, voxSize_mm.getZ))
   }
 
-  /**
-   * Get the size of the search volume in voxels.
-   */
-  private def sizeOfSearch(voxSize_mm: Seq[Double]): Point3i = {
-    val seq = voxSize_mm.map(size_mm => (Config.DailyPhantomSearchDistance_mm / size_mm).ceil.toInt)
-    new Point3i(seq.toArray)
-  }
+  private def multiplyPoints(a: Point3d, b: Point3d) = new Point3d(a.getX * b.getX, a.getY * b.getY, a.getZ * b.getZ)
+
+  private def d2i(d: Double): Int = d.round.toInt
+
+  private def d2i(d: Point3d): Point3i = new Point3i(d2i(d.getX), d2i(d.getY), d2i(d.getZ))
+
+  private def i2d(i: Point3i): Point3d = new Point3d(i.getX.toDouble, i.getY.toDouble, i.getZ)
+
+  //  /**
+  //   * Get the size of the search volume in voxels.
+  //   */
+  //  private def sizeOfSearch(voxSize_mm: Seq[Double]): Point3i = {
+  //    val seq = voxSize_mm.map(size_mm => (Config.DailyPhantomSearchDistance_mm / size_mm).ceil.toInt)
+  //    new Point3i(seq.toArray)
+  //  }
 
   /**
    * Get image from the perspective of the X-axis.
@@ -171,6 +181,64 @@ object BBbyCBCTAnalysis extends Logging {
     bufImg
   }
 
+  def getCoarseVox(entireVolume: DicomVolume, voxSize_mm: Point3d): Option[Point3i] = {
+
+    def horizontalSlice(sliceIndex: Int): IndexedSeq[IndexedSeq[Float]] = {
+      (0 until entireVolume.xSize).map(x => (0 until entireVolume.zSize).map(z => entireVolume.getXYZ(x, sliceIndex, z)))
+    }
+
+    def horizontalSliceToSum(sliceIndex: Int): Float = horizontalSlice(sliceIndex).flatten.sum
+
+    val profile = (0 until entireVolume.ySize).map(sliceIndex => horizontalSliceToSum(sliceIndex))
+
+    val cubeLen_vox = Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getY // height (along Y axis) of cube in voxels
+    val cubeSegment = (cubeLen_vox / 2).round.toInt
+
+    /**
+     * Determine if the profile at the given index defines the approximate top of the cube.
+     */
+    def isStartOfCube(index: Int): Boolean = {
+      val list = profile.drop(index).take(cubeSegment)
+      def flatness = {
+        val stdDev = ImageUtil.stdDev(list)
+        val avg = list.sum / list.size
+        stdDev / avg
+      }
+      val isStart = ((list.min >= Config.DailyQACBCTPhantomMinHorizontalPlaneSum_cu) && (flatness < Config.DailyQACBCTFlatnessMinimum))
+      isStart
+    }
+
+    //    val minSum = cubeSegment * Config.DailyQACBCTPhantomMinHorizontalPlaneSum_cu
+    //
+    //    val sumList = (0 until (profile.size - cubeSegment - 1)).map(i => profile.drop(i).take(cubeSegment).sum)
+    //    val top = sumList.zipWithIndex.find(si => si._1 > minSum)
+
+    val top = (0 until profile.size - cubeSegment).toSeq.find(index => isStartOfCube(index))
+    if (top.isDefined) {
+      // DICOM image that has just the cross section of the cube (no table, might contain BB).
+      val midCubeIndex = top.get + cubeSegment
+      val profileToMidCube = profile.take(midCubeIndex)
+      val threshold = (profileToMidCube.head + profileToMidCube.last) / 2
+      Trace.trace("profileToMidCube  min: " + profileToMidCube.min + "    max: " + profileToMidCube.max + "    head: " + profileToMidCube.head + "    last: " + profileToMidCube.last + "    threshold: " + threshold)
+      val topPosition = LocateEdge.locateEdge(profileToMidCube, threshold)
+      // the coarse Y position of the BB
+      val bbY = (topPosition + (cubeLen_vox / 2)).round.toInt
+
+      // find coarse X and Z
+      val cubeSlice = new DicomImage(horizontalSlice(midCubeIndex))
+      val bbX = ImageUtil.centerOfMass(cubeSlice.rowSums).round.toInt
+      val bbZ = ImageUtil.centerOfMass(cubeSlice.columnSums).round.toInt
+
+      val center = new Point3i(bbX, bbY, bbZ)
+      def i2d(i: Point3i) = new Point3d(i.getX, i.getY, i.getZ)
+      logger.info("coarse measurement of center: " + center)
+      Some(center)
+    } else {
+      logger.warn("could not find BB")
+      None
+    }
+  }
+
   /**
    * Make images that show the BB from the X, Y and Z axis by taking a slice a 4 times thicker than
    * the BB in the given direction that encompass the BB.  The point is to be able to generate
@@ -178,21 +246,21 @@ object BBbyCBCTAnalysis extends Logging {
    * the BB (from the 3 orthogonal axis).   The voxels are averaged in along the relevant axis to
    * produce a 2-D image.
    */
-  private def makeImagesXYZ(entireVolume: DicomVolume, fineLocation_vox: Point3d, cbctForLocation_mm: Point3d, voxSize: Seq[Double]): Seq[BufferedImage] = {
+  private def makeImagesXYZ(entireVolume: DicomVolume, fineLocation_vox: Point3d, cbctForLocation_mm: Point3d, voxSize_mm: Point3d): Seq[BufferedImage] = {
 
     val mm = Config.CBCTBBPenumbra_mm * 4
 
     // point closest to origin for each sub-volume
     val start = new Point3i(
-      (fineLocation_vox.getX - (mm / voxSize(0))).ceil.toInt,
-      (fineLocation_vox.getY - (mm / voxSize(1))).ceil.toInt,
-      (fineLocation_vox.getZ - (mm / voxSize(2))).ceil.toInt)
+      (fineLocation_vox.getX - (mm / voxSize_mm.getX)).ceil.toInt,
+      (fineLocation_vox.getY - (mm / voxSize_mm.getY)).ceil.toInt,
+      (fineLocation_vox.getZ - (mm / voxSize_mm.getZ)).ceil.toInt)
 
     // number of planes in each sub-volume
     val size = new Point3i(
-      ((mm * 2) / voxSize(0)).ceil.toInt,
-      ((mm * 2) / voxSize(1)).ceil.toInt,
-      ((mm * 2) / voxSize(2)).ceil.toInt)
+      ((mm * 2) / voxSize_mm.getX).ceil.toInt,
+      ((mm * 2) / voxSize_mm.getY).ceil.toInt,
+      ((mm * 2) / voxSize_mm.getZ).ceil.toInt)
 
     val diX = xImage(entireVolume, start, size)
     val diY = yImage(entireVolume, start, size)
@@ -201,42 +269,42 @@ object BBbyCBCTAnalysis extends Logging {
     val minMaxPixels = getMinMax(Seq(diX, diY, diZ))
 
     val bufImgList = Seq(
-      makeImage(diX, new Point2D.Double(fineLocation_vox.getZ, fineLocation_vox.getY), new Point2D.Double(voxSize(2), voxSize(1)), minMaxPixels),
-      makeImage(diY, new Point2D.Double(fineLocation_vox.getZ, fineLocation_vox.getX), new Point2D.Double(voxSize(2), voxSize(0)), minMaxPixels),
-      makeImage(diZ, new Point2D.Double(fineLocation_vox.getX, fineLocation_vox.getY), new Point2D.Double(voxSize(0), voxSize(1)), minMaxPixels))
+      makeImage(diX, new Point2D.Double(fineLocation_vox.getZ, fineLocation_vox.getY), new Point2D.Double(voxSize_mm.getZ, voxSize_mm.getY), minMaxPixels),
+      makeImage(diY, new Point2D.Double(fineLocation_vox.getZ, fineLocation_vox.getX), new Point2D.Double(voxSize_mm.getZ, voxSize_mm.getX), minMaxPixels),
+      makeImage(diZ, new Point2D.Double(fineLocation_vox.getX, fineLocation_vox.getY), new Point2D.Double(voxSize_mm.getX, voxSize_mm.getY), minMaxPixels))
 
     bufImgList
   }
 
-  private def addVolumeMarker(entireVolume: DicomVolume, fineLocation_vox: Point3d): DicomVolume = {
-
-    val min = 4
-    val max = 20
-
-    def fineInt = new Point3i(fineLocation_vox.getX.round.toInt, fineLocation_vox.getY.round.toInt, fineLocation_vox.getZ.round.toInt)
-
-    def inX(x: Int) = (x >= min + fineInt.getX) && (x < max + fineInt.getX)
-    def inY(x: Int) = (x >= min + fineInt.getY) && (x < max + fineInt.getY)
-    def inZ(x: Int) = (x >= min + fineInt.getZ) && (x < max + fineInt.getZ)
-
-    val increase = (2.5).toFloat
-    def mark(img: DicomImage, index: Int): DicomImage = {
-      if (inZ(index)) {
-        val pd = for (y <- 0 until img.height) yield {
-          val row = for (x <- 0 until img.width) yield {
-            val p = img.get(x, y)
-            if (inX(x) && inY(y)) { p * increase } else { p }
-          }
-          row
-        }
-        new DicomImage(pd)
-      } else
-        img
-    }
-
-    val imgList = entireVolume.volume.zipWithIndex.map(di => mark(di._1, di._2))
-    new DicomVolume(imgList)
-  }
+  //  private def addVolumeMarker(entireVolume: DicomVolume, fineLocation_vox: Point3d): DicomVolume = {
+  //
+  //    val min = 4
+  //    val max = 20
+  //
+  //    def fineInt = new Point3i(fineLocation_vox.getX.round.toInt, fineLocation_vox.getY.round.toInt, fineLocation_vox.getZ.round.toInt)
+  //
+  //    def inX(x: Int) = (x >= min + fineInt.getX) && (x < max + fineInt.getX)
+  //    def inY(x: Int) = (x >= min + fineInt.getY) && (x < max + fineInt.getY)
+  //    def inZ(x: Int) = (x >= min + fineInt.getZ) && (x < max + fineInt.getZ)
+  //
+  //    val increase = (2.5).toFloat
+  //    def mark(img: DicomImage, index: Int): DicomImage = {
+  //      if (inZ(index)) {
+  //        val pd = for (y <- 0 until img.height) yield {
+  //          val row = for (x <- 0 until img.width) yield {
+  //            val p = img.get(x, y)
+  //            if (inX(x) && inY(y)) { p * increase } else { p }
+  //          }
+  //          row
+  //        }
+  //        new DicomImage(pd)
+  //      } else
+  //        img
+  //    }
+  //
+  //    val imgList = entireVolume.volume.zipWithIndex.map(di => mark(di._1, di._2))
+  //    new DicomVolume(imgList)
+  //  }
 
   /**
    * Container for intermediary results.
@@ -264,6 +332,7 @@ object BBbyCBCTAnalysis extends Logging {
     outputDir.mkdirs
 
     val voxSize_mm = Util.getVoxSize_mm(sorted) // the size of a voxel in mm
+
     val entireVolume = DicomVolume.constructDicomVolume(sorted) // all CBCT voxels as a volume
 
     if (false) { // TODO rm
@@ -280,193 +349,90 @@ object BBbyCBCTAnalysis extends Logging {
     }
 
     val searchStart = startOfSearch(entireVolume, voxSize_mm) // point of search volume closest to origin
-    val searchSize = sizeOfSearch(voxSize_mm) // size of search volume
-    Trace.trace("%%%% entireVolume: " + entireVolume.xSize + ", " + entireVolume.ySize + ", " + entireVolume.zSize)
-    Trace.trace("%%%% searchStart: " + searchStart)
-    Trace.trace("%%%% searchSize: " + searchSize)
+    // val searchSize = sizeOfSearch(voxSize_mm) // size of search volume
 
+    /*
     val searchVolume = entireVolume.getSubVolume(searchStart, searchSize) // sub-volume of the CBCT volume to be searched for the BB.
 
-    val coarse_vox = {
+    def coarse_vox = {
       val start = System.currentTimeMillis // TODO rm
       val size = new Point3i(4, 4, 2)
       val high = searchVolume.getHighest(size)
       high.add(searchStart)
       //high.add(new Point3i(-2, -2, -1))
       high.add(new Point3i(size.getX / 2, size.getY / 2, size.getZ / 2))
-      Trace.trace("%%%% coarse_vox elapsed ms: " + (System.currentTimeMillis - start))
       high
     }
 
-    def coarseVoxCube = {
-      def sliceTo2d(sliceIndex: Int): IndexedSeq[IndexedSeq[Float]] = {
-        (0 until entireVolume.xSize).map(x => (0 until entireVolume.zSize).map(z => entireVolume.getXYZ(x, sliceIndex, z)))
-      }
-
-      val sliceList = (0 until entireVolume.ySize).map(sliceIndex => sliceTo2d(sliceIndex)) //.map(slice => (new DicomImage(slice)))
-      val profile = sliceList.map(slice => (new DicomImage(slice)).sum)
-
-      val cubeLen_pix = Config.DailyQAPhantomCubeSize_mm / voxSize_mm(1) // height (along Y axis) of cube in voxels
-      val cubeSegment = (cubeLen_pix / 3).round.toInt
-
-      val minSum = cubeSegment * Config.DailyQACBCTPhantomMinHorizontalPlaneSum_cu
-
-      val sumList = (0 until (profile.size - cubeSegment - 1)).map(i => profile.drop(i).take(cubeSegment).sum)
-      val top = sumList.zipWithIndex.find(si => si._1 > minSum)
-      if (top.isDefined) {
-        // DICOM image that has just the cross section of the cube (no table, might contain BB).
-        val midCubeIndex = top.get._2 + cubeSegment
-        Trace.trace("mid cube plane sum: " + profile(midCubeIndex))
-        val profileToMidCube = profile.take(midCubeIndex)
-        val threshold = (profileToMidCube.min + profileToMidCube.max) / 2
-        val topPosition = LocateEdge.locateEdge(profileToMidCube, threshold)
-        // the coarse Y position of the BB
-        val bbY = (topPosition + (cubeLen_pix / 2)).round.toInt
-
-        // find coarse X and Z
-        val cubeSlice = new DicomImage(sliceList(midCubeIndex))
-        val bbX = ImageUtil.centerOfMass(cubeSlice.rowSums).round.toInt
-        val bbZ = ImageUtil.centerOfMass(cubeSlice.columnSums).round.toInt
-
-        val cntr = new Point3i(bbX, bbY, bbZ)
-        def i2d(i: Point3i) = new Point3d(i.getX, i.getY, i.getZ)
-        Trace.trace("%%%% cntr: " + cntr + "    old coarse: " + coarse_vox + "     distance: " + i2d(cntr).distance(i2d(coarse_vox)))
-      } else {
-        logger.warn("could not find BB")
-      }
-    }
-
-    // Find the bb by sliding a window over each XYZ volume sum.
-    def coarseExperimental1 = {
-      val start = System.currentTimeMillis // TODO rm
-      Trace.trace
-      val PixelSpacing = cbctSeries.head.get(TagFromName.PixelSpacing).getDoubleValues
-      val SliceThickness = cbctSeries.head.get(TagFromName.SliceThickness).getDoubleValues()(0)
-
-      val bbSizeX = ((Config.CBCTBBPenumbra_mm * 2) / PixelSpacing(0)).ceil.toInt
-      val bbSizeY = ((Config.CBCTBBPenumbra_mm * 2) / PixelSpacing(1)).ceil.toInt
-      val bbSizeZ = ((Config.CBCTBBPenumbra_mm * 2) / SliceThickness).ceil.toInt
-      Trace.trace("bbSizeX: " + bbSizeX)
-      Trace.trace("bbSizeY: " + bbSizeY)
-      Trace.trace("bbSizeZ: " + bbSizeZ)
-
-      val xy = {
-        val start = System.currentTimeMillis // TODO rm
-        val zImage = searchVolume.sumZ
-        Util.writePng(zImage.toDeepColorBufferedImage(0), new File(outputDir, "sumZ.png"))
-        def sumOf(x: Int, y: Int) = {
-          (x, y, zImage.getSubimage(new Rectangle(x, y, bbSizeX, bbSizeY)).sum)
-        }
-        val sumList = for (x <- 0 until (searchVolume.xSize - bbSizeX); y <- 0 until (searchVolume.ySize - bbSizeY)) yield { sumOf(x, y) }
-        val best = sumList.maxBy(_._3)
-        (best._1, best._2)
-      }
-
-      val xz = {
-        val yImage = searchVolume.sumY
-        Util.writePng(yImage.toDeepColorBufferedImage(0), new File(outputDir, "sumY.png"))
-        def sumOf(x: Int, z: Int) = {
-          (x, z, yImage.getSubimage(new Rectangle(x, z, bbSizeX, bbSizeZ)).sum)
-        }
-        val sumList = for (x <- 0 until (searchVolume.xSize - bbSizeX); z <- 0 until (searchVolume.zSize - bbSizeZ)) yield { sumOf(x, z) }
-        val best = sumList.maxBy(_._3)
-        (best._1, best._2)
-      }
-
-      val zy = {
-        val xImage = searchVolume.sumX
-        Util.writePng(xImage.toDeepColorBufferedImage(0), new File(outputDir, "sumX.png"))
-        def sumOf(x: Int, y: Int) = {
-          (x, y, xImage.getSubimage(new Rectangle(x, y, bbSizeZ, bbSizeY)).sum)
-        }
-        val sumList = for (x <- 0 until (searchVolume.xSize - bbSizeZ); y <- 0 until (searchVolume.ySize - bbSizeY)) yield { sumOf(x, y) }
-        val best = sumList.maxBy(_._3)
-        (best._1, best._2)
-      }
-
-      Trace.trace("%%%% xy: " + xy)
-      Trace.trace("%%%% xz: " + xz)
-      Trace.trace("%%%% zy: " + zy)
-
-      val x = ((xy._1 + xz._1) / 2.0).round.toInt
-      val y = ((xy._2 + zy._2) / 2.0).round.toInt
-      val z = ((zy._1 + xz._2) / 2.0).round.toInt
-
-      val best = new Point3i(x, y, z)
-      best.add(new Point3i(bbSizeX / 2, bbSizeY / 2, bbSizeZ / 2))
-      best.add(searchStart)
-      Trace.trace("%%%% coarseExperimental1 elapsed ms: " + (System.currentTimeMillis - start))
-      best
-    }
-
-    //    // Use an area the size of the bb in each dimension.
-    //    def coarseExperimental2 = {
-    //      val PixelSpacing = cbctSeries.head.get(TagFromName.PixelSpacing).getDoubleValues
-    //      val SliceThickness = cbctSeries.head.get(TagFromName.SliceThickness).getDoubleValues
-    //
-    //      def toPixDiamtr(ps: Double) = ((Config.CBCTBBPenumbra_mm * 2) / ps).ceil.toInt
-    //      def toPixOffset(ps: Double) = -((Config.CBCTBBPenumbra_mm / ps).ceil.toInt)
-    //
-    //      val j = searchVolume.volSize
-    //
-    //      val sizePixDiamtr = new Point3i(toPixDiamtr(PixelSpacing(0)), toPixDiamtr(PixelSpacing(1)), toPixDiamtr(SliceThickness(0)))
-    //      val sizePixOffset = new Point3i(toPixOffset(PixelSpacing(0)), toPixOffset(PixelSpacing(1)), toPixOffset(SliceThickness(0)))
-    //
-    //      Trace.trace(sizePixDiamtr)
-    //      Trace.trace(searchVolume.volSize)
-    //      val start = System.currentTimeMillis // TODO rm
-    //      val high = searchVolume.getHighest(sizePixDiamtr) // TODO the getHighest function needs to be more efficient for this to be practical
-    //      Trace.trace(System.currentTimeMillis - start)
-    //      high.add(searchStart)
-    //      high.add(sizePixOffset)
-    //      high
-    //    }
-
     logger.info("coarseLocation       in pixels: " + coarse_vox)
-    Trace.trace("%%%% coarseLocation       in pixels: " + coarse_vox)
-    //    val exp1 = coarseExperimental1
-    //    logger.info("%%%% coarseExperimental1  in pixels: " + exp1)
     val cvc = coarseVoxCube
     logger.info("%%%% coarseVoxCube in pixels: " + cvc)
+    */
 
-    val bbVolumeStart = {
-      val coarseLocation = Seq(coarse_vox.getX.toDouble, coarse_vox.getY.toDouble, coarse_vox.getZ.toDouble)
-      coarseLocation.zip(voxSize_mm).map(cs => (cs._1 - ((Config.CBCTBBPenumbra_mm * 4) / cs._2)).round.toInt)
+    getCoarseVox(entireVolume, voxSize_mm) match {
+      case Some(coarse_vox) => {
+        val searchExtensionFactor = 4.0
+        val offset_mm = Config.CBCTBBPenumbra_mm * searchExtensionFactor
+        def offset_vox = d2i(new Point3d(offset_mm / voxSize_mm.getX, offset_mm / voxSize_mm.getY, offset_mm / voxSize_mm.getZ))
+
+        val bbVolumeStart = {
+          val ov = offset_vox
+          ov.scale(-1)
+          ov.add(coarse_vox)
+          ov
+        }
+
+        // sub-volume of the entire volume that contains just the BB and a little bit of surrounding cube, according to the coarse location.
+        val bbVolume = {
+          val size_vox = offset_vox
+          size_vox.scale(2)
+          entireVolume.getSubVolume(bbVolumeStart, size_vox)
+        }
+
+        // fine location in voxel coordinates
+
+        val relOpt = bbVolume.getMaxPoint(Config.CBCTBBMinimumStandardDeviation)
+        if (relOpt.isDefined) {
+          val fineLocation_vox = relOpt.get
+          fineLocation_vox.add(i2d(bbVolumeStart))
+          val volumeTranslator = new VolumeTranslator(sorted)
+          val cbctForLocation_mm = volumeTranslator.vox2mm(fineLocation_vox)
+          val imageXYZ = makeImagesXYZ(entireVolume, fineLocation_vox, cbctForLocation_mm, voxSize_mm)
+          val result = new CBCTAnalysisResult(coarse_vox, fineLocation_vox, volumeTranslator,
+            cbctForLocation_mm: Point3d, imageXYZ)
+
+          def fmt(d: Double) = d.formatted("%12.7f")
+          def fmtPoint(point: Point3d): String = fmt(point.getX) + ",  " + fmt(point.getY) + ",  " + fmt(point.getZ)
+          logger.info("BB found in CBCT" +
+            "\n    ImagePositionPatient first slice: " + volumeTranslator.ImagePositionPatient +
+            "\n    coordinates in voxels: " + fmtPoint(fineLocation_vox) +
+            "\n    frame of ref coordinates in mm: " + fmtPoint(cbctForLocation_mm))
+
+          Right(result)
+        } else
+          Left("Could not find BB, possibly due to insufficient signal to noise ratio.")
+
+      }
+      case _ => Left("No BB found.  Could not find cube containing BB.")
     }
 
-    // sub-volume of the entire volume that contains just the BB according to the coarse location.
-    val bbVolume = {
-      val bbVolumeSize = voxSize_mm.map(s => ((Config.CBCTBBPenumbra_mm * 8) / s).round.toInt)
-      entireVolume.getSubVolume(new Point3i(bbVolumeStart.toArray), new Point3i(bbVolumeSize.toArray))
-    }
-
-    // fine location in voxel coordinates
-    val fineLocation_vox = {
-      val relOpt = bbVolume.getMaxPoint(Config.CBCTBBMinimumStandardDeviation)
-      if (relOpt.isDefined) {
-        val rel = relOpt.get
-        val finloc = new Point3d(rel.getX + bbVolumeStart(0), rel.getY + bbVolumeStart(1), rel.getZ + bbVolumeStart(2))
-        Some(finloc)
-      } else None
-    }
-
-    val volumeTranslator = new VolumeTranslator(sorted)
-    // fine location in mm coordinates
-    if (fineLocation_vox.isDefined) {
-      val cbctForLocation_mm = volumeTranslator.vox2mm(fineLocation_vox.get)
-      def fmt(d: Double) = d.formatted("%12.7f")
-      def fmtPoint(point: Point3d): String = fmt(point.getX) + ",  " + fmt(point.getY) + ",  " + fmt(point.getZ)
-      logger.info("BB found in CBCT" +
-        "\n    ImagePositionPatient first slice: " + volumeTranslator.ImagePositionPatient +
-        "\n    coordinates in voxels: " + fmtPoint(fineLocation_vox.get) +
-        "\n    frame of ref coordinates in mm: " + fmtPoint(cbctForLocation_mm))
-      val imageXYZ = makeImagesXYZ(entireVolume, fineLocation_vox.get, cbctForLocation_mm, voxSize_mm)
-      //val imageXYZ = makeImagesXYZ(addVolumeMarker(entireVolume, fineLocation_vox.get), fineLocation_vox.get, cbctForLocation_mm, voxSize_mm)
-      val result = new CBCTAnalysisResult(coarse_vox, fineLocation_vox.get, volumeTranslator, cbctForLocation_mm: Point3d, imageXYZ)
-      Right(cbctForLocation_mm, imageXYZ)
-      Right(result)
-    } else {
-      Left("No BB found")
-    }
+    //    val volumeTranslator = new VolumeTranslator(sorted)
+    //    // fine location in mm coordinates
+    //    if (fineLocation_vox.isDefined) {
+    //      val cbctForLocation_mm = volumeTranslator.vox2mm(fineLocation_vox.get)
+    //      def fmt(d: Double) = d.formatted("%12.7f")
+    //      def fmtPoint(point: Point3d): String = fmt(point.getX) + ",  " + fmt(point.getY) + ",  " + fmt(point.getZ)
+    //      logger.info("BB found in CBCT" +
+    //        "\n    ImagePositionPatient first slice: " + volumeTranslator.ImagePositionPatient +
+    //        "\n    coordinates in voxels: " + fmtPoint(fineLocation_vox.get) +
+    //        "\n    frame of ref coordinates in mm: " + fmtPoint(cbctForLocation_mm))
+    //      val imageXYZ = makeImagesXYZ(entireVolume, fineLocation_vox.get, cbctForLocation_mm, voxSize_mm)
+    //      //val imageXYZ = makeImagesXYZ(addVolumeMarker(entireVolume, fineLocation_vox.get), fineLocation_vox.get, cbctForLocation_mm, voxSize_mm)
+    //      val result = new CBCTAnalysisResult(coarse_vox, fineLocation_vox.get, volumeTranslator, cbctForLocation_mm: Point3d, imageXYZ)
+    //      //Right(cbctForLocation_mm, imageXYZ)
+    //      Right(result)
+    //    } else {
+    //      Left("No BB found")
+    //    }
   }
 }
