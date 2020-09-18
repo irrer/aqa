@@ -42,7 +42,7 @@ class TestCBCTAnalysis extends FlatSpec with Matchers {
   }
 
   // list of directories that contain a CBCT set for analysis
-  val dirList = (new File("""src\test\resources\TestCBCTAlign""")).listFiles
+  val dirList = (new File("""src\test\resources\TestCBCTAlign""")).listFiles.sortBy(_.getName)
   println("List of CBCT directories used as input:\n    " + dirList.map(dir => dir.getAbsolutePath).mkString("\n    "))
 
   "TestCBCTAnalysis" should "find BB" in {
@@ -51,7 +51,7 @@ class TestCBCTAnalysis extends FlatSpec with Matchers {
       println("Processing directory " + dir.getAbsolutePath)
       val attrListSeq = dir.listFiles.map(f => (new DicomFile(f)).attributeList.get).toSeq
       println("Number of slices in series: " + attrListSeq.size)
-      val result = BBbyCBCTAnalysis.volumeAnalysis(attrListSeq)
+      val result = BBbyCBCTAnalysis.volumeAnalysis(attrListSeq, new File(outDir, dir.getName))
 
       val point = result.right.get.cbctFrameOfRefLocation_mm
       val bufImgList = result.right.get.imageXYZ
@@ -65,9 +65,18 @@ class TestCBCTAnalysis extends FlatSpec with Matchers {
       (result.isRight) should be(true) // Expected voxel coordinates: 246, 262, 42
     }
 
+    Trace.trace
     dirList.map(dir => testDir(dir))
+    Trace.trace
 
+    println("Wrote files to " + outDir.getAbsolutePath)
     (11 > 10) should be(true)
   }
 
+}
+
+object TestCBCTAnalysis {
+  def main(args: Array[String]): Unit = {
+    new TestCBCTAnalysis
+  }
 }

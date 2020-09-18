@@ -363,17 +363,17 @@ object BBbyCBCTHTML extends Logging {
 
     val voxelSize = {
       "%% XYZ dimensions of a voxel in mm" + ls +
-        "PixelSpacingX = " + cbctAnalysisResult.volumeTranslator.voxSize(0) + ";" + ls +
-        "PixelSpacingY = " + cbctAnalysisResult.volumeTranslator.voxSize(1) + ";" + ls +
-        "SliceThickness = " + cbctAnalysisResult.volumeTranslator.voxSize(2) + ";"
+        "PixelSpacingX = " + cbctAnalysisResult.volumeTranslator.voxSize.getX + ";" + ls +
+        "PixelSpacingY = " + cbctAnalysisResult.volumeTranslator.voxSize.getY + ";" + ls +
+        "SliceThickness = " + cbctAnalysisResult.volumeTranslator.voxSize.getZ + ";"
     }
 
     val cbctFor = {
       val fl = cbctAnalysisResult.fineLocation_vox
       "%% XYZ coordinates of bb in CBCT frame of reference in mm" + ls +
-        "xFor = fineLocation_vox(1) * " + vs(0) + " + " + ipp(0) + ";" + ls +
-        "yFor = fineLocation_vox(2) * " + vs(1) + " + " + ipp(1) + ";" + ls +
-        "zFor = fineLocation_vox(3) * " + vs(2) + " + " + ipp(2) + ";" + ls +
+        "xFor = fineLocation_vox(1) * " + vs.getX + " + " + ipp(0) + ";" + ls +
+        "yFor = fineLocation_vox(2) * " + vs.getY + " + " + ipp(1) + ";" + ls +
+        "zFor = fineLocation_vox(3) * " + vs.getZ + " + " + ipp(2) + ";" + ls +
         "cbctFor = [ xFor yFor zFor 1.0 ];" + ls
     }
 

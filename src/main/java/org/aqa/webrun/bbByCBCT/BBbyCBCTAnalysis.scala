@@ -26,6 +26,7 @@ import java.awt.geom.Point2D
 import org.aqa.VolumeTranslator
 import java.awt.Color
 import edu.umro.ImageUtil.LocateEdge
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * Find the BB in the CBCT volume.
@@ -181,61 +182,126 @@ object BBbyCBCTAnalysis extends Logging {
     bufImg
   }
 
-  def getCoarseVox(entireVolume: DicomVolume, voxSize_mm: Point3d): Option[Point3i] = {
+  private def getCoarseVerticalCenter_vox(entireVolume: DicomVolume, voxSize_mm: Point3d): Option[(Int, DicomImage)] = {
+
+    val cubeHeight_vox = (entireVolume.ySize / voxSize_mm.getY).round.toInt
+
+    val sliceCache = scala.collection.mutable.Map[Int, IndexedSeq[IndexedSeq[Float]]]()
 
     def horizontalSlice(sliceIndex: Int): IndexedSeq[IndexedSeq[Float]] = {
-      (0 until entireVolume.xSize).map(x => (0 until entireVolume.zSize).map(z => entireVolume.getXYZ(x, sliceIndex, z)))
+      sliceCache.get(sliceIndex) match {
+        case Some(slice) => slice
+        case _ => {
+          val s = (0 until entireVolume.xSize).map(x => (0 until entireVolume.zSize).map(z => entireVolume.getXYZ(x, sliceIndex, z)))
+          sliceCache.put(sliceIndex, s)
+          s
+        }
+      }
     }
 
-    def horizontalSliceToSum(sliceIndex: Int): Float = horizontalSlice(sliceIndex).flatten.sum
+    val profileCache = scala.collection.mutable.Map[Int, Float]()
 
-    val profile = (0 until entireVolume.ySize).map(sliceIndex => horizontalSliceToSum(sliceIndex))
+    def sliceSum(sliceIndex: Int): Float = {
+      profileCache.get(sliceIndex) match {
+        case Some(slice) => slice
+        case _ => {
+          val s = horizontalSlice(sliceIndex).flatten.sum
+          profileCache.put(sliceIndex, s)
+          s
+        }
+      }
+    }
 
-    val cubeLen_vox = Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getY // height (along Y axis) of cube in voxels
-    val cubeSegment = (cubeLen_vox / 2).round.toInt
+    def toBucket(entireVolume: DicomVolume, sliceIndex: Int, bucketCount: Int) = {
+      val voxList = horizontalSlice(sliceIndex).flatten
+      val min = voxList.min
+      val max = voxList.max
+
+      val range = max - min
+
+      val list = voxList.map(v => (((v - min) / range) * bucketCount).floor.toInt).groupBy(b => b).map(b => (b._1, b._2.size))
+      val hist = (0 until bucketCount).toSeq.map(i => if (list.contains(i)) list(i) else 0)
+      hist
+    }
+
+    val cubeHalf = cubeHeight_vox / 2
 
     /**
-     * Determine if the profile at the given index defines the approximate top of the cube.
+     * Calculate standard deviation / mean.
      */
-    def isStartOfCube(index: Int): Boolean = {
-      val list = profile.drop(index).take(cubeSegment)
-      def flatness = {
-        val stdDev = ImageUtil.stdDev(list)
-        val avg = list.sum / list.size
-        stdDev / avg
-      }
-      val isStart = ((list.min >= Config.DailyQACBCTPhantomMinHorizontalPlaneSum_cu) && (flatness < Config.DailyQACBCTFlatnessMinimum))
-      isStart
+    def flatness(i: Int): Float = {
+      val list = (0 until cubeHalf).map(s => sliceSum(s + i))
+      val stdDev = ImageUtil.stdDev(list)
+      val avg = list.sum / list.size
+
+      val f = if (avg == 0)
+        0.toFloat
+      else
+        (stdDev / avg).toFloat
+      f
     }
 
-    //    val minSum = cubeSegment * Config.DailyQACBCTPhantomMinHorizontalPlaneSum_cu
-    //
-    //    val sumList = (0 until (profile.size - cubeSegment - 1)).map(i => profile.drop(i).take(cubeSegment).sum)
-    //    val top = sumList.zipWithIndex.find(si => si._1 > minSum)
+    def percentOfCubeVoxels(sliceIndex: Int): Double = {
 
-    val top = (0 until profile.size - cubeSegment).toSeq.find(index => isStartOfCube(index))
-    if (top.isDefined) {
-      // DICOM image that has just the cross section of the cube (no table, might contain BB).
-      val midCubeIndex = top.get + cubeSegment
-      val profileToMidCube = profile.take(midCubeIndex)
-      val threshold = (profileToMidCube.head + profileToMidCube.last) / 2
-      Trace.trace("profileToMidCube  min: " + profileToMidCube.min + "    max: " + profileToMidCube.max + "    head: " + profileToMidCube.head + "    last: " + profileToMidCube.last + "    threshold: " + threshold)
-      val topPosition = LocateEdge.locateEdge(profileToMidCube, threshold)
-      // the coarse Y position of the BB
-      val bbY = (topPosition + (cubeLen_vox / 2)).round.toInt
+      // Determine the number of voxels expected, based on the dimensions of the cube.
+      val expected: Int = ((Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getX) * (Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getZ)).round.toInt
 
-      // find coarse X and Z
-      val cubeSlice = new DicomImage(horizontalSlice(midCubeIndex))
-      val bbX = ImageUtil.centerOfMass(cubeSlice.rowSums).round.toInt
-      val bbZ = ImageUtil.centerOfMass(cubeSlice.columnSums).round.toInt
+      val voxelList = horizontalSlice(sliceIndex).flatten
+      val mid = (voxelList.max - voxelList.min) / 2
+      val found = voxelList.filter(v => v > mid).size
 
-      val center = new Point3i(bbX, bbY, bbZ)
-      def i2d(i: Point3i) = new Point3d(i.getX, i.getY, i.getZ)
-      logger.info("coarse measurement of center: " + center)
-      Some(center)
-    } else {
-      logger.warn("could not find BB")
-      None
+      val percent = (found * 100.0) / expected
+      println("==== sliceIndex: " + sliceIndex.formatted("%4d") + "    expected: " + expected + "    found: " + found + "    pct found: " + percent)
+      percent
+    }
+
+    def hasCubeVoxels(sliceIndex: Int): Boolean = {
+      val pct = percentOfCubeVoxels(sliceIndex)
+      val diff = (100.0 - pct).abs
+      diff <= Config.DailyQACBCTVoxPercentTolerance
+    }
+
+    val top = (0 until entireVolume.ySize - cubeHalf).toSeq.find(i => (sliceSum(i) >= Config.DailyQACBCTPhantomMinHorizontalPlaneSum_cu) && (flatness(i) >= Config.DailyQACBCTFlatnessMaximum) && hasCubeVoxels(i + (cubeHalf / 2)))
+
+    val center =
+      if (top.isDefined) {
+        val t = top.get
+        if (t < 50)
+          println("top too high")
+        val nextFlatnesses = (1 until cubeHalf).map(i => flatness(t + i)).map(f => f.formatted("%8.6f"))
+        val cu = sliceSum(t)
+        val sumList = (t until (t + cubeHalf)).map(i => sliceSum(i))
+        val nextVals = sumList.map(v => ((cu - v) / cu).abs).map(p => p.formatted("%9.4f"))
+        val center = t + cubeHalf
+        Some((center, new DicomImage(horizontalSlice(center))))
+      } else {
+        println("Could not find center")
+        None
+      }
+
+    center
+  }
+
+  def getCoarseVox(entireVolume: DicomVolume, voxSize_mm: Point3d): Option[Point3i] = {
+
+    getCoarseVerticalCenter_vox(entireVolume, voxSize_mm) match {
+      case Some(indexImage) => {
+        val bbY = indexImage._1
+        val cubeSlice = indexImage._2
+
+        // find coarse X and Z
+        val bbX = ImageUtil.centerOfMass(cubeSlice.rowSums).round.toInt
+        val bbZ = ImageUtil.centerOfMass(cubeSlice.columnSums).round.toInt
+
+        val center = new Point3i(bbX, bbY, bbZ)
+        def i2d(i: Point3i) = new Point3d(i.getX, i.getY, i.getZ)
+        logger.info("coarse measurement of center: " + center)
+        Some(center)
+      }
+      case _ => {
+        logger.warn("could not find BB")
+        None
+      }
     }
   }
 

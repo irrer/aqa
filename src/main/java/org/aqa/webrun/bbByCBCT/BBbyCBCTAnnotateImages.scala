@@ -254,7 +254,7 @@ object BBbyCBCTAnnotateImages extends Logging {
   def annotate(bbByCBCT: BBbyCBCT, imageXYZ: Seq[BufferedImage], runReq: BBbyCBCTRunReq, bb_vox: Point3d, rtplanOrigin_vox: Point3d, date: Date): ImageSet = {
     logger.info("Annotating CBCT images for " + bbByCBCT)
     val voxSize_mm = Util.getVoxSize_mm(runReq.cbctList) // the size of a voxel in mm
-    logger.info("Annotating CBCT images with voxels sized in mm: " + voxSize_mm.map(s => Util.fmtDbl(s)).mkString(", "))
+    logger.info("Annotating CBCT images with voxels sized in mm: " + voxSize_mm)
 
     val volTrans = new VolumeTranslator(runReq.cbctList)
 
@@ -266,7 +266,7 @@ object BBbyCBCTAnnotateImages extends Logging {
 
     // sagittal
     def xImagePair = makePair(
-      voxSizeX_mmOrig = voxSize_mm(2), voxSizeY_mmOrig = voxSize_mm(1),
+      voxSizeX_mmOrig = voxSize_mm.getZ, voxSizeY_mmOrig = voxSize_mm.getY,
       bb_pix = new Point2d(bb_vox.getZ, bb_vox.getY),
       rtplanOrigin_pix = new Point2d(rtplanOrigin_vox.getZ, rtplanOrigin_vox.getY),
       originalImage = imageXYZ(0),
@@ -277,7 +277,7 @@ object BBbyCBCTAnnotateImages extends Logging {
 
     // frontal
     def yImagePair = makePair(
-      voxSize_mm(2), voxSize_mm(0),
+      voxSize_mm.getZ, voxSize_mm.getX,
       bb_pix = new Point2d(bb_vox.getZ, bb_vox.getX),
       rtplanOrigin_pix = new Point2d(rtplanOrigin_vox.getZ, rtplanOrigin_vox.getX),
       imageXYZ(1),
@@ -288,7 +288,7 @@ object BBbyCBCTAnnotateImages extends Logging {
 
     // transversal
     def zImagePair = makePair(
-      voxSize_mm(0), voxSize_mm(1),
+      voxSize_mm.getX, voxSize_mm.getY,
       bb_pix = new Point2d(bb_vox.getX, bb_vox.getY),
       rtplanOrigin_pix = new Point2d(rtplanOrigin_vox.getX, rtplanOrigin_vox.getY),
       imageXYZ(2),

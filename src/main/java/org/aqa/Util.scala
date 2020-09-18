@@ -207,24 +207,24 @@ object Util extends Logging {
   private val dicomDateTimeFormat = new SimpleDateFormat("yyyyMMddHHmmss.SSS")
   private val zeroDate = new Date(0)
 
-  /**
-   * Convert date and time pair into java.util.Date.  Note that time will only be accurate to the ms.  Note that
-   * the date and time must be done together so as to get the time zone and daylight savings time right.
-   */
-  private def getTimeAndDate(al: AttributeList, dateTag: AttributeTag, timeTag: AttributeTag): Option[Date] = {
-    try {
-      val dateText = al.get(dateTag).getSingleStringValueOrNull
-      val timeText = {
-        val t = al.get(timeTag).getSingleStringValueOrNull
-        val t2 = if (t.contains('.')) t + "000"
-        else t + ".000"
-        t2.take(10)
-      }
-      Some(dicomDateTimeFormat.parse(dateText + timeText))
-    } catch {
-      case e: Throwable => None
-    }
-  }
+  //  /**
+  //   * Convert date and time pair into java.util.Date.  Note that time will only be accurate to the ms.  Note that
+  //   * the date and time must be done together so as to get the time zone and daylight savings time right.
+  //   */
+  //  private def getTimeAndDate(al: AttributeList, dateTag: AttributeTag, timeTag: AttributeTag): Option[Date] = {
+  //    try {
+  //      val dateText = al.get(dateTag).getSingleStringValueOrNull
+  //      val timeText = {
+  //        val t = al.get(timeTag).getSingleStringValueOrNull
+  //        val t2 = if (t.contains('.')) t + "000"
+  //        else t + ".000"
+  //        t2.take(10)
+  //      }
+  //      Some(dicomDateTimeFormat.parse(dateText + timeText))
+  //    } catch {
+  //      case e: Throwable => None
+  //    }
+  //  }
 
   private def getTimeAndDate(al: AttributeList, dateTimeTag: AttributeTag): Option[Date] = {
     try {
@@ -250,7 +250,7 @@ object Util extends Logging {
 
     val AcquisitionDateTime = getTimeAndDate(attributeList, TagFromName.AcquisitionDateTime)
 
-    val dateTimePairs = dateTimeTagPairList.map(dt => getTimeAndDate(attributeList, dt._1, dt._2))
+    val dateTimePairs = dateTimeTagPairList.map(dt => DicomUtil.getTimeAndDate(attributeList, dt._1, dt._2))
 
     val dateList = (AcquisitionDateTime +: dateTimePairs).flatten //.distinct.map(dt => adjustDicomDateByLocalTimeZone(dt))
 
@@ -513,7 +513,14 @@ object Util extends Logging {
    */
   def writePng(im: RenderedImage, pngFile: File): Unit = fileSystemWriteSync.synchronized({
     pngFile.delete
-    ImageIO.write(im, "png", new FileOutputStream(pngFile))
+    val fos = new FileOutputStream(pngFile)
+    ImageIO.write(im, "png", fos)
+    try {
+      fos.flush
+      fos.close
+    } catch {
+      case t: Throwable => logger.warn("problem closing file output stream for PNG file " + pngFile.getAbsolutePath + " : " + t)
+    }
   })
 
   /**
@@ -1021,7 +1028,7 @@ object Util extends Logging {
     val xSize = sorted.head.get(TagFromName.PixelSpacing).getDoubleValues()(0)
     val ySize = sorted.head.get(TagFromName.PixelSpacing).getDoubleValues()(1)
     val zSize = getSliceSpacing(sorted)
-    Seq(xSize, ySize, zSize)
+    new Point3d(xSize, ySize, zSize)
   }
 
   case class RegInfo(attrList: AttributeList) {

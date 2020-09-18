@@ -32,16 +32,16 @@ class VolumeTranslator(alList: Seq[AttributeList]) {
   val ImagePositionPatient = sorted.head.get(TagFromName.ImagePositionPatient).getDoubleValues.toSeq
 
   def vox2mm(point: Point3d): Point3d = {
-    val x = (point.getX * voxSize(0)) + ImagePositionPatient(0)
-    val y = (point.getY * voxSize(1)) + ImagePositionPatient(1)
-    val z = (point.getZ * voxSize(2)) + ImagePositionPatient(2)
+    val x = (point.getX * voxSize.getX) + ImagePositionPatient(0)
+    val y = (point.getY * voxSize.getY) + ImagePositionPatient(1)
+    val z = (point.getZ * voxSize.getZ) + ImagePositionPatient(2)
     new Point3d(x, y, z)
   }
 
   def mm2vox(point: Point3d): Point3d = {
-    val x = (point.getX - ImagePositionPatient(0)) / voxSize(0)
-    val y = (point.getY - ImagePositionPatient(1)) / voxSize(1)
-    val z = (point.getZ - ImagePositionPatient(2)) / voxSize(2)
+    val x = (point.getX - ImagePositionPatient(0)) / voxSize.getX
+    val y = (point.getY - ImagePositionPatient(1)) / voxSize.getY
+    val z = (point.getZ - ImagePositionPatient(2)) / voxSize.getZ
     new Point3d(x, y, z)
   }
 
