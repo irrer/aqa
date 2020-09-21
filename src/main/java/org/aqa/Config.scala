@@ -829,11 +829,9 @@ object Config extends Logging {
   val VMATHistoryRange = logMainText("VMATHistoryRange", "25").toInt
 
   val DailyQATolerance_mm = logMainText("DailyQATolerance_mm", "1.0").toDouble
-  val CBCTBBMinimumStandardDeviation = logMainText("CBCTBBMinimumStandardDeviation", "1.75").toDouble
+  val CBCTBBMinimumStandardDeviation = logMainText("CBCTBBMinimumStandardDeviation", "5.0").toDouble
   val DailyPhantomSearchDistance_mm = logMainText("DailyPhantomSearchDistance_mm", "50.0").toDouble
   val DailyQAPhantomCubeSize_mm = logMainText("DailyQAPhantomCubeSize_mm", "50.0").toDouble
-  val DailyQACBCTPhantomMinHorizontalPlaneSum_cu = logMainText("DailyQACBCTPhantomMinHorizontalPlaneSum_cu", "50000.0").toDouble
-  val DailyQACBCTFlatnessMaximum = logMainText("DailyQACBCTFlatnessMaximum", "0.05").toDouble
   val DailyQACBCTVoxPercentTolerance = logMainText("DailyQACBCTVoxPercentTolerance", "10.0").toDouble
   val CBCTBBPenumbra_mm = logMainText("CBCTBBPenumbra_mm", "2.5").toDouble
   val CBCTZoomSize_mm = logMainText("CBCTZoomSize_mm", "30.0").toDouble

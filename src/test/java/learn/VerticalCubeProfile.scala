@@ -15,6 +15,7 @@ import edu.umro.ScalaUtil.Trace
 import javax.vecmath.Point3d
 import java.text.SimpleDateFormat
 import java.util.Date
+import javax.vecmath.Point2d
 
 object VerticalCubeProfile {
 
@@ -201,6 +202,24 @@ object VerticalCubeProfile {
       diff < DailyQACBCTVoxPercentTolerance
     }
 
+    def isGood(i: Int) = {
+      val a = (profile(i) > DailyQACBCTPhantomMinHorizontalPlaneSum_cu)
+      val b = (flatness(i) < DailyQACBCTFlatnessMinimum)
+      val c = hasCubeVoxels(i + (seg / 2))
+      val d = {
+        val img = new DicomImage(horizontalSlice(entireVolume, i))
+        val x = ImageUtil.centerOfMass(img.columnSums)
+        val y = ImageUtil.centerOfMass(img.rowSums)
+        new Point2d(x, y)
+      }
+      println("isGood   " + i.formatted("%4d") +
+        " minHorz: " + a +
+        "    flatness: " + b +
+        "    hasCubeVoxels: " + c + "    pct: " + percentOfCubeVoxels(i) +
+        "    center of mass: " + d.getX.formatted("%9.3f") + " , " + d.getY.formatted("%9.3f"))
+    }
+
+    (0 until profile.size - seg).toSeq.map(i => isGood(i))
     val top = (0 until profile.size - seg).toSeq.find(i => (profile(i) > DailyQACBCTPhantomMinHorizontalPlaneSum_cu) && (flatness(i) < DailyQACBCTFlatnessMinimum) && hasCubeVoxels(i + (seg / 2)))
 
     val center =
@@ -237,7 +256,8 @@ object VerticalCubeProfile {
   }
 
   def processCT(ctDir: File) = {
-    println("===========================================")
+    println("=========================================== dir: " + ctDir.getAbsolutePath)
+
     val ctList = Util.sortByZ(ctDir.listFiles.map(ct => readDicomFile(ct)).toSeq)
     val voxSize_mm = Util.getVoxSize_mm(ctList) // the size of a voxel in mm
 
@@ -275,6 +295,17 @@ object VerticalCubeProfile {
     Util.writePng(buf, pngFile)
     println("Wrote file " + pngFile.getAbsolutePath)
 
+    if (center == -1) {
+      val imgDir = new File(patOutDir, ctDir.getName)
+      imgDir.mkdirs
+      def saveHorzSlice(i: Int) = {
+        val buf = (new DicomImage(horizontalSlice(entireVolume, i))).toBufferedImage(Color.white)
+        val pngFile = new File(imgDir, i.formatted("%03d.png"))
+        Util.writePng(buf, pngFile)
+      }
+      (0 until entireVolume.ySize).map(i => saveHorzSlice(i))
+    }
+
     //val csvFile = new File(patOutDir, ctDir.getName + ".csv")
 
   }
@@ -310,6 +341,15 @@ object VerticalCubeProfile {
     val patDirList = dsDir.listFiles.filter(d => d.isDirectory && (d.getName.startsWith("$T") || d.getName.startsWith("BR1"))).toSeq
 
     println("patDirList: " + patDirList.map(d => d.getName).mkString("\n", "\n", "\n"))
+
+    if (true) {
+      val failList = Seq(
+        """$TB3_OBI2020Q2\2020-08-04T07-04-16_CT_175_1.2.246.352.62.2.5362375747545364333.10472334818973089212""",
+        """$TB3_OBI2020Q2\2020-08-04T07-06-04_CT_175_1.2.246.352.62.2.4916714739440032908.12839206091707120773""")
+      val j = new File(dsDir, failList.head)
+      failList.map(f => processCT(new File(dsDir, f)))
+      System.exit(99)
+    }
 
     patDirList.map(d => processPatient(d))
 
