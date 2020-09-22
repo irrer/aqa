@@ -119,7 +119,7 @@ object VerticalCubeProfile {
   }
 
   def toBucket(entireVolume: DicomVolume, sliceIndex: Int, bucketCount: Int) = {
-    val voxList = horizontalSlice(entireVolume, sliceIndex).flatten
+    val voxList = horizontalSlice(entireVolume, sliceIndex).flatten.sorted.dropRight(37)
     val min = voxList.min
     val max = voxList.max
 
@@ -157,8 +157,9 @@ object VerticalCubeProfile {
 
   def histogram(buf: BufferedImage, entireVolume: DicomVolume, sliceIndex: Int, voxSize_mm: Point3d): Seq[Float] = {
     val bucketList = toBucket(entireVolume, sliceIndex, buf.getWidth)
-    println("buckets: " + bucketList.mkString("  "))
-    bucketList.tail.map(_.toFloat) // drop the first one because it is always a bunch of zeroes that flattens the rest of the graph
+    println("buckets: " + sliceIndex.formatted("%4d") + " : " + bucketList.mkString("  "))
+    val b = bucketList.tail.map(_.toFloat) // drop the first one because it is always a bunch of zeroes that flattens the rest of the graph
+    b
   }
 
   def findCenter(entireVolume: DicomVolume, profile: Seq[Float], cubeLen_vox: Int, voxSize_mm: Point3d): Int = {
@@ -255,8 +256,26 @@ object VerticalCubeProfile {
     }
   }
 
+  def makeHistForAllSlices(imgDir: File, pngWidth: Int, entireVolume: DicomVolume, voxSize_mm: Point3d) = {
+    val subDir = new File(imgDir, "hist")
+    subDir.mkdirs
+    def makeChart(y: Int) = {
+      val bf = new BufferedImage(pngWidth, pngHeight, BufferedImage.TYPE_INT_RGB)
+      for (x <- 0 until pngWidth; y <- 0 until pngHeight) bf.setRGB(x, y, 0) // set image to black
+      val h = histogram(bf, entireVolume, y, voxSize_mm)
+      addProfile(bf, Color.red, h)
+      val max = horizontalSlice(entireVolume, y).flatten.max.toInt
+      val fl = new File(subDir, y.formatted("%03d") + "_" + max.formatted("%05d") + ".png")
+      Util.writePng(bf, fl)
+    }
+    (0 until entireVolume.ySize).map(y => makeChart(y))
+  }
+
   def processCT(ctDir: File) = {
     println("=========================================== dir: " + ctDir.getAbsolutePath)
+    val patOutDirName = ctDir.getParentFile.getName.replace('$', '_')
+    val patOutDir = new File(outDir, patOutDirName)
+    val imgDir = new File(patOutDir, ctDir.getName)
 
     val ctList = Util.sortByZ(ctDir.listFiles.map(ct => readDicomFile(ct)).toSeq)
     val voxSize_mm = Util.getVoxSize_mm(ctList) // the size of a voxel in mm
@@ -286,17 +305,16 @@ object VerticalCubeProfile {
     val center = findCenter(entireVolume, profile, cubeLen_vox, voxSize_mm)
     markCenter(buf, center)
     val hist = histogram(buf, entireVolume, center + cubeLen_vox / 3, voxSize_mm)
-    //addProfile(buf, Color.red, hist)
+    addProfile(buf, Color.red, hist)
 
-    val patOutDirName = ctDir.getParentFile.getName.replace('$', '_')
-    val patOutDir = new File(outDir, patOutDirName)
+    if (true) makeHistForAllSlices(imgDir, pngWidth, entireVolume, voxSize_mm)
+
     patOutDir.mkdirs
     val pngFile = new File(patOutDir, ctDir.getName + ".png")
     Util.writePng(buf, pngFile)
     println("Wrote file " + pngFile.getAbsolutePath)
 
     if (center == -1) {
-      val imgDir = new File(patOutDir, ctDir.getName)
       imgDir.mkdirs
       def saveHorzSlice(i: Int) = {
         val buf = (new DicomImage(horizontalSlice(entireVolume, i))).toBufferedImage(Color.white)
@@ -329,7 +347,8 @@ object VerticalCubeProfile {
 
     println("---------- Starting VerticalCubeProfile -------------------------------------------------------")
     showLegend
-    val dsDir = new File("""\\hitspr\e$\Program Files\UMRO\AQAClient\data\DICOMSeries""")
+    //val dsDir = new File("""\\hitspr\e$\Program Files\UMRO\AQAClient\data\DICOMSeries""")
+    val dsDir = new File("""\\uhroappwebspr1\e$\Program Files\UMRO\AQAClient\data\DICOMSeries""")
 
     FileUtil.deleteFileTree(outDir)
     outDir.mkdirs
@@ -344,6 +363,9 @@ object VerticalCubeProfile {
 
     if (true) {
       val failList = Seq(
+        """$TX4OBI2020Q2\2020-09-21T06-47-44_CT_160_1.2.246.352.61.2.5451780319018226224.16142076251553435779""")
+      val failList0 = Seq(
+        """$TX4OBI2020Q2\2020-09-21T06-47-44_CT_160_1.2.246.352.61.2.5451780319018226224.16142076251553435779""",
         """$TB3_OBI2020Q2\2020-08-04T07-04-16_CT_175_1.2.246.352.62.2.5362375747545364333.10472334818973089212""",
         """$TB3_OBI2020Q2\2020-08-04T07-06-04_CT_175_1.2.246.352.62.2.4916714739440032908.12839206091707120773""")
       val j = new File(dsDir, failList.head)

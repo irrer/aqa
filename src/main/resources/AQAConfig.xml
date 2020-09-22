@@ -566,9 +566,11 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- The minimum number of standard deviations that the BB must deviate in brightness to be considered
     legitimate.  This check is done to ensure that if there is no BB, then the algorithm will not settle for
-    the brightest bit of white noise from the background.  The 1.75 number given was arrived at
-    empirically after running several tests. -->
-    <CBCTBBMinimumStandardDeviation>5.0</CBCTBBMinimumStandardDeviation>
+    the brightest bit of white noise from the background.  This also filters out cases where noise happens to
+    satisfy the criteria for DailyQACBCTVoxPercentTolerance.
+    
+    The 15.0 number given was arrived at empirically after running several tests, where the lowest value was 20. -->
+    <CBCTBBMinimumStandardDeviation>15.0</CBCTBBMinimumStandardDeviation>
 
     <!-- The distance in floating point in mm from center to search for the BB in the daily phantom. -->
     <DailyPhantomSearchDistance_mm>50.0</DailyPhantomSearchDistance_mm>
@@ -581,7 +583,7 @@ Note that when building a package for release, the Maven build process uses the 
     voxels there are.  When slicing across the cube, this will be a known number (within some percentage).
     This value provides the tolerance in percentage (floating point) of voxels between the number expected
     and the number found. -->
-    <DailyQACBCTVoxPercentTolerance>10.0</DailyQACBCTVoxPercentTolerance>
+    <DailyQACBCTVoxPercentTolerance>15.0</DailyQACBCTVoxPercentTolerance>
 
     <!-- Distance in mm in floating point that the penumbra extends in one direction from the BB.  A
     volume of (2x)^3 this is used to measure the BB's location. ( 10 would yield 20x20x20 ) -->

@@ -196,6 +196,7 @@ object BBbyCBCTAnalysis extends Logging {
 
     val cubeHeight_vox = (Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getY).round.toInt
 
+    /** Keep a cache of previously calculated results for efficiency. */
     val sliceCache = scala.collection.mutable.Map[Int, IndexedSeq[IndexedSeq[Float]]]()
 
     def horizontalSlice(sliceIndex: Int): IndexedSeq[IndexedSeq[Float]] = {
@@ -211,30 +212,42 @@ object BBbyCBCTAnalysis extends Logging {
 
     def getCoarseVerticalCenter_vox(entireVolume: DicomVolume, voxSize_mm: Point3d): Option[Int] = {
 
-      def toBucket(entireVolume: DicomVolume, sliceIndex: Int, bucketCount: Int) = {
-        val voxList = horizontalSlice(sliceIndex).flatten
-        val min = voxList.min
-        val max = voxList.max
-
-        val range = max - min
-
-        val list = voxList.map(v => (((v - min) / range) * bucketCount).floor.toInt).groupBy(b => b).map(b => (b._1, b._2.size))
-        val hist = (0 until bucketCount).toSeq.map(i => if (list.contains(i)) list(i) else 0)
-        hist
-      }
+      //      def toBucket(entireVolume: DicomVolume, sliceIndex: Int, bucketCount: Int) = {
+      //        val voxList = horizontalSlice(sliceIndex).flatten
+      //        val min = voxList.min
+      //        val max = voxList.max
+      //
+      //        val range = max - min
+      //
+      //        val list = voxList.map(v => (((v - min) / range) * bucketCount).floor.toInt).groupBy(b => b).map(b => (b._1, b._2.size))
+      //        val hist = (0 until bucketCount).toSeq.map(i => if (list.contains(i)) list(i) else 0)
+      //        hist
+      //      }
 
       val cubeHalf = cubeHeight_vox / 2
 
+      /** Keep a cache of previously calculated results for efficiency. */
+      val percentOfCubeVoxelsCache = scala.collection.mutable.Map[Int, Double]()
+
       def percentOfCubeVoxels(sliceIndex: Int): Double = {
-        // Determine the number of voxels expected, based on the dimensions of the cube and the size of the voxels.
-        val expected: Int = ((Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getX) * (Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getZ)).round.toInt
+        if (percentOfCubeVoxelsCache.contains(sliceIndex)) {
+          percentOfCubeVoxelsCache(sliceIndex)
+        } else {
+          // Determine the number of voxels expected, based on the dimensions of the cube and the size of the voxels.
+          val expected: Int = ((Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getX) * (Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getZ)).round.toInt
 
-        val voxelList = horizontalSlice(sliceIndex).flatten
-        val mid = (voxelList.max - voxelList.min) / 2
-        val found = voxelList.filter(v => v > mid).size
+          // drop this percentage of the largest valued voxels to get rid of outliers.
+          val pctToDrop = 1.0
+          val dropCount = (expected * (pctToDrop / 100.0)).round.toInt
+          val voxelList = horizontalSlice(sliceIndex).flatten.sorted.dropRight(dropCount)
+          val mid = (voxelList.max - voxelList.min) / 2
+          val found = voxelList.filter(v => v > mid).size
+          val percent = (found * 100.0) / expected
 
-        val percent = (found * 100.0) / expected
-        percent
+          percentOfCubeVoxelsCache.put(sliceIndex, percent)
+
+          percent
+        }
       }
 
       def hasCubeVoxels(sliceIndex: Int): Boolean = {
@@ -245,15 +258,18 @@ object BBbyCBCTAnalysis extends Logging {
         ok
       }
 
-      val top = (0 until entireVolume.ySize - cubeHalf).toSeq.find(i => {
-        val a = hasCubeVoxels(i) // TODO rm
-        val q = i + (cubeHalf / 2)
-        val b = hasCubeVoxels(i + (cubeHalf / 2)) // TODO rm
-        Trace.trace("a: " + i + " : " + a + "        b: " + q + " : " + b)
-        hasCubeVoxels(i) && hasCubeVoxels(i + (cubeHalf / 2))
-      })
+      val top = {
+        val count = Math.max(5, cubeHeight_vox / 10) // get the number of slices to check.  Make sure there are at least a few.
+        val minRequired = (count * 0.90).round.toInt // require that 90 percent of them have the right count
 
-      (0 until entireVolume.ySize).map(y => Trace.trace(y.formatted("%4d") + " : " + percentOfCubeVoxels(y).formatted("%7.3f")))
+        def allHave(i: Int) = {
+          val list = (i until (i + count)).map(hasCubeVoxels)
+          val all = list.filter(a => a).size >= minRequired
+          all
+        }
+
+        (0 until entireVolume.ySize - cubeHalf).toSeq.find(i => allHave(i))
+      }
 
       val center =
         if (top.isDefined) {
