@@ -46,6 +46,7 @@ class TestBBbyCBCTAnalysis extends FlatSpec with Matchers {
 
   def runCbctTest = {
     val valid = Config.validate
+    val start = System.currentTimeMillis
     val mainDataDir = new File("""src\test\resources\TestBBbyCBCTAnalysis""")
     println("Using  input dir: " + mainDataDir.getAbsolutePath)
     println("Using output dir: " + outDir.getAbsolutePath)
@@ -58,6 +59,7 @@ class TestBBbyCBCTAnalysis extends FlatSpec with Matchers {
 
     val failDirList = (new File(mainDataDir, "fail")).listFiles.toSeq
     failDirList.map(ctDir => testCt(ctDir, false))
+    println("Done.  Elapsed ms: " + (System.currentTimeMillis - start))
   }
 
   "pass" should "pass" in {
@@ -67,8 +69,6 @@ class TestBBbyCBCTAnalysis extends FlatSpec with Matchers {
 
 object TestBBbyCBCTAnalysis {
   def main(args: Array[String]): Unit = {
-    val start = System.currentTimeMillis
     (new TestBBbyCBCTAnalysis).runCbctTest
-    println("Done.  Elapsed ms: " + (System.currentTimeMillis - start))
   }
 }
