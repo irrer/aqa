@@ -34,10 +34,6 @@ object BBbyCBCTAnnotateImages extends Logging {
 
   private case class Centerlines(top: String, bottom: String, topBottomColor: Color, left: String, right: String, leftRightColor: Color);
 
-  private def rotate = {
-    ???
-  }
-
   /**
    * Make a pair of images for a single axis orientation.
    *
@@ -65,8 +61,7 @@ object BBbyCBCTAnnotateImages extends Logging {
     mapImage: (BufferedImage) => BufferedImage,
     mapPoint: (Point2d, Int, Int) => Point2d,
     vertCenterline: Color,
-    horzCenterline: Color,
-    rotation: Int): BufferedImage = {
+    horzCenterline: Color): BufferedImage = {
 
     Trace.trace("voxSizeX_mmOrig: " + voxSizeX_mmOrig + "    voxSizeY_mmOrig: " + voxSizeY_mmOrig)
 
@@ -270,32 +265,29 @@ object BBbyCBCTAnnotateImages extends Logging {
       bb_pix = new Point2d(bb_vox.getZ, bb_vox.getY),
       rtplanOrigin_pix = new Point2d(rtplanOrigin_vox.getZ, rtplanOrigin_vox.getY),
       originalImage = imageXYZ(0),
-      (i: BufferedImage) => ImageUtil.mirrorVertically(ImageUtil.rotate90(i)),
-      (p: Point2d, w: Int, h: Int) => new Point2d(h - 1 - p.getY, w - 1 - p.getX),
-      Color.green, Color.blue,
-      rotation = 0)
+      mapImage = (i: BufferedImage) => ImageUtil.mirrorVertically(ImageUtil.rotate90(i)),
+      mapPoint = (p: Point2d, w: Int, h: Int) => new Point2d(h - 1 - p.getY, w - 1 - p.getX),
+      vertCenterline = Color.green, horzCenterline = Color.blue)
 
     // frontal
     def yImagePair = makePair(
-      voxSize_mm.getZ, voxSize_mm.getX,
+      voxSizeX_mmOrig = voxSize_mm.getZ, voxSizeY_mmOrig = voxSize_mm.getX,
       bb_pix = new Point2d(bb_vox.getZ, bb_vox.getX),
       rtplanOrigin_pix = new Point2d(rtplanOrigin_vox.getZ, rtplanOrigin_vox.getX),
-      imageXYZ(1),
-      (i: BufferedImage) => ImageUtil.rotate90(i),
-      (p: Point2d, w: Int, h: Int) => new Point2d(h - 1 - p.getY, p.getX),
-      Color.red, Color.blue,
-      rotation = 0)
+      originalImage = imageXYZ(1),
+      mapImage = (i: BufferedImage) => ImageUtil.rotate270(i),
+      mapPoint = (p: Point2d, w: Int, h: Int) => new Point2d(p.getY, w - 1 - p.getX),
+      vertCenterline = Color.red, horzCenterline = Color.blue)
 
     // transversal
     def zImagePair = makePair(
-      voxSize_mm.getX, voxSize_mm.getY,
+      voxSizeX_mmOrig = voxSize_mm.getX, voxSizeY_mmOrig = voxSize_mm.getY,
       bb_pix = new Point2d(bb_vox.getX, bb_vox.getY),
       rtplanOrigin_pix = new Point2d(rtplanOrigin_vox.getX, rtplanOrigin_vox.getY),
-      imageXYZ(2),
-      (i: BufferedImage) => i, // ImageUtil.mirrorVertically(i),
-      (p: Point2d, w: Int, h: Int) => p, // new Point2d(p.getX, h - 1 - p.getY),
-      Color.red, Color.green,
-      rotation = 0)
+      originalImage = imageXYZ(2),
+      mapImage = (i: BufferedImage) => i, // ImageUtil.mirrorVertically(i),
+      mapPoint = (p: Point2d, w: Int, h: Int) => p, // new Point2d(p.getX, h - 1 - p.getY),
+      vertCenterline = Color.red, horzCenterline = Color.green)
 
     // do annotation processing in parallel
     val imageList = Seq(xImagePair _, yImagePair _, zImagePair _).par.map(f => f()).toList
