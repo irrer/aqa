@@ -27,6 +27,8 @@ import org.aqa.VolumeTranslator
 import java.awt.Color
 import edu.umro.ImageUtil.LocateEdge
 import scala.collection.mutable.ArrayBuffer
+import edu.umro.ScalaUtil.DicomUtil
+import java.text.SimpleDateFormat
 
 /**
  * Find the BB in the CBCT volume.
@@ -167,10 +169,20 @@ object BBbyCBCTAnalysis extends Logging {
    */
   private def makeImage(dicomImage: DicomImage, location: Point2D.Double, pixelSize: Point2D.Double, minMax: (Float, Float)): BufferedImage = {
     val aspectCorrected = dicomImage.renderPixelsToSquare(pixelSize.getX, pixelSize.getY)
-    val bufImg = if (Config.CBCTImageColor.getRGB == 0)
-      aspectCorrected.toDeepColorBufferedImage(0.0)
-    else
-      aspectCorrected.toBufferedImage(Config.CBCTImageColor)
+    Trace.trace
+    val bufImg =
+      {
+        if (Config.CBCTImageColor.getRGB == 0)
+          aspectCorrected.toDeepColorBufferedImage(0.0)
+        else {
+          aspectCorrected.toBufferedImage(Config.CBCTImageColor)
+          val maxPixelValue = dicomImage.getSubArray(new Rectangle((location.getX - 5).toInt, (location.getY - 5).toInt, 10, 10)).flatten.max
+          aspectCorrected.toBufferedImage(ImageUtil.rgbColorMap(Config.CBCTImageColor), 0.0.toFloat, maxPixelValue.toFloat)
+
+          //aspectCorrected.toDeepColorBufferedImage(0.0)  // TODO rm
+        }
+      }
+    Trace.trace
     bufImg
   }
 
@@ -313,31 +325,37 @@ object BBbyCBCTAnalysis extends Logging {
    * produce a 2-D image.
    */
   private def makeImagesXYZ(entireVolume: DicomVolume, fineLocation_vox: Point3d, cbctForLocation_mm: Point3d, voxSize_mm: Point3d): Seq[BufferedImage] = {
+    Trace.trace
 
-    val mm = Config.CBCTBBPenumbra_mm * 4
+    val mm = (Config.DailyQAPhantomCubeSize_mm * 1.1) / 2
 
-    // point closest to origin for each sub-volume
+    // point closest to origin for each sub-volume.  Make sure this is within the boundaries of the volume.
     val start = new Point3i(
-      (fineLocation_vox.getX - (mm / voxSize_mm.getX)).ceil.toInt,
-      (fineLocation_vox.getY - (mm / voxSize_mm.getY)).ceil.toInt,
-      (fineLocation_vox.getZ - (mm / voxSize_mm.getZ)).ceil.toInt)
+      Math.max(0, (fineLocation_vox.getX - (mm / voxSize_mm.getX)).ceil.toInt),
+      Math.max(0, (fineLocation_vox.getY - (mm / voxSize_mm.getY)).ceil.toInt),
+      Math.max(0, (fineLocation_vox.getZ - (mm / voxSize_mm.getZ)).ceil.toInt))
 
     // number of planes in each sub-volume
-    val size = new Point3i(
+    val maxSize = new Point3i(
       ((mm * 2) / voxSize_mm.getX).ceil.toInt,
       ((mm * 2) / voxSize_mm.getY).ceil.toInt,
       ((mm * 2) / voxSize_mm.getZ).ceil.toInt)
 
-    val diX = xImage(entireVolume, start, size)
-    val diY = yImage(entireVolume, start, size)
-    val diZ = zImage(entireVolume, start, size)
+    // number of planes in each sub-volume  Make sure this is within the boundaries of the volume.
+    val size = new Point3i(
+      Math.min(entireVolume.xSize - start.getX, maxSize.getX),
+      Math.min(entireVolume.ySize - start.getY, maxSize.getY),
+      Math.min(entireVolume.zSize - start.getZ, maxSize.getZ))
 
-    val minMaxPixels = getMinMax(Seq(diX, diY, diZ))
+    // these are CPU intensive, so process in parallel for speed
+    val imageList = Seq(xImage _, yImage _, zImage _).par.map(im => im(entireVolume, start, size)).toList
+
+    val minMaxPixels = getMinMax(imageList)
 
     val bufImgList = Seq(
-      makeImage(diX, new Point2D.Double(fineLocation_vox.getZ, fineLocation_vox.getY), new Point2D.Double(voxSize_mm.getZ, voxSize_mm.getY), minMaxPixels),
-      makeImage(diY, new Point2D.Double(fineLocation_vox.getZ, fineLocation_vox.getX), new Point2D.Double(voxSize_mm.getZ, voxSize_mm.getX), minMaxPixels),
-      makeImage(diZ, new Point2D.Double(fineLocation_vox.getX, fineLocation_vox.getY), new Point2D.Double(voxSize_mm.getX, voxSize_mm.getY), minMaxPixels))
+      makeImage(imageList(0), new Point2D.Double(fineLocation_vox.getZ, fineLocation_vox.getY), new Point2D.Double(voxSize_mm.getZ, voxSize_mm.getY), minMaxPixels),
+      makeImage(imageList(1), new Point2D.Double(fineLocation_vox.getZ, fineLocation_vox.getX), new Point2D.Double(voxSize_mm.getZ, voxSize_mm.getX), minMaxPixels),
+      makeImage(imageList(2), new Point2D.Double(fineLocation_vox.getX, fineLocation_vox.getY), new Point2D.Double(voxSize_mm.getX, voxSize_mm.getY), minMaxPixels))
 
     bufImgList
   }
@@ -403,9 +421,11 @@ object BBbyCBCTAnalysis extends Logging {
 
           def fmt(d: Double) = d.formatted("%12.7f")
           def fmtPoint(point: Point3d): String = fmt(point.getX) + ",  " + fmt(point.getY) + ",  " + fmt(point.getZ)
+          val contentDateTime = cbctSeries.map(al => DicomUtil.getTimeAndDate(al, TagFromName.ContentDate, TagFromName.ContentTime)).flatten.minBy(_.getTime)
           logger.info("BB found in CBCT" +
             "\n    ImagePositionPatient first slice: " + volumeTranslator.ImagePositionPatient +
-            "\n    coordinates in voxels: " + fmtPoint(fineLocation_vox) +
+            "\n    Content date and time: " + (new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss")).format(contentDateTime) +
+            "    coordinates in voxels: " + fmtPoint(fineLocation_vox) +
             "\n    frame of ref coordinates in mm: " + fmtPoint(cbctForLocation_mm))
 
           Right(result)
