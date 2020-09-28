@@ -195,13 +195,14 @@ object BBbyCBCTAnnotateImages extends Logging {
         graphics.setColor(Color.green)
         // show BB offset from plan
         val text = "P"
-
-        val xOffset = if (bbCenter_pix.getX > planCenter_pix.getX) -1 else 1
-        val yOffset = if (bbCenter_pix.getY > planCenter_pix.getY) -1 else 1
-
         ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
-        val textRect = ImageText.getTextDimensions(graphics, text)
-        ImageText.drawTextCenteredAt(graphics, planCenter_pix.getX + xOffset * textPointSize, planCenter_pix.getY + yOffset * textPointSize, text)
+
+        val dist = bbCenter_pix.distance(planCenter_pix)
+        val distP = Math.sqrt(2.0) * textPointSize
+        val ratio = distP / dist
+        val x = planCenter_pix.getX + (planCenter_pix.getX - bbCenter_pix.getX) * ratio
+        val y = planCenter_pix.getY + (planCenter_pix.getY - bbCenter_pix.getY) * ratio
+        ImageText.drawTextCenteredAt(graphics, x, y, text)
       }
 
       // ---------------------------------------------------------------------------------
