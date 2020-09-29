@@ -173,23 +173,6 @@ object BBbyCBCTAnnotateImages extends Logging {
 
       // ---------------------------------------------------------------------------------
 
-      def drawPlanCenter = {
-        val graphics = ImageUtil.getGraphics(image)
-        graphics.setColor(Color.green)
-
-        val smallRadius = 4
-        val largeRadius = smallRadius * 2
-
-        graphics.drawOval(
-          d2i(planCenter_pix.getX - smallRadius), d2i(planCenter_pix.getY - smallRadius),
-          d2i(smallRadius * 2), d2i(smallRadius * 2))
-        graphics.drawOval(
-          d2i(planCenter_pix.getX - largeRadius), d2i(planCenter_pix.getY - largeRadius),
-          d2i(largeRadius * 2), d2i(largeRadius * 2))
-      }
-
-      // ---------------------------------------------------------------------------------
-
       def drawPlanText = {
         val graphics = ImageUtil.getGraphics(image)
         graphics.setColor(Color.green)
@@ -222,7 +205,7 @@ object BBbyCBCTAnnotateImages extends Logging {
       // ---------------------------------------------------------------------------------
 
       drawCircle
-      drawPlanCenter
+      Util.drawPlanCenter(image, planCenter_pix)
       drawPlanText
       drawCrossLines
       image
