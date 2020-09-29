@@ -35,6 +35,7 @@ import scala.xml.Node
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import javax.vecmath.Matrix4d
+import javax.vecmath.Point2d
 
 object Util extends Logging {
 
@@ -1158,6 +1159,25 @@ object Util extends Logging {
     val x = point.clone.asInstanceOf[Point3d]
     invMatrix.transform(x)
     x
+  }
+
+  /**
+   * Draw two green concentric circles around the RTPLAN center.  This imitates the way it is shown in Eclipse.
+   */
+  def drawPlanCenter(image: BufferedImage, planCenter_pix: Point2d, scale: Double = 1.0) = {
+    def d2i(d: Double) = d.round.toInt
+    val graphics = ImageUtil.getGraphics(image)
+    graphics.setColor(Color.green)
+
+    val smallRadius = 4 * scale
+    val largeRadius = smallRadius * 2
+
+    graphics.drawOval(
+      d2i(planCenter_pix.getX - smallRadius), d2i(planCenter_pix.getY - smallRadius),
+      d2i(smallRadius * 2), d2i(smallRadius * 2))
+    graphics.drawOval(
+      d2i(planCenter_pix.getX - largeRadius), d2i(planCenter_pix.getY - largeRadius),
+      d2i(largeRadius * 2), d2i(largeRadius * 2))
   }
 
 }
