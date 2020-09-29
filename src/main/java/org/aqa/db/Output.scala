@@ -265,9 +265,17 @@ object Output extends Logging {
   }
 
   def delete(outputPK: Long): Int = {
+    get(outputPK) match {
+      case Some(output) =>
+        logger.info("Deleting output: " + output)
+      case None =>
+        logger.info("outputPK " + outputPK + " does not exist but still attempting to delete it")
+    }
+
     val q = query.filter(_.outputPK === outputPK)
     val action = q.delete
-    Db.run(action)
+    val count = Db.run(action)
+    count
   }
 
   val displayFilePrefix = "display"
@@ -357,7 +365,7 @@ object Output extends Logging {
 
     val dicomSeriesInputPKSet: Set[Long] = {
       val search = for {
-        dsList <- DicomSeries.query.filter(ds => (ds.seriesInstanceUID.inSet(dicomSeriesUIDSet))).map(ds => ds.inputPK)
+        dsList <- DicomSeries.query.filter(ds => (ds.seriesInstanceUID.inSet(dicomSeriesUIDSet) && ((ds.modality === "RTIMAGE") || (ds.modality === "CT")))).map(ds => ds.inputPK)
       } yield { dsList }
 
       val result = Db.run(search.result).flatten.toSet

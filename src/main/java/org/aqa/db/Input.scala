@@ -9,6 +9,7 @@ import org.aqa.web.WebServer
 import edu.umro.ScalaUtil.FileUtil
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import edu.umro.ScalaUtil.Trace
 
 case class Input(
   inputPK: Option[Long], // primary key
@@ -49,9 +50,9 @@ case class Input(
     val outputDirList = Output.listByInputPK(inputPK.get).map(o => o.dir)
     val zippedContent = FileUtil.readFileTreeToZipByteArray(Seq(inputDir), Seq[String](), outputDirList)
     InputFiles.deleteByInputPK(inputPK.get)
-    val inputFiles =   new InputFiles(inputPK.get, inputPK.get, zippedContent)
-   inputFiles .insert
-   inputFiles
+    val inputFiles = new InputFiles(inputPK.get, inputPK.get, zippedContent)
+    inputFiles.insert
+    inputFiles
   }
 
   /**
@@ -143,8 +144,13 @@ object Input extends Logging {
   }
 
   def delete(inputPK: Long): Int = {
+    get(inputPK) match {
+      case Some(input) =>
+        logger.info("Deleting input: " + input)
+      case None =>
+        logger.info("inputPK " + inputPK + " does not exist but still attempting to delete it")
+    }
     val q = query.filter(_.inputPK === inputPK)
-    logger.info("deleting input " + inputPK)
     val start = System.currentTimeMillis
     val action = q.delete
     val count = Db.run(action)
