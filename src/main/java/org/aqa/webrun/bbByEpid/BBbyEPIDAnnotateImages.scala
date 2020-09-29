@@ -13,6 +13,7 @@ import org.aqa.Util
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.Trace
+import javax.vecmath.Point2d
 
 /**
  * Create user friendly images and annotate them.
@@ -94,27 +95,10 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
    *
    * @param center Center of + in pixels, not scaled.
    */
-  private def drawPlusAtCenterOfPlan(center: Point2D.Double, bufImage: BufferedImage, scale: Int) = {
-    val graphics = ImageUtil.getGraphics(bufImage)
-    ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
-    Trace.trace("center: " + center)
-
-    val radH = d2i(radius_pix * 1.5 * scale)
-
-    val xCenter = (center.getX * scale).round.toInt
-    val yCenter = (center.getY * scale).round.toInt
-
-    graphics.setColor(Color.white)
-    graphics.drawLine(xCenter - 1, yCenter - radH, xCenter - 1, yCenter + radH)
-    graphics.drawLine(xCenter + 1, yCenter - radH, xCenter + 1, yCenter + radH)
-    graphics.drawLine(xCenter - radH, yCenter - 1, xCenter + radH, yCenter - 1)
-    graphics.drawLine(xCenter - radH, yCenter + 1, xCenter + radH, yCenter + 1)
-
-    graphics.setColor(Color.black)
-    graphics.drawLine(xCenter, yCenter - radH, xCenter, yCenter + radH)
-    graphics.drawLine(xCenter - radH, yCenter, xCenter + radH, yCenter)
-
-    ImageText.drawTextOffsetFrom(graphics, xCenter, yCenter + circleRadius_pix(scale) + textPointSize, "+ is plan center", 270)
+  private def drawCirclesAtCenterOfPlan(center: Point2D.Double, bufImage: BufferedImage, scale: Int) = {
+    val scaledCenter = new Point2d(center.getX, center.getY)
+    scaledCenter.scale(scale)
+    Util.drawPlanCenter(bufImage, scaledCenter, scale / 4)
   }
 
   private def makeFullBufImg: BufferedImage = {
@@ -127,7 +111,7 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
     val pixCenter = trans.iso2Pix(trans.isoCenter)
 
     drawCircleWithXAtCenterOfBB(new Point2D.Double(0, 0), fullSize, scale)
-    drawPlusAtCenterOfPlan(pixCenter, fullSize, scale)
+    drawCirclesAtCenterOfPlan(pixCenter, fullSize, scale)
     fullSize
   }
 
@@ -166,7 +150,7 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
     Config.applyWatermark(closeupImage)
 
     drawCircleWithXAtCenterOfBB(upperLeftCorner, closeupImage, scale)
-    drawPlusAtCenterOfPlan(center, closeupImage, scale)
+    drawCirclesAtCenterOfPlan(center, closeupImage, scale)
 
     closeupImage
   }

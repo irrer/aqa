@@ -11,6 +11,8 @@ import edu.umro.ImageUtil.ImageUtil
 import javax.vecmath.Point2i
 import org.aqa.Util
 import javax.vecmath.Point2d
+import edu.umro.ImageUtil.LocateMax
+import edu.umro.ScalaUtil.Trace
 
 /**
  * Locate the BB in the EPID image.  The following steps are taken:
@@ -125,6 +127,24 @@ object BBbyEPIDImageAnalysis extends Logging {
 
     val xPos_pix = (in.map(p => p.getX * bbImage.get(p.getX, p.getY)).sum / sumMass) + bbRect.getX
     val yPos_pix = (in.map(p => p.getY * bbImage.get(p.getX, p.getY)).sum / sumMass) + bbRect.getY
+
+    if (true) { // TODO rm?
+      val col = bbImage.columnSums
+      val row = bbImage.rowSums
+      val x = LocateMax.locateMax(col) + bbRect.getX
+      val y = LocateMax.locateMax(row) + bbRect.getY
+      Trace.trace("x: " + x + "    xPos_pix: " + xPos_pix + "    diff: " + (x - xPos_pix))
+      Trace.trace("y: " + y + "    yPos_pix: " + yPos_pix + "    diff: " + (y - yPos_pix))
+
+      val xMax = LocateMax.toCubicSpline(col).evaluate(LocateMax.locateMax(col))
+      val yMax = LocateMax.toCubicSpline(row).evaluate(LocateMax.locateMax(row))
+
+      val sdCol = ImageUtil.stdDev(col)
+      val sdRow = ImageUtil.stdDev(row)
+
+      println("xMax: " + xMax + " sd: " + sdCol + "    mean: " + (col.sum / col.size))
+      println("yMax: " + yMax + " sd: " + sdRow + "    mean: " + (row.sum / row.size))
+    }
 
     val bbCenter_pix = new Point2d(xPos_pix, yPos_pix)
     val bbCenter_mm = trans.pix2Iso(xPos_pix, yPos_pix)
