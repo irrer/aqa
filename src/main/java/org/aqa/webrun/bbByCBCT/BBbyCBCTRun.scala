@@ -136,10 +136,20 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     val cbctSeriesList = cbctList.map(cbct => Util.serInstOfAl(cbct)).distinct
     def cbctFrameOfRefList = cbctList.map(cbct => Util.getFrameOfRef(cbct)).distinct
 
-    // Make a list of REG files that support the CBCT's frame of reference.  We don't care about the other REG files.
+    // Make a list of REG files that support the CBCT's frame of reference and reference the CBCT by its SeriesInstanceUID.
     val qualRegList = {
       val cbctFrameOfRef = cbctFrameOfRefList.head
-      regList.filter(al => new ImageRegistration(al).otherFrameOfRefUID.equals(cbctFrameOfRef))
+      val sameFrameOfRef = regList.filter(al => new ImageRegistration(al).otherFrameOfRefUID.equals(cbctFrameOfRef))
+      val cbctSeriesInstUID = Util.serInstOfAl(cbctList.head)
+
+      def regReferencesCbct(reg: AttributeList): Boolean = {
+        val list = DicomUtil.seqToAttr(reg, TagFromName.ReferencedSeriesSequence).map(al => al.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString)
+        val hasIt = list.contains(cbctSeriesInstUID)
+        hasIt
+      }
+      val qualifiedList = sameFrameOfRef.filter(reg => regReferencesCbct(reg))
+      Trace.trace("qualifiedList size: " + qualifiedList.size)
+      qualifiedList
     }
 
     logger.info("Number of files uploaded:  RTPLAN: " + rtplanList.size + "    REG: " + regList.size + "    CBCT: " + cbctList.size)
@@ -184,7 +194,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       case _ if cbctSeriesList.size > 1 => formError("CBCT slices are from " + cbctSeriesList.size + " different series.")
       case _ if cbctFrameOfRefList.isEmpty => formError("CBCT series are unusable: They do not specify a frame of reference.")
       case _ if cbctFrameOfRefList.size > 1 => formError("CBCT series uses more than one frame of reference.")
-      case _ if rtplan.isEmpty => formError("Can not find a CBCT + REG + RTPLAN with compatible frame of reference.")
+      case _ if rtplan.isEmpty => formError("Can not find a CBCT + REG + RTPLAN with compatible frame of reference.  Note that REG must reference CBCT.")
       case _ => {
         val plan = {
           val planAl = rtplan.get
