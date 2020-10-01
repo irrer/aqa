@@ -19,6 +19,7 @@ object DailyQAIndividualResults {
 
   private val dateFormat = new SimpleDateFormat("EEE MMM dd, YYYY")
   private val timeFormat = new SimpleDateFormat("H:mm:ss a")
+  private val dateAndtimeFormat = new SimpleDateFormat("EEE MMM dd, YYYY H:mm:ss a")
 
   def get(instPK: Long, date: Date): Elem = {
 
@@ -36,7 +37,7 @@ object DailyQAIndividualResults {
       val url = ViewOutput.path + "?" + ViewOutput.outputPKTag + "=" + ext.output_outputPK
 
       <tr>
-        <td><a title="View details" href={ url }>{ timeFormat.format(ext.output_startDate) }</a></td>
+        <td><a title="View details" href={ url }>{ dateAndtimeFormat.format(ext.output_startDate) }</a></td>
         <td>{ timeFormat.format(ext.input_dataDate.get) }</td>
         <td>{ ext.procedure_name }</td>
         <td>{ WebUtil.wrapAlias(ext.machine_id) }</td>
