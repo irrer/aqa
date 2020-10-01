@@ -177,7 +177,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
    */
   private def basicValidation(valueMap: ValueMapT, rtplanList: Seq[AttributeList], rtimageList: Seq[AttributeList]): Either[StyleMapT, BasicData] = {
     logger.info("Number of RTPLAN files uploaded: " + rtplanList.size)
-    logger.info("Number of RTIMAGE files duploaded: " + rtimageList.size)
+    logger.info("Number of RTIMAGE files uploaded: " + rtimageList.size)
     val machineSerialNumberList = rtimageList.map(rtimage => Util.getAttrValue(rtimage, TagFromName.DeviceSerialNumber)).flatten
 
     def rtimageDate(rtimage: AttributeList): Long = {
