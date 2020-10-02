@@ -14,6 +14,7 @@ import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.Trace
 import javax.vecmath.Point2d
+import java.awt.BasicStroke
 
 /**
  * Create user friendly images and annotate them.
@@ -98,7 +99,24 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
   private def drawCirclesAtCenterOfPlan(center: Point2D.Double, bufImage: BufferedImage, scale: Int) = {
     val scaledCenter = new Point2d(center.getX, center.getY)
     scaledCenter.scale(scale)
-    Util.drawPlanCenter(bufImage, scaledCenter, scale / 4)
+
+    val graphics = ImageUtil.getGraphics(bufImage)
+    graphics.setColor(Color.red)
+
+    val radius = scale * 2
+    val skip = 2
+    val diam = radius * 2
+    val xi = d2i(center.getX * scale)
+    val yi = d2i(center.getY * scale)
+
+    graphics.drawLine(xi - radius, yi, xi - skip, yi)
+    graphics.drawLine(xi + skip, yi, xi + radius, yi)
+
+    graphics.drawLine(xi, yi - radius, xi, yi - skip)
+    graphics.drawLine(xi, yi + skip, xi, yi + radius)
+
+    graphics.setStroke(new BasicStroke(3))
+    graphics.drawOval(xi - radius, yi - radius, diam, diam)
   }
 
   private def makeFullBufImg: BufferedImage = {
@@ -108,7 +126,7 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
     val fullSize = ImageUtil.magnify(fullImage.toDeepColorBufferedImage(0.05), scale)
     Config.applyWatermark(fullSize)
 
-    val pixCenter = trans.iso2Pix(trans.isoCenter)
+    val pixCenter = trans.iso2Pix(trans.isoCenter.getX, -trans.isoCenter.getY)
 
     drawCircleWithXAtCenterOfBB(new Point2D.Double(0, 0), fullSize, scale)
     drawCirclesAtCenterOfPlan(pixCenter, fullSize, scale)
@@ -133,7 +151,7 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
     }
 
     val center = {
-      val pixCenter = trans.iso2Pix(trans.isoCenter)
+      val pixCenter = trans.iso2Pix(trans.isoCenter.getX, -trans.isoCenter.getY)
       new Point2D.Double((pixCenter.getX - upperLeftCorner.getX), (pixCenter.getY - upperLeftCorner.getY))
     }
 
