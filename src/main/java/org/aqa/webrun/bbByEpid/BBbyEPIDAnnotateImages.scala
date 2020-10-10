@@ -15,6 +15,9 @@ import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.Trace
 import javax.vecmath.Point2d
 import java.awt.BasicStroke
+import edu.umro.ScalaUtil.DicomUtil
+import java.text.SimpleDateFormat
+import java.awt.Polygon
 
 /**
  * Create user friendly images and annotate them.
@@ -117,6 +120,58 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
 
     graphics.setStroke(new BasicStroke(3))
     graphics.drawOval(xi - radius, yi - radius, diam, diam)
+
+    val thickness = d2i(scale * 0.25)
+    val len = thickness * 3
+
+    def top = {
+      val poly = new Polygon
+      poly.addPoint(xi, yi - radius)
+      poly.addPoint(xi - thickness, yi - radius)
+      poly.addPoint(xi, yi - radius + len)
+      poly.addPoint(xi + 1, yi - radius + len)
+      poly.addPoint(xi + thickness, yi - radius)
+      Trace.trace(poly)
+      graphics.fill(poly)
+    }
+
+    def bottom = {
+      val poly = new Polygon
+      poly.addPoint(xi, yi + radius)
+      poly.addPoint(xi - thickness, yi + radius)
+      poly.addPoint(xi, yi + radius - len)
+      poly.addPoint(xi + 1, yi + radius - len)
+      poly.addPoint(xi + thickness, yi + radius)
+      Trace.trace(poly)
+      graphics.fill(poly)
+    }
+
+    def left = {
+      val poly = new Polygon
+      poly.addPoint(xi - radius, yi)
+      poly.addPoint(xi - radius, yi - thickness + 1)
+      poly.addPoint(xi - radius + len, yi)
+      poly.addPoint(xi - radius + len, yi + 1)
+      poly.addPoint(xi - radius, yi + thickness)
+      Trace.trace(poly)
+      graphics.fill(poly)
+    }
+
+    def right = {
+      val poly = new Polygon
+      poly.addPoint(xi + radius, yi)
+      poly.addPoint(xi + radius, yi - thickness + 1)
+      poly.addPoint(xi + radius - len, yi)
+      poly.addPoint(xi + radius - len, yi + 1)
+      poly.addPoint(xi + radius, yi + thickness)
+      Trace.trace(poly)
+      graphics.fill(poly)
+    }
+
+    top
+    bottom
+    left
+    right
   }
 
   private def makeFullBufImg: BufferedImage = {
@@ -126,11 +181,28 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
     val fullSize = ImageUtil.magnify(fullImage.toDeepColorBufferedImage(0.05), scale)
     Config.applyWatermark(fullSize)
 
-    val pixCenter = trans.iso2Pix(trans.isoCenter.getX, -trans.isoCenter.getY)
-
     drawCircleWithXAtCenterOfBB(new Point2D.Double(0, 0), fullSize, scale)
-    drawCirclesAtCenterOfPlan(pixCenter, fullSize, scale)
+    drawCirclesAtCenterOfPlan(trans.caxCenter_pix, fullSize, scale)
     fullSize
+  }
+
+  private def putDateTime(bufImage: BufferedImage) = {
+    val graphics = ImageUtil.getGraphics(bufImage)
+
+    val dateOpt = DicomUtil.getTimeAndDate(al, TagFromName.ContentDate, TagFromName.ContentTime)
+    if (dateOpt.isDefined) {
+      val date = dateOpt.get
+      val angle = Util.angleRoundedTo90(al.get(TagFromName.GantryAngle).getDoubleValues()(0))
+      val dateFormat = new SimpleDateFormat("m/d/yyyy H:mm")
+      val text = "G" + angle + " - " + dateFormat.format(date)
+      val dim = ImageText.getTextDimensions(graphics, text)
+
+      ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
+      graphics.setColor(Color.black)
+      graphics.fillRect(0, 0, dim.getWidth.toInt, dim.getHeight.toInt)
+      graphics.setColor(Color.white)
+      graphics.drawString(text, textPointSize, textPointSize)
+    }
   }
 
   private def makeCloseupBufImg: BufferedImage = {
@@ -138,20 +210,21 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
     val scale = 32
 
     // defines how much area around the bb should be used to make the close up image
-    val closeupScale = 5.0
+    val closeupScale = 10.0
+    val closeup_mm = Config.EPIDBBPenumbra_mm * closeupScale
 
     // position of upper left corner of close up image in pixel coordinates
     val upperLeftCorner = {
       if (bbLoc_mmIso.isDefined) {
-        trans.iso2Pix(bbLoc_mmIso.get.getX - Config.EPIDBBPenumbra_mm * closeupScale, -Config.EPIDBBPenumbra_mm * closeupScale)
+        trans.iso2Pix(bbLoc_mmIso.get.getX - closeup_mm, bbLoc_mmIso.get.getY - closeup_mm)
       } else {
         // if no BB found, then just make a close up of the center of the image
-        trans.iso2Pix(-Config.EPIDBBPenumbra_mm * closeupScale, -Config.EPIDBBPenumbra_mm * closeupScale)
+        trans.iso2Pix(-closeup_mm, -closeup_mm)
       }
     }
 
     val center = {
-      val pixCenter = trans.iso2Pix(trans.isoCenter.getX, -trans.isoCenter.getY)
+      val pixCenter = trans.iso2Pix(-trans.caxCenter_iso.getX, trans.caxCenter_iso.getY) // TODO experimental
       new Point2D.Double((pixCenter.getX - upperLeftCorner.getX), (pixCenter.getY - upperLeftCorner.getY))
     }
 
@@ -159,12 +232,13 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
     val closeupRect = {
       val x = d2i(upperLeftCorner.getX)
       val y = d2i(upperLeftCorner.getY)
-      val w = d2i(trans.iso2PixDistX(Config.EPIDBBPenumbra_mm * closeupScale * 2))
-      val h = d2i(trans.iso2PixDistY(Config.EPIDBBPenumbra_mm * closeupScale * 2))
+      val w = d2i(trans.iso2PixDistX(closeup_mm * 2))
+      val h = d2i(trans.iso2PixDistY(closeup_mm * 2))
       new Rectangle(x, y, w, h)
     }
 
     val closeupImage = ImageUtil.magnify(fullImage.getSubimage(closeupRect).toBufferedImage(Config.EPIDImageColor), scale)
+    putDateTime(closeupImage)
     Config.applyWatermark(closeupImage)
 
     drawCircleWithXAtCenterOfBB(upperLeftCorner, closeupImage, scale)

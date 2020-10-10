@@ -205,7 +205,7 @@ object BBbyEPIDHTML {
             <br/>
             { viewDicomMetadata }
             <br/>
-            { imgRef(closeUpImageFileName, "Closeup of BB") }
+            { imgRefWithZoom(closeUpImageFileName, "Closeup of BB") }
             <br/>
             { imgRefWithZoom(fullImageFileName, "Full image") }
           </center>
@@ -213,7 +213,7 @@ object BBbyEPIDHTML {
       }
 
       val script = {
-        Seq(fullImageFileName).
+        Seq(closeUpImageFileName, fullImageFileName).
           map(fn => "      $(document).ready(function(){ $('#" + Util.textToId(fn) + "').zoom(); });\n").
           mkString("\n      ")
       }

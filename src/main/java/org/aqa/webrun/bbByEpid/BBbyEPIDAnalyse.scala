@@ -21,6 +21,7 @@ import edu.umro.ScalaUtil.Trace
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.restlet.Response
 import org.aqa.web.ViewOutput
+import java.awt.geom.Point2D
 
 /**
  * Given validated data, process it.
@@ -41,9 +42,12 @@ object BBbyEPIDAnalyse extends Logging {
     val gantryAngle_rad = Math.toRadians(gantryAngle_deg)
 
     /**
-     * Epid offset in the isoplane in mm.
+     * EPID offset in the isoplane in mm.
      */
-    val epidOffset = (new IsoImagePlaneTranslator(epid)).isoCenter
+    val epidOffset = {
+      val isoCenter = (new IsoImagePlaneTranslator(epid)).caxCenter_iso
+      new Point2D.Double(isoCenter.getX, -isoCenter.getY)
+    }
 
     logger.info("gantryAngle_deg: " + gantryAngle_deg)
     logger.info("Using XRayImageReceptorTranslation in isoplane in mm of: " + epidOffset)
