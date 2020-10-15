@@ -40,7 +40,23 @@ object BBbyEPIDHTML {
   private def fmtApprox(d: Double) = d.formatted("%6.2f").trim
   private def fmtPrecise(d: Double) = d.formatted("%12.6f").trim // match precision shown in Matlab
 
-  def generateHtml(extendedData: ExtendedData, bbByEPIDList: Seq[BBbyEPID], composite: Either[String, (BBbyEPIDComposite, Option[String])], runReq: BBbyEPIDRunReq, status: ProcedureStatus.Value): Unit = {
+  /**
+   * Get either the content or acquisition date+time in ms.
+   */
+  private def result2ms(al: AttributeList): Long = {
+    val c = DicomUtil.getTimeAndDate(al, TagFromName.ContentDate, TagFromName.ContentTime)
+    val a = DicomUtil.getTimeAndDate(al, TagFromName.AcquisitionDate, TagFromName.AcquisitionTime)
+    Seq(c, a).flatten.head.getTime
+  }
+
+  /**
+   * Get either the content or acquisition date+time in ms.
+   */
+  private def result2ms(r: Either[BBbyEPIDImageAnalysis.FailedResult, BBbyEPIDImageAnalysis.Result]): Long = {
+    result2ms(BBbyEPIDImageAnalysis.alOf(r))
+  }
+
+  def generateHtml(extendedData: ExtendedData, bbByEPIDList: Seq[Either[BBbyEPIDImageAnalysis.FailedResult, BBbyEPIDImageAnalysis.Result]], composite: Either[String, (BBbyEPIDComposite, Option[String])], runReq: BBbyEPIDRunReq, status: ProcedureStatus.Value): Unit = {
 
     val bbByCBCT: Option[BBbyCBCT] = {
       if ((composite.isRight) && (composite.right.get._1.bbByCBCTPK.isDefined))
@@ -119,29 +135,40 @@ object BBbyEPIDHTML {
       wrapWithHeader
     }
 
-    class ImageSet(index: Int) {
-      val al = runReq.epidList(index)
+    class ImageSet(result: Either[BBbyEPIDImageAnalysis.FailedResult, BBbyEPIDImageAnalysis.Result], id: Int) {
+      val al = BBbyEPIDImageAnalysis.alOf(result)
       val SOPInstanceUID = Util.sopOfAl(al)
-      val bbByEpid = bbByEPIDList.find(b => b.epidSOPInstanceUid.equals(SOPInstanceUID))
+
+      def r2epid = {
+        if (result.isLeft) throw new RuntimeException("Unexpected failure accessing failed epid data.")
+        result.right.get.bbByEpid
+      }
 
       val description: Option[String] = {
-        bbByEpid match {
-          case Some(epid) if epid.isVert => Some(fmtApprox(epid.epid3DX_mm) + ", NA, " + fmtApprox(epid.epid3DZ_mm) + " mm")
-          case Some(epid) if epid.isHorz => Some("NA, " + fmtApprox(epid.epid3DY_mm) + ", " + fmtApprox(epid.epid3DZ_mm) + " mm")
-          case None => None
+        result match {
+          case _ if result.isRight && r2epid.isVert => Some(fmtApprox(r2epid.epid3DX_mm) + ", NA, " + fmtApprox(r2epid.epid3DZ_mm) + " mm")
+          case _ if result.isRight && r2epid.isHorz => Some("NA, " + fmtApprox(r2epid.epid3DY_mm) + ", " + fmtApprox(r2epid.epid3DZ_mm) + " mm")
+          case _ if result.isLeft => Some(result.left.get.error)
+          case _ => None
         }
       }
-      val bbLoc_mm = if (bbByEpid.isDefined) Some(new Point2D.Double(bbByEpid.get.epidImageX_mm, bbByEpid.get.epidImageY_mm)) else None
+
+      val bbLoc_mm = if (result.isRight) Some(new Point2D.Double(r2epid.epidImageX_mm, r2epid.epidImageY_mm)) else None
       val gantryAngle = Util.angleRoundedTo90(Util.gantryAngle(al))
       val gantryAngleRounded = Util.angleRoundedTo90(gantryAngle)
 
-      val suffix = "_" + gantryAngleRounded + "_" + (index + 1) + ".png"
+      val suffix = "_" + gantryAngleRounded + "_" + (id + 1) + ".png"
       val closeUpImageFileName = closeUpImagePrefix + suffix
       val fullImageFileName = fullImagePrefix + suffix
 
       def name2File(name: String) = new File(extendedData.output.dir, name)
 
-      val imageSet = new BBbyEPIDAnnotateImages(al, bbLoc_mm, description)
+      val bbCenter_pix = {
+        if (result.isRight) {
+          Some(result.right.get.pix)
+        } else None
+      }
+      val imageSet = new BBbyEPIDAnnotateImages(al, bbLoc_mm, description, bbCenter_pix)
 
       Util.writePng(imageSet.closeupBufImg, name2File(closeUpImageFileName))
       Util.writePng(imageSet.fullBufImg, name2File(fullImageFileName))
@@ -171,7 +198,7 @@ object BBbyEPIDHTML {
           </div>
         }
 
-        val fileName = "EPID_" + index + ".html"
+        val fileName = "EPID_" + id + ".html"
         val text = WebUtil.wrapBody(wrap(content), "EPID " + gantryAngle + " deg", None, true, None)
         val file = new File(extendedData.output.dir, fileName)
         Util.writeFile(file, text)
@@ -188,11 +215,12 @@ object BBbyEPIDHTML {
           </a>
         }
 
-        def imgRefWithZoom(name: String, title: String) = {
+        def imgRefWithZoom(name: String, title: String, border: Boolean = false) = {
+
           <a href={ name }>
             <h4>{ title }</h4>
             <div class='zoom' id={ Util.textToId(name) }>
-              <img width='400' src={ name }/>
+              { if (border) { <img width='400' src={ name } style="border: 1px solid lightgrey;"/> } else { <img width='400' src={ name }/> } }
             </div>
           </a>
         }
@@ -207,7 +235,7 @@ object BBbyEPIDHTML {
             <br/>
             { imgRefWithZoom(closeUpImageFileName, "Closeup of BB") }
             <br/>
-            { imgRefWithZoom(fullImageFileName, "Full image") }
+            { imgRefWithZoom(fullImageFileName, "Full Image", true) }
           </center>
         </td>
       }
@@ -224,7 +252,8 @@ object BBbyEPIDHTML {
     val chart = new BBbyEPIDChart(extendedData.output.outputPK.get)
 
     // make all of the images and get their names
-    val imageSetList = runReq.epidList.indices.par.map(index => new ImageSet(index)).toList
+    val imageSetList = bbByEPIDList.zipWithIndex.par.map(ri => new ImageSet(ri._1, ri._2)).toList
+    // val imageSetList = bbByEPIDList.zipWithIndex.map(ri => new ImageSet(ri._1, ri._2)).toList // non-parallel version for debug only
 
     val numberText = {
 
@@ -245,11 +274,14 @@ object BBbyEPIDHTML {
       }
 
       val tablePosition = {
-        val bbByEPID = bbByEPIDList.head
+        val al = if (bbByEPIDList.head.isLeft) bbByEPIDList.head.left.get.al else bbByEPIDList.head.right.get.al
 
-        val x = Util.fmtDbl(bbByEPID.tableXlateral_mm / 10)
-        val y = Util.fmtDbl(bbByEPID.tableYvertical_mm / 10)
-        val z = Util.fmtDbl(bbByEPID.tableZlongitudinal_mm / 10)
+        /** Get double value, convert from mm to cm, and format to text. */
+        def db(tag: AttributeTag) = { Util.fmtDbl(al.get(tag).getDoubleValues().head / 10) }
+
+        val x = db(TagFromName.TableTopLateralPosition) // tableXlateral_mm
+        val y = db(TagFromName.TableTopVerticalPosition) // tableYvertical_mm
+        val z = db(TagFromName.TableTopLongitudinalPosition) // tableZlongitudinal_mm
 
         <div title="Table position when CBCT was captured.">
           Table Position X,Y,Z cm:{ x + "," + y + "," + z }
@@ -408,58 +440,58 @@ object BBbyEPIDHTML {
             None
         }
 
-        val epidDateListSorted = bbByEPIDList.map(epid => (epid, epidToDate(epid))).filter(ed => ed._2.isDefined).map(ed => (ed._1, ed._2.get)).sortBy(_._2.getTime)
+        val epidDateListSorted = bbByEPIDList.sortBy(r => result2ms(r))
 
-        val msFirst = epidDateListSorted.head._2.getTime
+        val msFirst = result2ms(epidDateListSorted.head)
 
         def vectorLengthColumn(x: Double, y: Double, z: Double) = {
           val d = Math.sqrt((x * x) + (y * y) + (z * z))
           <td title={ fmtPrecise(d) }>{ fmtApprox(d) }</td>
         }
 
-        def elapsedText(date: Date): String = {
-          val ms = date.getTime - msFirst
-          val sec = (ms / 1000) % 60
-          val minutes = (ms / (60 * 1000))
+        def elapsedText(ms: Long): String = {
+          val elapsed = ms - msFirst
+          val sec = (elapsed / 1000) % 60
+          val minutes = (elapsed / (60 * 1000))
           minutes.toString + ":" + sec.formatted("%02d")
         }
 
-        def fmtEpidWithoutCbct(epid: BBbyEPID, date: Date) = {
+        def fmtEpidWithoutCbct(rslt: BBbyEPIDImageAnalysis.Result) = {
           val na = { <td>NA</td> }
-          val gantryAngle = Util.angleRoundedTo90(epid.gantryAngle_deg)
+          val gantryAngle = Util.angleRoundedTo90(rslt.bbByEpid.gantryAngle_deg)
 
           <tr style="text-align: center;">
             <td style="text-align: right;">MV G<b>{ gantryAngle.toString }</b> (BB - DIGITAL_CAX) @ ISOCENTER PLANE</td>
-            <td>{ elapsedText(date) }</td>
-            { if (epid.isVert) fmtTd(epid.epid3DX_mm) else na }
-            { if (epid.isHorz) fmtTd(epid.epid3DY_mm) else na }
-            { fmtTd(epid.epid3DZ_mm) }
+            <td>{ elapsedText(result2ms(rslt.al)) }</td>
+            { if (rslt.bbByEpid.isVert) fmtTd(rslt.bbByEpid.epid3DX_mm) else na }
+            { if (rslt.bbByEpid.isHorz) fmtTd(rslt.bbByEpid.epid3DY_mm) else na }
+            { fmtTd(rslt.bbByEpid.epid3DZ_mm) }
             {
               vectorLengthColumn(
-                if (epid.isVert) epid.epid3DX_mm else 0.0,
-                if (epid.isHorz) epid.epid3DY_mm else 0.0,
-                epid.epid3DZ_mm)
+                if (rslt.bbByEpid.isVert) rslt.bbByEpid.epid3DX_mm else 0.0,
+                if (rslt.bbByEpid.isHorz) rslt.bbByEpid.epid3DY_mm else 0.0,
+                rslt.bbByEpid.epid3DZ_mm)
             }
           </tr>
         }
 
-        def fmtEpidWithCbct(epid: BBbyEPID, date: Date) = {
+        def fmtEpidWithCbct(rslt: BBbyEPIDImageAnalysis.Result) = {
           val na = { <td>NA</td> }
-          val gantryAngle = Util.angleRoundedTo90(epid.gantryAngle_deg)
+          val gantryAngle = Util.angleRoundedTo90(rslt.bbByEpid.gantryAngle_deg)
           val isVert = AngleType.isAngleType(gantryAngle, AngleType.vertical)
           val isHorz = !isVert
 
           <tr style="text-align: center;">
             <td style="text-align: right;">MV G<b>{ gantryAngle.toString }</b> (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER)</td>
-            <td>{ elapsedText(date) }</td>
-            { if (isVert) fmtTd(epid.epid3DX_mm - cbct.err_mm.getX) else na }
-            { if (isHorz) fmtTd(epid.epid3DY_mm - cbct.err_mm.getY) else na }
-            { fmtTd(epid.epid3DZ_mm - cbct.err_mm.getZ) }
+            <td>{ elapsedText(result2ms(rslt.al)) }</td>
+            { if (isVert) fmtTd(rslt.bbByEpid.epid3DX_mm - cbct.err_mm.getX) else na }
+            { if (isHorz) fmtTd(rslt.bbByEpid.epid3DY_mm - cbct.err_mm.getY) else na }
+            { fmtTd(rslt.bbByEpid.epid3DZ_mm - cbct.err_mm.getZ) }
             {
               vectorLengthColumn(
-                if (isVert) epid.epid3DX_mm - cbct.err_mm.getX else 0.0,
-                if (isHorz) epid.epid3DY_mm - cbct.err_mm.getY else 0.0,
-                epid.epid3DZ_mm - cbct.err_mm.getZ)
+                if (isVert) rslt.bbByEpid.epid3DX_mm - cbct.err_mm.getX else 0.0,
+                if (isHorz) rslt.bbByEpid.epid3DY_mm - cbct.err_mm.getY else 0.0,
+                rslt.bbByEpid.epid3DZ_mm - cbct.err_mm.getZ)
             }
           </tr>
         }
@@ -499,8 +531,8 @@ object BBbyEPIDHTML {
                   cbct.err_mm.getZ)
               }
             </tr>
-            { epidDateListSorted.map(ed => fmtEpidWithoutCbct(ed._1, ed._2)) }
-            { epidDateListSorted.map(ed => fmtEpidWithCbct(ed._1, ed._2)) }
+            { epidDateListSorted.filter(_.isRight).map(r => fmtEpidWithoutCbct(r.right.get)) }
+            { epidDateListSorted.filter(_.isRight).map(r => fmtEpidWithCbct(r.right.get)) }
             <tr style="text-align: center;">
               <td style="text-align: right;">AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER)</td>
               <td></td>

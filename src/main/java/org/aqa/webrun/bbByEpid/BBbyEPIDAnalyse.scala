@@ -28,58 +28,6 @@ import java.awt.geom.Point2D
  */
 object BBbyEPIDAnalyse extends Logging {
 
-  /**
-   * Translate BB position in ISO plane to RTPLAN coordinates
-   *
-   * @param epid EPID DICOM
-   *
-   * @param bbLocation in EPID translated to mm in DICOM gantry coordinates.
-   *
-   * @param extendedData Associated DB rows
-   */
-  private def toBBbyEPID(epid: AttributeList, bbLocation: Point2d, extendedData: ExtendedData): BBbyEPID = {
-    val gantryAngle_deg = Util.gantryAngle(epid)
-    val gantryAngle_rad = Math.toRadians(gantryAngle_deg)
-
-    /**
-     * EPID offset in the isoplane in mm.
-     */
-    val epidOffset = {
-      val isoCenter = (new IsoImagePlaneTranslator(epid)).caxCenter_iso
-      new Point2D.Double(isoCenter.getX, -isoCenter.getY)
-    }
-
-    logger.info("gantryAngle_deg: " + gantryAngle_deg)
-    logger.info("Using XRayImageReceptorTranslation in isoplane in mm of: " + epidOffset)
-    logger.info("bbLocation in isoplane in mm: " + bbLocation)
-
-    val epid3DX_mm = Math.cos(gantryAngle_rad) * (bbLocation.getX + epidOffset.getX)
-    val epid3DY_mm = Math.sin(gantryAngle_rad) * (bbLocation.getX + epidOffset.getX)
-    val epid3DZ_mm = bbLocation.getY + epidOffset.getY
-    val origin = new Point3d(0, 0, 0)
-
-    def getDbl(tag: AttributeTag) = epid.get(tag).getDoubleValues.head
-
-    val bbByEPID = new BBbyEPID(
-      bbByEPIDPK = None,
-      outputPK = extendedData.output.outputPK.get,
-      // rtplanSOPInstanceUID = rtplanSOP,
-      epidSOPInstanceUid = Util.sopOfAl(epid),
-      offset_mm = (new Point3d(epid3DX_mm, epid3DY_mm, epid3DZ_mm)).distance(origin),
-      gantryAngle_deg = gantryAngle_deg,
-      status = ProcedureStatus.done.toString,
-      epidImageX_mm = bbLocation.getX,
-      epidImageY_mm = bbLocation.getY,
-      epid3DX_mm, epid3DY_mm, epid3DZ_mm,
-      getDbl(TagFromName.TableTopLateralPosition), // tableXlateral_mm
-      getDbl(TagFromName.TableTopVerticalPosition), // tableYvertical_mm
-      getDbl(TagFromName.TableTopLongitudinalPosition)) // tableZlongitudinal_mm
-
-    logger.info("constructed BBbyEPID: " + BBbyEPID)
-
-    bbByEPID
-  }
-
   private def isVert(al: AttributeList) = AngleType.isAngleType(Util.gantryAngle(al), AngleType.vertical)
 
   private val ls = System.lineSeparator
@@ -164,7 +112,7 @@ ${fprintf}
     text
   }
 
-  private def constructCompositeMatlab(epidResultList: Seq[(BBbyEPID, BBbyEPIDImageAnalysis.Result)], bbByCBCT: BBbyCBCT, response: Response): String = {
+  private def constructCompositeMatlab(epidResultList: Seq[BBbyEPIDImageAnalysis.Result], bbByCBCT: BBbyCBCT, response: Response): String = {
     val separator = ls + ls + "%% ------------------------------------------------------------------" + ls + ls
 
     val header = {
@@ -176,7 +124,7 @@ ${fprintf}
 %% users can be assured that the calculations are equivalent.  The only difference might be in roundoff errors, but the 
 %% results will match to at least 10 significant figures.
 
-%% EPID report: ${response.getRequest.getHostRef}${ViewOutput.viewOutputUrl(epidResultList.head._1.outputPK)}
+%% EPID report: ${response.getRequest.getHostRef}${ViewOutput.viewOutputUrl(epidResultList.head.bbByEpid.outputPK)}
 
 %% Results from CBCT
 cbctX = ${bbByCBCT.cbctX_mm} - ${bbByCBCT.rtplanX_mm};
@@ -186,7 +134,7 @@ fprintf("CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f  %f  %f$lsn", cbctX, cbctY, c
 """
     }
 
-    val epidText = epidResultList.map(er => constructEpidMatlab(er._2))
+    val epidText = epidResultList.map(er => constructEpidMatlab(er))
 
     val compositeText = {
       s"""
@@ -206,9 +154,9 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
     allText.replaceAll(lsn, "\\\\n")
   }
 
-  private def constructComposite(epidResultList: Seq[(BBbyEPID, BBbyEPIDImageAnalysis.Result)], extendedData: ExtendedData, runReq: BBbyEPIDRunReq, response: Response): Either[String, (BBbyEPIDComposite, Option[String])] = {
+  private def constructComposite(epidResultList: Seq[BBbyEPIDImageAnalysis.Result], extendedData: ExtendedData, runReq: BBbyEPIDRunReq, response: Response): Either[String, (BBbyEPIDComposite, Option[String])] = {
 
-    val bbByEPIDList = epidResultList.map(er => er._1)
+    // val bbByEPIDList = epidResultList.map(er => er._1)
 
     def getByAngleType(angleType: AngleType.Value) = {
       val at = angleType.toString
@@ -217,7 +165,7 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
         angTyp.isDefined && angTyp.get.toString.equals(at)
       }
 
-      bbByEPIDList.filter(bbByEPID => sameType(bbByEPID))
+      epidResultList.filter(r => sameType(r.bbByEpid))
     }
 
     val vert = getByAngleType(AngleType.vertical)
@@ -226,9 +174,9 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
     if ((vert.nonEmpty && horz.nonEmpty)) {
       // Use the same number of vertical and horizontal beams to get the averages.  Handles cases where are there are many of one and few of the others.
       val max = Math.min(vert.size, horz.size) // maximum number of images to use in each of the vertical and horizontal directions.
-      val x_mm = vert.take(max).map(bb => bb.epid3DX_mm).sum / max
-      val y_mm = horz.take(max).map(bb => bb.epid3DY_mm).sum / max
-      val z_mm = bbByEPIDList.map(bb => bb.epid3DZ_mm).sum / bbByEPIDList.size
+      val x_mm = vert.take(max).map(r => r.bbByEpid.epid3DX_mm).sum / max
+      val y_mm = horz.take(max).map(r => r.bbByEpid.epid3DY_mm).sum / max
+      val z_mm = epidResultList.map(r => r.bbByEpid.epid3DZ_mm).sum / epidResultList.size
       val offset_mm = (new Point3d(x_mm, y_mm, z_mm)).distance(new Point3d(0, 0, 0))
 
       val SeriesInstanceUID = runReq.epidList.head.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString
@@ -289,9 +237,9 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
             xAdjusted_mm = Some(x),
             yAdjusted_mm = Some(y),
             zAdjusted_mm = Some(z),
-            tableXlateral_mm = Some(bbByEPIDList.head.tableXlateral_mm - c.tableXlateral_mm),
-            tableYvertical_mm = Some(bbByEPIDList.head.tableYvertical_mm - c.tableYvertical_mm),
-            tableZlongitudinal_mm = Some(bbByEPIDList.head.tableZlongitudinal_mm - c.tableZlongitudinal_mm))
+            tableXlateral_mm = Some(epidResultList.head.bbByEpid.tableXlateral_mm - c.tableXlateral_mm),
+            tableYvertical_mm = Some(epidResultList.head.bbByEpid.tableYvertical_mm - c.tableYvertical_mm),
+            tableZlongitudinal_mm = Some(epidResultList.head.bbByEpid.tableZlongitudinal_mm - c.tableZlongitudinal_mm))
         } else bbByEPIDComposite
       }
 
@@ -308,23 +256,16 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
     try {
       logger.info("Starting analysis of EPID Alignment for machine " + extendedData.machine.id)
 
-      val bbLocList = runReq.epidList.par.map(epid => BBbyEPIDImageAnalysis.findBB(epid)).toList
+      val bbLocList = runReq.epidList.par.map(epid => BBbyEPIDImageAnalysis.findBB(epid, extendedData.output.outputPK.get)).toList
 
-      if (true) { // TODO rm
-        val j = bbLocList.filter(_.isRight).map(bl => bl.right.get)
-        val jj = j.map(r => "angle: " + Util.gantryAngle(r.al).toString + "     iso: " + r.iso + "     pix: " + r.pix).mkString("\n")
-        Trace.trace(jj)
-      }
+      //  bbLocList.map(bbl => if (bbl.isLeft) Left(bbl.left.get) else (
 
-      val resultList = bbLocList.filter(er => er.isRight).map(er => er.right.get)
-      val epidResultList = resultList.map(result => (toBBbyEPID(result.al, result.iso, extendedData), result))
-      val epidList = epidResultList.map(er => er._1)
-
-      logger.info("Inserting EPID records into database")
-      BBbyEPID.insertSeq(epidResultList.map(er => er._1))
+      val successList = bbLocList.filter(_.isRight).map(r => r.right.get) // list of bb's that were successfully found.
+      logger.info("Inserting " + successList.size + " BBbyEPID records into database")
+      BBbyEPID.insertSeq(successList.map(_.bbByEpid))
 
       logger.info("Calculating composite result.")
-      val bbByEPIDComposite = constructComposite(epidResultList, extendedData, runReq, response) // TODO this can fail if BB not found
+      val bbByEPIDComposite = constructComposite(successList, extendedData, runReq, response) // TODO this can fail if BB not found
       if (bbByEPIDComposite.isRight) {
         logger.info("Inserting composite EPID record into database: " + bbByEPIDComposite.right.get)
         bbByEPIDComposite.right.get._1.insert
@@ -333,7 +274,7 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
 
       val procedureStatus = if (bbByEPIDComposite.isRight) ProcedureStatus.done else ProcedureStatus.fail
 
-      BBbyEPIDHTML.generateHtml(extendedData, epidList, bbByEPIDComposite, runReq, ProcedureStatus.done) // TODO status should be real
+      BBbyEPIDHTML.generateHtml(extendedData, bbLocList, bbByEPIDComposite, runReq, ProcedureStatus.done) // TODO status should be real
       logger.info("Finished analysis of EPID Alignment for machine " + extendedData.machine.id)
       ProcedureStatus.done
     } catch {

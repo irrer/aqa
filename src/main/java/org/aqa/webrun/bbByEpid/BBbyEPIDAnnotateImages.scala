@@ -18,28 +18,34 @@ import java.awt.BasicStroke
 import edu.umro.ScalaUtil.DicomUtil
 import java.text.SimpleDateFormat
 import java.awt.Polygon
+import javax.vecmath.Point2i
 
 /**
  * Create user friendly images and annotate them.
  */
-class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.Double], description: Option[String]) {
+class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.Double], description: Option[String], bbCenter_pix: Option[Point2d]) {
 
-  val bbLoc_mmIso = {
-    if (bbLoc_mmGantry.isDefined) {
-      Some(new Point2D.Double(bbLoc_mmGantry.get.getX, -bbLoc_mmGantry.get.getY))
-    } else
-      None
+  private val trans = new IsoImagePlaneTranslator(al)
+  val gantryAngleRounded = Util.angleRoundedTo90(Util.gantryAngle(al))
+  //val ga = "gantry angle: " + gantryAngleRounded.formatted("%3d") // TODO rm
+
+  private def d2D(d: Point2d) = new Point2D.Double(d.getX, d.getY)
+
+  private val bbLoc_mmIso = {
+    if (bbCenter_pix.isDefined) Some(trans.pix2Iso(d2D(bbCenter_pix.get)))
+    else None
   }
+
+  private val planCenter_pix = trans.caxCenter_pix
+  //Trace.trace(ga + "   bbCenter_pix: " + bbCenter_pix + "    caxCenter_pix: " + planCenter_pix + "    diff: " + (bbCenter_pix.get.getX - planCenter_pix.getX) + ", " + (bbCenter_pix.get.getY - planCenter_pix.getY))
 
   private val textPointSize = 30
 
   private def d2i(d: Double) = d.round.toInt
 
-  // the circle drawn around the BB should be this many times its size
+  // The circle drawn around the BB should be this many times the BB's size
   private val circleRadiusScale = 2.0
 
-  private val trans = new IsoImagePlaneTranslator(al)
-  private def bbLoc_pix = trans.iso2Pix(bbLoc_mmIso.get) // location of BB in pixels
   private val fullImage = new DicomImage(al)
   private val radius_pix = trans.iso2PixDistX(Config.EPIDBBPenumbra_mm) // radius of the BB in pixels
 
@@ -61,14 +67,14 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
    *
    *  @scale Scale of bufImage compared to original
    */
-  private def drawCircleWithXAtCenterOfBB(offset: Point2D.Double, bufImage: BufferedImage, scale: Int) = {
-    if (bbLoc_mmIso.isDefined) {
+  private def drawCircleWithXAtCenterOfBB(offset: Point2d, bufImage: BufferedImage, scale: Int) = {
+    if (bbCenter_pix.isDefined) {
       val graphics = ImageUtil.getGraphics(bufImage)
       graphics.setColor(Color.white)
       ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
 
-      val psX = ((bbLoc_pix.getX - offset.getX + 0.5) * scale)
-      val psY = ((bbLoc_pix.getY - offset.getY + 0.5) * scale)
+      val psX = Util.scalePixel(scale, bbCenter_pix.get.getX - offset.getX)
+      val psY = Util.scalePixel(scale, bbCenter_pix.get.getY - offset.getY)
       val x = psX - circleRadius_pix(scale)
       val y = psY - circleRadius_pix(scale)
       val w = circleRadius_pix(scale) * 2
@@ -88,9 +94,9 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
         d2i(psX + lineOffset), d2i(psY - lineOffset),
         d2i(psX - lineOffset), d2i(psY + lineOffset))
 
-      ImageText.drawTextCenteredAt(graphics, psX, y - circleRadius_pix(scale), "X is BB center")
+      ImageText.drawTextCenteredAt(graphics, psX, y - circleRadius_pix(scale) - 2 * textPointSize, "X is BB center")
 
-      ImageText.drawTextCenteredAt(graphics, psX, y - circleRadius_pix(scale) + textPointSize, offsetText)
+      ImageText.drawTextCenteredAt(graphics, psX, y - circleRadius_pix(scale) - textPointSize, offsetText)
     }
   }
 
@@ -99,9 +105,11 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
    *
    * @param center Center of + in pixels, not scaled.
    */
-  private def drawCirclesAtCenterOfPlan(center: Point2D.Double, bufImage: BufferedImage, scale: Int) = {
-    val scaledCenter = new Point2d(center.getX, center.getY)
-    scaledCenter.scale(scale)
+  private def drawCirclesAtCenterOfPlan(offset: Point2d, bufImage: BufferedImage, scale: Int) = {
+
+    val planCenterOffsetAndScaled_pix = new Point2D.Double(
+      Util.scalePixel(scale, planCenter_pix.getX - offset.getX),
+      Util.scalePixel(scale, planCenter_pix.getY - offset.getY))
 
     val graphics = ImageUtil.getGraphics(bufImage)
     graphics.setColor(Color.red)
@@ -109,8 +117,8 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
     val radius = scale * 2
     val skip = 2
     val diam = radius * 2
-    val xi = d2i(center.getX * scale)
-    val yi = d2i(center.getY * scale)
+    val xi = d2i(planCenterOffsetAndScaled_pix.getX)
+    val yi = d2i(planCenterOffsetAndScaled_pix.getY)
 
     graphics.drawLine(xi - radius, yi, xi - skip, yi)
     graphics.drawLine(xi + skip, yi, xi + radius, yi)
@@ -131,7 +139,6 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
       poly.addPoint(xi, yi - radius + len)
       poly.addPoint(xi + 1, yi - radius + len)
       poly.addPoint(xi + thickness, yi - radius)
-      Trace.trace(poly)
       graphics.fill(poly)
     }
 
@@ -142,7 +149,6 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
       poly.addPoint(xi, yi + radius - len)
       poly.addPoint(xi + 1, yi + radius - len)
       poly.addPoint(xi + thickness, yi + radius)
-      Trace.trace(poly)
       graphics.fill(poly)
     }
 
@@ -153,7 +159,6 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
       poly.addPoint(xi - radius + len, yi)
       poly.addPoint(xi - radius + len, yi + 1)
       poly.addPoint(xi - radius, yi + thickness)
-      Trace.trace(poly)
       graphics.fill(poly)
     }
 
@@ -164,7 +169,6 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
       poly.addPoint(xi + radius - len, yi)
       poly.addPoint(xi + radius - len, yi + 1)
       poly.addPoint(xi + radius, yi + thickness)
-      Trace.trace(poly)
       graphics.fill(poly)
     }
 
@@ -178,30 +182,60 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
     /** Magnify the image by this scale. */
     val scale = 4
 
-    val fullSize = ImageUtil.magnify(fullImage.toDeepColorBufferedImage(0.05), scale)
-    Config.applyWatermark(fullSize)
+    val fullSize =
+      if (false)
+        ImageUtil.magnify(fullImage.toDeepColorBufferedImage(0.05), scale) // makes color image
+      else {
+        // use the pixels near the BB to determine the windowing and leveling of the greyscale image.
+        val dist = 15
+        // If the BB is defined, then use the area around it.  if it is not defined, the use the middle of the image.
+        val center = {
+          val c = if (bbCenter_pix.isDefined) d2D(bbCenter_pix.get) else trans.iso2Pix(0, 0)
+          new Point2i(c.getX.round.toInt, c.getY.round.toInt)
+        }
+        val pixList = for (
+          x <- (center.getX - dist until center.getX + dist);
+          y <- (center.getY - dist until center.getY + dist)
+        ) yield fullImage.get(x, y)
 
-    drawCircleWithXAtCenterOfBB(new Point2D.Double(0, 0), fullSize, scale)
-    drawCirclesAtCenterOfPlan(trans.caxCenter_pix, fullSize, scale)
+        val min = pixList.min
+        val max = pixList.max
+        // use the remaining color depth to allow the proper rendering of pixels brighter and dimmer than the allowed range.
+        val outside = (255 - (max - min)) / 2
+        ImageUtil.magnify(fullImage.toBufferedImage(ImageUtil.rgbColorMap(Config.EPIDImageColor), min - outside, max + outside), scale)
+      }
+
+    putAngleDateTime(fullSize, 2)
+    Config.applyWatermark(fullSize)
+    drawCircleWithXAtCenterOfBB(new Point2d(0, 0), fullSize, scale)
+    drawCirclesAtCenterOfPlan(new Point2d(0, 0), fullSize, scale)
     fullSize
   }
 
-  private def putDateTime(bufImage: BufferedImage) = {
-    val graphics = ImageUtil.getGraphics(bufImage)
+  // get the date and time via either the Content or AcquisitionF
+  val dateOpt = {
+    val dateTimeList = Seq(
+      (TagFromName.ContentDate, TagFromName.ContentTime),
+      (TagFromName.AcquisitionDate, TagFromName.AcquisitionTime))
+    val dateTime = dateTimeList.map(dt => DicomUtil.getTimeAndDate(al, dt._1, dt._2)).flatten.headOption
+    dateTime
+  }
 
-    val dateOpt = DicomUtil.getTimeAndDate(al, TagFromName.ContentDate, TagFromName.ContentTime)
+  private def putAngleDateTime(bufImage: BufferedImage, fontScale: Int = 1) = {
+    val graphics = ImageUtil.getGraphics(bufImage)
+    val fontSize = textPointSize * fontScale
+
     if (dateOpt.isDefined) {
       val date = dateOpt.get
-      val angle = Util.angleRoundedTo90(al.get(TagFromName.GantryAngle).getDoubleValues()(0))
-      val dateFormat = new SimpleDateFormat("m/d/yyyy H:mm")
-      val text = "G" + angle + " - " + dateFormat.format(date)
+      val dateFormat = new SimpleDateFormat("M/d/yyyy H:mm:ss")
+      val text = "G" + gantryAngleRounded + "   " + dateFormat.format(date)
+      ImageText.setFont(graphics, ImageText.DefaultFont, fontSize)
       val dim = ImageText.getTextDimensions(graphics, text)
 
-      ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
       graphics.setColor(Color.black)
-      graphics.fillRect(0, 0, dim.getWidth.toInt, dim.getHeight.toInt)
+      graphics.fillRect(0, 0, dim.getWidth.toInt + fontSize * 2, dim.getHeight.toInt)
       graphics.setColor(Color.white)
-      graphics.drawString(text, textPointSize, textPointSize)
+      graphics.drawString(text, fontSize, fontSize)
     }
   }
 
@@ -209,23 +243,14 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
     /** Magnify the image by this scale. */
     val scale = 32
 
-    // defines how much area around the bb should be used to make the close up image
-    val closeupScale = 10.0
-    val closeup_mm = Config.EPIDBBPenumbra_mm * closeupScale
+    // defines how much area around the bb should be used to make the close up image specified as a multiple of the bb size.
+    val closeupArea = 10.0
+    val closeup_mm = Config.EPIDBBPenumbra_mm * closeupArea
 
     // position of upper left corner of close up image in pixel coordinates
     val upperLeftCorner = {
-      if (bbLoc_mmIso.isDefined) {
-        trans.iso2Pix(bbLoc_mmIso.get.getX - closeup_mm, bbLoc_mmIso.get.getY - closeup_mm)
-      } else {
-        // if no BB found, then just make a close up of the center of the image
-        trans.iso2Pix(-closeup_mm, -closeup_mm)
-      }
-    }
-
-    val center = {
-      val pixCenter = trans.iso2Pix(-trans.caxCenter_iso.getX, trans.caxCenter_iso.getY) // TODO experimental
-      new Point2D.Double((pixCenter.getX - upperLeftCorner.getX), (pixCenter.getY - upperLeftCorner.getY))
+      val p = trans.iso2Pix(trans.caxCenter_iso.getX - closeup_mm, trans.caxCenter_iso.getY - closeup_mm)
+      new Point2d(p.getX, p.getY)
     }
 
     // define rectangle for copying just the middle of the image
@@ -238,16 +263,16 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
     }
 
     val closeupImage = ImageUtil.magnify(fullImage.getSubimage(closeupRect).toBufferedImage(Config.EPIDImageColor), scale)
-    putDateTime(closeupImage)
+    putAngleDateTime(closeupImage)
     Config.applyWatermark(closeupImage)
 
     drawCircleWithXAtCenterOfBB(upperLeftCorner, closeupImage, scale)
-    drawCirclesAtCenterOfPlan(center, closeupImage, scale)
+    drawCirclesAtCenterOfPlan(upperLeftCorner, closeupImage, scale)
 
     closeupImage
   }
 
-  val fullBufImg = makeFullBufImg
   val closeupBufImg = makeCloseupBufImg
+  val fullBufImg = makeFullBufImg
 
 }

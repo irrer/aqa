@@ -6,6 +6,7 @@ import com.pixelmed.dicom.AttributeList
 import org.aqa.Config
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import org.aqa.webrun.ExtendedData
 import java.awt.Rectangle
 import edu.umro.ImageUtil.ImageUtil
 import javax.vecmath.Point2i
@@ -13,6 +14,11 @@ import org.aqa.Util
 import javax.vecmath.Point2d
 import edu.umro.ImageUtil.LocateMax
 import edu.umro.ScalaUtil.Trace
+import org.aqa.db.BBbyEPID
+import java.awt.geom.Point2D
+import com.pixelmed.dicom.AttributeTag
+import javax.vecmath.Point3d
+import com.pixelmed.dicom.TagFromName
 
 /**
  * Locate the BB in the EPID image.  The following steps are taken:
@@ -40,8 +46,71 @@ object BBbyEPIDImageAnalysis extends Logging {
    *
    * @param iso: Coordinates of center of BB in DICOM gantry space.
    *
+   * @param bbByEpid: Database representation.
+   *
    */
-  case class Result(pix: Point2d, al: AttributeList, iso: Point2d);
+  case class Result(pix: Point2d, al: AttributeList, iso: Point2d, bbByEpid: BBbyEPID) {
+    def AlOf = al
+  }
+
+  case class FailedResult(error: String, al: AttributeList) {
+    def AlOf = al
+  }
+
+  /** Convenience function for getting the attribute list of a result. */
+  def alOf(r: Either[FailedResult, Result]): AttributeList = if (r.isLeft) r.left.get.al else r.right.get.al
+
+  /**
+   * Translate BB position in ISO plane to RTPLAN coordinates
+   *
+   * @param epid EPID DICOM
+   *
+   * @param bbLocation in EPID translated to mm in DICOM gantry coordinates.
+   *
+   * @param extendedData Associated DB rows
+   */
+  private def toBBbyEPID(epid: AttributeList, bbLocation: Point2d, outputPK: Long): BBbyEPID = {
+    val gantryAngle_deg = Util.gantryAngle(epid)
+    val gantryAngle_rad = Math.toRadians(gantryAngle_deg)
+
+    /**
+     * EPID offset in the isoplane in mm.
+     */
+    val epidOffset = {
+      val isoCenter = (new IsoImagePlaneTranslator(epid)).caxCenter_iso
+      new Point2D.Double(-isoCenter.getX, isoCenter.getY)
+    }
+
+    logger.info("gantryAngle_deg: " + gantryAngle_deg)
+    logger.info("Using XRayImageReceptorTranslation in isoplane in mm of: " + epidOffset)
+    logger.info("bbLocation in isoplane in mm: " + bbLocation)
+
+    val epid3DX_mm = Math.cos(gantryAngle_rad) * (bbLocation.getX + epidOffset.getX)
+    val epid3DY_mm = Math.sin(gantryAngle_rad) * (bbLocation.getX + epidOffset.getX)
+    val epid3DZ_mm = bbLocation.getY + epidOffset.getY
+    val origin = new Point3d(0, 0, 0)
+
+    def getDbl(tag: AttributeTag) = epid.get(tag).getDoubleValues.head
+
+    val bbByEPID = new BBbyEPID(
+      bbByEPIDPK = None,
+      outputPK = outputPK,
+      // rtplanSOPInstanceUID = rtplanSOP,
+      epidSOPInstanceUid = Util.sopOfAl(epid),
+      offset_mm = (new Point3d(epid3DX_mm, epid3DY_mm, epid3DZ_mm)).distance(origin),
+      gantryAngle_deg = gantryAngle_deg,
+      status = ProcedureStatus.done.toString,
+      epidImageX_mm = bbLocation.getX,
+      epidImageY_mm = bbLocation.getY,
+      epid3DX_mm, epid3DY_mm, epid3DZ_mm,
+      getDbl(TagFromName.TableTopLateralPosition), // tableXlateral_mm
+      getDbl(TagFromName.TableTopVerticalPosition), // tableYvertical_mm
+      getDbl(TagFromName.TableTopLongitudinalPosition)) // tableZlongitudinal_mm
+
+    logger.info("constructed BBbyEPID: " + BBbyEPID)
+
+    bbByEPID
+  }
 
   private val subProcedureName = "BB by EPID"
 
@@ -68,7 +137,7 @@ object BBbyEPIDImageAnalysis extends Logging {
    *
    * @return Position of BB in mm in the isoplane.
    */
-  def findBB(al: AttributeList): Either[String, Result] = {
+  def findBB(al: AttributeList, outputPK: Long): Either[FailedResult, Result] = {
     val wholeImage = new DicomImage(al)
     val trans = new IsoImagePlaneTranslator(al)
     // Using a sub-area eliminates the need for having to deal with other objects, such as the couch rails.
@@ -104,6 +173,24 @@ object BBbyEPIDImageAnalysis extends Logging {
     }
 
     val inOut = pixList.groupBy(p => bbCorePix.contains(p))
+
+    //    /**
+    //     * Put a white pixel at the center of the BB and write a png file.  This is for
+    //     * debugging to verify that the bb is found in the expected position.
+    //     */
+    //    def saveImage(bbCenter_pix: Point2d) = {
+    //
+    //      val ga = Util.angleRoundedTo90(Util.gantryAngle(al))
+    //
+    //      val name = ga.formatted("%03d") + "_" + Util.sopOfAl(al) + ".png"
+    //      val dir = new java.io.File("""D:\tmp\j16""")
+    //      val pngFile = new java.io.File(dir, name)
+    //
+    //      val dicomImage = new DicomImage(al)
+    //      val buf = dicomImage.toDeepColorBufferedImage(0.005)
+    //      buf.setRGB(bbCenter_pix.getX.round.toInt, bbCenter_pix.getY.round.toInt, 0xffffff)
+    //      Util.writePng(buf, pngFile)
+    //    }
 
     /**
      * Get the list of pixels that are in the BB by finding the largest that are adjacent to the core pixels.
@@ -142,11 +229,12 @@ object BBbyEPIDImageAnalysis extends Logging {
       val sdCol = ImageUtil.stdDev(col)
       val sdRow = ImageUtil.stdDev(row)
 
-      println("xMax: " + xMax + " sd: " + sdCol + "    mean: " + (col.sum / col.size))
-      println("yMax: " + yMax + " sd: " + sdRow + "    mean: " + (row.sum / row.size))
+      println("gantry angle: " + Util.gantryAngle(al).toInt + "   xMax: " + xMax + " sd: " + sdCol + "    mean: " + (col.sum / col.size))
+      println("gantry angle: " + Util.gantryAngle(al).toInt + "   yMax: " + yMax + " sd: " + sdRow + "    mean: " + (row.sum / row.size))
     }
 
     val bbCenter_pix = new Point2d(xPos_pix, yPos_pix)
+    //    saveImage(bbCenter_pix) // for debug only
     val bbCenter_mm = trans.pix2Iso(xPos_pix, yPos_pix)
 
     val valid = {
@@ -161,12 +249,14 @@ object BBbyEPIDImageAnalysis extends Logging {
     }
 
     if (valid) {
-      val result = new Result(bbCenter_pix, al, new Point2d(bbCenter_mm.getX, -bbCenter_mm.getY)) // Convert Y to DICOM gantry coordinate system
+      val bbLocation = new Point2d(bbCenter_mm.getX, -bbCenter_mm.getY)
+      val result = new Result(bbCenter_pix, al, bbLocation, toBBbyEPID(al, bbLocation, outputPK)) // Convert Y to DICOM gantry coordinate system
+      Trace.trace("find. gantry angle: " + Util.angleRoundedTo90(Util.gantryAngle(al)).formatted("%3d") + "     bbCenter_pix: " + Util.fmtDbl(bbCenter_pix.getX) + ", " + Util.fmtDbl(bbCenter_pix.getY))
       Right(result)
     } else {
       val msg = "Failed to find image of BB in EPID image with sufficient contrast to background. for gantry angle " + Util.gantryAngle(al)
       logger.warn(msg)
-      Left(msg)
+      Left(new FailedResult(msg, al))
     }
   }
 
