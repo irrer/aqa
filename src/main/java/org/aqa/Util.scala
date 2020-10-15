@@ -1180,4 +1180,11 @@ object Util extends Logging {
       d2i(largeRadius * 2), d2i(largeRadius * 2))
   }
 
+  /**
+   * Scale a pixel coordinate by the given scale to produce a scaled coordinate in pixel space.
+   */
+  def scalePixel(scale: Int, pix: Double): Double = {
+    scale * (pix + 0.5) - 0.5
+  }
+
 }
