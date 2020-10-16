@@ -265,7 +265,7 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
       BBbyEPID.insertSeq(successList.map(_.bbByEpid))
 
       logger.info("Calculating composite result.")
-      val bbByEPIDComposite = constructComposite(successList, extendedData, runReq, response) // TODO this can fail if BB not found
+      val bbByEPIDComposite = constructComposite(successList, extendedData, runReq, response)
       if (bbByEPIDComposite.isRight) {
         logger.info("Inserting composite EPID record into database: " + bbByEPIDComposite.right.get)
         bbByEPIDComposite.right.get._1.insert
@@ -274,7 +274,7 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
 
       val procedureStatus = if (bbByEPIDComposite.isRight) ProcedureStatus.done else ProcedureStatus.fail
 
-      BBbyEPIDHTML.generateHtml(extendedData, bbLocList, bbByEPIDComposite, runReq, ProcedureStatus.done) // TODO status should be real
+      BBbyEPIDHTML.generateHtml(extendedData, bbLocList, bbByEPIDComposite, runReq, ProcedureStatus.done)
       logger.info("Finished analysis of EPID Alignment for machine " + extendedData.machine.id)
       ProcedureStatus.done
     } catch {

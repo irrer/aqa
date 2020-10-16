@@ -203,7 +203,19 @@ object BBbyEPIDHTML {
         val file = new File(extendedData.output.dir, fileName)
         Util.writeFile(file, text)
 
-        <a href={ fileName } title={ "View / download DICOM for gantry angle " + gantryAngle }>View DICOM</a>
+        val desc = { if (description.isDefined) { <br> { description.get } </br> } else <span/> }
+
+        val date = {
+          BBbyEPIDAnnotateImages.epidDateText(al) match {
+            case Some(d) => <br>{ d }</br>
+            case _ => <span/>
+          }
+        }
+
+        <div>
+          <a href={ fileName } title={ "View / download DICOM for gantry angle " + gantryAngle }>View DICOM</a>
+          { desc }{ date }
+        </div>
       }
 
       val html: Elem = {

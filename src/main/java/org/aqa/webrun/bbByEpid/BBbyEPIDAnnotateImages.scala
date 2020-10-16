@@ -19,6 +19,19 @@ import edu.umro.ScalaUtil.DicomUtil
 import java.text.SimpleDateFormat
 import java.awt.Polygon
 import javax.vecmath.Point2i
+import org.aqa.OrientationWatermark
+
+object BBbyEPIDAnnotateImages {
+  // get the date and time via either the Content or AcquisitionF
+  def epidDateText(attrList: AttributeList): Option[String] = {
+    val dateTimeList = Seq(
+      (TagFromName.ContentDate, TagFromName.ContentTime),
+      (TagFromName.AcquisitionDate, TagFromName.AcquisitionTime))
+    val dateTime = dateTimeList.map(dt => DicomUtil.getTimeAndDate(attrList, dt._1, dt._2)).flatten.headOption
+    val dateFormat = new SimpleDateFormat("M/d/yyyy H:mm:ss")
+    if (dateTime.isDefined) Some(dateFormat.format(dateTime.get)) else None
+  }
+}
 
 /**
  * Create user friendly images and annotate them.
@@ -27,7 +40,6 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
 
   private val trans = new IsoImagePlaneTranslator(al)
   val gantryAngleRounded = Util.angleRoundedTo90(Util.gantryAngle(al))
-  //val ga = "gantry angle: " + gantryAngleRounded.formatted("%3d") // TODO rm
 
   private def d2D(d: Point2d) = new Point2D.Double(d.getX, d.getY)
 
@@ -57,6 +69,16 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
   }
 
   private def circleRadius_pix(scale: Int) = radius_pix * circleRadiusScale * scale
+
+  private def applyOrientationWatermark(image: BufferedImage) = {
+    gantryAngleRounded match {
+      case 0 => OrientationWatermark.mark(OrientationWatermark.Frontal, image)
+      case 90 => OrientationWatermark.mark(OrientationWatermark.SagittalLeft, image)
+      case 180 => OrientationWatermark.mark(OrientationWatermark.Posterior, image)
+      case 270 => OrientationWatermark.mark(OrientationWatermark.SagittalRight, image)
+      case _ =>
+    }
+  }
 
   /**
    *  draw a circle with an X in it centered around the BB
@@ -205,30 +227,23 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
         ImageUtil.magnify(fullImage.toBufferedImage(ImageUtil.rgbColorMap(Config.EPIDImageColor), min - outside, max + outside), scale)
       }
 
-    putAngleDateTime(fullSize, 2)
+    putGantryAngleAndDateAndTime(fullSize, 2)
     Config.applyWatermark(fullSize)
+    applyOrientationWatermark(fullSize)
     drawCircleWithXAtCenterOfBB(new Point2d(0, 0), fullSize, scale)
     drawCirclesAtCenterOfPlan(new Point2d(0, 0), fullSize, scale)
     fullSize
   }
 
-  // get the date and time via either the Content or AcquisitionF
-  val dateOpt = {
-    val dateTimeList = Seq(
-      (TagFromName.ContentDate, TagFromName.ContentTime),
-      (TagFromName.AcquisitionDate, TagFromName.AcquisitionTime))
-    val dateTime = dateTimeList.map(dt => DicomUtil.getTimeAndDate(al, dt._1, dt._2)).flatten.headOption
-    dateTime
-  }
+  private val dateOpt = BBbyEPIDAnnotateImages.epidDateText(al)
 
-  private def putAngleDateTime(bufImage: BufferedImage, fontScale: Int = 1) = {
+  private def putGantryAngleAndDateAndTime(bufImage: BufferedImage, fontScale: Int = 1) = {
     val graphics = ImageUtil.getGraphics(bufImage)
     val fontSize = textPointSize * fontScale
 
     if (dateOpt.isDefined) {
       val date = dateOpt.get
-      val dateFormat = new SimpleDateFormat("M/d/yyyy H:mm:ss")
-      val text = "G" + gantryAngleRounded + "   " + dateFormat.format(date)
+      val text = "G" + gantryAngleRounded + "   " + dateOpt.get
       ImageText.setFont(graphics, ImageText.DefaultFont, fontSize)
       val dim = ImageText.getTextDimensions(graphics, text)
 
@@ -263,8 +278,9 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
     }
 
     val closeupImage = ImageUtil.magnify(fullImage.getSubimage(closeupRect).toBufferedImage(Config.EPIDImageColor), scale)
-    putAngleDateTime(closeupImage)
+    putGantryAngleAndDateAndTime(closeupImage)
     Config.applyWatermark(closeupImage)
+    applyOrientationWatermark(closeupImage)
 
     drawCircleWithXAtCenterOfBB(upperLeftCorner, closeupImage, scale)
     drawCirclesAtCenterOfPlan(upperLeftCorner, closeupImage, scale)

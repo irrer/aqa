@@ -20,6 +20,7 @@ import javax.vecmath.Point2d
 import javax.imageio.ImageIO
 import edu.umro.ImageUtil.Watermark
 import java.text.SimpleDateFormat
+import org.aqa.OrientationWatermark
 
 object BBbyCBCTAnnotateImages extends Logging {
 
@@ -304,18 +305,7 @@ object BBbyCBCTAnnotateImages extends Logging {
       resizedList
     }
 
-    def applyOrientationLegend(image: BufferedImage, label: String, pngFileName: String, pctWidth: Double, top: String, bottom: String, left: String, right: String) = {
-
-      def applyLegend = {
-        val file = new File(Config.imageDirFile, pngFileName)
-        try {
-          val legend = ImageIO.read(file)
-          val watermark = new Watermark(legend, false, true, pctWidth, 50.0)
-          watermark.mark(image)
-        } catch {
-          case t: Throwable => logger.warn("Unable to apply watermark with file " + file.getAbsolutePath)
-        }
-      }
+    def applyOrientationLegend(image: BufferedImage, label: String, ow: OrientationWatermark.Value, top: String, bottom: String, left: String, right: String) = {
 
       def label4sides = {
         val graphics = ImageUtil.getGraphics(image)
@@ -339,18 +329,18 @@ object BBbyCBCTAnnotateImages extends Logging {
         graphics.drawString(text, 3, pointSize)
       }
 
-      applyLegend
+      OrientationWatermark.mark(ow, image)
       label4sides
       applyLabel
     }
 
-    applyOrientationLegend(imageList(0), "Sagittal", "HumanSagittal.png", 5.0, "H", "F", "P", "A")
-    applyOrientationLegend(imageList(1), "Frontal", "HumanFrontal.png", 10.0, "H", "F", "R", "L")
-    applyOrientationLegend(imageList(2), "Transversal", "HumanTransversal.png", 10.0, "A", "P", "R", "L")
+    applyOrientationLegend(imageList(0), "Sagittal", OrientationWatermark.SagittalRight, "H", "F", "P", "A")
+    applyOrientationLegend(imageList(1), "Frontal", OrientationWatermark.Frontal, "H", "F", "R", "L")
+    applyOrientationLegend(imageList(2), "Transversal", OrientationWatermark.Transversal, "A", "P", "R", "L")
 
-    applyOrientationLegend(aoiList(0), "Sagittal", "HumanSagittal.png", 5.0, "H", "F", "P", "A")
-    applyOrientationLegend(aoiList(1), "Frontal", "HumanFrontal.png", 10.0, "H", "F", "R", "L")
-    applyOrientationLegend(aoiList(2), "Transversal", "HumanTransversal.png", 10.0, "A", "P", "R", "L")
+    applyOrientationLegend(aoiList(0), "Sagittal", OrientationWatermark.SagittalRight, "H", "F", "P", "A")
+    applyOrientationLegend(aoiList(1), "Frontal", OrientationWatermark.Frontal, "H", "F", "R", "L")
+    applyOrientationLegend(aoiList(2), "Transversal", OrientationWatermark.Transversal, "A", "P", "R", "L")
 
     val imageSet = new ImageSet(imageList, aoiList)
 
