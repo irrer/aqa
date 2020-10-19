@@ -22,6 +22,7 @@ import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Procedure
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
+import org.aqa.db.MachineDailyQA
 
 object DailyQAHTML extends Logging {
 
@@ -55,8 +56,6 @@ object DailyQAHTML extends Logging {
 
     def fmtAngle(angle: Double) = angle.formatted("%12.8f").trim
 
-    var machinePassed = true
-
     case class Col(name: String, title: String, toElem: (BBbyEPIDComposite.DailyDataSetComposite) => Elem) {
       def toHeader = <th title={ title }>{ name }</th>
     }
@@ -67,19 +66,21 @@ object DailyQAHTML extends Logging {
     val styleWarn = "color: #000000; background: yellow;"
     val col0Title = "Machine Name"
 
-    val outOfToleranceTitle = " is out of tolerance for the " + Config.DailyQATolerance_mm + " mm limit"
-
     def colMachine(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val machElem = wrapAlias(dataSet.machine.id)
-      if (machinePassed) {
+
+      if (ProcedureStatus.eq(dataSet.status, ProcedureStatus.pass)) {
         <td title={ col0Title } style={ stylePass }><h4>{ machElem }<br/>Pass</h4></td>
       } else {
-        <td class="danger" title={ "At least one value is out of tolerance" } style={ styleFail }><h4>{ machElem }<br/>Fail</h4></td>
+        if (ProcedureStatus.eq(dataSet.status, ProcedureStatus.warning)) {
+          <td class="warning" title={ "At least one value is close to being out of tolerance" } style={ styleWarn }><h4>{ machElem }<br/>Warning</h4></td>
+        } else {
+          <td class="danger" title={ "At least one value is completely out of tolerance" } style={ styleFail }><h4>{ machElem }<br/>Fail</h4></td>
+        }
       }
     }
 
     def colPatient(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      " is out of tolerance of the " + Config.DailyQATolerance_mm + " mm limit"
 
       val patientName: Elem = DicomSeries.getBySeriesInstanceUID(dataSet.composite.epidSeriesInstanceUID).headOption match {
         case Some(ds) => {
@@ -91,12 +92,13 @@ object DailyQAHTML extends Logging {
       patientName
     }
 
-    def posnRow(posn: Double): Elem = {
+    def posnRow(posn: Double, machineDailyQA: MachineDailyQA): Elem = {
       val text = posn.formatted("%7.2f").trim
       val title = posn.formatted("%12.6f").trim
-      if (posn.abs > Config.DailyQATolerance_mm) {
-        machinePassed = false
-        <td class="danger" title={ title + outOfToleranceTitle }>{ text }</td>
+      if (posn.abs > machineDailyQA.warningLimit_mm) {
+        <td class="danger" title={ title + " is above warning limit of " + machineDailyQA.warningLimit_mm + " mm" }>{ text }</td>
+      } else if (posn.abs > machineDailyQA.passLimit_mm) {
+        <td class="warning" title={ title + " is above pass limit of " + machineDailyQA.passLimit_mm + " mm but below warning limit of " + machineDailyQA.warningLimit_mm + " mm" }>{ text }</td>
       } else {
         <td title={ title }>{ text }</td>
       }
@@ -114,11 +116,16 @@ object DailyQAHTML extends Logging {
       val text = x.formatted("%7.2f").trim + ", " + y.formatted("%7.2f").trim + ", " + z.formatted("%7.2f").trim
       val title = x.formatted("%12.6f").trim + ", " + y.formatted("%12.6f").trim + ", " + z.formatted("%12.6f").trim
 
-      if ((x.abs > Config.DailyQATolerance_mm) || (y.abs > Config.DailyQATolerance_mm) || (z.abs > Config.DailyQATolerance_mm)) {
-        machinePassed = false
-        <td class="danger" title={ title + outOfToleranceTitle }>{ text }</td>
+      def exceeds(limit: Double) = (x.abs > limit) || (y.abs > limit) || (z.abs > limit)
+
+      if (exceeds(dataSet.machineDailyQA.warningLimit_mm)) {
+        <td class="danger" title={ title + " exceeded warning limit of " + dataSet.machineDailyQA.warningLimit_mm + " mm" }>{ text }</td>
       } else {
-        <td title={ title }>{ text }</td>
+        if (exceeds(dataSet.machineDailyQA.passLimit_mm)) {
+          <td class="warning" title={ title + " exceeded pass limit of " + dataSet.machineDailyQA.passLimit_mm + " mm but below warning limit of " + dataSet.machineDailyQA.warningLimit_mm + " mm" }>{ text }</td>
+        } else {
+          <td title={ title }>{ text }</td>
+        }
       }
     }
 
@@ -138,12 +145,12 @@ object DailyQAHTML extends Logging {
     }
 
     def colVertXCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      posnRow(dataSet.composite.xAdjusted_mm.get)
+      posnRow(dataSet.composite.xAdjusted_mm.get, dataSet.machineDailyQA)
     }
 
     def colVertZCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val offset = dataSet.vertList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ
-      posnRow(offset)
+      posnRow(offset, dataSet.machineDailyQA)
     }
 
     def colHorzGantryAngle(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
@@ -152,16 +159,16 @@ object DailyQAHTML extends Logging {
     }
 
     def colHorzYCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      posnRow(dataSet.composite.yAdjusted_mm.get)
+      posnRow(dataSet.composite.yAdjusted_mm.get, dataSet.machineDailyQA)
     }
 
     def colHorzZCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val offset = dataSet.horzList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ
-      posnRow(offset)
+      posnRow(offset, dataSet.machineDailyQA)
     }
 
     def colEpidPlanCbct(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      if (dataSet.composite.offsetAdjusted_mm.isDefined) posnRow(dataSet.composite.offsetAdjusted_mm.get)
+      if (dataSet.composite.offsetAdjusted_mm.isDefined) posnRow(dataSet.composite.offsetAdjusted_mm.get, dataSet.machineDailyQA)
       else <div>undefined</div>
     }
 
@@ -203,7 +210,6 @@ object DailyQAHTML extends Logging {
       new Col("EPID Details", "Images and other details for EPID", colEpidImages _))
 
     def dataSetToRow(dataSet: BBbyEPIDComposite.DailyDataSetComposite): MOE = {
-      machinePassed = true
       val tdList = colList.tail.map(col => col.toElem(dataSet))
       val elem = <tr>{ colList.head.toElem(dataSet) :+ tdList }</tr>
       new MOE(dataSet.machine, Some(dataSet.output), elem)
@@ -412,8 +418,8 @@ object DailyQAHTML extends Logging {
         <div class="row">
           <div class="col-md-8 col-md-offset-2 col-sm-12">
             <center>
-              Machines above that have any measurements out of tolerance by{ Util.fmtDbl(Config.DailyQATolerance_mm) }
-              mm or more are marked as failed.  To produce a final result for a single machine, there must be both CBCT
+              Machines above that have any measurements out of tolerance by their machine's warning limit
+              are marked as failed.  To produce a final result for a single machine, there must be both CBCT
               and EPID results.  Both must be valid (found the BB near isocenter), the CBCT must scanned before the EPID,
               and they must be scanned on the same day.
               <p></p>

@@ -514,6 +514,7 @@ class WebServer extends Application with Logging {
         new EPIDUpdate,
         new MultileafCollimatorUpdate,
         new MaintenanceRecordList,
+        new MachineDailyQAUpdate,
         new MaintenanceRecordUpdate,
         new UserUpdate,
         new UserList,

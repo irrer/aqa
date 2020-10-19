@@ -180,6 +180,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   private val confirmDeleteButton = makeButton("Confirm Delete", false, ButtonType.BtnDanger)
   private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
   private val maintenanceButton = makeButton("Maintenance Records", false, ButtonType.BtnDefault)
+  private val dailyQAButton = makeButton("Daily QA", false, ButtonType.BtnDefault)
   private val customizePlanButton = makeButton("Customize Plan", false, ButtonType.BtnDefault)
   private val machinePK = new WebInputHidden(MachineUpdate.machinePKTag)
 
@@ -254,7 +255,8 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   }
 
   val createButtonList: WebRow = List(createButton, cancelButton)
-  val editButtonList: WebRow = List(saveButton, cancelButton, deleteButton, maintenanceButton, customizePlanButton, machinePK)
+  val editButtonList1: WebRow = List(saveButton, cancelButton, deleteButton)
+  val editButtonList2: WebRow = List(maintenanceButton, dailyQAButton, customizePlanButton, machinePK)
   val confirmDeleteButtonList: WebRow = List(cancelButton, confirmDeleteButton, machinePK)
 
   def confirmDeleteFieldList(valueMap: ValueMapT): List[WebRow] = {
@@ -264,7 +266,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   private def formCreate(valueMap: ValueMapT, isAdmin: Boolean) = new WebForm(pathOf, fieldList(valueMap, isAdmin) :+ createButtonList)
 
-  private def formEdit(valueMap: ValueMapT, isAdmin: Boolean) = new WebForm(pathOf, fieldList(valueMap, isAdmin) :+ editButtonList)
+  private def formEdit(valueMap: ValueMapT, isAdmin: Boolean) = new WebForm(pathOf, fieldList(valueMap, isAdmin) ++ Seq(editButtonList1, editButtonList2))
 
   private def formConfirmDelete(valueMap: ValueMapT) = new WebForm(pathOf, confirmDeleteFieldList(valueMap) :+ confirmDeleteButtonList)
 
@@ -612,9 +614,13 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   }
 
   private def maintRec(valueMap: ValueMapT, response: Response): Unit = {
-    val j = valueMap(machinePK.label)
     val path = MaintenanceRecordList.path + "?machinePK=" + valueMap(machinePK.label)
     response.redirectSeeOther(path)
+  }
+
+  private def dailyQA(valueMap: ValueMapT, response: Response): Unit = {
+    save(valueMap, response) // in case user made changes
+    MachineDailyQAUpdate.redirect(valueMap(machinePK.label).trim.toLong, response)
   }
 
   /**
@@ -696,6 +702,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
         case _ if buttonIs(valueMap, deleteButton) => delete(valueMap, response)
         case _ if buttonIs(valueMap, confirmDeleteButton) => confirmDelete(valueMap, response)
         case _ if buttonIs(valueMap, maintenanceButton) => maintRec(valueMap, response)
+        case _ if buttonIs(valueMap, dailyQAButton) => dailyQA(valueMap, response)
         case _ if buttonIs(valueMap, customizePlanButton) => customizePlan(valueMap, response)
         case _ if isEdit(valueMap) => edit(valueMap, response)
         case _ => emptyForm(response)

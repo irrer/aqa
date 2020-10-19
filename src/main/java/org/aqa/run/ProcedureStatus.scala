@@ -33,6 +33,7 @@ object ProcedureStatus extends Enumeration {
   val timeout = Value("timeout", "Terminated when time limit and was exceeded.")
   val crash = Value("crash", "Terminated itself in an uncontrolled fashion.")
   val servershutdown = Value("servershutdown", "Server was shut down while the procedure was running.")
+  val warning = Value("warning", "Results were acceptable but nearly failed.")
 
   class ProcedureStatus(val name: String, val description: String) extends Val(nextId, name)
 
@@ -111,6 +112,8 @@ object ProcedureStatus extends Enumeration {
    * Sort by id.
    */
   def sort(seq: Seq[ProcedureStatus.Value]) = seq.sortWith((a, b) => a.id < b.id)
+
+  def eq(a: Value, b: Value) = a.toString.equals(b.toString)
 
   /**
    * For internal testing only.

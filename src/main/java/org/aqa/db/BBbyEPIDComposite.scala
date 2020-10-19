@@ -195,6 +195,15 @@ object BBbyEPIDComposite extends ProcedureOutput {
     private def byType(angleType: AngleType.Value) = bbByEpid.filter(b => AngleType.isAngleType(b.gantryAngle_deg, angleType))
     val vertList = byType(AngleType.vertical)
     val horzList = byType(AngleType.horizontal)
+    val machineDailyQA = MachineDailyQA.getMachineDailyQAOrDefault(machine.machinePK.get)
+    val status = {
+      0 match {
+        case _ if composite.offsetAdjusted_mm.isEmpty => ProcedureStatus.fail
+        case _ if composite.offsetAdjusted_mm.get <= machineDailyQA.passLimit_mm => ProcedureStatus.pass
+        case _ if composite.offsetAdjusted_mm.get <= machineDailyQA.warningLimit_mm => ProcedureStatus.warning
+        case _ => ProcedureStatus.fail
+      }
+    }
   }
 
   /**
