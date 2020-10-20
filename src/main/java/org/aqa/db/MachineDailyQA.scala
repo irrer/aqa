@@ -71,6 +71,25 @@ object MachineDailyQA {
    */
   def list = Db.run(query.result)
 
+  case class MachineDailyQAExtended(machine: Machine, machineType: MachineType, machineDailyQA: MachineDailyQA);
+
+  /**
+   * Get a list of Daily QA parameters with extended values to support showing the user a nice list.
+   */
+  def listExtended(instPK: Long): Seq[MachineDailyQAExtended] = {
+    val action = for {
+      machine <- Machine.query if machine.institutionPK === instPK
+      machineType <- MachineType.query if machineType.machineTypePK === machine.machineTypePK
+    } yield (machine, machineType)
+
+    //          machineDailyQA <- query if machineDailyQA.machineDailyQAPK === machine.machinePK
+
+    val machList = Db.run(action.result).map(mmm => (mmm._1, mmm._2))
+
+    val result = machList.map(mmt => new MachineDailyQAExtended(mmt._1, mmt._2, getMachineDailyQAOrDefault(mmt._1.machinePK.get)))
+    result
+  }
+
   def delete(machineDailyQAPK: Long): Int = {
     val q = query.filter(_.machineDailyQAPK === machineDailyQAPK)
     val action = q.delete

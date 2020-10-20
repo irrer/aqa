@@ -510,6 +510,7 @@ class WebServer extends Application with Logging {
         new MachineList,
         new MachineTypeList,
         new MultileafCollimatorList,
+        new MachineDailyQAList,
         new EPIDList,
         new EPIDUpdate,
         new MultileafCollimatorUpdate,

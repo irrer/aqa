@@ -26,8 +26,10 @@ import org.aqa.Config
 object MachineDailyQAUpdate {
   def machineReference(machinePK: Long) = { "/" + SubUrl.admin + "/" + "MachineDailyQAUpdate" + "?" + MachineUpdate.machinePKTag + "=" + machinePK }
 
+  /**
+   * Redirect to the URL for this Restlet.
+   */
   def redirect(machinePK: Long, response: Response) = {
-    val j = machineReference(machinePK)
     response.redirectSeeOther(machineReference(machinePK))
   }
 }
@@ -35,6 +37,8 @@ object MachineDailyQAUpdate {
 class MachineDailyQAUpdate extends Restlet with SubUrlAdmin {
 
   private val pageTitleEdit = "Edit Daily QA Parameters"
+
+  private val pageHeader = new WebPlainText("Daily QA Parameters", false, 6, 0, formatHeader)
 
   private val passLimit = new WebInputText("Pass Limit (mm)", 2, 0, "")
 
@@ -51,7 +55,16 @@ class MachineDailyQAUpdate extends Restlet with SubUrlAdmin {
 
   private val machineDailyQAPK = new WebInputHidden(MachineUpdate.machinePKTag)
 
-  private val formEdit = new WebForm(pathOf, List(List(passLimit), List(warningLimit), List(saveButton, cancelButton, deleteButton, machineDailyQAPK)))
+  private val formEdit = new WebForm(pathOf, List(List(pageHeader), List(passLimit), List(warningLimit), List(saveButton, cancelButton, deleteButton, machineDailyQAPK)))
+
+  private def formatHeader(valueMap: ValueMapT): Elem = {
+    try {
+      val machine = Machine.get(valueMap.get(machineDailyQAPK.label).get.toLong).get
+      <h2>Daily QA Parameters for <span aqaalias="">{ machine.id }</span></h2>
+    } catch {
+      case t: Throwable => <h2>Daily QA Parameters</h2>
+    }
+  }
 
   private def isPosDbl(text: String): Boolean = {
     try {
