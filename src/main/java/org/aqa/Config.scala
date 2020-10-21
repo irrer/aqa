@@ -828,6 +828,7 @@ object Config extends Logging {
   val VMATBeamPairList = getVMATBeamPairList
   val VMATHistoryRange = logMainText("VMATHistoryRange", "25").toInt
 
+  val DailyQACBCTLimit_mm = logMainText("DailyQACBCTLimit_mm", "1.0").toDouble
   val DailyQAPassLimit_mm = logMainText("DailyQAPassLimit_mm", "1.0").toDouble
   val DailyQAWarningLimit_mm = logMainText("DailyQAWarningLimit_mm", "1.5").toDouble
   val CBCTBBMinimumStandardDeviation = logMainText("CBCTBBMinimumStandardDeviation", "15.0").toDouble

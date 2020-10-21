@@ -561,6 +561,9 @@ Note that when building a package for release, the Maven build process uses the 
     they exist) the current point being plotted. -->
     <VMATHistoryRange>25</VMATHistoryRange>
 
+    <!-- The maximum tolerance of error in floating point in mm for daily QA for CBCT.  Exceeding this means fail. -->
+    <DailyQACBCTLimit_mm>1.0</DailyQACBCTLimit_mm>
+
     <!-- The maximum tolerance of error in floating point in mm for daily QA.  Exceeding this means warning. -->
     <DailyQAPassLimit_mm>1.0</DailyQAPassLimit_mm>
 

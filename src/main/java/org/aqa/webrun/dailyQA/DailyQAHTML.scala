@@ -108,6 +108,9 @@ object DailyQAHTML extends Logging {
       <td>{ DailyQASummary.timeFormat.format(dataSet.output.dataDate.get) }</td>
     }
 
+    /**
+     * Format CBCT data.  If the system-wide limit is exceeded then mark it as failed.
+     */
     def colCbctXYZ(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val x = dataSet.cbct.err_mm.getX
       val y = dataSet.cbct.err_mm.getY
@@ -116,16 +119,15 @@ object DailyQAHTML extends Logging {
       val text = x.formatted("%7.2f").trim + ", " + y.formatted("%7.2f").trim + ", " + z.formatted("%7.2f").trim
       val title = x.formatted("%12.6f").trim + ", " + y.formatted("%12.6f").trim + ", " + z.formatted("%12.6f").trim
 
-      def exceeds(limit: Double) = (x.abs > limit) || (y.abs > limit) || (z.abs > limit)
+      def exceeds = {
+        val limit = Config.DailyQACBCTLimit_mm
+        (x.abs > limit) || (y.abs > limit) || (z.abs > limit)
+      }
 
-      if (exceeds(dataSet.machineDailyQA.warningLimit_mm)) {
-        <td class="danger" title={ title + " exceeded warning limit of " + dataSet.machineDailyQA.warningLimit_mm + " mm" }>{ text }</td>
+      if (exceeds) {
+        <td class="danger" title={ title + " exceeded warning limit of " + Config.DailyQACBCTLimit_mm + " mm" }>{ text }</td>
       } else {
-        if (exceeds(dataSet.machineDailyQA.passLimit_mm)) {
-          <td class="warning" title={ title + " exceeded pass limit of " + dataSet.machineDailyQA.passLimit_mm + " mm but below warning limit of " + dataSet.machineDailyQA.warningLimit_mm + " mm" }>{ text }</td>
-        } else {
-          <td title={ title }>{ text }</td>
-        }
+        <td title={ title }>{ text }</td>
       }
     }
 
@@ -189,25 +191,25 @@ object DailyQAHTML extends Logging {
     }
 
     val colList: List[Col] = List(
-      new Col("Machine", "Name of treatment machine", colMachine _),
-      new Col("Patient", "Name of test patient", colPatient _),
-      new Col("EPID Time " + reportDate, "Time of EPID acquisition", colDateTime _),
+      new Col("Machine", "Name of treatment machine", colMachine),
+      new Col("Patient", "Name of test patient", colPatient),
+      new Col("EPID Time " + reportDate, "Time of EPID acquisition", colDateTime),
 
-      new Col("X,Y,Z CBCT-PLAN mm", "CBCT - PLAN in mm", colCbctXYZ _),
-      new Col("X,Y,Z / lat,vert,long Table Movement cm", "RTIMAGE-CT in cm, X,Y,Z = lat,vert,lng", colTableMovement _),
+      new Col("X,Y,Z CBCT-PLAN mm", "CBCT - PLAN in mm", colCbctXYZ),
+      new Col("X,Y,Z / lat,vert,long Table Movement cm", "RTIMAGE-CT in cm, X,Y,Z = lat,vert,lng", colTableMovement),
 
-      new Col("Gantry Angle for XZ", "Angle of gantry for vertical image in degrees used to calculate values for Y and Z", colVertGantryAngle _),
-      new Col("Vert EPID-CAX(X) mm", "X offset Vertical EPID image-CAX in mm", colVertXCax _),
-      new Col("Vert EPID-CAX(Z) mm", "Z offset Vertical EPID image-CAX in mm", colVertZCax _),
+      new Col("Gantry Angle for XZ", "Angle of gantry for vertical image in degrees used to calculate values for Y and Z", colVertGantryAngle),
+      new Col("Vert EPID-CAX(X) mm", "X offset Vertical EPID image-CAX in mm", colVertXCax),
+      new Col("Vert EPID-CAX(Z) mm", "Z offset Vertical EPID image-CAX in mm", colVertZCax),
 
-      new Col("Gantry Angle for YZ", "Angle of gantry for horizontal image in degrees used to calculate values for X and Z", colHorzGantryAngle _),
-      new Col("Horz EPID-CAX(Y) mm", "Y offset Horizontal EPID-CAX in mm", colHorzYCax _),
-      new Col("Horz EPID-CAX(Z) mm", "Z offset Horizontal EPID-CAX in mm", colHorzZCax _),
+      new Col("Gantry Angle for YZ", "Angle of gantry for horizontal image in degrees used to calculate values for X and Z", colHorzGantryAngle),
+      new Col("Horz EPID-CAX(Y) mm", "Y offset Horizontal EPID-CAX in mm", colHorzYCax),
+      new Col("Horz EPID-CAX(Z) mm", "Z offset Horizontal EPID-CAX in mm", colHorzZCax),
 
-      new Col("(EPID-CAX)-(PLAN-CBCT)", "total offset of (EPID-CAX)-(PLAN-CBCT)", colEpidPlanCbct _),
+      new Col("(EPID-CAX)-(PLAN-CBCT)", "total offset of (EPID-CAX)-(PLAN-CBCT)", colEpidPlanCbct),
 
-      new Col("CBCT Details", "Images and other details for CBCT", colCbctImages _),
-      new Col("EPID Details", "Images and other details for EPID", colEpidImages _))
+      new Col("CBCT Details", "Images and other details for CBCT", colCbctImages),
+      new Col("EPID Details", "Images and other details for EPID", colEpidImages))
 
     def dataSetToRow(dataSet: BBbyEPIDComposite.DailyDataSetComposite): MOE = {
       val tdList = colList.tail.map(col => col.toElem(dataSet))

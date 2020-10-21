@@ -160,7 +160,9 @@ Jobs in progress will be aborted.">Confirm Restart</a>
   }
 
   private def restartService(response: Response): Unit = {
+    logger.info("Performing service restart as per user request.")
     AQA.initiateServiceRestart
+    logger.info("Service restart as per user request is underway.")
     response.redirectSeeOther(pathOf + "/?" + waitForRestartLabel + "=" + waitForRestartLabel)
   }
 

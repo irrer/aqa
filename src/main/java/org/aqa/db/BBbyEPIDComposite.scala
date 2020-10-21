@@ -14,6 +14,7 @@ import java.sql.Timestamp
 import java.util.Date
 import org.aqa.AngleType
 import edu.umro.ScalaUtil.Trace
+import org.aqa.Logging
 
 /**
  * Store the analysis results for a set of EPID images containing a BB.  This is derived from
@@ -69,7 +70,7 @@ case class BBbyEPIDComposite(
   val epid = new Point3d(x_mm, y_mm, z_mm)
 }
 
-object BBbyEPIDComposite extends ProcedureOutput {
+object BBbyEPIDComposite extends ProcedureOutput with Logging {
   class BBbyEPIDCompositeTable(tag: Tag) extends Table[BBbyEPIDComposite](tag, "bbByEPIDComposite") {
 
     def bbByEPIDCompositePK = column[Long]("bbByEPIDCompositePK", O.PrimaryKey, O.AutoInc)
@@ -196,13 +197,56 @@ object BBbyEPIDComposite extends ProcedureOutput {
     val vertList = byType(AngleType.vertical)
     val horzList = byType(AngleType.horizontal)
     val machineDailyQA = MachineDailyQA.getMachineDailyQAOrDefault(machine.machinePK.get)
+
+    /**
+     * Determine if the values are pass, warning, or failure.  Pass means that all values are less than or equal to the
+     * pass limit.  Fail means that at least one value is over the limit.  For CBCT there is a single pass/fail limit.
+     * For EPID and composite values there are a pass and warning limits.  If any value exceeds the warning limit then it
+     * means failure.  Exceeding the pass limit but not the warning limit means warning.  If all values are under the pass
+     * limit the it means pass.  Note that the absolute value of values is considered when comparing to the pass or warning
+     * limits.
+     */
     val status = {
-      0 match {
+
+      def exceedsWarning(d: Option[Double]): Boolean = d.isDefined && d.get.abs > machineDailyQA.warningLimit_mm
+      def exceedsPass(d: Option[Double]): Boolean = d.isDefined && d.get.abs > machineDailyQA.passLimit_mm
+
+      val vertZ = (vertList.head.epid3DZ_mm - cbct.err_mm.getZ).abs
+      val horzZ = (horzList.head.epid3DZ_mm - cbct.err_mm.getZ).abs
+
+      val s = 0 match {
+
+        case _ if cbct.err_mm.getX.abs > Config.DailyQACBCTLimit_mm => ProcedureStatus.fail
+        case _ if cbct.err_mm.getY.abs > Config.DailyQACBCTLimit_mm => ProcedureStatus.fail
+        case _ if cbct.err_mm.getZ.abs > Config.DailyQACBCTLimit_mm => ProcedureStatus.fail
+
+        case _ if exceedsWarning(composite.xAdjusted_mm) => ProcedureStatus.fail
+        case _ if exceedsWarning(composite.yAdjusted_mm) => ProcedureStatus.fail
+        case _ if exceedsWarning(composite.zAdjusted_mm) => ProcedureStatus.fail
+
+        case _ if vertZ > machineDailyQA.warningLimit_mm => ProcedureStatus.fail
+        case _ if horzZ > machineDailyQA.warningLimit_mm => ProcedureStatus.fail
+
         case _ if composite.offsetAdjusted_mm.isEmpty => ProcedureStatus.fail
-        case _ if composite.offsetAdjusted_mm.get <= machineDailyQA.passLimit_mm => ProcedureStatus.pass
-        case _ if composite.offsetAdjusted_mm.get <= machineDailyQA.warningLimit_mm => ProcedureStatus.warning
-        case _ => ProcedureStatus.fail
+        case _ if composite.offsetAdjusted_mm.get.abs > machineDailyQA.warningLimit_mm => ProcedureStatus.fail
+
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+        case _ if exceedsPass(composite.xAdjusted_mm) => ProcedureStatus.warning
+        case _ if exceedsPass(composite.yAdjusted_mm) => ProcedureStatus.warning
+        case _ if exceedsPass(composite.zAdjusted_mm) => ProcedureStatus.warning
+
+        case _ if vertZ > machineDailyQA.passLimit_mm => ProcedureStatus.warning
+        case _ if horzZ > machineDailyQA.passLimit_mm => ProcedureStatus.warning
+
+        case _ if composite.offsetAdjusted_mm.get.abs > machineDailyQA.passLimit_mm => ProcedureStatus.warning
+
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+        case _ => ProcedureStatus.pass
       }
+      logger.info("DailyDataSetComposite machine: " + machine.id + " status: " + s)
+      s
     }
   }
 
