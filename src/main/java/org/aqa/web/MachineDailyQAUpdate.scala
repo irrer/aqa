@@ -171,7 +171,8 @@ class MachineDailyQAUpdate extends Restlet with SubUrlAdmin {
       (createMachineDailyQAFromParameters(valueMap)).insertOrUpdate
       val machPK = valueMap.get(machineDailyQAPK.label).get.trim.toLong
 
-      MachineUpdate.redirect(machPK, response)
+      // MachineUpdate.redirect(machPK, response)
+      MachineDailyQAList.redirect(response)
     } else formEdit.setFormResponse(valueMap, styleMap, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
   }
 
@@ -230,7 +231,8 @@ class MachineDailyQAUpdate extends Restlet with SubUrlAdmin {
       if (dailyQAPK.isDefined) {
         MachineDailyQA.delete(dailyQAPK.get.toLong)
         val machPK = valueMap.get(machineDailyQAPK.label).get.toLong
-        MachineUpdate.redirect(machPK, response)
+        MachineDailyQAList.redirect(response)
+        // MachineUpdate.redirect(machPK, response)
       }
     } else {
       formEdit.setFormResponse(valueMap, auth, pageTitleEdit, response, Status.CLIENT_ERROR_BAD_REQUEST)
@@ -261,7 +263,7 @@ class MachineDailyQAUpdate extends Restlet with SubUrlAdmin {
 
     try {
       0 match {
-        case _ if buttonIs(valueMap, cancelButton) => MachineUpdate.redirect(valueMap(machineDailyQAPK.label).toLong, response)
+        case _ if buttonIs(valueMap, cancelButton) => MachineDailyQAList.redirect(response) //  MachineUpdate.redirect(valueMap(machineDailyQAPK.label).toLong, response)
         case _ if buttonIs(valueMap, saveButton) => saveEdits(valueMap, pageTitleEdit, response)
         case _ if buttonIs(valueMap, deleteButton) => delete(valueMap, response)
         case _ if isEdit(valueMap, response) => Nil
