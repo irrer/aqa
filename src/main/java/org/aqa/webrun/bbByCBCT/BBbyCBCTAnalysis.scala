@@ -169,7 +169,6 @@ object BBbyCBCTAnalysis extends Logging {
    */
   private def makeImage(dicomImage: DicomImage, location: Point2D.Double, pixelSize: Point2D.Double, minMax: (Float, Float)): BufferedImage = {
     val aspectCorrected = dicomImage.renderPixelsToSquare(pixelSize.getX, pixelSize.getY)
-    Trace.trace
     val bufImg =
       {
         if (Config.CBCTImageColor.getRGB == 0)
@@ -178,11 +177,8 @@ object BBbyCBCTAnalysis extends Logging {
           aspectCorrected.toBufferedImage(Config.CBCTImageColor)
           val maxPixelValue = dicomImage.getSubArray(new Rectangle((location.getX - 5).toInt, (location.getY - 5).toInt, 10, 10)).flatten.max
           aspectCorrected.toBufferedImage(ImageUtil.rgbColorMap(Config.CBCTImageColor), 0.0.toFloat, maxPixelValue.toFloat)
-
-          //aspectCorrected.toDeepColorBufferedImage(0.0)  // TODO rm
         }
       }
-    Trace.trace
     bufImg
   }
 
