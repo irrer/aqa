@@ -179,7 +179,14 @@ object DailyQAHTML extends Logging {
     }
 
     def colEpidImages(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      <td><a href={ ViewOutput.viewOutputUrl(dataSet.composite.outputPK) }>EPID Details</a></td>
+      def f(d: Double) = d.formatted("%12.2f").trim()
+      val tableMovement = dataSet.bbByEpid.map(e => (f(e.tableXlateral_mm) + ", " + f(e.tableYvertical_mm) + ", " + f(e.tableZlongitudinal_mm))).distinct
+      if (tableMovement.size > 1) {
+        val title = "The different EPID images have different table positions: " + titleNewline + tableMovement.mkString(titleNewline)
+        <td title={ title } class="warning"> <a href={ ViewOutput.viewOutputUrl(dataSet.composite.outputPK) }>EPID Details<br/><b style="color:red;">Table Moved</b></a></td>
+      } else {
+        <td><a href={ ViewOutput.viewOutputUrl(dataSet.composite.outputPK) }>EPID Details</a></td>
+      }
     }
 
     val reportDate: String = {
