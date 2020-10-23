@@ -182,6 +182,42 @@ object BBbyCBCTAnalysis extends Logging {
     bufImg
   }
 
+  private def getCoarseHorizontal(profile: Seq[Float], pixSize_mm: Double): Int = {
+    val edgeWidth_pix = (Config.PenumbraThickness_mm / pixSize_mm).round.toInt
+    val cubeWidth_pix = (Config.DailyQAPhantomCubeSize_mm / pixSize_mm).round.toInt
+
+    /** Index of first pixel and standard deviation of the set.  */
+    case class IndexStdDev(index: Int, stdDev: Double, rating: Double = -1);
+
+    def standDev(i: Int) = {
+      val pix = profile.drop(i).take(edgeWidth_pix)
+      if (pix.size < edgeWidth_pix) new IndexStdDev(i, 0)
+      else {
+        val avg = pix.sum / pix.size
+        IndexStdDev(i, ImageUtil.stdDev(pix) / avg)
+      }
+    }
+
+    val isdList = profile.indices.map(i => standDev(i))
+
+    /**
+     * Get the sum of the standard deviation of points one cube-width apart.
+     */
+    def rate(isd: IndexStdDev) = {
+      val otherIndex = isd.index + cubeWidth_pix
+      isdList.find(_.index == otherIndex) match {
+        case Some(other) => isd.copy(rating = isd.stdDev + other.stdDev)
+        case _ => isd
+      }
+    }
+
+    Trace.trace("pixSize_mm: " + pixSize_mm + "\n" + isdList.map(isd => rate(isd).rating).mkString("\n"))
+    val best = isdList.map(isd => rate(isd)).maxBy(_.rating)
+
+    val cntr = best.index + ((edgeWidth_pix + cubeWidth_pix) / 2)
+    cntr
+  }
+
   /**
    * Find the approximate center of the cube to within a few voxels.  To do this, each
    * horizontal slice is examined to determine if it contains approximately the number of non-zero
@@ -207,6 +243,7 @@ object BBbyCBCTAnalysis extends Logging {
     /** Keep a cache of previously calculated results for efficiency. */
     val sliceCache = scala.collection.mutable.Map[Int, IndexedSeq[IndexedSeq[Float]]]()
 
+    /** Get the voxels in the plane parallel to the table at the given slice index. */
     def horizontalSlice(sliceIndex: Int): IndexedSeq[IndexedSeq[Float]] = {
       sliceCache.get(sliceIndex) match {
         case Some(slice) => slice
@@ -218,39 +255,33 @@ object BBbyCBCTAnalysis extends Logging {
       }
     }
 
-    def getCoarseVerticalCenter_vox(entireVolume: DicomVolume, voxSize_mm: Point3d): Option[Int] = {
+    /** drop this percentage of the largest valued voxels to get rid of outliers. */
+    val pctToDrop = 1.0
 
-      //      def toBucket(entireVolume: DicomVolume, sliceIndex: Int, bucketCount: Int) = {
-      //        val voxList = horizontalSlice(sliceIndex).flatten
-      //        val min = voxList.min
-      //        val max = voxList.max
-      //
-      //        val range = max - min
-      //
-      //        val list = voxList.map(v => (((v - min) / range) * bucketCount).floor.toInt).groupBy(b => b).map(b => (b._1, b._2.size))
-      //        val hist = (0 until bucketCount).toSeq.map(i => if (list.contains(i)) list(i) else 0)
-      //        hist
-      //      }
+    /** Number of voxels expected to compose a cross section of cube. */
+    val expectedVoxelCount: Int = ((Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getX) * (Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getZ)).round.toInt
+
+    def getCoarseVerticalCenter_vox(entireVolume: DicomVolume, voxSize_mm: Point3d): Option[Int] = {
 
       val cubeHalf = cubeHeight_vox / 2
 
       /** Keep a cache of previously calculated results for efficiency. */
       val percentOfCubeVoxelsCache = scala.collection.mutable.Map[Int, Double]()
 
+      def getRelaventVoxels(sliceIndex: Int): IndexedSeq[Float] = {
+        val dropCount = (expectedVoxelCount * (pctToDrop / 100.0)).round.toInt
+        val voxelList = horizontalSlice(sliceIndex).flatten.sorted.dropRight(dropCount)
+        voxelList
+      }
+
       def percentOfCubeVoxels(sliceIndex: Int): Double = {
         if (percentOfCubeVoxelsCache.contains(sliceIndex)) {
           percentOfCubeVoxelsCache(sliceIndex)
         } else {
-          // Determine the number of voxels expected, based on the dimensions of the cube and the size of the voxels.
-          val expected: Int = ((Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getX) * (Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getZ)).round.toInt
-
-          // drop this percentage of the largest valued voxels to get rid of outliers.
-          val pctToDrop = 1.0
-          val dropCount = (expected * (pctToDrop / 100.0)).round.toInt
-          val voxelList = horizontalSlice(sliceIndex).flatten.sorted.dropRight(dropCount)
+          val voxelList = getRelaventVoxels(sliceIndex)
           val mid = (voxelList.max - voxelList.min) / 2
           val found = voxelList.filter(v => v > mid).size
-          val percent = (found * 100.0) / expected
+          val percent = (found * 100.0) / expectedVoxelCount
 
           percentOfCubeVoxelsCache.put(sliceIndex, percent)
 
@@ -292,16 +323,151 @@ object BBbyCBCTAnalysis extends Logging {
       center
     }
 
-    // Given the top of the cube, find the center.
+    def erode(orig: DicomImage, xSize: Double, ySize: Double): DicomImage = {
+      val listOfPointCoordinatesWithinRadius = {
+        val radius_mm = Config.DailyQAPhantomCubeSize_mm / 10
+        val xMax = (radius_mm / xSize).round.toInt
+        val yMax = (radius_mm / ySize).round.toInt
+
+        def withinRadius(x: Int, y: Int): Boolean = {
+          val xx = x * xSize
+          val yy = y * ySize
+          val distance = Math.sqrt((xx * xx) + (yy * yy))
+          val within = distance < radius_mm
+          within
+        }
+
+        val list = for (x <- (-xMax to xMax); y <- (-yMax to yMax); if (withinRadius(x, y))) yield (x, y)
+        list
+      }
+
+      val minPixelValueX = 1000 // TODO put in config
+      var darkCount = 0 // TODO rm
+      var darkTotal = 0.0 // TODO rm
+
+      val minPixelValue: Float = {
+        val dropCount = (expectedVoxelCount * (pctToDrop / 100.0)).round.toInt
+        val pixList = orig.pixelData.flatten.sorted.dropRight(dropCount).takeRight(expectedVoxelCount)
+        val avg = pixList.sum / pixList.size
+        val minPix = avg / 2
+        Trace.trace("minPix: " + minPix)
+        minPix
+      }
+
+      //println("listOfPointCoordinatesWithinRadius: " + listOfPointCoordinatesWithinRadius.map(xy => xy._1.formatted("%4d") + "," + xy._2.formatted("%4d")).mkString("\n")) // TODO rm
+
+      if (true) { // TODO rm
+        val cubePix = { for (x <- (80 until 90); y <- (200 until 210)) yield (orig.get(x, y)) }
+        Trace.trace("cubePix: " + cubePix.map(p => p.toInt).mkString("  "))
+      }
+
+      /**
+       * Given a pixel in the original image, set it to dark if there is a dark pixel within the radius_mm.
+       */
+      def eval(x: Int, y: Int): Float = {
+
+        val pixValue = orig.get(x, y)
+        //println("checking x,y: " + x.formatted("%4d") + ", " + y.formatted("%4d") + " : " + pixValue.round.toInt.formatted("%5d")) // TODO rm
+        if (pixValue < minPixelValue)
+          pixValue // this pixel is dark, so leave the way it is
+        else {
+          def pixelIsDark(xx: Int, yy: Int): Boolean = {
+            val j = (xx >= 0) && (yy >= 0) && (xx < orig.width) && (yy < orig.height) && (orig.get(xx, yy) < minPixelValue)
+            j
+          }
+
+          // look through the list of near pixels for a dark one.
+          if (listOfPointCoordinatesWithinRadius.find(p => pixelIsDark(p._1 + x, p._2 + y)).isDefined) {
+            darkCount = darkCount + 1
+            darkTotal = darkTotal + pixValue
+            println("darkened x,y: " + x.formatted("%4d") + ", " + y.formatted("%4d") + " : " + pixValue.round.toInt.formatted("%5d")) // TODO rm
+            0.toFloat // found a dark pixel nearby.  Set this one to dark.
+          } else pixValue
+        }
+      }
+
+      val pixArray = {
+        for (y <- 0 until orig.height) yield {
+          for (x <- 0 until orig.width) yield { eval(x, y) }
+        }
+      }
+
+      Trace.trace("orig sum: " + orig.pixelData.flatten.map(_.toDouble).sum + "    eroded sum: " + pixArray.flatten.map(_.toDouble).sum)
+      Trace.trace("darkCount: " + darkCount + "    darkTotal: " + darkTotal + "    avg: " + (darkTotal / darkCount))
+
+      val dicomImageEroded = new DicomImage(pixArray)
+
+      if (true) { // TODO rm
+        val bi2 = dicomImageEroded.toBufferedImage(Color.white)
+        Thread.sleep(50)
+        val pngFile2 = new java.io.File("""D:\tmp\horzImageEroded""" + System.currentTimeMillis + """.png""")
+        Util.writePng(bi2, pngFile2)
+      }
+      dicomImageEroded
+    }
+
+    // Given the vertical center of the cube, find the center.
     getCoarseVerticalCenter_vox(entireVolume, voxSize_mm) match {
       case Some(bbY) => {
         val horzImage = new DicomImage(horizontalSlice(bbY))
+
+        if (true) {
+          val bi = horzImage.toBufferedImage(Color.white)
+          val pngFile = new java.io.File("""D:\tmp\horzImage.png""")
+          Util.writePng(bi, pngFile)
+        }
 
         // find coarse X and Z
         val bbX = ImageUtil.centerOfMass(horzImage.rowSums).round.toInt
         val bbZ = ImageUtil.centerOfMass(horzImage.columnSums).round.toInt
 
-        val center = new Point3i(bbX, bbY, bbZ)
+        if (false) { // TODO rm
+          //          Trace.trace("Col sums: \n" + horzImage.columnSums.map(s => s / horzImage.width).mkString("\n"))
+          //          Trace.trace("Row sums: \n" + horzImage.rowSums.map(s => s / horzImage.height).mkString("\n"))
+          val colSum = horzImage.columnSums
+
+          val x = getCoarseHorizontal(horzImage.rowSums, voxSize_mm.getX)
+          val z = getCoarseHorizontal(horzImage.columnSums, voxSize_mm.getZ)
+          val newCenter = new Point3i(x, bbY, z)
+          logger.info("new coarse measurement of center: " + newCenter)
+        }
+
+        val eroded = erode(horzImage, voxSize_mm.getZ, voxSize_mm.getX)
+        val eroded2 = erode(eroded, voxSize_mm.getZ, voxSize_mm.getX)
+        val bbXe = ImageUtil.centerOfMass(eroded2.rowSums).round.toInt
+        val bbZe = ImageUtil.centerOfMass(eroded2.columnSums).round.toInt
+        val center = new Point3i(bbXe, bbY, bbZe)
+        logger.info("coarse measurement of center: " + center + " eroded")
+        if (true) {
+          // for the tallness of the bb in the Y dimension, add the slices above and below this slice togther with this slice
+          val sumDicomImage = {
+            def getEroded(s: Int) = {
+              val slice = new DicomImage(horizontalSlice(s))
+              val e1 = erode(slice, voxSize_mm.getZ, voxSize_mm.getX)
+              val e2 = erode(e1, voxSize_mm.getZ, voxSize_mm.getX)
+              e2
+            }
+            val bbTallness = (Config.CBCTBBPenumbra_mm / voxSize_mm.getY).round.toInt
+            val sliceList = (bbY - bbTallness until bbY + bbTallness).map(s => getEroded(s))
+
+            val sum = {
+              for (y <- 0 until horzImage.height) yield {
+                for (x <- 0 until horzImage.width) yield { sliceList.map(s => s.get(x, y)).sum }
+              }
+            }
+            new DicomImage(sum)
+          }
+          val bbWidth_pix = ((Config.CBCTBBPenumbra_mm * 2) / voxSize_mm.getZ).round.toInt
+          val bbHeight_pix = ((Config.CBCTBBPenumbra_mm * 2) / voxSize_mm.getX).round.toInt
+          val coords = for (x <- 0 until (horzImage.width - bbWidth_pix); y <- 0 until (horzImage.height - bbHeight_pix)) yield (x, y)
+          val best = coords.maxBy(xy => sumDicomImage.getSubimage(new Rectangle(xy._1, xy._2, bbWidth_pix, bbHeight_pix)).sum)
+          val centerBright = new Point3i(best._1 + (bbWidth_pix / 2), bbY, best._2 + (bbHeight_pix / 2))
+          logger.info("coarse measurement of center: " + centerBright + " centerBright")
+        }
+
+        val centerX = new Point3i(bbX, bbY, bbZ)
+        logger.info("coarse measurement of center: " + centerX + " NOT eroded")
+
         def i2d(i: Point3i) = new Point3d(i.getX, i.getY, i.getZ)
         logger.info("coarse measurement of center: " + center)
         Some(center)
