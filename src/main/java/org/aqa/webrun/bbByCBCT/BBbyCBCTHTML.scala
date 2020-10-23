@@ -419,7 +419,6 @@ object BBbyCBCTHTML extends Logging {
     imageSet: BBbyCBCTAnnotateImages.ImageSet, status: ProcedureStatus.Value,
     runReq: BBbyCBCTRunReq, cbctAnalysisResult: BBbyCBCTAnalysis.CBCTAnalysisResult,
     response: Response) = {
-
     val outputDir = extendedData.output.dir
 
     val chart = new BBbyCBCTChart(extendedData.output.outputPK.get)

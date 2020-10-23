@@ -125,60 +125,33 @@ object BBbyCBCTExecute extends Logging {
       // it found the BB, regardless of whether the BB was positioned within
       // tolerance of the plan's isocenter.
       logger.info("Starting analysis of CBCT Alignment for machine " + extendedData.machine.id)
-      Trace.trace
       val result = BBbyCBCTAnalysis.volumeAnalysis(runReq.cbctList, extendedData.output.dir)
-      Trace.trace
       if (result.isRight) {
-        Trace.trace
         val cbctFrameOfRefLocationBB_mm = result.right.get.cbctFrameOfRefLocation_mm
-        Trace.trace
         val imageXYZ = result.right.get.imageXYZ
-        Trace.trace
         logger.info("Found BB in CBCT volume.  XYZ Coordinates in original CBCT space: " +
           Util.fmtDbl(cbctFrameOfRefLocationBB_mm.getX) + ", " + Util.fmtDbl(cbctFrameOfRefLocationBB_mm.getY) + ", " + Util.fmtDbl(cbctFrameOfRefLocationBB_mm.getZ))
-        Trace.trace
 
         val transformMatrix = getTransformMatrix(runReq, cbctFrameOfRefLocationBB_mm)
-        Trace.trace
 
         val bbPointInRtplan = Util.transform(transformMatrix, cbctFrameOfRefLocationBB_mm)
-        Trace.trace
 
         val bbByCBCT = saveToDb(extendedData, runReq, bbPointInRtplan)
-        Trace.trace
-        if (true) { // TODO rm
-          Trace.trace
-          logger.info("err_mm: " + bbByCBCT.err_mm.toString)
-          Trace.trace("Saving original non-annotated images.")
-          imageXYZ.zipWithIndex.map(ii => {
-            val name = "orig_" + ii._2 + ".png"
-            val pngFile = new java.io.File(extendedData.output.dir, name)
-            Util.writePng(ii._1, pngFile)
-            Trace.trace("Saved original non-annotated image: " + pngFile.getAbsolutePath)
-          })
-        }
         //  val cbctFrameOfRefLocationRtplanOrigin_mm = if (runReq.reg.isDefined)   getCbctFrameOfRefLocationRtplanOrigin_mm(  runReq.imageRegistration.get.getMatrix
         //def mm2vox(p: Point3d) = result.right.get.volumeTranslator.mm2vox(p) // .mm2vox(p)
 
         def mm2vox(x: Double, y: Double, z: Double) = {
-          Trace.trace
           val pRTPLAN = new Point3d(x, y, z)
           val pCBCT = Util.invTransform(transformMatrix, pRTPLAN)
           result.right.get.volumeTranslator.mm2vox(pCBCT)
         }
 
-        Trace.trace
         val bb_vox = mm2vox(bbByCBCT.cbctX_mm, bbByCBCT.cbctY_mm, bbByCBCT.cbctZ_mm)
-        Trace.trace
         val rtplanOrigin_vox = mm2vox(bbByCBCT.rtplanX_mm, bbByCBCT.rtplanY_mm, bbByCBCT.rtplanZ_mm)
-        Trace.trace
 
         val annotatedImages = BBbyCBCTAnnotateImages.annotate(bbByCBCT, imageXYZ, runReq, bb_vox, rtplanOrigin_vox, extendedData.input.dataDate.get)
-        Trace.trace
         val html = BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, annotatedImages, ProcedureStatus.done, runReq, result.right.get, response)
-        Trace.trace
         logger.info("Finished analysis of CBCT Alignment for machine " + extendedData.machine.id)
-        Trace.trace
         ProcedureStatus.pass
       } else {
         showFailure(result.left.get, extendedData, runReq)
