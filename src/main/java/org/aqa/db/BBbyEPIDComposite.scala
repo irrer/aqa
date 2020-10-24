@@ -162,7 +162,7 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
     Db.perform(ops)
   }
 
-  case class BBbyEPIDCompositeHistory(date: Date, bbByEPIDComposite: BBbyEPIDComposite) {
+  case class BBbyEPIDCompositeHistory(date: Date, bbByEPIDComposite: BBbyEPIDComposite, bbByEPID: Seq[BBbyEPID] = Seq()) {
     override def toString = {
       "date: " + date + "    " + bbByEPIDComposite
     }
@@ -184,11 +184,23 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
    * @param date: Relative to this date.  If None, then use current date.
    */
   def history(machinePK: Long, procedurePK: Long) = {
+    val search1 = for {
+      outputPK <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => o.outputPK)
+      bbByEPIDComposite <- BBbyEPIDComposite.query.filter(c => (c.outputPK === outputPK) && c.bbByCBCTPK.isDefined)
+      bbByEpid <- BBbyEPID.query.filter(e => e.outputPK === bbByEPIDComposite.outputPK)
+    } yield (bbByEpid)
+    val bbByEPIDList = Db.run(search1.result)
+
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
       bbByEPIDComposite <- BBbyEPIDComposite.query.filter(c => (c.outputPK === output._1) && c.bbByCBCTPK.isDefined)
     } yield ((output._2, bbByEPIDComposite))
     val result = Db.run(search.result).map(h => new BBbyEPIDCompositeHistory(h._1.get, h._2)).sortWith((a, b) => a.date.getTime < b.date.getTime)
+
+    def epidOf(c: BBbyEPIDCompositeHistory) = bbByEPIDList.filter(b => b.outputPK == c.bbByEPIDComposite.outputPK)
+
+    result.map(c => c.copy(bbByEPID = epidOf(c)))
+
     result
   }
 
