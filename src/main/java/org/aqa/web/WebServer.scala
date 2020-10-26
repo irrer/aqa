@@ -46,6 +46,7 @@ import org.aqa.webrun.dailyQA.DailyQASummary
 import edu.umro.RestletUtil.NetworkIpFilter
 import edu.umro.ScalaUtil.Level2Ldap
 import org.aqa.webrun.phase2.vmat.VMATChartHistoryRestlet
+import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryPartialRestlet
 
 object WebServer {
   val challengeScheme = ChallengeScheme.HTTP_BASIC
@@ -530,6 +531,7 @@ class WebServer extends Application with Logging {
         new CenterDoseChartHistoryRestlet,
         new BBbyCBCTChartHistoryRestlet,
         new BBbyEPIDChartHistoryRestlet,
+        new BBbyEPIDChartHistoryPartialRestlet,
         new VMATChartHistoryRestlet,
         new WedgeChartHistoryRestlet,
         new SymmetryAndFlatnessHistoryRestlet,

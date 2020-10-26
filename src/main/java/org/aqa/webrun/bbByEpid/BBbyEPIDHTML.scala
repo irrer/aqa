@@ -262,6 +262,7 @@ object BBbyEPIDHTML {
     val outputDir = extendedData.output.dir
 
     val chart = new BBbyEPIDChart(extendedData.output.outputPK.get)
+    val chartPartial = new BBbyEPIDChartPartial(extendedData.output.outputPK.get)
 
     // make all of the images and get their names
     val imageSetList = bbByEPIDList.zipWithIndex.par.map(ri => new ImageSet(ri._1, ri._2)).toList
@@ -574,8 +575,20 @@ object BBbyEPIDHTML {
             { numberTable }
           </div>
         </div>
+        <div class="row" style="border: 1px solid lightgrey">
+          <div style="margin: 5px;">
+            <center><h3>(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER)</h3></center>
+            { chart.chartReference }
+          </div>
+        </div>
         <div class="row">
-          { chart.chartReference }
+          <p> </p>
+        </div>
+        <div class="row" style="border: 1px solid lightgrey">
+          <div style="margin: 5px;">
+            <center><h3>(BB - DIGITAL_CAX) @ ISOCENTER PLANE</h3></center>
+            { chartPartial.chartReference }
+          </div>
         </div>
         <div class="row">
           <table class="table table-responsive">
@@ -591,8 +604,9 @@ object BBbyEPIDHTML {
       val zoomList = imageSetList.map(imageSet => imageSet.script)
       val zoomScript = zoomList.mkString("\n<script>\n      ", "\n      ", "\n</script>")
       val chartRef = BBbyEPIDChartHistoryRestlet.makeReference(extendedData.output.outputPK.get)
+      val chartRefPartial = BBbyEPIDChartHistoryPartialRestlet.makeReference(extendedData.output.outputPK.get)
 
-      zoomScript + "\n" + chartRef
+      zoomScript + "\n" + chartRef + "\n" + chartRefPartial
     }
 
     def writeMatlabFile = {
