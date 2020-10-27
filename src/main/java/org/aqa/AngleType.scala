@@ -40,4 +40,6 @@ object AngleType extends Enumeration {
    */
   def isAngleType(al: AttributeList, angleType: AngleType.Value): Boolean = isAngleType(Util.gantryAngle(al), angleType)
 
+  def isVert(angleType: AngleType.Value) = angleType.toString.equals(vertical.toString)
+  def isHorz(angleType: AngleType.Value) = !isVert(angleType)
 }
