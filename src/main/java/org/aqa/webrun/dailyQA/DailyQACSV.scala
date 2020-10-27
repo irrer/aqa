@@ -12,6 +12,8 @@ import org.aqa.AnonymizeUtil
 import org.aqa.db.Input
 import org.aqa.db.DicomAnonymous
 import com.pixelmed.dicom.TagFromName
+import org.aqa.AngleType
+import javax.vecmath.Point3d
 
 object DailyQACSV {
 
@@ -59,6 +61,30 @@ object DailyQACSV {
 
     def dblOptToString10(d: Option[Double]) = if (d.isDefined) (d.get / 10).toString else "NA"
 
+    /**
+     * Get the list of X,Y,Z table positions for the EPID that is listed first with the requested angle type.  Return the values in cm.
+     */
+    def epidTablePosition_cm(dataSet: BBbyEPIDComposite.DailyDataSetComposite, angleType: AngleType.Value): Seq[String] = {
+      val vert = AngleType.isVert(angleType)
+      val list = dataSet.bbByEpid.find(epid => epid.isVert == vert) match {
+        case Some(epid) => Seq(epid.tableXlateral_mm, epid.tableYvertical_mm, epid.tableZlongitudinal_mm).map(t => (t / 10.0).toString)
+        case _ => Seq("NA", "NA", "NA")
+      }
+      list
+    }
+
+    /**
+     * Get the maximum distance that that table traveled between EPID images (has nothing to do with CBCT) in cm.
+     */
+    def epidMaxTravel_cm(dataSet: BBbyEPIDComposite.DailyDataSetComposite): String = {
+      val distList = for (a <- dataSet.bbByEpid; b <- dataSet.bbByEpid) yield {
+        val aa = new Point3d(a.tableXlateral_mm, a.tableYvertical_mm, a.tableZlongitudinal_mm)
+        val bb = new Point3d(b.tableXlateral_mm, b.tableYvertical_mm, b.tableZlongitudinal_mm)
+        aa.distance(bb)
+      }
+      (distList.max / 10).toString
+    }
+
     case class Col(header: String, toText: (BBbyEPIDComposite.DailyDataSetComposite) => String);
 
     val colList = Seq[Col](
@@ -80,9 +106,20 @@ object DailyQACSV {
       new Col("Y/vert Table Posn CBCT cm", (dataSet) => (dataSet.cbct.tableYvertical_mm / 10).toString),
       new Col("Z/lng Table Posn CBCT cm", (dataSet) => (dataSet.cbct.tableZlongitudinal_mm / 10).toString),
 
-      new Col("X/lat Table Posn EPID cm", (dataSet) => (dataSet.bbByEpid.head.tableXlateral_mm / 10).toString),
-      new Col("Y/vert Table Posn EPID cm", (dataSet) => (dataSet.bbByEpid.head.tableYvertical_mm / 10).toString),
-      new Col("Z/lng Table Posn EPID cm", (dataSet) => (dataSet.bbByEpid.head.tableZlongitudinal_mm / 10).toString),
+      new Col("EPID max Table Travel cm", (dataSet) => epidMaxTravel_cm(dataSet)),
+
+      new Col("Vert X/lat Table Posn EPID cm", (dataSet) => {
+        val j = epidTablePosition_cm(dataSet, AngleType.vertical)
+        j(0)
+      }),
+
+      new Col("Vert X/lat Table Posn EPID cm", (dataSet) => (epidTablePosition_cm(dataSet, AngleType.vertical))(0)),
+      new Col("Vert Y/vert Table Posn EPID cm", (dataSet) => (epidTablePosition_cm(dataSet, AngleType.vertical))(1)),
+      new Col("Vert Z/lng Table Posn EPID cm", (dataSet) => (epidTablePosition_cm(dataSet, AngleType.vertical))(2)),
+
+      new Col("Horz X/lat Table Posn EPID cm", (dataSet) => (epidTablePosition_cm(dataSet, AngleType.horizontal))(0)),
+      new Col("Horz Y/vert Table Posn EPID cm", (dataSet) => (epidTablePosition_cm(dataSet, AngleType.horizontal))(1)),
+      new Col("Horz Z/lng Table Posn EPID cm", (dataSet) => (epidTablePosition_cm(dataSet, AngleType.horizontal))(2)),
 
       new Col("Gantry Angle for XZ (vert) deg", (dataSet) => dataSet.vertList.head.gantryAngle_deg.toString),
       new Col("Vert (EPID-ISO) X mm", (dataSet) => dataSet.vertList.head.epid3DX_mm.toString),
