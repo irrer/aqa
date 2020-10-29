@@ -210,33 +210,4 @@ object BBbyEPID extends ProcedureOutput {
     seq
   }
 
-  def populateDicom = {
-    val action = for {
-      e <- BBbyEPID.query.map(e => e.bbByEPIDPK)
-    } yield (e)
-    val list = Db.run(action.result)
-
-    val start = System.currentTimeMillis
-    var count = 0
-    def check(epk: Long) = {
-      val epid = get(epk).get
-      if (epid.metadata_dcm_zip.isEmpty || epid.metadata_dcm_zip.get.isEmpty) {
-        val alList = DicomSeries.getBySopInstanceUID(epid.epidSOPInstanceUid)
-        if (alList.nonEmpty) {
-          val al = alList.head.attributeListList.find(a => Util.sopOfAl(a).equals(epid.epidSOPInstanceUid)).get
-          al.remove(com.pixelmed.dicom.TagFromName.PixelData)
-          val content = DicomUtil.dicomToZippedByteArray(Seq(al))
-          val epid2 = epid.copy(metadata_dcm_zip = Some(content))
-          epid2.insertOrUpdate
-          count = count + 1
-          Trace.trace(count.formatted("%5d") + "  Updated epid " + epid2)
-        }
-      }
-    }
-
-    list.map(epk => check(epk))
-    val elapsed = System.currentTimeMillis - start
-    Trace.trace("Elapsed ms: " + elapsed + "    Count of EPIDs updated: " + count)
-  }
-
 }
