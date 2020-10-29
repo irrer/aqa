@@ -14,6 +14,7 @@ import org.aqa.db.DicomAnonymous
 import com.pixelmed.dicom.TagFromName
 import org.aqa.AngleType
 import javax.vecmath.Point3d
+import com.pixelmed.dicom.AttributeTag
 
 object DailyQACSV {
 
@@ -85,6 +86,45 @@ object DailyQACSV {
       (distList.max / 10).toString
     }
 
+    def getEpidPixelSpacingXY(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Seq[String] = {
+      val al = dataSet.bbByEpid.head.attributeList
+      val pixSp = al.get(TagFromName.ImagePlanePixelSpacing)
+      if (pixSp == null)
+        Seq("NA", "NA")
+      else {
+        val dbl = pixSp.getDoubleValues
+        Seq(dbl(0).toString, dbl(1).toString)
+      }
+    }
+
+    def getCbctPixelSpacingXY(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Seq[String] = {
+      val pixSp = dataSet.cbct.attributeList.get(TagFromName.PixelSpacing)
+      if (pixSp == null)
+        Seq("NA", "NA")
+      else {
+        val dbl = pixSp.getDoubleValues
+        Seq(dbl(0).toString, dbl(1).toString)
+      }
+    }
+
+    def getCbctDouble(dataSet: BBbyEPIDComposite.DailyDataSetComposite, tag: AttributeTag): String = {
+      val at = dataSet.cbct.attributeList.get(tag)
+      if (at == null)
+        "NA"
+      else {
+        at.getDoubleValues()(0).toString
+      }
+    }
+
+    def getCbctInt(dataSet: BBbyEPIDComposite.DailyDataSetComposite, tag: AttributeTag): String = {
+      val at = dataSet.cbct.attributeList.get(tag)
+      if (at == null)
+        "NA"
+      else {
+        at.getIntegerValues()(0).toString
+      }
+    }
+
     case class Col(header: String, toText: (BBbyEPIDComposite.DailyDataSetComposite) => String);
 
     val colList = Seq[Col](
@@ -134,6 +174,17 @@ object DailyQACSV {
       new Col("Horz (EPID-ISO) - (CBCT-ISO) Z mm", (dataSet) => (dataSet.horzList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ).toString),
 
       new Col("Avg (EPID-ISO) - (CBCT-ISO) Z mm", (dataSet) => (dataSet.composite.zAdjusted_mm.get).toString),
+
+      new Col("EPID pixel spacing X mm", (dataSet) => (getEpidPixelSpacingXY(dataSet))(0)),
+      new Col("EPID pixel spacing Y mm", (dataSet) => (getEpidPixelSpacingXY(dataSet))(1)),
+
+      new Col("CBCT pixel spacing X mm", (dataSet) => (getCbctPixelSpacingXY(dataSet))(0)),
+      new Col("CBCT pixel spacing Y mm", (dataSet) => (getCbctPixelSpacingXY(dataSet))(1)),
+
+      new Col("CBCT Slice Thickness Z mm", (dataSet) => getCbctDouble(dataSet, TagFromName.SliceThickness)),
+      new Col("CBCT KVP Peak kilo voltage", (dataSet) => getCbctDouble(dataSet, TagFromName.KVP)),
+      new Col("CBCT Exposure Time msec", (dataSet) => getCbctInt(dataSet, TagFromName.KVP)),
+      new Col("CBCT X-Ray Tube Current mA", (dataSet) => getCbctInt(dataSet, TagFromName.XRayTubeCurrent)),
 
       new Col("CBCT Details", (dataSet) => urlPrefix + ViewOutput.viewOutputUrl(dataSet.cbct.outputPK)),
       new Col("EPID Details", (dataSet) => urlPrefix + ViewOutput.viewOutputUrl(dataSet.composite.outputPK)))

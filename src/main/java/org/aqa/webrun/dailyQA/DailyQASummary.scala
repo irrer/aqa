@@ -60,7 +60,7 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
   }
 
   private def csvLink(valueMap: ValueMapT): Elem = {
-    <a href={ DailyQASummary.path + "?CSV=" + getDateText(valueMap) } title="Download a spreadsheet of all DailyQA data for this institution.">CSV</a>
+    <a href={ DailyQASummary.path + ".csv?CSV=" + getDateText(valueMap) } title="Download a spreadsheet of all DailyQA data for this institution.">CSV</a>
   }
 
   private val csvField = new WebPlainText("CSV", false, 1, 0, csvLink)

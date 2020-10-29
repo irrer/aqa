@@ -14,6 +14,10 @@ import java.sql.Timestamp
 import java.util.Date
 import org.aqa.AngleType
 import edu.umro.ScalaUtil.Trace
+import com.pixelmed.dicom.AttributeList
+import java.io.ByteArrayInputStream
+import com.pixelmed.dicom.DicomInputStream
+import edu.umro.ScalaUtil.DicomUtil
 
 /**
  * Store the analysis results for one EPID image containing a BB.
@@ -32,8 +36,8 @@ case class BBbyEPID(
   epid3DZ_mm: Double, // Z position in EPID in 3D plan space
   tableXlateral_mm: Double, // table position in X dimension / lateral
   tableYvertical_mm: Double, // table position in Y dimension / vertical
-  tableZlongitudinal_mm: Double // table position in Z dimension / longitudinal
-) {
+  tableZlongitudinal_mm: Double, // table position in Z dimension / longitudinal
+  metadata_dcm_zip: Option[Array[Byte]]) { // DICOM without image for the slice referenced by this EPID
 
   def insert: BBbyEPID = {
     val insertQuery = BBbyEPID.query returning BBbyEPID.query.map(_.bbByEPIDPK) into ((bbByEPID, bbByEPIDPK) => bbByEPID.copy(bbByEPIDPK = Some(bbByEPIDPK)))
@@ -59,6 +63,13 @@ case class BBbyEPID(
 
   val isVert = AngleType.isAngleType(Util.angleRoundedTo90(gantryAngle_deg), AngleType.vertical)
   val isHorz = !isVert
+
+  val attributeList = {
+    if (metadata_dcm_zip.isEmpty || metadata_dcm_zip.get.isEmpty)
+      new AttributeList
+    else
+      DicomUtil.zippedByteArrayToDicom(metadata_dcm_zip.get).head
+  }
 }
 
 object BBbyEPID extends ProcedureOutput {
@@ -78,6 +89,7 @@ object BBbyEPID extends ProcedureOutput {
     def tableXlateral_mm = column[Double]("tableXlateral_mm")
     def tableYvertical_mm = column[Double]("tableYvertical_mm")
     def tableZlongitudinal_mm = column[Double]("tableZlongitudinal_mm")
+    def metadata_dcm_zip = column[Option[Array[Byte]]]("metadata_dcm_zip")
 
     def * = (
       bbByEPIDPK.?,
@@ -93,7 +105,8 @@ object BBbyEPID extends ProcedureOutput {
       epid3DZ_mm,
       tableXlateral_mm,
       tableYvertical_mm,
-      tableZlongitudinal_mm) <> ((BBbyEPID.apply _)tupled, BBbyEPID.unapply _)
+      tableZlongitudinal_mm,
+      metadata_dcm_zip) <> ((BBbyEPID.apply _)tupled, BBbyEPID.unapply _)
 
     def outputFK = foreignKey("BBbyEPID_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -195,6 +208,35 @@ object BBbyEPID extends ProcedureOutput {
 
     val seq = Db.run(search.result).map(omc => new DailyDataSetEPID(omc._1, omc._2, omc._3))
     seq
+  }
+
+  def populateDicom = {
+    val action = for {
+      e <- BBbyEPID.query.map(e => e.bbByEPIDPK)
+    } yield (e)
+    val list = Db.run(action.result)
+
+    val start = System.currentTimeMillis
+    var count = 0
+    def check(epk: Long) = {
+      val epid = get(epk).get
+      if (epid.metadata_dcm_zip.isEmpty || epid.metadata_dcm_zip.get.isEmpty) {
+        val alList = DicomSeries.getBySopInstanceUID(epid.epidSOPInstanceUid)
+        if (alList.nonEmpty) {
+          val al = alList.head.attributeListList.find(a => Util.sopOfAl(a).equals(epid.epidSOPInstanceUid)).get
+          al.remove(com.pixelmed.dicom.TagFromName.PixelData)
+          val content = DicomUtil.dicomToZippedByteArray(Seq(al))
+          val epid2 = epid.copy(metadata_dcm_zip = Some(content))
+          epid2.insertOrUpdate
+          count = count + 1
+          Trace.trace(count.formatted("%5d") + "  Updated epid " + epid2)
+        }
+      }
+    }
+
+    list.map(epk => check(epk))
+    val elapsed = System.currentTimeMillis - start
+    Trace.trace("Elapsed ms: " + elapsed + "    Count of EPIDs updated: " + count)
   }
 
 }

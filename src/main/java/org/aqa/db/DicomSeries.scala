@@ -43,7 +43,7 @@ case class DicomSeries(
   size: Int, // Number of files in series
   referencedRtplanUID: Option[String], // referenced RTPLAN UID if one is referenced
   content: Option[Array[Byte]]) // DICOM in zip form.  If empty, then DICOM must be retrieved from Input
-  {
+  extends Logging {
 
   /**
    * Insert, returning the row that was inserted.  Note that dicomSeriesPK in the return value is defined.
@@ -61,6 +61,7 @@ case class DicomSeries(
 
     val action = insertQuery += ds
     val result = Db.run(action)
+    logger.info("Inserted DicomSeries: " + this.toString)
     result
   }
 
@@ -70,15 +71,22 @@ case class DicomSeries(
    * Get the content as a list of <code>AttributeList</code>.
    */
   def attributeListList: Seq[AttributeList] = {
+    Trace.trace
 
     if (content.nonEmpty) {
+      Trace.trace("getting content from DicomSeries.content")
       val contentList = FileUtil.writeZipToNamedByteArrays(new ByteArrayInputStream(content.get)).map(_._2)
       val alList = DicomUtil.zippedByteArrayToDicom(content.get)
       alList
     } else {
+      Trace.trace("gonna get content from InputFiles")
       val inputContent = InputFiles.getByInputPK(inputPK.get).head.zippedContent
+      Trace.trace("inputContent.size: " + inputContent.size)
       val alList = DicomUtil.zippedByteArrayToDicom(inputContent)
-      alList
+      Trace.trace("alList.size: " + alList.size)
+      val list = alList.filter(al => Util.serInstOfAl(al).equals(seriesInstanceUID))
+      Trace.trace("list.size: " + list.size)
+      list
     }
   }
 
@@ -210,6 +218,7 @@ object DicomSeries extends Logging {
       dicomSeries <- query if ((dicomSeries.seriesInstanceUID === seriesInstanceUID))
     } yield (dicomSeries)
     val list = Db.run(action.result)
+    Trace.trace("Got list for ser UID " + seriesInstanceUID + "  of size: " + list.size)
     list
   }
 

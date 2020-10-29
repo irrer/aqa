@@ -8,6 +8,8 @@ import java.io.File
 import java.util.Date
 import edu.umro.ScalaUtil.Trace
 import org.aqa.run.RunProcedure
+import org.aqa.db.BBbyEPID
+import org.aqa.db.BBbyCBCT
 
 /**
  * Main service entry point.  Start up major portions of

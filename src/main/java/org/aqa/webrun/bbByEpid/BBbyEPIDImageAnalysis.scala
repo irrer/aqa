@@ -19,6 +19,7 @@ import java.awt.geom.Point2D
 import com.pixelmed.dicom.AttributeTag
 import javax.vecmath.Point3d
 import com.pixelmed.dicom.TagFromName
+import edu.umro.ScalaUtil.DicomUtil
 
 /**
  * Locate the BB in the EPID image.  The following steps are taken:
@@ -92,6 +93,13 @@ object BBbyEPIDImageAnalysis extends Logging {
 
     def getDbl(tag: AttributeTag) = epid.get(tag).getDoubleValues.head
 
+    // remove the image data from the DICOM and zip it into a byte array
+    val metadata_dcm_zip = {
+      val al = DicomUtil.clone(epid)
+      al.remove(TagFromName.PixelData)
+      Some(DicomUtil.dicomToZippedByteArray(Seq(al)))
+    }
+
     val bbByEPID = new BBbyEPID(
       bbByEPIDPK = None,
       outputPK = outputPK,
@@ -105,7 +113,8 @@ object BBbyEPIDImageAnalysis extends Logging {
       epid3DX_mm, epid3DY_mm, epid3DZ_mm,
       getDbl(TagFromName.TableTopLateralPosition), // tableXlateral_mm
       getDbl(TagFromName.TableTopVerticalPosition), // tableYvertical_mm
-      getDbl(TagFromName.TableTopLongitudinalPosition)) // tableZlongitudinal_mm
+      getDbl(TagFromName.TableTopLongitudinalPosition), // tableZlongitudinal_mm
+      metadata_dcm_zip)
 
     logger.info("constructed BBbyEPID: " + BBbyEPID)
 

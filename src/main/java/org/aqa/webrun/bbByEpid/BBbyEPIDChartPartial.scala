@@ -101,8 +101,8 @@ class BBbyEPIDChartPartial(outputPK: Long) extends Logging {
       Some(new C3Chart.Tolerance(-Config.BBbyEPIDChartTolerance_mm, Config.BBbyEPIDChartTolerance_mm)),
       Some(new C3Chart.YRange(-Config.BBbyEPIDChartYRange_mm, Config.BBbyEPIDChartYRange_mm)),
       Seq(
-        "LEFT/RIGHT 0/180", "SUP/INF 0/180", "Sum 0/180",
-        "POST/ANT 90/270", "SUP/INF 90/270", "Sum 90/270"),
+        "LEFT/RIGHT 0/180", "SUP/INF 0/180", "Vect Len 0/180",
+        "POST/ANT 90/270", "SUP/INF 90/270", "Vect Len 90/270"),
       units, dataToBeGraphed, index, ".3r", colorList)
   }
 

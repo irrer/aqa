@@ -13,6 +13,10 @@ import javax.vecmath.Point3d
 import java.sql.Timestamp
 import java.util.Date
 import edu.umro.ScalaUtil.Trace
+import com.pixelmed.dicom.AttributeList
+import java.io.ByteArrayInputStream
+import com.pixelmed.dicom.DicomInputStream
+import edu.umro.ScalaUtil.DicomUtil
 
 case class BBbyCBCT(
   bbByCBCTPK: Option[Long], // primary key
@@ -29,8 +33,8 @@ case class BBbyCBCT(
   cbctZ_mm: Double, // measured bb Z position in CBCT
   tableXlateral_mm: Double, // table position in X dimension / lateral
   tableYvertical_mm: Double, // table position in Y dimension / vertical
-  tableZlongitudinal_mm: Double // table position in Z dimension / longitudinal
-) {
+  tableZlongitudinal_mm: Double, // table position in Z dimension / longitudinal
+  metadata_dcm_zip: Option[Array[Byte]]) { // DICOM without image for one slice from the CBCT's series
 
   def insert: BBbyCBCT = {
     val insertQuery = BBbyCBCT.query returning BBbyCBCT.query.map(_.bbByCBCTPK) into ((bbByCBCT, bbByCBCTPK) => bbByCBCT.copy(bbByCBCTPK = Some(bbByCBCTPK)))
@@ -58,6 +62,13 @@ case class BBbyCBCT(
 
   /** CBCT - PLAN */
   val err_mm = new Point3d(cbctX_mm - rtplanX_mm, cbctY_mm - rtplanY_mm, cbctZ_mm - rtplanZ_mm)
+
+  val attributeList = {
+    if (metadata_dcm_zip.isEmpty || metadata_dcm_zip.get.isEmpty)
+      new AttributeList
+    else
+      DicomUtil.zippedByteArrayToDicom(metadata_dcm_zip.get).head
+  }
 }
 
 object BBbyCBCT extends ProcedureOutput {
@@ -78,6 +89,7 @@ object BBbyCBCT extends ProcedureOutput {
     def tableXlateral_mm = column[Double]("tableXlateral_mm")
     def tableYvertical_mm = column[Double]("tableYvertical_mm")
     def tableZlongitudinal_mm = column[Double]("tableZlongitudinal_mm")
+    def metadata_dcm_zip = column[Option[Array[Byte]]]("metadata_dcm_zip")
 
     def * = (
       bbByCBCTPK.?,
@@ -94,7 +106,8 @@ object BBbyCBCT extends ProcedureOutput {
       cbctZ_mm,
       tableXlateral_mm,
       tableYvertical_mm,
-      tableZlongitudinal_mm) <> ((BBbyCBCT.apply _)tupled, BBbyCBCT.unapply _)
+      tableZlongitudinal_mm,
+      metadata_dcm_zip) <> ((BBbyCBCT.apply _)tupled, BBbyCBCT.unapply _)
 
     def outputFK = foreignKey("BBbyCBCT_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -209,6 +222,67 @@ object BBbyCBCT extends ProcedureOutput {
 
     val seq = Db.run(search.result).map(omc => new DailyDataSetCBCT(omc._1, omc._2, omc._3))
     seq
+  }
+
+  def populateDicom = {
+    val action = for {
+      e <- BBbyCBCT.query.map(e => e.bbByCBCTPK)
+    } yield (e)
+    val list = Db.run(action.result)
+
+    Trace.trace("Number of CBCTs to check: " + list.size)
+    var count = 0
+
+    def checkSer(cpk: Long) = {
+      val cbct = get(cpk).get
+      val dsList = DicomSeries.getBySopInstanceUID(cbct.cbctSeriesInstanceUid)
+      if (dsList.nonEmpty) {
+        val al = dsList.head.attributeListList.head
+        val serUID = Util.serInstOfAl(al)
+        val cbct2 = cbct.copy(cbctSeriesInstanceUid = serUID)
+        cbct2.insertOrUpdate
+        count = count + 1
+        Trace.trace(count.formatted("%5d") + "  Updated serUID of CBCT " + cbct2)
+      }
+    }
+
+    Trace.trace
+    val start1 = System.currentTimeMillis
+    list.map(cpk => checkSer(cpk))
+    Trace.trace("Elapsed ms: " + (System.currentTimeMillis - start1) + "    Count of CBCTs serUID updated: " + count)
+    Trace.trace
+
+    count = 0
+    def check(cpk: Long) = {
+      val cbct = get(cpk).get
+      Trace.trace("metadata_dcm_zip: " + cbct.metadata_dcm_zip.toString.take(100))
+      if ((!cbct.metadata_dcm_zip.isDefined) || cbct.metadata_dcm_zip.get.isEmpty || cbct.metadata_dcm_zip.get.size < 50) {
+        val dsList = DicomSeries.getBySeriesInstanceUID(cbct.cbctSeriesInstanceUid)
+        Trace.trace("dsList size: " + dsList.size + "    bbByCBCTPK: " + cbct.bbByCBCTPK)
+        if (dsList.nonEmpty) {
+          Trace.trace("Processing CBCT " + cpk)
+          val ds = dsList.head.attributeListList.find(a => Util.serInstOfAl(a).equals(cbct.cbctSeriesInstanceUid))
+          if (ds.nonEmpty) {
+            val al = ds.get
+            val serUID = Util.serInstOfAl(al)
+            al.remove(com.pixelmed.dicom.TagFromName.PixelData)
+            val content = DicomUtil.dicomToZippedByteArray(Seq(al))
+            val cbct2 = cbct.copy(cbctSeriesInstanceUid = serUID, metadata_dcm_zip = Some(content))
+            cbct2.insertOrUpdate
+            count = count + 1
+            Trace.trace(count.formatted("%5d") + "  Updated CBCT " + cbct2)
+          } else {
+            Trace.trace("Unexpected non-serUID match: " + cbct)
+          }
+        }
+      }
+    }
+
+    Trace.trace
+    val start2 = System.currentTimeMillis
+    list.map(cpk => check(cpk))
+    Trace.trace("Elapsed ms: " + (System.currentTimeMillis - start2) + "    Count of CBCTs updated: " + count)
+    Trace.trace
   }
 
 }

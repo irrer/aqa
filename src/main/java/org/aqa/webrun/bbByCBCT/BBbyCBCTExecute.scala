@@ -71,11 +71,18 @@ object BBbyCBCTExecute extends Logging {
 
     def getDbl(tag: AttributeTag) = runReq.cbctList.head.get(tag).getDoubleValues.head
 
+    // grab the first slice of the series, remove the image data, and zip it into a byte array
+    val metadata_dcm_zip = {
+      val al = DicomUtil.clone(runReq.cbctList.head)
+      al.remove(TagFromName.PixelData)
+      Some(DicomUtil.dicomToZippedByteArray(Seq(al)))
+    }
+
     val bbByCBCT = new BBbyCBCT(
       None, // bbByCBCTPK
       extendedData.output.outputPK.get, // outputPK
       Util.sopOfAl(runReq.rtplan), // rtplanSOPInstanceUID
-      Util.sopOfAl(runReq.cbctList.head), // cbctSeriesInstanceUid
+      Util.serInstOfAl(runReq.cbctList.head), // cbctSeriesInstanceUid
       rtplanIsocenter.distance(bbPointInRtplan), // offset_mm
       ProcedureStatus.pass.toString, // status
       rtplanIsocenter.getX, // planX_mm
@@ -86,8 +93,8 @@ object BBbyCBCTExecute extends Logging {
       bbPointInRtplan.getZ, // cbctZ_mm
       getDbl(TagFromName.TableTopLateralPosition), // tableXlateral_mm
       -getDbl(TagFromName.TableHeight), // tableYvertical_mm
-      getDbl(TagFromName.TableTopLongitudinalPosition) // tableZlongitudinal_mmf
-    )
+      getDbl(TagFromName.TableTopLongitudinalPosition), // tableZlongitudinal_mmf
+      metadata_dcm_zip)
 
     logger.info("Inserting BBbyCBCT into database: " + bbByCBCT)
 
