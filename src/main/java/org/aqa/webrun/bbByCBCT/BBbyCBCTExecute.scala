@@ -92,7 +92,7 @@ object BBbyCBCTExecute extends Logging {
       bbPointInRtplan.getY, // cbctY_mm
       bbPointInRtplan.getZ, // cbctZ_mm
       getDbl(TagFromName.TableTopLateralPosition), // tableXlateral_mm
-      -getDbl(TagFromName.TableHeight), // tableYvertical_mm
+      -getDbl(TagFromName.TableHeight), // tableYvertical_mm.  Intentionally negated to conform to physicists' view.
       getDbl(TagFromName.TableTopLongitudinalPosition), // tableZlongitudinal_mmf
       metadata_dcm_zip)
 
