@@ -87,7 +87,8 @@ object BBbyCBCTAnnotateImages extends Logging {
           unscaledAndUnrotated.getX * (voxSizeX_mmOrig / voxSizeY_mmOrig)
         else
           unscaledAndUnrotated.getX
-        (xc + 0.5) * scale
+        //(xc + 0.5) * scale
+        Util.scalePixel(scale, xc)
       }
 
       val centerY_pix = {
@@ -95,27 +96,14 @@ object BBbyCBCTAnnotateImages extends Logging {
           unscaledAndUnrotated.getY * (voxSizeY_mmOrig / voxSizeX_mmOrig)
         else
           unscaledAndUnrotated.getY
-        (yc + 0.5) * scale
+        //(yc + 0.5) * scale
+        Util.scalePixel(scale, yc)
       }
 
       val cntr = new Point2d(centerX_pix, centerY_pix)
 
-      //            val rotated = rotation match {
-      //              case 0 => new Point2d(centerX_pix, centerY_pix)
-      //              case 90 => new Point2d((originalImage.getHeight * scale) - 1 - centerY_pix, centerX_pix)
-      //              case 180 => new Point2d((originalImage.getWidth * scale) - centerX_pix, centerY_pix)
-      //              case _ => throw new RuntimeException("Unexpected rotation in makePair: " + rotation)
-      //            }
-      //
-      //
-      //
-      //
-      //            rotated
-
       val p = mapPoint(cntr, originalImage.getWidth * scale, originalImage.getHeight * scale)
-      //      val xFactor = if (voxSizeX_mmOrig > voxSizeY_mmOrig) voxSizeX_mmOrig / voxSizeY_mmOrig else 1.0
-      //      val yFactor = if (voxSizeY_mmOrig > voxSizeY_mmOrig) voxSizeY_mmOrig / voxSizeX_mmOrig else 1.0
-      //      val p2 = new Point2d(p.getX * xFactor * scale, p.getY * yFactor * scale)
+
       p
     }
 
@@ -137,23 +125,13 @@ object BBbyCBCTAnnotateImages extends Logging {
     def makeFullImage: BufferedImage = {
       val image = ImageUtil.magnify(mapImage(originalImage), scale)
 
-      //      val image = {
-      //        val i = ImageUtil.magnify(originalImage, scale)
-      //        rotation match {
-      //          case 0 => i
-      //          case 90 => ImageUtil.rotate90(i)
-      //          case 180 => ImageUtil.mirrorHorizontally(i)
-      //          case _ => throw new RuntimeException("Unexpected rotation in makeFullImage: " + rotation)
-      //        }
-      //      }
-
       val maxVoxSize = Math.max(voxSizeX_mm, voxSizeY_mm) // larger voxel dimension
       val minVoxSize = Math.min(voxSizeX_mm, voxSizeY_mm) // smaller voxel dimension
       val widthCircle_pix = {
-        ((Config.CBCTBBPenumbra_mm * 7) / voxSizeX_mm) * scale //* (maxVoxSize / minVoxSize)
+        ((Config.CBCTBBPenumbra_mm * 10) / voxSizeX_mm) * scale //* (maxVoxSize / minVoxSize)
       }
       val heightCircle_pix = {
-        ((Config.CBCTBBPenumbra_mm * 7) / voxSizeY_mm) * scale //* (maxVoxSize / minVoxSize)
+        ((Config.CBCTBBPenumbra_mm * 10) / voxSizeY_mm) * scale //* (maxVoxSize / minVoxSize)
       }
 
       // ---------------------------------------------------------------------------------

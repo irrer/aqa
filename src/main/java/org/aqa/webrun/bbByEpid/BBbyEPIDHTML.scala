@@ -231,6 +231,7 @@ object BBbyEPIDHTML {
 
           <a href={ name }>
             <h4>{ title }</h4>
+            Red circle shows center of EPID image rotation without CBCT correction.
             <div class='zoom' id={ Util.textToId(name) }>
               { if (border) { <img width='400' src={ name } style="border: 1px solid lightgrey;"/> } else { <img width='400' src={ name }/> } }
             </div>

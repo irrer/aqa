@@ -232,9 +232,9 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
     applyOrientationWatermark(fullSize)
     drawCircleWithXAtCenterOfBB(new Point2d(0, 0), fullSize, scale)
     //drawCirclesAtCenterOfPlan(new Point2d(0, 0), fullSize, scale)
-    
-    val scaledPlanCenter = new Point2d(Util.scalePixel(scale, planCenter_pix.getX ) , Util.scalePixel(scale, planCenter_pix.getY))
-    Util.drawTarget(scaledPlanCenter, fullSize, scale)
+
+    val scaledPlanCenter = new Point2d(Util.scalePixel(scale, planCenter_pix.getX), Util.scalePixel(scale, planCenter_pix.getY))
+    Util.drawTarget(scaledPlanCenter, fullSize, scale * 2)
 
     fullSize
   }
@@ -288,7 +288,7 @@ class BBbyEPIDAnnotateImages(al: AttributeList, bbLoc_mmGantry: Option[Point2D.D
 
     drawCircleWithXAtCenterOfBB(upperLeftCorner, closeupImage, scale)
     //drawCirclesAtCenterOfPlan(upperLeftCorner, closeupImage, scale)
-        val scaledPlanCenter = new Point2d(Util.scalePixel(scale, planCenter_pix.getX  - upperLeftCorner.getX) , Util.scalePixel(scale, planCenter_pix.getY - upperLeftCorner.getY))
+    val scaledPlanCenter = new Point2d(Util.scalePixel(scale, planCenter_pix.getX - upperLeftCorner.getX), Util.scalePixel(scale, planCenter_pix.getY - upperLeftCorner.getY))
 
     Util.drawTarget(scaledPlanCenter, closeupImage, scale)
 
