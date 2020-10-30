@@ -192,7 +192,7 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
     result
   }
 
-  case class DailyDataSetComposite(composite: BBbyEPIDComposite, cbct: BBbyCBCT, machine: Machine, output: Output, bbByEpid: Seq[BBbyEPID]) {
+  case class DailyDataSetComposite(composite: BBbyEPIDComposite, cbct: BBbyCBCT, machine: Machine, output: Output, bbByEpid: Seq[BBbyEPID], cbctDicomSeries: DicomSeries) {
     private def byType(angleType: AngleType.Value) = bbByEpid.filter(b => AngleType.isAngleType(b.gantryAngle_deg, angleType))
     val vertList = byType(AngleType.vertical)
     val horzList = byType(AngleType.horizontal)
@@ -260,10 +260,11 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
       machine <- Machine.query.filter(m => (m.machinePK === output.machinePK) && (m.institutionPK === institutionPK))
       cbct <- BBbyCBCT.query.filter(c => c.bbByCBCTPK === bbByEPIDComposite.bbByCBCTPK)
       bbByEpid <- BBbyEPID.query.filter(b => b.outputPK === output.outputPK)
-    } yield (bbByEPIDComposite, cbct, machine, output, bbByEpid)
+      dicomSeries <- DicomSeries.query.filter(ds => cbct.cbctSeriesInstanceUid === ds.seriesInstanceUID)
+    } yield (bbByEPIDComposite, cbct, machine, output, bbByEpid, dicomSeries)
 
     val list = Db.run(search.result)
-    val dailyQA = list.groupBy(ga => ga._1.outputPK).map(gb => gb._2).map(g => new DailyDataSetComposite(g.head._1, g.head._2, g.head._3, g.head._4, g.map(gg => gg._5)))
+    val dailyQA = list.groupBy(ga => ga._1.outputPK).map(gb => gb._2).map(g => new DailyDataSetComposite(g.head._1, g.head._2, g.head._3, g.head._4, g.map(gg => gg._5), g.head._6))
     dailyQA.toSeq
   }
 
@@ -281,10 +282,11 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
       machine <- Machine.query.filter(m => (m.machinePK === output.machinePK) && (m.institutionPK === institutionPK))
       cbct <- BBbyCBCT.query.filter(c => c.bbByCBCTPK === bbByEPIDComposite.bbByCBCTPK)
       bbByEpid <- BBbyEPID.query.filter(b => b.outputPK === output.outputPK)
-    } yield (bbByEPIDComposite, cbct, machine, output, bbByEpid)
+      dicomSeries <- DicomSeries.query.filter(ds => cbct.cbctSeriesInstanceUid === ds.seriesInstanceUID)
+    } yield (bbByEPIDComposite, cbct, machine, output, bbByEpid, dicomSeries)
 
     val list = Db.run(search.result)
-    val dailyQA = list.groupBy(ga => ga._1.outputPK).map(gb => gb._2).map(g => new DailyDataSetComposite(g.head._1, g.head._2, g.head._3, g.head._4, g.map(gg => gg._5)))
+    val dailyQA = list.groupBy(ga => ga._1.outputPK).map(gb => gb._2).map(g => new DailyDataSetComposite(g.head._1, g.head._2, g.head._3, g.head._4, g.map(gg => gg._5), g.head._6))
     dailyQA.toSeq
   }
 }
