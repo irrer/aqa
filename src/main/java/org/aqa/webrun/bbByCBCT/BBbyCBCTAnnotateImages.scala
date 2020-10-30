@@ -25,9 +25,9 @@ import org.aqa.OrientationWatermark
 object BBbyCBCTAnnotateImages extends Logging {
 
   /** Factor to magnify area of interest image. */
-  private val scale = 6
+  private val scale = 8
 
-  private val textPointSize = 16
+  private val textPointSize = Util.d2i(scale * 2.5)
 
   case class ImageSet(fullImage: Seq[BufferedImage], areaOfInterest: Seq[BufferedImage]);
 
@@ -150,10 +150,10 @@ object BBbyCBCTAnnotateImages extends Logging {
       val maxVoxSize = Math.max(voxSizeX_mm, voxSizeY_mm) // larger voxel dimension
       val minVoxSize = Math.min(voxSizeX_mm, voxSizeY_mm) // smaller voxel dimension
       val widthCircle_pix = {
-        ((Config.CBCTBBPenumbra_mm * 3) / voxSizeX_mm) * scale //* (maxVoxSize / minVoxSize)
+        ((Config.CBCTBBPenumbra_mm * 7) / voxSizeX_mm) * scale //* (maxVoxSize / minVoxSize)
       }
       val heightCircle_pix = {
-        ((Config.CBCTBBPenumbra_mm * 3) / voxSizeY_mm) * scale //* (maxVoxSize / minVoxSize)
+        ((Config.CBCTBBPenumbra_mm * 7) / voxSizeY_mm) * scale //* (maxVoxSize / minVoxSize)
       }
 
       // ---------------------------------------------------------------------------------
@@ -163,7 +163,7 @@ object BBbyCBCTAnnotateImages extends Logging {
        */
       def drawCircle = {
         val graphics = ImageUtil.getGraphics(image)
-        graphics.setColor(Color.yellow)
+        graphics.setColor(Color.white)
 
         graphics.drawOval(d2i(bbCenter_pix.getX - (widthCircle_pix / 2)), d2i(bbCenter_pix.getY - (heightCircle_pix / 2)), d2i(widthCircle_pix), d2i(heightCircle_pix))
 
@@ -176,7 +176,7 @@ object BBbyCBCTAnnotateImages extends Logging {
 
       def drawPlanText = {
         val graphics = ImageUtil.getGraphics(image)
-        graphics.setColor(Color.green)
+        graphics.setColor(Color.red)
         // show BB offset from plan
         val text = "P"
         ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
@@ -206,7 +206,8 @@ object BBbyCBCTAnnotateImages extends Logging {
       // ---------------------------------------------------------------------------------
 
       drawCircle
-      Util.drawPlanCenter(image, planCenter_pix)
+      //Util.drawPlanCenter(image, planCenter_pix)
+      Util.drawTarget(planCenter_pix, image, scale * 5) // draw plan center
       drawPlanText
       drawCrossLines
       image

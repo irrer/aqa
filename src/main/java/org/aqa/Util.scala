@@ -36,6 +36,8 @@ import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import javax.vecmath.Matrix4d
 import javax.vecmath.Point2d
+import java.awt.geom.Point2D
+import java.awt.Polygon
 
 object Util extends Logging {
 
@@ -1185,6 +1187,84 @@ object Util extends Logging {
    */
   def scalePixel(scale: Int, pix: Double): Double = {
     scale * (pix + 0.5) - 0.5
+  }
+
+  def d2i(d: Double) = d.round.toInt
+
+  /**
+   * Draw a + at the center showing where the plan isocenter is.
+   *
+   * @param center Center of + in pixels, not scaled.
+   */
+  def drawTarget(center: Point2d, bufImage: BufferedImage, scale: Int, color: Color = Color.red) = {
+
+    val planCenterOffsetAndScaled_pix = new Point2D.Double(center.getX, center.getY)
+
+    val graphics = ImageUtil.getGraphics(bufImage)
+    graphics.setColor(Color.red)
+
+    val radius = scale * 2
+    val skip = 2
+    val diam = radius * 2
+    val xi = d2i(planCenterOffsetAndScaled_pix.getX)
+    val yi = d2i(planCenterOffsetAndScaled_pix.getY)
+
+    graphics.drawLine(xi - radius, yi, xi - skip, yi)
+    graphics.drawLine(xi + skip, yi, xi + radius, yi)
+
+    graphics.drawLine(xi, yi - radius, xi, yi - skip)
+    graphics.drawLine(xi, yi + skip, xi, yi + radius)
+
+    graphics.setStroke(new BasicStroke(3))
+    graphics.drawOval(xi - radius, yi - radius, diam, diam)
+
+    val thickness = d2i(scale * 0.25)
+    val len = thickness * 3
+
+    def top = {
+      val poly = new Polygon
+      poly.addPoint(xi, yi - radius)
+      poly.addPoint(xi - thickness, yi - radius)
+      poly.addPoint(xi, yi - radius + len)
+      poly.addPoint(xi + 1, yi - radius + len)
+      poly.addPoint(xi + thickness, yi - radius)
+      graphics.fill(poly)
+    }
+
+    def bottom = {
+      val poly = new Polygon
+      poly.addPoint(xi, yi + radius)
+      poly.addPoint(xi - thickness, yi + radius)
+      poly.addPoint(xi, yi + radius - len)
+      poly.addPoint(xi + 1, yi + radius - len)
+      poly.addPoint(xi + thickness, yi + radius)
+      graphics.fill(poly)
+    }
+
+    def left = {
+      val poly = new Polygon
+      poly.addPoint(xi - radius, yi)
+      poly.addPoint(xi - radius, yi - thickness + 1)
+      poly.addPoint(xi - radius + len, yi)
+      poly.addPoint(xi - radius + len, yi + 1)
+      poly.addPoint(xi - radius, yi + thickness)
+      graphics.fill(poly)
+    }
+
+    def right = {
+      val poly = new Polygon
+      poly.addPoint(xi + radius, yi)
+      poly.addPoint(xi + radius, yi - thickness + 1)
+      poly.addPoint(xi + radius - len, yi)
+      poly.addPoint(xi + radius - len, yi + 1)
+      poly.addPoint(xi + radius, yi + thickness)
+      graphics.fill(poly)
+    }
+
+    top
+    bottom
+    left
+    right
   }
 
 }
