@@ -236,11 +236,11 @@ object DailyQACSV {
 
       new Col("CBCT pixel spacing X mm", (dataSet) => (getCbctNums(dataSet, TagFromName.PixelSpacing))(0)),
       new Col("CBCT pixel spacing Y mm", (dataSet) => (getCbctNums(dataSet, TagFromName.PixelSpacing))(1)),
+      new Col("CBCT Slice Thickness Z mm", (dataSet) => (getCbctNums(dataSet, TagFromName.SliceThickness))(0)),
       new Col("CBCT num X pix", (dataSet) => (getCbctNums(dataSet, TagFromName.Columns))(0)),
       new Col("CBCT num Y pix", (dataSet) => (getCbctNums(dataSet, TagFromName.Rows))(0)),
       new Col("CBCT num Z pix (slices)", (dataSet) => dataSet.cbctDicomSeries.size.toString),
 
-      new Col("CBCT Slice Thickness Z mm", (dataSet) => (getCbctNums(dataSet, TagFromName.SliceThickness))(0)),
       new Col("CBCT KVP Peak kilo voltage", (dataSet) => (getCbctNums(dataSet, TagFromName.KVP))(0)),
       new Col("CBCT Exposure Time msec", (dataSet) => (getCbctNums(dataSet, TagFromName.ExposureTime))(0)),
       new Col("CBCT X-Ray Tube Current mA", (dataSet) => (getCbctNums(dataSet, TagFromName.XRayTubeCurrent))(0)),
