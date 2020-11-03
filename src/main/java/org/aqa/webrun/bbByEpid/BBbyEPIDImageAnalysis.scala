@@ -181,69 +181,44 @@ object BBbyEPIDImageAnalysis extends Logging {
       for (x <- 0 until coreSize; y <- 0 until coreSize) yield { new Point2i(x + corner.getX, y + corner.getY) }
     }
 
+    // Two lists of points, those that are in the BB and those that are not.
     val inOut = pixList.groupBy(p => bbCorePix.contains(p))
 
-    //    /**
-    //     * Put a white pixel at the center of the BB and write a png file.  This is for
-    //     * debugging to verify that the bb is found in the expected position.
-    //     */
-    //    def saveImage(bbCenter_pix: Point2d) = {
-    //
-    //      val ga = Util.angleRoundedTo90(Util.gantryAngle(al))
-    //
-    //      val name = ga.formatted("%03d") + "_" + Util.sopOfAl(al) + ".png"
-    //      val dir = new java.io.File("""D:\tmp\j16""")
-    //      val pngFile = new java.io.File(dir, name)
-    //
-    //      val dicomImage = new DicomImage(al)
-    //      val buf = dicomImage.toDeepColorBufferedImage(0.005)
-    //      buf.setRGB(bbCenter_pix.getX.round.toInt, bbCenter_pix.getY.round.toInt, 0xffffff)
-    //      Util.writePng(buf, pngFile)
-    //    }
-
     /**
-     * Get the list of pixels that are in the BB by finding the largest that are adjacent to the core pixels.
+     * Get the list of pixels that are in the BB by finding the largest that are adjacent to the core
+     * pixels.  Recursively do this until enough pixels have been acquired to cover the area of the BB.
+     * In this manner the BB is 'grown', looking for adjacent bright pixels.
      */
     def getListOfPixInBB(inOut: Map[Boolean, Seq[Point2i]]): Map[Boolean, Seq[Point2i]] = {
       val minDist = Math.sqrt(2) * 1.001
 
       // true if adjacent
       def adjacentTo(p1: Point2i, p2: Point2i) = ((p1.getX - p2.getX).abs < 2) && ((p1.getY - p2.getY).abs < 2)
+      // Make a list of all pixels that are adjacent to at least one of the pixels that are are part of the BB.
       val adjacentList = inOut(false).filter(pOut => inOut(true).filter(pIn => adjacentTo(pIn, pOut)).nonEmpty)
+
+      // Of the adjacent pixels, grab the largest one, add it to the BB list, and take it off the non-BB list.
       val maxAdjacent = adjacentList.maxBy(p => bbImage.get(p.getX, p.getY))
       val in = inOut(true) :+ maxAdjacent
       val out = inOut(false).diff(Seq(maxAdjacent))
+
+      // Create a new map that contains two lists of points, one for the BB and one list that is not part of the BB.
       val newInOut = Map((true, in), (false, out))
+
+      // If enough pixels have been acquired to cover the area of the BB then quit, otherwise get the next adjacent
+      // pixel that is the brightest..
       if (in.size >= bbCount) newInOut else getListOfPixInBB(newInOut)
     }
 
     val in = getListOfPixInBB(inOut)(true)
 
+    // calculate the center of mass for all points in the BB
     val sumMass = in.map(p => bbImage.get(p.getX, p.getY)).sum
-
     val xPos_pix = (in.map(p => p.getX * bbImage.get(p.getX, p.getY)).sum / sumMass) + bbRect.getX
     val yPos_pix = (in.map(p => p.getY * bbImage.get(p.getX, p.getY)).sum / sumMass) + bbRect.getY
 
-    if (true) { // TODO rm?
-      val col = bbImage.columnSums
-      val row = bbImage.rowSums
-      val x = LocateMax.locateMax(col) + bbRect.getX
-      val y = LocateMax.locateMax(row) + bbRect.getY
-      Trace.trace("x: " + x + "    xPos_pix: " + xPos_pix + "    diff: " + (x - xPos_pix))
-      Trace.trace("y: " + y + "    yPos_pix: " + yPos_pix + "    diff: " + (y - yPos_pix))
-
-      val xMax = LocateMax.toCubicSpline(col).evaluate(LocateMax.locateMax(col))
-      val yMax = LocateMax.toCubicSpline(row).evaluate(LocateMax.locateMax(row))
-
-      val sdCol = ImageUtil.stdDev(col)
-      val sdRow = ImageUtil.stdDev(row)
-
-      println("gantry angle: " + Util.gantryAngle(al).toInt + "   xMax: " + xMax + " sd: " + sdCol + "    mean: " + (col.sum / col.size))
-      println("gantry angle: " + Util.gantryAngle(al).toInt + "   yMax: " + yMax + " sd: " + sdRow + "    mean: " + (row.sum / row.size))
-    }
-
     val bbCenter_pix = new Point2d(xPos_pix, yPos_pix)
-    //    saveImage(bbCenter_pix) // for debug only
+
     val bbCenter_mm = trans.pix2Iso(xPos_pix, yPos_pix)
 
     val valid = {
