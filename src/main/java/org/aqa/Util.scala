@@ -172,6 +172,14 @@ object Util extends Logging {
   }
 
   /**
+   * Get the StudyInstanceUID of an attribute list.
+   */
+  def studyInstOfAl(al: AttributeList): String = {
+    val at = al.get(TagFromName.StudyInstanceUID)
+    if (at == null) "" else al.get(TagFromName.StudyInstanceUID).getSingleStringValueOrEmptyString
+  }
+
+  /**
    * Get the PatientID of an attribute list.
    */
   def patientIdOfAl(al: AttributeList): String = {
