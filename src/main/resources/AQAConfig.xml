@@ -238,23 +238,18 @@ Note that when building a package for release, the Maven build process uses the 
 
 
     <!--Name of Phase 2 DICOM RTPLAN files.  This is the basis for creating a plan customized plan for a given machine.  -->
-    <Phase2PlanFileList>
-        <Phase2PlanFile manufacturer='Varian' model='HD'>rtplan_hdmlc.dcm</Phase2PlanFile>
-        <Phase2PlanFile manufacturer='Varian' model='Millenium'>rtplan_millenium.dcm</Phase2PlanFile>
-    </Phase2PlanFileList>
-
-    <!-- When creating a custom plan, override the following attributes with their corresponding values. -->
-    <Phase2PlanAttributeOverrideList>
-    <!--
-        <Phase2PlanAttributeOverride Name='TableTopEccentricAngle'       Value='0'   />
-        <Phase2PlanAttributeOverride Name='TableTopLateralPosition'      Value='0'   />
-        <Phase2PlanAttributeOverride Name='TableTopLongitudinalPosition' Value='200' />
-        <Phase2PlanAttributeOverride Name='TableTopPitchAngle'           Value='0'   />
-        <Phase2PlanAttributeOverride Name='TableTopRollAngle'            Value='0'   />
-        <Phase2PlanAttributeOverride Name='TableTopVerticalPosition'     Value='-60' />
-    -->
-    </Phase2PlanAttributeOverrideList>
-    
+    <PlanFileList>
+        <PlanFile procedure='Phase2' manufacturer='Varian' collimatorModel='HD'>rtplan_hdmlc.dcm</PlanFile>
+        <PlanFile procedure='Phase2' manufacturer='Varian' collimatorModel='Millenium'>rtplan_millenium.dcm</PlanFile>
+        
+        <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='HD'>rtplan_hdmlc.dcm</PlanFile>
+        <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='Millenium'>rtplan_millenium.dcm</PlanFile>
+        
+        <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='HD'>rtplan_hdmlc.dcm</PlanFile>
+        <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='Millenium'>rtplan_millenium.dcm</PlanFile>
+        
+        
+    </PlanFileList>
 
     <!-- List of categories of maintenance, as referenced in the PMI database table.  If a category is in
         the database whose name does not match one of these, then the first category is used as a default.

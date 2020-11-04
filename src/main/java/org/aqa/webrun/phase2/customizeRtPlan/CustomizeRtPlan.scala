@@ -21,15 +21,30 @@ import edu.umro.util.UMROGUID
 import edu.umro.ScalaUtil.Trace
 import com.pixelmed.dicom.OtherByteAttribute
 import org.aqa.db.DicomSeries
+import org.aqa.Config.PlanAttributeOverride
 
 object CustomizeRtPlan extends Logging {
 
+  case class LOCRtplanPair(baseline: AttributeList, delivery: AttributeList) {
+    val asSeq = Seq(baseline, delivery)
+
+    //  rtplanPair.asSeq.map(al => DicomUtil.clone(al))
+
+  }
+
   private val standardBeamEnergy = 6.0
 
-  def getCollimatorCompatiblePlanForMachine(machine: Machine): Option[Config.Phase2PlanFileConfig] = {
+  def getCollimatorCompatiblePhase2PlanForMachine(machine: Machine): Option[Config.PlanFileConfig] = {
     val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
-    val planFile = Config.Phase2PlanFileList.filter(pf => pf.manufacturer.equalsIgnoreCase(collimator.manufacturer) && pf.model.equalsIgnoreCase(collimator.model)).headOption
+    val planFile = Config.PlanFileList.filter(pf =>
+      pf.procedure.toLowerCase.matches(".*phase *2.*") &&
+        pf.manufacturer.equalsIgnoreCase(collimator.manufacturer) &&
+        pf.collimatorModel.equalsIgnoreCase(collimator.model)).headOption
     planFile
+  }
+
+  private def getCollimatorCompatibleLocPlanPairForMachine(machine: Machine): LOCRtplanPair = {
+    ???
   }
 
   /**
@@ -178,7 +193,7 @@ object CustomizeRtPlan extends Logging {
     planName: String);
 
   def getPlanBeamList(machine: Machine): List[PlanBeam] = {
-    val plan = getCollimatorCompatiblePlanForMachine(machine)
+    val plan = getCollimatorCompatiblePhase2PlanForMachine(machine)
     if (plan.isDefined) {
       val planAttrList = plan.get.dicomFile.attributeList.get
 
@@ -550,20 +565,20 @@ object CustomizeRtPlan extends Logging {
   }
 
   /**
-   * Given all the required information, create a plan that is compatible with the given machine.
+   * Given all the required information, create an rtplan that is compatible with the given machine for Phase2.
    */
-  def makePlan(machine: Machine, userPK: Long, planBeamList: Seq[PlanBeam], planSpecification: PlanSpecification, machineEnergyList: Seq[MachineBeamEnergy]): AttributeList = {
+  def makePlanPhase2(machine: Machine, userPK: Long, planBeamList: Seq[PlanBeam], planSpecification: PlanSpecification, machineEnergyList: Seq[MachineBeamEnergy]): AttributeList = {
 
-    val rtplan = DicomUtil.clone(getCollimatorCompatiblePlanForMachine(machine).get.dicomFile.attributeList.get)
+    val rtplan = DicomUtil.clone(getCollimatorCompatiblePhase2PlanForMachine(machine).get.dicomFile.attributeList.get)
     replaceAllUids(rtplan) // change UIDs so that this plan will be considered new and unique from all others.
 
-    val overrideList = Config.Phase2PlanAttributeOverrideList ++ Seq(
-      new Config.PlanAttributeOverride(TagFromName.ToleranceTableLabel, planSpecification.toleranceTable),
-      new Config.PlanAttributeOverride(TagFromName.PatientID, planSpecification.patientID),
-      new Config.PlanAttributeOverride(TagFromName.PatientName, planSpecification.patientName),
-      new Config.PlanAttributeOverride(TagFromName.TreatmentMachineName, planSpecification.machineName),
-      new Config.PlanAttributeOverride(TagFromName.RTPlanLabel, planSpecification.planName),
-      new Config.PlanAttributeOverride(TagFromName.TableTopVerticalPosition, 0.toString))
+    val overrideList = Seq(
+      Config.PlanAttributeOverride(TagFromName.ToleranceTableLabel, planSpecification.toleranceTable),
+      Config.PlanAttributeOverride(TagFromName.PatientID, planSpecification.patientID),
+      Config.PlanAttributeOverride(TagFromName.PatientName, planSpecification.patientName),
+      Config.PlanAttributeOverride(TagFromName.TreatmentMachineName, planSpecification.machineName),
+      Config.PlanAttributeOverride(TagFromName.RTPlanLabel, planSpecification.planName),
+      Config.PlanAttributeOverride(TagFromName.TableTopVerticalPosition, 0.toString))
 
     // modify all attributes that get a constant value
     overrideList.map(ov => {
@@ -574,6 +589,46 @@ object CustomizeRtPlan extends Logging {
     reassignPlanEnergies(rtplan, planBeamList, machineEnergyList)
     saveAnonymizedDicom(machine, userPK, rtplan)
     rtplan
+  }
+
+  /**
+   * Given all the required information, create a pair of rtplans that are compatible with the given machine for LOC.
+   */
+  def makePlanLOC(machine: Machine, userPK: Long, planBeamList: Seq[PlanBeam], planSpecification: PlanSpecification, machineEnergyList: Seq[MachineBeamEnergy]): CustomizeRtPlan.LOCRtplanPair = {
+
+    val rtplanPair = getCollimatorCompatibleLocPlanPairForMachine(machine)
+
+    // change UIDs so that these plans will be considered new and unique from all others.
+    rtplanPair.asSeq.map(rtplan => replaceAllUids(rtplan))
+
+    // force them to have the same study instance UID so we know they were made together
+    val studyUID = rtplanPair.baseline.get(TagFromName.StudyInstanceUID).getSingleStringValueOrEmptyString
+    val studyAt = rtplanPair.delivery.get(TagFromName.StudyInstanceUID)
+    studyAt.removeValues
+    studyAt.addValue(studyUID)
+
+    val overrideList = Seq(
+      Config.PlanAttributeOverride(TagFromName.ToleranceTableLabel, planSpecification.toleranceTable),
+      Config.PlanAttributeOverride(TagFromName.PatientID, planSpecification.patientID),
+      Config.PlanAttributeOverride(TagFromName.PatientName, planSpecification.patientName),
+      Config.PlanAttributeOverride(TagFromName.TreatmentMachineName, planSpecification.machineName),
+      Config.PlanAttributeOverride(TagFromName.RTPlanLabel, planSpecification.planName),
+      Config.PlanAttributeOverride(TagFromName.TableTopVerticalPosition, 0.toString))
+
+    // modify all attributes that get a constant value
+    overrideList.map(ov => {
+      rtplanPair.asSeq.map(al => {
+        DicomUtil.findAllSingle(al, ov.tag).map(at =>
+          {
+            at.removeValues
+            at.addValue(ov.value)
+          })
+      })
+    })
+
+    rtplanPair.asSeq.map(al => removeVarianPrivateTagAttributes(al))
+    rtplanPair.asSeq.map(al => saveAnonymizedDicom(machine, userPK, al))
+    rtplanPair
   }
 
 }

@@ -147,7 +147,7 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     val patNameErr = if (empty(patientName.label)) Error.make(patientName, "A patient name must be given.") else styleNone
 
     val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong)
-    val collimatorErr = if (CustomizeRtPlan.getCollimatorCompatiblePlanForMachine(machine.get).isEmpty) Error.make(createButton, "There is no pre-defined plan to support this machine's collimator.") else styleNone
+    val collimatorErr = if (CustomizeRtPlan.getCollimatorCompatiblePhase2PlanForMachine(machine.get).isEmpty) Error.make(createButton, "There is no pre-defined plan to support this machine's collimator.") else styleNone
 
     (tolErr ++ planNameErr ++ machErr ++ patIdErr ++ patNameErr ++ collimatorErr)
   }
@@ -194,7 +194,7 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
         valueMap(patientName.label),
         valueMap(machineName.label),
         valueMap(planName.label))
-      val rtplan = CustomizeRtPlan.makePlan(machine, userPK, planEnergyList, planSpecification, machineEnergyList)
+      val rtplan = CustomizeRtPlan.makePlanPhase2(machine, userPK, planEnergyList, planSpecification, machineEnergyList)
       showDownload(rtplan, valueMap, machine, response)
     }
   }

@@ -688,25 +688,26 @@ object Config extends Logging {
   }
 
   /**
-   * A standard Phase 2 plan used as a basis for a customized plan.
+   * A standard plan used as a basis for a customized plan.
    */
-  case class Phase2PlanFileConfig(manufacturer: String, model: String, file: File) {
+  case class PlanFileConfig(procedure: String, manufacturer: String, collimatorModel: String, file: File) {
     val dicomFile = new DicomFile(file)
-    override def toString = "manufacturer: " + manufacturer + "  model: " + model.formatted("%-12s") + "  file: " + file.getName
+    override def toString = "manufacturer: " + manufacturer + "  collimator model: " + collimatorModel.formatted("%-12s") + "  file: " + file.getName
   }
 
-  private def getPhase2PlanFileList = {
-    def makePhase2PlanFileConfig(node: Node): Phase2PlanFileConfig = {
+  private def getPlanFileList = {
+    def makePlanFileConfig(node: Node): PlanFileConfig = {
+      val procedure = (node \ "@procedure").head.text
       val manufacturer = (node \ "@manufacturer").head.text
       val model = (node \ "@model").head.text
       val fileName = node.head.text
 
       val file = new File(staticDirFile, fileName)
-      new Phase2PlanFileConfig(manufacturer, model, file)
+      new PlanFileConfig(procedure, manufacturer, model, file)
     }
 
-    val configTag = "Phase2PlanFileList"
-    val list = (document \ configTag \ "Phase2PlanFile").toList.map(node => makePhase2PlanFileConfig(node))
+    val configTag = "PlanFileList"
+    val list = (document \ configTag \ "PlanFile").toList.map(node => makePlanFileConfig(node))
     logText(configTag, indentList(list))
     list
   }
@@ -718,18 +719,6 @@ object Config extends Logging {
     override def toString = DicomUtil.dictionary.getNameFromTag(tag) + " : " + value
   }
 
-  private def getPhase2PlanAttributeOverrideList: Seq[PlanAttributeOverride] = {
-    def makeOverride(node: Node): PlanAttributeOverride = {
-      val name = (node \ "@Name").head.text
-      val value = (node \ "@Value").head.text
-
-      new PlanAttributeOverride(DicomUtil.dictionary.getTagFromName(name), value)
-    }
-    val configTag = "Phase2PlanAttributeOverrideList"
-    val list = (document \ configTag \ "Phase2PlanAttributeOverride").toList.map(node => makeOverride(node))
-    logText(configTag, indentList(list))
-    list
-  }
 
   val SlickDb = getSlickDb
 
@@ -767,8 +756,7 @@ object Config extends Logging {
 
   val ToBeAnonymizedList = getToBeAnonymizedList
 
-  val Phase2PlanFileList = getPhase2PlanFileList
-  val Phase2PlanAttributeOverrideList = getPhase2PlanAttributeOverrideList
+  val PlanFileList = getPlanFileList
 
   val TermsOfUse = logMainText("TermsOfUse")
 
