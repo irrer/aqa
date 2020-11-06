@@ -33,6 +33,9 @@ import com.pixelmed.dicom.CodeStringAttribute
 import org.aqa.web.MachineUpdate
 import org.aqa.web.WebUtil
 import org.aqa.web.WebServer
+import java.util.Date
+import edu.umro.ScalaUtil.FileUtil
+import org.aqa.DicomFile
 
 object CustomizeRtPlanInterface {
   def reference(machinePK: Long) = { (new CustomizeRtPlanInterface).pathOf + "?" + MachineUpdate.machinePKTag + "=" + machinePK }
@@ -51,7 +54,7 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
 
   private val machineIdTag = "MachineId"
 
-  private val defaultPlanName = "AQA Phase 2"
+  private val defaultPlanName = "AQA Generated Plan"
 
   private val machinePK = new WebInputHidden(MachineUpdate.machinePKTag)
 
@@ -105,14 +108,16 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
   }
 
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
-    new FormButton(name, 1, 0, subUrl, pathOf, buttonType)
+    new FormButton(name, 2, 0, subUrl, pathOf, buttonType)
   }
 
-  private val createButton = makeButton("Create", false, ButtonType.BtnPrimary)
+  private val createPhase2Button = makeButton("Create Phase 2", false, ButtonType.BtnPrimary)
+  private val createLocButton = makeButton("Create LOC", false, ButtonType.BtnPrimary)
+  private val createDailyQAButton = makeButton("Create Daily QA", false, ButtonType.BtnPrimary)
   private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
   private val backButton = makeButton("Back", false, ButtonType.BtnDefault)
 
-  private val assignButtonList: WebRow = List(createButton, cancelButton, machinePK)
+  private val assignButtonList: WebRow = List(createPhase2Button, createLocButton, createDailyQAButton, cancelButton, machinePK)
 
   private def formSelect(valueMap: ValueMapT, response: Response, machine: Machine) = {
     val form = new WebForm(pathOf, List(row0, row1, row2) ++ List(assignButtonList))
@@ -133,35 +138,161 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     form.setFormResponse(valMap, styleNone, pageTitleSelect, response, Status.SUCCESS_OK)
   }
 
-  /**
-   * Make sure fields are valid.
-   */
-  private def validate(valueMap: ValueMapT): StyleMapT = {
+  private def validateEntryFields(valueMap: ValueMapT): StyleMapT = {
     // if field is empty
     def empty(label: String) = valueMap.get(label).isEmpty || (valueMap(label).trim.size == 0)
-
     val tolErr = if (empty(toleranceTable.label)) Error.make(toleranceTable, "A tolerance table name must be given.") else styleNone
     val planNameErr = if (empty(planName.label)) Error.make(planName, "A plan name must be given.") else styleNone
     val machErr = if (empty(machineName.label)) Error.make(machineName, "A machine name must be given.") else styleNone
     val patIdErr = if (empty(patientID.label)) Error.make(patientID, "A patient ID must be given.") else styleNone
     val patNameErr = if (empty(patientName.label)) Error.make(patientName, "A patient name must be given.") else styleNone
+    val patIdTooLongErr = if (valueMap(patientID.label).size > 64) Error.make(patientID, "Patient ID can not be over 64 characters..") else styleNone
+    val planNameTooLongErr = if (valueMap(planName.label).size > 16) Error.make(patientID, "Plan Name can not be over 16 characters..") else styleNone
+    val machTooLongErr = if (valueMap(machineName.label).size > 16) Error.make(patientID, "Machine Name can not be over 16 characters..") else styleNone
 
-    val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong)
-    val collimatorErr = if (CustomizeRtPlan.getCollimatorCompatiblePhase2PlanForMachine(machine.get).isEmpty) Error.make(createButton, "There is no pre-defined plan to support this machine's collimator.") else styleNone
-
-    (tolErr ++ planNameErr ++ machErr ++ patIdErr ++ patNameErr ++ collimatorErr)
+    tolErr ++ planNameErr ++ machErr ++ patIdErr ++ patNameErr ++ patIdTooLongErr ++ planNameTooLongErr ++ machTooLongErr
   }
 
-  private def showDownload(rtplan: AttributeList, valueMap: ValueMapT, machine: Machine, response: Response) = {
+  /**
+   * Determine if there is a configuration entry for the given procedure and machine's collimator.
+   */
+  private def validateConfigured(planConfig: Option[Config.PlanFileConfig], machine: Machine, procName: String, button: FormButton) = {
+    if (planConfig.isDefined) {
+      styleNone
+    } else {
+      val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
+      val msg = "The configuration does not contain an entry for machines with collimator type " + collimator.model + " for " + procName + "  Contact the system administrator."
+      Error.make(button, msg)
+    }
+  }
 
-    val sopuid = Util.sopOfAl(rtplan)
-    val file = new File(Config.tmpDirFile, sopuid + ".dcm")
-    DicomUtil.writeAttributeListToFile(rtplan, file, "AQA")
-    val downloadUrl = WebServer.urlOfTmpFile(file)
+  /**
+   * Determine if there is an RTPLAN for the given procedure and machine's collimator.
+   */
+  private def validateRtplanFileExists(planConfig: Config.PlanFileConfig, procName: String, button: FormButton) = {
+    if (planConfig.dicomFile.attributeList.isDefined) {
+      styleNone
+    } else {
+      val msg = "There is a configuration entry for " + procName +
+        " with collimator type " + planConfig.collimatorModel +
+        " that references file " + planConfig.dicomFile.file.getAbsolutePath.replace('\\', '/') +
+        " but that file does not exist. Contact the system administrator."
+      Error.make(button, msg)
+    }
+  }
 
-    val downloadLink = new WebPlainText("Download", false, 3, 0, (ValueMapT) => { <h4> <a href={ downloadUrl } title="Click to download DICOM RTPLAN file.">Download</a></h4> })
+  private def validateConfigAndRtplanFileExists(planConfig: Option[Config.PlanFileConfig], machine: Machine, procName: String, button: FormButton) = {
+    val exists = validateConfigured(planConfig, machine, procName, button)
+    if (exists.isEmpty)
+      validateRtplanFileExists(planConfig.get, procName, button)
+    else
+      exists
+  }
 
-    val dicomViewHtml = { <span><h4><p/>Preview</h4><p/><pre title="DICOM meta-data">{ WebUtil.nl + DicomUtil.attributeListToString(rtplan) }</pre></span> }
+  /**
+   * Make sure fields are valid for Phase 2.
+   */
+  private def validatePhase2(valueMap: ValueMapT): StyleMapT = {
+    val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
+    val phase2Rtplan = CustomizeRtPlan.getCollimatorCompatiblePhase2PlanForMachine(machine)
+    val conf = validateConfigAndRtplanFileExists(phase2Rtplan, machine, "Phase 2", createPhase2Button)
+    (validateEntryFields(valueMap) ++ conf)
+  }
+
+  /**
+   * Make sure fields are valid for DailyQA.
+   */
+  private def validateDailyQA(valueMap: ValueMapT): StyleMapT = {
+    val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
+    val dailyQaRtplan = CustomizeRtPlan.getCollimatorCompatibleDailyQAPlanForMachine(machine)
+    val conf = validateConfigAndRtplanFileExists(dailyQaRtplan, machine, "Daily QA", createDailyQAButton)
+    (validateEntryFields(valueMap) ++ conf)
+  }
+
+  /**
+   * Make sure fields are valid for LOC.
+   */
+  private def validateLOC(valueMap: ValueMapT): StyleMapT = {
+    val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
+    val locRtplan = CustomizeRtPlan.getCollimatorCompatibleLocPlanPairForMachine(machine)
+    val rtplanConfigErr = if (locRtplan.isEmpty) {
+      val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
+      Error.make(createLocButton, "Configuration error.  There is no configuration entry for LOC to support this machines with collimator " + collimator.model + " Contact the system administrator.")
+    } else {
+      val rtplanConfigBaselineErr = validateConfigAndRtplanFileExists(Some(locRtplan.get.baseline), machine, "LOC Baseline", createLocButton)
+      val rtplanConfigDeliveryErr = validateConfigAndRtplanFileExists(Some(locRtplan.get.delivery), machine, "LOC Delivery", createLocButton)
+      rtplanConfigBaselineErr ++ rtplanConfigDeliveryErr
+    }
+
+    (validateEntryFields(valueMap) ++ rtplanConfigErr)
+  }
+
+  private def showDownload(alListWithNames: Seq[(AttributeList, String)], procedureName: String, valueMap: ValueMapT, machine: Machine, response: Response) = {
+
+    /** Make a name look like a DICOM file name. */
+    def nameToDcm(name: String) = FileUtil.replaceInvalidFileNameCharacters(name.replace(' ', '-').trim, '_').replaceAll("__*", "_") + ".dcm"
+
+    /** Change a name into a HTML valid id attribute. */
+    def nameToId(name: String) = "ID_" + name.replaceAll("[^a-zA-Z0-9]", "_")
+
+    val downloadUrl: String = {
+      val realMachineName = AnonymizeUtil.decryptWithNonce(machine.institutionPK, machine.id_real.get)
+
+      def makeFile(suffix: String) = {
+        val fileName = {
+          val n = "RTPLAN_" + Util.timeAsFileName(new Date) + "_" + procedureName + "_" + realMachineName + suffix
+          FileUtil.replaceInvalidFileNameCharacters(n.replace(' ', '_').trim, '_')
+        }
+        new File(Config.tmpDirFile, fileName)
+      }
+
+      if (alListWithNames.size == 1) {
+        val file = makeFile(".dcm")
+        DicomUtil.writeAttributeListToFile(alListWithNames.head._1, file, "AQA")
+        WebServer.urlOfTmpFile(file)
+      } else {
+        val file = makeFile(".zip")
+        val alNameList = alListWithNames.map(alName => (alName._1, nameToDcm(alName._2)))
+        val zippedContent = DicomUtil.namedDicomToZippedByteArray(alNameList, "AQA")
+        FileUtil.writeBinaryFile(file, zippedContent)
+        WebServer.urlOfTmpFile(file)
+      }
+    }
+
+    val downloadLink = new WebPlainText("Download", false, 3, 0, (ValueMapT) => { <h4> <a href={ downloadUrl } title="Click to download DICOM RTPLAN file(s).">Download</a></h4> })
+
+    val dicomNav = {
+
+      def nameToNav(name: String) = {
+        <a href={ "#" + nameToId(name) } style="margin-right: 25px;">Go to: { name }</a>
+      }
+
+      if (alListWithNames.size > 1) {
+        <span>
+          { alListWithNames.map(alName => nameToNav(alName._2)) }
+        </span>
+      } else {
+        <span>
+        </span>
+      }
+    }
+
+    val dicomViewHtml = {
+      def toHtml(al: AttributeList, name: String) = {
+        <div>
+          { dicomNav }
+          <span id={ nameToId(name) }><h4><p/>Preview { name }</h4><p/><pre title="DICOM meta-data">{ WebUtil.nl + DicomUtil.attributeListToString(al) }</pre></span>
+        </div>
+      }
+
+      val elem = {
+        <div>
+          { alListWithNames.map(rtplanName => toHtml(rtplanName._1, rtplanName._2)) }
+        </div>
+      }
+      elem
+    }
+
     val dicomView = new WebPlainText("Download", false, 10, 0, (ValueMapT) => dicomViewHtml)
 
     val r1: WebRow = List(downloadLink, backButton, machinePK)
@@ -178,24 +309,65 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     value.isDefined && value.get.toString.equals(button.label)
   }
 
-  private def validateAndMakePlan(valueMap: ValueMapT, response: Response) = {
-    val styleMap = validate(valueMap)
-    val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
-    val machineEnergyList = getMachineEnergyList(machine.machinePK.get)
-    val planEnergyList = CustomizeRtPlan.getPlanBeamList(machine).toList
+  /**
+   * Put user inputs into a class for use by the plan creator.
+   */
+  private def makePlanSpec(valueMap: ValueMapT) = {
+    val planSpecification = new CustomizeRtPlan.PlanSpecification(
+      valueMap(toleranceTable.label),
+      valueMap(patientID.label),
+      valueMap(patientName.label),
+      valueMap(machineName.label),
+      valueMap(planName.label))
+    planSpecification
+  }
+
+  /**
+   * Show the user a message saying why the creation of a custom rtplan failed.
+   */
+  private def showFailedCustomize(valueMap: ValueMapT, styleMap: StyleMapT, response: Response) = {
+    val form = new WebForm(pathOf, List(row0, row1, row2) ++ List(assignButtonList))
+    form.setFormResponse(valueMap, styleMap, pageTitleSelect, response, Status.SUCCESS_OK)
+  }
+
+  private def validateAndMakePhase2Plan(valueMap: ValueMapT, response: Response) = {
+    val styleMap = validatePhase2(valueMap)
     if (styleMap.nonEmpty) {
-      val form = new WebForm(pathOf, List(row0, row1, row2) ++ List(assignButtonList))
-      form.setFormResponse(valueMap, styleMap, pageTitleSelect, response, Status.SUCCESS_OK)
+      showFailedCustomize(valueMap, styleMap, response)
     } else {
       val userPK = getUser(valueMap).get.userPK.get
-      val planSpecification = new CustomizeRtPlan.PlanSpecification(
-        valueMap(toleranceTable.label),
-        valueMap(patientID.label),
-        valueMap(patientName.label),
-        valueMap(machineName.label),
-        valueMap(planName.label))
+      val planSpecification = makePlanSpec(valueMap)
+      val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
+      val machineEnergyList = getMachineEnergyList(machine.machinePK.get)
+      val planEnergyList = CustomizeRtPlan.getPlanBeamList(machine).toList
       val rtplan = CustomizeRtPlan.makePlanPhase2(machine, userPK, planEnergyList, planSpecification, machineEnergyList)
-      showDownload(rtplan, valueMap, machine, response)
+      showDownload(Seq((rtplan, "Phase 2")), "Phase2", valueMap, machine, response)
+    }
+  }
+
+  private def validateAndMakeLocPlan(valueMap: ValueMapT, response: Response) = {
+    val styleMap = validateLOC(valueMap)
+    if (styleMap.nonEmpty) {
+      showFailedCustomize(valueMap, styleMap, response)
+    } else {
+      val userPK = getUser(valueMap).get.userPK.get
+      val planSpecification = makePlanSpec(valueMap)
+      val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
+      val locPair = CustomizeRtPlan.makePlanLOC(machine, userPK, planSpecification)
+      showDownload(Seq((locPair.baselineAl, "LOC Baseline"), (locPair.deliveryAl, "LOC Delivery")), "LOC", valueMap, machine, response)
+    }
+  }
+
+  private def validateAndMakeDailyQAPlan(valueMap: ValueMapT, response: Response) = {
+    val styleMap = validateDailyQA(valueMap)
+    if (styleMap.nonEmpty) {
+      showFailedCustomize(valueMap, styleMap, response)
+    } else {
+      val userPK = getUser(valueMap).get.userPK.get
+      val planSpecification = makePlanSpec(valueMap)
+      val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
+      val rtplan = CustomizeRtPlan.makePlanDailyQA(machine, userPK, planSpecification)
+      showDownload(Seq((rtplan, "Daily QA")), "DailQA", valueMap, machine, response)
     }
   }
 
@@ -216,7 +388,9 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
         case _ if (user.get.institutionPK != machine.get.institutionPK) && (!WebUtil.userIsWhitelisted(request)) => updateMach
         case _ if buttonIs(valueMap, cancelButton) => updateMach
         case _ if buttonIs(valueMap, backButton) => updateMach
-        case _ if buttonIs(valueMap, createButton) => validateAndMakePlan(valueMap, response)
+        case _ if buttonIs(valueMap, createPhase2Button) => validateAndMakePhase2Plan(valueMap, response)
+        case _ if buttonIs(valueMap, createLocButton) => validateAndMakeLocPlan(valueMap, response)
+        case _ if buttonIs(valueMap, createDailyQAButton) => validateAndMakeDailyQAPlan(valueMap, response)
         case _ => formSelect(valueMap, response, machine.get) // first time viewing the form.  Set defaults
       }
     } catch {

@@ -558,6 +558,7 @@ object Config extends Logging {
   }
 
   val imageDirFile = new File(staticDirFile, "images")
+  val rtplanDirFile = new File(staticDirFile, "rtplan")
 
   /**
    * Get the PenumbraThresholdPercent.  If it is not valid in the configuration, then assume the default.
@@ -692,33 +693,44 @@ object Config extends Logging {
    */
   case class PlanFileConfig(procedure: String, manufacturer: String, collimatorModel: String, file: File) {
     val dicomFile = new DicomFile(file)
+    val fileIsValid = dicomFile.attributeList.isDefined
     override def toString = "manufacturer: " + manufacturer + "  collimator model: " + collimatorModel.formatted("%-12s") + "  file: " + file.getName
   }
 
   private def getPlanFileList = {
+    Trace.trace
     def makePlanFileConfig(node: Node): PlanFileConfig = {
       val procedure = (node \ "@procedure").head.text
       val manufacturer = (node \ "@manufacturer").head.text
-      val model = (node \ "@model").head.text
+      val model = (node \ "@collimatorModel").head.text
       val fileName = node.head.text
 
-      val file = new File(staticDirFile, fileName)
-      new PlanFileConfig(procedure, manufacturer, model, file)
+      val file = new File(rtplanDirFile, fileName)
+      val pfc = new PlanFileConfig(procedure, manufacturer, model, file)
+
+      // check to see if the file is readable DICOM.  If not, flag an error.
+      if (pfc.dicomFile.attributeList.isEmpty)
+        logger.warn("Config problem.  Unable to ready DICOM RTPLAN file used for generating custom plans: " + pfc +
+          "\nFile: " + pfc.dicomFile.file.getAbsolutePath)
+
+      // Return the plan config even if its file does not exist.  The user interface for
+      // creating a custom plan will check it and tell the user if it does not exist.
+      // It is handled this way because:
+      //
+      //     The installation might not require this rtplan anyway, so there is no point in
+      //         having the configuration fail for something the user does not need.
+      //
+      //     If the user needs and it is not defined, then this makes the problem clear to
+      //         the user and allows them to do something about it.
+      pfc
     }
 
     val configTag = "PlanFileList"
     val list = (document \ configTag \ "PlanFile").toList.map(node => makePlanFileConfig(node))
     logText(configTag, indentList(list))
+    Trace.trace
     list
   }
-
-  /**
-   * When customizing a plan, override this DICOM attribute with the given value.
-   */
-  case class PlanAttributeOverride(tag: AttributeTag, value: String) {
-    override def toString = DicomUtil.dictionary.getNameFromTag(tag) + " : " + value
-  }
-
 
   val SlickDb = getSlickDb
 
@@ -753,10 +765,11 @@ object Config extends Logging {
   val MaxProcedureDuration = logMainText("MaxProcedureDuration").toDouble
 
   /** Lookup table for finding DICOM attributes to be anonymized and how to anonymize them.  */
-
   val ToBeAnonymizedList = getToBeAnonymizedList
+  Trace.trace
 
   val PlanFileList = getPlanFileList
+  Trace.trace
 
   val TermsOfUse = logMainText("TermsOfUse")
 

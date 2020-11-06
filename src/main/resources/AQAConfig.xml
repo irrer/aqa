@@ -239,16 +239,17 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!--Name of Phase 2 DICOM RTPLAN files.  This is the basis for creating a plan customized plan for a given machine.  -->
     <PlanFileList>
-        <PlanFile procedure='Phase2' manufacturer='Varian' collimatorModel='HD'>rtplan_hdmlc.dcm</PlanFile>
-        <PlanFile procedure='Phase2' manufacturer='Varian' collimatorModel='Millenium'>rtplan_millenium.dcm</PlanFile>
-        
-        <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='HD'>rtplan_hdmlc.dcm</PlanFile>
-        <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='Millenium'>rtplan_millenium.dcm</PlanFile>
-        
-        <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='HD'>rtplan_hdmlc.dcm</PlanFile>
-        <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='Millenium'>rtplan_millenium.dcm</PlanFile>
-        
-        
+        <PlanFile procedure='Phase2' manufacturer='Varian' collimatorModel='HD'>rtplanPhase2Hdmlc.dcm</PlanFile>
+        <PlanFile procedure='Phase2' manufacturer='Varian' collimatorModel='Millenium'>rtplanPhase2Millenium.dcm</PlanFile>
+
+        <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='HD'>rtplanLocHdmlcWithoutErrorBaseline.dcm</PlanFile>
+        <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='Millenium'>rtplanLocMilleniumWithoutErrorBaseline.dcm</PlanFile>
+
+        <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='HD'>rtplanLocHdmlcWithErrorDelivery.dcm</PlanFile>
+        <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='Millenium'>rtplanLocMilleniumWithErrorDelivery.dcm</PlanFile>
+
+        <PlanFile procedure='DailyQA' manufacturer='Varian' collimatorModel='HD'>rtplanLocHdmlcDailyQA.dcm</PlanFile>
+        <PlanFile procedure='DailyQA' manufacturer='Varian' collimatorModel='Millenium'>rtplanLocMilleniumDailyQA.dcm</PlanFile>
     </PlanFileList>
 
     <!-- List of categories of maintenance, as referenced in the PMI database table.  If a category is in
@@ -261,24 +262,14 @@ Note that when building a package for release, the Maven build process uses the 
         The content of the category element is free text that describes the category.
         -->
     <MaintenanceCategoryList>
-        <MaintenanceCategory Name='Maintenance' Color='#aaaaaa'>General Maintenance
-        </MaintenanceCategory>
-        <MaintenanceCategory Name='PMI' Color='#80FF9F'>Preventive Maintenance Inspection
-        </MaintenanceCategory>
+        <MaintenanceCategory Name='Maintenance' Color='#aaaaaa'>General Maintenance</MaintenanceCategory>
+        <MaintenanceCategory Name='PMI' Color='#80FF9F'>Preventive Maintenance Inspection</MaintenanceCategory>
         <MaintenanceCategory Name='Set Baseline' Color='lightgreen'>New baseline values set</MaintenanceCategory>
-        <MaintenanceCategory Name='Firmware Update' Color='#33aa33'>New treatment machine firmware
-        </MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Jaws' Color='#aa3322'>Maintenance performed on jaws
-        </MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Collimator' Color='#aa3322'>Maintenance performed on
-            Collimator
-        </MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Gantry' Color='#aa3322'>Maintenance performed on
-            Gantry
-        </MaintenanceCategory>
-        <MaintenanceCategory Name='Electrical' Color='#aa3322'>Maintenance performed due to
-            electrical issue(s)
-        </MaintenanceCategory>
+        <MaintenanceCategory Name='Firmware Update' Color='#33aa33'>New treatment machine firmware</MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Jaws' Color='#aa3322'>Maintenance performed on jaws</MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Collimator' Color='#aa3322'>Maintenance performed on Collimator </MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Gantry' Color='#aa3322'>Maintenance performed on Gantry</MaintenanceCategory>
+        <MaintenanceCategory Name='Electrical' Color='#aa3322'>Maintenance performed due to electrical issue(s)</MaintenanceCategory>
     </MaintenanceCategoryList>
 
     <!-- Beam name for flood field. -->

@@ -21,19 +21,23 @@ import edu.umro.util.UMROGUID
 import edu.umro.ScalaUtil.Trace
 import com.pixelmed.dicom.OtherByteAttribute
 import org.aqa.db.DicomSeries
-import org.aqa.Config.PlanAttributeOverride
 
 object CustomizeRtPlan extends Logging {
 
-  case class LOCRtplanPair(baseline: AttributeList, delivery: AttributeList) {
-    val asSeq = Seq(baseline, delivery)
-
-    //  rtplanPair.asSeq.map(al => DicomUtil.clone(al))
-
+  case class LOCRtplanPair(baseline: Config.PlanFileConfig, delivery: Config.PlanFileConfig) {
+    def asSeq = Seq(baseline.dicomFile.attributeList.get, delivery.dicomFile.attributeList.get)
+    def baselineAl = baseline.dicomFile.attributeList.get
+    def deliveryAl = delivery.dicomFile.attributeList.get
   }
 
+  /** Beam energy that all machines support. */
   private val standardBeamEnergy = 6.0
 
+  /**
+   * Get the template rtplan for the given machine for Phase 2.  If none exists, return None, which
+   * can happen if the system does not have such a plan configured.  This informs the user
+   * interface so that it can tell the user.
+   */
   def getCollimatorCompatiblePhase2PlanForMachine(machine: Machine): Option[Config.PlanFileConfig] = {
     val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
     val planFile = Config.PlanFileList.filter(pf =>
@@ -43,8 +47,42 @@ object CustomizeRtPlan extends Logging {
     planFile
   }
 
-  private def getCollimatorCompatibleLocPlanPairForMachine(machine: Machine): LOCRtplanPair = {
-    ???
+  /**
+   * Get the template rtplan for the given machine for Daily QA.  If none exists, return None, which
+   * can happen if the system does not have such a plan configured.  This informs the user
+   * interface so that it can tell the user.
+   * 
+   * Note that both the baseline and delivery entries have to be configured (regardless of RTPLAN file
+   * existence) or this will return None.
+   */
+  def getCollimatorCompatibleDailyQAPlanForMachine(machine: Machine): Option[Config.PlanFileConfig] = {
+    val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
+    val planFile = Config.PlanFileList.filter(pf =>
+      pf.procedure.toLowerCase.matches(".*daily.*qa.*") &&
+        pf.manufacturer.equalsIgnoreCase(collimator.manufacturer) &&
+        pf.collimatorModel.equalsIgnoreCase(collimator.model)).headOption
+    planFile
+  }
+
+  /**
+   * Get the template rtplans for the given machine for LOC.  If none exists, return None, which
+   * can happen if the system does not have such a plan configured.  This informs the user
+   * interface so that it can tell the user.
+   */
+  def getCollimatorCompatibleLocPlanPairForMachine(machine: Machine): Option[LOCRtplanPair] = {
+    val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
+    val planList = Config.PlanFileList.filter(pf =>
+      pf.procedure.toLowerCase.matches(".*loc.*") &&
+        pf.manufacturer.equalsIgnoreCase(collimator.manufacturer) &&
+        pf.collimatorModel.equalsIgnoreCase(collimator.model))
+
+    val baseline = planList.find(pf => pf.procedure.toLowerCase.matches(".*baseline.*"))
+    val delivery = planList.find(pf => pf.procedure.toLowerCase.matches(".*delivery.*"))
+    val locRtplanPair = (baseline, delivery) match {
+      case (Some(b), Some(d)) if (b.dicomFile.attributeList.isDefined && d.dicomFile.attributeList.isDefined) => Some(LOCRtplanPair(b, d))
+      case _ => None
+    }
+    locRtplanPair
   }
 
   /**
@@ -185,12 +223,44 @@ object CustomizeRtPlan extends Logging {
     }
   }
 
+  /**
+   * Encapsulate values specified by the user in the user interface.
+   */
   case class PlanSpecification(
     toleranceTable: String,
     patientID: String,
     patientName: String,
     machineName: String,
-    planName: String);
+    planName: String) {
+
+    /**
+     *  Modify all attributes that get a user specified value
+     */
+    def setOverrides(rtplan: AttributeList) = {
+
+      /**
+       * When customizing a plan, override this DICOM attribute with the given value.
+       */
+      case class PlanAttributeOverride(tag: AttributeTag, value: String) {
+        override def toString = DicomUtil.dictionary.getNameFromTag(tag) + " : " + value
+      }
+
+      val overrideList = Seq(
+        PlanAttributeOverride(TagFromName.ToleranceTableLabel, toleranceTable),
+        PlanAttributeOverride(TagFromName.PatientID, patientID),
+        PlanAttributeOverride(TagFromName.PatientName, patientName),
+        PlanAttributeOverride(TagFromName.TreatmentMachineName, machineName),
+        PlanAttributeOverride(TagFromName.RTPlanLabel, planName),
+        PlanAttributeOverride(TagFromName.TableTopVerticalPosition, 0.toString))
+
+      overrideList.map(ov => {
+        DicomUtil.findAllSingle(rtplan, ov.tag).map(at => {
+          at.removeValues
+          at.addValue(ov.value)
+        })
+      })
+    }
+  }
 
   def getPlanBeamList(machine: Machine): List[PlanBeam] = {
     val plan = getCollimatorCompatiblePhase2PlanForMachine(machine)
@@ -462,47 +532,29 @@ object CustomizeRtPlan extends Logging {
     "Number of beams: " + beamAlList.size + "\n    " + beamAlList.map(beamAl => showBeam(beamAl)).mkString("\n    ")
   }
 
-  /*
-  private def addExtendedInterfaceData(rtplan: AttributeList) = {
-    val template = """<?xml version="1.0" encoding="Windows-1252"?><ExtendedVAPlanInterface Version="1"><Beams>@beamText@</Beams><ToleranceTables><ToleranceTable><ReferencedToleranceTableNumber>1</ReferencedToleranceTableNumber><ToleranceTableExtension><GantryRtnSetup>Remote</GantryRtnSetup><CollRtnSetup>Remote</CollRtnSetup><CollXSetup>Remote</CollXSetup><CollYSetup>Remote</CollYSetup><PatientSupportAngleSetup>Manual</PatientSupportAngleSetup><CouchLngSetup>Manual</CouchLngSetup><CouchVrtSetup>Manual</CouchVrtSetup><CouchLatSetup>Manual</CouchLatSetup></ToleranceTableExtension></ToleranceTable></ToleranceTables><DoseReferences><DoseReference><ReferencedDoseReferenceNumber>1</ReferencedDoseReferenceNumber><DoseReferenceExtension><DailyDoseLimit>6.4</DailyDoseLimit><SessionDoseLimit>6.4</SessionDoseLimit></DoseReferenceExtension></DoseReference></DoseReferences></ExtendedVAPlanInterface>"""
-    val beamTemplate = """<Beam><ReferencedBeamNumber>@beamNumber@</ReferencedBeamNumber><BeamExtension><FieldOrder>@fieldOrder@</FieldOrder><GantryRtnExtendedStart>false</GantryRtnExtendedStart><GantryRtnExtendedStop>false</GantryRtnExtendedStop></BeamExtension></Beam>"""
-
-    val beamList = DicomUtil.seqToAttr(rtplan, TagFromName.BeamSequence)
-
-    def beamToBeamExt(bi: Int) = {
-      val beam = beamList(bi)
-
-      val beamNumber = beam.get(TagFromName.BeamNumber).getIntegerValues.head.toString
-      val fieldOrder = (bi + 1).toString
-
-      beamTemplate.replace("@beamNumber@", beamNumber).replace("@fieldOrder@", fieldOrder)
-    }
-
-    val beamText = beamList.indices.map(bi => beamToBeamExt(bi)).mkString("")
-
-    val text = template.replace("@beamText@", beamText)
-    logger.info("addExtendedInterfaceData text:\n" + text)
-
-    val attr = new OtherByteAttribute(VarianPrivateTag.ExtendedInterfaceData)
-    attr.setValues(text.getBytes)
-    rtplan.put(attr)
-  }
-  */
-
   private def setRtplanDateTimeToNow(rtplan: AttributeList) = {
     val now = System.currentTimeMillis
 
-    val InstanceCreationDate = rtplan.get(TagFromName.InstanceCreationDate)
-    if (InstanceCreationDate != null) {
-      InstanceCreationDate.removeValues
-      InstanceCreationDate.addValue(DicomUtil.dicomDateFormat.format(now))
+    def setDateTime(dateTag: AttributeTag, timeTag: AttributeTag) = {
+      val dateAttr = rtplan.get(dateTag)
+      if (dateAttr != null) {
+        dateAttr.removeValues
+        dateAttr.addValue(DicomUtil.dicomDateFormat.format(now))
+      }
+
+      val timeAttr = rtplan.get(timeTag)
+      if (timeAttr != null) {
+        timeAttr.removeValues
+        timeAttr.addValue(DicomUtil.dicomTimeFormat.format(now))
+      }
     }
 
-    val InstanceCreationTime = rtplan.get(TagFromName.InstanceCreationTime)
-    if (InstanceCreationTime != null) {
-      InstanceCreationTime.removeValues
-      InstanceCreationTime.addValue(DicomUtil.dicomTimeFormat.format(now))
-    }
+    val dateTimeTagList = Seq(
+      (TagFromName.InstanceCreationDate, TagFromName.InstanceCreationTime),
+      (TagFromName.StudyDate, TagFromName.StudyTime),
+      (TagFromName.RTPlanDate, TagFromName.RTPlanTime))
+
+    dateTimeTagList.map(dt => setDateTime(dt._1, dt._2))
   }
 
   private def orderBeamsByRenaming(rtplan: AttributeList) = {
@@ -542,8 +594,6 @@ object CustomizeRtPlan extends Logging {
 
     setNumberOfBeamsInFractionGroupSequence(rtplan)
     orderBeamsByRenaming(rtplan)
-    setRtplanDateTimeToNow(rtplan)
-    // addExtendedInterfaceData(rtplan)
   }
 
   /**
@@ -572,18 +622,9 @@ object CustomizeRtPlan extends Logging {
     val rtplan = DicomUtil.clone(getCollimatorCompatiblePhase2PlanForMachine(machine).get.dicomFile.attributeList.get)
     replaceAllUids(rtplan) // change UIDs so that this plan will be considered new and unique from all others.
 
-    val overrideList = Seq(
-      Config.PlanAttributeOverride(TagFromName.ToleranceTableLabel, planSpecification.toleranceTable),
-      Config.PlanAttributeOverride(TagFromName.PatientID, planSpecification.patientID),
-      Config.PlanAttributeOverride(TagFromName.PatientName, planSpecification.patientName),
-      Config.PlanAttributeOverride(TagFromName.TreatmentMachineName, planSpecification.machineName),
-      Config.PlanAttributeOverride(TagFromName.RTPlanLabel, planSpecification.planName),
-      Config.PlanAttributeOverride(TagFromName.TableTopVerticalPosition, 0.toString))
+    planSpecification.setOverrides(rtplan)
 
-    // modify all attributes that get a constant value
-    overrideList.map(ov => {
-      DicomUtil.findAllSingle(rtplan, ov.tag).map(at => { at.removeValues; at.addValue(ov.value) })
-    })
+    setRtplanDateTimeToNow(rtplan)
 
     removeVarianPrivateTagAttributes(rtplan)
     reassignPlanEnergies(rtplan, planBeamList, machineEnergyList)
@@ -592,42 +633,41 @@ object CustomizeRtPlan extends Logging {
   }
 
   /**
+   * Given all the required information, create an rtplan that is compatible with the given machine for Phase2.
+   */
+  def makePlanDailyQA(machine: Machine, userPK: Long, planSpecification: PlanSpecification): AttributeList = {
+
+    val rtplan = DicomUtil.clone(getCollimatorCompatibleDailyQAPlanForMachine(machine).get.dicomFile.attributeList.get)
+    replaceAllUids(rtplan) // change UIDs so that this plan will be considered new and unique from all others.
+
+    planSpecification.setOverrides(rtplan)
+
+    setRtplanDateTimeToNow(rtplan)
+
+    removeVarianPrivateTagAttributes(rtplan)
+    saveAnonymizedDicom(machine, userPK, rtplan)
+    rtplan
+  }
+
+  /**
    * Given all the required information, create a pair of rtplans that are compatible with the given machine for LOC.
    */
-  def makePlanLOC(machine: Machine, userPK: Long, planBeamList: Seq[PlanBeam], planSpecification: PlanSpecification, machineEnergyList: Seq[MachineBeamEnergy]): CustomizeRtPlan.LOCRtplanPair = {
+  def makePlanLOC(machine: Machine, userPK: Long, planSpecification: PlanSpecification): CustomizeRtPlan.LOCRtplanPair = {
 
-    val rtplanPair = getCollimatorCompatibleLocPlanPairForMachine(machine)
+    val rtplanPair = getCollimatorCompatibleLocPlanPairForMachine(machine).get
 
     // change UIDs so that these plans will be considered new and unique from all others.
     rtplanPair.asSeq.map(rtplan => replaceAllUids(rtplan))
 
-    // force them to have the same study instance UID so we know they were made together
-    val studyUID = rtplanPair.baseline.get(TagFromName.StudyInstanceUID).getSingleStringValueOrEmptyString
-    val studyAt = rtplanPair.delivery.get(TagFromName.StudyInstanceUID)
+    // Force them to have the same study instance UID so we know they were made together.
+    val studyAt = rtplanPair.delivery.dicomFile.attributeList.get.get(TagFromName.StudyInstanceUID)
     studyAt.removeValues
-    studyAt.addValue(studyUID)
+    studyAt.addValue(Util.studyInstOfAl(rtplanPair.baseline.dicomFile.attributeList.get))
 
-    val overrideList = Seq(
-      Config.PlanAttributeOverride(TagFromName.ToleranceTableLabel, planSpecification.toleranceTable),
-      Config.PlanAttributeOverride(TagFromName.PatientID, planSpecification.patientID),
-      Config.PlanAttributeOverride(TagFromName.PatientName, planSpecification.patientName),
-      Config.PlanAttributeOverride(TagFromName.TreatmentMachineName, planSpecification.machineName),
-      Config.PlanAttributeOverride(TagFromName.RTPlanLabel, planSpecification.planName),
-      Config.PlanAttributeOverride(TagFromName.TableTopVerticalPosition, 0.toString))
-
-    // modify all attributes that get a constant value
-    overrideList.map(ov => {
-      rtplanPair.asSeq.map(al => {
-        DicomUtil.findAllSingle(al, ov.tag).map(at =>
-          {
-            at.removeValues
-            at.addValue(ov.value)
-          })
-      })
-    })
-
-    rtplanPair.asSeq.map(al => removeVarianPrivateTagAttributes(al))
-    rtplanPair.asSeq.map(al => saveAnonymizedDicom(machine, userPK, al))
+    rtplanPair.asSeq.map(rtplan => planSpecification.setOverrides(rtplan))
+    rtplanPair.asSeq.map(rtplan => setRtplanDateTimeToNow(rtplan))
+    rtplanPair.asSeq.map(rtplan => removeVarianPrivateTagAttributes(rtplan))
+    rtplanPair.asSeq.map(rtplan => saveAnonymizedDicom(machine, userPK, rtplan))
     rtplanPair
   }
 
