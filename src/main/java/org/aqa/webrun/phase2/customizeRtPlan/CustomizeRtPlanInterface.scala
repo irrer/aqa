@@ -54,7 +54,7 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
 
   private val machineIdTag = "MachineId"
 
-  private val defaultPlanName = "AQA Generated Plan"
+  private val defaultPlanName = "AQA Plan"
 
   private val machinePK = new WebInputHidden(MachineUpdate.machinePKTag)
 
@@ -148,9 +148,11 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     val patNameErr = if (empty(patientName.label)) Error.make(patientName, "A patient name must be given.") else styleNone
     val patIdTooLongErr = if (valueMap(patientID.label).size > 64) Error.make(patientID, "Patient ID can not be over 64 characters..") else styleNone
     val planNameTooLongErr = if (valueMap(planName.label).size > 16) Error.make(patientID, "Plan Name can not be over 16 characters..") else styleNone
-    val machTooLongErr = if (valueMap(machineName.label).size > 16) Error.make(patientID, "Machine Name can not be over 16 characters..") else styleNone
+    // removed this check because it might stop people from generating a plan.  Technically the DICOM spec says that it
+    // must be 16 characters or shorter, but the reality is that a lot of systems handle longer strings.
+    //val machTooLongErr = if (valueMap(machineName.label).size > 16) Error.make(patientID, "Machine Name can not be over 16 characters..") else styleNone
 
-    tolErr ++ planNameErr ++ machErr ++ patIdErr ++ patNameErr ++ patIdTooLongErr ++ planNameTooLongErr ++ machTooLongErr
+    tolErr ++ planNameErr ++ machErr ++ patIdErr ++ patNameErr ++ patIdTooLongErr ++ planNameTooLongErr // ++ machTooLongErr
   }
 
   /**
