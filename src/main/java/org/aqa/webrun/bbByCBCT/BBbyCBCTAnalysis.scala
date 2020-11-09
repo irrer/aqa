@@ -29,6 +29,7 @@ import edu.umro.ImageUtil.LocateEdge
 import scala.collection.mutable.ArrayBuffer
 import edu.umro.ScalaUtil.DicomUtil
 import java.text.SimpleDateFormat
+import edu.umro.ImageUtil.Profile
 
 /**
  * Find the BB in the CBCT volume.
@@ -471,6 +472,30 @@ object BBbyCBCTAnalysis extends Logging {
    */
   case class CBCTAnalysisResult(coarseLoction_vox: Point3i, fineLocation_vox: Point3d, volumeTranslator: VolumeTranslator, cbctFrameOfRefLocation_mm: Point3d, imageXYZ: Seq[BufferedImage])
 
+  private def getMaxPoint(volume: DicomVolume): Option[Point3d] = {
+
+    val profileList = Seq(volume.xPlaneProfile, volume.yPlaneProfile, volume.zPlaneProfile)
+
+    /** Return the number of standard deviations that the maximum is. */
+    def maxStdDev(profile: Profile) = (profile.cubicSpline.evaluate(profile.max) - profile.mean).abs / profile.standardDeviation
+
+    def check(profile: Profile): Option[Double] = {
+      if (maxStdDev(profile) >= Config.CBCTBBMinimumStandardDeviation)
+        Some(profile.max)
+      else
+        None
+    }
+
+    val result = profileList.map(p => check(p))
+
+    logger.info("CBCT standard dev required: " + Config.CBCTBBMinimumStandardDeviation + "    actual XYZ: " + profileList.map(maxStdDev).mkString("  "))
+
+    if (result.flatten.size == 3)
+      Some(new Point3d(result(0).get, result(1).get, result(2).get))
+    else
+      None
+  }
+
   /**
    * Look in a center cubic volume of the CBCT set for the BB.
    *
@@ -505,7 +530,7 @@ object BBbyCBCTAnalysis extends Logging {
           entireVolume.getSubVolume(bbVolumeStart, size_vox)
         }
 
-        val relOpt = bbVolume.getMaxPoint(Config.CBCTBBMinimumStandardDeviation)
+        val relOpt = getMaxPoint(bbVolume)
         if (relOpt.isDefined) {
           val fineLocation_vox = relOpt.get
           fineLocation_vox.add(i2d(bbVolumeStart))
