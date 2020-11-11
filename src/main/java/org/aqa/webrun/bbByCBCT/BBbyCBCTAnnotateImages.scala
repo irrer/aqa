@@ -217,12 +217,6 @@ object BBbyCBCTAnnotateImages extends Logging {
 
     val volTrans = new VolumeTranslator(runReq.cbctList)
 
-    val j0 = volTrans.mm2vox(new Point3d(bbByCBCT.cbctX_mm, bbByCBCT.cbctY_mm, bbByCBCT.cbctZ_mm))
-    val j1 = volTrans.mm2vox(new Point3d(bbByCBCT.rtplanX_mm, bbByCBCT.rtplanY_mm, bbByCBCT.rtplanZ_mm))
-    Trace.trace(j0)
-    Trace.trace(j1)
-    Trace.trace
-
     // sagittal
     def xImagePair = makePair(
       voxSizeX_mmOrig = voxSize_mm.getZ, voxSizeY_mmOrig = voxSize_mm.getY,

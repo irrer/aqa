@@ -836,6 +836,7 @@ object Config extends Logging {
   val DailyPhantomSearchDistance_mm = logMainText("DailyPhantomSearchDistance_mm", "50.0").toDouble
   val DailyQAPhantomCubeSize_mm = logMainText("DailyQAPhantomCubeSize_mm", "50.0").toDouble
   val DailyQACBCTVoxPercentTolerance = logMainText("DailyQACBCTVoxPercentTolerance", "15.0").toDouble
+  val DailyQACBCTCubeSizePercentTolerance = logMainText("DailyQACBCTCubeSizePercentTolerance", "20.0").toDouble
   val CBCTBBPenumbra_mm = logMainText("CBCTBBPenumbra_mm", "2.5").toDouble
   val CBCTZoomSize_mm = logMainText("CBCTZoomSize_mm", "30.0").toDouble
   val CBCTImageColor = Util.hexToColor(logMainText("CBCTImageColor", "FFFFFF"))

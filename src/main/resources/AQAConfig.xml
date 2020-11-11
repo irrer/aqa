@@ -574,6 +574,13 @@ Note that when building a package for release, the Maven build process uses the 
     and the number found. -->
     <DailyQACBCTVoxPercentTolerance>15.0</DailyQACBCTVoxPercentTolerance>
 
+    <!-- Tuning parameter for finding the phantom cube as part of Daily QA CBCT processing.  When
+    locating the cube, one test is to look at a horizontal slice and determine if opposing edges are
+    approximately the right distance apart, and if so, assume that it is the cube.  This
+    parameter defines the percent error in the cube size detected.  Note that if the cube is slightly
+    rotated (sides not parallel to the table edges) then edges will a different distance apart. -->
+    <DailyQACBCTCubeSizePercentTolerance>20.0</DailyQACBCTCubeSizePercentTolerance>
+
     <!-- Distance in mm in floating point that the penumbra extends in one direction from the BB.  A
     volume of (2x)^3 this is used to measure the BB's location. ( 10 would yield 20x20x20 ) -->
     <CBCTBBPenumbra_mm>2.5</CBCTBBPenumbra_mm>

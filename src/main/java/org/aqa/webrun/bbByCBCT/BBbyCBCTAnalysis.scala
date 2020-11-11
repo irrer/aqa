@@ -26,7 +26,6 @@ import java.awt.geom.Point2D
 import org.aqa.VolumeTranslator
 import java.awt.Color
 import edu.umro.ImageUtil.LocateEdge
-import scala.collection.mutable.ArrayBuffer
 import edu.umro.ScalaUtil.DicomUtil
 import java.text.SimpleDateFormat
 import edu.umro.ImageUtil.Profile
@@ -289,6 +288,64 @@ object BBbyCBCTAnalysis extends Logging {
         }
       }
 
+      def opposingEdgesValid(sliceIndex: Int): Boolean = {
+        /**
+         * Portion of cube to use when taking a plateau.  Dictates how long the
+         *  compared profile segments should be. If this is too large, then a cube
+         *  very close to the edge of the volume in X or Z will not be detected.
+         */
+        val cubeFraction = 0.2
+
+        val dicomImage = new DicomImage(horizontalSlice(sliceIndex))
+
+        val cubeSizeImageX_pix = Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getZ // size of cube in image X direction in pixels
+        val cubeSizeImageY_pix = Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getX // size of cube in image Y direction in pixels
+
+        val plateauSizeImageX_pix = d2i(cubeSizeImageX_pix * cubeFraction) // size of plateau in image X direction in pixels
+        val plateauSizeImageY_pix = d2i(cubeSizeImageY_pix * cubeFraction) // size of plateau in image Y direction in pixels
+
+        val rowSum = dicomImage.rowSums
+        val colSum = dicomImage.columnSums
+
+        def edgeSize(sumList: Seq[Float], index: Int, plateauSize_pix: Int): Float = {
+          val left = sumList.take(index).takeRight(plateauSize_pix)
+          val right = sumList.drop(index).take(plateauSize_pix)
+          right.sum - left.sum
+        }
+
+        val xSize_mm = {
+          val xRange = (plateauSizeImageX_pix until dicomImage.width - plateauSizeImageX_pix).toSeq
+          val xEdgeSeq = xRange.map(imgX => (imgX, edgeSize(colSum, imgX, plateauSizeImageX_pix)))
+          val risingX = xEdgeSeq.maxBy(sv => sv._2)._1
+          val fallingX = xEdgeSeq.minBy(sv => sv._2)._1
+
+          (fallingX - risingX) * voxSize_mm.getZ // size of cube in mm in image X direction
+        }
+
+        val ySize_mm = {
+          val yRange = (plateauSizeImageY_pix until dicomImage.height - plateauSizeImageY_pix).toSeq
+          val yEdgeSeq = yRange.map(imgY => (imgY, edgeSize(rowSum, imgY, plateauSizeImageY_pix)))
+          val risingY = yEdgeSeq.maxBy(sv => sv._2)._1
+          val fallingY = yEdgeSeq.minBy(sv => sv._2)._1
+          (fallingY - risingY) * voxSize_mm.getX // size of cube in mm in image Y direction
+        }
+
+        val cubeDiff = Config.DailyQAPhantomCubeSize_mm * (Config.DailyQACBCTCubeSizePercentTolerance / 100.0)
+        val minCube_mm = Config.DailyQAPhantomCubeSize_mm - cubeDiff
+        val maxCube_mm = Config.DailyQAPhantomCubeSize_mm + cubeDiff
+        val ok =
+          (xSize_mm > minCube_mm) && (xSize_mm < maxCube_mm) &&
+            (ySize_mm > minCube_mm) && (ySize_mm < maxCube_mm)
+
+        if (ok) {
+          logger.info("BBbyCBCTAnalysis.  Expected cube size mm: " + Config.DailyQAPhantomCubeSize_mm +
+            "   pct error allowed: " + Config.DailyQACBCTCubeSizePercentTolerance +
+            "   xSize_mm: " + xSize_mm +
+            "   ySize_mm: " + ySize_mm)
+        }
+        ok
+      }
+
       def hasCubeVoxels(sliceIndex: Int): Boolean = {
         val pct = percentOfCubeVoxels(sliceIndex)
         val diff = (100.0 - pct).abs
@@ -297,17 +354,40 @@ object BBbyCBCTAnalysis extends Logging {
         ok
       }
 
+      // Wrap CPU intensive function with caching to eliminate doing the same calculations multiple times.
+      val cacheHasCubeVoxels = scala.collection.mutable.Map[Int, Boolean]()
+      def hasCubeVoxelsCached(sliceIndex: Int): Boolean = {
+        if (cacheHasCubeVoxels.contains(sliceIndex)) cacheHasCubeVoxels(sliceIndex)
+        else {
+          cacheHasCubeVoxels.put(sliceIndex, hasCubeVoxels(sliceIndex))
+          cacheHasCubeVoxels(sliceIndex)
+        }
+      }
+
+      // Wrap CPU intensive function with caching to eliminate doing the same calculations multiple times.
+      val cacheOpposingEdgesValid = scala.collection.mutable.Map[Int, Boolean]()
+      def opposingEdgesValidCached(sliceIndex: Int): Boolean = {
+        if (cacheOpposingEdgesValid.contains(sliceIndex)) cacheOpposingEdgesValid(sliceIndex)
+        else {
+          cacheOpposingEdgesValid.put(sliceIndex, opposingEdgesValid(sliceIndex))
+          cacheOpposingEdgesValid(sliceIndex)
+        }
+      }
+
       val top = {
+        val start = System.currentTimeMillis
         val count = Math.max(5, cubeHeight_vox / 10) // get the number of slices to check.  Make sure there are at least a few.
         val minRequired = (count * 0.90).round.toInt // require that 90 percent of them have the right count
 
         def allHave(i: Int) = {
-          val list = (i until (i + count)).map(hasCubeVoxels)
+          val list = (i until (i + count)).map(sliceIndex => hasCubeVoxelsCached(sliceIndex) && opposingEdgesValidCached(sliceIndex))
           val all = list.filter(a => a).size >= minRequired
           all
         }
 
-        (0 until entireVolume.ySize - cubeHalf).toSeq.find(i => allHave(i))
+        val sliceIndex = (0 until entireVolume.ySize - cubeHalf).toSeq.find(i => allHave(i))
+        logger.info("Elapsed time to find top of CBCT cube ms: " + (System.currentTimeMillis - start))
+        sliceIndex
       }
 
       val center =
@@ -323,69 +403,10 @@ object BBbyCBCTAnalysis extends Logging {
       center
     }
 
-    //    /**
-    //     * Set pixels to 0 if they are in range of a dark pixel.
-    //     */
-    //    def erode(orig: DicomImage, xSize: Double, ySize: Double): DicomImage = {
-    //      val listOfPointCoordinatesWithinRadius = {
-    //        val radius_mm = Config.DailyQAPhantomCubeSize_mm / 10
-    //        val xMax = (radius_mm / xSize).round.toInt
-    //        val yMax = (radius_mm / ySize).round.toInt
-    //
-    //        def withinRadius(x: Int, y: Int): Boolean = {
-    //          val xx = x * xSize
-    //          val yy = y * ySize
-    //          val distance = Math.sqrt((xx * xx) + (yy * yy))
-    //          val within = distance < radius_mm
-    //          within
-    //        }
-    //
-    //        val list = for (x <- (-xMax to xMax); y <- (-yMax to yMax); if (withinRadius(x, y))) yield (x, y)
-    //        list
-    //      }
-    //
-    //      val minPixelValue: Float = {
-    //        val dropCount = (expectedVoxelCount * (pctToDrop / 100.0)).round.toInt
-    //        val pixList = orig.pixelData.flatten.sorted.dropRight(dropCount).takeRight(expectedVoxelCount)
-    //        val avg = pixList.sum / pixList.size
-    //        val minPix = avg / 2
-    //        minPix
-    //      }
-    //
-    //      /**
-    //       * Given a pixel in the original image, set it to dark if there is a dark pixel within the radius_mm.
-    //       */
-    //      def eval(x: Int, y: Int): Float = {
-    //
-    //        val pixValue = orig.get(x, y)
-    //        if (pixValue < minPixelValue)
-    //          pixValue // this pixel is dark, so leave the way it is
-    //        else {
-    //          def pixelIsDark(xx: Int, yy: Int): Boolean = {
-    //            val j = (xx >= 0) && (yy >= 0) && (xx < orig.width) && (yy < orig.height) && (orig.get(xx, yy) < minPixelValue)
-    //            j
-    //          }
-    //
-    //          // look through the list of near pixels for a dark one.
-    //          if (listOfPointCoordinatesWithinRadius.find(p => pixelIsDark(p._1 + x, p._2 + y)).isDefined) {
-    //            0.toFloat // found a dark pixel nearby.  Set this one to dark.
-    //          } else pixValue
-    //        }
-    //      }
-    //
-    //      val pixArray = {
-    //        for (y <- 0 until orig.height) yield {
-    //          for (x <- 0 until orig.width) yield { eval(x, y) }
-    //        }
-    //      }
-    //
-    //      val dicomImageEroded = orig //  new DicomImage(pixArray)
-    //
-    //      dicomImageEroded
-    //    }
-
     // Given the vertical center of the cube, find the center.
-    getCoarseVerticalCenter_vox(entireVolume, voxSize_mm) match {
+    val coarseVertOpt = getCoarseVerticalCenter_vox(entireVolume, voxSize_mm)
+
+    coarseVertOpt match {
       case Some(bbY) => {
         val horzImage = new DicomImage(horizontalSlice(bbY))
 
