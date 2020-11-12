@@ -57,7 +57,10 @@ object BBbyCBCTExecute extends Logging {
         </h4>
       </div>
     }
-    val text = WebUtil.wrapBody(content, "CBCT Analysis Failed")
+
+    val text = WebUtil.wrapBody(BBbyCBCTHTML.wrap(content, extendedData), "CBCT Analysis Failed")
+
+    val textsss = WebUtil.wrapBody(content, "CBCT Analysis Failed")
     val display = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(display, text)
   }

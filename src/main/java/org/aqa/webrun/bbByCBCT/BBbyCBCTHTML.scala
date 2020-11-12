@@ -48,7 +48,7 @@ object BBbyCBCTHTML extends Logging {
   private val thumbnailsPerRow = 10
   private def getZ(al: AttributeList): Double = al.get(TagFromName.ImagePositionPatient).getDoubleValues()(2)
 
-  private def wrap(content: Elem, extendedData: ExtendedData) = {
+  def wrap(content: Elem, extendedData: ExtendedData) = {
     val twoLineDate = new SimpleDateFormat("MMM dd yyyy\nHH:mm")
     def wrapElement(col: Int, name: String, value: String, asAlias: Boolean): Elem = {
       val html =
