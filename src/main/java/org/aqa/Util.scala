@@ -522,7 +522,7 @@ object Util extends Logging {
   /**
    * Write a PNG file in a thread safe way.
    */
-  def writePng(im: RenderedImage, pngFile: File): Unit = fileSystemWriteSync.synchronized({
+  def writePngX(im: RenderedImage, pngFile: File): Unit = fileSystemWriteSync.synchronized({
     pngFile.delete
     val fos = new FileOutputStream(pngFile)
     ImageIO.write(im, "png", fos)
@@ -533,6 +533,26 @@ object Util extends Logging {
       case t: Throwable => logger.warn("problem closing file output stream for PNG file " + pngFile.getAbsolutePath + " : " + t)
     }
   })
+
+  /**
+   * Write a PNG file in a thread safe way.
+   *
+   * First render the image into a byte array.  This can take time and is thread safe, so it does not
+   * need to be done in a synchronized way.  Then write the byte array to a file, which does need to
+   * be done in a synchronized way.
+   */
+  def writePng(im: RenderedImage, pngFile: File): Unit = {
+    try {
+      val baos = new ByteArrayOutputStream
+      val fos = new FileOutputStream(pngFile)
+      ImageIO.write(im, "png", baos)
+      baos.flush
+      baos.close
+      writeBinaryFile(pngFile, baos.toByteArray)
+    } catch {
+      case t: Throwable => logger.warn("problem writing file for PNG file " + pngFile.getAbsolutePath + " : " + t)
+    }
+  }
 
   /**
    * Write a JPG / JPEG file in a thread safe way.
