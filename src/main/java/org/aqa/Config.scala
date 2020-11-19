@@ -833,6 +833,8 @@ object Config extends Logging {
   val DailyQAPassLimit_mm = logMainText("DailyQAPassLimit_mm", "1.0").toDouble
   val DailyQAWarningLimit_mm = logMainText("DailyQAWarningLimit_mm", "1.5").toDouble
   val CBCTBBMinimumStandardDeviation = logMainText("CBCTBBMinimumStandardDeviation", "15.0").toDouble
+  val DailyQACBCTDarkPixelValueLevels = logMainText("DailyQACBCTDarkPixelValueLevels", "50").toInt
+
   val DailyPhantomSearchDistance_mm = logMainText("DailyPhantomSearchDistance_mm", "50.0").toDouble
   val DailyQAPhantomCubeSize_mm = logMainText("DailyQAPhantomCubeSize_mm", "50.0").toDouble
   val DailyQACBCTVoxPercentTolerance = logMainText("DailyQACBCTVoxPercentTolerance", "15.0").toDouble

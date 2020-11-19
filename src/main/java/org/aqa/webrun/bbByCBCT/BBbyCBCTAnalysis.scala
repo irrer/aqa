@@ -29,12 +29,15 @@ import edu.umro.ImageUtil.LocateEdge
 import edu.umro.ScalaUtil.DicomUtil
 import java.text.SimpleDateFormat
 import edu.umro.ImageUtil.Profile
+import javax.vecmath.Point2d
 
 /**
  * Find the BB in the CBCT volume.
  */
 
 object BBbyCBCTAnalysis extends Logging {
+
+  val minHu = -1000.0 // minimum value for Houndsfield units.  Values below this are ignored as noise. // TODO put in Config
 
   /**
    * Get the corner of the search volume closest to the origin in voxels.
@@ -217,6 +220,411 @@ object BBbyCBCTAnalysis extends Logging {
     cntr
   }
 
+  private def getCoarseVerticalCenter_vox(entireVolume: DicomVolume, voxSize_mm: Point3d, toHu: Float => Float): Option[Int] = {
+
+    val cubePlateauFraction = 0.8
+
+    /** Size of cube in pixels. */
+    val cubeSize_pix = new Point3i(
+      d2i(Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getX),
+      d2i(Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getY),
+      d2i(Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getZ))
+
+    /** One third of height of cube in X axis in pixels. */
+    val oneThirdCubeX_pix = d2i((Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getX) / 3)
+
+    /** One third of height of cube in Y axis in pixels. */
+    val oneThirdCubeY_pix = d2i((Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getY) / 3)
+
+    /** One third of height of cube in Z axis in pixels. */
+    val oneThirdCubeZ_pix = d2i((Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getZ) / 3)
+
+    /** Keep a cache of previously calculated results for efficiency. */
+    val sliceCache = scala.collection.mutable.Map[Int, IndexedSeq[IndexedSeq[Float]]]()
+
+    /** Get the voxels in the plane parallel to the table at the given slice index. */
+    def horizontalSlice(sliceIndex: Int): IndexedSeq[IndexedSeq[Float]] = {
+      sliceCache.get(sliceIndex) match {
+        case Some(slice) => slice
+        case _ => {
+          val s = (0 until entireVolume.xSize).map(x => (0 until entireVolume.zSize).map(z => entireVolume.getXYZ(x, sliceIndex, z)))
+          val sii = s.map(i => i.toIndexedSeq).toIndexedSeq
+          sliceCache.put(sliceIndex, sii)
+          sii
+        }
+      }
+    }
+
+    def edgeSize(sumList: Seq[Float], index: Int, plateauSize_pix: Int): Float = {
+      val left = sumList.take(index).takeRight(plateauSize_pix)
+      val right = sumList.drop(index).take(plateauSize_pix)
+      right.sum - left.sum
+    }
+
+    def bandContainsCube(band: Seq[Float], cubeSize_pix: Int): Option[Double] = {
+      val plateauSize_pix = d2i(cubeSize_pix * cubePlateauFraction)
+
+      val edgeList = (plateauSize_pix until (band.size - plateauSize_pix)).map(index => (index, edgeSize(band, index, plateauSize_pix)))
+      //      if (edgeList.isEmpty)
+      //        Trace.trace
+      val rising = edgeList.maxBy(_._2)._1 // index of rising edge
+      val falling = edgeList.minBy(_._2)._1 // index of falling edge
+      val length = falling - rising
+      val cubeDiff = cubeSize_pix * (Config.DailyQACBCTCubeSizePercentTolerance / 100.0)
+
+      val min = cubeSize_pix - cubeDiff
+      val max = cubeSize_pix + cubeDiff
+      val ok = (length > min) && (length < max)
+      if (ok) {
+        val center = (rising + falling) / 2.0
+        Some(center)
+      } else None
+    }
+
+    /**
+     * Determine if the given slice contains the cube by dividing into horizontal bands and
+     * looking at the profile of each.  If any qualify, then return true.
+     *
+     * -------------------------------
+     * |                             |
+     * |                             |
+     * -------------------------------
+     * |                             |
+     * |            ...........      |
+     * -------------.---------.-------
+     * |            .         .      |
+     * |            .         .      |
+     * -------------.---------.-------
+     * |            .         .      |
+     * |            ...........      |
+     * -------------------------------
+     * |                             |
+     * |                             |
+     * -------------------------------
+     *
+     *              |<------->|
+     *
+     *    Look for rising and falling edges of
+     *    cube separated by the size of the cube.
+     */
+    def containsCubeHorzX(sliceIndex: Int): Option[Double] = {
+      val dicomImage = new DicomImage(horizontalSlice(sliceIndex))
+
+      def toMeans(i: Int): IndexedSeq[Float] = {
+        val rectangle = new Rectangle(0, i, entireVolume.zSize, Math.min(oneThirdCubeX_pix, entireVolume.xSize - i))
+        val di = dicomImage.getSubimage(rectangle)
+        if (sliceIndex == 242) { // TODO rm
+          val j = di.columnSums.map(s => toHu(s / di.height))
+          Trace.trace("unfiltered HU: " + j.map(v => Util.fmtDbl(v)).mkString("   "))
+        }
+        val meanList = di.columnSums.map(s => toHu(s / di.height)).map(m => if (m < minHu) 0.toFloat else m)
+        meanList
+      }
+
+      val horzBandList = (0 until entireVolume.xSize by oneThirdCubeX_pix).map(i => toMeans(i))
+
+      val hasCube = horzBandList.map(band => bandContainsCube(band, cubeSize_pix.getZ)).flatten
+      if (true && (sliceIndex == 242)) { // TODO rm
+        println("containsCubeHorz sliceIndex: " + sliceIndex + "    horzBandList.size: " + horzBandList.size)
+        horzBandList.map(b => {
+          if (b.max > 0) {
+            println("containsCubeHorz ---------------------------------------------------------------------------------------------------------------------- " + sliceIndex + "    bandContainsCube: " + bandContainsCube(b, cubeSize_pix.getZ))
+            println(b.mkString("  "))
+            println("containsCubeHorz ---------------------------------------------------------------------------------------------------------------------- " + sliceIndex + "    bandContainsCube: " + bandContainsCube(b, cubeSize_pix.getZ))
+          }
+        })
+      }
+
+      val ok = hasCube.nonEmpty
+      if (sliceIndex == 242) Trace.trace("containsCubeHorz sliceIndex " + sliceIndex.formatted("%3d") + " : " + ok)
+      hasCube.headOption
+    }
+
+    def containsCubeHorz(sliceIndex: Int): Option[Double] = {
+      val dicomImage = new DicomImage(horizontalSlice(sliceIndex))
+
+      val proximity = 4.0 //  pass as parameter TODO
+
+      def toMeans(i: Int): IndexedSeq[Float] = {
+        val rectangle = new Rectangle(0, i, entireVolume.zSize, 1)
+        val di = dicomImage.getSubimage(rectangle)
+        if (sliceIndex == 155) { // TODO rm
+          val j = di.columnSums.map(s => toHu(s / 1))
+          Trace.trace("unfiltered HU: " + j.map(v => Util.fmtDbl(v)).mkString("   "))
+          if (i == 158)
+            Trace.trace("hey")
+        }
+        val meanList = di.columnSums.map(s => toHu(s / 1)).map(m => if (m < minHu) 0.toFloat else m)
+        meanList
+      }
+
+      val horzBandList = (0 until entireVolume.xSize by 1).map(i => toMeans(i))
+
+      val hasCube = horzBandList.map(band => bandContainsCube(band, cubeSize_pix.getZ)).flatten
+      if (false && (sliceIndex == 155)) { // TODO rm
+        println("containsCubeHorz sliceIndex: " + sliceIndex + "    horzBandList.size: " + horzBandList.size)
+        horzBandList.map(b => {
+          if (b.max > 0) {
+            println("containsCubeHorz ---------------------------------------------------------------------------------------------------------------------- " + sliceIndex + "    bandContainsCube: " + bandContainsCube(b, cubeSize_pix.getZ))
+            println(b.mkString("  "))
+            println("containsCubeHorz ---------------------------------------------------------------------------------------------------------------------- " + sliceIndex + "    bandContainsCube: " + bandContainsCube(b, cubeSize_pix.getZ))
+          }
+        })
+      }
+      Trace.trace("sliceIndex: " + sliceIndex + "      hasCube.size: " + hasCube.size)
+
+      val ok = {
+
+        val quorum = hasCube.size >= oneThirdCubeX_pix
+        def proximal = {
+          val seq = scala.collection.mutable.ArrayBuffer[Int]()
+          seq.appendAll(hasCube.map(_ => 1))
+
+          val j = seq.size
+          val j1 = hasCube.size
+          val j2 = seq(0)
+
+          for (a <- (0 until hasCube.size)) {
+            for (b <- (a + 1 until hasCube.size)) {
+              if ((hasCube(a) - hasCube(b)).abs < proximity) {
+                seq(a) = seq(a) + 1
+                seq(b) = seq(b) + 1
+              }
+            }
+          }
+
+          val enough = (seq.size > 0) && (seq.max >= oneThirdCubeX_pix)
+          if (quorum && (!enough))
+            Trace.trace("hey")
+
+          enough
+        }
+
+        if (hasCube.isEmpty)
+          None
+        else {
+          val size = hasCube.size // TODO rm
+
+          //Trace.trace("containsCubeHorz " + sliceIndex.formatted("%3d") + "  quorum: " + quorum + "    proximal: " + proximal)
+          quorum && proximal
+        }
+      }
+      Trace.trace("containsCubeHorz sliceIndex " + sliceIndex.formatted("%3d") + " : " + ok)
+      hasCube.headOption
+
+    }
+
+    /**
+     * Determine if the given slice contains the cube by dividing into vertical bands and
+     * looking at the profile of each.  If any qualify, then return true.
+     *
+     * -------------------------------
+     * |    |    |    |    |    |    |
+     * |    |    |    |    |    |    |
+     * |    |    |    |    |    |    |
+     * |    |    |  ..........  |    |  -----
+     * |    |    |  . |    | .  |    |    ^
+     * |    |    |  . |    | .  |    |    |  Look for rising and falling edges of cube
+     * |    |    |  . |    | .  |    |    |  separated by the size of the cube.
+     * |    |    |  . |    | .  |    |    v
+     * |    |    |  ..........  |    |  -----
+     * |    |    |    |    |    |    |
+     * |    |    |    |    |    |    |
+     * |    |    |    |    |    |    |
+     * |    |    |    |    |    |    |
+     * |    |    |    |    |    |    |
+     * -------------------------------
+     */
+    def containsCubeVertX(sliceIndex: Int): Option[Double] = {
+      val dicomImage = new DicomImage(horizontalSlice(sliceIndex))
+
+      def toMeans(offset: Int): IndexedSeq[Float] = {
+        val rectangle = new Rectangle(offset, 0, Math.min(oneThirdCubeZ_pix, entireVolume.zSize - offset), entireVolume.xSize)
+        val di = dicomImage.getSubimage(rectangle)
+
+        if (sliceIndex == 242) { // TODO rm
+          val j = di.rowSums.map(s => toHu(s / di.width))
+          Trace.trace("unfiltered HU: " + j.map(v => Util.fmtDbl(v)).mkString("   "))
+        }
+
+        val j = di.rowSums
+        val maxJ = j.max
+        val meanList = di.rowSums.map(s => toHu(s / di.width)).map(m => if (m < minHu) 0.toFloat else m)
+        meanList.toIndexedSeq
+      }
+
+      val vertBandList = (0 until entireVolume.zSize by oneThirdCubeZ_pix).map(toMeans)
+      val hasCube = vertBandList.map(band => bandContainsCube(band, cubeSize_pix.getX)).flatten
+
+      if (true && (sliceIndex == 242)) { // TODO rm
+        println("containsCubeVert sliceIndex: " + sliceIndex + "    vertBandList.size: " + vertBandList.size)
+        vertBandList.map(b => {
+          if (b.max > 0) {
+            println("containsCubeHorz ---------------------------------------------------------------------------------------------------------------------- " + sliceIndex + "    bandContainsCube: " + bandContainsCube(b, cubeSize_pix.getX))
+            println(b.mkString("  "))
+            println("containsCubeHorz ---------------------------------------------------------------------------------------------------------------------- " + sliceIndex + "    bandContainsCube: " + bandContainsCube(b, cubeSize_pix.getX))
+          }
+        })
+      }
+
+      val ok = hasCube.nonEmpty
+      //logger.info("containsCubeVert sliceIndex " + sliceIndex.formatted("%3d") + " : " + ok)
+      hasCube.headOption
+    }
+
+    def containsCubeVert(sliceIndex: Int): Option[Double] = {
+      val dicomImage = new DicomImage(horizontalSlice(sliceIndex))
+
+      def toMeans(offset: Int): IndexedSeq[Float] = {
+        val rectangle = new Rectangle(offset, 0, 1, entireVolume.xSize)
+        val di = dicomImage.getSubimage(rectangle)
+
+        if (sliceIndex == 242) { // TODO rm
+          val j = di.rowSums.map(s => toHu(s / 1))
+          Trace.trace("unfiltered HU: " + j.map(v => Util.fmtDbl(v)).mkString("   "))
+        }
+
+        val j = di.rowSums
+        val maxJ = j.max
+        val meanList = di.rowSums.map(s => toHu(s / 1)).map(m => if (m < minHu) 0.toFloat else m)
+        meanList.toIndexedSeq
+      }
+
+      val vertBandList = (0 until entireVolume.zSize by 1).map(toMeans)
+      val hasCube = vertBandList.map(band => bandContainsCube(band, cubeSize_pix.getX)).flatten
+
+      if (true && (sliceIndex == 242)) { // TODO rm
+        println("containsCubeVert sliceIndex: " + sliceIndex + "    vertBandList.size: " + vertBandList.size)
+        vertBandList.map(b => {
+          if (b.max > 0) {
+            println("containsCubeHorz ---------------------------------------------------------------------------------------------------------------------- " + sliceIndex + "    bandContainsCube: " + bandContainsCube(b, cubeSize_pix.getX))
+            println(b.mkString("  "))
+            println("containsCubeHorz ---------------------------------------------------------------------------------------------------------------------- " + sliceIndex + "    bandContainsCube: " + bandContainsCube(b, cubeSize_pix.getX))
+          }
+        })
+      }
+
+      val ok = hasCube.size >= oneThirdCubeZ_pix
+      //logger.info("containsCubeVert sliceIndex " + sliceIndex.formatted("%3d") + " : " + ok)
+      if (ok) hasCube.headOption
+      else None
+    }
+
+    /**
+     * Require the image to contain bands oriented in both the vertical and horizontal
+     * directions that contain pairs of rising and falling edges separated by the size
+     * of the cube to consider the slice to contain the cube.
+     *
+     * If found, return the center coordinates.
+     */
+    def containsCube(sliceIndex: Int): Option[Point2d] = {
+      if (sliceIndex == 155) // TODO rmf
+        Trace.trace("hey")
+      val h = containsCubeHorz(sliceIndex)
+      val v = containsCubeVert(sliceIndex)
+      Trace.trace("sliceIndex: " + sliceIndex + "    h: " + h + "    v: " + v)
+
+      if (false) { // TODO put back in
+        containsCubeHorz(sliceIndex) match {
+          case Some(h) => {
+            containsCubeVert(sliceIndex) match {
+              case Some(v) => {
+                Trace.trace("Found center: " + sliceIndex + " : " + h + ", " + v)
+                Some(new Point2d(h, v))
+              }
+              case _ => None
+            }
+          }
+          case _ => None
+        }
+      }
+      if (h.isDefined && v.isDefined) Some(new Point2d(h.get, v.get)) else None
+    }
+
+    if (true) {
+      Trace.trace
+      val start = System.currentTimeMillis
+      val all = (0 until entireVolume.ySize).map(sliceIndex => (sliceIndex, containsCube(sliceIndex)))
+      Trace.trace("All:\n" + all.mkString("\n"))
+      val elapsed = System.currentTimeMillis - start
+      Trace.trace("elapsed ms: " + elapsed)
+      Trace.trace
+    }
+
+    def findVeryFirst(sliceIndex: Int): Int = {
+      if (containsCube(sliceIndex - 1).isDefined)
+        findVeryFirst(sliceIndex - 1)
+      else
+        sliceIndex
+    }
+
+    /**
+     * Descend vertically through the volume looking for a horizontal slice containing the cube.  For
+     * speed, skip down 1/3 of the cube height at at time.  After one of the topmost is found, another
+     * function will find the very topmost.
+     */
+    def findOneOfFirst(sliceIndex: Int): Option[Int] = {
+      if (containsCube(sliceIndex).isDefined)
+        Some(sliceIndex)
+      else {
+        val next = sliceIndex + oneThirdCubeY_pix
+        if (next < entireVolume.ySize)
+          findOneOfFirst(next)
+        else
+          None
+      }
+    }
+
+    /**
+     * Check multiple points near the center to make sure that they are all defined. If the cube is
+     * actually there, then it should be findable in multiple slices near the vertical center.
+     */
+    def checkMultiplePoints(vertCenterSliceIndex: Int): Option[Int] = {
+      val partialCube = cubeSize_pix.getY / 5
+      val centerList = (vertCenterSliceIndex - partialCube until vertCenterSliceIndex + partialCube).map(sliceIndex => (sliceIndex, containsCube(sliceIndex)))
+      Trace.trace("centerList:\n" + centerList.mkString("\n"))
+
+      // if any of the slices near the center do not describe the cube, then fail
+      val bad = centerList.find(c => c._2.isEmpty).isDefined
+      if (bad)
+        None
+      else {
+        val xList = centerList.map(c => c._2.get.getX)
+        val yList = centerList.map(c => c._2.get.getY)
+
+        def isConsistent(list: Seq[Double]) = {
+          val requiredStdDev = 0.2 // require the centers to have this standard deviation or less in both coordinates
+          val mean = list.sum / list.size
+          val stdDev = ImageUtil.stdDev(list.map(_.toFloat))
+          (stdDev / mean) < requiredStdDev
+        }
+
+        if (isConsistent(xList) && isConsistent(yList))
+          Some(vertCenterSliceIndex)
+        else {
+          logger.info("Found something that resembled the center, but not consistently: " + centerList.map(_._2.get).mkString("    "))
+          None
+        }
+      }
+    }
+
+    // Find vertical top of the cube.  If found, then get the vertical center by jumping down 1/2 cube.
+    val centerSliceIndex = findOneOfFirst(0) match {
+      case Some(sliceIndex) => {
+        val top = findVeryFirst(sliceIndex)
+        Some(top + (cubeSize_pix.getY / 2))
+      }
+      case _ => None
+    }
+
+    centerSliceIndex match {
+      case Some(sliceIndex) => checkMultiplePoints(sliceIndex)
+      case _ => None
+    }
+
+    centerSliceIndex
+  }
+
   /**
    * Find the approximate center of the cube to within a few voxels.  To do this, each
    * horizontal slice is examined to determine if it contains approximately the number of non-zero
@@ -235,7 +643,7 @@ object BBbyCBCTAnalysis extends Logging {
    *
    * @return If found, the position in voxels.  If not found, return None.
    */
-  private def getCoarseVox(entireVolume: DicomVolume, voxSize_mm: Point3d): Option[Point3i] = {
+  private def getCoarseVox(entireVolume: DicomVolume, voxSize_mm: Point3d, toHu: Float => Float): Option[Point3i] = {
 
     val cubeHeight_vox = (Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getY).round.toInt
 
@@ -255,12 +663,11 @@ object BBbyCBCTAnalysis extends Logging {
     }
 
     /** drop this percentage of the largest valued voxels to get rid of outliers. */
-    val pctToDrop = 1.0
 
     /** Number of voxels expected to compose a cross section of cube. */
     val expectedVoxelCount: Int = ((Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getX) * (Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getZ)).round.toInt
 
-    def getCoarseVerticalCenter_vox(entireVolume: DicomVolume, voxSize_mm: Point3d): Option[Int] = {
+    def getCoarseVerticalCenter_voxOld(entireVolume: DicomVolume, voxSize_mm: Point3d): Option[Int] = {
 
       val cubeHalf = cubeHeight_vox / 2
 
@@ -268,6 +675,7 @@ object BBbyCBCTAnalysis extends Logging {
       val percentOfCubeVoxelsCache = scala.collection.mutable.Map[Int, Double]()
 
       def getRelaventVoxels(sliceIndex: Int): IndexedSeq[Float] = {
+        val pctToDrop = 1.0
         val dropCount = (expectedVoxelCount * (pctToDrop / 100.0)).round.toInt
         val voxelList = horizontalSlice(sliceIndex).flatten.sorted.dropRight(dropCount)
         voxelList
@@ -313,22 +721,26 @@ object BBbyCBCTAnalysis extends Logging {
           right.sum - left.sum
         }
 
-        val xSize_mm = {
+        val xSize_mmAll = {
           val xRange = (plateauSizeImageX_pix until dicomImage.width - plateauSizeImageX_pix).toSeq
           val xEdgeSeq = xRange.map(imgX => (imgX, edgeSize(colSum, imgX, plateauSizeImageX_pix)))
           val risingX = xEdgeSeq.maxBy(sv => sv._2)._1
           val fallingX = xEdgeSeq.minBy(sv => sv._2)._1
 
-          (fallingX - risingX) * voxSize_mm.getZ // size of cube in mm in image X direction
+          val size = (fallingX - risingX) * voxSize_mm.getZ // size of cube in mm in image X direction
+          (risingX, fallingX, size)
         }
+        val xSize_mm = xSize_mmAll._3
 
-        val ySize_mm = {
+        val ySize_mmAll = {
           val yRange = (plateauSizeImageY_pix until dicomImage.height - plateauSizeImageY_pix).toSeq
           val yEdgeSeq = yRange.map(imgY => (imgY, edgeSize(rowSum, imgY, plateauSizeImageY_pix)))
           val risingY = yEdgeSeq.maxBy(sv => sv._2)._1
           val fallingY = yEdgeSeq.minBy(sv => sv._2)._1
-          (fallingY - risingY) * voxSize_mm.getX // size of cube in mm in image Y direction
+          val size = (fallingY - risingY) * voxSize_mm.getX // size of cube in mm in image Y direction
+          (risingY, fallingY, size)
         }
+        val ySize_mm = ySize_mmAll._3
 
         val cubeDiff = Config.DailyQAPhantomCubeSize_mm * (Config.DailyQACBCTCubeSizePercentTolerance / 100.0)
         val minCube_mm = Config.DailyQAPhantomCubeSize_mm - cubeDiff
@@ -337,12 +749,14 @@ object BBbyCBCTAnalysis extends Logging {
           (xSize_mm > minCube_mm) && (xSize_mm < maxCube_mm) &&
             (ySize_mm > minCube_mm) && (ySize_mm < maxCube_mm)
 
-        if (ok) {
-          logger.info("BBbyCBCTAnalysis.  Expected cube size mm: " + Config.DailyQAPhantomCubeSize_mm +
-            "   pct error allowed: " + Config.DailyQACBCTCubeSizePercentTolerance +
-            "   xSize_mm: " + xSize_mm +
-            "   ySize_mm: " + ySize_mm)
-        }
+        def fmt(d: Double) = d.formatted("%7.2f")
+        logger.info("BBbyCBCTAnalysis.opposingEdgesValid: " + ok.toString.formatted("%5s") +
+          "    Expected cube size mm: " + Config.DailyQAPhantomCubeSize_mm +
+          "    slice: " + sliceIndex.formatted("%3d") +
+          "   pct error allowed: " + Config.DailyQACBCTCubeSizePercentTolerance +
+          "   X rise,fall,size: " + fmt(xSize_mmAll._1) + " : " + fmt(xSize_mmAll._2) + " : " + fmt(xSize_mm) +
+          "   Y rise,fall,size: " + fmt(ySize_mmAll._1) + " : " + fmt(ySize_mmAll._2) + " : " + fmt(ySize_mm))
+
         ok
       }
 
@@ -350,7 +764,7 @@ object BBbyCBCTAnalysis extends Logging {
         val pct = percentOfCubeVoxels(sliceIndex)
         val diff = (100.0 - pct).abs
         val ok = diff <= Config.DailyQACBCTVoxPercentTolerance
-        if (ok) logger.info("Top of cube found at horizontal voxel slice " + sliceIndex + ".  Percent of voxels found: " + pct)
+        if (ok) logger.info("Cube cross section found at horizontal voxel slice " + sliceIndex + ".  Percent of voxels found: " + pct)
         ok
       }
 
@@ -404,7 +818,12 @@ object BBbyCBCTAnalysis extends Logging {
     }
 
     // Given the vertical center of the cube, find the center.
-    val coarseVertOpt = getCoarseVerticalCenter_vox(entireVolume, voxSize_mm)
+    val coarseVertOpt = BBbyCBCTCoarseCenter.getCoarseVerticalCenter_vox(entireVolume, voxSize_mm, toHu)
+
+    if (false) { // TODO
+      val coarseVertOptOld = getCoarseVerticalCenter_voxOld(entireVolume, voxSize_mm)
+      Trace.trace("new alg: " + coarseVertOpt + " old alg: " + coarseVertOptOld)
+    }
 
     coarseVertOpt match {
       case Some(bbY) => {
@@ -493,6 +912,11 @@ object BBbyCBCTAnalysis extends Logging {
    */
   case class CBCTAnalysisResult(coarseLoction_vox: Point3i, fineLocation_vox: Point3d, volumeTranslator: VolumeTranslator, cbctFrameOfRefLocation_mm: Point3d, imageXYZ: Seq[BufferedImage])
 
+  /**
+   * Get the maximum (sub-voxel) point in the given volume.  It must
+   * deviate sufficiently from the volume's mean to be considered a
+   * valid maximum.
+   */
   private def getMaxPoint(volume: DicomVolume): Option[Point3d] = {
 
     val profileList = Seq(volume.xPlaneProfile, volume.yPlaneProfile, volume.zPlaneProfile)
@@ -531,49 +955,94 @@ object BBbyCBCTAnalysis extends Logging {
 
     val entireVolume = DicomVolume.constructDicomVolume(sorted) // all CBCT voxels as a volume
 
-    getCoarseVox(entireVolume, voxSize_mm) match {
+    def getBbVolumeStart(offset_vox: Point3i, coarse_vox: Point3i): Point3i = {
+      val ov = offset_vox
+      ov.scale(-1)
+      ov.add(coarse_vox)
+      ov
+    }
+
+    /**
+     * Get sub-volume of the entire volume that contains just the
+     *  BB and some of surrounding cube, according to the coarse
+     *  location.  Getting a larger volume ensures that the BB's
+     *  location is actually in the volume, and also provides a
+     *  larger sample of voxels inside the cube to differentiate
+     *  from the brightness of the BB.
+     */
+    def getBbVolume(offset_vox: Point3i, bbVolumeStart: Point3i): DicomVolume = {
+      val size_vox = offset_vox
+      size_vox.scale(2)
+      entireVolume.getSubVolume(bbVolumeStart, size_vox)
+    }
+
+    /**
+     * Given the fine (precise) location, build results.
+     */
+    def processFineLocation(relOpt: Point3d, bbVolumeStart: Point3i, coarse_vox: Point3i): CBCTAnalysisResult = {
+      val fineLocation_vox = relOpt
+      fineLocation_vox.add(i2d(bbVolumeStart))
+      val volumeTranslator = new VolumeTranslator(sorted)
+      val cbctForLocation_mm = volumeTranslator.vox2mm(fineLocation_vox)
+      val imageXYZ = makeImagesXYZ(entireVolume, fineLocation_vox, cbctForLocation_mm, voxSize_mm)
+      val result = new CBCTAnalysisResult(coarse_vox, fineLocation_vox, volumeTranslator,
+        cbctForLocation_mm: Point3d, imageXYZ)
+
+      def fmt(d: Double) = d.formatted("%12.7f")
+      def fmtPoint(point: Point3d): String = fmt(point.getX) + ",  " + fmt(point.getY) + ",  " + fmt(point.getZ)
+      val contentDateTime = cbctSeries.map(al => DicomUtil.getTimeAndDate(al, TagFromName.ContentDate, TagFromName.ContentTime)).flatten.minBy(_.getTime)
+      logger.info("BB found in CBCT" +
+        "\n    ImagePositionPatient first slice: " + volumeTranslator.ImagePositionPatient +
+        "\n    Content date and time: " + (new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss")).format(contentDateTime) +
+        "    coordinates in voxels: " + fmtPoint(fineLocation_vox) +
+        "\n    frame of ref coordinates in mm: " + fmtPoint(cbctForLocation_mm))
+
+      result
+    }
+
+    val RescaleSlope = cbctSeries.head.get(TagFromName.RescaleSlope).getDoubleValues.head
+    val RescaleIntercept = cbctSeries.head.get(TagFromName.RescaleIntercept).getDoubleValues.head
+
+    def toHu(pixValue: Float) = ((pixValue * RescaleSlope) + RescaleIntercept).toFloat
+    val coarseOpt_vox = getCoarseVox(entireVolume, voxSize_mm, toHu)
+
+    coarseOpt_vox match {
       case Some(coarse_vox) => {
+        if (true) { // TODO rm
+          val al = cbctSeries(coarse_vox.getZ)
+          val bbSlice = new DicomImage(al)
+          val sub = bbSlice.getSubimage(new Rectangle(coarse_vox.getX + 10, coarse_vox.getY + 10, 8, 8))
+          val mean = sub.sum / (sub.width * sub.height)
+          val RescaleSlope = al.get(TagFromName.RescaleSlope).getDoubleValues.head
+          val RescaleIntercept = al.get(TagFromName.RescaleIntercept).getDoubleValues.head
+          val StationName = al.get(TagFromName.StationName).getSingleStringValueOrEmptyString
+          val meanHu = (mean * RescaleSlope) + RescaleIntercept
+          Trace.trace(
+            "    coarse_vox: " + coarse_vox +
+              "    StationName: " + StationName +
+              "    RescaleSlope: " + Util.fmtDbl(RescaleSlope) +
+              "    RescaleIntercept: " + Util.fmtDbl(RescaleIntercept) +
+              "    mean: " + Util.fmtDbl(mean) +
+              "    meanHu: " + Util.fmtDbl(meanHu))
+        }
+
+        // found the coarse location of the BB.  Now try to find the fine (exact) location.
         val searchExtensionFactor = 4.0
         val offset_mm = Config.CBCTBBPenumbra_mm * searchExtensionFactor
         def offset_vox = d2i(new Point3d(offset_mm / voxSize_mm.getX, offset_mm / voxSize_mm.getY, offset_mm / voxSize_mm.getZ))
 
-        val bbVolumeStart = {
-          val ov = offset_vox
-          ov.scale(-1)
-          ov.add(coarse_vox)
-          ov
+        val bbVolumeStart = getBbVolumeStart(offset_vox, coarse_vox)
+
+        val bbVolume = getBbVolume(offset_vox, bbVolumeStart)
+
+        getMaxPoint(bbVolume) match {
+          case Some(maxPoint) => {
+            // found the exact location
+            val resultX = processFineLocation(maxPoint, bbVolumeStart, coarse_vox)
+            Right(resultX)
+          }
+          case _ => Left("Could not find BB, possibly due to insufficient signal to noise ratio.")
         }
-
-        // sub-volume of the entire volume that contains just the BB and a little bit of surrounding cube, according to the coarse location.
-        val bbVolume = {
-          val size_vox = offset_vox
-          size_vox.scale(2)
-          entireVolume.getSubVolume(bbVolumeStart, size_vox)
-        }
-
-        val relOpt = getMaxPoint(bbVolume)
-        if (relOpt.isDefined) {
-          val fineLocation_vox = relOpt.get
-          fineLocation_vox.add(i2d(bbVolumeStart))
-          val volumeTranslator = new VolumeTranslator(sorted)
-          val cbctForLocation_mm = volumeTranslator.vox2mm(fineLocation_vox)
-          val imageXYZ = makeImagesXYZ(entireVolume, fineLocation_vox, cbctForLocation_mm, voxSize_mm)
-          val result = new CBCTAnalysisResult(coarse_vox, fineLocation_vox, volumeTranslator,
-            cbctForLocation_mm: Point3d, imageXYZ)
-
-          def fmt(d: Double) = d.formatted("%12.7f")
-          def fmtPoint(point: Point3d): String = fmt(point.getX) + ",  " + fmt(point.getY) + ",  " + fmt(point.getZ)
-          val contentDateTime = cbctSeries.map(al => DicomUtil.getTimeAndDate(al, TagFromName.ContentDate, TagFromName.ContentTime)).flatten.minBy(_.getTime)
-          logger.info("BB found in CBCT" +
-            "\n    ImagePositionPatient first slice: " + volumeTranslator.ImagePositionPatient +
-            "\n    Content date and time: " + (new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss")).format(contentDateTime) +
-            "    coordinates in voxels: " + fmtPoint(fineLocation_vox) +
-            "\n    frame of ref coordinates in mm: " + fmtPoint(cbctForLocation_mm))
-
-          Right(result)
-        } else
-          Left("Could not find BB, possibly due to insufficient signal to noise ratio.")
-
       }
       case _ => Left("No BB found.  Could not find cube containing BB.")
     }
