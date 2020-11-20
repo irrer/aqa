@@ -5,255 +5,121 @@
         This describes the BB finding algorithm and precise measurement of the BB's location.
     </p>
 
-    <h3>Image Processing</h3>
+    <h3>Coarse (approximate) Location of BB</h3>
     <p>
         The first step is to determine the BB's approximate location within the CBCT volume. The method needs to be immune to image
         artifacts and to avoid voxels occupied by the couch. To do this, the
         algorithm first locates the phantom cube and
         then the BB within the cube.
-
+    </p>
+    <p>
 
         A 3D volume is constructed using the CBCT slices. Next,
-        the volume is divided into horizontal slices parallel to the table and perpendicular to the Y-axis. The top most slice is examined to determine
-        whether it contains the phantom cube. The criteria is that it must have a histogram indicating the approximate number of voxels
-        that one slice of the cube should contain. Note that the top most
-        slice is normally black (empty). The next slice down is then
-        examined, and the next slice, continuing downward until a slice with the proper characteristics is found.
+        the volume is divided into horizontal slices parallel to the table and perpendicular to the Y-axis. Starting at the top, slices are
+        examined in descending order to determine if they contain the cube.
 
-        When found, it is assumed that this slice is the top of the cube. Using the size of the cube, the approximate vertical position of center
-        containing the BB is calculated by adding one half of the cube's height.
-        
-        
     </p>
+
+
+    The examination of a single slice involves the following steps:
     <ul>
-        <li>The bb must be within a bounded volume or the test will fail.</li>
-        <li>Avoiding objects elsewhere in the image that would make recognizing the bb difficult if not impossible.</li>
-        <li>Computational efficiency.</li>
+        <li>Construct the slice from the 3D volume. The slice is parallel to the table/couch and is orthogonal to the originally acquired slices.</li>
+        <li>
+            Remove noise. This is done by creating a histogram of the values (HU levels). Images containing the cube have been observed to
+            have 600 different voxel values. Values that fall in the
+            lower
+            portion of the histogram are deemed noise, and are set to zero. The size of the
+            portion of the histogram is driven by the configured value
+            <b>DailyQACBCTDarkPixelValueLevels</b>
+            .
+            <br></br>
+            <p>Images that are mostly 'black' will be made completely black. Images that contain the cube or the table will have the dark parts of the images made completely black.</p>
+        </li>
+        <li>Noise is reduced further by finding the sum of the count in histogram of the brightest voxels that is sufficient to account for the area of the cube (top view). Values
+            in the histogram
+            below this value are also considered noise and all voxels in the image with these low values are set to zero.
+        </li>
+        <li>
+            The slice is then examined to find rising and falling edges that are separated by the cube's approximate size. Edge pairs are found one row or column of
+            voxels at a time. A rising edge is
+            defined as transitioning from zero to non-zero, and a falling edge is the reverse. If the approximate correct number of
+            pairs are found in both orthogonal
+            directions (X and Z in RTPLAN
+            space), then the slice contains the cube.
+            <p>Note that using transitions is necessary because the profile of the cube is occasionally not symmetrical. This asymmetry thwarts approaches such as
+                center of mass and edge finding using
+                the severity of slope.
+            </p>
+        </li>
     </ul>
 
-    <p>
-        All possible sub-volumes of the VOI are searched of size 4*4*2 (X*Y*Z) voxels. The sub-volume with the largest sum of voxel values
-        is assumed to be a coarse location for the bb.
-    </p>
-
-    <p>
-        Next, a sub-volume is taken that is slightly larger than the actual size of the bb (the size of the bb is a configuration value) centered
-        on the coarse location. The sub-volume is summed across
-        the 3 different axis to create 3 one-dimensional arrays. The profile of each
-        array is analyzed with a center of mass algorithm to determine the exact center of the bb in each dimension. As a
-        further check, the magnitude
-        of the 'bump' in each profile created by the bb is checked to ensure that it is above a given number (configured value) of standard deviations
-        to reject random image
-        noise.
-    </p>
-
-    <p></p>
-    <div>
-        Given the bb's location in pixels $pix_X, pix_Y, pix_Z$, the location is converted to the frame of reference $for_X, for_Y, for_Z$ in mm by multiplying the X and Y coordinates
-        by
-        the
-        <b>PixelSpacing</b>
-        for X and Y,
-        and the Z coordinate by the
-        <b>SliceThickness</b>
-        . The result is offset by the
-        <b>ImagePositionPatient</b>
-        from the slice with the lowest Z coordinate value:
-
-        $$for_X = pix_X \times PixelSpacing_X + ImagePositionPatient_X$$
-        $$for_Y = pix_Y \times PixelSpacing_Y + ImagePositionPatient_Y$$
-        $$for_Z =
-        pix_Z \times SliceThickness + ImagePositionPatient_Z$$
-        <ul>
-            <li>
-                <b>0028,0030 PixelSpacing</b>
-                : Physical distance in the patient between the center of each pixel, specified by a numeric pair - adjacent row spacing (delimiter) adjacent column spacing in mm
-            </li>
-            <li>
-                <b>0018,0050 SliceThickness</b>
-                : Nominal slice thickness, in mm.
-            </li>
-            <li>
-                <b>0020,0032 ImagePositionPatient</b>
-                : The x, y, and z coordinates of the upper left hand corner (center of the first voxel transmitted) of the image, in mm.
-            </li>
-        </ul>
-    </div>
-    <p></p>
-
-
-    <p>
-        The coordinates in mm are then translated to the RTPLAN frame of reference. To do this, a DICOM REG file is
-        found (note the DICOM uses a UID, aka unique id, to identify frames of reference)
-        that
-        references both the
-        CBCT's frame of reference and the RTPLAN's frame of reference as shown in the diagram below.
-    </p>
 
     <div style="margin:10px; border: 1px solid lightgrey;">
-        <img src="CBCT_REG_RTPLAN.png" style="margin:30px;" />
+        <center>
+            <p>
+                The image below shows a horizontal slice containing the cube before and after noise reduction. Note that the aspect ratio has not been corrected.
+                <br></br>
+                <img src="BeforeAndAfterNoiseReduction.png" style="margin:30px;" />
+            </p>
+        </center>
     </div>
 
 
-
-    <p>
-        Standard linear algebra is used to multiply
-        the vector by the $4\times4$ matrix contained in the DICOM REG file as
-        <b>FrameOfReferenceTransformationMatrix</b>
-        . The resulting vector is the bb's
-        $X,Y,Z$ location in the RTPLAN's frame of reference. The RTPLAN
-        <b>IsocenterPosition</b>
-        is subtracted from the result to get the error between CBCT and isocenter:
-
-        $$X_{error} = X_{CBCT} - X_{PLAN}$$
-        $$Y_{error} = Y_{CBCT} - Y_{PLAN}$$
-        $$Z_{error} = Z_{CBCT} - Z_{PLAN}$$
-    </p>
-
-    <div>
-        DICOM attributes used to map the CBCT's frame of reference to the RTPLAN's frame of reference:
-        <ul>
-            <li>
-                <b>0020,0052 FrameOfReferenceUID </b>
-                : The Frame of Reference UID shall be used to uniquely identify a Frame of Reference for a Series.
-                <p></p>
-            </li>
-            <li>
-                <b>3006,00C6 FrameOfReferenceTransformationMatrix</b>
-                : The Frame of Reference Transformation Matrix (in the REG file) describes
-                how to transform a point (Bx,By,Bz) into (Ax,Ay,Az) according to the
-                equation below (For REG files this is the
-                RTPLAN
-                <b>FrameOfReference</b>
-                ):
-                <br />
-                <img src="MatrixTransform.png" width="300" style="margin:20px;" />
-                <p></p>
-            </li>
-            <li>
-                <b>0070,0308 RegistrationSequence</b>
-                : A Sequence of registration Items. Each Item defines a spatial registration of the images referenced in that
-                Item to the Registered RCS established by this SOP Instance. All referenced
-                images are in the same spatial\
-                Frame of Reference or atlas. This sequence contains the CBCT
-                <b>FrameOfReference</b>
-                .
-                <p></p>
-            </li>
-            <li>
-                <b>300A,012C IsocenterPosition</b>
-                : Isocenter coordinates (x,y,z) in the Patient-Based Coordinate System. (from the RTPLAN file)
-                <p></p>
-            </li>
-        </ul>
+    <div style="margin:10px; border: 1px solid lightgrey;">
+        <center>
+            <p>
+                The image below shows a typical horizontal slice containing the cube, with edge pairs from single voxel rows and columns in theZ axis (orange) and X axis (green) highlighted.
+                If the
+                proper number are accumulated it indicates that the slice contains the cube.
+                <br></br>
+                <img src="EdgePair.png" style="margin:30px;" />
+            </p>
+        </center>
     </div>
 
     <p>
-        There is a special case where the CBCT has the same frame of reference as the RTPLAN, and no matrix transformation
-        is necessary. While the analysis will be performed, the results may or may not
-        be useful. In practice this should not occur, but the software does support it.
+        When two adjacent slices are found where the higher one does not contain the cube and the lower one does, then the top of the cube has
+        been established. The vertical center of the cube is
+        determined by descending a further 1/2 the cube's height. Several slices are
+        checked at the vertical midpoint to increase confidence that the cube has been found.
     </p>
 
-    <h3>Example CBCT Calculations</h3>
-
-    <h4>Input Data</h4>
-    The following values were taken from actual machine values:
-
-    <p style="margin-left:40px;">
-        <br />
-        <b>PixelSpacing</b>
-        : 0.51119 \ 0.51119
-        <br />
-        <b>SliceThickness</b>
-        : 1.98972453680719
-        <br />
-        coarse location in voxels: 276, 239, 49 (calculated from volume)
-        <br />
-        fine location in voxels: 275.863, 238.8094845, 48.478 (calculated from volume)
-        <br />
-        <b>ImagePositionPatient</b>
-        of first slice: -130.2839, -130.70374936618, -91.855446207549
-        <br />
-        <b>FrameOfReferenceTransformationMatrix</b>
-        :
-        $$
-        \left[
-        \begin{array}{cccc}
-        0.999994& -0.000017& 0.003545&
-        -6.006019\\
-        0.000021& 0.999999& -0.001028& 171.213262\\
-        -0.003545& 0.001028& 0.999993& 59.937419\\
-        1.0& 0.000000& 0.000000& 1.000000
-        \end{array}
-        \right]
-        $$
-
-        <br />
-        <b>IsocenterPosition</b>
-        : 4.221317, 162.6656, 64.92423
+    <p>
+        The horizontal center of the cube is found using the midpoint between edges found in the Z and X directions. At this point the
+        coarse (approximate) position of the cube has been found, which is
+        accurate to within 2 voxels.
     </p>
 
-    <br />
-    <h4>Calculations</h4>
-    <p></p>
-    Determine coordinates of bb in CBCT frame of reference in mm:
-    $$ X = 275.863 \times 0.51119 + -130.2839 = 10.7349192 $$
-    $$ Y = 238.8094845 \times 0.51119 + -130.70374936618 = -8.6265526 $$
-    $$ Z =
-    48.478
-    \times 1.98972453680719 + -91.855446207549 = 4.6017616 $$
+    <h3>Fine (precise) Location of BB</h3>
 
-    <br />
-    <p></p>
+    <p>The following steps are taken to determine the precise location of the BB.</p>
+    <ul>
+        <li>A sub-volume is taken that surrounds the coarse location.</li>
+        <li>The sums of the planes in each axis of the sub-volume are summed, producing three one-dimensional arrays.</li>
+        <li>For each one-dimensional array, a cubic spline is calculated.</li>
+        <li>The maximum point in the cubic spline is found, which corresponds to the center of the BB in that dimension.</li>
+        <li>
+            To qualify as the BB, the standard deviation of the maximum must be above a threshold (specified in
+            configuration file). This is necessary because any profile, even without the BB, will
+            have a maximum due to
+            noise, and such cases must be rejected. For this reason, taking a large enough volume around the BB
+            handles two problems:
+            <ul>
+                <li>Accommodate small positioning errors from the coarse find.</li>
+                <li>Provide a large enough sample of voxels so as to establish a meaningful standard deviation.</li>
+            </ul>
+        </li>
+    </ul>
 
-    Transform with matrix to RTPLAN coordinates:
-
-    $$
-    \left[
-    \begin{array}{c}
-    10.7349192\\
-    -8.6265526\\
-    4.6017616\\
-    0
-    \end{array}
-    \right]
-
-    \times
-
-    \left[
-    \begin{array}{cccc}
-    0.999994& -0.000017& 0.003545&
-    -6.006019\\
-    0.000021& 0.999999& -0.001028& 171.213262\\
-    -0.003545& 0.001028& 0.999993& 59.937419\\
-    1.0& 0.000000& 0.000000& 1.000000
-    \end{array}
-    \right]
-
-    =
-
-    \left[
-    \begin{array}{c}
-    4.745294\\
-    162.582208\\
-    64.492228\\
-    1.0
-    \end{array}
-    \right]
-    $$
-
-    Subtract the RTPLAN isocenter from the CBCT coordinates to determine the error:
-
-    $$
-    X_{error} = 4.745294 - 4.221317 = 0.52398
-    $$
-    $$
-    Y_{error} = 162.582208 - 162.6656 = 0.083384
-    $$
-    $$
-    Z_{error} =
-    64.492228 - 64.92423 = -0.43202
-    $$
+    <div style="margin:10px; border: 1px solid lightgrey;">
+        <center>
+            <p>
+                The image below shows the profile of one of the cubic splines. The maximum point corresponds to the center of the BB.
+                <br></br>
+                <img src="CBCTFineLocation.png" style="margin:30px;" />
+            </p>
+        </center>
+    </div>
 
 
 <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
