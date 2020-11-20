@@ -68,9 +68,9 @@
     <div style="margin:10px; border: 1px solid lightgrey;">
         <center>
             <p>
-                The image below shows a typical horizontal slice containing the cube, with edge pairs from single voxel rows and columns in theZ axis (orange) and X axis (green) highlighted.
-                If the
-                proper number are accumulated it indicates that the slice contains the cube.
+                Typical horizontal slice containing the cube, with edge pairs from single voxel rows and columns in theZ axis (orange) and X
+                axis (green) highlighted.  Many of each are acquired, and if the proper number are accumulated it indicates that the
+                slice contains the cube.
                 <br></br>
                 <img src="EdgePair.png" style="margin:30px;" />
             </p>
@@ -105,16 +105,27 @@
             noise, and such cases must be rejected. For this reason, taking a large enough volume around the BB
             handles two problems:
             <ul>
-                <li>Accommodate small positioning errors from the coarse find.</li>
+                <li>Accommodate small errors from the coarse find.</li>
                 <li>Provide a large enough sample of voxels so as to establish a meaningful standard deviation.</li>
             </ul>
+            The volume can not be too large though, or its outer edges will be outside the cube and corrupt the
+            standard deviation, making it meaningless.
         </li>
     </ul>
 
     <div style="margin:10px; border: 1px solid lightgrey;">
         <center>
             <p>
-                The image below shows the profile of one of the cubic splines. The maximum point corresponds to the center of the BB.
+                Virtual sub-volume within the cube surrounding the BB.
+                <br></br>
+                <img src="SubVolumeInCube.png" style="margin:30px;" />
+            </p>
+        </center>
+    </div>
+    <div style="margin:10px; border: 1px solid lightgrey;">
+        <center>
+            <p>
+                Profile of one of the cubic splines. The maximum point corresponds to the center of the BB.
                 <br></br>
                 <img src="CBCTFineLocation.png" style="margin:30px;" />
             </p>
