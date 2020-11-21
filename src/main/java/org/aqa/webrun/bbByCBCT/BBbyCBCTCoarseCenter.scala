@@ -29,18 +29,6 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
       Config.DailyQAPhantomCubeSize_mm / voxSize_mm.getZ)
   }
 
-  /**
-   * Tuning parameter.  Determines how close two centers must be to consider them to
-   * both be the center of the same thing (hopefully the cube).
-   */
-  private val Config_CBCTProximityGrouping_mm = 4.0
-
-  /**
-   * Tuning parameter.  Determines how close two centers must be to consider them to
-   * both be the center of the same thing (hopefully the cube).
-   */
-  private val Config_CBCTPercentToleranceToCubeSize = 20.0
-
   private def d2i(d: Double): Int = d.round.toInt
 
   /**
@@ -135,27 +123,35 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
       if (hasNonZero.isEmpty) // quick check to reject all black bands.
         None
       else {
-
         // Get list of rising and falling edge indices.
         val risingList = band.indices.dropRight(1).filter(index => (band(index) == zero) && (band(index + 1) != zero))
         val fallingList = band.indices.dropRight(1).filter(index => (band(index) != zero) && (band(index + 1) == zero))
 
-        // establish the limits  that determine whether or not and edge pair's length is the proper.
         val cubeDiff_pix = cubeLen_pix * (Config.DailyQACBCTCubeSizePercentTolerance / 100.0) // allowed number of pixels off (error limit)
         val min = cubeLen_pix - cubeDiff_pix
         val max = cubeLen_pix + cubeDiff_pix
 
-        val edgePairList = risingList
-          .map(r => (r, fallingList.find(f => f > r))). // For each rising edge, find the corresponding falling edge.  This will be the first in the falling edge list that has an index greater than the rising edge.
-          filter(p => p._2.isDefined). // Discard any rising edges that do not have a corresponding falling edge. This can happen if the last pixel in the band is non-zero.
-          map(p => new EdgePair(p._1, p._2.get)). // Convert to convenience class.
-          filter(edgePair => (edgePair.length >= min) && (max >= edgePair.length)) // Filter out pairs that are not the proper length.
+        def inRange(r: Int, f: Int) = {
+          val length = f - r
+          (length >= min) && (max >= length)
+        }
 
-        val r = if (edgePairList.isEmpty)
-          None // no edge pairs found, so nothing.
-        else
-          Some(edgePairList.head.center) // Found at least one good pair.  Return the center of the first one.
-        r
+        val centerList = for (r <- risingList; f <- fallingList; if inRange(r, f)) yield ((r + 1 + f) / 2.0)
+        centerList.headOption
+
+        //        // establish the limits  that determine whether or not and edge pair's length is the proper.
+        //
+        //        val edgePairList = risingList
+        //          .map(r => (r, fallingList.find(f => f > r))). // For each rising edge, find the corresponding falling edge.  This will be the first in the falling edge list that has an index greater than the rising edge.
+        //          filter(p => p._2.isDefined). // Discard any rising edges that do not have a corresponding falling edge. This can happen if the last pixel in the band is non-zero.
+        //          map(p => new EdgePair(p._1, p._2.get)). // Convert to convenience class.
+        //          filter(edgePair => (edgePair.length >= min) && (max >= edgePair.length)) // Filter out pairs that are not the proper length.
+        //
+        //        val r = if (edgePairList.isEmpty)
+        //          None // no edge pairs found, so nothing.
+        //        else
+        //          Some(edgePairList.head.center) // Found at least one good pair.  Return the center of the first one.
+        //        r
       }
     }
     result
@@ -175,14 +171,14 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
   private def getProximalGroup(centerSeq: Seq[Double], bandSpacing_mm: Double, centerSpacing_mm: Double, sliceIndex: Int): Option[Double] = {
 
     val cubeSizeY_vox = Config.DailyQAPhantomCubeSize_mm / bandSpacing_mm
-    val pixTolerance = (Config_CBCTPercentToleranceToCubeSize / 100.0) * cubeSizeY_vox
+    val voxTolerance = (Config.DailyQACBCTCubeSizePercentTolerance / 100.0) * cubeSizeY_vox
 
     // Minimum and maximum number of centers required for a group to describe the cube.
-    val minCount = cubeSizeY_vox - pixTolerance
-    val maxCount = cubeSizeY_vox + pixTolerance
+    val minCount = cubeSizeY_vox - voxTolerance
+    val maxCount = cubeSizeY_vox + voxTolerance
 
-    // For two centers to be considered close to each other, they must be no farther apart than this.
-    val proximity_vox = Config_CBCTProximityGrouping_mm / centerSpacing_mm
+    // For two centers to be considered close to each other, they must be no farther apart than this number of voxels.
+    val proximity_vox = 5
 
     case class Proximal(count: Int, center: Double);
 
@@ -192,7 +188,7 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
 
       def proxTo(index: Int) = {
         val center = centerSeq(index)
-        val cntrLst = centerSeq.filter(c => (c - center).abs < proximity_vox)
+        val cntrLst = centerSeq.filter(c => (c - center).abs <= proximity_vox)
         new Proximal(cntrLst.size, cntrLst.sum / cntrLst.size)
       }
 
@@ -324,11 +320,18 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
     }
   }
 
-  private def findVeryFirst(sliceIndex: Int): Int = {
-    if (containsCube(sliceIndex - 1).isDefined)
-      findVeryFirst(sliceIndex - 1)
-    else
-      sliceIndex
+  private def findVeryFirst(sliceIndex: Int): Option[Int] = {
+    val isTop = {
+      val searchRange = 5
+      val prev = (-searchRange to 0).map(si => containsCube(si)).flatten
+      val ok = (prev.size == 0) && containsCube(sliceIndex).isDefined && containsCube(sliceIndex + 1).isDefined
+      ok
+    }
+
+    if (isTop)
+      Some(sliceIndex)
+    else if (sliceIndex == 0) None
+    else findVeryFirst(sliceIndex - 1)
   }
 
   /**
@@ -340,7 +343,7 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
     if (containsCube(sliceIndex).isDefined)
       Some(sliceIndex)
     else {
-      val next = sliceIndex + d2i(cubeSize_pix.getY / 2)
+      val next = sliceIndex + d2i(cubeSize_pix.getY / 4)
       if (next < entireVolume.ySize)
         findOneOfFirst(next)
       else
@@ -351,7 +354,7 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
   /**
    * For debug only.  dump the horizontal images as png and their pixel values as text.
    */
-  private def dumpHorizontalSliceImagesAndText(entireVolume: DicomVolume) = {
+  private def dumpHorizontalSliceImagesAndTextToDisk(entireVolume: DicomVolume) = {
     import java.io.File
     import java.awt.Color
     val date = (new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss")).format(new java.util.Date)
@@ -371,7 +374,7 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
   }
 
   /**
-   *  For each slice, show whether it contains the cube or not.  For debug only.
+   * For debug only. For each slice, show whether it contains the cube or not.
    */
   private def showAllSlices(entireVolume: DicomVolume) = {
     logger.info("all: begin")
@@ -384,37 +387,51 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
   }
 
   /**
-   * Require all of the slices near the given one to be valid slices.
+   * Require most of the slices near the given one to be valid slices.
    */
-  private def nearSlicesContainCube(sliceIndex: Int) = {
+  private def nearSlicesContainCube(sliceIndex: Int): Option[Point2d] = {
     val nearList = (sliceIndex - 2 until sliceIndex + 2).map(si => containsCube(si))
-    nearList.size == nearList.flatten.size
+    val ok = (nearList.size - nearList.flatten.size).abs <= 1
+    if (ok) {
+      nearList.flatten.headOption
+    } else
+      None
+  }
+
+  /**
+   * Make sure that the middle slice is in the cube and return XYZ coordinates.
+   */
+  private def getMiddle(top: Int): Option[Point3i] = {
+    val middle = d2i(top + (cubeSize_pix.getY / 2))
+    nearSlicesContainCube(middle) match {
+      case Some(p2d) => {
+        val point = new Point3i(d2i(p2d.getY), middle, d2i(p2d.getX))
+        Some(point)
+      }
+      case _ => None
+    }
   }
 
   /**
    * Top level processing.  Get the center coordinates of the cube (coincides with BB).  If not found,
    * then return None.
    */
-  def getCoarseCenter_vox = {
+  def getCoarseCenter_vox: Option[Point3i] = {
 
     logger.info("Finding CBCT BB coarse center.  " +
       "Volume size XYZ: " + entireVolume.xSize + entireVolume.ySize + entireVolume.zSize +
       "voxel size mm XYZ: " + voxSize_mm)
 
-    if (false) dumpHorizontalSliceImagesAndText(entireVolume)
+    if (false) dumpHorizontalSliceImagesAndTextToDisk(entireVolume)
     if (false) showAllSlices(entireVolume)
 
-    // Find vertical top of the cube.  If found, then get the vertical center by jumping down 1/2 cube.
+    // Find vertical top of the cube.  If qfound, then get the vertical center by jumping down 1/2 cube.
     findOneOfFirst(0) match {
       case Some(sliceIndex) => {
-        val top = findVeryFirst(sliceIndex)
-        val middle = d2i(top + (cubeSize_pix.getY / 2))
-        if (nearSlicesContainCube(middle)) {
-          val p = containsCube(middle).get
-          val point = new Point3i(d2i(p.getY), middle, d2i(p.getX))
-          Some(point)
-        } else
-          None
+        findVeryFirst(sliceIndex) match {
+          case Some(top) => getMiddle(top)
+          case _ => None
+        }
       }
       case _ => None
     }

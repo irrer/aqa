@@ -586,7 +586,7 @@ Note that when building a package for release, the Maven build process uses the 
     approximately the right distance apart, and if so, assume that it is the cube.  This
     parameter defines the percent error in the cube size detected.  Note that if the cube is slightly
     rotated (sides not parallel to the table edges) then edges will a different distance apart. -->
-    <DailyQACBCTCubeSizePercentTolerance>5.0</DailyQACBCTCubeSizePercentTolerance>
+    <DailyQACBCTCubeSizePercentTolerance>15.0</DailyQACBCTCubeSizePercentTolerance>
 
     <!-- Distance in mm in floating point that the penumbra extends in one direction from the BB.  A
     volume of (2x)^3 this is used to measure the BB's location. ( 10 would yield 20x20x20 ) -->
