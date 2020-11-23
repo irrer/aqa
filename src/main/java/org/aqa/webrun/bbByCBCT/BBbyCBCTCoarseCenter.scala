@@ -320,11 +320,17 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
     }
   }
 
+  /**
+   * From the given 'found' slice, incrementally ascend the cube examining each slice position until
+   * there are several consecutive non-cube slices above, and a minimum number below.
+   */
   private def findVeryFirst(sliceIndex: Int): Option[Int] = {
     val isTop = {
-      val searchRange = 5
-      val prev = (-searchRange to 0).map(si => containsCube(si)).flatten
-      val ok = (prev.size == 0) && containsCube(sliceIndex).isDefined && containsCube(sliceIndex + 1).isDefined
+      val searchRange = 6 // Consider this many slices above and below the point of examination.
+      val minRequired = 3 // Of the slices below the point of examination, require this many to contain the cube.
+      val prev = (sliceIndex - searchRange until (sliceIndex)).map(si => containsCube(si)).flatten
+      val next = (0 until (sliceIndex + searchRange)).map(si => containsCube(si)).flatten
+      val ok = (prev.size == 0) && (next.size >= minRequired)
       ok
     }
 
