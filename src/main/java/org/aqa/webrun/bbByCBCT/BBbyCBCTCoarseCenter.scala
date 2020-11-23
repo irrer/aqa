@@ -342,14 +342,16 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
 
   /**
    * Descend vertically through the volume looking for a horizontal slice containing the cube.  For
-   * speed, skip down 1/3 of the cube height at at time.  After one of the topmost is found, another
-   * function will find the very topmost.
+   * speed, skip down a fraction of the cube height at at time as opposed to examining every slice.
+   * The skip size should not be too large in case one of the slices in the cube is not recognized
+   * as such.  After one of the topmost is found, another function will find the very topmost.
    */
   private def findOneOfFirst(sliceIndex: Int): Option[Int] = {
+    val cubeSkipFraction = 0.25
     if (containsCube(sliceIndex).isDefined)
       Some(sliceIndex)
     else {
-      val next = sliceIndex + d2i(cubeSize_pix.getY / 4)
+      val next = d2i(sliceIndex + d2i(cubeSize_pix.getY * cubeSkipFraction))
       if (next < entireVolume.ySize)
         findOneOfFirst(next)
       else
