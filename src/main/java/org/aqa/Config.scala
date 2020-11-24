@@ -197,7 +197,15 @@ object Config extends Logging {
   // Commented out because of the potential security risk of exposing passwords.
   //logger.trace("Using configuration:\n" + edu.umro.ScalaUtil.Util.xmlToText(document) + "\n")
 
-  private val valueText = new ArrayBuffer[String]
+  private val valueText = {
+    val vt = new ArrayBuffer[String]
+    vt +=
+      "Many configuration values have a default value that is used if the value is not specified in the configuration file.  Example log messages of configuration values: \n" +
+      "        AuthenticationTimeout (same as default): 7200.0             <== means that there was a default value and the value was given in the configuration file and they were the same.\n" +
+      "        BBbyEPIDSearchDistance_mm (default: 10.0 overridden): 4.0   <== means that there was a default value and the value was given in the configuration file and they were different.\n" +
+      "        BBbyCBCTHistoryRange (defaulted): 25                        <== means that there was a default value but the value was not given in the configuration file so the default value was used.\n\n"
+    vt
+  }
 
   private def logText(name: String, value: String) = valueText += (name + ": " + value)
 
@@ -238,11 +246,11 @@ object Config extends Logging {
     }
   }
 
-  private def logMainText(name: String): String = {
-    val value = getMainText(name)
-    logText(name, value)
-    value
-  }
+  //  private def logMainText(name: String): String = {
+  //    val value = getMainText(name)
+  //    logText(name, value)
+  //    value
+  //  }
 
   /**
    * Get the value matching the given name.  If it does not exist or there is
@@ -251,11 +259,15 @@ object Config extends Logging {
   private def logMainText(name: String, default: String): String = {
     getMainTextOption(name) match {
       case Some(value: String) => {
-        logText(name, value)
+        val compare = if (default.equals(value))
+          " (same as default)"
+        else
+          " (default: " + default + " overridden)"
+        logText(name + compare, value)
         value
       }
       case _ => {
-        logText(name, default)
+        logText(name + " (defaulted)", default)
         default
       }
     }
@@ -318,6 +330,10 @@ object Config extends Logging {
     allowedList
   }
 
+  /**
+   * Get the URL of the LDAP service to use.  If this is not given in the
+   * configuration file, then disable LDAP.
+   */
   private def getLdapUrl: Option[String] = {
     val tag = "LdapUrl"
     try {
@@ -360,7 +376,7 @@ object Config extends Logging {
   val machineConfigurationDir = new File(DataDir, machineConfigurationDirName)
   machineConfigurationDir.mkdirs
 
-  val AuthenticationTimeout = logMainText("AuthenticationTimeout").toDouble
+  val AuthenticationTimeout = logMainText("AuthenticationTimeout", "7200.0").toDouble
   val AuthenticationTimeoutInMs = (AuthenticationTimeout * 1000).toLong
 
   val PasswordPrompt = logMainText("PasswordPrompt", "Please enter your password")
@@ -371,10 +387,10 @@ object Config extends Logging {
   val RestartTime: Long = {
     val dateFormat = new SimpleDateFormat("HH:mm")
     val millisec = try {
-      dateFormat.parse(logMainText("RestartTime")).getTime
+      dateFormat.parse(logMainText("RestartTime", "3:10")).getTime
     } catch {
       case e: ParseException => {
-        Log.get.warning("Badly formatted RestartTime in configuration file: " + logMainText("RestartTime") + " .  Should be HH:MM, as in 1:23 .  Assuming default of " + DEFAULT_RESTART_TIME)
+        Log.get.warning("Badly formatted RestartTime in configuration file: " + logMainText("RestartTime", "3:10") + " .  Should be HH:MM, as in 1:23 .  Assuming default of " + DEFAULT_RESTART_TIME)
         dateFormat.parse(DEFAULT_RESTART_TIME).getTime
       }
     }
@@ -560,19 +576,6 @@ object Config extends Logging {
   val imageDirFile = new File(staticDirFile, "images")
   val rtplanDirFile = new File(staticDirFile, "rtplan")
 
-  /**
-   * Get the PenumbraThresholdPercent.  If it is not valid in the configuration, then assume the default.
-   */
-  private def getPenumbraThresholdPercent = {
-    val name = "PenumbraThresholdPercent"
-    val ptp = logMainText(name).toDouble
-    if ((ptp > 0) && (ptp < 100)) ptp
-    else {
-      logText(name, "Invalid value, must be greater than 0 and less than 100.  Assuming default value of " + PenumbraThresholdPercentDefault)
-      PenumbraThresholdPercentDefault
-    }
-  }
-
   private def getWatermark: Option[Watermark] = {
     val tag = "Watermark"
     try {
@@ -698,7 +701,6 @@ object Config extends Logging {
   }
 
   private def getPlanFileList = {
-    Trace.trace
     def makePlanFileConfig(node: Node): PlanFileConfig = {
       val procedure = (node \ "@procedure").head.text
       val manufacturer = (node \ "@manufacturer").head.text
@@ -728,7 +730,6 @@ object Config extends Logging {
     val configTag = "PlanFileList"
     val list = (document \ configTag \ "PlanFile").toList.map(node => makePlanFileConfig(node))
     logText(configTag, indentList(list))
-    Trace.trace
     list
   }
 
@@ -740,38 +741,36 @@ object Config extends Logging {
   val passImageUrl = "/static/images/pass.png"
   val failImageUrl = "/static/images/fail.png"
 
-  val FloodFieldBeamName = logMainText("FloodFieldBeamName")
+  val FloodFieldBeamName = logMainText("FloodFieldBeamName", "Flood 6X")
 
-  val PrototypeCustomBeamName = logMainText("PrototypeCustomBeamName")
-  val PrefixForMachineDependentBeamName = logMainText("PrefixForMachineDependentBeamName")
+  val PrototypeCustomBeamName = logMainText("PrototypeCustomBeamName", "J18G0-6F")
+  val PrefixForMachineDependentBeamName = logMainText("PrefixForMachineDependentBeamName", "J18G0-")
 
-  val CollimatorCenteringTolerence_mm = logMainText("CollimatorCenteringTolerence_mm").toDouble
-  val CollimatorCentering090BeamName = logMainText("CollimatorCentering090BeamName")
-  val CollimatorCentering270BeamName = logMainText("CollimatorCentering270BeamName")
-  val CollimatorCenteringCoarseBandWidth_mm = logMainText("CollimatorCenteringCoarseBandWidth_mm").toDouble
-  val PenumbraThickness_mm = logMainText("PenumbraThickness_mm").toDouble
-  val PenumbraPlateauPixelsPerMillion = logMainText("PenumbraPlateauPixelsPerMillion").toInt
-  val PenumbraThresholdPercent = getPenumbraThresholdPercent
+  val CollimatorCenteringTolerence_mm = logMainText("CollimatorCenteringTolerence_mm", "2.0").toDouble
+  val CollimatorCentering090BeamName = logMainText("CollimatorCentering090BeamName", "J10G0C90-6X")
+  val CollimatorCentering270BeamName = logMainText("CollimatorCentering270BeamName", "J10G0C270-6X")
+  val CollimatorCenteringCoarseBandWidth_mm = logMainText("CollimatorCenteringCoarseBandWidth_mm", "5.0").toDouble
+  val PenumbraThickness_mm = logMainText("PenumbraThickness_mm", "20.0").toDouble
+  val PenumbraPlateauPixelsPerMillion = logMainText("PenumbraPlateauPixelsPerMillion", "500").toInt
+  val PenumbraThresholdPercent = logMainText("PenumbraThresholdPercent", "50.0").toDouble
 
-  val MaxEstimatedBadPixelPerMillion = logMainText("MaxEstimatedBadPixelPerMillion").toInt
-  val BadPixelSamplePerMillion = logMainText("BadPixelSamplePerMillion").toInt
-  val BadPixelStdDev = logMainText("BadPixelStdDev").toDouble
-  val BadPixelRadius_mm = logMainText("BadPixelRadius_mm").toDouble
-  val BadPixelMinimumDeviation_CU = logMainText("BadPixelMinimumDeviation_CU").toDouble
-  val BadPixelMaximumPercentChange = logMainText("BadPixelMaximumPercentChange").toDouble
-  val MaxAllowedBadPixelsPerMillion = logMainText("MaxAllowedBadPixelsPerMillion").toInt
-  val DeepColorPercentDrop = logMainText("DeepColorPercentDrop").toDouble
+  val MaxEstimatedBadPixelPerMillion = logMainText("MaxEstimatedBadPixelPerMillion", "20").toInt
+  val BadPixelSamplePerMillion = logMainText("BadPixelSamplePerMillion", "250").toInt
+  val BadPixelStdDev = logMainText("BadPixelStdDev", "3.0").toDouble
+  val BadPixelRadius_mm = logMainText("BadPixelRadius_mm", "3.5").toDouble
+  val BadPixelMinimumDeviation_CU = logMainText("BadPixelMinimumDeviation_CU", "10.0").toDouble
+  val BadPixelMaximumPercentChange = logMainText("BadPixelMaximumPercentChange", "10.0").toDouble
+  val MaxAllowedBadPixelsPerMillion = logMainText("MaxAllowedBadPixelsPerMillion", "50").toInt
+  val DeepColorPercentDrop = logMainText("DeepColorPercentDrop", "0.2").toDouble
 
-  val MaxProcedureDuration = logMainText("MaxProcedureDuration").toDouble
+  val MaxProcedureDuration = logMainText("MaxProcedureDuration", "120.0").toDouble
 
   /** Lookup table for finding DICOM attributes to be anonymized and how to anonymize them.  */
   val ToBeAnonymizedList = getToBeAnonymizedList
-  Trace.trace
 
   val PlanFileList = getPlanFileList
-  Trace.trace
 
-  val TermsOfUse = logMainText("TermsOfUse")
+  val TermsOfUse = logMainText("TermsOfUse", "not specified")
 
   private val watermark = getWatermark
   /** If a watermark has been configured, then apply it to the given image> */
@@ -787,26 +786,26 @@ object Config extends Logging {
   requireReadableDirectory("tmpDirFile", tmpDirFile)
   requireReadableDirectory("machineConfigurationDirFile", machineConfigurationDirFile)
 
-  val CenterDoseRadius_mm = logMainText("CenterDoseRadius_mm").toDouble
+  val CenterDoseRadius_mm = logMainText("CenterDoseRadius_mm", "5.0").toDouble
   val CenterDoseHistoryRange = logMainText("CenterDoseHistoryRange", "25").toInt
   val CenterDoseBeamNameList = getCenterDoseBeamNameList
 
-  val CollimatorPositionTolerance_mm = logMainText("CollimatorPositionTolerance_mm").toDouble
+  val CollimatorPositionTolerance_mm = logMainText("CollimatorPositionTolerance_mm", "2.0").toDouble
   val CollimatorPositionBeamList = getCollimatorPositionBeamList
 
   val MaintenanceCategoryList = getMaintenanceCategoryList
 
-  val WedgeProfileThickness_mm = logMainText("WedgeProfileThickness_mm").toDouble
+  val WedgeProfileThickness_mm = logMainText("WedgeProfileThickness_mm", "5.0").toDouble
   val WedgeBeamList = getWedgeBeamList
-  val WedgeTolerance_pct = logMainText("WedgeTolerance_pct").toDouble
+  val WedgeTolerance_pct = logMainText("WedgeTolerance_pct", "2.0").toDouble
   val WedgeHistoryRange = logMainText("WedgeHistoryRange", "25").toInt
 
-  val SymmetryAndFlatnessDiameter_mm = logMainText("SymmetryAndFlatnessDiameter_mm").toDouble
+  val SymmetryAndFlatnessDiameter_mm = logMainText("SymmetryAndFlatnessDiameter_mm", "5.0").toDouble
 
-  val SymmetryPercentLimit = logMainText("SymmetryPercentLimit").toDouble
-  val FlatnessPercentLimit = logMainText("FlatnessPercentLimit").toDouble
+  val SymmetryPercentLimit = logMainText("SymmetryPercentLimit", "2.0").toDouble
+  val FlatnessPercentLimit = logMainText("FlatnessPercentLimit", "2.0").toDouble
   val SymFlatConstHistoryRange = logMainText("SymFlatConstHistoryRange", "25").toInt
-  val ProfileConstancyPercentLimit = logMainText("ProfileConstancyPercentLimit").toDouble
+  val ProfileConstancyPercentLimit = logMainText("ProfileConstancyPercentLimit", "2.0").toDouble
 
   val SymmetryAndFlatnessBeamList = getSymmetryAndFlatnessBeamList
 
@@ -820,8 +819,8 @@ object Config extends Logging {
   val SymmetryPointRight = getSymPoint("SymmetryPointRight")
   val SymmetryPointCenter = getSymPoint("SymmetryPointCenter")
 
-  val LeafPositionMaxError_mm = logMainText("LeafPositionMaxError_mm").toDouble
-  val LeafPositionIsolationDistance_mm = logMainText("LeafPositionIsolationDistance_mm").toDouble
+  val LeafPositionMaxError_mm = logMainText("LeafPositionMaxError_mm", "1.0").toDouble
+  val LeafPositionIsolationDistance_mm = logMainText("LeafPositionIsolationDistance_mm", "0.5").toDouble
   val LeafPositionBeamNameList = getLeafPositionBeamNameList
 
   val VMATDeviationThreshold_pct = logMainText("VMATDeviationThreshold_pct", "3.0").toDouble
@@ -840,7 +839,7 @@ object Config extends Logging {
   val DailyQACBCTVoxPercentTolerance = logMainText("DailyQACBCTVoxPercentTolerance", "15.0").toDouble
   val DailyQACBCTCubeSizePercentTolerance = logMainText("DailyQACBCTCubeSizePercentTolerance", "15.0").toDouble
   val CBCTBBPenumbra_mm = logMainText("CBCTBBPenumbra_mm", "2.5").toDouble
-  val CBCTZoomSize_mm = logMainText("CBCTZoomSize_mm", "30.0").toDouble
+  val CBCTZoomSize_mm = logMainText("CBCTZoomSize_mm", "40.0").toDouble
   val CBCTImageColor = Util.hexToColor(logMainText("CBCTImageColor", "FFFFFF"))
   val BBbyCBCTHistoryRange = logMainText("BBbyCBCTHistoryRange", "25").toInt
 
