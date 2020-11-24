@@ -15,6 +15,7 @@ import java.util.Date
 import org.aqa.AngleType
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
+import com.pixelmed.dicom.TagFromName
 
 /**
  * Store the analysis results for a set of EPID images containing a BB.  This is derived from
@@ -214,6 +215,14 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
       val vertZ = (vertList.head.epid3DZ_mm - cbct.err_mm.getZ).abs
       val horzZ = (horzList.head.epid3DZ_mm - cbct.err_mm.getZ).abs
 
+      val sliceThickness = {
+        val at = cbct.attributeList.get(TagFromName.SliceThickness)
+        if (at != null)
+          Some(at.getDoubleValues.head)
+        else
+          None
+      }
+
       val s = 0 match {
 
         case _ if cbct.err_mm.getX.abs > Config.DailyQACBCTLimit_mm => ProcedureStatus.fail
@@ -238,6 +247,8 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
 
         case _ if vertZ > machineDailyQA.passLimit_mm => ProcedureStatus.warning
         case _ if horzZ > machineDailyQA.passLimit_mm => ProcedureStatus.warning
+
+        case _ if sliceThickness.isDefined && (sliceThickness.get > Config.BBbyCBCTMaximumSliceThickness_mm) => ProcedureStatus.warning
 
         case _ if composite.offsetAdjusted_mm.get.abs > machineDailyQA.passLimit_mm => ProcedureStatus.warning
 

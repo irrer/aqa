@@ -644,6 +644,10 @@ Note that when building a package for release, the Maven build process uses the 
     will be allowed to expand vertically.  If all of the values are normal, then the graph will have a range of BBbyEPIDChartTolerance_mm * 1.5 -->
     <BBbyEPIDChartYRange_mm>3.0</BBbyEPIDChartYRange_mm>
    
+    <!-- Maximum allowed slice thickness for CBCT volumes.  Exceeding this incurs a warning.  The problem with a large slice thickness is
+    that it makes the readings less accurate.   Specified as floating point value in mm.-->
+    <BBbyCBCTMaximumSliceThickness_mm>1.0</BBbyCBCTMaximumSliceThickness_mm>
+   
     <!-- When making the zoomed version of the EPID images, make them this size of a square in mm.-->
     <EPIDZoomSize_mm>60.0</EPIDZoomSize_mm>
     

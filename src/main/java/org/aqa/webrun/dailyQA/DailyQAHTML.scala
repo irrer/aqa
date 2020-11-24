@@ -175,7 +175,24 @@ object DailyQAHTML extends Logging {
     }
 
     def colCbctImages(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      <td><a href={ ViewOutput.viewOutputUrl(dataSet.cbct.outputPK) }>CBCT Details</a></td>
+
+      val sliceThickness = {
+        val at = dataSet.cbct.attributeList.get(TagFromName.SliceThickness)
+        if (at == null)
+          None
+        else {
+          Some(at.getDoubleValues.head)
+        }
+      }
+
+      if (sliceThickness.isEmpty || (sliceThickness.get <= Config.BBbyCBCTMaximumSliceThickness_mm)) {
+        <td><a href={ ViewOutput.viewOutputUrl(dataSet.cbct.outputPK) }>CBCT Details</a></td>
+      } else {
+        val thicknessText = sliceThickness.get.toString.take(4)
+        val title = "Slices too thick at " + thicknessText + " mm.  Limit is " + Config.BBbyCBCTMaximumSliceThickness_mm + " mm."
+        val msg = thicknessText + " mm Slice Thickness "
+        <td title={ title } class="warning"><a href={ ViewOutput.viewOutputUrl(dataSet.cbct.outputPK) }>CBCT Details<br/><b style="color:red;">{ msg }</b></a></td>
+      }
     }
 
     def colEpidImages(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
