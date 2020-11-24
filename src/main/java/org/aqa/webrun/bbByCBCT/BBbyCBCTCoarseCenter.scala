@@ -313,6 +313,7 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
   private def containsCube(sliceIndex: Int): Option[Point2d] = {
     containsCubeCache.get(sliceIndex) match {
       case Some(cc) => cc
+      case _ if sliceIndex < 0 => None
       case _ => {
         containsCubeCache.put(sliceIndex, containsCubeRaw(sliceIndex))
         containsCubeCache(sliceIndex)
