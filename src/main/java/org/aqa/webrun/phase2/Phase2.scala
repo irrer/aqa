@@ -250,11 +250,10 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
    */
   private def beamNotDefinedProblem(basicData: BasicData): Option[String] = {
     // check for beams that are not in the plan
-    val undefFileNameList = basicData.rtimageListByBeam.filter(b => b._1.isEmpty).map(b => Util.sopOfAl(b._2))
+    val undefFileNameList = basicData.rtimageListByBeam.filter(b => b._1.isEmpty).map(b => b._2)
     if (undefFileNameList.nonEmpty) {
-      Some("Can not find RTPLAN for images.  Try uploading the RTPLAN with the images." + WebUtil.titleNewline +
-        "There were " + undefFileNameList.size + " files that references a beam that was not in the plan:" + WebUtil.titleNewline +
-        undefFileNameList.mkString(WebUtil.titleNewline))
+      Some("There were " + undefFileNameList.size + " file(s) that referencing a beam that was not in the plan." + WebUtil.titleNewline +
+        "  Beam number(s): " + undefFileNameList.map(al => al.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head).mkString("  "))
     } else None
   }
 
