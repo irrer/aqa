@@ -157,6 +157,16 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
   }
 
   /**
+   * Return an error message if the user is not whitelisted.
+   */
+  private def validateIsWhitelisted(valueMap: ValueMapT, response: Response): StyleMapT = {
+    if (WebUtil.userIsWhitelisted(response))
+      styleNone
+    else
+      Error.make(institution, "Only system adminstrators are allowed to perform this operation.")
+  }
+
+  /**
    * Construct a user from parameters, changing only the fields that the user modified.
    */
   private def updateExistingUserFromParameters(user: User, valueMap: ValueMapT): User = {
@@ -336,7 +346,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
     val user = getReference(valueMap)
     val maintenanceRecordList = MaintenanceRecord.getByUser(user.get.userPK.get)
 
-    val errMap = validateAuthentication(valueMap, response.getRequest) ++ userHasMaintenanceRecord(valueMap) ++ userHasInput(valueMap)
+    val errMap = validateAuthentication(valueMap, response.getRequest) ++ userHasMaintenanceRecord(valueMap) ++ userHasInput(valueMap) ++ validateIsWhitelisted(valueMap, response)
 
     if (errMap.nonEmpty) {
       formEdit.setFormResponse(valueMap, errMap, pageTitleEdit, response, Status.SUCCESS_OK)
