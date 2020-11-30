@@ -21,11 +21,10 @@ import org.aqa.AnonymizeUtil
 
 class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.Value) extends Verifier with Logging {
 
-  private def createUserWithLdap(id: String, secret: String): Option[User] = {
+  private def createUserWithLdap(id: String, secret: String, userInfo: Level2Ldap.UserInfo): Option[User] = {
     try {
       val institutionPK = Institution.getInstitutionByRealName(Config.LdapInstitutionName).get.institutionPK.get
       val roleText = Config.LdapRole
-      val userInfo = Level2Ldap.getUserInfo(id, secret).right.get
       val user = User.insertNewUser(institutionPK, id, userInfo.firstName + " " + userInfo.lastName, userInfo.email, secret, roleText)
       Some(user)
     } catch {
@@ -46,8 +45,13 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
           val id = challResp.getIdentifier
           val secret = new String(challResp.getSecret)
 
-          def isValidLdapUser = {
-            Config.LdapUrl.isDefined && Level2Ldap.getUserInfo(id, secret).isRight
+          lazy val ldapUserInfo: Option[Level2Ldap.UserInfo] = {
+            if (Config.LdapUrl.isDefined) {
+              Level2Ldap.getUserInfo(id, secret) match {
+                case Right(userInfo) => Some(userInfo)
+                case _ => None
+              }
+            } else None
           }
 
           def addLdapUserToCache(user: User) = {
@@ -65,14 +69,12 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
               val user = cachedUser.get
               if (AuthenticationVerifier.validatePassword(secret, user.hashedPassword, user.passwordSalt))
                 Verifier.RESULT_VALID
-              else {
-                if (isValidLdapUser) addLdapUserToCache(user)
-                else Verifier.RESULT_UNKNOWN
-              }
+              else
+                Verifier.RESULT_UNKNOWN
             } else {
-              if (isValidLdapUser) {
+              if (ldapUserInfo.isDefined) {
                 // This user is not in the database but is valid according to LDAP, so insert them into the database
-                createUserWithLdap(id, secret) match {
+                createUserWithLdap(id, secret, ldapUserInfo.get) match {
                   case Some(user) => {
                     CachedUser.put(id, user) // add them to the cache for next time
                     Verifier.RESULT_VALID
