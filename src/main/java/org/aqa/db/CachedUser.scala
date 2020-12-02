@@ -107,16 +107,28 @@ object CachedUser extends Logging {
      *  LDAP groups.
      */
     lazy val ldapIsValid: Boolean = {
-      Level2Ldap.getGroupListOfUser(id, secret) match {
-        case Right(groupSet) => groupSet.intersect(Config.LdapGroupList.toSet).nonEmpty
-        case _ => false
-      }
+      if (ldapEnabled) {
+        Level2Ldap.getGroupListOfUser(id, secret) match {
+          case Right(groupSet) => groupSet.intersect(Config.LdapGroupList.toSet).nonEmpty
+          case Left(msg) => {
+            logger.warn("Error getting group information for user " + id + " : " + msg)
+            false
+          }
+          case _ => false
+        }
+      } else
+        false
     }
 
     lazy val ldapUserInfo: Option[Level2Ldap.UserInfo] = {
       if (ldapEnabled) {
         Level2Ldap.getUserInfo(id, secret) match {
           case Right(userInfo) => Some(userInfo)
+          case Left(msg) => {
+            logger.warn("Error getting group information for user " + id + " : " + msg)
+            None
+          }
+          case _ => None
         }
       } else
         None
@@ -213,9 +225,6 @@ object CachedUser extends Logging {
     cache.synchronized({
       cache.clear
     })
-  }
-
-  def main(args: Array[String]): Unit = {
   }
 
 }
