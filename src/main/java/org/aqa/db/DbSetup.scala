@@ -58,7 +58,7 @@ object DbSetup extends Logging {
 
     val email = defaultUser + "@" + Util.aqaDomain
     val passwordSalt = Crypto.randomSecureHash
-    val hashedPassword = AuthenticationVerifier.hashPassword(defaultPassword, passwordSalt)
+    val hashedPassword = CachedUser.hashPassword(defaultPassword, passwordSalt)
 
     val institutionPK = ensureAtLeastOneInstitution.institutionPK.get
     def encrypt(text: String) = AnonymizeUtil.encryptWithNonce(institutionPK, text)

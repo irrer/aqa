@@ -116,7 +116,7 @@ class SetPassword extends Restlet with SubUrlRoot {
       val pkOpt = valueMap.get(userPK.label)
       if (pkOpt.isDefined) {
         val newSalt = Crypto.randomSecureHash
-        val newHashedPW = AuthenticationVerifier.hashPassword(password.getValOrEmpty(valueMap), newSalt)
+        val newHashedPW = CachedUser.hashPassword(password.getValOrEmpty(valueMap), newSalt)
 
         val usr = User.get(pkOpt.get.toLong)
         if (usr.isDefined) {

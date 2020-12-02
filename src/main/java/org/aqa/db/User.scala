@@ -133,7 +133,7 @@ object User extends Logging {
    */
   def insertNewUser(institutionPK: Long, id: String, fullName: String, email: String, passwordText: String, roleText: String): User = {
     val passwordSalt = Crypto.randomSecureHash
-    val hashedPassword = AuthenticationVerifier.hashPassword(passwordText, passwordSalt)
+    val hashedPassword = CachedUser.hashPassword(passwordText, passwordSalt)
     val id_realText = AnonymizeUtil.encryptWithNonce(institutionPK, id)
     val fullName_realText = AnonymizeUtil.encryptWithNonce(institutionPK, fullName)
     val email_realText = AnonymizeUtil.encryptWithNonce(institutionPK, email)

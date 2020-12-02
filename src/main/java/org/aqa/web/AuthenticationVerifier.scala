@@ -21,68 +21,19 @@ import org.aqa.AnonymizeUtil
 
 class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.Value) extends Verifier with Logging {
 
-  private def createUserWithLdap(id: String, secret: String, userInfo: Level2Ldap.UserInfo): Option[User] = {
-    try {
-      val institutionPK = Institution.getInstitutionByRealName(Config.LdapInstitutionName).get.institutionPK.get
-      val roleText = Config.LdapRole
-      val user = User.insertNewUser(institutionPK, id, userInfo.firstName + " " + userInfo.lastName, userInfo.email, secret, roleText)
-      Some(user)
-    } catch {
-      case t: Throwable => {
-        logger.error("Unexpected exception while automatically creating user for LDAP: " + fmtEx(t))
-        None
-      }
-    }
-  }
-
   override def verify(request: Request, response: Response): Int = {
     val requestedRole = getRequestedRole(request, response)
     if (requestedRole.id == UserRole.publik.id) Verifier.RESULT_VALID // let anyone into public areas
     else {
       request.getChallengeResponse match {
-        case null => Verifier.RESULT_MISSING
+        case null => Verifier.RESULT_MISSING // The CachedUser.get function checks for this, but checking it here allows for finer grained reporting of the credentials.
         case challResp => {
-          val id = challResp.getIdentifier
-          val secret = new String(challResp.getSecret)
-
-          lazy val ldapUserInfo: Option[Level2Ldap.UserInfo] = {
-            if (Config.LdapUrl.isDefined) {
-              Level2Ldap.getUserInfo(id, secret) match {
-                case Right(userInfo) => Some(userInfo)
-                case _ => None
-              }
-            } else None
-          }
-
-          def addLdapUserToCache(user: User) = {
-            val encyrptedPassword = AnonymizeUtil.encryptWithNonce(user.institutionPK, secret)
-            val hashedPassword2 = AuthenticationVerifier.hashPassword(secret, user.passwordSalt)
-            val user2 = user.copy(hashedPassword = hashedPassword2)
-            CachedUser.put(id, user2)
-            Verifier.RESULT_VALID
-          }
-
-          val cachedUser = CachedUser.get(id)
+          val user = CachedUser.get(request)
 
           val status: Int = {
-            if (cachedUser.isDefined) {
-              val user = cachedUser.get
-              if (AuthenticationVerifier.validatePassword(secret, user.hashedPassword, user.passwordSalt))
-                Verifier.RESULT_VALID
-              else
-                Verifier.RESULT_UNKNOWN
-            } else {
-              if (ldapUserInfo.isDefined) {
-                // This user is not in the database but is valid according to LDAP, so insert them into the database
-                createUserWithLdap(id, secret, ldapUserInfo.get) match {
-                  case Some(user) => {
-                    CachedUser.put(id, user) // add them to the cache for next time
-                    Verifier.RESULT_VALID
-                  }
-                  case _ => Verifier.RESULT_UNKNOWN
-                }
-              } else
-                Verifier.RESULT_UNKNOWN
+            CachedUser.get(request) match {
+              case Some(user) => Verifier.RESULT_VALID
+              case _ => Verifier.RESULT_UNKNOWN
             }
           }
           status
@@ -95,13 +46,6 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
 }
 
 object AuthenticationVerifier {
-
-  def hashPassword(secret: String, passwordSalt: String): String = Crypto.secureHash(passwordSalt + secret)
-
-  /** Check the password against the hashed password. */
-  def validatePassword(secret: String, hashedPassword: String, passwordSalt: String): Boolean = {
-    hashPassword(secret, passwordSalt).equals(hashedPassword)
-  }
 
   private val minPasswordSize = 8
 
@@ -129,4 +73,5 @@ object AuthenticationVerifier {
       case _ => None
     }
   }
+
 }

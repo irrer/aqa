@@ -44,9 +44,9 @@ import org.aqa.webrun.bbByCBCT.BBbyCBCTChartHistoryRestlet
 import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryRestlet
 import org.aqa.webrun.dailyQA.DailyQASummary
 import edu.umro.RestletUtil.NetworkIpFilter
-import edu.umro.ScalaUtil.Level2Ldap
 import org.aqa.webrun.phase2.vmat.VMATChartHistoryRestlet
 import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryPartialRestlet
+import org.aqa.db.Institution
 
 object WebServer {
   val challengeScheme = ChallengeScheme.HTTP_BASIC
@@ -302,27 +302,12 @@ class WebServer extends Application with Logging {
     challAuthn.setVerifier(new AuthenticationVerifier(getRequestedRole _))
     challAuthn.setNext(restlet)
 
-    // case class UserAndRole(user: User, role: UserRole.Value);
-
-    def getRequestingUser(challRespId: String): Option[User] = {
-      try {
-        CachedUser.get(challRespId) match {
-          case Some(nonEncrypted) => Some(nonEncrypted)
-          case _ => {
-            CachedUser.get(challRespId.toLowerCase.trim)
-          }
-        }
-      } catch {
-        case t: Throwable => None
-      }
-    }
-
     def checkAuthorization(request: Request, response: Response, challResp: ChallengeResponse): Unit = {
       try {
         val requestedRole = getRequestedRole(request, response)
 
         if (requestedRole.id != UserRole.publik.id) { // let anyone into public areas
-          val userOpt = getRequestingUser(challResp.getIdentifier)
+          val userOpt = CachedUser.get(challResp.getIdentifier, new String(challResp.getSecret))
           userOpt match {
             case Some(user) => {
               if (user.getRole.get.id < requestedRole.id) {
@@ -332,10 +317,6 @@ class WebServer extends Application with Logging {
                 response.redirectSeeOther(notAuthorized.pathOf)
               } else
                 response.setStatus(Status.SUCCESS_OK)
-            }
-
-            case _ if (Config.LdapUrl.isDefined && Level2Ldap.getUserInfo(challResp.getIdentifier, challResp.getSecret.toString).isRight) => {
-              response.setStatus(Status.SUCCESS_OK)
             }
 
             case _ => {

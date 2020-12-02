@@ -73,7 +73,7 @@ class Login extends Restlet with SubUrlRoot {
     val user = CachedUser.get(idText).get
     val enteredPasswordText = valueMap.get(password.label).get
 
-    val ok = AuthenticationVerifier.validatePassword(enteredPasswordText, user.hashedPassword, user.passwordSalt)
+    val ok = CachedUser.validatePassword(user, enteredPasswordText)
 
     if (ok) styleNone else Error.make(password, "Incorrect password")
   }

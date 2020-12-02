@@ -28,7 +28,7 @@ object SetPasswordManually {
     if (true) {
 
       def testPassword(u: User) = {
-        val hashed = AuthenticationVerifier.hashPassword(password, u.passwordSalt)
+        val hashed = CachedUser.hashPassword(password, u.passwordSalt)
         if (hashed.equals(u.hashedPassword)) {
           println("User matches: " + u.id)
           println("    " + AnonymizeUtil.decryptWithNonce(u.institutionPK, u.id_real.get))
@@ -42,7 +42,7 @@ object SetPasswordManually {
     }
 
     val newSalt = Crypto.randomSecureHash
-    val newHashedPW = AuthenticationVerifier.hashPassword(password, newSalt)
+    val newHashedPW = CachedUser.hashPassword(password, newSalt)
     println("newSalt     : " + newSalt)
     println("newHashedPW : " + newHashedPW)
 
