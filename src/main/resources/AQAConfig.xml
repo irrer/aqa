@@ -583,6 +583,16 @@ Note that when building a package for release, the Maven build process uses the 
     parameter defines the percent error in the cube size detected.  Note that if the cube is slightly
     rotated (sides not parallel to the table edges) then edges will a different distance apart. -->
     <DailyQACBCTCubeSizePercentTolerance>15.0</DailyQACBCTCubeSizePercentTolerance>
+    
+    <!-- Tuning parameter for finding the phantom cube as part of Daily QA CBCT processing. When
+    reducing noise in horizontal images, many of the voxels are set to zero.  The number that are
+    not set to zero is determined by the cube's cross section, with the assumption that the cube
+    is the brightest object in the image.  Sometimes there are artifact in the image, so to tolerate
+    that an extra percentage of voxels are kept as non-zero to preserve the cube, which may be
+    dimmer than the artifact.  This number is that percentage.  Expressed as a floating point number
+    from 0 to 100.  Setting this too low may mean zeroing out part of the cube.  Setting it too
+    high may include too much noise. -->
+    <DailyQACBCTCubeCrossSectionalAreaPercentTolerance>25.0</DailyQACBCTCubeCrossSectionalAreaPercentTolerance>
 
     <!-- Distance in mm in floating point that the penumbra extends in one direction from the BB.  A
     volume of (2x)^3 this is used to measure the BB's location. ( 10 would yield 20x20x20 ) -->

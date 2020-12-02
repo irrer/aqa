@@ -47,7 +47,7 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
   private def makeHorizontalSlice(sliceIndex: Int): IndexedSeq[IndexedSeq[Float]] = {
 
     /** Number of pixels to make up the area of the cube in a horizontal slice. */
-    val numberOfCubePixels = cubeSize_pix.getX * cubeSize_pix.getZ
+    val numberOfCubePixels = cubeSize_pix.getX * cubeSize_pix.getZ * (1 + (Config.DailyQACBCTCubeCrossSectionalAreaPercentTolerance / 100))
 
     // grab a horizontal slice (perpendicular to the Y axis)
     val s = (0 until entireVolume.xSize).map(x => (0 until entireVolume.zSize).map(z => entireVolume.getXYZ(x, sliceIndex, z)))
@@ -62,7 +62,7 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
     val di = new DicomImage(s)
     val cubeLevel = getCubeLevel(0, di.histogram.reverse)
 
-    // Remove low level noise by settin the N lowest values to the zero value.
+    // Remove low level noise by setting the N lowest values to the zero value.
     val histogram = s.flatten.distinct.sorted
     val zero = histogram.head // use this as the lowest pixel value.  Usually this is zero.
     // getting the cutoff level this way guards against there not being enough levels to accommodate CBCTHistogramNoiseLevel.
@@ -373,6 +373,14 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
     def writeImg(sliceIndex: Int) = {
       val di = new DicomImage(horizontalSlice(sliceIndex))
       val bi = di.toBufferedImage(Color.white)
+
+      val graphics = ImageUtil.getGraphics(bi)
+      graphics.setColor(Color.orange)
+      val vert = containsCubeVert(sliceIndex)
+      if (vert.isDefined) graphics.drawLine(0, d2i(vert.get), di.width, d2i(vert.get))
+      val horz = containsCubeHorz(sliceIndex)
+      if (horz.isDefined) graphics.drawLine(d2i(horz.get), 0, d2i(horz.get), di.height)
+
       val pngFile = new File(dir, sliceIndex.formatted("%03d") + ".png")
       Util.writePng(bi, pngFile)
       val txtFile = new File(dir, sliceIndex.formatted("%03d") + ".txt")
@@ -387,12 +395,21 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
    */
   private def showAllSlices(entireVolume: DicomVolume) = {
     logger.info("all: begin")
+    var count = 0
+    var first = -1
+    var last = -1
     (0 until entireVolume.ySize).map(sliceIndex => {
       val h = containsCubeHorz(sliceIndex)
       val v = containsCubeVert(sliceIndex)
       logger.info("sliceIndex: " + sliceIndex + "    h: " + h + "    v: " + v)
+      if (h.isDefined && v.isDefined) {
+        count = count + 1
+        if (first == -1) first = sliceIndex
+        last = sliceIndex
+      }
     })
-    logger.info("all: done")
+
+    logger.info("all: done.  expected count of cube slices: " + Util.fmtDbl(cubeSize_pix.getY) + "    first: " + first + "    last: " + last + "    actual count of cube slices found: " + count)
   }
 
   /**
@@ -434,7 +451,7 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
     if (false) dumpHorizontalSliceImagesAndTextToDisk(entireVolume)
     if (false) showAllSlices(entireVolume)
 
-    // Find vertical top of the cube.  If qfound, then get the vertical center by jumping down 1/2 cube.
+    // Find vertical top of the cube.  If found, then get the vertical center by jumping down 1/2 cube.
     findOneOfFirst(0) match {
       case Some(sliceIndex) => {
         findVeryFirst(sliceIndex) match {
