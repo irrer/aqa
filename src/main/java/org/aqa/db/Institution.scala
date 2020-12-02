@@ -7,6 +7,7 @@ import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Util
 import org.aqa.Crypto
 import org.aqa.AnonymizeUtil
+import edu.umro.ScalaUtil.Trace
 
 case class Institution(
   institutionPK: Option[Long], // primary key
@@ -80,7 +81,7 @@ object Institution extends Logging {
    */
   def getInstitutionByRealName(name: String): Option[Institution] = {
     val trimmedName = name.trim
-    val inst = list.find(i => AnonymizeUtil.decryptWithNonce(i.institutionPK.get, i.name_real.get).equalsIgnoreCase(trimmedName))
+    val inst = list.filter(_.name_real.isDefined).find(i => AnonymizeUtil.decryptWithNonce(i.institutionPK.get, i.name_real.get).trim.equalsIgnoreCase(trimmedName))
     inst
   }
 
