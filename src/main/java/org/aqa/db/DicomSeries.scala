@@ -71,21 +71,15 @@ case class DicomSeries(
    * Get the content as a list of <code>AttributeList</code>.
    */
   def attributeListList: Seq[AttributeList] = {
-    Trace.trace
 
     if (content.nonEmpty) {
-      Trace.trace("getting content from DicomSeries.content")
       val contentList = FileUtil.writeZipToNamedByteArrays(new ByteArrayInputStream(content.get)).map(_._2)
       val alList = DicomUtil.zippedByteArrayToDicom(content.get)
       alList
     } else {
-      Trace.trace("gonna get content from InputFiles")
       val inputContent = InputFiles.getByInputPK(inputPK.get).head.zippedContent
-      Trace.trace("inputContent.size: " + inputContent.size)
       val alList = DicomUtil.zippedByteArrayToDicom(inputContent)
-      Trace.trace("alList.size: " + alList.size)
       val list = alList.filter(al => Util.serInstOfAl(al).equals(seriesInstanceUID))
-      Trace.trace("list.size: " + list.size)
       list
     }
   }
