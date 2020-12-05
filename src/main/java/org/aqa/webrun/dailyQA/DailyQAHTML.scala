@@ -26,6 +26,11 @@ import org.aqa.db.MachineDailyQA
 
 object DailyQAHTML extends Logging {
 
+  def makeChecksum(dataSetList: Seq[BBbyEPIDComposite.DailyDataSetComposite]): String = {
+    val j = dataSetList.map(_.checksum) // TODO rm
+    dataSetList.map(_.checksum).sorted.mkString(" / ")
+  }
+
   def makeReport(dataSetList: Seq[BBbyEPIDComposite.DailyDataSetComposite], institutionPK: Long, date: Date): Elem = {
 
     /** Local class for Machine, Output, and Elem. */
@@ -213,6 +218,9 @@ object DailyQAHTML extends Logging {
         case t: Throwable => ""
       }
     }
+
+    val checksum = makeChecksum(dataSetList)
+    Trace.trace(checksum) // TODO rm
 
     val colList: List[Col] = List(
       new Col("Machine", "Name of treatment machine", colMachine),
@@ -452,6 +460,7 @@ object DailyQAHTML extends Logging {
               A warning or failure may be cleared by re-doing the Daily QA for that machine.  If there there at least
               one set of data that passed for a machine, then that machine is marked as passed.
             </center>
+            <span hidden="true" id="checksum">{ checksum }</span>
           </div>
         </div>
         <div class="row">

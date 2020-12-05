@@ -194,6 +194,14 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
   }
 
   case class DailyDataSetComposite(composite: BBbyEPIDComposite, cbct: BBbyCBCT, machine: Machine, output: Output, bbByEpid: Seq[BBbyEPID], cbctDicomSeries: DicomSeries) {
+
+    // unique reference to this set of data
+    val checksum = {
+      val pkSeq = Seq(composite.bbByEPIDCompositePK, cbct.bbByCBCTPK, machine.machinePK, output.outputPK).flatten ++
+        bbByEpid.map(_.bbByEPIDPK.get).sorted
+        pkSeq.map(_.toString).mkString(" ")
+    }
+
     private def byType(angleType: AngleType.Value) = bbByEpid.filter(b => AngleType.isAngleType(b.gantryAngle_deg, angleType))
     val vertList = byType(AngleType.vertical)
     val horzList = byType(AngleType.horizontal)

@@ -576,7 +576,7 @@ object WebUtil extends Logging {
 
   val sessionLabel = "session"
 
-  class WebForm(action: String, title: Option[String], rowList: List[WebRow], fileUpload: Int) extends ToHtml {
+  class WebForm(action: String, title: Option[String], rowList: List[WebRow], fileUpload: Int, runScript: Option[String] = None) extends ToHtml {
 
     def this(action: String, rowList: List[WebRow]) = this(action, None, rowList, 0)
     def this(action: String, rowList: List[WebRow], fileUpload: Int) = this(action, None, rowList, fileUpload)
@@ -674,7 +674,7 @@ object WebUtil extends Logging {
       elem
     }
 
-    def makeFormAlertBox(errorMap: StyleMapT): Option[String] = {
+    def makeFormAlertBox(errorMap: StyleMapT, runScript: Option[String]): Option[String] = {
       val quote = "\""
       val back = """\"""
       val replace = back + quote
@@ -688,10 +688,12 @@ object WebUtil extends Logging {
 
       val textErrorList = errorMap.values.map(s => textOfError(s)).flatten
 
-      if (textErrorList.isEmpty)
-        None
-      else
-        Some("<script>" + makeAlertBox(textErrorList.mkString("\\n\\n")) + "</script>")
+      (textErrorList.nonEmpty, runScript.nonEmpty) match {
+        case (true, true) => Some("<script>" + makeAlertBox(textErrorList.mkString("\\n\\n")) + runScript.get + "</script>")
+        case (true, false) => Some("<script>" + makeAlertBox(textErrorList.mkString("\\n\\n")) + "</script>")
+        case (false, true) => Some("<script>" + runScript.get + "</script>")    
+        case (false, false) => None
+      }
     }
 
     /**
@@ -725,7 +727,7 @@ object WebUtil extends Logging {
       if (isAutoUpload(valueMap)) {
         setFormResponseAutoUpload(valueMap, errorMap, response, Status.SUCCESS_OK)
       } else {
-        val text = wrapBody(toHtml(valueMap, errorMap, Some(response)), pageTitle, None, false, makeFormAlertBox(errorMap))
+        val text = wrapBody(toHtml(valueMap, errorMap, Some(response)), pageTitle, None, false, makeFormAlertBox(errorMap, runScript))
 
         def replace(origText: String, col: Any): String = {
           val txt = if (col.isInstanceOf[IsInput]) {

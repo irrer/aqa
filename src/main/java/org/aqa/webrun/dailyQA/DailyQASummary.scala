@@ -41,6 +41,8 @@ object DailyQASummary {
 
 class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
+  private val checksumLabel = "checksum"
+
   private def fmt(d: Double) = d.formatted("%10.3f").trim
 
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
@@ -74,16 +76,16 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
   val controlRow: WebRow = List(displayedDate, coordinateDiagramCol(65), refreshButton, dateField, csvField)
 
+  private def getDate(valueMap: ValueMapT): Date = {
+    try {
+      dateField.dateFormat.parse(valueMap(dateField.label))
+    } catch {
+      case t: Throwable => edu.umro.ScalaUtil.Util.roundToDate(new Date)
+    }
+  }
+
   // bulk of the displayed information
   private val report = {
-    def getDate(valueMap: ValueMapT): Date = {
-      try {
-        dateField.dateFormat.parse(valueMap(dateField.label))
-      } catch {
-        case t: Throwable => edu.umro.ScalaUtil.Util.roundToDate(new Date)
-      }
-    }
-
     new WebPlainText("report", false, 12, 0, (valueMap: ValueMapT) => {
       val institutionPK = getUser(valueMap).get.institutionPK
       DailyQAHTML.makeReport(getDataSetListByDateAndInstitution(valueMap), institutionPK, getDate(valueMap))
@@ -92,7 +94,35 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
   val contentRow: WebRow = List(report)
 
-  private def formCreate(valueMap: ValueMapT) = new WebForm(pathOf, List(controlRow, contentRow))
+  val runScript = """
+    // Reload the page when there is new data, indicated by
+    // a change in status
+
+    var date=document.getElementById("Date").getAttribute("value");
+    var baseUrl='/DailyQASummary?checksum=true&Date=' + date;
+    var WebRefreshTime=1000;
+
+    function watchStatus() {
+        $.ajax({url:baseUrl,
+            success:function(result){
+                var status = document.getElementById("checksum").innerHTML;
+                if (status == result) {
+                    setTimeout(watchStatus, WebRefreshTime);
+                }
+                else {
+                    document.getElementById("mainForm").submit();
+                }
+            },
+            error:function(result){
+                setTimeout(watchStatus, WebRefreshTime);
+            }
+        });
+    }
+
+    setTimeout(watchStatus, WebRefreshTime);
+"""
+
+  private def formCreate(valueMap: ValueMapT) = new WebForm(pathOf, title = None, List(controlRow, contentRow), fileUpload = -1, runScript = Some(runScript))
 
   private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
     val value = valueMap.get(button.label)
@@ -112,7 +142,7 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
     val date = {
       if (valueMap.get(dateField.label).isDefined)
-        dateField.dateFormat.parse(valueMap(dateField.label))
+        dateField.dateFormat.parse(valueMap(dateField.label).replace("%20", " "))
       else
         dateField.dateFormat.parse(dateField.dateFormat.format(new Date)) // today rounded off to midnight
     }
@@ -146,12 +176,24 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
     formCreate(valueMap).setFormResponse(valueMap, styleNone, DailyQASummary.pageTitle, response, Status.SUCCESS_OK)
   }
 
+  /**
+   * Respond to the client with the checksum of the data so they can decide whether or not they need to reload it.
+   */
+  private def getChecksum(response: Response, valueMap: ValueMapT) = {
+    val checksum = DailyQAHTML.makeChecksum(getDataSetListByDateAndInstitution(valueMap))
+    Trace.trace(checksum) // TODO rm
+    response.setEntity(checksum, MediaType.TEXT_PLAIN)
+    response.setStatus(Status.SUCCESS_OK)
+  }
+
   override def handle(request: Request, response: Response): Unit = {
     try {
       super.handle(request, response)
       val valueMap = getValueMap(request)
       if (valueMap.get(csvField.label).isDefined)
         DailyQACSV.getCsv(BBbyEPIDComposite.getReportingDataSet(getUser(valueMap).get.institutionPK), response)
+      else if (valueMap.get(checksumLabel).isDefined)
+        getChecksum(response, valueMap)
       else
         show(response, valueMap)
     } catch {
