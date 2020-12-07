@@ -439,7 +439,7 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
       "voxel size mm XYZ: " + voxSize_mm)
 
     if (false) dumpHorizontalSliceImagesAndTextToDisk(entireVolume)
-    if (true) showAllSlices(entireVolume)
+    if (false) showAllSlices(entireVolume)
 
     // Find vertical top of the cube.  If found, then get the vertical center by jumping down 1/2 cube.
     findOneOfFirst(0) match {
