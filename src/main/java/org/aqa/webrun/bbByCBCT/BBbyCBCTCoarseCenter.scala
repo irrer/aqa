@@ -131,27 +131,17 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
         val min = cubeLen_pix - cubeDiff_pix
         val max = cubeLen_pix + cubeDiff_pix
 
-        def inRange(r: Int, f: Int) = {
+        /**
+         * Return true if the given segment of the band is approximately the right length and is mostly
+         * populated with non-zero voxels.
+         */
+        def inRangeAndPopulated(r: Int, f: Int) = {
           val length = f - r
-          (length >= min) && (max >= length)
+          (length >= min) && (max >= length) && band.drop(r).take(length).filter(_ != 0).size > (length * 0.75)
         }
 
-        val centerList = for (r <- risingList; f <- fallingList; if inRange(r, f)) yield ((r + 1 + f) / 2.0)
+        val centerList = for (r <- risingList; f <- fallingList; if inRangeAndPopulated(r, f)) yield ((r + 1 + f) / 2.0)
         centerList.headOption
-
-        //        // establish the limits  that determine whether or not and edge pair's length is the proper.
-        //
-        //        val edgePairList = risingList
-        //          .map(r => (r, fallingList.find(f => f > r))). // For each rising edge, find the corresponding falling edge.  This will be the first in the falling edge list that has an index greater than the rising edge.
-        //          filter(p => p._2.isDefined). // Discard any rising edges that do not have a corresponding falling edge. This can happen if the last pixel in the band is non-zero.
-        //          map(p => new EdgePair(p._1, p._2.get)). // Convert to convenience class.
-        //          filter(edgePair => (edgePair.length >= min) && (max >= edgePair.length)) // Filter out pairs that are not the proper length.
-        //
-        //        val r = if (edgePairList.isEmpty)
-        //          None // no edge pairs found, so nothing.
-        //        else
-        //          Some(edgePairList.head.center) // Found at least one good pair.  Return the center of the first one.
-        //        r
       }
     }
     result
@@ -449,7 +439,7 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
       "voxel size mm XYZ: " + voxSize_mm)
 
     if (false) dumpHorizontalSliceImagesAndTextToDisk(entireVolume)
-    if (false) showAllSlices(entireVolume)
+    if (true) showAllSlices(entireVolume)
 
     // Find vertical top of the cube.  If found, then get the vertical center by jumping down 1/2 cube.
     findOneOfFirst(0) match {
