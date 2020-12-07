@@ -264,7 +264,7 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
 
         case _ => ProcedureStatus.pass
       }
-      logger.info("DailyDataSetComposite machine: " + machine.id + " status: " + s)
+      //logger.info("DailyDataSetComposite machine: " + machine.id + " status: " + s)
       s
     }
   }
