@@ -24,6 +24,7 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import java.awt.geom.Point2D
 import org.aqa.webrun.bbByEpid.BBbyEPIDAnnotateImages
+import edu.umro.DicomDict.TagByName
 
 /**
  * Test the Config.
@@ -47,10 +48,10 @@ class TestBBbyEPIDImageAnalysis extends FlatSpec with Matchers {
       val DeviceSerialNumber = al.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrEmptyString.formatted("%16s")
       val PatientID = al.get(TagFromName.PatientID).getSingleStringValueOrEmptyString.formatted("%20s")
       val GantryAngle = {
-        val ga = (al.get(TagFromName.GantryAngle).getDoubleValues.head).round.toInt
+        val ga = (al.get(TagByName.GantryAngle).getDoubleValues.head).round.toInt
         (ga % 360).formatted("%4d")
       }
-      val IsocenterPosition = al.get(TagFromName.IsocenterPosition).getDoubleValues.map(d => fmt(d)).mkString(", ")
+      val IsocenterPosition = al.get(TagByName.IsocenterPosition).getDoubleValues.map(d => fmt(d)).mkString(", ")
       "DevSerNo: " + DeviceSerialNumber +
         "    Station: " + StationName +
         "    PatientID: " + PatientID +

@@ -23,6 +23,7 @@ import org.aqa.webrun.phase2.collimatorPosition.CollimatorPositionAnalysis.Colli
 import org.aqa.webrun.phase2.collimatorCentering.CollimatorCenteringAnalysis.CollimatorCenteringResult
 import org.aqa.db.CollimatorCentering
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.DicomDict.TagByName
 
 /**
  * Perform analysis of leaf position (picket fence).
@@ -174,13 +175,13 @@ object LeafPositionAnalysis extends Logging {
 
   private def getLeafSidesFromPlanAsPix(rtplan: AttributeList, translator: IsoImagePlaneTranslator): Seq[Double] = {
     def hasMLCX2Type(blds: AttributeList) = {
-      val t = blds.get(TagFromName.RTBeamLimitingDeviceType)
+      val t = blds.get(TagByName.RTBeamLimitingDeviceType)
       (t != null) && t.getSingleStringValueOrEmptyString.equals("MLCX2")
     }
 
-    val BeamSequence = DicomUtil.seqToAttr(rtplan, TagFromName.BeamSequence)
-    val BeamLimitingDeviceSequence = BeamSequence.map(bs => DicomUtil.seqToAttr(bs, TagFromName.BeamLimitingDeviceSequence)).flatten
-    val leafBoundaryList_mm = BeamLimitingDeviceSequence.filter(hasMLCX2Type _).head.get(TagFromName.LeafPositionBoundaries).getDoubleValues.toSeq
+    val BeamSequence = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
+    val BeamLimitingDeviceSequence = BeamSequence.map(bs => DicomUtil.seqToAttr(bs, TagByName.BeamLimitingDeviceSequence)).flatten
+    val leafBoundaryList_mm = BeamLimitingDeviceSequence.filter(hasMLCX2Type _).head.get(TagByName.LeafPositionBoundaries).getDoubleValues.toSeq
 
     val leafBoundaryList_pix = leafBoundaryList_mm.map(lb_mm => translator.iso2PixCoordY(lb_mm)).sorted
     leafBoundaryList_pix

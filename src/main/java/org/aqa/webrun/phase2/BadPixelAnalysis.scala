@@ -27,6 +27,7 @@ import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
+import edu.umro.DicomDict.TagByName
 
 /**
  * Store bad pixels in the database and generate HTML.
@@ -94,7 +95,7 @@ object BadPixelAnalysis extends Logging {
       }
     }
 
-    getAngle("G", TagFromName.GantryAngle) + " " + getAngle("C", TagFromName.BeamLimitingDeviceAngle).trim
+    getAngle("G", TagByName.GantryAngle) + " " + getAngle("C", TagByName.BeamLimitingDeviceAngle).trim
   }
 
   /**
@@ -195,8 +196,8 @@ object BadPixelAnalysis extends Logging {
         <tr align="center">
           <td style="text-align: center;" title="Click for DICOM metadata"><a href={ dicomHref }>{ beamName }</a></td>
           <td style="text-align: center;" title="Click for full size image"><a href={ Phase2Util.dicomViewImageHtmlHref(al, extendedData, runReq) }><img src={ pngHref } width={ smallImageWidth }/></a></td>
-          <td style="text-align: center;" title="Gantry Angle deg">{ angleOf(TagFromName.GantryAngle) }</td>
-          <td style="text-align: center;" title="Collimator Angle deg">{ angleOf(TagFromName.BeamLimitingDeviceAngle) }</td>
+          <td style="text-align: center;" title="Gantry Angle deg">{ angleOf(TagByName.GantryAngle) }</td>
+          <td style="text-align: center;" title="Collimator Angle deg">{ angleOf(TagByName.BeamLimitingDeviceAngle) }</td>
           <td style="text-align: center;" title="Collimator opening in CM">{ Phase2Util.jawDescription(al, runReq.rtplan) }</td>
           <td style="text-align: center;" title="Time since first image capture (mm:ss)">{ relativeTimeText }</td>
           <td style="text-align: center;" title="Collimator Centering">{ boolToName("Col Cntr", Config.CollimatorCentering090BeamName.equals(beamName) || Config.CollimatorCentering270BeamName.equals(beamName)) }</td>

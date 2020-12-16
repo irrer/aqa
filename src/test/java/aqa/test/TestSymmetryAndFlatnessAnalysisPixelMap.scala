@@ -16,6 +16,7 @@ import com.pixelmed.dicom.ValueRepresentation
 import edu.umro.ScalaUtil.Trace._
 import edu.umro.ImageUtil.ImageUtil
 import java.awt.Color
+import edu.umro.DicomDict.TagByName
 
 /**
  * Test IsoImagePlaneTranslator.
@@ -46,11 +47,11 @@ class TestSymmetryAndFlatnessAnalysisPixelMap extends FlatSpec with Matchers {
 
   private def put(tag: AttributeTag, value: String): Unit = put(tag, Seq(value))
 
-  put(TagFromName.RTImageSID, "1500.01778082533")
-  put(TagFromName.RadiationMachineSAD, "1000")
+  put(TagByName.RTImageSID, "1500.01778082533")
+  put(TagByName.RadiationMachineSAD, "1000")
   put(TagFromName.Rows, width.toString)
   put(TagFromName.Columns, height.toString)
-  put(TagFromName.ImagePlanePixelSpacing, Seq("0.336", "0.336"))
+  put(TagByName.ImagePlanePixelSpacing, Seq("0.336", "0.336"))
 
   "SymmetryAndFlatnessAnalysisPixelMap" should "make spots on image" in {
 

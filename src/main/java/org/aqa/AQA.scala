@@ -59,7 +59,7 @@ object AQA extends Logging {
   def initiateServiceRestart = {
     class InitiateServiceRestart extends Runnable {
       val delay = 4 * 1000 // wait long enough for web client to receive a response
-      def run = {
+      override def run() = {
         logger.info("Shutting down service for restart in " + delay + " ms...")
         Thread.sleep(delay)
         logger.info("Shutting down service now.")

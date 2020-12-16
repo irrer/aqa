@@ -49,6 +49,13 @@ object Crypto extends Logging {
     }
   }
 
+  /**
+   * Construct a secure hash from the given data.  Secure in this context means it
+   * is not computationally viable to reverse.
+   *
+   * @param data Source data.
+   * @return Secure hash of data.
+   */
   def secureHash(data: Array[Byte]): Array[Byte] = {
     val md = HashFactory.getInstance(DIGEST_NAME)
     md.update(data, 0, data.size)

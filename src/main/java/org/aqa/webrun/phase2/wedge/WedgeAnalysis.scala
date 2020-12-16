@@ -27,6 +27,7 @@ import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.SubProcedureResult
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.DicomDict.TagByName
 
 /**
  * Analyze DICOM files for Wedge Analysis.
@@ -35,7 +36,7 @@ object WedgeAnalysis extends Logging {
 
   def wedgeOrientationTransverse(beamName: String, plan: AttributeList): Boolean = {
     val bs = Phase2Util.getBeamSequenceOfPlan(beamName, plan)
-    val WedgeOrientation = DicomUtil.seqToAttr(bs, TagFromName.WedgeSequence).head.get(TagFromName.WedgeOrientation).getDoubleValues.head
+    val WedgeOrientation = DicomUtil.seqToAttr(bs, TagByName.WedgeSequence).head.get(TagByName.WedgeOrientation).getDoubleValues.head
     val horiz = Util.angleRoundedTo90(WedgeOrientation) match {
       case 0 => true
       case 90 => false

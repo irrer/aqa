@@ -32,6 +32,7 @@ import org.aqa.webrun.phase2.SubProcedureResult
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.webrun.phase2.MeasureTBLREdges.TBLR
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.DicomDict.TagByName
 
 /**
  * Analyze DICOM files for ImageAnalysis.
@@ -149,7 +150,7 @@ object CollimatorPositionAnalysis extends Logging {
     }
 
     def isInside = {
-      val collimatorAngle = rtimage.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head
+      val collimatorAngle = rtimage.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head
       val tblr = MeasureTBLREdges.imageCollimatorPositions(rtimage, rtplan).toTBLR(collimatorAngle)
       val trans = new IsoImagePlaneTranslator(rtimage)
       val imageMax = trans.pix2Iso(new Point2D.Double(trans.width, trans.height))

@@ -13,6 +13,7 @@ import org.aqa.Util
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
 import com.pixelmed.dicom.SOPClassDescriptions
+import edu.umro.DicomDict.TagByName
 
 object SearchReg {
 
@@ -39,7 +40,7 @@ object SearchReg {
       val refSeries = DicomUtil.findAllSingle(al, TagFromName.SeriesInstanceUID).map(a => a.getSingleStringValueOrEmptyString).toIndexedSeq
       val refSop = DicomUtil.findAllSingle(al, TagFromName.ReferencedSOPInstanceUID).map(a => a.getSingleStringValueOrEmptyString).toIndexedSeq
       val refSopClass = DicomUtil.findAllSingle(al, TagFromName.ReferencedSOPClassUID).map(a => SOPClassDescriptions.getDescriptionFromUID(a.getSingleStringValueOrEmptyString)).toIndexedSeq
-      val matrixList = DicomUtil.findAllSingle(al, TagFromName.FrameOfReferenceTransformationMatrix).map(a => a.getDoubleValues.mkString("  ")).toIndexedSeq
+      val matrixList = DicomUtil.findAllSingle(al, TagByName.FrameOfReferenceTransformationMatrix).map(a => a.getDoubleValues.mkString("  ")).toIndexedSeq
 
       override def toString = {
         "file: " + file.getAbsolutePath + dateTime +

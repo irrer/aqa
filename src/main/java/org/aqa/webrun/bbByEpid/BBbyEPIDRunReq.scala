@@ -6,6 +6,7 @@ import edu.umro.ScalaUtil.DicomUtil
 import com.pixelmed.dicom.TagFromName
 import com.pixelmed.dicom.AttributeList
 import org.aqa.run.RunReqClass
+import edu.umro.DicomDict.TagByName
 
 /**
  * Data needed to run an EPID BB analysis.
@@ -14,7 +15,7 @@ case class BBbyEPIDRunReq(epidList: Seq[AttributeList]) extends RunReqClass {
 
   val sopOfRTPlan: Option[String] = {
     try {
-      val sop = DicomUtil.seqToAttr(epidList.head, TagFromName.ReferencedRTPlanSequence).
+      val sop = DicomUtil.seqToAttr(epidList.head, TagByName.ReferencedRTPlanSequence).
         head.
         get(TagFromName.ReferencedSOPInstanceUID).
         getSingleStringValueOrNull

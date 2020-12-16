@@ -25,6 +25,7 @@ import org.aqa.AngleType
 import java.util.Date
 import org.aqa.Config
 import org.aqa.web.ViewOutput
+import edu.umro.DicomDict.TagByName
 
 /**
  * Generate and write HTML for EPID BB analysis.
@@ -293,9 +294,9 @@ object BBbyEPIDHTML {
         /** Get double value, convert from mm to cm, and format to text. */
         def db(tag: AttributeTag) = { Util.fmtDbl(al.get(tag).getDoubleValues().head / 10) }
 
-        val x = db(TagFromName.TableTopLateralPosition) // tableXlateral_mm
-        val y = db(TagFromName.TableTopVerticalPosition) // tableYvertical_mm
-        val z = db(TagFromName.TableTopLongitudinalPosition) // tableZlongitudinal_mm
+        val x = db(TagByName.TableTopLateralPosition) // tableXlateral_mm
+        val y = db(TagByName.TableTopVerticalPosition) // tableYvertical_mm
+        val z = db(TagByName.TableTopLongitudinalPosition) // tableZlongitudinal_mm
 
         <div title="Table position when CBCT was captured.">
           Table Position X,Y,Z cm:{ x + "," + y + "," + z }

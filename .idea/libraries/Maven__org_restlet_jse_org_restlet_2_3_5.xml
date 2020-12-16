@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: org.restlet.jse:org.restlet:2.3.5">
+    <CLASSES>
+      <root url="jar://C:/pfc/Maven/repository/org/restlet/jse/org.restlet/2.3.5/org.restlet-2.3.5.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://C:/pfc/Maven/repository/org/restlet/jse/org.restlet/2.3.5/org.restlet-2.3.5-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://C:/pfc/Maven/repository/org/restlet/jse/org.restlet/2.3.5/org.restlet-2.3.5-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

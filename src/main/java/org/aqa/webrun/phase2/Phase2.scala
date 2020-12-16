@@ -64,6 +64,7 @@ import org.aqa.webrun.phase2.vmat.VMATAnalysis
 import org.aqa.run.RunTrait
 import org.aqa.run.RunProcedure
 import org.aqa.run.RunReqClass
+import edu.umro.DicomDict.TagByName
 
 object Phase2 extends Logging {
   val parametersFileName = "parameters.xml"
@@ -253,7 +254,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     val undefFileNameList = basicData.rtimageListByBeam.filter(b => b._1.isEmpty).map(b => b._2)
     if (undefFileNameList.nonEmpty) {
       Some("There were " + undefFileNameList.size + " file(s) that referencing a beam that was not in the plan." + WebUtil.titleNewline +
-        "  Beam number(s): " + undefFileNameList.map(al => al.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head).mkString("  "))
+        "  Beam number(s): " + undefFileNameList.map(al => al.get(TagByName.ReferencedBeamNumber).getIntegerValues.head).mkString("  "))
     } else None
   }
 
@@ -323,7 +324,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
    * If more than one RTIMAGE reference the same beam, then remove all but the one with the the latest date/time.
    */
   private def cullRedundantBeamReferences(rtimageList: Seq[DicomFile]): Seq[DicomFile] = {
-    val groupList = rtimageList.groupBy(df => df.attributeList.get.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head).values
+    val groupList = rtimageList.groupBy(df => df.attributeList.get.get(TagByName.ReferencedBeamNumber).getIntegerValues.head).values
 
     def latestDateTime(al: AttributeList): Long = {
       Util.extractDateTimeAndPatientIdFromDicomAl(al)._1.map(dt => dt.getTime).max

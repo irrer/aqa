@@ -21,6 +21,7 @@ import edu.umro.ScalaUtil.DicomUtil
 import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.SequenceAttribute
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.DicomDict.TagByName
 
 //import java.nio.charset.StandardCharsets
 
@@ -36,14 +37,14 @@ object Windows1252Encoding {
       val al = df.attributeList.get
 
       if (true) {
-        val attr = al.get(TagFromName.BeamSequence)
+        val attr = al.get(TagByName.BeamSequence)
         Trace.trace(attr.getClass.getName)
         val seq = attr.asInstanceOf[SequenceAttribute]
 
-        val beamSeq = DicomUtil.seqToAttr(al, TagFromName.BeamSequence)
+        val beamSeq = DicomUtil.seqToAttr(al, TagByName.BeamSequence)
 
         val keep = beamSeq.take(2)
-        val newSeq = new SequenceAttribute(TagFromName.BeamSequence) //AttributeFactory.newAttribute(TagFromName.BeamSequence)
+        val newSeq = new SequenceAttribute(TagByName.BeamSequence) //AttributeFactory.newAttribute(TagFromName.BeamSequence)
 
         keep.map(k => newSeq.addItem(k))
 
@@ -82,7 +83,7 @@ object Windows1252Encoding {
     //System.exit(0)
 
     val text2 = "aaaaa 12345>><<"
-    val text = """mañana"""
+    val text = """maï¿½ana"""
 
     println("text as bytes: " + text.getBytes.toList.map(b => (b & 0xff).formatted("%3x")).mkString("  "))
     val in = new ByteArrayInputStream(text.getBytes)

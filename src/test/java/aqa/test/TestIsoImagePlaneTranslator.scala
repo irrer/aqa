@@ -14,6 +14,7 @@ import scala.collection.Seq
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import com.pixelmed.dicom.ValueRepresentation
 import edu.umro.ScalaUtil.Trace._
+import edu.umro.DicomDict.TagByName
 
 /**
  * Test IsoImagePlaneTranslator.
@@ -41,11 +42,11 @@ class TestIsoImagePlaneTranslator extends FlatSpec with Matchers {
 
   private def put(tag: AttributeTag, value: String): Unit = put(tag, Seq(value))
 
-  put(TagFromName.RTImageSID, "1500.01778082533")
-  put(TagFromName.RadiationMachineSAD, "1000")
+  put(TagByName.RTImageSID, "1500.01778082533")
+  put(TagByName.RadiationMachineSAD, "1000")
   put(TagFromName.Rows, "1190")
   put(TagFromName.Columns, "1190")
-  put(TagFromName.ImagePlanePixelSpacing, Seq("0.336", "0.336"))
+  put(TagByName.ImagePlanePixelSpacing, Seq("0.336", "0.336"))
 
   val originIso = new Point2D.Double(0.0, 0.0)
   val originImage = new Point2D.Double(0.0, 0.0)

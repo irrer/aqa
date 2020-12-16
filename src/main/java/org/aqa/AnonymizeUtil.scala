@@ -7,12 +7,10 @@ import org.aqa.web.WebUtil
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.db.Institution
 import scala.collection.Seq
-import com.pixelmed.dicom.AttributeList
 import edu.umro.ScalaUtil.DicomUtil
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.Attribute
 import org.aqa.db.DicomAnonymous
-import edu.umro.ScalaUtil.Trace
 
 /** Utilities to support database anonymization. */
 
@@ -20,26 +18,20 @@ object AnonymizeUtil extends Logging {
 
   /** Used to generate alias ids for institutions. */
   val institutionAliasPrefixId = "INST"
-  val institutionAliasUrlPrefixId = institutionAliasPrefixId + "_URL"
-  val institutionAliasDescriptionPrefixId = institutionAliasPrefixId + "_DESCRIPTION"
+  val institutionAliasUrlPrefixId: String = institutionAliasPrefixId + "_URL"
+  val institutionAliasDescriptionPrefixId: String = institutionAliasPrefixId + "_DESCRIPTION"
 
   /** Used to generate alias ids for machines. */
   val machineAliasPrefixId = "MACH"
-  val machineAliasNotesPrefixId = machineAliasPrefixId + "_NOTES"
+  val machineAliasNotesPrefixId: String = machineAliasPrefixId + "_NOTES"
 
   /** Used to generate alias ids for users. */
   val userAliasPrefixId = "USER"
-  val userAliasFullNamePrefixId = userAliasPrefixId + "_FULLNAME"
-  val userAliasEmailPrefixId = userAliasPrefixId + "_EMAIL"
+  val userAliasFullNamePrefixId: String = userAliasPrefixId + "_FULLNAME"
+  val userAliasEmailPrefixId: String = userAliasPrefixId + "_EMAIL"
 
   /** Name of directory where security credentials are kept. */
   private val securityDirName = "security"
-
-  private val makeSecurityDir = {
-    try {
-      securityDir.mkdirs
-    } catch { case t: Throwable => println("Unable to create security directory " + securityDir + " : " + fmtEx(t)) }
-  }
 
   /** Directory where security credentials are kept. */
   private lazy val securityDir = new File(Config.DataDir, securityDirName)
@@ -72,7 +64,7 @@ object AnonymizeUtil extends Logging {
    */
   private case class InstitutionCredentials(institution: Institution, key: String) {
 
-    val aliasName = {
+    val aliasName: String = {
       if (institution.name.startsWith(institutionAliasPrefixId)) institution.name
       else aliasify(institutionAliasPrefixId, institution.institutionPK.get)
     }
@@ -92,9 +84,9 @@ object AnonymizeUtil extends Logging {
     def decrypt(clearText: String): String = Crypto.decryptWithNonce(clearText, cipher)
 
     /**
-     * Save as XML file.
+     * Save as XML file.  The XML file is local to the server and by design not in the database.
      */
-    def persist = {
+    def persist(): Unit = {
       val file = credentialFile(aliasName)
       try {
         if (!securityDir.isDirectory) securityDir.mkdirs
@@ -192,7 +184,6 @@ object AnonymizeUtil extends Logging {
         try {
           if (institutionCache.nonEmpty) {
             institutionCache.synchronized({
-              val before = institutionCache.size
               val valid = institutionCache.filter(ic => ic.isValid)
               institutionCache.clear
               institutionCache.insertAll(0, valid)
