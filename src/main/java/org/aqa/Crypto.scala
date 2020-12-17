@@ -1,10 +1,10 @@
 package org.aqa
 
-import gnu.crypto.hash.HashFactory
-import scala.util.Random
-import java.security.InvalidParameterException
 import gnu.crypto.cipher.IBlockCipher
-import edu.umro.ScalaUtil.Trace
+import gnu.crypto.hash.HashFactory
+
+import java.security.InvalidParameterException
+import scala.util.Random
 
 object Crypto extends Logging {
 
@@ -94,9 +94,8 @@ object Crypto extends Logging {
    * @param key: Secret password, original value must be 32 characters long
    */
   def getCipher(keyAsHex: String): IBlockCipher = {
-    import gnu.crypto.cipher.IBlockCipher
-    import gnu.crypto.cipher.BaseCipher
-    import gnu.crypto.cipher.CipherFactory
+    import gnu.crypto.cipher.{CipherFactory, IBlockCipher}
+
     import java.util.HashMap
 
     val key = hexToByteArray(keyAsHex)

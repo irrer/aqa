@@ -7,6 +7,10 @@
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
+        <!-- Timestamp of build  -->
+        <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ssZ</maven.build.timestamp.format>
+        <maven.build.timestamp.timeZone>Europe/Zurich</maven.build.timestamp.timeZone>
+        <timestamp>${maven.build.timestamp}</timestamp>
     </properties>
 
     <packaging>jar</packaging>
@@ -52,85 +56,48 @@
         <dependency> <groupId>org.restlet.jee</groupId>          <artifactId>org.restlet.ext.html</artifactId>       <version>2.3.9</version>           </dependency>
     </dependencies>
 
-    <!--
-        <dependency> <groupId>com.microsoft.sqlserver</groupId>  <artifactId>sqljdbc4</artifactId>                   <version>3.0</version>             </dependency>        
-        <dependency> <groupId>com.microsoft.sqlserver.jdbc</groupId> <artifactId>sqljdbc</artifactId> <version>4.0</version> </dependency>
-    
-    
-        <dependency> <groupId>com.microsoft.sqlserver</groupId>  <artifactId>mssql-jdbc</artifactId>                 <version>8.2.0.jre8</version>      </dependency>
-    
-        <dependency>    <groupId>com.zaxxer</groupId>    <artifactId>HikariCP</artifactId>    <version>3.2.0</version></dependency>    
-        <dependency> <groupId>com.typesafe.slick</groupId>       <artifactId>slick_2.12</artifactId>                 <version>3.2.1</version>           </dependency>
-        <dependency> <groupId>com.typesafe.slick</groupId>       <artifactId>slick-hikaricp_2.12</artifactId>        <version>3.2.1</version>           </dependency>
-    
-        <dependency> <groupId>org.apache.logging.log4j</groupId> <artifactId>log4j-jul</artifactId>                  <version>2.10.0</version> <scope>runtime</scope> </dependency>
-
-        <dependency>  <groupId>com.microsoft.sqlserver</groupId>    <artifactId>sqljdbc4</artifactId>    <version>3.0</version>             </dependency>
-        <dependency>  <groupId>com.microsoft.sqlserver</groupId>    <artifactId>sqljdbc4</artifactId>    <version>4.0</version></dependency>
-        <dependency>  <groupId>com.microsoft.sqlserver</groupId>    <artifactId>mssql-jdbc</artifactId>  <version>8.2.0.jre13</version> </dependency>
-
-        <dependency> <groupId>log4j</groupId>              <artifactId>log4j</artifactId>                      <version>1.2.17</version>          </dependency>
-        <dependency> <groupId>org.scala-lang.modules</groupId>  <artifactId>scala-xml_2.12</artifactId> <version>1.0.6</version>    </dependency>
-        <dependency> <groupId>com.typesafe.play</groupId>  <artifactId>play_2.11</artifactId>                  <version>2.4.6</version>           </dependency>
-        <dependency> <groupId>org.apache.logging.log4j</groupId>  <artifactId>log4j-core</artifactId>          <version>2.6.1</version>           </dependency>
-        <dependency> <groupId>commons-logging</groupId>    <artifactId>commons-logging</artifactId>            <version>1.1.3</version>           </dependency>
-        <dependency> <groupId>commons-logging</groupId>    <artifactId>commons-logging</artifactId>            <version>1.2</version>             </dependency>
-        <dependency> <groupId>org.slf4j</groupId>          <artifactId>slf4j-nop</artifactId>                  <version>1.6.4</version>           </dependency>
-        <dependency> <groupId>org.slf4j</groupId>          <artifactId>slf4j-simple</artifactId>               <version>1.7.19</version>          </dependency>
-        <dependency> <groupId>edu.umro</groupId>           <artifactId>util</artifactId>                       <version>1.3.14</version>          </dependency>
-        <dependency> <groupId>edu.umro</groupId>           <artifactId>util</artifactId>                       <version>1.3.9</version>           </dependency>
-        <dependency> <groupId>org.apache.commons</groupId> <artifactId>commons-math3</artifactId>              <version>3.6.1</version>           </dependency>
-        <!__ Note that the play-json_2.11 version 2.3.9 is not the latest release, but the newer releases require Java 8, which is not running on our servers. __ >
-        <dependency> <groupId>com.typesafe.play</groupId>  <artifactId>play-json_2.11</artifactId>             <version>2.3.9</version>           </dependency>
-    -->
-  
   <build>
-  <!-- 
-    <sourceDirectory>src</sourceDirectory>
-    <resources>
-      <resource>
-        <directory>aqa</directory>
-        <excludes>
-          <exclude>**/*.java</exclude>
-        </excludes>
-      </resource>
-    </resources>
-     -->
-      <!-- <pluginManagement> -->
-    <plugins>
-      <plugin>  <!-- source jar -->
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-        <version>2.1.2</version>
-          <executions>
-            <execution>
-                <id>attach-sources</id>
-                <goals>
-                    <goal>jar</goal>
-                </goals>
-            </execution>
-          </executions>
-      </plugin>
+      <resources>
+          <resource>
+              <directory>src/main/resources/manifest</directory>
+              <filtering>true</filtering>
+          </resource>
+      </resources>
 
-            <plugin>  <!-- jar with dependencies -->
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.3.0</version>
-                <executions>
-                    <execution>
+      <plugins>
+          <plugin>  <!-- source jar -->
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-source-plugin</artifactId>
+              <version>2.1.2</version>
+              <executions>
+                  <execution>
+                      <id>attach-sources</id>
+                      <goals>
+                          <goal>jar</goal>
+                      </goals>
+                  </execution>
+              </executions>
+          </plugin>
+
+          <plugin>  <!-- jar with dependencies -->
+            <artifactId>maven-assembly-plugin</artifactId>
+            <version>3.3.0</version>
+            <executions>
+                <execution>
                     <goals>
                         <goal>single</goal>
                     </goals>
                     <phase>compile</phase>
-                    </execution>
-                </executions>
-                <configuration>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                </configuration>
-            </plugin>
+                </execution>
+            </executions>
+            <configuration>
+                <descriptorRefs>
+                    <descriptorRef>jar-with-dependencies</descriptorRef>
+                </descriptorRefs>
+            </configuration>
+        </plugin>
 
-            <!-- disable surefire -->
+        <!-- disable surefire -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -169,47 +136,62 @@
                   <configuration>
                     <target>
                       <property value="Z:\Projects\AQA\${project.artifactId}-${project.version}" name="project.dir"/>
-                      <property value="${project.dir}\${project.artifactId}-${project.version}" name="dest.dir"/>
+                      <!--suppress UnresolvedMavenProperty -->
+                        <property value="${project.dir}\${project.artifactId}-${project.version}" name="dest.dir"/>
                       <property value="src/main/resources" name="resource.dir"/>
                       <property value="yajsw-stable-12.12" name="yajsw"/>
                       <!-- <property value="domain\\serviceUserId" name="user_login"/> -->
                       <!-- <property value="somePassword" name="user_password"/> -->
+                        <!--suppress UnresolvedMavenProperty -->
                       <echo>project.dir is: ${project.dir}</echo>
+                        <!--suppress UnresolvedMavenProperty -->
                       <echo>dest.dir is: ${dest.dir}</echo>
                       <echo>artifactId is: ${project.artifactId}</echo>
+                        <!--suppress UnresolvedMavenProperty -->
                       <delete dir="${project.dir}"/>
+                        <!--suppress UnresolvedMavenProperty -->
                       <echo>Going to mkdir project.dir : ${project.dir}</echo>
+                        <!--suppress UnresolvedMavenProperty -->
                       <mkdir dir="${project.dir}"/>
+                        <!--suppress UnresolvedMavenProperty -->
                       <echo>Did mkdir project.dir : ${project.dir}</echo>
+                        <!--suppress UnresolvedMavenProperty -->
                       <echo>Going to mkdir dest.dir : ${dest.dir}</echo>
+                        <!--suppress UnresolvedMavenProperty -->
                       <mkdir dir="${dest.dir}"/>
+                        <!--suppress UnresolvedMavenProperty -->
                       <echo>Did mkdir dest.dir : ${dest.dir}</echo>
+                        <!--suppress UnresolvedMavenProperty -->
                       <unzip dest="${dest.dir}" src="${resource.dir}/${yajsw}.zip"/>
                       <echo>Did unzip</echo>
+                        <!--suppress UnresolvedMavenProperty -->
                       <copy toDir="${dest.dir}" file="target/${project.artifactId}-${project.version}-jar-with-dependencies.jar"/>
+                        <!--suppress UnresolvedMavenProperty -->
                       <copy toDir="${dest.dir}" file="src/main/dll/x64/sqljdbc_auth.dll"/>
+                        <!--suppress UnresolvedMavenProperty -->
                       <copy toFile="${dest.dir}/AQAConfig.xml" file="${resource.dir}/AQAConfigProd.xml"/>
+                        <!--suppress UnresolvedMavenProperty -->
                       <copy toDir="${dest.dir}" file="${resource.dir}/AQAConfigProd.xml"/>
+                        <!--suppress UnresolvedMavenProperty -->
                       <copy toDir="${dest.dir}" file="${resource.dir}/AQAConfigDev.xml"/>
+                        <!--suppress UnresolvedMavenProperty -->
                       <copy toDir="${dest.dir}" file="${resource.dir}/log4j2.xml"/>
+                        <!--suppress UnresolvedMavenProperty -->
                       <copy toDir="${dest.dir}">
+                          <!--suppress UnresolvedMavenProperty -->
                         <fileset includes="static/**" dir="${resource.dir}"/>
                       </copy>
                       <echo>Copying README.txt ...</echo>
+                        <!--suppress UnresolvedMavenProperty -->
                       <copy toDir="${dest.dir}" file="README.txt"/>
+                        <!--suppress UnresolvedMavenProperty -->
                       <delete file="${dest.dir}/${yajsw}/conf/wrapper.conf"/> <!-- Must force delete to handle case where destination is newer than source.  -->
+                        <!--suppress UnresolvedMavenProperty -->
                       <echo>Copying wrapper.conf ... ${resource.dir}/wrapper.conf to ${dest.dir}/${yajsw}/conf </echo>
+                        <!--suppress UnresolvedMavenProperty -->
                       <copy toDir="${dest.dir}/${yajsw}/conf" file="${resource.dir}/wrapper.conf"/>
-                      <tstamp>
-                        <format locale="en,US" pattern="yyyy-MMM-dd hh:mm:ss aa" property="TIMESTAMP"/>
-                      </tstamp>
-                     
-                      <replace value="${project.version}" token="@@VERSION@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
-                      <replace value="${TIMESTAMP}" token="@@BUILD_DATE@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
-                      <replace value="${user.name}" token="@@BUILDER@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
-                    
-                      <!-- <replace value="${user_login}" token="@@USER_LOGIN@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/> -->
-                      <!-- <replace value="${user_password}" token="@@USER_PASSWORD@@" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/> -->
+
+                        <!--suppress UnresolvedMavenProperty -->
                       <zip destfile="${project.dir}/${project.artifactId}-${project.version}.zip" basedir="${project.dir}"/>
                     </target>
                   </configuration>
@@ -219,40 +201,7 @@
                 </execution>
               </executions>
             </plugin>
-      
-      
-      
     </plugins>
-      <!-- </pluginManagement> -->
-      <pluginManagement>
-          <plugins>
-              <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
-              <plugin>
-                  <groupId>org.eclipse.m2e</groupId>
-                  <artifactId>lifecycle-mapping</artifactId>
-                  <version>1.0.0</version>
-                  <configuration>
-                      <lifecycleMappingMetadata>
-                          <pluginExecutions>
-                              <pluginExecution>
-                                  <pluginExecutionFilter>
-                                      <groupId>org.apache.maven.plugins</groupId>
-                                      <artifactId>maven-assembly-plugin</artifactId>
-                                      <versionRange>[2.3,)</versionRange>
-                                      <goals>
-                                          <goal>single</goal>
-                                      </goals>
-                                  </pluginExecutionFilter>
-                                  <action>
-                                      <ignore></ignore>
-                                  </action>
-                              </pluginExecution>
-                          </pluginExecutions>
-                      </lifecycleMappingMetadata>
-                  </configuration>
-              </plugin>
-          </plugins>
-      </pluginManagement>
   </build>
 
     <repositories>
@@ -262,19 +211,5 @@
             <url>https://maven.restlet.talend.com</url>
         </repository>
     </repositories>
-    <!-- 
-    <distributionManagement>
-        <repository>
-            <id>releases</id>
-            <name>Internal Releases</name>
-            <url>http://141.214.124.203:8081/nexus/content/repositories/releases</url>
-        </repository>
-        <snapshotRepository>
-            <id>snapshots</id>
-            <name>Internal Releases</name>
-            <url>http://141.214.124.203:8081/nexus/content/repositories/snapshots</url>
-        </snapshotRepository>
-    </distributionManagement>
-    -->
-  
+
 </project>

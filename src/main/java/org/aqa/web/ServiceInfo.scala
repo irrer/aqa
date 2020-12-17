@@ -1,32 +1,15 @@
 package org.aqa.web
 
-import org.restlet.Restlet
-import org.restlet.Request
-import org.restlet.Response
-import org.restlet.data.Method
+import edu.umro.util.OpSys
+import org.aqa.web.WebUtil._
+import org.aqa.{AQA, Config, Logging, Util}
+import org.restlet.data.{MediaType, Status}
+import org.restlet.{Request, Response, Restlet}
+
+import java.io.File
+import java.text.SimpleDateFormat
 import java.util.Date
 import scala.xml.Elem
-import org.restlet.data.Parameter
-import slick.lifted.TableQuery
-import slick.backend.DatabaseConfig
-import scala.concurrent.duration.DurationInt
-import org.aqa.db.EPID
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.api._
-import play.api.libs.concurrent.Execution.Implicits._
-import org.restlet.data.Form
-import scala.xml.PrettyPrinter
-import org.restlet.data.Status
-import org.restlet.data.MediaType
-import WebUtil._
-import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
-import org.aqa.Logging
-import org.aqa.Util
-import java.io.File
-import org.aqa.AQA
-import org.aqa.Config
-import edu.umro.util.OpSys
 
 object ServiceInfo {
   private val path = new String((new ServiceInfo).pathOf)
@@ -59,14 +42,24 @@ class ServiceInfo extends Restlet with SubUrlAdmin with Logging {
   private def fileRef(file: File): Elem = {
     val href = pathOf + "/?" + logFileTag + "=" + file.getName
     val ago = WebUtil.timeAgo(new Date(file.lastModified))
-    <a href={ href }>{ file.getName + ":" } { ago }</a>
+    <a href={href}>
+      {file.getName + ":"}{ago}
+    </a>
   }
 
   private def showList = {
     if (allFiles.isEmpty) {
-      <div class="row"><div class="col-sm-11 col-sm-offset-1" style="margin-top:10px">No log files</div></div>
+      <div class="row">
+        <div class="col-sm-11 col-sm-offset-1" style="margin-top:10px">No log files</div>
+      </div>
     } else
-      allFiles.map(f => { <div class="row"><div class="col-sm-11 col-sm-offset-1" style="margin-top:10px">  { fileRef(f) }</div></div> })
+      allFiles.map(f => {
+        <div class="row">
+          <div class="col-sm-11 col-sm-offset-1" style="margin-top:10px">
+            {fileRef(f)}
+          </div>
+        </div>
+      })
   }
 
   private def showFileContents(valueMap: ValueMapT, response: Response): Boolean = {
@@ -82,23 +75,26 @@ class ServiceInfo extends Restlet with SubUrlAdmin with Logging {
   }
 
   val confirmRestartLabel = "confirmRestart"
+
   private def confirmRestart: Elem = {
     val href = pathOf + "?" + confirmRestartLabel + "=" + confirmRestartLabel
-    <a class="btn btn-danger" href={ href } role="button" title="Shut down and restart service.
+    <a class="btn btn-danger" href={href} role="button" title="Shut down and restart service.
 Jobs in progress will be aborted.">Confirm Restart</a>
   }
 
   val cancelRestartLabel = "cancelRestart"
+
   private def cancelRestart: Elem = {
     val href = pathOf + "?" + cancelRestartLabel + "=" + cancelRestartLabel
-    <a class="btn btn-default" href={ href } role="button">Cancel</a>
+    <a class="btn btn-default" href={href} role="button">Cancel</a>
   }
 
   val requestRestartLabel = "requestRestart"
+
   private def requestRestart: Elem = {
     // TODO require user to confirm
     val href = pathOf + "?" + requestRestartLabel + "=" + requestRestartLabel
-    <a class="btn btn-default" href={ href } role="button" title="Shut down and restart. Jobs in progress will be aborted.">Restart Service</a>
+    <a class="btn btn-default" href={href} role="button" title="Shut down and restart. Jobs in progress will be aborted.">Restart Service</a>
   }
 
   private def basicInfo: Elem = {
@@ -108,29 +104,50 @@ Jobs in progress will be aborted.">Confirm Restart</a>
       (0 until 12 by 2).map(octet => text.substring(octet, octet + 2)).mkString("-")
     }
 
-    <div class="row">
-      <h5>Service Version: { System.getProperty("Build.Service_version") }</h5>
-      <h5>Build Date: { System.getProperty("Build.ServiceBuildDate") }</h5>
-      <h5>Built By: { System.getProperty("Build.Builder") }</h5>
-      <h5>Local Server IP: { OpSys.getHostIPAddress }</h5>
-      <h5>Server Name: { OpSys.getHostName }</h5>
-      <h5>Service started:{ timeAgo("", new Date(AQA.serviceStartTime)) }</h5>
-      <p></p>
-      { requestRestart }
-    </div>
+    val props = edu.umro.ScalaUtil.Util.getJarPropertyFile(ServiceInfo.getClass)
+
+    if (props.isDefined) {
+      val p = props.get
+      val date = (new SimpleDateFormat(p.getProperty("build.date.format")).parse(p.getProperty("build.date")))
+
+      <div class="row">
+        <h5>Package and Version:
+          {p.getProperty("groupId") + "." + p.getProperty("artifactId") + p.getProperty("version")}
+        </h5>
+        <h5>Build Date:
+          {Util.timeHumanFriendly(date)}
+        </h5>
+        <h5>Built By:
+          {p.getProperty("builder")}
+        </h5>
+        <h5>Local Server IP:
+          {OpSys.getHostIPAddress}
+        </h5>
+        <h5>Server Name:
+          {OpSys.getHostName}
+        </h5>
+        <h5>Service started:
+          {timeAgo("", new Date(AQA.serviceStartTime))}
+        </h5>
+        <p></p>{requestRestart}
+      </div>
+    }
+    else {
+      <div class="row">
+        <h5>Details not available.</h5>
+      </div>
+    }
   }
 
   private def configInfo: Elem = {
     <div class="row">
-      <h4>Configuration Parameters</h4>
-      { Config.toHtml }
+      <h4>Configuration Parameters</h4>{Config.toHtml}
     </div>
   }
 
   private def showLogFileList: Elem = {
     <div class="row">
-      <h4 style="margin-top:40px;">Log Files</h4>
-      { showList }
+      <h4 style="margin-top:40px;">Log Files</h4>{showList}
     </div>
   }
 
@@ -145,11 +162,13 @@ Jobs in progress will be aborted.">Confirm Restart</a>
           <table style="margin:40px">
             <tr>
               <td>
-                { cancelRestart }
+                {cancelRestart}
               </td>
-              <td><div style="margin:40px"> </div></td>
               <td>
-                { confirmRestart }
+                <div style="margin:40px"></div>
+              </td>
+              <td>
+                {confirmRestart}
               </td>
             </tr>
           </table>
@@ -182,11 +201,13 @@ Jobs in progress will be aborted.">Confirm Restart</a>
       </div>
     }
 
-    val javascript = """
+    val javascript =
+      """
 <script language="javascript">
 // Reload the main page when the server is ready.
 
-var status = '""" + AQA.serviceStartTime + """';
+var status = '""" + AQA.serviceStartTime +
+        """';
 var instanceUrl = '/admin/ServiceInstance';
 var WebRefreshTime = 1000;
 
@@ -219,21 +240,22 @@ setTimeout(watchStatus, WebRefreshTime);
       <div class="row">
         <div class="row">
           <div class="col-md-5 col-md-offset-1">
-            <h2>{ pageTitle }</h2>
+            <h2>
+              {pageTitle}
+            </h2>
           </div>
         </div>
         <div class="row">
           <div class="col-md-5 col-md-offset-1">
-            { basicInfo }
+            {basicInfo}
           </div>
           <div class="col-md-4 col-md-offset-1">
-            { showLogFileList }
+            {showLogFileList}
           </div>
         </div>
         <div class="row">
           <div class="col-md-10 col-md-offset-1">
-            <p></p><br> </br>
-            { configInfo }
+            <p></p> <br></br>{configInfo}
           </div>
         </div>
       </div>
