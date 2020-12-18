@@ -1,38 +1,17 @@
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
-import org.aqa.Logging
-import org.aqa.db.CollimatorPosition
-import com.pixelmed.dicom.AttributeTag
-import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.TagFromName
-import org.aqa.Util
-import scala.collection.Seq
-import scala.xml.Elem
-import org.aqa.db.Output
-import org.aqa.run.ProcedureStatus
-import org.aqa.DicomFile
-import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.ImageUtil
-import java.awt.geom.Point2D
 import org.aqa.Config
-import java.awt.Rectangle
-import edu.umro.ImageUtil.LocateEdge
-import java.awt.image.BufferedImage
-import java.awt.Color
-import java.awt.Graphics2D
-import java.awt.BasicStroke
-import edu.umro.ScalaUtil.Trace
-import scala.collection.parallel.ParSeq
-import org.aqa.db.CollimatorCentering
-import java.awt.Point
-import edu.umro.ImageUtil.ImageText
-import java.io.File
+import org.aqa.Logging
+import org.aqa.Util
+import org.aqa.run.ProcedureStatus
 import org.aqa.web.WebServer
 import org.aqa.web.WebUtil
-import org.aqa.db.Baseline
 import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.webrun.phase2.RunReq
+
+import java.io.File
+import scala.xml.Elem
 
 /**
  * Make HTML for symmetry and flatness.
@@ -79,7 +58,7 @@ object SymmetryAndFlatnessHTML extends Logging {
     val mainHtmlFile = new File(subDir, htmlFileName)
     resultList.par.map(rb => Util.writePng(rb.result.annotatedImage, annotatedImageFile(subDir, rb.result.beamName)))
 
-    val html = Phase2Util.wrapSubProcedure(extendedData, SymmetryAndFlatnessSubHTML.makeContent(subDir, extendedData, resultList, status, runReq), "Symmetry and Flatness", status, None, runReq)
+    val html = Phase2Util.wrapSubProcedure(extendedData, SymmetryAndFlatnessSubHTML.makeContent(subDir, extendedData, resultList, runReq), "Symmetry and Flatness", status, None, runReq)
     Util.writeFile(mainHtmlFile, html)
 
     resultList.map(rb => SymmetryAndFlatnessBeamProfileHTML.makeDisplay(subDir, extendedData, rb.result, status, runReq))

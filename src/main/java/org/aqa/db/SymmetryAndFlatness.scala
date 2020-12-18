@@ -1,45 +1,39 @@
 package org.aqa.db
 
-import Db.driver.api._
-import org.aqa.Config
-import org.aqa.Util
-import java.io.File
-import scala.xml.XML
-import scala.xml.Node
-import scala.xml.Elem
+import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
+
 import java.util.Date
-import java.sql.Timestamp
-import edu.umro.ScalaUtil.Trace
+import scala.xml.Elem
 
 case class SymmetryAndFlatness(
-  symmetryAndFlatnessPK: Option[Long], // primary key
-  outputPK: Long, // output primary key
-  SOPInstanceUID: String, // UID of source image
-  beamName: String, // name of beam in plan
+                                symmetryAndFlatnessPK: Option[Long], // primary key
+                                outputPK: Long, // output primary key
+                                SOPInstanceUID: String, // UID of source image
+                                beamName: String, // name of beam in plan
 
-  axialSymmetry_pct: Double,
-  axialSymmetryBaseline_pct: Double,
-  axialSymmetryStatus: String,
+                                axialSymmetry_pct: Double,
+                                axialSymmetryBaseline_pct: Double,
+                                axialSymmetryStatus: String,
 
-  transverseSymmetry_pct: Double,
-  transverseSymmetryBaseline_pct: Double,
-  transverseSymmetryStatus: String,
+                                transverseSymmetry_pct: Double,
+                                transverseSymmetryBaseline_pct: Double,
+                                transverseSymmetryStatus: String,
 
-  flatness_pct: Double,
-  flatnessBaseline_pct: Double,
-  flatnessStatus: String,
+                                flatness_pct: Double,
+                                flatnessBaseline_pct: Double,
+                                flatnessStatus: String,
 
-  profileConstancy_pct: Double,
-  profileConstancyBaseline_pct: Double,
-  profileConstancyStatus: String,
+                                profileConstancy_pct: Double,
+                                profileConstancyBaseline_pct: Double,
+                                profileConstancyStatus: String,
 
-  top_cu: Double, // average value of top point pixels
-  bottom_cu: Double, // average value of bottom point pixels
-  left_cu: Double, // average value of left point pixels
-  right_cu: Double, // average value of right point pixels
-  center_cu: Double // average value of center point pixels
-) {
+                                top_cu: Double, // average value of top point pixels
+                                bottom_cu: Double, // average value of bottom point pixels
+                                left_cu: Double, // average value of left point pixels
+                                right_cu: Double, // average value of right point pixels
+                                center_cu: Double // average value of center point pixels
+                              ) {
 
   def insert: SymmetryAndFlatness = {
     val insertQuery = SymmetryAndFlatness.query returning SymmetryAndFlatness.query.map(_.symmetryAndFlatnessPK) into
@@ -50,7 +44,7 @@ case class SymmetryAndFlatness(
     result
   }
 
-  def insertOrUpdate = Db.run(SymmetryAndFlatness.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(SymmetryAndFlatness.query.insertOrUpdate(this))
 
   override def toString: String = {
     "    symmetryAndFlatnessPK: " + symmetryAndFlatnessPK + "\n" +
@@ -77,28 +71,49 @@ case class SymmetryAndFlatness(
 }
 
 object SymmetryAndFlatness extends ProcedureOutput {
+
   class SymmetryAndFlatnessTable(tag: Tag) extends Table[SymmetryAndFlatness](tag, "symmetryAndFlatness") {
 
     def symmetryAndFlatnessPK = column[Long]("symmetryAndFlatnessPK", O.PrimaryKey, O.AutoInc)
+
     def outputPK = column[Long]("outputPK")
+
     def SOPInstanceUID = column[String]("SOPInstanceUID")
+
     def beamName = column[String]("beamName")
+
     def axialSymmetry_pct = column[Double]("axialSymmetry_pct")
+
     def axialSymmetryBaseline_pct = column[Double]("axialSymmetryBaseline_pct")
+
     def axialSymmetryStatus = column[String]("axialSymmetryStatus")
+
     def transverseSymmetry_pct = column[Double]("transverseSymmetry_pct")
+
     def transverseSymmetryBaseline_pct = column[Double]("transverseSymmetryBaseline_pct")
+
     def transverseSymmetryStatus = column[String]("transverseSymmetryStatus")
+
     def flatness_pct = column[Double]("flatness_pct")
+
     def flatnessBaseline_pct = column[Double]("flatnessBaseline_pct")
+
     def flatnessStatus = column[String]("flatnessStatus")
+
     def profileConstancy_pct = column[Double]("profileConstancy_pct")
+
     def profileConstancyBaseline_pct = column[Double]("profileConstancyBaseline_pct")
+
     def profileConstancyStatus = column[String]("profileConstancyStatus")
+
     def top_cu = column[Double]("top_cu")
+
     def bottom_cu = column[Double]("bottom_cu")
+
     def left_cu = column[Double]("left_cu")
+
     def right_cu = column[Double]("right_cu")
+
     def center_cu = column[Double]("center_cu")
 
     def * = (
@@ -122,23 +137,24 @@ object SymmetryAndFlatness extends ProcedureOutput {
       bottom_cu,
       left_cu,
       right_cu,
-      center_cu) <> ((SymmetryAndFlatness.apply _)tupled, SymmetryAndFlatness.unapply _)
+      center_cu) <> (SymmetryAndFlatness.apply _ tupled, SymmetryAndFlatness.unapply _)
 
     def outputFK = foreignKey("SymmetryAndFlatness_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   case class PointSet(top: Double, bottom: Double, right: Double, left: Double, center: Double) {
     def this(sf: SymmetryAndFlatness) = this(sf.top_cu, sf.bottom_cu, sf.right_cu, sf.left_cu, sf.center_cu)
+
     private val list = Seq(top, bottom, right, left, center)
 
     private val min = list.min
     private val max = list.max
 
-    val axialSymmetry = ((top - bottom) / bottom) * 100
-    val transverseSymmetry = ((right - left) / left) * 100
-    val flatness = ((max - min) / (max + min)) * 100
+    val axialSymmetry: Double = ((top - bottom) / bottom) * 100
+    val transverseSymmetry: Double = ((right - left) / left) * 100
+    val flatness: Double = ((max - min) / (max + min)) * 100
 
-    def profileConstancy(baseline: PointSet) = {
+    def profileConstancy(baseline: PointSet): Double = {
       val t = (top / center) - (baseline.top / baseline.center)
       val b = (bottom / center) - (baseline.bottom / baseline.center)
       val l = (left / center) - (baseline.left / baseline.center)
@@ -149,8 +165,9 @@ object SymmetryAndFlatness extends ProcedureOutput {
       profConst
     }
 
-    override def toString = {
+    override def toString: String = {
       def fmt(d: Double) = d.formatted("%10f")
+
       "top: " + fmt(top) +
         "    bottom: " + fmt(bottom) +
         "    right: " + fmt(right) +
@@ -166,7 +183,7 @@ object SymmetryAndFlatness extends ProcedureOutput {
   def get(symmetryAndFlatnessPK: Long): Option[SymmetryAndFlatness] = {
     val action = for {
       inst <- SymmetryAndFlatness.query if inst.symmetryAndFlatnessPK === symmetryAndFlatnessPK
-    } yield (inst)
+    } yield inst
     Db.run(action.result).headOption
   }
 
@@ -176,7 +193,7 @@ object SymmetryAndFlatness extends ProcedureOutput {
   def getByOutput(outputPK: Long): Seq[SymmetryAndFlatness] = {
     val action = for {
       inst <- SymmetryAndFlatness.query if inst.outputPK === outputPK
-    } yield (inst)
+    } yield inst
     Db.run(action.result)
   }
 
@@ -192,7 +209,7 @@ object SymmetryAndFlatness extends ProcedureOutput {
     Db.run(action)
   }
 
-  def insert(list: Seq[SymmetryAndFlatness]) = {
+  def insert(list: Seq[SymmetryAndFlatness]): Seq[Int] = {
     val ops = list.map { imgId => SymmetryAndFlatness.query.insertOrUpdate(imgId) }
     Db.perform(ops)
   }
@@ -211,21 +228,19 @@ object SymmetryAndFlatness extends ProcedureOutput {
   /**
    * Get the SymmetryAndFlatness results.
    *
-   * @param machinePK: For this machine
-   *
-   * @param beamName: For this beam
-   *
-   * @param procedurePK: For this procedure
+   * @param machinePK   : For this machine
+   * @param beamName    : For this beam
+   * @param procedurePK : For this procedure
    *
    */
-  def history(machinePK: Long, procedurePK: Long, beamName: String) = {
+  def history(machinePK: Long, procedurePK: Long, beamName: String): Seq[SymmetryAndFlatnessHistory] = {
 
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
       symmetryAndFlatness <- SymmetryAndFlatness.query.filter(c => c.outputPK === output._1 && c.beamName === beamName)
-    } yield ((output._2, symmetryAndFlatness))
+    } yield {(output._2, symmetryAndFlatness)}
 
-    val result = Db.run(search.result).map(h => new SymmetryAndFlatnessHistory(h._1.get, h._2)).sortBy(_.date.getTime)
+    val result = Db.run(search.result).map(h => SymmetryAndFlatnessHistory(h._1.get, h._2)).sortBy(_.date.getTime)
 
     result
   }

@@ -1,15 +1,11 @@
 package org.aqa
 
-import org.aqa.db.DbSetup
-import org.aqa.web.WebServer
-import org.aqa.run.Run
 import edu.umro.ScalaUtil.PeriodicRestart
-import java.io.File
-import java.util.Date
-import edu.umro.ScalaUtil.Trace
+import org.aqa.db.DbSetup
 import org.aqa.run.RunProcedure
-import org.aqa.db.BBbyEPID
-import org.aqa.db.BBbyCBCT
+import org.aqa.web.WebServer
+
+import java.util.Date
 
 /**
  * Main service entry point.  Start up major portions of
@@ -17,7 +13,7 @@ import org.aqa.db.BBbyCBCT
  */
 object AQA extends Logging {
   /** Time at which service was started. */
-  val serviceStartTime = System.currentTimeMillis
+  val serviceStartTime: Long = System.currentTimeMillis
 
   def main(args: Array[String]): Unit = {
 

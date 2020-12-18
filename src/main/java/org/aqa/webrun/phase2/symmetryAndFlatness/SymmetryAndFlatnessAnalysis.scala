@@ -1,36 +1,33 @@
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
-import org.aqa.Logging
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
-import scala.xml.Elem
-import org.aqa.run.ProcedureStatus
 import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.ImageUtil
-import org.aqa.Config
-import java.awt.Rectangle
-import java.awt.image.BufferedImage
-import java.awt.Color
-import java.awt.Graphics2D
-import edu.umro.ScalaUtil.Trace
 import edu.umro.ImageUtil.ImageText
-import java.awt.BasicStroke
+import edu.umro.ImageUtil.ImageUtil
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import org.aqa.Config
+import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Baseline
+import org.aqa.db.CollimatorCentering
+import org.aqa.db.MaintenanceCategory
 import org.aqa.db.MaintenanceRecord
 import org.aqa.db.SymmetryAndFlatness
 import org.aqa.db.SymmetryAndFlatness.PointSet
-import java.sql.Timestamp
-import org.aqa.db.MaintenanceCategory
-import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import org.aqa.run.ProcedureStatus
+import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.Phase2Util.MaintenanceRecordBaseline
 import org.aqa.webrun.phase2.RunReq
-import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.SubProcedureResult
-import org.aqa.webrun.phase2.Phase2Util
-import org.aqa.db.CollimatorCentering
+
+import java.awt.Color
+import java.awt.Rectangle
 import java.awt.geom.Point2D
-import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import java.awt.image.BufferedImage
+import java.sql.Timestamp
+import scala.xml.Elem
 
 /**
  * Analyze DICOM files for symmetry and flatness.
@@ -48,41 +45,41 @@ object SymmetryAndFlatnessAnalysis extends Logging {
    * Encapsulate data for generating a report.
    */
   case class SymmetryAndFlatnessBeamResult(
-    beamName: String,
-    SOPInstanceUID: String,
-    pointSet: PointSet,
+                                            beamName: String,
+                                            SOPInstanceUID: String,
+                                            pointSet: PointSet,
 
-    axialSymmetry: Double,
-    axialSymmetryBaseline: Double,
-    axialSymmetryStatus: ProcedureStatus.Value,
+                                            axialSymmetry: Double,
+                                            axialSymmetryBaseline: Double,
+                                            axialSymmetryStatus: ProcedureStatus.Value,
 
-    transverseSymmetry: Double,
-    transverseSymmetryBaseline: Double,
-    transverseSymmetryStatus: ProcedureStatus.Value,
+                                            transverseSymmetry: Double,
+                                            transverseSymmetryBaseline: Double,
+                                            transverseSymmetryStatus: ProcedureStatus.Value,
 
-    flatness: Double,
-    flatnessBaseline: Double,
-    flatnessStatus: ProcedureStatus.Value,
+                                            flatness: Double,
+                                            flatnessBaseline: Double,
+                                            flatnessStatus: ProcedureStatus.Value,
 
-    profileConstancy: Double,
-    profileConstancyBaseline: Double,
-    profileConstancyStatus: ProcedureStatus.Value,
+                                            profileConstancy: Double,
+                                            profileConstancyBaseline: Double,
+                                            profileConstancyStatus: ProcedureStatus.Value,
 
-    annotatedImage: BufferedImage,
-    transverseProfile: Seq[Double], transverse_pct: IndexedSeq[Double],
-    axialProfile: Seq[Double], axial_pct: IndexedSeq[Double],
-    baselinePointSet: PointSet) {
+                                            annotatedImage: BufferedImage,
+                                            transverseProfile: Seq[Double], transverse_pct: IndexedSeq[Double],
+                                            axialProfile: Seq[Double], axial_pct: IndexedSeq[Double],
+                                            baselinePointSet: PointSet) {
 
     /** True if everything is ok. */
-    val pass = Seq(axialSymmetryStatus, transverseSymmetryStatus, flatnessStatus).filter(s => !(s.toString.equals(ProcedureStatus.pass.toString))).isEmpty
+    val pass: Boolean = Seq(axialSymmetryStatus, transverseSymmetryStatus, flatnessStatus).forall(s => s.toString.equals(ProcedureStatus.pass.toString))
     logger.info("sym+flatness pass: " + pass)
 
     /** Aggregate status. */
-    val status = boolToStatus(pass)
+    val status: ProcedureStatus.ProcedureStatus = boolToStatus(pass)
     logger.info("sym+flatness aggregate status: " + status)
   }
 
-  def circleRadiusInPixels(isoImageTrans: IsoImagePlaneTranslator) = {
+  def circleRadiusInPixels(isoImageTrans: IsoImagePlaneTranslator): Double = {
     val radius_mm = Config.SymmetryAndFlatnessDiameter_mm / 2
     val imagePlaneCenterInPixels = isoImageTrans.iso2Pix(0, 0)
     val radiusInPixels = isoImageTrans.iso2Pix(radius_mm, radius_mm).distance(imagePlaneCenterInPixels)
@@ -98,14 +95,13 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val radius = circleRadiusInPixels(translator)
     val circleSize = (radius * 2).round.toInt
 
-    // addGraticules(img, translator)
     Util.addGraticules(image, translator, Color.gray)
 
     Util.addAxialAndTransverse(image)
 
     def dbl2Text(d: Double): String = if (d.round.toInt == d) d.toInt.toString else d.toString
 
-    def annotatePoint(point: SymmetryAndFlatnessPoint, value: Double) = {
+    def annotatePoint(point: SymmetryAndFlatnessPoint, value: Double): Unit = {
       graphics.setColor(Color.black)
       val center = translator.iso2Pix(point.asPoint)
       graphics.drawOval((center.getX - radius).round.toInt, (center.getY - radius).round.toInt, circleSize, circleSize)
@@ -121,12 +117,6 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     annotatePoint(Config.SymmetryPointCenter, pointSet.center)
 
     image
-  }
-
-  private def getDicomImage(beamName: String, runReq: RunReq): DicomImage = {
-    val isFlood = beamName.equalsIgnoreCase(Config.FloodFieldBeamName)
-    if (isFlood) runReq.floodCorrectedImage
-    else runReq.derivedMap(beamName).pixelCorrectedImage
   }
 
   private def getAttributeList(beamName: String, runReq: RunReq): AttributeList = {
@@ -149,7 +139,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       (avg * RescaleSlope) + RescaleIntercept // convert
     }
 
-    new PointSet(evalPoint(Config.SymmetryPointTop), evalPoint(Config.SymmetryPointBottom),
+    PointSet(evalPoint(Config.SymmetryPointTop), evalPoint(Config.SymmetryPointBottom),
       evalPoint(Config.SymmetryPointLeft), evalPoint(Config.SymmetryPointRight),
       evalPoint(Config.SymmetryPointCenter))
   }
@@ -163,7 +153,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
   def makeBaselineName(beamName: String, dataName: String): String = dataName + " " + beamName
 
-  case class BeamResultBaseline(result: SymmetryAndFlatnessBeamResult, maintenanceRecordBaseline: Seq[MaintenanceRecordBaseline], pointSet: PointSet);
+  case class BeamResultBaseline(result: SymmetryAndFlatnessBeamResult, maintenanceRecordBaseline: Seq[MaintenanceRecordBaseline], pointSet: PointSet) {}
 
   /**
    * Get the baseline for the given beam of the given type (dataName).  If it does not exist, then use this one to establish it.
@@ -171,8 +161,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   private def getBaseline(machinePK: Long, beamName: String, dataName: String, attributeList: AttributeList, value: Double, dataDate: Timestamp): MaintenanceRecordBaseline = {
     val id = makeBaselineName(beamName, dataName)
     Baseline.findLatest(machinePK, id, dataDate) match {
-      case Some((maintenanceRecord, baseline)) => new MaintenanceRecordBaseline(Some(maintenanceRecord), baseline)
-      case _ => new MaintenanceRecordBaseline(None, Baseline.makeBaseline(-1, dataDate, Util.sopOfAl(attributeList), id, value))
+      case Some((maintenanceRecord, baseline)) => MaintenanceRecordBaseline(Some(maintenanceRecord), baseline)
+      case _ => MaintenanceRecordBaseline(None, Baseline.makeBaseline(-1, dataDate, Util.sopOfAl(attributeList), id, value))
     }
   }
 
@@ -183,7 +173,6 @@ object SymmetryAndFlatnessAnalysis extends Logging {
    */
   private def analyze(beamName: String, extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): BeamResultBaseline = {
     logger.info("Begin analysis of beam " + beamName)
-    val image = getDicomImage(beamName, runReq)
     val attributeList: AttributeList = getAttributeList(beamName, runReq)
     val dicomImage = new DicomImage(attributeList)
     val RescaleSlope = attributeList.get(TagFromName.RescaleSlope).getDoubleValues.head
@@ -196,7 +185,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val axialSymmetry = pointSet.axialSymmetry
     logger.info("Axial symmetry of beam " + beamName + " : " + axialSymmetry)
     val transverseSymmetry = pointSet.transverseSymmetry
-    logger.info("ransverse symmetry of beam " + beamName + " : " + transverseSymmetry)
+    logger.info("transverse symmetry of beam " + beamName + " : " + transverseSymmetry)
 
     val flatness = pointSet.flatness
     logger.info("Flatness of beam " + beamName + " : " + flatness)
@@ -236,7 +225,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val rightBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointRight.name, attributeList, pointSet.right, timestamp)
     val centerBaseline = getBaseline(machinePK, beamName, Config.SymmetryPointCenter.name, attributeList, pointSet.center, timestamp)
 
-    val baselinePointSet = new PointSet(
+    val baselinePointSet = PointSet(
       topBaseline.baseline.value.toDouble,
       bottomBaseline.baseline.value.toDouble,
       leftBaseline.baseline.value.toDouble,
@@ -251,7 +240,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
     def checkPercent(value: Double, baseline: Double, limit: Double) = {
       val diff = value - baseline
-      if (limit >= (diff.abs)) ProcedureStatus.pass else ProcedureStatus.fail
+      if (limit >= diff.abs) ProcedureStatus.pass else ProcedureStatus.fail
     }
 
     logger.info("Checking percentages for beam " + beamName)
@@ -264,7 +253,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       topBaseline, bottomBaseline, leftBaseline, rightBaseline, centerBaseline)
 
     logger.info("Assembling result for beam " + beamName)
-    val result = new SymmetryAndFlatnessBeamResult(beamName, Util.sopOfAl(attributeList), pointSet,
+    val result = SymmetryAndFlatnessBeamResult(beamName, Util.sopOfAl(attributeList), pointSet,
       axialSymmetry,
       axialSymmetryBaseline.baseline.value.toDouble,
       axialSymmetryStatus,
@@ -285,7 +274,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
     logger.info("Finished analysis of beam " + beamName)
 
-    new BeamResultBaseline(result, maintenanceRecordBaselineList, pointSet)
+    BeamResultBaseline(result, maintenanceRecordBaselineList, pointSet)
   }
 
   private def storeResultsInDb(resultList: List[SymmetryAndFlatnessAnalysis.BeamResultBaseline], outputPK: Long): Unit = {
@@ -329,7 +318,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   private def storeMaintenanceRecordInDB(resultList: List[BeamResultBaseline], machinePK: Long, userPK: Long, outputPK: Long, analysisTime: Timestamp): Unit = {
 
     // make list of baselines that need to be saved
-    val baselineList = resultList.map(r => r.maintenanceRecordBaseline).flatten.filter(p => p.maintenanceRecord.isEmpty).map(p => p.baseline)
+    val baselineList = resultList.flatMap(r => r.maintenanceRecordBaseline).filter(p => p.maintenanceRecord.isEmpty).map(p => p.baseline)
 
     if (baselineList.nonEmpty) {
       logger.info("Creating MaintenanceRecord record for Symmetry and Flatness")
@@ -381,10 +370,9 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       logger.info("Finished analysis of SymmetryAndFlatness for machine " + extendedData.machine.id)
       if (pass) Right(result) else Left(result.summary)
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         logger.warn("Unexpected error in analysis of CollimatorPosition: " + t + fmtEx(t))
         Left(Phase2Util.procedureCrash(subProcedureName))
-      }
     }
   }
 }
