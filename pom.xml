@@ -190,6 +190,13 @@
                       <echo>Copying wrapper.conf ... ${resource.dir}/wrapper.conf to ${dest.dir}/${yajsw}/conf </echo>
                         <!--suppress UnresolvedMavenProperty -->
                       <copy toDir="${dest.dir}/${yajsw}/conf" file="${resource.dir}/wrapper.conf"/>
+                        <!--suppress UnresolvedMavenProperty -->
+                        <replace value="${project.version}" token="%%VERSION%%" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
+                        <!--suppress UnresolvedMavenProperty -->
+                        <replace value="${TIMESTAMP}" token="%%BUILD_DATE%%" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
+                        <!--suppress UnresolvedMavenProperty -->
+                        <replace value="${user.name}" token="%%BUILDER%%" file="${dest.dir}/${yajsw}/conf/wrapper.conf"/>
+
 
                         <!--suppress UnresolvedMavenProperty -->
                       <zip destfile="${project.dir}/${project.artifactId}-${project.version}.zip" basedir="${project.dir}"/>

@@ -116,6 +116,7 @@ object SymmetryAndFlatness extends ProcedureOutput {
 
     def center_cu = column[Double]("center_cu")
 
+    //noinspection LanguageFeature
     def * = (
       symmetryAndFlatnessPK.?,
       outputPK,
@@ -215,7 +216,7 @@ object SymmetryAndFlatness extends ProcedureOutput {
   }
 
   override def insert(elem: Elem, outputPK: Long): Int = {
-    ??? // TODO
+    ???
   }
 
   def insertSeq(list: Seq[SymmetryAndFlatness]): Unit = {
