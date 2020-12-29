@@ -308,7 +308,13 @@ object SymmetryAndFlatnessAnalysis extends Logging {
    * @param collimatorCentering Collimator center offset.
    * @return
    */
-  def testAnalyze(beamName: String, machinePK: Long, dataDate: Timestamp, attributeList: AttributeList, correctedImage: DicomImage, collimatorCentering: CollimatorCentering): BeamResultBaseline = {
+  def testAnalyze(
+                   beamName: String,
+                   machinePK: Long,
+                   dataDate: Timestamp,
+                   attributeList: AttributeList,
+                   correctedImage: DicomImage,
+                   collimatorCentering: CollimatorCentering): BeamResultBaseline = {
     analyze(beamName, machinePK, dataDate, attributeList, correctedImage, collimatorCentering)
   }
 

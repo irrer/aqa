@@ -192,11 +192,24 @@ object Baseline extends Logging {
           sf.flatness_pct === sf.flatnessBaseline_pct &&
           sf.profileConstancy_pct === sf.profileConstancyBaseline_pct
       } yield {
-        (sf.symmetryAndFlatnessPK)
+        sf.symmetryAndFlatnessPK
       }
 
+      // list of all baseline PKs
       val pkList = Db.run(action.result)
       Trace.trace("Sym+Flat PK list size: " + pkList.size + "    list: " + pkList.mkString("  "))
+
+      def markAsBaseline(pk: Long) : Unit = {
+        val symFlat = SymmetryAndFlatness.get(pk).get
+        val symFlatAsBaseline = symFlat.copy(isBaseline_text = true.toString)
+        symFlatAsBaseline.insertOrUpdate()
+        Trace.trace("Marked sym+flat " + pk + " as baseline")
+      }
+
+      if (true) // set to true to actually change the database
+        pkList.foreach(markAsBaseline )
+
+      Trace.trace
     }
 
     def markWedge(): Unit = {
@@ -209,6 +222,18 @@ object Baseline extends Logging {
 
       val pkList = Db.run(action.result)
       Trace.trace("Wedge PK list size: " + pkList.size + "    list: " + pkList.mkString("  "))
+
+      def markAsBaseline(pk: Long) : Unit = {
+        val wedge = WedgePoint.get(pk).get
+        val wedgeAsBaseline = wedge.copy(isBaseline_text = true.toString)
+        wedgeAsBaseline.insertOrUpdate()
+        Trace.trace("Marked wedge " + pk + " as baseline")
+      }
+
+      if (true) // set to true to actually change the database
+        pkList.foreach(markAsBaseline )
+
+      Trace.trace
     }
 
     Trace.trace("Validate Config and DB")
