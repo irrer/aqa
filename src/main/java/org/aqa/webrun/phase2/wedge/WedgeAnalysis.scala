@@ -1,33 +1,26 @@
 package org.aqa.webrun.phase2.wedge
 
-import org.aqa.Logging
-import org.aqa.db.MetadataCheck
-import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.TagFromName
-import org.aqa.Util
-import scala.collection.Seq
-import scala.xml.Elem
-import org.aqa.db.Output
-import org.aqa.run.ProcedureStatus
+import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Config
-import edu.umro.ScalaUtil.Trace
-import java.awt.Rectangle
-import org.aqa.db.CollimatorCentering
-import java.awt.Point
-import java.awt.geom.Point2D
-import org.aqa.db.CenterDose
-import org.aqa.db.WedgePoint
+import org.aqa.Logging
+import org.aqa.Util
 import org.aqa.db.Baseline
-import org.aqa.webrun.phase2.Phase2Util.MaintenanceRecordBaseline
+import org.aqa.db.CenterDose
+import org.aqa.db.CollimatorCentering
 import org.aqa.db.MaintenanceCategory
 import org.aqa.db.MaintenanceRecord
+import org.aqa.db.WedgePoint
+import org.aqa.run.ProcedureStatus
 import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.SubProcedureResult
-import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.DicomDict.TagByName
+
+import java.awt.Point
+import scala.collection.Seq
+import scala.xml.Elem
 
 /**
  * Analyze DICOM files for Wedge Analysis.
@@ -66,7 +59,7 @@ object WedgeAnalysis extends Logging {
       }
     }
 
-    val newBaselineList = wedgePointList.map(wp => constructOneBaseline(wp)).flatten
+    val newBaselineList = wedgePointList.flatMap(wp => constructOneBaseline(wp))
     if (newBaselineList.nonEmpty) {
       logger.info("Automatically creating new MaintenanceRecord and " + newBaselineList.size + "default Wedge baseline(s) for " + extendedData.institution.name + " : " + extendedData.machine.id)
 
@@ -91,10 +84,11 @@ object WedgeAnalysis extends Logging {
     }
   }
 
-  private case class WedgePair(beamName: String, backgroundBeamName: String);
+  private case class WedgePair(beamName: String, backgroundBeamName: String)
 
   private def analyzeWedgePair(wedgePair: WedgePair, pointList: Seq[Point], extendedData: ExtendedData, runReq: RunReq): WedgePoint = {
     logger.info("Starting individual wedge analysis of " + wedgePair.beamName + " with background " + wedgePair.backgroundBeamName)
+
     def measure(beamName: String) = {
       val derived = runReq.derivedMap(beamName)
       Phase2Util.measureDose(pointList, derived.originalImage, derived.attributeList)
@@ -117,7 +111,7 @@ object WedgeAnalysis extends Logging {
     }
 
     val wedgePoint = new WedgePoint(None, extendedData.output.outputPK.get,
-      Util.sopOfAl(derivedWedge.attributeList), wedgePair.beamName, wedgeDose,
+      Util.sopOfAl(derivedWedge.attributeList), wedgePair.beamName, isBaseline_text = false.toString, wedgeDose,
       Util.sopOfAl(derivedBackground.attributeList), wedgePair.backgroundBeamName, backgroundDose,
       percent,
       baselineValue)

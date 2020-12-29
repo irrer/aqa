@@ -1,11 +1,11 @@
 package org.aqa.db
 
-import Db.driver.api._
-import org.aqa.Logging
-import java.sql.Timestamp
-import com.pixelmed.dicom.AttributeList
-import org.aqa.Util
 import edu.umro.ScalaUtil.Trace
+import org.aqa.Config
+import org.aqa.Logging
+import org.aqa.db.Db.driver.api._
+
+import java.sql.Timestamp
 
 /**
  * Define values associated with specific machines that are established when the
@@ -16,14 +16,14 @@ import edu.umro.ScalaUtil.Trace
  * <code>Baseline</code> record.
  */
 case class Baseline(
-  baselinePK: Option[Long], // primary key
-  maintenanceRecordPK: Long, // refers to maintenance for which to use this value
-  acquisitionDate: Timestamp, // when data was acquired at the treatment machine.  Different from when this record was created.
-  SOPInstanceUID: Option[String], // UID of DICOM image.  May be empty if not applicable.
-  id: String, // unique identifier for data.  Can contain the concatenation of values such as beam name, energy level, jaw position, energy level, etc.  Should be human readable / user friendly
-  value: String, // text version of value
-  setup: String // <code>BaselineSetup</code> value
-) {
+                     baselinePK: Option[Long], // primary key
+                     maintenanceRecordPK: Long, // refers to maintenance for which to use this value
+                     acquisitionDate: Timestamp, // when data was acquired at the treatment machine.  Different from when this record was created.
+                     SOPInstanceUID: Option[String], // UID of DICOM image.  May be empty if not applicable.
+                     id: String, // unique identifier for data.  Can contain the concatenation of values such as beam name, energy level, jaw position, energy level, etc.  Should be human readable / user friendly
+                     value: String, // text version of value
+                     setup: String // <code>BaselineSetup</code> value
+                   ) {
 
   def insert: Baseline = {
     val insertQuery = Baseline.query returning Baseline.query.map(_.baselinePK) into ((baseline, baselinePK) => baseline.copy(baselinePK = Some(baselinePK)))
@@ -40,11 +40,17 @@ object Baseline extends Logging {
   class BaselineTable(tag: Tag) extends Table[Baseline](tag, "baseline") {
 
     def baselinePK = column[Long]("baselinePK", O.PrimaryKey, O.AutoInc)
+
     def maintenanceRecordPK = column[Long]("maintenanceRecordPK")
+
     def acquisitionDate = column[Timestamp]("acquisitionDate")
+
     def SOPInstanceUID = column[Option[String]]("SOPInstanceUID")
+
     def id = column[String]("id")
+
     def value = column[String]("value")
+
     def setup = column[String]("setup")
 
     def * = (
@@ -54,7 +60,7 @@ object Baseline extends Logging {
       SOPInstanceUID,
       id,
       value,
-      setup) <> ((Baseline.apply _)tupled, Baseline.unapply _)
+      setup) <> ((Baseline.apply _) tupled, Baseline.unapply _)
 
     def maintenanceRecordFK = foreignKey("Baseline_maintenanceRecordPKConstraint", maintenanceRecordPK, MaintenanceRecord.query)(_.maintenanceRecordPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -130,6 +136,7 @@ object Baseline extends Logging {
       val m = reqText.filter(rt => idLo.contains(rt))
       m.nonEmpty
     }
+
     val acceptable = list.filter(mb => ((!mb._1.category.equals(MaintenanceCategory.setBaseline))) || (idInSet(mb._2))).map(mb => mb._1)
 
     val result = acceptable.toList.groupBy(m => m.maintenanceRecordPK).values.map(v => v.head).toSeq.sortBy(_.creationTime.getTime)
@@ -141,5 +148,81 @@ object Baseline extends Logging {
    */
   def makeBaseline(maintenanceRecordPK: Long, dataDate: Timestamp, SOPInstanceUID: String, id: String, value: Double): Baseline = {
     new Baseline(None, maintenanceRecordPK, dataDate, Some(SOPInstanceUID), id, value.toString, BaselineSetup.byDefault.toString)
+  }
+
+  def main(args: Array[String]): Unit = {
+
+    def checkSymFlat(): Unit = {
+      val all = Db.run(SymmetryAndFlatness.query.result)
+      Trace.trace(all.size)
+
+      def check(sf: SymmetryAndFlatness): Unit = {
+
+        val output = Output.get(sf.outputPK).get
+
+        val sfDesc =
+          "symmetryAndFlatnessPK : " + sf.symmetryAndFlatnessPK +
+            "    Output: " + sf.outputPK +
+            "    machinePK: " + output.machinePK +
+            "    dataDate: " + output.dataDate +
+            "    beamName: " + sf.beamName
+        "    beamName: " + sf.beamName
+
+        if (sf.flatness_pct == sf.flatnessBaseline_pct) {
+          Trace.trace("this is a baseline " + sfDesc)
+        }
+        else {
+          val bs = all.find(s => s.flatness_pct == sf.flatness_pct)
+          if (bs.isEmpty)
+            Trace.trace("could not find baseline " + sfDesc)
+          else {
+            Trace.trace("did find baseline " + bs.get.symmetryAndFlatnessPK + " : " + sfDesc)
+          }
+        }
+      }
+
+      all.foreach(check _)
+    }
+
+    def markSymFlat(): Unit = {
+      val action = for {
+        sf <- SymmetryAndFlatness.query if
+        sf.axialSymmetry_pct === sf.axialSymmetryBaseline_pct &&
+          sf.transverseSymmetry_pct === sf.transverseSymmetryBaseline_pct &&
+          sf.flatness_pct === sf.flatnessBaseline_pct &&
+          sf.profileConstancy_pct === sf.profileConstancyBaseline_pct
+      } yield {
+        (sf.symmetryAndFlatnessPK)
+      }
+
+      val pkList = Db.run(action.result)
+      Trace.trace("Sym+Flat PK list size: " + pkList.size + "    list: " + pkList.mkString("  "))
+    }
+
+    def markWedge(): Unit = {
+      val action = for {
+        w <- WedgePoint.query if
+        w.percentOfBackground_pct === w.baselinePercentOfBackground_pct
+      } yield {
+        (w.wedgePointPK)
+      }
+
+      val pkList = Db.run(action.result)
+      Trace.trace("Wedge PK list size: " + pkList.size + "    list: " + pkList.mkString("  "))
+    }
+
+    Trace.trace("Validate Config and DB")
+
+    Config.validate
+    DbSetup.init
+
+    Trace.trace("--- Start baseline checks ----------------------------------------------------------")
+
+    checkSymFlat()
+
+    markSymFlat()
+    markWedge()
+
+    Trace.trace("--- Finish baseline checks ----------------------------------------------------------")
   }
 }

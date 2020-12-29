@@ -1,16 +1,24 @@
 package org.aqa.db
 
+import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
 
+import java.sql.Timestamp
 import java.util.Date
 import scala.xml.Elem
 
+/**
+ * Represent the results of a symmetry, flatness, and constancy analysis.
+ *
+ * Note that the limit for the number columns in Slick is 22, and this is exactly 22 columns.
+ */
 case class SymmetryAndFlatness(
                                 symmetryAndFlatnessPK: Option[Long], // primary key
                                 outputPK: Long, // output primary key
                                 SOPInstanceUID: String, // UID of source image
                                 beamName: String, // name of beam in plan
+                                isBaseline_text: String, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.   Note that this is a string instead of a boolean because boolean is not supported by some databases.
 
                                 axialSymmetry_pct: Double,
                                 axialSymmetryBaseline_pct: Double,
@@ -44,12 +52,21 @@ case class SymmetryAndFlatness(
     result
   }
 
+  val isBaseline: Boolean = {
+    isBaseline_text match {
+      case _ if isBaseline_text.equalsIgnoreCase("true") => true
+      case _ => false
+    }
+  }
+
   def insertOrUpdate(): Int = Db.run(SymmetryAndFlatness.query.insertOrUpdate(this))
 
   override def toString: String = {
     "    symmetryAndFlatnessPK: " + symmetryAndFlatnessPK + "\n" +
       "    outputPK: " + outputPK + "\n" +
       "    SOPInstanceUID: " + SOPInstanceUID + "\n" +
+      "    beamName: " + beamName + "\n" +
+      "    isBaseline_text: " + isBaseline_text + "\n" +
       "    axialSymmetry_pct: " + axialSymmetry_pct + "\n" +
       "    axialSymmetryBaseline_pct: " + axialSymmetryBaseline_pct + "\n" +
       "    axialSymmetryStatus: " + axialSymmetryStatus + "\n" +
@@ -70,7 +87,7 @@ case class SymmetryAndFlatness(
   }
 }
 
-object SymmetryAndFlatness extends ProcedureOutput {
+object SymmetryAndFlatness extends ProcedureOutput with Logging {
 
   class SymmetryAndFlatnessTable(tag: Tag) extends Table[SymmetryAndFlatness](tag, "symmetryAndFlatness") {
 
@@ -81,6 +98,8 @@ object SymmetryAndFlatness extends ProcedureOutput {
     def SOPInstanceUID = column[String]("SOPInstanceUID")
 
     def beamName = column[String]("beamName")
+
+    def isBaseline_text = column[String]("isBaseline_text")
 
     def axialSymmetry_pct = column[Double]("axialSymmetry_pct")
 
@@ -122,6 +141,7 @@ object SymmetryAndFlatness extends ProcedureOutput {
       outputPK,
       SOPInstanceUID,
       beamName,
+      isBaseline_text,
       axialSymmetry_pct,
       axialSymmetryBaseline_pct,
       axialSymmetryStatus,
@@ -216,7 +236,8 @@ object SymmetryAndFlatness extends ProcedureOutput {
   }
 
   override def insert(elem: Elem, outputPK: Long): Int = {
-    ???
+    logger.error("the insert method should never be called")
+    throw new RuntimeException("the insert method should never be called")
   }
 
   def insertSeq(list: Seq[SymmetryAndFlatness]): Unit = {
@@ -239,10 +260,42 @@ object SymmetryAndFlatness extends ProcedureOutput {
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
       symmetryAndFlatness <- SymmetryAndFlatness.query.filter(c => c.outputPK === output._1 && c.beamName === beamName)
-    } yield {(output._2, symmetryAndFlatness)}
+    } yield {
+      (output._2, symmetryAndFlatness)
+    }
 
     val result = Db.run(search.result).map(h => SymmetryAndFlatnessHistory(h._1.get, h._2)).sortBy(_.date.getTime)
 
     result
   }
+
+  /**
+   * Get the baseline by finding another set of values that
+   *   - were captured before the given time stamp
+   *   - belong to the same machine
+   *   - were produced by the same beam
+   *   - are defined as a baseline because <code>isBaseline_text</code> is true, or failing that, have the chronologically earliest preceding <code>SymmetryAndFlatness</code>.
+   *
+   * @param machinePK Match this machine
+   * @param beamName  Match this beam
+   * @param dataDate  Most recent that is at or before this time
+   * @return The baseline value to use, or None if not found.
+   */
+  def getBaseline(machinePK: Long, beamName: String, dataDate: Timestamp): Option[SymmetryAndFlatness] = {
+    val ts = new Timestamp(dataDate.getTime - (60 * 60 * 1000)) // allow for some leeway in the timestamp
+
+    val result = {
+      val search = for {
+        output <- Output.query.filter(o => (o.dataDate <= ts) && o.machinePK === machinePK).map(o => o)
+        symAndFlat <- SymmetryAndFlatness.query.
+          filter(saf => (saf.outputPK === output.outputPK) &&
+            (saf.beamName === beamName) &&
+            saf.flatness_pct === saf.flatnessBaseline_pct)
+      } yield (output, symAndFlat)
+      Db.run(search.result).sortBy(o => o._1.dataDate.get.getTime).reverse.map(os => os._2).headOption
+    }
+
+    result
+  }
+
 }

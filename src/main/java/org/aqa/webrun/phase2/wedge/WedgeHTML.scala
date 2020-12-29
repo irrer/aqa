@@ -202,7 +202,7 @@ object WedgeHTML {
     val wedgeDir = new File(outputDir, "wedge")
     wedgeDir.mkdirs
 
-    val history = WedgePoint.recentHistory(Config.WedgeHistoryRange, extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get, extendedData.output.dataDate)
+    val history = WedgePoint.recentHistory(extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get)
 
     val htmlJs = {
       wedgePointList.map(wp => beamToDisplay(wp, extendedData, runReq, wedgeDir, history, collimatorCenterOfRotation))

@@ -6,6 +6,7 @@ import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -153,6 +154,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
   def makeBaselineName(beamName: String, dataName: String): String = dataName + " " + beamName
 
+  // case class BeamResultBaseline(result: SymmetryAndFlatnessBeamResult, maintenanceRecordBaseline: Seq[MaintenanceRecordBaseline], pointSet: PointSet) {}
   case class BeamResultBaseline(result: SymmetryAndFlatnessBeamResult, maintenanceRecordBaseline: Seq[MaintenanceRecordBaseline], pointSet: PointSet) {}
 
   /**
@@ -167,13 +169,25 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   }
 
   /**
+   * Get the baseline for the given beam of the given type (dataName).  If it does not exist, then use this one to establish it.
+   */
+  private def getBaseline2(machinePK: Long, beamName: String, dataDate: Timestamp): SymmetryAndFlatness = {
+    val saf = SymmetryAndFlatness.getBaseline(machinePK, beamName, dataDate)
+    if (saf.isDefined)
+      saf.get
+    else
+      throw new RuntimeException("Baseline is not defined for machine " + machinePK + "    beam: " + beamName + "    dataData: " + dataDate)
+  }
+
+  /**
    * Analyze for symmetry and flatness.  The results should be sufficient to support both recording to
    * the database and generating a report.
    *
    */
-  private def analyze(beamName: String, extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): BeamResultBaseline = {
+  private def analyze(beamName: String, machinePK: Long, dataDate: Timestamp, attributeList: AttributeList,
+                      correctedImage: DicomImage, collimatorCentering: CollimatorCentering): BeamResultBaseline = {
     logger.info("Begin analysis of beam " + beamName)
-    val attributeList: AttributeList = getAttributeList(beamName, runReq)
+    // val attributeList: AttributeList = getAttributeList(beamName, runReq)
     val dicomImage = new DicomImage(attributeList)
     val RescaleSlope = attributeList.get(TagFromName.RescaleSlope).getDoubleValues.head
     val RescaleIntercept = attributeList.get(TagFromName.RescaleIntercept).getDoubleValues.head
@@ -190,8 +204,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val flatness = pointSet.flatness
     logger.info("Flatness of beam " + beamName + " : " + flatness)
 
-    logger.info("Getting corrected image of beam " + beamName)
-    val correctedImage = runReq.derivedMap(beamName).pixelCorrectedImage
+    // logger.info("Getting corrected image of beam " + beamName)
+    // val correctedImage = runReq.derivedMap(beamName).pixelCorrectedImage
 
     logger.info("Making annotated image of beam " + beamName)
     val annotatedImage = makeAnnotatedImage(correctedImage, attributeList, pointSet)
@@ -214,8 +228,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val axial_pct = (0 until translator.height).map(y => translator.pix2Iso(0, y).getY)
 
     logger.info("Getting baseline values for beam " + beamName)
-    val machinePK = extendedData.machine.machinePK.get
-    val timestamp = extendedData.output.dataDate.get
+    //val machinePK = extendedData.machine.machinePK.get
+    val timestamp = dataDate
     val axialSymmetryBaseline = getBaseline(machinePK, beamName, axialSymmetryName, attributeList, pointSet.axialSymmetry, timestamp)
     val transverseSymmetryBaseline = getBaseline(machinePK, beamName, transverseSymmetryName, attributeList, transverseSymmetry, timestamp)
     val flatnessBaseline = getBaseline(machinePK, beamName, flatnessName, attributeList, flatness, timestamp)
@@ -272,9 +286,30 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       axial_pct,
       baselinePointSet)
 
+    val base2 = getBaseline2(machinePK, beamName, dataDate)
+    if (base2.flatnessBaseline_pct == flatnessBaseline.baseline.value.toDouble)
+      Trace.trace("yay")
+    else
+      Trace.trace("What?")
+
     logger.info("Finished analysis of beam " + beamName)
 
     BeamResultBaseline(result, maintenanceRecordBaselineList, pointSet)
+  }
+
+  /**
+   * Entry point for testing only.
+   *
+   * @param beamName            Name of beam.
+   * @param machinePK           Machine being processed.
+   * @param dataDate            Date that data was acquired at the machine.
+   * @param attributeList       Image and metadata.
+   * @param correctedImage      Image with bad pixels fixed.
+   * @param collimatorCentering Collimator center offset.
+   * @return
+   */
+  def testAnalyze(beamName: String, machinePK: Long, dataDate: Timestamp, attributeList: AttributeList, correctedImage: DicomImage, collimatorCentering: CollimatorCentering): BeamResultBaseline = {
+    analyze(beamName, machinePK, dataDate, attributeList, correctedImage, collimatorCentering)
   }
 
   private def storeResultsInDb(resultList: List[SymmetryAndFlatnessAnalysis.BeamResultBaseline], outputPK: Long): Unit = {
@@ -286,6 +321,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
         outputPK,
         sf.SOPInstanceUID,
         sf.beamName,
+        isBaseline_text = false.toString,
 
         sf.axialSymmetry,
         sf.axialSymmetryBaseline,
@@ -350,7 +386,11 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       val beamNameList = Config.SymmetryAndFlatnessBeamList.filter(beamName => runReq.derivedMap.contains(beamName))
 
       // only process beams that are both configured and have been uploaded
-      val resultList = beamNameList.par.map(beamName => analyze(beamName, extendedData, runReq, collimatorCentering)).toList
+      val resultList = beamNameList.par.map(beamName =>
+        analyze(beamName, extendedData.machine.machinePK.get, extendedData.output.dataDate.get,
+          attributeList = getAttributeList(beamName, runReq),
+          correctedImage = runReq.derivedMap(beamName).pixelCorrectedImage,
+          collimatorCentering)).toList
 
       val pass = {
         0 match {
