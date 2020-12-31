@@ -7,6 +7,7 @@ import edu.umro.ScalaUtil.DicomUtil
 import javax.vecmath.Matrix4d
 import javax.vecmath.Point3d
 import edu.umro.ScalaUtil.Trace
+import edu.umro.DicomDict.TagByName
 
 /**
  * Support operations on image registration (spatial transforms) files.
@@ -23,7 +24,7 @@ case class ImageRegistration(attrList: AttributeList) {
   val frameOfRefUID = getFrUid(attrList)
 
   private val otherImageSeq = {
-    val regSeq = DicomUtil.seqToAttr(attrList, TagFromName.RegistrationSequence)
+    val regSeq = DicomUtil.seqToAttr(attrList, TagByName.RegistrationSequence)
     regSeq.filterNot(rs => getFrUid(rs).equals(frameOfRefUID)).head
   }
 
@@ -37,9 +38,9 @@ case class ImageRegistration(attrList: AttributeList) {
   def sameFrameOfRef(al: AttributeList): Boolean = getFrUid(al).equals(frameOfRefUID)
 
   private val matrix = {
-    val mrs = DicomUtil.seqToAttr(otherImageSeq, TagFromName.MatrixRegistrationSequence).head
-    val ms = DicomUtil.seqToAttr(mrs, TagFromName.MatrixSequence).head
-    val fortm = ms.get(TagFromName.FrameOfReferenceTransformationMatrix)
+    val mrs = DicomUtil.seqToAttr(otherImageSeq, TagByName.MatrixRegistrationSequence).head
+    val ms = DicomUtil.seqToAttr(mrs, TagByName.MatrixSequence).head
+    val fortm = ms.get(TagByName.FrameOfReferenceTransformationMatrix)
     new Matrix4d(fortm.getDoubleValues)
   }
 

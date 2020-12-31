@@ -34,6 +34,7 @@ import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.webrun.ExtendedData
 import org.aqa.web.OutputList
+import edu.umro.DicomDict.TagByName
 
 /**
  * Utilities for Phase 2.
@@ -44,7 +45,7 @@ object Phase2Util extends Logging {
    * Get the plan that this image references.  If it does not reference exactly one it will throw an exception.
    */
   def referencedPlanUID(rtimage: AttributeList): String = {
-    val planSeqList = DicomUtil.seqToAttr(rtimage, TagFromName.ReferencedRTPlanSequence)
+    val planSeqList = DicomUtil.seqToAttr(rtimage, TagByName.ReferencedRTPlanSequence)
     val planUidList = planSeqList.map(al => al.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrNull).filter(uid => uid != null).distinct
     if (planUidList.size != 1) throw new RuntimeException("RTIMAGE file should reference exactly one plan, but actually references " + planUidList.size)
     planUidList.head
@@ -61,7 +62,7 @@ object Phase2Util extends Logging {
         val j = imgRef.equals(planUID)
         imgRef.equals(planUID)
       }
-      val doesRefPlan = DicomUtil.seqToAttr(image, TagFromName.ReferencedRTPlanSequence).filter(al => doesRef(al)).nonEmpty
+      val doesRefPlan = DicomUtil.seqToAttr(image, TagByName.ReferencedRTPlanSequence).filter(al => doesRef(al)).nonEmpty
       doesRefPlan
     } catch {
       case t: Throwable => false
@@ -143,8 +144,8 @@ object Phase2Util extends Logging {
    */
   def getBeamNameOfRtimage(plan: AttributeList, rtimage: AttributeList): Option[String] = {
     try {
-      val ReferencedBeamNumber = rtimage.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head
-      val beam = DicomUtil.seqToAttr(plan, TagFromName.BeamSequence).find(bs => bs.get(TagFromName.BeamNumber).getIntegerValues().head == ReferencedBeamNumber).get
+      val ReferencedBeamNumber = rtimage.get(TagByName.ReferencedBeamNumber).getIntegerValues.head
+      val beam = DicomUtil.seqToAttr(plan, TagByName.BeamSequence).find(bs => bs.get(TagByName.BeamNumber).getIntegerValues().head == ReferencedBeamNumber).get
       val BeamName = Util.normalizedBeamName(beam)
       val bn = if (BeamName == "") None else Some(BeamName.trim)
       bn
@@ -162,7 +163,7 @@ object Phase2Util extends Logging {
    * Given an RTPLAN and a beam name, get the beam sequence.
    */
   def getBeamSequenceOfPlan(beamName: String, plan: AttributeList): AttributeList = {
-    val bs = DicomUtil.seqToAttr(plan, TagFromName.BeamSequence).filter(b => Util.normalizedBeamName(b).equals(beamName.trim)).head
+    val bs = DicomUtil.seqToAttr(plan, TagByName.BeamSequence).filter(b => Util.normalizedBeamName(b).equals(beamName.trim)).head
     bs
   }
 
@@ -325,7 +326,7 @@ object Phase2Util extends Logging {
   //  }
 
   def getImagePlanePixelSpacing(attributeList: AttributeList): Point2D.Double = {
-    val ImagePlanePixelSpacing = attributeList.get(TagFromName.ImagePlanePixelSpacing).getDoubleValues
+    val ImagePlanePixelSpacing = attributeList.get(TagByName.ImagePlanePixelSpacing).getDoubleValues
     new Point2D.Double(ImagePlanePixelSpacing(0), ImagePlanePixelSpacing(1))
   }
 
@@ -352,8 +353,8 @@ object Phase2Util extends Logging {
 
   def angleDescription(al: AttributeList): String = {
     try {
-      val g = al.get(TagFromName.GantryAngle).getDoubleValues.head
-      val c = al.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head
+      val g = al.get(TagByName.GantryAngle).getDoubleValues.head
+      val c = al.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head
 
       "G" + Util.angleRoundedTo90(g) + " C" + Util.angleRoundedTo90(c)
     } catch {
@@ -456,9 +457,9 @@ object Phase2Util extends Logging {
    */
   def getBeamSequence(plan: AttributeList, beamNumber: Int): AttributeList = {
     // Determine if the given attribute list references the given beam number.
-    def matchesBeam(beamNumber: Int, al: AttributeList): Boolean = (al.get(TagFromName.BeamNumber).getIntegerValues.head == beamNumber)
+    def matchesBeam(beamNumber: Int, al: AttributeList): Boolean = (al.get(TagByName.BeamNumber).getIntegerValues.head == beamNumber)
 
-    DicomUtil.seqToAttr(plan, TagFromName.BeamSequence).find(bs => matchesBeam(beamNumber, bs)).get
+    DicomUtil.seqToAttr(plan, TagByName.BeamSequence).find(bs => matchesBeam(beamNumber, bs)).get
   }
 
   /**
@@ -468,6 +469,6 @@ object Phase2Util extends Logging {
    *
    * Other collimator angles such as 45 degrees may give unexpected results.
    */
-  def isHorizontal(image: AttributeList): Boolean = (Util.angleRoundedTo90(image.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head).toInt % 180) == 0
+  def isHorizontal(image: AttributeList): Boolean = (Util.angleRoundedTo90(image.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head).toInt % 180) == 0
 
 }

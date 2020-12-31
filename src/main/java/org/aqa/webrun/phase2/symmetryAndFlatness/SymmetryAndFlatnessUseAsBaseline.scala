@@ -1,26 +1,26 @@
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
-import org.aqa.web.WebUtil.SubUrlRun
-import org.restlet.Restlet
-import org.restlet.Response
-import org.restlet.Request
-import org.aqa.web.WebUtil._
-import org.aqa.web.WebUtil
-import org.aqa.db.Output
-import org.aqa.db.Machine
-import org.aqa.db.SymmetryAndFlatness
+import org.aqa.Config
 import org.aqa.Logging
-import org.aqa.db.MaintenanceRecord
-import java.sql.Timestamp
-import SymmetryAndFlatnessUseAsBaseline._
 import org.aqa.db.Baseline
 import org.aqa.db.BaselineSetup
 import org.aqa.db.Input
-import scala.xml.Elem
-import org.aqa.web.MaintenanceRecordUpdate
-import org.restlet.data.Status
+import org.aqa.db.Machine
 import org.aqa.db.MaintenanceCategory
-import org.aqa.Config
+import org.aqa.db.MaintenanceRecord
+import org.aqa.db.Output
+import org.aqa.db.SymmetryAndFlatness
+import org.aqa.web.WebUtil
+import org.aqa.web.WebUtil.SubUrlRun
+import org.aqa.web.WebUtil._
+import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessUseAsBaseline._
+import org.restlet.Request
+import org.restlet.Response
+import org.restlet.Restlet
+import org.restlet.data.Status
+
+import java.sql.Timestamp
+import scala.xml.Elem
 
 object SymmetryAndFlatnessUseAsBaseline {
   val path = new String((new SymmetryAndFlatnessUseAsBaseline).pathOf)
@@ -84,7 +84,7 @@ class SymmetryAndFlatnessUseAsBaseline extends Restlet with SubUrlRun with Loggi
     val acquisitionDate = if (input.dataDate.isDefined) input.dataDate.get else creationTime
 
     val maintenanceRecord = { new MaintenanceRecord(None, MaintenanceCategory.setBaseline, machine.machinePK.get, creationTime, userPK, Some(outputPK), summary, preamble + valueText) }.insert
-    val baselineList = safList.map(saf => safToBaselineList(saf, maintenanceRecord.maintenanceRecordPK.get, acquisitionDate)).flatten
+    val baselineList = safList.flatMap(saf => safToBaselineList(saf, maintenanceRecord.maintenanceRecordPK.get, acquisitionDate))
     Baseline.insert(baselineList)
     logger.info("User " + userId + " created MaintenanceRecord record for Symmetry and Flatness " + maintenanceRecord)
     maintenanceRecord
@@ -160,9 +160,7 @@ class SymmetryAndFlatnessUseAsBaseline extends Restlet with SubUrlRun with Loggi
       val html = WebUtil.wrapBody(content, "Set Baseline for Symmetry and Flatness")
       WebUtil.setResponse(html, response, Status.SUCCESS_OK)
     } catch {
-      case t: Throwable => {
-        WebUtil.internalFailure(response, t)
-      }
+      case t: Throwable => WebUtil.internalFailure(response, t)
     }
 
   }

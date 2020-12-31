@@ -20,6 +20,7 @@ import com.pixelmed.dicom.AttributeTag
 import javax.vecmath.Point3d
 import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.DicomDict.TagByName
 
 /**
  * Locate the BB in the EPID image.  The following steps are taken:
@@ -111,9 +112,9 @@ object BBbyEPIDImageAnalysis extends Logging {
       epidImageX_mm = bbLocation.getX,
       epidImageY_mm = bbLocation.getY,
       epid3DX_mm, epid3DY_mm, epid3DZ_mm,
-      getDbl(TagFromName.TableTopLateralPosition), // tableXlateral_mm
-      getDbl(TagFromName.TableTopVerticalPosition), // tableYvertical_mm
-      getDbl(TagFromName.TableTopLongitudinalPosition), // tableZlongitudinal_mm
+      getDbl(TagByName.TableTopLateralPosition), // tableXlateral_mm
+      getDbl(TagByName.TableTopVerticalPosition), // tableYvertical_mm
+      getDbl(TagByName.TableTopLongitudinalPosition), // tableZlongitudinal_mm
       metadata_dcm_zip)
 
     logger.info("constructed BBbyEPID: " + BBbyEPID)

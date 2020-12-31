@@ -18,6 +18,7 @@ import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.DicomUtil
 import com.pixelmed.dicom.AttributeList
+import edu.umro.DicomDict.TagByName
 
 /**
  * Test the Config.
@@ -55,7 +56,7 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
       val beamName = file.getName
       val FloodCompensation = false
       val outputPK = -1.toLong
-      val collimatorAngle = al.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head
+      val collimatorAngle = al.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head
       println("collimatorAngle: " + collimatorAngle)
 
       val floodOffset = new Point(0, 0)
@@ -93,7 +94,7 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
       val beamName = file.getName
       val FloodCompensation = true
       val outputPK = -1.toLong
-      val collimatorAngle = al.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head
+      val collimatorAngle = al.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head
       println("collimatorAngle: " + collimatorAngle)
 
       val results = CollimatorPositionAnalysis.testMeasureImage(beamName, FloodCompensation, biasAndPixelCorrectedCroppedImage, pixelCorrectedImage,

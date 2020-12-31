@@ -8,6 +8,8 @@ import scala.collection.Seq
 
 object SymmetryAndFlatnessCSV {
 
+
+
   val csvFileName = "SymmetryAndFlatness.csv"
 
   def makeCsvFile(extendedData: ExtendedData, runReq: RunReq, symmetryAndFlatnessSeq: Seq[SymmetryAndFlatnessAnalysis.BeamResultBaseline], subDir: File) = {

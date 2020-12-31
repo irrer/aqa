@@ -10,6 +10,7 @@ import com.pixelmed.dicom.TagFromName
 import org.aqa.Util
 import edu.umro.ScalaUtil.DicomUtil
 import com.pixelmed.dicom.TagFromName
+import edu.umro.DicomDict.TagByName
 
 /**
  * Compare position of BB in CBCT to RTPLAN isocenter.
@@ -42,11 +43,11 @@ object MultMatrix2 {
       val frameOfRef = Util.getAttrValue(rtimage, TagFromName.FrameOfReferenceUID).get
       val PatientID = Util.getAttrValue(rtimage, TagFromName.PatientID).get
       val date = Util.standardDateFormat.format(Util.extractDateTimeAndPatientIdFromDicomAl(rtimage)._1.head)
-      val planUID = DicomUtil.seqToAttr(rtimage, TagFromName.ReferencedRTPlanSequence).
+      val planUID = DicomUtil.seqToAttr(rtimage, TagByName.ReferencedRTPlanSequence).
         head.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrEmptyString
 
-      val isoPoint = new Point3d(rtimage.get(TagFromName.IsocenterPosition).getDoubleValues)
-      val XRayImageReceptorTranslation = new Point3d(rtimage.get(TagFromName.XRayImageReceptorTranslation).getDoubleValues)
+      val isoPoint = new Point3d(rtimage.get(TagByName.IsocenterPosition).getDoubleValues)
+      val XRayImageReceptorTranslation = new Point3d(rtimage.get(TagByName.XRayImageReceptorTranslation).getDoubleValues)
       //val reg = regList.find(reg => reg.frameOfRefUID.equals(frameOfRef))
 
       val okReg = regList.filter(reg => reg.frameOfRefUID.equals(frameOfRef))

@@ -22,6 +22,7 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.Phase2Util
 import com.pixelmed.dicom.TagFromName
+import edu.umro.DicomDict.TagByName
 
 object MetadataCheckHTML {
   val htmlFileName = "MetadataCheck.html"
@@ -63,7 +64,7 @@ object MetadataCheckHTML {
     }
 
     val originalBeamNameList = {
-      DicomUtil.seqToAttr(runReq.rtplan, TagFromName.BeamSequence).map(bs => bs.get(TagFromName.BeamName).getSingleStringValueOrEmptyString).filter(bn => bn.size > 0)
+      DicomUtil.seqToAttr(runReq.rtplan, TagByName.BeamSequence).map(bs => bs.get(TagByName.BeamName).getSingleStringValueOrEmptyString).filter(bn => bn.size > 0)
     }
 
     def originalBeamName(psnChk: MetadataCheck): String = {

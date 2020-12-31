@@ -18,6 +18,7 @@ import com.pixelmed.dicom.AttributeTag
 import edu.umro.ScalaUtil.DicomUtil
 import com.pixelmed.dicom.ValueRepresentation
 import com.pixelmed.dicom.AttributeList
+import edu.umro.DicomDict.TagByName
 
 object DailyQACSV {
 
@@ -219,20 +220,20 @@ object DailyQACSV {
       new Col("Horz (EPID-ISO) - (CBCT-ISO) Y mm", (dataSet) => dataSet.composite.yAdjusted_mm.get.toString),
       new Col("Horz (EPID-ISO) - (CBCT-ISO) Z mm", (dataSet) => (dataSet.horzList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ).toString),
 
-      new Col("EPID Vert XRay Offset X mm", (dataSet) => (getEpidVertNums(dataSet, TagFromName.XRayImageReceptorTranslation))(0)),
-      new Col("EPID Vert XRay Offset Y mm", (dataSet) => (getEpidVertNums(dataSet, TagFromName.XRayImageReceptorTranslation))(1)),
-      new Col("EPID Vert XRay Offset Z mm", (dataSet) => (getEpidVertNums(dataSet, TagFromName.XRayImageReceptorTranslation))(2)),
+      new Col("EPID Vert XRay Offset X mm", (dataSet) => (getEpidVertNums(dataSet, TagByName.XRayImageReceptorTranslation))(0)),
+      new Col("EPID Vert XRay Offset Y mm", (dataSet) => (getEpidVertNums(dataSet, TagByName.XRayImageReceptorTranslation))(1)),
+      new Col("EPID Vert XRay Offset Z mm", (dataSet) => (getEpidVertNums(dataSet, TagByName.XRayImageReceptorTranslation))(2)),
 
-      new Col("EPID Horz XRay Offset X mm", (dataSet) => (getEpidHorzNums(dataSet, TagFromName.XRayImageReceptorTranslation))(0)),
-      new Col("EPID Horz XRay Offset Y mm", (dataSet) => (getEpidHorzNums(dataSet, TagFromName.XRayImageReceptorTranslation))(1)),
-      new Col("EPID Horz XRay Offset Z mm", (dataSet) => (getEpidHorzNums(dataSet, TagFromName.XRayImageReceptorTranslation))(2)),
+      new Col("EPID Horz XRay Offset X mm", (dataSet) => (getEpidHorzNums(dataSet, TagByName.XRayImageReceptorTranslation))(0)),
+      new Col("EPID Horz XRay Offset Y mm", (dataSet) => (getEpidHorzNums(dataSet, TagByName.XRayImageReceptorTranslation))(1)),
+      new Col("EPID Horz XRay Offset Z mm", (dataSet) => (getEpidHorzNums(dataSet, TagByName.XRayImageReceptorTranslation))(2)),
 
       new Col("Avg (EPID-ISO) - (CBCT-ISO) Z mm", (dataSet) => (dataSet.composite.zAdjusted_mm.get).toString),
 
       new Col("No. of EPID images", (dataSet) => dataSet.bbByEpid.size.toString),
 
-      new Col("EPID pixel spacing X mm", (dataSet) => (getEpidNums(dataSet, TagFromName.ImagePlanePixelSpacing))(0)),
-      new Col("EPID pixel spacing Y mm", (dataSet) => (getEpidNums(dataSet, TagFromName.ImagePlanePixelSpacing))(1)),
+      new Col("EPID pixel spacing X mm", (dataSet) => (getEpidNums(dataSet, TagByName.ImagePlanePixelSpacing))(0)),
+      new Col("EPID pixel spacing Y mm", (dataSet) => (getEpidNums(dataSet, TagByName.ImagePlanePixelSpacing))(1)),
 
       new Col("CBCT pixel spacing X mm", (dataSet) => (getCbctNums(dataSet, TagFromName.PixelSpacing))(0)),
       new Col("CBCT pixel spacing Y mm", (dataSet) => (getCbctNums(dataSet, TagFromName.PixelSpacing))(1)),
@@ -241,9 +242,9 @@ object DailyQACSV {
       new Col("CBCT num Y pix", (dataSet) => (getCbctNums(dataSet, TagFromName.Rows))(0)),
       new Col("CBCT num Z pix (slices)", (dataSet) => dataSet.cbctDicomSeries.size.toString),
 
-      new Col("CBCT KVP Peak kilo voltage", (dataSet) => (getCbctNums(dataSet, TagFromName.KVP))(0)),
-      new Col("CBCT Exposure Time msec", (dataSet) => (getCbctNums(dataSet, TagFromName.ExposureTime))(0)),
-      new Col("CBCT X-Ray Tube Current mA", (dataSet) => (getCbctNums(dataSet, TagFromName.XRayTubeCurrent))(0)),
+      new Col("CBCT KVP Peak kilo voltage", (dataSet) => (getCbctNums(dataSet, TagByName.KVP))(0)),
+      new Col("CBCT Exposure Time msec", (dataSet) => (getCbctNums(dataSet, TagByName.ExposureTime))(0)),
+      new Col("CBCT X-Ray Tube Current mA", (dataSet) => (getCbctNums(dataSet, TagByName.XRayTubeCurrent))(0)),
 
       new Col("CBCT Details", (dataSet) => urlPrefix + ViewOutput.viewOutputUrl(dataSet.cbct.outputPK)),
       new Col("EPID Details", (dataSet) => urlPrefix + ViewOutput.viewOutputUrl(dataSet.composite.outputPK)))

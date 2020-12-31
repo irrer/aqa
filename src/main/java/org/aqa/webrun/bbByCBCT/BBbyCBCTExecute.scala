@@ -32,6 +32,7 @@ import com.pixelmed.dicom.AttributeTag
 import org.restlet.Response
 import javax.vecmath.Matrix4d
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.DicomDict.TagByName
 
 /**
  * After the data has has been validated as sufficient to do the analysis, perform the
@@ -94,9 +95,9 @@ object BBbyCBCTExecute extends Logging {
       bbPointInRtplan.getX, // cbctX_mm
       bbPointInRtplan.getY, // cbctY_mm
       bbPointInRtplan.getZ, // cbctZ_mm
-      getDbl(TagFromName.TableTopLateralPosition), // tableXlateral_mm
+      getDbl(TagByName.TableTopLateralPosition), // tableXlateral_mm
       -getDbl(TagFromName.TableHeight), // tableYvertical_mm.  Intentionally negated to conform to physicists' view.
-      getDbl(TagFromName.TableTopLongitudinalPosition), // tableZlongitudinal_mmf
+      getDbl(TagByName.TableTopLongitudinalPosition), // tableZlongitudinal_mmf
       metadata_dcm_zip)
 
     logger.info("Inserting BBbyCBCT into database: " + bbByCBCT)

@@ -20,6 +20,7 @@ import org.aqa.Config
 import edu.umro.ImageUtil.DicomImage
 import org.aqa.Util
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import edu.umro.DicomDict.TagByName
 
 object VMATAnalysis extends Logging {
 
@@ -27,12 +28,12 @@ object VMATAnalysis extends Logging {
 
     val beamSeq = Phase2Util.getBeamSequenceOfPlan(beamPair.MLC, plan)
 
-    val beamLimitList = DicomUtil.findAllSingle(beamSeq, TagFromName.BeamLimitingDevicePositionSequence).
+    val beamLimitList = DicomUtil.findAllSingle(beamSeq, TagByName.BeamLimitingDevicePositionSequence).
       map(bdps => bdps.asInstanceOf[SequenceAttribute]).
       map(bdps => DicomUtil.alOfSeq(bdps)).
       flatten
 
-    val controlPointSeq = DicomUtil.findAllSingle(beamSeq, TagFromName.ControlPointSequence).map(s => DicomUtil.alOfSeq(s.asInstanceOf[SequenceAttribute])).flatten
+    val controlPointSeq = DicomUtil.findAllSingle(beamSeq, TagByName.ControlPointSequence).map(s => DicomUtil.alOfSeq(s.asInstanceOf[SequenceAttribute])).flatten
 
     /**
      * Determine if the limits are of interest, meaning that they are
@@ -41,11 +42,11 @@ object VMATAnalysis extends Logging {
      */
     def mlcOfInterest(bl: AttributeList): Option[(Double, Double)] = {
       def isMLC = {
-        val t = bl.get(TagFromName.RTBeamLimitingDeviceType)
+        val t = bl.get(TagByName.RTBeamLimitingDeviceType)
         (t != null) && t.getSingleStringValueOrEmptyString.toUpperCase.contains("MLCX")
       }
 
-      val ljp = bl.get(TagFromName.LeafJawPositions).getDoubleValues.distinct
+      val ljp = bl.get(TagByName.LeafJawPositions).getDoubleValues.distinct
       val max = ljp.max
       val min = ljp.min
 
@@ -66,12 +67,12 @@ object VMATAnalysis extends Logging {
      */
     val openLimits: MinMax = {
       val beamSeqOpen = Phase2Util.getBeamSequenceOfPlan(beamPair.OPEN, plan)
-      val beamLimitListOpen = DicomUtil.findAllSingle(beamSeqOpen, TagFromName.BeamLimitingDevicePositionSequence).
+      val beamLimitListOpen = DicomUtil.findAllSingle(beamSeqOpen, TagByName.BeamLimitingDevicePositionSequence).
         map(bdps => bdps.asInstanceOf[SequenceAttribute]).
         map(bdps => DicomUtil.alOfSeq(bdps)).
         flatten
-      val xSeq = beamLimitListOpen.filter(bl => bl.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString.toUpperCase.endsWith("X")).head
-      val xLimits = xSeq.get(TagFromName.LeafJawPositions).getDoubleValues
+      val xSeq = beamLimitListOpen.filter(bl => bl.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString.toUpperCase.endsWith("X")).head
+      val xLimits = xSeq.get(TagByName.LeafJawPositions).getDoubleValues
       new MinMax(xLimits(0), xLimits(1))
     }
 
@@ -104,9 +105,9 @@ object VMATAnalysis extends Logging {
 
     // single low-high pair specifying Y limits
     val yLimits = {
-      def isJawY(bl: AttributeList) = bl.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString.trim.equalsIgnoreCase("Y")
+      def isJawY(bl: AttributeList) = bl.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString.trim.equalsIgnoreCase("Y")
       val jawPos = beamLimitList.filter(bl => isJawY(bl)).head
-      val pair = jawPos.get(TagFromName.LeafJawPositions).getDoubleValues.sorted
+      val pair = jawPos.get(TagByName.LeafJawPositions).getDoubleValues.sorted
       new MinMax(pair(0), pair(1))
     }
 
@@ -123,7 +124,7 @@ object VMATAnalysis extends Logging {
    */
   private def getCollimatorAngle(beamName: String, plan: AttributeList): Double = {
     val beamSeq = Phase2Util.getBeamSequenceOfPlan(beamName, plan)
-    val BeamLimitingDeviceAngle = DicomUtil.findAllSingle(beamSeq, TagFromName.BeamLimitingDeviceAngle).head
+    val BeamLimitingDeviceAngle = DicomUtil.findAllSingle(beamSeq, TagByName.BeamLimitingDeviceAngle).head
     val collAngle = BeamLimitingDeviceAngle.getDoubleValues.head
     collAngle
   }

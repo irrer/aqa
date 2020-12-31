@@ -1,42 +1,23 @@
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
+import org.aqa.run.ProcedureStatus
+import org.aqa.web.WebServer
+import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.webrun.phase2.RunReq
+import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessAnalysis._
+import org.aqa.Config
 import org.aqa.Logging
-import org.aqa.db.CollimatorPosition
-import com.pixelmed.dicom.AttributeTag
-import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.TagFromName
-import org.aqa.Util
+
+import java.io.File
 import scala.collection.Seq
 import scala.xml.Elem
-import org.aqa.db.Output
-import org.aqa.run.ProcedureStatus
-import org.aqa.DicomFile
-import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.ImageUtil
-import java.awt.geom.Point2D
-import org.aqa.Config
-import java.awt.Rectangle
-import edu.umro.ImageUtil.LocateEdge
-import java.awt.image.BufferedImage
-import java.awt.Color
-import java.awt.Graphics2D
-import java.awt.BasicStroke
-import edu.umro.ScalaUtil.Trace
-import scala.collection.parallel.ParSeq
-import org.aqa.db.CollimatorCentering
-import java.awt.Point
-import edu.umro.ImageUtil.ImageText
-import java.io.File
-import org.aqa.web.WebServer
-import SymmetryAndFlatnessAnalysis._
-import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.phase2.RunReq
-import org.aqa.webrun.phase2.Phase2Util
 
 /**
  * Analyze DICOM files for symmetry and flatness.
  */
 object SymmetryAndFlatnessSubHTML extends Logging {
+
 
   private def titleDetails = "Click to view graphs and other details"
   private def titleImage = "Click to view DICOM metadata"
@@ -79,10 +60,10 @@ object SymmetryAndFlatnessSubHTML extends Logging {
 
   private def pctRounded(pct: Double) = {
     val factor = 1000000000L
-    (pct * factor).round.toLong.toDouble / factor
+    (pct * factor).round.toDouble / factor
   }
 
-  private def detailsColumn(subDir: File, beamName: String, extendedData: ExtendedData, runReq: RunReq): Elem = {
+  private def detailsColumn(subDir: File, beamName: String, runReq: RunReq): Elem = {
 
     val al = {
       if (beamName.equals(Config.FloodFieldBeamName)) runReq.flood
@@ -217,7 +198,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     Seq(
       {
         <tr align="center">
-          { detailsColumn(subDir, result.beamName, extendedData, runReq) }
+          { detailsColumn(subDir, result.beamName, runReq) }
           { imageColumn(subDir, result.beamName, extendedData, runReq) }
           <td style="text-align: center;">Axial Symmetry</td>
           { axialSymmetryBaselineColumn(result) }
@@ -255,7 +236,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       })
   }
 
-  def makeContent(subDir: File, extendedData: ExtendedData, resultList: List[BeamResultBaseline], status: ProcedureStatus.Value, runReq: RunReq): Elem = {
+  def makeContent(subDir: File, extendedData: ExtendedData, resultList: List[BeamResultBaseline], runReq: RunReq): Elem = {
 
     val useAsBaselineButton: Elem = {
       val href = SymmetryAndFlatnessUseAsBaseline.path + "?outputPK=" + extendedData.output.outputPK.get

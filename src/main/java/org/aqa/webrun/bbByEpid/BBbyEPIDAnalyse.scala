@@ -22,6 +22,7 @@ import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.restlet.Response
 import org.aqa.web.ViewOutput
 import java.awt.geom.Point2D
+import edu.umro.DicomDict.TagByName
 
 /**
  * Given validated data, process it.
@@ -45,11 +46,11 @@ object BBbyEPIDAnalyse extends Logging {
   private def constructEpidMatlab(result: BBbyEPIDImageAnalysis.Result): String = {
 
     def getDbls(tag: AttributeTag) = result.al.get(tag).getDoubleValues
-    val gantryAngle = getDbls(TagFromName.GantryAngle).head
+    val gantryAngle = getDbls(TagByName.GantryAngle).head
     val name = if (isVert(result.al)) "Vert" else "Horz"
-    val ipps = getDbls(TagFromName.ImagePlanePixelSpacing)
-    val rtip = getDbls(TagFromName.RTImagePosition)
-    val rTrans = getDbls(TagFromName.XRayImageReceptorTranslation)
+    val ipps = getDbls(TagByName.ImagePlanePixelSpacing)
+    val rtip = getDbls(TagByName.RTImagePosition)
+    val rTrans = getDbls(TagByName.XRayImageReceptorTranslation)
     val gaRounded = Util.angleRoundedTo90(Util.gantryAngle(result.al))
     val sinCos = if (isVert(result.al))
       "epidIsoX = cos(deg2rad(gantryAngleVert)) * (epidIsoVertX + VertTX);"
@@ -71,9 +72,9 @@ fprintf("MV G ${gaRounded.formatted("%3d")} (BB - DIGITAL_CAX) @ ISOCENTER PLANE
     val text = s"""
 %% Perform isoplane projection and map to RTPLAN coordinates for beam $name : ${Util.angleRoundedTo90(gantryAngle)}
 
-RTImageSID$name = ${getDbls(TagFromName.RTImageSID).head};     %% From DICOM.  Distance from beam to image plane in mm
+RTImageSID$name = ${getDbls(TagByName.RTImageSID).head};     %% From DICOM.  Distance from beam to image plane in mm
 
-RadiationMachineSAD$name = ${getDbls(TagFromName.RadiationMachineSAD).head};     %% From DICOM.  Distance from beam to isoplane in mm
+RadiationMachineSAD$name = ${getDbls(TagByName.RadiationMachineSAD).head};     %% From DICOM.  Distance from beam to isoplane in mm
 
 ImagePlanePixelSpacing${name}X = ${ipps(0)};     %% From DICOM.  Width  of pixel in mm in image plane
 ImagePlanePixelSpacing${name}Y = ${ipps(1)};     %% From DICOM.  Height of pixel in mm in image plane

@@ -11,6 +11,7 @@ import com.pixelmed.dicom.AttributeList
 import org.aqa.ImageRegistration
 import javax.vecmath.Point3d
 import com.pixelmed.dicom.TagFromName
+import edu.umro.DicomDict.TagByName
 
 object TableCoordinates {
 
@@ -63,8 +64,8 @@ object TableCoordinates {
 
     val ctTableHeight = ctAl.get(TagFromName.TableHeight).getDoubleValues().head / 10
     val ctTableTopVerticalPosition = -ctTableHeight
-    val ctTableTopLongitudinalPosition = ctAl.get(TagFromName.TableTopLongitudinalPosition).getDoubleValues().head / 10
-    val ctTableTopLateralPosition = ctAl.get(TagFromName.TableTopLateralPosition).getDoubleValues().head / 10
+    val ctTableTopLongitudinalPosition = ctAl.get(TagByName.TableTopLongitudinalPosition).getDoubleValues().head / 10
+    val ctTableTopLateralPosition = ctAl.get(TagByName.TableTopLateralPosition).getDoubleValues().head / 10
 
     println("ctTableHeight                       : " + ctTableHeight)
     println
@@ -73,10 +74,10 @@ object TableCoordinates {
     println("ctTableTopLateralPosition           : " + ctTableTopLateralPosition)
     println
 
-    val rtimageTableTopVerticalPosition = rtimageAl.get(TagFromName.TableTopVerticalPosition).getDoubleValues().head / 10
+    val rtimageTableTopVerticalPosition = rtimageAl.get(TagByName.TableTopVerticalPosition).getDoubleValues().head / 10
     val rtimageTableHeight = -rtimageTableTopVerticalPosition
-    val rtimageTableTopLongitudinalPosition = rtimageAl.get(TagFromName.TableTopLongitudinalPosition).getDoubleValues().head / 10
-    val rtimageTableTopLateralPosition = rtimageAl.get(TagFromName.TableTopLateralPosition).getDoubleValues().head / 10
+    val rtimageTableTopLongitudinalPosition = rtimageAl.get(TagByName.TableTopLongitudinalPosition).getDoubleValues().head / 10
+    val rtimageTableTopLateralPosition = rtimageAl.get(TagByName.TableTopLateralPosition).getDoubleValues().head / 10
 
     println("rtimageTableTopVerticalPosition     : " + rtimageTableTopVerticalPosition)
     println("rtimageTableTopLongitudinalPosition : " + rtimageTableTopLongitudinalPosition)

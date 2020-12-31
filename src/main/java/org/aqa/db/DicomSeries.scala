@@ -1,11 +1,11 @@
 package org.aqa.db
 
 import Db.driver.api._
-
 import org.aqa.Logging
 import org.aqa.Config
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Util
+
 import java.security.InvalidParameterException
 import java.sql.Timestamp
 import com.pixelmed.dicom.TagFromName
@@ -15,12 +15,15 @@ import edu.umro.ScalaUtil.DicomUtil
 import com.pixelmed.dicom.SOPClass
 import edu.umro.ScalaUtil.Trace
 import org.aqa.web.WebServer
+
 import scala.util.Try
 import org.aqa.DicomFile
 import com.pixelmed.dicom.TagFromName
+
 import java.io.File
 import java.io.ByteArrayInputStream
 import com.pixelmed.dicom.DicomInputStream
+import edu.umro.DicomDict.TagByName
 
 /**
  * Store the contents of a DICOM series.
@@ -311,8 +314,8 @@ object DicomSeries extends Logging {
       }
 
       def getReferencedRtplanUID: Option[String] = {
-        val seqList = alList.filter(al => al.get(TagFromName.ReferencedRTPlanSequence) != null)
-        val refList = seqList.map(seq => DicomUtil.seqToAttr(seq, TagFromName.ReferencedRTPlanSequence)).flatten
+        val seqList = alList.filter(al => al.get(TagByName.ReferencedRTPlanSequence) != null)
+        val refList = seqList.map(seq => DicomUtil.seqToAttr(seq, TagByName.ReferencedRTPlanSequence)).flatten
         val uidList = refList.filter(ref => ref.get(TagFromName.ReferencedSOPInstanceUID) != null).map(ref => ref.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrNull)
         val rtplanUid = uidList.filter(uid => uid != null).headOption
         rtplanUid

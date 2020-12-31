@@ -1,33 +1,21 @@
 package org.aqa
 
-import java.io.File
-import edu.umro.util.Log
-import scala.xml.Elem
-import scala.xml.XML
-import java.awt.Color
-import scala.collection.mutable.ResizableArray
-import scala.collection.mutable.ArrayBuffer
-import edu.umro.util.OpSys
-import scala.xml.Node
-import java.text.SimpleDateFormat
-import org.restlet.data.Warning
-import java.text.ParseException
-import java.util.Date
-import scala.xml.NodeSeq
-import java.net.InetAddress
-import java.util.Properties
-import edu.umro.util.Utility
-import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessPoint
-import java.awt.geom.Point2D
-import org.aqa.db.MaintenanceCategory
-import edu.umro.ImageUtil.Watermark
-import javax.imageio.ImageIO
-import java.awt.image.BufferedImage
 import com.pixelmed.dicom.AttributeTag
-import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
-import com.pixelmed.dicom.ValueRepresentation
 import com.typesafe.config.ConfigFactory
+import edu.umro.ImageUtil.Watermark
+import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.util.{Log, OpSys}
+import org.aqa.db.MaintenanceCategory
+import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessPoint
+
+import java.awt.geom.Point2D
+import java.awt.image.BufferedImage
+import java.io.File
+import java.text.{ParseException, SimpleDateFormat}
+import java.util.Date
+import javax.imageio.ImageIO
+import scala.collection.mutable.ArrayBuffer
+import scala.xml.{Elem, Node, XML}
 
 /**
  * This class extracts configuration information from the configuration file.  Refer

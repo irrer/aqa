@@ -27,6 +27,7 @@ import edu.umro.ImageUtil.ImageText
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import java.awt.geom.Rectangle2D
+import edu.umro.DicomDict.TagByName
 
 /*
 
@@ -208,16 +209,16 @@ object MeasureTBLREdges extends Logging {
 
   private def getCollimatorPositionsFromPlan(rtimage: AttributeList, rtplan: AttributeList): X1X2Y1Y2 = {
 
-    val BeamSequence = Phase2Util.getBeamSequence(rtplan, rtimage.get(TagFromName.ReferencedBeamNumber).getIntegerValues.head)
-    val ControlPoint = DicomUtil.seqToAttr(BeamSequence, TagFromName.ControlPointSequence).head
-    val BeamLimitingDeviceAngle = ControlPoint.get(TagFromName.BeamLimitingDeviceAngle).getDoubleValues.head
-    val BeamLimitingDevicePositionSequence = DicomUtil.seqToAttr(ControlPoint, TagFromName.BeamLimitingDevicePositionSequence)
+    val BeamSequence = Phase2Util.getBeamSequence(rtplan, rtimage.get(TagByName.ReferencedBeamNumber).getIntegerValues.head)
+    val ControlPoint = DicomUtil.seqToAttr(BeamSequence, TagByName.ControlPointSequence).head
+    val BeamLimitingDeviceAngle = ControlPoint.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head
+    val BeamLimitingDevicePositionSequence = DicomUtil.seqToAttr(ControlPoint, TagByName.BeamLimitingDevicePositionSequence)
 
     def getLeafPositionBoundaries(deviceTypeName: String): Seq[Double] = {
-      val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(BeamSequence, TagFromName.BeamLimitingDeviceSequence)
-      def nameMatch(blds: AttributeList): Boolean = blds.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString.equals(deviceTypeName)
+      val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(BeamSequence, TagByName.BeamLimitingDeviceSequence)
+      def nameMatch(blds: AttributeList): Boolean = blds.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString.equals(deviceTypeName)
 
-      val LeafPositionBoundaries = BeamLimitingDeviceSequence.find(blds => nameMatch(blds)).get.get(TagFromName.LeafPositionBoundaries).getDoubleValues
+      val LeafPositionBoundaries = BeamLimitingDeviceSequence.find(blds => nameMatch(blds)).get.get(TagByName.LeafPositionBoundaries).getDoubleValues
       LeafPositionBoundaries.toSeq
     }
 
@@ -225,17 +226,17 @@ object MeasureTBLREdges extends Logging {
       def this(name: String) = this(name, getLeafPositionBoundaries(name))
 
       val LeafPositionBoundaries = {
-        val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(BeamSequence, TagFromName.BeamLimitingDeviceSequence)
-        def nameMatch(blds: AttributeList): Boolean = blds.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString.equals(deviceTypeName)
+        val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(BeamSequence, TagByName.BeamLimitingDeviceSequence)
+        def nameMatch(blds: AttributeList): Boolean = blds.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString.equals(deviceTypeName)
 
-        val lpb = BeamLimitingDeviceSequence.find(blds => nameMatch(blds)).get.get(TagFromName.LeafPositionBoundaries).getDoubleValues
+        val lpb = BeamLimitingDeviceSequence.find(blds => nameMatch(blds)).get.get(TagByName.LeafPositionBoundaries).getDoubleValues
         lpb.toSeq
       }
 
       val leafPairCount = LeafPositionBoundaries.size - 1
       val LeafJawPositions = {
-        val BeamLimitingDevicePosition = BeamLimitingDevicePositionSequence.find(blds => blds.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString.equals(deviceTypeName)).get
-        val ljp = BeamLimitingDevicePosition.get(TagFromName.LeafJawPositions).getDoubleValues
+        val BeamLimitingDevicePosition = BeamLimitingDevicePositionSequence.find(blds => blds.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString.equals(deviceTypeName)).get
+        val ljp = BeamLimitingDevicePosition.get(TagByName.LeafJawPositions).getDoubleValues
         ljp.toSeq
       }
 
@@ -302,12 +303,12 @@ object MeasureTBLREdges extends Logging {
    * Get the collimator (jaw) positions from the image.  This assumes that the positions given in the image are valid.
    */
   private def getCollimatorPositionsFromImage(rtimage: AttributeList): X1X2Y1Y2 = {
-    val ExposureSequence = DicomUtil.seqToAttr(rtimage, TagFromName.ExposureSequence).head
-    val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(ExposureSequence, TagFromName.BeamLimitingDeviceSequence)
+    val ExposureSequence = DicomUtil.seqToAttr(rtimage, TagByName.ExposureSequence).head
+    val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(ExposureSequence, TagByName.BeamLimitingDeviceSequence)
 
     def getPair(nameList: Seq[String]): Array[Double] = {
-      def filterByName(s: AttributeList) = nameList.contains(s.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString)
-      val list = BeamLimitingDeviceSequence.filter(s => filterByName(s)).head.get(TagFromName.LeafJawPositions).getDoubleValues
+      def filterByName(s: AttributeList) = nameList.contains(s.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString)
+      val list = BeamLimitingDeviceSequence.filter(s => filterByName(s)).head.get(TagByName.LeafJawPositions).getDoubleValues
       list
     }
 

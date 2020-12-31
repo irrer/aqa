@@ -1,19 +1,17 @@
 
 package aqa.test;
 
-import org.aqa.Util
-import org.scalatest.FlatSpec
-import org.scalatest.Matchers
-import java.io.File
-import edu.umro.util.Utility
-import edu.umro.ScalaUtil.Trace
-import edu.umro.ScalaUtil.FileUtil
-import edu.umro.ImageUtil.DicomImage
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
+import edu.umro.ImageUtil.DicomImage
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
-import org.scalactic.TolerantNumerics
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessAnalysis
+import org.scalactic.TolerantNumerics
+import org.scalatest.FlatSpec
+import org.scalatest.Matchers
+
+import java.io.File
 
 /**
  * Test Sym+Flat function.

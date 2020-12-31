@@ -23,6 +23,7 @@ import com.pixelmed.dicom.SequenceAttribute
 import com.pixelmed.dicom.TransferSyntax
 import com.pixelmed.dicom.DicomFileUtilities
 import org.aqa.db.Output
+import edu.umro.DicomDict.TagByName
 
 object UploadTransAndOpen extends Logging {
 
@@ -36,9 +37,9 @@ object UploadTransAndOpen extends Logging {
     /**  Get the ExposureSequence --> ExposureTime.  */
     def getExposureTime: Option[Int] = {
       try {
-        val exposureSequence = attributeList.get(TagFromName.ExposureSequence).asInstanceOf[SequenceAttribute]
+        val exposureSequence = attributeList.get(TagByName.ExposureSequence).asInstanceOf[SequenceAttribute]
         val childAl = exposureSequence.getItem(0).getAttributeList
-        Some(childAl.get(TagFromName.ExposureTime).getIntegerValues()(0))
+        Some(childAl.get(TagByName.ExposureTime).getIntegerValues()(0))
       } catch {
         case t: Throwable => { None }
       }

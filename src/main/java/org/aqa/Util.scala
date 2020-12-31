@@ -10,30 +10,39 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.DateTimeAttribute
+
 import java.util.Properties
 import edu.umro.util.Utility
 import com.pixelmed.dicom.SequenceAttribute
+
 import java.awt.image.RenderedImage
 import javax.imageio.ImageIO
 import java.awt.image.BufferedImage
 import java.awt.Color
 import edu.umro.ImageUtil.ImageUtil
+
 import java.awt.BasicStroke
 import edu.umro.ImageUtil.ImageText
 import com.pixelmed.dicom.TransferSyntax
+
 import java.awt.Point
 import java.security.InvalidParameterException
 import com.pixelmed.dicom.DicomDictionary
+import edu.umro.DicomDict.TagByName
+
 import scala.xml.Elem
 import scala.xml.XML
 import java.io.ByteArrayOutputStream
 import edu.umro.ScalaUtil.DicomUtil
+
 import javax.vecmath.Point3d
 import edu.umro.ScalaUtil.Trace
+
 import java.util.TimeZone
 import scala.xml.Node
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+
 import javax.vecmath.Matrix4d
 import javax.vecmath.Point2d
 import java.awt.geom.Point2D
@@ -196,12 +205,12 @@ object Util extends Logging {
   }
 
   def collimatorAngle(al: AttributeList): Double = {
-    val at = al.get(TagFromName.BeamLimitingDeviceAngle)
+    val at = al.get(TagByName.BeamLimitingDeviceAngle)
     if (at == null) 0 else at.getDoubleValues.head
   }
 
   def gantryAngle(al: AttributeList): Double = {
-    val at = al.get(TagFromName.GantryAngle)
+    val at = al.get(TagByName.GantryAngle)
     if (at == null) 0 else at.getDoubleValues.head
   }
 
@@ -256,7 +265,7 @@ object Util extends Logging {
       (TagFromName.ContentDate, TagFromName.ContentTime),
       (TagFromName.InstanceCreationDate, TagFromName.InstanceCreationTime),
       (TagFromName.AcquisitionDate, TagFromName.AcquisitionTime),
-      (TagFromName.CreationDate, TagFromName.CreationTime),
+      (TagByName.CreationDate, TagByName.CreationTime),
       (TagFromName.SeriesDate, TagFromName.SeriesTime))
 
     val AcquisitionDateTime = getTimeAndDate(attributeList, TagFromName.AcquisitionDateTime)
@@ -969,7 +978,7 @@ object Util extends Logging {
    * a pair of digits that cause the beams to be sorted by the Eclipse planning system in the preferred delivery order.
    */
   def normalizedBeamName(al: AttributeList): String = {
-    normalizeBeamName(al.get(TagFromName.BeamName).getSingleStringValueOrEmptyString)
+    normalizeBeamName(al.get(TagByName.BeamName).getSingleStringValueOrEmptyString)
   }
 
   /**
@@ -1065,7 +1074,7 @@ object Util extends Logging {
   case class RegInfo(attrList: AttributeList) {
     val frameOfRefUID = attrList.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
     val otherFrameOfRefUID = {
-      val regSeq = DicomUtil.seqToAttr(attrList, TagFromName.RegistrationSequence)
+      val regSeq = DicomUtil.seqToAttr(attrList, TagByName.RegistrationSequence)
       val frmUid = regSeq.map(rs => rs.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString).filterNot(fu => fu.equalsIgnoreCase(frameOfRefUID))
       frmUid
     }
@@ -1078,7 +1087,7 @@ object Util extends Logging {
 
     def controlPointSeqToIsocenter(cps: AttributeList): Option[Point3d] = {
       try {
-        val IsocenterPosition = cps.get(TagFromName.IsocenterPosition)
+        val IsocenterPosition = cps.get(TagByName.IsocenterPosition)
         Some(new Point3d(IsocenterPosition.getDoubleValues))
       } catch {
         case t: Throwable => None
@@ -1086,11 +1095,11 @@ object Util extends Logging {
     }
 
     def beamSeqToIsocenter(beamSeq: AttributeList) = {
-      val ControlPointSequence = DicomUtil.seqToAttr(beamSeq, TagFromName.ControlPointSequence)
+      val ControlPointSequence = DicomUtil.seqToAttr(beamSeq, TagByName.ControlPointSequence)
       ControlPointSequence.map(cps => controlPointSeqToIsocenter(cps))
     }
 
-    val BeamSequence = DicomUtil.seqToAttr(rtplan, TagFromName.BeamSequence)
+    val BeamSequence = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
     val list = BeamSequence.map(bs => beamSeqToIsocenter(bs)).flatten.flatten
     list
   }
@@ -1122,7 +1131,7 @@ object Util extends Logging {
   def getAttr(node: Node, name: String) = (node \ ("@" + name)).text.toString
 
   def badPixelRadius(attributeList: AttributeList): Int = {
-    val pixSize = attributeList.get(TagFromName.ImagePlanePixelSpacing).getDoubleValues.sum / 2
+    val pixSize = attributeList.get(TagByName.ImagePlanePixelSpacing).getDoubleValues.sum / 2
     val diam = Config.BadPixelRadius_mm / pixSize
     val r = (diam.ceil.toInt - 1) / 2
     r

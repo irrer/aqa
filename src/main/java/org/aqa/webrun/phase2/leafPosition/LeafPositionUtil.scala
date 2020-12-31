@@ -10,6 +10,7 @@ import com.pixelmed.dicom.TagFromName
 import org.aqa.Util
 import edu.umro.ScalaUtil.Trace
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.DicomDict.TagByName
 
 /**
  * General utilities for leaf position.
@@ -20,9 +21,9 @@ object LeafPositionUtil extends Logging {
    * Get the sorted, distinct of all leaf position boundaries (positions of sides of leaves) from the plan for this beam in isoplane mm.
    */
   private def allLeafPositionBoundaries_mm(horizontal: Boolean, beamName: String, plan: AttributeList): Seq[Double] = {
-    val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagFromName.BeamLimitingDeviceSequence)
+    val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagByName.BeamLimitingDeviceSequence)
     def getLeafPositionBoundaries(bldps: AttributeList): Seq[Double] = {
-      val at = bldps.get(TagFromName.LeafPositionBoundaries)
+      val at = bldps.get(TagByName.LeafPositionBoundaries)
       if (at == null)
         Seq[Double]()
       else
@@ -36,17 +37,17 @@ object LeafPositionUtil extends Logging {
    * Get the jaw boundaries parallel to the sides of the collimator leaves.
    */
   private def jawBoundaries(horizontal: Boolean, beamName: String, plan: AttributeList): (Double, Double) = {
-    val ControlPointSequence = DicomUtil.seqToAttr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagFromName.ControlPointSequence)
-    val BeamLimitingDevicePositionSequence = ControlPointSequence.map(cps => DicomUtil.seqToAttr(cps, TagFromName.BeamLimitingDevicePositionSequence)).flatten
+    val ControlPointSequence = DicomUtil.seqToAttr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagByName.ControlPointSequence)
+    val BeamLimitingDevicePositionSequence = ControlPointSequence.map(cps => DicomUtil.seqToAttr(cps, TagByName.BeamLimitingDevicePositionSequence)).flatten
 
     def isJaw(BeamLimitingDevicePosition: AttributeList): Boolean = {
-      val deviceType = BeamLimitingDevicePosition.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString
+      val deviceType = BeamLimitingDevicePosition.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString
       val requiredType = if (horizontal) "Y" else "X"
       deviceType.equalsIgnoreCase(requiredType)
     }
 
     val jawList = BeamLimitingDevicePositionSequence.filter(bldp => isJaw(bldp))
-    val LeafJawPositions = jawList.map(jl => jl.get(TagFromName.LeafJawPositions).getDoubleValues).flatten
+    val LeafJawPositions = jawList.map(jl => jl.get(TagByName.LeafJawPositions).getDoubleValues).flatten
 
     (LeafJawPositions.min, LeafJawPositions.max)
   }
@@ -80,39 +81,39 @@ object LeafPositionUtil extends Logging {
   def leafEnds(horizontal: Boolean, beamName: String, plan: AttributeList): Seq[Double] = {
 
     def meterWeightSetNonZero(ctrlPtSeq: AttributeList): Boolean = {
-      val CumulativeMetersetWeight = ctrlPtSeq.get(TagFromName.CumulativeMetersetWeight).getDoubleValues.head
+      val CumulativeMetersetWeight = ctrlPtSeq.get(TagByName.CumulativeMetersetWeight).getDoubleValues.head
       CumulativeMetersetWeight > 0
     }
 
-    val ControlPointSequence = DicomUtil.seqToAttr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagFromName.ControlPointSequence).
+    val ControlPointSequence = DicomUtil.seqToAttr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagByName.ControlPointSequence).
       filter(cps => meterWeightSetNonZero(cps))
 
     def isMLCX1(ctrlPtSeq: AttributeList): Boolean = {
-      ctrlPtSeq.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString.equals("MLCX1")
+      ctrlPtSeq.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString.equals("MLCX1")
     }
 
     if (DicomUtil.isHalcyon(plan)) {
       def centerOfLeafJaw(al: AttributeList): Double = {
-        val all = al.get(TagFromName.LeafJawPositions).getDoubleValues
+        val all = al.get(TagByName.LeafJawPositions).getDoubleValues
         (all.min + all.max) / 2.0
       }
-      val bldsList = ControlPointSequence.map(cps => DicomUtil.seqToAttr(cps, TagFromName.BeamLimitingDevicePositionSequence)).
+      val bldsList = ControlPointSequence.map(cps => DicomUtil.seqToAttr(cps, TagByName.BeamLimitingDevicePositionSequence)).
         flatten.
         filter(cps => isMLCX1(cps))
 
       val endList = bldsList.map(m => centerOfLeafJaw(m)).distinct.sorted
       endList
     } else {
-      val withEnergy = ControlPointSequence.filter(cp => cp.get(TagFromName.CumulativeMetersetWeight).getDoubleValues.head != 0)
-      val BeamLimitingDevicePositionSequence = withEnergy.map(cps => DicomUtil.seqToAttr(cps, TagFromName.BeamLimitingDevicePositionSequence)).flatten
+      val withEnergy = ControlPointSequence.filter(cp => cp.get(TagByName.CumulativeMetersetWeight).getDoubleValues.head != 0)
+      val BeamLimitingDevicePositionSequence = withEnergy.map(cps => DicomUtil.seqToAttr(cps, TagByName.BeamLimitingDevicePositionSequence)).flatten
 
       def isMlc(BeamLimitingDevicePosition: AttributeList): Boolean = {
-        val deviceType = BeamLimitingDevicePosition.get(TagFromName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString
+        val deviceType = BeamLimitingDevicePosition.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString
         val requiredType = if (horizontal) "MLCX" else "MLCY"
         deviceType.equalsIgnoreCase(requiredType)
       }
 
-      val endList = BeamLimitingDevicePositionSequence.filter(bldp => isMlc(bldp)).map(bldp => bldp.get(TagFromName.LeafJawPositions).getDoubleValues.head).distinct.sorted
+      val endList = BeamLimitingDevicePositionSequence.filter(bldp => isMlc(bldp)).map(bldp => bldp.get(TagByName.LeafJawPositions).getDoubleValues.head).distinct.sorted
       endList
     }
   }
