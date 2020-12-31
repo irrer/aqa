@@ -282,17 +282,30 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
    * @return The baseline value to use, or None if not found.
    */
   def getBaseline(machinePK: Long, beamName: String, dataDate: Timestamp): Option[SymmetryAndFlatness] = {
-    val ts = new Timestamp(dataDate.getTime - (60 * 60 * 1000)) // allow for some leeway in the timestamp
+    val ts = new Timestamp(dataDate.getTime + (60 * 60 * 1000)) // allow for some leeway in the timestamp
 
     val result = {
+      val trueText = true.toString
       val search = for {
         output <- Output.query.filter(o => (o.dataDate <= ts) && o.machinePK === machinePK).map(o => o)
         symAndFlat <- SymmetryAndFlatness.query.
           filter(saf => (saf.outputPK === output.outputPK) &&
-            (saf.beamName === beamName) &&
-            saf.flatness_pct === saf.flatnessBaseline_pct)
+            (saf.beamName === beamName) // &&
+            // (saf.isBaseline_text === trueText)
+          )
       } yield (output, symAndFlat)
-      Db.run(search.result).sortBy(o => o._1.dataDate.get.getTime).reverse.map(os => os._2).headOption
+
+      // list of all results, with the most recent first
+      val list = Db.run(search.result).sortBy(o => o._1.dataDate.get.getTime).map(os => os._2).reverse
+      val b = list.find(_.isBaseline) match {
+
+        // Use the most recent set of values that is marked as a baseline.
+        case Some(symmetryAndFlatness: SymmetryAndFlatness) => Some(symmetryAndFlatness)
+
+        // Use the earliest set of results as a baseline even though it is not marked as a baseline.
+        case _ => list.lastOption
+      }
+      b
     }
 
     result

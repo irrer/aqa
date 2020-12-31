@@ -162,21 +162,19 @@ object SymmetryAndFlatnessAnalysis extends Logging {
    */
   private def getBaseline(machinePK: Long, beamName: String, dataName: String, attributeList: AttributeList, value: Double, dataDate: Timestamp): MaintenanceRecordBaseline = {
     val id = makeBaselineName(beamName, dataName)
-    Baseline.findLatest(machinePK, id, dataDate) match {
+    val maintenanceRecBaseline = Baseline.findLatest(machinePK, id, dataDate) match {
       case Some((maintenanceRecord, baseline)) => MaintenanceRecordBaseline(Some(maintenanceRecord), baseline)
       case _ => MaintenanceRecordBaseline(None, Baseline.makeBaseline(-1, dataDate, Util.sopOfAl(attributeList), id, value))
     }
+    maintenanceRecBaseline
   }
 
   /**
    * Get the baseline for the given beam of the given type (dataName).  If it does not exist, then use this one to establish it.
    */
-  private def getBaseline2(machinePK: Long, beamName: String, dataDate: Timestamp): SymmetryAndFlatness = {
+  private def getBaseline2(machinePK: Long, beamName: String, dataDate: Timestamp): Option[SymmetryAndFlatness] = {
     val saf = SymmetryAndFlatness.getBaseline(machinePK, beamName, dataDate)
-    if (saf.isDefined)
-      saf.get
-    else
-      throw new RuntimeException("Baseline is not defined for machine " + machinePK + "    beam: " + beamName + "    dataData: " + dataDate)
+    saf
   }
 
   /**
@@ -287,10 +285,31 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       baselinePointSet)
 
     val base2 = getBaseline2(machinePK, beamName, dataDate)
-    if (base2.flatnessBaseline_pct == flatnessBaseline.baseline.value.toDouble)
-      Trace.trace("yay")
-    else
-      Trace.trace("What?")
+    val j = base2 match {
+      case Some(b2) => {
+        if (
+          (b2.axialSymmetryBaseline_pct == axialSymmetryBaseline.baseline.value.toDouble) &&
+            (b2.transverseSymmetry_pct == transverseSymmetryBaseline.baseline.value.toDouble) &&
+            (b2.flatnessBaseline_pct == flatnessBaseline.baseline.value.toDouble) &&
+            (b2.profileConstancy_pct == profileConstancyBaseline.baseline.value.toDouble)
+        )
+          Trace.trace("yay")
+        else {}
+        Trace.trace("What?")
+
+        Trace.trace(b2.axialSymmetryBaseline_pct == axialSymmetryBaseline.baseline.value.toDouble)
+        Trace.trace(b2.transverseSymmetry_pct == transverseSymmetryBaseline.baseline.value.toDouble)
+        Trace.trace(b2.flatnessBaseline_pct == flatnessBaseline.baseline.value.toDouble)
+        Trace.trace(b2.profileConstancy_pct == profileConstancyBaseline.baseline.value.toDouble)
+
+        Trace.trace(b2.axialSymmetryBaseline_pct + "\n" + axialSymmetryBaseline.baseline.value.toDouble + "\n")
+        Trace.trace(b2.transverseSymmetry_pct + "\n" + transverseSymmetryBaseline.baseline.value.toDouble + "\n")
+        Trace.trace(b2.flatnessBaseline_pct + "\n" + flatnessBaseline.baseline.value.toDouble + "\n")
+        Trace.trace(b2.profileConstancy_pct + "\n" + profileConstancyBaseline.baseline.value.toDouble + "\n")
+      }
+      case _ => ;
+    }
+    Trace.trace(j)
 
     logger.info("Finished analysis of beam " + beamName)
 

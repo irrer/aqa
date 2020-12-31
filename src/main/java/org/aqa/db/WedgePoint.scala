@@ -3,6 +3,7 @@ package org.aqa.db
 import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
 
+import java.sql.Timestamp
 import java.util.Date
 import scala.xml.Elem
 
@@ -163,6 +164,49 @@ object WedgePoint extends ProcedureOutput {
     } yield (output._2, wedgePoint._1, wedgePoint._2, wedgePoint._3, output._1)
 
     val result = Db.run(search.result).map(h => WedgePointHistory(h._1.get, h._2, h._3, h._4, h._5)).sortBy(_.date.getTime)
+    result
+  }
+
+
+  /**
+   * Get the baseline by finding another set of values that
+   *   - were captured before the given time stamp
+   *   - belong to the same machine
+   *   - were produced by the same beam
+   *   - are defined as a baseline because <code>isBaseline_text</code> is true, or failing that, have the chronologically earliest preceding <code>SymmetryAndFlatness</code>.
+   *
+   * @param machinePK Match this machine
+   * @param beamName  Match this beam
+   * @param dataDate  Most recent that is at or before this time
+   * @return The baseline value to use, or None if not found.
+   */
+  def getBaseline(machinePK: Long, beamName: String, dataDate: Timestamp): Option[WedgePoint] = {
+    val ts = new Timestamp(dataDate.getTime + (60 * 60 * 1000)) // allow for some leeway in the timestamp
+
+    val result = {
+      val trueText = true.toString
+      val search = for {
+        output <- Output.query.filter(o => (o.dataDate <= ts) && (o.machinePK === machinePK)).map(o => o)
+        symAndFlat <- WedgePoint.query.
+          filter(saf => (saf.outputPK === output.outputPK) &&
+            (saf.wedgeBeamName === beamName) // &&
+            // (saf.isBaseline_text === trueText)
+          )
+      } yield (output, symAndFlat)
+
+      // list of all results, with the most recent first
+      val list = Db.run(search.result).sortBy(o => o._1.dataDate.get.getTime).map(os => os._2).reverse
+      val b: Option[WedgePoint] = list.find(_.isBaseline) match {
+
+        // Use the most recent set of values that is marked as a baseline.
+        case Some(wedgePoint: WedgePoint) => Some(wedgePoint)
+
+        // Use the earliest set of results as a baseline even though it is not marked as a baseline.
+        case _ => list.lastOption
+      }
+      b
+    }
+
     result
   }
 }
