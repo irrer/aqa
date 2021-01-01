@@ -12,7 +12,7 @@ object SymmetryAndFlatnessCSV {
 
   val csvFileName = "SymmetryAndFlatness.csv"
 
-  def makeCsvFile(extendedData: ExtendedData, runReq: RunReq, symmetryAndFlatnessSeq: Seq[SymmetryAndFlatnessAnalysis.BeamResultBaseline], subDir: File) = {
+  def makeCsvFile(extendedData: ExtendedData, runReq: RunReq, symmetryAndFlatnessSeq: Seq[SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult], subDir: File) = {
 
     // format lots of meta-information for the CSV header
 
@@ -30,35 +30,35 @@ object SymmetryAndFlatnessCSV {
     val userId = extendedData.user.id
     val acquisitionDate = if (extendedData.output.dataDate.isDefined) Util.standardDateFormat.format(extendedData.output.dataDate.get) else "none"
 
-    type SF = SymmetryAndFlatnessAnalysis.BeamResultBaseline
+    type SF = SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult
 
     val columns: Seq[(String, (SF) => Any)] = Seq(
-      ("beamName", (sf: SF) => sf.result.beamName),
-      ("SOPInstanceUID", (sf: SF) => sf.result.SOPInstanceUID),
+      ("beamName", (sf: SF) => sf.symmetryAndFlatness.beamName),
+      ("SOPInstanceUID", (sf: SF) => sf.symmetryAndFlatness.SOPInstanceUID),
 
-      ("axialSymmetry CU", (sf: SF) => sf.result.axialSymmetry),
-      ("axialSymmetryBaseline CU", (sf: SF) => sf.result.axialSymmetryBaseline),
-      ("axialSymmetryStatus", (sf: SF) => sf.result.axialSymmetryStatus),
+      ("axialSymmetry CU", (sf: SF) => sf.symmetryAndFlatness.axialSymmetry),
+      ("axialSymmetryBaseline CU", (sf: SF) => sf.baseline.axialSymmetry),
+      ("axialSymmetryStatus", (sf: SF) => sf.symmetryAndFlatness.axialSymmetryStatus),
 
-      ("transverseSymmetry CU", (sf: SF) => sf.result.transverseSymmetry),
-      ("transverseSymmetryBaseline CU", (sf: SF) => sf.result.transverseSymmetryBaseline),
-      ("transverseSymmetryStatus", (sf: SF) => sf.result.transverseSymmetryStatus),
+      ("transverseSymmetry CU", (sf: SF) => sf.symmetryAndFlatness.transverseSymmetry),
+      ("transverseSymmetryBaseline CU", (sf: SF) => sf.baseline.transverseSymmetry),
+      ("transverseSymmetryStatus", (sf: SF) => sf.symmetryAndFlatness.transverseSymmetryStatus),
 
-      ("flatness CU", (sf: SF) => sf.result.flatness),
-      ("flatnessBaseline CU", (sf: SF) => sf.result.flatnessBaseline),
-      ("flatnessStatus", (sf: SF) => sf.result.flatnessStatus),
+      ("flatness CU", (sf: SF) => sf.symmetryAndFlatness.flatness),
+      ("flatnessBaseline CU", (sf: SF) => sf.baseline.flatness),
+      ("flatnessStatus", (sf: SF) => sf.symmetryAndFlatness.flatnessStatus),
 
-      ("profileConstancy CU", (sf: SF) => sf.result.profileConstancy),
-      ("profileConstancyBaseline CU", (sf: SF) => sf.result.profileConstancyBaseline),
-      ("profileConstancyStatus", (sf: SF) => sf.result.profileConstancyStatus),
+      ("profileConstancy CU", (sf: SF) => sf.symmetryAndFlatness.profileConstancy(sf.baseline)),
+      ("profileConstancyBaseline CU", (sf: SF) => sf.baseline.profileConstancy(sf.baseline)),
+      ("profileConstancyStatus", (sf: SF) => sf.symmetryAndFlatness.profileConstancyStatus),
 
-      ("top CU", (sf: SF) => sf.pointSet.top),
-      ("bottom CU", (sf: SF) => sf.pointSet.bottom),
-      ("left CU", (sf: SF) => sf.pointSet.left),
-      ("right CU", (sf: SF) => sf.pointSet.right),
-      ("center CU", (sf: SF) => sf.pointSet.center))
+      ("top CU", (sf: SF) => sf.symmetryAndFlatness.top_cu),
+      ("bottom CU", (sf: SF) => sf.symmetryAndFlatness.bottom_cu),
+      ("left CU", (sf: SF) => sf.symmetryAndFlatness.left_cu),
+      ("right CU", (sf: SF) => sf.symmetryAndFlatness.right_cu),
+      ("center CU", (sf: SF) => sf.symmetryAndFlatness.center_cu))
 
-    def symmetryAndFlatnessToCsv(sf: SymmetryAndFlatnessAnalysis.BeamResultBaseline): String = {
+    def symmetryAndFlatnessToCsv(sf: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult): String = {
       def fmt(any: Any): String = {
         any match {
           case d: Double => d.formatted("%14.11e")

@@ -1,5 +1,6 @@
 package org.aqa.db
 
+import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
@@ -20,27 +21,27 @@ case class SymmetryAndFlatness(
                                 beamName: String, // name of beam in plan
                                 isBaseline_text: String, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.   Note that this is a string instead of a boolean because boolean is not supported by some databases.
 
-                                axialSymmetry_pct: Double,
-                                axialSymmetryBaseline_pct: Double,
-                                axialSymmetryStatus: String,
+                                axialSymmetry_pct: Double, // deprecated
+                                axialSymmetryBaseline_pct: Double, // deprecated
+                                axialSymmetryStatus: String, // deprecated
 
-                                transverseSymmetry_pct: Double,
-                                transverseSymmetryBaseline_pct: Double,
-                                transverseSymmetryStatus: String,
+                                transverseSymmetry_pct: Double, // deprecated
+                                transverseSymmetryBaseline_pct: Double, // deprecated
+                                transverseSymmetryStatus: String, // deprecated
 
-                                flatness_pct: Double,
-                                flatnessBaseline_pct: Double,
-                                flatnessStatus: String,
+                                flatness_pct: Double, // deprecated
+                                flatnessBaseline_pct: Double, // deprecated
+                                flatnessStatus: String, // deprecated
 
                                 profileConstancy_pct: Double,
                                 profileConstancyBaseline_pct: Double,
                                 profileConstancyStatus: String,
 
-                                top_cu: Double, // average value of top point pixels
-                                bottom_cu: Double, // average value of bottom point pixels
-                                left_cu: Double, // average value of left point pixels
-                                right_cu: Double, // average value of right point pixels
-                                center_cu: Double // average value of center point pixels
+                                top_cu: Double, // average value of top point pixels in CU
+                                bottom_cu: Double, // average value of bottom point pixels in CU
+                                left_cu: Double, // average value of left point pixels in CU
+                                right_cu: Double, // average value of right point pixels in CU
+                                center_cu: Double // average value of center point pixels in CU
                               ) {
 
   def insert: SymmetryAndFlatness = {
@@ -58,6 +59,53 @@ case class SymmetryAndFlatness(
       case _ => false
     }
   }
+
+
+  private val list = Seq(top_cu, bottom_cu, right_cu, left_cu, center_cu)
+
+  private val min = list.min
+  private val max = list.max
+
+  val axialSymmetry: Double = ((top_cu - bottom_cu) / bottom_cu) * 100
+  val transverseSymmetry: Double = ((right_cu - left_cu) / left_cu) * 100
+  val flatness: Double = ((max - min) / (max + min)) * 100
+
+  def profileConstancy(baseline: SymmetryAndFlatness): Double = {
+    val t = (top_cu / center_cu) - (baseline.top_cu / baseline.center_cu)
+    val b = (bottom_cu / center_cu) - (baseline.bottom_cu / baseline.center_cu)
+    val l = (left_cu / center_cu) - (baseline.left_cu / baseline.center_cu)
+    val r = (right_cu / center_cu) - (baseline.right_cu / baseline.center_cu)
+
+    val profConst = ((t + b + l + r) * 100) / 4
+
+    profConst
+  }
+
+  /**
+   * True if the comparison of the value to the baseline passes.  Otherwise it has failed.
+   *
+   * @param value         Value being checked.
+   * @param baselineValue Known good baseline used as a reference.
+   * @return True on pass, false on fail.
+   */
+  private def doesPass(value: Double, baselineValue: Double): Boolean = {
+    val diff = (value - baselineValue).abs
+    Config.SymmetryPercentLimit <= diff
+  }
+
+  def axialSymmetryPass(baseline: SymmetryAndFlatness): Boolean = doesPass(axialSymmetry, baseline.axialSymmetry)
+
+  def transverseSymmetryPass(baseline: SymmetryAndFlatness): Boolean = doesPass(transverseSymmetry, baseline.transverseSymmetry)
+
+  def flatnessPass(baseline: SymmetryAndFlatness): Boolean = doesPass(flatness, baseline.flatness)
+
+  def profileConstancyPass(baseline: SymmetryAndFlatness): Boolean = doesPass(profileConstancy(baseline), baseline.profileConstancy(baseline))
+
+  def allPass(baseline: SymmetryAndFlatness): Boolean =
+    axialSymmetryPass(baseline) &&
+      transverseSymmetryPass(baseline) &&
+      flatnessPass(baseline) &&
+      profileConstancyPass(baseline)
 
   def insertOrUpdate(): Int = Db.run(SymmetryAndFlatness.query.insertOrUpdate(this))
 
@@ -85,6 +133,8 @@ case class SymmetryAndFlatness(
       "    right_cu: " + right_cu + "\n" +
       "    center_cu: " + center_cu + "\n"
   }
+
+
 }
 
 object SymmetryAndFlatness extends ProcedureOutput with Logging {
@@ -163,7 +213,7 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     def outputFK = foreignKey("SymmetryAndFlatness_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
-  case class PointSet(top: Double, bottom: Double, right: Double, left: Double, center: Double) {
+  case class XPointSet(top: Double, bottom: Double, right: Double, left: Double, center: Double) {
     def this(sf: SymmetryAndFlatness) = this(sf.top_cu, sf.bottom_cu, sf.right_cu, sf.left_cu, sf.center_cu)
 
     private val list = Seq(top, bottom, right, left, center)
@@ -175,7 +225,7 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     val transverseSymmetry: Double = ((right - left) / left) * 100
     val flatness: Double = ((max - min) / (max + min)) * 100
 
-    def profileConstancy(baseline: PointSet): Double = {
+    def profileConstancy(baseline: XPointSet): Double = {
       val t = (top / center) - (baseline.top / baseline.center)
       val b = (bottom / center) - (baseline.bottom / baseline.center)
       val l = (left / center) - (baseline.left / baseline.center)
@@ -285,17 +335,12 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     val ts = new Timestamp(dataDate.getTime + (60 * 60 * 1000)) // allow for some leeway in the timestamp
 
     val result = {
-      val trueText = true.toString
       val search = for {
         output <- Output.query.filter(o => (o.dataDate <= ts) && o.machinePK === machinePK).map(o => o)
-        symAndFlat <- SymmetryAndFlatness.query.
-          filter(saf => (saf.outputPK === output.outputPK) &&
-            (saf.beamName === beamName) // &&
-            // (saf.isBaseline_text === trueText)
-          )
+        symAndFlat <- SymmetryAndFlatness.query.filter(saf => (saf.outputPK === output.outputPK) && (saf.beamName === beamName))
       } yield (output, symAndFlat)
 
-      // list of all results, with the most recent first
+      // make list of all results, with the most recent first
       val list = Db.run(search.result).sortBy(o => o._1.dataDate.get.getTime).map(os => os._2).reverse
       val b = list.find(_.isBaseline) match {
 

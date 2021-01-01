@@ -94,10 +94,10 @@ object TestSymmetryAndFlatnessAnalysis_analyze {
       DicomUtil.getTimeAndDate(al, TagFromName.ContentDate, TagFromName.ContentTime)).flatten.head
     println("Data Date: " + dataDate)
 
-    val result = SymmetryAndFlatnessAnalysis.testAnalyze(beamName, machinePK = 22, new Timestamp(dataDate.getTime), al, new DicomImage(al), collimatorCentering)
-    Trace.trace(result.result)
+    val result = SymmetryAndFlatnessAnalysis.testAnalyze(beamName, machinePK = 22, new Timestamp(dataDate.getTime), al, new DicomImage(al), collimatorCentering.center)
+    Trace.trace("Result: " + result.symmetryAndFlatness)
     //println(result.maintenanceRecordBaseline)
-    Trace.trace(result.pointSet)
+    Trace.trace("Baseline: " + result.baseline)
     Trace.trace
   }
 

@@ -69,17 +69,17 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
           </thead>
           <tr>
             <td>Analysis</td>
-            <td>{ Util.fmtDbl(result.transverseSymmetry) }</td>
-            <td>{ Util.fmtDbl(result.axialSymmetry) }</td>
-            <td>{ Util.fmtDbl(result.flatness) }</td>
-            <td>{ Util.fmtDbl(result.profileConstancy) }</td>
+            <td>{ Util.fmtDbl(result.symmetryAndFlatness.transverseSymmetry) }</td>
+            <td>{ Util.fmtDbl(result.symmetryAndFlatness.axialSymmetry) }</td>
+            <td>{ Util.fmtDbl(result.symmetryAndFlatness.flatness) }</td>
+            <td>{ Util.fmtDbl(result.symmetryAndFlatness.profileConstancy(result.baseline)) }</td>
           </tr>
           <tr>
             <td>Baseline</td>
-            <td>{ Util.fmtDbl(result.transverseSymmetryBaseline) }</td>
-            <td>{ Util.fmtDbl(result.axialSymmetryBaseline) }</td>
-            <td>{ Util.fmtDbl(result.flatnessBaseline) }</td>
-            <td>{ Util.fmtDbl(result.profileConstancyBaseline) }</td>
+            <td>{ Util.fmtDbl(result.baseline.transverseSymmetry) }</td>
+            <td>{ Util.fmtDbl(result.baseline.axialSymmetry) }</td>
+            <td>{ Util.fmtDbl(result.baseline.flatness) }</td>
+            <td>{ Util.fmtDbl(result.baseline.profileConstancy(result.baseline)) }</td>
           </tr>
         </table>
       </div>
@@ -101,19 +101,19 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
           </thead>
           <tr>
             <td>Analysis</td>
-            <td>{ Util.fmtDbl(result.pointSet.top) }</td>
-            <td>{ Util.fmtDbl(result.pointSet.bottom) }</td>
-            <td>{ Util.fmtDbl(result.pointSet.left) }</td>
-            <td>{ Util.fmtDbl(result.pointSet.right) }</td>
-            <td>{ Util.fmtDbl(result.pointSet.center) }</td>
+            <td>{ Util.fmtDbl(result.symmetryAndFlatness.top_cu) }</td>
+            <td>{ Util.fmtDbl(result.symmetryAndFlatness.bottom_cu) }</td>
+            <td>{ Util.fmtDbl(result.symmetryAndFlatness.left_cu) }</td>
+            <td>{ Util.fmtDbl(result.symmetryAndFlatness.right_cu) }</td>
+            <td>{ Util.fmtDbl(result.symmetryAndFlatness.center_cu) }</td>
           </tr>
           <tr>
             <td>Baseline</td>
-            <td>{ Util.fmtDbl(result.baselinePointSet.top) }</td>
-            <td>{ Util.fmtDbl(result.baselinePointSet.bottom) }</td>
-            <td>{ Util.fmtDbl(result.baselinePointSet.left) }</td>
-            <td>{ Util.fmtDbl(result.baselinePointSet.right) }</td>
-            <td>{ Util.fmtDbl(result.baselinePointSet.center) }</td>
+            <td>{ Util.fmtDbl(result.baseline.top_cu) }</td>
+            <td>{ Util.fmtDbl(result.baseline.bottom_cu) }</td>
+            <td>{ Util.fmtDbl(result.baseline.left_cu) }</td>
+            <td>{ Util.fmtDbl(result.baseline.right_cu) }</td>
+            <td>{ Util.fmtDbl(result.baseline.center_cu) }</td>
           </tr>
         </table>
       </div>
@@ -134,7 +134,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
         </div>
         <div class="row">
           <div class="col-md-5 col-md-offset-1">
-            { <center id="beamImage"><img class="img-responsive" src={ WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.beamName)) }/> </center> }
+            { <center id="beamImage"><img class="img-responsive" src={ WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.symmetryAndFlatness.beamName)) }/> </center> }
           </div>
           <div class="col-md-5">
             <div class="row">
@@ -173,15 +173,22 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
     $(document).ready(function(){ $('#beamImage').zoom(); });
 """
 
-    val historyScriptRef = SymmetryAndFlatnessHistoryRestlet.makeReference(result.beamName, extendedData.output.outputPK.get)
+    val historyScriptRef = SymmetryAndFlatnessHistoryRestlet.makeReference(result.symmetryAndFlatness.beamName, extendedData.output.outputPK.get)
 
     val javascript = "<script>\n" + graphTransverse.javascript + graphAxial.javascript + zoomScript + "\n</script>\n" + historyScriptRef
     (content, javascript)
   }
 
   def makeDisplay(subDir: File, extendedData: ExtendedData, result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult, status: ProcedureStatus.Value, runReq: RunReq) = {
+    val status = if (result.symmetryAndFlatness.allPass(result.baseline)) ProcedureStatus.pass else ProcedureStatus.fail
     val elemJavascript = makeContent(subDir, extendedData, result, status, runReq)
-    val html = Phase2Util.wrapSubProcedure(extendedData, elemJavascript._1, "Symmetry and Flatness " + result.beamName, result.status, Some(elemJavascript._2), runReq)
-    Util.writeBinaryFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, result.beamName), html.getBytes)
+    val html = Phase2Util.wrapSubProcedure(
+      extendedData,
+      elemJavascript._1,
+      title = "Symmetry and Flatness " + result.symmetryAndFlatness.beamName,
+      status,
+      Some(elemJavascript._2),
+      runReq)
+    Util.writeBinaryFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, result.symmetryAndFlatness.beamName), html.getBytes)
   }
 }

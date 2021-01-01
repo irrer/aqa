@@ -53,15 +53,15 @@ object SymmetryAndFlatnessHTML extends Logging {
     elem
   }
 
-  def makeDisplay(extendedData: ExtendedData, resultList: List[SymmetryAndFlatnessAnalysis.BeamResultBaseline], status: ProcedureStatus.Value, runReq: RunReq): Elem = {
+  def makeDisplay(extendedData: ExtendedData, resultList: List[SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult], status: ProcedureStatus.Value, runReq: RunReq): Elem = {
     val subDir = makeSubDir(extendedData.output.dir)
     val mainHtmlFile = new File(subDir, htmlFileName)
-    resultList.par.map(rb => Util.writePng(rb.result.annotatedImage, annotatedImageFile(subDir, rb.result.beamName)))
+    resultList.par.map(rb => Util.writePng(rb.annotatedImage, annotatedImageFile(subDir, rb.symmetryAndFlatness.beamName)))
 
     val html = Phase2Util.wrapSubProcedure(extendedData, SymmetryAndFlatnessSubHTML.makeContent(subDir, extendedData, resultList, runReq), "Symmetry and Flatness", status, None, runReq)
     Util.writeFile(mainHtmlFile, html)
 
-    resultList.map(rb => SymmetryAndFlatnessBeamProfileHTML.makeDisplay(subDir, extendedData, rb.result, status, runReq))
+    resultList.map(rb => SymmetryAndFlatnessBeamProfileHTML.makeDisplay(subDir, extendedData, rb, status, runReq))
 
     summary(mainHtmlFile, resultList.size, status)
   }

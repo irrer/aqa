@@ -41,29 +41,27 @@ object AQA extends Logging {
       // failed status will tell the service wrapper to restart the service.  The delay is there in the
       // event that this service behaves badly and keeps exiting when started, an keeps the service from
       // using excessive resources.
-      case e: Exception => {
+      case e: Exception =>
         logger.error("Unexpected exception in main: " + fmtEx(e))
         Thread.sleep(30 * 1000)
         System.exit(1)
-      }
-      case t: Throwable => {
+      case t: Throwable =>
         logger.error("Unexpected throwable in main: " + fmtEx(t))
         Thread.sleep(30 * 1000)
         System.exit(2)
-      }
     }
   }
 
-  def initiateServiceRestart = {
+  def initiateServiceRestart: Unit = {
     class InitiateServiceRestart extends Runnable {
-      val delay = 4 * 1000 // wait long enough for web client to receive a response
-      override def run() = {
+      private val delay: Int = 4 * 1000 // wait long enough for web client to receive a response
+      override def run(): Unit = {
         logger.info("Shutting down service for restart in " + delay + " ms...")
         Thread.sleep(delay)
         logger.info("Shutting down service now.")
         System.exit(1)
       }
-      (new Thread(this)).start
+      new Thread(this).start()
     }
     new InitiateServiceRestart
   }
