@@ -21,20 +21,32 @@ case class SymmetryAndFlatness(
                                 beamName: String, // name of beam in plan
                                 isBaseline_text: String, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.   Note that this is a string instead of a boolean because boolean is not supported by some databases.
 
+                                @deprecated
                                 axialSymmetry_pct: Double, // deprecated
+                                @deprecated
                                 axialSymmetryBaseline_pct: Double, // deprecated
+                                @deprecated
                                 axialSymmetryStatus: String, // deprecated
 
+                                @deprecated
                                 transverseSymmetry_pct: Double, // deprecated
+                                @deprecated
                                 transverseSymmetryBaseline_pct: Double, // deprecated
+                                @deprecated
                                 transverseSymmetryStatus: String, // deprecated
 
+                                @deprecated
                                 flatness_pct: Double, // deprecated
+                                @deprecated
                                 flatnessBaseline_pct: Double, // deprecated
+                                @deprecated
                                 flatnessStatus: String, // deprecated
 
+                                @deprecated
                                 profileConstancy_pct: Double,
+                                @deprecated
                                 profileConstancyBaseline_pct: Double,
+                                @deprecated
                                 profileConstancyStatus: String,
 
                                 top_cu: Double, // average value of top point pixels in CU

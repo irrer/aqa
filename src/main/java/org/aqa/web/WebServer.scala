@@ -4,6 +4,7 @@ import org.restlet.Application
 import org.restlet.Restlet
 import org.restlet.Component
 import org.aqa.Logging
+
 import java.io.File
 import edu.umro.RestletUtil.RestletHttps
 import edu.umro.RestletUtil.ExpiresLaterFilter
@@ -47,6 +48,7 @@ import edu.umro.RestletUtil.NetworkIpFilter
 import org.aqa.webrun.phase2.vmat.VMATChartHistoryRestlet
 import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryPartialRestlet
 import org.aqa.db.Institution
+import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessSubHTML
 
 object WebServer {
   val challengeScheme = ChallengeScheme.HTTP_BASIC
@@ -518,6 +520,7 @@ class WebServer extends Application with Logging {
         new SymmetryAndFlatnessHistoryRestlet,
         new DailyQASummary,
         new DataCollectionSummary,
+        new SymmetryAndFlatnessSubHTML,
         anonymousTranslate,
         getSeries,
         new CustomizeRtPlanInterface,

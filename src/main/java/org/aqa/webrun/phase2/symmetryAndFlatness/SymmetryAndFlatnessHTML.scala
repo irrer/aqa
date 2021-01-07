@@ -21,7 +21,12 @@ object SymmetryAndFlatnessHTML extends Logging {
   private val htmlFileName = "SymmetryAndFlatness.html"
   private val subDirName = "SymmetryAndFlatness"
 
-  private def makeSubDir(outputDir: File): File = {
+  /**
+   * Make the directory to contain symmetry, flatness, and constancy HTML report.
+   * @param outputDir Main output directory.
+   * @return Sub-directory.
+   */
+  def makeSubDir(outputDir: File): File = {
     val subDir = new File(outputDir, subDirName)
     subDir.mkdirs
     subDir
@@ -58,12 +63,15 @@ object SymmetryAndFlatnessHTML extends Logging {
     val mainHtmlFile = new File(subDir, htmlFileName)
     resultList.par.map(rb => Util.writePng(rb.annotatedImage, annotatedImageFile(subDir, rb.symmetryAndFlatness.beamName)))
 
+    /*  TODO
     val html = Phase2Util.wrapSubProcedure(extendedData, SymmetryAndFlatnessSubHTML.makeContent(subDir, extendedData, resultList, runReq), "Symmetry and Flatness", status, None, runReq)
     Util.writeFile(mainHtmlFile, html)
 
     resultList.map(rb => SymmetryAndFlatnessBeamProfileHTML.makeDisplay(subDir, extendedData, rb, status, runReq))
 
     summary(mainHtmlFile, resultList.size, status)
+     */
+    <div>TODO</div>
   }
 
 }

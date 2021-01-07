@@ -1,40 +1,33 @@
 package org.aqa.webrun.phase2
 
-import org.aqa.DicomFile
-import com.pixelmed.dicom.TagFromName
 import com.pixelmed.dicom.AttributeList
-import org.aqa.db.Machine
-import com.pixelmed.dicom.SOPClass
+import com.pixelmed.dicom.TagFromName
+import edu.umro.DicomDict.TagByName
+import edu.umro.ImageUtil.DicomImage
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.Config
+import org.aqa.DicomFile
 import org.aqa.Logging
 import org.aqa.Util
-import java.io.File
-import org.aqa.Config
-import org.aqa.db.Output
-import scala.xml.Elem
-import org.aqa.run.ProcedureStatus
-import org.aqa.db.Input
-import org.aqa.db.Procedure
-import org.aqa.db.Institution
-import org.aqa.db.User
-import java.util.Date
-import org.aqa.web.WebUtil._
-import edu.umro.ImageUtil.DicomImage
-import java.awt.geom.Point2D
-import java.awt.Point
-import org.aqa.db.MachineType
-import org.aqa.web.WebServer
-import java.text.SimpleDateFormat
-import org.aqa.db.CenterDose
-import org.aqa.db.MaintenanceRecord
 import org.aqa.db.Baseline
-import org.aqa.web.MaintenanceRecordList
-import org.aqa.web.MachineList
+import org.aqa.db.Machine
+import org.aqa.db.MaintenanceRecord
+import org.aqa.db.Output
+import org.aqa.run.ProcedureStatus
 import org.aqa.web.MachineUpdate
-import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import org.aqa.webrun.ExtendedData
+import org.aqa.web.MaintenanceRecordList
 import org.aqa.web.OutputList
-import edu.umro.DicomDict.TagByName
+import org.aqa.web.WebServer
+import org.aqa.web.WebUtil._
+import org.aqa.webrun.ExtendedData
+
+import java.awt.Point
+import java.awt.geom.Point2D
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import scala.xml.Elem
 
 /**
  * Utilities for Phase 2.
@@ -57,15 +50,16 @@ object Phase2Util extends Logging {
   def imageReferencesPlan(plan: AttributeList, image: AttributeList): Boolean = {
     try {
       val planUID = plan.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull
+
       def doesRef(al: AttributeList) = {
         val imgRef = al.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrEmptyString
-        val j = imgRef.equals(planUID)
         imgRef.equals(planUID)
       }
-      val doesRefPlan = DicomUtil.seqToAttr(image, TagByName.ReferencedRTPlanSequence).filter(al => doesRef(al)).nonEmpty
+
+      val doesRefPlan = DicomUtil.seqToAttr(image, TagByName.ReferencedRTPlanSequence).exists(al => doesRef(al))
       doesRefPlan
     } catch {
-      case t: Throwable => false
+      case _: Throwable => false
     }
   }
 
@@ -80,10 +74,9 @@ object Phase2Util extends Logging {
       try {
         DicomFile.readDicomInDir(Config.sharedDir).filter(df => df.isRtplan)
       } catch {
-        case t: Throwable => {
-          logger.warn("Unexpected problem while getting pre-configured RTPLANs: " + t)
+        case t: Throwable =>
+          logger.warn("Unexpected problem while getting pre-configured RTPLAN(s): " + t)
           Seq[DicomFile]()
-        }
       }
     }
 
@@ -91,10 +84,9 @@ object Phase2Util extends Logging {
       val configSopList = configuredPlans.map(c => Util.sopOfAl(c.attributeList.get))
       dicomList.filter(df => df.isRtplan).filter(d => !configSopList.contains(Util.sopOfAl(d.attributeList.get)))
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         logger.warn("Unexpected problem while getting RTPLAN: " + t)
         Seq[DicomFile]()
-      }
     }
 
     DicomFile.distinctSOPInstanceUID(configuredPlans ++ downloadedPlans)
@@ -103,7 +95,7 @@ object Phase2Util extends Logging {
   /**
    * If the serial number for the machine is not already set, then set it by using the DeviceSerialNumber in the RTIMAGE.
    */
-  def setMachineSerialNumber(machine: Machine, rtimage: AttributeList) = {
+  def setMachineSerialNumber(machine: Machine, rtimage: AttributeList): Unit = {
     if (machine.serialNumber.isEmpty) {
       try {
         val DeviceSerialNumber = rtimage.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrNull
@@ -118,7 +110,7 @@ object Phase2Util extends Logging {
   /**
    * If a plan was used that was not already saved, then save it to the shared directory so that it will be available for future runs.
    */
-  def saveRtplan(plan: DicomFile) = {
+  def saveRtplan(plan: DicomFile): Unit = {
     if (plan == null) {
       logger.error("Was given null RTPLAN DicomFile")
     } else {
@@ -145,12 +137,12 @@ object Phase2Util extends Logging {
   def getBeamNameOfRtimage(plan: AttributeList, rtimage: AttributeList): Option[String] = {
     try {
       val ReferencedBeamNumber = rtimage.get(TagByName.ReferencedBeamNumber).getIntegerValues.head
-      val beam = DicomUtil.seqToAttr(plan, TagByName.BeamSequence).find(bs => bs.get(TagByName.BeamNumber).getIntegerValues().head == ReferencedBeamNumber).get
+      val beam = DicomUtil.seqToAttr(plan, TagByName.BeamSequence).find(bs => bs.get(TagByName.BeamNumber).getIntegerValues.head == ReferencedBeamNumber).get
       val BeamName = Util.normalizedBeamName(beam)
       val bn = if (BeamName == "") None else Some(BeamName.trim)
       bn
     } catch {
-      case t: Throwable => None
+      case _: Throwable => None
     }
   }
 
@@ -168,7 +160,7 @@ object Phase2Util extends Logging {
   }
 
   /**
-   * Given an RTPLAN, a list of RTIMAGEs, and a BeamName, return the RTIMAGE associated with BeamName.
+   * Given an RTPLAN, a list of RTIMAGE(s), and a BeamName, return the RTIMAGE associated with BeamName.
    */
   def findRtimageByBeamName(plan: DicomFile, rtimageList: IndexedSeq[DicomFile], BeamName: String): Option[DicomFile] = {
     val beam = rtimageList.map(rti => (rti, getBeamNameOfRtimageDf(plan, rti))).filter(rn => rn._2.isDefined && rn._2.get.equals(BeamName.trim))
@@ -179,7 +171,7 @@ object Phase2Util extends Logging {
    * Given a status, determine if it is 'good'.
    */
   def statusOk(status: ProcedureStatus.Value): Boolean = {
-    Seq(ProcedureStatus.pass, ProcedureStatus.done).find(s => s.toString.equals(status.toString)).isDefined
+    Seq(ProcedureStatus.pass, ProcedureStatus.done).exists(s => s.toString.equals(status.toString))
   }
 
   /**
@@ -189,7 +181,9 @@ object Phase2Util extends Logging {
 
     def mainReport: Elem = {
       val href = WebServer.urlOfResultsFile(extendedData.output.dir) + "/" + Output.displayFilePrefix + ".html"
-      <div class="col-md-1 col-md-offset-1" title='Return to main (overview) report'><a href={ href }>Main Report</a></div>
+      <div class="col-md-1 col-md-offset-1" title='Return to main (overview) report'>
+        <a href={href}>Main Report</a>
+      </div>
     }
 
     val analysisDate: Date = {
@@ -198,14 +192,6 @@ object Phase2Util extends Logging {
         case _ => extendedData.output.startDate
       }
       date
-    }
-
-    def dateToString(date: Option[Date]): String = {
-      val dateFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss")
-      date match {
-        case Some(date) => dateFormat.format(date)
-        case _ => "unknown"
-      }
     }
 
     val machineId = extendedData.machine.id
@@ -224,9 +210,13 @@ object Phase2Util extends Logging {
 
     val passFailImage = {
       if (statusOk(status)) {
-        <div title="Passed!"><img src={ Config.passImageUrl } width="128"/></div>
+        <div title="Passed!">
+          <img src={Config.passImageUrl} width="128"/>
+        </div>
       } else {
-        <div title="Failed"><img src={ Config.failImageUrl } width="128"/></div>
+        <div title="Failed">
+          <img src={Config.failImageUrl} width="128"/>
+        </div>
       }
     }
 
@@ -241,13 +231,29 @@ object Phase2Util extends Logging {
     def wrap(col: Int, name: String, value: String, asAlias: Boolean): Elem = {
       val html =
         if (asAlias) {
-          <span aqaalias="">{ value }</span>
+          <span aqaalias="">
+            {value}
+          </span>
         } else {
           val valueList = value.split("\n");
-          { <span>{ valueList.head }{ valueList.tail.map(line => { <span><br/> { line } </span> }) }</span> }
+          {
+            <span>
+              {valueList.head}{valueList.tail.map(line => {
+              <span>
+                <br/>{line}
+              </span>
+            })}
+            </span>
+          }
         }
 
-      { <div class={ "col-md-" + col }><em>{ name }:</em><br/>{ html }</div> }
+      {
+        <div class={"col-md-" + col}>
+          <em>
+            {name}
+            :</em> <br/>{html}
+        </div>
+      }
 
     }
 
@@ -261,45 +267,54 @@ object Phase2Util extends Logging {
     val div = {
       <div class="row">
         <div class="row">
-          <div class="col-md-1 col-md-offset-1">{ passFailImage }</div>
-          <div class="col-md-3" title={ title }><h2>{ title }</h2></div>
+          <div class="col-md-1 col-md-offset-1">
+            {passFailImage}
+          </div>
+          <div class="col-md-3" title={title}>
+            <h2>
+              {title}
+            </h2>
+          </div>
           <div class="col-md-1" title="Treatment machine. Click to view and modify machine configuration.">
             <h2>
-              { MachineUpdate.linkToMachineUpdate(extendedData.machine.machinePK.get, machineId) }
+              {MachineUpdate.linkToMachineUpdate(extendedData.machine.machinePK.get, machineId)}
             </h2>
           </div>
           <div class="col-md-1">
-            <span title="Machine Type">{ machType }</span>
+            <span title="Machine Type">
+              {machType}
+            </span>
             <br/>
-            <span title="Multileaf Collimator">{ extendedData.multileafCollimator.model }</span>
+            <span title="Multileaf Collimator">
+              {extendedData.multileafCollimator.model}
+            </span>
           </div>
           <div class="col-md-2" title="Machine Type">
-            <span title="EPID (electronic portal imaging device)">{ extendedData.epid.model }</span>
+            <span title="EPID (electronic portal imaging device)">
+              {extendedData.epid.model}
+            </span>
             <br/>
-            <span title="X*Y pixel size in mm">{ pixelSpacing }</span>
+            <span title="X*Y pixel size in mm">
+              {pixelSpacing}
+            </span>
           </div>
           <div class="col-md-1">
-            <a href={ MaintenanceRecordList.path + "?machinePK=" + extendedData.machine.machinePK.get } title="View and modify maintenance events for this machine">Maintenance</a>
+            <a href={MaintenanceRecordList.path + "?machinePK=" + extendedData.machine.machinePK.get} title="View and modify maintenance events for this machine">Maintenance</a>
           </div>
         </div>
         <div class="row">
-          { mainReport }
-          { wrap(2, "Institution", extendedData.institution.name, true) }
-          { wrap(1, "Data Acquisition", dataAcquisitionDate, false) }
-          { wrap(1, "Analysis", twoLineDate.format(analysisDate), false) }
-          { wrap(1, "User", userId, true) }
-          { wrap(1, "Elapsed", elapsed, false) }
-          { wrap(1, "Procedure", procedureDesc, false) }
-          <div class="col-md-1">{ OutputList.redoUrl(extendedData.output.outputPK.get) }</div>
+          {mainReport}{wrap(2, "Institution", extendedData.institution.name, asAlias = true)}{wrap(1, "Data Acquisition", dataAcquisitionDate, asAlias = false)}{wrap(1, "Analysis", twoLineDate.format(analysisDate), asAlias = false)}{wrap(1, "User", userId, asAlias = true)}{wrap(1, "Elapsed", elapsed, asAlias = false)}{wrap(1, "Procedure", procedureDesc, asAlias = false)}<div class="col-md-1">
+          {OutputList.redoUrl(extendedData.output.outputPK.get)}
+        </div>
         </div>
         <div class="row">
-          { content }
+          {content}
         </div>
       </div>
     }
 
     // write the report to the output directory
-    val text = wrapBody(div, title, None, true, runScript)
+    val text = wrapBody(div, title, None, c3 = true, runScript)
     text
   }
 
@@ -308,22 +323,10 @@ object Phase2Util extends Logging {
    */
   def identifyBadPixels(originalImage: DicomImage, radius: Int): Seq[DicomImage.PixelRating] = {
     val numPixels = originalImage.width * originalImage.height
-    val sampleSize = ((Config.BadPixelSamplePerMillion / 1000000.0) * numPixels).round.toInt
     val maxBadPixels = ((Config.MaxEstimatedBadPixelPerMillion / 1000000.0) * numPixels).round.toInt
     val badPixels = originalImage.identifyBadPixels(maxBadPixels, Config.BadPixelStdDev, Config.BadPixelMaximumPercentChange, radius, Config.BadPixelMinimumDeviation_CU)
-    badPixels.filter(bp => bp.rating > 100) // TODO filter?
+    badPixels.filter(bp => bp.rating > 100)
   }
-
-  //  /**
-  //   * Create a corrected version of the given image using configured parameters.
-  //   */
-  //  def correctBadPixels(originalImage: DicomImage, badPixelList: IndexedSeq[Point]): DicomImage = {
-  //    val numPixels = originalImage.width * originalImage.height
-  //    val sampleSize = ((Config.BadPixelSamplePerMillion / 1000000.0) * numPixels).round.toInt
-  //    val maxBadPixels = ((Config.MaxBadPixelPerMillion / 1000000.0) * numPixels).round.toInt
-  //    val badPixelList = originalImage.identifyBadPixels(sampleSize, maxBadPixels, Config.BadPixelStdDevMultiple)
-  //    originalImage.correctBadPixels(badPixelList)
-  //  }
 
   def getImagePlanePixelSpacing(attributeList: AttributeList): Point2D.Double = {
     val ImagePlanePixelSpacing = attributeList.get(TagByName.ImagePlanePixelSpacing).getDoubleValues
@@ -333,10 +336,10 @@ object Phase2Util extends Logging {
   /**
    * HTML snippet to describe a crash.
    */
-  def procedureCrash(name: String) = {
+  def procedureCrash(name: String): Elem = {
     <div>
-      { name + " crashed" }<br/>
-      <img src={ Config.failImageUrl } height="32"/>
+      {name + " crashed"}<br/>
+      <img src={Config.failImageUrl} height="32"/>
     </div>
   }
 
@@ -347,7 +350,7 @@ object Phase2Util extends Logging {
       val height = ((jaws.Y1.abs + jaws.Y2.abs) / 10).round.toInt
       width + " x " + height + " cm"
     } catch {
-      case t: Throwable => ""
+      case _: Throwable => ""
     }
   }
 
@@ -358,7 +361,7 @@ object Phase2Util extends Logging {
 
       "G" + Util.angleRoundedTo90(g) + " C" + Util.angleRoundedTo90(c)
     } catch {
-      case t: Throwable => ""
+      case _: Throwable => ""
     }
   }
 
@@ -366,10 +369,22 @@ object Phase2Util extends Logging {
     (beamName.trim + "_" + jawDescription(rtimage, rtplan)).replaceAll("[^a-zA-Z0-9]", "_").replaceAll("__*", "_").replaceAll("_$", "").replaceAll("^_", "")
   }
 
-  def dicomViewHtmlFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
-    val htmlFile = dicomViewBaseName(runReq.beamNameOfAl(al), al, runReq.rtplan) + ".html"
-    val viewDir = new File(extendedData.output.dir, "view")
+  def dicomViewHtmlFile(al: AttributeList, beamName: String, outputDir: File, rtplanAl: AttributeList): File = {
+    val htmlFile = dicomViewBaseName(beamName, al, rtplanAl) + ".html"
+    val viewDir = new File(outputDir, "view")
     new File(viewDir, htmlFile)
+  }
+
+  def dicomViewHtmlFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
+    val f1 = dicomViewHtmlFile(al, runReq.beamNameOfAl(al), extendedData.output.dir, runReq.rtplan)
+    if (true) { // TODO rm
+      val htmlFile = dicomViewBaseName(runReq.beamNameOfAl(al), al, runReq.rtplan) + ".html"
+      val viewDir = new File(extendedData.output.dir, "view")
+      val f2 = new File(viewDir, htmlFile)
+      if (!f1.getAbsolutePath.equals(f2.getAbsolutePath))
+        throw new RuntimeException("change to function is wrong! : \nnew: " + f1.getAbsolutePath + "\nold: " + f2.getAbsolutePath)
+    }
+    f1
   }
 
   def dicomViewImageHtmlFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
@@ -382,6 +397,10 @@ object Phase2Util extends Logging {
     val pngFile = dicomViewBaseName(runReq.beamNameOfAl(al), al, runReq.rtplan) + ".png"
     val viewDir = new File(extendedData.output.dir, "view")
     new File(viewDir, pngFile)
+  }
+
+  def dicomViewHref(al: AttributeList, beamName: String, outputDir: File, rtplanAl: AttributeList) = {
+    WebServer.urlOfResultsFile(dicomViewHtmlFile(al, beamName, outputDir, rtplanAl))
   }
 
   def dicomViewHref(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): String = {
@@ -402,7 +421,7 @@ object Phase2Util extends Logging {
   def makeCenterDosePointList(attributeList: AttributeList, collimatorCenterOfRotation: Point2D.Double): Seq[Point] = {
     val translator = new IsoImagePlaneTranslator(attributeList)
 
-    // inspect this many pixels outside the calculated radius to account for roundoff errors
+    // inspect this many pixels outside the calculated radius to account for round off errors
     val pad = 2
 
     val mmX = collimatorCenterOfRotation.getX
@@ -415,15 +434,17 @@ object Phase2Util extends Logging {
     val loY = (translator.iso2PixCoordY(mmY - radius_mm) - pad).round.toInt
     val hiY = (translator.iso2PixCoordY(mmY + radius_mm) + pad).round.toInt
 
-    val xPixRange = (loX until hiX)
-    val yPixRange = (loY until hiY)
+    val xPixRange = loX until hiX
+    val yPixRange = loY until hiY
 
     // step through pixels and see which are close enough.
     def nearCenter(xPix: Int, yPix: Int): Boolean = {
       collimatorCenterOfRotation.distance(translator.pix2Iso(xPix, yPix)) <= radius_mm
     }
 
-    val pointList = for (xPix <- xPixRange; yPix <- yPixRange; if nearCenter(xPix, yPix)) yield { new Point(xPix, yPix) }
+    val pointList = for (xPix <- xPixRange; yPix <- yPixRange; if nearCenter(xPix, yPix)) yield {
+      new Point(xPix, yPix)
+    }
     pointList
   }
 
@@ -444,20 +465,20 @@ object Phase2Util extends Logging {
     // average value raw pixel values
     val rawAverage = pointList.map(p => dicomImage.get(p.getX.toInt, p.getY.toInt)).sum / pointList.size
 
-    val m = attributeList.get(TagFromName.RescaleSlope).getDoubleValues().head
-    val b = attributeList.get(TagFromName.RescaleIntercept).getDoubleValues().head
+    val m = attributeList.get(TagFromName.RescaleSlope).getDoubleValues.head
+    val b = attributeList.get(TagFromName.RescaleIntercept).getDoubleValues.head
     val dose = (rawAverage * m) + b
     dose
   }
 
-  case class MaintenanceRecordBaseline(maintenanceRecord: Option[MaintenanceRecord], baseline: Baseline);
+  case class MaintenanceRecordBaseline(maintenanceRecord: Option[MaintenanceRecord], baseline: Baseline) {}
 
   /**
    * Look through the BeamSequence and find the ReferencedBeamSequence that matches the given beam.
    */
   def getBeamSequence(plan: AttributeList, beamNumber: Int): AttributeList = {
     // Determine if the given attribute list references the given beam number.
-    def matchesBeam(beamNumber: Int, al: AttributeList): Boolean = (al.get(TagByName.BeamNumber).getIntegerValues.head == beamNumber)
+    def matchesBeam(beamNumber: Int, al: AttributeList): Boolean = al.get(TagByName.BeamNumber).getIntegerValues.head == beamNumber
 
     DicomUtil.seqToAttr(plan, TagByName.BeamSequence).find(bs => matchesBeam(beamNumber, bs)).get
   }
@@ -469,6 +490,6 @@ object Phase2Util extends Logging {
    *
    * Other collimator angles such as 45 degrees may give unexpected results.
    */
-  def isHorizontal(image: AttributeList): Boolean = (Util.angleRoundedTo90(image.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head).toInt % 180) == 0
+  def isHorizontal(image: AttributeList): Boolean = (Util.angleRoundedTo90(image.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head) % 180) == 0
 
 }
