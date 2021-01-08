@@ -158,7 +158,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       outputPK = outputPK,
       SOPInstanceUID = Util.sopOfAl(attributeList),
       beamName = beamName,
-      isBaseline_text = "false",
+      isBaseline_text = false.toString,
 
       axialSymmetry_pct = -1,
       axialSymmetryBaseline_pct = -1,

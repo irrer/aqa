@@ -23,6 +23,7 @@ object SymmetryAndFlatnessHTML extends Logging {
 
   /**
    * Make the directory to contain symmetry, flatness, and constancy HTML report.
+   *
    * @param outputDir Main output directory.
    * @return Sub-directory.
    */
@@ -49,9 +50,12 @@ object SymmetryAndFlatnessHTML extends Logging {
     val iconImage = if (status == ProcedureStatus.pass) Config.passImageUrl else Config.failImageUrl
     val elem = {
       <div title="Click for details.">
-        <a href={ WebServer.urlOfResultsFile(mainHtmlFile) }>
-          Symmetry &amp; Flatness Beams:{ resultListSize }<br/>
-          <img src={ iconImage } height="32"/>
+        <a href={WebServer.urlOfResultsFile(mainHtmlFile)}>
+          Symmetry
+          &amp;
+          Flatness Beams:
+          {resultListSize}<br/>
+          <img src={iconImage} height="32"/>
         </a>
       </div>
     }
@@ -63,8 +67,14 @@ object SymmetryAndFlatnessHTML extends Logging {
     val mainHtmlFile = new File(subDir, htmlFileName)
     resultList.par.map(rb => Util.writePng(rb.annotatedImage, annotatedImageFile(subDir, rb.symmetryAndFlatness.beamName)))
 
+
+    val dynamicContent = {
+      <div class="col-md-6 col-md-offset-3">
+        <embed type="text/html" src={ "/admin/SymmetryAndFlatnessSubHTML?outputPK=" + extendedData.output.outputPK.get }/>
+      </div>
+    }
+    val html = Phase2Util.wrapSubProcedure(extendedData, dynamicContent, title = "Symmetry and Flatness", status, None, runReq)
     /*  TODO
-    val html = Phase2Util.wrapSubProcedure(extendedData, SymmetryAndFlatnessSubHTML.makeContent(subDir, extendedData, resultList, runReq), "Symmetry and Flatness", status, None, runReq)
     Util.writeFile(mainHtmlFile, html)
 
     resultList.map(rb => SymmetryAndFlatnessBeamProfileHTML.makeDisplay(subDir, extendedData, rb, status, runReq))

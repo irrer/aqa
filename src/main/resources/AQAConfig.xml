@@ -439,13 +439,13 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Maximum allowed value for difference in flatness from baseline in percent. -->
     <FlatnessPercentLimit>2.0</FlatnessPercentLimit>
-    
+
+    <!-- Maximum allowed value for difference in profile constancy from baseline in percent. -->
+    <ProfileConstancyPercentLimit>2.0</ProfileConstancyPercentLimit>
+
     <!-- Used for graphing symmetry, flatness, and constancy history, a positive integer indicating the 
     number of values to display before and after (if they exist) the current point being plotted.. -->
     <SymFlatConstHistoryRange>25</SymFlatConstHistoryRange>
-    
-    <!-- Maximum allowed value for difference in profile constancy from baseline in percent. -->
-    <ProfileConstancyPercentLimit>2.0</ProfileConstancyPercentLimit>
 
     <!-- List of names of beams to be evaluated for Symmetry, Flatness and Constancy. -->
     <SymmetryAndFlatnessBeamList>

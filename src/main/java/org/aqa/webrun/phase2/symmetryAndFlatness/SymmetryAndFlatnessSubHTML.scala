@@ -2,6 +2,7 @@ package org.aqa.webrun.phase2.symmetryAndFlatness
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ScalaUtil.PrettyXML
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -28,7 +29,7 @@ import scala.xml.Elem
 /**
  * Analyze DICOM files for symmetry and flatness.
  */
-object SymmetryAndFlatnessSubHTML {
+object SymmetryAndFlatnessSubHTML extends Logging {
 
   private def titleDetails = "Click to view graphs and other details"
 
@@ -41,9 +42,6 @@ object SymmetryAndFlatnessSubHTML {
   private def titleFlatness = "Flatness: (max-min)/(max+min).  Max percent limit is " + Config.FlatnessPercentLimit
 
   private def titleProfileConstancy = "Profile Constancy.  Max percent limit is " + Config.ProfileConstancyPercentLimit
-
-  //  private val passImg = { <img title="Passed" src={ Config.passImageUrl } width="30"/> }
-  //  private val failImg = { <img title="Failed" src={ Config.failImageUrl } width="30"/> }
 
   private def tableHead: Elem = {
     <thead>
@@ -126,91 +124,22 @@ object SymmetryAndFlatnessSubHTML {
     </td>
   }
 
-  private def classOfStatus(status: ProcedureStatus.Value): String = {
-    if (status.toString == ProcedureStatus.pass.toString) "normal" else "danger"
-  }
-
-  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-  private def axialSymmetryColumn(symFlatData: SymmetryAndFlatnessDataSet): Elem = {
-    <td style="text-align: center;" title={titleAxialSymmetry}>
-      {symFlatData.symmetryAndFlatness.axialSymmetry.formatted("%14.6f")}
+  private def fmtBaselineColumn(baseline: Double): Elem = {
+    <td style="text-align: center;" title={"Baseline % : " + baseline.formatted("%10.8f")}>
+      {pctRounded(baseline).formatted("%5.3f").trim}
     </td>
   }
 
-  private def axialSymmetryBaselineColumn(symFlatData: SymmetryAndFlatnessDataSet): Elem = {
-    <td style="text-align: center;">
-      {symFlatData.baseline.axialSymmetry.formatted("%14.6f")}
+  private def fmtDifferenceColumn(percent: Double, limit: Double): Elem = {
+    val errorClass = if (percent.abs > limit.abs) "danger" else "normal"
+    <td style="text-align: center;" class={errorClass} title={"Difference: " + percent.formatted("%10.8f")}>
+      {pctRounded(percent).formatted("%5.2f").trim}
     </td>
   }
 
-  private def axialSymmetryBaselinePercentColumn(symFlatData: SymmetryAndFlatnessDataSet): Elem = {
-    val pct = symFlatData.symmetryAndFlatness.axialSymmetry - symFlatData.baseline.axialSymmetry
-    <td style="text-align: center;" class={classOfStatus(ProcedureStatus.stringToProcedureStatus(symFlatData.symmetryAndFlatness.axialSymmetryStatus).get)}>
-      {pctRounded(pct).formatted("%5.2f")}
-    </td>
-  }
-
-  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-  private def transverseSymmetryColumn(symFlatData: SymmetryAndFlatnessDataSet): Elem = {
-    <td style="text-align: center;" title={titleTransverseSymmetry}>
-      {symFlatData.symmetryAndFlatness.transverseSymmetry.formatted("%14.6f")}
-    </td>
-  }
-
-  private def transverseSymmetryBaselineColumn(symFlatData: SymmetryAndFlatnessDataSet): Elem = {
-    <td style="text-align: center;">
-      {symFlatData.baseline.transverseSymmetry.formatted("%14.6f")}
-    </td>
-  }
-
-  private def transverseSymmetryBaselinePercentColumn(symFlatData: SymmetryAndFlatnessDataSet): Elem = {
-    val pct = symFlatData.symmetryAndFlatness.transverseSymmetry - symFlatData.baseline.transverseSymmetry
-    <td style="text-align: center;" class={classOfStatus(ProcedureStatus.stringToProcedureStatus(symFlatData.symmetryAndFlatness.transverseSymmetryStatus).get)}>
-      {pctRounded(pct).formatted("%5.2f")}
-    </td>
-  }
-
-  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-  private def flatnessColumn(symFlatData: SymmetryAndFlatnessDataSet): Elem = {
-    <td style="text-align: center;" title={titleFlatness}>
-      {symFlatData.symmetryAndFlatness.flatness.formatted("%14.6f")}
-    </td>
-  }
-
-  private def flatnessBaselineColumn(symFlatData: SymmetryAndFlatnessDataSet): Elem = {
-    <td style="text-align: center;">
-      {symFlatData.baseline.flatness.formatted("%14.6f")}
-    </td>
-  }
-
-  private def flatnessBaselinePercentColumn(symFlatData: SymmetryAndFlatnessDataSet): Elem = {
-    val pct = symFlatData.symmetryAndFlatness.flatness - symFlatData.symmetryAndFlatness.flatness
-    <td style="text-align: center;" class={classOfStatus(ProcedureStatus.stringToProcedureStatus(symFlatData.symmetryAndFlatness.flatnessStatus).get)}>
-      {pctRounded(pct).formatted("%5.2f")}
-    </td>
-  }
-
-  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-  private def profileConstancyColumn(symFlatData: SymmetryAndFlatnessDataSet): Elem = {
-    <td style="text-align: center;" title={titleProfileConstancy}>
-      {symFlatData.symmetryAndFlatness.profileConstancy(symFlatData.baseline).formatted("%14.6f")}
-    </td>
-  }
-
-  private def profileConstancyBaselineColumn(symFlatData: SymmetryAndFlatnessDataSet): Elem = {
-    <td style="text-align: center;">
-      {symFlatData.baseline.profileConstancy(symFlatData.baseline).formatted("%14.6f")}
-    </td>
-  }
-
-  private def profileConstancyBaselinePercentColumn(symFlatData: SymmetryAndFlatnessDataSet): Elem = {
-    val pct = symFlatData.symmetryAndFlatness.profileConstancy(symFlatData.baseline) - symFlatData.baseline.profileConstancy(symFlatData.baseline)
-    <td style="text-align: center;" class={classOfStatus(ProcedureStatus.stringToProcedureStatus(symFlatData.symmetryAndFlatness.profileConstancyStatus).get)}>
-      {pctRounded(pct).formatted("%5.2f")}
+  private def fmtValueColumn(value: Double): Elem = {
+    <td style="text-align: center;" title={"Value % : " + value.formatted("%10.8f")}>
+      {pctRounded(value).formatted("%5.3f").trim}
     </td>
   }
 
@@ -224,43 +153,56 @@ object SymmetryAndFlatnessSubHTML {
         <tr align="center">
           {detailsColumn(subDir, symFlatData)}
           {imageColumn(symFlatData)}
-          <td style="text-align: center;">Axial Symmetry</td>
-          {axialSymmetryBaselineColumn(symFlatData)}
-          {axialSymmetryBaselinePercentColumn(symFlatData)}
+
+          <td style="text-align: center;" title={titleAxialSymmetry}>Axial Symmetry</td>
+          {fmtBaselineColumn(symFlatData.baseline.axialSymmetry)}
+          {
+            val pct = symFlatData.symmetryAndFlatness.axialSymmetry - symFlatData.baseline.axialSymmetry
+            fmtDifferenceColumn(pct, Config.SymmetryPercentLimit)
+          }
           {symmetryPercentLimitColumn}
-          {axialSymmetryColumn(symFlatData)}
+          {fmtValueColumn(symFlatData.symmetryAndFlatness.axialSymmetry)}
         </tr>
       },
       {
         <tr>
-          <td style="text-align: center;">Transverse Symmetry</td>
-          {transverseSymmetryBaselineColumn(symFlatData)}
-          {transverseSymmetryBaselinePercentColumn(symFlatData)}
+          <td style="text-align: center;" title={titleTransverseSymmetry}>Transverse Symmetry</td>
+          {fmtBaselineColumn(symFlatData.baseline.transverseSymmetry)}
+          {
+            val pct = symFlatData.symmetryAndFlatness.transverseSymmetry - symFlatData.baseline.transverseSymmetry
+            fmtDifferenceColumn(pct, Config.SymmetryPercentLimit)
+          }
           {symmetryPercentLimitColumn}
-          {transverseSymmetryColumn(symFlatData)}
+          {fmtValueColumn(symFlatData.symmetryAndFlatness.transverseSymmetry)}
         </tr>
       },
       {
         <tr>
-          <td style="text-align: center;">Flatness</td>{flatnessBaselineColumn(symFlatData)}
-          {flatnessBaselinePercentColumn(symFlatData)}
+          <td style="text-align: center;" title={titleFlatness}>Flatness</td>
+          {fmtBaselineColumn(symFlatData.baseline.flatness)}
+          {
+            val pct = symFlatData.symmetryAndFlatness.flatness - symFlatData.baseline.flatness
+            fmtDifferenceColumn(pct, Config.FlatnessPercentLimit)
+          }
           {flatnessPercentLimitColumn}
-          {flatnessColumn(symFlatData)}
+          {fmtValueColumn(symFlatData.symmetryAndFlatness.flatness)}
         </tr>
       },
       {
         <tr>
-          <td style="text-align: center;">Profile Constancy</td>
-          {profileConstancyBaselineColumn(symFlatData)}
-          {profileConstancyBaselinePercentColumn(symFlatData)}
+          <td style="text-align: center;" title={titleProfileConstancy}>Profile Constancy</td>
+          {fmtBaselineColumn(symFlatData.baseline.profileConstancy(symFlatData.baseline))}
+          {
+            val pct = symFlatData.symmetryAndFlatness.profileConstancy(symFlatData.baseline) - symFlatData.baseline.profileConstancy(symFlatData.baseline)
+            fmtDifferenceColumn(pct, Config.ProfileConstancyPercentLimit)
+          }
           {profileConstancyPercentLimitColumn}
-          {profileConstancyColumn(symFlatData)}
+          {fmtValueColumn(symFlatData.symmetryAndFlatness.profileConstancy(symFlatData.baseline))}
         </tr>
       })
   }
 
   def makeContent(output: Output, symFlatDataList: Seq[SymmetryAndFlatnessDataSet]): Elem = {
-
     val useAsBaselineButton: Elem = {
       val href = SymmetryAndFlatnessUseAsBaseline.path + "?outputPK=" + output.outputPK.get
       val title = "Use the values here as the baseline for future symmetry and flatness analysis"
@@ -279,16 +221,18 @@ object SymmetryAndFlatnessSubHTML {
       <a href={WebServer.urlOfResultsFile(file)} title="Download Symmetry and Flatness as a CSV viewable in a spreadsheet." style="margin:20px;">CSV</a>
     }
 
+    Trace.trace()
     val content = {
-      <div class="col-md-6 col-md-offset-3">
+      <div>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"/>
         {useAsBaselineButton}{csv}<br/>
-        <table class="table table-bordered">
+        <table class="table table-responsive table-bordered">
           {tableHead}{symFlatDataList.map(sfd => makeRow(sfd))}
         </table>
         <p/>
       </div>
-
     }
+    Trace.trace()
     content
   }
 
@@ -309,7 +253,9 @@ object SymmetryAndFlatnessSubHTML {
     val dicomSeries = symFlatList.flatMap(sf => DicomSeries.getBySopInstanceUID(sf.SOPInstanceUID)).groupBy(_.seriesInstanceUID).map(uidDs => uidDs._2.head)
 
     // list of all AttributeList's referenced by SymmetryFlatness rows
+    Trace.trace()
     val alList: immutable.Iterable[AttributeList] = dicomSeries.flatMap(ds => ds.attributeListList)
+    Trace.trace()
 
     // list RTPLANs SOP UIDs referenced by SymmetryFlatness rows
     val rtplanSopList: Seq[String] = alList.map(al => Phase2Util.referencedPlanUID(al)).toSeq.distinct
@@ -325,18 +271,35 @@ object SymmetryAndFlatnessSubHTML {
      * @param sf Basis of data
      * @return Convenient set of data
      */
-    def makeDataSet(sf: SymmetryAndFlatness): SymmetryAndFlatnessDataSet = {
-      val baseline = SymmetryAndFlatness.getBaseline(output.machinePK.get, sf.beamName, dataDate).get
-      val al = alList.find(al => Util.sopOfAl(al).equals(sf.SOPInstanceUID)).get
-      val refRtplanSop = Phase2Util.referencedPlanUID(al)
-      val rtplanAl = rtplanAlList.find(al => Util.sopOfAl(al).equals(refRtplanSop)).get
-      SymmetryAndFlatnessDataSet(sf, output, baseline, al, rtplanAl)
+    def makeDataSet(sf: SymmetryAndFlatness): Option[SymmetryAndFlatnessDataSet] = {
+      try {
+        val baseline = SymmetryAndFlatness.getBaseline(output.machinePK.get, sf.beamName, dataDate).get
+        val al: AttributeList = {
+          val aa = alList.find(a => Util.sopOfAl(a).equals(sf.SOPInstanceUID))
+          if (aa.isEmpty) throw new RuntimeException("Could not find RTIMAGE SOP " + sf.SOPInstanceUID)
+          aa.get
+        }
+        val refRtplanSop = Phase2Util.referencedPlanUID(al)
+        val rtplanAl = {
+          val aa = rtplanAlList.find(a => Util.sopOfAl(a).equals(refRtplanSop))
+          if (aa.isEmpty) throw new RuntimeException("Could not find RTPLAN SOP " + refRtplanSop)
+          aa.get
+        }
+        Some(SymmetryAndFlatnessDataSet(sf, output, baseline, al, rtplanAl))
+      }
+      catch {
+        case t =>
+          logger.error("Unexpected error: " + fmtEx(t))
+          None
+      }
     }
 
-    val symFlatDataList = symFlatList.map(sf => makeDataSet(sf)).sortBy(_.time)
+    Trace.trace()
+    val symFlatDataList = symFlatList.flatMap(sf => makeDataSet(sf)).sortBy(_.time)
 
     makeContent(output, symFlatDataList)
   }
+
 }
 
 class SymmetryAndFlatnessSubHTML extends Restlet with Logging with SubUrlAdmin {
