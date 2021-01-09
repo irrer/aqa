@@ -70,18 +70,50 @@ object SymmetryAndFlatnessHTML extends Logging {
 
     val dynamicContent = {
       <div class="col-md-6 col-md-offset-3">
-        <embed type="text/html" src={ "/admin/SymmetryAndFlatnessSubHTML?outputPK=" + extendedData.output.outputPK.get }/>
+        <div id="DynamicContent">
+          {extendedData.output.outputPK.get.toString}
+        </div>
       </div>
     }
-    val html = Phase2Util.wrapSubProcedure(extendedData, dynamicContent, title = "Symmetry and Flatness", status, None, runReq)
-    /*  TODO
+
+    val runScript = {
+      """
+        <script>
+          var baseUrl='/admin/SymmetryAndFlatnessSubHTML'
+          var dynUrl=baseUrl + '?outputPK=' + document.getElementById("DynamicContent").innerHTML.trim();
+
+          function loadDynamicContent() {
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+              if (this.readyState == 4 && this.status == 200) {
+                document.getElementById("DynamicContent").innerHTML = this.responseText;
+              }
+            };
+            xhttp.open("GET", dynUrl, true);
+            xhttp.send();
+          }
+
+          loadDynamicContent();
+
+          function setBaselineState(checkBox, symFlatPK) {
+            var baselineUrl=baseUrl + '?symFlatPK=' + symFlatPK.toString().trim() + '&baseline=' + checkBox.checked.toString();
+            // send the request to use or not use the beam as a baseline.  Note that if the user is
+            // not authorized, then the request will be silently rejected.
+            // alert("Sym Flat " + baselineUrl);  // TODO rm
+
+            var xhttp = new XMLHttpRequest();
+            xhttp.open("GET", baselineUrl, true);
+            xhttp.send();
+          }
+        </script>
+      """.replace("\r", "")
+    }
+    val html = Phase2Util.wrapSubProcedure(extendedData, dynamicContent, title = "Symmetry and Flatness", status, Some(runScript), runReq)
     Util.writeFile(mainHtmlFile, html)
 
     resultList.map(rb => SymmetryAndFlatnessBeamProfileHTML.makeDisplay(subDir, extendedData, rb, status, runReq))
 
     summary(mainHtmlFile, resultList.size, status)
-     */
-    <div>TODO</div>
   }
 
 }

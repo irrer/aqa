@@ -161,19 +161,19 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       isBaseline_text = false.toString,
 
       axialSymmetry_pct = -1,
-      axialSymmetryBaseline_pct = -1,
+      axialSymmetryBaseline_pct = -2,
       axialSymmetryStatus = "done",
 
-      transverseSymmetry_pct = -1,
-      transverseSymmetryBaseline_pct = -1,
+      transverseSymmetry_pct = -3,
+      transverseSymmetryBaseline_pct = -4,
       transverseSymmetryStatus = "done",
 
-      flatness_pct = -1,
-      flatnessBaseline_pct = -1,
+      flatness_pct = -5,
+      flatnessBaseline_pct = -6,
       flatnessStatus = "done",
 
-      profileConstancy_pct = -1,
-      profileConstancyBaseline_pct = -1,
+      profileConstancy_pct = -7,
+      profileConstancyBaseline_pct = -8,
       profileConstancyStatus = "done",
 
       top_cu = evalPoint(Config.SymmetryPointTop),
