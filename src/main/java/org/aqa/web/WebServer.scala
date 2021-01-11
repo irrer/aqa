@@ -31,7 +31,6 @@ import org.restlet.data.Protocol
 import org.restlet.data.Status
 import org.restlet.resource.Directory
 import org.restlet.routing.Filter
-import org.restlet.routing.Redirector
 import org.restlet.routing.Router
 import org.restlet.routing.Template
 import org.restlet.routing.TemplateRoute
@@ -51,6 +50,7 @@ object WebServer {
   def urlOfPath(baseUrl: String, filePath: String): String = (baseUrl + "/" + filePath.replace('\\', '/')).replaceAll("///*", "/")
 
   def urlOfResultsPath(filePath: String): String = urlOfPath(resultsDirBaseUrl, filePath)
+
   def urlOfTmpPath(filePath: String): String = urlOfPath(tmpDirBaseUrl, filePath)
 
   def urlOfMachineConfigurationPath(filePath: String): String = urlOfPath(machineConfigurationDirBaseUrl, filePath)
@@ -63,11 +63,11 @@ object WebServer {
 
   def fileOfResultsPath(filePath: String): File = new File(Config.resultsDirFile, filePath)
 
-  def fileToResultsPath(file: File): String = file.getAbsolutePath.substring(Config.resultsDirFile.getAbsolutePath.size)
+  def fileToResultsPath(file: File): String = file.getAbsolutePath.substring(Config.resultsDirFile.getAbsolutePath.length)
 
-  def fileToTmpPath(file: File): String = file.getAbsolutePath.substring(Config.tmpDirFile.getAbsolutePath.size)
+  def fileToTmpPath(file: File): String = file.getAbsolutePath.substring(Config.tmpDirFile.getAbsolutePath.length)
 
-  def fileToMachineConfigurationPath(file: File): String = file.getAbsolutePath.substring(Config.machineConfigurationDir.getAbsolutePath.size)
+  def fileToMachineConfigurationPath(file: File): String = file.getAbsolutePath.substring(Config.machineConfigurationDir.getAbsolutePath.length)
 
 }
 
@@ -90,11 +90,9 @@ class WebServer extends Application with Logging {
       }
     } else {
       val server = component.getServers.add(Protocol.HTTP, Config.HTTPPort)
-      server.getProtocols.toArray.map(p => logger.info("Using protocol " + p + " on port " + server.getPort))
+      server.getProtocols.toArray.foreach(p => logger.info("Using protocol " + p + " on port " + server.getPort))
     }
   }
-
-  private def getRelativeName(dir: File): String = dir.getAbsolutePath.substring(Config.DataDir.getCanonicalPath.size).replace('\\', '/')
 
   private def makeDirectory(dir: File): Directory = {
     val uri = ("file:///" + dir.getCanonicalPath).replace('\\', '/') + "/"
@@ -116,15 +114,13 @@ class WebServer extends Application with Logging {
    */
 
   private def attach(router: Router, url: String, restlet: Restlet): Unit = {
-    val name = restlet.getClass.getName.replaceAll(".*\\.", "")
-    val rootRef = if (restlet.isInstanceOf[Directory]) (" : " + restlet.asInstanceOf[Directory].getRootRef) else ""
     //logger.info("attaching router to " + url + " ==> " + name + rootRef)
     router.attach(url, restlet)
   }
 
   private lazy val router = {
     val r = new Router(getContext.createChildContext)
-    val redirector = new Redirector(getContext, "/target?referer={fi}", Redirector.MODE_CLIENT_SEE_OTHER)
+    // val redirector = new Redirector(getContext, "/target?referer={fi}", Redirector.MODE_CLIENT_SEE_OTHER)
     r
   }
 
@@ -163,31 +159,29 @@ class WebServer extends Application with Logging {
      * Attempt to restore the requested file from the database.  See if its directory matches
      * anything in input or output, and if it does, restore it.
      */
-    private def restoreFile(file: File) = {
+    private def restoreFile(file: File): Unit = {
       try {
-        def fileNameSuffix(f: File) = f.getAbsolutePath.substring(Config.resultsDirFile.getAbsolutePath.size)
+        def fileNameSuffix(f: File) = f.getAbsolutePath.substring(Config.resultsDirFile.getAbsolutePath.length)
+
         val outputDir = file.getParentFile
         val inputDir = outputDir.getParentFile
 
         Output.getByDirectory(fileNameSuffix(outputDir)) match {
-          case Some(output) => {
+          case Some(output) =>
             Output.getFilesFromDatabase(output.outputPK.get, outputDir.getParentFile)
             logger.info("Restored ouput directory from database: " + outputDir.getAbsolutePath)
-          }
           case _ =>
         }
 
         Input.getByDirectory(fileNameSuffix(inputDir)) match {
-          case Some(input) => {
+          case Some(input) =>
             Input.getFilesFromDatabase(input.inputPK.get, inputDir.getParentFile)
             logger.info("Restored input directory from database: " + inputDir.getAbsolutePath)
-          }
           case _ =>
         }
       } catch {
-        case t: Throwable => {
+        case t: Throwable =>
           logger.warn("Unable to restore input/output files from database for file " + file.getAbsolutePath + " : " + t)
-        }
       }
     }
 
@@ -197,6 +191,7 @@ class WebServer extends Application with Logging {
       if (!file.canRead) restoreFile(file)
       Filter.CONTINUE
     }
+
     this.setNext(makeDirectory(Config.resultsDirFile))
   }
 
@@ -247,7 +242,7 @@ class WebServer extends Application with Logging {
       tmpDirectoryRestlet,
       machineConfigurationDirRestlet)
 
-    val numNull = list.filter(r => r == null).size
+    val numNull = list.count(r => r == null)
     numNull
   }
 
@@ -279,10 +274,9 @@ class WebServer extends Application with Logging {
       case `outputList` => UserRole.user
       case `tmpDirectoryRestlet` => UserRole.user
       case `machineConfigurationDirRestlet` => UserRole.user
-      case _ => {
+      case _ =>
         logger.info("admin role requested by " + WebUtil.getUserIdOrDefault(request, "unknown"))
         UserRole.admin // default to most restrictive access for everything else
-      }
     }
 
     role
@@ -290,7 +284,7 @@ class WebServer extends Application with Logging {
 
   private def initAuthentication(restlet: Restlet): Restlet = {
     val challAuthn = new ChallengeAuthenticator(getContext.createChildContext, ChallengeScheme.HTTP_BASIC, Config.PasswordPrompt) // TODO remove when we figure out how to make a real login page
-    challAuthn.setVerifier(new AuthenticationVerifier(getRequestedRole _))
+    challAuthn.setVerifier(new AuthenticationVerifier(getRequestedRole))
     challAuthn.setNext(restlet)
 
     def checkAuthorization(request: Request, response: Response, challResp: ChallengeResponse): Unit = {
@@ -300,7 +294,7 @@ class WebServer extends Application with Logging {
         if (requestedRole.id != UserRole.publik.id) { // let anyone into public areas
           val userOpt = CachedUser.get(challResp.getIdentifier, new String(challResp.getSecret))
           userOpt match {
-            case Some(user) => {
+            case Some(user) =>
               if (user.getRole.get.id < requestedRole.id) {
                 logger.warn("Authorization violation.  User " + user.id +
                   " attempted to access " + request.toString + " that requires role " + requestedRole + " but their role is only " + user.getRole)
@@ -308,28 +302,17 @@ class WebServer extends Application with Logging {
                 response.redirectSeeOther(notAuthorized.pathOf)
               } else
                 response.setStatus(Status.SUCCESS_OK)
-            }
 
-            case _ => {
+            case _ =>
               logger.warn("Internal authorization error.  Can not identify user.")
               response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
-            }
           }
         }
       } catch {
-        case t: Throwable => {
+        case t: Throwable =>
           logger.warn("Unexpected exception during authentical.  Can not identify user from request: " + request.toString + " :\n" + fmtEx(t))
           response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
-        }
       }
-    }
-
-    def needsToAgreeToTerms(id: String): Boolean = {
-      CachedUser.get(id) match {
-        case Some(user) => user.termsOfUseAcknowledgment.isEmpty
-        case _ => false
-      }
-      false // TODO remove this when we figure out how to fix 'agree to terms of use'
     }
 
     class RedirectUnauthorizedToLogin extends Filter {
@@ -339,18 +322,12 @@ class WebServer extends Application with Logging {
         // send a challenge request to the client.
         request.getChallengeResponse match {
           case null => Filter.CONTINUE
-          case cr => {
-            if (needsToAgreeToTerms(cr.getIdentifier)) {
-              termsOfUse.handle(request, response)
+          case cr =>
+            checkAuthorization(request, response, cr)
+            if (response.getStatus.getCode == Status.SUCCESS_OK.getCode)
+              Filter.CONTINUE
+            else
               Filter.SKIP
-            } else {
-              checkAuthorization(request, response, cr)
-              if (response.getStatus.getCode == Status.SUCCESS_OK.getCode)
-                Filter.CONTINUE
-              else
-                Filter.SKIP
-            }
-          }
         }
       }
     }
@@ -431,6 +408,7 @@ class WebServer extends Application with Logging {
   /**
    * Ensure that the user has agreed to the terms in the legal statement for using this service.
    */
+  /*
   private def initLegal(restlet: Restlet): Restlet = {
 
     class LegalFilter extends Filter {
@@ -438,7 +416,7 @@ class WebServer extends Application with Logging {
       override def afterHandle(request: Request, response: Response): Unit = {
 
         CachedUser.get(request) match {
-          case Some(user) => if (!user.termsOfUseAcknowledgment.isDefined) response.redirectSeeOther("/")
+          case Some(user) => if (user.termsOfUseAcknowledgment.isEmpty) response.redirectSeeOther("/")
           case _ =>
         }
 
@@ -459,6 +437,7 @@ class WebServer extends Application with Logging {
     legalFilter.setNext(restlet)
     legalFilter
   }
+  */
 
   /**
    * Standard Restlet override defines how to serve web pages.
@@ -520,9 +499,9 @@ class WebServer extends Application with Logging {
         notAuthenticated,
         setPassword)
 
-      restletList.map(r => attach(router, WebUtil.SubUrl.url(r.subUrl, WebUtil.cleanClassName(r.getClass.getName)), r))
+      restletList.foreach(r => attach(router, WebUtil.SubUrl.url(r.subUrl, WebUtil.cleanClassName(r.getClass.getName)), r))
 
-      restletList.map(r => attach(router, r.pathOf, r))
+      restletList.foreach(r => attach(router, r.pathOf, r))
 
       attach(router, WebUtil.SubUrl.url(viewOutput.subUrl, WebUtil.cleanClassName(viewOutput.getClass.getName)), viewOutput)
 
@@ -537,15 +516,14 @@ class WebServer extends Application with Logging {
       val auth = initAuthentication(router)
       resolveToReferer(auth)
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         val msg = "WebServer.createInboundRoot unexpected error: " + fmtEx(t)
         logger.error(msg)
         router
-      }
     }
   }
 
-  private def waitForWebServiceToStart = {
+  private def waitForWebServiceToStart(): Unit = {
     if (!component.isStarted) Thread.sleep(100)
     if (!component.isStarted) {
       val timeout = System.currentTimeMillis + (10 * 1000) // wait up to 10 seconds for the component to start.  It should be only a few milliseconds.
@@ -559,14 +537,14 @@ class WebServer extends Application with Logging {
   /**
    * Initialize and start the service.
    */
-  def init: Unit = {
+  def init(): Unit = {
     logger.info("Beginning web service initialization.")
-    addProtocol
+    addProtocol()
     component.getDefaultHost.attach(this)
-    component.start
-    waitForWebServiceToStart
+    component.start()
+    waitForWebServiceToStart()
     logger.info("Started web service.   Restlets that failed to be constructed: " + forceConstruction)
   }
 
-  init
+  init()
 }
