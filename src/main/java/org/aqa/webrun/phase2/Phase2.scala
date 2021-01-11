@@ -11,6 +11,7 @@ import org.aqa.Util
 import org.aqa.db.DicomSeries
 import org.aqa.db.Output
 import org.aqa.db.Procedure
+import org.aqa.db.SymmetryAndFlatness
 import org.aqa.run.ProcedureStatus
 import org.aqa.run.RunProcedure
 import org.aqa.run.RunReqClass
@@ -242,7 +243,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
       case (Some(errorMessage), _) => formErr(errorMessage)
       case (_, Some(errorMessage)) => formErr(errorMessage)
       case _ if flood.isEmpty => formErr("Flood field beam is missing")
-      case _ => Right(RunReq(basicData.rtplan, rtimageMap, flood.head._2)) // success
+      case _ => Right(RunReq(basicData.rtplan, rtimageMap, flood.head._2, Seq(), Seq())) // success
     }
   }
 
@@ -372,7 +373,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
 
                     val list = seq.par.map(f => f())
                     val summaryList = prevSummaryList ++ list.map(r => if (r.isLeft) r.left.get else r.right.get.summary)
-                    val pass = !list.exists(r => r.isLeft) && !list.exists(s => !Phase2Util.statusOk(s.right.get.status))
+                    val pass = !list.exists(r => r.isLeft) && list.forall(s => Phase2Util.statusOk(s.right.get.status))
                     if (pass) Right(summaryList) else Left(summaryList)
                 }
             }
@@ -397,7 +398,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     status
   }
 
-  override def makeRunReqForRedo(alList: Seq[AttributeList]): RunReqClass = {
+  override def makeRunReqForRedo(alList: Seq[AttributeList], oldOutput: Option[Output]): RunReqClass = {
     //val result = validate(emptyValueMap, alList.filter(al => Util.isRtimage(al)))
     val rtimageList = alList.filter(al => Util.isRtimage(al))
 
@@ -417,7 +418,15 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     val rtplan = getRtplan
     val rtimageMap = rtimageList.map(al => (Phase2Util.getBeamNameOfRtimage(rtplan, al).get, al)).toMap
     val floodBeamName = rtimageMap.keys.find(_.toLowerCase.contains("flood")).get
-    val runReq = RunReq(rtplan, rtimageMap, rtimageMap(floodBeamName))
+
+    val symmetryAndFlatnessBaselineRedoBeamList = {
+      if (oldOutput.isEmpty)
+        Seq[String]()
+      else
+        SymmetryAndFlatness.getBaselineByOutput(oldOutput.get.outputPK.get).map(_.beamName)
+    }
+
+    val runReq = RunReq(rtplan, rtimageMap, rtimageMap(floodBeamName), symmetryAndFlatnessBaselineRedoBeamList, Seq()) // TODO add Wedge baseline lis
     runReq
   }
 

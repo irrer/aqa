@@ -1,44 +1,43 @@
 package org.aqa.run
 
-import org.aqa.web.WebUtil._
-import org.aqa.Logging
-import org.aqa.db.Machine
-import org.restlet.Request
-import org.restlet.Response
-import org.aqa.web.OutputList
-import edu.umro.util.Utility
-import org.aqa.web.WebRunIndex
-import org.restlet.data.Status
 import com.pixelmed.dicom.AttributeList
-import java.util.Date
-import java.sql.Timestamp
-import org.aqa.db.Input
-import org.aqa.db.Procedure
-import java.io.File
-import edu.umro.ScalaUtil.FileUtil
-import org.aqa.db.Institution
-import org.aqa.Util
-import org.aqa.Config
-import org.aqa.web.WebUtil
-import org.aqa.db.Output
-import org.aqa.web.WebServer
-import org.aqa.db.DataValidity
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-import org.aqa.db.CachedUser
-import org.aqa.db.DicomSeries
-import org.aqa.webrun.ExtendedData
-import org.aqa.web.ViewOutput
-import sys.process._
-import scala.sys.process._
-import scala.concurrent._
-import scala.concurrent.duration.Duration
-import java.util.concurrent.TimeUnit
-import org.aqa.DicomFile
-import scala.util.Try
 import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
+import edu.umro.ScalaUtil.FileUtil
+import edu.umro.util.Utility
+import org.aqa.Config
+import org.aqa.DicomFile
+import org.aqa.Logging
+import org.aqa.Util
+import org.aqa.db.CachedUser
+import org.aqa.db.DataValidity
+import org.aqa.db.DicomSeries
+import org.aqa.db.Input
+import org.aqa.db.Institution
+import org.aqa.db.Machine
+import org.aqa.db.Output
+import org.aqa.db.Procedure
+import org.aqa.web.OutputList
+import org.aqa.web.ViewOutput
+import org.aqa.web.WebRunIndex
+import org.aqa.web.WebServer
+import org.aqa.web.WebUtil
+import org.aqa.web.WebUtil._
+import org.aqa.webrun.ExtendedData
+import org.restlet.Request
+import org.restlet.Response
+import org.restlet.data.Status
+
+import java.io.File
+import java.sql.Timestamp
+import java.util.Date
+import java.util.concurrent.TimeUnit
+import scala.annotation.tailrec
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.concurrent._
+import scala.concurrent.duration.Duration
+import scala.util.Try
 
 object RunProcedure extends Logging {
 
@@ -51,7 +50,7 @@ object RunProcedure extends Logging {
   /** Convenience function for constructing error messages to display to user on web page. */
   def formError(msg: String) = Left(WebUtil.Error.make(WebUtil.uploadFileLabel, msg))
 
-  def makeForm(runTrait: RunTrait[RunReqClass]) = {
+  def makeForm(runTrait: RunTrait[RunReqClass]): WebForm = {
     val machineSelector = new WebInputSelectMachine(machineSelectorLabel, 6, 0)
 
     def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
@@ -59,8 +58,8 @@ object RunProcedure extends Logging {
       new FormButton(name, 1, 0, SubUrl.run, action, buttonType)
     }
 
-    val runButton = makeButton(runButtonName, true, ButtonType.BtnDefault)
-    val cancelButton = makeButton(cancelButtonName, false, ButtonType.BtnDefault)
+    val runButton = makeButton(runButtonName, primary = true, ButtonType.BtnDefault)
+    val cancelButton = makeButton(cancelButtonName, primary = false, ButtonType.BtnDefault)
 
     val form = new WebForm(runTrait.getProcedure.webUrl, Some(runTrait.getProcedure.fullName), List(List(machineSelector), List(runButton, cancelButton)), 10)
     form
@@ -111,13 +110,13 @@ object RunProcedure extends Logging {
         if (status) logger.info("Used File.renameTo to successfully rename from : " + oldDir.getAbsolutePath + " to " + newDir.getAbsolutePath)
         status
       } catch {
-        case t: Throwable => {
+        case t: Throwable =>
           logger.warn("Failed to rename file with File.renameTo from : " + oldDir.getAbsolutePath + " to " + newDir.getAbsolutePath + " : " + fmtEx(t))
           false
-        }
       }
     }
 
+    @tailrec
     def renameUsingNio: Boolean = {
       val retryLimitMs = 2 * 1000
       val timeout = System.currentTimeMillis + retryLimitMs
@@ -125,11 +124,11 @@ object RunProcedure extends Logging {
       val oldPath = java.nio.file.Paths.get(oldDir.getAbsolutePath)
       val newPath = java.nio.file.Paths.get(newDir.getAbsolutePath)
       try {
-        val path = java.nio.file.Files.move(oldPath, newPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        java.nio.file.Files.move(oldPath, newPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
         logger.info("Used nio to successfully rename from : " + oldDir.getAbsolutePath + " to " + newDir.getAbsolutePath)
         true
       } catch {
-        case t: Throwable => {
+        case t: Throwable =>
           if (System.currentTimeMillis < timeout) {
             logger.warn("Failed to rename file with nio - retrying. From : " + oldDir.getAbsolutePath + " to " + newDir.getAbsolutePath + " : " + fmtEx(t))
             Thread.sleep(500)
@@ -138,15 +137,14 @@ object RunProcedure extends Logging {
             logger.error("Unable using nio to rename file " + oldDir.getAbsolutePath + " to " + newDir.getAbsolutePath + " : " + fmtEx(t))
             false
           }
-        }
       }
     }
 
     def deleteLater(f: File): Unit = {
-      class DeleteLater(file: File) extends Runnable {
-        val timeout = System.currentTimeMillis + (60 * 60 * 1000) // try for up to an hour
-        override def run: Unit = {
-          while ((System.currentTimeMillis < timeout) && (f.exists)) {
+      class DeleteLater() extends Runnable {
+        val timeout: Long = System.currentTimeMillis + (60 * 60 * 1000) // try for up to an hour
+        override def run(): Unit = {
+          while ((System.currentTimeMillis < timeout) && f.exists) {
             Thread.sleep(20 * 1000)
             Util.deleteFileTreeSafely(f)
           }
@@ -155,7 +153,7 @@ object RunProcedure extends Logging {
         }
 
       }
-      new Thread((new DeleteLater(f))).start
+      new Thread(new DeleteLater()).start()
     }
 
     def copyFilesAndDeleteLater: Boolean = {
@@ -165,10 +163,9 @@ object RunProcedure extends Logging {
         deleteLater(oldDir)
         true
       } catch {
-        case t: Throwable => {
+        case t: Throwable =>
           logger.error("Unable using nio to rename file " + oldDir.getAbsolutePath + " to " + newDir.getAbsolutePath + " : " + fmtEx(t))
           false
-        }
       }
     }
 
@@ -189,9 +186,8 @@ object RunProcedure extends Logging {
     val content = {
       <div class="row">
         <div class="col-md-4 col-md-offset-2">
-          { msg }
-          <p></p>
-          <a href={ OutputList.path } class="btn btn-default" role="button">Back</a>
+          {msg}<p></p>
+          <a href={OutputList.path} class="btn btn-default" role="button">Back</a>
         </div>
       </div>
     }
@@ -220,11 +216,10 @@ object RunProcedure extends Logging {
    */
   private def deleteInput(inputPK: Long): Unit = {
     Input.get(inputPK) match {
-      case Some(input) => {
+      case Some(input) =>
         Util.deleteFileTreeSafely(input.dir)
         logger.info("Deleted input dir " + input.dir + " and its child output dirs.")
         Input.delete(inputPK)
-      }
       case _ => ;
     }
   }
@@ -265,12 +260,12 @@ object RunProcedure extends Logging {
    *
    * There are two situations:
    *
-   *  	1: New DICOM data (never seen by this platform) is uploaded.  The data is all stored in the database.
+   * 1: New DICOM data (never seen by this platform) is uploaded.  The data is all stored in the database.
    *
-   *    2: A set of DICOM data is uploaded that was uploaded previously.  In this case, a new Input will be
-   *       created, and new DicomSeries will also be created.  The rationale is that there may have been
-   *       something wrong (such as a missing slice) with the old data.  The old Input and all DicomSeries
-   *       referencing it will be deleted as redundant data.
+   * 2: A set of DICOM data is uploaded that was uploaded previously.  In this case, a new Input will be
+   * created, and new DicomSeries will also be created.  The rationale is that there may have been
+   * something wrong (such as a missing slice) with the old data.  The old Input and all DicomSeries
+   * referencing it will be deleted as redundant data.
    */
   private def saveDicomSeries(userPK: Long, inputPK: Option[Long], machinePK: Option[Long], alList: Seq[AttributeList]): Unit = {
 
@@ -288,11 +283,11 @@ object RunProcedure extends Logging {
     val rtplanAndOther = alList.partition(al => Util.modalityOfAl(al).trim.equalsIgnoreCase("RTPLAN"))
     val rtplanList = rtplanAndOther._1
     // list of non-RTPLAN series
-    val seriesList = rtplanAndOther._2.groupBy(al => Util.serInstOfAl(al)).map(s => s._2)
+    val seriesList = rtplanAndOther._2.groupBy(al => Util.serInstOfAl(al)).values
 
-    rtplanList.map(rtplan => insertRtplanIfNew(rtplan))
+    rtplanList.foreach(rtplan => insertRtplanIfNew(rtplan))
 
-    val insertedList = seriesList.map(series => DicomSeries.makeDicomSeries(userPK, inputPK, machinePK, series)).flatten.map(series => series.insert)
+    val insertedList = seriesList.flatMap(series => DicomSeries.makeDicomSeries(userPK, inputPK, machinePK, series)).map(series => series.insert)
     logger.info("Number of non-RTPLAN DicomSeries inserted: " + insertedList.size)
   }
 
@@ -315,18 +310,17 @@ object RunProcedure extends Logging {
           try {
             runTrait.run(extendedData, runReq, response)
           } catch {
-            case t: Throwable => {
+            case t: Throwable =>
+              logger.error("Analysis crashed: " + fmtEx(t))
               ProcedureStatus.crash
-            }
           }
         }
         val status = Await.result(future, timeout)
         saveResults(status, extendedData)
       } catch {
-        case timeout: TimeoutException => {
+        case _: TimeoutException =>
           // should kill the running procedure, but there is no good way to do that.
           saveResults(ProcedureStatus.timeout, extendedData)
-        }
       }
     }
 
@@ -336,9 +330,9 @@ object RunProcedure extends Logging {
     } else {
       // run in a thread instead of a Future because the debugger in the Eclipse IDE does not handle Future's nicely.
       class RunIt extends Runnable {
-        override def run = runIt
+        override def run(): Unit = runIt
       }
-      (new Thread(new RunIt)).start
+      new Thread(new RunIt).start()
     }
   }
 
@@ -364,9 +358,11 @@ object RunProcedure extends Logging {
    * data set, and for there to be only one set of analysis results for a given set of data.
    */
   private def makeNewInput(sessionDir: Option[File], uploadDate: Timestamp, userPK: Option[Long], PatientID: Option[String],
-    dataDate: Option[Timestamp], machine: Machine, procedure: Procedure, alList: Seq[AttributeList]): Input = {
+                           dataDate: Option[Timestamp], machine: Machine, procedure: Procedure, alList: Seq[AttributeList]): Input = {
     // create DB Input
-    val inputWithoutDir = (new Input(None, None, uploadDate, userPK, machine.machinePK, PatientID, dataDate)).insert
+    val inputWithoutDir = {
+      new Input(None, None, uploadDate, userPK, machine.machinePK, PatientID, dataDate).insert
+    }
     if (userPK.isDefined)
       saveDicomSeries(userPK.get, inputWithoutDir.inputPK, machine.machinePK, alList)
 
@@ -391,9 +387,7 @@ object RunProcedure extends Logging {
 
   def getDeviceSerialNumber(alList: Seq[AttributeList]): Seq[String] = {
     val serNoByImageList = {
-      alList.
-        map(al => DicomUtil.findAllSingle(al, TagFromName.DeviceSerialNumber)).
-        flatten.
+      alList.flatMap(al => DicomUtil.findAllSingle(al, TagFromName.DeviceSerialNumber)).
         map(serNo => serNo.getSingleStringValueOrNull).
         filterNot(_ == null).
         distinct
@@ -407,9 +401,7 @@ object RunProcedure extends Logging {
   def validateMachineSelection(valueMap: ValueMapT, deviceSerialNumberList: Seq[String]): Either[StyleMapT, Machine] = {
 
     val machineByInputList = deviceSerialNumberList.
-      distinct.
-      map(dsn => Machine.findMachinesBySerialNumber(dsn)).
-      flatten.
+      distinct.flatMap(dsn => Machine.findMachinesBySerialNumber(dsn)).
       groupBy(_.id).
       map(dsnM => dsnM._2.head)
 
@@ -417,9 +409,9 @@ object RunProcedure extends Logging {
     val chosenMachine = RunProcedure.getMachineFromSelector(valueMap)
 
     val result: Either[StyleMapT, Machine] = 0 match {
-      case _ if (machineByInputList.size > 1) => formError("Files come from more than one machine; please Cancel and try again.")
-      case _ if (machineByInputList.nonEmpty) => Right(machineByInputList.head)
-      case _ if (chosenMachine.isDefined) => Right(chosenMachine.get)
+      case _ if machineByInputList.size > 1 => formError("Files come from more than one machine; please Cancel and try again.")
+      case _ if machineByInputList.nonEmpty => Right(machineByInputList.head)
+      case _ if chosenMachine.isDefined => Right(chosenMachine.get)
       case _ => formError("Unknown machine.  Please choose from the 'Machine' list below or click Cancel " + WebUtil.titleNewline + "and then use the Administration interface to add a new machine.")
     }
     result
@@ -428,7 +420,7 @@ object RunProcedure extends Logging {
   /**
    * Create input + output and start the analysis.
    */
-  private def process(valueMap: ValueMapT, request: Request, response: Response, runTrait: RunTrait[RunReqClass], runReq: RunReqClass, alList: Seq[AttributeList]): Unit = {
+  private def process(valueMap: ValueMapT, response: Response, runTrait: RunTrait[RunReqClass], runReq: RunReqClass, alList: Seq[AttributeList]): Unit = {
     val now = new Timestamp((new Date).getTime)
     val PatientID = runTrait.getPatientID(valueMap, alList)
     val machine = validateMachineSelection(valueMap, runTrait.getMachineDeviceSerialNumberList(alList)).right.get
@@ -466,7 +458,7 @@ object RunProcedure extends Logging {
       val redundantList = Output.redundantWith(output)
       val msg = redundantList.size + " old output(s) and corresponding inputs: " + redundantList.mkString("\n    ", "\n    ", "\n    ")
       logger.info("Removing " + msg)
-      redundantList.map(o => deleteInput(o.inputPK))
+      redundantList.foreach(o => deleteInput(o.inputPK))
       logger.info("Done removing " + msg)
     }
 
@@ -478,12 +470,12 @@ object RunProcedure extends Logging {
   /**
    * Respond to the 'Run' button.
    */
-  private def runIfDataValid(valueMap: ValueMapT, request: Request, response: Response, runTrait: RunTrait[RunReqClass]) = {
+  private def runIfDataValid(valueMap: ValueMapT, response: Response, runTrait: RunTrait[RunReqClass]): Unit = {
 
     logger.info("Validating data")
     val form = makeForm(runTrait)
     val dicomFileList = dicomFilesInSession(valueMap)
-    val alList = dicomFileList.map(df => df.attributeList).flatten
+    val alList = dicomFileList.flatMap(df => df.attributeList)
 
     val ms = validateMachineSelection(valueMap, runTrait.getMachineDeviceSerialNumberList(alList))
 
@@ -492,14 +484,12 @@ object RunProcedure extends Logging {
       form.setFormResponse(valueMap, ms.left.get, runTrait.getProcedure.fullName, response, Status.CLIENT_ERROR_BAD_REQUEST)
     } else {
       runTrait.validate(valueMap, alList) match {
-        case Left(errMap) => {
+        case Left(errMap) =>
           logger.info("Invalid request: " + errMap.keys.map(k => k + " : " + valueMap.get(k)).mkString("\n    ") + "\nraw errMap: " + errMap.toString)
           form.setFormResponse(valueMap, errMap, runTrait.getProcedure.fullName, response, Status.CLIENT_ERROR_BAD_REQUEST)
-        }
-        case Right(runReq) => {
+        case Right(runReq) =>
           logger.info("Validated data for " + runTrait.getProcedure.fullName)
-          process(valueMap, request, response, runTrait, runReq, alList)
-        }
+          process(valueMap, response, runTrait, runReq, alList)
       }
     }
   }
@@ -511,7 +501,7 @@ object RunProcedure extends Logging {
    * Being whitelisted is not sufficient, because things just get weird in terms of viewing and
    * ownership of the data.
    */
-  private def userAuthorizedToModify(request: Request, response: Response, input: Input): Boolean = {
+  private def userAuthorizedToModify(request: Request, input: Input): Boolean = {
     val user = CachedUser.get(request).get
 
     val mach = Machine.get(input.machinePK.get).get
@@ -526,7 +516,7 @@ object RunProcedure extends Logging {
    * Re-process the given data.  Input data is not touched, old Output is deleted, along with
    * its file tree and the data that references it.
    */
-  private def redo(valueMap: ValueMapT, response: Response, runTrait: RunTrait[RunReqClass]) = {
+  private def redo(valueMap: ValueMapT, response: Response, runTrait: RunTrait[RunReqClass]): Unit = {
     val request = response.getRequest
     val oldOutput = {
       val outputPK = valueMap(OutputList.redoTag).toLong
@@ -541,7 +531,7 @@ object RunProcedure extends Logging {
     }
 
     if (input.isDefined) {
-      if (userAuthorizedToModify(request, response, input.get)) {
+      if (userAuthorizedToModify(request, input.get)) {
         val now = new Timestamp((new Date).getTime)
         val user = CachedUser.get(request)
 
@@ -564,24 +554,26 @@ object RunProcedure extends Logging {
           val out = tempOutput.insert
           out
         }
+        // instantiate the input files from originals
+        val extendedData = ExtendedData.get(newOutput)
+        val inputDir = extendedData.input.dir
+
+        // force the contents of the input directory to be reestablished so that they are
+        // exactly the same as the first time this was run.
+        Util.deleteFileTreeSafely(inputDir)
+        Try(Input.getFilesFromDatabase(extendedData.input.inputPK.get, inputDir.getParentFile))
+
+        makeOutputDir(inputDir, now)
+
+        // read the DICOM files
+        val alList = Util.listDirFiles(inputDir).map(f => new DicomFile(f)).flatMap(df => df.attributeList)
+        val runReq = runTrait.makeRunReqForRedo(alList, oldOutput)
+
         // now that new Output has been created, delete the old output.
         // Even if something goes horribly wrong after this (server crash, analysis crash),
         // having the output in the database gives visibility to the user via the Results screen.
         if (oldOutput.isDefined)
           deleteOutput(oldOutput.get)
-
-        // instantiate the input files from originals
-        val extendedData = ExtendedData.get(newOutput)
-        val inputDir = extendedData.input.dir
-        // force the contents of the input directory to be reestablished so that they are
-        // exactly the same as the first time this was run.
-        Util.deleteFileTreeSafely(inputDir)
-        Try(Input.getFilesFromDatabase(extendedData.input.inputPK.get, inputDir.getParentFile))
-        val outputDir = makeOutputDir(inputDir, now)
-
-        // read the DICOM files
-        val alList = Util.listDirFiles(inputDir).map(f => new DicomFile(f)).map(df => df.attributeList).flatten
-        val runReq = runTrait.makeRunReqForRedo(alList)
 
         runAnalysis(valueMap, runTrait, runReq, extendedData, response)
 
@@ -605,13 +597,13 @@ object RunProcedure extends Logging {
 
   private def buttonIs(valueMap: ValueMapT, buttonName: String): Boolean = {
     val value = valueMap.get(buttonName)
-    value.isDefined && value.get.toString.equals(buttonName)
+    value.isDefined && value.get.equals(buttonName)
   }
 
   /**
    * User elected to cancel.  Delete uploaded files.
    */
-  private def cancel(valueMap: ValueMapT, response: Response) = {
+  private def cancel(valueMap: ValueMapT, response: Response): Unit = {
     sessionDir(valueMap) match {
       case Some(dir) => Utility.deleteFileTree(dir)
       case _ => ;
@@ -620,22 +612,19 @@ object RunProcedure extends Logging {
   }
 
   def handle(valueMap: ValueMapT, request: Request, response: Response, runTrait: RunTrait[RunReqClass]): Unit = {
-
     val redoValue = valueMap.get(OutputList.redoTag)
-    val delValue = valueMap.get(OutputList.deleteTag)
 
     try {
       0 match {
         //case _ if (!sessionDefined(valueMap)) => redirectWithNewSession(response);
         case _ if buttonIs(valueMap, cancelButtonName) => cancel(valueMap, response)
         case _ if redoValue.isDefined => redo(valueMap, response, runTrait)
-        case _ if buttonIs(valueMap, runButtonName) => runIfDataValid(valueMap, request, response, runTrait)
+        case _ if buttonIs(valueMap, runButtonName) => runIfDataValid(valueMap, response, runTrait)
         case _ => emptyForm(valueMap, response, runTrait)
       }
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         internalFailure(response, "Unexpected failure: " + fmtEx(t))
-      }
     }
 
   }
@@ -654,7 +643,7 @@ object RunProcedure extends Logging {
   /**
    * Look for any Output's that were in running state when the server was shut down and set their state.
    */
-  def cleanupRunningProcedures: Unit = {
+  def cleanupRunningProcedures(): Unit = {
     logger.info("Starting to handle previously running procedures.")
     Output.listWithStatus(ProcedureStatus.running).map(or => handleRunningProcedure(or._1, or._2))
     logger.info("Done handling previously running procedures.")

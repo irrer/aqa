@@ -93,12 +93,13 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     val id = "baseline" + pk
     val baseline = symFlatDataSet.symmetryAndFlatness.isBaseline.toString
 
-    val input = if (symFlatDataSet.symmetryAndFlatness.isBaseline) {
-        <input title="Check to use this beam as a baseline." value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"} checked={baseline}/>
-    }
-    else {
-        <input title="Check to use this beam as a baseline." value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"}/>
-    }
+    val input =
+      if (symFlatDataSet.symmetryAndFlatness.isBaseline) {
+          <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"} checked={baseline}/>
+      }
+      else {
+          <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"}/>
+      }
 
     val elem = {
       <td style="vertical-align: middle;" rowspan="4">
@@ -106,7 +107,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
           {symFlatDataSet.symmetryAndFlatness.beamName}<br/>{Phase2Util.jawDescription(symFlatDataSet.al, symFlatDataSet.rtplan)}<br/>{Phase2Util.angleDescription(symFlatDataSet.al)}
         </a>
         <p></p>
-        <label for={id}>Baseline</label>{input}
+        <label title="Check to use this beam as a baseline." for={id}>Baseline</label>{input}
       </td>
     }
     Trace.trace(elem)
@@ -187,15 +188,8 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     Seq(
       {
         <tr align="center">
-          {detailsColumn(subDir, symFlatData)}
-          {imageColumn(symFlatData)}
-          <td style="text-align: center;" title={titleAxialSymmetry}>Axial Symmetry</td>
-          {fmtBaselineColumn(symFlatData.baseline.axialSymmetry)}
-          {
-          val pct = symFlatData.symmetryAndFlatness.axialSymmetry - symFlatData.baseline.axialSymmetry
-             fmtDifferenceColumn(pct, Config.SymmetryPercentLimit)}
-          {symmetryPercentLimitColumn}
-          {fmtValueColumn(symFlatData.symmetryAndFlatness.axialSymmetry)}
+          {detailsColumn(subDir, symFlatData)}{imageColumn(symFlatData)}<td style="text-align: center;" title={titleAxialSymmetry}>Axial Symmetry</td>{fmtBaselineColumn(symFlatData.baseline.axialSymmetry)}{val pct = symFlatData.symmetryAndFlatness.axialSymmetry - symFlatData.baseline.axialSymmetry
+        fmtDifferenceColumn(pct, Config.SymmetryPercentLimit)}{symmetryPercentLimitColumn}{fmtValueColumn(symFlatData.symmetryAndFlatness.axialSymmetry)}
         </tr>
       }, {
         <tr>
@@ -218,30 +212,21 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   }
 
   def makeContent(output: Output, symFlatDataList: Seq[SymmetryAndFlatnessDataSet]): Elem = {
-    val useAsBaselineButton: Elem = {
-      val href =
-        SymmetryAndFlatnessUseAsBaseline.path + "?outputPK=" + output.outputPK.get
-      val title =
-        "Use the values here as the baseline for future symmetry and flatness analysis"
-      val button = {
-        <a class="btn btn-primary" href={href} role="button" title={title} style="margin:20px;">Use As Baseline</a>
-      }
-      button
-    }
-
     val subDir = SymmetryAndFlatnessHTML.makeSubDir(output.dir)
 
     // SymmetryAndFlatnessCSV.makeCsvFile(extendedData, runReq, resultList, subDir)  TODO
 
     val csv: Elem = {
       val file = new File(subDir, SymmetryAndFlatnessCSV.csvFileName)
-      <a href={WebServer.urlOfResultsFile(file)} title="Download Symmetry and Flatness as a CSV viewable in a spreadsheet." style="margin:20px;">CSV</a>
+      <h4>
+        <a href={WebServer.urlOfResultsFile(file)} title="Download Symmetry and Flatness as a CSV viewable in a spreadsheet." style="margin:20px;">CSV</a>
+      </h4>
     }
 
     Trace.trace()
     val content = {
       <div>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"/>{useAsBaselineButton}{csv}<br/>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"/>{csv}<br/>
         <table class="table table-responsive table-bordered">
           {tableHead}{symFlatDataList.map(sfd => makeRow(sfd))}
         </table>
@@ -297,7 +282,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
      */
     def makeDataSet(sf: SymmetryAndFlatness): Option[SymmetryAndFlatnessDataSet] = {
       try {
-        val baseline = SymmetryAndFlatness .getBaseline(output.machinePK.get, sf.beamName, dataDate) .get
+        val baseline = SymmetryAndFlatness.getBaseline(output.machinePK.get, sf.beamName, dataDate).get
         val al: AttributeList = {
           val aa = alList.find(a => Util.sopOfAl(a).equals(sf.SOPInstanceUID))
           if (aa.isEmpty)
@@ -317,7 +302,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
         }
         Some(SymmetryAndFlatnessDataSet(sf, output, baseline, al, rtplanAl))
       } catch {
-        case t =>
+        case t: Throwable =>
           logger.error("Unexpected error: " + fmtEx(t))
           None
       }

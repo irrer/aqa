@@ -113,7 +113,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
    *
    */
   private def analyze(outputPK: Long, beamName: String, machinePK: Long, dataDate: Timestamp, attributeList: AttributeList,
-                      correctedImage: DicomImage, collimatorCenter: Point2D.Double): SymmetryAndFlatnessBeamResult = {
+                      correctedImage: DicomImage, collimatorCenter: Point2D.Double, symmetryAndFlatnessBaselineRedoBeamList: Seq[String]): SymmetryAndFlatnessBeamResult = {
     logger.info("Begin analysis of beam " + beamName)
     // val attributeList: AttributeList = getAttributeList(beamName, runReq)
     val dicomImage = new DicomImage(attributeList)
@@ -158,7 +158,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       outputPK = outputPK,
       SOPInstanceUID = Util.sopOfAl(attributeList),
       beamName = beamName,
-      isBaseline_text = false.toString,
+      isBaseline_text = symmetryAndFlatnessBaselineRedoBeamList.contains(beamName).toString,
 
       axialSymmetry_pct = -1,
       axialSymmetryBaseline_pct = -2,
@@ -221,7 +221,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
                    attributeList: AttributeList,
                    correctedImage: DicomImage,
                    collimatorCenter: Point2D.Double): SymmetryAndFlatnessBeamResult = {
-    analyze(outputPK = -1, beamName, machinePK, dataDate, attributeList, correctedImage, collimatorCenter)
+    analyze(outputPK = -1, beamName, machinePK, dataDate, attributeList, correctedImage, collimatorCenter, Seq())
   }
 
   /**
@@ -255,7 +255,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
           extendedData.output.dataDate.get,
           attributeList = getAttributeList(beamName, runReq),
           correctedImage = runReq.derivedMap(beamName).pixelCorrectedImage,
-          collimatorCentering.center)).toList
+          collimatorCentering.center, runReq.symmetryAndFlatnessBaselineRedoBeamList)).toList
 
 
       val pass = resultList.map(r => r.symmetryAndFlatness.allPass(r.baseline)).reduce(_ && _)

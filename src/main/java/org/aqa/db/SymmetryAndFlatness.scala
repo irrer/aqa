@@ -220,7 +220,9 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
       bottom_cu,
       left_cu,
       right_cu,
-      center_cu) <> (SymmetryAndFlatness.apply _ tupled, SymmetryAndFlatness.unapply _)
+      center_cu) <> (SymmetryAndFlatness.apply _ tupled, SymmetryAndFlatness.unapply)
+
+    // center_cu) <> (SymmetryAndFlatness.apply _ tupled, SymmetryAndFlatness.unapply _)  This is how it was before.
 
     def outputFK = foreignKey("SymmetryAndFlatness_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -366,6 +368,20 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     }
 
     result
+  }
+
+  /**
+   * Get the list of symmetry and flatness entries that were explicitly marked to be used as baselines that
+   * reference the given output.
+   *
+   * @param outputPK SymmetryAndFlatness rows must point to this output.
+   * @return
+   */
+  def getBaselineByOutput(outputPK: Long): Seq[SymmetryAndFlatness] = {
+    val trueText = true.toString
+    val search = for {symFlat <- SymmetryAndFlatness.query.filter(sf => (sf.outputPK === outputPK) && (sf.isBaseline_text === trueText))} yield symFlat
+    val list = Db.run(search.result)
+    list
   }
 
 }

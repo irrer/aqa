@@ -1,66 +1,24 @@
 package org.aqa.webrun.bbByEpid
 
+import com.pixelmed.dicom.AttributeList
+import com.pixelmed.dicom.AttributeTag
+import com.pixelmed.dicom.TagFromName
+import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.Util
+import org.aqa.db.Output
+import org.aqa.db.Procedure
+import org.aqa.run.ProcedureStatus
+import org.aqa.run.RunProcedure
+import org.aqa.run.RunReqClass
+import org.aqa.run.RunTrait
+import org.aqa.web.WebUtil
+import org.aqa.web.WebUtil._
+import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.WebRunProcedure
 import org.restlet.Request
 import org.restlet.Response
-import org.restlet.data.Status
-import org.aqa.web.WebUtil._
-import org.aqa.Logging
-import org.aqa.db.Machine
-import java.io.File
-import org.aqa.db.Procedure
-import org.aqa.Util
-import org.aqa.DicomFile
-import com.pixelmed.dicom.TagFromName
-import edu.umro.util.Utility
-import com.pixelmed.dicom.AttributeList
-import org.aqa.web.WebRunIndex
-import org.aqa.run.PostProcess
-import scala.xml.Elem
-import org.aqa.procedures.ProcedureOutputUtil
-import scala.xml.XML
-import org.aqa.db.MetadataCheck
-import com.pixelmed.dicom.SOPClass
-import org.aqa.db.Input
+
 import java.sql.Timestamp
-import java.util.Date
-import org.aqa.run.Run
-import org.aqa.run.ProcedureStatus
-import org.aqa.db.Output
-import org.aqa.db.Institution
-import org.aqa.db.User
-import org.aqa.web.ViewOutput
-import org.aqa.web.WebServer
-import com.pixelmed.dicom.TimeAttribute
-import edu.umro.ScalaUtil.DicomUtil
-import org.aqa.webrun.WebRunProcedure
-import org.aqa.webrun.LOCSpreadsheet
-import org.aqa.webrun.LOCXml
-import org.aqa.db.Machine
-import org.aqa.webrun.RunRequirements
-import org.aqa.Config
-import edu.umro.ScalaUtil.Trace
-import java.awt.Color
-import edu.umro.ImageUtil.ImageUtil
-import java.awt.Point
-import scala.util.Try
-import java.awt.geom.Point2D
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-import org.aqa.web.WebUtil
-import org.aqa.web.Session
-import org.aqa.db.CachedUser
-import org.aqa.web.OutputList
-import org.aqa.webrun.ExtendedData
-import org.aqa.ImageRegistration
-import org.aqa.db.DicomSeries
-import org.aqa.webrun.phase2.Phase2Util
-import org.aqa.db.BBbyEPID
-import org.aqa.AngleType
-import com.pixelmed.dicom.AttributeTag
-import org.aqa.run.RunTrait
-import org.aqa.run.RunProcedure
-import org.aqa.Logging
-import org.aqa.run.RunReqClass
 
 /**
  * Run BBbyEPID code.
@@ -71,13 +29,13 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
   private def getSeries(al: AttributeList): String = al.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString
 
-  override def getProcedure = procedure
+  override def getProcedure: Procedure = procedure
 
   override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp] = {
     val epidList = getEpidList(alList)
 
     def getTimestamp(dateTag: AttributeTag, timeTag: AttributeTag): Option[Timestamp] = {
-      val msList = epidList.map(al => DicomUtil.getTimeAndDate(al, dateTag, timeTag)).flatten.map(dt => dt.getTime)
+      val msList = epidList.flatMap(al => DicomUtil.getTimeAndDate(al, dateTag, timeTag)).map(dt => dt.getTime)
       if (msList.isEmpty)
         None
       else
@@ -99,16 +57,16 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
   override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList]): Seq[String] = {
     val rtimageList = alList.filter(al => Util.isRtimage(al))
-    val dsnList = rtimageList.map(al => Util.attributeListToDeviceSerialNumber(al)).flatten.distinct
+    val dsnList = rtimageList.flatMap(al => Util.attributeListToDeviceSerialNumber(al)).distinct
     dsnList
   }
 
   /**
    * Make the run requirements from the attribute lists.
    */
-  override def makeRunReqForRedo(alList: Seq[AttributeList]): BBbyEPIDRunReq = {
+  override def makeRunReqForRedo(alList: Seq[AttributeList], output: Option[Output]): BBbyEPIDRunReq = {
     val epidList = alList.filter(al => Util.isRtimage(al))
-    new BBbyEPIDRunReq(epidList)
+    BBbyEPIDRunReq(epidList)
   }
 
   /**
@@ -116,12 +74,9 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
    */
   override def validate(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, BBbyEPIDRunReq] = {
     val epidList = alList.filter(al => Util.modalityOfAl(al).trim.equalsIgnoreCase("RTIMAGE"))
-    val angleList = epidList.map(epid => Util.gantryAngle(epid))
-    def angleTextList = angleList.map(a => Util.fmtDbl(a)).mkString("  ")
-    // true if all angles are valid
-    val anglesTypeList = angleList.map(angle => AngleType.classifyAngle(angle)).flatten
 
     def epidSeriesList = epidList.map(epid => getSeries(epid)).distinct
+
     def frameOfRefList = epidList.map(epid => epid.get(TagFromName.FrameOfReferenceUID)).filterNot(attr => attr == null).map(attr => attr.getSingleStringValueOrEmptyString).distinct
 
     logger.info("Number of RTIMAGE files uploaded: " + epidList.size)
@@ -133,10 +88,9 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       case _ if frameOfRefList.isEmpty => formError("EPIDs do not specify a frame of reference")
       case _ if epidSeriesList.size > 1 => formError("EPID images are from " + numSeries + " different series.")
       case _ if frameOfRefList.size > 1 => formError("EPIDs specify more than one frame of reference")
-      case _ => {
-        val runReq = new BBbyEPIDRunReq(epidList)
+      case _ =>
+        val runReq = BBbyEPIDRunReq(epidList)
         Right(runReq)
-      }
     }
     result
   }

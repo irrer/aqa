@@ -14,13 +14,14 @@ import java.awt.Rectangle
 import java.awt.image.BufferedImage
 
 /**
- * @param rtplan: RTPLAN file
- *
- * @param rtimageMap: List of RTIMAGE files except for flood field
- *
- * @param flood: Flood field file
+ * @param rtplan                                  RTPLAN file
+ * @param rtimageMap                              List of RTIMAGE files except for flood field
+ * @param flood                                   Flood field file
+ * @param symmetryAndFlatnessBaselineRedoBeamList List of beams that were explicitly marked as baselines when this data was processed previously
+ * @param wedgeBaselineRedoBeamList               List of beams that were explicitly marked as baselines when this data was processed previously
  */
-case class RunReq(rtplan: AttributeList, rtimageMap: Map[String, AttributeList], flood: AttributeList) extends RunReqClass with Logging {
+case class RunReq(rtplan: AttributeList, rtimageMap: Map[String, AttributeList], flood: AttributeList,
+                  symmetryAndFlatnessBaselineRedoBeamList: Seq[String], wedgeBaselineRedoBeamList: Seq[String]) extends RunReqClass with Logging {
 
   private val floodAttributeList = flood
   val floodOriginalImage = new DicomImage(floodAttributeList)

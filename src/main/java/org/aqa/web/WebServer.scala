@@ -1,63 +1,52 @@
 package org.aqa.web
 
-import org.restlet.Application
-import org.restlet.Restlet
-import org.restlet.Component
-import org.aqa.Logging
-
-import java.io.File
+import edu.umro.RestletUtil.NetworkIpFilter
 import edu.umro.RestletUtil.RestletHttps
-import edu.umro.RestletUtil.ExpiresLaterFilter
-import org.restlet.routing.Router
-import org.restlet.routing.Redirector
 import org.aqa.Config
-import org.restlet.routing.Template
-import org.restlet.data.Protocol
-import org.restlet.resource.Directory
-import org.restlet.data.Status
-import org.aqa.db.Procedure
-import org.aqa.webrun.WebRun
-import org.restlet.security.ChallengeAuthenticator
-import org.restlet.data.ChallengeScheme
-import org.restlet.data.Reference
-import org.restlet.security.MapVerifier
-import org.restlet.Context
-import org.restlet.Request
-import org.restlet.Response
-import org.restlet.data.ChallengeRequest
-import org.restlet.data.ChallengeResponse
-import org.restlet.routing.Filter
-import org.aqa.db.User
-import org.aqa.db.UserRole
-import org.restlet.routing.TemplateRoute
+import org.aqa.Logging
 import org.aqa.db.CachedUser
-import org.aqa.db.Output
 import org.aqa.db.Input
-import org.aqa.webrun.phase2.wedge.WedgeUseAsBaseline
-import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessUseAsBaseline
-import org.aqa.AnonymizeUtil
-import edu.umro.ScalaUtil.Trace
-import org.aqa.webrun.phase2.customizeRtPlan.CustomizeRtPlanInterface
-import org.aqa.webrun.phase2.wedge.WedgeChartHistoryRestlet
-import org.aqa.webrun.phase2.centerDose.CenterDoseChartHistoryRestlet
-import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessHistoryRestlet
+import org.aqa.db.Output
+import org.aqa.db.UserRole
+import org.aqa.webrun.WebRun
 import org.aqa.webrun.bbByCBCT.BBbyCBCTChartHistoryRestlet
+import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryPartialRestlet
 import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryRestlet
 import org.aqa.webrun.dailyQA.DailyQASummary
-import edu.umro.RestletUtil.NetworkIpFilter
-import org.aqa.webrun.phase2.vmat.VMATChartHistoryRestlet
-import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryPartialRestlet
-import org.aqa.db.Institution
+import org.aqa.webrun.phase2.centerDose.CenterDoseChartHistoryRestlet
+import org.aqa.webrun.phase2.customizeRtPlan.CustomizeRtPlanInterface
+import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessHistoryRestlet
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessSubHTML
+import org.aqa.webrun.phase2.vmat.VMATChartHistoryRestlet
+import org.aqa.webrun.phase2.wedge.WedgeChartHistoryRestlet
+import org.aqa.webrun.phase2.wedge.WedgeUseAsBaseline
+import org.restlet.Application
+import org.restlet.Component
+import org.restlet.Request
+import org.restlet.Response
+import org.restlet.Restlet
+import org.restlet.data.ChallengeResponse
+import org.restlet.data.ChallengeScheme
+import org.restlet.data.Protocol
+import org.restlet.data.Status
+import org.restlet.resource.Directory
+import org.restlet.routing.Filter
+import org.restlet.routing.Redirector
+import org.restlet.routing.Router
+import org.restlet.routing.Template
+import org.restlet.routing.TemplateRoute
+import org.restlet.security.ChallengeAuthenticator
+
+import java.io.File
 
 object WebServer {
-  val challengeScheme = ChallengeScheme.HTTP_BASIC
+  val challengeScheme: ChallengeScheme = ChallengeScheme.HTTP_BASIC
 
-  val staticDirBaseUrl = "/" + Config.staticDirName
+  val staticDirBaseUrl: String = "/" + Config.staticDirName
 
-  val resultsDirBaseUrl = "/" + Config.resultsDirName
-  val tmpDirBaseUrl = "/" + Config.tmpDirName
-  val machineConfigurationDirBaseUrl = "/" + Config.machineConfigurationDirName
+  val resultsDirBaseUrl: String = "/" + Config.resultsDirName
+  val tmpDirBaseUrl: String = "/" + Config.tmpDirName
+  val machineConfigurationDirBaseUrl: String = "/" + Config.machineConfigurationDirName
 
   def urlOfPath(baseUrl: String, filePath: String): String = (baseUrl + "/" + filePath.replace('\\', '/')).replaceAll("///*", "/")
 
@@ -89,7 +78,7 @@ class WebServer extends Application with Logging {
   /**
    * If the Config.HTTPSPort is defined, then use HTTPS, otherwise use HTTP
    */
-  private def addProtocol: Unit = {
+  private def addProtocol(): Unit = {
     if (Config.HTTPSPort.isDefined) {
       // Sometimes reformatting the XML config file causes the password not to work, so try it with and without whitespace.
       val status = RestletHttps.addHttps(component, Config.HTTPSPort.get, Config.JavaKeyStoreFileList, Config.JavaKeyStorePasswordList)
@@ -509,7 +498,6 @@ class WebServer extends Application with Logging {
         new ServiceInstance,
         new SystemModificationList,
         systemModificationUpdate,
-        new SymmetryAndFlatnessUseAsBaseline,
         new WedgeUseAsBaseline,
         new CenterDoseChartHistoryRestlet,
         new BBbyCBCTChartHistoryRestlet,
