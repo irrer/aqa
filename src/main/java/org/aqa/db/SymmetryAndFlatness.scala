@@ -1,5 +1,6 @@
 package org.aqa.db
 
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
@@ -372,7 +373,8 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
 
   /**
    * Get the list of symmetry and flatness entries that were explicitly marked to be used as baselines that
-   * reference the given output.
+   * reference the given output.  The outputPK must match the passed outputPK and the
+   * <code>isBaseline_text</code> must be "true".
    *
    * @param outputPK SymmetryAndFlatness rows must point to this output.
    * @return
@@ -384,4 +386,125 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     list
   }
 
+  case class SymmetryFlatnessWithBaseline(symmetryAndFlatness: SymmetryAndFlatness, baseline: SymmetryAndFlatness, baselineDate: Timestamp) {}
+
+  /**
+   * Get all of the baselines that should be used for each of the records given.
+   *
+   * @param machinePK The primary key of a machine
+   * @return list of record+baseline pairs
+   */
+  def getSymmetryFlatnessForMachine(machinePK: Long): Map[String, Seq[SymmetryFlatnessWithBaseline]] = {
+
+    val procedurePK = {
+      Procedure.list.find(_.isPhase2).head.procedurePK.get
+    }
+
+    val outputList: Seq[Output] = {
+      val action = for {output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))} yield output
+      Db.run(action.result)
+    }
+
+    val outputDataDateMap = outputList.map(o => (o.outputPK.get, o.dataDate.get)).toMap
+
+    val outputPKSet = outputList.map(o => o.outputPK.get).toSet
+
+    val allSymmetryFlatness: Seq[SymmetryAndFlatness] = {
+      val action = for {symFlat <- SymmetryAndFlatness.query if symFlat.outputPK.inSet(outputPKSet)} yield symFlat
+      Db.run(action.result)
+    }
+
+    val groupedByBeam = allSymmetryFlatness.groupBy(_.beamName)
+
+    def getWithBaseline(beamName: String): Seq[SymmetryFlatnessWithBaseline] = {
+
+      val sortedByTime = groupedByBeam(beamName).sortBy(sf => outputDataDateMap(sf.outputPK).getTime)
+
+      val first = SymmetryFlatnessWithBaseline(sortedByTime.head, sortedByTime.head, outputDataDateMap(sortedByTime.head.outputPK))
+      val list = sortedByTime.tail.foldLeft(Seq(first))((baseline, sf) => {
+        val bl = if (sf.isBaseline) sf else baseline.last.baseline
+        baseline :+ SymmetryFlatnessWithBaseline(sf, bl, outputDataDateMap(sf.outputPK))
+      })
+      list
+    }
+
+    val withBaseline = groupedByBeam.keys.map(beamName => (beamName, getWithBaseline(beamName))).toMap
+
+    withBaseline
+  }
+
+  /**
+   * For testing only
+   *
+   * @param args Machine PK, or none to use random one
+   */
+  def main(args: Array[String]): Unit = {
+    DbSetup.init
+    (0 until 10).foreach(_ => println())
+
+    val machinePK = {
+      if (args.nonEmpty) args.head.toLong
+      else {
+        val procedure = Procedure.list.find(p => p.fullName.toLowerCase().matches(".*phase.*")).head
+        val procedurePK = procedure.procedurePK.get
+        val list = {
+          val action = Output.query.filter(o => o.procedurePK === procedure.procedurePK.get)
+          Db.run(action.result)
+        }
+        val rand = System.currentTimeMillis() % list.size
+        list(rand.toInt).machinePK.get
+      }
+    }
+
+    println("machinePK: " + machinePK)
+    val start = System.currentTimeMillis()
+    val sfList = getSymmetryFlatnessForMachine(machinePK)
+    val elapsed = System.currentTimeMillis() - start
+    println("elapsed ms: " + elapsed)
+
+    sfList.foreach(beamAndList => {
+      val beamName = beamAndList._1
+      val list = beamAndList._2
+
+      def fmtBsl(sf: SymmetryAndFlatness) =
+        sf.outputPK.formatted("%6d") +
+          " : " +
+          sf.symmetryAndFlatnessPK.get.formatted("%6d") +
+          " : " +
+          sf.isBaseline.toString.formatted("%5s")
+
+      println("beam name     outputPK : Sym FlatPK : isBaseline  |  baseline-outputPK : baseline-Sym FlatPK : isBaseline  :  output data data")
+
+      list.map(sf =>
+        println(beamName.formatted("%12s") + "  " + fmtBsl(sf.symmetryAndFlatness) + " | " + fmtBsl(sf.baseline) + " : " + sf.baselineDate))
+    })
+    Trace.trace()
+
+  }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
