@@ -1,78 +1,111 @@
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
 import org.aqa.Util
-import java.io.File
-import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.phase2.RunReq
+import org.aqa.db.Institution
+import org.aqa.db.Machine
+import org.aqa.db.Output
+import org.aqa.db.Procedure
+import org.aqa.db.SymmetryAndFlatness
+import org.aqa.db.User
+
 import scala.collection.Seq
 
 object SymmetryAndFlatnessCSV {
 
 
-
-  val csvFileName = "SymmetryAndFlatness.csv"
-
-  def makeCsvFile(extendedData: ExtendedData, runReq: RunReq, symmetryAndFlatnessSeq: Seq[SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult], subDir: File) = {
+  /**
+   * Construct the CSV content for the given output.
+   *
+   * @param output Just for this one entry.
+   * @return
+   */
+  def makeCsvFile(output: Output): String = {
 
     // format lots of meta-information for the CSV header
 
     val analysisDate: String = {
-      val date = extendedData.output.analysisDate match {
+      val date = output.analysisDate match {
         case Some(d) => d
-        case _ => extendedData.output.startDate
+        case _ => output.startDate
       }
       Util.timeHumanFriendly(date)
     }
 
-    val procedureDesc: String = extendedData.procedure.name + " : " + extendedData.procedure.version
+    val procedureDesc: String = {
+      val procedure = Procedure.get(output.procedurePK).get
+      procedure.name + " : " + procedure.version
+    }
 
-    val machineId = extendedData.machine.id
-    val userId = extendedData.user.id
-    val acquisitionDate = if (extendedData.output.dataDate.isDefined) Util.standardDateFormat.format(extendedData.output.dataDate.get) else "none"
+    val machine: Option[Machine] = Machine.get(output.machinePK.get)
 
-    type SF = SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult
+    val machineId: String = if (machine.isDefined) machine.get.id else "none"
 
-    val columns: Seq[(String, (SF) => Any)] = Seq(
-      ("beamName", (sf: SF) => sf.symmetryAndFlatness.beamName),
-      ("SOPInstanceUID", (sf: SF) => sf.symmetryAndFlatness.SOPInstanceUID),
+    val userId = {
+      try {
+        User.get(output.userPK.get).get.id
+      }
+      catch {
+        case _: Throwable => "unknown"
+      }
+    }
 
-      ("axialSymmetry CU", (sf: SF) => sf.symmetryAndFlatness.axialSymmetry),
-      ("axialSymmetryBaseline CU", (sf: SF) => sf.baseline.axialSymmetry),
-      ("axialSymmetryStatus", (sf: SF) => sf.symmetryAndFlatness.axialSymmetryStatus),
+    val institutionName = {
+      try {
+        val user = User.get(output.userPK.get).get
+        Institution.get(user.userPK.get).get.name
+      }
+      catch {
+        case _: Throwable => "unknown"
+      }
+    }
 
-      ("transverseSymmetry CU", (sf: SF) => sf.symmetryAndFlatness.transverseSymmetry),
-      ("transverseSymmetryBaseline CU", (sf: SF) => sf.baseline.transverseSymmetry),
-      ("transverseSymmetryStatus", (sf: SF) => sf.symmetryAndFlatness.transverseSymmetryStatus),
+    val acquisitionDate = if (output.dataDate.isDefined) Util.standardDateFormat.format(output.dataDate.get) else "none"
 
-      ("flatness CU", (sf: SF) => sf.symmetryAndFlatness.flatness),
-      ("flatnessBaseline CU", (sf: SF) => sf.baseline.flatness),
-      ("flatnessStatus", (sf: SF) => sf.symmetryAndFlatness.flatnessStatus),
+    type SFB = SymmetryAndFlatness.SymmetryFlatnessWithBaseline
 
-      ("profileConstancy CU", (sf: SF) => sf.symmetryAndFlatness.profileConstancy(sf.baseline)),
-      ("profileConstancyBaseline CU", (sf: SF) => sf.baseline.profileConstancy(sf.baseline)),
-      ("profileConstancyStatus", (sf: SF) => sf.symmetryAndFlatness.profileConstancyStatus),
+    val columns: Seq[(String, SFB => Any)] = Seq(
+      ("delivery Time", (sfb: SFB) => Util.standardDateFormat.format(sfb.baselineDate)),
+      ("beamName", (sfb: SFB) => sfb.symmetryAndFlatness.beamName),
+      ("SOPInstanceUID", (sfb: SFB) => sfb.symmetryAndFlatness.SOPInstanceUID),
 
-      ("top CU", (sf: SF) => sf.symmetryAndFlatness.top_cu),
-      ("bottom CU", (sf: SF) => sf.symmetryAndFlatness.bottom_cu),
-      ("left CU", (sf: SF) => sf.symmetryAndFlatness.left_cu),
-      ("right CU", (sf: SF) => sf.symmetryAndFlatness.right_cu),
-      ("center CU", (sf: SF) => sf.symmetryAndFlatness.center_cu))
+      ("axialSymmetry CU", (sfb: SFB) => sfb.symmetryAndFlatness.axialSymmetry),
+      ("axialSymmetryBaseline CU", (sfb: SFB) => sfb.baseline.axialSymmetry),
+      ("axialSymmetryStatus", (sfb: SFB) => sfb.symmetryAndFlatness.axialSymmetryStatus),
 
-    def symmetryAndFlatnessToCsv(sf: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult): String = {
+      ("transverseSymmetry CU", (sfb: SFB) => sfb.symmetryAndFlatness.transverseSymmetry),
+      ("transverseSymmetryBaseline CU", (sfb: SFB) => sfb.baseline.transverseSymmetry),
+      ("transverseSymmetryStatus", (sfb: SFB) => sfb.symmetryAndFlatness.transverseSymmetryStatus),
+
+      ("flatness CU", (sfb: SFB) => sfb.symmetryAndFlatness.flatness),
+      ("flatnessBaseline CU", (sfb: SFB) => sfb.baseline.flatness),
+      ("flatnessStatus", (sfb: SFB) => sfb.symmetryAndFlatness.flatnessStatus),
+
+      ("profileConstancy CU", (sfb: SFB) => sfb.symmetryAndFlatness.profileConstancy(sfb.baseline)),
+      ("profileConstancyBaseline CU", (sfb: SFB) => sfb.baseline.profileConstancy(sfb.baseline)),
+      ("profileConstancyStatus", (sfb: SFB) => sfb.symmetryAndFlatness.profileConstancyStatus),
+
+      ("top CU", (sf: SFB) => sf.symmetryAndFlatness.top_cu),
+      ("bottom CU", (sf: SFB) => sf.symmetryAndFlatness.bottom_cu),
+      ("left CU", (sf: SFB) => sf.symmetryAndFlatness.left_cu),
+      ("right CU", (sf: SFB) => sf.symmetryAndFlatness.right_cu),
+      ("center CU", (sf: SFB) => sf.symmetryAndFlatness.center_cu))
+
+    def symmetryAndFlatnessToCsv(sfb: SymmetryAndFlatness.SymmetryFlatnessWithBaseline): String = {
       def fmt(any: Any): String = {
         any match {
           case d: Double => d.formatted("%14.11e")
           case _ => Util.textToCsv(any.toString)
         }
       }
-      columns.map(c => fmt(c._2(sf))).mkString(",")
+
+      columns.map(c => fmt(c._2(sfb))).mkString(",")
     }
 
     val metaData = {
       val info = Seq(
         ("Procedure", procedureDesc),
         ("Machine", machineId),
-        ("Institution", extendedData.institution.name),
+        ("Institution", institutionName),
         ("Acquisition Date", acquisitionDate),
         ("Analysis Date", analysisDate),
         ("User", userId))
@@ -84,11 +117,20 @@ object SymmetryAndFlatnessCSV {
 
     val header = Seq(columns.map(c => c._1).mkString(","))
 
-    val data = symmetryAndFlatnessSeq.map(positionCheck => symmetryAndFlatnessToCsv(positionCheck))
+    val data: Iterable[String] = {
+      if (machine.isDefined) {
+        val list = SymmetryAndFlatness.getSymmetryFlatnessForMachine(machine.get.machinePK.get).flatMap(b => b._2.sortBy(_.baselineDate.getTime))
+        val textList = list.map(sfb => symmetryAndFlatnessToCsv(sfb))
+        textList
+      }
+      else
+        Seq("Machine for outputPK " + output.outputPK.get + " could not be found")
+    }
+
+    // symmetryAndFlatnessSeq.map(positionCheck => symmetryAndFlatnessToCsv(positionCheck))
 
     val text = (metaData ++ header ++ data).mkString("", "\r\n", "\r\n")
-    val file = new File(subDir, csvFileName)
-    Util.writeFile(file, text)
+    text
   }
 
 }

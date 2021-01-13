@@ -16,10 +16,13 @@ import org.aqa.web.WebUtil.SubUrlAdmin
 import org.aqa.web.WebUtil.ValueMapT
 import org.aqa.web.WebUtil.getValueMap
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessSubHTML.baselineTag
+import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessSubHTML.csvTag
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessSubHTML.outputPKTag
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
+import org.restlet.data.MediaType
 import org.restlet.data.Status
 
 import java.io.File
@@ -217,13 +220,12 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     // SymmetryAndFlatnessCSV.makeCsvFile(extendedData, runReq, resultList, subDir)  TODO
 
     val csv: Elem = {
-      val file = new File(subDir, SymmetryAndFlatnessCSV.csvFileName)
+      val url = (new SymmetryAndFlatnessSubHTML).pathOf + "?" + csvTag + "=true&" + outputPKTag + "=" + output.outputPK.get
       <h4>
-        <a href={WebServer.urlOfResultsFile(file)} title="Download Symmetry and Flatness as a CSV viewable in a spreadsheet." style="margin:20px;">CSV</a>
+        <a href={url} title="Download all Symmetry and Flatness for this machineas a CSV viewable in a spreadsheet." style="margin:20px;">CSV</a>
       </h4>
     }
 
-    Trace.trace()
     val content = {
       <div>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"/>{csv}<br/>
@@ -233,11 +235,8 @@ object SymmetryAndFlatnessSubHTML extends Logging {
         <p/>
       </div>
     }
-    Trace.trace()
     content
   }
-
-  val outputPKTag = "outputPK"
 
   /**
    * Collect and format the data as HTML and return it.
@@ -245,7 +244,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
    * @param valueMap List of parsed parameters.
    * @return
    */
-  private def collectData(valueMap: ValueMapT) = {
+  private def collectData(valueMap: ValueMapT, response: Response) = {
     val output = Output.get(valueMap(outputPKTag).toLong).get
     val dataDate = output.dataDate.get
     val symFlatList = SymmetryAndFlatness.getByOutput(output.outputPK.get)
@@ -257,10 +256,8 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       .map(uidDs => uidDs._2.head)
 
     // list of all AttributeList's referenced by SymmetryFlatness rows
-    Trace.trace()
     val alList: immutable.Iterable[AttributeList] =
       dicomSeries.flatMap(ds => ds.attributeListList)
-    Trace.trace()
 
     // list RTPLANs SOP UIDs referenced by SymmetryFlatness rows
     val rtplanSopList: Seq[String] =
@@ -308,24 +305,35 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       }
     }
 
-    Trace.trace()
     val symFlatDataList =
       symFlatList.flatMap(sf => makeDataSet(sf)).sortBy(_.time)
 
-    makeContent(output, symFlatDataList)
+    val elem = makeContent(output, symFlatDataList)
+    val text = PrettyXML.xmlToText(elem)
+    WebUtil.setResponse(text, response, Status.SUCCESS_OK)
   }
 
+  /** PK of the SymmetryAndFlatness row to have it's baseline changed. */
   private val symFlatPKTag = "symFlatPK"
+
+  /** Indicates that caller is requesting a CSV of the results. */
+  private val csvTag = "csv"
+
+  /** Indicates the value of the new baseline.  Must be either true or false. */
   private val baselineTag = "baseline"
+
+  /** Indicates which set of data to retrieve for display as a web page. */
+  private val outputPKTag = "outputPK"
 
   /**
    * If the user is authorized (must be in same institution or be whitelisted) then
    * change the given baseline to the given value.
    *
    * @param valueMap Contains user, symmetry and flatness PK, and baseline setting.
+   * @param response Put response (HTML) here.
    * @return Message indicating what was done.
    */
-  private def setBaseline(valueMap: ValueMapT): Elem = {
+  private def setBaseline(valueMap: ValueMapT, response: Response): Unit = {
     // Get parameters.  If there is any syntax error then throw an exception.
     val user = WebUtil.getUser(valueMap).get
     val symFlatPK = valueMap(symFlatPKTag).trim.toLong
@@ -337,26 +345,38 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       }
     }
 
-    Trace.trace()
     if (authorized) {
-      Trace.trace()
       val baseline = valueMap(baselineTag).trim.toBoolean
       val newSymmetryAndFlatness = symmetryAndFlatness.copy(isBaseline_text = baseline.toString)
-      Trace.trace(newSymmetryAndFlatness)
       newSymmetryAndFlatness.insertOrUpdate()
-      Trace.trace()
-      <div>Changed SymmetryAndFlatness
+      val elem = <div>Changed SymmetryAndFlatness
         {symFlatPK.toString}
         to
         {baseline.toString}
       </div>
+      val text = PrettyXML.xmlToText(elem)
+      WebUtil.setResponse(text, response, Status.SUCCESS_OK)
     }
     else {
-      Trace.trace()
-      <p>Not authorized to change baseline.</p>
+      val elem = <p>Not authorized to change baseline.</p>
+      val text = PrettyXML.xmlToText(elem)
+      WebUtil.setResponse(text, response, Status.CLIENT_ERROR_FORBIDDEN)
     }
   }
+
+  /**
+   *
+   * @param valueMap Contains parameters indicating which data to process.
+   * @param response Put results here.
+   */
+  private def makeCsv(valueMap: ValueMapT, response: Response): Unit = {
+    val output = Output.get(valueMap(outputPKTag).toLong).get
+    val csvText = SymmetryAndFlatnessCSV.makeCsvFile(output)
+    response.setStatus(Status.SUCCESS_OK)
+    response.setEntity(csvText, MediaType.TEXT_CSV)
+  }
 }
+
 
 class SymmetryAndFlatnessSubHTML extends Restlet with Logging with SubUrlAdmin {
 
@@ -371,14 +391,12 @@ class SymmetryAndFlatnessSubHTML extends Restlet with Logging with SubUrlAdmin {
     val valueMap = getValueMap(request)
     Trace.trace(valueMap)
     try {
-      val elem: Elem = {
-        if (valueMap.contains(outputPKTag))
-          SymmetryAndFlatnessSubHTML.collectData(valueMap)
-        else
-          SymmetryAndFlatnessSubHTML.setBaseline(valueMap)
+      0 match {
+        case _ if valueMap.contains(csvTag) && valueMap.contains(csvTag) => SymmetryAndFlatnessSubHTML.makeCsv(valueMap, response)
+        case _ if valueMap.contains(outputPKTag) => SymmetryAndFlatnessSubHTML.collectData(valueMap, response)
+        case _ if valueMap.contains(baselineTag) => SymmetryAndFlatnessSubHTML.setBaseline(valueMap, response)
+        case _ => WebUtil.badRequest(response, message = "Invalid request", Status.CLIENT_ERROR_BAD_REQUEST)
       }
-      val text = PrettyXML.xmlToText(elem)
-      WebUtil.setResponse(text, response, Status.SUCCESS_OK)
     } catch {
       case t: Throwable =>
         val msg =
