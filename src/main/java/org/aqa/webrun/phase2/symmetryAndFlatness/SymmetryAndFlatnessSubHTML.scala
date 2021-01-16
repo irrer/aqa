@@ -214,15 +214,19 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     )
   }
 
+  /**
+   * Respond to a request for the data nicely formatted in HTML.
+   *
+   * @param output Get data for machine referenced by this output.
+   * @param symFlatDataList
+   * @return
+   */
   def makeContent(output: Output, symFlatDataList: Seq[SymmetryAndFlatnessDataSet]): Elem = {
-    val subDir = SymmetryAndFlatnessHTML.makeSubDir(output.dir)
-
-    // SymmetryAndFlatnessCSV.makeCsvFile(extendedData, runReq, resultList, subDir)  TODO
-
+    // show link to CSV
     val csv: Elem = {
-      val url = (new SymmetryAndFlatnessSubHTML).pathOf + "?" + csvTag + "=true&" + outputPKTag + "=" + output.outputPK.get
+      val url = (new SymmetryAndFlatnessSubHTML).pathOf + "/SymmetryFlatnessAndConstancy.csv?" + csvTag + "=true&" + outputPKTag + "=" + output.outputPK.get
       <h4>
-        <a href={url} title="Download all Symmetry and Flatness for this machineas a CSV viewable in a spreadsheet." style="margin:20px;">CSV</a>
+        <a href={url} title="Download all Symmetry and Flatness for this machine as a CSV viewable in a spreadsheet." style="margin:20px;">CSV</a>
       </h4>
     }
 

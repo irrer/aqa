@@ -1,32 +1,29 @@
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
-import org.aqa.Logging
-import org.aqa.db.SymmetryAndFlatness
-import org.aqa.Util
-import org.aqa.web.C3ChartHistory
-import java.awt.Color
-import org.aqa.db.MaintenanceRecord
-import org.aqa.db.Baseline
 import org.aqa.Config
-import org.aqa.web.C3Chart
-import org.aqa.webrun.ExtendedData
-import scala.collection.Seq
-import org.aqa.db.Output
+import org.aqa.Logging
+import org.aqa.Util
+import org.aqa.db.Baseline
 import org.aqa.db.MaintenanceCategory
-import org.aqa.webrun.phase2.Phase2Util
-import edu.umro.ScalaUtil.Trace
+import org.aqa.db.MaintenanceRecord
+import org.aqa.db.Output
+import org.aqa.db.SymmetryAndFlatness
+import org.aqa.web.C3Chart
+import org.aqa.web.C3ChartHistory
+
+import java.awt.Color
+import scala.collection.Seq
 
 /**
  * Analyze DICOM files for symmetry and flatness.
  */
 class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) extends Logging {
 
-  val output = Output.get(outputPK).get
-  val machinePK = output.machinePK.get
+  val output: Output = Output.get(outputPK).get
+  val machinePK: Long = output.machinePK.get
 
   private val history = SymmetryAndFlatness.history(machinePK, output.procedurePK, beamName)
   private val dateList = history.map(h => h.date)
-  private val dateListFormatted = dateList.map(d => Util.standardDateFormat.format(d))
 
   // index of the entry being charted.
   private val yIndex = history.indexWhere(h => h.symmetryAndFlatness.outputPK == output.outputPK.get)
@@ -34,14 +31,14 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
   // list of all MaintenanceRecords in this time interval
   private val MaintenanceRecordList = {
     val inTimeRange = MaintenanceRecord.getRange(machinePK, history.head.date, history.last.date)
-    val releventBaseline = Baseline.filterOutUnrelatedBaselines(inTimeRange.map(itr => itr.maintenanceRecordPK.get).toSet, Set("symmetry", "flatness", "constancy")).map(_.maintenanceRecordPK.get).toSet
-    inTimeRange.filter(itr => releventBaseline.contains(itr.maintenanceRecordPK.get) || (!itr.category.equals(MaintenanceCategory.setBaseline)))
+    val relevantBaseline = Baseline.filterOutUnrelatedBaselines(inTimeRange.map(itr => itr.maintenanceRecordPK.get).toSet, Set("symmetry", "flatness", "constancy")).map(_.maintenanceRecordPK.get).toSet
+    inTimeRange.filter(itr => relevantBaseline.contains(itr.maintenanceRecordPK.get) || (!itr.category.equals(MaintenanceCategory.setBaseline)))
   }
 
   private def getBaseline(dataName: String): Option[Baseline] = {
     val baselineName = SymmetryAndFlatnessAnalysis.makeBaselineName(beamName, dataName)
     Baseline.findLatest(machinePK, baselineName, output.dataDate.get) match {
-      case Some(maintAndBaseline) => Some(maintAndBaseline._2)
+      case Some(maintenanceAndBaseline) => Some(maintenanceAndBaseline._2)
       case _ => None
     }
   }
@@ -51,16 +48,12 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
     val baseline = getBaseline(id)
     if (baseline.isEmpty) // TODO rm
       logger.info("No baseline found for beam " + beamName) // TODO rm
-    val currentDateIndex = dateList.indexWhere(d => output.dataDate.get.getTime == d.getTime)
-    val minDateTag = dateListFormatted.head
-    val maxDateTag = dateListFormatted.last
     val chartId = C3Chart.idTagPrefix + Util.textToId(id)
 
     val width = None
     val height = None
     val xLabel = "Date"
     val xDateList = dateList
-    val xFormat = ".4g"
     val yDataLabel = id + " %"
     val yAxisLabels = Seq(id + " %")
     val yValues = Seq(valueList)
@@ -82,7 +75,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
     chart
   }
 
-  val javascript = {
+  val javascript: String = {
     import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessAnalysis._
 
     history.head.symmetryAndFlatness.axialSymmetry_pct // TODO rm

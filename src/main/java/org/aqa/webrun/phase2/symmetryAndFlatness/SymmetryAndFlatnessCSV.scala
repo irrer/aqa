@@ -7,6 +7,7 @@ import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.db.SymmetryAndFlatness
 import org.aqa.db.User
+import org.aqa.run.ProcedureStatus
 
 import scala.collection.Seq
 
@@ -63,6 +64,8 @@ object SymmetryAndFlatnessCSV {
 
     type SFB = SymmetryAndFlatness.SymmetryFlatnessWithBaseline
 
+    def boolToStatus(b: Boolean) = { if (b) ProcedureStatus.pass else ProcedureStatus.fail }.toString()
+
     val columns: Seq[(String, SFB => Any)] = Seq(
       ("delivery Time", (sfb: SFB) => Util.standardDateFormat.format(sfb.baselineDate)),
       ("beamName", (sfb: SFB) => sfb.symmetryAndFlatness.beamName),
@@ -70,19 +73,19 @@ object SymmetryAndFlatnessCSV {
 
       ("axialSymmetry CU", (sfb: SFB) => sfb.symmetryAndFlatness.axialSymmetry),
       ("axialSymmetryBaseline CU", (sfb: SFB) => sfb.baseline.axialSymmetry),
-      ("axialSymmetryStatus", (sfb: SFB) => sfb.symmetryAndFlatness.axialSymmetryStatus),
+      ("axialSymmetryStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.axialSymmetryPass(sfb.baseline))),
 
       ("transverseSymmetry CU", (sfb: SFB) => sfb.symmetryAndFlatness.transverseSymmetry),
       ("transverseSymmetryBaseline CU", (sfb: SFB) => sfb.baseline.transverseSymmetry),
-      ("transverseSymmetryStatus", (sfb: SFB) => sfb.symmetryAndFlatness.transverseSymmetryStatus),
+      ("transverseSymmetryStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.transverseSymmetryPass(sfb.baseline))),
 
       ("flatness CU", (sfb: SFB) => sfb.symmetryAndFlatness.flatness),
       ("flatnessBaseline CU", (sfb: SFB) => sfb.baseline.flatness),
-      ("flatnessStatus", (sfb: SFB) => sfb.symmetryAndFlatness.flatnessStatus),
+      ("flatnessStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.flatnessPass(sfb.baseline))),
 
       ("profileConstancy CU", (sfb: SFB) => sfb.symmetryAndFlatness.profileConstancy(sfb.baseline)),
       ("profileConstancyBaseline CU", (sfb: SFB) => sfb.baseline.profileConstancy(sfb.baseline)),
-      ("profileConstancyStatus", (sfb: SFB) => sfb.symmetryAndFlatness.profileConstancyStatus),
+      ("profileConstancyStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.profileConstancyPass(sfb.baseline))),
 
       ("top CU", (sf: SFB) => sf.symmetryAndFlatness.top_cu),
       ("bottom CU", (sf: SFB) => sf.symmetryAndFlatness.bottom_cu),

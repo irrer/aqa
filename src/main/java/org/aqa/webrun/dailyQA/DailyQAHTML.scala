@@ -1,40 +1,37 @@
 package org.aqa.webrun.dailyQA
 
-import org.aqa.web.WebUtil._
-import scala.xml.Elem
-import org.aqa.db.BBbyEPIDComposite
 import com.pixelmed.dicom.TagFromName
-import org.aqa.db.DicomSeries
-import org.aqa.Util
-import org.aqa.web.ViewOutput
-import org.aqa.Crypto
 import org.aqa.AnonymizeUtil
-import java.util.Date
 import org.aqa.Config
-import org.aqa.db.Machine
+import org.aqa.Logging
+import org.aqa.Util
 import org.aqa.db.BBbyCBCT
 import org.aqa.db.BBbyEPID
+import org.aqa.db.BBbyEPIDComposite
+import org.aqa.db.DicomSeries
+import org.aqa.db.Machine
+import org.aqa.db.MachineDailyQA
 import org.aqa.db.Output
-import org.aqa.AngleType
-import org.aqa.run.ProcedureStatus
-import org.aqa.Logging
-import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Procedure
+import org.aqa.run.ProcedureStatus
+import org.aqa.web.ViewOutput
+import org.aqa.web.WebUtil._
+
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
-import org.aqa.db.MachineDailyQA
+import java.util.Date
+import scala.xml.Elem
 
 object DailyQAHTML extends Logging {
 
   def makeChecksum(dataSetList: Seq[BBbyEPIDComposite.DailyDataSetComposite]): String = {
-    val j = dataSetList.map(_.checksum) // TODO rm
     dataSetList.map(_.checksum).sorted.mkString(" / ")
   }
 
   def makeReport(dataSetList: Seq[BBbyEPIDComposite.DailyDataSetComposite], institutionPK: Long, date: Date): Elem = {
 
     /** Local class for Machine, Output, and Elem. */
-    case class MOE(machine: Machine, output: Option[Output], elem: Elem);
+    case class MOE(machine: Machine, output: Option[Output], elem: Elem) {}
 
     def sortMOE(a: MOE, b: MOE): Boolean = {
       if ((a.machine.machinePK.get == b.machine.machinePK.get) && a.output.isDefined && b.output.isDefined) {
@@ -42,6 +39,7 @@ object DailyQAHTML extends Logging {
       } else {
         val aMach = AnonymizeUtil.decryptWithNonce(a.machine.institutionPK, a.machine.id_real.get)
         val bMach = AnonymizeUtil.decryptWithNonce(b.machine.institutionPK, b.machine.id_real.get)
+
         def toNum(text: String): Option[Int] = {
           if (text.matches(".*[0-9].*"))
             Some(text.replaceAll("[^0-9]", "").toInt)
@@ -61,8 +59,10 @@ object DailyQAHTML extends Logging {
 
     def fmtAngle(angle: Double) = angle.formatted("%12.8f").trim
 
-    case class Col(name: String, title: String, toElem: (BBbyEPIDComposite.DailyDataSetComposite) => Elem) {
-      def toHeader = <th title={ title }>{ name }</th>
+    case class Col(name: String, title: String, toElem: BBbyEPIDComposite.DailyDataSetComposite => Elem) {
+      def toHeader: Elem = <th title={title}>
+        {name}
+      </th>
     }
 
     val stylePass = "color: #000000; background: #1dc32b;"
@@ -75,12 +75,24 @@ object DailyQAHTML extends Logging {
       val machElem = wrapAlias(dataSet.machine.id)
 
       if (ProcedureStatus.eq(dataSet.status, ProcedureStatus.pass)) {
-        <td title={ col0Title } style={ stylePass }><h4>{ machElem }<br/>Pass</h4></td>
+        <td title={col0Title} style={stylePass}>
+          <h4>
+            {machElem}<br/>
+            Pass</h4>
+        </td>
       } else {
         if (ProcedureStatus.eq(dataSet.status, ProcedureStatus.warning)) {
-          <td class="warning" title={ "At least one value is close to being out of tolerance" } style={ styleWarn }><h4>{ machElem }<br/>Warning</h4></td>
+          <td class="warning" title={"At least one value is close to being out of tolerance"} style={styleWarn}>
+            <h4>
+              {machElem}<br/>
+              Warning</h4>
+          </td>
         } else {
-          <td class="danger" title={ "At least one value is completely out of tolerance" } style={ styleFail }><h4>{ machElem }<br/>Fail</h4></td>
+          <td class="danger" title={"At least one value is completely out of tolerance"} style={styleFail}>
+            <h4>
+              {machElem}<br/>
+              Fail</h4>
+          </td>
         }
       }
     }
@@ -88,10 +100,11 @@ object DailyQAHTML extends Logging {
     def colPatient(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
 
       val patientName: Elem = DicomSeries.getBySeriesInstanceUID(dataSet.composite.epidSeriesInstanceUID).headOption match {
-        case Some(ds) => {
+        case Some(ds) =>
           val pn = ds.attributeListList.head.get(TagFromName.PatientName).getSingleStringValueOrEmptyString
-          <td>{ wrapAlias(pn) }</td>
-        }
+          <td>
+            {wrapAlias(pn)}
+          </td>
         case _ => <td>Unknown</td>
       }
       patientName
@@ -101,16 +114,24 @@ object DailyQAHTML extends Logging {
       val text = posn.formatted("%7.2f").trim
       val title = posn.formatted("%12.6f").trim
       if (posn.abs > machineDailyQA.warningLimit_mm) {
-        <td class="danger" title={ title + " is above warning limit of " + machineDailyQA.warningLimit_mm + " mm" }>{ text }</td>
+        <td class="danger" title={title + " is above warning limit of " + machineDailyQA.warningLimit_mm + " mm"}>
+          {text}
+        </td>
       } else if (posn.abs > machineDailyQA.passLimit_mm) {
-        <td class="warning" title={ title + " is above pass limit of " + machineDailyQA.passLimit_mm + " mm but below warning limit of " + machineDailyQA.warningLimit_mm + " mm" }>{ text }</td>
+        <td class="warning" title={title + " is above pass limit of " + machineDailyQA.passLimit_mm + " mm but below warning limit of " + machineDailyQA.warningLimit_mm + " mm"}>
+          {text}
+        </td>
       } else {
-        <td title={ title }>{ text }</td>
+        <td title={title}>
+          {text}
+        </td>
       }
     }
 
     def colDateTime(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      <td>{ DailyQASummary.timeFormat.format(dataSet.output.dataDate.get) }</td>
+      <td>
+        {DailyQASummary.timeFormat.format(dataSet.output.dataDate.get)}
+      </td>
     }
 
     /**
@@ -130,25 +151,33 @@ object DailyQAHTML extends Logging {
       }
 
       if (exceeds) {
-        <td class="danger" title={ title + " exceeded warning limit of " + Config.DailyQACBCTLimit_mm + " mm" }>{ text }</td>
+        <td class="danger" title={title + " exceeded warning limit of " + Config.DailyQACBCTLimit_mm + " mm"}>
+          {text}
+        </td>
       } else {
-        <td title={ title }>{ text }</td>
+        <td title={title}>
+          {text}
+        </td>
       }
     }
 
     def colTableMovement(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val composite = dataSet.composite
+
       def fmt(d: Option[Double]) = (d.get / 10).formatted("%4.1f")
+
       if (composite.tableXlateral_mm.isDefined) {
-        <td title={ Util.fmtDbl(composite.tableXlateral_mm.get / 10) + ", " + Util.fmtDbl(composite.tableYvertical_mm.get / 10) + ", " + Util.fmtDbl(composite.tableZlongitudinal_mm.get / 10) + ", " }>
-          { fmt(composite.tableXlateral_mm) + ", " + fmt(composite.tableYvertical_mm) + ", " + fmt(composite.tableZlongitudinal_mm) }
+        <td title={Util.fmtDbl(composite.tableXlateral_mm.get / 10) + ", " + Util.fmtDbl(composite.tableYvertical_mm.get / 10) + ", " + Util.fmtDbl(composite.tableZlongitudinal_mm.get / 10) + ", "}>
+          {fmt(composite.tableXlateral_mm) + ", " + fmt(composite.tableYvertical_mm) + ", " + fmt(composite.tableZlongitudinal_mm)}
         </td>
       } else <td></td>
     }
 
     def colVertGantryAngle(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val angle = dataSet.vertList.head.gantryAngle_deg
-      <td title={ fmtAngle(angle) }>{ Util.angleRoundedTo90(angle) }</td>
+      <td title={fmtAngle(angle)}>
+        {Util.angleRoundedTo90(angle)}
+      </td>
     }
 
     def colVertXCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
@@ -162,7 +191,9 @@ object DailyQAHTML extends Logging {
 
     def colHorzGantryAngle(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val angle = dataSet.horzList.head.gantryAngle_deg
-      <td title={ fmtAngle(angle) }>{ Util.angleRoundedTo90(angle) }</td>
+      <td title={fmtAngle(angle)}>
+        {Util.angleRoundedTo90(angle)}
+      </td>
     }
 
     def colHorzYCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
@@ -191,23 +222,38 @@ object DailyQAHTML extends Logging {
       }
 
       if (sliceThickness.isEmpty || (sliceThickness.get <= Config.BBbyCBCTMaximumSliceThickness_mm)) {
-        <td><a href={ ViewOutput.viewOutputUrl(dataSet.cbct.outputPK) }>CBCT Details</a></td>
+        <td>
+          <a href={ViewOutput.viewOutputUrl(dataSet.cbct.outputPK)}>CBCT Details</a>
+        </td>
       } else {
         val thicknessText = sliceThickness.get.toString.take(4)
         val title = "Slices too thick at " + thicknessText + " mm.  Limit is " + Config.BBbyCBCTMaximumSliceThickness_mm + " mm."
         val msg = thicknessText + " mm Slice Thickness "
-        <td title={ title } class="warning"><a href={ ViewOutput.viewOutputUrl(dataSet.cbct.outputPK) }>CBCT Details<br/><b style="color:red;">{ msg }</b></a></td>
+        <td title={title} class="warning">
+          <a href={ViewOutput.viewOutputUrl(dataSet.cbct.outputPK)}>CBCT Details
+            <br/> <b style="color:red;">
+            {msg}
+          </b>
+          </a>
+        </td>
       }
     }
 
     def colEpidImages(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       def f(d: Double) = d.formatted("%12.2f").trim()
-      val tableMovement = dataSet.bbByEpid.map(e => (f(e.tableXlateral_mm) + ", " + f(e.tableYvertical_mm) + ", " + f(e.tableZlongitudinal_mm))).distinct
+
+      val tableMovement = dataSet.bbByEpid.map(e => f(e.tableXlateral_mm) + ", " + f(e.tableYvertical_mm) + ", " + f(e.tableZlongitudinal_mm)).distinct
       if (tableMovement.size > 1) {
         val title = "The different EPID images have different table positions: " + titleNewline + tableMovement.mkString(titleNewline)
-        <td title={ title } class="warning"> <a href={ ViewOutput.viewOutputUrl(dataSet.composite.outputPK) }>EPID Details<br/><b style="color:red;">Table Moved</b></a></td>
+        <td title={title} class="warning">
+          <a href={ViewOutput.viewOutputUrl(dataSet.composite.outputPK)}>EPID Details
+            <br/> <b style="color:red;">Table Moved</b>
+          </a>
+        </td>
       } else {
-        <td><a href={ ViewOutput.viewOutputUrl(dataSet.composite.outputPK) }>EPID Details</a></td>
+        <td>
+          <a href={ViewOutput.viewOutputUrl(dataSet.composite.outputPK)}>EPID Details</a>
+        </td>
       }
     }
 
@@ -215,38 +261,39 @@ object DailyQAHTML extends Logging {
       try {
         DailyQASummary.dateFormat.format(dataSetList.head.output.dataDate.get)
       } catch {
-        case t: Throwable => ""
+        case _: Throwable => ""
       }
     }
 
     val checksum = makeChecksum(dataSetList)
-    Trace.trace(checksum) // TODO rm
 
     val colList: List[Col] = List(
-      new Col("Machine", "Name of treatment machine", colMachine),
-      new Col("Patient", "Name of test patient", colPatient),
-      new Col("EPID Time " + reportDate, "Time of EPID acquisition", colDateTime),
+      Col("Machine", "Name of treatment machine", colMachine),
+      Col("Patient", "Name of test patient", colPatient),
+      Col("EPID Time " + reportDate, "Time of EPID acquisition", colDateTime),
 
-      new Col("X,Y,Z CBCT-PLAN mm", "CBCT - PLAN in mm", colCbctXYZ),
-      new Col("X,Y,Z / lat,vert,long Table Movement cm", "RTIMAGE-CT in cm, X,Y,Z = lat,vert,lng", colTableMovement),
+      Col("X,Y,Z CBCT-PLAN mm", "CBCT - PLAN in mm", colCbctXYZ),
+      Col("X,Y,Z / lat,vert,long Table Movement cm", "RTIMAGE-CT in cm, X,Y,Z = lat,vert,lng", colTableMovement),
 
-      new Col("Gantry Angle for XZ", "Angle of gantry for vertical image in degrees used to calculate values for Y and Z", colVertGantryAngle),
-      new Col("Vert EPID-CAX(X) mm", "X offset Vertical EPID image-CAX in mm", colVertXCax),
-      new Col("Vert EPID-CAX(Z) mm", "Z offset Vertical EPID image-CAX in mm", colVertZCax),
+      Col("Gantry Angle for XZ", "Angle of gantry for vertical image in degrees used to calculate values for Y and Z", colVertGantryAngle),
+      Col("Vert EPID-CAX(X) mm", "X offset Vertical EPID image-CAX in mm", colVertXCax),
+      Col("Vert EPID-CAX(Z) mm", "Z offset Vertical EPID image-CAX in mm", colVertZCax),
 
-      new Col("Gantry Angle for YZ", "Angle of gantry for horizontal image in degrees used to calculate values for X and Z", colHorzGantryAngle),
-      new Col("Horz EPID-CAX(Y) mm", "Y offset Horizontal EPID-CAX in mm", colHorzYCax),
-      new Col("Horz EPID-CAX(Z) mm", "Z offset Horizontal EPID-CAX in mm", colHorzZCax),
+      Col("Gantry Angle for YZ", "Angle of gantry for horizontal image in degrees used to calculate values for X and Z", colHorzGantryAngle),
+      Col("Horz EPID-CAX(Y) mm", "Y offset Horizontal EPID-CAX in mm", colHorzYCax),
+      Col("Horz EPID-CAX(Z) mm", "Z offset Horizontal EPID-CAX in mm", colHorzZCax),
 
-      new Col("(EPID-CAX)-(PLAN-CBCT)", "total offset of (EPID-CAX)-(PLAN-CBCT)", colEpidPlanCbct),
+      Col("(EPID-CAX)-(PLAN-CBCT)", "total offset of (EPID-CAX)-(PLAN-CBCT)", colEpidPlanCbct),
 
-      new Col("CBCT Details", "Images and other details for CBCT", colCbctImages),
-      new Col("EPID Details", "Images and other details for EPID", colEpidImages))
+      Col("CBCT Details", "Images and other details for CBCT", colCbctImages),
+      Col("EPID Details", "Images and other details for EPID", colEpidImages))
 
     def dataSetToRow(dataSet: BBbyEPIDComposite.DailyDataSetComposite): MOE = {
       val tdList = colList.tail.map(col => col.toElem(dataSet))
-      val elem = <tr>{ colList.head.toElem(dataSet) :+ tdList }</tr>
-      new MOE(dataSet.machine, Some(dataSet.output), elem)
+      val elem = <tr>
+        {colList.head.toElem(dataSet) :+ tdList}
+      </tr>
+      MOE(dataSet.machine, Some(dataSet.output), elem)
     }
 
     val machinesMissingResults = {
@@ -271,8 +318,9 @@ object DailyQAHTML extends Logging {
       Output.getOutputByDateRange(institutionPK, dataDateBegin, dataDateEnd).filter(o => procedurePkSet.contains(o.procedurePK)).sortBy(o => o.dataDate.get.getTime)
     }
 
-    def outputCBCT(machinePK: Long) = allOutputs.filter(o => ((o.machinePK.get == machinePK) && (o.procedurePK == cbctProc.procedurePK.get)))
-    def outputEPID(machinePK: Long) = allOutputs.filter(o => ((o.machinePK.get == machinePK) && (o.procedurePK == epidProc.procedurePK.get)))
+    def outputCBCT(machinePK: Long) = allOutputs.filter(o => (o.machinePK.get == machinePK) && (o.procedurePK == cbctProc.procedurePK.get))
+
+    def outputEPID(machinePK: Long) = allOutputs.filter(o => (o.machinePK.get == machinePK) && (o.procedurePK == epidProc.procedurePK.get))
 
     // List of reasons that each machine is missing a full set of results.
     val missingResultsExplanations: Seq[MOE] = {
@@ -291,7 +339,7 @@ object DailyQAHTML extends Logging {
         val messageColspan = (colList.size - (listColSpanSize + 1)).toString
         val timeFormat = new SimpleDateFormat("H:mm")
 
-        def cbctBBnotFound(cOut: Output): Boolean = cbctResults.find(c => c.output.outputPK.get == cOut.outputPK.get).isEmpty
+        def cbctBBnotFound(cOut: Output): Boolean = !cbctResults.exists(c => c.output.outputPK.get == cOut.outputPK.get)
 
         /**
          * True if this EPID output has data for horizontal gantry angle.
@@ -313,6 +361,7 @@ object DailyQAHTML extends Logging {
 
         val machHistory = {
           val outputSeq = allOutputs.filter(o => o.machinePK.get == mach.machinePK.get)
+
           def ref(o: Output): Elem = {
             val isCBCT = o.procedurePK == cbctProc.procedurePK.get
             val procName = if (isCBCT) "CBCT" else "EPID"
@@ -327,7 +376,9 @@ object DailyQAHTML extends Logging {
                   "be re-done."
               }
               <p>
-                <a href={ url } title={ title }>{ text }<span style={ styleFail }>BB not found</span></a>
+                <a href={url} title={title}>
+                  {text}<span style={styleFail}>BB not found</span>
+                </a>
               </p>
             }
 
@@ -339,9 +390,12 @@ object DailyQAHTML extends Logging {
                   "calculate its position. The scan must be re-done. Click to view details of EPID."
               }
               <p>
-                <a href={ url } title={ title }>{ text }<span style={ styleFail }>No horizontal gantry angle image with BB found</span></a>
+                <a href={url} title={title}>
+                  {text}<span style={styleFail}>No horizontal gantry angle image with BB found</span>
+                </a>
               </p>
             }
+
             //  + titleNewline +
             def missingVertEPIDGantryAngle: Elem = {
               val title = {
@@ -351,18 +405,22 @@ object DailyQAHTML extends Logging {
                   "position. The scan must be re-done. Click to view details of EPID."
               }
               <p>
-                <a href={ url } title={ title }>{ text }<span style={ styleFail }>No vertical gantry angle image with BB found</span></a>
+                <a href={url} title={title}>
+                  {text}<span style={styleFail}>No vertical gantry angle image with BB found</span>
+                </a>
               </p>
             }
 
             def scanOk = {
               <p>
-                <a href={ url } title="Click to view details of scan">{ text }</a>
+                <a href={url} title="Click to view details of scan">
+                  {text}
+                </a>
               </p>
             }
 
             val elem: Elem = 0 match {
-              case _ if (isCBCT && cbctBBnotFound(o)) => badCBCT
+              case _ if isCBCT && cbctBBnotFound(o) => badCBCT
               case _ if (!isCBCT) && (!hasHorzAngle(o)) => missingHorzEPIDGantryAngle
               case _ if (!isCBCT) && (!hasVertAngle(o)) => missingVertEPIDGantryAngle
               case _ => scanOk
@@ -372,37 +430,51 @@ object DailyQAHTML extends Logging {
           }
 
           if (outputSeq.nonEmpty) {
-            <td colspan={ listColSpan }>
+            <td colspan={listColSpan}>
               <center>
                 Hover for info
               </center>
-              <p/>
-              { outputSeq.map(o => ref(o)) }
+              <p/>{outputSeq.map(o => ref(o))}
             </td>
-          } else { <td colspan={ listColSpan }></td> }
+          } else {
+            <td colspan={listColSpan}></td>
+          }
         }
 
         def showNoData: Elem = {
           <tr>
-            <td title={ col0Title } style={ styleNoData }><h4>{ wrapAlias(mach.id) }<br/>No Data</h4></td>
-            <td colspan={ messageColspan }>There are no CBCT or EPID scans for this machine.</td>
-            { machHistory }
+            <td title={col0Title} style={styleNoData}>
+              <h4>
+                {wrapAlias(mach.id)}<br/>
+                No Data</h4>
+            </td>
+            <td colspan={messageColspan}>There are no CBCT or EPID scans for this machine.</td>{machHistory}
           </tr>
         }
 
         def showWarn(msg: String): Elem = { // show links to CBCT and EPID outputs
           <tr>
-            <td title={ col0Title } style={ styleWarn }><h4>{ wrapAlias(mach.id) }<br/>Warning</h4></td>
-            <td colspan={ messageColspan }>{ msg }</td>
-            { machHistory }
+            <td title={col0Title} style={styleWarn}>
+              <h4>
+                {wrapAlias(mach.id)}<br/>
+                Warning</h4>
+            </td>
+            <td colspan={messageColspan}>
+              {msg}
+            </td>{machHistory}
           </tr>
         }
 
         def showFail(msg: String): Elem = { // show links to CBCT and EPID outputs
           <tr>
-            <td title={ col0Title } style={ styleFail }><h4>{ wrapAlias(mach.id) }<br/>Fail</h4></td>
-            <td colspan={ messageColspan }>{ msg }</td>
-            { machHistory }
+            <td title={col0Title} style={styleFail}>
+              <h4>
+                {wrapAlias(mach.id)}<br/>
+                Fail</h4>
+            </td>
+            <td colspan={messageColspan}>
+              {msg}
+            </td>{machHistory}
           </tr>
         }
 
@@ -423,7 +495,7 @@ object DailyQAHTML extends Logging {
           case _ if cbctOutput.nonEmpty && cbctResults.isEmpty => showFail("One or more CBCTs were done but the BB was not found.  Probably mis-alignment of table or phantom.  It is recommended that the CBCT scan be repeated.")
           case _ if (cbctResults.size == 1) && epidResults.isEmpty => showWarn("There is a successful CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
           case _ if cbctResults.nonEmpty && epidResults.isEmpty => showWarn("There are " + cbctResults.size + " successful CBCT scans but no EPID scans.  It is recommended that an EPID scan be performed.")
-          case _ if cbctResults.isEmpty && (epidOutput.nonEmpty) => showFail("There is one or more EPID scans but no CBCT scans.")
+          case _ if cbctResults.isEmpty && epidOutput.nonEmpty => showFail("There is one or more EPID scans but no CBCT scans.")
           case _ if cbctResults.isEmpty && epidResults.nonEmpty => showFail("There are " + epidOutput.size + " EPID scans but no successful CBCT scans.")
           case _ if cbctResults.nonEmpty && epidResults.isEmpty => showWarn("There are " + cbctResults.size + " CBCT scans but zero EPID scans.  The EPID scan needs to be done.")
           case _ if epidBeforeCbct => showFail("The EPID scan was done prior to CBCT.  The CBCT needs to be done first.")
@@ -432,7 +504,7 @@ object DailyQAHTML extends Logging {
         explanation
       }
 
-      machinesMissingResults.map(mach => new MOE(mach, None, explain(mach)))
+      machinesMissingResults.map(mach => MOE(mach, None, explain(mach)))
     }
 
     val resultSeq = dataSetList.map(dataSet => dataSetToRow(dataSet))
@@ -445,27 +517,32 @@ object DailyQAHTML extends Logging {
             <col/>
             <col/>
             <col width="110"/>
-            <thead><tr>{ colList.map(col => col.toHeader) }</tr></thead>
-            { all.map(moe => moe.elem) }
+            <thead>
+              <tr>
+                {colList.map(col => col.toHeader)}
+              </tr>
+            </thead>{all.map(moe => moe.elem)}
           </table>
         </div>
         <div class="row">
           <div class="col-md-8 col-md-offset-2 col-sm-12">
             <center>
               Machines above that have any measurements out of tolerance by their machine's warning limit
-              are marked as failed.  To produce a final result for a single machine, there must be both CBCT
-              and EPID results.  Both must be valid (found the BB near isocenter), the CBCT must scanned before the EPID,
+              are marked as failed. To produce a final result for a single machine, there must be both CBCT
+              and EPID results. Both must be valid (found the BB near isocenter), the CBCT must scanned before the EPID,
               and they must be scanned on the same day.
               <p></p>
-              A warning or failure may be cleared by re-doing the Daily QA for that machine.  If there there at least
+              A warning or failure may be cleared by re-doing the Daily QA for that machine. If there there at least
               one set of data that passed for a machine, then that machine is marked as passed.
             </center>
-            <span hidden="true" id="checksum">{ checksum }</span>
+            <span hidden="true" id="checksum">
+              {checksum}
+            </span>
           </div>
         </div>
         <div class="row">
           <div class="col-md-6 col-md-offset-3 col-sm-12">
-            { DailyQAIndividualResults.get(institutionPK, date) }
+            {DailyQAIndividualResults.get(institutionPK, date)}
           </div>
         </div>
       </div>
