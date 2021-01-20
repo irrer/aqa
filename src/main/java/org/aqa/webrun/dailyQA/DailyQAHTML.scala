@@ -25,7 +25,7 @@ import scala.xml.Elem
 object DailyQAHTML extends Logging {
 
   def makeChecksum(dataSetList: Seq[BBbyEPIDComposite.DailyDataSetComposite]): String = {
-    dataSetList.map(_.checksum).sorted.mkString(" / ")
+    "checksum size: " + dataSetList.size + " : " + dataSetList.map(_.checksum).sorted.mkString(" / ")
   }
 
   def makeReport(dataSetList: Seq[BBbyEPIDComposite.DailyDataSetComposite], institutionPK: Long, date: Date): Elem = {

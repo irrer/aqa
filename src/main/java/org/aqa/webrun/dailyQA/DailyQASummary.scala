@@ -90,13 +90,14 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
     var date=document.getElementById("Date").getAttribute("value");
     var baseUrl='/DailyQASummary?checksum=true&Date=' + date;
-    var WebRefreshTime=1000;
+    var WebRefreshTime=2000;
 
     function watchStatus() {
         $.ajax({url:baseUrl,
             success:function(result){
                 var status = document.getElementById("checksum").innerHTML;
-                if (status == result) {
+                // Must remove whitespace because IntelliJ source formatter adds it.
+                if (status.trim() == result.trim()) {
                     setTimeout(watchStatus, WebRefreshTime);
                 }
                 else {
@@ -147,7 +148,6 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
    */
   private def handleChecksum(response: Response, valueMap: ValueMapT): Unit = {
     val checksum = DailyQAHTML.makeChecksum(getDataSetListByDateAndInstitution(valueMap))
-    Trace.trace(checksum) // TODO rm
     response.setEntity(checksum, MediaType.TEXT_PLAIN)
     response.setStatus(Status.SUCCESS_OK)
   }
