@@ -1,15 +1,14 @@
 package org.aqa.webrun.dailyQA
 
-import scala.xml.Elem
-import java.util.Date
-import edu.umro.ScalaUtil.Util
-import org.aqa.db.BBbyEPIDComposite
 import org.aqa.db.Output
 import org.aqa.db.Procedure
-import java.text.SimpleDateFormat
+import org.aqa.web.OutputList
 import org.aqa.web.ViewOutput
 import org.aqa.web.WebUtil
-import org.aqa.web.OutputList
+
+import java.text.SimpleDateFormat
+import java.util.Date
+import scala.xml.Elem
 
 /**
  * Report the individual results for all EPID and CBCT analysis on the given day.  This
@@ -19,7 +18,7 @@ object DailyQAIndividualResults {
 
   private val dateFormat = new SimpleDateFormat("EEE MMM dd, YYYY")
   private val timeFormat = new SimpleDateFormat("H:mm:ss a")
-  private val dateAndtimeFormat = new SimpleDateFormat("EEE MMM dd, YYYY H:mm:ss a")
+  private val dateAndTimeFormat = new SimpleDateFormat("EEE MMM dd, YYYY H:mm:ss a")
 
   def get(instPK: Long, date: Date): Elem = {
 
@@ -37,17 +36,33 @@ object DailyQAIndividualResults {
       val url = ViewOutput.path + "?" + ViewOutput.outputPKTag + "=" + ext.output_outputPK
 
       <tr>
-        <td><a title="View details" href={ url }>{ dateAndtimeFormat.format(ext.output_startDate) }</a></td>
-        <td>{ timeFormat.format(ext.input_dataDate.get) }</td>
-        <td>{ ext.procedure_name }</td>
-        <td>{ WebUtil.wrapAlias(ext.machine_id) }</td>
-        <td>{ OutputList.redoUrl(ext.output_outputPK) }</td>
+        <td>
+          <a title="View details" href={url}>
+            {dateAndTimeFormat.format(ext.output_startDate)}
+          </a>
+        </td>
+        <td>
+          {timeFormat.format(ext.input_dataDate.get)}
+        </td>
+        <td>
+          {ext.procedure_name}
+        </td>
+        <td>
+          {WebUtil.wrapAlias(ext.machine_id)}
+        </td>
+        <td>
+          {OutputList.redoUrl(ext.output_outputPK)}
+        </td>
       </tr>
     }
 
     val content = {
       <div style="margin-top:60px;">
-        <center><h4>Results for Each Image Series { dateFormat.format(date) }</h4></center>
+        <center>
+          <h4>Results for Each Image Series
+            {dateFormat.format(date)}
+          </h4>
+        </center>
         <table class="table table-striped">
           <tbody>
             <thead>
@@ -58,8 +73,7 @@ object DailyQAIndividualResults {
                 <th>Machine</th>
                 <th>Redo</th>
               </tr>
-            </thead>
-            { extList.map(o => extToRow(o)) }
+            </thead>{extList.map(o => extToRow(o))}
           </tbody>
         </table>
       </div>

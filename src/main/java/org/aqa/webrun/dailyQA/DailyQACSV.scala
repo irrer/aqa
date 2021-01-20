@@ -1,33 +1,33 @@
 package org.aqa.webrun.dailyQA
 
-import org.restlet.Response
-import java.util.Date
-import org.aqa.db.BBbyEPIDComposite
+import com.pixelmed.dicom.AttributeList
+import com.pixelmed.dicom.AttributeTag
+import com.pixelmed.dicom.TagFromName
+import com.pixelmed.dicom.ValueRepresentation
+import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.AngleType
+import org.aqa.AnonymizeUtil
 import org.aqa.Util
+import org.aqa.db.BBbyEPIDComposite
+import org.aqa.db.DicomAnonymous
+import org.aqa.db.Input
 import org.aqa.web.ViewOutput
+import org.aqa.web.WebUtil
+import org.restlet.Response
 import org.restlet.data.MediaType
 import org.restlet.data.Status
-import org.aqa.web.WebUtil
-import org.aqa.AnonymizeUtil
-import org.aqa.db.Input
-import org.aqa.db.DicomAnonymous
-import com.pixelmed.dicom.TagFromName
-import org.aqa.AngleType
+
 import javax.vecmath.Point3d
-import com.pixelmed.dicom.AttributeTag
-import edu.umro.ScalaUtil.DicomUtil
-import com.pixelmed.dicom.ValueRepresentation
-import com.pixelmed.dicom.AttributeList
-import edu.umro.DicomDict.TagByName
 
 object DailyQACSV {
 
-  def getCsv(dataSetList: Seq[BBbyEPIDComposite.DailyDataSetComposite], response: Response): Unit = {
+  def makeCsv(dataSetList: Seq[BBbyEPIDComposite.DailyDataSetComposite], response: Response): Unit = {
 
     def sorter(a: BBbyEPIDComposite.DailyDataSetComposite, b: BBbyEPIDComposite.DailyDataSetComposite): Boolean = {
-      if (a.machine.machinePK.get != b.machine.machinePK.get) (a.machine.machinePK.get < b.machine.machinePK.get)
+      if (a.machine.machinePK.get != b.machine.machinePK.get) a.machine.machinePK.get < b.machine.machinePK.get
       else {
-        if (a.output.dataDate.get.getTime != b.output.dataDate.get.getTime) (a.output.dataDate.get.getTime < b.output.dataDate.get.getTime)
+        if (a.output.dataDate.get.getTime != b.output.dataDate.get.getTime) a.output.dataDate.get.getTime < b.output.dataDate.get.getTime
         else {
           a.output.startDate.getTime < b.output.startDate.getTime
         }
@@ -56,7 +56,7 @@ object DailyQACSV {
         }
         p
       } catch {
-        case t: Throwable => unknown
+        case _: Throwable => unknown
       }
 
       patId
@@ -129,7 +129,7 @@ object DailyQACSV {
     //      }
     //    }
 
-    def getNums(al: AttributeList, tag: AttributeTag, scale: Double): Seq[String] = {
+    def getValues(al: AttributeList, tag: AttributeTag, scale: Double): Seq[String] = {
       val at = al.get(tag)
       if (at == null) {
         Seq("NA", "NA", "NA")
@@ -155,105 +155,105 @@ object DailyQACSV {
       numList.map(n => n.toString)
     }
 
-    def getEpidNums(dataSet: BBbyEPIDComposite.DailyDataSetComposite, tag: AttributeTag, scale: Double = 1.0): Seq[String] = {
+    def getEpidValues(dataSet: BBbyEPIDComposite.DailyDataSetComposite, tag: AttributeTag, scale: Double = 1.0): Seq[String] = {
       val al = dataSet.bbByEpid.head.attributeList
-      getNums(al, tag, scale)
+      getValues(al, tag, scale)
     }
 
-    def getEpidVertNums(dataSet: BBbyEPIDComposite.DailyDataSetComposite, tag: AttributeTag, scale: Double = 1.0): Seq[String] = {
+    def getEpidVertValues(dataSet: BBbyEPIDComposite.DailyDataSetComposite, tag: AttributeTag, scale: Double = 1.0): Seq[String] = {
       val al = dataSet.bbByEpid.filter(e => e.isVert).head.attributeList
-      getNums(al, tag, scale)
+      getValues(al, tag, scale)
     }
 
-    def getEpidHorzNums(dataSet: BBbyEPIDComposite.DailyDataSetComposite, tag: AttributeTag, scale: Double = 1.0): Seq[String] = {
+    def getEpidHorzValues(dataSet: BBbyEPIDComposite.DailyDataSetComposite, tag: AttributeTag, scale: Double = 1.0): Seq[String] = {
       val al = dataSet.bbByEpid.filter(e => e.isHorz).head.attributeList
-      getNums(al, tag, scale)
+      getValues(al, tag, scale)
     }
 
-    def getCbctNums(dataSet: BBbyEPIDComposite.DailyDataSetComposite, tag: AttributeTag, scale: Double = 1.0): Seq[String] = getNums(dataSet.cbct.attributeList, tag, scale)
+    def getCbctValues(dataSet: BBbyEPIDComposite.DailyDataSetComposite, tag: AttributeTag, scale: Double = 1.0): Seq[String] = getValues(dataSet.cbct.attributeList, tag, scale)
 
-    case class Col(header: String, toText: (BBbyEPIDComposite.DailyDataSetComposite) => String);
+    case class Col(header: String, toText: BBbyEPIDComposite.DailyDataSetComposite => String){}
 
     val colList = Seq[Col](
-      new Col("Machine", (dataSet) => machineNameSet(dataSet.machine.id)),
-      new Col("Acquired", (dataSet) => Util.standardDateFormat.format(dataSet.output.dataDate.get)),
-      new Col("Analysis", (dataSet) => Util.standardDateFormat.format(dataSet.output.startDate)),
-      new Col("PatientID", (dataSet) => patientIdOf(dataSet)),
-      new Col("Status", (dataSet) => dataSet.output.status),
+      Col("Machine", dataSet => machineNameSet(dataSet.machine.id)),
+      Col("Acquired", dataSet => Util.standardDateFormat.format(dataSet.output.dataDate.get)),
+      Col("Analysis", dataSet => Util.standardDateFormat.format(dataSet.output.startDate)),
+      Col("PatientID", dataSet => patientIdOf(dataSet)),
+      Col("Status", dataSet => dataSet.output.status),
 
-      new Col("X CBCT - ISO mm", (dataSet) => (dataSet.cbct.cbctX_mm - dataSet.cbct.rtplanX_mm).toString),
-      new Col("Y CBCT - ISO mm", (dataSet) => (dataSet.cbct.cbctY_mm - dataSet.cbct.rtplanY_mm).toString),
-      new Col("Z CBCT - ISO mm", (dataSet) => (dataSet.cbct.cbctZ_mm - dataSet.cbct.rtplanZ_mm).toString),
+      Col("X CBCT - ISO mm", dataSet => (dataSet.cbct.cbctX_mm - dataSet.cbct.rtplanX_mm).toString),
+      Col("Y CBCT - ISO mm", dataSet => (dataSet.cbct.cbctY_mm - dataSet.cbct.rtplanY_mm).toString),
+      Col("Z CBCT - ISO mm", dataSet => (dataSet.cbct.cbctZ_mm - dataSet.cbct.rtplanZ_mm).toString),
 
-      new Col("X/lat Table Movement cm", (dataSet) => dblOptToString10(dataSet.composite.tableXlateral_mm)),
-      new Col("Y/vert Table Movement cm", (dataSet) => dblOptToString10(dataSet.composite.tableYvertical_mm)),
-      new Col("Z/lng Table Movement cm", (dataSet) => dblOptToString10(dataSet.composite.tableZlongitudinal_mm)),
+      Col("X/lat Table Movement cm", dataSet => dblOptToString10(dataSet.composite.tableXlateral_mm)),
+      Col("Y/vert Table Movement cm", dataSet => dblOptToString10(dataSet.composite.tableYvertical_mm)),
+      Col("Z/lng Table Movement cm", dataSet => dblOptToString10(dataSet.composite.tableZlongitudinal_mm)),
 
-      new Col("X/lat Table Posn CBCT cm", (dataSet) => (dataSet.cbct.tableXlateral_mm / 10).toString),
-      new Col("Y/vert Table Posn CBCT cm", (dataSet) => (dataSet.cbct.tableYvertical_mm / 10).toString),
-      new Col("Z/lng Table Posn CBCT cm", (dataSet) => (dataSet.cbct.tableZlongitudinal_mm / 10).toString),
+      Col("X/lat Table Posn CBCT cm", dataSet => (dataSet.cbct.tableXlateral_mm / 10).toString),
+      Col("Y/vert Table Posn CBCT cm", dataSet => (dataSet.cbct.tableYvertical_mm / 10).toString),
+      Col("Z/lng Table Posn CBCT cm", dataSet => (dataSet.cbct.tableZlongitudinal_mm / 10).toString),
 
-      new Col("Vert X/lat Table Posn EPID cm", (dataSet) => {
+      Col("Vert X/lat Table Posn EPID cm", dataSet => {
         val j = epidTablePosition_cm(dataSet, AngleType.vertical)
-        j(0)
+        j.head
       }),
 
-      new Col("Vert X/lat Table Posn EPID cm", (dataSet) => (epidTablePosition_cm(dataSet, AngleType.vertical))(0)),
-      new Col("Vert Y/vert Table Posn EPID cm", (dataSet) => (epidTablePosition_cm(dataSet, AngleType.vertical))(1)),
-      new Col("Vert Z/lng Table Posn EPID cm", (dataSet) => (epidTablePosition_cm(dataSet, AngleType.vertical))(2)),
+      Col("Vert X/lat Table Posn EPID cm", dataSet => epidTablePosition_cm(dataSet, AngleType.vertical).head),
+      Col("Vert Y/vert Table Posn EPID cm", dataSet => epidTablePosition_cm(dataSet, AngleType.vertical) (1)),
+      Col("Vert Z/lng Table Posn EPID cm", dataSet => epidTablePosition_cm(dataSet, AngleType.vertical) (2)),
 
-      new Col("Horz X/lat Table Posn EPID cm", (dataSet) => (epidTablePosition_cm(dataSet, AngleType.horizontal))(0)),
-      new Col("Horz Y/vert Table Posn EPID cm", (dataSet) => (epidTablePosition_cm(dataSet, AngleType.horizontal))(1)),
-      new Col("Horz Z/lng Table Posn EPID cm", (dataSet) => (epidTablePosition_cm(dataSet, AngleType.horizontal))(2)),
+      Col("Horz X/lat Table Posn EPID cm", dataSet => epidTablePosition_cm(dataSet, AngleType.horizontal).head),
+      Col("Horz Y/vert Table Posn EPID cm", dataSet => epidTablePosition_cm(dataSet, AngleType.horizontal) (1)),
+      Col("Horz Z/lng Table Posn EPID cm", dataSet => epidTablePosition_cm(dataSet, AngleType.horizontal) (2)),
 
-      new Col("EPID max Table Travel cm", (dataSet) => epidMaxTravel_cm(dataSet)),
+      Col("EPID max Table Travel cm", dataSet => epidMaxTravel_cm(dataSet)),
 
-      new Col("Gantry Angle for XZ (vert) deg", (dataSet) => dataSet.vertList.head.gantryAngle_deg.toString),
-      new Col("Vert (EPID-ISO) X mm", (dataSet) => dataSet.vertList.head.epid3DX_mm.toString),
-      new Col("Vert (EPID-ISO) Z mm", (dataSet) => dataSet.vertList.head.epid3DZ_mm.toString),
-      new Col("Vert (EPID-ISO) - (CBCT-ISO) X mm", (dataSet) => dataSet.composite.xAdjusted_mm.get.toString),
-      new Col("Vert (EPID-ISO) - (CBCT-ISO) Z mm", (dataSet) => (dataSet.vertList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ).toString),
+      Col("Gantry Angle for XZ (vert) deg", dataSet => dataSet.vertList.head.gantryAngle_deg.toString),
+      Col("Vert (EPID-ISO) X mm", dataSet => dataSet.vertList.head.epid3DX_mm.toString),
+      Col("Vert (EPID-ISO) Z mm", dataSet => dataSet.vertList.head.epid3DZ_mm.toString),
+      Col("Vert (EPID-ISO) - (CBCT-ISO) X mm", dataSet => dataSet.composite.xAdjusted_mm.get.toString),
+      Col("Vert (EPID-ISO) - (CBCT-ISO) Z mm", dataSet => (dataSet.vertList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ).toString),
 
-      new Col("Gantry Angle for YZ (horz) deg", (dataSet) => dataSet.horzList.head.gantryAngle_deg.toString),
-      new Col("Horz (EPID-ISO) Y mm", (dataSet) => dataSet.horzList.head.epid3DY_mm.toString),
-      new Col("Horz (EPID-ISO) Z mm", (dataSet) => dataSet.horzList.head.epid3DZ_mm.toString),
-      new Col("Horz (EPID-ISO) - (CBCT-ISO) Y mm", (dataSet) => dataSet.composite.yAdjusted_mm.get.toString),
-      new Col("Horz (EPID-ISO) - (CBCT-ISO) Z mm", (dataSet) => (dataSet.horzList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ).toString),
+      Col("Gantry Angle for YZ (horz) deg", dataSet => dataSet.horzList.head.gantryAngle_deg.toString),
+      Col("Horz (EPID-ISO) Y mm", dataSet => dataSet.horzList.head.epid3DY_mm.toString),
+      Col("Horz (EPID-ISO) Z mm", dataSet => dataSet.horzList.head.epid3DZ_mm.toString),
+      Col("Horz (EPID-ISO) - (CBCT-ISO) Y mm", dataSet => dataSet.composite.yAdjusted_mm.get.toString),
+      Col("Horz (EPID-ISO) - (CBCT-ISO) Z mm", dataSet => (dataSet.horzList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ).toString),
 
-      new Col("EPID Vert XRay Offset X mm", (dataSet) => (getEpidVertNums(dataSet, TagByName.XRayImageReceptorTranslation))(0)),
-      new Col("EPID Vert XRay Offset Y mm", (dataSet) => (getEpidVertNums(dataSet, TagByName.XRayImageReceptorTranslation))(1)),
-      new Col("EPID Vert XRay Offset Z mm", (dataSet) => (getEpidVertNums(dataSet, TagByName.XRayImageReceptorTranslation))(2)),
+      Col("EPID Vert XRay Offset X mm", dataSet => getEpidVertValues(dataSet, TagByName.XRayImageReceptorTranslation).head),
+      Col("EPID Vert XRay Offset Y mm", dataSet => getEpidVertValues(dataSet, TagByName.XRayImageReceptorTranslation) (1)),
+      Col("EPID Vert XRay Offset Z mm", dataSet => getEpidVertValues(dataSet, TagByName.XRayImageReceptorTranslation) (2)),
 
-      new Col("EPID Horz XRay Offset X mm", (dataSet) => (getEpidHorzNums(dataSet, TagByName.XRayImageReceptorTranslation))(0)),
-      new Col("EPID Horz XRay Offset Y mm", (dataSet) => (getEpidHorzNums(dataSet, TagByName.XRayImageReceptorTranslation))(1)),
-      new Col("EPID Horz XRay Offset Z mm", (dataSet) => (getEpidHorzNums(dataSet, TagByName.XRayImageReceptorTranslation))(2)),
+      Col("EPID Horz XRay Offset X mm", dataSet => getEpidHorzValues(dataSet, TagByName.XRayImageReceptorTranslation).head),
+      Col("EPID Horz XRay Offset Y mm", dataSet => getEpidHorzValues(dataSet, TagByName.XRayImageReceptorTranslation) (1)),
+      Col("EPID Horz XRay Offset Z mm", dataSet => getEpidHorzValues(dataSet, TagByName.XRayImageReceptorTranslation) (2)),
 
-      new Col("Avg (EPID-ISO) - (CBCT-ISO) Z mm", (dataSet) => (dataSet.composite.zAdjusted_mm.get).toString),
+      Col("Avg (EPID-ISO) - (CBCT-ISO) Z mm", dataSet => dataSet.composite.zAdjusted_mm.get.toString),
 
-      new Col("No. of EPID images", (dataSet) => dataSet.bbByEpid.size.toString),
+      Col("No. of EPID images", dataSet => dataSet.bbByEpid.size.toString),
 
-      new Col("EPID pixel spacing X mm", (dataSet) => (getEpidNums(dataSet, TagByName.ImagePlanePixelSpacing))(0)),
-      new Col("EPID pixel spacing Y mm", (dataSet) => (getEpidNums(dataSet, TagByName.ImagePlanePixelSpacing))(1)),
+      Col("EPID pixel spacing X mm", dataSet => getEpidValues(dataSet, TagByName.ImagePlanePixelSpacing).head),
+      Col("EPID pixel spacing Y mm", dataSet => getEpidValues(dataSet, TagByName.ImagePlanePixelSpacing) (1)),
 
-      new Col("CBCT pixel spacing X mm", (dataSet) => (getCbctNums(dataSet, TagFromName.PixelSpacing))(0)),
-      new Col("CBCT pixel spacing Y mm", (dataSet) => (getCbctNums(dataSet, TagFromName.PixelSpacing))(1)),
-      new Col("CBCT Slice Thickness Z mm", (dataSet) => (getCbctNums(dataSet, TagFromName.SliceThickness))(0)),
-      new Col("CBCT num X pix", (dataSet) => (getCbctNums(dataSet, TagFromName.Columns))(0)),
-      new Col("CBCT num Y pix", (dataSet) => (getCbctNums(dataSet, TagFromName.Rows))(0)),
-      new Col("CBCT num Z pix (slices)", (dataSet) => dataSet.cbctDicomSeries.size.toString),
+      Col("CBCT pixel spacing X mm", dataSet => getCbctValues(dataSet, TagFromName.PixelSpacing).head),
+      Col("CBCT pixel spacing Y mm", dataSet => getCbctValues(dataSet, TagFromName.PixelSpacing) (1)),
+      Col("CBCT Slice Thickness Z mm", dataSet => getCbctValues(dataSet, TagFromName.SliceThickness).head),
+      Col("CBCT num X pix", dataSet => getCbctValues(dataSet, TagFromName.Columns).head),
+      Col("CBCT num Y pix", dataSet => getCbctValues(dataSet, TagFromName.Rows).head),
+      Col("CBCT num Z pix (slices)", dataSet => dataSet.cbctDicomSeries.size.toString),
 
-      new Col("CBCT KVP Peak kilo voltage", (dataSet) => (getCbctNums(dataSet, TagByName.KVP))(0)),
-      new Col("CBCT Exposure Time msec", (dataSet) => (getCbctNums(dataSet, TagByName.ExposureTime))(0)),
-      new Col("CBCT X-Ray Tube Current mA", (dataSet) => (getCbctNums(dataSet, TagByName.XRayTubeCurrent))(0)),
+      Col("CBCT KVP Peak kilo voltage", dataSet => getCbctValues(dataSet, TagByName.KVP).head),
+      Col("CBCT Exposure Time ms", dataSet => getCbctValues(dataSet, TagByName.ExposureTime).head),
+      Col("CBCT X-Ray Tube Current mA", dataSet => getCbctValues(dataSet, TagByName.XRayTubeCurrent).head),
 
-      new Col("CBCT Details", (dataSet) => urlPrefix + ViewOutput.viewOutputUrl(dataSet.cbct.outputPK)),
-      new Col("EPID Details", (dataSet) => urlPrefix + ViewOutput.viewOutputUrl(dataSet.composite.outputPK)))
+      Col("CBCT Details", dataSet => urlPrefix + ViewOutput.viewOutputUrl(dataSet.cbct.outputPK)),
+      Col("EPID Details", dataSet => urlPrefix + ViewOutput.viewOutputUrl(dataSet.composite.outputPK)))
 
     val headerList = colList.map(col => '"' + col.header + '"').mkString(",")
 
     def makeRow(dataSet: BBbyEPIDComposite.DailyDataSetComposite) = colList.map(col => col.toText(dataSet)).mkString(",")
 
-    val rowList = dataSetList.sortWith(sorter _).map(dataSet => makeRow(dataSet)).mkString("\n")
+    val rowList = dataSetList.sortWith(sorter).map(dataSet => makeRow(dataSet)).mkString("\n")
 
     val csv = headerList + "\n" + rowList
 

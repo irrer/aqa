@@ -47,13 +47,13 @@ object DailyQAHTML extends Logging {
             None
         }
 
-        val cmpr =
+        val compare =
           if (toNum(aMach).isDefined && toNum(bMach).isDefined && (toNum(aMach).get != toNum(bMach).get)) {
             toNum(aMach).get < toNum(bMach).get
           } else {
             aMach.compareTo(bMach) <= 0
           }
-        cmpr
+        compare
       }
     }
 
@@ -336,10 +336,10 @@ object DailyQAHTML extends Logging {
 
         val listColSpanSize = 6
         val listColSpan = listColSpanSize.toString
-        val messageColspan = (colList.size - (listColSpanSize + 1)).toString
+        val messageColSpan = (colList.size - (listColSpanSize + 1)).toString
         val timeFormat = new SimpleDateFormat("H:mm")
 
-        def cbctBBnotFound(cOut: Output): Boolean = !cbctResults.exists(c => c.output.outputPK.get == cOut.outputPK.get)
+        def cbctBBNotFound(cOut: Output): Boolean = !cbctResults.exists(c => c.output.outputPK.get == cOut.outputPK.get)
 
         /**
          * True if this EPID output has data for horizontal gantry angle.
@@ -420,7 +420,7 @@ object DailyQAHTML extends Logging {
             }
 
             val elem: Elem = 0 match {
-              case _ if isCBCT && cbctBBnotFound(o) => badCBCT
+              case _ if isCBCT && cbctBBNotFound(o) => badCBCT
               case _ if (!isCBCT) && (!hasHorzAngle(o)) => missingHorzEPIDGantryAngle
               case _ if (!isCBCT) && (!hasVertAngle(o)) => missingVertEPIDGantryAngle
               case _ => scanOk
@@ -448,7 +448,7 @@ object DailyQAHTML extends Logging {
                 {wrapAlias(mach.id)}<br/>
                 No Data</h4>
             </td>
-            <td colspan={messageColspan}>There are no CBCT or EPID scans for this machine.</td>{machHistory}
+            <td colspan={messageColSpan}>There are no CBCT or EPID scans for this machine.</td>{machHistory}
           </tr>
         }
 
@@ -459,7 +459,7 @@ object DailyQAHTML extends Logging {
                 {wrapAlias(mach.id)}<br/>
                 Warning</h4>
             </td>
-            <td colspan={messageColspan}>
+            <td colspan={messageColSpan}>
               {msg}
             </td>{machHistory}
           </tr>
@@ -472,7 +472,7 @@ object DailyQAHTML extends Logging {
                 {wrapAlias(mach.id)}<br/>
                 Fail</h4>
             </td>
-            <td colspan={messageColspan}>
+            <td colspan={messageColSpan}>
               {msg}
             </td>{machHistory}
           </tr>
