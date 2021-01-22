@@ -1,21 +1,29 @@
 package org.aqa
 
 import com.pixelmed.dicom.AttributeTag
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import edu.umro.ImageUtil.Watermark
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.util.{Log, OpSys}
+import edu.umro.util.OpSys
+
 import org.aqa.db.MaintenanceCategory
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessPoint
 
+import java.awt.Color
 import java.awt.geom.Point2D
 import java.awt.image.BufferedImage
 import java.io.File
-import java.text.{ParseException, SimpleDateFormat}
+import java.text.ParseException
+import java.text.SimpleDateFormat
 import java.util.Date
 import javax.imageio.ImageIO
+import scala.annotation.tailrec
+import scala.collection.immutable
 import scala.collection.mutable.ArrayBuffer
-import scala.xml.{Elem, Node, XML}
+import scala.xml.Elem
+import scala.xml.Node
+import scala.xml.XML
 
 /**
  * This class extracts configuration information from the configuration file.  Refer
@@ -24,9 +32,8 @@ import scala.xml.{Elem, Node, XML}
  */
 object Config extends Logging {
 
-  private val configFileName = "AQAConfig.xml";
+  private val configFileName = "AQAConfig.xml"
   private val DEFAULT_RESTART_TIME = "1:20"
-  private val PenumbraThresholdPercentDefault = 80.0
 
   logger.info("Starting configuration.  File name: " + configFileName)
 
@@ -41,9 +48,6 @@ object Config extends Logging {
 
   /** For indenting sub-content. */
   private val indent1 = "\n                  "
-
-  /** For indenting sub-sub-content. */
-  private val indent2 = indent1 + "    "
 
   private def indentList[T](list: Seq[T]): String = list.mkString(indent1, indent1, "\n")
 
@@ -61,22 +65,22 @@ object Config extends Logging {
     dir
   }
 
-  lazy val resultsDirFile = makeDataDir(resultsDirName)
+  lazy val resultsDirFile: File = makeDataDir(resultsDirName)
 
   /** Directory for files shared by multiple machines, possibly multiple institutions. */
-  lazy val sharedDir = {
+  lazy val sharedDir: File = {
     val f = new File(resultsDirFile, "shared")
     f.mkdirs
     f
   }
 
-  lazy val tmpDirFile = makeDataDir(tmpDirName)
+  lazy val tmpDirFile: File = makeDataDir(tmpDirName)
 
-  lazy val machineConfigurationDirFile = makeDataDir(machineConfigurationDirName)
+  lazy val machineConfigurationDirFile: File = makeDataDir(machineConfigurationDirName)
 
-  private var configFile: File = null
+  private var configFile: Option[File] = None
 
-  def getConfigFile = configFile
+  def getConfigFile: File = configFile.get
 
   // Search these directories in the order given to find the configuration file.
   private lazy val directoryList: List[File] = {
@@ -93,8 +97,7 @@ object Config extends Logging {
   /**
    * Read the configuration file.
    *
-   * @param dir: Directory from which to read configuration file.
-   *
+   * @param dir : Directory from which to read configuration file.
    * @return DOM of configuration, or nothing on failure
    */
   private def readFile(dir: File, name: String): Option[Elem] = {
@@ -104,13 +107,12 @@ object Config extends Logging {
       try {
         val content = Some(XML.loadFile(file))
         logger.info("Using config file " + file.getAbsolutePath)
-        configFile = file
+        configFile = Some(file)
         content
       } catch {
-        case e: Exception => {
+        case e: Exception =>
           logger.info("Failed to use config file " + file.getAbsolutePath + "    file exists: " + file.exists + "    can read file: " + file.canRead + "  Exception: " + e)
           None
-        }
       }
     } else {
       if (!file.exists) logger.info("Config file " + file.getAbsoluteFile + " does not exist")
@@ -123,18 +125,19 @@ object Config extends Logging {
    * If a fatal error occurs during the reading of the configuration file, then the application
    * is toast, so log an error and exit with a failed status.
    */
-  private def epicFail(name: String) = {
+  private def epicFail(name: String): Unit = {
     val tried = indentList(directoryList.map(d => d.getAbsolutePath))
 
     logger.error("Could not find a usable configuration file.  Using file name " + name + " , tried directories: " + tried + "\nShutting down...")
     System.exit(1)
   }
 
+  @tailrec
   private def getDoc(dirList: List[File], name: String): Option[Elem] = {
     if (dirList.length < 1) None
     val elem = readFile(dirList.head, name)
     elem match {
-      case Some(el) => elem
+      case Some(_) => elem
       case _ => getDoc(dirList.tail, name)
     }
   }
@@ -149,10 +152,9 @@ object Config extends Logging {
       logText(name, "[redacted]")
       (passwordList ++ passwordList.map(pw => pw.trim)).distinct.toList
     } catch {
-      case _: Throwable => {
+      case _: Throwable =>
         logText(name, "[not configured]")
         List[String]()
-      }
     }
   }
 
@@ -160,13 +162,12 @@ object Config extends Logging {
     val name = "JavaKeyStoreFileList"
     try {
       val list = (document \ name \ "JavaKeyStoreFile").toList.map(node => new File(node.head.text))
-      list.map(jksf => logText("JavaKeyStoreFile", jksf.getAbsolutePath))
+      list.map(jk => logText("JavaKeyStoreFile", jk.getAbsolutePath))
       list
     } catch {
-      case _: Throwable => {
+      case _: Throwable =>
         logText(name, "[not configured]")
         List[File]()
-      }
     }
   }
 
@@ -174,10 +175,9 @@ object Config extends Logging {
     val doc = getDoc(directoryList, configFileName)
     doc match {
       case Some(d) => d
-      case _ => {
+      case _ =>
         epicFail(configFileName)
         null
-      }
     }
 
   }
@@ -189,9 +189,9 @@ object Config extends Logging {
     val vt = new ArrayBuffer[String]
     vt +=
       "Many configuration values have a default value that is used if the value is not specified in the configuration file.  Example log messages of configuration values: \n" +
-      "        AuthenticationTimeout (same as default): 7200.0             <== means that there was a default value and the value was given in the configuration file and they were the same.\n" +
-      "        BBbyEPIDSearchDistance_mm (default: 10.0 overridden): 4.0   <== means that there was a default value and the value was given in the configuration file and they were different.\n" +
-      "        BBbyCBCTHistoryRange (defaulted): 25                        <== means that there was a default value but the value was not given in the configuration file so the default value was used.\n\n"
+        "        AuthenticationTimeout (same as default): 7200.0             <== means that there was a default value and the value was given in the configuration file and they were the same.\n" +
+        "        BBbyEPIDSearchDistance_mm (default: 10.0 overridden): 4.0   <== means that there was a default value and the value was given in the configuration file and they were different.\n" +
+        "        BBbyCBCTHistoryRange (defaulted): 25                        <== means that there was a default value but the value was not given in the configuration file so the default value was used.\n\n"
     vt
   }
 
@@ -211,18 +211,17 @@ object Config extends Logging {
 
     def noHostGiven(node: Node) = (node \ "@HostIp").headOption.isEmpty
 
-    val thisHost = list.filter(n => forThisHost(n)).headOption
+    val thisHost = list.find(n => forThisHost(n))
 
-    val noHost = list.filter(n => noHostGiven(n)).headOption
+    val noHost = list.find(n => noHostGiven(n))
 
     (thisHost, noHost) match {
       case (Some(th), _) => th.text
       case (_, Some(nh)) => nh.text
-      case _ => {
+      case _ =>
         val msg = "No such XML node " + name
         fail(msg)
         msg
-      }
     }
   }
 
@@ -230,7 +229,7 @@ object Config extends Logging {
     try {
       Some(getMainText(name))
     } catch {
-      case t: Throwable => None
+      case _: Throwable => None
     }
   }
 
@@ -246,18 +245,16 @@ object Config extends Logging {
    */
   private def logMainText(name: String, default: String): String = {
     getMainTextOption(name) match {
-      case Some(value: String) => {
+      case Some(value: String) =>
         val compare = if (default.equals(value))
           " (same as default)"
         else
           " (default: " + default + " overridden)"
         logText(name + compare, value)
         value
-      }
-      case _ => {
+      case _ =>
         logText(name + " (defaulted)", default)
         default
-      }
     }
   }
 
@@ -271,23 +268,24 @@ object Config extends Logging {
   private def getThisJarFile: File = {
     // Assume we are in the development environment and get the latest jar
     def getDevJar: File = {
-      def cmprFileTime(a: File, b: File): Boolean = a.lastModified > b.lastModified
-      val timeSortedList = (new File("target")).listFiles.sortWith((a, b) => cmprFileTime(a, b))
-      timeSortedList.filter(f => f.getName.matches("^AQA.*jar-with-dependencies.jar$")).headOption match {
+      def compareFileTime(a: File, b: File): Boolean = a.lastModified > b.lastModified
+
+      val timeSortedList = new File("target").listFiles.sortWith((a, b) => compareFileTime(a, b))
+      timeSortedList.find(f => f.getName.matches("^AQA.*jar-with-dependencies.jar$")) match {
         case Some(f) => f
-        case _ => {
+        case _ =>
           val f = new File("target/AQA-0.0.1-jar-with-dependencies.jar")
           logger.warn("Unable to find the jar file being used.  Assuming " + f.getAbsolutePath)
           f
-        }
       }
     }
+
     val jf: File = Util.thisJarFile match {
       case f if f.isDirectory => getDevJar
-      case f if (f.isFile && f.canRead) => f
-      case f => { logger.warn("Unable to find the jar file being used.  Assuming " + f.getAbsolutePath); f }
+      case f if f.isFile && f.canRead => f
+      case f => logger.warn("Unable to find the jar file being used.  Assuming " + f.getAbsolutePath); f
     }
-    val fileDate = if (jf.canRead) " : " + (new Date(jf.lastModified)) else "  can not read file"
+    val fileDate = if (jf.canRead) " : " + new Date(jf.lastModified) else "  can not read file"
     logText("jarFile", jf.getAbsolutePath + fileDate)
     jf
   }
@@ -299,14 +297,13 @@ object Config extends Logging {
       logText(name, securePort.toString)
       Some(securePort)
     } catch {
-      case _: Throwable => {
+      case _: Throwable =>
         logTextNotSpecified(name)
         None
-      }
     }
   }
 
-  val HTTPPort = logMainText("HTTPPort", "80").toInt
+  val HTTPPort: Int = logMainText("HTTPPort", "80").toInt
 
   /**
    * Get the list of allowed IP addresses.  If empty, allow everything.
@@ -325,11 +322,11 @@ object Config extends Logging {
   private def getLdapUrl: Option[String] = {
     val tag = "LdapUrl"
     try {
-      val url = (document \ tag).head.text.toString.trim
+      val url = (document \ tag).head.text.trim
       logText(tag, url)
       Some(url)
     } catch {
-      case t: Throwable => None
+      case _: Throwable => None
     }
   }
 
@@ -337,53 +334,51 @@ object Config extends Logging {
     val groupTag = "LdapGroupList"
     val tag = "LdapGroup"
     try {
-      val groupList = (document \ groupTag \ tag).map(n => n.text.toString.trim)
+      val groupList = (document \ groupTag \ tag).map(n => n.text.trim)
       logText(groupTag, groupList.mkString("\n        ", "\n        ", ""))
       groupList
     } catch {
-      case t: Throwable => Seq[String]()
+      case _: Throwable => Seq[String]()
     }
   }
 
   /**
    * List of IP addresses allowed to access this server.
    */
-  val AllowedHttpIpList = getAllowedHttpIpList
+  val AllowedHttpIpList: List[String] = getAllowedHttpIpList
 
-  val JavaKeyStorePasswordList = getJavaKeyStorePasswordList
-  val JavaKeyStoreFileList = getJavaKeyStoreFileList
+  val JavaKeyStorePasswordList: List[String] = getJavaKeyStorePasswordList
+  val JavaKeyStoreFileList: List[File] = getJavaKeyStoreFileList
 
-  val LdapUrl = getLdapUrl
-  val LdapInstitutionName = logMainText("LdapInstitutionName", "not specified")
-  val LdapRole = logMainText("LdapRole", "not specified")
-  val LdapGroupList = getLdapGroupList
+  val LdapUrl: Option[String] = getLdapUrl
+  val LdapInstitutionName: String = logMainText("LdapInstitutionName", "not specified")
+  val LdapRole: String = logMainText("LdapRole", "not specified")
+  val LdapGroupList: Seq[String] = getLdapGroupList
 
-  val ProgramDir = getDir("ProgramDir")
-  val ProcedureDir = getDir("ProcedureDir")
-  val DataDir = getDir("DataDir")
+  val ProgramDir: File = getDir("ProgramDir")
+  val ProcedureDir: File = getDir("ProcedureDir")
+  val DataDir: File = getDir("DataDir")
   val machineConfigurationDir = new File(DataDir, machineConfigurationDirName)
   machineConfigurationDir.mkdirs
 
-  val AuthenticationTimeout = logMainText("AuthenticationTimeout", "7200.0").toDouble
-  val AuthenticationTimeoutInMs = (AuthenticationTimeout * 1000).toLong
+  val AuthenticationTimeout: Double = logMainText("AuthenticationTimeout", "7200.0").toDouble
+  val AuthenticationTimeoutInMs: Long = (AuthenticationTimeout * 1000).toLong
 
-  val PasswordPrompt = logMainText("PasswordPrompt", "Please enter your password")
+  val PasswordPrompt: String = logMainText("PasswordPrompt", "Please enter your password")
 
-  val jarFile = getThisJarFile
+  val jarFile: File = getThisJarFile
 
   /** Number of minutes into a 24 hour day at which time service should be restarted. */
   val RestartTime: Long = {
     val dateFormat = new SimpleDateFormat("HH:mm")
-    val millisec = try {
+    val milliseconds = try {
       dateFormat.parse(logMainText("RestartTime", "3:10")).getTime
     } catch {
-      case e: ParseException => {
-        Log.get.warning("Badly formatted RestartTime in configuration file: " + logMainText("RestartTime", "3:10") + " .  Should be HH:MM, as in 1:23 .  Assuming default of " + DEFAULT_RESTART_TIME)
+      case _: ParseException =>
+        logger.warn("Badly formatted RestartTime in configuration file: " + logMainText("RestartTime", "3:10") + " .  Should be HH:MM, as in 1:23 .  Assuming default of " + DEFAULT_RESTART_TIME)
         dateFormat.parse(DEFAULT_RESTART_TIME).getTime
-      }
     }
-
-    millisec
+    milliseconds
   }
 
   private def getSlickDb = {
@@ -400,32 +395,32 @@ object Config extends Logging {
   }
 
   private def getCenterDoseBeamNameList = {
-    val list = (document \ "CenterDoseBeamNameList" \ "BeamName").map(n => n.head.text.toString.trim).toList
+    val list = (document \ "CenterDoseBeamNameList" \ "BeamName").map(n => n.head.text.trim).toList
     logText("CenterDoseBeamNameList", indentList(list))
     list.distinct
   }
 
   private def getSymmetryAndFlatnessBeamList = {
-    val list = (document \ "SymmetryAndFlatnessBeamList" \ "BeamName").map(n => n.head.text.toString.trim)
+    val list = (document \ "SymmetryAndFlatnessBeamList" \ "BeamName").map(n => n.head.text.trim)
     logText("SymmetryAndFlatnessBeamList", indentList(list))
     list.distinct
   }
 
   private def getLeafPositionBeamNameList = {
-    val list = (document \ "LeafPositionBeamNameList" \ "BeamName").map(n => n.head.text.toString.trim).toList
+    val list = (document \ "LeafPositionBeamNameList" \ "BeamName").map(n => n.head.text.trim).toList
     logText("LeafPositionBeamNameList", indentList(list))
     list.distinct
   }
 
   private def getSymmetryAndFlatnessPointList: Seq[SymmetryAndFlatnessPoint] = {
     def makePoint(node: Node): SymmetryAndFlatnessPoint = {
-      val name = (node \ "@name").head.text.toString
-      val x_mm = (node \ "@x_mm").head.text.toString.toDouble
-      val y_mm = (node \ "@y_mm").head.text.toString.toDouble
-      new SymmetryAndFlatnessPoint(name, x_mm, y_mm)
+      val name = (node \ "@name").head.text
+      val x_mm = (node \ "@x_mm").head.text.toDouble
+      val y_mm = (node \ "@y_mm").head.text.toDouble
+      SymmetryAndFlatnessPoint(name, x_mm, y_mm)
     }
 
-    val list = (document \ "SymmetryAndFlatnessPointList" \ "SymmetryAndFlatnessPoint").map(n => makePoint(n)).toList.toSeq
+    val list = (document \ "SymmetryAndFlatnessPointList" \ "SymmetryAndFlatnessPoint").map(n => makePoint(n)).toList
     logText("SymmetryAndFlatnessPointList", indentList(list))
     list
   }
@@ -433,6 +428,7 @@ object Config extends Logging {
   private def getSymmetryAndFlatnessPointPairList = {
 
     val radius = SymmetryAndFlatnessDiameter_mm / 2
+
     def isPair(a: SymmetryAndFlatnessPoint, b: SymmetryAndFlatnessPoint) = {
       val bReflected = new Point2D.Double(-b.x_mm, -b.y_mm)
       val closeTo = a.asPoint.distance(bReflected) < radius
@@ -440,35 +436,38 @@ object Config extends Logging {
       closeTo && aLower
     }
 
-    val list = for (a <- SymmetryAndFlatnessPointList; b <- SymmetryAndFlatnessPointList; if isPair(a, b)) yield { (a, b) }
+    val list = for (a <- SymmetryAndFlatnessPointList; b <- SymmetryAndFlatnessPointList; if isPair(a, b)) yield {
+      (a, b)
+    }
     val listText = indentList(list.map(pair => pair._1.name + "   " + pair._2.name))
     logText("SymmetryAndFlatnessPointList", listText)
     list
   }
 
   private def getSymPoint(nodeName: String) = {
-    val name = (document \ nodeName \ "@name").head.text.toString
+    val name = (document \ nodeName \ "@name").head.text
     val point = SymmetryAndFlatnessPointList.find(p => p.name.equals(name)).get
     logText(nodeName, point.toString)
     point
   }
 
   case class CollimatorPositionBeamConfig(beamName: String, FloodCompensation: Boolean) {
-    override def toString = "Beam name: " + beamName + "  FloodCompensation: " + FloodCompensation
+    override def toString: String = "Beam name: " + beamName + "  FloodCompensation: " + FloodCompensation
   }
 
   private def getCollimatorPositionBeamList = {
     def nodeToCollimatorPositionBeam(node: Node) = {
-      val beamName = node.head.text.toString.trim
+      val beamName = node.head.text.trim
       val FloodCompensation = {
         try {
-          (node \ "@FloodCompensation").head.text.toString.toLowerCase.toBoolean
+          (node \ "@FloodCompensation").head.text.toLowerCase.toBoolean
         } catch {
-          case t: Throwable => false
+          case _: Throwable => false
         }
       }
-      new CollimatorPositionBeamConfig(beamName, FloodCompensation)
+      CollimatorPositionBeamConfig(beamName, FloodCompensation)
     }
+
     val list = (document \ "CollimatorPositionBeamList" \ "BeamName").map(node => nodeToCollimatorPositionBeam(node)).toList
     logText("CollimatorPositionBeamNameList", indentList(list))
     list
@@ -483,24 +482,24 @@ object Config extends Logging {
    * the order given, and the first one found (is present in the input data) is used as the background.
    */
   case class WedgeBeam(wedge: String, backgroundList: Seq[String]) {
-    override def toString = "Wedge: " + wedge + "    background: " + backgroundList.mkString("    ")
+    override def toString: String = "Wedge: " + wedge + "    background: " + backgroundList.mkString("    ")
   }
 
   private def getWedgeBeamList = {
 
     def nodeToWedgeBeamSet(node: Node) = {
-      val beamName = (node \ "@BeamName").head.text.toString.trim
+      val beamName = (node \ "@BeamName").head.text.trim
       val background = {
         try {
-          (node \ "BackgroundBeamName").map(n => n.head.text.toString)
+          (node \ "BackgroundBeamName").map(n => n.head.text)
         } catch {
-          case t: Throwable => {
+          case _: Throwable =>
             Seq("not found")
-          }
         }
       }
-      new WedgeBeam(beamName, background)
+      WedgeBeam(beamName, background)
     }
+
     val list = (document \ "WedgeBeamList" \ "WedgeBeam").map(node => nodeToWedgeBeamSet(node)).toList
     logText("WedgeBeamList", indentList(list))
     list
@@ -510,7 +509,7 @@ object Config extends Logging {
    * Encapsulate the configuration for pair of VMAT beams.
    */
   case class VMATBeamPair(name: String, MLC: String, OPEN: String, IsolationBorder_mm: Double) {
-    override def toString = name + "    MLC: " + MLC.formatted("%-14s") + "    OPEN: " + OPEN.formatted("%-14s") + "    IsolationBorder_mm: " + IsolationBorder_mm.formatted("%6.3f")
+    override def toString: String = name + "    MLC: " + MLC.formatted("%-14s") + "    OPEN: " + OPEN.formatted("%-14s") + "    IsolationBorder_mm: " + IsolationBorder_mm.formatted("%6.3f")
   }
 
   /**
@@ -518,12 +517,13 @@ object Config extends Logging {
    */
   private def getVMATBeamPairList: Seq[VMATBeamPair] = {
     def nodeToVMATBeamPair(node: Node) = {
-      new VMATBeamPair(
+      VMATBeamPair(
         (node \ "@Name").head.text,
         (node \ "@MLC").head.text,
         (node \ "@OPEN").head.text,
         (node \ "@IsolationBorder_mm").head.text.toDouble)
     }
+
     val list = (document \ "VMATBeamPairList" \ "VMATBeamPair").map(node => nodeToVMATBeamPair(node)).toList
     val asText = list.mkString("\n        ", "\n        ", "")
     logText("VMATBeamPairList", asText)
@@ -531,14 +531,14 @@ object Config extends Logging {
   }
 
   private def getMaintenanceCategoryList: List[MaintenanceCategory] = {
-    def nodeToMaintCat(node: Node) = {
+    def nodeToMaintenanceCat(node: Node) = {
       new MaintenanceCategory(
-        (node \ "@Name").head.text.toString,
-        (node \ "@Color").head.text.toString,
-        node.head.text.toString)
+        (node \ "@Name").head.text,
+        (node \ "@Color").head.text,
+        node.head.text)
     }
 
-    val list = (document \ "MaintenanceCategoryList" \ "MaintenanceCategory").map(node => nodeToMaintCat(node)).toList
+    val list = (document \ "MaintenanceCategoryList" \ "MaintenanceCategory").map(node => nodeToMaintenanceCat(node)).toList
     logText("MaintenanceCategoryList", indentList(list))
     list
   }
@@ -567,17 +567,16 @@ object Config extends Logging {
   private def getWatermark: Option[Watermark] = {
     val tag = "Watermark"
     try {
-      (document \ tag) match {
-        case wm if (wm.isEmpty) => {
+      document \ tag match {
+        case wm if wm.isEmpty =>
           logText("Watermark", "No watermark tag found in configuration.")
           None
-        }
-        case wm => {
-          val imageName = (wm \ "@image").head.text.toString
-          val top = (wm \ "@top").head.text.toString.toBoolean
-          val left = (wm \ "@left").head.text.toString.toBoolean
-          val percentWidth = (wm \ "@percentWidth").head.text.toString.toDouble
-          val percentChange = (wm \ "@percentChange").head.text.toString.toDouble
+        case wm =>
+          val imageName = (wm \ "@image").head.text
+          val top = (wm \ "@top").head.text.toBoolean
+          val left = (wm \ "@left").head.text.toBoolean
+          val percentWidth = (wm \ "@percentWidth").head.text.toDouble
+          val percentChange = (wm \ "@percentChange").head.text.toDouble
           val watermarkImageFile = new File(imageDirFile, imageName)
           val watermarkImage = ImageIO.read(watermarkImageFile)
           val watermark = new Watermark(watermarkImage, top, left, percentWidth, percentChange)
@@ -588,13 +587,11 @@ object Config extends Logging {
               "    left: " + left + "    percentWidth: " + percentWidth +
               "    percentChange: " + percentChange)
           Some(watermark)
-        }
       }
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         logText("Watermark", "Unable to create watermark: " + t)
         None
-      }
 
     }
   }
@@ -608,11 +605,10 @@ object Config extends Logging {
       try {
         DicomUtil.dictionary.getTagFromName(name)
       } catch {
-        case t: java.lang.Throwable => {
+        case _: java.lang.Throwable =>
           val msg = "Unable to find ToBeAnonymized name in Pixelmed library: " + name
           logger.error(msg)
           throw new RuntimeException(msg)
-        }
       }
     }
   }
@@ -621,7 +617,7 @@ object Config extends Logging {
    * A DICOM tag that should be anonymized.
    */
   case class ToBeAnonymized(Name: String, AttrTag: AttributeTag, Value: Option[String]) {
-    override def toString = {
+    override def toString: String = {
       val v = if (Value.isDefined) " : " + Value.get else ""
       ToBeAnonymized.fmtTag(AttrTag) + " : " + Name + v
     }
@@ -646,7 +642,7 @@ object Config extends Logging {
             val intList = text.trim.toLowerCase.replace("x", "").split(",").map(t => Integer.parseInt(t, 16))
             Some(new AttributeTag(intList(0), intList(1)))
           } catch {
-            case t: Throwable =>
+            case _: Throwable =>
               logger.warn("Ignoring unparsable ToBeAnonymized configuration tag (should be pair of hex values): " + ns)
               None
           }
@@ -661,13 +657,12 @@ object Config extends Logging {
       (Name, Tag) match {
         case (Some(n), Some(t)) => new ToBeAnonymized(n, t, Value)
         case (Some(n), _) => new ToBeAnonymized(n, ToBeAnonymized.tagFromName(n), Value)
-        case (_, Some(t)) => {
+        case (_, Some(t)) =>
           val nm = DicomUtil.dictionary.getNameFromTag(t) // try to get the name from the dictionary
           if (nm == null)
             new ToBeAnonymized(DicomUtil.formatAttrTag(t), t, Value)
           else
             new ToBeAnonymized(nm, t, Value)
-        }
         case _ => throw new RuntimeException("Ignoring unparsable ToBeAnonymized configuration value: " + node)
       }
     }
@@ -684,8 +679,9 @@ object Config extends Logging {
    */
   case class PlanFileConfig(procedure: String, manufacturer: String, collimatorModel: String, file: File) {
     val dicomFile = new DicomFile(file)
-    val fileIsValid = dicomFile.attributeList.isDefined
-    override def toString = "manufacturer: " + manufacturer + "  collimator model: " + collimatorModel.formatted("%-12s") + "  file: " + file.getName
+    val fileIsValid: Boolean = dicomFile.attributeList.isDefined
+
+    override def toString: String = "manufacturer: " + manufacturer + "  collimator model: " + collimatorModel.formatted("%-12s") + "  file: " + file.getName
   }
 
   private def getPlanFileList = {
@@ -696,7 +692,7 @@ object Config extends Logging {
       val fileName = node.head.text
 
       val file = new File(rtplanDirFile, fileName)
-      val pfc = new PlanFileConfig(procedure, manufacturer, model, file)
+      val pfc = PlanFileConfig(procedure, manufacturer, model, file)
 
       // check to see if the file is readable DICOM.  If not, flag an error.
       if (pfc.dicomFile.attributeList.isEmpty)
@@ -721,7 +717,7 @@ object Config extends Logging {
     list
   }
 
-  val SlickDb = getSlickDb
+  val SlickDb: Config = getSlickDb
 
   val UserWhiteList: List[String] = (document \ "UserWhiteList" \ "User").toList.map(node => node.head.text.trim.toLowerCase)
 
@@ -729,42 +725,43 @@ object Config extends Logging {
   val passImageUrl = "/static/images/pass.png"
   val failImageUrl = "/static/images/fail.png"
 
-  val FloodFieldBeamName = logMainText("FloodFieldBeamName", "Flood 6X")
+  val FloodFieldBeamName: String = logMainText("FloodFieldBeamName", "Flood 6X")
 
-  val PrototypeCustomBeamName = logMainText("PrototypeCustomBeamName", "J18G0-6F")
-  val PrefixForMachineDependentBeamName = logMainText("PrefixForMachineDependentBeamName", "J18G0-")
+  val PrototypeCustomBeamName: String = logMainText("PrototypeCustomBeamName", "J18G0-6F")
+  val PrefixForMachineDependentBeamName: String = logMainText("PrefixForMachineDependentBeamName", "J18G0-")
 
-  val CollimatorCenteringTolerence_mm = logMainText("CollimatorCenteringTolerence_mm", "2.0").toDouble
-  val CollimatorCentering090BeamName = logMainText("CollimatorCentering090BeamName", "J10G0C90-6X")
-  val CollimatorCentering270BeamName = logMainText("CollimatorCentering270BeamName", "J10G0C270-6X")
-  val CollimatorCenteringCoarseBandWidth_mm = logMainText("CollimatorCenteringCoarseBandWidth_mm", "5.0").toDouble
-  val PenumbraThickness_mm = logMainText("PenumbraThickness_mm", "20.0").toDouble
-  val PenumbraPlateauPixelsPerMillion = logMainText("PenumbraPlateauPixelsPerMillion", "500").toInt
-  val PenumbraThresholdPercent = logMainText("PenumbraThresholdPercent", "50.0").toDouble
+  val CollimatorCenteringTolerence_mm: Double = logMainText("CollimatorCenteringTolerence_mm", "2.0").toDouble
+  val CollimatorCentering090BeamName: String = logMainText("CollimatorCentering090BeamName", "J10G0C90-6X")
+  val CollimatorCentering270BeamName: String = logMainText("CollimatorCentering270BeamName", "J10G0C270-6X")
+  val CollimatorCenteringCoarseBandWidth_mm: Double = logMainText("CollimatorCenteringCoarseBandWidth_mm", "5.0").toDouble
+  val PenumbraThickness_mm: Double = logMainText("PenumbraThickness_mm", "20.0").toDouble
+  val PenumbraPlateauPixelsPerMillion: Int = logMainText("PenumbraPlateauPixelsPerMillion", "500").toInt
+  val PenumbraThresholdPercent: Double = logMainText("PenumbraThresholdPercent", "50.0").toDouble
 
-  val MaxEstimatedBadPixelPerMillion = logMainText("MaxEstimatedBadPixelPerMillion", "20").toInt
-  val BadPixelSamplePerMillion = logMainText("BadPixelSamplePerMillion", "250").toInt
-  val BadPixelStdDev = logMainText("BadPixelStdDev", "3.0").toDouble
-  val BadPixelRadius_mm = logMainText("BadPixelRadius_mm", "3.5").toDouble
-  val BadPixelMinimumDeviation_CU = logMainText("BadPixelMinimumDeviation_CU", "10.0").toDouble
-  val BadPixelMaximumPercentChange = logMainText("BadPixelMaximumPercentChange", "10.0").toDouble
-  val MaxAllowedBadPixelsPerMillion = logMainText("MaxAllowedBadPixelsPerMillion", "50").toInt
-  val DeepColorPercentDrop = logMainText("DeepColorPercentDrop", "0.2").toDouble
+  val MaxEstimatedBadPixelPerMillion: Int = logMainText("MaxEstimatedBadPixelPerMillion", "20").toInt
+  val BadPixelSamplePerMillion: Int = logMainText("BadPixelSamplePerMillion", "250").toInt
+  val BadPixelStdDev: Double = logMainText("BadPixelStdDev", "3.0").toDouble
+  val BadPixelRadius_mm: Double = logMainText("BadPixelRadius_mm", "3.5").toDouble
+  val BadPixelMinimumDeviation_CU: Double = logMainText("BadPixelMinimumDeviation_CU", "10.0").toDouble
+  val BadPixelMaximumPercentChange: Double = logMainText("BadPixelMaximumPercentChange", "10.0").toDouble
+  val MaxAllowedBadPixelsPerMillion: Int = logMainText("MaxAllowedBadPixelsPerMillion", "50").toInt
+  val DeepColorPercentDrop: Double = logMainText("DeepColorPercentDrop", "0.2").toDouble
 
-  val MaxProcedureDuration = logMainText("MaxProcedureDuration", "120.0").toDouble
+  val MaxProcedureDuration: Double = logMainText("MaxProcedureDuration", "120.0").toDouble
 
-  /** Lookup table for finding DICOM attributes to be anonymized and how to anonymize them.  */
-  val ToBeAnonymizedList = getToBeAnonymizedList
+  /** Lookup table for finding DICOM attributes to be anonymized and how to anonymize them. */
+  val ToBeAnonymizedList: Map[AttributeTag, ToBeAnonymized] = getToBeAnonymizedList
 
-  val PlanFileList = getPlanFileList
+  val PlanFileList: Seq[PlanFileConfig] = getPlanFileList
 
-  val TermsOfUse = logMainText("TermsOfUse", "not specified")
+  val TermsOfUse: String = logMainText("TermsOfUse", "not specified")
 
   private val watermark = getWatermark
-  /** If a watermark has been configured, then apply it to the given image> */
-  def applyWatermark(image: BufferedImage) = if (watermark.isDefined) watermark.get.mark(image)
 
-  private def requireReadableDirectory(name: String, dir: File) = {
+  /** If a watermark has been configured, then apply it to the given image> */
+  def applyWatermark(image: BufferedImage): Unit = if (watermark.isDefined) watermark.get.mark(image)
+
+  private def requireReadableDirectory(name: String, dir: File): Unit = {
     if (!dir.canRead) fail("Directory " + name + " is not readable: " + dir)
     if (!dir.isDirectory) fail("Directory " + name + " is required but is not a directory: " + dir)
   }
@@ -774,82 +771,82 @@ object Config extends Logging {
   requireReadableDirectory("tmpDirFile", tmpDirFile)
   requireReadableDirectory("machineConfigurationDirFile", machineConfigurationDirFile)
 
-  val CenterDoseRadius_mm = logMainText("CenterDoseRadius_mm", "5.0").toDouble
-  val CenterDoseHistoryRange = logMainText("CenterDoseHistoryRange", "25").toInt
-  val CenterDoseBeamNameList = getCenterDoseBeamNameList
+  val CenterDoseRadius_mm: Double = logMainText("CenterDoseRadius_mm", "5.0").toDouble
+  val CenterDoseHistoryRange: Int = logMainText("CenterDoseHistoryRange", "25").toInt
+  val CenterDoseBeamNameList: Seq[String] = getCenterDoseBeamNameList
 
-  val CollimatorPositionTolerance_mm = logMainText("CollimatorPositionTolerance_mm", "2.0").toDouble
-  val CollimatorPositionBeamList = getCollimatorPositionBeamList
+  val CollimatorPositionTolerance_mm: Double = logMainText("CollimatorPositionTolerance_mm", "2.0").toDouble
+  val CollimatorPositionBeamList: Seq[CollimatorPositionBeamConfig] = getCollimatorPositionBeamList
 
-  val MaintenanceCategoryList = getMaintenanceCategoryList
+  val MaintenanceCategoryList: Seq[MaintenanceCategory] = getMaintenanceCategoryList
 
-  val WedgeProfileThickness_mm = logMainText("WedgeProfileThickness_mm", "5.0").toDouble
-  val WedgeBeamList = getWedgeBeamList
-  val WedgeTolerance_pct = logMainText("WedgeTolerance_pct", "2.0").toDouble
-  val WedgeHistoryRange = logMainText("WedgeHistoryRange", "25").toInt
+  val WedgeProfileThickness_mm: Double = logMainText("WedgeProfileThickness_mm", "5.0").toDouble
+  val WedgeBeamList: Seq[WedgeBeam] = getWedgeBeamList
+  val WedgeTolerance_pct: Double = logMainText("WedgeTolerance_pct", "2.0").toDouble
+  val WedgeHistoryRange: Int = logMainText("WedgeHistoryRange", "25").toInt
 
-  val SymmetryAndFlatnessDiameter_mm = logMainText("SymmetryAndFlatnessDiameter_mm", "5.0").toDouble
+  val SymmetryAndFlatnessDiameter_mm: Double = logMainText("SymmetryAndFlatnessDiameter_mm", "5.0").toDouble
 
-  val SymmetryPercentLimit = logMainText("SymmetryPercentLimit", "2.0").toDouble
-  val FlatnessPercentLimit = logMainText("FlatnessPercentLimit", "2.0").toDouble
-  val SymFlatConstHistoryRange = logMainText("SymFlatConstHistoryRange", "25").toInt
-  val ProfileConstancyPercentLimit = logMainText("ProfileConstancyPercentLimit", "2.0").toDouble
+  val SymmetryPercentLimit: Double = logMainText("SymmetryPercentLimit", "2.0").toDouble
+  val FlatnessPercentLimit: Double = logMainText("FlatnessPercentLimit", "2.0").toDouble
+  val SymFlatConstHistoryRange: Int = logMainText("SymFlatConstHistoryRange", "25").toInt
+  val ProfileConstancyPercentLimit: Double = logMainText("ProfileConstancyPercentLimit", "2.0").toDouble
 
-  val SymmetryAndFlatnessBeamList = getSymmetryAndFlatnessBeamList
+  val SymmetryAndFlatnessBeamList: immutable.Seq[String] = getSymmetryAndFlatnessBeamList
 
-  val SymmetryAndFlatnessPointList = getSymmetryAndFlatnessPointList
+  val SymmetryAndFlatnessPointList: Seq[SymmetryAndFlatnessPoint] = getSymmetryAndFlatnessPointList
 
   val SymmetryAndFlatnessPointPairList: Seq[(SymmetryAndFlatnessPoint, SymmetryAndFlatnessPoint)] = getSymmetryAndFlatnessPointPairList
 
-  val SymmetryPointTop = getSymPoint("SymmetryPointTop")
-  val SymmetryPointBottom = getSymPoint("SymmetryPointBottom")
-  val SymmetryPointLeft = getSymPoint("SymmetryPointLeft")
-  val SymmetryPointRight = getSymPoint("SymmetryPointRight")
-  val SymmetryPointCenter = getSymPoint("SymmetryPointCenter")
+  val SymmetryPointTop: SymmetryAndFlatnessPoint = getSymPoint("SymmetryPointTop")
+  val SymmetryPointBottom: SymmetryAndFlatnessPoint = getSymPoint("SymmetryPointBottom")
+  val SymmetryPointLeft: SymmetryAndFlatnessPoint = getSymPoint("SymmetryPointLeft")
+  val SymmetryPointRight: SymmetryAndFlatnessPoint = getSymPoint("SymmetryPointRight")
+  val SymmetryPointCenter: SymmetryAndFlatnessPoint = getSymPoint("SymmetryPointCenter")
 
-  val LeafPositionMaxError_mm = logMainText("LeafPositionMaxError_mm", "1.0").toDouble
-  val LeafPositionIsolationDistance_mm = logMainText("LeafPositionIsolationDistance_mm", "0.5").toDouble
-  val LeafPositionBeamNameList = getLeafPositionBeamNameList
+  val LeafPositionMaxError_mm: Double = logMainText("LeafPositionMaxError_mm", "1.0").toDouble
+  val LeafPositionIsolationDistance_mm: Double = logMainText("LeafPositionIsolationDistance_mm", "0.5").toDouble
+  val LeafPositionBeamNameList: Seq[String] = getLeafPositionBeamNameList
 
-  val VMATDeviationThreshold_pct = logMainText("VMATDeviationThreshold_pct", "3.0").toDouble
-  val VMATAverageOfAbsoluteDeviationThreshold_pct = logMainText("VMATAverageOfAbsoluteDeviationThreshold_pct", "1.5").toDouble
-  val VMATBeamPairList = getVMATBeamPairList
-  val VMATHistoryRange = logMainText("VMATHistoryRange", "25").toInt
+  val VMATDeviationThreshold_pct: Double = logMainText("VMATDeviationThreshold_pct", "3.0").toDouble
+  val VMATAverageOfAbsoluteDeviationThreshold_pct: Double = logMainText("VMATAverageOfAbsoluteDeviationThreshold_pct", "1.5").toDouble
+  val VMATBeamPairList: Seq[VMATBeamPair] = getVMATBeamPairList
+  val VMATHistoryRange: Int = logMainText("VMATHistoryRange", "25").toInt
 
-  val DailyQACBCTLimit_mm = logMainText("DailyQACBCTLimit_mm", "1.0").toDouble
-  val DailyQAPassLimit_mm = logMainText("DailyQAPassLimit_mm", "1.0").toDouble
-  val DailyQAWarningLimit_mm = logMainText("DailyQAWarningLimit_mm", "1.5").toDouble
-  val CBCTBBMinimumStandardDeviation = logMainText("CBCTBBMinimumStandardDeviation", "1.0").toDouble
-  val DailyQACBCTDarkPixelValueLevels = logMainText("DailyQACBCTDarkPixelValueLevels", "50").toInt
+  val DailyQACBCTLimit_mm: Double = logMainText("DailyQACBCTLimit_mm", "1.0").toDouble
+  val DailyQAPassLimit_mm: Double = logMainText("DailyQAPassLimit_mm", "1.0").toDouble
+  val DailyQAWarningLimit_mm: Double = logMainText("DailyQAWarningLimit_mm", "1.5").toDouble
+  val CBCTBBMinimumStandardDeviation: Double = logMainText("CBCTBBMinimumStandardDeviation", "1.0").toDouble
+  val DailyQACBCTDarkPixelValueLevels: Int = logMainText("DailyQACBCTDarkPixelValueLevels", "50").toInt
 
-  val DailyPhantomSearchDistance_mm = logMainText("DailyPhantomSearchDistance_mm", "50.0").toDouble
-  val DailyQAPhantomCubeSize_mm = logMainText("DailyQAPhantomCubeSize_mm", "50.0").toDouble
-  val DailyQACBCTVoxPercentTolerance = logMainText("DailyQACBCTVoxPercentTolerance", "15.0").toDouble
-  val DailyQACBCTCubeSizePercentTolerance = logMainText("DailyQACBCTCubeSizePercentTolerance", "15.0").toDouble
-  val DailyQACBCTCubeCrossSectionalAreaPercentTolerance = logMainText("DailyQACBCTCubeCrossSectionalAreaPercentTolerance", "25.0").toDouble
-  val CBCTBBPenumbra_mm = logMainText("CBCTBBPenumbra_mm", "2.5").toDouble
-  val CBCTZoomSize_mm = logMainText("CBCTZoomSize_mm", "40.0").toDouble
-  val CBCTImageColor = Util.hexToColor(logMainText("CBCTImageColor", "FFFFFF"))
-  val BBbyCBCTHistoryRange = logMainText("BBbyCBCTHistoryRange", "25").toInt
+  val DailyPhantomSearchDistance_mm: Double = logMainText("DailyPhantomSearchDistance_mm", "50.0").toDouble
+  val DailyQAPhantomCubeSize_mm: Double = logMainText("DailyQAPhantomCubeSize_mm", "50.0").toDouble
+  val DailyQACBCTVoxPercentTolerance: Double = logMainText("DailyQACBCTVoxPercentTolerance", "15.0").toDouble
+  val DailyQACBCTCubeSizePercentTolerance: Double = logMainText("DailyQACBCTCubeSizePercentTolerance", "15.0").toDouble
+  val DailyQACBCTCubeCrossSectionalAreaPercentTolerance: Double = logMainText("DailyQACBCTCubeCrossSectionalAreaPercentTolerance", "25.0").toDouble
+  val CBCTBBPenumbra_mm: Double = logMainText("CBCTBBPenumbra_mm", "2.5").toDouble
+  val CBCTZoomSize_mm: Double = logMainText("CBCTZoomSize_mm", "40.0").toDouble
+  val CBCTImageColor: Color = Util.hexToColor(logMainText("CBCTImageColor", "FFFFFF"))
+  val BBbyCBCTHistoryRange: Int = logMainText("BBbyCBCTHistoryRange", "25").toInt
 
-  val BBbyEPIDSearchDistance_mm = logMainText("BBbyEPIDSearchDistance_mm", "10.0").toDouble
-  val EPIDBBPenumbra_mm = logMainText("EPIDBBPenumbra_mm", "2.0").toDouble
-  val EPIDBBMinimumStandardDeviation = logMainText("EPIDBBMinimumStandardDeviation", "1.25").toDouble
-  val EPIDImageColor = Util.hexToColor(logMainText("EPIDImageColor", "FFFFFF"))
-  val EPIDZoomSize_mm = logMainText("EPIDZoomSize_mm", "90.0").toDouble
-  val BBbyEPIDHistoryRange = logMainText("BBbyEPIDHistoryRange", "25").toInt
-  val BBbyCBCTChartTolerance_mm = logMainText("BBbyCBCTChartTolerance_mm", "1.0").toDouble.abs
-  val BBbyCBCTChartYRange_mm = logMainText("BBbyCBCTChartYRange_mm", "3.0").toDouble.abs
-  val BBbyEPIDChartTolerance_mm = logMainText("BBbyEPIDChartTolerance_mm", "1.0").toDouble.abs
-  val BBbyEPIDChartYRange_mm = logMainText("BBbyEPIDChartYRange_mm", "3.0").toDouble.abs
-  val BBbyCBCTMaximumSliceThickness_mm = logMainText("BBbyCBCTMaximumSliceThickness_mm", "1.0").toDouble.abs
+  val BBbyEPIDSearchDistance_mm: Double = logMainText("BBbyEPIDSearchDistance_mm", "10.0").toDouble
+  val EPIDBBPenumbra_mm: Double = logMainText("EPIDBBPenumbra_mm", "2.0").toDouble
+  val EPIDBBMinimumStandardDeviation: Double = logMainText("EPIDBBMinimumStandardDeviation", "1.25").toDouble
+  val EPIDImageColor: Color = Util.hexToColor(logMainText("EPIDImageColor", "FFFFFF"))
+  val EPIDZoomSize_mm: Double = logMainText("EPIDZoomSize_mm", "90.0").toDouble
+  val BBbyEPIDHistoryRange: Int = logMainText("BBbyEPIDHistoryRange", "25").toInt
+  val BBbyCBCTChartTolerance_mm: Double = logMainText("BBbyCBCTChartTolerance_mm", "1.0").toDouble.abs
+  val BBbyCBCTChartYRange_mm: Double = logMainText("BBbyCBCTChartYRange_mm", "3.0").toDouble.abs
+  val BBbyEPIDChartTolerance_mm: Double = logMainText("BBbyEPIDChartTolerance_mm", "1.0").toDouble.abs
+  val BBbyEPIDChartYRange_mm: Double = logMainText("BBbyEPIDChartYRange_mm", "3.0").toDouble.abs
+  val BBbyCBCTMaximumSliceThickness_mm: Double = logMainText("BBbyCBCTMaximumSliceThickness_mm", "1.0").toDouble.abs
 
   // =================================================================================
 
   object Fix extends Enumeration { // TODO temporary for transition
-    val ignore = Value
-    val check = Value
-    val fix = Value
+    val ignore: Fix.Value = Value
+    val check: Fix.Value = Value
+    val fix: Fix.Value = Value
   }
 
   private def getFixState(name: String): Fix.Value = {
@@ -868,26 +865,28 @@ object Config extends Logging {
     fixState
   }
 
-  val DicomSeriesDeleteOrphans = getFixState("DicomSeriesDeleteOrphans") // TODO temporary for transition
-  val DicomSeriesPopulateFromInput = getFixState("DicomSeriesPopulateFromInput") // TODO temporary for transition
-  val DicomSeriesTrim = getFixState("DicomSeriesTrim") // TODO temporary for transition
-  val DicomSeriesOrphanOutputs = getFixState("DicomSeriesOrphanOutputs") // TODO temporary for transition
-  val DicomSeriesUnlinkInputPK = getFixState("DicomSeriesUnlinkInputPK") // TODO temporary for transition
-  val DicomSeriesFindBadRtplans = getFixState("DicomSeriesFindBadRtplans") // TODO temporary for transition
-  val DicomSeriesShared = getFixState("DicomSeriesShared") // TODO temporary for transition
-  val DicomSeriesInput = getFixState("DicomSeriesInput") // TODO temporary for transition
+  val DicomSeriesDeleteOrphans: Fix.Value = getFixState("DicomSeriesDeleteOrphans") // TODO temporary for transition
+  val DicomSeriesPopulateFromInput: Fix.Value = getFixState("DicomSeriesPopulateFromInput") // TODO temporary for transition
+  val DicomSeriesTrim: Fix.Value = getFixState("DicomSeriesTrim") // TODO temporary for transition
+  val DicomSeriesOrphanOutputs: Fix.Value = getFixState("DicomSeriesOrphanOutputs") // TODO temporary for transition
+  val DicomSeriesUnlinkInputPK: Fix.Value = getFixState("DicomSeriesUnlinkInputPK") // TODO temporary for transition
+  val DicomSeriesFindBadRtplans: Fix.Value = getFixState("DicomSeriesFindBadRtplans") // TODO temporary for transition
+  val DicomSeriesShared: Fix.Value = getFixState("DicomSeriesShared") // TODO temporary for transition
+  val DicomSeriesInput: Fix.Value = getFixState("DicomSeriesInput") // TODO temporary for transition
 
   // =================================================================================
 
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true
 
-  def validate = validated
+  def validate: Boolean = validated
 
   override def toString: String = valueText.foldLeft("Configuration values:")((b, t) => b + "\n    " + t)
 
-  def toHtml = {
-    <pre>{ valueText }</pre>
+  def toHtml: Elem = {
+    <pre>
+      {valueText}
+    </pre>
   }
 
   logger.info("Configuration has been validated.")
