@@ -248,7 +248,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
    * @param valueMap List of parsed parameters.
    * @return
    */
-  private def collectData(valueMap: ValueMapT, response: Response) = {
+  private def collectData(valueMap: ValueMapT, response: Response): Unit = {
     val output = Output.get(valueMap(outputPKTag).toLong).get
     val dataDate = output.dataDate.get
     val symFlatList = SymmetryAndFlatness.getByOutput(output.outputPK.get)

@@ -6,7 +6,6 @@ import com.typesafe.config.ConfigFactory
 import edu.umro.ImageUtil.Watermark
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.util.OpSys
-
 import org.aqa.db.MaintenanceCategory
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessPoint
 
@@ -46,6 +45,11 @@ object Config extends Logging {
   /** Root directory name for temporary files. */
   val tmpDirName = "tmp"
 
+
+  /** Root directory name for cached files. */
+  val cacheDirName = "cache"
+
+
   /** For indenting sub-content. */
   private val indent1 = "\n                  "
 
@@ -75,6 +79,8 @@ object Config extends Logging {
   }
 
   lazy val tmpDirFile: File = makeDataDir(tmpDirName)
+
+  lazy val cacheDirFile: File = makeDataDir(cacheDirName)
 
   lazy val machineConfigurationDirFile: File = makeDataDir(machineConfigurationDirName)
 

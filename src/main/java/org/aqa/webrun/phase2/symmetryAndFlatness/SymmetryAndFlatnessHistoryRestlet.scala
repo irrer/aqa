@@ -17,7 +17,7 @@ object SymmetryAndFlatnessHistoryRestlet {
   private val outputPKTag = "outputPK"
   private val beamNameTag = "beamName"
 
-  def makeReference(beamName: String, outputPK: Long) = {
+  def makeReference(beamName: String, outputPK: Long): String = {
     "<script src='" + path + "?" + outputPKTag + "=" + outputPK + "&amp;" + beamNameTag + "=" + beamName + "'></script>"
   }
 }
@@ -34,9 +34,8 @@ class SymmetryAndFlatnessHistoryRestlet extends Restlet with SubUrlRoot with Log
       response.setStatus(Status.SUCCESS_OK)
       response.setEntity(js, MediaType.APPLICATION_JAVASCRIPT)
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         internalFailure(response, t)
-      }
     }
   }
 
