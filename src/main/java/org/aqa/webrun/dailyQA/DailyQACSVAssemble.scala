@@ -28,9 +28,21 @@ abstract class DailyQACSVAssemble {
    */
   protected def fetchData(date: Timestamp, hostRef: String, institutionPK: Long): String
 
-  protected def getHeaders: String
+  protected def constructHeaders: String
 
   protected def firstDataDate(institutionPK: Long): Option[Timestamp]
+
+  /**
+   * Allow the custom modification of the CSV content after all the pieces have been assembled.
+   *
+   * Default is to do nothing.
+   *
+   * @param assembledCsvText Sorted list of CSV lines without the headers.
+   * @return List of CSV lines.
+   */
+  protected def postProcessing(assembledCsvText: Seq[String]): Seq[String] = {
+    assembledCsvText
+  }
 
   private val cacheDir = new File(Config.cacheDirFile, cacheDirName())
 
@@ -154,15 +166,15 @@ abstract class DailyQACSVAssemble {
 
       val all: Seq[CachedResult] = allCached ++ newlyInstantiated ++ Seq(todayData)
 
-      val text: String =
-        getHeaders +
-          all. // all content
-            map(_.csv).
-            mkString("\n"). // Separate each day's content with a newline.
-            replaceAll("\n\n\n*", "\n"). // Remove multiple sequential newlines.
-            split("\n"). // break into list of lines
-            sorted. // sort
-            mkString("\n") // make into a single CSV
+      val assembledAndSorted = all. // all content
+        map(_.csv).
+        mkString("\n"). // Separate each day's content with a newline.
+        replaceAll("\n\n\n*", "\n"). // Remove multiple sequential newlines.
+        split("\n"). // break into list of lines
+        sorted
+
+      // Perform post-processing and make into a single CSV
+      val text: String = (constructHeaders +: postProcessing(assembledAndSorted)).mkString("\n")
 
       response.setEntity(text, MediaType.TEXT_CSV)
       response.setStatus(Status.SUCCESS_OK)

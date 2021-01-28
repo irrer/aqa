@@ -6,71 +6,24 @@ import com.pixelmed.dicom.TagFromName
 import com.pixelmed.dicom.ValueRepresentation
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.AngleType
 import org.aqa.AnonymizeUtil
 import org.aqa.Util
 import org.aqa.db.BBbyEPIDComposite
 import org.aqa.db.DicomAnonymous
-import org.aqa.db.Input
-import org.aqa.db.Institution
 import org.aqa.db.Machine
 import org.aqa.web.ViewOutput
 
 import java.sql.Timestamp
 import javax.vecmath.Point3d
 
-object DailyQACSV {
-  /**
-   * Cached list of machines' real names.
-   */
-  private val machineMap = scala.collection.mutable.Map[Long, String]()
-
-  /**
-   * Given a machine's PK, get it's real name.  For speed, use the list of
-   * cached values when possible.
-   *
-   * Note that if a user changes the name of a machine that it will make
-   * this cache out of date.  But that is rare, and a server restart will
-   * fix it.
-   *
-   * @param machinePK Machine PK (primary key)
-   * @return Real, non-anonymized name of machine.
-   */
-  private def getMachineId_real(machinePK: Long): String = {
-    if (machineMap.contains(machinePK))
-      machineMap(machinePK)
-    else {
-      val machine = Machine.get(machinePK).get
-      val institution = Institution.get(machine.institutionPK).get
-      machineMap.put(machinePK, AnonymizeUtil.decryptWithNonce(machine.institutionPK, machine.id_real.get))
-      machineMap(machinePK)
-    }
-  }
-}
 
 class DailyQACSVAssembleComposite(hostRef: String, institutionPK: Long) extends DailyQACSVAssemble {
-  Trace.trace()
-
-
-  private val patIdMap = DicomAnonymous.getAttributesByTag(institutionPK, Seq(TagFromName.PatientID)).
-    map(da => (da.value, AnonymizeUtil.decryptWithNonce(institutionPK, da.value_real))).toMap
 
 
   private def patientIdOf(dataSet: BBbyEPIDComposite.DailyDataSetComposite): String = {
-    val unknown = "unknown"
-    val patId = try {
-      val anonPatId = Input.get(dataSet.output.inputPK).get.patientId.get
-      val p = patIdMap.get(anonPatId) match {
-        case Some(text) => text
-        case _ => unknown
-      }
-      p
-    } catch {
-      case _: Throwable => unknown
-    }
-
-    patId
+    val anonPatId = dataSet.cbct.attributeList.get(TagFromName.PatientID).getSingleStringValueOrEmptyString
+    anonPatId
   }
 
 
@@ -145,11 +98,14 @@ class DailyQACSVAssembleComposite(hostRef: String, institutionPK: Long) extends 
 
   private case class Col(header: String, toText: BBbyEPIDComposite.DailyDataSetComposite => String) {}
 
+  val MachineColHeader = "Machine"
+  val PatientIDColHeader = "PatientID"
+
   private val colList = Seq[Col](
-    Col("Machine", dataSet => dataSet.machine.id),
+    Col(MachineColHeader, dataSet => dataSet.machine.id),
     Col("Acquired", dataSet => Util.standardDateFormat.format(dataSet.output.dataDate.get)),
     Col("Analysis", dataSet => Util.standardDateFormat.format(dataSet.output.startDate)),
-    Col("PatientID", dataSet => patientIdOf(dataSet)),
+    Col(PatientIDColHeader, dataSet => patientIdOf(dataSet)),
     Col("Status", dataSet => dataSet.output.status),
 
     Col("X CBCT - ISO mm", dataSet => (dataSet.cbct.cbctX_mm - dataSet.cbct.rtplanX_mm).toString),
@@ -222,11 +178,11 @@ class DailyQACSVAssembleComposite(hostRef: String, institutionPK: Long) extends 
 
   private def makeRow(dataSet: BBbyEPIDComposite.DailyDataSetComposite) = colList.map(col => col.toText(dataSet)).mkString(",")
 
-  override protected def getHeaders(): String = colList.map(col => '"' + col.header + '"').mkString(",")
+  override protected def constructHeaders: String = colList.map(col => '"' + col.header + '"').mkString(",")
 
   override protected def cacheDirName(): String = "DailyQACompositeCSV"
 
-  override protected def firstDataDate(institutionPK: Long) =  BBbyEPIDComposite.getEarliestDate(institutionPK)
+  override protected def firstDataDate(institutionPK: Long): Option[Timestamp] = BBbyEPIDComposite.getEarliestDate(institutionPK)
 
   override protected def fetchData(date: Timestamp, hostRef: String, institutionPK: Long): String = {
     val dataList = BBbyEPIDComposite.getForOneDay(date, institutionPK)
@@ -238,4 +194,66 @@ class DailyQACSVAssembleComposite(hostRef: String, institutionPK: Long) extends 
     csvText
   }
 
+  override protected def postProcessing(csvText: Seq[String]): Seq[String] = {
+
+    // Look up indexes this way in case they are moved to a different position.
+    val machineColIndex = colList.indexWhere(c => c.header.equals(MachineColHeader))
+    val patientIdColIndex = colList.indexWhere(c => c.header.equals(PatientIDColHeader))
+
+
+    // Map id --> de-anonymized real id
+    val machineMap = {
+      val machineList = Machine.listMachinesFromInstitution(institutionPK)
+      val mm = machineList.map(machine => (machine.id, AnonymizeUtil.decryptWithNonce(machine.institutionPK, machine.id_real.get)))
+      mm.toMap
+    }
+
+    val patIdMap = DicomAnonymous.getAttributesByTag(institutionPK, Seq(TagFromName.PatientID)).
+      map(da => (da.value, AnonymizeUtil.decryptWithNonce(institutionPK, da.value_real))).toMap
+
+    /**
+     * Replace anonymized values with real values.
+     *
+     * @param line Entire text of one line.
+     * @return Same line with fields de-anonymized.
+     */
+    def deAnonymize(line: String): String = {
+      val columnList = line.split(",")
+      val mach = machineMap(columnList(machineColIndex))
+      val pat = patIdMap(columnList(patientIdColIndex))
+
+      val fixed = columnList.
+        patch(machineColIndex, Seq(mach), 1).
+        patch(patientIdColIndex, Seq(pat), 1)
+
+      fixed.mkString(",")
+    }
+
+    val processed = csvText.map(line => deAnonymize(line))
+    processed
+  }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

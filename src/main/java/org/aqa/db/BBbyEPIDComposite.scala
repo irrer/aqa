@@ -1,7 +1,6 @@
 package org.aqa.db
 
 import com.pixelmed.dicom.TagFromName
-import edu.umro.ScalaUtil.Trace
 import org.aqa.AngleType
 import org.aqa.Config
 import org.aqa.Logging
@@ -316,7 +315,6 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
     val list = Db.run(search.result)
     val dailyQA = list.groupBy(ga => ga._1.outputPK).values.map(g => DailyDataSetComposite(g.head._1, g.head._2, g.head._3, g.head._4, g.map(gg => gg._5), g.head._6))
     val dailyQASeq = dailyQA.toSeq
-    Trace.trace("Leaving getReportingDataSet")
     dailyQASeq
   }
 

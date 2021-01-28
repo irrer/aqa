@@ -1,6 +1,5 @@
 package org.aqa.webrun.dailyQA
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.db.BBbyEPIDComposite
 import org.aqa.db.Institution
@@ -159,11 +158,8 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
       super.handle(request, response)
       val valueMap = getValueMap(request)
       if (valueMap.contains(csvField.label)) {
-        Trace.trace()
         val assembler = new DailyQACSVAssembleComposite(request.getHostRef.toString(), WebUtil.getUser(request).get.institutionPK)
-        Trace.trace()
         assembler.assemble(response)
-        Trace.trace()
       } else if (valueMap.contains(checksumLabel))
         handleChecksum(response, valueMap)
       else
