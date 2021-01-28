@@ -1,8 +1,11 @@
-package org.aqa.webrun.dailyQA
+package org.aqa.run
 
+import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Config
+import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.BBbyEPIDComposite
+import org.aqa.db.Institution
 import org.aqa.web.WebUtil
 import org.restlet.Response
 import org.restlet.data.MediaType
@@ -13,7 +16,73 @@ import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.util.Date
 
-abstract class DailyQACSVAssemble {
+/**
+ * Support for caching CSV content.  The point is to save content so that the
+ * entire data set does not have to be regenerated every time a user asks for
+ * the CSV.  The granularity is institution + data type + day.  When cache is
+ * invalidated, the granularity is institution + day.
+ */
+object CacheCSV extends Logging {
+  // Map of Institution.institutionPK --> Institution.name (name is anonymized) to be used as a cache
+  private val institutionMap = scala.collection.mutable.Map[Long, String]()
+
+  /**
+   * Given an institutionPK, get its name.
+   *
+   * @param institutionPK Primary key of institution.
+   * @return Name of institution.
+   */
+  private def getInstitutionName(institutionPK: Long) = {
+    if (institutionMap.contains(institutionPK))
+      institutionMap(institutionPK)
+    else {
+      val name = Institution.get(institutionPK).get.name
+      institutionMap.put(institutionPK, name)
+      institutionMap(institutionPK)
+    }
+  }
+
+  private val csvSuffix = ".csv"
+
+  private val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
+
+  private def dateToFileName(date: Date) = dateFormat.format(date) + csvSuffix
+
+  /**
+   * Remove cached entries for the given institution on the given date.  This is
+   * done when old data is analysed at a later date or new analysis of old data
+   * makes the cached value invalid.
+   *
+   * To simplify the interface, a slightly heavy-handed approach is taken where
+   * all cached data for that date for that institution is invalidated.  Thi
+   * is also a more robust approach, and it is more important to invalidate cache
+   * rather than keep some to be ever so slightly more efficient.
+   *
+   * @param date          Date of cached entry.
+   * @param institutionPK For the cache of this institution.
+   */
+  def invalidateCacheEntries(date: Date, institutionPK: Long): Unit = {
+    try {
+      val institutionDir = new File(Config.cacheDirFile, getInstitutionName(institutionPK))
+
+      val fileName = dateToFileName(date)
+
+      def invalidateCache(cacheDir: File): Unit = {
+        val file = new File(cacheDir, fileName)
+        file.delete()
+      }
+
+      FileUtil.listFiles(institutionDir).foreach(cacheDir => invalidateCache(cacheDir))
+    }
+    catch {
+      case t: Throwable =>
+        logger.error("Unexpected exception while invalidating cache entry for date " + date + " institutionPK: " + institutionPK + " : " + fmtEx(t))
+    }
+  }
+
+}
+
+abstract class CacheCSV {
 
   /** Name used to distinguish this cached results from others. */
   protected def cacheDirName(): String
@@ -44,16 +113,19 @@ abstract class DailyQACSVAssemble {
     assembledCsvText
   }
 
-  private val cacheDir = new File(Config.cacheDirFile, cacheDirName())
+  protected def getInstitutionPK: Long
 
-  private val csvSuffix = ".csv"
 
-  private val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
+  val cacheDir: File = {
+    val institutionDir = new File(Config.cacheDirFile, CacheCSV.getInstitutionName(getInstitutionPK))
+    new File(institutionDir, CacheCSV.getInstitutionName(getInstitutionPK))
+  }
 
   /** Convert a file to a date formatted as text.  Do this by removing the
    * suffix.  The file name format is yyyy-MM-dd.csv .
    */
-  private def fileToDateText(file: File): String = file.getName.dropRight(csvSuffix.length)
+  private def fileToDateText(file: File): String = file.getName.dropRight(CacheCSV.csvSuffix.length)
+
 
   /**
    * Given the text representation of a date, construct the file.
@@ -61,8 +133,15 @@ abstract class DailyQACSVAssemble {
    * @param dateText date as <code>dateFormat</code>
    * @return File in cache where the data is persisted..
    */
-  private def dateTextToFile(dateText: String) = new File(cacheDir, dateText + csvSuffix)
+  private def dateTextToFile(dateText: String) = new File(cacheDir, dateText + CacheCSV.csvSuffix)
 
+
+  /**
+   * Represent the CSV content entry for a given day.
+   *
+   * @param file File containing content.
+   * @param csv  CSV content.
+   */
   private case class CachedResult(file: File, csv: String) {
     val dateText: String = fileToDateText(file)
   }
@@ -77,8 +156,8 @@ abstract class DailyQACSVAssemble {
     def fileNameIsValidFormat(file: File): Boolean = {
       try {
         val name = file.getName
-        name.endsWith(csvSuffix) &&
-          (dateFormat.parse(name.dropRight(csvSuffix.length)).getTime > 0)
+        name.endsWith(CacheCSV.csvSuffix) &&
+          (CacheCSV.dateFormat.parse(name.dropRight(CacheCSV.csvSuffix.length)).getTime > 0)
       }
       catch {
         case _: Throwable => false
@@ -114,7 +193,7 @@ abstract class DailyQACSVAssemble {
    * @return A new cache entry that has been written to disk.
    */
   private def instantiateCache(dateText: String, hostRef: String, institutionPK: Long): CachedResult = {
-    val timestamp = new Timestamp(dateFormat.parse(dateText).getTime)
+    val timestamp = new Timestamp(CacheCSV.dateFormat.parse(dateText).getTime)
     val csvText = fetchData(timestamp, hostRef = hostRef, institutionPK)
     val file = dateTextToFile(dateText)
     Util.writeBinaryFile(file, csvText.getBytes)
@@ -149,12 +228,12 @@ abstract class DailyQACSVAssemble {
       val firstDate = edu.umro.ScalaUtil.Util.roundToDate(firstTime).getTime + (dayInMs / 2)
 
       // list of required dates as text
-      val requiredDayList = (firstDate to System.currentTimeMillis() by dayInMs).map(d => dateFormat.format(d))
+      val requiredDayList = (firstDate to System.currentTimeMillis() by dayInMs).map(d => CacheCSV.dateFormat.format(d))
 
       val allCached = retrieveAllCached()
 
-      val todayText = dateFormat.format(new Date)
-      val todayTimestamp = new Timestamp(dateFormat.parse(todayText).getTime)
+      val todayText = CacheCSV.dateFormat.format(new Date)
+      val todayTimestamp = new Timestamp(CacheCSV.dateFormat.parse(todayText).getTime)
 
       val nonCached = requiredDayList.diff(allCached.map(_.dateText)).diff(Seq(todayText))
 
@@ -190,4 +269,5 @@ abstract class DailyQACSVAssemble {
     }
 
   }
+
 }

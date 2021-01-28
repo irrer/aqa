@@ -158,7 +158,7 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
       super.handle(request, response)
       val valueMap = getValueMap(request)
       if (valueMap.contains(csvField.label)) {
-        val assembler = new DailyQACSVAssembleComposite(request.getHostRef.toString(), WebUtil.getUser(request).get.institutionPK)
+        val assembler = new DailyQACSVCacheComposite(request.getHostRef.toString(), WebUtil.getUser(request).get.institutionPK)
         assembler.assemble(response)
       } else if (valueMap.contains(checksumLabel))
         handleChecksum(response, valueMap)

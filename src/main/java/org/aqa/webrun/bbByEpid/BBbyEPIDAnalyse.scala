@@ -1,28 +1,24 @@
 package org.aqa.webrun.bbByEpid
 
-import org.aqa.webrun.ExtendedData
-import org.aqa.Logging
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.TagFromName
-import edu.umro.ScalaUtil.DicomUtil
-import org.aqa.Util
-import javax.vecmath.Point2d
-import org.aqa.db.BBbyEPID
-import javax.vecmath.Point3d
-import org.aqa.run.ProcedureStatus
-import org.aqa.db.BBbyEPIDComposite
-import org.aqa.db.BBbyCBCT
-import java.util.Date
-import java.text.SimpleDateFormat
-import gnu.crypto.mode.CBC
-import org.aqa.AngleType
 import com.pixelmed.dicom.AttributeTag
-import edu.umro.ScalaUtil.Trace
-import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import org.restlet.Response
-import org.aqa.web.ViewOutput
-import java.awt.geom.Point2D
+import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
+import org.aqa.AngleType
+import org.aqa.Logging
+import org.aqa.Util
+import org.aqa.db.BBbyCBCT
+import org.aqa.db.BBbyEPID
+import org.aqa.db.BBbyEPIDComposite
+import org.aqa.run.ProcedureStatus
+import org.aqa.web.ViewOutput
+import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.dailyQA.DailyQACSVCacheComposite
+import org.restlet.Response
+
+import java.text.SimpleDateFormat
+import java.util.Date
+import javax.vecmath.Point3d
 
 /**
  * Given validated data, process it.
@@ -37,15 +33,14 @@ object BBbyEPIDAnalyse extends Logging {
   /**
    * Create a Matlab script that shows calculations.
    *
-   * @param epid EPID DICOM
-   *
-   * @param bbLocation in EPID translated to mm
-   *
+   * @param epid         EPID DICOM
+   * @param bbLocation   in EPID translated to mm
    * @param extendedData Associated DB rows
    */
   private def constructEpidMatlab(result: BBbyEPIDImageAnalysis.Result): String = {
 
     def getDbls(tag: AttributeTag) = result.al.get(tag).getDoubleValues
+
     val gantryAngle = getDbls(TagByName.GantryAngle).head
     val name = if (isVert(result.al)) "Vert" else "Horz"
     val ipps = getDbls(TagByName.ImagePlanePixelSpacing)
@@ -57,19 +52,22 @@ object BBbyEPIDAnalyse extends Logging {
     else
       "epidIsoY = sin(deg2rad(gantryAngleHorz)) * (epidIsoHorzX + HorzTX);"
 
-    val fprintfVert = s"""
+    val fprintfVert =
+      s"""
 fprintf("MV G ${gaRounded.formatted("%3d")} (BB - DIGITAL_CAX) @ ISOCENTER PLANE:  %f   NA  %f  %f@@n@@",  epidIsoX, epidVertZ, sqrt(epidIsoX*epidIsoX + epidVertZ*epidVertZ));
 fprintf("MV G ${gaRounded.formatted("%3d")} (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f   NA   %f   %f$lsn", epidIsoX - cbctX, epidVertZ - cbctZ, sqrt((epidIsoX - cbctX)*(epidIsoX - cbctX) + (epidVertZ - cbctZ)*(epidVertZ - cbctZ)));
 """
 
-    val fprintfHorz = s"""
+    val fprintfHorz =
+      s"""
 fprintf("MV G ${gaRounded.formatted("%3d")} (BB - DIGITAL_CAX) @ ISOCENTER PLANE:  NA   %f  %f  %f$lsn", epidIsoY, epidHorzZ, sqrt(epidIsoY*epidIsoY + epidHorzZ*epidHorzZ));
 fprintf("MV G ${gaRounded.formatted("%3d")} (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  NA   %f   %f   %f$lsn", epidIsoY - cbctY, epidHorzZ - cbctZ, sqrt((epidIsoY - cbctY)*(epidIsoY - cbctY) + (epidHorzZ - cbctZ)*(epidHorzZ - cbctZ)));
 """
 
     val fprintf = if (isVert(result.al)) fprintfVert else fprintfHorz
 
-    val text = s"""
+    val text =
+      s"""
 %% Perform isoplane projection and map to RTPLAN coordinates for beam $name : ${Util.angleRoundedTo90(gantryAngle)}
 
 RTImageSID$name = ${getDbls(TagByName.RTImageSID).head};     %% From DICOM.  Distance from beam to image plane in mm
@@ -161,6 +159,7 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
 
     def getByAngleType(angleType: AngleType.Value) = {
       val at = angleType.toString
+
       def sameType(bbByEPID: BBbyEPID): Boolean = {
         val angTyp = AngleType.classifyAngle(bbByEPID.gantryAngle_deg)
         angTyp.isDefined && angTyp.get.toString.equals(at)
@@ -189,12 +188,14 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
             val epidDateTime = extendedData.output.dataDate.get
             val epidDateFormatted = dateFormat.format(epidDateTime)
             val list = BBbyCBCT.history(extendedData.machine.machinePK.get, cbctProcPk)
+
             /**
              * CBCT must have been acquired before EPID, and must be on the same date.
              */
             def qualifies(date: Date): Boolean = {
               (epidDateTime.getTime >= date.getTime) && dateFormat.format(date).equals(epidDateFormatted)
             }
+
             list.filter(c => qualifies(c.date)).sortBy(c => c.date.getTime).lastOption
           }
           // BBbyCBCT.getProcedurePK not defined,  Must be that sthere are no BBbyCBCT rows.

@@ -450,6 +450,9 @@ object RunProcedure extends Logging {
       out
     }
 
+    // invalidate cache in case this data was from a previous date
+    CacheCSV.invalidateCacheEntries(output.dataDate.get, machine.institutionPK)
+
     val extendedData = ExtendedData.get(output)
 
     // If this is the same data being re-submitted, then delete the old version of the analysis.  The
@@ -558,6 +561,8 @@ object RunProcedure extends Logging {
         val extendedData = ExtendedData.get(newOutput)
         val inputDir = extendedData.input.dir
 
+        CacheCSV.invalidateCacheEntries(newOutput.dataDate .get, extendedData.institution.institutionPK.get)
+
         // force the contents of the input directory to be reestablished so that they are
         // exactly the same as the first time this was run.
         Util.deleteFileTreeSafely(inputDir)
@@ -572,8 +577,11 @@ object RunProcedure extends Logging {
         // now that new Output has been created, delete the old output.
         // Even if something goes horribly wrong after this (server crash, analysis crash),
         // having the output in the database gives visibility to the user via the Results screen.
-        if (oldOutput.isDefined)
+        if (oldOutput.isDefined) {
           deleteOutput(oldOutput.get)
+          // Invalidate any cached data
+          CacheCSV.invalidateCacheEntries(oldOutput.get.dataDate .get, extendedData.institution.institutionPK.get)
+        }
 
         runAnalysis(valueMap, runTrait, runReq, extendedData, response)
 

@@ -12,13 +12,14 @@ import org.aqa.Util
 import org.aqa.db.BBbyEPIDComposite
 import org.aqa.db.DicomAnonymous
 import org.aqa.db.Machine
+import org.aqa.run.CacheCSV
 import org.aqa.web.ViewOutput
 
 import java.sql.Timestamp
 import javax.vecmath.Point3d
 
 
-class DailyQACSVAssembleComposite(hostRef: String, institutionPK: Long) extends DailyQACSVAssemble {
+class DailyQACSVCacheComposite(hostRef: String, institutionPK: Long) extends CacheCSV {
 
 
   private def patientIdOf(dataSet: BBbyEPIDComposite.DailyDataSetComposite): String = {
@@ -232,6 +233,8 @@ class DailyQACSVAssembleComposite(hostRef: String, institutionPK: Long) extends 
     val processed = csvText.map(line => deAnonymize(line))
     processed
   }
+
+  override protected def getInstitutionPK: Long = institutionPK
 }
 
 
