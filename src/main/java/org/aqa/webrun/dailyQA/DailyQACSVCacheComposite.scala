@@ -220,8 +220,22 @@ class DailyQACSVCacheComposite(hostRef: String, institutionPK: Long) extends Cac
      */
     def deAnonymize(line: String): String = {
       val columnList = line.split(",")
-      val mach = machineMap(columnList(machineColIndex))
-      val pat = patIdMap(columnList(patientIdColIndex))
+      val mach = {
+        if (columnList.size < (machineColIndex + 1))
+          "unknown machine"
+        else {
+          val anon = columnList(machineColIndex)
+          if (machineMap.contains(anon)) machineMap(anon) else anon
+        }
+      }
+      val pat = {
+        if (columnList.size < (patientIdColIndex + 1))
+          "unknown Patient ID"
+        else {
+          val anon = columnList(patientIdColIndex)
+          if (patIdMap.contains(anon)) patIdMap(anon) else anon
+        }
+      }
 
       val fixed = columnList.
         patch(machineColIndex, Seq(mach), 1).
@@ -230,7 +244,7 @@ class DailyQACSVCacheComposite(hostRef: String, institutionPK: Long) extends Cac
       fixed.mkString(",")
     }
 
-    val processed = csvText.map(line => deAnonymize(line))
+    val processed = csvText.filter(line => line.nonEmpty).map(line => deAnonymize(line))
     processed
   }
 

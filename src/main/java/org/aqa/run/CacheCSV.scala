@@ -4,7 +4,6 @@ import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
-import org.aqa.db.BBbyEPIDComposite
 import org.aqa.db.Institution
 import org.aqa.web.WebUtil
 import org.restlet.Response
@@ -82,7 +81,7 @@ object CacheCSV extends Logging {
 
 }
 
-abstract class CacheCSV {
+abstract class CacheCSV extends Logging {
 
   /** Name used to distinguish this cached results from others. */
   protected def cacheDirName(): String
@@ -118,7 +117,7 @@ abstract class CacheCSV {
 
   val cacheDir: File = {
     val institutionDir = new File(Config.cacheDirFile, CacheCSV.getInstitutionName(getInstitutionPK))
-    new File(institutionDir, CacheCSV.getInstitutionName(getInstitutionPK))
+    new File(institutionDir, cacheDirName())
   }
 
   /** Convert a file to a date formatted as text.  Do this by removing the
@@ -219,13 +218,14 @@ abstract class CacheCSV {
      * @param firstTime Time stamp of first (earliest acquired) data.
      */
     def processCsv(firstTime: Timestamp, institutionPK: Long): Unit = {
+
+      logger.info("First data date: " + firstTime)
       /** One day in milliseconds. */
       val dayInMs = 24 * 60 * 60 * 1000.toLong
 
       val hostRef = response.getRequest.getHostRef.toString
 
-      // add 1/2 day to avoid daylight savings time issues
-      val firstDate = edu.umro.ScalaUtil.Util.roundToDate(firstTime).getTime + (dayInMs / 2)
+      val firstDate = edu.umro.ScalaUtil.Util.roundToDate(firstTime).getTime - (24 * 60 * 60 * 1000)
 
       // list of required dates as text
       val requiredDayList = (firstDate to System.currentTimeMillis() by dayInMs).map(d => CacheCSV.dateFormat.format(d))
@@ -263,7 +263,7 @@ abstract class CacheCSV {
     val institutionPK = WebUtil.getUser(response.getRequest).get.institutionPK
 
     // if there is any data, then process it
-    BBbyEPIDComposite.getEarliestDate(institutionPK) match {
+    firstDataDate(institutionPK) match {
       case Some(firstTime) => processCsv(firstTime, institutionPK)
       case _ =>
     }
