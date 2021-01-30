@@ -47,11 +47,27 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
     }
   }
 
-  private def csvLink(valueMap: ValueMapT): Elem = {
-    <a href={DailyQASummary.path + ".csv?CSV=" + getDateText(valueMap)} title="Download a spreadsheet of all DailyQA data for this institution.">CSV</a>
+  private val CsvCompositeTag = "CSV_Composite"
+
+  private def csvCompositeLink(valueMap: ValueMapT): Elem = {
+    <a href={DailyQASummary.path + ".csv?" + CsvCompositeTag + "=" + getDateText(valueMap)} title="Download a spreadsheet of all DailyQA data for this institution.">CSV</a>
   }
 
-  private val csvField = new WebPlainText("CSV", false, 1, 0, csvLink)
+  private val CsvEpidTag = "CSV_EPID"
+
+  private def csvEpidLink(valueMap: ValueMapT): Elem = {
+    <a href={DailyQASummary.path + ".csv?" + CsvEpidTag + "=" + getDateText(valueMap)} title="Download a spreadsheet of all DailyQA EPID data for this institution.">EPID CSV</a>
+  }
+
+  private val CsvCbctTag = "CSV_CBCT"
+
+  private def csvCbctLink(valueMap: ValueMapT): Elem = {
+    <a href={DailyQASummary.path + ".csv?" + CsvCbctTag + "=" + getDateText(valueMap)} title="Download a spreadsheet of all DailyQA CBCT data for this institution.">CBCT CSV</a>
+  }
+
+  private val csvFieldComposite = new WebPlainText("CSV", false, 1, 0, csvCompositeLink)
+  private val csvFieldCbct = new WebPlainText("CBCT CSV", false, 1, 0, csvCbctLink)
+  private val csvFieldEpid = new WebPlainText("EPID CSV", false, 1, 0, csvEpidLink)
 
   private val displayedDate = {
     def getDisplayedDate(valueMap: ValueMapT): Elem = {
@@ -63,7 +79,7 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
     new WebPlainText("DisplayedDate", false, 2, 0, getDisplayedDate)
   }
 
-  val controlRow: WebRow = List(displayedDate, coordinateDiagramCol(65), refreshButton, dateField, csvField)
+  val controlRow: WebRow = List(displayedDate, coordinateDiagramCol(65), refreshButton, dateField, csvFieldComposite, csvFieldCbct, csvFieldEpid)
 
   private def getDate(valueMap: ValueMapT): Date = {
     try {
@@ -157,8 +173,14 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
     try {
       super.handle(request, response)
       val valueMap = getValueMap(request)
-      if (valueMap.contains(csvField.label)) {
+      if (valueMap.contains(CsvCompositeTag)) {
         val assembler = new DailyQACSVCacheComposite(request.getHostRef.toString(), WebUtil.getUser(request).get.institutionPK)
+        assembler.assemble(response)
+      } else if (valueMap.contains(CsvCbctTag)) {
+        val assembler = new DailyQACSVCacheComposite(request.getHostRef.toString(), WebUtil.getUser(request).get.institutionPK) // TODO make CBCT
+        assembler.assemble(response)
+      } else if (valueMap.contains(CsvEpidTag)) {
+        val assembler = new DailyQACSVCacheEPID(request.getHostRef.toString(), WebUtil.getUser(request).get.institutionPK)
         assembler.assemble(response)
       } else if (valueMap.contains(checksumLabel))
         handleChecksum(response, valueMap)

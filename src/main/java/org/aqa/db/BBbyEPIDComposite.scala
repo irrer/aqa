@@ -1,7 +1,6 @@
 package org.aqa.db
 
 import com.pixelmed.dicom.TagFromName
-import edu.umro.ScalaUtil.Trace
 import org.aqa.AngleType
 import org.aqa.Config
 import org.aqa.Logging
@@ -284,7 +283,7 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
    * Get the earliest date+time of a composite EPID result.
    *
    * @param institutionPK Get for this institution.
-   * @return The date+time of the first composite reulst, if there is at least one.
+   * @return The date+time of the first composite result, if there is at least one.
    */
   def getEarliestDate(institutionPK: Long): Option[Timestamp] = {
 
@@ -292,7 +291,7 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
       compositeOutputPK <- BBbyEPIDComposite.query.map(_.outputPK)
       md <- Output.query.filter(o => (compositeOutputPK === o.outputPK) && o.dataDate.isDefined).map(o => (o.machinePK, o.dataDate))
       machineInstitutionPK <- Machine.query.filter(m => (m.machinePK === md._1) && (m.institutionPK === institutionPK)).map(_.institutionPK)
-    } yield (md._2)
+    } yield md._2
 
     val list = search.sorted.take(num = 1)
 

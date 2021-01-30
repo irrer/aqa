@@ -99,8 +99,8 @@ class DailyQACSVCacheComposite(hostRef: String, institutionPK: Long) extends Cac
 
   private case class Col(header: String, toText: BBbyEPIDComposite.DailyDataSetComposite => String) {}
 
-  val MachineColHeader = "Machine"
-  val PatientIDColHeader = "PatientID"
+  private val MachineColHeader = "Machine"
+  private val PatientIDColHeader = "PatientID"
 
   private val colList = Seq[Col](
     Col(MachineColHeader, dataSet => dataSet.machine.id),
@@ -250,27 +250,3 @@ class DailyQACSVCacheComposite(hostRef: String, institutionPK: Long) extends Cac
 
   override protected def getInstitutionPK: Long = institutionPK
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

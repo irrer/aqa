@@ -1,43 +1,36 @@
 package org.aqa.db
 
-import Db.driver.api._
-import org.aqa.Config
+import com.pixelmed.dicom.AttributeList
+import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.AngleType
 import org.aqa.Util
-import java.io.File
-import scala.xml.XML
-import scala.xml.Node
-import scala.xml.Elem
+import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
-import org.aqa.run.ProcedureStatus
-import javax.vecmath.Point3d
+
 import java.sql.Timestamp
 import java.util.Date
-import org.aqa.AngleType
-import edu.umro.ScalaUtil.Trace
-import com.pixelmed.dicom.AttributeList
-import java.io.ByteArrayInputStream
-import com.pixelmed.dicom.DicomInputStream
-import edu.umro.ScalaUtil.DicomUtil
+import javax.vecmath.Point3d
+import scala.xml.Elem
 
 /**
  * Store the analysis results for one EPID image containing a BB.
  */
 case class BBbyEPID(
-  bbByEPIDPK: Option[Long], // primary key
-  outputPK: Long, // output primary key
-  epidSOPInstanceUid: String, // SOP instance UID of EPID image
-  offset_mm: Double, // distance between measured EPID position and expected (plan) location (aka: positioning error)
-  gantryAngle_deg: Double, // gantry angle in degrees
-  status: String, // termination status
-  epidImageX_mm: Double, // X position in EPID image in DICOM gantry coordinates.  Origin (0,0) is in the center, positive direction is to the right.
-  epidImageY_mm: Double, // Y position in EPID image in DICOM gantry coordinates.  Origin (0,0) is in the center, positive direction is up.  Note the the direction is opposite to that given by <code>edu.umro.ImageUtil.IsoImagePlaneTranslator</code>.
-  epid3DX_mm: Double, // X position in EPID in 3D plan space
-  epid3DY_mm: Double, // Y position in EPID in 3D plan space
-  epid3DZ_mm: Double, // Z position in EPID in 3D plan space
-  tableXlateral_mm: Double, // table position in X dimension / lateral
-  tableYvertical_mm: Double, // table position in Y dimension / vertical
-  tableZlongitudinal_mm: Double, // table position in Z dimension / longitudinal
-  metadata_dcm_zip: Option[Array[Byte]]) { // DICOM without image for the slice referenced by this EPID
+                     bbByEPIDPK: Option[Long], // primary key
+                     outputPK: Long, // output primary key
+                     epidSOPInstanceUid: String, // SOP instance UID of EPID image
+                     offset_mm: Double, // distance between measured EPID position and expected (plan) location (aka: positioning error)
+                     gantryAngle_deg: Double, // gantry angle in degrees
+                     status: String, // termination status
+                     epidImageX_mm: Double, // X position in EPID image in DICOM gantry coordinates.  Origin (0,0) is in the center, positive direction is to the right.
+                     epidImageY_mm: Double, // Y position in EPID image in DICOM gantry coordinates.  Origin (0,0) is in the center, positive direction is up.  Note the the direction is opposite to that given by <code>edu.umro.ImageUtil.IsoImagePlaneTranslator</code>.
+                     epid3DX_mm: Double, // X position in EPID in 3D plan space
+                     epid3DY_mm: Double, // Y position in EPID in 3D plan space
+                     epid3DZ_mm: Double, // Z position in EPID in 3D plan space
+                     tableXlateral_mm: Double, // table position in X dimension / lateral
+                     tableYvertical_mm: Double, // table position in Y dimension / vertical
+                     tableZlongitudinal_mm: Double, // table position in Z dimension / longitudinal
+                     metadata_dcm_zip: Option[Array[Byte]]) { // DICOM without image for the slice referenced by this EPID
 
   def insert: BBbyEPID = {
     val insertQuery = BBbyEPID.query returning BBbyEPID.query.map(_.bbByEPIDPK) into ((bbByEPID, bbByEPIDPK) => bbByEPID.copy(bbByEPIDPK = Some(bbByEPIDPK)))
@@ -46,7 +39,7 @@ case class BBbyEPID(
     result
   }
 
-  def insertOrUpdate = Db.run(BBbyEPID.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(BBbyEPID.query.insertOrUpdate(this))
 
   override def toString: String =
     "bbByEPIDPK : " + bbByEPIDPK +
@@ -61,10 +54,10 @@ case class BBbyEPID(
 
   val epid = new Point3d(epid3DX_mm, epid3DY_mm, epid3DZ_mm)
 
-  val isVert = AngleType.isAngleType(Util.angleRoundedTo90(gantryAngle_deg), AngleType.vertical)
-  val isHorz = !isVert
+  val isVert: Boolean = AngleType.isAngleType(Util.angleRoundedTo90(gantryAngle_deg), AngleType.vertical)
+  val isHorz: Boolean = !isVert
 
-  val attributeList = {
+  val attributeList: AttributeList = {
     if (metadata_dcm_zip.isEmpty || metadata_dcm_zip.get.isEmpty)
       new AttributeList
     else
@@ -73,22 +66,37 @@ case class BBbyEPID(
 }
 
 object BBbyEPID extends ProcedureOutput {
+
   class BBbyEPIDTable(tag: Tag) extends Table[BBbyEPID](tag, "bbByEPID") {
 
     def bbByEPIDPK = column[Long]("bbByEPIDPK", O.PrimaryKey, O.AutoInc)
+
     def outputPK = column[Long]("outputPK")
+
     def epidSOPInstanceUid = column[String]("epidSOPInstanceUid")
+
     def offset_mm = column[Double]("offset_mm")
+
     def gantryAngle_deg = column[Double]("gantryAngle_deg")
+
     def status = column[String]("status")
+
     def epidImageX_mm = column[Double]("epidImageX_mm")
+
     def epidImageY_mm = column[Double]("epidImageY_mm")
+
     def epid3DX_mm = column[Double]("epid3DX_mm")
+
     def epid3DY_mm = column[Double]("epid3DY_mm")
+
     def epid3DZ_mm = column[Double]("epid3DZ_mm")
+
     def tableXlateral_mm = column[Double]("tableXlateral_mm")
+
     def tableYvertical_mm = column[Double]("tableYvertical_mm")
+
     def tableZlongitudinal_mm = column[Double]("tableZlongitudinal_mm")
+
     def metadata_dcm_zip = column[Option[Array[Byte]]]("metadata_dcm_zip")
 
     def * = (
@@ -106,7 +114,7 @@ object BBbyEPID extends ProcedureOutput {
       tableXlateral_mm,
       tableYvertical_mm,
       tableZlongitudinal_mm,
-      metadata_dcm_zip) <> ((BBbyEPID.apply _)tupled, BBbyEPID.unapply _)
+      metadata_dcm_zip) <> (BBbyEPID.apply _ tupled, BBbyEPID.unapply)
 
     def outputFK = foreignKey("BBbyEPID_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -118,9 +126,9 @@ object BBbyEPID extends ProcedureOutput {
   def get(bbByEPIDPK: Long): Option[BBbyEPID] = {
     val action = for {
       inst <- BBbyEPID.query if inst.bbByEPIDPK === bbByEPIDPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   /**
@@ -129,7 +137,7 @@ object BBbyEPID extends ProcedureOutput {
   def getByOutput(outputPK: Long): Seq[BBbyEPID] = {
     val action = for {
       inst <- BBbyEPID.query if inst.outputPK === outputPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
     list
   }
@@ -147,7 +155,8 @@ object BBbyEPID extends ProcedureOutput {
   }
 
   def xmlToList(elem: Elem, outputPK: Long): Seq[BBbyEPID] = {
-    ???
+    if ((outputPK == -1) || (elem != null)) throw new RuntimeException("BBbyEPID.xmlToList should never be called")
+    Seq()
   }
 
   override def insert(elem: Elem, outputPK: Long): Int = {
@@ -162,7 +171,7 @@ object BBbyEPID extends ProcedureOutput {
   }
 
   case class BBbyEPIDHistory(date: Date, bbByEPID: BBbyEPID) {
-    override def toString = {
+    override def toString: String = {
       "date: " + date + "    " + bbByEPID
     }
   }
@@ -170,25 +179,26 @@ object BBbyEPID extends ProcedureOutput {
   /**
    * Get the BBbyEPID results that are nearest in time to the given date.
    *
-   * @param machinePK: For this machine
-   *
-   * @param procedurePK: For this procedure
+   * @param machinePK   : For this machine
+   * @param procedurePK : For this procedure
    */
-  def history(machinePK: Long, procedurePK: Long) = {
+  def history(machinePK: Long, procedurePK: Long): Seq[BBbyEPIDHistory] = {
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
       bbByEPID <- BBbyEPID.query.filter(c => c.outputPK === output._1)
-    } yield ((output._2, bbByEPID))
+    } yield (output._2, bbByEPID)
     //println(sorted.result.statements.mkString("\n    "))
-    val result = Db.run(search.result).map(h => new BBbyEPIDHistory(h._1.get, h._2)).sortBy(_.date.getTime)
+    val result = Db.run(search.result).map(h => BBbyEPIDHistory(h._1.get, h._2)).sortBy(_.date.getTime)
     result
   }
 
   /** EPID data and related results. */
   case class DailyDataSetEPID(output: Output, machine: Machine, bbByEPID: BBbyEPID) {
     private val angType = AngleType.classifyAngle(bbByEPID.gantryAngle_deg)
-    def isHorz = angType.isDefined && angType.get.toString.equals(AngleType.horizontal.toString)
-    def isVert = angType.isDefined && angType.get.toString.equals(AngleType.vertical.toString)
+
+    def isHorz: Boolean = angType.isDefined && angType.get.toString.equals(AngleType.horizontal.toString)
+
+    def isVert: Boolean = angType.isDefined && angType.get.toString.equals(AngleType.vertical.toString)
   }
 
   /**
@@ -201,13 +211,32 @@ object BBbyEPID extends ProcedureOutput {
 
     val search = for {
       output <- Output.query.filter(o => o.dataDate.isDefined && (o.dataDate >= beginDate) && (o.dataDate < endDate))
-      bbByEPID <- BBbyEPID.query.filter(c => (c.outputPK === output.outputPK))
+      bbByEPID <- BBbyEPID.query.filter(c => c.outputPK === output.outputPK)
       machine <- Machine.query.filter(m => (m.machinePK === output.machinePK) && (m.institutionPK === institutionPK))
-      cbct <- BBbyEPID.query.filter(c => c.bbByEPIDPK === bbByEPID.bbByEPIDPK)
     } yield (output, machine, bbByEPID)
 
-    val seq = Db.run(search.result).map(omc => new DailyDataSetEPID(omc._1, omc._2, omc._3))
+    val seq = Db.run(search.result).map(omc => DailyDataSetEPID(omc._1, omc._2, omc._3))
     seq
   }
 
+  /**
+   * Get the earliest date+time of an EPID result.
+   *
+   * @param institutionPK Get for this institution.
+   * @return The date+time of the first composite result, if there is at least one.
+   */
+  def getEarliestDate(institutionPK: Long): Option[Timestamp] = {
+
+    val search = for {
+      epidOutputPK <- BBbyEPID.query.map(_.outputPK)
+      md <- Output.query.filter(o => (epidOutputPK === o.outputPK) && o.dataDate.isDefined).map(o => (o.machinePK, o.dataDate))
+      _ <- Machine.query.filter(m => (m.machinePK === md._1) && (m.institutionPK === institutionPK)).map(_.institutionPK)
+    } yield md._2
+
+    val list = search.sorted.take(num = 1)
+
+    val result = Db.run(list.result).flatten
+
+    result.headOption
+  }
 }
