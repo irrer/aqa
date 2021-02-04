@@ -17,6 +17,7 @@ import org.aqa.db.Db.driver.api._
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.sql.Timestamp
+import java.util.Date
 
 /**
  * Store the contents of a DICOM series.
@@ -61,7 +62,7 @@ case class DicomSeries(
     result
   }
 
-  def insertOrUpdate = Db.run(DicomSeries.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(DicomSeries.query.insertOrUpdate(this))
 
 
   /**
@@ -76,7 +77,6 @@ case class DicomSeries(
   def attributeListList: Seq[AttributeList] = {
 
     if (content.nonEmpty) {
-      val contentList = FileUtil.writeZipToNamedByteArrays(new ByteArrayInputStream(content.get)).map(_._2)
       val alList = DicomUtil.zippedByteArrayToDicom(content.get)
       alList
     } else {
@@ -87,10 +87,10 @@ case class DicomSeries(
     }
   }
 
-  override def toString = {
+  override def toString: String = {
 
-    val contentText = if ((content != null) && (content.isDefined)) {
-      "\n    content size: " + content.get.size
+    val contentText = if ((content != null) && content.isDefined) {
+      "\n    content size: " + content.get.length
     } else {
       "\n    content: null"
     }
@@ -166,7 +166,7 @@ object DicomSeries extends Logging {
       patientID,
       size,
       referencedRtplanUID,
-      content) <> (DicomSeries.apply _ tupled, DicomSeries.unapply _)
+      content) <> (DicomSeries.apply _ tupled, DicomSeries.unapply)
 
     /* Note that accidental data deletion is protected by attempts to remove a machine.  If the
        user does confirm that they want a machine deleted, then the associated DicomSeries will be deleted automatically. */
@@ -185,7 +185,7 @@ object DicomSeries extends Logging {
   def get(dicomSeriesPK: Long): Option[DicomSeries] = {
     val action = for {
       dicomSeries <- query if dicomSeries.dicomSeriesPK === dicomSeriesPK
-    } yield (dicomSeries)
+    } yield dicomSeries
     val list = Db.run(action.result)
     list.headOption
   }
@@ -196,15 +196,15 @@ object DicomSeries extends Logging {
   def getByInputPK(inputPK: Long): Seq[DicomSeries] = {
     val action = for {
       dicomSeries <- query if dicomSeries.inputPK === inputPK
-    } yield (dicomSeries)
+    } yield dicomSeries
     val list = Db.run(action.result)
     list
   }
 
   def getByFrameUIDAndSOPClass(frameUIDSet: Set[String], sopClassUID: String): Seq[DicomSeries] = {
     val action = for {
-      dicomSeries <- query if (dicomSeries.frameOfReferenceUID.inSet(frameUIDSet) && (dicomSeries.sopClassUID === sopClassUID))
-    } yield (dicomSeries)
+      dicomSeries <- query if dicomSeries.frameOfReferenceUID.inSet(frameUIDSet) && (dicomSeries.sopClassUID === sopClassUID)
+    } yield dicomSeries
     val list = Db.run(action.result)
     list
   }
@@ -218,20 +218,19 @@ object DicomSeries extends Logging {
     val withBlankPrefix = "% " + sopInstUID
     val withBlankSuffix = sopInstUID + " %"
     val action = for {
-      dicomSeries <- query if (
-        (dicomSeries.sopInstanceUIDList === sopInstUID) ||
-          (dicomSeries.sopInstanceUIDList like withBlanks) ||
-          (dicomSeries.sopInstanceUIDList like withBlankPrefix) ||
-          (dicomSeries.sopInstanceUIDList like withBlankSuffix))
-    } yield (dicomSeries)
+      dicomSeries <- query if (dicomSeries.sopInstanceUIDList === sopInstUID) ||
+        (dicomSeries.sopInstanceUIDList like withBlanks) ||
+        (dicomSeries.sopInstanceUIDList like withBlankPrefix) ||
+        (dicomSeries.sopInstanceUIDList like withBlankSuffix)
+    } yield dicomSeries
     val list = Db.run(action.result)
     list
   }
 
   def getBySeriesInstanceUID(seriesInstanceUID: String): Seq[DicomSeries] = {
     val action = for {
-      dicomSeries <- query if ((dicomSeries.seriesInstanceUID === seriesInstanceUID))
-    } yield (dicomSeries)
+      dicomSeries <- query if dicomSeries.seriesInstanceUID === seriesInstanceUID
+    } yield dicomSeries
     val list = Db.run(action.result)
     Trace.trace("Got list for ser UID " + seriesInstanceUID + "  of size: " + list.size)
     list
@@ -239,8 +238,8 @@ object DicomSeries extends Logging {
 
   def getByReferencedRtplanUID(referencedRtplanUID: String): Seq[DicomSeries] = {
     val action = for {
-      dicomSeries <- query if ((dicomSeries.referencedRtplanUID === referencedRtplanUID))
-    } yield (dicomSeries)
+      dicomSeries <- query if dicomSeries.referencedRtplanUID === referencedRtplanUID
+    } yield dicomSeries
     val list = Db.run(action.result)
     list
   }
@@ -264,7 +263,7 @@ object DicomSeries extends Logging {
 
   def getByPatientID(patientID: String): Seq[DicomSeriesWithoutContent] = {
     val action = for {
-      ds <- query if ((ds.patientID === patientID))
+      ds <- query if ds.patientID === patientID
     } yield (
       ds.dicomSeriesPK,
       ds.userPK,
@@ -282,7 +281,7 @@ object DicomSeries extends Logging {
       ds.size,
       ds.referencedRtplanUID)
     val list = Db.run(action.result)
-    val dsLite = list.map(ds => new DicomSeriesWithoutContent(
+    val dsLite = list.map(ds => DicomSeriesWithoutContent(
       ds._1,
       ds._2,
       ds._3,
@@ -313,15 +312,15 @@ object DicomSeries extends Logging {
   def makeDicomSeries(usrPK: Long, inpPK: Option[Long], machPK: Option[Long], alList: Seq[AttributeList]): Option[DicomSeries] = {
     // Doing a lot of things with undependable data so wrap this in a try-catch to cover all the bases
     try {
-      val datePatID = alList.map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al))
+      //val datePatID = alList.map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al))
 
       case class DPAl(al: AttributeList) {
         private val dp = Util.extractDateTimeAndPatientIdFromDicomAl(al)
-        val date = dp._1.head
-        val patId = dp._2
+        val date: Date = dp._1.head
+        val patId: Option[String] = dp._2
       }
 
-      val sorted = alList.map(al => new DPAl(al)).sortBy(_.date.getTime)
+      val sorted = alList.map(al => DPAl(al)).sortBy(_.date.getTime)
 
       def byTag(tag: AttributeTag): Option[String] = {
         val s = if (sorted.nonEmpty && (sorted.head.al.get(tag) != null))
@@ -333,9 +332,9 @@ object DicomSeries extends Logging {
 
       def getReferencedRtplanUID: Option[String] = {
         val seqList = alList.filter(al => al.get(TagByName.ReferencedRTPlanSequence) != null)
-        val refList = seqList.map(seq => DicomUtil.seqToAttr(seq, TagByName.ReferencedRTPlanSequence)).flatten
+        val refList = seqList.flatMap(seq => DicomUtil.seqToAttr(seq, TagByName.ReferencedRTPlanSequence))
         val uidList = refList.filter(ref => ref.get(TagFromName.ReferencedSOPInstanceUID) != null).map(ref => ref.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrNull)
-        val rtplanUid = uidList.filter(uid => uid != null).headOption
+        val rtplanUid = uidList.find(uid => uid != null)
         rtplanUid
       }
 
@@ -366,7 +365,7 @@ object DicomSeries extends Logging {
 
       def getDate = new Timestamp(sorted.head.date.getTime)
 
-      def getPatientID = sorted.map(_.patId).flatten.headOption
+      def getPatientID = sorted.flatMap(_.patId).headOption
 
       def getSize = sorted.size
 
@@ -379,7 +378,7 @@ object DicomSeries extends Logging {
       def getMappedFrameOfReferenceUID: Option[String] = {
         if (getFrameOfReferenceUID.isDefined) {
           val mainFrmOfRef = getFrameOfReferenceUID.get
-          val allFrmOfRef = alList.map(al => DicomUtil.findAllSingle(al, TagFromName.FrameOfReferenceUID)).flatten.map(a => a.getSingleStringValueOrNull).filterNot(uid => uid == null).distinct
+          val allFrmOfRef = alList.flatMap(al => DicomUtil.findAllSingle(al, TagFromName.FrameOfReferenceUID)).map(a => a.getSingleStringValueOrNull).filterNot(uid => uid == null).distinct
           val mapped = allFrmOfRef.filterNot(frmOfRef => frmOfRef.equals(mainFrmOfRef)).headOption
           mapped
         } else
@@ -405,10 +404,9 @@ object DicomSeries extends Logging {
         getContent)
       Some(ds)
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         logger.warn("Unexpected error while creating DicomSeries: " + fmtEx(t))
         None
-      }
     }
   }
 
@@ -417,8 +415,8 @@ object DicomSeries extends Logging {
    */
   private def seriesExists(seriesInstanceUID: String): Boolean = {
     val action = for {
-      dicomSeries <- query if ((dicomSeries.seriesInstanceUID === seriesInstanceUID))
-    } yield (dicomSeries.seriesInstanceUID)
+      dicomSeries <- query if dicomSeries.seriesInstanceUID === seriesInstanceUID
+    } yield dicomSeries.seriesInstanceUID
     val size = Db.run(action.length.result)
     size > 0
   }
@@ -430,7 +428,7 @@ object DicomSeries extends Logging {
     if (alList.isEmpty) throw new IllegalArgumentException("List of DICOM slices is empty")
     val uidList = alList.map(al => Util.serInstOfAl(al)).distinct
     if (uidList.size > 1) throw new IllegalArgumentException("List of DICOM slices have more than one series UID: " + uidList.mkString("    "))
-    if (uidList.isEmpty) throw new IllegalArgumentException("List of DICOM slices has no SeriesInstanceUID's")
+    if (uidList.isEmpty) throw new IllegalArgumentException("List of DICOM slices has no SeriesInstanceUIDs")
 
     if (seriesExists(uidList.head)) {
       logger.info("Not inserting series into the database because it is already in the database")
@@ -450,10 +448,10 @@ object DicomSeries extends Logging {
   /**
    * Get a list of all known RTPLAN device serial numbers
    */
-  def planDeviceSerialNumberList = {
+  def planDeviceSerialNumberList: Seq[String] = {
     val action = for {
-      dicomSeries <- query if ((dicomSeries.sopClassUID === SOPClass.RTPlanStorage))
-    } yield (dicomSeries.deviceSerialNumber)
+      dicomSeries <- query if dicomSeries.sopClassUID === SOPClass.RTPlanStorage
+    } yield dicomSeries.deviceSerialNumber
     val list = Db.run(action.result)
     list.flatten.distinct
   }
@@ -463,18 +461,18 @@ object DicomSeries extends Logging {
   // ------------------------------------------------------------------------------------------------------------------------
   // ------------------------------------------------------------------------------------------------------------------------
 
-  private def deleteOrphans: Unit = {
+  private def deleteOrphans(): Unit = {
     println("deleteOrphans DicomSeries starting ...")
     val start = System.currentTimeMillis
 
     // get list of inputs
-    val actionInput = for {inPk <- Input.query.map(i => i.inputPK)} yield (inPk)
+    val actionInput = for {inPk <- Input.query.map(i => i.inputPK)} yield inPk
     val inputPKset = Db.run(actionInput.result).toSet
 
     // get list of DicomSeries
-    case class Ref(dicomSeriesPK: Long, inputPK: Option[Long], modality: String);
-    val action1 = for {ref <- DicomSeries.query.map(ds => (ds.dicomSeriesPK, ds.inputPK, ds.modality))} yield (ref)
-    val listOfDicomSeries = Db.run(action1.result).map(ref => new Ref(ref._1, ref._2, ref._3))
+    case class Ref(dicomSeriesPK: Long, inputPK: Option[Long], modality: String)
+    val action1 = for {ref <- DicomSeries.query.map(ds => (ds.dicomSeriesPK, ds.inputPK, ds.modality))} yield ref
+    val listOfDicomSeries = Db.run(action1.result).map(ref => Ref(ref._1, ref._2, ref._3))
     logger.info("Number of DicomSeries found: " + listOfDicomSeries.size)
 
     val listToDelete = listOfDicomSeries.
@@ -494,12 +492,12 @@ object DicomSeries extends Logging {
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  private def populateFromInput = {
+  private def populateFromInput(): Unit = {
     println("populate DicomSeries starting ...")
     val start = System.currentTimeMillis
     // get list of inputs
     val inputPKseq = {
-      val actionInput = for {inPk <- Input.query.map(i => i.inputPK)} yield (inPk)
+      val actionInput = for {inPk <- Input.query.map(i => i.inputPK)} yield inPk
       Db.run(actionInput.result)
     }
     println("populate DicomSeries number of inputs to process: " + inputPKseq.size)
@@ -508,10 +506,10 @@ object DicomSeries extends Logging {
 
     def ensureDS(inPK: Long) {
       InputFiles.get(inPK) match {
-        case Some(inputFiles) => {
+        case Some(inputFiles) =>
           println("Processing files for input " + inPK)
           val seriesList = DicomUtil.zippedByteArrayToDicom(inputFiles.zippedContent).groupBy(al => Util.serInstOfAl(al)) // TODO do not use zippedByteArrayToDicom
-          val missing = seriesList.filter(s => DicomSeries.getBySeriesInstanceUID(s._1).isEmpty).map(s => s._2)
+          val missing = seriesList.filter(s => DicomSeries.getBySeriesInstanceUID(s._1).isEmpty).values
 
           if (missing.nonEmpty) {
             println("For input " + inPK + " number of series missing: " + missing.size)
@@ -529,12 +527,11 @@ object DicomSeries extends Logging {
             })
 
           }
-        }
         case _ => println("no such input " + inPK)
       }
     }
 
-    inputPKseq.map(inPK => ensureDS(inPK))
+    inputPKseq.foreach(inPK => ensureDS(inPK))
     println("populateFromInput done.  Total missing: " + count + "   Elapsed ms: " + (System.currentTimeMillis - start))
   }
 
@@ -543,13 +540,13 @@ object DicomSeries extends Logging {
   /**
    * Find DicomSeries that have content but should not.
    */
-  private def trimOld = {
+  private def trimOld(): Unit = {
     val start = System.currentTimeMillis
 
     val trimList = {
       val action = for {
-        dicomSeries <- query.filter(ds => ((ds.modality =!= "RTPLAN") && (ds.content.isDefined))).map(ds => ds.dicomSeriesPK)
-      } yield (dicomSeries)
+        dicomSeries <- query.filter(ds => (ds.modality =!= "RTPLAN") && ds.content.isDefined).map(ds => ds.dicomSeriesPK)
+      } yield dicomSeries
       val list = Db.run(action.result)
       list
     }
@@ -558,17 +555,17 @@ object DicomSeries extends Logging {
 
     var trimCount = 0
 
-    def nullContent(dsPK: Long) = {
+    def nullContent(dsPK: Long): Unit = {
       try {
         val oldDs = DicomSeries.get(dsPK).get
-        if ((!oldDs.modality.equals("RTPLAN")) && (oldDs.content.isDefined)) {
+        if ((!oldDs.modality.equals("RTPLAN")) && oldDs.content.isDefined) {
           val newDs = oldDs.copy(content = null)
           trimCount = trimCount + 1
           if (Config.DicomSeriesTrim == Config.Fix.fix) {
             Trace.trace
             println("Going to trim content of " + newDs.dicomSeriesPK.get)
             Trace.trace
-            newDs.insertOrUpdate
+            newDs.insertOrUpdate()
             Trace.trace
             println("Trimmed content of " + newDs.dicomSeriesPK.get)
           } else {
@@ -582,7 +579,7 @@ object DicomSeries extends Logging {
       }
     }
 
-    trimList.map(dsPK => nullContent(dsPK))
+    trimList.foreach(dsPK => nullContent(dsPK))
     println("trimOld done.  trimCount: " + trimCount + "  Elapsed ms: " + (System.currentTimeMillis - start))
   }
 
@@ -591,25 +588,25 @@ object DicomSeries extends Logging {
   /**
    * Find DicomSeries that are linked to input but should not be
    */
-  private def unlinkRtplan = {
+  private def unlinkRtplan(): Unit = {
     val start = System.currentTimeMillis
     val unlinkList = {
       val action = for {
-        dicomSeries <- query.filter(ds => ((ds.modality === "RTPLAN") && (ds.inputPK.isDefined))).map(ds => ds.dicomSeriesPK)
-      } yield (dicomSeries)
+        dicomSeries <- query.filter(ds => (ds.modality === "RTPLAN") && ds.inputPK.isDefined).map(ds => ds.dicomSeriesPK)
+      } yield dicomSeries
       val list = Db.run(action.result)
       list
     }
 
     println("Number of DicomSeries rows that need to be unlinked from inputPK: " + unlinkList.size)
 
-    def unlinkInputPK(dsPK: Long) = {
+    def unlinkInputPK(dsPK: Long): Unit = {
       try {
         val oldDs = DicomSeries.get(dsPK).get
-        if ((oldDs.modality.equals("RTPLAN")) && (oldDs.inputPK.isDefined)) {
+        if (oldDs.modality.equals("RTPLAN") && oldDs.inputPK.isDefined) {
           val newDs = oldDs.copy(inputPK = None)
           if (Config.DicomSeriesUnlinkInputPK == Config.Fix.fix) {
-            newDs.insertOrUpdate
+            newDs.insertOrUpdate()
             println("Unlinked content of " + newDs)
           } else {
             println("Did NOT unlink content of " + newDs.dicomSeriesPK.get)
@@ -622,19 +619,19 @@ object DicomSeries extends Logging {
       }
     }
 
-    unlinkList.map(dsPK => unlinkInputPK(dsPK))
+    unlinkList.foreach(dsPK => unlinkInputPK(dsPK))
     println("unlinkRtplan done.  Elapsed ms: " + (System.currentTimeMillis - start))
   }
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  private def deleteOrphanOutputs = {
+  private def deleteOrphanOutputs() = {
     val search = Output.query.filter(o => o.machinePK.isEmpty)
     val list = Db.run(search.result)
     println("list of output PK's that have a null Machine reference: " + list.map(o => o.outputPK.get).mkString("    "))
     println("Number of outputs that have a null Machine reference: " + list.size)
 
-    def deleteOrphan(output: Output) = {
+    def deleteOrphan(output: Output): Unit = {
       if (Config.DicomSeriesOrphanOutputs == Config.Fix.fix) {
         try {
           println("removing output " + output.outputPK.get + " with input " + output.inputPK)
@@ -642,9 +639,8 @@ object DicomSeries extends Logging {
           Input.delete(output.inputPK)
           Util.deleteFileTreeSafely(input.dir)
         } catch {
-          case t: Throwable => {
+          case t: Throwable =>
             println("error removing output " + output.outputPK.get + " with input " + output.inputPK + " : " + fmtEx(t))
-          }
         }
       } else {
         println("NOT removing output " + output.outputPK.get + " with input " + output.inputPK)
@@ -661,13 +657,12 @@ object DicomSeries extends Logging {
       println("getting DICOM for " + ds.seriesInstanceUID)
       val alList = ds.attributeListList
       println("got DICOM for " + ds.seriesInstanceUID)
-      val count = alList.map(al => println(Util.sopOfAl(al))).size
+      alList.foreach(al => println(Util.sopOfAl(al)))
       true
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         println("Unable to validate DICOM series for dicomSeriesPK: " + ds.dicomSeriesPK + "\n" + fmtEx(t))
         false
-      }
     }
   }
 
@@ -676,14 +671,16 @@ object DicomSeries extends Logging {
   /**
    * Verify that the series is in the database.  If not, and if 'fix' is set, then put it in the database.
    */
-  private def verifySharedInDicomSeries = {
+  private def verifySharedInDicomSeries(): Unit = {
     Trace.trace
-    val dfList = Util.listDirFiles(Config.sharedDir).map(f => (new DicomFile(f)))
+    val dfList = Util.listDirFiles(Config.sharedDir).map(f => new DicomFile(f))
 
+    /*
     def dfToStr(df: DicomFile): String = {
       val serUid = if (df.attributeList.isDefined) Util.serInstOfAl(df.attributeList.get) else "NA"
       serUid + " : " + df.file.getName
     }
+    */
 
     // Trace.trace("list of files in shared:\n" + dfList.map(df => dfToStr(df)).mkString("\n"))
     // val series = dfList.flatMap(df => df.attributeList).groupBy(al => Util.serInstOfAl(al))
@@ -717,12 +714,12 @@ object DicomSeries extends Logging {
 
             val dsList = {
               val action = for {
-                dicomSeries <- query if ((dicomSeries.patientID === patId))
-              } yield (dicomSeries)
+                dicomSeries <- query if dicomSeries.patientID === patId
+              } yield dicomSeries
               val list = Db.run(action.result)
               list
             }
-            val machPk = dsList.map(ds => ds.machinePK).flatten.headOption
+            val machPk = dsList.flatMap(ds => ds.machinePK).headOption
             if (machPk.nonEmpty) {
               Trace.trace("for SOP " + Util.sopOfAl(al) + "    Found machine by patient ref: " + machPk)
               dsList.head.machinePK
@@ -774,13 +771,13 @@ object DicomSeries extends Logging {
     }
 
     Trace.trace
-    alList.map(saveAlList)
+    alList.foreach(saveAlList)
     Trace.trace
   }
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  private def putRtplansFromInputsIntoDicomSeries = {
+  private def putRtplansFromInputsIntoDicomSeries(): Unit = {
     Trace.trace
     val list = {
       val action = for {inFiles <- InputFiles.query} yield (inFiles.inputFilesPK, inFiles.inputPK)
@@ -788,7 +785,7 @@ object DicomSeries extends Logging {
     }
     Trace.trace("Number of InputFiles: " + list.size)
 
-    def putIfNeeded(ser: String, rtplan: Seq[AttributeList]) = {
+    def putIfNeeded(ser: String): Unit = {
       val dsList = DicomSeries.getBySeriesInstanceUID(ser)
       if (dsList.isEmpty) {
         Trace.trace("Series " + ser + " is not in DicomSeries table.")
@@ -819,7 +816,7 @@ object DicomSeries extends Logging {
       val content = InputFiles.get(filePk).get.zippedContent
       val rtplanSeriesList = DicomUtil.zippedByteArrayToDicom(content).filter(al => Util.modalityOfAl(al) == "RTPLAN").groupBy(al => Util.serInstOfAl(al))
       Trace.trace("Number of RTPLAN series found in " + inPk + " : " + rtplanSeriesList.size)
-      rtplanSeriesList.map(serPlan => putIfNeeded(serPlan._1, serPlan._2))
+      rtplanSeriesList.map(serPlan => putIfNeeded(serPlan._1))
     }
 
     list.map(fp => putFp(fp._1, fp._2))
@@ -831,20 +828,19 @@ object DicomSeries extends Logging {
   /**
    * List RTPLAN series that have bad/non-unzippable content.  If 'fix', then remove.
    */
-  private def findBadRtplans = {
+  private def findBadRtplans(): Unit = {
     Trace.trace
 
     val outDir = new File(Config.tmpDirFile, "saveDs")
     outDir.mkdirs
 
     val action = for {
-      ds <- query if ((ds.modality === "RTPLAN"))
-    } yield (
-      ds.dicomSeriesPK)
+      ds <- query if ds.modality === "RTPLAN"
+    } yield ds.dicomSeriesPK
     val list = Db.run(action.result)
     Trace.trace("total RTPLANs in db: " + list.size)
 
-    def process(pk: Long) = {
+    def process(pk: Long): Unit = {
       val ds = DicomSeries.get(pk).get
       if (ds.content.isDefined && (ds.content.get != null)) {
         val outFile = new File(outDir, "ds-" + pk + "-" + ds.seriesInstanceUID)
@@ -870,7 +866,7 @@ object DicomSeries extends Logging {
     }
 
     Trace.trace
-    list.map(pk => process(pk))
+    list.foreach(pk => process(pk))
     Trace.trace("Done with findBadRtplans")
   }
 
@@ -881,21 +877,21 @@ object DicomSeries extends Logging {
       DbSetup.init
       val start = System.currentTimeMillis
       Trace.trace("DicomSeries cleanup starting ------------------------------------------------------------------------------")
-      if (Config.DicomSeriesDeleteOrphans != Config.Fix.ignore) deleteOrphans
+      if (Config.DicomSeriesDeleteOrphans != Config.Fix.ignore) deleteOrphans()
       Trace.trace
-      if (Config.DicomSeriesPopulateFromInput != Config.Fix.ignore) populateFromInput
+      if (Config.DicomSeriesPopulateFromInput != Config.Fix.ignore) populateFromInput()
       Trace.trace
-      if (Config.DicomSeriesTrim != Config.Fix.ignore) trimOld
+      if (Config.DicomSeriesTrim != Config.Fix.ignore) trimOld()
       Trace.trace
-      if (Config.DicomSeriesUnlinkInputPK != Config.Fix.ignore) unlinkRtplan
+      if (Config.DicomSeriesUnlinkInputPK != Config.Fix.ignore) unlinkRtplan()
       Trace.trace
-      if (Config.DicomSeriesShared != Config.Fix.ignore) verifySharedInDicomSeries
+      if (Config.DicomSeriesShared != Config.Fix.ignore) verifySharedInDicomSeries()
       Trace.trace
-      if (Config.DicomSeriesOrphanOutputs != Config.Fix.ignore) deleteOrphanOutputs
+      if (Config.DicomSeriesOrphanOutputs != Config.Fix.ignore) deleteOrphanOutputs()
       Trace.trace
-      if (Config.DicomSeriesFindBadRtplans != Config.Fix.ignore) findBadRtplans
+      if (Config.DicomSeriesFindBadRtplans != Config.Fix.ignore) findBadRtplans()
       Trace.trace
-      if (Config.DicomSeriesInput != Config.Fix.ignore) putRtplansFromInputsIntoDicomSeries
+      if (Config.DicomSeriesInput != Config.Fix.ignore) putRtplansFromInputsIntoDicomSeries()
       Trace.trace
       val elapsed = System.currentTimeMillis - start
       Trace.trace("DicomSeries cleanup finished.  Elapsed ms: " + elapsed + " ------------------------------------------------------------------------------")
