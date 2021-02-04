@@ -1,17 +1,11 @@
 package org.aqa.webrun.dailyQA
 
-import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.TagFromName
-import com.pixelmed.dicom.ValueRepresentation
 import edu.umro.DicomDict.TagByName
-import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.AngleType
-import org.aqa.AnonymizeUtil
 import org.aqa.Util
 import org.aqa.db.BBbyEPIDComposite
-import org.aqa.db.DicomAnonymous
-import org.aqa.db.Machine
 import org.aqa.run.CacheCSV
 import org.aqa.web.ViewOutput
 
@@ -54,48 +48,23 @@ class DailyQACSVCacheComposite(hostRef: String, institutionPK: Long) extends Cac
     (distList.max / 10).toString
   }
 
-  private def getValues(al: AttributeList, tag: AttributeTag, scale: Double): Seq[String] = {
-    val at = al.get(tag)
-    if (at == null) {
-      Seq("NA", "NA", "NA")
-    }
-    val vr = DicomUtil.dictionary.getValueRepresentationFromTag(tag)
-    val numList = vr match {
-      case _ if ValueRepresentation.isIntegerStringVR(vr) => at.getIntegerValues
-      case _ if ValueRepresentation.isLongStringVR(vr) => at.getLongValues
-
-      case _ if ValueRepresentation.isSignedLongVR(vr) => at.getLongValues
-      case _ if ValueRepresentation.isSignedShortVR(vr) => at.getLongValues
-
-      case _ if ValueRepresentation.isUnsignedLongVR(vr) => at.getLongValues
-      case _ if ValueRepresentation.isUnsignedShortVR(vr) => at.getShortValues
-
-      case _ if ValueRepresentation.isFloatDoubleVR(vr) => at.getDoubleValues.map(n => n * scale)
-      case _ if ValueRepresentation.isFloatSingleVR(vr) => at.getFloatValues.map(n => n * scale)
-
-      case _ if ValueRepresentation.isDecimalStringVR(vr) => at.getFloatValues.map(n => n * scale)
-
-      case _ => throw new RuntimeException("Unrecognized value representation: " + new String(vr))
-    }
-    numList.map(n => n.toString)
-  }
 
   private def getEpidValues(dataSet: BBbyEPIDComposite.DailyDataSetComposite, tag: AttributeTag, scale: Double = 1.0): Seq[String] = {
     val al = dataSet.bbByEpid.head.attributeList
-    getValues(al, tag, scale)
+    DailyQAUtil.getValues(al, tag, scale)
   }
 
   private def getEpidVertValues(dataSet: BBbyEPIDComposite.DailyDataSetComposite, tag: AttributeTag, scale: Double = 1.0): Seq[String] = {
     val al = dataSet.bbByEpid.filter(e => e.isVert).head.attributeList
-    getValues(al, tag, scale)
+    DailyQAUtil.getValues(al, tag, scale)
   }
 
   private def getEpidHorzValues(dataSet: BBbyEPIDComposite.DailyDataSetComposite, tag: AttributeTag, scale: Double = 1.0): Seq[String] = {
     val al = dataSet.bbByEpid.filter(e => e.isHorz).head.attributeList
-    getValues(al, tag, scale)
+    DailyQAUtil.getValues(al, tag, scale)
   }
 
-  private def getCbctValues(dataSet: BBbyEPIDComposite.DailyDataSetComposite, tag: AttributeTag, scale: Double = 1.0): Seq[String] = getValues(dataSet.cbct.attributeList, tag, scale)
+  private def getCbctValues(dataSet: BBbyEPIDComposite.DailyDataSetComposite, tag: AttributeTag, scale: Double = 1.0): Seq[String] = DailyQAUtil.getValues(dataSet.cbct.attributeList, tag, scale)
 
   private case class Col(header: String, toText: BBbyEPIDComposite.DailyDataSetComposite => String) {}
 
@@ -121,10 +90,7 @@ class DailyQACSVCacheComposite(hostRef: String, institutionPK: Long) extends Cac
     Col("Y/vert Table Posn CBCT cm", dataSet => (dataSet.cbct.tableYvertical_mm / 10).toString),
     Col("Z/lng Table Posn CBCT cm", dataSet => (dataSet.cbct.tableZlongitudinal_mm / 10).toString),
 
-    Col("Vert X/lat Table Posn EPID cm", dataSet => {
-      val j = epidTablePosition_cm(dataSet, AngleType.vertical)
-      j.head
-    }),
+    Col("Vert X/lat Table Posn EPID cm", dataSet => epidTablePosition_cm(dataSet, AngleType.vertical).head),
 
     Col("Vert X/lat Table Posn EPID cm", dataSet => epidTablePosition_cm(dataSet, AngleType.vertical).head),
     Col("Vert Y/vert Table Posn EPID cm", dataSet => epidTablePosition_cm(dataSet, AngleType.vertical)(1)),
@@ -201,50 +167,9 @@ class DailyQACSVCacheComposite(hostRef: String, institutionPK: Long) extends Cac
     val machineColIndex = colList.indexWhere(c => c.header.equals(MachineColHeader))
     val patientIdColIndex = colList.indexWhere(c => c.header.equals(PatientIDColHeader))
 
+    val deAnon = new DailyQADeAnonymize(institutionPK, machineColIndex = machineColIndex, patientIdColIndex = patientIdColIndex)
 
-    // Map id --> de-anonymized real id
-    val machineMap = {
-      val machineList = Machine.listMachinesFromInstitution(institutionPK)
-      val mm = machineList.map(machine => (machine.id, AnonymizeUtil.decryptWithNonce(machine.institutionPK, machine.id_real.get)))
-      mm.toMap
-    }
-
-    val patIdMap = DicomAnonymous.getAttributesByTag(institutionPK, Seq(TagFromName.PatientID)).
-      map(da => (da.value, AnonymizeUtil.decryptWithNonce(institutionPK, da.value_real))).toMap
-
-    /**
-     * Replace anonymized values with real values.
-     *
-     * @param line Entire text of one line.
-     * @return Same line with fields de-anonymized.
-     */
-    def deAnonymize(line: String): String = {
-      val columnList = line.split(",")
-      val mach = {
-        if (columnList.size < (machineColIndex + 1))
-          "unknown machine"
-        else {
-          val anon = columnList(machineColIndex)
-          if (machineMap.contains(anon)) machineMap(anon) else anon
-        }
-      }
-      val pat = {
-        if (columnList.size < (patientIdColIndex + 1))
-          "unknown Patient ID"
-        else {
-          val anon = columnList(patientIdColIndex)
-          if (patIdMap.contains(anon)) patIdMap(anon) else anon
-        }
-      }
-
-      val fixed = columnList.
-        patch(machineColIndex, Seq(mach), 1).
-        patch(patientIdColIndex, Seq(pat), 1)
-
-      fixed.mkString(",")
-    }
-
-    val processed = csvText.filter(line => line.nonEmpty).map(line => deAnonymize(line))
+    val processed = csvText.filter(line => line.nonEmpty).map(line => deAnon.deAnonymize(line))
     processed
   }
 

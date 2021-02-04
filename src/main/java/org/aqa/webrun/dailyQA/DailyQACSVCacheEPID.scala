@@ -1,17 +1,11 @@
 package org.aqa.webrun.dailyQA
 
-import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.TagFromName
-import com.pixelmed.dicom.ValueRepresentation
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
-import org.aqa.AnonymizeUtil
 import org.aqa.Util
 import org.aqa.db.BBbyEPID
-import org.aqa.db.DicomAnonymous
-import org.aqa.db.Machine
 import org.aqa.run.CacheCSV
 import org.aqa.web.ViewOutput
 
@@ -22,100 +16,45 @@ class DailyQACSVCacheEPID(hostRef: String, institutionPK: Long) extends CacheCSV
 
 
   private def patientIdOf(dataSet: BBbyEPID.DailyDataSetEPID): String = {
-    val anonPatId = dataSet.bbByEPID.attributeList.get(TagFromName.PatientID).getSingleStringValueOrEmptyString
+    val anonPatId = dataSet.al.get(TagFromName.PatientID).getSingleStringValueOrEmptyString
     anonPatId
   }
 
   private def OperatorsName(dataSet: BBbyEPID.DailyDataSetEPID): String = {
-    val anonPatId = dataSet.bbByEPID.attributeList.get(TagFromName.OperatorsName).getSingleStringValueOrEmptyString
+    val anonPatId = dataSet.al.get(TagFromName.OperatorsName).getSingleStringValueOrEmptyString
     anonPatId
   }
 
 
   private def textFromAl(dataSet: BBbyEPID.DailyDataSetEPID, tag: AttributeTag): String = {
-    val attr = dataSet.bbByEPID.attributeList.get(tag)
+    val attr = dataSet.al.get(tag)
     if (attr == null) "NA"
     else attr.getSingleStringValueOrEmptyString
   }
 
-  private def dblOptToString10(d: Option[Double]) = if (d.isDefined) (d.get / 10).toString else "NA"
-
-  /**
-   * Get the list of X,Y,Z table positions for the EPID that is listed first with the requested angle type.  Return the values in cm.
-   */
-  /*
-  private def epidTablePosition_cm(dataSet: BBbyEPID.DailyDataSetEPID, angleType: AngleType.Value): Seq[String] = {
-    val vert = AngleType.isVert(angleType)
-    val list = dataSet.bbByEpid.find(epid => epid.isVert == vert) match {
-      case Some(epid) => Seq(epid.tableXlateral_mm, epid.tableYvertical_mm, epid.tableZlongitudinal_mm).map(t => (t / 10.0).toString)
-      case _ => Seq("NA", "NA", "NA")
-    }
-    list
-  }
-  */
-
-  /**
-   * Get the maximum distance that that table traveled between EPID images (has nothing to do with CBCT) in cm.
-   */
-  /*
-  private def epidMaxTravel_cm(dataSet: BBbyEPID.DailyDataSetEPID): String = {
-    val distList = for (a <- dataSet.bbByEpid; b <- dataSet.bbByEpid) yield {
-      val aa = new Point3d(a.tableXlateral_mm, a.tableYvertical_mm, a.tableZlongitudinal_mm)
-      val bb = new Point3d(b.tableXlateral_mm, b.tableYvertical_mm, b.tableZlongitudinal_mm)
-      aa.distance(bb)
-    }
-    (distList.max / 10).toString
-  }
-  */
-
-  private def getValues(al: AttributeList, tag: AttributeTag, scale: Double): Seq[String] = {
-    val list = DicomUtil.findAllSingle(al, tag)
-
-    if (list.isEmpty)
-      Seq("NA", "NA", "NA")
-    else {
-      val at = list.head
-      val vr = DicomUtil.dictionary.getValueRepresentationFromTag(tag)
-      val numList = vr match {
-        case _ if ValueRepresentation.isIntegerStringVR(vr) => at.getIntegerValues
-        case _ if ValueRepresentation.isLongStringVR(vr) => at.getLongValues
-
-        case _ if ValueRepresentation.isSignedLongVR(vr) => at.getLongValues
-        case _ if ValueRepresentation.isSignedShortVR(vr) => at.getLongValues
-
-        case _ if ValueRepresentation.isUnsignedLongVR(vr) => at.getLongValues
-        case _ if ValueRepresentation.isUnsignedShortVR(vr) => at.getShortValues
-
-        case _ if ValueRepresentation.isFloatDoubleVR(vr) => at.getDoubleValues.map(n => n * scale)
-        case _ if ValueRepresentation.isFloatSingleVR(vr) => at.getFloatValues.map(n => n * scale)
-
-        case _ if ValueRepresentation.isDecimalStringVR(vr) => at.getFloatValues.map(n => n * scale)
-
-        case _ => throw new RuntimeException("Unrecognized value representation: " + new String(vr))
-      }
-      numList.map(n => n.toString)
-    }
-  }
 
   private def getEpidValues(dataSet: BBbyEPID.DailyDataSetEPID, tag: AttributeTag, scale: Double = 1.0): Seq[String] = {
-    val al = dataSet.bbByEPID.attributeList
-    getValues(al, tag, scale)
+    val al = dataSet.al
+    DailyQAUtil.getValues(al, tag, scale)
   }
 
-  private def dateTimeFromEPID(dataSet: BBbyEPID.DailyDataSetEPID, dateTag: AttributeTag, timeTag: AttributeTag): String = {
-    val date = DicomUtil.getTimeAndDate(dataSet.bbByEPID.attributeList, dateTag, timeTag)
-    if (date.isDefined) Util.standardDateFormat.format(date.get) else "unknown"
-  }
 
   /**
-   * Format a number that is approximately zero.
+   * Get the date+time of the image.  Try for content date+time first, and if not available, use acquisition.
    *
-   * @param d Number to format.
-   * @return Number formatted as human friendly string.
+   * @param dataSet Get from here.
+   * @return A date+time formatted as a string, or "unknown"
    */
-  private def fmtSmall(d: Double): String = d.formatted("%20.12f").trim.replaceAll("00*$", "")
+  private def dateTimeFromEPID(dataSet: BBbyEPID.DailyDataSetEPID) = {
+    val c = DicomUtil.getTimeAndDate(dataSet.al, TagByName.ContentDate, TagByName.ContentTime)
+    val a = DicomUtil.getTimeAndDate(dataSet.al, TagByName.AcquisitionDate, TagByName.AcquisitionTime)
 
-  // private def getCbctValues(dataSet: BBbyEPID.DailyDataSetEPID, tag: AttributeTag, scale: Double = 1.0): Seq[String] = getValues(dataSet.cbct.attributeList, tag, scale)
+    (c, a) match {
+      case (Some(dt), _) => Util.standardDateFormat.format(dt)
+      case (_, Some(dt)) => Util.standardDateFormat.format(dt)
+      case _ => "unknown"
+    }
+  }
 
   private case class Col(header: String, toText: BBbyEPID.DailyDataSetEPID => String) {}
 
@@ -123,23 +62,35 @@ class DailyQACSVCacheEPID(hostRef: String, institutionPK: Long) extends CacheCSV
   private val PatientIDColHeader = "PatientID"
   private val OperatorsNameColHeader = "OperatorsName"
 
+  /**
+   * Extract a value from a BBbyEPID if it is available.
+   *
+   * @param dataSet  Potentially contains BBbyEPID
+   * @param toDouble Gets value from BBbyEPID
+   * @return Either a text version of the value or "NA".
+   */
+  private def epidVal(dataSet: BBbyEPID.DailyDataSetEPID, toDouble: BBbyEPID => Double): String = {
+    if (dataSet.data.isRight) toDouble(dataSet.data.right.get).toString
+    else "NA"
+  }
+
   private val colList = Seq[Col](
     Col(MachineColHeader, dataSet => dataSet.machine.id),
-    Col("SeriesAcquired", dataSet => Util.standardDateFormat.format(dataSet.output.dataDate.get)),
-    Col("ImageAcquisition", dataSet => dateTimeFromEPID(dataSet, TagFromName.AcquisitionDate, TagFromName.AcquisitionTime)),
+    Col("Series Time", dataSet => Util.standardDateFormat.format(dataSet.output.dataDate.get)),
+    Col("Image Time", dataSet => dateTimeFromEPID(dataSet)),
     Col("Analysis", dataSet => Util.standardDateFormat.format(dataSet.output.startDate)),
     Col(PatientIDColHeader, dataSet => patientIdOf(dataSet)),
 
-    Col("BB Image Posn X mm", dataSet => fmtSmall(dataSet.bbByEPID.epidImageX_mm)),
-    Col("BB Image Posn Y mm", dataSet => fmtSmall(dataSet.bbByEPID.epidImageY_mm)),
+    Col("BB Image Posn X mm", dataSet => epidVal(dataSet, e => e.epidImageX_mm)),
+    Col("BB Image Posn Y mm", dataSet => epidVal(dataSet, e => e.epidImageY_mm)),
 
-    Col("BB Plan Posn X mm", dataSet => fmtSmall(dataSet.bbByEPID.epid3DX_mm)),
-    Col("BB Plan Posn Y mm", dataSet => fmtSmall(dataSet.bbByEPID.epid3DY_mm)),
-    Col("BB Plan Posn Z mm", dataSet => fmtSmall(dataSet.bbByEPID.epid3DZ_mm)),
+    Col("BB Plan Posn X mm", dataSet => epidVal(dataSet, e => e.epid3DX_mm)),
+    Col("BB Plan Posn Y mm", dataSet => epidVal(dataSet, e => e.epid3DY_mm)),
+    Col("BB Plan Posn Z mm", dataSet => epidVal(dataSet, e => e.epid3DZ_mm)),
 
-    Col("Table X latr mm", dataSet => fmtSmall(dataSet.bbByEPID.tableXlateral_mm)),
-    Col("Table Y vert mm", dataSet => fmtSmall(dataSet.bbByEPID.tableYvertical_mm)),
-    Col("Table Z long mm", dataSet => fmtSmall(dataSet.bbByEPID.tableZlongitudinal_mm)),
+    Col("Table X latr mm", dataSet => epidVal(dataSet, e => e.tableXlateral_mm)),
+    Col("Table Y vert mm", dataSet => epidVal(dataSet, e => e.tableYvertical_mm)),
+    Col("Table Z long mm", dataSet => epidVal(dataSet, e => e.tableZlongitudinal_mm)),
 
     Col("EPID XRay Offset X mm", dataSet => getEpidValues(dataSet, TagByName.XRayImageReceptorTranslation).head),
     Col("EPID XRay Offset Y mm", dataSet => getEpidValues(dataSet, TagByName.XRayImageReceptorTranslation)(1)),
@@ -157,7 +108,7 @@ class DailyQACSVCacheEPID(hostRef: String, institutionPK: Long) extends CacheCSV
     Col("Gantry Angle", dataSet => getEpidValues(dataSet, TagByName.GantryAngle).head),
     Col("Collimator Angle", dataSet => getEpidValues(dataSet, TagByName.BeamLimitingDeviceAngle).head),
     Col("KVP", dataSet => getEpidValues(dataSet, TagByName.KVP).head),
-    Col("Meterset Exposure", dataSet => textFromAl(dataSet, TagByName.dict.getTagFromName("MetersetExposure"))),
+    Col("Meterset Exposure", dataSet => textFromAl(dataSet, TagByName.MetersetExposure)),
     Col("RT Image Label", dataSet => textFromAl(dataSet, TagByName.RTImageLabel)),
 
     Col("Table Top Latl Posn mm", dataSet => getEpidValues(dataSet, TagByName.TableTopLateralPosition).head),
@@ -165,13 +116,15 @@ class DailyQACSVCacheEPID(hostRef: String, institutionPK: Long) extends CacheCSV
     Col("Table Top Long Posn mm", dataSet => getEpidValues(dataSet, TagByName.TableTopLongitudinalPosition).head),
 
     Col(OperatorsNameColHeader, dataSet => OperatorsName(dataSet)),
-    Col("Reviewer Name", dataSet => textFromAl(dataSet, TagFromName.ReviewerName)),
-    Col("Approval Status", dataSet => textFromAl(dataSet, TagByName.dict.getTagFromName("ApprovalStatus"))),
+    Col("Reviewer Name", dataSet => textFromAl(dataSet, TagByName.ReviewerName)),
+    Col("Approval Status", dataSet => textFromAl(dataSet, TagByName.ApprovalStatus)),
     Col("Software Versions", dataSet => textFromAl(dataSet, TagFromName.SoftwareVersions)),
 
     Col("EPID Details", dataSet => hostRef + ViewOutput.viewOutputUrl(dataSet.output.outputPK.get)))
 
-  private def makeRow(dataSet: BBbyEPID.DailyDataSetEPID) = colList.map(col => col.toText(dataSet)).mkString(",")
+  private def makeRow(dataSet: BBbyEPID.DailyDataSetEPID) = colList.map(col => {
+    col.toText(dataSet)
+  }).mkString(",")
 
   // Trace.trace(TagByName.dict.getTagFromName("ApprovalStatus"))
 
@@ -186,8 +139,6 @@ class DailyQACSVCacheEPID(hostRef: String, institutionPK: Long) extends CacheCSV
 
     val csvText = dataList.map(dataSet => makeRow(dataSet)).mkString("\n")
 
-    // response.setEntity(csv, MediaType.TEXT_CSV)
-    // response.setStatus(Status.SUCCESS_OK)
     csvText
   }
 
@@ -198,64 +149,10 @@ class DailyQACSVCacheEPID(hostRef: String, institutionPK: Long) extends CacheCSV
     val patientIdColIndex = colList.indexWhere(c => c.header.equals(PatientIDColHeader))
     val operatorsNameColIndex = colList.indexWhere(c => c.header.equals(OperatorsNameColHeader))
 
+    val deAnon = new DailyQADeAnonymize(institutionPK, machineColIndex, patientIdColIndex, operatorsNameColIndex)
 
-    // Map id --> de-anonymized real id
-    val machineMap = {
-      val machineList = Machine.listMachinesFromInstitution(institutionPK)
-      val mm = machineList.map(machine => (machine.id, AnonymizeUtil.decryptWithNonce(machine.institutionPK, machine.id_real.get)))
-      mm.toMap
-    }
+    val processed = csvText.filter(line => line.nonEmpty).map(line => deAnon.deAnonymize(line))
 
-    val patIdMap = DicomAnonymous.getAttributesByTag(institutionPK, Seq(TagFromName.PatientID)).
-      map(da => (da.value, AnonymizeUtil.decryptWithNonce(institutionPK, da.value_real))).toMap
-
-    val operatorsNameMap = DicomAnonymous.getAttributesByTag(institutionPK, Seq(TagFromName.OperatorsName)).
-      map(da => (da.value, AnonymizeUtil.decryptWithNonce(institutionPK, da.value_real))).toMap
-
-    /**
-     * Replace anonymized values with real values.
-     *
-     * @param line Entire text of one line.
-     * @return Same line with fields de-anonymized.
-     */
-    def deAnonymize(line: String): String = {
-      val columnList = line.split(",")
-      val mach = {
-        if (columnList.size < (machineColIndex + 1))
-          "unknown machine"
-        else {
-          val anon = columnList(machineColIndex)
-          if (machineMap.contains(anon)) machineMap(anon) else anon
-        }
-      }
-
-      val pat = {
-        if (columnList.size < (patientIdColIndex + 1))
-          "unknown Patient ID"
-        else {
-          val anon = columnList(patientIdColIndex)
-          if (patIdMap.contains(anon)) patIdMap(anon) else anon
-        }
-      }
-
-      val operator = {
-        if (columnList.size < (operatorsNameColIndex + 1))
-          "unknown Op Name"
-        else {
-          val anon = columnList(operatorsNameColIndex)
-          if (operatorsNameMap.contains(anon)) operatorsNameMap(anon) else anon
-        }
-      }
-
-      val fixed = columnList.
-        patch(machineColIndex, Seq(mach), 1).
-        patch(patientIdColIndex, Seq(pat), 1).
-        patch(operatorsNameColIndex, Seq(operator), 1)
-
-      fixed.mkString(",")
-    }
-
-    val processed = csvText.filter(line => line.nonEmpty).map(line => deAnonymize(line))
     processed
   }
 

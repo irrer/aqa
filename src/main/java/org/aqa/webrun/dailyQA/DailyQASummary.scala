@@ -38,7 +38,7 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
   private val refreshButton = new FormButton(label = "Refresh", col = 1, offset = 0, subUrl, pathOf, ButtonType.BtnDefault)
 
   // let user choose date to display
-  private val dateField = new WebInputDatePicker("Date", 6, 0, false, true)
+  private val dateField = new WebInputDatePicker("Date", 5, 0, false, true)
 
   private def getDateText(valueMap: ValueMapT): String = {
     valueMap.get(dateField.label) match {
@@ -47,22 +47,36 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
     }
   }
 
-  private val CsvCompositeTag = "CSV_Composite"
+  private def csvLink(tag: String, name: String, title: String) = {
+    // Text version of time when page is loaded.  This is intended to make each version of the downloaded file uniquely named.
+    val nowText = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss").format(new Date)
+
+    <center title={title} style="border-style:solid; border-color:lightgray; border-width:1px 1px;">
+      <a href={DailyQASummary.path + "/" + tag + "-" + nowText + ".csv?" + tag + "=true"} style="margin: 6px;">
+        {name}<br/>CSV
+      </a>
+    </center>
+  }
+
+  private val CsvCompositeTag = "DailyQA-Composite"
 
   private def csvCompositeLink(valueMap: ValueMapT): Elem = {
-    <a href={DailyQASummary.path + ".csv?" + CsvCompositeTag + "=" + getDateText(valueMap)} title="Download a spreadsheet of all DailyQA data for this institution.">CSV</a>
+    if (false) println(valueMap) // gets rid of compiler warning about unused parameter
+    csvLink(CsvCompositeTag, name = "Composite", title = "Download a spreadsheet of all DailyQA data with CBCTs paired" + WebUtil.titleNewline  + "with EPIDs.  Values that can not be paired are not shown.")
   }
 
-  private val CsvEpidTag = "CSV_EPID"
-
-  private def csvEpidLink(valueMap: ValueMapT): Elem = {
-    <a href={DailyQASummary.path + ".csv?" + CsvEpidTag + "=" + getDateText(valueMap)} title="Download a spreadsheet of all DailyQA EPID data for this institution.">EPID CSV</a>
-  }
-
-  private val CsvCbctTag = "CSV_CBCT"
+  private val CsvCbctTag = "DailyQA-CBCT"
 
   private def csvCbctLink(valueMap: ValueMapT): Elem = {
-    <a href={DailyQASummary.path + ".csv?" + CsvCbctTag + "=" + getDateText(valueMap)} title="Download a spreadsheet of all DailyQA CBCT data for this institution.">CBCT CSV</a>
+    if (false) println(valueMap) // gets rid of compiler warning about unused parameter
+    csvLink(CsvCbctTag, name = "CBCT", title = "Download a spreadsheet of all DailyQA CBCT data " + WebUtil.titleNewline  + "including values that are not paired with EPID data.")
+  }
+
+  private val CsvEpidTag = "DailyQA-EPID"
+
+  private def csvEpidLink(valueMap: ValueMapT): Elem = {
+    if (false) println(valueMap) // gets rid of compiler warning about unused parameter
+    csvLink(CsvEpidTag, name = "EPID", title = "Download a spreadsheet of all DailyQA EPID data " + WebUtil.titleNewline  + "including values that are not paired with CBCT data.")
   }
 
   private val csvFieldComposite = new WebPlainText("CSV", false, 1, 0, csvCompositeLink)
@@ -105,34 +119,39 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
     // a change in status
 
     var date=document.getElementById("Date").getAttribute("value");
-    var baseUrl='/DailyQASummary?checksum=true&Date=' + date;
+    var baseUrl='/DailyQASummary?checksum=true
+    &
+    Date=' + date;
     var WebRefreshTime=2000;
 
-    function watchStatus() {
-        $.ajax({url:baseUrl,
-            success:function(result){
-                var status = document.getElementById("checksum").innerHTML;
-                // Must remove whitespace because IntelliJ source formatter adds it.
-                if (status.trim() == result.trim()) {
-                    setTimeout(watchStatus, WebRefreshTime);
-                }
-                else {
-                    document.getElementById("mainForm").submit();
-                }
-            },
-            error:function(result){
-                setTimeout(watchStatus, WebRefreshTime);
-            }
-        });
-    }
+    function watchStatus()
+    {$.ajax({
+      url: baseUrl
+      ,
+      success: function
+      (result) {
+        var status = document.getElementById("checksum").innerHTML;
+        // Must remove whitespace because IntelliJ source formatter adds it.
+        if (status.trim() == result.trim()) {
+          setTimeout(watchStatus, WebRefreshTime);
+        }
+        else {
+          document.getElementById("mainForm").submit();
+        }
+      }
+      ,
+      error: function
+      (result) {
+        setTimeout(watchStatus, WebRefreshTime);
+      }
+    });}
 
     setTimeout(watchStatus, WebRefreshTime);
-"""
+    """
 
   private def formCreate() = new WebForm(pathOf, title = None, List(controlRow, contentRow), fileUpload = -1, runScript = Some(runScript))
 
   private def getDataSetListByDateAndInstitution(valueMap: ValueMapT): Seq[BBbyEPIDComposite.DailyDataSetComposite] = {
-
     val user = getUser(valueMap)
 
     val institution: Option[Institution] = {
@@ -174,14 +193,11 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
       super.handle(request, response)
       val valueMap = getValueMap(request)
       if (valueMap.contains(CsvCompositeTag)) {
-        val assembler = new DailyQACSVCacheComposite(request.getHostRef.toString(), WebUtil.getUser(request).get.institutionPK)
-        assembler.assemble(response)
+        new DailyQACSVCacheComposite(request.getHostRef.toString(), WebUtil.getUser(request).get.institutionPK).assemble(response)
       } else if (valueMap.contains(CsvCbctTag)) {
-        val assembler = new DailyQACSVCacheComposite(request.getHostRef.toString(), WebUtil.getUser(request).get.institutionPK) // TODO make CBCT
-        assembler.assemble(response)
+        new DailyQACSVCacheCBCT(request.getHostRef.toString(), WebUtil.getUser(request).get.institutionPK).assemble(response)
       } else if (valueMap.contains(CsvEpidTag)) {
-        val assembler = new DailyQACSVCacheEPID(request.getHostRef.toString(), WebUtil.getUser(request).get.institutionPK)
-        assembler.assemble(response)
+        new DailyQACSVCacheEPID(request.getHostRef.toString(), WebUtil.getUser(request).get.institutionPK).assemble(response)
       } else if (valueMap.contains(checksumLabel))
         handleChecksum(response, valueMap)
       else

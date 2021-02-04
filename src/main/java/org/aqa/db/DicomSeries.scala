@@ -63,6 +63,13 @@ case class DicomSeries(
 
   def insertOrUpdate = Db.run(DicomSeries.query.insertOrUpdate(this))
 
+
+  /**
+   * Get the list of SOPInstanceUID 's that are in this series.
+   * @return
+   */
+  def sopUidSeq: Seq[String] = sopInstanceUIDList.split(" ").filterNot(_.isEmpty).toSeq
+
   /**
    * Get the content as a list of <code>AttributeList</code>.
    */
@@ -159,7 +166,7 @@ object DicomSeries extends Logging {
       patientID,
       size,
       referencedRtplanUID,
-      content) <> ((DicomSeries.apply _) tupled, DicomSeries.unapply _)
+      content) <> (DicomSeries.apply _ tupled, DicomSeries.unapply _)
 
     /* Note that accidental data deletion is protected by attempts to remove a machine.  If the
        user does confirm that they want a machine deleted, then the associated DicomSeries will be deleted automatically. */

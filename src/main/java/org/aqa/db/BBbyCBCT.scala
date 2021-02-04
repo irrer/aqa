@@ -1,40 +1,35 @@
 package org.aqa.db
 
-import Db.driver.api._
-import org.aqa.Config
-import org.aqa.Util
-import java.io.File
-import scala.xml.XML
-import scala.xml.Node
-import scala.xml.Elem
-import org.aqa.procedures.ProcedureOutput
-import org.aqa.run.ProcedureStatus
-import javax.vecmath.Point3d
-import java.sql.Timestamp
-import java.util.Date
-import edu.umro.ScalaUtil.Trace
 import com.pixelmed.dicom.AttributeList
-import java.io.ByteArrayInputStream
-import com.pixelmed.dicom.DicomInputStream
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.Trace
+import org.aqa.Util
+import org.aqa.db.Db.driver.api._
+import org.aqa.procedures.ProcedureOutput
+
+import java.sql.Timestamp
+import java.text.SimpleDateFormat
+import java.util.Date
+import javax.vecmath.Point3d
+import scala.xml.Elem
 
 case class BBbyCBCT(
-  bbByCBCTPK: Option[Long], // primary key
-  outputPK: Long, // output primary key
-  rtplanSOPInstanceUID: String, // UID of RTPLAN
-  cbctSeriesInstanceUid: String, // series instance UID of CBCT
-  offset_mm: Double, // distance between measured CBCT position and expected (plan) location (aka: positioning error)
-  status: String, // termination status
-  rtplanX_mm: Double, // expected X position in RTPLAN
-  rtplanY_mm: Double, // expected Y position in RTPLAN
-  rtplanZ_mm: Double, // expected Z position in RTPLAN
-  cbctX_mm: Double, // measured bb X position in CBCT
-  cbctY_mm: Double, // measured bb Y position in CBCT
-  cbctZ_mm: Double, // measured bb Z position in CBCT
-  tableXlateral_mm: Double, // table position in X dimension / lateral
-  tableYvertical_mm: Double, // table position in Y dimension / vertical
-  tableZlongitudinal_mm: Double, // table position in Z dimension / longitudinal
-  metadata_dcm_zip: Option[Array[Byte]]) { // DICOM without image for one slice from the CBCT's series
+                     bbByCBCTPK: Option[Long], // primary key
+                     outputPK: Long, // output primary key
+                     rtplanSOPInstanceUID: String, // UID of RTPLAN
+                     cbctSeriesInstanceUid: String, // series instance UID of CBCT
+                     offset_mm: Double, // distance between measured CBCT position and expected (plan) location (aka: positioning error)
+                     status: String, // termination status
+                     rtplanX_mm: Double, // expected X position in RTPLAN
+                     rtplanY_mm: Double, // expected Y position in RTPLAN
+                     rtplanZ_mm: Double, // expected Z position in RTPLAN
+                     cbctX_mm: Double, // measured bb X position in CBCT
+                     cbctY_mm: Double, // measured bb Y position in CBCT
+                     cbctZ_mm: Double, // measured bb Z position in CBCT
+                     tableXlateral_mm: Double, // table position in X dimension / lateral
+                     tableYvertical_mm: Double, // table position in Y dimension / vertical
+                     tableZlongitudinal_mm: Double, // table position in Z dimension / longitudinal
+                     metadata_dcm_zip: Option[Array[Byte]]) { // DICOM without image for one slice from the CBCT's series
 
   def insert: BBbyCBCT = {
     val insertQuery = BBbyCBCT.query returning BBbyCBCT.query.map(_.bbByCBCTPK) into ((bbByCBCT, bbByCBCTPK) => bbByCBCT.copy(bbByCBCTPK = Some(bbByCBCTPK)))
@@ -72,23 +67,39 @@ case class BBbyCBCT(
 }
 
 object BBbyCBCT extends ProcedureOutput {
+
   class BBbyCBCTTable(tag: Tag) extends Table[BBbyCBCT](tag, "bbByCBCT") {
 
     def bbByCBCTPK = column[Long]("bbByCBCTPK", O.PrimaryKey, O.AutoInc)
+
     def outputPK = column[Long]("outputPK")
+
     def rtplanSOPInstanceUID = column[String]("rtplanSOPInstanceUID")
+
     def cbctSeriesInstanceUid = column[String]("cbctSeriesInstanceUid")
+
     def offset_mm = column[Double]("offset_mm")
+
     def status = column[String]("status")
+
     def planX_mm = column[Double]("planX_mm")
+
     def planY_mm = column[Double]("planY_mm")
+
     def planZ_mm = column[Double]("planZ_mm")
+
     def cbctX_mm = column[Double]("cbctX_mm")
+
     def cbctY_mm = column[Double]("cbctY_mm")
+
     def cbctZ_mm = column[Double]("cbctZ_mm")
+
     def tableXlateral_mm = column[Double]("tableXlateral_mm")
+
     def tableYvertical_mm = column[Double]("tableYvertical_mm")
+
     def tableZlongitudinal_mm = column[Double]("tableZlongitudinal_mm")
+
     def metadata_dcm_zip = column[Option[Array[Byte]]]("metadata_dcm_zip")
 
     def * = (
@@ -107,7 +118,7 @@ object BBbyCBCT extends ProcedureOutput {
       tableXlateral_mm,
       tableYvertical_mm,
       tableZlongitudinal_mm,
-      metadata_dcm_zip) <> ((BBbyCBCT.apply _)tupled, BBbyCBCT.unapply _)
+      metadata_dcm_zip) <> ((BBbyCBCT.apply _) tupled, BBbyCBCT.unapply _)
 
     def outputFK = foreignKey("BBbyCBCT_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -171,9 +182,8 @@ object BBbyCBCT extends ProcedureOutput {
   /**
    * Get all BBbyCBCT results that are nearest in time to the given date.
    *
-   * @param machinePK: For this machine
-   *
-   * @param procedurePK: For this procedure
+   * @param machinePK   : For this machine
+   * @param procedurePK : For this procedure
    *
    */
   def history(machinePK: Long, procedurePK: Long) = {
@@ -190,7 +200,9 @@ object BBbyCBCT extends ProcedureOutput {
   /**
    * Get the procedure PK for the BBbyCBCT procedure.
    */
+  /*
   def getProcedurePK: Option[Long] = {
+
     Db.run(query.result.headOption) match {
       case Some(cbct) => {
         Output.get(cbct.outputPK) match {
@@ -200,10 +212,19 @@ object BBbyCBCT extends ProcedureOutput {
       }
       case _ => None
     }
+
+    Db.run(Procedure.query.result).filter(p => p.isBBbyCBCT).map(p => p.procedurePK.get).headOption
   }
+  */
 
   /** CBCT data and related results. */
-  case class DailyDataSetCBCT(output: Output, machine: Machine, bbByCBCT: BBbyCBCT);
+  case class DailyDataSetCBCT(output: Output, machine: Machine, dicomSeries: DicomSeries, cbct: Option[BBbyCBCT] = None) {
+    /**
+     * An attribute list that is representative of the CBCT volume.  Try getting it
+     * from the BBcyCBCT if possible because it is less resource intensive.
+     */
+    lazy val al: AttributeList = if (cbct.isDefined) cbct.get.attributeList else dicomSeries.attributeListList.head
+  }
 
   /**
    * Get all results that were acquired on one day for one institution.
@@ -213,15 +234,75 @@ object BBbyCBCT extends ProcedureOutput {
     val beginDate = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(date).replaceAll("T.*", "T00:00:00")).getTime)
     val endDate = new Timestamp(beginDate.getTime + (24 * 60 * 60 * 1000))
 
-    val search = for {
-      output <- Output.query.filter(o => o.dataDate.isDefined && (o.dataDate >= beginDate) && (o.dataDate < endDate))
-      bbByCBCT <- BBbyCBCT.query.filter(c => (c.outputPK === output.outputPK))
-      machine <- Machine.query.filter(m => (m.machinePK === output.machinePK) && (m.institutionPK === institutionPK))
-      cbct <- BBbyCBCT.query.filter(c => c.bbByCBCTPK === bbByCBCT.bbByCBCTPK)
-    } yield (output, machine, bbByCBCT)
+    val cbctProcPk = Procedure.ProcOfBBbyCBCT.get.procedurePK.get
 
-    val seq = Db.run(search.result).map(omc => new DailyDataSetCBCT(omc._1, omc._2, omc._3))
+    // one day's worth of BBbyCBCT processing attempts.
+    // case class OneDay(input: Input, output: Output, machine: Machine, dicomSeries: DicomSeries) {}
+
+    val searchOutput = for {
+      output <- Output.query.filter(o => o.dataDate.isDefined && (o.dataDate >= beginDate) && (o.dataDate < endDate) && (o.procedurePK === cbctProcPk))
+      input <- Input.query.filter(i => i.inputPK === output.inputPK)
+      machine <- Machine.query.filter(m => (m.machinePK === output.machinePK) && (m.institutionPK === institutionPK))
+      dicomSeries <- DicomSeries.query.filter(ds => (ds.inputPK === input.inputPK) && (ds.modality === "CT"))
+    } yield (output, machine, dicomSeries)
+
+    val oneDay = Db.run(searchOutput.result).map(od => new DailyDataSetCBCT(od._1, od._2, od._3))
+
+    // - - - - - - - - - - - - - - - - - - - - - -
+
+    val seriesUidSet = oneDay.map(od => od.dicomSeries.seriesInstanceUID).toSet
+    val searchCbct = for {
+      bbByCBCT <- BBbyCBCT.query.filter(c => c.cbctSeriesInstanceUid.inSet(seriesUidSet))
+    } yield bbByCBCT
+
+    val cbctList = Db.run(searchCbct.result)
+
+    def insertCbct(daily: DailyDataSetCBCT): DailyDataSetCBCT = {
+      val cbct = cbctList.find(_.cbctSeriesInstanceUid.equals(daily.dicomSeries.seriesInstanceUID))
+      DailyDataSetCBCT(daily.output, daily.machine, daily.dicomSeries, cbct)
+    }
+
+    val seq = oneDay.map(insertCbct)
+
     seq
+  }
+
+
+  /**
+   * Get the earliest date+time of an CBCT result.
+   *
+   * @param institutionPK Get for this institution.
+   * @return The date+time of the first composite result, if there is at least one.
+   */
+  def getEarliestDate(institutionPK: Long): Option[Timestamp] = {
+
+    val search = for {
+      cbctOutputPK <- BBbyCBCT.query.map(_.outputPK)
+      md <- Output.query.filter(o => (cbctOutputPK === o.outputPK) && o.dataDate.isDefined).map(o => (o.machinePK, o.dataDate))
+      _ <- Machine.query.filter(m => (m.machinePK === md._1) && (m.institutionPK === institutionPK)).map(_.institutionPK)
+    } yield md._2
+
+    val list = search.sorted.take(num = 1)
+
+    val result = Db.run(list.result).flatten
+
+    result.headOption
+  }
+
+
+  /**
+   * For testing only
+   * @param args Ignored.
+   */
+  def main(args: Array[String]): Unit = {
+    DbSetup.init
+    (0 to 5).foreach(_ => println("-----------------------------------------------------------"))
+    Trace.trace()
+    val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
+    val date = dateFormat.parse("2019-05-14")
+
+    getForOneDay(date, 1)
+    Trace.trace()
   }
 
 }

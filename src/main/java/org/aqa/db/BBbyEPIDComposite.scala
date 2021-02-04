@@ -257,6 +257,14 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
         case _ if composite.offsetAdjusted_mm.isEmpty => ProcedureStatus.fail
         case _ if composite.offsetAdjusted_mm.get.abs > machineDailyQA.warningLimit_mm => ProcedureStatus.fail
 
+        case _ if composite.xAdjusted_mm.isEmpty => ProcedureStatus.fail
+        case _ if composite.yAdjusted_mm.isEmpty => ProcedureStatus.fail
+        case _ if composite.zAdjusted_mm.isEmpty => ProcedureStatus.fail
+
+        case _ if composite.tableXlateral_mm.isEmpty => ProcedureStatus.fail
+        case _ if composite.tableYvertical_mm.isEmpty => ProcedureStatus.fail
+        case _ if composite.tableZlongitudinal_mm.isEmpty => ProcedureStatus.fail
+
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
         case _ if exceedsPass(composite.xAdjusted_mm) => ProcedureStatus.warning

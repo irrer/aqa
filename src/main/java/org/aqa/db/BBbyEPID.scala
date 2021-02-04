@@ -1,8 +1,10 @@
 package org.aqa.db
 
 import com.pixelmed.dicom.AttributeList
+import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.AngleType
+import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
@@ -65,7 +67,7 @@ case class BBbyEPID(
   }
 }
 
-object BBbyEPID extends ProcedureOutput {
+object BBbyEPID extends ProcedureOutput with Logging {
 
   class BBbyEPIDTable(tag: Tag) extends Table[BBbyEPID](tag, "bbByEPID") {
 
@@ -193,7 +195,8 @@ object BBbyEPID extends ProcedureOutput {
   }
 
   /** EPID data and related results. */
-  case class DailyDataSetEPID(output: Output, machine: Machine, bbByEPID: BBbyEPID) {
+  case class DailyDataSetEPIDJJ(output: Output, machine: Machine, bbByEPID: BBbyEPID) {
+
     private val angType = AngleType.classifyAngle(bbByEPID.gantryAngle_deg)
 
     def isHorz: Boolean = angType.isDefined && angType.get.toString.equals(AngleType.horizontal.toString)
@@ -204,7 +207,7 @@ object BBbyEPID extends ProcedureOutput {
   /**
    * Get all results that were acquired on one day for one institution.
    */
-  def getForOneDay(date: Date, institutionPK: Long): Seq[DailyDataSetEPID] = {
+  def getForOneDayX(date: Date, institutionPK: Long): Seq[DailyDataSetEPIDJJ] = {
 
     val beginDate = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(date).replaceAll("T.*", "T00:00:00")).getTime)
     val endDate = new Timestamp(beginDate.getTime + (24 * 60 * 60 * 1000))
@@ -215,8 +218,112 @@ object BBbyEPID extends ProcedureOutput {
       machine <- Machine.query.filter(m => (m.machinePK === output.machinePK) && (m.institutionPK === institutionPK))
     } yield (output, machine, bbByEPID)
 
-    val seq = Db.run(search.result).map(omc => DailyDataSetEPID(omc._1, omc._2, omc._3))
+    val seq = Db.run(search.result).map(omc => DailyDataSetEPIDJJ(omc._1, omc._2, omc._3))
     seq
+  }
+
+
+  /** EPID data and related results. */
+  case class DailyDataSetEPID(output: Output, machine: Machine, data: Either[AttributeList, BBbyEPID]) {
+
+    val al: AttributeList = data match {
+      case Right(bbyEPID: BBbyEPID) => bbyEPID.attributeList
+      case Left(attributeList: AttributeList) => attributeList
+    }
+
+    private val angType = AngleType.classifyAngle(al.get(TagByName.GantryAngle).getDoubleValues.head)
+
+    def isHorz: Boolean = angType.isDefined && angType.get.toString.equals(AngleType.horizontal.toString)
+
+    def isVert: Boolean = angType.isDefined && angType.get.toString.equals(AngleType.vertical.toString)
+  }
+
+
+  /**
+   * Get all results that were acquired on one day for one institution.
+   *
+   * @param date          Get results for all EPID results that were created on this day.
+   * @param institutionPK Get only for this institution.
+   */
+  def getForOneDay(date: Date, institutionPK: Long): Seq[DailyDataSetEPID] = {
+
+    val beginDate = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(date).replaceAll("T.*", "T00:00:00")).getTime)
+    val endDate = new Timestamp(beginDate.getTime + (24 * 60 * 60 * 1000))
+
+    val epidProcPk = Procedure.ProcOfBBbyEPID.get.procedurePK.get
+
+    // one day's worth of BBbyCBCT processing attempts.
+    // case class OneDay(input: Input, output: Output, machine: Machine, dicomSeries: DicomSeries) {}
+
+    val searchOutput = for {
+      output <- Output.query.filter(o => o.dataDate.isDefined && (o.dataDate >= beginDate) && (o.dataDate < endDate) && (o.procedurePK === epidProcPk))
+      input <- Input.query.filter(i => i.inputPK === output.inputPK)
+      machine <- Machine.query.filter(m => (m.machinePK === output.machinePK) && (m.institutionPK === institutionPK))
+      dicomSeries <- DicomSeries.query.filter(ds => (ds.inputPK === input.inputPK) && (ds.modality === "RTIMAGE"))
+    } yield (output, machine, dicomSeries)
+
+    /** Quickie class for rows from the database. */
+    case class OMD(output: Output, machine: Machine, dicomSeries: DicomSeries) {}
+
+    val omdList = Db.run(searchOutput.result).map(omd => OMD(omd._1, omd._2, omd._3))
+
+    // - - - - - - - - - - - - - - - - - - - - - -
+
+    // list all distinct outputs
+    val outputSet = omdList.map(_.output.outputPK.get).distinct.toSet
+
+    val searchEpid = for {
+      bbByEPID <- BBbyEPID.query.filter(c => c.outputPK.inSet(outputSet))
+    } yield bbByEPID
+
+    val epidList = Db.run(searchEpid.result)
+
+
+    def makePassed(epid: BBbyEPID): Option[DailyDataSetEPID] = {
+      omdList.find(omd => omd.dicomSeries.sopUidSeq.contains(epid.epidSOPInstanceUid)) match {
+        case Some(o) => Some(DailyDataSetEPID(o.output, o.machine, Right(epid)))
+        case _ =>
+          logger.warn("Could not find epid in DICOM series list: " + epid)
+          None
+      }
+    }
+
+    /**
+     * Given a DICOM series (with output and machine), look for any SOP instances that
+     * are not in the EPID list.  For each, make a DailyDataSetEPID.
+     *
+     * @param omd DICOM series with output and machine
+     * @return List of DailyDataSetEPID that do not have a corresponding EPID.
+     */
+    def makeFailed(omd: OMD): Seq[DailyDataSetEPID] = {
+
+      lazy val alListList = omd.dicomSeries.attributeListList // make this lazy because it might not be needed
+
+      def getAl(dsUid: String): AttributeList = alListList.find(al => Util.sopOfAl(al).equals(dsUid)).get
+
+      def toDaily(dsUid: String): Option[DailyDataSetEPID] = {
+        try {
+          epidList.find(e => e.epidSOPInstanceUid.equals(dsUid)) match {
+            case Some(_) => None
+            case None =>
+              Some(DailyDataSetEPID(omd.output, omd.machine, Left(getAl(dsUid))))
+          }
+        }
+        catch {
+          case t: Throwable =>
+            logger.warn("Unexpected error making failed EPID entry for " + omd + " Exception: " + fmtEx(t))
+            None
+        }
+      }
+
+
+      omd.dicomSeries.sopUidSeq.flatMap(toDaily)
+    }
+
+    val passedList = epidList.flatMap(makePassed)
+    val failedList = omdList.flatMap(makeFailed)
+
+    passedList ++ failedList
   }
 
   /**

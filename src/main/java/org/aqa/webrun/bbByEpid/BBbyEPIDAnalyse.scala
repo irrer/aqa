@@ -10,6 +10,7 @@ import org.aqa.Util
 import org.aqa.db.BBbyCBCT
 import org.aqa.db.BBbyEPID
 import org.aqa.db.BBbyEPIDComposite
+import org.aqa.db.Procedure
 import org.aqa.run.ProcedureStatus
 import org.aqa.web.ViewOutput
 import org.aqa.webrun.ExtendedData
@@ -182,12 +183,12 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
       val SeriesInstanceUID = runReq.epidList.head.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString
 
       val bbByCBCTHistory: Option[BBbyCBCT.BBbyCBCTHistory] = {
-        BBbyCBCT.getProcedurePK match {
-          case Some(cbctProcPk) => {
+        Procedure.ProcOfBBbyCBCT match {
+          case Some(proc) => {
             val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
             val epidDateTime = extendedData.output.dataDate.get
             val epidDateFormatted = dateFormat.format(epidDateTime)
-            val list = BBbyCBCT.history(extendedData.machine.machinePK.get, cbctProcPk)
+            val list = BBbyCBCT.history(extendedData.machine.machinePK.get, proc.procedurePK.get)
 
             /**
              * CBCT must have been acquired before EPID, and must be on the same date.

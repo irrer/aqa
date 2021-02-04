@@ -1,6 +1,7 @@
 package org.aqa.webrun.dailyQA
 
 import com.pixelmed.dicom.TagFromName
+import edu.umro.ScalaUtil.Trace
 import org.aqa.AnonymizeUtil
 import org.aqa.Config
 import org.aqa.Logging
@@ -72,6 +73,7 @@ object DailyQAHTML extends Logging {
     val col0Title = "Machine Name"
 
     def colMachine(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+      Trace.trace()
       val machElem = wrapAlias(dataSet.machine.id)
 
       if (ProcedureStatus.eq(dataSet.status, ProcedureStatus.pass)) {
@@ -326,11 +328,11 @@ object DailyQAHTML extends Logging {
     val missingResultsExplanations: Seq[MOE] = {
 
       val allCbctSeq = BBbyCBCT.getForOneDay(date, institutionPK)
-      val allEpidSeq = BBbyEPID.getForOneDay(date, institutionPK)
+      val allEpidSeq = BBbyEPID.getForOneDay(date, institutionPK).filter(d => d.data.isRight)
 
       def explain(mach: Machine): Elem = {
-        val cbctResults = allCbctSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
-        val epidResults = allEpidSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
+        val machineCbctResults = allCbctSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
+        val machineEpidResults = allEpidSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
         val cbctOutput = outputCBCT(mach.machinePK.get)
         val epidOutput = outputEPID(mach.machinePK.get)
 
@@ -339,13 +341,13 @@ object DailyQAHTML extends Logging {
         val messageColSpan = (colList.size - (listColSpanSize + 1)).toString
         val timeFormat = new SimpleDateFormat("H:mm")
 
-        def cbctBBNotFound(cOut: Output): Boolean = !cbctResults.exists(c => c.output.outputPK.get == cOut.outputPK.get)
+        def cbctBBNotFound(cOut: Output): Boolean = !machineCbctResults.exists(c => c.output.outputPK.get == cOut.outputPK.get)
 
         /**
          * True if this EPID output has data for horizontal gantry angle.
          */
         def hasHorzAngle(output: Output): Boolean = {
-          val eSeq = epidResults.filter(e => e.bbByEPID.outputPK == output.outputPK.get)
+          val eSeq = machineEpidResults.filter(e => e.data.right.get.outputPK == output.outputPK.get)
           val horz = eSeq.find(e => e.isHorz)
           horz.isDefined
         }
@@ -354,7 +356,7 @@ object DailyQAHTML extends Logging {
          * True if this EPID output has data for the vertical gantry angle.
          */
         def hasVertAngle(output: Output): Boolean = {
-          val eSeq = epidResults.filter(e => e.bbByEPID.outputPK == output.outputPK.get)
+          val eSeq = machineEpidResults.filter(e => e.data.right.get.outputPK == output.outputPK.get)
           val vert = eSeq.find(e => e.isVert)
           vert.isDefined
         }
@@ -482,9 +484,9 @@ object DailyQAHTML extends Logging {
          * Return true if the EPID was done before the CBCT.
          */
         def epidBeforeCbct = {
-          if (cbctResults.nonEmpty && epidResults.nonEmpty) {
-            val firstCbct = cbctResults.minBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
-            val lastEpid = epidResults.maxBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
+          if (machineCbctResults.nonEmpty && machineEpidResults.nonEmpty) {
+            val firstCbct = machineCbctResults.minBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
+            val lastEpid = machineEpidResults.maxBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
             lastEpid < firstCbct
           } else
             false
@@ -492,12 +494,12 @@ object DailyQAHTML extends Logging {
 
         val explanation: Elem = 0 match {
           case _ if cbctOutput.isEmpty && epidOutput.isEmpty => showNoData
-          case _ if cbctOutput.nonEmpty && cbctResults.isEmpty => showFail("One or more CBCTs were done but the BB was not found.  Probably mis-alignment of table or phantom.  It is recommended that the CBCT scan be repeated.")
-          case _ if (cbctResults.size == 1) && epidResults.isEmpty => showWarn("There is a successful CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
-          case _ if cbctResults.nonEmpty && epidResults.isEmpty => showWarn("There are " + cbctResults.size + " successful CBCT scans but no EPID scans.  It is recommended that an EPID scan be performed.")
-          case _ if cbctResults.isEmpty && epidOutput.nonEmpty => showFail("There is one or more EPID scans but no CBCT scans.")
-          case _ if cbctResults.isEmpty && epidResults.nonEmpty => showFail("There are " + epidOutput.size + " EPID scans but no successful CBCT scans.")
-          case _ if cbctResults.nonEmpty && epidResults.isEmpty => showWarn("There are " + cbctResults.size + " CBCT scans but zero EPID scans.  The EPID scan needs to be done.")
+          case _ if cbctOutput.nonEmpty && machineCbctResults.isEmpty => showFail("One or more CBCTs were done but the BB was not found.  Probably mis-alignment of table or phantom.  It is recommended that the CBCT scan be repeated.")
+          case _ if (machineCbctResults.size == 1) && machineEpidResults.isEmpty => showFail("There is a successful CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
+          case _ if machineCbctResults.nonEmpty && machineEpidResults.isEmpty => showWarn("There are " + machineCbctResults.size + " successful CBCT scans but no EPID scans.  It is recommended that an EPID scan be performed.")
+          case _ if machineCbctResults.isEmpty && epidOutput.nonEmpty => showFail("There is one or more EPID scans but no CBCT scans.")
+          case _ if machineCbctResults.isEmpty && machineEpidResults.nonEmpty => showFail("There are " + epidOutput.size + " EPID scans but no successful CBCT scans.")
+          case _ if machineCbctResults.nonEmpty && machineEpidResults.isEmpty => showWarn("There are " + machineCbctResults.size + " CBCT scans but zero EPID scans.  The EPID scan needs to be done.")
           case _ if epidBeforeCbct => showFail("The EPID scan was done prior to CBCT.  The CBCT needs to be done first.")
           case _ => showFail("There are no results for this machine.")
         }

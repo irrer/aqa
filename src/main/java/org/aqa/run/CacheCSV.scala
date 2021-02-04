@@ -68,7 +68,8 @@ object CacheCSV extends Logging {
 
       def invalidateCache(cacheDir: File): Unit = {
         val file = new File(cacheDir, fileName)
-        file.delete()
+        if (file.delete())
+          logger.info("Deleted cache file " + file.getAbsolutePath)
       }
 
       FileUtil.listFiles(institutionDir).foreach(cacheDir => invalidateCache(cacheDir))
@@ -78,7 +79,6 @@ object CacheCSV extends Logging {
         logger.error("Unexpected exception while invalidating cache entry for date " + date + " institutionPK: " + institutionPK + " : " + fmtEx(t))
     }
   }
-
 }
 
 abstract class CacheCSV extends Logging {
@@ -212,6 +212,8 @@ abstract class CacheCSV extends Logging {
    */
   def assemble(response: Response): Unit = {
 
+    removeOldCacheVersions()
+
     /**
      * Process the data by formatting it into a CSV.
      *
@@ -268,6 +270,33 @@ abstract class CacheCSV extends Logging {
       case _ =>
     }
 
+  }
+
+  /**
+   * Remove old versions of this cache if they exist for the given institution.  Assume that
+   * the cache name is of the form baseName-version.  Find all versions with the base name
+   * and delete all but the current version.
+   */
+  private def removeOldCacheVersions(): Unit = {
+    class DeleteOldVersions extends Runnable {
+      override def run(): Unit = {
+        try {
+          val baseName = cacheDirName().replaceAll("\\-.*", "")
+
+          // list of old directories to be deleted
+          val toDeleteList = Util.listDirFiles(cacheDir.getParentFile).filter(_.getName.startsWith(baseName)).filterNot(_.getName.equals(cacheDirName()))
+          if (toDeleteList.nonEmpty) {
+            logger.info("Deleting old versions of cache:\n" + toDeleteList.map(_.getAbsolutePath).mkString("\n"))
+            toDeleteList.map(FileUtil.deleteFileTree)
+            logger.info("Deleted old versions of cache:\n" + toDeleteList.map(_.getAbsolutePath).mkString("\n"))
+          }
+        }
+        catch {
+          case t: Throwable => logger.warn("Unexpected exception in removeOldCacheVersions: " + fmtEx(t))
+        }
+      }
+    }
+    new Thread(new DeleteOldVersions).run()
   }
 
 }
