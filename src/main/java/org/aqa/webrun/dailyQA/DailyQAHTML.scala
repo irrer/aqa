@@ -25,8 +25,33 @@ import scala.xml.Elem
 
 object DailyQAHTML extends Logging {
 
-  def makeChecksum(dataSetList: Seq[BBbyEPIDComposite.DailyDataSetComposite]): String = {
-    "checksum size: " + dataSetList.size + " : " + dataSetList.map(_.checksum).sorted.mkString(" / ")
+  private def makeChecksumX(institutionPK: Long, date: Date, dataSetList: Seq[BBbyEPIDComposite.DailyDataSetComposite]): String = {
+    val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
+
+    /** Truncate (floor) to the date. */
+    def dateFloor(d: Date): Date = dateFormat.parse(dateFormat.format(d))
+
+    val lo = dateFloor(date)
+
+    val msInHour = 60 * 60 * 1000 // milliseconds in an hour
+
+    val hi = dateFloor(new Date(lo.getTime + (26 * msInHour)))
+
+    val outputList = {
+      val all = Output.getOutputByDateRange(institutionPK, new Timestamp(lo.getTime), new Timestamp(hi.getTime))
+      all.filter(o => (o.procedurePK == Procedure.ProcOfBBbyCBCT) || (o.procedurePK == Procedure.ProcOfBBbyEPID))
+    }
+
+    val checksum2 = outputList.sortBy(_.outputPK.get).map(o => o.outputPK.get + ":" + o.status).mkString(" / ")
+
+    val cs3 = {
+      BBbyEPIDComposite.getChecksum(date, institutionPK)
+    }
+
+    val oldC = "checksum size: " + dataSetList.size + " : " + dataSetList.map(_.checksum).sorted.mkString(" / ")  // TODO rm
+    Trace.trace("\nOld: " + oldC + "\nNew: " + checksum2)
+
+    checksum2
   }
 
   def makeReport(dataSetList: Seq[BBbyEPIDComposite.DailyDataSetComposite], institutionPK: Long, date: Date): Elem = {
@@ -73,7 +98,6 @@ object DailyQAHTML extends Logging {
     val col0Title = "Machine Name"
 
     def colMachine(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      Trace.trace()
       val machElem = wrapAlias(dataSet.machine.id)
 
       if (ProcedureStatus.eq(dataSet.status, ProcedureStatus.pass)) {
@@ -267,7 +291,7 @@ object DailyQAHTML extends Logging {
       }
     }
 
-    val checksum = makeChecksum(dataSetList)
+    val checksum = BBbyEPIDComposite.getChecksum(date, institutionPK)
 
     val colList: List[Col] = List(
       Col("Machine", "Name of treatment machine", colMachine),
@@ -306,34 +330,35 @@ object DailyQAHTML extends Logging {
       noData
     }
 
+    val cbctPK = Procedure.ProcOfBBbyCBCT.get.procedurePK.get
+    val epidPK = Procedure.ProcOfBBbyEPID.get.procedurePK.get
     /** Procedures that we are interested in. */
-    val procedureSeq = Procedure.list.filter(p => p.isBBbyCBCT || p.isBBbyEPID)
-    val cbctProc = procedureSeq.find(p => p.isBBbyCBCT).get
-    val epidProc = procedureSeq.find(p => p.isBBbyEPID).get
+    val procedurePkSet = Set(cbctPK, epidPK)
 
     /** all outputs for CBCT and EPID for all machines from this institution with data from this day sorted by data (acquisition) date. */
     val allOutputs = {
       val dataDateBegin = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(date).replaceAll("T.*", "T00:00:00")).getTime)
       val dataDateEnd = new Timestamp(dataDateBegin.getTime + (24 * 60 * 60 * 1000))
 
-      val procedurePkSet = procedureSeq.map(p => p.procedurePK.get)
       Output.getOutputByDateRange(institutionPK, dataDateBegin, dataDateEnd).filter(o => procedurePkSet.contains(o.procedurePK)).sortBy(o => o.dataDate.get.getTime)
     }
 
-    def outputCBCT(machinePK: Long) = allOutputs.filter(o => (o.machinePK.get == machinePK) && (o.procedurePK == cbctProc.procedurePK.get))
+    def outputCBCT(machinePK: Long) = allOutputs.filter(o => (o.machinePK.get == machinePK) && (o.procedurePK == cbctPK))
 
-    def outputEPID(machinePK: Long) = allOutputs.filter(o => (o.machinePK.get == machinePK) && (o.procedurePK == epidProc.procedurePK.get))
+    def outputEPID(machinePK: Long) = allOutputs.filter(o => (o.machinePK.get == machinePK) && (o.procedurePK == epidPK))
 
     // List of reasons that each machine is missing a full set of results.
     val missingResultsExplanations: Seq[MOE] = {
 
       val allCbctSeq = BBbyCBCT.getForOneDay(date, institutionPK)
-      val allEpidSeq = BBbyEPID.getForOneDay(date, institutionPK).filter(d => d.data.isRight)
+      val allEpidSeqWithErrors = BBbyEPID.getForOneDay(date, institutionPK)
+      val allEpidSeq = allEpidSeqWithErrors.filter(d => d.data.isRight)
 
       def explain(mach: Machine): Elem = {
         val machineCbctResults = allCbctSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
-        val machineEpidResults = allEpidSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
-        val cbctOutput = outputCBCT(mach.machinePK.get)
+        val machineEpidResultsWithErrors = allEpidSeqWithErrors.filter(c => c.machine.machinePK.get == mach.machinePK.get)
+        val machineEpidResultsWithoutErrors = allEpidSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
+
         val epidOutput = outputEPID(mach.machinePK.get)
 
         val listColSpanSize = 6
@@ -347,7 +372,7 @@ object DailyQAHTML extends Logging {
          * True if this EPID output has data for horizontal gantry angle.
          */
         def hasHorzAngle(output: Output): Boolean = {
-          val eSeq = machineEpidResults.filter(e => e.data.right.get.outputPK == output.outputPK.get)
+          val eSeq = machineEpidResultsWithoutErrors.filter(e => e.data.right.get.outputPK == output.outputPK.get)
           val horz = eSeq.find(e => e.isHorz)
           horz.isDefined
         }
@@ -356,7 +381,7 @@ object DailyQAHTML extends Logging {
          * True if this EPID output has data for the vertical gantry angle.
          */
         def hasVertAngle(output: Output): Boolean = {
-          val eSeq = machineEpidResults.filter(e => e.data.right.get.outputPK == output.outputPK.get)
+          val eSeq = machineEpidResultsWithoutErrors.filter(e => e.data.right.get.outputPK == output.outputPK.get)
           val vert = eSeq.find(e => e.isVert)
           vert.isDefined
         }
@@ -365,7 +390,7 @@ object DailyQAHTML extends Logging {
           val outputSeq = allOutputs.filter(o => o.machinePK.get == mach.machinePK.get)
 
           def ref(o: Output): Elem = {
-            val isCBCT = o.procedurePK == cbctProc.procedurePK.get
+            val isCBCT = o.procedurePK == cbctPK
             val procName = if (isCBCT) "CBCT" else "EPID"
             val url = ViewOutput.path + "?" + ViewOutput.outputPKTag + "=" + o.outputPK.get
             val text = timeFormat.format(o.dataDate.get) + " " + procName
@@ -484,22 +509,23 @@ object DailyQAHTML extends Logging {
          * Return true if the EPID was done before the CBCT.
          */
         def epidBeforeCbct = {
-          if (machineCbctResults.nonEmpty && machineEpidResults.nonEmpty) {
+          if (machineCbctResults.nonEmpty && machineEpidResultsWithoutErrors.nonEmpty) {
             val firstCbct = machineCbctResults.minBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
-            val lastEpid = machineEpidResults.maxBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
+            val lastEpid = machineEpidResultsWithoutErrors.maxBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
             lastEpid < firstCbct
           } else
             false
         }
 
         val explanation: Elem = 0 match {
-          case _ if cbctOutput.isEmpty && epidOutput.isEmpty => showNoData
-          case _ if cbctOutput.nonEmpty && machineCbctResults.isEmpty => showFail("One or more CBCTs were done but the BB was not found.  Probably mis-alignment of table or phantom.  It is recommended that the CBCT scan be repeated.")
-          case _ if (machineCbctResults.size == 1) && machineEpidResults.isEmpty => showFail("There is a successful CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
-          case _ if machineCbctResults.nonEmpty && machineEpidResults.isEmpty => showWarn("There are " + machineCbctResults.size + " successful CBCT scans but no EPID scans.  It is recommended that an EPID scan be performed.")
+          case _ if machineCbctResults.isEmpty && epidOutput.isEmpty => showNoData
+          case _ if machineCbctResults.nonEmpty && machineCbctResults.isEmpty => showFail("One or more CBCTs were done but the BB was not found.  Probably mis-alignment of table or phantom.  It is recommended that the CBCT scan be repeated.")
+          case _ if (machineCbctResults.size == 1) && machineEpidResultsWithErrors.nonEmpty => showFail("There is a successful CBCT scan but EPID results failed.  A new EPID scan is recommended.")
+          case _ if (machineCbctResults.size == 1) && machineEpidResultsWithoutErrors.isEmpty => showWarn("There is a successful CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
+          case _ if machineCbctResults.nonEmpty && machineEpidResultsWithoutErrors.isEmpty => showWarn("There are " + machineCbctResults.size + " successful CBCT scans but no EPID scans.  It is recommended that an EPID scan be performed.")
           case _ if machineCbctResults.isEmpty && epidOutput.nonEmpty => showFail("There is one or more EPID scans but no CBCT scans.")
-          case _ if machineCbctResults.isEmpty && machineEpidResults.nonEmpty => showFail("There are " + epidOutput.size + " EPID scans but no successful CBCT scans.")
-          case _ if machineCbctResults.nonEmpty && machineEpidResults.isEmpty => showWarn("There are " + machineCbctResults.size + " CBCT scans but zero EPID scans.  The EPID scan needs to be done.")
+          case _ if machineCbctResults.isEmpty && machineEpidResultsWithoutErrors.nonEmpty => showFail("There are " + epidOutput.size + " EPID scans but no successful CBCT scans.")
+          case _ if machineCbctResults.nonEmpty && machineEpidResultsWithoutErrors.isEmpty => showWarn("There are " + machineCbctResults.size + " CBCT scans but zero EPID scans.  The EPID scan needs to be done.")
           case _ if epidBeforeCbct => showFail("The EPID scan was done prior to CBCT.  The CBCT needs to be done first.")
           case _ => showFail("There are no results for this machine.")
         }

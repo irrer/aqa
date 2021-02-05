@@ -53,7 +53,8 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
     <center title={title} style="border-style:solid; border-color:lightgray; border-width:1px 1px;">
       <a href={DailyQASummary.path + "/" + tag + "-" + nowText + ".csv?" + tag + "=true"} style="margin: 6px;">
-        {name}<br/>CSV
+        {name}<br/>
+        CSV
       </a>
     </center>
   }
@@ -62,21 +63,21 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
   private def csvCompositeLink(valueMap: ValueMapT): Elem = {
     if (false) println(valueMap) // gets rid of compiler warning about unused parameter
-    csvLink(CsvCompositeTag, name = "Composite", title = "Download a spreadsheet of all DailyQA data with CBCTs paired" + WebUtil.titleNewline  + "with EPIDs.  Values that can not be paired are not shown.")
+    csvLink(CsvCompositeTag, name = "Composite", title = "Download a spreadsheet of all DailyQA data with CBCTs paired" + WebUtil.titleNewline + "with EPIDs.  Values that can not be paired are not shown.")
   }
 
   private val CsvCbctTag = "DailyQA-CBCT"
 
   private def csvCbctLink(valueMap: ValueMapT): Elem = {
     if (false) println(valueMap) // gets rid of compiler warning about unused parameter
-    csvLink(CsvCbctTag, name = "CBCT", title = "Download a spreadsheet of all DailyQA CBCT data " + WebUtil.titleNewline  + "including values that are not paired with EPID data.")
+    csvLink(CsvCbctTag, name = "CBCT", title = "Download a spreadsheet of all DailyQA CBCT data " + WebUtil.titleNewline + "including values that are not paired with EPID data.")
   }
 
   private val CsvEpidTag = "DailyQA-EPID"
 
   private def csvEpidLink(valueMap: ValueMapT): Elem = {
     if (false) println(valueMap) // gets rid of compiler warning about unused parameter
-    csvLink(CsvEpidTag, name = "EPID", title = "Download a spreadsheet of all DailyQA EPID data " + WebUtil.titleNewline  + "including values that are not paired with CBCT data.")
+    csvLink(CsvEpidTag, name = "EPID", title = "Download a spreadsheet of all DailyQA EPID data " + WebUtil.titleNewline + "including values that are not paired with CBCT data.")
   }
 
   private val csvFieldComposite = new WebPlainText("CSV", false, 1, 0, csvCompositeLink)
@@ -113,22 +114,17 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
   val contentRow: WebRow = List(report)
 
-  val runScript =
+  val runScript = {
     """
     // Reload the page when there is new data, indicated by
     // a change in status
 
     var date=document.getElementById("Date").getAttribute("value");
-    var baseUrl='/DailyQASummary?checksum=true
-    &
-    Date=' + date;
+    var baseUrl='/DailyQASummary?checksum=true&Date=' + date;
     var WebRefreshTime=2000;
 
-    function watchStatus()
-    {$.ajax({
-      url: baseUrl
-      ,
-      success: function
+    function watchStatus() {$.ajax({
+      url: baseUrl , success: function
       (result) {
         var status = document.getElementById("checksum").innerHTML;
         // Must remove whitespace because IntelliJ source formatter adds it.
@@ -138,8 +134,7 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
         else {
           document.getElementById("mainForm").submit();
         }
-      }
-      ,
+      },
       error: function
       (result) {
         setTimeout(watchStatus, WebRefreshTime);
@@ -148,8 +143,16 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
     setTimeout(watchStatus, WebRefreshTime);
     """
+  }
 
   private def formCreate() = new WebForm(pathOf, title = None, List(controlRow, contentRow), fileUpload = -1, runScript = Some(runScript))
+
+  private def dateFromValueMap(valueMap: ValueMapT): Date = {
+    if (valueMap.contains(dateField.label))
+      dateField.dateFormat.parse(valueMap(dateField.label).replace("%20", " ").trim)
+    else
+      dateField.dateFormat.parse(dateField.dateFormat.format(new Date)) // today rounded off to midnight
+  }
 
   private def getDataSetListByDateAndInstitution(valueMap: ValueMapT): Seq[BBbyEPIDComposite.DailyDataSetComposite] = {
     val user = getUser(valueMap)
@@ -161,14 +164,7 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
       }
     }
 
-    val date = {
-      if (valueMap.contains(dateField.label))
-        dateField.dateFormat.parse(valueMap(dateField.label).replace("%20", " "))
-      else
-        dateField.dateFormat.parse(dateField.dateFormat.format(new Date)) // today rounded off to midnight
-    }
-
-    val list = BBbyEPIDComposite.getForOneDay(date, institution.get.institutionPK.get)
+    val list = BBbyEPIDComposite.getForOneDay(dateFromValueMap(valueMap), institution.get.institutionPK.get)
     list
   }
 
@@ -182,7 +178,9 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
    * Respond to the client with the checksum of the data so they can decide whether or not they need to reload it.
    */
   private def handleChecksum(response: Response, valueMap: ValueMapT): Unit = {
-    val checksum = DailyQAHTML.makeChecksum(getDataSetListByDateAndInstitution(valueMap))
+    val institutionPK = WebUtil.getUser(valueMap).get.institutionPK
+
+    val checksum = BBbyEPIDComposite.getChecksum(dateFromValueMap(valueMap), institutionPK)
     response.setEntity(checksum, MediaType.TEXT_PLAIN)
     response.setStatus(Status.SUCCESS_OK)
   }

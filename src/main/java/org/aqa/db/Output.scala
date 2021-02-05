@@ -133,7 +133,7 @@ object Output extends Logging {
       analysisDate,
       machinePK,
       status,
-      dataValidity) <> (Output.apply _ tupled, Output.unapply _)
+      dataValidity) <> (Output.apply _ tupled, Output.unapply)
 
     def inputFK = foreignKey("Output_inputPKConstraint", inputPK, Input.query)(_.inputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
 
@@ -347,6 +347,7 @@ object Output extends Logging {
     val seq = Db.run(search.result)
     seq
   }
+
 
   def redundantWith(output: Output): Seq[Output] = {
     val dicomSeriesUIDSet = DicomSeries.getByInputPK(output.inputPK).map(ds => ds.seriesInstanceUID).toSet
