@@ -10,7 +10,6 @@ import org.aqa.Util
 import org.aqa.db.BBbyCBCT
 import org.aqa.db.DicomSeries
 import org.aqa.db.Output
-import org.aqa.run.ProcedureStatus
 import org.aqa.web.MachineUpdate
 import org.aqa.web.OutputList
 import org.aqa.web.ViewOutput
