@@ -357,7 +357,7 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
     /** Truncate (floor) to the date. */
     def dateFloor(d: Date): Date = dateFormat.parse(dateFormat.format(d))
 
-    def toTs(date: Date) = new Timestamp(date.getTime())
+    def toTs(date: Date) = new Timestamp(date.getTime)
 
     val loTime = toTs(dateFloor(date))
 
@@ -374,7 +374,7 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
         output <- Output.query.filter(o => o.dataDate.isDefined && (o.dataDate >= loTime) && (o.dataDate < hiTime) && (o.procedurePK === cbctProcPk))
         machine <- Machine.query.filter(m => (m.machinePK === output.machinePK) && (m.institutionPK === institutionPK))
         cbct <- BBbyCBCT.query.filter(c => c.outputPK === output.outputPK)
-      } yield (cbct)
+      } yield cbct
 
       Db.run(searchCbct.result).map(c => c.bbByCBCTPK.get)
     }
@@ -387,14 +387,16 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
         output <- Output.query.filter(o => o.dataDate.isDefined && (o.dataDate >= loTime) && (o.dataDate < hiTime) && (o.procedurePK === epidProcPk))
         machine <- Machine.query.filter(m => (m.machinePK === output.machinePK) && (m.institutionPK === institutionPK))
         epid <- BBbyEPID.query.filter(e => e.outputPK === output.outputPK)
-      } yield (epid)
+      } yield epid
 
       Db.run(searchEpid.result).map(c => c.bbByEPIDPK.get)
     }
 
+    // get the list of outputs and their statuses in case any change
+    val outputList = Output.getOutputByDateRange(institutionPK, loTime, hiTime).sortBy(_.outputPK.get).map(o => o.outputPK.get + "-" + o.status)
 
     val pkList = cbctList.sorted ++ epidList.sorted
-    val checksum = "checksum size: " + pkList.size + " : " + (cbctList.sorted ++ epidList.sorted).mkString(" ")
+    val checksum = "checksum size: " + pkList.size + " : " + (cbctList.sorted ++ epidList.sorted).mkString(" ") + " " + outputList.mkString(" ")
     logger.info("BBbyEPIDComposite date: " + date + "     checksum: " + checksum)
     checksum
   }

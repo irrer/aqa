@@ -1,7 +1,6 @@
 package org.aqa.db
 
 import edu.umro.ScalaUtil.FileUtil
-import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 import org.aqa.run.ProcedureStatus
@@ -9,6 +8,7 @@ import org.aqa.web.WebServer
 
 import java.io.File
 import java.sql.Timestamp
+import java.text.SimpleDateFormat
 import java.util.Date
 import scala.util.Try
 
@@ -378,7 +378,6 @@ object Output extends Logging {
 
   def main(args: Array[String]): Unit = {
     println("Starting Output.main")
-    Config.validate
     DbSetup.init
 
     if (false) {
@@ -395,6 +394,16 @@ object Output extends Logging {
       println("list size: " + list.size)
       list.foreach(o => println(o))
       System.exit(0)
+    }
+
+    if (true) {
+      val fmt = new SimpleDateFormat("yyyy-MM-dd")
+      val lo = fmt.parse("2021-02-04")
+      val hi = fmt.parse("2021-02-05")
+
+      def d2ts(date: Date) = new Timestamp((date.getTime))
+
+      getOutputByDateRange(1, d2ts(lo), d2ts(hi))
     }
 
   }
