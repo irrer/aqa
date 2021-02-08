@@ -1,38 +1,22 @@
 package org.aqa.webrun.bbByCBCT
 
-import scala.xml.Elem
-import javax.vecmath.Point3d
-import org.aqa.Logging
-import org.aqa.run.ProcedureStatus
-import org.aqa.webrun.phase2.SubProcedureResult
-import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.phase2.RunReq
-import com.pixelmed.dicom.AttributeList
-import org.aqa.db.CollimatorCentering
-import org.aqa.webrun.phase2.Phase2Util
-import com.pixelmed.dicom.TagFromName
-import org.aqa.Config
-import edu.umro.ImageUtil.DicomImage
-import java.awt.Rectangle
-import org.aqa.Util
-import edu.umro.ImageUtil.LocateMax
-import edu.umro.ImageUtil.DicomVolume
-import javax.vecmath.Point3i
-import edu.umro.ScalaUtil.Trace
-import java.io.File
-import edu.umro.ImageUtil.ImageUtil
-import java.awt.image.BufferedImage
-import java.awt.geom.Point2D
-import org.aqa.VolumeTranslator
-import java.awt.Color
-import org.aqa.db.BBbyCBCT
-import org.aqa.web.WebUtil
-import org.aqa.db.Output
 import com.pixelmed.dicom.AttributeTag
-import org.restlet.Response
-import javax.vecmath.Matrix4d
-import edu.umro.ScalaUtil.DicomUtil
+import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.Logging
+import org.aqa.Util
+import org.aqa.db.BBbyCBCT
+import org.aqa.db.Output
+import org.aqa.run.ProcedureStatus
+import org.aqa.web.WebUtil
+import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.phase2.Phase2Util
+import org.restlet.Response
+
+import java.io.File
+import javax.vecmath.Matrix4d
+import javax.vecmath.Point3d
 
 /**
  * After the data has has been validated as sufficient to do the analysis, perform the
@@ -42,18 +26,20 @@ import edu.umro.DicomDict.TagByName
 object BBbyCBCTExecute extends Logging {
 
   private val subProcedureName = "CBCT Alignment"
-  private val tableDefault = 2000000.0
 
-  private def showFailure(message: String, extendedData: ExtendedData, runReq: BBbyCBCTRunReq) = {
+  private def showFailure(message: String, extendedData: ExtendedData, runReq: BBbyCBCTRunReq): Unit = {
     val content = {
       <div class="row col-md-10 col-md-offset-1">
         <h4>
-          Failed to process CBCT images:<br></br>
+          Failed to process CBCT images:
+          <br></br>
           <div class="row col-md-10 col-md-offset-1">
-            <i>{ message }</i>
+            <i>
+              {message}
+            </i>
           </div>
           <div class="row col-md-10 col-md-offset-1">
-            { BBbyCBCTHTML.makeCbctSlices(extendedData, runReq) }
+            {BBbyCBCTHTML.makeCbctSlices(extendedData, runReq)}
           </div>
         </h4>
       </div>
@@ -61,7 +47,6 @@ object BBbyCBCTExecute extends Logging {
 
     val text = WebUtil.wrapBody(BBbyCBCTHTML.wrap(content, extendedData), "CBCT Analysis Failed")
 
-    val textsss = WebUtil.wrapBody(content, "CBCT Analysis Failed")
     val display = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(display, text)
   }
@@ -112,11 +97,14 @@ object BBbyCBCTExecute extends Logging {
     } else {
       logger.info("Using identity matrix for transforming points between CBCT frame of reference and RTPLAN frame of reference.")
       val m = new Matrix4d
-      m.setIdentity
+      m.setIdentity()
       m
     }
+
     def f(d: Double) = d.formatted("%12.6f")
+
     def sp = " ".formatted("%12s")
+
     val p = Util.transform(matrix, cbctFrameOfRefLocationBB_mm)
 
     //      if (runReq.reg.isDefined) runReq.imageRegistration.get.transform(cbctFrameOfRefLocationBB_mm) else cbctFrameOfRefLocationBB_mm
@@ -125,7 +113,7 @@ object BBbyCBCTExecute extends Logging {
       s"${f(cbctFrameOfRefLocationBB_mm.getX)} * ${f(matrix.getM00)}, ${f(matrix.getM01)}, ${f(matrix.getM02)}, ${f(matrix.getM03)}, ${f(p.getX)}\n" +
       s"${f(cbctFrameOfRefLocationBB_mm.getY)} * ${f(matrix.getM10)}, ${f(matrix.getM11)}, ${f(matrix.getM12)}, ${f(matrix.getM13)}, ${f(p.getY)}\n" +
       s"${f(cbctFrameOfRefLocationBB_mm.getZ)} * ${f(matrix.getM20)}, ${f(matrix.getM21)}, ${f(matrix.getM22)}, ${f(matrix.getM23)}, ${f(p.getZ)}\n" +
-      s"${sp} * ${f(matrix.getM30)}, ${f(matrix.getM31)}, ${f(matrix.getM32)}, ${f(matrix.getM33)}")
+      s"$sp * ${f(matrix.getM30)}, ${f(matrix.getM31)}, ${f(matrix.getM32)}, ${f(matrix.getM33)}")
     matrix
 
   }
@@ -161,7 +149,7 @@ object BBbyCBCTExecute extends Logging {
         val rtplanOrigin_vox = mm2vox(bbByCBCT.rtplanX_mm, bbByCBCT.rtplanY_mm, bbByCBCT.rtplanZ_mm)
 
         val annotatedImages = BBbyCBCTAnnotateImages.annotate(bbByCBCT, imageXYZ, runReq, bb_vox, rtplanOrigin_vox, extendedData.input.dataDate.get)
-        val html = BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, annotatedImages, ProcedureStatus.done, runReq, result.right.get, response)
+        BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, annotatedImages, runReq, result.right.get, response)
         logger.info("Finished analysis of CBCT Alignment for machine " + extendedData.machine.id)
         ProcedureStatus.pass
       } else {
@@ -169,11 +157,10 @@ object BBbyCBCTExecute extends Logging {
         ProcedureStatus.fail
       }
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         logger.warn("Unexpected error in analysis of " + subProcedureName + ": " + t + fmtEx(t))
         Left(Phase2Util.procedureCrash(subProcedureName))
         ProcedureStatus.crash
-      }
     }
   }
 }
