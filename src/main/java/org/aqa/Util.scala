@@ -1201,6 +1201,34 @@ object Util extends Logging {
   }
 
   /**
+   * Multiply a matrix by another matrix.  The original matrixes are unchanged.  Note that the parameter
+   * order is important; they are not interchangable.
+   *
+   * @param matrix Matrix to multiply.
+   *
+   * @return the transposition of the original matrix.
+   */
+  def multiplyMatrix(a: Matrix4d, b: Matrix4d): Matrix4d = {
+    val t = a.clone().asInstanceOf[Matrix4d]
+    t.mul(b)
+    t
+  }
+
+
+  /**
+   * Calculate the transpose a matrix.  The original matrix is unchanged.
+   *
+   * @param matrix Matrix to transpose.
+   *
+   * @return the transposition of the original matrix.
+   */
+  def transposeMatrix(matrix: Matrix4d): Matrix4d = {
+    val trans = matrix.clone().asInstanceOf[Matrix4d]
+    trans.transpose()
+    trans
+  }
+
+  /**
    * Draw two green concentric circles around the RTPLAN center.  This imitates the way it is shown in Eclipse.
    */
   def drawPlanCenter(image: BufferedImage, planCenter_pix: Point2d, scale: Double = 1.0) = {
