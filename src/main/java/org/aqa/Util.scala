@@ -1,52 +1,41 @@
 package org.aqa
 
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.io.FileOutputStream
-import java.io.File
-import java.io.FileInputStream
-import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.TagFromName
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.DateTimeAttribute
-
-import java.util.Properties
-import edu.umro.util.Utility
-import com.pixelmed.dicom.SequenceAttribute
-
-import java.awt.image.RenderedImage
-import javax.imageio.ImageIO
-import java.awt.image.BufferedImage
-import java.awt.Color
+import com.pixelmed.dicom.DicomFileUtilities
+import com.pixelmed.dicom.TagFromName
+import com.pixelmed.dicom.TransferSyntax
+import edu.umro.DicomDict.TagByName
+import edu.umro.ImageUtil.DicomImage
+import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.util.Utility
 
 import java.awt.BasicStroke
-import edu.umro.ImageUtil.ImageText
-import com.pixelmed.dicom.TransferSyntax
-
-import java.awt.Point
-import java.security.InvalidParameterException
-import com.pixelmed.dicom.DicomDictionary
-import edu.umro.DicomDict.TagByName
-
-import scala.xml.Elem
-import scala.xml.XML
+import java.awt.Color
+import java.awt.Polygon
+import java.awt.geom.Point2D
+import java.awt.image.BufferedImage
+import java.awt.image.RenderedImage
 import java.io.ByteArrayOutputStream
-import edu.umro.ScalaUtil.DicomUtil
-
-import javax.vecmath.Point3d
-import edu.umro.ScalaUtil.Trace
-
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Properties
 import java.util.TimeZone
-import scala.xml.Node
-import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.IsoImagePlaneTranslator
-
+import javax.imageio.ImageIO
 import javax.vecmath.Matrix4d
 import javax.vecmath.Point2d
-import java.awt.geom.Point2D
-import java.awt.Polygon
+import javax.vecmath.Point3d
+import javax.vecmath.Vector4d
+import scala.xml.Elem
+import scala.xml.Node
+import scala.xml.XML
 
 object Util extends Logging {
 
@@ -89,7 +78,7 @@ object Util extends Logging {
 
   /**
    * Global lock for synchronizing all file writes so that only one write is being done at
-   *  a time (as opposed to being done in parallel).
+   * a time (as opposed to being done in parallel).
    */
   private val fileSystemWriteSync = "sync"
 
@@ -284,6 +273,7 @@ object Util extends Logging {
 
     def compar(a: AttributeList, b: AttributeList): Boolean = {
       def dt(al: AttributeList) = extractDateTimeAndPatientIdFromDicomAl(al)._1.head.getTime
+
       dt(a) < dt(b)
     }
 
@@ -490,7 +480,9 @@ object Util extends Logging {
    * Given the text for a single CVS cell, return the properly formatted text for CSV.
    */
   def textToCsv(text: String): String = {
-    if (text.contains('"') || text.contains(',')) { '"' + text.replaceAll("\"", "\"\"") + '"' }
+    if (text.contains('"') || text.contains(',')) {
+      '"' + text.replaceAll("\"", "\"\"") + '"'
+    }
     else text
   }
 
@@ -526,6 +518,7 @@ object Util extends Logging {
   val yOrientation = Seq("Y", "ASYMY", "MLCY")
 
   def specifiesX(devType: String): Boolean = xOrientation.contains(devType.toUpperCase)
+
   def specifiesY(devType: String): Boolean = yOrientation.contains(devType.toUpperCase)
 
   /**
@@ -585,108 +578,15 @@ object Util extends Logging {
     ((degrees % 360.0) + 360.0) % 360.0
   }
 
-  def main(args: Array[String]): Unit = {
-
-    if (true) {
-      val fileList = (new File("""D:\tmp\aqa\CBCT\MQATX1OBIQA2019Q3\ri_20190620""")).listFiles
-
-      def doit(file: File) = {
-        val al = new AttributeList
-        al.read(file)
-
-        val dtp = extractDateTimeAndPatientIdFromDicom(file)
-
-        println(dtp)
-
-      }
-
-      fileList.map(al => doit(al))
-
-      System.exit(99)
-    }
-
-    if (false) {
-      for (i <- (-800 until 800)) println(i.formatted("%5d") + " --> " + angleRoundedTo90(i).formatted("%5d"))
-      System.exit(0)
-    }
-
-    if (false) {
-      import scala.util.Try
-      var inc = 0
-
-      def bad = {
-        inc = inc + 1
-        println("*bad " + inc)
-        throw new RuntimeException("being bad")
-        inc
-      }
-
-      def good = {
-        inc = inc + 1
-        println("*good " + inc)
-        inc
-      }
-
-      println("bad good: " + { Try(bad).flatMap(g => Try(good)) })
-      println("bad bad: " + { Try(bad).flatMap(g => Try(bad)) })
-      println("good good: " + { Try(good).flatMap(g => Try(good)) })
-      println("good bad: " + { Try(good).flatMap(g => Try(bad)) })
-
-      val goodBad = { Try(good).flatMap(g => Try(bad)) }
-      println("goodBad.getClass: " + goodBad.getClass)
-      System.exit(0)
-    }
-
-    if (false) {
-      val file = new File("""D:\tmp\aqa\ritter_bad_loc_upload\copy_me\jj.txt""")
-      val fis = new FileInputStream(file)
-      val data = fis.read()
-      println("Sleeping ....")
-      Thread.sleep(60 * 1000)
-      println("exiting")
-      System.exit(0)
-    }
-
-    if (false) {
-      val j = this
-
-      def doit(j: Any) = {
-        val j1 = j.getClass
-        val j2 = j1.getName
-        val j3 = org.aqa.web.WebUtil.cleanClassName(j2)
-        val j4 = org.aqa.web.WebUtil.pathOf(org.aqa.web.WebUtil.SubUrl.admin, this)
-        println("ey")
-      }
-      doit(j)
-    }
-
-    val list: Seq[Double] = Seq(234.29847234, 0.00000023424, 2398472742.12341234)
-    list.map(d => println("    " + d.toString + " --> " + d.formatted("%7.5f") + " ==> " + d.formatted("%7.5e")))
-
-    println("thisJarFile: " + thisJarFile.getAbsolutePath)
-
-    val fileNameList = List(
-      """D:\pf\Conquest\dicomserver1417\data\ISOCAL""",
-      """D:\pf\Conquest\dicomserver1417\data\Phantom""",
-      """D:\pf\Conquest\dicomserver1417\data\txdlite_mr4""",
-      """D:\pf\Conquest\dicomserver1417\data\28291735""",
-      """D:\pf\Conquest\dicomserver1417\data\junk""")
-
-    fileNameList.map(fn => {
-      val f = new File(fn)
-      val dtp = dateTimeAndPatientIdFromDicom(f)
-      println("file: " + f.getName.formatted("%-20s") + "    " + dtp.dateTime + "    " + dtp.PatientID)
-    })
-  }
 
   /**
    * Add graticules to the given image.
    */
   def addGraticules(
-    image: BufferedImage,
-    x2Pix: (Double) => Double, y2Pix: (Double) => Double,
-    pix2X: (Double) => Double, pix2Y: (Double) => Double,
-    color: Color): Unit = {
+                     image: BufferedImage,
+                     x2Pix: (Double) => Double, y2Pix: (Double) => Double,
+                     pix2X: (Double) => Double, pix2Y: (Double) => Double,
+                     color: Color): Unit = {
 
     val graphics = ImageUtil.getGraphics(image)
 
@@ -793,13 +693,16 @@ object Util extends Logging {
    * Add graticules to the given image.
    */
   def addGraticules(
-    image: BufferedImage,
-    translator: IsoImagePlaneTranslator,
-    color: Color): Unit = {
+                     image: BufferedImage,
+                     translator: IsoImagePlaneTranslator,
+                     color: Color): Unit = {
 
     def x2Pix(xIso: Double) = translator.iso2Pix(xIso, 0).getX.round.toInt
+
     def y2Pix(yIso: Double) = translator.iso2Pix(0, yIso).getY.round.toInt
+
     def pix2X(xPix: Double) = translator.pix2Iso(xPix, 0).getX.round.toInt
+
     def pix2Y(yPix: Double) = translator.pix2Iso(0, yPix).getY.round.toInt
 
     Util.addGraticules(image, x2Pix _, y2Pix _, pix2X _, pix2Y _, Color.gray)
@@ -914,7 +817,9 @@ object Util extends Logging {
    * given size that steps between the given colors.
    */
   def colorPallette(colorA: Color, colorB: Color, size: Int): IndexedSeq[Color] = {
-    val step = { if (size == 1) 1.0 else (size - 1).toDouble }
+    val step = {
+      if (size == 1) 1.0 else (size - 1).toDouble
+    }
 
     val stepR = (colorB.getRed - colorA.getRed) / step
     val stepG = (colorB.getGreen - colorA.getGreen) / step
@@ -989,6 +894,7 @@ object Util extends Logging {
     val aa = normalizeBeamName(a)
     val bb = normalizeBeamName(b)
     val len = Math.min(aa.size, bb.size)
+
     def subStr(text: String) = text.substring(0, Math.min(text.size, len))
 
     subStr(aa).equalsIgnoreCase(subStr(bb))
@@ -1178,6 +1084,7 @@ object Util extends Logging {
   }
 
   def getFrameOfRef(al: AttributeList): String = al.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
+
   def getFrameOfRef(dicomFile: DicomFile): String = getFrameOfRef(dicomFile.attributeList.get)
 
   /**
@@ -1205,7 +1112,6 @@ object Util extends Logging {
    * order is important; they are not interchangable.
    *
    * @param matrix Matrix to multiply.
-   *
    * @return the transposition of the original matrix.
    */
   def multiplyMatrix(a: Matrix4d, b: Matrix4d): Matrix4d = {
@@ -1219,7 +1125,6 @@ object Util extends Logging {
    * Calculate the transpose a matrix.  The original matrix is unchanged.
    *
    * @param matrix Matrix to transpose.
-   *
    * @return the transposition of the original matrix.
    */
   def transposeMatrix(matrix: Matrix4d): Matrix4d = {
@@ -1229,10 +1134,61 @@ object Util extends Logging {
   }
 
   /**
+   * Format the matrix as a Matlab consumable string, aligning decimal points vertically and
+   * minimizing the overall width.
+   *
+   * @param matrix Matrix to format.
+   * @return A text fragment that can be embedded in a Matlab program and executed as code.
+   */
+  def formatMatrix(matrix: Matrix4d): String = {
+    def fmt(d: Double) = {
+      d.toString.replaceAll("00* ", "0 ").trim.replaceAll("\\.$", ".0")
+    }
+
+    /** Representation of one column of the matrix. */
+    case class Specs(textList: Seq[String]) {
+
+      /** Position of decimal point in text version of number. */
+      private def dPos(t: String): Int = t.indexOf('.')
+
+      /** Largest index of position of decimal point. */
+      val decimalPosition = textList.map(dPos).max
+      /** Maximum number of characters needed to represent a number. */
+      val maxLength = textList.map(t => t.length - dPos(t)).max + decimalPosition
+
+      /**
+       * Add spaces before and after as needed.
+       *
+       * @param row Row index.
+       * @return Number formatted so it will line up visually.
+       */
+      def show(row: Int): String = (Seq.fill(decimalPosition - dPos(textList(row)))(" ").mkString + textList(row) + "                                                 ").take(maxLength)
+    }
+
+    def specs(column: Int): Specs = {
+      val vector = new Vector4d()
+      matrix.getColumn(column, vector)
+      val values = Array.fill(4)(0.0)
+      vector.get(values)
+
+      val textList = values.map(fmt)
+      new Specs(textList)
+    }
+
+    val range = (0 to 3)
+    val specList = range.map(c => specs(c))
+
+    val matrixText = "[\n" + range.map(row => range.map(column => specList(column).show(row)).mkString("  ")).mkString("  ;\n") + " ];\n"
+
+    matrixText
+  }
+
+  /**
    * Draw two green concentric circles around the RTPLAN center.  This imitates the way it is shown in Eclipse.
    */
   def drawPlanCenter(image: BufferedImage, planCenter_pix: Point2d, scale: Double = 1.0) = {
     def d2i(d: Double) = d.round.toInt
+
     val graphics = ImageUtil.getGraphics(image)
     graphics.setColor(Color.green)
 
@@ -1332,4 +1288,122 @@ object Util extends Logging {
     right
   }
 
+  def main(args: Array[String]): Unit = {
+
+    if (true) {
+      val matrix = new Matrix4d(
+        0, 1.0 / 3, 667876.9879879876875776747575757, -47687.00000032,
+        28.5, 4444.987e-30, 1.0 / 3, -176.0,
+        0, -2768768765.0, 1.0 / 3, 6686.9879879876875776747575757,
+        5, 1.0 / 3, -56, 24
+      )
+
+      println(matrix.toString)
+      println(formatMatrix(matrix))
+    }
+
+    if (false) {
+      val fileList = (new File("""D:\tmp\aqa\CBCT\MQATX1OBIQA2019Q3\ri_20190620""")).listFiles
+
+      def doit(file: File) = {
+        val al = new AttributeList
+        al.read(file)
+
+        val dtp = extractDateTimeAndPatientIdFromDicom(file)
+
+        println(dtp)
+
+      }
+
+      fileList.map(al => doit(al))
+
+      System.exit(99)
+    }
+
+    if (false) {
+      for (i <- (-800 until 800)) println(i.formatted("%5d") + " --> " + angleRoundedTo90(i).formatted("%5d"))
+      System.exit(0)
+    }
+
+    if (false) {
+      import scala.util.Try
+      var inc = 0
+
+      def bad = {
+        inc = inc + 1
+        println("*bad " + inc)
+        throw new RuntimeException("being bad")
+        inc
+      }
+
+      def good = {
+        inc = inc + 1
+        println("*good " + inc)
+        inc
+      }
+
+      println("bad good: " + {
+        Try(bad).flatMap(g => Try(good))
+      })
+      println("bad bad: " + {
+        Try(bad).flatMap(g => Try(bad))
+      })
+      println("good good: " + {
+        Try(good).flatMap(g => Try(good))
+      })
+      println("good bad: " + {
+        Try(good).flatMap(g => Try(bad))
+      })
+
+      val goodBad = {
+        Try(good).flatMap(g => Try(bad))
+      }
+      println("goodBad.getClass: " + goodBad.getClass)
+      System.exit(0)
+    }
+
+    if (false) {
+      val file = new File("""D:\tmp\aqa\ritter_bad_loc_upload\copy_me\jj.txt""")
+      val fis = new FileInputStream(file)
+      val data = fis.read()
+      println("Sleeping ....")
+      Thread.sleep(60 * 1000)
+      println("exiting")
+      System.exit(0)
+    }
+
+    if (false) {
+      val j = this
+
+      def doit(j: Any) = {
+        val j1 = j.getClass
+        val j2 = j1.getName
+        val j3 = org.aqa.web.WebUtil.cleanClassName(j2)
+        val j4 = org.aqa.web.WebUtil.pathOf(org.aqa.web.WebUtil.SubUrl.admin, this)
+        println("ey")
+      }
+
+      doit(j)
+    }
+
+    if (false) {
+      val list: Seq[Double] = Seq(234.29847234, 0.00000023424, 2398472742.12341234)
+      list.map(d => println("    " + d.toString + " --> " + d.formatted("%7.5f") + " ==> " + d.formatted("%7.5e")))
+
+      println("thisJarFile: " + thisJarFile.getAbsolutePath)
+
+      val fileNameList = List(
+        """D:\pf\Conquest\dicomserver1417\data\ISOCAL""",
+        """D:\pf\Conquest\dicomserver1417\data\Phantom""",
+        """D:\pf\Conquest\dicomserver1417\data\txdlite_mr4""",
+        """D:\pf\Conquest\dicomserver1417\data\28291735""",
+        """D:\pf\Conquest\dicomserver1417\data\junk""")
+
+      fileNameList.map(fn => {
+        val f = new File(fn)
+        val dtp = dateTimeAndPatientIdFromDicom(f)
+        println("file: " + f.getName.formatted("%-20s") + "    " + dtp.dateTime + "    " + dtp.PatientID)
+      })
+    }
+  }
 }
