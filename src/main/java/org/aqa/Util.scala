@@ -542,6 +542,7 @@ object Util extends Logging {
 
   /**
    * Round the angle to the closest 90 degree angle.
+   * @param angleInDegrees Angle to round off.
    */
   def angleRoundedTo90(angleInDegrees: Double): Int = {
     ((((angleInDegrees % 360.0) + 360.0) / 90.0).round.toInt % 4) * 90
