@@ -112,15 +112,15 @@ object BBbyCBCTExecute extends Logging {
    * linearly interpolating between the two adjacent slices.
    *
    * @param runReq           Data being processed.
-   * @param fineLocation_vox Location of bb found via image analysis in voxels in CBCT coordinate space.
+   * @param preciseLocation_vox Location of bb found via image analysis in voxels in CBCT coordinate space.
    * @return Patient position at the location of the BB.
    */
-  private def getLinearlyInterpolatedImagePositionPatient(runReq: BBbyCBCTRunReq, fineLocation_vox: Point3d) = {
+  private def getLinearlyInterpolatedImagePositionPatient(runReq: BBbyCBCTRunReq, preciseLocation_vox: Point3d) = {
 
     // The fraction of the distance between the farthest planes of the volume.
     val ratio = {
       val span = runReq.cbctList.size - 1
-      fineLocation_vox.getZ / span
+      preciseLocation_vox.getZ / span
     }
 
     // Get ipp (ImagePositionPatient) of an attribute list
@@ -150,11 +150,11 @@ object BBbyCBCTExecute extends Logging {
    * pixel size to make a matrix that works in CBCT space in mm.
    *
    * @param runReq           DICOM used as input.
-   * @param fineLocation_vox Precisely located center of the BB in voxel coordinates in the CBCT space.
+   * @param preciseLocation_vox Precisely located center of the BB in voxel coordinates in the CBCT space.
    * @return A matrix that will compensate for the table being angled.
    */
-  private def getIppMatrix(runReq: BBbyCBCTRunReq, fineLocation_vox: Point3d): Matrix4d = {
-    val ipp = getLinearlyInterpolatedImagePositionPatient(runReq, fineLocation_vox)
+  private def getIppMatrix(runReq: BBbyCBCTRunReq, preciseLocation_vox: Point3d): Matrix4d = {
+    val ipp = getLinearlyInterpolatedImagePositionPatient(runReq, preciseLocation_vox)
 
     val pixelSpacing = runReq.cbctList.head.get(TagByName.PixelSpacing).getDoubleValues
     // Get pixel size (image resolution).
@@ -179,15 +179,18 @@ object BBbyCBCTExecute extends Logging {
    * Calculate the matrix that translates voxel coordinates in CBCT space to RTPLAN coordinates in mm.
    *
    * @param runReq           DICOM input.
-   * @param fineLocation_vox Location of BB in voxels in CBCT space.
+   * @param preciseLocation_vox Location of BB in voxels in CBCT space.
    * @return Matrix that translates voxel coordinates in CBCT space to RTPLAN coordinates in mm.
    */
-  private def getCombinedMatrix(runReq: BBbyCBCTRunReq, fineLocation_vox: Point3d): Matrix4d = {
-    val ippMatrix = getIppMatrix(runReq, fineLocation_vox)
+  private def getCombinedMatrix(runReq: BBbyCBCTRunReq, preciseLocation_vox: Point3d): Matrix4d = {
+    val ippMatrix = getIppMatrix(runReq, preciseLocation_vox)
     val regMatrix = getRegMatrix(runReq)
     val combinedMatrix = Util.multiplyMatrix(regMatrix, ippMatrix)
-    println("combinedMatrix:\n" + combinedMatrix)
-    println("combinedMatrix.determinant: " + combinedMatrix.determinant())
+    logger.info("ImagePatientPosition matrix:" + Util.formatMatrix(ippMatrix))
+    logger.info("REG matrix:" + Util.formatMatrix(regMatrix))
+    logger.info("combinedMatrix:" + Util.formatMatrix(combinedMatrix))
+    logger.info("combinedMatrix:" + Util.formatMatrix(combinedMatrix))
+    logger.info("combinedMatrix.determinant: " + combinedMatrix.determinant())
     combinedMatrix
   }
 
@@ -196,19 +199,19 @@ object BBbyCBCTExecute extends Logging {
    * Determine the center of the BB in mm in RTPLAN coordinates.
    *
    * @param runReq           DICOM input.
-   * @param fineLocation_vox Location of BB in voxels in CBCT space.
+   * @param preciseLocation_vox Location of BB in voxels in CBCT space.
    * @return The center of the BB in mm in RTPLAN coordinates.
    */
-  private def calculateBbCenterInRtplan(runReq: BBbyCBCTRunReq, fineLocation_vox: Point3d): Point3d = {
-    val vec = new Point3d(fineLocation_vox.getX, fineLocation_vox.getY, 0)
-    val combinedMatrix = getCombinedMatrix(runReq, fineLocation_vox)
+  private def calculateBbCenterInRtplan(runReq: BBbyCBCTRunReq, preciseLocation_vox: Point3d): Point3d = {
+    val vec = new Point3d(preciseLocation_vox.getX, preciseLocation_vox.getY, 0)
+    val combinedMatrix = getCombinedMatrix(runReq, preciseLocation_vox)
     val planPoint = Util.transform(combinedMatrix, vec)
     planPoint
   }
 
 
   /** For testing only */
-  def testCalculate(runReq: BBbyCBCTRunReq, fineLocation_vox: Point3d): Point3d = calculateBbCenterInRtplan(runReq, fineLocation_vox)
+  def testCalculate(runReq: BBbyCBCTRunReq, preciseLocation_vox: Point3d): Point3d = calculateBbCenterInRtplan(runReq, preciseLocation_vox)
 
 
   /**
@@ -228,19 +231,19 @@ object BBbyCBCTExecute extends Logging {
       val result = BBbyCBCTAnalysis.volumeAnalysis(runReq.cbctList, extendedData.output.dir)
       if (result.isRight) {
         val imageXYZ = result.right.get.imageXYZ
-        val fineLocation_vox = result.right.get.fineLocation_vox
-        logger.info("Found BB in CBCT volume.  XYZ Coordinates in original CBCT space in voxels (fineLocation_vox): " + fineLocation_vox)
+        val preciseLocation_vox = result.right.get.fineLocation_vox
+        logger.info("Found BB in CBCT volume.  XYZ Coordinates in original CBCT space in voxels (preciseLocation_vox): " + preciseLocation_vox)
 
-        val bbPointInRtplan = calculateBbCenterInRtplan(runReq, fineLocation_vox)
+        val bbPointInRtplan = calculateBbCenterInRtplan(runReq, preciseLocation_vox)
 
         val bbByCBCT = saveToDb(extendedData, runReq, bbPointInRtplan)
 
         // origin of RTPLAN in the CBCT voxel space
         val rtplanOrigin_vox = {
           val voxSize = Util.getVoxSize_mm(runReq.cbctList)
-          val x_vox = fineLocation_vox.getX - (bbByCBCT.err_mm.getX / voxSize.getX)
-          val y_vox = fineLocation_vox.getY - (bbByCBCT.err_mm.getY / voxSize.getY)
-          val z_vox = fineLocation_vox.getZ - (bbByCBCT.err_mm.getZ / voxSize.getZ)
+          val x_vox = preciseLocation_vox.getX - (bbByCBCT.err_mm.getX / voxSize.getX)
+          val y_vox = preciseLocation_vox.getY - (bbByCBCT.err_mm.getY / voxSize.getY)
+          val z_vox = preciseLocation_vox.getZ - (bbByCBCT.err_mm.getZ / voxSize.getZ)
           val o = new Point3d(x_vox, y_vox, z_vox)
           o
         }
@@ -248,7 +251,7 @@ object BBbyCBCTExecute extends Logging {
         // round trip to see if values match.  They will not match exactly because the RTPLAN center is
         // using the ImagePositionPatient of the center of the BB, which is slightly different.
         if (true) {
-          val combinedMatrix = getCombinedMatrix(runReq, fineLocation_vox)
+          val combinedMatrix = getCombinedMatrix(runReq, preciseLocation_vox)
           val roundTrip = Util.transform(combinedMatrix, rtplanOrigin_vox)
 
           logger.info("bbByCBCT.rtplan vox : " + rtplanOrigin_vox)
@@ -257,7 +260,7 @@ object BBbyCBCTExecute extends Logging {
         }
 
         // Creating images takes a long time.
-        val annotatedImages = BBbyCBCTAnnotateImages.annotate(bbByCBCT, imageXYZ, runReq, fineLocation_vox, rtplanOrigin_vox, extendedData.input.dataDate.get)
+        val annotatedImages = BBbyCBCTAnnotateImages.annotate(bbByCBCT, imageXYZ, runReq, preciseLocation_vox, rtplanOrigin_vox, extendedData.input.dataDate.get)
 
         // Generating HTML takes a little time.
         BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, annotatedImages, runReq, result.right.get, response)
