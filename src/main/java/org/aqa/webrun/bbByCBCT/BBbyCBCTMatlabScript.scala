@@ -45,6 +45,7 @@ class BBbyCBCTMatlabScript(output: Output, machine: Machine, cbctAnalysisResult:
 
   def make(): Unit = {
 
+    //noinspection SpellCheckingInspection
     val text =
       s"""
          |
@@ -127,10 +128,9 @@ class BBbyCBCTMatlabScript(output: Output, machine: Machine, cbctAnalysisResult:
          |    1]
          |
          |bbPostionInRtplan_mm = FrameOfReferenceTransformationMatrix * patientOrientationAndPosition * bbLocation_vox;
-         |bbPostionInRtplan_mm = bbPostionInRtplan_mm(1:3);
          |
          |% XYZ error of CBCT - PLAN isocenter
-         |XYZerror = bbPostionInRtplan_mm - IsocenterPosition';
+         |XYZerror = bbPostionInRtplan_mm(1:3) - IsocenterPosition';
          |fprintf("    XYZ error:  %f  %f  %f\\n", XYZerror(1),XYZerror(2),XYZerror(3));
          |
          |""".stripMargin

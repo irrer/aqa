@@ -489,7 +489,7 @@ object BBbyCBCTHTML extends Logging {
     val text = WebUtil.wrapBody(wrap(mainContent, extendedData), "BB Location by CBCT", None, c3 = true, Some(runScript))
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(file, text)
-    new BBbyCBCTMatlabScript(extendedData.output, extendedData.machine, cbctAnalysisResult, runReq, response).make
+    new BBbyCBCTMatlabScript(extendedData.output, extendedData.machine, cbctAnalysisResult, runReq, response).make()
     //makeMatlabScript(outputDir, extendedData.output.outputPK.get, cbctAnalysisResult, runReq, response)
 
     //makeCbctSlices(extendedData, runReq)
