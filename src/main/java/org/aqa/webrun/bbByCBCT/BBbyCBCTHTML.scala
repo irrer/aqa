@@ -12,7 +12,6 @@ import org.aqa.db.DicomSeries
 import org.aqa.db.Output
 import org.aqa.web.MachineUpdate
 import org.aqa.web.OutputList
-import org.aqa.web.ViewOutput
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.restlet.Response
@@ -20,7 +19,6 @@ import org.restlet.Response
 import java.awt.Color
 import java.io.File
 import java.text.SimpleDateFormat
-import javax.vecmath.Point3d
 import scala.annotation.tailrec
 import scala.xml.Elem
 
@@ -491,8 +489,8 @@ object BBbyCBCTHTML extends Logging {
     val text = WebUtil.wrapBody(wrap(mainContent, extendedData), "BB Location by CBCT", None, c3 = true, Some(runScript))
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(file, text)
-new    BBbyCBCTMatlabScript(outputDir, extendedData.output.outputPK.get, cbctAnalysisResult, runReq, response).make
-    makeMatlabScript(outputDir, extendedData.output.outputPK.get, cbctAnalysisResult, runReq, response)
+    new BBbyCBCTMatlabScript(extendedData.output, extendedData.machine, cbctAnalysisResult, runReq, response).make
+    //makeMatlabScript(outputDir, extendedData.output.outputPK.get, cbctAnalysisResult, runReq, response)
 
     //makeCbctSlices(extendedData, runReq)
   }
