@@ -1,5 +1,6 @@
 package org.aqa.webrun.dailyQA
 
+import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
@@ -58,6 +59,10 @@ class DailyQACSVCacheCBCT(hostRef: String, institutionPK: Long) extends CacheCSV
   private val MachineColHeader = "Machine"
   private val PatientIDColHeader = "PatientID"
   private val OperatorsNameColHeader = "OperatorsName"
+
+  private def formatImageOrientationPatient(al: AttributeList): String = {
+    al.get(TagByName.ImageOrientationPatient).getDoubleValues.map(d => if (d.round == d) d.toLong.toString else d.toString).mkString("  ")
+  }
 
   private val colList = Seq[Col](
     Col(MachineColHeader, dataSet => dataSet.machine.id),
@@ -135,10 +140,11 @@ class DailyQACSVCacheCBCT(hostRef: String, institutionPK: Long) extends CacheCSV
     Col("Patient Support Angle", dataSet => getCbctValues(dataSet, TagByName.PatientSupportAngle).head),
     Col("TableTopPitchAngle", dataSet => getCbctValues(dataSet, TagByName.TableTopPitchAngle).head),
     Col("TableTopRollAngle", dataSet => getCbctValues(dataSet, TagByName.TableTopRollAngle).head),
+    Col("ImageOrientationPatient", dataSet => formatImageOrientationPatient(dataSet.al)),
     Col("Rotation Direction", dataSet => textFromAl(dataSet, TagByName.RotationDirection)),
     Col("Software Versions", dataSet => textFromAl(dataSet, TagByName.SoftwareVersions)),
-
-    Col("CBCT Details", dataSet => hostRef + ViewOutput.viewOutputUrl(dataSet.output.outputPK.get)))
+    Col("CBCT Details", dataSet => hostRef + ViewOutput.viewOutputUrl(dataSet.output.outputPK.get))
+  )
 
 
   private def makeRow(dataSet: BBbyCBCT.DailyDataSetCBCT) = colList.map(col => {
@@ -149,7 +155,7 @@ class DailyQACSVCacheCBCT(hostRef: String, institutionPK: Long) extends CacheCSV
 
   override protected def constructHeaders: String = colList.map(col => '"' + col.header + '"').mkString(",")
 
-  override protected def cacheDirName(): String = "DailyQACbctCSV-2"
+  override protected def cacheDirName(): String = "DailyQACbctCSV"
 
   override protected def firstDataDate(institutionPK: Long): Option[Timestamp] = BBbyCBCT.getEarliestDate(institutionPK)
 
