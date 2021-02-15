@@ -111,7 +111,7 @@ object BBbyCBCTExecute extends Logging {
    * Get the image position patient vector for the point where the BB was found.  Do this by
    * linearly interpolating between the two adjacent slices.
    *
-   * @param runReq           Data being processed.
+   * @param runReq              Data being processed.
    * @param preciseLocation_vox Location of bb found via image analysis in voxels in CBCT coordinate space.
    * @return Patient position at the location of the BB.
    */
@@ -149,7 +149,7 @@ object BBbyCBCTExecute extends Logging {
    * first and last slice.  That is then combined with ImageOrientationPatient and
    * pixel size to make a matrix that works in CBCT space in mm.
    *
-   * @param runReq           DICOM used as input.
+   * @param runReq              DICOM used as input.
    * @param preciseLocation_vox Precisely located center of the BB in voxel coordinates in the CBCT space.
    * @return A matrix that will compensate for the table being angled.
    */
@@ -178,7 +178,7 @@ object BBbyCBCTExecute extends Logging {
   /**
    * Calculate the matrix that translates voxel coordinates in CBCT space to RTPLAN coordinates in mm.
    *
-   * @param runReq           DICOM input.
+   * @param runReq              DICOM input.
    * @param preciseLocation_vox Location of BB in voxels in CBCT space.
    * @return Matrix that translates voxel coordinates in CBCT space to RTPLAN coordinates in mm.
    */
@@ -198,7 +198,7 @@ object BBbyCBCTExecute extends Logging {
   /**
    * Determine the center of the BB in mm in RTPLAN coordinates.
    *
-   * @param runReq           DICOM input.
+   * @param runReq              DICOM input.
    * @param preciseLocation_vox Location of BB in voxels in CBCT space.
    * @return The center of the BB in mm in RTPLAN coordinates.
    */
@@ -213,6 +213,29 @@ object BBbyCBCTExecute extends Logging {
   /** For testing only */
   def testCalculate(runReq: BBbyCBCTRunReq, preciseLocation_vox: Point3d): Point3d = calculateBbCenterInRtplan(runReq, preciseLocation_vox)
 
+
+  /**
+   * Round trip RTPLAN origin to see if values match.  Do this by taking the calculated RTPLAN in voxel space
+   * and multiplying it by the combined matrix.  It should end up with the same coordinates as the one retrieve
+   * from the RTPLAN. They will not match exactly because of round off errors.  Round off errors are acceptable
+   * if they are less than 10 significant figures, and in this case are even more so because the RTPLAN voxel
+   * position is only used for annotating the image, and pixels on the screen have a much lower resolution
+   * than the round off errors.
+   *
+   * This is only shown for debugging and diagnostic reasons.
+   *
+   * @param runReq           DICOM data needed to calculate combined matrix.
+   * @param rtplanOrigin_vox Isocenter of RTPLAN in CBCT space in voxels.
+   * @param rtplanOrigin_mm  Isocenter of RTPLAN in RTPLAN space in mm.
+   */
+  private def showRtplanRoundTrip(runReq: BBbyCBCTRunReq, rtplanOrigin_vox: Point3d, rtplanOrigin_mm: Point3d): Unit = {
+    val combinedMatrix = getCombinedMatrix(runReq, rtplanOrigin_vox)
+    val roundTrip = Util.transform(combinedMatrix, rtplanOrigin_vox)
+
+    logger.info("bbByCBCT.rtplan vox                     : " + rtplanOrigin_vox)
+    logger.info("bbByCBCT.rtplan mm                      : " + rtplanOrigin_mm)
+    logger.info("round trip (should match above numbers) : " + roundTrip)
+  }
 
   /**
    * Main entry for processing Daily QA CBCT data.
@@ -248,16 +271,7 @@ object BBbyCBCTExecute extends Logging {
           o
         }
 
-        // round trip to see if values match.  They will not match exactly because the RTPLAN center is
-        // using the ImagePositionPatient of the center of the BB, which is slightly different.
-        if (true) {
-          val combinedMatrix = getCombinedMatrix(runReq, preciseLocation_vox)
-          val roundTrip = Util.transform(combinedMatrix, rtplanOrigin_vox)
-
-          logger.info("bbByCBCT.rtplan vox : " + rtplanOrigin_vox)
-          logger.info("bbByCBCT.rtplan mm  : " + bbByCBCT.rtplan)
-          logger.info("round trip          : " + roundTrip)
-        }
+        showRtplanRoundTrip(runReq, rtplanOrigin_vox, bbByCBCT.rtplan)
 
         // Creating images takes a long time.
         val annotatedImages = BBbyCBCTAnnotateImages.annotate(bbByCBCT, imageXYZ, runReq, preciseLocation_vox, rtplanOrigin_vox, extendedData.input.dataDate.get)
