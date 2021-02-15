@@ -202,8 +202,7 @@ abstract class CacheCSV extends Logging {
   /**
    * Assemble the CSV results for the user's institution and put it in the response.  Use previously
    * calculated values as much as possible because they are faster to get.  For any values that are
-   * not cached get them from the database and add them to the cache.  Always get today's data form
-   * the database because that data is still in a state of flux.
+   * not cached get them from the database and add them to the cache.
    *
    * The response is where the data is put, but is also used to get the request, which
    * indicates the user, which is used to get the institution.
@@ -234,18 +233,13 @@ abstract class CacheCSV extends Logging {
 
       val allCached = retrieveAllCached()
 
-      val todayText = CacheCSV.dateFormat.format(new Date)
-      val todayTimestamp = new Timestamp(CacheCSV.dateFormat.parse(todayText).getTime)
-
-      val nonCached = requiredDayList.diff(allCached.map(_.dateText)).diff(Seq(todayText))
+      val nonCached = requiredDayList.diff(allCached.map(_.dateText))
 
       cacheDir.mkdirs()
 
       val newlyInstantiated = nonCached.map(nc => instantiateCache(nc, hostRef, institutionPK))
 
-      val todayData = CachedResult(dateTextToFile(todayText), fetchData(todayTimestamp, hostRef, institutionPK))
-
-      val all: Seq[CachedResult] = allCached ++ newlyInstantiated ++ Seq(todayData)
+      val all: Seq[CachedResult] = allCached ++ newlyInstantiated
 
       val assembledAndSorted = all. // all content
         map(_.csv).
