@@ -1,5 +1,6 @@
 package org.aqa.webrun.dailyQA
 
+import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
@@ -65,6 +66,10 @@ class DailyQACSVCacheComposite(hostRef: String, institutionPK: Long) extends Cac
   }
 
   private def getCbctValues(dataSet: BBbyEPIDComposite.DailyDataSetComposite, tag: AttributeTag, scale: Double = 1.0): Seq[String] = DailyQAUtil.getValues(dataSet.cbct.attributeList, tag, scale)
+
+  private def formatImageOrientationPatient(al: AttributeList): String = {
+    al.get(TagByName.ImageOrientationPatient).getDoubleValues.map(d => if (d.round == d) d.toLong.toString else d.toString).mkString("  ")
+  }
 
   private case class Col(header: String, toText: BBbyEPIDComposite.DailyDataSetComposite => String) {}
 
@@ -139,6 +144,15 @@ class DailyQACSVCacheComposite(hostRef: String, institutionPK: Long) extends Cac
     Col("CBCT KVP Peak kilo voltage", dataSet => getCbctValues(dataSet, TagByName.KVP).head),
     Col("CBCT Exposure Time ms", dataSet => getCbctValues(dataSet, TagByName.ExposureTime).head),
     Col("CBCT X-Ray Tube Current mA", dataSet => getCbctValues(dataSet, TagByName.XRayTubeCurrent).head),
+
+    Col("X/lat Table Posn CBCT cm", dataSet => (dataSet.cbct.tableXlateral_mm / 10).toString),
+    Col("Y/vert Table Posn CBCT cm", dataSet => (dataSet.cbct.tableYvertical_mm / 10).toString),
+    Col("Z/lng Table Posn CBCT cm", dataSet => (dataSet.cbct.tableZlongitudinal_mm / 10).toString),
+
+    Col("Patient Support Angle", dataSet => getCbctValues(dataSet, TagByName.PatientSupportAngle).head),
+    Col("TableTopPitchAngle", dataSet => getCbctValues(dataSet, TagByName.TableTopPitchAngle).head),
+    Col("TableTopRollAngle", dataSet => getCbctValues(dataSet, TagByName.TableTopRollAngle).head),
+    Col("ImageOrientationPatient", dataSet => formatImageOrientationPatient(dataSet.cbct.attributeList)),
 
     Col("CBCT Details", dataSet => hostRef + ViewOutput.viewOutputUrl(dataSet.cbct.outputPK)),
     Col("EPID Details", dataSet => hostRef + ViewOutput.viewOutputUrl(dataSet.composite.outputPK)))
