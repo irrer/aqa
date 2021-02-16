@@ -520,6 +520,7 @@ object DailyQAHTML extends Logging {
         val explanation: Elem = 0 match {
           case _ if machineCbctResults.isEmpty && epidOutput.isEmpty => showNoData
           case _ if machineCbctResults.nonEmpty && machineCbctResults.isEmpty => showFail("One or more CBCTs were done but the BB was not found.  Probably mis-alignment of table or phantom.  It is recommended that the CBCT scan be repeated.")
+          case _ if (machineCbctResults.size == 1) && allEpidSeqWithErrors.isEmpty => showWarn("There is a successful CBCT scan but no EPID results.  A new EPID scan is recommended.")
           case _ if (machineCbctResults.size == 1) && machineEpidResultsWithErrors.nonEmpty => showFail("There is a successful CBCT scan but EPID results failed.  A new EPID scan is recommended.")
           case _ if (machineCbctResults.size == 1) && machineEpidResultsWithoutErrors.isEmpty => showWarn("There is a successful CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
           case _ if machineCbctResults.nonEmpty && machineEpidResultsWithoutErrors.isEmpty => showWarn("There are " + machineCbctResults.size + " successful CBCT scans but no EPID scans.  It is recommended that an EPID scan be performed.")
