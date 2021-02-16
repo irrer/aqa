@@ -25,34 +25,6 @@ import scala.xml.Elem
 
 object DailyQAHTML extends Logging {
 
-  private def makeChecksumX(institutionPK: Long, date: Date, dataSetList: Seq[BBbyEPIDComposite.DailyDataSetComposite]): String = {
-    val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
-
-    /** Truncate (floor) to the date. */
-    def dateFloor(d: Date): Date = dateFormat.parse(dateFormat.format(d))
-
-    val lo = dateFloor(date)
-
-    val msInHour = 60 * 60 * 1000 // milliseconds in an hour
-
-    val hi = dateFloor(new Date(lo.getTime + (26 * msInHour)))
-
-    val outputList = {
-      val all = Output.getOutputByDateRange(institutionPK, new Timestamp(lo.getTime), new Timestamp(hi.getTime))
-      all.filter(o => (o.procedurePK == Procedure.ProcOfBBbyCBCT) || (o.procedurePK == Procedure.ProcOfBBbyEPID))
-    }
-
-    val checksum2 = outputList.sortBy(_.outputPK.get).map(o => o.outputPK.get + ":" + o.status).mkString(" / ")
-
-    val cs3 = {
-      BBbyEPIDComposite.getChecksum(date, institutionPK)
-    }
-
-    val oldC = "checksum size: " + dataSetList.size + " : " + dataSetList.map(_.checksum).sorted.mkString(" / ")  // TODO rm
-    Trace.trace("\nOld: " + oldC + "\nNew: " + checksum2)
-
-    checksum2
-  }
 
   def makeReport(dataSetList: Seq[BBbyEPIDComposite.DailyDataSetComposite], institutionPK: Long, date: Date): Elem = {
 
@@ -342,8 +314,6 @@ object DailyQAHTML extends Logging {
 
       Output.getOutputByDateRange(institutionPK, dataDateBegin, dataDateEnd).filter(o => procedurePkSet.contains(o.procedurePK)).sortBy(o => o.dataDate.get.getTime)
     }
-
-    def outputCBCT(machinePK: Long) = allOutputs.filter(o => (o.machinePK.get == machinePK) && (o.procedurePK == cbctPK))
 
     def outputEPID(machinePK: Long) = allOutputs.filter(o => (o.machinePK.get == machinePK) && (o.procedurePK == epidPK))
 
