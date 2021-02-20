@@ -185,7 +185,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
     // Get the baseline for the given beam of the given type (dataName).  If it does not exist, then use this one to establish it.
     val baseline = SymmetryAndFlatness.getBaseline(machinePK, beamName, dataDate) match {
-      case Some(bl) => bl
+      case Some(bl) => bl.symmetryAndFlatness
       case _ => symmetryAndFlatness
     }
 

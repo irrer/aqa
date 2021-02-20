@@ -64,11 +64,13 @@ object C3Chart {
   class Tolerance(a: Double, b: Double) {
     val min = Math.min(a, b)
     val max = Math.max(a, b)
+    override def toString: String = "min: " + min + "    max: " + max
   }
 
   class YRange(a: Double, b: Double) {
     val min = Math.min(a, b)
     val max = Math.max(a, b)
+    override def toString: String = "min: " + min + "    max: " + max
   }
 
 }

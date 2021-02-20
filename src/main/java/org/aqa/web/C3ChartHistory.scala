@@ -1,58 +1,48 @@
 package org.aqa.web
 
 import org.aqa.Logging
-import java.util.Date
 import org.aqa.Util
-import org.aqa.db.MaintenanceRecord
-import org.aqa.db.MaintenanceCategory
-import java.awt.Color
 import org.aqa.db.Baseline
+import org.aqa.db.MaintenanceCategory
+import org.aqa.db.MaintenanceRecord
+
+import java.awt.Color
 import java.text.SimpleDateFormat
-import edu.umro.ScalaUtil.Trace
+import java.util.Date
+import scala.xml.Elem
 
 /**
- * @param maintList: List of maintenance records that fall chronologically in the displayed range
- *
- * @param width: Optional width of chart in pixels.
- *
- * @param height: Optional height of chart in pixels.
- *
- * @param xAxisLabel: Text label for X axis
- *
- * @param xValueList: List of X values
- *
- * @param baselineSpec: Optional baseline value.  If given, a horizontal line
- *
- * @param tolerance: If given, show horizontal tolerance (see AQA.css .c3-ygrid-line.tolerance)
- *                   lines at the given values.
- *
- * @param range: If given, scale the chart so that it shows values within this range.  If values
- *               are out of range, they will be literally 'off the chart'.
- *
- * @param yAxisLabels: Labels for each individual Y value
- *
- * @param yValues: Values to be charted.
- *
- * @param yIndex: Index of the Y values that is new.
- *
- * @param yFormat: Formatting for y values.   Examples: .3g .4g  Reference: http://bl.ocks.org/zanarmstrong/05c1e95bf7aa16c4768e
+ * @param maintenanceList   : List of maintenance records that fall chronologically in the displayed range
+ * @param width       : Optional width of chart in pixels.
+ * @param height      : Optional height of chart in pixels.
+ * @param xLabel      : Text label for X axis
+ * @param xDateList   : List of dates
+ * @param baseline    : Optional baseline value.  If given, a horizontal line
+ * @param tolerance   : If given, show horizontal tolerance (see AQA.css .c3-ygrid-line.tolerance)
+ *                    lines at the given values.
+ * @param yRange      : If given, scale the chart so that it shows values within this range.  If values
+ *                    are out of range, they will be literally 'off the chart'.
+ * @param yAxisLabels : Labels for each individual Y value
+ * @param yValues     : Values to be charted.
+ * @param yIndex      : Index of the Y values that is new.
+ * @param yFormat     : Formatting for y values.   Examples: .3g .4g  Reference: http://bl.ocks.org/zanarmstrong/05c1e95bf7aa16c4768e
  */
 class C3ChartHistory(
-  chartIdOpt: Option[String],
-  maintList: Seq[MaintenanceRecord],
-  width: Option[Int],
-  height: Option[Int],
-  xLabel: String,
-  xDateList: Seq[Date],
-  baseline: Option[Baseline],
-  tolerance: Option[C3Chart.Tolerance],
-  yRange: Option[C3Chart.YRange],
-  yAxisLabels: Seq[String],
-  yDataLabel: String,
-  yValues: Seq[Seq[Double]],
-  yIndex: Int,
-  yFormat: String,
-  yColorList: Seq[Color]) extends Logging {
+                      chartIdOpt: Option[String],
+                      maintenanceList: Seq[MaintenanceRecord],
+                      width: Option[Int],
+                      height: Option[Int],
+                      xLabel: String,
+                      xDateList: Seq[Date],
+                      baseline: Option[Baseline],
+                      tolerance: Option[C3Chart.Tolerance],
+                      yRange: Option[C3Chart.YRange],
+                      yAxisLabels: Seq[String],
+                      yDataLabel: String,
+                      yValues: Seq[Seq[Double]],
+                      yIndex: Int,
+                      yFormat: String,
+                      yColorList: Seq[Color]) extends Logging {
 
   if (yAxisLabels.size != yValues.size) throw new RuntimeException("Must be same number of Y labels as Y data sets.  yAxisLabels.size: " + yAxisLabels.size + "    yValues.size: " + yValues.size)
 
@@ -78,33 +68,41 @@ class C3ChartHistory(
   private val minDate = xDateList.minBy(d => d.getTime)
   private val maxDate = xDateList.maxBy(d => d.getTime)
 
-  private val maintDateList = dateColumn("maintDateList", maintList.map(maint => Seq(maint.creationTime, maint.creationTime)).flatten)
+  private val maintenanceDateList = dateColumn("maintenanceDateList", maintenanceList.flatMap(maintenance => Seq(maintenance.creationTime, maintenance.creationTime)))
 
-  val all = yValues.flatten
+  val all: Seq[Double] = yValues.flatten
 
-  val minY = all.min
-  val maxY = all.max
+  val minY: Double = all.min
+  val maxY: Double = all.max
 
-  val yRangeY = {
+  val yRangeY: C3Chart.YRange = {
     val minYt = if (tolerance.isDefined) Math.min(minY, tolerance.get.min) else minY
     val maxYt = if (tolerance.isDefined) Math.max(maxY, tolerance.get.max) else maxY
     (tolerance.isDefined, yRange.isDefined) match {
       case (_, false) => new C3Chart.YRange(minYt, maxYt)
       case (false, true) => new C3Chart.YRange(Math.max(minYt, yRange.get.min), Math.min(maxYt, yRange.get.max))
-      case (true, true) => {
+      case (true, true) =>
         val lo = if (minYt < yRange.get.min) yRange.get.min else minYt
         val hi = if (maxYt > yRange.get.max) yRange.get.max else maxYt
         new C3Chart.YRange(lo, hi)
-      }
     }
   }
 
-  private val maintValueList = column("MaintenanceRecord", Seq.fill(maintList.size)(Seq(minY, maxY)).flatten)
-  private val maintSummaryList = textColumn(maintList.map(maint => maint.summary))
-  private val maintColorList = textColumn(maintList.map(maint => MaintenanceCategory.findMaintenanceCategoryMatch(maint.category).Color))
-  private val maintCategoryList = textColumn(maintList.map(maint => maint.category))
+  private val maintenanceValueList = column("MaintenanceRecord", Seq.fill(maintenanceList.size)(Seq(yRangeY.min, yRangeY.max)).flatten)
+  private val maintenanceSummaryList = textColumn(maintenanceList.map(maintenance => maintenance.summary))
+  private val maintenanceColorList = textColumn(
+    maintenanceList.flatMap(maintenance => {
+      val c = MaintenanceCategory.findMaintenanceCategoryMatch(maintenance.category).Color
+      Seq(c, c)
+    })
+  )
+  private val maintenanceCategoryList = textColumn(maintenanceList.map(maintenance => maintenance.category))
 
-  val html = { <div id={ chartIdTag }>{ chartIdTag }</div> }
+  val html: Elem = {
+    <div id={chartIdTag}>
+      {chartIdTag}
+    </div>
+  }
 
   private val yLabels = {
     val yOnly = yAxisLabels.map(y => "'" + y + "' : '" + xLabel + "',")
@@ -146,26 +144,31 @@ class C3ChartHistory(
     grid: {
         y: {
             lines: [
-                """ + allGrid.mkString(",\n                ") + """
+                """ + allGrid.mkString(",\n                ") +
+        """
             ]
         }
     }"""
     }
   }
 
-  val javascript = {
+  val javascript: String = {
     """
-var """ + chartIdTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) + """
+var """ + chartIdTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) +
+      """
     tooltip: {
       format: {
         value: function (value, ratio, id, index) {
-          var maintSummaryList = """ + maintSummaryList + """;
-          if (id === 'MaintenanceRecord') return maintSummaryList[index/2];
-          return d3.format('""" + yFormat + """')(value);
+          var maintenanceSummaryList = """ + maintenanceSummaryList +
+      """;
+          if (id === 'MaintenanceRecord') return maintenanceSummaryList[index/2];
+          return d3.format('""" + yFormat +
+      """')(value);
           },
           name: function (name, ratio, id, index) {
-            var maintCategoryList = """ + maintCategoryList + """;
-              if (id === 'MaintenanceRecord') return maintCategoryList[index/2];
+            var maintenanceCategoryList = """ + maintenanceCategoryList +
+      """;
+              if (id === 'MaintenanceRecord') return maintenanceCategoryList[index/2];
               return id;
               },
           title: function (value) { 
@@ -175,27 +178,36 @@ var """ + chartIdTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, hei
     },
     data: {
       xs: {
-        """ + yLabels + """
-        'MaintenanceRecord': 'maintDateList'
+        """ + yLabels +
+      """
+        'MaintenanceRecord': 'maintenanceDateList'
         },
         xFormat: standardDateFormat,
         columns: [
-          """ + dateColumn(xLabel, xDateList) + """,
-          """ + yText + """,
-          """ + maintDateList + """,
-          """ + maintValueList + """
+          """ + dateColumn(xLabel, xDateList) +
+      """,
+          """ + yText +
+      """,
+          """ + maintenanceDateList +
+      """,
+          """ + maintenanceValueList +
+      """
         ],
         types: {
-          """ + yAxisLabels.map(label => "'" + label + "' : 'line'").mkString(",\n          ") + """,
+          """ + yAxisLabels.map(label => "'" + label + "' : 'line'").mkString(",\n          ") +
+      """,
           'MaintenanceRecord': 'bar'
         },
         color: function (color, d) {
-          var maintColorList = """ + maintColorList + """;
-          if (d.id === 'MaintenanceRecord') return maintColorList[d.index % maintColorList.length];
-          if (d.index == """ + yIndex + """) return 'orange';
+          var maintenanceColorList = """ + maintenanceColorList +
+      """;
+          if (d.id === 'MaintenanceRecord') return maintenanceColorList[d.index % maintenanceColorList.length];
+          if (d.index == """ + yIndex +
+      """) return 'orange';
           return color;
         }
-    }""" + grid + """,
+    }""" + grid +
+      """,
     point: {
         r: 2,
         focus : {
@@ -204,19 +216,24 @@ var """ + chartIdTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, hei
             }
         }
     },
-    bindto : '#""" + chartIdTag + """',
+    bindto : '#""" + chartIdTag +
+      """',
     axis: {
        x: {
          label: 'Date',
          type: 'timeseries',
-         min: '""" + Util.standardDateFormat.format(minDate) + """',
-         max: '""" + Util.standardDateFormat.format(maxDate) + """',
+         min: '""" + Util.standardDateFormat.format(minDate) +
+      """',
+         max: '""" + Util.standardDateFormat.format(maxDate) +
+      """',
          tick: { format: function(dt) { return [ formatDate(dt) , formatTime(dt) ]; } }
        },
        y: {
-         """ + C3Chart.rangeText(yRangeY.min, yRangeY.max) + """         label: '""" + yDataLabel + """',
+         """ + C3Chart.rangeText(yRangeY.min, yRangeY.max) + """         label: '""" + yDataLabel +
+      """',
          tick: {
-           format: d3.format('""" + yFormat + """')
+           format: d3.format('""" + yFormat +
+      """')
          }
        }
     },
@@ -228,7 +245,8 @@ var """ + chartIdTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, hei
       top: 10
     },
     color : {
-      pattern : """ + yColorNameList + """
+      pattern : """ + yColorNameList +
+      """
     }
   });
 

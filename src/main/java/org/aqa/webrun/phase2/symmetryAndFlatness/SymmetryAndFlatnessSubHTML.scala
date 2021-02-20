@@ -301,7 +301,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
             )
           aa.get
         }
-        Some(SymmetryAndFlatnessDataSet(sf, output, baseline, al, rtplanAl))
+        Some(SymmetryAndFlatnessDataSet(sf, output, baseline.symmetryAndFlatness, al, rtplanAl))
       } catch {
         case t: Throwable =>
           logger.error("Unexpected error: " + fmtEx(t))

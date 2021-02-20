@@ -309,24 +309,24 @@ object Baseline extends Logging {
         val b2 = SymmetryAndFlatness.getBaseline(output.machinePK.get, sf.beamName, output.dataDate.get).get
 
         if (
-          (b2.axialSymmetryBaseline_pct == axial) &&
-            (b2.transverseSymmetry_pct == trans) &&
-            (b2.flatnessBaseline_pct == flatness) &&
-            (b2.profileConstancy_pct == constancy)
+          (b2.symmetryAndFlatness.axialSymmetryBaseline_pct == axial) &&
+            (b2.symmetryAndFlatness.transverseSymmetry_pct == trans) &&
+            (b2.symmetryAndFlatness.flatnessBaseline_pct == flatness) &&
+            (b2.symmetryAndFlatness.profileConstancy_pct == constancy)
         )
           Trace.trace("sym+flat yay")
         else {
           Trace.trace("sym+flat What?")
 
-          Trace.trace(b2.axialSymmetryBaseline_pct == axial)
-          Trace.trace(b2.transverseSymmetry_pct == trans)
-          Trace.trace(b2.flatnessBaseline_pct == flatness)
-          Trace.trace(b2.profileConstancy_pct == constancy)
+          Trace.trace(b2.symmetryAndFlatness.axialSymmetryBaseline_pct == axial)
+          Trace.trace(b2.symmetryAndFlatness.transverseSymmetry_pct == trans)
+          Trace.trace(b2.symmetryAndFlatness.flatnessBaseline_pct == flatness)
+          Trace.trace(b2.symmetryAndFlatness.profileConstancy_pct == constancy)
 
-          Trace.trace("\n" + b2.axialSymmetryBaseline_pct + "\n" + axial + "\n")
-          Trace.trace("\n" + b2.transverseSymmetry_pct + "\n" + trans + "\n")
-          Trace.trace("\n" + b2.flatnessBaseline_pct + "\n" + flatness + "\n")
-          Trace.trace("\n" + b2.profileConstancy_pct + "\n" + constancy + "\n")
+          Trace.trace("\n" + b2.symmetryAndFlatness.axialSymmetryBaseline_pct + "\n" + axial + "\n")
+          Trace.trace("\n" + b2.symmetryAndFlatness.transverseSymmetry_pct + "\n" + trans + "\n")
+          Trace.trace("\n" + b2.symmetryAndFlatness.flatnessBaseline_pct + "\n" + flatness + "\n")
+          Trace.trace("\n" + b2.symmetryAndFlatness.profileConstancy_pct + "\n" + constancy + "\n")
         }
       }
 

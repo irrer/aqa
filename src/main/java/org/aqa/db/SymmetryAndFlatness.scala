@@ -7,7 +7,6 @@ import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
 
 import java.sql.Timestamp
-import java.util.Date
 import scala.xml.Elem
 
 /**
@@ -310,17 +309,18 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     Db.perform(ops)
   }
 
-  case class SymmetryAndFlatnessHistory(date: Date, symmetryAndFlatness: SymmetryAndFlatness)
+  case class SymmetryAndFlatnessHistory(timestamp: Timestamp, symmetryAndFlatness: SymmetryAndFlatness, baselineTimestamp: Timestamp, baseline: SymmetryAndFlatness)
 
   /**
    * Get the SymmetryAndFlatness results.
    *
-   * @param machinePK   : For this machine
-   * @param beamName    : For this beam
-   * @param procedurePK : For this procedure
+   * @param machinePK : For this machine
+   * @param beamName  : For this beam
+   * @return Complete history with baselines.
    *
    */
-  def history(machinePK: Long, procedurePK: Long, beamName: String): Seq[SymmetryAndFlatnessHistory] = {
+  def history(machinePK: Long, beamName: String): Seq[SymmetryAndFlatnessHistory] = {
+    val procedurePK = Procedure.ProcOfPhase2.get.procedurePK.get
 
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
@@ -329,9 +329,21 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
       (output._2, symmetryAndFlatness)
     }
 
-    val result = Db.run(search.result).map(h => SymmetryAndFlatnessHistory(h._1.get, h._2)).sortBy(_.date.getTime)
+    case class TimestampSf(timestamp: Timestamp, sf: SymmetryAndFlatness) {}
 
-    result
+    val tsList = Db.run(search.result).filter(_._1.isDefined).map(ts => TimestampSf(ts._1.get, ts._2)).sortBy(ts => ts.timestamp.getTime)
+
+    case class BaselineAndList(tsf: TimestampSf, list: Seq[SymmetryAndFlatnessHistory]) {}
+
+    val histList =
+      tsList.foldLeft(BaselineAndList(tsList.head, Seq[SymmetryAndFlatnessHistory]()))((hList, tsf) =>
+        if (tsf.sf.isBaseline)
+          BaselineAndList(tsf, hList.list :+ SymmetryAndFlatnessHistory(tsf.timestamp, tsf.sf, tsf.timestamp, tsf.sf))
+        else
+          BaselineAndList(hList.tsf, hList.list :+ SymmetryAndFlatnessHistory(tsf.timestamp, tsf.sf, hList.tsf.timestamp, hList.tsf.sf))
+      )
+
+    histList.list
   }
 
   /**
@@ -346,29 +358,9 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
    * @param dataDate  Most recent that is at or before this time
    * @return The baseline value to use, or None if not found.
    */
-  def getBaseline(machinePK: Long, beamName: String, dataDate: Timestamp): Option[SymmetryAndFlatness] = {
-    val ts = new Timestamp(dataDate.getTime + (60 * 60 * 1000)) // allow for some leeway in the timestamp
-
-    val result = {
-      val search = for {
-        output <- Output.query.filter(o => (o.dataDate <= ts) && o.machinePK === machinePK).map(o => o)
-        symAndFlat <- SymmetryAndFlatness.query.filter(saf => (saf.outputPK === output.outputPK) && (saf.beamName === beamName))
-      } yield (output, symAndFlat)
-
-      // make list of all results, with the most recent first
-      val list = Db.run(search.result).sortBy(o => o._1.dataDate.get.getTime).map(os => os._2).reverse
-      val b = list.find(_.isBaseline) match {
-
-        // Use the most recent set of values that is marked as a baseline.
-        case Some(symmetryAndFlatness: SymmetryAndFlatness) => Some(symmetryAndFlatness)
-
-        // Use the earliest set of results as a baseline even though it is not marked as a baseline.
-        case _ => list.lastOption
-      }
-      b
-    }
-
-    result
+  def getBaseline(machinePK: Long, beamName: String, dataDate: Timestamp): Option[SymmetryAndFlatnessHistory] = {
+    val baseline = history(machinePK, beamName) .find(h => h.timestamp.getTime == dataDate.getTime)
+    baseline
   }
 
   /**

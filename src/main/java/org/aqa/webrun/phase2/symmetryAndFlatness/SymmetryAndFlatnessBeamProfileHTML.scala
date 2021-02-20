@@ -55,6 +55,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
     }
 
     def resultTable: Elem = {
+      Trace.trace("making results table")
       <div style="margin:20px;">
         <center><h3>Results</h3></center>
         <table class="table table-bordered" title={ "Results of this analysis and baseline values" + WebUtil.titleNewline + "for comparison.  All values are in percent." }>

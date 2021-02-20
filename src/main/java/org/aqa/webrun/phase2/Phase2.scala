@@ -423,10 +423,10 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
       if (oldOutput.isEmpty)
         Seq[String]()
       else
-        SymmetryAndFlatness.getBaselineByOutput(oldOutput.get.outputPK.get).map(_.beamName)
+        SymmetryAndFlatness.getBaselineByOutput(oldOutput.get.outputPK.get).map(_.beamName) // get list of beams that were marked as baseline so the new results can be marked as baseline
     }
 
-    val runReq = RunReq(rtplan, rtimageMap, rtimageMap(floodBeamName), symmetryAndFlatnessBaselineRedoBeamList, Seq()) // TODO add Wedge baseline lis
+    val runReq = RunReq(rtplan, rtimageMap, rtimageMap(floodBeamName), symmetryAndFlatnessBaselineRedoBeamList, Seq()) // TODO add Wedge baseline list
     runReq
   }
 

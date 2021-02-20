@@ -77,6 +77,7 @@ object SymmetryAndFlatnessHTML extends Logging {
     }
 
     val runScript = {
+      (0 to 5).foreach(_ => println("hey -------------------------------------------"))
       """
         <script>
           var baseUrl='/admin/SymmetryAndFlatnessSubHTML'
@@ -104,6 +105,7 @@ object SymmetryAndFlatnessHTML extends Logging {
             var xhttp = new XMLHttpRequest();
             xhttp.open("GET", baselineUrl, true);
             xhttp.send();
+            // location.reload();
           }
         </script>
       """.replace("\r", "")
