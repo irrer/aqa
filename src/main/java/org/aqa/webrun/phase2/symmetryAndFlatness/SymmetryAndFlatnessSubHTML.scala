@@ -218,8 +218,8 @@ object SymmetryAndFlatnessSubHTML extends Logging {
    * Respond to a request for the data nicely formatted in HTML.
    *
    * @param output Get data for machine referenced by this output.
-   * @param symFlatDataList
-   * @return
+   * @param symFlatDataList List of data to display
+   * @return Formatted report
    */
   def makeContent(output: Output, symFlatDataList: Seq[SymmetryAndFlatnessDataSet]): Elem = {
     // show link to CSV
