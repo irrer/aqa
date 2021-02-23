@@ -1,7 +1,6 @@
 package org.aqa.webrun.dailyQA
 
 import com.pixelmed.dicom.TagFromName
-import edu.umro.ScalaUtil.Trace
 import org.aqa.AnonymizeUtil
 import org.aqa.Config
 import org.aqa.Logging
@@ -490,6 +489,7 @@ object DailyQAHTML extends Logging {
         val explanation: Elem = 0 match {
           case _ if machineCbctResults.isEmpty && epidOutput.isEmpty => showNoData
           case _ if machineCbctResults.nonEmpty && machineCbctResults.isEmpty => showFail("One or more CBCTs were done but the BB was not found.  Probably mis-alignment of table or phantom.  It is recommended that the CBCT scan be repeated.")
+          case _ if (machineCbctResults.size == 1) && ProcedureStatus.fail.toString.equals(machineCbctResults.head.output.status) => showFail("The CBCT scan failed.  A new CBCT scan is recommended.")
           case _ if (machineCbctResults.size == 1) && allEpidSeqWithErrors.isEmpty => showWarn("There is a successful CBCT scan but no EPID results.  A new EPID scan is recommended.")
           case _ if (machineCbctResults.size == 1) && machineEpidResultsWithErrors.nonEmpty => showFail("There is a successful CBCT scan but EPID results failed.  A new EPID scan is recommended.")
           case _ if (machineCbctResults.size == 1) && machineEpidResultsWithoutErrors.isEmpty => showWarn("There is a successful CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
