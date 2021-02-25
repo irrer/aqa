@@ -143,13 +143,15 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       val sameFrameOfRef = regList.filter(al => ImageRegistration(al).otherFrameOfRefUID.equals(cbctFrameOfRef))
       val cbctSeriesInstUID = Util.serInstOfAl(cbctList.head)
 
+      /*
       def regReferencesCbct(reg: AttributeList): Boolean = {
         val list = DicomUtil.seqToAttr(reg, TagFromName.ReferencedSeriesSequence).map(al => al.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString)
         val hasIt = list.contains(cbctSeriesInstUID)
         hasIt
       }
+      */
 
-      val qualifiedList = sameFrameOfRef.filter(reg => regReferencesCbct(reg))
+      val qualifiedList = sameFrameOfRef // .filter(reg => regReferencesCbct(reg))
       Trace.trace("qualifiedList size: " + qualifiedList.size)
       qualifiedList
     }
