@@ -228,8 +228,8 @@ abstract class CacheCSV extends Logging {
 
       val firstDate = edu.umro.ScalaUtil.Util.roundToDate(firstTime).getTime - (24 * 60 * 60 * 1000)
 
-      // list of required dates as text
-      val requiredDayList = (firstDate to System.currentTimeMillis() by dayInMs).map(d => CacheCSV.dateFormat.format(d))
+      // List of required dates as text going up through the current day.
+      val requiredDayList = (firstDate to (System.currentTimeMillis() + dayInMs) by dayInMs).map(d => CacheCSV.dateFormat.format(d))
 
       val allCached = retrieveAllCached()
 
@@ -275,7 +275,8 @@ abstract class CacheCSV extends Logging {
     class DeleteOldVersions extends Runnable {
       override def run(): Unit = {
         try {
-          val baseName = cacheDirName().replaceAll("\\-.*", "")
+          //noinspection RegExpRedundantEscape
+          val baseName = cacheDirName().replaceAll("\\-.*", "") // The extra backspace escape character is necessary.
 
           // list of old directories to be deleted
           val toDeleteList = Util.listDirFiles(cacheDir.getParentFile).filter(_.getName.startsWith(baseName)).filterNot(_.getName.equals(cacheDirName()))
