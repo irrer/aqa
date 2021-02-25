@@ -106,9 +106,9 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
     // List of EPIDs to redo.  Note that because multiple BBbyEPID rows may refer to the
     // same output, only the single output (hence the 'distinct') needs to be done.
-    val outputPKlist = allEpidDaily.map(dds => dds.output.outputPK.get).distinct
+    val outputPKList = allEpidDaily.map(dds => dds.output.outputPK.get).distinct
 
-    logger.info("Number of EPIDs to redo because of CBCT data at " + cbctOutput.dataDate.get + " from machine " + machine.id + " : " + outputPKlist.size)
+    logger.info("Number of EPIDs to redo because of CBCT data at " + cbctOutput.dataDate.get + " from machine " + machine.id + " : " + outputPKList.size)
 
     def redo(outputPK: Long): Unit = {
       logger.info("BBbyCBCTRun starting redo of EPID output " + outputPK)
@@ -116,7 +116,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       logger.info("BBbyCBCTRun finished redo of EPID output " + outputPK)
     }
 
-    outputPKlist.foreach(o => redo(o))
+    outputPKList.foreach(o => redo(o))
   }
 
   override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList]): Seq[String] = {
@@ -138,20 +138,10 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     def cbctFrameOfRefList = cbctList.map(cbct => Util.getFrameOfRef(cbct)).distinct
 
     // Make a list of REG files that support the CBCTs frame of reference and reference the CBCT by its SeriesInstanceUID.
-    val qualRegList = {
+    val qualifiedRegList = {
       val cbctFrameOfRef = cbctFrameOfRefList.head
-      val sameFrameOfRef = regList.filter(al => ImageRegistration(al).otherFrameOfRefUID.equals(cbctFrameOfRef))
-      val cbctSeriesInstUID = Util.serInstOfAl(cbctList.head)
+      val qualifiedList = regList.filter(al => ImageRegistration(al).otherFrameOfRefUID.equals(cbctFrameOfRef))
 
-      /*
-      def regReferencesCbct(reg: AttributeList): Boolean = {
-        val list = DicomUtil.seqToAttr(reg, TagFromName.ReferencedSeriesSequence).map(al => al.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString)
-        val hasIt = list.contains(cbctSeriesInstUID)
-        hasIt
-      }
-      */
-
-      val qualifiedList = sameFrameOfRef // .filter(reg => regReferencesCbct(reg))
       Trace.trace("qualifiedList size: " + qualifiedList.size)
       qualifiedList
     }
@@ -160,10 +150,10 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
     /** return list of plans (either uploaded or from DB) whose frame of reference match the CBCT exactly (no REG file involved) */
     def rtplanMatchingCbct: Seq[AttributeList] = {
-      val cbctFramOfRef = cbctFrameOfRefList.head
-      val dbPlan = DicomSeries.getByFrameUIDAndSOPClass(Set(cbctFramOfRef), SOPClass.RTPlanStorage).flatMap(db => db.attributeListList)
+      val cbctFrameOfRef = cbctFrameOfRefList.head
+      val dbPlan = DicomSeries.getByFrameUIDAndSOPClass(Set(cbctFrameOfRef), SOPClass.RTPlanStorage).flatMap(db => db.attributeListList)
 
-      val matching = (dbPlan ++ rtplanList).filter(plan => Util.getFrameOfRef(plan).equals(cbctFramOfRef))
+      val matching = (dbPlan ++ rtplanList).filter(plan => Util.getFrameOfRef(plan).equals(cbctFrameOfRef))
       logger.info("Number of plans whose FrameOfReferenceUID matches CBCT exactly so they do not require a REG file: " + matching.size)
       matching
     }
@@ -172,14 +162,14 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
      * Get the list of possible plan and reg pairs, preferring the uploaded plan(s) but also searching the plans in the database.
      */
     def getPlanAndReg: Seq[(AttributeList, AttributeList)] = {
-      val uploadedPairList = for (plan <- rtplanList; reg <- qualRegList; if Util.getFrameOfRef(plan).equals(Util.getFrameOfRef(reg))) yield (plan, reg)
+      val uploadedPairList = for (plan <- rtplanList; reg <- qualifiedRegList; if Util.getFrameOfRef(plan).equals(Util.getFrameOfRef(reg))) yield (plan, reg)
       if (uploadedPairList.nonEmpty)
         uploadedPairList
       else {
-        val qualRegFrameOfRefList = qualRegList.map(df => Util.getFrameOfRef(df)).toSet
-        val dbPlanList = DicomSeries.getByFrameUIDAndSOPClass(qualRegFrameOfRefList, SOPClass.RTPlanStorage).flatMap(db => db.attributeListList)
+        val qualifiedRegFrameOfRefList = qualifiedRegList.map(df => Util.getFrameOfRef(df)).toSet
+        val dbPlanList = DicomSeries.getByFrameUIDAndSOPClass(qualifiedRegFrameOfRefList, SOPClass.RTPlanStorage).flatMap(db => db.attributeListList)
 
-        val dbPairList = for (plan <- dbPlanList; reg <- qualRegList; if Util.getFrameOfRef(plan).equals(Util.getFrameOfRef(reg))) yield (plan, reg)
+        val dbPairList = for (plan <- dbPlanList; reg <- qualifiedRegList; if Util.getFrameOfRef(plan).equals(Util.getFrameOfRef(reg))) yield (plan, reg)
         dbPairList
       }
     }
