@@ -531,8 +531,7 @@ object DailyQAHTML extends Logging {
               and EPID results. Both must be valid (found the BB near isocenter), the CBCT must scanned before the EPID,
               and they must be scanned on the same day.
               <p></p>
-              A warning or failure may be cleared by re-doing the Daily QA for that machine. If there there at least
-              one set of data that passed for a machine, then that machine is marked as passed.
+              If your machine failed or no results are showing paging clinical physics coverage.
             </center>
             <span hidden="true" id="checksum">
               {checksum}
