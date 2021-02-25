@@ -4,7 +4,6 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
-import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Util
 import org.aqa.db.BBbyCBCT
 import org.aqa.run.CacheCSV
@@ -22,11 +21,6 @@ class DailyQACSVCacheCBCT(hostRef: String, institutionPK: Long) extends CacheCSV
     anonPatId
   }
 
-  private def OperatorsName(dataSet: BBbyCBCT.DailyDataSetCBCT): String = {
-    val anonPatId = dataSet.al.get(TagFromName.OperatorsName).getSingleStringValueOrEmptyString
-    anonPatId
-  }
-
 
   private def textFromAl(dataSet: BBbyCBCT.DailyDataSetCBCT, tag: AttributeTag): String = {
     val attr = dataSet.al.get(tag)
@@ -39,20 +33,6 @@ class DailyQACSVCacheCBCT(hostRef: String, institutionPK: Long) extends CacheCSV
     DailyQAUtil.getValues(dataSet.al, tag, scale)
   }
 
-  private def dateTimeFromCBCT(dataSet: BBbyCBCT.DailyDataSetCBCT, dateTag: AttributeTag, timeTag: AttributeTag): String = {
-    val date = DicomUtil.getTimeAndDate(dataSet.al, dateTag, timeTag)
-    if (date.isDefined) Util.standardDateFormat.format(date.get) else "unknown"
-  }
-
-  /**
-   * Format a number that is approximately zero.
-   *
-   * @param d Number to format.
-   * @return Number formatted as human friendly string.
-   */
-  private def fmtSmall(d: Double): String = d.formatted("%20.12f").trim.replaceAll("00*$", "")
-
-  // private def getCbctValues(dataSet: BBbyCBCT.DailyDataSetCBCT, tag: AttributeTag, scale: Double = 1.0): Seq[String] = getValues(dataSet.cbct.attributeList, tag, scale)
 
   private case class Col(header: String, toText: BBbyCBCT.DailyDataSetCBCT => String) {}
 
