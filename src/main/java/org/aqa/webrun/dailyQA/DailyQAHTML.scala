@@ -68,6 +68,7 @@ object DailyQAHTML extends Logging {
     val styleWarn = "color: #000000; background: yellow;"
     val col0Title = "Machine Name"
 
+
     def colMachine(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val machElem = wrapAlias(dataSet.machine.id)
 
@@ -324,16 +325,16 @@ object DailyQAHTML extends Logging {
       val allEpidSeq = allEpidSeqWithErrors.filter(d => d.data.isRight)
 
       def explain(mach: Machine): Elem = {
-        val machineCbctResults = allCbctSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
-        val machineEpidResultsWithErrors = allEpidSeqWithErrors.filter(c => c.machine.machinePK.get == mach.machinePK.get)
-        val machineEpidResultsWithoutErrors = allEpidSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
-
         val epidOutput = outputEPID(mach.machinePK.get)
 
         val listColSpanSize = 6
         val listColSpan = listColSpanSize.toString
         val messageColSpan = (colList.size - (listColSpanSize + 1)).toString
         val timeFormat = new SimpleDateFormat("H:mm")
+
+        val machineCbctResults = allCbctSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
+        val machineEpidResultsWithErrors = allEpidSeqWithErrors.filter(c => c.machine.machinePK.get == mach.machinePK.get)
+        val machineEpidResultsWithoutErrors = allEpidSeq.filter(c => c.machine.machinePK.get == mach.machinePK.get)
 
         def cbctBBNotFound(cOut: Output): Boolean = !machineCbctResults.exists(c => c.output.outputPK.get == cOut.outputPK.get)
 
@@ -461,7 +462,11 @@ object DailyQAHTML extends Logging {
           </tr>
         }
 
-        def showFail(msg: String): Elem = { // show links to CBCT and EPID outputs
+
+        def showFail(msg: String, pleasePage: Boolean = false): Elem = { // show links to CBCT and EPID outputs
+          val pleasePageElem = {
+            <div style="color: red; margin:10px;"> <h4 style="margin:10px;"> Please page clinical physics coverage.</h4></div>
+          }
           <tr>
             <td title={col0Title} style={styleFail}>
               <h4>
@@ -469,7 +474,7 @@ object DailyQAHTML extends Logging {
                 Fail</h4>
             </td>
             <td colspan={messageColSpan}>
-              {msg}
+              {msg}{if (pleasePage) pleasePageElem}
             </td>{machHistory}
           </tr>
         }
@@ -488,14 +493,14 @@ object DailyQAHTML extends Logging {
 
         val explanation: Elem = 0 match {
           case _ if machineCbctResults.isEmpty && epidOutput.isEmpty => showNoData
-          case _ if machineCbctResults.nonEmpty && machineCbctResults.isEmpty => showFail("One or more CBCTs were done but the BB was not found.  Probably mis-alignment of table or phantom.  It is recommended that the CBCT scan be repeated.")
-          case _ if (machineCbctResults.size == 1) && ProcedureStatus.fail.toString.equals(machineCbctResults.head.output.status) => showFail("The CBCT scan failed.  A new CBCT scan is recommended.")
+          case _ if machineCbctResults.nonEmpty && machineCbctResults.isEmpty => showFail("One or more CBCTs were done but the BB was not found.  Probably mis-alignment of table or phantom. ", pleasePage = true)
+          case _ if (machineCbctResults.size == 1) && ProcedureStatus.fail.toString.equals(machineCbctResults.head.output.status) => showFail("The CBCT scan failed.", pleasePage = true)
           case _ if (machineCbctResults.size == 1) && allEpidSeqWithErrors.isEmpty => showWarn("There is a successful CBCT scan but no EPID results.  A new EPID scan is recommended.")
-          case _ if (machineCbctResults.size == 1) && machineEpidResultsWithErrors.nonEmpty => showFail("There is a successful CBCT scan but EPID results failed.  A new EPID scan is recommended.")
+          case _ if (machineCbctResults.size == 1) && machineEpidResultsWithErrors.nonEmpty => showFail("There is a successful CBCT scan but EPID results failed.", pleasePage = true)
           case _ if (machineCbctResults.size == 1) && machineEpidResultsWithoutErrors.isEmpty => showWarn("There is a successful CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
           case _ if machineCbctResults.nonEmpty && machineEpidResultsWithoutErrors.isEmpty => showWarn("There are " + machineCbctResults.size + " successful CBCT scans but no EPID scans.  It is recommended that an EPID scan be performed.")
-          case _ if machineCbctResults.isEmpty && epidOutput.nonEmpty => showFail("There is one or more EPID scans but no CBCT scans.")
-          case _ if machineCbctResults.isEmpty && machineEpidResultsWithoutErrors.nonEmpty => showFail("There are " + epidOutput.size + " EPID scans but no successful CBCT scans.")
+          case _ if machineCbctResults.isEmpty && epidOutput.nonEmpty => showFail("There is one or more EPID scans but no CBCT scans.", pleasePage = true)
+          case _ if machineCbctResults.isEmpty && machineEpidResultsWithoutErrors.nonEmpty => showFail("There are " + epidOutput.size + " EPID scans but no successful CBCT scans.", pleasePage = true)
           case _ if machineCbctResults.nonEmpty && machineEpidResultsWithoutErrors.isEmpty => showWarn("There are " + machineCbctResults.size + " CBCT scans but zero EPID scans.  The EPID scan needs to be done.")
           case _ if epidBeforeCbct => showFail("The EPID scan was done prior to CBCT.  The CBCT needs to be done first.")
           case _ => showFail("There are no results for this machine.")
@@ -531,7 +536,7 @@ object DailyQAHTML extends Logging {
               and EPID results. Both must be valid (found the BB near isocenter), the CBCT must scanned before the EPID,
               and they must be scanned on the same day.
               <p></p>
-              If your machine failed or no results are showing paging clinical physics coverage.
+              If your machine failed or no results are showing, please page clinical physics coverage.
             </center>
             <span hidden="true" id="checksum">
               {checksum}
