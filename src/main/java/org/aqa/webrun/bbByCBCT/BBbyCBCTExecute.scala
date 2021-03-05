@@ -12,6 +12,7 @@ import org.aqa.db.Output
 import org.aqa.run.ProcedureStatus
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.dailyQA.DailyQAActivity
 import org.aqa.webrun.phase2.Phase2Util
 import org.restlet.Response
 
@@ -260,6 +261,7 @@ object BBbyCBCTExecute extends Logging {
         val bbPointInRtplan = calculateBbCenterInRtplan(runReq, preciseLocation_vox)
 
         val bbByCBCT = saveToDb(extendedData, runReq, bbPointInRtplan)
+        DailyQAActivity.update() // tell web page that data has changed
 
         // origin of RTPLAN in the CBCT voxel space
         val rtplanOrigin_vox = {

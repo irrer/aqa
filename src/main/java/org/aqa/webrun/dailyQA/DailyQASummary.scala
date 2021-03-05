@@ -114,7 +114,7 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
   val contentRow: WebRow = List(report)
 
-  val runScript = {
+  val runScript: String = {
     """
     // Reload the page when there is new data, indicated by
     // a change in status
@@ -177,10 +177,8 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
   /**
    * Respond to the client with the checksum of the data so they can decide whether or not they need to reload it.
    */
-  private def handleChecksum(response: Response, valueMap: ValueMapT): Unit = {
-    val institutionPK = WebUtil.getUser(valueMap).get.institutionPK
-
-    val checksum = BBbyEPIDComposite.getChecksum(dateFromValueMap(valueMap), institutionPK)
+  private def handleChecksum(response: Response): Unit = {
+    val checksum = DailyQAActivity.get
     response.setEntity(checksum, MediaType.TEXT_PLAIN)
     response.setStatus(Status.SUCCESS_OK)
   }
@@ -197,7 +195,7 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
       } else if (valueMap.contains(CsvEpidTag)) {
         new DailyQACSVCacheEPID(request.getHostRef.toString(), WebUtil.getUser(request).get.institutionPK).assemble(response)
       } else if (valueMap.contains(checksumLabel))
-        handleChecksum(response, valueMap)
+        handleChecksum(response)
       else
         show(response, valueMap)
     } catch {

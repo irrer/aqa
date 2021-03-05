@@ -14,6 +14,7 @@ import org.aqa.db.Procedure
 import org.aqa.run.ProcedureStatus
 import org.aqa.web.ViewOutput
 import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.dailyQA.DailyQAActivity
 import org.aqa.webrun.dailyQA.DailyQACSVCacheComposite
 import org.restlet.Response
 
@@ -275,6 +276,7 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
       } else
         logger.info("No composite EPID record created.  Reported error: " + bbByEPIDComposite.left.get)
 
+      DailyQAActivity.update() // tell web page that data has changed
       val procedureStatus = if (bbByEPIDComposite.isRight) ProcedureStatus.done else ProcedureStatus.fail
 
       BBbyEPIDHTML.generateHtml(extendedData, bbLocList, bbByEPIDComposite, runReq, ProcedureStatus.done)

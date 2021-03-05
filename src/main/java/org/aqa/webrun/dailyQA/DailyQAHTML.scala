@@ -263,8 +263,6 @@ object DailyQAHTML extends Logging {
       }
     }
 
-    val checksum = BBbyEPIDComposite.getChecksum(date, institutionPK)
-
     val colList: List[Col] = List(
       Col("Machine", "Name of treatment machine", colMachine),
       Col("Patient", "Name of test patient", colPatient),
@@ -539,7 +537,7 @@ object DailyQAHTML extends Logging {
               If your machine failed or no results are showing, please page clinical physics coverage.
             </center>
             <span hidden="true" id="checksum">
-              {checksum}
+              {DailyQAActivity.get}
             </span>
           </div>
         </div>
