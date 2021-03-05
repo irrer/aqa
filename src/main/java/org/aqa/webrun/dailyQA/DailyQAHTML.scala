@@ -536,7 +536,7 @@ object DailyQAHTML extends Logging {
               <p></p>
               If your machine failed or no results are showing, please page clinical physics coverage.
             </center>
-            <span hidden="true" id="checksum">
+            <span hidden="true" id="latestChange">
               {DailyQAActivity.get}
             </span>
           </div>

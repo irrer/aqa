@@ -33,7 +33,7 @@ object DailyQASummary {
 
 class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
-  private val checksumLabel = "checksum"
+  private val latestChangeLabel = "latestChange"
 
   private val refreshButton = new FormButton(label = "Refresh", col = 1, offset = 0, subUrl, pathOf, ButtonType.BtnDefault)
 
@@ -120,13 +120,13 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
     // a change in status
 
     var date=document.getElementById("Date").getAttribute("value");
-    var baseUrl='/DailyQASummary?checksum=true&Date=' + date;
+    var baseUrl='/DailyQASummary?latestChange=true&Date=' + date;
     var WebRefreshTime=2000;
 
     function watchStatus() {$.ajax({
       url: baseUrl , success: function
       (result) {
-        var status = document.getElementById("checksum").innerHTML;
+        var status = document.getElementById("latestChange").innerHTML;
         // Must remove whitespace because IntelliJ source formatter adds it.
         if (status.trim() == result.trim()) {
           setTimeout(watchStatus, WebRefreshTime);
@@ -175,11 +175,11 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
 
   /**
-   * Respond to the client with the checksum of the data so they can decide whether or not they need to reload it.
+   * Respond to the client with the latest change of the data so they can decide whether or not they need to reload it.
    */
-  private def handleChecksum(response: Response): Unit = {
-    val checksum = DailyQAActivity.get
-    response.setEntity(checksum, MediaType.TEXT_PLAIN)
+  private def handleLatestChange(response: Response): Unit = {
+    val latestChange = DailyQAActivity.get
+    response.setEntity(latestChange, MediaType.TEXT_PLAIN)
     response.setStatus(Status.SUCCESS_OK)
   }
 
@@ -194,8 +194,8 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
         new DailyQACSVCacheCBCT(request.getHostRef.toString(), WebUtil.getUser(request).get.institutionPK).assemble(response)
       } else if (valueMap.contains(CsvEpidTag)) {
         new DailyQACSVCacheEPID(request.getHostRef.toString(), WebUtil.getUser(request).get.institutionPK).assemble(response)
-      } else if (valueMap.contains(checksumLabel))
-        handleChecksum(response)
+      } else if (valueMap.contains(latestChangeLabel))
+        handleLatestChange(response)
       else
         show(response, valueMap)
     } catch {
