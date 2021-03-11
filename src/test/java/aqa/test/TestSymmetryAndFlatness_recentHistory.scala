@@ -32,7 +32,7 @@ class TestSymmetryAndFlatness_recentHistory extends FlatSpec with Matchers {
   println("\nStarting. Using date of:\n    " + Util.standardDateFormat.format(date))
   val seq: Seq[SymmetryAndFlatness.SymmetryAndFlatnessHistory] = SymmetryAndFlatness.history(machinePK, beamName)
 
-  println("results:\n    " + seq.map(_.timestamp).mkString("\n    "))
+  println("results:\n    " + seq.map(_.output.dataDate.get).mkString("\n    "))
   println("Number of results: " + seq.size)
 
   seq.size should be(4)

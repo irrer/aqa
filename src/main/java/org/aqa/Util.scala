@@ -6,6 +6,7 @@ import com.pixelmed.dicom.DateTimeAttribute
 import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.TagFromName
 import com.pixelmed.dicom.TransferSyntax
+import com.pixelmed.dicom.ValueRepresentation
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageText
@@ -1255,6 +1256,51 @@ object Util extends Logging {
     left()
     right()
   }
+
+
+
+  /**
+   * Get values from an attribute list, scaling by the amount given if they are
+   * numeric.  Discrete (Int, Short, Long) values will be rounded.  Search the
+   * entire depth of the attribute list for values, using the first one.  If
+   * there is a problems (such as none found), then return a Seq of "NA".
+   *
+   * @param al  Attribute list containing values.
+   * @param tag Attribute tag of value.
+   * @param scale Amount to scale value.  Ignored if string.
+   * @return String representation of scaled values.
+   */
+  def attr2Csv(al: AttributeList, tag: AttributeTag, scale: Double = 1.0): Seq[String] = {
+    try {
+      val at = DicomUtil.findAllSingle(al, tag).head
+      def getLong() = at.getLongValues.map(l => (l * scale).round)
+      val vr = DicomUtil.dictionary.getValueRepresentationFromTag(tag)
+      val numList = vr match {
+        case _ if ValueRepresentation.isIntegerStringVR(vr) => at.getIntegerValues.map(i => (i * scale).round.toInt)
+        case _ if ValueRepresentation.isLongStringVR(vr) => getLong()
+
+        case _ if ValueRepresentation.isSignedLongVR(vr) => getLong()
+        case _ if ValueRepresentation.isSignedShortVR(vr) => getLong()
+
+        case _ if ValueRepresentation.isUnsignedLongVR(vr) => getLong()
+        case _ if ValueRepresentation.isUnsignedShortVR(vr) => at.getIntegerValues.map(i => (i * scale).round.toShort)
+
+        case _ if ValueRepresentation.isFloatDoubleVR(vr) => at.getDoubleValues.map(n => n * scale)
+        case _ if ValueRepresentation.isFloatSingleVR(vr) => at.getFloatValues.map(n => n * scale)
+
+        case _ if ValueRepresentation.isDecimalStringVR(vr) => at.getFloatValues.map(n => n * scale)
+
+        case _ if ValueRepresentation.isOtherByteOrWordVR(vr) => throw new RuntimeException("binary values not supported")
+        case _ => at.getStringValues // Handle all of the various string VRs.
+      }
+      numList.map(n => n.toString)
+    }
+    catch {
+      case _: Throwable => Seq("NA", "NA", "NA")
+    }
+  }
+
+
 
   def main(args: Array[String]): Unit = {
 

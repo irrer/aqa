@@ -1,5 +1,6 @@
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
+import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.Institution
 import org.aqa.db.Machine
@@ -62,12 +63,12 @@ object SymmetryAndFlatnessCSV {
 
     val acquisitionDate = if (output.dataDate.isDefined) Util.standardDateFormat.format(output.dataDate.get) else "none"
 
-    type SFB = SymmetryAndFlatness.SymmetryFlatnessWithBaseline
+    type SFB = SymmetryAndFlatness.SymmetryAndFlatnessHistory
 
     def boolToStatus(b: Boolean) = { if (b) ProcedureStatus.pass else ProcedureStatus.fail }.toString()
 
     val columns: Seq[(String, SFB => Any)] = Seq(
-      ("delivery Time", (sfb: SFB) => Util.standardDateFormat.format(sfb.baselineDate)),
+      ("delivery Time", (sfb: SFB) => Util.standardDateFormat.format(sfb.output.dataDate.get)),
       ("beamName", (sfb: SFB) => sfb.symmetryAndFlatness.beamName),
       ("SOPInstanceUID", (sfb: SFB) => sfb.symmetryAndFlatness.SOPInstanceUID),
 
@@ -93,7 +94,7 @@ object SymmetryAndFlatnessCSV {
       ("right CU", (sf: SFB) => sf.symmetryAndFlatness.right_cu),
       ("center CU", (sf: SFB) => sf.symmetryAndFlatness.center_cu))
 
-    def symmetryAndFlatnessToCsv(sfb: SymmetryAndFlatness.SymmetryFlatnessWithBaseline): String = {
+    def symmetryAndFlatnessToCsv(sfb: SFB): String = {
       def fmt(any: Any): String = {
         any match {
           case d: Double => d.formatted("%14.11e")
@@ -122,7 +123,8 @@ object SymmetryAndFlatnessCSV {
 
     val data: Iterable[String] = {
       if (machine.isDefined) {
-        val list = SymmetryAndFlatness.getSymmetryFlatnessForMachine(machine.get.machinePK.get).flatMap(b => b._2.sortBy(_.baselineDate.getTime))
+        val beamList = Config.SymmetryAndFlatnessBeamList.sorted
+        val list = beamList.flatMap(beamName => SymmetryAndFlatness.history(machine.get.machinePK.get, beamName))
         val textList = list.map(sfb => symmetryAndFlatnessToCsv(sfb))
         textList
       }

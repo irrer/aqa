@@ -25,7 +25,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
   val machinePK: Long = output.machinePK.get
 
   private val history = SymmetryAndFlatness.history(machinePK, beamName)
-  private val dateList = history.map(h => h.timestamp)
+  private val dateList = history.map(h => h.output.dataDate.get)
 
   // index of the entry being charted.
   private val yIndex = history.indexWhere(h => h.symmetryAndFlatness.outputPK == output.outputPK.get)
@@ -36,7 +36,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
         maintenanceRecordPK = None,
         category = "Set Baseline",
         machinePK,
-        creationTime = h.timestamp,
+        creationTime = h.output.dataDate.get,
         userPK = -1,
         outputPK = None,
         summary = "Baseline",
@@ -46,7 +46,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
 
   // list of all MaintenanceRecords in this time interval
   private val MaintenanceRecordList = {
-    val inTimeRange = MaintenanceRecord.getRange(machinePK, history.head.timestamp, history.last.timestamp)
+    val inTimeRange = MaintenanceRecord.getRange(machinePK, history.head.output.dataDate.get, history.last.output.dataDate.get)
     val relevantBaseline = Baseline.filterOutUnrelatedBaselines(inTimeRange.map(itr => itr.maintenanceRecordPK.get).toSet, Set("symmetry", "flatness", "constancy")).map(_.maintenanceRecordPK.get).toSet
     inTimeRange.filter(itr => relevantBaseline.contains(itr.maintenanceRecordPK.get) || (!itr.category.equals(MaintenanceCategory.setBaseline)))
   }
@@ -101,7 +101,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
       makeChart(
         axialSymmetryName,
         toleranceRange = Config.SymmetryPercentLimit,
-        baselineDate = sfAndBaseline.baselineTimestamp,
+        baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
         sfAndBaseline.symmetryAndFlatness.axialSymmetry,
         valueList)
     }
@@ -111,7 +111,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
       makeChart(
         transverseSymmetryName,
         toleranceRange = Config.SymmetryPercentLimit,
-        baselineDate = sfAndBaseline.baselineTimestamp,
+        baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
         sfAndBaseline.symmetryAndFlatness.transverseSymmetry,
         valueList)
     }
@@ -121,7 +121,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
       makeChart(
         flatnessName,
         toleranceRange = Config.FlatnessPercentLimit,
-        baselineDate = sfAndBaseline.baselineTimestamp,
+        baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
         sfAndBaseline.symmetryAndFlatness.flatness,
         valueList)
     }
@@ -131,7 +131,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
       makeChart(
         profileConstancyName,
         toleranceRange = Config.ProfileConstancyPercentLimit,
-        baselineDate = sfAndBaseline.baselineTimestamp,
+        baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
         sfAndBaseline.symmetryAndFlatness.profileConstancy(sfAndBaseline.symmetryAndFlatness),
         valueList)
     }
