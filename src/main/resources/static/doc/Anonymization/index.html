@@ -1,0 +1,72 @@
+<div title="Anonymization" class="col-md-8 col-md-offset-1">
+
+    <h2>@@title@@</h2>
+    <p>The AQA platform provides anonymization to encourage data sharing. When DICOM files are uploaded, they are
+        immediately anonymized (aka: de-identified) before being stored. Both the original and anonymized versions of
+        each value are stored in the database, with the anonymized version being encrypted. Not storing unencrypted
+        identifying information in the database allows users to freely view any data without the risk of losing
+        confidentiality.
+    </p>
+    <h4>Encryption</h4>
+    <p>
+        Encryption is performed on a per-institution basis, meaning that there is a different encryption key for each
+        institution. Encryption keys are automatically generated when a new institution is added, and stored in a secure
+        file outside of the database.
+    </p>
+    <h4>DICOM Anonymization</h4>
+    <p>
+        DICOM values are anonymized as per <a
+            href="http://dicom.nema.org/dicom/2013/output/chtml/part15/chapter_E.html">the DICOM standard.</a>
+        Additionally, fields such as <b>3002,0020 RadiationMachineName</b> are anonymized. Full list can be found on the
+        <a href="/admin/ServiceInfo">Service Information</a> page listed on the <a
+            href="/static/admin.html">Administration</a>
+        page.
+    </p>
+    <h4>Anonymizing Database Values</h4>
+    <p>
+        Identifying fields in the database are also anonymized by using a standard prefix for each type and appending it
+        with and underscore and a number.
+    <table class="table table-responsive table-bordered">
+        <tr>
+            <td>Field</td>
+            <td>Anonymous Prefix</td>
+        </tr>
+        <tr>
+            <td>Institution</td>
+            <td>INST</td>
+        </tr>
+        <tr>
+            <td>Machine</td>
+            <td>MACH</td>
+        </tr>
+        <tr>
+            <td>User</td>
+            <td>USER</td>
+        </tr>
+    </table>
+    For example, a machine such as <b>TX8</b> might be anonymized to <b>MACH_47</b>.
+    </p>
+    <h4>De-Anonymization</h4>
+    <p>
+        When a user views a web page, several values are de-anonymized on the fly, but only those values for the user's
+        institutions. Other user may view the same web page, but they will see an anonymized version. Some data such as
+        DICOM dumps of metadata and CVS files are not de-anonymized due the excessive overhead it would incur.
+    </p>
+    <p>
+        The anonymized value of a field may be seen by hovering the mouse pointer over the value as shown:
+    <div class="row">
+        <div class="col-md-7">
+            <div style="margin:30px; border: 1px solid lightgrey;">
+                <img style="margin:30px;" src="aliasExample.png"/>
+            </div>
+        </div>
+    </div>
+    </p>
+    <p>
+        A table of all values that are de-anonymized on the fly at <a href="/AnonymousTranslate?html=1">Alias Values</a>
+        on the <a href="/static/admin.html">Administration</a> page.
+    </p>
+
+    <div style="margin:200px;"></div>
+
+</div>
