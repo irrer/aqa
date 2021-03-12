@@ -1,12 +1,18 @@
 package org.aqa.webrun.phase2.phase2csv
 
+import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.AttributeList
+import com.pixelmed.dicom.DicomFileUtilities
+import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
 import org.aqa.db.DbSetup
 import org.aqa.db.DicomSeries
+import org.aqa.db.InputFiles
 import org.aqa.db.Machine
 import org.aqa.db.Output
+
+import java.io.File
 
 abstract class Phase2Csv[T] {
 
@@ -26,7 +32,8 @@ abstract class Phase2Csv[T] {
 
   protected def getOutput(data: T): Output
 
-  private val machineCache = new MachineCache
+  private val prefixCsv = new PrefixCsv
+  private val dicomCsv = new DicomCsv
 
   /**
    * Get the data for a particular machine.
@@ -44,7 +51,7 @@ abstract class Phase2Csv[T] {
    */
   def makeHeader(): String = {
     val dataHeaderList = colList.map(col => '"' + col.header + '"').mkString(",")
-    machineCache.headerText + "," + dataHeaderList
+    prefixCsv.headerText + "," + dicomCsv.headerText + "," + dataHeaderList
   }
 
 
@@ -60,47 +67,34 @@ abstract class Phase2Csv[T] {
       new String(col.toText(dataSet))
     }).mkString(",")
 
-    val machineText = machineCache.machineCsvMap(getOutput(dataSet).machinePK.get)
-    machineText + "," + dataText
+    val prefixText = prefixCsv.prefixToText(getOutput(dataSet))
+    val dicomText = dicomCsv.dicomToText(getAl(dataSet))
+    prefixText + "," + dicomText + "," + dataText
   }
 
 
-  // List of all institutions.
-  // val institutionList: Seq[Institution] = Institution.list
-
+  /** List of all machines, sorted by institution so that all of the rows
+   * for a given institution will be consecutive. */
   private val machineList = Machine.list.sortBy(_.institutionPK)
 
-  // List of all machines sorted so that institutions are grouped together.
-  private val machineMap = {
-    Machine.list.sortBy(_.institutionPK)
+
+  private def machineToCsv(machine: Machine) = {
+    Phase2Csv.clearAlCache()
+    val dataList = getData(machine.machinePK.get)
+    // make the row list for this one machine
+    val machineRowList = dataList.map(d => makeCsvRow(d)).mkString(",\n")
+    Trace.trace("------------\n" + machineRowList)
+    Phase2Csv.clearAlCache()
+    machineRowList
   }
+
 
   /**
-   * Get the name of the institution.
+   * Get the CSV content for all institutions.
    *
-   * @param machine For this machine.
-   * @return Anonymous name of institution.
+   * @return
    */
-  private def institutionName(machine: Machine): String = {
-    // institutionList.find(_.institutionPK.get == machine.institutionPK).head.name
-    ???
-  }
-
-
-  // make the full list of CSV rows for all machines
-  def rowList: Seq[String] = {
-    Phase2Csv.clearAlCache()
-    for (machine <- machineList) yield {
-      val dataList = getData(machine.machinePK.get)
-      // make the row list for this one machine
-      val machineRowList = dataList.map(d => makeCsvRow(d))
-      Phase2Csv.clearAlCache()
-      machineRowList
-    }.mkString("\n")
-  }
-
-
-  val csvContent: String = makeHeader() + "\n" + rowList
+  def csvContent: String = makeHeader() + "\n" + machineList.map(machine => machineToCsv(machine)).filter(_.nonEmpty).mkString("\n")
 
 }
 
@@ -128,7 +122,22 @@ object Phase2Csv {
       alCache(SOPInstanceUID)
     else {
       val alList = DicomSeries.getBySopInstanceUID(SOPInstanceUID).flatMap(ds => ds.attributeListList)
+      Trace.trace("alList.size: " + alList.size)
+      if (alList.isEmpty)
+        Trace.trace("empty")
       alList.foreach(al => alCache.put(Util.sopOfAl(al), al))
+
+      // If for some reason there is a problem getting the DICOM from the database,
+      // then assume it is not available.  Create an empty attribute list which will
+      // result in a bunch of NA's being displayed.  This is not ideal, but better
+      // than failing.  Technically even the SOPInstanceUID is not needed, but it
+      // seems like it ought to be.
+      if (!alCache.contains(SOPInstanceUID)) {
+        val al = new AttributeList
+        val attr = AttributeFactory.newAttribute(TagByName.SOPInstanceUID)
+        attr.addValue(SOPInstanceUID)
+        alCache.put(SOPInstanceUID, al)
+      }
       alCache(SOPInstanceUID)
     }
   }
@@ -136,11 +145,25 @@ object Phase2Csv {
   def main(args: Array[String]): Unit = {
     DbSetup.init
     Trace.trace()
+    if (false) {
+      val inputFiles = InputFiles.get(1511).get
+      val data = inputFiles.zippedContent
+      val file = new File("""D:\tmp\symflat.zip""")
+      Util.writeBinaryFile(file, data)
+      println("Wrote to binary file " + file.getAbsolutePath)
+
+      DicomFileUtilities.isDicomOrAcrNemaFile("")
+
+      System.exit(99)
+    }
     val start = System.currentTimeMillis()
     (0 to 20).foreach(_ => println("-------------------------------------------------------------------------------"))
     val symFlat = new CsvSymmetryAndFlatness
     val text = symFlat.csvContent
     println("\n" + text + "\n")
+    val file = new File("""D:\tmp\symflat.csv""")
+    Util.writeFile(file, text)
+    println("Wrote to file " + file.getAbsolutePath)
     val elapsed = System.currentTimeMillis() - start
     println("Done.  Elapsed ms: " + elapsed)
   }

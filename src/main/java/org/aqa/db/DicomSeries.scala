@@ -6,7 +6,6 @@ import com.pixelmed.dicom.SOPClass
 import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.FileUtil
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.DicomFile
@@ -14,7 +13,6 @@ import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Db.driver.api._
 
-import java.io.ByteArrayInputStream
 import java.io.File
 import java.sql.Timestamp
 import java.util.Date
@@ -67,6 +65,7 @@ case class DicomSeries(
 
   /**
    * Get the list of SOPInstanceUID 's that are in this series.
+   *
    * @return
    */
   def sopUidSeq: Seq[String] = sopInstanceUIDList.split(" ").filterNot(_.isEmpty).toSeq
@@ -81,7 +80,15 @@ case class DicomSeries(
       alList
     } else {
       val inputContent = InputFiles.getByInputPK(inputPK.get).head.zippedContent
-      val alList = DicomUtil.zippedByteArrayToDicom(inputContent)
+      val alList = try {
+        DicomUtil.zippedByteArrayToDicom(inputContent)
+      }
+      catch {
+        case t: Throwable =>
+          logger.warn("Unexpected error unzipping DICOM from input table: " + fmtEx(t))
+          Seq[AttributeList]()
+      }
+      Trace.trace("List of SOPs: " + alList.map(al => Util.sopOfAl(al))) // TODO rm
       val list = alList.filter(al => Util.serInstOfAl(al).equals(seriesInstanceUID))
       list
     }
@@ -687,7 +694,7 @@ object DicomSeries extends Logging {
     val alList = dfList.flatMap(df => df.attributeList)
     Trace.trace("Number of attribute lists in shared: " + alList.size)
 
-    def saveAlList(al: AttributeList) : Unit = {
+    def saveAlList(al: AttributeList): Unit = {
       val sop = Util.sopOfAl(al)
       val ds = DicomSeries.getBySopInstanceUID(sop)
       val modality = Util.modalityOfAl(al)

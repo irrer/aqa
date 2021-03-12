@@ -22,11 +22,8 @@ class CsvSymmetryAndFlatness extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFl
     Seq(
       Col("Beam Name", (sf: SF) => sf.symmetryAndFlatness.beamName),
 
-      Col("Acquisition Date", (sf: SF) => Util.standardDateFormat.format(sf.output.dataDate.get)),
-      Col("Analysis Date", (sf: SF) => Util.standardDateFormat.format(sf.output.startDate)),
-
-      Col("Baseline Delivery Date", (sf: SF) => Util.standardDateFormat.format(sf.baselineOutput.dataDate.get)),
-      Col("Baseline Analysis Date", (sf: SF) => Util.standardDateFormat.format(sf.baselineOutput.startDate)),
+      Col("Baseline Acquisition", (sf: SF) => Util.standardDateFormat.format(sf.baselineOutput.dataDate.get)),
+      Col("Baseline Analysis", (sf: SF) => Util.standardDateFormat.format(sf.baselineOutput.startDate)),
 
       Col("Axial Symmetry", (sf: SF) => sf.symmetryAndFlatness.axialSymmetry_pct.toString),
       Col("Transverse Symmetry", (sf: SF) => sf.symmetryAndFlatness.transverseSymmetry.toString),

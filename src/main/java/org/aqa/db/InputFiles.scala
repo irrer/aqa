@@ -50,6 +50,7 @@ object InputFiles extends Logging {
   }
 
   def getByInputPK(inputPK: Long): Seq[InputFiles] = {
+    Trace.trace("inputPK: " + inputPK)  // TODO rm
     val action = for {
       inputFiles <- query if inputFiles.inputPK === inputPK
     } yield (inputFiles)
