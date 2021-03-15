@@ -24,6 +24,11 @@ import scala.xml.Elem
 
 object DailyQAHTML extends Logging {
 
+  private val pleasePageElem = {
+    <div style="color: red; margin:10px;">
+      <h4 style="margin:10px;">Please page clinical physics coverage.</h4>
+    </div>
+  }
 
   def makeReport(dataSetList: Seq[BBbyEPIDComposite.DailyDataSetComposite], institutionPK: Long, date: Date): Elem = {
 
@@ -101,7 +106,7 @@ object DailyQAHTML extends Logging {
         case Some(ds) =>
           val pn = ds.attributeListList.head.get(TagFromName.PatientName).getSingleStringValueOrEmptyString
           <td>
-            {wrapAlias(pn)}
+            {wrapAlias(pn)}{if (ProcedureStatus.fail.eq(dataSet.status)) pleasePageElem}
           </td>
         case _ => <td>Unknown</td>
       }
@@ -462,9 +467,6 @@ object DailyQAHTML extends Logging {
 
 
         def showFail(msg: String, pleasePage: Boolean = false): Elem = { // show links to CBCT and EPID outputs
-          val pleasePageElem = {
-            <div style="color: red; margin:10px;"> <h4 style="margin:10px;"> Please page clinical physics coverage.</h4></div>
-          }
           <tr>
             <td title={col0Title} style={styleFail}>
               <h4>
