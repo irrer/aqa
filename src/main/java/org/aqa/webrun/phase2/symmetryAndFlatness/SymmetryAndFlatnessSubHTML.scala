@@ -2,7 +2,6 @@ package org.aqa.webrun.phase2.symmetryAndFlatness
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ScalaUtil.PrettyXML
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -112,7 +111,6 @@ object SymmetryAndFlatnessSubHTML extends Logging {
         <label title="Check to use this beam as a baseline." for={id}>Baseline</label>{input}
       </td>
     }
-    Trace.trace(elem)
     elem
   }
 
@@ -238,7 +236,6 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     // @formatter:on
   }
 
-
   /**
     * Respond to a request for the data nicely formatted in HTML.
     *
@@ -308,7 +305,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       */
     def makeDataSet(sf: SymmetryAndFlatness): Option[SymmetryAndFlatnessDataSet] = {
       try {
-        val baseline = SymmetryAndFlatness.getBaseline(output.machinePK.get, sf.beamName, dataDate).get
+        val baseline = SymmetryAndFlatness.getBaseline(output.machinePK.get, sf.beamName, dataDate).get.baseline
         val al: AttributeList = {
           val aa = alList.find(a => Util.sopOfAl(a).equals(sf.SOPInstanceUID))
           if (aa.isEmpty)
@@ -326,7 +323,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
             )
           aa.get
         }
-        Some(SymmetryAndFlatnessDataSet(sf, output, baseline.symmetryAndFlatness, al, rtplanAl))
+        Some(SymmetryAndFlatnessDataSet(sf, output, baseline, al, rtplanAl))
       } catch {
         case t: Throwable =>
           logger.error("Unexpected error: " + fmtEx(t))
@@ -416,7 +413,6 @@ class SymmetryAndFlatnessSubHTML extends Restlet with Logging with SubUrlAdmin {
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
     val valueMap = getValueMap(request)
-    Trace.trace(valueMap)
     try {
       0 match {
         case _ if valueMap.contains(csvTag) && valueMap.contains(csvTag) => SymmetryAndFlatnessSubHTML.makeCsv(valueMap, response)

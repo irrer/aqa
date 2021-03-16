@@ -1,5 +1,6 @@
 package org.aqa.db
 
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
@@ -77,13 +78,7 @@ case class SymmetryAndFlatness(
 
   def profileConstancy(baseline: SymmetryAndFlatness): Double = {
     if (baseline.symmetryAndFlatnessPK.get == symmetryAndFlatnessPK.get) {
-      val t = (top_cu / center_cu)
-      val b = (bottom_cu / center_cu)
-      val l = (left_cu / center_cu)
-      val r = (right_cu / center_cu)
-
-      val profConst = ((t + b + l + r) * 100) / 4
-      profConst
+      0
     } else {
       val t = (top_cu / center_cu) - (baseline.top_cu / baseline.center_cu)
       val b = (bottom_cu / center_cu) - (baseline.bottom_cu / baseline.center_cu)
