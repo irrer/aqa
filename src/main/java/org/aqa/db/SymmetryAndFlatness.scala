@@ -1,6 +1,5 @@
 package org.aqa.db
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
@@ -226,41 +225,6 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     def outputFK = foreignKey("SymmetryAndFlatness_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
-  // TODO can probably deprecate
-  private case class XPointSet(top: Double, bottom: Double, right: Double, left: Double, center: Double) {
-    def this(sf: SymmetryAndFlatness) = this(sf.top_cu, sf.bottom_cu, sf.right_cu, sf.left_cu, sf.center_cu)
-
-    private val list = Seq(top, bottom, right, left, center)
-
-    private val min = list.min
-    private val max = list.max
-
-    val axialSymmetry: Double = ((top - bottom) / bottom) * 100
-    val transverseSymmetry: Double = ((right - left) / left) * 100
-    val flatness: Double = ((max - min) / (max + min)) * 100
-
-    def profileConstancy(baseline: XPointSet): Double = {
-      val t = (top / center) - (baseline.top / baseline.center)
-      val b = (bottom / center) - (baseline.bottom / baseline.center)
-      val l = (left / center) - (baseline.left / baseline.center)
-      val r = (right / center) - (baseline.right / baseline.center)
-
-      val profConst = ((t + b + l + r) * 100) / 4
-
-      profConst
-    }
-
-    override def toString: String = {
-      def fmt(d: Double) = d.formatted("%10f")
-
-      "top: " + fmt(top) +
-        "    bottom: " + fmt(bottom) +
-        "    right: " + fmt(right) +
-        "    left: " + fmt(left) +
-        "    center: " + fmt(center)
-    }
-  }
-
   val query = TableQuery[SymmetryAndFlatnessTable]
 
   override val topXmlLabel = "SymmetryAndFlatness"
@@ -311,33 +275,34 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
 
   case class SymmetryAndFlatnessHistory(output: Output, symmetryAndFlatness: SymmetryAndFlatness, baselineOutput: Output, baseline: SymmetryAndFlatness)
 
-  private case class TimestampSf(output: Output, sf: SymmetryAndFlatness) {}
+  private case class OutputSymFlat(output: Output, sf: SymmetryAndFlatness) {}
 
   /**
     * For each member in the list, associate it with its baseline.
     *
-    * @param tsList
-    * @return
+    * @param osfListUnsorted List of output sym+flat not sorted
+    * @return osfList associated with baselines.
     */
-  private def associateBaseline(tsListUnsorted: Seq[TimestampSf]): Seq[SymmetryAndFlatnessHistory] = {
+  private def associateBaseline(osfListUnsorted: Seq[OutputSymFlat]): Seq[SymmetryAndFlatnessHistory] = {
 
-    val tsList = tsListUnsorted.sortBy(_.output.dataDate.get.getTime)
+    // Sort by timestamp
+    val osfList = osfListUnsorted.sortBy(_.output.dataDate.get.getTime)
 
-    case class BaselineAndList(baseline: TimestampSf, list: Seq[SymmetryAndFlatnessHistory]) {}
+    case class BaselineAndList(baseline: OutputSymFlat, list: Seq[SymmetryAndFlatnessHistory]) {}
 
-    if (tsList.isEmpty)
+    if (osfList.isEmpty)
       Seq[SymmetryAndFlatnessHistory]()
     else {
       // For each entry, find its baseline.  For the first one this will always be itself.
       val histList = {
-        val init = new BaselineAndList(tsList.head, Seq[SymmetryAndFlatnessHistory]())
-        tsList.foldLeft(init)((baselineAndList, os) =>
+        val init = BaselineAndList(osfList.head, Seq[SymmetryAndFlatnessHistory]())
+        osfList.foldLeft(init)((baselineAndList, os) =>
           if (os.sf.isBaseline)
-            BaselineAndList(os, baselineAndList.list :+ new SymmetryAndFlatnessHistory(os.output, os.sf, os.output, os.sf))
+            BaselineAndList(os, baselineAndList.list :+ SymmetryAndFlatnessHistory(os.output, os.sf, os.output, os.sf))
           else
             BaselineAndList(
               baselineAndList.baseline,
-              baselineAndList.list :+ new SymmetryAndFlatnessHistory(os.output, os.sf, baselineAndList.baseline.output, baselineAndList.baseline.sf)
+              baselineAndList.list :+ SymmetryAndFlatnessHistory(os.output, os.sf, baselineAndList.baseline.output, baselineAndList.baseline.sf)
             )
         )
       }
@@ -366,7 +331,7 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     // Fetch entire history from the database.  Also sort by dataDate.  This sorting also has the
     // side effect of ensuring that the dataDate is defined.  If it is not defined, this will
     // throw an exception.
-    val tsList = Db.run(search.result).map(os => TimestampSf(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
+    val tsList = Db.run(search.result).map(os => OutputSymFlat(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
 
     associateBaseline(tsList)
   }
@@ -391,7 +356,7 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     // Fetch entire history from the database.  Also sort by beam and dataDate.  This sorting also has the
     // side effect of ensuring that the dataDate is defined.  If it is not defined, this will
     // throw an exception.
-    val tsList = Db.run(search.result).map(os => TimestampSf(os._1, os._2)).sortBy(os => os.sf.beamName + ":" + os.output.dataDate.get.getTime)
+    val tsList = Db.run(search.result).map(os => OutputSymFlat(os._1, os._2)).sortBy(os => os.sf.beamName + ":" + os.output.dataDate.get.getTime)
 
     tsList.groupBy(_.sf.beamName).flatMap(tsGroup => associateBaseline(tsGroup._2)).toSeq
   }
