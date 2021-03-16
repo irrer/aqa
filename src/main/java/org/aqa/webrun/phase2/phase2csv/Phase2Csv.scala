@@ -2,13 +2,11 @@ package org.aqa.webrun.phase2.phase2csv
 
 import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.DicomFileUtilities
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
 import org.aqa.db.DbSetup
 import org.aqa.db.DicomSeries
-import org.aqa.db.InputFiles
 import org.aqa.db.Machine
 import org.aqa.db.Output
 
@@ -22,7 +20,7 @@ abstract class Phase2Csv[T] {
    * @param header Name of column.
    * @param toText Converts given data to text that will be put in the cell.
    */
-  case class Col(header: String, toText: T => String) {}
+  case class Col(header: String, toText: T => Any) {}
 
   protected def makeColList: Seq[Col]
 
@@ -64,7 +62,7 @@ abstract class Phase2Csv[T] {
   private def makeCsvRow(dataSet: T): String = {
     val dataText = colList.map(col => {
       // Make into a new string to avoid references to other classes.  This helps free memory.
-      new String(col.toText(dataSet))
+      new String(col.toText(dataSet).toString)
     }).mkString(",")
 
     val prefixText = prefixCsv.prefixToText(getOutput(dataSet))
@@ -76,6 +74,7 @@ abstract class Phase2Csv[T] {
   /** List of all machines, sorted by institution so that all of the rows
    * for a given institution will be consecutive. */
   private val machineList = Machine.list.sortBy(_.institutionPK)
+    .filter(_.machinePK.get == 27) // TODO rm
 
 
   private def machineToCsv(machine: Machine) = {
@@ -145,23 +144,13 @@ object Phase2Csv {
   def main(args: Array[String]): Unit = {
     DbSetup.init
     Trace.trace()
-    if (false) {
-      val inputFiles = InputFiles.get(1511).get
-      val data = inputFiles.zippedContent
-      val file = new File("""D:\tmp\symflat.zip""")
-      Util.writeBinaryFile(file, data)
-      println("Wrote to binary file " + file.getAbsolutePath)
-
-      DicomFileUtilities.isDicomOrAcrNemaFile("")
-
-      System.exit(99)
-    }
     val start = System.currentTimeMillis()
     (0 to 20).foreach(_ => println("-------------------------------------------------------------------------------"))
     val symFlat = new CsvSymmetryAndFlatness
     val text = symFlat.csvContent
     println("\n" + text + "\n")
-    val file = new File("""D:\tmp\symflat.csv""")
+    // val file = new File("""D:\tmp\symflat.csv""")
+    val file = new File("""symflat.csv""") // put in local dir
     Util.writeFile(file, text)
     println("Wrote to file " + file.getAbsolutePath)
     val elapsed = System.currentTimeMillis() - start

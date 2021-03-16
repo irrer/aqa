@@ -31,8 +31,8 @@ import scala.collection.immutable
 import scala.xml.Elem
 
 /**
- * Analyze DICOM files for symmetry and flatness.
- */
+  * Analyze DICOM files for symmetry and flatness.
+  */
 object SymmetryAndFlatnessSubHTML extends Logging {
 
   private def titleDetails = "Click to view graphs and other details"
@@ -88,9 +88,9 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   }
 
   private def detailsColumn(
-                             subDir: File,
-                             symFlatDataSet: SymmetryAndFlatnessDataSet
-                           ): Elem = {
+      subDir: File,
+      symFlatDataSet: SymmetryAndFlatnessDataSet
+  ): Elem = {
     val detailUrl = WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, symFlatDataSet.symmetryAndFlatness.beamName))
     val pk = symFlatDataSet.symmetryAndFlatness.symmetryAndFlatnessPK.get
     val id = "baseline" + pk
@@ -98,10 +98,9 @@ object SymmetryAndFlatnessSubHTML extends Logging {
 
     val input =
       if (symFlatDataSet.symmetryAndFlatness.isBaseline) {
-          <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"} checked={baseline}/>
-      }
-      else {
-          <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"}/>
+        <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"} checked={baseline}/>
+      } else {
+        <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"}/>
       }
 
     val elem = {
@@ -131,7 +130,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       )
     )
     val imgSmall = {
-        <img src={imgUrl} width="100"/>
+      <img src={imgUrl} width="100"/>
     }
     val ref = {
       <a href={dicomHref}>
@@ -176,7 +175,6 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     </td>
   }
 
-
   private def fmtValueColumn(value: Double): Elem = {
     <td style="text-align: center;" title={"Value % : " + value.formatted("%10.8f")}>
       {pctRounded(value).formatted("%5.3f").trim}
@@ -188,39 +186,66 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   private def makeRow(symFlatData: SymmetryAndFlatnessDataSet): Seq[Elem] = {
     val subDir = SymmetryAndFlatnessHTML.makeSubDir(symFlatData.output.dir)
     println(symFlatData.symmetryAndFlatness.beamName)
+
+    // @formatter:off
     Seq(
       {
         <tr align="center">
-          {detailsColumn(subDir, symFlatData)}{imageColumn(symFlatData)}<td style="text-align: center;" title={titleAxialSymmetry}>Axial Symmetry</td>{fmtBaselineColumn(symFlatData.baseline.axialSymmetry)}{val pct = symFlatData.symmetryAndFlatness.axialSymmetry - symFlatData.baseline.axialSymmetry
-        fmtDifferenceColumn(pct, Config.SymmetryPercentLimit)}{symmetryPercentLimitColumn}{fmtValueColumn(symFlatData.symmetryAndFlatness.axialSymmetry)}
+          {detailsColumn(subDir, symFlatData)}
+          {imageColumn(symFlatData)}
+          <td style="text-align: center;" title={titleAxialSymmetry}>Axial Symmetry</td>
+          {fmtBaselineColumn(symFlatData.baseline.axialSymmetry)}
+          {
+            val pct = symFlatData.symmetryAndFlatness.axialSymmetry - symFlatData.baseline.axialSymmetry
+            fmtDifferenceColumn(pct, Config.SymmetryPercentLimit)}
+          { symmetryPercentLimitColumn }
+          { fmtValueColumn(symFlatData.symmetryAndFlatness.axialSymmetry) }
         </tr>
       }, {
         <tr>
-          <td style="text-align: center;" title={titleTransverseSymmetry}>Transverse Symmetry</td>{fmtBaselineColumn(symFlatData.baseline.transverseSymmetry)}{val pct = symFlatData.symmetryAndFlatness.transverseSymmetry - symFlatData.baseline.transverseSymmetry
-        fmtDifferenceColumn(pct, Config.SymmetryPercentLimit)}{symmetryPercentLimitColumn}{fmtValueColumn(symFlatData.symmetryAndFlatness.transverseSymmetry)}
+          <td style="text-align: center;" title={titleTransverseSymmetry}>Transverse Symmetry</td>
+          {fmtBaselineColumn(symFlatData.baseline.transverseSymmetry)}
+          {
+            val pct = symFlatData.symmetryAndFlatness.transverseSymmetry - symFlatData.baseline.transverseSymmetry
+            fmtDifferenceColumn(pct, Config.SymmetryPercentLimit)
+          }
+          { symmetryPercentLimitColumn }
+          {fmtValueColumn(symFlatData.symmetryAndFlatness.transverseSymmetry)}
         </tr>
       }, {
         <tr>
-          <td style="text-align: center;" title={titleFlatness}>Flatness</td>{fmtBaselineColumn(symFlatData.baseline.flatness)}{val pct = symFlatData.symmetryAndFlatness.flatness - symFlatData.baseline.flatness
-        fmtDifferenceColumn(pct, Config.FlatnessPercentLimit)}{flatnessPercentLimitColumn}{fmtValueColumn(symFlatData.symmetryAndFlatness.flatness)}
+          <td style="text-align: center;" title={titleFlatness}>Flatness</td>
+          {fmtBaselineColumn(symFlatData.baseline.flatness)}
+          {
+            val pct = symFlatData.symmetryAndFlatness.flatness - symFlatData.baseline.flatness
+            fmtDifferenceColumn(pct, Config.FlatnessPercentLimit)}
+          { flatnessPercentLimitColumn }
+          {fmtValueColumn(symFlatData.symmetryAndFlatness.flatness)}
         </tr>
       }, {
         <tr>
-          <td style="text-align: center;" title={titleProfileConstancy}>Profile Constancy</td>{fmtBaselineColumn(symFlatData.baseline.profileConstancy(symFlatData.baseline))}{val pct = symFlatData.symmetryAndFlatness.profileConstancy(symFlatData.baseline
-        ) - symFlatData.baseline.profileConstancy(symFlatData.baseline)
-        fmtDifferenceColumn(pct, Config.ProfileConstancyPercentLimit)}{profileConstancyPercentLimitColumn}{fmtValueColumn(symFlatData.symmetryAndFlatness.profileConstancy(symFlatData.baseline))}
+          <td style="text-align: center;" title={titleProfileConstancy}>Profile Constancy</td>
+          { fmtBaselineColumn(symFlatData.baseline.profileConstancy(symFlatData.baseline)) }
+          {
+            val pct = symFlatData.symmetryAndFlatness.profileConstancy(symFlatData.baseline ) - symFlatData.baseline.profileConstancy(symFlatData.baseline)
+            fmtDifferenceColumn(pct, Config.ProfileConstancyPercentLimit)
+          }
+          { profileConstancyPercentLimitColumn }
+          { fmtValueColumn(symFlatData.symmetryAndFlatness.profileConstancy(symFlatData.baseline)) }
         </tr>
       }
     )
+    // @formatter:on
   }
 
+
   /**
-   * Respond to a request for the data nicely formatted in HTML.
-   *
-   * @param output Get data for machine referenced by this output.
-   * @param symFlatDataList List of data to display
-   * @return Formatted report
-   */
+    * Respond to a request for the data nicely formatted in HTML.
+    *
+    * @param output          Get data for machine referenced by this output.
+    * @param symFlatDataList List of data to display
+    * @return Formatted report
+    */
   def makeContent(output: Output, symFlatDataList: Seq[SymmetryAndFlatnessDataSet]): Elem = {
     // show link to CSV
     val csv: Elem = {
@@ -243,11 +268,11 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   }
 
   /**
-   * Collect and format the data as HTML and return it.
-   *
-   * @param valueMap List of parsed parameters.
-   * @return
-   */
+    * Collect and format the data as HTML and return it.
+    *
+    * @param valueMap List of parsed parameters.
+    * @return
+    */
   private def collectData(valueMap: ValueMapT, response: Response): Unit = {
     val output = Output.get(valueMap(outputPKTag).toLong).get
     val dataDate = output.dataDate.get
@@ -276,11 +301,11 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     val rtplanAlList = rtplanDicomSeriesList.flatMap(ds => ds.attributeListList)
 
     /**
-     * Make a data set that contains all the relevant information associated with a SymmetryFlatness row.
-     *
-     * @param sf Basis of data
-     * @return Convenient set of data
-     */
+      * Make a data set that contains all the relevant information associated with a SymmetryFlatness row.
+      *
+      * @param sf Basis of data
+      * @return Convenient set of data
+      */
     def makeDataSet(sf: SymmetryAndFlatness): Option[SymmetryAndFlatnessDataSet] = {
       try {
         val baseline = SymmetryAndFlatness.getBaseline(output.machinePK.get, sf.beamName, dataDate).get
@@ -330,13 +355,13 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   private val outputPKTag = "outputPK"
 
   /**
-   * If the user is authorized (must be in same institution or be whitelisted) then
-   * change the given baseline to the given value.
-   *
-   * @param valueMap Contains user, symmetry and flatness PK, and baseline setting.
-   * @param response Put response (HTML) here.
-   * @return Message indicating what was done.
-   */
+    * If the user is authorized (must be in same institution or be whitelisted) then
+    * change the given baseline to the given value.
+    *
+    * @param valueMap Contains user, symmetry and flatness PK, and baseline setting.
+    * @param response Put response (HTML) here.
+    * @return Message indicating what was done.
+    */
   private def setBaseline(valueMap: ValueMapT, response: Response): Unit = {
     // Get parameters.  If there is any syntax error then throw an exception.
     val user = WebUtil.getUser(valueMap).get
@@ -360,8 +385,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       </div>
       val text = PrettyXML.xmlToText(elem)
       WebUtil.setResponse(text, response, Status.SUCCESS_OK)
-    }
-    else {
+    } else {
       val elem = <p>Not authorized to change baseline.</p>
       val text = PrettyXML.xmlToText(elem)
       WebUtil.setResponse(text, response, Status.CLIENT_ERROR_FORBIDDEN)
@@ -369,10 +393,10 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   }
 
   /**
-   *
-   * @param valueMap Contains parameters indicating which data to process.
-   * @param response Put results here.
-   */
+    *
+    * @param valueMap Contains parameters indicating which data to process.
+    * @param response Put results here.
+    */
   private def makeCsv(valueMap: ValueMapT, response: Response): Unit = {
     val output = Output.get(valueMap(outputPKTag).toLong).get
     val csvText = SymmetryAndFlatnessCSV.makeCsvFile(output)
@@ -381,15 +405,14 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   }
 }
 
-
 class SymmetryAndFlatnessSubHTML extends Restlet with Logging with SubUrlAdmin {
 
   /**
-   * If the incoming request is for the given handler, then handle it and return true.
-   *
-   * @param request  User request.
-   * @param response Put results and status here.
-   */
+    * If the incoming request is for the given handler, then handle it and return true.
+    *
+    * @param request  User request.
+    * @param response Put results and status here.
+    */
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
     val valueMap = getValueMap(request)
@@ -397,9 +420,9 @@ class SymmetryAndFlatnessSubHTML extends Restlet with Logging with SubUrlAdmin {
     try {
       0 match {
         case _ if valueMap.contains(csvTag) && valueMap.contains(csvTag) => SymmetryAndFlatnessSubHTML.makeCsv(valueMap, response)
-        case _ if valueMap.contains(outputPKTag) => SymmetryAndFlatnessSubHTML.collectData(valueMap, response)
-        case _ if valueMap.contains(baselineTag) => SymmetryAndFlatnessSubHTML.setBaseline(valueMap, response)
-        case _ => WebUtil.badRequest(response, message = "Invalid request", Status.CLIENT_ERROR_BAD_REQUEST)
+        case _ if valueMap.contains(outputPKTag)                         => SymmetryAndFlatnessSubHTML.collectData(valueMap, response)
+        case _ if valueMap.contains(baselineTag)                         => SymmetryAndFlatnessSubHTML.setBaseline(valueMap, response)
+        case _                                                           => WebUtil.badRequest(response, message = "Invalid request", Status.CLIENT_ERROR_BAD_REQUEST)
       }
     } catch {
       case t: Throwable =>

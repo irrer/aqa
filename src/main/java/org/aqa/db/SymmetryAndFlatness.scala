@@ -9,51 +9,46 @@ import java.sql.Timestamp
 import scala.xml.Elem
 
 /**
- * Represent the results of a symmetry, flatness, and constancy analysis.
- *
- * Note that the limit for the number columns in Slick is 22, and this is exactly 22 columns.
- */
+  * Represent the results of a symmetry, flatness, and constancy analysis.
+  *
+  * Note that the limit for the number columns in Slick is 22, and this is exactly 22 columns.
+  */
 case class SymmetryAndFlatness(
-                                symmetryAndFlatnessPK: Option[Long], // primary key
-                                outputPK: Long, // output primary key
-                                SOPInstanceUID: String, // UID of source image
-                                beamName: String, // name of beam in plan
-                                isBaseline_text: String, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.   Note that this is a string instead of a boolean because boolean is not supported by some databases.
-
-                                @deprecated
-                                axialSymmetry_pct: Double, // deprecated
-                                @deprecated
-                                axialSymmetryBaseline_pct: Double, // deprecated
-                                @deprecated
-                                axialSymmetryStatus: String, // deprecated
-
-                                @deprecated
-                                transverseSymmetry_pct: Double, // deprecated
-                                @deprecated
-                                transverseSymmetryBaseline_pct: Double, // deprecated
-                                @deprecated
-                                transverseSymmetryStatus: String, // deprecated
-
-                                @deprecated
-                                flatness_pct: Double, // deprecated
-                                @deprecated
-                                flatnessBaseline_pct: Double, // deprecated
-                                @deprecated
-                                flatnessStatus: String, // deprecated
-
-                                @deprecated
-                                profileConstancy_pct: Double,
-                                @deprecated
-                                profileConstancyBaseline_pct: Double,
-                                @deprecated
-                                profileConstancyStatus: String,
-
-                                top_cu: Double, // average value of top point pixels in CU
-                                bottom_cu: Double, // average value of bottom point pixels in CU
-                                left_cu: Double, // average value of left point pixels in CU
-                                right_cu: Double, // average value of right point pixels in CU
-                                center_cu: Double // average value of center point pixels in CU
-                              ) {
+    symmetryAndFlatnessPK: Option[Long], // primary key
+    outputPK: Long, // output primary key
+    SOPInstanceUID: String, // UID of source image
+    beamName: String, // name of beam in plan
+    isBaseline_text: String, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.   Note that this is a string instead of a boolean because boolean is not supported by some databases.
+    @deprecated
+    axialSymmetry_pct: Double, // deprecated
+    @deprecated
+    axialSymmetryBaseline_pct: Double, // deprecated
+    @deprecated
+    axialSymmetryStatus: String, // deprecated
+    @deprecated
+    transverseSymmetry_pct: Double, // deprecated
+    @deprecated
+    transverseSymmetryBaseline_pct: Double, // deprecated
+    @deprecated
+    transverseSymmetryStatus: String, // deprecated
+    @deprecated
+    flatness_pct: Double, // deprecated
+    @deprecated
+    flatnessBaseline_pct: Double, // deprecated
+    @deprecated
+    flatnessStatus: String, // deprecated
+    @deprecated
+    profileConstancy_pct: Double,
+    @deprecated
+    profileConstancyBaseline_pct: Double,
+    @deprecated
+    profileConstancyStatus: String,
+    top_cu: Double, // average value of top point pixels in CU
+    bottom_cu: Double, // average value of bottom point pixels in CU
+    left_cu: Double, // average value of left point pixels in CU
+    right_cu: Double, // average value of right point pixels in CU
+    center_cu: Double // average value of center point pixels in CU
+) {
 
   def insert: SymmetryAndFlatness = {
     val insertQuery = SymmetryAndFlatness.query returning SymmetryAndFlatness.query.map(_.symmetryAndFlatnessPK) into
@@ -67,10 +62,9 @@ case class SymmetryAndFlatness(
   val isBaseline: Boolean = {
     isBaseline_text match {
       case _ if isBaseline_text.equalsIgnoreCase("true") => true
-      case _ => false
+      case _                                             => false
     }
   }
-
 
   private val list = Seq(top_cu, bottom_cu, right_cu, left_cu, center_cu)
 
@@ -82,23 +76,33 @@ case class SymmetryAndFlatness(
   val flatness: Double = ((max - min) / (max + min)) * 100
 
   def profileConstancy(baseline: SymmetryAndFlatness): Double = {
-    val t = (top_cu / center_cu) - (baseline.top_cu / baseline.center_cu)
-    val b = (bottom_cu / center_cu) - (baseline.bottom_cu / baseline.center_cu)
-    val l = (left_cu / center_cu) - (baseline.left_cu / baseline.center_cu)
-    val r = (right_cu / center_cu) - (baseline.right_cu / baseline.center_cu)
+    if (baseline.symmetryAndFlatnessPK.get == symmetryAndFlatnessPK.get) {
+      val t = (top_cu / center_cu)
+      val b = (bottom_cu / center_cu)
+      val l = (left_cu / center_cu)
+      val r = (right_cu / center_cu)
 
-    val profConst = ((t + b + l + r) * 100) / 4
+      val profConst = ((t + b + l + r) * 100) / 4
+      profConst
+    } else {
+      val t = (top_cu / center_cu) - (baseline.top_cu / baseline.center_cu)
+      val b = (bottom_cu / center_cu) - (baseline.bottom_cu / baseline.center_cu)
+      val l = (left_cu / center_cu) - (baseline.left_cu / baseline.center_cu)
+      val r = (right_cu / center_cu) - (baseline.right_cu / baseline.center_cu)
 
-    profConst
+      val profConst = ((t + b + l + r) * 100) / 4
+
+      profConst
+    }
   }
 
   /**
-   * True if the comparison of the value to the baseline passes.  Otherwise it has failed.
-   *
-   * @param value         Value being checked.
-   * @param baselineValue Known good baseline used as a reference.
-   * @return True on pass, false on fail.
-   */
+    * True if the comparison of the value to the baseline passes.  Otherwise it has failed.
+    *
+    * @param value         Value being checked.
+    * @param baselineValue Known good baseline used as a reference.
+    * @return True on pass, false on fail.
+    */
   private def doesPass(value: Double, baselineValue: Double): Boolean = {
     val diff = (value - baselineValue).abs
     Config.SymmetryPercentLimit <= diff
@@ -144,7 +148,6 @@ case class SymmetryAndFlatness(
       "    right_cu: " + right_cu + "\n" +
       "    center_cu: " + center_cu + "\n"
   }
-
 
 }
 
@@ -197,29 +200,31 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     def center_cu = column[Double]("center_cu")
 
     //noinspection LanguageFeature
-    def * = (
-      symmetryAndFlatnessPK.?,
-      outputPK,
-      SOPInstanceUID,
-      beamName,
-      isBaseline_text,
-      axialSymmetry_pct,
-      axialSymmetryBaseline_pct,
-      axialSymmetryStatus,
-      transverseSymmetry_pct,
-      transverseSymmetryBaseline_pct,
-      transverseSymmetryStatus,
-      flatness_pct,
-      flatnessBaseline_pct,
-      flatnessStatus,
-      profileConstancy_pct,
-      profileConstancyBaseline_pct,
-      profileConstancyStatus,
-      top_cu,
-      bottom_cu,
-      left_cu,
-      right_cu,
-      center_cu) <> (SymmetryAndFlatness.apply _ tupled, SymmetryAndFlatness.unapply)
+    def * =
+      (
+        symmetryAndFlatnessPK.?,
+        outputPK,
+        SOPInstanceUID,
+        beamName,
+        isBaseline_text,
+        axialSymmetry_pct,
+        axialSymmetryBaseline_pct,
+        axialSymmetryStatus,
+        transverseSymmetry_pct,
+        transverseSymmetryBaseline_pct,
+        transverseSymmetryStatus,
+        flatness_pct,
+        flatnessBaseline_pct,
+        flatnessStatus,
+        profileConstancy_pct,
+        profileConstancyBaseline_pct,
+        profileConstancyStatus,
+        top_cu,
+        bottom_cu,
+        left_cu,
+        right_cu,
+        center_cu
+      ) <> (SymmetryAndFlatness.apply _ tupled, SymmetryAndFlatness.unapply)
 
     // center_cu) <> (SymmetryAndFlatness.apply _ tupled, SymmetryAndFlatness.unapply _)  This is how it was before.
 
@@ -273,8 +278,8 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
   }
 
   /**
-   * Get a list of all rows for the given output
-   */
+    * Get a list of all rows for the given output
+    */
   def getByOutput(outputPK: Long): Seq[SymmetryAndFlatness] = {
     val action = for {
       inst <- SymmetryAndFlatness.query if inst.outputPK === outputPK
@@ -309,17 +314,16 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     Db.perform(ops)
   }
 
-  case class SymmetryAndFlatnessHistory(output: Output, symmetryAndFlatness: SymmetryAndFlatness,
-                                        baselineOutput: Output, baseline: SymmetryAndFlatness)
+  case class SymmetryAndFlatnessHistory(output: Output, symmetryAndFlatness: SymmetryAndFlatness, baselineOutput: Output, baseline: SymmetryAndFlatness)
 
   private case class TimestampSf(output: Output, sf: SymmetryAndFlatness) {}
 
   /**
-   * For each member in the list, associate it with its baseline.
-   *
-   * @param tsList
-   * @return
-   */
+    * For each member in the list, associate it with its baseline.
+    *
+    * @param tsList
+    * @return
+    */
   private def associateBaseline(tsListUnsorted: Seq[TimestampSf]): Seq[SymmetryAndFlatnessHistory] = {
 
     val tsList = tsListUnsorted.sortBy(_.output.dataDate.get.getTime)
@@ -336,7 +340,10 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
           if (os.sf.isBaseline)
             BaselineAndList(os, baselineAndList.list :+ new SymmetryAndFlatnessHistory(os.output, os.sf, os.output, os.sf))
           else
-            BaselineAndList(baselineAndList.baseline, baselineAndList.list :+ new SymmetryAndFlatnessHistory(os.output, os.sf, baselineAndList.baseline.output, baselineAndList.baseline.sf))
+            BaselineAndList(
+              baselineAndList.baseline,
+              baselineAndList.list :+ new SymmetryAndFlatnessHistory(os.output, os.sf, baselineAndList.baseline.output, baselineAndList.baseline.sf)
+            )
         )
       }
       histList.list
@@ -344,13 +351,13 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
   }
 
   /**
-   * Get the SymmetryAndFlatness results.
-   *
-   * @param machinePK : For this machine
-   * @param beamName  : For this beam
-   * @return Complete history with baselines.
-   *
-   */
+    * Get the SymmetryAndFlatness results.
+    *
+    * @param machinePK : For this machine
+    * @param beamName  : For this beam
+    * @return Complete history with baselines.
+    *
+    */
   def history(machinePK: Long, beamName: String): Seq[SymmetryAndFlatnessHistory] = {
     val procedurePK = Procedure.ProcOfPhase2.get.procedurePK.get
 
@@ -370,12 +377,12 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
   }
 
   /**
-   * Get the SymmetryAndFlatness history for all beams on the given machine.
-   *
-   * @param machinePK : For this machine
-   * @return Complete history with baselines.
-   *
-   */
+    * Get the SymmetryAndFlatness history for all beams on the given machine.
+    *
+    * @param machinePK : For this machine
+    * @return Complete history with baselines.
+    *
+    */
   def history(machinePK: Long): Seq[SymmetryAndFlatnessHistory] = {
     val procedurePK = Procedure.ProcOfPhase2.get.procedurePK.get
 
@@ -386,43 +393,42 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
       (output, symmetryAndFlatness)
     }
 
-    // Fetch entire history from the database.  Also sort by dataDate.  This sorting also has the
+    // Fetch entire history from the database.  Also sort by beam and dataDate.  This sorting also has the
     // side effect of ensuring that the dataDate is defined.  If it is not defined, this will
     // throw an exception.
-    val tsList = Db.run(search.result).map(os => TimestampSf(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
+    val tsList = Db.run(search.result).map(os => TimestampSf(os._1, os._2)).sortBy(os => os.sf.beamName + ":" + os.output.dataDate.get.getTime)
 
     tsList.groupBy(_.sf.beamName).flatMap(tsGroup => associateBaseline(tsGroup._2)).toSeq
   }
 
-
   /**
-   * Get the baseline by finding another set of values that
-   *   - were captured before the given time stamp
-   *   - belong to the same machine
-   *   - were produced by the same beam
-   *   - are defined as a baseline because <code>isBaseline_text</code> is true, or failing that, have the chronologically earliest preceding <code>SymmetryAndFlatness</code>.
-   *
-   * @param machinePK Match this machine
-   * @param beamName  Match this beam
-   * @param dataDate  Most recent that is at or before this time
-   * @return The baseline value to use, or None if not found.
-   */
+    * Get the baseline by finding another set of values that
+    *   - were captured before the given time stamp
+    *   - belong to the same machine
+    *   - were produced by the same beam
+    *   - are defined as a baseline because <code>isBaseline_text</code> is true, or failing that, have the chronologically earliest preceding <code>SymmetryAndFlatness</code>.
+    *
+    * @param machinePK Match this machine
+    * @param beamName  Match this beam
+    * @param dataDate  Most recent that is at or before this time
+    * @return The baseline value to use, or None if not found.
+    */
   def getBaseline(machinePK: Long, beamName: String, dataDate: Timestamp): Option[SymmetryAndFlatnessHistory] = {
     val baseline = history(machinePK, beamName).find(h => h.output.dataDate.get.getTime == dataDate.getTime)
     baseline
   }
 
   /**
-   * Get the list of symmetry and flatness entries that were explicitly marked to be used as baselines that
-   * reference the given output.  The outputPK must match the passed outputPK and the
-   * <code>isBaseline_text</code> must be "true".
-   *
-   * @param outputPK SymmetryAndFlatness rows must point to this output.
-   * @return
-   */
+    * Get the list of symmetry and flatness entries that were explicitly marked to be used as baselines that
+    * reference the given output.  The outputPK must match the passed outputPK and the
+    * <code>isBaseline_text</code> must be "true".
+    *
+    * @param outputPK SymmetryAndFlatness rows must point to this output.
+    * @return
+    */
   def getBaselineByOutput(outputPK: Long): Seq[SymmetryAndFlatness] = {
     val trueText = true.toString
-    val search = for {symFlat <- SymmetryAndFlatness.query.filter(sf => (sf.outputPK === outputPK) && (sf.isBaseline_text === trueText))} yield symFlat
+    val search = for { symFlat <- SymmetryAndFlatness.query.filter(sf => (sf.outputPK === outputPK) && (sf.isBaseline_text === trueText)) } yield symFlat
     val list = Db.run(search.result)
     list
   }
