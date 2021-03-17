@@ -14,19 +14,19 @@ import java.io.File
 import scala.xml.Elem
 
 /**
- * Make HTML for symmetry and flatness.
- */
+  * Make HTML for symmetry and flatness.
+  */
 object SymmetryAndFlatnessHTML extends Logging {
 
   private val htmlFileName = "SymmetryAndFlatness.html"
   private val subDirName = "SymmetryAndFlatness"
 
   /**
-   * Make the directory to contain symmetry, flatness, and constancy HTML report.
-   *
-   * @param outputDir Main output directory.
-   * @return Sub-directory.
-   */
+    * Make the directory to contain symmetry, flatness, and constancy HTML report.
+    *
+    * @param outputDir Main output directory.
+    * @return Sub-directory.
+    */
   def makeSubDir(outputDir: File): File = {
     val subDir = new File(outputDir, subDirName)
     subDir.mkdirs
@@ -39,8 +39,8 @@ object SymmetryAndFlatnessHTML extends Logging {
   }
 
   /**
-   * Get the file of the HTML for the given beam.
-   */
+    * Get the file of the HTML for the given beam.
+    */
   def beamHtmlFile(subDir: File, beamName: String): File = {
     val fileName = WebUtil.stringToUrlSafe(beamName) + ".html"
     new File(subDir, fileName)
@@ -78,7 +78,6 @@ object SymmetryAndFlatnessHTML extends Logging {
     }
 
     val runScript = {
-      (0 to 5).foreach(_ => println("hey -------------------------------------------"))
       """
         <script>
 
