@@ -90,6 +90,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       subDir: File,
       symFlatDataSet: SymmetryAndFlatnessDataSet
   ): Elem = {
+    val errorClass = if (symFlatDataSet.symmetryAndFlatness.allPass(symFlatDataSet.baseline)) "normal" else "danger"
     val detailUrl = WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, symFlatDataSet.symmetryAndFlatness.beamName))
     val pk = symFlatDataSet.symmetryAndFlatness.symmetryAndFlatnessPK.get
     val id = "baseline" + pk
@@ -103,7 +104,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       }
 
     val elem = {
-      <td style="vertical-align: middle;" rowspan="4">
+      <td style="vertical-align: middle;" class={errorClass} rowspan="4">
         <a href={detailUrl} title={titleDetails}>
           {symFlatDataSet.symmetryAndFlatness.beamName}<br/>{Phase2Util.jawDescription(symFlatDataSet.al, symFlatDataSet.rtplan)}<br/>{Phase2Util.angleDescription(symFlatDataSet.al)}
         </a>

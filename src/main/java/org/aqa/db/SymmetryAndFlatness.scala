@@ -1,5 +1,6 @@
 package org.aqa.db
 
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
@@ -76,7 +77,12 @@ case class SymmetryAndFlatness(
   val flatness: Double = ((max - min) / (max + min)) * 100
 
   def profileConstancy(baseline: SymmetryAndFlatness): Double = {
-    if (baseline.symmetryAndFlatnessPK.get == symmetryAndFlatnessPK.get) {
+    if (symmetryAndFlatnessPK.isEmpty)
+      Trace.trace()
+    if (baseline.symmetryAndFlatnessPK.isEmpty)
+      Trace.trace()
+
+    if (symmetryAndFlatnessPK.nonEmpty && baseline.symmetryAndFlatnessPK.get == symmetryAndFlatnessPK.get) {
       0
     } else {
       val t = (top_cu / center_cu) - (baseline.top_cu / baseline.center_cu)
@@ -97,24 +103,26 @@ case class SymmetryAndFlatness(
     * @param baselineValue Known good baseline used as a reference.
     * @return True on pass, false on fail.
     */
-  private def doesPass(value: Double, baselineValue: Double): Boolean = {
+  private def doesPass(value: Double, baselineValue: Double, limit: Double): Boolean = {
     val diff = (value - baselineValue).abs
-    Config.SymmetryPercentLimit <= diff
+    val pass = limit >= diff
+    pass
   }
 
-  def axialSymmetryPass(baseline: SymmetryAndFlatness): Boolean = doesPass(axialSymmetry, baseline.axialSymmetry)
+  def axialSymmetryPass(baseline: SymmetryAndFlatness): Boolean = doesPass(axialSymmetry, baseline.axialSymmetry, Config.SymmetryPercentLimit)
 
-  def transverseSymmetryPass(baseline: SymmetryAndFlatness): Boolean = doesPass(transverseSymmetry, baseline.transverseSymmetry)
+  def transverseSymmetryPass(baseline: SymmetryAndFlatness): Boolean = doesPass(transverseSymmetry, baseline.transverseSymmetry, Config.SymmetryPercentLimit)
 
-  def flatnessPass(baseline: SymmetryAndFlatness): Boolean = doesPass(flatness, baseline.flatness)
+  def flatnessPass(baseline: SymmetryAndFlatness): Boolean = doesPass(flatness, baseline.flatness, Config.FlatnessPercentLimit)
 
-  def profileConstancyPass(baseline: SymmetryAndFlatness): Boolean = doesPass(profileConstancy(baseline), baseline.profileConstancy(baseline))
+  def profileConstancyPass(baseline: SymmetryAndFlatness): Boolean = doesPass(profileConstancy(baseline), baseline.profileConstancy(baseline), Config.ProfileConstancyPercentLimit)
 
-  def allPass(baseline: SymmetryAndFlatness): Boolean =
+  def allPass(baseline: SymmetryAndFlatness): Boolean = {
     axialSymmetryPass(baseline) &&
-      transverseSymmetryPass(baseline) &&
-      flatnessPass(baseline) &&
-      profileConstancyPass(baseline)
+    transverseSymmetryPass(baseline) &&
+    flatnessPass(baseline) &&
+    profileConstancyPass(baseline)
+  }
 
   def insertOrUpdate(): Int = Db.run(SymmetryAndFlatness.query.insertOrUpdate(this))
 
@@ -331,7 +339,9 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     // Fetch entire history from the database.  Also sort by dataDate.  This sorting also has the
     // side effect of ensuring that the dataDate is defined.  If it is not defined, this will
     // throw an exception.
-    val tsList = Db.run(search.result).map(os => OutputSymFlat(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
+    val sr = search.result
+    Trace.trace("\n\n" + sr.statements + "\n")
+    val tsList = Db.run(sr).map(os => OutputSymFlat(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
 
     associateBaseline(tsList)
   }
@@ -374,7 +384,8 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     * @return The baseline value to use, or None if not found.
     */
   def getBaseline(machinePK: Long, beamName: String, dataDate: Timestamp): Option[SymmetryAndFlatnessHistory] = {
-    val baseline = history(machinePK, beamName).find(h => h.output.dataDate.get.getTime == dataDate.getTime)
+    val hist = history(machinePK, beamName)
+    val baseline = history(machinePK, beamName).reverse.find(h => h.output.dataDate.get.getTime <= dataDate.getTime)
     baseline
   }
 

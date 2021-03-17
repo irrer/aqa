@@ -83,6 +83,10 @@ object SymmetryAndFlatnessHTML extends Logging {
           var baseUrl='/admin/SymmetryAndFlatnessSubHTML'
           var dynUrl=baseUrl + '?outputPK=' + document.getElementById("DynamicContent").innerHTML.trim();
 
+          function reloadMe() {
+            location.reload();
+          }
+
           function loadDynamicContent() {
             var xhttp = new XMLHttpRequest();
             xhttp.onreadystatechange = function() {
@@ -105,7 +109,8 @@ object SymmetryAndFlatnessHTML extends Logging {
             var xhttp = new XMLHttpRequest();
             xhttp.open("GET", baselineUrl, true);
             xhttp.send();
-            // location.reload();
+            // reload the page to show the changes due to chaning the baseline
+            setTimeout(reloadMe, 1000);
           }
         </script>
       """.replace("\r", "")
