@@ -1,64 +1,47 @@
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
-import org.aqa.Logging
-import org.aqa.db.CollimatorPosition
-import com.pixelmed.dicom.AttributeTag
-import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.TagFromName
-import org.aqa.Util
-import scala.collection.Seq
-import scala.xml.Elem
-import org.aqa.db.Output
-import org.aqa.run.ProcedureStatus
-import org.aqa.DicomFile
-import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.ImageUtil
-import java.awt.geom.Point2D
-import org.aqa.Config
-import java.awt.Rectangle
-import edu.umro.ImageUtil.LocateEdge
-import java.awt.image.BufferedImage
-import java.awt.Color
-import java.awt.Graphics2D
-import java.awt.BasicStroke
 import edu.umro.ScalaUtil.Trace
-import scala.collection.parallel.ParSeq
-import org.aqa.db.CollimatorCentering
-import java.awt.Point
-import edu.umro.ImageUtil.ImageText
-import java.io.File
+import org.aqa.Logging
+import org.aqa.Util
+import org.aqa.run.ProcedureStatus
+import org.aqa.web.C3Chart
 import org.aqa.web.WebServer
 import org.aqa.web.WebUtil
-import org.aqa.web.C3Chart
-import java.text.Format
 import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.webrun.phase2.RunReq
+
+import java.awt.Color
+import java.io.File
+import scala.collection.Seq
+import scala.xml.Elem
 
 /**
- * Analyze DICOM files for symmetry and flatness.
- */
+  * Analyze DICOM files for symmetry and flatness.
+  */
 object SymmetryAndFlatnessBeamProfileHTML extends Logging {
 
-  private def makeContent(subDir: File, extendedData: ExtendedData, result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult, status: ProcedureStatus.Value, runReq: RunReq): (Elem, String) = {
+  private def makeContent(
+      subDir: File,
+      extendedData: ExtendedData,
+      result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult,
+      status: ProcedureStatus.Value,
+      runReq: RunReq
+  ): (Elem, String) = {
 
-    val graphTransverse = new C3Chart(None, None,
-      "Position mm", "Position mm", result.transverse_pct, ".4g",
-      Seq("Level"), "Level", Seq(result.transverseProfile), ".4g", Seq(new Color(0x4477BB)))
+    val graphTransverse = new C3Chart(None, None, "Position mm", "Position mm", result.transverse_pct, ".4g", Seq("Level"), "Level", Seq(result.transverseProfile), ".4g", Seq(new Color(0x4477bb)))
 
-    val graphAxial = new C3Chart(None, None,
-      "Position mm", "Position mm", result.axial_pct, ".4g",
-      Seq("Level"), "Level", Seq(result.axialProfile), ".4g", Seq(new Color(0x4477BB)))
+    val graphAxial = new C3Chart(None, None, "Position mm", "Position mm", result.axial_pct, ".4g", Seq("Level"), "Level", Seq(result.axialProfile), ".4g", Seq(new Color(0x4477bb)))
 
     def fmt(value: Double): Elem = {
-      <small title='Value calculated by this analysis.  Shows up as orange dot in chart.'><font color='orange'> { value.formatted("%9.6f") } </font></small>
+      <small title='Value calculated by this analysis.  Shows up as orange dot in chart.'><font color='orange'> {value.formatted("%9.6f")} </font></small>
     }
 
     def resultTable: Elem = {
       Trace.trace("making results table")
       <div style="margin:20px;">
         <center><h3>Results</h3></center>
-        <table class="table table-bordered" title={ "Results of this analysis and baseline values" + WebUtil.titleNewline + "for comparison.  All values are in percent." }>
+        <table class="table table-bordered" title={"Results of this analysis and baseline values" + WebUtil.titleNewline + "for comparison.  All values are in percent."}>
           <thead>
             <tr>
               <th>Source</th>
@@ -70,17 +53,17 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
           </thead>
           <tr>
             <td>Analysis</td>
-            <td>{ Util.fmtDbl(result.symmetryAndFlatness.transverseSymmetry) }</td>
-            <td>{ Util.fmtDbl(result.symmetryAndFlatness.axialSymmetry) }</td>
-            <td>{ Util.fmtDbl(result.symmetryAndFlatness.flatness) }</td>
-            <td>{ Util.fmtDbl(result.symmetryAndFlatness.profileConstancy(result.baseline)) }</td>
+            <td>{Util.fmtDbl(result.symmetryAndFlatness.transverseSymmetry)}</td>
+            <td>{Util.fmtDbl(result.symmetryAndFlatness.axialSymmetry)}</td>
+            <td>{Util.fmtDbl(result.symmetryAndFlatness.flatness)}</td>
+            <td>{Util.fmtDbl(result.symmetryAndFlatness.profileConstancy(result.baseline))}</td>
           </tr>
           <tr>
             <td>Baseline</td>
-            <td>{ Util.fmtDbl(result.baseline.transverseSymmetry) }</td>
-            <td>{ Util.fmtDbl(result.baseline.axialSymmetry) }</td>
-            <td>{ Util.fmtDbl(result.baseline.flatness) }</td>
-            <td>{ Util.fmtDbl(result.baseline.profileConstancy(result.baseline)) }</td>
+            <td>{Util.fmtDbl(result.baseline.transverseSymmetry)}</td>
+            <td>{Util.fmtDbl(result.baseline.axialSymmetry)}</td>
+            <td>{Util.fmtDbl(result.baseline.flatness)}</td>
+            <td>{Util.fmtDbl(result.baseline.profileConstancy(result.baseline))}</td>
           </tr>
         </table>
       </div>
@@ -102,19 +85,19 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
           </thead>
           <tr>
             <td>Analysis</td>
-            <td>{ Util.fmtDbl(result.symmetryAndFlatness.top_cu) }</td>
-            <td>{ Util.fmtDbl(result.symmetryAndFlatness.bottom_cu) }</td>
-            <td>{ Util.fmtDbl(result.symmetryAndFlatness.left_cu) }</td>
-            <td>{ Util.fmtDbl(result.symmetryAndFlatness.right_cu) }</td>
-            <td>{ Util.fmtDbl(result.symmetryAndFlatness.center_cu) }</td>
+            <td>{Util.fmtDbl(result.symmetryAndFlatness.top_cu)}</td>
+            <td>{Util.fmtDbl(result.symmetryAndFlatness.bottom_cu)}</td>
+            <td>{Util.fmtDbl(result.symmetryAndFlatness.left_cu)}</td>
+            <td>{Util.fmtDbl(result.symmetryAndFlatness.right_cu)}</td>
+            <td>{Util.fmtDbl(result.symmetryAndFlatness.center_cu)}</td>
           </tr>
           <tr>
             <td>Baseline</td>
-            <td>{ Util.fmtDbl(result.baseline.top_cu) }</td>
-            <td>{ Util.fmtDbl(result.baseline.bottom_cu) }</td>
-            <td>{ Util.fmtDbl(result.baseline.left_cu) }</td>
-            <td>{ Util.fmtDbl(result.baseline.right_cu) }</td>
-            <td>{ Util.fmtDbl(result.baseline.center_cu) }</td>
+            <td>{Util.fmtDbl(result.baseline.top_cu)}</td>
+            <td>{Util.fmtDbl(result.baseline.bottom_cu)}</td>
+            <td>{Util.fmtDbl(result.baseline.left_cu)}</td>
+            <td>{Util.fmtDbl(result.baseline.right_cu)}</td>
+            <td>{Util.fmtDbl(result.baseline.center_cu)}</td>
           </tr>
         </table>
       </div>
@@ -123,26 +106,28 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
     // val graphHistory = new SymmetryAndFlatnessBeamHistoryHTML(result.beamName, extendedData.output.outputPK.get)  TODO rm
     val content = {
       <div class="row">
+
         <div class="row">
           <div class="col-md-4 col-md-offset-4">
-            { resultTable }
+            {resultTable}
           </div>
         </div>
         <div class="row">
           <div class="col-md-4 col-md-offset-4">
-            { inputTable }
+            {inputTable}
           </div>
         </div>
+
         <div class="row">
           <div class="col-md-5 col-md-offset-1">
-            { <center id="beamImage"><img class="img-responsive" src={ WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.symmetryAndFlatness.beamName)) }/> </center> }
+            {<center id="beamImage"><img class="img-responsive" src={WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.symmetryAndFlatness.beamName))}/> </center>}
           </div>
           <div class="col-md-5">
             <div class="row">
-              <h3>Transverse</h3>{ graphTransverse.html }
+              <h3>Transverse</h3>{graphTransverse.html}
             </div>
             <div class="row">
-              <h3>Axial</h3>{ graphAxial.html }
+              <h3>Axial</h3>{graphAxial.html}
             </div>
           </div>
         </div>
@@ -150,19 +135,19 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
           <div class="col-md-10 col-md-offset-1">
             <div class="row">
               <h2>Transverse Symmetry History</h2>
-              { C3Chart.html(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.transverseSymmetryName)) }
+              {C3Chart.html(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.transverseSymmetryName))}
             </div>
             <div class="row">
               <h2>Axial Symmetry History</h2>
-              { C3Chart.html(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.axialSymmetryName)) }
+              {C3Chart.html(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.axialSymmetryName))}
             </div>
             <div class="row">
               <h2>Flatness History</h2>
-              { C3Chart.html(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.flatnessName)) }
+              {C3Chart.html(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.flatnessName))}
             </div>
             <div class="row">
               <h2>Profile Constancy History</h2>
-              { C3Chart.html(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.profileConstancyName)) }
+              {C3Chart.html(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.profileConstancyName))}
             </div>
           </div>
         </div>
@@ -183,13 +168,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
   def makeDisplay(subDir: File, extendedData: ExtendedData, result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult, status: ProcedureStatus.Value, runReq: RunReq) = {
     val status = if (result.symmetryAndFlatness.allPass(result.baseline)) ProcedureStatus.pass else ProcedureStatus.fail
     val elemJavascript = makeContent(subDir, extendedData, result, status, runReq)
-    val html = Phase2Util.wrapSubProcedure(
-      extendedData,
-      elemJavascript._1,
-      title = "Symmetry and Flatness " + result.symmetryAndFlatness.beamName,
-      status,
-      Some(elemJavascript._2),
-      runReq)
+    val html = Phase2Util.wrapSubProcedure(extendedData, elemJavascript._1, title = "Symmetry and Flatness " + result.symmetryAndFlatness.beamName, status, Some(elemJavascript._2), runReq)
     Util.writeBinaryFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, result.symmetryAndFlatness.beamName), html.getBytes)
   }
 }

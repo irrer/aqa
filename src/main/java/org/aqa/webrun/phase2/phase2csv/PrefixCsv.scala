@@ -15,7 +15,7 @@ class PrefixCsv {
   private val machineMap = Machine.list.sortBy(_.institutionPK).map(m => (m.machinePK.get, m)).toMap
 
   /** Map to retrieve anonymized name of institution by institutionPK. */
-  private val institutionNameMap = Institution.list.map(i => (i.institutionPK.get, i.name)).sortBy(_._2).toMap
+  val institutionNameMap = Institution.list.map(i => (i.institutionPK.get, i.name)).sortBy(_._2).toMap
 
   /** Map of machine types and what they are called. */
   private val machineTypeMap = MachineType.list.map(mt => (mt.machineTypePK.get, mt.toName)).toMap

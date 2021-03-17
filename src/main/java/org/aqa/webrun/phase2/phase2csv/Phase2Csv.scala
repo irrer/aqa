@@ -4,6 +4,7 @@ import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.Trace
+import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.DbSetup
 import org.aqa.db.DicomSeries
@@ -15,11 +16,11 @@ import java.io.File
 abstract class Phase2Csv[T] {
 
   /**
-   * Define a column in a Phase2 CSV.
-   *
-   * @param header Name of column.
-   * @param toText Converts given data to text that will be put in the cell.
-   */
+    * Define a column in a Phase2 CSV.
+    *
+    * @param header Name of column.
+    * @param toText Converts given data to text that will be put in the cell.
+    */
   case class Col(header: String, toText: T => Any) {}
 
   protected def makeColList: Seq[Col]
@@ -28,75 +29,101 @@ abstract class Phase2Csv[T] {
 
   protected def getAl(data: T): AttributeList
 
+  protected def getSopUID(data: T): String
+
   protected def getOutput(data: T): Output
 
   private val prefixCsv = new PrefixCsv
   private val dicomCsv = new DicomCsv
 
+  private val dicomCsvCacheDirName = "DICOMCSV"
+
   /**
-   * Get the data for a particular machine.
-   *
-   * @param machinePK Machine to get data for.
-   * @return List of data for the particular machine.
-   */
+    * Get the data for a particular machine.
+    *
+    * @param machinePK Machine to get data for.
+    * @return List of data for the particular machine.
+    */
   protected def getData(machinePK: Long): Seq[T]
 
-
   /**
-   * Make the column header line of a CSV file.
-   *
-   * @return Single string of data headers.
-   */
+    * Make the column header line of a CSV file.
+    *
+    * @return Single string of data headers.
+    */
   def makeHeader(): String = {
     val dataHeaderList = colList.map(col => '"' + col.header + '"').mkString(",")
-    prefixCsv.headerText + "," + dicomCsv.headerText + "," + dataHeaderList
+    prefixCsv.headerText + "," + dataHeaderList + "," + dicomCsv.headerText
   }
 
+  /**
+    * Get the DICOM CSV text for the given data set.  Try getting if from the cache dir first.  If that fails,
+    * then create it and save it in cache.
+    *
+    * @param dataSet Get CSV for DICOM referenced by this.
+    * @param machine Machine that produced data.
+    * @return CSV text for DICOM.
+    */
+  private def getDicomText(dataSet: T, machine: Machine): String = {
+    val machDir = {
+      val instDir = new File(Config.cacheDirFile, prefixCsv.institutionNameMap(machine.institutionPK))
+      val dicomDir = new File(instDir, dicomCsvCacheDirName)
+      new File(dicomDir, machine.id)
+    }
+    val file = new File(machDir, getSopUID(dataSet))
+    if (file.exists())
+      Util.readTextFile(file).right.get
+    else {
+      val text = dicomCsv.dicomToText(getAl(dataSet))
+      machDir.mkdirs()
+      Util.writeFile(file, text)
+      text
+    }
+  }
 
   /**
-   * Make one row of a CSV file.
-   *
-   * @param dataSet Data to format
-   * @return One line of the CSV
-   */
-  private def makeCsvRow(dataSet: T): String = {
-    val dataText = colList.map(col => {
-      // Make into a new string to avoid references to other classes.  This helps free memory.
-      new String(col.toText(dataSet).toString)
-    }).mkString(",")
+    * Make one row of a CSV file.
+    *
+    * @param dataSet Data to format
+    * @return One line of the CSV
+    */
+  private def makeCsvRow(dataSet: T, machine: Machine): String = {
+    val dataText = colList
+      .map(col => {
+        // Make into a new string to avoid references to other classes.  This helps free memory.
+        new String(col.toText(dataSet).toString)
+      })
+      .mkString(",")
 
     val prefixText = prefixCsv.prefixToText(getOutput(dataSet))
-    val dicomText = dicomCsv.dicomToText(getAl(dataSet))
+    val dicomText = getDicomText(dataSet, machine)
     prefixText + "," + dicomText + "," + dataText
   }
 
-
   /** List of all machines, sorted by institution so that all of the rows
-   * for a given institution will be consecutive. */
-  private val machineList = Machine.list.sortBy(_.institutionPK)
+    * for a given institution will be consecutive. */
+  private val machineList = Machine.list
+    .sortBy(_.institutionPK)
     .filter(_.machinePK.get == 27) // TODO rm
-
 
   private def machineToCsv(machine: Machine) = {
     Phase2Csv.clearAlCache()
     val dataList = getData(machine.machinePK.get)
     // make the row list for this one machine
-    val machineRowList = dataList.map(d => makeCsvRow(d)).mkString(",\n")
+    val machineRowList = dataList.map(d => makeCsvRow(d, machine)).mkString(",\n")
     Trace.trace("------------\n" + machineRowList)
     Phase2Csv.clearAlCache()
     machineRowList
   }
 
-
   /**
-   * Get the CSV content for all institutions.
-   *
-   * @return
-   */
+    * Get the CSV content for all institutions.
+    *
+    * @return
+    */
   def csvContent: String = makeHeader() + "\n" + machineList.map(machine => machineToCsv(machine)).filter(_.nonEmpty).mkString("\n")
 
 }
-
 
 object Phase2Csv {
 
@@ -110,12 +137,12 @@ object Phase2Csv {
   }
 
   /**
-   * Get the attribute list.  First try the cache.  If not there, then get it from the
-   * database, put it in the cache, and then use it.
-   *
-   * @param SOPInstanceUID Unique slice identifier.
-   * @return The corresponding attribute list.
-   */
+    * Get the attribute list.  First try the cache.  If not there, then get it from the
+    * database, put it in the cache, and then use it.
+    *
+    * @param SOPInstanceUID Unique slice identifier.
+    * @return The corresponding attribute list.
+    */
   def getAlBySop(SOPInstanceUID: String): AttributeList = {
     if (alCache.contains(SOPInstanceUID))
       alCache(SOPInstanceUID)
