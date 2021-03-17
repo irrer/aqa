@@ -67,11 +67,12 @@ object SymmetryAndFlatnessHTML extends Logging {
     val mainHtmlFile = new File(subDir, htmlFileName)
     resultList.par.map(rb => Util.writePng(rb.annotatedImage, annotatedImageFile(subDir, rb.symmetryAndFlatness.beamName)))
 
-
     val dynamicContent = {
+      val url = (new SymmetryAndFlatnessSubHTML).pathOf + "?outputPK=" + extendedData.output.outputPK.get
+
       <div class="col-md-6 col-md-offset-3">
-        <div id="DynamicContent">
-          {extendedData.output.outputPK.get.toString}
+        <div id="DynamicContent1">
+          {url}
         </div>
       </div>
     }
@@ -80,25 +81,12 @@ object SymmetryAndFlatnessHTML extends Logging {
       (0 to 5).foreach(_ => println("hey -------------------------------------------"))
       """
         <script>
-          var baseUrl='/admin/SymmetryAndFlatnessSubHTML'
-          var dynUrl=baseUrl + '?outputPK=' + document.getElementById("DynamicContent").innerHTML.trim();
 
           function reloadMe() {
             location.reload();
           }
 
-          function loadDynamicContent() {
-            var xhttp = new XMLHttpRequest();
-            xhttp.onreadystatechange = function() {
-              if (this.readyState == 4 && this.status == 200) {
-                document.getElementById("DynamicContent").innerHTML = this.responseText;
-              }
-            };
-            xhttp.open("GET", dynUrl, true);
-            xhttp.send();
-          }
-
-          loadDynamicContent();
+          var baseUrl='/admin/SymmetryAndFlatnessSubHTML';
 
           function setBaselineState(checkBox, symFlatPK) {
             var baselineUrl=baseUrl + '?symFlatPK=' + symFlatPK.toString().trim() + '&baseline=' + checkBox.checked.toString();
@@ -109,7 +97,7 @@ object SymmetryAndFlatnessHTML extends Logging {
             var xhttp = new XMLHttpRequest();
             xhttp.open("GET", baselineUrl, true);
             xhttp.send();
-            // reload the page to show the changes due to chaning the baseline
+            // reload the page to show the changes due to changing the baseline
             setTimeout(reloadMe, 1000);
           }
         </script>

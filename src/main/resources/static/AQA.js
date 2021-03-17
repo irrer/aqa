@@ -141,3 +141,29 @@ function translateAliases() {
   }
 
 }
+
+
+/**
+ * If there is an element with dynamic content, then load it.  The element content should be the URL.
+ */
+function loadDynamicContent(id) {
+  var doc = document.getElementById(id);
+  if (doc !== null) {
+    var dynUrl = doc.innerHTML.trim();
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        doc.innerHTML = this.responseText;
+      }
+    };
+    xhttp.open("GET", dynUrl, true);
+    xhttp.send();
+  }
+}
+
+// Try appending 0-9 as the content's id.
+$(document).ready(function() {
+  for (i = 0; i < 10; i++) {
+    loadDynamicContent("DynamicContent" + i.toString());
+  }
+});
