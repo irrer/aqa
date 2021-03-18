@@ -38,7 +38,7 @@ object LeafPositionUtil extends Logging {
    */
   private def jawBoundaries(horizontal: Boolean, beamName: String, plan: AttributeList): (Double, Double) = {
     val ControlPointSequence = DicomUtil.seqToAttr(Phase2Util.getBeamSequenceOfPlan(beamName, plan), TagByName.ControlPointSequence)
-    val BeamLimitingDevicePositionSequence = ControlPointSequence.map(cps => DicomUtil.seqToAttr(cps, TagByName.BeamLimitingDevicePositionSequence)).flatten
+    val BeamLimitingDevicePositionSequence = ControlPointSequence.filter(cps => cps.get(TagByName.BeamLimitingDevicePositionSequence) != null).map(cps => DicomUtil.seqToAttr(cps, TagByName.BeamLimitingDevicePositionSequence)).flatten
 
     def isJaw(BeamLimitingDevicePosition: AttributeList): Boolean = {
       val deviceType = BeamLimitingDevicePosition.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString
