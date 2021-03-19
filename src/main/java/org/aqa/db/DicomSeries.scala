@@ -88,7 +88,6 @@ case class DicomSeries(
           logger.warn("Unexpected error unzipping DICOM from input table: " + fmtEx(t))
           Seq[AttributeList]()
       }
-      Trace.trace("List of SOPs: " + alList.map(al => Util.sopOfAl(al))) // TODO rm
       val list = alList.filter(al => Util.serInstOfAl(al).equals(seriesInstanceUID))
       list
     }
