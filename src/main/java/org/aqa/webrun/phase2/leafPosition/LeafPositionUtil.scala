@@ -42,8 +42,9 @@ object LeafPositionUtil extends Logging {
 
     def isJaw(BeamLimitingDevicePosition: AttributeList): Boolean = {
       val deviceType = BeamLimitingDevicePosition.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString
-      val requiredType = if (horizontal) "Y" else "X"
-      deviceType.equalsIgnoreCase(requiredType)
+      val requiredType = if (horizontal) "Y" else "X"  // TODO original code.  I think this is wrong.
+      // val requiredType = if (horizontal) "X" else "Y"  // TODO : I think this is correct, but do not want to make the change without extensive testing.
+      deviceType.equalsIgnoreCase(requiredType) || deviceType.equalsIgnoreCase("ASYM" + requiredType)  // Allow using asymmetric jaws.
     }
 
     val jawList = BeamLimitingDevicePositionSequence.filter(bldp => isJaw(bldp))
