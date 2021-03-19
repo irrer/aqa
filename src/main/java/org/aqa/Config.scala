@@ -731,6 +731,8 @@ object Config extends Logging {
   val passImageUrl = "/static/images/pass.png"
   val failImageUrl = "/static/images/fail.png"
 
+  val RootUrl = logMainText("RootUrl", "https://automatedqualityassurance.org/")
+
   val FloodFieldBeamName: String = logMainText("FloodFieldBeamName", "Flood 6X")
 
   val PrototypeCustomBeamName: String = logMainText("PrototypeCustomBeamName", "J18G0-6F")

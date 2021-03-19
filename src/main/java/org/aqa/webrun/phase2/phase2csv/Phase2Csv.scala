@@ -33,7 +33,10 @@ abstract class Phase2Csv[T] {
 
   protected def getOutput(data: T): Output
 
-  private val prefixCsv = new PrefixCsv
+  val metadataCache = new MetadataCache
+
+  private val prefixCsv = new PrefixCsv(metadataCache)
+  val machineDescriptionCsv = new MachineDescriptionCsv(metadataCache)
   private val dicomCsv = new DicomCsv
 
   private val dicomCsvCacheDirName = "DICOMCSV"
@@ -52,8 +55,8 @@ abstract class Phase2Csv[T] {
     * @return Single string of data headers.
     */
   def makeHeader(): String = {
-    val dataHeaderList = colList.map(col => '"' + col.header + '"').mkString(",")
-    prefixCsv.headerText + "," + dataHeaderList + "," + dicomCsv.headerText
+    val dataHeaderList = colList.map(col => Util.textToCsv(col.header)).mkString(",")
+    prefixCsv.headerText + "," + dataHeaderList + "," + machineDescriptionCsv.headerText + "," + dicomCsv.headerText
   }
 
   /**
@@ -66,11 +69,11 @@ abstract class Phase2Csv[T] {
     */
   private def getDicomText(dataSet: T, machine: Machine): String = {
     val machDir = {
-      val instDir = new File(Config.cacheDirFile, prefixCsv.institutionNameMap(machine.institutionPK))
+      val instDir = new File(Config.cacheDirFile, metadataCache.institutionNameMap(machine.institutionPK))
       val dicomDir = new File(instDir, dicomCsvCacheDirName)
       new File(dicomDir, machine.id)
     }
-    val file = new File(machDir, getSopUID(dataSet))
+    val file = new File(machDir, getSopUID(dataSet) + ".csv")
     if (file.exists())
       Util.readTextFile(file).right.get
     else {
@@ -95,16 +98,17 @@ abstract class Phase2Csv[T] {
       })
       .mkString(",")
 
-    val prefixText = prefixCsv.prefixToText(getOutput(dataSet))
+    val prefixText = prefixCsv.toCsvText(getOutput(dataSet))
+    val machineDescriptionText = machineDescriptionCsv.toCsvText(getOutput(dataSet))
     val dicomText = getDicomText(dataSet, machine)
-    prefixText + "," + dicomText + "," + dataText
+    Seq(prefixText, dataText, machineDescriptionText, dicomText).mkString(",")
   }
 
   /** List of all machines, sorted by institution so that all of the rows
     * for a given institution will be consecutive. */
   private val machineList = Machine.list
     .sortBy(_.institutionPK)
-    .filter(_.machinePK.get == 27) // TODO rm
+  // .filter(_.machinePK.get == 27) // TODO rm
 
   private def machineToCsv(machine: Machine) = {
     Phase2Csv.clearAlCache()

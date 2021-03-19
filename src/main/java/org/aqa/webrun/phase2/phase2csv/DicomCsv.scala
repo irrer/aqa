@@ -29,7 +29,7 @@ class DicomCsv {
     DicomCol("Gantry Angle", (al: AL) => Util.attr2Csv(al, TagByName.GantryAngle).head),
     DicomCol("Collimator Angle", (al: AL) => Util.attr2Csv(al, TagByName.BeamLimitingDeviceAngle).head),
     DicomCol("End Cumulative Meterset Wt", (al: AL) => Util.attr2Csv(al, TagByName.EndCumulativeMetersetWeight).head),
-    DicomCol("Operator", (al: AL) => Util.attr2Csv(al, TagByName.OperatorsName).mkString("  ")),
+    DicomCol("Operator", (al: AL) => Util.attr2Csv(al, TagByName.OperatorsName).head),
     DicomCol("Software Version", (al: AL) => Util.attr2Csv(al, TagByName.SoftwareVersions).mkString("  ")),
     DicomCol("SOPInstanceUID", (al: AL) => Util.attr2Csv(al, TagByName.SOPInstanceUID).head),
     DicomCol("SeriesInstanceUID", (al: AL) => Util.attr2Csv(al, TagByName.SeriesInstanceUID).head),
