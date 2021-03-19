@@ -12,32 +12,40 @@ class CsvSymmetryAndFlatness extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFl
   // abbreviation for the long name
   type SF = SymmetryAndFlatness.SymmetryAndFlatnessHistory
 
+  /**
+    * Indicate how and if this is used as a baseline.  Will be one of:
+    * <p/>
+    * explicit : The user has explicitly indicated that this is to be used as a baseline.
+    * <p/>
+    * implicit : In lieu of an explicit baseline, this is being used.  Note that the
+    * chronologically first reading will always be used as a baseline.
+    * <p/>
+    * [blank] : This is not a baseline.
+    *
+    * @param sf Sym+Flat to be examined.
+    *
+    * @return Baseline designation.
+    */
+  private def baselineDesignation(sf: SF): String = {
+    (sf.symmetryAndFlatness.isBaseline, sf.symmetryAndFlatness.symmetryAndFlatnessPK.get == sf.baseline.symmetryAndFlatnessPK.get) match {
+      case _ if sf.symmetryAndFlatness.isBaseline                                                         => "explicit"
+      case _ if sf.symmetryAndFlatness.symmetryAndFlatnessPK.get == sf.baseline.symmetryAndFlatnessPK.get => "implicit"
+      case _                                                                                              => ""
+    }
+
+  }
+
   override protected def makeColList: Seq[Col] = {
     Trace.trace()
     Seq(
       Col("Beam Name", (sf: SF) => sf.symmetryAndFlatness.beamName),
       Col("Baseline Acquisition", (sf: SF) => Util.standardDateFormat.format(sf.baselineOutput.dataDate.get)),
       Col("Baseline Analysis", (sf: SF) => Util.standardDateFormat.format(sf.baselineOutput.startDate)),
-      // Col("old Axial Symmetry pct", (sf: SF) => sf.symmetryAndFlatness.axialSymmetry_pct),
-      // Col("old Transverse Symmetry pct", (sf: SF) => sf.symmetryAndFlatness.transverseSymmetry_pct),
-      // Col("old Flatness pct", (sf: SF) => sf.symmetryAndFlatness.flatness_pct),
-      // Col("old Profile Constancy pct", (sf: SF) => sf.symmetryAndFlatness.profileConstancy_pct),
-      // Col("old Bsln Axial Symmetry pct", (sf: SF) => sf.symmetryAndFlatness.axialSymmetryBaseline_pct),
-      // Col("old Bsln Transverse Symmetry pct", (sf: SF) => sf.symmetryAndFlatness.transverseSymmetryBaseline_pct),
-      // Col("old Bsln Flatness pct", (sf: SF) => sf.symmetryAndFlatness.flatnessBaseline_pct),
-      // Col("old Bsln Profile Constancy pct", (sf: SF) => sf.symmetryAndFlatness.profileConstancyBaseline_pct),
-      // Col("new Axial Symmetry pct", (sf: SF) => sf.symmetryAndFlatness.axialSymmetry_pct),
-      // Col("new Transverse Symmetry pct", (sf: SF) => sf.symmetryAndFlatness.transverseSymmetry_pct),
-      // Col("new Flatness pct", (sf: SF) => sf.symmetryAndFlatness.flatness_pct),
-      // Col("new Profile Constancy pct", (sf: SF) => sf.symmetryAndFlatness.profileConstancy_pct),
-      // Col("new Bsln Axial Symmetry pct", (sf: SF) => sf.symmetryAndFlatness.axialSymmetryBaseline_pct),
-      // Col("new Bsln Transverse Symmetry pct", (sf: SF) => sf.symmetryAndFlatness.transverseSymmetryBaseline_pct),
-      // Col("new Bsln Flatness pct", (sf: SF) => sf.symmetryAndFlatness.flatnessBaseline_pct),
-      // Col("new Bsln Profile Constancy pct", (sf: SF) => sf.symmetryAndFlatness.profileConstancyBaseline_pct),
       Col("Axial Symmetry", (sf: SF) => sf.symmetryAndFlatness.axialSymmetry),
       Col("Transverse Symmetry", (sf: SF) => sf.symmetryAndFlatness.transverseSymmetry),
       Col("Flatness", (sf: SF) => sf.symmetryAndFlatness.flatness),
       Col("Profile Constancy", (sf: SF) => sf.symmetryAndFlatness.profileConstancy(sf.baseline)),
+      Col("Baseline Designation", (sf: SF) => baselineDesignation(sf)),
       Col("Top CU", (sf: SF) => sf.symmetryAndFlatness.top_cu),
       Col("Bottom CU", (sf: SF) => sf.symmetryAndFlatness.bottom_cu),
       Col("Left CU", (sf: SF) => sf.symmetryAndFlatness.left_cu),
