@@ -48,6 +48,7 @@ object LeafPositionAnalysis extends Logging {
     val planIndices = sideListPlanned_pix.indices.toList
 
     val profile = if (horizontal) dicomImage.rowSums else dicomImage.columnSums
+
     val leafWidthList_mm = LeafPositionUtil.getLeafWidthList_mm(LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, plan, translator))
 
     val coarseSideList_pix = LeafPositionCoarseLeafSides.coarseLeafSides(horizontal, profile, imageAttrList, leafWidthList_mm.min, leafWidthList_mm.max, dicomImage)
@@ -74,18 +75,24 @@ object LeafPositionAnalysis extends Logging {
        * the adjacent valleys.  There must be a peak on either side of this peak or it will get a score of -1.
        */
       val score: Double = {
-        if (isBetweenPeaks) {
-          val coarsePixHeight = profile(coarse_pix.round.toInt)
+        val coarseInt_pix = coarse_pix.round.toInt
+        if (isBetweenPeaks && (coarseInt_pix >= 0) && (coarseInt_pix < profile.size) && (minorValleyIndex >= 0) && (majorValleyIndex < profile.size)) {
+          val coarsePixHeight = profile(coarseInt_pix)
           val s = (coarsePixHeight * 2) - (minorValleyHeight + majorValleyHeight)
           s
         } else -1
       }
 
       lazy val precisePosition = {
-        val xList = profile.indices.drop(minorValleyIndex).take(majorValleyIndex - minorValleyIndex).map(i => i.toDouble)
-        val yList = profile.drop(minorValleyIndex).take(majorValleyIndex - minorValleyIndex).map(y => y.toDouble)
+        try {
+          val xList = profile.indices.drop(minorValleyIndex).take(majorValleyIndex - minorValleyIndex).map(i => i.toDouble)
+          val yList = profile.drop(minorValleyIndex).take(majorValleyIndex - minorValleyIndex).map(y => y.toDouble)
 
-        ImageUtil.profileMaxCubic(xList.toList.toArray, yList.toList.toArray)
+          ImageUtil.profileMaxCubic(xList.toList.toArray, yList.toList.toArray)
+        }
+        catch {
+          case  _: Throwable => -1.0
+        }
       }
 
       def adjustToNearest(bestList: Seq[LeafSide]): Double = {
@@ -113,9 +120,11 @@ object LeafPositionAnalysis extends Logging {
       }
 
       override def toString = {
-        "leaf " + planIndex.formatted("%2d") +
-          " isBetween: " + isBetweenPeaks.toString.formatted("%1s") +
-          " planned: " + Util.fmtDbl(planned) +
+          "pix: " + coarse_pix.round.formatted("%5d") +
+          "    precise: " + precisePosition.formatted("%8.3f") +
+          "    leaf: " + planIndex.formatted("%2d") +
+          "    isBetween: " + isBetweenPeaks.toString.formatted("%1s") +
+          "    planned: " + Util.fmtDbl(planned) +
           "    score: " + Util.fmtDbl(score)
       }
     }
@@ -127,6 +136,7 @@ object LeafPositionAnalysis extends Logging {
     val bestLower = usable.take(groupSize).sortBy(_.score).last
     val bestUpper = usable.takeRight(groupSize).sortBy(_.score).last
     val bestList = Seq(bestLower, bestUpper)
+
 
     val preciseList = leafSidesList.sortBy(_.coarse_pix).map(leaf => leaf.adjustToNearest(bestList))
     preciseList
