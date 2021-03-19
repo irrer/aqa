@@ -1,0 +1,113 @@
+0002,0000 UL  FileMetaInformationGroupLength: 178
+0002,0001 OB  FileMetaInformationVersion: 0x0 0x1
+0002,0002 UI  MediaStorageSOPClassUID: 1.2.840.10008.5.1.4.1.1.481.1 (RT Image Storage)
+0002,0003 UI  MediaStorageSOPInstanceUID: 1.2.246.352.81.3.804744157.4086.19992.144.33
+0002,0010 UI  TransferSyntaxUID: 1.2.840.10008.1.2
+0002,0012 UI  ImplementationClassUID: 1.2.246.352.70.2.1.160.3
+0002,0013 SH  ImplementationVersionName: DCIE 2.2
+0008,0008 CS  ImageType: ORIGINAL \ PRIMARY \ PORTAL
+0008,0012 DA  InstanceCreationDate: 20210215
+0008,0013 TM  InstanceCreationTime: 203203
+0008,0016 UI  SOPClassUID: 1.2.840.10008.5.1.4.1.1.481.1 (RT Image Storage)
+0008,0018 UI  SOPInstanceUID: 1.2.246.352.81.3.804744157.4086.19992.144.33
+0008,0020 DA  StudyDate: 20140602
+0008,0022 DA  AcquisitionDate: 20190610
+0008,0023 DA  ContentDate: 20190610
+0008,0030 TM  StudyTime: 131116.667
+0008,0032 TM  AcquisitionTime: 212925.85
+0008,0033 TM  ContentTime: 212829
+0008,0050 SH  AccessionNumber: <null>
+0008,0060 CS  Modality: RTIMAGE
+0008,0064 CS  ConversionType: DI
+0008,0070 LO  Manufacturer: Varian Medical Systems
+0008,0080 LO  InstitutionName: University of Michigan Radiation Oncology
+0008,0090 PN  ReferringPhysicianName: <null>
+0008,1010 SH  StationName: UM-Tx2
+0008,1030 LO  StudyDescription: ARIA RadOnc Study
+0008,1070 PN  OperatorsName: VisionDaemon130
+0008,1090 LO  ManufacturerModelName: On-Board Imager
+0010,0010 PN  PatientName: $LinacQA^MLCGapSkewOffset
+0010,0020 LO  PatientID: $20140602
+0010,0030 DA  PatientBirthDate: <null>
+0010,0040 CS  PatientSex: <null>
+0010,1000 LO  OtherPatientIDs: ZEL
+0018,1000 LO  DeviceSerialNumber: 1039
+0018,1020 LO  SoftwareVersions: 1.6.17.0
+0018,5100 CS  PatientPosition: HFS
+0020,000d UI  StudyInstanceUID: 1.2.246.352.71.1.824327626427.160960.20140602132138
+0020,000e UI  SeriesInstanceUID: 1.2.246.352.61.2.4936882891766209204.3199534811898971039
+0020,0010 SH  StudyID: S
+0020,0011 IS  SeriesNumber: 0
+0020,0013 IS  InstanceNumber: <null>
+0020,0020 CS  PatientOrientation: <null>
+0020,0052 UI  FrameOfReferenceUID: 1.2.246.352.61.8.5559792498033743832.8490577351012996018
+0020,1040 LO  PositionReferenceIndicator: <null>
+0028,0002 US  SamplesPerPixel: 1
+0028,0004 CS  PhotometricInterpretation: MONOCHROME2
+0028,0010 US  Rows: 768
+0028,0011 US  Columns: 1024
+0028,0100 US  BitsAllocated: 16
+0028,0101 US  BitsStored: 16
+0028,0102 US  HighBit: 15
+0028,0103 US  PixelRepresentation: 0
+0028,1050 DS  WindowCenter: -3562
+0028,1051 DS  WindowWidth: 583
+0028,1052 DS  RescaleIntercept: -16384
+0028,1053 DS  RescaleSlope: 1
+0028,1054 LO  RescaleType: US
+3002,0002 SH  RTImageLabel: ABankC270-9_1_4
+3002,0004 ST  RTImageDescription: 6 MV, 100 MU/min   Scan Mode IDU20-Full-LoX-Rad   Averaged Frames 2   Frame Statistics 1, 2, 2, 0, 0, 0, 0, 0, 0, 0   Dark Field Correction on  Flood Field Correction on  Static Pixel Defects Correction on  Random Pixel Defects Correction off  
+3002,000a CS  ReportedValuesOrigin: ACTUAL
+3002,000c CS  RTImagePlane: NORMAL
+3002,000d DS  XRayImageReceptorTranslation: 0.2396685558951 \ -0.2328694898382 \ -50
+3002,000e DS  XRayImageReceptorAngle: 0
+3002,0010 DS  RTImageOrientation: 1 \ 0 \ 0 \ 0 \ -1 \ 0
+3002,0011 DS  ImagePlanePixelSpacing: 0.392 \ 0.392
+3002,0012 DS  RTImagePosition: -200.508 \ 150.332
+3002,0020 SH  RadiationMachineName: UM-Tx2
+3002,0022 DS  RadiationMachineSAD: 1000
+3002,0026 DS  RTImageSID: 1050
+3002,0029 IS  FractionNumber: 1
+3002,0030 SQ  ExposureSequence: 
+  Item 1 / 1
+    0008,1160 IS  ReferencedFrameNumber: 1
+    0018,0060 DS  KVP: 6000
+    3002,0032 DS  MetersetExposure: 1.56
+    300a,00b6 SQ  BeamLimitingDeviceSequence: 
+      Item 1 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: X
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+        300a,011c DS  LeafJawPositions: -100 \ 100
+      Item 2 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: Y
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+        300a,011c DS  LeafJawPositions: -200 \ 200
+    300a,00f0 IS  NumberOfBlocks: 0
+    300a,011e DS  GantryAngle: 0
+    300a,0120 DS  BeamLimitingDeviceAngle: 270
+    300a,0122 DS  PatientSupportAngle: 0
+    300a,0128 DS  TableTopVerticalPosition: -151
+    300a,0129 DS  TableTopLongitudinalPosition: 300
+    300a,012a DS  TableTopLateralPosition: 0
+300a,00b3 CS  PrimaryDosimeterUnit: MU
+300a,011e DS  GantryAngle: 0
+300a,0120 DS  BeamLimitingDeviceAngle: 270
+300a,0122 DS  PatientSupportAngle: 0
+300a,0128 DS  TableTopVerticalPosition: -151
+300a,0129 DS  TableTopLongitudinalPosition: 300
+300a,012a DS  TableTopLateralPosition: 0
+300a,012c DS  IsocenterPosition: 0 \ -151 \ -300
+300c,0002 SQ  ReferencedRTPlanSequence: 
+  Item 1 / 1
+    0008,1150 UI  ReferencedSOPClassUID: 1.2.840.10008.5.1.4.1.1.481.5 (RT Plan Storage)
+    0008,1155 UI  ReferencedSOPInstanceUID: 1.2.246.352.71.5.824327626427.572133.20180504144124
+300c,0006 IS  ReferencedBeamNumber: 4
+300c,0022 IS  ReferencedFractionGroupNumber: 1
+3253,0010 LO  <unknown>: Varian Medical Systems VISION 3253
+3253,1000 UN  <unknown>: unknown
+3253,1001 UN  <unknown>: unknown
+3253,1002 UN  <unknown>: unknown
+3273,0010 LO  <unknown>: Varian Medical Systems VISION 3273
+3273,1000 UN  <unknown>: unknown
+3273,1001 UN  <unknown>: unknown
+7fe0,0010 OX  PixelData: 
