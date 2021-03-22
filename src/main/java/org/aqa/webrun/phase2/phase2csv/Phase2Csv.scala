@@ -3,17 +3,62 @@ package org.aqa.webrun.phase2.phase2csv
 import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
+import org.aqa.Logging
 import org.aqa.Util
-import org.aqa.db.DbSetup
 import org.aqa.db.DicomSeries
 import org.aqa.db.Machine
+import org.aqa.db.MaintenanceRecord
 import org.aqa.db.Output
 
 import java.io.File
 
-abstract class Phase2Csv[T] {
+abstract class Phase2Csv[T] extends Logging {
+
+  // ----------------------------------------------------------------------------
+  // Override these functions for specific data types:
+
+  /**
+    * Make a list of CSV columns.
+    * @return List of columns.
+    */
+  protected def makeColList: Seq[Col]
+
+  /**
+    * Get the DICOM data for the given data set.
+    * @param data Get for this data.
+    * @return DICOM data.
+    */
+  protected def getAl(data: T): AttributeList
+
+  /**
+    * Get the SOP of the DICOM for this data set.
+    * @param data Data using DICOM data.
+    * @return SOP instance UID.
+    */
+  protected def getSopUID(data: T): String
+
+  /**
+    * Get the output associated with the data.
+    * @param data Data associated with the output.
+    * @return A DB output.
+    */
+  protected def getOutput(data: T): Output
+
+  /**
+    * Get the data for a particular machine.
+    *
+    * @param machinePK Machine to get data for.
+    * @return List of data for the particular machine.
+    */
+  protected def getData(machinePK: Long): Seq[T]
+
+  /**
+    * Used to name CSV file.
+    */
+  protected val dataName: String
+
+  // ----------------------------------------------------------------------------
 
   /**
     * Define a column in a Phase2 CSV.
@@ -23,31 +68,20 @@ abstract class Phase2Csv[T] {
     */
   case class Col(header: String, toText: T => Any) {}
 
-  protected def makeColList: Seq[Col]
-
   private val colList: Seq[Col] = makeColList
 
-  protected def getAl(data: T): AttributeList
+  private val metadataCache = new MetadataCache
 
-  protected def getSopUID(data: T): String
+  private val maintenanceCsv = new MaintenanceCsv(metadataCache)
 
-  protected def getOutput(data: T): Output
-
-  val metadataCache = new MetadataCache
+  private val maintenanceRecordList = maintenanceCsv.retrieveGroupedAndOrderedList()
 
   private val prefixCsv = new PrefixCsv(metadataCache)
-  val machineDescriptionCsv = new MachineDescriptionCsv(metadataCache)
+  private val machineDescriptionCsv = new MachineDescriptionCsv(metadataCache)
   private val dicomCsv = new DicomCsv
 
+  //noinspection SpellCheckingInspection
   private val dicomCsvCacheDirName = "DICOMCSV"
-
-  /**
-    * Get the data for a particular machine.
-    *
-    * @param machinePK Machine to get data for.
-    * @return List of data for the particular machine.
-    */
-  protected def getData(machinePK: Long): Seq[T]
 
   /**
     * Make the column header line of a CSV file.
@@ -84,48 +118,115 @@ abstract class Phase2Csv[T] {
     }
   }
 
-  /**
-    * Make one row of a CSV file.
-    *
-    * @param dataSet Data to format
-    * @return One line of the CSV
-    */
-  private def makeCsvRow(dataSet: T, machine: Machine): String = {
-    val dataText = colList
-      .map(col => {
-        // Make into a new string to avoid references to other classes.  This helps free memory.
-        new String(col.toText(dataSet).toString)
-      })
-      .mkString(",")
+  private def msOfData(dataSet: T): Long = getOutput(dataSet).dataDate.get.getTime
+  private def maintenanceListToCsv(maintenanceList: Seq[MaintenanceRecord]): Seq[String] = maintenanceList.map(maintenanceCsv.toCsvText)
 
-    val prefixText = prefixCsv.toCsvText(getOutput(dataSet))
-    val machineDescriptionText = machineDescriptionCsv.toCsvText(getOutput(dataSet))
-    val dicomText = getDicomText(dataSet, machine)
-    Seq(prefixText, dataText, machineDescriptionText, dicomText).mkString(",")
+  private def maintenanceBefore(dataSet: Option[T], mtMachList: Seq[MaintenanceRecord]): Seq[String] = {
+    if (dataSet.isEmpty)
+      Seq() // no maintenance records
+    else {
+      val csvList = maintenanceListToCsv(mtMachList.filter(_.creationTime.getTime <= msOfData(dataSet.get)))
+      csvList
+    }
+  }
+
+  private def maintenanceAfter(dataSet: Option[T], mtMachList: Seq[MaintenanceRecord]): Seq[String] = {
+    if (dataSet.isEmpty)
+      Seq() // no maintenance records
+    else {
+      val csvList = maintenanceListToCsv(mtMachList.filter(_.creationTime.getTime > msOfData(dataSet.get)))
+      csvList
+    }
+  }
+
+  /**
+    * Make CSV content for maintenance records between the given data sets.
+    * @param dataSetA Use for one time stamp.
+    * @param dataSetB Use for the other time stamp.
+    * @param mtMachList List of all maintenance records for a given machine.
+    * @return
+    */
+  private def maintenanceBetween(dataSetA: T, dataSetB: T, mtMachList: Seq[MaintenanceRecord]): Seq[String] = {
+    val loTime = Math.min(msOfData(dataSetA), msOfData(dataSetB))
+    val hiTime = Math.max(msOfData(dataSetA), msOfData(dataSetB))
+    val between = mtMachList.filter(mt => (mt.creationTime.getTime > loTime) && (mt.creationTime.getTime <= hiTime))
+    val csvList = maintenanceListToCsv(between)
+    csvList
   }
 
   /** List of all machines, sorted by institution so that all of the rows
     * for a given institution will be consecutive. */
   private val machineList = Machine.list
     .sortBy(_.institutionPK)
-  // .filter(_.machinePK.get == 27) // TODO rm
+  // .filter(_.machinePK.get == 27) // put in to do specific machine
 
-  private def machineToCsv(machine: Machine) = {
+  /**
+    * Make one row of a CSV file.
+    *
+    * @param dataList Contains data to format.
+    * @param dataIndex Index of item in data list to format.
+    * @param machine Treatment machine that generated the data.
+    * @param mtMachList List of maintenance records for the given machine.
+    * @return One line of the CSV
+    */
+  private def makeCsvRow(dataList: Seq[T], dataIndex: Int, machine: Machine, mtMachList: Seq[MaintenanceRecord]): String = {
+
+    val dataSet = dataList(dataIndex)
+    // Make all of the columns.
+    val dataText = {
+      // Make into a new string to avoid references to other classes.  This helps free memory.
+      def colToText(col: Col) = new String(Util.textToCsv(col.toText(dataSet).toString))
+      colList.map(colToText).mkString(",")
+    }
+
+    val prefixText = prefixCsv.toCsvText(getOutput(dataList(dataIndex)))
+    val machineDescriptionText = machineDescriptionCsv.toCsvText(getOutput(dataSet))
+    val dicomText = getDicomText(dataSet, machine)
+    val csvRow = Seq(prefixText, dataText, machineDescriptionText, dicomText).mkString(",")
+
+    val maintenanceText: Seq[String] = {
+      if ((dataIndex + 1) < dataList.size) maintenanceBetween(dataSet, dataList(dataIndex + 1), mtMachList)
+      else Seq()
+    }
+
+    val fullText: String = Seq(Seq(csvRow), maintenanceText).flatten.mkString("\n")
+    fullText
+  }
+
+  /**
+    * Generate the CSV text for one machine.
+    * @param machine Given machine.
+    * @return Single string of CSV text.
+    */
+  private def machineToCsv(machine: Machine): String = {
     Phase2Csv.clearAlCache()
-    val dataList = getData(machine.machinePK.get)
+    val mtMachList = maintenanceRecordList.filter(_.machinePK == machine.machinePK.get) // list of maintenance records for just this machine
+
+    val dataList = getData(machine.machinePK.get) // data for this machine
+
+    val precedingMaintenance = maintenanceBefore(dataList.headOption, mtMachList)
+    val followingMaintenance = maintenanceAfter(dataList.lastOption, mtMachList)
+
     // make the row list for this one machine
-    val machineRowList = dataList.map(d => makeCsvRow(d, machine)).mkString(",\n")
-    Trace.trace("------------\n" + machineRowList)
+    val machineRowList = dataList.indices.map(dataIndex => makeCsvRow(dataList, dataIndex, machine, mtMachList))
+    val all = (precedingMaintenance ++ machineRowList ++ followingMaintenance).mkString(",\n")
     Phase2Csv.clearAlCache()
-    machineRowList
+    all
   }
 
   /**
     * Get the CSV content for all institutions.
     *
-    * @return
+    * @return The CSV content as a single string.
     */
-  def csvContent: String = makeHeader() + "\n" + machineList.map(machine => machineToCsv(machine)).filter(_.nonEmpty).mkString("\n")
+  def csvContent: String = makeHeader() + "\n" + machineList.map(machine => machineToCsv(machine)).filter(_.nonEmpty).mkString("\n\n")
+
+  def writeToFile(): Unit = {
+    Phase2Csv.csvDir.mkdirs()
+    val file = new File(Phase2Csv.csvDir, dataName + ".csv")
+    Util.writeFile(file, csvContent)
+    logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath)
+  }
 
 }
 
@@ -141,6 +242,11 @@ object Phase2Csv {
   }
 
   /**
+    * Location of cross-institutional CSV files.
+    */
+  val csvDir = new File(Config.cacheDirFile, "CSV")
+
+  /**
     * Get the attribute list.  First try the cache.  If not there, then get it from the
     * database, put it in the cache, and then use it.
     *
@@ -152,9 +258,6 @@ object Phase2Csv {
       alCache(SOPInstanceUID)
     else {
       val alList = DicomSeries.getBySopInstanceUID(SOPInstanceUID).flatMap(ds => ds.attributeListList)
-      Trace.trace("alList.size: " + alList.size)
-      if (alList.isEmpty)
-        Trace.trace("empty")
       alList.foreach(al => alCache.put(Util.sopOfAl(al), al))
 
       // If for some reason there is a problem getting the DICOM from the database,
@@ -170,21 +273,5 @@ object Phase2Csv {
       }
       alCache(SOPInstanceUID)
     }
-  }
-
-  def main(args: Array[String]): Unit = {
-    DbSetup.init
-    Trace.trace()
-    val start = System.currentTimeMillis()
-    (0 to 20).foreach(_ => println("-------------------------------------------------------------------------------"))
-    val symFlat = new CsvSymmetryAndFlatness
-    val text = symFlat.csvContent
-    println("\n" + text + "\n")
-    // val file = new File("""D:\tmp\symflat.csv""")
-    val file = new File("""symflat.csv""") // put in local dir
-    Util.writeFile(file, text)
-    println("Wrote to file " + file.getAbsolutePath)
-    val elapsed = System.currentTimeMillis() - start
-    println("Done.  Elapsed ms: " + elapsed)
   }
 }

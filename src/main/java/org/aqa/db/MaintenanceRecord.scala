@@ -1,32 +1,32 @@
 package org.aqa.db
 
-import Db.driver.api._
 import org.aqa.Config
-import org.aqa.Util
+import org.aqa.db.Db.driver.api._
+
 import java.sql.Timestamp
 import java.util.Date
 
 /**
- * Record of Preventive Maintenance Inspection.
- */
+  * Record of Preventive Maintenance Inspection.
+  */
 
 case class MaintenanceRecord(
-  maintenanceRecordPK: Option[Long], // primary key
-  category: String, // type of maintenance
-  machinePK: Long, // machine that was maintained
-  creationTime: Timestamp, // when this record was created
-  userPK: Long, // user that performed or oversaw maintenance
-  outputPK: Option[Long], // optional reference to a related Output
-  summary: String, // short description of maintenance
-  description: String // description of maintenance
+    maintenanceRecordPK: Option[Long], // primary key
+    category: String, // type of maintenance
+    machinePK: Long, // machine that was maintained
+    creationTime: Timestamp, // when this record was created
+    userPK: Long, // user that performed or oversaw maintenance
+    outputPK: Option[Long], // optional reference to a related Output
+    summary: String, // short description of maintenance
+    description: String // description of maintenance
 ) {
 
   /**
-   * Return true of the user is from the same institution as the machine.
-   *
-   * Note that this check was added because there was an instance on the AWS system of a user
-   * creating a maintenance event in a machine that belonged to a different institution.
-   */
+    * Return true of the user is from the same institution as the machine.
+    *
+    * Note that this check was added because there was an instance on the AWS system of a user
+    * creating a maintenance event in a machine that belonged to a different institution.
+    */
   private def checkUser: Boolean = {
     val machInst = Machine.get(machinePK).get.institutionPK
     val userInst = User.get(userPK).get.institutionPK
@@ -35,7 +35,9 @@ case class MaintenanceRecord(
 
   def insert: MaintenanceRecord = {
     if (!checkUser) throw new RuntimeException("User is not authorized to insert maintenance record because they are from a different institution than the machine.")
-    val insertQuery = MaintenanceRecord.query returning MaintenanceRecord.query.map(_.maintenanceRecordPK) into ((maintenanceRecord, maintenanceRecordPK) => maintenanceRecord.copy(maintenanceRecordPK = Some(maintenanceRecordPK)))
+    val insertQuery = MaintenanceRecord.query returning MaintenanceRecord.query.map(_.maintenanceRecordPK) into ((maintenanceRecord, maintenanceRecordPK) =>
+      maintenanceRecord.copy(maintenanceRecordPK = Some(maintenanceRecordPK))
+    )
     val action = insertQuery += this
     val result = Db.run(action)
     result
@@ -59,15 +61,7 @@ object MaintenanceRecord {
     def summary = column[String]("summary")
     def description = column[String]("description")
 
-    def * = (
-      maintenanceRecordPK.?,
-      category,
-      machinePK,
-      creationTime,
-      userPK,
-      outputPK,
-      summary,
-      description) <> ((MaintenanceRecord.apply _)tupled, MaintenanceRecord.unapply _)
+    def * = (maintenanceRecordPK.?, category, machinePK, creationTime, userPK, outputPK, summary, description) <> ((MaintenanceRecord.apply _) tupled, MaintenanceRecord.unapply _)
 
     def machineFK = foreignKey("MaintenanceRecord_machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
     def userFK = foreignKey("MaintenanceRecord_userPKConstraint", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Restrict)
@@ -98,9 +92,9 @@ object MaintenanceRecord {
   }
 
   /**
-   * Get the list of MaintenanceRecord's that have a creation time between the given limits (inclusive), which
-   * may be given in either order.  The list returned is ordered by creation time.
-   */
+    * Get the list of MaintenanceRecord's that have a creation time between the given limits (inclusive), which
+    * may be given in either order.  The list returned is ordered by creation time.
+    */
   def getRange(machinePK: Long, lo: Date, hi: Date): Seq[MaintenanceRecord] = {
     val loTs = new Timestamp(Math.min(lo.getTime, hi.getTime))
     val hiTs = new Timestamp(Math.max(lo.getTime, hi.getTime))
@@ -112,8 +106,20 @@ object MaintenanceRecord {
   }
 
   /**
-   * Get a list of all MaintenanceRecord's.
+   * Get maintenance records for all institutions and machines, except for baseline records.
+   *
+   * @return Unsorted list of all non-baseline records.
    */
+  def getAllExceptBaseline(): Seq[MaintenanceRecord] = {
+    val action = for {
+      maintenanceRecord <- MaintenanceRecord.query.filter(_.category =!= MaintenanceCategory.setBaseline)
+    } yield (maintenanceRecord)
+    Db.run(action.result)
+  }
+
+  /**
+    * Get a list of all MaintenanceRecord's.
+    */
   def list = Db.run(query.result)
 
   def delete(maintenanceRecordPK: Long): Int = {

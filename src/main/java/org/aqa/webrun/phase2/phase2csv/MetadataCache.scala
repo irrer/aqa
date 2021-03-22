@@ -7,6 +7,9 @@ import org.aqa.db.MachineType
 import org.aqa.db.MultileafCollimator
 import org.aqa.db.User
 
+/**
+ * Container for getting names/ids of institutions and machine information.
+ */
 class MetadataCache {
 
   /** Map of machines by machinePK. */

@@ -1,7 +1,6 @@
 package org.aqa.webrun.phase2.phase2csv
 
 import com.pixelmed.dicom.AttributeList
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
 import org.aqa.db.DbSetup
 import org.aqa.db.Output
@@ -11,6 +10,8 @@ class CsvSymmetryAndFlatness extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFl
 
   // abbreviation for the long name
   type SF = SymmetryAndFlatness.SymmetryAndFlatnessHistory
+
+  override val dataName: String = "SymmetryAndFlatness"
 
   /**
     * Indicate how and if this is used as a baseline.  Will be one of:
@@ -23,7 +24,6 @@ class CsvSymmetryAndFlatness extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFl
     * [blank] : This is not a baseline.
     *
     * @param sf Sym+Flat to be examined.
-    *
     * @return Baseline designation.
     */
   private def baselineDesignation(sf: SF): String = {
@@ -36,7 +36,6 @@ class CsvSymmetryAndFlatness extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFl
   }
 
   override protected def makeColList: Seq[Col] = {
-    Trace.trace()
     Seq(
       Col("Beam Name", (sf: SF) => sf.symmetryAndFlatness.beamName),
       Col("Baseline Acquisition", (sf: SF) => Util.standardDateFormat.format(sf.baselineOutput.dataDate.get)),
@@ -70,7 +69,7 @@ class CsvSymmetryAndFlatness extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFl
     * @return List of data for the particular machine.
     */
   override protected def getData(machinePK: Long): Seq[SF] = {
-    val symFlat = SymmetryAndFlatness.history(machinePK)
+    val symFlat = SymmetryAndFlatness.history(machinePK).sortBy(h => h.output.dataDate.get.getTime + h.symmetryAndFlatness.beamName)
     symFlat
   }
 
@@ -83,23 +82,7 @@ object CsvSymmetryAndFlatness {
 
   def main(args: Array[String]): Unit = {
     DbSetup.init
-    Trace.trace()
-    val history = SymmetryAndFlatness.history(22)
-
-    def show(h: SymmetryAndFlatness.SymmetryAndFlatnessHistory): Unit = {
-      val newAS_pct = h.symmetryAndFlatness.axialSymmetry
-      val newTS_pct = h.symmetryAndFlatness.transverseSymmetry
-      val newFL_pct = h.symmetryAndFlatness.flatness
-      val newPC_pct = h.symmetryAndFlatness.profileConstancy(h.baseline)
-
-      val oldAS_pct = h.symmetryAndFlatness.axialSymmetry_pct
-      val oldTS_pct = h.symmetryAndFlatness.transverseSymmetry_pct
-      val oldFL_pct = h.symmetryAndFlatness.flatness_pct
-      val oldPC_pct = h.symmetryAndFlatness.profileConstancy_pct
-
-    }
-
-    history.map(h => show(h))
+    (new CsvSymmetryAndFlatness).writeToFile()
   }
 
 }
