@@ -6,7 +6,7 @@ import org.aqa.db.DbSetup
 import org.aqa.db.Output
 import org.aqa.db.SymmetryAndFlatness
 
-class CsvSymmetryAndFlatness extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFlatnessHistory] {
+class SymmetryAndFlatnessCsv extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFlatnessHistory] {
 
   // abbreviation for the long name
   type SF = SymmetryAndFlatness.SymmetryAndFlatnessHistory
@@ -78,11 +78,11 @@ class CsvSymmetryAndFlatness extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFl
   override def getOutput(data: SF): Output = data.output
 }
 
-object CsvSymmetryAndFlatness {
+object SymmetryAndFlatnessCsv {
 
   def main(args: Array[String]): Unit = {
     DbSetup.init
-    (new CsvSymmetryAndFlatness).writeToFile()
+    (new SymmetryAndFlatnessCsv).writeToFile()
   }
 
 }

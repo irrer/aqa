@@ -222,10 +222,11 @@ abstract class Phase2Csv[T] extends Logging {
   def csvContent: String = makeHeader() + "\n" + machineList.map(machine => machineToCsv(machine)).filter(_.nonEmpty).mkString("\n\n")
 
   def writeToFile(): Unit = {
+    val start = System.currentTimeMillis()
     Phase2Csv.csvDir.mkdirs()
     val file = new File(Phase2Csv.csvDir, dataName + ".csv")
     Util.writeFile(file, csvContent)
-    logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath)
+    logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath + " in " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
   }
 
 }

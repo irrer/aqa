@@ -384,7 +384,6 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     * @return The baseline value to use, or None if not found.
     */
   def getBaseline(machinePK: Long, beamName: String, dataDate: Timestamp): Option[SymmetryAndFlatnessHistory] = {
-    val hist = history(machinePK, beamName)
     val baseline = history(machinePK, beamName).reverse.find(h => h.output.dataDate.get.getTime <= dataDate.getTime)
     baseline
   }
