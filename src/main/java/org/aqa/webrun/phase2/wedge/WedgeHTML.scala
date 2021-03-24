@@ -120,7 +120,7 @@ object WedgeHTML {
     <center id={ id }><img class="img-responsive" src={ pngFile.getName }/></center>
   }
 
-  private def beamToDisplay(wedgePoint: WedgePoint, extendedData: ExtendedData, runReq: RunReq, wedgeDir: File, history: Seq[WedgePoint.WedgePointHistory], collimatorCenterOfRotation: Point2D.Double): (Elem, String) = {
+  private def beamToDisplay(wedgePoint: WedgePoint, extendedData: ExtendedData, runReq: RunReq, wedgeDir: File, history: Seq[WedgePoint.WedgePointHistory1], collimatorCenterOfRotation: Point2D.Double): (Elem, String) = {
 
     val isTransverse = WedgeAnalysis.wedgeOrientationTransverse(wedgePoint.wedgeBeamName, runReq.rtplan)
     val dicomImage = runReq.derivedMap(wedgePoint.wedgeBeamName).pixelCorrectedImage
@@ -202,7 +202,7 @@ object WedgeHTML {
     val wedgeDir = new File(outputDir, "wedge")
     wedgeDir.mkdirs
 
-    val history = WedgePoint.recentHistory(extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get)
+    val history = WedgePoint.recentHistory(extendedData.machine.machinePK.get)
 
     val htmlJs = {
       wedgePointList.map(wp => beamToDisplay(wp, extendedData, runReq, wedgeDir, history, collimatorCenterOfRotation))

@@ -22,13 +22,13 @@ class WedgeChartHistory(outputPK: Long) {
   val output = Output.get(outputPK).get
   val machinePK = output.machinePK.get
 
-  val allHistory = WedgePoint.recentHistory( machinePK, output.procedurePK)
+  val allHistory = WedgePoint.recentHistory(machinePK)
 
   /** All maintenance records for the entire history interval for all beams except for 'Set Baseline' to reduce clutter. */
   val allMaintenanceRecordList = MaintenanceRecord.
     getRange(machinePK, allHistory.head.date, allHistory.last.date) //.filter(m => !(m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline.toString)))
 
-  def indexOfThis(beamHistory: Seq[WedgePoint.WedgePointHistory]): Int = {
+  def indexOfThis(beamHistory: Seq[WedgePoint.WedgePointHistory1]): Int = {
     val i = beamHistory.indexWhere(h => h.outputPK == output.outputPK.get)
     Math.max(0, i)
   }

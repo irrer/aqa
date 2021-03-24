@@ -32,7 +32,7 @@ class TestWedge_recentHistory extends FlatSpec with Matchers {
   val dateTime = new Timestamp(date.getTime)
 
   println("\nStarting. Using date of:\n    " + Util.standardDateFormat.format(date))
-  val seq = WedgePoint.recentHistory(machinePK, procedurePK)
+  val seq = WedgePoint.recentHistory(machinePK)
 
   println("results:\n    " + seq.map(_.date).mkString("\n    "))
   println("Number of results: " + seq.size)

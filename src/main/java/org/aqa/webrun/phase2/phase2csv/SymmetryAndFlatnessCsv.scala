@@ -37,9 +37,6 @@ class SymmetryAndFlatnessCsv extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFl
 
   override protected def makeColList: Seq[Col] = {
     Seq(
-      Col("Beam Name", (sf: SF) => sf.symmetryAndFlatness.beamName),
-      Col("Baseline Acquisition", (sf: SF) => Util.standardDateFormat.format(sf.baselineOutput.dataDate.get)),
-      Col("Baseline Analysis", (sf: SF) => Util.standardDateFormat.format(sf.baselineOutput.startDate)),
       Col("Axial Symmetry", (sf: SF) => sf.symmetryAndFlatness.axialSymmetry),
       Col("Transverse Symmetry", (sf: SF) => sf.symmetryAndFlatness.transverseSymmetry),
       Col("Flatness", (sf: SF) => sf.symmetryAndFlatness.flatness),
@@ -50,6 +47,9 @@ class SymmetryAndFlatnessCsv extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFl
       Col("Left CU", (sf: SF) => sf.symmetryAndFlatness.left_cu),
       Col("Right CU", (sf: SF) => sf.symmetryAndFlatness.right_cu),
       Col("Center CU", (sf: SF) => sf.symmetryAndFlatness.center_cu),
+      Col("Beam Name", (sf: SF) => sf.symmetryAndFlatness.beamName),
+      Col("Baseline Acquisition", (sf: SF) => Util.standardDateFormat.format(sf.baselineOutput.dataDate.get)),
+      Col("Baseline Analysis", (sf: SF) => Util.standardDateFormat.format(sf.baselineOutput.startDate)),
       Col("Baseline Top CU", (sf: SF) => sf.baseline.top_cu),
       Col("Baseline Bottom CU", (sf: SF) => sf.baseline.bottom_cu),
       Col("Baseline Left CU", (sf: SF) => sf.baseline.left_cu),

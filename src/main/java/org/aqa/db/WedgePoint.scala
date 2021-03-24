@@ -5,23 +5,23 @@ import org.aqa.procedures.ProcedureOutput
 
 import java.sql.Timestamp
 import java.util.Date
+import scala.annotation.tailrec
 import scala.xml.Elem
 
 case class WedgePoint(
-                       wedgePointPK: Option[Long], // primary key
-                       outputPK: Long, // output primary key
-
-                       wedgeSOPInstanceUID: String, // UID of wedge source image
-                       wedgeBeamName: String, // name of wedge beam in plan
-                       isBaseline_text: String, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.   Note that this is a string instead of a boolean because boolean is not supported by some databases.
-                       wedgeValue_cu: Double, // value of wedge point in CU : Calibrated Units
-
-                       backgroundSOPInstanceUID: String, // UID of background source image
-                       backgroundBeamName: String, // name of background beam in plan
-                       backgroundValue_cu: Double, // corresponding value of background field point in CU : Calibrated Units
-
-                       percentOfBackground_pct: Double, // (wedgeValue_cu * 100) / backgroundValue_cu
-                       baselinePercentOfBackground_pct: Double) // baseline for percentOfBackground_pct
+    wedgePointPK: Option[Long], // primary key
+    outputPK: Long, // output primary key
+    wedgeSOPInstanceUID: String, // UID of wedge source image
+    wedgeBeamName: String, // name of wedge beam in plan
+    isBaseline_text: String, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.   Note that this is a string instead of a boolean because boolean is not supported by some databases.
+    wedgeValue_cu: Double, // value of wedge point in CU : Calibrated Units
+    backgroundSOPInstanceUID: String, // UID of background source image
+    backgroundBeamName: String, // name of background beam in plan
+    backgroundValue_cu: Double, // corresponding value of background field point in CU : Calibrated Units
+    percentOfBackground_pct: Double, // (wedgeValue_cu * 100) / backgroundValue_cu
+    @deprecated
+    baselinePercentOfBackground_pct: Double
+) // baseline for percentOfBackground_pct
 {
   def insert: WedgePoint = {
     val insertQuery = WedgePoint.query returning WedgePoint.query.map(_.wedgePointPK) into
@@ -35,7 +35,7 @@ case class WedgePoint(
   val isBaseline: Boolean = {
     isBaseline_text match {
       case _ if isBaseline_text.equalsIgnoreCase("true") => true
-      case _ => false
+      case _                                             => false
     }
   }
 
@@ -82,18 +82,20 @@ object WedgePoint extends ProcedureOutput {
 
     def baselinePercentOfBackground_pct = column[Double]("baselinePercentOfBackground_pct")
 
-    def * = (
-      wedgePointPK.?,
-      outputPK,
-      wedgeSOPInstanceUID,
-      wedgeBeamName,
-      isBaseline_text,
-      wedgeValue_cu,
-      backgroundSOPInstanceUID,
-      backgroundBeamName,
-      backgroundValue_cu,
-      percentOfBackground_pct,
-      baselinePercentOfBackground_pct) <> (WedgePoint.apply _ tupled, WedgePoint.unapply _)
+    def * =
+      (
+        wedgePointPK.?,
+        outputPK,
+        wedgeSOPInstanceUID,
+        wedgeBeamName,
+        isBaseline_text,
+        wedgeValue_cu,
+        backgroundSOPInstanceUID,
+        backgroundBeamName,
+        backgroundValue_cu,
+        percentOfBackground_pct,
+        baselinePercentOfBackground_pct
+      ) <> (WedgePoint.apply _ tupled, WedgePoint.unapply)
 
     def outputFK = foreignKey("WedgePoint_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -110,8 +112,8 @@ object WedgePoint extends ProcedureOutput {
   }
 
   /**
-   * Get a list of all rows for the given output
-   */
+    * Get a list of all rows for the given output
+    */
   def getByOutput(outputPK: Long): Seq[WedgePoint] = {
     val action = for {
       inst <- WedgePoint.query if inst.outputPK === outputPK
@@ -145,53 +147,132 @@ object WedgePoint extends ProcedureOutput {
     Db.perform(ops)
   }
 
-  case class WedgePointHistory(date: Date, wedgeBeamName: String, backgroundBeamName: String, percentOfBackground_pct: Double, outputPK: Long)
+  case class WedgePointHistory1(date: Date, wedgeBeamName: String, backgroundBeamName: String, percentOfBackground_pct: Double, outputPK: Long) {}
 
   /**
-   * Get CenterBeam results.
-   *
-   * @param machinePK   : For this machine
-   * @param procedurePK : For this procedure
-   *
-   */
-  def recentHistory(machinePK: Long, procedurePK: Long): Seq[WedgePointHistory] = {
+    * Get CenterBeam results.
+    *
+    * @param machinePK   : For this machine
+    * @param procedurePK : For this procedure
+    *
+    */
+  def recentHistory(machinePK: Long, procedurePK: Long = Procedure.ProcOfPhase2.get.procedurePK.get): Seq[WedgePointHistory1] = {
 
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
-      wedgePoint <- WedgePoint.query.
-        filter(w => w.outputPK === output._1).
-        map(c => (c.wedgeBeamName, c.backgroundBeamName, c.percentOfBackground_pct))
+      wedgePoint <- WedgePoint.query.filter(w => w.outputPK === output._1).map(c => (c.wedgeBeamName, c.backgroundBeamName, c.percentOfBackground_pct))
     } yield (output._2, wedgePoint._1, wedgePoint._2, wedgePoint._3, output._1)
 
-    val result = Db.run(search.result).map(h => WedgePointHistory(h._1.get, h._2, h._3, h._4, h._5)).sortBy(_.date.getTime)
+    val result = Db.run(search.result).map(h => WedgePointHistory1(h._1.get, h._2, h._3, h._4, h._5)).sortBy(_.date.getTime)
     result
   }
 
+  /**
+    *
+    * @param output Output associated with wedge point.
+    * @param wedgePoint Data for wedge.
+    * @param baselineOutput Output associated with baseline wedge point.
+    * @param baselineWedgePoint Data for wedge.
+    *
+    * Note that if the wedge point is a baseline, then output will be the same as baselineOutput, and
+    * wedgePoint will be the same as baselineWedgePoint
+    */
+  case class WedgePointHistory(output: Output, wedgePoint: WedgePoint, baselineOutput: Output, baselineWedgePoint: WedgePoint) {}
+
+  private case class WPair(output: Output, wedgePoint: WedgePoint) {}
 
   /**
-   * Get the baseline by finding another set of values that
-   *   - were captured before the given time stamp
-   *   - belong to the same machine
-   *   - were produced by the same beam
-   *   - are defined as a baseline because <code>isBaseline_text</code> is true, or failing that, have the chronologically earliest preceding <code>SymmetryAndFlatness</code>.
-   *
-   * @param machinePK Match this machine
-   * @param beamName  Match this beam
-   * @param dataDate  Most recent that is at or before this time
-   * @return The baseline value to use, or None if not found.
-   */
+    * Associate Output+WedgePoint pairs with their baselines.
+    *
+    * @param pairList List of Output+WedgePoint pairs in chronological order.
+    * @param baseline Current baseline.
+    * @param hist History so far.
+    * @return Complete history list.
+    */
+  @tailrec
+  private def associateWithBaseline(pairList: Seq[WPair], baseline: WPair, hist: Seq[WedgePointHistory] = Seq()): Seq[WedgePointHistory] = {
+
+    /*
+    if (pairList.isEmpty) { // TODO rm
+      def show(wh: WedgePoint.WedgePointHistory): String = {
+        "    " +
+          wh.wedgePoint.wedgePointPK.get.formatted("%6d") +
+          " : " +
+          wh.output.dataDate.get.toString.formatted("%-25s") +
+          " : " +
+          wh.wedgePoint.isBaseline.toString.formatted("%-5s") +
+          " : " +
+          wh.wedgePoint.percentOfBackground_pct.formatted("%20.10f") +
+          " : " +
+          wh.baselineWedgePoint.percentOfBackground_pct.formatted("%20.10f")
+      }
+      println("\n\n\n\n machinePK: " + hist.head.output.machinePK.get + "\n" + hist.map(show).mkString("\n"))
+    }
+    */
+
+    if (pairList.isEmpty)
+      hist // all done
+    else {
+      if (pairList.head.wedgePoint.isBaseline) {
+        val h = WedgePointHistory(pairList.head.output, pairList.head.wedgePoint, pairList.head.output, pairList.head.wedgePoint)
+        associateWithBaseline(pairList.tail, pairList.head, hist :+ h)
+      } else {
+        val h = WedgePointHistory(pairList.head.output, pairList.head.wedgePoint, baseline.output, baseline.wedgePoint)
+        associateWithBaseline(pairList.tail, baseline, hist :+ h)
+      }
+    }
+  }
+
+  /**
+    * Get the entire history of wedges for the given machine.  Results are sorted chronologically.
+    *
+    * @param machinePK Machine to get data for.
+    * @return Entire history.
+    */
+  def history(machinePK: Long): Seq[WedgePointHistory] = {
+
+    val search = for {
+      output <- Output.query.filter(o => o.machinePK === machinePK)
+      wedgePoint <- WedgePoint.query.filter(w => w.outputPK === output.outputPK)
+    } yield (output, wedgePoint)
+
+    // list of output+wedge point pairs sorted chronologically
+    val pairList = Db.run(search.result).map(ow => WPair(ow._1, ow._2)).sortBy(p => p.output.dataDate.get.getTime)
+
+    val hist =
+      if (pairList.isEmpty)
+        Seq()
+      else {
+        val groupList = pairList.groupBy(h => h.wedgePoint.wedgeBeamName + h.wedgePoint.backgroundBeamName).values
+        val hist = groupList.map(g => g.sortBy(_.output.dataDate.get.getTime)).map(g => associateWithBaseline(g, g.head)).flatten.toSeq
+        hist.sortBy(_.output.dataDate.get.getTime)
+      }
+    hist
+  }
+
+  /**
+    * Get the baseline by finding another set of values that
+    *   - were captured before the given time stamp
+    *   - belong to the same machine
+    *   - were produced by the same beam
+    *   - are defined as a baseline because <code>isBaseline_text</code> is true, or failing that, have the chronologically earliest preceding <code>SymmetryAndFlatness</code>.
+    *
+    * @param machinePK Match this machine
+    * @param beamName  Match this beam
+    * @param dataDate  Most recent that is at or before this time
+    * @return The baseline value to use, or None if not found.
+    */
   def getBaseline(machinePK: Long, beamName: String, dataDate: Timestamp): Option[WedgePoint] = {
     val ts = new Timestamp(dataDate.getTime + (60 * 60 * 1000)) // allow for some leeway in the timestamp
 
     val result = {
-      val trueText = true.toString
       val search = for {
         output <- Output.query.filter(o => (o.dataDate <= ts) && (o.machinePK === machinePK)).map(o => o)
-        symAndFlat <- WedgePoint.query.
-          filter(saf => (saf.outputPK === output.outputPK) &&
+        symAndFlat <- WedgePoint.query.filter(saf =>
+          (saf.outputPK === output.outputPK) &&
             (saf.wedgeBeamName === beamName) // &&
-            // (saf.isBaseline_text === trueText)
-          )
+        // (saf.isBaseline_text === trueText)
+        )
       } yield (output, symAndFlat)
 
       // list of all results, with the most recent first
