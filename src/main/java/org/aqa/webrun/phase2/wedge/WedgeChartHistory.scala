@@ -1,85 +1,132 @@
 package org.aqa.webrun.phase2.wedge
 
-import org.aqa.db.WedgePoint
-import org.aqa.web.C3ChartHistory
+import org.aqa.Config
+import org.aqa.Util
 import org.aqa.db.Baseline
+import org.aqa.db.MaintenanceCategory
+import org.aqa.db.MaintenanceRecord
+import org.aqa.db.Output
+import org.aqa.db.WedgePoint
 import org.aqa.web.C3Chart
 import org.aqa.web.C3Chart.Tolerance
-import edu.umro.ScalaUtil.Trace
-import org.aqa.db.MaintenanceRecord
-import org.aqa.Util
-import org.aqa.Config
-import org.aqa.db.Output
-import org.aqa.webrun.phase2.Phase2Util
-import org.aqa.db.MaintenanceCategory
+import org.aqa.web.C3ChartHistory
 
 /**
- * Create the javascript that shows the wedge history for the given output.
- */
+  * Create the javascript that shows the wedge history for the given output.
+  */
 
 class WedgeChartHistory(outputPK: Long) {
 
-  val output = Output.get(outputPK).get
-  val machinePK = output.machinePK.get
-
-  val allHistory = WedgePoint.recentHistory(machinePK)
+  private val output: Output = Output.get(outputPK).get
+  private val machinePK: Long = output.machinePK.get
+  private val allHistory: Seq[WedgePoint.WedgePointHistory] = WedgePoint.history(machinePK)
 
   /** All maintenance records for the entire history interval for all beams except for 'Set Baseline' to reduce clutter. */
-  val allMaintenanceRecordList = MaintenanceRecord.
-    getRange(machinePK, allHistory.head.date, allHistory.last.date) //.filter(m => !(m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline.toString)))
+  private val allMaintenanceRecordList: Seq[MaintenanceRecord] = MaintenanceRecord
+    .getRange(machinePK, allHistory.head.output.dataDate.get, allHistory.last.output.dataDate.get)
+    .filterNot(m => m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline)) // Ignore any 'Set Baseline' maintenance records.  These are deprecated from the database.
 
-  def indexOfThis(beamHistory: Seq[WedgePoint.WedgePointHistory1]): Int = {
-    val i = beamHistory.indexWhere(h => h.outputPK == output.outputPK.get)
-    Math.max(0, i)
+
+  /**
+   * Index of this point on the history graph so it can be shown in a different color (orange).
+   * @param beamHistory All points to be displayed.
+   * @return Zero relative index.
+   */
+  private def indexOfThis(beamHistory: Seq[WedgePoint.WedgePointHistory]): Int = {
+    val index = beamHistory.indexWhere(h => h.output.outputPK.get == output.outputPK.get)
+    Math.max(0, index) // Cover case where index is not in the list.
   }
 
-  def currentWedgePoint(history: Seq[WedgePoint]): WedgePoint = {
-    history.find(w => w.outputPK == output.outputPK.get).get
+
+  /**
+   * Create a baseline for the series.
+   * @param wedgeHistory
+   * @return
+   */
+  private def getBaseline(wedgeHistory: WedgePoint.WedgePointHistory): Option[Baseline] = {
+    val baseline = Baseline(
+      baselinePK = None,
+      maintenanceRecordPK = -1,
+      acquisitionDate = wedgeHistory.baselineOutput.dataDate.get,
+      SOPInstanceUID = None,
+      id = "",
+      value = wedgeHistory.baselineWedgePoint.percentOfBackground_pct.toString,
+      setup = ""
+    )
+    Some(baseline)
   }
 
-  def getBaseline(wedgePoint: WedgePoint): Option[Baseline] = {
-    val maintenanceRecordBaseline = Baseline.findLatest(machinePK, WedgeAnalysis.makeWedgeBaselineName(wedgePoint), output.dataDate.get)
-    if (maintenanceRecordBaseline.isDefined) Some(maintenanceRecordBaseline.get._2) else None
-  }
 
-  def getTolerance(baseline: Option[Baseline]): Option[C3Chart.Tolerance] = {
+  private def getTolerance(baseline: Option[Baseline]): Option[C3Chart.Tolerance] = {
     if (baseline.isDefined) {
       val value = baseline.get.value.toDouble
       Some(new Tolerance(value - Config.WedgeTolerance_pct, value + Config.WedgeTolerance_pct))
     } else None
   }
 
-  def historyChart(wedgePoint: WedgePoint) = {
+
+  private def baselineMaintenanceList(beamHistory: Seq[WedgePoint.WedgePointHistory]): Seq[MaintenanceRecord] = {
+    beamHistory
+      .filter(wh => wh.wedgePoint.isBaseline)
+      .map(wh =>
+        MaintenanceRecord(
+          maintenanceRecordPK = None,
+          category = MaintenanceCategory.setBaseline,
+          machinePK,
+          creationTime = wh.output.dataDate.get,
+          userPK = -1,
+          outputPK = None,
+          summary = "Baseline",
+          description = "Baseline"
+        )
+      )
+  }
+
+  /**
+    * Get the maintenance records for this machine that are in the time frame being displayed.  Also get the
+    * baselines as maintenance records.
+    *
+    * @param beamHistory History of this beam.
+    * @return List of maintenance records, sorted by time.
+    */
+  private def getBeamMaintenanceRecordList(beamHistory: Seq[WedgePoint.WedgePointHistory]): Seq[MaintenanceRecord] = {
+    val min = beamHistory.head.output.dataDate.get.getTime
+    val max = beamHistory.last.output.dataDate.get.getTime
+    val inTimeRange = allMaintenanceRecordList.filter(m => (m.creationTime.getTime >= min) && (m.creationTime.getTime <= max)) ++ baselineMaintenanceList(beamHistory)
+    inTimeRange.sortBy(_.creationTime.getTime)
+  }
+
+  /**
+    * Generate a chart that contains the given wedge point.
+    *
+    * @param wedgePoint Make chart for this.
+    * @return Javascript script that displays chart.
+    */
+  private def historyChart(wedgePoint: WedgePoint): String = {
     val chartId = C3Chart.idTagPrefix + Util.textToId(wedgePoint.wedgeBeamName)
-    val beamHistory = allHistory.filter(h => h.wedgeBeamName.equalsIgnoreCase(wedgePoint.wedgeBeamName)).sortBy(_.date)
-    val maintenanceRecordList = {
-      val min = beamHistory.head.date.getTime
-      val max = beamHistory.last.date.getTime
-      val inTimeRange = allMaintenanceRecordList.filter(m => (m.creationTime.getTime >= min) && (m.creationTime.getTime <= max))
+    val beamHistory = allHistory.filter(w => w.wedgePoint.wedgeBeamName.equals(wedgePoint.wedgeBeamName) && w.wedgePoint.backgroundBeamName.equals(wedgePoint.backgroundBeamName))
+    val maintenanceRecordList = getBeamMaintenanceRecordList(beamHistory)
 
-      val releventBaseline = Baseline.filterOutUnrelatedBaselines(inTimeRange.map(itr => itr.maintenanceRecordPK.get).toSet, Set("wedge")).map(_.maintenanceRecordPK.get).toSet
-
-      inTimeRange.filter(itr => releventBaseline.contains(itr.maintenanceRecordPK.get) || (!itr.category.equals(MaintenanceCategory.setBaseline)))
-    }
-    val xDateList = beamHistory.map(_.date)
-    val baseline = getBaseline(wedgePoint)
+    val xDateList = beamHistory.map(_.output.dataDate.get)
+    val baseline = getBaseline(beamHistory.find(_.wedgePoint.wedgePointPK.get == wedgePoint.wedgePointPK.get).get)
     val tolerance = getTolerance(baseline)
 
     new C3ChartHistory(
-      Some(chartId),
-      maintenanceRecordList,
-      None, None, // chart width, height
-      "Date", // x axis label
-      xDateList, // xDateList
-      baseline, // baseline
-      tolerance, // tolerance
-      None, // yRange
-      Seq("Percent of Background"), // y axis labels
-      "Percent of Background", // y data label
-      Seq(beamHistory.map(_.percentOfBackground_pct)), // y values to plot
-      indexOfThis(beamHistory), // index of y value that is new
-      ".4g", // y number format
-      Seq(WedgeHTML.lineColor) // y line colors
+      chartIdOpt = Some(chartId),
+      maintenanceList = maintenanceRecordList,
+      width = None,
+      height = None,
+      xLabel = "Date",
+      xDateList = xDateList,
+      baseline = baseline,
+      tolerance = tolerance,
+      yRange = None,
+      yAxisLabels = Seq("Percent of Background"),
+      yDataLabel = "Percent of Background",
+      yValues = Seq(beamHistory.map(_.wedgePoint.percentOfBackground_pct)),
+      yIndex = indexOfThis(beamHistory),
+      yFormat = ".4g",
+      yColorList = Seq(WedgeHTML.lineColor)
     ).javascript
   }
 

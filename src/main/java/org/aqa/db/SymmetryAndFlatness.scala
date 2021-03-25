@@ -77,11 +77,6 @@ case class SymmetryAndFlatness(
   val flatness: Double = ((max - min) / (max + min)) * 100
 
   def profileConstancy(baseline: SymmetryAndFlatness): Double = {
-    if (symmetryAndFlatnessPK.isEmpty)
-      Trace.trace()
-    if (baseline.symmetryAndFlatnessPK.isEmpty)
-      Trace.trace()
-
     if (symmetryAndFlatnessPK.nonEmpty && baseline.symmetryAndFlatnessPK.get == symmetryAndFlatnessPK.get) {
       0
     } else {

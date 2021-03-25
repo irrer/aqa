@@ -12,6 +12,7 @@ import org.aqa.db.DicomSeries
 import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.db.SymmetryAndFlatness
+import org.aqa.db.WedgePoint
 import org.aqa.run.ProcedureStatus
 import org.aqa.run.RunProcedure
 import org.aqa.run.RunReqClass
@@ -426,7 +427,19 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
         SymmetryAndFlatness.getBaselineByOutput(oldOutput.get.outputPK.get).map(_.beamName) // get list of beams that were marked as baseline so the new results can be marked as baseline
     }
 
-    val runReq = RunReq(rtplan, rtimageMap, rtimageMap(floodBeamName), symmetryAndFlatnessBaselineRedoBeamList, Seq()) // TODO add Wedge baseline list
+    val wedgeBaselineRedoBeamList: Seq[String] = {
+      if (oldOutput.isEmpty)
+        Seq()
+      else {
+        // List of wedge points that were baselines.
+        val wereBaseline = WedgePoint.history(oldOutput.get.machinePK.get ).filter(wh => wh.output.outputPK.get == oldOutput.get.outputPK.get && wh.wedgePoint.isBaseline)
+        // Transform into beam name and background beam name, which is used to identify it.
+        val list = wereBaseline.map(wh => wh.wedgePoint.wedgeBeamName + wh.wedgePoint.backgroundBeamName)
+        list
+      }
+    }
+
+    val runReq = RunReq(rtplan, rtimageMap, rtimageMap(floodBeamName), symmetryAndFlatnessBaselineRedoBeamList, wedgeBaselineRedoBeamList) // TODO add Wedge baseline list
     runReq
   }
 

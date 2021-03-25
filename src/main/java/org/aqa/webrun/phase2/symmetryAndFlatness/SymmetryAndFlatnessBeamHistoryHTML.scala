@@ -34,7 +34,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
     history.filter(h => h.symmetryAndFlatness.isBaseline).map(h =>
       MaintenanceRecord(
         maintenanceRecordPK = None,
-        category = "Set Baseline",
+        category = MaintenanceCategory.setBaseline,
         machinePK,
         creationTime = h.output.dataDate.get,
         userPK = -1,

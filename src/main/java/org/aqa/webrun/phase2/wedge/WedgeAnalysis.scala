@@ -152,6 +152,20 @@ object WedgeAnalysis extends Logging {
     wedgePairList.map(wp => analyzeWedgePair(wp, pointList, extendedData, runReq))
   }
 
+  /**
+   * Restore the baseline status of a wedge point as necessary.
+   * @param wpList Wedge point to update.
+   * @param baselineList List of beam+background beam names.
+   * @return List of wedge points, possibly modified.
+   */
+  private def restoreBaseline(wp: WedgePoint, baselineList: Seq[String]): WedgePoint ={
+    val id = wp.wedgeBeamName + wp.backgroundBeamName
+    if (baselineList.contains(id))
+      wp.copy(isBaseline_text = true.toString)
+    else wp
+  }
+
+
   class WedgeResult(summary: Elem, status: ProcedureStatus.Value, wedgePointList: Seq[WedgePoint]) extends SubProcedureResult(summary, status, subProcedureName)
 
   /**
@@ -161,9 +175,12 @@ object WedgeAnalysis extends Logging {
     try {
       logger.info("Starting analysis of " + subProcedureName + " for machine " + extendedData.machine.id)
 
-      val wedgePointList = analyze(extendedData, runReq, collimatorCentering, centerDoseList)
-      WedgePoint.insert(wedgePointList)
-      updateBaselineAndMaintenanceRecord(wedgePointList, extendedData, runReq)
+      val wedgePointList = {
+        analyze(extendedData, runReq, collimatorCentering, centerDoseList). // analyse wedge beams
+        map(wp => restoreBaseline(wp, runReq.wedgeBaselineRedoBeamList)). // restore baselines as needed
+        map(wp => wp.insert)  // insert into database, which also defines wedgePointPK
+      }
+
       val status = ProcedureStatus.done
       logger.info("Starting HTML generation for " + subProcedureName)
       val summary = WedgeHTML.makeDisplay(extendedData, status, runReq, wedgePointList, collimatorCentering.center)
