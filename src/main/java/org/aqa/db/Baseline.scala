@@ -192,7 +192,7 @@ object Baseline extends Logging {
       all.foreach(check)
     }
 
-    def markSymFlat(): Unit = {
+    def markSymFlat(doIt: Boolean): Unit = {
       val action = for {
         sf <- SymmetryAndFlatness.query if
         sf.axialSymmetry_pct === sf.axialSymmetryBaseline_pct &&
@@ -214,8 +214,12 @@ object Baseline extends Logging {
         }
         else {
           val symFlatAsBaseline = symFlat.copy(isBaseline_text = true.toString)
-          symFlatAsBaseline.insertOrUpdate()
-          Trace.trace("Marked sym+flat " + pk + " as baseline")
+          if (doIt) {
+            symFlatAsBaseline.insertOrUpdate()
+            Trace.trace("Marked sym+flat " + pk + " as baseline")
+          }
+          else
+            Trace.trace("Would have Marked sym+flat " + pk + " as baseline")
         }
       }
 
@@ -225,7 +229,7 @@ object Baseline extends Logging {
       Trace.trace
     }
 
-    def markWedge(): Unit = {
+    def markWedge(doIt: Boolean): Unit = {
       val action = for {
         w <- WedgePoint.query if
         w.percentOfBackground_pct === w.baselinePercentOfBackground_pct
@@ -242,8 +246,12 @@ object Baseline extends Logging {
           Trace.trace("Already marked wedge " + pk + " as baseline")
         else {
           val wedgeAsBaseline = wedge.copy(isBaseline_text = true.toString)
-          wedgeAsBaseline.insertOrUpdate()
-          Trace.trace("Marked wedge " + pk + " as baseline")
+          if (doIt) {
+            wedgeAsBaseline.insertOrUpdate()
+            Trace.trace("Marked wedge " + pk + " as baseline")
+          }
+          else
+            Trace.trace("Would have Marked wedge " + pk + " as baseline")
         }
       }
 
@@ -345,17 +353,20 @@ object Baseline extends Logging {
     Config.validate
     DbSetup.init
 
+    val possibleArgs = "\n\nPossible args: doIt checkSymFlat markSymFlat markWedge checkOldNewSymFlat checkOldNewWedge\n\n"
     Trace.trace("--- Start baseline checks ----------------------------------------------------------")
-    println("Possible args: checkSymFlat markSymFlat markWedge checkOldNewSymFlat checkOldNewWedge ")
+    println(possibleArgs)
 
+    val doIt = args.contains("doIt")  // must use to change database
     if (args.contains("checkSymFlat")) checkSymFlat()
-    if (args.contains("markSymFlat")) markSymFlat()
-    if (args.contains("markWedge")) markWedge()
+    if (args.contains("markSymFlat")) markSymFlat(doIt)
+    if (args.contains("markWedge")) markWedge(doIt)
 
     if (args.contains("checkOldNewSymFlat")) checkOldNewSymFlat()
     if (args.contains("checkOldNewWedge")) checkOldNewWedge()
 
-    println("Possible args: checkSymFlat markSymFlat markWedge checkOldNewSymFlat checkOldNewWedge ")
+    println(possibleArgs)
     Trace.trace("--- Finish baseline checks ----------------------------------------------------------")
+    println("run with: java -cp  target\\AQA-0.3.1-jar-with-dependencies.jar org.aqa.db.Baseline")
   }
 }
