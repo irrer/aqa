@@ -1,5 +1,6 @@
 package org.aqa.webrun.phase2.phase2csv
 
+import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.DicomSeries
 import org.aqa.db.Machine
@@ -52,7 +53,7 @@ class PopulateDicomCsv extends Phase2Csv[DicomInstance] {
   override protected def getSopUID(data: DI, prefix: Option[String]): String = data.SOPInstanceUID
 }
 
-object PopulateDicomCsv {
+object PopulateDicomCsv extends Logging {
   def main(args: Array[String]): Unit = {
     val start = System.currentTimeMillis()
     val populateDicomCsv = new PopulateDicomCsv
@@ -62,8 +63,16 @@ object PopulateDicomCsv {
       val seriesList = DicomSeries.getByMachine(m.machinePK.get)
 
       def doSeries(series: DicomSeries): Unit = {
-        val di = series.sopInstanceUIDList.split(" ").filter(_.nonEmpty).map(DicomInstance).head
-        populateDicomCsv.getDicomText(di, m)
+        try {
+          if (series.modality.equals("RTIMAGE")) {
+            val di = series.sopInstanceUIDList.split(" ").filter(_.nonEmpty).map(DicomInstance).head
+            populateDicomCsv.getDicomText(di, m)
+          }
+          else
+            println("Ignoring non-RTIMAGE series: " + series)
+        } catch {
+          case t: Throwable => println("Failed with series " + series.seriesInstanceUID + " : " + fmtEx(t))
+        }
       }
 
       seriesList.foreach(series => doSeries(series))

@@ -185,27 +185,32 @@ abstract class Phase2Csv[T] extends Logging {
     * @return One line of the CSV
     */
   private def makeCsvRow(dataList: Seq[T], dataIndex: Int, machine: Machine, mtMachList: Seq[MaintenanceRecord]): String = {
+    try {
+      val dataSet = dataList(dataIndex)
+      // Make all of the columns.
+      val dataText = {
+        // Make into a new string to avoid references to other classes.  This helps free memory.
+        def colToText(col: Col) = new String(Util.textToCsv(col.toText(dataSet).toString))
+        colList.map(colToText).mkString(",")
+      }
 
-    val dataSet = dataList(dataIndex)
-    // Make all of the columns.
-    val dataText = {
-      // Make into a new string to avoid references to other classes.  This helps free memory.
-      def colToText(col: Col) = new String(Util.textToCsv(col.toText(dataSet).toString))
-      colList.map(colToText).mkString(",")
+      val prefixText = prefixCsv.toCsvText(getOutput(dataList(dataIndex)))
+      val machineDescriptionText = machineDescriptionCsv.toCsvText(getOutput(dataSet))
+      val dicomText = getDicomText(dataSet, machine)
+      val csvRow = Seq(prefixText, dataText, machineDescriptionText, dicomText).mkString(",")
+
+      val maintenanceText: Seq[String] = {
+        if ((dataIndex + 1) < dataList.size) maintenanceBetween(dataSet, dataList(dataIndex + 1), mtMachList)
+        else Seq()
+      }
+
+      val fullText: String = Seq(Seq(csvRow), maintenanceText).flatten.mkString("\n")
+      fullText
+    } catch {
+      case t: Throwable =>
+        logger.warn("Unexpected exception: " + fmtEx(t))
+        ""
     }
-
-    val prefixText = prefixCsv.toCsvText(getOutput(dataList(dataIndex)))
-    val machineDescriptionText = machineDescriptionCsv.toCsvText(getOutput(dataSet))
-    val dicomText = getDicomText(dataSet, machine)
-    val csvRow = Seq(prefixText, dataText, machineDescriptionText, dicomText).mkString(",")
-
-    val maintenanceText: Seq[String] = {
-      if ((dataIndex + 1) < dataList.size) maintenanceBetween(dataSet, dataList(dataIndex + 1), mtMachList)
-      else Seq()
-    }
-
-    val fullText: String = Seq(Seq(csvRow), maintenanceText).flatten.mkString("\n")
-    fullText
   }
 
   /**
@@ -222,7 +227,7 @@ abstract class Phase2Csv[T] extends Logging {
     val followingMaintenance = maintenanceAfter(dataList.lastOption, mtMachList)
 
     // make the row list for this one machine
-    val machineRowList = dataList.indices.map(dataIndex => makeCsvRow(dataList, dataIndex, machine, mtMachList))
+    val machineRowList = dataList.indices.map(dataIndex => makeCsvRow(dataList, dataIndex, machine, mtMachList)).filter(_.nonEmpty)
     val all = (precedingMaintenance ++ machineRowList ++ followingMaintenance).mkString(",\n")
     all
   }

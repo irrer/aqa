@@ -79,17 +79,24 @@ case class DicomSeries(
       val alList = DicomUtil.zippedByteArrayToDicom(content.get)
       alList
     } else {
-      val inputContent = InputFiles.getByInputPK(inputPK.get).head.zippedContent
-      val alList = try {
-        DicomUtil.zippedByteArrayToDicom(inputContent)
+      try {
+        val inputContent = InputFiles.getByInputPK(inputPK.get).head.zippedContent
+        val alList = try {
+          DicomUtil.zippedByteArrayToDicom(inputContent)
+        }
+        catch {
+          case t: Throwable =>
+            logger.warn("Unexpected error unzipping DICOM from input table: " + fmtEx(t))
+            Seq[AttributeList]()
+        }
+        val list = alList.filter(al => Util.serInstOfAl(al).equals(seriesInstanceUID))
+        list
       }
       catch {
         case t: Throwable =>
-          logger.warn("Unexpected error unzipping DICOM from input table: " + fmtEx(t))
-          Seq[AttributeList]()
+        logger.warn("Unexpected exception: " + fmtEx(t))
+        Seq()
       }
-      val list = alList.filter(al => Util.serInstOfAl(al).equals(seriesInstanceUID))
-      list
     }
   }
 
