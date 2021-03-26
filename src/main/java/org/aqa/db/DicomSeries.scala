@@ -250,6 +250,14 @@ object DicomSeries extends Logging {
     list
   }
 
+  def getByMachine(machinePK: Long): Seq[DicomSeries] = {
+    val action = for {
+      dicomSeries <- query if dicomSeries.machinePK === machinePK
+    } yield dicomSeries
+    val list = Db.run(action.result)
+    list
+  }
+
   case class DicomSeriesWithoutContent(
                                         dicomSeriesPK: Long,
                                         userPK: Long,

@@ -1,7 +1,5 @@
 package org.aqa.webrun.phase2.phase2csv
 
-import com.pixelmed.dicom.AttributeList
-import edu.umro.ScalaUtil.Trace
 import org.aqa.db.DbSetup
 import org.aqa.db.Output
 import org.aqa.db.WedgePoint
@@ -51,8 +49,6 @@ class WedgePointCsv extends Phase2Csv[WedgePoint.WedgePointHistory] {
     )
   }
 
-  override protected def getAl(data: WH): AttributeList = Phase2Csv.getAlBySop(data.wedgePoint.wedgeSOPInstanceUID)
-
   /**
     * Get the data for a particular machine.
     *
@@ -64,9 +60,17 @@ class WedgePointCsv extends Phase2Csv[WedgePoint.WedgePointHistory] {
     wedgeList
   }
 
-  override def getSopUID(data: WH): String = data.wedgePoint.wedgeSOPInstanceUID
 
   override def getOutput(data: WH): Output = data.output
+
+  /**
+   * Get the SOP of the DICOM for this data set.
+   *
+   * @param data   Data using DICOM data.
+   * @param prefix Prefix column headers with this.
+   * @return SOP instance UID.
+   */
+  override protected def getSopUID(data: WH, prefix: Option[String]): String = data.wedgePoint.wedgeSOPInstanceUID
 }
 
 object WedgePointCsv {

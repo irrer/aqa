@@ -1,8 +1,7 @@
 package org.aqa.webrun.phase2.phase2csv
 
-import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.AttributeList
-import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -25,18 +24,20 @@ abstract class Phase2Csv[T] extends Logging {
   protected def makeColList: Seq[Col]
 
   /**
-    * Get the DICOM data for the given data set.
-    * @param data Get for this data.
-    * @return DICOM data.
-    */
-  protected def getAl(data: T): AttributeList
-
-  /**
     * Get the SOP of the DICOM for this data set.
     * @param data Data using DICOM data.
+    * @param prefix Prefix column headers with this.
     * @return SOP instance UID.
     */
-  protected def getSopUID(data: T): String
+  protected def getSopUID(data: T, prefix: Option[String] = None): String
+
+  /**
+    * Get the SOP of the second DICOM for this data set.
+    * @param data Data using DICOM data.
+    * @param prefix Prefix column headers with this.
+    * @return SOP instance UID.
+    */
+  protected def getSopUID2(data: T, prefix: Option[String] = None): Option[String] = None
 
   /**
     * Get the output associated with the data.
@@ -101,20 +102,34 @@ abstract class Phase2Csv[T] extends Logging {
     * @param machine Machine that produced data.
     * @return CSV text for DICOM.
     */
-  private def getDicomText(dataSet: T, machine: Machine): String = {
+  protected def getDicomText(dataSet: T, machine: Machine): String = {
     val machDir = {
       val instDir = new File(Config.cacheDirFile, metadataCache.institutionNameMap(machine.institutionPK))
       val dicomDir = new File(instDir, dicomCsvCacheDirName)
       new File(dicomDir, machine.id)
     }
-    val file = new File(machDir, getSopUID(dataSet) + ".csv")
+
+    def fileOf(sop: String): File = new File(machDir, sop + ".csv")
+
+    val file = fileOf(getSopUID(dataSet))
     if (file.exists())
       Util.readTextFile(file).right.get
     else {
-      val text = dicomCsv.dicomToText(getAl(dataSet))
-      machDir.mkdirs()
-      Util.writeFile(file, text)
-      text
+      val alList = DicomSeries.getBySopInstanceUID(getSopUID(dataSet)).flatMap(ds => ds.attributeListList)
+
+      def makeCsv(al: AttributeList): Unit = {
+        val f = fileOf(Util.sopOfAl(al))
+        if (!f.exists()) {
+          machDir.mkdirs()
+          val text = dicomCsv.dicomToText(al)
+          Util.writeFile(f, text)
+          Trace.trace("wrote file " + file.getAbsolutePath)
+        }
+      }
+
+      alList.foreach(makeCsv)
+      Util.garbageCollect()
+      Util.readTextFile(fileOf(getSopUID(dataSet))).right.get
     }
   }
 
@@ -199,7 +214,6 @@ abstract class Phase2Csv[T] extends Logging {
     * @return Single string of CSV text.
     */
   private def machineToCsv(machine: Machine): String = {
-    Phase2Csv.clearAlCache()
     val mtMachList = maintenanceRecordList.filter(_.machinePK == machine.machinePK.get) // list of maintenance records for just this machine
 
     val dataList = getData(machine.machinePK.get) // data for this machine
@@ -210,7 +224,6 @@ abstract class Phase2Csv[T] extends Logging {
     // make the row list for this one machine
     val machineRowList = dataList.indices.map(dataIndex => makeCsvRow(dataList, dataIndex, machine, mtMachList))
     val all = (precedingMaintenance ++ machineRowList ++ followingMaintenance).mkString(",\n")
-    Phase2Csv.clearAlCache()
     all
   }
 
@@ -233,46 +246,9 @@ abstract class Phase2Csv[T] extends Logging {
 
 object Phase2Csv {
 
-  /** Keep a cache of recently fetched attribute lists. */
-  private val alCache = {
-    new scala.collection.mutable.HashMap[String, AttributeList]()
-  }
-
-  private def clearAlCache(): Unit = {
-    alCache.clear()
-  }
-
   /**
     * Location of cross-institutional CSV files.
     */
   val csvDir = new File(Config.cacheDirFile, "CSV")
 
-  /**
-    * Get the attribute list.  First try the cache.  If not there, then get it from the
-    * database, put it in the cache, and then use it.
-    *
-    * @param SOPInstanceUID Unique slice identifier.
-    * @return The corresponding attribute list.
-    */
-  def getAlBySop(SOPInstanceUID: String): AttributeList = {
-    if (alCache.contains(SOPInstanceUID))
-      alCache(SOPInstanceUID)
-    else {
-      val alList = DicomSeries.getBySopInstanceUID(SOPInstanceUID).flatMap(ds => ds.attributeListList)
-      alList.foreach(al => alCache.put(Util.sopOfAl(al), al))
-
-      // If for some reason there is a problem getting the DICOM from the database,
-      // then assume it is not available.  Create an empty attribute list which will
-      // result in a bunch of NA's being displayed.  This is not ideal, but better
-      // than failing.  Technically even the SOPInstanceUID is not needed, but it
-      // seems like it ought to be.
-      if (!alCache.contains(SOPInstanceUID)) {
-        val al = new AttributeList
-        val attr = AttributeFactory.newAttribute(TagByName.SOPInstanceUID)
-        attr.addValue(SOPInstanceUID)
-        alCache.put(SOPInstanceUID, al)
-      }
-      alCache(SOPInstanceUID)
-    }
-  }
 }

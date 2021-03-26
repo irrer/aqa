@@ -1,6 +1,5 @@
 package org.aqa.webrun.phase2.phase2csv
 
-import com.pixelmed.dicom.AttributeList
 import org.aqa.Util
 import org.aqa.db.DbSetup
 import org.aqa.db.Output
@@ -60,8 +59,6 @@ class SymmetryAndFlatnessCsv extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFl
     )
   }
 
-  override protected def getAl(data: SF): AttributeList = Phase2Csv.getAlBySop(data.symmetryAndFlatness.SOPInstanceUID)
-
   /**
     * Get the data for a particular machine.
     *
@@ -73,7 +70,7 @@ class SymmetryAndFlatnessCsv extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFl
     symFlat
   }
 
-  override def getSopUID(data: SF): String = data.symmetryAndFlatness.SOPInstanceUID
+  override def getSopUID(data: SF, prefix: Option[String]): String = data.symmetryAndFlatness.SOPInstanceUID
 
   override def getOutput(data: SF): Output = data.output
 }
