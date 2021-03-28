@@ -10,8 +10,11 @@ import org.aqa.db.Machine
 import org.aqa.db.MaintenanceRecord
 import org.aqa.db.Output
 import org.aqa.web.WebUtil
+import org.aqa.webrun.phase2.phase2csv.Phase2Csv.csvDir
 
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
 import scala.xml.Elem
 
 abstract class Phase2Csv[T] extends Logging {
@@ -62,6 +65,8 @@ abstract class Phase2Csv[T] extends Logging {
   protected val dataName: String
 
   // ----------------------------------------------------------------------------
+
+  private def fileBaseName = dataName.replaceAll(" ", "")
 
   private val colList: Seq[CsvCol[T]] = makeColList
 
@@ -236,7 +241,7 @@ abstract class Phase2Csv[T] extends Logging {
   def writeToFile(): Unit = {
     val start = System.currentTimeMillis()
     Phase2Csv.csvDir.mkdirs()
-    val file = new File(Phase2Csv.csvDir, dataName + ".csv")
+    val file = new File(Phase2Csv.csvDir, fileBaseName + ".csv")
     Util.writeFile(file, csvContent)
     logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath + " in " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
   }
@@ -259,18 +264,85 @@ abstract class Phase2Csv[T] extends Logging {
     }
     val text = WebUtil.wrapBody(content, name)
     Phase2Csv.csvDir.mkdirs()
-    val file = new File(Phase2Csv.csvDir, dataName + ".html")
+    val file = new File(Phase2Csv.csvDir, fileBaseName + ".html")
     Util.writeFile(file, text)
     logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath)
   }
 
+  def generateIndex() : Unit = {
+      val csvList = Util.listDirFiles(csvDir).filter(_.getName.endsWith(".csv"))
+
+      def fileToRow(file: File): Elem = {
+
+        val date = {
+          val dateFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm")
+          dateFormat.format(new Date(file.lastModified()))
+        }
+
+        <tr>
+          <td>
+            {file.getName.replaceAll(".csv$", "")}
+          </td>
+          <td>
+            <a href={file.getName}>Download CSV</a>
+          </td>
+          <td>
+            {date}
+          </td>
+          <td>
+            <a href={file.getName.replaceAll(".csv$", ".html")}>Column Definitions</a>
+          </td>
+        </tr>
+      }
+
+      val rowList = csvList.map(fileToRow)
+
+      val header = {
+        <tr>
+          <td><b>Name</b></td>
+          <td><b>CSV</b></td>
+          <td><b>Generated</b></td>
+          <td><b>Column Definitions</b></td>
+        </tr>
+      }
+
+      val content = {
+        <div class="col-md-8 col-md-offset-2">
+          <center>
+            <h2>Index of CSV Files</h2>
+            <em>These files are periodically generated and represent data from all institutions.</em>
+          </center>
+          <table class="table table-bordered" style="margin:30px;">
+            {csvList.map(fileToRow)}
+          </table>
+        </div>
+      }
+
+      val text = WebUtil.wrapBody(content, "CSV Index")
+      Phase2Csv.csvDir.mkdirs()
+      val file = new File(Phase2Csv.csvDir, "index.html")
+      Util.writeFile(file, text)
+      logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath)
+  }
+
+  def updateFiles: Unit = {
+    try {
+      writeDoc()
+      writeToFile()
+      generateIndex()
+    } catch {
+      case t: Throwable => logger.warn("Error updating CSV: " + fmtEx(t))
+    }
+  }
+
 }
 
-object Phase2Csv {
+object Phase2Csv extends Logging {
 
   /**
     * Location of cross-institutional CSV files.
     */
   val csvDir = new File(Config.resultsDirFile, "CSV")
+
 
 }

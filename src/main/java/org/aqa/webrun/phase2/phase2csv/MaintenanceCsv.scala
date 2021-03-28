@@ -19,11 +19,11 @@ class MaintenanceCsv(metadataCache: MetadataCache) {
   }
 
   private val colList = Seq(
-    MaintenanceCsv("Institution", (mt: MaintenanceRecord) => metadataCache.institutionNameMap(metadataCache.machineMap(mt.machinePK).institutionPK)),
-    MaintenanceCsv("Machine", (mt: MaintenanceRecord) => metadataCache.machineMap(mt.machinePK).id),
+    MaintenanceCsv("Institution (anonymized)", (mt: MaintenanceRecord) => metadataCache.institutionNameMap(metadataCache.machineMap(mt.machinePK).institutionPK)),
+    MaintenanceCsv("Machine (anonymized)", (mt: MaintenanceRecord) => metadataCache.machineMap(mt.machinePK).id),
     MaintenanceCsv("Effective Date", (mt: MaintenanceRecord) => Util.standardDateFormat.format(mt.creationTime)),
     MaintenanceCsv("Maintenance Category", (mt: MaintenanceRecord) => mt.category),
-    MaintenanceCsv("Created by User", (mt: MaintenanceRecord) => metadataCache.userMap(mt.userPK)),
+    MaintenanceCsv("Created by User (anonymized)", (mt: MaintenanceRecord) => metadataCache.userMap(mt.userPK)),
     MaintenanceCsv("Summary", (mt: MaintenanceRecord) => mt.summary),
     MaintenanceCsv("Description", (mt: MaintenanceRecord) => mt.description)
   )

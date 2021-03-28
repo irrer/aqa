@@ -10,7 +10,7 @@ class SymmetryAndFlatnessCsv extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFl
   // abbreviation for the long name
   type SF = SymmetryAndFlatness.SymmetryAndFlatnessHistory
 
-  override val dataName: String = "SymmetryAndFlatness"
+  override val dataName: String = "Symmetry And Flatness"
 
   /**
     * Indicate how and if this is used as a baseline.  Will be one of:

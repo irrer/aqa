@@ -9,7 +9,7 @@ class WedgePointCsv extends Phase2Csv[WedgePoint.WedgePointHistory] {
   // abbreviation for the long name
   type WH = WedgePoint.WedgePointHistory
 
-  override val dataName: String = "WedgePoint"
+  override val dataName: String = "Wedge Point"
 
   /**
     * Indicate how and if this is used as a baseline.  Will be one of:
@@ -78,7 +78,7 @@ object WedgePointCsv {
 
   def main(args: Array[String]): Unit = {
     DbSetup.init
-    (new WedgePointCsv).writeToFile()
+    (new WedgePointCsv).updateFiles
   }
 
 }
