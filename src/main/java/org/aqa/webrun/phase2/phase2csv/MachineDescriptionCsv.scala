@@ -6,18 +6,16 @@ import org.aqa.web.WebServer
 
 class MachineDescriptionCsv(metadataCache: MetadataCache) {
 
-  private case class PrefixCol(header: String, toText: Output => String) {}
-
-  private def urlOfOutput(output: Output) : String = {
+  private def urlOfOutput(output: Output): String = {
     Config.RootUrl + WebServer.urlOfResultsFile(output.dir) + "/" + Output.displayFilePrefix + ".html"
   }
 
-  private val colList = Seq(
-    PrefixCol("Type", (o: Output) => metadataCache.machineTypeMap(metadataCache.machineMap(o.machinePK.get).machineTypePK)),
-    PrefixCol("Collimator", (o: Output) => metadataCache.collimatorTypeMap(metadataCache.machineMap(o.machinePK.get).multileafCollimatorPK)),
-    PrefixCol("EPID", (o: Output) => metadataCache.epidTypeMap(metadataCache.machineMap(o.machinePK.get).epidPK)),
-    PrefixCol("URL", (o: Output) => urlOfOutput(o)),
-    PrefixCol("Uploaded By", (o: Output) => metadataCache.userMap(o.userPK.get))
+  val colList = Seq(
+    CsvCol[Output]("Machine Type", "Type of machine", (o: Output) => metadataCache.machineTypeMap(metadataCache.machineMap(o.machinePK.get).machineTypePK)),
+    CsvCol[Output]("Collimator", "Type of collimator", (o: Output) => metadataCache.collimatorTypeMap(metadataCache.machineMap(o.machinePK.get).multileafCollimatorPK)),
+    CsvCol[Output]("EPID", "Type of EPID", (o: Output) => metadataCache.epidTypeMap(metadataCache.machineMap(o.machinePK.get).epidPK)),
+    CsvCol[Output]("URL", "Link to main report.", (o: Output) => urlOfOutput(o)),
+    CsvCol[Output]("Uploaded By", "Anonymized version of user ID.", (o: Output) => metadataCache.userMap(o.userPK.get))
   )
 
   def toCsvText(output: Output): String = {

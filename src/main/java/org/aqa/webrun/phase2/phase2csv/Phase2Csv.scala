@@ -9,8 +9,10 @@ import org.aqa.db.DicomSeries
 import org.aqa.db.Machine
 import org.aqa.db.MaintenanceRecord
 import org.aqa.db.Output
+import org.aqa.web.WebUtil
 
 import java.io.File
+import scala.xml.Elem
 
 abstract class Phase2Csv[T] extends Logging {
 
@@ -21,7 +23,7 @@ abstract class Phase2Csv[T] extends Logging {
     * Make a list of CSV columns.
     * @return List of columns.
     */
-  protected def makeColList: Seq[Col]
+  protected def makeColList: Seq[CsvCol[T]]
 
   /**
     * Get the SOP of the DICOM for this data set.
@@ -61,15 +63,7 @@ abstract class Phase2Csv[T] extends Logging {
 
   // ----------------------------------------------------------------------------
 
-  /**
-    * Define a column in a Phase2 CSV.
-    *
-    * @param header Name of column.
-    * @param toText Converts given data to text that will be put in the cell.
-    */
-  case class Col(header: String, toText: T => Any) {}
-
-  private val colList: Seq[Col] = makeColList
+  private val colList: Seq[CsvCol[T]] = makeColList
 
   private val metadataCache = new MetadataCache
 
@@ -190,7 +184,7 @@ abstract class Phase2Csv[T] extends Logging {
       // Make all of the columns.
       val dataText = {
         // Make into a new string to avoid references to other classes.  This helps free memory.
-        def colToText(col: Col) = new String(Util.textToCsv(col.toText(dataSet).toString))
+        def colToText(col: CsvCol[T]) = new String(Util.textToCsv(col.toText(dataSet).toString))
         colList.map(colToText).mkString(",")
       }
 
@@ -247,6 +241,29 @@ abstract class Phase2Csv[T] extends Logging {
     logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath + " in " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
   }
 
+  /**
+    * Write a file documenting columns of this CSV.
+    */
+  def writeDoc(): Unit = {
+
+    val colList: Seq[CsvCol[_]] = prefixCsv.colList ++ makeColList ++ machineDescriptionCsv.colList ++ dicomCsv.colList
+
+    val name = "Definitions for " + dataName + " CSV columns."
+    val content: Elem = {
+      <div class="col-md-10 col-md-offset-1 ">
+        <h2>{name}</h2>
+        <table class="table table-bordered">
+          {colList.map(col => col.doc)}
+        </table>
+      </div>
+    }
+    val text = WebUtil.wrapBody(content, name)
+    Phase2Csv.csvDir.mkdirs()
+    val file = new File(Phase2Csv.csvDir, dataName + ".html")
+    Util.writeFile(file, text)
+    logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath)
+  }
+
 }
 
 object Phase2Csv {
@@ -254,6 +271,6 @@ object Phase2Csv {
   /**
     * Location of cross-institutional CSV files.
     */
-  val csvDir = new File(Config.cacheDirFile, "CSV")
+  val csvDir = new File(Config.resultsDirFile, "CSV")
 
 }

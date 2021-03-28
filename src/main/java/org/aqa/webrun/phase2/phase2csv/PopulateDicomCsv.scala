@@ -20,9 +20,9 @@ class PopulateDicomCsv extends Phase2Csv[DicomInstance] {
 
   override val dataName: String = "PopulateDicom"
 
-  override protected def makeColList: Seq[Col] = {
+  override protected def makeColList: Seq[CsvCol[DI]] = {
     Seq(
-      Col("SOPInstanceUID", (di: DI) => di.SOPInstanceUID)
+      CsvCol("SOPInstanceUID", "DICOM (0008,0018) UID of image.", (di: DI) => di.SOPInstanceUID)
     )
   }
 
@@ -67,8 +67,7 @@ object PopulateDicomCsv extends Logging {
           if (series.modality.equals("RTIMAGE")) {
             val di = series.sopInstanceUIDList.split(" ").filter(_.nonEmpty).map(DicomInstance).head
             populateDicomCsv.getDicomText(di, m)
-          }
-          else
+          } else
             println("Ignoring non-RTIMAGE series: " + series)
         } catch {
           case t: Throwable => println("Failed with series " + series.seriesInstanceUID + " : " + fmtEx(t))

@@ -33,19 +33,21 @@ class WedgePointCsv extends Phase2Csv[WedgePoint.WedgePointHistory] {
 
   }
 
-  override protected def makeColList: Seq[Col] = {
+  override protected def makeColList: Seq[CsvCol[WH]] = {
     Seq(
-      Col("Beam Name", (wh: WH) => wh.wedgePoint.wedgeBeamName),
-      Col("Baseline Designation", (wh: WH) => baselineDesignation(wh)),
-      Col("Wedge CU", (wh: WH) => wh.wedgePoint.wedgeValue_cu),
-      Col("Background Beam Name", (wh: WH) => wh.wedgePoint.backgroundBeamName),
-      Col("Background CU", (wh: WH) => wh.wedgePoint.backgroundValue_cu),
-      Col("Percent of Background", (wh: WH) => wh.wedgePoint.percentOfBackground_pct),
-      Col("Baseline Wedge CU", (wh: WH) => wh.baselineWedgePoint.wedgeValue_cu),
-      Col("Baseline Background CU", (wh: WH) => wh.baselineWedgePoint.backgroundValue_cu),
-      Col("Baseline Percent of Background", (wh: WH) => wh.baselineWedgePoint.percentOfBackground_pct)
-
-      // Col("Baseline Center CU", (sf: WH) => getAl(sf).get(TagByName.SoftwareVersions).getSingleStringValueOrEmptyString)
+      CsvCol("Beam Name", "Common name of RTPLAN beam.", (wh: WH) => wh.wedgePoint.wedgeBeamName),
+      CsvCol(
+        "Baseline Designation",
+        "explicit: Designated by user as a baseline.  implicit: Used as baseline when an explicit one is not defined.  If blank, then it is not used as a baseline.",
+        (wh: WH) => baselineDesignation(wh)
+      ),
+      CsvCol("Wedge CU", "Average CU of pixels in the center of the wedge image.", (wh: WH) => wh.wedgePoint.wedgeValue_cu),
+      CsvCol("Background Beam Name", "Common name of RTPLAN for background beam.", (wh: WH) => wh.wedgePoint.backgroundBeamName),
+      CsvCol("Background CU", "For background beam image, average CU of pixels in the center.", (wh: WH) => wh.wedgePoint.backgroundValue_cu),
+      CsvCol("Percent of Background", "Wedge CU / Background CU * 100", (wh: WH) => wh.wedgePoint.percentOfBackground_pct),
+      CsvCol("Baseline Wedge CU", "For baseline wedge image, average CU of pixels in the center.", (wh: WH) => wh.baselineWedgePoint.wedgeValue_cu),
+      CsvCol("Baseline Background CU", "For background baseline wedge image, average CU of pixels in the center.", (wh: WH) => wh.baselineWedgePoint.backgroundValue_cu),
+      CsvCol("Baseline Percent of Background", "For background, wedge CU / background CU * 100", (wh: WH) => wh.baselineWedgePoint.percentOfBackground_pct)
     )
   }
 
@@ -60,16 +62,15 @@ class WedgePointCsv extends Phase2Csv[WedgePoint.WedgePointHistory] {
     wedgeList
   }
 
-
   override def getOutput(data: WH): Output = data.output
 
   /**
-   * Get the SOP of the DICOM for this data set.
-   *
-   * @param data   Data using DICOM data.
-   * @param prefix Prefix column headers with this.
-   * @return SOP instance UID.
-   */
+    * Get the SOP of the DICOM for this data set.
+    *
+    * @param data   Data using DICOM data.
+    * @param prefix Prefix column headers with this.
+    * @return SOP instance UID.
+    */
   override protected def getSopUID(data: WH, prefix: Option[String]): String = data.wedgePoint.wedgeSOPInstanceUID
 }
 
