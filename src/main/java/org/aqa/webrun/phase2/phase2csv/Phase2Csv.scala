@@ -64,6 +64,8 @@ abstract class Phase2Csv[T] extends Logging {
     */
   protected val dataName: String
 
+  protected val standalone = false
+
   // ----------------------------------------------------------------------------
 
   private def fileBaseName = dataName.replaceAll(" ", "")

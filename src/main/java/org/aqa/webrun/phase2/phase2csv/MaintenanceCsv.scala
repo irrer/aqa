@@ -12,21 +12,18 @@ import java.io.File
   *
   * @param metadataCache Institution and machine information.
   */
-class MaintenanceCsv(metadataCache: MetadataCache) {
-
-  private case class MaintenanceCsv(header: String, toText: MaintenanceRecord => String) {
-    def toTextSafe(mt: MaintenanceRecord): String = Util.textToCsv(toText(mt))
-  }
+class MaintenanceCsv(metadataCache: MetadataCache) { // extends Phase2Csv [MaintenanceRecord] { // TODO extend to use file generator code
 
   private val colList = Seq(
-    MaintenanceCsv("Institution (anonymized)", (mt: MaintenanceRecord) => metadataCache.institutionNameMap(metadataCache.machineMap(mt.machinePK).institutionPK)),
-    MaintenanceCsv("Machine (anonymized)", (mt: MaintenanceRecord) => metadataCache.machineMap(mt.machinePK).id),
-    MaintenanceCsv("Effective Date", (mt: MaintenanceRecord) => Util.standardDateFormat.format(mt.creationTime)),
-    MaintenanceCsv("Maintenance Category", (mt: MaintenanceRecord) => mt.category),
-    MaintenanceCsv("Created by User (anonymized)", (mt: MaintenanceRecord) => metadataCache.userMap(mt.userPK)),
-    MaintenanceCsv("Summary", (mt: MaintenanceRecord) => mt.summary),
-    MaintenanceCsv("Description", (mt: MaintenanceRecord) => mt.description)
+    CsvCol("Institution", "Anonymous version of institution name.", (mt: MaintenanceRecord) => metadataCache.institutionNameMap(metadataCache.machineMap(mt.machinePK).institutionPK)),
+    CsvCol("Machine", "Anonymous version of machine id.", (mt: MaintenanceRecord) => metadataCache.machineMap(mt.machinePK).id),
+    CsvCol("Effective Date", "Date and time of maintenance.", (mt: MaintenanceRecord) => Util.standardDateFormat.format(mt.creationTime)),
+    CsvCol("Maintenance Category", "Type of maintenance.", (mt: MaintenanceRecord) => mt.category),
+    CsvCol("Created by User", "Anonymous version of user id.", (mt: MaintenanceRecord) => metadataCache.userMap(mt.userPK)),
+    CsvCol("Summary", "Short description of maintenance.", (mt: MaintenanceRecord) => mt.summary),
+    CsvCol("Description", "Full description of maintenance.", (mt: MaintenanceRecord) => mt.description)
   )
+
 
   /**
     * Convert a maintenance record into a single CSV row
@@ -34,11 +31,13 @@ class MaintenanceCsv(metadataCache: MetadataCache) {
     * @return A single line of text
     */
   def toCsvText(maintenanceRecord: MaintenanceRecord): String = {
-    colList.map(mtCsv => mtCsv.toTextSafe(maintenanceRecord)).mkString(",")
+    colList.map(mtCsv => mtCsv.toText(maintenanceRecord)).mkString(",")
   }
+
 
   /** The CSV headers for maintenance records. */
   val headerText: String = colList.map(c => c.header).mkString(",")
+
 
   /**
     * Get all maintenance records grouping all records within an institution together, all records for
@@ -47,6 +46,7 @@ class MaintenanceCsv(metadataCache: MetadataCache) {
     * @return Grouped and ordered list.
     */
   def retrieveGroupedAndOrderedList(): Seq[MaintenanceRecord] = {
+
 
     /**
       * Make a string that will group all records within an institution together, all records for
