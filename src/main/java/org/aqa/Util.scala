@@ -68,28 +68,30 @@ object Util extends Logging {
 
   def elapsedTimeHumanFriendly(time: Long): String = {
     val elapsedMs = time.abs
-    val fmt = if (elapsedMs >= (60 * 60 * 1000))
-      elapsedFormatHours
-    else if (elapsedMs >= (60 * 1000))
-      elapsedFormatMinutes
-    else
-      elapsedFormatSeconds
+    val fmt =
+      if (elapsedMs >= (60 * 60 * 1000))
+        elapsedFormatHours
+      else if (elapsedMs >= (60 * 1000))
+        elapsedFormatMinutes
+      else
+        elapsedFormatSeconds
     fmt.format(new Date(elapsedMs))
   }
 
   /**
-   * Global lock for synchronizing all file writes so that only one write is being done at
-   * a time (as opposed to being done in parallel).
-   */
+    * Global lock for synchronizing all file writes so that only one write is being done at
+    * a time (as opposed to being done in parallel).
+    */
   private val fileSystemWriteSync = "sync"
 
-  def writeBinaryFile(file: File, data: Array[Byte]): Unit = fileSystemWriteSync.synchronized({
-    file.delete
-    val fos = new FileOutputStream(file)
-    fos.write(data)
-    fos.flush()
-    fos.close()
-  })
+  def writeBinaryFile(file: File, data: Array[Byte]): Unit =
+    fileSystemWriteSync.synchronized({
+      file.delete
+      val fos = new FileOutputStream(file)
+      fos.write(data)
+      fos.flush()
+      fos.close()
+    })
 
   def writeFile(file: File, text: String): Unit = writeBinaryFile(file, text.getBytes)
 
@@ -112,8 +114,8 @@ object Util extends Logging {
   }
 
   /**
-   * Read a DICOM file.
-   */
+    * Read a DICOM file.
+    */
   def readDicomFile(file: File): Either[Throwable, AttributeList] = {
     try {
       val al = new AttributeList
@@ -153,40 +155,40 @@ object Util extends Logging {
   }
 
   /**
-   * Get the SOPInstanceUID of an attribute list.
-   */
+    * Get the SOPInstanceUID of an attribute list.
+    */
   def sopOfAl(al: AttributeList): String = {
     val at = al.get(TagFromName.SOPInstanceUID)
     if (at == null) "" else al.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
   }
 
   /**
-   * Get the SeriesInstanceUID of an attribute list.
-   */
+    * Get the SeriesInstanceUID of an attribute list.
+    */
   def serInstOfAl(al: AttributeList): String = {
     val at = al.get(TagFromName.SeriesInstanceUID)
     if (at == null) "" else al.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString
   }
 
   /**
-   * Get the StudyInstanceUID of an attribute list.
-   */
+    * Get the StudyInstanceUID of an attribute list.
+    */
   def studyInstOfAl(al: AttributeList): String = {
     val at = al.get(TagFromName.StudyInstanceUID)
     if (at == null) "" else al.get(TagFromName.StudyInstanceUID).getSingleStringValueOrEmptyString
   }
 
   /**
-   * Get the PatientID of an attribute list.
-   */
+    * Get the PatientID of an attribute list.
+    */
   def patientIdOfAl(al: AttributeList): String = {
     val at = al.get(TagFromName.PatientID)
     if (at == null) "" else al.get(TagFromName.PatientID).getSingleStringValueOrEmptyString
   }
 
   /**
-   * Get the Modality of an attribute list.
-   */
+    * Get the Modality of an attribute list.
+    */
   def modalityOfAl(al: AttributeList): String = {
     val at = al.get(TagFromName.Modality)
     if (at == null) "" else al.get(TagFromName.Modality).getSingleStringValueOrEmptyString
@@ -212,7 +214,6 @@ object Util extends Logging {
     }
   }
 
-
   private def getTimeAndDate(al: AttributeList): Option[Date] = {
     try {
       Some(DateTimeAttribute.getDateFromFormattedString(al.get(TagFromName.AcquisitionDateTime).getSingleStringValueOrNull))
@@ -222,8 +223,8 @@ object Util extends Logging {
   }
 
   /**
-   * Get dates and patient ID from attribute list.
-   */
+    * Get dates and patient ID from attribute list.
+    */
   def extractDateTimeAndPatientIdFromDicomAl(attributeList: AttributeList): (Seq[Date], Option[String]) = {
 
     val PatientID = getAttrValue(attributeList, TagFromName.PatientID)
@@ -233,7 +234,8 @@ object Util extends Logging {
       (TagFromName.InstanceCreationDate, TagFromName.InstanceCreationTime),
       (TagFromName.AcquisitionDate, TagFromName.AcquisitionTime),
       (TagByName.CreationDate, TagByName.CreationTime),
-      (TagFromName.SeriesDate, TagFromName.SeriesTime))
+      (TagFromName.SeriesDate, TagFromName.SeriesTime)
+    )
 
     val AcquisitionDateTime = getTimeAndDate(attributeList)
 
@@ -245,8 +247,8 @@ object Util extends Logging {
   }
 
   /**
-   * Sort a list attribute lists in ascending order by date-time.
-   */
+    * Sort a list attribute lists in ascending order by date-time.
+    */
   def sortByDateTime(alList: Seq[AttributeList]): Seq[AttributeList] = {
 
     def compar(a: AttributeList, b: AttributeList): Boolean = {
@@ -259,8 +261,8 @@ object Util extends Logging {
   }
 
   /**
-   * Get dates and patient ID from DICOM file.
-   */
+    * Get dates and patient ID from DICOM file.
+    */
   def extractDateTimeAndPatientIdFromDicom(file: File): (Seq[Date], Option[String]) = {
     val al = new AttributeList
     al.read(file)
@@ -297,13 +299,14 @@ object Util extends Logging {
   }
 
   /**
-   * Get the date and time for building an Output.
-   */
+    * Get the date and time for building an Output.
+    */
   def getOutputDateTime(alList: Seq[AttributeList]): Option[Long] = {
     val dateTimeTags = Seq(
       (TagFromName.AcquisitionDate, TagFromName.AcquisitionTime),
       (TagFromName.ContentDate, TagFromName.ContentTime),
-      (TagFromName.InstanceCreationDate, TagFromName.InstanceCreationTime))
+      (TagFromName.InstanceCreationDate, TagFromName.InstanceCreationTime)
+    )
 
     def earliest(dateTag: AttributeTag, timeTag: AttributeTag): Option[Long] = {
       val seq = alList.flatMap(al => DicomUtil.getTimeAndDate(al, dateTag, timeTag)).map(d => d.getTime)
@@ -315,8 +318,8 @@ object Util extends Logging {
   }
 
   /**
-   * Get the patient ID for building an Output.
-   */
+    * Get the patient ID for building an Output.
+    */
   def getOutputPatientId(al: AttributeList): Option[String] = {
     val at = al.get(TagFromName.PatientID)
     if ((at != null) && (at.getSingleStringValueOrNull != null))
@@ -326,30 +329,30 @@ object Util extends Logging {
   }
 
   /**
-   * Given a DICOM date/time, adjust it by the local time zone amount.
-   */
+    * Given a DICOM date/time, adjust it by the local time zone amount.
+    */
   def adjustDicomDateByLocalTimeZone(date: Date): Date = {
     new Date(date.getTime - TimeZone.getDefault.getRawOffset)
   }
 
   /**
-   * Given a DICOM date/time, adjust it by the local time zone amount.
-   */
+    * Given a DICOM date/time, adjust it by the local time zone amount.
+    */
   def adjustDicomDateByLocalTimeZone(ms: Long): Long = {
     ms - TimeZone.getDefault.getRawOffset
   }
 
   /**
-   * Get the jar file that contains this class.
-   */
+    * Get the jar file that contains this class.
+    */
   lazy val thisJarFile: File = {
     val clss = this.getClass // Pick current jar.  For a different jar pick a class from that jar.
     new File(clss.getProtectionDomain.getCodeSource.getLocation.toURI)
   }
 
   /**
-   * Get a Long from a string if possible
-   */
+    * Get a Long from a string if possible
+    */
   def stringToLong(text: String): Option[Long] = {
     try {
       val l: Long = text.toLong
@@ -360,12 +363,12 @@ object Util extends Logging {
   }
 
   /**
-   * Get a Long from a string if possible
-   */
+    * Get a Long from a string if possible
+    */
   def stringToLong(text: Option[String]): Option[Long] = {
     text match {
       case Some(t) => stringToLong(t)
-      case _ => None
+      case _       => None
     }
   }
 
@@ -386,11 +389,7 @@ object Util extends Logging {
     }
 
     val prop = new Properties
-    val fileNameList = Seq(
-      """wrapper.conf""",
-      """yajsw-stable-12.12\conf\wrapper.conf""",
-      """src\main\resources\wrapper.conf""",
-      """..\..\main\resources\wrapper.conf""") ++ wrapperByJar
+    val fileNameList = Seq("""wrapper.conf""", """yajsw-stable-12.12\conf\wrapper.conf""", """src\main\resources\wrapper.conf""", """..\..\main\resources\wrapper.conf""") ++ wrapperByJar
 
     val fileList = fileNameList.map(name => new File(name))
 
@@ -423,14 +422,15 @@ object Util extends Logging {
   }
 
   /**
-   * Safely get the list of files in a directory.
-   */
+    * Safely get the list of files in a directory.
+    */
   def listDirFiles(dir: File): Seq[File] = {
-    val list = try {
-      dir.listFiles.toSeq
-    } catch {
-      case _: Throwable => null
-    }
+    val list =
+      try {
+        dir.listFiles.toSeq
+      } catch {
+        case _: Throwable => null
+      }
 
     if (list != null) list else Seq[File]()
   }
@@ -444,40 +444,39 @@ object Util extends Logging {
   }
 
   /**
-   * Get the file name without the extension, as in:   foo.bar ==> foo
-   */
+    * Get the file name without the extension, as in:   foo.bar ==> foo
+    */
   def fileBaseName(file: File): String = {
     file.getName match {
       case name if name.contains('.') => name.substring(0, name.lastIndexOf('.'))
-      case name => name
+      case name                       => name
     }
   }
 
   /**
-   * Given the text for a single CVS cell, return the properly formatted text for CSV.
-   */
+    * Given the text for a single CVS cell, return the properly formatted text for CSV.
+    */
   def textToCsv(text: String): String = {
     if (text.contains('"') || text.contains(',')) {
       '"' + text.replaceAll("\"", "\"\"") + '"'
-    }
-    else text
+    } else text
   }
 
   /**
-   * Make a new file reference, putting the given file in the given directory.
-   */
+    * Make a new file reference, putting the given file in the given directory.
+    */
   def reDir(file: File, dir: File): File = {
     new File(dir, file.getName)
   }
 
   /**
-   * Remove the suffix from the given file name.  Examples:
-   *
-   * foo.TXT -> foo
-   * bar.    -> bar
-   * bar..   -> bar.
-   * goo.foo.roo -> goo.foo
-   */
+    * Remove the suffix from the given file name.  Examples:
+    *
+    * foo.TXT -> foo
+    * bar.    -> bar
+    * bar..   -> bar.
+    * goo.foo.roo -> goo.foo
+    */
   //noinspection RegExpRedundantEscape
   def removeFileNameSuffix(fileName: String): String = fileName.replaceAll("\\.[^\\.]*$", "")
 
@@ -486,13 +485,13 @@ object Util extends Logging {
   //  }
 
   /**
-   * Specified by 300A,00B8  RTBeamLimitingDeviceType.
-   */
+    * Specified by 300A,00B8  RTBeamLimitingDeviceType.
+    */
   val xOrientation = Seq("X", "ASYMX", "MLCX", "MLCX1", "MLCX2")
 
   /**
-   * Specified by 300A,00B8  RTBeamLimitingDeviceType.
-   */
+    * Specified by 300A,00B8  RTBeamLimitingDeviceType.
+    */
   val yOrientation = Seq("Y", "ASYMY", "MLCY")
 
   def specifiesX(devType: String): Boolean = xOrientation.contains(devType.toUpperCase)
@@ -500,27 +499,28 @@ object Util extends Logging {
   def specifiesY(devType: String): Boolean = yOrientation.contains(devType.toUpperCase)
 
   /**
-   * Write a PNG file in a thread safe way.
-   */
-  def writePngX(im: RenderedImage, pngFile: File): Unit = fileSystemWriteSync.synchronized({
-    pngFile.delete
-    val fos = new FileOutputStream(pngFile)
-    ImageIO.write(im, "png", fos)
-    try {
-      fos.flush()
-      fos.close()
-    } catch {
-      case t: Throwable => logger.warn("problem closing file output stream for PNG file " + pngFile.getAbsolutePath + " : " + t)
-    }
-  })
+    * Write a PNG file in a thread safe way.
+    */
+  def writePngX(im: RenderedImage, pngFile: File): Unit =
+    fileSystemWriteSync.synchronized({
+      pngFile.delete
+      val fos = new FileOutputStream(pngFile)
+      ImageIO.write(im, "png", fos)
+      try {
+        fos.flush()
+        fos.close()
+      } catch {
+        case t: Throwable => logger.warn("problem closing file output stream for PNG file " + pngFile.getAbsolutePath + " : " + t)
+      }
+    })
 
   /**
-   * Write a PNG file in a thread safe way.
-   *
-   * First render the image into a byte array.  This can take time and is thread safe, so it does not
-   * need to be done in a synchronized way.  Then write the byte array to a file, which does need to
-   * be done in a synchronized way.
-   */
+    * Write a PNG file in a thread safe way.
+    *
+    * First render the image into a byte array.  This can take time and is thread safe, so it does not
+    * need to be done in a synchronized way.  Then write the byte array to a file, which does need to
+    * be done in a synchronized way.
+    */
   def writePng(im: RenderedImage, pngFile: File): Unit = {
     try {
       val baos = new ByteArrayOutputStream
@@ -534,37 +534,33 @@ object Util extends Logging {
   }
 
   /**
-   * Write a JPG / JPEG file in a thread safe way.
-   */
-  def writeJpg(im: RenderedImage, jpegFile: File): Unit = fileSystemWriteSync.synchronized({
-    jpegFile.delete
-    ImageIO.write(im, "jpg", new FileOutputStream(jpegFile))
-  })
+    * Write a JPG / JPEG file in a thread safe way.
+    */
+  def writeJpg(im: RenderedImage, jpegFile: File): Unit =
+    fileSystemWriteSync.synchronized({
+      jpegFile.delete
+      ImageIO.write(im, "jpg", new FileOutputStream(jpegFile))
+    })
 
   /**
-   * Round the angle to the closest 90 degree angle.
-   * @param angleInDegrees Angle to round off.
-   */
+    * Round the angle to the closest 90 degree angle.
+    * @param angleInDegrees Angle to round off.
+    */
   def angleRoundedTo90(angleInDegrees: Double): Int = {
     ((((angleInDegrees % 360.0) + 360.0) / 90.0).round.toInt % 4) * 90
   }
 
   /**
-   * Convert arbitrary angle in degrees to a number 360 < degrees >= 0
-   */
+    * Convert arbitrary angle in degrees to a number 360 < degrees >= 0
+    */
   def modulo360(degrees: Double): Double = {
     ((degrees % 360.0) + 360.0) % 360.0
   }
 
-
   /**
-   * Add graticules to the given image.
-   */
-  def addGraticules(
-                     image: BufferedImage,
-                     x2Pix: Double => Double, y2Pix: Double => Double,
-                     pix2X: Double => Double, pix2Y: Double => Double,
-                     graticuleColor: Color): Unit = {
+    * Add graticules to the given image.
+    */
+  def addGraticules(image: BufferedImage, x2Pix: Double => Double, y2Pix: Double => Double, pix2X: Double => Double, pix2Y: Double => Double, graticuleColor: Color): Unit = {
 
     val graphics = ImageUtil.getGraphics(image)
 
@@ -668,12 +664,9 @@ object Util extends Logging {
   }
 
   /**
-   * Add graticules to the given image.
-   */
-  def addGraticules(
-                     image: BufferedImage,
-                     translator: IsoImagePlaneTranslator,
-                     color: Color): Unit = {
+    * Add graticules to the given image.
+    */
+  def addGraticules(image: BufferedImage, translator: IsoImagePlaneTranslator, color: Color): Unit = {
 
     def x2Pix(xIso: Double) = translator.iso2Pix(xIso, 0).getX.round.toInt
 
@@ -687,8 +680,8 @@ object Util extends Logging {
   }
 
   /**
-   * Number f pixels from edge to put axis arrows.
-   */
+    * Number f pixels from edge to put axis arrows.
+    */
   val axisOffsetFromEdge = 40
 
   def addAxisLabels(image: BufferedImage, horzLabel: String, vertLabel: String, color: Color, top: Boolean = true, bottom: Boolean = true, left: Boolean = true, right: Boolean = true): Unit = {
@@ -761,8 +754,8 @@ object Util extends Logging {
   }
 
   /**
-   * Convert the given DICOM to a byte array (aka: serialize) and return the byte array.  If there is an error return a string describing it.
-   */
+    * Convert the given DICOM to a byte array (aka: serialize) and return the byte array.  If there is an error return a string describing it.
+    */
   def dicomToBytes(attributeList: AttributeList): Either[String, Array[Byte]] = {
     try {
       // val j = Util.DEFAULT_TRANSFER_SYNTAX
@@ -789,9 +782,9 @@ object Util extends Logging {
   }
 
   /**
-   * Given two colors and a palette size, return a list of colors of the
-   * given size that steps between the given colors.
-   */
+    * Given two colors and a palette size, return a list of colors of the
+    * given size that steps between the given colors.
+    */
   def colorPallette(colorA: Color, colorB: Color, size: Int): IndexedSeq[Color] = {
     val step = {
       if (size == 1) 1.0 else (size - 1).toDouble
@@ -804,9 +797,9 @@ object Util extends Logging {
     def toColor(c: Double): Int = {
       val ci = c.round.toInt
       ci match {
-        case _ if ci < 0 => 0
+        case _ if ci < 0    => 0
         case _ if ci > 0xff => 0xff
-        case _ => ci
+        case _              => ci
       }
     }
 
@@ -819,9 +812,9 @@ object Util extends Logging {
   }
 
   /**
-   * Format a double with enough precision for most needs and not using the exponential format.  This works for numbers in
-   * of the magnitude range of e+8 to e-8.  Beyond that and they start to be annoyingly long strings.
-   */
+    * Format a double with enough precision for most needs and not using the exponential format.  This works for numbers in
+    * of the magnitude range of e+8 to e-8.  Beyond that and they start to be annoyingly long strings.
+    */
   def fmtDbl(dbl: Double): String = {
     val text = dbl.formatted("%6.3e").toDouble.formatted("%32.16f").replaceAll("0*$", "").trim
     if (text.endsWith(".")) text + "0" else text
@@ -844,28 +837,29 @@ object Util extends Logging {
   //  }
 
   /**
-   * Remove a possible artificial beam prefix.
-   */
+    * Remove a possible artificial beam prefix.
+    */
   def normalizeBeamName(name: String): String = {
-    val norm = if (name.matches("^[0-9][0-9]:.*"))
-      name.substring(3)
-    else
-      name
+    val norm =
+      if (name.matches("^[0-9][0-9]:.*"))
+        name.substring(3)
+      else
+        name
     norm.trim
   }
 
   /**
-   * Get the normalized beam name from the given attribute list.  Beam names are sometimes prefixed with "NN:", where NN is
-   * a pair of digits that cause the beams to be sorted by the Eclipse planning system in the preferred delivery order.
-   */
+    * Get the normalized beam name from the given attribute list.  Beam names are sometimes prefixed with "NN:", where NN is
+    * a pair of digits that cause the beams to be sorted by the Eclipse planning system in the preferred delivery order.
+    */
   def normalizedBeamName(al: AttributeList): String = {
     normalizeBeamName(al.get(TagByName.BeamName).getSingleStringValueOrEmptyString)
   }
 
   /**
-   * Determine if two beam names are equal.  Both do normalization and consider that one or both were truncated.  Some
-   * treatment planning systems truncates them from 16 characters to 13.
-   */
+    * Determine if two beam names are equal.  Both do normalization and consider that one or both were truncated.  Some
+    * treatment planning systems truncates them from 16 characters to 13.
+    */
   def beamNamesEqual(a: String, b: String): Boolean = {
     val aa = normalizeBeamName(a)
     val bb = normalizeBeamName(b)
@@ -877,20 +871,19 @@ object Util extends Logging {
   }
 
   /**
-   * Get the number of the beam referenced by the given RTIMAGE.
-   *
-   * If there is no referenced beam, then this will throw an exception.
-   *
-   * @param rtImage DICOM RTIMAGE.
-   * @return Beam number.
-   */
+    * Get the number of the beam referenced by the given RTIMAGE.
+    *
+    * If there is no referenced beam, then this will throw an exception.
+    *
+    * @param rtImage DICOM RTIMAGE.
+    * @return Beam number.
+    */
   def beamNumber(rtImage: AttributeList): Int =
     DicomUtil.findAllSingle(rtImage, TagByName.ReferencedBeamNumber).head.getIntegerValues.head
 
-
   /**
-   * Show which jar file is being used to ensure that we have the right version of the software.
-   */
+    * Show which jar file is being used to ensure that we have the right version of the software.
+    */
   def showJarFile(any: Any): Unit = {
 
     def description(file: File): String = {
@@ -910,19 +903,20 @@ object Util extends Logging {
       desc
     }
 
-    val msg = try {
-      description(edu.umro.ScalaUtil.Util.getJarFile(any).get)
-    } catch {
-      case _: Throwable => "Could not determine jar file being used."
-    }
+    val msg =
+      try {
+        description(edu.umro.ScalaUtil.Util.getJarFile(any).get)
+      } catch {
+        case _: Throwable => "Could not determine jar file being used."
+      }
 
     println(msg)
     logger.info(msg)
   }
 
   /**
-   * Load XML from a string.
-   */
+    * Load XML from a string.
+    */
   def loadXml(xmlText: String): Either[String, Elem] = {
     try {
       val doc = XML.loadString(xmlText)
@@ -936,9 +930,9 @@ object Util extends Logging {
   def slicePosition(attributeList: AttributeList): Double = attributeList.get(TagFromName.ImagePositionPatient).getDoubleValues()(2)
 
   /**
-   * Find the slice spacing by looking at the distance between consecutive slices.  Use a few of
-   * the smaller ones just in case there is a spacial discontinuity.
-   */
+    * Find the slice spacing by looking at the distance between consecutive slices.  Use a few of
+    * the smaller ones just in case there is a spacial discontinuity.
+    */
   private def getSliceSpacing(sorted: Seq[AttributeList]) = {
     if (sorted.size < 2) throw new IllegalArgumentException("Volume must contain at least 2 slices but actually has " + sorted.size)
     val sampleSize = 5
@@ -948,15 +942,15 @@ object Util extends Logging {
   }
 
   /**
-   * Sort series by Z position ascending.
-   */
+    * Sort series by Z position ascending.
+    */
   def sortByZ(attrListList: Seq[AttributeList]): Seq[AttributeList] = {
     attrListList.sortBy(al => slicePosition(al))
   }
 
   /**
-   * Get the size of a voxel in mm.  Requires that multiple slices be given.
-   */
+    * Get the size of a voxel in mm.  Requires that multiple slices be given.
+    */
   def getVoxSize_mm(attrListList: Seq[AttributeList]): Point3d = {
     val sorted = sortByZ(attrListList)
     val xSize = sorted.head.get(TagFromName.PixelSpacing).getDoubleValues()(0)
@@ -975,8 +969,8 @@ object Util extends Logging {
   }
 
   /**
-   * Get the list of isocenters in the given RTPLAN.
-   */
+    * Get the list of isocenters in the given RTPLAN.
+    */
   def getPlanIsocenterList(rtplan: AttributeList): Seq[Point3d] = {
 
     def controlPointSeqToIsocenter(cps: AttributeList): Option[Point3d] = {
@@ -999,8 +993,8 @@ object Util extends Logging {
   }
 
   /**
-   * Given arbitrary text, replace all special characters with underscore so it can be used as a JavaScript or XML identifier.
-   */
+    * Given arbitrary text, replace all special characters with underscore so it can be used as a JavaScript or XML identifier.
+    */
   def textToId(text: String): String = text.replaceAll("[^0-9a-zA-Z]", "_").replaceAll("__*", "_")
 
   def attributeListToDeviceSerialNumber(al: AttributeList): Option[String] = {
@@ -1013,15 +1007,15 @@ object Util extends Logging {
   }
 
   /**
-   * Convert a hex string to an AWT color.
-   */
+    * Convert a hex string to an AWT color.
+    */
   def hexToColor(hex: String): Color = {
     new Color(Integer.parseInt(hex, 16))
   }
 
   /**
-   * Get an attribute of a node as text.
-   */
+    * Get an attribute of a node as text.
+    */
   def getAttr(node: Node, name: String): String = (node \ ("@" + name)).text
 
   def badPixelRadius(attributeList: AttributeList): Int = {
@@ -1036,15 +1030,13 @@ object Util extends Logging {
     val numPixels = dicomImage.width * dicomImage.height
     val million = 1000.0 * 1000
     val maxBadPixels = ((Config.MaxEstimatedBadPixelPerMillion / million) * numPixels).round.toInt
-    val badPixels = dicomImage.identifyBadPixels(
-      maxBadPixels,
-      Config.BadPixelStdDev, Config.BadPixelMaximumPercentChange, Util.badPixelRadius(al), Config.BadPixelMinimumDeviation_CU)
+    val badPixels = dicomImage.identifyBadPixels(maxBadPixels, Config.BadPixelStdDev, Config.BadPixelMaximumPercentChange, Util.badPixelRadius(al), Config.BadPixelMinimumDeviation_CU)
     badPixels.filter(bp => bp.rating > 100) // TODO filter?
   }
 
   /**
-   * Attempt to free memory by using gc.
-   */
+    * Attempt to free memory by using gc.
+    */
   def garbageCollect(): Unit = {
     val runtime = Runtime.getRuntime
 
@@ -1062,14 +1054,13 @@ object Util extends Logging {
     logger.info("Free memory after garbage collection hint  : " + after + "    amount freed: " + (after - before))
   }
 
-
   def getFrameOfRef(al: AttributeList): String = al.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
 
   def getFrameOfRef(dicomFile: DicomFile): String = getFrameOfRef(dicomFile.attributeList.get)
 
   /**
-   * Transform a point by this matrix and create a new point.
-   */
+    * Transform a point by this matrix and create a new point.
+    */
   def transform(matrix: Matrix4d, point: Point3d): Point3d = {
     val x = point.clone.asInstanceOf[Point3d]
     matrix.transform(x)
@@ -1077,8 +1068,8 @@ object Util extends Logging {
   }
 
   /**
-   * Transform a point by the inverse of the given matrix and create a new point.
-   */
+    * Transform a point by the inverse of the given matrix and create a new point.
+    */
   def invTransform(matrix: Matrix4d, point: Point3d): Point3d = {
     val invMatrix = matrix.clone.asInstanceOf[Matrix4d]
     invMatrix.invert()
@@ -1088,26 +1079,25 @@ object Util extends Logging {
   }
 
   /**
-   * Multiply a matrix by another matrix.  The original matrixes are unchanged.  Note that the parameter
-   * order is important; they are not interchangeable.
-   *
-   * @param a Matrix to multiply.
-   * @param b Matrix to multiply.
-   * @return the transposition of the original matrix.
-   */
+    * Multiply a matrix by another matrix.  The original matrixes are unchanged.  Note that the parameter
+    * order is important; they are not interchangeable.
+    *
+    * @param a Matrix to multiply.
+    * @param b Matrix to multiply.
+    * @return the transposition of the original matrix.
+    */
   def multiplyMatrix(a: Matrix4d, b: Matrix4d): Matrix4d = {
     val t = a.clone().asInstanceOf[Matrix4d]
     t.mul(b)
     t
   }
 
-
   /**
-   * Calculate the transpose a matrix.  The original matrix is unchanged.
-   *
-   * @param matrix Matrix to transpose.
-   * @return the transposition of the original matrix.
-   */
+    * Calculate the transpose a matrix.  The original matrix is unchanged.
+    *
+    * @param matrix Matrix to transpose.
+    * @return the transposition of the original matrix.
+    */
   def transposeMatrix(matrix: Matrix4d): Matrix4d = {
     val trans = matrix.clone().asInstanceOf[Matrix4d]
     trans.transpose()
@@ -1115,12 +1105,12 @@ object Util extends Logging {
   }
 
   /**
-   * Format the matrix as a Matlab consumable string, aligning decimal points vertically and
-   * minimizing the overall width.
-   *
-   * @param matrix Matrix to format.
-   * @return A text fragment that can be embedded in a Matlab program and executed as code.
-   */
+    * Format the matrix as a Matlab consumable string, aligning decimal points vertically and
+    * minimizing the overall width.
+    *
+    * @param matrix Matrix to format.
+    * @return A text fragment that can be embedded in a Matlab program and executed as code.
+    */
   def formatMatrix(matrix: Matrix4d): String = {
     def fmt(d: Double) = {
       d.toString.replaceAll("00* ", "0 ").trim.replaceAll("\\.$", ".0")
@@ -1134,15 +1124,16 @@ object Util extends Logging {
 
       /** Largest index of position of decimal point. */
       val decimalPosition: Int = textList.map(dPos).max
+
       /** Maximum number of characters needed to represent a number. */
       val maxLength: Int = textList.map(t => t.length - dPos(t)).max + decimalPosition
 
       /**
-       * Add spaces before and after as needed.
-       *
-       * @param row Row index.
-       * @return Number formatted so it will line up visually.
-       */
+        * Add spaces before and after as needed.
+        *
+        * @param row Row index.
+        * @return Number formatted so it will line up visually.
+        */
       def show(row: Int): String = (Seq.fill(decimalPosition - dPos(textList(row)))(" ").mkString + textList(row) + "                                                 ").take(maxLength)
     }
 
@@ -1165,8 +1156,8 @@ object Util extends Logging {
   }
 
   /**
-   * Draw two green concentric circles around the RTPLAN center.  This imitates the way it is shown in Eclipse.
-   */
+    * Draw two green concentric circles around the RTPLAN center.  This imitates the way it is shown in Eclipse.
+    */
   def drawPlanCenter(image: BufferedImage, planCenter_pix: Point2d, scale: Double = 1.0): Unit = {
     def d2i(d: Double) = d.round.toInt
 
@@ -1176,17 +1167,13 @@ object Util extends Logging {
     val smallRadius = 4 * scale
     val largeRadius = smallRadius * 2
 
-    graphics.drawOval(
-      d2i(planCenter_pix.getX - smallRadius), d2i(planCenter_pix.getY - smallRadius),
-      d2i(smallRadius * 2), d2i(smallRadius * 2))
-    graphics.drawOval(
-      d2i(planCenter_pix.getX - largeRadius), d2i(planCenter_pix.getY - largeRadius),
-      d2i(largeRadius * 2), d2i(largeRadius * 2))
+    graphics.drawOval(d2i(planCenter_pix.getX - smallRadius), d2i(planCenter_pix.getY - smallRadius), d2i(smallRadius * 2), d2i(smallRadius * 2))
+    graphics.drawOval(d2i(planCenter_pix.getX - largeRadius), d2i(planCenter_pix.getY - largeRadius), d2i(largeRadius * 2), d2i(largeRadius * 2))
   }
 
   /**
-   * Scale a pixel coordinate by the given scale to produce a scaled coordinate in pixel space.
-   */
+    * Scale a pixel coordinate by the given scale to produce a scaled coordinate in pixel space.
+    */
   def scalePixel(scale: Int, pix: Double): Double = {
     scale * (pix + 0.5) - 0.5
   }
@@ -1194,10 +1181,10 @@ object Util extends Logging {
   def d2i(d: Double): Int = d.round.toInt
 
   /**
-   * Draw a + at the center showing where the plan isocenter is.
-   *
-   * @param center Center of + in pixels, not scaled.
-   */
+    * Draw a + at the center showing where the plan isocenter is.
+    *
+    * @param center Center of + in pixels, not scaled.
+    */
   def drawTarget(center: Point2d, bufImage: BufferedImage, scale: Int, color: Color = Color.red): Unit = {
 
     val planCenterOffsetAndScaled_pix = new Point2D.Double(center.getX, center.getY)
@@ -1269,32 +1256,30 @@ object Util extends Logging {
     right()
   }
 
-
-
   /**
-   * Get values from an attribute list, scaling by the amount given if they are
-   * numeric.  Discrete (Int, Short, Long) values will be rounded.  Search the
-   * entire depth of the attribute list for values, using the first one.  If
-   * there is a problems (such as none found), then return a Seq of "NA".
-   *
-   * @param al  Attribute list containing values.
-   * @param tag Attribute tag of value.
-   * @param scale Amount to scale value.  Ignored if string.
-   * @return String representation of scaled values.
-   */
+    * Get values from an attribute list, scaling by the amount given if they are
+    * numeric.  Discrete (Int, Short, Long) values will be rounded.  Search the
+    * entire depth of the attribute list for values, using the first one.  If
+    * there is a problems (such as none found), then return a Seq of "NA".
+    *
+    * @param al  Attribute list containing values.
+    * @param tag Attribute tag of value.
+    * @param scale Amount to scale value.  Ignored if string.
+    * @return String representation of scaled values.
+    */
   def attr2Csv(al: AttributeList, tag: AttributeTag, scale: Double = 1.0): Seq[String] = {
     try {
       val at = DicomUtil.findAllSingle(al, tag).head
-      def getLong() = at.getLongValues.map(l => (l * scale).round)
+      def asLong() = at.getLongValues.map(l => (l * scale).round)
       val vr = DicomUtil.dictionary.getValueRepresentationFromTag(tag)
       val numList = vr match {
         case _ if ValueRepresentation.isIntegerStringVR(vr) => at.getIntegerValues.map(i => (i * scale).round.toInt)
-        case _ if ValueRepresentation.isLongStringVR(vr) => getLong()
+        case _ if ValueRepresentation.isLongStringVR(vr)    => asLong()
 
-        case _ if ValueRepresentation.isSignedLongVR(vr) => getLong()
-        case _ if ValueRepresentation.isSignedShortVR(vr) => getLong()
+        case _ if ValueRepresentation.isSignedLongVR(vr)  => asLong()
+        case _ if ValueRepresentation.isSignedShortVR(vr) => asLong()
 
-        case _ if ValueRepresentation.isUnsignedLongVR(vr) => getLong()
+        case _ if ValueRepresentation.isUnsignedLongVR(vr)  => asLong()
         case _ if ValueRepresentation.isUnsignedShortVR(vr) => at.getIntegerValues.map(i => (i * scale).round.toShort)
 
         case _ if ValueRepresentation.isFloatDoubleVR(vr) => at.getDoubleValues.map(n => n * scale)
@@ -1303,25 +1288,34 @@ object Util extends Logging {
         case _ if ValueRepresentation.isDecimalStringVR(vr) => at.getFloatValues.map(n => n * scale)
 
         case _ if ValueRepresentation.isOtherByteOrWordVR(vr) => throw new RuntimeException("binary values not supported")
-        case _ => at.getStringValues // Handle all of the various string VRs.
+        case _                                                => at.getStringValues // Handle all of the various string VRs.
       }
       numList.map(n => n.toString)
-    }
-    catch {
+    } catch {
       case _: Throwable => Seq("NA", "NA", "NA")
     }
   }
-
-
 
   def main(args: Array[String]): Unit = {
 
     if (true) {
       val matrix = new Matrix4d(
-        0, 1.0 / 3, 667876.9879879876875776747575757, -47687.00000032,
-        28.5, 4444.987e-30, 1.0 / 3, -176.0,
-        0, -2768768765.0, 1.0 / 3, 6686.9879879876875776747575757,
-        5, 1.0 / 3, -56, 24
+        0,
+        1.0 / 3,
+        667876.9879879876875776747575757,
+        -47687.00000032,
+        28.5,
+        4444.987e-30,
+        1.0 / 3,
+        -176.0,
+        0,
+        -2768768765.0,
+        1.0 / 3,
+        6686.9879879876875776747575757,
+        5,
+        1.0 / 3,
+        -56,
+        24
       )
 
       println(matrix.toString)
@@ -1351,7 +1345,6 @@ object Util extends Logging {
       System.exit(0)
     }
 
-
     if (false) {
       val list: Seq[Double] = Seq(234.29847234, 0.00000023424, 2398472742.12341234)
       list.foreach(d => println("    " + d.toString + " --> " + d.formatted("%7.5f") + " ==> " + d.formatted("%7.5e")))
@@ -1363,7 +1356,8 @@ object Util extends Logging {
         """D:\pf\Conquest\dicomserver1417\data\Phantom""",
         """D:\pf\Conquest\dicomserver1417\data\txdlite_mr4""",
         """D:\pf\Conquest\dicomserver1417\data\28291735""",
-        """D:\pf\Conquest\dicomserver1417\data\junk""")
+        """D:\pf\Conquest\dicomserver1417\data\junk"""
+      )
 
       fileNameList.map(fn => {
         val f = new File(fn)
