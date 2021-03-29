@@ -877,6 +877,18 @@ object Util extends Logging {
   }
 
   /**
+   * Get the number of the beam referenced by the given RTIMAGE.
+   *
+   * If there is no referenced beam, then this will throw an exception.
+   *
+   * @param rtImage DICOM RTIMAGE.
+   * @return Beam number.
+   */
+  def beamNumber(rtImage: AttributeList): Int =
+    DicomUtil.findAllSingle(rtImage, TagByName.ReferencedBeamNumber).head.getIntegerValues.head
+
+
+  /**
    * Show which jar file is being used to ensure that we have the right version of the software.
    */
   def showJarFile(any: Any): Unit = {
