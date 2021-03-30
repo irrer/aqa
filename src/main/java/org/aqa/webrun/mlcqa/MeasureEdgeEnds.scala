@@ -89,9 +89,9 @@ class MeasureEdgeEnds(runReq: MlcQaRunReq) {
       val incr = (1 until preciseLeafSideList_mm.size).map(i => preciseLeafSideList_mm(i) - preciseLeafSideList_mm(i - 1))
       println("precise incr mm         : " + fl(incr))
 
-      val diff = {
+      val diff: Unit = {
         val size = Math.min(sideListPlan_mm.drop(1).size, preciseLeafSideList_mm.size)
-        val both = sideListPlan_mm.drop(1).take(size) zip (preciseLeafSideList_mm.take(size))
+        val both = sideListPlan_mm.slice(1, size + 1) zip preciseLeafSideList_mm.take(size)
         val diff = both.map(b => b._1 - b._2)
         println("diff                    : " + fl(diff))
       }
@@ -102,9 +102,9 @@ class MeasureEdgeEnds(runReq: MlcQaRunReq) {
       println("sideListPlan_pix        : " + fl(sideListPlan_pix.drop(1)))
       println("preciseLeafSideList_pix : " + fl(preciseLeafSideList_pix))
       println("preciseLeafSideList_pix : " + fl(preciseLeafSideList_pix))
-      val diff = {
+      val diff: Unit = {
         val size = Math.min(sideListPlan_pix.drop(1).size, preciseLeafSideList_pix.size)
-        val both = sideListPlan_pix.drop(1).take(size) zip (preciseLeafSideList_pix.take(size))
+        val both = sideListPlan_pix.slice(1, size + 1) zip preciseLeafSideList_pix.take(size)
         val diff = both.map(b => b._1 - b._2)
         println("diff                    : " + fl(diff))
       }
@@ -120,26 +120,26 @@ class MeasureEdgeEnds(runReq: MlcQaRunReq) {
 
       val mid = 365
 
-      def drawVertLineTop(xd: Double) = {
+      def drawVertLineTop(xd: Double): Unit = {
         g.setColor(Color.black)
         val x = xd.round.toInt
         g.drawLine(x, 0, x, mid)
       }
 
-      def drawVertLineMid(xd: Double) = {
+      def drawVertLineMid(xd: Double): Unit = {
         g.setColor(Color.white)
         val x = xd.round.toInt
         g.drawLine(x, mid, x, dicomImage.height - 1)
       }
 
-      sideListPlan_pix.map(x => drawVertLineTop(x))
-      preciseLeafSideList_pix.map(x => drawVertLineMid(x))
+      sideListPlan_pix.foreach(x => drawVertLineTop(x))
+      preciseLeafSideList_pix.foreach(x => drawVertLineMid(x))
       val outFile = new File("""D:\tmp\""" + System.currentTimeMillis() + """.png""")
       Util.writePng(img, outFile)
       println("Wrote file: " + outFile.getAbsolutePath)
     }
 
-    if (true) {
+    if (false) {
       val center = dicomImage.width / 2
       val list = (0 until dicomImage.height).map(y => dicomImage.get(center, y).round.formatted("%8d"))
       println("center pixel values (vertical):\n" + list.mkString("\n"))
@@ -167,7 +167,7 @@ object MeasureEdgeEnds {
     if (true) {
       val ljp = DicomUtil.findAllSingle(rtplan, TagByName.LeafJawPositions)
       def fix(jp: Attribute): Unit = {
-        if ((jp.getDoubleValues.size == 2) && (jp.getDoubleValues.head == -100)) {
+        if ((jp.getDoubleValues.length == 2) && (jp.getDoubleValues.head == -100)) {
           println("jp: " + jp.getDoubleValues.mkString("  "))
           jp.removeValues()
           jp.addValue(-199.9)
