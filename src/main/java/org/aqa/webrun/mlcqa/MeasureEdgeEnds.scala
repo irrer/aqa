@@ -20,6 +20,7 @@ import java.io.File
 
 class MeasureEdgeEnds(runReq: MlcQaRunReq) {
 
+  /*
   // Locate leaf sides
 
   def measure(beamName: String): Unit = {
@@ -187,4 +188,5 @@ object MeasureEdgeEnds {
 
     println("Done.  Elapsed ms: " + (System.currentTimeMillis() - start))
   }
+  */
 }

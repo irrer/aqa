@@ -658,10 +658,36 @@ Note that when building a package for release, the Maven build process uses the 
    
     <!-- When making the zoomed version of the EPID images, make them this size of a square in mm.-->
     <EPIDZoomSize_mm>60.0</EPIDZoomSize_mm>
-    
+
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <!-- List of names of beams to be evaluated for MLC QA. -->
+    <MlcQaBeamNameList>
+        <BeamName>Open_A_Bank</BeamName>
+        <BeamName>Open_B_Bank</BeamName>
+        <BeamName>Open_X2_Jaw</BeamName>
+
+        <BeamName>ABankC270</BeamName>
+        <BeamName>ABankC90</BeamName>
+        <BeamName>BBankC270</BeamName>
+        <BeamName>BBankC90</BeamName>
+        <BeamName>X1JawC270</BeamName>
+    </MlcQaBeamNameList>
+
+    <!-- For MLC QA, distance in mm next to leaf sides that should be ignored to diminish the effects of leaf leakage. -->
+    <MlcQaLeafSidePad_mm>1.0</MlcQaLeafSidePad_mm>
+
+    <!-- For MLC QA, size in mm of the bounding box that encompasses the leaf ends so as to emphasize the leaf sides. -->
+    <MlcQaLeafSideFinding_mm>5.0</MlcQaLeafSideFinding_mm>
+
+    <!-- For MLC QA, size in mm to define a bounding box around the end of the leaf to determine the location of the end. -->
+    <MlcQaLeafEndPenumbra_mm>20.0</MlcQaLeafEndPenumbra_mm>
+
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+
     <!-- Set to fix to clean up DicomSeries. Set to ignore to do nothing, set to check to show what it would do but
-    actually do nothing.  Invalid or missing values are interpreted as ignore. 
-   
+    actually do nothing.  Invalid or missing values are interpreted as ignore.
     Command line:
         java -cp AQA-0.3.00-jar-with-dependencies.jar org.aqa.db.DicomSeries
     -->

@@ -406,6 +406,12 @@ object Config extends Logging {
     list.distinct
   }
 
+  private def getMlcQaBeamNameList = {
+    val list = (document \ "MlcQaBeamNameList" \ "BeamName").map(n => n.head.text.trim).toList
+    logText("MlcQaBeamNameList", indentList(list))
+    list.distinct
+  }
+
   private def getSymmetryAndFlatnessBeamList = {
     val list = (document \ "SymmetryAndFlatnessBeamList" \ "BeamName").map(n => n.head.text.trim)
     logText("SymmetryAndFlatnessBeamList", indentList(list))
@@ -848,6 +854,11 @@ object Config extends Logging {
   val BBbyEPIDChartTolerance_mm: Double = logMainText("BBbyEPIDChartTolerance_mm", "1.0").toDouble.abs
   val BBbyEPIDChartYRange_mm: Double = logMainText("BBbyEPIDChartYRange_mm", "3.0").toDouble.abs
   val BBbyCBCTMaximumSliceThickness_mm: Double = logMainText("BBbyCBCTMaximumSliceThickness_mm", "1.0").toDouble.abs
+
+  val MlcQaBeamNameList = getMlcQaBeamNameList
+  val MlcQaLeafSidePad_mm: Double = logMainText("MlcQaLeafSidePad_mm", "1.0").toDouble.abs
+  val MlcQaLeafSideFinding_mm: Double = logMainText("MlcQaLeafSideFinding_mm", "5.0").toDouble.abs
+  val MlcQaLeafEndPenumbra_mm: Double = logMainText("MlcQaLeafEndPenumbra_mm", "20.0").toDouble.abs
 
   // =================================================================================
 

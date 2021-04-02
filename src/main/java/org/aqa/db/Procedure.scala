@@ -73,6 +73,7 @@ case class Procedure(
   final val isPhase2 = name.toLowerCase.contains("phase2")
   final val isLOC = (name.toLowerCase.contains("loc") || name.toLowerCase.contains("leaf offset")) && (!name.toLowerCase.contains("base"))
   final val isLOCBaseline = name.toLowerCase.contains("loc") && name.toLowerCase.contains("base")
+  final val isMlcQa = name.toLowerCase.contains("mlc") && name.toLowerCase.contains("qa")
 
 }
 
@@ -151,6 +152,7 @@ object Procedure {
   lazy val ProcOfPhase2 = list.filter(p => p.isPhase2).headOption
   lazy val ProcOfLOC = list.filter(p => p.isLOC).headOption
   lazy val ProcOfLOCBaseline = list.filter(p => p.isLOCBaseline).headOption
+  lazy val ProcOfMlcQa = list.filter(p => p.isMlcQa).headOption
 
   def main(args: Array[String]): Unit = {
     println("Starting Procedure.main")

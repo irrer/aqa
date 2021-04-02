@@ -2,16 +2,19 @@ package org.aqa.webrun
 
 import org.aqa.db.Procedure
 import org.restlet.Restlet
+
 import scala.collection.mutable.HashMap
 import org.restlet.Request
 import org.restlet.Response
 import org.aqa.web.WebUtil._
 import org.aqa.web.ProcedureUpdate
+
 import scala.xml.Elem
 import org.aqa.web.Session
 import org.aqa.webrun.phase2.Phase2
 import org.aqa.webrun.bbByCBCT.BBbyCBCTRun
 import org.aqa.webrun.bbByEpid.BBbyEPIDRun
+import org.aqa.webrun.mlcqa.MlcQaRun
 
 /**
  * Web interface for running the procedures.
@@ -47,6 +50,7 @@ object WebRun {
     ("BBbyCBCT", procedure => new BBbyCBCTRun(procedure)),
     ("BBbyEPID", procedure => new BBbyEPIDRun(procedure)),
     ("LOCUploadBaseFiles_1", procedure => new LOCUploadBaseFiles_1(procedure)),
+    ("MlcQaRun", procedure => new MlcQaRun(procedure)),
     ("UploadAndChooseMachine_1", procedure => new UploadAndChooseMachine_1(procedure)),
     ("WinstonLutz_1", procedure => new WinstonLutz_1(procedure)))
 

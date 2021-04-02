@@ -9,6 +9,8 @@ import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ImageUtil.LocateEdge
 import edu.umro.ImageUtil.LocateMax
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.Trace
+import org.aqa.Config
 import org.aqa.DicomFile
 import org.aqa.Logging
 import org.aqa.Util
@@ -16,18 +18,10 @@ import org.aqa.webrun.phase2.Phase2Util
 
 import java.awt.Color
 import java.awt.Rectangle
+import java.awt.image.BufferedImage
 import java.io.File
 
-class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Logging {
-
-  /* For MLC QA, distance in mm next to leaf sides that should be ignored to diminish the effects of leaf leakage. */
-  private val ConfigLeafSidePad_mm = 1.0
-
-  /* For MLC QA, size in mm of the bounding box that encompasses the leaf ends so as to emphasize the leaf sides. */
-  private val ConfigLeafSideFinding_mm = 5.0
-
-  /* For MLC QA, size in mm to define a bounding box around the end of the leaf to determine the location of the end. */
-  private val ConfigMlcQaLeafEndPenumbra_mm = 20.0
+case class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Logging {
 
   /** True if collimator is horizontal. */
   private val isHorizontal: Boolean = Phase2Util.isHorizontal(image)
@@ -52,7 +46,7 @@ class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Logging 
   private val dicomImage = new DicomImage(image)
 
   /** Create annotated image. */
-  val bufferedImage = dicomImage.toDeepColorBufferedImage(0.01)
+  val bufferedImage: BufferedImage = dicomImage.toDeepColorBufferedImage(0.01)
 
   Util.addGraticules(bufferedImage, translator, Color.lightGray)
 
@@ -90,10 +84,10 @@ class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Logging 
     * Mark the leaf ends and label with their positions.
     *
     * @param left_pix     Leftmost position of marker line in pixels
-    * @param right_pi     Rightmost position of marker line in pixels
+    * @param right_pix    Rightmost position of marker line in pixels
     * @param position_pix Vertical position of leaf end in pixels.
     */
-  private def annotateMeasurement(left_pix: Double, right_pix: Double, position_pix: Double) = {
+  private def annotateMeasurement(left_pix: Double, right_pix: Double, position_pix: Double): Unit = {
     val graphics = ImageUtil.getGraphics(bufferedImage)
 
     val pos = d2i(position_pix)
@@ -110,18 +104,18 @@ class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Logging 
       graphics.drawLine(x1, pos - 1, x2, pos - 1)
       graphics.drawLine(x1, pos + 1, x2, pos + 1)
 
-      val text = translator.pix2IsoCoordY(position_pix).formatted("%6.2f").trim
+      val text = (-translator.pix2IsoCoordY(position_pix)).formatted("%6.2f").trim
       val textDim = ImageText.getTextDimensions(graphics, text)
 
-      val boundingBoxHeight = translator.iso2PixDistY(ConfigLeafSideFinding_mm)
+      val boundingBoxHeight = translator.iso2PixDistY(Config.MlcQaLeafSideFinding_mm)
 
       val border_px = 3
 
       // center coordinates for text
       val xCenter = (left_pix + right_pix) / 2.0
-      val yCenter = position_pix - boundingBoxHeight - textDim.getCenterY - border_px * 2
+      val yCenter = position_pix - 5 - boundingBoxHeight - textDim.getCenterY - border_px * 2
 
-      def makeBackground() = {
+      def makeBackground(): Unit = {
         val x = xCenter - textDim.getWidth / 2.0 - border_px
         val y = yCenter - textDim.getHeight / 2.0 - border_px
         val width = textDim.getWidth + border_px * 2
@@ -161,10 +155,10 @@ class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Logging 
       val leafA = LocateMax.locateMax(profileFlipped.take(half))
       val leafB = LocateMax.locateMax(profileFlipped.drop(half)) + half
 
-      val penumbraHeight_pix = translator.iso2PixDistY(ConfigMlcQaLeafEndPenumbra_mm)
+      val penumbraHeight_pix = translator.iso2PixDistY(Config.MlcQaLeafEndPenumbra_mm)
 
-      val x = box.x + leafA + ConfigLeafSidePad_mm
-      val width = (leafB - leafA) - (ConfigLeafSidePad_mm * 2)
+      val x = box.x + leafA + Config.MlcQaLeafSidePad_mm
+      val width = (leafB - leafA) - (Config.MlcQaLeafSidePad_mm * 2)
       val y = box.getCenterY - penumbraHeight_pix / 2
       val height = penumbraHeight_pix
       val endBoundingRectangle = rectD(x, y, width, height)
@@ -201,7 +195,7 @@ class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Logging 
     else {
       val leafWidth_mm = (leafSidesFromPlanAsPix.head - leafSidesFromPlanAsPix(1)).abs
       val leafWidth_pix = translator.iso2PixDistX(leafWidth_mm)
-      val leafSideFinding_pix = translator.iso2PixDistY(ConfigLeafSideFinding_mm)
+      val leafSideFinding_pix = translator.iso2PixDistY(Config.MlcQaLeafSideFinding_mm)
 
       val height = leafSideFinding_pix
       val width = leafWidth_pix * 2
@@ -216,27 +210,29 @@ class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Logging 
       val bottomLeftRect = rectD(xLeft, yBottom, width, height)
       val bottomRightRect = rectD(xRight, yBottom, width, height)
 
+      Trace.trace("Beam Name: " + Util.beamNumber(image)) // TODO rm
+
       val topLeftEnd = endOfLeaf_pix(topLeftRect)
       val topRightEnd = endOfLeaf_pix(topRightRect)
       val bottomLeftEnd = endOfLeaf_pix(bottomLeftRect)
       val bottomRightEnd = endOfLeaf_pix(bottomRightRect)
 
       val set = LeafSet(
-        topLeftEnd,
-        topRightEnd,
-        bottomLeftEnd,
-        bottomRightEnd
+        -translator.pix2IsoCoordY(topLeftEnd),
+        -translator.pix2IsoCoordY(topRightEnd),
+        -translator.pix2IsoCoordY(bottomLeftEnd),
+        -translator.pix2IsoCoordY(bottomRightEnd)
       )
 
       logger.info("MLC leaf end positions: " + set)
       set
     }
 
-  if (true) {
-    val pngFile = new File("""D:\tmp\aqa\GapSkew\tmp\MLC_""" + System.currentTimeMillis() + ".png")
-    Util.writePng(bufferedImage, pngFile)
-  }
+  /** Minimum leaf position specified in the RTPLAN. */
+  val leafPositionRtplanTop_mm: Double = endPairIso.max
 
+  /** Maximum leaf position specified in the RTPLAN. */
+  val leafPositionRtplanBottom_mm: Double = endPairIso.min
 }
 
 object FindLeafEnds {
