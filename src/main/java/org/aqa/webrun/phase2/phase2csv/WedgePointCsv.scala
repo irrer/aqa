@@ -67,18 +67,21 @@ class WedgePointCsv extends Phase2Csv[WedgePoint.WedgePointHistory] {
   /**
     * Get the SOP of the DICOM for this data set.
     *
-    * @param data   Data using DICOM data.
-    * @param prefix Prefix column headers with this.
+    * @param data Data using DICOM data.
     * @return SOP instance UID.
     */
-  override protected def getSopUID(data: WH, prefix: Option[String]): String = data.wedgePoint.wedgeSOPInstanceUID
+  override protected def getSopUID(data: WH): String = data.wedgePoint.wedgeSOPInstanceUID
+
+  override protected val dicom2HeaderPrefix: Option[String] = Some("Background")
+
+  override protected def getSopUID2(data: WH): String = data.wedgePoint.backgroundSOPInstanceUID
 }
 
 object WedgePointCsv {
 
   def main(args: Array[String]): Unit = {
     DbSetup.init
-    (new WedgePointCsv).updateFiles
+    (new WedgePointCsv).updateFiles()
   }
 
 }

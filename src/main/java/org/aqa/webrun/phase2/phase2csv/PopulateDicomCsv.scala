@@ -47,10 +47,9 @@ class PopulateDicomCsv extends Phase2Csv[DicomInstance] {
     * Get the SOP of the DICOM for this data set.
     *
     * @param data   Data using DICOM data.
-    * @param prefix Prefix column headers with this.
     * @return SOP instance UID.
     */
-  override protected def getSopUID(data: DI, prefix: Option[String]): String = data.SOPInstanceUID
+  override protected def getSopUID(data: DI): String = data.SOPInstanceUID
 }
 
 object PopulateDicomCsv extends Logging {
@@ -66,7 +65,7 @@ object PopulateDicomCsv extends Logging {
         try {
           if (series.modality.equals("RTIMAGE")) {
             val di = series.sopInstanceUIDList.split(" ").filter(_.nonEmpty).map(DicomInstance).head
-            populateDicomCsv.getDicomText(di, m)
+            populateDicomCsv.getDicomText(di.SOPInstanceUID, m)
           } else
             println("Ignoring non-RTIMAGE series: " + series)
         } catch {

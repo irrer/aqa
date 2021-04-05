@@ -14,16 +14,31 @@ import java.io.File
   */
 class MaintenanceCsv(metadataCache: MetadataCache) { // extends Phase2Csv [MaintenanceRecord] { // TODO extend to use file generator code
 
+  /**
+    * Replace newline characters with blanks so they only occupy one line of the CSV file.
+    *
+    * Processes both \n and \r.
+    *
+    * @param text Might contain newlines.
+    * @return Text with newlines replaced by blanks.
+    */
+  private def replaceNewline(text: String): String = {
+    text.replace('\n', ' ').replace('\r', ' ')
+  }
+
   private val colList = Seq(
-    CsvCol("Institution", "Anonymous version of institution name.", (mt: MaintenanceRecord) => metadataCache.institutionNameMap(metadataCache.machineMap(mt.machinePK).institutionPK)),
+    CsvCol(
+      "Institution",
+      "Anonymous version of institution name.",
+      (mt: MaintenanceRecord) => metadataCache.institutionNameMap(metadataCache.machineMap(mt.machinePK).institutionPK)
+    ),
     CsvCol("Machine", "Anonymous version of machine id.", (mt: MaintenanceRecord) => metadataCache.machineMap(mt.machinePK).id),
     CsvCol("Effective Date", "Date and time of maintenance.", (mt: MaintenanceRecord) => Util.standardDateFormat.format(mt.creationTime)),
     CsvCol("Maintenance Category", "Type of maintenance.", (mt: MaintenanceRecord) => mt.category),
     CsvCol("Created by User", "Anonymous version of user id.", (mt: MaintenanceRecord) => metadataCache.userMap(mt.userPK)),
-    CsvCol("Summary", "Short description of maintenance.", (mt: MaintenanceRecord) => mt.summary),
-    CsvCol("Description", "Full description of maintenance.", (mt: MaintenanceRecord) => mt.description)
+    CsvCol("Summary", "Short description of maintenance.", (mt: MaintenanceRecord) => replaceNewline(mt.summary)),
+    CsvCol("Description", "Full description of maintenance.", (mt: MaintenanceRecord) => replaceNewline(mt.description))
   )
-
 
   /**
     * Convert a maintenance record into a single CSV row
@@ -34,10 +49,8 @@ class MaintenanceCsv(metadataCache: MetadataCache) { // extends Phase2Csv [Maint
     colList.map(mtCsv => mtCsv.toText(maintenanceRecord)).mkString(",")
   }
 
-
   /** The CSV headers for maintenance records. */
   val headerText: String = colList.map(c => c.header).mkString(",")
-
 
   /**
     * Get all maintenance records grouping all records within an institution together, all records for
@@ -46,7 +59,6 @@ class MaintenanceCsv(metadataCache: MetadataCache) { // extends Phase2Csv [Maint
     * @return Grouped and ordered list.
     */
   def retrieveGroupedAndOrderedList(): Seq[MaintenanceRecord] = {
-
 
     /**
       * Make a string that will group all records within an institution together, all records for
@@ -67,10 +79,10 @@ class MaintenanceCsv(metadataCache: MetadataCache) { // extends Phase2Csv [Maint
 object MaintenanceCsv {
 
   /**
-   * Create the MaintenanceRecord.csv file for all institutions.
-   *
-   * @param args Not used
-   */
+    * Create the MaintenanceRecord.csv file for all institutions.
+    *
+    * @param args Not used
+    */
   def main(args: Array[String]): Unit = {
     val start = System.currentTimeMillis()
     DbSetup.init

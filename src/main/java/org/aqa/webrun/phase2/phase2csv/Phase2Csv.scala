@@ -31,21 +31,28 @@ abstract class Phase2Csv[T] extends Logging {
   /**
     * Get the SOP of the DICOM for this data set.
     * @param data Data using DICOM data.
-    * @param prefix Prefix column headers with this.
     * @return SOP instance UID.
     */
-  protected def getSopUID(data: T, prefix: Option[String] = None): String
+  protected def getSopUID(data: T): String
 
   /**
-    * Get the SOP of the second DICOM for this data set.
-    * @param data Data using DICOM data.
-    * @param prefix Prefix column headers with this.
-    * @return SOP instance UID.
+    * If there is a second DICOM file involved for the data set, then
     */
-  protected def getSopUID2(data: T, prefix: Option[String] = None): Option[String] = None
+  protected val dicom2HeaderPrefix: Option[String] = None
+
+  /**
+    * Get the SOP of the second DICOM image for this data set.
+    *
+    * This is only used if <code>dicom2HeaderPrefix</code> is defined.
+    *
+    * @param data Data using DICOM data.
+    * @return Header prefix and second SOP instance UID.
+    */
+  protected def getSopUID2(data: T): String = ""
 
   /**
     * Get the output associated with the data.
+    *
     * @param data Data associated with the output.
     * @return A DB output.
     */
@@ -92,18 +99,24 @@ abstract class Phase2Csv[T] extends Logging {
     */
   def makeHeader(): String = {
     val dataHeaderList = colList.map(col => Util.textToCsv(col.header)).mkString(",")
-    prefixCsv.headerText + "," + dataHeaderList + "," + machineDescriptionCsv.headerText + "," + dicomCsv.headerText
+    prefixCsv.headerText + "," + dataHeaderList + "," + machineDescriptionCsv.headerText + "," + dicomCsv.headerText() + {
+      if (dicom2HeaderPrefix.isEmpty)
+        ""
+      else {
+        "," + dicomCsv.headerText(dicom2HeaderPrefix)
+      }
+    }
   }
 
   /**
     * Get the DICOM CSV text for the given data set.  Try getting if from the cache dir first.  If that fails,
     * then create it and save it in cache.
     *
-    * @param dataSet Get CSV for DICOM referenced by this.
+    * @param sopUid Get CSV for DICOM referenced by this.
     * @param machine Machine that produced data.
     * @return CSV text for DICOM.
     */
-  protected def getDicomText(dataSet: T, machine: Machine): String = {
+  protected def getDicomText(sopUid: String, machine: Machine): String = {
     val machDir = {
       val instDir = new File(Config.cacheDirFile, metadataCache.institutionNameMap(machine.institutionPK))
       val dicomDir = new File(instDir, dicomCsvCacheDirName)
@@ -112,11 +125,11 @@ abstract class Phase2Csv[T] extends Logging {
 
     def fileOf(sop: String): File = new File(machDir, sop + ".csv")
 
-    val file = fileOf(getSopUID(dataSet))
+    val file = fileOf(sopUid)
     if (file.exists())
       Util.readTextFile(file).right.get
     else {
-      val alList = DicomSeries.getBySopInstanceUID(getSopUID(dataSet)).flatMap(ds => ds.attributeListList)
+      val alList = DicomSeries.getBySopInstanceUID(sopUid).flatMap(ds => ds.attributeListList)
 
       def makeCsv(al: AttributeList): Unit = {
         val f = fileOf(Util.sopOfAl(al))
@@ -130,7 +143,7 @@ abstract class Phase2Csv[T] extends Logging {
 
       alList.foreach(makeCsv)
       Util.garbageCollect()
-      Util.readTextFile(fileOf(getSopUID(dataSet))).right.get
+      Util.readTextFile(fileOf(sopUid)).right.get
     }
   }
 
@@ -197,8 +210,24 @@ abstract class Phase2Csv[T] extends Logging {
 
       val prefixText = prefixCsv.toCsvText(getOutput(dataList(dataIndex)))
       val machineDescriptionText = machineDescriptionCsv.toCsvText(getOutput(dataSet))
-      val dicomText = getDicomText(dataSet, machine)
-      val csvRow = Seq(prefixText, dataText, machineDescriptionText, dicomText).mkString(",")
+
+      val dicomText = getDicomText(getSopUID(dataSet), machine)
+
+      val dicomText2: Option[String] = {
+        if (dicom2HeaderPrefix.isEmpty)
+          None
+        else {
+          Some(getDicomText(getSopUID2(dataSet), machine))
+        }
+      }
+
+      val csvRow = {
+        val text = Seq(prefixText, dataText, machineDescriptionText, dicomText).mkString(",")
+        if (dicomText2.isEmpty)
+          text
+        else
+          text + "," + dicomText2.get
+      }
 
       val maintenanceText: Seq[String] = {
         if ((dataIndex + 1) < dataList.size) maintenanceBetween(dataSet, dataList(dataIndex + 1), mtMachList)
@@ -271,17 +300,17 @@ abstract class Phase2Csv[T] extends Logging {
     logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath)
   }
 
-  def generateIndex() : Unit = {
-      val csvList = Util.listDirFiles(csvDir).filter(_.getName.endsWith(".csv"))
+  def generateIndex(): Unit = {
+    val csvList = Util.listDirFiles(csvDir).filter(_.getName.endsWith(".csv"))
 
-      def fileToRow(file: File): Elem = {
+    def fileToRow(file: File): Elem = {
 
-        val date = {
-          val dateFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm")
-          dateFormat.format(new Date(file.lastModified()))
-        }
+      val date = {
+        val dateFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm")
+        dateFormat.format(new Date(file.lastModified()))
+      }
 
-        <tr>
+      <tr>
           <td>
             {file.getName.replaceAll(".csv$", "")}
           </td>
@@ -295,21 +324,10 @@ abstract class Phase2Csv[T] extends Logging {
             <a href={file.getName.replaceAll(".csv$", ".html")}>Column Definitions</a>
           </td>
         </tr>
-      }
+    }
 
-      val rowList = csvList.map(fileToRow)
-
-      val header = {
-        <tr>
-          <td><b>Name</b></td>
-          <td><b>CSV</b></td>
-          <td><b>Generated</b></td>
-          <td><b>Column Definitions</b></td>
-        </tr>
-      }
-
-      val content = {
-        <div class="col-md-8 col-md-offset-2">
+    val content = {
+      <div class="col-md-8 col-md-offset-2">
           <center>
             <h2>Index of CSV Files</h2>
             <em>These files are periodically generated and represent data from all institutions.</em>
@@ -318,16 +336,16 @@ abstract class Phase2Csv[T] extends Logging {
             {csvList.map(fileToRow)}
           </table>
         </div>
-      }
+    }
 
-      val text = WebUtil.wrapBody(content, "CSV Index")
-      Phase2Csv.csvDir.mkdirs()
-      val file = new File(Phase2Csv.csvDir, "index.html")
-      Util.writeFile(file, text)
-      logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath)
+    val text = WebUtil.wrapBody(content, "CSV Index")
+    Phase2Csv.csvDir.mkdirs()
+    val file = new File(Phase2Csv.csvDir, "index.html")
+    Util.writeFile(file, text)
+    logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath)
   }
 
-  def updateFiles: Unit = {
+  def updateFiles(): Unit = {
     try {
       writeDoc()
       writeToFile()
@@ -345,6 +363,5 @@ object Phase2Csv extends Logging {
     * Location of cross-institutional CSV files.
     */
   val csvDir = new File(Config.resultsDirFile, "CSV")
-
 
 }
