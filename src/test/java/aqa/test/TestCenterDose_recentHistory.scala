@@ -31,7 +31,7 @@ class TestCenterDose_recentHistory extends FlatSpec with Matchers {
   val date = new Timestamp(Util.standardDateFormat.parse("2018-05-30T00:00:00.000").getTime)
 
   println("Starting")
-  val list = CenterDose.history(machinePK, procedurePK)
+  val list = CenterDose.history(machinePK)
 
   println("results:\n    " + list.mkString("\n    "))
   println("Number of results: " + list.size)
