@@ -26,23 +26,21 @@ class WedgeChartHistory(outputPK: Long) {
     .getRange(machinePK, allHistory.head.output.dataDate.get, allHistory.last.output.dataDate.get)
     .filterNot(m => m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline)) // Ignore any 'Set Baseline' maintenance records.  These are deprecated from the database.
 
-
   /**
-   * Index of this point on the history graph so it can be shown in a different color (orange).
-   * @param beamHistory All points to be displayed.
-   * @return Zero relative index.
-   */
+    * Index of this point on the history graph so it can be shown in a different color (orange).
+    * @param beamHistory All points to be displayed.
+    * @return Zero relative index.
+    */
   private def indexOfThis(beamHistory: Seq[WedgePoint.WedgePointHistory]): Int = {
     val index = beamHistory.indexWhere(h => h.output.outputPK.get == output.outputPK.get)
     Math.max(0, index) // Cover case where index is not in the list.
   }
 
-
   /**
-   * Create a baseline for the series.
-   * @param wedgeHistory
-   * @return
-   */
+    * Create a baseline for the series.
+    * @param wedgeHistory Entire history for this machine.
+    * @return
+    */
   private def getBaseline(wedgeHistory: WedgePoint.WedgePointHistory): Option[Baseline] = {
     val baseline = Baseline(
       baselinePK = None,
@@ -56,14 +54,12 @@ class WedgeChartHistory(outputPK: Long) {
     Some(baseline)
   }
 
-
   private def getTolerance(baseline: Option[Baseline]): Option[C3Chart.Tolerance] = {
     if (baseline.isDefined) {
       val value = baseline.get.value.toDouble
       Some(new Tolerance(value - Config.WedgeTolerance_pct, value + Config.WedgeTolerance_pct))
     } else None
   }
-
 
   private def baselineMaintenanceList(beamHistory: Seq[WedgePoint.WedgePointHistory]): Seq[MaintenanceRecord] = {
     beamHistory
@@ -108,8 +104,15 @@ class WedgeChartHistory(outputPK: Long) {
     val maintenanceRecordList = getBeamMaintenanceRecordList(beamHistory)
 
     val xDateList = beamHistory.map(_.output.dataDate.get)
-    val baseline = getBaseline(beamHistory.find(_.wedgePoint.wedgePointPK.get == wedgePoint.wedgePointPK.get).get)
+    val historyPair = beamHistory.find(_.wedgePoint.wedgePointPK.get == wedgePoint.wedgePointPK.get).get
+    val baseline = getBaseline(historyPair)
     val tolerance = getTolerance(baseline)
+
+    val yRange = {
+      val mid = (100 * historyPair.baselineWedgePoint.wedgeValue_cu) / historyPair.baselineWedgePoint.backgroundValue_cu
+      val range = Config.WedgeTolerance_pct * 2
+      new C3Chart.YRange(mid - range, mid + range)
+    }
 
     new C3ChartHistory(
       chartIdOpt = Some(chartId),
@@ -120,7 +123,7 @@ class WedgeChartHistory(outputPK: Long) {
       xDateList = xDateList,
       baseline = baseline,
       tolerance = tolerance,
-      yRange = None,
+      yRange = Some(yRange),
       yAxisLabels = Seq("Percent of Background"),
       yDataLabel = "Percent of Background",
       yValues = Seq(beamHistory.map(_.wedgePoint.percentOfBackground_pct)),

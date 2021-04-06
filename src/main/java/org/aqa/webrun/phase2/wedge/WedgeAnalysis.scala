@@ -7,10 +7,7 @@ import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Baseline
-import org.aqa.db.CenterDose
 import org.aqa.db.CollimatorCentering
-import org.aqa.db.MaintenanceCategory
-import org.aqa.db.MaintenanceRecord
 import org.aqa.db.WedgePoint
 import org.aqa.run.ProcedureStatus
 import org.aqa.webrun.ExtendedData
@@ -23,20 +20,20 @@ import scala.collection.Seq
 import scala.xml.Elem
 
 /**
- * Analyze DICOM files for Wedge Analysis.
- */
+  * Analyze DICOM files for Wedge Analysis.
+  */
 object WedgeAnalysis extends Logging {
 
   def wedgeOrientationTransverse(beamName: String, plan: AttributeList): Boolean = {
     val bs = Phase2Util.getBeamSequenceOfPlan(beamName, plan)
     val WedgeOrientation = DicomUtil.seqToAttr(bs, TagByName.WedgeSequence).head.get(TagByName.WedgeOrientation).getDoubleValues.head
-    val horiz = Util.angleRoundedTo90(WedgeOrientation) match {
-      case 0 => true
-      case 90 => false
+    val horizontal = Util.angleRoundedTo90(WedgeOrientation) match {
+      case 0   => true
+      case 90  => false
       case 180 => true
       case 270 => false
     }
-    horiz
+    horizontal
   }
 
   def makeWedgeBaselineName(wedgeBeamName: String, backgroundBeamName: String): String = "Wedge " + wedgeBeamName + " / " + backgroundBeamName
@@ -44,45 +41,6 @@ object WedgeAnalysis extends Logging {
   def makeWedgeBaselineName(wedgePair: WedgePair): String = makeWedgeBaselineName(wedgePair.beamName, wedgePair.backgroundBeamName)
 
   def makeWedgeBaselineName(wedgePoint: WedgePoint): String = makeWedgeBaselineName(wedgePoint.wedgeBeamName, wedgePoint.backgroundBeamName)
-
-  /**
-   * Given the list of wedge points, determine if any of them need to have a baseline value created, and if so, create
-   * them.  If any baseline values are created, then create the corresponding MaintenanceRecord record.
-   */
-  private def updateBaselineAndMaintenanceRecord(wedgePointList: Seq[WedgePoint], extendedData: ExtendedData, runReq: RunReq): Unit = {
-
-    def constructOneBaseline(wedgePoint: WedgePoint): Option[Baseline] = {
-      val id = makeWedgeBaselineName(wedgePoint.wedgeBeamName, wedgePoint.backgroundBeamName)
-      Baseline.findLatest(extendedData.machine.machinePK.get, id, extendedData.output.dataDate.get) match {
-        case Some((maintenanceRecord, baseline)) => None
-        case _ => Some(Baseline.makeBaseline(-1, extendedData.output.dataDate.get, Util.sopOfAl(runReq.rtimageMap(wedgePoint.wedgeBeamName)), id, wedgePoint.percentOfBackground_pct))
-      }
-    }
-
-    val newBaselineList = wedgePointList.flatMap(wp => constructOneBaseline(wp))
-    if (newBaselineList.nonEmpty) {
-      logger.info("Automatically creating new MaintenanceRecord and " + newBaselineList.size + "default Wedge baseline(s) for " + extendedData.institution.name + " : " + extendedData.machine.id)
-
-      val summary = "Automatically created baseline value for Wedge."
-      val preamble = "Wedge baseline values are created automatically if they have not been established for the given machine.  The following is a list of the values:\n\n"
-      val valueText = newBaselineList.map(bl => "    " + bl.id + " : " + bl.value).mkString("\n")
-      val analysisTime = extendedData.output.startDate
-      val maintenanceRecordOrig = new MaintenanceRecord(
-        None,
-        MaintenanceCategory.setBaseline,
-        extendedData.machine.machinePK.get,
-        analysisTime,
-        extendedData.user.userPK.get,
-        extendedData.output.outputPK,
-        summary,
-        preamble + valueText)
-      val maintenanceRecord = maintenanceRecordOrig.insert
-
-      val list = newBaselineList.map(bl => bl.copy(maintenanceRecordPK = maintenanceRecord.maintenanceRecordPK.get))
-      Baseline.insert(list)
-      logger.info("Wedge MaintenanceRecord and baseline inserted")
-    }
-  }
 
   private case class WedgePair(beamName: String, backgroundBeamName: String)
 
@@ -110,11 +68,19 @@ object WedgeAnalysis extends Logging {
       else percent
     }
 
-    val wedgePoint = new WedgePoint(None, extendedData.output.outputPK.get,
-      Util.sopOfAl(derivedWedge.attributeList), wedgePair.beamName, isBaseline_text = false.toString, wedgeDose,
-      Util.sopOfAl(derivedBackground.attributeList), wedgePair.backgroundBeamName, backgroundDose,
+    val wedgePoint = new WedgePoint(
+      None,
+      extendedData.output.outputPK.get,
+      Util.sopOfAl(derivedWedge.attributeList),
+      wedgePair.beamName,
+      isBaseline_text = false.toString,
+      wedgeDose,
+      Util.sopOfAl(derivedBackground.attributeList),
+      wedgePair.backgroundBeamName,
+      backgroundDose,
       percent,
-      baselineValue)
+      baselineValue
+    )
 
     logger.info("Finished individual wedge analysis of " + wedgePair.beamName + " with background " + wedgePair.backgroundBeamName + "\nResult:\n" + wedgePoint)
     wedgePoint
@@ -123,76 +89,98 @@ object WedgeAnalysis extends Logging {
   val subProcedureName = "Wedge"
 
   /**
-   * Use the center dose and flood CenterDose points to calculate the WedgePoints.
-   */
-  private def analyze(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering, centerDoseList: Seq[CenterDose]): Seq[WedgePoint] = {
-    val outputPK = extendedData.output.outputPK.get
-
+    * Use the center dose and flood CenterDose points to calculate the WedgePoints.
+    */
+  private def analyze(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Seq[WedgePoint] = {
     val pointList = Phase2Util.makeCenterDosePointList(runReq.flood, collimatorCentering.center)
 
     val beamList = runReq.derivedMap.keys.toList
 
     def findBeamPair(wedgeBeamName: String): Option[WedgePair] = {
       Config.WedgeBeamList.find(w => w.wedge.equalsIgnoreCase(wedgeBeamName)) match {
-        case Some(wedgeBeam) => {
-
-          val bg = wedgeBeam.backgroundList.map(bg => beamList.find(c => c.equalsIgnoreCase(bg))).flatten
+        case Some(wedgeBeam) =>
+          val bg = wedgeBeam.backgroundList.flatMap(bg => beamList.find(c => c.equalsIgnoreCase(bg)))
           if (bg.isEmpty)
             None // no background beam
           else {
             Some(WedgePair(wedgeBeamName, bg.head)) // use the first one in the list of allowable background beams
           }
-        }
         case _ => None // wedge beam name not in input list
       }
 
     }
 
-    val wedgePairList = beamList.map(b => findBeamPair(b)).flatten
+    val wedgePairList = beamList.flatMap(b => findBeamPair(b))
     wedgePairList.map(wp => analyzeWedgePair(wp, pointList, extendedData, runReq))
   }
 
   /**
-   * Restore the baseline status of a wedge point as necessary.
-   * @param wpList Wedge point to update.
-   * @param baselineList List of beam+background beam names.
-   * @return List of wedge points, possibly modified.
-   */
-  private def restoreBaseline(wp: WedgePoint, baselineList: Seq[String]): WedgePoint ={
+    * Restore the baseline status of a wedge point as necessary.
+    * @param wp Wedge point to update.
+    * @param baselineList List of beam+background beam names.
+    * @return List of wedge points, possibly modified.
+    */
+  private def restoreBaseline(wp: WedgePoint, baselineList: Seq[String]): WedgePoint = {
     val id = wp.wedgeBeamName + wp.backgroundBeamName
     if (baselineList.contains(id))
       wp.copy(isBaseline_text = true.toString)
     else wp
   }
 
+  /**
+    * Determine if all the values passed.  If so, return true.  Also return true if there are no values.
+    *
+    * @param wedgePointList List of newly analyzed values.
+    * @param machinePK Machine from which they came.
+    * @return True if all passed.
+    */
+  private def allPass(wedgePointList: Seq[WedgePoint], machinePK: Long): Boolean = {
+    if (wedgePointList.isEmpty)
+      true
+    else {
+      val history = WedgePoint.history(machinePK)
+      val pkList = wedgePointList.map(_.wedgePointPK.get)
 
-  class WedgeResult(summary: Elem, status: ProcedureStatus.Value, wedgePointList: Seq[WedgePoint]) extends SubProcedureResult(summary, status, subProcedureName)
+      def passes(hist: WedgePoint.WedgePointHistory): Boolean = {
+        val pct = (100 * hist.wedgePoint.wedgeValue_cu) / hist.wedgePoint.backgroundValue_cu
+        val baselinePct = (100 * hist.baselineWedgePoint.wedgeValue_cu) / hist.baselineWedgePoint.backgroundValue_cu
+        (pct - baselinePct).abs <= Config.WedgeTolerance_pct
+      }
+
+      val allOk = history.filter(h => pkList.contains(h.wedgePoint.wedgePointPK.get)).map(passes).reduce(_ && _)
+
+      allOk
+    }
+  }
+
+  class WedgeResult(summary: Elem, status: ProcedureStatus.Value) extends SubProcedureResult(summary, status, subProcedureName)
 
   /**
-   * Run the WedgeAnalysis sub-procedure, save results in the database, return true for pass or false for fail.  For it to pass all images have to pass.
-   */
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering, centerDoseList: Seq[CenterDose]): Either[Elem, WedgeResult] = {
+    * Run the WedgeAnalysis sub-procedure, save results in the database, return true for pass or false for fail.  For it to pass all images have to pass.
+    */
+  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, WedgeResult] = {
     try {
       logger.info("Starting analysis of " + subProcedureName + " for machine " + extendedData.machine.id)
 
       val wedgePointList = {
-        analyze(extendedData, runReq, collimatorCentering, centerDoseList). // analyse wedge beams
+        analyze(extendedData, runReq, collimatorCentering). // analyse wedge beams
         map(wp => restoreBaseline(wp, runReq.wedgeBaselineRedoBeamList)). // restore baselines as needed
-        map(wp => wp.insert)  // insert into database, which also defines wedgePointPK
+        map(wp => wp.insert) // insert into database, which also defines wedgePointPK
       }
 
-      val status = ProcedureStatus.done
+      val pass = allPass(wedgePointList, extendedData.machine.machinePK.get)
+
+      val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
       logger.info("Starting HTML generation for " + subProcedureName)
       val summary = WedgeHTML.makeDisplay(extendedData, status, runReq, wedgePointList, collimatorCentering.center)
       logger.info("Finished HTML generation for " + subProcedureName)
-      val result = new WedgeResult(summary, status, wedgePointList)
+      val result = new WedgeResult(summary, status)
       logger.info("Finished analysis of " + subProcedureName + " for machine " + extendedData.machine.id)
       Right(result)
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         logger.warn("Unexpected error in analysis of MetadataCheck: " + t + fmtEx(t))
         Left(Phase2Util.procedureCrash(subProcedureName))
-      }
     }
   }
 }

@@ -368,7 +368,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
                     }
                     val seq: Seq[() => Either[Elem, SubProcedureResult]] = Seq(
                       () => CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
-                      () => WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result, centerDose.resultList),
+                      () => WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
                       () => SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
                       () => LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result)) ++ vmatFunction
 
