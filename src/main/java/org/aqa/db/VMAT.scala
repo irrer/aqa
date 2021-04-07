@@ -168,28 +168,28 @@ object VMAT extends ProcedureOutput {
     Db.perform(ops)
   }
 
-  case class VMATHistory(date: Date, vmat: VMAT) {
+  case class VMATHistory(output: Output, vmat: VMAT) {
     override def toString = {
-      "date: " + date + "    " + vmat
+      "date: " + output.dataDate.get + "    " + vmat
     }
+
+    val date = output.dataDate.get
+    def getTime = date.getTime
   }
 
   /**
    * Get VMAT results.
    *
    * @param machinePK: For this machine
-   *
-   * @param procedurePK: For this procedure
-   *
    */
-  def history(machinePK: Long, procedurePK: Long) = {
+  def history(machinePK: Long) = {
 
     val search = for {
-      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
-      vmat <- VMAT.query.filter(c => c.outputPK === output._1)
-    } yield ((output._2, vmat))
+      output <- Output.query.filter(o => (o.machinePK === machinePK))
+      vmat <- VMAT.query.filter(c => c.outputPK === output.outputPK)
+    } yield ((output, vmat))
 
-    val result = Db.run(search.result).map(h => new VMATHistory(h._1.get, h._2)).sortBy(_.date.getTime)
+    val result = Db.run(search.result).map(h => new VMATHistory(h._1, h._2)).sortBy(_.output.dataDate.get.getTime)
     result
   }
 

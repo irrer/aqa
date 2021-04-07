@@ -30,20 +30,20 @@ class VMATChartHistory(outputPK: Long, beamNameMLC: String) extends Logging {
   private val output = Output.get(outputPK).get
   private val procedure = Procedure.get(output.procedurePK).get
   private val machine = Machine.get(output.machinePK.get).get
-  private val history = VMAT.history(machine.machinePK.get, procedure.procedurePK.get).filter(h => h.vmat.beamNameMLC.equals(beamNameMLC))
+  private val history = VMAT.history(machine.machinePK.get).filter(h => h.vmat.beamNameMLC.equals(beamNameMLC))
 
   /**
     * Get history of given beam as an array of sets of percents ordered by date and each set within that date sorted by X position.
     */
   private def getBeamHist =
-    history.groupBy(h => h.vmat.leftRtplan_mm).toSeq.sortBy(g => g._1).map(g => g._2).map(hSeq => hSeq.sortBy(vmat => vmat.date.getTime).map(h => h.vmat.diff_pct))
+    history.groupBy(h => h.vmat.leftRtplan_mm).toSeq.sortBy(g => g._1).map(g => g._2).map(hSeq => hSeq.sortBy(vmat => vmat.getTime).map(h => h.vmat.diff_pct))
 
   /**
     * Get index of this output in the list of output.  Used to mark the orange dot in the chart.
     */
   private def getBeamIndex = {
     val outputTime = output.dataDate.get.getTime
-    val index = history.map(h => h.date.getTime).distinct.sorted.indexWhere(d => d == outputTime)
+    val index = history.map(h => h.getTime).distinct.sorted.indexWhere(d => d == outputTime)
     if (index == -1) None else Some(index)
   }
 
@@ -53,14 +53,14 @@ class VMATChartHistory(outputPK: Long, beamNameMLC: String) extends Logging {
   private def getLineNames =
     history.map(h => (h.vmat.leftRtplan_mm + h.vmat.rightRtplan_mm) / 2).distinct.sorted.map(c => "Center mm: " + Util.fmtDbl(c))
 
-  private val allDates = history.map(cd => cd.date).distinct.sorted
+  private val allDates = history.map(cd => cd.date).distinct.sortBy(_.getTime)
 
   /** All maintenance records for the entire history interval for all beams except for 'Set Baseline' to reduce clutter. */
   private val maintenanceRecordList = {
     if (history.isEmpty)
       Seq[MaintenanceRecord]()
     else
-      MaintenanceRecord.getRange(machine.machinePK.get, allDates.min, allDates.max).filter(m => !m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline))
+      MaintenanceRecord.getRange(machine.machinePK.get, allDates.minBy(_.getTime), allDates.maxBy(_.getTime)).filter(m => !m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline))
   }
 
   // list of shades of green
@@ -97,12 +97,12 @@ class VMATChartHistory(outputPK: Long, beamNameMLC: String) extends Logging {
       // TODO rm
 
       val min = history.minBy(h => h.vmat.leftRtplan_mm).vmat.leftRtplan_mm
-      val hist = history.filter(h => h.vmat.leftRtplan_mm == min).sortBy(h => h.date.getTime).map(h => h.vmat.diff_pct)
+      val hist = history.filter(h => h.vmat.leftRtplan_mm == min).sortBy(h => h.getTime).map(h => h.vmat.diff_pct)
 
       println(
         "hist:\n    " + history
           .filter(h => h.vmat.leftRtplan_mm == min)
-          .sortBy(h => h.date.getTime)
+          .sortBy(h => h.getTime)
           .map(h => h.date + " : " + Util.fmtDbl(h.vmat.leftRtplan_mm) + " : " + Util.fmtDbl(h.vmat.diff_pct))
           .mkString("\n    ")
       )
