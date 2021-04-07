@@ -28,7 +28,6 @@ object VMATChartHistory {
 class VMATChartHistory(outputPK: Long, beamNameMLC: String) extends Logging {
 
   private val output = Output.get(outputPK).get
-  private val procedure = Procedure.get(output.procedurePK).get
   private val machine = Machine.get(output.machinePK.get).get
   private val history = VMAT.history(machine.machinePK.get).filter(h => h.vmat.beamNameMLC.equals(beamNameMLC))
 
