@@ -145,7 +145,7 @@ object VMATAnalysis extends Logging {
       Phase2Util.pixToDose(pixValSeq, alOpen)
     }
 
-    logger.info("mlc avg of rects: " + (mlcAvgSeq.sum / mlcAvgSeq.size) + "    open avg of rects: " + (openAvgSeq.sum / openAvgSeq.size))
+    logger.info("mlc avg of rectangles: " + (mlcAvgSeq.sum / mlcAvgSeq.size) + "    open avg of rectangles: " + (openAvgSeq.sum / openAvgSeq.size))
 
     // divide each pixel in MLC to corresponding pixel in OPEN to create a new image.
     val ratioOfImages = {
@@ -158,8 +158,8 @@ object VMATAnalysis extends Logging {
         * Get the value for one pixel in the final array.  Convert each to CU, then divide MLC / OPEN.
         */
       def ratio(x: Int, y: Int) = {
-        val m = (mlcImage.get(x, y) + mlcOffset) * mlcSlope
-        val o = (openImage.get(x, y) + openOffset) * openSlope
+        val m = (mlcImage.get(x, y) * mlcSlope) + mlcOffset
+        val o = (openImage.get(x, y) * openSlope) + openOffset
         if (o == 0) 0 else (m / o).toFloat
       }
 
@@ -175,7 +175,10 @@ object VMATAnalysis extends Logging {
     val pctSeqOld = mlcAvgSeq.indices.map(i => (mlcAvgSeq(i) * 100) / openAvgSeq(i))
     val pctSeq = pixSeq_pix.map(p => ratioOfImages.averageOfRectangle(p.toRectangle) * 100)
 
-    if (true) { // TODO rm
+    // log a comparison of the old way verses the new way.
+    if (true) {
+      // Note: old way was to divide the average of one rectangle by another.  The new way to divide each
+      // pixel in one image by its counterpart in the other and then take the average.
       def toText(dSeq: Seq[Double]) = dSeq.map(p => p.formatted("%12.8f")).mkString("    ")
 
       println("VMAT comparison " + beamPair)
