@@ -1,6 +1,7 @@
 package org.aqa.webrun.phase2.phase2csv
 
 import com.pixelmed.dicom.AttributeList
+import edu.umro.ScalaUtil.FileUtil
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
@@ -329,10 +330,9 @@ object Phase2Csv extends Logging {
     * Location of cross-institutional CSV files.
     */
   val csvDir = new File(Config.resultsDirFile, "CSV")
-//========================================================================================
-  //========================================================================================
-  //========================================================================================
-  //========================================================================================
+
+  /** Name of file that contains all of the CSV files. */
+  val zipFileName = "AQAcsv.zip"
 
   /**
     * Write a file documenting columns of this CSV.
@@ -359,6 +359,9 @@ object Phase2Csv extends Logging {
     logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath)
   }
 
+  /**
+    * Generate a user friendly web page to act as an index and write it as a file.
+    */
   def generateIndex(): Unit = {
     val csvList = Util.listDirFiles(csvDir).filter(_.getName.endsWith(".csv"))
 
@@ -371,10 +374,7 @@ object Phase2Csv extends Logging {
 
       <tr>
         <td>
-          {file.getName.replaceAll(".csv$", "")}
-        </td>
-        <td>
-          <a href={file.getName}>Download CSV</a>
+          <a href={file.getName}>{file.getName.replaceAll(".csv$", "")}</a>
         </td>
         <td>
           {date}
@@ -389,13 +389,30 @@ object Phase2Csv extends Logging {
       <div class="col-md-8 col-md-offset-2">
         <center>
           <h2>Index of CSV Files</h2>
-          <em>These files are periodically generated and represent data from all institutions.</em>
+          <em>These files are periodically generated and contain data from all institutions.</em>
         </center>
         <table class="table table-bordered" style="margin:30px;">
+          <tr>
+            <th>
+              Type of data.  Click to download
+            </th>
+            <th>
+              Date generated
+            </th>
+            <th>
+              Description of Columns
+            </th>
+          </tr>
           {csvList.map(fileToRow)}
         </table>
+        <center>
+          <a href={zipFileName}>Download zipped version of all CSV files.</a>
+        </center>
       </div>
     }
+
+    val zipFile = new File(csvDir, zipFileName)
+    FileUtil.readFileTreeToZipFile(csvList, excludePatternList = Seq(), excludeFileList = Seq(), zipFile)
 
     val text = WebUtil.wrapBody(content, "CSV Index")
     Phase2Csv.csvDir.mkdirs()
