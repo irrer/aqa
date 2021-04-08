@@ -9,7 +9,10 @@ object Phase2CsvMakeAll {
 
   def main(args: Array[String]): Unit = {
     DbSetup.init
+    (new PopulateDicomCsv).populateAll() // Get the DICOM column data up to date.
     (new CenterDoseCsv).updateFiles()
+    (new CenterDoseCsv).updateFiles()
+    (new CollimatorCenteringCsv).updateFiles()
     (new SymmetryAndFlatnessCsv).updateFiles()
     (new VMAT_T2_DR_GSCsv).updateFiles()
     (new VMAT_T2_DG_RSCsv).updateFiles()

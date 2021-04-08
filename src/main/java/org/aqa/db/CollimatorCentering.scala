@@ -1,35 +1,27 @@
 package org.aqa.db
 
-import Db.driver.api._
-import org.aqa.Config
-import org.aqa.Util
-import java.io.File
-import scala.xml.XML
-import scala.xml.Node
-import scala.xml.Elem
+import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
+
 import java.awt.geom.Point2D
+import scala.xml.Elem
 
 case class CollimatorCentering(
-  collimatorCenteringPK: Option[Long], // primary key
-  outputPK: Long, // output primary key
-  status: String, // termination status
-
-  SOPInstanceUID090: String, // UID of 90 degree DICOM image
-  SOPInstanceUID270: String, // UID of 270 degree DICOM image
-
-  xCollimatorCenter_mm: Double, // X collimator isoplane center of rotation in mm
-  yCollimatorCenter_mm: Double, // Y collimator isoplane center of rotation in mm
-
-  X1_090_mm: Double, // X1 position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
-  X2_090_mm: Double, // X2 position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
-  Y1_090_mm: Double, // Y1 position of collimator leaf edge for gantry at 90 degrees (Y axis) in mm
-  Y2_090_mm: Double, // Y2 position of collimator leaf edge for gantry at 90 degrees (Y axis) in mm
-
-  X1_270_mm: Double, // X1 position of collimator leaf edge for gantry at 270 degrees (X axis) in mm
-  X2_270_mm: Double, // X2 position of collimator leaf edge for gantry at 270 degrees (X axis) in mm
-  Y1_270_mm: Double, // Y1 position of collimator leaf edge for gantry at 270 degrees (Y axis) in mm
-  Y2_270_mm: Double //  Y2 position of collimator leaf edge for gantry at 270 degrees (Y axis) in mm
+    collimatorCenteringPK: Option[Long], // primary key
+    outputPK: Long, // output primary key
+    status: String, // termination status
+    SOPInstanceUID090: String, // UID of 90 degree DICOM image
+    SOPInstanceUID270: String, // UID of 270 degree DICOM image
+    xCollimatorCenter_mm: Double, // X collimator isoplane center of rotation in mm
+    yCollimatorCenter_mm: Double, // Y collimator isoplane center of rotation in mm
+    X1_090_mm: Double, // X1 position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
+    X2_090_mm: Double, // X2 position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
+    Y1_090_mm: Double, // Y1 position of collimator leaf edge for gantry at 90 degrees (Y axis) in mm
+    Y2_090_mm: Double, // Y2 position of collimator leaf edge for gantry at 90 degrees (Y axis) in mm
+    X1_270_mm: Double, // X1 position of collimator leaf edge for gantry at 270 degrees (X axis) in mm
+    X2_270_mm: Double, // X2 position of collimator leaf edge for gantry at 270 degrees (X axis) in mm
+    Y1_270_mm: Double, // Y1 position of collimator leaf edge for gantry at 270 degrees (Y axis) in mm
+    Y2_270_mm: Double //  Y2 position of collimator leaf edge for gantry at 270 degrees (Y axis) in mm
 ) {
 
   def insert: CollimatorCentering = {
@@ -41,7 +33,7 @@ case class CollimatorCentering(
     result
   }
 
-  def insertOrUpdate = Db.run(CollimatorCentering.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(CollimatorCentering.query.insertOrUpdate(this))
 
   override def toString: String = {
     "    collimatorCenteringPK: " + collimatorCenteringPK + "\n" +
@@ -84,22 +76,24 @@ object CollimatorCentering extends ProcedureOutput {
     def Y1_270_mm = column[Double]("Y1_270_mm")
     def Y2_270_mm = column[Double]("Y2_270_mm")
 
-    def * = (
-      collimatorCenteringPK.?,
-      outputPK,
-      status,
-      SOPInstanceUID090,
-      SOPInstanceUID270,
-      xCollimatorCenter_mm,
-      yCollimatorCenter_mm,
-      X1_090_mm,
-      X2_090_mm,
-      Y1_090_mm,
-      Y2_090_mm,
-      X1_270_mm,
-      X2_270_mm,
-      Y1_270_mm,
-      Y2_270_mm) <> ((CollimatorCentering.apply _)tupled, CollimatorCentering.unapply _)
+    def * =
+      (
+        collimatorCenteringPK.?,
+        outputPK,
+        status,
+        SOPInstanceUID090,
+        SOPInstanceUID270,
+        xCollimatorCenter_mm,
+        yCollimatorCenter_mm,
+        X1_090_mm,
+        X2_090_mm,
+        Y1_090_mm,
+        Y2_090_mm,
+        X1_270_mm,
+        X2_270_mm,
+        Y1_270_mm,
+        Y2_270_mm
+      ) <> (CollimatorCentering.apply _ tupled, CollimatorCentering.unapply)
 
     def outputFK = foreignKey("CollimatorCentering_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -111,17 +105,17 @@ object CollimatorCentering extends ProcedureOutput {
   def get(collimatorCenteringPK: Long): Option[CollimatorCentering] = {
     val action = for {
       inst <- CollimatorCentering.query if inst.collimatorCenteringPK === collimatorCenteringPK
-    } yield (inst)
+    } yield inst
     Db.run(action.result).headOption
   }
 
   /**
-   * Get a list of all rows for the given output
-   */
+    * Get a list of all rows for the given output
+    */
   def getByOutput(outputPK: Long): Seq[CollimatorCentering] = {
     val action = for {
       inst <- CollimatorCentering.query if inst.outputPK === outputPK
-    } yield (inst)
+    } yield inst
     Db.run(action.result)
   }
 
@@ -137,17 +131,37 @@ object CollimatorCentering extends ProcedureOutput {
     Db.run(action)
   }
 
-  def insert(list: Seq[CollimatorCentering]) = {
+  def insert(list: Seq[CollimatorCentering]): Seq[Int] = {
     val ops = list.map { imgId => CollimatorCentering.query.insertOrUpdate(imgId) }
     Db.perform(ops)
   }
 
   override def insert(elem: Elem, outputPK: Long): Int = {
-    ??? // TODO
+    throw new RuntimeException("Collimator Centering insert not defined for Elem data.")
   }
 
   def insertSeq(list: Seq[CollimatorCentering]): Unit = {
     val ops = list.map { loc => CollimatorCentering.query.insertOrUpdate(loc) }
     Db.perform(ops)
   }
+
+  case class ColCentHistory(output: Output, colCent: CollimatorCentering) {}
+
+  /**
+    * Get the entire history of collimator centering data for the given machine.
+    * @param machinePK Machine to get data for.
+    * @return List of history items sorted by data date.
+    */
+  def history(machinePK: Long): Seq[ColCentHistory] = {
+
+    val search = for {
+      output <- Output.query.filter(o => o.machinePK === machinePK)
+      colCent <- CollimatorCentering.query.filter(w => w.outputPK === output.outputPK)
+    } yield (output, colCent)
+
+    val sorted = Db.run(search.result).map(oc => ColCentHistory(oc._1, oc._2)).sortBy(_.output.dataDate.get.getTime)
+
+    sorted
+  }
+
 }

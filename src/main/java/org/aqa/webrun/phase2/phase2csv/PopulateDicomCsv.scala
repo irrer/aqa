@@ -2,6 +2,7 @@ package org.aqa.webrun.phase2.phase2csv
 
 import org.aqa.Logging
 import org.aqa.Util
+import org.aqa.db.DbSetup
 import org.aqa.db.DicomSeries
 import org.aqa.db.Machine
 import org.aqa.db.Output
@@ -13,7 +14,7 @@ case class DicomInstance(SOPInstanceUID: String) {}
   *
   * This creates files in the cache directory for the creation of CSV files.
   */
-class PopulateDicomCsv extends Phase2Csv[DicomInstance] {
+class PopulateDicomCsv extends Phase2Csv[DicomInstance] with Logging {
 
   // abbreviation for the long name
   type DI = DicomInstance
@@ -50,34 +51,41 @@ class PopulateDicomCsv extends Phase2Csv[DicomInstance] {
     * @return SOP instance UID.
     */
   override protected def getSopUID(data: DI): String = data.SOPInstanceUID
+
+  def populateAll(): Unit = {
+    {
+      val start = System.currentTimeMillis()
+      val populateDicomCsv = new PopulateDicomCsv
+      val machineList = Machine.list
+
+      def populate(m: Machine): Unit = {
+        val seriesList = DicomSeries.getByMachine(m.machinePK.get)
+
+        def doSeries(series: DicomSeries): Unit = {
+          try {
+            if (series.modality.equals("RTIMAGE")) {
+              val di = series.sopInstanceUIDList.split(" ").filter(_.nonEmpty).map(DicomInstance).head
+              populateDicomCsv.getDicomText(di.SOPInstanceUID, m)
+            } else
+              println("Ignoring non-RTIMAGE series: " + series)
+          } catch {
+            case t: Throwable => println("Failed with series " + series.seriesInstanceUID + " : " + fmtEx(t))
+          }
+        }
+
+        seriesList.foreach(series => doSeries(series))
+      }
+
+      machineList.foreach(m => populate(m))
+      val elapsed = System.currentTimeMillis() - start
+      println("Done.  Elapsed time: " + Util.elapsedTimeHumanFriendly(elapsed))
+    }
+  }
 }
 
 object PopulateDicomCsv extends Logging {
   def main(args: Array[String]): Unit = {
-    val start = System.currentTimeMillis()
-    val populateDicomCsv = new PopulateDicomCsv
-    val machineList = Machine.list
-
-    def populate(m: Machine): Unit = {
-      val seriesList = DicomSeries.getByMachine(m.machinePK.get)
-
-      def doSeries(series: DicomSeries): Unit = {
-        try {
-          if (series.modality.equals("RTIMAGE")) {
-            val di = series.sopInstanceUIDList.split(" ").filter(_.nonEmpty).map(DicomInstance).head
-            populateDicomCsv.getDicomText(di.SOPInstanceUID, m)
-          } else
-            println("Ignoring non-RTIMAGE series: " + series)
-        } catch {
-          case t: Throwable => println("Failed with series " + series.seriesInstanceUID + " : " + fmtEx(t))
-        }
-      }
-
-      seriesList.foreach(series => doSeries(series))
-    }
-
-    machineList.foreach(m => populate(m))
-    val elapsed = System.currentTimeMillis() - start
-    println("Done.  Elapsed time: " + Util.elapsedTimeHumanFriendly(elapsed))
+    DbSetup.init
+    (new PopulateDicomCsv).populateAll()
   }
 }
