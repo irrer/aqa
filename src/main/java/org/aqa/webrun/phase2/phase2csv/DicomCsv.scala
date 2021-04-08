@@ -16,7 +16,7 @@ class DicomCsv {
     CsvCol("Pixel size Y", "Image Plane Pixel Spacing.  DICOM 3002,0011", (al: AL) => Util.attr2Csv(al, TagByName.ImagePlanePixelSpacing)(1)),
     CsvCol("KVP", "Peak kilo voltage output of the X-Ray generator used.  DICOM 0018,0060", (al: AL) => Util.attr2Csv(al, TagByName.KVP).head),
     //noinspection SpellCheckingInspection
-    CsvCol("Exposure Time msec", "Exposure time in seconds.  DICOM 0016,0004", (al: AL) => Util.attr2Csv(al, TagByName.ExposureTime).head),
+    CsvCol("Exposure Time msec", "Exposure time in mseync.  DICOM 0016,0004", (al: AL) => Util.attr2Csv(al, TagByName.ExposureTime).head),
     CsvCol(
       "Meterset Exposure",
       "Treatment machine Meterset duration over which image has been acquired, specified in Monitor units (MU) or minutes as defined by Primary Dosimeter Unit (300A,00B3). Required if Value 3 of Image Type (0008,0008) is PORTAL  DICOM 3002,0032",

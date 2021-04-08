@@ -289,6 +289,10 @@ abstract class Phase2Csv[T] extends Logging {
       <div class="col-md-10 col-md-offset-1 ">
         <h2>{name}</h2>
         <table class="table table-bordered">
+          <tr>
+            <th>Column Title</th>
+            <th>Description</th>
+          </tr>
           {colList.map(col => col.doc)}
         </table>
       </div>

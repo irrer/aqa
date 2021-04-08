@@ -83,9 +83,7 @@ object SymmetryAndFlatnessCsv {
 
   def main(args: Array[String]): Unit = {
     DbSetup.init
-    val symFlat = new SymmetryAndFlatnessCsv
-    symFlat.writeDoc()
-    symFlat.writeToFile()
+    (new SymmetryAndFlatnessCsv).updateFiles()
   }
 
 }
