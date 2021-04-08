@@ -14,6 +14,9 @@ import java.io.File
   */
 class MaintenanceCsv(metadataCache: MetadataCache) { // extends Phase2Csv [MaintenanceRecord] { // TODO extend to use file generator code
 
+  val dataName = "Maintenance Record"
+  val fileBaseName = dataName.replaceAll(" ", "")
+
   /**
     * Replace newline characters with blanks so they only occupy one line of the CSV file.
     *
@@ -74,6 +77,9 @@ class MaintenanceCsv(metadataCache: MetadataCache) { // extends Phase2Csv [Maint
     MaintenanceRecord.getAllExceptBaseline().sortBy(compareCriteria)
   }
 
+  def writeDoc(): Unit = {
+    Phase2Csv.writeDoc(colList, dataName, fileBaseName)
+  }
 }
 
 object MaintenanceCsv {
@@ -92,10 +98,11 @@ object MaintenanceCsv {
     val csvContent = mrList.map(mr => maintenanceCsv.toCsvText(mr))
     val csvText = maintenanceCsv.headerText + "\n" + csvContent.mkString("\n")
 
-    val file = new File(Phase2Csv.csvDir, "MaintenanceRecord.csv")
+    val file = new File(Phase2Csv.csvDir, maintenanceCsv.fileBaseName + ".csv")
     Phase2Csv.csvDir.mkdirs()
-
     Util.writeFile(file, csvText)
+    maintenanceCsv.writeDoc()
+    Phase2Csv.generateIndex()
 
     println("Elapsed time: " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
     println("Wrote to file " + file.getAbsolutePath)
