@@ -167,7 +167,7 @@ object CollimatorPosition extends ProcedureOutput {
       colCent <- CollimatorPosition.query.filter(w => w.outputPK === output.outputPK)
     } yield (output, colCent)
 
-    val sorted = Db.run(search.result).map(oc => ColPosHistory(oc._1, oc._2)).sortBy(h => h.output.dataDate.get.getTime.formatted("%14s") + h.colCent.beamName)
+    val sorted = Db.run(search.result).map(oc => ColPosHistory(oc._1, oc._2)).sortBy(h => h.output.dataDate.get.getTime.formatted("%14d") + h.colCent.beamName)
 
     sorted
   }
