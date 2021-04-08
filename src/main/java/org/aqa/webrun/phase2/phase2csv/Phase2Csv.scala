@@ -36,7 +36,13 @@ abstract class Phase2Csv[T] extends Logging {
   protected def getSopUID(data: T): String
 
   /**
-    * If there is a second DICOM file involved for the data set, then
+    * Allow the subclass to specify the prefix for each DICOM CSV column header.
+    */
+  protected val dicomHeaderPrefix: Option[String] = None
+
+  /**
+    * If there is a second DICOM file involved for the data set, then the subclass should
+    * specify the prefix for each DICOM CSV column header to distinguish it from the first set of DICOM data.
     */
   protected val dicom2HeaderPrefix: Option[String] = None
 
@@ -70,8 +76,6 @@ abstract class Phase2Csv[T] extends Logging {
     * Used to name CSV file.
     */
   protected val dataName: String
-
-  protected val standalone = false
 
   // ----------------------------------------------------------------------------
 
