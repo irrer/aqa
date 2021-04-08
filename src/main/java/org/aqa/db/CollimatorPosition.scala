@@ -1,33 +1,29 @@
 package org.aqa.db
 
-import Db.driver.api._
-import org.aqa.Config
-import org.aqa.Util
-import java.io.File
-import scala.xml.XML
-import scala.xml.Node
-import scala.xml.Elem
+import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
 
+import scala.xml.Elem
+
 case class CollimatorPosition(
-  collimatorPositionPK: Option[Long], // primary key
-  outputPK: Long, // output primary key
-  status: String, // termination status
-  SOPInstanceUID: String, // UID of source image
-  beamName: String, // name of beam in plan
-  FloodCompensation: Boolean, // true if flood compensation was used
-  X1_mm: Double, //  X1 jaw position of collimator  (X axis) in mm
-  X2_mm: Double, //  X2 jaw position of collimator  (X axis) in mm
-  Y1_mm: Double, //  Y1  jaw of collimator (Y axis) in mm
-  Y2_mm: Double, //  Y2 jaw position of collimator (Y axis) in mm
-  X1_ExpectedMinusImage_mm: Double, //  X1 jaw plan minus east position of collimator  (X axis) in mm
-  X2_ExpectedMinusImage_mm: Double, //  X2 jaw plan minus west position of collimator  (X axis) in mm
-  Y1_ExpectedMinusImage_mm: Double, //  Y1 jaw plan minus north position of collimator (Y axis) in mm
-  Y2_ExpectedMinusImage_mm: Double, //  Y2 jaw plan minus south position of collimator (Y axis) in mm
-  XCollimatorCenterOfRotation_mm: Double, // X position of the collimator's center of rotation
-  YCollimatorCenterOfRotation_mm: Double, // Y position of the collimator's center of rotation
-  gantryAngle_deg: Double, // gantry angle in degrees
-  collimatorAngle_deg: Double // collimator angle in degrees
+    collimatorPositionPK: Option[Long], // primary key
+    outputPK: Long, // output primary key
+    status: String, // termination status
+    SOPInstanceUID: String, // UID of source image
+    beamName: String, // name of beam in plan
+    FloodCompensation: Boolean, // true if flood compensation was used
+    X1_mm: Double, //  X1 position of collimator  (X axis) in mm
+    X2_mm: Double, //  X2 position of collimator  (X axis) in mm
+    Y1_mm: Double, //  Y1 of collimator (Y axis) in mm
+    Y2_mm: Double, //  Y2 position of collimator (Y axis) in mm
+    X1_ExpectedMinusImage_mm: Double, //  X1 plan minus east position of collimator  (X axis) in mm
+    X2_ExpectedMinusImage_mm: Double, //  X2 plan minus west position of collimator  (X axis) in mm
+    Y1_ExpectedMinusImage_mm: Double, //  Y1 plan minus north position of collimator (Y axis) in mm
+    Y2_ExpectedMinusImage_mm: Double, //  Y2 plan minus south position of collimator (Y axis) in mm
+    XCollimatorCenterOfRotation_mm: Double, // X position of the collimator's center of rotation
+    YCollimatorCenterOfRotation_mm: Double, // Y position of the collimator's center of rotation
+    gantryAngle_deg: Double, // gantry angle in degrees
+    collimatorAngle_deg: Double // collimator angle in degrees
 ) {
 
   def insert: CollimatorPosition = {
@@ -39,7 +35,7 @@ case class CollimatorPosition(
     result
   }
 
-  def insertOrUpdate = Db.run(CollimatorPosition.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(CollimatorPosition.query.insertOrUpdate(this))
 
   override def toString: String = {
     "    collimatorPositionPK: " + collimatorPositionPK + "\n" +
@@ -85,25 +81,27 @@ object CollimatorPosition extends ProcedureOutput {
     def gantryAngle_deg = column[Double]("gantryAngle_deg")
     def collimatorAngle_deg = column[Double]("collimatorAngle_deg")
 
-    def * = (
-      collimatorPositionPK.?,
-      outputPK,
-      status,
-      SOPInstanceUID,
-      beamName,
-      FloodCompensation,
-      X1_mm,
-      X2_mm,
-      Y1_mm,
-      Y2_mm,
-      X1_ExpectedMinusImage_mm,
-      X2_ExpectedMinusImage_mm,
-      Y1_ExpectedMinusImage_mm,
-      Y2_ExpectedMinusImage_mm,
-      XCollimatorCenterOfRotation_mm,
-      YCollimatorCenterOfRotation_mm,
-      gantryAngle_deg,
-      collimatorAngle_deg) <> ((CollimatorPosition.apply _)tupled, CollimatorPosition.unapply _)
+    def * =
+      (
+        collimatorPositionPK.?,
+        outputPK,
+        status,
+        SOPInstanceUID,
+        beamName,
+        FloodCompensation,
+        X1_mm,
+        X2_mm,
+        Y1_mm,
+        Y2_mm,
+        X1_ExpectedMinusImage_mm,
+        X2_ExpectedMinusImage_mm,
+        Y1_ExpectedMinusImage_mm,
+        Y2_ExpectedMinusImage_mm,
+        XCollimatorCenterOfRotation_mm,
+        YCollimatorCenterOfRotation_mm,
+        gantryAngle_deg,
+        collimatorAngle_deg
+      ) <> (CollimatorPosition.apply _ tupled, CollimatorPosition.unapply)
 
     def outputFK = foreignKey("CollimatorPosition_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -115,17 +113,17 @@ object CollimatorPosition extends ProcedureOutput {
   def get(collimatorPositionPK: Long): Option[CollimatorPosition] = {
     val action = for {
       inst <- CollimatorPosition.query if inst.collimatorPositionPK === collimatorPositionPK
-    } yield (inst)
+    } yield inst
     Db.run(action.result).headOption
   }
 
   /**
-   * Get a list of all rows for the given output
-   */
+    * Get a list of all rows for the given output
+    */
   def getByOutput(outputPK: Long): Seq[CollimatorPosition] = {
     val action = for {
       inst <- CollimatorPosition.query if inst.outputPK === outputPK
-    } yield (inst)
+    } yield inst
     Db.run(action.result)
   }
 
@@ -141,17 +139,37 @@ object CollimatorPosition extends ProcedureOutput {
     Db.run(action)
   }
 
-  def insert(list: Seq[CollimatorPosition]) = {
+  def insert(list: Seq[CollimatorPosition]): Seq[Int] = {
     val ops = list.map { imgId => CollimatorPosition.query.insertOrUpdate(imgId) }
     Db.perform(ops)
   }
 
   override def insert(elem: Elem, outputPK: Long): Int = {
-    ??? // not implemented
+    throw new RuntimeException("CollimatorPosition.insert not implemented for Elem data.")
   }
 
   def insertSeq(list: Seq[CollimatorPosition]): Unit = {
     val ops = list.map { loc => CollimatorPosition.query.insertOrUpdate(loc) }
     Db.perform(ops)
   }
+
+  case class ColPosHistory(output: Output, colCent: CollimatorPosition) {}
+
+  /**
+    * Get the entire history of collimator position data for the given machine.
+    * @param machinePK Machine to get data for.
+    * @return List of history items sorted by data date.  For items with the same date, sort by beam name.
+    */
+  def history(machinePK: Long): Seq[ColPosHistory] = {
+
+    val search = for {
+      output <- Output.query.filter(o => o.machinePK === machinePK)
+      colCent <- CollimatorPosition.query.filter(w => w.outputPK === output.outputPK)
+    } yield (output, colCent)
+
+    val sorted = Db.run(search.result).map(oc => ColPosHistory(oc._1, oc._2)).sortBy(h => h.output.dataDate.get.getTime.formatted("%14s") + h.colCent.beamName)
+
+    sorted
+  }
+
 }
