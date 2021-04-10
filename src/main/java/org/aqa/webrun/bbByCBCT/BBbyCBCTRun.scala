@@ -5,7 +5,6 @@ import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.SOPClass
 import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.ImageRegistration
 import org.aqa.Util
 import org.aqa.db.BBbyEPID
@@ -27,12 +26,12 @@ import org.restlet.Response
 import java.sql.Timestamp
 
 /**
- * Provide the user interface and verify that the data provided is sufficient to do the analysis.
- */
+  * Provide the user interface and verify that the data provided is sufficient to do the analysis.
+  */
 
 /**
- * Run BBbyCBCT code.
- */
+  * Run BBbyCBCT code.
+  */
 class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[BBbyCBCTRunReq] {
 
   override def getPatientID(valueMap: org.aqa.web.WebUtil.ValueMapT, alList: Seq[com.pixelmed.dicom.AttributeList]): Option[String] = {
@@ -76,9 +75,9 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   override def getProcedure: Procedure = procedure
 
   /**
-   * Look through EPID results for one that would have used this CBCT output had it been available
-   * when the EPID was processed.  If there are any such EPID results, then redo them.
-   */
+    * Look through EPID results for one that would have used this CBCT output had it been available
+    * when the EPID was processed.  If there are any such EPID results, then redo them.
+    */
   private def checkForEpidRedo(cbctOutput: Output, response: Response): Unit = {
     val machine = Machine.get(cbctOutput.machinePK.get).get
     val endOfDay = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(cbctOutput.dataDate.get).replaceAll("T.*", "T00:00:00")).getTime + (24 * 60 * 60 * 1000))
@@ -89,20 +88,23 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     // the time of the next CBCT after this one.  If there is not one after this, then midnight of today.
     val cbctCeilingTime_ms = {
       // midnight of the dataDate
-      val ofInterest = allOutput.
-        filter(o => (o.machinePK == cbctOutput.machinePK) &&
-          (o.procedurePK == cbctOutput.procedurePK) &&
-          (o.outputPK.get != cbctOutput.outputPK.get)).
-        sortBy(_.dataDate.get.getTime)
+      val ofInterest = allOutput
+        .filter(o =>
+          (o.machinePK == cbctOutput.machinePK) &&
+            (o.procedurePK == cbctOutput.procedurePK) &&
+            (o.outputPK.get != cbctOutput.outputPK.get)
+        )
+        .sortBy(_.dataDate.get.getTime)
 
       val date = if (ofInterest.isEmpty) endOfDay else ofInterest.head.dataDate.get
       date.getTime
     }
 
     // List of EPIDs that have occurred after this CBCT but before cbctCeilingTime time
-    val allEpidDaily = BBbyEPID.getForOneDay(cbctOutput.dataDate.get, machine.institutionPK).
-      filter(dds => dds.machine.machinePK.get == machine.machinePK.get).
-      filter(dds => (dds.output.dataDate.get.getTime < cbctCeilingTime_ms) && (dds.output.dataDate.get.getTime > cbctOutput.dataDate.get.getTime))
+    val allEpidDaily = BBbyEPID
+      .getForOneDay(cbctOutput.dataDate.get, machine.institutionPK)
+      .filter(dds => dds.machine.machinePK.get == machine.machinePK.get)
+      .filter(dds => (dds.output.dataDate.get.getTime < cbctCeilingTime_ms) && (dds.output.dataDate.get.getTime > cbctOutput.dataDate.get.getTime))
 
     // List of EPIDs to redo.  Note that because multiple BBbyEPID rows may refer to the
     // same output, only the single output (hence the 'distinct') needs to be done.
@@ -112,7 +114,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
     def redo(outputPK: Long): Unit = {
       logger.info("BBbyCBCTRun starting redo of EPID output " + outputPK)
-      (new OutputList).redoOutput(outputPK, response, await = true, isAuto = true)
+      (new OutputList).redoOutput(outputPK, response, await = true, isAuto = true, cbctOutput.userPK)
       logger.info("BBbyCBCTRun finished redo of EPID output " + outputPK)
     }
 
@@ -126,8 +128,8 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   }
 
   /**
-   * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
-   */
+    * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
+    */
   override def validate(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, BBbyCBCTRunReq] = {
     val cbctList = alList.filter(al => Util.isCt(al)).sortBy(al => Util.slicePosition(al))
     val regList = alList.filter(al => Util.isReg(al))
@@ -142,7 +144,6 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       val cbctFrameOfRef = cbctFrameOfRefList.head
       val qualifiedList = regList.filter(al => ImageRegistration(al).otherFrameOfRefUID.equals(cbctFrameOfRef))
 
-      Trace.trace("qualifiedList size: " + qualifiedList.size)
       qualifiedList
     }
 
@@ -159,8 +160,8 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     }
 
     /**
-     * Get the list of possible plan and reg pairs, preferring the uploaded plan(s) but also searching the plans in the database.
-     */
+      * Get the list of possible plan and reg pairs, preferring the uploaded plan(s) but also searching the plans in the database.
+      */
     def getPlanAndReg: Seq[(AttributeList, AttributeList)] = {
       val uploadedPairList = for (plan <- rtplanList; reg <- qualifiedRegList; if Util.getFrameOfRef(plan).equals(Util.getFrameOfRef(reg))) yield (plan, reg)
       if (uploadedPairList.nonEmpty)
@@ -177,18 +178,18 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     /** Get the plan to use, if there is one. */
     def rtplan: Option[AttributeList] = {
       0 match {
-        case _ if getPlanAndReg.nonEmpty => Some(getPlanAndReg.head._1)
+        case _ if getPlanAndReg.nonEmpty      => Some(getPlanAndReg.head._1)
         case _ if rtplanMatchingCbct.nonEmpty => Some(rtplanMatchingCbct.head)
-        case _ => None
+        case _                                => None
       }
     }
 
     val result = 0 match {
-      case _ if cbctList.isEmpty => formError("No CBCT files uploaded")
-      case _ if cbctSeriesList.size > 1 => formError("CBCT slices are from " + cbctSeriesList.size + " different series.")
-      case _ if cbctFrameOfRefList.isEmpty => formError("CBCT series are unusable: They do not specify a frame of reference.")
+      case _ if cbctList.isEmpty            => formError("No CBCT files uploaded")
+      case _ if cbctSeriesList.size > 1     => formError("CBCT slices are from " + cbctSeriesList.size + " different series.")
+      case _ if cbctFrameOfRefList.isEmpty  => formError("CBCT series are unusable: They do not specify a frame of reference.")
       case _ if cbctFrameOfRefList.size > 1 => formError("CBCT series uses more than one frame of reference.")
-      case _ if rtplan.isEmpty => formError("Can not find a CBCT + REG + RTPLAN with compatible frame of reference.  Note that REG must reference CBCT.")
+      case _ if rtplan.isEmpty              => formError("Can not find a CBCT + REG + RTPLAN with compatible frame of reference.  Note that REG must reference CBCT.")
       case _ =>
         val plan = {
           val planAl = rtplan.get

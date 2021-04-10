@@ -21,8 +21,8 @@ import org.restlet.Response
 import java.sql.Timestamp
 
 /**
- * Run BBbyEPID code.
- */
+  * Run BBbyEPID code.
+  */
 class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[BBbyEPIDRunReq] {
 
   private def getEpidList(alList: Seq[AttributeList]) = alList.filter(al => Util.modalityOfAl(al).trim.equalsIgnoreCase("RTIMAGE"))
@@ -62,16 +62,16 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   }
 
   /**
-   * Make the run requirements from the attribute lists.
-   */
+    * Make the run requirements from the attribute lists.
+    */
   override def makeRunReqForRedo(alList: Seq[AttributeList], output: Option[Output]): BBbyEPIDRunReq = {
     val epidList = alList.filter(al => Util.isRtimage(al))
     BBbyEPIDRunReq(epidList)
   }
 
   /**
-   * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
-   */
+    * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
+    */
   override def validate(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, BBbyEPIDRunReq] = {
     val epidList = alList.filter(al => Util.modalityOfAl(al).trim.equalsIgnoreCase("RTIMAGE"))
 
@@ -84,8 +84,8 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     val numSeries = epidList.map(epid => epid.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString).distinct.sorted.size
 
     val result: Either[WebUtil.StyleMapT, BBbyEPIDRunReq] = 0 match {
-      case _ if epidList.isEmpty => formError("No EPID files uploaded")
-      case _ if frameOfRefList.isEmpty => formError("EPIDs do not specify a frame of reference")
+      case _ if epidList.isEmpty        => formError("No EPID files uploaded")
+      case _ if frameOfRefList.isEmpty  => formError("EPIDs do not specify a frame of reference")
       case _ if epidSeriesList.size > 1 => formError("EPID images are from " + numSeries + " different series.")
       case _ if frameOfRefList.size > 1 => formError("EPIDs specify more than one frame of reference")
       case _ =>

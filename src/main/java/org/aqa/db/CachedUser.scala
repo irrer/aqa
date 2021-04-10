@@ -32,7 +32,8 @@ object CachedUser extends Logging {
     })
   }
 
-  private def put(id: String, user: User): Unit = {
+  // private
+  def put(id: String, user: User): Unit = {
     cache.synchronized({
       cache.put(id, new CachedUser(user))
     })

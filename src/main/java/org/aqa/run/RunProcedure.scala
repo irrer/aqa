@@ -519,7 +519,7 @@ object RunProcedure extends Logging {
    * Re-process the given data.  Input data is not touched, old Output is deleted, along with
    * its file tree and the data that references it.
    */
-  private def redo(valueMap: ValueMapT, response: Response, runTrait: RunTrait[RunReqClass]): Unit = {
+  private def redo(valueMap: ValueMapT, response: Response, runTrait: RunTrait[RunReqClass], authenticatedUserPK: Option[Long]): Unit = {
     val request = response.getRequest
     val oldOutput = {
       val outputPK = valueMap(OutputList.redoTag).toLong
@@ -534,9 +534,9 @@ object RunProcedure extends Logging {
     }
 
     if (input.isDefined) {
-      if (userAuthorizedToModify(request, input.get)) {
+      if (authenticatedUserPK.isDefined || userAuthorizedToModify(request, input.get)) {
         val now = new Timestamp((new Date).getTime)
-        val user = CachedUser.get(request)
+        val userPK = if (authenticatedUserPK.isDefined) authenticatedUserPK else  CachedUser.get(request).get.userPK
 
         val machinePK = if (oldOutput.get.machinePK.isDefined) oldOutput.get.machinePK else input.get.machinePK
 
@@ -546,7 +546,7 @@ object RunProcedure extends Logging {
             inputPK = oldOutput.get.inputPK,
             directory = WebServer.fileToResultsPath(makeOutputDir(input.get.dir, now)),
             procedurePK = runTrait.getProcedure.procedurePK.get,
-            user.get.userPK,
+            userPK,
             now,
             finishDate = None,
             dataDate = input.get.dataDate,
@@ -619,14 +619,14 @@ object RunProcedure extends Logging {
     WebRunIndex.redirect(response)
   }
 
-  def handle(valueMap: ValueMapT, request: Request, response: Response, runTrait: RunTrait[RunReqClass]): Unit = {
+  def handle(valueMap: ValueMapT, request: Request, response: Response, runTrait: RunTrait[RunReqClass], authenticatedUserPK: Option[Long] = None): Unit = {
     val redoValue = valueMap.get(OutputList.redoTag)
 
     try {
       0 match {
         //case _ if (!sessionDefined(valueMap)) => redirectWithNewSession(response);
         case _ if buttonIs(valueMap, cancelButtonName) => cancel(valueMap, response)
-        case _ if redoValue.isDefined => redo(valueMap, response, runTrait)
+        case _ if redoValue.isDefined => redo(valueMap, response, runTrait, authenticatedUserPK)
         case _ if buttonIs(valueMap, runButtonName) => runIfDataValid(valueMap, response, runTrait)
         case _ => emptyForm(valueMap, response, runTrait)
       }

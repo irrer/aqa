@@ -1,8 +1,5 @@
 package org.aqa.web
 
-import edu.umro.ScalaUtil.Trace
-import org.aqa.AnonymizeUtil
-import org.aqa.Crypto
 import org.aqa.Util
 import org.aqa.db.CachedUser
 import org.aqa.db.Input
@@ -378,7 +375,8 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   /**
     * Redo the given output.
     */
-  def redoOutput(outputPK: Long, response: Response, await: Boolean = false, isAuto: Boolean = false): Unit = {
+  def redoOutput(outputPK: Long, response: Response, await: Boolean = false, isAuto: Boolean = false, authenticatedUserPK: Option[Long]): Unit = {
+
     Output.get(outputPK) match {
       case None => noSuchOutput(response)
       case Some(output) =>
@@ -388,54 +386,13 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
         val runTrait = WebRun.get(output.procedurePK).right.get.asInstanceOf[RunTrait[RunReqClass]]
         // Seems a bit round-about to create the valueMap, but this handles the bulk redo case.
         val valueMap = Map((OutputList.redoTag, output.outputPK.get.toString), (WebUtil.awaitTag, await.toString), (WebUtil.autoUploadTag, isAuto.toString))
-        RunProcedure.handle(valueMap, response.getRequest, response, runTrait)
+        RunProcedure.handle(valueMap, response.getRequest, response, runTrait, authenticatedUserPK)
     }
   }
 
   private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
     val value = valueMap.get(button.label)
     value.isDefined && value.get.equals(button.label)
-  }
-
-  /**
-    * Set up the given response+request with a user from the given institution that can be used to do a redo.
-    * @param institutionPK User must belong to this institution.
-    * @param response Put credentials here.
-    */
-  private def setupAdminUser(institutionPK: Long, response: Response): Unit = {
-    val passwordText = Crypto.makeRandomCipherKey
-
-    // Find an admin user for the given institution.  If one does not exist, then make one.  Either way this
-    // user is in the database.
-    val dbUser = User.getOrMakeInstitutionAdminUser(institutionPK)
-
-    // The real (in the clear) user id
-    val userId = AnonymizeUtil.decryptWithNonce(institutionPK, dbUser.id_real.get)
-
-    // make a temporary in-memory copy of the user with a password we know, then put it in the cache so it will be
-    // valid for a short time.
-
-    Trace.trace("response.getRequest.getChallengeResponse.getIdentifier : " + response.getRequest.getChallengeResponse.getIdentifier) // TODO rm
-    Trace.trace("response.getRequest.getChallengeResponse.getSecret     : " + new String(response.getRequest.getChallengeResponse.getSecret)) // TODO rm
-    if (CachedUser.get(response).isEmpty) // TODO rm
-      Trace.trace("gonna fail!") // TODO rm
-    def thisUser = CachedUser.get(response).get
-    def thisUserId = response.getRequest.getChallengeResponse.getIdentifier
-
-    val passwordSalt = Crypto.randomSecureHash
-    val hashedPassword = CachedUser.hashPassword(passwordText, passwordSalt)
-    val user = dbUser.copy(passwordSalt = passwordSalt, hashedPassword = hashedPassword)
-    CachedUser.clear
-    CachedUser.put(userId, user)
-    CachedUser.put(thisUserId, thisUser)
-
-    // put the user id and password into the request so it has the authority to do a redo
-    val request = response.getRequest
-    val cr = request.getChallengeResponse
-    cr.setSecret(passwordText)
-    cr.setIdentifier(userId)
-    request.setChallengeResponse(cr)
-    response.setRequest(request)
   }
 
   private def startBulkRedo(valueMap: ValueMapT, response: Response): Unit =
@@ -447,10 +404,13 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
         try {
           val output = Output.get(outputPK).get
           val machine = Machine.get(output.machinePK.get).get
-          setupAdminUser(machine.institutionPK, response)
+          //setupAdminUser(machine.institutionPK, response)
           logger.info("Performing bulk redo member: " + outputPK)
+          // Find an admin user for the given institution.  If one does not exist, then make one.  Either way this
+          // user is in the database.
+          val dbUser = User.getOrMakeInstitutionAdminUser(machine.institutionPK)
           val start = System.currentTimeMillis
-          redoOutput(outputPK, response, await = true, isAuto = true)
+          redoOutput(outputPK, response, await = true, isAuto = true, authenticatedUserPK = dbUser.userPK)
           val elapsed = System.currentTimeMillis - start
           logger.info("Performed bulk redo member: " + outputPK + " in " + elapsed + " ms")
         } catch {
@@ -472,7 +432,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
           handleDelete(valueMap, response)
           Filter.SKIP
         case _ if redo.isDefined =>
-          redoOutput(redo.get.toLong, response)
+          redoOutput(redo.get.toLong, response, authenticatedUserPK = None)
           Filter.SKIP
         case _ =>
           if (buttonIs(valueMap, redoAll)) {

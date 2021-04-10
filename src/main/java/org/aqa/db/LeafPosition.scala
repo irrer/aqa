@@ -1,28 +1,24 @@
 package org.aqa.db
 
-import Db.driver.api._
-import org.aqa.Config
-import org.aqa.Util
-import java.io.File
-import scala.xml.XML
-import scala.xml.Node
-import scala.xml.Elem
+import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
 import org.aqa.run.ProcedureStatus
 
+import scala.xml.Elem
+
 case class LeafPosition(
-  leafPositionPK: Option[Long], // primary key
-  outputPK: Long, // output primary key
-  SOPInstanceUID: String, // UID of source image
-  beamName: String, // name of beam in plan
-  leafIndex: Int, // leaf number starting at 1
-  leafPositionIndex: Int, // leaf position number as it moves across the field
-  offset_mm: Double, // difference from expected location: measuredEndPosition_mm - expectedEndPosition_mm
-  status: String, // termination status
-  measuredEndPosition_mm: Double, // measured position of leaf end
-  expectedEndPosition_mm: Double, // expected position of leaf end
-  measuredMinorSide_mm: Double, // measured position of top side of leaf, or left side if collimator is vertical
-  measuredMajorSide_mm: Double // measured position of bottom side of leaf, or right side if collimator is vertical
+    leafPositionPK: Option[Long], // primary key
+    outputPK: Long, // output primary key
+    SOPInstanceUID: String, // UID of source image
+    beamName: String, // name of beam in plan
+    leafIndex: Int, // leaf number starting at 1
+    leafPositionIndex: Int, // leaf position number as it moves across the field
+    offset_mm: Double, // difference from expected location: measuredEndPosition_mm - expectedEndPosition_mm
+    status: String, // termination status
+    measuredEndPosition_mm: Double, // measured position of leaf end
+    expectedEndPosition_mm: Double, // expected position of leaf end
+    measuredMinorSide_mm: Double, // measured position of top side of leaf, or left side if collimator is vertical
+    measuredMajorSide_mm: Double // measured position of bottom side of leaf, or right side if collimator is vertical
 ) {
 
   def insert: LeafPosition = {
@@ -34,12 +30,13 @@ case class LeafPosition(
 
   def insertOrUpdate = Db.run(LeafPosition.query.insertOrUpdate(this))
 
-  override def toString: String = "Beam: " + beamName +
-    "  Leaf Index: " + leafIndex.formatted("%2d") +
-    "  Leaf Position Index: " + leafPositionIndex.formatted("%2d") +
-    "  offset_mm: " + offset_mm.formatted("%9.5f") +
-    "  expectedEndPosition_mm: " + expectedEndPosition_mm.formatted("%6.2f") +
-    "  measuredEndPosition_mm: " + measuredEndPosition_mm.formatted("%10.5f")
+  override def toString: String =
+    "Beam: " + beamName +
+      "  Leaf Index: " + leafIndex.formatted("%2d") +
+      "  Leaf Position Index: " + leafPositionIndex.formatted("%2d") +
+      "  offset_mm: " + offset_mm.formatted("%9.5f") +
+      "  expectedEndPosition_mm: " + expectedEndPosition_mm.formatted("%6.2f") +
+      "  measuredEndPosition_mm: " + measuredEndPosition_mm.formatted("%10.5f")
 
   def pass = status.equalsIgnoreCase(ProcedureStatus.pass.toString)
 }
@@ -60,19 +57,21 @@ object LeafPosition extends ProcedureOutput {
     def measuredMinorSide_mm = column[Double]("measuredLowSide_mm")
     def measuredMajorSide_mm = column[Double]("measuredHighSide_mm")
 
-    def * = (
-      leafPositionPK.?,
-      outputPK,
-      SOPInstanceUID,
-      beamName,
-      leafIndex,
-      leafPositionIndex,
-      offset_mm,
-      status,
-      measuredEndPosition_mm,
-      expectedEndPosition_mm,
-      measuredMinorSide_mm,
-      measuredMajorSide_mm) <> ((LeafPosition.apply _)tupled, LeafPosition.unapply _)
+    def * =
+      (
+        leafPositionPK.?,
+        outputPK,
+        SOPInstanceUID,
+        beamName,
+        leafIndex,
+        leafPositionIndex,
+        offset_mm,
+        status,
+        measuredEndPosition_mm,
+        expectedEndPosition_mm,
+        measuredMinorSide_mm,
+        measuredMajorSide_mm
+      ) <> ((LeafPosition.apply _) tupled, LeafPosition.unapply _)
 
     def outputFK = foreignKey("LeafPosition_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -90,8 +89,8 @@ object LeafPosition extends ProcedureOutput {
   }
 
   /**
-   * Get a list of all LeafPosition for the given output
-   */
+    * Get a list of all LeafPosition for the given output
+    */
   def getByOutput(outputPK: Long): Seq[LeafPosition] = {
     val action = for {
       inst <- LeafPosition.query if inst.outputPK === outputPK
@@ -126,4 +125,24 @@ object LeafPosition extends ProcedureOutput {
     val ops = list.map { loc => LeafPosition.query.insertOrUpdate(loc) }
     Db.perform(ops)
   }
+
+  case class LeafPosHistory(output: Output, leafPos: LeafPosition) {}
+
+  /**
+    * Get the entire history of leaf position data for the given machine.
+    * @param machinePK Machine to get data for.
+    * @return List of history items sorted by data date.  For items with the same date, sort by beam name.
+    */
+  def history(machinePK: Long): Seq[LeafPosHistory] = {
+
+    val search = for {
+      output <- Output.query.filter(o => o.machinePK === machinePK)
+      leafPos <- LeafPosition.query.filter(w => w.outputPK === output.outputPK)
+    } yield (output, leafPos)
+
+    val sorted = Db.run(search.result).map(oc => LeafPosHistory(oc._1, oc._2)).sortBy(h => h.output.dataDate.get.getTime.formatted("%14d") + h.leafPos.beamName)
+
+    sorted
+  }
+
 }
