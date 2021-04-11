@@ -6,7 +6,6 @@ import org.aqa.db.Input
 import org.aqa.db.Machine
 import org.aqa.db.Output
 import org.aqa.db.Procedure
-import org.aqa.db.User
 import org.aqa.run.RunProcedure
 import org.aqa.run.RunReqClass
 import org.aqa.run.RunTrait
@@ -403,14 +402,9 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
       def redoOne(outputPK: Long): Unit = {
         try {
           val output = Output.get(outputPK).get
-          val machine = Machine.get(output.machinePK.get).get
-          //setupAdminUser(machine.institutionPK, response)
           logger.info("Performing bulk redo member: " + outputPK)
-          // Find an admin user for the given institution.  If one does not exist, then make one.  Either way this
-          // user is in the database.
-          val dbUser = User.getOrMakeInstitutionAdminUser(machine.institutionPK)
           val start = System.currentTimeMillis
-          redoOutput(outputPK, response, await = true, isAuto = true, authenticatedUserPK = dbUser.userPK)
+          redoOutput(outputPK, response, await = true, isAuto = true, authenticatedUserPK = output.userPK)
           val elapsed = System.currentTimeMillis - start
           logger.info("Performed bulk redo member: " + outputPK + " in " + elapsed + " ms")
         } catch {
