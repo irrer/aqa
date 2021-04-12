@@ -168,7 +168,7 @@ class MlcQaRun(procedure: Procedure) extends WebRunProcedure(procedure) with Run
     super.handle(request, response)
 
     val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
-    RunProcedure.handle(valueMap, request, response, this.asInstanceOf[RunTrait[RunReqClass]], authenticatedUserPK = None, sync = true)
+    RunProcedure.handleInput(valueMap, response, this.asInstanceOf[RunTrait[RunReqClass]], authenticatedUserPK = None, sync = true)
   }
 
 }

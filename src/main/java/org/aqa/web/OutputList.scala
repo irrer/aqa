@@ -385,7 +385,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
         val runTrait = WebRun.get(output.procedurePK).right.get.asInstanceOf[RunTrait[RunReqClass]]
         // Seems a bit round-about to create the valueMap, but this handles the bulk redo case.
         val valueMap = Map((OutputList.redoTag, output.outputPK.get.toString), (WebUtil.awaitTag, await.toString), (WebUtil.autoUploadTag, isAuto.toString))
-        RunProcedure.handle(valueMap, response.getRequest, response, runTrait, authenticatedUserPK, sync)
+        RunProcedure.handleInput(valueMap, response, runTrait, authenticatedUserPK, sync)
     }
   }
 

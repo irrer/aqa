@@ -41,8 +41,8 @@ object Phase2 extends Logging {
   val Phase2RunPKTag = "Phase2RunPK"
 
   /**
-   * Create a list of the RTIMAGEs mapped by beam name.
-   */
+    * Create a list of the RTIMAGEs mapped by beam name.
+    */
   /*
 private def constructRtimageMap(plan: AttributeList, rtimageList: Seq[AttributeList]) = {
   rtimageList.map(rtimage => (Phase2Util.getBeamNameOfRtimage(plan, rtimage), rtimage)).filter(ni => ni._1.isDefined).map(ni => (ni._1.get, ni._2)).toMap
@@ -50,48 +50,28 @@ private def constructRtimageMap(plan: AttributeList, rtimageList: Seq[AttributeL
    */
 
   /**
-   * Determine if user is authorized to perform redo.  To be authorized, the user must be from the
-   * same institution as the original user.
-   *
-   * Being whitelisted is not sufficient, because things just get weird in terms of viewing and
-   * ownership of the data.
-   */
-  /**
-   * private def userAuthorizedToModify(request: Request, response: Response, input: Input): Boolean = {
-   * val user = CachedUser.get(request).get
-   *
-   * val mach = Machine.get(input.machinePK.get).get
-   * val dataInstitution = mach.institutionPK
-   * val requestorsInstitution = user.institutionPK
-   * val same = dataInstitution == requestorsInstitution
-   * logger.info("user requesting redo.  Authorized: " + same)
-   * same
-   * }
-   */
-
-  /**
-   * Tell the user that the redo is forbidden and why.  Also give them a redirect back to the list of results.
-   * private def forbidRedo(response: Response, msg: String, outputPK: Option[Long]) {
-   * val content = {
-   * <div class="row">
-   * <div class="col-md-4 col-md-offset-2">
-   * {msg}<p></p>
-   * <a href={OutputList.path} class="btn btn-default" role="button">Back</a>
-   * </div>
-   * </div>
-   * }
-   *
-   * logger.info(msg + "  ouputPK: " + outputPK)
-   * val text = wrapBody(content, "Redo not permitted")
-   * setResponse(text, response, Status.CLIENT_ERROR_FORBIDDEN)
-   * }
-   */
+    * Tell the user that the redo is forbidden and why.  Also give them a redirect back to the list of results.
+    * private def forbidRedo(response: Response, msg: String, outputPK: Option[Long]) {
+    * val content = {
+    * <div class="row">
+    * <div class="col-md-4 col-md-offset-2">
+    * {msg}<p></p>
+    * <a href={OutputList.path} class="btn btn-default" role="button">Back</a>
+    * </div>
+    * </div>
+    * }
+    *
+    * logger.info(msg + "  ouputPK: " + outputPK)
+    * val text = wrapBody(content, "Redo not permitted")
+    * setResponse(text, response, Status.CLIENT_ERROR_FORBIDDEN)
+    * }
+    */
 
 }
 
 /**
- * Run Phase2 code.
- */
+  * Run Phase2 code.
+  */
 class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[RunReq] {
 
   /** Defines precision - Format to use when showing numbers. */
@@ -116,7 +96,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
   private def emptyForm(valueMap: ValueMapT, response: Response): Unit = {
     form.setFormResponse(valueMap, styleNone, procedure.name, response, Status.SUCCESS_OK)
   }
-  */
+   */
 
   private case class BasicData(rtplan: AttributeList, rtimageListByBeam: Seq[(Option[String], AttributeList)]) {
 
@@ -134,8 +114,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
   }
 
   /**
-   * Check that there is a single plan, single machine, and some images.
-   */
+    * Check that there is a single plan, single machine, and some images.
+    */
   private def basicValidation(rtplanList: Seq[AttributeList], rtimageList: Seq[AttributeList]): Either[StyleMapT, BasicData] = {
     logger.info("Number of RTPLAN files uploaded: " + rtplanList.size)
     logger.info("Number of RTIMAGE files uploaded: " + rtimageList.size)
@@ -169,30 +149,29 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     }
 
     /**
-     * Make a human readable list of machines
-     * def machineList: String = {
-     * val dstnct = machineSerialNumberList.distinct
-     * val idList = dstnct.flatMap(serNo => Machine.findMachinesBySerialNumber(serNo)).distinct.map(mach => mach.id).mkString("  ")
-     * dstnct.mkString("Serial Numbers: " + dstnct.mkString("  ")) + "    Machines: " + idList
-     * }
-     */
+      * Make a human readable list of machines
+      */
 
     0 match {
-      case _ if planUIDReferences.size > 1 => formErr("The RTIMAGES reference more than one RTPLAN.")
+      case _ if planUIDReferences.size > 1   => formErr("The RTIMAGES reference more than one RTPLAN.")
       case _ if referencedRtplanList.isEmpty => formErr("Can not find the referenced RTPLAN.  Retry and upload the RTPLAN with the images. ")
-      case _ if rtimageList.isEmpty => formErr("No RTIMAGEs given")
+      case _ if rtimageList.isEmpty          => formErr("No RTIMAGEs given")
 
       case _ if machineSerialNumberList.isEmpty =>
-        formErr("None of the " + rtimageList.size +
-          " RTIMAGEs have a device serial number (0018,1000) tag.\\n" +
-          "This can happen on a new machine or one that has been recently serviced.\\n" +
-          "The device serial number is required by this software to identify the instance of the machine.")
+        formErr(
+          "None of the " + rtimageList.size +
+            " RTIMAGEs have a device serial number (0018,1000) tag.\\n" +
+            "This can happen on a new machine or one that has been recently serviced.\\n" +
+            "The device serial number is required by this software to identify the instance of the machine."
+        )
 
       case _ if machineSerialNumberList.size != rtimageList.size =>
-        formErr("Only " + machineSerialNumberList.size + " of the " + rtimageList.size +
-          " RTIMAGEs have a device serial number (0018,1000) tag.\\n" +
-          "This can happen on a new machine or one that has been recently serviced.\\n" +
-          "The device serial number is required by this software to identify the instance of the machine.")
+        formErr(
+          "Only " + machineSerialNumberList.size + " of the " + rtimageList.size +
+            " RTIMAGEs have a device serial number (0018,1000) tag.\\n" +
+            "This can happen on a new machine or one that has been recently serviced.\\n" +
+            "The device serial number is required by this software to identify the instance of the machine."
+        )
 
       case _ if (dateTimeList.last - dateTimeList.head) > maxDuration =>
         formErr("Over " + Config.MaxProcedureDuration + " minutes from first to last image.  These RTIMAGE files were not from the same session")
@@ -205,22 +184,24 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
   }
 
   /**
-   * determine if there are undefined beams
-   */
+    * determine if there are undefined beams
+    */
   private def beamNotDefinedProblem(basicData: BasicData): Option[String] = {
     // check for beams that are not in the plan
     val undefFileNameList = basicData.rtimageListByBeam.filter(b => b._1.isEmpty).map(b => b._2)
     if (undefFileNameList.nonEmpty) {
       val undefBeamNumbers = undefFileNameList.map(al => al.get(TagByName.ReferencedBeamNumber)).filter(a => a != null).flatMap(a => a.getIntegerValues)
-      Some("There were " + undefFileNameList.size + " file(s) that reference a beam that was not in the plan, or, had no beam number." + WebUtil.titleNewline +
-        "  Beam number(s) in images but not defined in RTPLAN: " + undefBeamNumbers.mkString("  ") + WebUtil.titleNewline +
-        "  Number of images that did not reference a beam number: " + (undefFileNameList.size - undefBeamNumbers.size))
+      Some(
+        "There were " + undefFileNameList.size + " file(s) that reference a beam that was not in the plan, or, had no beam number." + WebUtil.titleNewline +
+          "  Beam number(s) in images but not defined in RTPLAN: " + undefBeamNumbers.mkString("  ") + WebUtil.titleNewline +
+          "  Number of images that did not reference a beam number: " + (undefFileNameList.size - undefBeamNumbers.size)
+      )
     } else None
   }
 
   /**
-   * determine if there is more than one image that reference/define the same beam
-   */
+    * determine if there is more than one image that reference/define the same beam
+    */
   private def beamMultiRefProblem(basicData: BasicData): Option[String] = {
     val multiRefList = basicData.rtimageListByBeam.filter(b => b._1.isDefined).groupBy(b => b._1.get.toUpperCase).values.filter(g => g.size > 1)
     if (multiRefList.isEmpty) None
@@ -232,8 +213,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
   }
 
   /**
-   * Check beam definitions, existence of flood field, and organize inputs into <code>RunReq</code> to facilitate further processing.
-   */
+    * Check beam definitions, existence of flood field, and organize inputs into <code>RunReq</code> to facilitate further processing.
+    */
   def basicBeamValidation(basicData: BasicData): Either[StyleMapT, RunReq] = {
     val rtimageMap = basicData.rtimageListByBeam.filter(rl => rl._1.isDefined && (!rl._1.get.equals(Config.FloodFieldBeamName))).map(rl => (rl._1.get, rl._2)).toMap
     val flood = basicData.rtimageListByBeam.filter(rl => rl._1.isDefined && rl._1.get.equals(Config.FloodFieldBeamName))
@@ -241,14 +222,14 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     (beamNotDefinedProblem(basicData), beamMultiRefProblem(basicData)) match {
       case (Some(errorMessage), _) => formErr(errorMessage)
       case (_, Some(errorMessage)) => formErr(errorMessage)
-      case _ if flood.isEmpty => formErr("Flood field beam is missing")
-      case _ => Right(RunReq(basicData.rtplan, rtimageMap, flood.head._2, Seq(), Seq())) // success
+      case _ if flood.isEmpty      => formErr("Flood field beam is missing")
+      case _                       => Right(RunReq(basicData.rtplan, rtimageMap, flood.head._2, Seq(), Seq())) // success
     }
   }
 
   /**
-   * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
-   */
+    * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
+    */
   private def validatePhase2(rtplanList: Seq[AttributeList], rtimageList: Seq[AttributeList]): Either[StyleMapT, RunReq] = {
     basicValidation(rtplanList: Seq[AttributeList], rtimageList: Seq[AttributeList]) match {
       case Left(fail) => Left(fail)
@@ -259,7 +240,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
         else {
           val runReq = basicBeamValid.right.get
           val err = MetadataCheckValidation.validate(runReq)
-          if (err.isDefined) Left(Error.make(form.uploadFileInput.get, err.get)) else {
+          if (err.isDefined) Left(Error.make(form.uploadFileInput.get, err.get))
+          else {
             val bpErr = BadPixelAnalysis.validate(runReq)
             if (bpErr.isDefined) Left(Error.make(form.uploadFileInput.get, err.get)) else Right(runReq)
           }
@@ -268,43 +250,31 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
   }
 
   /**
-   * Given an image list, find the one with the earliest date/time.
-   * private def dateTimePatId(rtimageList: Seq[DicomFile]): Util.DateTimeAndPatientId = {
-   * val list = rtimageList.map(df => Util.dateTimeAndPatientIdFromDicom(df.file)).filter(dt => dt.dateTime.isDefined)
-   * val dtap =
-   * if (list.isEmpty) Util.DateTimeAndPatientId(None, None)
-   * else list.minBy(dt => dt.dateTime.get)
-   * logger.info("DateTime and PatientId: " + dtap)
-   * dtap
-   * }
-   */
-
-  /**
-   * If more than one RTIMAGE reference the same beam, then remove all but the one with the the latest date/time.
-   * private def cullRedundantBeamReferences(rtimageList: Seq[DicomFile]): Seq[DicomFile] = {
-   * val groupList = rtimageList.groupBy(df => df.attributeList.get.get(TagByName.ReferencedBeamNumber).getIntegerValues.head).values
-   *
-   * def latestDateTime(al: AttributeList): Long = {
-   * Util.extractDateTimeAndPatientIdFromDicomAl(al)._1.map(dt => dt.getTime).max
-   * }
-   *
-   * def minGroup(g: Seq[DicomFile]): DicomFile = {
-   * if (g.size == 1) g.head
-   * else {
-   * val sorted = g.map(df => (latestDateTime(df.attributeList.get), df)).sortBy(_._1)
-   * val latestDicomFile = sorted.last._2
-   * val text = sorted.dropRight(1).map(df => Util.sopOfAl(df._2.attributeList.get)).mkString("\n    ")
-   * logger.info("Ignoring RTIMAGE files that redundantly reference the same beam.  Keeping the chronologically newest one:\n    " + text +
-   * "\nKeeping " + Util.sopOfAl(latestDicomFile.attributeList.get))
-   * latestDicomFile
-   * }
-   * }
-   *
-   * val culled = groupList.map(g => minGroup(g))
-   * logger.info("Number of RTIMAGE files culled due to redundant beam references: " + (rtimageList.size - culled.size))
-   * culled.toSeq
-   * }
-   */
+    * If more than one RTIMAGE reference the same beam, then remove all but the one with the the latest date/time.
+    * private def cullRedundantBeamReferences(rtimageList: Seq[DicomFile]): Seq[DicomFile] = {
+    * val groupList = rtimageList.groupBy(df => df.attributeList.get.get(TagByName.ReferencedBeamNumber).getIntegerValues.head).values
+    *
+    * def latestDateTime(al: AttributeList): Long = {
+    * Util.extractDateTimeAndPatientIdFromDicomAl(al)._1.map(dt => dt.getTime).max
+    * }
+    *
+    * def minGroup(g: Seq[DicomFile]): DicomFile = {
+    * if (g.size == 1) g.head
+    * else {
+    * val sorted = g.map(df => (latestDateTime(df.attributeList.get), df)).sortBy(_._1)
+    * val latestDicomFile = sorted.last._2
+    * val text = sorted.dropRight(1).map(df => Util.sopOfAl(df._2.attributeList.get)).mkString("\n    ")
+    * logger.info("Ignoring RTIMAGE files that redundantly reference the same beam.  Keeping the chronologically newest one:\n    " + text +
+    * "\nKeeping " + Util.sopOfAl(latestDicomFile.attributeList.get))
+    * latestDicomFile
+    * }
+    * }
+    *
+    * val culled = groupList.map(g => minGroup(g))
+    * logger.info("Number of RTIMAGE files culled due to redundant beam references: " + (rtimageList.size - culled.size))
+    * culled.toSeq
+    * }
+    */
 
   private def makeHtml(extendedData: ExtendedData, procedureStatus: ProcedureStatus.Value, elemList: Seq[Elem], runReq: RunReq): Unit = {
 
@@ -312,9 +282,11 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
 
     def showGroup(group: Seq[Elem]) = {
       <div class="row" style="margin-top:40px; margin-left:10px; margin-right:10px;">
-        {group.map(e => <div class="col-md-3">
+        {
+        group.map(e => <div class="col-md-3">
         {e}
-      </div>)}
+      </div>)
+      }
       </div>
     }
 
@@ -330,8 +302,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
   }
 
   /**
-   * Run the sub-procedures.
-   */
+    * Run the sub-procedures.
+    */
   private def runPhase2(extendedData: ExtendedData, runReq: RunReq): ProcedureStatus.Value = {
     logger.info("Starting Phase2 analysis")
 
@@ -368,7 +340,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
                       () => CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
                       () => WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
                       () => SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
-                      () => LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result)) ++ vmatFunction
+                      () => LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result)
+                    ) ++ vmatFunction
 
                     val list = seq.par.map(f => f())
                     val summaryList = prevSummaryList ++ list.map(r => if (r.isLeft) r.left.get else r.right.get.summary)
@@ -381,12 +354,12 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     logger.info("Finished all Phase2 analysis")
 
     val status = summaryList match {
-      case Left(_) => ProcedureStatus.fail
+      case Left(_)  => ProcedureStatus.fail
       case Right(_) => ProcedureStatus.pass
     }
 
     val sumList = summaryList match {
-      case Left(list) => list
+      case Left(list)  => list
       case Right(list) => list
     }
 
@@ -430,7 +403,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
         Seq()
       else {
         // List of wedge points that were baselines.
-        val wereBaseline = WedgePoint.history(oldOutput.get.machinePK.get ).filter(wh => wh.output.outputPK.get == oldOutput.get.outputPK.get && wh.wedgePoint.isBaseline)
+        val wereBaseline = WedgePoint.history(oldOutput.get.machinePK.get).filter(wh => wh.output.outputPK.get == oldOutput.get.outputPK.get && wh.wedgePoint.isBaseline)
         // Transform into beam name and background beam name, which is used to identify it.
         val list = wereBaseline.map(wh => wh.wedgePoint.wedgeBeamName + wh.wedgePoint.backgroundBeamName)
         list
@@ -475,7 +448,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     super.handle(request, response)
 
     val valueMap: ValueMapT = getValueMap(request)
-    RunProcedure.handle(valueMap, request, response, this.asInstanceOf[RunTrait[RunReqClass]], authenticatedUserPK = None, sync = true)
+    RunProcedure.handleInput(valueMap, response, this.asInstanceOf[RunTrait[RunReqClass]], authenticatedUserPK = None, sync = true)
   }
 
 }
