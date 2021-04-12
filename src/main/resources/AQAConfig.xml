@@ -73,6 +73,16 @@ Note that when building a package for release, the Maven build process uses the 
     <JavaKeyStorePassword>9c067233b07c7b04025989a197fad9b12cf4c19006678e2b18b121289bd1635a2d395a603122a6e6</JavaKeyStorePassword> <!-- rodicom11dev -->
     <JavaKeyStorePassword>44d18166c66bed60b6394e6625c63dea713dbe465ddc960a7cd109514bc0d2bd</JavaKeyStorePassword> <!-- -->     <!-- irrer -->
 
+    <!-- Maximum number of procedures to be run simultaneously.  Although the software allows many procedures to be
+     run in parallel, doing so can over-tax the host machine and cause out of memory failures.  The term procedure here
+     refers to the database Procedure table.  Examples of procedures are Phase2 and LOC.  Each procedure may start
+     multiple threads, which can tax the CPUs. -->
+    <MaxProcedureCount>1</MaxProcedureCount>
+
+    <!-- Maximum time as floating point in minutes to wait for a Procedure (see MaxProcedureCount) to finish before
+     going ahead and starting anyway. -->
+    <MaxProcedureWaitTime_min>10.0</MaxProcedureWaitTime_min>
+
     <!-- Root URL. -->
     <RootUrl>https://localhost:9443</RootUrl>
 

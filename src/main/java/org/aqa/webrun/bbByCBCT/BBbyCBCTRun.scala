@@ -51,7 +51,8 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
         DicomSeries.getByFrameUIDAndSOPClass(Set(planFrameUID), SOPClass.RTPlanStorage).head.attributeListList.head
       }
     }
-    BBbyCBCTRunReq(rtplan, reg, cbctList)
+    val result = BBbyCBCTRunReq(rtplan, reg, cbctList)
+    result
   }
 
   override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp] = {
@@ -114,7 +115,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
     def redo(outputPK: Long): Unit = {
       logger.info("BBbyCBCTRun starting redo of EPID output " + outputPK)
-      (new OutputList).redoOutput(outputPK, response, await = true, isAuto = true, cbctOutput.userPK)
+      (new OutputList).redoOutput(outputPK, response, await = true, isAuto = true, cbctOutput.userPK, sync = false)
       logger.info("BBbyCBCTRun finished redo of EPID output " + outputPK)
     }
 
@@ -225,7 +226,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     super.handle(request, response)
 
     val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
-    RunProcedure.handle(valueMap, request, response, this.asInstanceOf[RunTrait[RunReqClass]])
+    RunProcedure.handle(valueMap, request, response, this.asInstanceOf[RunTrait[RunReqClass]], authenticatedUserPK = None, sync = true)
   }
 
 }

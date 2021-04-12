@@ -66,7 +66,8 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     */
   override def makeRunReqForRedo(alList: Seq[AttributeList], output: Option[Output]): BBbyEPIDRunReq = {
     val epidList = alList.filter(al => Util.isRtimage(al))
-    BBbyEPIDRunReq(epidList)
+    val result = BBbyEPIDRunReq(epidList)
+    result
   }
 
   /**
@@ -104,7 +105,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     super.handle(request, response)
 
     val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
-    RunProcedure.handle(valueMap, request, response, this.asInstanceOf[RunTrait[RunReqClass]])
+    RunProcedure.handle(valueMap, request, response, this.asInstanceOf[RunTrait[RunReqClass]], authenticatedUserPK = None, sync = true)
   }
 
 }

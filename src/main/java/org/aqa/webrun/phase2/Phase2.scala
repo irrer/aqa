@@ -3,7 +3,6 @@ package org.aqa.webrun.phase2
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.DicomFile
 import org.aqa.Logging
@@ -211,7 +210,6 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
   private def beamNotDefinedProblem(basicData: BasicData): Option[String] = {
     // check for beams that are not in the plan
     val undefFileNameList = basicData.rtimageListByBeam.filter(b => b._1.isEmpty).map(b => b._2)
-    Trace.trace
     if (undefFileNameList.nonEmpty) {
       val undefBeamNumbers = undefFileNameList.map(al => al.get(TagByName.ReferencedBeamNumber)).filter(a => a != null).flatMap(a => a.getIntegerValues)
       Some("There were " + undefFileNameList.size + " file(s) that reference a beam that was not in the plan, or, had no beam number." + WebUtil.titleNewline +
@@ -463,7 +461,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
   override def validate(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, RunReqClass] = {
     val rtplanList = alList.filter(al => Util.isRtplan(al))
     val rtimageList = alList.filter(al => Util.isRtimage(al))
-    validatePhase2(rtplanList, rtimageList)
+    val result = validatePhase2(rtplanList, rtimageList)
+    result
   }
 
   override def run(extendedData: ExtendedData, runReq: RunReq, response: Response): ProcedureStatus.Value = {
@@ -476,7 +475,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     super.handle(request, response)
 
     val valueMap: ValueMapT = getValueMap(request)
-    RunProcedure.handle(valueMap, request, response, this.asInstanceOf[RunTrait[RunReqClass]])
+    RunProcedure.handle(valueMap, request, response, this.asInstanceOf[RunTrait[RunReqClass]], authenticatedUserPK = None, sync = true)
   }
 
 }

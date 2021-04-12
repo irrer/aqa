@@ -98,7 +98,7 @@ class MlcQaRun(procedure: Procedure) extends WebRunProcedure(procedure) with Run
     def allHaveSerialNumber() = rtimageList.map(rtimage => rtimage.get(TagByName.DeviceSerialNumber)).map(_ != null).reduce(_ && _)
 
     def rtplanIsAvailable(): Boolean = {
-      val uploaded = rtplanList.find(plan => Util.sopOfAl(plan).equals(rtplanRefList.head)).isDefined
+      val uploaded = rtplanList.exists(plan => Util.sopOfAl(plan).equals(rtplanRefList.head))
       def inDatabase() = DicomSeries.getBySopInstanceUID(rtplanRefList.head).nonEmpty
 
       uploaded || inDatabase()
@@ -168,7 +168,7 @@ class MlcQaRun(procedure: Procedure) extends WebRunProcedure(procedure) with Run
     super.handle(request, response)
 
     val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
-    RunProcedure.handle(valueMap, request, response, this.asInstanceOf[RunTrait[RunReqClass]])
+    RunProcedure.handle(valueMap, request, response, this.asInstanceOf[RunTrait[RunReqClass]], authenticatedUserPK = None, sync = true)
   }
 
 }

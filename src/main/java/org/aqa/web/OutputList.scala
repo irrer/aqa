@@ -374,7 +374,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   /**
     * Redo the given output.
     */
-  def redoOutput(outputPK: Long, response: Response, await: Boolean = false, isAuto: Boolean = false, authenticatedUserPK: Option[Long]): Unit = {
+  def redoOutput(outputPK: Long, response: Response, await: Boolean = false, isAuto: Boolean = false, authenticatedUserPK: Option[Long], sync: Boolean): Unit = {
 
     Output.get(outputPK) match {
       case None => noSuchOutput(response)
@@ -385,7 +385,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
         val runTrait = WebRun.get(output.procedurePK).right.get.asInstanceOf[RunTrait[RunReqClass]]
         // Seems a bit round-about to create the valueMap, but this handles the bulk redo case.
         val valueMap = Map((OutputList.redoTag, output.outputPK.get.toString), (WebUtil.awaitTag, await.toString), (WebUtil.autoUploadTag, isAuto.toString))
-        RunProcedure.handle(valueMap, response.getRequest, response, runTrait, authenticatedUserPK)
+        RunProcedure.handle(valueMap, response.getRequest, response, runTrait, authenticatedUserPK, sync)
     }
   }
 
@@ -404,7 +404,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
           val output = Output.get(outputPK).get
           logger.info("Performing bulk redo member: " + outputPK)
           val start = System.currentTimeMillis
-          redoOutput(outputPK, response, await = true, isAuto = true, authenticatedUserPK = output.userPK)
+          redoOutput(outputPK, response, await = true, isAuto = true, authenticatedUserPK = output.userPK, sync = true)
           val elapsed = System.currentTimeMillis - start
           logger.info("Performed bulk redo member: " + outputPK + " in " + elapsed + " ms")
         } catch {
@@ -426,7 +426,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
           handleDelete(valueMap, response)
           Filter.SKIP
         case _ if redo.isDefined =>
-          redoOutput(redo.get.toLong, response, authenticatedUserPK = None)
+          redoOutput(redo.get.toLong, response, authenticatedUserPK = None, sync = true)
           Filter.SKIP
         case _ =>
           if (buttonIs(valueMap, redoAll)) {
