@@ -407,6 +407,8 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
           redoOutput(outputPK, response, await = true, isAuto = true, authenticatedUserPK = output.userPK, sync = true)
           val elapsed = System.currentTimeMillis - start
           logger.info("Performed bulk redo member: " + outputPK + " in " + elapsed + " ms")
+          // Wait in case another user is trying to execute a procedure.
+          Thread.sleep(4 * 1000)
         } catch {
           case t: Throwable => logger.error("unexpected error redoing output " + outputPK + " : " + fmtEx(t))
         }
