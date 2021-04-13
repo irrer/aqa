@@ -149,7 +149,13 @@ function translateAliases() {
 function loadDynamicContent(id) {
   var doc = document.getElementById(id);
   if (doc !== null) {
+
+    // To more closely follow HTML guidelines, the URL should be specified in an attribute.  To maintain backwards
+    // compatibility the document content is used if the href is not specified.  Going forward, href should be used.
     var dynUrl = doc.innerHTML.trim();
+    var href = doc.getAttribute("href");
+    if (href !== null) dynUrl = href;
+
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
