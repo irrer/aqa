@@ -2,6 +2,7 @@ package org.aqa.webrun.phase2.symmetryAndFlatness
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ScalaUtil.PrettyXML
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -15,9 +16,6 @@ import org.aqa.web.WebUtil.SubUrlAdmin
 import org.aqa.web.WebUtil.ValueMapT
 import org.aqa.web.WebUtil.getValueMap
 import org.aqa.webrun.phase2.Phase2Util
-import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessSubHTML.baselineTag
-import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessSubHTML.csvTag
-import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessSubHTML.outputPKTag
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
@@ -37,6 +35,21 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   private def titleDetails = "Click to view graphs and other details"
 
   private def titleImage = "Click to view DICOM metadata"
+
+  /** PK of the SymmetryAndFlatness row to have it's baseline changed. */
+  private val symFlatPKTag = "symFlatPK"
+
+  /** Indicates that caller is requesting a CSV of the results. */
+  private val csvTag = "csv"
+
+  /** Indicates the value of the new baseline.  Must be either true or false. */
+  private val baselineTag = "baseline"
+
+  /** Indicates which set of data to retrieve for display as a web page. */
+  private val outputPKTag = "outputPK"
+
+  /** Used to specify the name of a beam in an URL. */
+  val beamNameTag = "BeamName"
 
   private def titleAxialSymmetry =
     "Axial symmetry from top to bottom: (top-bottom)/bottom.  Max percent limit is " + Config.SymmetryPercentLimit
@@ -340,17 +353,117 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     WebUtil.setResponse(text, response, Status.SUCCESS_OK)
   }
 
-  /** PK of the SymmetryAndFlatness row to have it's baseline changed. */
-  private val symFlatPKTag = "symFlatPK"
+  /**
+    * Format an HTML td with a double value.  Add title to show more precision.
+    * @param d Value to format.
+    * @return td element.
+    */
+  private def td(d: Double) = {
+    <td title={d.toString}>{Util.fmtDbl(d)}</td>
+  }
 
-  /** Indicates that caller is requesting a CSV of the results. */
-  private val csvTag = "csv"
+  /**
+    * Make HTML to show the results of the calculation of the beam data.
+    * @param beamData Data to show.
+    * @return HTML to display.
+    */
+  private def resultTable(beamData: SymmetryAndFlatness.SymmetryAndFlatnessHistory): Elem = {
+    Trace.trace("making results table")
 
-  /** Indicates the value of the new baseline.  Must be either true or false. */
-  private val baselineTag = "baseline"
+    <div style="margin:20px;">
+      <center><h3>Results</h3></center>
+      <table class="table table-bordered" title={"Results of this analysis and baseline values" + WebUtil.titleNewline + "for comparison.  All values are in percent."}>
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Transverse Symmetry %</th>
+            <th>Axial Symmetry %</th>
+            <th>Flatness %</th>
+            <th>Profile Constancy %</th>
+          </tr>
+        </thead>
+        <tr>
+          <td>Analysis</td>
+          {td(beamData.symmetryAndFlatness.transverseSymmetry)}
+          {td(beamData.symmetryAndFlatness.axialSymmetry)}
+          {td(beamData.symmetryAndFlatness.flatness)}
+          {td(beamData.symmetryAndFlatness.profileConstancy(beamData.baseline))}
+        </tr>
+        <tr>
+          <td>Baseline</td>
+          {td(beamData.baseline.transverseSymmetry)}
+          {td(beamData.baseline.axialSymmetry)}
+          {td(beamData.baseline.flatness)}
+          {td(beamData.baseline.profileConstancy(beamData.baseline))}
+        </tr>
+      </table>
+    </div>
+  }
 
-  /** Indicates which set of data to retrieve for display as a web page. */
-  private val outputPKTag = "outputPK"
+  /**
+    * Make HTML to show the raw beam data.
+    * @param beamData Data to show.
+    * @return HTML to display.
+    */
+  private def inputTable(beamData: SymmetryAndFlatness.SymmetryAndFlatnessHistory): Elem = {
+    <div style="margin:20px;">
+      <center><h3>Inputs</h3></center>
+      <table class="table table-bordered" title="Input values from this data set and from baseline.">
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Top CU</th>
+            <th>Bottom CU</th>
+            <th>Left CU</th>
+            <th>Right CU</th>
+            <th>Center CU</th>
+          </tr>
+        </thead>
+        <tr>
+          <td>Analysis</td>
+          {td(beamData.symmetryAndFlatness.top_cu)}
+          {td(beamData.symmetryAndFlatness.bottom_cu)}
+          {td(beamData.symmetryAndFlatness.left_cu)}
+          {td(beamData.symmetryAndFlatness.right_cu)}
+          {td(beamData.symmetryAndFlatness.center_cu)}
+        </tr>
+        <tr>
+          <td>Baseline</td>
+          {td(beamData.baseline.top_cu)}
+          {td(beamData.baseline.bottom_cu)}
+          {td(beamData.baseline.left_cu)}
+          {td(beamData.baseline.right_cu)}
+          {td(beamData.baseline.center_cu)}
+        </tr>
+      </table>
+    </div>
+  }
+
+  /**
+    * Format data for the just the given output and beam.  Build an HTML response to show it.
+    *
+    * @param valueMap Parameter list.  Already validated to have an output PK and beam name.
+    * @param response Put HTML here.
+    */
+  private def beamData(valueMap: ValueMapT, response: Response): Unit = {
+    val outputPK = valueMap(outputPKTag).toLong
+    val machinePK = Output.get(outputPK).get.machinePK.get
+    val beamName = valueMap(beamNameTag).replaceAll("%20", " ")
+    val history = SymmetryAndFlatness.history(machinePK, beamName)
+    val beamData = history.find(h => h.output.outputPK.get == outputPK).get
+
+    val content = {
+      <div class="row">
+        <div class="col-md-4 col-md-offset-4">
+          {resultTable(beamData)}
+          {inputTable(beamData)}
+        </div>
+      </div>
+    }
+
+    val text = PrettyXML.xmlToText(content)
+    WebUtil.setResponse(text, response, Status.SUCCESS_OK)
+  }
 
   /**
     * If the user is authorized (must be in same institution or be whitelisted) then
@@ -414,12 +527,19 @@ class SymmetryAndFlatnessSubHTML extends Restlet with Logging with SubUrlAdmin {
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
     val valueMap = getValueMap(request)
+    def has(tag: String) = valueMap.contains(tag)
+    val SF = SymmetryAndFlatnessSubHTML
+
+    Trace.trace("tag+value list:\n" + valueMap.keys.map(k => k + " : " + valueMap(k)).mkString("\n"))
+    val j0 = has(SF.beamNameTag)
+    val j1 = has(SF.outputPKTag)
     try {
       0 match {
-        case _ if valueMap.contains(csvTag) && valueMap.contains(csvTag) => SymmetryAndFlatnessSubHTML.makeCsv(valueMap, response)
-        case _ if valueMap.contains(outputPKTag)                         => SymmetryAndFlatnessSubHTML.collectData(valueMap, response)
-        case _ if valueMap.contains(baselineTag)                         => SymmetryAndFlatnessSubHTML.setBaseline(valueMap, response)
-        case _                                                           => WebUtil.badRequest(response, message = "Invalid request", Status.CLIENT_ERROR_BAD_REQUEST)
+        case _ if has(SF.csvTag)                             => SF.makeCsv(valueMap, response)
+        case _ if has(SF.outputPKTag) && has(SF.beamNameTag) => SF.beamData(valueMap, response)
+        case _ if has(SF.outputPKTag)                        => SF.collectData(valueMap, response)
+        case _ if has(SF.baselineTag)                        => SF.setBaseline(valueMap, response)
+        case _                                               => WebUtil.badRequest(response, message = "Invalid request", Status.CLIENT_ERROR_BAD_REQUEST)
       }
     } catch {
       case t: Throwable =>

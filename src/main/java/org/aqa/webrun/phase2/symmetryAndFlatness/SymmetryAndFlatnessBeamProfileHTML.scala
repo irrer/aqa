@@ -105,17 +105,15 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
 
     // val graphHistory = new SymmetryAndFlatnessBeamHistoryHTML(result.beamName, extendedData.output.outputPK.get)  TODO rm
     val content = {
+
+      val dynamicUrl: String = {
+        (new SymmetryAndFlatnessSubHTML).pathOf + "?outputPK=" + extendedData.output.outputPK.get + "&" + SymmetryAndFlatnessSubHTML.beamNameTag + "=" + result.symmetryAndFlatness.beamName
+      }
+
       <div class="row">
 
         <div class="row">
-          <div class="col-md-4 col-md-offset-4">
-            {resultTable}
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-md-4 col-md-offset-4">
-            {inputTable}
-          </div>
+          <div id="DynamicContent1" href={dynamicUrl}> </div>
         </div>
 
         <div class="row">
