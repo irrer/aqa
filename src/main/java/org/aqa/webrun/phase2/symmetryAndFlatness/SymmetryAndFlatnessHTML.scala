@@ -71,9 +71,7 @@ object SymmetryAndFlatnessHTML extends Logging {
       val url = (new SymmetryAndFlatnessSubHTML).pathOf + "?outputPK=" + extendedData.output.outputPK.get
 
       <div class="col-md-6 col-md-offset-3">
-        <div id="DynamicContent1">
-          {url}
-        </div>
+        <div id="DynamicContent1" href={url}> </div>
       </div>
     }
 

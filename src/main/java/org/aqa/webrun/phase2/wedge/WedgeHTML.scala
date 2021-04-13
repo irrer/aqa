@@ -130,7 +130,8 @@ object WedgeHTML {
 
     // Instructions to load the checkbox dynamically.
     val getBaselineHtmlDynamically = {
-      <div id="DynamicContent1"> {baseUrl + "?" + WedgeUseAsBaseline.loadCheckboxTag + "=" + wedgePoint.wedgePointPK.get} </div>
+      val dynUrl = baseUrl + "?" + WedgeUseAsBaseline.loadCheckboxTag + "=" + wedgePoint.wedgePointPK.get
+      <div id="DynamicContent1" href={dynUrl}> </div>
     }
 
     val elem = {
