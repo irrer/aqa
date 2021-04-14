@@ -18,6 +18,7 @@ import org.restlet.data.Status
 import org.restlet.routing.Filter
 
 import java.text.SimpleDateFormat
+import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.xml.Elem
@@ -39,6 +40,8 @@ object OutputList {
     <a title="Click to re-run analysis. New results will replace previous results." href={path + "?" + redoTag + "=" + outputPK}>Redo</a>
   }
 
+  /** Flag that controls whether a bulk redo is running.   Set to false to suspend the bulk redo. */
+  private val bulkRedoIsRunning = new AtomicBoolean(true)
 }
 
 class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlView {
@@ -53,25 +56,41 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   val checkbox = new WebInputCheckbox("All Institutions", true, Some("Check to show output from all institutions, then click 'Refresh'"), 2, 0)
   val refresh: FormButton = makeButton("Refresh", ButtonType.BtnPrimary)
 
+  /**
+    * Generate the contents for the the "To Do" list.  It consists of
+    * any outputs that exist.
+    * @param valueMap parameter list.
+    * @return List of output PKs
+    */
   private def getToDoHtml(valueMap: ValueMapT): Elem = {
-    val requestSet = getRequestedSet(valueMap)
+    val requestSeq = getRequestedSeq(valueMap)
     val todoText =
-      if (requestSet.isEmpty)
+      if (requestSeq.isEmpty)
         ""
       else {
         val response: Response = null // this never gets used
-        val todoSet = getData(valueMap, response).map(e => e.output_outputPK).toSet
-        todoSet.toSeq.sorted.mkString(" ")
+        val todoSet = getData(valueMap, response).map(e => e.output_outputPK)
+        requestSeq.filter(pk => todoSet.contains(pk)).mkString(" ")
       }
     <div title="List of outputPK's need to be done">{todoText}</div>
   }
 
+  private def getRunningHtml(valueMap: ValueMapT): Elem = {
+    <div>{OutputList.bulkRedoIsRunning.toString}</div>
+  }
+
+  /**
+    * Generate the contents for the the "Done" list.  It consists of
+    * any outputs that do not exist.
+    * @param valueMap parameter list.
+    * @return List of output PKs
+    */
   private def getDoneHtml(valueMap: ValueMapT): Elem = {
-    val requestSet = getRequestedSet(valueMap)
+    val requestSeq = getRequestedSeq(valueMap)
     val response: Response = null // this never gets used
     val existing = getData(valueMap, response).map(e => e.output_outputPK).toSet
     // val donePkSet = requestSet.diff(existing)
-    val doneText = requestSet.diff(existing).toSeq.sorted.mkString("   ")
+    val doneText = requestSeq.filterNot(pk => existing.contains(pk)).mkString(" ")
     <div title="List of outputPK's that no longer exist or never existed">{doneText}</div>
   }
 
@@ -89,7 +108,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
     def elem(valueMap: ValueMapT) = {
       val quantities: Elem = {
-        val requestList = getRequestedSet(valueMap).toSeq.sorted
+        val requestList = getRequestedSeq(valueMap)
         if (requestList.isEmpty)
           <div></div>
         else {
@@ -104,17 +123,20 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
       }
       <div title={title}>Hover here for bulk redo instructions.  {quantities}</div>
     }
-    new WebPlainText("Bulk Redo Instructions", false, 6, 0, (valueMap: ValueMapT) => elem(valueMap))
+    new WebPlainText("Bulk Redo Instructions", false, 3, 0, (valueMap: ValueMapT) => elem(valueMap))
   }
 
   val requestList = new WebInputTextArea("Request List", 4, 0, "List of Output PK's to Redo")
   val todoList = new WebPlainText("To Do", true, 4, 0, getToDoHtml)
   val doneList = new WebPlainText("Done", true, 4, 0, getDoneHtml)
   val redoAll: FormButton = makeButton("Redo All", ButtonType.BtnDefault)
+  val stopButton: FormButton = makeButton("Stop", ButtonType.BtnDefault)
+  val resumeButton: FormButton = makeButton("Resume", ButtonType.BtnDefault)
+  val runningState = new WebPlainText("Running", true, 1, 0, getRunningHtml)
 
   override def htmlFieldList(valueMap: ValueMapT): List[WebRow] = {
     val webRow = List(checkbox, refresh)
-    def instructRow = List(bulkRedoInstructions, redoAll)
+    def instructRow = List(bulkRedoInstructions, redoAll, stopButton, resumeButton, runningState)
     def redoRow = List(requestList, todoList, doneList)
 
     if (userIsWhitelisted(valueMap))
@@ -123,46 +145,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
       List(webRow)
   }
 
-  /*
-  private def humanReadableURL(url: String): String = {
-    val small = url.replaceAll("^https://", "").replaceAll("^http://", "").replaceAll("^www\\.", "")
-    WebUtil.firstPartOf(small, 20)
-  }
-
-  private def procedureName(output: Output): String = Procedure.get(output.procedurePK).get.fullName
-
-  private def machineName(output: Output): String = {
-    try {
-      val input = Input.get(output.outputPK.get)
-      val machine = Machine.get(input.get.machinePK.get)
-      machine.get.id
-    } catch {
-      case e: Exception => "none"
-    }
-  }
-
-  private def institutionName(output: Output): String = {
-    try {
-      val input = Input.get(output.outputPK.get)
-      val machine = Machine.get(input.get.machinePK.get)
-      val institution = Institution.get(machine.get.institutionPK)
-      institution.get.name
-    } catch {
-      case e: Exception => "none"
-    }
-  }
-   */
-
-  // private def user(output: Output): String = User.get(output.userPK.get).get.fullName_real
-
   private val startTimeFormat = new SimpleDateFormat("yyyy MM dd HH:mm:ss")
-
-  /*
-  private def compareByInputTime(a: Output.ExtendedValues, b: Output.ExtendedValues): Int = {
-    if (a.input_dataDate.isDefined && b.input_dataDate.isDefined) a.input_dataDate.get.compareTo(b.input_dataDate.get)
-    else 0
-  }
-   */
 
   //noinspection SameParameterValue
   private def compareByStartTime(a: Output.ExtendedValues, b: Output.ExtendedValues): Boolean = a.output_startDate.compareTo(b.output_startDate) > 0
@@ -172,21 +155,14 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     if (date.isDefined) startTimeFormat.format(date.get) else "unknown date"
   }
 
-  private def getUrl(outputPK: Long, summary: Boolean): String = {
-    val sum = if (summary) "&" + ViewOutput.summaryTag + "=true" else ""
-    val url = ViewOutput.path + "?" + ViewOutput.outputPKTag + "=" + outputPK + sum
+  private def getUrl(outputPK: Long): String = {
+    val url = ViewOutput.path + "?" + ViewOutput.outputPKTag + "=" + outputPK
     url
   }
 
   private def startTimeUrl(extendedValues: Output.ExtendedValues): Elem = {
-    <a title="Data analysis time" href={getUrl(extendedValues.output_outputPK, summary = false)}> {startTimeFormat.format(extendedValues.output_startDate)}</a>
+    <a title="Data analysis time" href={getUrl(extendedValues.output_outputPK)}> {startTimeFormat.format(extendedValues.output_startDate)}</a>
   }
-
-  /*
-  private def inputFileUrl(extendedValues: Output.ExtendedValues): Elem = {
-    <a title="Data aquisition time" href={WebServer.urlOfResultsPath(extendedValues.input_directory.get)}>{inputTime(extendedValues)}</a>
-  }
-   */
 
   private def deleteUrl(extendedValues: Output.ExtendedValues): Elem = {
     <a title="Click to delete.  Can NOT be undone" href={OutputList.path + "?" + OutputList.deleteTag + "=" + extendedValues.output_outputPK}>Delete</a>
@@ -222,16 +198,24 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     * Get the set of outputs that user wants to redo.  Return empty set if none.  This
     * feature is only available to whitelisted users.
     */
-  private def getRequestedSet(valueMap: ValueMapT): Set[Long] = {
+  private def getRequestedSeq(valueMap: ValueMapT): Seq[Long] = {
     val isWhitelisted = userIsWhitelisted(valueMap)
-    val outPkSet = if (isWhitelisted && valueMap.contains(requestList.label) && valueMap(requestList.label).trim.nonEmpty) {
-      // get all integers, distinct and sorted
-      valueMap(requestList.label).replaceAll("[^0-9]", " ").split(" ").toSeq.filter(t => t.nonEmpty).map(t => t.toLong).toSet
-    } else
-      Set[Long]()
-    outPkSet
+    val outPkSeq =
+      if (isWhitelisted && valueMap.contains(requestList.label) && valueMap(requestList.label).trim.nonEmpty) {
+        // get all longs
+        valueMap(requestList.label).replaceAll("[^0-9]", " ").split(" ").toSeq.filter(t => t.nonEmpty).map(t => t.toLong)
+      } else
+        Seq()
+    outPkSeq
   }
 
+  /**
+    * Get the extended data for the given list of outputs.
+    *
+    * @param valueMap Parameter list.
+    * @param response Put data here.  Not used for this implementation of the superclass.
+    * @return List of outputs with associated values.
+    */
   override def getData(valueMap: ValueMapT, response: Response): Seq[Output.ExtendedValues] = {
 
     val isWhitelisted = userIsWhitelisted(valueMap)
@@ -246,9 +230,9 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
       }
     }
 
-    val requestSet = getRequestedSet(valueMap)
-    if (requestSet.nonEmpty) {
-      Output.extendedList(requestSet)
+    val requestSeq = getRequestedSeq(valueMap)
+    if (requestSeq.nonEmpty) {
+      Output.extendedList(requestSeq.toSet)
     } else
       Output.extendedList(instPK, entriesPerPage)
   }
@@ -396,12 +380,17 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   private def startBulkRedo(valueMap: ValueMapT, response: Response): Unit =
     OutputList.path.synchronized {
-      val outputPkList = getRequestedSet(valueMap).toSeq.sorted
+      val outputPkList = getRequestedSeq(valueMap)
       logger.info("Performing bulk redo on: " + outputPkList.mkString(" "))
 
-      def redoOne(outputPK: Long): Unit = {
+      def redoOne(output: Output): Unit = {
         try {
-          val output = Output.get(outputPK).get
+          if (OutputList.bulkRedoIsRunning.get())
+            logger.info("running state: " + OutputList.bulkRedoIsRunning.get())
+          while (!OutputList.bulkRedoIsRunning.get())
+            Thread.sleep(2000)
+
+          val outputPK = output.outputPK.get
           logger.info("Performing bulk redo member: " + outputPK)
           val start = System.currentTimeMillis
           redoOutput(outputPK, response, await = true, isAuto = true, authenticatedUserPK = output.userPK, sync = true)
@@ -410,12 +399,11 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
           // Wait in case another user is trying to execute a procedure.
           Thread.sleep(4 * 1000)
         } catch {
-          case t: Throwable => logger.error("unexpected error redoing output " + outputPK + " : " + fmtEx(t))
+          case t: Throwable => logger.error("unexpected error redoing output " + output + " : " + fmtEx(t))
         }
       }
 
-      outputPkList.map(outputPK => redoOne(outputPK))
-
+      outputPkList.flatMap(Output.get).map(redoOne)
     }
 
   override def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Int = {
@@ -430,6 +418,12 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
         case _ if redo.isDefined =>
           redoOutput(redo.get.toLong, response, authenticatedUserPK = None, sync = true)
           Filter.SKIP
+        case _ if buttonIs(valueMap, stopButton) =>
+          OutputList.bulkRedoIsRunning.set(false)
+          Filter.CONTINUE
+        case _ if buttonIs(valueMap, resumeButton) =>
+          OutputList.bulkRedoIsRunning.set(true)
+          Filter.CONTINUE
         case _ =>
           if (buttonIs(valueMap, redoAll)) {
             Future { startBulkRedo(valueMap, response) }
