@@ -75,6 +75,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     <div title="List of outputPK's need to be done">{todoText}</div>
   }
 
+  //noinspection ScalaUnusedSymbol
   private def getRunningHtml(valueMap: ValueMapT): Elem = {
     <div>{OutputList.bulkRedoIsRunning.toString}</div>
   }
@@ -100,7 +101,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
         "Clicking the Refresh button will refresh the list containing just the 'Request List' entries." + titleNewline +
         "outputPKs may be separated by any whitespace, comma, or non-digit." + titleNewline +
         "If the 'Request List' list is empty then all outputs will be listed." + titleNewline +
-        "Output redo's are performed sequentially so as not to overload the server." + titleNewline +
+        "Each output redo is performed sequentially so as not to overload the server." + titleNewline +
         "The page will refresh when all of the outputs have been performed." + titleNewline +
         "Once started, the only way to stop processing the list is to restart the server." + titleNewline +
         "You may monitor progress by copying and pasting list to another results" + titleNewline +
@@ -126,7 +127,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     new WebPlainText("Bulk Redo Instructions", false, 3, 0, (valueMap: ValueMapT) => elem(valueMap))
   }
 
-  val requestList = new WebInputTextArea("Request List", 4, 0, "List of Output PK's to Redo")
+  val requestList = new WebInputTextArea("Request List", 4, 0, "List of Output public keys to Redo")
   val todoList = new WebPlainText("To Do", true, 4, 0, getToDoHtml)
   val doneList = new WebPlainText("Done", true, 4, 0, getDoneHtml)
   val redoAll: FormButton = makeButton("Redo All", ButtonType.BtnDefault)
@@ -160,6 +161,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     url
   }
 
+  //noinspection SameParameterValue
   private def startTimeUrl(extendedValues: Output.ExtendedValues): Elem = {
     <a title="Data analysis time" href={getUrl(extendedValues.output_outputPK)}> {startTimeFormat.format(extendedValues.output_startDate)}</a>
   }
@@ -178,6 +180,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   private val userCol = new Column[ColT]("User", _.user_id, colT => wrapAlias(colT.user_id))
 
+  //noinspection ConvertibleToMethodValue
   private val startTimeCol = new Column[ColT]("Analysis", compareByStartTime _, startTimeUrl _)
 
   private val inputFileCol = new Column[ColT]("Acquisition", inputTime)
