@@ -43,7 +43,7 @@ case class MaintenanceRecord(
     result
   }
 
-  def insertOrUpdate = {
+  def insertOrUpdate(): Int = {
     if (!checkUser) throw new RuntimeException("User is not authorized to insert or update maintenance record because they are from a different institution than the machine.")
     Db.run(MaintenanceRecord.query.insertOrUpdate(this))
   }
@@ -61,7 +61,7 @@ object MaintenanceRecord {
     def summary = column[String]("summary")
     def description = column[String]("description")
 
-    def * = (maintenanceRecordPK.?, category, machinePK, creationTime, userPK, outputPK, summary, description) <> ((MaintenanceRecord.apply _) tupled, MaintenanceRecord.unapply _)
+    def * = (maintenanceRecordPK.?, category, machinePK, creationTime, userPK, outputPK, summary, description) <> (MaintenanceRecord.apply _ tupled, MaintenanceRecord.unapply)
 
     def machineFK = foreignKey("MaintenanceRecord_machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
     def userFK = foreignKey("MaintenanceRecord_userPKConstraint", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Restrict)
@@ -72,22 +72,22 @@ object MaintenanceRecord {
   def get(maintenanceRecordPK: Long): Option[MaintenanceRecord] = {
     val action = for {
       inst <- MaintenanceRecord.query if inst.maintenanceRecordPK === maintenanceRecordPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   def getByMachine(machinePK: Long): Seq[MaintenanceRecord] = {
     val action = for {
-      maintenanceRecord <- MaintenanceRecord.query if (maintenanceRecord.machinePK === machinePK)
-    } yield (maintenanceRecord)
+      maintenanceRecord <- MaintenanceRecord.query if maintenanceRecord.machinePK === machinePK
+    } yield maintenanceRecord
     Db.run(action.result).sortBy(_.creationTime.getTime)
   }
 
   def getByUser(userPK: Long): Seq[MaintenanceRecord] = {
     val action = for {
-      maintenanceRecord <- MaintenanceRecord.query if (maintenanceRecord.userPK === userPK)
-    } yield (maintenanceRecord)
+      maintenanceRecord <- MaintenanceRecord.query if maintenanceRecord.userPK === userPK
+    } yield maintenanceRecord
     Db.run(action.result)
   }
 
@@ -100,36 +100,31 @@ object MaintenanceRecord {
     val hiTs = new Timestamp(Math.max(lo.getTime, hi.getTime))
     val action = for {
       inst <- MaintenanceRecord.query if (inst.machinePK === machinePK) && (inst.creationTime >= loTs) && (inst.creationTime <= hiTs)
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
     list.sortWith((a, b) => a.creationTime.getTime < b.creationTime.getTime)
   }
 
   /**
-   * Get maintenance records for all institutions and machines, except for baseline records.
-   *
-   * @return Unsorted list of all non-baseline records.
-   */
-  def getAllExceptBaseline(): Seq[MaintenanceRecord] = {
+    * Get maintenance records for all institutions and machines, except for baseline records.
+    *
+    * @return Unsorted list of all non-baseline records.
+    */
+  def getAllExceptBaseline: Seq[MaintenanceRecord] = {
     val action = for {
       maintenanceRecord <- MaintenanceRecord.query.filter(_.category =!= MaintenanceCategory.setBaseline)
-    } yield (maintenanceRecord)
+    } yield maintenanceRecord
     Db.run(action.result)
   }
 
   /**
     * Get a list of all MaintenanceRecord's.
     */
-  def list = Db.run(query.result)
+  def list: Seq[MaintenanceRecord] = Db.run(query.result)
 
   def delete(maintenanceRecordPK: Long): Int = {
     val q = query.filter(_.maintenanceRecordPK === maintenanceRecordPK)
     val action = q.delete
     Db.run(action)
-  }
-
-  def main(args: Array[String]): Unit = {
-    val valid = Config.validate
-    DbSetup.init
   }
 }
