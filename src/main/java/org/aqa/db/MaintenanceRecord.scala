@@ -81,7 +81,7 @@ object MaintenanceRecord {
     val action = for {
       maintenanceRecord <- MaintenanceRecord.query if (maintenanceRecord.machinePK === machinePK)
     } yield (maintenanceRecord)
-    Db.run(action.result)
+    Db.run(action.result).sortBy(_.creationTime.getTime)
   }
 
   def getByUser(userPK: Long): Seq[MaintenanceRecord] = {
