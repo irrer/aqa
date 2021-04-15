@@ -28,7 +28,7 @@ case class LeafPosition(
     result
   }
 
-  def insertOrUpdate = Db.run(LeafPosition.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(LeafPosition.query.insertOrUpdate(this))
 
   override def toString: String =
     "Beam: " + beamName +
@@ -38,7 +38,7 @@ case class LeafPosition(
       "  expectedEndPosition_mm: " + expectedEndPosition_mm.formatted("%6.2f") +
       "  measuredEndPosition_mm: " + measuredEndPosition_mm.formatted("%10.5f")
 
-  def pass = status.equalsIgnoreCase(ProcedureStatus.pass.toString)
+  def pass: Boolean = status.equalsIgnoreCase(ProcedureStatus.pass.toString)
 }
 
 object LeafPosition extends ProcedureOutput {
@@ -71,7 +71,7 @@ object LeafPosition extends ProcedureOutput {
         expectedEndPosition_mm,
         measuredMinorSide_mm,
         measuredMajorSide_mm
-      ) <> ((LeafPosition.apply _) tupled, LeafPosition.unapply _)
+      ) <> (LeafPosition.apply _ tupled, LeafPosition.unapply)
 
     def outputFK = foreignKey("LeafPosition_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -83,9 +83,9 @@ object LeafPosition extends ProcedureOutput {
   def get(leafPositionPK: Long): Option[LeafPosition] = {
     val action = for {
       inst <- LeafPosition.query if inst.leafPositionPK === leafPositionPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   /**
@@ -94,7 +94,7 @@ object LeafPosition extends ProcedureOutput {
   def getByOutput(outputPK: Long): Seq[LeafPosition] = {
     val action = for {
       inst <- LeafPosition.query if inst.outputPK === outputPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
     list
   }
@@ -112,7 +112,7 @@ object LeafPosition extends ProcedureOutput {
   }
 
   def xmlToList(elem: Elem, outputPK: Long): Seq[LeafPosition] = {
-    ???
+    throw new RuntimeException("Constructing from Elem not supported: " + outputPK + " : " + elem)
   }
 
   override def insert(elem: Elem, outputPK: Long): Int = {
@@ -126,12 +126,34 @@ object LeafPosition extends ProcedureOutput {
     Db.perform(ops)
   }
 
-  case class LeafPosHistory(output: Output, leafPos: LeafPosition) {}
+  /**
+    * Container for a group of LeafPositions associated with a single DICOM image.
+    *
+    * All data will have the same SOPInstanceUID.
+    *
+    * @param output Output with which the data is associated.
+    * @param leafPosSeq List of leaf positions.
+    */
+  case class LeafPosHistory(output: Output, leafPosSeq: Seq[LeafPosition]) {
+    // Used for sorting instances of this class
+    val ordering: String = output.dataDate.get.getTime + "  " + leafPosSeq.head.beamName
+
+    // Facilitate the quick finding a result given leafPositionIndex and leafIndex.
+    private val leafPosMap = leafPosSeq.map(lp => ((lp.leafPositionIndex, lp.leafIndex), lp)).toMap
+
+    /**
+      * Get the entry corresponding to the leaf's position and index.
+      * @param leafPositionIndex Index of horizontal position of leaf.  Currently a number from 1 to 10.  Note: NOT zero relative.
+      * @param leafIndex Index of leaf.  Will be either 1 to 36 or 1 to 52 depending on the collimator.  Note: NOT zero relative.
+      * @return A leaf position entry.
+      */
+    def get(leafPositionIndex: Int, leafIndex: Int): Option[LeafPosition] = leafPosMap.get((leafPositionIndex, leafIndex))
+  }
 
   /**
     * Get the entire history of leaf position data for the given machine.
     * @param machinePK Machine to get data for.
-    * @return List of history items sorted by data date.  For items with the same date, sort by beam name.
+    * @return List of history items sorted by data date and then beam name.  The leafPosSeq is not sorted.
     */
   def history(machinePK: Long): Seq[LeafPosHistory] = {
 
@@ -140,8 +162,15 @@ object LeafPosition extends ProcedureOutput {
       leafPos <- LeafPosition.query.filter(w => w.outputPK === output.outputPK)
     } yield (output, leafPos)
 
-    val sorted = Db.run(search.result).map(oc => LeafPosHistory(oc._1, oc._2)).sortBy(h => h.output.dataDate.get.getTime.formatted("%14d") + h.leafPos.beamName)
+    val result = Db.run(search.result)
 
+    val sorted =
+      // @formatter:off
+      result.
+        groupBy(_._2.SOPInstanceUID).                                         // group all entries that reference the same image together
+        values.map(sol => LeafPosHistory(sol.head._1, sol.map(l => l._2))).   // convert each group to a LeafHistory instance
+        toSeq.sortBy(_.ordering)                                              // sort by date and beam
+      // @formatter:on
     sorted
   }
 

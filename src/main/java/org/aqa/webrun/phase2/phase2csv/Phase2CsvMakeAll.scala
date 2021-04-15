@@ -14,6 +14,7 @@ object Phase2CsvMakeAll {
     (new CenterDoseCsv).updateFiles()
     (new CollimatorCenteringCsv).updateFiles()
     (new CollimatorPositionCsv).updateFiles()
+    (new LeafPositionCsv).updateFiles()
     (new SymmetryAndFlatnessCsv).updateFiles()
     (new VMAT_T2_DR_GSCsv).updateFiles()
     (new VMAT_T2_DG_RSCsv).updateFiles()
