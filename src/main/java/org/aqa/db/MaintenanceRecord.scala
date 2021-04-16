@@ -79,8 +79,8 @@ object MaintenanceRecord {
 
   def getByMachine(machinePK: Long): Seq[MaintenanceRecord] = {
     val action = for {
-      maintenanceRecord <- MaintenanceRecord.query if maintenanceRecord.machinePK === machinePK
-    } yield maintenanceRecord
+      mr <- MaintenanceRecord.query if (mr.machinePK === machinePK) && (mr.category =!= MaintenanceCategory.setBaseline)
+    } yield mr
     Db.run(action.result).sortBy(_.creationTime.getTime)
   }
 
@@ -114,7 +114,7 @@ object MaintenanceRecord {
     val action = for {
       maintenanceRecord <- MaintenanceRecord.query.filter(_.category =!= MaintenanceCategory.setBaseline)
     } yield maintenanceRecord
-    Db.run(action.result)
+    Db.run(action.result).sortBy(_.creationTime.getTime)
   }
 
   /**

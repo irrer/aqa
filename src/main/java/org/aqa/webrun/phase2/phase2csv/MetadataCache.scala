@@ -31,3 +31,7 @@ class MetadataCache {
   val userMap: Map[Long, String] = User.list.map(u => (u.userPK.get, u.id)).toMap
 
 }
+
+object MetadataCache {
+  lazy val metadataCache = new MetadataCache
+}

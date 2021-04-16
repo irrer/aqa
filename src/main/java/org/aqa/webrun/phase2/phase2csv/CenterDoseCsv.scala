@@ -39,6 +39,7 @@ object CenterDoseCsv {
   def main(args: Array[String]): Unit = {
     DbSetup.init
     (new CenterDoseCsv).updateFiles()
+    Phase2Csv.generateIndex()
   }
 
 }

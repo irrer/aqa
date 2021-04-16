@@ -15,11 +15,13 @@ object Phase2CsvMakeAll {
     (new CollimatorCenteringCsv).updateFiles()
     (new CollimatorPositionCsv).updateFiles()
     (new LeafPositionCsv).updateFiles()
+    MaintenanceCsv.updateFiles() // special because it is not associate with Output or DICOM
     (new SymmetryAndFlatnessCsv).updateFiles()
     (new VMAT_T2_DR_GSCsv).updateFiles()
     (new VMAT_T2_DG_RSCsv).updateFiles()
     (new VMAT_T3MLCSpeedCsv).updateFiles()
     (new WedgePointCsv).updateFiles()
+    Phase2Csv.generateIndex()
   }
 
 }

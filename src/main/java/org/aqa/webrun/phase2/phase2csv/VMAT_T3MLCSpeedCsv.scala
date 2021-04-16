@@ -12,6 +12,7 @@ object VMAT_T3MLCSpeedCsv {
   def main(args: Array[String]): Unit = {
     DbSetup.init
     (new VMAT_T3MLCSpeedCsv).updateFiles()
+    Phase2Csv.generateIndex()
   }
 }
 

@@ -84,6 +84,7 @@ object SymmetryAndFlatnessCsv {
   def main(args: Array[String]): Unit = {
     DbSetup.init
     (new SymmetryAndFlatnessCsv).updateFiles()
+    Phase2Csv.generateIndex()
   }
 
 }

@@ -97,5 +97,6 @@ object LeafPositionCsv {
   def main(args: Array[String]): Unit = {
     DbSetup.init
     (new LeafPositionCsv).updateFiles()
+    Phase2Csv.generateIndex()
   }
 }

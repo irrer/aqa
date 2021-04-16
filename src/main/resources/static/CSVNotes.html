@@ -1,0 +1,29 @@
+<div>
+    <h3>Notes on CSV Files</h3>
+    <p>
+        CSV files are intended as a way to provide access to the aggregated data for study and research.
+        The data spans all institutions and is anonymized.
+    </p>
+    <p>Data within each CSV is grouped by machine, with a separating blank row between machines. Within each machine,
+        data is sorted by date. Maintenance records are embedded chronologically in the data.</p>
+    <p>
+        Except for Maintenance Records, the CSV columns are organized in four main sections:
+    <ul>
+        <li>Institution, machine, and time stamps.</li>
+        <li>Data unique to the given type of analysis.</li>
+        <li>Machine characteristics, URL referencing report, and user that uploaded the data.</li>
+        <li>DICOM values associated with the data. This can be useful to find correlations between data
+            characteristics and machine settings. Some data sets (Collimator Centering, VMAT, and Wedge) have two sets
+            of DICOM files. The columns names will be slightly different for each DICOM file. The types of DICOM
+            metadata are the same for all CSV files. The column descriptions for DICOM fields are appended with
+            <i>DICOM GGGG,EEEE</i> to indicate the standard group and element as hex characters.
+        </li>
+    </ul>
+    </p>
+    <p>
+        Also note that CSV files are one way to access data, but it is also possible to access the database directly.
+        This allows the use of tools such as <a href="https://www.tableau.com/">Tableau</a> or
+        <a href="https://powerbi.microsoft.com/en-us/">PowerBI</a> to make your own custom reports. For direct
+        access to the database, contact the site administrator.
+    </p>
+</div>

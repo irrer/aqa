@@ -49,6 +49,7 @@ object CollimatorPositionCsv {
   def main(args: Array[String]): Unit = {
     DbSetup.init
     (new CollimatorPositionCsv).updateFiles()
+    Phase2Csv.generateIndex()
   }
 
 }

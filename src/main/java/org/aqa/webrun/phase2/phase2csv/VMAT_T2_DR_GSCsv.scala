@@ -12,5 +12,6 @@ object VMAT_T2_DR_GSCsv {
   def main(args: Array[String]): Unit = {
     DbSetup.init
     (new VMAT_T2_DR_GSCsv).updateFiles()
+    Phase2Csv.generateIndex()
   }
 }

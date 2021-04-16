@@ -82,6 +82,7 @@ object WedgePointCsv {
   def main(args: Array[String]): Unit = {
     DbSetup.init
     (new WedgePointCsv).updateFiles()
+    Phase2Csv.generateIndex()
   }
 
 }

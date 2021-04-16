@@ -85,9 +85,9 @@ abstract class Phase2Csv[T] extends Logging {
 
   private val metadataCache = new MetadataCache
 
-  private val maintenanceCsv = new MaintenanceCsv(metadataCache)
+  // private val maintenanceCsv = new MaintenanceCsv(metadataCache)
 
-  private val maintenanceRecordList = maintenanceCsv.retrieveGroupedAndOrderedList()
+  // private val maintenanceRecordList = maintenanceCsv.retrieveGroupedAndOrderedList()
 
   private val prefixCsv = new PrefixCsv(metadataCache)
   private val machineDescriptionCsv = new MachineDescriptionCsv(metadataCache)
@@ -152,7 +152,7 @@ abstract class Phase2Csv[T] extends Logging {
   }
 
   private def msOfData(dataSet: T): Long = getOutput(dataSet).dataDate.get.getTime
-  private def maintenanceListToCsv(maintenanceList: Seq[MaintenanceRecord]): Seq[String] = maintenanceList.map(maintenanceCsv.toCsvText)
+  private def maintenanceListToCsv(maintenanceList: Seq[MaintenanceRecord]): Seq[String] = maintenanceList.map(MaintenanceCsv.toCsvText)
 
   private def maintenanceBefore(dataSet: Option[T], mtMachList: Seq[MaintenanceRecord]): Seq[String] = {
     if (dataSet.isEmpty)
@@ -253,7 +253,7 @@ abstract class Phase2Csv[T] extends Logging {
     * @return Single string of CSV text.
     */
   private def machineToCsv(machine: Machine): String = {
-    val mtMachList = maintenanceRecordList.filter(_.machinePK == machine.machinePK.get) // list of maintenance records for just this machine
+    val mtMachList = MaintenanceRecord.getByMachine(machine.machinePK.get) // list of maintenance records for just this machine
 
     val dataList = getData(machine.machinePK.get) // data for this machine
 
@@ -285,38 +285,10 @@ abstract class Phase2Csv[T] extends Logging {
     Phase2Csv.writeDoc(prefixCsv.colList ++ makeColList ++ machineDescriptionCsv.colList ++ dicomCsv.colList, dataName, fileBaseName)
   }
 
-  /**
-    * Write a file documenting columns of this CSV.
-    */
-  def writeDocX(): Unit = {
-
-    val colList: Seq[CsvCol[_]] = prefixCsv.colList ++ makeColList ++ machineDescriptionCsv.colList ++ dicomCsv.colList
-
-    val name = "Definitions for " + dataName + " CSV columns."
-    val content: Elem = {
-      <div class="col-md-10 col-md-offset-1 ">
-        <h2>{name}</h2>
-        <table class="table table-bordered">
-          <tr>
-            <th>Column Title</th>
-            <th>Description</th>
-          </tr>
-          {colList.map(col => col.doc)}
-        </table>
-      </div>
-    }
-    val text = WebUtil.wrapBody(content, name)
-    Phase2Csv.csvDir.mkdirs()
-    val file = new File(Phase2Csv.csvDir, fileBaseName + ".html")
-    Util.writeFile(file, text)
-    logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath)
-  }
-
   def updateFiles(): Unit = {
     try {
       writeDoc()
       writeToFile()
-      Phase2Csv.generateIndex()
     } catch {
       case t: Throwable => logger.warn("Error updating CSV: " + fmtEx(t))
     }
@@ -357,6 +329,27 @@ object Phase2Csv extends Logging {
     val file = new File(Phase2Csv.csvDir, fileBaseName + ".html")
     Util.writeFile(file, text)
     logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath)
+  }
+
+  /** Name of file containing documentation on CSV files. */
+  private val notesFileName = "CSVNotes.html"
+
+  /** Tag in original HTML to be replaced by notes. */
+  private val notesTag = "@@@@" + notesFileName + "@@@@"
+
+  /**
+    * Get the notes for CVS from a static HTML file.
+    *
+    * @return On success, the contents of the file, otherwise an empty string.
+    */
+  private def getNotes(): String = {
+    val notesFile = new File(Config.staticDirFile, notesFileName)
+    Util.readTextFile(notesFile) match {
+      case Right(text) => text
+      case Left(t) =>
+        logger.warn("Could not read CVS notes file " + notesFile.getAbsolutePath + " : " + fmtEx(t))
+        ""
+    }
   }
 
   /**
@@ -408,13 +401,14 @@ object Phase2Csv extends Logging {
         <center>
           <a href={zipFileName}>Download zipped version of all CSV files.</a>
         </center>
+        {notesTag}
       </div>
     }
 
     val zipFile = new File(csvDir, zipFileName)
     FileUtil.readFileTreeToZipFile(csvList, excludePatternList = Seq(), excludeFileList = Seq(), zipFile)
 
-    val text = WebUtil.wrapBody(content, "CSV Index")
+    val text = WebUtil.wrapBody(content, "CSV Index").replace(notesTag, getNotes())
     Phase2Csv.csvDir.mkdirs()
     val file = new File(Phase2Csv.csvDir, "index.html")
     Util.writeFile(file, text)
