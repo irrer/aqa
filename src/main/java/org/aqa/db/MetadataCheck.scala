@@ -181,7 +181,8 @@ object MetadataCheck extends ProcedureOutput with Logging {
     *
     * Also, this code is bit hacky, but it did the job.
     *
-    * @param DoIt [MAX_COUNT].  'DoIt' as the first parameter is required to make changes to the database.
+    * @param args DoIt [MAX_COUNT]   'DoIt' as the first parameter is required to make changes to the
+    * database.  If MAX_COUNT is not given then all rows are fixed.
     */
   def main(args: Array[String]): Unit = {
 
