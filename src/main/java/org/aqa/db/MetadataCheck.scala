@@ -172,6 +172,32 @@ object MetadataCheck extends ProcedureOutput with Logging {
     Db.perform(ops)
   }
 
+  case class MetadataCheckHistory(output: Output, metadataCheck: MetadataCheck) {
+    override def toString: String = {
+      "date: " + output.dataDate.get + "    " + metadataCheck
+    }
+
+    val ordering = output.dataDate.get.getTime + "  " + metadataCheck.beamName
+  }
+
+  /**
+    * Get the CenterBeam results.
+    *
+    * @param machinePK: For this machine
+    */
+  def history(machinePK: Long): Seq[MetadataCheckHistory] = {
+
+    val search = for {
+      output <- Output.query.filter(o => o.machinePK === machinePK)
+      metadataCheck <- MetadataCheck.query.filter(c => c.outputPK === output.outputPK)
+    } yield (output, metadataCheck)
+
+    val result = Db.run(search.result).map(h => MetadataCheckHistory(h._1, h._2)).sortBy(_.ordering)
+    result
+  }
+
+  // ----------------------------------------------------------------------------------------------
+
   /**
     * Put SOPInstanceUIDs in rows that need it.
     *

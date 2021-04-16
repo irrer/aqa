@@ -16,6 +16,7 @@ object Phase2CsvMakeAll {
     (new CollimatorPositionCsv).updateFiles()
     (new LeafPositionCsv).updateFiles()
     MaintenanceCsv.updateFiles() // special because it is not associate with Output or DICOM
+    (new MetadataCheckCsv).updateFiles()
     (new SymmetryAndFlatnessCsv).updateFiles()
     (new VMAT_T2_DR_GSCsv).updateFiles()
     (new VMAT_T2_DG_RSCsv).updateFiles()
