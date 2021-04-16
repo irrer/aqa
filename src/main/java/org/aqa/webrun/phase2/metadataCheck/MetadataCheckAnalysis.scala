@@ -1,37 +1,33 @@
 package org.aqa.webrun.phase2.metadataCheck
 
-import org.aqa.Logging
-import org.aqa.db.MetadataCheck
-import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.TagFromName
+import com.pixelmed.dicom.AttributeTag
+import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.Logging
 import org.aqa.Util
-import scala.collection.Seq
-import scala.xml.Elem
-import org.aqa.db.Output
+import org.aqa.db.MetadataCheck
 import org.aqa.run.ProcedureStatus
-import org.aqa.Config
-import edu.umro.ScalaUtil.Trace
-import org.aqa.webrun.phase2.SubProcedureResult
-import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.SubProcedureResult
-import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.DicomDict.TagByName
+
+import scala.collection.Seq
+import scala.xml.Elem
 
 /**
- * Analyze DICOM files for ImageAnalysis.
- */
+  * Analyze DICOM files for ImageAnalysis.
+  */
 object MetadataCheckAnalysis extends Logging {
 
   private val JAW_NAME_X = "ASYMX"
   private val JAW_NAME_Y = "ASYMY"
-  private val jawNameSeq = Seq(JAW_NAME_X, JAW_NAME_Y)
 
   private def getJawPosns(jawSeq: Seq[AttributeList]) = {
-    Seq("X", "Y").map(name => jawSeq.filter(jp => jp.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrNull.toUpperCase.endsWith(name)).
-      head.get(TagByName.LeafJawPositions).getDoubleValues)
+    Seq("X", "Y").map(name =>
+      jawSeq.filter(jp => jp.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrNull.toUpperCase.endsWith(name)).head.get(TagByName.LeafJawPositions).getDoubleValues
+    )
   }
 
   private def getPlanJawPositions(plan: AttributeList, beamNumber: Int): Seq[Array[Double]] = {
@@ -65,13 +61,15 @@ object MetadataCheckAnalysis extends Logging {
       val imageExposureSeq = DicomUtil.seqToAttr(image, TagByName.ExposureSequence).head
 
       def allPlanCtrlPtDbl(dblTag: AttributeTag): Seq[Double] = planCtrlPointSeqList.filter(al => al.get(dblTag) != null).map(al => al.get(dblTag).getDoubleValues.head)
-      def aDblSeq(al: AttributeList, dblTag: AttributeTag): Seq[Double] = al.get(dblTag).getDoubleValues.toArray.toSeq
+      def aDblSeq(al: AttributeList, dblTag: AttributeTag): Seq[Double] = al.get(dblTag).getDoubleValues.toSeq
       def aDblHead(al: AttributeList, dblTag: AttributeTag): Double = aDblSeq(al, dblTag).head
 
       val planJawPosns = getPlanJawPositions(plan, imageBeamNumber)
       val imageJawPosns = getImageJawPositions(image)
 
       val beamName = Util.normalizedBeamName(planBeamSeq)
+
+      val SOPInstanceUID = image.get(TagByName.SOPInstanceUID).getSingleStringValueOrEmptyString()
 
       val gantryAnglePlan_deg = allPlanCtrlPtDbl(TagByName.GantryAngle).last
       val collimatorAnglePlan_deg = aDblHead(planCtrlPointSeqList.head, TagByName.BeamLimitingDeviceAngle)
@@ -95,10 +93,10 @@ object MetadataCheckAnalysis extends Logging {
       // If this is a wedge, then do not consider jaw errors as errors.
       val isWedge = (planBeamSeq.get(TagByName.NumberOfWedges) != null) && (planBeamSeq.get(TagByName.NumberOfWedges).getIntegerValues.head > 0)
 
-      val x1JawPlan_mm = planJawPosns(0)(0)
-      val x1JawPlanMinusImage_mm = planJawPosns(0)(0) - imageJawPosns(0)(0)
-      val x2JawPlan_mm = planJawPosns(0)(1)
-      val x2JawPlanMinusImage_mm = planJawPosns(0)(1) - imageJawPosns(0)(1)
+      val x1JawPlan_mm = planJawPosns.head(0)
+      val x1JawPlanMinusImage_mm = planJawPosns.head(0) - imageJawPosns.head(0)
+      val x2JawPlan_mm = planJawPosns.head(1)
+      val x2JawPlanMinusImage_mm = planJawPosns.head(1) - imageJawPosns.head(1)
       val y1JawPlan_mm = planJawPosns(1)(0)
       val y1JawPlanMinusImage_mm = planJawPosns(1)(0) - imageJawPosns(1)(0)
       val y2JawPlan_mm = planJawPosns(1)(1)
@@ -106,12 +104,12 @@ object MetadataCheckAnalysis extends Logging {
 
       val pass = {
         (gantryAnglePlanMinusImage_deg.abs < tolGantryAngle) &&
-          (collimatorAnglePlanMinusImage_deg.abs < tolCollimatorAngle) &&
-          (isWedge ||
-            (x1JawPlanMinusImage_mm.abs < tolJawX) &&
-            (x2JawPlanMinusImage_mm.abs < tolJawX) &&
-            (y1JawPlanMinusImage_mm.abs < tolJawY) &&
-            (y2JawPlanMinusImage_mm.abs < tolJawY))
+        (collimatorAnglePlanMinusImage_deg.abs < tolCollimatorAngle) &&
+        (isWedge ||
+        (x1JawPlanMinusImage_mm.abs < tolJawX) &&
+        (x2JawPlanMinusImage_mm.abs < tolJawX) &&
+        (y1JawPlanMinusImage_mm.abs < tolJawY) &&
+        (y2JawPlanMinusImage_mm.abs < tolJawY))
       }
 
       // image (independent of plan) uses flattening filter free
@@ -121,6 +119,7 @@ object MetadataCheckAnalysis extends Logging {
         None, // metadataCheckPK
         outputPK, // outputPK
         beamName,
+        Some(SOPInstanceUID),
         gantryAnglePlan_deg,
         gantryAnglePlanMinusImage_deg,
         collimatorAnglePlan_deg,
@@ -136,32 +135,32 @@ object MetadataCheckAnalysis extends Logging {
         energyPlan_kev,
         energyPlan_kev - energyImage_kev,
         flatteningFilter,
-        pass)
+        pass
+      )
 
       logger.info("MetadataCheckAnalysis.makeMetadata:\n" + metadataCheck)
       Some(metadataCheck)
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         logger.info("Unable to make Metadata: " + t + "\n" + fmtEx(t))
         None
-      }
     }
   }
 
   private val subProcedureName = "Metadata Check"
 
-  class MetadataResult(summary: Elem, status: ProcedureStatus.Value, resultList: Seq[MetadataCheck]) extends SubProcedureResult(summary, status, subProcedureName)
+  class MetadataResult(summary: Elem, status: ProcedureStatus.Value) extends SubProcedureResult(summary, status, subProcedureName)
 
   /**
-   * Run the Metadata sub-procedure, save results in the database, return true for pass or false for fail.  For it to pass all images have to pass.
-   */
+    * Run the Metadata sub-procedure, save results in the database, return true for pass or false for fail.  For it to pass all images have to pass.
+    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, MetadataResult] = {
     try {
       logger.info("Starting analysis of " + subProcedureName + "  for machine " + extendedData.machine.id)
       val planAttrList = runReq.rtplan
 
       val rtimageList = runReq.rtimageMap.values.toList
-      val resultList = rtimageList.map(rtimage => makeMetadata(extendedData.output.outputPK.get, planAttrList, rtimage)).flatten
+      val resultList = rtimageList.flatMap(rtimage => makeMetadata(extendedData.output.outputPK.get, planAttrList, rtimage))
 
       // make sure all were processed and that they all passed
       val pass = (resultList.size == rtimageList.size) && resultList.map(pc => pc.pass).reduce(_ && _)
@@ -169,14 +168,13 @@ object MetadataCheckAnalysis extends Logging {
 
       MetadataCheck.insert(resultList)
       val elem = MetadataCheckHTML.makeDisplay(extendedData, runReq, resultList, procedureStatus)
-      val pcr = Right(new MetadataResult(elem, procedureStatus, resultList))
+      val pcr = Right(new MetadataResult(elem, procedureStatus))
       logger.info("Finished analysis of Metadata for machine " + extendedData.machine.id)
       pcr
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         logger.warn("Unexpected error in analysis of Metadata: " + t + fmtEx(t))
         Left(Phase2Util.procedureCrash(subProcedureName))
-      }
     }
   }
 }
