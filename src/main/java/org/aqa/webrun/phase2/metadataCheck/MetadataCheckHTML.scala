@@ -69,7 +69,8 @@ object MetadataCheckHTML {
 
     def originalBeamName(psnChk: MetadataCheck): String = {
       val beamName = psnChk.beamName.trim
-      originalBeamNameList.find(orig => Util.normalizeBeamName(orig).equalsIgnoreCase(beamName)).get
+      val bn = originalBeamNameList.find(orig => Util.normalizeBeamName(orig).equalsIgnoreCase(beamName)).get
+      Util.normalizeBeamName(bn)
     }
 
     val rowList = Seq(
