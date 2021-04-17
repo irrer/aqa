@@ -253,16 +253,24 @@ abstract class Phase2Csv[T] extends Logging {
     * @return Single string of CSV text.
     */
   private def machineToCsv(machine: Machine): String = {
+    val prefix = dataName + " / " + machine.id + " "
+    logger.info(prefix + "starting")
     val mtMachList = MaintenanceRecord.getByMachine(machine.machinePK.get) // list of maintenance records for just this machine
 
+    logger.info(prefix + "getting data")
     val dataList = getData(machine.machinePK.get) // data for this machine
+    logger.info(prefix + "data size " + dataList.size)
 
+    logger.info(prefix + "getting maintenance records")
     val precedingMaintenance = maintenanceBefore(dataList.headOption, mtMachList)
     val followingMaintenance = maintenanceAfter(dataList.lastOption, mtMachList)
 
+    logger.info(prefix + "making rows")
     // make the row list for this one machine
     val machineRowList = dataList.indices.map(dataIndex => makeCsvRow(dataList, dataIndex, machine, mtMachList)).filter(_.nonEmpty)
+    logger.info(prefix + "number of rows " + machineRowList.size)
     val all = (precedingMaintenance ++ machineRowList ++ followingMaintenance).mkString(",\n")
+    logger.info(prefix + "done")
     all
   }
 
@@ -342,7 +350,7 @@ object Phase2Csv extends Logging {
     *
     * @return On success, the contents of the file, otherwise an empty string.
     */
-  private def getNotes(): String = {
+  private def readNotes(): String = {
     val notesFile = new File(Config.staticDirFile, notesFileName)
     Util.readTextFile(notesFile) match {
       case Right(text) => text
@@ -408,7 +416,7 @@ object Phase2Csv extends Logging {
     val zipFile = new File(csvDir, zipFileName)
     FileUtil.readFileTreeToZipFile(csvList, excludePatternList = Seq(), excludeFileList = Seq(), zipFile)
 
-    val text = WebUtil.wrapBody(content, "CSV Index").replace(notesTag, getNotes())
+    val text = WebUtil.wrapBody(content, "CSV Index").replace(notesTag, readNotes())
     Phase2Csv.csvDir.mkdirs()
     val file = new File(Phase2Csv.csvDir, "index.html")
     Util.writeFile(file, text)
