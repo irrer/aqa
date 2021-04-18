@@ -1,5 +1,6 @@
 package org.aqa.db
 
+import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
 import org.aqa.run.ProcedureStatus
@@ -157,13 +158,56 @@ object LeafPosition extends ProcedureOutput {
     */
   def history(machinePK: Long): Seq[LeafPosHistory] = {
 
-    val search = for {
-      output <- Output.query.filter(o => o.machinePK === machinePK)
-      leafPos <- LeafPosition.query.filter(w => w.outputPK === output.outputPK)
-    } yield (output, leafPos)
+    Trace.trace("machine: " + machinePK + " : " + Machine.get(machinePK).get.id)
+    val outputList = {
+      val procedurePK = Procedure.ProcOfPhase2.get.procedurePK.get
+      val search = for {
+        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
+      } yield output
+      val result = Db.run(search.result)
+      result
+    }
 
-    val result = Db.run(search.result)
+    Trace.trace()
+    val outputMap = outputList.map(o => (o.outputPK.get, o)).toMap
 
+    Trace.trace()
+    val leafPositionList = {
+      val search = for {
+        output <- Output.query.filter(o => o.machinePK === machinePK)
+        leafPos <- LeafPosition.query.filter(w => w.outputPK === output.outputPK)
+      } yield leafPos
+      Trace.trace()
+      println("=========\n\n" + search.result.statements.mkString("\n") + "\n\n")
+      Trace.trace()
+      val result = Db.run(search.result)
+      Trace.trace()
+      result
+    }
+
+    Trace.trace()
+    // @formatter:off
+
+
+
+    val j0 =
+      leafPositionList
+        .groupBy(_.SOPInstanceUID)
+        .map(uidLp => LeafPosHistory(outputMap(uidLp._2.head.outputPK), uidLp._2))
+        .toSeq
+
+    Trace.trace("size: " + j0.size)
+
+    val sorted =
+      leafPositionList
+        .groupBy(_.SOPInstanceUID)
+        .map(uidLp => LeafPosHistory(outputMap(uidLp._2.head.outputPK), uidLp._2))
+        .toSeq
+        .sortBy(_.ordering)
+    // @formatter:on
+    Trace.trace()
+
+    /*
     val sorted =
       // @formatter:off
       result.
@@ -171,6 +215,8 @@ object LeafPosition extends ProcedureOutput {
         values.map(sol => LeafPosHistory(sol.head._1, sol.map(l => l._2))).   // convert each group to a LeafHistory instance
         toSeq.sortBy(_.ordering)                                              // sort by date and beam
       // @formatter:on
+     */
+    Trace.trace()
     sorted
   }
 
