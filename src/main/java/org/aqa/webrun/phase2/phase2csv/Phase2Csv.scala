@@ -325,10 +325,11 @@ object Phase2Csv extends Logging {
         <h2>{name}</h2>
         <table class="table table-bordered">
           <tr>
+            <th>Column</th>
             <th>Column Title</th>
             <th>Description</th>
           </tr>
-          {colList.map(col => col.doc)}
+          {colList.zipWithIndex.map(colIndex => colIndex._1.doc(colIndex._2))}
         </table>
       </div>
     }
