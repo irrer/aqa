@@ -361,7 +361,8 @@ object Phase2Csv extends Logging {
   }
 
   /**
-    * Generate a user friendly web page to act as an index and write it as a file.
+    * Generate a user friendly web page to act as an index and write it as a file.  This
+    * also creates the ZIP file which contains all the CSV files.
     */
   def generateIndex(): Unit = {
     val csvList = Util.listDirFiles(csvDir).filter(_.getName.endsWith(".csv"))
