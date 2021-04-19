@@ -2,7 +2,6 @@ package org.aqa.webrun.phase2.phase2csv
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ScalaUtil.FileUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -141,7 +140,6 @@ abstract class Phase2Csv[T] extends Logging {
           machDir.mkdirs()
           val text = dicomCsv.dicomToText(al)
           Util.writeFile(f, text)
-          Trace.trace("wrote file " + file.getAbsolutePath)
         }
       }
 
@@ -312,6 +310,7 @@ object Phase2Csv extends Logging {
   val csvDir = new File(Config.resultsDirFile, "CSV")
 
   /** Name of file that contains all of the CSV files. */
+  //noinspection SpellCheckingInspection
   val zipFileName = "AQAcsv.zip"
 
   /**

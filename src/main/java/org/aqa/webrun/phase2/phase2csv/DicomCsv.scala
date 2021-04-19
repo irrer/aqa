@@ -67,6 +67,11 @@ class DicomCsv {
       "Cumulative Meterset Weight within Beam referenced by Referenced Beam Number (300C,0006) at which image acquisition ends.  DICOM 300C,0009",
       (al: AL) => Util.attr2Csv(al, TagByName.EndCumulativeMetersetWeight).head
     ),
+    CsvCol(
+      "Beam Number",
+      "Uniquely identifies the corresponding N-segment treatment beam specified by Beam Number (300A,00C0) within Beam Sequence (300A,00B0) in RT Beams Module within the RT Plan referenced in Referenced RT Plan Sequence (300C,0002) or the Ion Beam Sequence (300A,03A2) in the RT Ion Beams Module within the RT Ion Plan referenced in Referenced RT Plan Sequence (300C,0002).  DICOM 300C,0006",
+      (al: AL) => Util.attr2Csv(al, TagByName.ReferencedBeamNumber).head
+    ),
     CsvCol("Operator", "Anonymized name(s) of the operator(s) supporting the Series.  DICOM 0008,1070", (al: AL) => Util.attr2Csv(al, TagByName.OperatorsName).head),
     CsvCol(
       "Software Version",
