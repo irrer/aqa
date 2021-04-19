@@ -1,5 +1,6 @@
 package org.aqa.webrun.phase2.phase2csv
 
+import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Output
 import org.aqa.db.VMAT
 
@@ -98,7 +99,10 @@ abstract class VMATCsv extends Phase2Csv[Seq[VMAT.VMATHistory]] {
   private def avgAbsDev(centerList_mm: Seq[Double]) = {
     val header = "Avg of abs Diff(X)"
     val doc = "Average of absolute deviations (Diff Abs)"
-    val function = (vhs: VHS) => vhs.map(_.vmat.diff_pct.abs).sum / centerList_mm.size
+    val function = (vhs: VHS) => {
+      Trace.trace(vhs.size)
+      vhs.map(_.vmat.diff_pct.abs).sum / vhs.size
+    }
     CsvCol(header, doc, function)
   }
 
