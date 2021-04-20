@@ -279,10 +279,6 @@ abstract class Phase2Csv[T] extends Logging {
     */
   private def csvContent: String = makeHeader() + "\n" + machineList.map(machine => machineToCsv(machine)).filter(_.nonEmpty).mkString("\n\n")
 
-  private def csvDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss")
-
-  private def csvFileName = fileBaseName + "_" + csvDateFormat.format(new Date()) + ".csv"
-
   private def deleteCsvFiles(): Unit = {
     val toDeleteList = Util.listDirFiles(Phase2Csv.csvDir).filter(f => f.getName.matches(fileBaseName + "_" + ".*.csv$"))
     toDeleteList.map(f => f.delete())
@@ -295,7 +291,7 @@ abstract class Phase2Csv[T] extends Logging {
     val start = System.currentTimeMillis()
     Phase2Csv.csvDir.mkdirs()
     deleteCsvFiles()
-    val csvFile = new File(Phase2Csv.csvDir, csvFileName)
+    val csvFile = new File(Phase2Csv.csvDir, Phase2Csv.csvFileName(fileBaseName))
     Util.writeFile(csvFile, csvContent)
     logger.info("Wrote " + csvFile.length() + " bytes to file " + csvFile.getAbsolutePath + " in " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
   }
@@ -321,6 +317,10 @@ object Phase2Csv extends Logging {
     * Location of cross-institutional CSV files.
     */
   val csvDir = new File(Config.resultsDirFile, "CSV")
+
+  private def csvDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss")
+
+  def csvFileName(fileBaseName: String): String = fileBaseName + "_" + csvDateFormat.format(new Date()) + ".csv"
 
   /** Name of file that contains all of the CSV files. */
   //noinspection SpellCheckingInspection

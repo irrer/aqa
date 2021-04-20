@@ -6,6 +6,7 @@ import org.aqa.db.Machine
 import org.aqa.db.MaintenanceRecord
 
 import java.io.File
+import java.util.Date
 
 /**
   * Support both the creation of a maintenance record CSV file and the insertion of
@@ -83,7 +84,10 @@ object MaintenanceCsv {
 
     val fullText = headerText + "\n" + rows.filter(_.nonEmpty).mkString("\n\n")
 
-    val csvFile = new File(Phase2Csv.csvDir, fileBaseName + ".csv")
+    // Remove old versions of this CSV file.
+    Util.listDirFiles(Phase2Csv.csvDir).filter(f => f.getName.matches(fileBaseName + ".*.csv$")).foreach(_.delete())
+
+    val csvFile = new File(Phase2Csv.csvDir, Phase2Csv.csvFileName(fileBaseName))
     Phase2Csv.csvDir.mkdirs()
     Util.writeFile(csvFile, fullText)
 
