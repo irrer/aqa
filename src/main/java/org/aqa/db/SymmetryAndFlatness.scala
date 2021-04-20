@@ -335,8 +335,7 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     // side effect of ensuring that the dataDate is defined.  If it is not defined, this will
     // throw an exception.
     val sr = search.result
-    Trace.trace("\n\n" + sr.statements + "\n")
-    val tsList = Db.run(sr).map(os => OutputSymFlat(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
+    val tsList = Db.run(sr).map(os => OutputSymFlat(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime +  "  " + os.sf.beamName)
 
     associateBaseline(tsList)
   }
