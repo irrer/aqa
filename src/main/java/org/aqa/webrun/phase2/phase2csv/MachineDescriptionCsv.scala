@@ -15,6 +15,8 @@ class MachineDescriptionCsv(metadataCache: MetadataCache) {
     CsvCol[Output]("Collimator", "Type of collimator", (o: Output) => metadataCache.collimatorTypeMap(metadataCache.machineMap(o.machinePK.get).multileafCollimatorPK)),
     CsvCol[Output]("EPID", "Type of EPID", (o: Output) => metadataCache.epidTypeMap(metadataCache.machineMap(o.machinePK.get).epidPK)),
     CsvCol[Output]("URL", "Link to main report.", (o: Output) => urlOfOutput(o)),
+    CsvCol[Output]("outputPK", "Internal database reference to synthetic public key of output.", (o: Output) => o.outputPK.get),
+    CsvCol[Output]("inputPK", "Internal database reference to synthetic public key of input.", (o: Output) => o.inputPK),
     CsvCol[Output]("Uploaded By", "Anonymized version of user ID.", (o: Output) => metadataCache.userMap(o.userPK.get))
   )
 
