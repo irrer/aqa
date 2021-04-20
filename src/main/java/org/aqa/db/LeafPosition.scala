@@ -205,15 +205,6 @@ object LeafPosition extends ProcedureOutput with Logging {
         .sortBy(_.ordering)
     // @formatter:on
 
-    /*
-    val sorted =
-      // @formatter:off
-      result.
-        groupBy(_._2.SOPInstanceUID).                                         // group all entries that reference the same image together
-        values.map(sol => LeafPosHistory(sol.head._1, sol.map(l => l._2))).   // convert each group to a LeafHistory instance
-        toSeq.sortBy(_.ordering)                                              // sort by date and beam
-      // @formatter:on
-     */
     sorted
   }
 
