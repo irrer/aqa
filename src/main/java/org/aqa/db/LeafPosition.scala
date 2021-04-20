@@ -1,10 +1,11 @@
 package org.aqa.db
 
-import edu.umro.ScalaUtil.Trace
+import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
 import org.aqa.run.ProcedureStatus
 
+import scala.annotation.tailrec
 import scala.xml.Elem
 
 case class LeafPosition(
@@ -42,7 +43,7 @@ case class LeafPosition(
   def pass: Boolean = status.equalsIgnoreCase(ProcedureStatus.pass.toString)
 }
 
-object LeafPosition extends ProcedureOutput {
+object LeafPosition extends ProcedureOutput with Logging {
   class LeafPositionTable(tag: Tag) extends Table[LeafPosition](tag, "leafPosition") {
 
     def leafPositionPK = column[Long]("leafPositionPK", O.PrimaryKey, O.AutoInc)
@@ -158,7 +159,7 @@ object LeafPosition extends ProcedureOutput {
     */
   def history(machinePK: Long): Seq[LeafPosHistory] = {
 
-    Trace.trace("machine: " + machinePK + " : " + Machine.get(machinePK).get.id)
+    logger.info("LeafPosition history starting for machine: " + machinePK + " : " + Machine.get(machinePK).get.id)
     val outputList = {
       val procedurePK = Procedure.ProcOfPhase2.get.procedurePK.get
       val search = for {
@@ -168,24 +169,33 @@ object LeafPosition extends ProcedureOutput {
       result
     }
 
-    Trace.trace()
     val outputMap = outputList.map(o => (o.outputPK.get, o)).toMap
 
-    Trace.trace()
     val leafPositionList = {
-      val search = for {
-        output <- Output.query.filter(o => o.machinePK === machinePK)
-        leafPos <- LeafPosition.query.filter(w => w.outputPK === output.outputPK)
-      } yield leafPos
-      Trace.trace()
-      // println("=========\n\n" + search.result.statements.mkString("\n") + "\n\n")
-      // Trace.trace()
-      val result = Db.run(search.result)
-      Trace.trace()
-      result
+
+      val pageSize = 1000
+
+      @tailrec
+      def appendPage(list: Seq[LeafPosition] = Seq()): Seq[LeafPosition] = {
+        val search = for {
+          output <- Output.query.filter(o => o.machinePK === machinePK)
+          leafPos <- LeafPosition.query.filter(w => w.outputPK === output.outputPK)
+        } yield leafPos
+        val subSearch = search.sortBy(_.leafPositionPK).drop(list.size).take(pageSize)
+        val result = Db.run(subSearch.result)
+        val next = list ++ result
+        logger.info("LeafPosition history list size: " + next.size)
+
+        if (result.size < pageSize)
+          next
+        else
+          appendPage(next)
+      }
+      val fullList = appendPage()
+      logger.info("machinePK: " + machinePK + "   Total number of LeafPosition rows: " + fullList.size)
+      fullList
     }
 
-    Trace.trace()
     // @formatter:off
     val sorted =
       leafPositionList
@@ -194,7 +204,6 @@ object LeafPosition extends ProcedureOutput {
         .toSeq
         .sortBy(_.ordering)
     // @formatter:on
-    Trace.trace()
 
     /*
     val sorted =
@@ -205,7 +214,6 @@ object LeafPosition extends ProcedureOutput {
         toSeq.sortBy(_.ordering)                                              // sort by date and beam
       // @formatter:on
      */
-    Trace.trace()
     sorted
   }
 
