@@ -178,8 +178,8 @@ object LeafPosition extends ProcedureOutput {
         leafPos <- LeafPosition.query.filter(w => w.outputPK === output.outputPK)
       } yield leafPos
       Trace.trace()
-      println("=========\n\n" + search.result.statements.mkString("\n") + "\n\n")
-      Trace.trace()
+      // println("=========\n\n" + search.result.statements.mkString("\n") + "\n\n")
+      // Trace.trace()
       val result = Db.run(search.result)
       Trace.trace()
       result
@@ -187,17 +187,6 @@ object LeafPosition extends ProcedureOutput {
 
     Trace.trace()
     // @formatter:off
-
-
-
-    val j0 =
-      leafPositionList
-        .groupBy(_.SOPInstanceUID)
-        .map(uidLp => LeafPosHistory(outputMap(uidLp._2.head.outputPK), uidLp._2))
-        .toSeq
-
-    Trace.trace("size: " + j0.size)
-
     val sorted =
       leafPositionList
         .groupBy(_.SOPInstanceUID)
