@@ -277,14 +277,27 @@ abstract class Phase2Csv[T] extends Logging {
     *
     * @return The CSV content as a single string.
     */
-  def csvContent: String = makeHeader() + "\n" + machineList.map(machine => machineToCsv(machine)).filter(_.nonEmpty).mkString("\n\n")
+  private def csvContent: String = makeHeader() + "\n" + machineList.map(machine => machineToCsv(machine)).filter(_.nonEmpty).mkString("\n\n")
 
+  private def csvDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss")
+
+  private def csvFileName = fileBaseName + "_" + csvDateFormat.format(new Date()) + ".csv"
+
+  private def deleteCsvFiles(): Unit = {
+    val toDeleteList = Util.listDirFiles(Phase2Csv.csvDir).filter(f => f.getName.matches(fileBaseName + "_" + ".*.csv$"))
+    toDeleteList.map(f => f.delete())
+  }
+
+  /**
+    * Write the CSV content to a file.
+    */
   def writeToFile(): Unit = {
     val start = System.currentTimeMillis()
     Phase2Csv.csvDir.mkdirs()
-    val file = new File(Phase2Csv.csvDir, fileBaseName + ".csv")
-    Util.writeFile(file, csvContent)
-    logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath + " in " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
+    deleteCsvFiles()
+    val csvFile = new File(Phase2Csv.csvDir, csvFileName)
+    Util.writeFile(csvFile, csvContent)
+    logger.info("Wrote " + csvFile.length() + " bytes to file " + csvFile.getAbsolutePath + " in " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
   }
 
   def writeDoc(): Unit = {
@@ -374,15 +387,17 @@ object Phase2Csv extends Logging {
         dateFormat.format(new Date(file.lastModified()))
       }
 
+      val suffixPattern = ".....................csv$"
+
       <tr>
         <td>
-          <a href={file.getName}>{file.getName.replaceAll(".csv$", "")}</a>
+          <a href={file.getName}>{file.getName.replaceAll(suffixPattern, "")}</a>
         </td>
         <td>
           {date}
         </td>
         <td>
-          <a href={file.getName.replaceAll(".csv$", ".html")}>Column Definitions</a>
+          <a href={file.getName.replaceAll(suffixPattern, ".html")}>Column Definitions</a>
         </td>
       </tr>
     }

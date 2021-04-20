@@ -11,18 +11,26 @@
     </p>
     <p>
         Data within each CSV is grouped by machine, with a separating blank row between machines. Within each machine,
-        data is sorted by date. Maintenance records are embedded chronologically in the data.</p>
+        data is sorted by date. Maintenance records are embedded chronologically in the data.
+    </p>
+    <p>
+        The CSV files were designed with a bias towards being complete rather than minimal. It is expected that the
+        user may discard or hide a majority of the columns to focus on what is pertinent. DICOM values have been
+        provided to provide greater insight and possibly explain outliers.
+    </p>
     <p>
         Except for Maintenance Records, the CSV columns are organized in four main sections:
+    </p>
     <ul>
         <li>Institution, machine, and time stamps.</li>
         <li>Data unique to the given type of analysis.</li>
         <li>Machine characteristics, URL referencing report, and user that uploaded the data.</li>
         <li>DICOM values associated with the data. This can be useful to find correlations between data
             characteristics and machine settings. Some data sets (Collimator Centering, VMAT, and Wedge) have two sets
-            of DICOM files. The columns names will be slightly different for each DICOM file. The types of DICOM
+            of DICOM files, in which case the columns names will be slightly different for each. The types of DICOM
             metadata are the same for all CSV files. The column descriptions for DICOM fields are appended with
-            <i>DICOM GGGG,EEEE</i> to indicate the standard group and element as hex characters.
+            <i>DICOM GGGG,EEEE</i> to indicate the standard group and element as hex characters. Since the same DICOM
+            files can be used for multiple tests, the same values may appear in different CSV files.
         </li>
     </ul>
 
