@@ -1,0 +1,742 @@
+<?xml version='1.0' encoding='utf-8'?>
+
+<!-- Production Configuration for AQA -->
+
+<AQAConfig>
+
+    <!-- Note concerning the attribute HostIp='******'
+         
+         If given, then only that host will use that value, and that host will not use any alternative value.
+         
+         If not given, then it is considered the default and any host may use that value.
+     -->
+
+    <!-- Database parameters. -->
+    <!-- UMRO SQL Server test database.  Note that this works, but only indirectly.  A connection
+    to SQL Server could not be created directly using the Slick DB Configuration approach, so instead it
+    reads the parameters and connects to the SQL database via a DataSource. A problem is that if the
+    supported list of configuration parameters is tightly coupled to the code, and a change in what
+    tags are defined requires a change in the code. The bottom line is, if the list of tags is changed
+    then the code must also be changed. The values can be changed without changing the code.
+
+    Note that when running as a service on a HITS system the service will log into the
+    Windows DB server as UMHS\UHROAPPWEBPR1$ no matter what you configure for a user
+    and password.  This user must be granted permissions using Microsoft SQL Server
+    Management Studio with Database role membership including db_owner so that they can
+    create tables on the first startup. -->
+    <!-- user = 'UMHS/irrer' -->
+    <SlickDb>
+        db {
+          default = {
+            driver = "slick.jdbc.SQLServerProfile$"
+            db {
+              host = ntsrodbspr1.umhs.med.umich.edu
+              port = 1433
+              databaseName = AQAmsPR
+              user = serviceUserIgnored
+              password = ignored
+              url = "jdbc:sqlserver://ntsrodbspr1.umhs.med.umich.edu:1433/AQAmsPR"
+              integratedSecurity = true
+            }
+          }
+        }
+    </SlickDb>
+
+    <!-- Port number for the Secure ReST service.   Port 443 is the default for HTTPS.
+    If this is missing or commented out, then the server will instead use HTTP on port 80.   Alternately,
+    if this is specified, then the JavaKeyStoreFileList and JavaKeyStorePassword must be given. -->
+    <HTTPSPort>8111</HTTPSPort> <!--  -->
+    
+    <!-- Port number if using (non-secure) HTTP.  If not specified, defaults to 80.
+    Uses for HTTP:
+        On AWS there is a front-end that is providing HTTPS support.
+        In general, there is no PHI in this system, so some users may choose this out simplicity and convenience. -->
+    <!-- <HTTPPort>80</HTTPPort> -->
+
+    <!-- List of IP addresses that the HTTP or HTTPS service will honor. Using '*' for 
+    any triplet indicates a wild card.
+        
+    Note that if you have two consecutive triplets with wild cards they must
+    still use a '.' between them, as in 123.234.*.*, NOT 123.234.* .
+        
+    Note also that partial triplets are allowed as in 123.234.111.2* allows all of :
+        123.234.111.2
+        123.234.111.21
+        123.234.111.218
+        
+    If this list is empty or not specified then all incoming IP addresses are allowed. -->
+    <!--
+    -->
+    <AllowedHttpIpList>
+        <AllowedHttpIp>0:0:0:0:0:0:0:1</AllowedHttpIp>   <!-- localhost as IPv6 address -->
+        <AllowedHttpIp>127.0.0.1</AllowedHttpIp>
+        <AllowedHttpIp>141.214.124.*</AllowedHttpIp>
+        <AllowedHttpIp>141.214.125.*</AllowedHttpIp>
+        <AllowedHttpIp>172.20.125.*</AllowedHttpIp>
+        <AllowedHttpIp>10.30.3.89</AllowedHttpIp>
+        <AllowedHttpIp>10.30.3.90</AllowedHttpIp>
+        <AllowedHttpIp>10.30.3.92</AllowedHttpIp>
+        <AllowedHttpIp>10.20.140.*</AllowedHttpIp>
+        <AllowedHttpIp>10.20.141.*</AllowedHttpIp>
+        <AllowedHttpIp>10.20.230.*</AllowedHttpIp>
+        <AllowedHttpIp>10.60.*.*</AllowedHttpIp>   <!-- remote access -->
+    </AllowedHttpIpList>
+
+    <!-- Message that is shown across the entire site for branding, licensing, or legal restrictions.  The
+    contents are interpreted as HTML and displayed on all pages. -->
+    <!-- <SiteMessage><![CDATA[<h5 title="This software has not been approved for clinical use.">Not for Clinical Use</h5>]]></SiteMessage> -->
+ 
+    <!-- This flag exists as a way to gently transition from non-anonymized to anonymized.  In the future
+    it should be phased out. 
+    
+    At start up, the database is examined for any items that need to be anonymized, and if they exist,
+    they are listed in the log.  If this flag is true, then those items are anonymized.  If false, then no
+    changes to the database are made.   If specified, must be either true or false.  If not specified, then
+    assume false.  If neither true or false (invalid boolean) then false is assumed.
+    
+    Also, if the credential files do not exist, they will be created, whether or not this flag is true or false,
+    but this can be undone by deleting them.
+    -->
+    <ConvertToAnonymousDatabase>false</ConvertToAnonymousDatabase>
+
+    <!-- The password to access the Java Key Store file. -->
+    <JavaKeyStorePassword>aba19f1c7b012c728c7e19763983cc57f7660c8cde5cafa9ac036579d2cdde17b36b7f5b7333af9de4b3d6dadc30a539832ff4a0959f4fd6bda52bb9d76253ce</JavaKeyStorePassword>
+    <JavaKeyStorePassword>9c067233b07c7b04025989a197fad9b12cf4c19006678e2b18b121289bd1635a2d395a603122a6e6</JavaKeyStorePassword> <!-- rodicom11dev -->
+    <JavaKeyStorePassword>44d18166c66bed60b6394e6625c63dea713dbe465ddc960a7cd109514bc0d2bd</JavaKeyStorePassword> <!-- -->     <!-- irrer -->
+
+    <!-- Location of file that contains Java Key Store for HTTPS.  If multiple names are given, then they are
+    each tried in the order given until a readable file is found. -->
+    <JavaKeyStoreFileList>
+        <JavaKeyStoreFile>keystore.jks</JavaKeyStoreFile>
+        <JavaKeyStoreFile>E:\Program Files\UMRO\keystore.jks</JavaKeyStoreFile>
+        <JavaKeyStoreFile>D:\Program Files\UMRO\keystore.jks</JavaKeyStoreFile>
+        <JavaKeyStoreFile>C:\Program Files\UMRO\keystore.jks</JavaKeyStoreFile>
+        <JavaKeyStoreFile>src\main\resources\keystore.jks</JavaKeyStoreFile>
+    </JavaKeyStoreFileList>
+
+
+    <!-- Directory containing executables and configuration files to run procedures. -->
+    <ProgramDir>E:\Program Files\UMRO\AQA</ProgramDir>
+
+    <!-- Directory containing procedures' executable code. -->
+    <ProcedureDir>E:\Program Files\UMRO\AQA\AQA_Procedures</ProcedureDir>
+
+    <!-- Directory containing input and output data consumed by and produced by procedures. -->
+    <DataDir>E:\Program Files\UMRO\AQA\AQA_Data</DataDir>
+
+    <!-- Authentication timeout.  Number of seconds for a user id+password pair to be cached before re-checking with database. -->
+    <AuthenticationTimeout>7200.0</AuthenticationTimeout>
+
+    <!-- When user is asked for a password they are prompted with this. -->
+    <PasswordPrompt>Enter your Level 2 user ID and password</PasswordPrompt>
+
+    <!-- Location of LDAP service that has user names and passwords.  If not configured, then the LDAP feature is not active. -->
+    <LdapUrl>ldap://ldap.ent.med.umich.edu:636/</LdapUrl>  <!-- IP: 141.214.28.71 -->
+
+    <!-- Name of institution with LDAP. -->
+    <LdapInstitutionName>U Mich</LdapInstitutionName>
+
+    <!-- User role to be used when automatically creating a user due to LDAP authentication. -->
+    <LdapRole>admin</LdapRole>
+
+    <!-- List of LDAP groups that, if you belong to at least one of them, authorizes you to use the service. -->
+    <LdapGroupList>
+        <LdapGroup>RadOnc-Physics</LdapGroup>
+        <LdapGroup>RadOnc-RadOnc Users</LdapGroup>
+        <LdapGroup>RadOnc-Argus</LdapGroup>
+        <LdapGroup>RadOnc-UM</LdapGroup>
+        <LdapGroup>RadOnc-Sharepoint-Owners</LdapGroup>
+        <LdapGroup>Physics-ACL</LdapGroup>
+        <LdapGroup>Radonc_Archive-Map</LdapGroup>
+        <LdapGroup>Physics_Archive-RO</LdapGroup>
+    </LdapGroupList>
+
+    <!-- Time of day as hours and minutes (HH:MM) that program will restart
+    itself. This is done to avoid errors that build up over time.  The time is
+    formatted as a 24 hour clock, so 23:00 is eleven PM. -->
+    <RestartTime>3:10</RestartTime>
+
+    <!-- List of users that should have permissions to everything. -->
+    <UserWhiteList>
+        <User>admin</User>
+    </UserWhiteList>
+
+    <!-- Logging level for Restlet.  Messages at or above this severity level will be logged.
+    Possible values are: OFF FINE FINER FINEST INFO WARNING SEVERE ALL -->
+    <RestletLogLevel>WARNING</RestletLogLevel>
+
+    <!-- Terms of use for this service (legal). -->
+    <TermsOfUse>
+        Terms Of Use
+
+        To Be Determined
+    </TermsOfUse>
+    
+    <!-- If defined, watermark images with the given image.  If not defined, then do not perform watermarking.
+    
+        image: Source image in static directory.
+        
+        top: If true put watermark at top edge of image, otherwise put it at the bottom.
+        
+        left: If true put watermark at left edge of image, otherwise put it at the right.
+        
+        percentWidth: The floating point percent (0-100) of the width of the image to be watermarked (larger
+            numbers make a bigger watermark).
+            
+        percentChange: The floating point percent value to control the degree of contrast.  A value of 0.0 would
+            be no contrast (invisible), 100 would be full contrast.
+            
+    -->
+    <Watermark image="watermark.png" top="false" left="false" percentWidth="10.0" percentChange="33.3"></Watermark>
+
+    <!-- Maximum amount of time in minutes that a procedure should take.  This is used when
+    examining the input files to determine if they are from different sessions. -->
+    <MaxProcedureDuration>120.0</MaxProcedureDuration>
+
+    <!-- List of DICOM attributes to be anonymized to protect institutional identities.  The Name and
+    Tag allow the configuration of both standard and private tags.
+    
+         Name: The name by which the attribute is referenced.
+         
+         Tag:  The hex numeric tag of the attribute.
+         
+     At least one of Name or Tag must be specified.
+     
+     If both Name and Tag are given, then the Name will be associated with the Tag.
+     
+     If just Name is given, Pixelmed's standard dictionary will be used to look up the tag.
+     
+     If just the Tag is given and the tag is in Pixelmed's standard dictionary, then the Pixelmed name
+     will be used.
+     
+     If just the Tag is given and the tag is not in Pixelmed's standard dictionary, then tag will also
+     be used as the Name.
+     
+     The 'Value' XML attribute is used when a constant value is to be used for anonymizing the original
+     value.  This is used when it is not important to be able to recover the original contents, and the
+     field has specific formatting requirements (such as time or date).  
+     
+     If the 'Value' XML attribute is not given, then the DICOM attribute will be anonymized to either:
+         - for UIDs: To a new unique UID
+         - for non-UIDs: To the 'Name' XML attribute followed by an underscore and a unique integer.  For
+           example, StationName might be anonymized to StationName_43
+     
+     Warning: If a Name value is not in the standard dictionary, then the server will halt with
+     a java.lang.ExceptionInInitializerError error.
+     -->
+    <ToBeAnonymizedList>
+        <ToBeAnonymized Name='PatientID'          Tag='0010,0020'  />  <!-- Example of how Tag is used. -->
+        <ToBeAnonymized                           Tag='0010,0010'  />  <!-- Example of how just a Tag is used, equivalent to Name='PatientName' -->
+        <ToBeAnonymized Name='PatientBirthDate'                    Value='18000101'/>
+        <ToBeAnonymized Name='PatientBirthTime'                    Value='000000'/>
+        <ToBeAnonymized Name='PatientSex'                          Value='O'/>
+        <ToBeAnonymized Name='OtherPatientIDs'                     />
+        <ToBeAnonymized Name='OtherPatientNames'                   />
+        <ToBeAnonymized Name='PatientAge'                          Value='0'/>
+        <ToBeAnonymized Name='PatientSize'                         Value='0'/>
+        <ToBeAnonymized Name='PatientWeight'                       Value='0'/>
+        <ToBeAnonymized Name='InstanceCreatorUID'                  />
+        <ToBeAnonymized Name='SOPInstanceUID'                      />
+        <ToBeAnonymized Name='MediaStorageSOPInstanceUID'          />
+        <ToBeAnonymized Name='AccessionNumber'                     Value='0'/>
+        <ToBeAnonymized Name='InstitutionName'                     />
+        <ToBeAnonymized Name='InstitutionAddress'                  />
+        <ToBeAnonymized Name='ReferringPhysicianName'              />
+        <ToBeAnonymized Name='ReferringPhysicianAddress'           />
+        <ToBeAnonymized Name='ReferringPhysicianTelephoneNumbers'  />
+        <ToBeAnonymized Name='StationName'                         />
+        <ToBeAnonymized Name='InstitutionalDepartmentName'         />
+        <ToBeAnonymized Name='PhysiciansOfRecord'                  />
+        <ToBeAnonymized Name='PerformingPhysicianName'             />
+        <ToBeAnonymized Name='NameOfPhysiciansReadingStudy'        />
+        <ToBeAnonymized Name='OperatorsName'                       />
+        <ToBeAnonymized Name='ReferencedSOPInstanceUID'            />
+        <ToBeAnonymized Name='MedicalRecordLocator'                />
+        <ToBeAnonymized Name='EthnicGroup'                         />
+        <ToBeAnonymized Name='Occupation'                          />
+        <ToBeAnonymized Name='AdditionalPatientHistory'            />
+        <ToBeAnonymized Name='PatientComments'                     />
+        <ToBeAnonymized Name='DeviceSerialNumber'                  />
+        <ToBeAnonymized Name='ProtocolName'                        />
+        <ToBeAnonymized Name='StudyInstanceUID'                    />
+        <ToBeAnonymized Name='SeriesInstanceUID'                   />
+        <ToBeAnonymized Name='StudyID'                             />
+        <ToBeAnonymized Name='RadiationMachineName'                />  <!-- Note: This is not generally anonymized, but in this case it could protect the identity of the institution. -->
+        <ToBeAnonymized Name='FrameOfReferenceUID'                 />
+        <ToBeAnonymized Name='SynchronizationFrameOfReferenceUID'  />
+        <ToBeAnonymized Name='ImageComments'                       />
+        <ToBeAnonymized Name='UID'                                 />
+        <ToBeAnonymized Name='StorageMediaFileSetUID'              />
+        <ToBeAnonymized Name='ReferencedFrameOfReferenceUID'       />
+        <ToBeAnonymized Name='RelatedFrameOfReferenceUID'          />
+        <ToBeAnonymized Name='SourceFrameOfReferenceUID'           />
+        <ToBeAnonymized Name='RTPlanName'                          />
+        <ToBeAnonymized Name='DoseReferenceUID'                    />
+     <!--  <ToBeAnonymized Name='ReferencedPrimaryDoseRefUID'         />   -->
+    </ToBeAnonymizedList>
+
+
+    <!--Name of Phase 2 DICOM RTPLAN files.  This is the basis for creating a plan customized plan for a given machine.  -->
+    <Phase2PlanFileList>
+        <Phase2PlanFile manufacturer='Varian' model='HD'>rtplan_hdmlc.dcm</Phase2PlanFile>
+        <Phase2PlanFile manufacturer='Varian' model='Millenium'>rtplan_millenium.dcm</Phase2PlanFile>
+    </Phase2PlanFileList>
+
+    <!--Name of DICOM RTPLAN files.  This is the basis for creating a plan customized plan for a given machine.  -->
+    <PlanFileList>
+        <PlanFile procedure='Phase2' manufacturer='Varian' collimatorModel='HD'>rtplanPhase2Hdmlc.dcm</PlanFile>
+        <PlanFile procedure='Phase2' manufacturer='Varian' collimatorModel='Millenium'>rtplanPhase2Millenium.dcm</PlanFile>
+
+        <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='HD'>rtplanLocHdmlcWithoutErrorBaseline.dcm</PlanFile>
+        <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='Millenium'>rtplanLocMilleniumWithoutErrorBaseline.dcm</PlanFile>
+
+        <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='HD'>rtplanLocHdmlcWithErrorDelivery.dcm</PlanFile>
+        <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='Millenium'>rtplanLocMilleniumWithErrorDelivery.dcm</PlanFile>
+
+        <PlanFile procedure='DailyQA' manufacturer='Varian' collimatorModel='HD'>rtplanLocHdmlcDailyQA.dcm</PlanFile>
+        <PlanFile procedure='DailyQA' manufacturer='Varian' collimatorModel='Millenium'>rtplanLocMilleniumDailyQA.dcm</PlanFile>
+    </PlanFileList>    
+
+    <!-- When creating a custom plan, override the following attributes with their corresponding values. -->
+    <Phase2PlanAttributeOverrideList>
+        <Phase2PlanAttributeOverride Name='TableTopEccentricAngle'       Value='0'   />
+        <Phase2PlanAttributeOverride Name='TableTopLateralPosition'      Value='0'   />
+        <Phase2PlanAttributeOverride Name='TableTopLongitudinalPosition' Value='200' />
+        <Phase2PlanAttributeOverride Name='TableTopPitchAngle'           Value='0'   />
+        <Phase2PlanAttributeOverride Name='TableTopRollAngle'            Value='0'   />
+        <Phase2PlanAttributeOverride Name='TableTopVerticalPosition'     Value='-60' />
+    </Phase2PlanAttributeOverrideList>
+    
+
+    <!-- List of categories of maintenance, as referenced in the PMI database table.  If a category is in
+        the database whose name does not match one of these, then the first category is used as a default.
+        
+        Name: Unique name of the category
+        
+        Color: Color in which the category is to be displayed.  Format is web based, so examples are '#00ff00' for green or 'blue' for blue.
+        
+        The content of the category element is free text that describes the category.
+        -->
+    <MaintenanceCategoryList>
+        <MaintenanceCategory Name='Maintenance' Color='#aaaaaa'>General Maintenance
+        </MaintenanceCategory>
+        <MaintenanceCategory Name='PMI' Color='#80FF9F'>Preventive Maintenance Inspection
+        </MaintenanceCategory>
+        <MaintenanceCategory Name='Set Baseline' Color='lightgreen'>New baseline values set</MaintenanceCategory>
+        <MaintenanceCategory Name='Firmware Update' Color='#33aa33'>New treatment machine firmware
+        </MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Jaws' Color='#aa3322'>Maintenance performed on jaws
+        </MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Collimator' Color='#aa3322'>Maintenance performed on
+            Collimator</MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Gantry' Color='#aa3322'>Maintenance performed on
+            Gantry</MaintenanceCategory>
+        <MaintenanceCategory Name='Electrical' Color='#aa3322'>Maintenance performed due to
+            electrical issue(s)</MaintenanceCategory>
+    </MaintenanceCategoryList>
+
+    <!-- Beam name for flood field. -->
+    <FloodFieldBeamName>Flood 6X</FloodFieldBeamName>
+
+    <!-- The maximum error tolerated for CollimatorCentering in mm. -->
+    <CollimatorCenteringTolerence_mm>2.0</CollimatorCenteringTolerence_mm>
+    
+    <!-- Beam names used by Phase2 CollimatorCentering -->
+    <!-- 
+    <CollimatorCentering090BeamName>J10G90</CollimatorCentering090BeamName>
+    <CollimatorCentering270BeamName>J10G270</CollimatorCentering270BeamName>
+    -->
+    <CollimatorCentering090BeamName>J10G0C90-6X</CollimatorCentering090BeamName>
+    <CollimatorCentering270BeamName>J10G0C270-6X</CollimatorCentering270BeamName>
+    <!-- Width of band of pixels in isoplane mm to use for initial finding of edge. -->
+    <CollimatorCenteringCoarseBandWidth_mm>5.0</CollimatorCenteringCoarseBandWidth_mm>
+
+    <!-- Thickness in isoplane in mm of the penumbra of an edge. -->
+    <PenumbraThickness_mm>20.0</PenumbraThickness_mm>
+    
+    <!-- Number of pixels per million to use as the sets of largest and smallest pixels in
+    the image.   These pixels are selected after bad pixels have been removed.  -->
+    <PenumbraPlateauPixelsPerMillion>500</PenumbraPlateauPixelsPerMillion>
+
+    <!-- Percent value of penumbra that is considered to be the actual edge of the collimator or jaw.  -->
+    <PenumbraThresholdPercent>50.0</PenumbraThresholdPercent>
+
+    <!-- An maximum estimate of how many bad pixels (integer >= 0) to expect per million pixels.  A good
+    estimate can marginally improve results, but a bad estimate will probably still be acceptable. -->
+    <MaxEstimatedBadPixelPerMillion>20</MaxEstimatedBadPixelPerMillion>
+
+    <!-- The number of 'normal' pixels to use to characterize pixels. -->
+    <BadPixelSamplePerMillion>250</BadPixelSamplePerMillion>
+
+    <!-- Number of standard deviations that a pixel must be from it's 8 neighbors to be considered a bad pixel. -->
+    <BadPixelStdDev>3.0</BadPixelStdDev>
+    
+    <!-- Maximum number of bad pixel tolerated before considering the image to be of such poor quality that it should be rejected for processing.  Must be a positive integer. -->
+    <MaxAllowedBadPixelsPerMillion>50</MaxAllowedBadPixelsPerMillion>
+
+    <!-- Use pixels this many mm square to find and correct bad pixels.  This is used both in the determination of whether a pixel is bad by
+    defining it's neighborhood size, and determining replacement values for bad pixels. -->
+    <BadPixelRadius_mm>3.5</BadPixelRadius_mm>
+
+    <!-- When determining whether or not a pixel is bad, require it to be at least this many CU's different than it's neighbors' average.   This is
+    an absolute value (not a percent) and is a floating point number.-->
+    <BadPixelMinimumDeviation_CU>10.0</BadPixelMinimumDeviation_CU>
+
+    <!-- When determining whether or not a pixel is bad, require there to be pixel values within this percent of each other.-->
+    <BadPixelMaximumPercentChange>10.0</BadPixelMaximumPercentChange>
+
+    <!-- When determining the color range of an image, drop this many pixels, half from the low and and half from the high end.-->
+    <DeepColorPercentDrop>0.2</DeepColorPercentDrop>
+
+    <!-- Radius in mm (floating point) centered in an image defining the pixels to be used to determine dose.   Note that
+    the center dose is also used in calculating wedge values. -->
+    <CenterDoseRadius_mm>5.0</CenterDoseRadius_mm>
+
+    <!-- Used for graphing center dose history, a positive integer indicating the number of values to display before and after (if
+    they exist) the current point being plotted. -->
+    <CenterDoseHistoryRange>25</CenterDoseHistoryRange>
+
+    <!-- List of beam names of that can be used to record dose at the center of the image. -->
+    <CenterDoseBeamNameList>
+        <BeamName>Flood 6X</BeamName>
+        <BeamName>J10G180</BeamName>
+        <BeamName>J10G90</BeamName>
+        <BeamName>T2 Open</BeamName>
+        <BeamName>J20G0-6F</BeamName>
+        <BeamName>J10G0C270-6X</BeamName>
+        <BeamName>J20G0-6X</BeamName>
+        <BeamName>J20G0-16X</BeamName>
+        <BeamName>T3 Open</BeamName>
+        <BeamName>J10G0C90-6X</BeamName>
+        <BeamName>J10G0C90EDW45-6X</BeamName>
+        <BeamName>J18C270EDW60-6X</BeamName>
+        <BeamName>J18G0-10F</BeamName>
+        <BeamName>J18G0-16X</BeamName>
+        <BeamName>J18G0-6F</BeamName>
+        <BeamName>J18G0-6X</BeamName>
+        <BeamName>J18G180</BeamName>
+        <BeamName>J18G270</BeamName>
+        <BeamName>J18G90</BeamName>
+    </CenterDoseBeamNameList>
+    
+    <!-- Allowed error in mm when measuring collimator positions measured in the image to planned positions. -->
+    <CollimatorPositionTolerance_mm>2.0</CollimatorPositionTolerance_mm>
+    
+    <!-- List of beam names of that to be used to evaluation the accuracy of the collimator position.  If true, the 
+    FloodCompensation attribute specifies that the image pixels should be divided by their respective pixels in the
+    flood field, normalizing the dose across the field.  This can not be done for some images because their edges overlap
+    with the flood field edges.
+    -->
+    <CollimatorPositionBeamList>
+        <BeamName FloodCompensation='true'>J10G180</BeamName>
+        <BeamName FloodCompensation='false'>J10G180</BeamName>
+
+        <BeamName FloodCompensation='true'>J10G90</BeamName>
+        <BeamName FloodCompensation='false'>J10G90</BeamName>
+
+        <BeamName FloodCompensation='true'>J10G0C270-6X</BeamName>
+        <BeamName FloodCompensation='false'>J10G0C270-6X</BeamName>
+
+        <BeamName FloodCompensation='true'>J10G0C90-6X</BeamName>
+        <BeamName FloodCompensation='false'>J10G0C90-6X</BeamName>
+
+        <BeamName FloodCompensation='true'>J10G270</BeamName>
+        <BeamName FloodCompensation='false'>J10G270</BeamName>
+
+        <BeamName FloodCompensation='false'>J20G0-10X</BeamName>
+        <BeamName FloodCompensation='false'>J20G0-16X</BeamName>
+        <BeamName FloodCompensation='false'>J20G0-6X</BeamName>
+
+        <BeamName FloodCompensation='false'>T2 Open</BeamName>
+        <BeamName FloodCompensation='false'>T3 Open</BeamName>
+        <BeamName FloodCompensation='false'>J18G0-16X</BeamName>
+        <BeamName FloodCompensation='false'>J18G0-6X</BeamName>
+        <BeamName FloodCompensation='false'>J18G180</BeamName>
+        <BeamName FloodCompensation='false'>J18G270</BeamName>
+        <BeamName FloodCompensation='false'>J18G90</BeamName>
+    </CollimatorPositionBeamList>
+
+    <!-- The thickness of the band in mm in the isoplane across the center of the image used for drawing the wedge profile. -->
+    <WedgeProfileThickness_mm>5.0</WedgeProfileThickness_mm>
+
+    <!-- The amount in percent that wedge reading should vary from baseline to be valid. -->
+    <WedgeTolerance_pct>2.0</WedgeTolerance_pct>
+
+    <!-- Used for graphing wedge history, a positive integer indicating the number of values to display before and after (if
+    they exist) the current point being plotted.. -->
+    <WedgeHistoryRange>25</WedgeHistoryRange>
+
+    <!-- List of wedge beams.  Each entry gives the BeamName of the wedge, and a list of BackgroundBeamName's that
+    are compatible as background for the wedge beam.  In general, the background must have a collimator and jaw opening that
+    is as large or larger than the wedge, it must be flattened (not FFF), and must have the same beam energy.
+    -->
+    <WedgeBeamList>
+      <WedgeBeam BeamName="J18C270EDW60-6X">
+        <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
+        <BackgroundBeamName>J18G270</BackgroundBeamName>
+        <BackgroundBeamName>J18G90</BackgroundBeamName>
+        <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+      </WedgeBeam>
+
+      <WedgeBeam BeamName="J18C270EDW60-">  <!-- This is really a duplicate of J18C270EDW60-6X but is here because sometimes the beam name is truncated. -->
+        <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
+        <BackgroundBeamName>J18G270</BackgroundBeamName>
+        <BackgroundBeamName>J18G90</BackgroundBeamName>
+        <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+      </WedgeBeam>
+
+      <WedgeBeam BeamName="J10G0C90EDW45-6X">
+        <BackgroundBeamName>J10G0C270-6X</BackgroundBeamName>
+        <BackgroundBeamName>J10G180</BackgroundBeamName>
+        <BackgroundBeamName>J10G90</BackgroundBeamName>
+        <BackgroundBeamName>J10G270</BackgroundBeamName>
+        <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+      </WedgeBeam>
+
+      <WedgeBeam BeamName="J20G0C90EDW60-6X">
+        <BackgroundBeamName>J20G0-6X</BackgroundBeamName>
+        <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+      </WedgeBeam>
+    </WedgeBeamList>
+
+    <!-- Diameter of sample spots in mm. -->
+    <SymmetryAndFlatnessDiameter_mm>5.0</SymmetryAndFlatnessDiameter_mm>
+
+    <!-- Maximum allowed value for difference in both axial and transverse symmetry from baseline in percent. -->
+    <SymmetryPercentLimit>2.0</SymmetryPercentLimit>
+
+    <!-- Maximum allowed value for difference in flatness from baseline in percent. -->
+    <FlatnessPercentLimit>2.0</FlatnessPercentLimit>
+    
+    <!-- Used for graphing symmetry, flatness, and constancy history, a positive integer indicating the 
+    number of values to display before and after (if they exist) the current point being plotted.. -->
+    <SymFlatConstHistoryRange>25</SymFlatConstHistoryRange>
+    
+    <!-- Maximum allowed value for difference in profile constancy from baseline in percent. -->
+    <ProfileConstancyPercentLimit>2.0</ProfileConstancyPercentLimit>
+
+    <!-- List of names of beams to be evaluated for Symmetry, Flatness and Constancy. -->
+    <SymmetryAndFlatnessBeamList>
+        <BeamName>Flood 6X</BeamName>
+        <BeamName>J20G0-6X</BeamName>
+        <BeamName>J20G0-6F</BeamName>
+        <BeamName>J20G0-10X</BeamName>
+        <BeamName>J20G0-10F</BeamName>
+        <BeamName>J20G0-16X</BeamName>
+        <BeamName>J18G0-10F</BeamName>
+        <BeamName>J18G0-10X</BeamName>
+        <BeamName>J18G0-16X</BeamName>
+        <BeamName>J18G0-16F</BeamName>
+        <BeamName>J18G0-6F</BeamName>
+        <BeamName>J18G0-6X</BeamName>
+        <BeamName>J18G180</BeamName>
+        <BeamName>J18G270</BeamName>
+        <BeamName>J18G90</BeamName>
+    </SymmetryAndFlatnessBeamList>
+
+    <!-- Coordinates of centers of sampling points.  All are in mm, relative to the center of the image, and in the isoplane. -->
+    <SymmetryAndFlatnessPointList>
+        <SymmetryAndFlatnessPoint name='Top' x_mm='0.0' y_mm='-75.0' />
+        <SymmetryAndFlatnessPoint name='Bottom' x_mm='0.0' y_mm='75.0' />
+        <SymmetryAndFlatnessPoint name='Left' x_mm='-75.0' y_mm='0.0' />
+        <SymmetryAndFlatnessPoint name='Right' x_mm='75.0' y_mm='0.0' />
+        <SymmetryAndFlatnessPoint name='Center' x_mm='0.0' y_mm='0.0' />
+        <!--
+        <SymmetryAndFlatnessPoint name='Energy 1'  x_mm='-37.5'   y_mm=   '0.0'/>
+        <SymmetryAndFlatnessPoint name='Energy 2'  x_mm= '37.5'   y_mm=   '0.0'/>
+        <SymmetryAndFlatnessPoint name='Energy 3'  x_mm=  '0.0'   y_mm= '-37.5'/>
+        <SymmetryAndFlatnessPoint name='Energy 4'  x_mm=  '0.0'   y_mm=  '37.5'/>
+        -->
+    </SymmetryAndFlatnessPointList>
+
+    <SymmetryPointCenter name='Center' />
+    <!-- Names of opposing points (see <SymmetryAndFlatnessPointList>) used to calculate symmetry. -->
+    <SymmetryPointTop name='Top' />
+    <SymmetryPointBottom name='Bottom' />
+    <SymmetryPointLeft name='Left' />
+    <SymmetryPointRight name='Right' />
+
+    <!-- Maximum allowed error for leaf positions in mm.  If leaf ends are farther than this from
+    their expected positions then they are considered 'failed'.-->
+    <LeafPositionMaxError_mm>1.0</LeafPositionMaxError_mm>
+
+    <!-- When creating a custom plan, use this beam as the prototype for constructing beams. -->
+    <PrototypeCustomBeamName>J18G0-6F</PrototypeCustomBeamName>
+
+    <!-- When a machine does not support some energy levels in a plan, then a custom (via CustomizeRtPlan) plan can be created for those
+    energy levels.  This is done by creating beams to match the machine's energy level.  The new beam names are given this prefix, followed
+    by the energy level and optionally 'F' for FFF. -->
+    <PrefixForMachineDependentBeamName>J18G0-</PrefixForMachineDependentBeamName>
+
+    <!-- To get an accurate measurement of the end of collimator leaves, a buffer space is left between leaves, at the sides of the
+    leaves.  This keeps adjacent leaves' positions from interfering with each other.  This number specifies how large that space should
+    be.  It is given as the distance between the edge of the bounding rectangle used to find the edge's position and the measured
+    position of the side of the leaf in mm. -->
+    <LeafPositionIsolationDistance_mm>0.5</LeafPositionIsolationDistance_mm>
+    
+    <!-- List of names of beams to be evaluated for leaf positioning (picket fence). -->
+    <LeafPositionBeamNameList>
+        <BeamName>PF Stat 0</BeamName>
+        <BeamName>PF Stat 180</BeamName>
+   <!-- <BeamName>T2-DG-RS</BeamName> Not finding leaf ends.-->
+        <BeamName>PF Stat 90</BeamName>
+   <!-- <BeamName>T3MLCSpeed</BeamName> Should not be used for this test.-->
+        <BeamName>PF Stat 270</BeamName>
+        <BeamName>T1 PF ARC</BeamName>
+        <BeamName>T1 PF ARC ERROR</BeamName>
+    </LeafPositionBeamNameList>
+
+    <!-- Maximum amount +/- as a floating point percentage that each subfield is allowed to deviate from the average of the deviations. -->
+    <VMATDeviationThreshold_pct>3.0</VMATDeviationThreshold_pct>
+
+    <!-- Maximum amount as a floating point percentage that the average of the deviations are allowed to deviate from the average. -->
+    <VMATAverageOfAbsoluteDeviationThreshold_pct>1.5</VMATAverageOfAbsoluteDeviationThreshold_pct>
+
+    <!-- Indicate the beams to be used for VMAT tests.
+        Name: Name of test
+        MLC: Beam name of MLC
+        OPEN: Beam name of open beam
+        IsolationBorder_mm: Distance in mm from planned edge to the edge of the AOI used to capture pixels.  This distance minimizes the effects of on the final values.
+        -->
+    <VMATBeamPairList>
+        <VMATBeamPair Name="Leaf Speed Test" MLC="T3MLCSpeed" OPEN="T3 Open" IsolationBorder_mm="10.0"/>
+        <!-- Note that these two should have the same MLC name, but there was a mistake/typo made when creating the RTPLAN. -->
+        <VMATBeamPair Name="Dose Rate - Gantry Speed Test" MLC="T2-DG-RS" OPEN="T2 Open" IsolationBorder_mm="5.0"/>
+        <VMATBeamPair Name="Dose Rate - Gantry Speed Test" MLC="T2-DR-GS" OPEN="T2 Open" IsolationBorder_mm="5.0"/>
+    </VMATBeamPairList>
+
+    <!-- The amount in mm to shrink the areas of interest to avoid edge (penumbra) effects.  Special note: If this value
+    is -1, then VMAT processing is not performed.   This is intended to be temporary until the code is approved by the
+    AQA subcommittee. 23-Mar-2020 -->
+    <!-- <VMATPenumbraBorderThickness_mm>-1</VMATPenumbraBorderThickness_mm> -->
+    <VMATPenumbraBorderThickness_mm>5.0</VMATPenumbraBorderThickness_mm>
+
+    <!-- The maximum tolerance of error in floating point in mm for daily QA for CBCT.  Exceeding this means fail. -->
+    <DailyQACBCTLimit_mm>1.0</DailyQACBCTLimit_mm>
+
+    <!-- The maximum tolerance of error in floating point in mm for daily QA.  Exceeding this means warning. -->
+    <DailyQAPassLimit_mm>1.0</DailyQAPassLimit_mm>
+
+    <!-- The maximum tolerance of error in floating point in mm for daily QA.  Exceeding this means error. -->
+    <DailyQAWarningLimit_mm>2.0</DailyQAWarningLimit_mm>
+
+    <!-- The minimum number of standard deviations that the BB must deviate in brightness to be considered
+    legitimate.  This check is done to ensure that if there is no BB, then the algorithm will not settle for
+    the brightest bit of white noise from the background.  This also filters out cases where noise happens to
+    satisfy the criteria for DailyQACBCTVoxPercentTolerance.
+    
+    The 15.0 number given was arrived at empirically after running several tests, where the lowest value was 20. -->
+    <CBCTBBMinimumStandardDeviation>1.0</CBCTBBMinimumStandardDeviation>
+
+    <!-- The distance in floating point in mm from center to search for the BB in the daily phantom. -->
+    <DailyPhantomSearchDistance_mm>50.0</DailyPhantomSearchDistance_mm>
+
+    <!-- The length in floating point in mm for one edge of the phantom holding the BB. -->
+    <DailyQAPhantomCubeSize_mm>50.0</DailyQAPhantomCubeSize_mm>
+
+    <!-- Tuning parameter for finding the phantom cube as part of Daily QA CBCT processing.  When
+    locating the cube, one test is to look at a horizontal slice and determine how many non-zero
+    voxels there are.  When slicing across the cube, this will be a known number (within some percentage).
+    This value provides the tolerance in percentage (floating point) of voxels between the number expected
+    and the number found. -->
+    <DailyQACBCTVoxPercentTolerance>15.0</DailyQACBCTVoxPercentTolerance>
+    
+    <!-- Tuning parameter for finding the phantom cube as part of Daily QA CBCT processing.  When
+    processing a slice, set the darker pixels to 'zero' (the value of the lowest pixel) so that background
+    noise does not effect the coarse find algorithm.  Slices that contain the cube will have many values
+    due the penumbra around it.  600 is typical.  This number (a positive integer) is the number of the
+    smallest pixel grey scale values that will be set to zero. -->
+    <DailyQACBCTDarkPixelValueLevels>50</DailyQACBCTDarkPixelValueLevels>
+
+    <!-- Tuning parameter for finding the phantom cube as part of Daily QA CBCT processing.  When
+    locating the cube, one test is to look at a horizontal slice and determine if opposing edges are
+    approximately the right distance apart, and if so, assume that it is the cube.  This
+    parameter defines the percent error in the cube size detected.  Note that if the cube is slightly
+    rotated (sides not parallel to the table edges) then edges will a different distance apart. -->
+    <DailyQACBCTCubeSizePercentTolerance>15.0</DailyQACBCTCubeSizePercentTolerance>
+
+    <!-- Tuning parameter for finding the phantom cube as part of Daily QA CBCT processing. When
+    reducing noise in horizontal images, many of the voxels are set to zero.  The number that are
+    not set to zero is determined by the cube's cross section, with the assumption that the cube
+    is the brightest object in the image.  Sometimes there are artifact in the image, so to tolerate
+    that an extra percentage of voxels are kept as non-zero to preserve the cube, which may be
+    dimmer than the artifact.  This number is that percentage.  Expressed as a floating point number
+    from 0 to 100.  Setting this too low may mean zeroing out part of the cube.  Setting it too
+    high may include too much noise. -->
+    <DailyQACBCTCubeCrossSectionalAreaPercentTolerance>25.0</DailyQACBCTCubeCrossSectionalAreaPercentTolerance>    
+
+    <!-- Distance in mm in floating point that the penumbra extends in one direction from the BB.  A
+    volume of (2x)^3 this is used to measure the BB's location. ( 10 would yield 20x20x20 ) -->
+    <CBCTBBPenumbra_mm>2.5</CBCTBBPenumbra_mm>
+   
+    <!-- When making the zoomed version of the CBCT images, make them this size of a square in mm.-->
+    <CBCTZoomSize_mm>40.0</CBCTZoomSize_mm>
+   
+    <!-- Color to use when making CBCT images in HEX notation specifying red+green+blue.  Set
+    to 000000 (black) to use deep (multi) coloring.-->
+    <CBCTImageColor>FFFFFF</CBCTImageColor>
+
+    <!-- Used for graphing CBCT BB history, a positive integer indicating the number of values to display before and after (if
+    they exist) the current point being plotted. -->
+    <BBbyCBCTHistoryRange>25</BBbyCBCTHistoryRange>
+
+    <!-- The distance in floating point in mm from center to search for the BB in EPID images in the isoplane. -->
+    <BBbyEPIDSearchDistance_mm>4.0</BBbyEPIDSearchDistance_mm>
+
+    <!-- Radius in mm in floating point of the EPID BB penumbra.  Different
+    from CBCT, which has different imaging characteristics. -->
+    <EPIDBBPenumbra_mm>1.0</EPIDBBPenumbra_mm>
+    
+    <!-- The minimum number of standard deviations that the BB must deviate in brightness to be considered
+    legitimate.  This check is done to ensure that if there is no BB, then the algorithm will not settle for
+    the brightest bit of white noise from the background.  The 1.75 number given was arrived at
+    empirically after running several tests. -->
+    <EPIDBBMinimumStandardDeviation>1.4</EPIDBBMinimumStandardDeviation>
+
+    <!-- Color to use when making EPID images in HEX notation specifying red+green+blue.  Set
+    to 000000 (black) to use deep (multi) coloring.-->
+    <EPIDImageColor>FFFFFF</EPIDImageColor>
+
+    <!-- Used for graphing EPID BB history, a positive integer indicating the number of values to display before and after (if
+    they exist) the current point being plotted. -->
+    <BBbyEPIDHistoryRange>25</BBbyEPIDHistoryRange>
+
+    <!-- Used for graphing CBCT BB history, a positive floating point indicating the range of values above and below
+    zero that indicate the tolerated limits. -->
+    <BBbyCBCTChartTolerance_mm>1.0</BBbyCBCTChartTolerance_mm>
+   
+    <!-- Used for graphing CBCT BB history, a positive floating point indicating the maximum range of values above and below
+    zero.  Sometimes a single value will be wildly out of range, and make the graph look flat, so this is the farthest that the graph
+    will be allowed to expand vertically.  If all of the values are normal, then the graph will have a range of BBbyCBCTChartTolerance_mm * 1.5 -->
+    <BBbyCBCTChartYRange_mm>3.0</BBbyCBCTChartYRange_mm>
+    
+    <!-- Used for graphing EPID BB history, a positive floating point indicating the range of values above and below
+    zero that indicate the tolerated limits. -->
+    <BBbyEPIDChartTolerance_mm>1.0</BBbyEPIDChartTolerance_mm>
+      
+    <!-- Used for graphing EPID BB history, a positive floating point indicating the maximum range of values above and below
+    zero.  Sometimes a single value will be wildly out of range, and make the graph look flat, so this is the farthest that the graph
+    will be allowed to expand vertically.  If all of the values are normal, then the graph will have a range of BBbyEPIDChartTolerance_mm * 1.5 -->
+    <BBbyEPIDChartYRange_mm>3.0</BBbyEPIDChartYRange_mm>
+   
+    <!-- Maximum allowed slice thickness for CBCT volumes.  Exceeding this incurs a warning.  The problem with a large slice thickness is
+    that it makes the readings less accurate.   Specified as floating point value in mm.-->
+    <BBbyCBCTMaximumSliceThickness_mm>1.0</BBbyCBCTMaximumSliceThickness_mm>
+
+    <!-- When making the zoomed version of the EPID images, make them this size of a square in mm.-->
+    <EPIDZoomSize_mm>60.0</EPIDZoomSize_mm>
+
+    <!-- Set to fix to clean up DicomSeries. Set to ignore to do nothing, set to check to show what it would do but
+    actually do nothing.  Invalid or missing values are interpreted as ignore. 
+   
+    Command line:
+        java -cp AQA-0.3.00-jar-with-dependencies.jar org.aqa.db.DicomSeries
+    -->
+    <DicomSeriesDeleteOrphans>ignore</DicomSeriesDeleteOrphans>
+    <DicomSeriesPopulateFromInput>fix</DicomSeriesPopulateFromInput>
+    <DicomSeriesTrim>ignore</DicomSeriesTrim>
+    <DicomSeriesUnlinkInputPK>ignore</DicomSeriesUnlinkInputPK>
+    <DicomSeriesOrphanOutputs>ignore</DicomSeriesOrphanOutputs>
+    <DicomSeriesShared>check</DicomSeriesShared>
+
+</AQAConfig>
