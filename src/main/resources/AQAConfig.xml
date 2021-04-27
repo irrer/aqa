@@ -251,17 +251,18 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!--Name of DICOM RTPLAN files.  This is the basis for creating a plan customized plan for a given machine.  -->
     <PlanFileList>
-        <PlanFile procedure='Phase2' manufacturer='Varian' collimatorModel='HD'>rtplanPhase2Hdmlc.dcm</PlanFile>
-        <PlanFile procedure='Phase2' manufacturer='Varian' collimatorModel='Millenium'>rtplanPhase2Millenium.dcm</PlanFile>
+        <PlanFile procedure='Phase2'      manufacturer='Varian' collimatorModel='HD'       >rtplanPhase2Hdmlc.dcm</PlanFile>
+        <PlanFile procedure='Phase2'      manufacturer='Varian' collimatorModel='Millenium'>rtplanPhase2Millenium.dcm</PlanFile>
 
-        <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='HD'>rtplanLocHdmlcWithoutErrorBaseline.dcm</PlanFile>
+        <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='HD'       >rtplanLocHdmlcWithoutErrorBaseline.dcm</PlanFile>
         <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='Millenium'>rtplanLocMilleniumWithoutErrorBaseline.dcm</PlanFile>
 
-        <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='HD'>rtplanLocHdmlcWithErrorDelivery.dcm</PlanFile>
+        <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='HD'       >rtplanLocHdmlcWithErrorDelivery.dcm</PlanFile>
         <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='Millenium'>rtplanLocMilleniumWithErrorDelivery.dcm</PlanFile>
 
-        <PlanFile procedure='DailyQA' manufacturer='Varian' collimatorModel='HD'>rtplanLocHdmlcDailyQA.dcm</PlanFile>
-        <PlanFile procedure='DailyQA' manufacturer='Varian' collimatorModel='Millenium'>rtplanLocMilleniumDailyQA.dcm</PlanFile>
+        <!-- Note that the DailyQA RTPLAN is the same for both HD and Millenium. -->
+        <PlanFile procedure='DailyQA'     manufacturer='Varian' collimatorModel='HD'       >rtplanDailyQA.dcm</PlanFile>
+        <PlanFile procedure='DailyQA'     manufacturer='Varian' collimatorModel='Millenium'>rtplanDailyQA.dcm</PlanFile>
     </PlanFileList>
 
     <!-- List of categories of maintenance, as referenced in the PMI database table.  If a category is in

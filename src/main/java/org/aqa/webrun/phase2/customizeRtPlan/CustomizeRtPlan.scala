@@ -1,104 +1,103 @@
 package org.aqa.webrun.phase2.customizeRtPlan
 
-import org.aqa.Logging
-import org.aqa.db.Machine
-import org.aqa.Config
-import edu.umro.ScalaUtil.DicomUtil
+import com.pixelmed.dicom.Attribute
+import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.AttributeList
-import org.aqa.AnonymizeUtil
-import com.pixelmed.dicom.TagFromName
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.SequenceAttribute
+import com.pixelmed.dicom.TagFromName
+import com.pixelmed.dicom.ValueRepresentation
+import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.util.UMROGUID
+import org.aqa.AnonymizeUtil
+import org.aqa.Config
+import org.aqa.Logging
+import org.aqa.Util
 import org.aqa.VarianPrivateTag
+import org.aqa.db.DicomSeries
+import org.aqa.db.Machine
+import org.aqa.db.MachineBeamEnergy
 import org.aqa.db.MultileafCollimator
+import org.aqa.db.Procedure
 
 import java.io.File
-import com.pixelmed.dicom.AttributeFactory
-import com.pixelmed.dicom.ValueRepresentation
-import org.aqa.Util
-import com.pixelmed.dicom.Attribute
-import org.aqa.db.MachineBeamEnergy
-import edu.umro.util.UMROGUID
-import edu.umro.ScalaUtil.Trace
-import com.pixelmed.dicom.OtherByteAttribute
-import edu.umro.DicomDict.TagByName
-import org.aqa.db.DicomSeries
 
 object CustomizeRtPlan extends Logging {
 
   case class LOCRtplanPair(baseline: Config.PlanFileConfig, delivery: Config.PlanFileConfig) {
     def asSeq = Seq(baseline.dicomFile.attributeList.get, delivery.dicomFile.attributeList.get)
-    def baselineAl = baseline.dicomFile.attributeList.get
-    def deliveryAl = delivery.dicomFile.attributeList.get
+    def baselineAl: AttributeList = baseline.dicomFile.attributeList.get
+    def deliveryAl: AttributeList = delivery.dicomFile.attributeList.get
   }
 
-  /** Beam energy that all machines support. */
-  private val standardBeamEnergy = 6.0
-
   /**
-   * Get the template rtplan for the given machine for Phase 2.  If none exists, return None, which
-   * can happen if the system does not have such a plan configured.  This informs the user
-   * interface so that it can tell the user.
-   */
+    * Get the template rtplan for the given machine for Phase 2.  If none exists, return None, which
+    * can happen if the system does not have such a plan configured.  This informs the user
+    * interface so that it can tell the user.
+    */
   def getCollimatorCompatiblePhase2PlanForMachine(machine: Machine): Option[Config.PlanFileConfig] = {
     val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
-    val planFile = Config.PlanFileList.filter(pf =>
+    val planFile = Config.PlanFileList.find(pf =>
       pf.procedure.toLowerCase.matches(".*phase *2.*") &&
         pf.manufacturer.equalsIgnoreCase(collimator.manufacturer) &&
-        pf.collimatorModel.equalsIgnoreCase(collimator.model)).headOption
+        pf.collimatorModel.equalsIgnoreCase(collimator.model)
+    )
     planFile
   }
 
   /**
-   * Get the template rtplan for the given machine for Daily QA.  If none exists, return None, which
-   * can happen if the system does not have such a plan configured.  This informs the user
-   * interface so that it can tell the user.
-   * 
-   * Note that both the baseline and delivery entries have to be configured (regardless of RTPLAN file
-   * existence) or this will return None.
-   */
+    * Get the template rtplan for the given machine for Daily QA.  If none exists, return None, which
+    * can happen if the system does not have such a plan configured.  This informs the user
+    * interface so that it can tell the user.
+    *
+    * Note that both the baseline and delivery entries have to be configured (regardless of RTPLAN file
+    * existence) or this will return None.
+    */
   def getCollimatorCompatibleDailyQAPlanForMachine(machine: Machine): Option[Config.PlanFileConfig] = {
     val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
-    val planFile = Config.PlanFileList.filter(pf =>
+    val planFile = Config.PlanFileList.find(pf =>
       pf.procedure.toLowerCase.matches(".*daily.*qa.*") &&
         pf.manufacturer.equalsIgnoreCase(collimator.manufacturer) &&
-        pf.collimatorModel.equalsIgnoreCase(collimator.model)).headOption
+        pf.collimatorModel.equalsIgnoreCase(collimator.model)
+    )
     planFile
   }
 
   /**
-   * Get the template rtplans for the given machine for LOC.  If none exists, return None, which
-   * can happen if the system does not have such a plan configured.  This informs the user
-   * interface so that it can tell the user.
-   */
+    * Get the template rtplans for the given machine for LOC.  If none exists, return None, which
+    * can happen if the system does not have such a plan configured.  This informs the user
+    * interface so that it can tell the user.
+    */
   def getCollimatorCompatibleLocPlanPairForMachine(machine: Machine): Option[LOCRtplanPair] = {
     val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
     val planList = Config.PlanFileList.filter(pf =>
       pf.procedure.toLowerCase.matches(".*loc.*") &&
         pf.manufacturer.equalsIgnoreCase(collimator.manufacturer) &&
-        pf.collimatorModel.equalsIgnoreCase(collimator.model))
+        pf.collimatorModel.equalsIgnoreCase(collimator.model)
+    )
 
     val baseline = planList.find(pf => pf.procedure.toLowerCase.matches(".*baseline.*"))
     val delivery = planList.find(pf => pf.procedure.toLowerCase.matches(".*delivery.*"))
     val locRtplanPair = (baseline, delivery) match {
-      case (Some(b), Some(d)) if (b.dicomFile.attributeList.isDefined && d.dicomFile.attributeList.isDefined) => Some(LOCRtplanPair(b, d))
-      case _ => None
+      case (Some(b), Some(d)) if b.dicomFile.attributeList.isDefined && d.dicomFile.attributeList.isDefined => Some(LOCRtplanPair(b, d))
+      case _                                                                                                => None
     }
     locRtplanPair
   }
 
   /**
-   * Save an anonymized version of this file, so when the user uploads RTIMAGEs generated by
-   * this plan, the plan will already be uploaded.
-   */
-  private def saveAnonymizedDicom(machine: Machine, userPK: Long, rtplan: AttributeList) = {
+    * Save an anonymized version of this file, so when the user uploads RTIMAGEs generated by
+    * this plan, the plan will already be uploaded.
+    */
+  private def saveAnonymizedDicom(machine: Machine, userPK: Long, rtplan: AttributeList, procedurePK: Long) = {
     val anon = AnonymizeUtil.anonymizeDicom(machine.institutionPK, rtplan)
     val file = new File(Config.sharedDir, Util.sopOfAl(anon) + ".dcm")
     DicomUtil.writeAttributeListToFile(anon, file, "AQA") // TODO remove when shared directory is fully deprecated.
 
-    DicomSeries.makeDicomSeries(userPK, None, machine.machinePK, Seq(rtplan)) match {
+    DicomSeries.makeDicomSeries(userPK, None, machine.machinePK, Seq(rtplan), procedurePK) match {
       case Some(dicomSeries) => dicomSeries.insert
-      case _ => logger.warn("Unable to create DicomSeries for machine " + machine + " userPK: " + userPK)
+      case _                 => logger.warn("Unable to create DicomSeries for machine " + machine + " userPK: " + userPK)
     }
   }
 
@@ -107,24 +106,24 @@ object CustomizeRtPlan extends Logging {
     val uidSet = Config.ToBeAnonymizedList.keySet.filter(tag => ValueRepresentation.isUniqueIdentifierVR(DicomUtil.dictionary.getValueRepresentationFromTag(tag)))
     val attrList = DicomUtil.findAll(attributeList, uidSet)
     val replaceMap = attrList.map(at => at.getSingleStringValueOrEmptyString).distinct.map(uid => (uid, UMROGUID.getUID)).toMap
-    def replace(at: Attribute) = {
+    def replace(at: Attribute): Unit = {
       val uid = replaceMap(at.getSingleStringValueOrEmptyString)
-      at.removeValues
+      at.removeValues()
       at.addValue(uid)
     }
     attrList.map(at => replace(at))
   }
 
   /**
-   * Given a planned beam's attribute list, get the energy it specifies.
-   */
+    * Given a planned beam's attribute list, get the energy it specifies.
+    */
   private def getBeamEnergy(beamAl: AttributeList): Double = {
     DicomUtil.findAllSingle(beamAl, TagByName.NominalBeamEnergy).head.getDoubleValues.head
   }
 
   /**
-   * Determine if this is an FFF beam.
-   */
+    * Determine if this is an FFF beam.
+    */
   private def isFFFBeam(beamAl: AttributeList): Boolean = {
     val PrimaryFluenceModeSequence = DicomUtil.seqToAttr(beamAl, TagByName.PrimaryFluenceModeSequence)
     def isFFF(pfms: AttributeList): Boolean = {
@@ -136,12 +135,12 @@ object CustomizeRtPlan extends Logging {
   }
 
   /**
-   * Given a planned beam's attribute list, determine if it is supported by the machine.
-   */
+    * Given a planned beam's attribute list, determine if it is supported by the machine.
+    */
   private def beamIsSupported(beamAl: AttributeList, machineEnergyList: Seq[MachineBeamEnergy]) = {
     val beamEnergy = getBeamEnergy(beamAl)
     val fff = isFFFBeam(beamAl)
-    machineEnergyList.find(me => (me.photonEnergy_MeV.get == beamEnergy) && (me.isFFF == fff)).isDefined
+    machineEnergyList.exists(me => (me.photonEnergy_MeV.get == beamEnergy) && (me.isFFF == fff))
   }
 
   private def machineEnergyIsInPlan(rtplan: AttributeList, machineEnergy: MachineBeamEnergy): Boolean = {
@@ -153,23 +152,22 @@ object CustomizeRtPlan extends Logging {
   }
 
   /**
-   * Ensure that the number of beams in the FractionGroupSequence is correct.
-   */
+    * Ensure that the number of beams in the FractionGroupSequence is correct.
+    */
   private def setNumberOfBeamsInFractionGroupSequence(rtplan: AttributeList): Unit = {
     val noOfBeams = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence).size
-    def setNumberOfBeams(al: AttributeList) = {
+    def setNumberOfBeams(al: AttributeList): Unit = {
       val NumberOfBeams = al.get(TagByName.NumberOfBeams)
-      NumberOfBeams.removeValues
+      NumberOfBeams.removeValues()
       NumberOfBeams.addValue(noOfBeams)
     }
-    DicomUtil.seqToAttr(rtplan, TagByName.FractionGroupSequence).map(al => setNumberOfBeams(al))
+    DicomUtil.seqToAttr(rtplan, TagByName.FractionGroupSequence).foreach(al => setNumberOfBeams(al))
   }
 
   private def removeBeamFromPlan(rtplan: AttributeList, beamName: String): Unit = {
     logger.info("Removing beam " + beamName)
     def deleteFractSeq(BeamNumber: Int): Unit = {
       val FractionGroupSequence = DicomUtil.seqToAttr(rtplan, TagByName.FractionGroupSequence).head
-      val ReferencedBeamSequence = DicomUtil.seqToAttr(FractionGroupSequence, TagByName.ReferencedBeamSequence)
       DicomUtil.removeSeq(FractionGroupSequence, TagByName.ReferencedBeamSequence, (al: AttributeList) => al.get(TagByName.ReferencedBeamNumber).getIntegerValues.head == BeamNumber)
     }
 
@@ -178,7 +176,7 @@ object CustomizeRtPlan extends Logging {
     }
 
     // remove the beam from the BeamSequence
-    def deleteBeamSeq: Unit = {
+    def deleteBeamSeq(): Unit = {
       val removed = DicomUtil.removeSeq(rtplan, TagByName.BeamSequence, (al: AttributeList) => beamNameOf(al).equals(beamName))
 
       val BeamNumber = removed.head.get(TagByName.BeamNumber).getIntegerValues.head
@@ -188,23 +186,23 @@ object CustomizeRtPlan extends Logging {
       deletePatientSetup(PatientSetupNumber)
     }
 
-    deleteBeamSeq
+    deleteBeamSeq()
     logger.info("CustomizeRtPlan removed beam " + beamName)
   }
 
   /**
-   * Remove beams from the plan that are not supported by this machine.  Also remove their ControlPoint counterparts.
-   */
+    * Remove beams from the plan that are not supported by this machine.  Also remove their ControlPoint counterparts.
+    */
   private def removeUnsupportedBeams(rtplan: AttributeList, machineEnergyList: Seq[MachineBeamEnergy]): Unit = {
     val beamAlList = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
     val unsupported = beamAlList.filter(beamAl => !beamIsSupported(beamAl, machineEnergyList))
     val unsupportedNameList = unsupported.map(beamAl => beamNameOf(beamAl))
-    unsupportedNameList.map(beamName => removeBeamFromPlan(rtplan, beamName))
+    unsupportedNameList.foreach(beamName => removeBeamFromPlan(rtplan, beamName))
   }
 
   private def getFractionReference(rtplan: AttributeList, BeamNumber: Int): AttributeList = {
     val FractionGroupSequence = DicomUtil.seqToAttr(rtplan, TagByName.FractionGroupSequence)
-    val ReferencedBeamSequence = FractionGroupSequence.map(fractAl => DicomUtil.seqToAttr(fractAl, TagByName.ReferencedBeamSequence)).flatten
+    val ReferencedBeamSequence = FractionGroupSequence.flatMap(fractAl => DicomUtil.seqToAttr(fractAl, TagByName.ReferencedBeamSequence))
 
     def beamNumberMatches(fractAl: AttributeList): Boolean = {
       val ReferencedBeamNumber = fractAl.get(TagByName.ReferencedBeamNumber)
@@ -215,36 +213,31 @@ object CustomizeRtPlan extends Logging {
   }
 
   /**
-   * Represent a plan beam.  This class is public only to support testing.
-   */
+    * Represent a plan beam.  This class is public only to support testing.
+    */
   case class PlanBeam(energy: Double, name: String, fff: Boolean) {
-    def fffAsText = { if (fff) " FFF" else "" }
+    def fffAsText: String = { if (fff) " FFF" else "" }
 
-    override def toString = {
+    override def toString: String = {
       name + " : " + Util.fmtDbl(energy) + fffAsText
     }
   }
 
   /**
-   * Encapsulate values specified by the user in the user interface.
-   */
-  case class PlanSpecification(
-    toleranceTable: String,
-    patientID: String,
-    patientName: String,
-    machineName: String,
-    planName: String) {
+    * Encapsulate values specified by the user in the user interface.
+    */
+  case class PlanSpecification(toleranceTable: String, patientID: String, patientName: String, machineName: String, planName: String) {
 
     /**
-     *  Modify all attributes that get a user specified value
-     */
-    def setOverrides(rtplan: AttributeList) = {
+      *  Modify all attributes that get a user specified value
+      */
+    def setOverrides(rtplan: AttributeList): Seq[IndexedSeq[Unit]] = {
 
       /**
-       * When customizing a plan, override this DICOM attribute with the given value.
-       */
+        * When customizing a plan, override this DICOM attribute with the given value.
+        */
       case class PlanAttributeOverride(tag: AttributeTag, value: String) {
-        override def toString = DicomUtil.dictionary.getNameFromTag(tag) + " : " + value
+        override def toString: String = DicomUtil.dictionary.getNameFromTag(tag) + " : " + value
       }
 
       val overrideList = Seq(
@@ -253,13 +246,16 @@ object CustomizeRtPlan extends Logging {
         PlanAttributeOverride(TagFromName.PatientName, patientName),
         PlanAttributeOverride(TagByName.TreatmentMachineName, machineName),
         PlanAttributeOverride(TagFromName.RTPlanLabel, planName),
-        PlanAttributeOverride(TagByName.TableTopVerticalPosition, 0.toString))
+        PlanAttributeOverride(TagByName.TableTopVerticalPosition, 0.toString)
+      )
 
       overrideList.map(ov => {
-        DicomUtil.findAllSingle(rtplan, ov.tag).map(at => {
-          at.removeValues
-          at.addValue(ov.value)
-        })
+        DicomUtil
+          .findAllSingle(rtplan, ov.tag)
+          .map(at => {
+            at.removeValues()
+            at.addValue(ov.value)
+          })
       })
     }
   }
@@ -277,11 +273,8 @@ object CustomizeRtPlan extends Logging {
           if (FluenceModeID.isEmpty) false
           else FluenceModeID.map(fmi => fmi.getSingleStringValueOrEmptyString.toUpperCase.contains("FFF")).reduce(_ || _)
         }
-        new PlanBeam(energy, name, fff)
+        PlanBeam(energy, name, fff)
       }
-
-      val attrList = DicomUtil.findAllSingle(planAttrList, TagByName.NominalBeamEnergy)
-      val list = attrList.map(a => a.getDoubleValues.head).distinct.sorted
 
       val planBeamList = DicomUtil.seqToAttr(planAttrList, TagByName.BeamSequence).map(beamSeq => beamSeqToPlanBeam(beamSeq)).sortBy(_.energy)
 
@@ -292,15 +285,15 @@ object CustomizeRtPlan extends Logging {
   }
 
   /**
-   * For testing only
-   */
+    * For testing only
+    */
   def testGetPlanBeamList(machine: Machine): Seq[PlanBeam] = {
     getPlanBeamList(machine)
   }
 
   /**
-   * Get the energy of a beam.
-   */
+    * Get the energy of a beam.
+    */
   private def getEnergy(beamAl: AttributeList): Double = {
 
     def cpsEnergy(cpal: AttributeList): Option[Double] = {
@@ -309,41 +302,41 @@ object CustomizeRtPlan extends Logging {
       else Some(NominalBeamEnergy.getDoubleValues.head)
     }
 
-    val cps = DicomUtil.seqToAttr(beamAl, TagByName.ControlPointSequence).map(cpal => cpsEnergy(cpal)).flatten.max
+    val cps = DicomUtil.seqToAttr(beamAl, TagByName.ControlPointSequence).flatMap(cpal => cpsEnergy(cpal)).max
     cps
   }
 
   /**
-   * Get the name of the given beam specified by its attribute list.
-   */
+    * Get the name of the given beam specified by its attribute list.
+    */
   private def beamNameOf(beamAl: AttributeList): String = {
     Util.normalizedBeamName(beamAl)
   }
 
   /**
-   * Get the beam to be copied and modified to make non-standard beams.
-   */
+    * Get the beam to be copied and modified to make non-standard beams.
+    */
   private def getPrototypeBeam(rtplan: AttributeList): AttributeList = {
     val beamList = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
     beamList.filter(beamAl => beamNameOf(beamAl).equals(Config.PrototypeCustomBeamName)).head
   }
 
   /**
-   * Get an unused beam number.
-   */
+    * Get an unused beam number.
+    */
   private def getAvailableBeamNumber(rtplan: AttributeList): Int = {
     val beamAlList = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
     val all = beamAlList.map(beamAl => beamAl.get(TagByName.BeamNumber).getIntegerValues.head)
-    val available = (1 to (all.max + 1)).find(i => !(all.contains(i)))
+    val available = (1 to (all.max + 1)).find(i => !all.contains(i))
     available.get
   }
 
   private def setFluence(beamAl: AttributeList, fff: Boolean) {
 
     /**
-     * Remove both the DICOM standard and Varian fluence references.
-     */
-    def removeFluence = {
+      * Remove both the DICOM standard and Varian fluence references.
+      */
+    def removeFluence() = {
       val PrimaryFluenceModeSequence = beamAl.get(TagByName.PrimaryFluenceModeSequence)
       if (PrimaryFluenceModeSequence != null) beamAl.remove(TagByName.PrimaryFluenceModeSequence)
 
@@ -352,8 +345,8 @@ object CustomizeRtPlan extends Logging {
     }
 
     /**
-     * Add a sequence to the current beam.
-     */
+      * Add a sequence to the current beam.
+      */
     def addSequence(tag: AttributeTag): AttributeList = {
       val seq = new SequenceAttribute(tag)
       beamAl.put(seq)
@@ -379,7 +372,7 @@ object CustomizeRtPlan extends Logging {
     def addVarianFluenceModeID(al: AttributeList, mode: String) = al.put(VarianPrivateTag.newFluenceModeID(mode))
 
     def changeToFluenceStandard = {
-      removeFluence
+      removeFluence()
       // standard attributes
       val al = addSequence(TagByName.PrimaryFluenceModeSequence)
       addFluenceMode(al, "STANDARD")
@@ -391,7 +384,7 @@ object CustomizeRtPlan extends Logging {
     }
 
     def changeToFluenceFFF = {
-      removeFluence
+      removeFluence()
       // standard attributes
       val al = addSequence(TagByName.PrimaryFluenceModeSequence)
       addFluenceMode(al, "NON_STANDARD")
@@ -405,10 +398,10 @@ object CustomizeRtPlan extends Logging {
     }
 
     (isFFFBeam(beamAl), fff) match {
-      case (true, true) => ; // no change necessary
+      case (true, true)   => ; // no change necessary
       case (false, false) => ; // no change necessary
-      case (true, false) => changeToFluenceStandard
-      case (false, true) => changeToFluenceFFF
+      case (true, false)  => changeToFluenceStandard
+      case (false, true)  => changeToFluenceFFF
     }
   }
 
@@ -419,12 +412,12 @@ object CustomizeRtPlan extends Logging {
       val NominalBeamEnergy = cpt.get(TagByName.NominalBeamEnergy)
 
       if (NominalBeamEnergy != null) {
-        NominalBeamEnergy.removeValues
+        NominalBeamEnergy.removeValues()
         NominalBeamEnergy.addValue(energy)
       }
     }
 
-    controlPtSeq.map(cpt => changeOne(cpt))
+    controlPtSeq.foreach(cpt => changeOne(cpt))
   }
 
   private def changeDoseRate(beamAl: AttributeList, energy: Double): Unit = {
@@ -434,22 +427,22 @@ object CustomizeRtPlan extends Logging {
       val DoseRateSet = cpt.get(TagByName.DoseRateSet)
 
       if (DoseRateSet != null) {
-        DoseRateSet.removeValues
+        DoseRateSet.removeValues()
         DoseRateSet.addValue(energy)
       }
     }
 
-    controlPtSeq.map(cpt => changeOne(cpt))
+    controlPtSeq.foreach(cpt => changeOne(cpt))
   }
 
   /**
-   * Add another entry with the given number to the PatientSetupSequence.
-   */
+    * Add another entry with the given number to the PatientSetupSequence.
+    */
   private def addPatientSetup(rtplan: AttributeList, PatientSetupNumber: Int): Unit = {
     val patientSetup = DicomUtil.clone(DicomUtil.seqToAttr(rtplan, TagByName.PatientSetupSequence).head)
     val PatientSetupSequence = rtplan.get(TagByName.PatientSetupSequence).asInstanceOf[SequenceAttribute]
 
-    patientSetup.get(TagByName.PatientSetupNumber).removeValues
+    patientSetup.get(TagByName.PatientSetupNumber).removeValues()
     patientSetup.get(TagByName.PatientSetupNumber).addValue(PatientSetupNumber)
     PatientSetupSequence.addItem(patientSetup)
   }
@@ -459,7 +452,7 @@ object CustomizeRtPlan extends Logging {
     val index = beamList.indexWhere(b => beamNameOf(b).startsWith(Config.PrefixForMachineDependentBeamName))
     val seq = AttributeFactory.newAttribute(TagByName.BeamSequence).asInstanceOf[SequenceAttribute]
 
-    for (i <- 0 until beamList.size) {
+    for (i <- beamList.indices) {
       seq.addItem(beamList(i))
       if (i == index) seq.addItem(beamAl)
     }
@@ -468,9 +461,9 @@ object CustomizeRtPlan extends Logging {
   }
 
   /**
-   * Add a beam that supports the given machine energy.  Do it by copying and modifying both prototypes.  The original prototypes are
-   * not changed, but rtplan is changed.
-   */
+    * Add a beam that supports the given machine energy.  Do it by copying and modifying both prototypes.  The original prototypes are
+    * not changed, but rtplan is changed.
+    */
   private def addBeam(rtplan: AttributeList, machineEnergy: MachineBeamEnergy, prototypeBeam: AttributeList, prototypeFractionReference: AttributeList): Unit = {
     val BeamNumber = getAvailableBeamNumber(rtplan)
     val beamAl = DicomUtil.clone(prototypeBeam)
@@ -478,28 +471,28 @@ object CustomizeRtPlan extends Logging {
 
     // modify the fraction
     val ReferencedBeamNumber = fraction.get(TagByName.ReferencedBeamNumber)
-    ReferencedBeamNumber.removeValues
+    ReferencedBeamNumber.removeValues()
     ReferencedBeamNumber.addValue(BeamNumber)
 
     // modify the beam
 
     val beamNum = beamAl.get(TagByName.BeamNumber)
-    beamNum.removeValues
+    beamNum.removeValues()
     beamNum.addValue(BeamNumber)
 
     val refPatSetupNumber = beamAl.get(TagByName.ReferencedPatientSetupNumber)
-    refPatSetupNumber.removeValues
+    refPatSetupNumber.removeValues()
     refPatSetupNumber.addValue(BeamNumber)
 
     val beamNameText = {
       val energy = machineEnergy.photonEnergy_MeV.get
-      val numText = if (energy.round == energy) energy.round.toLong.toString else Util.fmtDbl(energy)
+      val numText = if (energy.round == energy) energy.round.toString else Util.fmtDbl(energy)
       val fffText = if (machineEnergy.isFFF) "F" else "X"
       Config.PrefixForMachineDependentBeamName + numText + fffText
     }
 
     val BeamNameAttr = beamAl.get(TagByName.BeamName)
-    BeamNameAttr.removeValues
+    BeamNameAttr.removeValues()
     BeamNameAttr.addValue(beamNameText)
 
     setFluence(beamAl, machineEnergy.isFFF)
@@ -524,7 +517,7 @@ object CustomizeRtPlan extends Logging {
       val energy = getEnergy(beamAl)
       val fff = if (isFFFBeam(beamAl)) "F" else "X"
       val gantryAngleList = {
-        val list = DicomUtil.findAllSingle(beamAl, TagByName.GantryAngle).map(ga => ga.getDoubleValues).flatten
+        val list = DicomUtil.findAllSingle(beamAl, TagByName.GantryAngle).flatMap(ga => ga.getDoubleValues)
         list.map(ga => Util.fmtDbl(ga)).mkString("  ")
       }
 
@@ -537,16 +530,16 @@ object CustomizeRtPlan extends Logging {
   private def setRtplanDateTimeToNow(rtplan: AttributeList) = {
     val now = System.currentTimeMillis
 
-    def setDateTime(dateTag: AttributeTag, timeTag: AttributeTag) = {
+    def setDateTime(dateTag: AttributeTag, timeTag: AttributeTag): Unit = {
       val dateAttr = rtplan.get(dateTag)
       if (dateAttr != null) {
-        dateAttr.removeValues
+        dateAttr.removeValues()
         dateAttr.addValue(DicomUtil.dicomDateFormat.format(now))
       }
 
       val timeAttr = rtplan.get(timeTag)
       if (timeAttr != null) {
-        timeAttr.removeValues
+        timeAttr.removeValues()
         timeAttr.addValue(DicomUtil.dicomTimeFormat.format(now))
       }
     }
@@ -554,7 +547,8 @@ object CustomizeRtPlan extends Logging {
     val dateTimeTagList = Seq(
       (TagFromName.InstanceCreationDate, TagFromName.InstanceCreationTime),
       (TagFromName.StudyDate, TagFromName.StudyTime),
-      (TagFromName.RTPlanDate, TagFromName.RTPlanTime))
+      (TagFromName.RTPlanDate, TagFromName.RTPlanTime)
+    )
 
     dateTimeTagList.map(dt => setDateTime(dt._1, dt._2))
   }
@@ -568,7 +562,7 @@ object CustomizeRtPlan extends Logging {
 
       val name = BeamName.getSingleStringValueOrEmptyString
       val newName = (bi + 1).formatted("%02d") + ":" + name
-      BeamName.removeValues
+      BeamName.removeValues()
       BeamName.addValue(newName)
 
       beamList(bi).put(VarianPrivateTag.newBeamSecondaryName(newName))
@@ -577,7 +571,7 @@ object CustomizeRtPlan extends Logging {
     beamList.indices.map(bi => updateBeamName(bi))
   }
 
-  private def reassignPlanEnergies(rtplan: AttributeList, planBeamList: Seq[PlanBeam], machineEnergyList: Seq[MachineBeamEnergy]): Unit = {
+  private def reassignPlanEnergies(rtplan: AttributeList, machineEnergyList: Seq[MachineBeamEnergy]): Unit = {
     // use this beam and its fraction reference to make non-standard beams
     val prototypeBeam = getPrototypeBeam(rtplan)
 
@@ -591,7 +585,7 @@ object CustomizeRtPlan extends Logging {
 
     logger.info("unsupportedEnergyList size: " + unsupportedEnergyList.size + "\n    " + unsupportedEnergyList.map(me => me.toString).mkString("\n    "))
 
-    unsupportedEnergyList.map(me => addBeam(rtplan, me, prototypeBeam, prototypeFractionReference))
+    unsupportedEnergyList.foreach(me => addBeam(rtplan, me, prototypeBeam, prototypeFractionReference))
     logger.info("customized rtplan\n" + showBeamList(rtplan))
 
     setNumberOfBeamsInFractionGroupSequence(rtplan)
@@ -599,10 +593,10 @@ object CustomizeRtPlan extends Logging {
   }
 
   /**
-   * There are some Varian private tags that are in a proprietary format that is not possible to
-   * duplicate.  The tags are not necessary for treatment so they are deleted so that they do not
-   * invalidate the plan.
-   */
+    * There are some Varian private tags that are in a proprietary format that is not possible to
+    * duplicate.  The tags are not necessary for treatment so they are deleted so that they do not
+    * invalidate the plan.
+    */
   private def removeVarianPrivateTagAttributes(rtplan: AttributeList): Unit = {
 
     val privateTagList = Seq(
@@ -611,14 +605,15 @@ object CustomizeRtPlan extends Logging {
       VarianPrivateTag.ExtendedInterfaceLength,
       VarianPrivateTag.ExtendedInterfaceFormat,
       VarianPrivateTag.VarianCreator3287,
-      VarianPrivateTag.PlanIntegritySequence)
+      VarianPrivateTag.PlanIntegritySequence
+    )
 
     privateTagList.map(tag => rtplan.remove(tag))
   }
 
   /**
-   * Given all the required information, create an rtplan that is compatible with the given machine for Phase2.
-   */
+    * Given all the required information, create an rtplan that is compatible with the given machine for Phase2.
+    */
   def makePlanPhase2(machine: Machine, userPK: Long, planBeamList: Seq[PlanBeam], planSpecification: PlanSpecification, machineEnergyList: Seq[MachineBeamEnergy]): AttributeList = {
 
     val rtplan = DicomUtil.clone(getCollimatorCompatiblePhase2PlanForMachine(machine).get.dicomFile.attributeList.get)
@@ -629,14 +624,15 @@ object CustomizeRtPlan extends Logging {
     setRtplanDateTimeToNow(rtplan)
 
     removeVarianPrivateTagAttributes(rtplan)
-    reassignPlanEnergies(rtplan, planBeamList, machineEnergyList)
-    saveAnonymizedDicom(machine, userPK, rtplan)
+    reassignPlanEnergies(rtplan, machineEnergyList)
+    val procedurePK = Procedure.ProcOfPhase2.get.procedurePK.get
+    saveAnonymizedDicom(machine, userPK, rtplan, procedurePK)
     rtplan
   }
 
   /**
-   * Given all the required information, create an rtplan that is compatible with the given machine for Phase2.
-   */
+    * Given all the required information, create an rtplan that is compatible with the given machine for Phase2.
+    */
   def makePlanDailyQA(machine: Machine, userPK: Long, planSpecification: PlanSpecification): AttributeList = {
 
     val rtplan = DicomUtil.clone(getCollimatorCompatibleDailyQAPlanForMachine(machine).get.dicomFile.attributeList.get)
@@ -647,13 +643,14 @@ object CustomizeRtPlan extends Logging {
     setRtplanDateTimeToNow(rtplan)
 
     removeVarianPrivateTagAttributes(rtplan)
-    saveAnonymizedDicom(machine, userPK, rtplan)
+    val procedurePK = Procedure.ProcOfBBbyEPID.get.procedurePK.get
+    saveAnonymizedDicom(machine, userPK, rtplan, procedurePK)
     rtplan
   }
 
   /**
-   * Given all the required information, create a pair of rtplans that are compatible with the given machine for LOC.
-   */
+    * Given all the required information, create a pair of rtplans that are compatible with the given machine for LOC.
+    */
   def makePlanLOC(machine: Machine, userPK: Long, planSpecification: PlanSpecification): CustomizeRtPlan.LOCRtplanPair = {
 
     val rtplanPair = getCollimatorCompatibleLocPlanPairForMachine(machine).get
@@ -663,13 +660,19 @@ object CustomizeRtPlan extends Logging {
 
     // Force them to have the same study instance UID so we know they were made together.
     val studyAt = rtplanPair.delivery.dicomFile.attributeList.get.get(TagFromName.StudyInstanceUID)
-    studyAt.removeValues
+    studyAt.removeValues()
     studyAt.addValue(Util.studyInstOfAl(rtplanPair.baseline.dicomFile.attributeList.get))
 
     rtplanPair.asSeq.map(rtplan => planSpecification.setOverrides(rtplan))
     rtplanPair.asSeq.map(rtplan => setRtplanDateTimeToNow(rtplan))
-    rtplanPair.asSeq.map(rtplan => removeVarianPrivateTagAttributes(rtplan))
-    rtplanPair.asSeq.map(rtplan => saveAnonymizedDicom(machine, userPK, rtplan))
+    rtplanPair.asSeq.foreach(rtplan => removeVarianPrivateTagAttributes(rtplan))
+
+    val baselineProcedurePK = Procedure.ProcOfLOCBaseline.get.procedurePK.get
+    saveAnonymizedDicom(machine, userPK, rtplanPair.baselineAl, baselineProcedurePK)
+
+    val deliveryProcedurePK = Procedure.ProcOfLOC.get.procedurePK.get
+    saveAnonymizedDicom(machine, userPK, rtplanPair.deliveryAl, deliveryProcedurePK)
+
     rtplanPair
   }
 

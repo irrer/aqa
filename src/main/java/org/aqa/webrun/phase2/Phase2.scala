@@ -314,7 +314,8 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     // the automatic client that will ask this server if a given series has been processed or not.  This actually
     // happened once.
     val seriesList = alList.groupBy(al => Util.serInstOfAl(al)).values
-    seriesList.foreach(series => DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, series))
+    val procedurePK = Procedure.ProcOfPhase2.get.procedurePK.get
+    seriesList.foreach(series => DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, series, procedurePK))
 
     val summaryList: Either[Seq[Elem], Seq[Elem]] = MetadataCheckAnalysis.runProcedure(extendedData, runReq) match {
       case Left(fail) => Left(Seq(fail))

@@ -3,6 +3,7 @@ package aqa.test;
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
+
 import java.io.File
 import edu.umro.ScalaUtil.Trace
 import org.aqa.db.DbSetup
@@ -12,6 +13,7 @@ import org.aqa.db.Input
 import org.aqa.db.Machine
 import org.aqa.db.DicomSeries
 import org.aqa.Util
+
 import java.sql.Timestamp
 import org.aqa.db.InputFiles
 import com.pixelmed.dicom.AttributeList
@@ -19,6 +21,8 @@ import edu.umro.ScalaUtil.FileUtil
 import com.pixelmed.dicom.SOPClass
 import com.pixelmed.dicom.TagFromName
 import com.pixelmed.dicom.Attribute
+import org.aqa.db.Procedure
+
 import scala.util.Try
 
 /**
@@ -86,8 +90,9 @@ class TestDicomSeries extends FlatSpec with Matchers {
       inputFiles.insert
       println("X inputFiles.inputFilesPK: " + inputFiles.inputFilesPK) // X denotes item to be deleted
 
-      dsRtplan = Some((DicomSeries.makeDicomSeries(userPK, Some(inpPK), None, Seq(rtplan)).get).insert)
-      dsImage = Some((DicomSeries.makeDicomSeries(userPK, Some(inpPK), None, imageList).get).insert)
+      val procedurePK = Procedure.ProcOfPhase2.get.procedurePK.get
+      dsRtplan = Some((DicomSeries.makeDicomSeries(userPK, Some(inpPK), None, Seq(rtplan), procedurePK).get).insert)
+      dsImage = Some((DicomSeries.makeDicomSeries(userPK, Some(inpPK), None, imageList, procedurePK).get).insert)
       println("X dsRtplan.dicomSeriesPK: " + dsRtplan.get.dicomSeriesPK.get) // X denotes item to be deleted
       println("X dsImage.dicomSeriesPK: " + dsImage.get.dicomSeriesPK.get) // X denotes item to be deleted
 
