@@ -1,63 +1,45 @@
 package org.aqa.web
 
+import org.aqa.AnonymizeUtil
+import org.aqa.db.Institution
+import org.aqa.db.Machine
+import org.aqa.db.Output
+import org.aqa.db.Procedure
+import org.aqa.web.WebUtil._
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
-import org.aqa.web.WebUtil._
-import org.aqa.db.Institution
-import org.aqa.AnonymizeUtil
-import org.aqa.db.Machine
 import org.restlet.data.Status
-import org.aqa.db.Output
-import org.aqa.db.Procedure
-import scala.xml.Elem
-import org.aqa.Util
-import java.util.Date
-import java.text.SimpleDateFormat
-import java.sql.Timestamp
 
-//import org.restlet.security.Verifier
-//import org.restlet.security.ChallengeAuthenticator
-//import org.restlet.data.ChallengeScheme
-//import org.restlet.data.ChallengeRequest
-//import org.restlet.data.ChallengeResponse
-//import org.restlet.Context
-//import org.aqa.db.User
-//import org.restlet.data.Status
-//import scala.xml.Elem
-//import java.net.URLDecoder
-//import org.restlet.engine.security.AuthenticatorHelper
-//import org.restlet.engine.security.HttpBasicHelper
-//import org.restlet.engine.header.ChallengeWriter
-//import org.restlet.data.Header
-//import org.restlet.util.Series
-//import org.aqa.Util
-//import org.aqa.db.UserRole
-//import org.aqa.db.CachedUser
-//import org.aqa.Crypto
-//import org.aqa.Config
+import java.sql.Timestamp
+import java.text.SimpleDateFormat
+import java.util.Date
+import scala.xml.Elem
 
 object DataCollectionSummary {
   val path = "/DataCollectionSummary"
   val messageTag = "Message"
 }
 
+/**
+  * Support the display of a report showing how much data has been submitted by
+  * each institution.  This is only available to whitelisted users because it
+  * contains de-anonymized cross-institutional data.
+  */
 class DataCollectionSummary extends Restlet with SubUrlAdmin {
 
-  def quote(text: String) = "'" + text + "'"
+  def quote(text: String): String = "'" + text + "'"
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
-  def fmt(date: Date) = dateFormat.format(date)
+  def fmt(date: Date): String = dateFormat.format(date)
 
   private def fmtDate(date: Date): String = quote(fmt(date))
 
   private def makeCountTable(instList: Seq[Institution], machList: Seq[Machine], outputList: Seq[Output]): Elem = {
 
-    val instMap = instList.map(inst => (inst.institutionPK.get, inst)).toMap
-
     /**
-     * Given an output, return the institutionPK.
-     */
+      * Given an output, return the institutionPK.
+      */
     def outputToInst(output: Output) = {
       machList.find(mach => mach.machinePK.get == output.machinePK.get).get.institutionPK
     }
@@ -68,28 +50,28 @@ class DataCollectionSummary extends Restlet with SubUrlAdmin {
     def outputCount(instPK: Long) = {
       instOutputMap.get(instPK) match {
         case Some(outList) => outList.size
-        case _ => 0
+        case _             => 0
       }
     }
 
     def timeOfMostRecent(instPK: Long) = {
       instOutputMap.get(instPK) match {
-        case Some(outList) => outList.sortBy(_.dataDate.get.getTime).last.dataDate.get.getTime
-        case _ => 0
+        case Some(outList) => outList.maxBy(_.dataDate.get.getTime).dataDate.get.getTime
+        case _             => 0
       }
     }
-    
+
     /**
-     * Convert an institution to a row in the table.
-     */
+      * Convert an institution to a row in the table.
+      */
     def instToRow(inst: Institution): Elem = {
-      val nameElem = { <td>{ inst.name_real.get }</td> }
+      val nameElem = { <td>{inst.name_real.get}</td> }
       val outList = instOutputMap.get(inst.institutionPK.get)
       val count = outputCount(inst.institutionPK.get)
-      val countElem = { <td>{ count.toString }</td> }
-      val latest: Option[Timestamp] = if (outList.isDefined) outList.get.sortBy(o => o.dataDate.get.getTime).last.dataDate else None
-      val latestElem = { <td>{ if (latest.isDefined) WebUtil.timeAgo(latest.get) else "NA" }</td> }
-      <tr>{ nameElem }{ countElem }{ latestElem }</tr>
+      val countElem = { <td>{count.toString}</td> }
+      val latest: Option[Timestamp] = if (outList.isDefined) outList.get.maxBy(o => o.dataDate.get.getTime).dataDate else None
+      val latestElem = { <td>{if (latest.isDefined) WebUtil.timeAgo(latest.get) else "NA"}</td> }
+      <tr>{nameElem}{countElem}{latestElem}</tr>
     }
 
     val instSortedByMostRecent = instList.map(inst => (inst, timeOfMostRecent(inst.institutionPK.get))).sortBy(_._2).map(_._1).reverse
@@ -104,7 +86,7 @@ class DataCollectionSummary extends Restlet with SubUrlAdmin {
             <th title="The date of the most recent data acquistion.">Most Recent</th>
           </tr>
         </thead>
-        { instSortedByMostRecent.map(inst => instToRow(inst)) }
+        {instSortedByMostRecent.map(inst => instToRow(inst))}
       </table>
     </div>
   }
@@ -112,8 +94,8 @@ class DataCollectionSummary extends Restlet with SubUrlAdmin {
   private def makeMainChart(instList: Seq[Institution], machList: Seq[Machine], outputList: Seq[Output]): String = {
 
     case class Row(name: String, data: Seq[String], index: Int) {
-      def toXs = quote(name) + ": " + quote(name + "Data")
-      def toColumn = {
+      def toXs: String = quote(name) + ": " + quote(name + "Data")
+      def toColumn: String = {
         val allX = quote(name + "Data") +: data
         val allY = quote(name) +: data.map(_ => index.toString)
         def bracket(seq: Seq[String]) = seq.mkString("[", ",", "]")
@@ -132,10 +114,10 @@ class DataCollectionSummary extends Restlet with SubUrlAdmin {
         nm
       }
 
-      new Row(name, textList, index)
+      Row(name, textList, index)
     }
 
-    val ml = machList.groupBy(_.institutionPK).map(im => im._2).flatten
+    val ml = machList.groupBy(_.institutionPK).flatMap(im => im._2)
     val rowList = ml.zipWithIndex.map(machIndex => rowInfo(machIndex._1, machIndex._2))
 
     val script =
@@ -173,7 +155,7 @@ var SummaryChart = c3.generate({
     script
   }
 
-  private def generateReport(response: Response) = {
+  private def generateReport(response: Response): Unit = {
     // get institutions and machine as clear text
     val instList = Institution.list.map(inst => inst.copy(name_real = Some(AnonymizeUtil.decryptWithNonce(inst.institutionPK.get, inst.name_real.get))))
     val machList = Machine.list.map(mach => mach.copy(id_real = Some(AnonymizeUtil.decryptWithNonce(mach.institutionPK, mach.id_real.get))))
@@ -189,7 +171,7 @@ var SummaryChart = c3.generate({
         <div class="row">
           <div class="col-md-6 col-md-offset-2">
             <h2>Phase 2 Collection Summary</h2>
-            { (new Date).toString }
+            {(new Date).toString}
             <br/>
             The graph below shows when data was collected for each of the respective institutions and machine.<br/>
             Hover over each dot to show<i>Inst Name : Machine : Number of Data Sets</i>
@@ -205,7 +187,7 @@ var SummaryChart = c3.generate({
         </div>
         <div class="row">
           <div>
-            { makeCountTable(instList, machList, outputList) }
+            {makeCountTable(instList, machList, outputList)}
           </div>
         </div>
         <div class="row">
@@ -229,15 +211,13 @@ var SummaryChart = c3.generate({
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
     try {
-      val valueMap = getValueMap(request)
       if (userIsWhitelisted(request)) {
         generateReport(response)
       } else
         badRequest(response, "You are not authorized to view this page", Status.CLIENT_ERROR_FORBIDDEN)
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         WebUtil.internalFailure(response, "Unexpected failure: " + fmtEx(t))
-      }
     }
   }
 
