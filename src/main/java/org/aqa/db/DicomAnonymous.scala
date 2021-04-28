@@ -1,40 +1,35 @@
 package org.aqa.db
 
-import Db.driver.api._
-import org.aqa.Logging
+import com.pixelmed.dicom.Attribute
+import com.pixelmed.dicom.AttributeTag
+import com.pixelmed.dicom.TagFromName
+import com.pixelmed.dicom.ValueRepresentation
+import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.util.UMROGUID
+import org.aqa.AnonymizeUtil
 import org.aqa.Config
 import org.aqa.Crypto
-import edu.umro.ScalaUtil.FileUtil
-import java.io.File
-import edu.umro.util.Utility
-import com.pixelmed.dicom.Attribute
-import org.aqa.AnonymizeUtil
-import edu.umro.ScalaUtil.DicomUtil
-import org.aqa.Crypto
-import com.pixelmed.dicom.AttributeTag
-import com.pixelmed.dicom.ValueRepresentation
-import edu.umro.util.UMROGUID
-import edu.umro.ScalaUtil.Trace
-import com.pixelmed.dicom.TagFromName
+import org.aqa.Logging
 import org.aqa.Util
+import org.aqa.db.Db.driver.api._
 
 /**
- * Support the anonymization of DICOM by providing a way to store previously anonymized values in the database.
- *
- * Note: All UID's are anonymized with the generic UID tag instead of their own (like 0008,0018:SOPInstanceUID or
- * 0008,1155:ReferencedSOPInstanceUID).  This is because the same value is used by different attributes, and the
- * lookup is really under the context of UID.
- */
+  * Support the anonymization of DICOM by providing a way to store previously anonymized values in the database.
+  *
+  * Note: All UID's are anonymized with the generic UID tag instead of their own (like 0008,0018:SOPInstanceUID or
+  * 0008,1155:ReferencedSOPInstanceUID).  This is because the same value is used by different attributes, and the
+  * lookup is really under the context of UID.
+  */
 case class DicomAnonymous(
-  dicomAnonymousPK: Option[Long], // primary key
-  institutionPK: Long, // associated institution
-  attributeTag: String, // DICOM attribute tag
-  value: String, // public value for tag
-  attributeHash: String, // secure hash of tag and value to allow searches on this row.
-  value_real: String // actual non-anonymized value encrypted
+    dicomAnonymousPK: Option[Long], // primary key
+    institutionPK: Long, // associated institution
+    attributeTag: String, // DICOM attribute tag
+    value: String, // public value for tag
+    attributeHash: String, // secure hash of tag and value to allow searches on this row.
+    value_real: String // actual non-anonymized value encrypted
 ) {
 
-  override def toString = {
+  override def toString: String = {
     "PK: " + { if (dicomAnonymousPK.isDefined) dicomAnonymousPK.get else "none" } +
       "    instPK: " + institutionPK +
       "    tag: " + attributeTag +
@@ -43,33 +38,20 @@ case class DicomAnonymous(
       "    value_real: " + value_real.take(10) + "..."
   }
 
-  /* This probably should never be used due to the special nature of generating anonymized values using
-   * the primary key which is generated as the entry is inserted.
-
-  def insert = {
-    val insertQuery = DicomAnonymous.query returning
-      DicomAnonymous.query.map(_.dicomAnonymousPK) into
-      ((dicomAnonymous, dicomAnonymousPK) => dicomAnonymous.copy(dicomAnonymousPK = Some(dicomAnonymousPK)))
-    val action = insertQuery += this
-    val result = Db.run(action)
-    result
-  }
-  */
-
-  def insertOrUpdate = Db.run(DicomAnonymous.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(DicomAnonymous.query.insertOrUpdate(this))
 
   /**
-   * Return a copy of this with the <code>value_real</code> set to the original value.
-   */
-  def unencrypt = {
-    val vReal = AnonymizeUtil.encryptWithNonce(institutionPK, value_real)
-    this.copy(value_real = vReal)
+    * Return a copy of this with the <code>value_real</code> set to the original value.
+    */
+  def originalValue: String = {
+    val original = AnonymizeUtil.decryptWithNonce(institutionPK, value_real)
+    original
   }
 
   /**
-   * Alias of this that gets presented to a user that is not allowed to see the real value.
-   */
-  def aliasOf(institionName: String): String = Util.textToId(institionName + " " + attributeTag + " " + dicomAnonymousPK.get)
+    * Alias of this that gets presented to a user that is not allowed to see the real value.
+    */
+  def aliasOf(institutionName: String): String = Util.textToId(institutionName + " " + attributeTag + " " + dicomAnonymousPK.get)
   //def aliasOf: String = aliasOf(Institution.get(institutionPK).get.name)
 }
 
@@ -84,15 +66,10 @@ object DicomAnonymous extends Logging {
     def attributeHash = column[String]("attributeHash")
     def value_real = column[String]("value_real")
 
-    def * = (
-      dicomAnonymousPK.?,
-      institutionPK,
-      attributeTag,
-      value,
-      attributeHash,
-      value_real) <> ((DicomAnonymous.apply _)tupled, DicomAnonymous.unapply _)
+    def * = (dicomAnonymousPK.?, institutionPK, attributeTag, value, attributeHash, value_real) <> (DicomAnonymous.apply _ tupled, DicomAnonymous.unapply)
 
-    def institutionFK = foreignKey("DicomAnonymous_institutionPKConstraint", institutionPK, Institution.query)(_.institutionPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
+    def institutionFK =
+      foreignKey("DicomAnonymous_institutionPKConstraint", institutionPK, Institution.query)(_.institutionPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[DicomAnonymousTable]
@@ -110,8 +87,8 @@ object DicomAnonymous extends Logging {
   }
 
   /**
-   * Delete the dicomAnonymous from the database.  If that is successful, then also delete its configuration directory.
-   */
+    * Delete the dicomAnonymous from the database.  If that is successful, then also delete its configuration directory.
+    */
   def delete(dicomAnonymousPK: Long): Int = {
     val dicomAnonymous = get(dicomAnonymousPK)
     if (dicomAnonymous.isDefined) {
@@ -138,24 +115,24 @@ object DicomAnonymous extends Logging {
   }
 
   /**
-   * Make a hash of the given attribute by combining:
-   *
-   * institutionKey + tag + value
-   *
-   * This makes it possible to look up anonymized values in the database without first decrypting them.
-   *
-   * The institution key and tag make the hash unique across institutions and tags.
-   */
+    * Make a hash of the given attribute by combining:
+    *
+    * institutionKey + tag + value
+    *
+    * This makes it possible to look up anonymized values in the database without first decrypting them.
+    *
+    * The institution key and tag make the hash unique across institutions and tags.
+    */
   def makeAttributeHash(institutionKey: String, attr: Attribute): String = {
     val text = institutionKey + formatAnonAttributeTag(attr.getTag) + attr.getSingleStringValueOrEmptyString
     Crypto.byteArrayToHex(Crypto.secureHash(text.getBytes))
   }
 
   /**
-   * Get the anonymous value for the given attribute.  If it is auto-incrementing (Name_number) then
-   * return None and leave the generation of the value to the caller.
-   */
-  private def getAnonymousValue(institutionPK: Long, attr: Attribute): Option[String] = {
+    * Get the anonymous value for the given attribute.  If it is auto-incrementing (Name_number) then
+    * return None and leave the generation of the value to the caller.
+    */
+  private def getAnonymousValue(attr: Attribute): Option[String] = {
     val tag = attr.getTag
 
     val toBeAnonymized = Config.ToBeAnonymizedList(tag)
@@ -166,32 +143,33 @@ object DicomAnonymous extends Logging {
     }
 
     val anonValue: Option[String] = 0 match {
-      case _ if (toBeAnonymized.Value.isDefined) => Some(toBeAnonymized.Value.get)
-      case _ if isUid => Some(UMROGUID.getUID)
-      case _ => None
+      case _ if toBeAnonymized.Value.isDefined => Some(toBeAnonymized.Value.get)
+      case _ if isUid                          => Some(UMROGUID.getUID)
+      case _                                   => None
     }
 
     anonValue
   }
 
   /**
-   * Given an attribute, insert it into the database with the appropriate fields encrypted and return the result.
-   */
+    * Given an attribute, insert it into the database with the appropriate fields encrypted and return the result.
+    */
   def insert(institutionPK: Long, attr: Attribute): DicomAnonymous = {
     val tag = attr.getTag
-    val valu = attr.getSingleStringValueOrEmptyString
+    val value = attr.getSingleStringValueOrEmptyString
     val institutionKey = AnonymizeUtil.getInstitutionKey(institutionPK)
 
     val tba = Config.ToBeAnonymizedList(tag)
-    val anonymousValue = getAnonymousValue(institutionPK, attr)
+    val anonymousValue = getAnonymousValue(attr)
 
     val da = new DicomAnonymous(
       None,
-      institutionPK,
-      formatAnonAttributeTag(tag),
-      if (anonymousValue.isDefined) anonymousValue.get else "dummyValue",
-      makeAttributeHash(institutionKey, attr),
-      AnonymizeUtil.encryptWithNonce(institutionPK, valu))
+      institutionPK = institutionPK,
+      attributeTag = formatAnonAttributeTag(tag),
+      value = if (anonymousValue.isDefined) anonymousValue.get else "dummyValue",
+      attributeHash = makeAttributeHash(institutionKey, attr),
+      value_real = AnonymizeUtil.encryptWithNonce(institutionPK, value)
+    )
 
     val insertQuery = {
       DicomAnonymous.query returning
@@ -215,8 +193,8 @@ object DicomAnonymous extends Logging {
   }
 
   /**
-   * Get previously anonymized values for the given institution.
-   */
+    * Get previously anonymized values for the given institution.
+    */
   def getAttributes(institutionPK: Long, attrList: Seq[Attribute]): Seq[DicomAnonymous] = {
     val institutionKey = AnonymizeUtil.getInstitutionKey(institutionPK)
     val hashMap = attrList.map(attr => (makeAttributeHash(institutionKey, attr), attr)).toMap
@@ -234,8 +212,8 @@ object DicomAnonymous extends Logging {
   }
 
   /**
-   * Get previously anonymized values by tag for all institutions.
-   */
+    * Get previously anonymized values by tag for all institutions.
+    */
   def getAttributesByTag(tagList: Seq[AttributeTag]): Seq[DicomAnonymous] = {
     val tagSet = tagList.toSet.map(tag => formatAnonAttributeTag(tag))
     val action = {
@@ -250,8 +228,8 @@ object DicomAnonymous extends Logging {
   }
 
   /**
-   * Get previously anonymized values by tag for the given institution.
-   */
+    * Get previously anonymized values by tag for the given institution.
+    */
   def getAttributesByTag(institutionPK: Long, tagList: Seq[AttributeTag]): Seq[DicomAnonymous] = {
     val tagSet = tagList.toSet.map(tag => formatAnonAttributeTag(tag))
     val action = {
@@ -266,10 +244,10 @@ object DicomAnonymous extends Logging {
   }
 
   /**
-   * Get previously anonymized values by value.
-   */
-  def getAttributeByValue(value: String): Seq[DicomAnonymous] = {
-    val action = DicomAnonymous.query.filter(da => (da.value === value))
+    * Get previously anonymized values by institution and value's membership in a set.
+    */
+  def getAttributeByValueSet(institutionPK: Long, value: Set[String]): Seq[DicomAnonymous] = {
+    val action = DicomAnonymous.query.filter(da => (da.institutionPK === institutionPK) && da.value.inSet(value))
     val list = Db.run(action.result)
     list
   }
