@@ -457,26 +457,31 @@ object DicomSeries extends Logging {
     list.flatten.distinct
   }
 
-  case class RtplanProcedure(rtplanUid: String, procedureName: String) {}
+  /**
+    * Container for UID + procedures.
+    * @param rtplanUID SOPInstanceUID for an RTPLAN.
+    * @param procedure Procedure that processes the plan.
+    */
+  case class RtplanProcedure(rtplanUID: String, procedure: Procedure) {
+    override def toString: String = rtplanUID.formatted("%-64s") + " " + procedure.fullName
+  }
 
   /**
-   * Get a list of all RTPLAN and their procedure names.
-   * @param institutionPK
-   * @return
-   */
+    * Get a list of all RTPLAN and their procedures.
+    * @param institutionPK Get only for this institution.
+    * @return
+    */
   def rtplanProcedureList(institutionPK: Long): Seq[RtplanProcedure] = {
     val action = for {
-      uidUserPK <- query.filter(_.modality === "RTPLAN").map(ds => (ds.sopInstanceUIDList, ds.userPK, ds.procedurePK))
-      _ <- User.query.filter(u => (u.institutionPK === institutionPK) && (u.userPK === uidUserPK._2))
-    } yield (uidUserPK._1, uidUserPK._3)
+      dcmSeries <- query.filter(_.modality === "RTPLAN").map(ds => (ds.sopInstanceUIDList, ds.userPK, ds.procedurePK))
+      _ <- User.query.filter(u => (u.institutionPK === institutionPK) && (u.userPK === dcmSeries._2))
+      procedure <- Procedure.query.filter(p => p.procedurePK === dcmSeries._3)
+    } yield (dcmSeries._1, procedure)
 
-    // list of (UIDs in single String, procedurePK)
-    val uidProd = Db.run(action.result).filter(_._2.isDefined).map(up => (up._1, up._2.get))
+    // list of tuples: (UIDs in single String, procedure)
+    val uidProd = Db.run(action.result)
 
-    // map of procedurePK -> Procedure name
-    val procNameMap = uidProd.map(_._2).distinct.map(procedurePK => (procedurePK, Procedure.get(procedurePK).get.fullName)).toMap
-
-    val list = uidProd.flatMap(uidProc => uidProc._1.split(" ").toSeq.map(uid => RtplanProcedure(uid, procNameMap(uidProc._2))))
+    val list = uidProd.flatMap(uidProc => uidProc._1.split(" ").filter(_.nonEmpty).toSeq.map(uid => RtplanProcedure(uid, uidProc._2)))
     list
   }
 
