@@ -457,4 +457,27 @@ object DicomSeries extends Logging {
     list.flatten.distinct
   }
 
+  case class RtplanProcedure(rtplanUid: String, procedureName: String) {}
+
+  /**
+   * Get a list of all RTPLAN and their procedure names.
+   * @param institutionPK
+   * @return
+   */
+  def rtplanProcedureList(institutionPK: Long): Seq[RtplanProcedure] = {
+    val action = for {
+      uidUserPK <- query.filter(_.modality === "RTPLAN").map(ds => (ds.sopInstanceUIDList, ds.userPK, ds.procedurePK))
+      _ <- User.query.filter(u => (u.institutionPK === institutionPK) && (u.userPK === uidUserPK._2))
+    } yield (uidUserPK._1, uidUserPK._3)
+
+    // list of (UIDs in single String, procedurePK)
+    val uidProd = Db.run(action.result).filter(_._2.isDefined).map(up => (up._1, up._2.get))
+
+    // map of procedurePK -> Procedure name
+    val procNameMap = uidProd.map(_._2).distinct.map(procedurePK => (procedurePK, Procedure.get(procedurePK).get.fullName)).toMap
+
+    val list = uidProd.flatMap(uidProc => uidProc._1.split(" ").toSeq.map(uid => RtplanProcedure(uid, procNameMap(uidProc._2))))
+    list
+  }
+
 }
