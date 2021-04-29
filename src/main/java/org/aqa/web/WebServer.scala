@@ -471,6 +471,8 @@ class WebServer extends Application with Logging {
         new MaintenanceRecordUpdate,
         new UserUpdate,
         new UserList,
+        new PatientProcedureList,
+        new PatientProcedureUpdate,
         new ProcedureUpdate,
         new ProcedureList,
         new ServiceInfo,

@@ -19,7 +19,9 @@ case class PatientProcedure(
 
   def insert: PatientProcedure = {
     val insertQuery =
-      PatientProcedure.query returning PatientProcedure.query.map(_.patientProcedurePK) into ((patientProcedure, patientProcedurePK) => patientProcedure.copy(patientProcedurePK = Some(patientProcedurePK)))
+      PatientProcedure.query returning PatientProcedure.query.map(_.patientProcedurePK) into ((patientProcedure, patientProcedurePK) =>
+        patientProcedure.copy(patientProcedurePK = Some(patientProcedurePK))
+      )
     val action = insertQuery += this
     val result = Db.run(action)
     result
@@ -64,10 +66,10 @@ object PatientProcedure extends ProcedureOutput with Logging {
   override val topXmlLabel = "PatientProcedure"
 
   /**
-   * Given the public key, retrieve the given row.
-   * @param patientProcedurePK Public key.
-   * @return Row of data, if it exists.
-   */
+    * Given the public key, retrieve the given row.
+    * @param patientProcedurePK Public key.
+    * @return Row of data, if it exists.
+    */
   def get(patientProcedurePK: Long): Option[PatientProcedure] = {
     val action = for {
       inst <- PatientProcedure.query if inst.patientProcedurePK === patientProcedurePK
@@ -84,6 +86,30 @@ object PatientProcedure extends ProcedureOutput with Logging {
 
   override def insert(elem: Elem, outputPK: Long): Int = {
     throw new RuntimeException("PatientProcedure: insert using Elem not supported")
+  }
+
+  /**
+    * Container for the listing of PatientProcedure data in web interface.
+    * @param patientProcedure Association between patient --> procedure
+    * @param institution Institution this belongs to.
+    * @param procedure Procedure to be used.
+    */
+  case class ExtendedData(patientProcedure: PatientProcedure, institution: Institution, procedure: Procedure) {}
+
+  /**
+    * Get the listing of PatientProcedure data in web interface.
+    * @param institutionPK For this institution.
+    * @return List of rows and their associated data.
+    */
+  def listExtended(institutionPK: Long): Seq[ExtendedData] = {
+    val action = for {
+      patientPosition <- query.filter(_.institutionPK === institutionPK)
+      institution <- Institution.query.filter(_.institutionPK === institutionPK)
+      procedure <- Procedure.query.filter(_.procedurePK === patientPosition.procedurePK)
+    } yield (patientPosition, institution, procedure)
+
+    val list = Db.run(action.result).map(pip => ExtendedData(pip._1, pip._2, pip._3))
+    list
   }
 
 }

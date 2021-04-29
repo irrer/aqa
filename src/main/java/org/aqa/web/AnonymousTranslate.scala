@@ -113,7 +113,7 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
     userList.flatMap(user => doUser(user))
   }
 
-  private val attributesToTranslate = Seq(TagFromName.PatientName, TagFromName.DeviceSerialNumber)
+  private val attributesToTranslate = Seq(TagFromName.PatientName, TagFromName.PatientID, TagFromName.DeviceSerialNumber)
 
   private def getDicomAttributes(institutionPK: Long, isWhitelisted: Boolean): Seq[Translate] = {
     val dicomAnonList: Seq[DicomAnonymous] = {
