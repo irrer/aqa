@@ -342,7 +342,7 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
       val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
       val machineEnergyList = getMachineEnergyList(machine.machinePK.get)
       val planEnergyList = CustomizeRtPlan.getPlanBeamList(machine).toList
-      val rtplan = CustomizeRtPlan.makePlanPhase2(machine, userPK, planEnergyList, planSpecification, machineEnergyList)
+      val rtplan = CustomizeRtPlan.makePlanPhase2(machine, userPK, planSpecification, machineEnergyList)
       showDownload(Seq((rtplan, "Phase 2")), "Phase2", valueMap, machine, response)
     }
   }

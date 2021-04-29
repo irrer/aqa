@@ -23,7 +23,6 @@ case class DicomSeries(
     userPK: Long, // user that uploaded or created this series
     inputPK: Option[Long], // referenced input, if available
     machinePK: Option[Long], // referenced machine, if available
-    procedurePK: Option[Long], // procedure for processing the data that references this plan
     sopInstanceUIDList: String, // DICOM SOPInstanceUID of all files in series, separated by a single blank, prefixed and appended with a single blank.
     seriesInstanceUID: String, // DICOM SeriesInstanceUID
     frameOfReferenceUID: Option[String], // DICOM FrameOfReferenceUID.  For registration files, this is the FrameOfReferenceUID that they convert from (take as input).
@@ -109,7 +108,6 @@ case class DicomSeries(
       "\n    userPK: " + userPK +
       "\n    inputPK: " + inputPK +
       "\n    machinePK: " + machinePK +
-      "\n    procedurePK: " + procedurePK +
       "\n    sopInstanceUIDList: " + sopInstanceUIDList +
       "\n    seriesInstanceUID: " + seriesInstanceUID +
       "\n    frameOfReferenceUID: " + frameOfReferenceUID +
@@ -133,7 +131,6 @@ object DicomSeries extends Logging {
     def userPK = column[Long]("userPK")
     def inputPK = column[Option[Long]]("inputPK")
     def machinePK = column[Option[Long]]("machinePK")
-    def procedurePK = column[Option[Long]]("procedurePK")
     def sopInstanceUIDList = column[String]("sopInstanceUIDList")
     def seriesInstanceUID = column[String]("seriesInstanceUID")
     def frameOfReferenceUID = column[Option[String]]("frameOfReferenceUID")
@@ -153,7 +150,6 @@ object DicomSeries extends Logging {
         userPK,
         inputPK,
         machinePK,
-        procedurePK,
         sopInstanceUIDList,
         seriesInstanceUID,
         frameOfReferenceUID,
@@ -175,8 +171,6 @@ object DicomSeries extends Logging {
     def inputFK = foreignKey("DicomSeries_inputPKConstraint", inputPK, Input.query)(_.inputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
 
     def machineFK = foreignKey("DicomSeries_machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
-
-    def procedureFK = foreignKey("DicomSeries_procedurePKConstraint", procedurePK, Procedure.query)(_.procedurePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Restrict)
   }
 
   val query = TableQuery[DicomSeriesTable]
@@ -306,7 +300,7 @@ object DicomSeries extends Logging {
   /**
     * Construct a DicomSeries from an attribute list and some other required fields.
     */
-  def makeDicomSeries(usrPK: Long, inpPK: Option[Long], machPK: Option[Long], alList: Seq[AttributeList], procedurePK: Long): Option[DicomSeries] = {
+  def makeDicomSeries(usrPK: Long, inpPK: Option[Long], machPK: Option[Long], alList: Seq[AttributeList]): Option[DicomSeries] = {
     // Doing a lot of things with undependable data so wrap this in a try-catch to cover all the bases
     try {
       //val datePatID = alList.map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al))
@@ -389,7 +383,6 @@ object DicomSeries extends Logging {
         usrPK,
         inpPK,
         derivedMachinePK,
-        Some(procedurePK),
         getSopInstanceUIDlist,
         getSeriesInstanceUID,
         getFrameOfReferenceUID,
@@ -425,7 +418,7 @@ object DicomSeries extends Logging {
   /**
     * Add this series to the database if it is not already in.  Use the SeriesInstanceUID to determine if it is already in the database.
     */
-  def insertIfNew(userPK: Long, inputPK: Option[Long], machinePK: Option[Long], alList: Seq[AttributeList], procPK: Long): Unit = {
+  def insertIfNew(userPK: Long, inputPK: Option[Long], machinePK: Option[Long], alList: Seq[AttributeList]): Unit = {
     if (alList.isEmpty) throw new IllegalArgumentException("List of DICOM slices is empty")
     val uidList = alList.map(al => Util.serInstOfAl(al)).distinct
     if (uidList.size > 1) throw new IllegalArgumentException("List of DICOM slices have more than one series UID: " + uidList.mkString("    "))
@@ -437,7 +430,7 @@ object DicomSeries extends Logging {
       // a time over months.  With this logic, the first slice would be stored, and subsequent ones would
       // be assumed redundant and not stored.  Will have to think about how to handle this.
     } else {
-      val ds = DicomSeries.makeDicomSeries(userPK, inputPK, machinePK, alList, procPK: Long)
+      val ds = DicomSeries.makeDicomSeries(userPK, inputPK, machinePK, alList)
       if (ds.isDefined) {
         ds.get.insert
         logger.info("inserted DicomSeries in to database: " + ds)
@@ -464,25 +457,6 @@ object DicomSeries extends Logging {
     */
   case class RtplanProcedure(rtplanUID: String, procedure: Procedure) {
     override def toString: String = rtplanUID.formatted("%-64s") + " " + procedure.fullName
-  }
-
-  /**
-    * Get a list of all RTPLAN and their procedures.
-    * @param institutionPK Get only for this institution.
-    * @return
-    */
-  def rtplanProcedureList(institutionPK: Long): Seq[RtplanProcedure] = {
-    val action = for {
-      dcmSeries <- query.filter(_.modality === "RTPLAN").map(ds => (ds.sopInstanceUIDList, ds.userPK, ds.procedurePK))
-      _ <- User.query.filter(u => (u.institutionPK === institutionPK) && (u.userPK === dcmSeries._2))
-      procedure <- Procedure.query.filter(p => p.procedurePK === dcmSeries._3)
-    } yield (dcmSeries._1, procedure)
-
-    // list of tuples: (UIDs in single String, procedure)
-    val uidProd = Db.run(action.result)
-
-    val list = uidProd.flatMap(uidProc => uidProc._1.split(" ").filter(_.nonEmpty).toSeq.map(uid => RtplanProcedure(uid, uidProc._2)))
-    list
   }
 
 }

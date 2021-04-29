@@ -494,7 +494,6 @@ class WebServer extends Application with Logging {
         termsOfUse,
         outputList,
         webRunIndex,
-        new RtplanProcedureList,
         login,
         notAuthorized,
         notAuthenticated,

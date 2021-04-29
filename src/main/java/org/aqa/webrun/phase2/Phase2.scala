@@ -315,7 +315,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     // happened once.
     val seriesList = alList.groupBy(al => Util.serInstOfAl(al)).values
     val procedurePK = Procedure.ProcOfPhase2.get.procedurePK.get
-    seriesList.foreach(series => DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, series, procedurePK))
+    seriesList.foreach(series => DicomSeries.insertIfNew(extendedData.user.userPK.get, extendedData.input.inputPK, extendedData.machine.machinePK, series))
 
     val summaryList: Either[Seq[Elem], Seq[Elem]] = MetadataCheckAnalysis.runProcedure(extendedData, runReq) match {
       case Left(fail) => Left(Seq(fail))
