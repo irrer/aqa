@@ -31,7 +31,7 @@ class PatientProcedureXml extends Restlet with SubUrlAdmin with Logging {
       <PatientProcedure>
         <PatientID>{pp.dicomAnonymous.originalValue}</PatientID>
         {
-        if (pp.procedure.name.toLowerCase() contains ("bb by")) {
+        if (pp.procedure.name.toLowerCase() contains "bb by") {
           Seq(procedureToXml(Procedure.ProcOfBBbyCBCT.get), procedureToXml(Procedure.ProcOfBBbyEPID.get))
         } else
           procedureToXml(pp.procedure)
