@@ -1,0 +1,37 @@
+<div title="Patient Procedure" class="col-md-8 col-md-offset-1">
+
+    <h2>@@title@@</h2>
+
+    <p>
+        The Patient Procedure list associates patient IDs with the test procedures that are run on them.
+    </p>
+
+    <p>
+        Periodically, the planning system is scanned for new data for each of the patient IDs.
+        When one is found, it looks at this list to see which procedure is to be run on it and runs
+        the analysis.
+    </p>
+
+    <p>
+        When transitioning to a new set of patient IDs, the new ones may be added to the list before
+        they come into clinical use. Said another way, the old and new patient IDs may be listed at
+        the same time.
+    </p>
+
+    <p>
+        When no longer in use, entries may be deprecated by deleting them from the list. Unchecking
+        the <b>Active</b> flag has the same effect, though having a long list produces clutter and
+        is harder to maintain.
+    </p>
+
+    <p>
+        It is a good convention to assign a patient ID to a single machine because it simplifies
+        viewing in the planning system. The AQA system does not impose this restriction. If a
+        patient that was originally intended to be associated for one machine but is scanned on
+        another machine, then the results will be linked to the machine, not the patient.
+    </p>
+
+    <p style="margin:100px;">
+    </p>
+
+</div>
