@@ -75,7 +75,7 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
 
       val dicomAnon = anonValue.find(da => da.originalValue.equals(clearText)) match {
         case Some(da) => da
-        case _ => DicomAnonymous.insert(institutionPK, attr)
+        case _        => DicomAnonymous.insert(institutionPK, attr)
       }
       Trace.trace(dicomAnon.dicomAnonymousPK.get + " :: " + dicomAnon.value + " :: " + dicomAnon.originalValue)
       dicomAnon.value
@@ -95,7 +95,7 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
     * Show this when user asks to create a new user from user list.
     */
   private def emptyForm(response: Response): Unit = {
-    formCreate.setFormResponse(emptyValueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
+    formCreate.setFormResponse(Map((active.label, true.toString)), styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
   }
 
   private def validateNonEmptyPatientId(valueMap: ValueMapT): StyleMapT = {
@@ -105,11 +105,16 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
       styleNone
   }
 
+  private def validateUnique(valueMap: ValueMapT): StyleMapT = {
+    val ppPK = if (valueMap.contains(patientProcedurePK.label)) Some(valueMap(patientProcedurePK.label).toLong) else None
+    styleNone // TODO
+  }
+
   /**
     * Save changes made to form.
     */
   private def save(valueMap: ValueMapT, response: Response): Unit = {
-    val errMap = validateNonEmptyPatientId(valueMap)
+    val errMap = validateNonEmptyPatientId(valueMap) ++ validateUnique(valueMap)
     if (errMap.isEmpty) {
       if (isAuthorized(valueMap, response)) {
         val patientProcedure = constructFromParameters(valueMap)

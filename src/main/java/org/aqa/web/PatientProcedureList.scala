@@ -1,5 +1,6 @@
 package org.aqa.web
 
+import edu.umro.ScalaUtil.Trace
 import org.aqa.db.PatientProcedure
 import org.aqa.db.PatientProcedure.ExtendedData
 import org.aqa.db.Procedure
@@ -41,7 +42,7 @@ class PatientProcedureList extends GenericList[ExtendedData] with WebUtil.SubUrl
 
   private def showActive(pip: PIP): String = if (pip.patientProcedure.active) "Active" else "-"
 
-  private val procedureCol = new Column[PIP]("Procedure", procedureName _, pip => wrapAlias(pip.procedure.name))
+  private val procedureCol = new Column[PIP]("Procedure", pip => procedureName(pip))
 
   private val activeCol = new Column[PIP]("Active", showActive)
 
