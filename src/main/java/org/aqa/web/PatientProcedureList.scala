@@ -1,6 +1,5 @@
 package org.aqa.web
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.db.PatientProcedure
 import org.aqa.db.PatientProcedure.ExtendedData
 import org.aqa.db.Procedure
@@ -12,13 +11,23 @@ object PatientProcedureList {
 
   def redirect(response: Response): Unit = response.redirectSeeOther(path)
 }
+
 class PatientProcedureList extends GenericList[ExtendedData] with WebUtil.SubUrlAdmin {
 
   type PIP = ExtendedData
 
   override val listName = "Patient Procedure"
 
-  private val idCol = new Column[PIP]("Patient ID", _.patientProcedure.patientId, pip => makePrimaryKeyHtmlWithAQAAlias(pip.patientProcedure.patientId, pip.patientProcedure.patientProcedurePK))
+  def compareForSorting(a: PIP, b: PIP): Boolean = {
+    a.dicomAnonymous.originalValue.compare(b.dicomAnonymous.originalValue) < 0
+  }
+
+  //noinspection ConvertibleToMethodValue
+  private val idCol = new Column[PIP](
+    columnName = "Patient ID",
+    compare = compareForSorting _,
+    pip => makePrimaryKeyHtmlWithAQAAlias(pip.dicomAnonymous.value, pip.patientProcedure.patientProcedurePK)
+  )
 
   private val dailyQaActive = Procedure.ProcOfBBbyCBCT.isDefined && Procedure.ProcOfBBbyEPID.isDefined
 

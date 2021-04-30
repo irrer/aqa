@@ -11,7 +11,7 @@ import scala.xml.Elem
   */
 case class PatientProcedure(
     patientProcedurePK: Option[Long], // primary key
-    patientId: String, // anonymized version of patient ID
+    dicomAnonymousPK: Long, // references DICOM tag
     institutionPK: Long, // institution to which this belongs
     procedurePK: Long, // procedure associated with the given patient ID.
     active: Boolean // True if patient is active and should be checked for new data.
@@ -31,7 +31,7 @@ case class PatientProcedure(
 
   override def toString: String =
     "patientProcedurePK : " + patientProcedurePK +
-      "    patientId : " + patientId +
+      "    dicomAnonymousPK : " + dicomAnonymousPK +
       "    institutionPK : " + institutionPK +
       "    procedurePK : " + procedurePK +
       "    active : " + active
@@ -42,7 +42,7 @@ object PatientProcedure extends ProcedureOutput with Logging {
   class PatientProcedureTable(tag: Tag) extends Table[PatientProcedure](tag, "patientProcedure") {
 
     def patientProcedurePK = column[Long]("patientProcedurePK", O.PrimaryKey, O.AutoInc)
-    def patientId = column[String]("patientId")
+    def dicomAnonymousPK = column[Long]("dicomAnonymousPK")
     def institutionPK = column[Long]("institutionPK")
     def procedurePK = column[Long]("procedurePK")
     def active = column[Boolean]("active")
@@ -50,7 +50,7 @@ object PatientProcedure extends ProcedureOutput with Logging {
     def * =
       (
         patientProcedurePK.?,
-        patientId,
+        dicomAnonymousPK,
         institutionPK,
         procedurePK,
         active
@@ -58,7 +58,10 @@ object PatientProcedure extends ProcedureOutput with Logging {
 
     def institutionFK =
       foreignKey("PatientProcedure_institutionPKConstraint", institutionPK, Institution.query)(_.institutionPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
-    def procedureFK = foreignKey("PatientProcedure_procedurePKConstraint", procedurePK, Procedure.query)(_.procedurePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def procedureFK =
+      foreignKey("PatientProcedure_procedurePKConstraint", procedurePK, Procedure.query)(_.procedurePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def dicomAnonymousFK =
+      foreignKey("PatientProcedure_dicomAnonymousPKConstraint", dicomAnonymousPK, DicomAnonymous.query)(_.dicomAnonymousPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[PatientProcedureTable]
@@ -94,7 +97,7 @@ object PatientProcedure extends ProcedureOutput with Logging {
     * @param institution Institution this belongs to.
     * @param procedure Procedure to be used.
     */
-  case class ExtendedData(patientProcedure: PatientProcedure, institution: Institution, procedure: Procedure) {}
+  case class ExtendedData(patientProcedure: PatientProcedure, institution: Institution, procedure: Procedure, dicomAnonymous: DicomAnonymous) {}
 
   /**
     * Get the listing of PatientProcedure data in web interface.
@@ -104,11 +107,12 @@ object PatientProcedure extends ProcedureOutput with Logging {
   def listExtended(institutionPK: Long): Seq[ExtendedData] = {
     val action = for {
       patientPosition <- query.filter(_.institutionPK === institutionPK)
+      dicomAnon <- DicomAnonymous.query.filter(_.dicomAnonymousPK === patientPosition.dicomAnonymousPK)
       institution <- Institution.query.filter(_.institutionPK === institutionPK)
       procedure <- Procedure.query.filter(_.procedurePK === patientPosition.procedurePK)
-    } yield (patientPosition, institution, procedure)
+    } yield (patientPosition, institution, procedure, dicomAnon)
 
-    val list = Db.run(action.result).map(pip => ExtendedData(pip._1, pip._2, pip._3))
+    val list = Db.run(action.result).map(pip => ExtendedData(pip._1, pip._2, pip._3, pip._4))
     list
   }
 

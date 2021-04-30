@@ -2,7 +2,6 @@ package org.aqa.web
 
 import com.pixelmed.dicom.AttributeFactory
 import edu.umro.DicomDict.TagByName
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.db.DicomAnonymous
 import org.aqa.db.PatientProcedure
@@ -31,7 +30,7 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
   private val active = new WebInputCheckbox(label = "Active", showLabel = true, title = Some("Check to indicate that data is actively being created for this patient."), col = 3, offset = 0)
 
   /**
-    * Get the list of institutions that the user may choose from.
+    * Get the list of prodedures that the user may choose from.
     */
   //noinspection ScalaUnusedSymbol
   private def procedureList(response: Option[Response]): Seq[(String, String)] = {
@@ -77,23 +76,22 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
     */
   private def constructFromParameters(valueMap: ValueMapT): PatientProcedure = {
 
-    val patId = {
+    val dicomAnonPatId: DicomAnonymous = {
       val clearText = valueMap(patientId.label).trim
       val institutionPK = getUser(valueMap).get.institutionPK
       val attr = AttributeFactory.newAttribute(TagByName.PatientID)
       attr.addValue(clearText)
 
       val dicomAnon = getKnownPatientIdList(valueMap).find(da => da.originalValue.equals(clearText)) match {
-        case Some(da) => da
-        case _        => DicomAnonymous.insert(institutionPK, attr)
+        case Some(da) => da // a DicomAnonymous value already exists.
+        case _        => DicomAnonymous.insert(institutionPK, attr) // No such DicomAnonymous value, so make a new one
       }
-      Trace.trace(dicomAnon.dicomAnonymousPK.get + " :: " + dicomAnon.value + " :: " + dicomAnon.originalValue)
-      dicomAnon.value
+      dicomAnon
     }
 
     val patientProcedure = PatientProcedure(
       patientProcedurePK = if (valueMap.contains(patientProcedurePK.label)) Some(valueMap(patientProcedurePK.label).toLong) else None,
-      patientId = patId,
+      dicomAnonPatId.dicomAnonymousPK.get,
       institutionPK = getUser(valueMap).get.institutionPK,
       procedurePK = valueMap(procedure.label).toLong,
       active = valueMap.contains(active.label)
@@ -102,18 +100,18 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
   }
 
   /**
-    * Show this when user asks to create a new user from user list.
+    * Show this when user asks to create a new row.
     */
   private def emptyForm(response: Response): Unit = {
     formCreate.setFormResponse(Map((active.label, true.toString)), styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
   }
 
   /**
-   * Do not allow the patient ID to be empty.  White space does not count.
-   *
-   * @param valueMap Parameters given by user.
-   * @return List of errors, which may be empty.
-   */
+    * Do not allow the patient ID to be empty.  White space does not count.
+    *
+    * @param valueMap Parameters given by user.
+    * @return List of errors, which may be empty.
+    */
   private def validateNonEmptyPatientId(valueMap: ValueMapT): StyleMapT = {
     if (valueMap(patientId.label).trim.isEmpty) {
       Error.make(patientId, inputTitle = "The patient ID is not allowed to be empty.")
@@ -122,11 +120,11 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
   }
 
   /**
-   * Make sure that the patient ID is only assigned to one procedure.
-   *
-   * @param valueMap Parameters given by user.
-   * @return List of errors, which may be empty.
-   */
+    * Make sure that the patient ID is only assigned to one procedure.
+    *
+    * @param valueMap Parameters given by user.
+    * @return List of errors, which may be empty.
+    */
   private def validateUnique(valueMap: ValueMapT): StyleMapT = {
     val ppPK = if (valueMap.contains(patientProcedurePK.label)) Some(valueMap(patientProcedurePK.label).toLong) else None
     val institutionPK = getUser(valueMap).get.institutionPK
@@ -137,11 +135,8 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
     // patient ID in clear text being proposed
     val patId = valueMap(patientId.label).trim
 
-    // map of anonymous PatientID --> clear text
-    val patIdMap = getKnownPatientIdList(valueMap).map(da => (da.value, da.originalValue)).toMap
-
     // list of other patient ID's in this list, in clear text
-    val otherPatientIdList = others.map(ip => patIdMap(ip.patientProcedure.patientId))
+    val otherPatientIdList = others.map(ip => ip.dicomAnonymous.originalValue)
 
     if (otherPatientIdList.contains(patId))
       Error.make(patientId, inputTitle = "This patient ID is already assigned to a procedure.")
@@ -150,11 +145,11 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
   }
 
   /**
-   * Perform all validations.
-   *
-   * @param valueMap Parameters given by user.
-   * @return List of errors, which may be empty.
-   */
+    * Perform all validations.
+    *
+    * @param valueMap Parameters given by user.
+    * @return List of errors, which may be empty.
+    */
   def validate(valueMap: ValueMapT): StyleMapT = validateNonEmptyPatientId(valueMap) ++ validateUnique(valueMap)
 
   /**
@@ -182,7 +177,7 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
     val pp = PatientProcedure.get(valueMap(patientProcedurePK.label).toLong).get
 
     val vm: ValueMapT = Map(
-      (patientId.label, pp.patientId),
+      (patientId.label, DicomAnonymous.get(pp.dicomAnonymousPK).get.value),
       (patientProcedurePK.label, pp.patientProcedurePK.get.toString),
       (procedure.label, pp.procedurePK.toString),
       (active.label, pp.active.toString)
@@ -192,7 +187,6 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
   }
 
   def isEdit(valueMap: ValueMapT): Boolean = {
-    Trace.trace(valueMap.contains(patientProcedurePK.label))
     valueMap.contains(patientProcedurePK.label)
   }
 
