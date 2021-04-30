@@ -147,12 +147,12 @@ object Procedure {
     Db.run(action)
   }
 
-  lazy val ProcOfBBbyCBCT = list.filter(p => p.isBBbyCBCT).headOption
-  lazy val ProcOfBBbyEPID = list.filter(p => p.isBBbyEPID).headOption
-  lazy val ProcOfPhase2 = list.filter(p => p.isPhase2).headOption
-  lazy val ProcOfLOC = list.filter(p => p.isLOC).headOption
-  lazy val ProcOfLOCBaseline = list.filter(p => p.isLOCBaseline).headOption
-  lazy val ProcOfMlcQa = list.filter(p => p.isMlcQa).headOption
+  lazy val ProcOfBBbyCBCT = list.filter(p => p.isBBbyCBCT).sortBy(_.version).lastOption
+  lazy val ProcOfBBbyEPID = list.filter(p => p.isBBbyEPID).sortBy(_.version).lastOption
+  lazy val ProcOfPhase2 = list.filter(p => p.isPhase2).sortBy(_.version).lastOption
+  lazy val ProcOfLOC = list.filter(p => p.isLOC).sortBy(_.version).lastOption
+  lazy val ProcOfLOCBaseline = list.filter(p => p.isLOCBaseline).sortBy(_.version).lastOption
+  lazy val ProcOfMlcQa = list.filter(p => p.isMlcQa).sortBy(_.version).lastOption
 
   def main(args: Array[String]): Unit = {
     println("Starting Procedure.main")
