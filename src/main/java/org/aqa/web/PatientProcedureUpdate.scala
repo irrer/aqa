@@ -61,19 +61,29 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
   private val formEdit = new WebForm(pathOf, List(List(patientId), List(procedure, active), List(saveButton, cancelButton, deleteButton, patientProcedurePK)))
 
   /**
+    * Get the list of known DicomAnonymous values for PatientID for this institution. This
+    * includes ALL patients from all DICOM files uploaded.
+    *
+    * @param valueMap Enables access to institution ID.
+    * @return List of DicomAnonymous values.
+    */
+  private def getKnownPatientIdList(valueMap: ValueMapT): Seq[DicomAnonymous] = {
+    val institutionPK = getUser(valueMap).get.institutionPK
+    DicomAnonymous.getAttributesByTag(institutionPK, Seq(TagByName.PatientID))
+  }
+
+  /**
     * Construct a row from valueMap parameters
     */
   private def constructFromParameters(valueMap: ValueMapT): PatientProcedure = {
 
     val patId = {
-      val clearText = valueMap(patientId.label)
+      val clearText = valueMap(patientId.label).trim
       val institutionPK = getUser(valueMap).get.institutionPK
       val attr = AttributeFactory.newAttribute(TagByName.PatientID)
       attr.addValue(clearText)
 
-      val anonValue = DicomAnonymous.getAttributesByTag(institutionPK, Seq(TagByName.PatientID))
-
-      val dicomAnon = anonValue.find(da => da.originalValue.equals(clearText)) match {
+      val dicomAnon = getKnownPatientIdList(valueMap).find(da => da.originalValue.equals(clearText)) match {
         case Some(da) => da
         case _        => DicomAnonymous.insert(institutionPK, attr)
       }
@@ -107,14 +117,33 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
 
   private def validateUnique(valueMap: ValueMapT): StyleMapT = {
     val ppPK = if (valueMap.contains(patientProcedurePK.label)) Some(valueMap(patientProcedurePK.label).toLong) else None
-    styleNone // TODO
+    val institutionPK = getUser(valueMap).get.institutionPK
+    val existing = PatientProcedure.listExtended(institutionPK)
+    // get list of other rows, excluding this one
+    val others = if (ppPK.isDefined) existing.filterNot(_.patientProcedure.patientProcedurePK.get == ppPK.get) else existing
+
+    // patient ID in clear text being proposed
+    val patId = valueMap(patientId.label).trim
+
+    // map of anonymous PatientID --> clear text
+    val patIdMap = getKnownPatientIdList(valueMap).map(da => (da.value, da.originalValue)).toMap
+
+    // list of other patient ID's in this list, in clear text
+    val otherPatientIdList = others.map(ip => patIdMap(ip.patientProcedure.patientId))
+
+    if (otherPatientIdList.contains(patId))
+      Error.make(patientId, inputTitle = "This patient ID is already assigned to a procedure.")
+    else
+      styleNone
   }
+
+  def validate(valueMap: ValueMapT): StyleMapT = validateNonEmptyPatientId(valueMap) ++ validateUnique(valueMap)
 
   /**
     * Save changes made to form.
     */
   private def save(valueMap: ValueMapT, response: Response): Unit = {
-    val errMap = validateNonEmptyPatientId(valueMap) ++ validateUnique(valueMap)
+    val errMap = validate(valueMap)
     if (errMap.isEmpty) {
       if (isAuthorized(valueMap, response)) {
         val patientProcedure = constructFromParameters(valueMap)
@@ -154,9 +183,8 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
     * otherwise show the same screen and communicate the error.
     */
   private def create(valueMap: ValueMapT, response: Response): Unit = {
-    val errMap = validateNonEmptyPatientId(valueMap)
+    val errMap = validate(valueMap)
     if (errMap.isEmpty) {
-      // val existing = PatientProcedure.get(valueMap(patientProcedurePK.label).toLong).get
       val patientProcedure = constructFromParameters(valueMap)
       patientProcedure.insertOrUpdate()
       PatientProcedureList.redirect(response)
