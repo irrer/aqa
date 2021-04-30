@@ -473,6 +473,7 @@ class WebServer extends Application with Logging {
         new UserList,
         new PatientProcedureList,
         new PatientProcedureUpdate,
+        new PatientProcedureXml,
         new ProcedureUpdate,
         new ProcedureList,
         new ServiceInfo,
