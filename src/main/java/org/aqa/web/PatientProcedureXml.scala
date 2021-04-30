@@ -22,7 +22,7 @@ class PatientProcedureXml extends Restlet with SubUrlAdmin with Logging {
     def procedureToXml(procedure: Procedure): Elem = {
       <Procedure>
         <Name>{procedure.name}</Name>
-        <Version>{procedure.name}</Version>
+        <Version>{procedure.version}</Version>
         <URL>{Config.RootUrl}/run/{procedure.webUrl}</URL>
       </Procedure>
     }
