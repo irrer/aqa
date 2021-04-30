@@ -108,6 +108,12 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
     formCreate.setFormResponse(Map((active.label, true.toString)), styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
   }
 
+  /**
+   * Do not allow the patient ID to be empty.  White space does not count.
+   *
+   * @param valueMap Parameters given by user.
+   * @return List of errors, which may be empty.
+   */
   private def validateNonEmptyPatientId(valueMap: ValueMapT): StyleMapT = {
     if (valueMap(patientId.label).trim.isEmpty) {
       Error.make(patientId, inputTitle = "The patient ID is not allowed to be empty.")
@@ -115,6 +121,12 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
       styleNone
   }
 
+  /**
+   * Make sure that the patient ID is only assigned to one procedure.
+   *
+   * @param valueMap Parameters given by user.
+   * @return List of errors, which may be empty.
+   */
   private def validateUnique(valueMap: ValueMapT): StyleMapT = {
     val ppPK = if (valueMap.contains(patientProcedurePK.label)) Some(valueMap(patientProcedurePK.label).toLong) else None
     val institutionPK = getUser(valueMap).get.institutionPK
@@ -137,6 +149,12 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
       styleNone
   }
 
+  /**
+   * Perform all validations.
+   *
+   * @param valueMap Parameters given by user.
+   * @return List of errors, which may be empty.
+   */
   def validate(valueMap: ValueMapT): StyleMapT = validateNonEmptyPatientId(valueMap) ++ validateUnique(valueMap)
 
   /**
