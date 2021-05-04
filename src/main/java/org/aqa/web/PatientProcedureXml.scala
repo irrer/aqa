@@ -41,7 +41,7 @@ class PatientProcedureXml extends Restlet with SubUrlAdmin with Logging {
 
     val elem = {
       <PatientProcedureList>
-        {list.map(e => ppToXml(e))}
+        {list.filter(_.patientProcedure.active).map(e => ppToXml(e))}
       </PatientProcedureList>
     }
 
