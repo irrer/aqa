@@ -19,7 +19,21 @@ class PatientProcedureList extends GenericList[ExtendedData] with WebUtil.SubUrl
   override val listName = "Patient Procedure"
 
   def compareForSorting(a: PIP, b: PIP): Boolean = {
-    a.dicomAnonymous.originalValue.compare(b.dicomAnonymous.originalValue) < 0
+    val aa = a.dicomAnonymous.originalValue
+    val bb = b.dicomAnonymous.originalValue
+
+    def onlyDigits(text: String) = text.replaceAll("[^0-9]", " ")
+
+    val aD = onlyDigits(aa)
+    val bD = onlyDigits(bb)
+
+    if (aD.compare(bD) == 0)
+      aa.compare(bb) < 0
+    else {
+      aD.compare(bD) < 0
+
+      // a.dicomAnonymous.originalValue.compare(b.dicomAnonymous.originalValue) < 0
+    }
   }
 
   //noinspection ConvertibleToMethodValue
