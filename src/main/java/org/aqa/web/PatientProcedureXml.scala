@@ -15,6 +15,11 @@ import scala.xml.PrettyPrinter
 
 class PatientProcedureXml extends Restlet with SubUrlAdmin with Logging {
 
+  /**
+   * Get the patient procedure list for the given institution as XML.
+   * @param institutionPK For this institution.
+   * @return XML version of patient procedure list.
+   */
   private def getXmlForInstitution(institutionPK: Long): Elem = {
 
     val list = PatientProcedure.listExtended(institutionPK)
