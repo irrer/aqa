@@ -57,7 +57,7 @@ class PatientProcedureXml extends Restlet with SubUrlAdmin with Logging {
       val xml = getXmlForInstitution(user.institutionPK)
       val xmlText = new PrettyPrinter(1024, 2).format(xml)
       response.setEntity(xmlText, MediaType.TEXT_XML)
-      logger.info("Fetched PatientProcedureList:\n" + xmlText)
+      logger.info("Fetched PatientProcedureList size in bytes:\n" + xmlText.length)
     } catch {
       case t: Throwable =>
         WebUtil.internalFailure(response, t)
