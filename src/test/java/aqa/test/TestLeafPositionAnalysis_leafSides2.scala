@@ -52,7 +52,7 @@ class TestLeafPositionAnalysis_leafSides2 extends FlatSpec with Matchers {
       println("leaf profile\n" + profile.mkString("\n    ", "\n    ", "\n    "))
       val translator = new IsoImagePlaneTranslator(imageAttrList)
       val leafEndList_pix = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, rtplanAl, translator).map(s => translator.iso2PixCoordY(s))
-      val preciseLeafSideList_pix = LeafPositionAnalysis.leafSides_pix(horizontal, beamName, imageAttrList, dicomImage, rtplanAl, translator, leafEndList_pix)
+      val preciseLeafSideList_pix = LeafPositionAnalysis.leafSides_pix(horizontal, beamName, dicomImage, rtplanAl, translator)
 
       val coarseList_pix = LeafPositionCoarseLeafSides.coarseLeafSides(horizontal, profile, imageAttrList, 5, 10, dicomImage)
       println("Number of coarse ridges found: " + coarseList_pix.size)
