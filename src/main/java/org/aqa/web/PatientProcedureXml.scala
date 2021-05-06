@@ -1,6 +1,5 @@
 package org.aqa.web
 
-import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.PatientProcedure
 import org.aqa.db.Procedure
@@ -16,10 +15,10 @@ import scala.xml.PrettyPrinter
 class PatientProcedureXml extends Restlet with SubUrlAdmin with Logging {
 
   /**
-   * Get the patient procedure list for the given institution as XML.
-   * @param institutionPK For this institution.
-   * @return XML version of patient procedure list.
-   */
+    * Get the patient procedure list for the given institution as XML.
+    * @param institutionPK For this institution.
+    * @return XML version of patient procedure list.
+    */
   private def getXmlForInstitution(institutionPK: Long): Elem = {
 
     val list = PatientProcedure.listExtended(institutionPK)
