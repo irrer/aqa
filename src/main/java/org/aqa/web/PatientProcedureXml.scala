@@ -35,10 +35,14 @@ class PatientProcedureXml extends Restlet with SubUrlAdmin with Logging {
       <PatientProcedure>
         <PatientID>{pp.dicomAnonymous.originalValue}</PatientID>
         {
-        if (pp.procedure.name.toLowerCase() contains "bb by") {
-          Seq(procedureToXml(Procedure.ProcOfBBbyCBCT.get), procedureToXml(Procedure.ProcOfBBbyEPID.get))
-        } else
-          procedureToXml(pp.procedure)
+        0 match {
+          case _ if pp.procedure.name.toLowerCase() contains "bb by" =>
+            Seq(procedureToXml(Procedure.ProcOfBBbyCBCT.get), procedureToXml(Procedure.ProcOfBBbyEPID.get))
+          case _ if pp.procedure.name.toLowerCase() contains "loc" =>
+            Seq(procedureToXml(Procedure.ProcOfLOC.get), procedureToXml(Procedure.ProcOfLOCBaseline.get))
+          case _ =>
+            procedureToXml(pp.procedure)
+        }
       }
       </PatientProcedure>
     }

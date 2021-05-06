@@ -37,6 +37,7 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
     // @formatter:off
     val procList = Procedure.list.                                               // get list of all procedures from database
       map(p => if (p.name.contains("BB by")) p.copy(name = "Daily QA") else p).  // change both Daily QA procedures to commonly known name.
+      map(p => if (p.name.contains("LOC")) p.copy(name = "LOC") else p).         // change both LOC procedures to commonly known name.
       groupBy(_.name).                                                           // group by procedure name
       map(np => np._2.maxBy(_.version)).                                         // choose the latest version of each
       toSeq.                                                                     // convert to expected container type
