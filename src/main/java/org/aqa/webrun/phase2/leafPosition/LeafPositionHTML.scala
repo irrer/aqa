@@ -8,6 +8,7 @@ import org.aqa.db.LeafPosition
 import org.aqa.run.ProcedureStatus
 import org.aqa.web.WebServer
 import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.phase2.BadPixelAnalysis
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
 
@@ -130,7 +131,6 @@ object LeafPositionHTML extends Logging {
   }
 
   private def makeMainHtml(subDir: File, extendedData: ExtendedData, runReq: RunReq, beamResultList: Seq[LeafPositionAnalysis.BeamResults]): Elem = {
-
     val tdList = beamResultList.par.map(br => makeRow(subDir, extendedData, runReq, br)).toList
     val groupedTdList = tdList.zipWithIndex.groupBy(_._2 / 4).toList.sortBy(_._1).map(ig => ig._2.map(_._1))
     val csvUrl = LeafPositionCSV.makeCsvFile(extendedData, runReq, beamResultList, subDir)
@@ -146,6 +146,17 @@ object LeafPositionHTML extends Logging {
       </div>
     }
     content
+  }
+
+  /**
+    * Tell the user explicitly that there were no leaf position images.
+    * @return
+    */
+  private def noBeams(): Elem = {
+    <div class="col-md-4 col-md-offset-3">
+      <h4 style="margin-top: 50px;">No leaf position images were found.</h4>
+      Go to <a href={"../" + BadPixelAnalysis.fileName}>View DICOM</a> to see the list of images that were uploaded.
+    </div>
   }
 
   private def summary(mainHtmlFile: File, maxOffset: Option[Double], pass: Boolean) = {
@@ -165,7 +176,10 @@ object LeafPositionHTML extends Logging {
     val subDir = new File(extendedData.output.dir, subDirName)
     subDir.mkdirs
     val mainHtmlFile = new File(subDir, mainHtmlFileName)
-    val mainHtml = makeMainHtml(subDir, extendedData, runReq, beamResultList)
+    val mainHtml =
+      if (beamResultList.isEmpty) noBeams()
+      else
+        makeMainHtml(subDir, extendedData, runReq, beamResultList)
 
     val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
     val html = Phase2Util.wrapSubProcedure(extendedData, mainHtml, LeafPositionAnalysis.subProcedureName, status, None, runReq)
