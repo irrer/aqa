@@ -1,4 +1,4 @@
-package org.aqa.webrun.mlcqa
+package org.aqa.webrun.gapSkew
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
@@ -107,7 +107,7 @@ case class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Log
       val text = (-translator.pix2IsoCoordY(position_pix)).formatted("%6.2f").trim
       val textDim = ImageText.getTextDimensions(graphics, text)
 
-      val boundingBoxHeight = translator.iso2PixDistY(Config.MlcQaLeafSideFinding_mm)
+      val boundingBoxHeight = translator.iso2PixDistY(Config.GapSkewLeafSideFinding_mm)
 
       val border_px = 3
 
@@ -155,10 +155,10 @@ case class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Log
       val leafA = LocateMax.locateMax(profileFlipped.take(half))
       val leafB = LocateMax.locateMax(profileFlipped.drop(half)) + half
 
-      val penumbraHeight_pix = translator.iso2PixDistY(Config.MlcQaLeafEndPenumbra_mm)
+      val penumbraHeight_pix = translator.iso2PixDistY(Config.GapSkewLeafEndPenumbra_mm)
 
-      val x = box.x + leafA + Config.MlcQaLeafSidePad_mm
-      val width = (leafB - leafA) - (Config.MlcQaLeafSidePad_mm * 2)
+      val x = box.x + leafA + Config.GapSkewLeafSidePad_mm
+      val width = (leafB - leafA) - (Config.GapSkewLeafSidePad_mm * 2)
       val y = box.getCenterY - penumbraHeight_pix / 2
       val height = penumbraHeight_pix
       val endBoundingRectangle = rectD(x, y, width, height)
@@ -195,7 +195,7 @@ case class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Log
     else {
       val leafWidth_mm = (leafSidesFromPlanAsPix.head - leafSidesFromPlanAsPix(1)).abs
       val leafWidth_pix = translator.iso2PixDistX(leafWidth_mm)
-      val leafSideFinding_pix = translator.iso2PixDistY(Config.MlcQaLeafSideFinding_mm)
+      val leafSideFinding_pix = translator.iso2PixDistY(Config.GapSkewLeafSideFinding_mm)
 
       val height = leafSideFinding_pix
       val width = leafWidth_pix * 2

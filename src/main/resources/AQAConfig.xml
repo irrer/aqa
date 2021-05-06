@@ -672,8 +672,8 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
-    <!-- List of names of beams to be evaluated for MLC QA. -->
-    <MlcQaBeamNameList>
+    <!-- List of names of beams to be evaluated for Gap Skew. -->
+    <GapSkewBeamNameList>
         <BeamName>Open_A_Bank</BeamName>
         <BeamName>Open_B_Bank</BeamName>
         <BeamName>Open_X2_Jaw</BeamName>
@@ -683,16 +683,16 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>BBankC270</BeamName>
         <BeamName>BBankC90</BeamName>
         <BeamName>X1JawC270</BeamName>
-    </MlcQaBeamNameList>
+    </GapSkewBeamNameList>
 
-    <!-- For MLC QA, distance in mm next to leaf sides that should be ignored to diminish the effects of leaf leakage. -->
-    <MlcQaLeafSidePad_mm>1.0</MlcQaLeafSidePad_mm>
+    <!-- For Gap Skew, distance in mm next to leaf sides that should be ignored to diminish the effects of leaf leakage. -->
+    <GapSkewLeafSidePad_mm>1.0</GapSkewLeafSidePad_mm>
 
-    <!-- For MLC QA, size in mm of the bounding box that encompasses the leaf ends so as to emphasize the leaf sides. -->
-    <MlcQaLeafSideFinding_mm>5.0</MlcQaLeafSideFinding_mm>
+    <!-- For Gap Skew, size in mm of the bounding box that encompasses the leaf ends so as to emphasize the leaf sides. -->
+    <GapSkewLeafSideFinding_mm>5.0</GapSkewLeafSideFinding_mm>
 
-    <!-- For MLC QA, size in mm to define a bounding box around the end of the leaf to determine the location of the end. -->
-    <MlcQaLeafEndPenumbra_mm>20.0</MlcQaLeafEndPenumbra_mm>
+    <!-- For Gap Skew, size in mm to define a bounding box around the end of the leaf to determine the location of the end. -->
+    <GapSkewLeafEndPenumbra_mm>20.0</GapSkewLeafEndPenumbra_mm>
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 

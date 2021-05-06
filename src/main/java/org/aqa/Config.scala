@@ -410,9 +410,9 @@ object Config extends Logging {
     list.distinct
   }
 
-  private def getMlcQaBeamNameList = {
-    val list = (document \ "MlcQaBeamNameList" \ "BeamName").map(n => n.head.text.trim).toList
-    logText("MlcQaBeamNameList", indentList(list))
+  private def getGapSkewBeamNameList = {
+    val list = (document \ "GapSkewBeamNameList" \ "BeamName").map(n => n.head.text.trim).toList
+    logText("GapSkewBeamNameList", indentList(list))
     list.distinct
   }
 
@@ -859,10 +859,10 @@ object Config extends Logging {
   val BBbyEPIDChartYRange_mm: Double = logMainText("BBbyEPIDChartYRange_mm", "3.0").toDouble.abs
   val BBbyCBCTMaximumSliceThickness_mm: Double = logMainText("BBbyCBCTMaximumSliceThickness_mm", "1.0").toDouble.abs
 
-  val MlcQaBeamNameList = getMlcQaBeamNameList
-  val MlcQaLeafSidePad_mm: Double = logMainText("MlcQaLeafSidePad_mm", "1.0").toDouble.abs
-  val MlcQaLeafSideFinding_mm: Double = logMainText("MlcQaLeafSideFinding_mm", "5.0").toDouble.abs
-  val MlcQaLeafEndPenumbra_mm: Double = logMainText("MlcQaLeafEndPenumbra_mm", "20.0").toDouble.abs
+  val GapSkewBeamNameList = getGapSkewBeamNameList
+  val GapSkewLeafSidePad_mm: Double = logMainText("GapSkewLeafSidePad_mm", "1.0").toDouble.abs
+  val GapSkewLeafSideFinding_mm: Double = logMainText("GapSkewLeafSideFinding_mm", "5.0").toDouble.abs
+  val GapSkewLeafEndPenumbra_mm: Double = logMainText("GapSkewLeafEndPenumbra_mm", "20.0").toDouble.abs
 
   // =================================================================================
 

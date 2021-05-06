@@ -1,4 +1,4 @@
-package org.aqa.webrun.mlcqa
+package org.aqa.webrun.gapSkew
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
@@ -24,7 +24,7 @@ import org.restlet.Response
 
 import java.sql.Timestamp
 
-class MlcQaRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[MlcQaRunReq] {
+class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[GapSkewRunReq] {
   // private val machineSelector = new WebInputSelectMachine("Machine", 6, 0)
   /*
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
@@ -74,13 +74,13 @@ class MlcQaRun(procedure: Procedure) extends WebRunProcedure(procedure) with Run
   }
 
   /** Run the actual analysis.  This must create a display.html file in the output directory. */
-  override def run(extendedData: ExtendedData, runReq: MlcQaRunReq, response: Response): ProcedureStatus.Value = {
-    val fleList = runReq.rtimageMap.keys.toSeq.filter(beam => Config.MlcQaBeamNameList.contains(beam)).sorted.map(runReq.rtimageMap)
+  override def run(extendedData: ExtendedData, runReq: GapSkewRunReq, response: Response): ProcedureStatus.Value = {
+    val fleList = runReq.rtimageMap.keys.toSeq.filter(beam => Config.GapSkewBeamNameList.contains(beam)).sorted.map(runReq.rtimageMap)
     val fleResultList = fleList.map(rtImg => new FindLeafEnds(rtImg, runReq.rtplan))
 
     // TODO should put data in database
 
-    MlcQaHtml.makeDisplay(extendedData, runReq, fleResultList, ProcedureStatus.done)
+    GapSkewHtml.makeDisplay(extendedData, runReq, fleResultList, ProcedureStatus.done)
     ProcedureStatus.done // TODO get status from fleList
   }
 
@@ -122,7 +122,7 @@ class MlcQaRun(procedure: Procedure) extends WebRunProcedure(procedure) with Run
       case _ =>
         // the RTPLAN that will be used
         val rtplan = getRtplan(rtplanRefList.head, rtplanList).get
-        Right(MlcQaRunReq(rtplan, makeRtimageMap(rtplan, rtimageList)))
+        Right(GapSkewRunReq(rtplan, makeRtimageMap(rtplan, rtimageList)))
     }
     result
   }
@@ -131,7 +131,7 @@ class MlcQaRun(procedure: Procedure) extends WebRunProcedure(procedure) with Run
     val rtimageList = alList.filter(Util.isRtimage)
     val rtplanSop = getRtplanRefList(rtimageList.head).head
     val rtplan = getRtplan(rtplanSop, Seq()).get
-    MlcQaRunReq(rtplan, makeRtimageMap(rtplan, rtimageList))
+    GapSkewRunReq(rtplan, makeRtimageMap(rtplan, rtimageList))
   }
 
   /**

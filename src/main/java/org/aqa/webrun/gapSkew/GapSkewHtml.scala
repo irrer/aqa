@@ -1,4 +1,4 @@
-package org.aqa.webrun.mlcqa
+package org.aqa.webrun.gapSkew
 
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Util
@@ -11,9 +11,9 @@ import org.aqa.webrun.phase2.Phase2Util
 import java.io.File
 import scala.xml.Elem
 
-object MlcQaHtml {
+object GapSkewHtml {
 
-  def makeDisplay(extendedData: ExtendedData, runReq: MlcQaRunReq, fleList: Seq[FindLeafEnds], procedureStatus: ProcedureStatus.Value): Unit = {
+  def makeDisplay(extendedData: ExtendedData, runReq: GapSkewRunReq, fleList: Seq[FindLeafEnds], procedureStatus: ProcedureStatus.Value): Unit = {
 
     def beamNameOf(fle: FindLeafEnds): String = Phase2Util.getBeamNameOfRtimage(runReq.rtplan, fle.image).get
 

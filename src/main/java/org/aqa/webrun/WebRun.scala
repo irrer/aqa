@@ -14,7 +14,7 @@ import org.aqa.web.Session
 import org.aqa.webrun.phase2.Phase2
 import org.aqa.webrun.bbByCBCT.BBbyCBCTRun
 import org.aqa.webrun.bbByEpid.BBbyEPIDRun
-import org.aqa.webrun.mlcqa.MlcQaRun
+import org.aqa.webrun.gapSkew.GapSkewRun
 
 /**
  * Web interface for running the procedures.
@@ -50,7 +50,7 @@ object WebRun {
     ("BBbyCBCT", procedure => new BBbyCBCTRun(procedure)),
     ("BBbyEPID", procedure => new BBbyEPIDRun(procedure)),
     ("LOCUploadBaseFiles_1", procedure => new LOCUploadBaseFiles_1(procedure)),
-    ("MlcQaRun", procedure => new MlcQaRun(procedure)),
+    ("GapSkewRun", procedure => new GapSkewRun(procedure)),
     ("UploadAndChooseMachine_1", procedure => new UploadAndChooseMachine_1(procedure)),
     ("WinstonLutz_1", procedure => new WinstonLutz_1(procedure)))
 

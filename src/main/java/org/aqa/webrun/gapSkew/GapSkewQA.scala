@@ -1,4 +1,4 @@
-package org.aqa.webrun.mlcqa
+package org.aqa.webrun.gapSkew
 
 import com.pixelmed.dicom.AttributeList
 import org.aqa.Util
@@ -15,10 +15,10 @@ import org.restlet.Response
 
 import java.sql.Timestamp
 
-class MlcQA(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[MlcQaRunReq] {
+class GapSkewQA(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[GapSkewRunReq] {
 
   /** Run the actual analysis.  This must create a display.html file in the output directory. */
-  override def run(extendedData: ExtendedData, runReq: MlcQaRunReq, response: Response): ProcedureStatus.Value = ???
+  override def run(extendedData: ExtendedData, runReq: GapSkewRunReq, response: Response): ProcedureStatus.Value = ???
 
   /**
     * Validate the data and either return the data packaged up for processing, or, messages indicating the problem.
