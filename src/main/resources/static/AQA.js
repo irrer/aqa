@@ -10,7 +10,7 @@ var standardDateFormat = '%Y-%m-%dT%H:%M:%S';
 /* Wait this number of ms between refreshing the alias values. */
 var aliasRefreshTime = 500;
 /* Try refreshing the alias values this many times. */
-var refreshAliasCount = 4;
+var refreshAliasCount = 20;
 
 
 function formatDate(date) { 
