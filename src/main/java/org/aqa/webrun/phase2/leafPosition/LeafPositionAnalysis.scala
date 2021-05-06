@@ -324,7 +324,8 @@ object LeafPositionAnalysis extends Logging {
       LeafPosition.insertSeq(resultList)
 
       // make sure all were processed and that they all passed
-      val pass = beamResultList.map(_.pass).reduce(_ && _)
+      val pass = beamResultList.forall(_.pass)
+
       val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
       logger.info("Making HTML for " + subProcedureName)
