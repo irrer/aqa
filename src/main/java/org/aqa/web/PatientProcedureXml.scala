@@ -28,7 +28,7 @@ class PatientProcedureXml extends Restlet with SubUrlAdmin with Logging {
       <Procedure>
         <Name>{procedure.name}</Name>
         <Version>{procedure.version}</Version>
-        <URL>{Config.RootUrl}/run/{procedure.webUrl}</URL>
+        <URL>/run/{procedure.webUrl}</URL>
       </Procedure>
     }
 
