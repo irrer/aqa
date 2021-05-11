@@ -118,15 +118,36 @@ object WedgeHTML {
     val translator = new IsoImagePlaneTranslator(runReq.rtimageMap(wedgePoint.wedgeBeamName))
 
     val wedgeProfile = profile(dicomImage, translator, isTransverse, runReq.rtimageMap(wedgePoint.wedgeBeamName), collimatorCenterOfRotation)
-    val valueChart = new C3Chart(None, None, "Position mm", "Position mm", wedgeProfile.map(p => p.position), ".3g", Seq("Level"), "Level", Seq(wedgeProfile.map(p => p.value)), ".3g", Seq(lineColor))
+    val valueChart = new C3Chart(
+      xAxisLabel = "Position mm",
+      xDataLabel = "Position mm",
+      xValueList = wedgeProfile.map(p => p.position),
+      yAxisLabels = Seq("Level"),
+      yDataLabel = "Level",
+      yValues = Seq(wedgeProfile.map(p => p.value))
+    )
 
     val backgroundDerived = runReq.derivedMap(wedgePoint.backgroundBeamName).pixelCorrectedImage // runReq.rtimageMap(wedgePoint.backgroundBeamName)
     val backgroundProfile = profile(backgroundDerived, translator, isTransverse, runReq.derivedMap(wedgePoint.backgroundBeamName).attributeList, collimatorCenterOfRotation)
     val percentProfile = wedgeProfile.zip(backgroundProfile).map(wb => ProfilePoint(wb._1.position, (wb._1.value * 100) / wb._2.value))
     val percentChart =
-      new C3Chart(None, None, "Position mm", "Position mm", percentProfile.map(p => p.position), ".3g", Seq("Percent"), "Percent", Seq(percentProfile.map(p => p.value)), ".3g", Seq(lineColor))
+      new C3Chart(
+        xAxisLabel = "Position mm",
+        xDataLabel = "Position mm",
+        xValueList = percentProfile.map(p => p.position),
+        yAxisLabels = Seq("Percent"),
+        yDataLabel = "Percent",
+        yValues = Seq(percentProfile.map(p => p.value))
+      )
     val backgroundChart =
-      new C3Chart(None, None, "Position mm", "Position mm", backgroundProfile.map(p => p.position), ".3g", Seq("Level"), "Level", Seq(backgroundProfile.map(p => p.value)), ".3g", Seq(lineColor))
+      new C3Chart(
+        xAxisLabel = "Position mm",
+        xDataLabel = "Position mm",
+        xValueList = backgroundProfile.map(p => p.position),
+        yAxisLabels = Seq("Level"),
+        yDataLabel = "Level",
+        yValues = Seq(backgroundProfile.map(p => p.value))
+      )
 
     // Instructions to load the checkbox dynamically.
     val getBaselineHtmlDynamically = {

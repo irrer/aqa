@@ -25,9 +25,23 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
       result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult
   ): (Elem, String) = {
 
-    val graphTransverse = new C3Chart(None, None, "Position mm", "Position mm", result.transverse_pct, ".4g", Seq("Level"), "Level", Seq(result.transverseProfile), ".4g", Seq(new Color(0x4477bb)))
+    val graphTransverse = new C3Chart(
+      xAxisLabel = "Position mm",
+      xDataLabel = "Position mm",
+      xValueList = result.transverse_pct,
+      yAxisLabels = Seq("Level"),
+      yDataLabel = "Level",
+      yValues = Seq(result.transverseProfile),
+      yColorList = Seq(new Color(0x4477bb)))
 
-    val graphAxial = new C3Chart(None, None, "Position mm", "Position mm", result.axial_pct, ".4g", Seq("Level"), "Level", Seq(result.axialProfile), ".4g", Seq(new Color(0x4477bb)))
+    val graphAxial = new C3Chart(
+      xAxisLabel = "Position mm",
+      xDataLabel = "Position mm",
+      xValueList = result.axial_pct,
+      yAxisLabels = Seq("Level"),
+      yDataLabel = "Level",
+      yValues = Seq(result.axialProfile),
+      yColorList = Seq(new Color(0x4477bb)))
 
     // val graphHistory = new SymmetryAndFlatnessBeamHistoryHTML(result.beamName, extendedData.output.outputPK.get)  TODO rm
     val content = {

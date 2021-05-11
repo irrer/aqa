@@ -1,10 +1,10 @@
 package org.aqa.web
 
 import org.aqa.Logging
-import java.awt.Color
-import edu.umro.ScalaUtil.Trace
-import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.Util
+
+import java.awt.Color
+import scala.xml.Elem
 
 object C3Chart {
 
@@ -19,23 +19,24 @@ object C3Chart {
   }
 
   /**
-   * Get an id that guaranteed to be unique for a given web page.
-   */
-  def makeUniqueChartIdTag: String = idLock.synchronized({
-    id = id + 1
-    textToChartId(id.toString)
-  })
+    * Get an id that guaranteed to be unique for a given web page.
+    */
+  def makeUniqueChartIdTag: String =
+    idLock.synchronized({
+      id = id + 1
+      textToChartId(id.toString)
+    })
 
   val scriptPrefix = """\n<script>\n"""
   val scriptSuffix = """\n</script>\n"""
 
-  def html(idTag: String) = {
-    <div id={ idTag }>{ idTag }</div>
+  def html(idTag: String): Elem = {
+    <div id={idTag}>{idTag}</div>
   }
 
   /**
-   * Make the C3 chart snippet to set the chart width and height if specified.
-   */
+    * Make the C3 chart snippet to set the chart width and height if specified.
+    */
   def chartSizeText(width: Option[Int], height: Option[Int]): String = {
     val w = if (width.isDefined) Some("      width: " + width.get) else None
     val h = if (height.isDefined) Some("      height: " + height.get) else None
@@ -47,60 +48,66 @@ object C3Chart {
   }
 
   /**
-   * Make the C3 chart snippet to set the min and max bounds.
-   */
+    * Make the C3 chart snippet to set the min and max bounds.
+    */
   def rangeText(min: Double, max: Double): String = {
     val range = max - min
     if (range == 0) ""
     else {
       val margin = range * 0.05 // put 5 % space on top and bottom
-      val lo = min - margin
-      val hi = max + margin
       "min: " + (min - margin) + ",\n" +
         "         max: " + (max + margin) + ",\n"
     }
   }
 
   class Tolerance(a: Double, b: Double) {
-    val min = Math.min(a, b)
-    val max = Math.max(a, b)
+    val min: Double = Math.min(a, b)
+    val max: Double = Math.max(a, b)
     override def toString: String = "min: " + min + "    max: " + max
   }
 
   class YRange(a: Double, b: Double) {
-    val min = Math.min(a, b)
-    val max = Math.max(a, b)
+    val min: Double = Math.min(a, b)
+    val max: Double = Math.max(a, b)
     override def toString: String = "min: " + min + "    max: " + max
   }
 
 }
 
 /**
- * Make a C3 chart.
- *
- * @param width: Optional width of chart in pixels.
- *
- * @param height: Optional height of chart in pixels.
- *
- * @param xAxisLabel: Text label for X axis
- *
- * @param xValueList: List of X values
- *
- * @param xFormat: Formatting for x values.   Examples: .3 .4g.  Reference: http://bl.ocks.org/zanarmstrong/05c1e95bf7aa16c4768e
- *
- * @param yAxisLabels
- *
- * @param yValues
- *
- * @param yFormat
- *
- * Format: .3g .4g
- */
+  * Make a C3 chart.
+  *
+  * @param width: Optional width of chart in pixels.
+  *
+  * @param height: Optional height of chart in pixels.
+  *
+  * @param xAxisLabel: Text label for X axis
+  *
+  * @param xValueList: List of X values
+  *
+  * @param xFormat: Formatting for x values.   Examples: .3 .4g.  Reference: http://bl.ocks.org/zanarmstrong/05c1e95bf7aa16c4768e
+  *
+  * @param yAxisLabels Axis label, one per set of Y values.
+  *
+  * @param yValues Y values to be plotted.
+  *
+  * @param yFormat Numeric format of Y values shown on mouseover.
+  *
+  * Format: .3g .4g
+  */
 class C3Chart(
-  width: Option[Int],
-  height: Option[Int],
-  xAxisLabel: String, xDataLabel: String, xValueList: Seq[Double], xFormat: String,
-  yAxisLabels: Seq[String], yDataLabel: String, yValues: Seq[Seq[Double]], yFormat: String, yColorList: Seq[Color]) extends Logging {
+    width: Option[Int] = None,
+    height: Option[Int] = None,
+    xAxisLabel: String,
+    xDataLabel: String,
+    xValueList: Seq[Double],
+    xFormat: String = ".4g",
+    yAxisLabels: Seq[String],
+    yDataLabel: String,
+    yValues: Seq[Seq[Double]],
+    yFormat: String = ".4g",
+    yColorList: Seq[Color] = Seq()
+) extends Logging {
 
   if (yAxisLabels.size != yValues.size) throw new RuntimeException("Must be same number of Y labels as Y data sets.  yAxisLabels.size: " + yAxisLabels.size + "    yValues.size: " + yValues.size)
 
@@ -110,20 +117,40 @@ class C3Chart(
 
   private val chartIdTag = C3Chart.makeUniqueChartIdTag
 
+  private val yColorText = {
+    val list =
+      if (yColorList.isEmpty)
+        Seq(Color.decode("#6688bb"))
+      else
+        yColorList
+
+    def colorToText(c: Color): String = {
+      def fmt(i: Int) = i.formatted("%02x")
+
+      "'#" + fmt(c.getRed) + fmt(c.getGreen) + fmt(c.getBlue) + "'"
+    }
+
+    "pattern: [ " + list.map(colorToText).mkString(", ") + "]"
+  }
+
   private def column(label: String, valueList: Seq[Double]): String = {
     "[ '" + label + "', " + valueList.mkString(", ") + "]"
   }
 
-  val html = { <div id={ chartIdTag }>{ chartIdTag }</div> }
+  val html: Elem = {
+    <div id={chartIdTag}>
+      {chartIdTag}
+    </div>
+  }
 
-  val javascript = {
-    """      
-var """ + chartIdTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) + """
+  val javascript: String = {
+    s"""
+var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
     data: {
-        x: '""" + xAxisLabel + """',
+        x: '$xAxisLabel',
         columns: [
-          """ + column(xAxisLabel, xValueList) + """,
-          """ + yAxisLabels.indices.map(i => column(yAxisLabels(i), yValues(i))).mkString(",\n         ") + """ 
+          ${column(xAxisLabel, xValueList)},
+          ${yAxisLabels.indices.map(i => column(yAxisLabels(i), yValues(i))).mkString(",\n         ")}
         ]
     },
     point: { // enlarge point on hover
@@ -134,31 +161,31 @@ var """ + chartIdTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, hei
             }
         }
     },
-    bindto : '#""" + chartIdTag + """',
+    bindto : '#$chartIdTag',
     axis: {
         x: {
-            label: '""" + xDataLabel + """',
+            label: '$xDataLabel',
             tick: {
-                format: d3.format('""" + xFormat + """')
+                format: d3.format('$xFormat')
             }
         },
         y: {
-            """ + C3Chart.rangeText(minY, maxY) + """
-            label: '""" + yDataLabel + """',
+            ${C3Chart.rangeText(minY, maxY)}
+            label: '$yDataLabel',
             tick: {
-                format: d3.format('""" + yFormat + """')
+                format: d3.format('$yFormat')
             }
         }
     },
     color : {
-        pattern : [ '#6688bb' ]
+        $yColorText
     },
     padding: {
       right: 30,
       top: 10
     }
   });
-""";
+""".stripMargin.replace('\r', ' ')
   }
 
 }

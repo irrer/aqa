@@ -1,21 +1,17 @@
-
 package aqa.test;
 
+import org.aqa.Crypto
 import org.aqa.Util
+import org.aqa.web.C3Chart
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-import java.io.File
-import edu.umro.util.Utility
-import edu.umro.ScalaUtil.Trace
-import edu.umro.ScalaUtil.FileUtil
-import org.aqa.web.C3Chart
+
 import java.awt.Color
-import org.aqa.Crypto
 
 /**
- * Test the Config.
- *
- */
+  * Test the Config.
+  *
+  */
 
 class TestC3Chart extends FlatSpec with Matchers {
 
@@ -30,9 +26,19 @@ class TestC3Chart extends FlatSpec with Matchers {
     val yDataLabel = "Y Data Label"
     val yValues = yRange.map(yy => yRange.map(y => ((y * 71 * yy) % 13) * 6786.3))
     val yFormat = ".g4"
-    val yColorList = Util.colorPallette(new Color(0x4477BB), new Color(0x44AAFF), yValues.size)
+    val yColorList = Util.colorPallette(new Color(0x4477bb), new Color(0x44aaff), yValues.size)
 
-    val chart = new C3Chart(None, None, xAxisLabel: String, xDataLabel, xValueList, xFormat, yAxisLabels, yDataLabel, yValues, yFormat, yColorList)
+    val chart = new C3Chart(
+      xAxisLabel = xAxisLabel: String,
+      xDataLabel = xDataLabel,
+      xValueList = xValueList,
+      xFormat = xFormat,
+      yAxisLabels = yAxisLabels,
+      yDataLabel = yDataLabel,
+      yValues = yValues,
+      yFormat = yFormat,
+      yColorList = yColorList
+    )
 
     println(chart.javascript)
 

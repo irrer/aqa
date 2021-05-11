@@ -1296,6 +1296,9 @@ object Util extends Logging {
     }
   }
 
+  /** The mathematical standard Golden Ratio that is pleasing to view : https://en.wikipedia.org/wiki/Golden_ratio  */
+  val goldenRatio = 1.61803398875
+
   def main(args: Array[String]): Unit = {
 
     if (true) {

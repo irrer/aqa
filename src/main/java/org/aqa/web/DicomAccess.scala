@@ -110,10 +110,15 @@ object DicomAccess extends Logging {
     private val xValues = hist.map(vc => vc.value.toDouble)
     private val yValues = hist.map(vc => vc.count.toDouble)
     val chart = new C3Chart(
-      None, // width:
-      None, // height
-      "Pixel Value", "Pixel Value", xValues, ".d",
-      Seq("Count"), "Count", Seq(yValues), ".d", Seq(Color.DARK_GRAY))
+      xAxisLabel = "Pixel Value",
+      xDataLabel = "Pixel Value",
+      xValueList = xValues,
+      xFormat = ".d",
+      yAxisLabels = Seq("Count"),
+      yDataLabel = "Count",
+      yValues = Seq(yValues),
+      yFormat = ".d",
+      yColorList = Seq(Color.DARK_GRAY))
   }
 
   /**
