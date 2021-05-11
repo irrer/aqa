@@ -46,9 +46,10 @@ case class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Log
   private val dicomImage = new DicomImage(image)
 
   /** Create annotated image. */
-  val bufferedImage: BufferedImage = dicomImage.toDeepColorBufferedImage(0.01)
+  // val bufferedImage: BufferedImage = dicomImage.toDeepColorBufferedImage(0.01)
+  val bufferedImage: BufferedImage = dicomImage.toBufferedImage(Color.WHITE)
 
-  Util.addGraticules(bufferedImage, translator, Color.lightGray)
+  Util.addGraticules(bufferedImage, translator, Color.yellow)
 
   // The sorted list of leaf sides in the RTPLAN in pixels.
   private val leafSidesFromPlanAsPix: Seq[Double] = {
@@ -131,6 +132,40 @@ case class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Log
     }
   }
 
+  /** Target width of graphed area for profile image in pixels. */
+  private val profileImageTargetWidth_pix = 600.0
+
+  /**
+    * Create an image showing the profile of intensity over the bounding box.
+    * @param endBoundingRectangle Area around the edge used to measure the edge's location.
+    * @return Profile image to show user.
+    */
+  private def makeProfileImage(endBoundingRectangle: Rectangle, profileAverages: Seq[Float]): BufferedImage = {
+
+    val borderLeft_pix = 72
+    val borderRight_pix = 24
+    val borderTop_pix = 36
+    val borderBottom_pix = 80
+
+    val backgroundColor = Color.black
+
+    val scale = (profileImageTargetWidth_pix / endBoundingRectangle.width).round.toInt
+
+    val width_pix = scale * endBoundingRectangle.width + borderLeft_pix + borderRight_pix
+
+    val height_pix = (width_pix / Util.goldenRatio).round.toInt
+
+    val profileImage = new BufferedImage(height_pix, width_pix, BufferedImage.TYPE_INT_RGB)
+
+    val graphics = ImageUtil.getGraphics(profileImage)
+    graphics.setColor(backgroundColor)
+    graphics.clearRect(0, 0, width_pix, height_pix)
+
+
+
+    profileImage
+  }
+
   /**
     * Given a bounding box that contains the leaf end and is between the sides of the leaf, determine
     * where the end of the leaf is in pixels.
@@ -163,13 +198,17 @@ case class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Log
       val height = penumbraHeight_pix
       val endBoundingRectangle = rectD(x, y, width, height)
 
-      val endProfile = dicomImage.getSubimage(endBoundingRectangle).rowSums
+      // averages of pixel intensity across the profile of the edge
+      val profileAverages = dicomImage.getSubimage(endBoundingRectangle).rowSums.map(_ / width.toFloat)
 
-      val end = LocateEdge.locateEdge(endProfile, (endProfile.min + endProfile.max) / 2)
+      val end = LocateEdge.locateEdge(profileAverages, (profileAverages.min + profileAverages.max) / 2)
 
       val endPosition_pix = y + end
 
       annotateMeasurement(x, x + width, endPosition_pix)
+
+      val profileImage = makeProfileImage(endBoundingRectangle, profileAverages)
+      (endBoundingRectangle)
 
       endPosition_pix
     }
