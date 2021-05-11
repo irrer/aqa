@@ -1,5 +1,6 @@
 package org.aqa.webrun.gapSkew
 
+import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Util
 import org.aqa.db.Output
@@ -113,6 +114,35 @@ object GapSkewHtml {
       // @formatter:on
       }
 
+      val baseFileName = beamName.replaceAll("[^a-zA-Z0-9_]", "_")
+      val htmlFileName = "DICOM_" + baseFileName + ".html"
+      val dicomFileName = "DICOM_" + baseFileName + ".dcm"
+
+      def fileOf(name: String) = new File(extendedData.output.dir, name)
+
+      def makeDicomContent() = {
+        val al = runReq.rtimageMap(beamName)
+        DicomUtil.writeAttributeListToFile(al, fileOf(dicomFileName), "AQA")
+        val content = {
+          <div>
+            <h2>{beamName}</h2>
+              <a href={dicomFileName}>Download DICOM</a>
+            <pre>
+              {DicomUtil.attributeListToString(al)}
+            </pre>
+          </div>
+        }
+
+        val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), "Beam " + beamName)
+        Util.writeFile(fileOf(htmlFileName), text)
+      }
+
+      makeDicomContent()
+
+      def dicomLink = {
+        <a href={htmlFileName}>View DICOM</a>
+      }
+
       val content = {
         <div class="row">
             <hr/>
@@ -124,6 +154,7 @@ object GapSkewHtml {
                 {skewTable}
                 <p></p>
                 {offsetTable}
+                {dicomLink}
               </center>
             </div>
             <div class="col-md-6">
@@ -160,7 +191,7 @@ object GapSkewHtml {
     }
 
     val contentWithHeader = ExtendedData.wrapExtendedData(extendedData, content)
-    val text = WebUtil.wrapBody(contentWithHeader, "MLC QA", refresh = None, c3 = true, runScript = Some(script))
+    val text = WebUtil.wrapBody(contentWithHeader, "Leaf Gap and Skew", refresh = None, c3 = true, runScript = Some(script))
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeBinaryFile(file, text.getBytes)
 
