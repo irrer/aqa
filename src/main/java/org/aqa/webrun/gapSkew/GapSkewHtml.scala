@@ -120,7 +120,7 @@ object GapSkewHtml {
 
       def fileOf(name: String) = new File(extendedData.output.dir, name)
 
-      def makeDicomContent() = {
+      def makeDicomContent(): Unit = {
         val al = runReq.rtimageMap(beamName)
         DicomUtil.writeAttributeListToFile(al, fileOf(dicomFileName), "AQA")
         val content = {
