@@ -16,6 +16,7 @@ import org.aqa.db.Input
 import org.aqa.db.Institution
 import org.aqa.db.Machine
 import org.aqa.db.Output
+import org.aqa.db.OutputFiles
 import org.aqa.db.Procedure
 import org.aqa.web.OutputList
 import org.aqa.web.ViewOutput
@@ -348,8 +349,12 @@ object RunProcedure extends Logging {
       try {
         val timeout = Duration(extendedData.procedure.timeoutInMs, TimeUnit.MILLISECONDS)
         val future = Future[ProcedureStatus.Value] {
+          val start = System.currentTimeMillis()
+          logger.info("Starting processing for user " + extendedData.user.id + " of " + runTrait.getProcedure.fullName)
           try {
             val status = runTrait.run(extendedData, runReq, response)
+            val elapsed = System.currentTimeMillis() - start
+            logger.info("Finished processing for user " + extendedData.user.id + " of " + runTrait.getProcedure.fullName + "   Elapsed time: " + Util.elapsedTimeHumanFriendly(elapsed))
             status
           } catch {
             case t: Throwable =>
@@ -384,7 +389,9 @@ object RunProcedure extends Logging {
   /**
     * Save the process results to the database.
     */
-  private def saveResults(newStatus: ProcedureStatus.Value, extendedData: ExtendedData) = {
+  private def saveResults(newStatus: ProcedureStatus.Value, extendedData: ExtendedData): OutputFiles = {
+    logger.info("Saving results to database for user " + extendedData.user.id + " of " + extendedData.procedure.fullName)
+    val start = System.currentTimeMillis()
     // write the status to a little file in the output directory
     ProcedureStatus.writeProcedureStatus(extendedData.output.dir, newStatus)
 
@@ -393,7 +400,10 @@ object RunProcedure extends Logging {
 
     // zip up the contents of the Output directory and save them
     val zippedContent = extendedData.output.makeZipOfFiles
-    extendedData.output.updateData(zippedContent)
+    val outputFiles = extendedData.output.updateData(zippedContent)
+    val elapsed = System.currentTimeMillis() - start
+    logger.info("Finished saving results to database for user " + extendedData.user.id + " of " + extendedData.procedure.fullName + "   Elapsed time: " + Util.elapsedTimeHumanFriendly(elapsed))
+    outputFiles
   }
 
   /**
