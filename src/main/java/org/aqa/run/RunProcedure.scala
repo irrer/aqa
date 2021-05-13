@@ -350,11 +350,11 @@ object RunProcedure extends Logging {
         val timeout = Duration(extendedData.procedure.timeoutInMs, TimeUnit.MILLISECONDS)
         val future = Future[ProcedureStatus.Value] {
           val start = System.currentTimeMillis()
-          logger.info("Starting processing for user " + extendedData.user.id + " of " + runTrait.getProcedure.fullName)
+          logger.info("Starting processing for user " + extendedData.user.id + " of " + extendedData.procedure.fullName)
           try {
             val status = runTrait.run(extendedData, runReq, response)
             val elapsed = System.currentTimeMillis() - start
-            logger.info("Finished processing for user " + extendedData.user.id + " of " + runTrait.getProcedure.fullName + "   Elapsed time: " + Util.elapsedTimeHumanFriendly(elapsed))
+            logger.info("Finished processing for user " + extendedData.user.id + " of " + extendedData.procedure.fullName + "   Elapsed time: " + Util.elapsedTimeHumanFriendly(elapsed))
             status
           } catch {
             case t: Throwable =>
