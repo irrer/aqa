@@ -6,12 +6,14 @@ import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.LeafPosition
 import org.aqa.run.ProcedureStatus
+import org.aqa.web.C3Chart
 import org.aqa.web.WebServer
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.BadPixelAnalysis
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
 
+import java.awt.Color
 import java.io.File
 import scala.xml.Elem
 
@@ -89,6 +91,36 @@ object LeafPositionHTML extends Logging {
     val imageUrl = WebServer.urlOfResultsFile(imageFile)
     val dicomHtmlHref = Phase2Util.dicomViewHref(derived.attributeList, extendedData, runReq)
 
+    val chart = {
+      val j = beamResult.resultList.filter(_.leafPositionIndex == 1) // TODO rm
+      println(j) // TODO rm
+      val data = {
+        val a = beamResult.resultList.groupBy(_.leafPositionIndex).toSeq.sortBy(_._1).map(_._2)
+        val j1 = a.head
+        val b = a.map(li => li.sortBy(_.leafIndex).map(_.offset_mm))
+        b
+      }
+      val dataX = {
+        val a = beamResult.resultList.groupBy(_.leafIndex).toSeq.sortBy(_._1).map(_._2)
+        val j1 = a.head
+        val b = a.map(li => li.sortBy(_.leafPositionPK).map(_.offset_mm))
+        b
+      }
+      val xValueList = beamResult.resultList.map(_.leafIndex).distinct.sorted.map(_.toDouble)
+
+      val yAxisLabels = beamResult.resultList.map(_.leafPositionIndex).distinct.sorted.map(y => "Leaf Pos " + y)
+
+      new C3Chart(
+        xAxisLabel = "Diff",
+        xDataLabel = "Leaf Index",
+        xValueList = xValueList,
+        yAxisLabels = yAxisLabels,
+        yDataLabel = "Measured - Expected mm",
+        yValues = data,
+        yColorList = Seq(Color.RED, Color.GREEN, Color.BLACK, Color.ORANGE, Color.BLUE, Color.YELLOW, Color.MAGENTA, Color.GRAY, Color.CYAN, Color.PINK)
+      )
+    }
+
     val content = {
       <div class="col-md-10 col-md-offset-1">
         <div class="row">
@@ -103,10 +135,14 @@ object LeafPositionHTML extends Logging {
             {resultsTable(beamResult.resultList)}
           </div>
         </div>
+        <div class="row">
+          {/* chart.html TODO Clean up, add labels, and put back. */}
+        </div>
       </div>
     }
 
-    val html = Phase2Util.wrapSubProcedure(extendedData, content, LeafPositionAnalysis.subProcedureName, beamResult.status, Some(zoomScript), runReq)
+    val script = zoomScript + "\n<script>\n" + chart.javascript + "\n</script>\n"
+    val html = Phase2Util.wrapSubProcedure(extendedData, content, LeafPositionAnalysis.subProcedureName, beamResult.status, Some(script), runReq)
     Util.writeFile(htmlFile, html)
 
     (url, imageUrl)
