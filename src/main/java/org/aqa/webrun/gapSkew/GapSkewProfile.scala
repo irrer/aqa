@@ -69,9 +69,9 @@ object GapSkewProfile {
       val c = spline.evaluate((i + 1) * increment)
       (c - b) - (b - a)
     }
-    (0 until numberOfPoints).map(i => ProfilePoint(yToProfileY(i), yToDerivative1(i)))
+    // (0 until numberOfPoints).map(i => ProfilePoint(yToProfileY(i), yToDerivative1(i)))
 
-    // (0 until numberOfPoints).map(i => ProfilePoint(yToProfileY(i), yToCu(i)))  // TODO put back
+    (0 until numberOfPoints).map(i => ProfilePoint(yToProfileY(i), yToCu(i)))  // TODO put back
   }
 
 }
