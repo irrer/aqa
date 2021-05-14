@@ -8,6 +8,7 @@ import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ImageUtil.LocateEdge
 import edu.umro.ImageUtil.LocateMax
+import edu.umro.ImageUtil.Profile
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
@@ -20,13 +21,14 @@ import java.awt.Color
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
 import java.io.File
+import javax.vecmath.Point2d
 
-case class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Logging {
+case class FindLeafEnds(attributeList: AttributeList, rtplan: AttributeList) extends Logging {
 
   /** True if collimator is horizontal. */
-  private val isHorizontal: Boolean = Phase2Util.isHorizontal(image)
+  private val isHorizontal: Boolean = Phase2Util.isHorizontal(attributeList)
 
-  private val translator = new IsoImagePlaneTranslator(image)
+  private val translator = new IsoImagePlaneTranslator(attributeList)
 
   private def d2i(d: Double): Int = d.round.toInt
 
@@ -43,11 +45,12 @@ case class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Log
     new Rectangle(d2i(x), d2i(y), d2i(width), d2i(height))
   }
 
-  private val dicomImage = new DicomImage(image)
+  private val dicomImage = new DicomImage(attributeList)
 
-  /** Create annotated image. */
-  // val bufferedImage: BufferedImage = dicomImage.toDeepColorBufferedImage(0.01)
-  val bufferedImage: BufferedImage = dicomImage.toBufferedImage(Color.WHITE)
+  /** Create annotated image.  Removing a large number of high and low pixels sets the window and level to
+    * as best to obviate the leakage at the leaves' sides.
+    */
+  private val bufferedImage: BufferedImage = dicomImage.toDeepColorBufferedImage(percentToDrop = 20.0)
 
   Util.addGraticules(bufferedImage, translator, Color.yellow)
 
@@ -56,13 +59,14 @@ case class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Log
     DicomUtil.findAllSingle(rtplan, TagByName.LeafPositionBoundaries).head.getDoubleValues.sorted
   }
 
+  // private case class BeamLimit(limit: Double, isLeaf: Boolean) {}
   private case class EndPair(min: Double, max: Double) {}
 
   /**
     * Get the positions of ends of the leaves in mm in isoplane.
     */
   private val endPairIso: EndPair = {
-    val beamSequence = Phase2Util.getBeamSequence(rtplan, Util.beamNumber(image))
+    val beamSequence = Phase2Util.getBeamSequence(rtplan, Util.beamNumber(attributeList))
     val cps = DicomUtil.seqToAttr(beamSequence, TagByName.ControlPointSequence).head
     val beamLimitList = DicomUtil.seqToAttr(cps, TagByName.BeamLimitingDevicePositionSequence)
     val end = beamLimitList.maxBy(bl => bl.get(TagByName.LeafJawPositions).getDoubleValues.length)
@@ -132,38 +136,41 @@ case class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Log
     }
   }
 
-  /** Target width of graphed area for profile image in pixels. */
-  private val profileImageTargetWidth_pix = 600.0
-
   /**
-    * Create an image showing the profile of intensity over the bounding box.
-    * @param endBoundingRectangle Area around the edge used to measure the edge's location.
-    * @return Profile image to show user.
+    * Make a profile that can be graphed to show the user what the edge looks like.  X values of
+    * Point2d are the Y position in mm, Y values are the CU.
+    *
+    * @param endPosition_pix Vertical position in pixels where the edge was found.
+    * @param x_pix Horizontal position of bounding box (inside leaf) in pixels used to find edge.
+    * @param width Width of bounding box (inside leaf) in pixels used to find edge.
+    * @return
     */
-  private def makeProfileImage(endBoundingRectangle: Rectangle, profileAverages: Seq[Float]): BufferedImage = {
+  private def makeProfile(endPosition_pix: Double, x_pix: Double, width: Float): Seq[Point2d] = {
 
-    val borderLeft_pix = 72
-    val borderRight_pix = 24
-    val borderTop_pix = 36
-    val borderBottom_pix = 80
+    // number of points to put in the profile.  This was chosen as enough to show detail without
+    // being overly resource intensive.
+    val numberOfPoints = 600
 
-    val backgroundColor = Color.black
+    // maximum height.  Actual height may be smaller because of cropping.
+    val maxHeight = translator.iso2PixDistY(30.0)
+    val y_pix = Math.max(endPosition_pix - maxHeight / 2, 0.0)
+    val bottom_pix = Math.min(maxHeight + y_pix, dicomImage.height - 1)
+    val height_pix = bottom_pix - y_pix
 
-    val scale = (profileImageTargetWidth_pix / endBoundingRectangle.width).round.toInt
+    val rectangle_pix = rectD(x_pix, y_pix, width, height_pix)
 
-    val width_pix = scale * endBoundingRectangle.width + borderLeft_pix + borderRight_pix
+    val profileValueSeq = dicomImage.getSubimage(rectangle_pix).rowSums.map(_ / width)
 
-    val height_pix = (width_pix / Util.goldenRatio).round.toInt
+    val spline = Profile(profileValueSeq).cubicSpline
 
-    val profileImage = new BufferedImage(height_pix, width_pix, BufferedImage.TYPE_INT_RGB)
+    val increment = height_pix / numberOfPoints
 
-    val graphics = ImageUtil.getGraphics(profileImage)
-    graphics.setColor(backgroundColor)
-    graphics.clearRect(0, 0, width_pix, height_pix)
+    def yToProfileY(i: Int): Double = -translator.pix2IsoCoordY((i * increment) + rectangle_pix.getY)
 
+    def yToCu(i: Int): Double = spline.evaluate(i * increment)
 
+    (0 until numberOfPoints).map(i => new Point2d(yToProfileY(i), yToCu(i)))
 
-    profileImage
   }
 
   /**
@@ -174,7 +181,7 @@ case class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Log
     *            TODO: This could be a Rectangle2D.Double so as to weight partial pixels on either side.
     * @return The position of the leaf in pixels.
     */
-  private def endOfLeaf_pix(box: Rectangle): Double = {
+  private def endOfLeaf_iso(box: Rectangle): Leaf = {
 
     val subImage = dicomImage.getSubimage(box)
     if (isHorizontal) {
@@ -182,7 +189,8 @@ case class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Log
     } else {
       val profile = subImage.columnSums
       val max = profile.max
-      // the minimums are well defined, but the locateMax function looks for maximums, so flip the profile vertically.
+      // the minimums are well defined, but the locateMax function looks for maximums, so flip the
+      // profile vertically which effectively looks for minimums.
       val profileFlipped = profile.map(max - _)
 
       val half = profile.size / 2
@@ -207,26 +215,18 @@ case class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Log
 
       annotateMeasurement(x, x + width, endPosition_pix)
 
-      val profileImage = makeProfileImage(endBoundingRectangle, profileAverages)
-      (endBoundingRectangle)
+      val endPosition_mm = -translator.pix2IsoCoordY(endPosition_pix)
+      val chartProfile = makeProfile(endPosition_pix, x, width.toFloat)
 
-      endPosition_pix
+      Leaf(endPosition_mm, chartProfile)
     }
   }
 
-  case class LeafSet(
-      topLeft: Double,
-      topRight: Double,
-      bottomLeft: Double,
-      bottomRight: Double
-  ) {
-    override def toString: String = {
-      "topLeft: " + topLeft +
-        "    topRight: " + topRight +
-        "    bottomLeft: " + bottomLeft +
-        "    bottomRight: " + bottomRight
-    }
-  }
+  /** Minimum leaf position specified in the RTPLAN. */
+  private val leafPositionRtplanTop_mm: Double = endPairIso.max
+
+  /** Maximum leaf position specified in the RTPLAN. */
+  private val leafPositionRtplanBottom_mm: Double = endPairIso.min
 
   val leafSet: LeafSet =
     if (isHorizontal)
@@ -249,29 +249,25 @@ case class FindLeafEnds(image: AttributeList, rtplan: AttributeList) extends Log
       val bottomLeftRect = rectD(xLeft, yBottom, width, height)
       val bottomRightRect = rectD(xRight, yBottom, width, height)
 
-      Trace.trace("Beam Name: " + Util.beamNumber(image)) // TODO rm
+      Trace.trace("Beam Name: " + Util.beamNumber(attributeList)) // TODO rm
 
-      val topLeftEnd = endOfLeaf_pix(topLeftRect)
-      val topRightEnd = endOfLeaf_pix(topRightRect)
-      val bottomLeftEnd = endOfLeaf_pix(bottomLeftRect)
-      val bottomRightEnd = endOfLeaf_pix(bottomRightRect)
+      // makeProfileData  TODO
 
       val set = LeafSet(
-        -translator.pix2IsoCoordY(topLeftEnd),
-        -translator.pix2IsoCoordY(topRightEnd),
-        -translator.pix2IsoCoordY(bottomLeftEnd),
-        -translator.pix2IsoCoordY(bottomRightEnd)
+        bufferedImage,
+        attributeList,
+        rtplan,
+        leafPositionRtplanTop_mm,
+        leafPositionRtplanBottom_mm,
+        endOfLeaf_iso(topLeftRect),
+        endOfLeaf_iso(topRightRect),
+        endOfLeaf_iso(bottomLeftRect),
+        endOfLeaf_iso(bottomRightRect)
       )
 
       logger.info("MLC leaf end positions: " + set)
       set
     }
-
-  /** Minimum leaf position specified in the RTPLAN. */
-  val leafPositionRtplanTop_mm: Double = endPairIso.max
-
-  /** Maximum leaf position specified in the RTPLAN. */
-  val leafPositionRtplanBottom_mm: Double = endPairIso.min
 }
 
 object FindLeafEnds {
