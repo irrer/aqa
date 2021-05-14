@@ -18,6 +18,7 @@ import edu.umro.util.Utility
 import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Polygon
+import java.awt.Rectangle
 import java.awt.geom.Point2D
 import java.awt.image.BufferedImage
 import java.awt.image.RenderedImage
@@ -1299,6 +1300,19 @@ object Util extends Logging {
   /** The mathematical standard Golden Ratio that is pleasing to view : https://en.wikipedia.org/wiki/Golden_ratio  */
   val goldenRatio = 1.61803398875
 
+
+  /**
+   * Make an awt Rectangle from double precision values.  This is mostly a convenience function.
+   *
+   * @param x      X
+   * @param y      Y
+   * @param width  Width
+   * @param height Height
+   * @return a Rectangle
+   */
+  def rectD(x: Double, y: Double, width: Double, height: Double): Rectangle = {
+    new Rectangle(d2i(x), d2i(y), d2i(width), d2i(height))
+  }
   def main(args: Array[String]): Unit = {
 
     if (true) {

@@ -65,11 +65,12 @@ object GapSkewHtml {
         height = Some(300),
         xAxisLabel = "Position",
         xDataLabel = "cm",
-        xValueList = leaf.profile.map(_.getX),
+        xValueList = leaf.profile.map(_.y_mm),
         yAxisLabels = Seq("CU"),
         yDataLabel = "CU",
-        yValues = Seq(leaf.profile.map(_.getY)),
-        yFormat = ".0f",
+        yValues = Seq(leaf.profile.map(_.cu)),
+        //yFormat = ".0f",
+        yFormat = ".8gf",
         yColorList = Seq(new Color(0, 255, 255))
       )
 
@@ -111,13 +112,13 @@ object GapSkewHtml {
             <tr>
               <td>
                 Top
-              </td>{td(leafSet.topLeft.position - leafSet.topRight.position)}{td(leafSet.topLeft.position)}{td(leafSet.topRight.position)}{td(leafSet.leafPositionRtplanTop_mm)}
+              </td>{td(leafSet.topLeft.position_mm - leafSet.topRight.position_mm)}{td(leafSet.topLeft.position_mm)}{td(leafSet.topRight.position_mm)}{td(leafSet.leafPositionRtplanTop_mm)}
             </tr>
 
             <tr>
               <td>
                 Bottom
-              </td>{td(leafSet.bottomLeft.position - leafSet.bottomRight.position)}{td(leafSet.bottomLeft.position)}{td(leafSet.bottomRight.position)}{td(leafSet.leafPositionRtplanBottom_mm)}
+              </td>{td(leafSet.bottomLeft.position_mm - leafSet.bottomRight.position_mm)}{td(leafSet.bottomLeft.position_mm)}{td(leafSet.bottomRight.position_mm)}{td(leafSet.leafPositionRtplanBottom_mm)}
             </tr>
 
           </thead>
@@ -148,18 +149,18 @@ object GapSkewHtml {
               <td>
                 Left
               </td>
-                {td(leafSet.topLeft.position - leafSet.bottomLeft.position - (leafSet.leafPositionRtplanTop_mm - leafSet.leafPositionRtplanBottom_mm))}
-                {td(leafSet.topLeft.position)}
-                {td(leafSet.topRight.position)}
+                {td(leafSet.topLeft.position_mm - leafSet.bottomLeft.position_mm - (leafSet.leafPositionRtplanTop_mm - leafSet.leafPositionRtplanBottom_mm))}
+                {td(leafSet.topLeft.position_mm)}
+                {td(leafSet.topRight.position_mm)}
             </tr>
           
             <tr>
               <td>
                 Right
               </td>
-              {td(leafSet.bottomRight.position - leafSet.topRight.position + (leafSet.leafPositionRtplanTop_mm - leafSet.leafPositionRtplanBottom_mm))}
-              {td(leafSet.bottomLeft.position)}
-              {td(leafSet.bottomRight.position)}
+              {td(leafSet.bottomRight.position_mm - leafSet.topRight.position_mm + (leafSet.leafPositionRtplanTop_mm - leafSet.leafPositionRtplanBottom_mm))}
+              {td(leafSet.bottomLeft.position_mm)}
+              {td(leafSet.bottomRight.position_mm)}
             </tr>
           
           </thead>
@@ -178,16 +179,16 @@ object GapSkewHtml {
         <h3>Edge Profiles</h3>
         <ul class="nav nav-tabs">
           <li class="active">
-            <a data-toggle="tab" href="#topLeft">Top Left {Util.fmtDbl(leafSet.topLeft.position)}</a>
+            <a data-toggle="tab" href="#topLeft">Top Left {Util.fmtDbl(leafSet.topLeft.position_mm)}</a>
           </li>
           <li>
-            <a data-toggle="tab" href="#topRight">Top Right {Util.fmtDbl(leafSet.topRight.position)}</a>
+            <a data-toggle="tab" href="#topRight">Top Right {Util.fmtDbl(leafSet.topRight.position_mm)}</a>
           </li>
           <li>
-            <a data-toggle="tab" href="#bottomLeft">Bottom Left {Util.fmtDbl(leafSet.bottomLeft.position)}</a>
+            <a data-toggle="tab" href="#bottomLeft">Bottom Left {Util.fmtDbl(leafSet.bottomLeft.position_mm)}</a>
           </li>
           <li>
-            <a data-toggle="tab" href="#bottomRight">Bottom Right {Util.fmtDbl(leafSet.bottomRight.position)}</a>
+            <a data-toggle="tab" href="#bottomRight">Bottom Right {Util.fmtDbl(leafSet.bottomRight.position_mm)}</a>
           </li>
         </ul>
 
