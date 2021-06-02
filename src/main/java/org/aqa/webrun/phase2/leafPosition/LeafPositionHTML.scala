@@ -92,23 +92,16 @@ object LeafPositionHTML extends Logging {
     val dicomHtmlHref = Phase2Util.dicomViewHref(derived.attributeList, extendedData, runReq)
 
     val chart = {
-      val j = beamResult.resultList.filter(_.leafPositionIndex == 1) // TODO rm
-      println(j) // TODO rm
       val data = {
         val a = beamResult.resultList.groupBy(_.leafPositionIndex).toSeq.sortBy(_._1).map(_._2)
-        val j1 = a.head
         val b = a.map(li => li.sortBy(_.leafIndex).map(_.offset_mm))
         b
       }
-      val dataX = {
-        val a = beamResult.resultList.groupBy(_.leafIndex).toSeq.sortBy(_._1).map(_._2)
-        val j1 = a.head
-        val b = a.map(li => li.sortBy(_.leafPositionPK).map(_.offset_mm))
-        b
-      }
+
       val xValueList = beamResult.resultList.map(_.leafIndex).distinct.sorted.map(_.toDouble)
 
-      val yAxisLabels = beamResult.resultList.map(_.leafPositionIndex).distinct.sorted.map(y => "Leaf Pos " + y)
+      val posList = beamResult.resultList.map(_.expectedEndPosition_mm).distinct.sorted.map(_.round)
+      val yAxisLabels = posList.map(lp => lp + " mm")
 
       new C3Chart(
         xAxisLabel = "Diff",
@@ -127,6 +120,11 @@ object LeafPositionHTML extends Logging {
           <h2>Beam  <a href={dicomHtmlHref} title="View DICOM">{beamName}</a> Max offset: {Util.fmtDbl(maxOffset)} </h2>
         </div>
         <div class="row">
+          <h3>Error for Each Leaf at Each Position</h3>
+          {chart.html}
+        </div>
+        <hr/>
+        <div class="row">
           <div class="col-md-6" id={imageId}>
             Hover over image to zoom in.  Dashed lines show expected position, solid lines are measured position. All values in mm in the isoplane.<br/>
             <img class="img-responsive" src={imageUrl}/>
@@ -134,9 +132,6 @@ object LeafPositionHTML extends Logging {
           <div class="col-md-6">
             {resultsTable(beamResult.resultList)}
           </div>
-        </div>
-        <div class="row">
-          {/* chart.html TODO Clean up, add labels, and put back. */}
         </div>
       </div>
     }
