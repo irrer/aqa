@@ -517,6 +517,12 @@ object DailyQAHTML extends Logging {
     val content = {
       <div class="row">
         <div class="row">
+          <center>
+            If your machine failed or no results are showing, please page clinical physics coverage.
+            <p></p>
+          </center>
+        </div>
+        <div class="row">
           <table class="table table-responsive table-bordered">
             <col/>
             <col/>
@@ -535,8 +541,6 @@ object DailyQAHTML extends Logging {
               are marked as failed. To produce a final result for a single machine, there must be both CBCT
               and EPID results. Both must be valid (found the BB near isocenter), the CBCT must scanned before the EPID,
               and they must be scanned on the same day.
-              <p></p>
-              If your machine failed or no results are showing, please page clinical physics coverage.
             </center>
             <span hidden="true" id="latestChange">
               {DailyQAActivity.get}
