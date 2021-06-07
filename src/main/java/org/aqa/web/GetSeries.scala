@@ -36,7 +36,6 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
 
   private def generateXml(user: User, realPatientId: String): Elem = {
     val institutionPK = user.institutionPK
-    val institutionKey = AnonymizeUtil.getInstitutionKey(institutionPK)
     val attribute = AttributeFactory.newAttribute(TagFromName.PatientID)
     attribute.addValue(realPatientId)
 
@@ -46,21 +45,20 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
     }
     val dicomSeriesList: Seq[DicomSeries.DicomSeriesWithoutContent] = DicomSeries.getByPatientID(anonPatientId).sortBy(ds => ds.date.getTime)
 
-    val relatedOutputList = Output.getByInputPKSet(dicomSeriesList.map(ds => ds.inputPK).flatten.toSet)
+    val relatedOutputList = Output.getByInputPKSet(dicomSeriesList.flatMap(ds => ds.inputPK).toSet)
 
     def outputOfDicomSeries(dicomSeries: DicomSeries.DicomSeriesWithoutContent): Option[Output] = {
       if (dicomSeries.inputPK.isDefined)
-        relatedOutputList.filter(o => o.inputPK == dicomSeries.inputPK.get).headOption
+        relatedOutputList.find(o => o.inputPK == dicomSeries.inputPK.get)
       else
         None
     }
 
     def urlOfDicomSeries(dicomSeries: DicomSeries.DicomSeriesWithoutContent): Option[String] = {
       outputOfDicomSeries(dicomSeries) match {
-        case Some(output) => {
+        case Some(output) =>
           val file = new File(output.dir, Output.displayFilePrefix + ".html")
           Some(WebServer.urlOfResultsFile(file))
-        }
         case _ => None
       }
     }
@@ -77,7 +75,6 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
       * Given a tag and anonymized value, return the non-anonymized value.
       */
     def lookup(tag: AttributeTag, anonValue: String): Option[String] = {
-      val tagText = DicomAnonymous.formatAnonAttributeTag(tag)
 
       daList.get(daKey(institutionPK, DicomAnonymous.formatAnonAttributeTag(tag), anonValue)) match {
         case Some(dicomAnonymous) => Some(AnonymizeUtil.decryptWithNonce(institutionPK, dicomAnonymous.value_real))
@@ -103,15 +100,13 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
       def getOpt(textOpt: Option[String], tag: AttributeTag, xmlTag: String): Option[Elem] = {
 
         textOpt match {
-          case Some(text) => {
+          case Some(text) =>
             lookup(tag, text) match {
-              case Some(text) => {
+              case Some(text) =>
                 val xml = "<" + xmlTag + ">" + edu.umro.util.XML.escapeSpecialChars(text) + "</" + xmlTag + ">"
                 Some(XML.loadString(xml))
-              }
               case _ => None
             }
-          }
           case _ => None
         }
       }
@@ -187,9 +182,9 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
       val realPatientId = valueMap.get(PatientIDTag)
 
       0 match {
-        case _ if (user.isEmpty)          => badRequest(response, "User not logged in or user can not be identified", Status.CLIENT_ERROR_BAD_REQUEST)
-        case _ if (realPatientId.isEmpty) => badRequest(response, "No " + PatientIDTag + " value given", Status.CLIENT_ERROR_BAD_REQUEST)
-        case _ =>
+        case _ if user.isEmpty          => badRequest(response, "User not logged in or user can not be identified", Status.CLIENT_ERROR_BAD_REQUEST)
+        case _ if realPatientId.isEmpty => badRequest(response, "No " + PatientIDTag + " value given", Status.CLIENT_ERROR_BAD_REQUEST)
+        case _                          =>
           // only allow one request at a time to avoid overloading the server
           GetSeries.sync.synchronized {
             logger.info("Getting list of series for PatientID " + realPatientId.get)
@@ -201,9 +196,8 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
       }
 
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         WebUtil.internalFailure(response, t)
-      }
     }
   }
 
