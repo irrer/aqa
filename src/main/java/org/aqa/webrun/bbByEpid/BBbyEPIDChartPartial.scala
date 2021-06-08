@@ -1,55 +1,55 @@
 package org.aqa.webrun.bbByEpid
 
-import org.aqa.Logging
-import org.aqa.db.Output
-import org.aqa.db.Procedure
-import org.aqa.db.Input
-import org.aqa.db.Machine
-import org.aqa.db.BBbyEPIDComposite
 import org.aqa.Config
-import org.aqa.db.MaintenanceRecord
-import org.aqa.db.MaintenanceCategory
-import org.aqa.web.C3Chart
+import org.aqa.Logging
 import org.aqa.Util
-import org.aqa.web.C3ChartHistory
-import java.awt.Color
 import org.aqa.db.BBbyEPID
 import org.aqa.db.BBbyEPID.BBbyEPIDHistory
+import org.aqa.db.Machine
+import org.aqa.db.MaintenanceCategory
+import org.aqa.db.MaintenanceRecord
+import org.aqa.db.Output
+import org.aqa.db.Procedure
+import org.aqa.web.C3Chart
+import org.aqa.web.C3ChartHistory
+
+import java.awt.Color
+import java.util.Date
+import scala.xml.Elem
 
 /**
- * Make a history chart for BBbyEPID.
- */
+  * Make a history chart for BBbyEPID.
+  */
 class BBbyEPIDChartPartial(outputPK: Long) extends Logging {
 
   private val output = Output.get(outputPK).get
   private val procedure = Procedure.get(output.procedurePK).get
-  private val input = Input.get(output.inputPK).get
   private val machine = Machine.get(output.machinePK.get).get
 
   private class ToBeCharted(epidList: Seq[BBbyEPID.BBbyEPIDHistory]) {
-    val date = epidList.head.date
-    val outpuPK = epidList.head.bbByEPID.outputPK
+    val date: Date = epidList.head.date
+    val outputPK: Long = epidList.head.bbByEPID.outputPK
     // to balance the number of vertical and horizontal readings, use the same number of each
-    val matchingSize = Math.min(epidList.filter(h => h.bbByEPID.isHorz).size, epidList.filter(h => h.bbByEPID.isVert).size)
+    val matchingSize: Int = Math.min(epidList.count(h => h.bbByEPID.isHorz), epidList.count(h => h.bbByEPID.isVert))
 
-    val horzList = epidList.filter(h => h.bbByEPID.isHorz).take(matchingSize)
-    val vertList = epidList.filter(h => h.bbByEPID.isVert).take(matchingSize)
+    val horzList: Seq[BBbyEPIDHistory] = epidList.filter(h => h.bbByEPID.isHorz).take(matchingSize)
+    val vertList: Seq[BBbyEPIDHistory] = epidList.filter(h => h.bbByEPID.isVert).take(matchingSize)
 
-    val epid3DXVert_mm = vertList.map(_.bbByEPID.epid3DX_mm).sum / matchingSize
-    val epid3DYHorz_mm = horzList.map(_.bbByEPID.epid3DY_mm).sum / matchingSize
+    val epid3DXVert_mm: Double = vertList.map(_.bbByEPID.epid3DX_mm).sum / matchingSize
+    val epid3DYHorz_mm: Double = horzList.map(_.bbByEPID.epid3DY_mm).sum / matchingSize
 
-    val epid3dZVert_mm = vertList.map(_.bbByEPID.epid3DZ_mm).sum / matchingSize
-    val epid3dZHorz_mm = horzList.map(_.bbByEPID.epid3DZ_mm).sum / matchingSize
+    val epid3dZVert_mm: Double = vertList.map(_.bbByEPID.epid3DZ_mm).sum / matchingSize
+    val epid3dZHorz_mm: Double = horzList.map(_.bbByEPID.epid3DZ_mm).sum / matchingSize
 
-    val epid3dSumVert_mm = Math.sqrt((epid3DXVert_mm * epid3DXVert_mm) + (epid3dZVert_mm * epid3dZVert_mm))
-    val epid3dSumHorz_mm = Math.sqrt((epid3DYHorz_mm * epid3DYHorz_mm) + (epid3dZHorz_mm * epid3dZHorz_mm))
+    val epid3dSumVert_mm: Double = Math.sqrt((epid3DXVert_mm * epid3DXVert_mm) + (epid3dZVert_mm * epid3dZVert_mm))
+    val epid3dSumHorz_mm: Double = Math.sqrt((epid3DYHorz_mm * epid3DYHorz_mm) + (epid3dZHorz_mm * epid3dZHorz_mm))
   }
 
   private val history = {
     val all = BBbyEPID.history(machine.machinePK.get, procedure.procedurePK.get)
-    def hasBothVH(g: Seq[BBbyEPIDHistory]) = g.find(e => e.bbByEPID.isHorz).isDefined && g.find(e => e.bbByEPID.isVert).isDefined
+    def hasBothVH(g: Seq[BBbyEPIDHistory]) = g.exists(e => e.bbByEPID.isHorz) && g.exists(e => e.bbByEPID.isVert)
 
-    val qualified = all.groupBy(_.bbByEPID.outputPK).map(_._2).filter(g => hasBothVH(g)).map(g => new ToBeCharted(g))
+    val qualified = all.groupBy(_.bbByEPID.outputPK).values.filter(g => hasBothVH(g)).map(g => new ToBeCharted(g))
     qualified.toSeq.sortBy(_.date.getTime)
   }
 
@@ -60,16 +60,14 @@ class BBbyEPIDChartPartial(outputPK: Long) extends Logging {
     if (history.isEmpty)
       Seq[MaintenanceRecord]()
     else
-      MaintenanceRecord.
-        getRange(machine.machinePK.get, allDates.min, allDates.max).
-        filter(m => !(m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline.toString)))
+      MaintenanceRecord.getRange(machine.machinePK.get, allDates.min, allDates.max).filter(m => !m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline))
   }
 
   private def chartId = C3Chart.idTagPrefix + Util.textToId(machine.id) + "_Partial"
 
-  def chartReference = {
+  def chartReference: Elem = {
     val ciob = chartId
-    <div id={ ciob }></div>
+    <div id={ciob}></div>
   }
 
   private def chartOf(index: Int): C3ChartHistory = {
@@ -78,43 +76,41 @@ class BBbyEPIDChartPartial(outputPK: Long) extends Logging {
       history.map(h => h.epid3DXVert_mm),
       history.map(h => h.epid3dZVert_mm),
       history.map(h => h.epid3dSumVert_mm),
-
       history.map(h => h.epid3DYHorz_mm),
       history.map(h => h.epid3dZHorz_mm),
-      history.map(h => h.epid3dSumHorz_mm))
+      history.map(h => h.epid3dSumHorz_mm)
+    )
 
-    val colorList = Seq(
-      new Color(160, 160, 160),
-      new Color(80, 80, 80),
-      new Color(20, 20, 20),
-      new Color(204, 255, 51),
-      new Color(61, 245, 0),
-      new Color(46, 184, 0))
+    val colorList = Seq(new Color(160, 160, 160), new Color(80, 80, 80), new Color(20, 20, 20), new Color(204, 255, 51), new Color(61, 245, 0), new Color(46, 184, 0))
 
     new C3ChartHistory(
       Some(chartId),
       maintenanceRecordList,
       None, // width
       None, // height
-      "Date", history.map(h => h.date),
+      "Date",
+      history.map(h => h.date),
       None, // BaselineSpec
       Some(new C3Chart.Tolerance(-Config.BBbyEPIDChartTolerance_mm, Config.BBbyEPIDChartTolerance_mm)),
       Some(new C3Chart.YRange(-Config.BBbyEPIDChartYRange_mm, Config.BBbyEPIDChartYRange_mm)),
-      Seq(
-        "LEFT/RIGHT 0/180", "SUP/INF 0/180", "Vect Len 0/180",
-        "POST/ANT 90/270", "SUP/INF 90/270", "Vect Len 90/270"),
-      units, dataToBeGraphed, index, ".3r", colorList)
+      Seq("LEFT/RIGHT 0/180", "SUP/INF 0/180", "Vect Len 0/180", "POST/ANT 90/270", "SUP/INF 90/270", "Vect Len 90/270"),
+      units,
+      dataToBeGraphed,
+      index,
+      ".3r",
+      colorList
+    )
   }
 
   private val chart = {
-    val index = history.indexWhere(sh => sh.outpuPK == outputPK)
+    val index = history.indexWhere(sh => sh.outputPK == outputPK)
     if (index == -1)
       None
     else
       Some(chartOf(index))
   }
 
-  val chartScript = {
+  val chartScript: String = {
     if (chart.isDefined) chart.get.javascript
     else ""
   }
