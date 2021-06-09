@@ -1,19 +1,19 @@
 package org.aqa.webrun.bbByCBCT
 
-import org.restlet.Restlet
+import org.aqa.Logging
+import org.aqa.web.WebUtil._
 import org.restlet.Request
 import org.restlet.Response
-import org.aqa.web.WebUtil._
+import org.restlet.Restlet
 import org.restlet.data.MediaType
-import org.aqa.Logging
 import org.restlet.data.Status
 
 /**
- * Support for generating JS scripts on request.
- */
+  * Support for generating JS scripts on request.
+  */
 object BBbyCBCTChartHistoryRestlet {
   private val path = new String((new BBbyCBCTChartHistoryRestlet).pathOf)
-  def makeReference(outputPK: Long) = {
+  def makeReference(outputPK: Long): String = {
     "<script src='" + path + "?outputPK=" + outputPK + "'></script>"
   }
 }
@@ -30,9 +30,8 @@ class BBbyCBCTChartHistoryRestlet extends Restlet with SubUrlRoot with Logging {
       response.setStatus(Status.SUCCESS_OK)
       response.setEntity(js, MediaType.APPLICATION_JAVASCRIPT)
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         internalFailure(response, t)
-      }
     }
   }
 
