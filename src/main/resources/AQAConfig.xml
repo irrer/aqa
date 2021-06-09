@@ -340,7 +340,7 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Used for graphing center dose history, a positive integer indicating the number of values to display before and after (if
     they exist) the current point being plotted. -->
-    <CenterDoseHistoryRange>25</CenterDoseHistoryRange>
+    <CenterDoseHistoryRange>1000000</CenterDoseHistoryRange>
 
     <!-- List of beam names of that can be used to record dose at the center of the image. -->
     <CenterDoseBeamNameList>
@@ -410,7 +410,7 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Used for graphing wedge history, a positive integer indicating the number of values to display before and after (if
     they exist) the current point being plotted.. -->
-    <WedgeHistoryRange>25</WedgeHistoryRange>
+    <WedgeHistoryRange>1000000</WedgeHistoryRange>
 
     <!-- List of wedge beams.  Each entry gives the BeamName of the wedge, and a list of BackgroundBeamName's that
     are compatible as background for the wedge beam.  In general, the background must have a collimator and jaw opening that
@@ -459,7 +459,7 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Used for graphing symmetry, flatness, and constancy history, a positive integer indicating the 
     number of values to display before and after (if they exist) the current point being plotted.. -->
-    <SymFlatConstHistoryRange>25</SymFlatConstHistoryRange>
+    <SymFlatConstHistoryRange>1000000</SymFlatConstHistoryRange>
 
     <!-- List of names of beams to be evaluated for Symmetry, Flatness and Constancy. -->
     <SymmetryAndFlatnessBeamList>
@@ -554,7 +554,7 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Used for graphing VMAT history, a positive integer indicating the number of values to display before and after (if
     they exist) the current point being plotted. -->
-    <VMATHistoryRange>25</VMATHistoryRange>
+    <VMATHistoryRange>1000000</VMATHistoryRange>
 
     <!-- The maximum tolerance of error in floating point in mm for daily QA for CBCT.  Exceeding this means fail. -->
     <DailyQACBCTLimit_mm>1.0</DailyQACBCTLimit_mm>
@@ -621,7 +621,7 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Used for graphing CBCT BB history, a positive integer indicating the number of values to display before and after (if
     they exist) the current point being plotted. -->
-    <BBbyCBCTHistoryRange>25</BBbyCBCTHistoryRange>
+    <BBbyCBCTHistoryRange>1000000</BBbyCBCTHistoryRange>
 
     <!-- The distance in floating point in mm from center to search for the BB in EPID images in the isoplane. -->
     <BBbyEPIDSearchDistance_mm>4.0</BBbyEPIDSearchDistance_mm>
@@ -643,7 +643,7 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Used for graphing EPID BB history, a positive integer indicating the number of values to display before and after (if
     they exist) the current point being plotted. -->
-    <BBbyEPIDHistoryRange>25</BBbyEPIDHistoryRange>
+    <BBbyEPIDHistoryRange>1000000</BBbyEPIDHistoryRange>
    
     <!-- Used for graphing CBCT BB history, a positive floating point indicating the range of values above and below
     zero that indicate the tolerated limits. -->
