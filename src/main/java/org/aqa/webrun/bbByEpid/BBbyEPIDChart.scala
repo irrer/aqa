@@ -11,7 +11,8 @@ import org.aqa.db.MaintenanceRecord
 import org.aqa.db.MaintenanceCategory
 import org.aqa.web.C3Chart
 import org.aqa.Util
-import org.aqa.web.C3ChartHistory
+import org.aqa.web.C3ChartHistory2
+
 import java.awt.Color
 
 /**
@@ -39,12 +40,12 @@ class BBbyEPIDChart(outputPK: Long) extends Logging {
 
   def chartId = C3Chart.idTagPrefix + Util.textToId(machine.id)
 
-  def chartReference = {
+  def chartReferenceX = {
     val ciob = chartId
     <div id={ ciob }></div>
   }
 
-  private def chartOf(index: Int): C3ChartHistory = {
+  private def chartOf(index: Int): C3ChartHistory2 = {
     val units = "mm"
     val dataToBeGraphed = Seq(
       history.map(h => h.bbByEPIDComposite.offsetAdjusted_mm.get),
@@ -58,7 +59,7 @@ class BBbyEPIDChart(outputPK: Long) extends Logging {
       new Color(104, 187, 112),
       new Color(137, 187, 104))
 
-    new C3ChartHistory(
+    new C3ChartHistory2(
       Some(chartId),
       maintenanceRecordList,
       None, // width

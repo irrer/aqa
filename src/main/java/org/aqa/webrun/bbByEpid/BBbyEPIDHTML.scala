@@ -1,35 +1,34 @@
 package org.aqa.webrun.bbByEpid
 
-import org.aqa.webrun.ExtendedData
-import org.aqa.db.BBbyEPID
-import org.aqa.run.ProcedureStatus
-import org.aqa.db.BBbyEPIDComposite
-import org.aqa.Util
-import java.io.File
-import scala.xml.Elem
-import java.text.SimpleDateFormat
-import org.aqa.web.MachineUpdate
-import org.aqa.web.WebUtil
-import org.aqa.db.Output
-import java.awt.geom.Point2D
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.TagFromName
-import org.aqa.db.BBbyCBCT
-import edu.umro.ScalaUtil.DicomUtil
-import org.aqa.web.WebServer
-import org.aqa.db.DicomSeries
 import com.pixelmed.dicom.AttributeTag
-import org.aqa.web.OutputList
-import org.aqa.webrun.phase2.Phase2Util
-import org.aqa.AngleType
-import java.util.Date
-import org.aqa.Config
-import org.aqa.web.ViewOutput
+import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.AngleType
+import org.aqa.Util
+import org.aqa.db.BBbyCBCT
+import org.aqa.db.BBbyEPID
+import org.aqa.db.BBbyEPIDComposite
+import org.aqa.db.DicomSeries
+import org.aqa.db.Output
+import org.aqa.run.ProcedureStatus
+import org.aqa.web.C3ChartHistory2
+import org.aqa.web.MachineUpdate
+import org.aqa.web.OutputList
+import org.aqa.web.ViewOutput
+import org.aqa.web.WebUtil
+import org.aqa.webrun.ExtendedData
+
+import java.awt.geom.Point2D
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import scala.xml.Elem
 
 /**
- * Generate and write HTML for EPID BB analysis.
- */
+  * Generate and write HTML for EPID BB analysis.
+  */
 object BBbyEPIDHTML {
 
   private val closeUpImagePrefix = "CloseUp"
@@ -42,8 +41,8 @@ object BBbyEPIDHTML {
   private def fmtPrecise(d: Double) = d.formatted("%12.6f").trim // match precision shown in Matlab
 
   /**
-   * Get either the content or acquisition date+time in ms.
-   */
+    * Get either the content or acquisition date+time in ms.
+    */
   private def result2ms(al: AttributeList): Long = {
     val c = DicomUtil.getTimeAndDate(al, TagFromName.ContentDate, TagFromName.ContentTime)
     val a = DicomUtil.getTimeAndDate(al, TagFromName.AcquisitionDate, TagFromName.AcquisitionTime)
@@ -51,13 +50,19 @@ object BBbyEPIDHTML {
   }
 
   /**
-   * Get either the content or acquisition date+time in ms.
-   */
+    * Get either the content or acquisition date+time in ms.
+    */
   private def result2ms(r: Either[BBbyEPIDImageAnalysis.FailedResult, BBbyEPIDImageAnalysis.Result]): Long = {
     result2ms(BBbyEPIDImageAnalysis.alOf(r))
   }
 
-  def generateHtml(extendedData: ExtendedData, bbByEPIDList: Seq[Either[BBbyEPIDImageAnalysis.FailedResult, BBbyEPIDImageAnalysis.Result]], composite: Either[String, (BBbyEPIDComposite, Option[String])], runReq: BBbyEPIDRunReq, status: ProcedureStatus.Value): Unit = {
+  def generateHtml(
+      extendedData: ExtendedData,
+      bbByEPIDList: Seq[Either[BBbyEPIDImageAnalysis.FailedResult, BBbyEPIDImageAnalysis.Result]],
+      composite: Either[String, (BBbyEPIDComposite, Option[String])],
+      runReq: BBbyEPIDRunReq,
+      status: ProcedureStatus.Value
+  ): Unit = {
 
     val bbByCBCT: Option[BBbyCBCT] = {
       if ((composite.isRight) && (composite.right.get._1.bbByCBCTPK.isDefined))
@@ -78,13 +83,13 @@ object BBbyEPIDHTML {
       def wrapElement(col: Int, name: String, value: String, asAlias: Boolean): Elem = {
         val html =
           if (asAlias) {
-            <span aqaalias="">{ value }</span>
+            <span aqaalias="">{value}</span>
           } else {
             val valueList = value.split("\n");
-            { <span>{ valueList.head }{ valueList.tail.map(line => { <span><br/> { line } </span> }) }</span> }
+            { <span>{valueList.head}{valueList.tail.map(line => { <span><br/> {line} </span> })}</span> }
           }
 
-        { <div class={ "col-md-" + col }><em>{ name }:</em><br/>{ html }</div> }
+        { <div class={"col-md-" + col}><em>{name}:</em><br/>{html}</div> }
 
       }
 
@@ -96,7 +101,7 @@ object BBbyEPIDHTML {
       val elapsed: String = {
         val fin = extendedData.output.finishDate match {
           case Some(finDate) => finDate.getTime
-          case _ => System.currentTimeMillis
+          case _             => System.currentTimeMillis
         }
         val elapsed = fin - extendedData.output.startDate.getTime
         Util.elapsedTimeHumanFriendly(elapsed)
@@ -107,7 +112,7 @@ object BBbyEPIDHTML {
       val showMachine = {
         val href = "/admin/MachineUpdate?machinePK=22"
         <div class="col-md-1">
-          <h2 title="Treatment machine.  Click for details.">{ MachineUpdate.linkToMachineUpdate(extendedData.machine.machinePK.get, extendedData.machine.id) }</h2>
+          <h2 title="Treatment machine.  Click for details.">{MachineUpdate.linkToMachineUpdate(extendedData.machine.machinePK.get, extendedData.machine.id)}</h2>
         </div>
       }
 
@@ -115,19 +120,19 @@ object BBbyEPIDHTML {
         <div class="row">
           <div class="row">
             <div class="col-md-10 col-md-offset-1">
-              { showMachine }
-              { wrapElement(2, "Institution", extendedData.institution.name, true) }
-              { wrapElement(1, "Data Acquisition", dataAcquisitionDate, false) }
-              { wrapElement(1, "Analysis Started", twoLineDate.format(extendedData.output.startDate), false) }
-              { wrapElement(1, "User", extendedData.user.id, true) }
-              { wrapElement(1, "Elapsed", elapsed, false) }
-              { wrapElement(1, "Procedure", procedureDesc, false) }
-              <div class="col-md-1">{ OutputList.redoUrl(extendedData.output.outputPK.get) }</div>
+              {showMachine}
+              {wrapElement(2, "Institution", extendedData.institution.name, true)}
+              {wrapElement(1, "Data Acquisition", dataAcquisitionDate, false)}
+              {wrapElement(1, "Analysis Started", twoLineDate.format(extendedData.output.startDate), false)}
+              {wrapElement(1, "User", extendedData.user.id, true)}
+              {wrapElement(1, "Elapsed", elapsed, false)}
+              {wrapElement(1, "Procedure", procedureDesc, false)}
+              <div class="col-md-1">{OutputList.redoUrl(extendedData.output.outputPK.get)}</div>
             </div>
           </div>
           <div class="row">
             <div class="col-md-10 col-md-offset-1">
-              { content }
+              {content}
             </div>
           </div>
         </div>
@@ -149,8 +154,8 @@ object BBbyEPIDHTML {
         result match {
           case _ if result.isRight && r2epid.isVert => Some(fmtApprox(r2epid.epid3DX_mm) + ", NA, " + fmtApprox(r2epid.epid3DZ_mm) + " mm")
           case _ if result.isRight && r2epid.isHorz => Some("NA, " + fmtApprox(r2epid.epid3DY_mm) + ", " + fmtApprox(r2epid.epid3DZ_mm) + " mm")
-          case _ if result.isLeft => Some(result.left.get.error)
-          case _ => None
+          case _ if result.isLeft                   => Some(result.left.get.error)
+          case _                                    => None
         }
       }
 
@@ -183,17 +188,17 @@ object BBbyEPIDHTML {
           <div>
             <div class="row">
               <div class="col-md-3 col-md-offset-1">
-                <h2>Gantry Angle { gantryAngle.toString } </h2>
+                <h2>Gantry Angle {gantryAngle.toString} </h2>
               </div>
               <div class="col-md-2">
-                <h2> </h2><a href={ mainReportFileName } title="Return to main EPID report">Main Report</a>
+                <h2> </h2><a href={mainReportFileName} title="Return to main EPID report">Main Report</a>
               </div>
             </div>
             <div class="row">
               <pre>
-                { WebUtil.nl + DicomUtil.attributeListToString(al) }
+                {WebUtil.nl + DicomUtil.attributeListToString(al)}
               </pre>
-              { WebUtil.nl }
+              {WebUtil.nl}
               <p> </p>
             </div>
           </div>
@@ -204,60 +209,64 @@ object BBbyEPIDHTML {
         val file = new File(extendedData.output.dir, fileName)
         Util.writeFile(file, text)
 
-        val desc = { if (description.isDefined) { <br> { description.get } </br> } else <span/> }
+        val desc = {
+          if (description.isDefined) { <br> {description.get} </br> }
+          else <span/>
+        }
 
         val date = {
           BBbyEPIDAnnotateImages.epidDateText(al) match {
-            case Some(d) => <br>{ d }</br>
-            case _ => <span/>
+            case Some(d) => <br>{d}</br>
+            case _       => <span/>
           }
         }
 
         <div>
-          <a href={ fileName } title={ "View / download DICOM for gantry angle " + gantryAngle }>View DICOM</a>
-          { desc }{ date }
+          <a href={fileName} title={"View / download DICOM for gantry angle " + gantryAngle}>View DICOM</a>
+          {desc}{date}
         </div>
       }
 
       val html: Elem = {
 
         def imgRef(name: String, title: String) = {
-          <a href={ name }>
-            <h4>{ title }</h4>
-            <img width='400' src={ name }/>
+          <a href={name}>
+            <h4>{title}</h4>
+            <img width='400' src={name}/>
           </a>
         }
 
         def imgRefWithZoom(name: String, title: String, border: Boolean = false) = {
 
-          <a href={ name }>
-            <h4>{ title }</h4>
+          <a href={name}>
+            <h4>{title}</h4>
             Red circle shows center of EPID image rotation without CBCT correction.
-            <div class='zoom' id={ Util.textToId(name) }>
-              { if (border) { <img width='400' src={ name } style="border: 1px solid lightgrey;"/> } else { <img width='400' src={ name }/> } }
+            <div class='zoom' id={Util.textToId(name)}>
+              {
+            if (border) { <img width='400' src={name} style="border: 1px solid lightgrey;"/> }
+            else { <img width='400' src={name}/> }
+          }
             </div>
           </a>
         }
 
         <td>
           <center>
-            <h3 title={ "Gantry angle in degrees: " + gantryAngle }>
-              { "Gantry " + gantryAngleRounded }
+            <h3 title={"Gantry angle in degrees: " + gantryAngle}>
+              {"Gantry " + gantryAngleRounded}
             </h3>
             <br/>
-            { viewDicomMetadata }
+            {viewDicomMetadata}
             <br/>
-            { imgRefWithZoom(closeUpImageFileName, "Closeup of BB") }
+            {imgRefWithZoom(closeUpImageFileName, "Closeup of BB")}
             <br/>
-            { imgRefWithZoom(fullImageFileName, "Full Image", true) }
+            {imgRefWithZoom(fullImageFileName, "Full Image", true)}
           </center>
         </td>
       }
 
       val script = {
-        Seq(closeUpImageFileName, fullImageFileName).
-          map(fn => "      $(document).ready(function(){ $('#" + Util.textToId(fn) + "').zoom(); });\n").
-          mkString("\n      ")
+        Seq(closeUpImageFileName, fullImageFileName).map(fn => "      $(document).ready(function(){ $('#" + Util.textToId(fn) + "').zoom(); });\n").mkString("\n      ")
       }
     }
 
@@ -273,18 +282,18 @@ object BBbyEPIDHTML {
     val numberText = {
 
       def dataCol(name: String, title: String, value: Double, cols: Int) = {
-        <span title={ title } class={ "col-md-" + cols }>
-          { name + " : " + fmtPrecise(value) }
+        <span title={title} class={"col-md-" + cols}>
+          {name + " : " + fmtPrecise(value)}
         </span>
       }
 
       def tableMovement(composite: BBbyEPIDComposite) = {
-        def fmt(d: Option[Double]) = <span title={ fmtPrecise(d.get / 10) }>{ fmtApprox(d.get / 10) }</span>
+        def fmt(d: Option[Double]) = <span title={fmtPrecise(d.get / 10)}>{fmtApprox(d.get / 10)}</span>
         fmt(composite.tableXlateral_mm) + ","
         <div title="Table movement between CBCT and RTIMAGE, calculated with RTIMAGE - CT">
-          Table Movement X,Y,Z cm:{ fmt(composite.tableXlateral_mm) }
-          ,{ fmt(composite.tableYvertical_mm) }
-          ,{ fmt(composite.tableZlongitudinal_mm) }
+          Table Movement X,Y,Z cm:{fmt(composite.tableXlateral_mm)}
+          ,{fmt(composite.tableYvertical_mm)}
+          ,{fmt(composite.tableZlongitudinal_mm)}
         </div>
       }
 
@@ -299,7 +308,7 @@ object BBbyEPIDHTML {
         val z = db(TagByName.TableTopLongitudinalPosition) // tableZlongitudinal_mm
 
         <div title="Table position when CBCT was captured.">
-          Table Position X,Y,Z cm:{ x + "," + y + "," + z }
+          Table Position X,Y,Z cm:{x + "," + y + "," + z}
         </div>
       }
 
@@ -311,13 +320,13 @@ object BBbyEPIDHTML {
             val cbctReference = {
               val timeText = new SimpleDateFormat("K:mm a").format(cbctOutput.get.dataDate.get)
               <div title="View CBCT report">
-                <a href={ ViewOutput.viewOutputUrl(cbctOutput.get.outputPK.get) }>CBCT at { timeText }</a>
+                <a href={ViewOutput.viewOutputUrl(cbctOutput.get.outputPK.get)}>CBCT at {timeText}</a>
               </div>
             }
 
             def matlabReference: Elem = {
               <div title="Executable Matlab script showing calculations. Copy and paste to Matlab.">
-                <a href={ matlabFileName } style="margin:20px;">Matlab</a>
+                <a href={matlabFileName} style="margin:20px;">Matlab</a>
               </div>
             }
 
@@ -328,30 +337,30 @@ object BBbyEPIDHTML {
               fmtPrecise(composite.right.get._1.offsetAdjusted_mm.get)
 
             <div>
-              <h3 title={ title }>
+              <h3 title={title}>
                 {
-                  "With CBCT Offset (mm): " + sp +
-                    "X:" + fmtApprox(composite.right.get._1.xAdjusted_mm.get) + sp +
-                    "Y:" + fmtApprox(composite.right.get._1.yAdjusted_mm.get) + sp +
-                    "Z:" + fmtApprox(composite.right.get._1.zAdjusted_mm.get) + sp +
-                    " :: " + fmtApprox(composite.right.get._1.offsetAdjusted_mm.get)
-                }
+              "With CBCT Offset (mm): " + sp +
+                "X:" + fmtApprox(composite.right.get._1.xAdjusted_mm.get) + sp +
+                "Y:" + fmtApprox(composite.right.get._1.yAdjusted_mm.get) + sp +
+                "Z:" + fmtApprox(composite.right.get._1.zAdjusted_mm.get) + sp +
+                " :: " + fmtApprox(composite.right.get._1.offsetAdjusted_mm.get)
+            }
               </h3>
               <div class="row">
-                <div class="col-md-4">{ tableMovement(composite.right.get._1) }</div>
-                <div class="col-md-2">{ cbctReference }</div>
-                <div class="col-md-3">{ matlabReference }</div>
+                <div class="col-md-4">{tableMovement(composite.right.get._1)}</div>
+                <div class="col-md-2">{cbctReference}</div>
+                <div class="col-md-3">{matlabReference}</div>
               </div>
             </div>
           } else {
             <div title="There was no corresponding CBCT.  CBCT must be taken earlier than the EPID and on the same day.">
               <h3>No CBCT results corresponding to these EPID images.</h3>
-              { tablePosition }
+              {tablePosition}
             </div>
           }
         } else {
           <div title="Common causes are BB not found or there were not two images with perpendicular gantry angles.">
-            <h3>Error: { composite.left.get }</h3>
+            <h3>Error: {composite.left.get}</h3>
           </div>
 
         }
@@ -365,7 +374,7 @@ object BBbyEPIDHTML {
             val title = "The actual plan that was used for these images may be different than" + WebUtil.titleNewline +
               "the plan used for the CBCT.  The requirement is that they have the same frame of" + WebUtil.titleNewline +
               "reference.  The SOP to capture RTIMAGEs was " + runReq.sopOfRTPlan
-            <div title={ title }>Could not find referenced plan</div>
+            <div title={title}>Could not find referenced plan</div>
           }
         } else {
           val rtplanAl = DicomSeries.getBySopInstanceUID(runReq.sopOfRTPlan.get).head.attributeListList.head
@@ -380,17 +389,17 @@ object BBbyEPIDHTML {
                   <h2>RTPLAN</h2>
                 </div>
                 <div class="col-md-2">
-                  <h2> </h2><a href={ mainReportFileName } title="Return to main EPID report">Main Report</a>
+                  <h2> </h2><a href={mainReportFileName} title="Return to main EPID report">Main Report</a>
                 </div>
                 <div class="col-md-2">
-                  <h2> </h2><a href={ dicomFile.getName } title="Download anonymized DICOM">Download DICOM</a>
+                  <h2> </h2><a href={dicomFile.getName} title="Download anonymized DICOM">Download DICOM</a>
                 </div>
               </div>
               <div class="row">
                 <pre>
-                  { WebUtil.nl + DicomUtil.attributeListToString(rtplanAl) }
+                  {WebUtil.nl + DicomUtil.attributeListToString(rtplanAl)}
                 </pre>
-                { WebUtil.nl }
+                {WebUtil.nl}
                 <p> </p>
               </div>
             </div>
@@ -400,7 +409,7 @@ object BBbyEPIDHTML {
           val file = new File(extendedData.output.dir, htmlRtplanFileName)
           Util.writeFile(file, text)
 
-          <a href={ htmlRtplanFileName } title={ "View / download RTPLAN DICOM" }>View RTPLAN DICOM</a>
+          <a href={htmlRtplanFileName} title={"View / download RTPLAN DICOM"}>View RTPLAN DICOM</a>
         }
       }
 
@@ -410,13 +419,13 @@ object BBbyEPIDHTML {
             <h2 title="Procedure performed">EPID BB Location</h2>
           </div>
           <div class="col-md-1">
-            { WebUtil.coordinateDiagramElem(80) }
+            {WebUtil.coordinateDiagramElem(80)}
           </div>
           <div class="col-md-8">
-            { numbersWithCbct }
+            {numbersWithCbct}
           </div>
           <div class="col-md-1">
-            { planReference }
+            {planReference}
           </div>
         </div>
       }
@@ -425,10 +434,10 @@ object BBbyEPIDHTML {
 
     def imageHtml(index: Int, getImageFileName: Int => String, title: String) = {
       val name = getImageFileName(index)
-      <a href={ name } title={ title }>
-        <div id={ Util.textToId(name) }>
-          <a href={ name }>
-            <img src={ name } class="img-responsive"/>
+      <a href={name} title={title}>
+        <div id={Util.textToId(name)}>
+          <a href={name}>
+            <img src={name} class="img-responsive"/>
           </a>
         </div>
       </a>
@@ -438,9 +447,9 @@ object BBbyEPIDHTML {
       if (bbByCBCT.isDefined && composite.isRight) {
         val cbct = bbByCBCT.get
         val epidComposite = composite.right.get._1
-        def fmt(d: Double) = { <td title={ fmtPrecise(d) }>{ fmtApprox(d) }</td> }
+        def fmt(d: Double) = { <td title={fmtPrecise(d)}>{fmtApprox(d)}</td> }
 
-        def fmtTd(d: Double) = { <td title={ fmtPrecise(d) }>{ fmtApprox(d) }</td> }
+        def fmtTd(d: Double) = { <td title={fmtPrecise(d)}>{fmtApprox(d)}</td> }
 
         def epidToDate(epid: BBbyEPID): Option[Date] = {
           val dsOpt = DicomSeries.getBySopInstanceUID(epid.epidSOPInstanceUid).headOption
@@ -461,7 +470,7 @@ object BBbyEPIDHTML {
 
         def vectorLengthColumn(x: Double, y: Double, z: Double) = {
           val d = Math.sqrt((x * x) + (y * y) + (z * z))
-          <td title={ fmtPrecise(d) }>{ fmtApprox(d) }</td>
+          <td title={fmtPrecise(d)}>{fmtApprox(d)}</td>
         }
 
         def elapsedText(ms: Long): String = {
@@ -476,17 +485,14 @@ object BBbyEPIDHTML {
           val gantryAngle = Util.angleRoundedTo90(rslt.bbByEpid.gantryAngle_deg)
 
           <tr style="text-align: center;">
-            <td style="text-align: right;">MV G<b>{ gantryAngle.toString }</b> (BB - DIGITAL_CAX) @ ISOCENTER PLANE</td>
-            <td>{ elapsedText(result2ms(rslt.al)) }</td>
-            { if (rslt.bbByEpid.isVert) fmtTd(rslt.bbByEpid.epid3DX_mm) else na }
-            { if (rslt.bbByEpid.isHorz) fmtTd(rslt.bbByEpid.epid3DY_mm) else na }
-            { fmtTd(rslt.bbByEpid.epid3DZ_mm) }
+            <td style="text-align: right;">MV G<b>{gantryAngle.toString}</b> (BB - DIGITAL_CAX) @ ISOCENTER PLANE</td>
+            <td>{elapsedText(result2ms(rslt.al))}</td>
+            {if (rslt.bbByEpid.isVert) fmtTd(rslt.bbByEpid.epid3DX_mm) else na}
+            {if (rslt.bbByEpid.isHorz) fmtTd(rslt.bbByEpid.epid3DY_mm) else na}
+            {fmtTd(rslt.bbByEpid.epid3DZ_mm)}
             {
-              vectorLengthColumn(
-                if (rslt.bbByEpid.isVert) rslt.bbByEpid.epid3DX_mm else 0.0,
-                if (rslt.bbByEpid.isHorz) rslt.bbByEpid.epid3DY_mm else 0.0,
-                rslt.bbByEpid.epid3DZ_mm)
-            }
+            vectorLengthColumn(if (rslt.bbByEpid.isVert) rslt.bbByEpid.epid3DX_mm else 0.0, if (rslt.bbByEpid.isHorz) rslt.bbByEpid.epid3DY_mm else 0.0, rslt.bbByEpid.epid3DZ_mm)
+          }
           </tr>
         }
 
@@ -497,17 +503,18 @@ object BBbyEPIDHTML {
           val isHorz = !isVert
 
           <tr style="text-align: center;">
-            <td style="text-align: right;">MV G<b>{ gantryAngle.toString }</b> (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER)</td>
-            <td>{ elapsedText(result2ms(rslt.al)) }</td>
-            { if (isVert) fmtTd(rslt.bbByEpid.epid3DX_mm - cbct.err_mm.getX) else na }
-            { if (isHorz) fmtTd(rslt.bbByEpid.epid3DY_mm - cbct.err_mm.getY) else na }
-            { fmtTd(rslt.bbByEpid.epid3DZ_mm - cbct.err_mm.getZ) }
+            <td style="text-align: right;">MV G<b>{gantryAngle.toString}</b> (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER)</td>
+            <td>{elapsedText(result2ms(rslt.al))}</td>
+            {if (isVert) fmtTd(rslt.bbByEpid.epid3DX_mm - cbct.err_mm.getX) else na}
+            {if (isHorz) fmtTd(rslt.bbByEpid.epid3DY_mm - cbct.err_mm.getY) else na}
+            {fmtTd(rslt.bbByEpid.epid3DZ_mm - cbct.err_mm.getZ)}
             {
-              vectorLengthColumn(
-                if (isVert) rslt.bbByEpid.epid3DX_mm - cbct.err_mm.getX else 0.0,
-                if (isHorz) rslt.bbByEpid.epid3DY_mm - cbct.err_mm.getY else 0.0,
-                rslt.bbByEpid.epid3DZ_mm - cbct.err_mm.getZ)
-            }
+            vectorLengthColumn(
+              if (isVert) rslt.bbByEpid.epid3DX_mm - cbct.err_mm.getX else 0.0,
+              if (isHorz) rslt.bbByEpid.epid3DY_mm - cbct.err_mm.getY else 0.0,
+              rslt.bbByEpid.epid3DZ_mm - cbct.err_mm.getZ
+            )
+          }
           </tr>
         }
 
@@ -536,30 +543,24 @@ object BBbyEPIDHTML {
             <tr style="text-align: center;">
               <td style="text-align: right;">CBCT(BB - DIGITAL_PLANNED_ISOCENTER)</td>
               <td></td>
-              { fmt(cbct.err_mm.getX) }
-              { fmt(cbct.err_mm.getY) }
-              { fmt(cbct.err_mm.getZ) }
+              {fmt(cbct.err_mm.getX)}
+              {fmt(cbct.err_mm.getY)}
+              {fmt(cbct.err_mm.getZ)}
               {
-                vectorLengthColumn(
-                  cbct.err_mm.getX,
-                  cbct.err_mm.getY,
-                  cbct.err_mm.getZ)
-              }
+          vectorLengthColumn(cbct.err_mm.getX, cbct.err_mm.getY, cbct.err_mm.getZ)
+        }
             </tr>
-            { epidDateListSorted.filter(_.isRight).map(r => fmtEpidWithoutCbct(r.right.get)) }
-            { epidDateListSorted.filter(_.isRight).map(r => fmtEpidWithCbct(r.right.get)) }
+            {epidDateListSorted.filter(_.isRight).map(r => fmtEpidWithoutCbct(r.right.get))}
+            {epidDateListSorted.filter(_.isRight).map(r => fmtEpidWithCbct(r.right.get))}
             <tr style="text-align: center;">
               <td style="text-align: right;">AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER)</td>
               <td></td>
-              { fmt(epidComposite.xAdjusted_mm.get) }
-              { fmt(epidComposite.yAdjusted_mm.get) }
-              { fmt(epidComposite.zAdjusted_mm.get) }
+              {fmt(epidComposite.xAdjusted_mm.get)}
+              {fmt(epidComposite.yAdjusted_mm.get)}
+              {fmt(epidComposite.zAdjusted_mm.get)}
               {
-                vectorLengthColumn(
-                  epidComposite.xAdjusted_mm.get,
-                  epidComposite.yAdjusted_mm.get,
-                  epidComposite.zAdjusted_mm.get)
-              }
+          vectorLengthColumn(epidComposite.xAdjusted_mm.get, epidComposite.yAdjusted_mm.get, epidComposite.zAdjusted_mm.get)
+        }
             </tr>
           </table>
         </div>
@@ -570,17 +571,17 @@ object BBbyEPIDHTML {
     def content = {
       <div>
         <div class="row">
-          { numberText }
+          {numberText}
         </div>
         <div class="row">
           <div class="col-md-12">
-            { numberTable }
+            {numberTable}
           </div>
         </div>
         <div class="row" style="border: 1px solid lightgrey">
           <div style="margin: 5px;">
             <center><h3>(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER)</h3></center>
-            { chart.chartReference }
+            {C3ChartHistory2.htmlRef(chart.chartId)}
           </div>
         </div>
         <div class="row">
@@ -589,13 +590,13 @@ object BBbyEPIDHTML {
         <div class="row" style="border: 1px solid lightgrey">
           <div style="margin: 5px;">
             <center><h3>(BB - DIGITAL_CAX) @ ISOCENTER PLANE</h3></center>
-            { chartPartial.chartReference }
+            {chartPartial.chartReference}
           </div>
         </div>
         <div class="row">
           <table class="table table-responsive">
             <tr>
-              { imageSetList.map(imageSet => imageSet.html) }
+              {imageSetList.map(imageSet => imageSet.html)}
             </tr>
           </table>
         </div>

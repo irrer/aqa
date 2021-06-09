@@ -173,3 +173,44 @@ $(document).ready(function() {
     loadDynamicContent("DynamicContent" + i.toString());
   }
 });
+
+
+
+// make a sorted list of all distinct dates in a history chart
+function getHistoryChartDateList(chart) {
+  var rng = chart.axis.range();
+  var dtList = [];
+  for (const x of chart.data()) {
+      for (const t of x.values) {
+        if (dtList.indexOf(t.x) === -1) dtList.push(t.x)
+      }
+  }
+  dtList.sort(function(a, b) {
+    return a.getTime() - b.getTime();
+  });
+
+  return dtList;
+}
+
+// change which part of the history chart to look at
+function moveHistoryChart(chart, dateList, start, count) {
+
+  var len = dateList.length;
+  var c = (count * ((dateList.length - 4) / 100.0)).toFixed(0);
+  c = Math.max(3, c);
+  c = Math.min(len-1, c); // actual number of items to show
+
+  // get index of first item to show
+  var mn = ((start / 100.0) * (dateList.length-c)).toFixed(0);
+  var mn = Math.max(0, mn);
+
+  // get index of last item to show
+  var mx = Math.min(mn + c, dateList.length - 1);
+  // mn = Math.max(mx - c, 0);
+
+  var rng = chart.axis.range();
+  rng.min.x = dateList[mn];
+  rng.max.x = dateList[mx];
+  // console.log(mn + " : " + mx);
+  chart.axis.range(rng);
+}
