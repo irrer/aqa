@@ -11,7 +11,7 @@ import org.aqa.db.MaintenanceRecord
 import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.web.C3Chart
-import org.aqa.web.C3ChartHistory
+import org.aqa.web.C3ChartHistory2
 
 import java.awt.Color
 import scala.xml.Elem
@@ -42,11 +42,10 @@ class BBbyCBCTChart(outputPK: Long) extends Logging {
   def chartId: String = C3Chart.idTagPrefix + Util.textToId(machine.id)
 
   def chartReference: Elem = {
-    val ciob = chartId
-    <div id={ciob}>{ciob}</div>
+    C3ChartHistory2.htmlRef(chartId)
   }
 
-  private def chartOf: C3ChartHistory = {
+  private def chartOf: C3ChartHistory2 = {
     val index = history.indexWhere(sh => sh.bbByCBCT.outputPK == output.outputPK.get)
     val units = "mm"
     val dataToBeGraphed = Seq(
@@ -58,7 +57,7 @@ class BBbyCBCTChart(outputPK: Long) extends Logging {
 
     val colorList = Seq(new Color(102, 136, 187), new Color(104, 187, 154), new Color(104, 187, 112), new Color(137, 187, 104))
 
-    new C3ChartHistory(
+    new C3ChartHistory2(
       Some(chartId),
       maintenanceRecordList,
       None, // width
