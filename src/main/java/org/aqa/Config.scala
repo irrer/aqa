@@ -140,7 +140,6 @@ object Config extends Logging {
 
   @tailrec
   private def getDoc(dirList: List[File], name: String): Option[Elem] = {
-    if (dirList.length < 1) None
     val elem = readFile(dirList.head, name)
     elem match {
       case Some(_) => elem
@@ -197,7 +196,7 @@ object Config extends Logging {
       "Many configuration values have a default value that is used if the value is not specified in the configuration file.  Example log messages of configuration values: \n" +
         "        AuthenticationTimeout (same as default): 7200.0             <== means that there was a default value and the value was given in the configuration file and they were the same.\n" +
         "        BBbyEPIDSearchDistance_mm (default: 10.0 overridden): 4.0   <== means that there was a default value and the value was given in the configuration file and they were different.\n" +
-        "        BBbyCBCTHistoryRange (defaulted): 25                        <== means that there was a default value but the value was not given in the configuration file so the default value was used.\n\n"
+        "        BBbyCBCTHistoryRange (defaulted): 1000000                   <== means that there was a default value but the value was not given in the configuration file so the default value was used.\n\n"
     vt
   }
 
@@ -741,7 +740,7 @@ object Config extends Logging {
   val passImageUrl = "/static/images/pass.png"
   val failImageUrl = "/static/images/fail.png"
 
-  val RootUrl = logMainText("RootUrl", "https://automatedqualityassurance.org")
+  val RootUrl: String = logMainText("RootUrl", "https://automatedqualityassurance.org")
 
   val FloodFieldBeamName: String = logMainText("FloodFieldBeamName", "Flood 6X")
 
@@ -790,7 +789,7 @@ object Config extends Logging {
   requireReadableDirectory("machineConfigurationDirFile", machineConfigurationDirFile)
 
   val CenterDoseRadius_mm: Double = logMainText("CenterDoseRadius_mm", "5.0").toDouble
-  val CenterDoseHistoryRange: Int = logMainText("CenterDoseHistoryRange", "25").toInt
+  val CenterDoseHistoryRange: Int = logMainText("CenterDoseHistoryRange", "1000000").toInt
   val CenterDoseBeamNameList: Seq[String] = getCenterDoseBeamNameList
 
   val CollimatorPositionTolerance_mm: Double = logMainText("CollimatorPositionTolerance_mm", "2.0").toDouble
@@ -801,13 +800,13 @@ object Config extends Logging {
   val WedgeProfileThickness_mm: Double = logMainText("WedgeProfileThickness_mm", "5.0").toDouble
   val WedgeBeamList: Seq[WedgeBeam] = getWedgeBeamList
   val WedgeTolerance_pct: Double = logMainText("WedgeTolerance_pct", "2.0").toDouble
-  val WedgeHistoryRange: Int = logMainText("WedgeHistoryRange", "25").toInt
+  val WedgeHistoryRange: Int = logMainText("WedgeHistoryRange", "1000000").toInt
 
   val SymmetryAndFlatnessDiameter_mm: Double = logMainText("SymmetryAndFlatnessDiameter_mm", "5.0").toDouble
 
   val SymmetryPercentLimit: Double = logMainText("SymmetryPercentLimit", "2.0").toDouble
   val FlatnessPercentLimit: Double = logMainText("FlatnessPercentLimit", "2.0").toDouble
-  val SymFlatConstHistoryRange: Int = logMainText("SymFlatConstHistoryRange", "25").toInt
+  val SymFlatConstHistoryRange: Int = logMainText("SymFlatConstHistoryRange", "1000000").toInt
   val ProfileConstancyPercentLimit: Double = logMainText("ProfileConstancyPercentLimit", "2.0").toDouble
 
   val SymmetryAndFlatnessBeamList: immutable.Seq[String] = getSymmetryAndFlatnessBeamList
@@ -829,7 +828,7 @@ object Config extends Logging {
   val VMATDeviationThreshold_pct: Double = logMainText("VMATDeviationThreshold_pct", "3.0").toDouble
   val VMATAverageOfAbsoluteDeviationThreshold_pct: Double = logMainText("VMATAverageOfAbsoluteDeviationThreshold_pct", "1.5").toDouble
   val VMATBeamPairList: Seq[VMATBeamPair] = getVMATBeamPairList
-  val VMATHistoryRange: Int = logMainText("VMATHistoryRange", "25").toInt
+  val VMATHistoryRange: Int = logMainText("VMATHistoryRange", "1000000").toInt
 
   val DailyQACBCTLimit_mm: Double = logMainText("DailyQACBCTLimit_mm", "1.0").toDouble
   val DailyQAPassLimit_mm: Double = logMainText("DailyQAPassLimit_mm", "1.0").toDouble
@@ -845,21 +844,21 @@ object Config extends Logging {
   val CBCTBBPenumbra_mm: Double = logMainText("CBCTBBPenumbra_mm", "2.5").toDouble
   val CBCTZoomSize_mm: Double = logMainText("CBCTZoomSize_mm", "40.0").toDouble
   val CBCTImageColor: Color = Util.hexToColor(logMainText("CBCTImageColor", "FFFFFF"))
-  val BBbyCBCTHistoryRange: Int = logMainText("BBbyCBCTHistoryRange", "25").toInt
+  val BBbyCBCTHistoryRange: Int = logMainText("BBbyCBCTHistoryRange", "1000000").toInt
 
   val BBbyEPIDSearchDistance_mm: Double = logMainText("BBbyEPIDSearchDistance_mm", "10.0").toDouble
   val EPIDBBPenumbra_mm: Double = logMainText("EPIDBBPenumbra_mm", "2.0").toDouble
   val EPIDBBMinimumStandardDeviation: Double = logMainText("EPIDBBMinimumStandardDeviation", "1.25").toDouble
   val EPIDImageColor: Color = Util.hexToColor(logMainText("EPIDImageColor", "FFFFFF"))
   val EPIDZoomSize_mm: Double = logMainText("EPIDZoomSize_mm", "90.0").toDouble
-  val BBbyEPIDHistoryRange: Int = logMainText("BBbyEPIDHistoryRange", "25").toInt
+  val BBbyEPIDHistoryRange: Int = logMainText("BBbyEPIDHistoryRange", "1000000").toInt
   val BBbyCBCTChartTolerance_mm: Double = logMainText("BBbyCBCTChartTolerance_mm", "1.0").toDouble.abs
   val BBbyCBCTChartYRange_mm: Double = logMainText("BBbyCBCTChartYRange_mm", "3.0").toDouble.abs
   val BBbyEPIDChartTolerance_mm: Double = logMainText("BBbyEPIDChartTolerance_mm", "1.0").toDouble.abs
   val BBbyEPIDChartYRange_mm: Double = logMainText("BBbyEPIDChartYRange_mm", "3.0").toDouble.abs
   val BBbyCBCTMaximumSliceThickness_mm: Double = logMainText("BBbyCBCTMaximumSliceThickness_mm", "1.0").toDouble.abs
 
-  val GapSkewBeamNameList = getGapSkewBeamNameList
+  val GapSkewBeamNameList: List[String] = getGapSkewBeamNameList
   val GapSkewLeafSidePad_mm: Double = logMainText("GapSkewLeafSidePad_mm", "1.0").toDouble.abs
   val GapSkewLeafSideFinding_mm: Double = logMainText("GapSkewLeafSideFinding_mm", "5.0").toDouble.abs
   val GapSkewLeafEndPenumbra_mm: Double = logMainText("GapSkewLeafEndPenumbra_mm", "20.0").toDouble.abs
