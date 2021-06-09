@@ -56,13 +56,21 @@ class C3ChartHistory2(
   }
 
   private def column(label: String, valueList: Seq[Double]): String = {
-    "[ '" + label + "', " + valueList.mkString(", ") + "]"
+    if (valueList.isEmpty)
+      "[ '" + label + "' ]"
+    else
+      "[ '" + label + "', " + valueList.mkString(", ") + "]"
   }
 
-  private def textColumn(valueList: Seq[String]): String = valueList.map(t => "'" + t + "'").mkString("[ ", ", ", "]")
+  private def textColumn(valueList: Seq[String]): String = {
+    valueList.map(t => "'" + t + "'").mkString("[ ", ", ", "]")
+  }
 
   private def dateColumn(label: String, valueList: Seq[Date]): String = {
-    "[ '" + label + "', " + valueList.map(d => "'" + Util.standardDateFormat.format(d) + "'").mkString(", ") + "]"
+    if (valueList.isEmpty)
+      "[ '" + label + "' ]"
+    else
+      "[ '" + label + "', " + valueList.map(d => "'" + Util.standardDateFormat.format(d) + "'").mkString(", ") + "]"
   }
 
   private val yColorNameList = textColumn(yColorList.map(c => (c.getRGB & 0xffffff).formatted("#%06x")))
@@ -106,7 +114,7 @@ class C3ChartHistory2(
     </div>
   }
 
-  val html = C3ChartHistory2.htmlRef(chartIdTag)
+  val html: Elem = C3ChartHistory2.htmlRef(chartIdTag)
 
   Trace.trace(html) // TODO rm
 
@@ -157,61 +165,48 @@ class C3ChartHistory2(
   }
 
   val javascript: String = {
-    """
-var """ + chartIdTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, height) +
-      """
+    s"""
+var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
     tooltip: {
       format: {
         value: function (value, ratio, id, index) {
-          var maintenanceSummaryList = """ + maintenanceSummaryList +
-      """;
+          var maintenanceSummaryList = $maintenanceSummaryList;
           if (id === 'MaintenanceRecord') return maintenanceSummaryList[index/2];
-          return d3.format('""" + yFormat +
-      """')(value);
+          return d3.format('$yFormat')(value);
           },
           name: function (name, ratio, id, index) {
-            var maintenanceCategoryList = """ + maintenanceCategoryList +
-      """;
+            var maintenanceCategoryList = $maintenanceCategoryList;
               if (id === 'MaintenanceRecord') return maintenanceCategoryList[index/2];
               return id;
-              },
+          },
           title: function (value) { 
               return formatDate(value) + " &nbsp; " + formatTime(value);
-        }
+          }
       }
     },
     data: {
       xs: {
-        """ + yLabels +
-      """
+        $yLabels
         'MaintenanceRecord': 'maintenanceDateList'
         },
         xFormat: standardDateFormat,
         columns: [
-          """ + dateColumn(xLabel, xDateList) +
-      """,
-          """ + yText +
-      """,
-          """ + maintenanceDateList +
-      """,
-          """ + maintenanceValueList +
-      """
+          ${dateColumn(xLabel, xDateList)},
+          $yText,
+          $maintenanceDateList,
+          $maintenanceValueList
         ],
         types: {
-          """ + yAxisLabels.map(label => "'" + label + "' : 'line'").mkString(",\n          ") +
-      """,
+          ${yAxisLabels.map(label => "'" + label + "' : 'line'").mkString(",\n          ")},
           'MaintenanceRecord': 'bar'
         },
         color: function (color, d) {
-          var maintenanceColorList = """ + maintenanceColorList +
-      """;
+          var maintenanceColorList = $maintenanceColorList;
           if (d.id === 'MaintenanceRecord') return maintenanceColorList[d.index % maintenanceColorList.length];
-          if (d.index == """ + yIndex +
-      """) return 'orange';
+          if (d.index === $yIndex) return 'orange';
           return color;
         }
-    }""" + grid +
-      """,
+    }$grid,
     point: {
         r: 2,
         focus : {
@@ -220,24 +215,19 @@ var """ + chartIdTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, hei
             }
         }
     },
-    bindto : '#""" + chartIdTag +
-      """',
+    bindto : '#$chartIdTag',
     axis: {
        x: {
          label: 'Date',
          type: 'timeseries',
-         min: '""" + Util.standardDateFormat.format(minDate) +
-      """',
-         max: '""" + Util.standardDateFormat.format(maxDate) +
-      """',
+         min: '${Util.standardDateFormat.format(minDate)}',
+         max: '${Util.standardDateFormat.format(maxDate)}',
          tick: { format: function(dt) { return [ formatDate(dt) , formatTime(dt) ]; } }
        },
        y: {
-         """ + C3Chart.rangeText(yRangeY.min, yRangeY.max) + """         label: '""" + yDataLabel +
-      """',
+         ${C3Chart.rangeText(yRangeY.min, yRangeY.max)}         label: '$yDataLabel',
          tick: {
-           format: d3.format('""" + yFormat +
-      """')
+           format: d3.format('$yFormat')
          }
        }
     },
@@ -249,8 +239,7 @@ var """ + chartIdTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, hei
       top: 10
     },
     color : {
-      pattern : """ + yColorNameList +
-      """
+      pattern : $yColorNameList
     }
   });
 
@@ -267,7 +256,7 @@ var """ + chartIdTag + """ = c3.generate({""" + C3Chart.chartSizeText(width, hei
          |  moveHistoryChart(@@, @@dateList, @@start, @@count);
          |}
          |
-         |var @@sliderCount = document.getElementById("@@aSliderCount");
+         |var @@sliderCount = document.getElementById("@@SliderCount");
          |@@sliderCount.oninput = function() {
          |  @@count = parseInt(this.value);
          |  moveHistoryChart(@@, @@dateList, @@start, @@count);
@@ -286,13 +275,13 @@ object C3ChartHistory2 {
         {chartIdTag}
       </div>
       <div class="row">
-        <div class="col-md-10">
+        <div class="col-md-10" title={"Slide all the way to the left to show the" + WebUtil.titleNewline + " oldest, to the right for newest."}>
           <label for={chartIdTag + "Slider"}>Show older or newer entries</label>
-          <input type="range" min="0" max="100" value="50" id={chartIdTag + "Slider"} title="Show older or new entries."/>
+          <input type="range" min="0" max="100" value="50" id={chartIdTag + "Slider"}/>
         </div>
-        <div class="col-md-2" style="visibility: visible;">
+        <div class="col-md-2" style="visibility: visible;" title={"Slide to the left to show just a few, slide all" + WebUtil.titleNewline + " the way to the right to show all of them."}>
           <label for={chartIdTag + "SliderCount"}>Show fewer or more entries</label>
-          <input type="range" min="0" max="100" value="50" id={chartIdTag + "SliderCount"} title="Show fewer or more entries."/>
+          <input type="range" min="0" max="100" value="50" id={chartIdTag + "SliderCount"}/>
         </div>
       </div>
     </div>
