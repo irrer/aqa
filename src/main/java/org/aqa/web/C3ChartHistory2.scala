@@ -243,7 +243,7 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
     }
   });
 
-""" +
+""" + // js to set up scroll bars
       s"""
          |var @@count = 50;
          |var @@start = 50;
