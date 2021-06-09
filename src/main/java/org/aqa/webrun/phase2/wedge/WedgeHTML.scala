@@ -9,6 +9,7 @@ import org.aqa.Util
 import org.aqa.db.WedgePoint
 import org.aqa.run.ProcedureStatus
 import org.aqa.web.C3Chart
+import org.aqa.web.C3ChartHistory
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
@@ -170,7 +171,7 @@ object WedgeHTML {
         </div>
         <div class="row">
           <h4>History of Wedge Point</h4>
-          {C3Chart.html(C3Chart.idTagPrefix + Util.textToId(wedgePoint.wedgeBeamName))}
+          {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(wedgePoint.wedgeBeamName))}
         </div>
         <div class="row">
           <div class="col-md-5">

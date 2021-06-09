@@ -1,30 +1,30 @@
 package org.aqa.webrun.bbByEpid
 
+import org.aqa.Config
 import org.aqa.Logging
-import org.aqa.db.Output
-import org.aqa.db.Procedure
+import org.aqa.Util
+import org.aqa.db.BBbyEPIDComposite
 import org.aqa.db.Input
 import org.aqa.db.Machine
-import org.aqa.db.BBbyEPIDComposite
-import org.aqa.Config
-import org.aqa.db.MaintenanceRecord
 import org.aqa.db.MaintenanceCategory
+import org.aqa.db.MaintenanceRecord
+import org.aqa.db.Output
+import org.aqa.db.Procedure
 import org.aqa.web.C3Chart
-import org.aqa.Util
-import org.aqa.web.C3ChartHistory2
+import org.aqa.web.C3ChartHistory
 
 import java.awt.Color
 
 /**
- * Make a history chart for BBbyEPID.
- */
+  * Make a history chart for BBbyEPID.
+  */
 class BBbyEPIDChart(outputPK: Long) extends Logging {
 
-  val output = Output.get(outputPK).get
-  val procedure = Procedure.get(output.procedurePK).get
-  val input = Input.get(output.inputPK).get
-  val machine = Machine.get(output.machinePK.get).get
-  val history = BBbyEPIDComposite.history(machine.machinePK.get, procedure.procedurePK.get)
+  val output: Output = Output.get(outputPK).get
+  val procedure: Procedure = Procedure.get(output.procedurePK).get
+  val input: Input = Input.get(output.inputPK).get
+  val machine: Machine = Machine.get(output.machinePK.get).get
+  val history: Seq[BBbyEPIDComposite.BBbyEPIDCompositeHistory] = BBbyEPIDComposite.history(machine.machinePK.get, procedure.procedurePK.get)
 
   private val allDates = history.map(cd => cd.date)
 
@@ -33,42 +33,39 @@ class BBbyEPIDChart(outputPK: Long) extends Logging {
     if (history.isEmpty)
       Seq[MaintenanceRecord]()
     else
-      MaintenanceRecord.
-        getRange(machine.machinePK.get, allDates.min, allDates.max).
-        filter(m => !(m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline.toString)))
+      MaintenanceRecord.getRange(machine.machinePK.get, allDates.min, allDates.max).filter(m => !m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline))
   }
 
-  def chartId = C3Chart.idTagPrefix + Util.textToId(machine.id)
+  def chartId: String = C3Chart.idTagPrefix + Util.textToId(machine.id)
 
-  def chartReferenceX = {
-    val ciob = chartId
-    <div id={ ciob }></div>
-  }
-
-  private def chartOf(index: Int): C3ChartHistory2 = {
+  private def chartOf(index: Int): C3ChartHistory = {
     val units = "mm"
     val dataToBeGraphed = Seq(
       history.map(h => h.bbByEPIDComposite.offsetAdjusted_mm.get),
       history.map(h => h.bbByEPIDComposite.xAdjusted_mm.get),
       history.map(h => h.bbByEPIDComposite.yAdjusted_mm.get),
-      history.map(h => h.bbByEPIDComposite.zAdjusted_mm.get))
+      history.map(h => h.bbByEPIDComposite.zAdjusted_mm.get)
+    )
 
-    val colorList = Seq(
-      new Color(102, 136, 187),
-      new Color(104, 187, 154),
-      new Color(104, 187, 112),
-      new Color(137, 187, 104))
+    val colorList = Seq(new Color(102, 136, 187), new Color(104, 187, 154), new Color(104, 187, 112), new Color(137, 187, 104))
 
-    new C3ChartHistory2(
+    new C3ChartHistory(
       Some(chartId),
       maintenanceRecordList,
       None, // width
       None, // height
-      "Date", history.map(h => h.date),
+      "Date",
+      history.map(h => h.date),
       None, // BaselineSpec
       Some(new C3Chart.Tolerance(-Config.BBbyEPIDChartTolerance_mm, Config.BBbyEPIDChartTolerance_mm)),
       Some(new C3Chart.YRange(-Config.BBbyEPIDChartYRange_mm, Config.BBbyEPIDChartYRange_mm)),
-      Seq("Total offset", "X offset", "Y offset", "Z offset"), units, dataToBeGraphed, index, ".3r", colorList)
+      Seq("Total offset", "X offset", "Y offset", "Z offset"),
+      units,
+      dataToBeGraphed,
+      index,
+      ".3r",
+      colorList
+    )
   }
 
   private val chart = {
@@ -79,7 +76,7 @@ class BBbyEPIDChart(outputPK: Long) extends Logging {
       Some(chartOf(index))
   }
 
-  val chartScript = {
+  val chartScript: String = {
     if (chart.isDefined) chart.get.javascript
     else ""
   }

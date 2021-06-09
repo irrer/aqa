@@ -13,7 +13,7 @@ import org.aqa.db.BBbyEPIDComposite
 import org.aqa.db.DicomSeries
 import org.aqa.db.Output
 import org.aqa.run.ProcedureStatus
-import org.aqa.web.C3ChartHistory2
+import org.aqa.web.C3ChartHistory
 import org.aqa.web.MachineUpdate
 import org.aqa.web.OutputList
 import org.aqa.web.ViewOutput
@@ -23,7 +23,7 @@ import org.aqa.webrun.ExtendedData
 import java.awt.geom.Point2D
 import java.io.File
 import java.text.SimpleDateFormat
-import java.util.Date
+import javax.vecmath.Point2d
 import scala.xml.Elem
 
 /**
@@ -65,7 +65,7 @@ object BBbyEPIDHTML {
   ): Unit = {
 
     val bbByCBCT: Option[BBbyCBCT] = {
-      if ((composite.isRight) && (composite.right.get._1.bbByCBCTPK.isDefined))
+      if (composite.isRight && composite.right.get._1.bbByCBCTPK.isDefined)
         BBbyCBCT.get(composite.right.get._1.bbByCBCTPK.get)
       else
         None
@@ -110,7 +110,6 @@ object BBbyEPIDHTML {
       val procedureDesc: String = extendedData.procedure.name + " : " + extendedData.procedure.version
 
       val showMachine = {
-        val href = "/admin/MachineUpdate?machinePK=22"
         <div class="col-md-1">
           <h2 title="Treatment machine.  Click for details.">{MachineUpdate.linkToMachineUpdate(extendedData.machine.machinePK.get, extendedData.machine.id)}</h2>
         </div>
@@ -121,12 +120,12 @@ object BBbyEPIDHTML {
           <div class="row">
             <div class="col-md-10 col-md-offset-1">
               {showMachine}
-              {wrapElement(2, "Institution", extendedData.institution.name, true)}
-              {wrapElement(1, "Data Acquisition", dataAcquisitionDate, false)}
-              {wrapElement(1, "Analysis Started", twoLineDate.format(extendedData.output.startDate), false)}
-              {wrapElement(1, "User", extendedData.user.id, true)}
-              {wrapElement(1, "Elapsed", elapsed, false)}
-              {wrapElement(1, "Procedure", procedureDesc, false)}
+              {wrapElement(2, "Institution", extendedData.institution.name, asAlias = true)}
+              {wrapElement(1, "Data Acquisition", dataAcquisitionDate, asAlias = false)}
+              {wrapElement(1, "Analysis Started", twoLineDate.format(extendedData.output.startDate), asAlias = false)}
+              {wrapElement(1, "User", extendedData.user.id, asAlias = true)}
+              {wrapElement(1, "Elapsed", elapsed, asAlias = false)}
+              {wrapElement(1, "Procedure", procedureDesc, asAlias = false)}
               <div class="col-md-1">{OutputList.redoUrl(extendedData.output.outputPK.get)}</div>
             </div>
           </div>
@@ -142,10 +141,9 @@ object BBbyEPIDHTML {
     }
 
     class ImageSet(result: Either[BBbyEPIDImageAnalysis.FailedResult, BBbyEPIDImageAnalysis.Result], id: Int) {
-      val al = BBbyEPIDImageAnalysis.alOf(result)
-      val SOPInstanceUID = Util.sopOfAl(al)
+      val al: AttributeList = BBbyEPIDImageAnalysis.alOf(result)
 
-      def r2epid = {
+      def r2epid: BBbyEPID = {
         if (result.isLeft) throw new RuntimeException("Unexpected failure accessing failed epid data.")
         result.right.get.bbByEpid
       }
@@ -159,17 +157,17 @@ object BBbyEPIDHTML {
         }
       }
 
-      val bbLoc_mm = if (result.isRight) Some(new Point2D.Double(r2epid.epidImageX_mm, r2epid.epidImageY_mm)) else None
-      val gantryAngle = Util.angleRoundedTo90(Util.gantryAngle(al))
-      val gantryAngleRounded = Util.angleRoundedTo90(gantryAngle)
+      val bbLoc_mm: Option[Point2D.Double] = if (result.isRight) Some(new Point2D.Double(r2epid.epidImageX_mm, r2epid.epidImageY_mm)) else None
+      val gantryAngle: Int = Util.angleRoundedTo90(Util.gantryAngle(al))
+      val gantryAngleRounded: Int = Util.angleRoundedTo90(gantryAngle)
 
-      val suffix = "_" + gantryAngleRounded + "_" + (id + 1) + ".png"
-      val closeUpImageFileName = closeUpImagePrefix + suffix
-      val fullImageFileName = fullImagePrefix + suffix
+      val suffix: String = "_" + gantryAngleRounded + "_" + (id + 1) + ".png"
+      val closeUpImageFileName: String = closeUpImagePrefix + suffix
+      val fullImageFileName: String = fullImagePrefix + suffix
 
       def name2File(name: String) = new File(extendedData.output.dir, name)
 
-      val bbCenter_pix = {
+      val bbCenter_pix: Option[Point2d] = {
         if (result.isRight) {
           Some(result.right.get.pix)
         } else None
@@ -179,10 +177,9 @@ object BBbyEPIDHTML {
       Util.writePng(imageSet.closeupBufImg, name2File(closeUpImageFileName))
       Util.writePng(imageSet.fullBufImg, name2File(fullImageFileName))
 
-      def viewDicomMetadata = {
+      def viewDicomMetadata: Elem = {
 
         val sop = Util.sopOfAl(al)
-        val dicomFile = runReq.epidList.find(al => Util.sopOfAl(al).equals(sop)).get
 
         val content = {
           <div>
@@ -205,7 +202,7 @@ object BBbyEPIDHTML {
         }
 
         val fileName = "EPID_" + id + ".html"
-        val text = WebUtil.wrapBody(wrap(content), "EPID " + gantryAngle + " deg", None, true, None)
+        val text = WebUtil.wrapBody(wrap(content), "EPID " + gantryAngle + " deg", None, c3 = true, None)
         val file = new File(extendedData.output.dir, fileName)
         Util.writeFile(file, text)
 
@@ -228,13 +225,6 @@ object BBbyEPIDHTML {
       }
 
       val html: Elem = {
-
-        def imgRef(name: String, title: String) = {
-          <a href={name}>
-            <h4>{title}</h4>
-            <img width='400' src={name}/>
-          </a>
-        }
 
         def imgRefWithZoom(name: String, title: String, border: Boolean = false) = {
 
@@ -260,17 +250,15 @@ object BBbyEPIDHTML {
             <br/>
             {imgRefWithZoom(closeUpImageFileName, "Closeup of BB")}
             <br/>
-            {imgRefWithZoom(fullImageFileName, "Full Image", true)}
+            {imgRefWithZoom(fullImageFileName, "Full Image", border = true)}
           </center>
         </td>
       }
 
-      val script = {
+      val script: String = {
         Seq(closeUpImageFileName, fullImageFileName).map(fn => "      $(document).ready(function(){ $('#" + Util.textToId(fn) + "').zoom(); });\n").mkString("\n      ")
       }
     }
-
-    val outputDir = extendedData.output.dir
 
     val chart = new BBbyEPIDChart(extendedData.output.outputPK.get)
     val chartPartial = new BBbyEPIDChartPartial(extendedData.output.outputPK.get)
@@ -280,12 +268,6 @@ object BBbyEPIDHTML {
     // val imageSetList = bbByEPIDList.zipWithIndex.map(ri => new ImageSet(ri._1, ri._2)).toList // non-parallel version for debug only
 
     val numberText = {
-
-      def dataCol(name: String, title: String, value: Double, cols: Int) = {
-        <span title={title} class={"col-md-" + cols}>
-          {name + " : " + fmtPrecise(value)}
-        </span>
-      }
 
       def tableMovement(composite: BBbyEPIDComposite) = {
         def fmt(d: Option[Double]) = <span title={fmtPrecise(d.get / 10)}>{fmtApprox(d.get / 10)}</span>
@@ -301,7 +283,7 @@ object BBbyEPIDHTML {
         val al = if (bbByEPIDList.head.isLeft) bbByEPIDList.head.left.get.al else bbByEPIDList.head.right.get.al
 
         /** Get double value, convert from mm to cm, and format to text. */
-        def db(tag: AttributeTag) = { Util.fmtDbl(al.get(tag).getDoubleValues().head / 10) }
+        def db(tag: AttributeTag) = { Util.fmtDbl(al.get(tag).getDoubleValues.head / 10) }
 
         val x = db(TagByName.TableTopLateralPosition) // tableXlateral_mm
         val y = db(TagByName.TableTopVerticalPosition) // tableYvertical_mm
@@ -405,7 +387,7 @@ object BBbyEPIDHTML {
             </div>
           }
 
-          val text = WebUtil.wrapBody(wrap(content), "RTPLAN for EPID", None, true, None)
+          val text = WebUtil.wrapBody(wrap(content), "RTPLAN for EPID", None, c3 = true, None)
           val file = new File(extendedData.output.dir, htmlRtplanFileName)
           Util.writeFile(file, text)
 
@@ -432,17 +414,6 @@ object BBbyEPIDHTML {
       elem
     }
 
-    def imageHtml(index: Int, getImageFileName: Int => String, title: String) = {
-      val name = getImageFileName(index)
-      <a href={name} title={title}>
-        <div id={Util.textToId(name)}>
-          <a href={name}>
-            <img src={name} class="img-responsive"/>
-          </a>
-        </div>
-      </a>
-    }
-
     val numberTable = {
       if (bbByCBCT.isDefined && composite.isRight) {
         val cbct = bbByCBCT.get
@@ -450,19 +421,6 @@ object BBbyEPIDHTML {
         def fmt(d: Double) = { <td title={fmtPrecise(d)}>{fmtApprox(d)}</td> }
 
         def fmtTd(d: Double) = { <td title={fmtPrecise(d)}>{fmtApprox(d)}</td> }
-
-        def epidToDate(epid: BBbyEPID): Option[Date] = {
-          val dsOpt = DicomSeries.getBySopInstanceUID(epid.epidSOPInstanceUid).headOption
-          if (dsOpt.isDefined) {
-            val j = dsOpt.get.attributeListList
-            val attrList = dsOpt.get.attributeListList.find(al => Util.sopOfAl(al).equals(epid.epidSOPInstanceUid))
-            if (attrList.isDefined)
-              DicomUtil.getTimeAndDate(attrList.get, TagFromName.ContentDate, TagFromName.ContentTime)
-            else
-              None
-          } else
-            None
-        }
 
         val epidDateListSorted = bbByEPIDList.sortBy(r => result2ms(r))
 
@@ -476,7 +434,7 @@ object BBbyEPIDHTML {
         def elapsedText(ms: Long): String = {
           val elapsed = ms - msFirst
           val sec = (elapsed / 1000) % 60
-          val minutes = (elapsed / (60 * 1000))
+          val minutes = elapsed / (60 * 1000)
           minutes.toString + ":" + sec.formatted("%02d")
         }
 
@@ -581,7 +539,7 @@ object BBbyEPIDHTML {
         <div class="row" style="border: 1px solid lightgrey">
           <div style="margin: 5px;">
             <center><h3>(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER)</h3></center>
-            {C3ChartHistory2.htmlRef(chart.chartId)}
+            {C3ChartHistory.htmlRef(chart.chartId)}
           </div>
         </div>
         <div class="row">
@@ -612,7 +570,7 @@ object BBbyEPIDHTML {
       zoomScript + "\n" + chartRef + "\n" + chartRefPartial
     }
 
-    def writeMatlabFile = {
+    def writeMatlabFile(): Unit = {
       if (composite.isRight && composite.right.get._2.isDefined) {
         val text = composite.right.get._2.get
         val file = new File(extendedData.output.dir, matlabFileName)
@@ -620,8 +578,8 @@ object BBbyEPIDHTML {
       }
     }
 
-    writeMatlabFile
-    val text = WebUtil.wrapBody(wrap(content), "BB Location by EPID", None, true, Some(runScript))
+    writeMatlabFile()
+    val text = WebUtil.wrapBody(wrap(content), "BB Location by EPID", None, c3 = true, Some(runScript))
     val file = new File(extendedData.output.dir, mainReportFileName)
     Util.writeFile(file, text)
   }

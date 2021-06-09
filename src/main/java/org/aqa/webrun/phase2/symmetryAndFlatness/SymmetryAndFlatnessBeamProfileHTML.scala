@@ -4,6 +4,7 @@ import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.run.ProcedureStatus
 import org.aqa.web.C3Chart
+import org.aqa.web.C3ChartHistory
 import org.aqa.web.WebServer
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
@@ -32,7 +33,8 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
       yAxisLabels = Seq("Level"),
       yDataLabel = "Level",
       yValues = Seq(result.transverseProfile),
-      yColorList = Seq(new Color(0x4477bb)))
+      yColorList = Seq(new Color(0x4477bb))
+    )
 
     val graphAxial = new C3Chart(
       xAxisLabel = "Position mm",
@@ -41,7 +43,8 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
       yAxisLabels = Seq("Level"),
       yDataLabel = "Level",
       yValues = Seq(result.axialProfile),
-      yColorList = Seq(new Color(0x4477bb)))
+      yColorList = Seq(new Color(0x4477bb))
+    )
 
     // val graphHistory = new SymmetryAndFlatnessBeamHistoryHTML(result.beamName, extendedData.output.outputPK.get)  TODO rm
     val content = {
@@ -73,19 +76,19 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
           <div class="col-md-10 col-md-offset-1">
             <div class="row">
               <h2>Transverse Symmetry History</h2>
-              {C3Chart.html(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.transverseSymmetryName))}
+              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.transverseSymmetryName))}
             </div>
             <div class="row">
               <h2>Axial Symmetry History</h2>
-              {C3Chart.html(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.axialSymmetryName))}
+              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.axialSymmetryName))}
             </div>
             <div class="row">
               <h2>Flatness History</h2>
-              {C3Chart.html(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.flatnessName))}
+              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.flatnessName))}
             </div>
             <div class="row">
               <h2>Profile Constancy History</h2>
-              {C3Chart.html(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.profileConstancyName))}
+              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.profileConstancyName))}
             </div>
           </div>
         </div>

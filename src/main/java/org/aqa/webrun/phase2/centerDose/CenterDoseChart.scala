@@ -55,7 +55,7 @@ class CenterDoseChart(outputPK: Long) extends Logging {
 
   def chartReferenceToBeam(beamName: String): Elem = {
     val chartId = chartIdOfBeam(beamName)
-    <div id={chartId}>{chartId}</div>
+    C3ChartHistory.htmlRef(chartId)
   }
 
   private def chartOfBeam(beamName: String): C3ChartHistory = {

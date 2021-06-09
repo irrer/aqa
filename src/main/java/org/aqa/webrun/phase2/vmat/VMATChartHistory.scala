@@ -6,7 +6,6 @@ import org.aqa.db.Machine
 import org.aqa.db.MaintenanceCategory
 import org.aqa.db.MaintenanceRecord
 import org.aqa.db.Output
-import org.aqa.db.Procedure
 import org.aqa.db.VMAT
 import org.aqa.web.C3Chart
 import org.aqa.web.C3ChartHistory
@@ -18,7 +17,7 @@ object VMATChartHistory {
   def chartId(beamNameMLC: String): String = C3Chart.idTagPrefix + Util.textToId(beamNameMLC)
 
   def chartReference(beamNameMLC: String): Elem = {
-    <div id={VMATChartHistory.chartId(beamNameMLC)}></div>
+    C3ChartHistory.htmlRef(VMATChartHistory.chartId(beamNameMLC))
   }
 }
 
