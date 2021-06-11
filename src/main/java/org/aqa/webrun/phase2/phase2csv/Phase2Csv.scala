@@ -309,6 +309,49 @@ abstract class Phase2Csv[T] extends Logging {
     }
   }
 
+  // --------------------------------------------------------------------------------------------------------------------------------
+
+  // Functions below are for writing a separate CSV file for each institution.
+
+  private def institutionCsvContent(institutionPK: Long): String = {
+    val machinesInInstitution = machineList.filter(_.institutionPK == institutionPK)
+    if (machinesInInstitution.isEmpty) {
+      ""
+    } else {
+      val rows = machinesInInstitution.map(machineToCsv).filter(_.nonEmpty).mkString("\n\n")
+      if (rows.isEmpty) "" else makeHeader() + rows
+    }
+  }
+
+  private def institutionCsvFile(institutionPK: Long): File = {
+    val dir = Phase2Csv.institutionCsvDir(institutionPK)
+    val csvFile = new File(dir, Phase2Csv.csvFileName(fileBaseName))
+    csvFile
+  }
+
+  private def writeOneInstitutionFile(institutionPK: Long): Unit = {
+    val csvDir = Phase2Csv.institutionCsvDir(institutionPK)
+    csvDir.mkdirs()
+    // delete old file(s)
+    Util.listDirFiles(Phase2Csv.institutionCsvDir(institutionPK)).filter(_.getName.startsWith(fileBaseName)).map(_.delete)
+    val csvFile = institutionCsvFile(institutionPK) // new CSV file
+
+    val content = institutionCsvContent(institutionPK)
+    if (content.isEmpty) {
+      logger.info("No content for " + metadataCache.institutionNameMap(institutionPK) + " : " + fileBaseName)
+    } else {
+      Util.writeFile(csvFile, content)
+      logger.info("Wrote " + content.length.formatted("%12d") + " bytes to CSV file" + csvFile.getAbsolutePath)
+    }
+  }
+
+  /**
+    * Update CSV file for all institutions.
+    */
+  def updateAllInstitutionFiles(): Unit = {
+    metadataCache.institutionNameMap.keys.foreach(writeOneInstitutionFile)
+  }
+
 }
 
 object Phase2Csv extends Logging {
@@ -353,22 +396,22 @@ object Phase2Csv extends Logging {
   }
 
   /** Name of file containing documentation on CSV files. */
-  private val notesFileName = "CSVNotes.html"
+  val notesFileName = "CSVNotes.html"
 
   /** Tag in original HTML to be replaced by notes. */
-  private val notesTag = "@@@@" + notesFileName + "@@@@"
+  val notesTag = "@@@@" + notesFileName + "@@@@"
 
   /**
-    * Get the notes for CVS from a static HTML file.
+    * Get the notes for CSV from a static HTML file.
     *
     * @return On success, the contents of the file, otherwise an empty string.
     */
-  private def readNotes(): String = {
+  def readNotes(): String = {
     val notesFile = new File(Config.staticDirFile, notesFileName)
     Util.readTextFile(notesFile) match {
       case Right(text) => text
       case Left(t) =>
-        logger.warn("Could not read CVS notes file " + notesFile.getAbsolutePath + " : " + fmtEx(t))
+        logger.warn("Could not read CSV notes file " + notesFile.getAbsolutePath + " : " + fmtEx(t))
         ""
     }
   }
@@ -438,4 +481,11 @@ object Phase2Csv extends Logging {
     Util.writeFile(file, text)
     logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath)
   }
+
+  def institutionCsvDir(institutionPK: Long): File = {
+    val d = new File(Config.resultsDirFile, MetadataCache.metadataCache.institutionNameMap(institutionPK))
+    val dir = new File(d, "CSV")
+    dir
+  }
+
 }
