@@ -1,7 +1,6 @@
 package org.aqa.webrun.phase2.phase2csv
 
 import org.aqa.Util
-import org.aqa.db.DbSetup
 import org.aqa.db.Output
 import org.aqa.db.SymmetryAndFlatness
 
@@ -40,7 +39,11 @@ class SymmetryAndFlatnessCsv extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFl
       CsvCol("Axial Symmetry", "((top - bottom) / bottom) * 100", (sf: SF) => sf.symmetryAndFlatness.axialSymmetry),
       CsvCol("Transverse Symmetry", "((right - left ) / left ) * 100", (sf: SF) => sf.symmetryAndFlatness.transverseSymmetry),
       CsvCol("Flatness", "(max - min) / (max + min) * 100", (sf: SF) => sf.symmetryAndFlatness.flatness),
-      CsvCol("Profile Constancy", "average of (X / center) - (baseline X / baseline center), where X iterates through top, bottom, right, left", (sf: SF) => sf.symmetryAndFlatness.profileConstancy(sf.baseline)),
+      CsvCol(
+        "Profile Constancy",
+        "average of (X / center) - (baseline X / baseline center), where X iterates through top, bottom, right, left",
+        (sf: SF) => sf.symmetryAndFlatness.profileConstancy(sf.baseline)
+      ),
       CsvCol(
         "Baseline Designation",
         "explicit: Designated by user as a baseline.  implicit: Used as baseline when an explicit one is not defined.  If blank, then it is not used as a baseline.",
@@ -77,14 +80,4 @@ class SymmetryAndFlatnessCsv extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFl
   override def getSopUID(data: SF): String = data.symmetryAndFlatness.SOPInstanceUID
 
   override def getOutput(data: SF): Output = data.output
-}
-
-object SymmetryAndFlatnessCsv {
-
-  def main(args: Array[String]): Unit = {
-    DbSetup.init
-    (new SymmetryAndFlatnessCsv).updateFiles()
-    Phase2Csv.generateIndex()
-  }
-
 }

@@ -1,7 +1,6 @@
 package org.aqa.webrun.phase2.phase2csv
 
 import org.aqa.db.CollimatorPosition
-import org.aqa.db.DbSetup
 import org.aqa.db.Output
 
 class CollimatorPositionCsv extends Phase2Csv[CollimatorPosition.ColPosHistory] {
@@ -43,13 +42,4 @@ class CollimatorPositionCsv extends Phase2Csv[CollimatorPosition.ColPosHistory] 
   override def getSopUID(data: CP): String = data.colCent.SOPInstanceUID
 
   override def getOutput(data: CP): Output = data.output
-}
-object CollimatorPositionCsv {
-
-  def main(args: Array[String]): Unit = {
-    DbSetup.init
-    (new CollimatorPositionCsv).updateFiles()
-    Phase2Csv.generateIndex()
-  }
-
 }

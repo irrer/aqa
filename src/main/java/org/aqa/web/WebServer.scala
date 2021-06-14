@@ -15,6 +15,7 @@ import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryRestlet
 import org.aqa.webrun.dailyQA.DailyQASummary
 import org.aqa.webrun.phase2.centerDose.CenterDoseChartHistoryRestlet
 import org.aqa.webrun.phase2.customizeRtPlan.CustomizeRtPlanInterface
+import org.aqa.webrun.phase2.phase2csv.Phase2CsvRestlet
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessHistoryRestlet
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessSubHTML
 import org.aqa.webrun.phase2.vmat.VMATChartHistoryRestlet
@@ -491,6 +492,7 @@ class WebServer extends Application with Logging {
         new DailyQASummary,
         new DataCollectionSummary,
         new SymmetryAndFlatnessSubHTML,
+        new Phase2CsvRestlet,
         anonymousTranslate,
         getSeries,
         new CustomizeRtPlanInterface,

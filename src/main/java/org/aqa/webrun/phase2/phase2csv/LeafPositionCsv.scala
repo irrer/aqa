@@ -1,12 +1,11 @@
 package org.aqa.webrun.phase2.phase2csv
 
-import org.aqa.db.DbSetup
 import org.aqa.db.LeafPosition
 import org.aqa.db.Output
 
 /**
- * Generate a CSV for leaf position data.
- */
+  * Generate a CSV for leaf position data.
+  */
 class LeafPositionCsv extends Phase2Csv[LeafPosition.LeafPosHistory] {
 
   // abbreviation for the long name
@@ -91,12 +90,4 @@ class LeafPositionCsv extends Phase2Csv[LeafPosition.LeafPosHistory] {
       (0 until leafCount).map(colExpectedLeafSide)
   }
 
-}
-
-object LeafPositionCsv {
-  def main(args: Array[String]): Unit = {
-    DbSetup.init
-    (new LeafPositionCsv).updateFiles()
-    Phase2Csv.generateIndex()
-  }
 }

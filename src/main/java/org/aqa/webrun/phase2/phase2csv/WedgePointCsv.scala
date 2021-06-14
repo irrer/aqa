@@ -1,6 +1,5 @@
 package org.aqa.webrun.phase2.phase2csv
 
-import org.aqa.db.DbSetup
 import org.aqa.db.Output
 import org.aqa.db.WedgePoint
 
@@ -75,14 +74,4 @@ class WedgePointCsv extends Phase2Csv[WedgePoint.WedgePointHistory] {
   override protected val dicom2HeaderPrefix: Option[String] = Some("Background")
 
   override protected def getSopUID2(data: WH): String = data.wedgePoint.backgroundSOPInstanceUID
-}
-
-object WedgePointCsv {
-
-  def main(args: Array[String]): Unit = {
-    DbSetup.init
-    (new WedgePointCsv).updateFiles()
-    Phase2Csv.generateIndex()
-  }
-
 }

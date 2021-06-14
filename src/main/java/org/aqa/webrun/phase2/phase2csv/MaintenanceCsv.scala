@@ -1,12 +1,10 @@
 package org.aqa.webrun.phase2.phase2csv
 
 import org.aqa.Util
-import org.aqa.db.DbSetup
 import org.aqa.db.Machine
 import org.aqa.db.MaintenanceRecord
 
 import java.io.File
-import java.util.Date
 
 /**
   * Support both the creation of a maintenance record CSV file and the insertion of
@@ -16,7 +14,7 @@ import java.util.Date
 object MaintenanceCsv {
 
   private val dataName = "Maintenance Record"
-  private val fileBaseName = dataName.replaceAll(" ", "")
+  // private val fileBaseName = Phase2Csv.fil
 
   /**
     * Replace newline characters with blanks so they only occupy one line of the CSV file.
@@ -41,7 +39,7 @@ object MaintenanceCsv {
     CsvCol(
       "Maintenance Record Marker",
       "Marks this row as a maintenance record.  This makes finding them straightforward when they are embedded in a CSV file.",
-      (mt: MaintenanceRecord) => "Maintenance Record"
+      (_: MaintenanceRecord) => "Maintenance Record"
     ),
     CsvCol("Maintenance Category", "Type of maintenance.", (mt: MaintenanceRecord) => mt.category),
     CsvCol("Created by User", "Anonymous version of user id.", (mt: MaintenanceRecord) => MetadataCache.metadataCache.userMap(mt.userPK)),
@@ -74,31 +72,15 @@ object MaintenanceCsv {
   /**
     * Create the MaintenanceRecord.csv file for all institutions.
     */
-  def updateFiles(): Unit = {
-    val start = System.currentTimeMillis()
-
+  def writeToFile(csvDir: File, machList: Seq[Machine]): Unit = {
     // list of all machines with institutions grouped together
-    val machineList = MetadataCache.metadataCache.machineMap.values.toSeq.sortBy(_.institutionPK) //.map(_.machinePK.get)
+    val machineList = machList.sortBy(_.institutionPK)
 
     val rows = machineList.map(m => makeCsv(m))
 
     val fullText = headerText + "\n" + rows.filter(_.nonEmpty).mkString("\n\n")
 
-    // Remove old versions of this CSV file.
-    Util.listDirFiles(Phase2Csv.csvDir).filter(f => f.getName.matches(fileBaseName + ".*.csv$")).foreach(_.delete())
-
-    val csvFile = new File(Phase2Csv.csvDir, Phase2Csv.csvFileName(fileBaseName))
-    Phase2Csv.csvDir.mkdirs()
-    Util.writeFile(csvFile, fullText)
-
-    Phase2Csv.writeDoc(colList, "Maintenance Record", fileBaseName)
-
-    println("Elapsed time: " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
+    Phase2Csv.writeToFile(csvDir, fullText, dataName)
   }
 
-  def main(args: Array[String]): Unit = {
-    DbSetup.init
-    updateFiles()
-    Phase2Csv.generateIndex()
-  }
 }

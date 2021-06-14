@@ -1,6 +1,5 @@
 package org.aqa.webrun.phase2.phase2csv
 
-import org.aqa.db.DbSetup
 import org.aqa.db.MetadataCheck
 import org.aqa.db.Output
 
@@ -51,14 +50,4 @@ class MetadataCheckCsv extends Phase2Csv[MetadataCheck.MetadataCheckHistory] {
   override def getSopUID(data: MDC): String = data.metadataCheck.SOPInstanceUID.get
 
   override def getOutput(data: MDC): Output = data.output
-}
-
-object MetadataCheckCsv {
-
-  def main(args: Array[String]): Unit = {
-    DbSetup.init
-    (new MetadataCheckCsv).updateFiles()
-    Phase2Csv.generateIndex()
-  }
-
 }

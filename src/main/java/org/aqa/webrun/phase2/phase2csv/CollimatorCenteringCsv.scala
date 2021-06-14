@@ -1,7 +1,6 @@
 package org.aqa.webrun.phase2.phase2csv
 
 import org.aqa.db.CollimatorCentering
-import org.aqa.db.DbSetup
 import org.aqa.db.Output
 
 class CollimatorCenteringCsv extends Phase2Csv[CollimatorCentering.ColCentHistory] {
@@ -58,13 +57,4 @@ class CollimatorCenteringCsv extends Phase2Csv[CollimatorCentering.ColCentHistor
   override protected val dicom2HeaderPrefix: Option[String] = Some("C 270")
 
   override protected def getSopUID2(data: CCH): String = data.colCent.SOPInstanceUID090
-}
-
-object CollimatorCenteringCsv {
-  def main(args: Array[String]): Unit = {
-    DbSetup.init
-    (new CollimatorCenteringCsv).updateFiles()
-    Phase2Csv.generateIndex()
-  }
-
 }

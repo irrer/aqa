@@ -173,7 +173,7 @@ object LeafPosition extends ProcedureOutput with Logging {
 
     val leafPositionList = {
 
-      val pageSize = 1000
+      val pageSize = 500
 
       @tailrec
       def appendPage(list: Seq[LeafPosition] = Seq()): Seq[LeafPosition] = {

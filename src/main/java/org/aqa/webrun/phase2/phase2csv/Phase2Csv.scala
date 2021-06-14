@@ -9,6 +9,8 @@ import org.aqa.db.DicomSeries
 import org.aqa.db.Machine
 import org.aqa.db.MaintenanceRecord
 import org.aqa.db.Output
+import org.aqa.db.Procedure
+import org.aqa.web.WebServer
 import org.aqa.web.WebUtil
 
 import java.io.File
@@ -76,13 +78,13 @@ abstract class Phase2Csv[T] extends Logging {
     */
   protected val dataName: String
 
-  // ----------------------------------------------------------------------------
-
-  private def fileBaseName = dataName.replaceAll(" ", "")
+  def getDataName: String = dataName
 
   private val colList: Seq[CsvCol[T]] = makeColList
 
-  private val metadataCache = new MetadataCache
+  private val metadataCache = MetadataCache.metadataCache
+
+  def fileBaseNm: String = Phase2Csv.fileBaseName(dataName)
 
   // private val maintenanceCsv = new MaintenanceCsv(metadataCache)
 
@@ -187,8 +189,8 @@ abstract class Phase2Csv[T] extends Logging {
 
   /** List of all machines, sorted by institution so that all of the rows
     * for a given institution will be consecutive. */
-  private val machineList = Machine.list
-    .sortBy(_.institutionPK)
+  // private val machineList = Machine.list
+  // .sortBy(_.institutionPK)
   // .filter(_.machinePK.get == 27) // put in to do specific machine
 
   /**
@@ -277,89 +279,32 @@ abstract class Phase2Csv[T] extends Logging {
     *
     * @return The CSV content as a single string.
     */
-  private def csvContent: String = makeHeader() + "\n" + machineList.map(machine => machineToCsv(machine)).filter(_.nonEmpty).mkString("\n\n")
-
-  private def deleteCsvFiles(): Unit = {
-    val toDeleteList = Util.listDirFiles(Phase2Csv.csvDir).filter(f => f.getName.matches(fileBaseName + "_" + ".*.csv$"))
-    toDeleteList.map(f => f.delete())
-  }
-
-  /**
-    * Write the CSV content to a file.
-    */
-  def writeToFile(): Unit = {
-    val start = System.currentTimeMillis()
-    Phase2Csv.csvDir.mkdirs()
-    deleteCsvFiles()
-    val csvFile = new File(Phase2Csv.csvDir, Phase2Csv.csvFileName(fileBaseName))
-    Util.writeFile(csvFile, csvContent)
-    logger.info("Wrote " + csvFile.length() + " bytes to file " + csvFile.getAbsolutePath + " in " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
+  private def csvContent(machineSeq: Seq[Machine]): String = {
+    val machineList = machineSeq.sortBy(_.institutionPK)
+    val content = machineList.map(machine => machineToCsv(machine)).filter(_.nonEmpty).mkString("\n\n")
+    makeHeader() + "\n" + content
   }
 
   def writeDoc(): Unit = {
-    Phase2Csv.writeDoc(prefixCsv.colList ++ makeColList ++ machineDescriptionCsv.colList ++ dicomCsv.colList, dataName, fileBaseName)
+    val colList = prefixCsv.colList ++ makeColList ++ machineDescriptionCsv.colList ++ dicomCsv.colList
+    Phase2Csv.writeDoc(colList.asInstanceOf[Seq[CsvCol[Any]]], dataName)
   }
 
-  def updateFiles(): Unit = {
-    try {
-      writeDoc()
-      writeToFile()
-    } catch {
-      case t: Throwable => logger.warn("Error updating CSV: " + fmtEx(t))
-    }
+  def writeToFile(csvDir: File, machineSeq: Seq[Machine]): Unit = {
+    Phase2Csv.writeToFile(csvDir, csvContent(machineSeq), dataName)
   }
-
-  // --------------------------------------------------------------------------------------------------------------------------------
-
-  // Functions below are for writing a separate CSV file for each institution.
-
-  private def institutionCsvContent(institutionPK: Long): String = {
-    val machinesInInstitution = machineList.filter(_.institutionPK == institutionPK)
-    if (machinesInInstitution.isEmpty) {
-      ""
-    } else {
-      val rows = machinesInInstitution.map(machineToCsv).filter(_.nonEmpty).mkString("\n\n")
-      if (rows.isEmpty) "" else makeHeader() + rows
-    }
-  }
-
-  private def institutionCsvFile(institutionPK: Long): File = {
-    val dir = Phase2Csv.institutionCsvDir(institutionPK)
-    val csvFile = new File(dir, Phase2Csv.csvFileName(fileBaseName))
-    csvFile
-  }
-
-  private def writeOneInstitutionFile(institutionPK: Long): Unit = {
-    val csvDir = Phase2Csv.institutionCsvDir(institutionPK)
-    csvDir.mkdirs()
-    // delete old file(s)
-    Util.listDirFiles(Phase2Csv.institutionCsvDir(institutionPK)).filter(_.getName.startsWith(fileBaseName)).map(_.delete)
-    val csvFile = institutionCsvFile(institutionPK) // new CSV file
-
-    val content = institutionCsvContent(institutionPK)
-    if (content.isEmpty) {
-      logger.info("No content for " + metadataCache.institutionNameMap(institutionPK) + " : " + fileBaseName)
-    } else {
-      Util.writeFile(csvFile, content)
-      logger.info("Wrote " + content.length.formatted("%12d") + " bytes to CSV file" + csvFile.getAbsolutePath)
-    }
-  }
-
-  /**
-    * Update CSV file for all institutions.
-    */
-  def updateAllInstitutionFiles(): Unit = {
-    metadataCache.institutionNameMap.keys.foreach(writeOneInstitutionFile)
-  }
-
 }
 
 object Phase2Csv extends Logging {
 
   /**
-    * Location of cross-institutional CSV files.
+    * Location of CSV files that include data from all institutions in the consortium.
     */
-  val csvDir = new File(Config.resultsDirFile, "CSV")
+  val consortiumCsvDir = new File(Config.resultsDirFile, "CSV")
+
+  val metadataCache: MetadataCache = MetadataCache.metadataCache
+
+  private def fileBaseName(dataName: String) = dataName.replaceAll(" ", "")
 
   private def csvDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss")
 
@@ -369,44 +314,18 @@ object Phase2Csv extends Logging {
   //noinspection SpellCheckingInspection
   val zipFileName = "AQAcsv.zip"
 
-  /**
-    * Write a file documenting columns of this CSV.
-    */
-  def writeDoc(colList: Seq[CsvCol[_]], dataName: String, fileBaseName: String): Unit = {
-
-    val name = "Definitions for " + dataName + " CSV columns."
-    val content: Elem = {
-      <div class="col-md-10 col-md-offset-1 ">
-        <h2>{name}</h2>
-        <table class="table table-bordered">
-          <tr>
-            <th>Column</th>
-            <th>Column Title</th>
-            <th>Description</th>
-          </tr>
-          {colList.zipWithIndex.map(colIndex => colIndex._1.doc(colIndex._2))}
-        </table>
-      </div>
-    }
-    val text = WebUtil.wrapBody(content, name)
-    Phase2Csv.csvDir.mkdirs()
-    val file = new File(Phase2Csv.csvDir, fileBaseName + ".html")
-    Util.writeFile(file, text)
-    logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath)
-  }
-
   /** Name of file containing documentation on CSV files. */
   val notesFileName = "CSVNotes.html"
 
   /** Tag in original HTML to be replaced by notes. */
-  val notesTag = "@@@@" + notesFileName + "@@@@"
+  val notesTag: String = "@@@@" + notesFileName + "@@@@"
 
   /**
     * Get the notes for CSV from a static HTML file.
     *
     * @return On success, the contents of the file, otherwise an empty string.
     */
-  def readNotes(): String = {
+  private def readNotes(): String = {
     val notesFile = new File(Config.staticDirFile, notesFileName)
     Util.readTextFile(notesFile) match {
       case Right(text) => text
@@ -420,27 +339,35 @@ object Phase2Csv extends Logging {
     * Generate a user friendly web page to act as an index and write it as a file.  This
     * also creates the ZIP file which contains all the CSV files.
     */
-  def generateIndex(): Unit = {
+  def generateIndex(institutionPK: Long): Unit = {
+    val csvDir = institutionCsvDir(institutionPK)
     val csvList = Util.listDirFiles(csvDir).filter(_.getName.endsWith(".csv"))
 
-    def fileToRow(file: File): Elem = {
+    val dataCount = Output.getCount(institutionPK, Procedure.ProcOfPhase2.get.procedurePK.get)
+
+    def fileToRow(csvFile: File): Elem = {
 
       val date = {
         val dateFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm")
-        dateFormat.format(new Date(file.lastModified()))
+        dateFormat.format(new Date(csvFile.lastModified()))
       }
 
       val suffixPattern = ".....................csv$"
 
+      val docFileReference = {
+        val docFile = new File(Phase2Csv.consortiumCsvDir, csvFile.getName.replaceAll(suffixPattern, ".html"))
+        WebServer.urlOfResultsFile(docFile)
+      }
+
       <tr>
         <td>
-          <a href={file.getName}>{file.getName.replaceAll(suffixPattern, "")}</a>
+          <a href={csvFile.getName}>{csvFile.getName.replaceAll(suffixPattern, "")}</a>
         </td>
         <td>
           {date}
         </td>
         <td>
-          <a href={file.getName.replaceAll(suffixPattern, ".html")}>Column Definitions</a>
+          <a href={docFileReference}>Column Definitions</a>
         </td>
       </tr>
     }
@@ -449,7 +376,8 @@ object Phase2Csv extends Logging {
       <div class="col-md-8 col-md-offset-2">
         <center>
           <h2>Index of CSV Files</h2>
-          <em>These files are periodically generated and contain data from all institutions.</em>
+          <em>These files are periodically generated and contain data from <span aqaalias="">{metadataCache.institutionNameMap(institutionPK)}</span>.</em>
+          <em>Number of data sets: {dataCount.toString}</em>
         </center>
         <table class="table table-bordered" style="margin:30px;">
           <tr>
@@ -476,8 +404,8 @@ object Phase2Csv extends Logging {
     FileUtil.readFileTreeToZipFile(csvList, excludePatternList = Seq(), excludeFileList = Seq(), zipFile)
 
     val text = WebUtil.wrapBody(content, "CSV Index").replace(notesTag, readNotes())
-    Phase2Csv.csvDir.mkdirs()
-    val file = new File(Phase2Csv.csvDir, "index.html")
+    csvDir.mkdirs()
+    val file = new File(csvDir, "index.html")
     Util.writeFile(file, text)
     logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath)
   }
@@ -488,4 +416,46 @@ object Phase2Csv extends Logging {
     dir
   }
 
+  /**
+    * Write a file documenting columns of this CSV.  All documentation files are put
+    * in the consortium CSV directory.
+    */
+  def writeDoc(colList: Seq[CsvCol[Any]], dataName: String): Unit = {
+    val name = "Definitions for " + dataName + " CSV columns."
+    val content: Elem = {
+      <div class="col-md-10 col-md-offset-1 ">
+        <h2>{name}</h2>
+        <table class="table table-bordered">
+          <tr>
+            <th>Column</th>
+            <th>Column Title</th>
+            <th>Description</th>
+          </tr>
+          {colList.zipWithIndex.map(colIndex => colIndex._1.doc(colIndex._2))}
+        </table>
+      </div>
+    }
+    val text = WebUtil.wrapBody(content, name)
+    Phase2Csv.consortiumCsvDir.mkdirs()
+    val file = new File(Phase2Csv.consortiumCsvDir, fileBaseName(dataName) + ".html")
+    Util.writeFile(file, text)
+    logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath)
+  }
+
+  private def deleteCsvFiles(csvDir: File, dataName: String): Unit = {
+    val toDeleteList = Util.listDirFiles(csvDir).filter(f => f.getName.matches(fileBaseName(dataName) + "_" + ".*.csv$"))
+    toDeleteList.map(f => f.delete())
+  }
+
+  /**
+    * Write the CSV content to a file.
+    */
+  def writeToFile(csvDir: File, csvContent: String, dataName: String): Unit = {
+    val start = System.currentTimeMillis()
+    csvDir.mkdirs()
+    deleteCsvFiles(csvDir, dataName)
+    val csvFile = new File(csvDir, Phase2Csv.csvFileName(fileBaseName(dataName)))
+    Util.writeFile(csvFile, csvContent)
+    logger.info("Wrote " + csvFile.length() + " bytes to file " + csvFile.getAbsolutePath + " in " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
+  }
 }

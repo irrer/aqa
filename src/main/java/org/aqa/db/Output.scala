@@ -376,6 +376,21 @@ object Output extends Logging {
     outputList
   }
 
+  /**
+   * Get the number of outputs from the the given institution and procedure.
+   * @param institutionPK Must match this institution.
+   * @param procedurePK Must match this procedure.
+   * @return Number of outputs.
+   */
+  def getCount(institutionPK: Long, procedurePK: Long): Int = {
+    val search = for {
+      machPK <- Machine.query.filter(m => m.institutionPK === institutionPK).map(m => m.machinePK)
+      outPK <- Output.query.filter(o => (o.machinePK === machPK) && (o.procedurePK === procedurePK) ).map(_.outputPK)
+    } yield outPK
+    val size = Db.run(search.result).size
+    size
+  }
+
   def main(args: Array[String]): Unit = {
     println("Starting Output.main")
     DbSetup.init
@@ -401,7 +416,7 @@ object Output extends Logging {
       val lo = fmt.parse("2021-02-04")
       val hi = fmt.parse("2021-02-05")
 
-      def d2ts(date: Date) = new Timestamp((date.getTime))
+      def d2ts(date: Date) = new Timestamp(date.getTime)
 
       getOutputByDateRange(1, d2ts(lo), d2ts(hi))
     }

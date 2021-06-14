@@ -1,7 +1,6 @@
 package org.aqa.webrun.phase2.phase2csv
 
 import org.aqa.db.CenterDose
-import org.aqa.db.DbSetup
 import org.aqa.db.Output
 
 class CenterDoseCsv extends Phase2Csv[CenterDose.CenterDoseHistory] {
@@ -33,13 +32,4 @@ class CenterDoseCsv extends Phase2Csv[CenterDose.CenterDoseHistory] {
   override def getSopUID(data: CD): String = data.centerDose.SOPInstanceUID
 
   override def getOutput(data: CD): Output = data.output
-}
-object CenterDoseCsv {
-
-  def main(args: Array[String]): Unit = {
-    DbSetup.init
-    (new CenterDoseCsv).updateFiles()
-    Phase2Csv.generateIndex()
-  }
-
 }
