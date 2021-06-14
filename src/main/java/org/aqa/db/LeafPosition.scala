@@ -5,7 +5,6 @@ import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
 import org.aqa.run.ProcedureStatus
 
-import scala.annotation.tailrec
 import scala.xml.Elem
 
 case class LeafPosition(
@@ -171,30 +170,20 @@ object LeafPosition extends ProcedureOutput with Logging {
 
     val outputMap = outputList.map(o => (o.outputPK.get, o)).toMap
 
-    val leafPositionList = {
-
-      val pageSize = 500
-
-      @tailrec
-      def appendPage(list: Seq[LeafPosition] = Seq()): Seq[LeafPosition] = {
-        val search = for {
-          output <- Output.query.filter(o => o.machinePK === machinePK)
-          leafPos <- LeafPosition.query.filter(w => w.outputPK === output.outputPK)
-        } yield leafPos
-        val subSearch = search.sortBy(_.leafPositionPK).drop(list.size).take(pageSize)
-        val result = Db.run(subSearch.result)
-        val next = list ++ result
-        logger.info("LeafPosition history list size: " + next.size)
-
-        if (result.size < pageSize)
-          next
-        else
-          appendPage(next)
-      }
-      val fullList = appendPage()
-      logger.info("machinePK: " + machinePK + "   Total number of LeafPosition rows: " + fullList.size)
-      fullList
+    def getLeafPositionsForGroup(outputPKList: Seq[Long]): Seq[LeafPosition] = {
+      val outputPKSet = outputPKList.toSet
+      val search = for {
+        leafPos <- LeafPosition.query.filter(w => w.outputPK.inSet(outputPKSet))
+      } yield leafPos
+      val result = Db.run(search.result)
+      result
     }
+
+    // output PKs put into groups sized small enough to efficiently retrieve values from the database
+    val outputGroupList = edu.umro.ScalaUtil.Util.sizedGroups(outputMap.keys.toSeq, 10)
+
+    // all leaf positions for this machine
+    val leafPositionList = outputGroupList.flatMap(getLeafPositionsForGroup)
 
     // @formatter:off
     val sorted =

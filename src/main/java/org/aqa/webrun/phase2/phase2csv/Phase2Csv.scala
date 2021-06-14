@@ -253,6 +253,7 @@ abstract class Phase2Csv[T] extends Logging {
     * @return Single string of CSV text.
     */
   private def machineToCsv(machine: Machine): String = {
+    val start = System.currentTimeMillis()
     val prefix = dataName + " / " + machine.id + " "
     logger.info(prefix + "starting")
     val mtMachList = MaintenanceRecord.getByMachine(machine.machinePK.get) // list of maintenance records for just this machine
@@ -270,7 +271,7 @@ abstract class Phase2Csv[T] extends Logging {
     val machineRowList = dataList.indices.map(dataIndex => makeCsvRow(dataList, dataIndex, machine, mtMachList)).filter(_.nonEmpty)
     logger.info(prefix + "number of rows " + machineRowList.size)
     val all = (precedingMaintenance ++ machineRowList ++ followingMaintenance).mkString(",\n")
-    logger.info(prefix + "done")
+    logger.info(prefix + "done. Elapsed time: " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
     all
   }
 
