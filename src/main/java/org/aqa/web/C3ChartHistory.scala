@@ -239,8 +239,8 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
 
 """ + // js to set up scroll bars
       s"""
-         |var @@count = 50;
-         |var @@start = 50;
+         |var @@count = ${C3ChartHistory.initialSliderCountValue};
+         |var @@start = ${C3ChartHistory.initialSliderHistoryValue};
          |
          |var @@dateList = getHistoryChartDateList(@@);
          |
@@ -263,6 +263,11 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
 }
 object C3ChartHistory {
 
+  // initial setting for history slider.  value is in percent
+  private val initialSliderHistoryValue = 100
+  // initial setting for count slider.  value is in percent
+  private val initialSliderCountValue = 51
+
   def htmlRef(chartIdTag: String): Elem = {
     <div>
       <div id={chartIdTag}>
@@ -271,11 +276,11 @@ object C3ChartHistory {
       <div class="row">
         <div class="col-md-10" title={"Slide all the way to the left to show the" + WebUtil.titleNewline + " oldest, to the right for newest."}>
           <label for={chartIdTag + "Slider"}>Show older or newer entries</label>
-          <input type="range" min="0" max="100" value="50" id={chartIdTag + "Slider"}/>
+          <input type="range" min="0" max="100" value={initialSliderHistoryValue.toString} id={chartIdTag + "Slider"}/>
         </div>
         <div class="col-md-2" style="visibility: visible;" title={"Slide to the left to show just a few, slide all" + WebUtil.titleNewline + " the way to the right to show all of them."}>
           <label for={chartIdTag + "SliderCount"}>Show fewer or more entries</label>
-          <input type="range" min="0" max="100" value="50" id={chartIdTag + "SliderCount"}/>
+          <input type="range" min="0" max="100" value={initialSliderCountValue.toString} id={chartIdTag + "SliderCount"}/>
         </div>
       </div>
     </div>
