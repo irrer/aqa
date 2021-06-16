@@ -1,6 +1,7 @@
 package org.aqa.db
 
 import com.pixelmed.dicom.TagFromName
+import edu.umro.DicomDict.TagByName
 import org.aqa.AngleType
 import org.aqa.Config
 import org.aqa.Logging
@@ -15,30 +16,32 @@ import javax.vecmath.Point3d
 import scala.xml.Elem
 
 /**
- * Store the analysis results for a set of EPID images containing a BB.  This is derived from
- * the BBbyEPID values to create an evaluation of the composite results of all images in a set.
- */
+  * Store the analysis results for a set of EPID images containing a BB.  This is derived from
+  * the BBbyEPID values to create an evaluation of the composite results of all images in a set.
+  */
 case class BBbyEPIDComposite(
-                              bbByEPIDCompositePK: Option[Long], // primary key
-                              outputPK: Long, // output primary key
-                              rtplanSOPInstanceUID: Option[String], // UID of RTPLAN
-                              epidSeriesInstanceUID: String, // SOP series instance UID of EPID image
-                              offset_mm: Double, // distance between measured EPID position and expected (plan) location (aka: positioning error)
-                              x_mm: Double, // X position in EPID in 3D plan space
-                              y_mm: Double, // Y position in EPID in 3D plan space
-                              z_mm: Double, // Z position in EPID in 3D plan space
-                              bbByCBCTPK: Option[Long], // referenced CBCT measurement
-                              offsetAdjusted_mm: Option[Double], // total distance in 3D plan space adjusted for corresponding CBCT location
-                              xAdjusted_mm: Option[Double], // X position in 3D plan space adjusted for corresponding CBCT location
-                              yAdjusted_mm: Option[Double], // Y position in 3D plan space adjusted for corresponding CBCT location
-                              zAdjusted_mm: Option[Double], //  Z position in 3D plan space adjusted for corresponding CBCT location
-                              tableXlateral_mm: Option[Double], // table position change (RTIMAGE - CT) in X dimension / lateral
-                              tableYvertical_mm: Option[Double], // table position change (RTIMAGE - CT) in Y dimension / vertical
-                              tableZlongitudinal_mm: Option[Double] // table position change (RTIMAGE - CT) in Z dimension / longitudinal
-                            ) {
+    bbByEPIDCompositePK: Option[Long], // primary key
+    outputPK: Long, // output primary key
+    rtplanSOPInstanceUID: Option[String], // UID of RTPLAN
+    epidSeriesInstanceUID: String, // SOP series instance UID of EPID image
+    offset_mm: Double, // distance between measured EPID position and expected (plan) location (aka: positioning error)
+    x_mm: Double, // X position in EPID in 3D plan space
+    y_mm: Double, // Y position in EPID in 3D plan space
+    z_mm: Double, // Z position in EPID in 3D plan space
+    bbByCBCTPK: Option[Long], // referenced CBCT measurement
+    offsetAdjusted_mm: Option[Double], // total distance in 3D plan space adjusted for corresponding CBCT location
+    xAdjusted_mm: Option[Double], // X position in 3D plan space adjusted for corresponding CBCT location
+    yAdjusted_mm: Option[Double], // Y position in 3D plan space adjusted for corresponding CBCT location
+    zAdjusted_mm: Option[Double], //  Z position in 3D plan space adjusted for corresponding CBCT location
+    tableXlateral_mm: Option[Double], // table position change (RTIMAGE - CT) in X dimension / lateral
+    tableYvertical_mm: Option[Double], // table position change (RTIMAGE - CT) in Y dimension / vertical
+    tableZlongitudinal_mm: Option[Double] // table position change (RTIMAGE - CT) in Z dimension / longitudinal
+) {
 
   def insert: BBbyEPIDComposite = {
-    val insertQuery = BBbyEPIDComposite.query returning BBbyEPIDComposite.query.map(_.bbByEPIDCompositePK) into ((bbByEPIDComposite, bbByEPIDCompositePK) => bbByEPIDComposite.copy(bbByEPIDCompositePK = Some(bbByEPIDCompositePK)))
+    val insertQuery = BBbyEPIDComposite.query returning BBbyEPIDComposite.query.map(_.bbByEPIDCompositePK) into ((bbByEPIDComposite, bbByEPIDCompositePK) =>
+      bbByEPIDComposite.copy(bbByEPIDCompositePK = Some(bbByEPIDCompositePK))
+    )
     val action = insertQuery += this
     val result = Db.run(action)
     result
@@ -105,23 +108,25 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
 
     def tableZlongitudinal_mm = column[Option[Double]]("tableZlongitudinal_mm")
 
-    def * = (
-      bbByEPIDCompositePK.?,
-      outputPK,
-      rtplanSOPInstanceUID,
-      epidSeriesInstanceUID,
-      offset_mm,
-      x_mm,
-      y_mm,
-      z_mm,
-      bbByCBCTPK,
-      offsetAdjusted_mm,
-      xAdjusted_mm,
-      yAdjusted_mm,
-      zAdjusted_mm,
-      tableXlateral_mm,
-      tableYvertical_mm,
-      tableZlongitudinal_mm) <> (BBbyEPIDComposite.apply _ tupled, BBbyEPIDComposite.unapply)
+    def * =
+      (
+        bbByEPIDCompositePK.?,
+        outputPK,
+        rtplanSOPInstanceUID,
+        epidSeriesInstanceUID,
+        offset_mm,
+        x_mm,
+        y_mm,
+        z_mm,
+        bbByCBCTPK,
+        offsetAdjusted_mm,
+        xAdjusted_mm,
+        yAdjusted_mm,
+        zAdjusted_mm,
+        tableXlateral_mm,
+        tableYvertical_mm,
+        tableZlongitudinal_mm
+      ) <> (BBbyEPIDComposite.apply _ tupled, BBbyEPIDComposite.unapply)
 
     // Note that if the output row is deleted, then this row will be deleted through the reference to BBbyCBCT
     def bbByCBCTFK = foreignKey("BBbyEPIDComposite_bbByCBCTPKConstraint", bbByCBCTPK, BBbyCBCT.query)(_.bbByCBCTPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
@@ -140,8 +145,8 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
   }
 
   /**
-   * Get a list of all BBbyEPIDComposite for the given output
-   */
+    * Get a list of all BBbyEPIDComposite for the given output
+    */
   def getByOutput(outputPK: Long): Seq[BBbyEPIDComposite] = {
     val action = for {
       inst <- BBbyEPIDComposite.query if inst.outputPK === outputPK
@@ -186,12 +191,12 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
   }
 
   /**
-   * Get the BBbyEPIDComposite results that are nearest in time to the given date.  The rows must
-   * have valid bbByCBCTPK and associated values.
-   *
-   * @param machinePK   : For this machine
-   * @param procedurePK : For this procedure
-   */
+    * Get the BBbyEPIDComposite results that are nearest in time to the given date.  The rows must
+    * have valid bbByCBCTPK and associated values.
+    *
+    * @param machinePK   : For this machine
+    * @param procedurePK : For this procedure
+    */
   def history(machinePK: Long, procedurePK: Long): Seq[BBbyEPIDCompositeHistory] = {
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
@@ -217,13 +222,34 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
     val machineDailyQA: MachineDailyQA = MachineDailyQA.getMachineDailyQAOrDefault(machine.machinePK.get)
 
     /**
-     * Determine if the values are pass, warning, or failure.  Pass means that all values are less than or equal to the
-     * pass limit.  Fail means that at least one value is over the limit.  For CBCT there is a single pass/fail limit.
-     * For EPID and composite values there are a pass and warning limits.  If any value exceeds the warning limit then it
-     * means failure.  Exceeding the pass limit but not the warning limit means warning.  If all values are under the pass
-     * limit the it means pass.  Note that the absolute value of values is considered when comparing to the pass or warning
-     * limits.
-     */
+      * If the machine supports X-Ray Offsets, then they must NOT be equal to 0,0,-500
+      *
+      * @return True if ok.
+      */
+    def xRayOffsetOk(): Boolean = {
+      def anyOffsetOk: Boolean = {
+        try {
+          def offsetOk(offset: Array[Double]): Boolean = (offset.head != 0) || (offset(1) != 0) || (offset(2) != -500)
+          val offsetList = bbByEpid.map(_.attributeList.get(TagByName.XRayImageReceptorTranslation).getDoubleValues)
+          val anyOk = offsetList.map(offsetOk).reduce(_ || _)
+          anyOk
+        } catch {
+          case t: Throwable =>
+            logger.warn("Unexpected error while checking X-Ray Offsets: " + fmtEx(t))
+            false
+        }
+      }
+      (!machineDailyQA.requireXRayOffset) || anyOffsetOk
+    }
+
+    /**
+      * Determine if the values are pass, warning, or failure.  Pass means that all values are less than or equal to the
+      * pass limit.  Fail means that at least one value is over the limit.  For CBCT there is a single pass/fail limit.
+      * For EPID and composite values there are a pass and warning limits.  If any value exceeds the warning limit then it
+      * means failure.  Exceeding the pass limit but not the warning limit means warning.  If all values are under the pass
+      * limit the it means pass.  Note that the absolute value of values is considered when comparing to the pass or warning
+      * limits.
+      */
     val status: ProcedureStatus.ProcedureStatus = {
 
       def exceedsWarning(d: Option[Double]): Boolean = d.isDefined && d.get.abs > machineDailyQA.warningLimit_mm
@@ -254,16 +280,18 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
         case _ if vertZ > machineDailyQA.warningLimit_mm => ProcedureStatus.fail
         case _ if horzZ > machineDailyQA.warningLimit_mm => ProcedureStatus.fail
 
-        case _ if composite.offsetAdjusted_mm.isEmpty => ProcedureStatus.fail
+        case _ if composite.offsetAdjusted_mm.isEmpty                                  => ProcedureStatus.fail
         case _ if composite.offsetAdjusted_mm.get.abs > machineDailyQA.warningLimit_mm => ProcedureStatus.fail
 
         case _ if composite.xAdjusted_mm.isEmpty => ProcedureStatus.fail
         case _ if composite.yAdjusted_mm.isEmpty => ProcedureStatus.fail
         case _ if composite.zAdjusted_mm.isEmpty => ProcedureStatus.fail
 
-        case _ if composite.tableXlateral_mm.isEmpty => ProcedureStatus.fail
-        case _ if composite.tableYvertical_mm.isEmpty => ProcedureStatus.fail
+        case _ if composite.tableXlateral_mm.isEmpty      => ProcedureStatus.fail
+        case _ if composite.tableYvertical_mm.isEmpty     => ProcedureStatus.fail
         case _ if composite.tableZlongitudinal_mm.isEmpty => ProcedureStatus.fail
+
+        case _ if !xRayOffsetOk => ProcedureStatus.fail
 
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -288,11 +316,11 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
   }
 
   /**
-   * Get the earliest date+time of a composite EPID result.
-   *
-   * @param institutionPK Get for this institution.
-   * @return The date+time of the first composite result, if there is at least one.
-   */
+    * Get the earliest date+time of a composite EPID result.
+    *
+    * @param institutionPK Get for this institution.
+    * @return The date+time of the first composite result, if there is at least one.
+    */
   def getEarliestDate(institutionPK: Long): Option[Timestamp] = {
 
     val search = for {
@@ -309,8 +337,8 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
   }
 
   /**
-   * Get all results for this institution.
-   */
+    * Get all results for this institution.
+    */
   def getReportingDataSet(institutionPK: Long): Seq[DailyDataSetComposite] = {
     val search = for {
       output <- Output.query.filter(o => o.dataDate.isDefined)
@@ -328,8 +356,8 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
   }
 
   /**
-   * Get all results that were acquired on one day for one institution.
-   */
+    * Get all results that were acquired on one day for one institution.
+    */
   def getForOneDay(date: Date, institutionPK: Long): Seq[DailyDataSetComposite] = {
 
     val beginDate = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(date).replaceAll("T.*", "T00:00:00")).getTime)
@@ -350,6 +378,3 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
   }
 
 }
-
-
-

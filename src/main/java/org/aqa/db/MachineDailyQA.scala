@@ -1,42 +1,44 @@
 package org.aqa.db
 
-import Db.driver.api._
 import org.aqa.Config
 import org.aqa.Util
-import java.io.File
-import edu.umro.ScalaUtil.Trace
+import org.aqa.db.Db.driver.api._
 
 /**
- * Represent the Daily QA parameters for a single machine.  Note that this is not an
- * auto-incrementing table, and that the primary key is the same as the <code>Machine.machinePK</key>.
- *
- * This is only created if the user creates it, otherwise default values are used.
- */
+  * Represent the Daily QA parameters for a single machine.  Note that this is not an
+  * auto-incrementing table, and that the primary key is the same as the <code>Machine.machinePK</key>.
+  *
+  * This is only created if the user creates it, otherwise default values are used.
+  */
 case class MachineDailyQA(
-  machineDailyQAPK: Option[Long], // primary key
-  passLimit_mm: Double, // If composite results are under this, then they should be considered to have passed.
-  warningLimit_mm: Double // If composite results are under this, then they should be considered to have passed, but are not as good as expected.
+    machineDailyQAPK: Option[Long], // primary key
+    passLimit_mm: Double, // If composite results are under this, then they should be considered to have passed.
+    warningLimit_mm: Double, // If composite results are under this, then they should be considered to have passed, but are not as good as expected.
+    requireXRayOffset: Boolean
 ) {
 
   def insert: MachineDailyQA = {
-    val insertQuery = MachineDailyQA.query returning MachineDailyQA.query.map(_.machineDailyQAPK) into ((machineDailyQA, machineDailyQAPK) => machineDailyQA.copy(machineDailyQAPK = Some(machineDailyQAPK)))
+    val insertQuery =
+      MachineDailyQA.query returning MachineDailyQA.query.map(_.machineDailyQAPK) into ((machineDailyQA, machineDailyQAPK) => machineDailyQA.copy(machineDailyQAPK = Some(machineDailyQAPK)))
     val action = insertQuery += this
     val result = Db.run(action)
     result
   }
 
-  def insertOrUpdate = Db.run(MachineDailyQA.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(MachineDailyQA.query.insertOrUpdate(this))
 
   override def equals(o: Any): Boolean = {
     val other = o.asInstanceOf[MachineDailyQA]
     passLimit_mm.equals(other.passLimit_mm) &&
-      warningLimit_mm.equals(other.warningLimit_mm)
+    warningLimit_mm.equals(other.warningLimit_mm) &&
+    requireXRayOffset.toString.equals(other.warningLimit_mm.toString)
   }
 
-  override def toString = {
+  override def toString: String = {
     "PK: " + machineDailyQAPK +
       "    passLimit_mm: " + Util.fmtDbl(passLimit_mm) +
       "    warningLimit_mm: " + Util.fmtDbl(warningLimit_mm)
+    "    requireXRayOffset: " + requireXRayOffset.toString
   }
 }
 
@@ -46,11 +48,9 @@ object MachineDailyQA {
     def machineDailyQAPK = column[Long]("machineDailyQAPK", O.PrimaryKey)
     def passLimit_mm = column[Double]("passLimit_mm")
     def warningLimit_mm = column[Double]("warningLimit_mm")
+    def requireXRayOffset = column[Boolean]("requireXRayOffset")
 
-    def * = (
-      machineDailyQAPK.?,
-      passLimit_mm,
-      warningLimit_mm) <> ((MachineDailyQA.apply _)tupled, MachineDailyQA.unapply _)
+    def * = (machineDailyQAPK.?, passLimit_mm, warningLimit_mm, requireXRayOffset) <> (MachineDailyQA.apply _ tupled, MachineDailyQA.unapply)
 
     //def machineFK = foreignKey("MachineDailyQA_machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
     def machFK = foreignKey("MachineDailyQA_machinePKConstraint", machineDailyQAPK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
@@ -61,21 +61,21 @@ object MachineDailyQA {
   def get(machineDailyQAPK: Long): Option[MachineDailyQA] = {
     val action = for {
       inst <- MachineDailyQA.query if inst.machineDailyQAPK === machineDailyQAPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   /**
-   * Get a list of all MachineDailyQA.
-   */
-  def list = Db.run(query.result)
+    * Get a list of all MachineDailyQA.
+    */
+  def list: Seq[MachineDailyQA] = Db.run(query.result)
 
-  case class MachineDailyQAExtended(machine: Machine, machineType: MachineType, machineDailyQA: MachineDailyQA);
+  case class MachineDailyQAExtended(machine: Machine, machineType: MachineType, machineDailyQA: MachineDailyQA) {}
 
   /**
-   * Get a list of Daily QA parameters with extended values to support showing the user a nice list.
-   */
+    * Get a list of Daily QA parameters with extended values to support showing the user a nice list.
+    */
   def listExtended(instPK: Long): Seq[MachineDailyQAExtended] = {
     val action = for {
       machine <- Machine.query if machine.institutionPK === instPK
@@ -86,7 +86,7 @@ object MachineDailyQA {
 
     val machList = Db.run(action.result).map(mmm => (mmm._1, mmm._2))
 
-    val result = machList.map(mmt => new MachineDailyQAExtended(mmt._1, mmt._2, getMachineDailyQAOrDefault(mmt._1.machinePK.get)))
+    val result = machList.map(mmt => MachineDailyQAExtended(mmt._1, mmt._2, getMachineDailyQAOrDefault(mmt._1.machinePK.get)))
     result
   }
 
@@ -97,12 +97,12 @@ object MachineDailyQA {
   }
 
   /**
-   * Get the Daily QA limits for the given machine.  If they do not exist, then get the default values.
-   */
+    * Get the Daily QA limits for the given machine.  If they do not exist, then get the default values.
+    */
   def getMachineDailyQAOrDefault(machinePK: Long): MachineDailyQA = {
     MachineDailyQA.get(machinePK) match {
       case Some(machineDailyQA) => machineDailyQA
-      case _ => new MachineDailyQA(Some(machinePK), passLimit_mm = Config.DailyQAPassLimit_mm, warningLimit_mm = Config.DailyQAWarningLimit_mm)
+      case _                    => new MachineDailyQA(Some(machinePK), passLimit_mm = Config.DailyQAPassLimit_mm, warningLimit_mm = Config.DailyQAWarningLimit_mm, requireXRayOffset = false)
     }
   }
 }

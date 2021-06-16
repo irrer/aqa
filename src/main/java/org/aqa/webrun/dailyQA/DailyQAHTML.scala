@@ -15,6 +15,7 @@ import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.run.ProcedureStatus
 import org.aqa.web.ViewOutput
+import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil._
 
 import java.sql.Timestamp
@@ -72,7 +73,6 @@ object DailyQAHTML extends Logging {
     val styleNoData = "color: #000000; background: #888888;"
     val styleWarn = "color: #000000; background: yellow;"
     val col0Title = "Machine Name"
-
 
     def colMachine(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val machElem = wrapAlias(dataSet.machine.id)
@@ -138,8 +138,8 @@ object DailyQAHTML extends Logging {
     }
 
     /**
-     * Format CBCT data.  If the system-wide limit is exceeded then mark it as failed.
-     */
+      * Format CBCT data.  If the system-wide limit is exceeded then mark it as failed.
+      */
     def colCbctXYZ(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
       val x = dataSet.cbct.err_mm.getX
       val y = dataSet.cbct.err_mm.getY
@@ -243,20 +243,43 @@ object DailyQAHTML extends Logging {
     }
 
     def colEpidImages(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
-      def f(d: Double) = d.formatted("%12.2f").trim()
+      def showXRayError: Elem = {
+        val title =
+          "The X-Ray Image Receptor Translation for this machine is set to" + WebUtil.titleNewline +
+            "0,0,-500 but should not be.  This is probably the because" + WebUtil.titleNewline +
+            "maintenance was performed and the translation was not calibrated."
+        <td title={title} class="warning">
+          <a href={ViewOutput.viewOutputUrl(dataSet.composite.outputPK)}>EPID Details
+            <p style="color:red;">
+              <b>X-Ray Translation</b>
+              <b>Not Calibrated</b>
+            </p>
+          </a>
+        </td>
+      }
 
+      def f(d: Double) = d.formatted("%12.2f").trim()
       val tableMovement = dataSet.bbByEpid.map(e => f(e.tableXlateral_mm) + ", " + f(e.tableYvertical_mm) + ", " + f(e.tableZlongitudinal_mm)).distinct
-      if (tableMovement.size > 1) {
+
+      def showTableMovementError: Elem = {
         val title = "The different EPID images have different table positions: " + titleNewline + tableMovement.mkString(titleNewline)
         <td title={title} class="warning">
           <a href={ViewOutput.viewOutputUrl(dataSet.composite.outputPK)}>EPID Details
             <br/> <b style="color:red;">Table Moved</b>
           </a>
         </td>
-      } else {
+      }
+
+      def showLink: Elem = {
         <td>
           <a href={ViewOutput.viewOutputUrl(dataSet.composite.outputPK)}>EPID Details</a>
         </td>
+      }
+
+      0 match {
+        case _ if !dataSet.xRayOffsetOk  => showXRayError
+        case _ if tableMovement.size > 1 => showTableMovementError
+        case _                           => showLink
       }
     }
 
@@ -272,22 +295,18 @@ object DailyQAHTML extends Logging {
       Col("Machine", "Name of treatment machine", colMachine),
       Col("Patient", "Name of test patient", colPatient),
       Col("EPID Time " + reportDate, "Time of EPID acquisition", colDateTime),
-
       Col("X,Y,Z CBCT-PLAN mm", "CBCT - PLAN in mm", colCbctXYZ),
       Col("X,Y,Z / lat,vert,long Table Movement cm", "RTIMAGE-CT in cm, X,Y,Z = lat,vert,lng", colTableMovement),
-
       Col("Gantry Angle for XZ", "Angle of gantry for vertical image in degrees used to calculate values for Y and Z", colVertGantryAngle),
       Col("Vert EPID-CAX(X) mm", "X offset Vertical EPID image-CAX in mm", colVertXCax),
       Col("Vert EPID-CAX(Z) mm", "Z offset Vertical EPID image-CAX in mm", colVertZCax),
-
       Col("Gantry Angle for YZ", "Angle of gantry for horizontal image in degrees used to calculate values for X and Z", colHorzGantryAngle),
       Col("Horz EPID-CAX(Y) mm", "Y offset Horizontal EPID-CAX in mm", colHorzYCax),
       Col("Horz EPID-CAX(Z) mm", "Z offset Horizontal EPID-CAX in mm", colHorzZCax),
-
       Col("(EPID-CAX)-(PLAN-CBCT)", "total offset of (EPID-CAX)-(PLAN-CBCT)", colEpidPlanCbct),
-
       Col("CBCT Details", "Images and other details for CBCT", colCbctImages),
-      Col("EPID Details", "Images and other details for EPID", colEpidImages))
+      Col("EPID Details", "Images and other details for EPID", colEpidImages)
+    )
 
     def dataSetToRow(dataSet: BBbyEPIDComposite.DailyDataSetComposite): MOE = {
       val tdList = colList.tail.map(col => col.toElem(dataSet))
@@ -307,6 +326,7 @@ object DailyQAHTML extends Logging {
 
     val cbctPK = Procedure.ProcOfBBbyCBCT.get.procedurePK.get
     val epidPK = Procedure.ProcOfBBbyEPID.get.procedurePK.get
+
     /** Procedures that we are interested in. */
     val procedurePkSet = Set(cbctPK, epidPK)
 
@@ -342,8 +362,8 @@ object DailyQAHTML extends Logging {
         def cbctBBNotFound(cOut: Output): Boolean = !machineCbctResults.exists(c => c.output.outputPK.get == cOut.outputPK.get)
 
         /**
-         * True if this EPID output has data for horizontal gantry angle.
-         */
+          * True if this EPID output has data for horizontal gantry angle.
+          */
         def hasHorzAngle(output: Output): Boolean = {
           val eSeq = machineEpidResultsWithoutErrors.filter(e => e.data.right.get.outputPK == output.outputPK.get)
           val horz = eSeq.find(e => e.isHorz)
@@ -351,8 +371,8 @@ object DailyQAHTML extends Logging {
         }
 
         /**
-         * True if this EPID output has data for the vertical gantry angle.
-         */
+          * True if this EPID output has data for the vertical gantry angle.
+          */
         def hasVertAngle(output: Output): Boolean = {
           val eSeq = machineEpidResultsWithoutErrors.filter(e => e.data.right.get.outputPK == output.outputPK.get)
           val vert = eSeq.find(e => e.isVert)
@@ -420,10 +440,10 @@ object DailyQAHTML extends Logging {
             }
 
             val elem: Elem = 0 match {
-              case _ if isCBCT && cbctBBNotFound(o) => badCBCT
+              case _ if isCBCT && cbctBBNotFound(o)     => badCBCT
               case _ if (!isCBCT) && (!hasHorzAngle(o)) => missingHorzEPIDGantryAngle
               case _ if (!isCBCT) && (!hasVertAngle(o)) => missingVertEPIDGantryAngle
-              case _ => scanOk
+              case _                                    => scanOk
             }
 
             elem
@@ -465,7 +485,6 @@ object DailyQAHTML extends Logging {
           </tr>
         }
 
-
         def showFail(msg: String, pleasePage: Boolean = false): Elem = { // show links to CBCT and EPID outputs
           <tr>
             <td title={col0Title} style={styleFail}>
@@ -480,8 +499,8 @@ object DailyQAHTML extends Logging {
         }
 
         /**
-         * Return true if the EPID was done before the CBCT.
-         */
+          * Return true if the EPID was done before the CBCT.
+          */
         def epidBeforeCbct = {
           if (machineCbctResults.nonEmpty && machineEpidResultsWithoutErrors.nonEmpty) {
             val firstCbct = machineCbctResults.minBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
@@ -493,17 +512,21 @@ object DailyQAHTML extends Logging {
 
         val explanation: Elem = 0 match {
           case _ if machineCbctResults.isEmpty && epidOutput.isEmpty => showNoData
-          case _ if machineCbctResults.nonEmpty && machineCbctResults.isEmpty => showFail("One or more CBCTs were done but the BB was not found.  Probably mis-alignment of table or phantom. ", pleasePage = true)
+          case _ if machineCbctResults.nonEmpty && machineCbctResults.isEmpty =>
+            showFail("One or more CBCTs were done but the BB was not found.  Probably mis-alignment of table or phantom. ", pleasePage = true)
           case _ if (machineCbctResults.size == 1) && ProcedureStatus.fail.toString.equals(machineCbctResults.head.output.status) => showFail("The CBCT scan failed.", pleasePage = true)
-          case _ if (machineCbctResults.size == 1) && allEpidSeqWithErrors.isEmpty => showWarn("There is a successful CBCT scan but no EPID results.  A new EPID scan is recommended.")
-          case _ if (machineCbctResults.size == 1) && machineEpidResultsWithErrors.nonEmpty => showFail("There is a successful CBCT scan but EPID results failed.", pleasePage = true)
-          case _ if (machineCbctResults.size == 1) && machineEpidResultsWithoutErrors.isEmpty => showWarn("There is a successful CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
-          case _ if machineCbctResults.nonEmpty && machineEpidResultsWithoutErrors.isEmpty => showWarn("There are " + machineCbctResults.size + " successful CBCT scans but no EPID scans.  It is recommended that an EPID scan be performed.")
-          case _ if machineCbctResults.isEmpty && epidOutput.nonEmpty => showFail("There is one or more EPID scans but no CBCT scans.", pleasePage = true)
+          case _ if (machineCbctResults.size == 1) && allEpidSeqWithErrors.isEmpty                                                => showWarn("There is a successful CBCT scan but no EPID results.  A new EPID scan is recommended.")
+          case _ if (machineCbctResults.size == 1) && machineEpidResultsWithErrors.nonEmpty                                       => showFail("There is a successful CBCT scan but EPID results failed.", pleasePage = true)
+          case _ if (machineCbctResults.size == 1) && machineEpidResultsWithoutErrors.isEmpty =>
+            showWarn("There is a successful CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
+          case _ if machineCbctResults.nonEmpty && machineEpidResultsWithoutErrors.isEmpty =>
+            showWarn("There are " + machineCbctResults.size + " successful CBCT scans but no EPID scans.  It is recommended that an EPID scan be performed.")
+          case _ if machineCbctResults.isEmpty && epidOutput.nonEmpty                      => showFail("There is one or more EPID scans but no CBCT scans.", pleasePage = true)
           case _ if machineCbctResults.isEmpty && machineEpidResultsWithoutErrors.nonEmpty => showFail("There are " + epidOutput.size + " EPID scans but no successful CBCT scans.", pleasePage = true)
-          case _ if machineCbctResults.nonEmpty && machineEpidResultsWithoutErrors.isEmpty => showWarn("There are " + machineCbctResults.size + " CBCT scans but zero EPID scans.  The EPID scan needs to be done.")
+          case _ if machineCbctResults.nonEmpty && machineEpidResultsWithoutErrors.isEmpty =>
+            showWarn("There are " + machineCbctResults.size + " CBCT scans but zero EPID scans.  The EPID scan needs to be done.")
           case _ if epidBeforeCbct => showFail("The EPID scan was done prior to CBCT.  The CBCT needs to be done first.")
-          case _ => showFail("There are no results for this machine.")
+          case _                   => showFail("There are no results for this machine.")
         }
         explanation
       }
