@@ -175,8 +175,8 @@ object LeafPosition extends ProcedureOutput with Logging {
       val search = for {
         leafPos <- LeafPosition.query.filter(w => w.outputPK.inSet(outputPKSet))
       } yield leafPos
-      val result = Db.run(search.result)
-      result
+      val list = Db.run(search.result)
+      list
     }
 
     // output PKs put into groups sized small enough to efficiently retrieve values from the database
