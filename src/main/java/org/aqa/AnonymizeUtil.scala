@@ -2,8 +2,6 @@ package org.aqa
 
 import com.pixelmed.dicom.Attribute
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.ValueRepresentation
-import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.db.DicomAnonymous
@@ -286,66 +284,4 @@ object AnonymizeUtil extends Logging {
       dest
     }
 
-  /**
-    * De-anonymize DICOM.
-    *
-    * @param institutionPK For this institution.
-    * @param sourceSeq Anonymized DICOM.  This is not modified.
-    * @return De-anonymized DICOM in the same order as <code>sourceSeq</code>.
-    */
-  def deAnonymizeDicom(institutionPK: Long, sourceSeq: Seq[AttributeList]): Seq[AttributeList] = {
-    val destSeq = sourceSeq.map(DicomUtil.clone) // do not modify the input
-
-  sourceSeq.head.get(  TagByName.PatientID).getTag.toString()
-    // map of encrypted values to original values
-    val daMap = {
-      val valueList = destSeq.flatMap(getListOfAttributesThatGetAnonymized).map(_.getSingleStringValueOrEmptyString())
-      val daSeq = DicomAnonymous.getAttributeByValueSet(institutionPK, valueList.toSet)
-
-      daSeq.map(da => ( da.attributeTag + ":" + da.value, da.originalValue)).toMap
-    }
-
-    /**
-      * De-anonymize one attribute.  Modification is done in-place because attributes are mutable (which makes them smelly).
-      * @param attr Anonymized attribute.
-      */
-    def deAnonymizeAttribute(attr: Attribute): Unit = {
-      val key = DicomAnonymous.formatAnonAttributeTag(attr.getTag) + ":" + attr.getSingleStringValueOrEmptyString()
-      val orig = daMap(key)
-      attr.removeValues()
-      val vr = TagByName.dict.getValueRepresentationFromTag(attr.getTag)
-
-      0 match {
-        case _
-            if ValueRepresentation.isUniqueIdentifierVR(vr) ||
-              ValueRepresentation.isCodeStringVR(vr) =>
-          attr.addValue(orig)
-
-        case _
-            if ValueRepresentation.isFloatSingleVR(vr) ||
-              ValueRepresentation.isFloatDoubleVR(vr) =>
-          attr.addValue(orig.toDouble)
-
-        case _
-            if ValueRepresentation.isUnsignedShortVR(vr) ||
-              ValueRepresentation.isUnsignedLongVR(vr) ||
-              ValueRepresentation.isUnsignedVeryLongVR(vr) ||
-              ValueRepresentation.isSignedShortVR(vr) ||
-              ValueRepresentation.isSignedLongVR(vr) ||
-              ValueRepresentation.isSignedVeryLongVR(vr) =>
-          attr.addValue(orig.toLong)
-
-        case _ => attr.addValue(orig)
-      }
-      attr.addValue(orig)
-    }
-
-    def deAnon(al: AttributeList): Unit = {
-      val attrList = getListOfAttributesThatGetAnonymized(al)
-      attrList.foreach(deAnonymizeAttribute)
-    }
-
-    destSeq.foreach(deAnon)
-    destSeq
-  }
 }
