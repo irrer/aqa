@@ -10,7 +10,6 @@ import org.aqa.AnonymizeUtil
 import org.aqa.Config
 import org.aqa.Crypto
 import org.aqa.Logging
-import org.aqa.Util
 import org.aqa.db.Db.driver.api._
 
 /**
@@ -47,12 +46,6 @@ case class DicomAnonymous(
     val original = AnonymizeUtil.decryptWithNonce(institutionPK, value_real)
     original
   }
-
-  /**
-    * Alias of this that gets presented to a user that is not allowed to see the real value.
-    */
-  def aliasOf(institutionName: String): String = Util.textToId(institutionName + " " + attributeTag + " " + dicomAnonymousPK.get)
-  //def aliasOf: String = aliasOf(Institution.get(institutionPK).get.name)
 }
 
 object DicomAnonymous extends Logging {
