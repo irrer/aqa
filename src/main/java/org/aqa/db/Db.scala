@@ -113,7 +113,7 @@ object Db extends Logging {
   def run[R](op: DBIOAction[R, NoStream, Nothing]): R = {
 
     /** A database operation that takes longer than this (in ms) is considered to have taken a very long time. */
-    val veryLongTime_ms = 0 // 5 * 1000
+    val veryLongTime_ms = 5 * 1000
     try {
       val start = System.currentTimeMillis()
       val dbAction = db.run(op)
