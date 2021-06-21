@@ -284,4 +284,46 @@ object AnonymizeUtil extends Logging {
       dest
     }
 
+  /**
+    * De-anonymize DICOM.  Note that small errors may occur:
+    *
+    *    - Attributes with no values (<null>) will be restored as a single empty string.
+    *
+    *    - Attributes with an extra blank at the end of the value may have it removed.
+    *
+    *    - Attributes with no extra blank at the end of the value may have one added.
+    *
+    *    - Some attributes that the DICOM specification says to anonymize are not.  See
+    *      configuration file for more details.
+    *
+    * @param institutionPK For this institution.
+    * @param sourceSeq Anonymized DICOM.  This is not modified.
+    * @return De-anonymized DICOM in the same order as <code>sourceSeq</code>.
+    */
+  def deAnonymizeDicom(institutionPK: Long, sourceSeq: Seq[AttributeList]): Seq[AttributeList] = {
+    val destSeq = sourceSeq.map(DicomUtil.clone) // do not modify the input
+
+    val attrList = destSeq.flatMap(getListOfAttributesThatGetAnonymized)
+
+    val dicomAnonymousList = DicomAnonymous.getByAttrAndValue(institutionPK, attrList)
+
+    def deAnonymizeAttribute(attr: Attribute): Unit = {
+      val attrTag = DicomAnonymous.formatAnonAttributeTag(attr.getTag)
+      val attrValue = attr.getSingleStringValueOrEmptyString().trim
+
+      val da = dicomAnonymousList.find(da => da.attributeTag.equals(attrTag) && da.value.trim.equals(attrValue))
+      if (da.isDefined) {
+        val origValue = da.get.originalValue
+        attr.removeValues()
+        attr.addValue(origValue)
+      } else {
+        logger.warn("Unable to properly de-anonymize attribute " + attrTag + " " + attrValue)
+      }
+    }
+
+    attrList.foreach(a => deAnonymizeAttribute(a))
+
+    destSeq
+  }
+
 }

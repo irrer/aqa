@@ -194,25 +194,30 @@ Note that when building a package for release, the Maven build process uses the 
          - for UIDs: To a new unique UID
          - for non-UIDs: To the 'Name' XML attribute followed by an underscore and a unique integer.  For
            example, StationName might be anonymized to StationName_43
-     
+
+     Note: The 'Value' XML attribute is deprecated.  It was deprecated because it made it impossible to
+     de-anonymize.  Note that with this deprecation, this anonymization scheme does not conform to the
+     DICOM standard.  This is considered to be ok for this application because it is really only
+     protecting institutional ID's, not patient PHI.  (18 June 2021)
+
      Warning: If a Name value is not in the standard dictionary, then the server will halt with
      a java.lang.ExceptionInInitializerError error.
      -->
     <ToBeAnonymizedList>
         <ToBeAnonymized Name='PatientID' Tag='0010,0020' />  <!-- Example of how Tag is used. -->
         <ToBeAnonymized Tag='0010,0010' />  <!-- Example of how just a Tag is used, equivalent to Name='PatientName' -->
-        <ToBeAnonymized Name='PatientBirthDate' Value='18000101' />
-        <ToBeAnonymized Name='PatientBirthTime' Value='000000' />
-        <ToBeAnonymized Name='PatientSex' Value='O' />
+        <!-- <ToBeAnonymized Name='PatientBirthDate' Value='18000101' /> -->
+        <!-- <ToBeAnonymized Name='PatientBirthTime' Value='000000' /> -->
+        <!-- <ToBeAnonymized Name='PatientSex' Value='O' /> -->
         <ToBeAnonymized Name='OtherPatientIDs' />
         <ToBeAnonymized Name='OtherPatientNames' />
-        <ToBeAnonymized Name='PatientAge' Value='0' />
-        <ToBeAnonymized Name='PatientSize' Value='0' />
-        <ToBeAnonymized Name='PatientWeight' Value='0' />
+        <!-- <ToBeAnonymized Name='PatientAge' Value='0' /> -->
+        <!-- <ToBeAnonymized Name='PatientSize' Value='0' /> -->
+        <!-- <ToBeAnonymized Name='PatientWeight' Value='0' /> -->
         <ToBeAnonymized Name='InstanceCreatorUID' />
         <ToBeAnonymized Name='SOPInstanceUID' />
         <ToBeAnonymized Name='MediaStorageSOPInstanceUID' />
-        <ToBeAnonymized Name='AccessionNumber' Value='0' />
+        <!-- <ToBeAnonymized Name='AccessionNumber' Value='0' /> -->
         <ToBeAnonymized Name='InstitutionName' />
         <ToBeAnonymized Name='InstitutionAddress' />
         <ToBeAnonymized Name='ReferringPhysicianName' />

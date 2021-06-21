@@ -237,10 +237,44 @@ object DicomAnonymous extends Logging {
   }
 
   /**
-    * Get previously anonymized values by institution and value's membership in a set.
+    * Get previously anonymized values by institution and attribute tag and value.
+    *
+    * Note that this must account for values that may or may not have an extra blank at the end.
+    *
+    * @param institutionPK Only for this institution.
+    * @param attrList For this list of attributes.
+    * @return Previously anonymized attributes.
     */
-  def getAttributeByValueSet(institutionPK: Long, value: Set[String]): Seq[DicomAnonymous] = {
-    val action = DicomAnonymous.query.filter(da => (da.institutionPK === institutionPK) && da.value.inSet(value))
+  def getByAttrAndValue(institutionPK: Long, attrList: Seq[Attribute]): Seq[DicomAnonymous] = {
+    def tagSet = attrList.map(attr => formatAnonAttributeTag(attr.getTag)).toSet
+    def valueSet = {
+      val trimmed = attrList.map(_.getSingleStringValueOrEmptyString.trim).toSet.toSeq
+      val extraBlank = trimmed.map(_ + " ")
+      (trimmed ++ extraBlank).toSet
+    }
+
+    val action = DicomAnonymous.query.filter(da => (da.institutionPK === institutionPK) && da.value.inSet(valueSet) && da.attributeTag.inSet(tagSet))
+    val list = Db.run(action.result)
+    val pairSet = attrList.map(attr => (formatAnonAttributeTag(attr.getTag) + ":" + attr.getSingleStringValueOrEmptyString()).trim).toSet
+    def daAsPair(da: DicomAnonymous) = (da.attributeTag + ":" + da.value).trim
+    val inList = list.filter(da => pairSet.contains(daAsPair(da)))
+    inList
+  }
+
+  def getLastPk(): Long = {
+    val lastPk =
+      try {
+        val action = DicomAnonymous.query.map(da => da.dicomAnonymousPK).max
+        val mx = Db.run(action.result)
+        mx.get
+      } catch {
+        case _: Throwable => 0.toLong
+      }
+    lastPk
+  }
+
+  def getByPkLargerThan(pk: Long): Seq[DicomAnonymous] = {
+    val action = DicomAnonymous.query.filter(da => da.dicomAnonymousPK > pk)
     val list = Db.run(action.result)
     list
   }
