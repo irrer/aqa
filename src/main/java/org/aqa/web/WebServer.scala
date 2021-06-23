@@ -2,6 +2,7 @@ package org.aqa.web
 
 import edu.umro.RestletUtil.NetworkIpFilter
 import edu.umro.RestletUtil.RestletHttps
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.CachedUser
@@ -77,8 +78,8 @@ class WebServer extends Application with Logging {
   private lazy val component = new Component
 
   /**
-   * If the Config.HTTPSPort is defined, then use HTTPS, otherwise use HTTP
-   */
+    * If the Config.HTTPSPort is defined, then use HTTPS, otherwise use HTTP
+    */
   private def addProtocol(): Unit = {
     if (Config.HTTPSPort.isDefined) {
       // Sometimes reformatting the XML config file causes the password not to work, so try it with and without whitespace.
@@ -103,16 +104,16 @@ class WebServer extends Application with Logging {
   }
 
   /**
-   * If the static directory is different from the install directory, then delete it
-   * and copy the latest install directory.
-   * private def initStaticContentDir = {
-   * if (!Utility.compareFolders(installDir, WebServer.STATIC_CONTENT_DIR)) {
-   * logger.info("Updating directory " + WebServer.STATIC_CONTENT_DIR.getAbsolutePath + " from " + installDir.getAbsolutePath)
-   * Utility.deleteFileTree(WebServer.STATIC_CONTENT_DIR)
-   * Utility.copyFileTree(installDir, WebServer.STATIC_CONTENT_DIR)
-   * }
-   * }
-   */
+    * If the static directory is different from the install directory, then delete it
+    * and copy the latest install directory.
+    * private def initStaticContentDir = {
+    * if (!Utility.compareFolders(installDir, WebServer.STATIC_CONTENT_DIR)) {
+    * logger.info("Updating directory " + WebServer.STATIC_CONTENT_DIR.getAbsolutePath + " from " + installDir.getAbsolutePath)
+    * Utility.deleteFileTree(WebServer.STATIC_CONTENT_DIR)
+    * Utility.copyFileTree(installDir, WebServer.STATIC_CONTENT_DIR)
+    * }
+    * }
+    */
 
   private def attach(router: Router, url: String, restlet: Restlet): Unit = {
     //logger.info("attaching router to " + url + " ==> " + name + rootRef)
@@ -148,18 +149,18 @@ class WebServer extends Application with Logging {
 
             attach(router, "/" + WebServer.staticDirName, expiresOneHourLaterFilter)
         }
-  */
+   */
 
   /**
-   * Allow access to the results directory, which contains the input and output files used by
-   * procedures.  If a file is requested that does not exist, try to get it from the database.
-   */
+    * Allow access to the results directory, which contains the input and output files used by
+    * procedures.  If a file is requested that does not exist, try to get it from the database.
+    */
   private class ResultsDir extends Filter {
 
     /**
-     * Attempt to restore the requested file from the database.  See if its directory matches
-     * anything in input or output, and if it does, restore it.
-     */
+      * Attempt to restore the requested file from the database.  See if its directory matches
+      * anything in input or output, and if it does, restore it.
+      */
     private def restoreFile(file: File): Unit = {
       try {
         def fileNameSuffix(f: File) = f.getAbsolutePath.substring(Config.resultsDirFile.getAbsolutePath.length)
@@ -221,8 +222,8 @@ class WebServer extends Application with Logging {
   private lazy val mainIndex = new MainIndex(Config.staticDirFile)
 
   /**
-   * Referencing this value will force all of the lazy values to be constructed.
-   */
+    * Referencing this value will force all of the lazy values to be constructed.
+    */
   private lazy val forceConstruction = {
 
     val list = Seq(
@@ -241,39 +242,39 @@ class WebServer extends Application with Logging {
       viewOutput,
       outputList,
       tmpDirectoryRestlet,
-      machineConfigurationDirRestlet)
+      machineConfigurationDirRestlet )
 
     val numNull = list.count(r => r == null)
     numNull
   }
 
   /**
-   * Determine the role (authorization level) that the request is for.  This is the rules are
-   * defined for authorization, or in other words, given a request, what UserRole is required
-   * to use it?
-   *
-   * This function is related to <code>forceConstruction</code>, which forces the construction of restlets.
-   */
+    * Determine the role (authorization level) that the request is for.  This is the rules are
+    * defined for authorization, or in other words, given a request, what UserRole is required
+    * to use it?
+    *
+    * This function is related to <code>forceConstruction</code>, which forces the construction of restlets.
+    */
   private def getRequestedRole(request: Request, response: Response): UserRole.Value = {
     val templateRoute = router.getNext(request, response).asInstanceOf[TemplateRoute]
     val restlet = templateRoute.getNext
 
     val role: UserRole.Value = restlet match {
-      case `staticDirRestlet` => UserRole.publik
-      case `anonymousTranslate` => UserRole.guest // tough lesson: This MUST be privileged to at least require a password.
-      case `mainIndex` => UserRole.publik
-      case `login` => UserRole.publik
-      case `notAuthorized` => UserRole.publik
-      case `notAuthenticated` => UserRole.publik
-      case `termsOfUse` => UserRole.publik
-      case `setPassword` => UserRole.guest
-      case `systemModificationUpdate` => UserRole.publik
-      case `resultsDirectoryRestlet` => UserRole.guest
-      case `webRunIndex` => UserRole.user
-      case `getSeries` => UserRole.user
-      case `viewOutput` => UserRole.user
-      case `outputList` => UserRole.user
-      case `tmpDirectoryRestlet` => UserRole.user
+      case `staticDirRestlet`               => UserRole.publik
+      case `anonymousTranslate`             => UserRole.guest // tough lesson: This MUST be privileged to at least require a password.
+      case `mainIndex`                      => UserRole.publik
+      case `login`                          => UserRole.publik
+      case `notAuthorized`                  => UserRole.publik
+      case `notAuthenticated`               => UserRole.publik
+      case `termsOfUse`                     => UserRole.publik
+      case `setPassword`                    => UserRole.guest
+      case `systemModificationUpdate`       => UserRole.publik
+      case `resultsDirectoryRestlet`        => UserRole.guest
+      case `webRunIndex`                    => UserRole.user
+      case `getSeries`                      => UserRole.user
+      case `viewOutput`                     => UserRole.user
+      case `outputList`                     => UserRole.user
+      case `tmpDirectoryRestlet`            => UserRole.user
       case `machineConfigurationDirRestlet` => UserRole.user
       case _ =>
         logger.info("admin role requested by " + WebUtil.getUserIdOrDefault(request, "unknown"))
@@ -298,7 +299,7 @@ class WebServer extends Application with Logging {
             case Some(user) =>
               if (user.getRole.get.id < requestedRole.id) {
                 logger.warn("Authorization violation.  User " + user.id +
-                  " attempted to access " + request.toString + " that requires role " + requestedRole + " but their role is only " + user.getRole)
+                    " attempted to access " + request.toString + " that requires role " + requestedRole + " but their role is only " + user.getRole)
                 response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
                 response.redirectSeeOther(notAuthorized.pathOf)
               } else
@@ -361,13 +362,13 @@ class WebServer extends Application with Logging {
   }
 
   /**
-   * Filter all messages to fix REDIRECTION_SEE_OTHER messages so that they go to the
-   * 'right' place.  The AWS security layer translates https to http and back, but this
-   * server only sees them as http.  So when it does a redirection, it otherwise redirects
-   * the browser to http.  This is what this filter fixes.  This also works locally on
-   * the AWS host where the client does not go through the security layer but instead
-   * goes directly to the service via http.
-   */
+    * Filter all messages to fix REDIRECTION_SEE_OTHER messages so that they go to the
+    * 'right' place.  The AWS security layer translates https to http and back, but this
+    * server only sees them as http.  So when it does a redirection, it otherwise redirects
+    * the browser to http.  This is what this filter fixes.  This also works locally on
+    * the AWS host where the client does not go through the security layer but instead
+    * goes directly to the service via http.
+    */
   private def resolveToReferer(restlet: Restlet): Restlet = {
 
     class ResolveToRefererFilter extends Filter {
@@ -379,8 +380,9 @@ class WebServer extends Application with Logging {
           val path = locRef.toString.replaceAll("^" + request.getResourceRef.getHostIdentifier, desiredHost)
           response.redirectSeeOther(path)
           logger.info("Redirecting response via REDIRECTION_SEE_OTHER from/to:" +
-            "\n    " + locRef +
-            "\n    " + path)
+              "\n    " + locRef +
+              "\n    " + path
+          )
         }
         // TODO Problem : If css and js is served from Cloudflare, they work, but if served from AQA, they don't.
         // The problem shows up for tabs in the online spreadsheet viewer and timedatepicker.
@@ -407,8 +409,8 @@ class WebServer extends Application with Logging {
   }
 
   /**
-   * Ensure that the user has agreed to the terms in the legal statement for using this service.
-   */
+    * Ensure that the user has agreed to the terms in the legal statement for using this service.
+    */
   /*
   private def initLegal(restlet: Restlet): Restlet = {
 
@@ -438,11 +440,11 @@ class WebServer extends Application with Logging {
     legalFilter.setNext(restlet)
     legalFilter
   }
-  */
+   */
 
   /**
-   * Standard Restlet override defines how to serve web pages.
-   */
+    * Standard Restlet override defines how to serve web pages.
+    */
   override def createInboundRoot: Restlet = {
 
     try {
@@ -540,11 +542,21 @@ class WebServer extends Application with Logging {
   }
 
   /**
-   * Initialize and start the service.
-   */
+    * Initialize and start the service.
+    */
   def init(): Unit = {
     logger.info("Beginning web service initialization.")
     addProtocol()
+
+    // Set min and max threads to avoid Restlet errors similar to:
+    //   [Thread-4] WARN  Server:135 - Unable to run the following server-side task: sun.net.httpserver.ServerImpl$Exchange@4b9315ab
+    val serverList = component.getServers
+    (0 until serverList.size()).foreach(i => {
+      val parameters = serverList.get(i).getContext().getParameters()
+      parameters.add("maxThreads", "30");
+      parameters.add("minThreads", "5");
+    })
+
     component.getDefaultHost.attach(this)
     component.start()
     waitForWebServiceToStart()

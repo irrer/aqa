@@ -97,9 +97,9 @@
     <orderEntry type="library" name="Maven: org.jfree:jfreechart:1.0.19" level="project" />
     <orderEntry type="library" name="Maven: org.jfree:jcommon:1.0.23" level="project" />
     <orderEntry type="library" name="Maven: org.postgresql:postgresql:9.4-1202-jdbc41" level="project" />
-    <orderEntry type="library" name="Maven: org.restlet.jee:org.restlet.ext.fileupload:2.3.4" level="project" />
-    <orderEntry type="library" name="Maven: org.restlet.jee:org.restlet:2.3.4" level="project" />
-    <orderEntry type="library" name="Maven: org.restlet.jee:org.restlet.ext.servlet:2.3.4" level="project" />
+    <orderEntry type="library" name="Maven: org.restlet.jee:org.restlet.ext.fileupload:2.3.5" level="project" />
+    <orderEntry type="library" name="Maven: org.restlet.jee:org.restlet:2.3.5" level="project" />
+    <orderEntry type="library" name="Maven: org.restlet.jee:org.restlet.ext.servlet:2.3.5" level="project" />
     <orderEntry type="library" name="Maven: org.restlet.jse:org.restlet.ext.crypto:2.3.5" level="project" />
     <orderEntry type="library" name="Maven: org.restlet.jse:org.restlet.ext.httpclient:2.3.5" level="project" />
     <orderEntry type="library" name="Maven: org.apache.httpcomponents:httpclient:4.3.2" level="project" />
