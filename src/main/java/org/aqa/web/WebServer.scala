@@ -2,7 +2,6 @@ package org.aqa.web
 
 import edu.umro.RestletUtil.NetworkIpFilter
 import edu.umro.RestletUtil.RestletHttps
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.CachedUser
@@ -242,7 +241,8 @@ class WebServer extends Application with Logging {
       viewOutput,
       outputList,
       tmpDirectoryRestlet,
-      machineConfigurationDirRestlet )
+      machineConfigurationDirRestlet
+    )
 
     val numNull = list.count(r => r == null)
     numNull
@@ -298,8 +298,10 @@ class WebServer extends Application with Logging {
           userOpt match {
             case Some(user) =>
               if (user.getRole.get.id < requestedRole.id) {
-                logger.warn("Authorization violation.  User " + user.id +
-                    " attempted to access " + request.toString + " that requires role " + requestedRole + " but their role is only " + user.getRole)
+                logger.warn(
+                  "Authorization violation.  User " + user.id +
+                    " attempted to access " + request.toString + " that requires role " + requestedRole + " but their role is only " + user.getRole
+                )
                 response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
                 response.redirectSeeOther(notAuthorized.pathOf)
               } else
@@ -379,7 +381,8 @@ class WebServer extends Application with Logging {
           val desiredHost = request.getReferrerRef.getHostIdentifier
           val path = locRef.toString.replaceAll("^" + request.getResourceRef.getHostIdentifier, desiredHost)
           response.redirectSeeOther(path)
-          logger.info("Redirecting response via REDIRECTION_SEE_OTHER from/to:" +
+          logger.info(
+            "Redirecting response via REDIRECTION_SEE_OTHER from/to:" +
               "\n    " + locRef +
               "\n    " + path
           )
@@ -504,7 +507,8 @@ class WebServer extends Application with Logging {
         login,
         notAuthorized,
         notAuthenticated,
-        setPassword)
+        setPassword
+      )
 
       restletList.foreach(r => attach(router, WebUtil.SubUrl.url(r.subUrl, WebUtil.cleanClassName(r.getClass.getName)), r))
 
@@ -552,9 +556,9 @@ class WebServer extends Application with Logging {
     //   [Thread-4] WARN  Server:135 - Unable to run the following server-side task: sun.net.httpserver.ServerImpl$Exchange@4b9315ab
     val serverList = component.getServers
     (0 until serverList.size()).foreach(i => {
-      val parameters = serverList.get(i).getContext().getParameters()
-      parameters.add("maxThreads", "30");
-      parameters.add("minThreads", "5");
+      val parameters = serverList.get(i).getContext.getParameters
+      parameters.add("maxThreads", "30")
+      parameters.add("minThreads", "5")
     })
 
     component.getDefaultHost.attach(this)
