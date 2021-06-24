@@ -549,7 +549,10 @@ class WebServer extends Application with Logging {
     * Set min and max threads to avoid Restlet errors similar to:
     *   [Thread-4] WARN  Server:135 - Unable to run the following server-side task: sun.net.httpserver.ServerImpl$Exchange@4b9315ab
     *
-    * Reference:
+    * References:
+    *   org.restlet.engine.connector.NetServerHelper.java
+    *     https://javadocs.restlet.talend.com/2.4/jse/engine/org/restlet/engine/connector/NetServerHelper.html
+    *
     *   https://stackoverflow.com/questions/8247869/repeated-calls-by-restlet-client-to-restlet-server-hangs
     */
   private def setThreadPoolSize(): Unit = {
