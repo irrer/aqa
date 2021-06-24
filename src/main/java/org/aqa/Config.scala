@@ -356,6 +356,10 @@ object Config extends Logging {
   val JavaKeyStoreFileList: List[File] = getJavaKeyStoreFileList
 
   val LdapUrl: Option[String] = getLdapUrl
+
+  val RestletMinThreads = logMainText("RestletMinThreads", "5").toInt
+  val RestletMaxThreads = logMainText("RestletMaxThreads", "50").toInt
+
   val LdapInstitutionName: String = logMainText("LdapInstitutionName", "not specified")
   val LdapRole: String = logMainText("LdapRole", "not specified")
   val LdapGroupList: Seq[String] = getLdapGroupList

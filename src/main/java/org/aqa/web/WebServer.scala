@@ -546,20 +546,29 @@ class WebServer extends Application with Logging {
   }
 
   /**
+    * Set min and max threads to avoid Restlet errors similar to:
+    *   [Thread-4] WARN  Server:135 - Unable to run the following server-side task: sun.net.httpserver.ServerImpl$Exchange@4b9315ab
+    *
+    * Reference:
+    *   https://stackoverflow.com/questions/8247869/repeated-calls-by-restlet-client-to-restlet-server-hangs
+    */
+  private def setThreadPoolSize(): Unit = {
+    val serverList = component.getServers
+    (0 until serverList.size()).foreach(i => {
+      val parameters = serverList.get(i).getContext.getParameters
+      parameters.add("maxThreads", Config.RestletMaxThreads.toString)
+      parameters.add("minThreads", Config.RestletMinThreads.toString)
+    })
+  }
+
+  /**
     * Initialize and start the service.
     */
   def init(): Unit = {
     logger.info("Beginning web service initialization.")
     addProtocol()
 
-    // Set min and max threads to avoid Restlet errors similar to:
-    //   [Thread-4] WARN  Server:135 - Unable to run the following server-side task: sun.net.httpserver.ServerImpl$Exchange@4b9315ab
-    val serverList = component.getServers
-    (0 until serverList.size()).foreach(i => {
-      val parameters = serverList.get(i).getContext.getParameters
-      parameters.add("maxThreads", "30")
-      parameters.add("minThreads", "5")
-    })
+    setThreadPoolSize()
 
     component.getDefaultHost.attach(this)
     component.start()

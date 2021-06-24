@@ -104,6 +104,13 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Location of LDAP service that has user names and passwords.  If not configured, then the LDAP feature is not active. -->
     <LdapUrl>ldap://ldap.ent.med.umich.edu:636/</LdapUrl>  <!-- IP: 141.214.28.71 -->
 
+    <!-- From Restlet documentation: Minimum number of worker threads waiting to service calls, even
+    if they are idle. Technically speaking, this is a core number of threads that are pre-started. -->
+    <RestletMinThreads>5</RestletMinThreads>
+    <!-- From Restlet documentation: Maximum number of worker threads that can service calls. If this
+    number is reached then additional calls are queued if the "maxQueued" value hasn't been reached. -->
+    <RestletMaxThreads>50</RestletMaxThreads>
+
     <!-- Name of institution with LDAP. -->
     <LdapInstitutionName>U Mich</LdapInstitutionName>
 
