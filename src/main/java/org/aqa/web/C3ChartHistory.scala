@@ -245,18 +245,21 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
          |var @@dateList = getHistoryChartDateList(@@);
          |
          |var @@slider = document.getElementById("@@Slider");
-         |@@slider.oninput = function() {
-         |  @@start = parseInt(this.value);
+         |
+         |if (@@slider != null) { // backwards compatible with history graphs that do not have sliders.
+         |  @@slider.oninput = function() {
+         |    @@start = parseInt(this.value);
+         |    moveHistoryChart(@@, @@dateList, @@start, @@count);
+         |  }
+         |
+         |  var @@sliderCount = document.getElementById("@@SliderCount");
+         |  @@sliderCount.oninput = function() {
+         |    @@count = parseInt(this.value);
+         |    moveHistoryChart(@@, @@dateList, @@start, @@count);
+         |  }
+         |
          |  moveHistoryChart(@@, @@dateList, @@start, @@count);
          |}
-         |
-         |var @@sliderCount = document.getElementById("@@SliderCount");
-         |@@sliderCount.oninput = function() {
-         |  @@count = parseInt(this.value);
-         |  moveHistoryChart(@@, @@dateList, @@start, @@count);
-         |}
-         |
-         |moveHistoryChart(@@, @@dateList, @@start, @@count);
          |""".stripMargin.replace("@@", chartIdTag)
   }
 
