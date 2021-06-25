@@ -86,10 +86,6 @@ abstract class Phase2Csv[T] extends Logging {
 
   def fileBaseNm: String = Phase2Csv.fileBaseName(dataName)
 
-  // private val maintenanceCsv = new MaintenanceCsv(metadataCache)
-
-  // private val maintenanceRecordList = maintenanceCsv.retrieveGroupedAndOrderedList()
-
   private val prefixCsv = new PrefixCsv(metadataCache)
   private val machineDescriptionCsv = new MachineDescriptionCsv(metadataCache)
   private val dicomCsv = new DicomCsv
@@ -256,7 +252,8 @@ abstract class Phase2Csv[T] extends Logging {
     val start = System.currentTimeMillis()
     val prefix = dataName + " / " + machine.id + " "
     logger.info(prefix + "starting")
-    val mtMachList = MaintenanceRecord.getByMachine(machine.machinePK.get) // list of maintenance records for just this machine
+    // changed this so it would not put maintenance records in data.
+    val mtMachList: Seq[MaintenanceRecord] = Seq() // MaintenanceRecord.getByMachine(machine.machinePK.get) // list of maintenance records for just this machine
 
     logger.info(prefix + "getting data")
     val dataList = getData(machine.machinePK.get) // data for this machine
