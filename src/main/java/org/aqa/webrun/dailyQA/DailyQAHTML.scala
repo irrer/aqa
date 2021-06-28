@@ -31,7 +31,7 @@ object DailyQAHTML extends Logging {
     </div>
   }
 
-  def makeReport(dataSetList: Seq[BBbyEPIDComposite.DailyDataSetComposite], institutionPK: Long, date: Date): Elem = {
+  def makeReport(dataSetList: Seq[DailyDataSetComposite], institutionPK: Long, date: Date): Elem = {
 
     /** Local class for Machine, Output, and Elem. */
     case class MOE(machine: Machine, output: Option[Output], elem: Elem) {}
@@ -62,7 +62,7 @@ object DailyQAHTML extends Logging {
 
     def fmtAngle(angle: Double) = angle.formatted("%12.8f").trim
 
-    case class Col(name: String, title: String, toElem: BBbyEPIDComposite.DailyDataSetComposite => Elem) {
+    case class Col(name: String, title: String, toElem: DailyDataSetComposite => Elem) {
       def toHeader: Elem = <th title={title}>
         {name}
       </th>
@@ -74,7 +74,7 @@ object DailyQAHTML extends Logging {
     val styleWarn = "color: #000000; background: yellow;"
     val col0Title = "Machine Name"
 
-    def colMachine(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+    def colMachine(dataSet: DailyDataSetComposite): Elem = {
       val machElem = wrapAlias(dataSet.machine.id)
 
       if (ProcedureStatus.eq(dataSet.status, ProcedureStatus.pass)) {
@@ -100,7 +100,7 @@ object DailyQAHTML extends Logging {
       }
     }
 
-    def colPatient(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+    def colPatient(dataSet: DailyDataSetComposite): Elem = {
 
       val patientName: Elem = DicomSeries.getBySeriesInstanceUID(dataSet.composite.epidSeriesInstanceUID).headOption match {
         case Some(ds) =>
@@ -131,7 +131,7 @@ object DailyQAHTML extends Logging {
       }
     }
 
-    def colDateTime(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+    def colDateTime(dataSet: DailyDataSetComposite): Elem = {
       <td>
         {DailyQASummary.timeFormat.format(dataSet.output.dataDate.get)}
       </td>
@@ -140,7 +140,7 @@ object DailyQAHTML extends Logging {
     /**
       * Format CBCT data.  If the system-wide limit is exceeded then mark it as failed.
       */
-    def colCbctXYZ(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+    def colCbctXYZ(dataSet: DailyDataSetComposite): Elem = {
       val x = dataSet.cbct.err_mm.getX
       val y = dataSet.cbct.err_mm.getY
       val z = dataSet.cbct.err_mm.getZ
@@ -164,7 +164,7 @@ object DailyQAHTML extends Logging {
       }
     }
 
-    def colTableMovement(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+    def colTableMovement(dataSet: DailyDataSetComposite): Elem = {
       val composite = dataSet.composite
 
       def fmt(d: Option[Double]) = (d.get / 10).formatted("%4.1f")
@@ -176,44 +176,44 @@ object DailyQAHTML extends Logging {
       } else <td></td>
     }
 
-    def colVertGantryAngle(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+    def colVertGantryAngle(dataSet: DailyDataSetComposite): Elem = {
       val angle = dataSet.vertList.head.gantryAngle_deg
       <td title={fmtAngle(angle)}>
         {Util.angleRoundedTo90(angle)}
       </td>
     }
 
-    def colVertXCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+    def colVertXCax(dataSet: DailyDataSetComposite): Elem = {
       posnRow(dataSet.composite.xAdjusted_mm.get, dataSet.machineDailyQA)
     }
 
-    def colVertZCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+    def colVertZCax(dataSet: DailyDataSetComposite): Elem = {
       val offset = dataSet.vertList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ
       posnRow(offset, dataSet.machineDailyQA)
     }
 
-    def colHorzGantryAngle(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+    def colHorzGantryAngle(dataSet: DailyDataSetComposite): Elem = {
       val angle = dataSet.horzList.head.gantryAngle_deg
       <td title={fmtAngle(angle)}>
         {Util.angleRoundedTo90(angle)}
       </td>
     }
 
-    def colHorzYCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+    def colHorzYCax(dataSet: DailyDataSetComposite): Elem = {
       posnRow(dataSet.composite.yAdjusted_mm.get, dataSet.machineDailyQA)
     }
 
-    def colHorzZCax(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+    def colHorzZCax(dataSet: DailyDataSetComposite): Elem = {
       val offset = dataSet.horzList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ
       posnRow(offset, dataSet.machineDailyQA)
     }
 
-    def colEpidPlanCbct(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+    def colEpidPlanCbct(dataSet: DailyDataSetComposite): Elem = {
       if (dataSet.composite.offsetAdjusted_mm.isDefined) posnRow(dataSet.composite.offsetAdjusted_mm.get, dataSet.machineDailyQA)
       else <div>undefined</div>
     }
 
-    def colCbctImages(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+    def colCbctImages(dataSet: DailyDataSetComposite): Elem = {
 
       val sliceThickness = {
         val at = dataSet.cbct.attributeList.get(TagFromName.SliceThickness)
@@ -242,7 +242,7 @@ object DailyQAHTML extends Logging {
       }
     }
 
-    def colEpidImages(dataSet: BBbyEPIDComposite.DailyDataSetComposite): Elem = {
+    def colEpidImages(dataSet: DailyDataSetComposite): Elem = {
       def showXRayError: Elem = {
         val title =
           "The X-Ray Image Receptor Translation for this machine is set to" + WebUtil.titleNewline +
@@ -308,7 +308,7 @@ object DailyQAHTML extends Logging {
       Col("EPID Details", "Images and other details for EPID", colEpidImages)
     )
 
-    def dataSetToRow(dataSet: BBbyEPIDComposite.DailyDataSetComposite): MOE = {
+    def dataSetToRow(dataSet: DailyDataSetComposite): MOE = {
       val tdList = colList.tail.map(col => col.toElem(dataSet))
       val elem = <tr>
         {colList.head.toElem(dataSet) :+ tdList}

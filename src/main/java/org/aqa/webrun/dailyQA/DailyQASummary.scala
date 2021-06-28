@@ -154,7 +154,7 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
       dateField.dateFormat.parse(dateField.dateFormat.format(new Date)) // today rounded off to midnight
   }
 
-  private def getDataSetListByDateAndInstitution(valueMap: ValueMapT): Seq[BBbyEPIDComposite.DailyDataSetComposite] = {
+  private def getDataSetListByDateAndInstitution(valueMap: ValueMapT): Seq[DailyDataSetComposite] = {
     val user = getUser(valueMap)
 
     val institution: Option[Institution] = {

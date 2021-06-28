@@ -6,7 +6,6 @@ import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.AnonymizeUtil
 import org.aqa.Util
 import org.aqa.db.BBbyEPIDComposite
-import org.aqa.db.BBbyEPIDComposite.DailyDataSetComposite
 import org.aqa.db.BBbyEPIDComposite.getForOneDay
 import org.aqa.db.Db
 import org.aqa.db.Db.driver.api._
@@ -14,6 +13,7 @@ import org.aqa.db.DbSetup
 import org.aqa.db.DicomSeries
 import org.aqa.db.Machine
 import org.aqa.db.Output
+import org.aqa.webrun.dailyQA.DailyDataSetComposite
 
 import java.util.Date
 import scala.annotation.tailrec
