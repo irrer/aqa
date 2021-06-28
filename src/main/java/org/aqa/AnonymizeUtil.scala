@@ -150,7 +150,9 @@ object AnonymizeUtil extends Logging {
     */
   private def getInstitutionCredentials(institutionPK: Long): InstitutionCredentials = {
 
-    institutionCache.find(ic => ic.institution.institutionPK.get == institutionPK) match {
+    val institutionCredentialsOption = institutionCache.synchronized(institutionCache.find(ic => ic.institution.institutionPK.get == institutionPK))
+
+    institutionCredentialsOption match {
       case Some(institutionCredentials) => institutionCredentials // if it's in the cache, then we're done
       case _ =>
         val institution = Institution.get(institutionPK).get
