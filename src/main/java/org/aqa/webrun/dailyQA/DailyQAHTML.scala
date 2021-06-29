@@ -1,13 +1,13 @@
 package org.aqa.webrun.dailyQA
 
 import com.pixelmed.dicom.TagFromName
+import edu.umro.ScalaUtil.Trace
 import org.aqa.AnonymizeUtil
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.BBbyCBCT
 import org.aqa.db.BBbyEPID
-import org.aqa.db.BBbyEPIDComposite
 import org.aqa.db.DicomSeries
 import org.aqa.db.Machine
 import org.aqa.db.MachineDailyQA
@@ -72,6 +72,7 @@ object DailyQAHTML extends Logging {
     val styleFail = "color: #000000; background: #e00034;"
     val styleNoData = "color: #000000; background: #888888;"
     val styleWarn = "color: #000000; background: yellow;"
+    val styleInProgress = "color: #000000; background: white;"
     val col0Title = "Machine Name"
 
     def colMachine(dataSet: DailyDataSetComposite): Elem = {
@@ -338,6 +339,7 @@ object DailyQAHTML extends Logging {
       Output.getOutputByDateRange(institutionPK, dataDateBegin, dataDateEnd).filter(o => procedurePkSet.contains(o.procedurePK)).sortBy(o => o.dataDate.get.getTime)
     }
 
+    def outputCBCT(machinePK: Long) = allOutputs.filter(o => (o.machinePK.get == machinePK) && (o.procedurePK == cbctPK))
     def outputEPID(machinePK: Long) = allOutputs.filter(o => (o.machinePK.get == machinePK) && (o.procedurePK == epidPK))
 
     // List of reasons that each machine is missing a full set of results.
@@ -348,7 +350,7 @@ object DailyQAHTML extends Logging {
       val allEpidSeq = allEpidSeqWithErrors.filter(d => d.data.isRight)
 
       def explain(mach: Machine): Elem = {
-        val epidOutput = outputEPID(mach.machinePK.get)
+        val epidOutput: Seq[Output] = outputEPID(mach.machinePK.get)
 
         val listColSpanSize = 6
         val listColSpan = listColSpanSize.toString
@@ -379,7 +381,7 @@ object DailyQAHTML extends Logging {
           vert.isDefined
         }
 
-        val machHistory = {
+        val machHistory: Elem = {
           val outputSeq = allOutputs.filter(o => o.machinePK.get == mach.machinePK.get)
 
           def ref(o: Output): Elem = {
@@ -391,7 +393,8 @@ object DailyQAHTML extends Logging {
             def badCBCT: Elem = {
               val title = {
                 "Click to view details of CBCT.  Not finding the BB is usually the result " + titleNewline +
-                  "of the phantom being mis-aligned or incorrect table height/position." + titleNewline +
+                  "of the phantom being grossly mis-aligned, failure to use the fan filter, or" + titleNewline +
+                  "incorrect table height/position." + titleNewline + titleNewline +
                   "The data from this scan can not be used, and the CBCT scan must" + titleNewline +
                   "be re-done."
               }
@@ -472,6 +475,20 @@ object DailyQAHTML extends Logging {
           </tr>
         }
 
+        def showInProgress(msg: String): Elem = { // show links to CBCT and EPID outputs
+          <tr>
+            <td title={col0Title} style={styleInProgress}>
+              <h4>
+                {wrapAlias(mach.id)}<br/>
+                <span style="white-space: nowrap;">In Progress</span>
+              </h4>
+            </td>
+            <td colspan={messageColSpan}>
+              {msg}
+            </td>{machHistory}
+          </tr>
+        }
+
         def showWarn(msg: String): Elem = { // show links to CBCT and EPID outputs
           <tr>
             <td title={col0Title} style={styleWarn}>
@@ -510,23 +527,74 @@ object DailyQAHTML extends Logging {
             false
         }
 
+        /**
+          * True if Daily QA on the given machine is in progress.  It is better to acknowledge to the user that it
+          * takes time to run things instead of giving warnings and errors right away..
+          */
+        val inProgress: Boolean = {
+          // this much time until it has been 'too long'
+          def timeLeft = outputCBCT(mach.machinePK.get).head.analysisDate.get.getTime + Config.DailyQAInProgressInterval_ms - System.currentTimeMillis()
+          val isInProgress = outputCBCT(mach.machinePK.get).nonEmpty && (timeLeft > 0)
+          if (isInProgress) {
+            Trace.trace("================================================== timeLeft: " + timeLeft)
+            DailyQAActivity.update(timeLeft)
+          }
+          isInProgress
+        }
+
+        val oneCbct = machineCbctResults.size == 1
+
+        val onePassedCbct = oneCbct && (!ProcedureStatus.fail.toString.equals(machineCbctResults.head.output.status))
+        val oneFailedCbct = oneCbct && (!onePassedCbct)
+
         val explanation: Elem = 0 match {
-          case _ if machineCbctResults.isEmpty && epidOutput.isEmpty => showNoData
-          case _ if machineCbctResults.nonEmpty && machineCbctResults.isEmpty =>
-            showFail("One or more CBCTs were done but the BB was not found.  Probably mis-alignment of table or phantom. ", pleasePage = true)
-          case _ if (machineCbctResults.size == 1) && ProcedureStatus.fail.toString.equals(machineCbctResults.head.output.status) => showFail("The CBCT scan failed.", pleasePage = true)
-          case _ if (machineCbctResults.size == 1) && allEpidSeqWithErrors.isEmpty                                                => showWarn("There is a successful CBCT scan but no EPID results.  A new EPID scan is recommended.")
-          case _ if (machineCbctResults.size == 1) && machineEpidResultsWithErrors.nonEmpty                                       => showFail("There is a successful CBCT scan but EPID results failed.", pleasePage = true)
-          case _ if (machineCbctResults.size == 1) && machineEpidResultsWithoutErrors.isEmpty =>
-            showWarn("There is a successful CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
+          case _ if machineCbctResults.isEmpty && epidOutput.isEmpty =>
+            showNoData
+
+          case _ if onePassedCbct && inProgress =>
+            showInProgress("The CBCT scan has passed.")
+
+          case _ if oneCbct && ProcedureStatus.fail.toString.equals(machineCbctResults.head.output.status) && inProgress =>
+            showInProgress("The CBCT did not yet pass.")
+
+          case _ if oneCbct && oneFailedCbct =>
+            showFail("The CBCT scan failed.", pleasePage = true)
+
+          case _ if oneCbct && allEpidSeqWithErrors.isEmpty && inProgress =>
+            showInProgress("There is a CBCT scan but no EPID results.  An EPID scan is recommended.")
+
+          case _ if oneCbct && allEpidSeqWithErrors.isEmpty =>
+            showFail("There is a CBCT scan but no EPID results.  An EPID scan is recommended.")
+
+          case _ if oneCbct && machineEpidResultsWithErrors.nonEmpty && inProgress =>
+            showInProgress("There is a CBCT scan but EPID results failed.")
+
+          case _ if oneCbct && machineEpidResultsWithErrors.nonEmpty =>
+            showFail("There is a CBCT scan but EPID results failed.", pleasePage = true)
+
+          case _ if oneCbct && machineEpidResultsWithoutErrors.isEmpty =>
+            showWarn("There is a CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
+
+          case _ if oneCbct && machineEpidResultsWithoutErrors.isEmpty =>
+            showWarn("There is a CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
+
           case _ if machineCbctResults.nonEmpty && machineEpidResultsWithoutErrors.isEmpty =>
             showWarn("There are " + machineCbctResults.size + " successful CBCT scans but no EPID scans.  It is recommended that an EPID scan be performed.")
-          case _ if machineCbctResults.isEmpty && epidOutput.nonEmpty                      => showFail("There is one or more EPID scans but no CBCT scans.", pleasePage = true)
-          case _ if machineCbctResults.isEmpty && machineEpidResultsWithoutErrors.nonEmpty => showFail("There are " + epidOutput.size + " EPID scans but no successful CBCT scans.", pleasePage = true)
+
+          case _ if machineCbctResults.isEmpty && epidOutput.nonEmpty =>
+            showFail("There is one or more EPID scans but no CBCT scans.", pleasePage = true)
+
+          case _ if machineCbctResults.isEmpty && machineEpidResultsWithoutErrors.nonEmpty =>
+            showFail("There are " + epidOutput.size + " EPID scans but no successful CBCT scans.", pleasePage = true)
+
           case _ if machineCbctResults.nonEmpty && machineEpidResultsWithoutErrors.isEmpty =>
             showWarn("There are " + machineCbctResults.size + " CBCT scans but zero EPID scans.  The EPID scan needs to be done.")
-          case _ if epidBeforeCbct => showFail("The EPID scan was done prior to CBCT.  The CBCT needs to be done first.")
-          case _                   => showFail("There are no results for this machine.")
+
+          case _ if epidBeforeCbct =>
+            showFail("The EPID scan was done prior to CBCT.  The CBCT needs to be done first.")
+
+          case _ =>
+            showFail("There are no results for this machine.")
         }
         explanation
       }

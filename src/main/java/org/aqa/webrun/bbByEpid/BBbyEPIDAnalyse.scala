@@ -260,6 +260,7 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
     try {
       logger.info("Starting analysis of EPID Alignment for machine " + extendedData.machine.id)
 
+      DailyQAActivity.update() // tell web page that data has changed
       val bbLocList = runReq.epidList.par.map(epid => BBbyEPIDImageAnalysis.findBB(epid, extendedData.output.outputPK.get)).toList
 
       //  bbLocList.map(bbl => if (bbl.isLeft) Left(bbl.left.get) else (
@@ -281,6 +282,7 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
 
       BBbyEPIDHTML.generateHtml(extendedData, bbLocList, bbByEPIDComposite, runReq, ProcedureStatus.done)
       logger.info("Finished analysis of EPID Alignment for machine " + extendedData.machine.id)
+      DailyQAActivity.update() // tell web page that data has changed
       ProcedureStatus.done
     } catch {
       case t: Throwable => {

@@ -252,6 +252,7 @@ object BBbyCBCTExecute extends Logging {
       // it found the BB, regardless of whether the BB was positioned within
       // tolerance of the plan's isocenter.
       logger.info("Starting analysis of CBCT Alignment for machine " + extendedData.machine.id)
+      DailyQAActivity.update() // tell web page that data has changed
       val result = BBbyCBCTAnalysis.volumeAnalysis(runReq.cbctList, extendedData.output.dir)
       if (result.isRight) {
         val imageXYZ = result.right.get.imageXYZ
@@ -284,6 +285,7 @@ object BBbyCBCTExecute extends Logging {
         ProcedureStatus.pass
       } else {
         showFailure(result.left.get, extendedData, runReq)
+        DailyQAActivity.update() // tell web page that data has changed
         ProcedureStatus.fail
       }
     } catch {
