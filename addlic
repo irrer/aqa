@@ -1,0 +1,10 @@
+#!/bin/bash
+
+list=$( find * -type f | grep java$ )
+
+for f in $list ; do
+   echo $f
+   cat license.txt $f | unix2dos > jj 
+   cp jj $f
+done
+
