@@ -560,12 +560,16 @@ object DailyQAHTML extends Logging {
 
         val oneCbct = machineCbctResults.size == 1
 
-        val onePassedCbct = oneCbct && (!ProcedureStatus.fail.toString.equals(machineCbctResults.head.output.status))
-        val oneFailedCbct = oneCbct && (!onePassedCbct)
+        val onePassedCbct = oneCbct && (ProcedureStatus.pass.toString.equals(machineCbctResults.head.output.status) || ProcedureStatus.warning.toString.equals(machineCbctResults.head.output.status))
+        val oneFailedCbct = oneCbct && ProcedureStatus.fail.toString.equals(machineCbctResults.head.output.status)
+        val oneRunningCbct = oneCbct && ProcedureStatus.running.toString.equals(machineCbctResults.head.output.status)
 
         val explanation: Elem = 0 match {
           case _ if machineCbctResults.isEmpty && epidOutput.isEmpty =>
             showNoData
+
+          case _ if oneRunningCbct && inProgress =>
+            showInProgress("The CBCT scan is being analyzed.")
 
           case _ if onePassedCbct && inProgress =>
             showInProgress("The CBCT scan has passed.")

@@ -188,7 +188,7 @@ object BBbyEPIDHTML {
           Some(result.right.get.pix)
         } else None
       }
-      val imageSet = new BBbyEPIDAnnotateImages(al, bbLoc_mm, description, bbCenter_pix)
+      val imageSet = new BBbyEPIDAnnotateImages(al, description, bbCenter_pix)
 
       Util.writePng(imageSet.closeupBufImg, name2File(closeUpImageFileName))
       Util.writePng(imageSet.fullBufImg, name2File(fullImageFileName))
