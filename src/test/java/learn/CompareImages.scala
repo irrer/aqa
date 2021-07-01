@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021 Regents of the University of Michigan
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package learn
 
 import edu.umro.ImageUtil.DicomImage
@@ -47,20 +63,31 @@ object CompareImages {
 
   def main(args: Array[String]): Unit = {
 
-    val diffArray = (0 until oldImage.height).map(compareRow).toArray
-    val diffDicomImage = new DicomImage(diffArray)
-    val diffImage = diffDicomImage.toBufferedImage(Color.white)
+    if (true) {
+      val diffArray = (0 until oldImage.height).map(compareRow).toArray
+      val diffDicomImage = new DicomImage(diffArray)
+      val diffImage = diffDicomImage.toBufferedImage(Color.white)
 
-    val diffFile = new File("""D:\tmp\aqa\tmp\diff.png""")
+      val diffFile = new File("""D:\tmp\aqa\tmp\diff.png""")
 
-    Util.writePng(diffImage, diffFile)
-    println("Wrote file " + diffFile.getAbsolutePath)
+      Util.writePng(diffImage, diffFile)
+      println("Wrote file " + diffFile.getAbsolutePath)
 
-    val closeUpDiff = diffDicomImage.getSubimage(new Rectangle(300, 30, 40, 40))
-    val closeUpDiffFile = new File("""D:\tmp\aqa\tmp\diffCloseup.png""")
-    val closeupBufDiff = closeUpDiff.toBufferedImage(Color.white)
-    Util.writePng(closeupBufDiff, closeUpDiffFile)
-    println("Wrote file " + closeUpDiffFile.getAbsolutePath)
+      val closeUpDiff = diffDicomImage.getSubimage(new Rectangle(300, 30, 40, 40))
+      val closeUpDiffFile = new File("""D:\tmp\aqa\tmp\diffCloseup.png""")
+      val closeupBufDiff = closeUpDiff.toBufferedImage(Color.white)
+      Util.writePng(closeupBufDiff, closeUpDiffFile)
+      println("Wrote file " + closeUpDiffFile.getAbsolutePath)
+    }
+
+    if (true) {
+      val center = oldImage.getSubimage(new Rectangle(270, 270, 100, 100))
+      //  val center = oldImage.getSubimage(new Rectangle(300, 300, 40, 40))
+      val centerBuf = center.toBufferedImage(Color.white)
+      val centerFile = new File("""D:\tmp\aqa\tmp\center.png""")
+      Util.writePng(centerBuf, centerFile)
+      println("Wrote file " + centerFile.getAbsolutePath)
+    }
   }
 
 }
