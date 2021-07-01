@@ -31,24 +31,25 @@ import javax.vecmath.Point3d
 import scala.xml.Elem
 
 /**
- * Store the analysis results for one EPID image containing a BB.
- */
+  * Store the analysis results for one EPID image containing a BB.
+  */
 case class BBbyEPID(
-                     bbByEPIDPK: Option[Long], // primary key
-                     outputPK: Long, // output primary key
-                     epidSOPInstanceUid: String, // SOP instance UID of EPID image
-                     offset_mm: Double, // distance between measured EPID position and expected (plan) location (aka: positioning error)
-                     gantryAngle_deg: Double, // gantry angle in degrees
-                     status: String, // termination status
-                     epidImageX_mm: Double, // X position in EPID image in DICOM gantry coordinates.  Origin (0,0) is in the center, positive direction is to the right.
-                     epidImageY_mm: Double, // Y position in EPID image in DICOM gantry coordinates.  Origin (0,0) is in the center, positive direction is up.  Note the the direction is opposite to that given by <code>edu.umro.ImageUtil.IsoImagePlaneTranslator</code>.
-                     epid3DX_mm: Double, // X position in EPID in 3D plan space
-                     epid3DY_mm: Double, // Y position in EPID in 3D plan space
-                     epid3DZ_mm: Double, // Z position in EPID in 3D plan space
-                     tableXlateral_mm: Double, // table position in X dimension / lateral
-                     tableYvertical_mm: Double, // table position in Y dimension / vertical
-                     tableZlongitudinal_mm: Double, // table position in Z dimension / longitudinal
-                     metadata_dcm_zip: Option[Array[Byte]]) { // DICOM without image for the slice referenced by this EPID
+    bbByEPIDPK: Option[Long], // primary key
+    outputPK: Long, // output primary key
+    epidSOPInstanceUid: String, // SOP instance UID of EPID image
+    offset_mm: Double, // distance between measured EPID position and expected (plan) location (aka: positioning error)
+    gantryAngle_deg: Double, // gantry angle in degrees
+    status: String, // termination status
+    epidImageX_mm: Double, // X position in EPID image in DICOM gantry coordinates.  Origin (0,0) is in the center, positive direction is to the right.
+    epidImageY_mm: Double, // Y position in EPID image in DICOM gantry coordinates.  Origin (0,0) is in the center, positive direction is up.  Note the the direction is opposite to that given by <code>edu.umro.ImageUtil.IsoImagePlaneTranslator</code>.
+    epid3DX_mm: Double, // X position in EPID in 3D plan space
+    epid3DY_mm: Double, // Y position in EPID in 3D plan space
+    epid3DZ_mm: Double, // Z position in EPID in 3D plan space
+    tableXlateral_mm: Double, // table position in X dimension / lateral
+    tableYvertical_mm: Double, // table position in Y dimension / vertical
+    tableZlongitudinal_mm: Double, // table position in Z dimension / longitudinal
+    metadata_dcm_zip: Option[Array[Byte]]
+) { // DICOM without image for the slice referenced by this EPID
 
   def insert: BBbyEPID = {
     val insertQuery = BBbyEPID.query returning BBbyEPID.query.map(_.bbByEPIDPK) into ((bbByEPID, bbByEPIDPK) => bbByEPID.copy(bbByEPIDPK = Some(bbByEPIDPK)))
@@ -117,22 +118,24 @@ object BBbyEPID extends ProcedureOutput with Logging {
 
     def metadata_dcm_zip = column[Option[Array[Byte]]]("metadata_dcm_zip")
 
-    def * = (
-      bbByEPIDPK.?,
-      outputPK,
-      epidSOPInstanceUid,
-      offset_mm,
-      gantryAngle_deg,
-      status,
-      epidImageX_mm,
-      epidImageY_mm,
-      epid3DX_mm,
-      epid3DY_mm,
-      epid3DZ_mm,
-      tableXlateral_mm,
-      tableYvertical_mm,
-      tableZlongitudinal_mm,
-      metadata_dcm_zip) <> (BBbyEPID.apply _ tupled, BBbyEPID.unapply)
+    def * =
+      (
+        bbByEPIDPK.?,
+        outputPK,
+        epidSOPInstanceUid,
+        offset_mm,
+        gantryAngle_deg,
+        status,
+        epidImageX_mm,
+        epidImageY_mm,
+        epid3DX_mm,
+        epid3DY_mm,
+        epid3DZ_mm,
+        tableXlateral_mm,
+        tableYvertical_mm,
+        tableZlongitudinal_mm,
+        metadata_dcm_zip
+      ) <> (BBbyEPID.apply _ tupled, BBbyEPID.unapply)
 
     def outputFK = foreignKey("BBbyEPID_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -150,8 +153,8 @@ object BBbyEPID extends ProcedureOutput with Logging {
   }
 
   /**
-   * Get a list of all BBbyEPID for the given output
-   */
+    * Get a list of all BBbyEPID for the given output
+    */
   def getByOutput(outputPK: Long): Seq[BBbyEPID] = {
     val action = for {
       inst <- BBbyEPID.query if inst.outputPK === outputPK
@@ -195,11 +198,11 @@ object BBbyEPID extends ProcedureOutput with Logging {
   }
 
   /**
-   * Get the BBbyEPID results that are nearest in time to the given date.
-   *
-   * @param machinePK   : For this machine
-   * @param procedurePK : For this procedure
-   */
+    * Get the BBbyEPID results that are nearest in time to the given date.
+    *
+    * @param machinePK   : For this machine
+    * @param procedurePK : For this procedure
+    */
   def history(machinePK: Long, procedurePK: Long): Seq[BBbyEPIDHistory] = {
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
@@ -221,8 +224,8 @@ object BBbyEPID extends ProcedureOutput with Logging {
   }
 
   /**
-   * Get all results that were acquired on one day for one institution.
-   */
+    * Get all results that were acquired on one day for one institution.
+    */
   def getForOneDayX(date: Date, institutionPK: Long): Seq[DailyDataSetEPIDJJ] = {
 
     val beginDate = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(date).replaceAll("T.*", "T00:00:00")).getTime)
@@ -238,12 +241,11 @@ object BBbyEPID extends ProcedureOutput with Logging {
     seq
   }
 
-
   /** EPID data and related results. */
   case class DailyDataSetEPID(output: Output, machine: Machine, data: Either[AttributeList, BBbyEPID]) {
 
     val al: AttributeList = data match {
-      case Right(bbyEPID: BBbyEPID) => bbyEPID.attributeList
+      case Right(bbyEPID: BBbyEPID)           => bbyEPID.attributeList
       case Left(attributeList: AttributeList) => attributeList
     }
 
@@ -254,13 +256,12 @@ object BBbyEPID extends ProcedureOutput with Logging {
     def isVert: Boolean = angType.isDefined && angType.get.toString.equals(AngleType.vertical.toString)
   }
 
-
   /**
-   * Get all results that were acquired on one day for one institution.
-   *
-   * @param date          Get results for all EPID results that were created on this day.
-   * @param institutionPK Get only for this institution.
-   */
+    * Get all results that were acquired on one day for one institution.
+    *
+    * @param date          Get results for all EPID results that were created on this day.
+    * @param institutionPK Get only for this institution.
+    */
   def getForOneDay(date: Date, institutionPK: Long): Seq[DailyDataSetEPID] = {
 
     val beginDate = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(date).replaceAll("T.*", "T00:00:00")).getTime)
@@ -294,7 +295,6 @@ object BBbyEPID extends ProcedureOutput with Logging {
 
     val epidList = Db.run(searchEpid.result)
 
-
     def makePassed(epid: BBbyEPID): Option[DailyDataSetEPID] = {
       omdList.find(omd => omd.dicomSeries.sopUidSeq.contains(epid.epidSOPInstanceUid)) match {
         case Some(o) => Some(DailyDataSetEPID(o.output, o.machine, Right(epid)))
@@ -305,12 +305,12 @@ object BBbyEPID extends ProcedureOutput with Logging {
     }
 
     /**
-     * Given a DICOM series (with output and machine), look for any SOP instances that
-     * are not in the EPID list.  For each, make a DailyDataSetEPID.
-     *
-     * @param omd DICOM series with output and machine
-     * @return List of DailyDataSetEPID that do not have a corresponding EPID.
-     */
+      * Given a DICOM series (with output and machine), look for any SOP instances that
+      * are not in the EPID list.  For each, make a DailyDataSetEPID.
+      *
+      * @param omd DICOM series with output and machine
+      * @return List of DailyDataSetEPID that do not have a corresponding EPID.
+      */
     def makeFailed(omd: OMD): Seq[DailyDataSetEPID] = {
 
       lazy val alListList = omd.dicomSeries.attributeListList // make this lazy because it might not be needed
@@ -324,14 +324,12 @@ object BBbyEPID extends ProcedureOutput with Logging {
             case None =>
               Some(DailyDataSetEPID(omd.output, omd.machine, Left(getAl(dsUid))))
           }
-        }
-        catch {
+        } catch {
           case t: Throwable =>
             logger.warn("Unexpected error making failed EPID entry for " + omd + " Exception: " + fmtEx(t))
             None
         }
       }
-
 
       omd.dicomSeries.sopUidSeq.flatMap(toDaily)
     }
@@ -343,11 +341,11 @@ object BBbyEPID extends ProcedureOutput with Logging {
   }
 
   /**
-   * Get the earliest date+time of an EPID result.
-   *
-   * @param institutionPK Get for this institution.
-   * @return The date+time of the first composite result, if there is at least one.
-   */
+    * Get the earliest date+time of an EPID result.
+    *
+    * @param institutionPK Get for this institution.
+    * @return The date+time of the first composite result, if there is at least one.
+    */
   def getEarliestDate(institutionPK: Long): Option[Timestamp] = {
 
     val search = for {
