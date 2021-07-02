@@ -84,7 +84,7 @@ case class BBbyEPID(
   val isHorz: Boolean = !isVert
 
   /** coefficient of variation of pixel near the BB but not including the BB. */
-  val pixelCoefficientOfVariation = pixelStandardDeviation_cu / pixelMean_cu
+  val pixelCoefficientOfVariation: Double = pixelStandardDeviation_cu / pixelMean_cu
 
   val attributeList: AttributeList = {
     if (metadata_dcm_zip.isEmpty || metadata_dcm_zip.get.isEmpty)
