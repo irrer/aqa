@@ -48,6 +48,7 @@ case class BBbyEPID(
     tableXlateral_mm: Double, // table position in X dimension / lateral
     tableYvertical_mm: Double, // table position in Y dimension / vertical
     tableZlongitudinal_mm: Double, // table position in Z dimension / longitudinal
+    bbStdDevMultiple: Double, // Number of times (multiple) that the BB's mean pixel value was of the background's standard deviation.  A higher number means that the BB was more distinctive.
     pixelStandardDeviation_cu: Double, // standard deviation of pixels in search area around BB, not including BB pixels.  In CU (calibrated units)
     pixelMean_cu: Double, // mean value of pixels in search area around BB, not including BB pixels.  In CU (calibrated units)
     isOpenFieldImage: Boolean, // true if image was an open field.  This means that the 300a,011c LeafJawPositions were more open than the plan called for.
@@ -73,7 +74,9 @@ case class BBbyEPID(
       "\n    epid image X,Y : " + Util.fmtDbl(epidImageX_mm) + ", " + Util.fmtDbl(epidImageY_mm) +
       "\n    epid 3D X,Y,Z : " + Util.fmtDbl(epid3DX_mm) + ", " + Util.fmtDbl(epid3DY_mm) + ", " + Util.fmtDbl(epid3DZ_mm) +
       "\n    table Xlat,Yvert,Zlong : " + Util.fmtDbl(tableXlateral_mm) + ", " + Util.fmtDbl(tableYvertical_mm) + ", " + Util.fmtDbl(tableZlongitudinal_mm) +
-      "\n    pixel std dev: " + Util.fmtDbl(pixelStandardDeviation_cu) + "    pixel mean CU: " + Util.fmtDbl(pixelMean_cu) + "    is open field: " + isOpenFieldImage
+      "\n    BB standard deviation multiple: " + Util.fmtDbl(bbStdDevMultiple) + "    pixel std dev: " + Util.fmtDbl(pixelStandardDeviation_cu) + "    pixel mean CU: " + Util.fmtDbl(
+      pixelMean_cu
+    ) + "    is open field: " + isOpenFieldImage
 
   val epid = new Point3d(epid3DX_mm, epid3DY_mm, epid3DZ_mm)
 
@@ -123,6 +126,8 @@ object BBbyEPID extends ProcedureOutput with Logging {
 
     def tableZlongitudinal_mm = column[Double]("tableZlongitudinal_mm")
 
+    def bbStdDevMultiple = column[Double]("bbStdDevMultiple")
+
     def pixelStandardDeviation_cu = column[Double]("pixelStandardDeviation_cu")
 
     def pixelMean_cu = column[Double]("pixelMean_cu")
@@ -147,6 +152,7 @@ object BBbyEPID extends ProcedureOutput with Logging {
         tableXlateral_mm,
         tableYvertical_mm,
         tableZlongitudinal_mm,
+        bbStdDevMultiple,
         pixelStandardDeviation_cu,
         pixelMean_cu,
         isOpenFieldImage,

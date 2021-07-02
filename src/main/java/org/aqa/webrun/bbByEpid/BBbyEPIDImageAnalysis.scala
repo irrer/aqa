@@ -158,7 +158,7 @@ object BBbyEPIDImageAnalysis extends Logging {
     *
     * @param pixelMean_cu Mean value of pixels near BB.
     */
-  private def toBBbyEPID(epid: AttributeList, bbLocation: Point2d, outputPK: Long, pixelStandardDeviation_cu: Double, pixelMean_cu: Double): BBbyEPID = {
+  private def toBBbyEPID(epid: AttributeList, bbLocation: Point2d, outputPK: Long, bbStdDevMultiple: Double, pixelStandardDeviation_cu: Double, pixelMean_cu: Double): BBbyEPID = {
     val gantryAngle_deg = Util.gantryAngle(epid)
     val gantryAngle_rad = Math.toRadians(gantryAngle_deg)
 
@@ -206,6 +206,7 @@ object BBbyEPIDImageAnalysis extends Logging {
       getDbl(TagByName.TableTopLateralPosition), // tableXlateral_mm
       getDbl(TagByName.TableTopVerticalPosition), // tableYvertical_mm
       getDbl(TagByName.TableTopLongitudinalPosition), // tableZlongitudinal_mm
+      bbStdDevMultiple = bbStdDevMultiple,
       pixelStandardDeviation_cu,
       pixelMean_cu,
       isOpenFieldImage,
@@ -305,38 +306,47 @@ object BBbyEPIDImageAnalysis extends Logging {
     }
 
     val all = getListOfPixInBB(inOut)
-    val in = all(true)
+    val inPixXY = all(true)
+    val outPixXY = all(false)
+    val inValue = inPixXY.map(p => bbImage.get(p.getX, p.getY))
+    val outValue = outPixXY.map(p => bbImage.get(p.getX, p.getY))
+    val outStdDev = ImageUtil.stdDev(outValue)
 
     // calculate the center of mass for all points in the BB
-    val sumMass = in.map(p => bbImage.get(p.getX, p.getY)).sum
-    val xPos_pix = (in.map(p => p.getX * bbImage.get(p.getX, p.getY)).sum / sumMass) + bbRect.getX
-    val yPos_pix = (in.map(p => p.getY * bbImage.get(p.getX, p.getY)).sum / sumMass) + bbRect.getY
+    val sumMass = inValue.sum
+    val xPos_pix = (inPixXY.map(p => p.getX * bbImage.get(p.getX, p.getY)).sum / sumMass) + bbRect.getX
+    val yPos_pix = (inPixXY.map(p => p.getY * bbImage.get(p.getX, p.getY)).sum / sumMass) + bbRect.getY
 
     val bbCenter_pix = new Point2d(xPos_pix, yPos_pix)
 
     val bbCenter_mm = trans.pix2Iso(xPos_pix, yPos_pix)
 
+    val outMean = outValue.sum / outValue.size // mean of pixels outside the BB
+    val bbMean = sumMass / inPixXY.size // mean of pixels inside the BB
+    // how many times larger (number of multiples) of the difference of the BB's mean is than the standard deviation
+    val bbStdDevMultiple = (bbMean - outMean).abs / outStdDev
+
     val valid = {
-      val searchImagePix = searchImage.pixelData.flatten
-      val searchImageMean = searchImagePix.sum / searchImagePix.size
-      val searchStdDev = ImageUtil.stdDev(searchImagePix)
-      val bbMean = sumMass / in.size
-      val bbStdDevFactor = (bbMean - searchImageMean).abs / searchStdDev
-      val ok = bbStdDevFactor >= Config.EPIDBBMinimumStandardDeviation
-      logger.info("EPID bbStdDevFactor: " + bbStdDevFactor + "    valid: " + ok)
+      val ok = bbStdDevMultiple >= Config.EPIDBBMinimumStandardDeviation
       ok
     }
+    logger.info("EPID bbStdDevMultiple: " + bbStdDevMultiple + "    valid: " + valid)
 
     // calculate values related to image quality
-    val outPix = all(false).map(p => bbImage.get(p.getX, p.getY))
-    val pixelStandardDeviation_cu = ImageUtil.stdDev(outPix)
-    val pixelMean_cu = outPix.sum / outPix.size
+    val pixelStandardDeviation_cu = ImageUtil.stdDev(outValue)
+    val pixelMean_cu = outValue.sum / outPixXY.size
 
     Trace.trace("coefficientOfVariation : " + (pixelStandardDeviation_cu / pixelMean_cu))
 
     if (valid) {
       val bbLocation = new Point2d(bbCenter_mm.getX, -bbCenter_mm.getY)
-      val result = Result(bbCenter_pix, al, bbLocation, toBBbyEPID(al, bbLocation, outputPK, pixelStandardDeviation_cu, pixelMean_cu)) // Convert Y to DICOM gantry coordinate system
+      val result =
+        Result(
+          bbCenter_pix,
+          al,
+          bbLocation,
+          toBBbyEPID(al, bbLocation, outputPK, bbStdDevMultiple = bbStdDevMultiple, pixelStandardDeviation_cu, pixelMean_cu)
+        ) // Convert Y to DICOM gantry coordinate system
       Trace.trace(
         "find. gantry angle: " + Util.angleRoundedTo90(Util.gantryAngle(al)).formatted("%3d") + "     bbCenter_pix: " + Util.fmtDbl(bbCenter_pix.getX) + ", " + Util.fmtDbl(bbCenter_pix.getY)
       )
