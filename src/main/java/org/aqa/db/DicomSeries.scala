@@ -203,11 +203,22 @@ object DicomSeries extends Logging {
   }
 
   /**
-    * Get using the input key.
-    */
+   * Get using the input key.
+   */
   def getByInputPK(inputPK: Long): Seq[DicomSeries] = {
     val action = for {
       dicomSeries <- query if dicomSeries.inputPK === inputPK
+    } yield dicomSeries
+    val list = Db.run(action.result)
+    list
+  }
+
+  /**
+    * Get using the patient ID.
+    */
+  def getByPatientIdAndModality(patientId: String, modality: String): Seq[DicomSeries] = {
+    val action = for {
+      dicomSeries <- query if (dicomSeries.patientID === patientId) && (dicomSeries.modality === modality)
     } yield dicomSeries
     val list = Db.run(action.result)
     list

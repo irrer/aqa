@@ -21,7 +21,7 @@ package learn
  * is parameterized by a Slick driver that implements JdbScProfile.
  */
 
-import FooFoo.driver.api._
+// import FooFoo.driver.api._
 import java.io.File
 import com.pixelmed.dicom.AttributeList
 import org.aqa.ImageRegistration
