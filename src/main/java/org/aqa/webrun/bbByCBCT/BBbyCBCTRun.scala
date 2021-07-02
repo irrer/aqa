@@ -177,19 +177,37 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     }
 
     /**
-      * Get the list of possible plan and reg pairs, preferring the uploaded plan(s) but also searching the plans in the database.
+      * Get the list of possible plan and reg pairs, preferring the uploaded plan(s) but also searching the plans in the
+      * database.  Return a list sorted with the most recent REG file first.
+      *
+      * It turns out that there may be several REG files that qualify, but they produce different results. Varian says
+      * that the last one (chronologically) is the right one to use.
+      *
+      * @return List of RTPLAN+REG pairs, sorted by REG date, with most recent REG date first.
       */
     def getPlanAndReg: Seq[(AttributeList, AttributeList)] = {
       val uploadedPairList = for (plan <- rtplanList; reg <- qualifiedRegList; if Util.getFrameOfRef(plan).equals(Util.getFrameOfRef(reg))) yield (plan, reg)
-      if (uploadedPairList.nonEmpty)
-        uploadedPairList
-      else {
-        val qualifiedRegFrameOfRefList = qualifiedRegList.map(df => Util.getFrameOfRef(df)).toSet
-        val dbPlanList = DicomSeries.getByFrameUIDAndSOPClass(qualifiedRegFrameOfRefList, SOPClass.RTPlanStorage).flatMap(db => db.attributeListList)
+      val list =
+        if (uploadedPairList.nonEmpty)
+          uploadedPairList
+        else {
+          val qualifiedRegFrameOfRefList = qualifiedRegList.map(df => Util.getFrameOfRef(df)).toSet
+          val dbPlanList = DicomSeries.getByFrameUIDAndSOPClass(qualifiedRegFrameOfRefList, SOPClass.RTPlanStorage).flatMap(db => db.attributeListList)
 
-        val dbPairList = for (plan <- dbPlanList; reg <- qualifiedRegList; if Util.getFrameOfRef(plan).equals(Util.getFrameOfRef(reg))) yield (plan, reg)
-        dbPairList
+          val dbPairList = for (plan <- dbPlanList; reg <- qualifiedRegList; if Util.getFrameOfRef(plan).equals(Util.getFrameOfRef(reg))) yield (plan, reg)
+          dbPairList
+        }
+
+      def dateOf(al: AttributeList): Long = {
+        val date = Seq(
+          DicomUtil.getTimeAndDate(al, TagFromName.ContentDate, TagFromName.ContentTime),
+          DicomUtil.getTimeAndDate(al, TagFromName.InstanceCreationDate, TagFromName.InstanceCreationTime)
+        ).flatten.head.getTime
+        date
       }
+
+      val revDateList = list.sortBy(pr => dateOf(pr._2)).reverse
+      revDateList
     }
 
     /** Get the plan to use, if there is one. */
