@@ -1,0 +1,58 @@
+<div title="Daily QA EPID Image Processing" class="col-md-10 col-md-offset-1">
+    <!--
+    Copyright 2021 Regents of the University of Michigan
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    -->
+
+    <h2>@@title@@</h2>
+    <p>
+        This describes the BB finding algorithm and precise measurement of the BB's location.
+    </p>
+
+    <h3>Coarse (approximate) Location of BB</h3>
+    <p>
+        The first step is to determine the BB's approximate location within the EPID plane. This is done by restricting
+        the search area to a square centered in the image. The size of the square is 2 x BBbyEPIDSearchDistance_mm,
+        where BBbyEPIDSearchDistance_mm is a configuration value. The size of the square is smaller than the cube
+        containing the BB. The square is searched by examining each possible array of 2x2 pixels to see which is the
+        brightest. Next, the brightest adjacent pixels are included until an area has been acquired that is equivalent
+        to the area of the BB.
+    </p>
+
+    <p>
+        The center of mass (which includes the pixels' location and brightness) of the BB's
+        pixels is calculated in X and Y to determine the BB's precise location.
+    </p>
+    <p>
+        For the BB's location to be valid, it must be significantly brighter than the surrounding pixels. For
+        validation, the standard deviation and mean of the pixels in the search area that are not included by the BB is
+        calculated. A BB standard deviation multiple is calculated by:
+
+    <p>
+        $$absoluteValueOf(BB_{mean} - SearchArea_{mean}) / SearchArea_{StandardDeviation} $$
+    </p>
+
+    If this value is large enough, then the BB is considered valid. The configuration value
+    EPIDBBMinimumStandardDeviation is used for the comparison.
+    </p>
+
+    <p>
+        Note that EPID image quality can be reduced by using an open field instead of restricting the treated field
+        to the size in the RTPLAN.
+    </p>
+
+
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+</div>
