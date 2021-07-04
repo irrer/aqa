@@ -34,7 +34,7 @@ import java.util.Date
 import scala.xml.Elem
 
 /**
-  * Make a history chart for BBbyEPID.
+  * Make a history chart for BBbyEPID without CBCT (that is why it is called partial).
   */
 class BBbyEPIDChartPartial(outputPK: Long) extends Logging {
 
