@@ -31,7 +31,6 @@ import org.aqa.run.ProcedureStatus
 import org.aqa.web.ViewOutput
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.dailyQA.DailyQAActivity
-import org.aqa.webrun.dailyQA.DailyQACSVCacheComposite
 import org.restlet.Response
 
 import java.text.SimpleDateFormat
@@ -39,8 +38,8 @@ import java.util.Date
 import javax.vecmath.Point3d
 
 /**
- * Given validated data, process it.
- */
+  * Given validated data, process it.
+  */
 object BBbyEPIDAnalyse extends Logging {
 
   private def isVert(al: AttributeList) = AngleType.isAngleType(Util.gantryAngle(al), AngleType.vertical)
@@ -49,54 +48,61 @@ object BBbyEPIDAnalyse extends Logging {
   private val lsn = "@@n@@"
 
   /**
-   * Create a Matlab script that shows calculations.
-   *
-   * @param epid         EPID DICOM
-   * @param bbLocation   in EPID translated to mm
-   * @param extendedData Associated DB rows
-   */
+    * Create a Matlab script that shows calculations.
+    *
+    * @param result       EPID data
+    *
+    * @return A Matlab script
+    */
   private def constructEpidMatlab(result: BBbyEPIDImageAnalysis.Result): String = {
 
-    def getDbls(tag: AttributeTag) = result.al.get(tag).getDoubleValues
+    def getDoubles(tag: AttributeTag) = result.al.get(tag).getDoubleValues
 
-    val gantryAngle = getDbls(TagByName.GantryAngle).head
+    val gantryAngle = getDoubles(TagByName.GantryAngle).head
     val name = if (isVert(result.al)) "Vert" else "Horz"
-    val ipps = getDbls(TagByName.ImagePlanePixelSpacing)
-    val rtip = getDbls(TagByName.RTImagePosition)
-    val rTrans = getDbls(TagByName.XRayImageReceptorTranslation)
+    val ips = getDoubles(TagByName.ImagePlanePixelSpacing)
+    val rip = getDoubles(TagByName.RTImagePosition)
+    val rTrans = getDoubles(TagByName.XRayImageReceptorTranslation)
     val gaRounded = Util.angleRoundedTo90(Util.gantryAngle(result.al))
-    val sinCos = if (isVert(result.al))
-      "epidIsoX = cos(deg2rad(gantryAngleVert)) * (epidIsoVertX + VertTX);"
-    else
-      "epidIsoY = sin(deg2rad(gantryAngleHorz)) * (epidIsoHorzX + HorzTX);"
+    val sinCos =
+      if (isVert(result.al))
+        "epidIsoX = cos(deg2rad(gantryAngleVert)) * (epidIsoVertX + VertTX);"
+      else
+        "epidIsoY = sin(deg2rad(gantryAngleHorz)) * (epidIsoHorzX + HorzTX);"
 
+    //noinspection SpellCheckingInspection
     val fprintfVert =
       s"""
 fprintf("MV G ${gaRounded.formatted("%3d")} (BB - DIGITAL_CAX) @ ISOCENTER PLANE:  %f   NA  %f  %f@@n@@",  epidIsoX, epidVertZ, sqrt(epidIsoX*epidIsoX + epidVertZ*epidVertZ));
-fprintf("MV G ${gaRounded.formatted("%3d")} (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f   NA   %f   %f$lsn", epidIsoX - cbctX, epidVertZ - cbctZ, sqrt((epidIsoX - cbctX)*(epidIsoX - cbctX) + (epidVertZ - cbctZ)*(epidVertZ - cbctZ)));
+fprintf("MV G ${gaRounded
+        .formatted("%3d")} (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f   NA   %f   %f$lsn", epidIsoX - cbctX, epidVertZ - cbctZ, sqrt((epidIsoX - cbctX)*(epidIsoX - cbctX) + (epidVertZ - cbctZ)*(epidVertZ - cbctZ)));
 """
 
+    //noinspection SpellCheckingInspection
     val fprintfHorz =
       s"""
 fprintf("MV G ${gaRounded.formatted("%3d")} (BB - DIGITAL_CAX) @ ISOCENTER PLANE:  NA   %f  %f  %f$lsn", epidIsoY, epidHorzZ, sqrt(epidIsoY*epidIsoY + epidHorzZ*epidHorzZ));
-fprintf("MV G ${gaRounded.formatted("%3d")} (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  NA   %f   %f   %f$lsn", epidIsoY - cbctY, epidHorzZ - cbctZ, sqrt((epidIsoY - cbctY)*(epidIsoY - cbctY) + (epidHorzZ - cbctZ)*(epidHorzZ - cbctZ)));
+fprintf("MV G ${gaRounded
+        .formatted("%3d")} (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  NA   %f   %f   %f$lsn", epidIsoY - cbctY, epidHorzZ - cbctZ, sqrt((epidIsoY - cbctY)*(epidIsoY - cbctY) + (epidHorzZ - cbctZ)*(epidHorzZ - cbctZ)));
 """
 
+    //noinspection SpellCheckingInspection
     val fprintf = if (isVert(result.al)) fprintfVert else fprintfHorz
 
+    //noinspection SpellCheckingInspection, RedundantBlock
     val text =
       s"""
 %% Perform isoplane projection and map to RTPLAN coordinates for beam $name : ${Util.angleRoundedTo90(gantryAngle)}
 
-RTImageSID$name = ${getDbls(TagByName.RTImageSID).head};     %% From DICOM.  Distance from beam to image plane in mm
+RTImageSID$name = ${getDoubles(TagByName.RTImageSID).head};     %% From DICOM.  Distance from beam to image plane in mm
 
-RadiationMachineSAD$name = ${getDbls(TagByName.RadiationMachineSAD).head};     %% From DICOM.  Distance from beam to isoplane in mm
+RadiationMachineSAD$name = ${getDoubles(TagByName.RadiationMachineSAD).head};     %% From DICOM.  Distance from beam to isoplane in mm
 
-ImagePlanePixelSpacing${name}X = ${ipps(0)};     %% From DICOM.  Width  of pixel in mm in image plane
-ImagePlanePixelSpacing${name}Y = ${ipps(1)};     %% From DICOM.  Height of pixel in mm in image plane
+ImagePlanePixelSpacing${name}X = ${ips(0)};     %% From DICOM.  Width  of pixel in mm in image plane
+ImagePlanePixelSpacing${name}Y = ${ips(1)};     %% From DICOM.  Height of pixel in mm in image plane
 
-RTImagePosition${name}X = ${rtip(0)};     %% From DICOM.  X Coordinate of center of leftmost pixel in mm in image plane.
-RTImagePosition${name}Y = ${rtip(1)};     %% From DICOM.  Y Coordinate of center of topmost pixel in mm in image plane.
+RTImagePosition${name}X = ${rip(0)};     %% From DICOM.  X Coordinate of center of leftmost pixel in mm in image plane.
+RTImagePosition${name}Y = ${rip(1)};     %% From DICOM.  Y Coordinate of center of topmost pixel in mm in image plane.
 
 %% Coordinates in pixels in the image plane where the bb was found by AQA software.  (0,0 is upper left corner of image)
 epidPix${name}X = ${result.pix.getX};
@@ -132,6 +138,7 @@ ${fprintf}
   private def constructCompositeMatlab(epidResultList: Seq[BBbyEPIDImageAnalysis.Result], bbByCBCT: BBbyCBCT, response: Response): String = {
     val separator = ls + ls + "%% ------------------------------------------------------------------" + ls + ls
 
+    //noinspection SpellCheckingInspection
     val header = {
       s"""
 %% Calculate EPID results with Matlab code.  This code may be run with Matlab.  This code is provided as a convenience to
@@ -153,6 +160,7 @@ fprintf("CBCT(BB - DIGITAL_PLANNED_ISOCENTER):  %f  %f  %f$lsn", cbctX, cbctY, c
 
     val epidText = epidResultList.map(er => constructEpidMatlab(er))
 
+    //noinspection SpellCheckingInspection
     val compositeText = {
       s"""
 %% Calculate the Z position of the bb in RTPLAN (world) coordinates by averaging the two values from the vertical and horizontal images."
@@ -171,7 +179,12 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
     allText.replaceAll(lsn, "\\\\n")
   }
 
-  private def constructComposite(epidResultList: Seq[BBbyEPIDImageAnalysis.Result], extendedData: ExtendedData, runReq: BBbyEPIDRunReq, response: Response): Either[String, (BBbyEPIDComposite, Option[String])] = {
+  private def constructComposite(
+      epidResultList: Seq[BBbyEPIDImageAnalysis.Result],
+      extendedData: ExtendedData,
+      runReq: BBbyEPIDRunReq,
+      response: Response
+  ): Either[String, (BBbyEPIDComposite, Option[String])] = {
 
     // val bbByEPIDList = epidResultList.map(er => er._1)
 
@@ -189,34 +202,33 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
     val vert = getByAngleType(AngleType.vertical)
     val horz = getByAngleType(AngleType.horizontal)
 
-    if ((vert.nonEmpty && horz.nonEmpty)) {
+    if (vert.nonEmpty && horz.nonEmpty) {
       // Use the same number of vertical and horizontal beams to get the averages.  Handles cases where are there are many of one and few of the others.
       val max = Math.min(vert.size, horz.size) // maximum number of images to use in each of the vertical and horizontal directions.
       val x_mm = vert.take(max).map(r => r.bbByEpid.epid3DX_mm).sum / max
       val y_mm = horz.take(max).map(r => r.bbByEpid.epid3DY_mm).sum / max
       val z_mm = epidResultList.map(r => r.bbByEpid.epid3DZ_mm).sum / epidResultList.size
-      val offset_mm = (new Point3d(x_mm, y_mm, z_mm)).distance(new Point3d(0, 0, 0))
+      val offset_mm = new Point3d(x_mm, y_mm, z_mm).distance(new Point3d(0, 0, 0))
 
       val SeriesInstanceUID = runReq.epidList.head.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString
 
       val bbByCBCTHistory: Option[BBbyCBCT.BBbyCBCTHistory] = {
         Procedure.ProcOfBBbyCBCT match {
-          case Some(proc) => {
+          case Some(proc) =>
             val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
             val epidDateTime = extendedData.output.dataDate.get
             val epidDateFormatted = dateFormat.format(epidDateTime)
             val list = BBbyCBCT.history(extendedData.machine.machinePK.get, proc.procedurePK.get)
 
             /**
-             * CBCT must have been acquired before EPID, and must be on the same date.
-             */
+              * CBCT must have been acquired before EPID, and must be on the same date.
+              */
             def qualifies(date: Date): Boolean = {
               (epidDateTime.getTime >= date.getTime) && dateFormat.format(date).equals(epidDateFormatted)
             }
 
             list.filter(c => qualifies(c.date)).sortBy(c => c.date.getTime).lastOption
-          }
-          // BBbyCBCT.getProcedurePK not defined,  Must be that sthere are no BBbyCBCT rows.
+          // BBbyCBCT.getProcedurePK not defined,  Must be that there are no BBbyCBCT rows.
           case _ => None
         }
       }
@@ -238,8 +250,13 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
         z_mm,
         None,
         None,
-        None, None, None,
-        None, None, None)
+        None,
+        None,
+        None,
+        None,
+        None,
+        None
+      )
 
       val matlabComposite = if (bbByCBCTHistory.isDefined) Some(constructCompositeMatlab(epidResultList, bbByCBCTHistory.get.bbByCBCT, response)) else None
 
@@ -259,7 +276,8 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
             zAdjusted_mm = Some(z),
             tableXlateral_mm = Some(epidResultList.head.bbByEpid.tableXlateral_mm - c.tableXlateral_mm),
             tableYvertical_mm = Some(epidResultList.head.bbByEpid.tableYvertical_mm - c.tableYvertical_mm),
-            tableZlongitudinal_mm = Some(epidResultList.head.bbByEpid.tableZlongitudinal_mm - c.tableZlongitudinal_mm))
+            tableZlongitudinal_mm = Some(epidResultList.head.bbByEpid.tableZlongitudinal_mm - c.tableZlongitudinal_mm)
+          )
         } else bbByEPIDComposite
       }
 
@@ -294,17 +312,15 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
         logger.info("No composite EPID record created.  Reported error: " + bbByEPIDComposite.left.get)
 
       DailyQAActivity.update() // tell web page that data has changed
-      val procedureStatus = if (bbByEPIDComposite.isRight) ProcedureStatus.done else ProcedureStatus.fail
 
-      BBbyEPIDHTML.generateHtml(extendedData, bbLocList, bbByEPIDComposite, runReq, ProcedureStatus.done)
+      BBbyEPIDHTML.generateHtml(extendedData, bbLocList, bbByEPIDComposite, runReq)
       logger.info("Finished analysis of EPID Alignment for machine " + extendedData.machine.id)
       DailyQAActivity.update() // tell web page that data has changed
       ProcedureStatus.done
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         logger.warn("Unexpected error in analysis of BBbyEPIDAnalyse" + ": " + t + fmtEx(t))
         ProcedureStatus.crash
-      }
     }
   }
 

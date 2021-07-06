@@ -16,7 +16,6 @@
 
 package org.aqa.web
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Baseline
@@ -28,6 +27,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import scala.xml.Elem
 
+//noinspection SpellCheckingInspection
 /**
   * @param maintenanceList   : List of maintenance records that fall chronologically in the displayed range
   * @param width       : Optional width of chart in pixels.
@@ -35,7 +35,7 @@ import scala.xml.Elem
   * @param xLabel      : Text label for X axis
   * @param xDateList   : List of dates
   * @param baseline    : Optional baseline value.  If given, a horizontal line
-  * @param tolerance   : If given, show horizontal tolerance (see AQA.css .c3-ygrid-line.tolerance)
+  * @param tolerance   : If given, show horizontal tolerance
   *                    lines at the given values.
   * @param yRange      : If given, scale the chart so that it shows values within this range.  If values
   *                    are out of range, they will be literally 'off the chart'.
@@ -49,8 +49,8 @@ class C3ChartHistory(
     maintenanceList: Seq[MaintenanceRecord],
     width: Option[Int],
     height: Option[Int],
-    xLabel: String,
-    xDateList: Seq[Date],
+    xLabel: String = "Date",
+    xDateList: Seq[Seq[Date]],
     baseline: Option[Baseline],
     tolerance: Option[C3Chart.Tolerance],
     yRange: Option[C3Chart.YRange],
@@ -61,11 +61,6 @@ class C3ChartHistory(
     yFormat: String,
     yColorList: Seq[Color]
 ) extends Logging {
-
-  if (yAxisLabels.size != yValues.size) throw new RuntimeException("Must be same number of Y labels as Y data sets.  yAxisLabels.size: " + yAxisLabels.size + "    yValues.size: " + yValues.size)
-
-  private val yMaxSize = yValues.map(yy => yy.size).max
-  if (yMaxSize > xDateList.size) throw new RuntimeException("Size of at least one of the yValues is " + yMaxSize + " and is greater than size of xDateList " + xDateList.size)
 
   private val chartIdTag: String = {
     if (chartIdOpt.isDefined) chartIdOpt.get else C3Chart.makeUniqueChartIdTag
@@ -91,8 +86,8 @@ class C3ChartHistory(
 
   private val yColorNameList = textColumn(yColorList.map(c => (c.getRGB & 0xffffff).formatted("#%06x")))
 
-  private val minDate = xDateList.minBy(d => d.getTime)
-  private val maxDate = xDateList.maxBy(d => d.getTime)
+  private val minDate = xDateList.flatten.minBy(d => d.getTime)
+  private val maxDate = xDateList.flatten.maxBy(d => d.getTime)
 
   private val maintenanceDateList = dateColumn("maintenanceDateList", maintenanceList.flatMap(maintenance => Seq(maintenance.creationTime, maintenance.creationTime)))
 
@@ -126,11 +121,9 @@ class C3ChartHistory(
 
   val html: Elem = C3ChartHistory.htmlRef(chartIdTag)
 
-  Trace.trace(html) // TODO rm
-
   private val yLabels = {
-    val yOnly = yAxisLabels.map(y => "'" + y + "' : '" + xLabel + "',")
-    yOnly.mkString("\n        ")
+    val yOnly = yAxisLabels.indices.map(index => "'" + yAxisLabels(index) + "' : 'Date" + Math.min(index, xDateList.size - 1) + "',")
+    yOnly.mkString("\n          ")
   }
 
   private val yText = {
@@ -138,6 +131,7 @@ class C3ChartHistory(
     yData.mkString(",\n          ")
   }
 
+  //noinspection SpellCheckingInspection
   private def gridLine(clss: String, value: Double, title: String): String = {
     "{ position: 'start', class: '" + clss + "', value:  " + value.toString + ", text: '  \\032 \\032 \\032 \\032 \\032 \\032  " + title + " " + Util.fmtDbl(value) + "' }"
   }
@@ -174,6 +168,8 @@ class C3ChartHistory(
     }
   }
 
+  private val dateText = xDateList.indices.map(index => dateColumn("Date" + index, xDateList(index))).mkString(",\n          ")
+//noinspection SpellCheckingInspection
   val javascript: String = {
     s"""
 var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
@@ -196,12 +192,12 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
     },
     data: {
       xs: {
-        $yLabels
-        'MaintenanceRecord': 'maintenanceDateList'
+          $yLabels
+          'MaintenanceRecord': 'maintenanceDateList'
         },
         xFormat: standardDateFormat,
         columns: [
-          ${dateColumn(xLabel, xDateList)},
+          $dateText,
           $yText,
           $maintenanceDateList,
           $maintenanceValueList
@@ -217,6 +213,9 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
           return color;
         }
     }$grid,
+    zoom: {
+      enabled: true
+    },
     point: {
         r: 2,
         focus : {
@@ -253,54 +252,23 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
     }
   });
 
-""" + // js to set up scroll bars
-      s"""
-         |var @@count = ${C3ChartHistory.initialSliderCountValue};
-         |var @@start = ${C3ChartHistory.initialSliderHistoryValue};
-         |
-         |var @@dateList = getHistoryChartDateList(@@);
-         |
-         |var @@slider = document.getElementById("@@Slider");
-         |
-         |if (@@slider != null) { // backwards compatible with history graphs that do not have sliders.
-         |  @@slider.oninput = function() {
-         |    @@start = parseInt(this.value);
-         |    moveHistoryChart(@@, @@dateList, @@start, @@count);
-         |  }
-         |
-         |  var @@sliderCount = document.getElementById("@@SliderCount");
-         |  @@sliderCount.oninput = function() {
-         |    @@count = parseInt(this.value);
-         |    moveHistoryChart(@@, @@dateList, @@start, @@count);
-         |  }
-         |
-         |  moveHistoryChart(@@, @@dateList, @@start, @@count);
-         |}
-         |""".stripMargin.replace("@@", chartIdTag)
+"""
   }
 
 }
 object C3ChartHistory {
 
-  // initial setting for history slider.  value is in percent
-  private val initialSliderHistoryValue = 100
-  // initial setting for count slider.  value is in percent
-  private val initialSliderCountValue = 51
-
+  /**
+    * Generate the reference to the chart that should be embedded in the HTML that wants to show it.
+    *
+    * @param chartIdTag Chart identifier.
+    *
+    * @return HTML to embed.
+    */
   def htmlRef(chartIdTag: String): Elem = {
     <div>
       <div id={chartIdTag}>
         {chartIdTag}
-      </div>
-      <div class="row">
-        <div class="col-md-10" title={"Slide all the way to the left to show the" + WebUtil.titleNewline + " oldest, to the right for newest."}>
-          <label for={chartIdTag + "Slider"}>Show older or newer entries</label>
-          <input type="range" min="0" max="100" value={initialSliderHistoryValue.toString} id={chartIdTag + "Slider"}/>
-        </div>
-        <div class="col-md-2" style="visibility: visible;" title={"Slide to the left to show just a few, slide all" + WebUtil.titleNewline + " the way to the right to show all of them."}>
-          <label for={chartIdTag + "SliderCount"}>Show fewer or more entries</label>
-          <input type="range" min="0" max="100" value={initialSliderCountValue.toString} id={chartIdTag + "SliderCount"}/>
-        </div>
       </div>
     </div>
   }

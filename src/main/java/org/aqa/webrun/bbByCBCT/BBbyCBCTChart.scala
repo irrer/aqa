@@ -79,7 +79,7 @@ class BBbyCBCTChart(outputPK: Long) extends Logging {
       None, // width
       None, // height
       "Date",
-      history.map(h => h.date),
+      Seq(history.map(h => h.date)),
       None, // BaselineSpec
       Some(new C3Chart.Tolerance(-Config.BBbyCBCTChartTolerance_mm, Config.BBbyCBCTChartTolerance_mm)), // tolerance
       Some(new C3Chart.YRange(-Config.BBbyCBCTChartYRange_mm, Config.BBbyCBCTChartYRange_mm)), // yRange

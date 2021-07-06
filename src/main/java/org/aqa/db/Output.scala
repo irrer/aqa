@@ -29,23 +29,24 @@ import java.util.Date
 import scala.util.Try
 
 case class Output(
-                   outputPK: Option[Long], // primary key
-                   inputPK: Long, // input data
-                   directory: String, // directory containing data
-                   procedurePK: Long, // procedure that created this output
-                   userPK: Option[Long], // user that created this output
-                   startDate: Timestamp, // when procedure was started
-                   finishDate: Option[Timestamp], // when procedure finished
-                   dataDate: Option[Timestamp], // optionally supplied by analysis procedure to indicate or override Input.dataDate
-                   analysisDate: Option[Timestamp], // optionally supplied by analysis procedure to indicate prior analysis
-                   machinePK: Option[Long], // optionally supplied by analysis procedure to indicate treatment machine
-                   status: String, // termination status
-                   dataValidity: String) // whether the data is valid or otherwise
+    outputPK: Option[Long], // primary key
+    inputPK: Long, // input data
+    directory: String, // directory containing data
+    procedurePK: Long, // procedure that created this output
+    userPK: Option[Long], // user that created this output
+    startDate: Timestamp, // when procedure was started
+    finishDate: Option[Timestamp], // when procedure finished
+    dataDate: Option[Timestamp], // optionally supplied by analysis procedure to indicate or override Input.dataDate
+    analysisDate: Option[Timestamp], // optionally supplied by analysis procedure to indicate prior analysis
+    machinePK: Option[Long], // optionally supplied by analysis procedure to indicate treatment machine
+    status: String, // termination status
+    dataValidity: String
+) // whether the data is valid or otherwise
 {
 
   /**
-   * Insert into table, returning the row that was inserted.  Note that outputPK in the return value is defined.
-   */
+    * Insert into table, returning the row that was inserted.  Note that outputPK in the return value is defined.
+    */
   def insert: Output = {
     val insertQuery = Output.query returning Output.query.map(_.outputPK) into ((output, outputPK) => output.copy(outputPK = Some(outputPK)))
     val action = insertQuery += this
@@ -55,13 +56,15 @@ case class Output(
 
   def getUser: Option[User] = if (userPK.isDefined) User.get(userPK.get) else None
 
-  def insertOrUpdate(): Int = Db.run(Output.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = {
+    Db.run(Output.query.insertOrUpdate(this))
+  }
 
   def dir: File = WebServer.fileOfResultsPath(directory)
 
   /**
-   * Update the status and finish date.
-   */
+    * Update the status and finish date.
+    */
   def updateStatusAndFinishDate(sts: String, finDate: Date): Unit = {
     val finTimestamp = new Timestamp(finDate.getTime)
     Db.run(Output.query.filter(_.outputPK === outputPK.get).map(o => (o.status, o.finishDate)).update((sts, Some(finTimestamp))))
@@ -75,8 +78,8 @@ case class Output(
   }
 
   /**
-   * Get the elapsed time in ms.  If the output is still running, then get the elapsed time so far.
-   */
+    * Get the elapsed time in ms.  If the output is still running, then get the elapsed time so far.
+    */
   def elapsedTime: Long = {
     val elapsed =
       if (finishDate.isDefined)
@@ -107,6 +110,8 @@ case class Output(
       "    status: " + status +
       "    dataValidity: " + dataValidity
   }
+
+  def statusOf: ProcedureStatus.Value = ProcedureStatus.stringToProcedureStatus(status).get
 }
 
 object Output extends Logging {
@@ -137,19 +142,7 @@ object Output extends Logging {
 
     def dataValidity = column[String]("dataValidity")
 
-    def * = (
-      outputPK.?,
-      inputPK,
-      directory,
-      procedurePK,
-      userPK,
-      startDate,
-      finishDate,
-      dataDate,
-      analysisDate,
-      machinePK,
-      status,
-      dataValidity) <> (Output.apply _ tupled, Output.unapply)
+    def * = (outputPK.?, inputPK, directory, procedurePK, userPK, startDate, finishDate, dataDate, analysisDate, machinePK, status, dataValidity) <> (Output.apply _ tupled, Output.unapply)
 
     def inputFK = foreignKey("Output_inputPKConstraint", inputPK, Input.query)(_.inputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
 
@@ -161,40 +154,41 @@ object Output extends Logging {
   val query = TableQuery[OutputTable]
 
   def get(outputPK: Long): Option[Output] = {
-    val action = for {output <- Output.query if output.outputPK === outputPK} yield output
+    val action = for { output <- Output.query if output.outputPK === outputPK } yield output
     val list = Db.run(action.result)
     list.headOption
   }
 
   /**
-   * Find the output given the name of its directory.  This parameter must exactly match the <code>output.directory</code> field.
-   */
+    * Find the output given the name of its directory.  This parameter must exactly match the <code>output.directory</code> field.
+    */
   def getByDirectory(dirName: String): Option[Output] = {
-    val action = for {output <- Output.query if output.directory === dirName} yield output
+    val action = for { output <- Output.query if output.directory === dirName } yield output
     val list = Db.run(action.result)
     list.headOption
   }
 
   /**
-   * Get a list of all outputs.
-   */
+    * Get a list of all outputs.
+    */
   def list: Seq[Output] = Db.run(query.result)
 
   case class ExtendedValues(
-                             input_dataDate: Option[Timestamp],
-                             input_directory: Option[String],
-                             institutionPK: Long,
-                             institution_name: String,
-                             machine_id: String,
-                             output_outputPK: Long,
-                             output_startDate: Timestamp,
-                             procedure_name: String,
-                             procedure_version: String,
-                             user_id: String) {}
+      input_dataDate: Option[Timestamp],
+      input_directory: Option[String],
+      institutionPK: Long,
+      institution_name: String,
+      machine_id: String,
+      output_outputPK: Long,
+      output_startDate: Timestamp,
+      procedure_name: String,
+      procedure_version: String,
+      user_id: String
+  ) {}
 
   /**
-   * Get an extended list of all outputs.
-   */
+    * Get an extended list of all outputs.
+    */
   def extendedList(instPK: Option[Long], maxSize: Int, date: Option[Date] = None): Seq[ExtendedValues] = {
 
     val search = for {
@@ -226,8 +220,8 @@ object Output extends Logging {
   }
 
   /**
-   * Get an extended list of all outputs.
-   */
+    * Get an extended list of all outputs.
+    */
   def extendedList(outputPkSet: Set[Long]): Seq[ExtendedValues] = {
 
     val search = for {
@@ -245,10 +239,9 @@ object Output extends Logging {
     result
   }
 
-
   /**
-   * Get a list of all outputs with the given status and their associated procedures.
-   */
+    * Get a list of all outputs with the given status and their associated procedures.
+    */
   def listWithStatus(status: ProcedureStatus.Value): Seq[(Output, Procedure)] = {
     val statusText = status.toString
     val action = for {
@@ -265,8 +258,8 @@ object Output extends Logging {
   }
 
   /**
-   * Get a list of all outputs that have an input in the set.
-   */
+    * Get a list of all outputs that have an input in the set.
+    */
   def getByInputPKSet(inputPKSet: Set[Long]): Seq[Output] = {
     val action = for {
       output <- query if output.inputPK.inSet(inputPKSet)
@@ -292,18 +285,17 @@ object Output extends Logging {
   val displayFilePrefix = "display"
 
   /**
-   * If the given directory contains an output file, then return it.
-   */
+    * If the given directory contains an output file, then return it.
+    */
   def outputFile(directory: File): Option[File] = {
     val list = directory.listFiles().filter { f => f.canRead && f.getName.toLowerCase.startsWith(Output.displayFilePrefix) }
     list.headOption
   }
 
-
   /**
-   * Ensure that the output files and related input files are in the file system.  If
-   * not, then get them from the database.
-   */
+    * Ensure that the output files and related input files are in the file system.  If
+    * not, then get them from the database.
+    */
   def ensureInputAndOutputFilesExist(output: Output): AnyVal = {
     val inputDir = output.dir.getParentFile
 
@@ -318,11 +310,11 @@ object Output extends Logging {
   }
 
   /**
-   * Get the files from the database and restore them to the file system.  Overwrite any files that are already there.
-   *
-   * It is up to the caller to determine if the files need to be restored.
-   *
-   */
+    * Get the files from the database and restore them to the file system.  Overwrite any files that are already there.
+    *
+    * It is up to the caller to determine if the files need to be restored.
+    *
+    */
   def getFilesFromDatabase(outputPK: Long, dir: File): Boolean = {
     dir.mkdirs
     // Steps are done on separate lines so that if there is an error/exception it can be precisely
@@ -337,8 +329,8 @@ object Output extends Logging {
   }
 
   /**
-   * Given a machine PK, get the input and output containing the latest LOC baseline files.
-   */
+    * Given a machine PK, get the input and output containing the latest LOC baseline files.
+    */
   def getLatestLOCBaselineDir(machinePK: Long, webInterface: String): Option[(Input, Output)] = {
     val search = for {
       //machine <- Machine.query.filter(m => m.machinePK === machinePK)
@@ -353,8 +345,8 @@ object Output extends Logging {
   }
 
   /**
-   * Get a list of outputs from the given institution whose data is >= begin and < end.
-   */
+    * Get a list of outputs from the given institution whose data is >= begin and < end.
+    */
   def getOutputByDateRange(institutionPK: Long, dataDateBegin: Timestamp, dataDateEnd: Timestamp): Seq[Output] = {
     val search = for {
       machPK <- Machine.query.filter(m => m.institutionPK === institutionPK).map(m => m.machinePK)
@@ -363,7 +355,6 @@ object Output extends Logging {
     val seq = Db.run(search.result)
     seq
   }
-
 
   def redundantWith(output: Output): Seq[Output] = {
     val dicomSeriesUIDSet = DicomSeries.getByInputPK(output.inputPK).map(ds => ds.seriesInstanceUID).toSet
@@ -393,15 +384,15 @@ object Output extends Logging {
   }
 
   /**
-   * Get the number of outputs from the the given institution and procedure.
-   * @param institutionPK Must match this institution.
-   * @param procedurePK Must match this procedure.
-   * @return Number of outputs.
-   */
+    * Get the number of outputs from the the given institution and procedure.
+    * @param institutionPK Must match this institution.
+    * @param procedurePK Must match this procedure.
+    * @return Number of outputs.
+    */
   def getCount(institutionPK: Long, procedurePK: Long): Int = {
     val search = for {
       machPK <- Machine.query.filter(m => m.institutionPK === institutionPK).map(m => m.machinePK)
-      outPK <- Output.query.filter(o => (o.machinePK === machPK) && (o.procedurePK === procedurePK) ).map(_.outputPK)
+      outPK <- Output.query.filter(o => (o.machinePK === machPK) && (o.procedurePK === procedurePK)).map(_.outputPK)
     } yield outPK
     val size = Db.run(search.result).size
     size

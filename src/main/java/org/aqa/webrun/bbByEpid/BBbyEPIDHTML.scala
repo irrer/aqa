@@ -22,13 +22,13 @@ import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.AngleType
+import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.BBbyCBCT
 import org.aqa.db.BBbyEPID
 import org.aqa.db.BBbyEPIDComposite
 import org.aqa.db.DicomSeries
 import org.aqa.db.Output
-import org.aqa.run.ProcedureStatus
 import org.aqa.web.C3ChartHistory
 import org.aqa.web.MachineUpdate
 import org.aqa.web.OutputList
@@ -36,7 +36,6 @@ import org.aqa.web.ViewOutput
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 
-import java.awt.geom.Point2D
 import java.io.File
 import java.text.SimpleDateFormat
 import javax.vecmath.Point2d
@@ -72,12 +71,18 @@ object BBbyEPIDHTML {
     result2ms(BBbyEPIDImageAnalysis.alOf(r))
   }
 
+  private val squareTitle = "From central " + (2 * Config.BBbyEPIDSearchDistance_mm) + " mm square of image."
+
+  private val noisinessTitle = "Relative indication of image noise as Coefficient of Variation.  Lower numbers indicate a better quality image. " + squareTitle
+  private val bbSignalToNoiseTitle =
+    "Strength of BB contrast.  The difference of the BB's mean is this many time the central image's standard deviation.  This can be thought of as the strength of the BB's image compared to the background, with larger values being better."
+  private val meanCuTitle = "Mean CU of pixels.  " + squareTitle
+
   def generateHtml(
       extendedData: ExtendedData,
       bbByEPIDList: Seq[Either[BBbyEPIDImageAnalysis.FailedResult, BBbyEPIDImageAnalysis.Result]],
       composite: Either[String, (BBbyEPIDComposite, Option[String])],
-      runReq: BBbyEPIDRunReq,
-      status: ProcedureStatus.Value
+      runReq: BBbyEPIDRunReq
   ): Unit = {
 
     val bbByCBCT: Option[BBbyCBCT] = {
@@ -173,8 +178,7 @@ object BBbyEPIDHTML {
         }
       }
 
-      val bbLoc_mm: Option[Point2D.Double] = if (result.isRight) Some(new Point2D.Double(r2epid.epidImageX_mm, r2epid.epidImageY_mm)) else None
-      val gantryAngle: Int = Util.angleRoundedTo90(Util.gantryAngle(al))
+      val gantryAngle: Double = Util.gantryAngle(al)
       val gantryAngleRounded: Int = Util.angleRoundedTo90(gantryAngle)
 
       val suffix: String = "_" + gantryAngleRounded + "_" + (id + 1) + ".png"
@@ -195,13 +199,11 @@ object BBbyEPIDHTML {
 
       def viewDicomMetadata: Elem = {
 
-        val sop = Util.sopOfAl(al)
-
         val content = {
           <div>
             <div class="row">
               <div class="col-md-3 col-md-offset-1">
-                <h2>Gantry Angle {gantryAngle.toString} </h2>
+                <h2>Gantry Angle {gantryAngleRounded.toString} </h2>
               </div>
               <div class="col-md-2">
                 <h2> </h2><a href={mainReportFileName} title="Return to main EPID report">Main Report</a>
@@ -218,25 +220,42 @@ object BBbyEPIDHTML {
         }
 
         val fileName = "EPID_" + id + ".html"
-        val text = WebUtil.wrapBody(wrap(content), "EPID " + gantryAngle + " deg", None, c3 = true, None)
+        val text = WebUtil.wrapBody(wrap(content), "EPID " + gantryAngleRounded + " deg", None, c3 = true, None)
         val file = new File(extendedData.output.dir, fileName)
         Util.writeFile(file, text)
 
-        val desc = {
-          if (description.isDefined) { <br> {description.get} </br> }
+        val desc: Elem = {
+          if (description.isDefined) { <span> {description.get} <br/></span> }
           else <span/>
         }
 
-        val date = {
+        val date: Elem = {
           BBbyEPIDAnnotateImages.epidDateText(al) match {
-            case Some(d) => <br>{d}</br>
+            case Some(d) => <span>{d}<br/></span>
             case _       => <span/>
+          }
+        }
+
+        val stats: Elem = {
+          if (result.isRight) {
+            val bbByEpid = result.right.get.bbByEpid
+            <div>
+              {if (bbByEpid.isOpenFieldImage) <span style="background-color: red;color: white; ">@@nbsp@@;Open Field@@nbsp@@;</span> else <span>Planned Field</span>}
+              <br/>
+              <span title={noisinessTitle}>Image Noisiness: <span title={bbByEpid.pixelCoefficientOfVariation.toString}>{Util.fmtDbl(bbByEpid.pixelCoefficientOfVariation)}</span></span>
+              <br/>
+              <span title={bbSignalToNoiseTitle}>BB Signal to Noise: <span title={bbByEpid.pixelStandardDeviation_cu.toString}>{Util.fmtDbl(bbByEpid.pixelStandardDeviation_cu)}</span></span>
+              <br/>
+              <span title={meanCuTitle}>Mean CU of Pixels: <span title={bbByEpid.pixelMean_cu.toString}>{Util.fmtDbl(bbByEpid.pixelMean_cu)}</span></span>
+            </div>
+          } else {
+            <div></div>
           }
         }
 
         <div>
           <a href={fileName} title={"View / download DICOM for gantry angle " + gantryAngle}>View DICOM</a>
-          {desc}{date}
+          {desc}{date}{stats}
         </div>
       }
 
@@ -301,9 +320,9 @@ object BBbyEPIDHTML {
         /** Get double value, convert from mm to cm, and format to text. */
         def db(tag: AttributeTag) = { Util.fmtDbl(al.get(tag).getDoubleValues.head / 10) }
 
-        val x = db(TagByName.TableTopLateralPosition) // tableXlateral_mm
-        val y = db(TagByName.TableTopVerticalPosition) // tableYvertical_mm
-        val z = db(TagByName.TableTopLongitudinalPosition) // tableZlongitudinal_mm
+        val x = db(TagByName.TableTopLateralPosition) // table X lateral_mm
+        val y = db(TagByName.TableTopVerticalPosition) // table Y vertical_mm
+        val z = db(TagByName.TableTopLongitudinalPosition) // table Z longitudinal_mm
 
         <div title="Table position when CBCT was captured.">
           Table Position X,Y,Z cm:{x + "," + y + "," + z}
@@ -369,6 +388,7 @@ object BBbyEPIDHTML {
           if (runReq.sopOfRTPlan.isEmpty) {
             <div>No plan reference</div>
           } else {
+            //noinspection SpellCheckingInspection
             val title = "The actual plan that was used for these images may be different than" + WebUtil.titleNewline +
               "the plan used for the CBCT.  The requirement is that they have the same frame of" + WebUtil.titleNewline +
               "reference.  The SOP to capture RTIMAGEs was " + runReq.sopOfRTPlan
@@ -454,39 +474,39 @@ object BBbyEPIDHTML {
           minutes.toString + ":" + sec.formatted("%02d")
         }
 
-        def fmtEpidWithoutCbct(rslt: BBbyEPIDImageAnalysis.Result) = {
+        def fmtEpidWithoutCbct(result: BBbyEPIDImageAnalysis.Result) = {
           val na = { <td>NA</td> }
-          val gantryAngle = Util.angleRoundedTo90(rslt.bbByEpid.gantryAngle_deg)
+          val gantryAngle = Util.angleRoundedTo90(result.bbByEpid.gantryAngle_deg)
 
           <tr style="text-align: center;">
             <td style="text-align: right;">MV G<b>{gantryAngle.toString}</b> (BB - DIGITAL_CAX) @ ISOCENTER PLANE</td>
-            <td>{elapsedText(result2ms(rslt.al))}</td>
-            {if (rslt.bbByEpid.isVert) fmtTd(rslt.bbByEpid.epid3DX_mm) else na}
-            {if (rslt.bbByEpid.isHorz) fmtTd(rslt.bbByEpid.epid3DY_mm) else na}
-            {fmtTd(rslt.bbByEpid.epid3DZ_mm)}
+            <td>{elapsedText(result2ms(result.al))}</td>
+            {if (result.bbByEpid.isVert) fmtTd(result.bbByEpid.epid3DX_mm) else na}
+            {if (result.bbByEpid.isHorz) fmtTd(result.bbByEpid.epid3DY_mm) else na}
+            {fmtTd(result.bbByEpid.epid3DZ_mm)}
             {
-            vectorLengthColumn(if (rslt.bbByEpid.isVert) rslt.bbByEpid.epid3DX_mm else 0.0, if (rslt.bbByEpid.isHorz) rslt.bbByEpid.epid3DY_mm else 0.0, rslt.bbByEpid.epid3DZ_mm)
+            vectorLengthColumn(if (result.bbByEpid.isVert) result.bbByEpid.epid3DX_mm else 0.0, if (result.bbByEpid.isHorz) result.bbByEpid.epid3DY_mm else 0.0, result.bbByEpid.epid3DZ_mm)
           }
           </tr>
         }
 
-        def fmtEpidWithCbct(rslt: BBbyEPIDImageAnalysis.Result) = {
+        def fmtEpidWithCbct(result: BBbyEPIDImageAnalysis.Result) = {
           val na = { <td>NA</td> }
-          val gantryAngle = Util.angleRoundedTo90(rslt.bbByEpid.gantryAngle_deg)
+          val gantryAngle = Util.angleRoundedTo90(result.bbByEpid.gantryAngle_deg)
           val isVert = AngleType.isAngleType(gantryAngle, AngleType.vertical)
           val isHorz = !isVert
 
           <tr style="text-align: center;">
             <td style="text-align: right;">MV G<b>{gantryAngle.toString}</b> (BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER)</td>
-            <td>{elapsedText(result2ms(rslt.al))}</td>
-            {if (isVert) fmtTd(rslt.bbByEpid.epid3DX_mm - cbct.err_mm.getX) else na}
-            {if (isHorz) fmtTd(rslt.bbByEpid.epid3DY_mm - cbct.err_mm.getY) else na}
-            {fmtTd(rslt.bbByEpid.epid3DZ_mm - cbct.err_mm.getZ)}
+            <td>{elapsedText(result2ms(result.al))}</td>
+            {if (isVert) fmtTd(result.bbByEpid.epid3DX_mm - cbct.err_mm.getX) else na}
+            {if (isHorz) fmtTd(result.bbByEpid.epid3DY_mm - cbct.err_mm.getY) else na}
+            {fmtTd(result.bbByEpid.epid3DZ_mm - cbct.err_mm.getZ)}
             {
             vectorLengthColumn(
-              if (isVert) rslt.bbByEpid.epid3DX_mm - cbct.err_mm.getX else 0.0,
-              if (isHorz) rslt.bbByEpid.epid3DY_mm - cbct.err_mm.getY else 0.0,
-              rslt.bbByEpid.epid3DZ_mm - cbct.err_mm.getZ
+              if (isVert) result.bbByEpid.epid3DX_mm - cbct.err_mm.getX else 0.0,
+              if (isHorz) result.bbByEpid.epid3DY_mm - cbct.err_mm.getY else 0.0,
+              result.bbByEpid.epid3DZ_mm - cbct.err_mm.getZ
             )
           }
           </tr>
@@ -573,6 +593,24 @@ object BBbyEPIDHTML {
               {imageSetList.map(imageSet => imageSet.html)}
             </tr>
           </table>
+        </div>
+        <div class="row" style="border: 1px solid lightgrey">
+          <div style="margin: 5px;">
+            <center title={noisinessTitle}><h3>Image Noisiness</h3></center>
+            {chartPartial.chartReferencePixelCoefficientOfVariation}
+          </div>
+        </div>
+        <div class="row" style="border: 1px solid lightgrey">
+          <div style="margin: 5px;">
+            <center title={bbSignalToNoiseTitle}><h3>BB Signal to Noise</h3></center>
+            {chartPartial.chartReferenceBBStdDevMultiple}
+          </div>
+        </div>
+        <div class="row" style="border: 1px solid lightgrey">
+          <div style="margin: 5px;">
+            <center title={meanCuTitle}><h3>Mean CU of Pixels</h3></center>
+            {chartPartial.chartReferencePixelMean}
+          </div>
         </div>
       </div>
     }

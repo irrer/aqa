@@ -71,7 +71,7 @@ class BBbyEPIDChart(outputPK: Long) extends Logging {
       None, // width
       None, // height
       "Date",
-      history.map(h => h.date),
+      Seq(history.map(h => h.date)),
       None, // BaselineSpec
       Some(new C3Chart.Tolerance(-Config.BBbyEPIDChartTolerance_mm, Config.BBbyEPIDChartTolerance_mm)),
       Some(new C3Chart.YRange(-Config.BBbyEPIDChartYRange_mm, Config.BBbyEPIDChartYRange_mm)),

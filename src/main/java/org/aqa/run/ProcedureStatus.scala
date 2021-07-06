@@ -28,7 +28,7 @@ import scala.collection.mutable.ArrayBuffer
 private object ProcedureStatusList {
   private val statusList = ArrayBuffer[ProcedureStatus.ProcedureStatus]()
 
-  def add(status: ProcedureStatus.ProcedureStatus): statusList.type = statusList += status
+  def add(status: ProcedureStatus.ProcedureStatus): ArrayBuffer[ProcedureStatus.ProcedureStatus] = statusList += status
 
   def list: List[ProcedureStatus.ProcedureStatus] = statusList.toList
 }

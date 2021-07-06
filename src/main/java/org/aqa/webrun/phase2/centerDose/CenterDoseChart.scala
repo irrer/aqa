@@ -85,7 +85,7 @@ class CenterDoseChart(outputPK: Long) extends Logging {
       None, // width
       None, // height
       "Date",
-      sortedHistory.map(h => h.date),
+      Seq(sortedHistory.map(h => h.date)),
       None, // BaselineSpec
       None, // tolerance
       None, // yRange

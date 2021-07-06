@@ -16,8 +16,6 @@
 
 package org.aqa.webrun.dailyQA
 
-import edu.umro.ScalaUtil.Trace
-
 import java.text.SimpleDateFormat
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -68,7 +66,6 @@ object DailyQAActivity {
   def update(delay_ms: Long = 0): Unit =
     if (delay_ms > 0) {
       Future {
-        Trace.trace("================================================== delay_ms: " + delay_ms)
         Thread.sleep(delay_ms)
         DailyQAActivity.updateNow()
       }

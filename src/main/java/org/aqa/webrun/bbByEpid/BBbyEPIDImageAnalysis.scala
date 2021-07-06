@@ -24,7 +24,6 @@ import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -336,8 +335,6 @@ object BBbyEPIDImageAnalysis extends Logging {
     val pixelStandardDeviation_cu = ImageUtil.stdDev(outValue)
     val pixelMean_cu = outValue.sum / outPixXY.size
 
-    Trace.trace("coefficientOfVariation : " + (pixelStandardDeviation_cu / pixelMean_cu))
-
     if (valid) {
       val bbLocation = new Point2d(bbCenter_mm.getX, -bbCenter_mm.getY)
       val result =
@@ -347,9 +344,7 @@ object BBbyEPIDImageAnalysis extends Logging {
           bbLocation,
           toBBbyEPID(al, bbLocation, outputPK, bbStdDevMultiple = bbStdDevMultiple, pixelStandardDeviation_cu, pixelMean_cu)
         ) // Convert Y to DICOM gantry coordinate system
-      Trace.trace(
-        "find. gantry angle: " + Util.angleRoundedTo90(Util.gantryAngle(al)).formatted("%3d") + "     bbCenter_pix: " + Util.fmtDbl(bbCenter_pix.getX) + ", " + Util.fmtDbl(bbCenter_pix.getY)
-      )
+
       Right(result)
     } else {
       val msg = "Failed to find image of BB in EPID image with sufficient contrast to background. for gantry angle " + Util.gantryAngle(al)

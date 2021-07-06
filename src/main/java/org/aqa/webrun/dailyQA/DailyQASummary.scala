@@ -32,8 +32,8 @@ import java.util.Date
 import scala.xml.Elem
 
 /**
- * Support for generating JS scripts on request.
- */
+  * Support for generating JS scripts on request.
+  */
 object DailyQASummary {
 
   private val pageTitle = "Daily QA Summary"
@@ -59,7 +59,7 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
   private def getDateText(valueMap: ValueMapT): String = {
     valueMap.get(dateField.label) match {
       case Some(text) => text
-      case _ => dateField.dateFormat.format(new Date)
+      case _          => dateField.dateFormat.format(new Date)
     }
   }
 
@@ -79,21 +79,33 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
   private def csvCompositeLink(valueMap: ValueMapT): Elem = {
     if (false) println(valueMap) // gets rid of compiler warning about unused parameter
-    csvLink(CsvCompositeTag, name = "Composite", title = "Download a spreadsheet of all DailyQA data with CBCTs paired" + WebUtil.titleNewline + "with EPIDs.  Values that can not be paired are not shown.")
+    csvLink(
+      CsvCompositeTag,
+      name = "Composite",
+      title = "Download a spreadsheet of all DailyQA data with CBCTs paired" + WebUtil.titleNewline + "with EPIDs.  Values that can not be paired are not shown."
+    )
   }
 
   private val CsvCbctTag = "DailyQA-CBCT"
 
   private def csvCbctLink(valueMap: ValueMapT): Elem = {
     if (false) println(valueMap) // gets rid of compiler warning about unused parameter
-    csvLink(CsvCbctTag, name = "CBCT", title = "Download a spreadsheet of all DailyQA CBCT data " + WebUtil.titleNewline + "including values that are not paired with EPID data.")
+    csvLink(
+      CsvCbctTag,
+      name = "CBCT",
+      title = "Download a spreadsheet of all DailyQA CBCT data " + WebUtil.titleNewline + "including values that are not paired with EPID data."
+    )
   }
 
   private val CsvEpidTag = "DailyQA-EPID"
 
   private def csvEpidLink(valueMap: ValueMapT): Elem = {
     if (false) println(valueMap) // gets rid of compiler warning about unused parameter
-    csvLink(CsvEpidTag, name = "EPID", title = "Download a spreadsheet of all DailyQA EPID data " + WebUtil.titleNewline + "including values that are not paired with CBCT data.")
+    csvLink(
+      CsvEpidTag,
+      name = "EPID",
+      title = "Download a spreadsheet of all DailyQA EPID data " + WebUtil.titleNewline + "including values that are not paired with CBCT data."
+    )
   }
 
   private val csvFieldComposite = new WebPlainText("CSV", false, 1, 0, csvCompositeLink)
@@ -122,10 +134,16 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
   // bulk of the displayed information
   private val report = {
-    new WebPlainText("report", false, 12, 0, (valueMap: ValueMapT) => {
-      val institutionPK = getUser(valueMap).get.institutionPK
-      DailyQAHTML.makeReport(getDataSetListByDateAndInstitution(valueMap), institutionPK, getDate(valueMap))
-    })
+    new WebPlainText(
+      "report",
+      false,
+      12,
+      0,
+      (valueMap: ValueMapT) => {
+        val institutionPK = getUser(valueMap).get.institutionPK
+        DailyQAHTML.makeReport(getDataSetListByDateAndInstitution(valueMap), institutionPK, getDate(valueMap))
+      }
+    )
   }
 
   val contentRow: WebRow = List(report)
@@ -176,7 +194,7 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
     val institution: Option[Institution] = {
       user match {
         case Some(u) => Institution.get(u.institutionPK)
-        case _ => None
+        case _       => None
       }
     }
 
@@ -184,21 +202,18 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
     list
   }
 
-
   private def show(response: Response, valueMap: ValueMapT): Unit = {
     formCreate().setFormResponse(valueMap, styleNone, DailyQASummary.pageTitle, response, Status.SUCCESS_OK)
   }
 
-
   /**
-   * Respond to the client with the latest change of the data so they can decide whether or not they need to reload it.
-   */
+    * Respond to the client with the latest change of the data so they can decide whether or not they need to reload it.
+    */
   private def handleLatestChange(response: Response): Unit = {
     val latestChange = DailyQAActivity.get
     response.setEntity(latestChange, MediaType.TEXT_PLAIN)
     response.setStatus(Status.SUCCESS_OK)
   }
-
 
   override def handle(request: Request, response: Response): Unit = {
     try {

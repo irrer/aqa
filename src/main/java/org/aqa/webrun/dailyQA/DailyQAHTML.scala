@@ -17,7 +17,6 @@
 package org.aqa.webrun.dailyQA
 
 import com.pixelmed.dicom.TagFromName
-import edu.umro.ScalaUtil.Trace
 import org.aqa.AnonymizeUtil
 import org.aqa.Config
 import org.aqa.Logging
@@ -552,17 +551,16 @@ object DailyQAHTML extends Logging {
           def timeLeft = outputCBCT(mach.machinePK.get).head.analysisDate.get.getTime + Config.DailyQAInProgressInterval_ms - System.currentTimeMillis()
           val isInProgress = outputCBCT(mach.machinePK.get).nonEmpty && (timeLeft > 0)
           if (isInProgress) {
-            Trace.trace("================================================== timeLeft: " + timeLeft)
             DailyQAActivity.update(timeLeft)
           }
           isInProgress
         }
 
-        val oneCbct = machineCbctResults.size == 1
+        val haveCbct = machineCbctResults.size == 1
 
-        val onePassedCbct = oneCbct && (ProcedureStatus.pass.toString.equals(machineCbctResults.head.output.status) || ProcedureStatus.warning.toString.equals(machineCbctResults.head.output.status))
-        val oneFailedCbct = oneCbct && ProcedureStatus.fail.toString.equals(machineCbctResults.head.output.status)
-        val oneRunningCbct = oneCbct && ProcedureStatus.running.toString.equals(machineCbctResults.head.output.status)
+        val onePassedCbct = haveCbct && (ProcedureStatus.pass.toString.equals(machineCbctResults.head.output.status) || ProcedureStatus.warning.toString.equals(machineCbctResults.head.output.status))
+        val oneFailedCbct = haveCbct && ProcedureStatus.fail.toString.equals(machineCbctResults.head.output.status)
+        val oneRunningCbct = haveCbct && ProcedureStatus.running.toString.equals(machineCbctResults.head.output.status)
 
         val explanation: Elem = 0 match {
           case _ if machineCbctResults.isEmpty && epidOutput.isEmpty =>
@@ -574,28 +572,28 @@ object DailyQAHTML extends Logging {
           case _ if onePassedCbct && inProgress =>
             showInProgress("The CBCT scan has passed.")
 
-          case _ if oneCbct && ProcedureStatus.fail.toString.equals(machineCbctResults.head.output.status) && inProgress =>
+          case _ if haveCbct && ProcedureStatus.fail.toString.equals(machineCbctResults.head.output.status) && inProgress =>
             showInProgress("The CBCT did not yet pass.")
 
-          case _ if oneCbct && oneFailedCbct =>
+          case _ if haveCbct && oneFailedCbct =>
             showFail("The CBCT scan failed.", pleasePage = true)
 
-          case _ if oneCbct && allEpidSeqWithErrors.isEmpty && inProgress =>
+          case _ if haveCbct && allEpidSeqWithErrors.isEmpty && inProgress =>
             showInProgress("There is a CBCT scan but no EPID results.  An EPID scan is recommended.")
 
-          case _ if oneCbct && allEpidSeqWithErrors.isEmpty =>
+          case _ if haveCbct && allEpidSeqWithErrors.isEmpty =>
             showFail("There is a CBCT scan but no EPID results.  An EPID scan is recommended.")
 
-          case _ if oneCbct && machineEpidResultsWithErrors.nonEmpty && inProgress =>
+          case _ if haveCbct && machineEpidResultsWithErrors.nonEmpty && inProgress =>
             showInProgress("There is a CBCT scan but EPID results failed.")
 
-          case _ if oneCbct && machineEpidResultsWithErrors.nonEmpty =>
+          case _ if haveCbct && machineEpidResultsWithErrors.nonEmpty =>
             showFail("There is a CBCT scan but EPID results failed.", pleasePage = true)
 
-          case _ if oneCbct && machineEpidResultsWithoutErrors.isEmpty =>
+          case _ if haveCbct && machineEpidResultsWithoutErrors.isEmpty =>
             showWarn("There is a CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
 
-          case _ if oneCbct && machineEpidResultsWithoutErrors.isEmpty =>
+          case _ if haveCbct && machineEpidResultsWithoutErrors.isEmpty =>
             showWarn("There is a CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
 
           case _ if machineCbctResults.nonEmpty && machineEpidResultsWithoutErrors.isEmpty =>

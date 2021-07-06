@@ -96,7 +96,7 @@ class VMATChartHistory(outputPK: Long, beamNameMLC: String) extends Logging {
         None, // width
         None, // height
         "Date",
-        allDates,
+        Seq(allDates),
         None, // BaselineSpec
         None, // tolerance Some(new C3Chart.Tolerance(-Config.VMATDeviationThreshold_pct, Config.VMATDeviationThreshold_pct)),
         None, // range
@@ -108,8 +108,6 @@ class VMATChartHistory(outputPK: Long, beamNameMLC: String) extends Logging {
         Seq[Color]()
       )
     } else {
-      // TODO rm
-
       val min = history.minBy(h => h.vmat.leftRtplan_mm).vmat.leftRtplan_mm
       val hist = history.filter(h => h.vmat.leftRtplan_mm == min).sortBy(h => h.getTime).map(h => h.vmat.diff_pct)
 
@@ -127,7 +125,7 @@ class VMATChartHistory(outputPK: Long, beamNameMLC: String) extends Logging {
         None, // width
         None, // height
         "Date",
-        allDates,
+        Seq(allDates),
         None, // BaselineSpec
         None, // tolerance Some(new C3Chart.Tolerance(-Config.VMATDeviationThreshold_pct, Config.VMATDeviationThreshold_pct)),
         None, // range

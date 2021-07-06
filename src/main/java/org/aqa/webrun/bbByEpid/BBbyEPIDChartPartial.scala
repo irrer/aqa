@@ -61,8 +61,9 @@ class BBbyEPIDChartPartial(outputPK: Long) extends Logging {
     val epid3dSumHorz_mm: Double = Math.sqrt((epid3DYHorz_mm * epid3DYHorz_mm) + (epid3dZHorz_mm * epid3dZHorz_mm))
   }
 
+  private val all: Seq[BBbyEPIDHistory] = BBbyEPID.history(machine.machinePK.get, procedure.procedurePK.get)
+
   private val history = {
-    val all = BBbyEPID.history(machine.machinePK.get, procedure.procedurePK.get)
     def hasBothVH(g: Seq[BBbyEPIDHistory]) = g.exists(e => e.bbByEPID.isHorz) && g.exists(e => e.bbByEPID.isVert)
 
     val qualified = all.groupBy(_.bbByEPID.outputPK).values.filter(g => hasBothVH(g)).map(g => new ToBeCharted(g))
@@ -79,15 +80,15 @@ class BBbyEPIDChartPartial(outputPK: Long) extends Logging {
       MaintenanceRecord.getRange(machine.machinePK.get, allDates.min, allDates.max).filter(m => !m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline))
   }
 
-  private def chartId = C3Chart.idTagPrefix + Util.textToId(machine.id) + "_Partial"
+  private def chartIdPartial: String = C3Chart.idTagPrefix + Util.textToId(machine.id) + "_Partial"
 
-  def chartReference: Elem = {
-    // val ciob = chartId
-    C3ChartHistory.htmlRef(chartId)
-    // <div id={ciob}></div>
-  }
+  def chartReference: Elem = C3ChartHistory.htmlRef(chartIdPartial)
 
-  private def chartOf(index: Int): C3ChartHistory = {
+  // ----------------------------------------------------------------------------------------
+
+  private val index: Int = history.indexWhere(sh => sh.outputPK == outputPK)
+
+  private def chartOf(): C3ChartHistory = {
     val units = "mm"
     val dataToBeGraphed = Seq(
       history.map(h => h.epid3DXVert_mm),
@@ -101,15 +102,16 @@ class BBbyEPIDChartPartial(outputPK: Long) extends Logging {
     val colorList = Seq(new Color(160, 160, 160), new Color(80, 80, 80), new Color(20, 20, 20), new Color(204, 255, 51), new Color(61, 245, 0), new Color(46, 184, 0))
 
     new C3ChartHistory(
-      Some(chartId),
+      Some(chartIdPartial),
       maintenanceRecordList,
       None, // width
       None, // height
       "Date",
-      history.map(h => h.date),
+      Seq(history.map(_.date)),
       None, // BaselineSpec
       Some(new C3Chart.Tolerance(-Config.BBbyEPIDChartTolerance_mm, Config.BBbyEPIDChartTolerance_mm)),
       Some(new C3Chart.YRange(-Config.BBbyEPIDChartYRange_mm, Config.BBbyEPIDChartYRange_mm)),
+      //noinspection SpellCheckingInspection
       Seq("LEFT/RIGHT 0/180", "SUP/INF 0/180", "Vect Len 0/180", "POST/ANT 90/270", "SUP/INF 90/270", "Vect Len 90/270"),
       units,
       dataToBeGraphed,
@@ -119,17 +121,72 @@ class BBbyEPIDChartPartial(outputPK: Long) extends Logging {
     )
   }
 
-  private val chart = {
-    val index = history.indexWhere(sh => sh.outputPK == outputPK)
-    if (index == -1)
-      None
-    else
-      Some(chartOf(index))
+  // ----------------------------------------------------------------------------------------
+
+  private def chartOfStats(chartId: String, getValue: BBbyEPIDHistory => Double, yDataLabel: String): C3ChartHistory = {
+
+    val allRelevant = all.filterNot(h => h.bbByEPID.pixelStandardDeviation_cu == -1)
+
+    val dataToBeGraphed = Seq(
+      allRelevant.filter(_.bbByEPID.isOpenFieldImage).map(getValue),
+      allRelevant.filterNot(_.bbByEPID.isOpenFieldImage).map(getValue)
+    )
+
+    val xDateList = {
+      Seq(all.filter(_.bbByEPID.isOpenFieldImage).map(h => h.date), all.filterNot(_.bbByEPID.isOpenFieldImage).map(h => h.date))
+    }
+
+    new C3ChartHistory(
+      Some(chartId),
+      maintenanceRecordList,
+      width = None, // width
+      height = None, // height
+      xLabel = "Date",
+      xDateList = xDateList,
+      baseline = None,
+      tolerance = None,
+      yRange = None,
+      Seq("Planned Field", "Open Field"),
+      yDataLabel = yDataLabel,
+      dataToBeGraphed,
+      index,
+      ".3r",
+      yColorList = Seq(new Color(46, 140, 0), new Color(189, 31, 0))
+    )
   }
 
+  // ----------------------------------------------------------------------------------------
+
+  private def chartIdPixelCoefficientOfVariation = C3Chart.idTagPrefix + Util.textToId(machine.id) + "_PixelCoefficientOfVariation"
+  def chartReferencePixelCoefficientOfVariation: Elem = C3ChartHistory.htmlRef(chartIdPixelCoefficientOfVariation)
+
+  private def chartOfPixelCoefficientOfVariation(): C3ChartHistory =
+    chartOfStats(chartIdPixelCoefficientOfVariation, (h: BBbyEPIDHistory) => h.bbByEPID.pixelCoefficientOfVariation, "Image Coefficient of Variation")
+
+  // ----------------------------------------------------------------------------------------
+
+  private def chartIdBBStdDevMultiple = C3Chart.idTagPrefix + Util.textToId(machine.id) + "_BBStdDevMultiple"
+  def chartReferenceBBStdDevMultiple: Elem = C3ChartHistory.htmlRef(chartIdBBStdDevMultiple)
+
+  private def chartOfBBStdDevMultiple(): C3ChartHistory = chartOfStats(chartIdBBStdDevMultiple, (h: BBbyEPIDHistory) => h.bbByEPID.bbStdDevMultiple, "Multiple of Std. Dev.")
+
+  // ----------------------------------------------------------------------------------------
+
+  private def chartIdPixelMean = C3Chart.idTagPrefix + Util.textToId(machine.id) + "_PixelMean"
+  def chartReferencePixelMean: Elem = C3ChartHistory.htmlRef(chartIdPixelMean)
+
+  private def chartOfPixelMean(): C3ChartHistory = chartOfStats(chartIdPixelMean, (h: BBbyEPIDHistory) => h.bbByEPID.pixelMean_cu, "CU")
+
+  // ----------------------------------------------------------------------------------------
+
   val chartScript: String = {
-    if (chart.isDefined) chart.get.javascript
-    else ""
+    if (index == -1)
+      ""
+    else {
+      val chartList = Seq(chartOf(), chartOfPixelCoefficientOfVariation(), chartOfBBStdDevMultiple(), chartOfPixelMean())
+      val js = chartList.map(c => c.javascript).mkString("\n\n")
+      js
+    }
   }
 
 }

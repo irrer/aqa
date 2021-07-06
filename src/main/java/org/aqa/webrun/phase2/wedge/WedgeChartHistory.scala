@@ -136,7 +136,7 @@ class WedgeChartHistory(outputPK: Long) {
       width = None,
       height = None,
       xLabel = "Date",
-      xDateList = xDateList,
+      xDateList = Seq(xDateList),
       baseline = baseline,
       tolerance = tolerance,
       yRange = Some(yRange),
