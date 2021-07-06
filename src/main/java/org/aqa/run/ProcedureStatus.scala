@@ -17,41 +17,43 @@
 package org.aqa.run
 
 //import collection.JavaConverters._
-import java.io.FileInputStream
-import java.io.File
+import org.aqa.run
 import resource.managed
-import scala.collection.mutable.ArrayBuffer
+
+import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
+import scala.collection.mutable.ArrayBuffer
 
 private object ProcedureStatusList {
   private val statusList = ArrayBuffer[ProcedureStatus.ProcedureStatus]()
 
-  def add(status: ProcedureStatus.ProcedureStatus) = statusList += status
+  def add(status: ProcedureStatus.ProcedureStatus): statusList.type = statusList += status
 
-  def list = statusList.toList
+  def list: List[ProcedureStatus.ProcedureStatus] = statusList.toList
 }
 
 /**
- * Various types of procedure termination statuses.  Add more as needed.
- */
+  * Various types of procedure termination statuses.  Add more as needed.
+  */
 object ProcedureStatus extends Enumeration {
 
   /** When storing a ProcedureStatus in a file, the file must have this name. */
   val statusFileName = "status.txt"
 
-  val running = Value("running", "Procedure is currently running.")
-  val pass = Value("pass", "All results are within acceptable limits.")
-  val fail = Value("fail", "At least one result was outside acceptable limits.")
-  val done = Value("done", "Completed, but no indication as to whether results are acceptable or not.")
-  val abort = Value("abort", "Prematurely terminated itself.")
-  val dberr = Value("dberr", "Problem using the database from the procedure.")
-  val userabort = Value("userabort", "Prematurely terminated by user.")
-  val timeout = Value("timeout", "Terminated when time limit and was exceeded.")
-  val crash = Value("crash", "Terminated itself in an uncontrolled fashion.")
-  val servershutdown = Value("servershutdown", "Server was shut down while the procedure was running.")
-  val warning = Value("warning", "Results were acceptable but nearly failed.")
+  val running: ProcedureStatus = Value("running", "Procedure is currently running.")
+  val pass: ProcedureStatus = Value("pass", "All results are within acceptable limits.")
+  val fail: ProcedureStatus = Value("fail", "At least one result was outside acceptable limits.")
+  val done: ProcedureStatus = Value("done", "Completed, but no indication as to whether results are acceptable or not.")
+  val abort: ProcedureStatus = Value("abort", "Prematurely terminated itself.")
+  val dberr: ProcedureStatus = Value("dberr", "Problem using the database from the procedure.")
+  val userabort: ProcedureStatus = Value("userabort", "Prematurely terminated by user.")
+  val timeout: ProcedureStatus = Value("timeout", "Terminated when time limit and was exceeded.")
+  val crash: ProcedureStatus = Value("crash", "Terminated itself in an uncontrolled fashion.")
+  val servershutdown: ProcedureStatus = Value("servershutdown", "Server was shut down while the procedure was running.")
+  val warning: ProcedureStatus = Value("warning", "Results were acceptable but nearly failed.")
 
-  class ProcedureStatus(val name: String, val description: String) extends Val(nextId, name)
+  class ProcedureStatus(val name: String, val description: String) extends Val(nextId, name) {}
 
   protected final def Value(name: String, description: String): ProcedureStatus = {
     val status = new ProcedureStatus(name, description)
@@ -59,11 +61,11 @@ object ProcedureStatus extends Enumeration {
     status
   }
 
-  private val maxNameLength = ProcedureStatus.values.map(s => s.toString.size).max
+  private val maxNameLength = ProcedureStatus.values.map(s => s.toString.length).max
 
   def stringToProcedureStatus(name: String): Option[ProcedureStatus.Value] = {
     val matches = ProcedureStatus.values.filter(s => name.equalsIgnoreCase(s.toString)).toList
-    if (matches.isEmpty) None else Some(matches.head)
+    matches.headOption
   }
 
   def descriptionOf(status: ProcedureStatus.Value): String = {
@@ -72,21 +74,20 @@ object ProcedureStatus extends Enumeration {
   }
 
   /**
-   * Given a file, try to read a status (by name) from it.
-   */
+    * Given a file, try to read a status (by name) from it.
+    */
   def fileToProcedureStatus(file: File): Option[ProcedureStatus.Value] = {
     try {
       val buf = Array.ofDim[Byte](maxNameLength)
-      managed(new FileInputStream(file)) acquireAndGet {
-        fis =>
-          {
-            val size = fis.read(buf)
-            val name = new String(buf).substring(0, size).toLowerCase.trim
-            stringToProcedureStatus(name)
-          }
+      managed(new FileInputStream(file)) acquireAndGet { fis =>
+        {
+          val size = fis.read(buf)
+          val name = new String(buf).substring(0, size).toLowerCase.trim
+          stringToProcedureStatus(name)
+        }
       }
     } catch {
-      case t: Throwable => None
+      case _: Throwable => None
     }
   }
 
@@ -95,29 +96,28 @@ object ProcedureStatus extends Enumeration {
   def writeProcedureStatus(dir: File, status: ProcedureStatus.Value): Unit = {
     try {
       val statusFile = new File(dir, statusFileName)
-      managed(new FileOutputStream(statusFile)) acquireAndGet {
-        fos =>
-          {
-            fos.write(status.toString.getBytes)
-          }
+      managed(new FileOutputStream(statusFile)) acquireAndGet { fos =>
+        {
+          fos.write(status.toString.getBytes)
+        }
       }
     } catch {
-      case t: Throwable => ;
+      case _: Throwable => ;
     }
   }
 
   /**
-   * Convenience function to log a message to stdout, write a status file, and
-   *  exit.  The exit code will be 0 for a status of 'pass' or 'done', and 1 for
-   *  all other status values.
-   */
-  def terminate(msg: String, status: ProcedureStatus.Value) = {
+    * Convenience function to log a message to stdout, write a status file, and
+    *  exit.  The exit code will be 0 for a status of 'pass' or 'done', and 1 for
+    *  all other status values.
+    */
+  def terminate(msg: String, status: ProcedureStatus.Value): Unit = {
     println(msg)
     ProcedureStatus.writeProcedureStatus(status)
     val exitCode: Int = status match {
       case ProcedureStatus.pass => 0
       case ProcedureStatus.done => 0
-      case _ => 1
+      case _                    => 1
     }
     System.exit(exitCode)
   }
@@ -125,18 +125,18 @@ object ProcedureStatus extends Enumeration {
   def writeProcedureStatus(status: ProcedureStatus.Value): Unit = writeProcedureStatus(new File("."), status)
 
   /**
-   * Sort by id.
-   */
-  def sort(seq: Seq[ProcedureStatus.Value]) = seq.sortWith((a, b) => a.id < b.id)
+    * Sort by id.
+    */
+  def sort(seq: Seq[ProcedureStatus.Value]): Seq[run.ProcedureStatus.Value] = seq.sortWith((a, b) => a.id < b.id)
 
-  def eq(a: Value, b: Value) = a.toString.equals(b.toString)
+  def eq(a: Value, b: Value): Boolean = a.toString.equals(b.toString)
 
   /**
-   * For internal testing only.
-   */
+    * For internal testing only.
+    */
   def main(args: Array[String]): Unit = {
 
-    val first = ProcedureStatus.values.toArray.toList(0)
+    val first = ProcedureStatus.values.toArray.toList.head
 
     if (true) {
       println("starting")
@@ -146,7 +146,7 @@ object ProcedureStatus extends Enumeration {
     }
 
     if (true) {
-      println("cwd: " + (new File(".")).getAbsolutePath)
+      println("cwd: " + new File(".").getAbsolutePath)
       println("status.good: " + fileToProcedureStatus(new File("status.good")))
       println("status.bad: " + fileToProcedureStatus(new File("status.bad")))
       System.exit(99)
@@ -162,12 +162,12 @@ object ProcedureStatus extends Enumeration {
 
     println("first: " + first)
 
-    def show(s: ProcedureStatus.ProcedureStatus) = {
+    def show(s: ProcedureStatus.ProcedureStatus): Unit = {
       println
       println("s: " + s)
       println("s.toString: " + s.toString)
       println("s.description: " + s.description)
-      println("s.asInstanceOf[ProcedureStatus.ProcedureStatus].description: " + s.asInstanceOf[ProcedureStatus.ProcedureStatus].description)
+      println("s.asInstanceOf[ProcedureStatus.ProcedureStatus].description: " + s.description)
       println("s.+(\"hey\"): " + s.+("hey"))
       println("s.id: " + s.id)
     }
@@ -183,12 +183,5 @@ object ProcedureStatus extends Enumeration {
 
     println
     println("p.description: " + p.description)
-
-    /*
-        println
-        println("ProcedureStatus.construct(\"crash\"): " + ProcedureStatus.construct("crash"))
-        println("ProcedureStatus.construct(\"baddy\"): " + ProcedureStatus.construct("baddy"))
-        println("ProcedureStatus.construct(\"Done\"): " + ProcedureStatus.construct("Done"))
-        */
   }
 }
