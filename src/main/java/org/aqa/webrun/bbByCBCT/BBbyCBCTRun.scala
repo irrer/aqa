@@ -36,7 +36,6 @@ import org.aqa.web.OutputList
 import org.aqa.web.WebUtil._
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.WebRunProcedure
-import org.aqa.webrun.bbByEpid.BBbyEPIDRunReq
 import org.aqa.webrun.dailyQA.DailyQAActivity
 import org.restlet.Request
 import org.restlet.Response
@@ -159,11 +158,15 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     def cbctFrameOfRefList = cbctList.map(cbct => Util.getFrameOfRef(cbct)).distinct
 
     // Make a list of REG files that support the CBCTs frame of reference and reference the CBCT by its SeriesInstanceUID.
-    val qualifiedRegList = {
-      val cbctFrameOfRef = cbctFrameOfRefList.head
-      val qualifiedList = regList.filter(al => ImageRegistration(al).otherFrameOfRefUID.equals(cbctFrameOfRef))
+    val qualifiedRegList: Seq[AttributeList] = {
+      if (cbctFrameOfRefList.isEmpty)
+        Seq()
+      else {
+        val cbctFrameOfRef = cbctFrameOfRefList.head
+        val qualifiedList = regList.filter(al => ImageRegistration(al).otherFrameOfRefUID.equals(cbctFrameOfRef))
 
-      qualifiedList
+        qualifiedList
+      }
     }
 
     logger.info("Number of files uploaded:  RTPLAN: " + rtplanList.size + "    REG: " + regList.size + "    CBCT: " + cbctList.size)
