@@ -385,6 +385,8 @@ object RunProcedure extends Logging {
           // should kill the running procedure, but there is no good way to do that.
           saveResults(ProcedureStatus.timeout, extendedData)
       }
+      // if any post processing is to be done, do it here
+      runTrait.postRun(extendedData, runReq)
     }
 
     if (WebUtil.isAwait(valueMap)) {

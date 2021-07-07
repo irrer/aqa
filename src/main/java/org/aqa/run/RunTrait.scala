@@ -33,11 +33,17 @@ trait RunTrait[RunReqClassType] extends Logging {
   /** Run the actual analysis.  This must create a display.html file in the output directory. */
   def run(extendedData: ExtendedData, runReq: RunReqClassType, response: Response): ProcedureStatus.Value
 
-  //def redo(extendedData: ExtendedData, runReq: RunReqClassType): ProcedureStatus.Value;
+  /**
+    * After processing has been completed, call this function.  This will be called after run or redo.
+    * If not provided by the subclass, then it defaults to doing nothing.
+    * @param extendedData Metadata
+    * @param runReq Data used for processing.
+    */
+  def postRun(extendedData: ExtendedData, runReq: RunReqClassType): Unit = {}
 
   /**
-   * Validate the data and either return the data packaged up for processing, or, messages indicating the problem.
-   */
+    * Validate the data and either return the data packaged up for processing, or, messages indicating the problem.
+    */
   def validate(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, RunReqClass]
 
   /*
@@ -47,24 +53,24 @@ trait RunTrait[RunReqClassType] extends Logging {
   def makeRunReqForRedo(alList: Seq[AttributeList], oldOutput: Option[Output]): RunReqClass
 
   /**
-   * If possible, get the patient ID.
-   */
+    * If possible, get the patient ID.
+    */
   def getPatientID(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[String]
 
   /**
-   * get the date that the data was acquired.
-   */
+    * get the date that the data was acquired.
+    */
   def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp]
 
   /**
-   * Get the procedure that this was constructed with.
-   */
+    * Get the procedure that this was constructed with.
+    */
   def getProcedure: Procedure
 
   /**
-   * Get the machine's DeviceSerialNumber from the input files.  This is used to handle the
-   * case where a new machine needs to have it's serial number established.
-   */
+    * Get the machine's DeviceSerialNumber from the input files.  This is used to handle the
+    * case where a new machine needs to have it's serial number established.
+    */
   def getMachineDeviceSerialNumberList(alList: Seq[AttributeList]): Seq[String]
 
   /** Convenience function for constructing error messages to display to user on web page. */
