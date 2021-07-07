@@ -36,6 +36,8 @@ import org.aqa.web.OutputList
 import org.aqa.web.WebUtil._
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.WebRunProcedure
+import org.aqa.webrun.bbByEpid.BBbyEPIDRunReq
+import org.aqa.webrun.dailyQA.DailyQAActivity
 import org.restlet.Request
 import org.restlet.Response
 
@@ -256,6 +258,9 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     status
   }
 
+  override def postRun(extendedData: ExtendedData, runReq: BBbyCBCTRunReq): Unit = {
+    DailyQAActivity.update()
+  }
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
 

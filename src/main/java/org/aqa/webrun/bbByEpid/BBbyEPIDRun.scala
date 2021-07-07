@@ -31,6 +31,7 @@ import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil._
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.WebRunProcedure
+import org.aqa.webrun.dailyQA.DailyQAActivity
 import org.restlet.Request
 import org.restlet.Response
 
@@ -115,6 +116,10 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   override def run(extendedData: ExtendedData, runReq: BBbyEPIDRunReq, response: Response): ProcedureStatus.Value = {
     val status = BBbyEPIDAnalyse.runProcedure(extendedData, runReq, response)
     status
+  }
+
+  override def postRun(extendedData: ExtendedData, runReq: BBbyEPIDRunReq): Unit = {
+     DailyQAActivity.update()
   }
 
   override def handle(request: Request, response: Response): Unit = {

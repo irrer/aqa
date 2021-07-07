@@ -301,9 +301,6 @@ object BBbyCBCTExecute extends Logging {
           Left(Phase2Util.procedureCrash(subProcedureName))
           ProcedureStatus.crash
       }
-    DailyQAActivity.update(1 * 1000) // tell web page that data has changed
-    DailyQAActivity.update(5 * 1000) // tell web page that data has changed
-    DailyQAActivity.update(15 * 1000) // tell web page that data has changed
     status
   }
 }
