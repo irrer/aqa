@@ -65,7 +65,10 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
       if (ds.nonEmpty) ds.head.attributeListList.head
       else {
         val planFrameUID = reg.get.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
-        DicomSeries.getByFrameUIDAndSOPClass(Set(planFrameUID), SOPClass.RTPlanStorage).head.attributeListList.head
+        val plan = DicomSeries.getByFrameUIDAndSOPClass(Set(planFrameUID), SOPClass.RTPlanStorage)
+        if (plan.isEmpty)
+          throw new RuntimeException("Unable to find RTPLAN for Redo of Daily QA CBCT")
+        plan.head.attributeListList.head
       }
     }
     val result = BBbyCBCTRunReq(rtplan, reg, cbctList)

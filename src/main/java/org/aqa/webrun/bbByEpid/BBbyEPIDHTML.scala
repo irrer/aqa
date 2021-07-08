@@ -594,19 +594,19 @@ object BBbyEPIDHTML {
             </tr>
           </table>
         </div>
-        <div class="row" style="border: 1px solid lightgrey">
+        <div class="row" style="border: 1px solid lightgrey; margin-bottom: 30px;">
           <div style="margin: 5px;">
             <center title={noisinessTitle}><h3>Image Noisiness</h3></center>
             {chartPartial.chartReferencePixelCoefficientOfVariation}
           </div>
         </div>
-        <div class="row" style="border: 1px solid lightgrey">
+        <div class="row" style="border: 1px solid lightgrey; margin-bottom: 30px;">
           <div style="margin: 5px;">
             <center title={bbSignalToNoiseTitle}><h3>BB Signal to Noise</h3></center>
             {chartPartial.chartReferenceBBStdDevMultiple}
           </div>
         </div>
-        <div class="row" style="border: 1px solid lightgrey">
+        <div class="row" style="border: 1px solid lightgrey; margin-bottom: 30px;">
           <div style="margin: 5px;">
             <center title={meanCuTitle}><h3>Mean CU of Pixels</h3></center>
             {chartPartial.chartReferencePixelMean}

@@ -17,6 +17,7 @@
 package org.aqa.webrun.dailyQA
 
 import com.pixelmed.dicom.TagFromName
+import edu.umro.ScalaUtil.Trace
 import org.aqa.AnonymizeUtil
 import org.aqa.Config
 import org.aqa.Logging
@@ -266,11 +267,11 @@ object DailyQAHTML extends Logging {
             "maintenance was performed and the translation was not calibrated."
         <td title={title} class="warning">
           <a href={ViewOutput.viewOutputUrl(dataSet.composite.outputPK)}>EPID Details
-            <p style="color:red;">
-              <b>X-Ray Translation</b>
-              <b>Not Calibrated</b>
-            </p>
           </a>
+          <p style="color:red;">
+            <b>X-Ray Translation</b>
+            <b>Not Calibrated</b>
+          </p>
         </td>
       }
 
@@ -557,6 +558,7 @@ object DailyQAHTML extends Logging {
         }
 
         val haveCbct = machineCbctResults.size == 1
+        Trace.trace("machine: " + AnonymizeUtil.decryptWithNonce(mach.institutionPK, mach.id_real.get) + " : " + mach.id + "    machineCbctResults.size: " + machineCbctResults.size)
 
         val onePassedCbct = haveCbct && (ProcedureStatus.pass.toString.equals(machineCbctResults.head.output.status) || ProcedureStatus.warning.toString.equals(machineCbctResults.head.output.status))
         val oneFailedCbct = haveCbct && ProcedureStatus.fail.toString.equals(machineCbctResults.head.output.status)
@@ -597,7 +599,7 @@ object DailyQAHTML extends Logging {
             showWarn("There is a CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
 
           case _ if machineCbctResults.nonEmpty && machineEpidResultsWithoutErrors.isEmpty =>
-            showWarn("There are " + machineCbctResults.size + " successful CBCT scans but no EPID scans.  It is recommended that an EPID scan be performed.")
+            showWarn("There are " + machineCbctResults.size + " CBCT scans but no EPID scans.  It is recommended that an EPID scan be performed.")
 
           case _ if machineCbctResults.isEmpty && epidOutput.nonEmpty =>
             showFail("There is one or more EPID scans but no CBCT scans.", pleasePage = true)
@@ -621,6 +623,10 @@ object DailyQAHTML extends Logging {
     }
 
     val resultSeq = dataSetList.map(dataSet => dataSetToRow(dataSet))
+
+    // val allCbctSeq = BBbyCBCT.getForOneDay(date, institutionPK)
+    // val allEpidSeqWithErrors = BBbyEPID.getForOneDay(date, institutionPK)
+
     val all = (resultSeq ++ missingResultsExplanations).sortWith(sortMOE)
 
     val content = {

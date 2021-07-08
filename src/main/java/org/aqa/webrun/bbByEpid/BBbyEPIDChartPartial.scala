@@ -125,16 +125,14 @@ class BBbyEPIDChartPartial(outputPK: Long) extends Logging {
 
   private def chartOfStats(chartId: String, getValue: BBbyEPIDHistory => Double, yDataLabel: String): C3ChartHistory = {
 
-    val allRelevant = all.filterNot(h => h.bbByEPID.pixelStandardDeviation_cu == -1)
+    val allRelevant = all.filter(h => h.bbByEPID.pixelStandardDeviation_cu != -1)
 
-    val dataToBeGraphed = Seq(
-      allRelevant.filter(_.bbByEPID.isOpenFieldImage).map(getValue),
-      allRelevant.filterNot(_.bbByEPID.isOpenFieldImage).map(getValue)
-    )
+    val plannedFieldList = allRelevant.filterNot(_.bbByEPID.isOpenFieldImage)
+    val openFieldList = allRelevant.filter(_.bbByEPID.isOpenFieldImage)
 
-    val xDateList = {
-      Seq(all.filter(_.bbByEPID.isOpenFieldImage).map(h => h.date), all.filterNot(_.bbByEPID.isOpenFieldImage).map(h => h.date))
-    }
+    val dataToBeGraphed = Seq(plannedFieldList.map(getValue), openFieldList.map(getValue))
+
+    val xDateList = { Seq(plannedFieldList.map(h => h.date), openFieldList.map(h => h.date)) }
 
     new C3ChartHistory(
       Some(chartId),
@@ -151,7 +149,7 @@ class BBbyEPIDChartPartial(outputPK: Long) extends Logging {
       dataToBeGraphed,
       index,
       ".3r",
-      yColorList = Seq(new Color(46, 140, 0), new Color(189, 31, 0))
+      yColorList = Seq(new Color(46, 140, 0), new Color(189, 31, 0), Color.gray)
     )
   }
 
