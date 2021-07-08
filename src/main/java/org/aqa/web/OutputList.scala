@@ -133,7 +133,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
           val todoSet = getData(valueMap, response).map(e => e.output_outputPK)
           <div class="row">
             <div class="col-md-2">Requested: {requestList.size}</div>
-            <div class="col-md-2">To Do: {todoSet.size}</div>
+            <div class="col-md-2"><span style="white-space: nowrap;">To Do:</span>{todoSet.size}</div>
             <div class="col-md-2">Done: {(requestList.size - todoSet.size).toString}</div>
           </div>
         }

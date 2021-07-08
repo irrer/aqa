@@ -281,8 +281,8 @@ Note that when building a package for release, the Maven build process uses the 
         <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='Millenium'>rtplanLocMilleniumWithErrorDelivery.dcm</PlanFile>
 
         <!-- Note that the DailyQA RTPLAN is the same for both HD and Millenium. -->
-        <PlanFile procedure='DailyQA'     manufacturer='Varian' collimatorModel='HD'       >rtplanDailyQA.dcm</PlanFile>
-        <PlanFile procedure='DailyQA'     manufacturer='Varian' collimatorModel='Millenium'>rtplanDailyQA.dcm</PlanFile>
+        <PlanFile procedure='DailyQA'     manufacturer='Varian' collimatorModel='HD'       >rtplanDailyQA2021-07-07T08-24-08.dcm</PlanFile>
+        <PlanFile procedure='DailyQA'     manufacturer='Varian' collimatorModel='Millenium'>rtplanDailyQA2021-07-07T08-24-08.dcm</PlanFile>
     </PlanFileList>
 
     <!-- List of categories of maintenance, as referenced in the PMI database table.  If a category is in
