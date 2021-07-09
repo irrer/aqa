@@ -93,7 +93,15 @@ case class DicomSeries(
       alList
     } else {
       try {
-        val inputContent = InputFiles.getByInputPK(inputPK.get).head.zippedContent
+        val inputContent: Array[Byte] = {
+          val all = InputFiles.getByInputPK(inputPK.get)
+          if (all.nonEmpty)
+            all.head.zippedContent
+          else {
+            logger.warn("Could not get content for DicomSeries " + this.toString)
+            Array()
+          }
+        }
         val alList =
           try {
             DicomUtil.zippedByteArrayToDicom(inputContent)
@@ -106,7 +114,7 @@ case class DicomSeries(
         list
       } catch {
         case t: Throwable =>
-          logger.warn("Unexpected exception: " + fmtEx(t))
+          logger.warn("Unexpected exception.  DicomSeries: " + this.toString + "\n" + t + " :\n" + fmtEx(t))
           Seq()
       }
     }
@@ -203,8 +211,8 @@ object DicomSeries extends Logging {
   }
 
   /**
-   * Get using the input key.
-   */
+    * Get using the input key.
+    */
   def getByInputPK(inputPK: Long): Seq[DicomSeries] = {
     val action = for {
       dicomSeries <- query if dicomSeries.inputPK === inputPK

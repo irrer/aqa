@@ -335,7 +335,7 @@ object BBbyEPID extends ProcedureOutput with Logging {
       */
     def makeFailed(omd: OMD): Seq[DailyDataSetEPID] = {
 
-      lazy val alListList = omd.dicomSeries.attributeListList // make this lazy because it might not be needed
+      val alListList = omd.dicomSeries.attributeListList
 
       def getAl(dsUid: String): AttributeList = alListList.find(al => Util.sopOfAl(al).equals(dsUid)).get
 

@@ -32,7 +32,6 @@ import org.aqa.db.Input
 import org.aqa.db.Institution
 import org.aqa.db.Machine
 import org.aqa.db.Output
-import org.aqa.db.OutputFiles
 import org.aqa.db.Procedure
 import org.aqa.web.OutputList
 import org.aqa.web.ViewOutput
@@ -407,7 +406,7 @@ object RunProcedure extends Logging {
   /**
     * Save the process results to the database.
     */
-  private def saveResults(newStatus: ProcedureStatus.Value, extendedData: ExtendedData): OutputFiles = {
+  private def saveResults(newStatus: ProcedureStatus.Value, extendedData: ExtendedData): Unit = {
     logger.info("Saving results to database for user " + extendedData.user.id + " of " + extendedData.procedure.fullName)
     val start = System.currentTimeMillis()
     // write the status to a little file in the output directory
@@ -416,12 +415,34 @@ object RunProcedure extends Logging {
     // save the finish status and finish date to the Output in the database
     extendedData.output.updateStatusAndFinishDate(newStatus.toString, new Date)
 
-    // zip up the contents of the Output directory and save them
-    val zippedContent = extendedData.output.makeZipOfFiles
-    val outputFiles = extendedData.output.updateData(zippedContent)
+    // Zip up the contents of the Output directory and save them.  If there is an error, then wait and
+    // retry.  After several retries, give up and return an empty array.
+    val zippedContent = {
+      logger.info("Starting the zipping of output files. user " + extendedData.user.id + " of " + extendedData.procedure.fullName)
+      val numberOfTimesToRetry = 10
+      val retryInterval_ms = 5 * 1000
+      @tailrec
+      def zipFiles(count: Int): Array[Byte] = {
+        if (count > 0) {
+          try {
+            extendedData.output.makeZipOfFiles
+          } catch {
+            case t: Throwable =>
+              logger.warn("Unexpected error while zipping output files: " + t + "\n" + fmtEx(t))
+              logger.info("Retrying zip. count: " + count + "    user " + extendedData.user.id + " of " + extendedData.procedure.fullName)
+              Thread.sleep(retryInterval_ms)
+              zipFiles(count - 1)
+          }
+        } else
+          Array()
+      }
+      val content = zipFiles(numberOfTimesToRetry)
+      logger.info("Finished zipping output files. user " + extendedData.user.id + " of " + extendedData.procedure.fullName + "    size in bytes: " + content.length)
+      content
+    }
+    extendedData.output.updateData(zippedContent)
     val elapsed = System.currentTimeMillis() - start
     logger.info("Finished saving results to database for user " + extendedData.user.id + " of " + extendedData.procedure.fullName + "   Elapsed time: " + Util.elapsedTimeHumanFriendly(elapsed))
-    outputFiles
   }
 
   /**

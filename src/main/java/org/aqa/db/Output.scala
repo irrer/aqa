@@ -26,7 +26,6 @@ import java.io.File
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.util.Date
-import scala.util.Try
 
 case class Output(
     outputPK: Option[Long], // primary key
@@ -317,11 +316,17 @@ object Output extends Logging {
     */
   def getFilesFromDatabase(outputPK: Long, dir: File): Boolean = {
     dir.mkdirs
-    // Steps are done on separate lines so that if there is an error/exception it can be precisely
-    // tracked.
+    // Steps are done on separate lines so that if there is an error/exception it can be precisely tracked.
     OutputFiles.getByOutput(outputPK) match {
       case Some(outputFiles) =>
-        Try(FileUtil.writeByteArrayZipToFileTree(outputFiles.zippedContent, dir)).isSuccess
+        try {
+          FileUtil.writeByteArrayZipToFileTree(outputFiles.zippedContent, dir)
+          true
+        } catch {
+          case t: Throwable =>
+            logger.warn("Unable to reinstate output files for output " + outputPK + " in dir " + dir.getAbsolutePath + " exception: " + t + " : " + fmtEx(t))
+            false
+        }
       case _ =>
         logger.info("Unable to reinstate output files for output " + outputPK + " in dir " + dir.getAbsolutePath)
         false
