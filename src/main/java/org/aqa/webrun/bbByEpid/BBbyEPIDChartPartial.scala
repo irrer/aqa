@@ -16,6 +16,7 @@
 
 package org.aqa.webrun.bbByEpid
 
+import edu.umro.ImageUtil.ImageUtil
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -132,6 +133,15 @@ class BBbyEPIDChartPartial(outputPK: Long) extends Logging {
 
     val dataToBeGraphed = Seq(plannedFieldList.map(getValue), openFieldList.map(getValue))
 
+    val yRange = {
+      val stdDevMultiple = 2.0
+      val valueList = dataToBeGraphed.flatten
+      val mean = valueList.sum / valueList.size
+      val stdDev = ImageUtil.stdDev(valueList.map(_.toFloat))
+      val range = ImageUtil.stdDev(valueList.map(_.toFloat)) * stdDevMultiple
+      Some(new C3Chart.YRange(mean - range, mean + range))
+    }
+
     val xDateList = { Seq(plannedFieldList.map(h => h.date), openFieldList.map(h => h.date)) }
 
     new C3ChartHistory(
@@ -143,7 +153,7 @@ class BBbyEPIDChartPartial(outputPK: Long) extends Logging {
       xDateList = xDateList,
       baseline = None,
       tolerance = None,
-      yRange = None,
+      yRange = yRange,
       Seq("Planned Field", "Open Field"),
       yDataLabel = yDataLabel,
       dataToBeGraphed,
