@@ -16,66 +16,57 @@
 
 package org.aqa.web
 
-import org.restlet.Request
-import org.restlet.Response
-import org.restlet.Restlet
-import scala.xml.PrettyPrinter
-import scala.xml.Node
-import org.restlet.data.MediaType
-import scala.xml.MetaData
-import scala.xml.Attribute
-import scala.xml.Text
-import org.restlet.data.Status
-import scala.xml.Elem
-import org.restlet.data.Parameter
-import java.util.Date
-import org.restlet.data.Form
-import org.aqa.Logging
-import org.restlet.data.Method
-import java.io.File
-import org.apache.commons.fileupload.disk.DiskFileItemFactory
-import org.restlet.ext.fileupload.RestletFileUpload
-import java.io.InputStream
-import java.io.FileOutputStream
-import java.lang.Class
-import org.aqa.db.User
-import edu.umro.MSOfficeUtil.Excel.ExcelUtil
-import org.apache.poi.ss.usermodel.Workbook
-import org.apache.poi.ss.usermodel.Sheet
-import org.apache.poi.ss.usermodel.Row
-import org.apache.poi.ss.usermodel.Cell
-import java.text.SimpleDateFormat
-import java.text.ParseException
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.DicomFileUtilities
+import com.pixelmed.dicom.DicomInputStream
 import com.pixelmed.dicom.TagFromName
-import org.aqa.db.Machine
-import org.aqa.Util
-import org.aqa.db.Machine.MMI
+import edu.umro.MSOfficeUtil.Excel.ExcelUtil
+import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.FileUtil
+import org.apache.commons.fileupload.disk.DiskFileItemFactory
+import org.apache.poi.ss.usermodel.Cell
+import org.apache.poi.ss.usermodel.Row
+import org.apache.poi.ss.usermodel.Sheet
+import org.apache.poi.ss.usermodel.Workbook
+import org.aqa.AnonymizeUtil
+import org.aqa.Config
 import org.aqa.DicomFile
+import org.aqa.Logging
+import org.aqa.Util
+import org.aqa.db.CachedUser
+import org.aqa.db.DicomSeries
+import org.aqa.db.Institution
+import org.aqa.db.Machine
+import org.aqa.db.Machine.MMI
+import org.aqa.db.Procedure
+import org.aqa.db.User
+import org.restlet.Request
+import org.restlet.Response
+import org.restlet.data.Form
+import org.restlet.data.MediaType
+import org.restlet.data.Method
+import org.restlet.data.Parameter
+import org.restlet.data.Status
+import org.restlet.ext.fileupload.RestletFileUpload
+import resource.managed
+
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import com.pixelmed.dicom.DicomInputStream
-import org.aqa.AnonymizeUtil
-import edu.umro.ScalaUtil.DicomUtil
-import org.aqa.db.CachedUser
-import org.aqa.Config
-import org.aqa.db.Institution
-import edu.umro.ScalaUtil.Trace
-import com.pixelmed.dicom.SOPClass
-import com.pixelmed.dicom.FileMetaInformation
-import com.pixelmed.dicom.TransferSyntax
-import org.aqa.db.DicomSeries
-import edu.umro.ScalaUtil.FileUtil
-import resource.managed
-import scala.annotation.tailrec
-import java.util.zip.ZipInputStream
-import java.io.OutputStream
-import org.aqa.db.Procedure
-import scala.concurrent.duration.FiniteDuration
+import java.io.File
+import java.io.InputStream
+import java.text.ParseException
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.concurrent.TimeUnit
-import scala.concurrent.{ Await, Future }
-import scala.concurrent.ExecutionContext.Implicits.global
+import java.util.zip.ZipInputStream
+import scala.annotation.tailrec
+import scala.concurrent.Await
+import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
+import scala.xml.Elem
+import scala.xml.MetaData
+import scala.xml.Node
+import scala.xml.PrettyPrinter
 
 object WebUtil extends Logging {
 
@@ -96,48 +87,53 @@ object WebUtil extends Logging {
   val mathSuf = "@@mathSuf@@"
 
   /**
-   * Tag used to indicate that this is coming from an automatic upload client, as opposed to a human using a web browser.
-   */
+    * Tag used to indicate that this is coming from an automatic upload client, as opposed to a human using a web browser.
+    */
   val autoUploadTag = "AutoUpload"
 
   /**
-   * Tag used to indicate that the call should not return until processing is complete.
-   */
+    * Tag used to indicate that the call should not return until processing is complete.
+    */
   val awaitTag = "Await"
 
   /** ID for upload file object in web page. */
   val uploadFileLabel = "uploadFile"
 
-  val aqaAliasAttr = { <div aqaalias=""/> }.attributes
-  def ifAqaAliasAttr(elem: Elem, aqaAlias: Boolean) = if (aqaAlias) { elem % aqaAliasAttr } else elem
-  def wrapAlias(text: String) = <span aqaalias="">{ text }</span>
-  def wrapAlias(elem: Elem) = <span aqaalias="">{ elem }</span>
+  val aqaAliasAttr: MetaData = { <div aqaalias=""/> }.attributes
+  def ifAqaAliasAttr(elem: Elem, aqaAlias: Boolean): Elem =
+    if (aqaAlias) { elem % aqaAliasAttr }
+    else elem
+  def wrapAlias(text: String): Elem = <span aqaalias="">{text}</span>
+  def wrapAlias(elem: Elem): Elem = <span aqaalias="">{elem}</span>
 
   def snglQuote(text: String): String = singleQuote + text + singleQuote
 
   def dblQuote(text: String): String = doubleQuote + text + doubleQuote
 
   def specialCharTagsToLiteralXml(text: String): String = {
-    text.replace(singleQuote, "'").
-      replace(doubleQuote, "\"").
-      replace(amp, "&").
-      replace(nl, "\n").
-      replace(openCurly, "{").
-      replace(closeCurly, "}").
-      replace(nbsp, "&nbsp").
-      replace(mathPre, """<math xmlns="http://www.w3.org/1998/Math/MathML">""").
-      replace(mathSuf, """</math>""")
+    text
+      .replace(singleQuote, "'")
+      .replace(doubleQuote, "\"")
+      .replace(amp, "&")
+      .replace(nl, "\n")
+      .replace(openCurly, "{")
+      .replace(closeCurly, "}")
+      .replace(nbsp, "&nbsp")
+      .replace(mathPre, """<math xmlns="http://www.w3.org/1998/Math/MathML">""")
+      .replace(mathSuf, """</math>""")
   }
 
   def specialCharTagsToLiteralJs(text: String): String = {
-    val out = text.replace(singleQuote, "\\'").replaceAllLiterally("dfasd", "").
-      replace(doubleQuote, "\\\"").
-      replace(nl, "\\n").
-      replace(titleNewline, "\\n").
-      replace(openCurly, "{").
-      replace(closeCurly, "}").
-      replace(nbsp, "&nbsp").
-      replace(amp, "&")
+    val out = text
+      .replace(singleQuote, "\\'")
+      .replaceAllLiterally("dfasd", "")
+      .replace(doubleQuote, "\\\"")
+      .replace(nl, "\\n")
+      .replace(titleNewline, "\\n")
+      .replace(openCurly, "{")
+      .replace(closeCurly, "}")
+      .replace(nbsp, "&nbsp")
+      .replace(amp, "&")
     out
   }
 
@@ -145,39 +141,38 @@ object WebUtil extends Logging {
     specialCharTagsToLiteralXml(new PrettyPrinter(1024, 2).format(document))
   }
 
-  def cleanClassName(className: String) = className.substring(className.lastIndexOf('.') + 1).replace("$", "")
+  def cleanClassName(className: String): String = className.substring(className.lastIndexOf('.') + 1).replace("$", "")
 
-  def pathOf(subUrl: SubUrl.Value, className: String) = "/" + subUrl + "/" + cleanClassName(className)
+  def pathOf(subUrl: SubUrl.Value, className: String): String = "/" + subUrl + "/" + cleanClassName(className)
 
-  def pathOf(subUrl: SubUrl.Value, any: Any) = "/" + subUrl + "/" + cleanClassName(any.getClass.getName)
+  def pathOf(subUrl: SubUrl.Value, any: Any): String = "/" + subUrl + "/" + cleanClassName(any.getClass.getName)
 
   /**
-   * Use the referrer reference to build a full path from a relative path.
-   */
+    * Use the referrer reference to build a full path from a relative path.
+    */
   def relativeUrlToFullPath(response: Response, path: String): String = {
     response.getRequest.getReferrerRef.getHostIdentifier
     response.getRequest.getReferrerRef.getHostIdentifier + path
   }
 
   /**
-   * Number of digits to use when constructing anonymized file names.
-   */
+    * Number of digits to use when constructing anonymized file names.
+    */
   private val writeUploadedFileDigits = 4
 
   private case class UniquelyNamedFile(parentDir: File) {
     private val used = scala.collection.mutable.HashSet[String]()
 
     /**
-     * Get a unique (within directory) file name.
-     *
-     * @param parentDir File is to be put here.
-     *
-     * @param suffix Suffix without '.'.
-     */
+      * Get a unique (within directory) file name.
+      *
+      * @param suffix Suffix without '.'.
+      */
     def getUniquelyNamedFile(suffix: String): File = {
       parentDir.mkdirs
       def pickBaseName: String = {
         lazy val fileList = parentDir.listFiles.map(f => f.getName.take(writeUploadedFileDigits)).toSet
+        @tailrec
         def tryName(count: Int): String = {
           val name = count.formatted("%0" + writeUploadedFileDigits + "d")
           if (used.contains(name) || fileList.contains(name)) tryName(count + 1)
@@ -195,9 +190,9 @@ object WebUtil extends Logging {
   }
 
   /**
-   * Convert the given stream to DICOM and return the attribute list.  If it
-   * is not DICOM, then return None.
-   */
+    * Convert the given stream to DICOM and return the attribute list.  If it
+    * is not DICOM, then return None.
+    */
   private def isDicom(data: Array[Byte]): Option[AttributeList] = {
     try {
       val al = new AttributeList
@@ -207,14 +202,14 @@ object WebUtil extends Logging {
       al.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull.trim
       Some(al)
     } catch {
-      case t: Throwable => None
+      case _: Throwable => None
     }
   }
 
   /**
-   * Anonymized and write the given attribute list.
-   */
-  private def writeAnonymizedDicom(al: AttributeList, unique: UniquelyNamedFile, request: Request) = {
+    * Anonymized and write the given attribute list.
+    */
+  private def writeAnonymizedDicom(al: AttributeList, unique: UniquelyNamedFile, request: Request): Unit = {
     val user = CachedUser.get(request)
     val institution = user.get.institutionPK
     val anonAl = AnonymizeUtil.anonymizeDicom(institution, al)
@@ -225,33 +220,32 @@ object WebUtil extends Logging {
   }
 
   /**
-   * Attempt to interpret as a zip file.  Return true on success.
-   */
+    * Attempt to interpret as a zip file.  Return true on success.
+    */
   private def writeZip(data: Array[Byte], unique: UniquelyNamedFile, request: Request): Unit = {
     try {
       val inputStream = new ByteArrayInputStream(data)
-      managed(new ZipInputStream(inputStream)) acquireAndGet {
-        zipIn =>
-          {
-            @tailrec
-            def next: Unit = {
-              val entry = zipIn.getNextEntry
-              if (entry != null) {
-                if (!entry.isDirectory) {
-                  val data = {
-                    val baos = new ByteArrayOutputStream
-                    FileUtil.copyStream(zipIn, baos)
-                    baos.toByteArray
-                  }
-                  val file = new File(unique.parentDir, entry.getName.replace("/", File.separator))
-                  saveData(data, file, "", unique, request)
+      managed(new ZipInputStream(inputStream)) acquireAndGet { zipIn =>
+        {
+          @tailrec
+          def next(): Unit = {
+            val entry = zipIn.getNextEntry
+            if (entry != null) {
+              if (!entry.isDirectory) {
+                val data = {
+                  val baos = new ByteArrayOutputStream
+                  FileUtil.copyStream(zipIn, baos)
+                  baos.toByteArray
                 }
-                next
+                val file = new File(unique.parentDir, entry.getName.replace("/", File.separator))
+                saveData(data, file, "", unique, request)
               }
+              next()
             }
-            // Start processing
-            next
           }
+          // Start processing
+          next()
+        }
       }
     } catch {
       case t: Throwable => logger.warn("Unexpected error writing uploaded zip: " + fmtEx(t))
@@ -261,57 +255,56 @@ object WebUtil extends Logging {
   private def saveData(data: Array[Byte], file: File, contentType: String, unique: UniquelyNamedFile, request: Request): Unit = {
     def isZip: Boolean = {
       contentType.equalsIgnoreCase(MediaType.APPLICATION_ZIP.getName) ||
-        contentType.equalsIgnoreCase(MediaType.APPLICATION_GNU_ZIP.getName) ||
-        contentType.equalsIgnoreCase("application/x-zip-compressed") ||
-        contentType.toLowerCase.matches(".*application.*zip.*")
+      contentType.equalsIgnoreCase(MediaType.APPLICATION_GNU_ZIP.getName) ||
+      contentType.equalsIgnoreCase("application/x-zip-compressed") ||
+      contentType.toLowerCase.matches(".*application.*zip.*")
     }
 
     if (isZip)
       writeZip(data, unique, request)
     else {
       isDicom(data) match {
-        case Some(al) => {
+        case Some(al) =>
           writeAnonymizedDicom(al, unique, request)
-        }
 
         // We don't know what kind of file this is.  Just save it.
-        case _ => {
+        case _ =>
           val anonFile = unique.getUniquelyNamedFile(FileUtil.getFileSuffix(file.getName))
           Util.writeBinaryFile(anonFile, data)
-        }
       }
     }
   }
 
   /**
-   * Write the input stream to the file.
-   */
-  private def saveFile(inputStream: InputStream, file: File, contentType: String, request: Request) = writeUploadedFileDigits.synchronized {
-    val parentDir = file.getParentFile
-    parentDir.mkdirs
+    * Write the input stream to the file.
+    */
+  private def saveFile(inputStream: InputStream, file: File, contentType: String, request: Request): Unit =
+    writeUploadedFileDigits.synchronized {
+      val parentDir = file.getParentFile
+      parentDir.mkdirs
 
-    val unique = new UniquelyNamedFile(parentDir)
+      val unique = UniquelyNamedFile(parentDir)
 
-    val outputStream = new ByteArrayOutputStream
+      val outputStream = new ByteArrayOutputStream
 
-    val fileSize = FileUtil.copyStream(inputStream, outputStream)
-    logger.info("Size of uploaded file in bytes: " + fileSize)
+      val fileSize = FileUtil.copyStream(inputStream, outputStream)
+      logger.info("Size of uploaded file in bytes: " + fileSize)
 
-    val data = outputStream.toByteArray
+      val data = outputStream.toByteArray
 
-    saveData(data, file, contentType, unique, request)
-  }
+      saveData(data, file, contentType, unique, request)
+    }
 
   def sessionDir(valueMap: ValueMapT): Option[File] = {
     valueMap.get(sessionLabel) match {
       case Some(sessionId) => Some(Session.idToFile(sessionId))
-      case _ => None
+      case _               => None
     }
   }
 
   /**
-   *  Parse values that are part of the URL.  The Restlet way of doing this could not be ascertained.
-   */
+    *  Parse values that are part of the URL.  The Restlet way of doing this could not be ascertained.
+    */
   private def parseOriginalReference(request: Request): ValueMapT = {
     val text = request.getOriginalRef.toString
     val paramStart = text.indexOf('?')
@@ -320,7 +313,7 @@ object WebUtil extends Logging {
     else {
       def getKeyVal(kv: String): (String, String) = {
         val items = kv.split('=')
-        items.size match {
+        items.length match {
           case 2 => (items(0), items(1))
           case 1 => (items(0), null)
           case _ => (null, null)
@@ -333,23 +326,20 @@ object WebUtil extends Logging {
   private def saveFileList(request: Request): ValueMapT = {
     val valueMap = ensureSessionId(parseOriginalReference(request))
 
-    val dir = sessionDir(valueMap) match {
-      case Some(dir) => {
-
+    val dir: Unit = sessionDir(valueMap) match {
+      case Some(dir) =>
         val upload = new RestletFileUpload(new DiskFileItemFactory(500, dir))
         val itemIterator = upload.getItemIterator(request.getEntity)
 
         val userId: String = getUser(request) match { case Some(user) => user.id; case _ => "unknown" }
         while (itemIterator.hasNext) {
           val ii = itemIterator.next
-          val j = ii.isFormField
           if (!ii.isFormField) {
             val file = new File(dir, ii.getName)
             logger.info("Uploading file from user " + userId + " to " + file.getAbsolutePath)
             saveFile(ii.openStream, file, ii.getContentType, request)
           }
         }
-      }
       case _ => throw new RuntimeException("Unexpected internal error. None in WebUtil.saveFileList")
     }
     valueMap ++ parseForm(new Form(request.getEntity))
@@ -357,14 +347,14 @@ object WebUtil extends Logging {
 
   def firstPartOf(text: String, maxLen: Int): String = {
     text match {
-      case _ if text == null => ""
-      case _ if (text.size <= maxLen) => text
-      case _ => text.substring(0, maxLen - 3) + "..."
+      case _ if text == null          => ""
+      case _ if text.length <= maxLen => text
+      case _                          => text.substring(0, maxLen - 3) + "..."
     }
   }
 
   private def ensureSessionId(valueMap: ValueMapT): ValueMapT = {
-    if (valueMap.get(sessionLabel).isDefined) valueMap else (valueMap ++ (Map((sessionLabel, Session.makeUniqueId))))
+    if (valueMap.contains(sessionLabel)) valueMap else valueMap ++ Map((sessionLabel, Session.makeUniqueId))
   }
 
   private def parseForm(form: Form): ValueMapT = {
@@ -374,8 +364,8 @@ object WebUtil extends Logging {
   }
 
   /**
-   * Return true if the request is an upload
-   */
+    * Return true if the request is an upload
+    */
   def requestIsUpload(request: Request): Boolean = {
     val methodIsUpload = (request.getMethod == Method.POST) || (request.getMethod == Method.PUT)
     def entity = request.getEntity
@@ -387,11 +377,11 @@ object WebUtil extends Logging {
 
   type ValueMapT = Map[String, String]
 
-  val emptyValueMap = Map[String, String]()
+  val emptyValueMap: Map[String, String] = Map[String, String]()
 
   type StyleMapT = Map[String, Style]
 
-  val styleNone = Map[String, Style]()
+  val styleNone: Map[String, Style] = Map[String, Style]()
 
   def getValueMap(request: Request): ValueMapT = {
     val vm = if (requestIsUpload(request)) {
@@ -404,12 +394,12 @@ object WebUtil extends Logging {
     valueMap
   }
 
-  def isAutoUpload(valueMap: ValueMapT) = {
+  def isAutoUpload(valueMap: ValueMapT): Boolean = {
     val v = valueMap.get(autoUploadTag)
     v.isDefined && v.get.equalsIgnoreCase("true")
   }
 
-  def isAwait(valueMap: ValueMapT) = {
+  def isAwait(valueMap: ValueMapT): Boolean = {
     val v = valueMap.get(awaitTag)
     v.isDefined && v.get.equalsIgnoreCase("true")
   }
@@ -417,7 +407,7 @@ object WebUtil extends Logging {
   def simpleWebPage(content: Elem, status: Status, title: String, response: Response): Unit = {
     val indentedContent = {
       <div class="row col-md-10 col-md-offset-1 col-sm-8 col-sm-offset-2">
-        { content }
+        {content}
       </div>
     }
     response.setEntity(wrapBody(indentedContent, title), MediaType.TEXT_HTML)
@@ -426,19 +416,19 @@ object WebUtil extends Logging {
 
   def simpleWebPage(content: Elem, title: String, response: Response): Unit = simpleWebPage(content, Status.SUCCESS_OK, title, response)
 
-  def notFound(response: Response) = {
+  def notFound(response: Response): Unit = {
     val status = Status.CLIENT_ERROR_NOT_FOUND
     val content = {
-      <div>{ status.toString } Error : No such web page.</div>
+      <div>{status.toString} Error : No such web page.</div>
     }
     simpleWebPage(content, status, "Not Found", response)
   }
 
   def badRequest(response: Response, message: String, status: Status): Unit = {
-    val messageAsHtml = message.split('\n').map(line => <br>{ line }</br>)
+    val messageAsHtml = message.split('\n').map(line => <br>{line}</br>)
 
     val content = {
-      <div>{ status.toString } <p/> { messageAsHtml }</div>
+      <div>{status.toString} <p/> {messageAsHtml}</div>
     }
     logger.warn(status.toString + " shown to user " + getUserIdOrDefault(response.getRequest, "unknown") + " : " + message)
     simpleWebPage(content, status, "Bad Request", response)
@@ -448,7 +438,7 @@ object WebUtil extends Logging {
     val status = Status.SERVER_ERROR_INTERNAL
 
     val content = {
-      <div>{ status.toString } <p> <pre>{message}</pre> </p> </div>
+      <div>{status.toString} <p> <pre>{message}</pre> </p> </div>
     }
     logger.warn(Status.SERVER_ERROR_INTERNAL.toString + " shown to user " + getUserIdOrDefault(response.getRequest, "unknown") + " : " + message)
     simpleWebPage(content, status, "Not Found", response)
@@ -462,7 +452,7 @@ object WebUtil extends Logging {
 
   def wrapBody(content: Elem, pageTitle: String, refresh: Option[Int] = None, c3: Boolean = false, runScript: Option[String] = None, mathjax: Boolean = false): String = {
 
-    val refreshMeta = Seq(refresh).flatten.filter(r => r > 0).map(r => { <meta http-equiv='refresh' content={ r.toString }/> })
+    val refreshMeta = Seq(refresh).flatten.filter(r => r > 0).map(r => { <meta http-equiv='refresh' content={r.toString}/> })
 
     val c3Refs: Seq[Elem] = {
       if (c3) {
@@ -470,13 +460,14 @@ object WebUtil extends Logging {
         Seq(
           <link href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.20/c3.min.css" rel="stylesheet"/>,
           <script src="https://c3js.org/js/d3-5.8.2.min-c5268e33.js" type="text/javascript"></script>,
-          <script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.20/c3.min.js"></script>)
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.20/c3.min.js"></script>
+        )
       } else Seq[Elem]()
     }
 
     val mathjaxRefs = {
-      <script type="text/x-mathjax-config">{ """MathJax.Hub.Config({ tex2jax: { inlineMath: [['$','$'], ['\\(','\\)']] } });""" }</script>
-      <script type="text/x-mathjax-config">{ """MathJax.Hub.Config({ TeX: { extensions: ['autobold.js', 'AMSsymbols.js'] } });""" }</script>
+      <script type="text/x-mathjax-config">{"""MathJax.Hub.Config({ tex2jax: { inlineMath: [['$','$'], ['\\(','\\)']] } });"""}</script>
+      <script type="text/x-mathjax-config">{"""MathJax.Hub.Config({ TeX: { extensions: ['autobold.js', 'AMSsymbols.js'] } });"""}</script>
       <script type="text/javascript" src="/static/mathjax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     }
 
@@ -485,8 +476,8 @@ object WebUtil extends Logging {
     val page = {
       <html lang="en">
         <head>
-          <title>{ pageTitle }</title>
-          { refreshMeta }
+          <title>{pageTitle}</title>
+          {refreshMeta}
           <link rel="icon" href="/static/images/favicon.ico?" type="image/x-icon"/>
           <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"/>
           <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap-theme.min.css"/>
@@ -498,8 +489,8 @@ object WebUtil extends Logging {
           <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.3.0/min/dropzone.min.js"></script>
           <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-timeago/1.5.4/jquery.timeago.min.js"></script>
           <script src="/static/tooltip/tooltip.js"></script>
-          { c3Refs /* only include c3 when needed */ }
-          { mathjaxRefs /* only include mathjax when needed */ }
+          {c3Refs /* only include c3 when needed */}
+          {mathjaxRefs /* only include mathjax when needed */}
           <script src="/static/zoom/jquery.zoom.js"></script>
           <script type="text/javascript" src="/static/bootstrap/datetime/bootstrap-datetimepicker.js" charset="UTF-8"></script>
           <script src="/static/AQA.js"></script>
@@ -526,15 +517,15 @@ object WebUtil extends Logging {
               </div>
             </div>
           </header>
-          { content }
-          { runScriptTag }
+          {content}
+          {runScriptTag}
         </body>
       </html>
     }
 
     val runScriptContent = runScript match {
       case Some(s) => s
-      case _ => ""
+      case _       => ""
     }
 
     val j = xmlToText(page)
@@ -545,9 +536,9 @@ object WebUtil extends Logging {
     text
   }
 
-  def wrapBody(content: Elem, pageTitle: String, refresh: Option[Int]): String = wrapBody(content, pageTitle, refresh, false, None)
+  def wrapBody(content: Elem, pageTitle: String, refresh: Option[Int]): String = wrapBody(content, pageTitle, refresh, c3 = false, None)
 
-  def wrapBody(content: Elem, pageTitle: String): String = wrapBody(content, pageTitle, None, false, None)
+  def wrapBody(content: Elem, pageTitle: String): String = wrapBody(content, pageTitle, None, c3 = false, None)
 
   def setResponse(text: String, response: Response, status: Status): Unit = {
     response.setStatus(status)
@@ -561,7 +552,7 @@ object WebUtil extends Logging {
   def respond(content: Elem, title: String, response: Response): Unit = respond(content, title, response, Status.SUCCESS_OK)
 
   trait ToHtml {
-    def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem;
+    def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem
     def toHtml(valueMap: ValueMapT): Elem = toHtml(valueMap, styleNone, None)
     def toHtml: Elem = toHtml(emptyValueMap, styleNone, None)
   }
@@ -571,7 +562,7 @@ object WebUtil extends Logging {
       val elem = {
         <div class="form-group">
           <div class="row">
-            { colList.map(c => c.toHtml(valueMap, errorMap, response)) }
+            {colList.map(c => c.toHtml(valueMap, errorMap, response))}
           </div>
         </div>
       }
@@ -579,7 +570,8 @@ object WebUtil extends Logging {
     }
   }
 
-  implicit def ColList(col: ToHtml): List[ToHtml] = List(col);
+  //noinspection LanguageFeature
+  implicit def ColList(col: ToHtml): List[ToHtml] = { List(col) }
 
   def markLiteralValue(label: String): String = "@@@@" + label + "@@@@"
 
@@ -596,21 +588,22 @@ object WebUtil extends Logging {
     def this(action: String, rowList: List[WebRow]) = this(action, None, rowList, 0)
     def this(action: String, rowList: List[WebRow], fileUpload: Int) = this(action, None, rowList, fileUpload)
 
-    val rowListWithSession = (new WebInputSession) ++ rowList
+    val rowListWithSession: List[ToHtml] = new WebInputSession ++ rowList
 
     val uploadFileInput: Option[IsInput] = if (validCol(fileUpload)) Some(new IsInput(uploadFileLabel)) else None
 
     def findInput(label: String): Option[IsInput] = {
-      rowList.map(r => r.colList).flatten.filter(i => i.isInstanceOf[IsInput]).map(in => in.asInstanceOf[IsInput]).find(isIn => isIn.label.equals(label))
+      rowList.flatMap(r => r.colList).filter(i => i.isInstanceOf[IsInput]).map(in => in.asInstanceOf[IsInput]).find(isIn => isIn.label.equals(label))
     }
 
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
-      val valueMapWithSession = if (valueMap.get(sessionLabel).isDefined) valueMap else (Map((sessionLabel, Session.makeUniqueId)) ++ valueMap)
+      val valueMapWithSession = if (valueMap.contains(sessionLabel)) valueMap else Map((sessionLabel, Session.makeUniqueId)) ++ valueMap
 
-      val mainForm =
-        <form id="mainForm" action={ action } method={ Method.POST.toString } class="form-horizontal" role="form">
-          { rowListWithSession.map(r => r.toHtml(valueMapWithSession, errorMap, response)) }
-        </form>;
+      val mainForm = {
+        <form id="mainForm" action={action} method={Method.POST.toString} class="form-horizontal" role="form">
+          {rowListWithSession.map(r => r.toHtml(valueMapWithSession, errorMap, response))}
+        </form>
+      }
 
       val alreadyUploadedFiles: Elem = {
 
@@ -632,48 +625,48 @@ object WebUtil extends Logging {
           (dz + fileText).replaceAllLiterally("\"", doubleQuote).replaceAllLiterally("'", singleQuote)
         } else ""
 
-        <script>{ text }</script>
+        <script>{text}</script>
       }
 
       val titleHtml: Elem = {
         title match {
-          case Some(t) => <h2>{ t }</h2>
-          case _ => <span></span>
+          case Some(t) => <h2>{t}</h2>
+          case _       => <span></span>
         }
       }
 
       val html = {
         if (validCol(fileUpload)) {
-          val sessionId: String = valueMapWithSession.get(sessionLabel).get
+          val sessionId: String = valueMapWithSession(sessionLabel)
           val formClass = "dropzone row " + colToName(fileUpload, 0) + " has-error"
 
           val uploadStyle: Style = {
             errorMap.get(uploadFileLabel) match {
               case Some(sty) => sty
-              case _ => new Style
+              case _         => new Style
             }
           }
 
           val uploadHtml: Elem = {
-            val hasError = errorMap.get(uploadFileLabel).isDefined
+            val hasError = errorMap.contains(uploadFileLabel)
             val borderColor = if (hasError) "#a94442" else "#cccccc"
             val uploadForm = {
               val cssStyle = "border-color: " + borderColor + "; border-width: 1px; border-radius: 10px; margin-bottom: 15px;"
-              <form action={ action + "?" + sessionLabel + "=" + sessionId } class={ formClass } id={ uploadFileLabel } style={ cssStyle }></form>
+              <form action={action + "?" + sessionLabel + "=" + sessionId} class={formClass} id={uploadFileLabel} style={cssStyle}></form>
             }
             if (hasError) {
-              val style: Style = errorMap.get(uploadFileLabel).get
+              val style: Style = errorMap(uploadFileLabel)
               uploadForm % style.divAttributes(uploadForm.attributes)
             } else uploadForm
           }
 
           val uploadForm = {
             <div class="row">
-              { uploadHtml }
+              {uploadHtml}
             </div>
             <div class="row">
-              { mainForm }
-              { alreadyUploadedFiles }
+              {mainForm}
+              {alreadyUploadedFiles}
             </div>
           }
           uploadForm
@@ -682,8 +675,8 @@ object WebUtil extends Logging {
 
       val elem = {
         <div class="row col-md-10 col-md-offset-1 col-sm-8 col-sm-offset-2">
-          { titleHtml }
-          { html }
+          {titleHtml}
+          {html}
         </div>
       }
       elem
@@ -701,27 +694,27 @@ object WebUtil extends Logging {
           None
       }
 
-      val textErrorList = errorMap.values.map(s => textOfError(s)).flatten
+      val textErrorList = errorMap.values.flatMap(s => textOfError(s))
 
       (textErrorList.nonEmpty, runScript.nonEmpty) match {
-        case (true, true) => Some("<script>" + makeAlertBox(textErrorList.mkString("\\n\\n")) + runScript.get + "</script>")
-        case (true, false) => Some("<script>" + makeAlertBox(textErrorList.mkString("\\n\\n")) + "</script>")
-        case (false, true) => Some("<script>" + runScript.get + "</script>")    
+        case (true, true)   => Some("<script>" + makeAlertBox(textErrorList.mkString("\\n\\n")) + runScript.get + "</script>")
+        case (true, false)  => Some("<script>" + makeAlertBox(textErrorList.mkString("\\n\\n")) + "</script>")
+        case (false, true)  => Some("<script>" + runScript.get + "</script>")
         case (false, false) => None
       }
     }
 
     /**
-     * Respond to an automatic upload client in a form it can digest (as text, not HTML).
-     * Differences
-     *
-     *     if successful, then return an empty message and SUCCESS_OK
-     *
-     *     if failure, then return an error message as text and SUCCESS_OK.
-     */
-    private def setFormResponseAutoUpload(valueMap: ValueMapT, errorMap: StyleMapT, response: Response, status: Status) = {
+      * Respond to an automatic upload client in a form it can digest (as text, not HTML).
+      * Differences
+      *
+      *     if successful, then return an empty message and SUCCESS_OK
+      *
+      *     if failure, then return an error message as text and SUCCESS_OK.
+      */
+    private def setFormResponseAutoUpload(valueMap: ValueMapT, errorMap: StyleMapT, response: Response, status: Status): Unit = {
 
-      val statusIsOk = status.toString.equals(Status.SUCCESS_OK)
+      val statusIsOk = status.toString.equals(Status.SUCCESS_OK.toString)
       if (errorMap.isEmpty && statusIsOk) {
         response.setStatus(status)
         response.setEntity("", MediaType.TEXT_PLAIN)
@@ -742,19 +735,19 @@ object WebUtil extends Logging {
       if (isAutoUpload(valueMap)) {
         setFormResponseAutoUpload(valueMap, errorMap, response, Status.SUCCESS_OK)
       } else {
-        val text = wrapBody(toHtml(valueMap, errorMap, Some(response)), pageTitle, None, false, makeFormAlertBox(errorMap, runScript))
+        val text = wrapBody(toHtml(valueMap, errorMap, Some(response)), pageTitle, None, c3 = false, makeFormAlertBox(errorMap, runScript))
 
         def replace(origText: String, col: Any): String = {
           val txt = if (col.isInstanceOf[IsInput]) {
             val input = col.asInstanceOf[IsInput]
             val markedLiteral = markLiteralValue(input.label)
-            if (valueMap.get(input.label).isDefined && text.contains(markedLiteral)) {
-              origText.replace(markedLiteral, valueMap.get(input.label).get)
+            if (valueMap.contains(input.label) && text.contains(markedLiteral)) {
+              origText.replace(markedLiteral, valueMap(input.label))
             } else origText
           } else origText
           txt
         }
-        val colList = rowList.map(row => row.colList).flatten
+        val colList = rowList.flatMap(row => row.colList)
 
         val finalText = colList.foldLeft(text)((txt, col) => replace(txt, col))
 
@@ -765,32 +758,33 @@ object WebUtil extends Logging {
 
   def valueAsAttr(label: String, valueMap: ValueMapT): MetaData = {
     val value = valueMap.get(label)
-    (if (value.isDefined) <input value={ value.get }></input> else <input></input>).attributes
+    (if (value.isDefined) <input value={value.get}></input> else <input></input>).attributes
   }
 
-  def placeholderAsAttr(placeholder: String): MetaData = (<input placeholder={ placeholder }/>).attributes
+  def placeholderAsAttr(placeholder: String): MetaData = <input placeholder={placeholder}/>.attributes
 
-  def idNameClassAsAttr(label: String): MetaData = (<input class="form-control" id={ label } name={ label }/>).attributes
+  def idNameClassAsAttr(label: String): MetaData = <input class="form-control" id={label} name={label}/>.attributes
 
   def idNameClassValueAsAttr(label: String, valueMap: ValueMapT): MetaData = {
     (<input/> % idNameClassAsAttr(label) % valueAsAttr(label, valueMap)).attributes
   }
 
-  def htmlLabel(label: String) = <label class="control-label">{ label }</label>
+  def htmlLabel(label: String): Elem = <label class="control-label">{label}</label>
 
   def validCol(col: Int): Boolean = (col > 0) && (col <= 12)
 
   def colToName(col: Int, offset: Int): String = {
-    val colClass = if (validCol(col)) ("col-md-" + col) else ""
-    val offsetClass = if ((offset > 0) && (offset <= 12)) (" col-md-offset-" + offset) else ""
+    val colClass = if (validCol(col)) "col-md-" + col else ""
+    val offsetClass = if ((offset > 0) && (offset <= 12)) " col-md-offset-" + offset else ""
     colClass + offsetClass
   }
 
   class Style {
+
     /**
-     * Given the list of attributes for the input, return a modified list that
-     * implements the desired style.
-     */
+      * Given the list of attributes for the input, return a modified list that
+      * implements the desired style.
+      */
     def divAttributes(metaData: MetaData): MetaData = metaData
     def inputAttributes(metaData: MetaData): MetaData = metaData
 
@@ -805,7 +799,7 @@ object WebUtil extends Logging {
     override def divAttributes(metaData: MetaData): MetaData = {
       val clss = metaData.get("class")
       val clssText = (if (clss.isDefined) clss.get.toString + " " else "") + "has-error"
-      val attr = ((<x/> % metaData) % (<x class={ clssText } title={ inputTitle.replace("\\n", "\n").toString }/>.attributes)).attributes
+      val attr = ((<x/> % metaData) % <x class={clssText} title={inputTitle.replace("\\n", "\n")}/>.attributes).attributes
       attr
     }
   }
@@ -822,7 +816,7 @@ object WebUtil extends Logging {
 
   class Disable extends Style {
     override def inputAttributes(metaData: MetaData): MetaData = {
-      ((<x/> % metaData) % (<x disabled="disabled"/>.attributes)).attributes
+      ((<x/> % metaData) % <x disabled="disabled"/>.attributes).attributes
     }
   }
 
@@ -832,10 +826,10 @@ object WebUtil extends Logging {
 
   class DisableWithTitle(inputTitle: String) extends Style {
     override def divAttributes(metaData: MetaData): MetaData = {
-      ((<x/> % metaData) % (<x title={ inputTitle }/>.attributes)).attributes
+      ((<x/> % metaData) % <x title={inputTitle}/>.attributes).attributes
     }
     override def inputAttributes(metaData: MetaData): MetaData = {
-      ((<x/> % metaData) % (<x disabled="disabled"/>.attributes)).attributes
+      ((<x/> % metaData) % <x disabled="disabled"/>.attributes).attributes
     }
   }
 
@@ -845,12 +839,12 @@ object WebUtil extends Logging {
 
   def wrapInput(label: String, showLabel: Boolean, html: Elem, col: Int, offset: Int, styleMap: StyleMapT): Elem = {
 
-    val style = if (styleMap.get(label).isDefined) styleMap.get(label).get else new Style
+    val style = if (styleMap.contains(label)) styleMap(label) else new Style
 
     val div =
-      <div class={ colToName(col, offset) }>
-        { if (showLabel) <label class="control-label">{ label }</label> }
-        { html % style.inputAttributes(html.attributes) }
+      <div class={colToName(col, offset)}>
+        {if (showLabel) <label class="control-label">{label}</label>}
+        {html % style.inputAttributes(html.attributes)}
       </div>
 
     div % style.divAttributes(div.attributes)
@@ -860,7 +854,7 @@ object WebUtil extends Logging {
     try {
       Some(text.toDouble)
     } catch {
-      case t: Throwable => None
+      case _: Throwable => None
     }
   }
 
@@ -878,13 +872,13 @@ object WebUtil extends Logging {
       try {
         Some(text.toInt)
       } catch {
-        case t: Throwable => None
+        case _: Throwable => None
       }
     }
 
     def getDouble(valueMap: ValueMapT): Option[Double] = stringToDouble(getValOrEmpty(valueMap).trim)
 
-    override def toString = "class: " + this.getClass.getName + " label: " + label
+    override def toString: String = "class: " + this.getClass.getName + " label: " + label
   }
 
   class WebInputText(override val label: String, showLabel: Boolean, col: Int, offset: Int, placeholder: String, aqaAlias: Boolean) extends IsInput(label) with ToHtml {
@@ -899,11 +893,11 @@ object WebUtil extends Logging {
   }
 
   /**
-   * Show text that the user can not change.
-   */
-  class WebPlainText(override val label: String, val showLabel: Boolean, col: Int, offset: Int, html: (ValueMapT) => Elem) extends IsInput(label) with ToHtml {
-    def this(label: String, col: Int, offset: Int, content: String) = this(label, true, col, offset, ((Null)) => <div>{ content }</div>)
-    def this(label: String, col: Int, offset: Int, content: Elem) = this(label, true, col, offset, ((Null)) => content)
+    * Show text that the user can not change.
+    */
+  class WebPlainText(override val label: String, val showLabel: Boolean, col: Int, offset: Int, html: ValueMapT => Elem) extends IsInput(label) with ToHtml {
+    def this(label: String, col: Int, offset: Int, content: String) = this(label, true, col, offset, _ => <div>{content}</div>)
+    def this(label: String, col: Int, offset: Int, content: Elem) = this(label, true, col, offset, _ => content)
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
       wrapInput(label, showLabel, html(valueMap), col, offset, errorMap)
     }
@@ -912,53 +906,56 @@ object WebUtil extends Logging {
   class WebInputURL(override val label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
       val html = <input type="url"/> % idNameClassValueAsAttr(label, valueMap) % placeholderAsAttr(placeholder)
-      wrapInput(label, true, html, col, offset, errorMap)
+      wrapInput(label, showLabel = true, html, col, offset, errorMap)
     }
   }
 
   class WebInputEmail(override val label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
       val html = <input type="email"/> % idNameClassValueAsAttr(label, valueMap) % placeholderAsAttr(placeholder)
-      wrapInput(label, true, html, col, offset, errorMap)
+      wrapInput(label, showLabel = true, html, col, offset, errorMap)
     }
   }
 
   class WebInputPassword(override val label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
       val html = <input type="password"/> % idNameClassAsAttr(label) % placeholderAsAttr(placeholder)
-      wrapInput(label, true, html, col, offset, errorMap)
+      wrapInput(label, showLabel = true, html, col, offset, errorMap)
     }
   }
 
-  class WebInputSelect(override val label: String, val showLabel: Boolean, col: Int, offset: Int, selectList: (Option[Response]) => Seq[(String, String)], aqaAlias: Boolean) extends IsInput(label) with ToHtml {
+  class WebInputSelect(override val label: String, val showLabel: Boolean, col: Int, offset: Int, selectList: Option[Response] => Seq[(String, String)], aqaAlias: Boolean)
+      extends IsInput(label)
+      with ToHtml {
 
-    def this(label: String, col: Int, offset: Int, selList: (Option[Response]) => Seq[(String, String)]) = this(label, false, col, offset, selList, false)
+    def this(label: String, col: Int, offset: Int, selList: Option[Response] => Seq[(String, String)]) = this(label, false, col, offset, selList, false)
 
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
 
-      val curValue: Option[String] = if (valueMap.get(label).isDefined) valueMap.get(label) else None
+      val curValue: Option[String] = if (valueMap.contains(label)) valueMap.get(label) else None
 
       def toOption(value: String, text: String): Elem = {
 
         val opt = if (curValue.isDefined && curValue.get.equals(value)) {
-          <option selected="selected" value={ value }>{ text }</option>
+          <option selected="selected" value={value}>{text}</option>
         } else {
-          <option value={ value }>{ text }</option>
+          <option value={value}>{text}</option>
         }
 
         ifAqaAliasAttr(opt, aqaAlias)
       }
 
       val list = selectList(response).map(v => toOption(v._1, v._2))
-      val html = <select>{ list }</select> % idNameClassValueAsAttr(label, valueMap)
+      val html = <select>{list}</select> % idNameClassValueAsAttr(label, valueMap)
       wrapInput(label, showLabel, html, col, offset, errorMap)
     }
   }
 
   /**
-   * Optionally show a selection list based on evaluating a function.
-   */
-  class WebInputSelectOption(override val label: String, col: Int, offset: Int, selectList: (Option[Response]) => Seq[(String, String)], show: (ValueMapT) => Boolean) extends WebInputSelect(label, true, col, offset, selectList, true) {
+    * Optionally show a selection list based on evaluating a function.
+    */
+  class WebInputSelectOption(override val label: String, col: Int, offset: Int, selectList: Option[Response] => Seq[(String, String)], show: ValueMapT => Boolean)
+      extends WebInputSelect(label, true, col, offset, selectList, true) {
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
       if (show(valueMap)) {
         super.toHtml(valueMap, errorMap, response)
@@ -967,20 +964,20 @@ object WebUtil extends Logging {
   }
 
   /**
-   * Optionally show a selection list based on evaluating a function.
-   */
+    * Optionally show a selection list based on evaluating a function.
+    */
   class WebInputSelectMachine(override val label: String, col: Int, offset: Int) extends IsInput(label) with ToHtml {
 
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
 
-      val curValue: Option[String] = if (valueMap.get(label).isDefined) valueMap.get(label) else None
+      val curValue: Option[String] = if (valueMap.contains(label)) valueMap.get(label) else None
 
       def toOption(value: String, choice: String): Elem = {
 
         val opt = if (curValue.isDefined && curValue.get.equals(value)) {
-          <option selected="selected" value={ value }>{ choice }</option>
+          <option selected="selected" value={value}>{choice}</option>
         } else {
-          <option value={ value }>{ choice }</option>
+          <option value={value}>{choice}</option>
         }
         opt
       }
@@ -988,12 +985,13 @@ object WebUtil extends Logging {
       val selectList: Seq[(String, String)] = {
         if (response.isEmpty) Seq[(String, String)]()
         else {
-          val machListAll = if (userIsWhitelisted(response.get.getRequest))
-            Machine.list
-          else {
-            val user = CachedUser.get(response.get.getRequest)
-            Machine.listMachinesFromInstitution(user.get.institutionPK)
-          }
+          val machListAll =
+            if (userIsWhitelisted(response.get.getRequest))
+              Machine.list
+            else {
+              val user = CachedUser.get(response.get.getRequest)
+              Machine.listMachinesFromInstitution(user.get.institutionPK)
+            }
 
           val machListAvail = machListAll.filter(m => m.serialNumber.isEmpty)
           def machToDescription(m: Machine): String = {
@@ -1007,12 +1005,12 @@ object WebUtil extends Logging {
       }
 
       val shouldShow: Boolean = {
-        val attrListList = dicomFilesInSession(valueMap).map(df => df.attributeList).flatten
+        val attrListList = dicomFilesInSession(valueMap).flatMap(df => df.attributeList)
 
         /**
-         * Get all <code>DeviceSerialNumber</code> from DICOM files, but ignore any RTPLAN (primary) serial numbers because
-         * they reference the planning system, not a treatment machine.
-         */
+          * Get all <code>DeviceSerialNumber</code> from DICOM files, but ignore any RTPLAN (primary) serial numbers because
+          * they reference the planning system, not a treatment machine.
+          */
         def serialNumberOf(al: AttributeList): IndexedSeq[String] = {
           val all = DicomUtil.findAllSingle(al, TagFromName.DeviceSerialNumber).map(attr => attr.getSingleStringValueOrEmptyString).filterNot(_.equals("")).distinct
           val planDsn = {
@@ -1031,8 +1029,8 @@ object WebUtil extends Logging {
 
         def isMatchingMachine = {
           // get all non-plan serial numbers, but do not allow serial numbers from previously uploaded plans
-          val serialNumbers = attrListList.map(al => serialNumberOf(al)).flatten.distinct.diff(DicomSeries.planDeviceSerialNumberList)
-          val machList = serialNumbers.map(sn => Machine.findMachinesBySerialNumber(sn)).flatten
+          val serialNumbers = attrListList.flatMap(al => serialNumberOf(al)).distinct.diff(DicomSeries.planDeviceSerialNumberList)
+          val machList = serialNumbers.flatMap(sn => Machine.findMachinesBySerialNumber(sn))
           machList.nonEmpty
         }
 
@@ -1044,8 +1042,8 @@ object WebUtil extends Logging {
       val html = {
         if (shouldShow) {
           val list = selectList.map(v => toOption(v._1, v._2))
-          val input = { <select>{ list }</select> % idNameClassValueAsAttr(label, valueMap) }
-          wrapInput(label, true, input, col, offset, errorMap)
+          val input = { <select>{list}</select> % idNameClassValueAsAttr(label, valueMap) }
+          wrapInput(label, showLabel = true, input, col, offset, errorMap)
         } else {
           {
             <div></div>
@@ -1062,13 +1060,13 @@ object WebUtil extends Logging {
     def this(label: String, showLabel: Boolean, col: Int, offset: Int) = this(label, showLabel, None, col, offset)
     def this(label: String, col: Int, offset: Int) = this(label, true, None, col, offset)
 
-    override def toString = "class: " + this.getClass.getName + " label: " + label
+    override def toString: String = "class: " + this.getClass.getName + " label: " + label
 
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
       val input = <input type="checkbox"/> % idNameClassValueAsAttr(label, valueMap)
       val inputWithValue: Elem = {
-        if (valueMap.get(label).isDefined && (valueMap(label).equals("true") || valueMap(label).equals("on")))
-          input % (<input checked="true"/>).attributes
+        if (valueMap.contains(label) && (valueMap(label).equals("true") || valueMap(label).equals("on")))
+          input % <input checked="true"/>.attributes
         else
           input
       }
@@ -1076,43 +1074,43 @@ object WebUtil extends Logging {
       val html = {
         val tr = {
           <tr>
-            <td>{ inputWithValue }</td>
-            <td> <label style="vertical-align:middle; margin: 5px;"> { if (showLabel) label else "" }</label></td>
+            <td>{inputWithValue}</td>
+            <td> <label style="vertical-align:middle; margin: 5px;"> {if (showLabel) label else ""}</label></td>
           </tr>
         }
 
         if (title.isDefined)
-          <table title={ title.get }>{ tr }</table>
+          <table title={title.get}>{tr}</table>
         else
-          <table>{ tr }</table>
+          <table>{tr}</table>
       }
-      wrapInput(label, false, html, col, offset, errorMap)
+      wrapInput(label, showLabel = false, html, col, offset, errorMap)
     }
   }
 
   /**
-   * Standard Twitter bootstrap button types.
-   */
+    * Standard Twitter bootstrap button types.
+    */
   object ButtonType extends Enumeration {
     type ButtonType = Value
 
-    val BtnDefault = Value("btn-default")
-    val BtnPrimary = Value("btn-primary")
-    val BtnSuccess = Value("btn-success")
-    val BtnInfo = Value("btn-info")
-    val BtnWarning = Value("btn-warning")
-    val BtnDanger = Value("btn-danger")
-    val BtnLink = Value("btn-link")
+    val BtnDefault: WebUtil.ButtonType.Value = Value("btn-default")
+    val BtnPrimary: WebUtil.ButtonType.Value = Value("btn-primary")
+    val BtnSuccess: WebUtil.ButtonType.Value = Value("btn-success")
+    val BtnInfo: WebUtil.ButtonType.Value = Value("btn-info")
+    val BtnWarning: WebUtil.ButtonType.Value = Value("btn-warning")
+    val BtnDanger: WebUtil.ButtonType.Value = Value("btn-danger")
+    val BtnLink: WebUtil.ButtonType.Value = Value("btn-link")
   }
 
   object SubUrl extends Enumeration {
     type SubUrl = Value
 
-    val root = Value("")
-    val admin = Value("admin")
-    val run = Value("run")
-    val view = Value("view")
-    val doc = Value("doc")
+    val root: WebUtil.SubUrl.Value = Value("")
+    val admin: WebUtil.SubUrl.Value = Value("admin")
+    val run: WebUtil.SubUrl.Value = Value("run")
+    val view: WebUtil.SubUrl.Value = Value("view")
+    val doc: WebUtil.SubUrl.Value = Value("doc")
 
     def url(subUrl: SubUrl.Value, name: String): String = {
       ("/" + subUrl + "/" + name).replace("//", "/")
@@ -1126,49 +1124,53 @@ object WebUtil extends Logging {
 
     private val className = this.getClass.getName
     private val cn = className.substring(className.lastIndexOf('.') + 1).replace("$", "")
-    def pathOf = url(cn)
+    def pathOf: String = url(cn)
   }
 
   trait SubUrlRoot extends SubUrlTrait {
-    override def subUrl = SubUrl.root
+    override def subUrl: SubUrl.Value = SubUrl.root
   }
 
   trait SubUrlAdmin extends SubUrlTrait {
-    override def subUrl = SubUrl.admin
+    override def subUrl: SubUrl.Value = SubUrl.admin
   }
 
   trait SubUrlRun extends SubUrlTrait {
-    override def subUrl = SubUrl.run
+    override def subUrl: SubUrl.Value = SubUrl.run
   }
 
   trait SubUrlView extends SubUrlTrait {
-    override def subUrl = SubUrl.view
+    override def subUrl: SubUrl.Value = SubUrl.view
   }
 
   trait SubUrlDoc extends SubUrlTrait {
-    override def subUrl = SubUrl.doc
+    override def subUrl: SubUrl.Value = SubUrl.doc
   }
 
   /**
-   * An HTML button.
-   *
-   * @param label Name and id of button.
-   *
-   * @param col Number of columns to occupy (1-12)
-   *
-   * @param offset Offset column (0-11)
-   *
-   * @param primary True if this button is primary
-   */
-  class FormButton(override val label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: (ValueMapT) => String, buttonType: ButtonType.Value, value: String, title: Option[String]) extends IsInput(label) with ToHtml {
-    def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: (ValueMapT) => String, buttonType: ButtonType.Value, value: String) = this(label, col, offset, subUrl, action, buttonType, value, None)
-    def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String, buttonType: ButtonType.Value, value: String) = this(label, col, offset, subUrl, (_) => action, buttonType, value)
+    * An HTML button.
+    *
+    * @param label Name and id of button.
+    *
+    * @param col Number of columns to occupy (1-12)
+    *
+    * @param offset Offset column (0-11)
+    *
+    * @param primary True if this button is primary
+    */
+  class FormButton(override val label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: ValueMapT => String, buttonType: ButtonType.Value, value: String, title: Option[String])
+      extends IsInput(label)
+      with ToHtml {
+    def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: ValueMapT => String, buttonType: ButtonType.Value, value: String) =
+      this(label, col, offset, subUrl, action, buttonType, value, None)
+    def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String, buttonType: ButtonType.Value, value: String) =
+      this(label, col, offset, subUrl, _ => action, buttonType, value)
     def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String, buttonType: ButtonType.Value) = this(label, col, offset, subUrl, action: String, buttonType, label)
     def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String) = this(label, col, offset, subUrl, action: String, ButtonType.BtnDefault, label)
 
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
-      val button = { <button type="submit" class={ "btn " + buttonType.toString } action={ action(valueMap) } value={ value } name={ label }>{ label }</button> }
-      wrapInput(label, false, button, col, offset, errorMap)
+      val button = { <button type="submit" class={"btn " + buttonType.toString} action={action(valueMap)} value={value} name={label}>{label}</button> }
+      wrapInput(label, showLabel = false, button, col, offset, errorMap)
     }
   }
 
@@ -1178,15 +1180,16 @@ object WebUtil extends Logging {
       val value = valueMap.get(label)
 
       val rowCount: Int = {
-        val s = if (value.isDefined) { value.get.split("\n").size + 1 } else 3
+        val s = if (value.isDefined) { value.get.split("\n").length + 1 }
+        else 3
         Math.max(3, s)
       }
 
       val html = // must not allow embedded blanks
-        <textarea rows={ rowCount.toString }>{ if (value.isDefined) markLiteralValue(label) else "" }</textarea> % idNameClassAsAttr(label) % placeholderAsAttr(placeholder)
+        <textarea rows={rowCount.toString}>{if (value.isDefined) markLiteralValue(label) else ""}</textarea> % idNameClassAsAttr(label) % placeholderAsAttr(placeholder)
 
       val htmlAlias = ifAqaAliasAttr(html, aqaAlias)
-      val elem = wrapInput(label, true, htmlAlias, col, offset, errorMap)
+      val elem = wrapInput(label, showLabel = true, htmlAlias, col, offset, errorMap)
       elem
     }
   }
@@ -1203,21 +1206,20 @@ object WebUtil extends Logging {
 
       val value: String = valueMap.get(label) match {
         case Some(v) => v
-        case _ => dateFormat.format((new Date).getTime)
+        case _       => dateFormat.format((new Date).getTime)
       }
 
-      val html =
-        {
-          val submitOnChangeText = {
-            if (submitOnChange) """.on('changeDate', function(){
+      val html = {
+        val submitOnChangeText = {
+          if (submitOnChange) """.on('changeDate', function(){
               document.getElementById('mainForm').submit();
               }
               )"""
-            else ""
-          }
+          else ""
+        }
 
-          <div class="input-group date form_date col-md-5" data-date="" data-date-format={ jsFormat } data-link-field={ label } data-link-format={ jsFormat }>
-            <input class="form-control" size="16" type="text" id={ label } name={ label } value={ value }/>
+        <div class="input-group date form_date col-md-5" data-date="" data-date-format={jsFormat} data-link-field={label} data-link-format={jsFormat}>
+            <input class="form-control" size="16" type="text" id={label} name={label} value={value}/>
             <span class="input-group-addon">
               <span class="glyphicon glyphicon-remove"></span>
             </span>
@@ -1225,7 +1227,7 @@ object WebUtil extends Logging {
               <span class="glyphicon glyphicon-calendar"></span>
             </span>
             <script type="text/javascript">
-              $('.form_date').datetimepicker({ openCurly }
+              $('.form_date').datetimepicker({openCurly}
               weekStart: 0,            /* first day is Sunday */
                 todayBtn:  1,          /* show button to go quickly to today */
                 autoclose: 1,          /* close when date selected */
@@ -1234,12 +1236,12 @@ object WebUtil extends Logging {
                 minView: 2,            /* minimum granularity of viewing mode */
                 startDate: '2010/1/1', /* minimum selectable date */
                 forceParse: true       /* fix: parse to supported form */
-              { closeCurly }
-              ){ submitOnChangeText }
+              {closeCurly}
+              ){submitOnChangeText}
               ;
             </script>
           </div>
-        }
+      }
 
       /*
 .on('changeDate', function (){ openCurly }
@@ -1268,13 +1270,12 @@ object WebUtil extends Logging {
 
       val value: String = valueMap.get(label) match {
         case Some(v) => v
-        case _ => dateFormat.format((new Date).getTime)
+        case _       => dateFormat.format((new Date).getTime)
       }
 
-      val html =
-        {
-          <div class="input-group date form_datetime col-md-5" data-date="" data-date-format={ jsFormat } data-link-field={ label } data-link-format={ jsFormat }>
-            <input class="form-control" size="16" type="text" id={ label } name={ label } value={ value }/>
+      val html = {
+        <div class="input-group date form_datetime col-md-5" data-date="" data-date-format={jsFormat} data-link-field={label} data-link-format={jsFormat}>
+            <input class="form-control" size="16" type="text" id={label} name={label} value={value}/>
             <span class="input-group-addon">
               <span class="glyphicon glyphicon-remove"></span>
             </span>
@@ -1282,7 +1283,7 @@ object WebUtil extends Logging {
               <span class="glyphicon glyphicon-calendar"></span>
             </span>
             <script type="text/javascript">
-              $('.form_datetime').datetimepicker({ openCurly }
+              $('.form_datetime').datetimepicker({openCurly}
               weekStart: 0,            /* first day is Sunday */
                 todayBtn:  1,          /* show button to go quickly to today */
                 autoclose: 1,          /* close when date selected */
@@ -1291,24 +1292,24 @@ object WebUtil extends Logging {
                 minView: 0,            /* minimum granularity of viewing mode */
                 startDate: '2010/1/1', /* minimum selectable date */
                 forceParse: true       /* fix: parse to supported form */
-              { closeCurly }
+              {closeCurly}
               );
             </script>
           </div>
-        }
+      }
 
-      wrapInput(label, true, html, col, offset, errorMap)
+      wrapInput(label, showLabel = true, html, col, offset, errorMap)
     }
   }
 
   class WebInputDateTime(label: String, col: Int, offset: Int, placeholder: String) extends IsInput(label) with ToHtml {
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
       val html = <input type="datetime-local"/> % idNameClassValueAsAttr(label, valueMap) % placeholderAsAttr(placeholder)
-      wrapInput(label, true, html, col, offset, errorMap)
+      wrapInput(label, showLabel = true, html, col, offset, errorMap)
     }
 
     /** For converting between <code>String</code> and <code>Date</code>. */
-    val dateTimeFormat = WebInputDateTime.dateTimeFormat
+    val dateTimeFormat: SimpleDateFormat = WebInputDateTime.dateTimeFormat
 
     def validateDateTime(text: String): Option[Date] = {
 
@@ -1347,16 +1348,16 @@ object WebUtil extends Logging {
   class WebInputHidden(override val label: String) extends IsInput(label) with ToHtml {
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
       val html = <input type="text" class="hidden"/> % idNameClassValueAsAttr(label, valueMap)
-      val elem = { <span class="hidden">{ html }</span> }
+      val elem = { <span class="hidden">{html}</span> }
       elem
     }
   }
 
-  private class WebInputSession extends WebInputHidden(sessionLabel) with ToHtml;
+  private class WebInputSession extends WebInputHidden(sessionLabel) with ToHtml {}
 
   /**
-   * Given a request, extract the user from it.
-   */
+    * Given a request, extract the user from it.
+    */
   def getUser(request: Request): Option[User] = {
     val cr = request.getChallengeResponse
     if (cr == null) None
@@ -1367,8 +1368,8 @@ object WebUtil extends Logging {
   }
 
   /**
-   * Given a value map, extract the user from it.
-   */
+    * Given a value map, extract the user from it.
+    */
   def getUser(valueMap: ValueMapT): Option[User] = {
     val v = valueMap.get(userIdRealTag)
     if (v.isEmpty)
@@ -1380,28 +1381,27 @@ object WebUtil extends Logging {
   }
 
   /**
-   * Return true if the user is whitelisted in the configuration.
-   */
+    * Return true if the user is whitelisted in the configuration.
+    */
   def userIsWhitelisted(userId: String): Boolean = {
     Config.UserWhiteList.map(u => u.toLowerCase.trim).contains(userId.toLowerCase.trim)
   }
 
   /**
-   * Given a value map, determine if the user is whitelisted.
-   */
+    * Given a value map, determine if the user is whitelisted.
+    */
   def userIsWhitelisted(valueMap: ValueMapT): Boolean = {
     getUser(valueMap) match {
-      case Some(user) => {
+      case Some(user) =>
         user.id_real.isDefined &&
           userIsWhitelisted(AnonymizeUtil.decryptWithNonce(user.institutionPK, user.id_real.get))
-      }
       case _ => false
     }
   }
 
   /**
-   * Return true if the user is whitelisted in the configuration.
-   */
+    * Return true if the user is whitelisted in the configuration.
+    */
   def userIsWhitelisted(request: Request): Boolean = {
     val cr = request.getChallengeResponse
     if (cr == null) false
@@ -1412,8 +1412,8 @@ object WebUtil extends Logging {
   }
 
   /**
-   * Return true if the user is whitelisted in the configuration.
-   */
+    * Return true if the user is whitelisted in the configuration.
+    */
   def userIsWhitelisted(response: Response): Boolean = {
     userIsWhitelisted(response.getRequest)
   }
@@ -1422,8 +1422,8 @@ object WebUtil extends Logging {
   val userIdRealTag = "userIdReal"
 
   /**
-   * If the user is logged in, then create a value map that contains their real ID.
-   */
+    * If the user is logged in, then create a value map that contains their real ID.
+    */
   def userToValueMap(request: Request): ValueMapT = {
     val cr = request.getChallengeResponse
     if (cr == null) emptyValueMap
@@ -1441,16 +1441,17 @@ object WebUtil extends Logging {
   def excelToHtml(workbook: Workbook): String = {
 
     def doCell(cell: Cell): Elem = {
-      val content: String = try {
-        if (cell == null) "" else ExcelUtil.cellToString(cell)
-      } catch {
-        case t: Throwable => ""
-      }
-      <td>{ content }</td>
+      val content: String =
+        try {
+          if (cell == null) "" else ExcelUtil.cellToString(cell)
+        } catch {
+          case t: Throwable => ""
+        }
+      <td>{content}</td>
     }
 
     def doRow(row: Row, firstCol: Short, lastCol: Short): Elem = {
-      <tr>{ (firstCol until lastCol).map(cellnum => doCell(row.getCell(cellnum))) }</tr>
+      <tr>{(firstCol until lastCol).map(cellnum => doCell(row.getCell(cellnum)))}</tr>
     }
 
     def nameToId(name: String): String = name.replaceAll("[# \"'@<>]", "_")
@@ -1458,9 +1459,9 @@ object WebUtil extends Logging {
     def sheetHeader(sheet: Sheet, active: Boolean): Elem = {
       val id = "#" + nameToId(sheet.getSheetName)
       if (active) {
-        <li class="active"><a data-toggle="tab" href={ id }>{ sheet.getSheetName }</a></li>
+        <li class="active"><a data-toggle="tab" href={id}>{sheet.getSheetName}</a></li>
       } else {
-        <li><a data-toggle="tab" href={ id }>{ sheet.getSheetName }</a></li>
+        <li><a data-toggle="tab" href={id}>{sheet.getSheetName}</a></li>
       }
     }
 
@@ -1468,34 +1469,34 @@ object WebUtil extends Logging {
       val rowList = (sheet.getFirstRowNum to sheet.getLastRowNum).map(rownum => sheet.getRow(rownum)).filter(row => row != null)
       val firstCol: Short =
         rowList.map(row => row.getFirstCellNum).min match {
-          case min if (min >= 0) => min
-          case _ => 0.toShort
+          case min if min >= 0 => min
+          case _               => 0.toShort
         }
 
       val lastCol = rowList.map(row => row.getLastCellNum).max
       val classValue = if (active) "tab-pane fade in active" else "tab-pane fade"; // funny, but the Scala compiler requires a ; here
 
       {
-        <div id={ nameToId(sheet.getSheetName) } class={ classValue }>
-          <h3>{ sheet.getSheetName }</h3>
+        <div id={nameToId(sheet.getSheetName)} class={classValue}>
+          <h3>{sheet.getSheetName}</h3>
           <table class="table table-bordered">
-            { (sheet.getFirstRowNum until sheet.getLastRowNum).map(rownum => sheet.getRow(rownum)).filter(row => row != null).map(row => doRow(row, firstCol, lastCol)) }
+            {(sheet.getFirstRowNum until sheet.getLastRowNum).map(rownum => sheet.getRow(rownum)).filter(row => row != null).map(row => doRow(row, firstCol, lastCol))}
           </table>
         </div>
       }
     }
 
     def linkToSheet(sheet: Sheet) = {
-      <a href={ "#" + sheet.getSheetName } style="margin: 40px;">{ sheet.getSheetName }</a>
+      <a href={"#" + sheet.getSheetName} style="margin: 40px;">{sheet.getSheetName}</a>
     }
 
     val html: Elem = {
       <div style="margin: 40px;">
         <ul class="nav nav-tabs">
-          { ExcelUtil.sheetList(workbook).zipWithIndex.map(si => sheetHeader(si._1, si._2 == 0)) }
+          {ExcelUtil.sheetList(workbook).zipWithIndex.map(si => sheetHeader(si._1, si._2 == 0))}
         </ul>
         <div class="tab-content">
-          { ExcelUtil.sheetList(workbook).zipWithIndex.map(si => doSheetContent(si._1, si._2 == 0)) }
+          {ExcelUtil.sheetList(workbook).zipWithIndex.map(si => doSheetContent(si._1, si._2 == 0))}
         </div>
       </div>
     }
@@ -1517,21 +1518,21 @@ object WebUtil extends Logging {
 
   def dicomFilesInSession(valueMap: ValueMapT): Seq[DicomFile] = {
     sessionDir(valueMap) match {
-      case Some(dir) if (dir.isDirectory) => DicomFile.readDicomInDir(dir)
-      case _ => Seq[DicomFile]()
+      case Some(dir) if dir.isDirectory => DicomFile.readDicomInDir(dir)
+      case _                            => Seq[DicomFile]()
     }
   }
 
   def attributeListsInSession(valueMap: ValueMapT): Seq[AttributeList] = {
-    dicomFilesInSession(valueMap).map(df => df.attributeList).flatten
+    dicomFilesInSession(valueMap).flatMap(df => df.attributeList)
   }
 
   /**
-   * Given a value map, determine which machines' DICOM files have been uploaded to the session.
-   */
+    * Given a value map, determine which machines' DICOM files have been uploaded to the session.
+    */
   def machinesInSession(valueMap: ValueMapT): Seq[Machine] = {
     try {
-      attributeListsInSession(valueMap).map(al => Machine.attributeListToMachine(al)).flatten
+      attributeListsInSession(valueMap).flatMap(al => Machine.attributeListToMachine(al))
     } catch {
       case t: Throwable =>
         Seq[Machine]()
@@ -1544,7 +1545,7 @@ object WebUtil extends Logging {
 
   def timeAgo(prefix: String, date: Date): Elem = {
     val stdTime = timeAgoFormat.format(date)
-    <time class='timeago' datetime={ stdTime }>{ prefix + " " + Util.timeHumanFriendly(date) }</time>
+    <time class='timeago' datetime={stdTime}>{prefix + " " + Util.timeHumanFriendly(date)}</time>
   }
 
   def timeAgo(date: Date): Elem = timeAgo("", date)
@@ -1552,25 +1553,25 @@ object WebUtil extends Logging {
   def showMachineSelector(valueMap: ValueMapT): Boolean = {
     lazy val fileList = sessionDir(valueMap) match {
       case Some(dir) if dir.isDirectory => dir.listFiles.toSeq
-      case _ => Seq[File]()
+      case _                            => Seq[File]()
     }
     lazy val alList = attributeListsInSession(valueMap)
 
-    lazy val machList = alList.map(al => Machine.attributeListToMachine(al)).flatten
+    lazy val machList = alList.flatMap(al => Machine.attributeListToMachine(al))
 
     alList match {
-      case _ if fileList.isEmpty => false
-      case _ if alList.isEmpty => false
+      case _ if fileList.isEmpty  => false
+      case _ if alList.isEmpty    => false
       case _ if machList.nonEmpty => false
-      case _ => true
+      case _                      => true
     }
   }
 
-  def machineList(response: Option[Response]) = {
+  def machineList(response: Option[Response]): Seq[(String, String)] = {
     def mmiToMachPK(mmi: MMI): String = {
       mmi.machine.machinePK match {
-        case Some(pk) => pk.toString()
-        case _ => "unknown"
+        case Some(pk) => pk.toString
+        case _        => "unknown"
       }
     }
 
@@ -1595,8 +1596,8 @@ object WebUtil extends Logging {
   def stringToUrlSafe(text: String): String = text.replaceAll("[^a-zA-Z0-9]", "_")
 
   /**
-   * Wait for the given future to complete if specified in the valueMap.
-   */
+    * Wait for the given future to complete if specified in the valueMap.
+    */
   def awaitIfRequested[T](future: Future[T], await: Boolean, procedurePK: Long): Unit = {
     if (await) {
       logger.info("Await was not requested.")
@@ -1612,30 +1613,29 @@ object WebUtil extends Logging {
   }
 
   /**
-   * Wait for the given future to complete if specified in the valueMap.
-   */
+    * Wait for the given future to complete if specified in the valueMap.
+    */
   def awaitIfRequested[T](future: Future[T], valueMap: ValueMapT, procedurePK: Long): Unit = awaitIfRequested(future, isAwait(valueMap), procedurePK)
 
   /**
-   * Column that can be added to a WebRow to show the coordinate diagram.
-   *
-   * @param height: Display height in pixels.
-   */
+    * Column that can be added to a WebRow to show the coordinate diagram.
+    *
+    * @param height: Display height in pixels.
+    */
   def coordinateDiagramElem(height: Int): Elem = {
     val png = "/static/images/CoordinateDiagram.png"
-    <a href={ png } class="screenshot" rel={ png }><img src={ png } height={ height.toString }/></a>
+    <a href={png} class="screenshot" rel={png}><img src={png} height={height.toString}/></a>
   }
 
   /**
-   * Column that can be added to a WebRow to show the coordinate diagram.
-   *
-   * @param height: Display height in pixels.
-   */
-  def coordinateDiagramCol(height: Int) = {
+    * Column that can be added to a WebRow to show the coordinate diagram.
+    *
+    * @param height: Display height in pixels.
+    */
+  def coordinateDiagramCol(height: Int): WebPlainText = {
     val png = "/static/images/CoordinateDiagram.png"
     def getElem(valueMap: ValueMapT): Elem = coordinateDiagramElem(height)
     new WebPlainText("CoordinateDiagram", false, 1, 0, getElem)
   }
 
 }
-
