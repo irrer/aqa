@@ -17,6 +17,7 @@
 package org.aqa.webrun.dailyQA
 
 import org.aqa.Logging
+import org.aqa.Util
 import org.aqa.db.BBbyEPIDComposite
 import org.aqa.db.Institution
 import org.aqa.web.WebUtil
@@ -42,7 +43,7 @@ object DailyQASummary {
   val dateFormat = new SimpleDateFormat("EEE MMM dd")
   val timeFormat = new SimpleDateFormat("H:mm a")
 
-  def makeReference(outputPK: Long): String = {
+  private def makeReference(outputPK: Long): String = {
     "<script src='" + path + "?date=" + outputPK + "'></script>"
   }
 }
@@ -60,12 +61,13 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
     valueMap.get(dateField.label) match {
       case Some(text) => text
       case _          => dateField.dateFormat.format(new Date)
+      case _          => Util.formatDate(dateField.dateFormat, new Date)
     }
   }
 
   private def csvLink(tag: String, name: String, title: String) = {
     // Text version of time when page is loaded.  This is intended to make each version of the downloaded file uniquely named.
-    val nowText = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss").format(new Date)
+    val nowText = Util.formatDate(new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss"), new Date)
 
     <center title={title} style="border-style:solid; border-color:lightgray; border-width:1px 1px;">
       <a href={DailyQASummary.path + "/" + tag + "-" + nowText + ".csv?" + tag + "=true"} style="margin: 6px;">
@@ -122,11 +124,11 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
     new WebPlainText("DisplayedDate", false, 2, 0, getDisplayedDate)
   }
 
-  val controlRow: WebRow = List(displayedDate, coordinateDiagramCol(65), refreshButton, dateField, csvFieldComposite, csvFieldCbct, csvFieldEpid)
+  private val controlRow: WebRow = List(displayedDate, coordinateDiagramCol(65), refreshButton, dateField, csvFieldComposite, csvFieldCbct, csvFieldEpid)
 
   private def getDate(valueMap: ValueMapT): Date = {
     try {
-      dateField.dateFormat.parse(valueMap(dateField.label))
+      Util.parseDate(dateField.dateFormat, valueMap(dateField.label))
     } catch {
       case _: Throwable => edu.umro.ScalaUtil.Util.roundToDate(new Date)
     }
@@ -146,9 +148,9 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
     )
   }
 
-  val contentRow: WebRow = List(report)
+  private val contentRow: WebRow = List(report)
 
-  val runScript: String = {
+  private val runScript: String = {
     """
     // Reload the page when there is new data, indicated by
     // a change in status
@@ -183,9 +185,9 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
   private def dateFromValueMap(valueMap: ValueMapT): Date = {
     if (valueMap.contains(dateField.label))
-      dateField.dateFormat.parse(valueMap(dateField.label).replace("%20", " ").trim)
+      Util.parseDate(dateField.dateFormat, valueMap(dateField.label).replace("%20", " ").trim)
     else
-      dateField.dateFormat.parse(dateField.dateFormat.format(new Date)) // today rounded off to midnight
+      Util.parseDate(dateField.dateFormat, Util.formatDate(dateField.dateFormat, new Date)) // today rounded off to midnight
   }
 
   private def getDataSetListByDateAndInstitution(valueMap: ValueMapT): Seq[DailyDataSetComposite] = {
@@ -202,9 +204,28 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
     list
   }
 
-  private def show(response: Response, valueMap: ValueMapT): Unit = {
-    formCreate().setFormResponse(valueMap, styleNone, DailyQASummary.pageTitle, response, Status.SUCCESS_OK)
-  }
+  private val showLock = ""
+
+  private def show(response: Response, valueMap: ValueMapT): Unit =
+    showLock.synchronized {
+      val user = getUser(valueMap)
+      if (user.isDefined) {
+        val institutionPK = user.get.institutionPK
+        val date = Util.parseDate(dateField.dateFormat, getDateText(valueMap))
+        val cachedResult = DailyQAActivity.getCache(institutionPK, date)
+        if (cachedResult.isDefined) {
+          logger.info("got Daily QA Summary from cache")
+          setResponse(cachedResult.get, response, Status.SUCCESS_OK)
+        } else {
+          logger.info("re-created Daily QA Summary and put it in cache")
+          formCreate().setFormResponse(valueMap, styleNone, DailyQASummary.pageTitle, response, Status.SUCCESS_OK)
+          val text = response.getEntityAsText
+          DailyQAActivity.putCache(institutionPK, date, text)
+        }
+      } else {
+        setResponse("You are not authorized to view this page.", response, Status.CLIENT_ERROR_UNAUTHORIZED)
+      }
+    }
 
   /**
     * Respond to the client with the latest change of the data so they can decide whether or not they need to reload it.

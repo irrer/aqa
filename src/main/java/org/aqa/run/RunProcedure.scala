@@ -20,6 +20,7 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
+import edu.umro.ScalaUtil.Trace
 import edu.umro.util.Utility
 import org.aqa.Config
 import org.aqa.DicomFile
@@ -481,9 +482,13 @@ object RunProcedure extends Logging {
     if (!inputDir.exists)
       throw new RuntimeException("Unable to rename temporary directory " + sessionDir + " to input directory " + inputDir.getAbsolutePath)
 
+    Trace.trace()
     inputWithoutDir.updateDirectory(inputDir)
+    Trace.trace()
     val input = Input.get(inputWithoutDir.inputPK.get).get // update the directory
+    Trace.trace()
     input.putFilesInDatabaseFuture(inputDir)
+    Trace.trace()
     input
   }
 
@@ -526,7 +531,9 @@ object RunProcedure extends Logging {
     val userPK = if (user.isDefined) user.get.userPK else None
 
     val input = makeNewInput(sessionDir(valueMap), now, userPK, PatientID, dataDate, machine, runTrait.getProcedure, alList)
+    Trace.trace()
     val outputDir = makeOutputDir(input.dir, now)
+    Trace.trace()
 
     val output = {
       val tempOutput = new Output(
@@ -543,28 +550,42 @@ object RunProcedure extends Logging {
         status = ProcedureStatus.running.toString,
         dataValidity = DataValidity.valid.toString
       )
+      Trace.trace()
       val out = tempOutput.insert
       out
     }
+    Trace.trace()
 
     // invalidate cache in case this data was from a previous date
     CacheCSV.invalidateCacheEntries(output.dataDate.get, machine.institutionPK)
+    Trace.trace()
 
     val extendedData = ExtendedData.get(output)
+    Trace.trace()
 
     // If this is the same data being re-submitted, then delete the old version of the analysis.  The
     // usual reasons are that the analysis was changed or the analysis aborted.
+    Trace.trace()
     Future {
+      Trace.trace()
       val redundantList = Output.redundantWith(output)
       val msg = redundantList.size + " old output(s) and corresponding inputs: " + redundantList.mkString("\n    ", "\n    ", "\n    ")
+      Trace.trace()
       logger.info("Removing " + msg)
+      Trace.trace()
       redundantList.foreach(o => deleteInput(o.inputPK))
+      Trace.trace()
       logger.info("Done removing " + msg)
+      Trace.trace()
     }
 
+    Trace.trace()
     runAnalysis(valueMap, runTrait, runReq, extendedData, response, sync)
+    Trace.trace()
 
+    Trace.trace()
     ViewOutput.redirectToViewRunProgress(response, WebUtil.isAutoUpload(valueMap), output.outputPK.get)
+    Trace.trace()
   }
 
   /**

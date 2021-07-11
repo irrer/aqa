@@ -16,7 +16,10 @@
 
 package org.aqa.webrun.dailyQA
 
+import org.aqa.Util
+
 import java.text.SimpleDateFormat
+import java.util.Date
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -46,15 +49,53 @@ object DailyQAActivity {
       text
     })
 
+  private def keyOf(institutionPK: Long, rawDate: Date): String = {
+    val day = Util.dateTimeToDate(rawDate)
+    val key: String = institutionPK.toString + " : " + Util.formatDate(Util.standardDateFormat, day)
+    key
+  }
+
+  private class CachedResult(val institutionPK: Long, rawDate: Date, val result: String) {
+    val day = Util.dateTimeToDate(rawDate)
+    val key = keyOf(institutionPK, day)
+  }
+
+  private val cachedResultList = scala.collection.mutable.HashMap[String, CachedResult]()
+
+  def putCache(institutionPK: Long, dataDate: Date, result: String): Unit =
+    cachedResultList.synchronized {
+      val cr = new CachedResult(institutionPK, dataDate, result)
+      cachedResultList.put(cr.key, cr)
+    }
+
+  def getCache(institutionPK: Long, dataDate: Date): Option[String] =
+    cachedResultList.synchronized {
+      val date = Util.dateTimeToDate(new Date(dataDate.getTime))
+      val key = keyOf(institutionPK, date)
+      val cr = cachedResultList.get(key)
+      if (cr.isDefined)
+        Some(cr.get.result)
+      else
+        None
+    }
+
+  private def clearCache(institutionPK: Long, rawDate: Date): Unit = {
+    cachedResultList.synchronized {
+      val key = keyOf(institutionPK, rawDate)
+      cachedResultList.remove(key)
+    }
+  }
+
   /**
     * Change to reflect that an update has happened now.
     */
-  private def updateNow(): Unit =
+  private def updateNow(institutionPK: Long, dataDate: Date): Unit =
     latest.synchronized({
       //noinspection LoopVariableNotUpdated
       while (latest == System.currentTimeMillis()) {
         Thread.sleep(10)
       }
+      clearCache(institutionPK, dataDate)
       latest = System.currentTimeMillis()
     })
 
@@ -63,12 +104,12 @@ object DailyQAActivity {
     *
     * @param delay_ms Delay in ms to wait before updating.  0 or less means do it now.
     */
-  def update(delay_ms: Long = 0): Unit =
+  def update(institutionPK: Long, dataDate: Date, delay_ms: Long = 0): Unit =
     if (delay_ms > 0) {
       Future {
         Thread.sleep(delay_ms)
-        DailyQAActivity.updateNow()
+        DailyQAActivity.updateNow(institutionPK, dataDate)
       }
     } else
-      updateNow()
+      updateNow(institutionPK, dataDate)
 }

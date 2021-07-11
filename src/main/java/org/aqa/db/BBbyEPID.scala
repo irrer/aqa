@@ -19,6 +19,7 @@ package org.aqa.db
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.AngleType
 import org.aqa.Logging
 import org.aqa.Util
@@ -250,7 +251,8 @@ object BBbyEPID extends ProcedureOutput with Logging {
     */
   def getForOneDayX(date: Date, institutionPK: Long): Seq[DailyDataSetEPIDJJ] = {
 
-    val beginDate = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(date).replaceAll("T.*", "T00:00:00")).getTime)
+    val beginDate = new Timestamp(Util.dateTimeToDate(date).getTime)
+
     val endDate = new Timestamp(beginDate.getTime + (24 * 60 * 60 * 1000))
 
     val search = for {
@@ -286,7 +288,7 @@ object BBbyEPID extends ProcedureOutput with Logging {
     */
   def getForOneDay(date: Date, institutionPK: Long): Seq[DailyDataSetEPID] = {
 
-    val beginDate = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(date).replaceAll("T.*", "T00:00:00")).getTime)
+    val beginDate = new Timestamp(Util.dateTimeToDate(date).getTime)
     val endDate = new Timestamp(beginDate.getTime + (24 * 60 * 60 * 1000))
 
     val epidProcPk = Procedure.ProcOfBBbyEPID.get.procedurePK.get
@@ -335,7 +337,9 @@ object BBbyEPID extends ProcedureOutput with Logging {
       */
     def makeFailed(omd: OMD): Seq[DailyDataSetEPID] = {
 
+      Trace.trace()
       val alListList = omd.dicomSeries.attributeListList
+      Trace.trace()
 
       def getAl(dsUid: String): AttributeList = alListList.find(al => Util.sopOfAl(al).equals(dsUid)).get
 

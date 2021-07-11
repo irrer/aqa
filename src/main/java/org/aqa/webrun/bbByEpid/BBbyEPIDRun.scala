@@ -119,7 +119,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   }
 
   override def postRun(extendedData: ExtendedData, runReq: BBbyEPIDRunReq): Unit = {
-     DailyQAActivity.update()
+    DailyQAActivity.update(extendedData.user.institutionPK, extendedData.output.dataDate.get)
   }
 
   override def handle(request: Request, response: Response): Unit = {

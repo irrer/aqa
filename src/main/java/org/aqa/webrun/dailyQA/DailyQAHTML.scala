@@ -552,7 +552,7 @@ object DailyQAHTML extends Logging {
           def timeLeft = outputCBCT(mach.machinePK.get).head.analysisDate.get.getTime + Config.DailyQAInProgressInterval_ms - System.currentTimeMillis()
           val isInProgress = outputCBCT(mach.machinePK.get).nonEmpty && (timeLeft > 0)
           if (isInProgress) {
-            DailyQAActivity.update(timeLeft)
+            DailyQAActivity.update(mach.institutionPK, allOutputs.flatMap(_.dataDate).head)
           }
           isInProgress
         }
@@ -572,10 +572,10 @@ object DailyQAHTML extends Logging {
             showInProgress("The CBCT scan is being analyzed.")
 
           case _ if onePassedCbct && inProgress =>
-            showInProgress("The CBCT scan has passed.")
+            showInProgress("The CBCT scan has finished.")
 
           case _ if haveCbct && ProcedureStatus.fail.toString.equals(machineCbctResults.head.output.status) && inProgress =>
-            showInProgress("The CBCT did not yet pass.")
+            showInProgress("The CBCT did not yet finished.")
 
           case _ if haveCbct && oneFailedCbct =>
             showFail("The CBCT scan failed.", pleasePage = true)

@@ -107,7 +107,7 @@ case class DicomSeries(
             DicomUtil.zippedByteArrayToDicom(inputContent)
           } catch {
             case t: Throwable =>
-              logger.warn("Unexpected error unzipping DICOM from input table: " + fmtEx(t))
+              logger.warn("Unexpected exception unzipping DICOM from input table: " + fmtEx(t))
               Seq[AttributeList]()
           }
         val list = alList.filter(al => Util.serInstOfAl(al).equals(seriesInstanceUID))

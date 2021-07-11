@@ -254,13 +254,15 @@ object BBbyCBCTExecute extends Logging {
     * @return Status indicating termination state.
     */
   def runProcedure(extendedData: ExtendedData, runReq: BBbyCBCTRunReq, response: Response): ProcedureStatus.Value = {
+    val institutionPK = extendedData.user.institutionPK
+    val dataDate  = extendedData.output.dataDate.get
     val status =
       try {
         // This code only reports values and considers the test to have passed if
         // it found the BB, regardless of whether the BB was positioned within
         // tolerance of the plan's isocenter.
         logger.info("Starting analysis of CBCT Alignment for machine " + extendedData.machine.id)
-        DailyQAActivity.update() // tell web page that data has changed
+        DailyQAActivity.update(institutionPK, dataDate) // tell web page that data has changed
         val result = BBbyCBCTAnalysis.volumeAnalysis(runReq.cbctList, extendedData.output.dir)
         if (result.isRight) {
           val imageXYZ = result.right.get.imageXYZ
@@ -270,7 +272,6 @@ object BBbyCBCTExecute extends Logging {
           val bbPointInRtplan = calculateBbCenterInRtplan(runReq, preciseLocation_vox)
 
           val bbByCBCT = saveToDb(extendedData, runReq, bbPointInRtplan)
-          DailyQAActivity.update() // tell web page that data has changed
 
           // origin of RTPLAN in the CBCT voxel space
           val rtplanOrigin_vox = {
@@ -290,15 +291,18 @@ object BBbyCBCTExecute extends Logging {
           // Generating HTML takes a little time.
           BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, annotatedImages, runReq, result.right.get, response)
           logger.info("Finished analysis of CBCT Alignment for machine " + extendedData.machine.id)
+          DailyQAActivity.update(institutionPK, dataDate) // tell web page that data has changed
           ProcedureStatus.pass
         } else {
           showFailure(result.left.get, extendedData, runReq)
+          DailyQAActivity.update(institutionPK, dataDate) // tell web page that data has changed
           ProcedureStatus.fail
         }
       } catch {
         case t: Throwable =>
           logger.warn("Unexpected error in analysis of " + subProcedureName + ": " + t + fmtEx(t))
           Left(Phase2Util.procedureCrash(subProcedureName))
+          DailyQAActivity.update(institutionPK, dataDate) // tell web page that data has changed
           ProcedureStatus.crash
       }
     status
