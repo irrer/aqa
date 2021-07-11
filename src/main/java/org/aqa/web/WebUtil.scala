@@ -446,17 +446,16 @@ object WebUtil extends Logging {
 
   def internalFailure(response: Response, message: String): Unit = {
     val status = Status.SERVER_ERROR_INTERNAL
-    val messageAsHtml = message.split('\n').map(line => <br>{ line }</br>)
 
     val content = {
-      <div>{ status.toString } <p/> { messageAsHtml }</div>
+      <div>{ status.toString } <p> <pre>{message}</pre> </p> </div>
     }
     logger.warn(Status.SERVER_ERROR_INTERNAL.toString + " shown to user " + getUserIdOrDefault(response.getRequest, "unknown") + " : " + message)
     simpleWebPage(content, status, "Not Found", response)
   }
 
   def internalFailure(response: Response, throwable: Throwable): Unit = {
-    internalFailure(response, "Unexpected internal failure: " + throwable.getMessage + "\nStack trace:\n" + fmtEx(throwable))
+    internalFailure(response, WebUtil.nl + "Unexpected exception. Internal failure: " + throwable.toString + "\nStack trace:\n" + fmtEx(throwable))
   }
 
   val HTML_PREFIX = "<!DOCTYPE html>\n"
