@@ -326,7 +326,7 @@ object WebUtil extends Logging {
   private def saveFileList(request: Request): ValueMapT = {
     val valueMap = ensureSessionId(parseOriginalReference(request))
 
-    val dir: Unit = sessionDir(valueMap) match {
+    sessionDir(valueMap) match {
       case Some(dir) =>
         val upload = new RestletFileUpload(new DiskFileItemFactory(500, dir))
         val itemIterator = upload.getItemIterator(request.getEntity)
@@ -528,8 +528,6 @@ object WebUtil extends Logging {
       case _       => ""
     }
 
-    val j = xmlToText(page)
-    val j1 = j.replaceAllLiterally(runScriptTag, runScriptContent)
     val text = HTML_PREFIX + xmlToText(page).replaceAllLiterally(runScriptTag, runScriptContent)
 
     logger.debug("HTML delivered:\n" + text)
@@ -640,13 +638,6 @@ object WebUtil extends Logging {
           val sessionId: String = valueMapWithSession(sessionLabel)
           val formClass = "dropzone row " + colToName(fileUpload, 0) + " has-error"
 
-          val uploadStyle: Style = {
-            errorMap.get(uploadFileLabel) match {
-              case Some(sty) => sty
-              case _         => new Style
-            }
-          }
-
           val uploadHtml: Elem = {
             val hasError = errorMap.contains(uploadFileLabel)
             val borderColor = if (hasError) "#a94442" else "#cccccc"
@@ -683,9 +674,6 @@ object WebUtil extends Logging {
     }
 
     def makeFormAlertBox(errorMap: StyleMapT, runScript: Option[String]): Option[String] = {
-      val quote = "\""
-      val back = """\"""
-      val replace = back + quote
       def textOfError(style: Style): Option[String] = {
         if (style.isInstanceOf[Error]) {
           val text = style.asInstanceOf[Error].inputTitle.replaceAll("'", singleQuote).replaceAll("\"", doubleQuote)
@@ -712,7 +700,7 @@ object WebUtil extends Logging {
       *
       *     if failure, then return an error message as text and SUCCESS_OK.
       */
-    private def setFormResponseAutoUpload(valueMap: ValueMapT, errorMap: StyleMapT, response: Response, status: Status): Unit = {
+    private def setFormResponseAutoUpload(errorMap: StyleMapT, response: Response, status: Status): Unit = {
 
       val statusIsOk = status.toString.equals(Status.SUCCESS_OK.toString)
       if (errorMap.isEmpty && statusIsOk) {
@@ -733,7 +721,7 @@ object WebUtil extends Logging {
     def setFormResponse(valueMap: ValueMapT, errorMap: StyleMapT, pageTitle: String, response: Response, status: Status): Unit = {
 
       if (isAutoUpload(valueMap)) {
-        setFormResponseAutoUpload(valueMap, errorMap, response, Status.SUCCESS_OK)
+        setFormResponseAutoUpload(errorMap, response, Status.SUCCESS_OK)
       } else {
         val text = wrapBody(toHtml(valueMap, errorMap, Some(response)), pageTitle, None, c3 = false, makeFormAlertBox(errorMap, runScript))
 
@@ -1155,8 +1143,6 @@ object WebUtil extends Logging {
     * @param col Number of columns to occupy (1-12)
     *
     * @param offset Offset column (0-11)
-    *
-    * @param primary True if this button is primary
     */
   class FormButton(override val label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: ValueMapT => String, buttonType: ButtonType.Value, value: String, title: Option[String])
       extends IsInput(label)
@@ -1334,7 +1320,7 @@ object WebUtil extends Logging {
 
         Some(dateTimeFormat.parse(formattedText))
       } catch {
-        case t: Throwable => None
+        case _: Throwable => None
       }
 
     }
@@ -1445,7 +1431,7 @@ object WebUtil extends Logging {
         try {
           if (cell == null) "" else ExcelUtil.cellToString(cell)
         } catch {
-          case t: Throwable => ""
+          case _: Throwable => ""
         }
       <td>{content}</td>
     }
@@ -1486,10 +1472,6 @@ object WebUtil extends Logging {
       }
     }
 
-    def linkToSheet(sheet: Sheet) = {
-      <a href={"#" + sheet.getSheetName} style="margin: 40px;">{sheet.getSheetName}</a>
-    }
-
     val html: Elem = {
       <div style="margin: 40px;">
         <ul class="nav nav-tabs">
@@ -1512,7 +1494,7 @@ object WebUtil extends Logging {
         Some(al)
       } else None
     } catch {
-      case t: Throwable => None
+      case _: Throwable => None
     }
   }
 
@@ -1534,14 +1516,12 @@ object WebUtil extends Logging {
     try {
       attributeListsInSession(valueMap).flatMap(al => Machine.attributeListToMachine(al))
     } catch {
-      case t: Throwable =>
+      case _: Throwable =>
         Seq[Machine]()
     }
   }
 
   private def timeAgoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
-
-  private val timeHumanFriendlyTimeAgoFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss Z")
 
   def timeAgo(prefix: String, date: Date): Elem = {
     val stdTime = timeAgoFormat.format(date)
@@ -1633,9 +1613,7 @@ object WebUtil extends Logging {
     * @param height: Display height in pixels.
     */
   def coordinateDiagramCol(height: Int): WebPlainText = {
-    val png = "/static/images/CoordinateDiagram.png"
-    def getElem(valueMap: ValueMapT): Elem = coordinateDiagramElem(height)
-    new WebPlainText("CoordinateDiagram", false, 1, 0, getElem)
+    new WebPlainText("CoordinateDiagram", false, 1, 0, _ => coordinateDiagramElem(height))
   }
 
 }
