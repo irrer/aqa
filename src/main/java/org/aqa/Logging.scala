@@ -16,24 +16,19 @@
 
 package org.aqa
 
-import java.util.logging.Level
-import java.util.logging.FileHandler
-import java.util.logging.Logger
-import edu.umro.util.Log
 import org.restlet.Restlet
-import org.restlet.routing.Filter
-import java.io.File
+import org.slf4j.Logger
 
 trait Logging {
-  protected val logger = org.slf4j.LoggerFactory.getLogger(this.getClass)
+  protected val logger: Logger = org.slf4j.LoggerFactory.getLogger(this.getClass)
 
   /**
-   * Format a <code>Throwable</code>.
-   *
-   * @param throwable Contains description and stack trace.
-   *
-   * @return Human readable version of <code>Throwable</code> and stack trace.
-   */
+    * Format a <code>Throwable</code>.
+    *
+    * @param throwable Contains description and stack trace.
+    *
+    * @return Human readable version of <code>Throwable</code> and stack trace.
+    */
   def fmtEx(throwable: Throwable): String = {
     val textList = throwable.getStackTrace.map(ste => "\n    " + ste) // convert to text
     textList.mkString // join as one string
@@ -41,11 +36,6 @@ trait Logging {
 }
 
 object LoggingMain extends Logging {
-
-  //    private lazy val logDir: File = {
-  //        val logFileName = Util.buildProperties.getProperty("wrapper.logfile")
-  //        new File(logFileName).getParentFile
-  //    }
 
   def main(args: Array[String]): Unit = {
     println("Logging starting")
@@ -57,10 +47,10 @@ object LoggingMain extends Logging {
     simple.warn("A warning")
 
     class Foo extends Restlet {
-      def wrn = getLogger.warning("Warning from foo")
+      def wrn(): Unit = getLogger.warning("Warning from foo")
     }
     val foo = new Foo
-    foo.wrn
+    foo.wrn()
     println("foo.getLogger: " + foo.getLogger)
     println("foo.getLogger.getName: " + foo.getLogger.getName)
     println("foo.getLogger.getParent.getName: " + foo.getLogger.getParent.getName)
