@@ -25,7 +25,7 @@ import org.restlet.routing.Filter
 import java.io.File
 
 trait Logging {
-  protected val logger = org.slf4j.LoggerFactory.getLogger("")
+  protected val logger = org.slf4j.LoggerFactory.getLogger(this.getClass)
 
   /**
    * Format a <code>Throwable</code>.

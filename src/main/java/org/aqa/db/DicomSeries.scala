@@ -459,11 +459,33 @@ object DicomSeries extends Logging {
     if (uidList.size > 1) throw new IllegalArgumentException("List of DICOM slices have more than one series UID: " + uidList.mkString("    "))
     if (uidList.isEmpty) throw new IllegalArgumentException("List of DICOM slices has no SeriesInstanceUIDs")
 
-    if (seriesExists(uidList.head)) {
-      logger.info("Not inserting series into the database because it is already in the database")
-      // TODO there are some odd cases where RTPLAN series may be created incrementally, one 'slice' at
-      // a time over months.  With this logic, the first slice would be stored, and subsequent ones would
-      // be assumed redundant and not stored.  Will have to think about how to handle this.
+    val existing = getBySeriesInstanceUID(Util.serInstOfAl(alList.head))
+    if (existing.nonEmpty) {
+      val ds = existing.head
+      val incomingUidList = alList.map(al => Util.sopOfAl(al))
+      val existingUidList = ds.sopInstanceUIDList
+      val newSopList = incomingUidList.diff(existingUidList)
+      if (newSopList.isEmpty) {
+        logger.info("Not inserting series into the database because it is already in the database")
+        // a time over months.  With this logic, the first slice would be stored, and subsequent ones would
+        // be assumed redundant and not stored.  Will have to think about how to handle this.
+      } else {
+        // add new slices to DicomSeries
+        logger.info("adding " + newSopList.size + " slices to current DicomSeries " + ds.toString)
+        val newAlList = alList.filter(al => newSopList.contains(Util.sopOfAl(al)))
+        val bothAlList = ds.attributeListList ++ newAlList
+        val bothSize = newSopList.size + ds.size
+        val bothSopList = (existingUidList ++ incomingUidList).mkString(" ", " ", " ")
+        val bothContent: Option[Array[Byte]] = {
+          if (ds.modality.equalsIgnoreCase("RTPLAN")) {
+            Some(DicomUtil.dicomToZippedByteArray(bothAlList))
+          } else None
+        }
+
+        val newDs = ds.copy(size = bothSize, sopInstanceUIDList = bothSopList, content = bothContent)
+        val insertCount = newDs.insertOrUpdate()
+        logger.info("Updated " + insertCount + " DicomSeries " + newDs.toString)
+      }
     } else {
       val ds = DicomSeries.makeDicomSeries(userPK, inputPK, machinePK, alList)
       if (ds.isDefined) {
