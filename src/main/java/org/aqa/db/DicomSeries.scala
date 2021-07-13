@@ -450,20 +450,28 @@ object DicomSeries extends Logging {
     size > 0
   }
 
+  def getRandomForTesting(): Option[DicomSeries] = {
+    val ds = Db.run(query.take(num = 1).result)
+    ds.headOption
+  }
+
   /**
     * Add this series to the database if it is not already in.  Use the SeriesInstanceUID to determine if it is already in the database.
+    *
+    * If the series is already in the database, but there are new incoming slices that are not in the database, then add them.
     */
   def insertIfNew(userPK: Long, inputPK: Option[Long], machinePK: Option[Long], alList: Seq[AttributeList]): Unit = {
     if (alList.isEmpty) throw new IllegalArgumentException("List of DICOM slices is empty")
     val uidList = alList.map(al => Util.serInstOfAl(al)).distinct
     if (uidList.size > 1) throw new IllegalArgumentException("List of DICOM slices have more than one series UID: " + uidList.mkString("    "))
     if (uidList.isEmpty) throw new IllegalArgumentException("List of DICOM slices has no SeriesInstanceUIDs")
+    if (alList.map(Util.serInstOfAl).distinct.size != 1)  throw new IllegalArgumentException("Some DICOM slices have different SeriesInstanceUIDs")
 
     val existing = getBySeriesInstanceUID(Util.serInstOfAl(alList.head))
     if (existing.nonEmpty) {
       val ds = existing.head
       val incomingUidList = alList.map(al => Util.sopOfAl(al))
-      val existingUidList = ds.sopInstanceUIDList
+      val existingUidList = ds.sopUidSeq
       val newSopList = incomingUidList.diff(existingUidList)
       if (newSopList.isEmpty) {
         logger.info("Not inserting series into the database because it is already in the database")
@@ -475,7 +483,7 @@ object DicomSeries extends Logging {
         val newAlList = alList.filter(al => newSopList.contains(Util.sopOfAl(al)))
         val bothAlList = ds.attributeListList ++ newAlList
         val bothSize = newSopList.size + ds.size
-        val bothSopList = (existingUidList ++ incomingUidList).mkString(" ", " ", " ")
+        val bothSopList = (existingUidList ++ incomingUidList).distinct.mkString(" ", " ", " ")
         val bothContent: Option[Array[Byte]] = {
           if (ds.modality.equalsIgnoreCase("RTPLAN")) {
             Some(DicomUtil.dicomToZippedByteArray(bothAlList))
