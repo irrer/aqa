@@ -38,6 +38,9 @@ object DailyQAActivity {
   /** Put date into a human friendly format. */
   private val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss-SSS")
 
+  /** Entries cached this long are considered invalid. */
+  private val timeoutInterval_ms = 5 * 60 * 1000
+
   /**
     * Get a string indicating the last time a DailyQA value changed.
     *
@@ -56,8 +59,17 @@ object DailyQAActivity {
   }
 
   private class CachedResult(val institutionPK: Long, rawDate: Date, val result: String) {
-    val day = Util.dateTimeToDate(rawDate)
-    val key = keyOf(institutionPK, day)
+    val day: Date = Util.dateTimeToDate(rawDate)
+    val key: String = keyOf(institutionPK, day)
+    val cacheDate: Long = System.currentTimeMillis()
+
+    /**
+      * Determine if this entry is valid.
+      * @return True if valid.
+      */
+    def isValid: Boolean = {
+      (cacheDate + timeoutInterval_ms) > System.currentTimeMillis()
+    }
   }
 
   private val cachedResultList = scala.collection.mutable.HashMap[String, CachedResult]()
@@ -73,9 +85,15 @@ object DailyQAActivity {
       val date = Util.dateTimeToDate(new Date(dataDate.getTime))
       val key = keyOf(institutionPK, date)
       val cr = cachedResultList.get(key)
-      if (cr.isDefined)
-        Some(cr.get.result)
-      else
+      if (cr.isDefined) {
+        if (cr.get.isValid)
+          Some(cr.get.result)
+        else {
+          val key = keyOf(institutionPK, dataDate)
+          cachedResultList.remove(key)
+          None
+        }
+      } else
         None
     }
 
