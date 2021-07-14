@@ -296,7 +296,6 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
     try {
       logger.info("Starting analysis of EPID Alignment for machine " + extendedData.machine.id)
 
-      DailyQAActivity.update(institutionPK, dataDate) // tell web page that data has changed
       val bbLocList = runReq.epidList.par.map(epid => BBbyEPIDImageAnalysis.findBB(epid, extendedData.output.outputPK.get)).toList
 
       //  bbLocList.map(bbl => if (bbl.isLeft) Left(bbl.left.get) else (

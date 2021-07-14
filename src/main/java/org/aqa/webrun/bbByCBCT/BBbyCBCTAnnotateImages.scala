@@ -207,6 +207,7 @@ object BBbyCBCTAnnotateImages extends Logging {
     */
   def annotate(bbByCBCT: BBbyCBCT, imageXYZ: Seq[BufferedImage], runReq: BBbyCBCTRunReq, bb_vox: Point3d, rtplanOrigin_vox: Point3d, date: Date): ImageSet = {
     logger.info("Annotating CBCT images for " + bbByCBCT)
+    val start = System.currentTimeMillis()
     val voxSize_mm = Util.getVoxSize_mm(runReq.cbctList) // the size of a voxel in mm
     logger.info("Annotating CBCT images with voxels sized in mm: " + voxSize_mm)
 
@@ -321,6 +322,7 @@ object BBbyCBCTAnnotateImages extends Logging {
 
     val imageSet = ImageSet(imageList, aoiList)
 
+    logger.info("Finished annotating CBCT images in " + (System.currentTimeMillis() - start) + " ms for " + bbByCBCT)
     imageSet
   }
 }

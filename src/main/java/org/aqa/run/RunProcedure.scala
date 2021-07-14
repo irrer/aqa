@@ -387,6 +387,7 @@ object RunProcedure extends Logging {
       }
       // if any post processing is to be done, do it here
       runTrait.postRun(extendedData, runReq)
+      Util.garbageCollect()
     }
 
     if (WebUtil.isAwait(valueMap)) {
