@@ -20,7 +20,7 @@ import org.restlet.Restlet
 import org.slf4j.Logger
 
 trait Logging {
-  protected val logger: Logger = org.slf4j.LoggerFactory.getLogger(this.getClass)
+  protected lazy val logger: Logger = org.slf4j.LoggerFactory.getLogger(this.getClass)
 
   /**
     * Format a <code>Throwable</code>.
