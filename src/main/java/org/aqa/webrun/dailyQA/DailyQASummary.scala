@@ -42,10 +42,6 @@ object DailyQASummary {
 
   val dateFormat = new SimpleDateFormat("EEE MMM dd")
   val timeFormat = new SimpleDateFormat("H:mm a")
-
-  private def makeReference(outputPK: Long): String = {
-    "<script src='" + path + "?date=" + outputPK + "'></script>"
-  }
 }
 
 class DailyQASummary extends Restlet with SubUrlRoot with Logging {
@@ -217,8 +213,9 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
           logger.info("got Daily QA Summary from cache")
           setResponse(cachedResult.get, response, Status.SUCCESS_OK)
         } else {
-          logger.info("re-created Daily QA Summary and put it in cache")
+          logger.info("re-creating Daily QA Summary and will put it in cache")
           formCreate().setFormResponse(valueMap, styleNone, DailyQASummary.pageTitle, response, Status.SUCCESS_OK)
+          logger.info("Daily QA Summary has been re-created.")
           val text = response.getEntityAsText
           DailyQAActivity.putCache(institutionPK, date, text)
         }
