@@ -223,6 +223,8 @@ object WebUtil extends Logging {
     * Attempt to interpret as a zip file.  Return true on success.
     */
   private def writeZip(data: Array[Byte], unique: UniquelyNamedFile, request: Request): Unit = {
+    logger.info("Starting to unpack zipped content of " + data.size + " bytes")
+    val start = System.currentTimeMillis()
     try {
       val inputStream = new ByteArrayInputStream(data)
       managed(new ZipInputStream(inputStream)) acquireAndGet { zipIn =>
@@ -250,6 +252,9 @@ object WebUtil extends Logging {
     } catch {
       case t: Throwable => logger.warn("Unexpected error writing uploaded zip: " + fmtEx(t))
     }
+    val elapsed = System.currentTimeMillis() - start
+
+    logger.info("Unpacked zipped content of " + data.size + " bytes and wrote it to the file system.  Elapsed time ms: " + elapsed)
   }
 
   private def saveData(data: Array[Byte], file: File, contentType: String, unique: UniquelyNamedFile, request: Request): Unit = {
