@@ -103,7 +103,7 @@ object CachedUser extends Logging {
    */
   private def findOrCreateUser(id: String, secret: String): Option[User] = {
 
-    lazy val dbValue = {
+    val dbValue = {
       val userList = User.list.filter(u => u.id_real.nonEmpty).filter(u => AnonymizeUtil.decryptWithNonce(u.institutionPK, u.id_real.get).equals(id))
       if (userList.nonEmpty) {
         put(id, userList.head)
@@ -111,18 +111,18 @@ object CachedUser extends Logging {
       userList.headOption
     }
 
-    lazy val isInDb = dbValue.isDefined
+    val isInDb = dbValue.isDefined
 
-    lazy val dbIsValid = isInDb && validatePassword(dbValue.get, secret)
+    val dbIsValid = isInDb && validatePassword(dbValue.get, secret)
 
-    lazy val ldapEnabled = Config.LdapUrl.isDefined
+    val ldapEnabled = Config.LdapUrl.isDefined
 
     /**
      * True if the user has been validated by LDAP.  This means that their
      *  password must be correct and they must belong to at least one of the
      *  LDAP groups.
      */
-    lazy val ldapIsValid: Boolean = {
+    val ldapIsValid: Boolean = {
       if (ldapEnabled) {
         Level2Ldap.getGroupListOfUser(id, secret) match {
           case Right(groupSet) => groupSet.intersect(Config.LdapGroupList.toSet).nonEmpty
@@ -136,7 +136,7 @@ object CachedUser extends Logging {
         false
     }
 
-    lazy val ldapUserInfo: Option[Level2Ldap.UserInfo] = {
+    val ldapUserInfo: Option[Level2Ldap.UserInfo] = {
       if (ldapEnabled) {
         Level2Ldap.getUserInfo(id, secret) match {
           case Right(userInfo) => Some(userInfo)

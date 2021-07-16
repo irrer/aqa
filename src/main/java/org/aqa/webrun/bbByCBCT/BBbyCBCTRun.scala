@@ -101,7 +101,11 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     */
   private def checkForEpidRedo(cbctOutput: Output, response: Response): Unit = {
     val machine = Machine.get(cbctOutput.machinePK.get).get
-    val endOfDay = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(cbctOutput.dataDate.get).replaceAll("T.*", "T00:00:00")).getTime + (24 * 60 * 60 * 1000))
+    val endOfDay = {
+      val day = Util.dateTimeToDate(cbctOutput.dataDate.get)
+      val tomorrow_ms = day.getTime + (24 * 60 * 60 * 1000)
+      new Timestamp(tomorrow_ms)
+    }
 
     // list of all output on this machine that has a data date after the cbctOutput.
     val allOutput = Output.getOutputByDateRange(machine.institutionPK, cbctOutput.dataDate.get, endOfDay).filter(o => o.machinePK == cbctOutput.machinePK)
@@ -265,7 +269,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   }
 
   override def postRun(extendedData: ExtendedData, runReq: BBbyCBCTRunReq): Unit = {
-    DailyQAActivity.update(extendedData.user.institutionPK, extendedData.output.dataDate.get)
+    DailyQAActivity.update(extendedData.user.institutionPK, extendedData.output.dataDate.get, 5 * 1000)
   }
 
   override def handle(request: Request, response: Response): Unit = {

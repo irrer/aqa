@@ -291,18 +291,15 @@ object BBbyCBCTExecute extends Logging {
           // Generating HTML takes a little time.
           BBbyCBCTHTML.generateHtml(extendedData, bbByCBCT, annotatedImages, runReq, result.right.get, response)
           logger.info("Finished analysis of CBCT Alignment for machine " + extendedData.machine.id)
-          DailyQAActivity.update(institutionPK, dataDate) // tell web page that data has changed
           ProcedureStatus.pass
         } else {
           showFailure(result.left.get, extendedData, runReq)
-          DailyQAActivity.update(institutionPK, dataDate) // tell web page that data has changed
           ProcedureStatus.fail
         }
       } catch {
         case t: Throwable =>
           logger.warn("Unexpected error in analysis of " + subProcedureName + ": " + t + fmtEx(t))
           Left(Phase2Util.procedureCrash(subProcedureName))
-          DailyQAActivity.update(institutionPK, dataDate) // tell web page that data has changed
           ProcedureStatus.crash
       }
     status

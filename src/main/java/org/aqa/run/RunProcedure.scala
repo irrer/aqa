@@ -93,6 +93,7 @@ object RunProcedure extends Logging {
           throw t
       } finally {
         resourceLock.release()
+        Util.garbageCollect()
       }
     } else {
       // do in a non-synchronized way
@@ -393,11 +394,13 @@ object RunProcedure extends Logging {
     if (WebUtil.isAwait(valueMap)) {
       // wait for analysis to finish
       performSynchronized[Unit](sync, runIt _)
+      Util.garbageCollect()
     } else {
       // run in a thread instead of a Future because the debugger in the Eclipse IDE does not handle Future's nicely.
       class RunIt extends Runnable {
         override def run(): Unit = {
           performSynchronized[Unit](sync, runIt _)
+          Util.garbageCollect()
         }
       }
       val thread = new Thread(new RunIt)

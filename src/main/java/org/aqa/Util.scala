@@ -84,8 +84,8 @@ object Util extends Logging {
   private val elapsedFormatMinutes = new SimpleDateFormat("m:ss.SSS")
   private val elapsedFormatSeconds = new SimpleDateFormat("s.SSS")
 
-  def formatDate(format: SimpleDateFormat, date: Date) = edu.umro.ScalaUtil.Util.formatDate(format, date)
-  def parseDate(format: SimpleDateFormat, text: String) = edu.umro.ScalaUtil.Util.parseDate(format, text)
+  def formatDate(format: SimpleDateFormat, date: Date) = standardDateFormat.synchronized(format.format(date))
+  def parseDate(format: SimpleDateFormat, text: String) = standardDateFormat.synchronized(format.parse(text))
 
   def dateTimeToDate(date: Date): Date = {
     val stdText = Util.formatDate(Util.standardDateFormat, date)
@@ -1069,20 +1069,26 @@ object Util extends Logging {
     * Attempt to free memory by using gc.
     */
   def garbageCollect(): Unit = {
+    val start = System.currentTimeMillis()
     val runtime = Runtime.getRuntime
 
     val totalWait_ms = 410.toLong
     val wait_ms = 100.toLong
 
+    def fmt(x: Long) = {
+      (x / (1000.0 * 1000 * 1000)).formatted("%6.3f") + " GB"
+    }
+
     val timeout = System.currentTimeMillis + totalWait_ms
     val before = runtime.freeMemory
-    logger.info("Free memory before garbage collection hint : " + before)
+    logger.info("Free memory before garbage collection hint : " + fmt(before))
     while (timeout > System.currentTimeMillis) {
       runtime.gc()
       Thread.sleep(wait_ms)
     }
     val after = runtime.freeMemory
-    logger.info("Free memory after garbage collection hint  : " + after + "    amount freed: " + (after - before))
+    val elapsed = System.currentTimeMillis() - start
+    logger.info("Freed memory in " + elapsed + " ms garbage collection.  Available before: " + fmt(before) + "    after: " + fmt(after) + "    amount freed: " + fmt((after - before)))
   }
 
   def getFrameOfRef(al: AttributeList): String = al.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString

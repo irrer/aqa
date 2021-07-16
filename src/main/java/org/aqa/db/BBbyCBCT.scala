@@ -246,8 +246,7 @@ object BBbyCBCT extends ProcedureOutput {
    * Get all results that were acquired on one day for one institution.
    */
   def getForOneDay(date: Date, institutionPK: Long): Seq[DailyDataSetCBCT] = {
-
-    val beginDate = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(date).replaceAll("T.*", "T00:00:00")).getTime)
+    val beginDate = new Timestamp(Util.dateTimeToDate(date).getTime)
     val endDate = new Timestamp(beginDate.getTime + (24 * 60 * 60 * 1000))
 
     val cbctProcPk = Procedure.ProcOfBBbyCBCT.get.procedurePK.get

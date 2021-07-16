@@ -208,7 +208,7 @@ abstract class CacheCSV extends Logging {
    * @return A new cache entry that has been written to disk.
    */
   private def instantiateCache(dateText: String, hostRef: String, institutionPK: Long): CachedResult = {
-    val timestamp = new Timestamp(CacheCSV.dateFormat.parse(dateText).getTime)
+    val timestamp = new Timestamp(Util.parseDate(CacheCSV.dateFormat, dateText).getTime)
     val csvText = fetchData(timestamp, hostRef = hostRef, institutionPK)
     val file = dateTextToFile(dateText)
     Util.writeBinaryFile(file, csvText.getBytes)

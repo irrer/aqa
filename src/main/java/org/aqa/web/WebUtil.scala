@@ -23,6 +23,7 @@ import com.pixelmed.dicom.TagFromName
 import edu.umro.MSOfficeUtil.Excel.ExcelUtil
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
+import edu.umro.ScalaUtil.Trace
 import org.apache.commons.fileupload.disk.DiskFileItemFactory
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.ss.usermodel.Row
@@ -210,51 +211,73 @@ object WebUtil extends Logging {
     * Anonymized and write the given attribute list.
     */
   private def writeAnonymizedDicom(al: AttributeList, unique: UniquelyNamedFile, request: Request): Unit = {
+    val start = System.currentTimeMillis()
+    val anonFile = unique.getUniquelyNamedFile("dcm")
+    logger.info("Writing " + Util.modalityOfAl(al) + " DICOM file " + anonFile.getAbsolutePath)
     val user = CachedUser.get(request)
     val institution = user.get.institutionPK
     val anonAl = AnonymizeUtil.anonymizeDicom(institution, al)
-    val anonFile = unique.getUniquelyNamedFile("dcm")
     val os = new ByteArrayOutputStream
     DicomUtil.writeAttributeList(anonAl, os, "AQA")
     Util.writeBinaryFile(anonFile, os.toByteArray)
+    val elapsed = System.currentTimeMillis() - start
+    logger.info("Wrote " + Util.modalityOfAl(al) + " in " + elapsed + " ms   DICOM file " + anonFile.getAbsolutePath)
   }
 
   /**
     * Attempt to interpret as a zip file.  Return true on success.
     */
   private def writeZip(data: Array[Byte], unique: UniquelyNamedFile, request: Request): Unit = {
-    logger.info("Starting to unpack zipped content of " + data.size + " bytes")
+    logger.info("Starting to unpack zipped content of " + data.length + " bytes")
     val start = System.currentTimeMillis()
     try {
       val inputStream = new ByteArrayInputStream(data)
+      Util.garbageCollect()
       managed(new ZipInputStream(inputStream)) acquireAndGet { zipIn =>
         {
+          Trace.trace()
           @tailrec
           def next(): Unit = {
+            Trace.trace()
             val entry = zipIn.getNextEntry
+            Trace.trace()
             if (entry != null) {
+              Trace.trace()
               if (!entry.isDirectory) {
+                Trace.trace()
                 val data = {
                   val baos = new ByteArrayOutputStream
                   FileUtil.copyStream(zipIn, baos)
                   baos.toByteArray
                 }
+                Trace.trace()
                 val file = new File(unique.parentDir, entry.getName.replace("/", File.separator))
+                Trace.trace()
                 saveData(data, file, "", unique, request)
+                Trace.trace()
               }
+              Trace.trace()
               next()
             }
           }
           // Start processing
           next()
+          Trace.trace()
         }
       }
     } catch {
-      case t: Throwable => logger.warn("Unexpected error writing uploaded zip: " + fmtEx(t))
+      case t: Throwable =>
+        Trace.trace()
+        logger.warn("Unexpected error writing uploaded zip: " + fmtEx(t))
     }
+    Trace.trace()
     val elapsed = System.currentTimeMillis() - start
 
-    logger.info("Unpacked zipped content of " + data.size + " bytes and wrote it to the file system.  Elapsed time ms: " + elapsed)
+    Trace.trace()
+    logger.info("Unpacked zipped content of " + data.length + " bytes and wrote it to the file system.  Elapsed time ms: " + elapsed)
+    Trace.trace()
+    Util.garbageCollect()
+    Trace.trace()
   }
 
   private def saveData(data: Array[Byte], file: File, contentType: String, unique: UniquelyNamedFile, request: Request): Unit = {
@@ -270,7 +293,9 @@ object WebUtil extends Logging {
     else {
       isDicom(data) match {
         case Some(al) =>
+          Trace.trace("writing anonymized DICOM")
           writeAnonymizedDicom(al, unique, request)
+          Trace.trace("wrote anonymized DICOM")
 
         // We don't know what kind of file this is.  Just save it.
         case _ =>

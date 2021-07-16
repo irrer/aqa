@@ -263,7 +263,7 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
     */
   def getForOneDay(date: Date, institutionPK: Long): Seq[DailyDataSetComposite] = {
 
-    val beginDate = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(date).replaceAll("T.*", "T00:00:00")).getTime)
+    val beginDate = new Timestamp(Util.dateTimeToDate(date).getTime)
     val endDate = new Timestamp(beginDate.getTime + (24 * 60 * 60 * 1000))
 
     val search = for {

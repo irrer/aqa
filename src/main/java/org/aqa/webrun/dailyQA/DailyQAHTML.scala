@@ -349,7 +349,7 @@ object DailyQAHTML extends Logging {
 
     /** all outputs for CBCT and EPID for all machines from this institution with data from this day sorted by data (acquisition) date. */
     val allOutputs = {
-      val dataDateBegin = new Timestamp(Util.standardDateFormat.parse(Util.standardDateFormat.format(date).replaceAll("T.*", "T00:00:00")).getTime)
+      val dataDateBegin = new Timestamp(Util.dateTimeToDate(date).getTime)
       val dataDateEnd = new Timestamp(dataDateBegin.getTime + (24 * 60 * 60 * 1000))
 
       Output.getOutputByDateRange(institutionPK, dataDateBegin, dataDateEnd).filter(o => procedurePkSet.contains(o.procedurePK)).sortBy(o => o.dataDate.get.getTime)
@@ -485,7 +485,8 @@ object DailyQAHTML extends Logging {
             <td title={col0Title} style={styleNoData}>
               <h4>
                 {wrapAlias(mach.id)}<br/>
-                No Data</h4>
+                <span style="white-space: nowrap;">No Data</span>
+              </h4>
             </td>
             <td colspan={messageColSpan}>There are no CBCT or EPID scans for this machine.</td>{machHistory}
           </tr>

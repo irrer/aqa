@@ -16,6 +16,7 @@
 
 package org.aqa.webrun.dailyQA
 
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.BBbyEPIDComposite
@@ -30,6 +31,7 @@ import org.restlet.data.Status
 
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.concurrent.Semaphore
 import scala.xml.Elem
 
 /**
@@ -200,30 +202,65 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
     list
   }
 
-  private val showLock = ""
+  // private val showLock = ""
+  private val showLock = new Semaphore(1)
 
-  private def show(response: Response, valueMap: ValueMapT): Unit =
-    showLock.synchronized {
-      val user = getUser(valueMap)
-      if (user.isDefined) {
-        val institutionPK = user.get.institutionPK
-        val date = Util.parseDate(dateField.dateFormat, getDateText(valueMap))
-        val cachedResult = DailyQAActivity.getCache(institutionPK, date)
-        if (cachedResult.isDefined) {
-          logger.info("got Daily QA Summary from cache")
-          setResponse(cachedResult.get, response, Status.SUCCESS_OK)
-        } else {
-          logger.info("re-creating Daily QA Summary and will put it in cache")
-          formCreate().setFormResponse(valueMap, styleNone, DailyQASummary.pageTitle, response, Status.SUCCESS_OK)
-          logger.info("Daily QA Summary has been re-created.")
-          Util.garbageCollect()
-          val text = response.getEntityAsText
-          DailyQAActivity.putCache(institutionPK, date, text)
-        }
+  private val showLockMaxWaitTime_ms = 5 * 1000
+
+  private def show(response: Response, valueMap: ValueMapT): Unit = {
+    Trace.trace()
+    showLock.tryAcquire(showLockMaxWaitTime_ms, java.util.concurrent.TimeUnit.MILLISECONDS)
+
+    //showLock.synchronized {
+    Trace.trace()
+    val user = getUser(valueMap)
+    Trace.trace()
+    if (user.isDefined) {
+      Trace.trace()
+      val institutionPK = user.get.institutionPK
+      Trace.trace()
+      val date = Util.parseDate(dateField.dateFormat, getDateText(valueMap))
+      Trace.trace()
+      val cachedResult = DailyQAActivity.getCache(institutionPK, date)
+      Trace.trace()
+      if (cachedResult.isDefined) {
+        Trace.trace()
+        logger.info("got Daily QA Summary from cache")
+        Trace.trace()
+        setResponse(cachedResult.get, response, Status.SUCCESS_OK)
+        Trace.trace()
       } else {
-        setResponse("You are not authorized to view this page.", response, Status.CLIENT_ERROR_UNAUTHORIZED)
+        Trace.trace()
+        logger.info("re-creating Daily QA Summary and will put it in cache")
+        Trace.trace()
+        formCreate().setFormResponse(valueMap, styleNone, DailyQASummary.pageTitle, response, Status.SUCCESS_OK)
+        Trace.trace()
+        logger.info("Daily QA Summary has been re-created.")
+        Trace.trace()
+        Util.garbageCollect()
+        Trace.trace()
+        val text = response.getEntityAsText
+        Trace.trace()
+        DailyQAActivity.putCache(institutionPK, date, text)
+        Trace.trace()
       }
+    } else {
+      Trace.trace()
+      setResponse("You are not authorized to view this page.", response, Status.CLIENT_ERROR_UNAUTHORIZED)
+      Trace.trace()
     }
+    //}
+    Trace.trace()
+    try {
+      Trace.trace()
+      showLock.release(1)
+      Trace.trace()
+    } catch {
+      case _: Throwable =>
+        Trace.trace()
+    }
+    Trace.trace()
+  }
 
   /**
     * Respond to the client with the latest change of the data so they can decide whether or not they need to reload it.

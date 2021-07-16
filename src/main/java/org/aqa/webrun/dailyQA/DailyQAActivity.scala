@@ -16,6 +16,7 @@
 
 package org.aqa.webrun.dailyQA
 
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
 
 import java.text.SimpleDateFormat
@@ -39,7 +40,7 @@ object DailyQAActivity {
   private val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss-SSS")
 
   /** Entries cached this long are considered invalid. */
-  private val timeoutInterval_ms = 5 * 60 * 1000
+  private val timeoutInterval_ms = 2 * 60 * 1000
 
   /**
     * Get a string indicating the last time a DailyQA value changed.
@@ -48,6 +49,10 @@ object DailyQAActivity {
     */
   def get: String =
     latest.synchronized({
+      // timeout if the contents are stale
+      val timedOut = (latest + timeoutInterval_ms) < System.currentTimeMillis()
+      if (timedOut)
+        latest = System.currentTimeMillis
       val text = dateFormat.format(latest)
       text
     })
@@ -74,14 +79,21 @@ object DailyQAActivity {
 
   private val cachedResultList = scala.collection.mutable.HashMap[String, CachedResult]()
 
-  def putCache(institutionPK: Long, dataDate: Date, result: String): Unit =
+  def putCache(institutionPK: Long, dataDate: Date, result: String): Unit = {
+    Trace.trace()
+    val cr = new CachedResult(institutionPK, dataDate, result)
+    Trace.trace()
     cachedResultList.synchronized {
-      val cr = new CachedResult(institutionPK, dataDate, result)
+      Trace.trace()
       cachedResultList.put(cr.key, cr)
+      Trace.trace()
     }
+    Trace.trace()
+  }
 
-  def getCache(institutionPK: Long, dataDate: Date): Option[String] =
-    cachedResultList.synchronized {
+  def getCache(institutionPK: Long, dataDate: Date): Option[String] = {
+    Trace.trace()
+    val result = cachedResultList.synchronized {
       val date = Util.dateTimeToDate(new Date(dataDate.getTime))
       val key = keyOf(institutionPK, date)
       val cr = cachedResultList.get(key)
@@ -96,19 +108,24 @@ object DailyQAActivity {
       } else
         None
     }
+    Trace.trace()
+    result
+  }
 
   private def clearCache(institutionPK: Long, rawDate: Date): Unit = {
+    Trace.trace()
     cachedResultList.synchronized {
       val key = keyOf(institutionPK, rawDate)
       cachedResultList.remove(key)
     }
+    Trace.trace()
   }
 
   /**
     * Change to reflect that an update has happened now.
     */
   private def updateNow(institutionPK: Long, dataDate: Date): Unit =
-    latest.synchronized({
+    cachedResultList.synchronized({
       //noinspection LoopVariableNotUpdated
       while (latest == System.currentTimeMillis()) {
         Thread.sleep(10)
