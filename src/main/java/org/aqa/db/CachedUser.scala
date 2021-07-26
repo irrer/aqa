@@ -141,7 +141,7 @@ object CachedUser extends Logging {
         Level2Ldap.getUserInfo(id, secret) match {
           case Right(userInfo) => Some(userInfo)
           case Left(msg) => {
-            logger.warn("Error getting group information for user " + id + " : " + msg)
+            logger.info("Could not get LDAP user information for user " + id + " : " + msg)
             None
           }
           case _ => None
