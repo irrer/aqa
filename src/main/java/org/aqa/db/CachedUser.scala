@@ -127,7 +127,7 @@ object CachedUser extends Logging {
         Level2Ldap.getGroupListOfUser(id, secret) match {
           case Right(groupSet) => groupSet.intersect(Config.LdapGroupList.toSet).nonEmpty
           case Left(msg) => {
-            logger.warn("Error getting group information for user " + id + " : " + msg)
+            logger.info("Unable to get LDAP group information for user " + id + " : " + msg)
             false
           }
           case _ => false
