@@ -155,7 +155,7 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
 
     var date=document.getElementById("Date").getAttribute("value");
     var baseUrl='/DailyQASummary?latestChange=true&Date=' + date;
-    var WebRefreshTime=2000;
+    var WebRefreshTime=5000;
 
     function watchStatus() {$.ajax({
       url: baseUrl , success: function
