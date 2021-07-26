@@ -6,11 +6,6 @@ var baseUrl = 'empty';
 var monthList = [ 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ];
 var standardDateFormat = '%Y-%m-%dT%H:%M:%S';
 
-/* Wait this number of ms between refreshing the alias values. */
-var aliasRefreshTime = 500;
-/* Try refreshing the alias values this many times. */
-var refreshAliasCount = 20;
-
 
 /** Support for history charts. */
 function formatDate(date) { 
@@ -75,6 +70,12 @@ $(document).ready(function() {
  * Finally, set or append to the title of the element its alias 
  * so the user can easily find it.
  */
+
+/* Wait this number of ms between refreshing the alias values. */
+var aliasRefreshTime = 10;
+/* Try refreshing the alias values this many times. */
+var refreshAliasCount = 14;
+
 var jsonhttp = new XMLHttpRequest();
 var aliasToRealUrl = "/AnonymousTranslate/translateTable.json";  // defines the URL for getting the alias to real table
 
@@ -143,6 +144,7 @@ function translateAliases() {
 
   if (refreshAliasCount > 0) {
     refreshAliasCount = refreshAliasCount - 1;
+    aliasRefreshTime = aliasRefreshTime * 2;
     setTimeout(translateAliases, aliasRefreshTime);
   }
 
