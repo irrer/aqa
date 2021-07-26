@@ -1,7 +1,6 @@
 // Reload the page when there is new data, indicated by
 // a change in Checksum
 
-var WebRefreshTime = 2000;
 var checksum = 'none';
 var baseUrl = 'empty';
 var monthList = [ 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' ];
@@ -13,14 +12,21 @@ var aliasRefreshTime = 500;
 var refreshAliasCount = 20;
 
 
+/** Support for history charts. */
 function formatDate(date) { 
   return (date.getYear() + 1900) + ' ' + monthList[date.getMonth()] + ' ' + date.getDate();
 };
     
-function formatTime(date) { 
+/** Support for history charts. */
+function formatTime(date) {
   return ("0" + date.getHours()).slice(-2) + ':' + ("0" + date.getMinutes()).slice(-2) ;
 };
-      
+
+/*
+ * As analysis is being performed, periodically update the web page to get the latest status.
+ */
+var WebRefreshTime = 4000;
+
 function watchChecksum() {
   $.ajax({
     url : baseUrl,
