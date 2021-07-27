@@ -15,27 +15,31 @@
     limitations under the License.
     -->
 
-<!-- 
+    <!--
 
-Note: Data is from https://automatedqualityassurance.org/results/INST_2/MACH_21/Phase2_0.1_4/2019-03-12T19-11-11-943_326/output_2019-03-12T19-11-20-117/SymmetryAndFlatness/SymmetryAndFlatness.html
+    Note: Data is from https://automatedqualityassurance.org/results/INST_2/MACH_21/Phase2_0.1_4/2019-03-12T19-11-11-943_326/output_2019-03-12T19-11-20-117/SymmetryAndFlatness/SymmetryAndFlatness.html
 
-This was done with a 20 cm field because at the time 18 cm did not have enough data.
+    This was done with a 20 cm field because at the time 18 cm did not have enough data.
 
- -->
+     -->
 
     <h2>@@title@@</h2>
     This test characterizes the beam's general shape. It starts by sampling the image in 5
-    <a href="doc/circle">circles</a>
+    <a href="../circle/index.html">circles</a>
     , (whose positions are corrected for collimator centering) as shown in the following image
-    and reporting them in CU (Calibrated Units) Click image for larger image):
+    and reporting them in CU (Calibrated Units) Click image to enlarge:
 
     <p style="margin-top: 30px"/>
     <a href="Sym_Flat_J20G0_6X.png">
-        <img src="Sym_Flat_J20G0_6X.png" width="500" />
+        <img src="Sym_Flat_J20G0_6X.png" width="500"/>
     </a>
 
-<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
+    <p style="margin-top:30px;">
+        Each circle is 5 mm in diameter. They are 75 mm from the center of the image, with a compensation for collimator
+        centering.
+    </p>
     <p style="margin-top: 30px"/>
     For the examples, the following values are used:
 
@@ -45,14 +49,14 @@ This was done with a 20 cm field because at the time 18 cm did not have enough d
         </center>
         <table class="table table-bordered" title="Input values from this data set and from baseline.">
             <thead>
-                <tr>
-                    <th>Source</th>
-                    <th>Top CU</th>
-                    <th>Bottom CU</th>
-                    <th>Left CU</th>
-                    <th>Right CU</th>
-                    <th>Center CU</th>
-                </tr>
+            <tr>
+                <th>Source</th>
+                <th>Top CU</th>
+                <th>Bottom CU</th>
+                <th>Left CU</th>
+                <th>Right CU</th>
+                <th>Center CU</th>
+            </tr>
             </thead>
             <tr>
                 <td>Analysis</td>
@@ -71,23 +75,23 @@ This was done with a 20 cm field because at the time 18 cm did not have enough d
                 <td>0.2301</td>
             </tr>
         </table>
-        
+
         <b>Note on baseline values:</b> <em> Some tests are better evaluated when they can be compared to
-        previous values.  For these tests, AQA allows users to establish baseline values.  When
-        a test is run, the results are compared to the baseline values.  The first time a test is run
+        previous values. For these tests, AQA allows users to establish baseline values. When
+        a test is run, the results are compared to the baseline values. The first time a test is run
         there are no baseline values, so the platform uses the results of the current test to
         establish them.
         <p/> <br/>
         Users may override this default by using the "Use As Baseline" button, which will establish
         a new baseline going forward.
-        </em>
+    </em>
     </div>
 
 
-<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
     <div title="Calculation of Symmetry">
-        <hr />
+        <hr/>
         <h3>Calculation of Symmetry</h3>
         Symmetry is calculated both axially and transversely as a percentage with:
         <pre>axial      = ((top   - bottom) / bottom) * 100</pre>
@@ -100,11 +104,11 @@ This was done with a 20 cm field because at the time 18 cm did not have enough d
         <pre>transverse = ((0.2209 - 0.2195) / 0.2195) * 100 = 0.6378</pre>
 
     </div>
-    
-<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
     <div title="Calculation of Flatness">
-        <hr />
+        <hr/>
         <h3>Calculation of Flatness</h3>
         Flatness is calculated over the image as a percentage using the maximum and minimum values of the 5 measured
         circles:
@@ -115,12 +119,12 @@ This was done with a 20 cm field because at the time 18 cm did not have enough d
         <pre>flatness = ((0.2288 - 0.2195) / (0.2288 + 0.2195)) * 100 = 2.0745</pre>
 
     </div>
-    
-<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
 
     <div title="Calculation of Constancy">
-        <hr />
+        <hr/>
         <h3>Calculation of Constancy</h3>
         Constancy is calculated over the image by dividing each of the outer values by the
         center value then subtracting each from the baseline values, processed similarly:
@@ -134,7 +138,7 @@ This was done with a 20 cm field because at the time 18 cm did not have enough d
 
         <pre>((t + r + b + l) * 100) / 4</pre>
 
-        <p style="margin:25px;"/> 
+        <p style="margin:25px;"/>
 
         An example, using the the above values:
 
@@ -142,7 +146,7 @@ This was done with a 20 cm field because at the time 18 cm did not have enough d
         <pre>b = (0.2195 / 0.2288) - (0.2209 / 0.2301) = -0.0006642</pre>
         <pre>l = (0.2195 / 0.2288) - (0.2220 / 0.2301) = -0.0054450</pre>
         <pre>r = (0.2209 / 0.2288) - (0.2210 / 0.2301) =  0.0050200</pre>
-        <p style="margin:25px;"/> 
+        <p style="margin:25px;"/>
         <pre>((0.0006395 + -0.0006642 + -0.0054450 + 0.0050200) * 100) / 4 = -0.01124</pre>
     </div>
 

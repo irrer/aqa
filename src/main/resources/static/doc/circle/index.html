@@ -1,31 +1,56 @@
-Circles
+<div title="Circles" class="col-md-8 col-md-offset-1">
+    <!--
+    Copyright 2021 Regents of the University of Michigan
 
-Circles are used to sample circular regions of the EPID as
-an measurement of dose.  They are used by the center dose,
-wedge and symmetry/flatness/constancy tests.
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
 
-The dose from a circle is calculated by calculating the
-average CU (calibrated units) of all pixels that lie within
-a 10 mm diameter circle as measured in the isoplane.
+        http://www.apache.org/licenses/LICENSE-2.0
 
-To determine the center of the circle in the isoplane, the
-expected center (determined by the test) is added to the
-collimator's center of rotation, as determined in the
-Collimator Centering test.
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    -->
+    <h2>@@title@@</h2>
 
-To determine the pixels that should be averaged, the
-positions of pixels in the image plane are projected back to
-the isoplane (LINK: using SID and SAD).  All pixels whose
-centers fall within the radius of the circle are used.
+    <p>
+        Circles are used to sample circular regions of the EPID as
+        an measurement of dose. They are used by the center dose,
+        wedge and symmetry/flatness/constancy tests.
+    </p>
+    <p>
+        The dose from a circle is calculated by calculating the
+        average CU (calibrated units) of all pixels that lie within
+        the circle as measured in the isoplane.
+    </p>
+    <p>
+        To determine the center of the circle in the isoplane, the
+        expected center (determined by the test) is added to the
+        collimator's center of rotation, as determined in the
+        Collimator Centering test.
+    </p>
+    <p>
+        To determine the pixels that should be averaged, the
+        positions of pixels in the image plane are projected back to
+        the isoplane (LINK: using SID and SAD). All pixels whose
+        centers fall within the radius of the circle are used.
+    </p>
+    <p>
+        Because a circle is being projected onto a rectangular
+        pixel array, pixels on the edge of the circle will only have
+        part of their area within the circle. If the center of the
+        pixel is inside the circle or not, then the entire pixel is
+        used or not; no attempt is made to partially weight the
+        pixel's influence.
+    </p>
+    <p>
+        Also note that although the collimator's center of rotation
+        is generally a small number, even smaller than the width of
+        the pixels, it may cause some pixels to be include or not
+        included that otherwise would be.
+    </p>
 
-Because a circle is being projected onto a rectangular
-pixel array, pixels on the edge of the circle will only have
-part of their area within the circle.  If the center of the
-pixel is inside the circle or not, then the entire pixel is
-used or not; no attempt is made to partially weight the
-pixel's influence.
-
-Also note that although the collimator's center of rotation
-is generally a small number, even smaller than the width of
-the pixels, it may cause some pixels to be include or not
-included that otherwise would be.
+</div>
