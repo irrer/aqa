@@ -30,6 +30,8 @@ import org.restlet.Restlet
 import org.restlet.data.MediaType
 import org.restlet.data.Status
 
+import java.util.Date
+import scala.annotation.tailrec
 import scala.xml.Elem
 
 object AnonymousTranslate {
@@ -58,6 +60,63 @@ object AnonymousTranslate {
     val fixed = text.map(c => c.toString).map(c => fix(c)).mkString("")
     fixed
   }
+
+  /** Cache entries older than this are considered stale. */
+  private val cacheTimeout_ms: Int = 2 * 60 * 1000
+
+  private case class TranslateCache(userId: String, date: Date, content: String) {
+    def isValid: Boolean = {
+      val timeout = date.getTime + cacheTimeout_ms
+      timeout > System.currentTimeMillis()
+    }
+  }
+
+  private val cache = scala.collection.mutable.Map[String, TranslateCache]()
+
+  /**
+    * Put an entry in the cache.
+    * @param userId Real user id.
+    * @param content json content
+    */
+  private def putToCache(userId: String, content: String): Unit =
+    cache.synchronized {
+      cache.put(userId, TranslateCache(userId, new Date, content))
+    }
+
+  /**
+    * Attempt to get the content from cache.  It must be json and it must not be stale.
+    * @param isHtml True if the user is asking for the content as HTML (not json)
+    * @param user Real id of user.
+    * @param response HTML response.  Put content here if it is found in the cache.
+    * @return
+    */
+  private def getFromCache(isHtml: Boolean, user: String, response: Response): Boolean =
+    cache.synchronized {
+
+      @tailrec
+      def clean(): Unit = {
+        val expired = cache.values.find(tc => !tc.isValid)
+        if (expired.isDefined) {
+          cache.remove(expired.get.userId)
+          clean()
+        }
+      }
+
+      clean()
+
+      if (!isHtml) {
+        val tc = cache.get(user)
+        if (tc.isDefined) {
+          response.setEntity(tc.get.content, MediaType.TEXT_HTML)
+          response.setStatus(Status.SUCCESS_OK)
+          true
+        } else
+          false
+      } else
+        false
+
+    }
+
 }
 
 /**
@@ -140,10 +199,11 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
     dicomAnonList.map(da => Translate(da.institutionPK, da.value, da.value_real, "DICOM Attr " + da.attributeTag))
   }
 
-  private def putJson(list: Seq[Translate], response: Response): Unit = {
+  private def putJson(list: Seq[Translate], userId: String, response: Response): Unit = {
     val jsonTable = list.map(t => t.toJson).mkString("[\n", ",\n", "\n]\n")
     response.setEntity(jsonTable, MediaType.APPLICATION_JSON)
     response.setStatus(Status.SUCCESS_OK)
+    AnonymousTranslate.putToCache(userId, jsonTable)
   }
 
   private def putHtml(list: Seq[Translate], userId: String, response: Response): Unit = {
@@ -183,21 +243,28 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
 
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
+    val start = System.currentTimeMillis()
     val valueMap = getValueMap(request)
+    val isHtml = valueMap.contains("html")
     val userId = WebUtil.getUserIdOrDefault(request, "guest")
-    try {
-      val list = getTranslationList(request)
-      if (valueMap.contains("html"))
-        putHtml(list, userId, response)
-      else
-        putJson(list, response)
 
-    } catch {
-      case t: Throwable =>
-        //  WebUtil.internalFailure(response, t)
-        logger.warn("Ignoring unexpected exception: " + fmtEx(t))
-        response.setEntity(emptyTable, MediaType.APPLICATION_JSON)
-        response.setStatus(Status.SUCCESS_OK)
+    // Attempt to get content from cache because it is faster.
+    if (!AnonymousTranslate.getFromCache(isHtml, userId, response)) {
+      try {
+        val list = getTranslationList(request)
+        if (isHtml)
+          putHtml(list, userId, response)
+        else
+          putJson(list, userId, response)
+
+      } catch {
+        case t: Throwable =>
+          //  WebUtil.internalFailure(response, t)
+          logger.warn("Ignoring unexpected exception: " + fmtEx(t))
+          response.setEntity(emptyTable, MediaType.APPLICATION_JSON)
+          response.setStatus(Status.SUCCESS_OK)
+      }
     }
+    logger.info("AnonymousTranslate table retrieval time in ms: " + (System.currentTimeMillis() - start))
   }
 }
