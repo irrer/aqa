@@ -21,6 +21,8 @@
 # xterm stuff
 # xterm.exe.stackdump
 
+SlickDb.conf
+
 /src/main/resources/investigate/
 
 # terraform stuff
