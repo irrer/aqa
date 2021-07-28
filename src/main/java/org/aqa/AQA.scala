@@ -71,7 +71,7 @@ object AQA extends Logging {
   }
 
   /**
-   * Initiate the restarting of the service.  This service is configured to be restarted
+   * Initiate the restarting of the service. This service is configured to be restarted
    * (using YAJSW) to restart if it exits with status 1.
    */
   def initiateServiceRestart: Unit = {
