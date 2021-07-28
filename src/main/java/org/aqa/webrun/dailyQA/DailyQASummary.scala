@@ -31,7 +31,7 @@ import org.restlet.data.Status
 
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.concurrent.Semaphore
+import scala.annotation.tailrec
 import scala.xml.Elem
 
 /**
@@ -44,6 +44,13 @@ object DailyQASummary {
 
   val dateFormat = new SimpleDateFormat("EEE MMM dd")
   val timeFormat = new SimpleDateFormat("H:mm a")
+
+  private val maxWaitTime_ms = 5 * 1000
+
+  private var inProgress = false
+
+  private def setInProgress(state: Boolean): Unit = inProgress.synchronized { inProgress = state }
+  private def getInProgress: Boolean = inProgress.synchronized { inProgress }
 }
 
 class DailyQASummary extends Restlet with SubUrlRoot with Logging {
@@ -202,16 +209,8 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
     list
   }
 
-  // private val showLock = ""
-  private val showLock = new Semaphore(1)
-
-  private val showLockMaxWaitTime_ms = 5 * 1000
-
   private def show(response: Response, valueMap: ValueMapT): Unit = {
-    Trace.trace()
-    showLock.tryAcquire(showLockMaxWaitTime_ms, java.util.concurrent.TimeUnit.MILLISECONDS)
 
-    //showLock.synchronized {
     Trace.trace()
     val user = getUser(valueMap)
     Trace.trace()
@@ -221,28 +220,45 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
       Trace.trace()
       val date = Util.parseDate(dateField.dateFormat, getDateText(valueMap))
       Trace.trace()
-      val cachedResult = DailyQAActivity.getCache(institutionPK, date)
-      Trace.trace()
-      if (cachedResult.isDefined) {
-        setResponse(cachedResult.get, response, Status.SUCCESS_OK)
-      } else {
-        logger.info("re-creating Daily QA Summary and will put it in cache")
-        formCreate().setFormResponse(valueMap, styleNone, DailyQASummary.pageTitle, response, Status.SUCCESS_OK)
-        logger.info("Daily QA Summary has been re-created.")
-        Util.garbageCollect()
-        val text = response.getEntityAsText
-        DailyQAActivity.putCache(institutionPK, date, text)
+
+      /**
+        * Recreate a set of daily qa results.
+        */
+      def recreate(): Unit = {
+        DailyQASummary.setInProgress(true)
+        try {
+          logger.info("re-creating Daily QA Summary and will put it in cache.  Date: " + date)
+          formCreate().setFormResponse(valueMap, styleNone, DailyQASummary.pageTitle, response, Status.SUCCESS_OK)
+          logger.info("Daily QA Summary has been re-created.")
+          Util.garbageCollect()
+          val text = response.getEntityAsText
+          DailyQAActivity.putCache(institutionPK, date, text)
+        } catch {
+          case t: Throwable => logger.warn("Unexpected exception " + fmtEx(t))
+        }
+        DailyQASummary.setInProgress(false)
       }
+
+      // try to get results from cache for this long, then give up and create them.
+      val timeout = System.currentTimeMillis() + DailyQASummary.maxWaitTime_ms
+      @tailrec
+      def get(): Unit = {
+        val cachedResult = DailyQAActivity.getCache(institutionPK, date)
+        if (cachedResult.isDefined) {
+          setResponse(cachedResult.get, response, Status.SUCCESS_OK)
+        } else {
+          if (DailyQASummary.getInProgress && (System.currentTimeMillis() < timeout)) {
+            Thread.sleep(500)
+            get()
+          } else
+            recreate()
+        }
+      }
+      get()
     } else {
       setResponse("You are not authorized to view this page.", response, Status.CLIENT_ERROR_UNAUTHORIZED)
     }
-    //}
-    try {
-      showLock.release(1)
-    } catch {
-      case t: Throwable =>
-        logger.warn("unexpected exception releasing lock: " + fmtEx(t))
-    }
+
     Trace.trace()
   }
 
