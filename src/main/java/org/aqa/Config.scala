@@ -41,7 +41,7 @@ import scala.xml.Node
 import scala.xml.XML
 
 /**
- * This class extracts configuration information from the configuration file.  Refer
+ * This class extracts configuration information from the configuration file.  Refe
  * to <code>Config.configFileName</code> for details indicating what the different
  * configuration values are used for.
  */
@@ -410,9 +410,19 @@ object Config extends Logging {
     milliseconds
   }
 
-  private def getSlickDb = {
+  private def getSlickDb: Config = {
     val name = "SlickDb"
-    val configText = getMainText(name)
+    val configText = {
+      val text = getMainText(name)
+      if (text.contains("{")) {
+        logger.warn("Should remove slick configuration from config file.")
+        text
+      }
+      else {
+        val t = Util.readTextFile(new File(text)).right.get
+        t
+      }
+    }
     logger.info("Constructing database config")
     val dbConfig = ConfigFactory.parseString(configText)
     logger.info("Constructed database config")

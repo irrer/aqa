@@ -4,23 +4,8 @@
 Note that when building a package for release, the Maven build process uses the AQAConfigProd.xml file. -->
 
 <AQAConfig>
-    <!-- Database parameters. -->
-    <SlickDb>
-        db {
-          default = {
-            driver = "org.postgresql.Driver"
-            db {
-              host = 141.214.125.209
-              port = 5432
-              databaseName = AQATest
-              user = postgres
-              password = 
-              url =
-              "jdbc:postgresql://141.214.125.209:5432/AQATest"
-            }
-          }
-        }
-    </SlickDb>
+    <!-- Database configuration file name. -->
+    <SlickDb>SlickDb.conf</SlickDb>
 
     <!--
     Note that with SqlServer, Slick emits this error on startup:
