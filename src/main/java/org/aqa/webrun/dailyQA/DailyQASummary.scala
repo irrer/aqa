@@ -224,40 +224,24 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
       val cachedResult = DailyQAActivity.getCache(institutionPK, date)
       Trace.trace()
       if (cachedResult.isDefined) {
-        Trace.trace()
-        logger.info("got Daily QA Summary from cache")
-        Trace.trace()
         setResponse(cachedResult.get, response, Status.SUCCESS_OK)
-        Trace.trace()
       } else {
-        Trace.trace()
         logger.info("re-creating Daily QA Summary and will put it in cache")
-        Trace.trace()
         formCreate().setFormResponse(valueMap, styleNone, DailyQASummary.pageTitle, response, Status.SUCCESS_OK)
-        Trace.trace()
         logger.info("Daily QA Summary has been re-created.")
-        Trace.trace()
         Util.garbageCollect()
-        Trace.trace()
         val text = response.getEntityAsText
-        Trace.trace()
         DailyQAActivity.putCache(institutionPK, date, text)
-        Trace.trace()
       }
     } else {
-      Trace.trace()
       setResponse("You are not authorized to view this page.", response, Status.CLIENT_ERROR_UNAUTHORIZED)
-      Trace.trace()
     }
     //}
-    Trace.trace()
     try {
-      Trace.trace()
       showLock.release(1)
-      Trace.trace()
     } catch {
-      case _: Throwable =>
-        Trace.trace()
+      case t: Throwable =>
+        logger.warn("unexpected exception releasing lock: " + fmtEx(t))
     }
     Trace.trace()
   }
