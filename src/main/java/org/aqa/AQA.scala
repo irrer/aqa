@@ -53,7 +53,7 @@ object AQA extends Logging {
         logger.error("Could not validate configuration")
     } catch {
       // Exceptions thrown to this level should not happen, and if they do it probably means that something
-      // very unexpected has happened.
+      // unexpected has happened.
       //
       // If there is a problem, catch and log the error, delay, and then exit with a failed status.  The
       // failed status will tell the service wrapper to restart the service.  The delay is there in the
