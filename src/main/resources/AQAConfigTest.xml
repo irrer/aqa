@@ -8,7 +8,7 @@
     <PropertyList>
         <Property Name='slick.dbs.default.db.url'>jdbc:postgresql://aqatest.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA?sslmode=require</Property>
         <Property Name='slick.dbs.default.db.user'>aqa</Property>
-        <Property Name='slick.dbs.default.db.password'>Kwalitee_1</Property>
+        <Property Name='slick.dbs.default.db.password'></Property>
 
         <Property Name='slick.dbs.default.driver'>slick.driver.PostgresDriver$</Property>
         <Property Name='slick.dbs.default.db.driver'>org.postgresql.Driver</Property>

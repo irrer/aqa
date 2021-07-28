@@ -21,7 +21,7 @@ Note that when building a package for release, the Maven build process uses the 
               port = 1433
               databaseName = AQAmsDV
               user = 'UMHS/irrer'
-              password = 45eetslp
+              password = 
               url = "jdbc:sqlserver://ntsrodbsdv1.umhs.med.umich.edu:1433/AQAmsDV"
               integratedSecurity = true
             }

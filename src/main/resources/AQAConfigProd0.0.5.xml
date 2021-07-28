@@ -16,7 +16,7 @@
     <SlickDbsDefaultDbUrl HostIp='141.214.125.209'>jdbc:postgresql://141.214.125.209:5432/AQATest</SlickDbsDefaultDbUrl>
     <SlickDbsDefaultDbUrl>jdbc:postgresql://aqatest.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA?sslmode=require</SlickDbsDefaultDbUrl>
     <SlickDbsDefaultDbUser>aqa</SlickDbsDefaultDbUser>
-    <SlickDbsDefaultDbPassword>Kwalitee_1</SlickDbsDefaultDbPassword>
+    <SlickDbsDefaultDbPassword></SlickDbsDefaultDbPassword>
     <SlickDbsDefaultDriver>slick.driver.PostgresDriver$</SlickDbsDefaultDriver>
     <SlickDbsDefaultDbDriver>org.postgresql.Driver</SlickDbsDefaultDbDriver>
     

@@ -22,7 +22,7 @@
               port = 5432
               databaseName = AQA
               user = aqa
-              password = Kwalitee_1
+              password = 
               url = "jdbc:postgresql://aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com:5432/AQA?sslmode=require"
               sslmode = require
             }
