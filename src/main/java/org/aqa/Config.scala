@@ -48,7 +48,7 @@ import scala.xml.XML
 object Config extends Logging {
 
   private val configFileName = "AQAConfig.xml"
-  private val DEFAULT_RESTART_TIME = "1:20"
+  private val DEFAULT_RESTART_TIME = "1:15"
 
   logger.info("Starting configuration.  File name: " + configFileName)
 
