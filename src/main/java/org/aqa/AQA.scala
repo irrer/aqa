@@ -70,6 +70,10 @@ object AQA extends Logging {
     }
   }
 
+  /**
+   * Initiate the restarting of the service.  This service is configured to be restarted
+   * (using YAJSW) to restart if it exits with status 1.
+   */
   def initiateServiceRestart: Unit = {
     class InitiateServiceRestart extends Runnable {
       private val delay: Int = 4 * 1000 // wait long enough for web client to receive a response
