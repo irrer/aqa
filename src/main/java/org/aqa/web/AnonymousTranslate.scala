@@ -19,6 +19,7 @@ package org.aqa.web
 import com.pixelmed.dicom.TagFromName
 import org.aqa.AnonymizeUtil
 import org.aqa.Logging
+import org.aqa.db.CachedUser
 import org.aqa.db.DicomAnonymous
 import org.aqa.db.Institution
 import org.aqa.db.Machine
@@ -62,42 +63,71 @@ object AnonymousTranslate {
   }
 
   /** Cache entries older than this are considered stale. */
-  private val cacheTimeout_ms: Int = 2 * 60 * 1000
+  private val cacheTimeout_ms: Int = 5 * 60 * 1000
 
-  private case class TranslateCache(userId: String, date: Date, content: String) {
+  private val whiteListedUser: Long = -1
+  private val unknownUser: Long = -2
+
+  private def institutionPKofUser(userId: String): Long = {
+    if (userIsWhitelisted(userId))
+      whiteListedUser
+    else {
+      val user = CachedUser.get(userId)
+      if (user.isDefined)
+        user.get.institutionPK
+      else unknownUser
+    }
+  }
+
+  private case class TranslateCache(institutionPK: Long, date: Date, content: String) {
     def isValid: Boolean = {
       val timeout = date.getTime + cacheTimeout_ms
       timeout > System.currentTimeMillis()
     }
   }
 
-  private val cache = scala.collection.mutable.Map[String, TranslateCache]()
+  private val cache = scala.collection.mutable.Map[Long, TranslateCache]()
+
+  /**
+    * If there in an entry in the cache corresponding to the given user, then remove it.
+    *
+    * @param userId Real ID of user.
+    */
+  private def clearCache(userId: String): Unit = {
+    val institutionPK = institutionPKofUser(userId)
+    cache.synchronized {
+      if (cache.contains(institutionPK))
+        cache.remove(institutionPK)
+    }
+  }
 
   /**
     * Put an entry in the cache.
     * @param userId Real user id.
     * @param content json content
     */
-  private def putToCache(userId: String, content: String): Unit =
+  private def putToCache(userId: String, content: String): Unit = {
+    val institutionPK = institutionPKofUser(userId)
     cache.synchronized {
-      cache.put(userId, TranslateCache(userId, new Date, content))
+      cache.put(institutionPK, TranslateCache(institutionPK, new Date, content))
     }
+  }
 
   /**
     * Attempt to get the content from cache.  It must be json and it must not be stale.
     * @param isHtml True if the user is asking for the content as HTML (not json)
-    * @param user Real id of user.
+    * @param userId Real id of user.
     * @param response HTML response.  Put content here if it is found in the cache.
     * @return
     */
-  private def getFromCache(isHtml: Boolean, user: String, response: Response): Boolean =
+  private def getFromCache(isHtml: Boolean, userId: String, response: Response): Boolean =
     cache.synchronized {
 
       @tailrec
       def clean(): Unit = {
         val expired = cache.values.find(tc => !tc.isValid)
         if (expired.isDefined) {
-          cache.remove(expired.get.userId)
+          cache.remove(expired.get.institutionPK)
           clean()
         }
       }
@@ -105,7 +135,8 @@ object AnonymousTranslate {
       clean()
 
       if (!isHtml) {
-        val tc = cache.get(user)
+        val institutionPK = institutionPKofUser(userId)
+        val tc = cache.get(institutionPK)
         if (tc.isDefined) {
           response.setEntity(tc.get.content, MediaType.TEXT_HTML)
           response.setStatus(Status.SUCCESS_OK)
@@ -207,6 +238,7 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
   }
 
   private def putHtml(list: Seq[Translate], userId: String, response: Response): Unit = {
+    AnonymousTranslate.clearCache(userId)
     val content = {
       <div class="row col-md-10 col-md-offset-1">
         <h2>List of Aliases and Values Viewable by User <i>{userId}</i></h2>
