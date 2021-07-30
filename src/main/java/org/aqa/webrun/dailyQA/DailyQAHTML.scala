@@ -411,7 +411,7 @@ object DailyQAHTML extends Logging {
                 "Click to view details of CBCT.  Not finding the BB is usually the result " + titleNewline +
                   "of the phantom being grossly mis-aligned, failure to use the fan filter, or" + titleNewline +
                   "incorrect table height/position." + titleNewline + titleNewline +
-                  "The data from this scan can not be used, and the CBCT scan must" + titleNewline +
+                  "The data from this scan can not be used, and the CBCT must" + titleNewline +
                   "be re-done."
               }
               <p>
@@ -570,7 +570,7 @@ object DailyQAHTML extends Logging {
             showNoData
 
           case _ if oneRunningCbct && inProgress =>
-            showInProgress("The CBCT scan is being analyzed.")
+            showInProgress("The CBCT is being analyzed.")
 
           case _ if onePassedCbct && inProgress =>
             showInProgress("The CBCT analysis has finished.")
@@ -579,40 +579,40 @@ object DailyQAHTML extends Logging {
             showInProgress("The CBCT did not yet finished.")
 
           case _ if haveCbct && oneFailedCbct =>
-            showFail("The CBCT scan failed.", pleasePage = true)
+            showFail("The CBCT failed.", pleasePage = true)
 
           case _ if haveCbct && allEpidSeqWithErrors.isEmpty && inProgress =>
-            showInProgress("There is a CBCT scan but no EPID results.  An EPID scan is recommended.")
+            showInProgress("There is a CBCT but no EPID results.  Acquiring an EPID is recommended.")
 
           case _ if haveCbct && allEpidSeqWithErrors.isEmpty =>
-            showFail("There is a CBCT scan but no EPID results.  An EPID scan is recommended.")
+            showFail("There is a CBCT but no EPID results.  Acquiring an EPID is recommended.")
 
           case _ if haveCbct && machineEpidResultsWithErrors.nonEmpty && inProgress =>
-            showInProgress("There is a CBCT scan but EPID results failed.")
+            showInProgress("There is a CBCT but the EPID failed.")
 
           case _ if haveCbct && machineEpidResultsWithErrors.nonEmpty =>
-            showFail("There is a CBCT scan but EPID results failed.", pleasePage = true)
+            showFail("There is a CBCT but the EPID results failed.", pleasePage = true)
 
           case _ if haveCbct && machineEpidResultsWithoutErrors.isEmpty =>
-            showWarn("There is a CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
+            showWarn("There is a CBCT but no EPID images.  Acquiring an EPID is recommended.")
 
           case _ if haveCbct && machineEpidResultsWithoutErrors.isEmpty =>
-            showWarn("There is a CBCT scan but no EPID scans.  It is recommended that an EPID scan be performed.")
+            showWarn("There is a CBCT but no EPID images.  Acquiring an EPID is recommended.")
 
           case _ if machineCbctResults.nonEmpty && machineEpidResultsWithoutErrors.isEmpty =>
-            showWarn("There are " + machineCbctResults.size + " CBCT scans but no EPID scans.  It is recommended that an EPID scan be performed.")
+            showWarn("There are " + machineCbctResults.size + " CBCT slices but no EPID images.  Acquiring an EPID is recommended.")
 
           case _ if machineCbctResults.isEmpty && epidOutput.nonEmpty =>
-            showFail("There is one or more EPID scans but no CBCT scans.", pleasePage = true)
+            showFail("There is one or more EPID sets of images but no CBCT images.", pleasePage = true)
 
           case _ if machineCbctResults.isEmpty && machineEpidResultsWithoutErrors.nonEmpty =>
-            showFail("There are " + epidOutput.size + " EPID scans but no successful CBCT scans.", pleasePage = true)
+            showFail("There are " + epidOutput.size + " EPID sets but no successful CBCT images.", pleasePage = true)
 
           case _ if machineCbctResults.nonEmpty && machineEpidResultsWithoutErrors.isEmpty =>
-            showWarn("There are " + machineCbctResults.size + " CBCT scans but zero EPID scans.  The EPID scan needs to be done.")
+            showWarn("There are " + machineCbctResults.size + " CBCT image sets but zero EPID image sets.  Acquiring an EPID is recommended.")
 
           case _ if epidBeforeCbct =>
-            showFail("The EPID scan was done prior to CBCT.  The CBCT needs to be done first.")
+            showFail("The EPID acquisition was done prior to CBCT.  The CBCT needs to be done first.")
 
           case _ =>
             showFail("There are no results for this machine.")
