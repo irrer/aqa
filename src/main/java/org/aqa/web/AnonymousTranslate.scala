@@ -111,19 +111,6 @@ object AnonymousTranslate {
   }
 
   /**
-    * If there in an entry in the cache corresponding to the given user, then remove it.
-    *
-    * @param userId Real ID of user.
-  private def expireCache(userId: String): Unit = {
-    val institutionPK = institutionPKofUser(userId)
-    cache.synchronized {
-      if (cache.contains(institutionPK))
-        cache.remove(institutionPK)
-    }
-  }
-    */
-
-  /**
     * Put an entry in the cache.
     * @param userId Real user id.
     * @param content json content

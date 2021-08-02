@@ -16,37 +16,37 @@
 
 package org.aqa.db
 
-import Db.driver.api._
-import org.aqa.Logging
-import org.aqa.Config
-import edu.umro.ScalaUtil.FileUtil
-
-import java.io.File
-import edu.umro.util.Utility
 import com.pixelmed.dicom.AttributeList
+import edu.umro.ScalaUtil.FileUtil
+import edu.umro.util.Utility
+import org.aqa.Config
+import org.aqa.Logging
 import org.aqa.Util
+import org.aqa.db.Db.driver.api._
 import org.aqa.web.AnonymousTranslate
 
+import java.io.File
+
 case class Machine(
-  machinePK: Option[Long], // primary key
-  id: String, // alias identifying name
-  id_real: Option[String], // real name uniquely identifying name within hosting institution
-  machineTypePK: Long, // type of machine foreign key
-  configurationDirectory: Option[String], // directory containing configuration files unique to this machine
-  multileafCollimatorPK: Long, // collimator
-  epidPK: Long, // EPID
-  institutionPK: Long, // institution that this machine belongs to
-  serialNumber: Option[String], // encrypted version of the machine's serial number.  Becomes defined when a user associates data with it via the web interface.
-  imagingBeam2_5_mv: Boolean, // True if this is supported.  Defaults to false.
-  onboardImager: Boolean, // True if this is supported.  Defaults to false.
-  table6DOF: Boolean, // True if (six degrees of freedom table) is supported.  Defaults to false.
-  respiratoryManagement: Boolean, // True if this is supported.  Defaults to false.
-  developerMode: Boolean, // True if this is supported.  Defaults to false.
-  active: Boolean, // True if the machine is actively being used.  Defaults to true.  Setting to false may exclude this machine's data from some reports.
-  notes: String // optional further information
+    machinePK: Option[Long], // primary key
+    id: String, // alias identifying name
+    id_real: Option[String], // real name uniquely identifying name within hosting institution
+    machineTypePK: Long, // type of machine foreign key
+    configurationDirectory: Option[String], // directory containing configuration files unique to this machine
+    multileafCollimatorPK: Long, // collimator
+    epidPK: Long, // EPID
+    institutionPK: Long, // institution that this machine belongs to
+    serialNumber: Option[String], // encrypted version of the machine's serial number.  Becomes defined when a user associates data with it via the web interface.
+    imagingBeam2_5_mv: Boolean, // True if this is supported.  Defaults to false.
+    onboardImager: Boolean, // True if this is supported.  Defaults to false.
+    table6DOF: Boolean, // True if (six degrees of freedom table) is supported.  Defaults to false.
+    respiratoryManagement: Boolean, // True if this is supported.  Defaults to false.
+    developerMode: Boolean, // True if this is supported.  Defaults to false.
+    active: Boolean, // True if the machine is actively being used.  Defaults to true.  Setting to false may exclude this machine's data from some reports.
+    notes: String // optional further information
 ) {
 
-  def insert = {
+  def insert: Machine = {
     val insertQuery = Machine.query returning Machine.query.map(_.machinePK) into ((machine, machinePK) => machine.copy(machinePK = Some(machinePK)))
     val action = insertQuery += this
     val result = Db.run(action)
@@ -54,17 +54,17 @@ case class Machine(
     result
   }
 
-  def insertOrUpdate = {
+  def insertOrUpdate(): Int = {
     val count = Db.run(Machine.query.insertOrUpdate(this))
     AnonymousTranslate.clearCache(institutionPK)
     count
   }
 
-  def fileName = Machine.fileName(id)
+  def fileName: String = Machine.fileName(id)
 
   def configDir: Option[File] = if (configurationDirectory.isDefined) Some(Machine.getConfigDir(configurationDirectory.get)) else None
 
-  override def toString = {
+  override def toString: String = {
     def fmt(text: String) = text.take(8) + "..."
     def fmtB(boo: Boolean) = boo.toString.subSequence(0, 1)
     "machinePK: " + (if (machinePK.isDefined) machinePK.get else "None") +
@@ -108,26 +108,33 @@ object Machine extends Logging {
     def developerMode = column[Boolean]("developerMode")
     def active = column[Boolean]("active")
 
-    def * = (
-      machinePK.?,
-      id,
-      id_real,
-      machineTypePK,
-      configurationDirectory,
-      multileafCollimatorPK,
-      epidPK,
-      institutionPK,
-      serialNumber,
-      imagingBeam2_5_mv,
-      onboardImager,
-      table6DOF,
-      respiratoryManagement,
-      developerMode,
-      active,
-      notes) <> ((Machine.apply _)tupled, Machine.unapply _)
+    def * =
+      (
+        machinePK.?,
+        id,
+        id_real,
+        machineTypePK,
+        configurationDirectory,
+        multileafCollimatorPK,
+        epidPK,
+        institutionPK,
+        serialNumber,
+
+        onboardImager,
+        table6DOF,
+        respiratoryManagement,
+        developerMode,
+        active,
+        notes
+      ) <> (Machine.apply _ tupled, Machine.unapply _)
 
     def machineTypeFK = foreignKey("Machine_machineTypePKConstraint", machineTypePK, MachineType.query)(_.machineTypePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
-    def multileafCollimatorFK = foreignKey("Machine_multileafCollimatorPKConstraint", multileafCollimatorPK, MultileafCollimator.query)(_.multileafCollimatorPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
+    def multileafCollimatorFK =
+      foreignKey("Machine_multileafCollimatorPKConstraint", multileafCollimatorPK, MultileafCollimator.query)(
+        _.multileafCollimatorPK,
+        onDelete = ForeignKeyAction.Restrict,
+        onUpdate = ForeignKeyAction.Cascade
+      )
     def epidFK = foreignKey("Machine_epidPKConstraint", epidPK, EPID.query)(_.epidPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
     def institutionFK = foreignKey("Machine_institutionPKConstraint", institutionPK, Institution.query)(_.institutionPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -143,9 +150,9 @@ object Machine extends Logging {
   def getConfigDir(configurationDirectory: String) = new File(machConfigBaseDir, configurationDirectory)
 
   /**
-   * Build a name and use it to create a new configuration directory for the given machine.  The name
-   * is made of institution + machine id + serial number
-   */
+    * Build a name and use it to create a new configuration directory for the given machine.  The name
+    * is made of institution + machine id + serial number
+    */
   private def initConfigDir(machine: Machine, serialNumber: String): String = {
     val instName = Institution.get(machine.institutionPK).get.name.trim
     val rawName = (instName + "_" + machine.id + "_" + serialNumber).replace(' ', '_')
@@ -155,17 +162,17 @@ object Machine extends Logging {
     name
   }
 
-  private def deleteConfigDir(machine: Machine) = {
+  private def deleteConfigDir(machine: Machine): Unit = {
     machine.configDir match {
       case Some(dir) => Utility.deleteFileTree(dir)
-      case _ =>
+      case _         =>
     }
   }
 
   /**
-   * Set the serial number for the machine and create the corresponding configuration directory.  Also put the
-   *  configuration directory name in the machine's database entry.  Return true on success.
-   */
+    * Set the serial number for the machine and create the corresponding configuration directory.  Also put the
+    *  configuration directory name in the machine's database entry.  Return true on success.
+    */
   def setSerialNumber(machPK: Long, sr: String): Boolean = {
     try {
       val machine = Machine.get(machPK).get
@@ -176,10 +183,9 @@ object Machine extends Logging {
         case _ => false
       }
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         logger.warn("Unable to make machine configuration dir for machinePK " + machPK + " : " + fmtEx(t))
         false
-      }
     }
   }
 
@@ -192,18 +198,18 @@ object Machine extends Logging {
   }
 
   /**
-   * Get a list of all machines.
-   */
+    * Get a list of all machines.
+    */
   def list: Seq[Machine] = Db.run(query.result)
 
   /** Dependent types */
   case class MMI(machine: Machine, machineType: MachineType, institution: Institution, mlc: MultileafCollimator, epid: EPID)
 
   /**
-   * Get machine related info.
-   *
-   * @param instPK: If defined, only get machines from this institution, otherwise get from all institutions.
-   */
+    * Get machine related info.
+    *
+    * @param instPK: If defined, only get machines from this institution, otherwise get from all institutions.
+    */
   def listWithDependencies(instPK: Option[Long]): Seq[MMI] = {
 
     val action = for {
@@ -219,7 +225,7 @@ object Machine extends Logging {
       else action
     }
 
-    Db.run(filtered.result).map(mmi => new MMI(mmi._1, mmi._2, mmi._3, mmi._4, mmi._5))
+    Db.run(filtered.result).map(mmi => MMI(mmi._1, mmi._2, mmi._3, mmi._4, mmi._5))
   }
 
   def listMachinesFromInstitution(institutionPK: Long): Seq[Machine] = {
@@ -242,8 +248,8 @@ object Machine extends Logging {
   }
 
   /**
-   * Delete the machine from the database.  If that is successful, then also delete its configuration directory.
-   */
+    * Delete the machine from the database.  If that is successful, then also delete its configuration directory.
+    */
   def delete(machinePK: Long): Int = {
     val machine = get(machinePK)
     if (machine.isDefined) {
@@ -257,21 +263,21 @@ object Machine extends Logging {
   }
 
   /**
-   * Given an attribute list, determine which machines' DICOM files match according to DeviceSerialNumber.
-   */
+    * Given an attribute list, determine which machines' DICOM files match according to DeviceSerialNumber.
+    */
   def attributeListToMachine(attributeList: AttributeList): Option[Machine] = {
     try {
       Util.attributeListToDeviceSerialNumber(attributeList) match {
         case Some(serNo) => Machine.findMachinesBySerialNumber(serNo).headOption
-        case _ => None
+        case _           => None
       }
     } catch {
-      case t: Throwable =>
+      case _: Throwable =>
         None
     }
   }
   def main(args: Array[String]): Unit = {
-    val valid = Config.validate
+    Config.validate
     DbSetup.init
     println("======== machine: " + get(5))
     //println("======== machine delete: " + delete(5))

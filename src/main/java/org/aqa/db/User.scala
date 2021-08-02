@@ -16,28 +16,26 @@
 
 package org.aqa.db
 
-import Db.driver.api._
-import org.aqa.Logging
-import org.aqa.Config
-import org.aqa.Util
-import org.aqa.web.AuthenticationVerifier
-
-import java.sql.Timestamp
-import org.aqa.Crypto
 import org.aqa.AnonymizeUtil
+import org.aqa.Config
+import org.aqa.Crypto
+import org.aqa.Logging
+import org.aqa.db.Db.driver.api._
 import org.aqa.web.AnonymousTranslate
 
+import java.sql.Timestamp
+
 case class User(
-  userPK: Option[Long], // primary key
-  id: String, // alias login name
-  id_real: Option[String], // alias login name, encrypted
-  fullName_real: String, // full name, as in 'Louis Pasteur', encrypted
-  email_real: String, // email for contacting, encrypted
-  institutionPK: Long, // institution that this user belongs to
-  hashedPassword: String, // cryptographically hashed password
-  passwordSalt: String, // salt used for hashing password
-  role: String, // user role which defines authorization
-  termsOfUseAcknowledgment: Option[Timestamp] // time at which user agreed to the legal terms of the service, or 'None' if they never did.
+    userPK: Option[Long], // primary key
+    id: String, // alias login name
+    id_real: Option[String], // alias login name, encrypted
+    fullName_real: String, // full name, as in 'Louis Pasteur', encrypted
+    email_real: String, // email for contacting, encrypted
+    institutionPK: Long, // institution that this user belongs to
+    hashedPassword: String, // cryptographically hashed password
+    passwordSalt: String, // salt used for hashing password
+    role: String, // user role which defines authorization
+    termsOfUseAcknowledgment: Option[Timestamp] // time at which user agreed to the legal terms of the service, or 'None' if they never did.
 ) {
 
   def insert: User = {
@@ -48,23 +46,23 @@ case class User(
     result
   }
 
-  def insertOrUpdate = {
+  def insertOrUpdate(): Int = {
     val count = Db.run(User.query.insertOrUpdate(this))
     AnonymousTranslate.clearCache(institutionPK)
     count
   }
 
   /**
-   * Update the termsOfUseAcknowledgment, possibly to None.  Returns number of records updated, which
-   * should always be one.  If it is zero then it is probably because the object is not in the database.
-   */
-  def updateTermsOfUseAcknowledgment(timestamp: Option[Timestamp]) = {
-    Db.run(User.query.filter(_.userPK === userPK.get).map(u => (u.termsOfUseAcknowledgment)).update((timestamp)))
+    * Update the termsOfUseAcknowledgment, possibly to None.  Returns number of records updated, which
+    * should always be one.  If it is zero then it is probably because the object is not in the database.
+    */
+  def updateTermsOfUseAcknowledgment(timestamp: Option[Timestamp]): Int = {
+    Db.run(User.query.filter(_.userPK === userPK.get).map(u => u.termsOfUseAcknowledgment).update(timestamp))
   }
 
-  def getRole = UserRole.stringToUserRole(role)
+  def getRole: Option[UserRole.Value] = UserRole.stringToUserRole(role)
 
-  override def toString = {
+  override def toString: String = {
     def fmt(text: String) = text.take(6) + "..."
     "userPK: " + (if (userPK.isDefined) userPK.get else "None") +
       "  id: " + id +
@@ -79,8 +77,8 @@ case class User(
   }
 
   /**
-   * Determine if this user is an admin for their respective institution
-   */
+    * Determine if this user is an admin for their respective institution
+    */
   def isAdmin: Boolean = {
     id_real.isDefined && AnonymizeUtil.decryptWithNonce(institutionPK, id_real.get).toLowerCase.contains(User.adminIndicator)
   }
@@ -103,17 +101,7 @@ object User extends Logging {
     def role = column[String]("role")
     def termsOfUseAcknowledgment = column[Option[Timestamp]]("termsOfUseAcknowledgment")
 
-    def * = (
-      userPK.?,
-      id,
-      id_real,
-      fullName_real,
-      email_real,
-      institutionPK,
-      hashedPassword,
-      passwordSalt,
-      role,
-      termsOfUseAcknowledgment) <> ((User.apply _)tupled, User.unapply _)
+    def * = (userPK.?, id, id_real, fullName_real, email_real, institutionPK, hashedPassword, passwordSalt, role, termsOfUseAcknowledgment) <> (User.apply _ tupled, User.unapply _)
 
     def institutionFK = foreignKey("User_institutionPKConstraint", institutionPK, Institution.query)(_.institutionPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -123,14 +111,14 @@ object User extends Logging {
   def get(userPK: Long): Option[User] = {
     val action = for {
       user <- query if user.userPK === userPK
-    } yield (user)
+    } yield user
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   /**
-   * Get the of user with the given id.  Comparison is case insensitive.
-   */
+    * Get the of user with the given id.  Comparison is case insensitive.
+    */
   def getUserById(idRaw: String): Option[User] = {
     val id = idRaw.trim.toLowerCase
     val action = query.filter(_.id.toLowerCase === id)
@@ -140,20 +128,20 @@ object User extends Logging {
   }
 
   /**
-   * Construct a user from parameters.
-   *
-   * @param institutionPK Institution PK
-   *
-   * @param id user id (not encrypted)
-   *
-   * @param fullName user's full name (not encrypted)
-   *
-   * @param email user's email (not encrypted)
-   *
-   * @param passwordText user's email (not encrypted)
-   *
-   * @param roleText User role (admin, guest, etc) as text
-   */
+    * Construct a user from parameters.
+    *
+    * @param institutionPK Institution PK
+    *
+    * @param id user id (not encrypted)
+    *
+    * @param fullName user's full name (not encrypted)
+    *
+    * @param email user's email (not encrypted)
+    *
+    * @param passwordText user's email (not encrypted)
+    *
+    * @param roleText User role (admin, guest, etc) as text
+    */
   def insertNewUser(institutionPK: Long, id: String, fullName: String, email: String, passwordText: String, roleText: String): User = {
     val passwordSalt = Crypto.randomSecureHash
     val hashedPassword = CachedUser.hashPassword(passwordText, passwordSalt)
@@ -164,7 +152,7 @@ object User extends Logging {
     val tmpUser = new User(None, "unknown", Some(id_realText), fullName_realText, email_realText, institutionPK, hashedPassword, passwordSalt, roleText, None)
     val userWithPk = tmpUser.insert
     val aliasId = AnonymizeUtil.aliasify(AnonymizeUtil.userAliasPrefixId, userWithPk.userPK.get)
-    userWithPk.copy(id = aliasId).insertOrUpdate
+    userWithPk.copy(id = aliasId).insertOrUpdate()
     val finalUser = User.get(userWithPk.userPK.get).get
     finalUser
   }
@@ -178,13 +166,13 @@ object User extends Logging {
   /** List all users. */
   def list: List[User] = Db.run(query.result).toList
 
-  case class UserInstitution(user: User, institution: Institution);
+  case class UserInstitution(user: User, institution: Institution) {}
 
   /**
-   * Get a list of all users with institution.
-   *
-   * @param instPK: If defined, get only from this institution, otherwise get all.
-   */
+    * Get a list of all users with institution.
+    *
+    * @param instPK: If defined, get only from this institution, otherwise get all.
+    */
   def listWithDependencies(instPK: Option[Long]): Seq[UserInstitution] = {
     val action = for {
       user <- query
@@ -197,7 +185,7 @@ object User extends Logging {
       } else action
     }
 
-    Db.run(filtered.result).map(ui => new UserInstitution(ui._1, ui._2))
+    Db.run(filtered.result).map(ui => UserInstitution(ui._1, ui._2))
   }
 
   def delete(userPK: Long): Int = {
@@ -215,53 +203,52 @@ object User extends Logging {
   }
 
   /**
-   * Get the number of users that belong to the given institution.
-   */
+    * Get the number of users that belong to the given institution.
+    */
   def numberOfUsersInInstitution(institutionPK: Long): Int = {
     val action = query.filter(_.institutionPK === institutionPK).length
     Db.run(action.result)
   }
 
   /**
-   * Get the admin for the given institution if there is one.
-   */
+    * Get the admin for the given institution if there is one.
+    */
   def getInstitutionAdminUser(institutionPK: Long): Option[User] = {
-    listUsersFromInstitution(institutionPK).filter(_.isAdmin).headOption
+    listUsersFromInstitution(institutionPK).find(_.isAdmin)
   }
 
   /**
-   * Make (and insert) admin user for given institution if there is not one already.
-   *
-   * If there is already a user in the institution, then their email is used, otherwise a fake one is made with "@unknown.edu".
-   *
-   * A random password is created.
-   *
-   * The user is created as an admin.
-   */
+    * Make (and insert) admin user for given institution if there is not one already.
+    *
+    * If there is already a user in the institution, then their email is used, otherwise a fake one is made with "@unknown.edu".
+    *
+    * A random password is created.
+    *
+    * The user is created as an admin.
+    */
   def getOrMakeInstitutionAdminUser(institutionPK: Long): User = {
     getInstitutionAdminUser(institutionPK) match {
       case Some(user) => user // there already is one.
-      case _ => {
+      case _ =>
         def decrypt(text: String) = AnonymizeUtil.decryptWithNonce(institutionPK, text)
-        def encrypt(text: String) = AnonymizeUtil.encryptWithNonce(institutionPK, text)
+
         val institutionName = decrypt(Institution.get(institutionPK).get.name_real.get)
-        val adminId = adminIndicator + (institutionName.trim.replaceAll("[^0-9a-zA-Z]", "_")) // make an id
+        val adminId = adminIndicator + institutionName.trim.replaceAll("[^0-9a-zA-Z]", "_") // make an id
         val email = {
           listUsersFromInstitution(institutionPK).headOption match {
             case Some(u) => AnonymizeUtil.decryptWithNonce(institutionPK, u.email_real)
-            case _ => adminId + "@unknown.edu"
+            case _       => adminId + "@unknown.edu"
           }
         }
 
         val passwordText = Crypto.makeRandomCipherKey.take(32)
 
         insertNewUser(institutionPK, adminId, adminId, email, passwordText, UserRole.admin.toString)
-      }
     }
   }
 
   def main(args: Array[String]): Unit = {
-    val valid = Config.validate
+    Config.validate
     DbSetup.init
     //    println("======== usingInstitution(1): " + numberOfUsersInInstitution(1))
     //    println("======== usingInstitution(5): " + numberOfUsersInInstitution(5))
