@@ -24,6 +24,8 @@ import org.aqa.db.DicomAnonymous
 import org.aqa.db.Institution
 import org.aqa.db.Machine
 import org.aqa.db.User
+import org.aqa.web.AnonymousTranslate.clearCache
+import org.aqa.web.AnonymousTranslate.institutionPKofUser
 import org.aqa.web.WebUtil._
 import org.restlet.Request
 import org.restlet.Response
@@ -63,19 +65,19 @@ object AnonymousTranslate {
   }
 
   /** Cache entries older than this are considered stale. */
-  private val cacheTimeout_ms: Int = 5 * 60 * 1000
+  private val cacheTimeout_ms: Int = 60 * 60 * 1000
 
-  private val whiteListedUser: Long = -1
-  private val unknownUser: Long = -2
+  private val whiteListedInstitution: Long = -1
+  private val unknownInstitution: Long = -2
 
   private def institutionPKofUser(userId: String): Long = {
     if (userIsWhitelisted(userId))
-      whiteListedUser
+      whiteListedInstitution
     else {
       val user = CachedUser.get(userId)
       if (user.isDefined)
         user.get.institutionPK
-      else unknownUser
+      else unknownInstitution
     }
   }
 
@@ -89,17 +91,37 @@ object AnonymousTranslate {
   private val cache = scala.collection.mutable.Map[Long, TranslateCache]()
 
   /**
+    * If there in an entry in the cache corresponding to the given institution, then
+    * remove it.  This is called from external functions that are informing the cache
+    * that content has changed (such as a machine id changed) which makes the cache
+    * invalid.
+    *
+    * Also clear the whitelisted cache because it has also become invalid.
+    *
+    * @param institutionPK The institution whose content has changed.
+    */
+  def clearCache(institutionPK: Long): Unit = {
+    cache.synchronized {
+      if (cache.contains(institutionPK)) {
+        cache.remove(institutionPK)
+        if (cache.contains(whiteListedInstitution))
+          cache.remove(whiteListedInstitution)
+      }
+    }
+  }
+
+  /**
     * If there in an entry in the cache corresponding to the given user, then remove it.
     *
     * @param userId Real ID of user.
-    */
-  private def clearCache(userId: String): Unit = {
+  private def expireCache(userId: String): Unit = {
     val institutionPK = institutionPKofUser(userId)
     cache.synchronized {
       if (cache.contains(institutionPK))
         cache.remove(institutionPK)
     }
   }
+    */
 
   /**
     * Put an entry in the cache.
@@ -238,7 +260,7 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
   }
 
   private def putHtml(list: Seq[Translate], userId: String, response: Response): Unit = {
-    AnonymousTranslate.clearCache(userId)
+    // AnonymousTranslate.expireCache(userId)
     val content = {
       <div class="row col-md-10 col-md-offset-1">
         <h2>List of Aliases and Values Viewable by User <i>{userId}</i></h2>
@@ -257,6 +279,8 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
 
     val text = WebUtil.wrapBody(content, "Translation of Aliased Values")
 
+    // Clear the cache here as a way to give the user some control over its freshness.
+    clearCache(institutionPKofUser(userId))
     response.setEntity(text, MediaType.TEXT_HTML)
     response.setStatus(Status.SUCCESS_OK)
   }

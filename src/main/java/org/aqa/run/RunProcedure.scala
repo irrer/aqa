@@ -34,6 +34,7 @@ import org.aqa.db.Institution
 import org.aqa.db.Machine
 import org.aqa.db.Output
 import org.aqa.db.Procedure
+import org.aqa.web.AnonymousTranslate
 import org.aqa.web.OutputList
 import org.aqa.web.ViewOutput
 import org.aqa.web.WebRunIndex
@@ -388,6 +389,7 @@ object RunProcedure extends Logging {
       }
       // if any post processing is to be done, do it here
       runTrait.postRun(extendedData, runReq)
+      AnonymousTranslate.clearCache(extendedData.machine.institutionPK) // invalidate cached alias translation values in case anything was added or changed.
       Util.garbageCollect()
     }
 

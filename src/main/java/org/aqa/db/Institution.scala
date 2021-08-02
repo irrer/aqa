@@ -24,6 +24,7 @@ import org.aqa.Util
 import org.aqa.Crypto
 import org.aqa.AnonymizeUtil
 import edu.umro.ScalaUtil.Trace
+import org.aqa.web.AnonymousTranslate
 
 case class Institution(
   institutionPK: Option[Long], // primary key
@@ -37,10 +38,15 @@ case class Institution(
     val insertQuery = Institution.query returning Institution.query.map(_.institutionPK) into ((institution, institutionPK) => institution.copy(institutionPK = Some(institutionPK)))
     val action = insertQuery += this
     val result = Db.run(action)
+    if (institutionPK.isDefined) AnonymousTranslate.clearCache(institutionPK.get)
     result
   }
 
-  def insertOrUpdate = Db.run(Institution.query.insertOrUpdate(this))
+  def insertOrUpdate = {
+    val count = Db.run(Institution.query.insertOrUpdate(this))
+    if (institutionPK.isDefined) AnonymousTranslate.clearCache(institutionPK.get)
+    count
+  }
 
   def fileName = Institution.fileName(name)
 }
@@ -108,7 +114,9 @@ object Institution extends Logging {
   def delete(institutionPK: Long): Int = {
     val q = query.filter(_.institutionPK === institutionPK)
     val action = q.delete
-    Db.run(action)
+    val count = Db.run(action)
+    AnonymousTranslate.clearCache(institutionPK)
+    count
   }
 
   def main(args: Array[String]): Unit = {

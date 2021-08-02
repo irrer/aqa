@@ -20,10 +20,12 @@ import Db.driver.api._
 import org.aqa.Logging
 import org.aqa.Config
 import edu.umro.ScalaUtil.FileUtil
+
 import java.io.File
 import edu.umro.util.Utility
 import com.pixelmed.dicom.AttributeList
 import org.aqa.Util
+import org.aqa.web.AnonymousTranslate
 
 case class Machine(
   machinePK: Option[Long], // primary key
@@ -48,10 +50,15 @@ case class Machine(
     val insertQuery = Machine.query returning Machine.query.map(_.machinePK) into ((machine, machinePK) => machine.copy(machinePK = Some(machinePK)))
     val action = insertQuery += this
     val result = Db.run(action)
+    AnonymousTranslate.clearCache(institutionPK)
     result
   }
 
-  def insertOrUpdate = Db.run(Machine.query.insertOrUpdate(this))
+  def insertOrUpdate = {
+    val count = Db.run(Machine.query.insertOrUpdate(this))
+    AnonymousTranslate.clearCache(institutionPK)
+    count
+  }
 
   def fileName = Machine.fileName(id)
 
@@ -244,6 +251,7 @@ object Machine extends Logging {
       val action = q.delete
       val count = Db.run(action)
       deleteConfigDir(machine.get)
+      AnonymousTranslate.clearCache(machine.get.institutionPK)
       count
     } else 0
   }

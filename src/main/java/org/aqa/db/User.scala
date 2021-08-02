@@ -21,9 +21,11 @@ import org.aqa.Logging
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.web.AuthenticationVerifier
+
 import java.sql.Timestamp
 import org.aqa.Crypto
 import org.aqa.AnonymizeUtil
+import org.aqa.web.AnonymousTranslate
 
 case class User(
   userPK: Option[Long], // primary key
@@ -42,10 +44,15 @@ case class User(
     val insertQuery = User.query returning User.query.map(_.userPK) into ((user, userPK) => user.copy(userPK = Some(userPK)))
     val action = insertQuery += this
     val result = Db.run(action)
+    AnonymousTranslate.clearCache(institutionPK)
     result
   }
 
-  def insertOrUpdate = Db.run(User.query.insertOrUpdate(this))
+  def insertOrUpdate = {
+    val count = Db.run(User.query.insertOrUpdate(this))
+    AnonymousTranslate.clearCache(institutionPK)
+    count
+  }
 
   /**
    * Update the termsOfUseAcknowledgment, possibly to None.  Returns number of records updated, which
@@ -194,9 +201,12 @@ object User extends Logging {
   }
 
   def delete(userPK: Long): Int = {
+    val user = get(userPK)
     val q = query.filter(_.userPK === userPK)
     val action = q.delete
-    Db.run(action)
+    val count = Db.run(action)
+    if (user.isDefined) AnonymousTranslate.clearCache(user.get.institutionPK)
+    count
   }
 
   def listUsersFromInstitution(institutionPK: Long): Seq[User] = {
