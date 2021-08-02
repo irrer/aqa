@@ -119,7 +119,7 @@ object Machine extends Logging {
         epidPK,
         institutionPK,
         serialNumber,
-
+        imagingBeam2_5_mv,
         onboardImager,
         table6DOF,
         respiratoryManagement,
