@@ -37,7 +37,7 @@ import java.util.Date
 import scala.annotation.tailrec
 import scala.xml.Elem
 
-object AnonymousTranslate {
+object AnonymousTranslate extends Logging {
   private val path = new String((new AnonymousTranslate).pathOf)
 
   def redirect(response: Response): Unit = response.redirectSeeOther(path)
