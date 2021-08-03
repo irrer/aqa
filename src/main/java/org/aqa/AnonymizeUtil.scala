@@ -20,6 +20,7 @@ import com.pixelmed.dicom.Attribute
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.db.DicomAnonymous
 import org.aqa.db.Institution
 import org.aqa.web.WebUtil
@@ -187,32 +188,39 @@ object AnonymizeUtil extends Logging {
     }
   }
 
-  def scheduleCacheExpiration(): Unit = {
+  /**
+    * Start a thread that periodically looks for expired credentials in the cache and removes them.
+    */
+  private def initializeCacheExpiration(): Unit = {
 
     /**
       * Constructing this class starts a thread that will run in the future and remove expired credentials.
       */
     class ExpireCache extends Runnable {
       def run(): Unit = {
-        // add a little extra time to ensure that the operation that cached the credential is done
-        Thread.sleep(cacheTimeout + 1000)
-        try {
-          if (institutionCache.nonEmpty) {
-            institutionCache.synchronized({
-              val valid = institutionCache.filter(ic => ic.isValid)
-              institutionCache.clear
-              institutionCache.insertAll(0, valid)
-              //logger.info("Cleared anonymizing security cache from size " + before + " to size " + institutionCache.size)
-            })
+        while (true) {
+          Thread.sleep(cacheTimeout)
+          try {
+            if (institutionCache.nonEmpty) {
+              institutionCache.synchronized({
+                val sizeBefore = institutionCache.size
+                val valid = institutionCache.filter(ic => ic.isValid)
+                institutionCache.clear
+                institutionCache.insertAll(0, valid)
+                logger.info("Cleared anonymizing security cache from size " + sizeBefore + " to size " + institutionCache.size)
+              })
+            }
+          } catch {
+            case t: Throwable => logger.warn("Ignoring unexpected error in cache expiration: " + fmtEx(t))
           }
-        } catch {
-          case t: Throwable => logger.warn("Ignoring unexpected error in cache expiration: " + fmtEx(t))
         }
       }
-      new Thread(this).start()
     }
-    new ExpireCache
+
+    new Thread(new ExpireCache).start()
   }
+
+  initializeCacheExpiration()
 
   /**
     * Get the key of the given institution.
@@ -220,14 +228,14 @@ object AnonymizeUtil extends Logging {
   def getInstitutionKey(institutionPK: Long): String = getInstitutionCredentials(institutionPK).key
 
   def encryptWithNonce(institutionPK: Long, text: String): String = {
+    Trace.trace("encryptWithNonce would have started cache expiration thread") // TODO rm.  Keep until problem of 'too many threads' is fixed
     val institutionCredentials = getInstitutionCredentials(institutionPK).encrypt(text)
-    scheduleCacheExpiration()
     institutionCredentials
   }
 
   def decryptWithNonce(institutionPK: Long, text: String): String = {
+    Trace.trace("decryptWithNonce would have started cache expiration thread") // TODO rm.  Keep until problem of 'too many threads' is fixed
     val institutionCredentials = getInstitutionCredentials(institutionPK).decrypt(text)
-    scheduleCacheExpiration()
     institutionCredentials
   }
 
