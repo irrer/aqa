@@ -101,6 +101,7 @@ object AnonymousTranslate {
     * @param institutionPK The institution whose content has changed.
     */
   def clearCache(institutionPK: Long): Unit = {
+    logger.info("Clearing AnonymousTranslate cache for institution " + institutionPK)
     cache.synchronized {
       if (cache.contains(institutionPK)) {
         cache.remove(institutionPK)
