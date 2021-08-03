@@ -84,8 +84,8 @@ object Util extends Logging {
   private val elapsedFormatMinutes = new SimpleDateFormat("m:ss.SSS")
   private val elapsedFormatSeconds = new SimpleDateFormat("s.SSS")
 
-  def formatDate(format: SimpleDateFormat, date: Date) = standardDateFormat.synchronized(format.format(date))
-  def parseDate(format: SimpleDateFormat, text: String) = standardDateFormat.synchronized(format.parse(text))
+  def formatDate(format: SimpleDateFormat, date: Date): String = standardDateFormat.synchronized(format.format(date))
+  def parseDate(format: SimpleDateFormat, text: String): Date = standardDateFormat.synchronized(format.parse(text))
 
   def dateTimeToDate(date: Date): Date = {
     val stdText = Util.formatDate(Util.standardDateFormat, date)
@@ -282,13 +282,13 @@ object Util extends Logging {
     */
   def sortByDateTime(alList: Seq[AttributeList]): Seq[AttributeList] = {
 
-    def compar(a: AttributeList, b: AttributeList): Boolean = {
+    def compareTo(a: AttributeList, b: AttributeList): Boolean = {
       def dt(al: AttributeList) = extractDateTimeAndPatientIdFromDicomAl(al)._1.head.getTime
 
       dt(a) < dt(b)
     }
 
-    alList.sortWith(compar)
+    alList.sortWith(compareTo)
   }
 
   /**
@@ -1088,7 +1088,7 @@ object Util extends Logging {
     }
     val after = runtime.freeMemory
     val elapsed = System.currentTimeMillis() - start
-    logger.info("Freed memory in " + elapsed + " ms garbage collection.  Available before: " + fmt(before) + "    after: " + fmt(after) + "    amount freed: " + fmt((after - before)))
+    logger.info("Freed memory in " + elapsed + " ms garbage collection.  Available before: " + fmt(before) + "    after: " + fmt(after) + "    amount freed: " + fmt(after - before))
   }
 
   def getFrameOfRef(al: AttributeList): String = al.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
@@ -1348,6 +1348,26 @@ object Util extends Logging {
   def rectD(x: Double, y: Double, width: Double, height: Double): Rectangle = {
     new Rectangle(d2i(x), d2i(y), d2i(width), d2i(height))
   }
+
+  /**
+    * Periodically print the number of threads to the log.
+    *
+    * @param interval_ms Print it this often.
+    */
+  def monitorThreadCount(interval_ms: Long): Unit = {
+    class InitiateServiceRestart extends Runnable {
+      override def run(): Unit = {
+        while (true) {
+          logger.info("Number of threads: " + Thread.getAllStackTraces.keySet().size())
+          Thread.sleep(interval_ms)
+        }
+      }
+      new Thread(this).start()
+    }
+
+    new InitiateServiceRestart
+  }
+
   def main(args: Array[String]): Unit = {
 
     if (true) {

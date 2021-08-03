@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package org.aqa
 
 import edu.umro.ScalaUtil.PeriodicRestart
@@ -45,8 +44,11 @@ object AQA extends Logging {
         DbSetup.init
         DbSetup.smokeTest
         // Run.handleRunningProcedureList
-        RunProcedure.cleanupRunningProcedures
+        RunProcedure.cleanupRunningProcedures()
         new WebServer
+
+        if (Config.MonitorThreadCountInterval_ms > 0) Util.monitorThreadCount(Config.MonitorThreadCountInterval_ms)
+
         new PeriodicRestart(Config.RestartTime)
         logger.info("AQA service started")
       } else
@@ -71,10 +73,10 @@ object AQA extends Logging {
   }
 
   /**
-   * Initiate the restarting of the service. This service is configured to be restarted
-   * (using YAJSW) to restart if it exits with status 1.
-   */
-  def initiateServiceRestart: Unit = {
+    * Initiate the restarting of the service. This service is configured to be restarted
+    * (using YAJSW) to restart if it exits with status 1.
+    */
+  def initiateServiceRestart(): Unit = {
     class InitiateServiceRestart extends Runnable {
       private val delay: Int = 4 * 1000 // wait long enough for web client to receive a response
       override def run(): Unit = {
