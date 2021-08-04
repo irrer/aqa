@@ -108,6 +108,11 @@ class DailyQACSVCacheEPID(hostRef: String, institutionPK: Long) extends CacheCSV
     Col("Table Y vert mm", dataSet => epidVal(dataSet, e => e.tableYvertical_mm)),
     Col("Table Z long mm", dataSet => epidVal(dataSet, e => e.tableZlongitudinal_mm)),
 
+    Col("Image Coeff of Variation", dataSet => epidVal(dataSet, e => e.pixelStandardDeviation_cu / e.pixelMean_cu)),
+    Col("Multiple of Std Dev", dataSet => epidVal(dataSet, e => e.bbStdDevMultiple)),
+    Col("Pixel Mean CU", dataSet => epidVal(dataSet, e => e.pixelMean_cu)),
+    Col("Pixel Std Dev CU", dataSet => epidVal(dataSet, e => e.pixelStandardDeviation_cu)),
+
     Col("EPID XRay Offset X mm", dataSet => getEpidValues(dataSet, TagByName.XRayImageReceptorTranslation).head),
     Col("EPID XRay Offset Y mm", dataSet => getEpidValues(dataSet, TagByName.XRayImageReceptorTranslation)(1)),
     Col("EPID XRay Offset Z mm", dataSet => getEpidValues(dataSet, TagByName.XRayImageReceptorTranslation)(2)),
