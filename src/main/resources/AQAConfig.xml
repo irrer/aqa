@@ -106,7 +106,7 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- If this value (floating point in seconds) is greater than zero, then periodically log the number of active
     threads.  This number is the interval between messages. -->
-    <MonitorThreadCountInterval_sec>5.0</MonitorThreadCountInterval_sec>
+    <MonitorThreadCountInterval_sec>120.0</MonitorThreadCountInterval_sec>
 
     <!-- Name of institution with LDAP. -->
     <LdapInstitutionName>U Mich</LdapInstitutionName>
@@ -284,14 +284,12 @@ Note that when building a package for release, the Maven build process uses the 
         The content of the category element is free text that describes the category.
         -->
     <MaintenanceCategoryList>
-        <MaintenanceCategory Name='Maintenance' Color='#aaaaaa'>General Maintenance</MaintenanceCategory>
-        <MaintenanceCategory Name='PMI' Color='#80FF9F'>Preventive Maintenance Inspection</MaintenanceCategory>
-        <MaintenanceCategory Name='Set Baseline' Color='lightgreen'>New baseline values set</MaintenanceCategory>
-        <MaintenanceCategory Name='Firmware Update' Color='#33aa33'>New treatment machine firmware</MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Jaws' Color='#aa3322'>Maintenance performed on jaws</MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Collimator' Color='#aa3322'>Maintenance performed on Collimator </MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Gantry' Color='#aa3322'>Maintenance performed on Gantry</MaintenanceCategory>
-        <MaintenanceCategory Name='Electrical' Color='#aa3322'>Maintenance performed due to electrical issue(s)</MaintenanceCategory>
+        <MaintenanceCategory Name='Maintenance'               Color='#aaaaaa'   >General Maintenance</MaintenanceCategory>
+        <MaintenanceCategory Name='Output Adjustment'         Color='#00ee9a'   >Output Adjustment</MaintenanceCategory>
+        <MaintenanceCategory Name='Beam Steering Adjustment'  Color='#0088ff'   >Beam Steering Adjustment</MaintenanceCategory>
+        <MaintenanceCategory Name='PMI'                       Color='#80FF9F'   >Preventive Maintenance Inspection</MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Jaws'           Color='#aa3322'   >Maintenance performed on jaws</MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Gantry'         Color='#3422aa'   >Maintenance performed on Gantry</MaintenanceCategory>
     </MaintenanceCategoryList>
 
     <!-- Beam name for flood field. -->
