@@ -228,13 +228,11 @@ object AnonymizeUtil extends Logging {
   def getInstitutionKey(institutionPK: Long): String = getInstitutionCredentials(institutionPK).key
 
   def encryptWithNonce(institutionPK: Long, text: String): String = {
-    Trace.trace("encryptWithNonce would have started cache expiration thread") // TODO rm.  Keep until problem of 'too many threads' is fixed
     val institutionCredentials = getInstitutionCredentials(institutionPK).encrypt(text)
     institutionCredentials
   }
 
   def decryptWithNonce(institutionPK: Long, text: String): String = {
-    Trace.trace("decryptWithNonce would have started cache expiration thread") // TODO rm.  Keep until problem of 'too many threads' is fixed
     val institutionCredentials = getInstitutionCredentials(institutionPK).decrypt(text)
     institutionCredentials
   }
