@@ -24,6 +24,9 @@ import org.aqa.db.DicomSeries
 
 import java.io.File
 
+/**
+  * Get a DICOM file from the database.
+  */
 object SimpleDb {
   def main(args: Array[String]): Unit = {
     Trace.trace("Starting")
