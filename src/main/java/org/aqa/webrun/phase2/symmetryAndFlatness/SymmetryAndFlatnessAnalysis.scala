@@ -17,7 +17,6 @@
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.TagFromName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
@@ -41,8 +40,8 @@ import java.sql.Timestamp
 import scala.xml.Elem
 
 /**
- * Analyze DICOM files for symmetry and flatness.
- */
+  * Analyze DICOM files for symmetry and flatness.
+  */
 object SymmetryAndFlatnessAnalysis extends Logging {
 
   private def boolToStatus(pass: Boolean) = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
@@ -53,26 +52,29 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   val profileConstancyName = "Profile Constancy"
 
   /**
-   * Encapsulate data for generating a report.
-   */
+    * Encapsulate data for generating a report.
+    */
   case class SymmetryAndFlatnessBeamResult(
-                                            symmetryAndFlatness: SymmetryAndFlatness,
-                                            annotatedImage: BufferedImage,
-                                            transverseProfile: Seq[Double], transverse_pct: IndexedSeq[Double],
-                                            axialProfile: Seq[Double], axial_pct: IndexedSeq[Double],
-                                            baseline: SymmetryAndFlatness) {
+      symmetryAndFlatness: SymmetryAndFlatness,
+      annotatedImage: BufferedImage,
+      transverseProfile: Seq[Double],
+      transverse_pct: IndexedSeq[Double],
+      axialProfile: Seq[Double],
+      axial_pct: IndexedSeq[Double],
+      baseline: SymmetryAndFlatness
+  ) {
 
     /** True if everything is ok. */
     /*
     val pass: Boolean = Seq(axialSymmetryStatus, transverseSymmetryStatus, flatnessStatus).forall(s => s.toString.equals(ProcedureStatus.pass.toString))
     logger.info("sym+flatness pass: " + pass)
-    */
+     */
 
     /** Aggregate status. */
     /*
     val status: ProcedureStatus.ProcedureStatus = boolToStatus(pass)
     logger.info("sym+flatness aggregate status: " + status)
-    */
+     */
   }
 
   def circleRadiusInPixels(isoImageTrans: IsoImagePlaneTranslator): Double = {
@@ -124,42 +126,52 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   def makeBaselineName(beamName: String, dataName: String): String = dataName + " " + beamName
 
   /**
-   * Analyze for symmetry and flatness.  The results should be sufficient to support both recording to
-   * the database and generating a report.
-   *
-   */
-  private def analyze(outputPK: Long, beamName: String, machinePK: Long, dataDate: Timestamp, attributeList: AttributeList,
-                      correctedImage: DicomImage, collimatorCenter: Point2D.Double, symmetryAndFlatnessBaselineRedoBeamList: Seq[String]): SymmetryAndFlatnessBeamResult = {
+    * Analyze for symmetry and flatness.  The results should be sufficient to support both recording to
+    * the database and generating a report.
+    *
+    */
+  private def analyze(
+      outputPK: Long,
+      beamName: String,
+      machinePK: Long,
+      dataDate: Timestamp,
+      attributeList: AttributeList,
+      correctedImage: DicomImage,
+      collimatorCenter: Point2D.Double,
+      symmetryAndFlatnessBaselineRedoBeamList: Seq[String]
+  ): SymmetryAndFlatnessBeamResult = {
     logger.info("Begin analysis of beam " + beamName)
     // val attributeList: AttributeList = getAttributeList(beamName, runReq)
     val dicomImage = new DicomImage(attributeList)
-    val RescaleSlope = attributeList.get(TagFromName.RescaleSlope).getDoubleValues.head
-    val RescaleIntercept = attributeList.get(TagFromName.RescaleIntercept).getDoubleValues.head
     val translator = new IsoImagePlaneTranslator(attributeList)
     val widthOfBand = circleRadiusInPixels(translator).round.toInt
+    val widthOfBandDouble = widthOfBand.toDouble
 
     /**
-     * Get the average pixel value for one spot in HU or CU or whatever units the image is using.
-     */
+      * Get the average pixel value for one spot in HU or CU or whatever units the image is using.
+      */
     def evalPoint(point: SymmetryAndFlatnessPoint): Double = {
       val center = new Point2D.Double(point.x_mm + collimatorCenter.getX, point.y_mm + collimatorCenter.getY)
       val pixList = Phase2Util.makeCenterDosePointList(attributeList, center)
       val avg = pixList.map(p => dicomImage.get(p.getX.toInt, p.getY.toInt)).sum / pixList.size
-      (avg * RescaleSlope) + RescaleIntercept // convert
+      val cu = Phase2Util.pixToDose(avg, attributeList)
+      cu
     }
 
     logger.info("Making transverse profile of beam " + beamName)
     val transverseProfile = {
       val y = ((translator.height - widthOfBand) / 2.0).round.toInt
       val rectangle = new Rectangle(0, y, translator.width, widthOfBand)
-      dicomImage.getSubimage(rectangle).columnSums.map(c => ((c / widthOfBand) * RescaleSlope) + RescaleIntercept)
+      val cuList = Phase2Util.pixToDose(dicomImage.getSubimage(rectangle).columnSums.map(_ / widthOfBandDouble), attributeList)
+      cuList
     }
 
     logger.info("Making axial profile of beam " + beamName)
     val axialProfile = {
       val x = ((translator.width - widthOfBand) / 2.0).round.toInt
       val rectangle = new Rectangle(x, 0, widthOfBand, translator.height)
-      dicomImage.getSubimage(rectangle).rowSums.map(c => ((c / widthOfBand) * RescaleSlope) + RescaleIntercept)
+      val cuList = Phase2Util.pixToDose(dicomImage.getSubimage(rectangle).rowSums.map(_ / widthOfBandDouble), attributeList)
+      cuList
     }
 
     val transverse_pct = (0 until translator.width).map(x => translator.pix2Iso(x, 0).getX)
@@ -175,23 +187,18 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       SOPInstanceUID = Util.sopOfAl(attributeList),
       beamName = beamName,
       isBaseline_text = symmetryAndFlatnessBaselineRedoBeamList.contains(beamName).toString,
-
       axialSymmetry_pct = -1,
       axialSymmetryBaseline_pct = -2,
       axialSymmetryStatus = "done",
-
       transverseSymmetry_pct = -3,
       transverseSymmetryBaseline_pct = -4,
       transverseSymmetryStatus = "done",
-
       flatness_pct = -5,
       flatnessBaseline_pct = -6,
       flatnessStatus = "done",
-
       profileConstancy_pct = -7,
       profileConstancyBaseline_pct = -8,
       profileConstancyStatus = "done",
-
       top_cu = evalPoint(Config.SymmetryPointTop),
       bottom_cu = evalPoint(Config.SymmetryPointBottom),
       left_cu = evalPoint(Config.SymmetryPointLeft),
@@ -202,17 +209,12 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     // Get the baseline for the given beam of the given type (dataName).  If it does not exist, then use this one to establish it.
     val baseline = SymmetryAndFlatness.getBaseline(machinePK, beamName, dataDate) match {
       case Some(bl) => bl.symmetryAndFlatness
-      case _ => symmetryAndFlatness
+      case _        => symmetryAndFlatness
     }
 
     logger.info("Making annotated image of beam " + beamName)
     val annotatedImage = makeAnnotatedImage(correctedImage, attributeList, symmetryAndFlatness)
-    val result = SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult(
-      symmetryAndFlatness,
-      annotatedImage,
-      transverseProfile, transverse_pct,
-      axialProfile, axial_pct,
-      baseline)
+    val result = SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult(symmetryAndFlatness, annotatedImage, transverseProfile, transverse_pct, axialProfile, axial_pct, baseline)
 
     logger.info("Finished analysis of beam " + beamName)
 
@@ -220,31 +222,25 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   }
 
   /**
-   * Entry point for testing only.
-   *
-   * @param beamName         Name of beam.
-   * @param machinePK        Machine being processed.
-   * @param dataDate         Date that data was acquired at the machine.
-   * @param attributeList    Image and metadata.
-   * @param correctedImage   Image with bad pixels fixed.
-   * @param collimatorCenter Collimator center offset.
-   * @return
-   */
-  def testAnalyze(
-                   beamName: String,
-                   machinePK: Long,
-                   dataDate: Timestamp,
-                   attributeList: AttributeList,
-                   correctedImage: DicomImage,
-                   collimatorCenter: Point2D.Double): SymmetryAndFlatnessBeamResult = {
+    * Entry point for testing only.
+    *
+    * @param beamName         Name of beam.
+    * @param machinePK        Machine being processed.
+    * @param dataDate         Date that data was acquired at the machine.
+    * @param attributeList    Image and metadata.
+    * @param correctedImage   Image with bad pixels fixed.
+    * @param collimatorCenter Collimator center offset.
+    * @return
+    */
+  def testAnalyze(beamName: String, machinePK: Long, dataDate: Timestamp, attributeList: AttributeList, correctedImage: DicomImage, collimatorCenter: Point2D.Double): SymmetryAndFlatnessBeamResult = {
     analyze(outputPK = -1, beamName, machinePK, dataDate, attributeList, correctedImage, collimatorCenter, Seq())
   }
 
   /**
-   * Put the results in the database.
-   *
-   * @param resultList List of new results.
-   */
+    * Put the results in the database.
+    *
+    * @param resultList List of new results.
+    */
   private def storeResultsInDb(resultList: List[SymmetryAndFlatnessBeamResult]): Unit = {
     resultList.foreach(r => r.symmetryAndFlatness.insertOrUpdate())
     logger.info("Stored " + resultList.size + " SymmetryAndFlatness records")
@@ -255,8 +251,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   class SymmetryAndFlatnessResult(summary: Elem, status: ProcedureStatus.Value) extends SubProcedureResult(summary, status, subProcedureName)
 
   /**
-   * Run the CollimatorPosition sub-procedure, save results in the database, return right for proper execution or left for crash.
-   */
+    * Run the CollimatorPosition sub-procedure, save results in the database, return right for proper execution or left for crash.
+    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, SymmetryAndFlatnessResult] = {
     try {
       logger.info("Starting analysis of SymmetryAndFlatness for machine " + extendedData.machine.id)
@@ -264,15 +260,20 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       val beamNameList = Config.SymmetryAndFlatnessBeamList.filter(beamName => runReq.derivedMap.contains(beamName))
 
       // only process beams that are both configured and have been uploaded
-      val resultList = beamNameList.par.map(beamName =>
-        analyze(extendedData.output.outputPK.get,
-          beamName = beamName,
-          extendedData.machine.machinePK.get,
-          extendedData.output.dataDate.get,
-          attributeList = getAttributeList(beamName, runReq),
-          correctedImage = runReq.derivedMap(beamName).pixelCorrectedImage,
-          collimatorCentering.center, runReq.symmetryAndFlatnessBaselineRedoBeamList)).toList
-
+      val resultList = beamNameList.par
+        .map(beamName =>
+          analyze(
+            extendedData.output.outputPK.get,
+            beamName = beamName,
+            extendedData.machine.machinePK.get,
+            extendedData.output.dataDate.get,
+            attributeList = getAttributeList(beamName, runReq),
+            correctedImage = runReq.derivedMap(beamName).pixelCorrectedImage,
+            collimatorCentering.center,
+            runReq.symmetryAndFlatnessBaselineRedoBeamList
+          )
+        )
+        .toList
 
       val pass = resultList.map(r => r.symmetryAndFlatness.allPass(r.baseline)).reduce(_ && _)
       val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail

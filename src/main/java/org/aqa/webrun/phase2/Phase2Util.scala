@@ -415,7 +415,7 @@ object Phase2Util extends Logging {
     new File(viewDir, pngFile)
   }
 
-  def dicomViewHref(al: AttributeList, beamName: String, outputDir: File, rtplanAl: AttributeList) = {
+  def dicomViewHref(al: AttributeList, beamName: String, outputDir: File, rtplanAl: AttributeList): String = {
     WebServer.urlOfResultsFile(dicomViewHtmlFile(al, beamName, outputDir, rtplanAl))
   }
 
@@ -474,16 +474,15 @@ object Phase2Util extends Logging {
     pixValueSeq.map(p => (p * m) + b)
   }
 
+  def pixToDose(pixValue: Float, attributeList: AttributeList): Double = pixToDose(Seq(pixValue.toDouble), attributeList).head
+
   /**
    * Measure dose as specified by the list of points and return it in the proper units.
    */
   def measureDose(pointList: Seq[Point], dicomImage: DicomImage, attributeList: AttributeList): Double = {
     // average value raw pixel values
     val rawAverage = pointList.map(p => dicomImage.get(p.getX.toInt, p.getY.toInt)).sum / pointList.size
-
-    val m = attributeList.get(TagFromName.RescaleSlope).getDoubleValues.head
-    val b = attributeList.get(TagFromName.RescaleIntercept).getDoubleValues.head
-    val dose = (rawAverage * m) + b
+    val dose  = Phase2Util.pixToDose(rawAverage, attributeList)
     dose
   }
 
