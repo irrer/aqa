@@ -134,8 +134,20 @@ object LeafPositionUtil extends Logging {
         deviceType.equalsIgnoreCase(requiredType)
       }
 
+      def betweenLeaves(list: Array[Double]): Double = {
+        val midPoint = list.sum / list.size
+        if (list.size != 2)
+          throw new RuntimeException("Leaf pair list should specify exactly 2 distinct values, but are: " + list.mkString(",  "))
+        midPoint
+      }
+
+      val leafEndPairList = BeamLimitingDevicePositionSequence.filter(bldp => isMlc(bldp)).map(bldp => bldp.get(TagByName.LeafJawPositions).getDoubleValues.distinct.sorted)
+      val newEndList = leafEndPairList.map(betweenLeaves).distinct
+      Trace.trace("newEndList: " + newEndList.mkString("  "))
+
       val endList = BeamLimitingDevicePositionSequence.filter(bldp => isMlc(bldp)).map(bldp => bldp.get(TagByName.LeafJawPositions).getDoubleValues.head).distinct.sorted
       endList
+      newEndList
     }
   }
 
