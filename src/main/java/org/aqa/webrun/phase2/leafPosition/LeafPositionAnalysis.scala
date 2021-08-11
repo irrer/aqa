@@ -302,9 +302,8 @@ object LeafPositionAnalysis extends Logging {
   /**
     * Hook for testing
     */
-  def testMeasureBeam(beamName: String, outputPK: Long, attributeList: AttributeList, image: DicomImage, plan: AttributeList, collimatorCentering: Option[CollimatorCentering]): Seq[LeafPosition] = {
-    if (collimatorCentering.isDefined) measureBeam(beamName, outputPK, attributeList, image, plan, collimatorCentering.get)
-    else Seq[LeafPosition]()
+  def testMeasureBeam(beamName: String, outputPK: Long, attributeList: AttributeList, image: DicomImage, plan: AttributeList, collimatorCentering: CollimatorCentering): Seq[LeafPosition] = {
+    measureBeam(beamName, outputPK, attributeList, image, plan, collimatorCentering)
   }
 
   case class LeafPositionResult(sum: Elem, sts: ProcedureStatus.Value, result: Seq[LeafPosition]) extends SubProcedureResult(sum, sts, subProcedureName)

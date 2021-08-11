@@ -14,29 +14,30 @@
  * limitations under the License.
  */
 
+package aqa.test
 
-package aqa.test;
-
-import org.aqa.Config
-import org.scalatest.FlatSpec
-import org.scalatest.Matchers
-import java.io.File
-import org.aqa.Util
 import edu.umro.ImageUtil.DicomImage
+import edu.umro.ImageUtil.ImageUtil
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import org.aqa.Config
+import org.aqa.Util
+import org.aqa.db.CollimatorCentering
 import org.aqa.webrun.phase2.leafPosition.LeafPositionAnalysis
 import org.aqa.webrun.phase2.leafPosition.LeafPositionAnnotateImage
-import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import edu.umro.ImageUtil.ImageUtil
+import org.scalatest.FlatSpec
+import org.scalatest.Matchers
+
+import java.io.File
 
 /**
- * Test the LeafPositionAnalysis.
- *
- */
+  * Test the LeafPositionAnalysis.
+  *
+  */
 
 class TestLeafPositionAnalysis extends FlatSpec with Matchers {
   "LeafPositionAnalysis" should "measure leaf positions" in {
-    val dir = new File("""src\test\resources""")
-    val file = new File(dir, """TestLeafPositionAnalysis.dcm""")
+    val dir = new File("""src\test\resources\TestLeafPositionAnalysis""")
+    val file = new File(dir, """rtimage1.dcm""")
 
     val outDir = new File("""target\TestLeafPositionAnalysisOverview""")
     Util.deleteFileTreeSafely(outDir)
@@ -50,18 +51,35 @@ class TestLeafPositionAnalysis extends FlatSpec with Matchers {
       correctedImage
     }
 
-    val profile = dicomImage.rowSums
-
-    val planFile = new File(dir, """TestLeafPositionAnalysisPlan.dcm""")
+    val planFile = new File(dir, """rtplan1.dcm""")
     val planAl = Util.readDicomFile(planFile).right.get
 
     val beamName = "PF Stat 0"
 
     val outputPK = -1.toLong
 
-    val leafPositionList = LeafPositionAnalysis.testMeasureBeam(beamName, outputPK, imageAl, dicomImage, planAl, None)
+    val collimatorCentering = new CollimatorCentering(
+      collimatorCenteringPK = None,
+      outputPK = -1,
+      status = "pass",
+      SOPInstanceUID090 = "12.34",
+      SOPInstanceUID270 = "12.345",
+      xCollimatorCenter_mm = 0,
+      yCollimatorCenter_mm = 0,
+      X1_090_mm = 0,
+      X2_090_mm = 0,
+      Y1_090_mm = 0,
+      Y2_090_mm = 0,
+      X1_270_mm = 0,
+      X2_270_mm = 0,
+      Y1_270_mm = 0,
+      Y2_270_mm = 0
+    )
+    val start = System.currentTimeMillis()
+    val leafPositionList = LeafPositionAnalysis.testMeasureBeam(beamName, outputPK, imageAl, dicomImage, planAl, collimatorCentering)
+    val elapsed = System.currentTimeMillis() - start
 
-    leafPositionList.map(lp => println(lp))
+    leafPositionList.foreach(lp => println(lp))
 
     val avg = leafPositionList.map(lp => lp.offset_mm.abs).sum / leafPositionList.size
     println("LeafPositionIsolationDistance_mm: " + Config.LeafPositionIsolationDistance_mm + "    Average (absolute value of) offset: " + avg)
@@ -73,8 +91,10 @@ class TestLeafPositionAnalysis extends FlatSpec with Matchers {
 
     val pngFile = new File(outDir, "TestLeafPositionAnalysis.png")
     pngFile.delete
+    println("A collimator centering position of 0,0 was assumed")
     println("Writing image file: " + pngFile.getAbsolutePath)
     ImageUtil.writePngFile(bufImg, pngFile)
+    println("Elapsed calculation time in ms: " + elapsed)
 
     true should be(true)
   }
