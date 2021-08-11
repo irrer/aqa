@@ -48,7 +48,7 @@ class TestLeafPositionUtil extends FlatSpec with Matchers {
   private def testPlan(file: File) = {
     val plan = (new DicomFile(file)).attributeList.get
 
-    val leafEdgeList = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(true, beamName, plan, translator)
+    val leafEdgeList = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(true, beamName, plan)
 
     println("leafEdgeList size: " + leafEdgeList.size)
     println("leafEdgeList: " + leafEdgeList.map(le => Util.fmtDbl(le)).mkString("  "))

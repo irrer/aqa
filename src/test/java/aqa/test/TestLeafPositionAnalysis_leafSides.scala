@@ -56,9 +56,9 @@ class TestLeafPositionAnalysis_leafSides extends FlatSpec with Matchers {
     val horizontal = true
     val profile = if (horizontal) dicomImage.rowSums else dicomImage.columnSums
     val translator = new IsoImagePlaneTranslator(imageAttrList)
-    val leafEndList_pix = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, planAl, translator).map(s => translator.iso2PixCoordY(s))
+    val leafEndList_pix = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, planAl).map(s => translator.iso2PixCoordY(s))
     val preciseLeafSideList_pix = LeafPositionAnalysis.leafSides_pix(horizontal, beamName, dicomImage, planAl, translator)
-    val sideListPlan_mm = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, planAl, translator).sorted
+    val sideListPlan_mm = LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, planAl).sorted
 
     val coarseList_pix = LeafPositionCoarseLeafSides.coarseLeafSides(horizontal, profile, imageAttrList, 5, 10, dicomImage)
     println("Number of coarse ridges found: " + coarseList_pix.size)

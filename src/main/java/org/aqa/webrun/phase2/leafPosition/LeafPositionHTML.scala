@@ -98,13 +98,12 @@ object LeafPositionHTML extends Logging {
     val derived = runReq.derivedMap(beamName)
     val horizontal = Phase2Util.isHorizontal(derived.attributeList)
     val translator = new IsoImagePlaneTranslator(derived.attributeList)
-    val leafWidthList_mm = LeafPositionUtil.getLeafWidthList_mm(LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, runReq.rtplan, translator))
+    val leafWidthList_mm = LeafPositionUtil.getLeafWidthList_mm(LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, runReq.rtplan))
 
     val image = LeafPositionAnnotateImage.annotateImage(beamResult.resultList, horizontal, derived.pixelCorrectedImage, leafWidthList_mm, translator)
     val imageFileName = Util.textToId(beamName) + ".png"
     val imageFile = new File(subDir, imageFileName)
     Util.writePng(image, imageFile)
-    val imageUrl = WebServer.urlOfResultsFile(imageFile)
     val dicomHtmlHref = Phase2Util.dicomViewHref(derived.attributeList, extendedData, runReq)
 
     val chart = {
