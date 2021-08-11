@@ -141,9 +141,14 @@ object LeafPositionHTML extends Logging {
         </div>
         <hr/>
         <div class="row">
-          <div class="col-md-6" id={imageId}>
-            Hover over image to zoom in.  Dashed lines show expected position, solid lines are measured position. All values in mm in the isoplane.<br/>
-            <img class="img-responsive" src={imageUrl}/>
+          <div class="col-md-6">
+            Hover over image to zoom in, click for full image.  Dashed lines show expected position,
+            solid lines are measured position. All values in mm in the isoplane.
+            <a href={imageFileName}>
+              <div id={imageId}>
+                <img class="img-responsive" src={imageFileName}/>
+              </div>
+            </a>
           </div>
           <div class="col-md-6">
             {resultsTable(beamResult.resultList)}
@@ -156,7 +161,7 @@ object LeafPositionHTML extends Logging {
     val html = Phase2Util.wrapSubProcedure(extendedData, content, LeafPositionAnalysis.subProcedureName, beamResult.status, Some(script), runReq)
     Util.writeFile(htmlFile, html)
 
-    (url, imageUrl)
+    (url, imageFileName)
   }
 
   private def makeRow(subDir: File, extendedData: ExtendedData, runReq: RunReq, beamResult: LeafPositionAnalysis.BeamResults): Elem = {
