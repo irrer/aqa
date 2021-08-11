@@ -14,43 +14,43 @@
  * limitations under the License.
  */
 
+package aqa.test
 
-package aqa.test;
-
-import org.aqa.Config
+import org.aqa.Util
+import org.aqa.webrun.phase2.leafPosition.LeafPositionUtil
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
+
 import java.io.File
-import org.aqa.Util
-import edu.umro.ImageUtil.DicomImage
-import org.aqa.webrun.phase2.leafPosition.LeafPositionAnalysis
-import org.aqa.webrun.phase2.leafPosition.LeafPositionUtil
 
 /**
- * Test the LeafPositionAnalysis.leafEnds method.
- */
+  * Test the LeafPositionAnalysis.leafEnds method.
+  */
 
 class TestLeafPositionAnalysis_LeafEnds_Planned extends FlatSpec with Matchers {
   "LeafPositionAnalysis" should "show leaf end positions in isoplan in mm" in {
-    val dir = new File("""src\test\resources""")
+    val dir = new File("""src\test\resources\TestLeafPositionAnalysis_LeafEnds_Planned""")
 
-    val planFile = new File(dir, """TestLeafPositionAnalysisPlan.dcm""")
+    val planFile = new File(dir, """rtplan1.dcm""")
+    println("Using DICOM RTPLAN file " + planFile.getAbsolutePath)
     val planAl = Util.readDicomFile(planFile).right.get
-    val leafEndList = LeafPositionUtil.leafEnds(true, "PF Stat 0", planAl)
+    val leafEndList = LeafPositionUtil.leafEnds(horizontal = true, "PF Stat 0", planAl)
 
+    // @formatter:off
     val expectedLeafEndList = Seq(
-      -60.0,
-      -45.0,
-      -30.0,
-      -15.0,
-      0.0,
-      15.0,
-      30.0,
-      45.0,
-      60.0,
-      75.0)
+      -59.5,
+      -44.5,
+      -29.5,
+      -14.5,
+        0.5,
+       15.5,
+       30.5,
+       45.5,
+       60.5,
+       75.5)
+    // @formatter:on
 
-    println("list of leaf ends:\n    " + leafEndList.mkString("\n    "))
+    println("list of leaf ends:\n    " + leafEndList.map(_.formatted("%5.1f")).mkString("\n    "))
 
     leafEndList should be(expectedLeafEndList)
   }
