@@ -54,7 +54,9 @@
           "symmetryAndFlatness"."left_cu",
           "symmetryAndFlatness"."right_cu",
           "symmetryAndFlatness"."center_cu",
-          "symmetryAndFlatness"."isBaseline_text"
+          -- If true, then this data set should be used as a baseline for this and
+          -- subsequent data sets with the same machine and beam.
+          "symmetryAndFlatness"."isBaseline"
         FROM
           public."symmetryAndFlatness",
           public."institution",
