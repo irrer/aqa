@@ -30,8 +30,8 @@ class DicomCsv {
     CsvCol("Pixel Columns", "Number of columns in the images. DICOM 0028,0011", (al: AL) => Util.attr2Csv(al, TagByName.Columns).head),
     CsvCol("Pixel size X", "Image Plane Pixel Spacing.  DICOM 3002,0011", (al: AL) => Util.attr2Csv(al, TagByName.ImagePlanePixelSpacing).head),
     CsvCol("Pixel size Y", "Image Plane Pixel Spacing.  DICOM 3002,0011", (al: AL) => Util.attr2Csv(al, TagByName.ImagePlanePixelSpacing)(1)),
-    CsvCol("b value for converting pixel values to CU: CU = m*PixelValue + b", "Rescale Intercept.  DICOM 0028,1052", (al: AL) => Util.attr2Csv(al, TagByName.RescaleIntercept)(1)),
-    CsvCol("m value for converting pixel values to CU: CU = m*PixelValue + b", "Rescale Slope.  DICOM 0028,1053", (al: AL) => Util.attr2Csv(al, TagByName.RescaleSlope)(1)),
+    CsvCol("b value for converting pixel values to CU: CU = m*PixelValue + b", "Rescale Intercept.  DICOM 0028,1052", (al: AL) => Util.attr2Csv(al, TagByName.RescaleIntercept).head),
+    CsvCol("m value for converting pixel values to CU: CU = m*PixelValue + b", "Rescale Slope.  DICOM 0028,1053", (al: AL) => Util.attr2Csv(al, TagByName.RescaleSlope).head),
     CsvCol("KVP", "Peak kilo voltage output of the X-Ray generator used.  DICOM 0018,0060", (al: AL) => Util.attr2Csv(al, TagByName.KVP).head),
     //noinspection SpellCheckingInspection
     CsvCol("Exposure Time msec", "Exposure time in mseync.  DICOM 0016,0004", (al: AL) => Util.attr2Csv(al, TagByName.ExposureTime).head),
