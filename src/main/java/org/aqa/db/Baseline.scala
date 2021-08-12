@@ -16,34 +16,28 @@
 
 package org.aqa.db
 
-import edu.umro.ScalaUtil.Trace
-import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
-import org.aqa.webrun.phase2.Phase2Util.MaintenanceRecordBaseline
-import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessAnalysis
-import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessAnalysis.makeBaselineName
-import org.aqa.webrun.phase2.wedge.WedgeAnalysis
 
 import java.sql.Timestamp
 
 /**
- * Define values associated with specific machines that are established when the
- * machine is operating as expected.  These values can later be used to quantify
- * how much the values have changed.
- *
- * Note that <code>BaselineContent</code> records may be created to augment a
- * <code>Baseline</code> record.
- */
+  * Define values associated with specific machines that are established when the
+  * machine is operating as expected.  These values can later be used to quantify
+  * how much the values have changed.
+  *
+  * Note that <code>BaselineContent</code> records may be created to augment a
+  * <code>Baseline</code> record.
+  */
 case class Baseline(
-                     baselinePK: Option[Long], // primary key
-                     maintenanceRecordPK: Long, // refers to maintenance for which to use this value
-                     acquisitionDate: Timestamp, // when data was acquired at the treatment machine.  Different from when this record was created.
-                     SOPInstanceUID: Option[String], // UID of DICOM image.  May be empty if not applicable.
-                     id: String, // unique identifier for data.  Can contain the concatenation of values such as beam name, energy level, jaw position, energy level, etc.  Should be human readable / user friendly
-                     value: String, // text version of value
-                     setup: String // <code>BaselineSetup</code> value
-                   ) {
+    baselinePK: Option[Long], // primary key
+    maintenanceRecordPK: Long, // refers to maintenance for which to use this value
+    acquisitionDate: Timestamp, // when data was acquired at the treatment machine.  Different from when this record was created.
+    SOPInstanceUID: Option[String], // UID of DICOM image.  May be empty if not applicable.
+    id: String, // unique identifier for data.  Can contain the concatenation of values such as beam name, energy level, jaw position, energy level, etc.  Should be human readable / user friendly
+    value: String, // text version of value
+    setup: String // <code>BaselineSetup</code> value
+) {
 
   def insert: Baseline = {
     val insertQuery = Baseline.query returning Baseline.query.map(_.baselinePK) into ((baseline, baselinePK) => baseline.copy(baselinePK = Some(baselinePK)))
@@ -73,16 +67,14 @@ object Baseline extends Logging {
 
     def setup = column[String]("setup")
 
-    def * = (
-      baselinePK.?,
-      maintenanceRecordPK,
-      acquisitionDate,
-      SOPInstanceUID,
-      id,
-      value,
-      setup) <> (Baseline.apply _ tupled, Baseline.unapply _)
+    def * = (baselinePK.?, maintenanceRecordPK, acquisitionDate, SOPInstanceUID, id, value, setup) <> (Baseline.apply _ tupled, Baseline.unapply _)
 
-    def maintenanceRecordFK = foreignKey("Baseline_maintenanceRecordPKConstraint", maintenanceRecordPK, MaintenanceRecord.query)(_.maintenanceRecordPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def maintenanceRecordFK =
+      foreignKey("Baseline_maintenanceRecordPKConstraint", maintenanceRecordPK, MaintenanceRecord.query)(
+        _.maintenanceRecordPK,
+        onDelete = ForeignKeyAction.Cascade,
+        onUpdate = ForeignKeyAction.Cascade
+      )
   }
 
   val query = TableQuery[BaselineTable]
@@ -92,12 +84,12 @@ object Baseline extends Logging {
       baseline <- query if baseline.baselinePK === baselinePK
     } yield baseline
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   /**
-   * Given a machine and Baseline id, get the latest value on or before the given time stamp if it exists.
-   */
+    * Given a machine and Baseline id, get the latest value on or before the given time stamp if it exists.
+    */
   def findLatest(machinePK: Long, id: String, timestamp: Timestamp): Option[(MaintenanceRecord, Baseline)] = {
     // Special note: New baselines use the dataDate of the output.  Older baselines use the dataDate
     // of the individual slice.  The problem with the old way is that when searching for a baseline
@@ -127,23 +119,23 @@ object Baseline extends Logging {
     Db.run(action)
   }
 
-  def insert(list: Seq[Baseline]) = {
+  def insert(list: Seq[Baseline]): Seq[Int] = {
     val ops = list.map { bl => Baseline.query.insertOrUpdate(bl) }
     Db.perform(ops)
   }
 
   /**
-   * Given a set of maintenance records, only allow that are baselines and are referenced by baseline
-   * values that have an ID that have text in the <code>requiredText</code> list.  Text
-   * comparisons are case-insensitive.
-   *
-   * Note that this will filter out non-baseline maintenance events.
-   */
+    * Given a set of maintenance records, only allow that are baselines and are referenced by baseline
+    * values that have an ID that have text in the <code>requiredText</code> list.  Text
+    * comparisons are case-insensitive.
+    *
+    * Note that this will filter out non-baseline maintenance events.
+    */
   def filterOutUnrelatedBaselines(maintRecPKset: Set[Long], requiredText: Set[String]): Seq[MaintenanceRecord] = {
     val action = {
       for {
         maintenanceRecord <- MaintenanceRecord.query.filter(m => m.maintenanceRecordPK.inSet(maintRecPKset))
-        baseline <- Baseline.query.filter(b => (b.maintenanceRecordPK === maintenanceRecord.maintenanceRecordPK))
+        baseline <- Baseline.query.filter(b => b.maintenanceRecordPK === maintenanceRecord.maintenanceRecordPK)
       } yield (maintenanceRecord, baseline.id)
     }
 
@@ -157,15 +149,15 @@ object Baseline extends Logging {
       m.nonEmpty
     }
 
-    val acceptable = list.filter(mb => ((!mb._1.category.equals(MaintenanceCategory.setBaseline))) || (idInSet(mb._2))).map(mb => mb._1)
+    val acceptable = list.filter(mb => !mb._1.category.equals(MaintenanceCategory.setBaseline) || idInSet(mb._2)).map(mb => mb._1)
 
     val result = acceptable.toList.groupBy(m => m.maintenanceRecordPK).values.map(v => v.head).toSeq.sortBy(_.creationTime.getTime)
     result
   }
 
   /**
-   * Construct a baseline object using an attribute list.
-   */
+    * Construct a baseline object using an attribute list.
+    */
   def makeBaseline(maintenanceRecordPK: Long, dataDate: Timestamp, SOPInstanceUID: String, id: String, value: Double): Baseline = {
     new Baseline(None, maintenanceRecordPK, dataDate, Some(SOPInstanceUID), id, value.toString, BaselineSetup.byDefault.toString)
   }
@@ -188,6 +180,6 @@ object Baseline extends Logging {
 
     Trace.trace("--- Finish baseline.  Changed text to boolean ----------------------------------------------------------")
     println("run with: java -cp  target\\AQA-0.3.1-jar-with-dependencies.jar org.aqa.db.Baseline")
-    */
+     */
   }
 }

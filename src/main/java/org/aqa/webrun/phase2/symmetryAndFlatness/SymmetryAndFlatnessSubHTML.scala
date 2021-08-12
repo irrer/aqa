@@ -547,8 +547,6 @@ class SymmetryAndFlatnessSubHTML extends Restlet with Logging with SubUrlAdmin {
     val SF = SymmetryAndFlatnessSubHTML
 
     Trace.trace("tag+value list:\n" + valueMap.keys.map(k => k + " : " + valueMap(k)).mkString("\n"))
-    val j0 = has(SF.beamNameTag)
-    val j1 = has(SF.outputPKTag)
     try {
       0 match {
         case _ if has(SF.csvTag)                             => SF.makeCsv(valueMap, response)

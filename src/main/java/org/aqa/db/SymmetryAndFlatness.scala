@@ -34,7 +34,6 @@ case class SymmetryAndFlatness(
     outputPK: Long, // output primary key
     SOPInstanceUID: String, // UID of source image
     beamName: String, // name of beam in plan
-    // isBaseline_text: String, // TODO isBaseline_text will be deprecated // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.   Note that this is a string instead of a boolean because boolean is not supported by some databases.
     isBaseline: Boolean, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.   Note that this is a string instead of a boolean because boolean is not supported by some databases.
     top_cu: Double, // average value of top point pixels in CU
     bottom_cu: Double, // average value of bottom point pixels in CU
@@ -58,7 +57,6 @@ case class SymmetryAndFlatness(
   }
 
   val isBaselineFunc: Boolean = isBaseline
-
 
   private val list = Seq(top_cu, bottom_cu, right_cu, left_cu, center_cu)
 
@@ -119,7 +117,6 @@ case class SymmetryAndFlatness(
       "    outputPK: " + outputPK + "\n" +
       "    SOPInstanceUID: " + SOPInstanceUID + "\n" +
       "    beamName: " + beamName + "\n" +
-      // "    isBaseline_text: " + isBaseline_text + "\n" +
       "    top_cu: " + top_cu + "\n" +
       "    bottom_cu: " + bottom_cu + "\n" +
       "    left_cu: " + left_cu + "\n" +
@@ -145,8 +142,6 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     def SOPInstanceUID = column[String]("SOPInstanceUID")
 
     def beamName = column[String]("beamName")
-
-    // def isBaseline_text = column[String]("isBaseline_text")
 
     def isBaseline = column[Boolean]("isBaseline")
 
@@ -177,7 +172,6 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
         outputPK,
         SOPInstanceUID,
         beamName,
-        // isBaseline_text,
         isBaseline,
         top_cu,
         bottom_cu,
@@ -359,8 +353,7 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     * @return
     */
   def getBaselineByOutput(outputPK: Long): Seq[SymmetryAndFlatness] = {
-    val trueText = true.toString
-    val search = for { symFlat <- SymmetryAndFlatness.query.filter(sf => (sf.outputPK === outputPK) && (sf.isBaseline)) } yield symFlat
+    val search = for { symFlat <- SymmetryAndFlatness.query.filter(sf => (sf.outputPK === outputPK) && sf.isBaseline) } yield symFlat
     val list = Db.run(search.result)
     list
   }

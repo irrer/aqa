@@ -149,11 +149,11 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
     /**
       * Get the average pixel value for one spot in HU or CU or whatever units the image is using.
-     *
-     * @param point: Center of circle in image.
-     *
-     * @return Mean value of pixels in circle in CU.
-     */
+      *
+      * @param point: Center of circle in image.
+      *
+      * @return Mean value of pixels in circle in CU.
+      */
     def evalPoint(point: SymmetryAndFlatnessPoint): Double = {
       val center = new Point2D.Double(point.x_mm + collimatorCenter.getX, point.y_mm + collimatorCenter.getY)
       val pixList = Phase2Util.makeCenterDosePointList(attributeList, center)
@@ -208,7 +208,6 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       outputPK = outputPK,
       SOPInstanceUID = Util.sopOfAl(attributeList),
       beamName = beamName,
-      // isBaseline_text = symmetryAndFlatnessBaselineRedoBeamList.contains(beamName).toString, // TODO isBaseline_text will be deprecated
       isBaseline = symmetryAndFlatnessBaselineRedoBeamList.contains(beamName),
       top_cu = evalPoint(Config.SymmetryPointTop),
       bottom_cu = evalPoint(Config.SymmetryPointBottom),
