@@ -16,7 +16,6 @@
 
 package org.aqa.db
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
@@ -35,36 +34,18 @@ case class SymmetryAndFlatness(
     outputPK: Long, // output primary key
     SOPInstanceUID: String, // UID of source image
     beamName: String, // name of beam in plan
-    isBaseline_text: String, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.   Note that this is a string instead of a boolean because boolean is not supported by some databases.
-    @deprecated
-    axialSymmetry_pct: Double, // deprecated
-    @deprecated
-    axialSymmetryBaseline_pct: Double, // deprecated
-    @deprecated
-    axialSymmetryStatus: String, // deprecated
-    @deprecated
-    transverseSymmetry_pct: Double, // deprecated
-    @deprecated
-    transverseSymmetryBaseline_pct: Double, // deprecated
-    @deprecated
-    transverseSymmetryStatus: String, // deprecated
-    @deprecated
-    flatness_pct: Double, // deprecated
-    @deprecated
-    flatnessBaseline_pct: Double, // deprecated
-    @deprecated
-    flatnessStatus: String, // deprecated
-    @deprecated
-    profileConstancy_pct: Double,
-    @deprecated
-    profileConstancyBaseline_pct: Double,
-    @deprecated
-    profileConstancyStatus: String,
+    // isBaseline_text: String, // TODO isBaseline_text will be deprecated // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.   Note that this is a string instead of a boolean because boolean is not supported by some databases.
+    isBaseline: Boolean, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.   Note that this is a string instead of a boolean because boolean is not supported by some databases.
     top_cu: Double, // average value of top point pixels in CU
     bottom_cu: Double, // average value of bottom point pixels in CU
     left_cu: Double, // average value of left point pixels in CU
     right_cu: Double, // average value of right point pixels in CU
-    center_cu: Double // average value of center point pixels in CU
+    center_cu: Double, // average value of center point pixels in CU
+    topStdDev_cu: Double, // standard deviation of top point pixels in CU
+    bottomStdDev_cu: Double, // standard deviation of bottom point pixels in CU
+    leftStdDev_cu: Double, // standard deviation of left point pixels in CU
+    rightStdDev_cu: Double, // standard deviation of right point pixels in CU
+    centerStdDev_cu: Double // standard deviation of center point pixels in CU
 ) {
 
   def insert: SymmetryAndFlatness = {
@@ -76,12 +57,8 @@ case class SymmetryAndFlatness(
     result
   }
 
-  val isBaseline: Boolean = {
-    isBaseline_text match {
-      case _ if isBaseline_text.equalsIgnoreCase("true") => true
-      case _                                             => false
-    }
-  }
+  val isBaselineFunc: Boolean = isBaseline
+
 
   private val list = Seq(top_cu, bottom_cu, right_cu, left_cu, center_cu)
 
@@ -142,24 +119,17 @@ case class SymmetryAndFlatness(
       "    outputPK: " + outputPK + "\n" +
       "    SOPInstanceUID: " + SOPInstanceUID + "\n" +
       "    beamName: " + beamName + "\n" +
-      "    isBaseline_text: " + isBaseline_text + "\n" +
-      "    axialSymmetry_pct: " + axialSymmetry_pct + "\n" +
-      "    axialSymmetryBaseline_pct: " + axialSymmetryBaseline_pct + "\n" +
-      "    axialSymmetryStatus: " + axialSymmetryStatus + "\n" +
-      "    transverseSymmetry_pct: " + transverseSymmetry_pct + "\n" +
-      "    transverseSymmetryBaseline_pct: " + transverseSymmetryBaseline_pct + "\n" +
-      "    transverseSymmetryStatus: " + transverseSymmetryStatus + "\n" +
-      "    flatness_pct: " + flatness_pct + "\n" +
-      "    flatnessBaseline_pct: " + flatnessBaseline_pct + "\n" +
-      "    flatnessStatus: " + flatnessStatus + "\n" +
-      "    profileConstancy_pct: " + profileConstancy_pct + "\n" +
-      "    profileConstancyBaseline_pct: " + profileConstancyBaseline_pct + "\n" +
-      "    profileConstancyStatus: " + profileConstancyStatus + "\n" +
+      // "    isBaseline_text: " + isBaseline_text + "\n" +
       "    top_cu: " + top_cu + "\n" +
       "    bottom_cu: " + bottom_cu + "\n" +
       "    left_cu: " + left_cu + "\n" +
       "    right_cu: " + right_cu + "\n" +
-      "    center_cu: " + center_cu + "\n"
+      "    center_cu: " + center_cu + "\n" +
+      "    topStdDev_cu: " + topStdDev_cu + "\n" +
+      "    bottomStdDev_cu: " + bottomStdDev_cu + "\n" +
+      "    leftStdDev_cu: " + leftStdDev_cu + "\n" +
+      "    rightStdDev_cu: " + rightStdDev_cu + "\n" +
+      "    centerStdDev_cu: " + centerStdDev_cu + "\n"
   }
 
 }
@@ -176,31 +146,9 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
 
     def beamName = column[String]("beamName")
 
-    def isBaseline_text = column[String]("isBaseline_text")
+    // def isBaseline_text = column[String]("isBaseline_text")
 
-    def axialSymmetry_pct = column[Double]("axialSymmetry_pct")
-
-    def axialSymmetryBaseline_pct = column[Double]("axialSymmetryBaseline_pct")
-
-    def axialSymmetryStatus = column[String]("axialSymmetryStatus")
-
-    def transverseSymmetry_pct = column[Double]("transverseSymmetry_pct")
-
-    def transverseSymmetryBaseline_pct = column[Double]("transverseSymmetryBaseline_pct")
-
-    def transverseSymmetryStatus = column[String]("transverseSymmetryStatus")
-
-    def flatness_pct = column[Double]("flatness_pct")
-
-    def flatnessBaseline_pct = column[Double]("flatnessBaseline_pct")
-
-    def flatnessStatus = column[String]("flatnessStatus")
-
-    def profileConstancy_pct = column[Double]("profileConstancy_pct")
-
-    def profileConstancyBaseline_pct = column[Double]("profileConstancyBaseline_pct")
-
-    def profileConstancyStatus = column[String]("profileConstancyStatus")
+    def isBaseline = column[Boolean]("isBaseline")
 
     def top_cu = column[Double]("top_cu")
 
@@ -212,6 +160,16 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
 
     def center_cu = column[Double]("center_cu")
 
+    def topStdDev_cu = column[Double]("topStdDev_cu")
+
+    def bottomStdDev_cu = column[Double]("bottomStdDev_cu")
+
+    def leftStdDev_cu = column[Double]("leftStdDev_cu")
+
+    def rightStdDev_cu = column[Double]("rightStdDev_cu")
+
+    def centerStdDev_cu = column[Double]("centerStdDev_cu")
+
     //noinspection LanguageFeature
     def * =
       (
@@ -219,24 +177,18 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
         outputPK,
         SOPInstanceUID,
         beamName,
-        isBaseline_text,
-        axialSymmetry_pct,
-        axialSymmetryBaseline_pct,
-        axialSymmetryStatus,
-        transverseSymmetry_pct,
-        transverseSymmetryBaseline_pct,
-        transverseSymmetryStatus,
-        flatness_pct,
-        flatnessBaseline_pct,
-        flatnessStatus,
-        profileConstancy_pct,
-        profileConstancyBaseline_pct,
-        profileConstancyStatus,
+        // isBaseline_text,
+        isBaseline,
         top_cu,
         bottom_cu,
         left_cu,
         right_cu,
-        center_cu
+        center_cu,
+        topStdDev_cu,
+        bottomStdDev_cu,
+        leftStdDev_cu,
+        rightStdDev_cu,
+        centerStdDev_cu
       ) <> (SymmetryAndFlatness.apply _ tupled, SymmetryAndFlatness.unapply)
 
     // center_cu) <> (SymmetryAndFlatness.apply _ tupled, SymmetryAndFlatness.unapply _)  This is how it was before.
@@ -351,7 +303,7 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     // side effect of ensuring that the dataDate is defined.  If it is not defined, this will
     // throw an exception.
     val sr = search.result
-    val tsList = Db.run(sr).map(os => OutputSymFlat(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime +  "  " + os.sf.beamName)
+    val tsList = Db.run(sr).map(os => OutputSymFlat(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime + "  " + os.sf.beamName)
 
     associateBaseline(tsList)
   }
@@ -386,7 +338,7 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     *   - were captured before the given time stamp
     *   - belong to the same machine
     *   - were produced by the same beam
-    *   - are defined as a baseline because <code>isBaseline_text</code> is true, or failing that, have the chronologically earliest preceding <code>SymmetryAndFlatness</code>.
+    *   - are defined as a baseline because <code>isBaseline</code> is true, or failing that, have the chronologically earliest preceding <code>SymmetryAndFlatness</code>.
     *
     * @param machinePK Match this machine
     * @param beamName  Match this beam
@@ -401,14 +353,14 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
   /**
     * Get the list of symmetry and flatness entries that were explicitly marked to be used as baselines that
     * reference the given output.  The outputPK must match the passed outputPK and the
-    * <code>isBaseline_text</code> must be "true".
+    * <code>isBaseline</code> must be "true".
     *
     * @param outputPK SymmetryAndFlatness rows must point to this output.
     * @return
     */
   def getBaselineByOutput(outputPK: Long): Seq[SymmetryAndFlatness] = {
     val trueText = true.toString
-    val search = for { symFlat <- SymmetryAndFlatness.query.filter(sf => (sf.outputPK === outputPK) && (sf.isBaseline_text === trueText)) } yield symFlat
+    val search = for { symFlat <- SymmetryAndFlatness.query.filter(sf => (sf.outputPK === outputPK) && (sf.isBaseline)) } yield symFlat
     val list = Db.run(search.result)
     list
   }

@@ -149,13 +149,35 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
     /**
       * Get the average pixel value for one spot in HU or CU or whatever units the image is using.
-      */
+     *
+     * @param point: Center of circle in image.
+     *
+     * @return Mean value of pixels in circle in CU.
+     */
     def evalPoint(point: SymmetryAndFlatnessPoint): Double = {
       val center = new Point2D.Double(point.x_mm + collimatorCenter.getX, point.y_mm + collimatorCenter.getY)
       val pixList = Phase2Util.makeCenterDosePointList(attributeList, center)
       val avg = pixList.map(p => dicomImage.get(p.getX.toInt, p.getY.toInt)).sum / pixList.size
       val cu = Phase2Util.pixToDose(avg, attributeList)
       cu
+    }
+
+    /**
+      * Get the standard deviation of the pixel values in CU for one spot in HU or CU or whatever units the image is using.
+      *
+      * @param point: Center of circle in image.
+      *
+      * @return Standard deviation of pixels in circle in CU.
+      */
+    def evalPointStdDev(point: SymmetryAndFlatnessPoint): Double = {
+      val center = new Point2D.Double(point.x_mm + collimatorCenter.getX, point.y_mm + collimatorCenter.getY)
+      val pixList = Phase2Util.makeCenterDosePointList(attributeList, center)
+
+      val dicomImage = new DicomImage(attributeList)
+      val cuList = Phase2Util.pixToDose(pixList.map(p => dicomImage.get(p.x, p.y).toDouble), attributeList)
+      val stdDev_cu = ImageUtil.stdDev(cuList.map(_.toFloat))
+
+      stdDev_cu
     }
 
     logger.info("Making transverse profile of beam " + beamName)
@@ -186,24 +208,18 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       outputPK = outputPK,
       SOPInstanceUID = Util.sopOfAl(attributeList),
       beamName = beamName,
-      isBaseline_text = symmetryAndFlatnessBaselineRedoBeamList.contains(beamName).toString,
-      axialSymmetry_pct = -1,
-      axialSymmetryBaseline_pct = -2,
-      axialSymmetryStatus = "done",
-      transverseSymmetry_pct = -3,
-      transverseSymmetryBaseline_pct = -4,
-      transverseSymmetryStatus = "done",
-      flatness_pct = -5,
-      flatnessBaseline_pct = -6,
-      flatnessStatus = "done",
-      profileConstancy_pct = -7,
-      profileConstancyBaseline_pct = -8,
-      profileConstancyStatus = "done",
+      // isBaseline_text = symmetryAndFlatnessBaselineRedoBeamList.contains(beamName).toString, // TODO isBaseline_text will be deprecated
+      isBaseline = symmetryAndFlatnessBaselineRedoBeamList.contains(beamName),
       top_cu = evalPoint(Config.SymmetryPointTop),
       bottom_cu = evalPoint(Config.SymmetryPointBottom),
       left_cu = evalPoint(Config.SymmetryPointLeft),
       right_cu = evalPoint(Config.SymmetryPointRight),
-      center_cu = evalPoint(Config.SymmetryPointCenter)
+      center_cu = evalPoint(Config.SymmetryPointCenter),
+      topStdDev_cu = evalPointStdDev(Config.SymmetryPointTop),
+      bottomStdDev_cu = evalPointStdDev(Config.SymmetryPointBottom),
+      leftStdDev_cu = evalPointStdDev(Config.SymmetryPointLeft),
+      rightStdDev_cu = evalPointStdDev(Config.SymmetryPointRight),
+      centerStdDev_cu = evalPointStdDev(Config.SymmetryPointCenter)
     )
 
     // Get the baseline for the given beam of the given type (dataName).  If it does not exist, then use this one to establish it.

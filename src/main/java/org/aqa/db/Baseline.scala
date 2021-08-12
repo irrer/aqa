@@ -172,217 +172,22 @@ object Baseline extends Logging {
 
   def main(args: Array[String]): Unit = {
 
-    /**
-     * Check off the sym+flat rows to see if a baseline can be found to prove that
-     * they are stored in a consistent manner.
-     */
-    def checkSymFlat(): Unit = {
-      val all = Db.run(SymmetryAndFlatness.query.result)
-      Trace.trace(all.size)
-
-      def check(sf: SymmetryAndFlatness): Unit = {
-
-        val output = Output.get(sf.outputPK).get
-
-        val sfDesc =
-          "symmetryAndFlatnessPK : " + sf.symmetryAndFlatnessPK +
-            "    Output: " + sf.outputPK +
-            "    machinePK: " + output.machinePK +
-            "    dataDate: " + output.dataDate +
-            "    beamName: " + sf.beamName
-        "    beamName: " + sf.beamName
-
-        if (sf.flatness_pct == sf.flatnessBaseline_pct) {
-          Trace.trace("this is a baseline " + sfDesc)
-        }
-        else {
-          val bs = all.find(s => s.flatness_pct == sf.flatness_pct)
-          if (bs.isEmpty)
-            Trace.trace("could not find baseline " + sfDesc)
-          else {
-            Trace.trace("did find baseline " + bs.get.symmetryAndFlatnessPK + " : " + sfDesc)
-          }
-        }
-      }
-
-      all.foreach(check)
+    /*
+    def setToBaseline(sf: SymmetryAndFlatness): Unit = {
+      val isBsLn = sf.copy(isBaseline = true)
+      isBsLn.insertOrUpdate()
+      println("Updated " + isBsLn)
     }
 
-    def markSymFlat(doIt: Boolean): Unit = {
-      val action = for {
-        sf <- SymmetryAndFlatness.query if
-        sf.axialSymmetry_pct === sf.axialSymmetryBaseline_pct &&
-          sf.transverseSymmetry_pct === sf.transverseSymmetryBaseline_pct &&
-          sf.flatness_pct === sf.flatnessBaseline_pct &&
-          sf.profileConstancy_pct === sf.profileConstancyBaseline_pct
-      } yield {
-        sf.symmetryAndFlatnessPK
-      }
-
-      // list of all baseline PKs
-      val pkList = Db.run(action.result)
-      Trace.trace("Sym+Flat PK list size: " + pkList.size + "    list: " + pkList.mkString("  "))
-
-      def markAsBaseline(pk: Long): Unit = {
-        val symFlat = SymmetryAndFlatness.get(pk).get
-        if (symFlat.isBaseline) {
-          Trace.trace("Already marked sym+flat " + pk + " as baseline")
-        }
-        else {
-          val symFlatAsBaseline = symFlat.copy(isBaseline_text = true.toString)
-          if (doIt) {
-            symFlatAsBaseline.insertOrUpdate()
-            Trace.trace("Marked sym+flat " + pk + " as baseline")
-          }
-          else
-            Trace.trace("Would have Marked sym+flat " + pk + " as baseline")
-        }
-      }
-
-      if (true) // set to true to actually change the database
-        pkList.foreach(markAsBaseline)
-
-      Trace.trace
-    }
-
-    def markWedge(doIt: Boolean): Unit = {
-      val action = for {
-        w <- WedgePoint.query if
-        w.percentOfBackground_pct === w.baselinePercentOfBackground_pct
-      } yield {
-        (w.wedgePointPK)
-      }
-
-      val pkList = Db.run(action.result)
-      Trace.trace("Wedge PK list size: " + pkList.size + "    list: " + pkList.mkString("  "))
-
-      def markAsBaseline(pk: Long): Unit = {
-        val wedge = WedgePoint.get(pk).get
-        if (wedge.isBaseline)
-          Trace.trace("Already marked wedge " + pk + " as baseline")
-        else {
-          val wedgeAsBaseline = wedge.copy(isBaseline_text = true.toString)
-          if (doIt) {
-            wedgeAsBaseline.insertOrUpdate()
-            Trace.trace("Marked wedge " + pk + " as baseline")
-          }
-          else
-            Trace.trace("Would have Marked wedge " + pk + " as baseline")
-        }
-      }
-
-      if (true) // set to true to actually change the database
-        pkList.foreach(markAsBaseline)
-
-      Trace.trace
-    }
-
-    def getBaseline(machinePK: Long, beamName: String, dataName: String, value: Double, dataDate: Timestamp): MaintenanceRecordBaseline = {
-      val id = makeBaselineName(beamName, dataName)
-      val maintenanceRecBaseline = Baseline.findLatest(machinePK, id, dataDate) match {
-        case Some((maintenanceRecord, baseline)) => MaintenanceRecordBaseline(Some(maintenanceRecord), baseline)
-        case _ => MaintenanceRecordBaseline(None, Baseline.makeBaseline(-1, dataDate, SOPInstanceUID = "12.34.56.78", id, value))
-      }
-      maintenanceRecBaseline
-    }
-
-    def checkOldNewWedge(): Unit = {
-
-      def check(w: WedgePoint): Unit = {
-        val output = Output.get(w.outputPK).get
-        val machinePK = output.machinePK.get
-        val dataDate = output.dataDate.get
-
-        val baselineId = WedgeAnalysis.makeWedgeBaselineName(w)
-        val maintenanceRecordBaseline = Baseline.findLatest(machinePK, baselineId, dataDate)
-        if (maintenanceRecordBaseline.isDefined) {
-          val j1 = maintenanceRecordBaseline.get._1
-          val oldBaseline = maintenanceRecordBaseline.get._2.value.toDouble
-          val newBaseline = WedgePoint.getBaseline(machinePK, w.wedgeBeamName, dataDate).get
-          if (newBaseline.percentOfBackground_pct == oldBaseline) {
-            Trace.trace("wedge yay")
-          }
-          else {
-            Trace.trace("wedge what")
-            Trace.trace("\n" + oldBaseline + "\n" + newBaseline.percentOfBackground_pct + "\n")
-          }
-          Trace.trace()
-        }
-      }
-
-      val list = Db.run(WedgePoint.query.result)
-      list.foreach(check)
-    }
-
-    def checkOldNewSymFlat(): Unit = {
-
-      def check(sf: SymmetryAndFlatness): Unit = {
-
-        val output = Output.get(sf.outputPK).get
-        val machinePK = output.machinePK.get
-        val dataDate = output.dataDate.get
-        val beamName = sf.beamName
-
-        // get the baseline values the old way via maintenance records
-        val axial = getBaseline(machinePK, beamName, SymmetryAndFlatnessAnalysis.axialSymmetryName, sf.axialSymmetryBaseline_pct, dataDate).baseline.value.toDouble
-        val trans = getBaseline(machinePK, beamName, SymmetryAndFlatnessAnalysis.transverseSymmetryName, sf.transverseSymmetryBaseline_pct, dataDate).baseline.value.toDouble
-        val flatness = getBaseline(machinePK, beamName, SymmetryAndFlatnessAnalysis.flatnessName, sf.flatnessBaseline_pct, dataDate).baseline.value.toDouble
-        val constancy = getBaseline(machinePK, beamName, SymmetryAndFlatnessAnalysis.profileConstancyName, sf.profileConstancy_pct, dataDate).baseline.value.toDouble
-
-        // Get baseline values the new way.  It should always be defined.
-        val b2 = SymmetryAndFlatness.getBaseline(output.machinePK.get, sf.beamName, output.dataDate.get).get
-
-        if (
-          (b2.symmetryAndFlatness.axialSymmetryBaseline_pct == axial) &&
-            (b2.symmetryAndFlatness.transverseSymmetry_pct == trans) &&
-            (b2.symmetryAndFlatness.flatnessBaseline_pct == flatness) &&
-            (b2.symmetryAndFlatness.profileConstancy_pct == constancy)
-        )
-          Trace.trace("sym+flat yay")
-        else {
-          Trace.trace("sym+flat What?")
-
-          Trace.trace(b2.symmetryAndFlatness.axialSymmetryBaseline_pct == axial)
-          Trace.trace(b2.symmetryAndFlatness.transverseSymmetry_pct == trans)
-          Trace.trace(b2.symmetryAndFlatness.flatnessBaseline_pct == flatness)
-          Trace.trace(b2.symmetryAndFlatness.profileConstancy_pct == constancy)
-
-          Trace.trace("\n" + b2.symmetryAndFlatness.axialSymmetryBaseline_pct + "\n" + axial + "\n")
-          Trace.trace("\n" + b2.symmetryAndFlatness.transverseSymmetry_pct + "\n" + trans + "\n")
-          Trace.trace("\n" + b2.symmetryAndFlatness.flatnessBaseline_pct + "\n" + flatness + "\n")
-          Trace.trace("\n" + b2.symmetryAndFlatness.profileConstancy_pct + "\n" + constancy + "\n")
-        }
-      }
-
-      val list = Db.run(SymmetryAndFlatness.query.result)
-
-      println("number of sym+flat: " + list.size)
-      list.foreach(check)
-    }
-
-    def param(name: String) :  Boolean = {
-      args.contains(name)
-    }
-
-    Trace.trace("Validate Config and DB")
-
-    Config.validate
     DbSetup.init
 
-    val possibleArgs = "\n\nPossible args: doIt checkSymFlat markSymFlat markWedge checkOldNewSymFlat checkOldNewWedge\n\n"
-    Trace.trace("--- Start baseline checks ----------------------------------------------------------")
-    println(possibleArgs)
+    val action = SymmetryAndFlatness.query.filter(_.isBaseline_text =!= "false")
+    val list = Db.run(action.result)
 
-    val doIt = args.contains("doIt")  // must use to change database
-    if (args.contains("checkSymFlat")) checkSymFlat()
-    if (args.contains("markSymFlat")) markSymFlat(doIt)
-    if (args.contains("markWedge")) markWedge(doIt)
+    list.foreach(sf => setToBaseline(sf))
 
-    if (args.contains("checkOldNewSymFlat")) checkOldNewSymFlat()
-    if (args.contains("checkOldNewWedge")) checkOldNewWedge()
-
-    println(possibleArgs)
-    Trace.trace("--- Finish baseline checks ----------------------------------------------------------")
+    Trace.trace("--- Finish baseline.  Changed text to boolean ----------------------------------------------------------")
     println("run with: java -cp  target\\AQA-0.3.1-jar-with-dependencies.jar org.aqa.db.Baseline")
+    */
   }
 }

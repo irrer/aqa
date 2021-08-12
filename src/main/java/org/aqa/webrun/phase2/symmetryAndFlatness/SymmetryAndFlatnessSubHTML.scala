@@ -503,7 +503,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
 
     if (authorized) {
       val baseline = valueMap(baselineTag).trim.toBoolean
-      val newSymmetryAndFlatness = symmetryAndFlatness.copy(isBaseline_text = baseline.toString)
+      val newSymmetryAndFlatness = symmetryAndFlatness.copy(isBaseline = baseline)
       newSymmetryAndFlatness.insertOrUpdate()
       val elem = <div>Changed SymmetryAndFlatness
         {symFlatPK.toString}
