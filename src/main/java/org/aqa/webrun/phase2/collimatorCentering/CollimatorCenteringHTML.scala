@@ -113,6 +113,8 @@ object CollimatorCenteringHTML {
       runReq: RunReq
   ): Elem = {
 
+    val charts = new CollimatorCenteringChart(extendedData.output.outputPK.get)
+
     val attr090 = runReq.rtimageMap(Config.CollimatorCentering090BeamName)
     val attr270 = runReq.rtimageMap(Config.CollimatorCentering270BeamName)
 
@@ -136,11 +138,12 @@ object CollimatorCenteringHTML {
     val image270Name = "image270"
 
     val script = {
-      """
+      s"""
     <script>
-      $(document).ready(function(){ $('#""" + image090Name + """').zoom(); });
-      $(document).ready(function(){ $('#""" + image270Name + """').zoom(); });
+      $$(document).ready(function(){ $$('#$image090Name').zoom(); });
+      $$(document).ready(function(){ $$('#$image270Name').zoom(); });
     </script>
+    ${CollimatorCenteringChartHistoryRestlet.makeReference(extendedData.output.outputPK.get)}
 """
     }
 
@@ -149,8 +152,21 @@ object CollimatorCenteringHTML {
       val href270 = Phase2Util.dicomViewHref(attr270, extendedData, runReq)
 
       <div>
-        <div class="col-md-4 col-md-offset-3" align="middle">
-          <h3 title='X, Y difference from isoplane center in mm'>{resultSummary} mm</h3>
+        <div class="row">
+          <div class="col-md-4 col-md-offset-3" align="middle">
+            <h3 title='X, Y difference from isoplane center in mm'>Offset: {resultSummary} mm</h3>
+          </div>
+          <div class="col-md-10 col-md-offset-1">
+            <div class="row">
+              {charts.summary.html}
+            </div>
+            <div class="row">
+              {charts.collCenter090.html}
+            </div>
+            <div class="row">
+              {charts.collCenter270.html}
+            </div>
+          </div>
         </div>
         <div class="row" style="margin:30px;">
           <div class="col-md-4 col-md-offset-1" align="middle">
@@ -170,7 +186,14 @@ object CollimatorCenteringHTML {
       </div>
     }
 
-    val html = Phase2Util.wrapSubProcedure(extendedData, content, "Collimator Centering", status, Some(script), runReq)
+    val html = Phase2Util.wrapSubProcedure(
+      extendedData,
+      content,
+      "Collimator Centering",
+      status,
+      Some(script),
+      runReq
+    )
     val outFile = new File(outputDir, htmlFileName)
     Util.writeFile(outFile, html)
 

@@ -30,6 +30,7 @@ import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryPartialRestlet
 import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryRestlet
 import org.aqa.webrun.dailyQA.DailyQASummary
 import org.aqa.webrun.phase2.centerDose.CenterDoseChartHistoryRestlet
+import org.aqa.webrun.phase2.collimatorCentering.CollimatorCenteringChartHistoryRestlet
 import org.aqa.webrun.phase2.customizeRtPlan.CustomizeRtPlanInterface
 import org.aqa.webrun.phase2.phase2csv.Phase2CsvRestlet
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessHistoryRestlet
@@ -504,6 +505,7 @@ class WebServer extends Application with Logging {
         systemModificationUpdate,
         new WedgeUseAsBaseline,
         new CenterDoseChartHistoryRestlet,
+        new CollimatorCenteringChartHistoryRestlet,
         new BBbyCBCTChartHistoryRestlet,
         new BBbyEPIDChartHistoryRestlet,
         new BBbyEPIDChartHistoryPartialRestlet,
