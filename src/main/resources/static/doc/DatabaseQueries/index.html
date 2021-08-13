@@ -30,6 +30,7 @@
         Assurance site uses PostreSQL version 12.5 R5.
     </p>
 
+    <hr/>
     <h3><u>Select Symmetry, Flatness, and Constancy Data</u></h3>
     <p>
         Refer to the <a href="../SymmetryAndFlatness/index.html">Symmetry and Flatness</a> user guide for more
@@ -75,5 +76,49 @@
           "output"."dataDate"
         ASC LIMIT 10;
     </pre>
+
+    <hr/>
+    <h3><u>Select Collimator Centering Data</u></h3>
+    <p>
+        Refer to the <a href="../CollimatorCentering/index.html">Collimator Centering</a> user guide for more
+        information.
+    </p>
+    <pre>
+&nbsp;
+        SELECT
+          "institution"."name",
+          "machine"."id",
+          "machineType"."model",
+          "multileafCollimator"."model",
+          "output"."dataDate",
+          "collimatorCentering"."xCollimatorCenter_mm",
+          "collimatorCentering"."yCollimatorCenter_mm",
+          "collimatorCentering"."X1_090_mm",
+          "collimatorCentering"."X2_090_mm",
+          "collimatorCentering"."Y1_090_mm",
+          "collimatorCentering"."Y2_090_mm",
+          "collimatorCentering"."X1_270_mm",
+          "collimatorCentering"."X2_270_mm",
+          "collimatorCentering"."Y1_270_mm",
+          "collimatorCentering"."Y2_270_mm"
+        FROM
+          public."collimatorCentering",
+          public."institution",
+          public."machine",
+          public."machineType",
+          public."multileafCollimator",
+          public."output"
+        WHERE
+              ("collimatorCentering"."outputPK" = "output"."outputPK")
+          AND ("output"."machinePK" = "machine"."machinePK")
+          AND ("machine"."institutionPK" = "institution"."institutionPK")
+          AND ("machine"."machineTypePK" = "machineType"."machineTypePK")
+          AND ("machine"."multileafCollimatorPK" = "multileafCollimator"."multileafCollimatorPK")
+        ORDER BY
+          "machine"."id",
+          "output"."dataDate"
+        ASC LIMIT 10;
+    </pre>
+
 
 </div>
