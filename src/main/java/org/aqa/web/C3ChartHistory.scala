@@ -214,7 +214,8 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
         }
     }$grid,
     zoom: {
-      enabled: true
+      enabled: true,
+      rescale: true
     },
     point: {
         r: 2,
@@ -266,10 +267,6 @@ object C3ChartHistory {
     * @return HTML to embed.
     */
   def htmlRef(chartIdTag: String): Elem = {
-    <div>
-      <div id={chartIdTag}>
-        {chartIdTag}
-      </div>
-    </div>
+    <div id={chartIdTag + "Parent"}><div id={chartIdTag}>{chartIdTag}</div></div>
   }
 }
