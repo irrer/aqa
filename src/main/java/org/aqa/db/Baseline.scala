@@ -165,6 +165,7 @@ object Baseline extends Logging {
 
   def main(args: Array[String]): Unit = {
 
+    /*
     def setToBaseline(w: WedgePoint): Unit = {
       val isBsLn = w.copy(isBaseline = true)
       isBsLn.insertOrUpdate()
@@ -180,5 +181,6 @@ object Baseline extends Logging {
 
     Trace.trace("--- Finish baseline.  Changed text to boolean ----------------------------------------------------------")
     println("run with: java -cp  target\\AQA-0.3.1-jar-with-dependencies.jar org.aqa.db.Baseline")
+  */
   }
 }

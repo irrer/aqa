@@ -414,7 +414,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
         Seq()
       else {
         // List of wedge points that were baselines.
-        val wereBaseline = WedgePoint.history(oldOutput.get.machinePK.get).filter(wh => wh.output.outputPK.get == oldOutput.get.outputPK.get && wh.wedgePoint.isBaselineX)
+        val wereBaseline = WedgePoint.history(oldOutput.get.machinePK.get).filter(wh => wh.output.outputPK.get == oldOutput.get.outputPK.get && wh.wedgePoint.isBaseline)
         // Transform into beam name and background beam name, which is used to identify it.
         val list = wereBaseline.map(wh => wh.wedgePoint.wedgeBeamName + wh.wedgePoint.backgroundBeamName)
         list

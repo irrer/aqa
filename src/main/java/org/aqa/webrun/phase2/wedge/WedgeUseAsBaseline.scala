@@ -49,7 +49,7 @@ class WedgeUseAsBaseline extends Restlet with SubUrlRun with Logging {
 
     val wedgePoint = WedgePoint.get(wedgePointPK).get
 
-    val newWedgePoint = wedgePoint.copy(isBaseline_text = (!wedgePoint.isBaseline).toString, isBaseline = (!wedgePoint.isBaseline))
+    val newWedgePoint = wedgePoint.copy(isBaseline = (!wedgePoint.isBaseline))
     newWedgePoint.insertOrUpdate()
   }
 
@@ -102,7 +102,7 @@ class WedgeUseAsBaseline extends Restlet with SubUrlRun with Logging {
 
     val input = {
       val onClick = "setBaselineState(this, " + wedgePointPK + ")"
-      if (wedgePoint.isBaselineX) {
+      if (wedgePoint.isBaseline) {
         <input class="form-control" type="checkbox" name="Baseline" onclick={onClick} value="true" checked="true"/>
       } else {
         <input class="form-control" type="checkbox" name="Baseline" onclick={onClick} value="false"/>

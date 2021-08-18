@@ -29,7 +29,7 @@ case class WedgePoint(
     outputPK: Long, // output primary key
     wedgeSOPInstanceUID: String, // UID of wedge source image
     wedgeBeamName: String, // name of wedge beam in plan
-    isBaseline_text: String, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.   Note that this is a string instead of a boolean because boolean is not supported by some databases.
+    // isBaseline_text: String, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.   Note that this is a string instead of a boolean because boolean is not supported by some databases.
     isBaseline: Boolean, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.   Note that this is a string instead of a boolean because boolean is not supported by some databases.
     wedgeValue_cu: Double, // value of wedge point in CU : Calibrated Units
     backgroundSOPInstanceUID: String, // UID of background source image
@@ -49,13 +49,6 @@ case class WedgePoint(
     result
   }
 
-  val isBaselineX: Boolean = {
-    isBaseline_text match {
-      case _ if isBaseline_text.equalsIgnoreCase("true") => true
-      case _                                             => false
-    }
-  }
-
   def insertOrUpdate(): Int = Db.run(WedgePoint.query.insertOrUpdate(this))
 
   override def toString: String = {
@@ -63,7 +56,7 @@ case class WedgePoint(
       "    outputPK: " + outputPK + "\n" +
       "    wedgeSOPInstanceUID: " + wedgeSOPInstanceUID + "\n" +
       "    wedgeBeamName: " + wedgeBeamName + "\n" +
-      "    isBaseline_text: " + isBaseline_text + "\n" +
+      // "    isBaseline_text: " + isBaseline_text + "\n" +
       "    isBaseline: " + isBaseline + "\n" +
       "    wedgeValue_cu: " + wedgeValue_cu + "\n" +
       "    backgroundSOPInstanceUID: " + backgroundSOPInstanceUID + "\n" +
@@ -86,7 +79,7 @@ object WedgePoint extends ProcedureOutput {
 
     def wedgeBeamName = column[String]("wedgeBeamName")
 
-    def isBaseline_text = column[String]("isBaseline_text")
+    //def isBaseline_text = column[String]("isBaseline_text")
     def isBaseline = column[Boolean]("isBaseline")
 
     def wedgeValue_cu = column[Double]("wedgeValue_cu")
@@ -107,7 +100,7 @@ object WedgePoint extends ProcedureOutput {
         outputPK,
         wedgeSOPInstanceUID,
         wedgeBeamName,
-        isBaseline_text,
+        //isBaseline_text,
         isBaseline,
         wedgeValue_cu,
         backgroundSOPInstanceUID,
@@ -215,7 +208,7 @@ object WedgePoint extends ProcedureOutput {
     if (pairList.isEmpty)
       hist // all done
     else {
-      if (pairList.head.wedgePoint.isBaselineX) {
+      if (pairList.head.wedgePoint.isBaseline) {
         val h = WedgePointHistory(pairList.head.output, pairList.head.wedgePoint, pairList.head.output, pairList.head.wedgePoint)
         associateWithBaseline(pairList.tail, pairList.head, hist :+ h)
       } else {
@@ -278,7 +271,7 @@ object WedgePoint extends ProcedureOutput {
 
       // list of all results, with the most recent first
       val list = Db.run(search.result).sortBy(o => o._1.dataDate.get.getTime).map(os => os._2).reverse
-      val b: Option[WedgePoint] = list.find(_.isBaselineX) match {
+      val b: Option[WedgePoint] = list.find(_.isBaseline) match {
 
         // Use the most recent set of values that is marked as a baseline.
         case Some(wedgePoint: WedgePoint) => Some(wedgePoint)
