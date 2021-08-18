@@ -16,6 +16,7 @@
 
 package org.aqa.db
 
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 
@@ -164,22 +165,20 @@ object Baseline extends Logging {
 
   def main(args: Array[String]): Unit = {
 
-    /*
-    def setToBaseline(sf: SymmetryAndFlatness): Unit = {
-      val isBsLn = sf.copy(isBaseline = true)
+    def setToBaseline(w: WedgePoint): Unit = {
+      val isBsLn = w.copy(isBaseline = true)
       isBsLn.insertOrUpdate()
       println("Updated " + isBsLn)
     }
 
     DbSetup.init
 
-    val action = SymmetryAndFlatness.query.filter(_.isBaseline_text =!= "false")
+    val action = WedgePoint.query.filter(_.isBaseline_text =!= "false")
     val list = Db.run(action.result)
 
     list.foreach(sf => setToBaseline(sf))
 
     Trace.trace("--- Finish baseline.  Changed text to boolean ----------------------------------------------------------")
     println("run with: java -cp  target\\AQA-0.3.1-jar-with-dependencies.jar org.aqa.db.Baseline")
-     */
   }
 }

@@ -79,7 +79,7 @@ class WedgeChartHistory(outputPK: Long) {
 
   private def baselineMaintenanceList(beamHistory: Seq[WedgePoint.WedgePointHistory]): Seq[MaintenanceRecord] = {
     beamHistory
-      .filter(wh => wh.wedgePoint.isBaseline)
+      .filter(wh => wh.wedgePoint.isBaselineX)
       .map(wh =>
         MaintenanceRecord(
           maintenanceRecordPK = None,

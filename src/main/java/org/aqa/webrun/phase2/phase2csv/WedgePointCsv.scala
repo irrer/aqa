@@ -40,8 +40,8 @@ class WedgePointCsv extends Phase2Csv[WedgePoint.WedgePointHistory] {
     * @return Baseline designation.
     */
   private def baselineDesignation(wh: WH): String = {
-    (wh.wedgePoint.isBaseline, wh.wedgePoint.wedgePointPK.get == wh.baselineWedgePoint.wedgePointPK.get) match {
-      case _ if wh.wedgePoint.isBaseline                                                 => "explicit"
+    (wh.wedgePoint.isBaselineX, wh.wedgePoint.wedgePointPK.get == wh.baselineWedgePoint.wedgePointPK.get) match {
+      case _ if wh.wedgePoint.isBaselineX                                                => "explicit"
       case _ if wh.wedgePoint.wedgePointPK.get == wh.baselineWedgePoint.wedgePointPK.get => "implicit"
       case _                                                                             => ""
     }

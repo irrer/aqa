@@ -90,6 +90,7 @@ object WedgeAnalysis extends Logging {
       Util.sopOfAl(derivedWedge.attributeList),
       wedgePair.beamName,
       isBaseline_text = false.toString,
+      isBaseline = false,
       wedgeDose,
       Util.sopOfAl(derivedBackground.attributeList),
       wedgePair.backgroundBeamName,
@@ -139,7 +140,7 @@ object WedgeAnalysis extends Logging {
   private def restoreBaseline(wp: WedgePoint, baselineList: Seq[String]): WedgePoint = {
     val id = wp.wedgeBeamName + wp.backgroundBeamName
     if (baselineList.contains(id))
-      wp.copy(isBaseline_text = true.toString)
+      wp.copy(isBaseline_text = true.toString, isBaseline = true)
     else wp
   }
 
