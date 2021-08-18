@@ -541,7 +541,6 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Maximum amount +/- as a floating point percentage that each subfield is allowed to deviate from the average of the deviations until it is considered a failure. -->
     <VMATDeviationThreshold_pct>3.0</VMATDeviationThreshold_pct>
-    <!-- <VMATDeviationThreshold_pct>-1.0</VMATDeviationThreshold_pct> -->   <!-- Set this to -1 to disable VMAT.  Used until VMAT is released. -->
 
     <!-- Maximum amount as a floating point percentage that the average of the deviations are allowed to deviate from the average until it is considered a failure. -->
     <VMATAverageOfAbsoluteDeviationThreshold_pct>1.5</VMATAverageOfAbsoluteDeviationThreshold_pct>

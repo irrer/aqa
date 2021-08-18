@@ -346,19 +346,13 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
                   case Left(fail) => Left(Seq(metadataCheck.summary, badPixel.summary, collimatorCentering.summary, fail))
                   case Right(centerDose) =>
                     val prevSummaryList = Seq(metadataCheck, badPixel, collimatorCentering, centerDose).map(r => r.summary)
-                    val vmatFunction: Seq[() => Either[Elem, SubProcedureResult]] = { // TODO this should be incorporated into the <code>seq</code> list when VMAT is approved.
-                      if (Config.VMATDeviationThreshold_pct == -1) {
-                        Seq[() => Either[Elem, SubProcedureResult]]()
-                      } else {
-                        Seq(() => VMATAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result))
-                      }
-                    }
                     val seq: Seq[() => Either[Elem, SubProcedureResult]] = Seq(
                       () => CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
                       () => WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
                       () => SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
-                      () => LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result)
-                    ) ++ vmatFunction
+                      () => LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result),
+                      () => VMATAnalysis.runProcedure(extendedData, runReq, collimatorCentering.result)
+                    )
 
                     val list = seq.par.map(f => f())
                     val summaryList = prevSummaryList ++ list.map(r => if (r.isLeft) r.left.get else r.right.get.summary)
