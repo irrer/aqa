@@ -34,7 +34,7 @@ import scala.util.Success
 object Db extends Logging {
 
   /** Ensure that the the configuration has been read. */
-   Config.validate
+  Config.validate
 
   def isSqlServer: Boolean = Config.SlickDb.getString("db.default.driver").toLowerCase.contains("sqlserver")
 
@@ -57,7 +57,7 @@ object Db extends Logging {
       // case _ if name.toLowerCase.contains("sqlite")    => slick.jdbc.SQLiteProfile // not tested
       // case _ if name.toLowerCase.contains("derby")     => slick.jdbc.DerbyProfile // not tested
       // case _ if name.toLowerCase.contains("hsqld")     => slick.jdbc.HsqldbProfile // not tested
-      case _                                           => throw new RuntimeException("Unable to recognize database driver: " + name)
+      case _ => throw new RuntimeException("Unable to recognize database driver: " + name)
     }
     logger.info("Using database driver " + d)
     d
@@ -134,9 +134,7 @@ object Db extends Logging {
       val dbAction = db.run(op)
       val elapsed = System.currentTimeMillis() - start
       if (elapsed > veryLongTime_ms) {
-        val stackText = Thread.currentThread
-          .getStackTrace
-          .tail
+        val stackText = Thread.currentThread.getStackTrace.tail
           .map(_.toString)
           .filterNot(_.contains("scala.collection")) // filter out stuff we don't care about
           .filterNot(_.contains("org.restlet")) // filter out stuff we don't care about
