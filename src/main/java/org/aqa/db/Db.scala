@@ -19,7 +19,6 @@ package org.aqa.db
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
-import org.aqa.db.Db.driver
 import slick.jdbc.meta.MTable
 import slick.sql.FixedSqlAction
 
@@ -50,14 +49,14 @@ object Db extends Logging {
     if (slick.jdbc.SQLServerProfile == null) logger.warn("slick.jdbc.SQLServerProfile is null")
 
     val d = 0 match {
-      case _ if name.toLowerCase.contains("postgres")  => slick.driver.PostgresDriver
+      case _ if name.toLowerCase.contains("postgres")  => slick.jdbc.PostgresProfile
       case _ if name.toLowerCase.contains("sqlserver") => slick.jdbc.SQLServerProfile
-      case _ if name.toLowerCase.contains("oracle")    => slick.jdbc.OracleProfile
-      case _ if name.toLowerCase.contains("mysql")     => slick.driver.MySQLDriver
-      case _ if name.toLowerCase.contains("h2")        => slick.driver.H2Driver
-      case _ if name.toLowerCase.contains("sqlite")    => slick.driver.SQLiteDriver
-      case _ if name.toLowerCase.contains("derby")     => slick.driver.DerbyDriver
-      case _ if name.toLowerCase.contains("hsqld")     => slick.driver.HsqldbDriver
+      // case _ if name.toLowerCase.contains("oracle")    => slick.jdbc.OracleProfile // not tested
+      // case _ if name.toLowerCase.contains("mysql")     => slick.jdbc.MySQLProfile // not tested
+      // case _ if name.toLowerCase.contains("h2")        => slick.jdbc.H2Profile // not tested
+      // case _ if name.toLowerCase.contains("sqlite")    => slick.jdbc.SQLiteProfile // not tested
+      // case _ if name.toLowerCase.contains("derby")     => slick.jdbc.DerbyProfile // not tested
+      // case _ if name.toLowerCase.contains("hsqld")     => slick.jdbc.HsqldbProfile // not tested
       case _                                           => throw new RuntimeException("Unable to recognize database driver: " + name)
     }
     logger.info("Using database driver " + d)
@@ -107,7 +106,7 @@ object Db extends Logging {
           // for all the other databases that play nicely with config.
           Database.forConfig(prefix, Config.SlickDb)
         logger.info("Was able to configure " + msg)
-        dd
+        Some(dd)
       } catch {
         case t: Throwable =>
           logger.error("Unable to create database connection: " + fmtEx(t))
@@ -116,12 +115,12 @@ object Db extends Logging {
     d
   }
 
-  private var dbValue: Database = null
+  private var dbValue: Option[Database] = None
 
-  def db: driver.api.Database =
+  private def db: driver.api.Database =
     TIMEOUT.synchronized {
-      if (dbValue == null) dbValue = initDb
-      dbValue
+      if (dbValue.isEmpty) dbValue = initDb
+      dbValue.get
     }
 
   private def tableName(table: TableQuery[Table[_]]): String = table.shaped.value.tableName
@@ -136,7 +135,7 @@ object Db extends Logging {
       val elapsed = System.currentTimeMillis() - start
       if (elapsed > veryLongTime_ms) {
         val stackText = Thread.currentThread
-          .getStackTrace()
+          .getStackTrace
           .tail
           .map(_.toString)
           .filterNot(_.contains("scala.collection")) // filter out stuff we don't care about
@@ -178,7 +177,7 @@ object Db extends Logging {
   private object TableList {
 
     /** List of database tables in lower case. Do not reference this directly, instead use <code>getTableList</code> .*/
-    private var tableList: Seq[String] = null
+    private var tableList: Seq[String] = Seq[String]()
 
     def resetTableList(): Unit = tableList = null
 
@@ -186,14 +185,13 @@ object Db extends Logging {
       * Get the latest version of the list of tables.
       */
     def getTableList: Seq[String] = {
-      if (tableList == null) {
+      if (tableList.isEmpty) {
         val tableListMixed = if (isSqlServer) {
-          //val action = sql"select TABLE_NAME from AQAmsDV.INFORMATION_SCHEMA.TABLES".as[String]
           val action = sql"select TABLE_NAME from INFORMATION_SCHEMA.TABLES".as[String]
-          val tl = run(action).toSeq
+          val tl = run(action)
           tl
         } else {
-          Await.result(db.run(MTable.getTables), TIMEOUT).toSeq.map(m => m.name.name)
+          Await.result(db.run(MTable.getTables), TIMEOUT).map(m => m.name.name)
         }
         tableList = tableListMixed.map(name => name.toLowerCase)
       }
@@ -216,7 +214,7 @@ object Db extends Logging {
   def dropTableIfExists(table: TableQuery[Table[_]]): Unit = {
     if (TableList.tableExists(table)) {
       perform(table.schema.drop)
-      TableList.resetTableList
+      TableList.resetTableList()
       if (TableList.tableExists(table)) throw new RuntimeException("Tried but failed to drop table " + tableName(table))
     }
   }
@@ -224,7 +222,7 @@ object Db extends Logging {
   def createTableIfNonexistent(table: TableQuery[Table[_]]): Unit = {
     if (!TableList.tableExists(table)) {
       perform(table.schema.create)
-      TableList.resetTableList
+      TableList.resetTableList()
       if (!TableList.tableExists(table)) throw new RuntimeException("Tried but failed to create table " + tableName(table))
     }
   }
