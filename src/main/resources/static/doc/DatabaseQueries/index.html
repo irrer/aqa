@@ -27,11 +27,26 @@
     </p>
     <p>
         The AQA software is compatible with both PostgreSQL and Microsoft SQL server databases. The Automated Quality
-        Assurance site uses PostreSQL version 12.5 R5.
+        Assurance site uses PostgreSQL version 12.5 R5.
     </p>
 
+    <a href="SymmetryFlatnessConstancy.html">Symmetry Flatness Constancy</a>
+
+    <h3>Index</h3>
+    <ul>
+        <li><a href="#SymmetryFlatnessConstancy">Symmetry Flatness Constancy</a></li>
+        <li><a href="#CollimatorCentering">Collimator Centering</a></li>
+        <li><a href="#CenterDose">Center Dose</a></li>
+        <li><a href="#Wedge">Wedge</a></li>
+        <li><a href="#CollimatorPosition">Collimator Position</a></li>
+        <li><a href="#LeafPosition">Leaf Position</a></li>
+        <li><a href="#VMAT">VMAT</a></li>
+    </ul>
+
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
     <hr/>
-    <h3><u>Select Symmetry, Flatness, and Constancy Data</u></h3>
+    <h3 id="SymmetryFlatnessConstancy"><u>Symmetry, Flatness, and Constancy</u></h3>
     <p>
         Refer to the <a href="../SymmetryAndFlatness/index.html">Symmetry and Flatness</a> user guide for more
         information.
@@ -43,7 +58,7 @@
         next baseline or the last data set.
     </p>
     <pre>
-&nbsp;
+        &nbsp;
         SELECT
           "institution"."name",
           "machine"."id",
@@ -77,14 +92,16 @@
         ASC LIMIT 10;
     </pre>
 
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
     <hr/>
-    <h3><u>Select Collimator Centering Data</u></h3>
+    <h3 id="CollimatorCentering"><u>Collimator Centering</u></h3>
     <p>
         Refer to the <a href="../CollimatorCentering/index.html">Collimator Centering</a> user guide for more
         information.
     </p>
     <pre>
-&nbsp;
+        &nbsp;
         SELECT
           "institution"."name",
           "machine"."id",
@@ -120,5 +137,131 @@
         ASC LIMIT 10;
     </pre>
 
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <hr/>
+    <h3 id="CenterDose"><u>Center Dose</u></h3>
+    <p>
+        Refer to the <a href="../CenterDose/index.html">Center Dose</a> user guide for more
+        information.
+    </p>
+    <pre>
+        &nbsp;
+        SELECT
+          "institution"."name",
+          "machine"."id",
+          "machineType"."model",
+          "multileafCollimator"."model",
+          "output"."dataDate",
+          "centerDose"."beamName",
+          "centerDose"."dose"
+        FROM
+          public."centerDose",
+          public."institution",
+          public."machine",
+          public."machineType",
+          public."multileafCollimator",
+          public."output"
+        WHERE
+              ("centerDose"."outputPK" = "output"."outputPK")
+          AND ("output"."machinePK" = "machine"."machinePK")
+          AND ("machine"."institutionPK" = "institution"."institutionPK")
+          AND ("machine"."machineTypePK" = "machineType"."machineTypePK")
+          AND ("machine"."multileafCollimatorPK" = "multileafCollimator"."multileafCollimatorPK")
+        ORDER BY
+          "machine"."id",
+          "output"."dataDate"
+        ASC LIMIT 10;
+    </pre>
+
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <hr/>
+    <h3 id="Wedge"><u>Wedge</u></h3>
+    <p>
+    </p>
+    <pre>
+        &nbsp;
+          SELECT
+          "institution"."name",
+          "machine"."id",
+          "machineType"."model",
+          "multileafCollimator"."model",
+          "output"."dataDate",
+          "wedgePoint"."wedgeBeamName",
+          "wedgePoint"."backgroundBeamName",
+          "wedgePoint"."wedgeValue_cu",
+          "wedgePoint"."backgroundValue_cu",
+          "wedgePoint"."percentOfBackground_pct",
+          "wedgePoint"."isBaseline"
+		FROM
+          public."wedgePoint",
+          public."institution",
+          public."machine",
+          public."machineType",
+          public."multileafCollimator",
+          public."output"
+        WHERE
+              ("wedgePoint"."outputPK" = "output"."outputPK")
+          AND ("output"."machinePK" = "machine"."machinePK")
+          AND ("machine"."institutionPK" = "institution"."institutionPK")
+          AND ("machine"."machineTypePK" = "machineType"."machineTypePK")
+          AND ("machine"."multileafCollimatorPK" = "multileafCollimator"."multileafCollimatorPK")
+        ORDER BY
+          "machine"."id",
+          "output"."dataDate"
+        ASC LIMIT 10;
+    </pre>
+
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <hr/>
+    <h3 id="CollimatorPosition"><u>Collimator Position</u></h3>
+    <p>
+    </p>
+    <pre>
+        &nbsp;
+        SELECT
+          "institution"."name",
+          "machine"."id",
+          "machineType"."model",
+          "multileafCollimator"."model",
+          "output"."dataDate",
+          "collimatorPosition"."beamName",
+          "collimatorPosition"."X1_mm",
+          "collimatorPosition"."X2_mm",
+          "collimatorPosition"."Y1_mm",
+          "collimatorPosition"."Y2_mm",
+          "collimatorPosition"."X1_ExpectedMinusImage_mm",
+          "collimatorPosition"."X2_ExpectedMinusImage_mm",
+          "collimatorPosition"."Y1_ExpectedMinusImage_mm",
+          "collimatorPosition"."Y2_ExpectedMinusImage_mm",
+          "collimatorPosition"."gantryAngle_deg",
+          "collimatorPosition"."collimatorAngle_deg",
+          "collimatorPosition"."FloodCompensation", -- true if flood compensation was used
+          "collimatorPosition"."XCollimatorCenterOfRotation_mm",
+          "collimatorPosition"."YCollimatorCenterOfRotation_mm"
+		FROM
+          public."collimatorPosition",
+          public."institution",
+          public."machine",
+          public."machineType",
+          public."multileafCollimator",
+          public."output"
+        WHERE
+              ("collimatorPosition"."outputPK" = "output"."outputPK")
+          AND ("output"."machinePK" = "machine"."machinePK")
+          AND ("machine"."institutionPK" = "institution"."institutionPK")
+          AND ("machine"."machineTypePK" = "machineType"."machineTypePK")
+          AND ("machine"."multileafCollimatorPK" = "multileafCollimator"."multileafCollimatorPK")
+        ORDER BY
+          "machine"."id",
+          "output"."dataDate"
+        ASC LIMIT 10;
+    </pre>
+
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <p style="margin-bottom: 80px;"></p>
 
 </div>

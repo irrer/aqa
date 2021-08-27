@@ -1,0 +1,64 @@
+<div title="Symmetry, Flatness, and Constancy Database Query" class="col-md-8 col-md-offset-1">
+    <!--
+    Copyright 2021 Regents of the University of Michigan
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    -->
+
+    <h2>@@title@@</h2>
+    <p>
+        Refer to the <a href="../SymmetryAndFlatness/index.html">Symmetry and Flatness</a> user guide for background
+        information.
+    </p>
+    <p>
+        The <b>isBaseline_text</b> column is either <b>true</b> or <b>false</b>. If <b>true</b>, it means that this data
+        set should be used as a baseline for those that follow it chronologically for the same beam and machine until
+        the
+        next baseline or the last data set.
+    </p>
+    <pre>
+        &nbsp;
+        SELECT
+          "institution"."name",
+          "machine"."id",
+          "machineType"."model",
+          "multileafCollimator"."model",
+          "output"."dataDate",
+          "symmetryAndFlatness"."top_cu",
+          "symmetryAndFlatness"."bottom_cu",
+          "symmetryAndFlatness"."left_cu",
+          "symmetryAndFlatness"."right_cu",
+          "symmetryAndFlatness"."center_cu",
+          -- If true, then this data set should be used as a baseline for this and
+          -- subsequent data sets with the same machine and beam.
+          "symmetryAndFlatness"."isBaseline"
+        FROM
+          public."symmetryAndFlatness",
+          public."institution",
+          public."machine",
+          public."machineType",
+          public."multileafCollimator",
+          public."output"
+        WHERE
+              ("symmetryAndFlatness"."outputPK" = "output"."outputPK")
+          AND ("output"."machinePK" = "machine"."machinePK")
+          AND ("machine"."institutionPK" = "institution"."institutionPK")
+          AND ("machine"."machineTypePK" = "machineType"."machineTypePK")
+          AND ("machine"."multileafCollimatorPK" = "multileafCollimator"."multileafCollimatorPK")
+        ORDER BY
+          "machine"."id",
+          "output"."dataDate"
+        ASC LIMIT 10;
+    </pre>
+
+</div>
