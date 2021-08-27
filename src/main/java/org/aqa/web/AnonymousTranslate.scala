@@ -105,9 +105,9 @@ object AnonymousTranslate extends Logging {
     cache.synchronized {
       if (cache.contains(institutionPK)) {
         cache.remove(institutionPK)
-        if (cache.contains(whiteListedInstitution))
-          cache.remove(whiteListedInstitution)
       }
+      if (cache.contains(whiteListedInstitution))
+        cache.remove(whiteListedInstitution)
     }
   }
 
