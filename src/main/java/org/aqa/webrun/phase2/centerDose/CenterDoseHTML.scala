@@ -24,6 +24,7 @@ import org.aqa.db.Input
 import org.aqa.db.Procedure
 import org.aqa.db.User
 import org.aqa.Util
+
 import java.util.Date
 import org.aqa.web.WebServer
 import org.aqa.db.CenterDose
@@ -32,11 +33,14 @@ import org.aqa.web.WebUtil._
 import org.aqa.DicomFile
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.run.ProcedureStatus
+
 import java.io.File
 import org.aqa.Config
 import edu.umro.ImageUtil.DicomImage
+
 import java.awt.geom.Point2D
 import com.pixelmed.dicom.AttributeList
+
 import java.awt.Point
 import com.pixelmed.dicom.TagFromName
 import org.aqa.Logging
@@ -45,6 +49,7 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.SubProcedureResult
 import org.aqa.webrun.phase2.Phase2Util
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import org.aqa.web.C3ChartHistory
 
 object CenterDoseHTML extends Logging {
   private val htmlFileName = "CenterDose.html"
@@ -127,7 +132,8 @@ object CenterDoseHTML extends Logging {
     val content = {
       <div>
         <div class="row" style="margin:50px;">
-          <div class="col-md-1">{ viewRtPlan }</div>
+          <div class="col-md-2">{ C3ChartHistory.htmlHelp() }</div>
+          <div class="col-md-2">{ viewRtPlan }</div>
         </div>
         <div class="row" style="margin:50px;">
           <div class="row" style="margin:50px;">

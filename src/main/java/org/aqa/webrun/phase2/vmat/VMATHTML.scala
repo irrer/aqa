@@ -23,6 +23,7 @@ import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.VMAT
 import org.aqa.run.ProcedureStatus
+import org.aqa.web.C3ChartHistory
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
@@ -197,6 +198,7 @@ object VMATHTML {
             </div>
           </div>
           <div class="row">
+            {C3ChartHistory.htmlHelp()}
             <center>
               {bigFont("Diff(X) Trend Over Time")}
             </center>

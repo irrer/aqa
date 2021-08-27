@@ -186,8 +186,17 @@ object WedgeHTML {
           </div>
         </div>
         <div class="row">
-          <h4>History of Wedge Point</h4>
-          {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(wedgePoint.wedgeBeamName))}
+          <div class="row">
+            <div class="col-md-2">
+              <h4>History of Wedge Point</h4>
+            </div>
+            <div class="col-md-2">
+              {C3ChartHistory.htmlHelp()}
+            </div>
+          </div>
+          <div class="row">
+            {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(wedgePoint.wedgeBeamName))}
+          </div>
         </div>
         <div class="row">
           <div class="col-md-5">

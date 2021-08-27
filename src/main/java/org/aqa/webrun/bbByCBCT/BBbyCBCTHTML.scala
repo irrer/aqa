@@ -26,6 +26,7 @@ import org.aqa.Util
 import org.aqa.db.BBbyCBCT
 import org.aqa.db.DicomSeries
 import org.aqa.db.Output
+import org.aqa.web.C3ChartHistory
 import org.aqa.web.MachineUpdate
 import org.aqa.web.OutputList
 import org.aqa.web.WebUtil
@@ -67,11 +68,13 @@ object BBbyCBCTHTML extends Logging {
           val valueList = value.split("\n");
           {
             <span>
-              {valueList.head}{valueList.tail.map(line => {
-              <span>
+              {valueList.head}{
+              valueList.tail.map(line => {
+                <span>
                 <br/>{line}
               </span>
-            })}
+              })
+            }
             </span>
           }
         }
@@ -94,7 +97,7 @@ object BBbyCBCTHTML extends Logging {
     val elapsed: String = {
       val fin = extendedData.output.finishDate match {
         case Some(finDate) => finDate.getTime
-        case _ => System.currentTimeMillis
+        case _             => System.currentTimeMillis
       }
       val elapsed = fin - extendedData.output.startDate.getTime
       Util.elapsedTimeHumanFriendly(elapsed)
@@ -142,8 +145,8 @@ object BBbyCBCTHTML extends Logging {
   }
 
   /**
-   * Create a web page for viewing and downloading the CBCT files.
-   */
+    * Create a web page for viewing and downloading the CBCT files.
+    */
   def makeCbctSlices(extendedData: ExtendedData, runReq: BBbyCBCTRunReq): Elem = {
     val subDir = new File(extendedData.output.dir, cbctDirName)
 
@@ -266,8 +269,8 @@ object BBbyCBCTHTML extends Logging {
   }
 
   /**
-   * Create a web page for viewing and downloading the registration file.
-   */
+    * Create a web page for viewing and downloading the registration file.
+    */
   private def makeRegReference(extendedData: ExtendedData, regAl: AttributeList): Elem = {
 
     val dicomFile = new File(extendedData.output.dir, "registration.dcm")
@@ -303,8 +306,8 @@ object BBbyCBCTHTML extends Logging {
   }
 
   /**
-   * Create a web page for viewing and downloading the RTPLAN file.
-   */
+    * Create a web page for viewing and downloading the RTPLAN file.
+    */
   private def makePlanReference(extendedData: ExtendedData, runReq: BBbyCBCTRunReq): Elem = {
 
     val planSop = Util.sopOfAl(runReq.rtplan)
@@ -350,12 +353,16 @@ object BBbyCBCTHTML extends Logging {
   }
 
   /**
-   * Make the HTML.
-   */
-  def generateHtml(extendedData: ExtendedData, bbByCBCT: BBbyCBCT,
-                   imageSet: BBbyCBCTAnnotateImages.ImageSet,
-                   runReq: BBbyCBCTRunReq, cbctAnalysisResult: BBbyCBCTAnalysis.CBCTAnalysisResult,
-                   response: Response): Unit = {
+    * Make the HTML.
+    */
+  def generateHtml(
+      extendedData: ExtendedData,
+      bbByCBCT: BBbyCBCT,
+      imageSet: BBbyCBCTAnnotateImages.ImageSet,
+      runReq: BBbyCBCTRunReq,
+      cbctAnalysisResult: BBbyCBCTAnalysis.CBCTAnalysisResult,
+      response: Response
+  ): Unit = {
     val outputDir = extendedData.output.dir
 
     val chart = new BBbyCBCTChart(extendedData.output.outputPK.get)
@@ -383,7 +390,6 @@ object BBbyCBCTHTML extends Logging {
         </div>
       }
 
-
       val elem = {
         <div class="row">
           <div title="Test performed" class="col-md-3">
@@ -392,7 +398,9 @@ object BBbyCBCTHTML extends Logging {
                 {WebUtil.coordinateDiagramElem(80)}
               </span>
             </h2>
-          </div>{dataCol("Offset(mm)", "Distance in mm between plan isocenter and position of BB", bbByCBCT.offset_mm, 2)}{dataCol("X", "Plan X position - BB X position in mm", bbByCBCT.err_mm.getX, 1)}{dataCol("Y", "Plan Y position - BB Y position in mm", bbByCBCT.err_mm.getY, 1)}{dataCol("Z", "Plan Z position - BB Z position in mm", bbByCBCT.err_mm.getZ, 1)}
+          </div>{dataCol("Offset(mm)", "Distance in mm between plan isocenter and position of BB", bbByCBCT.offset_mm, 2)}{
+          dataCol("X", "Plan X position - BB X position in mm", bbByCBCT.err_mm.getX, 1)
+        }{dataCol("Y", "Plan Y position - BB Y position in mm", bbByCBCT.err_mm.getY, 1)}{dataCol("Z", "Plan Z position - BB Z position in mm", bbByCBCT.err_mm.getZ, 1)}
         </div>
       }
       elem
@@ -439,20 +447,22 @@ object BBbyCBCTHTML extends Logging {
           {viewCbctSlices}
         </div>
         <div class="col-md-2">
+          {C3ChartHistory.htmlHelp()}
+        </div>
+        <div class="col-md-2">
           {if (runReq.reg.isDefined) viewReg}
         </div>
         <div class="col-md-2">
           {viewRtplan}
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           {tablePosition}
         </div>
-        <div class="col-md-2">
+        <div class="col-md-1">
           {matlabReference}
         </div>
       </div>
     }
-
 
     def imageHtmlWithZoom(imageFileNameFull: String, imageFileNameAoi: String, title: String) = {
       <center title={title}>
@@ -464,7 +474,6 @@ object BBbyCBCTHTML extends Logging {
         </a>
       </center>
     }
-
 
     def makeImages: Elem = {
       <div class="row">

@@ -172,6 +172,10 @@ class C3ChartHistory(
 //noinspection SpellCheckingInspection
   val javascript: String = {
     s"""
+var ${chartIdTag}Var = constructVertControl(${yRangeY.min}, ${yRangeY.max}, "$chartIdTag");
+
+insertVertHtml("$chartIdTag");
+
 var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
     tooltip: {
       format: {
@@ -253,6 +257,7 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
     }
   });
 
+initVertControl(${chartIdTag}Var, $chartIdTag, "$chartIdTag");
 """
   }
 
@@ -267,6 +272,10 @@ object C3ChartHistory {
     * @return HTML to embed.
     */
   def htmlRef(chartIdTag: String): Elem = {
-    <div id={chartIdTag + "Parent"}><div id={chartIdTag}>{chartIdTag}</div></div>
+    <div id={chartIdTag}>{chartIdTag}</div>
+  }
+
+  def htmlHelp(): Elem = {
+    <a rel="/static/images/ChartScrollAndScale.png" class="screenshot" href="/static/images/ChartScrollAndScale.png"><img src="/static/images/ChartScrollAndScaleIcon.png" height="10px"/> Help</a>
   }
 }

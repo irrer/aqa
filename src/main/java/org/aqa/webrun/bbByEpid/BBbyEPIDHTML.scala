@@ -572,6 +572,9 @@ object BBbyEPIDHTML {
             {numberTable}
           </div>
         </div>
+        <div class="row">
+          {C3ChartHistory.htmlHelp()}
+        </div>
         <div class="row" style="border: 1px solid lightgrey">
           <div style="margin: 5px;">
             <center><h3>(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER)</h3></center>

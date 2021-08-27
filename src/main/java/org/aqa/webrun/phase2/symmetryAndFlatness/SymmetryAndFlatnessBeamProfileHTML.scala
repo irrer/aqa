@@ -91,6 +91,9 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
         <div class="row">
           <div class="col-md-10 col-md-offset-1">
             <div class="row">
+              {C3ChartHistory.htmlHelp()}
+            </div>
+            <div class="row">
               <h2>Transverse Symmetry History</h2>
               {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.transverseSymmetryName))}
             </div>

@@ -22,6 +22,7 @@ import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.CollimatorCentering
 import org.aqa.run.ProcedureStatus
+import org.aqa.web.C3ChartHistory
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.MeasureTBLREdges
 import org.aqa.webrun.phase2.Phase2Util
@@ -158,12 +159,18 @@ object CollimatorCenteringHTML {
           </div>
           <div class="col-md-10 col-md-offset-1">
             <div class="row">
+              {C3ChartHistory.htmlHelp()}
+            </div>
+            <div class="row" style=" border: 1px solid grey; margin-bottom:10px;">
+              <center><h2>Summary</h2></center>
               {charts.summary.html}
             </div>
-            <div class="row">
+            <div class="row" style=" border: 1px solid grey; margin-bottom:10px;">
+              <center><h2>{Config.CollimatorCentering090BeamName}</h2></center>
               {charts.collCenter090.html}
             </div>
-            <div class="row">
+            <div class="row" style=" border: 1px solid grey; margin-bottom:10px;">
+              <center><h2>{Config.CollimatorCentering270BeamName}</h2></center>
               {charts.collCenter270.html}
             </div>
           </div>

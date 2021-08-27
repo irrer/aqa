@@ -1,0 +1,76 @@
+<div title="Scrolling and Scaling Charts">
+    <!--
+    Copyright 2021 Regents of the University of Michigan
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    -->
+
+    <h2>@@title@@</h2>
+
+    <p>
+        Charts help illustrate how data behaves over time. When the charts are initially rendered, a best estimate is
+        made as to their scrolling position and scale. Controls are provided to change these as needed.
+    </p>
+    <br/>
+    <ul>
+        <li>
+            To scale horizontally, place the mouse pointer inside the charted data and use the mouse's scroll wheel.
+            Scaling will be centered at the mouse's position.
+        </li>
+        <li>
+            To scroll horizontally, place the mouse pointer inside the charted data and use the mouse's scroll wheel.
+        </li>
+        <li>
+            To scale vertically, place the mouse pointer inside the Vertical Adjust Area to the right of the chart and
+            use the mouse's scroll wheel. Scaling will be centered at the mouse's position.
+        </li>
+        <li>
+            To scroll vertically, place the mouse pointer inside the Vertical Adjust Area to the right of the chart and
+            drag the mouse vertically.
+        </li>
+        <li>
+            The <b>Reset</b> button under the Vertical Adjust Area will set the vertical parameters back to their
+            initial values.
+        </li>
+        <li>
+            The <b>Show All</b> button under the Vertical Adjust Area will set vertical parameters so that the full
+            range of vertical values are shown. This can be used to show outliers or expand a set of similar values.
+        </li>
+        <li>
+            Reloading the page will reset all charts to the original view.
+        </li>
+    </ul>
+
+    <p style="margin-top: 40px;">
+        This quick chart help feature
+        <a rel="/static/images/ChartScrollAndScale.png" class="screenshot"
+           href="/static/images/ChartScrollAndScale.png">
+            <img src="/static/images/ChartScrollAndScaleIcon.png" height="10px"/>
+            Help
+        </a>
+        is shown near charts. Hovering over it will show the following:
+        <br/>
+        <img src="/static/images/ChartScrollAndScale.png">
+    </p>
+    <p>
+        Note that these features only apply to charts that are plotted as data verses time.
+    </p>
+    <p>
+        There is also a known problem where, when the chart is zoomed in horizontally, changing vertical settings will
+        contract the data horizontally. A workaround is to scroll the data slightly horizontally to restore the
+        horizontal settings.
+    </p>
+
+    <p style="margin-top: 80px;"></p>
+
+</div>
