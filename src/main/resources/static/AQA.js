@@ -346,7 +346,6 @@ function constructVertControl(minY, maxY, name) {
    */
   vertCont.vertScroll = function(event) {
     if (button1Down && (event.movementY != 0)) {
-      vertCont.vertPane.innerHTML = "";
       var direction = 0.5 * event.movementY;
 
       var range = vertCont.curMaxY - vertCont.curMinY;
@@ -357,8 +356,6 @@ function constructVertControl(minY, maxY, name) {
       vertCont.chart.axis.max(vertCont.curMaxY);
       vertCont.chart.axis.min(vertCont.curMinY);
     }
-    else
-       vertCont.vertPane.innerHTML = vertCont.vertPaneContent;
   }
 
   // -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
@@ -387,6 +384,14 @@ function constructVertControl(minY, maxY, name) {
     vertCont.curMinY = vertCont.allMinY;
     vertCont.chart.axis.max(vertCont.curMaxY);
     vertCont.chart.axis.min(vertCont.curMinY);
+  }
+
+  vertCont.vertImageOff = function(event) {
+    vertCont.vertPane.innerHTML = "";
+  }
+
+  vertCont.vertImageOn = function(event) {
+     vertCont.vertPane.innerHTML = vertCont.vertPaneContent;
   }
 
   // -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
@@ -420,6 +425,12 @@ function initVertControl(vertCont, chart, name) {
   eval(js);
   js = "vertPane.addEventListener('mousemove'," + name + "Var.vertScroll);";
   eval(js);
+
+  js = "vertPane.addEventListener('mouseenter'," + name + "Var.vertImageOff);";
+  eval(js);
+  js = "vertPane.addEventListener('mouseleave'," + name + "Var.vertImageOn);";
+  eval(js);
+
   vertPane.style.cursor = "n-resize";
   var table = document.getElementById(name + "Table");
   var resetButton = document.getElementById(name + "ResetButton");
