@@ -266,14 +266,6 @@ setTimeout(function () {if (button1Down === undefined) initButton1State();}, 100
  */
 function insertVertHtml(name) {
 
-            // <img id='@@VertPane' style='width: 50px; height: 50px; border: 1px solid black;' src="/static/images/VerticalAdjust.png"/>
-            // <div id='@@VertPane' style='width: 50px; height: 50px; border: 1px solid black; background-image: url("/static/images/VerticalAdjust.png"); backgroundSize: 100% 100%;'> </div>
-            // <div id='@@VertPane' style='width: 50px; height: 50px; border: 1px solid black; background-image: url("/static/images/VerticalAdjust.png"); backgroundSize: inherit;'> </div>
-            // <div id='@@VertPane' style='width: 50px; height: 50px; border: 1px solid black; background-image: url("/static/images/VerticalAdjust.png"); backgroundSize: contain;'> </div>
-            // <div id='@@VertPane' style='width: 50px; height: 50px; border: 1px solid black;'><img src='/static/images/VerticalAdjust.png'/></div>
-            // <div id='@@VertPane' style='width: 50px; height: 50px; border: 1px solid black; background-image: url("/static/images/VerticalAdjust.png"); backgroundSize: contain; background-repeat: no-repeat;'> </div>
-            // <div id='@@VertPane' style='width: 50px; height: 50px; border: 1px solid black;'><img style='object-fit:fill;' src='/static/images/VerticalAdjust.png'/></div>
-
   var vertHtml = `
     <table id='@@Table' style='display: table; width: 100%;'>
       <tr>
