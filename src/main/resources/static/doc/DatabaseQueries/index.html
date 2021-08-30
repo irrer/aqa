@@ -44,8 +44,12 @@
     <ul>
         <li><a href="SymmetryFlatnessConstancy.html">Symmetry Flatness Constancy</a></li>
         <li><a href="LeafPosition.html">Leaf Position / Picket Fence</a></li>
+        <li><a href="CollimatorCentering.html">Collimator Centering</a></li>
+
         <li><a href="#Filler">Dummy</a></li>
+
         <li><a href="#Filler">Dummy</a></li>
+
         <li><a href="#SymmetryFlatnessConstancy">Symmetry Flatness Constancy</a></li>
         <li><a href="#CollimatorCentering">Collimator Centering</a></li>
         <li><a href="#CenterDose">Center Dose</a></li>
@@ -146,51 +150,7 @@
     <hr/>
     <hr/>
 
-    <h3 id="SymmetryFlatnessConstancy"><u>Symmetry, Flatness, and Constancy</u></h3>
-    <p>
-        Refer to the <a href="../SymmetryAndFlatness/index.html">Symmetry and Flatness</a> user guide for more
-        information.
-    </p>
-    <p>
-        The <b>isBaseline_text</b> column is either <b>true</b> or <b>false</b>. If <b>true</b>, it means that this data
-        set should be used as a baseline for those that follow it chronologically for the same beam and machine until
-        the
-        next baseline or the last data set.
-    </p>
-    <pre>
-        &nbsp;
-        SELECT
-          "institution"."name",
-          "machine"."id",
-          "machineType"."model",
-          "multileafCollimator"."model",
-          "output"."dataDate",
-          "symmetryAndFlatness"."top_cu",
-          "symmetryAndFlatness"."bottom_cu",
-          "symmetryAndFlatness"."left_cu",
-          "symmetryAndFlatness"."right_cu",
-          "symmetryAndFlatness"."center_cu",
-          -- If true, then this data set should be used as a baseline for this and
-          -- subsequent data sets with the same machine and beam.
-          "symmetryAndFlatness"."isBaseline"
-        FROM
-          public."symmetryAndFlatness",
-          public."institution",
-          public."machine",
-          public."machineType",
-          public."multileafCollimator",
-          public."output"
-        WHERE
-              ("symmetryAndFlatness"."outputPK" = "output"."outputPK")
-          AND ("output"."machinePK" = "machine"."machinePK")
-          AND ("machine"."institutionPK" = "institution"."institutionPK")
-          AND ("machine"."machineTypePK" = "machineType"."machineTypePK")
-          AND ("machine"."multileafCollimatorPK" = "multileafCollimator"."multileafCollimatorPK")
-        ORDER BY
-          "machine"."id",
-          "output"."dataDate"
-        ASC LIMIT 10;
-    </pre>
+
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
