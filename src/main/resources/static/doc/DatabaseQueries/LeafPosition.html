@@ -21,8 +21,9 @@
         information.
     </p>
     <p>
-        Currently there are are <em style="color: white; background-color: red;">&nbsp;over 2 million rows </em> in this table, so the quantity of data in a single query should be
-        restricted by adding <b>WHERE</b> clauses.
+        Currently there are are <em style="color: white; background-color: red;">&nbsp;over 2 million rows </em> in this
+        table, so the quantity of data in a single query should be restricted by adding <b>WHERE</b> clauses. The
+        following query limits by <b>leafIndex</b>, <b>leafPositionIndex</b>, and <b>machine</b>.
     </p>
     <p>
     </p>
@@ -56,9 +57,9 @@
           AND ("machine"."institutionPK" = "institution"."institutionPK")
           AND ("machine"."machineTypePK" = "machineType"."machineTypePK")
           AND ("machine"."multileafCollimatorPK" = "multileafCollimator"."multileafCollimatorPK")
-       -- AND ("leafPosition"."leafIndex" = 5)           -- restrict search to a given leaf
-       -- AND ("leafPosition"."leafPositionIndex" = 2)   -- restrict search to a given leaf position
-       -- AND (ABS("leafPosition"."offset_mm") > 1.5)    -- restrict search to a leaves that have an error (absolute value) greater than 1.1 mm
+          AND ("leafPosition"."leafIndex" = 5)           -- restrict search to a given leaf
+          AND ("leafPosition"."leafPositionIndex" = 2)   -- restrict search to a given leaf position
+          AND ("machine"."id" = 'MACH_2')                -- restrict search to a given machine
         ORDER BY
           "institution"."name",
           "machine"."id",

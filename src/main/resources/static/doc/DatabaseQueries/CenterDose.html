@@ -1,4 +1,4 @@
-<div title="Symmetry, Flatness, and Constancy Database Query" class="col-md-10 col-md-offset-1">
+<div title="Center Dose Database Query" class="col-md-10 col-md-offset-1">
     <!--
     Copyright 2021 Regents of the University of Michigan
 
@@ -17,12 +17,7 @@
 
     <h2>@@title@@</h2>
     <p>
-        Refer to the <a href="../SymmetryAndFlatness/index.html">Symmetry and Flatness</a> user guide for background
-        information.
-    </p>
-    <p>
-        If the <b>isBaseline</b> column is <b>true</b>, it means that this data set should be used as a baseline for
-        those that follow it chronologically for the same beam and machine until the next baseline or the last data set.
+        Refer to the <a href="../CenterDose/index.html">Center Dose</a> user guide for background information.
     </p>
     <pre>
         &nbsp;
@@ -33,22 +28,17 @@
           "multileafCollimator"."model",            -- HD or Millenium
           "output"."dataDate",                      -- time and date that data was collected
        -- "output"."analysisDate",                  -- time and date that data was analyzed
-          "symmetryAndFlatness"."top_cu",           -- average value of pixels in top circle in CU
-          "symmetryAndFlatness"."bottom_cu",        -- average value of pixels in bottom circle in CU
-          "symmetryAndFlatness"."left_cu",          -- average value of pixels in left circle in CU
-          "symmetryAndFlatness"."right_cu",         -- average value of pixels in right circle in CU
-          "symmetryAndFlatness"."center_cu",        -- average value of pixels in center circle in CU
-          "symmetryAndFlatness"."isBaseline"        -- If true, then this data set should be used as a baseline for
-                                                    --   this and subsequent data sets with the same machine and beam.
+          "centerDose"."beamName",                  -- name of beam in RTPLAN
+          "centerDose"."dose"                       -- average dose of pixels in center of image in CU
         FROM
-          public."symmetryAndFlatness",
+          public."centerDose",
           public."institution",
           public."machine",
           public."machineType",
           public."multileafCollimator",
           public."output"
         WHERE
-              ("symmetryAndFlatness"."outputPK" = "output"."outputPK")
+              ("centerDose"."outputPK" = "output"."outputPK")
           AND ("output"."machinePK" = "machine"."machinePK")
           AND ("machine"."institutionPK" = "institution"."institutionPK")
           AND ("machine"."machineTypePK" = "machineType"."machineTypePK")
@@ -56,7 +46,8 @@
         ORDER BY
           "institution"."name",
           "machine"."id",
-          "output"."dataDate"
+          "output"."dataDate",
+          "centerDose"."beamName"
         ASC LIMIT 10;
     </pre>
 

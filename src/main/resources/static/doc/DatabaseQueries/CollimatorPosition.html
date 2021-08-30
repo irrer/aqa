@@ -1,0 +1,66 @@
+<div title="Collimator Position Database Query" class="col-md-10 col-md-offset-1">
+    <!--
+    Copyright 2021 Regents of the University of Michigan
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    -->
+
+    <h2>@@title@@</h2>
+    <p>
+
+    </p>
+    <pre>
+        &nbsp;
+        SELECT
+          "institution"."name",                                  -- anonymized name of institution
+          "machine"."id",                                        -- anonymized name of machine
+          "machineType"."model",                                 -- type of machine
+          "multileafCollimator"."model",                         -- HD or Millenium
+          "output"."dataDate",                                   -- time and date that data was collected
+       -- "output"."analysisDate",                               -- time and date that data was analyzed
+          "collimatorPosition"."beamName",                       -- name of beam in RTPLAN
+          "collimatorPosition"."FloodCompensation",              -- true if flood compensation was used
+          "collimatorPosition"."X1_mm",                          --  X1 position of collimator  (X axis) in mm
+          "collimatorPosition"."X2_mm",                          --  X2 position of collimator  (X axis) in mm
+          "collimatorPosition"."Y1_mm",                          --  Y1 of collimator (Y axis) in mm
+          "collimatorPosition"."Y2_mm",                          --  Y2 position of collimator (Y axis) in mm
+          "collimatorPosition"."X1_ExpectedMinusImage_mm",       --  X1 plan minus east position of collimator  (X axis) in mm
+          "collimatorPosition"."X2_ExpectedMinusImage_mm",       --  X2 plan minus west position of collimator  (X axis) in mm
+          "collimatorPosition"."Y1_ExpectedMinusImage_mm",       --  Y1 plan minus north position of collimator (Y axis) in mm
+          "collimatorPosition"."Y2_ExpectedMinusImage_mm",       --  Y2 plan minus south position of collimator (Y axis) in mm
+          "collimatorPosition"."XCollimatorCenterOfRotation_mm", -- X position of the collimator's center of rotation
+          "collimatorPosition"."YCollimatorCenterOfRotation_mm", -- Y position of the collimator's center of rotation
+          "collimatorPosition"."gantryAngle_deg",                -- gantry angle in degrees
+          "collimatorPosition"."collimatorAngle_deg"             -- collimator angle in degrees
+		FROM
+          public."collimatorPosition",
+          public."institution",
+          public."machine",
+          public."machineType",
+          public."multileafCollimator",
+          public."output"
+        WHERE
+              ("collimatorPosition"."outputPK" = "output"."outputPK")
+          AND ("output"."machinePK" = "machine"."machinePK")
+          AND ("machine"."institutionPK" = "institution"."institutionPK")
+          AND ("machine"."machineTypePK" = "machineType"."machineTypePK")
+          AND ("machine"."multileafCollimatorPK" = "multileafCollimator"."multileafCollimatorPK")
+        ORDER BY
+          "institution"."name",
+          "machine"."id",
+          "output"."dataDate",
+          "collimatorPosition"."beamName"
+        ASC LIMIT 10;
+    </pre>
+
+</div>

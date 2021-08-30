@@ -30,7 +30,7 @@ case class WedgePoint(
     wedgeSOPInstanceUID: String, // UID of wedge source image
     wedgeBeamName: String, // name of wedge beam in plan
     // isBaseline_text: String, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.   Note that this is a string instead of a boolean because boolean is not supported by some databases.
-    isBaseline: Boolean, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.   Note that this is a string instead of a boolean because boolean is not supported by some databases.
+    isBaseline: Boolean, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.
     wedgeValue_cu: Double, // value of wedge point in CU : Calibrated Units
     backgroundSOPInstanceUID: String, // UID of background source image
     backgroundBeamName: String, // name of background beam in plan
