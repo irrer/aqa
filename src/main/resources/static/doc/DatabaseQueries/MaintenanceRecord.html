@@ -1,4 +1,4 @@
-<div title="Center Dose Database Query" class="col-md-10 col-md-offset-1">
+<div title="Maintenance Record Database Query" class="col-md-10 col-md-offset-1">
     <!--
     Copyright 2021 Regents of the University of Michigan
 
@@ -18,38 +18,37 @@
     <h2>@@title@@</h2>
     <a href="../DatabaseQueries/index.html">Back to Database Queries</a>
     <p>
-        Refer to the <a href="../CenterDose/index.html">Center Dose</a> user guide for background information.
     </p>
     <pre>
         &nbsp;
         SELECT
-          "institution"."name",                     -- anonymized name of institution
-          "machine"."id",                           -- anonymized name of machine
-          "machineType"."model",                    -- type of machine
-          "multileafCollimator"."model",            -- HD or Millenium
-          "output"."dataDate",                      -- time and date that data was collected
-       -- "output"."analysisDate",                  -- time and date that data was analyzed
-          "centerDose"."beamName",                  -- name of beam in RTPLAN
-          "centerDose"."dose"                       -- average dose of pixels in center of image in CU
-        FROM
-          public."centerDose",
+          "institution"."name",                   -- anonymized name of institution
+          "machine"."id",                         -- anonymized name of machine
+          "machineType"."model",                  -- type of machine
+          "multileafCollimator"."model",          -- HD or Millenium
+          "maintenanceRecord"."creationTime",     -- date and time that event occurred
+          "user"."id",                            -- user that created maintenence event
+          "maintenanceRecord"."category",         -- event classification
+          "maintenanceRecord"."summary",          -- event summary
+          "maintenanceRecord"."description"       -- event description
+		FROM
+          public."maintenanceRecord",
           public."institution",
           public."machine",
           public."machineType",
           public."multileafCollimator",
-          public."output"
+          public."user"
         WHERE
-              ("centerDose"."outputPK" = "output"."outputPK")
-          AND ("output"."machinePK" = "machine"."machinePK")
+              ("machine"."machinePK" = "maintenanceRecord"."machinePK")
           AND ("machine"."institutionPK" = "institution"."institutionPK")
           AND ("machine"."machineTypePK" = "machineType"."machineTypePK")
           AND ("machine"."multileafCollimatorPK" = "multileafCollimator"."multileafCollimatorPK")
+          AND ("user"."userPK" = "maintenanceRecord"."userPK")
         ORDER BY
           "institution"."name",
           "machine"."id",
-          "output"."dataDate",
-          "centerDose"."beamName"
-        ASC LIMIT 10;
+          "maintenanceRecord"."creationTime"
+        ASC LIMIT 10;  -- limit to first 10 entries
     </pre>
 
 </div>
