@@ -1,4 +1,4 @@
-<div title="Database Queries" class="col-md-8 col-md-offset-1">
+<div title="Database Queries" class="col-md-10 col-md-offset-1">
     <!--
     Copyright 2021 Regents of the University of Michigan
 
@@ -22,6 +22,11 @@
         you need a query that is not listed, please contact the site administrator.
     </p>
     <p>
+        To perform these queries a database account is required, which is different from the account used to access the
+        web. To obtain a database account, contact the site administrator. Note that database accounts provide read-only
+        access to the database to protect against accidental modification of data.
+    </p>
+    <p>
         Examples include the <b>LIMIT 10</b> statement which limits the number of rows returned to 10 to make it more
         appropriate while becoming familiar with the data. Remove or change this to get more data.
     </p>
@@ -29,7 +34,10 @@
         The AQA software is compatible with both PostgreSQL and Microsoft SQL server databases. The Automated Quality
         Assurance site uses PostgreSQL version 12.5 R5.
     </p>
-
+    <p>
+        Refer to the <a href="https://www.postgresql.org/docs/12/sql-select.html"> PostgreSQL documentation</a> for more
+        information.
+    </p>
 
 
     <h3>Index</h3>
@@ -50,6 +58,94 @@
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
     <hr/>
+
+    <h3>Restricting Queries</h3>
+    <p>
+        Below are <b>WHERE</b> clauses that can be added to queries to focus on data of interest. It may also be
+        desirable to limit the size of data returned by queries for efficient use of resources.
+    </p>
+
+
+    <h4 style="margin-top: 40px;">Restrict results to data created after a given date</h4>
+    <pre>
+        &nbsp;
+        AND "output.dataDate" > '2019-10-25 16:00:00.00'
+    </pre>
+
+    <h4 style="margin-top: 40px;">Restrict results to a single machine</h4>
+    <pre>
+        &nbsp;
+        AND "machine"."id" = 'MACH_5'
+    </pre>
+
+    <h4 style="margin-top: 40px;">Restrict results to a single institution</h4>
+    <pre>
+        &nbsp;
+        AND "machine"."id" = 'INST_8'
+    </pre>
+
+    <h4 style="margin-top: 40px;">Limit the number of results to 10, starting at the 40th qualifying entry by adding
+        this to the end of a query</h4>
+    <pre>
+        &nbsp;
+        LIMIT 10 OFFSET 40;
+    </pre>
+
+
+    <h3 style="margin-top: 40px;">Database Schema</h3>
+
+    <p>The database tables can be listed with:</p>
+    <pre>
+        &nbsp;
+        SELECT *
+          FROM pg_catalog.pg_tables
+          WHERE schemaname != 'pg_catalog' AND
+              schemaname != 'information_schema';
+    </pre>
+
+
+    <p style="margin-top: 40px;">The columns for a database table can be listed with:</p>
+    <pre>
+        &nbsp;
+        SELECT
+          table_name,
+          column_name,
+          data_type
+        FROM
+          information_schema.columns
+        WHERE
+          table_name = 'leafPosition';  -- where 'leafPosition' is the name of the table
+    </pre>
+
+
+    <h3 style="margin-top: 40px;">Database Conventions</h3>
+
+    <p>All tables use a <a href="https://en.wikipedia.org/wiki/Surrogate_key">synthetic key</a> (also called a surrogate
+        key) as their primary database key. The primary key name is the same as the table name, appended with 'PK'.
+        For example, the primary key of the <b>collimatorCentering</b> table is <b>collimatorCenteringPK</b>. The same
+        name is used when it is referenced as a foreign key.</p>
+    <p>
+        To indicate units, column names are appended with <b>_units</b>. For example,
+        <b>"leafPosition"."offset_mm"</b> indicates a value in millimeters.
+    </p>
+
+    <hr/>
+    <hr/>
+    <hr/>
+    <hr/>
+    <hr/>
+    <hr/>
+    <hr/>
+    <hr/>
+    <hr/>
+    <hr/>
+    <hr/>
+    <hr/>
+    <hr/>
+    <hr/>
+    <hr/>
+    <hr/>
+
     <h3 id="SymmetryFlatnessConstancy"><u>Symmetry, Flatness, and Constancy</u></h3>
     <p>
         Refer to the <a href="../SymmetryAndFlatness/index.html">Symmetry and Flatness</a> user guide for more

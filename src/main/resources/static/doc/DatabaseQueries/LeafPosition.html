@@ -1,4 +1,4 @@
-<div title="Leaf Position Database Query" class="col-md-8 col-md-offset-1">
+<div title="Leaf Position Database Query" class="col-md-10 col-md-offset-1">
     <!--
     Copyright 2021 Regents of the University of Michigan
 
@@ -21,25 +21,28 @@
         information.
     </p>
     <p>
-        Currently there are are over 2 million rows in this table, so the quantity of data in a single query should be
-        restricted by adding a <b>WHERE</b> clause.
+        Currently there are are <em style="color: white; background-color: red;">&nbsp;over 2 million rows </em> in this table, so the quantity of data in a single query should be
+        restricted by adding <b>WHERE</b> clauses.
+    </p>
+    <p>
     </p>
     <pre>
         &nbsp;
         SELECT
-          "institution"."name",
-          "machine"."id",
-          "machineType"."model",
-          "multileafCollimator"."model",
-          "output"."dataDate",
-          "leafPosition"."beamName",
+          "institution"."name",                     -- anonymized name of institution
+          "machine"."id",                           -- anonymized name of machine
+          "machineType"."model",                    -- type of machine
+          "multileafCollimator"."model",            -- HD or Millenium
+          "output"."dataDate",                      -- time and date that data was collected
+       -- "output"."analysisDate",                  -- time and date that data was analyzed
+          "leafPosition"."beamName",                -- name of beam in RTPLAN
           "leafPosition"."leafIndex",               -- leaf number starting at 1
           "leafPosition"."leafPositionIndex",       -- leaf position number as it moves across the field.  This will be a number from 1 to 10.
-          "leafPosition"."offset_mm",               -- difference from expected location: measuredEndPosition_mm - expectedEndPosition_mm
-          "leafPosition"."measuredEndPosition_mm",  -- measured position of leaf end
-          "leafPosition"."expectedEndPosition_mm",  -- expected position of leaf end
-          "leafPosition"."measuredLowSide_mm",      -- measured position of top side of leaf
-          "leafPosition"."measuredHighSide_mm"      -- measured position of bottom side of leaf
+          "leafPosition"."offset_mm",               -- difference from expected location in mm: measuredEndPosition_mm - expectedEndPosition_mm
+          "leafPosition"."measuredEndPosition_mm",  -- measured position of leaf end in mm
+          "leafPosition"."expectedEndPosition_mm",  -- expected position of leaf end in mm
+          "leafPosition"."measuredLowSide_mm",      -- measured position of top side of leaf in mm
+          "leafPosition"."measuredHighSide_mm"      -- measured position of bottom side of leaf in mm
 		FROM
           public."leafPosition",
           public."institution",
@@ -53,12 +56,16 @@
           AND ("machine"."institutionPK" = "institution"."institutionPK")
           AND ("machine"."machineTypePK" = "machineType"."machineTypePK")
           AND ("machine"."multileafCollimatorPK" = "multileafCollimator"."multileafCollimatorPK")
+       -- AND ("leafPosition"."leafIndex" = 5)           -- restrict search to a given leaf
+       -- AND ("leafPosition"."leafPositionIndex" = 2)   -- restrict search to a given leaf position
+       -- AND (ABS("leafPosition"."offset_mm") > 1.5)    -- restrict search to a leaves that have an error (absolute value) greater than 1.1 mm
         ORDER BY
+          "institution"."name",
           "machine"."id",
           "output"."dataDate",
-		  "leafPosition"."leafIndex",
-		  "leafPosition"."leafPositionIndex"
-        ASC LIMIT 10;
+          "leafPosition"."leafIndex",
+          "leafPosition"."leafPositionIndex"
+        ASC LIMIT 10;  -- limit to first 10 entries
     </pre>
 
 </div>

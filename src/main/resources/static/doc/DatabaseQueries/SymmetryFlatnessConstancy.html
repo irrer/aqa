@@ -1,4 +1,4 @@
-<div title="Symmetry, Flatness, and Constancy Database Query" class="col-md-8 col-md-offset-1">
+<div title="Symmetry, Flatness, and Constancy Database Query" class="col-md-10 col-md-offset-1">
     <!--
     Copyright 2021 Regents of the University of Michigan
 
@@ -29,19 +29,19 @@
     <pre>
         &nbsp;
         SELECT
-          "institution"."name",
-          "machine"."id",
-          "machineType"."model",
-          "multileafCollimator"."model",
-          "output"."dataDate",
-          "symmetryAndFlatness"."top_cu",
-          "symmetryAndFlatness"."bottom_cu",
-          "symmetryAndFlatness"."left_cu",
-          "symmetryAndFlatness"."right_cu",
-          "symmetryAndFlatness"."center_cu",
-          -- If true, then this data set should be used as a baseline for this and
-          -- subsequent data sets with the same machine and beam.
-          "symmetryAndFlatness"."isBaseline"
+          "institution"."name",                     -- anonymized name of institution
+          "machine"."id",                           -- anonymized name of machine
+          "machineType"."model",                    -- type of machine
+          "multileafCollimator"."model",            -- HD or Millenium
+          "output"."dataDate",                      -- time and date that data was collected
+       -- "output"."analysisDate",                  -- time and date that data was analyzed
+          "symmetryAndFlatness"."top_cu",           -- average value of pixels in top circle in CU
+          "symmetryAndFlatness"."bottom_cu",        -- average value of pixels in bottom circle in CU
+          "symmetryAndFlatness"."left_cu",          -- average value of pixels in left circle in CU
+          "symmetryAndFlatness"."right_cu",         -- average value of pixels in right circle in CU
+          "symmetryAndFlatness"."center_cu",        -- average value of pixels in center circle in CU
+          "symmetryAndFlatness"."isBaseline"        -- If true, then this data set should be used as a baseline for
+                                                    --   this and subsequent data sets with the same machine and beam.
         FROM
           public."symmetryAndFlatness",
           public."institution",
@@ -56,6 +56,7 @@
           AND ("machine"."machineTypePK" = "machineType"."machineTypePK")
           AND ("machine"."multileafCollimatorPK" = "multileafCollimator"."multileafCollimatorPK")
         ORDER BY
+          "institution"."name",
           "machine"."id",
           "output"."dataDate"
         ASC LIMIT 10;
