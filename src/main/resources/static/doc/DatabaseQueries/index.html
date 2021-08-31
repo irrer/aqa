@@ -39,7 +39,8 @@
         Assurance site uses PostgreSQL version 12.5 R5.
     </p>
     <p>
-        Refer to the <a href="https://www.postgresql.org/docs/12/sql-select.html" target="_blank"> PostgreSQL documentation</a> for more
+        Refer to the <a href="https://www.postgresql.org/docs/12/sql-select.html" target="_blank"> PostgreSQL
+        documentation</a> for more
         information.
     </p>
     <p>
@@ -49,16 +50,29 @@
 
     <hr/>
 
-    <h3>Index</h3>
+    <h3>Phase 2</h3>
     <ul>
-        <li><a href="MetadataCheck.html">MetadataCheck</a></li>
-        <li><a href="CollimatorCentering.html">Collimator Centering</a></li>
-        <li><a href="CenterDose.html">Center Dose</a></li>
-        <li><a href="CollimatorPosition.html">Collimator Position</a></li>
-        <li><a href="Wedge.html">Wedge</a></li>
-        <li><a href="SymmetryFlatnessConstancy.html">Symmetry Flatness Constancy</a></li>
-        <li><a href="LeafPosition.html">Leaf Position / Picket Fence</a></li>
-        <li><a href="VMAT.html">VMAT</a></li>
+        <li><a href="Phase2/MetadataCheck.html">MetadataCheck</a></li>
+        <li><a href="Phase2/CollimatorCentering.html">Collimator Centering</a></li>
+        <li><a href="Phase2/CenterDose.html">Center Dose</a></li>
+        <li><a href="Phase2/CollimatorPosition.html">Collimator Position</a></li>
+        <li><a href="Phase2/Wedge.html">Wedge</a></li>
+        <li><a href="Phase2/SymmetryFlatnessConstancy.html">Symmetry Flatness Constancy</a></li>
+        <li><a href="Phase2/LeafPosition.html">Leaf Position / Picket Fence</a></li>
+        <li><a href="Phase2/VMAT.html">VMAT</a></li>
+    </ul>
+
+    <h3>LOC</h3>
+    <ul>
+        <li><a href="LOC/LeafOffset.html">Leaf Offset</a></li>
+        <li><a href="LOC/LeafTransmissionFraction.html">Leaf Transmission Fraction</a></li>
+        <li><a href="LOC/RSquared.html">R<sup>2</sup></a></li>
+        <li><a href="LOC/DifferenceBaselineOpen.html">Difference from Baseline Open</a></li>
+        <li><a href="LOC/DifferenceBaselineTransmission.html">Difference from Baseline Transmission</a></li>
+    </ul>
+
+    <h3>AQA</h3>
+    <ul>
         <li><a href="MaintenanceRecord.html">Maintenance Record</a></li>
     </ul>
 
@@ -67,7 +81,8 @@
 
     <h3 style="margin-top: 40px;">Database Conventions</h3>
 
-    <p>All tables use a <a href="https://en.wikipedia.org/wiki/Surrogate_key" target="_blank">synthetic key</a> (also called a surrogate
+    <p>All tables use a <a href="https://en.wikipedia.org/wiki/Surrogate_key" target="_blank">synthetic key</a> (also
+        called a surrogate
         key) as their primary database key. The primary key name is the same as the table name, appended with 'PK'.
         For example, the primary key of the <b>collimatorCentering</b> table is <b>collimatorCenteringPK</b>. The same
         name is used when it is referenced as a foreign key.</p>
