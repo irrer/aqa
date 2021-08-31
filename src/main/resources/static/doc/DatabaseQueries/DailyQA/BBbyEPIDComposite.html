@@ -1,0 +1,61 @@
+<div title="Daily QA: BB by EPID Composite Database Query" class="col-md-10 col-md-offset-1">
+    <!--
+    Copyright 2021 Regents of the University of Michigan
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    -->
+
+    <h2>@@title@@</h2>
+    <a href="../index.html">Back to Database Queries</a>
+    <p>Note that this query is in Sequel Server syntax.</p>
+    <pre>
+        &nbsp;
+        SELECT TOP (10)
+          "institution"."name",                        -- anonymized name of institution
+          "machine"."id",                              -- anonymized name of machine
+          "machineType"."model",                       -- type of machine
+          "multileafCollimator"."model",               -- HD or Millenium
+          "output"."dataDate",                         -- time and date that data was collected
+       -- "output"."analysisDate",                     -- time and date that data was analyzed
+          "bbByEPIDComposite"."offset_mm",             -- distance between measured EPID position and expected (plan) location (aka: positioning error)
+          "bbByEPIDComposite"."x_mm",                  -- X position in EPID in 3D plan space
+          "bbByEPIDComposite"."y_mm",                  -- Y position in EPID in 3D plan space
+          "bbByEPIDComposite"."z_mm",                  -- Z position in EPID in 3D plan space
+          "bbByEPIDComposite"."bbByCBCTPK",            -- referenced CBCT measurement
+          "bbByEPIDComposite"."offsetAdjusted_mm",     -- total distance in 3D plan space adjusted for corresponding CBCT location
+          "bbByEPIDComposite"."xAdjusted_mm",          -- X position in 3D plan space adjusted for corresponding CBCT location
+          "bbByEPIDComposite"."yAdjusted_mm",          -- Y position in 3D plan space adjusted for corresponding CBCT location
+          "bbByEPIDComposite"."zAdjusted_mm",          --  Z position in 3D plan space adjusted for corresponding CBCT location
+          "bbByEPIDComposite"."tableXlateral_mm",      -- table position change (RTIMAGE - CT) in X dimension / lateral
+          "bbByEPIDComposite"."tableYvertical_mm",     -- table position change (RTIMAGE - CT) in Y dimension / vertical
+          "bbByEPIDComposite"."tableZlongitudinal_mm"  -- table position change (RTIMAGE - CT) in Z dimension / longitudinal
+        FROM
+          "bbByEPIDComposite",
+          "institution",
+          "machine",
+          "machineType",
+          "multileafCollimator",
+          "output"
+        WHERE
+              ("bbByEPIDComposite"."outputPK" = "output"."outputPK")
+          AND ("output"."machinePK" = "machine"."machinePK")
+          AND ("machine"."institutionPK" = "institution"."institutionPK")
+          AND ("machine"."machineTypePK" = "machineType"."machineTypePK")
+          AND ("machine"."multileafCollimatorPK" = "multileafCollimator"."multileafCollimatorPK")
+        ORDER BY
+          "institution"."name",
+          "machine"."id",
+          "output"."dataDate";
+    </pre>
+
+</div>
