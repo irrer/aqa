@@ -109,6 +109,44 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
     chart
   }
 
+  private def makeEpidCuChart(maintenanceRecords: Seq[MaintenanceRecord], yValues: Seq[Seq[Double]], xDateList: Seq[Seq[Timestamp]]): C3ChartHistory = {
+
+    val yColorList = Seq(
+      new Color(44, 160, 44),
+      new Color(255, 140, 38),
+      new Color(53, 133, 187),
+      new Color(218, 61, 62),
+      new Color(218, 62, 218)
+    )
+
+    val allY = yValues.flatten
+
+    val mean = allY.sum / allY.size
+
+    val middleY = allY.sortBy(y => (y - mean).abs).take((allY.size * 0.9).round.toInt)
+
+    val yRange = new C3Chart.YRange(middleY.min, middleY.max)
+
+    val chart = new C3ChartHistory(
+      chartIdOpt = Some(C3Chart.idTagPrefix + "EpidCu"),
+      maintenanceRecords,
+      width = None,
+      height = None,
+      xLabel = "Date",
+      xDateList,
+      baseline = None,
+      tolerance = None,
+      yRange = Some(yRange),
+      yAxisLabels = Seq("top", "bottom", "left", "right", "center"),
+      yDataLabel = "Average CU",
+      yValues,
+      yIndex,
+      yFormat = ".4g",
+      yColorList
+    )
+    chart
+  }
+
   private def makeEpidNoiseChart(maintenanceRecords: Seq[MaintenanceRecord], yValues: Seq[Seq[Double]], xDateList: Seq[Seq[Timestamp]]): C3ChartHistory = {
 
     val yColorList = Seq(
@@ -196,6 +234,25 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
       )
     }
 
+    val chartEpidCU = {
+
+      val covDateList = history.map(h => h.output.dataDate.get)
+
+      val valueList = Seq(
+        history.map(h => h.symmetryAndFlatness.top_cu),
+        history.map(h => h.symmetryAndFlatness.bottom_cu),
+        history.map(h => h.symmetryAndFlatness.left_cu),
+        history.map(h => h.symmetryAndFlatness.right_cu),
+        history.map(h => h.symmetryAndFlatness.center_cu)
+      )
+
+      val minDate = history.minBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
+      val maxDate = history.maxBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
+      val covMaintenanceList = allMaintenanceRecords.filter(mr => (mr.creationTime.getTime >= minDate) && (mr.creationTime.getTime <= maxDate))
+
+      makeEpidNoiseChart(covMaintenanceList, valueList, Seq(covDateList, covDateList, covDateList, covDateList, covDateList))
+    }
+
     val chartEpidNoise = {
 
       val covHistory = history.filter(h =>
@@ -206,8 +263,6 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
           (h.symmetryAndFlatness.centerCOV != -1)
       )
 
-      val covDateList = history.map(h => h.output.dataDate.get)
-
       val valueList = Seq(
         covHistory.map(h => h.symmetryAndFlatness.topCOV),
         covHistory.map(h => h.symmetryAndFlatness.bottomCOV),
@@ -216,14 +271,10 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
         covHistory.map(h => h.symmetryAndFlatness.centerCOV)
       )
 
-      val minDate = history.minBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
-      val maxDate = history.maxBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
-      val covMaintenanceList = allMaintenanceRecords.filter(mr => (mr.creationTime.getTime >= minDate) && (mr.creationTime.getTime <= maxDate))
-
-      makeEpidNoiseChart(covMaintenanceList, valueList, Seq(covDateList, covDateList, covDateList, covDateList, covDateList))
+      makeEpidCuChart(allMaintenanceRecords, valueList, Seq(dateList, dateList, dateList, dateList, dateList))
     }
 
-    chartAxial.javascript + chartTransverse.javascript + chartFlatness.javascript + chartProfileConstancy.javascript + chartEpidNoise.javascript
+    chartAxial.javascript + chartTransverse.javascript + chartFlatness.javascript + chartProfileConstancy.javascript + chartEpidCU.javascript + chartEpidNoise.javascript
   }
 
 }
