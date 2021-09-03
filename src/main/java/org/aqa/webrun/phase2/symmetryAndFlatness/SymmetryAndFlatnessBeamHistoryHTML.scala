@@ -16,7 +16,6 @@
 
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -33,8 +32,8 @@ import java.sql.Timestamp
 import scala.collection.Seq
 
 /**
- * Analyze DICOM files for symmetry and flatness.
- */
+  * Analyze DICOM files for symmetry and flatness.
+  */
 class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) extends Logging {
 
   val output: Output = Output.get(outputPK).get
@@ -47,35 +46,33 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
   private val yIndex = history.indexWhere(h => h.symmetryAndFlatness.outputPK == output.outputPK.get)
 
   private val baselineMaintenanceList = {
-    history.filter(h => h.symmetryAndFlatness.isBaseline).map(h =>
-      MaintenanceRecord(
-        maintenanceRecordPK = None,
-        category = MaintenanceCategory.setBaseline,
-        machinePK,
-        creationTime = h.output.dataDate.get,
-        userPK = -1,
-        outputPK = None,
-        summary = "Baseline",
-        description = "Baseline"
-      ))
+    history
+      .filter(h => h.symmetryAndFlatness.isBaseline)
+      .map(h =>
+        MaintenanceRecord(
+          maintenanceRecordPK = None,
+          category = MaintenanceCategory.setBaseline,
+          machinePK,
+          creationTime = h.output.dataDate.get,
+          userPK = -1,
+          outputPK = None,
+          summary = "Baseline",
+          description = "Baseline"
+        )
+      )
   }
 
   // list of all MaintenanceRecords in this time interval
   private val MaintenanceRecordList = {
     val inTimeRange = MaintenanceRecord.getRange(machinePK, history.head.output.dataDate.get, history.last.output.dataDate.get)
-    val relevantBaseline = Baseline.filterOutUnrelatedBaselines(inTimeRange.map(itr => itr.maintenanceRecordPK.get).toSet, Set("symmetry", "flatness", "constancy")).map(_.maintenanceRecordPK.get).toSet
+    val relevantBaseline =
+      Baseline.filterOutUnrelatedBaselines(inTimeRange.map(itr => itr.maintenanceRecordPK.get).toSet, Set("symmetry", "flatness", "constancy")).map(_.maintenanceRecordPK.get).toSet
     inTimeRange.filter(itr => relevantBaseline.contains(itr.maintenanceRecordPK.get) || (!itr.category.equals(MaintenanceCategory.setBaseline)))
   }
 
-
   private val allMaintenanceRecords = (baselineMaintenanceList ++ MaintenanceRecordList).sortBy(_.creationTime.getTime)
 
-  private def makeChart(
-                         chartTitle: String,
-                         toleranceRange: Double,
-                         baselineDate: Timestamp,
-                         baselineValue: Double,
-                         valueList: Seq[Double]): C3ChartHistory = {
+  private def makeChart(chartTitle: String, toleranceRange: Double, baselineDate: Timestamp, baselineValue: Double, valueList: Seq[Double]): C3ChartHistory = {
 
     val chartId = C3Chart.idTagPrefix + Util.textToId(chartTitle)
 
@@ -87,13 +84,12 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
     val yAxisLabels = Seq(chartTitle + " %")
     val yValues = Seq(valueList)
     val yFormat = ".4g"
-    val yColorList = Util.colorPallette(new Color(0x4477BB), new Color(0x44AAFF), yValues.size)
+    val yColorList = Util.colorPallette(new Color(0x4477bb), new Color(0x44aaff), yValues.size)
     val baseline = new Baseline(None, maintenanceRecordPK = -1, baselineDate, SOPInstanceUID = None, chartTitle, baselineValue.toString, setup = "")
     val tolerance = new C3Chart.Tolerance(baselineValue - toleranceRange, baselineValue + toleranceRange)
 
-    Trace.trace("tolerance: " + tolerance)
     val chart = new C3ChartHistory(
-      Some(chartId),
+      chartIdOpt = Some(chartId),
       allMaintenanceRecords,
       width,
       height,
@@ -102,9 +98,52 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
       baseline = Some(baseline),
       Some(tolerance),
       yRange = None,
-      yAxisLabels, yDataLabel, yValues, yIndex, yFormat, yColorList
+      yAxisLabels,
+      yDataLabel,
+      yValues,
+      yIndex,
+      yFormat,
+      yColorList
     )
 
+    chart
+  }
+
+  private def makeEpidNoiseChart(maintenanceRecords: Seq[MaintenanceRecord], yValues: Seq[Seq[Double]], xDateList: Seq[Seq[Timestamp]]): C3ChartHistory = {
+
+    val yColorList = Seq(
+      new Color(44, 160, 44),
+      new Color(255, 140, 38),
+      new Color(53, 133, 187),
+      new Color(218, 61, 62),
+      new Color(218, 62, 218)
+    )
+
+    val allY = yValues.flatten
+
+    val mean = allY.sum / allY.size
+
+    val middleY = allY.sortBy(y => (y - mean).abs).take((allY.size * 0.9).round.toInt)
+
+    val yRange = new C3Chart.YRange(middleY.min, middleY.max)
+
+    val chart = new C3ChartHistory(
+      chartIdOpt = Some(C3Chart.idTagPrefix + "EpidNoise"),
+      maintenanceRecords,
+      width = None,
+      height = None,
+      xLabel = "Date",
+      xDateList,
+      baseline = None,
+      tolerance = None,
+      yRange = Some(yRange),
+      yAxisLabels = Seq("top", "bottom", "left", "right", "center"),
+      yDataLabel = "Coefficient of Variation",
+      yValues,
+      yIndex,
+      yFormat = ".4g",
+      yColorList
+    )
     chart
   }
 
@@ -120,7 +159,8 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
         toleranceRange = Config.SymmetryPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
         sfAndBaseline.symmetryAndFlatness.axialSymmetry,
-        valueList)
+        valueList
+      )
     }
 
     val chartTransverse = {
@@ -130,7 +170,8 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
         toleranceRange = Config.SymmetryPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
         sfAndBaseline.symmetryAndFlatness.transverseSymmetry,
-        valueList)
+        valueList
+      )
     }
 
     val chartFlatness = {
@@ -140,7 +181,8 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
         toleranceRange = Config.FlatnessPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
         sfAndBaseline.symmetryAndFlatness.flatness,
-        valueList)
+        valueList
+      )
     }
 
     val chartProfileConstancy = {
@@ -150,75 +192,38 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
         toleranceRange = Config.ProfileConstancyPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
         sfAndBaseline.symmetryAndFlatness.profileConstancy(sfAndBaseline.symmetryAndFlatness),
-        valueList)
+        valueList
+      )
     }
 
-    chartAxial.javascript + chartTransverse.javascript + chartFlatness.javascript + chartProfileConstancy.javascript
+    val chartEpidNoise = {
+
+      val covHistory = history.filter(h =>
+        (h.symmetryAndFlatness.topCOV != -1) &&
+          (h.symmetryAndFlatness.bottomCOV != -1) &&
+          (h.symmetryAndFlatness.leftCOV != -1) &&
+          (h.symmetryAndFlatness.rightCOV != -1) &&
+          (h.symmetryAndFlatness.centerCOV != -1)
+      )
+
+      val covDateList = history.map(h => h.output.dataDate.get)
+
+      val valueList = Seq(
+        covHistory.map(h => h.symmetryAndFlatness.topCOV),
+        covHistory.map(h => h.symmetryAndFlatness.bottomCOV),
+        covHistory.map(h => h.symmetryAndFlatness.leftCOV),
+        covHistory.map(h => h.symmetryAndFlatness.rightCOV),
+        covHistory.map(h => h.symmetryAndFlatness.centerCOV)
+      )
+
+      val minDate = history.minBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
+      val maxDate = history.maxBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
+      val covMaintenanceList = allMaintenanceRecords.filter(mr => (mr.creationTime.getTime >= minDate) && (mr.creationTime.getTime <= maxDate))
+
+      makeEpidNoiseChart(covMaintenanceList, valueList, Seq(covDateList, covDateList, covDateList, covDateList, covDateList))
+    }
+
+    chartAxial.javascript + chartTransverse.javascript + chartFlatness.javascript + chartProfileConstancy.javascript + chartEpidNoise.javascript
   }
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

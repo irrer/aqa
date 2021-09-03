@@ -67,6 +67,13 @@ case class SymmetryAndFlatness(
   val transverseSymmetry: Double = ((right_cu - left_cu) / left_cu) * 100
   val flatness: Double = ((max - min) / (max + min)) * 100
 
+  /** Coefficients of Variation. */
+  val topCOV: Double = topStdDev_cu / top_cu
+  val bottomCOV: Double = bottomStdDev_cu / bottom_cu
+  val leftCOV: Double = leftStdDev_cu / left_cu
+  val rightCOV: Double = rightStdDev_cu / right_cu
+  val centerCOV: Double = centerStdDev_cu / center_cu
+
   def profileConstancy(baseline: SymmetryAndFlatness): Double = {
     if (symmetryAndFlatnessPK.nonEmpty && baseline.symmetryAndFlatnessPK.get == symmetryAndFlatnessPK.get) {
       0
@@ -238,7 +245,7 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     Db.perform(ops)
   }
 
-  case class SymmetryAndFlatnessHistory(output: Output, symmetryAndFlatness: SymmetryAndFlatness, baselineOutput: Output, baseline: SymmetryAndFlatness)
+  case class SymmetryAndFlatnessHistory(output: Output, symmetryAndFlatness: SymmetryAndFlatness, baselineOutput: Output, baseline: SymmetryAndFlatness) {}
 
   private case class OutputSymFlat(output: Output, sf: SymmetryAndFlatness) {}
 

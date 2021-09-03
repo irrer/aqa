@@ -109,6 +109,10 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
               <h2>Profile Constancy History</h2>
               {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.profileConstancyName))}
             </div>
+            <div class="row">
+              <h2>EPID Noise History</h2>
+              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + "EpidNoise")}
+            </div>
           </div>
         </div>
         <p> </p>
