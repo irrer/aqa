@@ -76,8 +76,17 @@ class SymmetryAndFlatnessCsv extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFl
       CsvCol("Baseline Bottom CU", "For baseline image, average CU of pixel values in the bottom circle.", (sf: SF) => sf.baseline.bottom_cu),
       CsvCol("Baseline Left CU", "For baseline image, average CU of pixel values in the left circle.", (sf: SF) => sf.baseline.left_cu),
       CsvCol("Baseline Right CU", "For baseline image, average CU of pixel values in the right circle.", (sf: SF) => sf.baseline.right_cu),
-      CsvCol("Baseline Center CU", "For baseline image, average CU of pixel values in the center circle.", (sf: SF) => sf.baseline.center_cu)
-
+      CsvCol("Baseline Center CU", "For baseline image, average CU of pixel values in the center circle.", (sf: SF) => sf.baseline.center_cu),
+      CsvCol("Top Std Dev CU", "Standard Deviation in CU of pixel values in the top circle of the image.", (sf: SF) => sf.symmetryAndFlatness.topStdDev_cu),
+      CsvCol("Bottom Std Dev CU", "Standard Deviation in CU of pixel values in the bottom circle of the image.", (sf: SF) => sf.symmetryAndFlatness.bottomStdDev_cu),
+      CsvCol("Left Std Dev CU", "Standard Deviation in CU of pixel values in the left hand circle of the image.", (sf: SF) => sf.symmetryAndFlatness.leftStdDev_cu),
+      CsvCol("Right Std Dev CU", "Standard Deviation in CU of pixel values in the right hand circle of the image.", (sf: SF) => sf.symmetryAndFlatness.rightStdDev_cu),
+      CsvCol("Center Std Dev CU", "Standard Deviation in CU of pixel values in center circle of the image.", (sf: SF) => sf.symmetryAndFlatness.centerStdDev_cu),
+      CsvCol("Top COV", "Coefficient of Variation (stdDev/mean) of pixel values in the top circle of the image.", (sf: SF) => sf.symmetryAndFlatness.topCOV),
+      CsvCol("Bottom COV", "Coefficient of Variation (stdDev/mean) of pixel values in the bottom circle of the image.", (sf: SF) => sf.symmetryAndFlatness.bottomCOV),
+      CsvCol("Left COV", "Coefficient of Variation (stdDev/mean) of pixel values in the left hand circle of the image.", (sf: SF) => sf.symmetryAndFlatness.leftCOV),
+      CsvCol("Right COV", "Coefficient of Variation (stdDev/mean) of pixel values in the right hand circle of the image.", (sf: SF) => sf.symmetryAndFlatness.rightCOV),
+      CsvCol("Center COV", "Coefficient of Variation (stdDev/mean) of pixel values in center circle of the image.", (sf: SF) => sf.symmetryAndFlatness.centerCOV)
       // Col("Baseline Center CU", (sf: SF) => getAl(sf).get(TagByName.SoftwareVersions).getSingleStringValueOrEmptyString)
     )
   }
