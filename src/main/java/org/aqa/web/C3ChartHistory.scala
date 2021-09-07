@@ -84,8 +84,6 @@ class C3ChartHistory(
       "[ '" + label + "', " + valueList.map(d => "'" + Util.standardDateFormat.format(d) + "'").mkString(", ") + "]"
   }
 
-  private val yColorNameList = textColumn(yColorList.map(c => (c.getRGB & 0xffffff).formatted("#%06x")))
-
   private val minDate = xDateList.flatten.minBy(d => d.getTime)
   private val maxDate = xDateList.flatten.maxBy(d => d.getTime)
 
@@ -111,13 +109,18 @@ class C3ChartHistory(
 
   private val maintenanceValueList = column("MaintenanceRecord", Seq.fill(maintenanceList.size)(Seq(yRangeY.min, yRangeY.max)).flatten)
   private val maintenanceSummaryList = textColumn(maintenanceList.map(maintenance => maintenance.summary))
-  private val maintenanceColorList = textColumn(
+  private val maintenanceColorList =
     maintenanceList.flatMap(maintenance => {
       val c = MaintenanceCategory.findMaintenanceCategoryMatch(maintenance.category).Color
       Seq(c, c)
     })
-  )
+
+  private val maintenanceColorListFormatted = textColumn(maintenanceColorList)
   private val maintenanceCategoryList = textColumn(maintenanceList.map(maintenance => maintenance.category))
+
+  private val defaultMaintenanceColor = if (maintenanceColorList.nonEmpty) maintenanceColorList.head else "#aaaaaa"
+
+  private val yColorNameList = textColumn(yColorList.map(c => (c.getRGB & 0xffffff).formatted("#%06x")) :+ defaultMaintenanceColor)
 
   val html: Elem = C3ChartHistory.htmlRef(chartIdTag)
 
@@ -211,7 +214,7 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
           'MaintenanceRecord': 'bar'
         },
         color: function (color, d) {
-          var maintenanceColorList = $maintenanceColorList;
+          var maintenanceColorList = $maintenanceColorListFormatted;
           if (d.id === 'MaintenanceRecord') return maintenanceColorList[d.index % maintenanceColorList.length];
           if (d.index === $yIndex) return 'orange';
           return color;
