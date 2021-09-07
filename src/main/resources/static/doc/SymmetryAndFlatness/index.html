@@ -29,7 +29,7 @@
     , (whose positions are corrected for collimator centering) as shown in the following image
     and reporting them in CU (Calibrated Units) Click image to enlarge:
 
-    <p style="margin-top: 30px"/>
+    <p style="margin-top: 30px"></p>
     <a href="Sym_Flat_J20G0_6X.png">
         <img src="Sym_Flat_J20G0_6X.png" width="500"/>
     </a>
@@ -40,7 +40,7 @@
         Each circle is 5 mm in diameter. They are 75 mm from the center of the image, with a compensation for collimator
         centering.
     </p>
-    <p style="margin-top: 30px"/>
+    <p style="margin-top: 30px"></p>
     For the examples, the following values are used:
 
     <div style="margin:20px;">
@@ -76,15 +76,15 @@
             </tr>
         </table>
 
-        <b>Note on baseline values:</b> <em> Some tests are better evaluated when they can be compared to
-        previous values. For these tests, AQA allows users to establish baseline values. When
-        a test is run, the results are compared to the baseline values. The first time a test is run
-        there are no baseline values, so the platform uses the results of the current test to
-        establish them.
-        <p/> <br/>
-        Users may override this default by using the "Use As Baseline" button, which will establish
-        a new baseline going forward.
-    </em>
+        <p>
+            <b>Note on baseline values:</b> <em> Some tests are better evaluated when they can be compared to
+            previous values. For these tests, AQA allows users to establish baseline values. When
+            a test is run, the results are compared to the baseline values. The first time a test is run
+            there are no baseline values, so the platform uses the results of the current test to
+            establish them.</em></p>
+        <p>
+            <em>Users may override this default by using the "Use As Baseline" button, which will establish
+                a new baseline going forward.</em>:w</p>
     </div>
 
 
@@ -122,7 +122,6 @@
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
-
     <div title="Calculation of Constancy">
         <hr/>
         <h3>Calculation of Constancy</h3>
@@ -138,7 +137,7 @@
 
         <pre>((t + r + b + l) * 100) / 4</pre>
 
-        <p style="margin:25px;"/>
+        <p style="margin:25px;"></p>
 
         An example, using the the above values:
 
@@ -146,8 +145,23 @@
         <pre>b = (0.2195 / 0.2288) - (0.2209 / 0.2301) = -0.0006642</pre>
         <pre>l = (0.2195 / 0.2288) - (0.2220 / 0.2301) = -0.0054450</pre>
         <pre>r = (0.2209 / 0.2288) - (0.2210 / 0.2301) =  0.0050200</pre>
-        <p style="margin:25px;"/>
+        <p style="margin:25px;"></p>
         <pre>((0.0006395 + -0.0006642 + -0.0054450 + 0.0050200) * 100) / 4 = -0.01124</pre>
+    </div>
+
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <div title="Image Noise">
+        <hr/>
+        <h3>Image Noise</h3>
+        <p>The standard deviation is recorded for each of the five circles as a measurement of image noisiness. If this
+            value is large it indicates a poorer image quality. To normalize noisiness for comparison between beams and
+            machines, the value is displayed as the coefficient of variation, which is:</p>
+        <pre>coefficient of variation = standard deviation / mean</pre>
+
+        An example, using the the above center value and a standard deviation of <b>0.0002643</b>:
+
+        <pre>0.001155 = 0.0002643 / 0.2288</pre>
     </div>
 
 </div>
