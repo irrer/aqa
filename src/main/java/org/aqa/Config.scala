@@ -899,6 +899,7 @@ object Config extends Logging {
 
   // =================================================================================
 
+  /*
   object Fix extends Enumeration { // TODO temporary for transition
     val ignore: Fix.Value = Value
     val check: Fix.Value = Value
@@ -929,6 +930,7 @@ object Config extends Logging {
   val DicomSeriesFindBadRtplans: Fix.Value = getFixState("DicomSeriesFindBadRtplans") // TODO temporary for transition
   val DicomSeriesShared: Fix.Value = getFixState("DicomSeriesShared") // TODO temporary for transition
   val DicomSeriesInput: Fix.Value = getFixState("DicomSeriesInput") // TODO temporary for transition
+  */
 
   // =================================================================================
 
