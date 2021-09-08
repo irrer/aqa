@@ -31,7 +31,7 @@ trait Logging {
     */
   def fmtEx(throwable: Throwable): String = {
     val textList = throwable.getStackTrace.map(ste => "\n    " + ste) // convert to text
-    textList.mkString // join as one string
+    throwable.getMessage + textList.mkString // join as one string
   }
 }
 
