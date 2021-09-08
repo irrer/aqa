@@ -349,7 +349,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
           val aa = rtplanAlList.find(a => Util.sopOfAl(a).equals(refRtplanSop))
           if (aa.isEmpty)
             throw new RuntimeException(
-              "Could not find RTPLAN SOP " + refRtplanSop
+              "Could not find RTPLAN SOP " + refRtplanSop + "   List of RTPLAN SOPs size: " + rtplanAlList.size + " : " + rtplanAlList.map(Util.sopOfAl).mkString("  ")
             )
           aa.get
         }
