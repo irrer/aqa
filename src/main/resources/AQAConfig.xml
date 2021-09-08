@@ -705,18 +705,4 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
-
-    <!-- Set to fix to clean up DicomSeries. Set to ignore to do nothing, set to check to show what it would do but
-    actually do nothing.  Invalid or missing values are interpreted as ignore.
-    Command line:
-        java -cp AQA-0.3.00-jar-with-dependencies.jar org.aqa.db.DicomSeries
-    -->
-    <DicomSeriesDeleteOrphans>ignore</DicomSeriesDeleteOrphans>
-    <DicomSeriesPopulateFromInput>ignore</DicomSeriesPopulateFromInput>
-    <DicomSeriesTrim>ignore</DicomSeriesTrim>
-    <DicomSeriesUnlinkInputPK>ignore</DicomSeriesUnlinkInputPK>
-    <DicomSeriesOrphanOutputs>ignore</DicomSeriesOrphanOutputs>
-    <DicomSeriesFindBadRtplans>ignore</DicomSeriesFindBadRtplans>
-    <DicomSeriesShared>check</DicomSeriesShared>
-    <DicomSeriesInput>ignore</DicomSeriesInput>
 </AQAConfig>
