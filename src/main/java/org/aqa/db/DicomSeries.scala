@@ -439,18 +439,7 @@ object DicomSeries extends Logging {
     }
   }
 
-  /**
-    * Return true if the DICOM series with the given seriesInstanceUID is in the database.
-    */
-  private def seriesExists(seriesInstanceUID: String): Boolean = {
-    val action = for {
-      dicomSeries <- query if dicomSeries.seriesInstanceUID === seriesInstanceUID
-    } yield dicomSeries.seriesInstanceUID
-    val size = Db.run(action.length.result)
-    size > 0
-  }
-
-  def getRandomForTesting(): Option[DicomSeries] = {
+  def getRandomForTesting: Option[DicomSeries] = {
     val ds = Db.run(query.take(num = 1).result)
     ds.headOption
   }
@@ -465,7 +454,7 @@ object DicomSeries extends Logging {
     val uidList = alList.map(al => Util.serInstOfAl(al)).distinct
     if (uidList.size > 1) throw new IllegalArgumentException("List of DICOM slices have more than one series UID: " + uidList.mkString("    "))
     if (uidList.isEmpty) throw new IllegalArgumentException("List of DICOM slices has no SeriesInstanceUIDs")
-    if (alList.map(Util.serInstOfAl).distinct.size != 1)  throw new IllegalArgumentException("Some DICOM slices have different SeriesInstanceUIDs")
+    if (alList.map(Util.serInstOfAl).distinct.size != 1) throw new IllegalArgumentException("Some DICOM slices have different SeriesInstanceUIDs")
 
     val existing = getBySeriesInstanceUID(Util.serInstOfAl(alList.head))
     if (existing.nonEmpty) {
@@ -524,4 +513,80 @@ object DicomSeries extends Logging {
     override def toString: String = rtplanUID.formatted("%-64s") + " " + procedure.fullName
   }
 
+  /*
+  // The following adds any RTPLANs in the shared directory into the DB as DicomSeries if:
+  //    - They are not already in the database.
+  //    - They are referenced by at least one other DicomSeries OR can find the institution and user via DicomAnonymous
+  def main(args: Array[String]): Unit = {
+    Config.validate
+    DbSetup.init
+    (0 to 10).foreach(Trace.trace)
+    val doit = {
+      args.nonEmpty && args(0).equals("doit")
+    }
+    Trace.trace("doit: " + doit)
+    val rtplanFileList = Util.listDirFiles(Config.sharedDir)
+    Trace.trace("Starting.  Number of files in " + Config.sharedDir.getAbsolutePath + " : " + rtplanFileList.size)
+
+    def getByValue(value: String): Seq[DicomAnonymous] = {
+      val action = DicomAnonymous.query.filter(da => da.value === value)
+      val list = Db.run(action.result)
+      list
+    }
+
+    def getUserOfInstitution(institutionPK: Long): Long = {
+      val action = User.query.filter(u => u.institutionPK === institutionPK)
+      val userList = Db.run(action.result)
+      val user = userList.head
+      user.userPK.get
+    }
+
+    def putInDbIfNeeded(rtplanFile: File): Unit = {
+      val df = DicomFile(rtplanFile)
+      val name = rtplanFile.getAbsolutePath
+      if (df.attributeList.isDefined) {
+        val sop = Util.sopOfAl(df.attributeList.get)
+        if (DicomSeries.getBySopInstanceUID(sop).nonEmpty)
+          Trace.trace("File is already in DB: " + name)
+        else {
+          val referringList = DicomSeries.getByReferencedRtplanUID(sop)
+
+          if (referringList.isEmpty) {
+            Trace.trace("File is not referenced by any other series: " + name)
+            val dsList = getByValue(Util.sopOfAl(df.attributeList.get))
+            dsList.size match {
+              case 0 => Trace.trace("Unexpected.  No SOP values is found: " + name)
+              case 1 =>
+                val userPK = getUserOfInstitution(dsList.head.institutionPK)
+                val rtplanDicomSeries = makeDicomSeries(userPK, inpPK = None, machPK = None, Seq(df.attributeList.get))
+                Trace.trace("created RTPLAN DICOM series with user " + userPK + " from " + name + "\n" + rtplanDicomSeries.toString)
+                if (doit) {
+                  rtplanDicomSeries.get.insert
+                  Trace.trace("inserted new DicomSeries with user " + userPK + " for " + name)
+                }
+              case _ => Trace.trace("Unexpected.  Multiple SOP values is found: " + name)
+            }
+
+          } else {
+            val userPK = referringList.head.userPK
+            val rtplanDicomSeries = makeDicomSeries(userPK, inpPK = None, machPK = referringList.head.machinePK, Seq(df.attributeList.get))
+            if (rtplanDicomSeries.isDefined) {
+              Trace.trace("created RTPLAN DICOM series from " + name + "\n" + rtplanDicomSeries.toString)
+              if (doit) {
+                rtplanDicomSeries.get.insert
+                Trace.trace("inserted new DicomSeries for " + name)
+              }
+            } else {
+              Trace.trace("Could not construct DicomSeries for: " + name)
+            }
+          }
+        }
+      } else {
+        Trace.trace("File is not a DICOM file: " + name)
+      }
+
+    }
+    rtplanFileList.foreach(putInDbIfNeeded)
+  }
+   */
 }
