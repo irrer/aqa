@@ -16,32 +16,29 @@
 
 package org.aqa.web
 
-import org.restlet.Restlet
+import org.aqa.Config
+import org.aqa.Logging
+import org.aqa.Util
+import org.aqa.web.WebUtil._
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.data.MediaType
-import WebUtil._
-import org.aqa.Logging
-import org.aqa.Util
-import java.io.File
-import org.aqa.Config
-import org.restlet.routing.Filter
-import edu.umro.ScalaUtil.Trace
-import scala.xml.XML
-import scala.xml.Elem
 import org.restlet.data.Status
+import org.restlet.routing.Filter
+
+import java.io.File
 
 /**
- * Support for internal documentation.  HTML files in the static/doc directory are wrapped with
- * standard HTML (in static/doc/wrapper.html) and the title of the document set.
- *
- * Having a standard wrapper gives a common look and feel to the documentation.  Putting it in a
- * file makes it maintainable and consistent across multiple documents.
- */
+  * Support for internal documentation.  HTML files in the static/doc directory are wrapped with
+  * standard HTML (in static/doc/wrapper.html) and the title of the document set.
+  *
+  * Having a standard wrapper gives a common look and feel to the documentation.  Putting it in a
+  * file makes it maintainable and consistent across multiple documents.
+  */
 object Doc {
   private val path = new String((new Doc).pathOf)
 
-  def redirect(response: Response) = response.redirectSeeOther(path)
+  def redirect(response: Response): Unit = response.redirectSeeOther(path)
 
   /** Replace this tag in the wrapper with the target content. */
   val contentTag = "@@content@@"
@@ -61,7 +58,7 @@ object Doc {
   // lazy val wrapperFile = new File(docDir, "wrapper.html")
 
   lazy val wrapperContent: String = {
-    val content = { <div class="col-md-8 col-md-offset-1">{ contentTag }</div> }
+    val content = { <div class="col-md-8 col-md-offset-1">{contentTag}</div> }
     WebUtil.wrapBody(content, titleTag, mathjax = true)
   }
 
@@ -70,19 +67,19 @@ object Doc {
 class Doc extends Filter with SubUrlDoc with Logging {
 
   /**
-   * Get the title from the HTML text by finding the first HTML title attribute and using
-   * it's content.  The text 'Hello there' would be found in the following example:
-   *
-   * <div title="Hello there">
-   *     blah blah ...
-   */
+    * Get the title from the HTML text by finding the first HTML title attribute and using
+    * it's content.  The text 'Hello there' would be found in the following example:
+    *
+    * <div title="Hello there">
+    *     blah blah ...
+    */
   private def getTitleFromText(text: String): String = {
     val tag = "title=\""
     val start = text.indexOf(tag)
     if (start == -1)
       Doc.defaultTitle
     else {
-      val begin = text.substring(start + tag.size)
+      val begin = text.substring(start + tag.length)
       val end = begin.indexOf('"')
       if (end == -1)
         Doc.defaultTitle
@@ -93,17 +90,6 @@ class Doc extends Filter with SubUrlDoc with Logging {
     }
   }
 
-  private def processXml(doc: Elem): String = {
-    val pageTitle = {
-      (doc \ "@title").headOption match {
-        case Some(node) => node.text
-        case _ => Doc.defaultTitle
-      }
-    }
-    val indented = { <div class="col-md-8 col-md-offset-1">{ doc }</div> }
-    WebUtil.wrapBody(indented, pageTitle, mathjax = true).replace(Doc.titleTag, pageTitle)
-  }
-
   override def afterHandle(request: Request, response: Response): Unit = {
     val remaining = request.getResourceRef.getRemainingPart
     val rem = remaining.toLowerCase
@@ -111,20 +97,21 @@ class Doc extends Filter with SubUrlDoc with Logging {
       super.afterHandle(request, response)
       val sourceText = response.getEntityAsText
 
-      val newText = Util.loadXml(sourceText) match {
-        case Right(doc) => processXml(doc)
-        case Left(msg) => {
-          logger.warn("User requested doc " + remaining + " but was not valid XML: " + msg)
-          Doc.wrapperContent.replace(Doc.contentTag, sourceText).replaceAll(Doc.titleTag, getTitleFromText(sourceText))
-        }
+      Util.loadXml(sourceText) match {
+        case Left(msg) =>
+          logger.warn(
+            "Unexpected error.  User requested doc " + remaining +
+              " but it was not valid XML.  Content will still be returned but may be misinterpreted by the web browser.\nError: " + msg
+          )
+        case _ =>
       }
+      val newText = Doc.wrapperContent.replace(Doc.contentTag, sourceText).replaceAll(Doc.titleTag, getTitleFromText(sourceText))
 
       response.getEntity.exhaust // not totally sure if this is required or not
-      response.getEntity.release // not totally sure if this is required or not
+      response.getEntity.release() // not totally sure if this is required or not
       response.setEntity(newText, MediaType.TEXT_HTML)
       response.setStatus(Status.SUCCESS_OK)
     }
   }
 
 }
-
