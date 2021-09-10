@@ -110,26 +110,26 @@
 
     <h4 style="margin-top: 40px;">Restrict results to data created after a given date</h4>
     <pre>
-        &nbsp;
+        &#xA0;
         AND "output.dataDate" > '2019-10-25 16:00:00.00'
     </pre>
 
     <h4 style="margin-top: 40px;">Restrict results to a single machine</h4>
     <pre>
-        &nbsp;
+        &#xA0;
         AND "machine"."id" = 'MACH_5'
     </pre>
-
+    &#xA0;
     <h4 style="margin-top: 40px;">Restrict results to a single institution</h4>
     <pre>
-        &nbsp;
+        &#xA0;
         AND "machine"."id" = 'INST_8'
     </pre>
 
     <h4 style="margin-top: 40px;">Limit the number of results to 10, starting at the 40th qualifying entry by adding
         this to the end of a query</h4>
     <pre>
-        &nbsp;
+        &#xA0;
         LIMIT 10 OFFSET 40;
     </pre>
 
@@ -140,7 +140,7 @@
 
     <p>The database tables can be listed with:</p>
     <pre>
-        &nbsp;
+        &#xA0;
         SELECT *
           FROM pg_catalog.pg_tables
           WHERE schemaname != 'pg_catalog' AND
@@ -148,9 +148,9 @@
     </pre>
 
 
-    <p style="margin-top: 40px;">The columns for a database table can be listed with:</p>
+    <p style="margin-top: 40px;">The columns for a database table can be listed with the following:</p>
     <pre>
-        &nbsp;
+        &#xA0;
         SELECT
           table_name,
           column_name,
@@ -158,7 +158,8 @@
         FROM
           information_schema.columns
         WHERE
-          table_name = 'leafPosition';  -- where 'leafPosition' is the name of the table
+          -- where 'leafPosition' is the name of the table
+          table_name = 'leafPosition';
     </pre>
 
 

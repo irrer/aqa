@@ -22,7 +22,8 @@
 
     <h3>Calculations</h3>
     <p>
-        The first step is to determine the bb's location within the CBCT volume. A 3D volume is constructed, and a VOI (volume of interest is
+        The first step is to determine the bb's location within the CBCT volume. A 3D volume is constructed, and a VOI
+        (volume of interest is
         searched for the bb. The reasons for limiting the search
         volume are:
     </p>
@@ -33,24 +34,29 @@
     </ul>
 
     <p>
-        All possible sub-volumes of the VOI are searched of size 4*4*2 (X*Y*Z) voxels. The sub-volume with the largest sum of voxel values
+        All possible sub-volumes of the VOI are searched of size 4*4*2 (X*Y*Z) voxels. The sub-volume with the largest
+        sum of voxel values
         is assumed to be a coarse location for the bb.
     </p>
 
     <p>
-        Next, a sub-volume is taken that is slightly larger than the actual size of the bb (the size of the bb is a configuration value) centered
+        Next, a sub-volume is taken that is slightly larger than the actual size of the bb (the size of the bb is a
+        configuration value) centered
         on the coarse location. The sub-volume is summed across
         the 3 different axis to create 3 one-dimensional arrays. The profile of each
-        array is analyzed with a center of mass algorithm to determine the exact center of the bb in each dimension. As a
+        array is analyzed with a center of mass algorithm to determine the exact center of the bb in each dimension. As
+        a
         further check, the magnitude
-        of the 'bump' in each profile created by the bb is checked to ensure that it is above a given number (configured value) of standard deviations
+        of the 'bump' in each profile created by the bb is checked to ensure that it is above a given number (configured
+        value) of standard deviations
         to reject random image
         noise.
     </p>
 
     <p></p>
     <div>
-        Given the bb's location in pixels $pix_X, pix_Y, pix_Z$, the location is converted to the frame of reference $for_X, for_Y, for_Z$ in mm by multiplying the X and Y coordinates
+        Given the bb's location in pixels $pix_X, pix_Y, pix_Z$, the location is converted to the frame of reference
+        $for_X, for_Y, for_Z$ in mm by multiplying the X and Y coordinates
         by
         the
         <b>PixelSpacing</b>
@@ -68,7 +74,8 @@
         <ul>
             <li>
                 <b>0028,0030 PixelSpacing</b>
-                : Physical distance in the patient between the center of each pixel, specified by a numeric pair - adjacent row spacing (delimiter) adjacent column spacing in mm
+                : Physical distance in the patient between the center of each pixel, specified by a numeric pair -
+                adjacent row spacing (delimiter) adjacent column spacing in mm
             </li>
             <li>
                 <b>0018,0050 SliceThickness</b>
@@ -76,7 +83,8 @@
             </li>
             <li>
                 <b>0020,0032 ImagePositionPatient</b>
-                : The x, y, and z coordinates of the upper left hand corner (center of the first voxel transmitted) of the image, in mm.
+                : The x, y, and z coordinates of the upper left hand corner (center of the first voxel transmitted) of
+                the image, in mm.
             </li>
         </ul>
     </div>
@@ -92,9 +100,8 @@
     </p>
 
     <div style="margin:10px; border: 1px solid lightgrey;">
-        <img src="CBCT_REG_RTPLAN.png" style="margin:30px;" />
+        <img src="CBCT_REG_RTPLAN.png" style="margin:30px;"/>
     </div>
-
 
 
     <p>
@@ -127,13 +134,14 @@
                 RTPLAN
                 <b>FrameOfReference</b>
                 ):
-                <br />
-                <img src="MatrixTransform.png" width="300" style="margin:20px;" />
+                <br/>
+                <img src="MatrixTransform.png" width="300" style="margin:20px;"/>
                 <p></p>
             </li>
             <li>
                 <b>0070,0308 RegistrationSequence</b>
-                : A Sequence of registration Items. Each Item defines a spatial registration of the images referenced in that
+                : A Sequence of registration Items. Each Item defines a spatial registration of the images referenced in
+                that
                 Item to the Registered RCS established by this SOP Instance. All referenced
                 images are in the same spatial\
                 Frame of Reference or atlas. This sequence contains the CBCT
@@ -150,7 +158,8 @@
     </div>
 
     <p>
-        There is a special case where the CBCT has the same frame of reference as the RTPLAN, and no matrix transformation
+        There is a special case where the CBCT has the same frame of reference as the RTPLAN, and no matrix
+        transformation
         is necessary. While the analysis will be performed, the results may or may not
         be useful. In practice this should not occur, but the software does support it.
     </p>
@@ -161,40 +170,39 @@
     The following values were taken from actual machine values:
 
     <p style="margin-left:40px;">
-        <br />
+        <br/>
         <b>PixelSpacing</b>
         : 0.51119 \ 0.51119
-        <br />
+        <br/>
         <b>SliceThickness</b>
         : 1.98972453680719
-        <br />
+        <br/>
         coarse location in voxels: 276, 239, 49 (calculated from volume)
-        <br />
+        <br/>
         fine location in voxels: 275.863, 238.8094845, 48.478 (calculated from volume)
-        <br />
+        <br/>
         <b>ImagePositionPatient</b>
         of first slice: -130.2839, -130.70374936618, -91.855446207549
-        <br />
+        <br/>
         <b>FrameOfReferenceTransformationMatrix</b>
         :
         $$
         \left[
         \begin{array}{cccc}
-        0.999994& -0.000017& 0.003545&
-        -6.006019\\
-        0.000021& 0.999999& -0.001028& 171.213262\\
-        -0.003545& 0.001028& 0.999993& 59.937419\\
-        1.0& 0.000000& 0.000000& 1.000000
+        0.999994&amp; -0.000017&amp; 0.003545&amp; -6.006019\\
+        0.000021&amp; 0.999999&amp; -0.001028&amp; 171.213262\\
+        -0.003545&amp; 0.001028&amp; 0.999993&amp; 59.937419\\
+        1.0&amp; 0.000000&amp; 0.000000&amp; 1.000000
         \end{array}
         \right]
         $$
 
-        <br />
+        <br/>
         <b>IsocenterPosition</b>
         : 4.221317, 162.6656, 64.92423
     </p>
 
-    <br />
+    <br/>
     <h4>Calculations</h4>
     <p></p>
     Determine coordinates of bb in CBCT frame of reference in mm:
@@ -204,7 +212,7 @@
     48.478
     \times 1.98972453680719 + -91.855446207549 = 4.6017616 $$
 
-    <br />
+    <br/>
     <p></p>
 
     Transform with matrix to RTPLAN coordinates:
@@ -223,11 +231,10 @@
 
     \left[
     \begin{array}{cccc}
-    0.999994& -0.000017& 0.003545&
-    -6.006019\\
-    0.000021& 0.999999& -0.001028& 171.213262\\
-    -0.003545& 0.001028& 0.999993& 59.937419\\
-    1.0& 0.000000& 0.000000& 1.000000
+    0.999994&amp; -0.000017&amp; 0.003545&amp; -6.006019\\
+    0.000021&amp; 0.999999&amp; -0.001028&amp; 171.213262\\
+    -0.003545&amp; 0.001028&amp; 0.999993&amp; 59.937419\\
+    1.0&amp; 0.000000&amp; 0.000000&amp; 1.000000
     \end{array}
     \right]
 
@@ -257,6 +264,6 @@
     $$
 
 
-<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
 </div>

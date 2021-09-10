@@ -24,10 +24,11 @@
 
     <div style="margin:30px;">
         <center>
-            <a href='exampleOfFourEdges.png' title='Example of finding four edges.  Dashed lines show edge location. Click for full sized image.'>
-                <img width='512' src='exampleOfFourEdges.png' />
+            <a href='exampleOfFourEdges.png'
+               title='Example of finding four edges.  Dashed lines show edge location. Click for full sized image.'>
+                <img width='512' src='exampleOfFourEdges.png'/>
             </a>
-            <br />
+            <br/>
             <i>Example of finding four edges. Dashed lines show edge location. Click for full sized image.
             </i>
         </center>
@@ -59,9 +60,9 @@
     <div style="margin:30px;">
         <center>
             <a href='leftEdgeDetail.png' title='Detail of bounding box.  Click for image.'>
-                <img src='leftEdgeDetail.png' />
+                <img src='leftEdgeDetail.png'/>
             </a>
-            <br />
+            <br/>
             <i>Left edge detail.
             </i>
         </center>
@@ -75,18 +76,19 @@
     <div style="margin:30px;">
         <p style="margin:10px; border: 1px solid lightgrey;">
             <a href='rawToCubic.png' title='Raw profile and corresponding cubic spline.  Click for image.'>
-                <img src='rawToCubic.png' />
+                <img src='rawToCubic.png'/>
             </a>
-            <center>
-                <i>Note: The above image is an approximation of real data. The ends have been trimmed and coarseness
-                    has been exaggerated in the above image for illustration purposes.
-                </i>
-            </center>
         </p>
+        <center>
+            <i>Note: The above image is an approximation of real data. The ends have been trimmed and coarseness
+                has been exaggerated in the above image for illustration purposes.
+            </i>
+        </center>
     </div>
 
     <p>
-        Using the cubic spline, a binary search which tries different horizontal inputs is used to find the vertical position where the curve is halfway (
+        Using the cubic spline, a binary search which tries different horizontal inputs is used to find the vertical
+        position where the curve is halfway (
         <b>50%</b>
         ) between
         the upper and lower bounds. The resulting horizontal position is used as the edge measurement.
@@ -94,34 +96,38 @@
 
     <p>
         Notes:
+    </p>
 
-        <ul>
-            <li>The bounding box approach is designed to use the maximum possible number of pixels. This reduces the influence of any aberrant pixels.</li>
+    <ul>
+        <li>The bounding box approach is designed to use the maximum possible number of pixels. This reduces the
+            influence of any aberrant pixels.
+        </li>
 
-            <li>The cubic spline is implemented in double precision floating point and yields sub-pixel accuracy.</li>
+        <li>The cubic spline is implemented in double precision floating point and yields sub-pixel accuracy.</li>
 
-            <li>It is expected that the penumbra value is chosen to be large enough such that the upper and lower bounds plateau.</li>
+        <li>It is expected that the penumbra value is chosen to be large enough such that the upper and lower bounds
+            plateau.
+        </li>
 
-            <li>
-                While there are edge detection algorithms such as
-                <a href='https://en.wikipedia.org/wiki/Canny_edge_detector'>Canny</a>
-                , the purpose
-                here is not to detect whether there is an edge, but to measure as precisely as feasible where the edge is.
-            </li>
+        <li>
+            While there are edge detection algorithms such as
+            <a href='https://en.wikipedia.org/wiki/Canny_edge_detector'>Canny</a>
+            , the purpose
+            here is not to detect whether there is an edge, but to measure as precisely as feasible where the edge is.
+        </li>
 
-            <li>In the event that a single well defined edge is not in the bounding box predicted by the RTPLAN, the algorithm can produce unpredictable results. Examples would be an area where there
-                were multiple edges or an area that was featureless.
-            </li>
+        <li>In the event that a single well defined edge is not in the bounding box predicted by the RTPLAN, the
+            algorithm can produce unpredictable results. Examples would be an area where there
+            were multiple edges or an area that was featureless.
+        </li>
 
-        </ul>
+    </ul>
 
+
+    <p style="margin:10px;">
     </p>
 
 
-    <p style="margin:10px;"> &nbsp; 
-    </p>
-
-
-<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
 </div>
