@@ -236,8 +236,6 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
 
     val chartEpidCU = {
 
-      val covDateList = history.map(h => h.output.dataDate.get)
-
       val valueList = Seq(
         history.map(h => h.symmetryAndFlatness.top_cu),
         history.map(h => h.symmetryAndFlatness.bottom_cu),
@@ -246,22 +244,20 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
         history.map(h => h.symmetryAndFlatness.center_cu)
       )
 
-      val minDate = history.minBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
-      val maxDate = history.maxBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
-      val covMaintenanceList = allMaintenanceRecords.filter(mr => (mr.creationTime.getTime >= minDate) && (mr.creationTime.getTime <= maxDate))
-
-      makeEpidCuChart(covMaintenanceList, valueList, Seq(covDateList, covDateList, covDateList, covDateList, covDateList))
+      makeEpidCuChart(allMaintenanceRecords, valueList, Seq(dateList, dateList, dateList, dateList, dateList))
     }
 
     val chartEpidNoise = {
 
       val covHistory = history.filter(h =>
-        (h.symmetryAndFlatness.topCOV != -1) &&
-          (h.symmetryAndFlatness.bottomCOV != -1) &&
-          (h.symmetryAndFlatness.leftCOV != -1) &&
-          (h.symmetryAndFlatness.rightCOV != -1) &&
-          (h.symmetryAndFlatness.centerCOV != -1)
+        (h.symmetryAndFlatness.topStdDev_cu != -1) &&
+          (h.symmetryAndFlatness.bottomStdDev_cu != -1) &&
+          (h.symmetryAndFlatness.leftStdDev_cu != -1) &&
+          (h.symmetryAndFlatness.rightStdDev_cu != -1) &&
+          (h.symmetryAndFlatness.centerStdDev_cu != -1)
       )
+
+      val covDateList = covHistory.map(h => h.output.dataDate.get)
 
       val valueList = Seq(
         covHistory.map(h => h.symmetryAndFlatness.topCOV),
@@ -271,7 +267,11 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
         covHistory.map(h => h.symmetryAndFlatness.centerCOV)
       )
 
-      makeEpidNoiseChart(allMaintenanceRecords, valueList, Seq(dateList, dateList, dateList, dateList, dateList))
+      val minDate = covHistory.minBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
+      val maxDate = covHistory.maxBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
+      val covMaintenanceList = allMaintenanceRecords.filter(mr => (mr.creationTime.getTime >= minDate) && (mr.creationTime.getTime <= maxDate))
+
+      makeEpidNoiseChart(covMaintenanceList, valueList, Seq(covDateList, covDateList, covDateList, covDateList, covDateList))
     }
 
     chartAxial.javascript + chartTransverse.javascript + chartFlatness.javascript + chartProfileConstancy.javascript + chartEpidCU.javascript + chartEpidNoise.javascript
