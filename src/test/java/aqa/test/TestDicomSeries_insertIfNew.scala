@@ -59,7 +59,7 @@ class TestDicomSeries_insertIfNew extends FlatSpec with Matchers {
 
     cleanup()
 
-    val templateDs = DicomSeries.getRandomForTesting().get
+    val templateDs = DicomSeries.getRandomForTesting.get
 
     if (true) {
       DicomSeries.insertIfNew(templateDs.userPK, templateDs.inputPK, templateDs.machinePK, Seq(al1))
@@ -114,7 +114,7 @@ class TestDicomSeries_insertIfNew extends FlatSpec with Matchers {
 
     cleanup()
 
-    val templateDs = DicomSeries.getRandomForTesting().get
+    val templateDs = DicomSeries.getRandomForTesting.get
 
     // insert the DICOM series in stages, a few slices at a time
 
