@@ -1349,25 +1349,6 @@ object Util extends Logging {
     new Rectangle(d2i(x), d2i(y), d2i(width), d2i(height))
   }
 
-  /**
-    * Periodically print the number of threads to the log.
-    *
-    * @param interval_ms Print it this often.
-    */
-  def monitorThreadCount(interval_ms: Long): Unit = {
-    class InitiateServiceRestart extends Runnable {
-      override def run(): Unit = {
-        while (true) {
-          logger.info("Number of threads: " + Thread.getAllStackTraces.keySet().size())
-          Thread.sleep(interval_ms)
-        }
-      }
-      new Thread(this).start()
-    }
-
-    new InitiateServiceRestart
-  }
-
   def main(args: Array[String]): Unit = {
 
     if (true) {

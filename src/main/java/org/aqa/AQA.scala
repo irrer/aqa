@@ -47,7 +47,7 @@ object AQA extends Logging {
         RunProcedure.cleanupRunningProcedures()
         new WebServer
 
-        if (Config.MonitorThreadCountInterval_ms > 0) Util.monitorThreadCount(Config.MonitorThreadCountInterval_ms)
+        if (Config.MonitorThreadCountInterval_ms > 0) ThreadMonitor.monitorThreads(Config.MonitorThreadCountInterval_ms)
 
         new PeriodicRestart(Config.RestartTime)
         logger.info("AQA service started")
