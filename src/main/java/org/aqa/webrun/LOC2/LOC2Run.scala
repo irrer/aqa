@@ -20,25 +20,12 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.Config
 import org.aqa.Util
-import org.aqa.db.EPID
-import org.aqa.db.Institution
 import org.aqa.db.Machine
-import org.aqa.db.MachineBeamEnergy
-import org.aqa.db.MachineType
-import org.aqa.db.MultileafCollimator
 import org.aqa.db.Output
 import org.aqa.db.Procedure
-import org.aqa.run.ActiveProcess
 import org.aqa.run.ProcedureStatus
-import org.aqa.run.Run.epidEnv
-import org.aqa.run.Run.institutionEnv
-import org.aqa.run.Run.machBeamEnergyToEnv
-import org.aqa.run.Run.machTypeEnv
-import org.aqa.run.Run.machineEnv
-import org.aqa.run.Run.mainEnv
-import org.aqa.run.Run.mlcEnv
-import org.aqa.run.Run.writeMatlabMap
 import org.aqa.run.RunProcedure
 import org.aqa.run.RunReqClass
 import org.aqa.run.RunTrait
@@ -51,6 +38,7 @@ import org.restlet.Request
 import org.restlet.Response
 
 import java.io.File
+import java.io.FileInputStream
 import java.sql.Timestamp
 import scala.sys.process.Process
 
@@ -130,8 +118,6 @@ class LOC2Run(procedure: Procedure) extends WebRunProcedure(procedure) with RunT
 
     val numSeries = rtimageList.map(epid => epid.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString).distinct.sorted.size
 
-    val deviceSerialNumber = ???
-
     val result: Either[WebUtil.StyleMapT, LOC2RunReq] = 0 match {
       case _ if rtimageList.isEmpty       => formError("No EPID files uploaded")
       case _ if rtimageList.size != 5     => formError("There should be exactly 5 EPID images but there are " + rtimageList.size)
@@ -146,53 +132,55 @@ class LOC2Run(procedure: Procedure) extends WebRunProcedure(procedure) with RunT
 
   private def executeMatlab(extendedData: ExtendedData): Unit = {
 
-    val output = extendedData.output
-    val machine = extendedData.machine
-    val cd = "CD /D " + output.dir.getAbsolutePath
-    val echoOff = "@echo off"
-    val logEnv = "@set > env.txt"
-    val echoOn = "@echo on"
+    def setEnv(name: String, value: String): String = {
+      s"SET $name='$value"
+    }
 
-    val kvMap =
-      mainEnv(procedure, output) ++
-        institutionEnv(Institution.get(machine.institutionPK)) ++
-        machineEnv(machine) ++
-        mlcEnv(MultileafCollimator.get(machine.multileafCollimatorPK).get) ++
-        machTypeEnv(MachineType.get(machine.machineTypePK).get) ++
-        epidEnv(EPID.get(machine.epidPK).get)
+    val matlabExecutableFile = {
+      val locDir = new File(Config.staticDirFile, "LOC")
+      val exe = new File(locDir, extendedData.procedure.fileName + ".exe")
+      if (!exe.canExecute) {
+        throw new RuntimeException("Can not execute LOC MATLAB file " + exe.getAbsolutePath)
+      }
+      exe
+    }
 
-    val beamEnergyList = MachineBeamEnergy.getByMachine(machine.machinePK.get)
-    writeMatlabMap(kvMap, beamEnergyList, output.dir)
 
-    val execute = "\"" + procedure.execDir + File.separator + runCommandName + "\""
+    val commandFileName = "run.cmd"
 
-    val kvEnv = (kvMap ++ machBeamEnergyToEnv(beamEnergyList)).map(kv => "SET " + kv._1 + "=" + kv._2.toString.replace('\n', ' ')).toSeq.sorted
+    val commandFile = new File(extendedData.output.dir, commandFileName)
 
-    val cmdList: List[String] = List(cd, echoOff) ++ kvEnv ++ List(logEnv, echoOn, execute)
+    val commandList = Seq(
+      "CD /D " + extendedData.output.dir.getAbsolutePath,
+      """copy /Y ..\*.dcm .""",
+      setEnv("institution_id", extendedData.institution.name),
+      setEnv("machine_configDir", extendedData.machine.configDir.get.getAbsolutePath),
+      setEnv("machine_id", extendedData.machine.id),
+      setEnv("mlc_model", extendedData.multileafCollimator.model),
+      setEnv("outputPK", extendedData.output.outputPK.get.toString),
+      matlabExecutableFile.getAbsolutePath
+    )
 
-    // val cmdList = List(cd, setDir, setInputPk, setOutputPk, setJar, setDbCommand, execute)
-    val inputString = cmdList.foldLeft("")((t, c) => t + c + System.lineSeparator)
-    val inputStream = new java.io.ByteArrayInputStream(inputString.getBytes("UTF-8"))
+    val commandFileContent = commandList.mkString("", System.lineSeparator(), System.lineSeparator())
+    Util.writeFile(commandFile, commandFileContent)
 
-    val pb = Process(Seq("cmd.exe")) #< inputStream
-    val processLogger = new StdLogger(output)
-    val process = pb.run(processLogger, true)
-    new ActiveProcess(output, process, postProcess, processLogger, response)
+    val fileInputStream = new FileInputStream(commandFile)
 
+    val pb = Process(Seq("cmd.exe")) #< fileInputStream
+    val processLogger = new StdLogger(extendedData.output)
+    pb.run(processLogger, connectInput = true)
   }
 
   override def run(extendedData: ExtendedData, runReq: LOC2RunReq, response: Response): ProcedureStatus.Value = {
-    val execute = "\"" + procedure.execDir + File.separator + runCommandName + "\""
+    executeMatlab(extendedData)
 
-    val kvEnv = (kvMap ++ machBeamEnergyToEnv(beamEnergyList)).map(kv => "SET " + kv._1 + "=" + kv._2.toString.replace('\n', ' ')).toSeq.sorted
-    val cmdList: List[String] = List(cd, echoOff) ++ kvEnv ++ List(logEnv, echoOn, execute)
+    val statusText = {
+      val result = Util.readTextFile(new File(extendedData.output.dir, "status.txt"))
+      result.right.get
+    }
+    val status = ProcedureStatus.stringToProcedureStatus(statusText)
 
-    val pb = Process(Seq("cmd.exe")) #< inputStream
-    val processLogger = new StdLogger(output)
-    val process = pb.run(processLogger, true)
-
-
-    ???
+    status.get
   }
 
   // override def postRun(extendedData: ExtendedData, runReq: LOC2RunReq): Unit = {}
