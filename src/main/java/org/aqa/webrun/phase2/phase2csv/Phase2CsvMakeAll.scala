@@ -65,6 +65,8 @@ object Phase2CsvMakeAll extends Logging {
     // write the documentation for each type of data
     dataTypeList.foreach(dt => dt.writeDoc())
 
+    MaintenanceCsv.writeDoc()
+
     // Write an index for each institution, regardless of whether or not it has data.
     metadataCache.institutionNameMap.keys.foreach(institutionPK => Phase2Csv.generateIndex(institutionPK))
 

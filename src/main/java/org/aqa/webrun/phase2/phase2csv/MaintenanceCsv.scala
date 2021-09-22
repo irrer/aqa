@@ -99,4 +99,11 @@ object MaintenanceCsv {
     Phase2Csv.writeToFile(csvDir, fullText, dataName)
   }
 
+  /**
+   * Write the documentation for columns.
+   */
+  def writeDoc(): Unit = {
+    Phase2Csv.writeDoc(colList.asInstanceOf[Seq[CsvCol[Any]]], dataName)
+  }
+
 }
