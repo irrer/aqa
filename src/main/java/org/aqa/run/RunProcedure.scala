@@ -49,7 +49,6 @@ import org.restlet.data.Status
 import java.io.File
 import java.sql.Timestamp
 import java.util.Date
-import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -64,10 +63,6 @@ object RunProcedure extends Logging {
   private val cancelButtonName = "Cancel"
 
   private val outputSubDirNamePrefix = "output_"
-  // used to synchronize the running of procedures.  Should only do one thing at a time so as not to overload the hardware.
-  // @volatile private var synchronizer = "sync" // actual value does not matter
-
-  private val resourceLock = new Semaphore(1)
 
   /**
     * Perform a function but wrap it in a semaphore to limit the number of resources consumed.
@@ -82,10 +77,13 @@ object RunProcedure extends Logging {
     */
   private def performSynchronized[RT](sync: Boolean, func: () => RT): RT = {
     if (sync) {
-      val didAcquire = resourceLock.tryAcquire(Config.MaxProcedureWaitTime_ms, java.util.concurrent.TimeUnit.MILLISECONDS)
+      logger.info("Waiting to acquire semaphore to run procedure.")
+      val didAcquire = Config.procedureLock.tryAcquire(Config.MaxProcedureWaitTime_ms, java.util.concurrent.TimeUnit.MILLISECONDS)
       if (!didAcquire)
         logger.warn("Failed to acquire semaphore.  Going ahead anyway.  Wait time (ms) was: " + Config.MaxProcedureWaitTime_ms)
       try {
+        val numProc = Config.MaxProcedureCount - Config.procedureLock.availablePermits()
+        logger.info("Starting processing.  Max number of processes allowed: " + Config.MaxProcedureCount + "   Current number of simultaneous processes: " + numProc)
         val result = func()
         result
       } catch {
@@ -93,7 +91,7 @@ object RunProcedure extends Logging {
           logger.warn("Unexpected exception: " + fmtEx(t))
           throw t
       } finally {
-        resourceLock.release()
+        Config.procedureLock.release()
         Util.garbageCollect()
       }
     } else {

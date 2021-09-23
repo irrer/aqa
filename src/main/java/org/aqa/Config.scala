@@ -32,6 +32,7 @@ import java.io.File
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.concurrent.Semaphore
 import javax.imageio.ImageIO
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -382,9 +383,11 @@ object Config extends Logging {
   val LdapRole: String = logMainText("LdapRole", "not specified")
   val LdapGroupList: Seq[String] = getLdapGroupList
 
-  val MaxProcedureCount: Double = logMainText("MaxProcedureCount", "1").toInt
+  val MaxProcedureCount: Int = logMainText("MaxProcedureCount", "1").toInt
   val MaxProcedureWaitTime_min: Double = logMainText("MaxProcedureWaitTime_min", "10.0").toDouble
   val MaxProcedureWaitTime_ms: Long = (MaxProcedureWaitTime_min * 60 * 1000).round
+  /** used to synchronize the running of procedures.  Should only process a maximum number of jobs at a time so as not to overload the hardware. */
+  val procedureLock = new Semaphore(MaxProcedureCount)
 
   val ProgramDir: File = getDir("ProgramDir")
   val ProcedureDir: File = getDir("ProcedureDir")
