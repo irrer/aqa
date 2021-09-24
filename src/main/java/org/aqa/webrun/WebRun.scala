@@ -17,48 +17,40 @@
 package org.aqa.webrun
 
 import org.aqa.db.Procedure
-import org.restlet.Restlet
-
-import scala.collection.mutable.HashMap
-import org.restlet.Request
-import org.restlet.Response
 import org.aqa.web.WebUtil._
-import org.aqa.web.ProcedureUpdate
-
-import scala.xml.Elem
-import org.aqa.web.Session
-import org.aqa.webrun.phase2.Phase2
 import org.aqa.webrun.bbByCBCT.BBbyCBCTRun
 import org.aqa.webrun.bbByEpid.BBbyEPIDRun
 import org.aqa.webrun.gapSkew.GapSkewRun
+import org.aqa.webrun.phase2.Phase2
+import org.restlet.Request
+import org.restlet.Response
+import org.restlet.Restlet
 
 /**
- * Web interface for running the procedures.
- *
- * Looks at the incoming request and determines which procedure restlet the client wants to
- * invoke.  If the restlet has not been instantiated, then do so, add it to the internal
- * list (WebRunProcedure.lookup) and return it.
- */
+  * Web interface for running the procedures.
+  *
+  * Looks at the incoming request and determines which procedure restlet the client wants to
+  * invoke.  If the restlet has not been instantiated, then do so, add it to the internal
+  * list (WebRunProcedure.lookup) and return it.
+  */
 
 class WebRun extends Restlet {
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
-    val restlet = WebRun.getNext(request, response)
+    val restlet = WebRun.getNext(request)
     if (restlet.isRight)
       restlet.right.get.handle(request, response)
     else {
       internalFailure(response, restlet.left.get)
-      None
     }
   }
 }
 
-abstract class WebRunProcedure(procedure: Procedure) extends Restlet {
-}
+abstract class WebRunProcedure(procedure: Procedure) extends Restlet {}
 
 object WebRun {
 
-  type ConstructInterfaceT = (Procedure) => WebRunProcedure
+  type ConstructInterfaceT = Procedure => WebRunProcedure
 
   private val interfaceList: Map[String, ConstructInterfaceT] = Map(
     ("LOCRun_1", procedure => new LOCRun_1(procedure)),
@@ -68,13 +60,14 @@ object WebRun {
     ("LOCUploadBaseFiles_1", procedure => new LOCUploadBaseFiles_1(procedure)),
     ("GapSkewRun", procedure => new GapSkewRun(procedure)),
     ("UploadAndChooseMachine_1", procedure => new UploadAndChooseMachine_1(procedure)),
-    ("WinstonLutz_1", procedure => new WinstonLutz_1(procedure)))
+    ("WinstonLutz_1", procedure => new WinstonLutz_1(procedure))
+  )
 
   /** Possible choices for procedure interfaces. */
-  def interfaceChoices = interfaceList.map(nc => nc._1)
+  def interfaceChoices: Iterable[String] = interfaceList.keys
 
   /** List of procedurePK -> interface pairs that have been instantiated. */
-  private val lookup = new HashMap[Long, Restlet]()
+  private val lookup = new scala.collection.mutable.HashMap[Long, Restlet]()
 
   private def interfaceNotFound(procedure: Procedure): String = {
     "The selected procedure " + procedure.fullName + " specifies that it needs the web interface " +
@@ -83,9 +76,9 @@ object WebRun {
   }
 
   /**
-   * Make a new interface Restlet for handling the running of the given
-   * procedure.  On failure, return a String explaining the problem.
-   */
+    * Make a new interface Restlet for handling the running of the given
+    * procedure.  On failure, return a String explaining the problem.
+    */
   private def makeNewInterfaceInstance(procedurePK: Long): Either[String, Restlet] = {
     val procedure = Procedure.get(procedurePK)
     if (procedure.isDefined) {
@@ -101,8 +94,8 @@ object WebRun {
   }
 
   /**
-   * Given a procedure, get a restlet to handle it.  On success return Right, on failure return Left(failure message).
-   */
+    * Given a procedure, get a restlet to handle it.  On success return Right, on failure return Left(failure message).
+    */
   def get(procedurePK: Long): Either[String, Restlet] = { // TODO should return type RunTrait instead of Restlet
     // it is important to synchronize this because even one web client often makes multiple overlapping calls, and we
     // do not want to instantiate multiple copies of the same thing.
@@ -113,7 +106,7 @@ object WebRun {
     })
   }
 
-  def getNext(request: Request, response: Response): Either[String, Restlet] = {
+  def getNext(request: Request): Either[String, Restlet] = {
     val procedurePK = request.getResourceRef.getLastSegment.replaceAll(".*_", "").toLong
     get(procedurePK)
   }
