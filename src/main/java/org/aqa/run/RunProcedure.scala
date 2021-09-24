@@ -78,12 +78,18 @@ object RunProcedure extends Logging {
   private def performSynchronized[RT](sync: Boolean, func: () => RT): RT = {
     if (sync) {
       logger.info("Waiting to acquire semaphore to run procedure.")
+      val waitStart = System.currentTimeMillis()
       val didAcquire = Config.procedureLock.tryAcquire(Config.MaxProcedureWaitTime_ms, java.util.concurrent.TimeUnit.MILLISECONDS)
       if (!didAcquire)
         logger.warn("Failed to acquire semaphore.  Going ahead anyway.  Wait time (ms) was: " + Config.MaxProcedureWaitTime_ms)
       try {
         val numProc = Config.MaxProcedureCount - Config.procedureLock.availablePermits()
-        logger.info("Starting processing.  Max number of processes allowed: " + Config.MaxProcedureCount + "   Current number of simultaneous processes: " + numProc)
+        val waitElapsed = System.currentTimeMillis() - waitStart
+        logger.info(
+          "Starting processing.  Max number of processes allowed: " + Config.MaxProcedureCount +
+            "    Current number of simultaneous processes: " + numProc +
+            "    Elapsed wait time in ms: " + waitElapsed
+        )
         val result = func()
         result
       } catch {
