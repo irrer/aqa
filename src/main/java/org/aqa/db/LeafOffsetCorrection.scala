@@ -16,22 +16,22 @@
 
 package org.aqa.db
 
-import Db.driver.api._
 import org.aqa.Config
-import org.aqa.Util
-import java.io.File
-import scala.xml.XML
-import scala.xml.Node
-import scala.xml.Elem
+import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
 import org.aqa.webrun.LOCXml
 
+import java.io.File
+import scala.xml.Elem
+import scala.xml.Node
+import scala.xml.XML
+
 case class LeafOffsetCorrection(
-  leafOffsetCorrectionPK: Option[Long], // primary key
-  outputPK: Long, // output primary key
-  section: String, // arbitrary section name.  May be used to associate this section with input data such as UID
-  leafIndex: Int, // leaf number
-  correction_mm: Double // maximum leaf gap
+    leafOffsetCorrectionPK: Option[Long], // primary key
+    outputPK: Long, // output primary key
+    section: String, // arbitrary section name.  May be used to associate this section with input data such as UID
+    leafIndex: Int, // leaf number
+    correction_mm: Double // maximum leaf gap
 ) {
 
   def insert: LeafOffsetCorrection = {
@@ -45,7 +45,7 @@ case class LeafOffsetCorrection(
 
   def insertOrUpdate = Db.run(LeafOffsetCorrection.query.insertOrUpdate(this))
 
-  override def toString: String = (correction_mm.toString).trim
+  override def toString: String = "leaf: " + leafIndex.formatted("%2d") + "    section: " + section + "    correction_mm: " + (correction_mm.toString).trim
 }
 
 object LeafOffsetCorrection extends ProcedureOutput {
@@ -57,12 +57,7 @@ object LeafOffsetCorrection extends ProcedureOutput {
     def leafIndex = column[Int]("leafIndex")
     def correction_mm = column[Double]("correction_mm")
 
-    def * = (
-      leafOffsetCorrectionPK.?,
-      outputPK,
-      section,
-      leafIndex,
-      correction_mm) <> ((LeafOffsetCorrection.apply _)tupled, LeafOffsetCorrection.unapply _)
+    def * = (leafOffsetCorrectionPK.?, outputPK, section, leafIndex, correction_mm) <> ((LeafOffsetCorrection.apply _) tupled, LeafOffsetCorrection.unapply _)
 
     def outputFK = foreignKey("LeafOffsetCorrection_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -80,8 +75,8 @@ object LeafOffsetCorrection extends ProcedureOutput {
   }
 
   /**
-   * Get a list of all leafOffsetCorrections for the given output
-   */
+    * Get a list of all leafOffsetCorrections for the given output
+    */
   def getByOutput(outputPK: Long): Seq[LeafOffsetCorrection] = {
     val action = for {
       inst <- LeafOffsetCorrection.query if inst.outputPK === outputPK
@@ -110,7 +105,7 @@ object LeafOffsetCorrection extends ProcedureOutput {
 
     (elem \ topXmlLabel).headOption match {
       case Some(node) => (node \ "LeafList" \ "Leaf").map(leaf => leafNodeToLocList(leaf)).flatten
-      case None => Seq[LeafOffsetCorrection]()
+      case None       => Seq[LeafOffsetCorrection]()
     }
   }
 

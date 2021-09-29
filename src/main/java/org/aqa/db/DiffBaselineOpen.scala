@@ -16,22 +16,22 @@
 
 package org.aqa.db
 
-import Db.driver.api._
 import org.aqa.Config
-import org.aqa.Util
-import java.io.File
-import scala.xml.XML
-import scala.xml.Node
-import scala.xml.Elem
+import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
 import org.aqa.webrun.LOCXml
 
+import java.io.File
+import scala.xml.Elem
+import scala.xml.Node
+import scala.xml.XML
+
 case class DiffBaselineOpen(
-  diffBaselineOpenPK: Option[Long], // primary key
-  outputPK: Long, // output primary key
-  section: String, // arbitrary section name.  May be used to associate this section with input data such as UID
-  leafIndex: Int, // leaf number
-  diffBaselineOpen_mm: Double // difference from baseline open value in mm
+    diffBaselineOpenPK: Option[Long], // primary key
+    outputPK: Long, // output primary key
+    section: String, // arbitrary section name.  May be used to associate this section with input data such as UID
+    leafIndex: Int, // leaf number
+    diffBaselineOpen_mm: Double // difference from baseline open value in mm
 ) {
 
   def insert: DiffBaselineOpen = {
@@ -43,9 +43,9 @@ case class DiffBaselineOpen(
     result
   }
 
-  def insertOrUpdate = Db.run(DiffBaselineOpen.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(DiffBaselineOpen.query.insertOrUpdate(this))
 
-  override def toString: String = (diffBaselineOpen_mm.toString).trim
+  override def toString: String = "leaf: " + leafIndex.formatted("%2d") + "    section: " + section + "    diffBaselineOpen_mm: " + diffBaselineOpen_mm.toString.trim
 }
 
 object DiffBaselineOpen extends ProcedureOutput {
@@ -57,12 +57,7 @@ object DiffBaselineOpen extends ProcedureOutput {
     def leafIndex = column[Int]("leafIndex")
     def diffBaselineOpen_mm = column[Double]("diffBaselineOpen_mm")
 
-    def * = (
-      diffBaselineOpenPK.?,
-      outputPK,
-      section,
-      leafIndex,
-      diffBaselineOpen_mm) <> ((DiffBaselineOpen.apply _)tupled, DiffBaselineOpen.unapply _)
+    def * = (diffBaselineOpenPK.?, outputPK, section, leafIndex, diffBaselineOpen_mm) <> (DiffBaselineOpen.apply _ tupled, DiffBaselineOpen.unapply _)
 
     def outputFK = foreignKey("DiffBaselineOpen_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -74,18 +69,18 @@ object DiffBaselineOpen extends ProcedureOutput {
   def get(diffBaselineOpenPK: Long): Option[DiffBaselineOpen] = {
     val action = for {
       inst <- DiffBaselineOpen.query if inst.diffBaselineOpenPK === diffBaselineOpenPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   /**
-   * Get a list of all diffBaselineOpens for the given output
-   */
+    * Get a list of all diffBaselineOpens for the given output
+    */
   def getByOutput(outputPK: Long): Seq[DiffBaselineOpen] = {
     val action = for {
       inst <- DiffBaselineOpen.query if inst.outputPK === outputPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
     list
   }
@@ -109,8 +104,8 @@ object DiffBaselineOpen extends ProcedureOutput {
     }
 
     (elem \ topXmlLabel).headOption match {
-      case Some(node) => (node \ "Leaf").map(leaf => leafNodeToLocList(leaf)).flatten
-      case None => Seq[DiffBaselineOpen]()
+      case Some(node) => (node \ "Leaf").flatMap(leaf => leafNodeToLocList(leaf))
+      case None       => Seq[DiffBaselineOpen]()
     }
   }
 
@@ -127,14 +122,14 @@ object DiffBaselineOpen extends ProcedureOutput {
 
   /** For testing only. */
   def main(args: Array[String]): Unit = {
-    val valid = Config.validate
+    Config.validate
     DbSetup.init
     System.exit(99)
     //val elem = XML.loadFile(new File("""D:\AQA_Data\data\Chicago_33\TB5x_1\WinstonLutz_1.0_1\2016-12-09T09-50-54-361_134\output_2016-12-09T09-50-54-490\output.xml"""))
     val elem = XML.loadFile(new File("""D:\tmp\aqa\tmp\output.xml"""))
     val xmlList = xmlToList(elem, 134)
-    xmlList.map(loc => println("    outputPK: " + loc.outputPK + "     section: " + loc.section + "     leafIndex: " + loc.leafIndex + "     diffBaselineOpen_mm: " + loc.diffBaselineOpen_mm))
-    xmlList.map(loc => loc.insertOrUpdate)
+    xmlList.foreach(loc => println("    outputPK: " + loc.outputPK + "     section: " + loc.section + "     leafIndex: " + loc.leafIndex + "     diffBaselineOpen_mm: " + loc.diffBaselineOpen_mm))
+    xmlList.map(loc => loc.insertOrUpdate())
     println("DiffBaselineOpen.main done")
     //println("======== inst: " + get(5))
     //println("======== inst delete: " + delete(5))

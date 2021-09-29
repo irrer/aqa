@@ -16,24 +16,24 @@
 
 package org.aqa.db
 
-import Db.driver.api._
 import org.aqa.Config
-import org.aqa.Util
-import java.io.File
-import scala.xml.XML
-import scala.xml.Node
-import scala.xml.Elem
-import org.aqa.procedures.ProcedureOutput
 import org.aqa.Logging
+import org.aqa.db.Db.driver.api._
+import org.aqa.procedures.ProcedureOutput
 import org.aqa.webrun.LOCXml
 
+import java.io.File
+import scala.xml.Elem
+import scala.xml.Node
+import scala.xml.XML
+
 case class LOCRSquared(
-  rSquaredPK: Option[Long], // primary key
-  outputPK: Long, // output primary key
-  section: String, // arbitrary section name. May be used to associate this section with input data
-  // such as UID
-  leafIndex: Int, // leaf number
-  rSquared_mmsq: Double // R squared value
+    rSquaredPK: Option[Long], // primary key
+    outputPK: Long, // output primary key
+    section: String, // arbitrary section name. May be used to associate this section with input data
+    // such as UID
+    leafIndex: Int, // leaf number
+    rSquared_mmsq: Double // R squared value
 ) {
 
   def insert: LOCRSquared = {
@@ -45,9 +45,9 @@ case class LOCRSquared(
     result
   }
 
-  def insertOrUpdate = Db.run(LOCRSquared.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(LOCRSquared.query.insertOrUpdate(this))
 
-  override def toString: String = (rSquared_mmsq.toString).trim
+  override def toString: String = "leaf: " + leafIndex.formatted("%2d") + "    section: " + section + "    rSquared_mmsq: " + rSquared_mmsq.toString.trim
 }
 
 object LOCRSquared extends ProcedureOutput with Logging {
@@ -59,12 +59,7 @@ object LOCRSquared extends ProcedureOutput with Logging {
     def leafIndex = column[Int]("leafIndex")
     def rSquared_mmsq = column[Double]("rSquared_mmsq")
 
-    def * = (
-      rSquaredPK.?,
-      outputPK,
-      section,
-      leafIndex,
-      rSquared_mmsq) <> ((LOCRSquared.apply _)tupled, LOCRSquared.unapply _)
+    def * = (rSquaredPK.?, outputPK, section, leafIndex, rSquared_mmsq) <> (LOCRSquared.apply _ tupled, LOCRSquared.unapply _)
 
     def outputFK = foreignKey("LOCRSquared_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -76,18 +71,18 @@ object LOCRSquared extends ProcedureOutput with Logging {
   def get(rSquaredPK: Long): Option[LOCRSquared] = {
     val action = for {
       inst <- LOCRSquared.query if inst.rSquaredPK === rSquaredPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   /**
-   * Get a list of all rSquareds for the given output
-   */
+    * Get a list of all rSquareds for the given output
+    */
   def getByOutput(outputPK: Long): Seq[LOCRSquared] = {
     val action = for {
       inst <- LOCRSquared.query if inst.outputPK === outputPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
     list
   }
@@ -111,8 +106,8 @@ object LOCRSquared extends ProcedureOutput with Logging {
     }
 
     val list = (elem \ topXmlLabel).headOption match {
-      case Some(node) => (node \ "Leaf").map(leaf => leafNodeToLocList(leaf)).flatten
-      case None => Seq[LOCRSquared]()
+      case Some(node) => (node \ "Leaf").flatMap(leaf => leafNodeToLocList(leaf))
+      case None       => Seq[LOCRSquared]()
     }
     logger.info("Number of items constructed: " + list.size)
     list
@@ -133,14 +128,14 @@ object LOCRSquared extends ProcedureOutput with Logging {
 
   /** For testing only. */
   def main(args: Array[String]): Unit = {
-    val valid = Config.validate
+    Config.validate
     DbSetup.init
     System.exit(99)
     //val elem = XML.loadFile(new File("""D:\AQA_Data\data\Chicago_33\TB5x_1\WinstonLutz_1.0_1\2016-12-09T09-50-54-361_134\output_2016-12-09T09-50-54-490\output.xml"""))
     val elem = XML.loadFile(new File("""D:\tmp\aqa\tmp\output.xml"""))
     val xmlList = xmlToList(elem, 134)
-    xmlList.map(loc => println("    outputPK: " + loc.outputPK + "     section: " + loc.section + "     leafIndex: " + loc.leafIndex + "     rSquared_mmsq: " + loc.rSquared_mmsq))
-    xmlList.map(loc => loc.insertOrUpdate)
+    xmlList.foreach(loc => println("    outputPK: " + loc.outputPK + "     section: " + loc.section + "     leafIndex: " + loc.leafIndex + "     rSquared_mmsq: " + loc.rSquared_mmsq))
+    xmlList.map(loc => loc.insertOrUpdate())
     println("LOCRSquared.main done")
     //println("======== inst: " + get(5))
     //println("======== inst delete: " + delete(5))
