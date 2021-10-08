@@ -177,7 +177,7 @@ object Db extends Logging {
     /** List of database tables in lower case. Do not reference this directly, instead use <code>getTableList</code> .*/
     private var tableList: Seq[String] = Seq[String]()
 
-    def resetTableList(): Unit = tableList = null
+    def resetTableList(): Unit = tableList = Seq[String]()
 
     /**
       * Get the latest version of the list of tables.
