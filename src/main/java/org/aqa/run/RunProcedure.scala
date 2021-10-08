@@ -434,7 +434,8 @@ object RunProcedure extends Logging {
       val retryInterval_ms = 5 * 1000
       @tailrec
       def zipFiles(count: Int): Array[Byte] = {
-        if (count > 0) {
+        // Only try this a finite number of times.  Also the output directory must exist.
+        if ((count > 0) && extendedData.output.dir.isDirectory) {
           try {
             extendedData.output.makeZipOfFiles
           } catch {
