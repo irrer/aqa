@@ -1623,11 +1623,6 @@ object WebUtil extends Logging {
   }
 
   /**
-    * Wait for the given future to complete if specified in the valueMap.
-    */
-  def awaitIfRequested[T](future: Future[T], valueMap: ValueMapT, procedurePK: Long): Unit = awaitIfRequested(future, isAwait(valueMap), procedurePK)
-
-  /**
     * Column that can be added to a WebRow to show the coordinate diagram.
     *
     * @param height: Display height in pixels.
