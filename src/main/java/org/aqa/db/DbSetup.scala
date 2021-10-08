@@ -42,7 +42,7 @@ object DbSetup extends Logging {
       url_real = encrypt("https://medicine.umich.edu/dept/radiation-oncology"),
       description_real = encrypt("to be determined")
     )
-    inst.insertOrUpdate
+    inst.insertOrUpdate()
     inst
   }
 
@@ -74,7 +74,7 @@ object DbSetup extends Logging {
 
     val adminUser = new User(None, "admin", Some(encrypt("admin")), encrypt("An Administrator"), encrypt(email), institutionPK, hashedPassword, passwordSalt, UserRole.admin.toString, None)
     val user = adminUser.insert.copy(id = AnonymizeUtil.aliasify(AnonymizeUtil.userAliasPrefixId, institutionPK))
-    user.insertOrUpdate
+    user.insertOrUpdate()
     User.get(user.userPK.get).get
   }
 
@@ -99,6 +99,7 @@ object DbSetup extends Logging {
     MachineDailyQA.query,
     Input.query,
     InputFiles.query,
+    MachineLog.query,
     MaintenanceRecord.query,
     Output.query,
     OutputFiles.query,
