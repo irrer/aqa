@@ -270,7 +270,8 @@ object MachineLog extends Logging {
   def main(args: Array[String]): Unit = {
     DbSetup.init
     println("Starting ...")
-    val dir = new File("""D:\tmp\aqa\MachineLogs\CedarsSinia""")
+    //val dir = new File("""D:\tmp\aqa\MachineLogs\CedarsSinia""")
+    val dir = new File("""D:\tmp\aqa\MachineLogs\H192448\H192448""")
 
     def showFile(f: File): Unit = {
 
