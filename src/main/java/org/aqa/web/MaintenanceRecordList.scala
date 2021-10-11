@@ -16,18 +16,18 @@
 
 package org.aqa.web
 
-import org.restlet.Response
-import scala.xml.Elem
-import org.aqa.db.MaintenanceRecord
-import java.sql.Timestamp
-import org.aqa.web.WebUtil._
-import org.aqa.db.User
 import org.aqa.db.Machine
+import org.aqa.db.MaintenanceRecord
+import org.aqa.db.User
+import org.aqa.web.WebUtil._
+import org.restlet.Response
+
+import scala.xml.Elem
 
 object MaintenanceRecordList {
   val path = new String((new MaintenanceRecordList).pathOf)
 
-  def redirect(response: Response) = response.redirectSeeOther(path)
+  def redirect(response: Response): Unit = response.redirectSeeOther(path)
 }
 
 class MaintenanceRecordList extends GenericList[MaintenanceRecord] with WebUtil.SubUrlAdmin {
@@ -36,12 +36,12 @@ class MaintenanceRecordList extends GenericList[MaintenanceRecord] with WebUtil.
   override def getPKName: String = "maintenanceRecordPK"
 
   /**
-   * If a machinePK is given, then filter on that, otherwise list maintenance records for all machines.
-   */
-  override def getData(valueMap: ValueMapT, response: Response) = {
+    * If a machinePK is given, then filter on that, otherwise list maintenance records for all machines.
+    */
+  override def getData(valueMap: ValueMapT, response: Response): Seq[MaintenanceRecord] = {
     valueMap.get(MachineUpdate.machinePKTag) match {
       case Some(machinePK) => MaintenanceRecord.getByMachine(machinePK.toLong)
-      case _ => MaintenanceRecord.list
+      case _               => MaintenanceRecord.list
     }
   }
 
@@ -59,22 +59,24 @@ class MaintenanceRecordList extends GenericList[MaintenanceRecord] with WebUtil.
       try {
         Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get.id
       } catch {
-        case t: Throwable => ""
+        case _: Throwable => ""
       }
     }
     <div class="row col-md-2 col-md-offset-10">
       <strong>
-        <a href={ createNewPath(valueMap) }>Create new { listName }</a><p> </p>
-        <a href={ machinePath }>Return to machine { " " + machineName }</a><p> </p>
+        <a href={createNewPath(valueMap)}>Create new {listName}</a><p> </p>
+        <a href={machinePath}>Return to machine {" " + machineName}</a><p> </p>
       </strong>
-    </div>;
+    </div>
   }
 
-  private def descHTML(maintenanceRecord: MaintenanceRecord): Elem = <div>{ WebUtil.firstPartOf(maintenanceRecord.description, 60) }</div>
+  private def descHTML(maintenanceRecord: MaintenanceRecord): Elem = <div>{WebUtil.firstPartOf(maintenanceRecord.description, 60)}</div>
 
   private val dateTimeCol = new Column[MaintenanceRecord](
     "Date/Time",
-    (a, b) => (a.creationTime.getTime < b.creationTime.getTime), (mr: MaintenanceRecord) => makePrimaryKeyHtml(WebInputDateTime.dateTimeFormat.format(mr.creationTime), mr.maintenanceRecordPK))
+    (a, b) => a.creationTime.getTime < b.creationTime.getTime,
+    (mr: MaintenanceRecord) => makePrimaryKeyHtml(WebInputDateTime.dateTimeFormat.format(mr.creationTime), mr.maintenanceRecordPK)
+  )
 
   private val categoryCol = new Column[MaintenanceRecord]("Category", _.category)
 
