@@ -76,11 +76,13 @@ class MaintenanceRecordList extends GenericList[MaintenanceRecord] with WebUtil.
     "Date/Time",
     (a, b) => (a.creationTime.getTime < b.creationTime.getTime), (mr: MaintenanceRecord) => makePrimaryKeyHtml(WebInputDateTime.dateTimeFormat.format(mr.creationTime), mr.maintenanceRecordPK))
 
+  private val categoryCol = new Column[MaintenanceRecord]("Category", _.category)
+
   private val userCol = new Column[MaintenanceRecord]("User", mr => User.get(mr.userPK).get.id, mr => wrapAlias(User.get(mr.userPK).get.id))
 
   private val summaryCol = new Column[MaintenanceRecord]("Summary", _.summary)
 
   private val descriptionCol = new Column[MaintenanceRecord]("Description", _.description, descHTML)
 
-  override val columnList = Seq(dateTimeCol, userCol, summaryCol, descriptionCol)
+  override val columnList = Seq(dateTimeCol, categoryCol, userCol, summaryCol, descriptionCol)
 }
