@@ -54,6 +54,7 @@ import javax.vecmath.Point3d
 import javax.vecmath.Vector4d
 import scala.xml.Elem
 import scala.xml.Node
+import scala.xml.PrettyPrinter
 import scala.xml.XML
 
 object Util extends Logging {
@@ -1347,6 +1348,11 @@ object Util extends Logging {
     */
   def rectD(x: Double, y: Double, width: Double, height: Double): Rectangle = {
     new Rectangle(d2i(x), d2i(y), d2i(width), d2i(height))
+  }
+
+  /** General purpose XML formatter */
+  def prettyPrint(xml: Elem): String = {
+    new PrettyPrinter(1024, 2).format(xml)
   }
 
   def main(args: Array[String]): Unit = {
