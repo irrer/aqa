@@ -381,7 +381,7 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     status
   }
 
-  override def makeRunReqForRedo(alList: Seq[AttributeList], oldOutput: Option[Output]): RunReqClass = {
+  override def makeRunReqForRedo(alList: Seq[AttributeList], xmlList: Seq[Elem], oldOutput: Option[Output]): RunReqClass = {
     //val result = validate(emptyValueMap, alList.filter(al => Util.isRtimage(al)))
     val rtimageList = alList.filter(al => Util.isRtimage(al))
 
@@ -425,24 +425,24 @@ class Phase2(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     runReq
   }
 
-  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList]): Seq[String] = {
+  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String] = {
     val rtimageList = alList.filter(al => Util.isRtimage(al))
     val dsnList = rtimageList.flatMap(al => Util.attributeListToDeviceSerialNumber(al)).distinct
     dsnList
   }
 
-  override def getPatientID(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[String] = {
+  override def getPatientID(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Option[String] = {
     alList.filter(al => Util.isRtimage(al)).map(al => Util.patientIdOfAl(al)).headOption
   }
 
-  override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp] = {
+  override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Option[Timestamp] = {
     val min = alList.filter(al => Util.isRtimage(al)).map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al)).flatMap(dp => dp._1).minBy(_.getTime)
     Some(new Timestamp(min.getTime))
   }
 
   override def getProcedure: Procedure = procedure
 
-  override def validate(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, RunReqClass] = {
+  override def validate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Either[StyleMapT, RunReqClass] = {
     val rtplanList = alList.filter(al => Util.isRtplan(al))
     val rtimageList = alList.filter(al => Util.isRtimage(al))
     val result = validatePhase2(rtplanList, rtimageList)

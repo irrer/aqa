@@ -16,7 +16,6 @@
 
 package org.aqa.db
 
-import org.aqa.Config
 import org.aqa.db.Db.driver.api._
 
 import java.sql.Timestamp
@@ -33,6 +32,7 @@ case class MaintenanceRecord(
     creationTime: Timestamp, // when this record was created
     userPK: Long, // user that performed or oversaw maintenance
     outputPK: Option[Long], // optional reference to a related Output
+    machineLogPK: Option[Long], // originating Machine Log entry, if applicable
     summary: String, // short description of maintenance
     description: String // description of maintenance
 ) {
@@ -74,13 +74,15 @@ object MaintenanceRecord {
     def creationTime = column[Timestamp]("creationTime")
     def userPK = column[Long]("userPK")
     def outputPK = column[Option[Long]]("outputPK")
+    def machineLogPK = column[Option[Long]]("machineLogPK")
     def summary = column[String]("summary")
     def description = column[String]("description")
 
-    def * = (maintenanceRecordPK.?, category, machinePK, creationTime, userPK, outputPK, summary, description) <> (MaintenanceRecord.apply _ tupled, MaintenanceRecord.unapply)
+    def * = (maintenanceRecordPK.?, category, machinePK, creationTime, userPK, outputPK, machineLogPK, summary, description) <> (MaintenanceRecord.apply _ tupled, MaintenanceRecord.unapply)
 
     def machineFK = foreignKey("MaintenanceRecord_machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
     def userFK = foreignKey("MaintenanceRecord_userPKConstraint", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Restrict)
+    def machineLogFK = foreignKey("MaintenanceRecord_machineLogPKConstraint", machineLogPK, MachineLog.query)(_.machineLogPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[MaintenanceRecordTable]
@@ -118,7 +120,18 @@ object MaintenanceRecord {
       inst <- MaintenanceRecord.query if (inst.machinePK === machinePK) && (inst.creationTime >= loTs) && (inst.creationTime <= hiTs)
     } yield inst
     val list = Db.run(action.result)
-    list.sortWith((a, b) => a.creationTime.getTime < b.creationTime.getTime)
+    list.sortBy(_.creationTime.getTime)
+  }
+
+  /**
+    * Get the list of MaintenanceRecord's for a given machine that have one of the set of timestamps given.
+    */
+  def getSet(machinePK: Long, dateTimeSet: Set[Timestamp]): Seq[MaintenanceRecord] = {
+    val action = for {
+      inst <- MaintenanceRecord.query if (inst.machinePK === machinePK) && inst.creationTime.inSet(dateTimeSet)
+    } yield inst
+    val list = Db.run(action.result)
+    list.sortBy(_.creationTime.getTime)
   }
 
   /**

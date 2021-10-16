@@ -88,6 +88,7 @@ class WedgeChartHistory(outputPK: Long) {
           creationTime = wh.output.dataDate.get,
           userPK = -1,
           outputPK = None,
+          machineLogPK = None,
           summary = "Baseline",
           description = "Baseline"
         )

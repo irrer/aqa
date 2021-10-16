@@ -68,6 +68,7 @@ import scala.xml.Elem
 import scala.xml.MetaData
 import scala.xml.Node
 import scala.xml.PrettyPrinter
+import scala.xml.XML
 
 object WebUtil extends Logging {
 
@@ -208,7 +209,7 @@ object WebUtil extends Logging {
   }
 
   /**
-    * Anonymized and write the given attribute list.
+    * Anonymize and write the given attribute list.
     */
   private def writeAnonymizedDicom(al: AttributeList, unique: UniquelyNamedFile, request: Request): Unit = {
     val start = System.currentTimeMillis()
@@ -222,6 +223,22 @@ object WebUtil extends Logging {
     Util.writeBinaryFile(anonFile, os.toByteArray)
     val elapsed = System.currentTimeMillis() - start
     logger.info("Wrote " + Util.modalityOfAl(al) + " in " + elapsed + " ms   DICOM file " + anonFile.getAbsolutePath)
+  }
+
+  /**
+    * Anonymize and write the given XML.
+    */
+  private def writeAnonymizedXml(xml: Elem, unique: UniquelyNamedFile, request: Request): Unit = {
+    val start = System.currentTimeMillis()
+    val anonFile = unique.getUniquelyNamedFile("xml")
+    logger.info("Writing " + " XML file " + anonFile.getAbsolutePath)
+    val user = CachedUser.get(request)
+    val institution = user.get.institutionPK
+    val anonXml = AnonymizeUtil.anonymizeXml(institution, xml)
+    val xmlText = (new PrettyPrinter(1024, 2).format(anonXml))
+    Util.writeBinaryFile(anonFile, xmlText.getBytes)
+    val elapsed = System.currentTimeMillis() - start
+    logger.info("Wrote file in " + elapsed + " ms   XML file " + anonFile.getAbsolutePath)
   }
 
   /**
@@ -288,20 +305,27 @@ object WebUtil extends Logging {
       contentType.toLowerCase.matches(".*application.*zip.*")
     }
 
-    if (isZip)
-      writeZip(data, unique, request)
-    else {
-      isDicom(data) match {
-        case Some(al) =>
-          Trace.trace("writing anonymized DICOM")
-          writeAnonymizedDicom(al, unique, request)
-          Trace.trace("wrote anonymized DICOM")
-
-        // We don't know what kind of file this is.  Just save it.
-        case _ =>
-          val anonFile = unique.getUniquelyNamedFile(FileUtil.getFileSuffix(file.getName))
-          Util.writeBinaryFile(anonFile, data)
+    def isXml: Option[Elem] = {
+      try {
+        Some(XML.loadString(new String(data)))
+      } catch {
+        case _: Throwable => None
       }
+    }
+
+    (isZip, isDicom(data), isXml) match {
+      case (true, _, _) =>
+        writeZip(data, unique, request)
+      case (_, Some(al), _) =>
+        writeAnonymizedDicom(al, unique, request)
+        Trace.trace("wrote anonymized DICOM to file.")
+      case (_, _, Some(xml)) =>
+        writeAnonymizedXml(xml, unique, request)
+        Trace.trace("wrote anonymized XML to file.")
+      case _ =>
+        // We don't know what kind of file this is.  Just save it.
+        val anonFile = unique.getUniquelyNamedFile(FileUtil.getFileSuffix(file.getName))
+        Util.writeBinaryFile(anonFile, data)
     }
   }
 
@@ -1532,6 +1556,21 @@ object WebUtil extends Logging {
     sessionDir(valueMap) match {
       case Some(dir) if dir.isDirectory => DicomFile.readDicomInDir(dir)
       case _                            => Seq[DicomFile]()
+    }
+  }
+
+  def xmlFilesInSession(valueMap: ValueMapT): Seq[Elem] = {
+    def readXmlFile(file: File): Option[Elem] = {
+      try {
+        Some(XML.loadFile(file))
+      } catch {
+        case _: Throwable => None
+      }
+    }
+
+    sessionDir(valueMap) match {
+      case Some(dir) if dir.isDirectory => Util.listDirFiles(dir).flatMap(readXmlFile)
+      case _                            => Seq()
     }
   }
 

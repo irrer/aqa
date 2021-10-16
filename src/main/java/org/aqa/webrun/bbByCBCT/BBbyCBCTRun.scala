@@ -41,6 +41,7 @@ import org.restlet.Request
 import org.restlet.Response
 
 import java.sql.Timestamp
+import scala.xml.Elem
 
 /**
   * Provide the user interface and verify that the data provided is sufficient to do the analysis.
@@ -51,11 +52,11 @@ import java.sql.Timestamp
   */
 class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[BBbyCBCTRunReq] {
 
-  override def getPatientID(valueMap: org.aqa.web.WebUtil.ValueMapT, alList: Seq[com.pixelmed.dicom.AttributeList]): Option[String] = {
+  override def getPatientID(valueMap: org.aqa.web.WebUtil.ValueMapT, alList: Seq[com.pixelmed.dicom.AttributeList], xmlList: Seq[Elem]): Option[String] = {
     alList.filter(al => Util.isCt(al)).map(al => Util.patientIdOfAl(al)).headOption
   }
 
-  override def makeRunReqForRedo(alList: Seq[AttributeList], output: Option[Output]): org.aqa.run.RunReqClass = {
+  override def makeRunReqForRedo(alList: Seq[AttributeList], xmlList: Seq[Elem], output: Option[Output]): org.aqa.run.RunReqClass = {
     //validate(emptyValueMap, alList.filter(al => Util.isCt(al))).right.get
     val cbctList = alList.filter(al => Util.isCt(al)).sortBy(al => al.get(TagFromName.ImagePositionPatient).getDoubleValues()(2))
     val reg = alList.find(al => Util.isReg(al))
@@ -75,7 +76,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     result
   }
 
-  override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp] = {
+  override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Option[Timestamp] = {
     val cbctList = alList.filter(al => Util.isCt(al))
 
     def getTimestamp(dateTag: AttributeTag, timeTag: AttributeTag): Option[Timestamp] = {
@@ -146,7 +147,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     outputPKList.foreach(o => redo(o))
   }
 
-  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList]): Seq[String] = {
+  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String] = {
     val ctList = alList.filter(al => Util.isCt(al) || Util.isReg(al))
     val dsnList = ctList.flatMap(al => Util.attributeListToDeviceSerialNumber(al)).distinct
     dsnList
@@ -155,7 +156,7 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   /**
     * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
     */
-  override def validate(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, BBbyCBCTRunReq] = {
+  override def validate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Either[StyleMapT, BBbyCBCTRunReq] = {
     val cbctList = alList.filter(al => Util.isCt(al)).sortBy(al => Util.slicePosition(al))
     val regList = alList.filter(al => Util.isReg(al))
     val rtplanList = alList.filter(al => Util.isRtplan(al))

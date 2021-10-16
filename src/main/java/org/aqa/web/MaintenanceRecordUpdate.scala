@@ -161,12 +161,13 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
     val cat = valueMap.get(category.label).get
 
     new MaintenanceRecord(
-      mrPK,
-      cat,
-      machPK,
-      dt,
-      uPK,
-      None, // outputPK
+      maintenanceRecordPK =  mrPK,
+      category =  cat,
+      machinePK = machPK,
+      creationTime =  dt,
+      userPK =  uPK,
+      outputPK =  None, // outputPK
+      machineLogPK = None,
       summary.getValOrEmpty(valueMap).trim,
       description.getValOrEmpty(valueMap).trim)
 

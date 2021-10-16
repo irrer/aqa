@@ -36,6 +36,7 @@ import org.restlet.Request
 import org.restlet.Response
 
 import java.sql.Timestamp
+import scala.xml.Elem
 
 /**
   * Run BBbyEPID code.
@@ -48,7 +49,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
   override def getProcedure: Procedure = procedure
 
-  override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp] = {
+  override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Option[Timestamp] = {
     val epidList = getEpidList(alList)
 
     def getTimestamp(dateTag: AttributeTag, timeTag: AttributeTag): Option[Timestamp] = {
@@ -67,12 +68,12 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
 
   }
 
-  override def getPatientID(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[String] = {
+  override def getPatientID(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Option[String] = {
     val list = getEpidList(alList).map(al => Util.patientIdOfAl(al)).distinct
     list.headOption
   }
 
-  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList]): Seq[String] = {
+  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String] = {
     val rtimageList = alList.filter(al => Util.isRtimage(al))
     val dsnList = rtimageList.flatMap(al => Util.attributeListToDeviceSerialNumber(al)).distinct
     dsnList
@@ -81,7 +82,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   /**
     * Make the run requirements from the attribute lists.
     */
-  override def makeRunReqForRedo(alList: Seq[AttributeList], output: Option[Output]): BBbyEPIDRunReq = {
+  override def makeRunReqForRedo(alList: Seq[AttributeList], xmlList: Seq[Elem], output: Option[Output]): BBbyEPIDRunReq = {
     val epidList = alList.filter(al => Util.isRtimage(al))
     val result = BBbyEPIDRunReq(epidList)
     result
@@ -90,7 +91,7 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
   /**
     * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
     */
-  override def validate(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, BBbyEPIDRunReq] = {
+  override def validate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Either[StyleMapT, BBbyEPIDRunReq] = {
     val epidList = alList.filter(al => Util.modalityOfAl(al).trim.equalsIgnoreCase("RTIMAGE"))
 
     def epidSeriesList = epidList.map(epid => getSeries(epid)).distinct

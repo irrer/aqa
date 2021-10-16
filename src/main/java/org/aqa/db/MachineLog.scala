@@ -25,7 +25,6 @@ import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import scala.xml.Elem
 import scala.xml.Node
-import scala.xml.PrettyPrinter
 import scala.xml.Text
 import scala.xml.XML
 
@@ -80,6 +79,9 @@ case class MachineLog(
     val text = DateTimeSaved + " " + "    machinePK: " + machinePK + "   Node(s): " + node
     text
   }
+
+  /** True if there is at least one node defined.  If there are none, then the log entry is a no-op. */
+  val hasNode = isBeamGenerationModule || isCollimator || isCouch || isKiloVoltageDetector || isKiloVoltageSource || isMegaVoltageDetector || isStand || isSupervisor || isXRayImager
 }
 
 object MachineLog extends Logging {
@@ -130,9 +132,22 @@ object MachineLog extends Logging {
 
   val query = TableQuery[MachineLogTable]
 
-  private val prettyPrinter = new PrettyPrinter(1024, 2)
-
   private val dateFormat = new SimpleDateFormat("EEEE, dd MMMM yyyy HH:mm:ss")
+
+  /**
+    * Get the timestamp from the XML.
+    * @param xml Representation of a Machine Log entry.
+    * @return DateTimeSaved, or nothing on failure.
+    */
+  def getDateTimeSaved(xml: Elem): Option[Timestamp] = {
+    try {
+      val text = (xml \ "DateTimeSaved").head.text
+      val date = dateFormat.parse(text)
+      Some(new Timestamp(date.getTime))
+    } catch {
+      case _: Throwable => None
+    }
+  }
 
   /**
     * Construct a MachineLog instance from XML.
@@ -152,12 +167,6 @@ object MachineLog extends Logging {
         has
       }
 
-      val dateTimeSaved: Timestamp = {
-        val text = (elem \ "DateTimeSaved").head.text
-        val date = dateFormat.parse(text)
-        new Timestamp(date.getTime)
-      }
-
       val loggedInUser: String = {
         val text = (elem \ "LoggedInUser").head.text
         text
@@ -174,7 +183,7 @@ object MachineLog extends Logging {
       val machineLog = MachineLog(
         machineLogPK = None,
         machinePK,
-        DateTimeSaved = dateTimeSaved,
+        DateTimeSaved = getDateTimeSaved(elem).get,
         LoggedInUser = loggedInUser,
         SystemVersion = env("SystemVersion"),
         ServiceSoftwareVersion = env("ServiceSoftwareVersion"),
@@ -188,7 +197,7 @@ object MachineLog extends Logging {
         isStand = hasNode("Stand"),
         isSupervisor = hasNode("Supervisor"),
         isXRayImager = hasNode("XRay Imager"),
-        content = prettyPrinter.format(elem)
+        content = Util.prettyPrint(elem)
       )
 
       Some(machineLog)
@@ -221,6 +230,14 @@ object MachineLog extends Logging {
     } yield inst
     val list = Db.run(action.result)
     list.headOption
+  }
+
+  def get(machinePK: Long, dateSet: Set[Timestamp]): Seq[MachineLog] = {
+    val action = for {
+      inst <- MachineLog.query if (inst.machinePK === machinePK) && (inst.DateTimeSaved.inSet(dateSet))
+    } yield inst
+    val list = Db.run(action.result)
+    list
   }
 
   def delete(machineLogPK: Long): Int = {

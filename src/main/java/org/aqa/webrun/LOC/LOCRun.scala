@@ -39,6 +39,7 @@ import org.restlet.Response
 
 import java.io.File
 import java.sql.Timestamp
+import scala.xml.Elem
 import scala.xml.XML
 
 /**
@@ -55,7 +56,7 @@ class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
 
   override def getProcedure: Procedure = procedure
 
-  override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp] = {
+  override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Option[Timestamp] = {
     val rtimageList = getRtimageList(alList)
 
     def getTimestamp(dateTag: AttributeTag, timeTag: AttributeTag): Option[Timestamp] = {
@@ -74,12 +75,12 @@ class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
 
   }
 
-  override def getPatientID(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[String] = {
+  override def getPatientID(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Option[String] = {
     val list = getRtimageList(alList).map(al => Util.patientIdOfAl(al)).distinct
     list.headOption
   }
 
-  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList]): Seq[String] = {
+  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String] = {
     val dsnList = getRtimageList(alList).flatMap(al => Util.attributeListToDeviceSerialNumber(al)).distinct
     dsnList
   }
@@ -87,7 +88,7 @@ class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
   /**
     * Make the run requirements from the attribute lists.
     */
-  override def makeRunReqForRedo(alList: Seq[AttributeList], output: Option[Output]): LOCRunReq = {
+  override def makeRunReqForRedo(alList: Seq[AttributeList], xmlList: Seq[Elem], output: Option[Output]): LOCRunReq = {
     val rtimageList = getRtimageList(alList)
     val result = LOCRunReq(rtimageList)
     result
@@ -100,7 +101,7 @@ class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     * @return True if there are baseline files.
     */
   private def hasBaseline(rtimageList: Seq[AttributeList]): Boolean = {
-    val dsnList = getMachineDeviceSerialNumberList(rtimageList)
+    val dsnList = getMachineDeviceSerialNumberList(rtimageList, Seq())
     if (dsnList.isEmpty)
       false
     else {
@@ -123,7 +124,7 @@ class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
   /**
     * Validate inputs enough so as to avoid trivial input errors and then organize data to facilitate further processing.
     */
-  override def validate(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, LOCRunReq] = {
+  override def validate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Either[StyleMapT, LOCRunReq] = {
     val rtimageList = getRtimageList(alList)
 
     def epidSeriesList = rtimageList.map(epid => getSeries(epid)).distinct

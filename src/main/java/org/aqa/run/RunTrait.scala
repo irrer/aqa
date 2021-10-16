@@ -27,6 +27,7 @@ import org.aqa.webrun.ExtendedData
 import org.restlet.Response
 
 import java.sql.Timestamp
+import scala.xml.Elem
 
 trait RunTrait[RunReqClassType] extends Logging {
 
@@ -44,23 +45,23 @@ trait RunTrait[RunReqClassType] extends Logging {
   /**
     * Validate the data and either return the data packaged up for processing, or, messages indicating the problem.
     */
-  def validate(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, RunReqClass]
+  def validate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Either[StyleMapT, RunReqClass]
 
   /*
    * Construct the run requirements to perform a redo.  The implication of redo is that the
    * data has already been validated, so the data should be correct.
    */
-  def makeRunReqForRedo(alList: Seq[AttributeList], oldOutput: Option[Output]): RunReqClass
+  def makeRunReqForRedo(alList: Seq[AttributeList], xmlList: Seq[Elem], oldOutput: Option[Output]): RunReqClass
 
   /**
     * If possible, get the patient ID.
     */
-  def getPatientID(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[String]
+  def getPatientID(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Option[String]
 
   /**
     * get the date that the data was acquired.
     */
-  def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp]
+  def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Option[Timestamp]
 
   /**
     * Get the procedure that this was constructed with.
@@ -71,7 +72,7 @@ trait RunTrait[RunReqClassType] extends Logging {
     * Get the machine's DeviceSerialNumber from the input files.  This is used to handle the
     * case where a new machine needs to have it's serial number established.
     */
-  def getMachineDeviceSerialNumberList(alList: Seq[AttributeList]): Seq[String]
+  def getMachineDeviceSerialNumberList(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String]
 
   /** Convenience function for constructing error messages to display to user on web page. */
   def formError(msg: String) = Left(WebUtil.Error.make(WebUtil.uploadFileLabel, msg))

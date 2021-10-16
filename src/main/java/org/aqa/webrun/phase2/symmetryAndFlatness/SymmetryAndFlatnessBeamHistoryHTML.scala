@@ -56,6 +56,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
           creationTime = h.output.dataDate.get,
           userPK = -1,
           outputPK = None,
+          machineLogPK = None,
           summary = "Baseline",
           description = "Baseline"
         )

@@ -1351,7 +1351,7 @@ object Util extends Logging {
   }
 
   /** General purpose XML formatter */
-  def prettyPrint(xml: Elem): String = {
+  def prettyPrint(xml: Node): String = {
     new PrettyPrinter(1024, 2).format(xml)
   }
 

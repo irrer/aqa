@@ -17,10 +17,11 @@
 package org.aqa
 
 import com.pixelmed.dicom.Attribute
+import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.AttributeList
+import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.db.DicomAnonymous
 import org.aqa.db.Institution
 import org.aqa.web.WebUtil
@@ -28,6 +29,9 @@ import org.aqa.web.WebUtil
 import java.io.File
 import scala.collection.Seq
 import scala.collection.mutable.ArrayBuffer
+import scala.xml.Elem
+import scala.xml.Node
+import scala.xml.Text
 import scala.xml.XML
 
 /** Utilities to support database anonymization. */
@@ -350,4 +354,77 @@ object AnonymizeUtil extends Logging {
     destSeq
   }
 
+  def deviceSerialNumberInXml(xml: Elem): Option[String] = {
+    val node = (xml \ "Environment" \ "MachineSerialNumber").headOption
+
+    if (node.isEmpty) None
+    else Some(node.head.text)
+  }
+
+  /**
+    * Anonymize the machine serial number (aka: DeviceSerialNumber) in the given MachineLog XML.
+    *
+    * @param elem Machine log as XML document.
+    * @param newDeviceSerialNumber New value for serial number.
+    *
+    * @return Same XML with device serial number anonymized.
+    */
+  def anonymizeMachineLog(institutionPK: Long, xml: Elem): Node = {
+    import scala.xml.Node
+    import scala.xml.transform.RewriteRule
+    import scala.xml.transform.RuleTransformer
+
+    val dsn = deviceSerialNumberInXml(xml)
+
+    if (dsn.isEmpty) {
+      xml
+    } else {
+
+      // Use the same value as in the DICOM DeviceSerialNumber tag.  Note that if there is not already a
+      // value in the database, then one will be be established.
+      val anonymizedDeviceSerialNumber = {
+        val at = AttributeFactory.newAttribute(TagByName.DeviceSerialNumber)
+        at.addValue(dsn.get)
+        val l = makeDicomAnonymousList(institutionPK, Seq(at))
+        l.head.value
+      }
+
+      object t1 extends RewriteRule {
+        override def transform(n: Node): Seq[Node] =
+          n match {
+            case Elem(prefix, "MachineSerialNumber", attributes, scope, _*) =>
+              Elem(prefix, "MachineSerialNumber", attributes, scope, false, Text(anonymizedDeviceSerialNumber))
+            case other => other
+          }
+      }
+
+      object rt1 extends RuleTransformer(t1)
+
+      object t2 extends RewriteRule {
+        override def transform(n: Node): Seq[Node] =
+          n match {
+            case sn @ Elem(_, "Environment", _, _, _*) => rt1(sn)
+            case other                                 => other
+          }
+      }
+
+      object rt2 extends RuleTransformer(t2)
+
+      val anonymized = rt2(xml)
+      anonymized
+    }
+  }
+
+  /**
+    * General function for anonymizing XML.
+    *
+    * This handles machine log files, but can be expanded to handle other types of XLM.
+    *
+    * @param institutionPK  Institution PK.
+    * @param xml XML to be anonymized.
+    * @return XML in same form, but with fields anonymized.
+    */
+  def anonymizeXml(institutionPK: Long, xml: Elem): Node = {
+    anonymizeMachineLog(institutionPK, xml)
+  }
 }

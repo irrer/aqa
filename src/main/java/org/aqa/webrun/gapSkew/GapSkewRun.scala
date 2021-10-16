@@ -39,6 +39,7 @@ import org.restlet.Request
 import org.restlet.Response
 
 import java.sql.Timestamp
+import scala.xml.Elem
 
 class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[GapSkewRunReq] {
   // private val machineSelector = new WebInputSelectMachine("Machine", 6, 0)
@@ -103,7 +104,7 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
   /**
     * Validate the data and either return the data packaged up for processing, or, messages indicating the problem.
     */
-  override def validate(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, RunReqClass] = {
+  override def validate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Either[StyleMapT, RunReqClass] = {
     val rtimageList = alList.filter(Util.isRtimage)
     val rtplanList = alList.filter(Util.isRtplan)
 
@@ -143,7 +144,7 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
     result
   }
 
-  override def makeRunReqForRedo(alList: Seq[AttributeList], oldOutput: Option[Output]): RunReqClass = {
+  override def makeRunReqForRedo(alList: Seq[AttributeList], xmlList: Seq[Elem], oldOutput: Option[Output]): RunReqClass = {
     val rtimageList = alList.filter(Util.isRtimage)
     val rtplanSop = getRtplanRefList(rtimageList.head).head
     val rtplan = getRtplan(rtplanSop, Seq()).get
@@ -153,14 +154,14 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
   /**
     * If possible, get the patient ID.
     */
-  override def getPatientID(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[String] = {
+  override def getPatientID(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Option[String] = {
     alList.filter(Util.isRtimage).map(Util.patientIdOfAl).headOption
   }
 
   /**
     * get the date that the data was acquired.
     */
-  override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp] = {
+  override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Option[Timestamp] = {
     val min = alList.filter(Util.isRtimage).map(Util.extractDateTimeAndPatientIdFromDicomAl).flatMap(dp => dp._1.map(_.getTime)).min
     Some(new Timestamp(min))
   }
@@ -174,7 +175,7 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
     * Get the machine's DeviceSerialNumber from the input files.  This is used to handle the
     * case where a new machine needs to have it's serial number established.
     */
-  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList]): Seq[String] = {
+  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String] = {
     val rtimageList = alList.filter(Util.isRtimage)
     val dsnList = rtimageList.flatMap(Util.attributeListToDeviceSerialNumber).distinct
     dsnList

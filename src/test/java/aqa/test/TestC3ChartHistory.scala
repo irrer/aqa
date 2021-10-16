@@ -65,6 +65,7 @@ class TestC3ChartHistory extends FlatSpec with Matchers {
       new Timestamp(offsetDate(day).getTime),
       userPK,
       outputPK,
+      machineLogPK = None,
       "Summary " + rand.nextInt(100),
       "Description " + rand.nextInt(100))
   }

@@ -22,6 +22,7 @@ import org.aqa.webrun.LOC.LOCRun
 import org.aqa.webrun.bbByCBCT.BBbyCBCTRun
 import org.aqa.webrun.bbByEpid.BBbyEPIDRun
 import org.aqa.webrun.gapSkew.GapSkewRun
+import org.aqa.webrun.machLog.MachLogRun
 import org.aqa.webrun.phase2.Phase2
 import org.restlet.Request
 import org.restlet.Response
@@ -62,6 +63,7 @@ object WebRun {
     ("GapSkewRun", procedure => new GapSkewRun(procedure)),
     ("UploadAndChooseMachine_1", procedure => new UploadAndChooseMachine_1(procedure)),
     ("WinstonLutz_1", procedure => new WinstonLutz_1(procedure)),
+    ("MachineLog", procedure => new MachLogRun(procedure)),
     ("LOC", procedure => new LOCRun(procedure))
   )
 

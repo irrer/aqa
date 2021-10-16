@@ -56,6 +56,8 @@ import scala.concurrent.Future
 import scala.concurrent._
 import scala.concurrent.duration.Duration
 import scala.util.Try
+import scala.xml.Elem
+import scala.xml.XML
 
 object RunProcedure extends Logging {
 
@@ -532,13 +534,13 @@ object RunProcedure extends Logging {
   /**
     * Create input + output and start the analysis.
     */
-  private def process(valueMap: ValueMapT, response: Response, runTrait: RunTrait[RunReqClass], runReq: RunReqClass, alList: Seq[AttributeList], sync: Boolean): Unit = {
+  private def process(valueMap: ValueMapT, response: Response, runTrait: RunTrait[RunReqClass], runReq: RunReqClass, alList: Seq[AttributeList], xmlList: Seq[Elem], sync: Boolean): Unit = {
     val now = new Timestamp((new Date).getTime)
-    val PatientID = runTrait.getPatientID(valueMap, alList)
-    val machine = validateMachineSelection(valueMap, runTrait.getMachineDeviceSerialNumberList(alList)).right.get
+    val PatientID = runTrait.getPatientID(valueMap, alList, xmlList)
+    val machine = validateMachineSelection(valueMap, runTrait.getMachineDeviceSerialNumberList(alList, xmlList)).right.get
     val user = getUser(valueMap)
-    val dataDate = runTrait.getDataDate(valueMap, alList)
-    setMachineSerialNumber(machine, runTrait.getMachineDeviceSerialNumberList(alList).head)
+    val dataDate = runTrait.getDataDate(valueMap, alList, xmlList)
+    setMachineSerialNumber(machine, runTrait.getMachineDeviceSerialNumberList(alList, xmlList).head)
     val userPK = if (user.isDefined) user.get.userPK else None
 
     val input = makeNewInput(sessionDir(valueMap), now, userPK, PatientID, dataDate, machine, runTrait.getProcedure, alList)
@@ -609,14 +611,16 @@ object RunProcedure extends Logging {
     val dicomFileList = dicomFilesInSession(valueMap)
     val alList = dicomFileList.flatMap(df => df.attributeList)
 
-    val ms = validateMachineSelection(valueMap, runTrait.getMachineDeviceSerialNumberList(alList))
+    val xmlList = xmlFilesInSession(valueMap)
+
+    val ms = validateMachineSelection(valueMap, runTrait.getMachineDeviceSerialNumberList(alList, xmlList))
 
     if (ms.isLeft) { // handle universal case of machine not identified
       logger.info("Unknown machine: " + ms.left.get)
       form.setFormResponse(valueMap, ms.left.get, runTrait.getProcedure.fullName, response, Status.CLIENT_ERROR_BAD_REQUEST)
     } else {
 
-      def func(): Either[StyleMapT, RunReqClass] = runTrait.validate(valueMap, alList)
+      def func(): Either[StyleMapT, RunReqClass] = runTrait.validate(valueMap, alList, xmlList)
       val validateResults = performSynchronized(sync, func)
 
       validateResults match {
@@ -625,7 +629,7 @@ object RunProcedure extends Logging {
           form.setFormResponse(valueMap, errMap, runTrait.getProcedure.fullName, response, Status.CLIENT_ERROR_BAD_REQUEST)
         case Right(runReq) =>
           logger.info("Validated data for " + runTrait.getProcedure.fullName)
-          process(valueMap, response, runTrait, runReq, alList, sync)
+          process(valueMap, response, runTrait, runReq, alList, xmlList, sync)
       }
     }
   }
@@ -664,6 +668,23 @@ object RunProcedure extends Logging {
         Input.get(oldOutput.get.inputPK)
       else
         None
+    }
+
+    /**
+     * Get the content of the XML files in the given directory.  Ignore non-XML files.
+     * @param dir Directory potentially containing XML files.
+     * @return List of 0 or more XML files.
+     */
+    def xmlFilesInDir(dir: File): Seq[Elem] = {
+      def toXml(file: File): Option[Elem] = {
+        try {
+          Some(XML.loadFile(file))
+        }
+        catch {
+          case _ : Throwable => None
+        }
+      }
+      Util.listDirFiles(dir).flatMap(toXml)
     }
 
     if (input.isDefined) {
@@ -706,7 +727,8 @@ object RunProcedure extends Logging {
 
         // read the DICOM files
         val alList = Util.listDirFiles(inputDir).map(f => new DicomFile(f)).flatMap(df => df.attributeList)
-        val runReq: RunReqClass = performSynchronized[RunReqClass](sync, () => runTrait.makeRunReqForRedo(alList, oldOutput))
+        val xmlList = xmlFilesInDir(inputDir)
+        val runReq: RunReqClass = performSynchronized[RunReqClass](sync, () => runTrait.makeRunReqForRedo(alList, xmlList, oldOutput))
 
         // now that new Output has been created, delete the old output.
         // Even if something goes horribly wrong after this (server crash, analysis crash),

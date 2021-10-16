@@ -30,6 +30,7 @@ import org.aqa.webrun.WebRunProcedure
 import org.restlet.Response
 
 import java.sql.Timestamp
+import scala.xml.Elem
 
 class GapSkewQA(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[GapSkewRunReq] {
 
@@ -39,21 +40,21 @@ class GapSkewQA(procedure: Procedure) extends WebRunProcedure(procedure) with Ru
   /**
     * Validate the data and either return the data packaged up for processing, or, messages indicating the problem.
     */
-  override def validate(valueMap: ValueMapT, alList: Seq[AttributeList]): Either[StyleMapT, RunReqClass] = ???
+  override def validate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Either[StyleMapT, RunReqClass] = ???
 
-  override def makeRunReqForRedo(alList: Seq[AttributeList], oldOutput: Option[Output]): RunReqClass = ???
+  override def makeRunReqForRedo(alList: Seq[AttributeList], xmlList: Seq[Elem], oldOutput: Option[Output]): RunReqClass = ???
 
   /**
     * If possible, get the patient ID.
     */
-  override def getPatientID(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[String] = {
+  override def getPatientID(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Option[String] = {
     alList.filter(al => Util.isRtimage(al)).map(al => Util.patientIdOfAl(al)).headOption
   }
 
   /**
     * get the date that the data was acquired.
     */
-  override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[Timestamp] = {
+  override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Option[Timestamp] = {
     val min = alList.filter(al => Util.isRtimage(al)).map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al)).flatMap(dp => dp._1).minBy(_.getTime)
     Some(new Timestamp(min.getTime))
   }
@@ -67,7 +68,7 @@ class GapSkewQA(procedure: Procedure) extends WebRunProcedure(procedure) with Ru
     * Get the machine's DeviceSerialNumber from the input files.  This is used to handle the
     * case where a new machine needs to have it's serial number established.
     */
-  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList]): Seq[String] = {
+  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String] = {
     val rtimageList = alList.filter(al => Util.isRtimage(al))
     val dsnList = rtimageList.flatMap(al => Util.attributeListToDeviceSerialNumber(al)).distinct
     dsnList
