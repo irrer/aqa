@@ -576,7 +576,7 @@ object DailyQAHTML extends Logging {
             showInProgress("The CBCT analysis has finished.")
 
           case _ if haveCbct && ProcedureStatus.fail.toString.equals(machineCbctResults.head.output.status) && inProgress =>
-            showInProgress("The CBCT did not yet finished.")
+            showInProgress("CBCT analysis in progress.")
 
           case _ if haveCbct && oneFailedCbct =>
             showFail("The CBCT failed.", pleasePage = true)
