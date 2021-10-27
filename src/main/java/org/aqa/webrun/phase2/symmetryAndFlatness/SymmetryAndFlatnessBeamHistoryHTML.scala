@@ -57,6 +57,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
           userPK = -1,
           outputPK = None,
           machineLogPK = None,
+          machineLogNodeIndex = None,
           summary = "Baseline",
           description = "Baseline"
         )

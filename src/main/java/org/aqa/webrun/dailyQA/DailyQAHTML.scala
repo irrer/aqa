@@ -575,11 +575,11 @@ object DailyQAHTML extends Logging {
           case _ if onePassedCbct && inProgress =>
             showInProgress("The CBCT analysis has finished.")
 
+          case _ if oneFailedCbct =>
+            showFail("The CBCT failed.", pleasePage = true)
+
           case _ if haveCbct && ProcedureStatus.fail.toString.equals(machineCbctResults.head.output.status) && inProgress =>
             showInProgress("CBCT analysis in progress.")
-
-          case _ if haveCbct && oneFailedCbct =>
-            showFail("The CBCT failed.", pleasePage = true)
 
           case _ if haveCbct && allEpidSeqWithErrors.isEmpty && inProgress =>
             showInProgress("There is a CBCT but no EPID results.  Acquiring an EPID is recommended.")

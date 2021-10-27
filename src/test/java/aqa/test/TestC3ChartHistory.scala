@@ -14,34 +14,28 @@
  * limitations under the License.
  */
 
-
 package aqa.test;
 
+import org.aqa.Crypto
 import org.aqa.Util
-import org.scalatest.FlatSpec
-import org.scalatest.Matchers
-import java.io.File
-import edu.umro.util.Utility
-import edu.umro.ScalaUtil.Trace
-import edu.umro.ScalaUtil.FileUtil
-import org.aqa.web.C3ChartHistory
-import scala.util.Random
-import java.util.Date
-import org.aqa.db.MaintenanceRecord
-import org.aqa.Config
-import java.sql.Timestamp
-import java.awt.Color
-import akka.Main
-import org.aqa.db.MaintenanceCategory
-import org.aqa.web.C3Chart
 import org.aqa.db.Baseline
 import org.aqa.db.BaselineSetup
-import org.aqa.Crypto
+import org.aqa.db.MaintenanceCategory
+import org.aqa.db.MaintenanceRecord
+import org.aqa.web.C3Chart
+import org.aqa.web.C3ChartHistory
+import org.scalatest.FlatSpec
+import org.scalatest.Matchers
+
+import java.awt.Color
+import java.sql.Timestamp
+import java.util.Date
+import scala.util.Random
 
 /**
- * Test the Config.
- *
- */
+  * Test the Config.
+  *
+  */
 
 class TestC3ChartHistory extends FlatSpec with Matchers {
 
@@ -66,8 +60,10 @@ class TestC3ChartHistory extends FlatSpec with Matchers {
       userPK,
       outputPK,
       machineLogPK = None,
+      machineLogNodeIndex = None,
       "Summary " + rand.nextInt(100),
-      "Description " + rand.nextInt(100))
+      "Description " + rand.nextInt(100)
+    )
   }
 
   "TestC3ChartHistory" should "makeNiceHistoricalChart" in {
@@ -80,10 +76,8 @@ class TestC3ChartHistory extends FlatSpec with Matchers {
     val yDataLabel = "Y Data Label"
     val yValues = yRange.map(yy => (0 until xDateList.size).map(y => (rand.nextDouble + 1) * 25346.331))
     val yFormat = ".5"
-    val yColorList = Util.colorPallette(new Color(0x4477BB), new Color(0x44AAFF), yValues.size)
-    val XmaintenanceRecordList = Seq(
-      makePmi(2, MaintenanceCategory.firmwareUpdate),
-      makePmi(9, MaintenanceCategory.setBaseline))
+    val yColorList = Util.colorPallette(new Color(0x4477bb), new Color(0x44aaff), yValues.size)
+    val XmaintenanceRecordList = Seq(makePmi(2, MaintenanceCategory.firmwareUpdate), makePmi(9, MaintenanceCategory.setBaseline))
 
     val yMin = yValues.flatten.min
     val yMax = yValues.flatten.max
@@ -95,7 +89,23 @@ class TestC3ChartHistory extends FlatSpec with Matchers {
 
     val tolerance = new C3Chart.Tolerance((yDiff * .2) + yMin, (yDiff * .8) + yMin)
 
-    val chart = new C3ChartHistory(Some("TestChart"), maintenanceRecordList, Some(600), Some(200), xLabel, Seq(xDateList), Some(baselineSpec), Some(tolerance), None, yAxisLabels, yDataLabel, yValues, yValues.head.size / 2, yFormat, yColorList)
+    val chart = new C3ChartHistory(
+      Some("TestChart"),
+      maintenanceRecordList,
+      Some(600),
+      Some(200),
+      xLabel,
+      Seq(xDateList),
+      Some(baselineSpec),
+      Some(tolerance),
+      None,
+      yAxisLabels,
+      yDataLabel,
+      yValues,
+      yValues.head.size / 2,
+      yFormat,
+      yColorList
+    )
     //val chart = new C3ChartHistory(maintenanceRecordList, xAxisLabel: String, xDataLabel, xDateList, xFormat, None, yAxisLabels, yDataLabel, yValues, yFormat, yColorList)
 
     val sep = Seq.fill(60)("-").reduce(_ + _)

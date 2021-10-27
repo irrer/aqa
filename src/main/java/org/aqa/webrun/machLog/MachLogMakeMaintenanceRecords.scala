@@ -145,7 +145,7 @@ class MachLogMakeMaintenanceRecords(extendedData: ExtendedData, logList: Seq[Mac
 
   private def makeMaintenanceRecordsFromSingleMachineLog(machineLog: MachineLog): Seq[MaintenanceRecord] = {
 
-    def makeOneRecord(logNode: Node): MaintenanceRecord = {
+    def makeOneRecord(logNode: Node, machineLogNodeIndex: Long): MaintenanceRecord = {
       val category = (logNode \ "@name").head.text
 
       val mr = new MaintenanceRecord(
@@ -155,15 +155,16 @@ class MachLogMakeMaintenanceRecords(extendedData: ExtendedData, logList: Seq[Mac
         creationTime = machineLog.DateTimeSaved,
         userPK = extendedData.user.userPK.get,
         outputPK = extendedData.output.outputPK,
+        machineLogPK = machineLog.machineLogPK,
+        machineLogNodeIndex = Some(machineLogNodeIndex),
         summary = category + " auto-generated",
-        description = formatNode(logNode),
-        machineLogPK = machineLog.machineLogPK
+        description = formatNode(logNode)
       )
 
       mr
     }
 
-    val list = (machineLog.elem \ "Node").map(makeOneRecord)
+    val list = (machineLog.elem \ "Node").zipWithIndex.map(li => makeOneRecord(li._1, li._2))
     list
   }
 

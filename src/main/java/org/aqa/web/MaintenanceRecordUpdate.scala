@@ -168,6 +168,7 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
       userPK =  uPK,
       outputPK =  None, // outputPK
       machineLogPK = None,
+      machineLogNodeIndex = None,
       summary.getValOrEmpty(valueMap).trim,
       description.getValOrEmpty(valueMap).trim)
 

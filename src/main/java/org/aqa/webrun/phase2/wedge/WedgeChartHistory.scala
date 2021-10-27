@@ -89,6 +89,7 @@ class WedgeChartHistory(outputPK: Long) {
           userPK = -1,
           outputPK = None,
           machineLogPK = None,
+          machineLogNodeIndex = None,
           summary = "Baseline",
           description = "Baseline"
         )
