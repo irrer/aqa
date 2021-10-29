@@ -82,11 +82,14 @@ object WebUtil extends Logging {
   val nl = "@@nl@@"
   val openCurly = "@@openCurly@@"
   val closeCurly = "@@closeCurly@@"
+  //noinspection SpellCheckingInspection
   val nbsp = "@@nbsp@@"
 
   val titleNewline = "@@amp@@#10;"
   val mathPre = "@@mathPre@@"
   val mathSuf = "@@mathSuf@@"
+  val rightDoubleArrow = "@@rightDoubleArrow@@"
+  val gt = "@@gt@@"
 
   /**
     * Tag used to indicate that this is coming from an automatic upload client, as opposed to a human using a web browser.
@@ -108,6 +111,7 @@ object WebUtil extends Logging {
   def wrapAlias(text: String): Elem = <span aqaalias="">{text}</span>
   def wrapAlias(elem: Elem): Elem = <span aqaalias="">{elem}</span>
 
+  //noinspection SpellCheckingInspection
   def snglQuote(text: String): String = singleQuote + text + singleQuote
 
   def dblQuote(text: String): String = doubleQuote + text + doubleQuote
@@ -120,7 +124,9 @@ object WebUtil extends Logging {
       .replace(nl, "\n")
       .replace(openCurly, "{")
       .replace(closeCurly, "}")
-      .replace(nbsp, "&nbsp")
+      .replace(nbsp, "&#160;")
+      .replace(rightDoubleArrow, "&#8658;")
+      .replace(gt, "&#62;")
       .replace(mathPre, """<math xmlns="http://www.w3.org/1998/Math/MathML">""")
       .replace(mathSuf, """</math>""")
   }
@@ -235,7 +241,7 @@ object WebUtil extends Logging {
     val user = CachedUser.get(request)
     val institution = user.get.institutionPK
     val anonXml = AnonymizeUtil.anonymizeXml(institution, xml)
-    val xmlText = (new PrettyPrinter(1024, 2).format(anonXml))
+    val xmlText = new PrettyPrinter(1024, 2).format(anonXml)
     Util.writeBinaryFile(anonFile, xmlText.getBytes)
     val elapsed = System.currentTimeMillis() - start
     logger.info("Wrote file in " + elapsed + " ms   XML file " + anonFile.getAbsolutePath)

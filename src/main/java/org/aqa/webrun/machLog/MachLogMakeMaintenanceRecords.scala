@@ -5,14 +5,25 @@ import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.MachineLog
 import org.aqa.db.MaintenanceRecord
+import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 
 import java.text.SimpleDateFormat
 import java.util.Date
 import scala.xml.Node
+import scala.xml.NodeSeq
 import scala.xml.XML
 
 class MachLogMakeMaintenanceRecords(extendedData: ExtendedData, logList: Seq[MachineLog]) extends Logging {
+
+  private val rtArrow = " --" + WebUtil.gt + " "
+
+  /** If both the old and new values are less than this many characters, then put them on one line. */
+  private val oneLine = 50
+
+  private val sp2 = WebUtil.nbsp + WebUtil.nbsp
+  private val sp4 = sp2 + sp2
+  private val sp6 = sp4 + sp2
 
   private abstract case class LogType(name: String) {
 
@@ -25,13 +36,14 @@ class MachLogMakeMaintenanceRecords(extendedData: ExtendedData, logList: Seq[Mac
   }
 
   private def formatParameter(parNode: Node): String = {
-    val displayName = (parNode \ "@Display_Name").text
+    val displayName = {
+      if ((parNode \ "@Display_Name").nonEmpty)
+        (parNode \ "@Display_Name").text
+      else
+        (parNode \ "@Enum_Name").text
+    }
     val oldValue = (parNode \ "@Old_Value").text
     val newValue = (parNode \ "@New_Value").text
-    /*
-    val change = newValue - oldValue
-    val percent = (change * 100) / oldValue
-     */
 
     def dblOpt(text: String): Option[Double] = {
       if (text.matches(".*[T:tf,].*")) // disqualifies most non-numbers
@@ -69,6 +81,7 @@ class MachLogMakeMaintenanceRecords(extendedData: ExtendedData, logList: Seq[Mac
     val asDateTime: Option[String] = {
       def isDT(text: String): Option[Date] = {
         if ((text.length > 17) && (text(4) == '-') && (text(7) == '-') && (text(10) == 'T')) {
+          //noinspection SpellCheckingInspection
           val formatList = Seq(
             new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSSS-X"),
             new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS-X"),
@@ -91,7 +104,7 @@ class MachLogMakeMaintenanceRecords(extendedData: ExtendedData, logList: Seq[Mac
 
       (isDT(oldValue), isDT(newValue)) match {
         case (Some(oldDT), Some(newDT)) =>
-          val text = oldDT + " --> " + newDT + "    change: " + Util.elapsedTimeHumanFriendly(newDT.getTime - oldDT.getTime)
+          val text = oldDT + rtArrow + newDT + "    change: " + Util.elapsedTimeHumanFriendly(newDT.getTime - oldDT.getTime)
           Some(text)
         case _ => None
       }
@@ -100,45 +113,119 @@ class MachLogMakeMaintenanceRecords(extendedData: ExtendedData, logList: Seq[Mac
     val oldDouble = dblOpt(oldValue)
     val newDouble = dblOpt(newValue)
 
-    val content = if (oldDouble.isDefined && newDouble.isDefined) {
+    val content: String = if (oldDouble.isDefined && newDouble.isDefined) {
       val o = oldDouble.get
       val n = newDouble.get
-      val percent = ((o - n) * 100) / n
-      val text = Util.fmtDbl(o) + " --> " + Util.fmtDbl(n) + "    change: " + Util.fmtDbl(o - n) + " = " + Util.fmtDbl(percent) + "%"
+      val percent: String = {
+        (o, n) match {
+          case (0.0, 0.0) => " = 0%"
+          case (0.0, _)   => ""
+          case (_, 0.0)   => ""
+          case _ =>
+            val pct = ((n - o) * 100) / o
+            " = " + Util.fmtDbl(pct) + "%"
+        }
+      }
+      val change = "    change: " + Util.fmtDbl(o - n) + percent
+
+      val text = displayName + ": " + Util.fmtDbl(o) + rtArrow + Util.fmtDbl(n) + change
       text
     } else {
       (asXml, asDateTime) match {
-        case (Some(xml), _) => xml
-        case (_, Some(dt))  => dt
-        case _              => " " + oldValue + " --> " + newValue // simplest case
+        case (Some(xml), _) => displayName + ": " + xml
+        case (_, Some(dt))  => displayName + ": " + dt
+        case _ =>
+          if ((oldValue.length < oneLine) && (oldValue.length < oneLine))
+            displayName + ": " + oldValue + rtArrow + newValue
+          else
+            displayName +
+              "\n" + sp6 + "Old: " + oldValue +
+              "\n" + sp6 + "New: " + newValue
       }
     }
 
-    val text = "    " + displayName + ": " + content
-    text
+    content
   }
 
-  private def formatGroup(group: Node, prefix: String): String = {
-    try {
-      val name = (group \ "@name").text
-      val subGroupList = group \ "Group"
-      if (subGroupList.isEmpty)
-        prefix + name + "\n" + (group \ "Parameter").map(p => formatParameter(p)).mkString("\n")
-      else {
-        val separator = if (prefix.trim.nonEmpty) " / " else ""
-        val newPrefix = prefix + separator + name
-        subGroupList.map(g => formatGroup(g, newPrefix)).mkString("\n")
+  /**
+    * Describe a list of nodes within a machine log.
+    * @param node MachineLog Node being represented.
+    * @param groupList List of Group nodes.
+    */
+  private case class LogGroup(node: Node, groupList: Seq[Node]) {
+
+    private def nameOf(n: Node) = (n \ "@name").text
+
+    val groupNames: String = groupList.map(nameOf).mkString(" / ")
+
+    val parameterList: NodeSeq = groupList.last \ "Parameter"
+
+    override def toString: String = {
+      nameOf(node) + " :: " + groupNames
+    }
+  }
+
+  /**
+    * Given a Node (with tag Node in machine log), return a list of all of the groups within that
+    * Node.
+    *
+    * <p/>
+    * IMHO: It is unfortunate that Varian picked such an overloaded term as Node, but that is what
+    * we are stuck with.
+    *
+    * @param node Node (eg: <Node name="Beam Generation Module">)
+    * @return List of groups within the Node.
+    */
+  private def findGroups(node: Node): Seq[LogGroup] = {
+    val groupList = node \ "Group"
+
+    def checkGroup(nodeList: Seq[Node], logList: Seq[LogGroup] = Seq()): Seq[LogGroup] = {
+      def hasParam(node: Node) = (node \ "Parameter").nonEmpty
+
+      if (hasParam(nodeList.last)) {
+        val lg = LogGroup(node, nodeList)
+        logList :+ lg
+      } else {
+        val gl = (nodeList.last \ "Group").map(g => checkGroup(nodeList :+ g, logList))
+        gl.flatten
       }
+
+    }
+
+    groupList.flatMap(g => checkGroup(g))
+  }
+
+  private def formatGroup(logGroup: LogGroup): String = {
+    try {
+      logGroup.groupNames + "\n" + sp4 + logGroup.parameterList.map(formatParameter).mkString("\n" + sp4)
     } catch {
       case t: Throwable =>
-        logger.warn("Unexpected exception auto-generating maintenance record: " + fmtEx(t) + "\n" + Util.prettyPrint(group))
-        Util.prettyPrint(group)
+        val text = logGroup.toString + "\n" + Util.prettyPrint(logGroup.groupList.last)
+        logger.warn("Unexpected exception auto-generating maintenance record: " + fmtEx(t) + "\n" + text)
+        text
     }
   }
 
-  private def formatNode(node: Node): String = {
-    val nodeName = (node \ "@name").text
-    val text = nodeName + "\n" + (node \ "Group").map(g => formatGroup(g, "  ")).mkString("\n")
+  /**
+    * Sometimes parameters are direct children of the Node.  If they exist, format them.
+    * @param node the Node node.
+    * @return Text description.  Will usually be an empty string.
+    */
+  private def formatNodeParameters(node: Node): String = {
+    val nodeParameterList = (node \ "Parameter").map(formatParameter)
+    if (nodeParameterList.isEmpty)
+      ""
+    else
+      "\n" + sp2 + nodeParameterList.mkString("\n" + sp2)
+  }
+
+  private def formatNode(machineLog: MachineLog, node: Node): String = {
+    val groupList = findGroups(node)
+    val header =
+      (node \ "@name").text + sp4 + " System Version: " + machineLog.SystemVersion
+
+    val text = header + formatNodeParameters(node) + groupList.map(formatGroup).mkString("\n" + sp2, "\n" + sp2, "")
+
     Trace.trace("\n" + text)
     text
   }
@@ -158,7 +245,7 @@ class MachLogMakeMaintenanceRecords(extendedData: ExtendedData, logList: Seq[Mac
         machineLogPK = machineLog.machineLogPK,
         machineLogNodeIndex = Some(machineLogNodeIndex),
         summary = category + " auto-generated",
-        description = formatNode(logNode)
+        description = formatNode(machineLog, logNode)
       )
 
       mr

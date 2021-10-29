@@ -39,7 +39,11 @@ class MachLogHTML(
       // <td><a href={"/admin/MaintenanceRecordUpdate?maintenanceRecordPK=" + rec.maintenanceRecordPK.get}>{rec.summary}</a></td> // TODO put back
       j = j + 1
       // val id = { "MachLog" + machLog.machineLogPK }
-      val descStart = rec.description.take(abbreviationLength).replace("\n", " | ") + " ..."
+      val descStart = rec.description
+        .replace(WebUtil.nbsp, "")
+        .replace(WebUtil.gt, "")
+        .replace("\n", " | ")
+        .take(abbreviationLength) + " ..."
 
       val id = { "Rec" + j }
       <div class="container">
@@ -52,8 +56,8 @@ class MachLogHTML(
     }
 
     <tr>
-      <td>{rec.creationTime}</td>
-      <td style="white-space: nowrap;"><a href={"/admin/MaintenanceRecordUpdate?maintenanceRecordPK=" + j}>{rec.category}</a></td>
+      <td style="vertical-align: top;">{rec.creationTime}</td>
+      <td style="white-space: nowrap; vertical-align: top;"><a href={"/admin/MaintenanceRecordUpdate?maintenanceRecordPK=" + j}>{rec.category}</a></td>
       <td>{description}</td>
     </tr>
   }
@@ -101,8 +105,8 @@ class MachLogHTML(
       </div>
     }
     <tr>
-      <td>{machLog.DateTimeSaved}</td>
-      <td>{nodeNameList}</td>
+      <td style="vertical-align: top;">{machLog.DateTimeSaved}</td>
+      <td style="vertical-align: top;">{nodeNameList}</td>
       <td>{showHide}</td>
     </tr>
   }
@@ -125,7 +129,8 @@ class MachLogHTML(
 
   private def content(): Elem = {
     // val preexistingMaintenanceRecords =
-    <div class="row">
+    //noinspection SpellCheckingInspection
+      <div class="row">
       <style>{" th, td { padding: 5px; border:1px solid lightgrey;}"}</style>
       <div>
         {listMaintenanceRecords("New Maintenance Records: " + newMaintenanceRecordList.size, newMaintenanceRecordList)}
