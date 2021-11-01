@@ -18,7 +18,7 @@ import scala.xml.Elem
   * @param uploadedMachLogList Machine log entries that were uploaded by the user.  Some of these
   *                            may have been previously uploaded and are already in the database.
   * @param newMaintenanceRecordList New maintenance records created as a result of this upload.
-  * @param maintenanceRecordList List of all maintenance records constructed from the uploaded
+  * @param uploadedMaintenanceRecordList List of all maintenance records constructed from the uploaded
   *                              machine log list.  Some of these may have already existed in the
   *                              database prior to this upload as a result of a previous upload.
   */
@@ -27,13 +27,18 @@ class MachLogHTML(
     newMachLogList: Seq[MachineLog],
     uploadedMachLogList: Seq[MachineLog],
     newMaintenanceRecordList: Seq[MaintenanceRecord],
-    maintenanceRecordList: Seq[MaintenanceRecord]
+    uploadedMaintenanceRecordList: Seq[MaintenanceRecord]
 ) {
 
   private var j = 0 // TODO rm
 
   private val abbreviationLength = 140
   private def recToHtml(rec: MaintenanceRecord): Elem = {
+
+    // True if this is a new maintenance record, false if it was already in the database.
+    val isNew: Boolean = {
+      newMaintenanceRecordList.exists(mr => (mr.machineLogPK.get == rec.machineLogPK.get) && (mr.machineLogNodeIndex == rec.machineLogNodeIndex))
+    }
 
     val description = {
       // <td><a href={"/admin/MaintenanceRecordUpdate?maintenanceRecordPK=" + rec.maintenanceRecordPK.get}>{rec.summary}</a></td> // TODO put back
@@ -55,16 +60,22 @@ class MachLogHTML(
       </div>
     }
 
+    val creationTime = {
+      if (isNew) { <td style="vertical-align: top;" class="bg-success">{rec.creationTime}</td> }
+      else { <td style="vertical-align: top;">{rec.creationTime}</td> }
+
+    }
+
     <tr>
-      <td style="vertical-align: top;">{rec.creationTime}</td>
+      {creationTime}
       <td style="white-space: nowrap; vertical-align: top;"><a href={"/admin/MaintenanceRecordUpdate?maintenanceRecordPK=" + j}>{rec.category}</a></td>
       <td>{description}</td>
     </tr>
   }
 
-  private def listMaintenanceRecords(title: String, list: Seq[MaintenanceRecord]): Elem = {
+  private def listMaintenanceRecords(): Elem = {
     <div style="margin:10px">
-      <h3>{title}</h3>
+      <h3>Total Maintenance Records Uploaded: {uploadedMachLogList.size.toString}<span class="bg-success " style="margin-right:50px;">New: {newMaintenanceRecordList.size}</span></h3>
       <table style="margin:10px;">
         <thead>
           <tr>
@@ -73,7 +84,7 @@ class MachLogHTML(
             <th>Description</th>
           </tr>
         </thead>
-        {list.map(recToHtml)}
+        {uploadedMaintenanceRecordList.map(recToHtml)}
       </table>
     </div>
   }
@@ -128,12 +139,11 @@ class MachLogHTML(
   }
 
   private def content(): Elem = {
-    // val preexistingMaintenanceRecords =
     //noinspection SpellCheckingInspection
-      <div class="row">
+    <div class="row">
       <style>{" th, td { padding: 5px; border:1px solid lightgrey;}"}</style>
       <div>
-        {listMaintenanceRecords("New Maintenance Records: " + newMaintenanceRecordList.size, newMaintenanceRecordList)}
+        {listMaintenanceRecords()}
       </div>
       <div style="margin: 50px;"> </div>
       <div>

@@ -16,12 +16,14 @@ import scala.xml.XML
 
 class MachLogMakeMaintenanceRecords(extendedData: ExtendedData, logList: Seq[MachineLog]) extends Logging {
 
-  private val rtArrow = " --" + WebUtil.gt + " "
+  //private val rtArrow = " --" + WebUtil.gt + " "
+  private val rtArrow = " --> "
 
   /** If both the old and new values are less than this many characters, then put them on one line. */
   private val oneLine = 50
 
-  private val sp2 = WebUtil.nbsp + WebUtil.nbsp
+  //private val sp2 = WebUtil.nbsp + WebUtil.nbsp
+  private val sp2 = "  "
   private val sp4 = sp2 + sp2
   private val sp6 = sp4 + sp2
 
@@ -238,13 +240,13 @@ class MachLogMakeMaintenanceRecords(extendedData: ExtendedData, logList: Seq[Mac
       val mr = new MaintenanceRecord(
         maintenanceRecordPK = None,
         category = category,
-        machinePK = extendedData.machine.machinePK.get,
+        machinePK = machineLog.machinePK,
         creationTime = machineLog.DateTimeSaved,
         userPK = extendedData.user.userPK.get,
         outputPK = extendedData.output.outputPK,
         machineLogPK = machineLog.machineLogPK,
         machineLogNodeIndex = Some(machineLogNodeIndex),
-        summary = category + " auto-generated",
+        summary = category,
         description = formatNode(machineLog, logNode)
       )
 

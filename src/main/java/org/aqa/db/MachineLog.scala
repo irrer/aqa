@@ -34,20 +34,12 @@ import scala.xml.XML
 case class MachineLog(
     machineLogPK: Option[Long], // primary key
     machinePK: Long, // PK of machine this references
+    outputPK: Long, // PK of output that created this row
     DateTimeSaved: Timestamp, // date+time from log entry
     LoggedInUser: String, // LoggedInUser from log entry.  Probably the Varian service user ID.  NOT an AQA user.
     SystemVersion: String, // SystemVersion from log entry
     ServiceSoftwareVersion: String, // ServiceSoftwareVersion from log entry
     RTSSVersion: String, // RTSSVersion from log entry
-    isBeamGenerationModule: Boolean, // True if log entry contains Node with name Beam Generation Module
-    isCollimator: Boolean, // True if log entry contains Node with name Collimator
-    isCouch: Boolean, // True if log entry contains Node with name Couch
-    isKiloVoltageDetector: Boolean, // True if log entry contains Node with name Kilo Voltage Detector
-    isKiloVoltageSource: Boolean, // True if log entry contains Node with name Kilo Voltage Source
-    isMegaVoltageDetector: Boolean, // True if log entry contains Node with name Mega Voltage Detector
-    isStand: Boolean, // True if log entry contains Node with name Stand
-    isSupervisor: Boolean, // True if log entry contains Node with name Supervisor
-    isXRayImager: Boolean, // True if log entry contains Node with name XRay Imager
     content: String // XML content
 ) {
 
@@ -64,24 +56,9 @@ case class MachineLog(
   def elem: Elem = XML.loadString(content)
 
   override def toString: String = {
-    val node =
-      Seq(
-        if (isBeamGenerationModule) "isBeamGenerationModule" else "",
-        if (isCollimator) "isCollimator" else "",
-        if (isCouch) "isCouch" else "",
-        if (isKiloVoltageDetector) "isKiloVoltageDetector" else "",
-        if (isKiloVoltageSource) "isKiloVoltageSource" else "",
-        if (isMegaVoltageDetector) "isMegaVoltageDetector" else "",
-        if (isStand) "isStand" else "",
-        if (isSupervisor) "isSupervisor" else "",
-        if (isXRayImager) "isXRayImager" else ""
-      ).filter(_.nonEmpty).mkString("  |  ")
-    val text = DateTimeSaved + " " + "    machinePK: " + machinePK + "   Node(s): " + node
+    val text = DateTimeSaved + " " + "    machinePK: " + machinePK
     text
   }
-
-  /** True if there is at least one node defined.  If there are none, then the log entry is a no-op. */
-  val hasNode = isBeamGenerationModule || isCollimator || isCouch || isKiloVoltageDetector || isKiloVoltageSource || isMegaVoltageDetector || isStand || isSupervisor || isXRayImager
 }
 
 object MachineLog extends Logging {
@@ -89,45 +66,32 @@ object MachineLog extends Logging {
 
     def machineLogPK = column[Long]("machineLogPK", O.PrimaryKey, O.AutoInc)
     def machinePK = column[Long]("machinePK")
+    def outputPK = column[Long]("outputPK")
     def DateTimeSaved = column[Timestamp]("DateTimeSaved")
     def LoggedInUser = column[String]("LoggedInUser")
     def SystemVersion = column[String]("SystemVersion")
     def ServiceSoftwareVersion = column[String]("ServiceSoftwareVersion")
     def RTSSVersion = column[String]("RTSSVersion")
-    def isBeamGenerationModule = column[Boolean]("isBeamGenerationModule")
-    def isCollimator = column[Boolean]("isCollimator")
-    def isCouch = column[Boolean]("isCouch")
-    def isKiloVoltageDetector = column[Boolean]("isKiloVoltageDetector")
-    def isKiloVoltageSource = column[Boolean]("isKiloVoltageSource")
-    def isMegaVoltageDetector = column[Boolean]("isMegaVoltageDetector")
-    def isStand = column[Boolean]("isStand")
-    def isSupervisor = column[Boolean]("isSupervisor")
-    def isXRayImager = column[Boolean]("isXRayImager")
     def content = column[String]("content")
 
     def * =
       (
         machineLogPK.?,
         machinePK,
+        outputPK,
         DateTimeSaved,
         LoggedInUser,
         SystemVersion,
         ServiceSoftwareVersion,
         RTSSVersion,
-        isBeamGenerationModule,
-        isCollimator,
-        isCouch,
-        isKiloVoltageDetector,
-        isKiloVoltageSource,
-        isMegaVoltageDetector,
-        isStand,
-        isSupervisor,
-        isXRayImager,
         content
       ) <> (MachineLog.apply _ tupled, MachineLog.unapply)
 
     def machineFK =
       foreignKey("machineLog_machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+
+    def outputFK =
+      foreignKey("machineLog_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[MachineLogTable]
@@ -154,7 +118,7 @@ object MachineLog extends Logging {
     * @param elem Machine log XML.
     * @return A MachineLog instance or nothing.
     */
-  def construct(elem: Elem): Option[MachineLog] = {
+  def construct(elem: Elem, outputPK: Long): Option[MachineLog] = {
     try {
       def env(tag: String) = {
         (elem \ "Environment" \ tag).head.text
@@ -183,20 +147,12 @@ object MachineLog extends Logging {
       val machineLog = MachineLog(
         machineLogPK = None,
         machinePK,
+        outputPK = outputPK,
         DateTimeSaved = getDateTimeSaved(elem).get,
         LoggedInUser = loggedInUser,
         SystemVersion = env("SystemVersion"),
         ServiceSoftwareVersion = env("ServiceSoftwareVersion"),
         RTSSVersion = env("RTSSVersion"),
-        isBeamGenerationModule = hasNode("Beam Generation Module"),
-        isCollimator = hasNode("Collimator"),
-        isCouch = hasNode("Couch"),
-        isKiloVoltageDetector = hasNode("Kilo Voltage Detector"),
-        isKiloVoltageSource = hasNode("Kilo Voltage Source"),
-        isMegaVoltageDetector = hasNode("Mega Voltage Detector"),
-        isStand = hasNode("Stand"),
-        isSupervisor = hasNode("Supervisor"),
-        isXRayImager = hasNode("XRay Imager"),
         content = Util.prettyPrint(elem)
       )
 
@@ -208,7 +164,7 @@ object MachineLog extends Logging {
     }
   }
 
-  def construct(xmlText: String): Option[MachineLog] = construct(XML.loadString(xmlText))
+  def construct(xmlText: String, outputPK: Long): Option[MachineLog] = construct(XML.loadString(xmlText), outputPK)
 
   /**
     * Get a specific row.
@@ -234,7 +190,7 @@ object MachineLog extends Logging {
 
   def get(machinePK: Long, dateSet: Set[Timestamp]): Seq[MachineLog] = {
     val action = for {
-      inst <- MachineLog.query if (inst.machinePK === machinePK) && (inst.DateTimeSaved.inSet(dateSet))
+      inst <- MachineLog.query if (inst.machinePK === machinePK) && inst.DateTimeSaved.inSet(dateSet)
     } yield inst
     val list = Db.run(action.result)
     list
@@ -287,13 +243,14 @@ object MachineLog extends Logging {
   def main(args: Array[String]): Unit = {
     DbSetup.init
     println("Starting ...")
+    //noinspection SpellCheckingInspection
     //val dir = new File("""D:\tmp\aqa\MachineLogs\CedarsSinia""")
     val dir = new File("""D:\tmp\aqa\MachineLogs\H192448\H192448""")
 
     def showFile(f: File): Unit = {
 
       val text = Util.readTextFile(f).right.get
-      val ml = MachineLog.construct(text)
+      val ml = MachineLog.construct(text, -1)
       println(f.getName + "\n    " + ml.get)
       anonymizeSerialNumber(XML.loadString(text), "somethingBetter")
     }

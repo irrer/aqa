@@ -18,6 +18,7 @@ package org.aqa.web
 
 import org.aqa.Config
 import org.aqa.db.Machine
+import org.aqa.db.MachineLog
 import org.aqa.db.MaintenanceRecord
 import org.aqa.web.WebUtil._
 import org.restlet.Request
@@ -65,6 +66,16 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
   private val category = new WebInputSelect("Category", 6, 0, (_: Option[Response]) => Config.MaintenanceCategoryList.map(m => (m.Name, m.Name)))
 
   private val description = new WebInputTextArea("Description", 6, 0, "")
+
+
+  private def machLogHtml(valueMap: ValueMapT): Elem = {
+    val mr = MaintenanceRecord.get(valueMap(MaintenanceRecordUpdate.maintenanceRecordPKTag).toLong).get
+    if (mr.machineLogPK.isDefined  && mr.machineLogNodeIndex.isDefined) {
+      val machLog = MachineLog.get(mr.machineLogPK.get).get
+    }
+  }
+
+  private val machineLog = new WebPlainText("Machine Log", showLabel = false, col = 6, offset = 0, machLogHtml)
 
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
     val action = pathOf + "?" + name + "=" + name

@@ -85,7 +85,7 @@ class MachLogRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
 
   /**
     * Determine which of the given maintenance records do not already exist in the database.
-    * @param maintenanceRecordList
+    * @param maintenanceRecordList List of uploaded maintenance records.
     * @return List of records that are not in the database.
     */
   private def findNewMaintenanceRecords(maintenanceRecordList: Seq[MaintenanceRecord]): Seq[MaintenanceRecord] = {
@@ -111,24 +111,26 @@ class MachLogRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
     // look up existing ones by machinePK and time stamp
     val existing = MachineLog.get(logList.head.machinePK, logList.map(_.DateTimeSaved).toSet).map(_.DateTimeSaved).toSet
     val newList = logList.filter(ml => ml.hasNode && (!existing.contains(ml.DateTimeSaved)))
-
-    if (false) { // TODO put back in
-      val newInDb = newList.map(_.insert)
-      logger.info("Number of new MachineLog entries inserted for " + machineId + " : " + newInDb.size)
-      newInDb
-    } else
-      newList
+    newList
   }
 
   override def run(extendedData: ExtendedData, runReq: MachLogRunReq, response: Response): ProcedureStatus.Value = {
 
-    val newMachLogList = updateMachineLogs(extendedData.machine.id, runReq.machineLogList)
+    val newMachLogList = {
+      val list = updateMachineLogs(extendedData.machine.id, runReq.machineLogList)
+      logger.info("Inserting " + list.size + " new machine log entries for machine " + extendedData.machine.id)
+      list.map(_.insert)
+    }
 
-    val maintenanceRecordList = new MachLogMakeMaintenanceRecords(extendedData, runReq.machineLogList).makeMaintenanceRecords()
+    val uploadedMachLogMaintenanceRecordList = new MachLogMakeMaintenanceRecords(extendedData, runReq.machineLogList).makeMaintenanceRecords()
 
-    val newMaintenceRecordList = findNewMaintenanceRecords(maintenanceRecordList)
+    val newMaintenanceRecordList = {
+      val newList = findNewMaintenanceRecords(uploadedMachLogMaintenanceRecordList)
+      logger.info("Inserting " + newList.size + " new machine maintenance entries for machine " + extendedData.machine.id)
+      newList.map(_.insert)
+    }
 
-    new MachLogHTML(extendedData, newMachLogList, runReq.machineLogList, newMaintenceRecordList, maintenanceRecordList).generate()
+    new MachLogHTML(extendedData, newMachLogList, runReq.machineLogList, newMaintenanceRecordList, uploadedMachLogMaintenanceRecordList).generate()
 
     ProcedureStatus.done
   }

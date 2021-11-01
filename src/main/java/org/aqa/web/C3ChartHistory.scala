@@ -209,6 +209,7 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
           $maintenanceDateList,
           $maintenanceValueList
         ],
+	      // onclick: function (d, i) { console.log("onclick", d, i); },
         types: {
           ${yAxisLabels.map(label => "'" + label + "' : 'line'").mkString(",\n          ")},
           'MaintenanceRecord': 'bar'
