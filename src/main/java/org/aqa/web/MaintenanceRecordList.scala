@@ -74,7 +74,7 @@ class MaintenanceRecordList extends GenericList[MaintenanceRecord] with WebUtil.
 
   private val dateTimeCol = new Column[MaintenanceRecord](
     "Date/Time",
-    (a, b) => a.creationTime.getTime < b.creationTime.getTime,
+    (a, b) => a.creationTime.getTime > b.creationTime.getTime,
     (mr: MaintenanceRecord) => makePrimaryKeyHtml(WebInputDateTime.dateTimeFormat.format(mr.creationTime), mr.maintenanceRecordPK)
   )
 
