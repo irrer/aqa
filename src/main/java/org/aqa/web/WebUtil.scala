@@ -596,7 +596,7 @@ object WebUtil extends Logging {
 
   def wrapBody(content: Elem, pageTitle: String, refresh: Option[Int]): String = wrapBody(content, pageTitle, refresh, c3 = false, None)
 
-  def wrapBody(content: Elem, pageTitle: String): String = wrapBody(content, pageTitle, None, c3 = false, None)
+  def wrapBody(content: Elem, pageTitle: String): String = wrapBody(content, pageTitle, refresh = None, c3 = false, None)
 
   def setResponse(text: String, response: Response, status: Status): Unit = {
     response.setStatus(status)
@@ -1684,6 +1684,27 @@ object WebUtil extends Logging {
     */
   def coordinateDiagramCol(height: Int): WebPlainText = {
     new WebPlainText("CoordinateDiagram", false, 1, 0, _ => coordinateDiagramElem(height))
+  }
+
+  /**
+    * Make an HTML snippet that expands and collapses content.
+    * @param id HTML id
+    * @param header Header information shown at top. The parameter passed will be the button.
+    * @param details Content that will be expanded.
+    * @return
+    */
+  def expandCollapse(id: String, header: (Elem) => Elem, details: Elem): Elem = {
+    val button = {
+      <button type="button" class="btn btn-info" data-toggle="collapse" data-target={"#" + id} title="Click to expand details">{WebUtil.amp}#x1F50D;</button>
+    }
+
+    <div class="container">
+      {header(button)}
+      <div id={id} class="collapse">
+        {details}
+      </div>
+    </div>
+
   }
 
 }

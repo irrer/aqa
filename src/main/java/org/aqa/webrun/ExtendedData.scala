@@ -66,7 +66,7 @@ object ExtendedData {
     new ExtendedData(output, input, machine, machineType, multileafCollimator, epid, institution, procedure, user)
   }
 
-  def wrapExtendedData(extendedData: ExtendedData, content: Elem) = {
+  def wrapExtendedData(extendedData: ExtendedData, content: Elem, offset: Int = 1) = {
     val twoLineDate = new SimpleDateFormat("MMM dd yyyy\nHH:mm")
     def wrapElement(col: Int, name: String, value: String, asAlias: Boolean): Elem = {
       val html =
@@ -119,7 +119,7 @@ object ExtendedData {
           </div>
         </div>
         <div class="row">
-          <div class="col-md-10 col-md-offset-1">
+          <div class={"col-md-10 col-md-offset-" + offset}>
             {content}
           </div>
         </div>

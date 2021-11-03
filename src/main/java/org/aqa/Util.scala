@@ -958,6 +958,22 @@ object Util extends Logging {
     }
   }
 
+  /**
+    * Escape all the special characters in XML so that they will be interpreted as their original form.
+    * @param xmlText Text formatted as XML.
+    * @return Escaped XML.
+    */
+  def escapeXml(xmlText: String): String = {
+    // @formatter:off
+    xmlText.
+      replace("&", "&#38;").
+      replace(">", "&#62;").
+      replace("<", "&#60;").
+      replace("'", "&#39;").
+      replace("\"", "&#34;")
+    // @formatter:on
+  }
+
   /** Get the Z position of a slice. */
   def slicePosition(attributeList: AttributeList): Double = attributeList.get(TagFromName.ImagePositionPatient).getDoubleValues()(2)
 
@@ -1353,6 +1369,20 @@ object Util extends Logging {
   /** General purpose XML formatter */
   def prettyPrint(xml: Node): String = {
     new PrettyPrinter(1024, 2).format(xml)
+  }
+
+  /**
+    * Given XML from a machine log, get the machine serial number.  If it does not exist, then return nothing.
+    *  This also somewhat serves as a validation for the XML.
+    *
+    * @param elem Machine log representation.
+    * @return Machine serial number if it is present.
+    */
+  def machineLogSerialNumber(elem: Elem): Option[String] = {
+    (elem \ "Environment" \ "MachineSerialNumber").headOption match {
+      case Some(e) => Some(e.text)
+      case _       => None
+    }
   }
 
   def main(args: Array[String]): Unit = {

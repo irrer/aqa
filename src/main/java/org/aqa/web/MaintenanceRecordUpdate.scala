@@ -59,23 +59,42 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
 
   private val outputReference = new WebPlainText("RelatedOutput", false, 6, 0, getOutputReference)
 
-  //private val user = new WebInputText("User", 6, 0, "")
-
   private val summary = new WebInputText("Summary", 6, 0, "")
 
   private val category = new WebInputSelect("Category", 6, 0, (_: Option[Response]) => Config.MaintenanceCategoryList.map(m => (m.Name, m.Name)))
 
   private val description = new WebInputTextArea("Description", 6, 0, "")
 
-
   private def machLogHtml(valueMap: ValueMapT): Elem = {
     val mr = MaintenanceRecord.get(valueMap(MaintenanceRecordUpdate.maintenanceRecordPKTag).toLong).get
-    if (mr.machineLogPK.isDefined  && mr.machineLogNodeIndex.isDefined) {
+    if (mr.machineLogPK.isDefined && mr.machineLogNodeIndex.isDefined) {
       val machLog = MachineLog.get(mr.machineLogPK.get).get
-    }
+      val text = machLog.content.replace("\n", WebUtil.nl).replace(" ", WebUtil.nbsp)
+
+      // prefix of full XML text starting at the first Node.
+      val pre = {
+        val i = machLog.content.indexOf("<Environment>")
+        val t = if (i < 0) machLog.content else machLog.content.drop(i)
+        val p = t.replaceAll(".*<.Environment>", "").take(100) + "..."
+        p
+      }
+      val id = "MachLog"
+
+      <div>
+        <b>Originating Machine Log</b>
+        <div class="container">
+          <button type="button" class="btn btn-info" data-toggle="collapse" data-target={"#" + id}>{WebUtil.amp}#x1F50D;</button>
+          <span style="white-space: pre-line;">{pre}</span>
+          <div id={id} class="collapse">
+            <pre>{WebUtil.nl + text}</pre>
+          </div>
+        </div>
+      </div>
+    } else
+      <span></span>
   }
 
-  private val machineLog = new WebPlainText("Machine Log", showLabel = false, col = 6, offset = 0, machLogHtml)
+  private val machineLog = new WebPlainText(" ", showLabel = false, col = 6, offset = 0, machLogHtml)
 
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
     val action = pathOf + "?" + name + "=" + name
@@ -87,7 +106,7 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
   private val deleteButton = makeButton("Delete", primary = false, ButtonType.BtnDanger)
   private val cancelButton = makeButton("Cancel", primary = false, ButtonType.BtnDefault)
 
-  val fieldList: List[WebRow] = List(List(summary), List(category), List(description), List(outputReference), List(dateTime))
+  val fieldList: List[WebRow] = List(List(summary), List(category), List(description), List(outputReference), List(machineLog), List(dateTime))
 
   val createButtonList: WebRow = List(createButton, cancelButton, machinePK)
   val editButtonList: WebRow = List(saveButton, cancelButton, deleteButton, machinePK, maintenanceRecordPK)
@@ -135,7 +154,20 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
     val instPK = Machine.get(machPK).get.institutionPK
 
     if (isAuthorized(request, instPK)) styleNone
-    else Error.make(summary, "You are not allowed to modify maintenance records for machines from other institutions.")
+    else Error.make(summary, "You are not allowed to modify maintenance records for machines from other institutions.  Use Cancel to return to list.")
+  }
+
+  /**
+    * If this was created from a machine log, then do not allow the user to modify it.
+    * @param valueMap Parameter list.
+    * @return Message if it was created from a machine log.
+    */
+  private def fromMachineLog(valueMap: ValueMapT): StyleMapT = {
+    val machineLogPK = MaintenanceRecord.get(valueMap(maintenanceRecordPK.label).toLong).get.machineLogPK
+    if (machineLogPK.isDefined)
+      Error.make(summary, "You are not allowed to modify maintenance records that were created from machine logs.  Use Cancel to return to list.")
+    else
+      styleNone
   }
 
   private def checkFields(valueMap: ValueMapT, request: Request): StyleMapT = validateAuthentication(valueMap, request) ++ emptySummary(valueMap)
@@ -178,7 +210,7 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
     * Save changes made to form.
     */
   private def save(valueMap: ValueMapT, response: Response): Unit = {
-    val styleMap = checkFields(valueMap, response.getRequest)
+    val styleMap = checkFields(valueMap, response.getRequest) ++ fromMachineLog(valueMap)
     if (styleMap.isEmpty) {
       createMaintenanceRecordFromParameters(valueMap, response.getRequest).insertOrUpdate()
       redirectToList(response, valueMap)

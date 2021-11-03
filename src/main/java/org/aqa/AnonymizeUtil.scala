@@ -354,13 +354,6 @@ object AnonymizeUtil extends Logging {
     destSeq
   }
 
-  def deviceSerialNumberInXml(xml: Elem): Option[String] = {
-    val node = (xml \ "Environment" \ "MachineSerialNumber").headOption
-
-    if (node.isEmpty) None
-    else Some(node.head.text)
-  }
-
   /**
     * Anonymize the machine serial number (aka: DeviceSerialNumber) in the given MachineLog XML.
     *
@@ -374,7 +367,7 @@ object AnonymizeUtil extends Logging {
     import scala.xml.transform.RewriteRule
     import scala.xml.transform.RuleTransformer
 
-    val dsn = deviceSerialNumberInXml(xml)
+    val dsn = Util.machineLogSerialNumber(xml)
 
     if (dsn.isEmpty) {
       xml

@@ -20,7 +20,6 @@ import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Db.driver.api._
 
-import java.io.File
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import scala.xml.Elem
@@ -137,8 +136,8 @@ object MachineLog extends Logging {
       }
 
       val machinePK: Long = {
-        val deviceSerialNumber = env(tag = "MachineSerialNumber")
-        val machineList = Machine.findMachinesBySerialNumber(deviceSerialNumber)
+        val deviceSerialNumber = Util.machineLogSerialNumber(elem)
+        val machineList = Machine.findMachinesBySerialNumber(deviceSerialNumber.get)
         if (machineList.isEmpty)
           logger.warn("Could not find machine with device serial number " + deviceSerialNumber)
         machineList.head.machinePK.get
@@ -240,21 +239,4 @@ object MachineLog extends Logging {
     anonymized
   }
 
-  def main(args: Array[String]): Unit = {
-    DbSetup.init
-    println("Starting ...")
-    //noinspection SpellCheckingInspection
-    //val dir = new File("""D:\tmp\aqa\MachineLogs\CedarsSinia""")
-    val dir = new File("""D:\tmp\aqa\MachineLogs\H192448\H192448""")
-
-    def showFile(f: File): Unit = {
-
-      val text = Util.readTextFile(f).right.get
-      val ml = MachineLog.construct(text, -1)
-      println(f.getName + "\n    " + ml.get)
-      anonymizeSerialNumber(XML.loadString(text), "somethingBetter")
-    }
-
-    Util.listDirFiles(dir).filter(_.getName.endsWith(".xml")).foreach(showFile)
-  }
 }

@@ -290,6 +290,16 @@ Note that when building a package for release, the Maven build process uses the 
         <MaintenanceCategory Name='PMI'                       Color='#80FF9F'   >Preventive Maintenance Inspection</MaintenanceCategory>
         <MaintenanceCategory Name='Mechanical Jaws'           Color='#aa3322'   >Maintenance performed on jaws</MaintenanceCategory>
         <MaintenanceCategory Name='Mechanical Gantry'         Color='#3422aa'   >Maintenance performed on Gantry</MaintenanceCategory>
+
+        <MaintenanceCategory Name="Beam Generation Module"    Color='#00ffff'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Collimator"                Color='#00ffff'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Couch"                     Color='#00ffff'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Kilo Voltage Detector"     Color='#00ffff'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Kilo Voltage Source"       Color='#00ffff'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Mega Voltage Detector"     Color='#00ffff'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Stand"                     Color='#00ffff'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Supervisor"                Color='#00ffff'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="XRay Imager"               Color='#00ffff'>Automatic from Machine Log</MaintenanceCategory>
     </MaintenanceCategoryList>
 
     <!-- Beam name for flood field. -->

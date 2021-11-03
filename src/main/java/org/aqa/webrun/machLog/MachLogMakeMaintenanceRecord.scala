@@ -5,8 +5,6 @@ import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.MachineLog
 import org.aqa.db.MaintenanceRecord
-import org.aqa.web.WebUtil
-import org.aqa.webrun.ExtendedData
 
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -14,7 +12,7 @@ import scala.xml.Node
 import scala.xml.NodeSeq
 import scala.xml.XML
 
-class MachLogMakeMaintenanceRecords(extendedData: ExtendedData, logList: Seq[MachineLog]) extends Logging {
+object MachLogMakeMaintenanceRecord extends Logging {
 
   //private val rtArrow = " --" + WebUtil.gt + " "
   private val rtArrow = " --> "
@@ -158,6 +156,7 @@ class MachLogMakeMaintenanceRecords(extendedData: ExtendedData, logList: Seq[Mac
 
     private def nameOf(n: Node) = (n \ "@name").text
 
+    val nodeName = nameOf(node)
     val groupNames: String = groupList.map(nameOf).mkString(" / ")
 
     val parameterList: NodeSeq = groupList.last \ "Parameter"
@@ -221,49 +220,57 @@ class MachLogMakeMaintenanceRecords(extendedData: ExtendedData, logList: Seq[Mac
       "\n" + sp2 + nodeParameterList.mkString("\n" + sp2)
   }
 
-  private def formatNode(machineLog: MachineLog, node: Node): String = {
+  def formatNode(machineLog: MachineLog, node: Node): String = {
     val groupList = findGroups(node)
     val header =
       (node \ "@name").text + sp4 + " System Version: " + machineLog.SystemVersion
 
     val text = header + formatNodeParameters(node) + groupList.map(formatGroup).mkString("\n" + sp2, "\n" + sp2, "")
-
-    Trace.trace("\n" + text)
     text
   }
 
-  private def makeMaintenanceRecordsFromSingleMachineLog(machineLog: MachineLog): Seq[MaintenanceRecord] = {
+  def formatNode(machineLog: MachineLog, machineLogNodeIndex: Long): String = {
+    val node = (machineLog.elem \ "Node")(machineLogNodeIndex.toInt)
+    formatNode(machineLog, node)
+  }
 
-    def makeOneRecord(logNode: Node, machineLogNodeIndex: Long): MaintenanceRecord = {
-      val category = (logNode \ "@name").head.text
+  private def formatSummary(node: Node): String = {
+    val groups = findGroups(node)
+    if (groups.nonEmpty) {
+      groups.head.groupNames
+    } else
+      (node \ "@name").head.text
+  }
 
-      val mr = new MaintenanceRecord(
-        maintenanceRecordPK = None,
-        category = category,
-        machinePK = machineLog.machinePK,
-        creationTime = machineLog.DateTimeSaved,
-        userPK = extendedData.user.userPK.get,
-        outputPK = extendedData.output.outputPK,
-        machineLogPK = machineLog.machineLogPK,
-        machineLogNodeIndex = Some(machineLogNodeIndex),
-        summary = category,
-        description = formatNode(machineLog, logNode)
-      )
+  def makeMachineRecord(machineLog: MachineLog, machineLogNodeIndex: Long, userPK: Long, outputPK: Long): MaintenanceRecord = {
+    val node = (machineLog.elem \ "Node")(machineLogNodeIndex.toInt)
+    val category = (node \ "@name").head.text
+    val mr = new MaintenanceRecord(
+      maintenanceRecordPK = None,
+      category = category,
+      machinePK = machineLog.machinePK,
+      creationTime = machineLog.DateTimeSaved,
+      userPK = userPK,
+      outputPK = Some(outputPK),
+      machineLogPK = machineLog.machineLogPK,
+      machineLogNodeIndex = Some(machineLogNodeIndex),
+      summary = formatSummary(node),
+      description = formatNode(machineLog, machineLogNodeIndex)
+    )
 
-      mr
-    }
-
-    val list = (machineLog.elem \ "Node").zipWithIndex.map(li => makeOneRecord(li._1, li._2))
-    list
+    mr
   }
 
   /**
-    * Make MaintenanceRecords from the given list of MachineLogs.
-    *
-    * @return List of all maintenance records derived from the machine log list.
+    * Given a machine log, create one or more maintenance records.
+    * @param machineLog Contains machine log XML.
+    * @param userPK Created by this user.
+    * @param outputPK References this output.
+    * @return A list of maintenance records.
     */
-  def makeMaintenanceRecords(): Seq[MaintenanceRecord] = {
-    val allRec = logList.flatMap(makeMaintenanceRecordsFromSingleMachineLog)
-    allRec
+  def makeMaintenanceRecordList(machineLog: MachineLog, userPK: Long, outputPK: Long): Seq[MaintenanceRecord] = {
+    val nodeList = machineLog.elem \ "Node"
+    val list = nodeList.zipWithIndex.map(li => makeMachineRecord(machineLog, li._2, userPK, outputPK))
+    list
   }
 }
