@@ -88,7 +88,7 @@ object RunProcedure extends Logging {
         val numProc = Config.MaxProcedureCount - Config.procedureLock.availablePermits()
         val waitElapsed = System.currentTimeMillis() - waitStart
         logger.info(
-          "Starting processing.  Max number of processes allowed: " + Config.MaxProcedureCount +
+          "Acquired semaphore.  Starting processing.  Max number of processes allowed: " + Config.MaxProcedureCount +
             "    Current number of simultaneous processes: " + numProc +
             "    Elapsed wait time in ms: " + waitElapsed
         )
