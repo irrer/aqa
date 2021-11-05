@@ -112,7 +112,7 @@ object GetSeries extends Logging {
     cache.synchronized {
       val prefix = institutionPK + ":"
       val list = cache.keys.filter(_.startsWith(prefix))
-      list.map(cache.remove(_))
+      list.map(cache.remove)
     }
   }
 }
