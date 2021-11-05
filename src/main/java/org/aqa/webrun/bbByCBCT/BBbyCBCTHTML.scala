@@ -20,6 +20,7 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -203,8 +204,15 @@ object BBbyCBCTHTML extends Logging {
     subDir.mkdirs
 
     val sortedCbct = runReq.cbctList.sortBy(al => getZ(al))
-    sortedCbct.par.foreach(al => writeDicomImage(al))
-    sortedCbct.par.foreach(al => writeDicomMetaData(al))
+
+    // Limit the number of items processed in parallel so as to limit the number of threads started.
+    val maxParallel = 3
+    val groups = edu.umro.ScalaUtil.Util.sizedGroups(sortedCbct, maxParallel)
+    Trace.time(groups.foreach(g => g.par.foreach(writeDicomImage)))
+    Trace.time(groups.foreach(g => g.par.foreach(writeDicomMetaData)))
+
+    //Trace.time(sortedCbct.foreach(al => writeDicomImage(al))) // using par got speedup from 13555 ms to 3497 ms.  Alternate: sortedCbct.par.foreach...
+    //Trace.time(sortedCbct.foreach(al => writeDicomMetaData(al))) // could use a par, but uses a lot of threads.  Speedup for par in ms 867 --> 464.  Nice, but not worth it.
 
     @tailrec
     def sizedGroups(seq: Seq[AttributeList], grp: Seq[Seq[AttributeList]]): Seq[Seq[AttributeList]] = {
