@@ -258,49 +258,34 @@ object WebUtil extends Logging {
       Util.garbageCollect()
       managed(new ZipInputStream(inputStream)) acquireAndGet { zipIn =>
         {
-          Trace.trace()
           @tailrec
           def next(): Unit = {
-            Trace.trace()
             val entry = zipIn.getNextEntry
-            Trace.trace()
             if (entry != null) {
-              Trace.trace()
               if (!entry.isDirectory) {
-                Trace.trace()
                 val data = {
                   val baos = new ByteArrayOutputStream
                   FileUtil.copyStream(zipIn, baos)
                   baos.toByteArray
                 }
-                Trace.trace()
                 val file = new File(unique.parentDir, entry.getName.replace("/", File.separator))
-                Trace.trace()
                 saveData(data, file, "", unique, request)
-                Trace.trace()
               }
-              Trace.trace()
               next()
             }
           }
           // Start processing
           next()
-          Trace.trace()
         }
       }
     } catch {
       case t: Throwable =>
-        Trace.trace()
         logger.warn("Unexpected error writing uploaded zip: " + fmtEx(t))
     }
-    Trace.trace()
     val elapsed = System.currentTimeMillis() - start
 
-    Trace.trace()
     logger.info("Unpacked zipped content of " + data.length + " bytes and wrote it to the file system.  Elapsed time ms: " + elapsed)
-    Trace.trace()
     Util.garbageCollect()
-    Trace.trace()
   }
 
   private def saveData(data: Array[Byte], file: File, contentType: String, unique: UniquelyNamedFile, request: Request): Unit = {
