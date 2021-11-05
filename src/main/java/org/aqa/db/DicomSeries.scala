@@ -26,6 +26,7 @@ import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Db.driver.api._
+import org.aqa.web.GetSeries
 
 import java.sql.Timestamp
 import java.util.Date
@@ -71,10 +72,14 @@ case class DicomSeries(
     val action = insertQuery += ds
     val result = Db.run(action)
     logger.info("Inserted DicomSeries: " + this.toString)
+    GetSeries.remove(userPK, patientID)
     result
   }
 
-  def insertOrUpdate(): Int = Db.run(DicomSeries.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = {
+    GetSeries.remove(userPK, patientID)
+    Db.run(DicomSeries.query.insertOrUpdate(this))
+  }
 
   /**
     * Get the list of SOPInstanceUID 's that are in this series.
@@ -327,6 +332,20 @@ object DicomSeries extends Logging {
   }
 
   def delete(dicomSeriesPK: Long): Int = {
+    // Removing an entry potentially invalidates the GetSeries cache.  Remove the relavent entry.
+    try {
+      val action = for {
+        dicomSeries <- query if dicomSeries.dicomSeriesPK === dicomSeriesPK
+      } yield (dicomSeries.userPK, dicomSeries.patientID)
+      val list = Db.run(action.result)
+
+      val userPK = list.head._1
+      val patientID = list.head._2
+
+      GetSeries.remove(userPK, patientID)
+    } catch {
+      case t: Throwable => logger.warn("Unable to remove GetSeries cache entry.  dicomSeriesPK: " + dicomSeriesPK + " : " + fmtEx(t))
+    }
     val q = query.filter(_.dicomSeriesPK === dicomSeriesPK)
     val action = q.delete
     Db.run(action)

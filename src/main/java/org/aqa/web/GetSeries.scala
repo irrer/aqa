@@ -17,8 +17,10 @@
 package org.aqa.web
 
 import com.pixelmed.dicom.AttributeFactory
+import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.TagFromName
+import edu.umro.DicomDict.TagByName
 import org.aqa.AnonymizeUtil
 import org.aqa.Logging
 import org.aqa.Util
@@ -36,11 +38,83 @@ import org.restlet.data.Status
 
 import java.io.File
 import scala.xml.Elem
-import scala.xml.PrettyPrinter
 import scala.xml.XML
 
-object GetSeries {
+object GetSeries extends Logging {
   private val sync = "sync"
+
+  /**
+    * Local cache for series to reduce the processing load and improve response times.
+    *
+    * Key: institutionPK:patientID
+    * Value: XML text
+    */
+  private val cache = scala.collection.mutable.HashMap[String, String]()
+
+  /**
+    * Build a hash-worthy key from the institution PK and the patient ID so
+    * that the key is guaranteed to be unique across institutions.
+    *
+    * @param institutionPK Identifies institution.
+    * @param realPatientId real (non-anonymized) patient ID.
+    * @return
+    */
+  private def makeKey(institutionPK: Long, realPatientId: String): String = {
+    institutionPK + ":" + realPatientId
+  }
+
+  private def get(institutionPK: Long, realPatientId: String): Option[String] =
+    cache.synchronized {
+      cache.get(makeKey(institutionPK, realPatientId))
+    }
+
+  private def put(institutionPK: Long, realPatientId: String, xmlText: String): Option[String] =
+    cache.synchronized {
+      cache.put(makeKey(institutionPK, realPatientId), xmlText)
+    }
+
+  /**
+    * Remove the given entry from the cache.  This is how cache entries are invalidated.  The
+    * contents will be re-generated next time it is fetched.  If the cache entry to be removed
+    * is not in the cache, then no action will be taken.
+    *
+    * @param userPK Identifies institution via user.
+    * @param anonymizedPatientId real (non-anonymized) patient ID.
+    */
+  def remove(userPK: Long, anonymizedPatientId: Option[String]): Unit = {
+    try {
+      val institutionPK = User.get(userPK).get.institutionPK
+      // jump through hoops to get the real patient ID using the user ID and anonymizedPatientId
+      val realPatientId = {
+        val at = AttributeFactory.newAttribute(TagByName.PatientID)
+        at.addValue(anonymizedPatientId.get)
+        val al = new AttributeList
+        al.put(at)
+        val realAlList = AnonymizeUtil.deAnonymizeDicom(institutionPK, Seq(al))
+        val rpi = realAlList.head.get(TagByName.PatientID).getSingleStringValueOrNull
+        rpi
+      }
+      cache.synchronized {
+        cache.remove(makeKey(institutionPK, realPatientId))
+        logger.info("Removed " + realPatientId + " from GetSeries cache.")
+      }
+    } catch {
+      case t: Throwable => logger.warn("Unable to remove entry from cache.  userPK: " + userPK + "    anonymizedPatientId: " + anonymizedPatientId + " : " + fmtEx(t))
+    }
+  }
+
+  /**
+    * Remove all entries in the given institution.
+    *
+    * @param institutionPK Institution of interest.
+    */
+  def remove(institutionPK: Long): Unit = {
+    cache.synchronized {
+      val prefix = institutionPK + ":"
+      val list = cache.keys.filter(_.startsWith(prefix))
+      list.map(cache.remove(_))
+    }
+  }
 }
 
 /**
@@ -50,8 +124,7 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
 
   private val PatientIDTag = "PatientID"
 
-  private def generateXml(user: User, realPatientId: String): Elem = {
-    val institutionPK = user.institutionPK
+  private def generateXml(institutionPK: Long, realPatientId: String): Elem = {
     val attribute = AttributeFactory.newAttribute(TagFromName.PatientID)
     attribute.addValue(realPatientId)
 
@@ -190,6 +263,32 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
     seriesListXml
   }
 
+  /**
+    * Get the series list for the given patient.  First try getting it from cache, but if that
+    * fails, generate it and put the new content in cache.
+    *
+    * @param institutionPK Identify institution.
+    * @param realPatientId Real (non-anonymized) patient ID.
+    * @return XML representation of all series processed for the given patient ID.
+    */
+  private def getXml(institutionPK: Long, realPatientId: String): String = {
+    GetSeries.get(institutionPK, realPatientId) match {
+      case Some(text) => text
+      case _          =>
+        // only allow one request at a time to avoid overloading the server
+        GetSeries.sync.synchronized {
+          logger.info("Generating the list of series for PatientID " + realPatientId)
+          val start = System.currentTimeMillis
+          val xml = generateXml(institutionPK, realPatientId)
+          val text = Util.prettyPrint(xml)
+          GetSeries.put(institutionPK, realPatientId, text)
+          val elapsed = System.currentTimeMillis - start
+          logger.info("Generated series list for " + realPatientId + "    text length: " + text.length + "    Elapsed ms: " + elapsed + "\n" + text)
+          text
+        }
+    }
+  }
+
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
     val valueMap = getValueMap(request)
@@ -200,15 +299,10 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
       0 match {
         case _ if user.isEmpty          => badRequest(response, "User not logged in or user can not be identified", Status.CLIENT_ERROR_BAD_REQUEST)
         case _ if realPatientId.isEmpty => badRequest(response, "No " + PatientIDTag + " value given", Status.CLIENT_ERROR_BAD_REQUEST)
-        case _                          =>
-          // only allow one request at a time to avoid overloading the server
-          GetSeries.sync.synchronized {
-            logger.info("Getting list of series for PatientID " + realPatientId.get)
-            val xml = generateXml(user.get, realPatientId.get)
-            val xmlText = new PrettyPrinter(1024, 2).format(xml)
-            response.setEntity(xmlText, MediaType.TEXT_XML)
-            logger.info("Got list of series for PatientID " + realPatientId.get)
-          }
+        case _ =>
+          val xmlText = getXml(user.get.institutionPK, realPatientId.get)
+          response.setEntity(xmlText, MediaType.TEXT_XML)
+          logger.info("Got list of series for PatientID " + realPatientId.get + "    text length: " + xmlText.length)
       }
 
     } catch {

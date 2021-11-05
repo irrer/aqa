@@ -20,6 +20,7 @@ import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 import org.aqa.run.ProcedureStatus
+import org.aqa.web.GetSeries
 import org.aqa.web.WebServer
 
 import java.io.File
@@ -271,6 +272,13 @@ object Output extends Logging {
     get(outputPK) match {
       case Some(output) =>
         logger.info("Deleting output: " + output)
+        try {
+          val machine = Machine.get(output.machinePK.get)
+          if (machine.isDefined)
+            GetSeries.remove(machine.get.institutionPK)
+        } catch {
+          case t: Throwable => logger.warn("Error while removing GetSeries cache entries: " + fmtEx(t))
+        }
       case None =>
         logger.info("outputPK " + outputPK + " does not exist but still attempting to delete it")
     }
