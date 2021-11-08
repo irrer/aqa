@@ -172,14 +172,31 @@ class C3ChartHistory(
   }
 
   private val dateText = xDateList.indices.map(index => dateColumn("Date" + index, xDateList(index))).mkString(",\n          ")
-//noinspection SpellCheckingInspection
+  /*
+   * Color review at: http://www-personal.umich.edu/~irrer/tmp/colors.html
+   */
+
+  //noinspection SpellCheckingInspection
   val javascript: String = {
     s"""
 var ${chartIdTag}Var = constructVertControl(${yRangeY.min}, ${yRangeY.max}, "$chartIdTag");
 
-var ${chartIdTag}Hide = [ "Categories" ];
+var ${chartIdTag}Hide = [ "nil" ];
 var ${chartIdTag}MaintenanceCategoryList = $maintenanceCategoryList;
 var ${chartIdTag}MaintenanceSummaryList = $maintenanceSummaryList;
+
+
+function ${chartIdTag}CategoryOf(i) {
+  return ${chartIdTag}MaintenanceCategoryList[Math.trunc(i/2.0)];
+}
+
+function ${chartIdTag}SummaryOf(i) {
+  return ${chartIdTag}MaintenanceSummaryList[Math.trunc(i/2.0)];
+}
+
+function ${chartIdTag}NameOf(i) {
+  return ${chartIdTag}CategoryOf(i) + ' : ' + ${chartIdTag}SummaryOf(i);
+}
 
 insertVertHtml("$chartIdTag");
 
@@ -187,11 +204,13 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
     tooltip: {
       format: {
         value: function (value, ratio, id, index) {
-          if (id === 'MaintenanceRecord') return ${chartIdTag}MaintenanceCategoryList[index/2];
+          var maintenanceSummaryList = $maintenanceSummaryList;
+          if (id === 'MaintenanceRecord') return maintenanceSummaryList[index/2];
           return d3.format('$yFormat')(value);
           },
           name: function (name, ratio, id, index) {
-            if (id === 'MaintenanceRecord') return ${chartIdTag}MaintenanceCategoryList[index/2];
+            var maintenanceCategoryList = $maintenanceCategoryList;
+              if (id === 'MaintenanceRecord') return maintenanceCategoryList[index/2];
               return id;
           },
           title: function (value) {
@@ -212,12 +231,16 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
           $maintenanceValueList
         ],
 	      onclick: function (d, i) {
-	        // console.log("onclick", d, i);
+          /*
+	        console.log("onclick", d, i);
 	        console.log("onclick d.index:", d.index);
+	        console.log("onclick CategoryOf:", ${chartIdTag}CategoryOf(d.index));
+	        console.log("onclick SummaryOf:", ${chartIdTag}SummaryOf(d.index));
+	        console.log("onclick name:", ${chartIdTag}NameOf(d.index));
+          */
           // Hide the maintenance record bar by changing its color to white.
-          var category = ${chartIdTag}MaintenanceCategoryList[Math.trunc(d.index / 2)];
-          ${chartIdTag}Hide.push(category);
-	        console.log("onclick category:", category);
+          ${chartIdTag}Hide.push(${chartIdTag}NameOf(d.index));
+	        // console.log("onclick name:", ${chartIdTag}NameOf(d.index));
           // ${chartIdTag}Hide.push(d.index);
           // Hide the other half of the maintenance record bar.
           // if ((d.index % 2) === 0) ${chartIdTag}Hide.push(d.index + 1);
@@ -232,9 +255,12 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
         color: function (color, d) {
           var maintenanceColorList = $maintenanceColorListFormatted;
           if (d.id === 'MaintenanceRecord') {
-            var category = ${chartIdTag}MaintenanceCategoryList[Math.trunc(d.index / 2)];
+            var name = ${chartIdTag}NameOf(d.index);
             for (let ii = 0; ii < ${chartIdTag}Hide.length; ii++) {
-              if (${chartIdTag}Hide[ii] === category)
+              // var hide = ${chartIdTag}Hide[ii];
+              // console.log("hide:>>", hide, "<<");
+              // console.log("name:>>", name, "<<");
+              if (${chartIdTag}Hide[ii] === name)
                 return '#ffffffff';  // Set to transparent.  White would work also.
             }
             // This maintenance event is visible.
