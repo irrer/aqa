@@ -177,19 +177,21 @@ class C3ChartHistory(
     s"""
 var ${chartIdTag}Var = constructVertControl(${yRangeY.min}, ${yRangeY.max}, "$chartIdTag");
 
+var ${chartIdTag}Hide = [ "Categories" ];
+var ${chartIdTag}MaintenanceCategoryList = $maintenanceCategoryList;
+var ${chartIdTag}MaintenanceSummaryList = $maintenanceSummaryList;
+
 insertVertHtml("$chartIdTag");
 
 var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
     tooltip: {
       format: {
         value: function (value, ratio, id, index) {
-          var maintenanceSummaryList = $maintenanceSummaryList;
-          if (id === 'MaintenanceRecord') return maintenanceSummaryList[index/2];
+          if (id === 'MaintenanceRecord') return ${chartIdTag}MaintenanceCategoryList[index/2];
           return d3.format('$yFormat')(value);
           },
           name: function (name, ratio, id, index) {
-            var maintenanceCategoryList = $maintenanceCategoryList;
-              if (id === 'MaintenanceRecord') return maintenanceCategoryList[index/2];
+            if (id === 'MaintenanceRecord') return ${chartIdTag}MaintenanceCategoryList[index/2];
               return id;
           },
           title: function (value) {
@@ -209,15 +211,37 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
           $maintenanceDateList,
           $maintenanceValueList
         ],
-	      // onclick: function (d, i) { console.log("onclick", d, i); },
+	      onclick: function (d, i) {
+	        // console.log("onclick", d, i);
+	        console.log("onclick d.index:", d.index);
+          // Hide the maintenance record bar by changing its color to white.
+          var category = ${chartIdTag}MaintenanceCategoryList[Math.trunc(d.index / 2)];
+          ${chartIdTag}Hide.push(category);
+	        console.log("onclick category:", category);
+          // ${chartIdTag}Hide.push(d.index);
+          // Hide the other half of the maintenance record bar.
+          // if ((d.index % 2) === 0) ${chartIdTag}Hide.push(d.index + 1);
+          // else ${chartIdTag}Hide.push(d.index - 1);
+          $chartIdTag.flush();
+          setTimeout(function() { $chartIdTag.flush(); }, 50);
+	      },
         types: {
           ${yAxisLabels.map(label => "'" + label + "' : 'line'").mkString(",\n          ")},
           'MaintenanceRecord': 'bar'
         },
         color: function (color, d) {
           var maintenanceColorList = $maintenanceColorListFormatted;
-          if (d.id === 'MaintenanceRecord') return maintenanceColorList[d.index % maintenanceColorList.length];
-          if (d.index === $yIndex) return 'orange';
+          if (d.id === 'MaintenanceRecord') {
+            var category = ${chartIdTag}MaintenanceCategoryList[Math.trunc(d.index / 2)];
+            for (let ii = 0; ii < ${chartIdTag}Hide.length; ii++) {
+              if (${chartIdTag}Hide[ii] === category)
+                return '#ffffffff';  // Set to transparent.  White would work also.
+            }
+            // This maintenance event is visible.
+            return maintenanceColorList[d.index % maintenanceColorList.length];
+          }
+          if (d.index === $yIndex)
+            return 'orange';
           return color;
         }
     }$grid,
@@ -250,7 +274,7 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
        }
     },
     bar: {
-      width: 3
+      width: 4
     },
     padding: {
       right: 30,

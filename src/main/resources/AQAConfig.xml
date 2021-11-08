@@ -284,22 +284,23 @@ Note that when building a package for release, the Maven build process uses the 
         The content of the category element is free text that describes the category.
         -->
     <MaintenanceCategoryList>
-        <MaintenanceCategory Name='Maintenance'               Color='#aaaaaa'   >General Maintenance</MaintenanceCategory>
-        <MaintenanceCategory Name='Output Adjustment'         Color='#00ee9a'   >Output Adjustment</MaintenanceCategory>
-        <MaintenanceCategory Name='Beam Steering Adjustment'  Color='#0088ff'   >Beam Steering Adjustment</MaintenanceCategory>
-        <MaintenanceCategory Name='PMI'                       Color='#80FF9F'   >Preventive Maintenance Inspection</MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Jaws'           Color='#aa3322'   >Maintenance performed on jaws</MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Gantry'         Color='#3422aa'   >Maintenance performed on Gantry</MaintenanceCategory>
+        <MaintenanceCategory Name='Maintenance'               Color='#3366ff'   >General Maintenance</MaintenanceCategory>
+        <MaintenanceCategory Name='Output Adjustment'         Color='#6633ff'   >Output Adjustment</MaintenanceCategory>
+        <MaintenanceCategory Name='Beam Steering Adjustment'  Color='#cc33ff'   >Beam Steering Adjustment</MaintenanceCategory>
+        <MaintenanceCategory Name='PMI'                       Color='#ff33cc'   >Preventive Maintenance Inspection</MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Jaws'           Color='#ff3366'   >Maintenance performed on jaws</MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Gantry'         Color='#ff6633'   >Maintenance performed on Gantry</MaintenanceCategory>
 
-        <MaintenanceCategory Name="Beam Generation Module"    Color='#00ffff'>Automatic from Machine Log</MaintenanceCategory>
-        <MaintenanceCategory Name="Collimator"                Color='#00ffff'>Automatic from Machine Log</MaintenanceCategory>
-        <MaintenanceCategory Name="Couch"                     Color='#00ffff'>Automatic from Machine Log</MaintenanceCategory>
-        <MaintenanceCategory Name="Kilo Voltage Detector"     Color='#00ffff'>Automatic from Machine Log</MaintenanceCategory>
-        <MaintenanceCategory Name="Kilo Voltage Source"       Color='#00ffff'>Automatic from Machine Log</MaintenanceCategory>
-        <MaintenanceCategory Name="Mega Voltage Detector"     Color='#00ffff'>Automatic from Machine Log</MaintenanceCategory>
-        <MaintenanceCategory Name="Stand"                     Color='#00ffff'>Automatic from Machine Log</MaintenanceCategory>
-        <MaintenanceCategory Name="Supervisor"                Color='#00ffff'>Automatic from Machine Log</MaintenanceCategory>
-        <MaintenanceCategory Name="XRay Imager"               Color='#00ffff'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Beam Generation Module"    Color='#ffcc33'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Collimator"                Color='#b88a00'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Couch"                     Color='#66ff33'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Kilo Voltage Detector"     Color='#33ff66'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Kilo Voltage Source"       Color='#33ffcc'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Mega Voltage Detector"     Color='#33ccff'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Stand"                     Color='#003df5'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Supervisor"                Color='#002eb8'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="XRay Imager"               Color='#f5b800'>Automatic from Machine Log</MaintenanceCategory>
+   <!-- <MaintenanceCategory Name="???"                  Color='#ccff32'>TBD</MaintenanceCategory> -->
     </MaintenanceCategoryList>
 
     <!-- Beam name for flood field. -->
