@@ -1,0 +1,127 @@
+<div title="Machine Log">
+    <!--
+    Copyright 2021 Regents of the University of Michigan
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    -->
+
+    <h2>@@title@@</h2>
+
+    <p>
+        The Machine Log procedure allows users to upload machine logs in XML format and automatically create maintenance
+        records. The records are formatted for better readability and show up in history charts including Phase 2.
+    </p>
+    <p>
+        To run, go to <a href="/run/WebRunIndex">Run Procedures</a> and click <b>Machine Log</b>. Upload the the XML
+        files from your <b>I</b> drive using drag and drop and then click the <b>Run</b> button.
+    </p>
+    <p>
+        Below is an example of a machine log file:
+    </p>
+
+    <div style="margin:10px; border: 1px solid lightgrey;">
+        <img src="XmlAnnotated.png" style="margin:30px;" width="800px;"/>
+    </div>
+
+    <p style="margin-top: 50px;">
+        Processing the above machine log will produce the following output. The <b>New</b> designation indicates
+        maintenance records that were created by this run. If the same machine log was uploaded a second time it would
+        not be marked as new. The point is to prevent the user from accidentally making duplicate maintenance records.
+        Note that multiple machine logs may be uploaded in a single run.
+    </p>
+
+    <div style="margin:10px; border: 1px solid lightgrey;">
+        <img src="reportCollapsed.png" style="margin:30px;" width="800px;"/>
+    </div>
+
+    <p style="margin-top: 50px;">
+        Using the magnifying glass icons to expand the content and then each item, it will appear as below. The
+        originating machine log is shown for verification.
+    </p>
+
+
+    <div style="margin:10px; border: 1px solid lightgrey;">
+        <img src="report.png" style="margin:10px;" width="1200px;"/>
+    </div>
+
+    <p>Automatically created maintenance records can clutter charts. Clicking on records in the chart will hide them.
+        When a record is clicked, it and all other records with the same category and summary will be hidden.</p>
+
+    <p>Below is an example of a chart before and after with several of the maintenance records hidden. Reloading the
+        page will make them visible.</p>
+
+    <div style="margin:10px; border: 1px solid lightgrey;">
+        <img src="hide.png" style="margin:10px;"/>
+    </div>
+
+    <h3>Notes</h3>
+    <ul>
+        <li>The <b>Node</b> in the log is used to designate the maintenance record's category. There are nine node
+            names:
+        </li>
+
+        <b>
+            <style>td { padding: 20px; background: #dddddd; border: 1px solid #555555;}</style>
+            <table style="margin-left:100px; margin-top:20px; margin-bottom:20px;">
+                <tr>
+                    <td>Beam Generation Module</td>
+                    <td>Collimator</td>
+                    <td>Couch</td>
+                </tr>
+                <tr>
+                    <td>Kilo Voltage Detector</td>
+                    <td>Kilo Voltage Source</td>
+                    <td>Mega Voltage Detector</td>
+                </tr>
+                <tr>
+                    <td>Stand</td>
+                    <td>Supervisor</td>
+                    <td>XRay Imager</td>
+                </tr>
+            </table>
+        </b>
+
+        <li style="margin-top:20px;">Hierarchically organized group names are concatenated from the top to the bottom of
+            the hierarchy to create
+            the record's summary. A maintenance record is created for each hierarchy path, even if two multi-part paths
+            only differ by one group name.
+        </li>
+        <li style="margin-top:20px;">A machine log can create zero or more maintenance records. Some machine logs do not
+            contain any nodes while
+            others contain multiple nodes.
+        </li>
+
+        <li style="margin-top:20px;">If the same machine log is uploaded more than once, only one set of maintenance
+            records are created. This
+            protects against unintentional duplicate uploads, which may occur when periodically updating log files.
+        </li>
+        <li style="margin-top:20px;">If a machine log output is deleted from the <b>Results</b> page, then the
+            maintenance records and machine
+            logs that it created (new) will also be deleted. This provides the user with the equivalent of an undo
+            operation.
+        </li>
+
+        <li style="margin-top:20px;">Maintenance records generated from machine logs can not be edited.</li>
+
+        <li style="margin-top:20px;">Maintenance records generated from machine logs can be deleted. Performing a <b>Redo</b>
+            of the output will re-create the deleted records.
+        </li>
+
+        <li style="margin-top:20px;">Files may be uploaded as a zip archive, which may improve upload time.</li>
+
+        <li style="margin-top:20px;">Files may be uploaded by dragging and dropping their parent folder.</li>
+    </ul>
+
+    <p style="margin-bottom:100px;"></p>
+
+</div>
