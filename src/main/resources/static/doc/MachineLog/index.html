@@ -19,11 +19,17 @@
 
     <p>
         The Machine Log procedure allows users to upload machine logs in XML format and automatically create maintenance
-        records. The records are formatted for better readability and show up in history charts including Phase 2.
+        records. The records are formatted for better readability. They show up in history charts to potentially provide
+        explanations for changes in machine behavior.
     </p>
     <p>
         To run, go to <a href="/run/WebRunIndex">Run Procedures</a> and click <b>Machine Log</b>. Upload the the XML
         files from your <b>I</b> drive using drag and drop and then click the <b>Run</b> button.
+    <ul>
+        <li style="margin-top:20px;">Files may be uploaded as a zip archive, which may improve upload time.</li>
+
+        <li style="margin-top:20px;">Files may be uploaded by dragging and dropping their parent folder.</li>
+    </ul>
     </p>
     <p>
         Below is an example of a machine log file:
@@ -92,9 +98,44 @@
         </b>
 
         <li style="margin-top:20px;">Hierarchically organized group names are concatenated from the top to the bottom of
-            the hierarchy to create
-            the record's summary. A maintenance record is created for each hierarchy path, even if two multi-part paths
-            only differ by one group name.
+            the hierarchy to create the record's summary. A maintenance record is created for each node, using the full
+            hierarchical path of the first group hierarchy as the summary.
+
+            <div style="margin-top:10px;"></div>
+
+            In the example below, there are two Group hierarchies in the same Node, so the first one is used as the
+            record's summary.
+
+            <div style="margin-top:20px;margin-left:150px;">
+                <b>Energies / Energy-10x / Carrousel / IonChamber </b> &nbsp; &nbsp; <i>
+                (Used
+                as summary)</i>
+            </div>
+            <div style="margin-top:20px;margin-left:150px;">
+                <b>Energies / Energy-10xFFF / Carrousel / IonChamber</b>
+            </div>
+            <div style="margin-top:20px;"></div>
+
+
+            <pre style="margin-left:80px;">
+&lt;Node name="Beam Generation Module"&gt;
+  &lt;Group name="Energies"&gt;
+    &lt;Group name="Energy-10x"&gt;
+      &lt;Group name="Carrousel"&gt;
+        &lt;Group name="IonChamber"&gt;
+          &lt;Parameter Enum_Name="EXPECTED_SECONDARY_POSITION" Display_Name="Sec. Position (IonChamber)" Old_Value="203.307" New_Value="203.309"/&gt;
+        &lt;/Group&gt;
+      &lt;/Group&gt;
+    &lt;/Group&gt;
+    &lt;Group name="Energy-10xFFF"&gt;
+      &lt;Group name="Carrousel"&gt;
+        &lt;Group name="IonChamber"&gt;
+          &lt;Parameter Enum_Name="EXPECTED_SECONDARY_POSITION" Display_Name="Sec. Position (IonChamber)" Old_Value="203.307" New_Value="203.309"/&gt;
+        &lt;/Group&gt;
+      &lt;/Group&gt;
+    &lt;/Group&gt;
+&lt;/Node name="Beam Generation Module"&gt;
+                </pre>
         </li>
         <li style="margin-top:20px;">A machine log can create zero or more maintenance records. Some machine logs do not
             contain any nodes while
@@ -103,7 +144,7 @@
 
         <li style="margin-top:20px;">If the same machine log is uploaded more than once, only one set of maintenance
             records are created. This
-            protects against unintentional duplicate uploads, which may occur when periodically updating log files.
+            protects against unintentional duplicate uploads, which may occur when periodically uploading log files.
         </li>
         <li style="margin-top:20px;">If a machine log output is deleted from the <b>Results</b> page, then the
             maintenance records and machine
@@ -117,9 +158,6 @@
             of the output will re-create the deleted records.
         </li>
 
-        <li style="margin-top:20px;">Files may be uploaded as a zip archive, which may improve upload time.</li>
-
-        <li style="margin-top:20px;">Files may be uploaded by dragging and dropping their parent folder.</li>
     </ul>
 
     <p style="margin-bottom:100px;"></p>
