@@ -51,8 +51,6 @@ object MachineUpdate {
 
 class MachineUpdate extends Restlet with SubUrlAdmin {
 
-  private val pageTitleCreate = "Create Machine"
-
   private val pageTitleEdit = "Edit Machine"
 
   private val id = new WebInputText("Id", true, 3, 0, "Name of machine (required)", true)
@@ -71,7 +69,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   private def getConfigUrl(valueMap: ValueMapT): Elem = {
     val notDef = { <div>Configuration directory not defined</div> }
     val machPk = valueMap.get(machinePK.label)
-    if (machPk.isDefined) {
+    if (machPk.isDefined && machPk.get.nonEmpty) {
       val mach = Machine.get(machPk.get.toLong)
       if (mach.isDefined) {
         val machConfigDir = mach.get.configurationDirectory
@@ -179,7 +177,6 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     new FormButton(name, columns, 0, subUrl, pathOf, buttonType)
   }
 
-  private val createButton = makeButton("Create", primary = true, ButtonType.BtnPrimary)
   private val saveButton = makeButton("Save", primary = true, ButtonType.BtnPrimary)
   private val deleteButton = makeButton("Delete", primary = false, ButtonType.BtnDanger)
   private val confirmDeleteButton = makeButton("Confirm Delete", primary = false, ButtonType.BtnDanger)
@@ -260,7 +257,6 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     listA ++ listB ++ listC ++ listSerNo
   }
 
-  val createButtonList: WebRow = List(createButton, cancelButton)
   val editButtonList1: WebRow = List(saveButton, cancelButton, deleteButton)
   val editButtonList2: WebRow = List(maintenanceButton, dailyQAButton, customizePlanButton, machinePK)
   val confirmDeleteButtonList: WebRow = List(cancelButton, confirmDeleteButton, machinePK)
@@ -270,19 +266,9 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     list
   }
 
-  private def formCreate(valueMap: ValueMapT, isAdmin: Boolean) = new WebForm(pathOf, fieldList(valueMap, isAdmin) :+ createButtonList)
-
   private def formEdit(valueMap: ValueMapT, isAdmin: Boolean) = new WebForm(pathOf, fieldList(valueMap, isAdmin) ++ Seq(editButtonList1, editButtonList2))
 
   private def formConfirmDelete() = new WebForm(pathOf, confirmDeleteFieldList() :+ confirmDeleteButtonList)
-
-  //    private def redirect(response: Response, valueMap: ValueMapT) = {
-  //        val pk = machinePK.getValOrEmpty(valueMap)
-  //        val suffix =
-  //            if (pk.size > 0) { "?" + machinePK.label + "=" + pk }
-  //            else
-  //                ""
-  //    }
 
   private def emptyId(valueMap: ValueMapT): StyleMapT = {
     val idText = valueMap(id.label).trim
@@ -301,7 +287,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
     val machList = {
       val sameIDList = Machine.listMachinesFromInstitution(instPK).filter(m => AnonymizeUtil.decryptWithNonce(instPK, m.id_real.get).equalsIgnoreCase(machID))
-      if (machPK.isDefined)
+      if (machPK.isDefined && machPK.get.nonEmpty)
         sameIDList.filter(m => m.machinePK.get != machPK.get.toInt)
       else
         sameIDList
@@ -500,40 +486,8 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     * Show this when machine asks to create a new machine from machine list.
     */
   private def emptyForm(response: Response): Unit = {
-
     val valueMap = Map((active.label, "true"))
-    formCreate(emptyValueMap, userIsAdmin(response)).setFormResponse(valueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
-  }
-
-  /**
-    * Call this when machine has clicked create button.  If everything is ok, then create the new machine,
-    * otherwise show the same screen and communicate the error.
-    */
-  private def create(valueMap: ValueMapT, response: Response): Unit = {
-    val form = formCreate(valueMap, userIsAdmin(response))
-
-    val styleMap = validateAll(valueMap, response.getRequest, form)
-
-    if (styleMap.isEmpty) {
-      val machine = constructMachineFromParameters(valueMap)
-      logger.info("Creating machine " + machine)
-
-      if (machine.machinePK.isDefined) {
-        machine.insertOrUpdate()
-        updateBeamEnergies(machine, valueMap)
-        MachineList.redirect(response)
-      } else {
-        val machineWithoutId = machine.insert
-        val newMachine = machineWithoutId.copy(id = AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasPrefixId, machineWithoutId.machinePK.get))
-        newMachine.insertOrUpdate()
-
-        updateBeamEnergies(newMachine, valueMap)
-        MachineList.redirect(response)
-      }
-
-    } else {
-      form.setFormResponse(valueMap, styleMap, pageTitleCreate, response, Status.CLIENT_ERROR_BAD_REQUEST)
-    }
+    formEdit(emptyValueMap, userIsAdmin(response)).setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
   }
 
   /**
@@ -659,12 +613,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   }
 
   private def reload(valueMap: ValueMapT, response: Response): Unit = {
-    val j = valueMap.contains(createButton.label)
-    if (valueMap.contains(createButton.label)) {
-      formCreate(valueMap, userIsAdmin(response)).setFormResponse(valueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
-    } else {
-      formEdit(valueMap, userIsAdmin(response)).setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
-    }
+    formEdit(valueMap, userIsAdmin(response)).setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
   }
 
   private def addBeam(valueMap: ValueMapT, response: Response): Unit = {
@@ -701,7 +650,6 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
         case _ if buttonIs(valueMap, cancelButton)         => MachineList.redirect(response)
         case _ if buttonIs(valueMap, addBeamEnergyButton)  => addBeam(valueMap, response)
         case _ if buttonIsDeleteBeamEnergyButton(valueMap) => deleteBeam(valueMap, response)
-        case _ if buttonIs(valueMap, createButton)         => create(valueMap, response)
         case _ if buttonIs(valueMap, saveButton)           => save(valueMap, response)
         case _ if buttonIs(valueMap, deleteButton)         => delete(valueMap, response)
         case _ if buttonIs(valueMap, confirmDeleteButton)  => confirmDelete(valueMap, response)
