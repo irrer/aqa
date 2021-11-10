@@ -16,27 +16,24 @@
 
 package org.aqa.web
 
-import org.aqa.db.Machine
-import org.restlet.Request
-import org.restlet.Response
-import org.restlet.Restlet
-
-import scala.xml.Elem
-//import scala.concurrent.ExecutionContext.Implicits.global
-//import play.api._
-//import play.api.libs.concurrent.Execution.Implicits._
 import org.aqa.AnonymizeUtil
 import org.aqa.db.CachedUser
 import org.aqa.db.EPID
 import org.aqa.db.Input
 import org.aqa.db.Institution
+import org.aqa.db.Machine
 import org.aqa.db.MachineBeamEnergy
 import org.aqa.db.MachineType
 import org.aqa.db.MaintenanceRecord
 import org.aqa.db.MultileafCollimator
 import org.aqa.web.WebUtil._
 import org.aqa.webrun.phase2.customizeRtPlan.CustomizeRtPlanInterface
+import org.restlet.Request
+import org.restlet.Response
+import org.restlet.Restlet
 import org.restlet.data.Status
+
+import scala.xml.Elem
 
 object MachineUpdate {
   val machinePKTag = "machinePK"
@@ -376,8 +373,13 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     val mach: Machine = if (machine.machinePK.isDefined) {
       machine.insertOrUpdate()
       machine
-    } else
-      machine.insert
+    } else {
+      val machWithPk = machine.insert
+      val idVal = AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasPrefixId, machWithPk.machinePK.get)
+      val machWithId = machWithPk.copy(id = idVal)
+      machWithId.insertOrUpdate()
+      machWithId
+    }
     logger.info("Updating machine " + mach)
     updateBeamEnergies(mach, valueMap)
   }
@@ -657,6 +659,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
   }
 
   private def reload(valueMap: ValueMapT, response: Response): Unit = {
+    val j = valueMap.contains(createButton.label)
     if (valueMap.contains(createButton.label)) {
       formCreate(valueMap, userIsAdmin(response)).setFormResponse(valueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
     } else {
