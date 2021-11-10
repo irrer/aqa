@@ -19,6 +19,7 @@ package org.aqa.db
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
+import org.aqa.web.PatientProcedureXml
 
 import scala.xml.Elem
 
@@ -34,6 +35,7 @@ case class PatientProcedure(
 ) {
 
   def insert: PatientProcedure = {
+    PatientProcedureXml.cacheClear(institutionPK)
     val insertQuery =
       PatientProcedure.query returning PatientProcedure.query.map(_.patientProcedurePK) into ((patientProcedure, patientProcedurePK) =>
         patientProcedure.copy(patientProcedurePK = Some(patientProcedurePK))
@@ -43,7 +45,10 @@ case class PatientProcedure(
     result
   }
 
-  def insertOrUpdate(): Int = Db.run(PatientProcedure.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = {
+    PatientProcedureXml.cacheClear(institutionPK)
+    Db.run(PatientProcedure.query.insertOrUpdate(this))
+  }
 
   override def toString: String =
     "patientProcedurePK : " + patientProcedurePK +
@@ -98,6 +103,11 @@ object PatientProcedure extends ProcedureOutput with Logging {
   }
 
   def delete(patientProcedurePK: Long): Int = {
+    get(patientProcedurePK) match {
+      case Some(pp) => PatientProcedureXml.cacheClear(pp.institutionPK)
+      case _        =>
+    }
+
     val q = query.filter(_.patientProcedurePK === patientProcedurePK)
     val action = q.delete
     Db.run(action)

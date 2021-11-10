@@ -17,6 +17,7 @@
 package org.aqa.web
 
 import org.aqa.Logging
+import org.aqa.Util
 import org.aqa.db.PatientProcedure
 import org.aqa.db.Procedure
 import org.aqa.web.WebUtil._
@@ -26,7 +27,49 @@ import org.restlet.Restlet
 import org.restlet.data.MediaType
 
 import scala.xml.Elem
-import scala.xml.PrettyPrinter
+
+object PatientProcedureXml extends Logging {
+
+  /**
+    * Local cache for list of patient procedures to reduce the processing load and
+    * improve response times.  These do not change often, so with caching, the server
+    * can simply and quickly return the cached version instead of constructing it
+    * from the database.
+    *
+    * Key: institutionPK
+    * Value: XML text
+    */
+  private val cache = scala.collection.mutable.HashMap[Long, String]()
+
+  /**
+    * Get contents from cache for given institution if they are present.
+    * @param institutionPK Institution.
+    * @return Cached XML or None.
+    */
+  private def cacheGet(institutionPK: Long): Option[String] =
+    cache.synchronized {
+      cache.get(institutionPK)
+    }
+
+  /**
+    * Put the given XML text into the cache, adding it if it is not there, replacing it if it is.
+    * @param institutionPK Institution.
+    * @param xmlText XML in text form.
+    */
+  private def cachePut(institutionPK: Long, xmlText: String): Unit =
+    cache.synchronized {
+      cache.put(institutionPK, xmlText)
+    }
+
+  /**
+    * Remove the cache entry.  If it does not exist, then do nothing.
+    * @param institutionPK Institution.
+    */
+  def cacheClear(institutionPK: Long): Unit =
+    cache.synchronized {
+      cache.remove(institutionPK)
+    }
+}
 
 class PatientProcedureXml extends Restlet with SubUrlAdmin with Logging {
 
@@ -72,14 +115,23 @@ class PatientProcedureXml extends Restlet with SubUrlAdmin with Logging {
     elem
   }
 
+  private def getXmlTextForInstitutionCached(institutionPK: Long): String = {
+    PatientProcedureXml.cacheGet(institutionPK) match {
+      case Some(xmlText) => xmlText
+      case _ =>
+        val xml = getXmlForInstitution(institutionPK)
+        val xmlText = Util.prettyPrint(xml)
+        PatientProcedureXml.cachePut(institutionPK, xmlText)
+        xmlText
+    }
+  }
+
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
     val valueMap = getValueMap(request)
     try {
       val user = getUser(valueMap).get
-
-      val xml = getXmlForInstitution(user.institutionPK)
-      val xmlText = new PrettyPrinter(1024, 2).format(xml)
+      val xmlText = getXmlTextForInstitutionCached(user.institutionPK)
       response.setEntity(xmlText, MediaType.TEXT_XML)
       logger.info("Fetched PatientProcedureList size in bytes: " + xmlText.length)
     } catch {

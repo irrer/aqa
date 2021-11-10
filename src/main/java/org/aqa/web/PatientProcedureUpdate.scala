@@ -178,6 +178,7 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
       if (isAuthorized(valueMap, response)) {
         val patientProcedure = constructFromParameters(valueMap)
         patientProcedure.insertOrUpdate()
+        AnonymousTranslate.clearCache(WebUtil.getUser(valueMap).get.institutionPK)
         PatientProcedureList.redirect(response)
       }
     } else {
@@ -216,6 +217,7 @@ class PatientProcedureUpdate extends Restlet with SubUrlAdmin with Logging {
     if (errMap.isEmpty) {
       val patientProcedure = constructFromParameters(valueMap)
       patientProcedure.insertOrUpdate()
+      AnonymousTranslate.clearCache(WebUtil.getUser(valueMap).get.institutionPK)
       PatientProcedureList.redirect(response)
     } else {
       formCreate.setFormResponse(valueMap, errMap, pageTitleCreate, response, Status.CLIENT_ERROR_BAD_REQUEST)
