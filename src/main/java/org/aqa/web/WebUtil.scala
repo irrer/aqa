@@ -1039,6 +1039,8 @@ object WebUtil extends Logging {
 
       val shouldShow: Boolean = {
         val attrListList = dicomFilesInSession(valueMap).flatMap(df => df.attributeList)
+        val xmlList = xmlFilesInSession(valueMap)
+        val xmlSerialList = xmlList.flatMap(Util.machineLogSerialNumber)
 
         /**
           * Get all <code>DeviceSerialNumber</code> from DICOM files, but ignore any RTPLAN (primary) serial numbers because
@@ -1062,12 +1064,12 @@ object WebUtil extends Logging {
 
         def isMatchingMachine = {
           // get all non-plan serial numbers, but do not allow serial numbers from previously uploaded plans
-          val serialNumbers = attrListList.flatMap(al => serialNumberOf(al)).distinct.diff(DicomSeries.planDeviceSerialNumberList)
+          val serialNumbers = attrListList.flatMap(al => serialNumberOf(al)).distinct.diff(DicomSeries.planDeviceSerialNumberList) ++ xmlSerialList
           val machList = serialNumbers.flatMap(sn => Machine.findMachinesBySerialNumber(sn))
           machList.nonEmpty
         }
 
-        val ss = attrListList.nonEmpty && (!isMatchingMachine)
+        val ss = (attrListList.nonEmpty || xmlList.nonEmpty) && (!isMatchingMachine)
 
         ss
       }
