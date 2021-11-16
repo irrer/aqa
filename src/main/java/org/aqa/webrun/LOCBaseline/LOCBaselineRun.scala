@@ -21,6 +21,7 @@ import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Util
+import org.aqa.db.Machine
 import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.run.ProcedureStatus
@@ -34,6 +35,7 @@ import org.aqa.webrun.WebRunProcedure
 import org.restlet.Request
 import org.restlet.Response
 
+import java.io.File
 import java.sql.Timestamp
 import scala.xml.Elem
 
@@ -81,7 +83,7 @@ class LOCBaselineRun(procedure: Procedure) extends WebRunProcedure(procedure) wi
     */
   override def makeRunReqForRedo(alList: Seq[AttributeList], xmlList: Seq[Elem], output: Option[Output]): LOCBaselineRunReq = {
     val result = LOCFindRunReq.constructRunReq(getRtimageList(alList))
-    result
+    result.right.get // For redo, there should never be validation problems.
   }
 
   /**
@@ -101,19 +103,32 @@ class LOCBaselineRun(procedure: Procedure) extends WebRunProcedure(procedure) wi
       case _ if rtimageList.size != 2   => formError("There should be exactly 2 EPID images but there are " + rtimageList.size)
       case _ if epidSeriesList.size > 1 => formError("EPID images are from " + numSeries + " different series.")
       case _ =>
-        val runReq = LOCFindRunReq.constructRunReq(rtimageList)
-        Right(runReq)
+        LOCFindRunReq.constructRunReq(rtimageList) match {
+          case Right(runReq) => Right(runReq)
+          case Left(msg)     => Left(WebUtil.Error.make(WebUtil.uploadFileLabel, msg))
+        }
     }
     result
+  }
+
+  private def writeToConfigDir(machine: Machine, name: String, rtimage: AttributeList): Unit = {
+    val configDir = machine.configDir.get
+    val file = new File(configDir, name)
+    logger.info("Writing LOC baseline file " + file.getAbsolutePath)
+    // DicomUtil.writeAttributeListToFile(rtimage, file, "AQA")
   }
 
   override def run(extendedData: ExtendedData, runReq: LOCBaselineRunReq, response: Response): ProcedureStatus.Value = {
 
     logger.info("Running LOC Baseline ...")
 
-    // TODO: copy stuff for backwards compatibility, make a web page
+    // This is done for backwards compatibility.
+    writeToConfigDir(extendedData.machine, "OPEN_Baseline.dcm", runReq.baselineOpen)
+    writeToConfigDir(extendedData.machine, "TRANS_Baseline.dcm", runReq.baselineTrans)
 
-    ???
+    LOCBaselineHtml.write(extendedData, runReq)
+
+    ProcedureStatus.done
   }
 
   // override def postRun(extendedData: ExtendedData, runReq: LOC2RunReq): Unit = {}
