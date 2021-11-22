@@ -32,39 +32,17 @@ object LOCFindRunReq extends Logging {
 
   /**
     * Check if the file is a baseline image.
-    * @param rtimage DICOM RTIMAGE of LOC.
+    * @param rtplan DICOM RTPLAN of LOC.
     * @return True if is baseline.
     */
-  def isBaselinePlan(rtimage: AttributeList): Boolean = maxSizeOfDistinctLeafJawPositions(rtimage) == 2
+  def isBaselinePlan(rtplan: AttributeList): Boolean = maxSizeOfDistinctLeafJawPositions(rtplan) == 2
 
   /**
     * Check if the file is a delivery image.
-    * @param rtimage DICOM RTIMAGE of LOC.
+    * @param rtplan DICOM RTPLAN of LOC.
     * @return True if is delivery.
     */
-  def isDeliveryPlan(rtimage: AttributeList): Boolean = maxSizeOfDistinctLeafJawPositions(rtimage) == 4
-
-  /**
-    * Get the SOP of the RTPLAN that this RTIMAGE references.
-    * @param rtimage RTIMAGE
-    * @return SOP of RTPLAN
-    */
-  private def getRtplanSop(rtimage: AttributeList): String = {
-    val rtplanRef = DicomUtil.seqToAttr(rtimage, TagByName.ReferencedRTPlanSequence)
-    val sop = rtplanRef.map(al => al.get(TagByName.ReferencedSOPInstanceUID)).head.getSingleStringValueOrNull
-    sop
-  }
-
-  private def getRtplan(rtimage: AttributeList): Option[AttributeList] = {
-    try {
-      val rtplanSop = getRtplanSop(rtimage)
-      val ds = DicomSeries.getBySopInstanceUID(rtplanSop).headOption
-      val rtplanAl = ds.get.attributeListList.filter(al => Util.sopOfAl(al).equals(rtplanSop)).head
-      Some(rtplanAl)
-    } catch {
-      case _: Throwable => None
-    }
-  }
+  def isDeliveryPlan(rtplan: AttributeList): Boolean = maxSizeOfDistinctLeafJawPositions(rtplan) == 4
 
   /**
     * Get the beam name by looking up the RTIMAGE in the DB and then looking for its name there.  If
@@ -75,8 +53,6 @@ object LOCFindRunReq extends Logging {
     */
   private def getBeamName(rtimage: AttributeList, rtplan: AttributeList): Option[String] = {
     try {
-      val rtplanSop = getRtplanSop(rtimage)
-      val ds = DicomSeries.getBySopInstanceUID(rtplanSop).headOption
       val beamName = Phase2Util.getBeamNameOfRtimage(rtplan, rtimage).get
       Some(beamName)
     } catch {
@@ -155,7 +131,7 @@ object LOCFindRunReq extends Logging {
     */
   def constructRunReq(rtimageList: Seq[AttributeList]): Either[String, LOCBaselineRunReq] = {
 
-    val rtplan = getRtplan(rtimageList.head)
+    val rtplan = DicomSeries.getRtplan(rtimageList.head)
 
     if (rtplan.isDefined) {
       val openList = rtimageList.filter(img => isBaselineOpen(img, rtplan.get))

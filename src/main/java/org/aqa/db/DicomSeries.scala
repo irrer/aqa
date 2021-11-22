@@ -532,6 +532,28 @@ object DicomSeries extends Logging {
     override def toString: String = rtplanUID.formatted("%-64s") + " " + procedure.fullName
   }
 
+  /**
+    * Get the attribute list of the RTPLAN from the database referenced by the given RTIMAGE.
+    *
+    * @param attributeList Referencing file, usually an RTIMAGE.
+    * @return RTPLAN, or None if not found.
+    */
+  def getRtplan(attributeList: AttributeList): Option[AttributeList] = {
+    try {
+      val rtplanSop = Util.getRtplanSop(attributeList)
+      if (rtplanSop.isDefined) {
+        val ds = DicomSeries.getBySopInstanceUID(rtplanSop.get).headOption
+        val rtplanAl = ds.get.attributeListList.filter(al => Util.sopOfAl(al).equals(rtplanSop)).head
+        Some(rtplanAl)
+      } else {
+        logger.error("Asking for RTPLAN referenced by image, but there is no such reference.  Image modality: " + Util.modalityOfAl(attributeList))
+        None
+      }
+    } catch {
+      case _: Throwable => None
+    }
+  }
+
   /*
   // The following adds any RTPLANs in the shared directory into the DB as DicomSeries if:
   //    - They are not already in the database.

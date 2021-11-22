@@ -1041,6 +1041,21 @@ object Util extends Logging {
   }
 
   /**
+    * Get the SOP of the RTPLAN that this RTIMAGE references.
+    * @param rtimage RTIMAGE
+    * @return SOP of RTPLAN, or None if not available.
+    */
+  def getRtplanSop(rtimage: AttributeList): Option[String] = {
+    try {
+      val rtplanRef = DicomUtil.seqToAttr(rtimage, TagByName.ReferencedRTPlanSequence)
+      val sop = rtplanRef.map(al => al.get(TagByName.ReferencedSOPInstanceUID)).head.getSingleStringValueOrNull
+      Some(sop)
+    } catch {
+      case _: Throwable => None
+    }
+  }
+
+  /**
     * Given arbitrary text, replace all special characters with underscore so it can be used as a JavaScript or XML identifier.
     */
   def textToId(text: String): String = text.replaceAll("[^0-9a-zA-Z]", "_").replaceAll("__*", "_")
