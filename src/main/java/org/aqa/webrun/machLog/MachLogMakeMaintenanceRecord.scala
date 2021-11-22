@@ -1,6 +1,5 @@
 package org.aqa.webrun.machLog
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.MachineLog
@@ -14,13 +13,11 @@ import scala.xml.XML
 
 object MachLogMakeMaintenanceRecord extends Logging {
 
-  //private val rtArrow = " --" + WebUtil.gt + " "
   private val rtArrow = " --> "
 
   /** If both the old and new values are less than this many characters, then put them on one line. */
   private val oneLine = 50
 
-  //private val sp2 = WebUtil.nbsp + WebUtil.nbsp
   private val sp2 = "  "
   private val sp4 = sp2 + sp2
   private val sp6 = sp4 + sp2
@@ -156,7 +153,6 @@ object MachLogMakeMaintenanceRecord extends Logging {
 
     private def nameOf(n: Node) = (n \ "@name").text
 
-    val nodeName = nameOf(node)
     val groupNames: String = groupList.map(nameOf).mkString(" / ")
 
     val parameterList: NodeSeq = groupList.last \ "Parameter"
@@ -220,7 +216,7 @@ object MachLogMakeMaintenanceRecord extends Logging {
       "\n" + sp2 + nodeParameterList.mkString("\n" + sp2)
   }
 
-  def formatNode(machineLog: MachineLog, node: Node): String = {
+  private def formatNode(machineLog: MachineLog, node: Node): String = {
     val groupList = findGroups(node)
     val header =
       (node \ "@name").text + sp4 + " System Version: " + machineLog.SystemVersion
@@ -229,7 +225,7 @@ object MachLogMakeMaintenanceRecord extends Logging {
     text
   }
 
-  def formatNode(machineLog: MachineLog, machineLogNodeIndex: Long): String = {
+  private def formatNode(machineLog: MachineLog, machineLogNodeIndex: Long): String = {
     val node = (machineLog.elem \ "Node")(machineLogNodeIndex.toInt)
     formatNode(machineLog, node)
   }
@@ -242,7 +238,7 @@ object MachLogMakeMaintenanceRecord extends Logging {
       (node \ "@name").head.text
   }
 
-  def makeMachineRecord(machineLog: MachineLog, machineLogNodeIndex: Long, userPK: Long, outputPK: Long): MaintenanceRecord = {
+  private def makeMachineRecord(machineLog: MachineLog, machineLogNodeIndex: Long, userPK: Long, outputPK: Long): MaintenanceRecord = {
     val node = (machineLog.elem \ "Node")(machineLogNodeIndex.toInt)
     val category = (node \ "@name").head.text
     val mr = new MaintenanceRecord(
