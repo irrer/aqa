@@ -5,13 +5,14 @@ import org.aqa.Util
 import org.aqa.db.MachineLog
 import org.aqa.db.MaintenanceRecord
 
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import scala.xml.Node
 import scala.xml.NodeSeq
 import scala.xml.XML
 
-object MachLogMakeMaintenanceRecord extends Logging {
+object MachLogDistill extends Logging {
 
   private val rtArrow = " --> "
 
@@ -153,12 +154,12 @@ object MachLogMakeMaintenanceRecord extends Logging {
 
     private def nameOf(n: Node) = (n \ "@name").text
 
-    val groupNames: String = groupList.map(nameOf).mkString(" / ")
+    val groupNames: String = groupList.map(nameOf).mkString("%%%%")
 
     val parameterList: NodeSeq = groupList.last \ "Parameter"
 
     override def toString: String = {
-      nameOf(node) + " :: " + groupNames
+      nameOf(node) + "::::" + groupNames
     }
   }
 
@@ -232,35 +233,17 @@ object MachLogMakeMaintenanceRecord extends Logging {
 
   private def formatSummary(node: Node): String = {
     val groups = findGroups(node)
+    val nodeName = (node \ "@name").text
+
+    def showGroup(g: LogGroup): Unit = {
+      val parameterTextList = g.parameterList.map(p => (p \ "@Enum_Name").text).sorted
+      parameterTextList.map(p => println("== " + nodeName + "||||" + g.groupNames + "====" + p))
+    }
+
+    groups.map(showGroup)
+
     if (groups.nonEmpty) {
-      val minDepth = groups.map(_.groupList.size).min
-      val maxDepth = groups.map(_.groupList.size).max
-
-      /**
-        * Get the group name at the given depth for the LoggGroup.
-        * @param group Get from this group.
-        * @param depth Get for this depth.
-        * @return Name, or None if it does not exist.
-        */
-      def nameForDepth(group: LogGroup, depth: Int) = {
-        if (group.groupList.size > depth)
-          Some((group.groupList(depth) \ "@name").text)
-        else
-          None
-      }
-
-      def nameAtDepth(depth: Int): String = {
-        val list = groups.map(g => nameForDepth(g, depth))
-        val distinct = list.flatten.distinct
-        if ((list.size == list.flatten.size) && (distinct.size == 1))
-          distinct.head
-        else
-          "*"
-      }
-
-      val fullName = (0 until maxDepth).map(nameAtDepth).mkString(" / ")
-
-      fullName
+      groups.head.groupNames
     } else
       (node \ "@name").head.text
   }
@@ -295,5 +278,24 @@ object MachLogMakeMaintenanceRecord extends Logging {
     val nodeList = machineLog.elem \ "Node"
     val list = nodeList.zipWithIndex.map(li => makeMachineRecord(machineLog, li._2, userPK, outputPK))
     list
+  }
+
+  def main(args: Array[String]): Unit = {
+    //val dir = new File("""D:\tmp\aqa\MachineLogs\CedarsSinia""")
+    val dir = new File("""D:\tmp\aqa\MachineLogs\H192448\H192448""")
+    val fileList = Util.listDirFiles(dir).filter(_.getName.startsWith("SavedConfigParameters_"))
+    val machLogList = fileList.flatMap(file => {
+      try {
+        // println("\nfile: " + file.getName)
+        val text = Util.readTextFile(file).right.get.replaceAll("<MachineSerialNumber>.*</MachineSerialNumber>", "<MachineSerialNumber>DeviceSerialNumber_152</MachineSerialNumber>")
+        (0 to 20).foreach(_ => println())
+        MachineLog.construct(text, -1)
+      } catch {
+        case _: Throwable => None
+      }
+    })
+
+    machLogList.map(ml => makeMaintenanceRecordList(ml, -1, -1))
+    println("\ndir: " + dir.getAbsolutePath)
   }
 }
