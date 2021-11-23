@@ -28,9 +28,6 @@ class MachLogHTML(
     newMaintenanceRecordList: Seq[MaintenanceRecord],
     oldMaintenanceRecordList: Seq[MaintenanceRecord]
 ) {
-
-  // private var j = 0 // TODO rm
-
   private val abbreviationLength = 140
   private def recToHtml(rec: MaintenanceRecord): Elem = {
 
