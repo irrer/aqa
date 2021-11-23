@@ -119,7 +119,7 @@ class MachLogHTML(
           <tr>
             <th>Date</th>
             <th>Category</th>
-            <th>Description</th>
+            <th>Summary and Description</th>
           </tr>
         </thead>
         {uploaded.map(recToHtml)}
