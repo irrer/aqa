@@ -4,6 +4,7 @@ import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.DicomSeries
@@ -79,10 +80,15 @@ object LOCBaselineHtml extends Logging {
   }
 
   def write(extendedData: ExtendedData, runReq: LOCBaselineRunReq): Unit = {
+    Trace.trace()
     val content = makeHtml(extendedData, runReq)
+    Trace.trace()
     val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), "LOC Baseline")
-    val file = new File(Output.displayFilePrefix + ".html")
+    Trace.trace()
+    val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
+    Trace.trace()
     Util.writeFile(file, text)
+    Trace.trace()
   }
 
 }

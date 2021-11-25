@@ -347,7 +347,7 @@ object LOCMakeHtml extends Logging {
           <div class="row">
             <div class="col-md-1" title="Leaf Offset Constancy and Transmission"><h2>LOC</h2></div>
             <div class="col-md-2 col-md-offset-1" title="Machine"><h2 aqaalias="">{machineId}</h2></div>
-            <div class="col-md-3 col-md-offset-1">EPID Center Correction in mm: {epidCenterCorrection}</div>
+            <div class="col-md-3 col-md-offset-1">EPID Center Correction mm: {epidCenterCorrection}</div>
           </div>
           <div class="row" style="margin:20px;">
             {wrap2Anon(1, "Institution", institutionName)}

@@ -19,6 +19,7 @@ package org.aqa.webrun
 import org.aqa.db.Procedure
 import org.aqa.web.WebUtil._
 import org.aqa.webrun.LOC.LOCRun
+import org.aqa.webrun.LOCBaseline.LOCBaselineRun
 import org.aqa.webrun.bbByCBCT.BBbyCBCTRun
 import org.aqa.webrun.bbByEpid.BBbyEPIDRun
 import org.aqa.webrun.gapSkew.GapSkewRun
@@ -64,7 +65,8 @@ object WebRun {
     ("UploadAndChooseMachine_1", procedure => new UploadAndChooseMachine_1(procedure)),
     ("WinstonLutz_1", procedure => new WinstonLutz_1(procedure)),
     ("MachineLog", procedure => new MachLogRun(procedure)),
-    ("LOC", procedure => new LOCRun(procedure))
+    ("LOC", procedure => new LOCRun(procedure)),
+    ("LOCBaseline", procedure => new LOCBaselineRun(procedure))
   )
 
   /** Possible choices for procedure interfaces. */
