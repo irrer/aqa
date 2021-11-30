@@ -248,7 +248,7 @@ object RunProcedure extends Logging {
   /**
     * Tell the user that the redo is forbidden and why.  Also give them a redirect back to the list of results.
     */
-  private def forbidRedo(response: Response, msg: String, outputPK: Option[Long]) {
+  private def forbidRedo(response: Response, msg: String, outputPK: Option[Long]): Unit = {
     val content = {
       <div class="row">
         <div class="col-md-4 col-md-offset-2">
@@ -671,88 +671,94 @@ object RunProcedure extends Logging {
     }
 
     /**
-     * Get the content of the XML files in the given directory.  Ignore non-XML files.
-     * @param dir Directory potentially containing XML files.
-     * @return List of 0 or more XML files.
-     */
+      * Get the content of the XML files in the given directory.  Ignore non-XML files.
+      *
+      * @param dir Directory potentially containing XML files.
+      * @return List of 0 or more XML files.
+      */
     def xmlFilesInDir(dir: File): Seq[Elem] = {
       def toXml(file: File): Option[Elem] = {
         try {
           Some(XML.loadFile(file))
-        }
-        catch {
-          case _ : Throwable => None
+        } catch {
+          case _: Throwable => None
         }
       }
+
       Util.listDirFiles(dir).flatMap(toXml)
     }
 
-    if (input.isDefined) {
-      if (authenticatedUserPK.isDefined || userAuthorizedToModify(request, input.get)) {
-        val now = new Timestamp((new Date).getTime)
-        val userPK = if (authenticatedUserPK.isDefined) authenticatedUserPK else CachedUser.get(request).get.userPK
+    val redoMessage: Option[String] = {
+      val validateRedo = runTrait.validateRedo(oldOutput.get.outputPK.get)
+      val authorized = authenticatedUserPK.isDefined || userAuthorizedToModify(request, input.get)
 
-        val machinePK = if (oldOutput.get.machinePK.isDefined) oldOutput.get.machinePK else input.get.machinePK
+      0 match {
+        case _ if input.isEmpty         => Some("Redo of output " + oldOutput + " not possible because output or input does not exist")
+        case _ if !authorized           => Some("Redo of output " + oldOutput + " not possible because user is not authorized.")
+        case _ if validateRedo.nonEmpty => validateRedo
+        case _                          => None
+      }
+    }
 
-        val newOutput = {
-          val tempOutput = new Output(
-            outputPK = None,
-            inputPK = oldOutput.get.inputPK,
-            directory = WebServer.fileToResultsPath(makeOutputDir(input.get.dir, now)),
-            procedurePK = runTrait.getProcedure.procedurePK.get,
-            userPK,
-            now,
-            finishDate = None,
-            dataDate = input.get.dataDate,
-            analysisDate = Some(now),
-            machinePK,
-            status = ProcedureStatus.running.toString,
-            dataValidity = DataValidity.valid.toString
-          )
-          val out = tempOutput.insert
-          out
-        }
-        // instantiate the input files from originals
-        val extendedData = ExtendedData.get(newOutput)
-        val inputDir = extendedData.input.dir
+    if (redoMessage.nonEmpty) {
+      logger.info(redoMessage.get)
+      forbidRedo(response, redoMessage.get, None)
+    } else {
+      val now = new Timestamp((new Date).getTime)
+      val userPK = if (authenticatedUserPK.isDefined) authenticatedUserPK else CachedUser.get(request).get.userPK
 
-        CacheCSV.invalidateCacheEntries(newOutput.dataDate.get, extendedData.institution.institutionPK.get)
+      val machinePK = if (oldOutput.get.machinePK.isDefined) oldOutput.get.machinePK else input.get.machinePK
 
-        // force the contents of the input directory to be reestablished so that they are
-        // exactly the same as the first time this was run.
-        Util.deleteFileTreeSafely(inputDir)
-        Try(Input.getFilesFromDatabase(extendedData.input.inputPK.get, inputDir.getParentFile))
+      val newOutput = {
+        val tempOutput = new Output(
+          outputPK = None,
+          inputPK = oldOutput.get.inputPK,
+          directory = WebServer.fileToResultsPath(makeOutputDir(input.get.dir, now)),
+          procedurePK = runTrait.getProcedure.procedurePK.get,
+          userPK,
+          now,
+          finishDate = None,
+          dataDate = input.get.dataDate,
+          analysisDate = Some(now),
+          machinePK,
+          status = ProcedureStatus.running.toString,
+          dataValidity = DataValidity.valid.toString
+        )
+        val out = tempOutput.insert
+        out
+      }
+      // instantiate the input files from originals
+      val extendedData = ExtendedData.get(newOutput)
+      val inputDir = extendedData.input.dir
 
-        makeOutputDir(inputDir, now)
+      CacheCSV.invalidateCacheEntries(newOutput.dataDate.get, extendedData.institution.institutionPK.get)
 
-        // read the DICOM files
-        val alList = Util.listDirFiles(inputDir).map(f => new DicomFile(f)).flatMap(df => df.attributeList)
-        val xmlList = xmlFilesInDir(inputDir)
-        val runReq: RunReqClass = performSynchronized[RunReqClass](sync, () => runTrait.makeRunReqForRedo(alList, xmlList, oldOutput))
+      // force the contents of the input directory to be reestablished so that they are
+      // exactly the same as the first time this was run.
+      Util.deleteFileTreeSafely(inputDir)
+      Try(Input.getFilesFromDatabase(extendedData.input.inputPK.get, inputDir.getParentFile))
 
-        // now that new Output has been created, delete the old output.
-        // Even if something goes horribly wrong after this (server crash, analysis crash),
-        // having the output in the database gives visibility to the user via the Results screen.
-        if (oldOutput.isDefined) {
-          deleteOutput(oldOutput.get)
-          // Invalidate any cached data
-          CacheCSV.invalidateCacheEntries(oldOutput.get.dataDate.get, extendedData.institution.institutionPK.get)
-        }
+      makeOutputDir(inputDir, now)
 
-        runAnalysis(valueMap, runTrait, runReq, extendedData, response, sync)
+      // read the DICOM files
+      val alList = Util.listDirFiles(inputDir).map(f => new DicomFile(f)).flatMap(df => df.attributeList)
+      val xmlList = xmlFilesInDir(inputDir)
+      val runReq: RunReqClass = performSynchronized[RunReqClass](sync, () => runTrait.makeRunReqForRedo(alList, xmlList, oldOutput))
 
-        ViewOutput.redirectToViewRunProgress(response, WebUtil.isAutoUpload(valueMap), newOutput.outputPK.get)
-      } else {
-        logger.info("Redo of output " + oldOutput + " not possible because user is not authorized.")
-        val msg = "Redo not possible because user is not authorized.  You must be a member of the same institution as the originating data."
-        forbidRedo(response, msg, None)
+      // now that new Output has been created, delete the old output.
+      // Even if something goes horribly wrong after this (server crash, analysis crash),
+      // having the output in the database gives visibility to the user via the Results screen.
+      if (oldOutput.isDefined) {
+        deleteOutput(oldOutput.get)
+        // Invalidate any cached data
+        CacheCSV.invalidateCacheEntries(oldOutput.get.dataDate.get, extendedData.institution.institutionPK.get)
       }
 
-    } else {
-      logger.info("Redo of output " + oldOutput + " not possible because output or input does not exist")
-      val msg = "Redo not possible because the old output no longer exists.  Refresh the list to bring it up to date."
-      forbidRedo(response, msg, None)
+      runAnalysis(valueMap, runTrait, runReq, extendedData, response, sync)
+
+      ViewOutput.redirectToViewRunProgress(response, WebUtil.isAutoUpload(valueMap), newOutput.outputPK.get)
     }
+
   }
 
   private def emptyForm(valueMap: ValueMapT, response: Response, runTrait: RunTrait[RunReqClass]): Unit = {

@@ -5,7 +5,6 @@ import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.DicomFile
 import org.aqa.Logging
-import org.aqa.Util
 import org.aqa.db.DicomSeries
 import org.aqa.webrun.phase2.Phase2Util
 
@@ -35,14 +34,14 @@ object LOCFindRunReq extends Logging {
     * @param rtplan DICOM RTPLAN of LOC.
     * @return True if is baseline.
     */
-  def isBaselinePlan(rtplan: AttributeList): Boolean = maxSizeOfDistinctLeafJawPositions(rtplan) == 2
+  private def isBaselinePlan(rtplan: AttributeList): Boolean = maxSizeOfDistinctLeafJawPositions(rtplan) == 2
 
   /**
     * Check if the file is a delivery image.
     * @param rtplan DICOM RTPLAN of LOC.
     * @return True if is delivery.
     */
-  def isDeliveryPlan(rtplan: AttributeList): Boolean = maxSizeOfDistinctLeafJawPositions(rtplan) == 4
+  private def isDeliveryPlan(rtplan: AttributeList): Boolean = maxSizeOfDistinctLeafJawPositions(rtplan) == 4
 
   /**
     * Get the beam name by looking up the RTIMAGE in the DB and then looking for its name there.  If
@@ -90,7 +89,7 @@ object LOCFindRunReq extends Logging {
     * @param rtimageList List of RTIMAGE files uploaded.
     * @return Run requirements.
     */
-  def determineBeamIdentityWithoutRTPLAN(rtimageList: Seq[AttributeList]): LOCBaselineRunReq = {
+  private def determineBeamIdentityWithoutRTPLAN(rtimageList: Seq[AttributeList]): LOCBaselineRunReq = {
     val aAl = rtimageList.head
     val bAl = rtimageList(1)
     val aExposure = exposureTime(aAl)

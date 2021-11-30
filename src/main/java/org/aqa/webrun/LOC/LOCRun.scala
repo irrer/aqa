@@ -22,7 +22,9 @@ import com.pixelmed.dicom.TagFromName
 import edu.umro.MSOfficeUtil.Excel.ExcelUtil
 import edu.umro.ScalaUtil.DicomUtil
 import org.apache.poi.ss.usermodel.Workbook
+import org.aqa.DicomFile
 import org.aqa.Util
+import org.aqa.db.DicomSeries
 import org.aqa.db.Machine
 import org.aqa.db.Output
 import org.aqa.db.Procedure
@@ -33,6 +35,8 @@ import org.aqa.run.RunTrait
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil._
 import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.LOCBaseline.LOCBaselineRunReq
+import org.aqa.webrun.LOCBaseline.LOCFindRunReq
 import org.aqa.webrun.WebRunProcedure
 import org.restlet.Request
 import org.restlet.Response
@@ -90,34 +94,87 @@ class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     */
   override def makeRunReqForRedo(alList: Seq[AttributeList], xmlList: Seq[Elem], output: Option[Output]): LOCRunReq = {
     val rtimageList = getRtimageList(alList)
-    val result = LOCRunReq(rtimageList)
+    val deviceSerialNumber = getMachineDeviceSerialNumberList(rtimageList, Seq()).head
+    val locBaselineRunReq = getLocBaselineRunReq(deviceSerialNumber)
+    val result = LOCRunReq(rtimageList, locBaselineRunReq.get)
     result
+  }
+
+  override def validateRedo(outputPK: Long): Option[String] = {
+    val fail = Some("Redo not possible because a LOC Baseline can not be found for this machine.")
+    try {
+      val machinePK = Output.get(outputPK).get.machinePK
+      val deviceSerialNumber = Machine.get(machinePK.get).get.serialNumber.get
+      if (getLocBaselineRunReq(deviceSerialNumber).isDefined)
+        None
+      else
+        fail
+    } catch {
+      case _: Throwable => fail
+    }
   }
 
   /**
     * Look in the machine configuration directory for this machine and then ensure that there are OPEN and TRANS files.
     *
-    * @param rtimageList List of image files uploaded by user.
+    * Note: This function should be deprecated when all LOC baseline files are put in the database.
+    *
+    * @param deviceSerialNumber Device serial number
     * @return True if there are baseline files.
     */
-  private def hasBaseline(rtimageList: Seq[AttributeList]): Boolean = {
-    val dsnList = getMachineDeviceSerialNumberList(rtimageList, Seq())
-    if (dsnList.isEmpty)
-      false
+  private def getBaselineByFile(deviceSerialNumber: String): Option[LOCBaselineRunReq] = {
+    val machineList = Machine.findMachinesBySerialNumber(deviceSerialNumber)
+    if (machineList.isEmpty)
+      None
     else {
-      val machineList = Machine.findMachinesBySerialNumber(dsnList.head)
-      if (machineList.isEmpty)
-        false
-      else {
-        val machineConfigDir = machineList.head.configDir
-        val has = {
-          machineConfigDir.isDefined &&
-          machineConfigDir.get.isDirectory &&
-          Util.listDirFiles(machineConfigDir.get).exists(f => f.getName.contains("OPEN")) &&
-          Util.listDirFiles(machineConfigDir.get).exists(f => f.getName.contains("TRANS"))
-        }
-        has
+      val machineConfigDir = machineList.head.configDir
+      val dirList = Util.listDirFiles(machineConfigDir.get)
+      val hasFiles = {
+        machineConfigDir.isDefined &&
+        machineConfigDir.get.isDirectory &&
+        dirList.exists(_.getName.contains("OPEN")) &&
+        dirList.exists(_.getName.contains("TRANS"))
       }
+      if (hasFiles) {
+        val open = dirList.find(_.getName.contains("OPEN")).get
+        val trans = dirList.find(_.getName.contains("TRANS")).get
+        val openAl = new DicomFile(open).attributeList.get
+        val transAl = new DicomFile(trans).attributeList.get
+        val locBaselineRunReq = Some(LOCBaselineRunReq(openAl, transAl))
+        locBaselineRunReq
+      } else
+        None
+    }
+  }
+
+  /**
+    * Get the most recent LOC baseline files from the database.
+    * @param serialNumber Device serial number uniquely defines the machine.
+    *
+    * @return Either an error message or the baseline.
+    */
+  private def getMostRecentBaselineFromDb(serialNumber: String): Either[String, LOCBaselineRunReq] = {
+    try {
+      val machine = Machine.findMachinesBySerialNumber(serialNumber).head
+      val output = Output.getMostRecentLOCBaselineOutput(machine.machinePK.get).get
+      val ds = DicomSeries.getByInputPK(output.inputPK)
+      val alList = ds.head.attributeListList
+      val baselineRunReq = LOCFindRunReq.constructRunReq(alList)
+      baselineRunReq
+    } catch {
+      case _: Throwable => Left("Unable to get LOC baseline from database.")
+    }
+  }
+
+  private def getLocBaselineRunReq(deviceSerialNumber: String): Option[LOCBaselineRunReq] = {
+    try {
+      val rr = getMostRecentBaselineFromDb(deviceSerialNumber) match {
+        case Right(rr) => Some(rr)
+        case _         => getBaselineByFile(deviceSerialNumber)
+      }
+      rr
+    } catch {
+      case _: Throwable => None
     }
   }
 
@@ -130,6 +187,14 @@ class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     def epidSeriesList = rtimageList.map(epid => getSeries(epid)).distinct
 
     logger.info("Number of RTIMAGE files uploaded: " + rtimageList.size)
+    val locBaselineRunReq = {
+      try {
+        val deviceSerialNumber = getMachineDeviceSerialNumberList(rtimageList, Seq()).head
+        getLocBaselineRunReq(deviceSerialNumber)
+      } catch {
+        case _: Throwable => None
+      }
+    }
 
     val numSeries = rtimageList.map(epid => epid.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString).distinct.sorted.size
 
@@ -137,10 +202,8 @@ class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
       case _ if rtimageList.isEmpty       => formError("No EPID files uploaded")
       case _ if rtimageList.size != 5     => formError("There should be exactly 5 EPID images but there are " + rtimageList.size)
       case _ if epidSeriesList.size > 1   => formError("EPID images are from " + numSeries + " different series.")
-      case _ if !hasBaseline(rtimageList) => formError("LOC baseline images have not been established for this machine.")
-      case _ =>
-        val runReq = LOCRunReq(rtimageList)
-        Right(runReq)
+      case _ if locBaselineRunReq.isEmpty => formError("LOC baseline images have not been established for this machine.")
+      case _                              => Right(LOCRunReq(rtimageList, locBaselineRunReq.get))
     }
     result
   }

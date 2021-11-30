@@ -77,4 +77,11 @@ trait RunTrait[RunReqClassType] extends Logging {
   /** Convenience function for constructing error messages to display to user on web page. */
   def formError(msg: String) = Left(WebUtil.Error.make(WebUtil.uploadFileLabel, msg))
 
+  /**
+    * Called when a redo is being performed.  If it is not ok to do the redo, then a message is
+    * returned, otherwise None is returned.
+    *
+    * @param outputPK: Output PK of old output.
+    */
+  def validateRedo(outputPK: Long): Option[String] = None
 }

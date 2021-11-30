@@ -358,6 +358,26 @@ object Output extends Logging {
   }
 
   /**
+    * Get the most recently  processed output that establishes a set of LOC baseline files.
+    * <p/>
+    * Note that this is the most recently processed.   It does not use the dataData.  This allows
+    * the user to control which baseline to use.
+    * <p/>
+    * @param machinePK Machine PK
+    * @return Most recent or None.
+    */
+  def getMostRecentLOCBaselineOutput(machinePK: Long): Option[Output] = {
+    val procedurePK = Procedure.ProcOfLOCBaseline.get.procedurePK.get
+    val search = for {
+      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
+    } yield output
+
+    val sorted = search.sortBy(_.analysisDate.get)
+
+    Db.run(sorted.result).lastOption
+  }
+
+  /**
     * Get a list of outputs from the given institution whose data is >= begin and < end.
     */
   def getOutputByDateRange(institutionPK: Long, dataDateBegin: Timestamp, dataDateEnd: Timestamp): Seq[Output] = {
