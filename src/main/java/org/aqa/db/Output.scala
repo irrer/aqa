@@ -372,9 +372,9 @@ object Output extends Logging {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
     } yield output
 
-    val sorted = search.sortBy(_.analysisDate.get)
-
-    Db.run(sorted.result).lastOption
+    val list = Db.run(search.result)
+    val sorted = list.sortBy(_.analysisDate.get.getTime)
+    sorted.lastOption
   }
 
   /**

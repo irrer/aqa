@@ -48,6 +48,7 @@ import org.restlet.data.Status
 
 import java.io.File
 import java.sql.Timestamp
+import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.concurrent.TimeUnit
 import scala.annotation.tailrec
@@ -691,10 +692,14 @@ object RunProcedure extends Logging {
     val redoMessage: Option[String] = {
       val validateRedo = runTrait.validateRedo(oldOutput.get.outputPK.get)
       val authorized = authenticatedUserPK.isDefined || userAuthorizedToModify(request, input.get)
+      val outputDescription = {
+        val format = new SimpleDateFormat("yyyy MM dd HH:mm:ss")
+        runTrait.getProcedure.fullName + " from " + format.format(oldOutput.get.dataDate.get)
+      }
 
       0 match {
-        case _ if input.isEmpty         => Some("Redo of output " + oldOutput + " not possible because output or input does not exist")
-        case _ if !authorized           => Some("Redo of output " + oldOutput + " not possible because user is not authorized.")
+        case _ if input.isEmpty         => Some("Redo of output " + outputDescription + " not possible because output or input does not exist")
+        case _ if !authorized           => Some("Redo of output " + outputDescription + " not possible because user is not authorized.  You must be a member of the same institution.")
         case _ if validateRedo.nonEmpty => validateRedo
         case _                          => None
       }

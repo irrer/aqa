@@ -101,7 +101,7 @@ class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
   }
 
   override def validateRedo(outputPK: Long): Option[String] = {
-    val fail = Some("Redo not possible because a LOC Baseline can not be found for this machine.")
+    val fail = Some("Redo not possible because a LOC Baseline can not be found for this machine.  This can be caused by the user having deleted the LOC Baseline analysis.")
     try {
       val machinePK = Output.get(outputPK).get.machinePK
       val deviceSerialNumber = Machine.get(machinePK.get).get.serialNumber.get
@@ -160,6 +160,7 @@ class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
       val ds = DicomSeries.getByInputPK(output.inputPK)
       val alList = ds.head.attributeListList
       val baselineRunReq = LOCFindRunReq.constructRunReq(alList)
+      logger.info("Retrieved LOC Baseline from database.")
       baselineRunReq
     } catch {
       case _: Throwable => Left("Unable to get LOC baseline from database.")
@@ -230,8 +231,26 @@ class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     }
   }
 
+  /**
+    * Write the baseline files to the output directory to make them available to the MATLAB code.
+    *
+    * @param extendedData Relevant metadata.
+    * @param runReq Contain baseline DICOM.
+    */
+  private def writeBaselineFilesLocally(extendedData: ExtendedData, runReq: LOCRunReq): Unit = {
+    val dir = extendedData.output.dir
+
+    val openFile = new File(dir, "OPEN_Baseline.dcm")
+    val transFile = new File(dir, "TRANS_Baseline.dcm")
+
+    DicomUtil.writeAttributeListToFile(runReq.baseline.baselineOpen, openFile, "AQA")
+    DicomUtil.writeAttributeListToFile(runReq.baseline.baselineTrans, transFile, "AQA")
+  }
+
   override def run(extendedData: ExtendedData, runReq: LOCRunReq, response: Response): ProcedureStatus.Value = {
 
+    logger.info("Writing DICOM baseline to the output directory " + extendedData.output.dir.getAbsolutePath)
+    writeBaselineFilesLocally(extendedData, runReq)
     logger.info("Running LOC Matlab program...")
     val status = LOCMatlab.executeMatlab(extendedData)
     logger.info("LOC Matlab program finished.  Status: " + status)

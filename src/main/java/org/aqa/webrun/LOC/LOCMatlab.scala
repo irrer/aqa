@@ -43,7 +43,7 @@ object LOCMatlab extends Logging {
       "CD /D " + extendedData.output.dir.getAbsolutePath,
       """copy /Y ..\*.dcm .""",
       setEnv("institution_id", extendedData.institution.name),
-      setEnv("machine_configDir", extendedData.machine.configDir.get.getAbsolutePath),
+      setEnv("machine_configDir", extendedData.output.dir.getAbsolutePath),
       setEnv("machine_id", extendedData.machine.id),
       setEnv("mlc_model", extendedData.multileafCollimator.model),
       setEnv("outputPK", extendedData.output.outputPK.get.toString),
@@ -113,10 +113,10 @@ object LOCMatlab extends Logging {
   }
 
   /**
-   * Execute the MATLAB code as a separate process.  Log the output to the AQA log, and return the status.
-   * @param extendedData Meta data of input DICOM files.
-   * @return Procedure status
-   */
+    * Execute the MATLAB code as a separate process.  Log the output to the AQA log, and return the status.
+    * @param extendedData Meta data of input DICOM files.
+    * @return Procedure status
+    */
   def executeMatlab(extendedData: ExtendedData): ProcedureStatus.Value = {
     execute(extendedData)
     val outputDir = extendedData.output.dir
