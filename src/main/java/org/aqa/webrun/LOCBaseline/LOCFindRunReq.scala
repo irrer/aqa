@@ -10,6 +10,14 @@ import org.aqa.webrun.phase2.Phase2Util
 
 import java.io.File
 
+
+/**
+ * Provide support for determining which of the incoming RTIMAGE files are OPEN and TRANS.
+ *
+ * Note that this requires that there are exactly two files.  It might be enhanced in the
+ * future to handle a larger number of images and ignore the irrelevant ones, but that
+ * would depend on having the RTPLAN available.  For newer cases it is, but not for older ones.
+ */
 object LOCFindRunReq extends Logging {
 
   /**
