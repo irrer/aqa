@@ -20,7 +20,7 @@ object LOCMatlab extends Logging {
     *
     * @param extendedData Metadata for data being created.
     */
-  private def execute(extendedData: ExtendedData): Unit = {
+  private def execute(extendedData: ExtendedData, baselineDir: File): Unit = {
 
     def setEnv(name: String, value: String): String = {
       s"SET $name=$value"
@@ -41,13 +41,12 @@ object LOCMatlab extends Logging {
 
     val commandList = Seq(
       "CD /D " + extendedData.output.dir.getAbsolutePath,
-      """copy /Y ..\*.dcm .""",
       setEnv("institution_id", extendedData.institution.name),
-      setEnv("machine_configDir", extendedData.output.dir.getAbsolutePath),
+      setEnv("machine_configDir", baselineDir.getAbsolutePath),
       setEnv("machine_id", extendedData.machine.id),
       setEnv("mlc_model", extendedData.multileafCollimator.model),
       setEnv("outputPK", extendedData.output.outputPK.get.toString),
-      matlabExecutableFile.getAbsolutePath
+      "\"" + matlabExecutableFile.getAbsolutePath + "\""
     )
 
     val commandFileContent = commandList.mkString("", System.lineSeparator(), System.lineSeparator())
@@ -61,7 +60,7 @@ object LOCMatlab extends Logging {
     val start = System.currentTimeMillis()
     pb.run(processLogger, connectInput = true)
     val timeout_ms = System.currentTimeMillis() + extendedData.procedure.timeoutInMs
-    logger.info("Waiting for LOC Matlab executable to finish.  Timeout in ms: " + timeout_ms)
+    logger.info("Waiting for LOC Matlab executable to finish.  Timeout in: " + Util.elapsedTimeHumanFriendly(extendedData.procedure.timeoutInMs))
 
     val statusFile = new File(extendedData.output.dir, "status.txt")
     while ((System.currentTimeMillis() < timeout_ms) && (!statusFile.canRead)) {
@@ -117,8 +116,8 @@ object LOCMatlab extends Logging {
     * @param extendedData Meta data of input DICOM files.
     * @return Procedure status
     */
-  def executeMatlab(extendedData: ExtendedData): ProcedureStatus.Value = {
-    execute(extendedData)
+  def executeMatlab(extendedData: ExtendedData, baselineDir: File): ProcedureStatus.Value = {
+    execute(extendedData, baselineDir)
     val outputDir = extendedData.output.dir
     logMatlabLog(outputDir)
     getMatlabProgramStatus(outputDir)

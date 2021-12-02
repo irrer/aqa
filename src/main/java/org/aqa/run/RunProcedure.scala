@@ -383,7 +383,7 @@ object RunProcedure extends Logging {
             status
           } catch {
             case t: Throwable =>
-              logger.error("Analysis crashed: " + fmtEx(t))
+              logger.error("Analysis crashed: " + t + "\n" + fmtEx(t))
               ProcedureStatus.crash
           }
         }

@@ -19,8 +19,10 @@ package org.aqa.webrun.LOC
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.TagFromName
+import edu.umro.DicomDict.TagByName
 import edu.umro.MSOfficeUtil.Excel.ExcelUtil
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.FileUtil
 import org.apache.poi.ss.usermodel.Workbook
 import org.aqa.DicomFile
 import org.aqa.Util
@@ -53,6 +55,9 @@ class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
 
   /** Name of file that Matlab program creates and puts data in. */
   private val outputXmlFileName = "output.xml"
+
+  /** Name of subdirectory under the output directory containing baseline files. */
+  private val baselineDirName = "baseline"
 
   private def getRtimageList(alList: Seq[AttributeList]) = alList.filter(Util.isRtimage)
 
@@ -231,6 +236,8 @@ class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     }
   }
 
+  private def baselineDir(extendedData: ExtendedData) = new File(extendedData.output.dir, baselineDirName)
+
   /**
     * Write the baseline files to the output directory to make them available to the MATLAB code.
     *
@@ -238,7 +245,8 @@ class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     * @param runReq Contain baseline DICOM.
     */
   private def writeBaselineFilesLocally(extendedData: ExtendedData, runReq: LOCRunReq): Unit = {
-    val dir = extendedData.output.dir
+    val dir = baselineDir(extendedData)
+    dir.mkdirs()
 
     val openFile = new File(dir, "OPEN_Baseline.dcm")
     val transFile = new File(dir, "TRANS_Baseline.dcm")
@@ -247,12 +255,35 @@ class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     DicomUtil.writeAttributeListToFile(runReq.baseline.baselineTrans, transFile, "AQA")
   }
 
+  /**
+    * Write the delivery files to the local directory.
+    * @param extendedData Metadata
+    * @param runReq Contains DICOM files.
+    */
+  private def writeDeliveryDicomFiles(extendedData: ExtendedData, runReq: LOCRunReq): Unit = {
+
+    def writeToOutputDir(al: AttributeList, index: Int): Unit = {
+      val imageLabel = {
+        val attr = al.get(TagByName.RTImageLabel)
+        if (attr != null) "_" + attr.getSingleStringValueOrEmptyString()
+        else ""
+      }
+      val name = FileUtil.replaceInvalidFileNameCharacters("delivery" + index + imageLabel + ".dcm", '_')
+      val file = new File(extendedData.output.dir, name)
+      DicomUtil.writeAttributeListToFile(al, file, "AQA")
+    }
+
+    runReq.epidList.zipWithIndex.foreach(x => writeToOutputDir(x._1, x._2))
+  }
+
   override def run(extendedData: ExtendedData, runReq: LOCRunReq, response: Response): ProcedureStatus.Value = {
 
-    logger.info("Writing DICOM baseline to the output directory " + extendedData.output.dir.getAbsolutePath)
+    logger.info("Writing DICOM baseline to the local baseline directory " + extendedData.output.dir.getAbsolutePath)
     writeBaselineFilesLocally(extendedData, runReq)
+    logger.info("Writing DICOM delivery files the output directory " + extendedData.output.dir.getAbsolutePath)
+    writeDeliveryDicomFiles(extendedData, runReq)
     logger.info("Running LOC Matlab program...")
-    val status = LOCMatlab.executeMatlab(extendedData)
+    val status = LOCMatlab.executeMatlab(extendedData, baselineDir(extendedData))
     logger.info("LOC Matlab program finished.  Status: " + status)
 
     if (ProcedureStatus.eq(status, ProcedureStatus.done)) {

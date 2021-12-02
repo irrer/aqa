@@ -16,29 +16,15 @@ object LOCInsertIntoDb extends Logging {
 
   def insert(doc: Elem, outputPK: Long): Unit = {
 
-    import scala.reflect.runtime.universe._
-
-    def insertLeafList[T: TypeTag](xmlTag: String): Unit = {
-      val typeName = typeOf[T].toString
-      def constructAndInsert(outputPK: Long, section: String, leafIndex: Int, value: Double): Unit = {
-        0 match {
-          case _ if typeName.equals(typeOf[LeafOffsetCorrection].toString) => LeafOffsetCorrection(None, outputPK, section, leafIndex, value).insert
-          case _ if typeName.equals(typeOf[LeafTransmission].toString)     => LeafTransmission(None, outputPK, section, leafIndex, value).insert
-          case _ if typeName.equals(typeOf[LOCRSquared].toString)          => LOCRSquared(None, outputPK, section, leafIndex, value).insert
-          case _ if typeName.equals(typeOf[DiffBaselineOpen].toString)     => DiffBaselineOpen(None, outputPK, section, leafIndex, value).insert
-          case _ if typeName.equals(typeOf[DiffBaselineTrans].toString)    => DiffBaselineTrans(None, outputPK, section, leafIndex, value).insert
-          case _                                                           => throw new RuntimeException("Unexpected LOC type: " + typeName)
-        }
-      }
-
+    def insertLeafList(xmlTag: String, insertIntoDb: (String, Int, Double) => Unit): Unit = {
       def leafNodeToLocList(leaf: Node): Unit = {
         val leafIndex = (leaf \ "leafIndex").head.text.toInt
-        (leaf \ "Value").map(n => LOCXml.textToDouble(n.text)).zipWithIndex.foreach(di => constructAndInsert(outputPK, (di._2 + 1).toString, leafIndex, di._1))
+        (leaf \ "Value").map(n => LOCXml.textToDouble(n.text)).zipWithIndex.foreach(di => insertIntoDb((di._2 + 1).toString, leafIndex, di._1))
       }
 
       val nodeList = (doc \ xmlTag \ "LeafList" \ "Leaf") ++ (doc \ xmlTag \ "Leaf")
       nodeList.foreach(leafNodeToLocList)
-      logger.info("LOC data type: " + typeName + "   Number of data points: " + nodeList.size)
+      logger.info("LOC data type: " + xmlTag + "   Number of data points: " + nodeList.size)
     }
 
     def insertEPIDCenterCorrection(): Unit = {
@@ -52,12 +38,31 @@ object LOCInsertIntoDb extends Logging {
 
     // Note that names in XML do not match class names.  Most are just abbreviations,
     // but Correction vs Constancy is disconcerting.
+    //
+    // Further note that some table names do not match the class names, as in:
+    //   class: LOCRSquared is db table rSquared
+
     insertEPIDCenterCorrection()
-    insertLeafList[LeafOffsetCorrection]("LeafOffsetConstancy")
-    insertLeafList[LeafTransmission]("LeafTransmission")
-    insertLeafList[LOCRSquared]("LOCRSquared")
-    insertLeafList[DiffBaselineOpen]("LOCDifferenceFromBaselineOpen")
-    insertLeafList[DiffBaselineTrans]("LOCDifferenceFromBaselineTrans")
+    // @formatter:off
+    
+    insertLeafList( xmlTag = "LeafOffsetConstancy",
+      (section: String, leafIndex: Int, value: Double) => { LeafOffsetCorrection(None, outputPK, section, leafIndex, value).insert })
+    
+    insertLeafList( xmlTag = "LeafTransmission",
+      (section: String, leafIndex: Int, value: Double) => { LeafTransmission(None, outputPK, section, leafIndex, value).insert })
+    
+    insertLeafList( xmlTag = "LOCRSquared",
+      (section: String, leafIndex: Int, value: Double) => { LOCRSquared(None, outputPK, section, leafIndex, value).insert })
+    
+    insertLeafList( xmlTag = "LOCDifferenceFromBaselineOpen",
+      (section: String, leafIndex: Int, value: Double) => { DiffBaselineOpen(None, outputPK, section, leafIndex, value).insert }
+    )
+    
+    insertLeafList( xmlTag = "LOCDifferenceFromBaselineTrans",
+      (section: String, leafIndex: Int, value: Double) => { DiffBaselineTrans(None, outputPK, section, leafIndex, value).insert }
+    )
+    
+    // @formatter:on
   }
 
   /*
