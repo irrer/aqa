@@ -431,6 +431,21 @@ object Output extends Logging {
     size
   }
 
+  /**
+   * Get the list of outputs sorted by data data for the given machine and procedure.
+   * @param machinePK Machine to match.
+   * @param procedurePK Procedure to match.
+   * @return List of outputs, sorted by data date.
+   */
+  def getByMachineAndProcedure(machinePK: Long, procedurePK: Long): Seq[Output] = {
+    val search = for {
+      outPK <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
+    } yield outPK
+
+    val list = Db.run(search.result)
+    list.sortBy(_.dataDate.get.getTime)
+  }
+
   def main(args: Array[String]): Unit = {
     println("Starting Output.main")
     DbSetup.init
