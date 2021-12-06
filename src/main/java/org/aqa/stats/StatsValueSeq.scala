@@ -1,3 +1,3 @@
 package org.aqa.stats
 
-class StatsValueSeq(beamName: String, valueList: Seq[Int]) {}
+class StatsValueSeq(beamName: String, valueList: Seq[StatsValue]) {}
