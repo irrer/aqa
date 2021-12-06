@@ -1,5 +1,6 @@
 package org.aqa.webrun.machLog
 
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.MachineLog
@@ -233,33 +234,7 @@ object MachLogMakeMaintenanceRecord extends Logging {
   private def formatSummary(node: Node): String = {
     val groups = findGroups(node)
     if (groups.nonEmpty) {
-      val minDepth = groups.map(_.groupList.size).min
-      val maxDepth = groups.map(_.groupList.size).max
-
-      /**
-        * Get the group name at the given depth for the LoggGroup.
-        * @param group Get from this group.
-        * @param depth Get for this depth.
-        * @return Name, or None if it does not exist.
-        */
-      def nameForDepth(group: LogGroup, depth: Int) = {
-        if (group.groupList.size > depth)
-          Some((group.groupList(depth) \ "@name").text)
-        else
-          None
-      }
-
-      def nameAtDepth(depth: Int): String = {
-        val list = groups.map(g => nameForDepth(g, depth))
-        val distinct = list.flatten.distinct
-        if ((list.size == list.flatten.size) && (distinct.size == 1))
-          distinct.head
-        else
-          "*"
-      }
-
-      val fullName = (0 until maxDepth).map(nameAtDepth).mkString(" / ")
-
+      val fullName = groups.map(_.groupNames).distinct.sorted.mkString(" || ")
       fullName
     } else
       (node \ "@name").head.text
