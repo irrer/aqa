@@ -36,8 +36,10 @@ object ThreadMonitor extends Logging {
 
     newIdList.foreach(threadIdSet.add)
 
+    val prefix = "::::" // add :::: so that it is obvious in the log.
+
     def show(ti: ThreadInfo): String = {
-      val stackText = ti.getStackTrace.mkString("\n    ")
+      val stackText = ti.getStackTrace.mkString("\n    : : ")
 
       def has(pattern: String): String = {
         "    " + pattern + ": " + { if (stackText.contains(pattern)) "1" else "0" }
@@ -54,7 +56,7 @@ object ThreadMonitor extends Logging {
     }
 
     if (threadInfoList.nonEmpty)
-    Trace.trace(threadInfoList.sortBy(_.getThreadId).map(show).mkString("\n\n"))
+      Trace.trace(threadInfoList.sortBy(_.getThreadId).map(show).mkString("\n\n").replaceAllLiterally("\n", "\n" + prefix + " "))
   }
 
   /**
