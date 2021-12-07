@@ -315,6 +315,7 @@ function constructVertControl(minY, maxY, name) {
    * of the mouse in the vertPane box.
    */
   vertCont.vertRescale = function(event) {
+    var zoomSave = vertCont.chart.zoom();
     event.preventDefault();
     var direction = 1;
     if (event.deltaY < 0) direction = -direction;
@@ -329,6 +330,7 @@ function constructVertControl(minY, maxY, name) {
 
     vertCont.chart.axis.max(vertCont.curMaxY);
     vertCont.chart.axis.min(vertCont.curMinY);
+    vertCont.chart.zoom(zoomSave);
   }
 
   // -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
@@ -338,6 +340,7 @@ function constructVertControl(minY, maxY, name) {
    */
   vertCont.vertScroll = function(event) {
     if (button1Down && (event.movementY != 0)) {
+      var zoomSave = vertCont.chart.zoom();
       var direction = 0.5 * event.movementY;
 
       var range = vertCont.curMaxY - vertCont.curMinY;
@@ -347,6 +350,7 @@ function constructVertControl(minY, maxY, name) {
 
       vertCont.chart.axis.max(vertCont.curMaxY);
       vertCont.chart.axis.min(vertCont.curMinY);
+      vertCont.chart.zoom(zoomSave);
     }
   }
 

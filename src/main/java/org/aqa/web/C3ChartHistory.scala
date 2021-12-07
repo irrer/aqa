@@ -238,6 +238,7 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
 	        console.log("onclick SummaryOf:", ${chartIdTag}SummaryOf(d.index));
 	        console.log("onclick name:", ${chartIdTag}NameOf(d.index));
           */
+          var zoomSave = $chartIdTag.zoom();
           // Hide the maintenance record bar by changing its color to white.
           ${chartIdTag}Hide.push(${chartIdTag}NameOf(d.index));
 	        // console.log("onclick name:", ${chartIdTag}NameOf(d.index));
@@ -245,8 +246,7 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
           // Hide the other half of the maintenance record bar.
           // if ((d.index % 2) === 0) ${chartIdTag}Hide.push(d.index + 1);
           // else ${chartIdTag}Hide.push(d.index - 1);
-          $chartIdTag.flush();
-          setTimeout(function() { $chartIdTag.flush(); }, 50);
+          $chartIdTag.zoom(zoomSave);
 	      },
         types: {
           ${yAxisLabels.map(label => "'" + label + "' : 'line'").mkString(",\n          ")},
