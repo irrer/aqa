@@ -16,6 +16,7 @@
 
 package org.aqa.web
 
+import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Baseline
@@ -87,7 +88,26 @@ class C3ChartHistory(
   private val minDate = xDateList.flatten.minBy(d => d.getTime)
   private val maxDate = xDateList.flatten.maxBy(d => d.getTime)
 
-  private val maintenanceDateList = dateColumn("maintenanceDateList", maintenanceList.flatMap(maintenance => Seq(maintenance.creationTime, maintenance.creationTime)))
+  // private val maintenanceDateList = dateColumn("maintenanceDateList", maintenanceList.flatMap(maintenance => Seq(maintenance.creationTime, maintenance.creationTime)))
+
+  /**
+    * Make the list of maintenance events along with their data.
+    * @return Javascript code that pushes them into an array.
+    */
+  private def makeMRList(): String = {
+    def colorOfMr(mr: MaintenanceRecord): String = {
+      Config.MaintenanceCategoryList.find(c => c.Name.equalsIgnoreCase(mr.category)) match {
+        case Some(cat) => cat.Color
+        case _         => "black"
+      }
+    }
+    def makeMR(mr: MaintenanceRecord): String = {
+      s"""  m.push({ pk: ${mr.maintenanceRecordPK.get}, date: '${Util.standardDateFormat.format(mr.creationTime)}', color: '${colorOfMr(
+        mr
+      )}', visible: true, category: '${mr.category}', summary: `${mr.summary}` , description: `${mr.description}`});"""
+    }
+    maintenanceList.map(makeMR).mkString("\n")
+  }
 
   val all: Seq[Double] = yValues.flatten
 
@@ -107,16 +127,16 @@ class C3ChartHistory(
     }
   }
 
-  private val maintenanceValueList = column("MaintenanceRecord", Seq.fill(maintenanceList.size)(Seq(yRangeY.min, yRangeY.max)).flatten)
-  private val maintenanceSummaryList = textColumn(maintenanceList.map(maintenance => maintenance.summary))
+  // private val maintenanceValueList = column("MaintenanceRecord", Seq.fill(maintenanceList.size)(Seq(yRangeY.min, yRangeY.max)).flatten)
+  // private val maintenanceSummaryList = textColumn(maintenanceList.map(maintenance => maintenance.summary))
   private val maintenanceColorList =
     maintenanceList.flatMap(maintenance => {
       val c = MaintenanceCategory.findMaintenanceCategoryMatch(maintenance.category).Color
       Seq(c, c)
     })
 
-  private val maintenanceColorListFormatted = textColumn(maintenanceColorList)
-  private val maintenanceCategoryList = textColumn(maintenanceList.map(maintenance => maintenance.category))
+  // private val maintenanceColorListFormatted = textColumn(maintenanceColorList)
+  // private val maintenanceCategoryList = textColumn(maintenanceList.map(maintenance => maintenance.category))
 
   private val defaultMaintenanceColor = if (maintenanceColorList.nonEmpty) maintenanceColorList.head else "#aaaaaa"
 
@@ -159,7 +179,8 @@ class C3ChartHistory(
     if (allGrid.isEmpty) ""
     else {
 
-      """,
+      """
+    ,
     grid: {
         y: {
             lines: [
@@ -181,90 +202,82 @@ class C3ChartHistory(
     s"""
 var ${chartIdTag}Var = constructVertControl(${yRangeY.min}, ${yRangeY.max}, "$chartIdTag");
 
-var ${chartIdTag}Hide = [ "nil" ];
-var ${chartIdTag}MaintenanceCategoryList = $maintenanceCategoryList;
-var ${chartIdTag}MaintenanceSummaryList = $maintenanceSummaryList;
-
-
-function ${chartIdTag}CategoryOf(i) {
-  return ${chartIdTag}MaintenanceCategoryList[Math.trunc(i/2.0)];
-}
-
-function ${chartIdTag}SummaryOf(i) {
-  return ${chartIdTag}MaintenanceSummaryList[Math.trunc(i/2.0)];
-}
-
-function ${chartIdTag}NameOf(i) {
-  return ${chartIdTag}CategoryOf(i) + ' : ' + ${chartIdTag}SummaryOf(i);
-}
-
 insertVertHtml("$chartIdTag");
 
-var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
+function ${chartIdTag}maker(chart, chartId) {
+  var info = {};
+  info.chartId = chartId;
+  info.maintenanceLo = ${yRangeY.min};
+  info.maintenanceHi = ${yRangeY.max};
+  var m = [];
+  ${makeMRList()}
+
+  info.maintenanceList = m;
+
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  MRsetupVisibleList(info);
+
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  info.values =
+    [
+      $dateText,
+      $yText
+    ];
+
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  return info;
+};
+
+var ${chartIdTag}info = ${chartIdTag}maker($chartIdTag, "$chartIdTag");
+
+
+var $chartIdTag = c3.generate({
     tooltip: {
       format: {
         value: function (value, ratio, id, index) {
-          var maintenanceSummaryList = $maintenanceSummaryList;
-          if (id === 'MaintenanceRecord') return maintenanceSummaryList[index/2];
-          return d3.format('$yFormat')(value);
-          },
-          name: function (name, ratio, id, index) {
-            var maintenanceCategoryList = $maintenanceCategoryList;
-              if (id === 'MaintenanceRecord') return maintenanceCategoryList[index/2];
-              return id;
-          },
-          title: function (value) {
-              return formatDate(value) + " &nbsp; " + formatTime(value);
+          if (id === 'MaintenanceRecord') {
+            // Explicitly mark as undefined so that C3 will not show both high and low maintenance record values
+            if ((index % 2) == 1) return undefined;
+            return MRindexToVisible(${chartIdTag}info, index).summary;
           }
+          return d3.format('$yFormat')(value);
+        },
+        name: function (name, ratio, id, index) {
+          if (id === 'MaintenanceRecord') {
+            // Explicitly mark as undefined so that C3 will not show both high and low maintenance record values
+            if ((index % 2) == 1) return undefined;
+            return MRindexToVisible(${chartIdTag}info, index).category;
+          }
+          return name;
+        },
+        title: function (value) {
+          return formatDate(value) + " &nbsp; " + formatTime(value);
+        }
       }
     },
     data: {
       xs: {
-          $yLabels
+           $yLabels
           'MaintenanceRecord': 'maintenanceDateList'
         },
         xFormat: standardDateFormat,
-        columns: [
-          $dateText,
-          $yText,
-          $maintenanceDateList,
-          $maintenanceValueList
-        ],
-	      onclick: function (d, i) {
-          /*
-	        console.log("onclick", d, i);
-	        console.log("onclick d.index:", d.index);
-	        console.log("onclick CategoryOf:", ${chartIdTag}CategoryOf(d.index));
-	        console.log("onclick SummaryOf:", ${chartIdTag}SummaryOf(d.index));
-	        console.log("onclick name:", ${chartIdTag}NameOf(d.index));
-          */
-          var zoomSave = $chartIdTag.zoom();
-          // Hide the maintenance record bar by changing its color to white.
-          ${chartIdTag}Hide.push(${chartIdTag}NameOf(d.index));
-	        // console.log("onclick name:", ${chartIdTag}NameOf(d.index));
-          // ${chartIdTag}Hide.push(d.index);
-          // Hide the other half of the maintenance record bar.
-          // if ((d.index % 2) === 0) ${chartIdTag}Hide.push(d.index + 1);
-          // else ${chartIdTag}Hide.push(d.index - 1);
-          $chartIdTag.zoom(zoomSave);
-	      },
+
+        columns: getColumns(${chartIdTag}info),
+
+        onclick: function(d, i) { MRselectMaintenanceRecord(${chartIdTag}info, d, i);},
+
         types: {
           ${yAxisLabels.map(label => "'" + label + "' : 'line'").mkString(",\n          ")},
           'MaintenanceRecord': 'bar'
         },
         color: function (color, d) {
-          var maintenanceColorList = $maintenanceColorListFormatted;
           if (d.id === 'MaintenanceRecord') {
-            var name = ${chartIdTag}NameOf(d.index);
-            for (let ii = 0; ii < ${chartIdTag}Hide.length; ii++) {
-              // var hide = ${chartIdTag}Hide[ii];
-              // console.log("hide:>>", hide, "<<");
-              // console.log("name:>>", name, "<<");
-              if (${chartIdTag}Hide[ii] === name)
-                return '#ffffffff';  // Set to transparent.  White would work also.
-            }
-            // This maintenance event is visible.
-            return maintenanceColorList[d.index % maintenanceColorList.length];
+            var x = MRindexToVisible(${chartIdTag}info, d.index);
+            if (x === undefined) return "black";
+            return x.color;
           }
           if (d.index === $yIndex)
             return 'orange';
@@ -310,6 +323,8 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
       pattern : $yColorNameList
     }
   });
+
+${chartIdTag}info.chart = $chartIdTag;
 
 initVertControl(${chartIdTag}Var, $chartIdTag, "$chartIdTag");
 """

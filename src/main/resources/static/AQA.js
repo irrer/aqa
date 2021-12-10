@@ -263,10 +263,13 @@ setTimeout(function () {if (button1Down === undefined) initButton1State();}, 100
  * Also note that because the chart has not been generated yet, some of the functionality
  * can not be set up because the data from the chart is required.
  *
+ * The following is where the maintenance record details section is inserted.
+ *  <div id='@@details'></div>
  */
 function insertVertHtml(name) {
 
   var vertHtml = `
+    <div id='@@details'></div>
     <table id='@@Table' style='display: table; width: 100%;'>
       <tr>
         <td align='left'>
@@ -442,3 +445,205 @@ function initVertControl(vertCont, chart, name) {
   vertPane.innerHTML = vertCont.vertPaneContent;
   vertCont.vertPane = vertPane;
 }
+
+// ----------------------------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------------------------
+
+/*
+ * The following is the MR (Maintenance Record) section which supports the viewing, hiding, and
+ * showing of maintenance records.
+ */
+
+function MRsetupVisibleList(info) {
+  list = [];
+  var i = 0;
+  for (i = 0; i < info.maintenanceList.length; i++) {
+    if (info.maintenanceList[i].visible) list.push(info.maintenanceList[i]);
+  }
+  info.visibleList = list;
+  console.log("num visable: " + info.visibleList.length);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+/**
+ * Given the index from C3, return the nth visible maintenance record.
+ */
+function MRindexToVisible(info, index) {
+  var i = Math.min(Math.trunc(index / 2), info.visibleList.length-1);
+  var j = info.visibleList[i];
+  if (j === undefined) {
+    console.log("index: " + index + "  i: " + i);
+  }
+  return j;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+function MRgetMaintenanceDateList(info) {
+    var list = [ 'maintenanceDateList' ];
+    var i = 0;
+    for (i = 0; i < info.visibleList.length; i++) {
+        var m = info.visibleList[i];
+        if (m.visible) {
+          list.push(m.date);
+          list.push(m.date);
+        }
+    }
+    return list;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+function MRgetMaintenanceRecordList(info) {
+  var list = [ 'MaintenanceRecord' ];
+  var i = 0;
+  for (i = 0; i < info.visibleList.length; i++) {
+    var m = info.visibleList[i];
+    if (m.visible) {
+      list.push(info.maintenanceLo);
+      list.push(info.maintenanceHi);
+    }
+  }
+  return list;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+function getColumns(info) {
+  var cols = [];
+  var i = 0;
+  for (i = 0; i < info.values.length; i++) {
+    cols.push(info.values[i]);
+  }
+
+  cols.push(MRgetMaintenanceDateList(info));
+  cols.push(MRgetMaintenanceRecordList(info));
+  return cols;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+var MRprefix =
+  '<div style="border:1px solid lightgray;">\n' +
+  '  <table class="table table-responsive" style="table-layout: auto; border-bottom:1px solid lightgray;">\n';
+
+function MRsuffix(chartId) {
+  var text =
+    '  </table>\n' +
+    '    <button onclick=\'MRclose("'+ chartId  + 'details")\' style="margin:10px;">Close</button>\n' +
+    '</div>\n';
+  return text;
+}
+
+function MRhtmlButton(chartId, mr) {
+  console.log("MRhtmlButton  hey");
+  console.log("MRhtmlButton  chartId: " + chartId);
+  var func = "MRhide(" + chartId + "info.chartId, " + mr.pk + ")";
+  var text = '<td width="50" style="border-bottom: 1px solid lightgray;"> <button onclick="' + func + '">Hide/Show</button> </td>\n';
+  return text;
+}
+
+function MRhtmlDate(mr) {
+    var date = new Date(mr.date);
+    var t = formatDate(date) + " " + formatTime(date);
+    var text = '<td width="150" style="border-bottom: 1px solid lightgray;">' + t + '</td>\n';
+    return text;
+}
+
+function MRhtmlSummary(chartId, mr) {
+    var id = chartId + "expand" + mr.pk;
+    var box = '<b style="background:' + mr.color + ';height:8;width:8;margin:3px;"> &nbsp; &nbsp; </b>'
+
+    var text =
+    '<td style="border-bottom: 1px solid lightgray;">\n' +
+    '  <button type="button" class="btn btn-info" data-toggle="collapse" data-target="#' + id + '" title="Click to expand details">&#x1F50D;</button> ' + box + " " + mr.category + " : " +  mr.summary + '\n' +
+    '  <div id="' + id + '" class="collapse">\n' +
+    '    <pre style="overflow:auto; display:flex;">\n' +
+           mr.description +
+    '    </pre>\n' +
+    '  </div>\n' +
+    '</td>\n';
+    return text;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+function MRfindNear(info, dateText) {
+  var interval_ms = 8 * 60 * 60 * 1000;
+  var date = new Date(dateText);
+  var lo = date.getTime() - interval_ms;
+  var hi = date.getTime() + interval_ms;
+
+  var mrList = [];
+
+  var i = 0;
+  for (i = 0; i < info.maintenanceList.length; i++) {
+    var mr = info.maintenanceList[i];
+    var d = (new Date(mr.date)).getTime();
+    if ((d > lo) && (d < hi))
+      mrList.push(mr);
+  }
+  return mrList;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+function MRmakeDetails(info, d, i) {
+  var mr = MRindexToVisible(info, d.index);
+  var mrList = MRfindNear(info, mr.date);
+  var i = 0;
+  var rowHtml = "";
+  for (i = 0; i < mrList.length; i++) {
+     rowHtml = rowHtml +
+       '<tr>\n' +
+       MRhtmlButton(info.chartId, mrList[i]) +
+       MRhtmlDate(mrList[i]) +
+       MRhtmlSummary(info.chartId, mrList[i]) +
+       "</tr>\n";
+  }
+  var text = MRprefix + rowHtml + MRsuffix(info.chartId);
+  // console.log("details text:\n" + text);
+  return text;
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+/**
+ * Respond to a button push and toggle the visible state of the maintenance event.
+ */
+function MRhide(chartId, pkText) {
+  var info = eval(chartId + "info;");
+  console.log("info: " + info);
+  var pk = Number(pkText);
+  var mr = undefined;
+  var i = 0;
+  for (i = 0; i < info.maintenanceList.length; i++) {
+    if (info.maintenanceList[i].pk === pk)
+      mr = info.maintenanceList[i];
+  }
+
+  var zoomSave = info.chart.zoom();
+  mr.visible = !mr.visible;
+  MRsetupVisibleList(info);
+  info.chart.load({columns: getColumns(info)});
+  info.chart.zoom(zoomSave);
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+function MRselectMaintenanceRecord(info, d, i) {
+  var dets = document.getElementById(info.chartId + "details")
+  dets.innerHTML = MRmakeDetails(info, d, i);
+  dets.style.display = "inline";
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+function MRclose(id) {
+  console.log("closing from jj id: " + id);
+  document.getElementById(id).style.display = "none";
+}
+
+// ---------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------
