@@ -219,7 +219,6 @@ function moveHistoryChart(chart, dateList, start, count) {
   var rng = chart.axis.range();
   rng.min.x = dateList[mn];
   rng.max.x = dateList[mx];
-  // console.log(mn + " : " + mx);
   chart.axis.range(rng);
 }
 
@@ -461,7 +460,6 @@ function MRsetupVisibleList(info) {
     if (info.maintenanceList[i].visible) list.push(info.maintenanceList[i]);
   }
   info.visibleList = list;
-  console.log("num visable: " + info.visibleList.length);
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -473,7 +471,7 @@ function MRindexToVisible(info, index) {
   var i = Math.min(Math.trunc(index / 2), info.visibleList.length-1);
   var j = info.visibleList[i];
   if (j === undefined) {
-    console.log("index: " + index + "  i: " + i);
+    console.log("Error: index: " + index + "  i: " + i);
   }
   return j;
 }
@@ -524,9 +522,16 @@ function getColumns(info) {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-var MRprefix =
+function MRprefix(chartId) {
+  var content =
   '<div style="border:1px solid lightgray;">\n' +
   '  <table class="table table-responsive" style="table-layout: auto; border-bottom:1px solid lightgray;">\n';
+  return content;
+}
+
+function MRsearch(chartId) {
+  console.log(chartId + " hiya"); // TODO
+}
 
 function MRsuffix(chartId) {
   var text =
@@ -536,11 +541,12 @@ function MRsuffix(chartId) {
   return text;
 }
 
-function MRhtmlButton(chartId, mr) {
-  console.log("MRhtmlButton  hey");
-  console.log("MRhtmlButton  chartId: " + chartId);
-  var func = "MRhide(" + chartId + "info.chartId, " + mr.pk + ")";
-  var text = '<td width="50" style="border-bottom: 1px solid lightgray;"> <button onclick="' + func + '">Hide/Show</button> </td>\n';
+function MRhtmlCheckbox(chartId, mr) {
+  var func = '"MRhide(' + "'" + chartId + "', " + mr.pk + ')"';
+  var oninput = "oninput=" + func;
+  var id = 'id="' + chartId + 'showHide' + mr.pk + '"';
+  var checked = "checked='" + mr.visible.toString() + "'";
+  var text = '<td title="Show/Hide" width="25" style="border-bottom: 1px solid lightgray;"> <input type="checkbox" ' + id + ' ' + oninput + ' ' + checked + '"/> </td>\n';
   return text;
 }
 
@@ -597,13 +603,12 @@ function MRmakeDetails(info, d, i) {
   for (i = 0; i < mrList.length; i++) {
      rowHtml = rowHtml +
        '<tr>\n' +
-       MRhtmlButton(info.chartId, mrList[i]) +
+       MRhtmlCheckbox(info.chartId, mrList[i]) +
        MRhtmlDate(mrList[i]) +
        MRhtmlSummary(info.chartId, mrList[i]) +
        "</tr>\n";
   }
-  var text = MRprefix + rowHtml + MRsuffix(info.chartId);
-  // console.log("details text:\n" + text);
+  var text = MRprefix(info.chartId) + rowHtml + MRsuffix(info.chartId);
   return text;
 }
 
@@ -614,7 +619,6 @@ function MRmakeDetails(info, d, i) {
  */
 function MRhide(chartId, pkText) {
   var info = eval(chartId + "info;");
-  console.log("info: " + info);
   var pk = Number(pkText);
   var mr = undefined;
   var i = 0;
@@ -623,8 +627,10 @@ function MRhide(chartId, pkText) {
       mr = info.maintenanceList[i];
   }
 
+  var id = chartId + 'showHide' + mr.pk
+  var checkbox = document.getElementById(id);
   var zoomSave = info.chart.zoom();
-  mr.visible = !mr.visible;
+  mr.visible = checkbox.checked;
   MRsetupVisibleList(info);
   info.chart.load({columns: getColumns(info)});
   info.chart.zoom(zoomSave);
@@ -641,7 +647,6 @@ function MRselectMaintenanceRecord(info, d, i) {
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 function MRclose(id) {
-  console.log("closing from jj id: " + id);
   document.getElementById(id).style.display = "none";
 }
 
