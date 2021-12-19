@@ -25,7 +25,6 @@ import org.aqa.web.WebServer
 
 import java.io.File
 import java.sql.Timestamp
-import java.text.SimpleDateFormat
 import java.util.Date
 
 case class Output(
@@ -308,12 +307,12 @@ object Output extends Logging {
 
     if (!inputDir.isDirectory) {
       Input.getFilesFromDatabase(output.inputPK, inputDir.getParentFile)
-    }
-
-    if (!output.dir.isDirectory) {
       Output.getFilesFromDatabase(output.outputPK.get, inputDir)
+    } else {
+      if (!output.dir.isDirectory) {
+        Output.getFilesFromDatabase(output.outputPK.get, inputDir)
+      }
     }
-
   }
 
   /**
@@ -432,11 +431,11 @@ object Output extends Logging {
   }
 
   /**
-   * Get the list of outputs sorted by data data for the given machine and procedure.
-   * @param machinePK Machine to match.
-   * @param procedurePK Procedure to match.
-   * @return List of outputs, sorted by data date.
-   */
+    * Get the list of outputs sorted by data data for the given machine and procedure.
+    * @param machinePK Machine to match.
+    * @param procedurePK Procedure to match.
+    * @return List of outputs, sorted by data date.
+    */
   def getByMachineAndProcedure(machinePK: Long, procedurePK: Long): Seq[Output] = {
     val search = for {
       outPK <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
@@ -446,35 +445,71 @@ object Output extends Logging {
     list.sortBy(_.dataDate.get.getTime)
   }
 
+  /*
   def main(args: Array[String]): Unit = {
     println("Starting Output.main")
     DbSetup.init
+    (0 to 5).foreach(_ => println("---------------------------------------------------------------------------------"))
 
-    if (false) {
-      println("testing redundantWith")
-      val redundant = redundantWith(listByInputPK(73).head)
-      println("redundant size: " + redundant.size)
-      redundant.foreach(o => println(o))
-      System.exit(0)
+    val outputList = {
+      val search = for {
+        outPK <- Output.query.map(_.outputPK)
+      } yield outPK
+
+      val list = Db.run(search.result).sorted.reverse
+      list
     }
 
-    if (false) {
-      println("starting input find")
-      val list = listByInputPK(70)
-      println("list size: " + list.size)
-      list.foreach(o => println(o))
-      System.exit(0)
+    println("Number of outputs: " + outputList.size)
+
+    val start = System.currentTimeMillis()
+
+    val count = outputList.size.toDouble / 100
+
+    def showContent(outputPK: Long, index: Int): Unit = {
+      def doIt(output: Output, fileSystem: Array[Byte], db: OutputFiles): Unit = {
+        val fsg = if (fileSystem.length > db.zippedContent.length) " gt" else ""
+        val elapsed_ms = System.currentTimeMillis() - start
+        val elapsed = Util.elapsedTimeHumanFriendly(elapsed_ms)
+        val remain = {
+          val avg = elapsed_ms / (index + 1.0)
+          val r = ((outputList.size - index) * avg).toLong
+          Util.elapsedTimeHumanFriendly(r)
+        }
+        println(
+          (index + 1).formatted("%5d") + ((index + 1) / count).formatted("%7.3f") +
+            "    outputPK: " + outputPK +
+            "    " + elapsed.formatted("%10s") +
+            "    " + remain.formatted("%10s") +
+            "  " + output.dir.getAbsolutePath +
+            "    fileSystem size: " + fileSystem.length.formatted("%10d") +
+            "    db size: " + db.zippedContent.length.formatted("%10d") + fsg
+        )
+      }
+
+      try {
+        val output = {
+          val o = get(outputPK)
+          if (o.isEmpty)
+            println("Failed.  outputPK: " + outputPK + "  no such output")
+          o.get
+        }
+        if (output.dir.isDirectory) {
+          val fileSystem = output.makeZipOfFiles
+          val outFilesOpt = OutputFiles.getByOutput(output.outputPK.get)
+          if (outFilesOpt.nonEmpty)
+            doIt(output, fileSystem, outFilesOpt.get)
+          else
+            println("Failed.  outputPK: " + outputPK + "  no such OutputFile")
+        } else
+          println("Failed.  outputPK: " + outputPK + "  no such dir:  " + output.dir.getAbsolutePath)
+      } catch {
+        case t: Throwable => println("Failed.  outputPK: " + outputPK + " : " + fmtEx(t))
+      }
     }
 
-    if (true) {
-      val fmt = new SimpleDateFormat("yyyy-MM-dd")
-      val lo = fmt.parse("2021-02-04")
-      val hi = fmt.parse("2021-02-05")
-
-      def d2ts(date: Date) = new Timestamp(date.getTime)
-
-      getOutputByDateRange(1, d2ts(lo), d2ts(hi))
-    }
+    outputList.zipWithIndex.foreach(oi => showContent(oi._1, oi._2))
 
   }
+   */
 }
