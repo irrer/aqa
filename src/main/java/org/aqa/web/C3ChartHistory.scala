@@ -102,9 +102,10 @@ class C3ChartHistory(
       }
     }
     def makeMR(mr: MaintenanceRecord): String = {
-      s"""  m.push({ pk: ${mr.maintenanceRecordPK.get}, date: '${Util.standardDateFormat.format(mr.creationTime)}', color: '${colorOfMr(
-        mr
-      )}', visible: true, category: '${mr.category}', summary: `${mr.summary}` , description: `${mr.description}`});"""
+      val pk = mr.maintenanceRecordPK.get.toString
+      val date = Util.standardDateFormat.format(mr.creationTime)
+      val color = colorOfMr(mr)
+      s"""  m.push({ pk: $pk, date: '$date', color: '$color', visible: true, category: '${mr.category}', summary: `${mr.summary}` , description: `${mr.description}`});"""
     }
     maintenanceList.map(makeMR).mkString("\n")
   }

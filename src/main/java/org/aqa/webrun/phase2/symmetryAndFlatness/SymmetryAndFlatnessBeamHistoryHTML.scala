@@ -46,14 +46,14 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
   private val yIndex = history.indexWhere(h => h.symmetryAndFlatness.outputPK == output.outputPK.get)
 
   private val baselineMaintenanceList = {
-    history
-      .filter(h => h.symmetryAndFlatness.isBaseline)
-      .map(h =>
+    history.zipWithIndex
+      .filter(hi => hi._1.symmetryAndFlatness.isBaseline)
+      .map(hi =>
         MaintenanceRecord(
-          maintenanceRecordPK = None,
+          maintenanceRecordPK = Some(-(hi._2 + 1)), // use a fake primary key to identify this in the javascript code
           category = MaintenanceCategory.setBaseline,
           machinePK,
-          creationTime = h.output.dataDate.get,
+          creationTime = hi._1.output.dataDate.get,
           userPK = -1,
           outputPK = None,
           machineLogPK = None,
