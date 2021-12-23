@@ -1,4 +1,4 @@
-<div title="Patient Procedure" class="col-md-8 col-md-offset-1">
+<div title="Patient Procedure" class="col-md-9 col-md-offset-1">
     <!--
     Copyright 2021 Regents of the University of Michigan
 
@@ -18,26 +18,71 @@
     <h2>@@title@@</h2>
 
     <p>
-        The <a href="/admin/PatientProcedureList">Patient Procedure</a> list associates patient IDs with the test
-        procedures that are run on them.  This supports the AQA Client service that supports automatic uploading
-        of data.
+        The <a href="/admin/PatientProcedureList">Patient Procedures</a> list specifies the processing that should be
+        done for given files based on patient IDs (MRNs). It can be accessed from the <a href="/static/admin.html">Administration</a>
+        page.
+    </p>
+
+
+    <h3>List of Patient Procedures</h3>
+
+    <div style="margin:10px; border: 1px solid lightgrey;">
+        <img src="PatientProcedureList.png" style="margin:30px;" width="843px;"/>
+    </div>
+
+    <h3 style="margin-top:40px;">Editing</h3>
+
+    <p>
+        To create a new item, click <b>Create new Patient Procedure</b>. To edit an existing item, click the
+        corresponding patient ID.
+    </p>
+
+    <div style="margin:10px; border: 1px solid lightgrey;">
+        <img src="PatientProcedureEdit.png" style="margin:30px;" width="413px;"/>
+    </div>
+
+    <ul>
+        <li style="margin-top:40px;">
+            Fill in the <b>Patient ID</b> (MRN). <em> Do not use the patient name.</em>
+        </li>
+
+        <li style="margin-top:20px;">
+            Select the procedure to be performed on that patient.
+        </li>
+
+        <li style="margin-top:20px;">
+            Make sure the <b>Active</b> flag is checked. To indicate that a patient ID is no longer in active use,
+            uncheck
+            this flag.
+        </li>
+
+        <li style="margin-top:20px;">
+            Click the <b>Save</b> button which will return you to the list.
+        </li>
+
+        <li style="margin-top:20px;">
+            It can take several minutes (default is 5) before the changes go into effect.
+        </li>
+
+    </ul>
+
+    <h3 style="margin-top:40px;">Further Details</h3>
+
+    <p>
+        This is used by the AQA Client service that supports automatic uploading of data. The AQA Client service must be
+        installed on your local system for data to be automatically uploaded. At this time it is still experimental and
+        not available for general use.
     </p>
 
     <p>
-        The AQA Client service must be installed on your local system for data to be automatically uploaded.
-        At this time it is still experimental and not available for general use.
-    </p>
-
-    <p>
-        Periodically, the planning system is scanned for new data for each of the patient IDs.
-        When one is found, it looks at this list to see which procedure is to be run on it and runs
-        the analysis.
+        Periodically, the AQA Client scans the planning system for new data for each of the patient IDs. When new data
+        is found, it looks at this list to see how it is to be processed, and sends the data to the AQA server.
     </p>
 
     <p>
         When transitioning to a new set of patient IDs, the new ones may be added to the list before
         they come into clinical use. Said another way, the old and new patient IDs may be listed at
-        the same time.
+        the same time and the client will search both for new data.
     </p>
 
     <p>
@@ -47,10 +92,15 @@
     </p>
 
     <p>
+        As patient IDs fall out of use, they should be removed from the list or marked as not active to reduce resource
+        use.
+    </p>
+
+    <p>
         It is a good convention to assign a patient ID to a single machine because it simplifies
         viewing in the planning system. The AQA system does not impose this restriction. If a
         patient that was originally intended to be associated for one machine but is scanned on
         another machine, then the results will be linked to the machine, not the patient.
     </p>
-
+    </p>
 </div>
