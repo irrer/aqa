@@ -59,7 +59,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
           machineLogPK = None,
           machineLogNodeIndex = None,
           summary = "Baseline",
-          description = "Baseline"
+          description = "Set Baseline effective " + hi._1.output.dataDate.get
         )
       )
   }
