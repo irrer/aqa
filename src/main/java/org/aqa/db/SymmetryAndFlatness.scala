@@ -34,7 +34,7 @@ case class SymmetryAndFlatness(
     outputPK: Long, // output primary key
     SOPInstanceUID: String, // UID of source image
     beamName: String, // name of beam in plan
-    isBaseline: Boolean, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.   Note that this is a string instead of a boolean because boolean is not supported by some databases.
+    isBaseline: Boolean, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.
     top_cu: Double, // average value of top point pixels in CU
     bottom_cu: Double, // average value of bottom point pixels in CU
     left_cu: Double, // average value of left point pixels in CU
@@ -287,7 +287,7 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     *
     * @param machinePK : For this machine
     * @param beamName  : For this beam
-    * @return Complete history with baselines.
+    * @return Complete history with baselines sorted by date.
     *
     */
   def history(machinePK: Long, beamName: String): Seq[SymmetryAndFlatnessHistory] = {
@@ -347,6 +347,7 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     * @return The baseline value to use, or None if not found.
     */
   def getBaseline(machinePK: Long, beamName: String, dataDate: Timestamp): Option[SymmetryAndFlatnessHistory] = {
+    //noinspection ReverseFind
     val baseline = history(machinePK, beamName).reverse.find(h => h.output.dataDate.get.getTime <= dataDate.getTime)
     baseline
   }
