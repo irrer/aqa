@@ -80,7 +80,19 @@ object MaintenanceRecord {
     def summary = column[String]("summary")
     def description = column[String]("description")
 
-    def * = (maintenanceRecordPK.?, category, machinePK, creationTime, userPK, outputPK, machineLogPK, machineLogNodeIndex, summary, description) <> (MaintenanceRecord.apply _ tupled, MaintenanceRecord.unapply)
+    def * =
+      (
+        maintenanceRecordPK.?,
+        category,
+        machinePK,
+        creationTime,
+        userPK,
+        outputPK,
+        machineLogPK,
+        machineLogNodeIndex,
+        summary,
+        description
+      ) <> (MaintenanceRecord.apply _ tupled, MaintenanceRecord.unapply)
 
     def machineFK = foreignKey("MaintenanceRecord_machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
     def userFK = foreignKey("MaintenanceRecord_userPKConstraint", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Restrict)
