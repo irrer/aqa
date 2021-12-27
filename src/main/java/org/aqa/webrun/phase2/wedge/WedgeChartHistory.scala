@@ -23,6 +23,7 @@ import org.aqa.db.MaintenanceCategory
 import org.aqa.db.MaintenanceRecord
 import org.aqa.db.Output
 import org.aqa.db.WedgePoint
+import org.aqa.db.WedgePoint.WedgePointHistory
 import org.aqa.web.C3Chart
 import org.aqa.web.C3Chart.Tolerance
 import org.aqa.web.C3ChartHistory
@@ -77,23 +78,16 @@ class WedgeChartHistory(outputPK: Long) {
     } else None
   }
 
-  private def baselineMaintenanceList(beamHistory: Seq[WedgePoint.WedgePointHistory]): Seq[MaintenanceRecord] = {
-    beamHistory
-      .filter(wh => wh.wedgePoint.isBaseline)
-      .map(wh =>
-        MaintenanceRecord(
-          maintenanceRecordPK = None,
-          category = MaintenanceCategory.setBaseline,
-          machinePK,
-          creationTime = wh.output.dataDate.get,
-          userPK = -1,
-          outputPK = None,
-          machineLogPK = None,
-          machineLogNodeIndex = None,
-          summary = "Baseline",
-          description = "Baseline"
-        )
-      )
+  private def setBaselineList(history: Seq[WedgePoint.WedgePointHistory]): Seq[C3ChartHistory.SetBaseline] = {
+    def toSetBaseline(w: WedgePointHistory): Option[C3ChartHistory.SetBaseline] = {
+      val date = w.output.dataDate.get
+      w match {
+        case _ if w.wedgePoint.isBaseline                                        => Some(C3ChartHistory.SetBaseline(explicit = true, date))
+        case _ if w.wedgePoint.wedgePointPK == w.baselineWedgePoint.wedgePointPK => Some(C3ChartHistory.SetBaseline(explicit = false, date))
+        case _                                                                   => None
+      }
+    }
+    history.flatMap(toSetBaseline)
   }
 
   /**
@@ -106,7 +100,7 @@ class WedgeChartHistory(outputPK: Long) {
   private def getBeamMaintenanceRecordList(beamHistory: Seq[WedgePoint.WedgePointHistory]): Seq[MaintenanceRecord] = {
     val min = beamHistory.head.output.dataDate.get.getTime
     val max = beamHistory.last.output.dataDate.get.getTime
-    val inTimeRange = allMaintenanceRecordList.filter(m => (m.creationTime.getTime >= min) && (m.creationTime.getTime <= max)) ++ baselineMaintenanceList(beamHistory)
+    val inTimeRange = allMaintenanceRecordList.filter(m => (m.creationTime.getTime >= min) && (m.creationTime.getTime <= max))
     inTimeRange.sortBy(_.creationTime.getTime)
   }
 
@@ -132,6 +126,8 @@ class WedgeChartHistory(outputPK: Long) {
       new C3Chart.YRange(mid - range, mid + range)
     }
 
+    val baselineList = setBaselineList(beamHistory)
+
     new C3ChartHistory(
       chartIdOpt = Some(chartId),
       maintenanceList = maintenanceRecordList,
@@ -147,7 +143,8 @@ class WedgeChartHistory(outputPK: Long) {
       yValues = Seq(beamHistory.map(_.wedgePoint.percentOfBackground_pct)),
       yIndex = indexOfThis(beamHistory),
       yFormat = ".4g",
-      yColorList = Seq(WedgeHTML.lineColor)
+      yColorList = Seq(WedgeHTML.lineColor),
+      baselineList
     ).javascript
   }
 

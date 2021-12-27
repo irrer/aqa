@@ -24,6 +24,7 @@ import org.aqa.db.MaintenanceCategory
 import org.aqa.db.MaintenanceRecord
 
 import java.awt.Color
+import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.util.Date
 import scala.xml.Elem
@@ -60,7 +61,8 @@ class C3ChartHistory(
     yValues: Seq[Seq[Double]],
     yIndex: Int,
     yFormat: String,
-    yColorList: Seq[Color]
+    yColorList: Seq[Color],
+    setBaselineList: Seq[C3ChartHistory.SetBaseline] = Seq()
 ) extends Logging {
 
   private val chartIdTag: String = {
@@ -91,7 +93,7 @@ class C3ChartHistory(
   // private val maintenanceDateList = dateColumn("maintenanceDateList", maintenanceList.flatMap(maintenance => Seq(maintenance.creationTime, maintenance.creationTime)))
 
   /**
-    * Make the list of maintenance events along with their data.
+    * Make the list of baseline and maintenance events along with their data.
     * @return Javascript code that pushes them into an array.
     */
   private def makeMRList(): String = {
@@ -101,13 +103,35 @@ class C3ChartHistory(
         case _         => "black"
       }
     }
-    def makeMR(mr: MaintenanceRecord): String = {
+    def makeMR(mr: MaintenanceRecord): (Timestamp, String) = {
       val pk = mr.maintenanceRecordPK.get.toString
       val date = Util.standardDateFormat.format(mr.creationTime)
       val color = colorOfMr(mr)
-      s"""  m.push({ pk: $pk, date: '$date', color: '$color', visible: true, category: '${mr.category}', summary: `${mr.summary}` , description: `${mr.description}`});"""
+      val text = s"""  m.push({ pk: $pk, date: '$date', color: '$color', visible: true, category: '${mr.category}', summary: `${mr.summary}` , description: `${mr.description}`});"""
+      (mr.creationTime, text)
     }
-    maintenanceList.map(makeMR).mkString("\n")
+
+    val baselineColor = {
+      Config.MaintenanceCategoryList.find(c => c.Name.equalsIgnoreCase(MaintenanceCategory.setBaseline)) match {
+        case Some(cat) => cat.Color
+        case _         => "black"
+      }
+    }
+
+    val setBaselineCategoryName = MaintenanceCategory.setBaseline
+
+    def makeSetBaseline(pk: Long, setBaseline: C3ChartHistory.SetBaseline): (Timestamp, String) = {
+      val date = Util.standardDateFormat.format(setBaseline.date)
+      val summary = setBaselineCategoryName + { if (setBaseline.explicit) " Explicitly" else " Implicitly" }
+      val description = setBaselineCategoryName + { if (setBaseline.explicit) " set explicitly by user." else " implicitly defined because it is the first value." }
+      val text = s"""  m.push({ pk: $pk, date: '$date', color: '$baselineColor', visible: true, category: '$setBaselineCategoryName', summary: `$summary` , description: `$description`});"""
+      (setBaseline.date, text)
+    }
+
+    val mr = maintenanceList.map(makeMR)
+    val bl = setBaselineList.zipWithIndex.map(bi => makeSetBaseline(-(bi._2 + 1), bi._1))
+
+    (mr ++ bl).sortBy(_._1.getTime).map(_._2).mkString("\n")
   }
 
   val all: Seq[Double] = yValues.flatten
@@ -128,16 +152,11 @@ class C3ChartHistory(
     }
   }
 
-  // private val maintenanceValueList = column("MaintenanceRecord", Seq.fill(maintenanceList.size)(Seq(yRangeY.min, yRangeY.max)).flatten)
-  // private val maintenanceSummaryList = textColumn(maintenanceList.map(maintenance => maintenance.summary))
   private val maintenanceColorList =
     maintenanceList.flatMap(maintenance => {
       val c = MaintenanceCategory.findMaintenanceCategoryMatch(maintenance.category).Color
       Seq(c, c)
     })
-
-  // private val maintenanceColorListFormatted = textColumn(maintenanceColorList)
-  // private val maintenanceCategoryList = textColumn(maintenanceList.map(maintenance => maintenance.category))
 
   private val defaultMaintenanceColor = if (maintenanceColorList.nonEmpty) maintenanceColorList.head else "#aaaaaa"
 
@@ -348,4 +367,11 @@ object C3ChartHistory {
   def htmlHelp(): Elem = {
     <a rel="/static/images/ChartScrollAndScale.png" class="screenshot" href="/static/images/ChartScrollAndScale.png"><img src="/static/images/ChartScrollAndScaleIcon.png" height="10px"/> Help</a>
   }
+
+  /**
+    * Define a general baseline reference.
+    * @param explicit If true, the user explicitly marked this as a baseline.
+    * @param date Effective date.
+    */
+  case class SetBaseline(explicit: Boolean, date: Timestamp) {}
 }

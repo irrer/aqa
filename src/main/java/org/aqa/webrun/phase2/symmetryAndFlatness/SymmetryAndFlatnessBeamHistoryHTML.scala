@@ -45,23 +45,18 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
   // index of the entry being charted.
   private val yIndex = history.indexWhere(h => h.symmetryAndFlatness.outputPK == output.outputPK.get)
 
-  private val baselineMaintenanceList = {
-    history.zipWithIndex
-      .filter(hi => hi._1.symmetryAndFlatness.isBaseline)
-      .map(hi =>
-        MaintenanceRecord(
-          maintenanceRecordPK = Some(-(hi._2 + 1)), // use a fake primary key to identify this in the javascript code
-          category = MaintenanceCategory.setBaseline,
-          machinePK,
-          creationTime = hi._1.output.dataDate.get,
-          userPK = -1,
-          outputPK = None,
-          machineLogPK = None,
-          machineLogNodeIndex = None,
-          summary = "Baseline",
-          description = "Set Baseline effective " + hi._1.output.dataDate.get
-        )
-      )
+  /**
+    * Make a set of baseline values.
+    */
+  private val setBaselineList = {
+    def toBl(h: SymmetryAndFlatness.SymmetryAndFlatnessHistory): Option[C3ChartHistory.SetBaseline] = {
+      h match {
+        case _ if h.symmetryAndFlatness.isBaseline                                                => Some(C3ChartHistory.SetBaseline(explicit = true, h.output.dataDate.get))
+        case _ if h.symmetryAndFlatness.symmetryAndFlatnessPK == h.baseline.symmetryAndFlatnessPK => Some(C3ChartHistory.SetBaseline(explicit = false, h.output.dataDate.get))
+        case _                                                                                    => None
+      }
+    }
+    history.flatMap(toBl)
   }
 
   // list of all MaintenanceRecords in this time interval
@@ -71,8 +66,6 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
       Baseline.filterOutUnrelatedBaselines(inTimeRange.map(itr => itr.maintenanceRecordPK.get).toSet, Set("symmetry", "flatness", "constancy")).map(_.maintenanceRecordPK.get).toSet
     inTimeRange.filter(itr => relevantBaseline.contains(itr.maintenanceRecordPK.get) || (!itr.category.equals(MaintenanceCategory.setBaseline)))
   }
-
-  private val allMaintenanceRecords = (baselineMaintenanceList ++ MaintenanceRecordList).sortBy(_.creationTime.getTime)
 
   private def makeChart(chartTitle: String, toleranceRange: Double, baselineDate: Timestamp, baselineValue: Double, valueList: Seq[Double]): C3ChartHistory = {
 
@@ -92,7 +85,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
 
     val chart = new C3ChartHistory(
       chartIdOpt = Some(chartId),
-      allMaintenanceRecords,
+      MaintenanceRecordList,
       width,
       height,
       xLabel,
@@ -105,7 +98,8 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
       yValues,
       yIndex,
       yFormat,
-      yColorList
+      yColorList,
+      setBaselineList
     )
 
     chart
@@ -144,7 +138,8 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
       yValues,
       yIndex,
       yFormat = ".4g",
-      yColorList
+      yColorList,
+      setBaselineList
     )
     chart
   }
@@ -182,7 +177,8 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
       yValues,
       yIndex,
       yFormat = ".4g",
-      yColorList
+      yColorList,
+      setBaselineList
     )
     chart
   }
@@ -246,7 +242,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
         history.map(h => h.symmetryAndFlatness.center_cu)
       )
 
-      makeEpidCuChart(allMaintenanceRecords, valueList, Seq(dateList, dateList, dateList, dateList, dateList))
+      makeEpidCuChart(MaintenanceRecordList, valueList, Seq(dateList, dateList, dateList, dateList, dateList))
     }
 
     val chartEpidNoise = {
@@ -271,7 +267,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
 
       val minDate = covHistory.minBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
       val maxDate = covHistory.maxBy(_.output.dataDate.get.getTime).output.dataDate.get.getTime
-      val covMaintenanceList = allMaintenanceRecords.filter(mr => (mr.creationTime.getTime >= minDate) && (mr.creationTime.getTime <= maxDate))
+      val covMaintenanceList = MaintenanceRecordList.filter(mr => (mr.creationTime.getTime >= minDate) && (mr.creationTime.getTime <= maxDate))
 
       makeEpidNoiseChart(covMaintenanceList, valueList, Seq(covDateList, covDateList, covDateList, covDateList, covDateList))
     }
