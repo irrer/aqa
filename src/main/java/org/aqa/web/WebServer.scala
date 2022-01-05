@@ -516,6 +516,7 @@ class WebServer extends Application with Logging {
         new DataCollectionSummary,
         new SymmetryAndFlatnessSubHTML,
         new Phase2CsvRestlet,
+        new MachineLogXml,
         anonymousTranslate,
         getSeries,
         new CustomizeRtPlanInterface,

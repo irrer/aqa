@@ -195,6 +195,17 @@ object MachineLog extends Logging {
     list
   }
 
+  /**
+   * Get the sorted list of dates from all machine log entries for the given machine.
+   * @param machinePK
+   * @return
+   */
+  def getDateList(machinePK: Long): Seq[Timestamp] = {
+    val action = MachineLog.query.filter(mach => mach.machinePK === machinePK).map(_.DateTimeSaved)
+    val list = Db.run(action.result)
+    list.sortBy(_.getTime)
+  }
+
   def delete(machineLogPK: Long): Int = {
     val q = query.filter(_.machineLogPK === machineLogPK)
     val action = q.delete

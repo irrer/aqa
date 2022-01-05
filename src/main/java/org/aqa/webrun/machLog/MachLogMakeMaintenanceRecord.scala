@@ -1,11 +1,11 @@
 package org.aqa.webrun.machLog
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.MachineLog
 import org.aqa.db.MaintenanceRecord
 
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import scala.xml.Node
@@ -270,5 +270,82 @@ object MachLogMakeMaintenanceRecord extends Logging {
     val nodeList = machineLog.elem \ "Node"
     val list = nodeList.zipWithIndex.map(li => makeMachineRecord(machineLog, li._2, userPK, outputPK))
     list
+  }
+
+  def main(args: Array[String]): Unit = {
+
+    val list = scala.collection.mutable.ArrayBuffer[String]()
+
+    def bufIt(text: String): Unit = {
+      list.append(text)
+      println(text)
+    }
+
+    def showNode(node: Node): Unit = {
+      try {
+        findGroups(node).toSeq.foreach(g => {
+          def nameOf(p: Node): String = {
+            Seq(p \ "@Display_Name", p \ "@Enum_Name").filter(_.nonEmpty).head.text
+          }
+          val paramList = g.parameterList.map(nameOf).sorted.distinct
+          paramList.foreach(p => bufIt(g.toString + " | " + p))
+        })
+      } catch {
+        case _: Throwable => println("bad node")
+      }
+    }
+
+    def show(file: File): Unit = {
+      println("File: " + file.getName)
+      try {
+        val doc = XML.loadFile(file)
+        (doc \ "Node").map(showNode)
+      } catch {
+        case _: Throwable => println("Error with parsing file " + file.getAbsolutePath)
+      }
+    }
+
+    val dir1 = new File("""D:\tmp\aqa\MachineLogs\H192448\H192448""")
+    val dir2 = new File("""D:\tmp\aqa\MachineLogs\CedarsSinia""")
+    val fileList = (Util.listDirFiles(dir1) ++ Util.listDirFiles(dir2)).filter(f => f.getName.startsWith("SavedConfigParameter"))
+    println("Number of files " + fileList.size)
+    fileList.map(show)
+
+    (0 to 5).foreach(_ => println("---------------------------------------"))
+
+    /*
+    val energyList = Seq(
+      "Energy-0k",
+      "Energy-0n",
+      "Energy-10x",
+      "Energy-10xFFF",
+      "Energy-12e",
+      "Energy-15e",
+      "Energy-15x",
+      "Energy-16e",
+      "Energy-18e",
+      "Energy-18x",
+      "Energy-2.5x",
+      "Energy-20e",
+      "Energy-22e",
+      "Energy-4x",
+      "Energy-6e",
+      "Energy-6eHDTSE",
+      "Energy-6x",
+      "Energy-6xFFF",
+      "Energy-9e",
+      "Energy-9eHDTSE"
+    ).map(t => " / " + t +" / ")
+     */
+
+    val distinct = list.distinct
+      .map(t => t.replaceAll(" / Energy-[^ ]* ", " / Energy-* "))
+      // .map(t => t.replaceAll("_HIGH", "_HILO"))
+      // .map(t => t.replaceAll("_LOW", "_HILO"))
+      .distinct
+      .sorted
+    distinct.map(println)
+    println("distinct.size: " + distinct.size)
+    println("done")
   }
 }
