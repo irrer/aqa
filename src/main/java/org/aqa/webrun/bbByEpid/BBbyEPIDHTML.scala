@@ -240,7 +240,7 @@ object BBbyEPIDHTML {
           if (result.isRight) {
             val bbByEpid = result.right.get.bbByEpid
             <div>
-              {if (bbByEpid.isOpenFieldImage) <span style="background-color: red;color: white; ">@@nbsp@@;Open Field@@nbsp@@;</span> else <span>Planned Field</span>}
+              {if (bbByEpid.isOpenFieldImage) <span style="background-color: red;color: white; ">@@nbsp@@Open Field@@nbsp@@</span> else <span>Planned Field</span>}
               <br/>
               <span title={noisinessTitle}>Image Noisiness: <span title={bbByEpid.pixelCoefficientOfVariation.toString}>{Util.fmtDbl(bbByEpid.pixelCoefficientOfVariation)}</span></span>
               <br/>
