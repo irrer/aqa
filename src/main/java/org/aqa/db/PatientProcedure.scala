@@ -35,7 +35,7 @@ case class PatientProcedure(
 ) {
 
   def insert: PatientProcedure = {
-    PatientProcedureXml.cacheClear(institutionPK)
+    PatientProcedureXml.cacheClear(Some(institutionPK))
     val insertQuery =
       PatientProcedure.query returning PatientProcedure.query.map(_.patientProcedurePK) into ((patientProcedure, patientProcedurePK) =>
         patientProcedure.copy(patientProcedurePK = Some(patientProcedurePK))
@@ -46,7 +46,7 @@ case class PatientProcedure(
   }
 
   def insertOrUpdate(): Int = {
-    PatientProcedureXml.cacheClear(institutionPK)
+    PatientProcedureXml.cacheClear(Some(institutionPK))
     Db.run(PatientProcedure.query.insertOrUpdate(this))
   }
 
@@ -104,7 +104,7 @@ object PatientProcedure extends ProcedureOutput with Logging {
 
   def delete(patientProcedurePK: Long): Int = {
     get(patientProcedurePK) match {
-      case Some(pp) => PatientProcedureXml.cacheClear(pp.institutionPK)
+      case Some(pp) => PatientProcedureXml.cacheClear(Some(pp.institutionPK))
       case _        =>
     }
 

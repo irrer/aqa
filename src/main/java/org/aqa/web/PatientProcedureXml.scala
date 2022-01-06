@@ -43,6 +43,7 @@ object PatientProcedureXml extends Logging {
 
   /**
     * Get contents from cache for given institution if they are present.
+    *
     * @param institutionPK Institution.
     * @return Cached XML or None.
     */
@@ -53,8 +54,9 @@ object PatientProcedureXml extends Logging {
 
   /**
     * Put the given XML text into the cache, adding it if it is not there, replacing it if it is.
+    *
     * @param institutionPK Institution.
-    * @param xmlText XML in text form.
+    * @param xmlText       XML in text form.
     */
   private def cachePut(institutionPK: Long, xmlText: String): Unit =
     cache.synchronized {
@@ -63,11 +65,15 @@ object PatientProcedureXml extends Logging {
 
   /**
     * Remove the cache entry.  If it does not exist, then do nothing.
+    *
     * @param institutionPK Institution.
     */
-  def cacheClear(institutionPK: Long): Unit =
+  def cacheClear(institutionPK: Option[Long]): Unit =
     cache.synchronized {
-      cache.remove(institutionPK)
+      institutionPK match {
+        case Some(pk) => cache.remove(pk)
+        case _        => cache.clear()
+      }
     }
 }
 
