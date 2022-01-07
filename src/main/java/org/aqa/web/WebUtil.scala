@@ -202,13 +202,17 @@ object WebUtil extends Logging {
     * is not DICOM, then return None.
     */
   private def isDicom(data: Array[Byte]): Option[AttributeList] = {
+
     try {
-      val al = new AttributeList
-      val dicomInStream = new DicomInputStream(new ByteArrayInputStream(data))
-      al.read(dicomInStream)
-      // require it to have an SOPInstanceUID to be valid DICOM.  Throws an exception if it does not have one
-      al.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull.trim
-      Some(al)
+      if (edu.umro.ScalaUtil.IsDicom.isDicomOrAcrNema(data)) {
+        val al = new AttributeList
+        val dicomInStream = new DicomInputStream(new ByteArrayInputStream(data))
+        al.read(dicomInStream)
+        // require it to have an SOPInstanceUID to be valid DICOM.  Throws an exception if it does not have one
+        al.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull.trim
+        Some(al)
+      } else
+        None
     } catch {
       case _: Throwable => None
     }
