@@ -28,6 +28,13 @@ import org.restlet.data.MediaType
 
 import scala.xml.Elem
 
+/**
+  * Provide a way for a client to get an XML version of the PatientProcedure associations and
+  * the list of all procedures.
+  *
+  * Users get the subset of results of PatientProcedure items that apply to their
+  * institution.  Results are cached for efficiency.
+  */
 object PatientProcedureXml extends Logging {
 
   /**
@@ -112,9 +119,20 @@ class PatientProcedureXml extends Restlet with SubUrlAdmin with Logging {
       </PatientProcedure>
     }
 
+    /**
+      * Make a list of all procedures, regardless of whether they are associated with a patient or not.
+      * @return
+      */
+    def procedureList: Elem = {
+      <ProcedureList>
+        {Procedure.list.sortBy(_.fullName).map(procedureToXml)}
+      </ProcedureList>
+    }
+
     val elem = {
       <PatientProcedureList>
         {list.filter(_.patientProcedure.active).map(e => ppToXml(e))}
+        {procedureList}
       </PatientProcedureList>
     }
 
