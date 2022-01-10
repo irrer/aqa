@@ -42,10 +42,10 @@ import scala.xml.Node
 import scala.xml.XML
 
 /**
- * This class extracts configuration information from the configuration file.  Refe
- * to <code>Config.configFileName</code> for details indicating what the different
- * configuration values are used for.
- */
+  * This class extracts configuration information from the configuration file.  Refer
+  * to <code>Config.configFileName</code> for details indicating what the different
+  * configuration values are used for.
+  */
 object Config extends Logging {
 
   private val configFileName = "AQAConfig.xml"
@@ -62,10 +62,8 @@ object Config extends Logging {
   /** Root directory name for temporary files. */
   val tmpDirName = "tmp"
 
-
   /** Root directory name for cached files. */
   val cacheDirName = "cache"
-
 
   /** For indenting sub-content. */
   private val indent1 = "\n                  "
@@ -75,7 +73,7 @@ object Config extends Logging {
   /** Root directory name for machine configuration files. */
   val machineConfigurationDirName = "MachineConfiguration"
 
-  private def fail(msg: String) {
+  private def fail(msg: String): Unit = {
     logger.error(msg)
     throw new RuntimeException(msg)
   }
@@ -118,11 +116,11 @@ object Config extends Logging {
   }
 
   /**
-   * Read the configuration file.
-   *
-   * @param dir : Directory from which to read configuration file.
-   * @return DOM of configuration, or nothing on failure
-   */
+    * Read the configuration file.
+    *
+    * @param dir : Directory from which to read configuration file.
+    * @return DOM of configuration, or nothing on failure
+    */
   private def readFile(dir: File, name: String): Option[Elem] = {
     val file = new File(dir, name)
     logger.info("Trying config file " + file.getAbsolutePath + " ...")
@@ -145,9 +143,9 @@ object Config extends Logging {
   }
 
   /**
-   * If a fatal error occurs during the reading of the configuration file, then the application
-   * is toast, so log an error and exit with a failed status.
-   */
+    * If a fatal error occurs during the reading of the configuration file, then the application
+    * is toast, so log an error and exit with a failed status.
+    */
   private def epicFail(name: String): Unit = {
     val tried = indentList(directoryList.map(d => d.getAbsolutePath))
 
@@ -160,13 +158,13 @@ object Config extends Logging {
     val elem = readFile(dirList.head, name)
     elem match {
       case Some(_) => elem
-      case _ => getDoc(dirList.tail, name)
+      case _       => getDoc(dirList.tail, name)
     }
   }
 
   /**
-   * Get the list of possible passwords to use for the java key store for serving web pages via HTTPS.  If not configured, then return an empty list.
-   */
+    * Get the list of possible passwords to use for the java key store for serving web pages via HTTPS.  If not configured, then return an empty list.
+    */
   private def getJavaKeyStorePasswordList: List[String] = {
     val name = "JavaKeyStorePassword"
     try {
@@ -262,16 +260,17 @@ object Config extends Logging {
   //  }
 
   /**
-   * Get the value matching the given name.  If it does not exist or there is
-   * some sort of other problem then return the default.
-   */
+    * Get the value matching the given name.  If it does not exist or there is
+    * some sort of other problem then return the default.
+    */
   private def logMainText(name: String, default: String): String = {
     getMainTextOption(name) match {
       case Some(value: String) =>
-        val compare = if (default.equals(value))
-          " (same as default)"
-        else
-          " (default: " + default + " overridden)"
+        val compare =
+          if (default.equals(value))
+            " (same as default)"
+          else
+            " (default: " + default + " overridden)"
         logText(name + compare, value)
         value
       case _ =>
@@ -303,9 +302,9 @@ object Config extends Logging {
     }
 
     val jf: File = Util.thisJarFile match {
-      case f if f.isDirectory => getDevJar
+      case f if f.isDirectory         => getDevJar
       case f if f.isFile && f.canRead => f
-      case f => logger.warn("Unable to find the jar file being used.  Assuming " + f.getAbsolutePath); f
+      case f                          => logger.warn("Unable to find the jar file being used.  Assuming " + f.getAbsolutePath); f
     }
     val fileDate = if (jf.canRead) " : " + new Date(jf.lastModified) else "  can not read file"
     logText("jarFile", jf.getAbsolutePath + fileDate)
@@ -328,8 +327,8 @@ object Config extends Logging {
   val HTTPPort: Int = logMainText("HTTPPort", "80").toInt
 
   /**
-   * Get the list of allowed IP addresses.  If empty, allow everything.
-   */
+    * Get the list of allowed IP addresses.  If empty, allow everything.
+    */
   private def getAllowedHttpIpList: List[String] = {
     val nodeList = document \ "AllowedHttpIpList" \ "AllowedHttpIp"
     val allowedList = nodeList.toList.map(n => n.head.text.trim)
@@ -338,9 +337,9 @@ object Config extends Logging {
   }
 
   /**
-   * Get the URL of the LDAP service to use.  If this is not given in the
-   * configuration file, then disable LDAP.
-   */
+    * Get the URL of the LDAP service to use.  If this is not given in the
+    * configuration file, then disable LDAP.
+    */
   private def getLdapUrl: Option[String] = {
     val tag = "LdapUrl"
     try {
@@ -365,8 +364,8 @@ object Config extends Logging {
   }
 
   /**
-   * List of IP addresses allowed to access this server.
-   */
+    * List of IP addresses allowed to access this server.
+    */
   val AllowedHttpIpList: List[String] = getAllowedHttpIpList
 
   val JavaKeyStorePasswordList: List[String] = getJavaKeyStorePasswordList
@@ -386,6 +385,7 @@ object Config extends Logging {
   val MaxProcedureCount: Int = logMainText("MaxProcedureCount", "1").toInt
   val MaxProcedureWaitTime_min: Double = logMainText("MaxProcedureWaitTime_min", "10.0").toDouble
   val MaxProcedureWaitTime_ms: Long = (MaxProcedureWaitTime_min * 60 * 1000).round
+
   /** used to synchronize the running of procedures.  Should only process a maximum number of jobs at a time so as not to overload the hardware. */
   val procedureLock = new Semaphore(MaxProcedureCount)
 
@@ -405,13 +405,14 @@ object Config extends Logging {
   /** Number of minutes into a 24 hour day at which time service should be restarted. */
   val RestartTime: Long = {
     val dateFormat = new SimpleDateFormat("HH:mm")
-    val milliseconds = try {
-      dateFormat.parse(logMainText("RestartTime", "3:10")).getTime
-    } catch {
-      case _: ParseException =>
-        logger.warn("Badly formatted RestartTime in configuration file: " + logMainText("RestartTime", "3:10") + " .  Should be HH:MM, as in 1:23 .  Assuming default of " + DEFAULT_RESTART_TIME)
-        dateFormat.parse(DEFAULT_RESTART_TIME).getTime
-    }
+    val milliseconds =
+      try {
+        dateFormat.parse(logMainText("RestartTime", "3:10")).getTime
+      } catch {
+        case _: ParseException =>
+          logger.warn("Badly formatted RestartTime in configuration file: " + logMainText("RestartTime", "3:10") + " .  Should be HH:MM, as in 1:23 .  Assuming default of " + DEFAULT_RESTART_TIME)
+          dateFormat.parse(DEFAULT_RESTART_TIME).getTime
+      }
     milliseconds
   }
 
@@ -422,8 +423,7 @@ object Config extends Logging {
       if (text.contains("{")) {
         logger.warn("Should remove slick configuration from config file.")
         text
-      }
-      else {
+      } else {
         val t = Util.readTextFile(new File(text)).right.get
         t
       }
@@ -524,13 +524,13 @@ object Config extends Logging {
   }
 
   /**
-   * Give the name of a wedge beam and a list of beams that are compatible for being the background of the wedge beam.
-   *
-   * wedge: Beam name for wedge
-   *
-   * background: List of beam names for background beam for comparison (percent calculation).  The beams are searched in
-   * the order given, and the first one found (is present in the input data) is used as the background.
-   */
+    * Give the name of a wedge beam and a list of beams that are compatible for being the background of the wedge beam.
+    *
+    * wedge: Beam name for wedge
+    *
+    * background: List of beam names for background beam for comparison (percent calculation).  The beams are searched in
+    * the order given, and the first one found (is present in the input data) is used as the background.
+    */
   case class WedgeBeam(wedge: String, backgroundList: Seq[String]) {
     override def toString: String = "Wedge: " + wedge + "    background: " + backgroundList.mkString("    ")
   }
@@ -556,22 +556,18 @@ object Config extends Logging {
   }
 
   /**
-   * Encapsulate the configuration for pair of VMAT beams.
-   */
+    * Encapsulate the configuration for pair of VMAT beams.
+    */
   case class VMATBeamPair(name: String, MLC: String, OPEN: String, IsolationBorder_mm: Double) {
     override def toString: String = name + "    MLC: " + MLC.formatted("%-14s") + "    OPEN: " + OPEN.formatted("%-14s") + "    IsolationBorder_mm: " + IsolationBorder_mm.formatted("%6.3f")
   }
 
   /**
-   * Convert VMAT beam pair list from XML to list of <code>VMATBeamPair</code>s.
-   */
+    * Convert VMAT beam pair list from XML to list of <code>VMATBeamPair</code>s.
+    */
   private def getVMATBeamPairList: Seq[VMATBeamPair] = {
     def nodeToVMATBeamPair(node: Node) = {
-      VMATBeamPair(
-        (node \ "@Name").head.text,
-        (node \ "@MLC").head.text,
-        (node \ "@OPEN").head.text,
-        (node \ "@IsolationBorder_mm").head.text.toDouble)
+      VMATBeamPair((node \ "@Name").head.text, (node \ "@MLC").head.text, (node \ "@OPEN").head.text, (node \ "@IsolationBorder_mm").head.text.toDouble)
     }
 
     val list = (document \ "VMATBeamPairList" \ "VMATBeamPair").map(node => nodeToVMATBeamPair(node)).toList
@@ -582,10 +578,7 @@ object Config extends Logging {
 
   private def getMaintenanceCategoryList: List[MaintenanceCategory] = {
     def nodeToMaintenanceCat(node: Node) = {
-      new MaintenanceCategory(
-        (node \ "@Name").head.text,
-        (node \ "@Color").head.text,
-        node.head.text)
+      new MaintenanceCategory((node \ "@Name").head.text, (node \ "@Color").head.text, node.head.text)
     }
 
     val list = (document \ "MaintenanceCategoryList" \ "MaintenanceCategory").map(node => nodeToMaintenanceCat(node)).toList
@@ -594,8 +587,8 @@ object Config extends Logging {
   }
 
   /**
-   * Directory containing the definitive static files.
-   */
+    * Directory containing the definitive static files.
+    */
   val staticDirFile: File = {
     val locations = List(""".\""", """src\main\resources\""").map(name => new File(name + Config.staticDirName))
 
@@ -635,7 +628,8 @@ object Config extends Logging {
             "image:  " + watermarkImageFile.getAbsolutePath +
               "    top: " + top +
               "    left: " + left + "    percentWidth: " + percentWidth +
-              "    percentChange: " + percentChange)
+              "    percentChange: " + percentChange
+          )
           Some(watermark)
       }
     } catch {
@@ -664,8 +658,8 @@ object Config extends Logging {
   }
 
   /**
-   * A DICOM tag that should be anonymized.
-   */
+    * A DICOM tag that should be anonymized.
+    */
   case class ToBeAnonymized(Name: String, AttrTag: AttributeTag, Value: Option[String]) {
     override def toString: String = {
       val v = if (Value.isDefined) " : " + Value.get else ""
@@ -674,8 +668,8 @@ object Config extends Logging {
   }
 
   /**
-   * Construct lookup table for finding DICOM attributes to be anonymized and how to anonymize them.
-   */
+    * Construct lookup table for finding DICOM attributes to be anonymized and how to anonymize them.
+    */
   def getToBeAnonymizedList: Map[AttributeTag, ToBeAnonymized] = {
     def makeToBeAnon(node: Node): ToBeAnonymized = {
       val Name: Option[String] = {
@@ -706,7 +700,7 @@ object Config extends Logging {
 
       (Name, Tag) match {
         case (Some(n), Some(t)) => new ToBeAnonymized(n, t, Value)
-        case (Some(n), _) => new ToBeAnonymized(n, ToBeAnonymized.tagFromName(n), Value)
+        case (Some(n), _)       => new ToBeAnonymized(n, ToBeAnonymized.tagFromName(n), Value)
         case (_, Some(t)) =>
           val nm = DicomUtil.dictionary.getNameFromTag(t) // try to get the name from the dictionary
           if (nm == null)
@@ -725,8 +719,8 @@ object Config extends Logging {
   }
 
   /**
-   * A standard plan used as a basis for a customized plan.
-   */
+    * A standard plan used as a basis for a customized plan.
+    */
   case class PlanFileConfig(procedure: String, manufacturer: String, collimatorModel: String, file: File) {
     val dicomFile = new DicomFile(file)
     val fileIsValid: Boolean = dicomFile.attributeList.isDefined
@@ -746,8 +740,10 @@ object Config extends Logging {
 
       // check to see if the file is readable DICOM.  If not, flag an error.
       if (pfc.dicomFile.attributeList.isEmpty)
-        logger.warn("Config problem.  Unable to ready DICOM RTPLAN file used for generating custom plans: " + pfc +
-          "\nFile: " + pfc.dicomFile.file.getAbsolutePath)
+        logger.warn(
+          "Config problem.  Unable to ready DICOM RTPLAN file used for generating custom plans: " + pfc +
+            "\nFile: " + pfc.dicomFile.file.getAbsolutePath
+        )
 
       // Return the plan config even if its file does not exist.  The user interface for
       // creating a custom plan will check it and tell the user if it does not exist.
@@ -933,7 +929,7 @@ object Config extends Logging {
   val DicomSeriesFindBadRtplans: Fix.Value = getFixState("DicomSeriesFindBadRtplans") // TODO temporary for transition
   val DicomSeriesShared: Fix.Value = getFixState("DicomSeriesShared") // TODO temporary for transition
   val DicomSeriesInput: Fix.Value = getFixState("DicomSeriesInput") // TODO temporary for transition
-  */
+   */
 
   // =================================================================================
 
@@ -961,4 +957,3 @@ object Config extends Logging {
     System.exit(99)
   }
 }
-
