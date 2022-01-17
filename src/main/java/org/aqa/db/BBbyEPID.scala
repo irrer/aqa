@@ -336,10 +336,7 @@ object BBbyEPID extends ProcedureOutput with Logging {
       * @return List of DailyDataSetEPID that do not have a corresponding EPID.
       */
     def makeFailed(omd: OMD): Seq[DailyDataSetEPID] = {
-
-      Trace.trace()
       val alListList = omd.dicomSeries.attributeListList
-      Trace.trace()
 
       def getAl(dsUid: String): AttributeList = alListList.find(al => Util.sopOfAl(al).equals(dsUid)).get
 
