@@ -351,7 +351,7 @@ object CustomizeRtPlan extends Logging {
     available.get
   }
 
-  private def setFluence(beamAl: AttributeList, fff: Boolean) {
+  private def setFluence(beamAl: AttributeList, fff: Boolean): Unit = {
 
     /**
       * Remove both the DICOM standard and Varian fluence references.
