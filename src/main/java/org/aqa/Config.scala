@@ -949,6 +949,10 @@ object Config extends Logging {
   logger.info("Configuration has been validated.")
   logger.info(toString)
 
+  /**
+   * Self test.
+   * @param args Not used.
+   */
   def main(args: Array[String]): Unit = {
     val startTime = System.currentTimeMillis
     println("validate: " + validate) // loading forces configuration to be read
