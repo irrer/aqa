@@ -274,6 +274,19 @@ Note that when building a package for release, the Maven build process uses the 
         <PlanFile procedure='DailyQA'     manufacturer='Varian' collimatorModel='Millenium'>rtplanDailyQA2021-07-07T08-24-08.dcm</PlanFile>
     </PlanFileList>
 
+    <!-- Name of subdirectory that contains the DICOM template files for creating a basic RTPLAN.  This is located under
+    the static/rtplan directory.  This directory can have an arbitrary name.  There must be exactly one DICOM file in this
+    directory with the name containing the string 'RTPLAN' in either upper or lower case.  Other files in this directory
+    will be ignored.  In this directory does not exist or the RTPLAN file under it does not exist, then the feature to
+    generate a basic RTPLAN will not be supported. -->
+    <BasicRtplanTemplateDir>basicRtplan</BasicRtplanTemplateDir>
+
+    <!-- Names of beams in BasicRtplan that should be used for the 4 gantry angles. -->
+    <BasicRtplanBeamNameG000>1 kV AP</BasicRtplanBeamNameG000>
+    <BasicRtplanBeamNameG090>2 kV LLAT</BasicRtplanBeamNameG090>
+    <BasicRtplanBeamNameG180>3 kV PA</BasicRtplanBeamNameG180>
+    <BasicRtplanBeamNameG270>4 kV RLAT</BasicRtplanBeamNameG270>
+
     <!-- List of categories of maintenance, as referenced in the PMI database table.  If a category is in
         the database whose name does not match one of these, then the first category is used as a default.
         

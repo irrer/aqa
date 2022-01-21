@@ -18,13 +18,13 @@ package org.aqa
 
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.CodeStringAttribute
+import com.pixelmed.dicom.DecimalStringAttribute
+import com.pixelmed.dicom.IntegerStringAttribute
 import com.pixelmed.dicom.LongStringAttribute
 import com.pixelmed.dicom.OtherByteAttribute
 import com.pixelmed.dicom.SequenceAttribute
-import com.pixelmed.dicom.DecimalStringAttribute
 import com.pixelmed.dicom.ShortStringAttribute
 import com.pixelmed.dicom.UniqueIdentifierAttribute
-import com.pixelmed.dicom.IntegerStringAttribute
 
 object VarianPrivateTag extends Logging {
 
@@ -47,6 +47,28 @@ object VarianPrivateTag extends Logging {
   val PlanIntegritySequence = new AttributeTag(0x3287, 0x1000) //  SQ
   val PlanIntegrityHash = new AttributeTag(0x3287, 0x1001) //  LO
   val PlanIntegrityHashVersion = new AttributeTag(0x3287, 0x1002) //  SH
+
+  val tagList = Seq(
+    VarianCreator3243,
+    BeamSecondaryName,
+    VarianCreator3249,
+    MaximumTreatmentTime,
+    ReferencedPrimaryDoseRefUID,
+    VarianCreator3253,
+    ExtendedInterfaceData,
+    ExtendedInterfaceLength,
+    ExtendedInterfaceFormat,
+    VarianCreator3267,
+    ReferencedPatientVolumeID,
+    VarianCreator3285,
+    PrimaryFluenceModeSequence,
+    FluenceMode,
+    FluenceModeID,
+    VarianCreator3287,
+    PlanIntegritySequence,
+    PlanIntegrityHash,
+    PlanIntegrityHashVersion
+  )
 
   def newExtendedInterfaceFormat(text: String) = {
     val attr = new CodeStringAttribute(ExtendedInterfaceFormat)

@@ -607,6 +607,30 @@ object Config extends Logging {
   val imageDirFile = new File(staticDirFile, "images")
   val rtplanDirFile = new File(staticDirFile, "rtplan")
 
+  /**
+    * Get the directory containing the DICOM file used as a template to make a basic RTPLAN.
+    *
+    * @return Directory, if it exists.
+    */
+  private def getBasicRtplanTemplateDir: Option[File] = {
+    val tagName = "BasicRtplanTemplateDir"
+    val rtplanFileName = getMainTextOption(tagName)
+    val directory = if (rtplanFileName.isDefined) {
+      val dir = new File(rtplanDirFile, rtplanFileName.get)
+      if (dir.isDirectory)
+        Some(dir)
+      else
+        None
+    } else {
+      None
+    }
+    if (directory.isDefined)
+      logText(tagName, "Directory: " + directory.get.getAbsolutePath)
+    else
+      logText(tagName, "Could not initialize directory.  The generate basic RTPLAN feature will not be supported.")
+    directory
+  }
+
   private def getWatermark: Option[Watermark] = {
     val tag = "Watermark"
     try {
@@ -728,7 +752,7 @@ object Config extends Logging {
     override def toString: String = "manufacturer: " + manufacturer + "  collimator model: " + collimatorModel.formatted("%-12s") + "  file: " + file.getName
   }
 
-  private def getPlanFileList = {
+  private def getPlanFileList: Seq[PlanFileConfig] = {
     def makePlanFileConfig(node: Node): PlanFileConfig = {
       val procedure = (node \ "@procedure").head.text
       val manufacturer = (node \ "@manufacturer").head.text
@@ -896,40 +920,11 @@ object Config extends Logging {
   val GapSkewLeafSideFinding_mm: Double = logMainText("GapSkewLeafSideFinding_mm", "5.0").toDouble.abs
   val GapSkewLeafEndPenumbra_mm: Double = logMainText("GapSkewLeafEndPenumbra_mm", "20.0").toDouble.abs
 
-  // =================================================================================
-
-  /*
-  object Fix extends Enumeration { // TODO temporary for transition
-    val ignore: Fix.Value = Value
-    val check: Fix.Value = Value
-    val fix: Fix.Value = Value
-  }
-
-  private def getFixState(name: String): Fix.Value = {
-    val list = document \ name
-    val fixState = if (list.isEmpty) {
-      Fix.ignore
-    } else {
-      val state = list.head.text match {
-        case text if text.equalsIgnoreCase("check") => Fix.check
-        case text if text.equalsIgnoreCase("fix") => Fix.fix
-        case _ => Fix.ignore
-      }
-      state
-    }
-    logText(name, fixState.toString)
-    fixState
-  }
-
-  val DicomSeriesDeleteOrphans: Fix.Value = getFixState("DicomSeriesDeleteOrphans") // TODO temporary for transition
-  val DicomSeriesPopulateFromInput: Fix.Value = getFixState("DicomSeriesPopulateFromInput") // TODO temporary for transition
-  val DicomSeriesTrim: Fix.Value = getFixState("DicomSeriesTrim") // TODO temporary for transition
-  val DicomSeriesOrphanOutputs: Fix.Value = getFixState("DicomSeriesOrphanOutputs") // TODO temporary for transition
-  val DicomSeriesUnlinkInputPK: Fix.Value = getFixState("DicomSeriesUnlinkInputPK") // TODO temporary for transition
-  val DicomSeriesFindBadRtplans: Fix.Value = getFixState("DicomSeriesFindBadRtplans") // TODO temporary for transition
-  val DicomSeriesShared: Fix.Value = getFixState("DicomSeriesShared") // TODO temporary for transition
-  val DicomSeriesInput: Fix.Value = getFixState("DicomSeriesInput") // TODO temporary for transition
-   */
+  val BasicRtplanTemplateDir = getBasicRtplanTemplateDir
+  val BasicRtplanBeamNameG000 = logMainText(name = "BasicRtplanBeamNameG000", default = "1 kV AP").trim
+  val BasicRtplanBeamNameG090 = logMainText(name = "BasicRtplanBeamNameG090 ", default = "2 kV LLAT").trim
+  val BasicRtplanBeamNameG180 = logMainText(name = "BasicRtplanBeamNameG180 ", default = "3 kV PA").trim
+  val BasicRtplanBeamNameG270 = logMainText(name = "BasicRtplanBeamNameG270 ", default = "4 kV RLAT").trim
 
   // =================================================================================
 
@@ -950,9 +945,9 @@ object Config extends Logging {
   logger.info(toString)
 
   /**
-   * Self test.
-   * @param args Not used.
-   */
+    * Self test.
+    * @param args Not used.
+    */
   def main(args: Array[String]): Unit = {
     val startTime = System.currentTimeMillis
     println("validate: " + validate) // loading forces configuration to be read
