@@ -178,7 +178,7 @@ class MakeRtPlan(
       })
     }
 
-    alList.map(remove)
+    alList.foreach(remove)
   }
 
   /**
