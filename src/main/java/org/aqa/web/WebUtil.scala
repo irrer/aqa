@@ -599,9 +599,7 @@ object WebUtil extends Logging {
   def respond(content: Elem, title: String, response: Response): Unit = respond(content, title, response, Status.SUCCESS_OK)
 
   trait ToHtml {
-    def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem
-    def toHtml(valueMap: ValueMapT): Elem = toHtml(valueMap, styleNone, None)
-    def toHtml: Elem = toHtml(emptyValueMap, styleNone, None)
+    def toHtml(valueMap: ValueMapT = emptyValueMap, errorMap: StyleMapT = styleNone, response: Option[Response] = None): Elem
   }
 
   implicit class WebRow(val colList: List[ToHtml]) extends ToHtml {
