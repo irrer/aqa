@@ -27,6 +27,7 @@ class MakeRtPlan(
     PatientName: String,
     machineName: String,
     RTPlanLabel: String,
+    ToleranceTableLabel: String,
     beamList: Seq[BeamSpecification]
 ) extends Logging {
 
@@ -109,6 +110,7 @@ class MakeRtPlan(
     setAll(TagByName.TreatmentMachineName, machineName)
     setAll(TagByName.PatientSex, "O")
     setAll(TagByName.RTPlanLabel, RTPlanLabel)
+    setAll(TagByName.ToleranceTableLabel, ToleranceTableLabel)
 
     setAll(TagByName.Manufacturer, "AQA")
     setAll(TagByName.ManufacturerModelName, "Basic Plan")
@@ -236,7 +238,8 @@ object MakeRtPlan {
     val g180 = BeamSpecification(GantryAngle_deg = 180, BeamName = Config.BasicRtplanBeamNameG180, X_mm = 45, Y_mm = 46, NominalBeamEnergy = 6)
     val g270 = BeamSpecification(GantryAngle_deg = 270, BeamName = Config.BasicRtplanBeamNameG270, X_mm = 55, Y_mm = 56, NominalBeamEnergy = 6)
 
-    val mrp = new MakeRtPlan(PatientID = "Hiya", PatientName = "Lowe^Hiram", machineName = "JimMach", RTPlanLabel = "ThePlan", beamList = Seq(g000, g090, g180, g270))
+    val mrp =
+      new MakeRtPlan(PatientID = "Hiya", PatientName = "Lowe^Hiram", machineName = "JimMach", RTPlanLabel = "ThePlan", ToleranceTableLabel = "Tolerable", beamList = Seq(g000, g090, g180, g270))
     val plan = mrp.makeRtplan()
 
     val text = DicomUtil.attributeListToString(plan)

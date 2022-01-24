@@ -20,6 +20,7 @@ import edu.umro.RestletUtil.NetworkIpFilter
 import edu.umro.RestletUtil.RestletHttps
 import org.aqa.Config
 import org.aqa.Logging
+import org.aqa.basicRtPlan.BasicRtPlanInterface
 import org.aqa.db.CachedUser
 import org.aqa.db.Input
 import org.aqa.db.Output
@@ -520,6 +521,7 @@ class WebServer extends Application with Logging {
         anonymousTranslate,
         getSeries,
         new CustomizeRtPlanInterface,
+        new BasicRtPlanInterface,
         termsOfUse,
         outputList,
         webRunIndex,
