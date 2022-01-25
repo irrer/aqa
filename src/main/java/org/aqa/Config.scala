@@ -627,7 +627,7 @@ object Config extends Logging {
     if (directory.isDefined)
       logText(tagName, "Directory: " + directory.get.getAbsolutePath)
     else
-      logText(tagName, "Could not initialize directory.  The generate basic RTPLAN feature will not be supported.")
+      logText(tagName, "Could not initialize Basic RTPLAN directory.  The generate basic RTPLAN feature will not be supported.")
     directory
   }
 
