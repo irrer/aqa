@@ -33,11 +33,6 @@ class MakeRtPlan(
 
   private val templateDir = Config.BasicRtplanTemplateDir.get
 
-  private val rtplanFile = Util.listDirFiles(templateDir).find(f => f.getName.toLowerCase().contains("rtplan")).get
-  private val rtplanTemplate = new DicomFile(rtplanFile).attributeList.get
-
-  private val BeamSequence = DicomUtil.seqToAttr(rtplanTemplate, TagByName.BeamSequence)
-
   /**
     * Given a beam, return its name.
     * @param beamAl Beam sequence item.
@@ -53,6 +48,13 @@ class MakeRtPlan(
     NominalBeamEnergy.addValue(energy)
   }
 
+  /**
+    * Set the jaws according to what the user requested.
+    *
+    * @param beamTemplate Beam to change.
+    * @param deviceTypeList Which part of beam to change.
+    * @param size_mm Dimension of beam.
+    */
   private def setLeafJawPositions(beamTemplate: AttributeList, deviceTypeList: Seq[String], size_mm: Double): Unit = {
     val positionSeqList = {
       val atSeq = DicomUtil.findAllSingle(beamTemplate, TagByName.BeamLimitingDevicePositionSequence).asInstanceOf[IndexedSeq[SequenceAttribute]]
@@ -76,7 +78,7 @@ class MakeRtPlan(
     positionSeqList.filter(ps => typeOk(ps)).foreach(setJaw)
   }
 
-  private def setupBeam(beamSpecification: BeamSpecification): Unit = {
+  private def setupBeam(BeamSequence: Seq[AttributeList], beamSpecification: BeamSpecification): Unit = {
 
     val beamTemplate = BeamSequence.find(b => nameOfBeam(b).equalsIgnoreCase(beamSpecification.BeamName)).get
 
@@ -93,8 +95,8 @@ class MakeRtPlan(
     * @param tag Tag to find.
     * @param value New value.
     */
-  private def setAll(tag: AttributeTag, value: String): Unit = {
-    val list = DicomUtil.findAllSingle(rtplanTemplate, tag)
+  private def setAll(al: AttributeList, tag: AttributeTag, value: String): Unit = {
+    val list = DicomUtil.findAllSingle(al, tag)
 
     list.foreach(attr => {
       attr.removeValues()
@@ -102,23 +104,23 @@ class MakeRtPlan(
     })
   }
 
-  private def setVariousAttributes(): Unit = {
-    setAll(TagByName.PatientID, PatientID)
+  private def setVariousAttributes(al: AttributeList): Unit = {
+    setAll(al, TagByName.PatientID, PatientID)
 
-    setAll(TagByName.PatientName, PatientName)
+    setAll(al, TagByName.PatientName, PatientName)
 
-    setAll(TagByName.TreatmentMachineName, machineName)
-    setAll(TagByName.PatientSex, "O")
-    setAll(TagByName.RTPlanLabel, RTPlanLabel)
-    setAll(TagByName.ToleranceTableLabel, ToleranceTableLabel)
+    setAll(al, TagByName.TreatmentMachineName, machineName)
+    setAll(al, TagByName.PatientSex, "O")
+    setAll(al, TagByName.RTPlanLabel, RTPlanLabel)
+    setAll(al, TagByName.ToleranceTableLabel, ToleranceTableLabel)
 
-    setAll(TagByName.Manufacturer, "AQA")
-    setAll(TagByName.ManufacturerModelName, "Basic Plan")
-    setAll(TagByName.DeviceSerialNumber, "001")
-    setAll(TagByName.SoftwareVersions, "0.0.1")
+    setAll(al, TagByName.Manufacturer, "AQA")
+    setAll(al, TagByName.ManufacturerModelName, "Basic Plan")
+    setAll(al, TagByName.DeviceSerialNumber, "001")
+    setAll(al, TagByName.SoftwareVersions, "0.0.1")
   }
 
-  private def setDatesAndTimes(): Unit = {
+  private def setDatesAndTimes(al: AttributeList): Unit = {
     val now = new Date()
     val dateText = DicomUtil.dicomDateFormat.format(now)
     val timeText = DicomUtil.dicomTimeFormat.format(now)
@@ -139,19 +141,30 @@ class MakeRtPlan(
       false
     }
 
-    DicomUtil.findAll(rtplanTemplate, setDates _)
-    DicomUtil.findAll(rtplanTemplate, setTimes _)
+    DicomUtil.findAll(al, setDates _)
+    DicomUtil.findAll(al, setTimes _)
 
-    setAll(TagByName.PatientBirthDate, "18000101")
-    setAll(TagByName.PatientBirthTime, "000000")
+    setAll(al, TagByName.PatientBirthDate, "18000101")
+    setAll(al, TagByName.PatientBirthTime, "000000")
   }
 
-  private def makeNewUIDs(): Unit = {
-    val uidSet = Config.ToBeAnonymizedList.keySet.filter(tag => ValueRepresentation.isUniqueIdentifierVR(DicomUtil.dictionary.getValueRepresentationFromTag(tag)))
-    val attrList = DicomUtil.findAll(rtplanTemplate, uidSet)
-    val replaceMap = attrList.map(at => at.getSingleStringValueOrEmptyString).distinct.map(uid => (uid, UMROGUID.getUID)).toMap
+  /** Map of which UIDs were changed and their replacements. */
+  private val UIDSet = scala.collection.mutable.HashMap[String, String]()
+
+  private def getReplacementUID(oldUID: String): String =
+    UIDSet.synchronized {
+      if (!UIDSet.contains(oldUID)) {
+        val newUID = UMROGUID.getUID
+        UIDSet.put(oldUID, newUID)
+      }
+      UIDSet(oldUID)
+    }
+
+  private def makeNewUIDs(al: AttributeList): Unit = {
+    val keySet = Config.ToBeAnonymizedList.keySet.filter(tag => ValueRepresentation.isUniqueIdentifierVR(DicomUtil.dictionary.getValueRepresentationFromTag(tag)))
+    val attrList = DicomUtil.findAll(al, keySet)
     def replace(at: Attribute): Unit = {
-      val uid = replaceMap(at.getSingleStringValueOrEmptyString)
+      val uid = getReplacementUID(at.getSingleStringValueOrEmptyString)
       at.removeValues()
       at.addValue(uid)
     }
@@ -162,16 +175,16 @@ class MakeRtPlan(
     (attr.getTag.getGroup & 1) == 1
   }
 
-  private val privateTagList = DicomUtil.findAll(rtplanTemplate, isPrivateTag _).map(_.getTag).toSet
-
   /**
     * Remove all private tags.
     */
-  private def removePrivateTags(): Unit = {
+  private def removePrivateTags(al: AttributeList): Unit = {
+
+    val privateTagList = DicomUtil.findAll(al, isPrivateTag _).map(_.getTag).toSet
 
     def isSeqAttr(attr: Attribute) = ValueRepresentation.isSequenceVR(attr.getVR)
 
-    val alList = rtplanTemplate +: DicomUtil.findAll(rtplanTemplate, isSeqAttr _).asInstanceOf[Seq[SequenceAttribute]].flatMap(DicomUtil.alOfSeq)
+    val alList = al +: DicomUtil.findAll(al, isSeqAttr _).asInstanceOf[Seq[SequenceAttribute]].flatMap(DicomUtil.alOfSeq)
 
     def remove(al: AttributeList): Unit = {
       privateTagList.map(tag => {
@@ -186,18 +199,18 @@ class MakeRtPlan(
   /**
     * Remove beams that are not one of the 4 required.
     */
-  private def removeOtherBeams(): Unit = {
+  private def removeOtherBeams(rtplan: AttributeList): Unit = {
 
     // List of beam numbers that we need.  You gotta be on the list or you will be deleted.
     val requiredBeamNumberList = {
       val beamNameList = beamList.map(_.BeamName)
-      val allBeams = DicomUtil.seqToAttr(rtplanTemplate, TagByName.BeamSequence)
+      val allBeams = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
       val requiredBeams = allBeams.filter(al => beamNameList.contains(nameOfBeam(al)))
       val beamNumberList = requiredBeams.map(al => al.get(TagByName.BeamNumber).getIntegerValues.head)
       beamNumberList
     }
 
-    val seqList = DicomUtil.findAll(rtplanTemplate, attr => ValueRepresentation.isSequenceVR(attr.getVR)).asInstanceOf[Seq[SequenceAttribute]]
+    val seqList = DicomUtil.findAll(rtplan, attr => ValueRepresentation.isSequenceVR(attr.getVR)).asInstanceOf[Seq[SequenceAttribute]]
 
     def hasUnneededBeam(item: SequenceItem): Boolean = {
       val al = item.getAttributeList
@@ -220,13 +233,18 @@ class MakeRtPlan(
   }
 
   def makeRtplan(): AttributeList = {
-    removePrivateTags()
-    removeOtherBeams()
-    setVariousAttributes()
-    setDatesAndTimes()
-    makeNewUIDs()
-    beamList.foreach(setupBeam)
-    rtplanTemplate
+    val rtplanFile = Util.listDirFiles(templateDir).find(f => f.getName.toLowerCase().contains("rtplan")).get
+
+    val rtplan = new DicomFile(rtplanFile).attributeList.get
+    val BeamSequence = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
+
+    removePrivateTags(rtplan)
+    removeOtherBeams(rtplan)
+    setVariousAttributes(rtplan)
+    setDatesAndTimes(rtplan)
+    makeNewUIDs(rtplan)
+    beamList.foreach(b => setupBeam(BeamSequence, b))
+    rtplan
   }
 
 }
