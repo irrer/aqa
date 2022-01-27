@@ -307,7 +307,7 @@ class MakeRtPlan(
     * @param templateFiles List of configured files.
     */
   private def makeCT(toZipOutputStream: FileUtil.ToZipOutputStream, templateFiles: TemplateFiles): Unit = {
-    val ctList = templateFiles.fileList.filter(_.modality.equals("CT"))
+    val ctList = templateFiles.fileList.filter(_.modality.equals("CT")).sortBy(_.file.getName)
 
     def make(ctRef: TemplateFileRef, index: Int): Unit = {
       val ct = ctRef.fileToDicom()
