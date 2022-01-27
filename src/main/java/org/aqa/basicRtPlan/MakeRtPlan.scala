@@ -38,6 +38,12 @@ class MakeRtPlan(
   /** Name of application writing DICOM files. */
   private val sourceApplication = "AQA Basic RTPlan"
 
+  /** Setting this to true will cause all beams to be kept, even those that are not of the main 4. */
+  private val keepOtherBeams = true
+
+  /** Setting this to true will cause all private tags to be kept. */
+  private val keepPrivateTags = true
+
   /** Used for DICOM dates and times. */
   private val now = new Date()
 
@@ -96,6 +102,7 @@ class MakeRtPlan(
     // set the X and Y jaw values
     setLeafJawPositions(beamTemplate, Seq("X", "ASYMX"), beamSpecification.X_mm)
     setLeafJawPositions(beamTemplate, Seq("Y", "ASYMY"), beamSpecification.Y_mm)
+    logger.info("Set up beam parameters: " + beamSpecification)
   }
 
   /**
@@ -187,61 +194,74 @@ class MakeRtPlan(
     */
   private def removePrivateTags(al: AttributeList): Unit = {
 
-    val privateTagList = DicomUtil.findAll(al, isPrivateTag _).map(_.getTag).toSet
+    if (keepPrivateTags) {
+      logger.info("Keeping private tags.")
+    } else {
+      val privateTagList = DicomUtil.findAll(al, isPrivateTag _).map(_.getTag).toSet
 
-    def isSeqAttr(attr: Attribute) = ValueRepresentation.isSequenceVR(attr.getVR)
+      def isSeqAttr(attr: Attribute) = ValueRepresentation.isSequenceVR(attr.getVR)
 
-    val alList = al +: DicomUtil.findAll(al, isSeqAttr _).asInstanceOf[Seq[SequenceAttribute]].flatMap(DicomUtil.alOfSeq)
+      val alList = al +: DicomUtil.findAll(al, isSeqAttr _).asInstanceOf[Seq[SequenceAttribute]].flatMap(DicomUtil.alOfSeq)
 
-    def remove(al: AttributeList): Unit = {
-      privateTagList.map(tag => {
-        if (al.get(tag) != null)
-          al.remove(tag)
-      })
+      def remove(al: AttributeList): Unit = {
+        privateTagList.map(tag => {
+          if (al.get(tag) != null)
+            al.remove(tag)
+        })
+      }
+
+      val privateAttributeList = DicomUtil.findAll(al, isPrivateTag _)
+      logger.info("Removing private tags.  Count: " + privateAttributeList.size)
+
+      alList.foreach(remove)
     }
-
-    alList.foreach(remove)
   }
 
   /**
     * Remove beams that are not one of the 4 required.
     */
   private def removeOtherBeams(rtplan: AttributeList): Unit = {
+    if (keepOtherBeams) {
+      logger.info("Keeping all beams.")
+    } else {
+      // List of beam numbers that we need.  You gotta be on the list or you will be deleted.
+      val requiredBeamNumberList = {
+        val beamNameList = beamList.map(_.BeamName)
+        val allBeams = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
+        val requiredBeams = allBeams.filter(al => beamNameList.contains(nameOfBeam(al)))
+        val beamNumberList = requiredBeams.map(al => al.get(TagByName.BeamNumber).getIntegerValues.head)
+        beamNumberList
+      }
 
-    // List of beam numbers that we need.  You gotta be on the list or you will be deleted.
-    val requiredBeamNumberList = {
-      val beamNameList = beamList.map(_.BeamName)
-      val allBeams = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
-      val requiredBeams = allBeams.filter(al => beamNameList.contains(nameOfBeam(al)))
-      val beamNumberList = requiredBeams.map(al => al.get(TagByName.BeamNumber).getIntegerValues.head)
-      beamNumberList
+      val seqList = DicomUtil.findAll(rtplan, attr => ValueRepresentation.isSequenceVR(attr.getVR)).asInstanceOf[Seq[SequenceAttribute]]
+      logger.info("Removing extra beams and keeping the main 4.")
+
+      def hasUnneededBeam(item: SequenceItem): Boolean = {
+        val al = item.getAttributeList
+
+        val ref = al.get(TagByName.ReferencedBeamNumber)
+        val beam = al.get(TagByName.BeamNumber)
+
+        val r = (ref != null) && (!requiredBeamNumberList.contains(ref.getIntegerValues.head))
+        val b = (beam != null) && (!requiredBeamNumberList.contains(beam.getIntegerValues.head))
+
+        r || b
+      }
+
+      def remove(seqAttr: SequenceAttribute): Unit = {
+        val itemList = (0 until seqAttr.getNumberOfItems).map(i => seqAttr.getItem(i))
+        val removeList = itemList.filter(hasUnneededBeam)
+        logger.info("Removing non-main beams.  Count: " + removeList.size)
+        removeList.foreach(seqAttr.remove)
+      }
+
+      seqList.foreach(remove)
     }
-
-    val seqList = DicomUtil.findAll(rtplan, attr => ValueRepresentation.isSequenceVR(attr.getVR)).asInstanceOf[Seq[SequenceAttribute]]
-
-    def hasUnneededBeam(item: SequenceItem): Boolean = {
-      val al = item.getAttributeList
-
-      val ref = al.get(TagByName.ReferencedBeamNumber)
-      val beam = al.get(TagByName.BeamNumber)
-
-      val r = (ref != null) && (!requiredBeamNumberList.contains(ref.getIntegerValues.head))
-      val b = (beam != null) && (!requiredBeamNumberList.contains(beam.getIntegerValues.head))
-
-      r || b
-    }
-
-    def remove(seqAttr: SequenceAttribute): Unit = {
-      val itemList = (0 until seqAttr.getNumberOfItems).map(i => seqAttr.getItem(i))
-      itemList.filter(hasUnneededBeam).foreach(seqAttr.remove)
-    }
-
-    seqList.foreach(remove)
   }
 
   private def makeRtplan(rtplan: AttributeList): Unit = {
-    //removePrivateTags(rtplan)
-    //removeOtherBeams(rtplan)
+    removePrivateTags(rtplan)
+    removeOtherBeams(rtplan)
     setVariousAttributes(rtplan)
     setDatesAndTimes(rtplan)
     makeNewUIDs(rtplan)
@@ -267,6 +287,14 @@ class MakeRtPlan(
       makeNewUIDs(rtstruct)
       val suffix = if (rtStructList.size == 1) "" else "_" + (index + 1)
       toZipOutputStream.writeDicom(rtstruct, "RTSTRUCT" + suffix + ".dcm", sourceApplication)
+
+      val description = {
+        val list = Seq(TagByName.SOPInstanceUID, TagByName.StructureSetLabel, TagByName.ROIName, TagByName.ROIObservationLabel)
+        val textList = list.flatMap(tag => { DicomUtil.findAllSingle(rtstruct, tag).map(_.getSingleStringValueOrEmptyString()) })
+        textList.mkString("  ")
+      }
+
+      logger.info("Made RTSTRUCT file " + description)
     }
 
     rtStructList.zipWithIndex.foreach(ri => make(ri._1, ri._2))
@@ -289,6 +317,7 @@ class MakeRtPlan(
       makeNewUIDs(ct)
       val suffix = if (ctList.size == 1) "" else "_" + (index + 1).formatted("%03d")
       toZipOutputStream.writeDicom(ct, "CT/CT" + suffix + ".dcm", sourceApplication)
+      logger.info("Made CT slice " + ct.get(TagByName.ImagePositionPatient).getDoubleValues.map(Util.fmtDbl).mkString("  "))
     }
 
     ctList.zipWithIndex.foreach(ri => make(ri._1, ri._2))
@@ -311,6 +340,9 @@ class MakeRtPlan(
       makeNewUIDs(rtimage)
       val suffix = if (rtimageList.size == 1) "" else "_" + (index + 1)
       toZipOutputStream.writeDicom(rtimage, "RTIMAGE" + suffix + ".dcm", sourceApplication)
+      val description = "Beam number " + rtimage.get(TagByName.ReferencedBeamNumber).getIntegerValues.head + " : " +
+        DicomUtil.findAllSingle(rtimage, TagByName.LeafJawPositions).map(_.getDoubleValues.mkString(", ")).mkString("    ")
+      logger.info("Made RTIMAGE " + description)
     }
 
     rtimageList.zipWithIndex.foreach(ri => make(ri._1, ri._2))
@@ -333,6 +365,7 @@ class MakeRtPlan(
 
     makeRtplan(rtplan)
     toZipOutputStream.writeDicom(rtplan, path = "RTPLAN.dcm", sourceApplication)
+    logger.info("Made RTPLAN file " + rtplan.get(TagByName.RTPlanLabel).getSingleStringValueOrEmptyString())
     makeRtstruct(toZipOutputStream, templateFiles)
     makeRTIMAGE(toZipOutputStream, templateFiles)
     makeCT(toZipOutputStream, templateFiles)

@@ -7,5 +7,10 @@ case class BeamSpecification(
     X_mm: Double,
     Y_mm: Double
 ) {
-
+  override def toString: String = {
+    BeamName + " ==> " +
+      "Gantry: " + GantryAngle_deg + "    " +
+      "Energy: " + NominalBeamEnergy + "    " +
+      "X_mm, Y_mm: " + X_mm + ", " + Y_mm
+  }
 }
