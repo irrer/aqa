@@ -400,8 +400,8 @@ class BasicRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
       beamList = beamRowSeq.map(_.toBeamSpecification(valueMap)).sortBy(_.GantryAngle_deg)
     )
 
-    val rtplan = makeRtPlan.makeRtplan()
-    Trace.trace(DicomUtil.attributeListToString(rtplan))
+    val textData = makeRtPlan.makeZipWithSupportingFiles()
+    Trace.trace(textData._1)
     // DicomUtil.writeAttributeListToFile(???, ???, ???)
   }
 

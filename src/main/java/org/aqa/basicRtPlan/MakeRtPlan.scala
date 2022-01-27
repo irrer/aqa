@@ -8,18 +8,22 @@ import com.pixelmed.dicom.SequenceItem
 import com.pixelmed.dicom.ValueRepresentation
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.FileUtil
 import edu.umro.util.UMROGUID
 import org.aqa.Config
-import org.aqa.DicomFile
 import org.aqa.Logging
 import org.aqa.Util
 
+import java.io.File
 import java.util.Date
 
 /**
-  * Given specifications, create a basic custom RTPLAN.
+  *
   * @param PatientID Patient ID to use.
+  * @param PatientName Name of patient.
+  * @param machineName Name of machine.
   * @param RTPlanLabel Plan label ID to use.
+  * @param ToleranceTableLabel Tolerance table to use.
   * @param beamList List of beam specifications.
   */
 class MakeRtPlan(
@@ -31,7 +35,11 @@ class MakeRtPlan(
     beamList: Seq[BeamSpecification]
 ) extends Logging {
 
-  private val templateDir = Config.BasicRtplanTemplateDir.get
+  /** Name of application writing DICOM files. */
+  private val sourceApplication = "AQA Basic RTPlan"
+
+  /** Used for DICOM dates and times. */
+  private val now = new Date()
 
   /**
     * Given a beam, return its name.
@@ -121,7 +129,6 @@ class MakeRtPlan(
   }
 
   private def setDatesAndTimes(al: AttributeList): Unit = {
-    val now = new Date()
     val dateText = DicomUtil.dicomDateFormat.format(now)
     val timeText = DicomUtil.dicomTimeFormat.format(now)
 
@@ -171,7 +178,7 @@ class MakeRtPlan(
     attrList.foreach(at => replace(at))
   }
 
-  def isPrivateTag(attr: Attribute): Boolean = {
+  private def isPrivateTag(attr: Attribute): Boolean = {
     (attr.getTag.getGroup & 1) == 1
   }
 
@@ -232,19 +239,107 @@ class MakeRtPlan(
     seqList.foreach(remove)
   }
 
-  def makeRtplan(): AttributeList = {
-    val rtplanFile = Util.listDirFiles(templateDir).find(f => f.getName.toLowerCase().contains("rtplan")).get
-
-    val rtplan = new DicomFile(rtplanFile).attributeList.get
-    val BeamSequence = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
-
-    removePrivateTags(rtplan)
-    removeOtherBeams(rtplan)
+  private def makeRtplan(rtplan: AttributeList): Unit = {
+    //removePrivateTags(rtplan)
+    //removeOtherBeams(rtplan)
     setVariousAttributes(rtplan)
     setDatesAndTimes(rtplan)
     makeNewUIDs(rtplan)
+
+    val BeamSequence = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
     beamList.foreach(b => setupBeam(BeamSequence, b))
-    rtplan
+  }
+
+  /**
+    * Modify the RTSTRUCT templates and write them to the stream.
+    *
+    * @param toZipOutputStream Write DICOM here.
+    * @param templateFiles List of configured files.
+    */
+  private def makeRtstruct(toZipOutputStream: FileUtil.ToZipOutputStream, templateFiles: TemplateFiles): Unit = {
+    val rtStructList = templateFiles.fileList.filter(_.modality.equals("RTSTRUCT"))
+
+    def make(rtstructRef: TemplateFileRef, index: Int): Unit = {
+      val rtstruct = rtstructRef.fileToDicom()
+      removePrivateTags(rtstruct)
+      setVariousAttributes(rtstruct)
+      setDatesAndTimes(rtstruct)
+      makeNewUIDs(rtstruct)
+      val suffix = if (rtStructList.size == 1) "" else "_" + (index + 1)
+      toZipOutputStream.writeDicom(rtstruct, "RTSTRUCT" + suffix + ".dcm", sourceApplication)
+    }
+
+    rtStructList.zipWithIndex.foreach(ri => make(ri._1, ri._2))
+  }
+
+  /**
+    * Modify the CT templates and write them to the stream.
+    *
+    * @param toZipOutputStream Write DICOM here.
+    * @param templateFiles List of configured files.
+    */
+  private def makeCT(toZipOutputStream: FileUtil.ToZipOutputStream, templateFiles: TemplateFiles): Unit = {
+    val ctList = templateFiles.fileList.filter(_.modality.equals("CT"))
+
+    def make(ctRef: TemplateFileRef, index: Int): Unit = {
+      val ct = ctRef.fileToDicom()
+      removePrivateTags(ct)
+      setVariousAttributes(ct)
+      setDatesAndTimes(ct)
+      makeNewUIDs(ct)
+      val suffix = if (ctList.size == 1) "" else "_" + (index + 1).formatted("%03d")
+      toZipOutputStream.writeDicom(ct, "CT/CT" + suffix + ".dcm", sourceApplication)
+    }
+
+    ctList.zipWithIndex.foreach(ri => make(ri._1, ri._2))
+  }
+
+  /**
+    * Modify the RTIMAGE templates and write them to the stream.
+    *
+    * @param toZipOutputStream Write DICOM here.
+    * @param templateFiles List of configured files.
+    */
+  private def makeRTIMAGE(toZipOutputStream: FileUtil.ToZipOutputStream, templateFiles: TemplateFiles): Unit = {
+    val rtimageList = templateFiles.fileList.filter(_.modality.equals("RTIMAGE"))
+
+    def make(rtimageRef: TemplateFileRef, index: Int): Unit = {
+      val rtimage = rtimageRef.fileToDicom()
+      removePrivateTags(rtimage)
+      setVariousAttributes(rtimage)
+      setDatesAndTimes(rtimage)
+      makeNewUIDs(rtimage)
+      val suffix = if (rtimageList.size == 1) "" else "_" + (index + 1)
+      toZipOutputStream.writeDicom(rtimage, "RTIMAGE" + suffix + ".dcm", sourceApplication)
+    }
+
+    rtimageList.zipWithIndex.foreach(ri => make(ri._1, ri._2))
+  }
+
+  /**
+    * Make the RTPLAN and the files that it references, including RTSTRUCT, RTIMAGE, and CT.
+    *
+    * The point of the supporting files is to allow the user to bring this into
+    * another system for viewing.
+    *
+    * @return A text version of the RTPLAN and a zipped byte array of all of the DICOM files.
+    */
+  def makeZipWithSupportingFiles(): (String, Array[Byte]) = {
+    val toZipOutputStream = new FileUtil.ToZipOutputStream
+
+    val templateFiles = new TemplateFiles
+
+    val rtplan = templateFiles.ofModality(modality = "RTPLAN").head.fileToDicom()
+
+    makeRtplan(rtplan)
+    toZipOutputStream.writeDicom(rtplan, path = "RTPLAN.dcm", sourceApplication)
+    makeRtstruct(toZipOutputStream, templateFiles)
+    makeRTIMAGE(toZipOutputStream, templateFiles)
+    makeCT(toZipOutputStream, templateFiles)
+
+    val data = toZipOutputStream.finish()
+    val text = DicomUtil.attributeListToString(rtplan)
+    (text, data)
   }
 
 }
@@ -257,12 +352,15 @@ object MakeRtPlan {
     val g270 = BeamSpecification(GantryAngle_deg = 270, BeamName = Config.BasicRtplanBeamNameG270, X_mm = 55, Y_mm = 56, NominalBeamEnergy = 6)
 
     val mrp =
-      new MakeRtPlan(PatientID = "Hiya", PatientName = "Lowe^Hiram", machineName = "JimMach", RTPlanLabel = "ThePlan", ToleranceTableLabel = "Tolerable", beamList = Seq(g000, g090, g180, g270))
-    val plan = mrp.makeRtplan()
+      new MakeRtPlan(PatientID = "$AQA_Basic", PatientName = "$AQA_Basic", machineName = "UM-EX4", RTPlanLabel = "AQA Basic", ToleranceTableLabel = "PELVIS", beamList = Seq(g000, g090, g180, g270))
+    val textData = mrp.makeZipWithSupportingFiles()
 
-    val text = DicomUtil.attributeListToString(plan)
     println("===========================================================================")
-    println(text)
+    println(textData._1)
     println("===========================================================================")
+
+    val outFile = new File("target/basic.zip")
+    Util.writeBinaryFile(outFile, textData._2)
+    println("Wrote file " + outFile.getAbsolutePath)
   }
 }
