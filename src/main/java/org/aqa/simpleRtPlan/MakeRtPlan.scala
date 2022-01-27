@@ -316,7 +316,7 @@ class MakeRtPlan(
       setDatesAndTimes(ct)
       makeNewUIDs(ct)
       val suffix = if (ctList.size == 1) "" else "_" + (index + 1).formatted("%03d")
-      toZipOutputStream.writeDicom(ct, "CT/CT" + suffix + ".dcm", sourceApplication)
+      toZipOutputStream.writeDicom(ct, "CT" + suffix + ".dcm", sourceApplication)
       logger.info("Made CT slice " + ct.get(TagByName.ImagePositionPatient).getDoubleValues.map(Util.fmtDbl).mkString("  "))
     }
 
