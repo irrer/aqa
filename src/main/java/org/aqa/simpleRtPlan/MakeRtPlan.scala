@@ -1,4 +1,4 @@
-package org.aqa.basicRtPlan
+package org.aqa.simpleRtPlan
 
 import com.pixelmed.dicom.Attribute
 import com.pixelmed.dicom.AttributeList
@@ -32,11 +32,11 @@ class MakeRtPlan(
     machineName: String,
     RTPlanLabel: String,
     ToleranceTableLabel: String,
-    beamList: Seq[BeamSpecification]
+    beamList: Seq[SimpleSpecification]
 ) extends Logging {
 
   /** Name of application writing DICOM files. */
-  private val sourceApplication = "AQA Basic RTPlan"
+  private val sourceApplication = "AQA Simple RTPlan"
 
   /** Setting this to true will cause all beams to be kept, even those that are not of the main 4. */
   private val keepOtherBeams = true
@@ -92,7 +92,7 @@ class MakeRtPlan(
     positionSeqList.filter(ps => typeOk(ps)).foreach(setJaw)
   }
 
-  private def setupBeam(BeamSequence: Seq[AttributeList], beamSpecification: BeamSpecification): Unit = {
+  private def setupBeam(BeamSequence: Seq[AttributeList], beamSpecification: SimpleSpecification): Unit = {
 
     val beamTemplate = BeamSequence.find(b => nameOfBeam(b).equalsIgnoreCase(beamSpecification.BeamName)).get
 
@@ -130,7 +130,7 @@ class MakeRtPlan(
     setAll(al, TagByName.ToleranceTableLabel, ToleranceTableLabel)
 
     setAll(al, TagByName.Manufacturer, "AQA")
-    setAll(al, TagByName.ManufacturerModelName, "Basic Plan")
+    setAll(al, TagByName.ManufacturerModelName, "Simple Plan")
     setAll(al, TagByName.DeviceSerialNumber, "001")
     setAll(al, TagByName.SoftwareVersions, "0.0.1")
   }
@@ -356,7 +356,7 @@ class MakeRtPlan(
     *
     * @return A text version of the RTPLAN and a zipped byte array of all of the DICOM files.
     */
-  def makeZipWithSupportingFiles(): (String, Array[Byte]) = {
+  def makeZipWithSupportingFiles(): ModifiedPlan = {
     val toZipOutputStream = new FileUtil.ToZipOutputStream
 
     val templateFiles = new TemplateFiles
@@ -372,28 +372,28 @@ class MakeRtPlan(
 
     val data = toZipOutputStream.finish()
     val text = DicomUtil.attributeListToString(rtplan)
-    (text, data)
+    ModifiedPlan(text, data)
   }
 
 }
 
 object MakeRtPlan {
   def main(args: Array[String]): Unit = {
-    val g000 = BeamSpecification(GantryAngle_deg = 0, BeamName = Config.BasicRtplanBeamNameG000, X_mm = 25, Y_mm = 26, NominalBeamEnergy = 6)
-    val g090 = BeamSpecification(GantryAngle_deg = 90, BeamName = Config.BasicRtplanBeamNameG090, X_mm = 35, Y_mm = 36, NominalBeamEnergy = 6)
-    val g180 = BeamSpecification(GantryAngle_deg = 180, BeamName = Config.BasicRtplanBeamNameG180, X_mm = 45, Y_mm = 46, NominalBeamEnergy = 6)
-    val g270 = BeamSpecification(GantryAngle_deg = 270, BeamName = Config.BasicRtplanBeamNameG270, X_mm = 55, Y_mm = 56, NominalBeamEnergy = 6)
+    val g000 = SimpleSpecification(GantryAngle_deg = 0, BeamName = Config.SimpleRtplanBeamNameG000, X_mm = 25, Y_mm = 26, NominalBeamEnergy = 6)
+    val g090 = SimpleSpecification(GantryAngle_deg = 90, BeamName = Config.SimpleRtplanBeamNameG090, X_mm = 35, Y_mm = 36, NominalBeamEnergy = 6)
+    val g180 = SimpleSpecification(GantryAngle_deg = 180, BeamName = Config.SimpleRtplanBeamNameG180, X_mm = 45, Y_mm = 46, NominalBeamEnergy = 6)
+    val g270 = SimpleSpecification(GantryAngle_deg = 270, BeamName = Config.SimpleRtplanBeamNameG270, X_mm = 55, Y_mm = 56, NominalBeamEnergy = 6)
 
     val mrp =
-      new MakeRtPlan(PatientID = "$AQA_Basic", PatientName = "$AQA_Basic", machineName = "UM-EX4", RTPlanLabel = "AQA Basic", ToleranceTableLabel = "PELVIS", beamList = Seq(g000, g090, g180, g270))
-    val textData = mrp.makeZipWithSupportingFiles()
+      new MakeRtPlan(PatientID = "$AQA_Simple", PatientName = "$AQA_Simple", machineName = "UM-EX4", RTPlanLabel = "AQA Simple", ToleranceTableLabel = "PELVIS", beamList = Seq(g000, g090, g180, g270))
+    val modifiedPlan = mrp.makeZipWithSupportingFiles()
 
     println("===========================================================================")
-    println(textData._1)
+    println(modifiedPlan.rtplanText)
     println("===========================================================================")
 
-    val outFile = new File("target/basic.zip")
-    Util.writeBinaryFile(outFile, textData._2)
+    val outFile = new File("target/simple.zip")
+    Util.writeBinaryFile(outFile, modifiedPlan.zippedContent)
     println("Wrote file " + outFile.getAbsolutePath)
   }
 }

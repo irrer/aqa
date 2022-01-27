@@ -1,4 +1,4 @@
-package org.aqa.basicRtPlan
+package org.aqa.simpleRtPlan
 
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.DicomFileUtilities
@@ -36,7 +36,7 @@ class TemplateFiles {
   }
 
   val fileList: Seq[TemplateFileRef] = {
-    val dir = Config.BasicRtplanTemplateDir
+    val dir = Config.SimpleRtplanTemplateDir
     if (dir.isDefined && dir.get.isDirectory)
       listFiles(dir.get, Seq()).map(makeTemplateFileRef)
     else

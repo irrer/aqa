@@ -1,7 +1,7 @@
-package org.aqa.basicRtPlan
+package org.aqa.simpleRtPlan
 
 /** Represent the specifications given by the user that can be used to modify the beams in the RTPLAN. */
-case class BeamSpecification(
+case class SimpleSpecification(
     GantryAngle_deg: Double,
     BeamName: String,
     NominalBeamEnergy: Double,

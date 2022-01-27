@@ -608,12 +608,12 @@ object Config extends Logging {
   val rtplanDirFile = new File(staticDirFile, "rtplan")
 
   /**
-    * Get the directory containing the DICOM file used as a template to make a basic RTPLAN.
+    * Get the directory containing the DICOM file used as a template to make a simple RTPLAN.
     *
     * @return Directory, if it exists.
     */
-  private def getBasicRtplanTemplateDir: Option[File] = {
-    val tagName = "BasicRtplanTemplateDir"
+  private def getSimpleRtplanTemplateDir: Option[File] = {
+    val tagName = "SimpleRtplanTemplateDir"
     val rtplanFileName = getMainTextOption(tagName)
     val directory = if (rtplanFileName.isDefined) {
       val dir = new File(rtplanDirFile, rtplanFileName.get)
@@ -627,7 +627,7 @@ object Config extends Logging {
     if (directory.isDefined)
       logText(tagName, "Directory: " + directory.get.getAbsolutePath)
     else
-      logText(tagName, "Could not initialize Basic RTPLAN directory.  The generate basic RTPLAN feature will not be supported.")
+      logText(tagName, "Could not initialize Simple RTPLAN directory.  The generate simple RTPLAN feature will not be supported.")
     directory
   }
 
@@ -920,11 +920,11 @@ object Config extends Logging {
   val GapSkewLeafSideFinding_mm: Double = logMainText("GapSkewLeafSideFinding_mm", "5.0").toDouble.abs
   val GapSkewLeafEndPenumbra_mm: Double = logMainText("GapSkewLeafEndPenumbra_mm", "20.0").toDouble.abs
 
-  val BasicRtplanTemplateDir = getBasicRtplanTemplateDir
-  val BasicRtplanBeamNameG000 = logMainText(name = "BasicRtplanBeamNameG000", default = "1 kV AP").trim
-  val BasicRtplanBeamNameG090 = logMainText(name = "BasicRtplanBeamNameG090 ", default = "2 kV LLAT").trim
-  val BasicRtplanBeamNameG180 = logMainText(name = "BasicRtplanBeamNameG180 ", default = "3 kV PA").trim
-  val BasicRtplanBeamNameG270 = logMainText(name = "BasicRtplanBeamNameG270 ", default = "4 kV RLAT").trim
+  val SimpleRtplanTemplateDir: Option[File] = getSimpleRtplanTemplateDir
+  val SimpleRtplanBeamNameG000: String = logMainText(name = "SimpleRtplanBeamNameG000", default = "1 kV AP").trim
+  val SimpleRtplanBeamNameG090: String = logMainText(name = "SimpleRtplanBeamNameG090 ", default = "2 kV LLAT").trim
+  val SimpleRtplanBeamNameG180: String = logMainText(name = "SimpleRtplanBeamNameG180 ", default = "3 kV PA").trim
+  val SimpleRtplanBeamNameG270: String = logMainText(name = "SimpleRtplanBeamNameG270 ", default = "4 kV RLAT").trim
 
   // =================================================================================
 

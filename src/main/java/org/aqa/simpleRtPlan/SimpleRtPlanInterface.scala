@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.aqa.basicRtPlan
+package org.aqa.simpleRtPlan
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ScalaUtil.DicomUtil
@@ -25,7 +25,6 @@ import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.CachedUser
-import org.aqa.db.Machine
 import org.aqa.web.WebServer
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil._
@@ -39,11 +38,11 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 /**
-  * Generate a basic DICOM RTPLAN file customized for the user's environment.
+  * Generate a simple DICOM RTPLAN file customized for the user's environment.
   */
-class BasicRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
+class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
 
-  private val pageTitleSelect = "Basic RTPlan"
+  private val pageTitleSelect = "Simple RTPlan"
 
   /** Default tolerance table label. */
   private val defaultToleranceTableLabel = "PELVIS"
@@ -144,8 +143,8 @@ class BasicRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
       }
     }
 
-    def toBeamSpecification(valueMap: ValueMapT): BeamSpecification = {
-      BeamSpecification(
+    def toBeamSpecification(valueMap: ValueMapT): SimpleSpecification = {
+      SimpleSpecification(
         GantryAngle_deg = gantryAngle,
         BeamName = beamName,
         NominalBeamEnergy = beamEnergyOf(valueMap),
@@ -174,10 +173,10 @@ class BasicRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     */
   def beamRowSeq =
     Seq(
-      BeamRow(0, Config.BasicRtplanBeamNameG000),
-      BeamRow(90, Config.BasicRtplanBeamNameG090),
-      BeamRow(180, Config.BasicRtplanBeamNameG180),
-      BeamRow(270, Config.BasicRtplanBeamNameG270)
+      BeamRow(0, Config.SimpleRtplanBeamNameG000),
+      BeamRow(90, Config.SimpleRtplanBeamNameG090),
+      BeamRow(180, Config.SimpleRtplanBeamNameG180),
+      BeamRow(270, Config.SimpleRtplanBeamNameG270)
     )
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -208,11 +207,11 @@ class BasicRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
 
     val uniqueText = new SimpleDateFormat("yyyy-MM-dd").format(new Date)
 
-    val defaultPatient = "$Basic_" + uniqueText
+    val defaultPatient = "$Simple_" + uniqueText
 
     val patientIdMap = if (empty(patientID.label)) Map((patientID.label, defaultPatient)) else emptyValueMap
     val patientNameMap = if (empty(patientName.label)) Map((patientName.label, defaultPatient)) else emptyValueMap
-    val planNameMap = if (empty(planName.label)) Map((planName.label, "Basic " + uniqueText.replace('-', ' '))) else emptyValueMap
+    val planNameMap = if (empty(planName.label)) Map((planName.label, "Simple" + uniqueText.replace('-', ' '))) else emptyValueMap
     val toleranceTableMap = if (empty(toleranceTable.label)) Map((toleranceTable.label, defaultToleranceTableLabel)) else emptyValueMap
 
     val valMap = valueMap ++ beamDefaults ++ patientIdMap ++ patientNameMap ++ planNameMap ++ toleranceTableMap
@@ -294,15 +293,15 @@ class BasicRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     * @return Error on failure, empty list on success.
     */
   private def validateConfigAndFiles() = {
-    val templateDir = Config.BasicRtplanTemplateDir
+    val templateDir = Config.SimpleRtplanTemplateDir
     def rtplanFile = Util.listDirFiles(templateDir.get).find(f => f.getName.toLowerCase().contains("rtplan"))
 
-    if (Config.BasicRtplanTemplateDir.isDefined && rtplanFile.isDefined && rtplanFile.get.canRead)
+    if (Config.SimpleRtplanTemplateDir.isDefined && rtplanFile.isDefined && rtplanFile.get.canRead)
       styleNone
     else
       Error.make(
         planName.label,
-        "RTPLAN file used as template has not been set up in the configuration.  Have the system administrator configure BasicRtplanTemplateDir."
+        "RTPLAN file used as template has not been set up in the configuration.  Have the system administrator configure SimpleRtplanTemplateDir."
       )
   }
 
@@ -317,69 +316,21 @@ class BasicRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     errorList
   }
 
-  private def showDownload(alListWithNames: Seq[(AttributeList, String)], procedureName: String, valueMap: ValueMapT, machine: Machine, response: Response): Unit = {
+  private def showDownload(modifiedPlan: ModifiedPlan, valueMap: ValueMapT, response: Response): Unit = {
 
-    /** Make a name look like a DICOM file name. */
-    def nameToDcm(name: String) = FileUtil.replaceInvalidFileNameCharacters(name.replace(' ', '-').trim, '_').replaceAll("__*", "_") + ".dcm"
-
-    /** Change a name into a HTML valid id attribute. */
-    def nameToId(name: String) = "ID_" + name.replaceAll("[^a-zA-Z0-9]", "_")
-
-    val downloadUrl: String = {
-      val realMachineName = AnonymizeUtil.decryptWithNonce(machine.institutionPK, machine.id_real.get)
-
-      def makeFile(suffix: String) = {
-        val fileName = {
-          val n = "RTPLAN_" + Util.timeAsFileName(new Date) + "_" + procedureName + "_" + realMachineName + suffix
-          FileUtil.replaceInvalidFileNameCharacters(n.replace(' ', '_').trim, '_')
-        }
-        new File(Config.tmpDirFile, fileName)
-      }
-
-      if (alListWithNames.size == 1) {
-        val file = makeFile(".dcm")
-        DicomUtil.writeAttributeListToFile(alListWithNames.head._1, file, "AQA")
-        WebServer.urlOfTmpFile(file)
-      } else {
-        val file = makeFile(".zip")
-        val alNameList = alListWithNames.map(alName => (alName._1, nameToDcm(alName._2)))
-        val zippedContent = DicomUtil.namedDicomToZippedByteArray(alNameList, "AQA")
-        FileUtil.writeBinaryFile(file, zippedContent)
-        WebServer.urlOfTmpFile(file)
-      }
-    }
+    val downloadUrl = pathOf + "?download"
 
     val downloadLink = new WebPlainText("Download", false, 3, 0, _ => { <h4> <a href={downloadUrl} title="Click to download DICOM RTPLAN file(s).">Download</a></h4> })
 
-    val dicomNav = {
 
-      def nameToNav(name: String) = {
-        <a href={"#" + nameToId(name)} style="margin-right: 25px;">Go to: {name}</a>
-      }
-
-      if (alListWithNames.size > 1) {
-        <span>
-          {alListWithNames.map(alName => nameToNav(alName._2))}
-        </span>
-      } else {
-        <span>
-        </span>
-      }
-    }
 
     val dicomViewHtml = {
-      def toHtml(al: AttributeList, name: String) = {
+      val elem = {
         <div>
-          {dicomNav}
-          <span id={nameToId(name)}><h4><p/>Preview {name}</h4><p/><pre title="DICOM meta-data">{WebUtil.nl + DicomUtil.attributeListToString(al)}</pre></span>
+          <pre title="DICOM meta-data">{WebUtil.nl + modifiedPlan.rtplanText}</pre>
         </div>
       }
 
-      val elem = {
-        <div>
-          {alListWithNames.map(rtplanName => toHtml(rtplanName._1, rtplanName._2))}
-        </div>
-      }
       elem
     }
 
@@ -390,7 +341,7 @@ class BasicRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
 
   private case class BeamReference(beam: AttributeList, fractionReference: AttributeList) {}
 
-  private def createRtplan(valueMap: ValueMapT, response: Response): Unit = {
+  private def createRtplan(valueMap: ValueMapT, response: Response): ModifiedPlan = {
     val makeRtPlan = new MakeRtPlan(
       PatientID = valueMap(patientID.label),
       PatientName = valueMap(patientName.label),
@@ -400,9 +351,8 @@ class BasicRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
       beamList = beamRowSeq.map(_.toBeamSpecification(valueMap)).sortBy(_.GantryAngle_deg)
     )
 
-    val textData = makeRtPlan.makeZipWithSupportingFiles()
-    Trace.trace(textData._1)
-    // DicomUtil.writeAttributeListToFile(???, ???, ???)
+    val modifiedPlan = makeRtPlan.makeZipWithSupportingFiles()
+    modifiedPlan
   }
 
   private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
@@ -417,20 +367,23 @@ class BasicRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     makeWebForm().setFormResponse(valueMap, styleMap, pageTitleSelect, response, Status.SUCCESS_OK)
   }
 
+  private def valueMapToString(valueMap: ValueMapT): String = {
+    val text =
+        "Patient ID: " + valueMap(patientID.label) + "\n" +
+        "Patient Name: " + valueMap(patientName.label) + "\n" +
+        "Tolerance Table: " + valueMap(toleranceTable.label) + "\n" +
+        "Plan Name: " + valueMap(planName.label) + "\n" +
+        "Machine: " + valueMap(machineName.label) + "\n" +
+        beamRowSeq.map(_.toText(valueMap)).mkString("\n")
+    text
+  }
+
   private def validateAndMakePlan(valueMap: ValueMapT, response: Response): Unit = {
     val styleMap: StyleMapT = validate(valueMap)
     if (styleMap.isEmpty) {
-      logger.info(
-        "Creating plan.  Parameters: \n" +
-          "Patient ID: " + valueMap(patientID.label) + "\n" +
-          "Patient Name: " + valueMap(patientName.label) + "\n" +
-          "Tolerance Table: " + valueMap(toleranceTable.label) + "\n" +
-          "Plan Name: " + valueMap(planName.label) + "\n" +
-          "Machine: " + valueMap(machineName.label) + "\n" +
-          beamRowSeq.map(_.toText(valueMap)).mkString("\n")
-      )
-      createRtplan(valueMap, response)
-      response.redirectSeeOther("/") // TODO rm
+      logger.info("Creating plan.  Parameters: \n" + valueMapToString(valueMap))
+      val modifiedPlan = createRtplan(valueMap, response)
+      showDownload(modifiedPlan, valueMap, response)
     } else {
       showFailedCustomize(valueMap, styleMap, response)
     }
