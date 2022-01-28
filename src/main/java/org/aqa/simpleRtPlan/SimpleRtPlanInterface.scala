@@ -17,23 +17,21 @@
 package org.aqa.simpleRtPlan
 
 import com.pixelmed.dicom.AttributeList
-import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
 import edu.umro.ScalaUtil.Trace
-import org.aqa.AnonymizeUtil
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.CachedUser
-import org.aqa.web.WebServer
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil._
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
+import org.restlet.data.MediaType
 import org.restlet.data.Status
+import org.restlet.representation.ByteArrayRepresentation
 
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -101,7 +99,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     List(
       makePlainText(text = "Gantry Angle", Some("In degrees")),
       new WebPlainText(label = uniqueId, showLabel = false, col = 1, offset = 0, html = _ => <b title="Beam name in RTPLAN">Beam</b>), // do not center this
-      makePlainText(text = "Energy", Some("Beam Enegy")),
+      makePlainText(text = "Energy", Some("Beam Energy")),
       makePlainText(
         text = "Width mm",
         Some("Width of beam in mm (along the X or Y axis," + titleNewline + "e.g. Anterior to posterior or Sagittal" + titleNewline + "left to right distance.)")
@@ -316,13 +314,39 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     errorList
   }
 
+  private val downloadList = scala.collection.mutable.Map[String, ModifiedPlan]()
+
+  private def downloadZip(valueMap: ValueMapT, response: Response): Unit = {
+    Trace.trace()
+    val zip = {
+      Trace.trace()
+      val uid = valueMap("download")
+      Trace.trace()
+      val modifiedPlan = downloadList(uid)
+      Trace.trace()
+      val data = modifiedPlan.zippedContent
+      Trace.trace()
+      data
+    }
+    Trace.trace()
+
+    Trace.trace()
+    val entity = new ByteArrayRepresentation(zip, MediaType.APPLICATION_GNU_ZIP)
+    Trace.trace()
+    response.setEntity(entity)
+  }
+
   private def showDownload(modifiedPlan: ModifiedPlan, valueMap: ValueMapT, response: Response): Unit = {
 
-    val downloadUrl = pathOf + "?download"
+    Trace.trace(valueMap)
+    val downloadUrl = {
+      val name = FileUtil.replaceInvalidFileNameCharacters(valueMap(patientID.label), '_').replace(' ', '_') + ".zip"
+      val url = pathOf + "/" + name + "?download=" + modifiedPlan.rtplanUID
+      Trace.trace(url)
+      url
+    }
 
-    val downloadLink = new WebPlainText("Download", false, 3, 0, _ => { <h4> <a href={downloadUrl} title="Click to download DICOM RTPLAN file(s).">Download</a></h4> })
-
-
+    val downloadLink = new WebPlainText("Download", false, 3, 0, _ => { <h4> <a href={downloadUrl} title="Click to download zipped DICOM RTPLAN and supporting files.">Download</a></h4> })
 
     val dicomViewHtml = {
       val elem = {
@@ -335,13 +359,27 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     }
 
     val dicomView = new WebPlainText("Download", false, 10, 0, _ => dicomViewHtml)
-    val form = makeWebForm()
-    form.setFormResponse(valueMap, styleNone, "Download RTPLAN", response, Status.SUCCESS_OK)
+
+    val summary = {
+      val elem = { <pre>{WebUtil.nl + valueMapToString(valueMap).replaceAll("\n", WebUtil.nl)}</pre> }
+      new WebPlainText("Summary", false, 10, 0, _ => elem)
+    }
+    /*
+     */
+
+    val rowA: WebRow = List(new WebPlainText("SummaryHeader", false, 10, 0, _ => { <h4>RTPlan Summary</h4> }))
+    val rowB: WebRow = List(summary)
+    val rowC: WebRow = List(downloadLink)
+    val rowD: WebRow = List(new WebPlainText("DetailHeader", false, 10, 0, _ => { <h4>RTPlan as Text</h4> }))
+    val rowE: WebRow = List(dicomView)
+
+    val form = new WebForm(pathOf, List(rowA, rowB, rowC, rowD, rowE))
+    form.setFormResponse(valueMap, styleNone, "Download Simple RTPLAN", response, Status.SUCCESS_OK)
   }
 
   private case class BeamReference(beam: AttributeList, fractionReference: AttributeList) {}
 
-  private def createRtplan(valueMap: ValueMapT, response: Response): ModifiedPlan = {
+  private def createRtplan(valueMap: ValueMapT): ModifiedPlan = {
     val makeRtPlan = new MakeRtPlan(
       PatientID = valueMap(patientID.label),
       PatientName = valueMap(patientName.label),
@@ -352,6 +390,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     )
 
     val modifiedPlan = makeRtPlan.makeZipWithSupportingFiles()
+    downloadList.synchronized { downloadList.put(modifiedPlan.rtplanUID, modifiedPlan) }
     modifiedPlan
   }
 
@@ -369,7 +408,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
 
   private def valueMapToString(valueMap: ValueMapT): String = {
     val text =
-        "Patient ID: " + valueMap(patientID.label) + "\n" +
+      "Patient ID: " + valueMap(patientID.label) + "\n" +
         "Patient Name: " + valueMap(patientName.label) + "\n" +
         "Tolerance Table: " + valueMap(toleranceTable.label) + "\n" +
         "Plan Name: " + valueMap(planName.label) + "\n" +
@@ -382,7 +421,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     val styleMap: StyleMapT = validate(valueMap)
     if (styleMap.isEmpty) {
       logger.info("Creating plan.  Parameters: \n" + valueMapToString(valueMap))
-      val modifiedPlan = createRtplan(valueMap, response)
+      val modifiedPlan = createRtplan(valueMap)
       showDownload(modifiedPlan, valueMap, response)
     } else {
       showFailedCustomize(valueMap, styleMap, response)
@@ -406,6 +445,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
       0 match {
         case _ if user.isEmpty                     => quit(response)
         case _ if buttonIs(valueMap, cancelButton) => quit(response)
+        case _ if valueMap.contains("download")    => downloadZip(valueMap, response)
         case _ if buttonIs(valueMap, createButton) => validateAndMakePlan(valueMap, response)
         case _                                     => formSelect(valueMap, response) // first time viewing the form.  Set defaults
       }

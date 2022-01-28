@@ -6,4 +6,4 @@ package org.aqa.simpleRtPlan
   * @param rtplanText For display to the user.
   * @param zippedContent For download.
   */
-case class ModifiedPlan(rtplanText: String, zippedContent: Array[Byte]) {}
+case class ModifiedPlan(rtplanText: String, rtplanUID: String, zippedContent: Array[Byte]) {}

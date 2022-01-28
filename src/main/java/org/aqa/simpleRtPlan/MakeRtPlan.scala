@@ -372,7 +372,7 @@ class MakeRtPlan(
 
     val data = toZipOutputStream.finish()
     val text = DicomUtil.attributeListToString(rtplan)
-    ModifiedPlan(text, data)
+    ModifiedPlan(text, Util.sopOfAl(rtplan), data)
   }
 
 }
