@@ -16,11 +16,9 @@
 
 package org.aqa.web
 
-import com.pixelmed.dicom.TagFromName
 import org.aqa.AnonymizeUtil
 import org.aqa.Logging
 import org.aqa.Util
-import org.aqa.db.DicomAnonymous
 import org.aqa.db.Machine
 import org.aqa.db.MachineLog
 import org.aqa.web.WebUtil._
@@ -59,16 +57,10 @@ class MachineLogXml extends Restlet with SubUrlAdmin with Logging {
     * @param machine get DeviceSerialNumber for this machine.
     * @return DeviceSerialNumber de-anonymized.
     */
-  private def realDeviceSerialNumber(machine: Machine): String = {
-    val unknown = "unknown"
-    if (machine.serialNumber.isEmpty)
-      unknown
-    else {
-      val anon = DicomAnonymous.getAttributesByTag(machine.institutionPK, Seq(TagFromName.DeviceSerialNumber)).find(da => da.value.equals(machine.serialNumber.get))
-      if (anon.isEmpty)
-        unknown
-      else
-        anon.get.originalValue
+  private def getRealDeviceSerialNumber(machine: Machine): String = {
+    machine.realDeviceSerialNumber() match {
+      case Some(serialNumber) => serialNumber
+      case _                  => "unknown"
     }
   }
 
@@ -78,8 +70,8 @@ class MachineLogXml extends Restlet with SubUrlAdmin with Logging {
     * @return List of machine log dates, plus identifying information for the machine.
     */
   private def machineToXml(machine: Machine): Elem = {
-    val serialNumber = realDeviceSerialNumber(machine)
-    val machineId = AnonymizeUtil.decryptWithNonce(machine.institutionPK, machine.id_real.get)
+    val serialNumber = getRealDeviceSerialNumber(machine)
+    val machineId = machine.realId
     val dateList = MachineLog.getDateList(machine.machinePK.get)
 
     <MachineLogDateList machineId={machineId} DeviceSerialNumber={serialNumber} NumberOfMachineLogs={dateList.size.toString}>

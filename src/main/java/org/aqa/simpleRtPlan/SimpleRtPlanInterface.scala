@@ -383,7 +383,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     val makeRtPlan = new MakeRtPlan(
       PatientID = valueMap(patientID.label),
       PatientName = valueMap(patientName.label),
-      machineName = valueMap(machineName.label),
+      ???, // machineName = valueMap(machineName.label), // TODO
       RTPlanLabel = valueMap(planName.label),
       ToleranceTableLabel = valueMap(toleranceTable.label),
       beamList = beamRowSeq.map(_.toBeamSpecification(valueMap)).sortBy(_.GantryAngle_deg)

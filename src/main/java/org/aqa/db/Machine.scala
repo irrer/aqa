@@ -17,8 +17,10 @@
 package org.aqa.db
 
 import com.pixelmed.dicom.AttributeList
+import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.FileUtil
 import edu.umro.util.Utility
+import org.aqa.AnonymizeUtil
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -85,6 +87,29 @@ case class Machine(
       "  notes: " + fmt(notes)
   }
 
+  /**
+    * Get the real device serial number for the given machine.
+    * @return DeviceSerialNumber de-anonymized.
+    */
+  def realDeviceSerialNumber(): Option[String] = {
+    if (serialNumber.isEmpty)
+      None
+    else {
+      val anon = DicomAnonymous.getAttributesByTag(institutionPK, Seq(TagFromName.DeviceSerialNumber)).find(da => da.value.equals(serialNumber.get))
+      if (anon.isEmpty)
+        None
+      else
+        Some(anon.get.originalValue)
+    }
+  }
+
+  /**
+    * Get the real (de-anonymized) ID of this machine.
+    * @return
+    */
+  def realId: String = {
+    AnonymizeUtil.decryptWithNonce(institutionPK, id_real.get)
+  }
 }
 
 object Machine extends Logging {
@@ -126,7 +151,7 @@ object Machine extends Logging {
         developerMode,
         active,
         notes
-      ) <> (Machine.apply _ tupled, Machine.unapply _)
+      ) <> (Machine.apply _ tupled, Machine.unapply)
 
     def machineTypeFK = foreignKey("Machine_machineTypePKConstraint", machineTypePK, MachineType.query)(_.machineTypePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
     def multileafCollimatorFK =

@@ -13,6 +13,7 @@ import edu.umro.util.UMROGUID
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
+import org.aqa.db.Machine
 
 import java.io.File
 import java.util.Date
@@ -21,7 +22,7 @@ import java.util.Date
   *
   * @param PatientID Patient ID to use.
   * @param PatientName Name of patient.
-  * @param machineName Name of machine.
+  * @param machine Name of machine.
   * @param RTPlanLabel Plan label ID to use.
   * @param ToleranceTableLabel Tolerance table to use.
   * @param beamList List of beam specifications.
@@ -29,7 +30,7 @@ import java.util.Date
 class MakeRtPlan(
     PatientID: String,
     PatientName: String,
-    machineName: String,
+    machine: Machine,
     RTPlanLabel: String,
     ToleranceTableLabel: String,
     beamList: Seq[SimpleSpecification]
@@ -124,7 +125,9 @@ class MakeRtPlan(
 
     setAll(al, TagByName.PatientName, PatientName)
 
-    setAll(al, TagByName.TreatmentMachineName, machineName)
+    val machineID = ""
+    val machineDeviceSerialNumber = machine.realDeviceSerialNumber().get
+    setAll(al, TagByName.TreatmentMachineName, machineID)
     setAll(al, TagByName.PatientSex, "O")
     setAll(al, TagByName.RTPlanLabel, RTPlanLabel)
     setAll(al, TagByName.ToleranceTableLabel, ToleranceTableLabel)
@@ -379,13 +382,23 @@ class MakeRtPlan(
 
 object MakeRtPlan {
   def main(args: Array[String]): Unit = {
+
+    if (true) {
+      val f = new File("""D:\tmp\maggie\33529_RTPLAN_1__0000_1_X.DCM""")
+      val al = new AttributeList
+      al.read(f)
+      val t = DicomUtil.attributeListToString(al)
+      println(t)
+      System.exit(99)
+    }
+
     val g000 = SimpleSpecification(GantryAngle_deg = 0, BeamName = Config.SimpleRtplanBeamNameG000, X_mm = 25, Y_mm = 26, NominalBeamEnergy = 6)
     val g090 = SimpleSpecification(GantryAngle_deg = 90, BeamName = Config.SimpleRtplanBeamNameG090, X_mm = 35, Y_mm = 36, NominalBeamEnergy = 6)
     val g180 = SimpleSpecification(GantryAngle_deg = 180, BeamName = Config.SimpleRtplanBeamNameG180, X_mm = 45, Y_mm = 46, NominalBeamEnergy = 6)
     val g270 = SimpleSpecification(GantryAngle_deg = 270, BeamName = Config.SimpleRtplanBeamNameG270, X_mm = 55, Y_mm = 56, NominalBeamEnergy = 6)
 
     val mrp =
-      new MakeRtPlan(PatientID = "$AQA_Simple", PatientName = "$AQA_Simple", machineName = "UM-EX4", RTPlanLabel = "AQA Simple", ToleranceTableLabel = "PELVIS", beamList = Seq(g000, g090, g180, g270))
+      new MakeRtPlan(PatientID = "$AQA_Simple", PatientName = "$AQA_Simple", machine = ???, RTPlanLabel = "AQA Simple", ToleranceTableLabel = "PELVIS", beamList = Seq(g000, g090, g180, g270))
     val modifiedPlan = mrp.makeZipWithSupportingFiles()
 
     println("===========================================================================")
