@@ -58,7 +58,7 @@ class MachineLogXml extends Restlet with SubUrlAdmin with Logging {
     * @return DeviceSerialNumber de-anonymized.
     */
   private def getRealDeviceSerialNumber(machine: Machine): String = {
-    machine.realDeviceSerialNumber() match {
+    machine.getRealDeviceSerialNumber() match {
       case Some(serialNumber) => serialNumber
       case _                  => "unknown"
     }
@@ -71,7 +71,7 @@ class MachineLogXml extends Restlet with SubUrlAdmin with Logging {
     */
   private def machineToXml(machine: Machine): Elem = {
     val serialNumber = getRealDeviceSerialNumber(machine)
-    val machineId = machine.realId
+    val machineId = machine.getRealId
     val dateList = MachineLog.getDateList(machine.machinePK.get)
 
     <MachineLogDateList machineId={machineId} DeviceSerialNumber={serialNumber} NumberOfMachineLogs={dateList.size.toString}>

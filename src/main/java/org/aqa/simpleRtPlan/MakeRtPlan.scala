@@ -120,14 +120,21 @@ class MakeRtPlan(
     })
   }
 
+  private def setMachineForBeams(al: AttributeList, machine: Machine): Unit = {
+    val rtimage = 0
+    val machineID = machine.getRealId
+    val machineDeviceSerialNumber = machine.getRealDeviceSerialNumber().get
+    val internalId = 5
+    setAll(al, TagByName.TreatmentMachineName, machineID)
+
+
+  }
+
   private def setVariousAttributes(al: AttributeList): Unit = {
     setAll(al, TagByName.PatientID, PatientID)
 
     setAll(al, TagByName.PatientName, PatientName)
 
-    val machineID = ""
-    val machineDeviceSerialNumber = machine.realDeviceSerialNumber().get
-    setAll(al, TagByName.TreatmentMachineName, machineID)
     setAll(al, TagByName.PatientSex, "O")
     setAll(al, TagByName.RTPlanLabel, RTPlanLabel)
     setAll(al, TagByName.ToleranceTableLabel, ToleranceTableLabel)

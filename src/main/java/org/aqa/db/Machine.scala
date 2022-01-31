@@ -91,7 +91,7 @@ case class Machine(
     * Get the real device serial number for the given machine.
     * @return DeviceSerialNumber de-anonymized.
     */
-  def realDeviceSerialNumber(): Option[String] = {
+  def getRealDeviceSerialNumber(): Option[String] = {
     if (serialNumber.isEmpty)
       None
     else {
@@ -107,7 +107,7 @@ case class Machine(
     * Get the real (de-anonymized) ID of this machine.
     * @return
     */
-  def realId: String = {
+  def getRealId: String = {
     AnonymizeUtil.decryptWithNonce(institutionPK, id_real.get)
   }
 }
