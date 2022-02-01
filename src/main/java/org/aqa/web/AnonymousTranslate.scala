@@ -208,7 +208,17 @@ class AnonymousTranslate extends Restlet with SubUrlRoot with Logging {
     def doMach(mach: Machine) = {
       val name = Translate(mach.institutionPK, mach.id, mach.id_real.get, "Machine ID")
       val url = Translate(mach.institutionPK, AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasNotesPrefixId, mach.machinePK.get), mach.notes, "Machine Notes")
-      Seq(name, url)
+      if (mach.tpsID_real.isDefined) {
+        val tpsId = Translate(
+          mach.institutionPK,
+          AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasTreatmentPlanningSystemId, mach.machinePK.get),
+          mach.tpsID_real.get,
+          "Machine TPS ID"
+        )
+        Seq(name, url, tpsId)
+      } else {
+        Seq(name, url)
+      }
     }
 
     val list = if (isWhitelisted) Machine.list else Machine.listMachinesFromInstitution(institutionPK).filter(m => m.id_real.isDefined)

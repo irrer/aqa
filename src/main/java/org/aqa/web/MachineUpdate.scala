@@ -55,6 +55,8 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
   private val id = new WebInputText("Id", true, 3, 0, "Name of machine (required)", true)
 
+  private val tpsId = new WebInputText("TPS ID", true, 3, 0, "ID of machine that is unique within the treatment planning system.", true)
+
   private val machineTypePK = new WebInputSelect("Type", true, 3, 0, typeName, false)
 
   //noinspection ScalaUnusedSymbol
@@ -168,7 +170,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     }
   }
 
-  private val institutionPK = new WebInputSelect("Institution", true, 6, 0, institutionList, true)
+  private val institutionPK = new WebInputSelect("Institution", true, col = 3, 0, institutionList, true)
 
   private val notes = new WebInputTextArea("Notes", 6, 0, "", true)
 
@@ -244,7 +246,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       List(id, machineTypePK),
       List(multileafCollimatorPK, epidPK),
       List(configurationDirectory),
-      List(institutionPK),
+      List(institutionPK, tpsId),
       List(onboardImager, table6DOF),
       List(developerMode, respiratoryManagement),
       List(imagingBeam2_5_mv, active),
@@ -444,6 +446,15 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     }
     val idVal = if (pk.isDefined) AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasPrefixId, pk.get) else "None"
     val id_realVal = Some(AnonymizeUtil.encryptWithNonce(institutionPKVal, valueMap(id.label).trim))
+
+    val tpsIdVal: Option[String] = {
+      valueMap(tpsId.label).trim match {
+        case text if text.isEmpty => None
+        case text                 => Some(AnonymizeUtil.encryptWithNonce(institutionPKVal, text))
+      }
+
+    }
+
     val machineTypePKVal = valueMap(machineTypePK.label).trim.toLong
     val multiLeafCollimatorPKVal = valueMap(multileafCollimatorPK.label).trim.toLong
     val epidPKVal = valueMap(epidPK.label).trim.toLong
@@ -476,6 +487,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       valueMap.contains(respiratoryManagement.label),
       valueMap.contains(developerMode.label),
       valueMap.contains(active.label),
+      tpsIdVal,
       notesVal
     )
 
@@ -541,6 +553,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       (developerMode.label, mach.developerMode.toString),
       (active.label, mach.active.toString),
       (notes.label, AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasNotesPrefixId, pk)),
+      (tpsId.label, AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasTreatmentPlanningSystemId, mach.machinePK.get)),
       (machinePK.label, pk.toString)
     ) ++ getBeamEnergyListAsValueMap(mach.machinePK.get)
 

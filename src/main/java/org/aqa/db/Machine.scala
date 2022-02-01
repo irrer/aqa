@@ -45,6 +45,7 @@ case class Machine(
     respiratoryManagement: Boolean, // True if this is supported.  Defaults to false.
     developerMode: Boolean, // True if this is supported.  Defaults to false.
     active: Boolean, // True if the machine is actively being used.  Defaults to true.  Setting to false may exclude this machine's data from some reports.
+    tpsID_real: Option[String], // ID of the machine in its associated treatment planning system.  Stored as encrypted.
     notes: String // optional further information
 ) {
 
@@ -91,7 +92,7 @@ case class Machine(
     * Get the real device serial number for the given machine.
     * @return DeviceSerialNumber de-anonymized.
     */
-  def getRealDeviceSerialNumber(): Option[String] = {
+  def getRealDeviceSerialNumber: Option[String] = {
     if (serialNumber.isEmpty)
       None
     else {
@@ -110,6 +111,20 @@ case class Machine(
   def getRealId: String = {
     AnonymizeUtil.decryptWithNonce(institutionPK, id_real.get)
   }
+
+  /**
+    * Get the real (de-anonymized) tpsID of this machine.  In earlier versions of
+    * the code this column did not exist, and so might not always be set up.
+    *
+    * @return The name of the machine used as the unique ID in the treatment planning system.
+    */
+  def getRealTpsId: Option[String] = {
+    tpsID_real match {
+      case Some(t) => Some(AnonymizeUtil.decryptWithNonce(institutionPK, t))
+      case _       => None
+    }
+  }
+
 }
 
 object Machine extends Logging {
@@ -131,6 +146,7 @@ object Machine extends Logging {
     def table6DOF = column[Boolean]("table6DOF")
     def respiratoryManagement = column[Boolean]("respiratoryManagement")
     def developerMode = column[Boolean]("developerMode")
+    def tpsID_real = column[Option[String]]("tpsID_real")
     def active = column[Boolean]("active")
 
     def * =
@@ -150,6 +166,7 @@ object Machine extends Logging {
         respiratoryManagement,
         developerMode,
         active,
+        tpsID_real,
         notes
       ) <> (Machine.apply _ tupled, Machine.unapply)
 
