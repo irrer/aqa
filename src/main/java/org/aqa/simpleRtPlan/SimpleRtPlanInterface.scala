@@ -332,16 +332,16 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
         Col("Tol. Table", Display, init = () => DicomUtil.findAllSingle(rtplan, TagByName.ToleranceTableLabel).head.getSingleStringValueOrEmptyString()),
         // Col("Calculated SSD [cm]", Display, init = ???),
         // Col("Planned SSD [cm]", Display, init = ???),
-        Col("Gantry Rtn [deg]", Display, init = () => beamDblS(TagByName.GantryAngle), validate = validAngle90, put = putGantryAngle),
+        Col("Gantry Rtn [deg]", if (isTreat) Text else Display, init = () => beamDblS(TagByName.GantryAngle), validate = validAngle90, put = putGantryAngle),
         Col("Coll Rtn [deg]", Display, init = () => beamDblS(TagByName.BeamLimitingDeviceAngle)),
         //
         Col("Field X [cm]", Display, init = () => initJawSize(typeX)),
-        Col("X1 [cm]", Display, init = () => jawDim(index = 0, jawType = typeX).toString, validate = validateJaw, put = putDimX1),
-        Col("X2 [cm]", Display, init = () => jawDim(index = 1, jawType = typeX).toString, validate = validateJaw, put = putDimX2),
+        Col("X1 [cm]", if (isTreat) Text else Display, init = () => jawDim(index = 0, jawType = typeX).toString, validate = validateJaw, put = putDimX1),
+        Col("X2 [cm]", if (isTreat) Text else Display, init = () => jawDim(index = 1, jawType = typeX).toString, validate = validateJaw, put = putDimX2),
         //
         Col("Field Y [cm]", Display, init = () => initJawSize(typeY)),
-        Col("Y1 [cm]", Display, init = () => jawDim(index = 0, jawType = typeY).toString, validate = validateJaw, put = putDimY1),
-        Col("Y2 [cm]", Display, init = () => jawDim(index = 1, jawType = typeY).toString, validate = validateJaw, put = putDimY2),
+        Col("Y1 [cm]", if (isTreat) Text else Display, init = () => jawDim(index = 0, jawType = typeY).toString, validate = validateJaw, put = putDimY1),
+        Col("Y2 [cm]", if (isTreat) Text else Display, init = () => jawDim(index = 1, jawType = typeY).toString, validate = validateJaw, put = putDimY2),
         //
         Col("Couch Vrt [cm]", Display, init = () => (beamDbl(TagByName.TableTopVerticalPosition) / 10).toString),
         Col("Couch Lng [cm]", Display, init = () => (beamDbl(TagByName.TableTopLongitudinalPosition) / 10).toString),
@@ -427,7 +427,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
         */
       def makeRow(rowIndex: Int): WebRow = {
         val name = beamSeq.head.colList(rowIndex)
-        val header = new WebPlainText(label = "rowHeader" + rowIndex, showLabel = false, col = 1, offset = 0, html = _ => <span>{name.name}</span>)
+        val header = new WebPlainText(label = "rowHeader" + rowIndex, showLabel = false, col = 1, offset = 0, html = _ => <span style="white-space: nowrap;">{name.name}</span>)
         val fieldList = beamSeq.map(beam => beam.colList(rowIndex).field)
         Trace.trace(rowIndex + " WebRow " + name.name)
         (header +: fieldList).toList
