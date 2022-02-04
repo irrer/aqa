@@ -539,6 +539,14 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
 
     val mach = Machine.get(pk).get
 
+    val tps = {
+      if (mach.tpsID_real.isDefined)
+        AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasTreatmentPlanningSystemId, mach.machinePK.get)
+      else {
+        ""
+      }
+    }
+
     val valueMap = Map(
       (id.label, mach.id),
       (machineTypePK.label, mach.machineTypePK.toString),
@@ -553,7 +561,7 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
       (developerMode.label, mach.developerMode.toString),
       (active.label, mach.active.toString),
       (notes.label, AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasNotesPrefixId, pk)),
-      (tpsId.label, AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasTreatmentPlanningSystemId, mach.machinePK.get)),
+      (tpsId.label, tps),
       (machinePK.label, pk.toString)
     ) ++ getBeamEnergyListAsValueMap(mach.machinePK.get)
 

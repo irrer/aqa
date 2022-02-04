@@ -921,10 +921,6 @@ object Config extends Logging {
   val GapSkewLeafEndPenumbra_mm: Double = logMainText("GapSkewLeafEndPenumbra_mm", "20.0").toDouble.abs
 
   val SimpleRtplanTemplateDir: Option[File] = getSimpleRtplanTemplateDir
-  val SimpleRtplanBeamNameG000: String = logMainText(name = "SimpleRtplanBeamNameG000", default = "1 kV AP").trim
-  val SimpleRtplanBeamNameG090: String = logMainText(name = "SimpleRtplanBeamNameG090 ", default = "2 kV LLAT").trim
-  val SimpleRtplanBeamNameG180: String = logMainText(name = "SimpleRtplanBeamNameG180 ", default = "3 kV PA").trim
-  val SimpleRtplanBeamNameG270: String = logMainText(name = "SimpleRtplanBeamNameG270 ", default = "4 kV RLAT").trim
 
   // =================================================================================
 

@@ -29,16 +29,20 @@ class TemplateFiles {
     }
   }
 
-  private def makeTemplateFileRef(file: File): TemplateFileRef = {
-    val al = new AttributeList
-    al.read(file)
-    TemplateFileRef(file, Util.modalityOfAl(al), Util.sopOfAl(al))
+  private def makeTemplateFileRef(file: File): Option[TemplateFileRef] = {
+    try {
+      val al = new AttributeList
+      al.read(file)
+      Some(TemplateFileRef(file, Util.modalityOfAl(al), Util.sopOfAl(al)))
+    } catch {
+      case _: Throwable => None
+    }
   }
 
   val fileList: Seq[TemplateFileRef] = {
     val dir = Config.SimpleRtplanTemplateDir
     if (dir.isDefined && dir.get.isDirectory)
-      listFiles(dir.get, Seq()).map(makeTemplateFileRef)
+      listFiles(dir.get, Seq()).flatMap(makeTemplateFileRef)
     else
       Seq()
   }

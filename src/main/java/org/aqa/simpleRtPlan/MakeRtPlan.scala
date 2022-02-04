@@ -33,7 +33,7 @@ class MakeRtPlan(
     machine: Machine,
     RTPlanLabel: String,
     ToleranceTableLabel: String,
-    beamList: Seq[SimpleSpecification]
+    beamList: Seq[SimpleBeamSpecification]
 ) extends Logging {
 
   /** Name of application writing DICOM files. */
@@ -70,7 +70,7 @@ class MakeRtPlan(
     * @param deviceTypeList Which part of beam to change.
     * @param size_mm Dimension of beam.
     */
-  private def setLeafJawPositions(beamTemplate: AttributeList, deviceTypeList: Seq[String], size_mm: Double): Unit = {
+  private def setLeafJawPositions(beamTemplate: AttributeList, deviceTypeList: Seq[String], d1: Double, d2: Double): Unit = {
     val positionSeqList = {
       val atSeq = DicomUtil.findAllSingle(beamTemplate, TagByName.BeamLimitingDevicePositionSequence).asInstanceOf[IndexedSeq[SequenceAttribute]]
       val list = atSeq.flatMap(DicomUtil.alOfSeq)
@@ -85,15 +85,14 @@ class MakeRtPlan(
     def setJaw(ps: AttributeList): Unit = {
       val LeafJawPositions = ps.get(TagByName.LeafJawPositions)
       LeafJawPositions.removeValues()
-      val half = (size_mm / 2).abs
-      LeafJawPositions.addValue(-half)
-      LeafJawPositions.addValue(half)
+      LeafJawPositions.addValue(-d1)
+      LeafJawPositions.addValue(d2)
     }
 
     positionSeqList.filter(ps => typeOk(ps)).foreach(setJaw)
   }
 
-  private def setupBeam(BeamSequence: Seq[AttributeList], beamSpecification: SimpleSpecification): Unit = {
+  private def setupBeam(BeamSequence: Seq[AttributeList], beamSpecification: SimpleBeamSpecification): Unit = {
 
     val beamTemplate = BeamSequence.find(b => nameOfBeam(b).equalsIgnoreCase(beamSpecification.BeamName)).get
 
@@ -101,8 +100,8 @@ class MakeRtPlan(
     DicomUtil.findAllSingle(beamTemplate, TagByName.NominalBeamEnergy).foreach(nbe => setNominalBeamEnergy(nbe, beamSpecification.NominalBeamEnergy))
 
     // set the X and Y jaw values
-    setLeafJawPositions(beamTemplate, Seq("X", "ASYMX"), beamSpecification.X_mm)
-    setLeafJawPositions(beamTemplate, Seq("Y", "ASYMY"), beamSpecification.Y_mm)
+    setLeafJawPositions(beamTemplate, Seq("X", "ASYMX"), beamSpecification.X1_mm , beamSpecification.X2_mm  )
+    setLeafJawPositions(beamTemplate, Seq("Y", "ASYMY"), beamSpecification.Y1_mm, beamSpecification.Y2_mm )
     logger.info("Set up beam parameters: " + beamSpecification)
   }
 
@@ -123,7 +122,7 @@ class MakeRtPlan(
   private def setMachineForBeams(al: AttributeList, machine: Machine): Unit = {
     val rtimage = 0
     val machineID = machine.getRealId
-    val machineDeviceSerialNumber = machine.getRealDeviceSerialNumber().get
+    val machineDeviceSerialNumber = machine.getRealDeviceSerialNumber.get
     val internalId = 5
     setAll(al, TagByName.TreatmentMachineName, machineID)
 
@@ -399,6 +398,7 @@ object MakeRtPlan {
       System.exit(99)
     }
 
+    /*
     val g000 = SimpleSpecification(GantryAngle_deg = 0, BeamName = Config.SimpleRtplanBeamNameG000, X_mm = 25, Y_mm = 26, NominalBeamEnergy = 6)
     val g090 = SimpleSpecification(GantryAngle_deg = 90, BeamName = Config.SimpleRtplanBeamNameG090, X_mm = 35, Y_mm = 36, NominalBeamEnergy = 6)
     val g180 = SimpleSpecification(GantryAngle_deg = 180, BeamName = Config.SimpleRtplanBeamNameG180, X_mm = 45, Y_mm = 46, NominalBeamEnergy = 6)
@@ -415,5 +415,6 @@ object MakeRtPlan {
     val outFile = new File("target/simple.zip")
     Util.writeBinaryFile(outFile, modifiedPlan.zippedContent)
     println("Wrote file " + outFile.getAbsolutePath)
+    */
   }
 }

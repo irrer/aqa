@@ -46,7 +46,7 @@ object AnonymizeUtil extends Logging {
   /** Used to generate alias ids for machines. */
   val machineAliasPrefixId = "MACH"
   val machineAliasNotesPrefixId: String = machineAliasPrefixId + "_NOTES"
-  val machineAliasTreatmentPlanningSystemId: String = machineAliasPrefixId + "_MACH_TPS_ID"
+  val machineAliasTreatmentPlanningSystemId: String = machineAliasPrefixId + "_TPS_ID"
 
   /** Used to generate alias ids for users. */
   val userAliasPrefixId = "USER"

@@ -6,6 +6,7 @@ Note that when building a package for release, the Maven build process uses the 
 <AQAConfig>
     <!-- Database configuration file name. -->
     <SlickDb>SlickDb.conf</SlickDb>
+    <!-- <SlickDb>SlickDb_AQA.conf</SlickDb> -->
 
     <!--
     Note that with SqlServer, Slick emits this error on startup:
@@ -280,12 +281,6 @@ Note that when building a package for release, the Maven build process uses the 
     will be ignored.  In this directory does not exist or the RTPLAN file under it does not exist, then the feature to
     generate a simple RTPLAN will not be supported. -->
     <SimpleRtplanTemplateDir>simpleRtplan</SimpleRtplanTemplateDir>
-
-    <!-- Names of beams in SimpleRtplan that should be used for the 4 gantry angles. -->
-    <SimpleRtplanBeamNameG000>1 kV AP</SimpleRtplanBeamNameG000>
-    <SimpleRtplanBeamNameG090>2 kV LLAT</SimpleRtplanBeamNameG090>
-    <SimpleRtplanBeamNameG180>3 kV PA</SimpleRtplanBeamNameG180>
-    <SimpleRtplanBeamNameG270>4 kV RLAT</SimpleRtplanBeamNameG270>
 
     <!-- List of categories of maintenance, as referenced in the PMI database table.  If a category is in
         the database whose name does not match one of these, then the first category is used as a default.

@@ -58,7 +58,7 @@ class MachineLogXml extends Restlet with SubUrlAdmin with Logging {
     * @return DeviceSerialNumber de-anonymized.
     */
   private def getRealDeviceSerialNumber(machine: Machine): String = {
-    machine.getRealDeviceSerialNumber() match {
+    machine.getRealDeviceSerialNumber match {
       case Some(serialNumber) => serialNumber
       case _                  => "unknown"
     }

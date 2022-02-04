@@ -16,14 +16,24 @@
 
 package org.aqa.simpleRtPlan
 
+import com.pixelmed.dicom.Attribute
+import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.AttributeList
+import com.pixelmed.dicom.AttributeTag
+import com.pixelmed.dicom.SequenceAttribute
+import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
+import org.aqa.DicomFile
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.CachedUser
 import org.aqa.web.WebUtil
+import org.aqa.web.WebUtil.IsInput
+import org.aqa.web.WebUtil.ToHtml
+import org.aqa.web.WebUtil.ValueMapT
 import org.aqa.web.WebUtil._
 import org.restlet.Request
 import org.restlet.Response
@@ -34,6 +44,7 @@ import org.restlet.representation.ByteArrayRepresentation
 
 import java.text.SimpleDateFormat
 import java.util.Date
+import scala.annotation.tailrec
 
 /**
   * Generate a simple DICOM RTPLAN file customized for the user's environment.
@@ -57,7 +68,10 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
   /** Default beam height in mm. */
   private val defaultHeight_mm = 180.0
 
-  private def energySelectList = Seq(("6", "6"), ("16", "16"), ("None", "None"))
+  /** Default beam treatment limit is seconds. */
+  private val defaultBeamDeliveryDurationLimit = 0.6
+
+  private def energySelectList = Seq(("6", "6"), ("16", "16"))
 
   private def toleranceTable = new WebInputText("Tolerance Table Name", true, 3, 0, "Should match planning system name", false)
 
@@ -68,6 +82,16 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
   private def patientID = new WebInputText("Patient ID", true, 3, 0, "")
 
   private def patientName = new WebInputText("Patient Name", true, 3, 0, "")
+
+  private lazy val templateFiles = {
+    if (true) {
+      val f = new TemplateFiles().ofModality("RTPLAN").head.file
+      Trace.trace("------------------------------------------------------------")
+      Trace.trace(DicomUtil.attributeListToString(new DicomFile(f).attributeList.get))
+      Trace.trace("------------------------------------------------------------")
+    }
+    new TemplateFiles
+  }
 
   /** Inserts vertical spacing above beam list. */
   private def header = {
@@ -110,45 +134,244 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  case class BeamRow(gantryAngle: Int, beamName: String) {
+  case class BeamColumn(rtplan: AttributeList, beamAl: AttributeList) {
 
-    private val uniqueName = "G" + gantryAngle.formatted("%03d")
+    private val templateBeamName = beamAl.get(TagByName.BeamName).getSingleStringValueOrEmptyString()
+    private val prefix = templateBeamName
 
-    private def makeBeamName(): WebPlainText = new WebPlainText(label = uniqueName + "BeamId", showLabel = false, col = 1, offset = 0, html = _ => <b style="white-space: nowrap;">{beamName}</b>)
+    val beamNumber: Int = beamAl.get(TagByName.BeamNumber).getIntegerValues.head
 
-    private def makeEnergy() = new WebInputSelect(label = uniqueName + "Energy", showLabel = false, col = 1, offset = 0, selectList = _ => energySelectList, aqaAlias = false)
+    val beamRef: AttributeList = {
+      val fractionGroupSequence = DicomUtil.seqToAttr(rtplan, TagByName.FractionGroupSequence)
+      val referencedBeamSequenceList = fractionGroupSequence.flatMap(fgs => DicomUtil.seqToAttr(fgs, TagByName.ReferencedBeamSequence))
+      val seqOfInterest = referencedBeamSequenceList.find(rbs => rbs.get(TagByName.ReferencedBeamNumber).getIntegerValues.head == beamNumber).get
 
-    def makeWidth() = new WebInputText(label = uniqueName + "Width", showLabel = false, col = 1, offset = 0, "", aqaAlias = false)
+      val isT = {
+        val bms = seqOfInterest.get(TagByName.BeamMeterset)
+        (bms != null) && (bms.getIntegerValues.head > 0)
+      }
 
-    def makeHeight() = new WebInputText(label = uniqueName + "Height", showLabel = false, col = 1, offset = 0, placeholder = "", aqaAlias = false)
-
-    def makeRow(): WebRow = List(makePlainText(gantryAngle.toString), makeBeamName(), makeEnergy(), makeWidth(), makeHeight())
-
-    def toText(valueMap: ValueMapT): String = {
-      "Gantry Angle " + gantryAngle.formatted("%3d") +
-        "    Energy: " + valueMap(makeEnergy().label).formatted("%5s") +
-        "    Width mm: " + valueMap(makeWidth().label).formatted("%8s") +
-        "    Height mm: " + valueMap(makeHeight().label).formatted("%8s")
+      // if this is a treatment beam and there is no BeamDeliveryDurationLimit, then add a BeamDeliveryDurationLimit
+      if (isT && seqOfInterest.get(TagByName.BeamDeliveryDurationLimit) == null) {
+        val bms = AttributeFactory.newAttribute(TagByName.BeamDeliveryDurationLimit)
+        bms.addValue(defaultBeamDeliveryDurationLimit)
+        seqOfInterest.put(bms)
+      }
+      seqOfInterest
     }
 
-    private def beamEnergyOf(valueMap: ValueMapT): Double = {
-      val text = valueMap(makeEnergy().label)
-      try {
-        val d = text.toDouble
-        d
-      } catch {
-        case _: Throwable => 0
+    // true if this is a treatment beam.
+    val isTreat: Boolean = {
+      val attr = beamRef.get(TagByName.BeamMeterset)
+      (attr != null) && (attr.getIntegerValues.head > 0)
+    }
+
+    //noinspection TypeAnnotation
+    object EntryType extends Enumeration {
+      val Numeric = Value // user can enter data, must be valid numeric
+      val Text = Value // user can enter arbitrary text
+      val Display = Value // user not can enter data, for display only
+    }
+
+    def noValidation(valueMap: ValueMapT, col: Col): StyleMapT = styleNone
+
+    def noPut(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = simpleBeamSpecification
+
+    case class Col(
+        name: String,
+        entryType: EntryType.Value,
+        init: () => String,
+        validate: (ValueMapT, Col) => StyleMapT = noValidation,
+        put: (ValueMapT, SimpleBeamSpecification, Col) => SimpleBeamSpecification = noPut
+    ) {
+
+      val label: String = prefix + name
+
+      def field: IsInput with ToHtml = {
+        if (entryType.toString.equals(EntryType.Display.toString)) {
+          new WebPlainText(label = name, showLabel = false, col = 1, offset = 0, _ => <span>{init()}</span>)
+        } else {
+          new WebInputText(label = name, showLabel = false, col = 1, offset = 0, placeholder = "", aqaAlias = false)
+        }
       }
     }
 
-    def toBeamSpecification(valueMap: ValueMapT): SimpleSpecification = {
-      SimpleSpecification(
-        GantryAngle_deg = gantryAngle,
-        BeamName = beamName,
-        NominalBeamEnergy = beamEnergyOf(valueMap),
-        X_mm = valueMap(makeWidth().label).toDouble,
-        Y_mm = valueMap(makeHeight().label).toDouble
+    import EntryType._
+
+    private def beamList(tag: AttributeTag): Seq[Attribute] = DicomUtil.findAllSingle(beamAl, tag)
+
+    private def beamDbl(tag: AttributeTag): Double = {
+      beamList(tag).head.getDoubleValues.head
+    }
+
+    private def beamDblS(tag: AttributeTag): String = beamDbl(tag).toString
+    Trace.trace("beamRef: " + DicomUtil.attributeListToString(beamRef))
+    private def beamRefList(tag: AttributeTag): Seq[Attribute] = DicomUtil.findAllSingle(beamRef, tag)
+
+    private def beamRefDbl(tag: AttributeTag): Double = {
+      val j1 = beamRefList(tag)
+      val j2 = j1.head
+      val j3 = j2.getDoubleValues
+      val j4 = j3.head
+      Trace.trace(j4)
+
+      beamRefList(tag).head.getDoubleValues.head
+    }
+
+    private def beamRefDblS(tag: AttributeTag): String = {
+      beamRefDbl(tag).toString
+    }
+
+    val typeX = Seq("X", "ASYMX")
+    val typeY = Seq("Y", "ASYMY")
+
+    private def jawDim(index: Int, jawType: Seq[String]): Double = {
+      val list = beamList(TagByName.BeamLimitingDevicePositionSequence)
+        .flatMap(s => DicomUtil.alOfSeq(s.asInstanceOf[SequenceAttribute]))
+        .find(al => jawType.contains(al.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString))
+        .get
+      val positions = list.get(TagByName.LeafJawPositions).getDoubleValues
+      positions(index)
+    }
+
+    /**
+      * Get the jaw opening size for either X or Y.
+      * @param jawType List of types of jow we are looking for.
+      * @return String representing jaw opening size.
+      */
+    private def initJawSize(jawType: Seq[String]): String = {
+      (jawDim(index = 1, jawType) - jawDim(index = 0, jawType)).toString
+    }
+
+    private def validBeamName(valueMap: ValueMapT, col: Col): StyleMapT = {
+      val value = valueMap(col.label)
+      0 match {
+        case _ if value.trim.isEmpty   => WebUtil.Error.make("", "Can not be empty")
+        case _ if value.length > 64    => WebUtil.Error.make("", "Can not be longer than 64 characters")
+        case _ if value.contains('\\') => WebUtil.Error.make("", "Can not contain backslash")
+        case _                         => styleNone
+      }
+    }
+
+    val maxJaw_cm = 24
+
+    private def validateJaw(valueMap: ValueMapT, col: Col): StyleMapT = {
+      val text = valueMap(col.label)
+      0 match {
+        case _ if WebUtil.stringToDouble(text).isEmpty         => Error.make(col.label, "Must be a valid floating point number.")
+        case _ if WebUtil.stringToDouble(text).get < 0         => Error.make(col.label, "Negative values not allowed.")
+        case _ if WebUtil.stringToDouble(text).get > maxJaw_cm => Error.make(col.label, "Value greater than " + maxJaw_cm + " not allowed.")
+        case _                                                 => styleNone
+      }
+    }
+
+    private def validAngle90(valueMap: ValueMapT, col: Col): StyleMapT = {
+
+      val rightAngles = Seq(0.0, 90.0, 180.0, 270.0)
+
+      val text = valueMap(col.label)
+      0 match {
+        case _ if WebUtil.stringToDouble(text).isEmpty                    => Error.make(col.label, "Must be a valid floating point number.")
+        case _ if !rightAngles.contains(WebUtil.stringToDouble(text).get) => Error.make(col.label, "Angle must be one of " + rightAngles.mkString(" ") + ".")
+        case _                                                            => styleNone
+      }
+    }
+
+    private def validateNonNegDouble(valueMap: ValueMapT, col: Col): StyleMapT = {
+      val text = valueMap(col.label)
+      0 match {
+        case _ if WebUtil.stringToDouble(text).isEmpty => Error.make(col.label, "Must be a valid floating point number.")
+        case _ if WebUtil.stringToDouble(text).get < 0 => Error.make(col.label, "Negative values not allowed.")
+        case _                                         => styleNone
+      }
+    }
+
+    private def putGantryAngle(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
+      simpleBeamSpecification.copy(GantryAngle_deg = valueMap(col.label).toDouble)
+    }
+
+    private def putMU(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
+      simpleBeamSpecification.copy(BeamMeterset = valueMap(col.label).toDouble)
+    }
+
+    private def putDimX1(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
+      simpleBeamSpecification.copy(X1_mm = valueMap(col.label).toDouble * 10)
+    }
+
+    private def putDimX2(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
+      simpleBeamSpecification.copy(X1_mm = valueMap(col.label).toDouble * 10)
+    }
+
+    private def putDimY1(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
+      simpleBeamSpecification.copy(X1_mm = valueMap(col.label).toDouble * 10)
+    }
+
+    private def putDimY2(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
+      simpleBeamSpecification.copy(X1_mm = valueMap(col.label).toDouble * 10)
+    }
+
+    val colList: Seq[Col] =
+      Seq(
+        Col("Field Order/Type", Display, init = () => { beamNumber + " / " + { if (isTreat) "Treat" else "Setup" } }),
+        // Col("Field ID", if (isTreat) Text else Display, init = () => templateBeamName, validate = validLO),
+        Col("Field Name", if (isTreat) Text else Display, init = () => templateBeamName, validate = validBeamName),
+        Col("Technique", Display, init = () => beamAl.get(TagByName.BeamType).getSingleStringValueOrEmptyString),
+        Col("Scale", Display, init = () => "Varian IEC"),
+        Col("Energy", Display, init = () => beamDblS(TagByName.NominalBeamEnergy)),
+        Col("Dose Rate [MU/min]", Display, init = () => beamDblS(TagByName.DoseRateSet)),
+        Col("MU", Display, init = () => if (isTreat) beamRefDblS(TagByName.BeamMeterset) else "", validate = validateNonNegDouble, put = putMU),
+        // Col("Dose to Beam Dose Point", Display, init = ???),
+        // Col("Dose to CBCT SIM", Display, init = ???),
+        Col(
+          "Backup Timer [min]",
+          Display,
+          init = () => if (isTreat) Util.fmtDbl(beamRefDbl(TagByName.BeamDeliveryDurationLimit) / 60) else "",
+          validate = validateNonNegDouble,
+          put = (v: ValueMapT, sbs: SimpleBeamSpecification, col: Col) => sbs.copy(BeamDeliveryDurationLimit_sec = v(col.label).toDouble * 60) // convert from minutes to seconds
+        ),
+        Col("Tol. Table", Display, init = () => DicomUtil.findAllSingle(rtplan, TagByName.ToleranceTableLabel).head.getSingleStringValueOrEmptyString()),
+        // Col("Calculated SSD [cm]", Display, init = ???),
+        // Col("Planned SSD [cm]", Display, init = ???),
+        Col("Gantry Rtn [deg]", Display, init = () => beamDblS(TagByName.GantryAngle), validate = validAngle90, put = putGantryAngle),
+        Col("Coll Rtn [deg]", Display, init = () => beamDblS(TagByName.BeamLimitingDeviceAngle)),
+        //
+        Col("Field X [cm]", Display, init = () => initJawSize(typeX)),
+        Col("X1 [cm]", Display, init = () => jawDim(index = 0, jawType = typeX).toString, validate = validateJaw, put = putDimX1),
+        Col("X2 [cm]", Display, init = () => jawDim(index = 1, jawType = typeX).toString, validate = validateJaw, put = putDimX2),
+        //
+        Col("Field Y [cm]", Display, init = () => initJawSize(typeY)),
+        Col("Y1 [cm]", Display, init = () => jawDim(index = 0, jawType = typeY).toString, validate = validateJaw, put = putDimY1),
+        Col("Y2 [cm]", Display, init = () => jawDim(index = 1, jawType = typeY).toString, validate = validateJaw, put = putDimY2),
+        //
+        Col("Couch Vrt [cm]", Display, init = () => (beamDbl(TagByName.TableTopVerticalPosition) / 10).toString),
+        Col("Couch Lng [cm]", Display, init = () => (beamDbl(TagByName.TableTopLongitudinalPosition) / 10).toString),
+        Col("Couch Lat [cm]", Display, init = () => (beamDbl(TagByName.TableTopLateralPosition) / 10).toString),
+        Col("Couch Rtn [deg]", Display, init = () => beamDblS(TagByName.TableTopEccentricAngle))
       )
+
+    Trace.trace(colList.size + "  col list: " + colList.map(_.name).mkString("\n"))
+
+    /**
+      * Fill in beam values.
+      *
+      * @param valueMap User entries.
+      * @return A single beam specification.
+      */
+    def toBeamSpecification(valueMap: ValueMapT): SimpleBeamSpecification = {
+
+      val simpleBeamSpecification = SimpleBeamSpecification
+
+      @tailrec
+      def putList(sbs: SimpleBeamSpecification, cl: Seq[Col]): SimpleBeamSpecification = {
+        if (cl.isEmpty) sbs
+        else {
+          putList(cl.head.put(valueMap, sbs, cl.head), cl.tail)
+        }
+      }
+
+      val sbsInit = SimpleBeamSpecification()
+      val sbsFinal = putList(sbsInit, colList)
+      sbsFinal
     }
 
     /**
@@ -157,10 +380,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
       * @return List of label+value pairs.
       */
     def defaultValueMap(): ValueMapT = {
-      Map(
-        (uniqueName + "Width", defaultWidth_mm.toString),
-        (uniqueName + "Height", defaultHeight_mm.toString)
-      )
+      colList.map(f => (f.label, f.init())).toMap
     }
   }
 
@@ -169,13 +389,12 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     *
     * @return Parameters for all beams.
     */
-  def beamRowSeq =
-    Seq(
-      BeamRow(0, Config.SimpleRtplanBeamNameG000),
-      BeamRow(90, Config.SimpleRtplanBeamNameG090),
-      BeamRow(180, Config.SimpleRtplanBeamNameG180),
-      BeamRow(270, Config.SimpleRtplanBeamNameG270)
-    )
+
+  def beamColSeq: Seq[BeamColumn] = {
+    val rtplan = new DicomFile(templateFiles.ofModality("RTPLAN").head.file).attributeList.get
+    val beamAlList = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
+    beamAlList.map(beamAl => BeamColumn(rtplan, beamAl))
+  }
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -195,11 +414,46 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
 
   private val assignButtonList: WebRow = List(makePlainText(" "), createButton, makePlainText(" "), cancelButton)
 
-  private def makeWebForm() = new WebForm(pathOf, List(row1, row2, row3, row4) ++ beamRowSeq.map(b => b.makeRow()) ++ List(assignButtonList))
+  private def makeWebForm() = {
+    val beamSeq = beamColSeq
+
+    // define the rows representing the beam data
+    val beamRowSeq: List[WebRow] = {
+
+      /**
+        * Make one horizontal row if the input fields.
+        * @param rowIndex Index of row
+        * @return One horizontal WebRow
+        */
+      def makeRow(rowIndex: Int): WebRow = {
+        val name = beamSeq.head.colList(rowIndex)
+        val header = new WebPlainText(label = "rowHeader" + rowIndex, showLabel = false, col = 1, offset = 0, html = _ => <span>{name.name}</span>)
+        val fieldList = beamSeq.map(beam => beam.colList(rowIndex).field)
+        Trace.trace(rowIndex + " WebRow " + name.name)
+        (header +: fieldList).toList
+      }
+
+      // make each row
+      val rowList = beamSeq.head.colList.indices.map(makeRow).toList
+      rowList
+    }
+
+    new WebForm(pathOf, List(row1, row2, row3, row4) ++ beamRowSeq ++ List(assignButtonList))
+  }
+
+  /**
+    * Create a list of initial values.
+    *
+    * @return List fo initial values.
+    */
+  private def beamInitialValueMap: ValueMapT = {
+    val all = beamColSeq.map(b => b.colList).flatten
+    val valueMap = all.map(col => (col.label, col.init())).toMap
+    valueMap
+  }
 
   private def formSelect(valueMap: ValueMapT, response: Response): Unit = {
     val form = makeWebForm()
-    val beamDefaults = beamRowSeq.flatMap(b => b.defaultValueMap())
     // if field is empty
     def empty(label: String) = !valueMap.contains(label) || valueMap(label).trim.isEmpty
 
@@ -212,7 +466,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     val planNameMap = if (empty(planName.label)) Map((planName.label, "Simple" + uniqueText.replace('-', ' '))) else emptyValueMap
     val toleranceTableMap = if (empty(toleranceTable.label)) Map((toleranceTable.label, defaultToleranceTableLabel)) else emptyValueMap
 
-    val valMap = valueMap ++ beamDefaults ++ patientIdMap ++ patientNameMap ++ planNameMap ++ toleranceTableMap
+    val valMap = valueMap ++ beamInitialValueMap ++ patientIdMap ++ patientNameMap ++ planNameMap ++ toleranceTableMap
     form.setFormResponse(valMap, styleNone, pageTitleSelect, response, Status.SUCCESS_OK)
   }
 
@@ -234,54 +488,9 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
   }
 
   private def validateBeamFields(valueMap: ValueMapT): StyleMapT = {
-
-    def parseDouble(text: String): Option[Double] = {
-      try {
-        val d = text.toDouble
-        Some(d)
-      } catch {
-        case _: Throwable => None
-      }
-    }
-
-    def checkMin(d: Double, label: String, name: String): StyleMapT = {
-      if (d < 0)
-        Error.make(label, "Negative values not allowed for " + name)
-      else
-        styleNone
-    }
-
-    def checkMax(d: Double, max: Double, label: String, name: String): StyleMapT = {
-      if (d > max)
-        Error.make(label, "Given value of " + d + " is above the limit of " + max + " mm for " + name + ".")
-      else
-        styleNone
-    }
-
-    def validateWidth(label: String): StyleMapT = {
-      Trace.trace(label)
-      val value = valueMap(label)
-      parseDouble(value) match {
-        case Some(d) => checkMin(d, label, "width") ++ checkMax(d, maxWidth_mm, label, "width")
-        case _       => Error.make(label, "Not a valid floating point number.")
-      }
-    }
-
-    def validateHeight(label: String): StyleMapT = {
-      Trace.trace(label)
-      val value = valueMap(label)
-      parseDouble(value) match {
-        case Some(d) => checkMin(d, label, "height") ++ checkMax(d, maxHeight_mm, label, "height")
-        case _       => Error.make(label, "Not a valid floating point number.")
-      }
-    }
-
-    def validateBeamParameters(beamRow: BeamRow): StyleMapT = {
-      validateWidth(beamRow.makeWidth().label) ++ validateHeight(beamRow.makeHeight().label)
-    }
-
-    val errorList = beamRowSeq.foldLeft(styleNone)((s, b) => s ++ validateBeamParameters(b))
-    errorList
+    val beamList = beamColSeq
+    val errorList = beamList.map(b => b.colList.flatMap(c => c.validate(valueMap, c)))
+    errorList.flatten.asInstanceOf[StyleMapT]
   }
 
   /**
@@ -361,7 +570,8 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     val dicomView = new WebPlainText("Download", false, 10, 0, _ => dicomViewHtml)
 
     val summary = {
-      val elem = { <pre>{WebUtil.nl + valueMapToString(valueMap).replaceAll("\n", WebUtil.nl)}</pre> }
+      // val elem = { <pre>{WebUtil.nl + valueMapToString(valueMap).replaceAll("\n", WebUtil.nl)}</pre> }
+      val elem = <div>hey</div>
       new WebPlainText("Summary", false, 10, 0, _ => elem)
     }
     /*
@@ -380,13 +590,16 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
   private case class BeamReference(beam: AttributeList, fractionReference: AttributeList) {}
 
   private def createRtplan(valueMap: ValueMapT): ModifiedPlan = {
+
+    val beamSpecificationList = beamColSeq.map(b => b.toBeamSpecification(valueMap))
+
     val makeRtPlan = new MakeRtPlan(
       PatientID = valueMap(patientID.label),
       PatientName = valueMap(patientName.label),
       ???, // machineName = valueMap(machineName.label), // TODO
       RTPlanLabel = valueMap(planName.label),
       ToleranceTableLabel = valueMap(toleranceTable.label),
-      beamList = beamRowSeq.map(_.toBeamSpecification(valueMap)).sortBy(_.GantryAngle_deg)
+      beamSpecificationList
     )
 
     val modifiedPlan = makeRtPlan.makeZipWithSupportingFiles()
@@ -413,7 +626,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
         "Tolerance Table: " + valueMap(toleranceTable.label) + "\n" +
         "Plan Name: " + valueMap(planName.label) + "\n" +
         "Machine: " + valueMap(machineName.label) + "\n" +
-        beamRowSeq.map(_.toText(valueMap)).mkString("\n")
+        "hey" // beamRowSeq.map(_.toText(valueMap)).mkString("\n")
     text
   }
 

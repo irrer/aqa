@@ -554,80 +554,50 @@ object DicomSeries extends Logging {
     }
   }
 
-  /*
-  // The following adds any RTPLANs in the shared directory into the DB as DicomSeries if:
-  //    - They are not already in the database.
-  //    - They are referenced by at least one other DicomSeries OR can find the institution and user via DicomAnonymous
   def main(args: Array[String]): Unit = {
-    Config.validate
-    DbSetup.init
-    (0 to 10).foreach(Trace.trace)
-    val doit = {
-      args.nonEmpty && args(0).equals("doit")
-    }
-    Trace.trace("doit: " + doit)
-    val rtplanFileList = Util.listDirFiles(Config.sharedDir)
-    Trace.trace("Starting.  Number of files in " + Config.sharedDir.getAbsolutePath + " : " + rtplanFileList.size)
 
-    def getByValue(value: String): Seq[DicomAnonymous] = {
-      val action = DicomAnonymous.query.filter(da => da.value === value)
+    def getRtimageSeries(machine: Machine): Option[DicomSeries] = {
+      val action = for {
+        dicomSeries <- query.filter(ds => (ds.modality === "RTIMAGE") && (ds.machinePK === machine.machinePK.get)).take(1)
+      } yield dicomSeries
       val list = Db.run(action.result)
-      list
+      list.headOption
     }
 
-    def getUserOfInstitution(institutionPK: Long): Long = {
-      val action = User.query.filter(u => u.institutionPK === institutionPK)
-      val userList = Db.run(action.result)
-      val user = userList.head
-      user.userPK.get
-    }
+    def doMach(machine: Machine): Unit = {
 
-    def putInDbIfNeeded(rtplanFile: File): Unit = {
-      val df = DicomFile(rtplanFile)
-      val name = rtplanFile.getAbsolutePath
-      if (df.attributeList.isDefined) {
-        val sop = Util.sopOfAl(df.attributeList.get)
-        if (DicomSeries.getBySopInstanceUID(sop).nonEmpty)
-          Trace.trace("File is already in DB: " + name)
-        else {
-          val referringList = DicomSeries.getByReferencedRtplanUID(sop)
-
-          if (referringList.isEmpty) {
-            Trace.trace("File is not referenced by any other series: " + name)
-            val dsList = getByValue(Util.sopOfAl(df.attributeList.get))
-            dsList.size match {
-              case 0 => Trace.trace("Unexpected.  No SOP values is found: " + name)
-              case 1 =>
-                val userPK = getUserOfInstitution(dsList.head.institutionPK)
-                val rtplanDicomSeries = makeDicomSeries(userPK, inpPK = None, machPK = None, Seq(df.attributeList.get))
-                Trace.trace("created RTPLAN DICOM series with user " + userPK + " from " + name + "\n" + rtplanDicomSeries.toString)
-                if (doit) {
-                  rtplanDicomSeries.get.insert
-                  Trace.trace("inserted new DicomSeries with user " + userPK + " for " + name)
-                }
-              case _ => Trace.trace("Unexpected.  Multiple SOP values is found: " + name)
-            }
-
-          } else {
-            val userPK = referringList.head.userPK
-            val rtplanDicomSeries = makeDicomSeries(userPK, inpPK = None, machPK = referringList.head.machinePK, Seq(df.attributeList.get))
-            if (rtplanDicomSeries.isDefined) {
-              Trace.trace("created RTPLAN DICOM series from " + name + "\n" + rtplanDicomSeries.toString)
-              if (doit) {
-                rtplanDicomSeries.get.insert
-                Trace.trace("inserted new DicomSeries for " + name)
-              }
-            } else {
-              Trace.trace("Could not construct DicomSeries for: " + name)
-            }
-          }
+      def origTpsIdOf(ds: DicomSeries): String = {
+        val anonAttr = ds.attributeListList.head.get(TagByName.RadiationMachineName) //.getSingleStringValueOrEmptyString()
+        val daList = DicomAnonymous.getByAttrAndValue(machine.institutionPK, Seq(anonAttr))
+        daList.size match {
+          case 1 =>
+            val text = daList.head.originalValue
+            if (text.contains("RadiationMachineName"))
+              "Re-anonymized? " + text
+            else text
+          case 0 => "Could not de-anonymize attribute"
+          case _ => "Found " + daList.size + " entries.  Values: " + daList.map(_.originalValue).mkString("  |  ")
         }
-      } else {
-        Trace.trace("File is not a DICOM file: " + name)
       }
 
+      try {
+        val text = getRtimageSeries(machine) match {
+          case Some(ds) => "TPS ID: " + origTpsIdOf(ds)
+          case _        => "could not find RTIMAGE series"
+        }
+        println("machine: " + machine.machinePK.get.formatted("%3d") +
+          " : " + machine.id.formatted("%8s") +
+          "    real ID: " + machine.getRealId.formatted("%30s") +
+          "    old TPS: " + machine.getRealTpsId + " --> " + text)
+      } catch {
+        case t: Throwable => println("badness " + machine + " : " + fmtEx(t))
+      }
     }
-    rtplanFileList.foreach(putInDbIfNeeded)
+
+    val start = System.currentTimeMillis()
+    println("Starting -----------------------")
+    Machine.list.sortBy(_.machinePK.get).foreach(doMach)
+    println("Done. Elapsed ms: " + (System.currentTimeMillis() - start))
+    // System.exit(0)
   }
-   */
 }
