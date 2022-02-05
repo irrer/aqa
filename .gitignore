@@ -23,6 +23,7 @@
 
 SlickDb.conf
 SlickDb_AQA.conf
+Slick*conf
 
 /src/main/resources/investigate/
 
