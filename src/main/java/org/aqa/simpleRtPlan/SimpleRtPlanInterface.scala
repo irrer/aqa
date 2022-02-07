@@ -16,23 +16,17 @@
 
 package org.aqa.simpleRtPlan
 
-import com.pixelmed.dicom.Attribute
-import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.AttributeTag
-import com.pixelmed.dicom.SequenceAttribute
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.FileUtil
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.DicomFile
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.CachedUser
+import org.aqa.db.Machine
 import org.aqa.web.WebUtil
-import org.aqa.web.WebUtil.IsInput
-import org.aqa.web.WebUtil.ToHtml
 import org.aqa.web.WebUtil.ValueMapT
 import org.aqa.web.WebUtil._
 import org.restlet.Request
@@ -44,7 +38,6 @@ import org.restlet.representation.ByteArrayRepresentation
 
 import java.text.SimpleDateFormat
 import java.util.Date
-import scala.annotation.tailrec
 
 /**
   * Generate a simple DICOM RTPLAN file customized for the user's environment.
@@ -53,28 +46,17 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
 
   private val pageTitleSelect = "Simple RTPlan"
 
-  /** Default tolerance table label. */
-  private val defaultToleranceTableLabel = "PELVIS"
-
-  /** Maximum beam width in mm. */
-  private val maxWidth_mm = 240.0
-
-  /** Maximum beam height in mm. */
-  private val maxHeight_mm = 240.0
-
-  /** Default beam width in mm. */
-  private val defaultWidth_mm = 240.0
-
-  /** Default beam height in mm. */
-  private val defaultHeight_mm = 180.0
-
-  private def energySelectList = Seq(("6", "6"), ("16", "16"))
-
-  private def toleranceTable = new WebInputText("Tolerance Table Name", true, 3, 0, "Should match planning system name", false)
-
   private def planName = new WebInputText("Plan Name", true, 2, 0, "Name to distinguish this plan from others", false)
 
-  private def machineName = new WebInputText("Machine Name", true, 2, 0, "", false)
+  private def machineName() = {
+    def makeSelectList(response: Option[Response]): List[(String, String)] = {
+      val user = getUser(response.get.getRequest).get
+      val machineList = Machine.listMachinesFromInstitution(user.institutionPK).filter(_.tpsID_real.isDefined)
+      val selectList = machineList.map(m => (m.getRealTpsId.get.trim, m.getRealId.trim)).toList
+      selectList
+    }
+    new WebInputSelect(label = "Machine", showLabel = true, col = 2, offset = 0, selectList = makeSelectList _, aqaAlias = false)
+  }
 
   private def patientID = new WebInputText("Patient ID", true, 3, 0, "")
 
@@ -89,6 +71,8 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     }
     new TemplateFiles
   }
+
+  private lazy val beamInterfaceList = BeamInterfaceList(templateFiles)
 
   /** Inserts vertical spacing above beam list. */
   private def header = {
@@ -131,14 +115,13 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-
   /**
     * List of beam parameters.
     *
     * @return Parameters for all beams.
     */
 
-  def beamColSeq: Seq[BeamInterface] = {
+  def beamColSeqX: Seq[BeamInterface] = {
     val rtplan = new DicomFile(templateFiles.ofModality("RTPLAN").head.file).attributeList.get
     val beamAlList = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
     beamAlList.map(beamAl => BeamInterface(rtplan, beamAl))
@@ -147,7 +130,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   private def row1: WebRow = List(patientID, patientName)
-  private def row2: WebRow = List(toleranceTable, planName, machineName)
+  private def row2: WebRow = List(planName, machineName)
   private def row3: WebRow = List(header)
   private def row4: WebRow = headerRow
 
@@ -163,41 +146,54 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
   private val assignButtonList: WebRow = List(makePlainText(" "), createButton, makePlainText(" "), cancelButton)
 
   private def makeWebForm() = {
-    val beamSeq = beamColSeq
 
-    // define the rows representing the beam data
-    val beamRowSeq: List[WebRow] = {
-
-      /**
-        * Make one horizontal row if the input fields.
-        * @param rowIndex Index of row
-        * @return One horizontal WebRow
-        */
-      def makeRow(rowIndex: Int): WebRow = {
-        val name = beamSeq.head.colList(rowIndex)
-        val header = new WebPlainText(label = "rowHeader" + rowIndex, showLabel = false, col = 1, offset = 0, html = _ => <b style="white-space: nowrap;">{name.name}</b>)
-        val fieldList = beamSeq.map(beam => beam.colList(rowIndex).field)
-        Trace.trace(rowIndex + " WebRow " + name.name)
-        (header +: fieldList).toList
-      }
-
-      // make each row
-      val rowList = beamSeq.head.colList.indices.map(makeRow).toList
-      rowList
-    }
-
-    new WebForm(pathOf, List(row1, row2, row3, row4) ++ beamRowSeq ++ List(assignButtonList))
-  }
-
-  /**
-    * Create a list of initial values.
-    *
-    * @return List fo initial values.
-    */
-  private def beamInitialValueMap: ValueMapT = {
-    val all = beamColSeq.map(b => b.colList).flatten
-    val valueMap = all.map(col => (col.label, col.init())).toMap
-    valueMap
+    val runScript =
+      s"""
+         |
+         |  function updateJaws(sumName, d1Name, d2Name) {
+         |
+         |    var d1List = [];
+         |
+         |    function grab(elem) {
+         |      var id = elem.getAttribute("id");
+         |      if (id.endsWith(d1Name))
+         |        d1List.push(elem);
+         |    }
+         |
+         |
+         |    function addJaws(d1Elem) {
+         |      var fullName = d1Elem.getAttribute("id");
+         |      var baseName = fullName.substring(0, fullName.length - d1Name.length);
+         |      console.log(baseName);
+         |      var d2Elem = document.getElementById(baseName + d2Name);
+         |      var sumElem = document.getElementById(baseName + sumName);
+         |
+         |      var d1 = parseFloat(d1Elem.value);
+         |      var d2 = parseFloat(d2Elem.value);
+         |      var sum = d1 + d2;
+         |      sumElem.innerHTML = sum.toString();
+         |    }
+         |
+         |    document.querySelectorAll("input").forEach(grab);
+         |
+         |    d1List.forEach(addJaws);
+         |  }
+         |
+         |  // setTimeout(updateJaws("Field X [cm]", "X1 [cm]", "X2 [cm]"), 5000);
+         |
+         |  var beamRefreshTime = 100;
+         |
+         |  function updateBeamLoop() {
+         |    updateJaws("Field X [cm]", "X1 [cm]", "X2 [cm]");
+         |    updateJaws("Field Y [cm]", "Y1 [cm]", "Y2 [cm]");
+         |    setTimeout(updateBeamLoop, beamRefreshTime);
+         |  }
+         |
+         |  updateBeamLoop();
+         |
+         |""".stripMargin
+    val rowList = List(row1, row2, row3, row4) ++ beamInterfaceList.makeWebRows() ++ List(assignButtonList)
+    new WebForm(action = pathOf, title = Some("Simple Emergency RTPLAN"), rowList = rowList, fileUpload = 0, runScript = Some(runScript))
   }
 
   private def formSelect(valueMap: ValueMapT, response: Response): Unit = {
@@ -212,19 +208,17 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     val patientIdMap = if (empty(patientID.label)) Map((patientID.label, defaultPatient)) else emptyValueMap
     val patientNameMap = if (empty(patientName.label)) Map((patientName.label, defaultPatient)) else emptyValueMap
     val planNameMap = if (empty(planName.label)) Map((planName.label, "Simple" + uniqueText.replace('-', ' '))) else emptyValueMap
-    val toleranceTableMap = if (empty(toleranceTable.label)) Map((toleranceTable.label, defaultToleranceTableLabel)) else emptyValueMap
 
-    val valMap = valueMap ++ beamInitialValueMap ++ patientIdMap ++ patientNameMap ++ planNameMap ++ toleranceTableMap
+    val valMap = valueMap ++ beamInterfaceList.beamInitialValueMap ++ patientIdMap ++ patientNameMap ++ planNameMap
     form.setFormResponse(valMap, styleNone, pageTitleSelect, response, Status.SUCCESS_OK)
   }
 
   private def validateEntryFields(valueMap: ValueMapT): StyleMapT = {
     // if field is empty
     def empty(label: String) = !valueMap.contains(label) || valueMap(label).trim.isEmpty
-    val tolErr = if (empty(toleranceTable.label)) Error.make(toleranceTable, "A tolerance table name must be given.") else styleNone
     val planNameErr = if (empty(planName.label)) Error.make(planName, "A plan name must be given.") else styleNone
-    val machErr = if (empty(machineName.label)) Error.make(machineName, "A machine name must be given.") else styleNone
-    val patIdErr = if (empty(patientID.label)) Error.make(patientID, "A patient ID must be given.") else styleNone
+    val machErr = if (empty(machineName.label)) Error.make(machineName, "A  must be given.") else styleNone
+    val patIdErr = if (empty(patientID.label)) Error.make(patientID, "A patient machine nameID must be given.") else styleNone
     val patNameErr = if (empty(patientName.label)) Error.make(patientName, "A patient name must be given.") else styleNone
     val patIdTooLongErr = if (valueMap(patientID.label).length > 64) Error.make(patientID, "Patient ID can not be over 64 characters..") else styleNone
     val planNameTooLongErr = if (valueMap(planName.label).length > 16) Error.make(patientID, "Plan Name can not be over 16 characters..") else styleNone
@@ -232,13 +226,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     // must be 16 characters or shorter, but the reality is that a lot of systems handle longer strings.
     //val machTooLongErr = if (valueMap(machineName.label).size > 16) Error.make(patientID, "Machine Name can not be over 16 characters..") else styleNone
 
-    tolErr ++ planNameErr ++ machErr ++ patIdErr ++ patNameErr ++ patIdTooLongErr ++ planNameTooLongErr // ++ machTooLongErr
-  }
-
-  private def validateBeamFields(valueMap: ValueMapT): StyleMapT = {
-    val beamList = beamColSeq
-    val errorList = beamList.map(b => b.colList.flatMap(c => c.validate(valueMap, c)))
-    errorList.flatten.asInstanceOf[StyleMapT]
+    planNameErr ++ machErr ++ patIdErr ++ patNameErr ++ patIdTooLongErr ++ planNameTooLongErr // ++ machTooLongErr
   }
 
   /**
@@ -267,7 +255,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     * @return List of errors.  List is empty if everything is ok.
     */
   private def validate(valueMap: ValueMapT): StyleMapT = {
-    val errorList = validateConfigAndFiles ++ validateEntryFields(valueMap) ++ validateBeamFields(valueMap)
+    val errorList = validateConfigAndFiles ++ validateEntryFields(valueMap) ++ beamInterfaceList.validateBeamFields(valueMap)
     errorList
   }
 
@@ -294,7 +282,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
   }
 
   private def showDownload(modifiedPlan: ModifiedPlan, valueMap: ValueMapT, response: Response): Unit = {
-
+    /*
     Trace.trace(valueMap)
     val downloadUrl = {
       val name = FileUtil.replaceInvalidFileNameCharacters(valueMap(patientID.label), '_').replace(' ', '_') + ".zip"
@@ -322,8 +310,6 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
       val elem = <div>hey</div>
       new WebPlainText("Summary", false, 10, 0, _ => elem)
     }
-    /*
-     */
 
     val rowA: WebRow = List(new WebPlainText("SummaryHeader", false, 10, 0, _ => { <h4>RTPlan Summary</h4> }))
     val rowB: WebRow = List(summary)
@@ -333,20 +319,24 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
 
     val form = new WebForm(pathOf, List(rowA, rowB, rowC, rowD, rowE))
     form.setFormResponse(valueMap, styleNone, "Download Simple RTPLAN", response, Status.SUCCESS_OK)
+     */
   }
 
   private case class BeamReference(beam: AttributeList, fractionReference: AttributeList) {}
 
   private def createRtplan(valueMap: ValueMapT): ModifiedPlan = {
 
-    val beamSpecificationList = beamColSeq.map(b => b.toBeamSpecification(valueMap))
+    val beamSpecificationList = beamInterfaceList.beamList.map(b => b.toBeamSpecification(valueMap))
+
+    val selectedMachineName = valueMap(machineName.label)
+    val machine = Machine.listMachinesFromInstitution(getUser(valueMap).get.institutionPK).find(m => m.getRealId.trim.equals(selectedMachineName)).get
 
     val makeRtPlan = new MakeRtPlan(
       PatientID = valueMap(patientID.label),
       PatientName = valueMap(patientName.label),
-      ???, // machineName = valueMap(machineName.label), // TODO
+      machine = machine,
       RTPlanLabel = valueMap(planName.label),
-      ToleranceTableLabel = valueMap(toleranceTable.label),
+      ToleranceTableLabel = beamInterfaceList.beamList.head.getToleranceTable(valueMap),
       beamSpecificationList
     )
 
@@ -371,7 +361,6 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     val text =
       "Patient ID: " + valueMap(patientID.label) + "\n" +
         "Patient Name: " + valueMap(patientName.label) + "\n" +
-        "Tolerance Table: " + valueMap(toleranceTable.label) + "\n" +
         "Plan Name: " + valueMap(planName.label) + "\n" +
         "Machine: " + valueMap(machineName.label) + "\n" +
         "hey" // beamRowSeq.map(_.toText(valueMap)).mkString("\n")
@@ -398,9 +387,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
 
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
-    val valueMap = beamInitialValueMap ++ getValueMap(request)
-
-    Trace.trace("\n--------------\n" + valueMap.mkString("\n") + "\n--------------\n")
+    val valueMap = beamInterfaceList.beamInitialValueMap ++ getValueMap(request)
 
     try {
       val user = CachedUser.get(request)
