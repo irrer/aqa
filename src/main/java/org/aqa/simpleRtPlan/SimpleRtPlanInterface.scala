@@ -137,7 +137,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
   case class BeamColumn(rtplan: AttributeList, beamAl: AttributeList) {
 
     private val templateBeamName = beamAl.get(TagByName.BeamName).getSingleStringValueOrEmptyString()
-    private val prefix = templateBeamName
+    private val prefix = templateBeamName + " :: "
 
     val beamNumber: Int = beamAl.get(TagByName.BeamNumber).getIntegerValues.head
 
@@ -171,6 +171,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
       val Numeric = Value // user can enter data, must be valid numeric
       val Text = Value // user can enter arbitrary text
       val Display = Value // user not can enter data, for display only
+      val DisplayBold = Value // user not can enter data, for display only, in bold
     }
 
     def noValidation(valueMap: ValueMapT, col: Col): StyleMapT = styleNone
@@ -188,10 +189,10 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
       val label: String = prefix + name
 
       def field: IsInput with ToHtml = {
-        if (entryType.toString.equals(EntryType.Display.toString)) {
-          new WebPlainText(label = name, showLabel = false, col = 1, offset = 0, _ => <span>{init()}</span>)
-        } else {
-          new WebInputText(label = name, showLabel = false, col = 1, offset = 0, placeholder = "", aqaAlias = false)
+        entryType match {
+          case EntryType.DisplayBold => new WebPlainText(label = name, showLabel = false, col = 1, offset = 0, _ => <b>{init()}</b>)
+          case EntryType.Display     => new WebPlainText(label = name, showLabel = false, col = 1, offset = 0, _ => <span>{init()}</span>)
+          case _                     => new WebInputText(label = name, showLabel = false, col = 1, offset = 0, placeholder = "", aqaAlias = false)
         }
       }
     }
@@ -299,20 +300,20 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     }
 
     private def putDimX2(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
-      simpleBeamSpecification.copy(X1_mm = valueMap(col.label).toDouble * 10)
+      simpleBeamSpecification.copy(X2_mm = valueMap(col.label).toDouble * -10)
     }
 
     private def putDimY1(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
-      simpleBeamSpecification.copy(X1_mm = valueMap(col.label).toDouble * 10)
+      simpleBeamSpecification.copy(Y1_mm = valueMap(col.label).toDouble * 10)
     }
 
     private def putDimY2(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
-      simpleBeamSpecification.copy(X1_mm = valueMap(col.label).toDouble * 10)
+      simpleBeamSpecification.copy(Y2_mm = valueMap(col.label).toDouble * -10)
     }
 
     val colList: Seq[Col] =
       Seq(
-        Col("Field Order/Type", Display, init = () => { beamNumber + " / " + { if (isTreat) "Treat" else "Setup" } }),
+        Col("Field Order/Type", DisplayBold, init = () => { beamNumber + " / " + { if (isTreat) "Treat" else "Setup" } }),
         // Col("Field ID", if (isTreat) Text else Display, init = () => templateBeamName, validate = validLO),
         Col("Field Name", if (isTreat) Text else Display, init = () => templateBeamName, validate = validBeamName),
         Col("Technique", Display, init = () => beamAl.get(TagByName.BeamType).getSingleStringValueOrEmptyString),
@@ -379,7 +380,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
       *
       * @return List of label+value pairs.
       */
-    def defaultValueMap(): ValueMapT = {
+    private def defaultValueMap(): ValueMapT = {
       colList.map(f => (f.label, f.init())).toMap
     }
   }
@@ -427,7 +428,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
         */
       def makeRow(rowIndex: Int): WebRow = {
         val name = beamSeq.head.colList(rowIndex)
-        val header = new WebPlainText(label = "rowHeader" + rowIndex, showLabel = false, col = 1, offset = 0, html = _ => <span style="white-space: nowrap;">{name.name}</span>)
+        val header = new WebPlainText(label = "rowHeader" + rowIndex, showLabel = false, col = 1, offset = 0, html = _ => <b style="white-space: nowrap;">{name.name}</b>)
         val fieldList = beamSeq.map(beam => beam.colList(rowIndex).field)
         Trace.trace(rowIndex + " WebRow " + name.name)
         (header +: fieldList).toList
@@ -650,7 +651,9 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
 
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
-    val valueMap = getValueMap(request)
+    val valueMap = beamInitialValueMap ++ getValueMap(request)
+
+    Trace.trace("\n--------------\n" + valueMap.mkString("\n") + "\n--------------\n")
 
     try {
       val user = CachedUser.get(request)
