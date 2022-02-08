@@ -40,7 +40,7 @@ case class BeamInterfaceList(templateFiles: TemplateFiles) {
     */
   def validateBeamFields(valueMap: ValueMapT): StyleMapT = {
     val errorList = beamList.map(b => b.validateBeam(valueMap))
-    errorList.flatten.asInstanceOf[StyleMapT]
+    errorList.flatten.toMap
   }
 
   /**

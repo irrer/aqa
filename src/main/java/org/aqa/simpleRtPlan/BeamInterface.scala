@@ -351,7 +351,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
   def validateBeam(valueMap: ValueMapT): StyleMapT = {
     if (isTreat) {
       val list = colList.flatMap(c => c.validate(valueMap, c))
-      list.asInstanceOf[StyleMapT]
+      list.toMap
     }
     else styleNone
   }
