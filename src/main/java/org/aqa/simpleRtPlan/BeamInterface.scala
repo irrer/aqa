@@ -226,6 +226,8 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
 
   private val toleranceColName = "Tol. Table"
 
+  private val muColName = "MU"
+
   /**
     * The the beam's tolerance table.
     * @param valueMap What the user entered.
@@ -243,11 +245,26 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
     * @return Empty list on error, or error description on error.
     */
   private def validateToleranceTable(valueMap: ValueMapT, col: Col): StyleMapT = {
-    val tolTableToValidate = valueMap(makeColLabel(toleranceColName)).trim
-    if (tolTableToValidate.isEmpty) {
-      Error.make(makeColLabel(toleranceColName), "Tolerance table can not be empty.")
+    if (isTreat) {
+      val tolTableToValidate = valueMap(makeColLabel(toleranceColName)).trim
+      if (tolTableToValidate.isEmpty) {
+        Error.make(makeColLabel(toleranceColName), "Tolerance table can not be empty.")
+      } else
+        styleNone
     } else
       styleNone
+  }
+
+  private def validateMU(valueMap: ValueMapT, col: Col): StyleMapT = {
+    val label = valueMap(makeColLabel(muColName))
+    def err(msg: String) = Error.make(label, msg)
+
+    WebUtil.stringToDouble(label.trim) match {
+      case Some(d) if d < 0     => err("MU must be 0 or greater, not negative.")
+      case Some(d) if d >= 1000 => err("MU must be less than 1000.")
+      case Some(d)              => styleNone
+      case _                    => err("MU must be valid floating point from 0 to 999")
+    }
   }
 
   private val tolTable = Col(
@@ -261,12 +278,12 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
     Seq(
       Col("Field Order/Type", DisplayBold, init = () => { beamNumber + " / " + { if (isTreat) "Treat" else "Setup" } }),
       // Col("Field ID", if (isTreat) Text else Display, init = () => templateBeamName, validate = validLO),
-      Col("Field Name", if (isTreat) Input else Display, init = () => templateBeamName, validate = validBeamName),
+      Col("Field Name", if (isTreat) Input else Display, init = () => templateBeamName, validate = validBeamName _),
       Col("Technique", Display, init = () => beamAl.get(TagByName.BeamType).getSingleStringValueOrEmptyString),
       Col("Scale", Display, init = () => "Varian IEC"),
       Col("Energy", if (isTreat) Energy else Display, init = () => beamDbl(TagByName.NominalBeamEnergy).round + "X"),
       Col("Dose Rate [MU/min] ", Display, init = () => beamDblS(TagByName.DoseRateSet)),
-      Col("MU", if (isTreat) Input else Display, init = () => if (isTreat) beamRefDblS(TagByName.BeamMeterset) else "", validate = validateNonNegDouble, put = putMU),
+      Col("MU", if (isTreat) Input else Display, init = () => if (isTreat) beamRefDblS(TagByName.BeamMeterset) else "", validate = validateMU, put = putMU),
       // Col("Dose to Beam Dose Point", Display, init = ???),
       // Col("Dose to CBCT SIM", Display, init = ???),
       Col(
@@ -329,6 +346,14 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
   def initialValueMap(): ValueMapT = {
     val vm = colList.filter(_.entryType.toString.equals(EntryType.Input.toString)).map(f => (f.label, f.init())).toMap
     vm
+  }
+
+  def validateBeam(valueMap: ValueMapT): StyleMapT = {
+    if (isTreat) {
+      val list = colList.flatMap(c => c.validate(valueMap, c))
+      list.asInstanceOf[StyleMapT]
+    }
+    else styleNone
   }
 
 }

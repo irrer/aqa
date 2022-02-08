@@ -2,7 +2,6 @@ package org.aqa.simpleRtPlan
 
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.DicomFile
 import org.aqa.web.WebUtil.StyleMapT
 import org.aqa.web.WebUtil.ValueMapT
@@ -34,13 +33,13 @@ case class BeamInterfaceList(templateFiles: TemplateFiles) {
   }
 
   /**
-    * Validate all values specified in the beams.
+    * Validate all values specified in the treatment beams.
     *
     * @param valueMap Values specified by user.
     * @return Empty list if all is ok, otherwise list of errors.
     */
   def validateBeamFields(valueMap: ValueMapT): StyleMapT = {
-    val errorList = beamList.map(b => b.colList.flatMap(c => c.validate(valueMap, c)))
+    val errorList = beamList.map(b => b.validateBeam(valueMap))
     errorList.flatten.asInstanceOf[StyleMapT]
   }
 
@@ -60,7 +59,7 @@ case class BeamInterfaceList(templateFiles: TemplateFiles) {
       val name = beamList.head.colList(rowIndex)
       val header = new WebPlainText(label = "rowHeader" + rowIndex, showLabel = false, col = 1, offset = 0, html = _ => <b style="white-space: nowrap;">{name.name}</b>)
       val fieldList = beamList.map(beam => beam.colList(rowIndex).field)
-      Trace.trace(rowIndex + " WebRow " + name.name)
+      //Trace.trace(rowIndex + " WebRow " + name.name)
       (header +: fieldList).toList
     }
 

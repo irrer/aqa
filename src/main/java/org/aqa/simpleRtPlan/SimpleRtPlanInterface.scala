@@ -150,9 +150,9 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     val runScript =
       s"""
          |
-         |  function updateJaws(sumName, d1Name, d2Name) {
-         |
          |    var d1List = [];
+         |
+         |  function updateJaws(sumName, d1Name, d2Name) {
          |
          |    function grab(elem) {
          |      var id = elem.getAttribute("id");
@@ -174,7 +174,8 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
          |      sumElem.innerHTML = sum.toString();
          |    }
          |
-         |    document.querySelectorAll("input").forEach(grab);
+         |    if (d1List.length === 0)
+         |      document.querySelectorAll("input").forEach(grab);
          |
          |    d1List.forEach(addJaws);
          |  }
