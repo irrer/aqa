@@ -29,6 +29,11 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
   private val prefix = beamNumber.formatted("%02d") + ":: "
   private def makeColLabel(colName: String) = prefix + colName
 
+  private val labelX1 = "X1 [cm]"
+  private val labelX2 = "X2 [cm]"
+  private val labelY1 = "Y1 [cm]"
+  private val labelY2 = "Y2 [cm]"
+
   private def energySelectList() = {
     //noinspection ScalaUnusedSymbol
     def makeSelectList(response: Option[Response]): List[(String, String)] = {
@@ -150,20 +155,39 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
   }
 
   //noinspection SameParameterValue
-  private def validateJaw(valueMap: ValueMapT, col: Col, name: String, min: Double, max: Double): StyleMapT = {
+  private def validateJaw(valueMap: ValueMapT, col: Col, commonName: String, min: Double, max: Double): StyleMapT = {
     val text = valueMap(col.label)
     0 match {
-      case _ if WebUtil.stringToDouble(text).isEmpty   => Error.make(col.label, name + " must be a valid floating point number.")
-      case _ if WebUtil.stringToDouble(text).get < min => Error.make(col.label, name + " value less than " + min + " not allowed.")
-      case _ if WebUtil.stringToDouble(text).get > max => Error.make(col.label, name + " value greater than " + max + " not allowed.")
+      case _ if WebUtil.stringToDouble(text).isEmpty   => Error.make(col.label, commonName + " must be a valid floating point number.")
+      case _ if WebUtil.stringToDouble(text).get < min => Error.make(col.label, commonName + " value less than " + min + " not allowed.")
+      case _ if WebUtil.stringToDouble(text).get > max => Error.make(col.label, commonName + " value greater than " + max + " not allowed.")
       case _                                           => styleNone
     }
   }
 
-  private def validateJawX1(valueMap: ValueMapT, col: Col): StyleMapT = validateJaw(valueMap, col, name = "X1", min = -2, max = 20)
-  private def validateJawX2(valueMap: ValueMapT, col: Col): StyleMapT = validateJaw(valueMap, col, name = "X2", min = -2, max = 20)
-  private def validateJawY1(valueMap: ValueMapT, col: Col): StyleMapT = validateJaw(valueMap, col, name = "Y1", min = -10, max = 20)
-  private def validateJawY2(valueMap: ValueMapT, col: Col): StyleMapT = validateJaw(valueMap, col, name = "Y2", min = -10, max = 20)
+  private def validateJawPair(valueMap: ValueMapT, d2Col: Col, d2CommonName: String, min: Double, max: Double, d1Name: String): StyleMapT = {
+    validateJaw(valueMap, d2Col, d2CommonName, min, max) match {
+      case err if err.nonEmpty =>
+        err
+      case _ =>
+        val d2 = valueMap(d2Col.label).toDouble
+        val d1 = valueMap(makeColLabel(d1Name)).toDouble
+        if ((d2 + d1) < 0)
+          Error.make(d2Col.label, d2CommonName + " would collide with opposing jaw.")
+        else
+          styleNone
+    }
+  }
+
+  private def validateJawX1(valueMap: ValueMapT, col: Col): StyleMapT = validateJaw(valueMap, col, commonName = "X1", min = -10, max = 20)
+  private def validateJawX2(valueMap: ValueMapT, col: Col): StyleMapT = {
+    validateJawPair(valueMap, col, d2CommonName = "X2", min = -2, max = 20, labelX1)
+  }
+
+  private def validateJawY1(valueMap: ValueMapT, col: Col): StyleMapT = validateJaw(valueMap, col, commonName = "Y1", min = -10, max = 20)
+  private def validateJawY2(valueMap: ValueMapT, col: Col): StyleMapT = {
+    validateJawPair(valueMap, col, d2CommonName = "Y2", min = -10, max = 20, labelY1)
+  }
 
   private def validateNonNegDouble(valueMap: ValueMapT, col: Col): StyleMapT = {
     val text = valueMap(col.label)
@@ -287,12 +311,12 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
       Col("Coll Rtn [deg]", Display, init = () => beamDblS(TagByName.BeamLimitingDeviceAngle)),
       //
       Col("Field X [cm]", Display, init = () => initJawSize(typeX)),
-      Col("X1 [cm]", if (isTreat) Input else Display, init = () => jawDim(index = 0, jawType = typeX).toString, validate = validateJawX1, put = putDimX1),
-      Col("X2 [cm]", if (isTreat) Input else Display, init = () => jawDim(index = 1, jawType = typeX).toString, validate = validateJawX2, put = putDimX2),
+      Col(labelX1, if (isTreat) Input else Display, init = () => jawDim(index = 0, jawType = typeX).toString, validate = validateJawX1, put = putDimX1),
+      Col(labelX2, if (isTreat) Input else Display, init = () => jawDim(index = 1, jawType = typeX).toString, validate = validateJawX2, put = putDimX2),
       //
       Col("Field Y [cm]", Display, init = () => initJawSize(typeY)),
-      Col("Y1 [cm]", if (isTreat) Input else Display, init = () => jawDim(index = 0, jawType = typeY).toString, validate = validateJawY1, put = putDimY1),
-      Col("Y2 [cm]", if (isTreat) Input else Display, init = () => jawDim(index = 1, jawType = typeY).toString, validate = validateJawY2, put = putDimY2),
+      Col(labelY1, if (isTreat) Input else Display, init = () => jawDim(index = 0, jawType = typeY).toString, validate = validateJawY1, put = putDimY1),
+      Col(labelY2, if (isTreat) Input else Display, init = () => jawDim(index = 1, jawType = typeY).toString, validate = validateJawY2, put = putDimY2),
       //
       Col("Couch Vrt [cm]", Display, init = () => (beamDbl(TagByName.TableTopVerticalPosition) / 10).toString),
       Col("Couch Lng [cm]", Display, init = () => (beamDbl(TagByName.TableTopLongitudinalPosition) / 10).toString),

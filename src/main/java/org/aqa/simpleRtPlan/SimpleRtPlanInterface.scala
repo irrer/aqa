@@ -264,22 +264,14 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
   private val downloadList = scala.collection.mutable.Map[String, ModifiedPlan]()
 
   private def downloadZip(valueMap: ValueMapT, response: Response): Unit = {
-    Trace.trace()
     val zip = {
-      Trace.trace()
       val uid = valueMap("download")
-      Trace.trace()
       val modifiedPlan = downloadList(uid)
-      Trace.trace()
       val data = modifiedPlan.zippedContent
-      Trace.trace()
       data
     }
-    Trace.trace()
 
-    Trace.trace()
     val entity = new ByteArrayRepresentation(zip, MediaType.APPLICATION_GNU_ZIP)
-    Trace.trace()
     response.setEntity(entity)
   }
 
