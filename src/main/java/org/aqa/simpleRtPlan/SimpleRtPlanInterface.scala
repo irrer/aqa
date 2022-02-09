@@ -19,6 +19,7 @@ package org.aqa.simpleRtPlan
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.FileUtil
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.DicomFile
@@ -55,7 +56,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
       val selectList = machineList.map(m => (m.getRealTpsId.get.trim, m.getRealId.trim)).toList
       selectList
     }
-    new WebInputSelect(label = "Machine", showLabel = true, col = 2, offset = 0, selectList = makeSelectList _, aqaAlias = false)
+    new WebInputSelect(label = "Machine", showLabel = true, col = 2, offset = 0, selectList = makeSelectList, aqaAlias = false)
   }
 
   private def patientID = new WebInputText("Patient ID", true, 3, 0, "")
@@ -130,7 +131,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   private def row1: WebRow = List(patientID, patientName)
-  private def row2: WebRow = List(planName, machineName)
+  private def row2: WebRow = List(planName, machineName())
   private def row3: WebRow = List(header)
   private def row4: WebRow = headerRow
 
@@ -218,7 +219,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     // if field is empty
     def empty(label: String) = !valueMap.contains(label) || valueMap(label).trim.isEmpty
     val planNameErr = if (empty(planName.label)) Error.make(planName, "A plan name must be given.") else styleNone
-    val machErr = if (empty(machineName.label)) Error.make(machineName, "A  must be given.") else styleNone
+    val machErr = if (empty(machineName().label)) Error.make(machineName(), "A  must be given.") else styleNone
     val patIdErr = if (empty(patientID.label)) Error.make(patientID, "A patient machine nameID must be given.") else styleNone
     val patNameErr = if (empty(patientName.label)) Error.make(patientName, "A patient name must be given.") else styleNone
     val patIdTooLongErr = if (valueMap(patientID.label).length > 64) Error.make(patientID, "Patient ID can not be over 64 characters..") else styleNone
@@ -283,7 +284,6 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
   }
 
   private def showDownload(modifiedPlan: ModifiedPlan, valueMap: ValueMapT, response: Response): Unit = {
-    /*
     Trace.trace(valueMap)
     val downloadUrl = {
       val name = FileUtil.replaceInvalidFileNameCharacters(valueMap(patientID.label), '_').replace(' ', '_') + ".zip"
@@ -320,24 +320,28 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
 
     val form = new WebForm(pathOf, List(rowA, rowB, rowC, rowD, rowE))
     form.setFormResponse(valueMap, styleNone, "Download Simple RTPLAN", response, Status.SUCCESS_OK)
-     */
   }
 
   private case class BeamReference(beam: AttributeList, fractionReference: AttributeList) {}
 
   private def createRtplan(valueMap: ValueMapT): ModifiedPlan = {
 
-    val beamSpecificationList = beamInterfaceList.beamList.map(b => b.toBeamSpecification(valueMap))
+    val beamSpecificationList = beamInterfaceList.beamList.filter(_.isTreat).map(b => b.toBeamSpecification(valueMap))
 
-    val selectedMachineName = valueMap(machineName.label)
-    val machine = Machine.listMachinesFromInstitution(getUser(valueMap).get.institutionPK).find(m => m.getRealId.trim.equals(selectedMachineName)).get
+    val selectedMachineName = valueMap(machineName().label)
+    val machineMap = {
+      val machineList = Machine.listMachinesFromInstitution(getUser(valueMap).get.institutionPK).filter(_.tpsID_real.isDefined)
+      val machineMap = machineList.map(m => (m.getRealTpsId.get, m)).toMap
+      machineMap
+    }
+
+    val machine = machineMap(selectedMachineName)
 
     val makeRtPlan = new MakeRtPlan(
       PatientID = valueMap(patientID.label),
       PatientName = valueMap(patientName.label),
       machine = machine,
       RTPlanLabel = valueMap(planName.label),
-      ToleranceTableLabel = beamInterfaceList.beamList.head.getToleranceTable(valueMap),
       beamSpecificationList
     )
 
@@ -363,8 +367,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
       "Patient ID: " + valueMap(patientID.label) + "\n" +
         "Patient Name: " + valueMap(patientName.label) + "\n" +
         "Plan Name: " + valueMap(planName.label) + "\n" +
-        "Machine: " + valueMap(machineName.label) + "\n" +
-        "hey" // beamRowSeq.map(_.toText(valueMap)).mkString("\n")
+        "Machine: " + valueMap(machineName().label) + "\n"
     text
   }
 

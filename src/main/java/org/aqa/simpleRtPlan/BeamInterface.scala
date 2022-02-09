@@ -7,7 +7,6 @@ import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.SequenceAttribute
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil.Error
@@ -31,17 +30,19 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
   private def makeColLabel(colName: String) = prefix + colName
 
   private def energySelectList() = {
+    //noinspection ScalaUnusedSymbol
     def makeSelectList(response: Option[Response]): List[(String, String)] = {
       List(("6", "6X"), ("16", "16X"))
     }
-    new WebInputSelect(label = makeColLabel("Energy"), showLabel = false, col = 1, offset = 0, selectList = makeSelectList _, aqaAlias = false)
+    new WebInputSelect(label = makeColLabel("Energy"), showLabel = false, col = 1, offset = 0, selectList = makeSelectList, aqaAlias = false)
   }
 
   private def gantryAngleSelectList() = {
+    //noinspection ScalaUnusedSymbol
     def makeSelectList(response: Option[Response]): List[(String, String)] = {
       List(("0", "0"), ("90", "90"), ("180", "180"), ("270", "270"))
     }
-    new WebInputSelect(label = makeColLabel("Gantry Rtn [deg]"), showLabel = false, col = 1, offset = 0, selectList = makeSelectList _, aqaAlias = false)
+    new WebInputSelect(label = makeColLabel("Gantry Rtn [deg]"), showLabel = false, col = 1, offset = 0, selectList = makeSelectList, aqaAlias = false)
   }
 
   /** Default beam treatment limit is seconds. */
@@ -81,16 +82,17 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
     val DisplayBold = Value // user not can enter data, for display only, in bold
   }
 
-  def noValidation(valueMap: ValueMapT, col: Col): StyleMapT = styleNone
+  //def noValidation(valueMap: ValueMapT, col: Col): StyleMapT = styleNone
 
-  def noPut(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = simpleBeamSpecification
+  //def noPut(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = simpleBeamSpecification
 
   case class Col(
       name: String,
       entryType: EntryType.Value,
       init: () => String,
-      validate: (ValueMapT, Col) => StyleMapT = noValidation,
-      put: (ValueMapT, SimpleBeamSpecification, Col) => SimpleBeamSpecification = noPut
+      //validate: (ValueMapT, Col) => StyleMapT = noValidation,
+      validate: (ValueMapT, Col) => StyleMapT = (_, _) => styleNone,
+      put: (ValueMapT, SimpleBeamSpecification, Col) => SimpleBeamSpecification = (_, simpleBeamSpecification: SimpleBeamSpecification, _) => simpleBeamSpecification
   ) {
 
     val label: String = makeColLabel(name)
@@ -115,21 +117,11 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
   }
 
   private def beamDblS(tag: AttributeTag): String = beamDbl(tag).toString
-  Trace.trace("beamRef: " + DicomUtil.attributeListToString(beamRef))
+
   private def beamRefList(tag: AttributeTag): Seq[Attribute] = DicomUtil.findAllSingle(beamRef, tag)
 
   private def beamRefDbl(tag: AttributeTag): Double = {
-    val j1 = beamRefList(tag)
-    val j2 = j1.head
-    val j3 = j2.getDoubleValues
-    val j4 = j3.head
-    Trace.trace(j4)
-
     beamRefList(tag).head.getDoubleValues.head
-  }
-
-  private def beamRefDblS(tag: AttributeTag): String = {
-    beamRefDbl(tag).toString
   }
 
   val typeX = Seq("X", "ASYMX")
@@ -157,39 +149,21 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
     (jawDim(index = 1, jawType) + jawDim(index = 0, jawType)).toString
   }
 
-  private def validBeamName(valueMap: ValueMapT, col: Col): StyleMapT = {
-    val value = valueMap(col.label)
-    0 match {
-      case _ if value.trim.isEmpty   => WebUtil.Error.make("", "Can not be empty")
-      case _ if value.length > 64    => WebUtil.Error.make("", "Can not be longer than 64 characters")
-      case _ if value.contains('\\') => WebUtil.Error.make("", "Can not contain backslash")
-      case _                         => styleNone
-    }
-  }
-
-  val maxJaw_cm = 24
-
-  private def validateJaw(valueMap: ValueMapT, col: Col): StyleMapT = {
+  //noinspection SameParameterValue
+  private def validateJaw(valueMap: ValueMapT, col: Col, name: String, min: Double, max: Double): StyleMapT = {
     val text = valueMap(col.label)
     0 match {
-      case _ if WebUtil.stringToDouble(text).isEmpty         => Error.make(col.label, "Must be a valid floating point number.")
-      case _ if WebUtil.stringToDouble(text).get < 0         => Error.make(col.label, "Negative values not allowed.")
-      case _ if WebUtil.stringToDouble(text).get > maxJaw_cm => Error.make(col.label, "Value greater than " + maxJaw_cm + " not allowed.")
-      case _                                                 => styleNone
+      case _ if WebUtil.stringToDouble(text).isEmpty   => Error.make(col.label, name + " must be a valid floating point number.")
+      case _ if WebUtil.stringToDouble(text).get < min => Error.make(col.label, name + " value less than " + min + " not allowed.")
+      case _ if WebUtil.stringToDouble(text).get > max => Error.make(col.label, name + " value greater than " + max + " not allowed.")
+      case _                                           => styleNone
     }
   }
 
-  private def validAngle90(valueMap: ValueMapT, col: Col): StyleMapT = {
-
-    val rightAngles = Seq(0.0, 90.0, 180.0, 270.0)
-
-    val text = valueMap(col.label)
-    0 match {
-      case _ if WebUtil.stringToDouble(text).isEmpty                    => Error.make(col.label, "Must be a valid floating point number.")
-      case _ if !rightAngles.contains(WebUtil.stringToDouble(text).get) => Error.make(col.label, "Angle must be one of " + rightAngles.mkString(" ") + ".")
-      case _                                                            => styleNone
-    }
-  }
+  private def validateJawX1(valueMap: ValueMapT, col: Col): StyleMapT = validateJaw(valueMap, col, name = "X1", min = -2, max = 20)
+  private def validateJawX2(valueMap: ValueMapT, col: Col): StyleMapT = validateJaw(valueMap, col, name = "X2", min = -2, max = 20)
+  private def validateJawY1(valueMap: ValueMapT, col: Col): StyleMapT = validateJaw(valueMap, col, name = "Y1", min = -10, max = 20)
+  private def validateJawY2(valueMap: ValueMapT, col: Col): StyleMapT = validateJaw(valueMap, col, name = "Y2", min = -10, max = 20)
 
   private def validateNonNegDouble(valueMap: ValueMapT, col: Col): StyleMapT = {
     val text = valueMap(col.label)
@@ -200,8 +174,9 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
     }
   }
 
-  private def putGantryAngle(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
-    simpleBeamSpecification.copy(GantryAngle_deg = valueMap(col.label).toDouble)
+  private def putEnergy(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
+    val e = valueMap(col.label).toDouble
+    simpleBeamSpecification.copy(NominalBeamEnergy = e)
   }
 
   private def putMU(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
@@ -209,19 +184,19 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
   }
 
   private def putDimX1(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
-    simpleBeamSpecification.copy(X1_mm = valueMap(col.label).toDouble * 10)
+    simpleBeamSpecification.copy(X1_mm = valueMap(col.label).toDouble * -10)
   }
 
   private def putDimX2(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
-    simpleBeamSpecification.copy(X2_mm = valueMap(col.label).toDouble * -10)
+    simpleBeamSpecification.copy(X2_mm = valueMap(col.label).toDouble * 10)
   }
 
   private def putDimY1(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
-    simpleBeamSpecification.copy(Y1_mm = valueMap(col.label).toDouble * 10)
+    simpleBeamSpecification.copy(Y1_mm = valueMap(col.label).toDouble * -10)
   }
 
   private def putDimY2(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
-    simpleBeamSpecification.copy(Y2_mm = valueMap(col.label).toDouble * -10)
+    simpleBeamSpecification.copy(Y2_mm = valueMap(col.label).toDouble * 10)
   }
 
   private val toleranceColName = "Tol. Table"
@@ -255,9 +230,10 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
       styleNone
   }
 
+  //noinspection ScalaUnusedSymbol
   private def validateMU(valueMap: ValueMapT, col: Col): StyleMapT = {
     val label = valueMap(makeColLabel(muColName))
-    def err(msg: String) = Error.make(label, msg)
+    def err(msg: String): StyleMapT = Error.make(label, msg)
 
     WebUtil.stringToDouble(label.trim) match {
       case Some(d) if d < 0     => err("MU must be 0 or greater, not negative.")
@@ -267,6 +243,17 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
     }
   }
 
+  private def getToleranceTableLabel: String = {
+    DicomUtil.findAllSingle(rtplan, TagByName.ToleranceTableLabel).head.getSingleStringValueOrEmptyString()
+  }
+
+  /**
+    * Generate tolerance table column.
+    *
+    * Currently this is not in use but may be implemented in the
+    * future to allow users to select a different tolerance table.
+    */
+  //noinspection ScalaUnusedSymbol
   private val tolTable = Col(
     toleranceColName,
     if (isTreat) Input else Display,
@@ -278,12 +265,12 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
     Seq(
       Col("Field Order/Type", DisplayBold, init = () => { beamNumber + " / " + { if (isTreat) "Treat" else "Setup" } }),
       // Col("Field ID", if (isTreat) Text else Display, init = () => templateBeamName, validate = validLO),
-      Col("Field Name", if (isTreat) Input else Display, init = () => templateBeamName, validate = validBeamName _),
+      Col("Field Name", Display, init = () => templateBeamName),
       Col("Technique", Display, init = () => beamAl.get(TagByName.BeamType).getSingleStringValueOrEmptyString),
       Col("Scale", Display, init = () => "Varian IEC"),
-      Col("Energy", if (isTreat) Energy else Display, init = () => beamDbl(TagByName.NominalBeamEnergy).round + "X"),
+      Col("Energy", if (isTreat) Energy else Display, init = () => beamDbl(TagByName.NominalBeamEnergy).round + "X", put = putEnergy),
       Col("Dose Rate [MU/min] ", Display, init = () => beamDblS(TagByName.DoseRateSet)),
-      Col("MU", if (isTreat) Input else Display, init = () => if (isTreat) beamRefDblS(TagByName.BeamMeterset) else "", validate = validateMU, put = putMU),
+      Col("MU", if (isTreat) Input else Display, init = () => if (isTreat) beamRefDbl(TagByName.BeamMeterset).toString else "", validate = validateMU, put = putMU),
       // Col("Dose to Beam Dose Point", Display, init = ???),
       // Col("Dose to CBCT SIM", Display, init = ???),
       Col(
@@ -293,19 +280,19 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
         validate = validateNonNegDouble,
         put = (v: ValueMapT, sbs: SimpleBeamSpecification, col: Col) => sbs.copy(BeamDeliveryDurationLimit_sec = v(col.label).toDouble * 60) // convert from minutes to seconds
       ),
-      tolTable,
+      Col(toleranceColName, Display, init = () => getToleranceTableLabel), // tolTable, // for possible future use.
       // Col("Calculated SSD [cm]", Display, init = ???),
       // Col("Planned SSD [cm]", Display, init = ???),
-      Col("Gantry Rtn [deg]", if (isTreat) GantryAngle else Display, init = () => beamDbl(TagByName.GantryAngle).round.toString, put = putGantryAngle),
+      Col("Gantry Rtn [deg]", Display, init = () => beamDbl(TagByName.GantryAngle).round.toString),
       Col("Coll Rtn [deg]", Display, init = () => beamDblS(TagByName.BeamLimitingDeviceAngle)),
       //
       Col("Field X [cm]", Display, init = () => initJawSize(typeX)),
-      Col("X1 [cm]", if (isTreat) Input else Display, init = () => jawDim(index = 0, jawType = typeX).toString, validate = validateJaw, put = putDimX1),
-      Col("X2 [cm]", if (isTreat) Input else Display, init = () => jawDim(index = 1, jawType = typeX).toString, validate = validateJaw, put = putDimX2),
+      Col("X1 [cm]", if (isTreat) Input else Display, init = () => jawDim(index = 0, jawType = typeX).toString, validate = validateJawX1, put = putDimX1),
+      Col("X2 [cm]", if (isTreat) Input else Display, init = () => jawDim(index = 1, jawType = typeX).toString, validate = validateJawX2, put = putDimX2),
       //
       Col("Field Y [cm]", Display, init = () => initJawSize(typeY)),
-      Col("Y1 [cm]", if (isTreat) Input else Display, init = () => jawDim(index = 0, jawType = typeY).toString, validate = validateJaw, put = putDimY1),
-      Col("Y2 [cm]", if (isTreat) Input else Display, init = () => jawDim(index = 1, jawType = typeY).toString, validate = validateJaw, put = putDimY2),
+      Col("Y1 [cm]", if (isTreat) Input else Display, init = () => jawDim(index = 0, jawType = typeY).toString, validate = validateJawY1, put = putDimY1),
+      Col("Y2 [cm]", if (isTreat) Input else Display, init = () => jawDim(index = 1, jawType = typeY).toString, validate = validateJawY2, put = putDimY2),
       //
       Col("Couch Vrt [cm]", Display, init = () => (beamDbl(TagByName.TableTopVerticalPosition) / 10).toString),
       Col("Couch Lng [cm]", Display, init = () => (beamDbl(TagByName.TableTopLongitudinalPosition) / 10).toString),
@@ -313,7 +300,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
       Col("Couch Rtn [deg]", Display, init = () => beamDblS(TagByName.TableTopEccentricAngle))
     )
 
-  Trace.trace(colList.size + "  col list: " + colList.map(_.name).mkString("\n"))
+  // Trace.trace(colList.size + "  col list: " + colList.map(_.name).mkString("\n"))
 
   /**
     * Fill in beam values.
@@ -323,8 +310,6 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
     */
   def toBeamSpecification(valueMap: ValueMapT): SimpleBeamSpecification = {
 
-    val simpleBeamSpecification = SimpleBeamSpecification
-
     @tailrec
     def putList(sbs: SimpleBeamSpecification, cl: Seq[Col]): SimpleBeamSpecification = {
       if (cl.isEmpty) sbs
@@ -333,7 +318,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
       }
     }
 
-    val sbsInit = SimpleBeamSpecification()
+    val sbsInit = SimpleBeamSpecification(BeamNumber = beamNumber)
     val sbsFinal = putList(sbsInit, colList)
     sbsFinal
   }
@@ -352,8 +337,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
     if (isTreat) {
       val list = colList.flatMap(c => c.validate(valueMap, c))
       list.toMap
-    }
-    else styleNone
+    } else styleNone
   }
 
 }
