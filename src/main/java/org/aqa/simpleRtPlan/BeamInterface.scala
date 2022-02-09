@@ -29,10 +29,21 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
   private val prefix = beamNumber.formatted("%02d") + ":: "
   private def makeColLabel(colName: String) = prefix + colName
 
-  private val labelX1 = "X1 [cm]"
-  private val labelX2 = "X2 [cm]"
-  private val labelY1 = "Y1 [cm]"
-  private val labelY2 = "Y2 [cm]"
+  val labelMU = "MU"
+
+  /** If the MU is this large or larger, then warn the user. */
+  val MUWarnLimit = 400
+
+  /** If the MU is this large or larger, then reject the plan. */
+  val MULimit = 1000
+
+  val labelFieldX = "Field X [cm]"
+  val labelX1 = "X1 [cm]"
+  val labelX2 = "X2 [cm]"
+
+  val labelFieldY = "Field Y [cm]"
+  val labelY1 = "Y1 [cm]"
+  val labelY2 = "Y2 [cm]"
 
   private def energySelectList() = {
     //noinspection ScalaUnusedSymbol
@@ -156,7 +167,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
 
   //noinspection SameParameterValue
   private def validateJaw(valueMap: ValueMapT, col: Col, commonName: String, min: Double, max: Double): StyleMapT = {
-    val text = valueMap(col.label)
+    val text = valueMap(col.label).trim
     0 match {
       case _ if WebUtil.stringToDouble(text).isEmpty   => Error.make(col.label, commonName + " must be a valid floating point number.")
       case _ if WebUtil.stringToDouble(text).get < min => Error.make(col.label, commonName + " value less than " + min + " not allowed.")
@@ -165,13 +176,25 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
     }
   }
 
+  /**
+    * Validate the second jaw (X2 or Y2). Make sure that it is a valid number, is
+    * in range, and does not collide with its opposing jaw.
+    * @param valueMap All user entered values.
+    * @param d2Col Column for X2 or Y2.
+    * @param d2CommonName Name that user will recognize.
+    * @param min Minimum allowed value.
+    * @param max Maximum allowed value.
+    * @param d1Name Name of opposing (X1 or Y1) jaw.
+    * @return Error if something is wrong, empty if all is ok.
+    */
+  //noinspection SameParameterValue
   private def validateJawPair(valueMap: ValueMapT, d2Col: Col, d2CommonName: String, min: Double, max: Double, d1Name: String): StyleMapT = {
     validateJaw(valueMap, d2Col, d2CommonName, min, max) match {
       case err if err.nonEmpty =>
         err
       case _ =>
-        val d2 = valueMap(d2Col.label).toDouble
-        val d1 = valueMap(makeColLabel(d1Name)).toDouble
+        val d2 = valueMap(d2Col.label).trim.toDouble
+        val d1 = valueMap(makeColLabel(d1Name)).trim.toDouble
         if ((d2 + d1) < 0)
           Error.make(d2Col.label, d2CommonName + " would collide with opposing jaw.")
         else
@@ -260,10 +283,10 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
     def err(msg: String): StyleMapT = Error.make(label, msg)
 
     WebUtil.stringToDouble(label.trim) match {
-      case Some(d) if d < 0     => err("MU must be 0 or greater, not negative.")
-      case Some(d) if d >= 1000 => err("MU must be less than 1000.")
-      case Some(d)              => styleNone
-      case _                    => err("MU must be valid floating point from 0 to 999")
+      case Some(d) if d < 0        => err("MU must be 0 or greater, not negative.")
+      case Some(d) if d >= MULimit => err("MU must be less than 1000.")
+      case Some(d)                 => styleNone
+      case _                       => err("MU must be valid floating point from 0 to 999")
     }
   }
 
@@ -294,7 +317,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
       Col("Scale", Display, init = () => "Varian IEC"),
       Col("Energy", if (isTreat) Energy else Display, init = () => beamDbl(TagByName.NominalBeamEnergy).round + "X", put = putEnergy),
       Col("Dose Rate [MU/min] ", Display, init = () => beamDblS(TagByName.DoseRateSet)),
-      Col("MU", if (isTreat) Input else Display, init = () => if (isTreat) beamRefDbl(TagByName.BeamMeterset).toString else "", validate = validateMU, put = putMU),
+      Col(labelMU, if (isTreat) Input else Display, init = () => if (isTreat) beamRefDbl(TagByName.BeamMeterset).toString else "", validate = validateMU, put = putMU),
       // Col("Dose to Beam Dose Point", Display, init = ???),
       // Col("Dose to CBCT SIM", Display, init = ???),
       Col(
@@ -310,11 +333,11 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
       Col("Gantry Rtn [deg]", Display, init = () => beamDbl(TagByName.GantryAngle).round.toString),
       Col("Coll Rtn [deg]", Display, init = () => beamDblS(TagByName.BeamLimitingDeviceAngle)),
       //
-      Col("Field X [cm]", Display, init = () => initJawSize(typeX)),
+      Col(labelFieldX, Display, init = () => initJawSize(typeX)),
       Col(labelX1, if (isTreat) Input else Display, init = () => jawDim(index = 0, jawType = typeX).toString, validate = validateJawX1, put = putDimX1),
       Col(labelX2, if (isTreat) Input else Display, init = () => jawDim(index = 1, jawType = typeX).toString, validate = validateJawX2, put = putDimX2),
       //
-      Col("Field Y [cm]", Display, init = () => initJawSize(typeY)),
+      Col(labelFieldY, Display, init = () => initJawSize(typeY)),
       Col(labelY1, if (isTreat) Input else Display, init = () => jawDim(index = 0, jawType = typeY).toString, validate = validateJawY1, put = putDimY1),
       Col(labelY2, if (isTreat) Input else Display, init = () => jawDim(index = 1, jawType = typeY).toString, validate = validateJawY2, put = putDimY2),
       //

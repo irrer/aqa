@@ -151,11 +151,13 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     val runScript =
       s"""
          |
-         |    var d1List = [];
+         |  // ------------------------------------------------------------------
+         |
+         |  var d1List = [];
          |
          |  function updateJaws(sumName, d1Name, d2Name) {
          |
-         |    function grab(elem) {
+         |    function grabD1(elem) {
          |      var id = elem.getAttribute("id");
          |      if (id.endsWith(d1Name))
          |        d1List.push(elem);
@@ -165,33 +167,82 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
          |    function addJaws(d1Elem) {
          |      var fullName = d1Elem.getAttribute("id");
          |      var baseName = fullName.substring(0, fullName.length - d1Name.length);
-         |      console.log(baseName);
          |      var d2Elem = document.getElementById(baseName + d2Name);
          |      var sumElem = document.getElementById(baseName + sumName);
          |
-         |      var d1 = parseFloat(d1Elem.value);
-         |      var d2 = parseFloat(d2Elem.value);
+         |      var d1 = parseFloat(d1Elem.value.trim());
+         |      var d2 = parseFloat(d2Elem.value.trim());
          |      var sum = d1 + d2;
          |      sumElem.innerHTML = sum.toString();
+         |      if (sum < 0) {
+         |        sumElem.style.backgroundColor = "pink";
+         |        sumElem.title = "Negative sized field not allowed.";
+         |      }
+         |      else {
+         |        sumElem.style.backgroundColor = "white";
+         |        sumElem.removeAttribute("title");
+         |      }
          |    }
          |
          |    if (d1List.length === 0)
-         |      document.querySelectorAll("input").forEach(grab);
+         |      document.querySelectorAll("input").forEach(grabD1);
          |
          |    d1List.forEach(addJaws);
          |  }
          |
-         |  // setTimeout(updateJaws("Field X [cm]", "X1 [cm]", "X2 [cm]"), 5000);
+         |  // ------------------------------------------------------------------
+         |
+         |  var MUList = [];
+         |
+         |  function checkMU() {
+         |    function grabMU(elem) {
+         |      var id = elem.getAttribute("id");
+         |      if (id.endsWith("${beamInterfaceList.beamList.head.labelMU}"))
+         |        MUList.push(elem);
+         |    }
+         |
+         |    if (MUList.length === 0)
+         |      document.querySelectorAll("input").forEach(grabMU);
+         |
+         |    function checkOneMU(MUElem) {
+         |      var muValue = parseFloat(MUElem.value.trim());
+         |
+         |      // MU is normal
+         |      if (muValue < ${beamInterfaceList.beamList.head.MUWarnLimit}) {
+         |        MUElem.style.backgroundColor = "white";
+         |        MUElem.removeAttribute("title");
+         |        return;
+         |      }
+         |
+         |      // MU is excessive.
+         |      if (muValue >= ${beamInterfaceList.beamList.head.MULimit}) {
+         |        MUElem.style.backgroundColor = "pink";
+         |        MUElem.title = "Error: MU is higher than the limit of ${beamInterfaceList.beamList.head.MULimit}";
+         |        return;
+         |      }
+         |
+         |      // warn user over use of high MU
+         |      MUElem.style.backgroundColor = "yellow";
+         |      MUElem.title = "Warning: MU is higher than the warning limit of ${beamInterfaceList.beamList.head.MUWarnLimit}";
+         |    }
+         |
+         |    MUList.forEach(checkOneMU);
+         |  }
+         |
+         |  // ------------------------------------------------------------------
          |
          |  var beamRefreshTime = 100;
          |
          |  function updateBeamLoop() {
-         |    updateJaws("Field X [cm]", "X1 [cm]", "X2 [cm]");
-         |    updateJaws("Field Y [cm]", "Y1 [cm]", "Y2 [cm]");
+         |    updateJaws("${beamInterfaceList.beamList.head.labelFieldX}", "${beamInterfaceList.beamList.head.labelX1}", "${beamInterfaceList.beamList.head.labelX2}");
+         |    updateJaws("${beamInterfaceList.beamList.head.labelFieldY}", "${beamInterfaceList.beamList.head.labelY1}", "${beamInterfaceList.beamList.head.labelY2}");
+         |    checkMU();
          |    setTimeout(updateBeamLoop, beamRefreshTime);
          |  }
          |
          |  updateBeamLoop();
+         |
+         |  // ------------------------------------------------------------------
          |
          |""".stripMargin
     val rowList = List(row1, row2, row3, row4) ++ beamInterfaceList.makeWebRows() ++ List(assignButtonList)
