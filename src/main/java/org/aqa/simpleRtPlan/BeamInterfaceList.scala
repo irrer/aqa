@@ -3,10 +3,13 @@ package org.aqa.simpleRtPlan
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.DicomFile
+import org.aqa.Util
 import org.aqa.web.WebUtil.StyleMapT
 import org.aqa.web.WebUtil.ValueMapT
 import org.aqa.web.WebUtil.WebPlainText
 import org.aqa.web.WebUtil.WebRow
+
+import scala.xml.Elem
 
 case class BeamInterfaceList(templateFiles: TemplateFiles) {
 
@@ -65,6 +68,45 @@ case class BeamInterfaceList(templateFiles: TemplateFiles) {
 
     // make each row
     val rowList = beamList.head.colList.indices.map(makeRow).toList
+    rowList
+  }
+
+  def makeReviewTable(valueMap: ValueMapT): Elem = {
+    def makeRow(rowIndex: Int): Elem = {
+      val name = beamList.head.colList(rowIndex)
+      val row = beamList.map(beam => {
+        val value = valueMap.get(beam.colList(rowIndex).label) match {
+          case Some(text) => text
+          case _          => beam.colList(rowIndex).init()
+        }
+        if (rowIndex == 0)
+          <td><b>{value}</b></td>
+        else
+          <td>{value}</td>
+      })
+      <tr><td><b>{beamList.head.colList(rowIndex).name}</b></td> {row}</tr>
+    }
+
+    val rowList = beamList.head.colList.indices.map(makeRow).toList
+
+    <table class="table table-bordered">{rowList}</table>
+  }
+
+  def makeCsvSummary(valueMap: ValueMapT): String = {
+    def makeRow(rowIndex: Int): String = {
+      val row = beamList.map(beam => {
+        val value = valueMap.get(beam.colList(rowIndex).label) match {
+          case Some(text) => text
+          case _          => beam.colList(rowIndex).init()
+        }
+        value
+      })
+      val list = (beamList.head.colList(rowIndex).name +: row)
+      list.map(Util.textToCsv).mkString(",")
+    }
+
+    val rowList = beamList.head.colList.indices.map(makeRow).toList.mkString("\n")
+
     rowList
   }
 

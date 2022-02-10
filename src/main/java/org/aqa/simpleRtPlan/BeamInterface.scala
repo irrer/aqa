@@ -149,7 +149,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
       .find(al => jawType.contains(al.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString))
       .get
     val positions = list.get(TagByName.LeafJawPositions).getDoubleValues
-    val pos = positions(index)
+    val pos = positions(index) / 10.0
     index match {
       case 0 => -pos
       case 1 => pos

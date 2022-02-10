@@ -215,6 +215,7 @@ class MakeRtPlan(
 
     def make(rtstructRef: TemplateFileRef, index: Int): Unit = {
       val rtstruct = rtstructRef.fileToDicom()
+      setVariousAttributes(rtstruct)
       setDatesAndTimes(rtstruct)
       makeNewUIDs(rtstruct)
       val suffix = if (rtStructList.size == 1) "" else "_" + (index + 1)
@@ -286,32 +287,26 @@ class MakeRtPlan(
     *
     * @return A text version of the RTPLAN and a zipped byte array of all of the DICOM files.
     */
-  def makeZipWithSupportingFiles(): ModifiedPlan = {
+  def makeZipWithSupportingFiles(csvText: String): ModifiedPlan = {
     val toZipOutputStream = new FileUtil.ToZipOutputStream
 
     val templateFiles = new TemplateFiles
 
     val rtplan = templateFiles.ofModality(modality = "RTPLAN").head.fileToDicom()
+    val rtplanText = DicomUtil.attributeListToString(rtplan)
 
-    Trace.trace()
     makeRtplan(rtplan)
-    Trace.trace()
     toZipOutputStream.writeDicom(rtplan, path = "RTPLAN.dcm", sourceApplication)
-    Trace.trace()
+    toZipOutputStream.write(csvText.getBytes(), "Summary.csv")
+    toZipOutputStream.write(rtplanText.getBytes(), "RTPLAN.txt")
     logger.info("Made RTPLAN file " + rtplan.get(TagByName.RTPlanLabel).getSingleStringValueOrEmptyString())
-    Trace.trace()
     makeRtstruct(toZipOutputStream, templateFiles)
-    Trace.trace()
     makeRTIMAGE(toZipOutputStream, templateFiles)
-    Trace.trace()
     makeCT(toZipOutputStream, templateFiles)
-    Trace.trace()
 
     val data = toZipOutputStream.finish()
-    Trace.trace()
-    val text = DicomUtil.attributeListToString(rtplan)
-    Trace.trace("\nModified plan -------------------------------------------\n" + text + "\nEnd of modified plan -------------------------------------------")
-    ModifiedPlan(text, Util.sopOfAl(rtplan), data)
+    Trace.trace("\nModified plan -------------------------------------------\n" + rtplanText + "\nEnd of modified plan -------------------------------------------")
+    ModifiedPlan(rtplanText, Util.sopOfAl(rtplan), data)
   }
 
 }

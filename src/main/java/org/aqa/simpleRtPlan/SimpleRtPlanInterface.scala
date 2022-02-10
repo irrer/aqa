@@ -335,7 +335,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
       url
     }
 
-    val downloadLink = new WebPlainText("Download", false, 3, 0, _ => { <h4> <a href={downloadUrl} title="Click to download zipped DICOM RTPLAN and supporting files.">Download</a></h4> })
+    val downloadLink = new WebPlainText("Download", false, 3, 0, _ => { <h3> <a href={downloadUrl} title="Click to download zipped DICOM RTPLAN and supporting files.">Download</a></h3> })
 
     val dicomViewHtml = {
       val elem = {
@@ -351,13 +351,25 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
 
     val summary = {
       // val elem = { <pre>{WebUtil.nl + valueMapToString(valueMap).replaceAll("\n", WebUtil.nl)}</pre> }
-      val elem = <div>hey</div>
+      val elem = <div>
+        <table class="table table-bordered">
+          <tr>
+            <td> <b>Patient ID: </b>{valueMap(patientID.label)} </td>
+            <td> <b>Machine: </b>{valueMap(machineName().label)} </td>
+          </tr>
+          <tr>
+            <td> <b>Patient Name: </b>{valueMap(patientName.label)} </td>
+            <td> <b>Plan Name: </b>{valueMap(planName.label)} </td>
+          </tr>
+        </table>
+        {beamInterfaceList.makeReviewTable(valueMap)}
+      </div>
       new WebPlainText("Summary", false, 10, 0, _ => elem)
     }
 
-    val rowA: WebRow = List(new WebPlainText("SummaryHeader", false, 10, 0, _ => { <h4>RTPlan Summary</h4> }))
-    val rowB: WebRow = List(summary)
-    val rowC: WebRow = List(downloadLink)
+    val rowA: WebRow = List(downloadLink)
+    val rowB: WebRow = List(new WebPlainText("SummaryHeader", false, 10, 0, _ => { <h4>RTPlan Summary</h4> }))
+    val rowC: WebRow = List(summary)
     val rowD: WebRow = List(new WebPlainText("DetailHeader", false, 10, 0, _ => { <h4>RTPlan as Text</h4> }))
     val rowE: WebRow = List(dicomView)
 
@@ -366,6 +378,18 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
   }
 
   private case class BeamReference(beam: AttributeList, fractionReference: AttributeList) {}
+
+  private def makeCsv(valueMap: ValueMapT): String = {
+    val rows = Seq(
+      Seq("Patient ID:" + Util.textToCsv(valueMap(patientID.label))),
+      Seq("Patient Name:" + Util.textToCsv(valueMap(patientName.label))),
+      Seq("Machine:" + Util.textToCsv(valueMap(machineName().label))),
+      Seq("Plan Name:" + Util.textToCsv(valueMap(planName.label)))
+    )
+
+    val text = rows.map(r => r.mkString(",")).mkString("\n") + beamInterfaceList.makeCsvSummary(valueMap)
+    text
+  }
 
   private def createRtplan(valueMap: ValueMapT): ModifiedPlan = {
 
@@ -388,7 +412,9 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
       beamSpecificationList
     )
 
-    val modifiedPlan = makeRtPlan.makeZipWithSupportingFiles()
+    val csvText = makeCsv(valueMap)
+
+    val modifiedPlan = makeRtPlan.makeZipWithSupportingFiles(csvText)
     downloadList.synchronized { downloadList.put(modifiedPlan.rtplanUID, modifiedPlan) }
     modifiedPlan
   }
