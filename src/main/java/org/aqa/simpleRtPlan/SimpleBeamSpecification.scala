@@ -9,7 +9,7 @@ case class SimpleBeamSpecification(
                                     BeamNumber: Int = -1,
                                     BeamDose: Double = -1,
                                     BeamMeterset: Double = -1,
-                                    BeamDeliveryDurationLimit_sec: Double = -1,
+                                    MaximumTreatmentTime_min: Double = -1,
                                     DoseRateSet: Double = -1,
                                     NominalBeamEnergy: Double = -1,
                                     X1_mm: Double = -1,
@@ -24,7 +24,7 @@ case class SimpleBeamSpecification(
       "    BeamDose: " + BeamDose +
       "    DoseRateSet: " + DoseRateSet +
       "    NominalBeamEnergy: " + NominalBeamEnergy +
-      "    BeamDeliveryDurationLimit_sec: " + BeamDeliveryDurationLimit_sec +
+      "    MaximumTreatmentTime_min: " + MaximumTreatmentTime_min +
       "    X1,X2 mm: " + X1_mm + "," + X2_mm +
       "    Y1,Y2 mm: " + Y1_mm + "," + Y2_mm
   }

@@ -1,6 +1,7 @@
 package org.aqa.simpleRtPlan
 
 import com.pixelmed.dicom.Attribute
+import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.SequenceAttribute
@@ -13,6 +14,7 @@ import edu.umro.util.UMROGUID
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
+import org.aqa.VarianPrivateTag
 import org.aqa.db.Machine
 
 import java.io.File
@@ -50,6 +52,11 @@ class MakeRtPlan(
     number
   }
 
+  private def nameOfBeam(beamAl: AttributeList): String = {
+    val name = DicomUtil.findAllSingle(beamAl, TagByName.BeamName).head.getSingleStringValueOrEmptyString()
+    name
+  }
+
   private def setNominalBeamEnergy(NominalBeamEnergy: Attribute, energy: Double): Unit = {
     NominalBeamEnergy.removeValues()
     NominalBeamEnergy.addValue(energy)
@@ -75,27 +82,58 @@ class MakeRtPlan(
       deviceTypeList.contains(devType)
     }
 
+    val jawSeq = positionSeqList.filter(typeOk)
+
     def setJaw(ps: AttributeList): Unit = {
       val LeafJawPositions = ps.get(TagByName.LeafJawPositions)
       LeafJawPositions.removeValues()
-      LeafJawPositions.addValue(-d1)
+      LeafJawPositions.addValue(d1)
       LeafJawPositions.addValue(d2)
     }
 
-    positionSeqList.filter(ps => typeOk(ps)).foreach(setJaw)
+    jawSeq.foreach(setJaw)
   }
 
-  private def setupBeam(BeamSequence: Seq[AttributeList], beamSpecification: SimpleBeamSpecification): Unit = {
+  private def refBeamSeq(rtplan: AttributeList, beamNumber: Int): AttributeList = {
+    val all = DicomUtil.seqToAttr(rtplan, TagByName.FractionGroupSequence).flatMap(al => DicomUtil.seqToAttr(al, TagByName.ReferencedBeamSequence))
+    val ref = all.find(al => al.get(TagByName.ReferencedBeamNumber).getIntegerValues.head == beamNumber)
+    ref.get
+  }
 
-    val beamTemplate = BeamSequence.find(b => numberOfBeam(b) == beamSpecification.BeamNumber).get
+  private def setupBeam(rtplan: AttributeList, beamSpecification: SimpleBeamSpecification): Unit = {
+
+    val beamAl = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence).find(b => numberOfBeam(b) == beamSpecification.BeamNumber).get
+    val beamRefAl = refBeamSeq(rtplan, beamSpecification.BeamNumber)
+
+    def setRBS(tag: AttributeTag, value: Double): Unit = {
+      beamRefAl.remove(tag)
+      val attr = AttributeFactory.newAttribute(tag, ValueRepresentation.DS)
+      attr.addValue(value)
+      beamRefAl.put(attr)
+    }
 
     // Find all references to beam energy and set them to the specified level.
-    DicomUtil.findAllSingle(beamTemplate, TagByName.NominalBeamEnergy).foreach(nbe => setNominalBeamEnergy(nbe, beamSpecification.NominalBeamEnergy))
+    DicomUtil.findAllSingle(beamAl, TagByName.NominalBeamEnergy).foreach(nbe => setNominalBeamEnergy(nbe, beamSpecification.NominalBeamEnergy))
 
     // set the X and Y jaw values
-    setLeafJawPositions(beamTemplate, Seq("X", "ASYMX"), beamSpecification.X1_mm, beamSpecification.X2_mm)
-    setLeafJawPositions(beamTemplate, Seq("Y", "ASYMY"), beamSpecification.Y1_mm, beamSpecification.Y2_mm)
+    setLeafJawPositions(beamAl, Seq("X", "ASYMX"), beamSpecification.X1_mm, beamSpecification.X2_mm)
+    setLeafJawPositions(beamAl, Seq("Y", "ASYMY"), beamSpecification.Y1_mm, beamSpecification.Y2_mm)
+
+    // set the same jaw positions for the corresponding port film beam.
+    def setPortfilmAl = {
+      val beamName = nameOfBeam(beamAl)
+      val tp = DicomUtil
+        .seqToAttr(rtplan, TagByName.BeamSequence)
+        .filter(b => nameOfBeam(b).equals(beamName) && b.get(TagByName.TreatmentDeliveryType).getSingleStringValueOrEmptyString().equals("TRMT_PORTFILM"))
+      tp.map(t => setLeafJawPositions(t, Seq("X", "ASYMX"), beamSpecification.X1_mm, beamSpecification.X2_mm))
+      tp.map(t => setLeafJawPositions(t, Seq("Y", "ASYMY"), beamSpecification.Y1_mm, beamSpecification.Y2_mm))
+    }
+    setPortfilmAl
+
     logger.info("Set up beam parameters: " + beamSpecification)
+
+    setRBS(TagByName.BeamMeterset, beamSpecification.BeamMeterset)
+    setRBS(VarianPrivateTag.MaximumTreatmentTime, beamSpecification.MaximumTreatmentTime_min)
   }
 
   /**
@@ -200,8 +238,7 @@ class MakeRtPlan(
     setDatesAndTimes(rtplan)
     makeNewUIDs(rtplan)
 
-    val BeamSequence = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
-    beamList.foreach(b => setupBeam(BeamSequence, b))
+    beamList.foreach(b => setupBeam(rtplan, b))
   }
 
   /**
@@ -293,9 +330,9 @@ class MakeRtPlan(
     val templateFiles = new TemplateFiles
 
     val rtplan = templateFiles.ofModality(modality = "RTPLAN").head.fileToDicom()
-    val rtplanText = DicomUtil.attributeListToString(rtplan)
 
     makeRtplan(rtplan)
+    val rtplanText = DicomUtil.attributeListToString(rtplan)
     toZipOutputStream.writeDicom(rtplan, path = "RTPLAN.dcm", sourceApplication)
     toZipOutputStream.write(csvText.getBytes(), "Summary.csv")
     toZipOutputStream.write(rtplanText.getBytes(), "RTPLAN.txt")

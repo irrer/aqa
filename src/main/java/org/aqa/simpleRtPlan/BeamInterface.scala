@@ -7,7 +7,8 @@ import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.SequenceAttribute
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import org.aqa.Util
+import edu.umro.ScalaUtil.Trace
+import org.aqa.VarianPrivateTag
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil.Error
 import org.aqa.web.WebUtil.IsInput
@@ -85,8 +86,12 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
 
   // true if this is a treatment beam.
   val isTreat: Boolean = {
-    val attr = beamRef.get(TagByName.BeamMeterset)
-    (attr != null) && (attr.getIntegerValues.head > 0)
+    // val attr = beamRef.get(TagByName.BeamMeterset)
+    // (attr != null) && (attr.getIntegerValues.head > 0)
+    DicomUtil.findAllSingle(beamAl, TagByName.TreatmentDeliveryType) match {
+      case list if list.nonEmpty => list.head.getSingleStringValueOrEmptyString().trim.equalsIgnoreCase("TREATMENT")
+      case _                     => false
+    }
   }
 
   //noinspection TypeAnnotation
@@ -215,8 +220,8 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
   private def validateNonNegDouble(valueMap: ValueMapT, col: Col): StyleMapT = {
     val text = valueMap(col.label)
     0 match {
-      case _ if WebUtil.stringToDouble(text).isEmpty => Error.make(col.label, "Must be a valid floating point number.")
-      case _ if WebUtil.stringToDouble(text).get < 0 => Error.make(col.label, "Negative values not allowed.")
+      case _ if WebUtil.stringToDouble(text).isEmpty => Error.make(col.label, col.name + " Must be a valid floating point number.")
+      case _ if WebUtil.stringToDouble(text).get < 0 => Error.make(col.label, col.name + " Negative values not allowed.")
       case _                                         => styleNone
     }
   }
@@ -308,6 +313,18 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
     validate = validateToleranceTable
   )
 
+  private def getMaximumTreatmentTime(): String = {
+    val text =
+      "\n-----\n" +
+        "beamAl BeamNumber: " + beamAl.get(TagByName.BeamNumber).getSingleStringValueOrEmptyString() + "\n" +
+        "beamAl BeamName: " + beamAl.get(TagByName.BeamName).getSingleStringValueOrEmptyString() + "\n" +
+        "beamRef:\n" + DicomUtil.attributeListToString(beamRef) + "\n"
+    Trace.trace(text)
+
+    //beamRef.get(VarianPrivateTag.MaximumTreatmentTime).asInstanceOf[DecimalStringAttribute].getDoubleValues.head.toString
+    beamRef.get(VarianPrivateTag.MaximumTreatmentTime).getSingleStringValueOrEmptyString()
+  }
+
   val colList: Seq[Col] =
     Seq(
       Col("Field Order/Type", DisplayBold, init = () => { beamNumber + " / " + { if (isTreat) "Treat" else "Setup" } }),
@@ -323,9 +340,10 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
       Col(
         "Backup Timer [min]",
         if (isTreat) Input else Display,
-        init = () => if (isTreat) Util.fmtDbl(beamRefDbl(TagByName.BeamDeliveryDurationLimit) / 60) else "",
+        //init = () => if (isTreat) Util.fmtDbl(beamRefDbl(TagByName.BeamDeliveryDurationLimit) / 60) else "", // TODO put back
+        init = () => if (isTreat) getMaximumTreatmentTime else "", // TODO rm
         validate = validateNonNegDouble,
-        put = (v: ValueMapT, sbs: SimpleBeamSpecification, col: Col) => sbs.copy(BeamDeliveryDurationLimit_sec = v(col.label).toDouble * 60) // convert from minutes to seconds
+        put = (v: ValueMapT, sbs: SimpleBeamSpecification, col: Col) => sbs.copy(MaximumTreatmentTime_min = v(col.label).toDouble)
       ),
       Col(toleranceColName, Display, init = () => getToleranceTableLabel), // tolTable, // for possible future use.
       // Col("Calculated SSD [cm]", Display, init = ???),
