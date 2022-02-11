@@ -120,7 +120,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
 
     def field: IsInput with ToHtml = {
       entryType match {
-        case EntryType.DisplayBold => new WebPlainText(label = label, showLabel = false, col = 1, offset = 0, _ => <b>{init()}</b>)
+        case EntryType.DisplayBold => new WebPlainText(label = label, showLabel = false, col = 1, offset = 0, _ => <b> {init() } </b>)
         case EntryType.Display     => new WebPlainText(label = label, showLabel = false, col = 1, offset = 0, _ => <span id={label}>{init()}</span>)
         case EntryType.Energy      => energySelectList()
         case EntryType.GantryAngle => gantryAngleSelectList()

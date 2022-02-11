@@ -133,7 +133,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
   private def row1: WebRow = List(patientID, patientName)
   private def row2: WebRow = List(planName, machineName())
   private def row3: WebRow = List(header)
-  private def row4: WebRow = headerRow
+  //private def row4: WebRow = headerRow
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -253,7 +253,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
          |  // ------------------------------------------------------------------
          |
          |""".stripMargin
-    val rowList = List(row1, row2, row3, row4) ++ beamInterfaceList.makeWebRows() ++ List(assignButtonList)
+    val rowList = List(row1, row2, row3) ++ beamInterfaceList.makeWebRows() ++ List(assignButtonList)
     new WebForm(action = pathOf, title = Some("Simple Emergency RTPLAN"), rowList = rowList, fileUpload = 0, runScript = Some(runScript))
   }
 

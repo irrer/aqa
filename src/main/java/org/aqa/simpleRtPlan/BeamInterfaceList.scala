@@ -21,10 +21,9 @@ case class BeamInterfaceList(templateFiles: TemplateFiles) {
   val beamList: Seq[BeamInterface] = {
     val rtplan = new DicomFile(templateFiles.ofModality("RTPLAN").head.file).attributeList.get
 
-
     val beamAlList = {
       // Types of delivery we are interested in.
-      val DeliveryTypeList = Seq("TREATMENT", "SETUP")
+      val DeliveryTypeList = Seq("TREATMENT")
       val list = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
 
       // Limit the beams shown to the types we are interested in.
@@ -69,7 +68,7 @@ case class BeamInterfaceList(templateFiles: TemplateFiles) {
       */
     def makeRow(rowIndex: Int): WebRow = {
       val name = beamList.head.colList(rowIndex)
-      val header = new WebPlainText(label = "rowHeader" + rowIndex, showLabel = false, col = 1, offset = 0, html = _ => <b style="white-space: nowrap;">{name.name}</b>)
+      val header = new WebPlainText(label = "rowHeader" + rowIndex, showLabel = false, col = 2, offset = 0, html = _ => <b style="white-space: nowrap;">{name.name}</b>)
       val fieldList = beamList.map(beam => beam.colList(rowIndex).field)
       //Trace.trace(rowIndex + " WebRow " + name.name)
       (header +: fieldList).toList
