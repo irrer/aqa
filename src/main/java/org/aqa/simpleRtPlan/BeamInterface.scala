@@ -8,6 +8,7 @@ import com.pixelmed.dicom.SequenceAttribute
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
+import org.aqa.Util
 import org.aqa.VarianPrivateTag
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil.Error
@@ -120,7 +121,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
 
     def field: IsInput with ToHtml = {
       entryType match {
-        case EntryType.DisplayBold => new WebPlainText(label = label, showLabel = false, col = 1, offset = 0, _ => <b> {init() } </b>)
+        case EntryType.DisplayBold => new WebPlainText(label = label, showLabel = false, col = 1, offset = 0, _ => <b> {init()} </b>)
         case EntryType.Display     => new WebPlainText(label = label, showLabel = false, col = 1, offset = 0, _ => <span id={label}>{init()}</span>)
         case EntryType.Energy      => energySelectList()
         case EntryType.GantryAngle => gantryAngleSelectList()
@@ -346,7 +347,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
         put = (v: ValueMapT, sbs: SimpleBeamSpecification, col: Col) => sbs.copy(MaximumTreatmentTime_min = v(col.label).toDouble)
       ),
       Col(toleranceColName, Display, init = () => getToleranceTableLabel), // tolTable, // for possible future use.
-      // Col("Calculated SSD [cm]", Display, init = ???),
+      Col("Calculated SSD [cm]", Display, init = () => Util.fmtDbl(beamDbl(TagByName.SourceToSurfaceDistance) / 10)), // tolTable, // for possible future use.
       // Col("Planned SSD [cm]", Display, init = ???),
       Col("Gantry Rtn [deg]", Display, init = () => beamDbl(TagByName.GantryAngle).round.toString),
       Col("Coll Rtn [deg]", Display, init = () => beamDblS(TagByName.BeamLimitingDeviceAngle)),
