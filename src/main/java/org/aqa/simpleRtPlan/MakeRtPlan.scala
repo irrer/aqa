@@ -6,6 +6,7 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.SequenceAttribute
 import com.pixelmed.dicom.ValueRepresentation
+import edu.umro.DicomDict.DicomDict
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
@@ -352,11 +353,18 @@ object MakeRtPlan {
   def main(args: Array[String]): Unit = {
 
     if (true) {
-      val f = new File("""D:\tmp\maggie\33529_RTPLAN_1__0000_1_X.DCM""")
+      val f = new File("""src\main\resources\static\rtplan\rtplanPhase2Millenium.dcm""")
       val al = new AttributeList
       al.read(f)
       val t = DicomUtil.attributeListToString(al)
       println(t)
+
+      DicomUtil.findAll(al, (_) => true).map(attr => {
+        println(DicomDict.dict.getNameFromTag(attr.getTag) + " : " + DicomDict.dict.getInformationEntityFromTag(attr.getTag))
+      })
+
+
+
       System.exit(99)
     }
 

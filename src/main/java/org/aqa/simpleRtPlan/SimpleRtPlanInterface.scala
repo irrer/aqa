@@ -153,16 +153,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
          |
          |  // ------------------------------------------------------------------
          |
-         |  var d1List = [];
-         |
-         |  function updateJaws(sumName, d1Name, d2Name) {
-         |
-         |    function grabD1(elem) {
-         |      var id = elem.getAttribute("id");
-         |      if (id.endsWith(d1Name))
-         |        d1List.push(elem);
-         |    }
-         |
+         |  function updateJaws(d1List, sumName, d1Name, d2Name) {
          |
          |    function addJaws(d1Elem) {
          |      var fullName = d1Elem.getAttribute("id");
@@ -183,9 +174,6 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
          |        sumElem.removeAttribute("title");
          |      }
          |    }
-         |
-         |    if (d1List.length === 0)
-         |      document.querySelectorAll("input").forEach(grabD1);
          |
          |    d1List.forEach(addJaws);
          |  }
@@ -231,11 +219,31 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
          |
          |  // ------------------------------------------------------------------
          |
+         |  var x1List = [];
+         |  var y1List = [];
+         |
+         |  function grabX1(elem) {
+         |    var id = elem.getAttribute("id");
+         |    if (id.endsWith("${beamInterfaceList.beamList.head.labelX1}"))
+         |      x1List.push(elem);
+         |  }
+         |
+         |  function grabY1(elem) {
+         |    var id = elem.getAttribute("id");
+         |    if (id.endsWith("${beamInterfaceList.beamList.head.labelY1}"))
+         |      y1List.push(elem);
+         |  }
+         |
+         |  document.querySelectorAll("input").forEach(grabX1);
+         |  document.querySelectorAll("input").forEach(grabY1);
+         |
          |  var beamRefreshTime = 100;
          |
+         |  // ------------------------------------------------------------------
+         |
          |  function updateBeamLoop() {
-         |    updateJaws("${beamInterfaceList.beamList.head.labelFieldX}", "${beamInterfaceList.beamList.head.labelX1}", "${beamInterfaceList.beamList.head.labelX2}");
-         |    updateJaws("${beamInterfaceList.beamList.head.labelFieldY}", "${beamInterfaceList.beamList.head.labelY1}", "${beamInterfaceList.beamList.head.labelY2}");
+         |    updateJaws(x1List, "${beamInterfaceList.beamList.head.labelFieldX}", "${beamInterfaceList.beamList.head.labelX1}", "${beamInterfaceList.beamList.head.labelX2}");
+         |    updateJaws(y1List, "${beamInterfaceList.beamList.head.labelFieldY}", "${beamInterfaceList.beamList.head.labelY1}", "${beamInterfaceList.beamList.head.labelY2}");
          |    checkMU();
          |    setTimeout(updateBeamLoop, beamRefreshTime);
          |  }
