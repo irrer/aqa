@@ -101,19 +101,6 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     new WebPlainText(label = uniqueId, showLabel = false, col = col, offset = 0, html = _ => elem)
   }
 
-  private def headerRow: WebRow = {
-    List(
-      makePlainText(text = "Gantry Angle", Some("In degrees")),
-      new WebPlainText(label = uniqueId, showLabel = false, col = 1, offset = 0, html = _ => <b title="Beam name in RTPLAN">Beam</b>), // do not center this
-      makePlainText(text = "Energy", Some("Beam Energy")),
-      makePlainText(
-        text = "Width mm",
-        Some("Width of beam in mm (along the X or Y axis," + titleNewline + "e.g. Anterior to posterior or Sagittal" + titleNewline + "left to right distance.)")
-      ),
-      makePlainText(text = "Height mm", Some("Height of beam in mm (along the Z axis," + titleNewline + "e.g. Superior to inferior distance.)"))
-    )
-  }
-
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   /**
@@ -133,7 +120,6 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
   private def row1: WebRow = List(patientID, patientName)
   private def row2: WebRow = List(planName, machineName())
   private def row3: WebRow = List(header)
-  //private def row4: WebRow = headerRow
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -147,112 +133,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
   private val assignButtonList: WebRow = List(makePlainText(" "), createButton, makePlainText(" "), cancelButton)
 
   private def makeWebForm() = {
-
-    val runScript =
-      s"""
-         |
-         |  // ------------------------------------------------------------------
-         |
-         |  function updateJaws(d1List, sumName, d1Name, d2Name) {
-         |
-         |    function addJaws(d1Elem) {
-         |      var fullName = d1Elem.getAttribute("id");
-         |      var baseName = fullName.substring(0, fullName.length - d1Name.length);
-         |      var d2Elem = document.getElementById(baseName + d2Name);
-         |      var sumElem = document.getElementById(baseName + sumName);
-         |
-         |      var d1 = parseFloat(d1Elem.value.trim());
-         |      var d2 = parseFloat(d2Elem.value.trim());
-         |      var sum = d1 + d2;
-         |      sumElem.innerHTML = sum.toString();
-         |      if (sum < 0) {
-         |        sumElem.style.backgroundColor = "pink";
-         |        sumElem.title = "Negative sized field not allowed.";
-         |      }
-         |      else {
-         |        sumElem.style.backgroundColor = "white";
-         |        sumElem.removeAttribute("title");
-         |      }
-         |    }
-         |
-         |    d1List.forEach(addJaws);
-         |  }
-         |
-         |  // ------------------------------------------------------------------
-         |
-         |  var MUList = [];
-         |
-         |  function checkMU() {
-         |    function grabMU(elem) {
-         |      var id = elem.getAttribute("id");
-         |      if (id.endsWith("${beamInterfaceList.beamList.head.labelMU}"))
-         |        MUList.push(elem);
-         |    }
-         |
-         |    if (MUList.length === 0)
-         |      document.querySelectorAll("input").forEach(grabMU);
-         |
-         |    function checkOneMU(MUElem) {
-         |      var muValue = parseFloat(MUElem.value.trim());
-         |
-         |      // MU is normal
-         |      if (muValue < ${beamInterfaceList.beamList.head.MUWarnLimit}) {
-         |        MUElem.style.backgroundColor = "white";
-         |        MUElem.removeAttribute("title");
-         |        return;
-         |      }
-         |
-         |      // MU is excessive.
-         |      if (muValue >= ${beamInterfaceList.beamList.head.MULimit}) {
-         |        MUElem.style.backgroundColor = "pink";
-         |        MUElem.title = "Error: MU is higher than the limit of ${beamInterfaceList.beamList.head.MULimit}";
-         |        return;
-         |      }
-         |
-         |      // warn user over use of high MU
-         |      MUElem.style.backgroundColor = "yellow";
-         |      MUElem.title = "Warning: MU is higher than the warning limit of ${beamInterfaceList.beamList.head.MUWarnLimit}";
-         |    }
-         |
-         |    MUList.forEach(checkOneMU);
-         |  }
-         |
-         |  // ------------------------------------------------------------------
-         |
-         |  var x1List = [];
-         |  var y1List = [];
-         |
-         |  function grabX1(elem) {
-         |    var id = elem.getAttribute("id");
-         |    if (id.endsWith("${beamInterfaceList.beamList.head.labelX1}"))
-         |      x1List.push(elem);
-         |  }
-         |
-         |  function grabY1(elem) {
-         |    var id = elem.getAttribute("id");
-         |    if (id.endsWith("${beamInterfaceList.beamList.head.labelY1}"))
-         |      y1List.push(elem);
-         |  }
-         |
-         |  document.querySelectorAll("input").forEach(grabX1);
-         |  document.querySelectorAll("input").forEach(grabY1);
-         |
-         |  var beamRefreshTime = 100;
-         |
-         |  // ------------------------------------------------------------------
-         |
-         |  function updateBeamLoop() {
-         |    updateJaws(x1List, "${beamInterfaceList.beamList.head.labelFieldX}", "${beamInterfaceList.beamList.head.labelX1}", "${beamInterfaceList.beamList.head.labelX2}");
-         |    updateJaws(y1List, "${beamInterfaceList.beamList.head.labelFieldY}", "${beamInterfaceList.beamList.head.labelY1}", "${beamInterfaceList.beamList.head.labelY2}");
-         |    checkMU();
-         |    setTimeout(updateBeamLoop, beamRefreshTime);
-         |  }
-         |
-         |  updateBeamLoop();
-         |
-         |  // ------------------------------------------------------------------
-         |
-         |""".stripMargin
+    val runScript = SimpleRtplanJS.runScript(beamInterfaceList.beamList.head)
     val rowList = List(row1, row2, row3) ++ beamInterfaceList.makeWebRows() ++ List(assignButtonList)
     new WebForm(action = pathOf, title = Some("Simple Emergency RTPLAN"), rowList = rowList, fileUpload = 0, runScript = Some(runScript))
   }
@@ -351,15 +232,14 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
           <pre title="DICOM meta-data">{WebUtil.nl + modifiedPlan.rtplanText}</pre>
         </div>
       }
-
       elem
     }
 
     val dicomView = new WebPlainText("Download", false, 10, 0, _ => dicomViewHtml)
 
-    val summary = {
+    def summary = {
       // val elem = { <pre>{WebUtil.nl + valueMapToString(valueMap).replaceAll("\n", WebUtil.nl)}</pre> }
-      val elem = <div>
+      val elem = <div style="margin-right=200px; margin-left=200px;">
         <table class="table table-bordered">
           <tr>
             <td> <b>Patient ID: </b>{valueMap(patientID.label)} </td>
@@ -387,7 +267,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
 
   private case class BeamReference(beam: AttributeList, fractionReference: AttributeList) {}
 
-  private def makeCsv(valueMap: ValueMapT): String = {
+  private def makeCsv(valueMap: ValueMapT, NominalBeamEnergy: Double): String = {
     val rows = Seq(
       Seq("Patient ID:" + Util.textToCsv(valueMap(patientID.label))),
       Seq("Patient Name:" + Util.textToCsv(valueMap(patientName.label))),
@@ -395,13 +275,22 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
       Seq("Plan Name:" + Util.textToCsv(valueMap(planName.label)))
     )
 
-    val text = rows.map(r => r.mkString(",")).mkString("\n") + beamInterfaceList.makeCsvSummary(valueMap)
+    val text = rows.map(r => r.mkString(",")).mkString("\n") + beamInterfaceList.makeCsvSummary(valueMap, NominalBeamEnergy)
     text
   }
 
   private def createRtplan(valueMap: ValueMapT): ModifiedPlan = {
 
     val beamSpecificationList = beamInterfaceList.beamList.filter(_.isTreat).map(b => b.toBeamSpecification(valueMap))
+
+    val NominalBeamEnergy = {
+      val treatBeams = beamInterfaceList.beamList.filter(_.isTreat)
+      val energyCol = treatBeams.head.colList.find(c => c.name.equals(treatBeams.head.labelEnergy)).get
+
+      // the energy that the user specified
+      val energy = valueMap(energyCol.label).trim.toDouble
+      energy
+    }
 
     val selectedMachineName = valueMap(machineName().label)
     val machineMap = {
@@ -417,10 +306,11 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
       PatientName = valueMap(patientName.label),
       machine = machine,
       RTPlanLabel = valueMap(planName.label),
+      NominalBeamEnergy = NominalBeamEnergy,
       beamSpecificationList
     )
 
-    val csvText = makeCsv(valueMap)
+    val csvText = makeCsv(valueMap, NominalBeamEnergy)
 
     val modifiedPlan = makeRtPlan.makeZipWithSupportingFiles(csvText)
     downloadList.synchronized { downloadList.put(modifiedPlan.rtplanUID, modifiedPlan) }

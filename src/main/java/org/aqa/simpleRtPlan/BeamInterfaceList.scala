@@ -100,12 +100,17 @@ case class BeamInterfaceList(templateFiles: TemplateFiles) {
     <table class="table table-bordered">{rowList}</table>
   }
 
-  def makeCsvSummary(valueMap: ValueMapT): String = {
+  def makeCsvSummary(valueMap: ValueMapT, NominalBeamEnergy: Double): String = {
     def makeRow(rowIndex: Int): String = {
       val row = beamList.map(beam => {
         val value = valueMap.get(beam.colList(rowIndex).label) match {
           case Some(text) => text
-          case _          => beam.colList(rowIndex).init()
+          case _ =>
+            val col = beam.colList(rowIndex)
+            if (col.name.equals(beamList.head.labelEnergy))
+              NominalBeamEnergy.toString
+            else
+              beam.colList(rowIndex).init()
         }
         value
       })

@@ -34,6 +34,7 @@ class MakeRtPlan(
     PatientName: String,
     machine: Machine,
     RTPlanLabel: String,
+    NominalBeamEnergy: Double,
     beamList: Seq[SimpleBeamSpecification]
 ) extends Logging {
 
@@ -113,23 +114,21 @@ class MakeRtPlan(
       beamRefAl.put(attr)
     }
 
-    // Find all references to beam energy and set them to the specified level.
-    DicomUtil.findAllSingle(beamAl, TagByName.NominalBeamEnergy).foreach(nbe => setNominalBeamEnergy(nbe, beamSpecification.NominalBeamEnergy))
-
     // set the X and Y jaw values
     setLeafJawPositions(beamAl, Seq("X", "ASYMX"), beamSpecification.X1_mm, beamSpecification.X2_mm)
     setLeafJawPositions(beamAl, Seq("Y", "ASYMY"), beamSpecification.Y1_mm, beamSpecification.Y2_mm)
 
     // set the same jaw positions for the corresponding port film beam.
-    def setPortfilmAl = {
+    def setPortfilmAl() = {
       val beamName = nameOfBeam(beamAl)
+      //noinspection SpellCheckingInspection
       val tp = DicomUtil
         .seqToAttr(rtplan, TagByName.BeamSequence)
         .filter(b => nameOfBeam(b).equals(beamName) && b.get(TagByName.TreatmentDeliveryType).getSingleStringValueOrEmptyString().equals("TRMT_PORTFILM"))
-      tp.map(t => setLeafJawPositions(t, Seq("X", "ASYMX"), beamSpecification.X1_mm, beamSpecification.X2_mm))
+      tp.foreach(t => setLeafJawPositions(t, Seq("X", "ASYMX"), beamSpecification.X1_mm, beamSpecification.X2_mm))
       tp.map(t => setLeafJawPositions(t, Seq("Y", "ASYMY"), beamSpecification.Y1_mm, beamSpecification.Y2_mm))
     }
-    setPortfilmAl
+    setPortfilmAl()
 
     logger.info("Set up beam parameters: " + beamSpecification)
 
@@ -171,8 +170,6 @@ class MakeRtPlan(
   }
 
   private def setRtplanAttributes(al: AttributeList): Unit = {
-    setAll(al, TagByName.Manufacturer, "AQA")
-    setAll(al, TagByName.ManufacturerModelName, "Simple Plan")
     setAll(al, TagByName.RTPlanLabel, RTPlanLabel)
 
     val beamAlList = DicomUtil.seqToAttr(al, TagByName.BeamSequence)
@@ -238,6 +235,9 @@ class MakeRtPlan(
     setRtplanAttributes(rtplan)
     setDatesAndTimes(rtplan)
     makeNewUIDs(rtplan)
+
+    // Find all references to beam energy and set them to the specified level.  This is set for all beams, not just treatment.
+    DicomUtil.findAllSingle(rtplan, TagByName.NominalBeamEnergy).foreach(nbe => setNominalBeamEnergy(nbe, NominalBeamEnergy))
 
     beamList.foreach(b => setupBeam(rtplan, b))
   }
@@ -359,7 +359,7 @@ object MakeRtPlan {
       val t = DicomUtil.attributeListToString(al)
       println(t)
 
-      DicomUtil.findAll(al, (_) => true).map(attr => {
+      DicomUtil.findAll(al, _ => true).foreach(attr => {
         println(DicomDict.dict.getNameFromTag(attr.getTag) + " : " + DicomDict.dict.getInformationEntityFromTag(attr.getTag))
       })
 

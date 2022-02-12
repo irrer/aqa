@@ -47,12 +47,14 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
   val labelY1 = "Y1 [cm]"
   val labelY2 = "Y2 [cm]"
 
+  val labelEnergy = "Energy"
+
   private def energySelectList() = {
     //noinspection ScalaUnusedSymbol
     def makeSelectList(response: Option[Response]): List[(String, String)] = {
       List(("6", "6X"), ("16", "16X"))
     }
-    new WebInputSelect(label = makeColLabel("Energy"), showLabel = false, col = 1, offset = 0, selectList = makeSelectList, aqaAlias = false)
+    new WebInputSelect(label = makeColLabel(labelEnergy), showLabel = false, col = 1, offset = 0, selectList = makeSelectList, aqaAlias = false)
   }
 
   private def gantryAngleSelectList() = {
@@ -285,10 +287,10 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
 
   //noinspection ScalaUnusedSymbol
   private def validateMU(valueMap: ValueMapT, col: Col): StyleMapT = {
-    val label = valueMap(makeColLabel(muColName))
-    def err(msg: String): StyleMapT = Error.make(label, msg)
+    val value = valueMap(col.label)
+    def err(msg: String): StyleMapT = Error.make(col.label, msg)
 
-    WebUtil.stringToDouble(label.trim) match {
+    WebUtil.stringToDouble(value.trim) match {
       case Some(d) if d < 0        => err("MU must be 0 or greater, not negative.")
       case Some(d) if d >= MULimit => err("MU must be less than 1000.")
       case Some(d)                 => styleNone
@@ -333,7 +335,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
       Col("Field Name", Display, init = () => templateBeamName),
       Col("Technique", Display, init = () => beamAl.get(TagByName.BeamType).getSingleStringValueOrEmptyString),
       Col("Scale", Display, init = () => "Varian IEC"),
-      Col("Energy", if (isTreat) Energy else Display, init = () => beamDbl(TagByName.NominalBeamEnergy).round + "X", put = putEnergy),
+      Col(labelEnergy, if (isTreat) Energy else Display, init = () => beamDbl(TagByName.NominalBeamEnergy).round + "X", put = putEnergy),
       Col("Dose Rate [MU/min] ", Display, init = () => beamDblS(TagByName.DoseRateSet)),
       Col(labelMU, if (isTreat) Input else Display, init = () => if (isTreat) beamRefDbl(TagByName.BeamMeterset).toString else "", validate = validateMU, put = putMU),
       // Col("Dose to Beam Dose Point", Display, init = ???),
