@@ -34,7 +34,6 @@ class MakeRtPlan(
     PatientName: String,
     machine: Machine,
     RTPlanLabel: String,
-    NominalBeamEnergy: Double,
     beamList: Seq[SimpleBeamSpecification]
 ) extends Logging {
 
@@ -106,6 +105,9 @@ class MakeRtPlan(
 
     val beamAl = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence).find(b => numberOfBeam(b) == beamSpecification.BeamNumber).get
     val beamRefAl = refBeamSeq(rtplan, beamSpecification.BeamNumber)
+
+    // Find all references to beam energy and set them to the specified level.
+    DicomUtil.findAllSingle(beamAl, TagByName.NominalBeamEnergy).foreach(nbe => setNominalBeamEnergy(nbe, beamSpecification.NominalBeamEnergy))
 
     def setRBS(tag: AttributeTag, value: Double): Unit = {
       beamRefAl.remove(tag)
@@ -235,9 +237,6 @@ class MakeRtPlan(
     setRtplanAttributes(rtplan)
     setDatesAndTimes(rtplan)
     makeNewUIDs(rtplan)
-
-    // Find all references to beam energy and set them to the specified level.  This is set for all beams, not just treatment.
-    DicomUtil.findAllSingle(rtplan, TagByName.NominalBeamEnergy).foreach(nbe => setNominalBeamEnergy(nbe, NominalBeamEnergy))
 
     beamList.foreach(b => setupBeam(rtplan, b))
   }
