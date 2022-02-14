@@ -116,7 +116,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
   case class Col(
       name: String,
       entryType: EntryType.Value,
-      init: (ValueMapT) => String,
+      init: ValueMapT => String,
       //validate: (ValueMapT, Col) => StyleMapT = noValidation,
       validate: (ValueMapT, Col) => StyleMapT = (_, _) => styleNone,
       put: (ValueMapT, SimpleBeamSpecification, Col) => SimpleBeamSpecification = (_, simpleBeamSpecification: SimpleBeamSpecification, _) => simpleBeamSpecification
@@ -145,16 +145,10 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
 
   private def beamDblS(tag: AttributeTag): String = beamDbl(tag).toString
 
-  private def beamRefList(tag: AttributeTag): Seq[Attribute] = DicomUtil.findAllSingle(beamRef, tag)
-
-  private def beamRefDbl(tag: AttributeTag): Double = {
-    beamRefList(tag).head.getDoubleValues.head
-  }
-
   val typeX = Seq("X", "ASYMX")
   val typeY = Seq("Y", "ASYMY")
 
-  private def jawDim(valueMap: ValueMapT, index: Int, jawType: Seq[String]): Double = {
+  private def jawDim(index: Int, jawType: Seq[String]): Double = {
     val list = beamList(TagByName.BeamLimitingDevicePositionSequence)
       .flatMap(s => DicomUtil.alOfSeq(s.asInstanceOf[SequenceAttribute]))
       .find(al => jawType.contains(al.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString))
@@ -173,7 +167,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
     * @return String representing jaw opening size.
     */
   private def initJawSize(valueMap: ValueMapT, d1Label: String, d2Label: String, jawType: Seq[String]): String = {
-    val default = (jawDim(valueMap, index = 1, jawType) + jawDim(valueMap, index = 0, jawType)).toString
+    val default = (jawDim(index = 1, jawType) + jawDim(index = 0, jawType)).toString
     (valueMap.get(makeColLabel(d1Label)), valueMap.get(makeColLabel(d2Label))) match {
       case (Some(textX1), Some(textX2)) =>
         try {
@@ -270,8 +264,6 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
 
   private val toleranceColName = "Tol. Table"
 
-  private val muColName = "MU"
-
   /**
     * The the beam's tolerance table.
     * @param valueMap What the user entered.
@@ -326,11 +318,11 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
   private val tolTable = Col(
     toleranceColName,
     if (isTreat) Input else Display,
-    init = (_) => DicomUtil.findAllSingle(rtplan, TagByName.ToleranceTableLabel).head.getSingleStringValueOrEmptyString(),
+    init = _ => DicomUtil.findAllSingle(rtplan, TagByName.ToleranceTableLabel).head.getSingleStringValueOrEmptyString(),
     validate = validateToleranceTable
   )
 
-  private def getMaximumTreatmentTime(): String = {
+  private def fetchMaximumTreatmentTime(): String = {
     val text =
       "\n-----\n" +
         "beamAl BeamNumber: " + beamAl.get(TagByName.BeamNumber).getSingleStringValueOrEmptyString() + "\n" +
@@ -352,54 +344,54 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
 
   private def initMU(valueMap: ValueMapT): String = {
     if (isTreat) {
-      beamRefDbl(TagByName.BeamMeterset).toString
       val label = makeColLabel(labelMU)
       valueMap.get(label) match {
         case Some(text) => text
-        case _          => beamRefDbl(TagByName.BeamMeterset).toString
+        case _ =>
+          DicomUtil.findAllSingle(beamRef, TagByName.BeamMeterset).head.getDoubleValues.head.toString
       }
     } else {
       ""
     }
   }
 
-  def colList(valueMap: ValueMapT): Seq[Col] =
+  val colList: Seq[Col] =
     Seq(
-      Col("Field Order/Type", DisplayBold, init = (_) => { beamNumber + " / " + { if (isTreat) "Treat" else "Setup" } }),
+      Col("Field Order/Type", DisplayBold, init = _ => { beamNumber + " / " + { if (isTreat) "Treat" else "Setup" } }),
       // Col("Field ID", if (isTreat) Text else Display, init = () => templateBeamName, validate = validLO),
-      Col("Field Name", Display, init = (_) => templateBeamName),
-      Col("Technique", Display, init = (_) => beamAl.get(TagByName.BeamType).getSingleStringValueOrEmptyString),
-      Col("Scale", Display, init = (_) => "Varian IEC"),
+      Col("Field Name", Display, init = _ => templateBeamName),
+      Col("Technique", Display, init = _ => beamAl.get(TagByName.BeamType).getSingleStringValueOrEmptyString),
+      Col("Scale", Display, init = _ => "Varian IEC"),
       Col(labelEnergy, if (isTreat) Energy else Display, init = initEnergy, put = putEnergy),
-      Col(labelDoseRate, Display, init = (_) => beamDblS(TagByName.DoseRateSet)),
+      Col(labelDoseRate, Display, init = _ => beamDblS(TagByName.DoseRateSet)),
       Col(labelMU, if (isTreat) Input else Display, init = initMU, validate = validateMU, put = putMU),
       // Col("Dose to Beam Dose Point", Display, init = ???),
       // Col("Dose to CBCT SIM", Display, init = ???),
       Col(
         labelBackupTimer,
         if (isTreat) Input else Display,
-        init = (_) => if (isTreat) getMaximumTreatmentTime else "",
+        init = _ => if (isTreat) fetchMaximumTreatmentTime() else "",
         validate = validateNonNegDouble,
         put = (v: ValueMapT, sbs: SimpleBeamSpecification, col: Col) => sbs.copy(MaximumTreatmentTime_min = v(col.label).toDouble)
       ),
-      Col(toleranceColName, Display, init = (_) => getToleranceTableLabel), // tolTable, // for possible future use.
-      Col("Calculated SSD [cm]", Display, init = (_) => Util.fmtDbl(beamDbl(TagByName.SourceToSurfaceDistance) / 10)), // tolTable, // for possible future use.
+      Col(toleranceColName, Display, init = _ => getToleranceTableLabel), // tolTable, // for possible future use.
+      Col("Calculated SSD [cm]", Display, init = _ => Util.fmtDbl(beamDbl(TagByName.SourceToSurfaceDistance) / 10)), // tolTable, // for possible future use.
       // Col("Planned SSD [cm]", Display, init = ???),
-      Col("Gantry Rtn [deg]", Display, init = (_) => beamDbl(TagByName.GantryAngle).round.toString),
-      Col("Coll Rtn [deg]", Display, init = (_) => beamDblS(TagByName.BeamLimitingDeviceAngle)),
+      Col("Gantry Rtn [deg]", Display, init = _ => beamDbl(TagByName.GantryAngle).round.toString),
+      Col("Coll Rtn [deg]", Display, init = _ => beamDblS(TagByName.BeamLimitingDeviceAngle)),
       //
-      Col(labelFieldX, Display, init = (valueMap) => initJawSize(valueMap, labelX1, labelX2, typeX)),
-      Col(labelX1, if (isTreat) Input else Display, init = (valueMap: ValueMapT) => jawDim(valueMap, index = 0, jawType = typeX).toString, validate = validateJawX1, put = putDimX1),
-      Col(labelX2, if (isTreat) Input else Display, init = (valueMap: ValueMapT) => jawDim(valueMap, index = 1, jawType = typeX).toString, validate = validateJawX2, put = putDimX2),
+      Col(labelFieldX, Display, init = valueMap => initJawSize(valueMap, labelX1, labelX2, typeX)),
+      Col(labelX1, if (isTreat) Input else Display, init = _ => jawDim(index = 0, jawType = typeX).toString, validate = validateJawX1, put = putDimX1),
+      Col(labelX2, if (isTreat) Input else Display, init = _ => jawDim(index = 1, jawType = typeX).toString, validate = validateJawX2, put = putDimX2),
       //
-      Col(labelFieldY, Display, init = (valueMap) => initJawSize(valueMap, labelY1, labelY2, typeY)),
-      Col(labelY1, if (isTreat) Input else Display, init = (valueMap: ValueMapT) => jawDim(valueMap, index = 0, jawType = typeY).toString, validate = validateJawY1, put = putDimY1),
-      Col(labelY2, if (isTreat) Input else Display, init = (valueMap: ValueMapT) => jawDim(valueMap, index = 1, jawType = typeY).toString, validate = validateJawY2, put = putDimY2),
+      Col(labelFieldY, Display, init = valueMap => initJawSize(valueMap, labelY1, labelY2, typeY)),
+      Col(labelY1, if (isTreat) Input else Display, init = _ => jawDim(index = 0, jawType = typeY).toString, validate = validateJawY1, put = putDimY1),
+      Col(labelY2, if (isTreat) Input else Display, init = _ => jawDim(index = 1, jawType = typeY).toString, validate = validateJawY2, put = putDimY2),
       //
-      Col("Couch Vrt [cm]", Display, init = (_) => (beamDbl(TagByName.TableTopVerticalPosition) / 10).toString),
-      Col("Couch Lng [cm]", Display, init = (_) => (beamDbl(TagByName.TableTopLongitudinalPosition) / 10).toString),
-      Col("Couch Lat [cm]", Display, init = (_) => (beamDbl(TagByName.TableTopLateralPosition) / 10).toString),
-      Col("Couch Rtn [deg]", Display, init = (_) => beamDblS(TagByName.TableTopEccentricAngle))
+      Col("Couch Vrt [cm]", Display, init = _ => (beamDbl(TagByName.TableTopVerticalPosition) / 10).toString),
+      Col("Couch Lng [cm]", Display, init = _ => (beamDbl(TagByName.TableTopLongitudinalPosition) / 10).toString),
+      Col("Couch Lat [cm]", Display, init = _ => (beamDbl(TagByName.TableTopLateralPosition) / 10).toString),
+      Col("Couch Rtn [deg]", Display, init = _ => beamDblS(TagByName.TableTopEccentricAngle))
     )
 
   // Trace.trace(colList.size + "  col list: " + colList.map(_.name).mkString("\n"))
@@ -421,7 +413,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
     }
 
     val sbsInit = SimpleBeamSpecification(BeamNumber = beamNumber)
-    val sbsFinal = putList(sbsInit, colList(valueMap))
+    val sbsFinal = putList(sbsInit, colList)
     sbsFinal
   }
 
@@ -431,13 +423,13 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
     * @return List of label+value pairs.
     */
   def initialValueMap(): ValueMapT = {
-    val vm = colList(emptyValueMap).filter(_.entryType.toString.equals(EntryType.Input.toString)).map(f => (f.label, f.init(emptyValueMap))).toMap
+    val vm = colList.filter(_.entryType.toString.equals(EntryType.Input.toString)).map(f => (f.label, f.init(emptyValueMap))).toMap
     vm
   }
 
   def validateBeam(valueMap: ValueMapT): StyleMapT = {
     if (isTreat) {
-      val list = colList(valueMap).flatMap(c => c.validate(valueMap, c))
+      val list = colList.flatMap(c => c.validate(valueMap, c))
       list.toMap
     } else styleNone
   }

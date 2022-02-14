@@ -68,10 +68,10 @@ case class BeamInterfaceList(templateFiles: TemplateFiles) {
       * @return One horizontal WebRow
       */
     def makeRow(rowIndex: Int): WebRow = {
-      val name = beamList.head.colList(emptyValueMap)(rowIndex)
+      val name = beamList.head.colList(rowIndex)
       val header = new WebPlainText(label = "rowHeader" + rowIndex, showLabel = false, col = 2, offset = 0, html = _ => <b style="white-space: nowrap;">{name.name}</b>)
       val fieldList = beamList.map(beam => {
-        val cl = beam.colList(emptyValueMap)
+        val cl = beam.colList
         cl(rowIndex).field(emptyValueMap)
       })
       //Trace.trace(rowIndex + " WebRow " + name.name)
@@ -79,27 +79,26 @@ case class BeamInterfaceList(templateFiles: TemplateFiles) {
     }
 
     // make each row
-    val rowList = beamList.head.colList(emptyValueMap).indices.map(makeRow).toList
+    val rowList = beamList.head.colList.indices.map(makeRow).toList
     rowList
   }
 
   def makeReviewTable(valueMap: ValueMapT): Elem = {
     def makeRow(rowIndex: Int): Elem = {
-      val name = beamList.head.colList(valueMap)(rowIndex)
       val row = beamList.map(beam => {
-        val value = valueMap.get(beam.colList(valueMap)(rowIndex).label) match {
+        val value = valueMap.get(beam.colList(rowIndex).label) match {
           case Some(text) => text
-          case _          => beam.colList(valueMap)(rowIndex).init(valueMap)
+          case _          => beam.colList(rowIndex).init(valueMap)
         }
         if (rowIndex == 0)
           <td><b>{value}</b></td>
         else
           <td>{value}</td>
       })
-      <tr><td><b>{beamList.head.colList(valueMap)(rowIndex).name}</b></td> {row}</tr>
+      <tr><td><b>{beamList.head.colList(rowIndex).name}</b></td> {row}</tr>
     }
 
-    val rowList = beamList.head.colList(valueMap).indices.map(makeRow).toList
+    val rowList = beamList.head.colList.indices.map(makeRow).toList
 
     <table class="table table-bordered">{rowList}</table>
   }
@@ -107,22 +106,22 @@ case class BeamInterfaceList(templateFiles: TemplateFiles) {
   def makeCsvSummary(valueMap: ValueMapT, NominalBeamEnergy: Double): String = {
     def makeRow(rowIndex: Int): String = {
       val row = beamList.map(beam => {
-        val value = valueMap.get(beam.colList(valueMap)(rowIndex).label) match {
+        val value = valueMap.get(beam.colList(rowIndex).label) match {
           case Some(text) => text
           case _ =>
-            val col = beam.colList(valueMap)(rowIndex)
+            val col = beam.colList(rowIndex)
             if (col.name.equals(beamList.head.labelEnergy))
               NominalBeamEnergy.toString
             else
-              beam.colList(valueMap)(rowIndex).init(valueMap)
+              beam.colList(rowIndex).init(valueMap)
         }
         value
       })
-      val list = (beamList.head.colList(valueMap)(rowIndex).name +: row)
+      val list = beamList.head.colList(rowIndex).name +: row
       list.map(Util.textToCsv).mkString(",")
     }
 
-    val rowList = beamList.head.colList(valueMap).indices.map(makeRow).toList.mkString("\n")
+    val rowList = beamList.head.colList.indices.map(makeRow).toList.mkString("\n")
 
     rowList
   }

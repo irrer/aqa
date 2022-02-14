@@ -52,8 +52,7 @@ object SimpleRtplanJS {
        |  
        |    // ------------------------------------------------------------------
        |  
-       |    function checkOneMU(event) {
-       |      var MUElem = event.target;
+       |    function checkOneMU(MUElem) {
        |      var muValue = parseFloat(MUElem.value.trim());
        |  
        |      // MU is normal
@@ -91,7 +90,11 @@ object SimpleRtplanJS {
        |      backupTimeElem.value = backupTime.toString();
        |      console.log("backupTime: " + backupTime);
        |    }
-       |  
+       |
+       |    function checkOneMUEvent(event) {
+       |      checkOneMU(event.target);
+       |    }
+       |
        |    // Wait until after the page is loaded.  Otherwise filling in the initial values might trigger this.  TODO : check to see if this is true.
        |    setTimeout(function () {
        |      var list = document.querySelectorAll("input");
@@ -100,13 +103,8 @@ object SimpleRtplanJS {
        |        var elem = list[i];
        |        var id = elem.getAttribute("id");
        |        if (id.endsWith(muName)) {
-       |          // elem.onchange = function() {checkOneMU(this)};
-       |          // elem.keyup = function() {checkOneMU(this)};
-       |          // elem.setAttribute("onchange", "checkOneMU(this)");
-       |          // elem.setAttribute("keyup", "checkOneMU(this)");
-       |          //elem.addEventListener('change', checkOneMU);
-       |          //elem.addEventListener('onchange', checkOneMU);
-       |          elem.addEventListener('keyup', checkOneMU);
+       |          elem.addEventListener('keyup', checkOneMUEvent);
+       |          checkOneMU(elem);
        |        }
        |      }
        |    }, 500);

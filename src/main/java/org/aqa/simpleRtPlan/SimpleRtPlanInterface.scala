@@ -132,14 +132,14 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
 
   private val assignButtonList: WebRow = List(makePlainText(" "), createButton, makePlainText(" "), cancelButton)
 
-  private def makeWebForm(valueMap: ValueMapT) = {
+  private def makeWebForm() = {
     val runScript = SimpleRtplanJS.runScript(beamInterfaceList.beamList.head)
     val rowList = List(row1, row2, row3) ++ beamInterfaceList.makeWebRows() ++ List(assignButtonList)
     new WebForm(action = pathOf, title = Some("Simple Emergency RTPLAN"), rowList = rowList, fileUpload = 0, runScript = Some(runScript))
   }
 
   private def formSelect(valueMap: ValueMapT, response: Response): Unit = {
-    val form = makeWebForm(valueMap)
+    val form = makeWebForm()
     // if field is empty
     def empty(label: String) = !valueMap.contains(label) || valueMap(label).trim.isEmpty
 
@@ -285,7 +285,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
 
     val NominalBeamEnergy = {
       val treatBeams = beamInterfaceList.beamList.filter(_.isTreat)
-      val energyCol = treatBeams.head.colList(valueMap).find(c => c.name.equals(treatBeams.head.labelEnergy)).get
+      val energyCol = treatBeams.head.colList.find(c => c.name.equals(treatBeams.head.labelEnergy)).get
 
       // the energy that the user specified
       val energy = valueMap(energyCol.label).trim.toDouble
@@ -325,7 +325,7 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     * Show the user a message saying why the creation of a custom rtplan failed.
     */
   private def showFailedCustomize(valueMap: ValueMapT, styleMap: StyleMapT, response: Response): Unit = {
-    makeWebForm(valueMap).setFormResponse(valueMap, styleMap, pageTitleSelect, response, Status.SUCCESS_OK)
+    makeWebForm().setFormResponse(valueMap, styleMap, pageTitleSelect, response, Status.SUCCESS_OK)
   }
 
   private def valueMapToString(valueMap: ValueMapT): String = {
