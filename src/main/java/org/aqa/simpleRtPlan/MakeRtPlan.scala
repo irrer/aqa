@@ -63,6 +63,11 @@ class MakeRtPlan(
     NominalBeamEnergy.addValue(energy)
   }
 
+  private def setSourceToSurfaceDistance(SourceToSurfaceDistance: Attribute, distance_mm: Double): Unit = {
+    SourceToSurfaceDistance.removeValues()
+    SourceToSurfaceDistance.addValue(distance_mm)
+  }
+
   /**
     * Set the jaws according to what the user requested.
     *
@@ -78,6 +83,8 @@ class MakeRtPlan(
       list
     }
 
+    val xTypeList = Seq("X", "ASYMX", "MLCX")
+
     def typeOk(ps: AttributeList): Boolean = {
       val devType = ps.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString()
       deviceTypeList.contains(devType)
@@ -90,6 +97,20 @@ class MakeRtPlan(
       LeafJawPositions.removeValues()
       LeafJawPositions.addValue(d1)
       LeafJawPositions.addValue(d2)
+
+      // set the type according to whether it is X or Y, and whether it is symmetric or not.
+      val RTBeamLimitingDeviceType = ps.get(TagByName.RTBeamLimitingDeviceType)
+      val dt = RTBeamLimitingDeviceType.getSingleStringValueOrEmptyString()
+      val symmetric = (-d1) == d2
+      val isX = xTypeList.contains(dt)
+      val newType = (isX, symmetric) match {
+        case (true, true)   => "X" // X, symmetric
+        case (true, false)  => "ASYMX" // X, asymmetric
+        case (false, true)  => "Y" // Y, symmetric
+        case (false, false) => "ASYMY" // Y, asymmetric
+      }
+      RTBeamLimitingDeviceType.removeValues()
+      RTBeamLimitingDeviceType.addValue(newType)
     }
 
     jawSeq.foreach(setJaw)
@@ -109,6 +130,9 @@ class MakeRtPlan(
     // Find all references to beam energy and set them to the specified level.
     DicomUtil.findAllSingle(beamAl, TagByName.NominalBeamEnergy).foreach(nbe => setNominalBeamEnergy(nbe, beamSpecification.NominalBeamEnergy))
 
+    // Find all references to SourceToSurfaceDistance and set them to the specified level.
+    DicomUtil.findAllSingle(beamAl, TagByName.SourceToSurfaceDistance).foreach(nbe => setSourceToSurfaceDistance(nbe, beamSpecification.SourceToSurfaceDistance))
+
     def setRBS(tag: AttributeTag, value: Double): Unit = {
       beamRefAl.remove(tag)
       val attr = AttributeFactory.newAttribute(tag, ValueRepresentation.DS)
@@ -120,15 +144,17 @@ class MakeRtPlan(
     setLeafJawPositions(beamAl, Seq("X", "ASYMX"), beamSpecification.X1_mm, beamSpecification.X2_mm)
     setLeafJawPositions(beamAl, Seq("Y", "ASYMY"), beamSpecification.Y1_mm, beamSpecification.Y2_mm)
 
-    // set the same jaw positions for the corresponding port film beam.
-    def setPortfilmAl() = {
+    // set the same jaw positions for the corresponding port film beam.  Also set the same SourceToSurfaceDistance.
+    def setPortfilmAl(): Unit = {
       val beamName = nameOfBeam(beamAl)
       //noinspection SpellCheckingInspection
       val tp = DicomUtil
         .seqToAttr(rtplan, TagByName.BeamSequence)
         .filter(b => nameOfBeam(b).equals(beamName) && b.get(TagByName.TreatmentDeliveryType).getSingleStringValueOrEmptyString().equals("TRMT_PORTFILM"))
+
       tp.foreach(t => setLeafJawPositions(t, Seq("X", "ASYMX"), beamSpecification.X1_mm, beamSpecification.X2_mm))
-      tp.map(t => setLeafJawPositions(t, Seq("Y", "ASYMY"), beamSpecification.Y1_mm, beamSpecification.Y2_mm))
+      tp.foreach(t => setLeafJawPositions(t, Seq("Y", "ASYMY"), beamSpecification.Y1_mm, beamSpecification.Y2_mm))
+      tp.foreach(t => DicomUtil.findAllSingle(t, TagByName.SourceToSurfaceDistance).foreach(nbe => setSourceToSurfaceDistance(nbe, beamSpecification.SourceToSurfaceDistance)))
     }
     setPortfilmAl()
 
@@ -358,11 +384,11 @@ object MakeRtPlan {
       val t = DicomUtil.attributeListToString(al)
       println(t)
 
-      DicomUtil.findAll(al, _ => true).foreach(attr => {
-        println(DicomDict.dict.getNameFromTag(attr.getTag) + " : " + DicomDict.dict.getInformationEntityFromTag(attr.getTag))
-      })
-
-
+      DicomUtil
+        .findAll(al, _ => true)
+        .foreach(attr => {
+          println(DicomDict.dict.getNameFromTag(attr.getTag) + " : " + DicomDict.dict.getInformationEntityFromTag(attr.getTag))
+        })
 
       System.exit(99)
     }

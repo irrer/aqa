@@ -8,8 +8,8 @@ import com.pixelmed.dicom.SequenceAttribute
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
+import org.aqa.Logging
 import org.aqa.Util
-import org.aqa.VarianPrivateTag
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil.Error
 import org.aqa.web.WebUtil.IsInput
@@ -25,7 +25,7 @@ import org.restlet.Response
 
 import scala.annotation.tailrec
 
-case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
+case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) extends Logging {
 
   private val templateBeamName = beamAl.get(TagByName.BeamName).getSingleStringValueOrEmptyString()
   private val beamNumber: Int = beamAl.get(TagByName.BeamNumber).getIntegerValues.head
@@ -218,6 +218,19 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
     }
   }
 
+  private def validateSSD(valueMap: ValueMapT, col: Col): StyleMapT = {
+    val min = 50
+    val max = 100
+    val text = valueMap(col.label).trim
+    val result = 0 match {
+      case _ if WebUtil.stringToDouble(text).isEmpty   => Error.make(col.label, col.name + " must be a valid floating point number.")
+      case _ if WebUtil.stringToDouble(text).get < min => Error.make(col.label, col.name + " must be " + min + " or greater.")
+      case _ if WebUtil.stringToDouble(text).get > max => Error.make(col.label, col.name + " must be " + max + " or less.")
+      case _                                           => styleNone
+    }
+    result
+  }
+
   private def validateJawX1(valueMap: ValueMapT, col: Col): StyleMapT = validateJaw(valueMap, col, commonName = "X1", min = -10, max = 20)
   private def validateJawX2(valueMap: ValueMapT, col: Col): StyleMapT = {
     validateJawPair(valueMap, col, d2CommonName = "X2", min = -2, max = 20, labelX1)
@@ -228,15 +241,6 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
     validateJawPair(valueMap, col, d2CommonName = "Y2", min = -10, max = 20, labelY1)
   }
 
-  private def validateNonNegDouble(valueMap: ValueMapT, col: Col): StyleMapT = {
-    val text = valueMap(col.label)
-    0 match {
-      case _ if WebUtil.stringToDouble(text).isEmpty => Error.make(col.label, col.name + " Must be a valid floating point number.")
-      case _ if WebUtil.stringToDouble(text).get < 0 => Error.make(col.label, col.name + " Negative values not allowed.")
-      case _                                         => styleNone
-    }
-  }
-
   private def putEnergy(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
     val e = valueMap(col.label).toDouble
     simpleBeamSpecification.copy(NominalBeamEnergy = e)
@@ -244,6 +248,10 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
 
   private def putMU(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
     simpleBeamSpecification.copy(BeamMeterset = valueMap(col.label).toDouble)
+  }
+
+  private def putSSD(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
+    simpleBeamSpecification.copy(SourceToSurfaceDistance = valueMap(col.label).toDouble * 10)
   }
 
   private def putDimX1(valueMap: ValueMapT, simpleBeamSpecification: SimpleBeamSpecification, col: Col): SimpleBeamSpecification = {
@@ -322,7 +330,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
     validate = validateToleranceTable
   )
 
-  private def fetchMaximumTreatmentTime(): String = {
+  private def fetchBackupTimer(valueMap: ValueMapT): Double = {
     val text =
       "\n-----\n" +
         "beamAl BeamNumber: " + beamAl.get(TagByName.BeamNumber).getSingleStringValueOrEmptyString() + "\n" +
@@ -330,8 +338,19 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
         "beamRef:\n" + DicomUtil.attributeListToString(beamRef) + "\n"
     Trace.trace(text)
 
-    //beamRef.get(VarianPrivateTag.MaximumTreatmentTime).asInstanceOf[DecimalStringAttribute].getDoubleValues.head.toString
-    beamRef.get(VarianPrivateTag.MaximumTreatmentTime).getSingleStringValueOrEmptyString()
+    val DoseRateSet = DicomUtil.findAllSingle(beamAl, TagByName.DoseRateSet).head.getDoubleValues.head
+    val BeamMeterset = DicomUtil.findAllSingle(beamRef, TagByName.BeamMeterset).head.getDoubleValues.head
+
+    val mu = valueMap.get(makeColLabel(labelMU))
+
+    val maxTime = if (mu.isDefined) {
+      (mu.get.toDouble / DoseRateSet) + 0.1
+    } else {
+      (BeamMeterset / DoseRateSet) + 0.1
+    }
+
+    logger.info("Using " + labelBackupTimer + " of " + maxTime + " minutes")
+    maxTime
   }
 
   private def initEnergy(valueMap: ValueMapT): String = {
@@ -365,18 +384,14 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) {
       Col(labelEnergy, if (isTreat) Energy else Display, init = initEnergy, put = putEnergy),
       Col(labelDoseRate, Display, init = _ => beamDblS(TagByName.DoseRateSet)),
       Col(labelMU, if (isTreat) Input else Display, init = initMU, validate = validateMU, put = putMU),
-      // Col("Dose to Beam Dose Point", Display, init = ???),
-      // Col("Dose to CBCT SIM", Display, init = ???),
       Col(
         labelBackupTimer,
-        if (isTreat) Input else Display,
-        init = _ => if (isTreat) fetchMaximumTreatmentTime() else "",
-        validate = validateNonNegDouble,
-        put = (v: ValueMapT, sbs: SimpleBeamSpecification, col: Col) => sbs.copy(MaximumTreatmentTime_min = v(col.label).toDouble)
+        Display,
+        init = valueMap => if (isTreat) Util.fmtDbl(fetchBackupTimer(valueMap)) else "",
+        put = (valueMap: ValueMapT, sbs: SimpleBeamSpecification, _: Col) => sbs.copy(MaximumTreatmentTime_min = fetchBackupTimer(valueMap))
       ),
       Col(toleranceColName, Display, init = _ => getToleranceTableLabel), // tolTable, // for possible future use.
-      Col("Calculated SSD [cm]", Display, init = _ => Util.fmtDbl(beamDbl(TagByName.SourceToSurfaceDistance) / 10)), // tolTable, // for possible future use.
-      // Col("Planned SSD [cm]", Display, init = ???),
+      Col("Calculated SSD [cm]", if (isTreat) Input else Display, init = _ => Util.fmtDbl(beamDbl(TagByName.SourceToSurfaceDistance) / 10), validate = validateSSD, put = putSSD),
       Col("Gantry Rtn [deg]", Display, init = _ => beamDbl(TagByName.GantryAngle).round.toString),
       Col("Coll Rtn [deg]", Display, init = _ => beamDblS(TagByName.BeamLimitingDeviceAngle)),
       //

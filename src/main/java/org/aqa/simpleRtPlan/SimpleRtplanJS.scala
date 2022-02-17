@@ -87,7 +87,7 @@ object SimpleRtplanJS {
        |      var mu = parseFloat(MUElem.value);
        |  
        |      var backupTime = (mu / doseRate) + 0.1;
-       |      backupTimeElem.value = backupTime.toString();
+       |      backupTimeElem.innerHTML = backupTime.toString().substring(0,6);
        |      console.log("backupTime: " + backupTime);
        |    }
        |

@@ -5,17 +5,18 @@ package org.aqa.simpleRtPlan
   * example, X1 for the user is in cm, but DICOM is in mm.
   */
 case class SimpleBeamSpecification(
-                                    GantryAngle_deg: Double = -1,
-                                    BeamNumber: Int = -1,
-                                    BeamDose: Double = -1,
-                                    BeamMeterset: Double = -1,
-                                    MaximumTreatmentTime_min: Double = -1,
-                                    DoseRateSet: Double = -1,
-                                    NominalBeamEnergy: Double = -1,
-                                    X1_mm: Double = -1,
-                                    X2_mm: Double = -1,
-                                    Y1_mm: Double = -1,
-                                    Y2_mm: Double = -1
+    GantryAngle_deg: Double = -1,
+    BeamNumber: Int = -1,
+    BeamDose: Double = -1,
+    BeamMeterset: Double = -1,
+    MaximumTreatmentTime_min: Double = -1,
+    DoseRateSet: Double = -1,
+    NominalBeamEnergy: Double = -1,
+    SourceToSurfaceDistance: Double = -1,
+    X1_mm: Double = -1,
+    X2_mm: Double = -1,
+    Y1_mm: Double = -1,
+    Y2_mm: Double = -1
 ) {
 
   override def toString: String = {
