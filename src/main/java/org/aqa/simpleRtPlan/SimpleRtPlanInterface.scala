@@ -64,12 +64,6 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
   private def patientName = new WebInputText("Patient Name", true, 3, 0, "")
 
   private lazy val templateFiles = {
-    if (true) {
-      val f = new TemplateFiles().ofModality("RTPLAN").head.file
-      Trace.trace("------------------------------------------------------------")
-      Trace.trace(DicomUtil.attributeListToString(new DicomFile(f).attributeList.get))
-      Trace.trace("------------------------------------------------------------")
-    }
     new TemplateFiles
   }
 
@@ -355,6 +349,18 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
     */
   private def quit(response: Response): Unit = response.redirectSeeOther("/static/admin.html")
 
+  private def notConfigured(response: Response): Unit = {
+    val elem =
+      <div>
+        The Emergency Simple RTPLAN generator has not been configured on this system.<p></p>
+        The <b>SimpleRtplanTemplateDir</b> parameter needs to be set up in the configuration file and DICOM template files installed.
+        <p></p>
+        <p></p>
+        <h4><a href="/">Return to Home Page</a></h4>
+      </div>
+    WebUtil.simpleWebPage(elem, "Not Configured", response)
+  }
+
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
     val valueMap = beamInterfaceList.beamInitialValueMap ++ getValueMap(request)
@@ -363,11 +369,12 @@ class SimpleRtPlanInterface extends Restlet with SubUrlAdmin with Logging {
       val user = CachedUser.get(request)
 
       0 match {
-        case _ if user.isEmpty                     => quit(response)
-        case _ if buttonIs(valueMap, cancelButton) => quit(response)
-        case _ if valueMap.contains("download")    => downloadZip(valueMap, response)
-        case _ if buttonIs(valueMap, createButton) => validateAndMakePlan(valueMap, response)
-        case _                                     => formSelect(valueMap, response) // first time viewing the form.  Set defaults
+        case _ if (beamInterfaceList.beamList.isEmpty) => notConfigured(response)
+        case _ if user.isEmpty                         => quit(response)
+        case _ if buttonIs(valueMap, cancelButton)     => quit(response)
+        case _ if valueMap.contains("download")        => downloadZip(valueMap, response)
+        case _ if buttonIs(valueMap, createButton)     => validateAndMakePlan(valueMap, response)
+        case _                                         => formSelect(valueMap, response) // first time viewing the form.  Set defaults
       }
     } catch {
       case t: Throwable =>

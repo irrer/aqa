@@ -109,8 +109,14 @@ class MakeRtPlan(
         case (false, true)  => "Y" // Y, symmetric
         case (false, false) => "ASYMY" // Y, asymmetric
       }
-      RTBeamLimitingDeviceType.removeValues()
-      RTBeamLimitingDeviceType.addValue(newType)
+
+      def changeDeviceType(attr: Attribute): Unit = {
+        attr.removeValues()
+        attr.addValue(newType)
+      }
+
+      val deviceTypeList = DicomUtil.findAllSingle(beamTemplate, TagByName.RTBeamLimitingDeviceType).filter(_.getSingleStringValueOrEmptyString().equals(dt))
+      deviceTypeList.foreach(changeDeviceType)
     }
 
     jawSeq.foreach(setJaw)

@@ -20,17 +20,22 @@ case class BeamInterfaceList(templateFiles: TemplateFiles) {
     * @return Parameters for all beams.
     */
   val beamList: Seq[BeamInterface] = {
-    val rtplan = new DicomFile(templateFiles.ofModality("RTPLAN").head.file).attributeList.get
+    val rtplanFile = templateFiles.ofModality("RTPLAN").headOption
+    if (rtplanFile.isEmpty) {
+      Seq() // No files configured for Simple RTPLAN
+    } else {
+      val rtplan = new DicomFile(rtplanFile.get.file).attributeList.get
 
-    val beamAlList = {
-      // Types of delivery we are interested in.
-      val DeliveryTypeList = Seq("TREATMENT")
-      val list = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
+      val beamAlList = {
+        // Types of delivery we are interested in.
+        val DeliveryTypeList = Seq("TREATMENT")
+        val list = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
 
-      // Limit the beams shown to the types we are interested in.
-      list.filter(b => DeliveryTypeList.contains(b.get(TagByName.TreatmentDeliveryType).getSingleStringValueOrEmptyString()))
+        // Limit the beams shown to the types we are interested in.
+        list.filter(b => DeliveryTypeList.contains(b.get(TagByName.TreatmentDeliveryType).getSingleStringValueOrEmptyString()))
+      }
+      beamAlList.map(beamAl => BeamInterface(rtplan, beamAl))
     }
-    beamAlList.map(beamAl => BeamInterface(rtplan, beamAl))
   }
 
   /**
