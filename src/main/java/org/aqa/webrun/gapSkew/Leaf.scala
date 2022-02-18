@@ -18,8 +18,6 @@ package org.aqa.webrun.gapSkew
 
 import org.aqa.Util
 
-import javax.vecmath.Point2d
-
 /**
   * Describe one leaf position and the profile surrounding it.
   * @param position_mm Position of leaf in mm in isoplane.
@@ -28,7 +26,7 @@ import javax.vecmath.Point2d
   * @param profile X,Y graph to plot showing the profile.
   */
 case class Leaf(position_mm: Double, xPosition_mm: Double, width_mm: Double, profile: Seq[ProfilePoint]) {
-  override def toString =
+  override def toString: String =
     position_mm +
       "   x, width (mm): " + xPosition_mm + ", " + width_mm +
       "    profile: " + profile.map(p => Util.fmtDbl(p.y_mm) + ", " + Util.fmtDbl(p.cu)).mkString("    ")

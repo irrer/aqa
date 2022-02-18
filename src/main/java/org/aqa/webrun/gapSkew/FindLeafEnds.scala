@@ -41,8 +41,6 @@ case class FindLeafEnds(attributeList: AttributeList, rtplan: AttributeList) ext
 
   private val translator = new IsoImagePlaneTranslator(attributeList)
 
-  private def d2i(d: Double): Int = d.round.toInt
-
   private val dicomImage = new DicomImage(attributeList)
 
   /** Create annotated image.  Removing a large number of high and low pixels sets the window and level to
@@ -57,7 +55,7 @@ case class FindLeafEnds(attributeList: AttributeList, rtplan: AttributeList) ext
     DicomUtil.findAllSingle(rtplan, TagByName.LeafPositionBoundaries).head.getDoubleValues.sorted
   }
 
-  val edgesFromPlan = EdgesFromPlan.edgesFromPlan(attributeList, rtplan)
+  val edgesFromPlan: EdgesFromPlan.EndPair = EdgesFromPlan.edgesFromPlan(attributeList, rtplan)
 
   /*
   private val endPairPix: EndPair = {
@@ -119,8 +117,8 @@ case class FindLeafEnds(attributeList: AttributeList, rtplan: AttributeList) ext
   }
 
   /**
-   * The 4 measured positions.  Also the associated data required to construct the HTML.
-   */
+    * The 4 measured positions.  Also the associated data required to construct the HTML.
+    */
   val leafSet: LeafSet =
     if (isHorizontal)
       throw new RuntimeException("FindLeafSides : Not implemented for horizontally positioned collimator.")

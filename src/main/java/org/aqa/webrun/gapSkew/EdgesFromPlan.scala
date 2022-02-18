@@ -67,7 +67,7 @@ object EdgesFromPlan extends Logging {
 
     val limiterList = beamLimitList.map(toLimiter)
     val jawOp = limiterList.find(_.name.equalsIgnoreCase("X"))
-    val mlcOp = limiterList.find(l => l.name.equalsIgnoreCase("MLCX") || l.name.equalsIgnoreCase("ASYMX")  )
+    val mlcOp = limiterList.find(l => l.name.equalsIgnoreCase("MLCX") || l.name.equalsIgnoreCase("ASYMX"))
 
     val endPair = (jawOp, mlcOp) match {
       case (Some(jaw), Some(mlc)) =>

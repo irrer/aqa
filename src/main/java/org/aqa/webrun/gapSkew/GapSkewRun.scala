@@ -75,7 +75,7 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
   /**
     * Get the RTPLAN referenced with the given SOP UID.  Try the passed parameters first, then the database.
     * @param rtplanSop SOPInstanceUID of RTPLAN.
-    * @param rtplanList List of RTPLANs uploaded.
+    * @param rtplanList List of RTPLAN(s) uploaded.
     * @return
     */
   private def getRtplan(rtplanSop: String, rtplanList: Seq[AttributeList]): Option[AttributeList] = {
@@ -93,7 +93,7 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
   /** Run the actual analysis.  This must create a display.html file in the output directory. */
   override def run(extendedData: ExtendedData, runReq: GapSkewRunReq, response: Response): ProcedureStatus.Value = {
     val fleList = runReq.rtimageMap.keys.toSeq.filter(beam => Config.GapSkewBeamNameList.contains(beam)).sorted.map(runReq.rtimageMap)
-    val fleResultList = fleList.map(rtImg => (new FindLeafEnds(rtImg, runReq.rtplan)).leafSet)
+    val fleResultList = fleList.map(rtImg => new FindLeafEnds(rtImg, runReq.rtplan).leafSet)
 
     // TODO should put data in database
 
@@ -122,16 +122,16 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
     }
 
     val result: Either[StyleMapT, RunReqClass] = 0 match {
-      case _ if rtplanRefList.size > 1           => formError("The RTIMAGEs reference more than one RTPLAN.")
+      case _ if rtplanRefList.size > 1           => formError("The RTIMAGE(s) reference more than one RTPLAN.")
       case _ if rtimageList.isEmpty              => formError("No RTIMAGE files given.")
       case _ if rtplanRefList.isEmpty            => formError("Can not find the referenced RTPLAN.  Retry and upload the RTPLAN with the images. ")
-      case _ if machineSerialNumberList.size > 1 => formError("The RTIMAGEs reference more than one treatment machine.  There must be exactly one.")
+      case _ if machineSerialNumberList.size > 1 => formError("The RTIMAGE(s) reference more than one treatment machine.  There must be exactly one.")
       case _ if !rtplanIsAvailable()             => formError("Can not find the referenced RTPLAN.  Retry and upload the RTPLAN with the images.")
       case _ if !allHaveSerialNumber()           => formError("At least one RTIMAGE file does not have a device serial number defining which machine created it.")
       case _ if machineSerialNumberList.isEmpty =>
         formError(
           "None of the " + rtimageList.size +
-            " RTIMAGEs have a device serial number (0018,1000) tag.\\n" +
+            " RTIMAGE(s) have a device serial number (0018,1000) tag.\\n" +
             "This can happen on a new machine or one that has been recently serviced.\\n" +
             "The device serial number is required by this software to identify the instance of the machine."
         )

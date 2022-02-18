@@ -46,7 +46,6 @@ object GapSkewProfile {
     * Make a profile that can be graphed to show the user what the edge looks like.  X values of
     * Point2d are the Y position in mm, Y values are the CU.
     *
-    * @param leaf Make profile for this leaf.
     * @param translator For mapping iso --> pix.
     * @param dicomImage Original image content.
     * @return List of y-position, CU pairs.
@@ -87,7 +86,7 @@ object GapSkewProfile {
     }
     // (0 until numberOfPoints).map(i => ProfilePoint(yToProfileY(i), yToDerivative1(i)))
 
-    (0 until numberOfPoints).map(i => ProfilePoint(yToProfileY(i), yToCu(i)))  // TODO put back
+    (0 until numberOfPoints).map(i => ProfilePoint(yToProfileY(i), yToCu(i))) // TODO put back
   }
 
 }

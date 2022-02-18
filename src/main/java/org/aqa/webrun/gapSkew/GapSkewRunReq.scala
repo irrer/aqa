@@ -23,7 +23,6 @@ import org.aqa.run.RunReqClass
 /**
   * Container for validated data needed to run procedure.
   *
-  * @param extendedData Metadata from database.
   * @param rtplan RTPLAN referenced.
   * @param rtimageMap Map of RTIMAGEs by beam name.
   */
