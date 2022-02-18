@@ -73,19 +73,19 @@ object EdgesFromPlan extends Logging {
       case (Some(jaw), Some(mlc)) =>
         val top = {
           if (jaw.top >= mlc.top) // jaw is at or beyond MLC
-            BeamLimit(jaw.top, true)
+            BeamLimit(jaw.top, isJaw = true)
           else
-            BeamLimit(mlc.top, false) // edge is completely defined by MLC
+            BeamLimit(mlc.top, isJaw = false) // edge is completely defined by MLC
         }
         val bottom = {
           if (jaw.bottom <= mlc.bottom) // jaw is at or beyond MLC
-            BeamLimit(jaw.top, true)
+            BeamLimit(jaw.top, isJaw = true)
           else
-            BeamLimit(mlc.top, false) // edge is completely defined by MLC
+            BeamLimit(mlc.top, isJaw = false) // edge is completely defined by MLC
         }
         EndPair(top, bottom)
-      case (None, Some(mlc)) => EndPair(BeamLimit(mlc.top, false), BeamLimit(mlc.bottom, false))
-      case (Some(jaw), None) => EndPair(BeamLimit(jaw.top, true), BeamLimit(jaw.bottom, true))
+      case (None, Some(mlc)) => EndPair(BeamLimit(mlc.top, isJaw = false), BeamLimit(mlc.bottom, isJaw = false))
+      case (Some(jaw), None) => EndPair(BeamLimit(jaw.top, isJaw = true), BeamLimit(jaw.bottom, isJaw = true))
       case (None, None) =>
         throw new RuntimeException("Could not find leaf or jaw pair ")
     }
