@@ -41,14 +41,37 @@ case class LeafSet(
     bottomRight: Leaf
 ) {
 
-  // beam name
+  /** Beam name. */
   val beamName: String = Phase2Util.getBeamNameOfRtimage(rtplan, attributeList).get
 
+  /** Distance in mm from center of left measurement to center of right measurement. */
+  val measurementLength_mm: Double = bottomRight.xPosition_mm - bottomLeft.xPosition_mm
+
+  /** Skew in degrees due to difference in top pair of edges. */
+  val topSkew_deg: Double = {
+    val delta_mm = topRight.position_mm - topLeft.position_mm
+    val skew = Math.acos(delta_mm / measurementLength_mm)
+    skew
+  }
+
+  /** Skew in degrees due to difference in bottom pair of edges. */
+  val bottomSkew_deg: Double = {
+    val delta_mm = bottomRight.position_mm - bottomLeft.position_mm
+    val skew = Math.acos(delta_mm / measurementLength_mm)
+    skew
+  }
+
   override def toString: String = {
-    "beam name: " + beamName
-    "\n    topLeft: " + topLeft +
-      "\n    topRight: " + topRight +
-      "\n    bottomLeft: " + bottomLeft +
-      "\n    bottomRight: " + bottomRight
+    def fmt(d: Double) = d.formatted("%10.4f")
+    def fmtAngle(d: Double) = d.formatted("%10.7f")
+    "beam name: " + beamName +
+      "    topSkew_deg: " + fmtAngle(topSkew_deg) +
+      "    top delta: " + fmt(topLeft.position_mm - topRight.position_mm) +
+      "    topLeft: " + fmt(topLeft.position_mm) +
+      "    topRight: " + fmt(topRight.position_mm) +
+      "    bottomSkew_deg: " + fmtAngle(bottomSkew_deg) +
+      "    bottom delta: " + fmt(bottomLeft.position_mm - bottomRight.position_mm) +
+      "    bottomLeft: " + fmt(bottomLeft.position_mm) +
+      "    bottomRight: " + fmt(bottomRight.position_mm)
   }
 }

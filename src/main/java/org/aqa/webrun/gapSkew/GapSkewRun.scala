@@ -97,7 +97,7 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
 
     // TODO should put data in database
 
-    GapSkewHtml.makeDisplay(extendedData, runReq, fleResultList, ProcedureStatus.done)
+    new GapSkewHtml(extendedData, runReq, fleResultList, ProcedureStatus.done).makeDisplay
     ProcedureStatus.done // TODO get status from fleList
   }
 

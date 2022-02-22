@@ -34,14 +34,14 @@ import java.awt.Rectangle
 import java.awt.image.BufferedImage
 import java.io.File
 
-case class FindLeafEnds(attributeList: AttributeList, rtplan: AttributeList) extends Logging {
+case class FindLeafEnds(rtimage: AttributeList, rtplan: AttributeList) extends Logging {
 
   /** True if collimator is horizontal. */
-  private val isHorizontal: Boolean = Phase2Util.isHorizontal(attributeList)
+  private val isHorizontal: Boolean = Phase2Util.isHorizontal(rtimage)
 
-  private val translator = new IsoImagePlaneTranslator(attributeList)
+  private val translator = new IsoImagePlaneTranslator(rtimage)
 
-  private val dicomImage = new DicomImage(attributeList)
+  private val dicomImage = new DicomImage(rtimage)
 
   /** Create annotated image.  Removing a large number of high and low pixels sets the window and level to
     * as best to obviate the leakage at the leaves' sides.
@@ -55,7 +55,7 @@ case class FindLeafEnds(attributeList: AttributeList, rtplan: AttributeList) ext
     DicomUtil.findAllSingle(rtplan, TagByName.LeafPositionBoundaries).head.getDoubleValues.sorted
   }
 
-  val edgesFromPlan: EdgesFromPlan.EndPair = EdgesFromPlan.edgesFromPlan(attributeList, rtplan)
+  val edgesFromPlan: EdgesFromPlan.EndPair = EdgesFromPlan.edgesFromPlan(rtimage, rtplan)
 
   /*
   private val endPairPix: EndPair = {
@@ -73,7 +73,7 @@ case class FindLeafEnds(attributeList: AttributeList, rtplan: AttributeList) ext
     * width of two leaves), determine where the end of the leaf is in pixels.
     *
     * @param box_pix A bounding box that contains the leaf end and is between the sides of the leaf in pixels.
-    *            TODO: This could be a Rectangle2D.Double so as to weight partial pixels on either side.
+    *            Note: This could be a Rectangle2D.Double so as to weight partial pixels on either side.
     * @return The position of the leaf in pixels.
     */
   private def endOfLeaf_iso(box_pix: Rectangle): Leaf = {
@@ -140,11 +140,13 @@ case class FindLeafEnds(attributeList: AttributeList, rtplan: AttributeList) ext
       val bottomLeftRect = Util.rectD(xLeft_pix, yBottom_pix, width, height)
       val bottomRightRect = Util.rectD(xRight_pix, yBottom_pix, width, height)
 
-      logger.info("GapSkew processing beam: " + Util.beamNumber(attributeList))
+
+
+      logger.info("GapSkew processing beam: " + Util.beamNumber(rtimage))
 
       val set = LeafSet(
         bufferedImage,
-        attributeList,
+        rtimage,
         rtplan,
         edgesFromPlan.top.limit_mm,
         edgesFromPlan.bottom.limit_mm,

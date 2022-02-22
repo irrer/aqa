@@ -19,6 +19,7 @@ package org.aqa.webrun.gapSkew
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.webrun.phase2.Phase2Util
@@ -53,6 +54,7 @@ object EdgesFromPlan extends Logging {
     * It is important to differentiate
     */
   def edgesFromPlan(attributeList: AttributeList, rtplan: AttributeList): EndPair = {
+    Trace.trace("BeamName: " + Phase2Util.getBeamNameOfRtimage(rtplan, attributeList) + "     BeamNumber: " + Util.beamNumber(attributeList))
     val beamSequence = Phase2Util.getBeamSequence(rtplan, Util.beamNumber(attributeList))
     val cps = DicomUtil.seqToAttr(beamSequence, TagByName.ControlPointSequence).head
     val beamLimitList = DicomUtil.seqToAttr(cps, TagByName.BeamLimitingDevicePositionSequence)
@@ -66,19 +68,19 @@ object EdgesFromPlan extends Logging {
     }
 
     val limiterList = beamLimitList.map(toLimiter)
-    val jawOp = limiterList.find(_.name.equalsIgnoreCase("X"))
-    val mlcOp = limiterList.find(l => l.name.equalsIgnoreCase("MLCX") || l.name.equalsIgnoreCase("ASYMX"))
+    val jawOp = limiterList.find(l => l.name.equalsIgnoreCase("X") || l.name.equalsIgnoreCase("ASYMX"))
+    val mlcOp = limiterList.find(_.name.equalsIgnoreCase("MLCX"))
 
     val endPair = (jawOp, mlcOp) match {
       case (Some(jaw), Some(mlc)) =>
         val top = {
-          if (jaw.top >= mlc.top) // jaw is at or beyond MLC
+          if (jaw.top <= mlc.top) // jaw is at or beyond MLC
             BeamLimit(jaw.top, isJaw = true)
           else
             BeamLimit(mlc.top, isJaw = false) // edge is completely defined by MLC
         }
         val bottom = {
-          if (jaw.bottom <= mlc.bottom) // jaw is at or beyond MLC
+          if (jaw.bottom >= mlc.bottom) // jaw is at or beyond MLC
             BeamLimit(jaw.top, isJaw = true)
           else
             BeamLimit(mlc.top, isJaw = false) // edge is completely defined by MLC
