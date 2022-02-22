@@ -29,9 +29,7 @@ import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.webrun.phase2.Phase2Util
 
-import java.awt.Color
 import java.awt.Rectangle
-import java.awt.image.BufferedImage
 import java.io.File
 
 case class FindLeafEnds(rtimage: AttributeList, rtplan: AttributeList) extends Logging {
@@ -42,13 +40,6 @@ case class FindLeafEnds(rtimage: AttributeList, rtplan: AttributeList) extends L
   private val translator = new IsoImagePlaneTranslator(rtimage)
 
   private val dicomImage = new DicomImage(rtimage)
-
-  /** Create annotated image.  Removing a large number of high and low pixels sets the window and level to
-    * as best to obviate the leakage at the leaves' sides.
-    */
-  private val bufferedImage: BufferedImage = dicomImage.toDeepColorBufferedImage(percentToDrop = 20.0)
-
-  Util.addGraticules(bufferedImage, translator, Color.yellow)
 
   // The sorted list of leaf sides in the RTPLAN in pixels.
   private val leafSidesFromPlanAsPix: Seq[Double] = {
@@ -132,28 +123,38 @@ case class FindLeafEnds(rtimage: AttributeList, rtplan: AttributeList) extends L
 
       val xLeft_pix = leafWidth_pix / 2
       val xRight_pix = dicomImage.width - xLeft_pix - 2 * leafWidth_pix
-      val yTop_pix = translator.iso2PixCoordY(edgesFromPlan.top.limit_mm) - height / 2
-      val yBottom_pix = translator.iso2PixCoordY(edgesFromPlan.bottom.limit_mm) - height / 2
+
+      val collimatorAngle = Util.angleRoundedTo90(DicomUtil.findAllSingle(rtimage, TagByName.BeamLimitingDeviceAngle).head.getDoubleValues.head)
+      val yTop = if (collimatorAngle == 90) edgesFromPlan.X2 else edgesFromPlan.X1
+      val yBottom = if (collimatorAngle == 90) edgesFromPlan.X1 else edgesFromPlan.X2
+
+      val yTop_pix = translator.iso2PixCoordY(-yTop.limit_mm) - height / 2
+      val yBottom_pix = translator.iso2PixCoordY(-yBottom.limit_mm) - height / 2
 
       val topLeftRect = Util.rectD(xLeft_pix, yTop_pix, width, height)
       val topRightRect = Util.rectD(xRight_pix, yTop_pix, width, height)
       val bottomLeftRect = Util.rectD(xLeft_pix, yBottom_pix, width, height)
       val bottomRightRect = Util.rectD(xRight_pix, yBottom_pix, width, height)
 
-
-
       logger.info("GapSkew processing beam: " + Util.beamNumber(rtimage))
+
+      val topLeft = endOfLeaf_iso(topLeftRect)
+      val topRight = endOfLeaf_iso(topRightRect)
+      val bottomLeft = endOfLeaf_iso(bottomLeftRect)
+      val bottomRight = endOfLeaf_iso(bottomRightRect)
+
+      val bufferedImage = GapSkewAnnotateImage(dicomImage, translator, topLeft, topRight, bottomLeft, bottomRight).annotate
 
       val set = LeafSet(
         bufferedImage,
         rtimage,
         rtplan,
-        edgesFromPlan.top.limit_mm,
-        edgesFromPlan.bottom.limit_mm,
-        endOfLeaf_iso(topLeftRect),
-        endOfLeaf_iso(topRightRect),
-        endOfLeaf_iso(bottomLeftRect),
-        endOfLeaf_iso(bottomRightRect)
+        yTop.limit_mm,
+        yBottom.limit_mm,
+        topLeft,
+        topRight,
+        bottomLeft,
+        bottomRight
       )
 
       logger.info("MLC leaf end positions: " + set)

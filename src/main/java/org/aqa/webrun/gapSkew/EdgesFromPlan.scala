@@ -19,7 +19,6 @@ package org.aqa.webrun.gapSkew
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.webrun.phase2.Phase2Util
@@ -33,14 +32,22 @@ object EdgesFromPlan extends Logging {
     * @param isJaw If true, then the jaw is positioned at this place.  The collimator may also be here, but
     *              it will be somewhat obscured by teh jaw.
     */
-  case class BeamLimit(limit_mm: Double, isJaw: Boolean) {}
+  case class BeamLimit(limit_mm: Double, isJaw: Boolean) {
+    override def toString: String = {
+      "limit_mm: " + limit_mm.formatted("%8.2f") + "    isJaw: " + isJaw.toString.formatted("%5s")
+    }
+  }
 
   /**
     * Describe a pair of beam limits.
-    * @param top The one nearer the top of the image.
-    * @param bottom The one nearer the bottom of the image.
+    * @param X1 X1 jaw or collimator edge
+    * @param X2 X2 jaw or collimator edge
     */
-  case class EndPair(top: BeamLimit, bottom: BeamLimit) {}
+  case class EndPair(X1: BeamLimit, X2: BeamLimit) {
+    override def toString: String = {
+      "X1: " + X1 + "    X2: " + X2
+    }
+  }
 
   /**
     * Get the positions of ends of the leaves in mm in isoplane.  Also
@@ -54,17 +61,16 @@ object EdgesFromPlan extends Logging {
     * It is important to differentiate
     */
   def edgesFromPlan(attributeList: AttributeList, rtplan: AttributeList): EndPair = {
-    Trace.trace("BeamName: " + Phase2Util.getBeamNameOfRtimage(rtplan, attributeList) + "     BeamNumber: " + Util.beamNumber(attributeList))
     val beamSequence = Phase2Util.getBeamSequence(rtplan, Util.beamNumber(attributeList))
     val cps = DicomUtil.seqToAttr(beamSequence, TagByName.ControlPointSequence).head
     val beamLimitList = DicomUtil.seqToAttr(cps, TagByName.BeamLimitingDevicePositionSequence)
 
-    case class Limiter(top: Double, bottom: Double, name: String) {}
+    case class Limiter(X1: Double, X2: Double, name: String) {}
 
     def toLimiter(al: AttributeList): Limiter = {
       val valueList = al.get(TagByName.LeafJawPositions).getDoubleValues
       val devType = al.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString
-      Limiter(valueList.min, valueList.max, devType)
+      Limiter(valueList.head, valueList.last, devType)
     }
 
     val limiterList = beamLimitList.map(toLimiter)
@@ -73,26 +79,30 @@ object EdgesFromPlan extends Logging {
 
     val endPair = (jawOp, mlcOp) match {
       case (Some(jaw), Some(mlc)) =>
-        val top = {
-          if (jaw.top <= mlc.top) // jaw is at or beyond MLC
-            BeamLimit(jaw.top, isJaw = true)
+        val X1 = {
+          if (jaw.X1 > mlc.X1)
+            BeamLimit(jaw.X1, isJaw = true) // edge is jaw
           else
-            BeamLimit(mlc.top, isJaw = false) // edge is completely defined by MLC
+            BeamLimit(mlc.X1, isJaw = false) // edge is mlc
         }
-        val bottom = {
-          if (jaw.bottom >= mlc.bottom) // jaw is at or beyond MLC
-            BeamLimit(jaw.top, isJaw = true)
+        val X2 = {
+          if (jaw.X2 < mlc.X2)
+            BeamLimit(jaw.X2, isJaw = true) // edge is jaw
           else
-            BeamLimit(mlc.top, isJaw = false) // edge is completely defined by MLC
+            BeamLimit(mlc.X2, isJaw = false) // edge is mlc
         }
-        EndPair(top, bottom)
-      case (None, Some(mlc)) => EndPair(BeamLimit(mlc.top, isJaw = false), BeamLimit(mlc.bottom, isJaw = false))
-      case (Some(jaw), None) => EndPair(BeamLimit(jaw.top, isJaw = true), BeamLimit(jaw.bottom, isJaw = true))
+        EndPair(X1, X2)
+      case (None, Some(mlc)) => EndPair(BeamLimit(mlc.X1, isJaw = false), BeamLimit(mlc.X2, isJaw = false))
+      case (Some(jaw), None) => EndPair(BeamLimit(jaw.X1, isJaw = true), BeamLimit(jaw.X2, isJaw = true))
       case (None, None) =>
         throw new RuntimeException("Could not find leaf or jaw pair ")
     }
 
-    logger.info("Leaf ends positioned at " + endPair)
+    logger.info(
+      "BeamName: " + Phase2Util.getBeamNameOfRtimage(rtplan, attributeList).get +
+        "    BeamNumber: " + Util.beamNumber(attributeList).formatted("%2d") +
+        "    Leaf ends positioned at " + endPair
+    )
     endPair
   }
 

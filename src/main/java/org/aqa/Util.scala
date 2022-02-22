@@ -712,6 +712,22 @@ object Util extends Logging {
   }
 
   /**
+    * Add graticules to the given image, reversing the Y-axis.
+    */
+  def addGraticulesNegY(image: BufferedImage, translator: IsoImagePlaneTranslator, color: Color): Unit = {
+
+    def x2Pix(xIso: Double) = translator.iso2Pix(xIso, 0).getX.round.toInt
+
+    def y2Pix(yIso: Double) = translator.iso2Pix(0, -yIso).getY.round.toInt
+
+    def pix2X(xPix: Double) = translator.pix2Iso(xPix, 0).getX.round.toInt
+
+    def pix2Y(yPix: Double) = -(translator.pix2Iso(0, yPix).getY.round.toInt)
+
+    addGraticules(image, x2Pix, y2Pix, pix2X, pix2Y, color)
+  }
+
+  /**
     * Number f pixels from edge to put axis arrows.
     */
   val axisOffsetFromEdge = 40

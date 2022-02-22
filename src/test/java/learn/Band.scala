@@ -15,7 +15,7 @@ import java.io.File
   */
 object Band {
   def main(args: Array[String]): Unit = {
-    val file = new File("""D:\tmp\aqa\GapSkew\dicom\Study_1\RTIMAGE_01\RTIMAGE_002_2020-03-23T19-13-17.000.dcm""")
+    val file = new File("""D:\tmp\aqa\GapSkew\dicom\Study_1\RTIMAGE_01\RTIMAGE_003_2020-03-23T19-12-25.000.dcm""")
     val df = new DicomFile(file)
     val al = df.attributeList.get
     val di = new DicomImage(al)
