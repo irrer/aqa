@@ -11,8 +11,8 @@ import java.awt.Rectangle
 import java.io.File
 
 /**
- * View image characteristics.  Review coordinate system.
- */
+  * View image characteristics.  Review coordinate system.
+  */
 object Band {
   def main(args: Array[String]): Unit = {
     val file = new File("""D:\tmp\aqa\GapSkew\dicom\Study_1\RTIMAGE_01\RTIMAGE_002_2020-03-23T19-13-17.000.dcm""")
@@ -38,7 +38,7 @@ object Band {
       val g = ImageUtil.getGraphics(img)
       val dim = 10
 
-      def draw(pos: Int) = {
+      def draw(pos: Int): Unit = {
         g.setColor(Color.white)
         val p1 = trans.iso2Pix(pos, pos)
         println(p1)
