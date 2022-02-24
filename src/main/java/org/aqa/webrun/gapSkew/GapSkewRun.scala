@@ -93,9 +93,9 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
   /** Run the actual analysis.  This must create a display.html file in the output directory. */
   override def run(extendedData: ExtendedData, runReq: GapSkewRunReq, response: Response): ProcedureStatus.Value = {
     val fleList = runReq.rtimageMap.keys.toSeq.filter(beam => Config.GapSkewBeamNameList.contains(beam)).sorted.map(runReq.rtimageMap)
-    val fleResultList = fleList.map(rtImg => new FindLeafEnds(rtImg, runReq.rtplan).leafSet)
+    val fleResultList = fleList.map(rtImg => new FindLeafEnds(extendedData, rtImg, runReq.rtplan).leafSet)
 
-    // TODO should put data in database
+    // fleResultList.map(r => r.gapSkew.insert) // TODO : un-comment this when the table has been added to the database
 
     new GapSkewHtml(extendedData, runReq, fleResultList, ProcedureStatus.done).makeDisplay
     ProcedureStatus.done // TODO get status from fleList

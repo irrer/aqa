@@ -68,9 +68,9 @@ case class GapSkewAnnotateImage(
     val g = ImageUtil.getGraphics(image)
     g.setColor(Color.darkGray)
 
-    val y = d2i(translator.iso2PixCoordY(-leaf.position_mm))
-    val x1 = d2i(translator.iso2PixCoordX(leaf.xPosition_mm))
-    val x2 = d2i(translator.iso2PixCoordX(leaf.xPosition_mm + leaf.width_mm))
+    val y = d2i(translator.iso2PixCoordY(-leaf.yPosition_mm))
+    val x1 = d2i(translator.iso2PixCoordX(leaf.xLeftPosition_mm))
+    val x2 = d2i(translator.iso2PixCoordX(leaf.xLeftPosition_mm + leaf.width_mm))
     ImageUtil.setLineThickness(g, 3)
     g.drawLine(d2i(x1), d2i(y), d2i(x2), d2i(y))
 
@@ -79,10 +79,10 @@ case class GapSkewAnnotateImage(
     ImageText.setFont(g, ImageText.DefaultFont, textPointSize = 20)
     val textHeight = d2i(ImageText.getTextDimensions(g, "Hq").getHeight)
     val textOffsetY = d2i(textHeight * 1.5)
-    val textX = d2i(translator.iso2PixCoordX(leaf.xPosition_mm + leaf.width_mm / 2.0))
+    val textX = d2i(translator.iso2PixCoordX(leaf.xLeftPosition_mm + leaf.width_mm / 2.0))
     val textY = d2i(if (isTop) y - textOffsetY else y + textOffsetY)
 
-    ImageText.drawTextCenteredAt(g, textX, textY, leaf.position_mm.formatted("%9.2f").trim)
+    ImageText.drawTextCenteredAt(g, textX, textY, leaf.yPosition_mm.formatted("%9.2f").trim)
 
     // -----------------------------------------------------------------
 

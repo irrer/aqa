@@ -16,282 +16,68 @@
 
 package org.aqa.webrun.gapSkew
 
-import com.pixelmed.dicom
+import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
-import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
 import org.aqa.db.Output
 import org.aqa.run.ProcedureStatus
-import org.aqa.web.C3Chart
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 
-import java.awt.Color
 import java.io.File
-import scala.collection.mutable.ArrayBuffer
 import scala.xml.Elem
+
+object GapSkewHtml {
+
+  def imageFileOf(leafSet: LeafSet, outputDir: File): File = {
+    val pngFileName = FileUtil.replaceInvalidFileNameCharacters(leafSet.beamName, '_').replace(' ', '_') + ".png"
+    new File(outputDir, pngFileName)
+  }
+
+}
 
 class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq: Seq[LeafSet], procedureStatus: ProcedureStatus.Value) {
 
-  private def makeDicomContent(al: dicom.AttributeList, title: String): String = {
-    val baseFileName = title.replaceAll("[^a-zA-Z0-9_]", "_")
-    val htmlFileName = "DICOM_" + baseFileName + ".html"
-    val dicomFileName = "DICOM_" + baseFileName + ".dcm"
-
-    def fileOf(name: String) = new File(extendedData.output.dir, name)
-    DicomUtil.writeAttributeListToFile(al, fileOf(dicomFileName), "AQA")
-    val content = {
-      <div>
-          <h2>{title}</h2>
-          <a href={dicomFileName}>Download DICOM</a>
-          <pre>
-            {WebUtil.nl + DicomUtil.attributeListToString(al)}
-          </pre>
-        </div>
-    }
-
-    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), title)
-    Util.writeFile(fileOf(htmlFileName), text)
-
-    htmlFileName
-  }
+  Trace.trace(procedureStatus)
   private def beamNameOf(leafSet: LeafSet): String = Phase2Util.getBeamNameOfRtimage(runReq.rtplan, leafSet.attributeList).get
 
-  private def imageFileOf(leafSet: LeafSet): File = {
-    val pngFileName = FileUtil.replaceInvalidFileNameCharacters(leafSet.beamName, '_').replace(' ', '_') + ".png"
-    new File(extendedData.output.dir, pngFileName)
-  }
-
-  // accumulate all of the chart javascript here
-  private def chartJavascript = ArrayBuffer[String]()
-
-  /**
-    * Make a chart that shows the profile of the beam at the edge.  Also put the javascript in the common buffer.
-    * @param leaf Leaf to show.
-    * @return HTML reference to chart.
-    */
-  private def makeChart(leaf: Leaf): Elem = {
-
-    val chart = new C3Chart(
-      // width = Some(400),
-      height = Some(300),
-      xAxisLabel = "Position",
-      xDataLabel = "cm",
-      xValueList = leaf.profile.map(_.y_mm),
-      yAxisLabels = Seq("CU"),
-      yDataLabel = "CU",
-      yValues = Seq(leaf.profile.map(_.cu)),
-      //yFormat = ".0f",
-      yFormat = ".8gf",
-      yColorList = Seq(new Color(0, 255, 255))
-    )
-
-    chartJavascript += chart.javascript
-    chart.html
-  }
-
-  private def leafSetToHtml(leafSet: LeafSet): Elem = {
-
-    val pngFile = imageFileOf(leafSet)
-    Util.writePng(leafSet.image, pngFile)
-
-    def td(d: Double): Elem = {
-      <td title={d.toString}>{d.formatted("%8.2f").trim}</td>
-    }
-
-    val skewTable = {
-      // @formatter:off
-        <table class="table table-bordered">
-          <thead>
-            <tr>
-              <th>
-                Position (mm)
-              </th>
-              <th>
-                Left - Right (mm)
-              </th>
-              <th>
-                Left (mm)
-              </th>
-              <th>
-                Right (mm)
-              </th>
-              <th>
-                Planned (mm)
-              </th>
-            </tr>
-
-            <tr>
-              <td>
-                Top
-              </td>{td(leafSet.topLeft.position_mm - leafSet.topRight.position_mm)}{td(leafSet.topLeft.position_mm)}{td(leafSet.topRight.position_mm)}{td(leafSet.leafPositionRtplanTop_mm)}
-            </tr>
-
-            <tr>
-              <td>
-                Bottom
-              </td>{td(leafSet.bottomLeft.position_mm - leafSet.bottomRight.position_mm)}{td(leafSet.bottomLeft.position_mm)}{td(leafSet.bottomRight.position_mm)}{td(leafSet.leafPositionRtplanBottom_mm)}
-            </tr>
-
-          </thead>
-        </table>
-      // @formatter:on
-    }
-
-    def offsetTable = {
-      // @formatter:off
-          <table class="table table-bordered">
-          <thead>
-            <tr>
-              <th>
-                Position (mm)
-              </th>
-              <th>
-                Top - Bottom - <br/> Planned (mm)
-              </th>
-              <th>
-                Top (mm)
-              </th>
-              <th>
-                Bottom (mm)
-              </th>
-            </tr>
-
-            <tr>
-              <td>
-                Left
-              </td>
-                {td(leafSet.topLeft.position_mm - leafSet.bottomLeft.position_mm - (leafSet.leafPositionRtplanTop_mm - leafSet.leafPositionRtplanBottom_mm))}
-                {td(leafSet.topLeft.position_mm)}
-                {td(leafSet.topRight.position_mm)}
-            </tr>
-          
-            <tr>
-              <td>
-                Right
-              </td>
-              {td(leafSet.bottomRight.position_mm - leafSet.topRight.position_mm + (leafSet.leafPositionRtplanTop_mm - leafSet.leafPositionRtplanBottom_mm))}
-              {td(leafSet.bottomLeft.position_mm)}
-              {td(leafSet.bottomRight.position_mm)}
-            </tr>
-          
-          </thead>
-        </table>
-      // @formatter:on
-    }
-
-    def htmlName = makeDicomContent(runReq.rtimageMap(leafSet.beamName), leafSet.beamName)
-
-    def dicomLink = {
-      <a href={htmlName}>View DICOM</a>
-    }
-
-    val idPrefix = Util.textToId(leafSet.beamName)
-
-    val edgeChartList: Elem = {
-      <div>
-        <h3>Edge Profiles</h3>
-        <ul class="nav nav-tabs">
-          <li class="active">
-            <a data-toggle="tab" href={"#" + idPrefix + "topLeft"}>Top Left {Util.fmtDbl(leafSet.topLeft.position_mm)}</a>
-          </li>
-          <li>
-            <a data-toggle="tab" href={"#" + idPrefix + "topRight"}>Top Right {Util.fmtDbl(leafSet.topRight.position_mm)}</a>
-          </li>
-          <li>
-            <a data-toggle="tab" href={"#" + idPrefix + "bottomLeft"}>Bottom Left {Util.fmtDbl(leafSet.bottomLeft.position_mm)}</a>
-          </li>
-          <li>
-            <a data-toggle="tab" href={"#" + idPrefix + "bottomRight"}>Bottom Right {Util.fmtDbl(leafSet.bottomRight.position_mm)}</a>
-          </li>
-        </ul>
-
-        <div class="tab-content">
-          <div id={idPrefix + "topLeft"} class="tab-pane fade in active">
-            <h3>Top Left</h3>
-            {makeChart(leafSet.topLeft)}
-          </div>
-          <div id={idPrefix + "topRight"} class="tab-pane fade">
-              <h3>Top Right</h3>
-            {makeChart(leafSet.topRight)}
-          </div>
-          <div id={idPrefix + "bottomLeft"} class="tab-pane fade">
-            <h3>Bottom Left</h3>
-            {makeChart(leafSet.bottomLeft)}
-          </div>
-          <div id={idPrefix + "bottomRight"} class="tab-pane fade">
-            <h3>Bottom Right</h3>
-            {makeChart(leafSet.bottomRight)}
-          </div>
-        </div>
-      </div>
-    }
-
-    def content = {
-      <div class="row">
-          <hr/>
-          <div class="col-md-6">
-            <center>
-            <h3 style="margin:20px;">
-              {leafSet.beamName}
-            </h3>
-              {skewTable}
-              <p></p>
-              {offsetTable}
-              {dicomLink}
-            </center>
-          </div>
-          <div class="col-md-6">
-            <center>
-            <a href={pngFile.getName} style="margin:8px;">
-              Click image for larger view.
-              <div class="zoom" id={pngFile.getName.dropRight(4)}>
-                <img height="400;" src={pngFile.getName}/>
-              </div>
-            </a>
-            </center>
-          </div>
-          {edgeChartList}
-        </div>
-    }
-
-    content
-  }
-
-  private def rtplanName = makeDicomContent(runReq.rtplan, "RTPLAN")
+  private def rtplanName = DicomHtml(extendedData).makeDicomContent(runReq.rtplan, "RTPLAN")
 
   /**
     * Make an HTML reference to the RTPLAN so it can be viewed.
-    * @return Link to rtplan.
+    * @return Link to rtplan.  Also show the patient ID and patient name.
     */
-  private def rtplanReference(): Elem = {
-    <a href={rtplanName}>View RTPLAN</a>
-  }
 
-  private def makeScript() = {
-    def toZoom(leafSet: LeafSet): String = {
-      "$(document).ready(function(){ $('#" + imageFileOf(leafSet).getName.dropRight(4) + "').zoom(); });"
-    }
-    "\n<script>\n" +
-      leafSetSeq.map(toZoom).mkString("\n\n") +
-      chartJavascript.mkString("\n//-------------------------------------------\n") +
-      "\n</script>\n"
+  private def generalReference(): Elem = {
+
+    val planReference = <a href={rtplanName}>View RTPLAN</a>
+
+    val patientId = <span>Patient ID <span aqaalias="">{Util.patientIdOfAl(leafSetSeq.head.attributeList)}</span> </span>
+
+    val patientName = <span>Patient Name <span aqaalias="">{leafSetSeq.head.attributeList.get(TagByName.PatientName).getSingleStringValueOrEmptyString()}</span> </span>
+
+    val sp = (0 to 6) map (_ => WebUtil.nbsp)
+
+    val ref = <span> {planReference} {sp} {patientId} {sp} {patientName} </span>
+
+    ref
   }
 
   private def content: Elem = {
     <div class="row">
         <div class="col-md-8 col-md-offset-2">
-        {rtplanReference()}
-          {leafSetSeq.sortBy(beamNameOf).map(leafSetToHtml)}
+        {generalReference()}
+          {leafSetSeq.sortBy(beamNameOf).map(leafSet => LeafSetHtml(extendedData, leafSet, runReq).leafSetToHtml)}
         </div>
       </div>
   }
 
   def makeDisplay(): Unit = {
     val contentWithHeader = ExtendedData.wrapExtendedData(extendedData, content)
-    val text = WebUtil.wrapBody(contentWithHeader, "Leaf Gap and Skew", refresh = None, c3 = true, runScript = Some(makeScript()))
+    val text = WebUtil.wrapBody(contentWithHeader, "Leaf Gap and Skew", refresh = None, c3 = true)
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeBinaryFile(file, text.getBytes)
     if (true) {

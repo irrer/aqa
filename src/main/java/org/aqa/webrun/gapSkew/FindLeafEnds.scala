@@ -27,12 +27,14 @@ import org.aqa.Config
 import org.aqa.DicomFile
 import org.aqa.Logging
 import org.aqa.Util
+import org.aqa.db.GapSkew
+import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 
 import java.awt.Rectangle
 import java.io.File
 
-case class FindLeafEnds(rtimage: AttributeList, rtplan: AttributeList) extends Logging {
+case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, rtplan: AttributeList) extends Logging {
 
   /** True if collimator is horizontal. */
   private val isHorizontal: Boolean = Phase2Util.isHorizontal(rtimage)
@@ -47,17 +49,6 @@ case class FindLeafEnds(rtimage: AttributeList, rtplan: AttributeList) extends L
   }
 
   val edgesFromPlan: EdgesFromPlan.EndPair = EdgesFromPlan.edgesFromPlan(rtimage, rtplan)
-
-  /*
-  private val endPairPix: EndPair = {
-    if (isHorizontal)
-      throw new RuntimeException("EndPair: Not implemented for horizontally positioned collimator.")
-    else {
-      val both = Seq(translator.iso2PixCoordY(-endPairIso.min), translator.iso2PixCoordY(-endPairIso.max))
-      EndPair(both.min, both.max)
-    }
-  }
-   */
 
   /**
     * Given a bounding box that contains the leaf end and is between the sides of the leaf (roughly containing the
@@ -136,7 +127,8 @@ case class FindLeafEnds(rtimage: AttributeList, rtplan: AttributeList) extends L
       val bottomLeftRect = Util.rectD(xLeft_pix, yBottom_pix, width, height)
       val bottomRightRect = Util.rectD(xRight_pix, yBottom_pix, width, height)
 
-      logger.info("GapSkew processing beam: " + Util.beamNumber(rtimage))
+      val beamName = Phase2Util.getBeamNameOfRtimage(plan = rtplan, rtimage).get
+      logger.info("GapSkew processing beam: " + Util.beamNumber(rtimage) + " : " + beamName)
 
       val topLeft = endOfLeaf_iso(topLeftRect)
       val topRight = endOfLeaf_iso(topRightRect)
@@ -144,6 +136,27 @@ case class FindLeafEnds(rtimage: AttributeList, rtplan: AttributeList) extends L
       val bottomRight = endOfLeaf_iso(bottomRightRect)
 
       val bufferedImage = GapSkewAnnotateImage(dicomImage, translator, topLeft, topRight, bottomLeft, bottomRight).annotate
+
+      val gapSkew = GapSkew(
+        gapSkewPK = None,
+        outputPK = extendedData.output.outputPK.get,
+        rtplanSOPInstanceUID = Util.sopOfAl(rtplan),
+        rtimageSeriesInstanceUID = Util.serInstOfAl(rtimage),
+        rtimageUID = Util.sopOfAl(rtimage),
+        beamName = beamName,
+        topLeftX_mm = topLeft.xCenter_mm,
+        topLeftY_mm = topLeft.yPosition_mm,
+        topRightX_mm = topRight.xCenter_mm,
+        topRightY_mm = topRight.yPosition_mm,
+        topPlannedY_mm = yTop.limit_mm,
+        topIsJaw = yTop.isJaw,
+        bottomLeftX_mm = bottomLeft.xCenter_mm,
+        bottomLeftY_mm = bottomLeft.yPosition_mm,
+        bottomRightX_mm = bottomRight.xCenter_mm,
+        bottomRightY_mm = bottomRight.yPosition_mm,
+        bottomPlannedY_mm = yBottom.limit_mm,
+        bottomIsJaw = yBottom.isJaw
+      )
 
       val set = LeafSet(
         bufferedImage,
@@ -154,7 +167,8 @@ case class FindLeafEnds(rtimage: AttributeList, rtplan: AttributeList) extends L
         topLeft,
         topRight,
         bottomLeft,
-        bottomRight
+        bottomRight,
+        gapSkew
       )
 
       logger.info("MLC leaf end positions: " + set)
@@ -167,6 +181,6 @@ object FindLeafEnds {
     val image = new DicomFile(new File("""D:\tmp\aqa\GapSkew\dicom\Study_1\RTIMAGE_01\RTIMAGE_003_2020-03-23T19-12-25.000.dcm""")).attributeList.get
     val rtplan = new DicomFile(new File("""D:\tmp\aqa\GapSkew\dicom\GapSkewRtPlans\RP.1.2.246.352.71.5.824327626427.245627.20140602132138.dcm""")).attributeList.get
 
-    new FindLeafEnds(image, rtplan)
+    new FindLeafEnds(???, image, rtplan)
   }
 }
