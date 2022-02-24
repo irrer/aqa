@@ -19,6 +19,8 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
     }
 
     val skewTable = {
+      def isJawToText(isJaw: Boolean): String = if (isJaw) "Jaw" else "MLC"
+
       // @formatter:off
       <table class="table table-bordered">
         <thead>
@@ -32,9 +34,7 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
           </tr>
 
           <tr>
-            <td>
-              Top
-            </td>
+            <td style="white-space: nowrap;">Top ({isJawToText(leafSet.gapSkew.topIsJaw)})</td>
             {td(leafSet.gapSkew.topAngle_deg)}
             {td(leafSet.topLeft.yPosition_mm - leafSet.topRight.yPosition_mm)}
             {td(leafSet.topLeft.yPosition_mm)}
@@ -43,9 +43,7 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
           </tr>
 
           <tr>
-            <td>
-              Bottom
-            </td>
+            <td style="white-space: nowrap;">Bottom ({isJawToText(leafSet.gapSkew.topIsJaw)})</td>
             {td(leafSet.gapSkew.bottomAngle_deg)}
             {td(leafSet.bottomLeft.yPosition_mm - leafSet.bottomRight.yPosition_mm)}
             {td(leafSet.bottomLeft.yPosition_mm)}
