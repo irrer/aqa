@@ -11,12 +11,12 @@ import java.awt.Polygon
 import java.awt.image.BufferedImage
 
 case class GapSkewAnnotateImage(
-    dicomImage: DicomImage,
-    translator: IsoImagePlaneTranslator,
-    topLeft: Leaf,
-    topRight: Leaf,
-    bottomLeft: Leaf,
-    bottomRight: Leaf
+                                 dicomImage: DicomImage,
+                                 translator: IsoImagePlaneTranslator,
+                                 topLeft: Leaf,
+                                 topRight: Leaf,
+                                 bottomLeft: Leaf,
+                                 bottomRight: Leaf
 ) {
 
   private def d2i = Util.d2i _
@@ -82,7 +82,28 @@ case class GapSkewAnnotateImage(
     val textX = d2i(translator.iso2PixCoordX(leaf.xLeftPosition_mm + leaf.width_mm / 2.0))
     val textY = d2i(if (isTop) y - textOffsetY else y + textOffsetY)
 
-    ImageText.drawTextCenteredAt(g, textX, textY, leaf.yPosition_mm.formatted("%9.2f").trim)
+    val text = leaf.yPosition_mm.formatted("%9.2f").trim
+
+    val textBox = ImageText.getTextDimensions(g, text)
+    val margin = 6
+    val minX = margin + textBox.getCenterX
+    val maxX = dicomImage.width - (margin + textBox.getCenterX)
+    val minY = margin + textBox.getCenterY
+    val maxY = dicomImage.height - (margin + textBox.getCenterY)
+
+    val tX = 0 match {
+      case _ if textX < minX => minX
+      case _ if textX > maxX => maxX
+      case _                 => textX
+    }
+
+    val tY = 0 match {
+      case _ if textY < minY => minY
+      case _ if textY > maxY => maxY
+      case _                 => textY
+    }
+
+    ImageText.drawTextCenteredAt(g, tX, tY, text)
 
     // -----------------------------------------------------------------
 
@@ -101,7 +122,7 @@ case class GapSkewAnnotateImage(
 
   def annotate: BufferedImage = {
     val bufferedImage: BufferedImage = dicomImage.toDeepColorBufferedImage(percentToDrop = 0.1)
-    Util.addGraticulesNegY(bufferedImage, translator, Color.yellow)
+    // Util.addGraticulesNegY(bufferedImage, translator, Color.yellow)
 
     addLeaf(bufferedImage, topLeft, isTop = true)
     addLeaf(bufferedImage, topRight, isTop = true)
