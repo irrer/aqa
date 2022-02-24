@@ -16,21 +16,17 @@
 
 package org.aqa.webrun.gapSkew
 
-import org.aqa.Util
-
 /**
-  * Describe one leaf position and the profile surrounding it.
+  * Describe one leaf position.
+  *
   * @param yPosition_mm Vertical position of leaf in mm in isoplane.
   * @param xLeftPosition_mm Horizontal left side of measurement in mm in isoplane.
   * @param width_mm Width of measurement (distance across leaf) in mm in isoplane.
-  * @param profile X,Y graph to plot showing the profile.
   */
-case class Leaf(yPosition_mm: Double, xLeftPosition_mm: Double, width_mm: Double, profile: Seq[ProfilePoint]) {
+case class Leaf(yPosition_mm: Double, xLeftPosition_mm: Double, width_mm: Double) {
 
-  val xCenter_mm = xLeftPosition_mm + (width_mm / 2)
+  val xCenter_mm: Double = xLeftPosition_mm + (width_mm / 2)
 
   override def toString: String =
-    yPosition_mm +
-      "   xCenter_mm , width (mm): " + xCenter_mm + ", " + width_mm +
-      "    profile: " + profile.map(p => Util.fmtDbl(p.y_mm) + ", " + Util.fmtDbl(p.cu)).mkString("    ")
+    yPosition_mm + "   xCenter_mm , width (mm): " + xCenter_mm + ", " + width_mm
 }

@@ -100,77 +100,6 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
 
     def htmlName = DicomHtml(extendedData).makeDicomContent(runReq.rtimageMap(leafSet.beamName), leafSet.beamName, Some(GapSkewHtml.imageFileOf(leafSet, extendedData.output.dir).getName))
 
-    /*
-    // accumulate all of the chart javascript here
-    def chartJavascript = ArrayBuffer[String]()
-
-     * Make a chart that shows the profile of the beam at the edge.  Also put the javascript in the common buffer.
-     * @param leaf Leaf to show.
-     * @return HTML reference to chart.
-    def makeChart(leaf: Leaf): Elem = {
-
-      val chart = new C3Chart(
-        // width = Some(400),
-        height = Some(300),
-        xAxisLabel = "Position",
-        xDataLabel = "cm",
-        xValueList = leaf.profile.map(_.y_mm),
-        yAxisLabels = Seq("CU"),
-        yDataLabel = "CU",
-        yValues = Seq(leaf.profile.map(_.cu)),
-        //yFormat = ".0f",
-        yFormat = ".8gf",
-        yColorList = Seq(new Color(0, 255, 255))
-      )
-
-      chartJavascript += chart.javascript
-      chart.html
-    }
-     */
-
-    /*
-    val idPrefix = Util.textToId(leafSet.beamName)
-
-    val edgeChartList: Elem = {
-      <div>
-        <h3>Edge Profiles</h3>
-        <ul class="nav nav-tabs">
-          <li class="active">
-            <a data-toggle="tab" href={"#" + idPrefix + "topLeft"}>Top Left {Util.fmtDbl(leafSet.topLeft.yPosition_mm)}</a>
-          </li>
-          <li>
-            <a data-toggle="tab" href={"#" + idPrefix + "topRight"}>Top Right {Util.fmtDbl(leafSet.topRight.yPosition_mm)}</a>
-          </li>
-          <li>
-            <a data-toggle="tab" href={"#" + idPrefix + "bottomLeft"}>Bottom Left {Util.fmtDbl(leafSet.bottomLeft.yPosition_mm)}</a>
-          </li>
-          <li>
-            <a data-toggle="tab" href={"#" + idPrefix + "bottomRight"}>Bottom Right {Util.fmtDbl(leafSet.bottomRight.yPosition_mm)}</a>
-          </li>
-        </ul>
-
-        <div class="tab-content">
-          <div id={idPrefix + "topLeft"} class="tab-pane fade in active">
-            <h3>Top Left</h3>
-            {makeChart(leafSet.topLeft)}
-          </div>
-          <div id={idPrefix + "topRight"} class="tab-pane fade">
-            <h3>Top Right</h3>
-            {makeChart(leafSet.topRight)}
-          </div>
-          <div id={idPrefix + "bottomLeft"} class="tab-pane fade">
-            <h3>Bottom Left</h3>
-            {makeChart(leafSet.bottomLeft)}
-          </div>
-          <div id={idPrefix + "bottomRight"} class="tab-pane fade">
-            <h3>Bottom Right</h3>
-            {makeChart(leafSet.bottomRight)}
-          </div>
-        </div>
-      </div>
-    }
-     */
-
     def content = {
 
       Trace.trace("Angles.  top: " + leafSet.gapSkew.topAngle_deg + "    bottom: " + leafSet.gapSkew.bottomAngle_deg + "    avg: " + leafSet.gapSkew.averageAngle_deg)
@@ -195,7 +124,6 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
             </a>
           </center>
         </div>
-        { /* edgeChartList */ }
       </div>
     }
 

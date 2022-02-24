@@ -21,7 +21,6 @@ import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ImageUtil.LocateEdge
-import edu.umro.ImageUtil.LocateMax
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Config
 import org.aqa.DicomFile
@@ -56,45 +55,20 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, rtpl
     *
     * @param box_pix A bounding box that contains the leaf end and is between the sides of the leaf in pixels.
     *            Note: This could be a Rectangle2D.Double so as to weight partial pixels on either side.
-    * @return The position of the leaf in pixels.
+    * @return The position of the leaf in mm in isoplane.
     */
   private def endOfLeaf_iso(box_pix: Rectangle): Leaf = {
-
-    val subImage = dicomImage.getSubimage(box_pix)
     if (isHorizontal) {
       throw new RuntimeException("endOfLeaf_pix: Not implemented for horizontally positioned collimator.")
     } else {
-      val profile = subImage.columnSums
-      val max = profile.max
-      // the minimums are well defined, but the locateMax function looks for maximums, so flip the
-      // profile vertically which effectively looks for minimums.
-      val profileFlipped = profile.map(max - _)
+      val profile = dicomImage.getSubimage(box_pix).rowSums
 
-      val half = profile.size / 2
+      val leafEndY = LocateEdge.locateEdge(profile, (profile.min + profile.max) / 2)
 
-      val leafA = LocateMax.locateMax(profileFlipped.take(half))
-      val leafB = LocateMax.locateMax(profileFlipped.drop(half)) + half
-
-      val leafSidePad_pix = translator.iso2PixDistY(Config.GapSkewLeafSidePad_mm)
-      val penumbraHeight_pix = translator.iso2PixDistY(Config.GapSkewLeafEndPenumbra_mm)
-
-      val x_pix = box_pix.x + leafA + leafSidePad_pix
-      val width_pix = (leafB - leafA) - (leafSidePad_pix * 2)
-      val y_pix = box_pix.getCenterY - penumbraHeight_pix / 2
-      val height = penumbraHeight_pix
-      val endBoundingRectangle = Util.rectD(x_pix, y_pix, width_pix, height)
-
-      // averages of pixel intensity across the profile of the edge
-      val profileAverages = dicomImage.getSubimage(endBoundingRectangle).rowSums.map(_ / width_pix.toFloat)
-
-      val end = LocateEdge.locateEdge(profileAverages, (profileAverages.min + profileAverages.max) / 2)
-
-      val endPosition_pix = y_pix + end
-
+      val endPosition_pix = box_pix.getY + leafEndY
       val endPosition_mm = -translator.pix2IsoCoordY(endPosition_pix)
-      val chartProfile = GapSkewProfile.gapSkewProfile(endPosition_mm, x_pix, width_pix, translator, dicomImage)
 
-      Leaf(endPosition_mm, translator.pix2IsoCoordX(x_pix), translator.pix2IsoDistX(width_pix), chartProfile)
+      Leaf(endPosition_mm, translator.pix2IsoCoordX(box_pix.getX), translator.pix2IsoDistX(box_pix.getWidth))
     }
   }
 
@@ -106,14 +80,15 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, rtpl
       throw new RuntimeException("FindLeafSides : Not implemented for horizontally positioned collimator.")
     else {
       val leafWidth_mm = (leafSidesFromPlanAsPix.head - leafSidesFromPlanAsPix(1)).abs
-      val leafWidth_pix = translator.iso2PixDistX(leafWidth_mm)
+      val leafWidth_pix = translator.iso2PixDistX(leafWidth_mm) // outer leaf width in pixels
       val leafSideFinding_pix = translator.iso2PixDistY(Config.GapSkewLeafSideFinding_mm)
 
       val height = leafSideFinding_pix
       val width = leafWidth_pix * 2
+      val halfLeaf_pix = leafWidth_pix / 2
 
-      val xLeft_pix = leafWidth_pix / 2
-      val xRight_pix = dicomImage.width - xLeft_pix - 2 * leafWidth_pix
+      val xLeft_pix = halfLeaf_pix
+      val xRight_pix = dicomImage.width - halfLeaf_pix - 2 * leafWidth_pix
 
       val collimatorAngle = Util.angleRoundedTo90(DicomUtil.findAllSingle(rtimage, TagByName.BeamLimitingDeviceAngle).head.getDoubleValues.head)
       val yTop = if (collimatorAngle == 90) edgesFromPlan.X2 else edgesFromPlan.X1

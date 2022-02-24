@@ -31,16 +31,16 @@ import java.awt.image.BufferedImage
   * @param bottomRight Positioned in bottom right.
   */
 case class LeafSet(
-    image: BufferedImage,
-    attributeList: AttributeList,
-    rtplan: AttributeList,
-    leafPositionRtplanTop_mm: Double,
-    leafPositionRtplanBottom_mm: Double,
-    topLeft: Leaf,
-    topRight: Leaf,
-    bottomLeft: Leaf,
-    bottomRight: Leaf,
-    gapSkew: GapSkew
+                    image: BufferedImage,
+                    attributeList: AttributeList,
+                    rtplan: AttributeList,
+                    leafPositionRtplanTop_mm: Double,
+                    leafPositionRtplanBottom_mm: Double,
+                    topLeft: Leaf,
+                    topRight: Leaf,
+                    bottomLeft: Leaf,
+                    bottomRight: Leaf,
+                    gapSkew: GapSkew
 ) {
 
   /** Beam name. */
