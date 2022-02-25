@@ -21,6 +21,7 @@ import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Logging
 import org.aqa.Util
+import org.aqa.db.GapSkew
 import org.aqa.webrun.phase2.Phase2Util
 
 object EdgesFromPlan extends Logging {
@@ -29,12 +30,12 @@ object EdgesFromPlan extends Logging {
     * Describe one beam's position.
     *
     * @param limit_mm Position in isoplane in mm.
-    * @param isJaw If true, then the jaw is positioned at this place.  The collimator may also be here, but
+    * @param edgeType If true, then the jaw is positioned at this place.  The collimator may also be here, but
     *              it will be somewhat obscured by teh jaw.
     */
-  case class BeamLimit(limit_mm: Double, isJaw: Boolean) {
+  case class BeamLimit(limit_mm: Double, edgeType: String) {
     override def toString: String = {
-      "limit_mm: " + limit_mm.formatted("%8.2f") + "    isJaw: " + isJaw.toString.formatted("%5s")
+      "limit_mm: " + limit_mm.formatted("%8.2f") + "    isJaw: " + edgeType.toString.formatted("%5s")
     }
   }
 
@@ -81,19 +82,19 @@ object EdgesFromPlan extends Logging {
       case (Some(jaw), Some(mlc)) =>
         val X1 = {
           if (jaw.X1 > mlc.X1)
-            BeamLimit(jaw.X1, isJaw = true) // edge is jaw
+            BeamLimit(jaw.X1, edgeType = GapSkew.edgeTypeJaw) // edge is jaw
           else
-            BeamLimit(mlc.X1, isJaw = false) // edge is mlc
+            BeamLimit(mlc.X1, edgeType = GapSkew.edgeTypeMlc) // edge is mlc
         }
         val X2 = {
           if (jaw.X2 < mlc.X2)
-            BeamLimit(jaw.X2, isJaw = true) // edge is jaw
+            BeamLimit(jaw.X2, edgeType = GapSkew.edgeTypeJaw) // edge is jaw
           else
-            BeamLimit(mlc.X2, isJaw = false) // edge is mlc
+            BeamLimit(mlc.X2, edgeType = GapSkew.edgeTypeMlc) // edge is mlc
         }
         EndPair(X1, X2)
-      case (None, Some(mlc)) => EndPair(BeamLimit(mlc.X1, isJaw = false), BeamLimit(mlc.X2, isJaw = false))
-      case (Some(jaw), None) => EndPair(BeamLimit(jaw.X1, isJaw = true), BeamLimit(jaw.X2, isJaw = true))
+      case (None, Some(mlc)) => EndPair(BeamLimit(mlc.X1, edgeType = GapSkew.edgeTypeMlc), BeamLimit(mlc.X2, edgeType = GapSkew.edgeTypeMlc))
+      case (Some(jaw), None) => EndPair(BeamLimit(jaw.X1, edgeType = GapSkew.edgeTypeJaw), BeamLimit(jaw.X2, edgeType = GapSkew.edgeTypeJaw))
       case (None, None) =>
         throw new RuntimeException("Could not find leaf or jaw pair ")
     }

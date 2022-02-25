@@ -124,13 +124,13 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, rtpl
         topRightX_mm = topRight.xCenter_mm,
         topRightY_mm = topRight.yPosition_mm,
         topPlannedY_mm = yTop.limit_mm,
-        topIsJaw = yTop.isJaw,
+        topEdgeType = yTop.edgeType,
         bottomLeftX_mm = bottomLeft.xCenter_mm,
         bottomLeftY_mm = bottomLeft.yPosition_mm,
         bottomRightX_mm = bottomRight.xCenter_mm,
         bottomRightY_mm = bottomRight.yPosition_mm,
         bottomPlannedY_mm = yBottom.limit_mm,
-        bottomIsJaw = yBottom.isJaw
+        bottomEdgeType = yBottom.edgeType
       )
 
       val set = LeafSet(

@@ -34,7 +34,7 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
           </tr>
 
           <tr>
-            <td style="white-space: nowrap;">Top ({isJawToText(leafSet.gapSkew.topIsJaw)})</td>
+            <td style="white-space: nowrap;">Top ({leafSet.gapSkew.topEdgeType})</td>
             {td(leafSet.gapSkew.topAngle_deg)}
             {td(leafSet.topLeft.yPosition_mm - leafSet.topRight.yPosition_mm)}
             {td(leafSet.topLeft.yPosition_mm)}
@@ -43,7 +43,7 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
           </tr>
 
           <tr>
-            <td style="white-space: nowrap;">Bottom ({isJawToText(leafSet.gapSkew.topIsJaw)})</td>
+            <td style="white-space: nowrap;">Bottom ({leafSet.gapSkew.topEdgeType})</td>
             {td(leafSet.gapSkew.bottomAngle_deg)}
             {td(leafSet.bottomLeft.yPosition_mm - leafSet.bottomRight.yPosition_mm)}
             {td(leafSet.bottomLeft.yPosition_mm)}

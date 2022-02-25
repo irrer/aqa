@@ -37,13 +37,13 @@ case class GapSkew(
     topRightX_mm: Double, // X isoplane coordinate center of top right measurement
     topRightY_mm: Double, // Y isoplane coordinate of top right center measurement
     topPlannedY_mm: Double, // planned Y for top
-    topIsJaw: Boolean, // true if top is a jaw edge, false if it is an MLC edge
+    topEdgeType: String, // true if top is a jaw edge, false if it is an MLC edge
     bottomLeftX_mm: Double, // X isoplane coordinate center of bottom left measurement
     bottomLeftY_mm: Double, // Y isoplane coordinate of bottom left center measurement
     bottomRightX_mm: Double, // X isoplane coordinate center of bottom right measurement
     bottomRightY_mm: Double, // Y isoplane coordinate of bottom right center measurement
     bottomPlannedY_mm: Double, // planned Y for bottomtop
-    bottomIsJaw: Boolean // true if bottom top is a jaw edge, false if it is an MLC edge
+    bottomEdgeType: String // true if bottom top is a jaw edge, false if it is an MLC edge
 ) {
 
   def insert: GapSkew = {
@@ -90,14 +90,14 @@ object GapSkew extends ProcedureOutput with Logging {
     def topRightX_mm = column[Double]("topRightX_mm")
     def topRightY_mm = column[Double]("topRightY_mm")
     def topPlannedY_mm = column[Double]("topPlannedY_mm")
-    def topIsJaw = column[Boolean]("topIsJaw")
+    def topEdgeType = column[String]("topEdgeType")
 
     def bottomLeftX_mm = column[Double]("bottomLeftX_mm")
     def bottomLeftY_mm = column[Double]("bottomLeftY_mm")
     def bottomRightX_mm = column[Double]("bottomRightX_mm")
     def bottomRightY_mm = column[Double]("bottomRightY_mm")
     def bottomPlannedY_mm = column[Double]("bottomPlannedY_mm")
-    def bottomIsJaw = column[Boolean]("bottomIsJaw")
+    def bottomEdgeType = column[String]("bottomEdgeType")
 
     def * =
       (
@@ -112,19 +112,23 @@ object GapSkew extends ProcedureOutput with Logging {
         topRightX_mm,
         topRightY_mm,
         topPlannedY_mm,
-        topIsJaw,
+        topEdgeType,
         bottomLeftX_mm,
         bottomLeftY_mm,
         bottomRightX_mm,
         bottomRightY_mm,
         bottomPlannedY_mm,
-        bottomIsJaw
+        bottomEdgeType
       ) <> (GapSkew.apply _ tupled, GapSkew.unapply)
 
     def outputFK = foreignKey("GapSkew_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[GapSkewTable]
+
+  val edgeTypeJaw = "Jaw" // edge was formed by jaw
+  val edgeTypeMlc = "MLC" // edge was formed by MLC leaf ends
+  val edgeTypeNone = "None" // indicates that there was no measurement
 
   override val topXmlLabel = "GapSkew"
 
