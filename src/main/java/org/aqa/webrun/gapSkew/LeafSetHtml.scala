@@ -119,7 +119,7 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
         <div class="col-md-6">
           <center>
             <a href={htmlName} style="margin:8px;">
-              View larger image and metadata
+              Click to view larger image and metadata
               <img class="img-responsive fit-image" src={pngFile.getName}/>
             </a>
           </center>
