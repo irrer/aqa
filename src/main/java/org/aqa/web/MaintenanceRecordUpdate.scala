@@ -66,9 +66,15 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
   private val description = new WebInputTextArea("Description", 6, 0, "")
 
   private def machLogHtml(valueMap: ValueMapT): Elem = {
-    val mr = MaintenanceRecord.get(valueMap(MaintenanceRecordUpdate.maintenanceRecordPKTag).toLong).get
-    if (mr.machineLogPK.isDefined && mr.machineLogNodeIndex.isDefined) {
-      val machLog = MachineLog.get(mr.machineLogPK.get).get
+    val mr = {
+      val pkText = valueMap.get(MaintenanceRecordUpdate.maintenanceRecordPKTag)
+      if (pkText.isDefined)
+        MaintenanceRecord.get(pkText.get.toLong)
+      else
+        None
+    }
+    if (mr.isDefined && mr.get.machineLogPK.isDefined && mr.get.machineLogNodeIndex.isDefined) {
+      val machLog = MachineLog.get(mr.get.machineLogPK.get).get
       val text = machLog.content.replace("\n", WebUtil.nl).replace(" ", WebUtil.nbsp)
 
       // prefix of full XML text starting at the first Node.
