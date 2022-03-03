@@ -33,7 +33,7 @@ case class DicomHtml(extendedData: ExtendedData) {
 
     val imageRef = {
       if (imageFileName.isDefined) {
-          <img src={imageFileName.get}/>
+        <img src={imageFileName.get}/>
       } else <span/>
     }
 

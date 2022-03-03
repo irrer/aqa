@@ -22,6 +22,7 @@ import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.GapSkew
+import org.aqa.webrun.gapSkew.GapSkewUtil._
 import org.aqa.webrun.phase2.Phase2Util
 
 object EdgesFromPlan extends Logging {
@@ -35,7 +36,7 @@ object EdgesFromPlan extends Logging {
     */
   case class BeamLimit(limit_mm: Double, edgeType: String) {
     override def toString: String = {
-      "limit_mm: " + limit_mm.formatted("%8.2f") + "    isJaw: " + edgeType.formatted("%5s")
+      "limit_mm: " + fmt2(limit_mm) + "    isJaw: " + edgeType.formatted("%5s")
     }
   }
 

@@ -21,18 +21,19 @@ import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.Util
+import org.aqa.webrun.gapSkew.GapSkewUtil._
 
 import java.awt.Color
 import java.awt.Polygon
 import java.awt.image.BufferedImage
 
 case class GapSkewAnnotateImage(
-                                 dicomImage: DicomImage,
-                                 translator: IsoImagePlaneTranslator,
-                                 topLeft: Leaf,
-                                 topRight: Leaf,
-                                 bottomLeft: Leaf,
-                                 bottomRight: Leaf
+    dicomImage: DicomImage,
+    translator: IsoImagePlaneTranslator,
+    topLeft: Leaf,
+    topRight: Leaf,
+    bottomLeft: Leaf,
+    bottomRight: Leaf
 ) {
 
   private def d2i = Util.d2i _
@@ -98,7 +99,7 @@ case class GapSkewAnnotateImage(
     val textX = d2i(translator.iso2PixCoordX(leaf.xLeftPosition_mm + leaf.width_mm / 2.0))
     val textY = d2i(if (isTop) y - textOffsetY else y + textOffsetY)
 
-    val text = leaf.yPosition_mm.formatted("%9.2f").trim
+    val text = fmt2(leaf.yPosition_mm)
 
     val textBox = ImageText.getTextDimensions(g, text)
     val margin = 6

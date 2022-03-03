@@ -18,6 +18,7 @@ package org.aqa.webrun.gapSkew
 
 import com.pixelmed.dicom.AttributeList
 import org.aqa.db.GapSkew
+import org.aqa.webrun.gapSkew.GapSkewUtil._
 import org.aqa.webrun.phase2.Phase2Util
 
 import java.awt.image.BufferedImage
@@ -31,16 +32,16 @@ import java.awt.image.BufferedImage
   * @param bottomRight Positioned in bottom right.
   */
 case class LeafSet(
-                    image: BufferedImage,
-                    attributeList: AttributeList,
-                    rtplan: AttributeList,
-                    leafPositionRtplanTop_mm: Double,
-                    leafPositionRtplanBottom_mm: Double,
-                    topLeft: Leaf,
-                    topRight: Leaf,
-                    bottomLeft: Leaf,
-                    bottomRight: Leaf,
-                    gapSkew: GapSkew
+    image: BufferedImage,
+    attributeList: AttributeList,
+    rtplan: AttributeList,
+    leafPositionRtplanTop_mm: Double,
+    leafPositionRtplanBottom_mm: Double,
+    topLeft: Leaf,
+    topRight: Leaf,
+    bottomLeft: Leaf,
+    bottomRight: Leaf,
+    gapSkew: GapSkew
 ) {
 
   /** Beam name. */
@@ -64,16 +65,14 @@ case class LeafSet(
   }
 
   override def toString: String = {
-    def fmt(d: Double) = d.formatted("%10.4f")
-    def fmtAngle(d: Double) = d.formatted("%10.7f")
     "beam name: " + beamName +
-      "    topSkew_deg: " + fmtAngle(topSkew_deg) +
-      "    top delta: " + fmt(topLeft.yPosition_mm - topRight.yPosition_mm) +
-      "    topLeft: " + fmt(topLeft.yPosition_mm) +
-      "    topRight: " + fmt(topRight.yPosition_mm) +
-      "    bottomSkew_deg: " + fmtAngle(bottomSkew_deg) +
-      "    bottom delta: " + fmt(bottomLeft.yPosition_mm - bottomRight.yPosition_mm) +
-      "    bottomLeft: " + fmt(bottomLeft.yPosition_mm) +
-      "    bottomRight: " + fmt(bottomRight.yPosition_mm)
+      "    topSkew_deg: " + fmt2(topSkew_deg) +
+      "    top delta: " + fmt2(topLeft.yPosition_mm - topRight.yPosition_mm) +
+      "    topLeft: " + fmt2(topLeft.yPosition_mm) +
+      "    topRight: " + fmt2(topRight.yPosition_mm) +
+      "    bottomSkew_deg: " + fmt2(bottomSkew_deg) +
+      "    bottom delta: " + fmt2(bottomLeft.yPosition_mm - bottomRight.yPosition_mm) +
+      "    bottomLeft: " + fmt2(bottomLeft.yPosition_mm) +
+      "    bottomRight: " + fmt2(bottomRight.yPosition_mm)
   }
 }

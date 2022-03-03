@@ -21,6 +21,7 @@ import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.Config
 import org.aqa.Util
+import org.aqa.webrun.gapSkew.GapSkewUtil._
 
 import java.awt.Color
 import java.awt.image.BufferedImage
@@ -49,7 +50,7 @@ object GapSkewMakeAnnotatedImage {
     graphics.drawLine(x1, pos - 1, x2, pos - 1)
     graphics.drawLine(x1, pos + 1, x2, pos + 1)
 
-    val text = (-translator.pix2IsoCoordY(position_pix)).formatted("%6.2f").trim
+    val text = fmt2(-translator.pix2IsoCoordY(position_pix))
     val textDim = ImageText.getTextDimensions(graphics, text)
 
     val boundingBoxHeight = translator.iso2PixDistY(Config.GapSkewLeafSideFinding_mm)

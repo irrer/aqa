@@ -20,6 +20,7 @@ import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.gapSkew.GapSkewUtil._
 
 import scala.xml.Elem
 
@@ -31,12 +32,10 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
     Util.writePng(leafSet.image, pngFile)
 
     def td(d: Double): Elem = {
-      <td title={d.toString}>{Util.fmtDbl(d).trim}</td>
+      <td title={d.toString}>{fmt2(d)}</td>
     }
 
     val skewTable = {
-      def isJawToText(isJaw: Boolean): String = if (isJaw) "Jaw" else "MLC"
-
       // @formatter:off
       <table class="table table-bordered">
         <thead>
@@ -124,12 +123,12 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
         <hr/>
         <div class="col-md-6">
           <center>
-            <h3 style="margin:20px;" title="Average rotational error of top and bottom (0 is ideal).">
-              {leafSet.beamName + " " + WebUtil.nbsp + " " + WebUtil.nbsp + " " + WebUtil.nbsp + " Rotation: " + Util.fmtDbl(leafSet.gapSkew.averageAngle_deg) + " deg"}
+            <h3 style="margin:20px;" title={"Average rotational error of top and bottom (0 is ideal)." + WebUtil.titleNewline + leafSet.gapSkew.averageAngle_deg.formatted("%20.8f").trim}>
+              {leafSet.beamName + " " + WebUtil.nbsp + " " + WebUtil.nbsp + " " + WebUtil.nbsp + " Rotation: " + fmt2(leafSet.gapSkew.averageAngle_deg) + " deg"}
             </h3>
-            {skewTable}
-            <p></p>
             {offsetTable}
+            <p></p>
+            {skewTable}
           </center>
         </div>
         <div class="col-md-6">
