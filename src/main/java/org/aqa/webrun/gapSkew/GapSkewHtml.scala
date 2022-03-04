@@ -19,7 +19,7 @@ package org.aqa.webrun.gapSkew
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ScalaUtil.FileUtil
-import edu.umro.ScalaUtil.Trace
+import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.Output
 import org.aqa.run.ProcedureStatus
@@ -41,7 +41,6 @@ object GapSkewHtml {
 
 class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq: Seq[LeafSet], procedureStatus: ProcedureStatus.Value) {
 
-  Trace.trace(procedureStatus)
   private def beamNameOf(leafSet: LeafSet): String = Phase2Util.getBeamNameOfRtimage(runReq.rtplan, leafSet.attributeList).get
 
   private def rtplanName = DicomHtml(extendedData).makeDicomContent(runReq.rtplan, "RTPLAN")
@@ -53,15 +52,32 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
 
   private def generalReference(): Elem = {
 
-    val planReference = <a href={rtplanName}>View RTPLAN</a>
+    val status = {
+      def toElem(title: String, text: String, color: String): Elem = {
+        <div class="col-md-2" style={s"background-color:$color;"} title={
+          title +
+            WebUtil.titleNewline + "Warning limit: " + Config.GapSkewAngleWarn_deg + " degrees.   Fail limit: " + Config.GapSkewAngleFail_deg + " degrees."
+        }><center style={s"border-bottom:solid $color 10px;"}><h3> {text} </h3></center></div>
+      }
 
-    val patientId = <span>Patient ID <span aqaalias="">{Util.patientIdOfAl(leafSetSeq.head.attributeList)}</span> </span>
+      val s = procedureStatus match {
+        case ProcedureStatus.fail =>
+          toElem("At least one of the angles was off by more than the fail limit.", "Failed", GapSkewUtil.colorFail)
+        case ProcedureStatus.warning =>
+          toElem("At least one of the angles was off by more than the warning limit.", "Warning", GapSkewUtil.colorWarn)
+        case _ =>
+          toElem("All angles were less than the warning limit.", "Passed", GapSkewUtil.colorPass)
+      }
+      s
+    }
 
-    val patientName = <span>Patient Name <span aqaalias="">{leafSetSeq.head.attributeList.get(TagByName.PatientName).getSingleStringValueOrEmptyString()}</span> </span>
+    val planReference = <div class="col-md-2"><center><br/><a href={rtplanName}>View RTPLAN</a></center></div>
 
-    val sp = (0 to 6) map (_ => WebUtil.nbsp)
+    val patientId = <div class="col-md-2"><center>Patient ID <br/><b aqaalias="">{Util.patientIdOfAl(leafSetSeq.head.attributeList)}</b></center></div>
 
-    val ref = <span> {planReference} {sp} {patientId} {sp} {patientName} </span>
+    val patientName = <div class="col-md-2"><center>Patient Name <br/><b aqaalias="">{leafSetSeq.head.attributeList.get(TagByName.PatientName).getSingleStringValueOrEmptyString()}</b> </center></div>
+
+    val ref = <div class="row" style="margin-top:20px;">{status} {planReference} {patientId} {patientName} </div>
 
     ref
   }

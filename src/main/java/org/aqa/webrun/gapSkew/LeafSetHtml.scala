@@ -16,7 +16,7 @@
 
 package org.aqa.webrun.gapSkew
 
-import edu.umro.ScalaUtil.Trace
+import org.aqa.Config
 import org.aqa.Util
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
@@ -35,6 +35,16 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
       <td title={d.toString}>{fmt2(d)}</td>
     }
 
+    def tdAngle(angle: Double): Elem = {
+      val title = {
+        angle.toString + "   Warning limit: " + Config.GapSkewAngleWarn_deg + "  Fail limit: " + Config.GapSkewAngleFail_deg
+      }
+
+      val style = s"background-color:${beamColor(angle)};"
+
+      <td title={title} style={style}>{fmt2(angle)}</td>
+    }
+
     val skewTable = {
       // @formatter:off
       <table class="table table-bordered">
@@ -50,7 +60,7 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
 
           <tr>
             <td style="white-space: nowrap;">Top ({leafSet.gapSkew.topEdgeType})</td>
-            {td(leafSet.gapSkew.topAngle_deg)}
+            {tdAngle(leafSet.gapSkew.topAngle_deg)}
             {td(leafSet.topLeft.yPosition_mm - leafSet.topRight.yPosition_mm)}
             {td(leafSet.topLeft.yPosition_mm)}
             {td(leafSet.topRight.yPosition_mm)}
@@ -59,7 +69,7 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
 
           <tr>
             <td style="white-space: nowrap;">Bottom ({leafSet.gapSkew.topEdgeType})</td>
-            {td(leafSet.gapSkew.bottomAngle_deg)}
+            {tdAngle(leafSet.gapSkew.bottomAngle_deg)}
             {td(leafSet.bottomLeft.yPosition_mm - leafSet.bottomRight.yPosition_mm)}
             {td(leafSet.bottomLeft.yPosition_mm)}
             {td(leafSet.bottomRight.yPosition_mm)}
@@ -117,18 +127,24 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
 
     def content = {
 
-      Trace.trace("Angles.  top: " + leafSet.gapSkew.topAngle_deg + "    bottom: " + leafSet.gapSkew.bottomAngle_deg + "    avg: " + leafSet.gapSkew.averageAngle_deg)
+      val beamText = leafSet.beamName + " " + WebUtil.nbsp + " " + WebUtil.nbsp + " " + WebUtil.nbsp + " Rotation: " + fmt2(leafSet.gapSkew.largestAngleError_deg) + " deg"
+
+      val beamTitle = { "Largest rotational error of top and bottom (0 is ideal) in degrees." + WebUtil.titleNewline + leafSet.gapSkew.largestAngleError_deg.formatted("%20.8f").trim }
+
+      val color = beamColor(leafSet.gapSkew.largestAngleError_deg)
 
       <div class="row">
         <hr/>
         <div class="col-md-6">
           <center>
-            <h3 style="margin:20px;" title={"Average rotational error of top and bottom (0 is ideal)." + WebUtil.titleNewline + leafSet.gapSkew.averageAngle_deg.formatted("%20.8f").trim}>
-              {leafSet.beamName + " " + WebUtil.nbsp + " " + WebUtil.nbsp + " " + WebUtil.nbsp + " Rotation: " + fmt2(leafSet.gapSkew.averageAngle_deg) + " deg"}
-            </h3>
-            {offsetTable}
-            <p></p>
+            <div style={s"margin:5px;background-color:$color; border:solid $color 1px;"} title={beamTitle}>
+              <h3>
+                {beamText}
+              </h3>
+            </div>
             {skewTable}
+            <p></p>
+            {offsetTable}
           </center>
         </div>
         <div class="col-md-6">

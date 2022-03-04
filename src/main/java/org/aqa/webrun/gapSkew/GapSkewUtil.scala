@@ -1,5 +1,7 @@
 package org.aqa.webrun.gapSkew
 
+import org.aqa.Config
+
 object GapSkewUtil {
 
   /**
@@ -18,6 +20,19 @@ object GapSkewUtil {
         2
     }
     val text = d.formatted("%30." + lastSig + "f").trim
+    text
+  }
+
+  val colorFail = "#E00034"
+  val colorWarn = "yellow"
+  val colorPass = "#1DC32B"
+
+  def beamColor(angle: Double): String = {
+    val text = 0 match {
+      case _ if angle.abs > Config.GapSkewAngleFail_deg => colorFail
+      case _ if angle.abs > Config.GapSkewAngleWarn_deg => colorWarn
+      case _                                            => colorPass
+    }
     text
   }
 

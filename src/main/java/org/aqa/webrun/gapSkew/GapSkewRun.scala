@@ -129,8 +129,17 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
 
     // fleResultList.map(r => r.gapSkew.insert) // TODO : un-comment this when the table has been added to the database
 
-    new GapSkewHtml(extendedData, runReq, fleResultList, ProcedureStatus.done).makeDisplay()
-    ProcedureStatus.done // TODO get status from fleList
+    val status = {
+      val largest = fleResultList.map(r => r.gapSkew.largestAngleError_deg.abs).max
+      0 match {
+        case _ if largest > Config.GapSkewAngleFail_deg => ProcedureStatus.fail
+        case _ if largest > Config.GapSkewAngleWarn_deg => ProcedureStatus.warning
+        case _                                          => ProcedureStatus.pass
+      }
+    }
+
+    new GapSkewHtml(extendedData, runReq, fleResultList, status).makeDisplay()
+    status
   }
 
   /**

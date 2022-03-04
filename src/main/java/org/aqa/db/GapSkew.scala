@@ -37,13 +37,13 @@ case class GapSkew(
     topRightX_mm: Double, // X isoplane coordinate center of top right measurement
     topRightY_mm: Double, // Y isoplane coordinate of top right center measurement
     topPlannedY_mm: Double, // planned Y for top
-    topEdgeType: String, // true if top is a jaw edge, false if it is an MLC edge
+    topEdgeType: String, // name of top jaw type, e.g. "Jaw", "MLC"
     bottomLeftX_mm: Double, // X isoplane coordinate center of bottom left measurement
     bottomLeftY_mm: Double, // Y isoplane coordinate of bottom left center measurement
     bottomRightX_mm: Double, // X isoplane coordinate center of bottom right measurement
     bottomRightY_mm: Double, // Y isoplane coordinate of bottom right center measurement
-    bottomPlannedY_mm: Double, // planned Y for bottomtop
-    bottomEdgeType: String // true if bottom top is a jaw edge, false if it is an MLC edge
+    bottomPlannedY_mm: Double, // planned Y for bottom
+    bottomEdgeType: String // name of bottom jaw type, e.g. "Jaw", "MLC"
 ) {
 
   def insert: GapSkew = {
@@ -55,8 +55,8 @@ case class GapSkew(
 
   def insertOrUpdate(): Int = Db.run(GapSkew.query.insertOrUpdate(this))
 
-  val topDeltaY = topRightY_mm - topLeftY_mm
-  val bottomDeltaY = bottomRightY_mm - bottomLeftY_mm
+  val topDeltaY: Double = topRightY_mm - topLeftY_mm
+  val bottomDeltaY: Double = bottomRightY_mm - bottomLeftY_mm
 
   val topAngle_deg: Double = {
     val topDeltaX = topLeftX_mm - topRightX_mm
@@ -68,7 +68,10 @@ case class GapSkew(
     Math.toDegrees(Math.atan(bottomDeltaY / bottomDeltaX))
   }
 
-  val averageAngle_deg = (topAngle_deg + bottomAngle_deg) / 2
+  /**
+   * Of the top and bottom angles, the worst of the two.
+   */
+  val largestAngleError_deg: Double = if (topAngle_deg.abs > bottomAngle_deg.abs) topAngle_deg else bottomAngle_deg
 }
 
 object GapSkew extends ProcedureOutput with Logging {
