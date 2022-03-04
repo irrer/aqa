@@ -916,8 +916,8 @@ object Config extends Logging {
   val BBbyCBCTMaximumSliceThickness_mm: Double = logMainText("BBbyCBCTMaximumSliceThickness_mm", "1.0").toDouble.abs
 
   val GapSkewBeamNameList: List[String] = getGapSkewBeamNameList
-  val GapSkewLeafSidePad_mm: Double = logMainText("GapSkewLeafSidePad_mm", "1.0").toDouble.abs
-  val GapSkewLeafSideFinding_mm: Double = logMainText("GapSkewLeafSideFinding_mm", "5.0").toDouble.abs
+  // val GapSkewLeafSidePad_mm: Double = logMainText("GapSkewLeafSidePad_mm", "1.0").toDouble.abs
+  // val GapSkewLeafSideFinding_mm: Double = logMainText("GapSkewLeafSideFinding_mm", "5.0").toDouble.abs
   val GapSkewLeafEndPenumbra_mm: Double = logMainText("GapSkewLeafEndPenumbra_mm", "20.0").toDouble.abs
 
   val SimpleRtplanTemplateDir: Option[File] = getSimpleRtplanTemplateDir

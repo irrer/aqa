@@ -713,10 +713,10 @@ Note that when building a package for release, the Maven build process uses the 
     </GapSkewBeamNameList>
 
     <!-- For Gap Skew, distance in mm next to leaf sides that should be ignored to diminish the effects of leaf leakage. -->
-    <GapSkewLeafSidePad_mm>1.0</GapSkewLeafSidePad_mm>
+    <!-- <GapSkewLeafSidePad_mm>1.0</GapSkewLeafSidePad_mm> -->
 
-    <!-- For Gap Skew, size in mm of the bounding box that encompasses the leaf ends to emphasize the leaf sides. -->
-    <GapSkewLeafSideFinding_mm>5.0</GapSkewLeafSideFinding_mm>
+    <!-- For Gap Skew, size in mm of the bounding box that encompasses the leaf sides. -->
+    <!-- <GapSkewLeafSideFinding_mm>5.0</GapSkewLeafSideFinding_mm> -->
 
     <!-- For Gap Skew, size in mm to define a bounding box around the end of the leaf to determine the location of the end. -->
     <GapSkewLeafEndPenumbra_mm>20.0</GapSkewLeafEndPenumbra_mm>

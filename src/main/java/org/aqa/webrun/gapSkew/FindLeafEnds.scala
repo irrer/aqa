@@ -79,9 +79,9 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
     else {
       val leafWidth_mm = (leafSidesFromPlanAsPix.head - leafSidesFromPlanAsPix(1)).abs
       val leafWidth_pix = translator.iso2PixDistX(leafWidth_mm) // outer leaf width in pixels
-      val leafSideFinding_pix = translator.iso2PixDistY(Config.GapSkewLeafSideFinding_mm)
+      val leafEndFinding_pix = translator.iso2PixDistY(Config.GapSkewLeafEndPenumbra_mm)
 
-      val height = leafSideFinding_pix
+      val height = leafEndFinding_pix
       val width = leafWidth_pix * 2
       val halfLeaf_pix = leafWidth_pix / 2
 
