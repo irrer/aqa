@@ -141,7 +141,7 @@ case class GapSkewAnnotateImage(
 
   def annotate: BufferedImage = {
     val bufferedImage: BufferedImage = dicomImage.toDeepColorBufferedImage(minPixel, maxPixel)
-    // Util.addGraticulesNegY(bufferedImage, translator, Color.yellow)
+    Util.addGraticulesNegY(bufferedImage, translator, Color.yellow)
 
     addLeaf(bufferedImage, topLeft, isTop = true)
     addLeaf(bufferedImage, topRight, isTop = true)
