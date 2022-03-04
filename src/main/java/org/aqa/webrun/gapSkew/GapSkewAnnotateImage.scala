@@ -30,6 +30,8 @@ import java.awt.image.BufferedImage
 case class GapSkewAnnotateImage(
     dicomImage: DicomImage,
     translator: IsoImagePlaneTranslator,
+    minPixel: Float,
+    maxPixel: Float,
     topLeft: Leaf,
     topRight: Leaf,
     bottomLeft: Leaf,
@@ -138,7 +140,7 @@ case class GapSkewAnnotateImage(
     */
 
   def annotate: BufferedImage = {
-    val bufferedImage: BufferedImage = dicomImage.toDeepColorBufferedImage(percentToDrop = 0.1)
+    val bufferedImage: BufferedImage = dicomImage.toDeepColorBufferedImage(minPixel, maxPixel)
     // Util.addGraticulesNegY(bufferedImage, translator, Color.yellow)
 
     addLeaf(bufferedImage, topLeft, isTop = true)

@@ -23,7 +23,6 @@ import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ImageUtil.LocateEdge
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Config
-import org.aqa.DicomFile
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.GapSkew
@@ -31,9 +30,8 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 
 import java.awt.Rectangle
-import java.io.File
 
-case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, rtplan: AttributeList) extends Logging {
+case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minPixel: Float, maxPixel: Float, rtplan: AttributeList) extends Logging {
 
   /** True if collimator is horizontal. */
   private val isHorizontal: Boolean = Phase2Util.isHorizontal(rtimage)
@@ -110,7 +108,7 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, rtpl
       val bottomLeft = endOfLeaf_iso(bottomLeftRect)
       val bottomRight = endOfLeaf_iso(bottomRightRect)
 
-      val bufferedImage = GapSkewAnnotateImage(dicomImage, translator, topLeft, topRight, bottomLeft, bottomRight).annotate
+      val bufferedImage = GapSkewAnnotateImage(dicomImage, translator, minPixel, maxPixel, topLeft, topRight, bottomLeft, bottomRight).annotate
 
       val gapSkew = GapSkew(
         gapSkewPK = None,
@@ -149,13 +147,4 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, rtpl
       logger.info("MLC leaf end positions: " + set)
       set
     }
-}
-
-object FindLeafEnds {
-  def main(args: Array[String]): Unit = {
-    val image = new DicomFile(new File("""D:\tmp\aqa\GapSkew\dicom\Study_1\RTIMAGE_01\RTIMAGE_003_2020-03-23T19-12-25.000.dcm""")).attributeList.get
-    val rtplan = new DicomFile(new File("""D:\tmp\aqa\GapSkew\dicom\GapSkewRtPlans\RP.1.2.246.352.71.5.824327626427.245627.20140602132138.dcm""")).attributeList.get
-
-    new FindLeafEnds(???, image, rtplan)
-  }
 }

@@ -18,6 +18,7 @@ package org.aqa.webrun.gapSkew
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
+import edu.umro.ImageUtil.DicomImage
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Config
 import org.aqa.Util
@@ -39,6 +40,7 @@ import org.restlet.Request
 import org.restlet.Response
 
 import java.sql.Timestamp
+import scala.annotation.tailrec
 import scala.xml.Elem
 
 class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[GapSkewRunReq] {
@@ -90,14 +92,44 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
     }
   }
 
+  /**
+    * Get rid of outlier pixels by dropping those with the largest and smallest values.  This shrinks the color levels to a more appropriate range.
+    * @param dicomImageList List of all DICOM images.
+    * @return (min,max) values to be used as the color map range.  Pixels outside that range will be colored as either the min or max.
+    */
+  private def getMinMaxTrimmed(dicomImageList: Seq[DicomImage]): (Float, Float) = {
+    val histogram = DicomImage.histogramSum(dicomImageList.map(di => di.histogram))
+    val pixelCountToDrop = dicomImageList.size * 10 // 10 per image off each of the high and low ends
+    @tailrec
+    def dropPixels(dropped: Int, h: Seq[DicomImage.HistPoint], hi: Boolean): Seq[DicomImage.HistPoint] = {
+      if (dropped >= pixelCountToDrop)
+        h
+      else {
+        if (hi) {
+          dropPixels(dropped + h.last.count, h.dropRight(1), hi)
+        } else
+          dropPixels(dropped + h.head.count, h.tail, hi)
+      }
+    }
+
+    val trimmedHistogramHi = dropPixels(0, histogram, hi = true)
+    val trimmedHistogramLo = dropPixels(0, trimmedHistogramHi, hi = false)
+
+    val min = trimmedHistogramLo.head.value
+    val max = trimmedHistogramLo.last.value
+    (min, max)
+  }
+
   /** Run the actual analysis.  This must create a display.html file in the output directory. */
   override def run(extendedData: ExtendedData, runReq: GapSkewRunReq, response: Response): ProcedureStatus.Value = {
     val fleList = runReq.rtimageMap.keys.toSeq.filter(beam => Config.GapSkewBeamNameList.contains(beam)).sorted.map(runReq.rtimageMap)
-    val fleResultList = fleList.map(rtImg => new FindLeafEnds(extendedData, rtImg, runReq.rtplan).leafSet)
+    val dicomImageList = fleList.map(fle => new DicomImage(fle))
+    val minMax = getMinMaxTrimmed(dicomImageList)
+    val fleResultList = fleList.map(rtImg => FindLeafEnds(extendedData, rtImg, minMax._1, minMax._2, runReq.rtplan).leafSet)
 
     // fleResultList.map(r => r.gapSkew.insert) // TODO : un-comment this when the table has been added to the database
 
-    new GapSkewHtml(extendedData, runReq, fleResultList, ProcedureStatus.done).makeDisplay
+    new GapSkewHtml(extendedData, runReq, fleResultList, ProcedureStatus.done).makeDisplay()
     ProcedureStatus.done // TODO get status from fleList
   }
 
