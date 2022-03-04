@@ -698,6 +698,8 @@ Note that when building a package for release, the Maven build process uses the 
     <EPIDZoomSize_mm>60.0</EPIDZoomSize_mm>
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <!-- For Gap Skew, size in mm to define a bounding box around the end of the leaf to determine the location of the end. -->
+    <GapSkewLeafEndPenumbra_mm>20.0</GapSkewLeafEndPenumbra_mm>
 
     <!-- List of names of beams to be evaluated for Gap Skew. -->
     <GapSkewBeamNameList>

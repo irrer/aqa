@@ -57,7 +57,7 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
         <div class="col-md-2" style={s"background-color:$color;"} title={
           title +
             WebUtil.titleNewline + "Warning limit: " + Config.GapSkewAngleWarn_deg + " degrees.   Fail limit: " + Config.GapSkewAngleFail_deg + " degrees."
-        }><center style={s"border-bottom:solid $color 10px;"}><h3> {text} </h3></center></div>
+        }><center style={s"border-bottom:solid $color 10px;"}><h2> {text} </h2></center></div>
       }
 
       val s = procedureStatus match {
