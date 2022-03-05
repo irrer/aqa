@@ -125,6 +125,11 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
 
     def htmlName = DicomHtml(extendedData).makeDicomContent(runReq.rtimageMap(leafSet.beamName), leafSet.beamName, Some(GapSkewHtml.imageFileOf(leafSet, extendedData.output.dir).getName))
 
+    def historyCharts(): Elem = {
+      // TODO Insert angle and offset charts here
+      <div>Insert angle and offset charts here</div>
+    }
+
     def content = {
 
       val beamText = leafSet.beamName + " " + WebUtil.nbsp + " " + WebUtil.nbsp + " " + WebUtil.nbsp + " Rotation: " + fmt2(leafSet.gapSkew.largestAngleError_deg) + " deg"
@@ -133,32 +138,49 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
 
       val color = beamColor(leafSet.gapSkew.largestAngleError_deg)
 
-      <div class="row">
-        <hr/>
-        <div class="col-md-6">
-          <center>
-            <div style={s"margin:5px;background-color:$color; border:solid $color 1px;"} title={beamTitle}>
-              <h3>
-                {beamText}
-              </h3>
+      val tables = {
+        <center>
+          <div style={s"margin:5px;background-color:$color; border:solid $color 1px;"} title={beamTitle}>
+            <h3>
+              {beamText}
+            </h3>
+          </div>
+          {skewTable}
+          <p></p>
+          {offsetTable}
+        </center>
+      }
+
+      val image = {
+        <center>
+          <a href={htmlName} style="margin:8px;">
+            Click to view larger image and metadata
+            <img class="img-responsive fit-image" src={pngFile.getName}/>
+          </a>
+        </center>
+      }
+
+      val container = {
+        <div>
+          <div class="row">
+            <hr/>
+            <div class="col-md-6">
+              {tables}
             </div>
-            {skewTable}
-            <p></p>
-            {offsetTable}
-          </center>
+            <div class="col-md-6">
+              {image}
+            </div>
+          </div>
+          <div class="row">
+            {historyCharts}
+          </div>
         </div>
-        <div class="col-md-6">
-          <center>
-            <a href={htmlName} style="margin:8px;">
-              Click to view larger image and metadata
-              <img class="img-responsive fit-image" src={pngFile.getName}/>
-            </a>
-          </center>
-        </div>
-      </div>
+      }
+
+      container
     }
 
     content
-  }
 
+  }
 }
