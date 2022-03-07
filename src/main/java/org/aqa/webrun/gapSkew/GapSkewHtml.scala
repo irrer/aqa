@@ -53,11 +53,13 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
   private def generalReference(): Elem = {
 
     val status = {
+      val titleSuffix = WebUtil.titleNewline + "Warning limit: " + Config.GapSkewAngleWarn_deg + " degrees.   Fail limit: " + Config.GapSkewAngleFail_deg + " degrees."
       def toElem(title: String, text: String, color: String): Elem = {
-        <div class="col-md-2" style={s"background-color:$color;"} title={
-          title +
-            WebUtil.titleNewline + "Warning limit: " + Config.GapSkewAngleWarn_deg + " degrees.   Fail limit: " + Config.GapSkewAngleFail_deg + " degrees."
-        }><center style={s"border-bottom:solid $color 10px;"}><h2> {text} </h2></center></div>
+        <div class="col-md-2">
+          <center>
+            <h2 style={s"background-color:$color; border:solid $color 1px; border-radius: 18px; padding: 12px;"} title={title + titleSuffix}> {text} </h2>
+          </center>
+        </div>
       }
 
       val s = procedureStatus match {

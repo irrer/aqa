@@ -140,11 +140,7 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
 
       val tables = {
         <center>
-          <div style={s"margin:5px;background-color:$color; border:solid $color 1px;"} title={beamTitle}>
-            <h3>
-              {beamText}
-            </h3>
-          </div>
+            <h3 style={s"margin:8px; background-color:$color; border:solid $color 1px; border-radius: 18px; padding: 12px;"} title={beamTitle}> {beamText} </h3>
           {skewTable}
           <p></p>
           {offsetTable}
