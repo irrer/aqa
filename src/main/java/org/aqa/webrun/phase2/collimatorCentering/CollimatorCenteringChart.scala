@@ -23,6 +23,7 @@ import org.aqa.db.Output
 import org.aqa.web.C3Chart
 import org.aqa.web.C3ChartHistory
 
+import java.awt.Color
 import java.sql.Timestamp
 import java.util.Date
 
@@ -46,6 +47,8 @@ class CollimatorCenteringChart(outputPK: Long) extends Logging {
 
   private val index: Int = history.indexWhere(h => h.output.outputPK.get == output.outputPK.get)
 
+  private val yColorList = Seq(0xff0000, 0x00ff00, 0x00ffff, 0x0000ff, 0xffff00, 0x000000, 0xff00ff, 0xffc800, 0xffff00, 0xff00ff, 0x808080).map(i => new Color(i))
+
   private def makeChart(id: String, yAxisLabels: Seq[String], yValues: Seq[Seq[Double]]): C3ChartHistory = {
     new C3ChartHistory(
       chartIdOpt = Some(id),
@@ -62,7 +65,7 @@ class CollimatorCenteringChart(outputPK: Long) extends Logging {
       yValues = yValues,
       yIndex = index,
       yFormat = ".5g",
-      yColorList = Seq()
+      yColorList = yColorList
     )
   }
 
