@@ -18,6 +18,7 @@ package org.aqa.webrun.gapSkew
 
 import org.aqa.Config
 import org.aqa.Util
+import org.aqa.web.C3Chart
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.gapSkew.GapSkewUtil._
@@ -25,6 +26,8 @@ import org.aqa.webrun.gapSkew.GapSkewUtil._
 import scala.xml.Elem
 
 case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: GapSkewRunReq) {
+
+  val charts = new GapSkewHistoryChart(extendedData, leafSet)
 
   def leafSetToHtml: Elem = {
 
@@ -90,30 +93,30 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
               Position (mm)
             </th>
             <th>
-              Top - Bottom - <br/> Planned (mm)
+              Planned - Measured (mm)
             </th>
             <th>
-              Top (mm)
+              Left (mm)
             </th>
             <th>
-              Bottom (mm)
+              Right (mm)
             </th>
           </tr>
 
           <tr>
             <td>
-              Left
+              Top
             </td>
-            {td(leafSet.topLeft.yPosition_mm - leafSet.bottomLeft.yPosition_mm - (leafSet.leafPositionRtplanTop_mm - leafSet.leafPositionRtplanBottom_mm))}
+            {td((leafSet.leafPositionRtplanTop_mm - leafSet.leafPositionRtplanBottom_mm) - (leafSet.topLeft.yPosition_mm - leafSet.bottomLeft.yPosition_mm) )}
             {td(leafSet.topLeft.yPosition_mm)}
             {td(leafSet.topRight.yPosition_mm)}
           </tr>
 
           <tr>
             <td>
-              Right
+              Bottom
             </td>
-            {td(leafSet.bottomRight.yPosition_mm - leafSet.topRight.yPosition_mm + (leafSet.leafPositionRtplanTop_mm - leafSet.leafPositionRtplanBottom_mm))}
+            {td((leafSet.leafPositionRtplanTop_mm - leafSet.leafPositionRtplanBottom_mm) - (leafSet.topLeft.yPosition_mm - leafSet.bottomLeft.yPosition_mm) )}
             {td(leafSet.bottomLeft.yPosition_mm)}
             {td(leafSet.bottomRight.yPosition_mm)}
           </tr>
@@ -126,8 +129,16 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
     def htmlName = DicomHtml(extendedData).makeDicomContent(runReq.rtimageMap(leafSet.beamName), leafSet.beamName, Some(GapSkewHtml.imageFileOf(leafSet, extendedData.output.dir).getName))
 
     def historyCharts(): Elem = {
-      // TODO Insert angle and offset charts here
-      <div>Insert angle and offset charts here</div>
+      <div>
+        <div class="row">
+          <h4>Angles</h4>
+          {C3Chart.html(charts.angleChartIdTag)}
+        </div>
+        <div class="row">
+          <h4>Offsets</h4>
+          {C3Chart.html(charts.offsetChartIdTag)}
+        </div>
+      </div>
     }
 
     def content = {
@@ -168,7 +179,7 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
             </div>
           </div>
           <div class="row">
-            {historyCharts}
+            {historyCharts()}
           </div>
         </div>
       }

@@ -715,10 +715,10 @@ Note that when building a package for release, the Maven build process uses the 
     </GapSkewBeamNameList>
 
     <!-- For Gap Skew, if angle is greater than this then the user should be warned. -->
-    <GapSkewAngleWarn_deg>0.06</GapSkewAngleWarn_deg>
+    <GapSkewAngleWarn_deg>0.1</GapSkewAngleWarn_deg>
 
     <!-- For Gap Skew, if angle is greater than this then it is considered to have failed. -->
-    <GapSkewAngleFail_deg>0.08</GapSkewAngleFail_deg>
+    <GapSkewAngleFail_deg>0.2</GapSkewAngleFail_deg>
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 

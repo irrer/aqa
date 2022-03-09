@@ -69,8 +69,8 @@ case class GapSkew(
   }
 
   /**
-   * Of the top and bottom angles, the worst of the two.
-   */
+    * Of the top and bottom angles, the worst of the two.
+    */
   val largestAngleError_deg: Double = if (topAngle_deg.abs > bottomAngle_deg.abs) topAngle_deg else bottomAngle_deg
 }
 
@@ -182,4 +182,33 @@ object GapSkew extends ProcedureOutput with Logging {
     val ops = list.map { loc => GapSkew.query.insertOrUpdate(loc) }
     Db.perform(ops)
   }
+
+  case class GapSkewHistory(output: Output, gapSkew: GapSkew) {}
+
+  /**
+    * Get the GapSkew results.
+    *
+    * @param machinePK : For this machine
+    * @param beamName  : For this beam
+    * @return Complete history with baselines sorted by date.
+    *
+    */
+  def history(machinePK: Long, beamName: String): Seq[GapSkewHistory] = {
+
+    val search = for {
+      output <- Output.query.filter(o => o.machinePK === machinePK)
+      gapSkew <- GapSkew.query.filter(c => c.outputPK === output.outputPK && c.beamName === beamName)
+    } yield {
+      (output, gapSkew)
+    }
+
+    // Fetch entire history from the database.  Also sort by dataDate.  This sorting also has the
+    // side effect of ensuring that the dataDate is defined.  If it is not defined, this will
+    // throw an exception.
+    val sr = search.result
+    val tsList = Db.run(sr).map(os => GapSkewHistory(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
+
+    tsList
+  }
+
 }

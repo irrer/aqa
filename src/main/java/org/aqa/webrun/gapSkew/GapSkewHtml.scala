@@ -84,18 +84,21 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
     ref
   }
 
+  val leafSetHtmlList: Seq[LeafSetHtml] = leafSetSeq.sortBy(beamNameOf).map(leafSet => LeafSetHtml(extendedData, leafSet, runReq))
+
   private def content: Elem = {
     <div class="row">
         <div class="col-md-8 col-md-offset-2">
-        {generalReference()}
-          {leafSetSeq.sortBy(beamNameOf).map(leafSet => LeafSetHtml(extendedData, leafSet, runReq).leafSetToHtml)}
+          {generalReference()}
+          {leafSetHtmlList.map(_.leafSetToHtml)}
         </div>
       </div>
   }
 
   def makeDisplay(): Unit = {
     val contentWithHeader = ExtendedData.wrapExtendedData(extendedData, content)
-    val text = WebUtil.wrapBody(contentWithHeader, "Leaf Gap and Skew", refresh = None, c3 = true)
+    val js = s"""<script>${leafSetHtmlList.map(_.charts.js).mkString("\n")}</script>"""
+    val text = WebUtil.wrapBody(contentWithHeader, "Leaf Gap and Skew", refresh = None, c3 = true, runScript = Some(js))
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeBinaryFile(file, text.getBytes)
     if (true) {

@@ -89,11 +89,12 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
       val xRight_pix = dicomImage.width - halfLeaf_pix - 2 * leafWidth_pix
 
       val collimatorAngle = Util.angleRoundedTo90(DicomUtil.findAllSingle(rtimage, TagByName.BeamLimitingDeviceAngle).head.getDoubleValues.head)
-      val yTop = if (collimatorAngle == 90) edgesFromPlan.X2 else edgesFromPlan.X1
-      val yBottom = if (collimatorAngle == 90) edgesFromPlan.X1 else edgesFromPlan.X2
+      val col90 = collimatorAngle == 90
+      val yTop = if (col90) edgesFromPlan.X2 else edgesFromPlan.X1
+      val yBottom = if (col90) edgesFromPlan.X1 else edgesFromPlan.X2
 
-      val yTop_pix = translator.iso2PixCoordY(-yTop.limit_mm) - height / 2
-      val yBottom_pix = translator.iso2PixCoordY(-yBottom.limit_mm) - height / 2
+      val yTop_pix = translator.iso2PixCoordY(if (col90) -yTop.limit_mm else yTop.limit_mm) - height / 2
+      val yBottom_pix = translator.iso2PixCoordY(if (col90) -yBottom.limit_mm else yBottom.limit_mm) - height / 2
 
       val topLeftRect = Util.rectD(xLeft_pix, yTop_pix, width, height)
       val topRightRect = Util.rectD(xRight_pix, yTop_pix, width, height)
@@ -108,7 +109,7 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
       val bottomLeft = endOfLeaf_iso(bottomLeftRect)
       val bottomRight = endOfLeaf_iso(bottomRightRect)
 
-      val bufferedImage = GapSkewAnnotateImage(dicomImage, translator, minPixel, maxPixel, topLeft, topRight, bottomLeft, bottomRight).annotate
+      val bufferedImage = GapSkewAnnotateImage(dicomImage, collimatorAngle, translator, minPixel, maxPixel, topLeft, topRight, bottomLeft, bottomRight).annotate
 
       val gapSkew = GapSkew(
         gapSkewPK = None,

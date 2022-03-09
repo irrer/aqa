@@ -29,6 +29,7 @@ import java.awt.image.BufferedImage
 
 case class GapSkewAnnotateImage(
     dicomImage: DicomImage,
+    collimatorAngle: Int,
     translator: IsoImagePlaneTranslator,
     minPixel: Float,
     maxPixel: Float,
@@ -136,7 +137,7 @@ case class GapSkewAnnotateImage(
   }
 
   /**
-  Create annotated image.
+    * Create annotated image.
     */
 
   def annotate: BufferedImage = {
