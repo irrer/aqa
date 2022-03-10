@@ -54,7 +54,7 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
         <thead>
           <tr>
             <th> Position (mm) </th>
-            <th> Rotation (deg) </th>
+            <th> Skew (deg) </th>
             <th> Left - Right (mm) </th>
             <th> Left (mm) </th>
             <th> Right (mm) </th>
@@ -143,9 +143,9 @@ case class LeafSetHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: Gap
 
     def content = {
 
-      val beamText = leafSet.beamName + " " + WebUtil.nbsp + " " + WebUtil.nbsp + " " + WebUtil.nbsp + " Rotation: " + fmt2(leafSet.gapSkew.largestAngleError_deg) + " deg"
+      val beamText = leafSet.beamName + " " + WebUtil.nbsp + " " + WebUtil.nbsp + " " + WebUtil.nbsp + " Max Skew: " + fmt2(leafSet.gapSkew.largestAngleError_deg) + " deg"
 
-      val beamTitle = { "Largest rotational error of top and bottom (0 is ideal) in degrees." + WebUtil.titleNewline + leafSet.gapSkew.largestAngleError_deg.formatted("%20.8f").trim }
+      val beamTitle = { "Largest skew (rotational) error of top and bottom (0 is ideal) in degrees." + WebUtil.titleNewline + leafSet.gapSkew.largestAngleError_deg.formatted("%20.8f").trim }
 
       val color = beamColor(leafSet.gapSkew.largestAngleError_deg)
 
