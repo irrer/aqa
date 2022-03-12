@@ -11,23 +11,27 @@ object GapSkewUtil {
     * @return Formatted number.
     */
   def fmt2(d: Double): String = {
-    val mantissa = d.formatted("%30.20f").trim.replaceAll(""".*\.""", "")
-    val firstSig = mantissa.indices.find(i => mantissa(i) != '0')
-    val lastSig = {
-      if (firstSig.isDefined)
-        firstSig.get + 2
-      else
-        2
+    if (d.abs > 1)
+      d.formatted("%30.2f").trim
+    else {
+      val mantissa = d.formatted("%30.20f").trim.replaceAll(""".*\.""", "")
+      val firstSig = mantissa.indices.find(i => mantissa(i) != '0')
+      val lastSig = {
+        if (firstSig.isDefined)
+          firstSig.get + 2
+        else
+          2
+      }
+      val text = d.formatted("%30." + lastSig + "f").trim
+      text
     }
-    val text = d.formatted("%30." + lastSig + "f").trim
-    text
   }
 
   val colorFail = "#E00034"
   val colorWarn = "yellow"
   val colorPass = "#1DC32B"
 
-  def beamColor(angle: Double): String = {
+  def statusColor(angle: Double): String = {
     val text = 0 match {
       case _ if angle.abs > Config.GapSkewAngleFail_deg => colorFail
       case _ if angle.abs > Config.GapSkewAngleWarn_deg => colorWarn

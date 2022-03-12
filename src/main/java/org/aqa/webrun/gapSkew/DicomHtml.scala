@@ -24,11 +24,12 @@ import org.aqa.webrun.ExtendedData
 
 import java.io.File
 
-case class DicomHtml(extendedData: ExtendedData) {
+case class DicomHtml(extendedData: ExtendedData, title: String) {
 
-  def makeDicomContent(al: dicom.AttributeList, title: String, imageFileName: Option[String] = None): String = {
-    val baseFileName = title.replaceAll("[^a-zA-Z0-9_]", "_")
-    val htmlFileName = "DICOM_" + baseFileName + ".html"
+  private val baseFileName = title.replaceAll("[^a-zA-Z0-9_]", "_")
+  val htmlUrl: String = "DICOM_" + baseFileName + ".html"
+
+  def makeDicomContent(al: dicom.AttributeList, imageFileName: Option[String] = None): Unit = {
     val dicomFileName = "DICOM_" + baseFileName + ".dcm"
 
     val imageRef = {
@@ -55,8 +56,6 @@ case class DicomHtml(extendedData: ExtendedData) {
     }
 
     val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), title)
-    Util.writeFile(fileOf(htmlFileName), text)
-
-    htmlFileName
+    Util.writeFile(fileOf(htmlUrl), text)
   }
 }

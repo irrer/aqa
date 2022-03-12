@@ -17,6 +17,7 @@
 package org.aqa.db
 
 import org.aqa.Logging
+import org.aqa.Util
 import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
 
@@ -32,6 +33,7 @@ case class GapSkew(
     rtimageSeriesInstanceUID: String, // SOP series instance UID of EPID image
     rtimageUID: String, // SOP series instance UID of EPID image
     beamName: String, // name of beam
+    collimatorAngle_deg: Double, // Angle of collimator in degrees.  This is from the RTIMAGE and is not rounded.
     topLeftX_mm: Double, // X isoplane coordinate center of top left measurement
     topLeftY_mm: Double, // Y isoplane coordinate of top left center measurement
     topRightX_mm: Double, // X isoplane coordinate center of top right measurement
@@ -55,22 +57,56 @@ case class GapSkew(
 
   def insertOrUpdate(): Int = Db.run(GapSkew.query.insertOrUpdate(this))
 
-  val topDeltaY: Double = topRightY_mm - topLeftY_mm
-  val bottomDeltaY: Double = bottomRightY_mm - bottomLeftY_mm
+  val colIs90: Boolean = Util.angleRoundedTo90(collimatorAngle_deg) == 90
 
+  private def diffIf90(a: Double, b: Double) = { if (colIs90) a - b else b - a }
+
+  /** Vertical change in top left leaf.  Planned - measured. */
+  val topLeftDeltaY_mm: Double = diffIf90(topPlannedY_mm, topLeftY_mm)
+
+  /** Vertical change in top right leaf.  Planned - measured. */
+  val topRightDeltaY_mm: Double = diffIf90(topPlannedY_mm, topRightY_mm)
+
+  /** Vertical change in bottom left leaf.  Planned - measured. */
+  val bottomLeftDeltaY_mm: Double = diffIf90(bottomPlannedY_mm, bottomLeftY_mm)
+
+  /** Vertical change in bottom right leaf.  Planned - measured. */
+  val bottomRightDeltaY_mm: Double = diffIf90(bottomPlannedY_mm, bottomRightY_mm)
+
+  /** Vertical change in top edge.  Left - Right (if right-hand is higher, then delta will be positive). */
+  val topDeltaY_mm: Double = diffIf90(topLeftY_mm, topRightY_mm)
+
+  /** Vertical change in bottom edge.  Left - Right (if right-hand is higher, then delta will be positive). */
+  val bottomDeltaY_mm: Double = diffIf90(bottomLeftY_mm, bottomRightY_mm)
+
+  /** Planned vertical separation of top and vertical edges.  Bottom - top. */
+  val plannedVertical_mm: Double = diffIf90(bottomPlannedY_mm, topPlannedY_mm)
+
+  /** Measured left vertical distance. */
+  val leftVertical_mm: Double = diffIf90(bottomLeftY_mm, topLeftY_mm)
+
+  /** Measured right vertical distance. */
+  val rightVertical_mm: Double = diffIf90(bottomRightY_mm, topRightY_mm)
+
+  /** Difference in measured vs left planned vertical distance (planned - measured). */
+  val leftVerticalError_mm: Double = diffIf90(plannedVertical_mm, leftVertical_mm)
+
+  /** Difference in measured vs right planned vertical distance (planned - measured). */
+  val rightVerticalError_mm: Double = diffIf90(plannedVertical_mm, rightVertical_mm)
+
+  /** Angle of top edge. */
   val topAngle_deg: Double = {
-    val topDeltaX = topLeftX_mm - topRightX_mm
-    Math.toDegrees(Math.atan(topDeltaY / topDeltaX))
+    val topDeltaX_mm = topLeftX_mm - topRightX_mm
+    Math.toDegrees(Math.atan(topDeltaY_mm / topDeltaX_mm))
   }
 
+  /** Angle of bottom edge. */
   val bottomAngle_deg: Double = {
-    val bottomDeltaX = bottomLeftX_mm - bottomRightX_mm
-    Math.toDegrees(Math.atan(bottomDeltaY / bottomDeltaX))
+    val bottomDeltaX_mm = bottomLeftX_mm - bottomRightX_mm
+    Math.toDegrees(Math.atan(bottomDeltaY_mm / bottomDeltaX_mm))
   }
 
-  /**
-    * Of the top and bottom angles, the worst of the two.
-    */
+  /** Of the top and bottom angles, the maximum magnitude of the two. */
   val largestAngleError_deg: Double = if (topAngle_deg.abs > bottomAngle_deg.abs) topAngle_deg else bottomAngle_deg
 }
 
@@ -87,6 +123,7 @@ object GapSkew extends ProcedureOutput with Logging {
     def rtimageSeriesInstanceUID = column[String]("rtimageSeriesInstanceUID")
     def rtimageUID = column[String]("rtimageUID")
     def beamName = column[String]("beamName")
+    def collimatorAngle_deg = column[Double]("collimatorAngle_deg")
 
     def topLeftX_mm = column[Double]("topLeftX_mm")
     def topLeftY_mm = column[Double]("topLeftY_mm")
@@ -110,6 +147,7 @@ object GapSkew extends ProcedureOutput with Logging {
         rtimageSeriesInstanceUID,
         rtimageUID,
         beamName,
+        collimatorAngle_deg,
         topLeftX_mm,
         topLeftY_mm,
         topRightX_mm,

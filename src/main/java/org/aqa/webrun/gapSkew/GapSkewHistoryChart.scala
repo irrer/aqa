@@ -2,32 +2,36 @@ package org.aqa.webrun.gapSkew
 
 import org.aqa.db.GapSkew
 import org.aqa.db.MaintenanceRecord
+import org.aqa.db.Output
 import org.aqa.web.C3Chart
 import org.aqa.web.C3ChartHistory
-import org.aqa.webrun.ExtendedData
 
 import java.awt.Color
 import scala.collection.Seq
 
-class GapSkewHistoryChart(extendedData: ExtendedData, leafSet: LeafSet) {
+object GapSkewHistoryChart {
+  def angleChartIdTag(beamName: String): String = C3Chart.textToChartId(beamName) + "_angle"
+  def offsetChartIdTag(beamName: String): String = C3Chart.textToChartId(beamName) + "_offset"
+}
 
-  private val history = GapSkew.history(extendedData.machine.machinePK.get, leafSet.gapSkew.beamName)
+class GapSkewHistoryChart(outputPK: Long, beamName: String) {
+
+  private val machinePK = Output.get(outputPK).get.machinePK.get
+
+  private val history = GapSkew.history(machinePK, beamName)
 
   private val gs = history.map(_.gapSkew)
-
-  val angleChartIdTag: String = C3Chart.textToChartId(leafSet.gapSkew.beamName) + "_angle"
-  val offsetChartIdTag: String = C3Chart.textToChartId(leafSet.gapSkew.beamName) + "_offset"
 
   // list of all MaintenanceRecords in this time interval
   private val MaintenanceRecordList = {
     val first = history.head.output.dataDate.get
     val last = history.last.output.dataDate.get
-    MaintenanceRecord.getRange(extendedData.machine.machinePK.get, first, last)
+    MaintenanceRecord.getRange(machinePK, first, last)
   }
 
   private val xDateList = history.map(h => h.output.dataDate.get)
 
-  private val yIndex = if (history.size < 2) -1 else history.indexWhere(h => h.gapSkew.outputPK == extendedData.output.outputPK.get)
+  private val yIndex = if (history.size < 2) -1 else history.indexWhere(h => h.gapSkew.outputPK == outputPK)
 
   private val angleChart = {
     val yValues = Seq(gs.map(h => h.topAngle_deg), gs.map(h => h.bottomAngle_deg))
@@ -35,7 +39,7 @@ class GapSkewHistoryChart(extendedData: ExtendedData, leafSet: LeafSet) {
     val yColorList = Seq(new Color(0x4477bb), new Color(0x44bb77))
 
     val chart = new C3ChartHistory(
-      chartIdOpt = Some(angleChartIdTag),
+      chartIdOpt = Some(GapSkewHistoryChart.angleChartIdTag(beamName)),
       MaintenanceRecordList,
       width = None,
       height = None,
@@ -75,7 +79,7 @@ class GapSkewHistoryChart(extendedData: ExtendedData, leafSet: LeafSet) {
     )
 
     val chart = new C3ChartHistory(
-      chartIdOpt = Some(offsetChartIdTag),
+      chartIdOpt = Some(GapSkewHistoryChart.offsetChartIdTag(beamName)),
       MaintenanceRecordList,
       width = None,
       height = None,
@@ -96,6 +100,6 @@ class GapSkewHistoryChart(extendedData: ExtendedData, leafSet: LeafSet) {
     chart
   }
 
-  val js: String = angleChart.javascript + "\n" + offsetChart.javascript
+  val javascript: String = angleChart.javascript + "\n" + offsetChart.javascript
 
 }

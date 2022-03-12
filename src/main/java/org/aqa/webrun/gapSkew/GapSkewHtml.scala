@@ -18,7 +18,6 @@ package org.aqa.webrun.gapSkew
 
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
-import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.Output
@@ -30,20 +29,15 @@ import org.aqa.webrun.phase2.Phase2Util
 import java.io.File
 import scala.xml.Elem
 
-object GapSkewHtml {
-
-  def imageFileOf(leafSet: LeafSet, outputDir: File): File = {
-    val pngFileName = FileUtil.replaceInvalidFileNameCharacters(leafSet.beamName, '_').replace(' ', '_') + ".png"
-    new File(outputDir, pngFileName)
-  }
-
-}
+object GapSkewHtml {}
 
 class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq: Seq[LeafSet], procedureStatus: ProcedureStatus.Value) {
 
   private def beamNameOf(leafSet: LeafSet): String = Phase2Util.getBeamNameOfRtimage(runReq.rtplan, leafSet.attributeList).get
 
-  private def rtplanName = DicomHtml(extendedData).makeDicomContent(runReq.rtplan, "RTPLAN")
+  private val dicomHtml = DicomHtml(extendedData, "RTPLAN")
+
+  private def rtplanUrl = dicomHtml.htmlUrl
 
   /**
     * Make an HTML reference to the RTPLAN so it can be viewed.
@@ -55,7 +49,7 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
     val status = {
       val titleSuffix = WebUtil.titleNewline + "Warning limit: " + Config.GapSkewAngleWarn_deg + " degrees.   Fail limit: " + Config.GapSkewAngleFail_deg + " degrees."
       def toElem(title: String, text: String, color: String): Elem = {
-        <div class="col-md-2">
+        <div class="col-md-3">
           <center>
             <h2 style={s"background-color:$color; border:solid $color 1px; border-radius: 18px; padding: 12px;"} title={title + titleSuffix}> {text} </h2>
           </center>
@@ -73,7 +67,7 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
       s
     }
 
-    val planReference = <div class="col-md-2"><center><br/><a href={rtplanName}>View RTPLAN</a></center></div>
+    val planReference = <div class="col-md-2"><center><br/><a href={rtplanUrl}>View RTPLAN</a></center></div>
 
     val patientId = <div class="col-md-2"><center>Patient ID <br/><b aqaalias="">{Util.patientIdOfAl(leafSetSeq.head.attributeList)}</b></center></div>
 
@@ -84,23 +78,25 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
     ref
   }
 
-  val leafSetHtmlList: Seq[LeafSetHtml] = leafSetSeq.sortBy(beamNameOf).map(leafSet => LeafSetHtml(extendedData, leafSet, runReq))
+  val leafSetHtmlList: Seq[GapSkewDetailHtml] = leafSetSeq.sortBy(beamNameOf).map(leafSet => GapSkewDetailHtml(extendedData, leafSet, runReq))
 
   private def content: Elem = {
     <div class="row">
         <div class="col-md-8 col-md-offset-2">
           {generalReference()}
-          {leafSetHtmlList.map(_.leafSetToHtml)}
+          {leafSetHtmlList.map(_.summaryHtml)}
         </div>
       </div>
   }
 
   def makeDisplay(): Unit = {
-    val contentWithHeader = ExtendedData.wrapExtendedData(extendedData, content)
-    val js = s"""<script>${leafSetHtmlList.map(_.charts.js).mkString("\n")}</script>"""
-    val text = WebUtil.wrapBody(contentWithHeader, "Leaf Gap and Skew", refresh = None, c3 = true, runScript = Some(js))
+    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), "Leaf Gap and Skew", refresh = None)
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeBinaryFile(file, text.getBytes)
+
+    leafSetHtmlList.map(_.writeDetailedHtml)
+    dicomHtml.makeDicomContent(runReq.rtplan)
+
     if (true) {
       val img = new DicomImage(runReq.rtimageMap.head._2)
       val text = img.pixelsToText
