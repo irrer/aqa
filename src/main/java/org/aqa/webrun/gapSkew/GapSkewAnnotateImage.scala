@@ -41,6 +41,8 @@ case class GapSkewAnnotateImage(
 
   private def d2i = Util.d2i _
 
+  private val colIs270 = Util.angleRoundedTo90(collimatorAngle) == 270
+
   private def arrow(image: BufferedImage, x1: Int, y1: Int, x2: Int, y2: Int, color: Color = Color.darkGray): Unit = {
     val g = ImageUtil.getGraphics(image)
     g.setColor(color)
@@ -88,7 +90,7 @@ case class GapSkewAnnotateImage(
     val g = ImageUtil.getGraphics(image)
     g.setColor(Color.darkGray)
 
-    val y = d2i(translator.iso2PixCoordY(-leaf.yPosition_mm))
+    val y = d2i(translator.iso2PixCoordY(if (colIs270) leaf.yPosition_mm else -leaf.yPosition_mm))
     val x1 = d2i(translator.iso2PixCoordX(leaf.xLeftPosition_mm))
     val x2 = d2i(translator.iso2PixCoordX(leaf.xLeftPosition_mm + leaf.width_mm))
     ImageUtil.setLineThickness(g, 3)

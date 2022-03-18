@@ -19,6 +19,7 @@ package org.aqa.webrun.gapSkew
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.GapSkew
@@ -30,25 +31,38 @@ object EdgesFromPlan extends Logging {
   /**
     * Describe one beam's position.
     *
-    * @param limit_mm Position in isoplane in mm.
-    * @param edgeType If true, then the jaw is positioned at this place.  The collimator may also be here, but
-    *              it will be somewhat obscured by teh jaw.
+    * @param position_mm Position in isoplane in mm.
+    * @param edgeType    If true, then the jaw is positioned at this place.  The collimator may also be here, but
+    *                    it will be somewhat obscured by teh jaw.
     */
-  case class BeamLimit(limit_mm: Double, edgeType: String) {
+  case class BeamLimit(position_mm: Double, edgeType: GapSkew.EdgeType) {
     override def toString: String = {
-      "limit_mm: " + fmt2(limit_mm) + "    isJaw: " + edgeType.formatted("%5s")
+      "limit_mm: " + fmt2(position_mm) + "    isJaw: " + edgeType.toString.formatted("%6s")
     }
   }
 
-  /**
-    * Describe a pair of beam limits.
-    * @param X1 X1 jaw or collimator edge
-    * @param X2 X2 jaw or collimator edge
-    */
-  case class EndPair(X1: BeamLimit, X2: BeamLimit) {
-    override def toString: String = {
-      "X1: " + X1 + "    X2: " + X2
+  /** Describe a pair of beam limits with their orientation in the image. */
+  case class OrientedEdgePair(topOrLeft: Option[BeamLimit], bottomOrRight: Option[BeamLimit]) {
+    private val all = Seq(topOrLeft, bottomOrRight).flatten
+
+    Trace.trace(all.map(_.toString).mkString("\n", "\n", "\n"))
+    if (all.map(_.edgeType.bank).distinct.size == 1)
+      Trace.trace("hey")
+    // def bank1 = all.find(_.edgeType.is1).get
+    // def bank2 = all.find(e => !e.edgeType.is1).get
+  }
+
+  private def getPos(beamLim: Seq[AttributeList], bankNumber: Int, nameList: Seq[String]): Option[Double] = {
+    def bld(al: AttributeList): String = {
+      val at = al.get(TagByName.RTBeamLimitingDeviceType)
+      at.getSingleStringValueOrEmptyString().trim.toUpperCase()
     }
+    val posSeq = beamLim.find(al => nameList.contains(bld(al)))
+    if (posSeq.isDefined) {
+      val list = posSeq.get.get(TagByName.LeafJawPositions).getDoubleValues()
+      val p = if (bankNumber == 1) list.head else list.last
+      Some(p)
+    } else None
   }
 
   /**
@@ -62,50 +76,117 @@ object EdgesFromPlan extends Logging {
     *
     * It is important to differentiate
     */
-  def edgesFromPlan(attributeList: AttributeList, rtplan: AttributeList): EndPair = {
-    val beamSequence = Phase2Util.getBeamSequence(rtplan, Util.beamNumber(attributeList))
-    val cps = DicomUtil.seqToAttr(beamSequence, TagByName.ControlPointSequence).head
+  def edgesFromPlan(rtimage: AttributeList, rtplan: AttributeList): OrientedEdgePair = {
+    logger.info(
+      "Leaf Gap Skew processing BeamName: " + Phase2Util.getBeamNameOfRtimage(rtplan, rtimage).get +
+        "    BeamNumber: " + Util.beamNumber(rtimage).formatted("%2d")
+    )
+    val beamSequence = Phase2Util.getBeamSequence(rtplan, Util.beamNumber(rtimage))
+    // get the first control point that contains RTBeamLimitingDeviceType
+    val cps = DicomUtil.seqToAttr(beamSequence, TagByName.ControlPointSequence).filter(al => DicomUtil.findAllSingle(al, TagByName.RTBeamLimitingDeviceType).nonEmpty).head
+
+    // convert them to a list of edge pairs
     val beamLimitList = DicomUtil.seqToAttr(cps, TagByName.BeamLimitingDevicePositionSequence)
 
-    case class Limiter(X1: Double, X2: Double, name: String) {}
+    val xJawNames = Seq("X", "ASYMX")
+    val yJawNames = Seq("Y", "ASYMY")
+    val xMlcNames = Seq("MLCX") // note: MLCY is not supported by the treatment machines
 
-    def toLimiter(al: AttributeList): Limiter = {
-      val valueList = al.get(TagByName.LeafJawPositions).getDoubleValues
-      val devType = al.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString
-      Limiter(valueList.head, valueList.last, devType)
+    val col = Util.angleRoundedTo90(Util.collimatorAngle(rtimage))
+
+    val jawX1 = getPos(beamLimitList, 1, xJawNames).get
+    val jawX2 = getPos(beamLimitList, 2, xJawNames).get
+    val jawY1 = getPos(beamLimitList, 1, yJawNames).get
+    val jawY2 = getPos(beamLimitList, 2, yJawNames).get
+    val mlcX1 = getPos(beamLimitList, 1, xMlcNames)
+    val mlcX2 = getPos(beamLimitList, 2, xMlcNames)
+
+    // true if beam is more restricted by top and bottom than right to left
+    val topBottom: Boolean = {
+      val mlcSize = {
+        (mlcX1, mlcX2) match {
+          case (Some(mx1), Some(mx2)) =>
+            Some(mx2 - mx1)
+          case _ =>
+            None // not valid
+        }
+      }
+      val jawXSize = Some(jawX2 - jawX1)
+      val jawYSize = Some(jawY2 - jawY1)
+
+      val vert = (col == 90) || (col == 270)
+
+      val minXSize =
+        if (vert)
+          Seq(jawXSize, mlcSize).flatten.min
+        else
+          jawXSize.get
+
+      val minYSize =
+        if (vert)
+          jawYSize.get
+        else
+          Seq(jawYSize, mlcSize).flatten.min
+
+      minXSize <= minYSize
     }
 
-    val limiterList = beamLimitList.map(toLimiter)
-    val jawOp = limiterList.find(l => l.name.equalsIgnoreCase("X") || l.name.equalsIgnoreCase("ASYMX"))
-    val mlcOp = limiterList.find(_.name.equalsIgnoreCase("MLCX"))
+    // Note: Not all possible combinations of Jaw and MLC use are covered here (for
+    // example collimator angle at 0).  The design can be expanded to handle them,
+    // but until there are test cases it is best not to write code.
+    val orientedEdgePair = (jawX1, jawX2, jawY1, jawY2, mlcX1, mlcX2, col, topBottom) match {
+      case (jx1, jx2, _, _, Some(mx1), Some(mx2), 90, true) =>
+        val top =
+          if (jx2 < mx2)
+            BeamLimit(jx2, GapSkew.EdgeType.X1_Jaw_Horz)
+          else
+            BeamLimit(mx2, GapSkew.EdgeType.X2_MLC_Horz)
 
-    val endPair = (jawOp, mlcOp) match {
-      case (Some(jaw), Some(mlc)) =>
-        val X1 = {
-          if (jaw.X1 > mlc.X1)
-            BeamLimit(jaw.X1, edgeType = GapSkew.edgeTypeJaw) // edge is jaw
+        val bottom =
+          if (jx1 > mx1)
+            BeamLimit(jx1, GapSkew.EdgeType.X2_Jaw_Horz)
           else
-            BeamLimit(mlc.X1, edgeType = GapSkew.edgeTypeMlc) // edge is mlc
-        }
-        val X2 = {
-          if (jaw.X2 < mlc.X2)
-            BeamLimit(jaw.X2, edgeType = GapSkew.edgeTypeJaw) // edge is jaw
+            BeamLimit(mx1, GapSkew.EdgeType.X1_MLC_Horz)
+
+        OrientedEdgePair(Some(top), Some(bottom))
+
+      case (jx1, jx2, _, _, Some(mx1), Some(mx2), 270, true) =>
+        val top =
+          if (jx2 < mx1)
+            BeamLimit(jx1, GapSkew.EdgeType.X1_Jaw_Horz)
           else
-            BeamLimit(mlc.X2, edgeType = GapSkew.edgeTypeMlc) // edge is mlc
-        }
-        EndPair(X1, X2)
-      case (None, Some(mlc)) => EndPair(BeamLimit(mlc.X1, edgeType = GapSkew.edgeTypeMlc), BeamLimit(mlc.X2, edgeType = GapSkew.edgeTypeMlc))
-      case (Some(jaw), None) => EndPair(BeamLimit(jaw.X1, edgeType = GapSkew.edgeTypeJaw), BeamLimit(jaw.X2, edgeType = GapSkew.edgeTypeJaw))
-      case (None, None) =>
-        throw new RuntimeException("Could not find leaf or jaw pair ")
+            BeamLimit(mx1, GapSkew.EdgeType.X1_MLC_Horz)
+
+        val bottom =
+          if (jx1 > mx2)
+            BeamLimit(jx2, GapSkew.EdgeType.X2_Jaw_Horz)
+          else
+            BeamLimit(mx2, GapSkew.EdgeType.X2_MLC_Horz)
+        OrientedEdgePair(Some(top), Some(bottom))
+
+      // no MLC, just jaws, topBottom: true
+      case (jx1, jx2, _, _, None, None, _, true) =>
+        val top = BeamLimit(jx2, GapSkew.EdgeType.X1_Jaw_Horz)
+        val bottom = BeamLimit(jx1, GapSkew.EdgeType.X2_Jaw_Horz)
+        OrientedEdgePair(Some(top), Some(bottom))
+
+      // no MLC, just jaws, topBottom: false
+      case (_, _, jy1, jy2, None, None, _, false) =>
+        val left = BeamLimit(jy1, GapSkew.EdgeType.Y1_Jaw_Horz)
+        val right = BeamLimit(jy2, GapSkew.EdgeType.Y2_Jaw_Horz)
+        OrientedEdgePair(Some(left), Some(right))
+
+      case _ =>
+        throw new RuntimeException("Unhandled jaw/MLC orientation configuration.")
     }
 
     logger.info(
-      "BeamName: " + Phase2Util.getBeamNameOfRtimage(rtplan, attributeList).get +
-        "    BeamNumber: " + Util.beamNumber(attributeList).formatted("%2d") +
-        "    Leaf ends positioned at " + endPair
+      "BeamName: " + Phase2Util.getBeamNameOfRtimage(rtplan, rtimage).get +
+        "    BeamNumber: " + Util.beamNumber(rtimage).formatted("%2d") +
+        "    Leaf ends positioned at " + orientedEdgePair
     )
-    endPair
+
+    orientedEdgePair
   }
 
 }

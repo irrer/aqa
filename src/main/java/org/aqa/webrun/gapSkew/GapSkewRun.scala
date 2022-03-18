@@ -44,23 +44,10 @@ import scala.annotation.tailrec
 import scala.xml.Elem
 
 class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[GapSkewRunReq] {
-  // private val machineSelector = new WebInputSelectMachine("Machine", 6, 0)
-  /*
-  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
-    val action = procedure.webUrl + "?" + name + "=" + name
-    new FormButton(name, 1, 0, SubUrl.run, action, buttonType)
-  }
-   */
-
-  // private val runButton = makeButton("Run", primary = true, ButtonType.BtnDefault)
-  // private val cancelButton = makeButton("Cancel", primary = false, ButtonType.BtnDefault)
-
-  // private def form = new WebForm(procedure.webUrl, Some("MLC QA"), List(List(machineSelector), List(runButton, cancelButton)), 10)
-
-  // private def formErr(msg: String): Either[StyleMapT, RunReqClass] = Left(Error.make(form.uploadFileInput.get, msg))
-
   private def makeRtimageMap(rtplan: AttributeList, rtimageList: Seq[AttributeList]): Map[String, AttributeList] = {
-    rtimageList.map(rtImg => (Phase2Util.getBeamNameOfRtimage(rtplan, rtImg).get, rtImg)).toMap
+    // sort chronologically
+    val sortedRtimageList = rtimageList.sortBy(r => Util.extractDateTimeAndPatientIdFromDicomAl(r)._1.head.getTime)
+    sortedRtimageList.map(rtImg => (Phase2Util.getBeamNameOfRtimage(rtplan, rtImg).get, rtImg)).toMap
   }
 
   /**
@@ -122,7 +109,7 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
 
   /** Run the actual analysis.  This must create a display.html file in the output directory. */
   override def run(extendedData: ExtendedData, runReq: GapSkewRunReq, response: Response): ProcedureStatus.Value = {
-    val fleList = runReq.rtimageMap.keys.toSeq.filter(beam => Config.GapSkewBeamNameList.contains(beam)).sorted.map(runReq.rtimageMap)
+    val fleList = runReq.rtimageMap.keys.toSeq.filter(beam => Config.GapSkewBeamNameList.contains(beam)).map(runReq.rtimageMap)
     val dicomImageList = fleList.map(fle => new DicomImage(fle))
     val minMax = getMinMaxTrimmed(dicomImageList)
     val fleResultList = fleList.map(rtImg => FindLeafEnds(extendedData, rtImg, minMax._1, minMax._2, runReq.rtplan).leafSet)
@@ -130,7 +117,7 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
     fleResultList.map(r => r.gapSkew.insert)
 
     val status = {
-      val largest = fleResultList.map(r => r.gapSkew.largestAngleError_deg.abs).max
+      val largest = fleResultList.map(r => r.gapSkew.largestHorzSkew_deg.abs).max
       0 match {
         case _ if largest > Config.GapSkewAngleFail_deg => ProcedureStatus.fail
         case _ if largest > Config.GapSkewAngleWarn_deg => ProcedureStatus.warning

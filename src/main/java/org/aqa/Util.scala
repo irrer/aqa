@@ -227,8 +227,8 @@ object Util extends Logging {
   }
 
   def collimatorAngle(al: AttributeList): Double = {
-    val at = al.get(TagByName.BeamLimitingDeviceAngle)
-    if (at == null) 0 else at.getDoubleValues.head
+    val at = DicomUtil.findAllSingle(al, TagByName.BeamLimitingDeviceAngle).headOption
+    if (at.isDefined) at.get.getDoubleValues.head else 0
   }
 
   def gantryAngle(al: AttributeList): Double = {

@@ -25,27 +25,38 @@ import scala.xml.Elem
 
 /**
   * Store the analysis results for a single gap skew image.
+  *
+  * Data is associated with a "bank", which indicates a pair of X1 and X2 MLCs or Jaws, or
+  * a pair of Y1 and Y2 MLCs or Jaws.  If only one edge is measured, then only one set of
+  * values will be valid (non-null).
   */
 case class GapSkew(
-    gapSkewPK: Option[Long], // primary key
-    outputPK: Long, // output primary key
-    rtplanSOPInstanceUID: String, // UID of RTPLAN
-    rtimageSeriesInstanceUID: String, // SOP series instance UID of EPID image
-    rtimageUID: String, // SOP series instance UID of EPID image
-    beamName: String, // name of beam
-    collimatorAngle_deg: Double, // Angle of collimator in degrees.  This is from the RTIMAGE and is not rounded.
-    topLeftX_mm: Double, // X isoplane coordinate center of top left measurement
-    topLeftY_mm: Double, // Y isoplane coordinate of top left center measurement
-    topRightX_mm: Double, // X isoplane coordinate center of top right measurement
-    topRightY_mm: Double, // Y isoplane coordinate of top right center measurement
-    topPlannedY_mm: Double, // planned Y for top
-    topEdgeType: String, // name of top jaw type, e.g. "Jaw", "MLC"
-    bottomLeftX_mm: Double, // X isoplane coordinate center of bottom left measurement
-    bottomLeftY_mm: Double, // Y isoplane coordinate of bottom left center measurement
-    bottomRightX_mm: Double, // X isoplane coordinate center of bottom right measurement
-    bottomRightY_mm: Double, // Y isoplane coordinate of bottom right center measurement
-    bottomPlannedY_mm: Double, // planned Y for bottom
-    bottomEdgeType: String // name of bottom jaw type, e.g. "Jaw", "MLC"
+    // @formatter:off
+    gapSkewPK: Option[Long],                  // primary key
+    outputPK: Long,                           // output primary key
+    rtimageUID: String,                       // SOP series instance UID of EPID image
+    beamName: String,                         // name of beam
+    collimatorAngle_deg: Double,              // Angle of collimator in degrees.  This is the raw value from the RTIMAGE and is not rounded.
+    //
+    measurementWidth_mm: Double,              // width of measurement rectangle.  Not required to calculate values, but provides an indication of the number of pixels used to establish the edge measurements.
+    measurementSeparation_mm: Double,         // distance between measurements of the same edge.  Needed to calculate skew angle.
+    //
+    topLeftEdgeTypeName: Option[String],      // name of top jaw type and bank, Must be one of: "X1_Jaw", "X1_MLC", "Y1_Jaw", "Y1_MLC".  If None/null, then this bank has no values.  See <code>GapSkew.EdgeType</code>
+    topLeftValue_mm: Option[Double],          // isoplane coordinate of end of leaf or jaw position at higher numbered leaves.
+    topLeftPlanned_mm: Option[Double],        // planned isoplane position (expected value of bank1Low_mm and bank1High_mm)
+    //
+    topRightEdgeTypeName: Option[String],     // name of top jaw type and bank, Must be one of: "X1_Jaw", "X1_MLC", "Y1_Jaw", "Y1_MLC".  If None/null, then this bank has no values.  See <code>GapSkew.EdgeType</code>
+    topRightValue_mm: Option[Double],         // isoplane coordinate of end of leaf or jaw position at higher numbered leaves.
+    topRightPlanned_mm: Option[Double],       // planned isoplane position (expected value of bank1Low_mm and bank1High_mm)
+    //
+    bottomLeftEdgeTypeName: Option[String],   // name of top jaw type and bank, Must be one of: "X1_Jaw", "X1_MLC", "Y1_Jaw", "Y1_MLC".  If None/null, then this bank has no values.  See <code>GapSkew.EdgeType</code>
+    bottomLeftValue_mm: Option[Double],       // isoplane coordinate of end of leaf or jaw position at higher numbered leaves.
+    bottomLeftPlanned_mm: Option[Double],     // planned isoplane position (expected value of bank1Low_mm and bank1High_mm)
+    //
+    bottomRightEdgeTypeName: Option[String],  // name of top jaw type and bank, Must be one of: "X1_Jaw", "X1_MLC", "Y1_Jaw", "Y1_MLC".  If None/null, then this bank has no values.  See <code>GapSkew.EdgeType</code>
+    bottomRightValue_mm: Option[Double],      // isoplane coordinate of end of leaf or jaw position at higher numbered leaves.
+    bottomRightPlanned_mm: Option[Double],    // planned isoplane position (expected value of bank1Low_mm and bank1High_mm)
+    // @formatter:on
 ) {
 
   def insert: GapSkew = {
@@ -57,57 +68,95 @@ case class GapSkew(
 
   def insertOrUpdate(): Int = Db.run(GapSkew.query.insertOrUpdate(this))
 
-  val colIs90: Boolean = Util.angleRoundedTo90(collimatorAngle_deg) == 90
+  private val edgeTypeNameList = Seq(topLeftEdgeTypeName, topRightEdgeTypeName, bottomLeftEdgeTypeName, bottomRightEdgeTypeName).flatten
 
-  private def diffIf90(a: Double, b: Double) = { if (colIs90) a - b else b - a }
+  /** True if there are two edges defined, false if just one. */
+  val hasTwoEdges: Boolean = edgeTypeNameList.size == 4
 
-  /** Vertical change in top left leaf.  Planned - measured. */
-  val topLeftDeltaY_mm: Double = diffIf90(topPlannedY_mm, topLeftY_mm)
-
-  /** Vertical change in top right leaf.  Planned - measured. */
-  val topRightDeltaY_mm: Double = diffIf90(topPlannedY_mm, topRightY_mm)
-
-  /** Vertical change in bottom left leaf.  Planned - measured. */
-  val bottomLeftDeltaY_mm: Double = diffIf90(bottomPlannedY_mm, bottomLeftY_mm)
-
-  /** Vertical change in bottom right leaf.  Planned - measured. */
-  val bottomRightDeltaY_mm: Double = diffIf90(bottomPlannedY_mm, bottomRightY_mm)
-
-  /** Vertical change in top edge.  Left - Right (if right-hand is higher, then delta will be positive). */
-  val topDeltaY_mm: Double = diffIf90(topLeftY_mm, topRightY_mm)
-
-  /** Vertical change in bottom edge.  Left - Right (if right-hand is higher, then delta will be positive). */
-  val bottomDeltaY_mm: Double = diffIf90(bottomLeftY_mm, bottomRightY_mm)
-
-  /** Planned vertical separation of top and vertical edges.  Bottom - top. */
-  val plannedVertical_mm: Double = diffIf90(bottomPlannedY_mm, topPlannedY_mm)
-
-  /** Measured left vertical distance. */
-  val leftVertical_mm: Double = diffIf90(bottomLeftY_mm, topLeftY_mm)
-
-  /** Measured right vertical distance. */
-  val rightVertical_mm: Double = diffIf90(bottomRightY_mm, topRightY_mm)
-
-  /** Difference in measured vs left planned vertical distance (planned - measured). */
-  val leftVerticalError_mm: Double = diffIf90(plannedVertical_mm, leftVertical_mm)
-
-  /** Difference in measured vs right planned vertical distance (planned - measured). */
-  val rightVerticalError_mm: Double = diffIf90(plannedVertical_mm, rightVertical_mm)
-
-  /** Angle of top edge. */
-  val topAngle_deg: Double = {
-    val topDeltaX_mm = topLeftX_mm - topRightX_mm
-    Math.toDegrees(Math.atan(topDeltaY_mm / topDeltaX_mm))
+  /** True if at least one of the edges was defined by an MLC. */
+  val hasMlc: Boolean = {
+    val edgeTypeList = edgeTypeNameList.map(GapSkew.EdgeType.toEdgeType)
+    edgeTypeList.exists(et => !et.isJaw)
   }
 
-  /** Angle of bottom edge. */
-  val bottomAngle_deg: Double = {
-    val bottomDeltaX_mm = bottomLeftX_mm - bottomRightX_mm
-    Math.toDegrees(Math.atan(bottomDeltaY_mm / bottomDeltaX_mm))
+  /** True if one of the edges is the MLC and the collimator is at 270 degrees. */
+  val colIs270: Boolean = hasMlc && (Util.angleRoundedTo90(collimatorAngle_deg) == 270)
+
+  /*
+   * ---------------------------------------------------------------------------------------------------------
+   *
+   * Below are convenience functions that encapsulate abstractions of the data and
+   * make it more easily consumable.  They are defined as functions instead of values
+   * because they may or may not be valid at run time.  If not valid, they will throw
+   * an exception.
+   *
+   * The nomenclature is to use 'Horz' in the function names to indicate that they
+   * are processing on the assumption that the edges being measured are horizontal.
+   * If the need to support vertical edges arises, then the function names should
+   * include 'Vert'.
+   *
+   * Note also that functions have been written to support a pair of horizontal edges.
+   * The database fields support:
+   *    - single edge horizontal
+   *    - single edge vertical
+   *    - double edge vertical
+   * but the functions have not been written because the use case has not been presented.
+   *
+   * ---------------------------------------------------------------------------------------------------------
+   */
+
+  def topLeftEdgeType: GapSkew.EdgeType = GapSkew.EdgeType.toEdgeType(topLeftEdgeTypeName.get)
+  def topRightEdgeType: GapSkew.EdgeType = GapSkew.EdgeType.toEdgeType(topRightEdgeTypeName.get)
+  def bottomLeftEdgeType: GapSkew.EdgeType = GapSkew.EdgeType.toEdgeType(bottomLeftEdgeTypeName.get)
+  def bottomRightEdgeType: GapSkew.EdgeType = GapSkew.EdgeType.toEdgeType(bottomRightEdgeTypeName.get)
+
+  /** Planned separation of edges.  Only valid if there are two edges. */
+  def plannedEdgeSeparation_mm: Double = {
+    if (topLeftEdgeType.isHorz)
+      (topLeftPlanned_mm.get - topRightPlanned_mm.get).abs
+    else
+      (topLeftPlanned_mm.get - bottomRightPlanned_mm.get).abs
   }
 
-  /** Of the top and bottom angles, the maximum magnitude of the two. */
-  val largestAngleError_deg: Double = if (topAngle_deg.abs > bottomAngle_deg.abs) topAngle_deg else bottomAngle_deg
+  /** Rise or fall of top edge (if defined, else exception). */
+  def topHorzDelta_mm: Double = topRightValue_mm.get - topLeftValue_mm.get
+
+  /** Rise or fall of bottom edge (if defined, else exception). */
+  def bottomHorzDelta_mm: Double = bottomRightValue_mm.get - bottomLeftValue_mm.get
+
+  /** Vertical separation between upper and lower left horizontal edges. (if defined, else exception). */
+  def leftSeparationOfHorzEdges_mm: Double = (topLeftValue_mm.get - bottomLeftValue_mm.get).abs
+
+  /** Vertical separation between upper and lower right horizontal edges. (if defined, else exception). */
+  def rightSeparationOfHorzEdges_mm: Double = (bottomRightValue_mm.get - topRightValue_mm.get).abs
+
+  /** Change (error) in vertical separation between upper and lower left horizontal edges. (planned - measured) (if defined, else exception). */
+  def leftDeltaSeparationOfHorzEdges_mm: Double = plannedEdgeSeparation_mm - leftSeparationOfHorzEdges_mm
+
+  /** Change (error) in vertical separation between upper and lower right horizontal edges. (planned - measured) (if defined, else exception). */
+  def rightDeltaSeparationOfHorzEdges_mm: Double = plannedEdgeSeparation_mm - rightSeparationOfHorzEdges_mm
+
+  /** Skew (angle) of top edge (if defined, else exception). */
+  def topHorzSkew_deg: Double = Math.toDegrees(Math.atan(topHorzDelta_mm / measurementSeparation_mm))
+
+  /** Skew (angle) of bottom edge (if defined, else exception). */
+  def bottomHorzSkew_deg: Double = Math.toDegrees(Math.atan(bottomHorzDelta_mm / measurementSeparation_mm))
+
+  /** Of the two horizontal angle skews, the one with the largest magnitude. */
+  def largestHorzSkew_deg: Double = Seq(topHorzSkew_deg, bottomHorzSkew_deg).maxBy(_.abs)
+
+  /** Difference (error) in top left horizontal edge measurement from plan (planned - measured). */
+  def topLeftHorzDelta_mm: Double = topLeftPlanned_mm.get - topLeftValue_mm.get
+
+  /** Difference (error) in top right horizontal edge measurement from plan (planned - measured). */
+  def topRightHorzDelta_mm: Double = topRightPlanned_mm.get - topRightValue_mm.get
+
+  /** Difference (error) in bottom left horizontal edge measurement from plan (planned - measured). */
+  def bottomLeftHorzDelta_mm: Double = bottomLeftPlanned_mm.get - bottomLeftValue_mm.get
+
+  /** Difference (error) in bottom right horizontal edge measurement from plan (planned - measured). */
+  def bottomRightHorzDelta_mm: Double = bottomRightPlanned_mm.get - bottomRightValue_mm.get
+
 }
 
 object GapSkew extends ProcedureOutput with Logging {
@@ -115,51 +164,51 @@ object GapSkew extends ProcedureOutput with Logging {
   class GapSkewTable(tag: Tag) extends Table[GapSkew](tag, "gapSkew") {
 
     def gapSkewPK = column[Long]("gapSkewPK", O.PrimaryKey, O.AutoInc)
-
     def outputPK = column[Long]("outputPK")
-
-    def rtplanSOPInstanceUID = column[String]("rtplanSOPInstanceUID")
-
-    def rtimageSeriesInstanceUID = column[String]("rtimageSeriesInstanceUID")
     def rtimageUID = column[String]("rtimageUID")
     def beamName = column[String]("beamName")
     def collimatorAngle_deg = column[Double]("collimatorAngle_deg")
-
-    def topLeftX_mm = column[Double]("topLeftX_mm")
-    def topLeftY_mm = column[Double]("topLeftY_mm")
-    def topRightX_mm = column[Double]("topRightX_mm")
-    def topRightY_mm = column[Double]("topRightY_mm")
-    def topPlannedY_mm = column[Double]("topPlannedY_mm")
-    def topEdgeType = column[String]("topEdgeType")
-
-    def bottomLeftX_mm = column[Double]("bottomLeftX_mm")
-    def bottomLeftY_mm = column[Double]("bottomLeftY_mm")
-    def bottomRightX_mm = column[Double]("bottomRightX_mm")
-    def bottomRightY_mm = column[Double]("bottomRightY_mm")
-    def bottomPlannedY_mm = column[Double]("bottomPlannedY_mm")
-    def bottomEdgeType = column[String]("bottomEdgeType")
+    //
+    def measurementWidth_mm = column[Double]("measurementWidth_mm")
+    def measurementSeparation_mm = column[Double]("measurementSeparation_mm")
+    //
+    def topLeftEdgeTypeName = column[Option[String]]("topLeftEdgeTypeName")
+    def topLeftValue_mm = column[Option[Double]]("topLeftValue_mm")
+    def topLeftPlanned_mm = column[Option[Double]]("topLeftPlanned_mm")
+    //
+    def topRightEdgeTypeName = column[Option[String]]("topRightEdgeTypeName")
+    def topRightValue_mm = column[Option[Double]]("topRightValue_mm")
+    def topRightPlanned_mm = column[Option[Double]]("topRightPlanned_mm")
+    //
+    def bottomLeftEdgeTypeName = column[Option[String]]("bottomLeftEdgeTypeName")
+    def bottomLeftValue_mm = column[Option[Double]]("bottomLeftValue_mm")
+    def bottomLeftPlanned_mm = column[Option[Double]]("bottomLeftPlanned_mm")
+    //
+    def bottomRightEdgeTypeName = column[Option[String]]("bottomRightEdgeTypeName")
+    def bottomRightValue_mm = column[Option[Double]]("bottomRightValue_mm")
+    def bottomRightPlanned_mm = column[Option[Double]]("bottomRightPlanned_mm")
 
     def * =
       (
         gapSkewPK.?,
         outputPK,
-        rtplanSOPInstanceUID,
-        rtimageSeriesInstanceUID,
         rtimageUID,
         beamName,
         collimatorAngle_deg,
-        topLeftX_mm,
-        topLeftY_mm,
-        topRightX_mm,
-        topRightY_mm,
-        topPlannedY_mm,
-        topEdgeType,
-        bottomLeftX_mm,
-        bottomLeftY_mm,
-        bottomRightX_mm,
-        bottomRightY_mm,
-        bottomPlannedY_mm,
-        bottomEdgeType
+        measurementWidth_mm,
+        measurementSeparation_mm,
+        topLeftEdgeTypeName,
+        topLeftValue_mm,
+        topLeftPlanned_mm,
+        topRightEdgeTypeName,
+        topRightValue_mm,
+        topRightPlanned_mm,
+        bottomLeftEdgeTypeName,
+        bottomLeftValue_mm,
+        bottomLeftPlanned_mm,
+        bottomRightEdgeTypeName,
+        bottomRightValue_mm,
+        bottomRightPlanned_mm
       ) <> (GapSkew.apply _ tupled, GapSkew.unapply)
 
     def outputFK = foreignKey("GapSkew_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
@@ -167,9 +216,98 @@ object GapSkew extends ProcedureOutput with Logging {
 
   val query = TableQuery[GapSkewTable]
 
+  /*
+   * The following diagram shows the jaw (not collimator) positions as seen on an RTIMAGE.
+   * To be clear, the X1 horizontal line shows the profile of the X2 jaw, which moves vertically.
+   *
+   *  ..........................................
+   *  .                                        .
+   *  .                                        .
+   *  .              Jaw Positions             .
+   *  .                                        .
+   *  .                                        .
+   *  .                   X2                   .
+   *  .          --------------------          .
+   *  .          |                  |          .
+   *  .          |                  |          .
+   *  .          |                  |          .
+   *  .       Y1 |                  | Y2       .
+   *  .          |                  |          .
+   *  .          |                  |          .
+   *  .          |                  |          .
+   *  .          --------------------          .
+   *  .                   X1                   .
+   *  .                                        .
+   *  .                                        .
+   *  .                                        .
+   *  ..........................................
+   *
+   */
+
+  case class EdgeType(isX: Boolean, bank: Int, isJaw: Boolean, isHorz: Boolean) {
+    val name = {
+      (if (isX) "X" else "Y") +
+        bank + " " +
+        (if (isJaw) "Jaw" else "MLC") + " " +
+        (if (isHorz) "Horz" else "Vert")
+    }
+    override def toString: String = name + "    isX: " + isX + "    is1: " + bank + "    isJaw: " + isJaw
+  }
+
+  /**
+    * All possible types of edges.
+    */
+  object EdgeType {
+    // @formatter:off
+    val X1_Jaw_Horz: EdgeType = EdgeType( isX =  true, bank = 1, isJaw =  true, isHorz =  true)
+    val X1_Jaw_Vert: EdgeType = EdgeType( isX =  true, bank = 1, isJaw =  true, isHorz = false)
+    val X1_MLC_Horz: EdgeType = EdgeType( isX =  true, bank = 1, isJaw = false, isHorz =  true)
+    val X1_MLC_Vert: EdgeType = EdgeType( isX =  true, bank = 1, isJaw = false, isHorz = false)
+    val X2_Jaw_Horz: EdgeType = EdgeType( isX =  true, bank = 2, isJaw =  true, isHorz =  true)
+    val X2_Jaw_Vert: EdgeType = EdgeType( isX =  true, bank = 2, isJaw =  true, isHorz = false)
+    val X2_MLC_Horz: EdgeType = EdgeType( isX =  true, bank = 2, isJaw = false, isHorz =  true)
+    val X2_MLC_Vert: EdgeType = EdgeType( isX =  true, bank = 2, isJaw = false, isHorz = false)
+
+    val Y1_Jaw_Horz: EdgeType = EdgeType( isX = false, bank = 1, isJaw =  true, isHorz =  true)
+    val Y1_Jaw_Vert: EdgeType = EdgeType( isX = false, bank = 1, isJaw =  true, isHorz = false)
+    val Y1_MLC_Horz: EdgeType = EdgeType( isX = false, bank = 1, isJaw = false, isHorz =  true) // not supported by Varian
+    val Y1_MLC_Vert: EdgeType = EdgeType( isX = false, bank = 1, isJaw = false, isHorz = false) // not supported by Varian
+    val Y2_Jaw_Horz: EdgeType = EdgeType( isX = false, bank = 2, isJaw =  true, isHorz =  true)
+    val Y2_Jaw_Vert: EdgeType = EdgeType( isX = false, bank = 2, isJaw =  true, isHorz = false)
+    val Y2_MLC_Horz: EdgeType = EdgeType( isX = false, bank = 2, isJaw = false, isHorz =  true) // not supported by Varian
+    val Y2_MLC_Vert: EdgeType = EdgeType( isX = false, bank = 2, isJaw = false, isHorz = false) // not supported by Varian
+
+    val list = List(
+      X1_Jaw_Horz, X1_Jaw_Vert, X1_MLC_Horz, X1_MLC_Vert, X2_Jaw_Horz, X2_Jaw_Vert, X2_MLC_Horz, X2_MLC_Vert,
+      Y1_Jaw_Horz, Y1_Jaw_Vert, Y1_MLC_Horz, Y1_MLC_Vert, Y2_Jaw_Horz, Y2_Jaw_Vert, Y2_MLC_Horz, Y2_MLC_Vert
+    )
+    // @formatter:on
+
+    /**
+      * Find the EdgeType with the given characteristics.
+      * @param isX True if X, false if Y.
+      * @param bank Bank number.  Can only be 1 or 2, as in X1 or Y2.
+      * @param isJaw True if is jaw, false if MLC.
+      * @return The corresponding EdgeType.
+      */
+    def find(isX: Boolean, bank: Int, isJaw: Boolean, isHorz: Boolean): EdgeType = {
+      val t = EdgeType(isX, bank, isJaw, isHorz)
+      list.find(et => et.name.equals(t.name)).get
+    }
+
+    /**
+      * Convert text to an EdgeType.  EdgeTypes are stored as text in the database.
+      * @param text Text version of EdgeType.
+      * @return The corresponding EdgeType.
+      */
+    def toEdgeType(text: String): EdgeType = list.find(_.name.equals(text)).get
+  }
+
+  /*
   val edgeTypeJaw = "Jaw" // edge was formed by jaw
   val edgeTypeMlc = "MLC" // edge was formed by MLC leaf ends
   val edgeTypeNone = "None" // indicates that there was no measurement
+   */
 
   override val topXmlLabel = "GapSkew"
 

@@ -19,6 +19,7 @@ package org.aqa.webrun.gapSkew
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Config
 import org.aqa.Util
+import org.aqa.db.GapSkew.EdgeType
 import org.aqa.web.C3Chart
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
@@ -56,6 +57,10 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
       <td style={"background-color:" + statusColor(angle) + ";"} title={title}>{fmt2(angle)}</td>
     }
 
+    def formatEdgeType(edgeType: EdgeType): String = {
+      (if (edgeType.isX) "X" else "Y") + edgeType.bank + " " + (if (edgeType.isJaw) "Jaw" else "MLC")
+    }
+
     <table class="table table-bordered">
       <thead>
         <tr>
@@ -65,15 +70,15 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
         </tr>
 
         <tr>
-          <td style="white-space: nowrap;">Top ({gapSkew.topEdgeType})</td>
-          {tdAngle(gapSkew.topAngle_deg)}
-          {td(gapSkew.topDeltaY_mm)}
+          <td style="white-space: nowrap;">Top ({formatEdgeType(gapSkew.topLeftEdgeType)})</td>
+          {tdAngle(gapSkew.topHorzSkew_deg)}
+          {td(gapSkew.topHorzDelta_mm)}
         </tr>
 
         <tr>
-          <td style="white-space: nowrap;">Bottom ({gapSkew.topEdgeType})</td>
-          {tdAngle(gapSkew.bottomAngle_deg)}
-          {td(gapSkew.bottomAngle_deg)}
+          <td style="white-space: nowrap;">Top ({formatEdgeType(gapSkew.bottomLeftEdgeType)})</td>
+          {tdAngle(gapSkew.bottomHorzSkew_deg)}
+          {td(gapSkew.bottomHorzDelta_mm)}
         </tr>
 
       </thead>
@@ -98,8 +103,8 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
   }
 
   private val leafTitle: Elem = {
-    val beamTitle = { "Largest skew (rotational) error of top and bottom (0 is ideal) in degrees." + WebUtil.titleNewline + gapSkew.largestAngleError_deg.formatted("%20.8f").trim }
-    val color = statusColor(gapSkew.largestAngleError_deg)
+    val beamTitle = { "Largest skew (rotational) error of top and bottom (0 is ideal) in degrees." + WebUtil.titleNewline + gapSkew.largestHorzSkew_deg.formatted("%20.8f").trim }
+    val color = statusColor(gapSkew.largestHorzSkew_deg)
     val heading = <h3 style={s"margin:8px; background-color:$color; border:solid $color 1px; border-radius: 18px; padding: 12px;"} title={beamTitle}> {gapSkew.beamName} </h3>
     heading
   }

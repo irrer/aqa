@@ -45,7 +45,7 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
     DicomUtil.findAllSingle(rtplan, TagByName.LeafPositionBoundaries).head.getDoubleValues.sorted
   }
 
-  val edgesFromPlan: EdgesFromPlan.EndPair = EdgesFromPlan.edgesFromPlan(rtimage, rtplan)
+  val edgesFromPlan: EdgesFromPlan.OrientedEdgePair = EdgesFromPlan.edgesFromPlan(rtimage, rtplan)
 
   /**
     * Given a bounding box that contains the leaf end and is between the sides of the leaf (roughly containing the
@@ -88,13 +88,12 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
       val xLeft_pix = halfLeaf_pix
       val xRight_pix = dicomImage.width - halfLeaf_pix - 2 * leafWidth_pix
 
-      val collimatorAngle = Util.angleRoundedTo90(DicomUtil.findAllSingle(rtimage, TagByName.BeamLimitingDeviceAngle).head.getDoubleValues.head)
-      val col90 = collimatorAngle == 90
-      val yTop = if (col90) edgesFromPlan.X2 else edgesFromPlan.X1
-      val yBottom = if (col90) edgesFromPlan.X1 else edgesFromPlan.X2
+      val collimatorAngle = Util.angleRoundedTo90(Util.collimatorAngle(rtimage))
+      val yTop = edgesFromPlan.topOrLeft.get.position_mm
+      val yBottom = edgesFromPlan.bottomOrRight.get.position_mm
 
-      val yTop_pix = translator.iso2PixCoordY(if (col90) -yTop.limit_mm else yTop.limit_mm) - height / 2
-      val yBottom_pix = translator.iso2PixCoordY(if (col90) -yBottom.limit_mm else yBottom.limit_mm) - height / 2
+      val yTop_pix = translator.iso2PixCoordY(-yTop) - height / 2
+      val yBottom_pix = translator.iso2PixCoordY(-yBottom) - height / 2
 
       val topLeftRect = Util.rectD(xLeft_pix, yTop_pix, width, height)
       val topRightRect = Util.rectD(xRight_pix, yTop_pix, width, height)
@@ -110,34 +109,38 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
       val bottomRight = endOfLeaf_iso(bottomRightRect)
 
       val bufferedImage = GapSkewAnnotateImage(dicomImage, collimatorAngle, translator, minPixel, maxPixel, topLeft, topRight, bottomLeft, bottomRight).annotate
-      val collimatorAngle_deg = {
-        val j = DicomUtil.findAllSingle(rtimage, TagByName.BeamLimitingDeviceAngle)
-        val j1 = j.head
-        val j2 = j1.getDoubleValues
-        val j4 = j2.head
-        j4
-      }
+      val collimatorAngle_deg = Util.collimatorAngle(rtimage)
 
+      val bank1LowLeaf_mm = if (edgesFromPlan.topOrLeft.get.edgeType.bank == 1) topLeft.yPosition_mm else bottomLeft.yPosition_mm
+      val bank1HighLeaf_mm = if (edgesFromPlan.topOrLeft.get.edgeType.bank == 1) topRight.yPosition_mm else bottomRight.yPosition_mm
+
+      val bank2LowLeaf_mm = if (edgesFromPlan.topOrLeft.get.edgeType.bank == 2) topLeft.yPosition_mm else bottomLeft.yPosition_mm
+      val bank2HighLeaf_mm = if (edgesFromPlan.topOrLeft.get.edgeType.bank == 2) topRight.yPosition_mm else bottomRight.yPosition_mm
+      val measurementSeparation_mm = (translator.pix2IsoDistX(xRight_pix) - translator.pix2IsoDistX(xLeft_pix)).abs
       val gapSkew = GapSkew(
         gapSkewPK = None,
         outputPK = extendedData.output.outputPK.get,
-        rtplanSOPInstanceUID = Util.sopOfAl(rtplan),
-        rtimageSeriesInstanceUID = Util.serInstOfAl(rtimage),
         rtimageUID = Util.sopOfAl(rtimage),
         beamName = beamName,
         collimatorAngle_deg = collimatorAngle_deg,
-        topLeftX_mm = topLeft.xCenter_mm,
-        topLeftY_mm = topLeft.yPosition_mm,
-        topRightX_mm = topRight.xCenter_mm,
-        topRightY_mm = topRight.yPosition_mm,
-        topPlannedY_mm = yTop.limit_mm,
-        topEdgeType = yTop.edgeType,
-        bottomLeftX_mm = bottomLeft.xCenter_mm,
-        bottomLeftY_mm = bottomLeft.yPosition_mm,
-        bottomRightX_mm = bottomRight.xCenter_mm,
-        bottomRightY_mm = bottomRight.yPosition_mm,
-        bottomPlannedY_mm = yBottom.limit_mm,
-        bottomEdgeType = yBottom.edgeType
+        measurementWidth_mm = leafWidth_mm * 2,
+        measurementSeparation_mm = measurementSeparation_mm,
+        //
+        topLeftEdgeTypeName = Some(edgesFromPlan.topOrLeft.get.edgeType.name),
+        topLeftValue_mm = Some(topLeft.yPosition_mm),
+        topLeftPlanned_mm = Some(edgesFromPlan.topOrLeft.get.position_mm),
+        //
+        topRightEdgeTypeName = Some(edgesFromPlan.topOrLeft.get.edgeType.name),
+        topRightValue_mm = Some(topRight.yPosition_mm),
+        topRightPlanned_mm = Some(edgesFromPlan.topOrLeft.get.position_mm),
+        //
+        bottomLeftEdgeTypeName = Some(edgesFromPlan.bottomOrRight.get.edgeType.name),
+        bottomLeftValue_mm = Some(bottomLeft.yPosition_mm),
+        bottomLeftPlanned_mm = Some(edgesFromPlan.bottomOrRight.get.position_mm),
+        //
+        bottomRightEdgeTypeName = Some(edgesFromPlan.bottomOrRight.get.edgeType.name),
+        bottomRightValue_mm = Some(bottomRight.yPosition_mm),
+        bottomRightPlanned_mm = Some(edgesFromPlan.bottomOrRight.get.position_mm)
       )
 
       val set = LeafSet(
