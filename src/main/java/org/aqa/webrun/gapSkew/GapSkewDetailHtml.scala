@@ -130,6 +130,37 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
     </table>
   }
 
+  private def verticalTable: Elem = {
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th> </th>
+          <th> Left </th>
+          <th> Right </th>
+        </tr>
+      </thead>
+
+      <tr>
+        <td style="white-space: nowrap;">Vertical Delta (mm) </td>
+        {td(gapSkew.leftDeltaSeparationOfHorzEdges_mm)}
+        {td(gapSkew.rightDeltaSeparationOfHorzEdges_mm)}
+      </tr>
+
+      <tr>
+        <td style="white-space: nowrap;">Vertical Measured (mm) </td>
+        {td(gapSkew.leftSeparationOfHorzEdges_mm)}
+        {td(gapSkew.rightSeparationOfHorzEdges_mm)}
+      </tr>
+
+      <tr>
+        <td style="white-space: nowrap;">Vertical Planned (mm) </td>
+        {td(gapSkew.plannedEdgeSeparation_mm)}
+        {td(gapSkew.plannedEdgeSeparation_mm)}
+      </tr>
+
+    </table>
+  }
+
   /**
     * Generate the HTML references to the history charts.
     * @return References to charts.
@@ -173,14 +204,17 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
 
         <div class="row">
           <div class="col-md-6 col-md-offset-3">
-            <center> {detailedTable} </center>
+            <center>
+              {detailedTable}
+            </center>
           </div>
         </div>
 
         <div class="row">
-          <div class="col-md-8 col-md-offset-2">
+          <div class="col-md-4 col-md-offset-4">
             <center>
-              {spatialTable}
+              <h4>Vertical Measurements</h4>
+              {verticalTable}
             </center>
           </div>
         </div>
@@ -188,6 +222,14 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
         <div class="row">
           <div class="col-md-10 col-md-offset-1">
             {historyCharts()}
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-8 col-md-offset-2">
+            <center style="margin-top: 40px; margin-bottom: 40px;">
+              {spatialTable}
+            </center>
           </div>
         </div>
       </div>
@@ -224,7 +266,12 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
     */
   def summaryHtml(): Elem = {
     <div class="row" style="margin-top: 40px;">
-      <div class="col-md-3"> <a href={detailUrl} title="Click for details."><center> {leafTitle}<p> </p> </center></a></div>
+      <div class="col-md-3">
+        <a href={detailUrl} title="Click for details.">
+          <center style="padding: 24px;">
+            {leafTitle}<p> </p>
+          </center>
+        </a></div>
       <div class="col-md-5">{summaryTable}</div>
       <div class="col-md-2">
         <a href={detailUrl} title="Click for details.">

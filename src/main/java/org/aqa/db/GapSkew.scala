@@ -113,9 +113,9 @@ case class GapSkew(
   /** Planned separation of edges.  Only valid if there are two edges. */
   def plannedEdgeSeparation_mm: Double = {
     if (topLeftEdgeType.isHorz)
-      (topLeftPlanned_mm.get - topRightPlanned_mm.get).abs
-    else
       (topLeftPlanned_mm.get - bottomRightPlanned_mm.get).abs
+    else
+      (topLeftPlanned_mm.get - topRightPlanned_mm.get).abs
   }
 
   /** Rise or fall of top edge (if defined, else exception). */

@@ -85,9 +85,9 @@ class GapSkewHtmlTable(gapSkew: GapSkew, dicomMetadataUrl: String, imageUrl: Str
       <div style="display: table-cell; vertical-align: middle; horizontal-align: right;">
         {span(t = "Left Vert Error (mm)", value = gs.leftDeltaSeparationOfHorzEdges_mm, "Planned separation - measured separation (mm).")}
         <br/>
-        {span(t = "Planned (mm)", value = gs.plannedEdgeSeparation_mm, "Planned separation of horizontal edges.")}
+        {span(t = "Left Vert Planned (mm)", value = gs.plannedEdgeSeparation_mm, "Planned separation of horizontal edges.")}
         <br/>
-        {span(t = "Measured(mm)", value = gs.leftDeltaSeparationOfHorzEdges_mm, "Measured distance between top and bottom on the left side (mm)")}
+        {span(t = "Left Vert Measured (mm)", value = gs.leftSeparationOfHorzEdges_mm, "Measured distance between top and bottom on the left side (mm)")}
       </div>
     </div>
   }
@@ -95,11 +95,11 @@ class GapSkewHtmlTable(gapSkew: GapSkew, dicomMetadataUrl: String, imageUrl: Str
   private val rightCenter = {
     <div style="display: table; height: 384px; overflow: hidden;">
       <div style="display: table-cell; vertical-align: middle; horizontal-align: left;">
-        {span(t = "Right Vert Error (mm)", value = gapSkew.plannedEdgeSeparation_mm, "Planned separation - measured separation (mm).")}
+        {span(t = "Right Vert Error (mm)", value = gs.rightDeltaSeparationOfHorzEdges_mm, "Measured distance between top and bottom on the right side (mm)")}
         <br/>
-        {span(t = "Planned (mm)", value = gapSkew.plannedEdgeSeparation_mm, "Rise or fall in bottom horizontal edge (mm)")}
+        {span(t = "Right Vert Planned (mm)", value = gapSkew.plannedEdgeSeparation_mm, "Rise or fall in bottom horizontal edge (mm)")}
         <br/>
-        {span(t = "Measured(mm)", value = gs.rightDeltaSeparationOfHorzEdges_mm, "Measured distance between top and bottom on the right side (mm)")}
+        {span(t = "Right Vert Measured (mm)", value = gapSkew.rightSeparationOfHorzEdges_mm, "Planned separation - measured separation (mm).")}
       </div>
     </div>
   }
