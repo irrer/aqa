@@ -111,11 +111,6 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
       val bufferedImage = GapSkewAnnotateImage(dicomImage, collimatorAngle, translator, minPixel, maxPixel, topLeft, topRight, bottomLeft, bottomRight).annotate
       val collimatorAngle_deg = Util.collimatorAngle(rtimage)
 
-      val bank1LowLeaf_mm = if (edgesFromPlan.topOrLeft.get.edgeType.bank == 1) topLeft.yPosition_mm else bottomLeft.yPosition_mm
-      val bank1HighLeaf_mm = if (edgesFromPlan.topOrLeft.get.edgeType.bank == 1) topRight.yPosition_mm else bottomRight.yPosition_mm
-
-      val bank2LowLeaf_mm = if (edgesFromPlan.topOrLeft.get.edgeType.bank == 2) topLeft.yPosition_mm else bottomLeft.yPosition_mm
-      val bank2HighLeaf_mm = if (edgesFromPlan.topOrLeft.get.edgeType.bank == 2) topRight.yPosition_mm else bottomRight.yPosition_mm
       val measurementSeparation_mm = (translator.pix2IsoDistX(xRight_pix) - translator.pix2IsoDistX(xLeft_pix)).abs
       val gapSkew = GapSkew(
         gapSkewPK = None,
