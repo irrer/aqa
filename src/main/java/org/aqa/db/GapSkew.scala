@@ -245,7 +245,7 @@ object GapSkew extends ProcedureOutput with Logging {
    */
 
   case class EdgeType(isX: Boolean, bank: Int, isJaw: Boolean, isHorz: Boolean) {
-    val name = {
+    val name: String = {
       (if (isX) "X" else "Y") +
         bank + " " +
         (if (isJaw) "Jaw" else "MLC") + " " +
