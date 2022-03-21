@@ -18,6 +18,7 @@ package org.aqa.webrun.gapSkew
 
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
+import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.Output
@@ -67,11 +68,13 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
       s
     }
 
+    val patientNameText = leafSetSeq.head.attributeList.get(TagByName.PatientName).getSingleStringValueOrEmptyString()
+
     val planReference = <div class="col-md-2"><center><br/><a href={rtplanUrl}>View RTPLAN</a></center></div>
 
     val patientId = <div class="col-md-2"><center>Patient ID <br/><b aqaalias="">{Util.patientIdOfAl(leafSetSeq.head.attributeList)}</b></center></div>
 
-    val patientName = <div class="col-md-2"><center>Patient Name <br/><b aqaalias="">{leafSetSeq.head.attributeList.get(TagByName.PatientName).getSingleStringValueOrEmptyString()}</b> </center></div>
+    val patientName = <div class="col-md-2" title={DicomUtil.parseDicomPersonName(patientNameText).toString()}><center>Patient Name <br/><b aqaalias="">{patientNameText}</b> </center></div>
 
     val ref = <div class="row" style="margin-top:20px;">{status} {planReference} {patientId} {patientName} </div>
 
@@ -81,8 +84,8 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
   val leafSetHtmlList: Seq[GapSkewDetailHtml] = leafSetSeq.sortBy(beamNameOf).map(leafSet => GapSkewDetailHtml(extendedData, leafSet, runReq))
 
   private def content: Elem = {
-    <div class="row">
-        <div class="col-md-8 col-md-offset-2">
+    <div class="row" style="margin-top:10px;">
+        <div class="col-md-8 col-md-offset-2" style="border:solid #bbbbbb 1px; padding: 12px;">
           {generalReference()}
           {leafSetHtmlList.map(l => l.summaryHtml())}
         </div>

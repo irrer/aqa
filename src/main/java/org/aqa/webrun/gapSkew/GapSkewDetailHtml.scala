@@ -40,48 +40,93 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
 
   private val imageUrl: String = FileUtil.replaceInvalidFileNameCharacters(leafSet.gapSkew.beamName, '_').replace(' ', '_') + ".png"
 
+  private def td(d: Double): Elem = {
+    <td title={d.toString}>{fmt2(d)}</td>
+  }
+
+  private def tdAngle(angle: Double): Elem = {
+    val title = {
+      angle.toString + "   Warning limit: " + Config.GapSkewAngleWarn_deg + "  Fail limit: " + Config.GapSkewAngleFail_deg
+    }
+    <td style={"background-color:" + statusColor(angle) + ";"} title={title}>{fmt2(angle)}</td>
+  }
+
+  private def formatEdgeType(edgeType: EdgeType): String = {
+    (if (edgeType.isX) "X" else "Y") + edgeType.bank + " " + (if (edgeType.isJaw) "Jaw" else "MLC")
+  }
+
   /**
     * Make a summary table for the beam.
     * @return Summary as HTML.
     */
   private def summaryTable: Elem = {
-
-    def td(d: Double): Elem = {
-      <td title={d.toString}>{fmt2(d)}</td>
-    }
-
-    def tdAngle(angle: Double): Elem = {
-      val title = {
-        angle.toString + "   Warning limit: " + Config.GapSkewAngleWarn_deg + "  Fail limit: " + Config.GapSkewAngleFail_deg
-      }
-      <td style={"background-color:" + statusColor(angle) + ";"} title={title}>{fmt2(angle)}</td>
-    }
-
-    def formatEdgeType(edgeType: EdgeType): String = {
-      (if (edgeType.isX) "X" else "Y") + edgeType.bank + " " + (if (edgeType.isJaw) "Jaw" else "MLC")
-    }
-
     <table class="table table-bordered">
       <thead>
         <tr>
           <th> Position (mm) </th>
           <th> Skew (deg) </th>
-          <th title="Change in mm of measurement: Left - Right"> Delta (mm) </th>
+          <th title="Change in mm of measurement: Right - Left "> Delta (mm) </th>
         </tr>
+      </thead>
 
         <tr>
-          <td style="white-space: nowrap;">Top ({formatEdgeType(gapSkew.topLeftEdgeType)})</td>
+          <td style="white-space: nowrap;">{formatEdgeType(gapSkew.topLeftEdgeType)} (top)</td>
           {tdAngle(gapSkew.topHorzSkew_deg)}
           {td(gapSkew.topHorzDelta_mm)}
         </tr>
 
         <tr>
-          <td style="white-space: nowrap;">Top ({formatEdgeType(gapSkew.bottomLeftEdgeType)})</td>
+          <td style="white-space: nowrap;">{formatEdgeType(gapSkew.bottomLeftEdgeType)} (bottom)</td>
           {tdAngle(gapSkew.bottomHorzSkew_deg)}
           {td(gapSkew.bottomHorzDelta_mm)}
         </tr>
 
+    </table>
+  }
+
+  private def detailedTable: Elem = {
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th> Position (mm) </th>
+          <th> Skew (deg) </th>
+          <th title="Change in mm of measurement: Right - Left"> Delta (mm) </th>
+
+          <th>Planned (mm)</th>
+          <th>Left (mm)</th>
+          <th>Left Delta (mm)</th>
+          <th>Right (mm)</th>
+          <th>Right Delta (mm)</th>
+
+        </tr>
       </thead>
+
+      <tr>
+        <td style="white-space: nowrap;">{formatEdgeType(gapSkew.topLeftEdgeType)} (top)</td>
+        {tdAngle(gapSkew.topHorzSkew_deg)}
+        {td(gapSkew.topHorzDelta_mm)}
+
+        {td(gapSkew.topLeftPlanned_mm.get)}
+        {td(gapSkew.topLeftValue_mm.get)}
+        {td(gapSkew.topLeftHorzDelta_mm)}
+        {td(gapSkew.topRightValue_mm.get)}
+        {td(gapSkew.topRightHorzDelta_mm)}
+
+      </tr>
+
+      <tr>
+        <td style="white-space: nowrap;">{formatEdgeType(gapSkew.bottomLeftEdgeType)} (bottom)</td>
+        {tdAngle(gapSkew.bottomHorzSkew_deg)}
+        {td(gapSkew.bottomHorzDelta_mm)}
+
+        {td(gapSkew.bottomLeftPlanned_mm.get)}
+        {td(gapSkew.bottomLeftValue_mm.get)}
+        {td(gapSkew.bottomLeftHorzDelta_mm)}
+        {td(gapSkew.bottomRightValue_mm.get)}
+        {td(gapSkew.bottomRightHorzDelta_mm)}
+
+      </tr>
+
     </table>
   }
 
@@ -103,11 +148,12 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
   }
 
   private val leafTitle: Elem = {
-    val beamTitle = { "Largest skew (rotational) error of top and bottom (0 is ideal) in degrees." + WebUtil.titleNewline + gapSkew.largestHorzSkew_deg.formatted("%20.8f").trim }
     val color = statusColor(gapSkew.largestHorzSkew_deg)
-    val heading = <h3 style={s"margin:8px; background-color:$color; border:solid $color 1px; border-radius: 18px; padding: 12px;"} title={beamTitle}> {gapSkew.beamName} </h3>
+    val heading = <h3 style={s"margin:8px; background-color:$color; border:solid $color 1px; border-radius: 18px; padding: 12px;"} title={"Click for details"}> {gapSkew.beamName} </h3>
     heading
   }
+
+  private val detailUrl: String = GapSkewDetailHtml.htmlFileName(gapSkew.beamName)
 
   /**
     * Generate detailed HTML content for one RTIMAGE.
@@ -115,7 +161,7 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
     */
   private def content = {
 
-    val detailTable = new GapSkewHtmlTable(gapSkew, dicomHtml.htmlUrl, imageUrl).detailTable
+    val spatialTable = new GapSkewHtmlTable(gapSkew, dicomHtml.htmlUrl, imageUrl).detailTable
 
     <div class="row">
       <div class="col-md-12 col-md-offset-1">
@@ -126,15 +172,15 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
         </div>
 
         <div class="row">
-          <div class="col-md-4 col-md-offset-4">
-            <center> {summaryTable} </center>
+          <div class="col-md-6 col-md-offset-3">
+            <center> {detailedTable} </center>
           </div>
         </div>
 
         <div class="row">
           <div class="col-md-8 col-md-offset-2">
             <center>
-              {detailTable}
+              {spatialTable}
             </center>
           </div>
         </div>
@@ -178,8 +224,13 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
     */
   def summaryHtml(): Elem = {
     <div class="row" style="margin-top: 40px;">
-      <div class="col-md-3"> <center> {leafTitle}<p> </p> <a href={GapSkewDetailHtml.htmlFileName(gapSkew.beamName)}>Details</a> </center> </div>
+      <div class="col-md-3"> <a href={detailUrl} title="Click for details."><center> {leafTitle}<p> </p> </center></a></div>
       <div class="col-md-5">{summaryTable}</div>
+      <div class="col-md-2">
+        <a href={detailUrl} title="Click for details.">
+          <img class="img-responsive fit-image" src={imageUrl} style="width:384px;"/>
+        </a>
+      </div>
     </div>
   }
 
