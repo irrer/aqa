@@ -84,7 +84,7 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
     <div class="row">
         <div class="col-md-8 col-md-offset-2">
           {generalReference()}
-          {leafSetHtmlList.map(_.summaryHtml)}
+          {leafSetHtmlList.map(l => l.summaryHtml())}
         </div>
       </div>
   }
@@ -94,7 +94,7 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeBinaryFile(file, text.getBytes)
 
-    leafSetHtmlList.map(_.writeDetailedHtml)
+    leafSetHtmlList.foreach(l => l.writeDetailedHtml())
     dicomHtml.makeDicomContent(runReq.rtplan)
 
     if (true) {

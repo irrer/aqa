@@ -66,7 +66,7 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
         <tr>
           <th> Position (mm) </th>
           <th> Skew (deg) </th>
-          <th> Left - Right (mm) </th>
+          <th title="Change in mm of measurement: Left - Right"> Delta (mm) </th>
         </tr>
 
         <tr>
