@@ -919,6 +919,8 @@ object Config extends Logging {
   val GapSkewLeafEndPenumbra_mm: Double = logMainText("GapSkewLeafEndPenumbra_mm", "20.0").toDouble.abs
   val GapSkewAngleWarn_deg: Double = logMainText("GapSkewAngleWarn_deg", "0.1").toDouble.abs
   val GapSkewAngleFail_deg: Double = logMainText("GapSkewAngleFail_deg", "0.2").toDouble.abs
+  val GapSkewExpiration_day: Double = logMainText("GapSkewExpiration_day", "45").toDouble
+  val GapSkewExpiration_ms: Double = GapSkewExpiration_day.toLong * 24 * 60 * 60 * 1000
 
   val SimpleRtplanTemplateDir: Option[File] = getSimpleRtplanTemplateDir
 

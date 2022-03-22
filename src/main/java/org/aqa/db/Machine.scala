@@ -318,6 +318,42 @@ object Machine extends Logging {
         None
     }
   }
+
+  /**
+    * Compare two machines to determine which should be ordered lexicographically first.
+    * It first tries to use numbers in machine names, and failing that, sorts alphabetically.
+    * For example, this makes 'TX2' come after 'TB1', and 'BR1' come before 'TB1'.
+    *
+    * This is usually used with 'sortWith'.
+    *
+    * @param a One machine.
+    * @param b The other machine.
+    * @return True if a < b.
+    */
+  def orderMachine(a: Machine, b: Machine): Boolean = {
+    if (a.machinePK.get == b.machinePK.get)
+      false
+    else {
+      val aMach = a.getRealId
+      val bMach = b.getRealId
+
+      def toNum(text: String): Option[Int] = {
+        if (text.matches(".*[0-9].*"))
+          Some(text.replaceAll("[^0-9]", "").toInt)
+        else
+          None
+      }
+
+      val compare =
+        if (toNum(aMach).isDefined && toNum(bMach).isDefined && (toNum(aMach).get != toNum(bMach).get)) {
+          toNum(aMach).get < toNum(bMach).get
+        } else {
+          aMach.compareTo(bMach) <= 0
+        }
+      compare
+    }
+  }
+
   def main(args: Array[String]): Unit = {
     Config.validate
     DbSetup.init

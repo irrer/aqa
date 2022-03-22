@@ -720,6 +720,9 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- For Gap Skew, if angle is greater than this then it is considered to have failed. -->
     <GapSkewAngleFail_deg>0.2</GapSkewAngleFail_deg>
 
+    <!-- If Gap Skew data is older than this, it is considered out of date.  In days as a floating point number. -->
+    <GapSkewExpiration_day>45.0</GapSkewExpiration_day>
+
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
 </AQAConfig>
