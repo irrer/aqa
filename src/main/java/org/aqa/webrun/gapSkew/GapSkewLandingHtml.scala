@@ -160,7 +160,8 @@ class GapSkewLandingHtml extends Restlet with SubUrlRoot with Logging {
     val summary = summaryData(institutionPK)
     <div class="row">
       <div class="col-md-4 col-md-offset-4">
-        <center><h2>Gap Skew Offset Status</h2></center>
+        <center><h2 style="margin-bottom:24px;">Latest Gap Skew Offset</h2></center>
+        <p> </p>
         <table class="table table-responsive table-bordered">
             <tr>
               <td><b> Machine </b></td>
@@ -179,7 +180,6 @@ class GapSkewLandingHtml extends Restlet with SubUrlRoot with Logging {
       super.handle(request, response)
       val valueMap = getValueMap(request)
       val institutionPK = WebUtil.getUser(valueMap).get.institutionPK
-      val text = WebUtil.wrapBody(content(institutionPK), "Gap Skew")
       WebUtil.respond(content(institutionPK), "Gap Skew", response)
     } catch {
       case t: Throwable =>
