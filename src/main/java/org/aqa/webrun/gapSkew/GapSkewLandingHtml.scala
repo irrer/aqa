@@ -126,34 +126,33 @@ class GapSkewLandingHtml extends Restlet with SubUrlRoot with Logging {
         if (summary.output.isEmpty)
           <td></td>
         else {
-          WebUtil.timeAgo(new Date(summary.output.get.dataDate.get.getTime))
+          <td style={"background-color:" + color}>{WebUtil.timeAgo(new Date(summary.output.get.dataDate.get.getTime))}</td>
         }
       }
-
-      <td style={"background-color:" + color}>{elem}</td>
+      elem
     }
 
     val skewElem: Elem = {
       if (summary.gapSkew.isEmpty)
-        <span></span>
+        <td>No Data</td>
       else {
         val skew = summary.gapSkew.get.largestHorzSkew_deg
-        <span title={"Skew (deg): " + skew}>{GapSkewUtil.fmt2(skew)}</span>
+        <td title={"Skew (deg): " + skew}>{GapSkewUtil.fmt2(skew)}</td>
       }
     }
 
     val detailsElem: Elem = {
       if (summary.output.isEmpty)
-        <span></span>
+        <td></td>
       else
-        <a href={ViewOutput.viewOutputUrl(summary.output.get.outputPK.get)}>Details</a>
+        <td><a href={ViewOutput.viewOutputUrl(summary.output.get.outputPK.get)}>Details</a></td>
     }
 
     <tr>
       {machineElem}
       {dateElem}
-      <td>{skewElem}</td>
-      <td>{detailsElem}</td>
+      {skewElem}
+      {detailsElem}
     </tr>
   }
 
