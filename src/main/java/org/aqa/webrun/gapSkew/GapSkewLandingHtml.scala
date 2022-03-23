@@ -165,7 +165,7 @@ class GapSkewLandingHtml extends Restlet with SubUrlRoot with Logging {
             <tr>
               <td><b> Machine </b></td>
               <td><b> Date </b></td>
-              <td title="Skew show as angle in degrees"><b> Largest Skew </b></td>
+              <td title="Skew show as angle in degrees"><b style="white-space: nowrap;"> Largest Skew (deg) </b></td>
               <td><b> Details </b></td>
             </tr>
             {summary.map(summaryToHtml)}
