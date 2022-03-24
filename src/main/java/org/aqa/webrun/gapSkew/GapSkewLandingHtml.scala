@@ -156,6 +156,14 @@ class GapSkewLandingHtml extends Restlet with SubUrlRoot with Logging {
     </tr>
   }
 
+  /**
+   * Show a list of previous results.
+   * @return
+   */
+  private def previous: Elem = {
+    <div></div>
+  }
+
   private def content(institutionPK: Long): Elem = {
     val summary = summaryData(institutionPK)
     <div class="row">
@@ -180,7 +188,7 @@ class GapSkewLandingHtml extends Restlet with SubUrlRoot with Logging {
       super.handle(request, response)
       val valueMap = getValueMap(request)
       val institutionPK = WebUtil.getUser(valueMap).get.institutionPK
-      WebUtil.respond(content(institutionPK), "Gap Skew", response)
+      WebUtil.respond(content(institutionPK), "Latest Gap Skew", response)
     } catch {
       case t: Throwable =>
         internalFailure(response, t)

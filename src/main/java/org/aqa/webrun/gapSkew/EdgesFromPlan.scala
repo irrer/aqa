@@ -96,13 +96,34 @@ object EdgesFromPlan extends Logging {
     val jawX2 = getPos(beamLimitList, 2, xJawNames).get
     val jawY1 = getPos(beamLimitList, 1, yJawNames).get
     val jawY2 = getPos(beamLimitList, 2, yJawNames).get
-    val mlcX1 = getPos(beamLimitList, 1, xMlcNames)
-    val mlcX2 = getPos(beamLimitList, 2, xMlcNames)
+
+    val ml1 = getPos(beamLimitList, 1, xMlcNames)
+    val ml2 = getPos(beamLimitList, 2, xMlcNames)
+
+    val mlIsDefined = ml1.isDefined && ml2.isDefined
+
+    /** The position of the collimator that is closest to the bottom of the image (more negative). */
+    val mlcBottom: Option[Double] = {
+      (mlIsDefined, col) match {
+        case (false, _)  => None
+        case (true, 270) => ml2.map(m => -m)
+        case _           => ml1
+      }
+    }
+
+    /** The position of the collimator that is closest to the top of the image (more positive). */
+    val mlcTop: Option[Double] = {
+      (mlIsDefined, col) match {
+        case (false, _)  => None
+        case (true, 270) => ml1.map(m => -m)
+        case _           => ml2
+      }
+    }
 
     // true if beam is more restricted by top and bottom than right to left
     val topBottom: Boolean = {
       val mlcSize = {
-        (mlcX1, mlcX2) match {
+        (mlcBottom, mlcTop) match {
           case (Some(mx1), Some(mx2)) =>
             Some(mx2 - mx1)
           case _ =>
@@ -132,34 +153,34 @@ object EdgesFromPlan extends Logging {
     // Note: Not all possible combinations of Jaw and MLC use are covered here (for
     // example collimator angle at 0).  The design can be expanded to handle them,
     // but until there are test cases it is best not to write code.
-    val orientedEdgePair = (jawX1, jawX2, jawY1, jawY2, mlcX1, mlcX2, col, topBottom) match {
-      case (jx1, jx2, _, _, Some(mx1), Some(mx2), 90, true) =>
+    val orientedEdgePair = (jawX1, jawX2, jawY1, jawY2, mlcBottom, mlcTop, col, topBottom) match {
+      case (jx1, jx2, _, _, Some(mxBottom), Some(mxTop), 90, true) =>
         val top =
-          if (jx2 < mx2)
-            BeamLimit(jx2, GapSkew.EdgeType.X1_Jaw_Horz)
+          if (jx2 < mxTop)
+            BeamLimit(jx2, GapSkew.EdgeType.X2_Jaw_Horz)
           else
-            BeamLimit(mx2, GapSkew.EdgeType.X2_MLC_Horz)
+            BeamLimit(mxTop, GapSkew.EdgeType.X2_MLC_Horz)
 
         val bottom =
-          if (jx1 > mx1)
-            BeamLimit(jx1, GapSkew.EdgeType.X2_Jaw_Horz)
+          if (jx1 > mxBottom)
+            BeamLimit(jx1, GapSkew.EdgeType.X1_Jaw_Horz)
           else
-            BeamLimit(mx1, GapSkew.EdgeType.X1_MLC_Horz)
+            BeamLimit(mxBottom, GapSkew.EdgeType.X1_MLC_Horz)
 
         OrientedEdgePair(Some(top), Some(bottom))
 
-      case (jx1, jx2, _, _, Some(mx1), Some(mx2), 270, true) =>
+      case (jx1, jx2, _, _, Some(mxBottom), Some(mxTop), 270, true) =>
         val top =
-          if (jx2 < mx2)
-            BeamLimit(jx2, GapSkew.EdgeType.X1_Jaw_Horz)
+          if (jx2 < mxTop)
+            BeamLimit(jx2, GapSkew.EdgeType.X2_Jaw_Horz)
           else
-            BeamLimit(mx2, GapSkew.EdgeType.X2_MLC_Horz)
+            BeamLimit(mxTop, GapSkew.EdgeType.X1_MLC_Horz)
 
         val bottom =
-          if (jx1 > mx1)
-            BeamLimit(jx1, GapSkew.EdgeType.X2_Jaw_Horz)
+          if (jx1 > mxBottom)
+            BeamLimit(jx1, GapSkew.EdgeType.X1_Jaw_Horz)
           else
-            BeamLimit(mx1, GapSkew.EdgeType.X1_MLC_Horz)
+            BeamLimit(mxBottom, GapSkew.EdgeType.X2_MLC_Horz)
         OrientedEdgePair(Some(top), Some(bottom))
 
       // no MLC, just jaws, topBottom: true

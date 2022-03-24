@@ -40,6 +40,9 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
 
   private val dicomImage = new DicomImage(rtimage)
 
+  private val collimatorAngle_deg: Double = Util.collimatorAngle(rtimage)
+  private val collimatorAngleRounded_deg: Int = Util.angleRoundedTo90(collimatorAngle_deg)
+
   // The sorted list of leaf sides in the RTPLAN in pixels.
   private val leafSidesFromPlanAsPix: Seq[Double] = {
     DicomUtil.findAllSingle(rtplan, TagByName.LeafPositionBoundaries).head.getDoubleValues.sorted
@@ -64,7 +67,10 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
       val leafEndY = LocateEdge.locateEdge(profile, (profile.min + profile.max) / 2)
 
       val endPosition_pix = box_pix.getY + leafEndY
-      val endPosition_mm = -translator.pix2IsoCoordY(endPosition_pix)
+      val endPosition_mm = {
+        val y = -translator.pix2IsoCoordY(endPosition_pix)
+        y // if (collimatorAngleRounded_deg == 270) y else -y
+      }
 
       Leaf(endPosition_mm, translator.pix2IsoCoordX(box_pix.getX), translator.pix2IsoDistX(box_pix.getWidth))
     }
@@ -88,7 +94,6 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
       val xLeft_pix = halfLeaf_pix
       val xRight_pix = dicomImage.width - halfLeaf_pix - 2 * leafWidth_pix
 
-      val collimatorAngle = Util.angleRoundedTo90(Util.collimatorAngle(rtimage))
       val yTop = edgesFromPlan.topOrLeft.get.position_mm
       val yBottom = edgesFromPlan.bottomOrRight.get.position_mm
 
@@ -108,8 +113,19 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
       val bottomLeft = endOfLeaf_iso(bottomLeftRect)
       val bottomRight = endOfLeaf_iso(bottomRightRect)
 
-      val bufferedImage = GapSkewAnnotateImage(dicomImage, collimatorAngle, translator, minPixel, maxPixel, topLeft, topRight, bottomLeft, bottomRight).annotate
-      val collimatorAngle_deg = Util.collimatorAngle(rtimage)
+      val bufferedImage =
+        GapSkewAnnotateImage(
+          dicomImage,
+          collimatorAngleRounded_deg,
+          beamName = beamName,
+          translator,
+          minPixel = minPixel,
+          maxPixel = maxPixel,
+          topLeft = topLeft,
+          topRight = topRight,
+          bottomLeft = bottomLeft,
+          bottomRight = bottomRight
+        ).annotate
 
       val measurementSeparation_mm = (translator.pix2IsoDistX(xRight_pix) - translator.pix2IsoDistX(xLeft_pix)).abs
       val gapSkew = GapSkew(

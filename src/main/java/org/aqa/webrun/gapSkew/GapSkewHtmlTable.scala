@@ -16,9 +16,15 @@ class GapSkewHtmlTable(gapSkew: GapSkew, dicomMetadataUrl: String, imageUrl: Str
 
   private val gs = gapSkew
 
+  private def formatEdgeName(edgeName: Option[String]) = {
+    if (edgeName.isDefined) {
+      edgeName.get.replace("Horz", "").replace("Vert", "").trim
+    } else ""
+  }
+
   private val topLeft = {
     <center>
-      <h4>Top Left</h4>
+      <h4>Top Left {formatEdgeName(gs.topLeftEdgeTypeName)}</h4>
       <br/>
       {span(t = "Error (mm)", value = gs.topLeftHorzDelta_mm, "Top left planned position - actual position (mm)")}
       <br/>
@@ -30,7 +36,7 @@ class GapSkewHtmlTable(gapSkew: GapSkew, dicomMetadataUrl: String, imageUrl: Str
 
   private val topRight = {
     <center>
-      <h4>Top Right</h4>
+      <h4>Top Right {formatEdgeName(gs.topRightEdgeTypeName)}</h4>
       <br/>
       {span(t = "Error (mm)", value = gs.topRightHorzDelta_mm, "Top right planned position - actual position (mm)")}
       <br/>
@@ -42,7 +48,7 @@ class GapSkewHtmlTable(gapSkew: GapSkew, dicomMetadataUrl: String, imageUrl: Str
 
   private val bottomLeft = {
     <center>
-      <h4>Bottom Left</h4>
+      <h4>Bottom Left {formatEdgeName(gs.bottomLeftEdgeTypeName)}</h4>
       <br/>
       {span(t = "Error (mm)", value = gs.bottomLeftHorzDelta_mm, "Bottom left planned position - actual position (mm)")}
       <br/>
@@ -54,7 +60,7 @@ class GapSkewHtmlTable(gapSkew: GapSkew, dicomMetadataUrl: String, imageUrl: Str
 
   private val bottomRight = {
     <center>
-      <h4>Bottom Right</h4>
+      <h4>Bottom Right {formatEdgeName(gs.bottomRightEdgeTypeName)}</h4>
       <br/>
       {span(t = "Error (mm)", value = gs.bottomRightHorzDelta_mm, "Bottom right planned position - actual position (mm)")}
       <br/>

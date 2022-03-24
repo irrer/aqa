@@ -29,7 +29,8 @@ import java.awt.image.BufferedImage
 
 case class GapSkewAnnotateImage(
     dicomImage: DicomImage,
-    collimatorAngle: Int,
+    collimatorAngleRounded_deg: Int,
+    beamName: String,
     translator: IsoImagePlaneTranslator,
     minPixel: Float,
     maxPixel: Float,
@@ -40,8 +41,6 @@ case class GapSkewAnnotateImage(
 ) {
 
   private def d2i = Util.d2i _
-
-  private val colIs270 = Util.angleRoundedTo90(collimatorAngle) == 270
 
   private def arrow(image: BufferedImage, x1: Int, y1: Int, x2: Int, y2: Int, color: Color = Color.darkGray): Unit = {
     val g = ImageUtil.getGraphics(image)
@@ -54,7 +53,7 @@ case class GapSkewAnnotateImage(
     val arrowWidth = 8
     val ah = arrowWidth / 2
 
-    val arrow: Seq[Array[Int]] = 0 match {
+    val arrowPoints: Seq[Array[Int]] = 0 match {
       case _ if (x1 == x2) && (y1 < y2) => // down arrow
         Seq(
           Array(x2 - ah, x2 + ah, x2),
@@ -82,21 +81,30 @@ case class GapSkewAnnotateImage(
       case _ => throw new RuntimeException("The only arrow directions supported are up, down, right, and left.")
     }
 
-    val p = new Polygon(arrow.head, arrow(1), 3)
+    val p = new Polygon(arrowPoints.head, arrowPoints(1), 3)
     g.fillPolygon(p)
   }
 
-  private def addLeaf(image: BufferedImage, leaf: Leaf, isTop: Boolean): Unit = {
+  private def addBeamName(image: BufferedImage): Unit = {
     val g = ImageUtil.getGraphics(image)
     g.setColor(Color.darkGray)
 
-    val y = d2i(translator.iso2PixCoordY(if (colIs270) leaf.yPosition_mm else -leaf.yPosition_mm))
+    ImageText.setFont(g, ImageText.DefaultFont, textPointSize = 30)
+    val centerX = dicomImage.width / 2
+    val centerY = ImageText.getTextDimensions(g, beamName).getHeight
+    ImageText.drawTextCenteredAt(g, centerX, centerY, beamName)
+  }
+
+  private def addLeaf(image: BufferedImage, leaf: Leaf, isTop: Boolean): Unit = {
+    addBeamName(image)
+    val g = ImageUtil.getGraphics(image)
+    g.setColor(Color.darkGray)
+
+    val y = d2i(translator.iso2PixCoordY(-leaf.yPosition_mm))
     val x1 = d2i(translator.iso2PixCoordX(leaf.xLeftPosition_mm))
     val x2 = d2i(translator.iso2PixCoordX(leaf.xLeftPosition_mm + leaf.width_mm))
     ImageUtil.setLineThickness(g, 3)
     g.drawLine(d2i(x1), d2i(y), d2i(x2), d2i(y))
-
-    // -----------------------------------------------------------------
 
     ImageText.setFont(g, ImageText.DefaultFont, textPointSize = 20)
     val textHeight = d2i(ImageText.getTextDimensions(g, "Hq").getHeight)
@@ -146,10 +154,10 @@ case class GapSkewAnnotateImage(
     val bufferedImage: BufferedImage = dicomImage.toDeepColorBufferedImage(minPixel, maxPixel)
     Util.addGraticulesNegY(bufferedImage, translator, Color.yellow)
 
-    addLeaf(bufferedImage, topLeft, isTop = !colIs270) // true)
-    addLeaf(bufferedImage, topRight, isTop = !colIs270) // true)
-    addLeaf(bufferedImage, bottomLeft, isTop = colIs270) // false)
-    addLeaf(bufferedImage, bottomRight, isTop = colIs270) // false)
+    addLeaf(bufferedImage, topLeft, isTop = true) // , isTop = !colIs270) // true)
+    addLeaf(bufferedImage, topRight, isTop = true) // , isTop = !colIs270) // true)
+    addLeaf(bufferedImage, bottomLeft, isTop = false) // , isTop = colIs270) // false)
+    addLeaf(bufferedImage, bottomRight, isTop = false) // , isTop = colIs270) // false)
 
     bufferedImage
   }
