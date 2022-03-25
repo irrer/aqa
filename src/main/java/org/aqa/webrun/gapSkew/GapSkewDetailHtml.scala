@@ -220,16 +220,16 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
         </div>
 
         <div class="row">
-          <div class="col-md-10 col-md-offset-1">
-            {historyCharts()}
-          </div>
-        </div>
-
-        <div class="row">
           <div class="col-md-8 col-md-offset-2">
             <center style="margin-top: 40px; margin-bottom: 40px;">
               {spatialTable}
             </center>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-10 col-md-offset-1">
+            {historyCharts()}
           </div>
         </div>
       </div>
