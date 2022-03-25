@@ -35,11 +35,11 @@ import scala.xml.Elem
 /**
   * Support for generating JS scripts on request.
   */
-object GapSkewLandingHtml {
-  val path = new String((new GapSkewLandingHtml).pathOf)
+object GapSkewSummaryHtml {
+  val path = new String((new GapSkewSummaryHtml).pathOf)
 }
 
-class GapSkewLandingHtml extends Restlet with SubUrlRoot with Logging {
+class GapSkewSummaryHtml extends Restlet with SubUrlRoot with Logging {
 
   private case class Summary(machine: Machine, output: Option[Output] = None, gapSkew: Option[GapSkew] = None) {}
 
