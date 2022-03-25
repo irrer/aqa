@@ -362,7 +362,7 @@ object GapSkew extends ProcedureOutput with Logging {
   case class GapSkewHistory(output: Output, gapSkew: GapSkew) {}
 
   /**
-    * Get the GapSkew results.
+    * Get the history of GapSkew results.
     *
     * @param machinePK : For this machine
     * @param beamName  : For this beam
@@ -383,6 +383,26 @@ object GapSkew extends ProcedureOutput with Logging {
     // throw an exception.
     val sr = search.result
     val tsList = Db.run(sr).map(os => GapSkewHistory(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
+
+    tsList
+  }
+
+  /**
+    * Get all GapSkew results.
+    *
+    * @param outputSet  : List of output PKs.  Each GapSkew must point to one of the items in this set.
+    * @return List of GapSkew that point to the output set.
+    *
+    */
+  def listByOutputSet(outputSet: Set[Long]): Seq[GapSkew] = {
+
+    val search = for {
+      gapSkew <- GapSkew.query.filter(c => c.outputPK.inSet(outputSet))
+    } yield {
+      gapSkew
+    }
+
+    val tsList = Db.run(search.result)
 
     tsList
   }
