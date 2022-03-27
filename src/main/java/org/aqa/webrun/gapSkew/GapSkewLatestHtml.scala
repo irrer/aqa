@@ -42,9 +42,6 @@ object GapSkewLatestHtml {
 
 class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
 
-  private val columnWidthOfPrevious = 200
-  private def columnWidthStyle = "max-width: " + columnWidthOfPrevious + "px;"
-
   private case class Latest(machine: Machine, output: Option[Output] = None, gapSkew: Option[GapSkew] = None) {}
 
   private case class OutputGapSkew(output: Output, gapSkew: GapSkew) {}
@@ -168,21 +165,23 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
         val title = Util.timeHumanFriendly(outputDate) + WebUtil.titleNewline + "Largest skew (deg): " + largestHorzSkew_deg
         val dateStyle = "margin:8px; background-color:" + color + "; border:solid " + color + " 1px; border-radius: 4px; padding: 4px;white-space: nowrap; padding: 12px;"
 
-        <td title={title} style="border: 1px solid lightgrey; padding: 5px;">
+        <td title={title} style="border: 1px solid lightgrey; padding: 5px; ">
           <a href={ViewOutput.viewOutputUrl(outputGapSkew.output.outputPK.get)}>
             <center>
-              <p style={dateStyle}>{WebUtil.timeAgo(outputDate)}</p>
-              <p>{GapSkewUtil.fmt2(largestHorzSkew_deg)}</p>
+              <div style={dateStyle}>{WebUtil.timeAgo(outputDate)}></div>
+              <div>{GapSkewUtil.fmt2(largestHorzSkew_deg)}</div>
             </center>
           </a>
         </td>
 
       }
 
-      <td style={columnWidthStyle}>
-        <table>
-          <tr>{previousList.map(toElem)}</tr>
-        </table>
+      <td style={"overflow: auto;white-space: nowrap;"}>
+        <div style="width:400px; overflow: auto;white-space: nowrap;">
+          <table>
+            <tr>{previousList.map(toElem)}</tr>
+          </table>
+        </div>
       </td>
     }
 
@@ -197,7 +196,7 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
 
   private def content(gapSkewData: GapSkewData): Elem = {
     <div class="row">
-      <div class="col-md-4 col-md-offset-4">
+      <div class="col-md-8 col-md-offset-2">
         <center><h2 style="margin-bottom:24px;">Latest Gap Skew Offset</h2></center>
         <p> </p>
         <table class="table table-responsive table-bordered">
@@ -206,7 +205,7 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
               <td><b> Date </b></td>
               <td title="Skew show as angle in degrees"><b style="white-space: nowrap;"> Largest Skew (deg) </b></td>
               <td><b> Details </b></td>
-              <td style={columnWidthStyle}><b> Previous </b></td>
+              <td><b> Previous </b></td>
             </tr>
             {gapSkewData.machineList.map(m => summaryToHtml(m, gapSkewData))}
         </table>
