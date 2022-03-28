@@ -119,7 +119,7 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
         }
       }
 
-      <td><h3 style={"margin:8px; background-color:" + color + "; border:solid " + color + " 1px; border-radius: 10px; padding: 12px;"} title={title} aqaalias="">{latest.machine.id}</h3></td>
+      <td><h3 style={"margin:17px; background-color:" + color + "; border:solid " + color + " 1px; border-radius: 10px; padding: 12px;"} title={title} aqaalias="">{latest.machine.id}</h3></td>
     }
 
     val dateElem = {
@@ -129,18 +129,19 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
         if (latest.output.isEmpty)
           <td></td>
         else {
-          <td style={"white-space: nowrap; background-color:" + color}>{WebUtil.timeAgo(new Date(latest.output.get.dataDate.get.getTime))}</td>
+          <td style={"vertical-align:middle; text-align:center; white-space: nowrap; background-color:" + color}>{WebUtil.timeAgo(new Date(latest.output.get.dataDate.get.getTime))}</td>
         }
       }
       elem
     }
 
     val skewElem: Elem = {
+      val style = "vertical-align:middle; text-align:center;"
       if (latest.gapSkew.isEmpty)
-        <td>No Data</td>
+        <td style={style}>No Data</td>
       else {
         val skew = latest.gapSkew.get.largestHorzSkew_deg
-        <td title={"Skew (deg): " + skew}>{GapSkewUtil.fmt2(skew)}</td>
+        <td title={"Skew (deg): " + skew} style={style}>{GapSkewUtil.fmt2(skew)}</td>
       }
     }
 
@@ -148,7 +149,7 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
       if (latest.output.isEmpty)
         <td></td>
       else
-        <td>
+        <td style="vertical-align:middle; text-align:center;">
           <a href={ViewOutput.viewOutputUrl(latest.output.get.outputPK.get)}>Details</a>
         </td>
     }
@@ -165,21 +166,22 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
         val title = Util.timeHumanFriendly(outputDate) + WebUtil.titleNewline + "Largest skew (deg): " + largestHorzSkew_deg
         val dateStyle = "margin:8px; background-color:" + color + "; border:solid " + color + " 1px; border-radius: 4px; padding: 4px;white-space: nowrap; padding: 12px;"
 
-        <td title={title} style="border: 1px solid lightgrey; padding: 5px; ">
+        <td title={title} style="border: 1px solid lightgrey; padding: 5px;">
           <a href={ViewOutput.viewOutputUrl(outputGapSkew.output.outputPK.get)}>
             <center>
-              <div style={dateStyle}>{WebUtil.timeAgo(outputDate)}></div>
+              <div style={dateStyle}>{WebUtil.timeAgo(outputDate)}</div>
               <div>{GapSkewUtil.fmt2(largestHorzSkew_deg)}</div>
             </center>
           </a>
         </td>
-
       }
 
-      <td style={"overflow: auto;white-space: nowrap;"}>
-        <div style="width:400px; overflow: auto;white-space: nowrap;">
+      val pList = previousList.map(toElem)
+
+      <td style="width: 100%;">
+        <div style="width: 900px; overflow: auto;">
           <table>
-            <tr>{previousList.map(toElem)}</tr>
+            <tr>{pList ++ pList ++ pList ++ pList ++ pList ++ pList}</tr>
           </table>
         </div>
       </td>
@@ -195,20 +197,28 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
   }
 
   private def content(gapSkewData: GapSkewData): Elem = {
+    val j = gapSkewData.machineList.filter(m => m.getRealId.length < 4).map(m => summaryToHtml(m, gapSkewData)) //  TODO rm
+
+    val list = gapSkewData.machineList.map(m => summaryToHtml(m, gapSkewData)) // TODO put back
     <div class="row">
-      <div class="col-md-8 col-md-offset-2">
-        <center><h2 style="margin-bottom:24px;">Latest Gap Skew Offset</h2></center>
-        <p> </p>
-        <table class="table table-responsive table-bordered">
-            <tr>
-              <td><b> Machine </b></td>
-              <td><b> Date </b></td>
-              <td title="Skew show as angle in degrees"><b style="white-space: nowrap;"> Largest Skew (deg) </b></td>
-              <td><b> Details </b></td>
-              <td><b> Previous </b></td>
-            </tr>
-            {gapSkewData.machineList.map(m => summaryToHtml(m, gapSkewData))}
-        </table>
+      <div class="col-md-10 col-md-offset-1">
+        <div class="row">
+          <center><h2 style="margin-bottom:24px;">Latest Gap Skew Offset</h2></center>
+        </div>
+        <div class="row">
+          <div class="col-md-12">
+            <table class="table table-responsive table-bordered" xstyle="table-layout: fixed;">
+              <tr>
+                <td><b> Machine </b></td>
+                <td><b> Date </b></td>
+                <td title="Skew shown as angle in degrees"><b style="white-space: nowrap;"> Largest Skew (deg) </b></td>
+                <td><b> Details </b></td>
+                <td style="width: 100%;"><b> Previous </b></td>
+              </tr>
+              {j}
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   }
