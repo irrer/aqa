@@ -274,7 +274,7 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
         </a></div>
       <div class="col-md-5">{summaryTable}</div>
       <div class="col-md-2">
-        <a href={detailUrl} title="Click for details.">
+        <a href={detailUrl} title="Click for details." class="screenshot" rel={imageUrl}>
           <img class="img-responsive fit-image" src={imageUrl} style="width:384px;"/>
         </a>
       </div>

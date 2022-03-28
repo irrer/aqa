@@ -85,7 +85,7 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
 
   private def content: Elem = {
     <div class="row" style="margin-top:10px;">
-        <div class="col-md-8 col-md-offset-2" style="border:solid #bbbbbb 1px; padding: 12px;">
+        <div class="col-md-8 col-md-offset-2" style="border:solid #bbbbbb 1px; padding: 12px; margin-bottom:500px;">
           {generalReference()}
           {leafSetHtmlList.map(l => l.summaryHtml())}
         </div>
