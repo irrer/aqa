@@ -1585,11 +1585,12 @@ object WebUtil extends Logging {
     }
   }
 
-  private def timeAgoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+  private def timeAgoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
 
   def timeAgo(prefix: String, date: Date): Elem = {
     val stdTime = timeAgoFormat.format(date)
-    <time class='timeago' datetime={stdTime}>{prefix + " " + Util.timeHumanFriendly(date)}</time>
+    val timeHumanFriendlyFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss")
+    <time class='timeago' datetime={stdTime}>{prefix + " " + timeHumanFriendlyFormat.format(date)}</time>
   }
 
   def timeAgo(date: Date): Elem = timeAgo("", date)

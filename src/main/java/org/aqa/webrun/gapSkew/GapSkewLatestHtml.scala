@@ -166,23 +166,21 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
         val title = Util.timeHumanFriendly(outputDate) + WebUtil.titleNewline + "Largest skew (deg): " + largestHorzSkew_deg
         val dateStyle = "margin:8px; background-color:" + color + "; border:solid " + color + " 1px; border-radius: 4px; padding: 4px;white-space: nowrap; padding: 12px;"
 
-        <td title={title} style="border: 1px solid lightgrey; padding: 5px;">
+        <div title={title} style="border: 1px solid lightgrey; padding: 5px; margin-right:8px;">
           <a href={ViewOutput.viewOutputUrl(outputGapSkew.output.outputPK.get)}>
             <center>
               <div style={dateStyle}>{WebUtil.timeAgo(outputDate)}</div>
               <div>{GapSkewUtil.fmt2(largestHorzSkew_deg)}</div>
             </center>
           </a>
-        </td>
+        </div>
       }
 
       val pList = previousList.map(toElem)
 
       <td style="width: 100%;">
-        <div style="width: 900px; overflow: auto;">
-          <table>
-            <tr>{pList ++ pList ++ pList ++ pList ++ pList ++ pList}</tr>
-          </table>
+        <div style="width: 1050px; overflow: auto; display: flex; flex-direction: row;">
+            {pList ++ pList ++ pList ++ pList ++ pList ++ pList}
         </div>
       </td>
     }
