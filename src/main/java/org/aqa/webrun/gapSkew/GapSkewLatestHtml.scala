@@ -119,7 +119,11 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
         }
       }
 
-      <td><h3 style={"margin:17px; background-color:" + color + "; border:solid " + color + " 1px; border-radius: 10px; padding: 12px;"} title={title} aqaalias="">{latest.machine.id}</h3></td>
+      val backgroundColor = if (dataExpired(latest.output)) GapSkewUtil.colorNone else "white"
+
+      <td title={title} style={"background-color:" + backgroundColor + ";"}><h3 style={
+        "margin:17px; background-color:" + color + "; border:solid " + color + " 1px; border-radius: 10px; padding: 12px;"
+      } aqaalias="">{latest.machine.id}</h3></td>
     }
 
     val dateElem = {
@@ -129,7 +133,7 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
         if (latest.output.isEmpty)
           <td></td>
         else {
-          <td style={"vertical-align:middle; text-align:center; white-space: nowrap; background-color:" + color}>{WebUtil.timeAgo(new Date(latest.output.get.dataDate.get.getTime))}</td>
+          <td style={"vertical-align:middle; text-align:center; white-space: nowrap;"}>{WebUtil.timeAgo(new Date(latest.output.get.dataDate.get.getTime))}</td>
         }
       }
       elem
@@ -150,7 +154,7 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
         <td></td>
       else
         <td style="vertical-align:middle; text-align:center;">
-          <a href={ViewOutput.viewOutputUrl(latest.output.get.outputPK.get)}>Details</a>
+          <a href={ViewOutput.viewOutputUrl(latest.output.get.outputPK.get)}>Full Report</a>
         </td>
     }
 
@@ -176,11 +180,9 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
         </div>
       }
 
-      val pList = previousList.map(toElem)
-
       <td style="width: 100%;">
-        <div style="width: 1050px; overflow: auto; display: flex; flex-direction: row;">
-            {pList ++ pList ++ pList ++ pList ++ pList ++ pList}
+        <div style="width: 950px; overflow: auto; display: flex; flex-direction: row;">
+            {previousList.map(toElem)}
         </div>
       </td>
     }
@@ -195,8 +197,6 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
   }
 
   private def content(gapSkewData: GapSkewData): Elem = {
-    val j = gapSkewData.machineList.filter(m => m.getRealId.length < 4).map(m => summaryToHtml(m, gapSkewData)) //  TODO rm
-
     val list = gapSkewData.machineList.map(m => summaryToHtml(m, gapSkewData)) // TODO put back
     <div class="row">
       <div class="col-md-10 col-md-offset-1">
@@ -207,13 +207,13 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
           <div class="col-md-12">
             <table class="table table-responsive table-bordered" xstyle="table-layout: fixed;">
               <tr>
-                <td><b> Machine </b></td>
-                <td><b> Date </b></td>
-                <td title="Skew shown as angle in degrees"><b style="white-space: nowrap;"> Largest Skew (deg) </b></td>
-                <td><b> Details </b></td>
-                <td style="width: 100%;"><b> Previous </b></td>
+                <td style="vertical-align:middle; text-align:center;"><b> Machine </b></td>
+                <td style="vertical-align:middle; text-align:center;"><b> Date </b></td>
+                <td title="Skew shown as angle in degrees"><b style="vertical-align:middle; white-space: nowrap;"> Largest Skew (deg) </b></td>
+                <td style="vertical-align:middle; text-align:center;"><b> Full Report </b></td>
+                <td style="vertical-align:middle; text-align:left;width: 100%;"><b> Previous Results</b></td>
               </tr>
-              {j}
+              {list}
             </table>
           </div>
         </div>
