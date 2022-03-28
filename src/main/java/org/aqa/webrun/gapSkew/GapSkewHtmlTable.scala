@@ -86,28 +86,24 @@ class GapSkewHtmlTable(gapSkew: GapSkew, dicomMetadataUrl: String, imageUrl: Str
     </center>
   }
 
-  private val leftCenter = {
-    <div style="display: table; height: 384px; overflow: hidden;">
-      <div style="display: table-cell; vertical-align: middle; horizontal-align: right;">
-        {span(t = "Left Vert Error (mm)", value = gs.leftDeltaSeparationOfHorzEdges_mm, "Planned separation - measured separation (mm).")}
-        <br/>
-        {span(t = "Left Vert Planned (mm)", value = gs.plannedEdgeSeparation_mm, "Planned separation of horizontal edges.")}
-        <br/>
-        {span(t = "Left Vert Measured (mm)", value = gs.leftSeparationOfHorzEdges_mm, "Measured distance between top and bottom on the left side (mm)")}
-      </div>
-    </div>
+  private val leftMiddle = {
+    <center>
+      {span(t = "Left Vert Error (mm)", value = gs.leftDeltaSeparationOfHorzEdges_mm, "Planned separation - measured separation (mm).")}
+      <br/>
+      {span(t = "Left Vert Planned (mm)", value = gs.plannedEdgeSeparation_mm, "Planned separation of horizontal edges.")}
+      <br/>
+      {span(t = "Left Vert Measured (mm)", value = gs.leftSeparationOfHorzEdges_mm, "Measured distance between top and bottom on the left side (mm)")}
+    </center>
   }
 
-  private val rightCenter = {
-    <div style="display: table; height: 384px; overflow: hidden;">
-      <div style="display: table-cell; vertical-align: middle; horizontal-align: left;">
+  private val rightMiddle = {
+      <center>
         {span(t = "Right Vert Error (mm)", value = gs.rightDeltaSeparationOfHorzEdges_mm, "Measured distance between top and bottom on the right side (mm)")}
         <br/>
         {span(t = "Right Vert Planned (mm)", value = gapSkew.plannedEdgeSeparation_mm, "Rise or fall in bottom horizontal edge (mm)")}
         <br/>
         {span(t = "Right Vert Measured (mm)", value = gapSkew.rightSeparationOfHorzEdges_mm, "Planned separation - measured separation (mm).")}
-      </div>
-    </div>
+      </center>
   }
 
   private val center = {
@@ -126,21 +122,22 @@ class GapSkewHtmlTable(gapSkew: GapSkew, dicomMetadataUrl: String, imageUrl: Str
     * @return HTML table.
     */
   def detailTable: Elem = {
+    val style = "vertical-align: middle;"
     <table class="table table-bordered">
       <tr>
-        <td>{topLeft}</td>
-        <td>{topCenter}</td>
-        <td>{topRight}</td>
+        <td style={style}>{topLeft}</td>
+        <td style={style}>{topCenter}</td>
+        <td style={style}>{topRight}</td>
       </tr>
       <tr>
-        <td>{leftCenter}</td>
-        <td>{center}</td>
-        <td>{rightCenter}</td>
+        <td style={style}>{leftMiddle}</td>
+        <td style={style}>{center}</td>
+        <td style={style}>{rightMiddle}</td>
       </tr>
       <tr>
-        <td>{bottomLeft}</td>
-        <td>{bottomCenter}</td>
-        <td>{bottomRight}</td>
+        <td style={style}>{bottomLeft}</td>
+        <td style={style}>{bottomCenter}</td>
+        <td style={style}>{bottomRight}</td>
       </tr>
     </table>
   }
