@@ -127,8 +127,6 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
     }
 
     val dateElem = {
-      val color = if (dataExpired(latest.output)) GapSkewUtil.colorNone else "white"
-
       val elem = {
         if (latest.output.isEmpty)
           <td></td>
