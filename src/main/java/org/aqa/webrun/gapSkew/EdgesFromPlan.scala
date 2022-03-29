@@ -156,14 +156,14 @@ object EdgesFromPlan extends Logging {
     val orientedEdgePair = (jawX1, jawX2, jawY1, jawY2, mlcBottom, mlcTop, col, topBottom) match {
       case (jx1, jx2, _, _, Some(mxBottom), Some(mxTop), 90, true) =>
         val top =
-          if (jx2 < mxTop)
-            BeamLimit(jx2, GapSkew.EdgeType.X2_Jaw_Horz)
+          if (-jx1 < mxTop)
+            BeamLimit(-jx1, GapSkew.EdgeType.X1_Jaw_Horz)
           else
             BeamLimit(mxTop, GapSkew.EdgeType.X2_MLC_Horz)
 
         val bottom =
-          if (jx1 > mxBottom)
-            BeamLimit(jx1, GapSkew.EdgeType.X1_Jaw_Horz)
+          if (-jx2 > mxBottom)
+            BeamLimit(-jx2, GapSkew.EdgeType.X2_Jaw_Horz)
           else
             BeamLimit(mxBottom, GapSkew.EdgeType.X1_MLC_Horz)
 
@@ -171,29 +171,31 @@ object EdgesFromPlan extends Logging {
 
       case (jx1, jx2, _, _, Some(mxBottom), Some(mxTop), 270, true) =>
         val top =
-          if (jx2 < mxTop)
-            BeamLimit(jx2, GapSkew.EdgeType.X2_Jaw_Horz)
+          if (-jx1 < mxTop)
+            BeamLimit(-jx1, GapSkew.EdgeType.X1_Jaw_Horz)
           else
             BeamLimit(mxTop, GapSkew.EdgeType.X1_MLC_Horz)
 
         val bottom =
-          if (jx1 > mxBottom)
-            BeamLimit(jx1, GapSkew.EdgeType.X1_Jaw_Horz)
+          if (-jx2 > mxBottom)
+            BeamLimit(-jx2, GapSkew.EdgeType.X2_Jaw_Horz)
           else
             BeamLimit(mxBottom, GapSkew.EdgeType.X2_MLC_Horz)
         OrientedEdgePair(Some(top), Some(bottom))
 
       // no MLC, just jaws, topBottom: true
       case (jx1, jx2, _, _, None, None, _, true) =>
-        val top = BeamLimit(jx2, GapSkew.EdgeType.X1_Jaw_Horz)
-        val bottom = BeamLimit(jx1, GapSkew.EdgeType.X2_Jaw_Horz)
+        val top = BeamLimit(-jx1, GapSkew.EdgeType.X1_Jaw_Horz)
+        val bottom = BeamLimit(-jx2, GapSkew.EdgeType.X2_Jaw_Horz)
         OrientedEdgePair(Some(top), Some(bottom))
 
+      /*
       // no MLC, just jaws, topBottom: false
       case (_, _, jy1, jy2, None, None, _, false) =>
         val left = BeamLimit(jy1, GapSkew.EdgeType.Y1_Jaw_Horz)
         val right = BeamLimit(jy2, GapSkew.EdgeType.Y2_Jaw_Horz)
         OrientedEdgePair(Some(left), Some(right))
+      */
 
       case _ =>
         throw new RuntimeException("Unhandled jaw/MLC orientation configuration.")
