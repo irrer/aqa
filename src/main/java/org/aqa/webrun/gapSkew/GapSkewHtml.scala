@@ -18,7 +18,6 @@ package org.aqa.webrun.gapSkew
 
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
-import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.Output
@@ -47,14 +46,16 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
 
   private def generalReference(): Elem = {
 
+    val style = "vertical-align:middle; padding:20px;"
+
     val status = {
       val titleSuffix = WebUtil.titleNewline + "Warning limit: " + Config.GapSkewAngleWarn_deg + " degrees.   Fail limit: " + Config.GapSkewAngleFail_deg + " degrees."
       def toElem(title: String, text: String, color: String): Elem = {
-        <div class="col-md-3">
+        <td style={style}>
           <center>
             <h2 style={s"background-color:$color; border:solid $color 1px; border-radius: 18px; padding: 12px;"} title={title + titleSuffix}> {text} </h2>
           </center>
-        </div>
+        </td>
       }
 
       val s = procedureStatus match {
@@ -70,13 +71,49 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
 
     val patientNameText = leafSetSeq.head.attributeList.get(TagByName.PatientName).getSingleStringValueOrEmptyString()
 
-    val planReference = <div class="col-md-2"><center><br/><a href={rtplanUrl}>View RTPLAN</a></center></div>
+    val rtplan =
+      <td style={style}>
+        <center>
+          <a href={rtplanUrl}>View RTPLAN</a>
+        </center>
+      </td>
 
-    val patientId = <div class="col-md-2"><center>Patient ID <br/><b aqaalias="">{Util.patientIdOfAl(leafSetSeq.head.attributeList)}</b></center></div>
+    val latestGapSkew =
+      <td style={style}>
+        <center>
+          <a href={GapSkewLatestHtml.path}> Latest Gap Skew </a>
+        </center>
+      </td>
 
-    val patientName = <div class="col-md-2" title={DicomUtil.parseDicomPersonName(patientNameText).toString()}><center>Patient Name <br/><b aqaalias="">{patientNameText}</b> </center></div>
+    val patientId =
+      <td style={style}>
+        Patient ID
+        <br/>
+        <b aqaalias="">{Util.patientIdOfAl(leafSetSeq.head.attributeList)}</b>
+      </td>
 
-    val ref = <div class="row" style="margin-top:20px;">{status} {planReference} {patientId} {patientName} </div>
+    val patientName =
+      <td style={style}>
+        Patient Name
+        <br/>
+        <b aqaalias="">{patientNameText}</b>
+      </td>
+
+    val ref = {
+      <div class="row">
+        <div class="col-md-12">
+          <table style="padding:20px;">
+            <tr>
+              {status}
+              {rtplan}
+              {patientId}
+              {patientName}
+              {latestGapSkew}
+            </tr>
+          </table>
+        </div>
+      </div>
+    }
 
     ref
   }

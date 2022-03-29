@@ -201,7 +201,7 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
             <center>
               {leafTitle}
               <br/>
-              <a href="display.html">Back to main report</a>
+              <a href="display.html"> Back to main report </a> <a href={GapSkewLatestHtml.path} style="margin-left:50px;"> Latest Gap Skew </a>
               <p></p>
             </center>
           </div>
