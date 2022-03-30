@@ -189,14 +189,6 @@ object EdgesFromPlan extends Logging {
         val bottom = BeamLimit(-jx2, GapSkew.EdgeType.X2_Jaw_Horz)
         OrientedEdgePair(Some(top), Some(bottom))
 
-      /*
-      // no MLC, just jaws, topBottom: false
-      case (_, _, jy1, jy2, None, None, _, false) =>
-        val left = BeamLimit(jy1, GapSkew.EdgeType.Y1_Jaw_Horz)
-        val right = BeamLimit(jy2, GapSkew.EdgeType.Y2_Jaw_Horz)
-        OrientedEdgePair(Some(left), Some(right))
-      */
-
       case _ =>
         throw new RuntimeException("Unhandled jaw/MLC orientation configuration.")
     }
