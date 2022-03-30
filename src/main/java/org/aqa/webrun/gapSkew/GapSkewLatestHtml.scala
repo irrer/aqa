@@ -172,7 +172,6 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
 
       def toElem(outputGapSkew: OutputGapSkew): Elem = {
         val largestHorzSkew_deg = outputGapSkew.gapSkew.largestHorzSkew_deg
-        val color = GapSkewUtil.statusColor(largestHorzSkew_deg)
         val outputDate = outputGapSkew.output.dataDate.get
 
         val title = Util.timeHumanFriendly(outputDate) + WebUtil.titleNewline + "Largest skew (deg): " + largestHorzSkew_deg
