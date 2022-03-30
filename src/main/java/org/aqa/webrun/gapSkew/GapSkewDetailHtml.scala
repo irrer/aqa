@@ -180,7 +180,10 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
 
   private val leafTitle: Elem = {
     val color = statusColor(gapSkew.largestHorzSkew_deg)
-    val heading = <h3 style={s"margin:8px; background-color:$color; border:solid $color 1px; border-radius: 18px; padding: 12px;"} title={"Click for details"}> {gapSkew.beamName} </h3>
+    val collimatorAngle = Util.angleRoundedTo90(Util.collimatorAngle(leafSet.attributeList))
+    val style = s"margin:8px; background-color:$color; border:solid $color 1px; border-radius: 18px; padding: 12px;"
+    val title = "Click for details" + WebUtil.titleNewline + "Collimator angle: " + collimatorAngle
+    val heading = <h3 style={style} title={title}> {gapSkew.beamName}</h3>
     heading
   }
 
