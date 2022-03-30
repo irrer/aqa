@@ -30,7 +30,7 @@ import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
 
-import java.util.Date
+import java.text.SimpleDateFormat
 import scala.xml.Elem
 
 /**
@@ -70,8 +70,13 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
       gapSkewList.filter(_.outputPK == output.outputPK.get).maxBy(_.largestHorzSkew_deg)
     }
 
+    /**
+      * Get all GapSkew results for this machine, ordered as most recent first.
+      * @param machine Only for this machine.
+      * @return List of GapSkew results for this machine, ordered as most recent first.
+      */
     def getPrevious(machine: Machine): Seq[OutputGapSkew] = {
-      val outList = outputList.filter(_.machinePK.get == machine.machinePK.get).sortBy(_.dataDate.get.getTime).reverse.drop(1)
+      val outList = outputList.filter(_.machinePK.get == machine.machinePK.get).sortBy(_.dataDate.get.getTime).reverse
       outList.map(o => OutputGapSkew(o, largestGapSkew(o)))
     }
   }
@@ -84,7 +89,55 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
     val gapSkewList = GapSkew.listByOutputSet(outputSet)
 
     GapSkewData(machineList, outputList, gapSkewList)
+  }
 
+  private def decorate(elem: Elem, outputGapSkew: OutputGapSkew): Elem = {
+
+    val color = GapSkewUtil.statusColor(outputGapSkew.gapSkew.largestHorzSkew_deg)
+    val borderColor = if (dataExpired(Some(outputGapSkew.output))) GapSkewUtil.colorNone else color
+
+    val expired = dataExpired(Some(outputGapSkew.output))
+
+    val spaces = "    "
+
+    val sep1 = WebUtil.titleNewline + spaces
+
+    val expirationDateText = {
+      val days = Config.GapSkewExpiration_day
+      if (days.round == days)
+        days.round.toString
+      else
+        Util.fmtDbl(days)
+    }
+
+    val dateTitle = {
+      val dateFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm")
+      dateFormat.format(outputGapSkew.output.dataDate.get) + {
+        if (expired) sep1 + sep1 + "The data for this machine more than " + expirationDateText + spaces + sep1 + "days old and is out of date. (grey border)" else ""
+      }
+    }
+
+    val limits = {
+      "Warning limit (deg): " + Config.GapSkewAngleWarn_deg + spaces + "Fail limit (deg): " + Config.GapSkewAngleFail_deg + spaces
+    }
+
+    val statusTitle = {
+      val largestSkew = outputGapSkew.gapSkew.largestHorzSkew_deg.abs
+      val text = 0 match {
+        case _ if largestSkew.abs > Config.GapSkewAngleFail_deg => "The largest skew is above the fail limit."
+        case _ if largestSkew.abs > Config.GapSkewAngleWarn_deg => "The largest skew is above the warning limit."
+        case _                                                  => "All skew angles are below the warning limit."
+      }
+      text
+    }
+
+    val valueTitle = "Largest skew (deg): " + outputGapSkew.gapSkew.largestHorzSkew_deg.formatted("%10.5f").trim
+
+    val title = Seq(valueTitle, dateTitle, statusTitle, limits).filterNot(_.isEmpty).mkString(sep1, sep1 + sep1, sep1)
+
+    val style = "margin:8px; background-color:" + color + "; border:solid " + borderColor + " 8px; border-radius: 15px; padding: 4px;white-space: nowrap; padding: 12px;"
+
+    <div title={title} style={style}>{elem}</div>
   }
 
   /**
@@ -102,58 +155,15 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
     val latest = gapSkewData.getLatestForMachine(machine)
 
     val machineElem = {
-      val color: String = {
-        0 match {
-          case _ if latest.output.isEmpty => GapSkewUtil.colorNone
-          case _                          => GapSkewUtil.statusColor(latest.gapSkew.get.largestHorzSkew_deg)
-        }
-      }
-
-      val title = {
-        val common = WebUtil.titleNewline + "Warning limit: " + Config.GapSkewAngleWarn_deg + "  Fail limit: " + Config.GapSkewAngleFail_deg
-
-        0 match {
-          case _ if latest.gapSkew.isEmpty     => "No gap skew data for this machine."
-          case _ if dataExpired(latest.output) => "The data for this machine more than " + Config.GapSkewExpiration_day + " days old and is out of date." + common
-          case _                               => "Largest skew (deg): " + latest.gapSkew.get.largestHorzSkew_deg
-        }
-      }
-
-      val backgroundColor = if (dataExpired(latest.output)) GapSkewUtil.colorNone else "white"
-
-      <td title={title} style={"background-color:" + backgroundColor + ";"}><h3 style={
-        "margin:17px; background-color:" + color + "; border:solid " + color + " 1px; border-radius: 10px; padding: 12px;"
-      } aqaalias="">{latest.machine.id}</h3></td>
-    }
-
-    val dateElem = {
-      val elem = {
+      val content = {
+        val elem = <h3 aqaalias="">{latest.machine.id}</h3>
         if (latest.output.isEmpty)
-          <td></td>
-        else {
-          <td style={"vertical-align:middle; text-align:center; white-space: nowrap;"}>{WebUtil.timeAgo(new Date(latest.output.get.dataDate.get.getTime))}</td>
-        }
+          elem
+        else
+          decorate(elem, OutputGapSkew(latest.output.get, latest.gapSkew.get))
       }
-      elem
-    }
 
-    val skewElem: Elem = {
-      val style = "vertical-align:middle; text-align:center;"
-      if (latest.gapSkew.isEmpty)
-        <td style={style}>No Data</td>
-      else {
-        val skew = latest.gapSkew.get.largestHorzSkew_deg
-        <td title={"Skew (deg): " + skew} style={style}>{GapSkewUtil.fmt2(skew)}</td>
-      }
-    }
-
-    val detailsElem: Elem = {
-      if (latest.output.isEmpty)
-        <td></td>
-      else
-        <td style="vertical-align:middle; text-align:center;">
-          <a href={ViewOutput.viewOutputUrl(latest.output.get.outputPK.get)}>Full Report</a>
-        </td>
+      <td style="vertical-align:middle; text-align:center;">{content}</td>
     }
 
     val previousElem: Elem = {
@@ -166,13 +176,16 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
         val outputDate = outputGapSkew.output.dataDate.get
 
         val title = Util.timeHumanFriendly(outputDate) + WebUtil.titleNewline + "Largest skew (deg): " + largestHorzSkew_deg
-        val dateStyle = "margin:8px; background-color:" + color + "; border:solid " + color + " 1px; border-radius: 4px; padding: 4px;white-space: nowrap; padding: 12px;"
+
+        val elem = {
+          <div>{WebUtil.timeAgo(outputDate)}</div>
+        }
 
         <div title={title} style="border: 1px solid lightgrey; padding: 5px; margin-right:8px;">
           <a href={ViewOutput.viewOutputUrl(outputGapSkew.output.outputPK.get)}>
+            {decorate(elem, outputGapSkew)}
             <center>
-              <div style={dateStyle}>{WebUtil.timeAgo(outputDate)}</div>
-              <div>{GapSkewUtil.fmt2(largestHorzSkew_deg)}</div>
+              <div>Skew (deg): {GapSkewUtil.fmt2(largestHorzSkew_deg)}</div>
             </center>
           </a>
         </div>
@@ -185,14 +198,23 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
       </td>
     }
 
+    /*
+    {dateElem}
+    {skewElem}
+    {detailsElem}
+     */
+
     <tr>
       {machineElem}
-      {dateElem}
-      {skewElem}
-      {detailsElem}
       {previousElem}
     </tr>
   }
+
+  /*
+    <td style="vertical-align:middle; text-align:center;"><b> Date </b></td>
+    <td title="Skew shown as angle in degrees"><b style="vertical-align:middle; white-space: nowrap;"> Largest Skew (deg) </b></td>
+    <td style="vertical-align:middle; text-align:center;"><b> Full Report </b></td>
+   */
 
   private def content(gapSkewData: GapSkewData): Elem = {
     val list = gapSkewData.machineList.map(m => summaryToHtml(m, gapSkewData)) // TODO put back
@@ -206,10 +228,7 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
             <table class="table table-responsive table-bordered" xstyle="table-layout: fixed;">
               <tr>
                 <td style="vertical-align:middle; text-align:center;"><b> Machine </b></td>
-                <td style="vertical-align:middle; text-align:center;"><b> Date </b></td>
-                <td title="Skew shown as angle in degrees"><b style="vertical-align:middle; white-space: nowrap;"> Largest Skew (deg) </b></td>
-                <td style="vertical-align:middle; text-align:center;"><b> Full Report </b></td>
-                <td style="vertical-align:middle; text-align:left;width: 100%;"><b> Previous Results</b></td>
+                <td style="vertical-align:middle; text-align:left;width: 100%;"><b> Results (most recent first) </b></td>
               </tr>
               {list}
             </table>
