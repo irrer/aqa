@@ -29,6 +29,7 @@ import org.aqa.run.ProcedureStatus
 import org.aqa.run.RunProcedure
 import org.aqa.run.RunReqClass
 import org.aqa.run.RunTrait
+import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil.StyleMapT
 import org.aqa.web.WebUtil.ValueMapT
 import org.aqa.web.WebUtil.emptyValueMap
@@ -149,6 +150,37 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
       uploaded || inDatabase()
     }
 
+    /**
+      * Determine if the Y jaws are fully opened.  If not, then the input should be rejected.  Note that this is
+      * one of the latter checks because it will throw an exception if some basic data is not there.
+      *
+      * @return List of beam names of RTIMAGE files that are NOT acceptably positioned.
+      */
+    def checkYJaws(): Seq[String] = {
+
+      def checkImage(rtimage: AttributeList): Boolean = {
+        // Y leaf jaw positions (pair) in mm
+        val yJawPositions_mm = GapSkewUtil.yRtimageJawPositions_mm(rtimage)
+
+        // field width
+        val yJawWidth_mm = yJawPositions_mm.max - yJawPositions_mm.min
+
+        val ok = yJawWidth_mm >= Config.GapSkewMinimumFieldWidth_mm
+        ok
+      }
+
+      val failList = rtimageList.filterNot(checkImage)
+
+      if (failList.isEmpty)
+        Seq() // success
+      else {
+        val rtplan = getRtplan(rtplanRefList.head, rtplanList).get
+        val beamNameList = failList.map(img => Phase2Util.getBeamNameOfRtimage(rtplan, img)).map(name => if (name.isDefined) name.get else "unknown")
+        beamNameList
+      }
+
+    }
+
     val result: Either[StyleMapT, RunReqClass] = 0 match {
       case _ if rtplanRefList.size > 1           => formError("The RTIMAGE(s) reference more than one RTPLAN.")
       case _ if rtimageList.isEmpty              => formError("No RTIMAGE files given.")
@@ -164,7 +196,14 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
             "The device serial number is required by this software to identify the instance of the machine."
         )
 
-      case _ =>
+      case _ if checkYJaws().nonEmpty =>
+        formError(
+          "The Y jaws are required to be at least " + Config.GapSkewMinimumFieldWidth_mm + " mm apart." + WebUtil.titleNewline +
+            "but they aer nor for beam(s): " + WebUtil.titleNewline +
+            checkYJaws().mkString("    " + WebUtil.titleNewline)
+        )
+
+      case _ => // success
         // the RTPLAN that will be used
         val rtplan = getRtplan(rtplanRefList.head, rtplanList).get
         Right(GapSkewRunReq(rtplan, makeRtimageMap(rtplan, rtimageList)))

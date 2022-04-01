@@ -1,5 +1,9 @@
 package org.aqa.webrun.gapSkew
 
+import com.pixelmed.dicom.AttributeList
+import com.pixelmed.dicom.SequenceAttribute
+import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Config
 
 object GapSkewUtil {
@@ -39,6 +43,21 @@ object GapSkewUtil {
       case _                                            => colorPass
     }
     text
+  }
+
+  /**
+    * Get the positions of the Y jaws in mm.  Looks for both Y and ASYMY.
+    *
+    * @return Y1 and Y2 values.
+    */
+  def yRtimageJawPositions_mm(rtimage: AttributeList): Seq[Double] = {
+    val bl = DicomUtil.findAllSingle(rtimage, TagByName.BeamLimitingDeviceSequence)
+    val alList = bl.flatMap(l => DicomUtil.alOfSeq(l.asInstanceOf[SequenceAttribute]))
+    def isY(al: AttributeList) = {
+      Seq("Y", "ASYMY").contains(al.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString())
+    }
+    val yBl = alList.filter(isY).head
+    yBl.get(TagByName.LeafJawPositions).getDoubleValues
   }
 
   def main(args: Array[String]): Unit = {

@@ -89,10 +89,28 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
 
       val height = leafEndFinding_pix
       val width = leafWidth_pix * 2
-      val halfLeaf_pix = leafWidth_pix / 2
 
-      val xLeft_pix = halfLeaf_pix
-      val xRight_pix = dicomImage.width - halfLeaf_pix - 2 * leafWidth_pix
+      val yJaws_mm = GapSkewUtil.yRtimageJawPositions_mm(rtimage)
+
+      val yLeftJaw_mm = {
+        if (collimatorAngleRounded_deg == 90)
+          -yJaws_mm(1)
+        else
+          yJaws_mm.head
+      }
+
+      val yRightJaw_mm = {
+        if (collimatorAngleRounded_deg == 90)
+          -yJaws_mm.head
+        else
+          yJaws_mm(1)
+      }
+
+      val offset = leafWidth_pix * 1.5
+      val xLeft_pix = {
+        offset
+      }
+      val xRight_pix = dicomImage.width - offset - 2 * leafWidth_pix
 
       val yTop = edgesFromPlan.topOrLeft.get.position_mm
       val yBottom = edgesFromPlan.bottomOrRight.get.position_mm
