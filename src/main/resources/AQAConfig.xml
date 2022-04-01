@@ -723,12 +723,16 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Thickness in isoplane in mm of the penumbra of an edge.  The measurement's nearest end will
     be placed at least this far from the corner of the open field or edge of the image.  Floating
     point value in mm. -->
-    <GapSkewPenumbraThickness_mm>8.0</GapSkewPenumbraThickness_mm>
+    <GapSkewPenumbraThickness_mm>5.0</GapSkewPenumbraThickness_mm>
 
     <!-- For Gap Skew, the width of the field (distance between Y jaws) must at a minimum be this for the image to be
     accepted.  If it is smaller, then there is insufficient distance to get an accurate
     measurement.   Floating point value in mm. -->
     <GapSkewMinimumFieldWidth_mm>170.0</GapSkewMinimumFieldWidth_mm>
+
+    <!-- Minimum width of bounding box (floating point in mm) for GapSkew.  This should be
+    sufficiently large to get enough pixels for an accurate measurement. -->
+    <GapSkewMinimumMeasurementLength_mm>20.0</GapSkewMinimumMeasurementLength_mm>
 
     <!-- If Gap Skew data is older than this, it is considered out of date.  In days as a floating point number. -->
     <GapSkewExpiration_day>800.0</GapSkewExpiration_day>

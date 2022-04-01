@@ -44,7 +44,7 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
   private val collimatorAngleRounded_deg: Int = Util.angleRoundedTo90(collimatorAngle_deg)
 
   // The sorted list of leaf sides in the RTPLAN in pixels.
-  private val leafSidesFromPlanAsPix: Seq[Double] = {
+  private val leafSidesFromPlan_mm: Seq[Double] = {
     DicomUtil.findAllSingle(rtplan, TagByName.LeafPositionBoundaries).head.getDoubleValues.sorted
   }
 
@@ -83,34 +83,80 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
     if (isHorizontal)
       throw new RuntimeException("FindLeafSides : Not implemented for horizontally positioned collimator.")
     else {
-      val leafWidth_mm = (leafSidesFromPlanAsPix.head - leafSidesFromPlanAsPix(1)).abs
-      val leafWidth_pix = translator.iso2PixDistX(leafWidth_mm) // outer leaf width in pixels
+      val leafWidth_mm = (leafSidesFromPlan_mm.head - leafSidesFromPlan_mm(1)).abs
       val leafEndFinding_pix = translator.iso2PixDistY(Config.GapSkewLeafEndPenumbra_mm)
 
       val height = leafEndFinding_pix
-      val width = leafWidth_pix * 2
 
       val yJaws_mm = GapSkewUtil.yRtimageJawPositions_mm(rtimage)
 
-      val yLeftJaw_mm = {
+      val yLeftJaw_mm = { // Y coordinate of Y jaw on right side of imaging field.  Will be Y1 or Y2 depending on the collimator angle
         if (collimatorAngleRounded_deg == 90)
           -yJaws_mm(1)
         else
           yJaws_mm.head
       }
 
-      val yRightJaw_mm = {
+      val yRightJaw_mm = { // Y coordinate of Y jaw on left side of imaging field.  Will be Y1 or Y2 depending on the collimator angle
         if (collimatorAngleRounded_deg == 90)
           -yJaws_mm.head
         else
           yJaws_mm(1)
       }
 
-      val offset = leafWidth_pix * 1.5
-      val xLeft_pix = {
-        offset
+      val yLeftField_mm = translator.pix2IsoCoordX(0) // Y coordinate of left side of imaging field
+      val yRightField_mm = translator.pix2IsoCoordX(dicomImage.width - 1) // Y coordinate of right side of imaging field
+
+      // leftmost edge of left-hand bounding boxes
+      val xLeftPosition_mm = {
+        val min_mm =
+          if (yLeftJaw_mm > yLeftField_mm)
+            yLeftJaw_mm + Config.GapSkewPenumbraThickness_mm
+          else
+            yLeftField_mm
+
+        val leftLeaf_mm = leafSidesFromPlan_mm.filter(_ >= min_mm).min
+        val rightLeaf_mm = leafSidesFromPlan_mm.filter(_ > leftLeaf_mm).min
+        val lft_mm = (leftLeaf_mm + rightLeaf_mm) / 2.0
+        lft_mm
       }
-      val xRight_pix = dicomImage.width - offset - 2 * leafWidth_pix
+
+      // width of left-handed bounding boxes
+      val xLeftWidth_mm = {
+        val min_mm = leafSidesFromPlan_mm.filter(_ <= (xLeftPosition_mm + Config.GapSkewMinimumMeasurementLength_mm)).max
+        val leftLeaf_mm = leafSidesFromPlan_mm.filter(_ >= min_mm).min
+        val rightLeaf_mm = leafSidesFromPlan_mm.filter(_ > leftLeaf_mm).min
+        val lft_mm = (leftLeaf_mm + rightLeaf_mm) / 2.0
+        lft_mm - xLeftPosition_mm
+      }
+
+      // rightmost edge of right-hand bounding boxes
+      val xRightPosition_mm = {
+        val max_mm =
+          if (yRightJaw_mm < yRightField_mm)
+            yRightJaw_mm - Config.GapSkewPenumbraThickness_mm
+          else
+            yRightField_mm
+
+        val rightLeaf_mm = leafSidesFromPlan_mm.filter(_ <= max_mm).max
+        val leftLeaf_mm = leafSidesFromPlan_mm.filter(_ < rightLeaf_mm).max
+        val rt_mm = (rightLeaf_mm + leftLeaf_mm) / 2.0
+        rt_mm
+      }
+
+      // width of right-handed bounding boxes
+      val xRightWidth_mm = {
+        val leftLeaf_mm = leafSidesFromPlan_mm.filter(_ <= (xRightPosition_mm - Config.GapSkewMinimumMeasurementLength_mm)).max
+        val rightLeaf_mm = leafSidesFromPlan_mm.filter(_ > leftLeaf_mm).min
+        val rt_mm = (leftLeaf_mm + rightLeaf_mm) / 2.0
+        xRightPosition_mm - rt_mm
+      }
+
+      val leftRectPosition_pix = translator.iso2PixCoordX(xLeftPosition_mm)
+      val leftRectWidth_pix = translator.iso2PixDistX(xLeftWidth_mm)
+
+      val rightRectPosition_pix = translator.iso2PixCoordX(xRightPosition_mm - xRightWidth_mm)
+      val rightRectWidth_pix = translator.iso2PixDistX(xRightWidth_mm)
 
       val yTop = edgesFromPlan.topOrLeft.get.position_mm
       val yBottom = edgesFromPlan.bottomOrRight.get.position_mm
@@ -118,10 +164,10 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
       val yTop_pix = translator.iso2PixCoordY(-yTop) - height / 2
       val yBottom_pix = translator.iso2PixCoordY(-yBottom) - height / 2
 
-      val topLeftRect = Util.rectD(xLeft_pix, yTop_pix, width, height)
-      val topRightRect = Util.rectD(xRight_pix, yTop_pix, width, height)
-      val bottomLeftRect = Util.rectD(xLeft_pix, yBottom_pix, width, height)
-      val bottomRightRect = Util.rectD(xRight_pix, yBottom_pix, width, height)
+      val topLeftRect = Util.rectD(leftRectPosition_pix, yTop_pix, leftRectWidth_pix, height)
+      val topRightRect = Util.rectD(rightRectPosition_pix, yTop_pix, rightRectWidth_pix, height)
+      val bottomLeftRect = Util.rectD(leftRectPosition_pix, yBottom_pix, leftRectWidth_pix, height)
+      val bottomRightRect = Util.rectD(rightRectPosition_pix, yBottom_pix, rightRectWidth_pix, height)
 
       val beamName = Phase2Util.getBeamNameOfRtimage(plan = rtplan, rtimage).get
       logger.info("GapSkew processing beam: " + Util.beamNumber(rtimage) + " : " + beamName)
@@ -145,7 +191,8 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
           bottomRight = bottomRight
         ).annotate
 
-      val measurementSeparation_mm = (translator.pix2IsoDistX(xRight_pix) - translator.pix2IsoDistX(xLeft_pix)).abs
+      val measurementSeparation_mm = (xRightPosition_mm - xRightWidth_mm / 2.0) - (xLeftPosition_mm + xLeftWidth_mm / 2.0)
+
       val gapSkew = GapSkew(
         gapSkewPK = None,
         outputPK = extendedData.output.outputPK.get,
