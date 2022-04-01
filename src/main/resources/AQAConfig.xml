@@ -273,6 +273,9 @@ Note that when building a package for release, the Maven build process uses the 
         <!-- Note that the DailyQA RTPLAN is the same for both HD and Millenium. -->
         <PlanFile procedure='DailyQA'     manufacturer='Varian' collimatorModel='HD'       >rtplanDailyQA2021-07-07T08-24-08.dcm</PlanFile>
         <PlanFile procedure='DailyQA'     manufacturer='Varian' collimatorModel='Millenium'>rtplanDailyQA2021-07-07T08-24-08.dcm</PlanFile>
+
+        <PlanFile procedure='GapSkew'     manufacturer='Varian' collimatorModel='HD'       >rtplanGapSkewHdmlc.dcm</PlanFile>
+        <PlanFile procedure='GapSkew'     manufacturer='Varian' collimatorModel='Millenium'>rtplanGapSkewMillenium.dcm</PlanFile>
     </PlanFileList>
 
     <!-- Name of subdirectory that contains the DICOM template files for creating a simple RTPLAN.  This is located under

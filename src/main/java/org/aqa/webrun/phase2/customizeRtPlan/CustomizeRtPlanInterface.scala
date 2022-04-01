@@ -117,10 +117,11 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
   private val createPhase2Button = makeButton("Create Phase 2", ButtonType.BtnPrimary)
   private val createLocButton = makeButton("Create LOC", ButtonType.BtnPrimary)
   private val createDailyQAButton = makeButton("Create Daily QA", ButtonType.BtnPrimary)
+  private val createGapSkewButton = makeButton("Create Gap Skew", ButtonType.BtnPrimary)
   private val cancelButton = makeButton("Cancel", ButtonType.BtnDefault)
   private val backButton = makeButton("Back", ButtonType.BtnDefault)
 
-  private val assignButtonList: WebRow = List(createPhase2Button, createLocButton, createDailyQAButton, cancelButton, machinePK)
+  private val assignButtonList: WebRow = List(createPhase2Button, createLocButton, createDailyQAButton, createGapSkewButton, cancelButton, machinePK)
 
   private def formSelect(valueMap: ValueMapT, response: Response, machine: Machine): Unit = {
     val form = new WebForm(pathOf, List(row0, row1, row2) ++ List(assignButtonList))
@@ -211,6 +212,16 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
     val dailyQaRtplan = CustomizeRtPlan.getCollimatorCompatibleDailyQAPlanForMachine(machine)
     val conf = validateConfigAndRtplanFileExists(dailyQaRtplan, machine, "Daily QA", createDailyQAButton)
+    validateEntryFields(valueMap) ++ conf
+  }
+
+  /**
+    * Make sure fields are valid for DailyQA.
+    */
+  private def validateGapSkew(valueMap: ValueMapT): StyleMapT = {
+    val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
+    val gapSkewRtplan = CustomizeRtPlan.getCollimatorCompatibleDailyQAPlanForMachine(machine)
+    val conf = validateConfigAndRtplanFileExists(gapSkewRtplan, machine, "Gap Skew", createGapSkewButton)
     validateEntryFields(valueMap) ++ conf
   }
 
@@ -370,7 +381,20 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
       val planSpecification = makePlanSpec(valueMap)
       val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
       val rtplan = CustomizeRtPlan.makePlanDailyQA(machine, userPK, planSpecification)
-      showDownload(Seq((rtplan, "Daily QA")), "DailQA", valueMap, machine, response)
+      showDownload(Seq((rtplan, "Daily QA")), "Daily QA", valueMap, machine, response)
+    }
+  }
+
+  private def validateAndMakeGapSkewPlan(valueMap: ValueMapT, response: Response): Unit = {
+    val styleMap = validateGapSkew(valueMap)
+    if (styleMap.nonEmpty) {
+      showFailedCustomize(valueMap, styleMap, response)
+    } else {
+      val userPK = getUser(valueMap).get.userPK.get
+      val planSpecification = makePlanSpec(valueMap)
+      val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
+      val rtplan = CustomizeRtPlan.makePlanGapSkew(machine, userPK, planSpecification)
+      showDownload(Seq((rtplan, "Gap Skew")), "Gap Skew", valueMap, machine, response)
     }
   }
 
@@ -394,6 +418,7 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
         case _ if buttonIs(valueMap, createPhase2Button)                                                         => validateAndMakePhase2Plan(valueMap, response)
         case _ if buttonIs(valueMap, createLocButton)                                                            => validateAndMakeLocPlan(valueMap, response)
         case _ if buttonIs(valueMap, createDailyQAButton)                                                        => validateAndMakeDailyQAPlan(valueMap, response)
+        case _ if buttonIs(valueMap, createGapSkewButton)                                                        => validateAndMakeGapSkewPlan(valueMap, response)
         case _                                                                                                   => formSelect(valueMap, response, machine.get) // first time viewing the form.  Set defaults
       }
     } catch {

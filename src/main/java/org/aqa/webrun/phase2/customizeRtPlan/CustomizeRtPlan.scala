@@ -83,6 +83,24 @@ object CustomizeRtPlan extends Logging {
   }
 
   /**
+    * Get the template rtplan for the given machine for Gap Skew.  If none exists, return None, which
+    * can happen if the system does not have such a plan configured.  This informs the user
+    * interface so that it can tell the user.
+    *
+    * Note that both the baseline and delivery entries have to be configured (regardless of RTPLAN file
+    * existence) or this will return None.
+    */
+  def getCollimatorCompatibleGapSkewPlanForMachine(machine: Machine): Option[Config.PlanFileConfig] = {
+    val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
+    val planFile = Config.PlanFileList.find(pf =>
+      pf.procedure.toLowerCase.matches(".*gap.*skew.*") &&
+        pf.manufacturer.equalsIgnoreCase(collimator.manufacturer) &&
+        pf.collimatorModel.equalsIgnoreCase(collimator.model)
+    )
+    planFile
+  }
+
+  /**
     * Get the template rtplans for the given machine for LOC.  If none exists, return None, which
     * can happen if the system does not have such a plan configured.  This informs the user
     * interface so that it can tell the user.
@@ -683,7 +701,7 @@ object CustomizeRtPlan extends Logging {
   }
 
   /**
-    * Given all the required information, create an rtplan that is compatible with the given machine for Phase2.
+    * Given all the required information, create an rtplan that is compatible with the given machine for Daily QA.
     */
   def makePlanDailyQA(machine: Machine, userPK: Long, planSpecification: PlanSpecification): AttributeList = {
 
@@ -698,6 +716,25 @@ object CustomizeRtPlan extends Logging {
     val anonDicom = saveAnonymizedDicom(machine, userPK, rtplan)
 
     setupPatientProcedure(machine.institutionPK, anonDicom.get(TagByName.PatientID), Procedure.ProcOfBBbyCBCT)
+    rtplan
+  }
+
+  /**
+    * Given all the required information, create an rtplan that is compatible with the given machine for gap skew.
+    */
+  def makePlanGapSkew(machine: Machine, userPK: Long, planSpecification: PlanSpecification): AttributeList = {
+
+    val rtplan = DicomUtil.clone(getCollimatorCompatibleGapSkewPlanForMachine(machine).get.dicomFile.attributeList.get)
+    replaceAllUids(rtplan) // change UIDs so that this plan will be considered new and unique from all others.
+
+    planSpecification.setOverrides(rtplan)
+
+    setRtplanDateTimeToNow(rtplan)
+
+    removeVarianPrivateTagAttributes(rtplan)
+    val anonDicom = saveAnonymizedDicom(machine, userPK, rtplan)
+
+    setupPatientProcedure(machine.institutionPK, anonDicom.get(TagByName.PatientID), Procedure.ProcOfGapSkew)
     rtplan
   }
 
