@@ -74,6 +74,7 @@ object Util extends Logging {
 
   /** Standard date format */
   val standardDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+  val spreadsheetDateFormat = new SimpleDateFormat("yyyy-MM-dd' 'HH:mm:ss")
 
   private val timeHumanFriendlyFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss Z")
 
@@ -722,7 +723,7 @@ object Util extends Logging {
 
     def pix2X(xPix: Double) = translator.pix2Iso(xPix, 0).getX.round.toInt
 
-    def pix2Y(yPix: Double) = -(translator.pix2Iso(0, yPix).getY.round.toInt)
+    def pix2Y(yPix: Double) = -translator.pix2Iso(0, yPix).getY.round.toInt
 
     addGraticules(image, x2Pix, y2Pix, pix2X, pix2Y, color)
   }

@@ -61,8 +61,8 @@ class DailyQACSVCacheEPID(hostRef: String, institutionPK: Long) extends CacheCSV
     val a = DicomUtil.getTimeAndDate(dataSet.al, TagByName.AcquisitionDate, TagByName.AcquisitionTime)
 
     (c, a) match {
-      case (Some(dt), _) => Util.standardDateFormat.format(dt)
-      case (_, Some(dt)) => Util.standardDateFormat.format(dt)
+      case (Some(dt), _) => Util.spreadsheetDateFormat.format(dt)
+      case (_, Some(dt)) => Util.spreadsheetDateFormat.format(dt)
       case _             => "unknown"
     }
   }
@@ -113,9 +113,9 @@ class DailyQACSVCacheEPID(hostRef: String, institutionPK: Long) extends CacheCSV
 
   private val colList = Seq[Col](
     Col(MachineColHeader, dataSet => dataSet.machine.id),
-    Col("Series Time", dataSet => Util.standardDateFormat.format(dataSet.output.dataDate.get)),
+    Col("Series Time", dataSet => Util.spreadsheetDateFormat.format(dataSet.output.dataDate.get)),
     Col("Image Time", dataSet => dateTimeFromEPID(dataSet)),
-    Col("Analysis", dataSet => Util.standardDateFormat.format(dataSet.output.startDate)),
+    Col("Analysis", dataSet => Util.spreadsheetDateFormat.format(dataSet.output.startDate)),
     Col(PatientIDColHeader, dataSet => patientIdOf(dataSet)),
     //
     Col("BB Image Posn X mm", dataSet => epidVal(dataSet, e => e.epidImageX_mm)),

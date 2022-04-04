@@ -62,8 +62,8 @@ class DailyQACSVCacheCBCT(hostRef: String, institutionPK: Long) extends CacheCSV
 
   private val colList = Seq[Col](
     Col(MachineColHeader, dataSet => dataSet.machine.id),
-    Col("Acquired", dataSet => Util.standardDateFormat.format(dataSet.output.dataDate.get)),
-    Col("Analysis", dataSet => Util.standardDateFormat.format(dataSet.output.startDate)),
+    Col("Acquired", dataSet => Util.spreadsheetDateFormat.format(dataSet.output.dataDate.get)),
+    Col("Analysis", dataSet => Util.spreadsheetDateFormat.format(dataSet.output.startDate)),
     Col(PatientIDColHeader, dataSet => patientIdOf(dataSet)),
     Col("Status", dataSet => dataSet.output.status),
 

@@ -90,8 +90,8 @@ class DailyQACSVCacheComposite(hostRef: String, institutionPK: Long) extends Cac
 
   private val colList = Seq[Col](
     Col(MachineColHeader, dataSet => dataSet.machine.id),
-    Col("Acquired", dataSet => Util.standardDateFormat.format(dataSet.output.dataDate.get)),
-    Col("Analysis", dataSet => Util.standardDateFormat.format(dataSet.output.startDate)),
+    Col("Acquired", dataSet => Util.spreadsheetDateFormat.format(dataSet.output.dataDate.get)),
+    Col("Analysis", dataSet => Util.spreadsheetDateFormat.format(dataSet.output.startDate)),
     Col(PatientIDColHeader, dataSet => patientIdOf(dataSet)),
     Col("Status", dataSet => dataSet.output.status),
     Col("X CBCT - ISO mm", dataSet => (dataSet.cbct.cbctX_mm - dataSet.cbct.rtplanX_mm).toString),
