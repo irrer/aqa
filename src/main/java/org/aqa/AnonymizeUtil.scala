@@ -356,10 +356,34 @@ object AnonymizeUtil extends Logging {
   }
 
   /**
+    * De-anonymize a single attribute.  If it can be deanonymized, then return a
+    * copy of it as deanonymized.  If it can not be deanonymized, then return None.
+    *
+    * Note that an attribute can not be deanonymized if it was never anonymized.
+    *
+    * @param institutionPK For this institution.
+    * @param attribute To be deanonymized.  Original value is not changed.
+    * @return New, deanonymized attribute.
+    */
+  def deAnonymizeAttribute(institutionPK: Long, attribute: Attribute): Option[Attribute] = {
+    val dicomAnonymousList = DicomAnonymous.getByAttrAndValue(institutionPK, Seq(attribute))
+    val attrTag = DicomAnonymous.formatAnonAttributeTag(attribute.getTag)
+    val attrValue = attribute.getSingleStringValueOrEmptyString().trim
+    val da = dicomAnonymousList.find(da => da.attributeTag.equals(attrTag) && da.value.trim.equals(attrValue))
+    if (da.isDefined) {
+      val deAnon = AttributeFactory.newAttribute(attribute.getTag)
+      val origValue = da.get.originalValue
+      deAnon.addValue(origValue)
+      Some(deAnon)
+    } else
+      None
+  }
+
+  /**
     * Anonymize the machine serial number (aka: DeviceSerialNumber) in the given MachineLog XML.
     *
-    * @param elem Machine log as XML document.
-    * @param newDeviceSerialNumber New value for serial number.
+    * @param institutionPK Owning institution.
+    * @param xml Content to be anonymized.
     *
     * @return Same XML with device serial number anonymized.
     */

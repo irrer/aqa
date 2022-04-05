@@ -16,9 +16,14 @@
 
 package org.aqa.db
 
+import com.pixelmed.dicom.Attribute
+import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
+import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
+import edu.umro.ScalaUtil.Trace
 import edu.umro.util.Utility
 import org.aqa.AnonymizeUtil
 import org.aqa.Config
@@ -125,6 +130,54 @@ case class Machine(
     }
   }
 
+  def distinctBy[T, C](list: Iterable[T], func: (T) => C): Iterable[T] = {
+    list.groupBy(func).map(_._2.head)
+  }
+
+  /**
+    * Set the tpsId_real value if it is not set.
+    *
+    * A complication is that for some time the RadiationMachineName was not anonymized,
+    * and then later it was.  This method covers both cases.
+    *
+    * @param alList Get the machine name from here.  Only RTIMAGE files are searched.
+    *
+    * @return None if it was updated.  False if no change,
+    */
+  def setTpsIdIfNeeded(alListAny: Seq[AttributeList]): Option[String] = {
+
+    val alList = alListAny.filter(Util.isRtimage)
+
+    def deAnon(attr: Attribute): Attribute = {
+      AnonymizeUtil.deAnonymizeAttribute(institutionPK, attr) match {
+        case Some(a) => a
+        case _       => attr // use original
+      }
+    }
+
+    // only update if it is not defined, and the machine is already in the database
+    if (tpsID_real.isEmpty && machinePK.isDefined) {
+      val attrList = {
+        val all = alList.map(al => DicomUtil.findAllSingle(al, TagByName.RadiationMachineName)).flatten.toList
+        val allReduced = all.groupBy(_.getSingleStringValueOrEmptyString()).map(_._2.head).map(deAnon)
+        allReduced.groupBy(_.getSingleStringValueOrEmptyString()).map(_._2.head)
+      }
+
+      val machineNameList = attrList.map(_.getSingleStringValueOrEmptyString).filterNot(_.isEmpty).toSeq.distinct
+      if (machineNameList.size == 1) {
+        val plainText = machineNameList.head
+        val tpsID_real = AnonymizeUtil.encryptWithNonce(institutionPK, plainText)
+        val updatedTps = this.copy(tpsID_real = Some(tpsID_real))
+        val count = updatedTps.insertOrUpdate() == 1 // should always return 1
+        if (count == 1)
+          None
+        else
+          Some("The insertOrUpdate method returned " + count + " instead of 1.")
+      } else
+        Some("Multiple machine names defined in attribute lists: " + machineNameList.mkString("  ")) // more than one machine name in attribute lists
+    } else
+      Some("Machine name is already defined or machinePK is not defined.")
+  }
 }
 
 object Machine extends Logging {
@@ -354,10 +407,78 @@ object Machine extends Logging {
     }
   }
 
+  private def setTpsIdReal(machine: Machine, writeToDatabase: Boolean): Unit = {
+
+    def getSeries(machinePK: Long): Option[DicomSeries] = {
+      val action = for {
+        ds <- DicomSeries.query if (ds.machinePK === machinePK) && (ds.modality === "RTIMAGE")
+      } yield ds
+
+      val dicomSeries = Db.run(action.take(1).result)
+      dicomSeries.headOption
+    }
+
+    try {
+      val machName = machine.id + " : " + machine.getRealId
+      Trace.trace("Processing machine " + machName)
+      val start = System.currentTimeMillis()
+
+      val series = getSeries(machine.machinePK.get)
+      if (series.isEmpty)
+        Trace.trace("No RTIMAGE data")
+      else {
+        val alList = series.get.attributeListList
+        if (alList.isEmpty) {
+          val elapsed = System.currentTimeMillis() - start
+          Trace.trace("no attribute lists.  elapsed ms: " + elapsed)
+        } else {
+          val al = alList.head
+          val machineName = DicomUtil.findAllSingle(al, TagByName.RadiationMachineName).head.getSingleStringValueOrEmptyString()
+          val attr = AttributeFactory.newAttribute(TagByName.RadiationMachineName)
+          attr.addValue(machineName)
+          val daList = DicomAnonymous.getByAttrAndValue(machine.institutionPK, Seq(attr))
+          if (daList.isEmpty) {
+            Trace.trace("Could not find tps name for " + machName)
+          } else {
+            val da = daList.head
+            val realName = da.originalValue
+            val elapsed = System.currentTimeMillis() - start
+
+            0 match {
+              case _ if machine.tpsID_real.isEmpty                => Trace.trace("Name for " + machName + " is empty but found " + realName)
+              case _ if machine.getRealTpsId.get.equals(realName) => Trace.trace("Name for " + machName + " matches found name " + realName)
+              case _                                              => Trace.trace("Name for " + machName + " DOES NOT MATCH found name " + realName)
+            }
+
+            if (machine.tpsID_real.isEmpty) {
+              val tpsID_real = AnonymizeUtil.encryptWithNonce(machine.institutionPK, realName)
+              if (writeToDatabase) {
+                val updatedTps = machine.copy(tpsID_real = Some(tpsID_real))
+                val count = updatedTps.insertOrUpdate()
+                Trace.trace("Updated.  count: " + count + "   machine " + machName + " with " + realName)
+              }
+            }
+          }
+        }
+      }
+    } catch {
+      case t: Throwable => println("Exception with machine " + machine.id + " : " + machine.getRealId + " :: " + t + "\n" + fmtEx(t))
+    }
+  }
+
   def main(args: Array[String]): Unit = {
+    val writeToDatabase = args.nonEmpty && args.head.equals("writeToDatabase")
     Config.validate
     DbSetup.init
-    println("======== machine: " + get(5))
+    val start = System.currentTimeMillis()
+    println("\n\n\n\n--------------------------------------\n\n\n\nStarting...")
+    Trace.trace("writeToDatabase: " + writeToDatabase)
+    val list = Machine.list
+    println("Number of machine: " + list.size)
+    list.foreach(m => setTpsIdReal(m, writeToDatabase))
+    val elapsed = System.currentTimeMillis() - start
+    println("Done.  Elapsed ms: " + elapsed)
+    System.exit(0)
     //println("======== machine delete: " + delete(5))
   }
 }
