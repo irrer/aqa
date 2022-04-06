@@ -46,8 +46,6 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
 
   private case class OutputGapSkew(output: Output, gapSkew: GapSkew) {}
 
-  val procedurePK: Long = Procedure.ProcOfGapSkew.get.procedurePK.get
-
   private case class GapSkewData(machineList: Seq[Machine], outputList: Seq[Output], gapSkewList: Seq[GapSkew]) {
 
     /**

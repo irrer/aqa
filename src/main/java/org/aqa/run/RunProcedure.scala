@@ -541,7 +541,9 @@ object RunProcedure extends Logging {
     val machine = validateMachineSelection(valueMap, runTrait.getMachineDeviceSerialNumberList(alList, xmlList)).right.get
     val user = getUser(valueMap)
     val dataDate = runTrait.getDataDate(valueMap, alList, xmlList)
-    setMachineSerialNumber(machine, runTrait.getMachineDeviceSerialNumberList(alList, xmlList).head)
+    val rtImageList = alList.filter(Util.isRtimage)
+    setMachineSerialNumber(machine, runTrait.getMachineDeviceSerialNumberList(rtImageList, xmlList).head)
+    machine.setTpsIdIfNeeded(rtImageList)
     val userPK = if (user.isDefined) user.get.userPK else None
 
     val input = makeNewInput(sessionDir(valueMap), now, userPK, PatientID, dataDate, machine, runTrait.getProcedure, alList)
