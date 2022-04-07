@@ -540,15 +540,10 @@ class MachineUpdate extends Restlet with SubUrlAdmin {
     val mach = Machine.get(pk).get
 
     val tps = {
-      val userInstitutionPK = getUser(response.getRequest).get.institutionPK
-      if ((userInstitutionPK == mach.institutionPK) || userIsWhitelisted(response)) {
-        if (mach.tpsID_real.isDefined)
-          AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasTreatmentPlanningSystemId, mach.machinePK.get)
-        else {
-          ""
-        }
-      } else
-        "redacted"
+      if (mach.tpsID_real.isDefined)
+        AnonymizeUtil.aliasify(AnonymizeUtil.machineAliasTreatmentPlanningSystemId, mach.machinePK.get)
+      else
+        ""
     }
 
     val valueMap = Map(

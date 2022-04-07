@@ -157,7 +157,7 @@ case class Machine(
     }
 
     // only update if it is not defined or is blank, and the machine is already in the database
-    if ((tpsID_real.isEmpty || tpsID_real.get.trim.isEmpty) && machinePK.isDefined) {
+    if ((tpsID_real.isEmpty || getRealTpsId.get.trim.isEmpty) && machinePK.isDefined) {
       val attrList = {
         val all = alList.flatMap(al => DicomUtil.findAllSingle(al, TagByName.RadiationMachineName)).toList
         val allReduced = all.groupBy(_.getSingleStringValueOrEmptyString()).map(_._2.head).map(deAnon)

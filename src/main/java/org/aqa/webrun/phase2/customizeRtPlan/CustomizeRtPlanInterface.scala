@@ -72,7 +72,9 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
   }
 
   private def machineIdHtml(valueMap: ValueMapT): Elem = {
-    <h3 title="Plan customization for machine">Custom RT Plan Comptatible with Machine {linkToMachineUpdate(valueMap)}</h3>
+    <h3 title="Plan customization for machine">Custom RT Plan Comptatible with Machine
+      {linkToMachineUpdate(valueMap)}
+    </h3>
   }
 
   val machineId = new WebPlainText(machineIdTag, false, 6, 0, machineIdHtml)
@@ -81,7 +83,9 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
 
   private def planName = new WebInputText("Plan Name", true, 2, 0, "Name to distinguish this plan from others", false)
 
-  private def machineName = new WebInputText("Machine Name", true, 2, 0, "To match planning system", false)
+  private def machineName = {
+    new WebInputText("Machine Name", true, 2, 0, "To match planning system", false)
+  }
 
   private def patientID = new WebInputText("Patient ID", true, 3, 0, "")
 
@@ -131,7 +135,12 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
 
     val defaultPatient = "$AQA_" + machine.machinePK.get
 
-    def getRealMachineId = AnonymizeUtil.decryptWithNonce(machine.institutionPK, machine.id_real.get)
+    def getRealMachineId = {
+      machine.getRealTpsId match {
+        case Some(text) if text.trim.nonEmpty => text.trim
+        case _                                => ""
+      }
+    }
 
     val patientIdMap = if (empty(patientID.label)) Map((patientID.label, defaultPatient)) else emptyValueMap
     val patientNameMap = if (empty(patientName.label)) Map((patientName.label, defaultPatient)) else emptyValueMap
