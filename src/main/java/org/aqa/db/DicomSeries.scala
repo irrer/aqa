@@ -332,7 +332,7 @@ object DicomSeries extends Logging {
   }
 
   def delete(dicomSeriesPK: Long): Int = {
-    // Removing an entry potentially invalidates the GetSeries cache.  Remove the relavent entry.
+    // Removing an entry potentially invalidates the GetSeries cache.  Remove the relevant entry.
     try {
       val action = for {
         dicomSeries <- query if dicomSeries.dicomSeriesPK === dicomSeriesPK
@@ -398,7 +398,7 @@ object DicomSeries extends Logging {
           throw new IllegalArgumentException("User PK " + usrPK + " passed as parameter is different from that referenced by inputPK " + inpPK.get + " --> " + input.userPK.get)
       }
 
-      def getSopInstanceUIDlist = alList.map(al => Util.sopOfAl(al)).mkString(" ", " ", " ")
+      def getSopInstanceUIDList = alList.map(al => Util.sopOfAl(al)).mkString(" ", " ", " ")
 
       def getSeriesInstanceUID = byTag(TagFromName.SeriesInstanceUID).get
 
@@ -437,7 +437,7 @@ object DicomSeries extends Logging {
         usrPK,
         inpPK,
         derivedMachinePK,
-        getSopInstanceUIDlist,
+        getSopInstanceUIDList,
         getSeriesInstanceUID,
         getFrameOfReferenceUID,
         getMappedFrameOfReferenceUID,
@@ -543,7 +543,7 @@ object DicomSeries extends Logging {
       val rtplanSop = Util.getRtplanSop(attributeList)
       if (rtplanSop.isDefined) {
         val ds = DicomSeries.getBySopInstanceUID(rtplanSop.get).headOption
-        val rtplanAl = ds.get.attributeListList.filter(al => Util.sopOfAl(al).equals(rtplanSop)).head
+        val rtplanAl = ds.get.attributeListList.filter(al => Util.sopOfAl(al).equals(rtplanSop.get)).head
         Some(rtplanAl)
       } else {
         logger.error("Asking for RTPLAN referenced by image, but there is no such reference.  Image modality: " + Util.modalityOfAl(attributeList))
