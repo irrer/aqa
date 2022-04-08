@@ -334,12 +334,12 @@ object RunProcedure extends Logging {
     * something wrong (such as a missing slice) with the old data.  The old Input and all DicomSeries
     * referencing it will be deleted as redundant data.
     */
-  private def saveDicomSeries(userPK: Long, inputPK: Option[Long], machinePK: Option[Long], alList: Seq[AttributeList]): Unit = {
+  private def saveDicomSeries(userPK: Long, inputPK: Option[Long], machinePK: Option[Long], alList: Seq[AttributeList], procedurePK: Option[Long]): Unit = {
 
     def insertRtplanIfNew(rtplan: AttributeList): Unit = {
       val existing = DicomSeries.getBySopInstanceUID(Util.sopOfAl(rtplan))
       if (existing.isEmpty) {
-        DicomSeries.makeDicomSeries(userPK, inputPK, machinePK, Seq(rtplan)) match {
+        DicomSeries.makeDicomSeries(userPK, inputPK, machinePK, Seq(rtplan), procedurePK) match {
           case Some(dicomSeries) => dicomSeries.insert
           case _                 => logger.warn("Unable to create RTPLAN DicomSeries")
         }
@@ -354,7 +354,7 @@ object RunProcedure extends Logging {
 
     rtplanList.foreach(rtplan => insertRtplanIfNew(rtplan))
 
-    val insertedList = seriesList.flatMap(series => DicomSeries.makeDicomSeries(userPK, inputPK, machinePK, series)).map(series => series.insert)
+    val insertedList = seriesList.flatMap(series => DicomSeries.makeDicomSeries(userPK, inputPK, machinePK, series, procedurePK)).map(series => series.insert)
     logger.info("Number of non-RTPLAN DicomSeries inserted: " + insertedList.size)
   }
 
@@ -481,7 +481,7 @@ object RunProcedure extends Logging {
       new Input(None, None, uploadDate, userPK, machine.machinePK, PatientID, dataDate).insert
     }
     if (userPK.isDefined)
-      saveDicomSeries(userPK.get, inputWithoutDir.inputPK, machine.machinePK, alList)
+      saveDicomSeries(userPK.get, inputWithoutDir.inputPK, machine.machinePK, alList, procedure.procedurePK)
 
     // The input PK is needed to make the input directory, which creates a circular definition when making an
     // input row, but this is part of the compromise of creating a file hierarchy that has a consistent (as

@@ -62,7 +62,7 @@ class TestDicomSeries_insertIfNew extends FlatSpec with Matchers {
     val templateDs = DicomSeries.getRandomForTesting.get
 
     if (true) {
-      DicomSeries.insertIfNew(templateDs.userPK, templateDs.inputPK, templateDs.machinePK, Seq(al1))
+      DicomSeries.insertIfNew(templateDs.userPK, templateDs.inputPK, templateDs.machinePK, Seq(al1), None)
       val ds = DicomSeries.getBySeriesInstanceUID(seriesUid)
       ds.size should be(1)
       ds.head.size should be(1)
@@ -71,7 +71,7 @@ class TestDicomSeries_insertIfNew extends FlatSpec with Matchers {
     }
 
     if (true) {
-      DicomSeries.insertIfNew(templateDs.userPK, templateDs.inputPK, templateDs.machinePK, Seq(al1))
+      DicomSeries.insertIfNew(templateDs.userPK, templateDs.inputPK, templateDs.machinePK, Seq(al1), None)
       val ds = DicomSeries.getBySeriesInstanceUID(seriesUid)
       ds.size should be(1)
       ds.head.size should be(1)
@@ -80,7 +80,7 @@ class TestDicomSeries_insertIfNew extends FlatSpec with Matchers {
     }
 
     if (true) {
-      DicomSeries.insertIfNew(templateDs.userPK, templateDs.inputPK, templateDs.machinePK, Seq(al2))
+      DicomSeries.insertIfNew(templateDs.userPK, templateDs.inputPK, templateDs.machinePK, Seq(al2), None)
       val ds = DicomSeries.getBySeriesInstanceUID(seriesUid)
       ds.size should be(1)
       ds.head.size should be(2)
@@ -119,7 +119,7 @@ class TestDicomSeries_insertIfNew extends FlatSpec with Matchers {
     // insert the DICOM series in stages, a few slices at a time
 
     if (true) {
-      DicomSeries.insertIfNew(templateDs.userPK, templateDs.inputPK, templateDs.machinePK, alA)
+      DicomSeries.insertIfNew(templateDs.userPK, templateDs.inputPK, templateDs.machinePK, alA, None)
       val ds = DicomSeries.getBySeriesInstanceUID(seriesUid)
       ds.size should be(1)
       ds.head.size should be(3)
@@ -130,7 +130,7 @@ class TestDicomSeries_insertIfNew extends FlatSpec with Matchers {
     }
 
     if (true) {
-      DicomSeries.insertIfNew(templateDs.userPK, templateDs.inputPK, templateDs.machinePK, alA)
+      DicomSeries.insertIfNew(templateDs.userPK, templateDs.inputPK, templateDs.machinePK, alA, None)
       val ds = DicomSeries.getBySeriesInstanceUID(seriesUid)
       ds.size should be(1)
       ds.head.size should be(3)
@@ -141,7 +141,7 @@ class TestDicomSeries_insertIfNew extends FlatSpec with Matchers {
     }
 
     if (true) {
-      DicomSeries.insertIfNew(templateDs.userPK, templateDs.inputPK, templateDs.machinePK, alB)
+      DicomSeries.insertIfNew(templateDs.userPK, templateDs.inputPK, templateDs.machinePK, alB, None)
       val ds = DicomSeries.getBySeriesInstanceUID(seriesUid)
       ds.size should be(1)
       ds.head.size should be(5)
@@ -152,7 +152,7 @@ class TestDicomSeries_insertIfNew extends FlatSpec with Matchers {
     }
 
     if (true) {
-      DicomSeries.insertIfNew(templateDs.userPK, templateDs.inputPK, templateDs.machinePK, alC)
+      DicomSeries.insertIfNew(templateDs.userPK, templateDs.inputPK, templateDs.machinePK, alC, None)
       val ds = DicomSeries.getBySeriesInstanceUID(seriesUid)
       ds.size should be(1)
       ds.head.size should be(10)

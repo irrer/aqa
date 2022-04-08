@@ -14,36 +14,30 @@
  * limitations under the License.
  */
 
+package aqa.test
 
-package aqa.test;
-
+import com.pixelmed.dicom.Attribute
+import com.pixelmed.dicom.SOPClass
+import com.pixelmed.dicom.TagFromName
+import edu.umro.ScalaUtil.FileUtil
+import org.aqa.DicomFile
+import org.aqa.Util
+import org.aqa.db.DbSetup
+import org.aqa.db.DicomSeries
+import org.aqa.db.Input
+import org.aqa.db.InputFiles
+import org.aqa.db.Procedure
+import org.aqa.db.User
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 
 import java.io.File
-import edu.umro.ScalaUtil.Trace
-import org.aqa.db.DbSetup
-import org.aqa.DicomFile
-import org.aqa.db.User
-import org.aqa.db.Input
-import org.aqa.db.Machine
-import org.aqa.db.DicomSeries
-import org.aqa.Util
-
 import java.sql.Timestamp
-import org.aqa.db.InputFiles
-import com.pixelmed.dicom.AttributeList
-import edu.umro.ScalaUtil.FileUtil
-import com.pixelmed.dicom.SOPClass
-import com.pixelmed.dicom.TagFromName
-import com.pixelmed.dicom.Attribute
-import org.aqa.db.Procedure
-
 import scala.util.Try
 
 /**
- * Test InputFiles.
- */
+  * Test InputFiles.
+  */
 
 class TestDicomSeries extends FlatSpec with Matchers {
 
@@ -56,11 +50,7 @@ class TestDicomSeries extends FlatSpec with Matchers {
 
     println("Reading DICOM test files ...")
 
-    val alRtplanAndImageSeq = dicomDir.
-      listFiles.
-      toSeq.
-      map(f => (new DicomFile(f)).attributeList.get).
-      partition(al => Util.modalityOfAl(al).equalsIgnoreCase("RTPLAN"))
+    val alRtplanAndImageSeq = dicomDir.listFiles.toSeq.map(f => new DicomFile(f).attributeList.get).partition(al => Util.modalityOfAl(al).equalsIgnoreCase("RTPLAN"))
     val rtplan = alRtplanAndImageSeq._1.head
     val imageList = alRtplanAndImageSeq._2
 
@@ -73,28 +63,21 @@ class TestDicomSeries extends FlatSpec with Matchers {
     val imageSopClass = imageList.head.get(TagFromName.SOPClassUID).getSingleStringValueOrNull
 
     val input = {
-      Some(new Input(
-        inputPK = None,
-        directory = Some(dicomDir.getAbsolutePath),
-        uploadDate = new Timestamp(0),
-        userPK = Some(userPK),
-        machinePK = None,
-        patientId = None,
-        dataDate = None).insert)
+      Some(new Input(inputPK = None, directory = Some(dicomDir.getAbsolutePath), uploadDate = new Timestamp(0), userPK = Some(userPK), machinePK = None, patientId = None, dataDate = None).insert)
     }
 
     val inpPK = input.get.inputPK.get
     println("X inputPK: " + inpPK) // X denotes item to be deleted
 
     /**
-     * remove all relevant data from database
-     */
+      * remove all relevant data from database
+      */
     def cleanup = {
       Try {
         val dicomSeries = DicomSeries.getBySeriesInstanceUID(Util.serInstOfAl(rtplan)) ++ DicomSeries.getBySeriesInstanceUID(Util.serInstOfAl(imageList.head))
 
         dicomSeries.map(ds => DicomSeries.delete(ds.dicomSeriesPK.get))
-        dicomSeries.map(ds => ds.inputPK).flatten.distinct.map(inputPK => Input.delete(inputPK))
+        dicomSeries.flatMap(ds => ds.inputPK).distinct.map(inputPK => Input.delete(inputPK))
       }
     }
 
@@ -106,9 +89,9 @@ class TestDicomSeries extends FlatSpec with Matchers {
       inputFiles.insert
       println("X inputFiles.inputFilesPK: " + inputFiles.inputFilesPK) // X denotes item to be deleted
 
-      val procedurePK = Procedure.ProcOfPhase2.get.procedurePK.get
-      dsRtplan = Some((DicomSeries.makeDicomSeries(userPK, Some(inpPK), None, Seq(rtplan)).get).insert)
-      dsImage = Some((DicomSeries.makeDicomSeries(userPK, Some(inpPK), None, imageList).get).insert)
+      val procedurePK = Procedure.ProcOfPhase2.get.procedurePK
+      dsRtplan = Some(DicomSeries.makeDicomSeries(userPK, Some(inpPK), None, Seq(rtplan), procedurePK).get.insert)
+      dsImage = Some(DicomSeries.makeDicomSeries(userPK, Some(inpPK), None, imageList, procedurePK).get.insert)
       println("X dsRtplan.dicomSeriesPK: " + dsRtplan.get.dicomSeriesPK.get) // X denotes item to be deleted
       println("X dsImage.dicomSeriesPK: " + dsImage.get.dicomSeriesPK.get) // X denotes item to be deleted
 
@@ -132,7 +115,7 @@ class TestDicomSeries extends FlatSpec with Matchers {
       DicomSeries.getBySopInstanceUID(Util.sopOfAl(rtplan)).size should be(1)
       rtplan.get(TagFromName.FrameOfReferenceUID) match {
         case at: Attribute => DicomSeries.getByFrameUIDAndSOPClass(Set(at.getSingleStringValueOrNull), SOPClass.RTPlanStorage).size should be(1)
-        case _ => ;
+        case _             => ;
       }
 
       // test the get functions for an image series
@@ -156,9 +139,9 @@ class TestDicomSeries extends FlatSpec with Matchers {
       DicomSeries.delete(dsRtplan.get.dicomSeriesPK.get) should be(1)
 
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         println("Unexpected exception: " + t)
-        t.printStackTrace
+        t.printStackTrace()
         if (input.isDefined) {
           println("Cleaning up input " + input.get.inputPK.get)
           Input.delete(inpPK)
@@ -181,7 +164,6 @@ class TestDicomSeries extends FlatSpec with Matchers {
         }
         cleanup
         true should be(false) // force test to fail
-      }
     }
   }
 

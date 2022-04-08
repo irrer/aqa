@@ -210,18 +210,41 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
       val devSerNo = getOpt(dicomSeries.deviceSerialNumber, TagFromName.DeviceSerialNumber, "DeviceSerialNumber")
       val patId = getOpt(dicomSeries.patientID, TagFromName.PatientID, "PatientID")
       val referencedRtplanUID = getOpt(dicomSeries.referencedRtplanUID, TagFromName.ReferencedSOPInstanceUID, "referencedRtplanUID")
+
       val startDate = {
         if (output.isDefined) Some(<AnalysisStartDate>{Util.standardDateFormat.format(output.get.startDate)}</AnalysisStartDate>)
         else None
       }
+
+      /**
+        * Get the procedure associated with this series.  First try getting it via the
+        * DicomSeries.procedurePK field, and if that fails, get it from the output it
+        * is associated with.
+        *
+        * Ideally the DicomSeries.procedurePK should always work, but the case for the database not being
+        * transitioned to the required state must be handled.
+        */
+      val procedurePK: Option[Long] = {
+
+        def getFromOutput = if (output.isDefined) Some(output.get.procedurePK) else None
+
+        0 match {
+          case _ if dicomSeries.procedurePK.isEmpty                                              => getFromOutput
+          case _ if !procedureList.exists(p => p.procedurePK.get == dicomSeries.procedurePK.get) => getFromOutput
+          case _                                                                                 => Some(dicomSeries.procedurePK.get)
+        }
+      }
+
       val procedure = {
-        if (output.isDefined) Some(<Procedure>{nameOfProcedure(output.get.procedurePK)}</Procedure>)
+        if (procedurePK.isDefined) Some(<Procedure>{nameOfProcedure(procedurePK.get)}</Procedure>)
         else None
       }
+
       val status = {
         if (output.isDefined) Some(<Status>{output.get.status}</Status>)
         else None
       }
+
       val url = {
         urlOfDicomSeries(dicomSeries) match {
           case Some(u) => Some(<URL>{u}</URL>)

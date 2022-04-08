@@ -51,9 +51,9 @@ case class DicomSeries(
     patientID: Option[String], // Patient ID, if available
     size: Int, // Number of files in series
     referencedRtplanUID: Option[String], // referenced RTPLAN UID if one is referenced
-    content: Option[Array[Byte]]
-) // DICOM in zip form.  If empty, then DICOM must be retrieved from Input
-    extends Logging {
+    procedurePK: Option[Long], // procedure to which this DICOM was applied
+    content: Option[Array[Byte]] // DICOM in zip form.  If empty, then DICOM must be retrieved from Input
+) extends Logging {
 
   /**
     * Insert, returning the row that was inserted.  Note that dicomSeriesPK in the return value is defined.
@@ -171,6 +171,7 @@ object DicomSeries extends Logging {
     def patientID = column[Option[String]]("patientID")
     def size = column[Int]("size")
     def referencedRtplanUID = column[Option[String]]("referencedRtplanUID")
+    def procedurePK = column[Option[Long]]("procedurePK")
     def content = column[Option[Array[Byte]]]("content")
 
     def * =
@@ -190,6 +191,7 @@ object DicomSeries extends Logging {
         patientID,
         size,
         referencedRtplanUID,
+        procedurePK,
         content
       ) <> (DicomSeries.apply _ tupled, DicomSeries.unapply)
 
@@ -200,6 +202,8 @@ object DicomSeries extends Logging {
     def inputFK = foreignKey("DicomSeries_inputPKConstraint", inputPK, Input.query)(_.inputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
 
     def machineFK = foreignKey("DicomSeries_machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+
+    def procedureFK = foreignKey("DicomSeries_procedurePKConstraint", procedurePK, Procedure.query)(_.procedurePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Restrict)
   }
 
   val query = TableQuery[DicomSeriesTable]
@@ -302,6 +306,7 @@ object DicomSeries extends Logging {
       deviceSerialNumber: Option[String],
       date: Timestamp,
       patientID: Option[String],
+      procedurePK: Option[Long],
       size: Int,
       referencedRtplanUID: Option[String]
   ) {}
@@ -323,11 +328,12 @@ object DicomSeries extends Logging {
       ds.deviceSerialNumber,
       ds.date,
       ds.patientID,
+      ds.procedurePK,
       ds.size,
       ds.referencedRtplanUID
     )
     val list = Db.run(action.result)
-    val dsLite = list.map(ds => DicomSeriesWithoutContent(ds._1, ds._2, ds._3, ds._4, ds._5, ds._6, ds._7, ds._8, ds._9, ds._10, ds._11, ds._12, ds._13, ds._14, ds._15))
+    val dsLite = list.map(ds => DicomSeriesWithoutContent(ds._1, ds._2, ds._3, ds._4, ds._5, ds._6, ds._7, ds._8, ds._9, ds._10, ds._11, ds._12, ds._13, ds._14, ds._15, ds._16))
     dsLite
   }
 
@@ -354,7 +360,7 @@ object DicomSeries extends Logging {
   /**
     * Construct a DicomSeries from an attribute list and some other required fields.
     */
-  def makeDicomSeries(usrPK: Long, inpPK: Option[Long], machPK: Option[Long], alList: Seq[AttributeList]): Option[DicomSeries] = {
+  def makeDicomSeries(usrPK: Long, inpPK: Option[Long], machPK: Option[Long], alList: Seq[AttributeList], procedurePK: Option[Long]): Option[DicomSeries] = {
     // Doing a lot of things with undependable data so wrap this in a try-catch to cover all the bases
     try {
       //val datePatID = alList.map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al))
@@ -448,6 +454,7 @@ object DicomSeries extends Logging {
         getPatientID,
         getSize,
         getReferencedRtplanUID,
+        procedurePK,
         getContent
       )
       Some(ds)
@@ -468,7 +475,7 @@ object DicomSeries extends Logging {
     *
     * If the series is already in the database, but there are new incoming slices that are not in the database, then add them.
     */
-  def insertIfNew(userPK: Long, inputPK: Option[Long], machinePK: Option[Long], alList: Seq[AttributeList]): Unit = {
+  def insertIfNew(userPK: Long, inputPK: Option[Long], machinePK: Option[Long], alList: Seq[AttributeList], procedurePK: Option[Long]): Unit = {
     if (alList.isEmpty) throw new IllegalArgumentException("List of DICOM slices is empty")
     val uidList = alList.map(al => Util.serInstOfAl(al)).distinct
     if (uidList.size > 1) throw new IllegalArgumentException("List of DICOM slices have more than one series UID: " + uidList.mkString("    "))
@@ -503,7 +510,7 @@ object DicomSeries extends Logging {
         logger.info("Updated " + insertCount + " DicomSeries " + newDs.toString)
       }
     } else {
-      val ds = DicomSeries.makeDicomSeries(userPK, inputPK, machinePK, alList)
+      val ds = DicomSeries.makeDicomSeries(userPK, inputPK, machinePK, alList, procedurePK)
       if (ds.isDefined) {
         ds.get.insert
         logger.info("inserted DicomSeries in to database: " + ds)
@@ -585,10 +592,12 @@ object DicomSeries extends Logging {
           case Some(ds) => "TPS ID: " + origTpsIdOf(ds)
           case _        => "could not find RTIMAGE series"
         }
-        println("machine: " + machine.machinePK.get.formatted("%3d") +
-          " : " + machine.id.formatted("%8s") +
-          "    real ID: " + machine.getRealId.formatted("%30s") +
-          "    old TPS: " + machine.getRealTpsId + " --> " + text)
+        println(
+          "machine: " + machine.machinePK.get.formatted("%3d") +
+            " : " + machine.id.formatted("%8s") +
+            "    real ID: " + machine.getRealId.formatted("%30s") +
+            "    old TPS: " + machine.getRealTpsId + " --> " + text
+        )
       } catch {
         case t: Throwable => println("badness " + machine + " : " + fmtEx(t))
       }
