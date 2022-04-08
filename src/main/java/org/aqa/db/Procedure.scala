@@ -25,19 +25,19 @@ import java.io.File
 import java.sql.Date
 
 /**
- * A quality assurance procedure.
- *
- */
+  * A quality assurance procedure.
+  *
+  */
 case class Procedure(
-                      procedurePK: Option[Long], // Primary key
-                      name: String, // human readable identifier
-                      version: String, // code version, should be in numeric+dot format, as in 1.2.3
-                      timeout: Float, // For 'runaway' programs.  Timeout in minutes after which the procedure should be terminated
-                      created: Date, // time that this record was last modified
-                      supportingUserPK: Long, // id of user that supports this procedure, usually the author
-                      webInterface: String, // Class name of Restlet for running procedure
-                      notes: String // Additional information on usage, inputs, limitations, etc.
-                    ) {
+    procedurePK: Option[Long], // Primary key
+    name: String, // human readable identifier
+    version: String, // code version, should be in numeric+dot format, as in 1.2.3
+    timeout: Float, // For 'runaway' programs.  Timeout in minutes after which the procedure should be terminated
+    created: Date, // time that this record was last modified
+    supportingUserPK: Long, // id of user that supports this procedure, usually the author
+    webInterface: String, // Class name of Restlet for running procedure
+    notes: String // Additional information on usage, inputs, limitations, etc.
+) {
 
   def insert: Procedure = {
     PatientProcedureXml.cacheClear(None)
@@ -48,7 +48,7 @@ case class Procedure(
     result
   }
 
-  def insertOrUpdate = {
+  def insertOrUpdate(): Int = {
     PatientProcedureXml.cacheClear(None)
     // if the procedure already exists, and the execution directory is being
     // changed (via a name or version change) then rename the execution directory on disk.
@@ -63,18 +63,18 @@ case class Procedure(
     Db.run(Procedure.query.insertOrUpdate(this))
   }
 
-  def fullName = Procedure.fullName(name, version)
+  def fullName: String = Procedure.fullName(name, version)
 
-  def fileName = Procedure.fileName(name, version)
+  def fileName: String = Procedure.fileName(name, version)
 
-  def webUrl = webInterface + "_" + procedurePK.get
+  def webUrl: String = webInterface + "_" + procedurePK.get
 
-  def timeoutInMs = (timeout * (60 * 1000)).round.toLong
+  def timeoutInMs: Long = (timeout * (60 * 1000)).round.toLong
 
   /** Get the directory containing the executables for this procedure. */
   def execDir = new File(Config.ProcedureDir, fileName)
 
-  override def toString = {
+  override def toString: String = {
     "\n    procedurePK: " + procedurePK +
       "\n    name: " + name +
       "\n    version: " + version +
@@ -108,7 +108,7 @@ object Procedure {
 
     def timeout = column[Float]("timeout")
 
-    def created = column[Date]("created");
+    def created = column[Date]("created")
 
     def supportingUserPK = column[Long]("userPK")
 
@@ -116,15 +116,7 @@ object Procedure {
 
     def notes = column[String]("notes")
 
-    def * = (
-      procedurePK.?,
-      name,
-      version,
-      timeout,
-      created,
-      supportingUserPK,
-      webInterface,
-      notes) <> ((Procedure.apply _) tupled, Procedure.unapply _)
+    def * = (procedurePK.?, name, version, timeout, created, supportingUserPK, webInterface, notes) <> (Procedure.apply _ tupled, Procedure.unapply _)
 
     def supportingUserFK = foreignKey("Procedure_userPKConstraint", supportingUserPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -153,12 +145,12 @@ object Procedure {
       user <- User.query if user.userPK === procedure.supportingUserPK
     } yield (procedure, user)
     val seq = Db.run(action.result)
-    seq.map(pu => new ProcedureUser(pu._1, pu._2))
+    seq.map(pu => ProcedureUser(pu._1, pu._2))
   }
 
   def get(pk: Long): Option[Procedure] = {
     val list = Db.run(query.filter(p => p.procedurePK === pk).result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   def delete(procedurePK: Long): Int = {
@@ -167,23 +159,23 @@ object Procedure {
     Db.run(action)
   }
 
-  lazy val ProcOfBBbyCBCT = list.filter(p => p.isBBbyCBCT).sortBy(_.version).lastOption
-  lazy val ProcOfBBbyEPID = list.filter(p => p.isBBbyEPID).sortBy(_.version).lastOption
-  lazy val ProcOfPhase2 = list.filter(p => p.isPhase2).sortBy(_.version).lastOption
-  lazy val ProcOfLOC = list.filter(p => p.isLOC).sortBy(_.version).lastOption
-  lazy val ProcOfLOCBaseline = list.filter(p => p.isLOCBaseline).sortBy(_.version).lastOption
-  lazy val ProcOfGapSkew = list.filter(p => p.isGapSkew).sortBy(_.version).lastOption
+  lazy val ProcOfBBbyCBCT: Option[Procedure] = list.filter(p => p.isBBbyCBCT).sortBy(_.version).lastOption
+  lazy val ProcOfBBbyEPID: Option[Procedure] = list.filter(p => p.isBBbyEPID).sortBy(_.version).lastOption
+  lazy val ProcOfPhase2: Option[Procedure] = list.filter(p => p.isPhase2).sortBy(_.version).lastOption
+  lazy val ProcOfLOC: Option[Procedure] = list.filter(p => p.isLOC).sortBy(_.version).lastOption
+  lazy val ProcOfLOCBaseline: Option[Procedure] = list.filter(p => p.isLOCBaseline).sortBy(_.version).lastOption
+  lazy val ProcOfGapSkew: Option[Procedure] = list.filter(p => p.isGapSkew).sortBy(_.version).lastOption
 
   def main(args: Array[String]): Unit = {
     println("Starting Procedure.main")
-    val valid = Config.validate
+    Config.validate
     DbSetup.init
 
-    def show(p: Procedure) = {
+    def show(p: Procedure): Unit = {
       println(p.fullName + " : " + p.execDir.getAbsolutePath + " isDirectory: " + p.execDir.isDirectory)
     }
 
-    list.map(p => show(p))
+    list.foreach(p => show(p))
   }
 
 }
