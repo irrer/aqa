@@ -23,6 +23,7 @@ import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
+import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Db.driver.api._
@@ -86,7 +87,7 @@ case class DicomSeries(
     *
     * @return
     */
-  def sopUidSeq: Seq[String] = sopInstanceUIDList.split(" ").filterNot(_.isEmpty).toSeq
+  def sopUidSeq: Seq[String] = DicomSeries.sopUidSeq(sopInstanceUIDList)
 
   /**
     * Get the content as a list of <code>AttributeList</code>.
@@ -148,6 +149,7 @@ case class DicomSeries(
       "\n    patientID: " + patientID +
       "\n    size: " + size +
       "\n    referencedRtplanUID: " + referencedRtplanUID +
+      "\n    procedurePK: " + procedurePK +
       contentText
   }
 }
@@ -197,16 +199,22 @@ object DicomSeries extends Logging {
 
     /* Note that accidental data deletion is protected by attempts to remove a machine.  If the
        user does confirm that they want a machine deleted, then the associated DicomSeries will be deleted automatically. */
-    def userFK = foreignKey("DicomSeries_userPKConstraint", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Restrict)
+    def userFK =
+      foreignKey("DicomSeries_userPKConstraint", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Restrict)
 
-    def inputFK = foreignKey("DicomSeries_inputPKConstraint", inputPK, Input.query)(_.inputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def inputFK =
+      foreignKey("DicomSeries_inputPKConstraint", inputPK, Input.query)(_.inputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
 
-    def machineFK = foreignKey("DicomSeries_machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def machineFK =
+      foreignKey("DicomSeries_machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
 
-    def procedureFK = foreignKey("DicomSeries_procedurePKConstraint", procedurePK, Procedure.query)(_.procedurePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Restrict)
+    def procedureFK =
+      foreignKey("DicomSeries_procedurePKConstraint", procedurePK, Procedure.query)(_.procedurePK)
   }
 
   val query = TableQuery[DicomSeriesTable]
+
+  def sopUidSeq(sopInstanceUIDList: String): Seq[String] = sopInstanceUIDList.split(" ").filterNot(_.isEmpty).toSeq
 
   /**
     * Get using the primary key.
@@ -309,7 +317,9 @@ object DicomSeries extends Logging {
       procedurePK: Option[Long],
       size: Int,
       referencedRtplanUID: Option[String]
-  ) {}
+  ) {
+    def sopUidSeq = DicomSeries.sopUidSeq(sopInstanceUIDList)
+  }
 
   def getByPatientID(patientID: String): Seq[DicomSeriesWithoutContent] = {
     val action = for {
@@ -563,50 +573,198 @@ object DicomSeries extends Logging {
 
   def main(args: Array[String]): Unit = {
 
-    def getRtimageSeries(machine: Machine): Option[DicomSeries] = {
-      val action = for {
-        dicomSeries <- query.filter(ds => (ds.modality === "RTIMAGE") && (ds.machinePK === machine.machinePK.get)).take(1)
-      } yield dicomSeries
-      val list = Db.run(action.result)
-      list.headOption
+    Trace.trace()
+    Config.validate
+    Trace.trace()
+    DbSetup.init
+    Trace.trace()
+    Thread.sleep(1000)
+    Trace.trace()
+
+    val writeEnabled = args.contains("writeEnabled")
+    val doNonPlan = args.contains("doNonPlan")
+    val doPlan = args.contains("doPlan")
+
+    // maps procedure PKs to a descriptive name
+    val procMap = Procedure.list.map(p => (p.procedurePK.get, p.procedurePK.get + " : " + p.name + " " + p.version)).toMap
+
+    // true if Daily QA is defined
+    val hasDailyQa = procMap.values.find(n => n.contains("CBCT")).isDefined
+
+    def doNonPlanDs: Unit = {
+
+      Trace.trace("\n\n\n\n\n\n\n\n\nStarting.  writeEnabled: " + writeEnabled)
+      def getByMachinePK(machinePK: Long): Seq[DicomSeriesWithoutContent] = {
+        val action = for {
+          ds <- query if ds.machinePK === machinePK
+        } yield (
+          ds.dicomSeriesPK,
+          ds.userPK,
+          ds.inputPK,
+          ds.machinePK,
+          ds.sopInstanceUIDList,
+          ds.seriesInstanceUID,
+          ds.frameOfReferenceUID,
+          ds.mappedFrameOfReferenceUID,
+          ds.modality,
+          ds.sopClassUID,
+          ds.deviceSerialNumber,
+          ds.date,
+          ds.patientID,
+          ds.procedurePK,
+          ds.size,
+          ds.referencedRtplanUID
+        )
+        val list = Db.run(action.result)
+        val dsLite = list.map(ds => DicomSeriesWithoutContent(ds._1, ds._2, ds._3, ds._4, ds._5, ds._6, ds._7, ds._8, ds._9, ds._10, ds._11, ds._12, ds._13, ds._14, ds._15, ds._16))
+        dsLite
+      }
+
+      def procByOutput(inputPK: Option[Long]): Option[Long] = {
+        if (inputPK.isEmpty)
+          None
+        else {
+          val outputList = Output.getByInputPKSet(Set(inputPK.get))
+          val procList = outputList.map(o => o.procedurePK).distinct
+          if (procList.size != 1) {
+            Trace.trace("Unexpected: Multiple procedures associated with inputPK " + inputPK)
+            None
+          } else
+            procList.headOption
+        }
+      }
+
+      def doMach(machine: Machine): Unit = {
+
+        val machText = machine.machinePK.get + " : " + machine.id + " : " + machine.getRealId
+
+        println("----------------------------------------------------------------------------")
+        println("----------------------------------------------------------------------------")
+        println("----------------------------------------------------------------------------")
+        println("----------------------------------------------------------------------------")
+        Trace.trace("Processing machine " + machText)
+
+        def doDs(ds: DicomSeriesWithoutContent): Unit = {
+
+          try {
+            if (ds.procedurePK.isDefined) {
+              Trace.trace("DicomSeries proc already set: " + ds.dicomSeriesPK + ":" + ds.modality + "  size: " + ds.size + "  proc: " + procMap(ds.procedurePK.get))
+            } else {
+              val procedurePK = procByOutput(ds.inputPK)
+              if (procedurePK.isDefined) {
+                Trace.trace("found procedure " + procMap(procedurePK.get) + " for DicomSeries " + ds.dicomSeriesPK + ":" + ds.modality + "  size: " + ds.size)
+                if (writeEnabled) {
+                  Trace.trace("writing procedure " + procMap(procedurePK.get) + " for DicomSeries " + ds.dicomSeriesPK + ":" + ds.modality + "  size: " + ds.size)
+                  val sql = DicomSeries.query.filter(_.dicomSeriesPK === ds.dicomSeriesPK).map(d => d.procedurePK).update(procedurePK)
+                  Db.run(sql)
+                }
+              }
+            }
+          } catch {
+            case t: Throwable => println("badness " + machine + " : " + fmtEx(t))
+          }
+        }
+
+        val dsList = getByMachinePK(machine.machinePK.get)
+        dsList.foreach(doDs)
+      }
+
+      Machine.list.sortBy(_.machinePK.get).foreach(doMach)
     }
 
-    def doMach(machine: Machine): Unit = {
-
-      def origTpsIdOf(ds: DicomSeries): String = {
-        val anonAttr = ds.attributeListList.head.get(TagByName.RadiationMachineName) //.getSingleStringValueOrEmptyString()
-        val daList = DicomAnonymous.getByAttrAndValue(machine.institutionPK, Seq(anonAttr))
-        daList.size match {
-          case 1 =>
-            val text = daList.head.originalValue
-            if (text.contains("RadiationMachineName"))
-              "Re-anonymized? " + text
-            else text
-          case 0 => "Could not de-anonymize attribute"
-          case _ => "Found " + daList.size + " entries.  Values: " + daList.map(_.originalValue).mkString("  |  ")
-        }
-      }
-
-      try {
-        val text = getRtimageSeries(machine) match {
-          case Some(ds) => "TPS ID: " + origTpsIdOf(ds)
-          case _        => "could not find RTIMAGE series"
-        }
-        println(
-          "machine: " + machine.machinePK.get.formatted("%3d") +
-            " : " + machine.id.formatted("%8s") +
-            "    real ID: " + machine.getRealId.formatted("%30s") +
-            "    old TPS: " + machine.getRealTpsId + " --> " + text
+    def doPlanDs: Unit = {
+      def getAllRtplanDs(): Seq[DicomSeriesWithoutContent] = {
+        val action = for {
+          ds <- query if ds.modality === "RTPLAN"
+        } yield (
+          ds.dicomSeriesPK,
+          ds.userPK,
+          ds.inputPK,
+          ds.machinePK,
+          ds.sopInstanceUIDList,
+          ds.seriesInstanceUID,
+          ds.frameOfReferenceUID,
+          ds.mappedFrameOfReferenceUID,
+          ds.modality,
+          ds.sopClassUID,
+          ds.deviceSerialNumber,
+          ds.date,
+          ds.patientID,
+          ds.procedurePK,
+          ds.size,
+          ds.referencedRtplanUID
         )
-      } catch {
-        case t: Throwable => println("badness " + machine + " : " + fmtEx(t))
+        val list = Db.run(action.result)
+        val dsLite = list.map(ds => DicomSeriesWithoutContent(ds._1, ds._2, ds._3, ds._4, ds._5, ds._6, ds._7, ds._8, ds._9, ds._10, ds._11, ds._12, ds._13, ds._14, ds._15, ds._16))
+        dsLite
       }
+
+      case class MiniDs(dicomSeriesPK: Long, procedurePK: Option[Long], refPlan: Option[String]) {}
+
+      val allDs = {
+        val action = for {
+          ds <- DicomSeries.query
+        } yield (ds.dicomSeriesPK, ds.procedurePK, ds.referencedRtplanUID)
+        val list = Db.run(action.result).map(d => MiniDs(d._1, d._2, d._3))
+        list.filter(ds => ds.procedurePK.nonEmpty && ds.refPlan.nonEmpty)
+      }
+
+      def doOneRtplanDs(rtplanDs: DicomSeriesWithoutContent): Unit = {
+        println("============================================================================")
+        val dsText = rtplanDs.dicomSeriesPK + ":" + rtplanDs.modality + "  size: " + rtplanDs.size
+        Trace.trace("Processing DicomSeries: " + dsText)
+
+        val sopList = rtplanDs.sopUidSeq
+
+        // list of procedurePKs from non-plans that point to the plan
+        val procPkList = {
+          val list = allDs.filter(ds => sopList.contains(ds.refPlan)).map(_.procedurePK.get)
+          // change all BBbyCBCT to BBbyEPID
+          if (hasDailyQa) {
+            val cbct = Procedure.ProcOfBBbyCBCT.get.procedurePK.get
+            val epid = Procedure.ProcOfBBbyEPID.get.procedurePK.get
+            list.map(pk => if (pk == cbct) epid else pk).distinct
+          } else
+            list
+        }
+
+        val procName = 0 match {
+          case _ if procPkList.isEmpty =>
+            Trace.trace("No non-plan series reference the RTPLAN: " + procPkList.map(p => procMap(p)).mkString("\n", "\n", "\n"))
+            "none"
+          case _ if procPkList.size > 1 =>
+            Trace.trace("No non-plan series reference the RTPLAN: " + procPkList.map(p => procMap(p)).mkString("\n", "\n", "\n"))
+            procPkList.map(p => procMap(p)).mkString("    ")
+          case _ =>
+            procMap(procPkList.head)
+        }
+
+        val sizeName = if (rtplanDs.size == 1) "one" else "StrangeSize_" + rtplanDs.size
+
+        val beamNameText = {
+          val alList = DicomSeries.get(rtplanDs.dicomSeriesPK).head.attributeListList
+          val beamNameList = alList.map(al => DicomUtil.findAllSingle(al, TagByName.BeamName).map(_.getSingleStringValueOrEmptyString)).flatten.sorted
+          beamNameList.mkString("  ")
+        }
+        Trace.trace(dsText + " Proc:" + procName + "    size:" + sizeName + "    beams: " + beamNameText)
+      }
+
+      println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+      println("============================================================================")
+      println("============================================================================")
+      println("============================================================================")
+      println("============================================================================")
+      println("============================================================================")
+      val dsList = getAllRtplanDs()
+
+      dsList.filter(_.procedurePK.isEmpty).foreach(doOneRtplanDs)
     }
 
     val start = System.currentTimeMillis()
-    println("Starting -----------------------")
-    Machine.list.sortBy(_.machinePK.get).foreach(doMach)
+    Trace.trace("\n\n\n\n\n\n\n\n\nStarting.  writeEnabled: " + writeEnabled + "    doNonPlan: " + doNonPlan + "    doPlan : " + doPlan)
+    if (doNonPlan) doNonPlanDs
+    if (doPlan) doPlanDs
     println("Done. Elapsed ms: " + (System.currentTimeMillis() - start))
-    // System.exit(0)
+    System.exit(0)
   }
 }

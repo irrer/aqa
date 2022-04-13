@@ -156,10 +156,14 @@ case class Machine(
       }
     }
 
+    def properModality(al: AttributeList): Boolean = {
+      Set("CT", "REG", "RTIMAGE").contains(Util.modalityOfAl(al))
+    }
+
     // only update if it is not defined or is blank, and the machine is already in the database
     if ((tpsID_real.isEmpty || getRealTpsId.get.trim.isEmpty) && machinePK.isDefined) {
       val attrList = {
-        val all = alList.flatMap(al => DicomUtil.findAllSingle(al, TagByName.RadiationMachineName)).toList
+        val all = alList.filter(properModality).flatMap(al => DicomUtil.findAll(al, Set(TagByName.StationName, TagByName.RadiationMachineName))).toList
         val allReduced = all.groupBy(_.getSingleStringValueOrEmptyString()).map(_._2.head).map(deAnon)
         allReduced.groupBy(_.getSingleStringValueOrEmptyString()).map(_._2.head)
       }
@@ -173,8 +177,7 @@ case class Machine(
           if (write) {
             logger.info("Setting tpsId_real name for " + this.id + " / " + this.getRealId + " to " + plainText)
             updatedTps.insertOrUpdate() // should always return 1
-          }
-          else {
+          } else {
             logger.info("(write=false) Would have set tpsId_real name for " + this.id + " / " + this.getRealId + " to " + plainText)
             1 // fake a successful write for testing
           }

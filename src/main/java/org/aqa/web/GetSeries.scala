@@ -200,6 +200,16 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
         }
       }
 
+      def makeSopList(): Option[Elem] = {
+        if (dicomSeries.modality.equals("RTPLAN")) {
+          val elem = <SOPInstanceUIDList>
+            {dicomSeries.sopUidSeq.map(uid => <SOPInstanceUID>{uid.trim}</SOPInstanceUID>)}
+          </SOPInstanceUIDList>
+          Some(elem)
+        } else
+          None
+      }
+
       val output = outputOfDicomSeries(dicomSeries)
 
       val serInstUid = getOpt(Some(dicomSeries.seriesInstanceUID), TagFromName.SeriesInstanceUID, "SeriesInstanceUID")
@@ -210,6 +220,7 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
       val devSerNo = getOpt(dicomSeries.deviceSerialNumber, TagFromName.DeviceSerialNumber, "DeviceSerialNumber")
       val patId = getOpt(dicomSeries.patientID, TagFromName.PatientID, "PatientID")
       val referencedRtplanUID = getOpt(dicomSeries.referencedRtplanUID, TagFromName.ReferencedSOPInstanceUID, "referencedRtplanUID")
+      val sopList = makeSopList()
 
       val startDate = {
         if (output.isDefined) Some(<AnalysisStartDate>{Util.standardDateFormat.format(output.get.startDate)}</AnalysisStartDate>)
@@ -252,7 +263,7 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
         }
       }
 
-      val elemList: Seq[Elem] = Seq(serInstUid, devSerNo, frmOfRef, mappedFrameOfReferenceUID, modality, sopClassUid, patId, referencedRtplanUID, url, procedure, status, startDate).flatten
+      val elemList: Seq[Elem] = Seq(serInstUid, devSerNo, sopList, frmOfRef, mappedFrameOfReferenceUID, modality, sopClassUid, patId, referencedRtplanUID, url, procedure, status, startDate).flatten
 
       val seriesXml = {
         <Series>
