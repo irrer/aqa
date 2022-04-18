@@ -40,7 +40,7 @@ object DailyQAActivity {
   private val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss-SSS")
 
   /** Entries cached this long are considered invalid. */
-  private val timeoutInterval_ms = 2 * 60 * 1000
+  private val timeoutInterval_ms = 10 * 60 * 1000
 
   /**
     * Get a string indicating the last time a DailyQA value changed.
