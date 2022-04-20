@@ -128,6 +128,15 @@ object Util extends Logging {
 
   def writeFile(file: File, text: String): Unit = writeBinaryFile(file, text.getBytes)
 
+  /**
+    * Wrapper for <code>File.mkdirs</code> (which makes a directory and all of
+    * the necessary parent directories) that is thread safe.
+    *
+    * @param dir Make this directory if it does not already exist.
+    * @return True if the directory was created.
+    */
+  def mkdirs(dir: File): Boolean = fileSystemWriteSync.synchronized(dir.mkdirs())
+
   def readBinaryFile(file: File): Either[Throwable, Array[Byte]] = {
     try {
       val fis = new FileInputStream(file)
