@@ -469,7 +469,9 @@ object Util extends Logging {
   def listDirFiles(dir: File): Seq[File] = {
     val list =
       try {
-        dir.listFiles.toSeq
+        fileSystemWriteSync.synchronized {
+          dir.listFiles.toSeq
+        }
       } catch {
         case _: Throwable => null
       }
@@ -479,7 +481,9 @@ object Util extends Logging {
 
   def deleteFileTreeSafely(dir: File): Unit = {
     try {
-      Utility.deleteFileTree(dir)
+      fileSystemWriteSync.synchronized {
+        Utility.deleteFileTree(dir)
+      }
     } catch {
       case t: Throwable => logger.warn("Unable to delete directory " + dir.getAbsolutePath + " : " + fmtEx(t))
     }
