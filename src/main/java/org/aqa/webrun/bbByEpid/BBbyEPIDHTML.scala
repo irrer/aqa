@@ -73,10 +73,10 @@ object BBbyEPIDHTML {
 
   private val squareTitle = "From central " + (2 * Config.BBbyEPIDSearchDistance_mm) + " mm square of image."
 
-  private val noisinessTitle = "Relative indication of image noise as Coefficient of Variation.  Lower numbers indicate a better quality image. " + squareTitle
+  private val noisinessTitle = "Relative indication of image noise as Coefficient of Variation.  Lower numbers indicate a better quality image. " + squareTitle + "  Precise value: "
   private val bbSignalToNoiseTitle =
-    "Strength of BB contrast.  The difference of the BB's mean is this many time the central image's standard deviation.  This can be thought of as the strength of the BB's image compared to the background, with larger values being better."
-  private val meanCuTitle = "Mean CU of pixels.  " + squareTitle
+    "Strength of BB contrast.  The difference of the BB's mean is this many time the central image's standard deviation.  This can be thought of as the strength of the BB's image compared to the background, with larger values being better.  Precise value: "
+  private val meanCuTitle = "Mean CU of pixels.  " + squareTitle + " Precise value: "
 
   def generateHtml(
       extendedData: ExtendedData,
@@ -242,11 +242,13 @@ object BBbyEPIDHTML {
             <div>
               {if (bbByEpid.isOpenFieldImage) <span style="background-color: red;color: white; ">@@nbsp@@Open Field@@nbsp@@</span> else <span>Planned Field</span>}
               <br/>
-              <span title={noisinessTitle}>Image Noisiness: <span title={bbByEpid.pixelCoefficientOfVariation.toString}>{Util.fmtDbl(bbByEpid.pixelCoefficientOfVariation)}</span></span>
+              <span title={noisinessTitle + bbByEpid.pixelCoefficientOfVariation}>Image Noisiness: {Util.fmtDbl(bbByEpid.pixelCoefficientOfVariation)}</span>
               <br/>
-              <span title={bbSignalToNoiseTitle}>BB Signal to Noise: <span title={bbByEpid.pixelStandardDeviation_cu.toString}>{Util.fmtDbl(bbByEpid.pixelStandardDeviation_cu)}</span></span>
+              <span title={bbSignalToNoiseTitle + bbByEpid.bbStdDevMultiple}>BB Signal to Noise: <span>{
+              Util.fmtDbl(bbByEpid.bbStdDevMultiple)
+            }</span></span>
               <br/>
-              <span title={meanCuTitle}>Mean CU of Pixels: <span title={bbByEpid.pixelMean_cu.toString}>{Util.fmtDbl(bbByEpid.pixelMean_cu)}</span></span>
+              <span title={meanCuTitle + bbByEpid.pixelMean_cu}>Mean CU of Pixels: {bbByEpid.pixelMean_cu.formatted("%12.1f").trim}</span>
             </div>
           } else {
             <div></div>
