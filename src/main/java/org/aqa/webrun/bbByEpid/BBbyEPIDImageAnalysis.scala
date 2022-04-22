@@ -185,7 +185,7 @@ object BBbyEPIDImageAnalysis extends Logging {
 
     def getDbl(tag: AttributeTag) = {
       val attr = epid.get(tag)
-      if ((attr == null) || (attr.getDoubleValues.isEmpty))
+      if ((attr == null) || attr.getDoubleValues.isEmpty)
         Double.NaN
       else
         attr.getDoubleValues.head
@@ -337,6 +337,52 @@ object BBbyEPIDImageAnalysis extends Logging {
     correctedImage
   }
 
+  private def getBackgroundValueList(searchImage: DicomImage, searchRect_pix: Rectangle, bbPixList: Seq[Point2i]): IndexedSeq[Float] = {
+    // list of points within search area that are part of the BB
+    val bbSearchPointList = bbPixList.map(p => new Point2i(p.x - searchRect_pix.x, p.y - searchRect_pix.y))
+    val searchPointList = for (x <- 0 until searchImage.width; y <- 0 until searchImage.height) yield new Point2i(x, y)
+    val backgroundPoints = searchPointList.diff(bbSearchPointList)
+    val backgroundValueList = backgroundPoints.map(p => searchImage.get(p.x, p.y))
+    backgroundValueList
+  }
+
+  private def getBackgroundStandardDeviation(searchImage: DicomImage, searchRect_pix: Rectangle, bbPixList: Seq[Point2i]) = {
+    val stdDev = ImageUtil.stdDev(getBackgroundValueList(searchImage, searchRect_pix, bbPixList))
+    stdDev
+  }
+
+  private def getBackgroundMean(searchImage: DicomImage, searchRect_pix: Rectangle, bbPixList: Seq[Point2i]) = {
+    val backgroundValueList = getBackgroundValueList(searchImage, searchRect_pix, bbPixList)
+    val mean = backgroundValueList.sum / backgroundValueList.size
+    mean
+  }
+
+  /**
+    * Get the center of mass of the given list of points.
+    * @param bbImage Image containing CU values.
+    * @param bbPixList List of points comprising the BB.
+    * @return Point relative to bbImage.
+    */
+  private def centerOfMass(bbImage: DicomImage, bbPixList: Seq[Point2i]): Point2d = {
+    val bbValueList = bbPixList.map(p => bbImage.get(p.getX, p.getY)) // list of CU of pixels that are inside the BB
+    val sumMass = bbValueList.sum
+    val xPos_pix = bbPixList.map(p => p.getX * bbImage.get(p.getX, p.getY)).sum / sumMass
+    val yPos_pix = bbPixList.map(p => p.getY * bbImage.get(p.getX, p.getY)).sum / sumMass
+    new Point2d(xPos_pix, yPos_pix)
+  }
+
+  /**
+    * Get the mean CU value of the list of pixels in the BB.
+    * @param bbImage Image containing pixels.
+    * @param bbPixList List of BB pixel coordinates.
+    * @return Mean CU.
+    */
+  private def meanValueOfPixelList(bbImage: DicomImage, bbPixList: Seq[Point2i]): Double = {
+    val bbValueList = bbPixList.map(p => bbImage.get(p.getX, p.getY)) // list of CU of pixels that are inside the BB
+    val mean = bbValueList.sum / bbPixList.size
+    mean
+  }
+
   /**
     * Get the list of pixels that are in the BB by finding the largest that are adjacent to the core
     * pixels.  Recursively do this until enough pixels have been acquired to cover the area of the BB.
@@ -389,87 +435,86 @@ object BBbyEPIDImageAnalysis extends Logging {
       if (columnarNoiseCorrection) // TODO remove
         correctForColumnarAmplification(wholeImage, searchRect_pix, columnarCorrectionHeight_pix, al, diagnosticsDir) // TODO should always do this
       else {
-        val searchRect = searchArea(trans, new Point2d(0, 0), Config.BBbyEPIDSearchDistance_mm)
-        wholeImage.getSubimage(searchRect) // TODO remove
+        wholeImage.getSubimage(searchRect_pix) // TODO remove
       }
     }
 
-    val bbSizeX_pix = trans.iso2PixDistX(Config.EPIDBBPenumbra_mm) * 2
-    val bbSizeY_pix = trans.iso2PixDistY(Config.EPIDBBPenumbra_mm) * 2
+    val bbWidth_pix = trans.iso2PixDistX(Config.EPIDBBPenumbra_mm * 2)
+    val bbHeight_pix = trans.iso2PixDistY(Config.EPIDBBPenumbra_mm * 2)
 
-    // define a rectangle twice the width and height of the BB centered on the coarse location of the BB
+    // Define a rectangle twice the width and height of the BB centered on the coarse location of
+    // the BB.  The BB is defined by the brightest BB-sized rectangle within the search area.
     val bbRect = {
-      val bbCorner = searchImage.getMaxRect(d2i(bbSizeX_pix), d2i(bbSizeY_pix))
-      val bbRectX = searchRect_pix.getX + bbCorner.getX - (bbSizeX_pix / 2.0)
-      val bbRectY = searchRect_pix.getY + bbCorner.getY - (bbSizeY_pix / 2.0)
-      val bbRectW = bbSizeX_pix * 2.0
-      val bbRectH = bbSizeY_pix * 2.0
+      val bbCorner = searchImage.getMaxRect(d2i(bbWidth_pix), d2i(bbHeight_pix))
+      val bbRectX = bbCorner.getX - bbWidth_pix
+      val bbRectY = bbCorner.getY - bbHeight_pix
+      val bbRectW = bbWidth_pix * 2.0
+      val bbRectH = bbHeight_pix * 2.0
       new Rectangle(d2i(bbRectX), d2i(bbRectY), d2i(bbRectW), d2i(bbRectH))
     }
 
-    // make an image of the BB
-    val bbImage = {
-      if (columnarNoiseCorrection) // TODO remove
-        correctForColumnarAmplification(wholeImage, bbRect, columnarCorrectionHeight_pix, al, diagnosticsDir) // TODO should always do this
-      else
-        wholeImage.getSubimage(bbRect) // TODO remove
+    // make an image of the very small area around the BB
+    val bbImage = searchImage.getSubimage(bbRect)
+
+    // list of pixel coordinates of brightest pixels that define the BB.  These are used to determine if
+    // the BB is sufficiently bright enough (above standard deviation) to be certain that this is the BB
+    // and not just a bright-ish bit of image noise.
+    val bbPixListX = {
+      // Number of pixels that occupy BB area:  PI * R^2
+      val bbCount = Math.PI * bbWidth_pix * bbHeight_pix
+      val pixList = for (y <- 0 until bbImage.height; x <- 0 until bbImage.width) yield { new Point2i(x, y) }
+      pixList.sortBy(p => bbImage.get(p.getX, p.getY)).takeRight(d2i(bbCount))
     }
 
-    // Number of pixels that occupy BB area:  PI * R^2
-    val bbCount = Math.PI * ((bbSizeX_pix * bbSizeY_pix) / 4)
-    def pixList = for (y <- 0 until bbImage.height; x <- 0 until bbImage.width) yield { new Point2i(x, y) }
+    val bbPixList = {
+      // Number of pixels that occupy BB area:  PI * R^2
+      val bbCount = Math.PI * bbWidth_pix * bbHeight_pix
+      val pixList = for (y <- 0 until bbImage.height; x <- 0 until bbImage.width) yield { new Point2i(x, y) }
 
-    // Get a very small group of pixels that will be assumed be be at the core of the BB.
-    val bbCorePix = {
-      val coreSize = 2 // just a 2x2 area of pixels
-      val corner = bbImage.getMaxRect(coreSize, coreSize)
-      for (x <- 0 until coreSize; y <- 0 until coreSize) yield { new Point2i(x + corner.getX, y + corner.getY) }
+      // Get a very small group of pixels that will be assumed be be at the core of the BB.
+      val bbCorePix = {
+        val coreSize = 2 // just a 2x2 area of pixels
+        val corner = bbImage.getMaxRect(coreSize, coreSize)
+        for (x <- 0 until coreSize; y <- 0 until coreSize) yield { new Point2i(x + corner.getX, y + corner.getY) }
+      }
+
+      // Two lists of points, those that are in the BB and those that are not.
+      val inOut = pixList.groupBy(p => bbCorePix.contains(p))
+
+      val all = getListOfPixInBB(bbImage, bbCount, inOut)
+      all(true)
     }
 
-    // Two lists of points, those that are in the BB and those that are not.
-    val inOut = pixList.groupBy(p => bbCorePix.contains(p))
-
-    val all = getListOfPixInBB(bbImage, bbCount, inOut)
-    val inPixXY = all(true)
-    val outPixXY = all(false)
-    val outPixXY2 = {
-
+    // coordinates of BB in pixels in the whole image
+    val bbCenter_pix = {
+      val p = centerOfMass(bbImage, bbPixList)
+      new Point2d(p.getX + bbRect.getX + searchRect_pix.getX, p.getY + bbRect.getY + searchRect_pix.getY)
     }
-    val inValue = inPixXY.map(p => bbImage.get(p.getX, p.getY)) // list of CU of pixels that are inside the BB
-    val outValue = outPixXY.map(p => bbImage.get(p.getX, p.getY)) // list of CU of pixels that are outside the BB
-    val pixelStandardDeviation_cu = ImageUtil.stdDev(outValue)
 
-    // calculate the center of mass for all points in the BB
-    val sumMass = inValue.sum
-    val xPos_pix = (inPixXY.map(p => p.getX * bbImage.get(p.getX, p.getY)).sum / sumMass) + bbRect.getX
-    val yPos_pix = (inPixXY.map(p => p.getY * bbImage.get(p.getX, p.getY)).sum / sumMass) + bbRect.getY
-
-    val bbCenter_pix = new Point2d(xPos_pix, yPos_pix)
-
-    val bbCenter_mm = trans.pix2Iso(xPos_pix, yPos_pix)
-
-    val outMean = outValue.sum / outValue.size // mean of pixels outside the BB
-    val bbMean = sumMass / inPixXY.size // mean of pixels inside the BB
-    // how many times larger (number of multiples) of the difference of the BB's mean is than the standard deviation
-    val bbStdDevMultiple = (bbMean - outMean).abs / pixelStandardDeviation_cu
-
-    val valid = {
-      val ok = bbStdDevMultiple >= Config.EPIDBBMinimumStandardDeviation
-      ok
+    val bbCenter_mm = {
+      val p = trans.pix2Iso(bbCenter_pix.getX, bbCenter_pix.getY)
+      new Point2d(p.getX, p.getY)
     }
-    logger.info("EPID bbStdDevMultiple: " + bbStdDevMultiple + "    valid: " + valid)
 
-    // calculate values related to image quality
-    val pixelMean_cu = outValue.sum / outPixXY.size
+    // mean value of pixels that are part of the BB
+    val bbPixelsMeanValue_cu = meanValueOfPixelList(bbImage, bbPixList)
+
+    val backgroundStandardDeviation_cu = getBackgroundStandardDeviation(searchImage, searchRect_pix, bbPixList)
+    val backgroundMean_cu = getBackgroundMean(searchImage, searchRect_pix, bbPixList)
+
+    val bbStdDevMultiple_cu = (bbPixelsMeanValue_cu - backgroundMean_cu) / backgroundStandardDeviation_cu
+
+    val valid = bbStdDevMultiple_cu >= Config.EPIDBBMinimumStandardDeviation
+
+    logger.info("EPID bbStdDevMultiple: " + bbStdDevMultiple_cu + "    valid: " + valid)
 
     if (valid) {
-      val bbLocation = new Point2d(bbCenter_mm.getX, -bbCenter_mm.getY)
       val result =
         Result(
-          bbCenter_pix,
-          al,
-          bbLocation,
-          toBBbyEPID(al, bbLocation, outputPK, bbStdDevMultiple = bbStdDevMultiple, pixelStandardDeviation_cu, pixelMean_cu)
+          pix = bbCenter_pix,
+          al = al,
+          iso = bbCenter_mm,
+          toBBbyEPID(al, bbCenter_mm, outputPK, bbStdDevMultiple = bbStdDevMultiple_cu, backgroundStandardDeviation_cu, bbPixelsMeanValue_cu)
         ) // Convert Y to DICOM gantry coordinate system
 
       Right(result)

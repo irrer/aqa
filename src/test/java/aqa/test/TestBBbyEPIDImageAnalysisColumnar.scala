@@ -80,7 +80,7 @@ class TestBBbyEPIDImageAnalysisColumnar extends FlatSpec with Matchers {
       * Add final column to the spreadsheet.
       * @param content Contents of column.
       */
-    def asf(content: String): Unit = spreadsheet.append(content.toString + "\n")
+    def asf(content: String): Unit = spreadsheet.append(content + "\n")
 
     def saveSpreadsheet(name: String): Unit = {
       asf("")
@@ -138,12 +138,15 @@ class TestBBbyEPIDImageAnalysisColumnar extends FlatSpec with Matchers {
 
         rawResult.isRight should be(true)
 
-        println("result   : " + fmt(rawResult.right.get.bbByEpid.epidImageX_mm) + "," + fmt(rawResult.right.get.bbByEpid.epidImageY_mm))
-        println("colResult: " + fmt(colResult.right.get.bbByEpid.epidImageX_mm) + "," + fmt(colResult.right.get.bbByEpid.epidImageY_mm))
         val deltaX = rawResult.right.get.bbByEpid.epidImageX_mm - colResult.right.get.bbByEpid.epidImageX_mm
         val deltaY = rawResult.right.get.bbByEpid.epidImageY_mm - colResult.right.get.bbByEpid.epidImageY_mm
         val xy = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY))
-        println("delta    : " + fmt(deltaX) + ", " + fmt(deltaY) + "   XY: " + fmt(xy))
+        println(
+          "result   : " + fmt(rawResult.right.get.bbByEpid.epidImageX_mm) + "," + fmt(rawResult.right.get.bbByEpid.epidImageY_mm) +
+            "    colResult: " + fmt(colResult.right.get.bbByEpid.epidImageX_mm) + "," + fmt(colResult.right.get.bbByEpid.epidImageY_mm) +
+            "    delta    : " + fmt(deltaX) + ", " + fmt(deltaY) + "   XY: " + fmt(xy) +
+            "    " + outDir.getName
+        )
 
         // write spreadsheet content.
         if (true) {
@@ -173,11 +176,11 @@ class TestBBbyEPIDImageAnalysisColumnar extends FlatSpec with Matchers {
     }
 
     def testMarginalFile(file: File): Unit = {
-      println("TODO") // TODO
+      println(file) // TODO
     }
 
     def testFailFile(file: File): Unit = {
-      println("TODO") // TODO
+      println(file) // TODO
     }
 
     val start = System.currentTimeMillis()
