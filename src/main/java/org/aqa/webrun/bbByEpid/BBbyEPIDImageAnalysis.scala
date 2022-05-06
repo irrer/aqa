@@ -82,7 +82,7 @@ object BBbyEPIDImageAnalysis extends Logging {
   ) {
     def AlOf: AttributeList = al
 
-    def ok = error.isEmpty
+    def ok: Boolean = error.isEmpty
 
     /**
       * Format extra information concerning the image analysis.
@@ -90,6 +90,13 @@ object BBbyEPIDImageAnalysis extends Logging {
       * @return User friendly information to aid with diagnosing problems.
       */
     def diagnostics: String = {
+
+      def errorText = {
+        if (ok)
+          "Result is ok.\n"
+        else
+          "Error: " + error + "\n"
+      }
 
       def bbPointListText = {
         if (bbPointList.isDefined) {
@@ -114,6 +121,7 @@ object BBbyEPIDImageAnalysis extends Logging {
 
       val fullText =
         "" + // makes the auto-formatter line the source code up the way I like
+          errorText +
           "Precise pixel coordinates (pix): " + pix + "\n" +
           "Precise isoplane coordinates (mm): " + iso + "\n" +
           bbByEpid.toString + "\n" +
@@ -541,8 +549,6 @@ object BBbyEPIDImageAnalysis extends Logging {
       new Point2d(p.getX, -p.getY)
     }
 
-    val valid = bbStdDevMultiple > Config.EPIDBBMinimumStandardDeviation
-
     val error = {
       0 match {
         case _ if backgroundCoOfVar > Config.EPIDBBMaxBackgroundCoefficientOfVariation => Some("Image is too noisy.  Possibly the table is mis-positioned.")
@@ -683,6 +689,6 @@ object BBbyEPIDImageAnalysis extends Logging {
   }
 
   // define the official function
-  def findBB(al: AttributeList, outputPK: Long): Result = findBBold(al, outputPK)
+  def findBB(al: AttributeList, outputPK: Long): Result = findBB_columnCorrectedGrowBB(al, outputPK)
 
 }

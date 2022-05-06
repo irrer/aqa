@@ -204,6 +204,10 @@ object BBbyEPIDHTML {
             </div>
             <div class="row">
               <pre>
+                {result.diagnostics}
+              </pre>
+              <br/>DICOM Metadata<br/>
+              <pre>
                 {WebUtil.nl + DicomUtil.attributeListToString(al)}
               </pre>
               {WebUtil.nl}
@@ -249,8 +253,10 @@ object BBbyEPIDHTML {
         }
 
         <div>
-          <a href={fileName} title={"View / download DICOM for gantry angle " + gantryAngle}>View DICOM</a>
-          {desc}{date}{stats}
+          <center>
+            {desc}{date}{stats}
+            <a href={fileName} title={"View / download DICOM for gantry angle " + gantryAngle}>Technical Details</a>
+          </center>
         </div>
       }
 

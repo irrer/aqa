@@ -328,8 +328,8 @@ class TestBBbyEPIDImageAnalysisColumnar extends FlatSpec with Matchers {
         println(outDir.getName + " both old and new statuses are correct: old: " + oldResult.ok + "   new: " + newResult.ok)
 
       // statuses should match the expected statuses
-      // TODO put back oldResult.ok should be(oldStatus)
-      // TODO put back newResult.ok should be(newStatus)
+      oldResult.ok should be(oldStatus)
+      newResult.ok should be(newStatus)
 
       println
     }
@@ -337,16 +337,15 @@ class TestBBbyEPIDImageAnalysisColumnar extends FlatSpec with Matchers {
     val start = System.currentTimeMillis()
     Trace.trace
 
-    if (true) {
-      spreadsheet.clear()
+    spreadsheet.clear()
 
-      Util.listDirFiles(passInDir).filter(_.isFile).foreach(file => testFile(file, oldStatus = true, newStatus = true))
-      saveSpreadsheet(passInDir.getName)
+    Util.listDirFiles(passInDir).filter(_.isFile).foreach(file => testFile(file, oldStatus = true, newStatus = true))
 
-      Util.listDirFiles(marginalInDir).filter(_.isFile).foreach(file => testFile(file, oldStatus = false, newStatus = true))
-    }
+    Util.listDirFiles(marginalInDir).filter(_.isFile).foreach(file => testFile(file, oldStatus = false, newStatus = true))
 
     Util.listDirFiles(failInDir).filter(_.isFile).foreach(file => testFile(file, oldStatus = false, newStatus = false))
+
+    saveSpreadsheet(passInDir.getName)
 
     val elapsed = System.currentTimeMillis() - start
     println("Done.  Elapsed time in ms: " + elapsed)
