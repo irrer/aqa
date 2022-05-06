@@ -78,7 +78,8 @@ object BBbyEPIDImageAnalysis extends Logging {
       processedSearchArea: Option[DicomImage] = None,
       bbPointList: Option[Seq[Point2i]] = None,
       bbPixelCount: Option[Int] = None,
-      bbMean_cu: Double
+      bbMean_cu: Double,
+      minMaxColumnRatio: Option[Double]
   ) {
     def AlOf: AttributeList = al
 
@@ -119,6 +120,13 @@ object BBbyEPIDImageAnalysis extends Logging {
         } else ""
       }
 
+      def minMaxColumnRatioText = {
+        if (minMaxColumnRatio.isDefined)
+          "minMaxColumnRatio: " + minMaxColumnRatio.get + "\n"
+        else
+          ""
+      }
+
       val fullText =
         "" + // makes the auto-formatter line the source code up the way I like
           errorText +
@@ -126,7 +134,8 @@ object BBbyEPIDImageAnalysis extends Logging {
           "Precise isoplane coordinates (mm): " + iso + "\n" +
           bbByEpid.toString + "\n" +
           bbPointListText +
-          "bbMean_cu: " + bbMean_cu.formatted("%20.10f").trim + "\n" ++
+          "bbMean_cu: " + bbMean_cu.formatted("%20.10f").trim + "\n" +
+          minMaxColumnRatioText +
           rawSearchAreaText +
           processedSearchAreaText
 
@@ -310,7 +319,7 @@ object BBbyEPIDImageAnalysis extends Logging {
     * @param al: Attribute list of RTIMAGE.
     * @return A corrected image.
     */
-  private def correctForColumnarAmplification(wholeImage: DicomImage, searchRect: Rectangle, al: AttributeList): DicomImage = {
+  private def correctForColumnarAmplification(wholeImage: DicomImage, searchRect: Rectangle, al: AttributeList): (DicomImage, Double) = {
     val x = searchRect.x
     val columnarCorrectionHeight_pix = d2i(searchRect.getHeight)
     val width_pix = searchRect.width
@@ -322,6 +331,7 @@ object BBbyEPIDImageAnalysis extends Logging {
 
     // The 'darkest' column.
     val avgOfMinColumn = avgOfEachColumn.min
+    val avgOfMaxColumn = avgOfEachColumn.max
 
     val rawImage = wholeImage.getSubimage(searchRect)
 
@@ -330,7 +340,7 @@ object BBbyEPIDImageAnalysis extends Logging {
 
       for (x <- 0 until width_pix)
         yield {
-          //rawImage.get(x, y) - (avgOfEachColumn(x) - avgOfMinColumn) // additive approach
+          // rawImage.get(x, y) - (avgOfEachColumn(x) - avgOfMinColumn) // additive approach.  Used decades ago to reduce CPU load.
           rawImage.get(x, y) * (avgOfMinColumn / avgOfEachColumn(x)) // multiplicative approach
         }
     }
@@ -339,7 +349,7 @@ object BBbyEPIDImageAnalysis extends Logging {
 
     val correctedImage = new DicomImage(correctedPixels)
 
-    correctedImage
+    (correctedImage, avgOfMaxColumn / avgOfMinColumn)
   }
 
   /**
@@ -531,8 +541,9 @@ object BBbyEPIDImageAnalysis extends Logging {
     val searchRect = searchArea(trans, new Point2d(0, 0), Config.BBbyEPIDSearchDistance_mm)
 
     // image that contains the area to search
-    val searchImageColumnarCorrected = correctForColumnarAmplification(wholeImage, searchRect, al)
-
+    val searchImageColumnarCorrectedAndMaxMin = correctForColumnarAmplification(wholeImage, searchRect, al)
+    val searchImageColumnarCorrected = searchImageColumnarCorrectedAndMaxMin._1
+    val minMaxColumnRatio = searchImageColumnarCorrectedAndMaxMin._2
     val coarseColumnarPixelList = locateBbCoarsely(trans, searchImageColumnarCorrected)
 
     val coarseCenter = pointListCenter(coarseColumnarPixelList)
@@ -567,7 +578,8 @@ object BBbyEPIDImageAnalysis extends Logging {
         rawSearchArea = Some(wholeImage.getSubimage(searchRect)),
         processedSearchArea = Some(searchImageColumnarCorrected),
         bbPointList = Some(preciseStats.bbPixelList),
-        bbMean_cu = preciseStats.bbMean_cu
+        bbMean_cu = preciseStats.bbMean_cu,
+        minMaxColumnRatio = Some(minMaxColumnRatio)
       )
 
     result
@@ -682,7 +694,8 @@ object BBbyEPIDImageAnalysis extends Logging {
         toBBbyEPID(al, bbLocation, outputPK, bbStdDevMultiple = bbStdDevMultiple, pixelStandardDeviation_cu, pixelMean_cu),
         rawSearchArea = Some(searchImage),
         bbPointList = Some(inPixXY.map(p => new Point2i(p.x + xOffset, p.y + yOffset))),
-        bbMean_cu = bbMean_cu.toDouble
+        bbMean_cu = bbMean_cu.toDouble,
+        minMaxColumnRatio = None
       ) // Convert Y to DICOM gantry coordinate system
 
     result

@@ -162,33 +162,37 @@ class TestBBbyEPIDImageAnalysisColumnar extends FlatSpec with Matchers {
     val colSeq: Seq[Col] = Seq(
       Col("Machine", (o, _) => o.al.get(TagByName.RadiationMachineName).getSingleStringValueOrEmptyString),
       Col("Acquisition", (o, _) => dateFormat.format(DicomUtil.getTimeAndDate(o.al, TagByName.AcquisitionDate, TagByName.AcquisitionTime).get)),
-      Col("Gantry Angle", (o, _) => Util.angleRoundedTo90(Util.gantryAngle(o.al)).toString),
-      Col("Old X mm", (o, _) => o.bbByEpid.epidImageX_mm.toString),
-      Col("Old Y mm", (o, _) => o.bbByEpid.epidImageY_mm.toString),
-      Col("New X mm", (_, n) => n.bbByEpid.epidImageX_mm.toString),
-      Col("New Y mm", (_, n) => n.bbByEpid.epidImageY_mm.toString),
-      Col("Old-New X", (o, n) => (o.bbByEpid.epidImageX_mm - n.bbByEpid.epidImageX_mm).toString),
-      Col("Old-New Y", (o, n) => (o.bbByEpid.epidImageY_mm - n.bbByEpid.epidImageY_mm).toString),
+      Col("Gantry Angle", (o, _) => Util.angleRoundedTo90(Util.gantryAngle(o.al))),
+      Col("Old X mm", (o, _) => o.bbByEpid.epidImageX_mm),
+      Col("Old Y mm", (o, _) => o.bbByEpid.epidImageY_mm),
+      Col("New X mm", (_, n) => n.bbByEpid.epidImageX_mm),
+      Col("New Y mm", (_, n) => n.bbByEpid.epidImageY_mm),
+      Col("Old-New X", (o, n) => (o.bbByEpid.epidImageX_mm - n.bbByEpid.epidImageX_mm)),
+      Col("Old-New Y", (o, n) => (o.bbByEpid.epidImageY_mm - n.bbByEpid.epidImageY_mm)),
       Col(
-        "Old New XY",
+        "Old-New XY",
         (o, n) => {
           val x = o.bbByEpid.epidImageX_mm - n.bbByEpid.epidImageX_mm
           val y = o.bbByEpid.epidImageY_mm - n.bbByEpid.epidImageY_mm
-          Math.sqrt(x * x + y * y).toString
+          Math.sqrt(x * x + y * y)
         }
       ),
-      Col("Old Pixel Mean CU", (o, _) => o.bbByEpid.pixelMean_cu.toString),
-      Col("Old Pixel Co-eff of Var", (o, _) => (o.bbByEpid.pixelStandardDeviation_cu / o.bbByEpid.pixelMean_cu).toString),
-      Col("Old BB Mean CU", (o, _) => o.bbMean_cu.toString),
-      Col("Old Pixel StdDev CU", (o, _) => o.bbByEpid.pixelStandardDeviation_cu.toString),
-      Col("Old BB StdDev Multiple CU", (o, _) => o.bbByEpid.bbStdDevMultiple.toString),
-      Col("New Pixel Mean CU", (_, n) => n.bbByEpid.pixelMean_cu.toString),
-      Col("New Pixel Co-eff of Var", (_, n) => (n.bbByEpid.pixelStandardDeviation_cu / n.bbByEpid.pixelMean_cu).toString),
-      Col("New BB Mean CU", (_, n) => n.bbMean_cu.toString),
-      Col("New Pixel Mean StdDev", (_, n) => n.bbByEpid.pixelStandardDeviation_cu.toString),
-      Col("New BB StdDev Multiple CU", (_, n) => n.bbByEpid.bbStdDevMultiple.toString),
-      Col("Pix Size X mm", (o, _) => o.al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues.head.toString),
-      Col("Pix Size Y mm", (o, _) => o.al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues()(1).toString),
+      Col("Old Pixel Mean CU", (o, _) => o.bbByEpid.pixelMean_cu),
+      Col("Old Number of pixels: ", (o, _) => o.bbPointList.size),
+      Col("Old Number of pixels: ", (o, _) => if (o.bbPointList.isDefined) o.bbPointList.get.size else "NA"),
+      Col("Old Pixel Co-eff of Var", (o, _) => (o.bbByEpid.pixelStandardDeviation_cu / o.bbByEpid.pixelMean_cu)),
+      Col("Old BB Mean CU", (o, _) => o.bbMean_cu),
+      Col("Old Pixel StdDev CU", (o, _) => o.bbByEpid.pixelStandardDeviation_cu),
+      Col("Old BB StdDev Multiple CU", (o, _) => o.bbByEpid.bbStdDevMultiple),
+      Col("New Pixel Mean CU", (_, n) => n.bbByEpid.pixelMean_cu),
+      Col("New Number of pixels: ", (_, n) => if (n.bbPointList.isDefined) n.bbPointList.get.size else "NA"),
+      Col("New Pixel Co-eff of Var", (_, n) => (n.bbByEpid.pixelStandardDeviation_cu / n.bbByEpid.pixelMean_cu)),
+      Col("New BB Mean CU", (_, n) => n.bbMean_cu),
+      Col("New Pixel Mean StdDev", (_, n) => n.bbByEpid.pixelStandardDeviation_cu),
+      Col("New BB StdDev Multiple CU", (_, n) => n.bbByEpid.bbStdDevMultiple),
+      Col("New Min Max Col Ratio", (_, n) => n.minMaxColumnRatio.get),
+      Col("Pix Size X mm", (o, _) => o.al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues.head),
+      Col("Pix Size Y mm", (o, _) => o.al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues()(1)),
       Col("Dir", (_, _) => outDir.getAbsolutePath)
     )
 
