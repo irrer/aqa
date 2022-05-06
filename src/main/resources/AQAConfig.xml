@@ -20,14 +20,14 @@ Note that when building a package for release, the Maven build process uses the 
     If this is missing or commented out, then the server will instead use HTTP on port 80.   Alternately,
     if this is specified, then the JavaKeyStoreFileList and JavaKeyStorePassword must be given. -->
     <HTTPSPort>9443</HTTPSPort> <!--  -->
-    
+
     <!-- Port number if using (non-secure) HTTP.  If not specified, defaults to 80.
     Uses for HTTP:
         On AWS there is a front-end that is providing HTTPS support.
         In general, there is no PHI in this system, so some users may choose this out simplicity and convenience. -->
     <!-- <HTTPPort>80</HTTPPort> -->
-    
-        
+
+
     <!-- List of IP addresses that the HTTP or HTTPS service will honor. Using '*' for 
     any triplet indicates a wild card.
         
@@ -54,7 +54,7 @@ Note that when building a package for release, the Maven build process uses the 
         <AllowedHttpIp>10.20.141.*</AllowedHttpIp>
         <AllowedHttpIp>10.20.230.*</AllowedHttpIp>
     </AllowedHttpIpList>
-    
+
     <!-- Location of file that contains Java Key Store for HTTPS.  If multiple names are given, then they are
     each tried in the order given until a readable file is found. -->
     <JavaKeyStoreFileList>
@@ -64,8 +64,10 @@ Note that when building a package for release, the Maven build process uses the 
     </JavaKeyStoreFileList>
 
     <!-- The password to access the Java Key Store file. -->
-    <JavaKeyStorePassword>9c067233b07c7b04025989a197fad9b12cf4c19006678e2b18b121289bd1635a2d395a603122a6e6</JavaKeyStorePassword> <!-- rodicom11dev -->
-    <JavaKeyStorePassword>44d18166c66bed60b6394e6625c63dea713dbe465ddc960a7cd109514bc0d2bd</JavaKeyStorePassword> <!-- -->     <!-- irrer -->
+    <JavaKeyStorePassword>9c067233b07c7b04025989a197fad9b12cf4c19006678e2b18b121289bd1635a2d395a603122a6e6
+    </JavaKeyStorePassword> <!-- rodicom11dev -->
+    <JavaKeyStorePassword>44d18166c66bed60b6394e6625c63dea713dbe465ddc960a7cd109514bc0d2bd
+    </JavaKeyStorePassword> <!-- -->     <!-- irrer -->
 
     <!-- Maximum number of procedures to be run simultaneously.  Although the software allows many procedures to be
      run in parallel, doing so can over-tax the host machine and cause out of memory failures.  The term procedure here
@@ -95,7 +97,7 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- When user is asked for a password they are prompted with this. -->
     <PasswordPrompt>Enter your AQA password here</PasswordPrompt>
 
-    <!-- Location of LDAP service that has user names and passwords.  If not configured, then the LDAP feature is not active. -->
+    <!-- Location of LDAP service that has usernames( and passwords.  If not configured, then the LDAP feature is not active. -->
     <LdapUrl>ldap://ldap.ent.med.umich.edu:636/</LdapUrl>  <!-- IP: 141.214.28.71 -->
 
     <!-- From Restlet documentation: Minimum number of worker threads waiting to service calls, even
@@ -150,7 +152,7 @@ Note that when building a package for release, the Maven build process uses the 
 
         To Be Determined
     </TermsOfUse>
-    
+
     <!-- If defined, watermark images with the given image.  If not defined, then do not perform watermarking.
     
         image: Source image in static directory.
@@ -209,73 +211,87 @@ Note that when building a package for release, the Maven build process uses the 
      a java.lang.ExceptionInInitializerError error.
      -->
     <ToBeAnonymizedList>
-        <ToBeAnonymized Name='PatientID' Tag='0010,0020' />  <!-- Example of how Tag is used. -->
-        <ToBeAnonymized Tag='0010,0010' />  <!-- Example of how just a Tag is used, equivalent to Name='PatientName' -->
+        <ToBeAnonymized Name='PatientID' Tag='0010,0020'/>  <!-- Example of how Tag is used. -->
+        <ToBeAnonymized Tag='0010,0010'/>  <!-- Example of how just a Tag is used, equivalent to Name='PatientName' -->
         <!-- <ToBeAnonymized Name='PatientBirthDate' Value='18000101' /> -->
         <!-- <ToBeAnonymized Name='PatientBirthTime' Value='000000' /> -->
         <!-- <ToBeAnonymized Name='PatientSex' Value='O' /> -->
-        <ToBeAnonymized Name='OtherPatientIDs' />
-        <ToBeAnonymized Name='OtherPatientNames' />
+        <ToBeAnonymized Name='OtherPatientIDs'/>
+        <ToBeAnonymized Name='OtherPatientNames'/>
         <!-- <ToBeAnonymized Name='PatientAge' Value='0' /> -->
         <!-- <ToBeAnonymized Name='PatientSize' Value='0' /> -->
         <!-- <ToBeAnonymized Name='PatientWeight' Value='0' /> -->
-        <ToBeAnonymized Name='InstanceCreatorUID' />
-        <ToBeAnonymized Name='SOPInstanceUID' />
-        <ToBeAnonymized Name='MediaStorageSOPInstanceUID' />
+        <ToBeAnonymized Name='InstanceCreatorUID'/>
+        <ToBeAnonymized Name='SOPInstanceUID'/>
+        <ToBeAnonymized Name='MediaStorageSOPInstanceUID'/>
         <!-- <ToBeAnonymized Name='AccessionNumber' Value='0' /> -->
-        <ToBeAnonymized Name='InstitutionName' />
-        <ToBeAnonymized Name='InstitutionAddress' />
-        <ToBeAnonymized Name='ReferringPhysicianName' />
-        <ToBeAnonymized Name='ReferringPhysicianAddress' />
-        <ToBeAnonymized Name='ReferringPhysicianTelephoneNumbers' />
-        <ToBeAnonymized Name='StationName' />
-        <ToBeAnonymized Name='InstitutionalDepartmentName' />
-        <ToBeAnonymized Name='PhysiciansOfRecord' />
-        <ToBeAnonymized Name='PerformingPhysicianName' />
-        <ToBeAnonymized Name='NameOfPhysiciansReadingStudy' />
-        <ToBeAnonymized Name='OperatorsName' />
-        <ToBeAnonymized Name='ReferencedSOPInstanceUID' />
-        <ToBeAnonymized Name='MedicalRecordLocator' />
-        <ToBeAnonymized Name='EthnicGroup' />
-        <ToBeAnonymized Name='Occupation' />
-        <ToBeAnonymized Name='AdditionalPatientHistory' />
-        <ToBeAnonymized Name='PatientComments' />
-        <ToBeAnonymized Name='DeviceSerialNumber' />
-        <ToBeAnonymized Name='ProtocolName' />
-        <ToBeAnonymized Name='StudyInstanceUID' />
-        <ToBeAnonymized Name='SeriesInstanceUID' />
-        <ToBeAnonymized Name='StudyID' />
-        <ToBeAnonymized Name='RadiationMachineName' />  <!-- Note: This is not generally anonymized, but in this case it could protect the identity of the institution. -->
-        <ToBeAnonymized Name='FrameOfReferenceUID' />
-        <ToBeAnonymized Name='SynchronizationFrameOfReferenceUID' />
-        <ToBeAnonymized Name='ImageComments' />
-        <ToBeAnonymized Name='UID' />
-        <ToBeAnonymized Name='StorageMediaFileSetUID' />
-        <ToBeAnonymized Name='ReferencedFrameOfReferenceUID' />
-        <ToBeAnonymized Name='RelatedFrameOfReferenceUID' />
-        <ToBeAnonymized Name='SourceFrameOfReferenceUID' />
-        <ToBeAnonymized Name='RTPlanName' />
-        <ToBeAnonymized Name='DoseReferenceUID' />
-     <!--  <ToBeAnonymized Name='ReferencedPrimaryDoseRefUID'         />   -->
+        <ToBeAnonymized Name='InstitutionName'/>
+        <ToBeAnonymized Name='InstitutionAddress'/>
+        <ToBeAnonymized Name='ReferringPhysicianName'/>
+        <ToBeAnonymized Name='ReferringPhysicianAddress'/>
+        <ToBeAnonymized Name='ReferringPhysicianTelephoneNumbers'/>
+        <ToBeAnonymized Name='StationName'/>
+        <ToBeAnonymized Name='InstitutionalDepartmentName'/>
+        <ToBeAnonymized Name='PhysiciansOfRecord'/>
+        <ToBeAnonymized Name='PerformingPhysicianName'/>
+        <ToBeAnonymized Name='NameOfPhysiciansReadingStudy'/>
+        <ToBeAnonymized Name='OperatorsName'/>
+        <ToBeAnonymized Name='ReferencedSOPInstanceUID'/>
+        <ToBeAnonymized Name='MedicalRecordLocator'/>
+        <ToBeAnonymized Name='EthnicGroup'/>
+        <ToBeAnonymized Name='Occupation'/>
+        <ToBeAnonymized Name='AdditionalPatientHistory'/>
+        <ToBeAnonymized Name='PatientComments'/>
+        <ToBeAnonymized Name='DeviceSerialNumber'/>
+        <ToBeAnonymized Name='ProtocolName'/>
+        <ToBeAnonymized Name='StudyInstanceUID'/>
+        <ToBeAnonymized Name='SeriesInstanceUID'/>
+        <ToBeAnonymized Name='StudyID'/>
+        <ToBeAnonymized
+                Name='RadiationMachineName'/>  <!-- Note: This is not generally anonymized, but in this case it could protect the identity of the institution. -->
+        <ToBeAnonymized Name='FrameOfReferenceUID'/>
+        <ToBeAnonymized Name='SynchronizationFrameOfReferenceUID'/>
+        <ToBeAnonymized Name='ImageComments'/>
+        <ToBeAnonymized Name='UID'/>
+        <ToBeAnonymized Name='StorageMediaFileSetUID'/>
+        <ToBeAnonymized Name='ReferencedFrameOfReferenceUID'/>
+        <ToBeAnonymized Name='RelatedFrameOfReferenceUID'/>
+        <ToBeAnonymized Name='SourceFrameOfReferenceUID'/>
+        <ToBeAnonymized Name='RTPlanName'/>
+        <ToBeAnonymized Name='DoseReferenceUID'/>
+        <!--  <ToBeAnonymized Name='ReferencedPrimaryDoseRefUID'         />   -->
     </ToBeAnonymizedList>
 
     <!--Name of DICOM RTPLAN files.  This is the basis for creating a plan customized plan for a given machine.  -->
     <PlanFileList>
-        <PlanFile procedure='Phase2'      manufacturer='Varian' collimatorModel='HD'       >rtplanPhase2Hdmlc.dcm</PlanFile>
-        <PlanFile procedure='Phase2'      manufacturer='Varian' collimatorModel='Millenium'>rtplanPhase2Millenium.dcm</PlanFile>
+        <PlanFile procedure='Phase2' manufacturer='Varian' collimatorModel='HD'>rtplanPhase2Hdmlc.dcm</PlanFile>
+        <PlanFile procedure='Phase2' manufacturer='Varian' collimatorModel='Millenium'>rtplanPhase2Millenium.dcm
+        </PlanFile>
 
-        <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='HD'       >rtplanLocHdmlcWithoutErrorBaseline.dcm</PlanFile>
-        <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='Millenium'>rtplanLocMilleniumWithoutErrorBaseline.dcm</PlanFile>
+        <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='HD'>
+            rtplanLocHdmlcWithoutErrorBaseline.dcm
+        </PlanFile>
+        <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='Millenium'>
+            rtplanLocMilleniumWithoutErrorBaseline.dcm
+        </PlanFile>
 
-        <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='HD'       >rtplanLocHdmlcWithErrorDelivery.dcm</PlanFile>
-        <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='Millenium'>rtplanLocMilleniumWithErrorDelivery.dcm</PlanFile>
+        <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='HD'>
+            rtplanLocHdmlcWithErrorDelivery.dcm
+        </PlanFile>
+        <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='Millenium'>
+            rtplanLocMilleniumWithErrorDelivery.dcm
+        </PlanFile>
 
         <!-- Note that the DailyQA RTPLAN is the same for both HD and Millenium. -->
-        <PlanFile procedure='DailyQA'     manufacturer='Varian' collimatorModel='HD'       >rtplanDailyQA2021-07-07T08-24-08.dcm</PlanFile>
-        <PlanFile procedure='DailyQA'     manufacturer='Varian' collimatorModel='Millenium'>rtplanDailyQA2021-07-07T08-24-08.dcm</PlanFile>
+        <PlanFile procedure='DailyQA' manufacturer='Varian' collimatorModel='HD'>rtplanDailyQA2021-07-07T08-24-08.dcm
+        </PlanFile>
+        <PlanFile procedure='DailyQA' manufacturer='Varian' collimatorModel='Millenium'>
+            rtplanDailyQA2021-07-07T08-24-08.dcm
+        </PlanFile>
 
-        <PlanFile procedure='GapSkew'     manufacturer='Varian' collimatorModel='HD'       >rtplanGapSkewHdmlc.dcm</PlanFile>
-        <PlanFile procedure='GapSkew'     manufacturer='Varian' collimatorModel='Millenium'>rtplanGapSkewMillenium.dcm</PlanFile>
+        <PlanFile procedure='GapSkew' manufacturer='Varian' collimatorModel='HD'>rtplanGapSkewHdmlc.dcm</PlanFile>
+        <PlanFile procedure='GapSkew' manufacturer='Varian' collimatorModel='Millenium'>rtplanGapSkewMillenium.dcm
+        </PlanFile>
     </PlanFileList>
 
     <!-- Name of subdirectory that contains the DICOM template files for creating a simple RTPLAN.  This is located under
@@ -295,22 +311,27 @@ Note that when building a package for release, the Maven build process uses the 
         The content of the category element is free text that describes the category.
         -->
     <MaintenanceCategoryList>
-        <MaintenanceCategory Name='Maintenance'               Color='#808080'   >General Maintenance</MaintenanceCategory>
-        <MaintenanceCategory Name='Output Adjustment'         Color='#ff8000'   >Output Adjustment</MaintenanceCategory>
-        <MaintenanceCategory Name='Beam Steering Adjustment'  Color='#ff8080'   >Beam Steering Adjustment</MaintenanceCategory>
-        <MaintenanceCategory Name='PMI'                       Color='#ffff00'   >Preventive Maintenance Inspection</MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Jaws'           Color='#ff00ff'   >Maintenance performed on jaws</MaintenanceCategory>
-        <MaintenanceCategory Name='Mechanical Gantry'         Color='#8000ff'   >Maintenance performed on Gantry</MaintenanceCategory>
+        <MaintenanceCategory Name='Maintenance' Color='#808080'>General Maintenance</MaintenanceCategory>
+        <MaintenanceCategory Name='Output Adjustment' Color='#ff8000'>Output Adjustment</MaintenanceCategory>
+        <MaintenanceCategory Name='Beam Steering Adjustment' Color='#ff8080'>Beam Steering Adjustment
+        </MaintenanceCategory>
+        <MaintenanceCategory Name='PMI' Color='#ffff00'>Preventive Maintenance Inspection</MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Jaws' Color='#ff00ff'>Maintenance performed on jaws</MaintenanceCategory>
+        <MaintenanceCategory Name='Mechanical Gantry' Color='#8000ff'>Maintenance performed on Gantry
+        </MaintenanceCategory>
 
-        <MaintenanceCategory Name="Beam Generation Module"    Color='#008080'>Automatic from Machine Log</MaintenanceCategory>
-        <MaintenanceCategory Name="Collimator"                Color='#008000'>Automatic from Machine Log</MaintenanceCategory>
-        <MaintenanceCategory Name="Couch"                     Color='#800000'>Automatic from Machine Log</MaintenanceCategory>
-        <MaintenanceCategory Name="Kilo Voltage Detector"     Color='#000080'>Automatic from Machine Log</MaintenanceCategory>
-        <MaintenanceCategory Name="Kilo Voltage Source"       Color='#808000'>Automatic from Machine Log</MaintenanceCategory>
-        <MaintenanceCategory Name="Mega Voltage Detector"     Color='#ff0000'>Automatic from Machine Log</MaintenanceCategory>
-        <MaintenanceCategory Name="Stand"                     Color='#000000'>Automatic from Machine Log</MaintenanceCategory>
-        <MaintenanceCategory Name="Supervisor"                Color='#0080ff'>Automatic from Machine Log</MaintenanceCategory>
-        <MaintenanceCategory Name="XRay Imager"               Color='#ff0080'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Beam Generation Module" Color='#008080'>Automatic from Machine Log
+        </MaintenanceCategory>
+        <MaintenanceCategory Name="Collimator" Color='#008000'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Couch" Color='#800000'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Kilo Voltage Detector" Color='#000080'>Automatic from Machine Log
+        </MaintenanceCategory>
+        <MaintenanceCategory Name="Kilo Voltage Source" Color='#808000'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Mega Voltage Detector" Color='#ff0000'>Automatic from Machine Log
+        </MaintenanceCategory>
+        <MaintenanceCategory Name="Stand" Color='#000000'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="Supervisor" Color='#0080ff'>Automatic from Machine Log</MaintenanceCategory>
+        <MaintenanceCategory Name="XRay Imager" Color='#ff0080'>Automatic from Machine Log</MaintenanceCategory>
     </MaintenanceCategoryList>
 
     <!-- Beam name for flood field. -->
@@ -318,7 +339,7 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- The maximum error tolerated for CollimatorCentering in mm. -->
     <CollimatorCenteringTolerence_mm>2.0</CollimatorCenteringTolerence_mm>
-    
+
     <!-- Beam names used by Phase2 CollimatorCentering -->
     <CollimatorCentering090BeamName>J10G0C90-6X</CollimatorCentering090BeamName>
     <CollimatorCentering270BeamName>J10G0C270-6X</CollimatorCentering270BeamName>
@@ -344,7 +365,7 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Number of standard deviations that a pixel must be from it's 8 neighbors to be considered a bad pixel. -->
     <BadPixelStdDev>3.0</BadPixelStdDev>
-    
+
     <!-- Maximum number of bad pixel tolerated before considering the image to be of such poor quality that it should be rejected for processing.  Must be a positive integer. -->
     <MaxAllowedBadPixelsPerMillion>50</MaxAllowedBadPixelsPerMillion>
 
@@ -392,10 +413,10 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>J18G270</BeamName>
         <BeamName>J18G90</BeamName>
     </CenterDoseBeamNameList>
-    
+
     <!-- Allowed error in mm when measuring collimator positions measured in the image to planned positions. -->
     <CollimatorPositionTolerance_mm>2.0</CollimatorPositionTolerance_mm>
-    
+
     <!-- List of beam names of that to be used to evaluation the accuracy of the collimator position.  If true, the 
     FloodCompensation attribute specifies that the image pixels should be divided by their respective pixels in the
     flood field, normalizing the dose across the field.  This can not be done for some images because their edges overlap
@@ -452,7 +473,8 @@ Note that when building a package for release, the Maven build process uses the 
             <BackgroundBeamName>Flood 6X</BackgroundBeamName>
         </WedgeBeam>
 
-        <WedgeBeam BeamName="J18C270EDW60-">  <!-- This is really a duplicate of J18C270EDW60-6X but is here because sometimes the beam name is truncated. -->
+        <WedgeBeam
+                BeamName="J18C270EDW60-">  <!-- This is really a duplicate of J18C270EDW60-6X but is here because sometimes the beam name is truncated. -->
             <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
             <BackgroundBeamName>J18G270</BackgroundBeamName>
             <BackgroundBeamName>J18G90</BackgroundBeamName>
@@ -510,11 +532,11 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Coordinates of centers of sampling points.  All are in mm, relative to the center of the image, and in the isoplane. -->
     <SymmetryAndFlatnessPointList>
-        <SymmetryAndFlatnessPoint name='Top' x_mm='0.0' y_mm='-75.0' />
-        <SymmetryAndFlatnessPoint name='Bottom' x_mm='0.0' y_mm='75.0' />
-        <SymmetryAndFlatnessPoint name='Left' x_mm='-75.0' y_mm='0.0' />
-        <SymmetryAndFlatnessPoint name='Right' x_mm='75.0' y_mm='0.0' />
-        <SymmetryAndFlatnessPoint name='Center' x_mm='0.0' y_mm='0.0' />
+        <SymmetryAndFlatnessPoint name='Top' x_mm='0.0' y_mm='-75.0'/>
+        <SymmetryAndFlatnessPoint name='Bottom' x_mm='0.0' y_mm='75.0'/>
+        <SymmetryAndFlatnessPoint name='Left' x_mm='-75.0' y_mm='0.0'/>
+        <SymmetryAndFlatnessPoint name='Right' x_mm='75.0' y_mm='0.0'/>
+        <SymmetryAndFlatnessPoint name='Center' x_mm='0.0' y_mm='0.0'/>
         <!--
         <SymmetryAndFlatnessPoint name='Energy 1'  x_mm='-37.5'   y_mm=   '0.0'/>
         <SymmetryAndFlatnessPoint name='Energy 2'  x_mm= '37.5'   y_mm=   '0.0'/>
@@ -523,12 +545,12 @@ Note that when building a package for release, the Maven build process uses the 
         -->
     </SymmetryAndFlatnessPointList>
 
-    <SymmetryPointCenter name='Center' />
+    <SymmetryPointCenter name='Center'/>
     <!-- Names of opposing points (see <SymmetryAndFlatnessPointList>) used to calculate symmetry. -->
-    <SymmetryPointTop name='Top' />
-    <SymmetryPointBottom name='Bottom' />
-    <SymmetryPointLeft name='Left' />
-    <SymmetryPointRight name='Right' />
+    <SymmetryPointTop name='Top'/>
+    <SymmetryPointBottom name='Bottom'/>
+    <SymmetryPointLeft name='Left'/>
+    <SymmetryPointRight name='Right'/>
 
     <!-- Maximum allowed error for leaf positions in mm.  If leaf ends are farther than this from
     their expected positions then they are considered 'failed'.-->
@@ -541,20 +563,20 @@ Note that when building a package for release, the Maven build process uses the 
     energy levels.  This is done by creating beams to match the machine's energy level.  The new beam names are given this prefix, followed
     by the energy level and optionally 'F' for FFF. -->
     <PrefixForMachineDependentBeamName>J18G0-</PrefixForMachineDependentBeamName>
-    
+
     <!-- To get an accurate measurement of the end of collimator leaves, a buffer space is left between leaves, at the sides of the
     leaves.  This keeps adjacent leaves' positions from interfering with each other.  This number specifies how large that space should
     be.  It is given as the distance between the edge of the bounding rectangle used to find the edge's position and the measured
     position of the side of the leaf in mm. -->
     <LeafPositionIsolationDistance_mm>0.5</LeafPositionIsolationDistance_mm>
-    
+
     <!-- List of names of beams to be evaluated for leaf positioning (picket fence). -->
     <LeafPositionBeamNameList>
         <BeamName>PF Stat 0</BeamName>
         <BeamName>PF Stat 180</BeamName>
-   <!-- <BeamName>T2-DG-RS</BeamName> Not finding leaf ends.-->
+        <!-- <BeamName>T2-DG-RS</BeamName> Not finding leaf ends.-->
         <BeamName>PF Stat 90</BeamName>
-   <!-- <BeamName>T3MLCSpeed</BeamName> Should not be used for this test.-->
+        <!-- <BeamName>T3MLCSpeed</BeamName> Should not be used for this test.-->
         <BeamName>PF Stat 270</BeamName>
         <BeamName>T1 PF ARC</BeamName>
         <BeamName>T1 PF ARC ERROR</BeamName>
@@ -573,10 +595,10 @@ Note that when building a package for release, the Maven build process uses the 
         IsolationBorder_mm: Distance in mm from planned edge to the edge of the AOI used to capture pixels.  This distance minimizes the effects of on the final values.
         -->
     <VMATBeamPairList>
-        <VMATBeamPair Name="Leaf Speed Test" MLC="T3MLCSpeed" OPEN="T3 Open" IsolationBorder_mm="10.0" />
+        <VMATBeamPair Name="Leaf Speed Test" MLC="T3MLCSpeed" OPEN="T3 Open" IsolationBorder_mm="10.0"/>
         <!-- Note that these two should have the same MLC name, but there was a mistake/typo made when creating the RTPLAN. -->
-        <VMATBeamPair Name="Dose Rate - Gantry Speed Test" MLC="T2-DG-RS" OPEN="T2 Open" IsolationBorder_mm="5.0" />
-        <VMATBeamPair Name="Dose Rate - Gantry Speed Test" MLC="T2-DR-GS" OPEN="T2 Open" IsolationBorder_mm="5.0" />
+        <VMATBeamPair Name="Dose Rate - Gantry Speed Test" MLC="T2-DG-RS" OPEN="T2 Open" IsolationBorder_mm="5.0"/>
+        <VMATBeamPair Name="Dose Rate - Gantry Speed Test" MLC="T2-DR-GS" OPEN="T2 Open" IsolationBorder_mm="5.0"/>
     </VMATBeamPairList>
 
     <!-- Used for graphing VMAT history, a positive integer indicating the number of values to display before and after (if
@@ -613,21 +635,21 @@ Note that when building a package for release, the Maven build process uses the 
     This value provides the tolerance in percentage (floating point) of voxels between the number expected
     and the number found. -->
     <DailyQACBCTVoxPercentTolerance>15.0</DailyQACBCTVoxPercentTolerance>
-    
+
     <!-- Tuning parameter for finding the phantom cube as part of Daily QA CBCT processing.  When
     processing a slice, set the darker pixels to 'zero' (the value of the lowest pixel) so that background
     noise does not effect the coarse find algorithm.  Slices that contain the cube will have many values
     due the penumbra around it.  600 is typical.  This number (a positive integer) is the number of the
     smallest pixel grey scale values that will be set to zero. -->
     <DailyQACBCTDarkPixelValueLevels>50</DailyQACBCTDarkPixelValueLevels>
-    
+
     <!-- Tuning parameter for finding the phantom cube as part of Daily QA CBCT processing.  When
     locating the cube, one test is to look at a horizontal slice and determine if opposing edges are
     approximately the right distance apart, and if so, assume that it is the cube.  This
     parameter defines the percent error in the cube size detected.  Note that if the cube is slightly
     rotated (sides not parallel to the table edges) then edges will a different distance apart. -->
     <DailyQACBCTCubeSizePercentTolerance>15.0</DailyQACBCTCubeSizePercentTolerance>
-    
+
     <!-- Tuning parameter for finding the phantom cube as part of Daily QA CBCT processing. When
     reducing noise in horizontal images, many of the voxels are set to zero.  The number that are
     not set to zero is determined by the cube's cross section, with the assumption that the cube
@@ -641,10 +663,10 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Distance in mm in floating point that the penumbra extends in one direction from the BB.  A
     volume of (2x)^3 this is used to measure the BB's location. ( 10 would yield 20x20x20 ) -->
     <CBCTBBPenumbra_mm>2.5</CBCTBBPenumbra_mm>
-   
+
     <!-- When making the zoomed version of the CBCT images, make them this size of a square in mm.-->
     <CBCTZoomSize_mm>40.0</CBCTZoomSize_mm>
-   
+
     <!-- Color to use when making CBCT images in HEX notation specifying red+green+blue.  Set
     to 000000 (black) to use deep (multi) coloring. -->
     <CBCTImageColor>FFFFFF</CBCTImageColor>
@@ -658,14 +680,14 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Radius in mm in floating point of the EPID BB penumbra.  Different
     from CBCT, which has different imaging characteristics. -->
-    <EPIDBBPenumbra_mm>0.75</EPIDBBPenumbra_mm>
+    <EPIDBBPenumbra_mm>1.0</EPIDBBPenumbra_mm>
     <!-- <EPIDBBPenumbra_mm>2.5</EPIDBBPenumbra_mm> --> <!-- for testing with larger ceramic bb -->
-    
+
     <!-- The minimum number of standard deviations that the BB must deviate in brightness to be considered
     legitimate.  This check is done to ensure that if there is no BB, then the algorithm will not settle for
     the brightest bit of white noise from the background.  The 1.75 number given was arrived at
     empirically after running several tests. -->
-    <EPIDBBMinimumStandardDeviation>1.50</EPIDBBMinimumStandardDeviation>
+    <EPIDBBMinimumStandardDeviation>2.25</EPIDBBMinimumStandardDeviation>
 
     <!-- Color to use when making EPID images in HEX notation specifying red+green+blue.  Set
     to 000000 (black) to use deep (multi) coloring.-->
@@ -674,29 +696,36 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Used for graphing EPID BB history, a positive integer indicating the number of values to display before and after (if
     they exist) the current point being plotted. -->
     <BBbyEPIDHistoryRange>1000000</BBbyEPIDHistoryRange>
-   
+
     <!-- Used for graphing CBCT BB history, a positive floating point indicating the range of values above and below
     zero that indicate the tolerated limits. -->
     <BBbyCBCTChartTolerance_mm>1.0</BBbyCBCTChartTolerance_mm>
-   
+
     <!-- Used for graphing CBCT BB history, a positive floating point indicating the maximum range of values above and below
     zero.  Sometimes a single value will be wildly out of range, and make the graph look flat, so this is the farthest that the graph
     will be allowed to expand vertically.  If all of the values are normal, then the graph will have a range of BBbyCBCTChartTolerance_mm * 1.5 -->
     <BBbyCBCTChartYRange_mm>3.0</BBbyCBCTChartYRange_mm>
-    
+
     <!-- Used for graphing EPID BB history, a positive floating point indicating the range of values above and below
     zero that indicate the tolerated limits. -->
     <BBbyEPIDChartTolerance_mm>1.0</BBbyEPIDChartTolerance_mm>
-      
+
     <!-- Used for graphing EPID BB history, a positive floating point indicating the maximum range of values above and below
     zero.  Sometimes a single value will be wildly out of range, and make the graph look flat, so this is the farthest that the graph
     will be allowed to expand vertically.  If all of the values are normal, then the graph will have a range of BBbyEPIDChartTolerance_mm * 1.5 -->
     <BBbyEPIDChartYRange_mm>3.0</BBbyEPIDChartYRange_mm>
-   
+
+    <!-- Maximum allowed coefficient of variation for Daily QA EPID RTIMAGE files.  This is done for the background pixels
+    near the center of the image that are not part of the BB, after the image has been corrected for columnar amplification
+    mis-calibrations.  It is used to reject images that have large non-flat areas, which can happen when the table is in the
+    image or a non-daily QA image is used (such as from a real patient).
+    The definition of coefficient of variation is stdDev/mean. -->
+    <EPIDBBMaxBackgroundCoefficientOfVariation>0.03</EPIDBBMaxBackgroundCoefficientOfVariation>
+
     <!-- Maximum allowed slice thickness for CBCT volumes.  Exceeding this incurs a warning.  The problem with a large slice thickness is
     that it makes the readings less accurate.   Specified as floating point value in mm.-->
     <BBbyCBCTMaximumSliceThickness_mm>1.0</BBbyCBCTMaximumSliceThickness_mm>
-   
+
     <!-- When making the zoomed version of the EPID images, make them this size of a square in mm.-->
     <EPIDZoomSize_mm>60.0</EPIDZoomSize_mm>
 

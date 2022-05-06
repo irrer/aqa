@@ -64,13 +64,6 @@ object BBbyEPIDHTML {
     Seq(c, a).flatten.head.getTime
   }
 
-  /**
-    * Get either the content or acquisition date+time in ms.
-    */
-  private def result2ms(r: Either[BBbyEPIDImageAnalysis.FailedResult, BBbyEPIDImageAnalysis.Result]): Long = {
-    result2ms(BBbyEPIDImageAnalysis.alOf(r))
-  }
-
   private val squareTitle = "From central " + (2 * Config.BBbyEPIDSearchDistance_mm) + " mm square of image."
 
   private val noisinessTitle = "Relative indication of image noise as Coefficient of Variation.  Lower numbers indicate a better quality image. " + squareTitle + "  Precise value: "
@@ -80,7 +73,7 @@ object BBbyEPIDHTML {
 
   def generateHtml(
       extendedData: ExtendedData,
-      bbByEPIDList: Seq[Either[BBbyEPIDImageAnalysis.FailedResult, BBbyEPIDImageAnalysis.Result]],
+      bbByEPIDList: Seq[BBbyEPIDImageAnalysis.Result],
       composite: Either[String, (BBbyEPIDComposite, Option[String])],
       runReq: BBbyEPIDRunReq
   ): Unit = {
@@ -161,20 +154,20 @@ object BBbyEPIDHTML {
       wrapWithHeader
     }
 
-    class ImageSet(result: Either[BBbyEPIDImageAnalysis.FailedResult, BBbyEPIDImageAnalysis.Result], id: Int) {
-      val al: AttributeList = BBbyEPIDImageAnalysis.alOf(result)
+    class ImageSet(result: BBbyEPIDImageAnalysis.Result, id: Int) {
+      val al: AttributeList = result.al
 
       def r2epid: BBbyEPID = {
-        if (result.isLeft) throw new RuntimeException("Unexpected failure accessing failed epid data.")
-        result.right.get.bbByEpid
+        if (result.error.isDefined) throw new RuntimeException("Unexpected failure accessing failed epid data.")
+        result.bbByEpid
       }
 
       val description: Option[String] = {
         result match {
-          case _ if result.isRight && r2epid.isVert => Some(fmtApprox(r2epid.epid3DX_mm) + ", NA, " + fmtApprox(r2epid.epid3DZ_mm) + " mm")
-          case _ if result.isRight && r2epid.isHorz => Some("NA, " + fmtApprox(r2epid.epid3DY_mm) + ", " + fmtApprox(r2epid.epid3DZ_mm) + " mm")
-          case _ if result.isLeft                   => Some(result.left.get.error)
-          case _                                    => None
+          case _ if result.ok && r2epid.isVert => Some(fmtApprox(r2epid.epid3DX_mm) + ", NA, " + fmtApprox(r2epid.epid3DZ_mm) + " mm")
+          case _ if result.ok && r2epid.isHorz => Some("NA, " + fmtApprox(r2epid.epid3DY_mm) + ", " + fmtApprox(r2epid.epid3DZ_mm) + " mm")
+          case _ if !result.ok                 => result.error
+          case _                               => None
         }
       }
 
@@ -188,8 +181,8 @@ object BBbyEPIDHTML {
       def name2File(name: String) = new File(extendedData.output.dir, name)
 
       val bbCenter_pix: Option[Point2d] = {
-        if (result.isRight) {
-          Some(result.right.get.pix)
+        if (result.ok) {
+          Some(result.pix)
         } else None
       }
       val imageSet = new BBbyEPIDAnnotateImages(al, description, bbCenter_pix)
@@ -237,8 +230,8 @@ object BBbyEPIDHTML {
         }
 
         val stats: Elem = {
-          if (result.isRight) {
-            val bbByEpid = result.right.get.bbByEpid
+          if (result.ok) {
+            val bbByEpid = result.bbByEpid
             <div>
               {if (bbByEpid.isOpenFieldImage) <span style="background-color: red;color: white; ">@@nbsp@@Open Field@@nbsp@@</span> else <span>Planned Field</span>}
               <br/>
@@ -317,7 +310,7 @@ object BBbyEPIDHTML {
       }
 
       val tablePosition = {
-        val al = if (bbByEPIDList.head.isLeft) bbByEPIDList.head.left.get.al else bbByEPIDList.head.right.get.al
+        val al = bbByEPIDList.head.al
 
         /** Get double value, convert from mm to cm, and format to text. */
         def db(tag: AttributeTag) = { Util.fmtDbl(al.get(tag).getDoubleValues.head / 10) }
@@ -460,9 +453,9 @@ object BBbyEPIDHTML {
 
         def fmtTd(d: Double) = { <td title={fmtPrecise(d)}>{fmtApprox(d)}</td> }
 
-        val epidDateListSorted = bbByEPIDList.sortBy(r => result2ms(r))
+        val epidDateListSorted = bbByEPIDList.sortBy(r => result2ms(r.al))
 
-        val msFirst = result2ms(epidDateListSorted.head)
+        val msFirst = result2ms(epidDateListSorted.head.al)
 
         def vectorLengthColumn(x: Double, y: Double, z: Double) = {
           val d = Math.sqrt((x * x) + (y * y) + (z * z))
@@ -546,8 +539,8 @@ object BBbyEPIDHTML {
           vectorLengthColumn(cbct.err_mm.getX, cbct.err_mm.getY, cbct.err_mm.getZ)
         }
             </tr>
-            {epidDateListSorted.filter(_.isRight).map(r => fmtEpidWithoutCbct(r.right.get))}
-            {epidDateListSorted.filter(_.isRight).map(r => fmtEpidWithCbct(r.right.get))}
+            {epidDateListSorted.filter(_.ok).map(r => fmtEpidWithoutCbct(r))}
+            {epidDateListSorted.filter(_.ok).map(r => fmtEpidWithCbct(r))}
             <tr style="text-align: center;">
               <td style="text-align: right;">AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLANNED_ISOCENTER)</td>
               <td></td>

@@ -17,6 +17,7 @@
 package aqa.test
 
 import com.pixelmed.dicom.AttributeList
+import com.pixelmed.dicom.DicomFileUtilities
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageUtil
@@ -27,6 +28,7 @@ import edu.umro.ScalaUtil.Trace
 import edu.umro.util.Utility
 import org.aqa.Config
 import org.aqa.DicomFile
+import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.webrun.bbByEpid.BBbyEPIDImageAnalysis
 import org.scalatest.FlatSpec
@@ -89,6 +91,7 @@ class TestBBbyEPIDImageAnalysisColumnar extends FlatSpec with Matchers {
     case class TransIdentity(file: File) {
       val al: AttributeList = new DicomFile(file).attributeList.get
       val trans = new IsoImagePlaneTranslator(al)
+
       // Key parameters for translation.  Used to compare if two IsoImagePlaneTranslators are the same.
       override def toString: String = {
         val items = Seq(
@@ -111,19 +114,13 @@ class TestBBbyEPIDImageAnalysisColumnar extends FlatSpec with Matchers {
       * real examples of BBs.  This tells us that the model is appropriately sized.
       *
       * @param rtimageFile RTIMAGE DICOM file
-      * @param outDir Write files here.
+      * @param outDir      Write files here.
       */
     def showImage(rtimageFile: File, outDir: File): Unit = {
       val ti = TransIdentity(rtimageFile)
       val pointList = BBbyEPIDImageAnalysis.testListOfPointsWithinBB(ti.trans)
 
       val outTextFile = new File(outDir, "pointList.txt")
-
-      val text =
-        "Source file: " + ti.file.getAbsolutePath + "\n" +
-          ti.toString + "\n" +
-          "List of points profiling BB for this resolution:\n    " + pointList.map(p => p.x.formatted("%2d") + "," + p.y.formatted("%2d")).mkString("\n    ") + "\n"
-      Util.writeFile(outTextFile, text)
 
       println("Wrote file " + outTextFile.getAbsolutePath)
 
@@ -158,55 +155,80 @@ class TestBBbyEPIDImageAnalysisColumnar extends FlatSpec with Matchers {
 
     }
 
-    case class Col(title: String, toText: (BBbyEPIDImageAnalysis.Result, BBbyEPIDImageAnalysis.Result) => String) {}
+    case class Col(title: String, toText: (BBbyEPIDImageAnalysis.Result, BBbyEPIDImageAnalysis.Result) => Any) {}
+
+    var outDir: File = null
+
+    val colSeq: Seq[Col] = Seq(
+      Col("Machine", (o, _) => o.al.get(TagByName.RadiationMachineName).getSingleStringValueOrEmptyString),
+      Col("Acquisition", (o, _) => dateFormat.format(DicomUtil.getTimeAndDate(o.al, TagByName.AcquisitionDate, TagByName.AcquisitionTime).get)),
+      Col("Gantry Angle", (o, _) => Util.angleRoundedTo90(Util.gantryAngle(o.al)).toString),
+      Col("Old X mm", (o, _) => o.bbByEpid.epidImageX_mm.toString),
+      Col("Old Y mm", (o, _) => o.bbByEpid.epidImageY_mm.toString),
+      Col("New X mm", (_, n) => n.bbByEpid.epidImageX_mm.toString),
+      Col("New Y mm", (_, n) => n.bbByEpid.epidImageY_mm.toString),
+      Col("Old-New X", (o, n) => (o.bbByEpid.epidImageX_mm - n.bbByEpid.epidImageX_mm).toString),
+      Col("Old-New Y", (o, n) => (o.bbByEpid.epidImageY_mm - n.bbByEpid.epidImageY_mm).toString),
+      Col(
+        "Old New XY",
+        (o, n) => {
+          val x = o.bbByEpid.epidImageX_mm - n.bbByEpid.epidImageX_mm
+          val y = o.bbByEpid.epidImageY_mm - n.bbByEpid.epidImageY_mm
+          Math.sqrt(x * x + y * y).toString
+        }
+      ),
+      Col("Old Pixel Mean CU", (o, _) => o.bbByEpid.pixelMean_cu.toString),
+      Col("Old Pixel Co-eff of Var", (o, _) => (o.bbByEpid.pixelStandardDeviation_cu / o.bbByEpid.pixelMean_cu).toString),
+      Col("Old BB Mean CU", (o, _) => o.bbMean_cu.toString),
+      Col("Old Pixel StdDev CU", (o, _) => o.bbByEpid.pixelStandardDeviation_cu.toString),
+      Col("Old BB StdDev Multiple CU", (o, _) => o.bbByEpid.bbStdDevMultiple.toString),
+      Col("New Pixel Mean CU", (_, n) => n.bbByEpid.pixelMean_cu.toString),
+      Col("New Pixel Co-eff of Var", (_, n) => (n.bbByEpid.pixelStandardDeviation_cu / n.bbByEpid.pixelMean_cu).toString),
+      Col("New BB Mean CU", (_, n) => n.bbMean_cu.toString),
+      Col("New Pixel Mean StdDev", (_, n) => n.bbByEpid.pixelStandardDeviation_cu.toString),
+      Col("New BB StdDev Multiple CU", (_, n) => n.bbByEpid.bbStdDevMultiple.toString),
+      Col("Pix Size X mm", (o, _) => o.al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues.head.toString),
+      Col("Pix Size Y mm", (o, _) => o.al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues()(1).toString),
+      Col("Dir", (_, _) => outDir.getAbsolutePath)
+    )
 
     var prevMach = "None"
 
+    def addRowToSpreadsheet(oldResult: BBbyEPIDImageAnalysis.Result, newResult: BBbyEPIDImageAnalysis.Result): Unit = {
+      val deltaX = oldResult.bbByEpid.epidImageX_mm - newResult.bbByEpid.epidImageX_mm
+      val deltaY = oldResult.bbByEpid.epidImageY_mm - newResult.bbByEpid.epidImageY_mm
+      val xy = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY))
+      println(
+        "result   : " + fmt(oldResult.bbByEpid.epidImageX_mm) + "," + fmt(oldResult.bbByEpid.epidImageY_mm) +
+          "    colResult: " + fmt(newResult.bbByEpid.epidImageX_mm) + "," + fmt(newResult.bbByEpid.epidImageY_mm) +
+          "    delta    : " + fmt(deltaX) + ", " + fmt(deltaY) + "   XY: " + fmt(xy) +
+          "    " + outDir.getName
+      )
+
+      // write spreadsheet content.  Put a blank line between machines to improve view-ability.
+      val rowText = colSeq.map(c => c.toText(oldResult, newResult).toString).mkString(",") + "\n"
+      val mach = oldResult.al.get(TagByName.RadiationMachineName).getSingleStringValueOrEmptyString()
+      if (!mach.equals(prevMach)) spreadsheet.append("\n")
+      spreadsheet.append(rowText)
+      prevMach = mach
+    }
+
     /**
       * Test an RTIMAGE file that is known to be valid.
+      *
       * @param rtimageFile RTIMAGE file.
       */
-    def testPassFile(rtimageFile: File): Unit = {
+    def testFile(rtimageFile: File, oldStatus: Boolean, newStatus: Boolean): Unit = {
       println("\nProcessing RTIMAGE file: " + rtimageFile.getAbsolutePath)
 
       val al = new DicomFile(rtimageFile).attributeList.get
-      val outDir = outputDir(rtimageFile)
-
-      val colSeq: Seq[Col] = Seq(
-        Col("Machine", (o, _) => o.al.get(TagByName.RadiationMachineName).getSingleStringValueOrEmptyString),
-        Col("Acquisition", (o, _) => dateFormat.format(DicomUtil.getTimeAndDate(o.al, TagByName.AcquisitionDate, TagByName.AcquisitionTime).get)),
-        Col("Gantry Angle", (o, _) => Util.angleRoundedTo90(Util.gantryAngle(o.al)).toString),
-        Col("Old X mm", (o, _) => o.bbByEpid.epidImageX_mm.toString),
-        Col("Old Y mm", (o, _) => o.bbByEpid.epidImageY_mm.toString),
-        Col("New X mm", (_, n) => n.bbByEpid.epidImageX_mm.toString),
-        Col("New Y mm", (_, n) => n.bbByEpid.epidImageY_mm.toString),
-        Col("Old-New X", (o, n) => (o.bbByEpid.epidImageX_mm - n.bbByEpid.epidImageX_mm).toString),
-        Col("Old-New Y", (o, n) => (o.bbByEpid.epidImageY_mm - n.bbByEpid.epidImageY_mm).toString),
-        Col(
-          "Old New XY",
-          (o, n) => {
-            val x = o.bbByEpid.epidImageX_mm - n.bbByEpid.epidImageX_mm
-            val y = o.bbByEpid.epidImageY_mm - n.bbByEpid.epidImageY_mm
-            Math.sqrt(x * x + y * y).toString
-          }
-        ),
-        Col("Old Pixel Mean CU", (o, _) => o.bbByEpid.pixelMean_cu.toString),
-        Col("Old BB Mean CU", (o, _) => o.bbMean_cu.toString),
-        Col("Old Pixel StdDev CU", (o, _) => o.bbByEpid.pixelStandardDeviation_cu.toString),
-        Col("Old BB StdDev Mult CU", (o, _) => o.bbByEpid.bbStdDevMultiple.toString),
-        Col("New Pixel Mean CU", (_, n) => n.bbByEpid.pixelMean_cu.toString),
-        Col("New BB Mean CU", (_, n) => n.bbMean_cu.toString),
-        Col("New Pixel Mean CU", (_, n) => n.bbByEpid.pixelStandardDeviation_cu.toString),
-        Col("New BB StdDev Mult CU", (_, n) => n.bbByEpid.bbStdDevMultiple.toString),
-        Col("Pix Size X mm", (o, _) => o.al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues.head.toString),
-        Col("Pix Size Y mm", (o, _) => o.al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues()(1).toString),
-        Col("Dir", (_, _) => outDir.getAbsolutePath)
-      )
-
-      // write spreadsheet headers.
-      if (spreadsheet.isEmpty) spreadsheet.append(colSeq.map(c => c.title).mkString(",") + "\n")
+      outDir = outputDir(rtimageFile)
 
       showImage(rtimageFile, outDir)
+      val fullImage = new DicomImage(al)
+      val fullBufImage = fullImage.toDeepColorBufferedImage(0.01)
+      val fullImageFile = new File(outDir, "fullImage.png")
+      Util.writePng(fullBufImage, fullImageFile) // write full sized image
 
       Util.writeFile(new File(outDir, "RTIMAGE.txt"), DicomUtil.attributeListToString(al)) // write text version to file for diagnosing problems.
 
@@ -214,98 +236,117 @@ class TestBBbyEPIDImageAnalysisColumnar extends FlatSpec with Matchers {
       val newResult = BBbyEPIDImageAnalysis.findBB_columnCorrectedGrowBB(al, outputPK = -1)
       // val colResult = BBbyEPIDImageAnalysis.findBB(al, -1, Some(outDir))
 
+      // write spreadsheet headers.
+      if (oldStatus && newStatus && spreadsheet.isEmpty) spreadsheet.append(colSeq.map(c => c.title).mkString(",") + "\n")
+
       println("outDir: " + outDir.getAbsolutePath)
-      println("rawResult.isRight: " + oldResult.isRight + "     colResult.isRight: " + newResult.isRight)
-      if (newResult.isLeft && oldResult.isLeft) { // TODO rm
-        println("mv " + rtimageFile.getName + " ../fail")
+      println("rawResult.ok: " + oldResult.ok + "     colResult.ok: " + newResult.ok)
+
+      if (newResult.ok && newResult.rawSearchArea.isDefined) {
+        val enlarged = ImageUtil.magnify(newResult.rawSearchArea.get.toDeepColorBufferedImage(0.01), magnification)
+        val file = new File(outDir, "rawSearchArea.png")
+        Util.writePng(enlarged, file)
+
+        val enlargedBw = ImageUtil.magnify(newResult.rawSearchArea.get.toBufferedImage(Color.white), magnification)
+        val fileBw = new File(outDir, "rawSearchAreaBlackAndWhite.png")
+        Util.writePng(enlargedBw, fileBw)
       }
 
-      if (newResult.isRight && oldResult.isLeft) { // TODO rm
-        println("mv " + rtimageFile.getName + " ../marginal")
+      if (newResult.ok && newResult.processedSearchArea.isDefined) {
+        val enlarged = ImageUtil.magnify(newResult.processedSearchArea.get.toDeepColorBufferedImage(0.01), magnification)
+        val file = new File(outDir, "processedSearchArea.png")
+        Util.writePng(enlarged, file)
+
+        val enlargedBw = ImageUtil.magnify(newResult.processedSearchArea.get.toBufferedImage(Color.white), magnification)
+        val fileBw = new File(outDir, "processedSearchAreaBlackAndWhite.png")
+        Util.writePng(enlargedBw, fileBw)
       }
 
-      if (newResult.isLeft && oldResult.isLeft) { // TODO rm
-        println("mv " + rtimageFile.getName + " ../fail")
+      if (newResult.ok && newResult.rawSearchArea.isDefined && newResult.bbPointList.isDefined) {
+        val image = newResult.processedSearchArea.get.toDeepColorBufferedImage(0.01)
+
+        println("image size: " + image.getWidth + " x " + image.getHeight())
+        println("coordinates: " + newResult.bbPointList.get.mkString("  "))
+        val coordinates = newResult.bbPointList.get.filter(p => p.x >= 0 && p.y >= 0 && p.x < image.getWidth() && p.y < image.getHeight())
+        val outOfBounds = newResult.bbPointList.get.diff(coordinates)
+        if (outOfBounds.nonEmpty) println("List of out of bound coordinates: " + outOfBounds.mkString("  "))
+
+        newResult.bbPointList.get.foreach(p => image.setRGB(p.x, p.y, Color.black.getRGB))
+        val enlarged = ImageUtil.magnify(image, magnification)
+        val file = new File(outDir, "processedSearchAreaWithBBFromProcessedMarked.png")
+        Util.writePng(enlarged, file)
       }
 
-      if (newResult.isLeft)
-        Trace.trace("hey col")
+      if (oldResult.ok) {
+        val diagnostics = oldResult.diagnostics
+        Util.writeFile(new File(outDir, "oldDiagnostics.txt"), diagnostics)
+        println(diagnostics)
+      }
 
-      if (oldResult.isLeft)
-        Trace.trace("hey raw")
+      if (newResult.ok) {
+        val diagnostics = newResult.diagnostics
+        Util.writeFile(new File(outDir, "newDiagnostics.txt"), diagnostics)
+        println(diagnostics)
+      }
 
-      if (newResult.isRight && oldResult.isRight) {
-        newResult.isRight should be(true)
+      if (newResult.ok)
+        if (oldResult.ok && oldResult.rawSearchArea.isDefined && oldResult.bbPointList.isDefined) {
+          val image = oldResult.rawSearchArea.get.toDeepColorBufferedImage(0.01)
 
-        oldResult.isRight should be(true)
+          println("image size: " + image.getWidth + " x " + image.getHeight())
+          println("coordinates: " + oldResult.bbPointList.get.mkString("  "))
+          val coordinates = oldResult.bbPointList.get.filter(p => p.x >= 0 && p.y >= 0 && p.x < image.getWidth() && p.y < image.getHeight())
+          val outOfBounds = oldResult.bbPointList.get.diff(coordinates)
+          if (outOfBounds.nonEmpty) println("List of out of bound coordinates: " + outOfBounds.mkString("  "))
 
-        val deltaX = oldResult.right.get.bbByEpid.epidImageX_mm - newResult.right.get.bbByEpid.epidImageX_mm
-        val deltaY = oldResult.right.get.bbByEpid.epidImageY_mm - newResult.right.get.bbByEpid.epidImageY_mm
-        val xy = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY))
-        println(
-          "result   : " + fmt(oldResult.right.get.bbByEpid.epidImageX_mm) + "," + fmt(oldResult.right.get.bbByEpid.epidImageY_mm) +
-            "    colResult: " + fmt(newResult.right.get.bbByEpid.epidImageX_mm) + "," + fmt(newResult.right.get.bbByEpid.epidImageY_mm) +
-            "    delta    : " + fmt(deltaX) + ", " + fmt(deltaY) + "   XY: " + fmt(xy) +
-            "    " + outDir.getName
-        )
-
-        if (newResult.right.get.rawSearchArea.isDefined) {
-          val enlarged = ImageUtil.magnify(newResult.right.get.rawSearchArea.get.toDeepColorBufferedImage(0.01), magnification)
-          val file = new File(outDir, "rawSearchArea.png")
-          Util.writePng(enlarged, file)
-        }
-
-        if (newResult.right.get.processedSearchArea.isDefined) {
-          val enlarged = ImageUtil.magnify(newResult.right.get.processedSearchArea.get.toDeepColorBufferedImage(0.01), magnification)
-          val file = new File(outDir, "processedSearchArea.png")
-          Util.writePng(enlarged, file)
-        }
-
-        if (newResult.right.get.rawSearchArea.isDefined && newResult.right.get.bbPointList.isDefined) {
-          val image = newResult.right.get.processedSearchArea.get.toDeepColorBufferedImage(0.01)
-          newResult.right.get.bbPointList.get.foreach(p => image.setRGB(p.x, p.y, Color.black.getRGB))
-          val enlarged = ImageUtil.magnify(image, magnification)
-          val file = new File(outDir, "processedSearchAreaWithBBFromProcessedMarked.png")
-          Util.writePng(enlarged, file)
-        }
-
-        if (oldResult.right.get.rawSearchArea.isDefined && oldResult.right.get.bbPointList.isDefined) {
-          val image = oldResult.right.get.rawSearchArea.get.toDeepColorBufferedImage(0.01)
-          oldResult.right.get.bbPointList.get.foreach(p => image.setRGB(p.x, p.y, Color.black.getRGB))
+          coordinates.foreach(p => image.setRGB(p.x, p.y, Color.black.getRGB))
           val enlarged = ImageUtil.magnify(image, magnification)
           val file = new File(outDir, "rawSearchAreaWithBBFromRawMarked.png")
           Util.writePng(enlarged, file)
         }
 
-        // write spreadsheet content.  Put a blank line between machines to improve view-ability.
-        val rowText = colSeq.map(c => c.toText(oldResult.right.get, newResult.right.get)).mkString(",") + "\n"
-        val mach = oldResult.right.get.al.get(TagByName.RadiationMachineName).getSingleStringValueOrEmptyString()
-        if (!mach.equals(prevMach)) spreadsheet.append("\n")
-        spreadsheet.append(rowText)
-        prevMach = mach
+      // if both the old and new methods work, then add a row to the CSV file to facilitate comparison.
+      if (newResult.ok && oldResult.ok) addRowToSpreadsheet(oldResult, newResult)
 
-      }
+      println(
+        outDir.getName +
+          " old status:    expected: " + oldStatus + "    old status actual: " + oldResult.ok +
+          " new status:    expected: " + newStatus + "    new status actual: " + newResult.ok
+      )
+
+      if (!oldResult.ok.toString.equals(oldStatus.toString))
+        println(outDir.getName + " old status is wrong.  expected: " + oldStatus + "    actual: " + oldResult.ok + "    outDir: " + outDir.getAbsolutePath)
+      else
+        println(outDir.getName + " old status is correct.  expected: " + oldStatus + "    actual: " + oldResult.ok + "    outDir: " + outDir.getAbsolutePath)
+
+      if (!newResult.ok.toString.equals(newStatus.toString))
+        println(outDir.getName + " new status is wrong.  expected: " + newStatus + "    actual: " + newResult.ok + "    outDir: " + outDir.getAbsolutePath)
+      else
+        println(outDir.getName + " new status is correct.  expected: " + newStatus + "    actual: " + newResult.ok + "    outDir: " + outDir.getAbsolutePath)
+
+      if (oldResult.ok.toString.equals(oldStatus.toString) && newResult.ok.toString.equals(newStatus.toString))
+        println(outDir.getName + " both old and new statuses are correct: old: " + oldResult.ok + "   new: " + newResult.ok)
+
+      // statuses should match the expected statuses
+      // TODO put back oldResult.ok should be(oldStatus)
+      // TODO put back newResult.ok should be(newStatus)
 
       println
-    }
-
-    def testMarginalFile(file: File): Unit = {
-      println(file) // TODO
-    }
-
-    def testFailFile(file: File): Unit = {
-      println(file) // TODO
     }
 
     val start = System.currentTimeMillis()
     Trace.trace
 
-    spreadsheet.clear()
-    Util.listDirFiles(passInDir).filter(_.isFile).foreach(testPassFile)
-    saveSpreadsheet(passInDir.getName)
+    if (true) {
+      spreadsheet.clear()
 
-    Util.listDirFiles(marginalInDir).filter(_.isFile).foreach(testMarginalFile)
-    Util.listDirFiles(failInDir).filter(_.isFile).foreach(testFailFile)
+      Util.listDirFiles(passInDir).filter(_.isFile).foreach(file => testFile(file, oldStatus = true, newStatus = true))
+      saveSpreadsheet(passInDir.getName)
+
+      Util.listDirFiles(marginalInDir).filter(_.isFile).foreach(file => testFile(file, oldStatus = false, newStatus = true))
+    }
+
+    Util.listDirFiles(failInDir).filter(_.isFile).foreach(file => testFile(file, oldStatus = false, newStatus = false))
 
     val elapsed = System.currentTimeMillis() - start
     println("Done.  Elapsed time in ms: " + elapsed)
@@ -317,31 +358,35 @@ class TestBBbyEPIDImageAnalysisColumnar extends FlatSpec with Matchers {
 
 }
 
-object TestBBbyEPIDImageAnalysisColumnar {
+object TestBBbyEPIDImageAnalysisColumnar extends Logging {
   val mainInDir = new File("src\\test\\resources\\TestBBbyEPIDImageAnalysisColumnar")
 
   private def renameRtimageFile(file: File): Unit = {
-    if (file.isFile) {
-      val al = new DicomFile(file).attributeList.get
-      val seriesDateTimeText = Util.timeAsFileName(DicomUtil.getTimeAndDate(al, TagByName.AcquisitionDate, TagByName.AcquisitionTime).get)
-      val machineName = al.get(TagByName.RadiationMachineName).getSingleStringValueOrEmptyString
-      val gantryAngleText = "G" + Util.angleRoundedTo90(DicomUtil.findAllSingle(al, TagByName.GantryAngle).head.getDoubleValues.head).formatted("%03d")
-      val newName = FileUtil.replaceInvalidFileNameCharacters(machineName + "_" + seriesDateTimeText + "_" + gantryAngleText + ".dcm", '_')
-      val newFile = new File(file.getParentFile, newName)
+    try {
+      if (file.isFile && DicomFileUtilities.isDicomOrAcrNemaFile(file)) {
+        val al = new DicomFile(file).attributeList.get
+        val seriesDateTimeText = Util.timeAsFileName(DicomUtil.getTimeAndDate(al, TagByName.AcquisitionDate, TagByName.AcquisitionTime).get)
+        val machineName = al.get(TagByName.RadiationMachineName).getSingleStringValueOrEmptyString
+        val gantryAngleText = "G" + Util.angleRoundedTo90(DicomUtil.findAllSingle(al, TagByName.GantryAngle).head.getDoubleValues.head).formatted("%03d")
+        val newName = FileUtil.replaceInvalidFileNameCharacters(machineName + "_" + seriesDateTimeText + "_" + gantryAngleText + ".dcm", '_')
+        val newFile = new File(file.getParentFile, newName)
 
-      if (file.getAbsolutePath.equals(newFile.getAbsolutePath))
-        println("File rename FAILED: File already has been renamed: " + file.getAbsolutePath)
-      else {
-        if (newFile.exists())
-          println("Can not rename file.  Desination already exists.\n    old: " + file.getName + "\n    new: " + newFile.getName)
+        if (file.getAbsolutePath.equals(newFile.getAbsolutePath))
+          println("File rename FAILED: File already has been renamed: " + file.getAbsolutePath)
         else {
-          val renamed = file.renameTo(newFile)
-          if (renamed)
-            println("File renamed\n    old: " + file.getName + "\n    new: " + newFile.getName)
-          else
-            println("File rename FAILED:\n    old: " + file.getName + "\n    new: " + newFile.getName)
+          if (newFile.exists())
+            println("Can not rename file.  Destination already exists.\n    old: " + file.getName + "\n    new: " + newFile.getName)
+          else {
+            val renamed = file.renameTo(newFile)
+            if (renamed)
+              println("File renamed\n    old: " + file.getName + "\n    new: " + newFile.getName)
+            else
+              println("File rename FAILED:\n    old: " + file.getName + "\n    new: " + newFile.getName)
+          }
         }
       }
+    } catch {
+      case t: Throwable => println("Could not rename file: " + file.getAbsolutePath + " :: " + fmtEx(t))
     }
   }
 

@@ -913,6 +913,7 @@ object Config extends Logging {
   val BBbyCBCTChartYRange_mm: Double = logMainText("BBbyCBCTChartYRange_mm", "3.0").toDouble.abs
   val BBbyEPIDChartTolerance_mm: Double = logMainText("BBbyEPIDChartTolerance_mm", "1.0").toDouble.abs
   val BBbyEPIDChartYRange_mm: Double = logMainText("BBbyEPIDChartYRange_mm", "3.0").toDouble.abs
+  val EPIDBBMaxBackgroundCoefficientOfVariation: Double = logMainText("EPIDBBMaxBackgroundCoefficientOfVariation", "0.03").toDouble.abs
   val BBbyCBCTMaximumSliceThickness_mm: Double = logMainText("BBbyCBCTMaximumSliceThickness_mm", "1.0").toDouble.abs
 
   val GapSkewBeamNameList: List[String] = getGapSkewBeamNameList

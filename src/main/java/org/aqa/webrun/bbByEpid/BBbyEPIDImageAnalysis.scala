@@ -69,6 +69,7 @@ object BBbyEPIDImageAnalysis extends Logging {
     *
     */
   case class Result(
+      error: Option[String], // None indicates success, otherwise a message indicates the error.
       pix: Point2d,
       al: AttributeList,
       iso: Point2d,
@@ -80,6 +81,49 @@ object BBbyEPIDImageAnalysis extends Logging {
       bbMean_cu: Double
   ) {
     def AlOf: AttributeList = al
+
+    def ok = error.isEmpty
+
+    /**
+      * Format extra information concerning the image analysis.
+      *
+      * @return User friendly information to aid with diagnosing problems.
+      */
+    def diagnostics: String = {
+
+      def bbPointListText = {
+        if (bbPointList.isDefined) {
+          "Number of BB pixels found: " + bbPointList.get.size + "\n"
+          "BB pixel coordinate list (search area relative): " + bbPointList.get.mkString("  ") + "\n"
+        } else
+          ""
+      }
+
+      def rawSearchAreaText = {
+
+        if (rawSearchArea.isDefined) {
+          "Raw search area pixels:\n" + rawSearchArea.get.pixelsToText + "\n"
+        } else ""
+      }
+
+      def processedSearchAreaText = {
+        if (processedSearchArea.isDefined) {
+          "Processed search area pixels:\n" + processedSearchArea.get.pixelsToText + "\n"
+        } else ""
+      }
+
+      val fullText =
+        "" + // makes the auto-formatter line the source code up the way I like
+          "Precise pixel coordinates (pix): " + pix + "\n" +
+          "Precise isoplane coordinates (mm): " + iso + "\n" +
+          bbByEpid.toString + "\n" +
+          bbPointListText +
+          "bbMean_cu: " + bbMean_cu.formatted("%20.10f").trim + "\n" ++
+          rawSearchAreaText +
+          processedSearchAreaText
+
+      fullText
+    }
   }
 
   case class FailedResult(error: String, al: AttributeList) {
@@ -218,9 +262,9 @@ object BBbyEPIDImageAnalysis extends Logging {
       epid3DX_mm,
       epid3DY_mm,
       epid3DZ_mm,
-      getDbl(TagByName.TableTopLateralPosition), // tableXlateral_mm
-      getDbl(TagByName.TableTopVerticalPosition), // tableYvertical_mm
-      getDbl(TagByName.TableTopLongitudinalPosition), // tableZlongitudinal_mm
+      getDbl(TagByName.TableTopLateralPosition), // table X lateral mm
+      getDbl(TagByName.TableTopVerticalPosition), // table Y vertical mm
+      getDbl(TagByName.TableTopLongitudinalPosition), // table Z longitudinal mm
       bbStdDevMultiple = bbStdDevMultiple,
       pixelStandardDeviation_cu,
       pixelMean_cu,
@@ -256,7 +300,7 @@ object BBbyEPIDImageAnalysis extends Logging {
     * @param wholeImage Take sub-image from here.
     * @param searchRect Defines sub-image
     * @param al: Attribute list of RTIMAGE.
-    * @return
+    * @return A corrected image.
     */
   private def correctForColumnarAmplification(wholeImage: DicomImage, searchRect: Rectangle, al: AttributeList): DicomImage = {
     val x = searchRect.x
@@ -288,83 +332,6 @@ object BBbyEPIDImageAnalysis extends Logging {
     val correctedImage = new DicomImage(correctedPixels)
 
     correctedImage
-  }
-
-  private def getBackgroundValueList(searchImage: DicomImage, searchRect_pix: Rectangle, bbPixList: Seq[Point2i]): IndexedSeq[Float] = {
-    // list of points within search area that are part of the BB
-    val bbSearchPointList = bbPixList.map(p => new Point2i(p.x - searchRect_pix.x, p.y - searchRect_pix.y))
-    val searchPointList = for (x <- 0 until searchImage.width; y <- 0 until searchImage.height) yield new Point2i(x, y)
-    val backgroundPoints = searchPointList.diff(bbSearchPointList)
-    val backgroundValueList = backgroundPoints.map(p => searchImage.get(p.x, p.y))
-    backgroundValueList
-  }
-
-  private def getBackgroundStandardDeviation(searchImage: DicomImage, searchRect_pix: Rectangle, bbPixList: Seq[Point2i]) = {
-    val stdDev = ImageUtil.stdDev(getBackgroundValueList(searchImage, searchRect_pix, bbPixList))
-    stdDev
-  }
-
-  private def getBackgroundMean(searchImage: DicomImage, searchRect_pix: Rectangle, bbPixList: Seq[Point2i]) = {
-    val backgroundValueList = getBackgroundValueList(searchImage, searchRect_pix, bbPixList)
-    val mean = backgroundValueList.sum / backgroundValueList.size
-    mean
-  }
-
-  /**
-    * Calculate the center of mass of the given list of points.
-    *
-    * The average of the bbImage is taken by taking the average of the points that are in
-    * the image but not in the bbPixList.  Then, a list of pixels in the bbPixList is made
-    * that are of above average value.  The center of mass of the above-average pixels is
-    * calculated and used as the precise location (in pixels) of the BB.
-    *
-    * @param bbImage Image containing CU values.
-    * @param bbPixList List of points comprising the BB.
-    * @return Point relative to bbImage.
-    */
-  private def centerOfMass(bbImage: DicomImage, bbPixList: Seq[Point2i]): Point2d = {
-
-    val bbValueList = bbPixList.map(p => bbImage.get(p.getX, p.getY)) // list of CU of pixels that are inside the BB
-    val bbSumMass = bbValueList.sum
-
-    // average of pixel values that is outside the bbPixList
-    val imageAverage = (bbImage.sum - bbSumMass) / (bbImage.width * bbImage.height - bbPixList.size)
-
-    val aboveAveragePixList = bbPixList.filter(p => bbImage.get(p.x, p.y) >= imageAverage)
-
-    def sumOf(pointList: Seq[Point2i]) = {
-      pointList.map(p => bbImage.get(p.x, p.y)).sum
-    }
-    val xCenter_pix = aboveAveragePixList.groupBy(_.x).map(xv => xv._1 * sumOf(xv._2)).sum / bbSumMass
-    val yCenter_pix = aboveAveragePixList.groupBy(_.y).map(yv => yv._1 * sumOf(yv._2)).sum / bbSumMass
-    println(" c: " + xCenter_pix + "  " + yCenter_pix)
-
-    /*
-    val xPos_pix = aboveAveragePixList.map(p => p.getX * bbImage.get(p.getX, p.getY)).sum / bbSumMass
-    val yPos_pix = aboveAveragePixList.map(p => p.getY * bbImage.get(p.getX, p.getY)).sum / bbSumMass
-    println(" o: " + xPos_pix + "  " + yPos_pix)
-    new Point2d(xPos_pix, yPos_pix)
-     */
-
-    // ------------------------------------------------------------------------------------------------------------
-
-    val brightest = bbPixList.sortBy(p => bbImage.get(p.x, p.y)).takeRight(30)
-    val xPos_pix = brightest.map(p => p.getX * bbImage.get(p.getX, p.getY)).sum / bbSumMass
-    val yPos_pix = brightest.map(p => p.getY * bbImage.get(p.getX, p.getY)).sum / bbSumMass
-    println(" o: " + xPos_pix + "  " + yPos_pix)
-    new Point2d(xPos_pix, yPos_pix)
-  }
-
-  /**
-    * Get the mean CU value of the list of pixels in the BB.
-    * @param bbImage Image containing pixels.
-    * @param bbPixList List of BB pixel coordinates.
-    * @return Mean CU.
-    */
-  private def meanValueOfPixelList(bbImage: DicomImage, bbPixList: Seq[Point2i]): Double = {
-    val bbValueList = bbPixList.map(p => bbImage.get(p.getX, p.getY)) // list of CU of pixels that are inside the BB
-    val mean = bbValueList.sum / bbPixList.size
-    mean
   }
 
   /**
@@ -484,49 +451,6 @@ object BBbyEPIDImageAnalysis extends Logging {
     new Point2i(d2i(x), d2i(y))
   }
 
-  private case class Stats(image: DicomImage, excludedPixelList: Seq[Point2i]) {
-    // list of pixel values that are in the image but not in the excluded list.
-    private val valueList: Seq[Float] = {
-      val pointList = for (y <- 0 until image.height; x <- 0 until image.width) yield { new Point2i(x, y) }
-      pointList.filterNot(p => excludedPixelList.contains(p)).map(p => image.get(p.x, p.y))
-    }
-    val mean: Float = valueList.sum / valueList.size
-    val stdDev: Double = ImageUtil.stdDev(valueList)
-  }
-
-  /**
-    * Make an enlarged template of the BB that is centered on the given coarse center.  The temple will
-    * have the same center (within a pixel) as the given coarse center.
-    *
-    * @param trans Translates between pixel plane and isoplane.
-    * @param coarseCenter Center in search area.
-    * @return List of points in enlarged search area.
-    */
-  private def makeEnlargedTemplate(trans: IsoImagePlaneTranslator, coarseCenter: Point2i): Seq[Point2i] = {
-    // an enlarged BB template centered (to the nearest pixel) around the coarse center.
-    val enlarged = listOfPointsWithinBBRadius(trans, Config.EPIDBBPenumbra_mm + 1.5)
-    val width = enlarged.map(_.x).max
-    val height = enlarged.map(_.y).max
-
-    val coarseOffsetX = d2i(coarseCenter.x - (width / 2.0))
-    val coarseOffsetY = d2i(coarseCenter.y - (height / 2.0))
-    val enlargedTemplate = listOfPointsWithinBBRadius(trans, Config.EPIDBBPenumbra_mm + 1.0).map(p => new Point2i(p.x + coarseOffsetX, p.y + coarseOffsetY))
-
-    if (true) { // TODO rm
-      val minX = enlargedTemplate.map(_.x).min
-      val maxX = enlargedTemplate.map(_.x).max
-
-      val minY = enlargedTemplate.map(_.y).min
-      val maxY = enlargedTemplate.map(_.y).max
-
-      val centerX = (minX + maxX) / 2.0
-      val centerY = (minY + maxY) / 2.0
-
-      println("coarse center: " + coarseCenter + "   enlargedCenter: " + centerX + ", " + centerY)
-    }
-    enlargedTemplate
-  }
-
   /**
     * Given a list of points in the search image, filter out those that are not part of the BB or the BB's penumbra.
     * @param pointList List of image points.
@@ -547,7 +471,7 @@ object BBbyEPIDImageAnalysis extends Logging {
 
   case class PreciseLocation(precise_pix: Point2d, bbMean_cu: Double, backgroundMean_cu: Double, backgroundStdDev_cu: Double, bbPixelList: Seq[Point2i]) {}
 
-  def preciseLocation(coarseCenter: Point2i, searchImage: DicomImage, trans: IsoImagePlaneTranslator, searchRect: Rectangle): PreciseLocation = {
+  private def preciseLocationUsingBBGrowth(coarseCenter: Point2i, searchImage: DicomImage, trans: IsoImagePlaneTranslator, searchRect: Rectangle): PreciseLocation = {
 
     val inOut: Map[Boolean, Seq[Point2i]] = {
       val center = (true, Seq(coarseCenter))
@@ -584,8 +508,13 @@ object BBbyEPIDImageAnalysis extends Logging {
     PreciseLocation(new Point2d(xPos_pix, yPos_pix), bbMean_cu, backgroundMean_cu, backgroundStdDev_cu, bbPixelList = inPixXY)
   }
 
-  // TODO new version
-  def findBB_columnCorrectedGrowBB(al: AttributeList, outputPK: Long): Either[FailedResult, Result] = {
+  /**
+    * Find the BB in the RTIMAGE.
+    * @param al RTIMAGE.
+    * @param outputPK Output associated with this data.
+    * @return Either success with data, or failure with an explanation.
+    */
+  def findBB_columnCorrectedGrowBB(al: AttributeList, outputPK: Long): Result = {
 
     val wholeImage = new DicomImage(al)
     val trans = new IsoImagePlaneTranslator(al)
@@ -596,13 +525,14 @@ object BBbyEPIDImageAnalysis extends Logging {
     // image that contains the area to search
     val searchImageColumnarCorrected = correctForColumnarAmplification(wholeImage, searchRect, al)
 
-    println("search:\n" + searchImageColumnarCorrected.pixelsToText) // TODO rm
-
     val coarseColumnarPixelList = locateBbCoarsely(trans, searchImageColumnarCorrected)
 
     val coarseCenter = pointListCenter(coarseColumnarPixelList)
 
-    val preciseStats = preciseLocation(coarseCenter, searchImageColumnarCorrected, trans, searchRect)
+    val preciseStats = preciseLocationUsingBBGrowth(coarseCenter, searchImageColumnarCorrected, trans, searchRect)
+
+    val backgroundCoOfVar = preciseStats.backgroundStdDev_cu / preciseStats.backgroundMean_cu
+    println("Background coefficient of variation: " + backgroundCoOfVar)
 
     val bbStdDevMultiple = (preciseStats.bbMean_cu - preciseStats.backgroundMean_cu) / preciseStats.backgroundStdDev_cu
 
@@ -613,34 +543,28 @@ object BBbyEPIDImageAnalysis extends Logging {
 
     val valid = bbStdDevMultiple > Config.EPIDBBMinimumStandardDeviation
 
-    if (valid) {
-      val result =
-        Result(
-          pix = preciseStats.precise_pix,
-          al = al,
-          iso = bbCenter_mm,
-          toBBbyEPID(al, bbCenter_mm, outputPK, bbStdDevMultiple, preciseStats.backgroundStdDev_cu, preciseStats.backgroundMean_cu),
-          rawSearchArea = Some(wholeImage.getSubimage(searchRect)),
-          processedSearchArea = Some(searchImageColumnarCorrected),
-          bbPointList = Some(preciseStats.bbPixelList),
-          bbMean_cu = preciseStats.bbMean_cu
-        ) // Convert Y to DICOM gantry coordinate system
-
-      Right(result)
-    } else {
-      val msg = "Failed to find image of BB in EPID image with sufficient contrast to background. for gantry angle " + Util.gantryAngle(al)
-      logger.warn(msg)
-      Left(FailedResult(msg, al))
+    val error = {
+      0 match {
+        case _ if backgroundCoOfVar > Config.EPIDBBMaxBackgroundCoefficientOfVariation => Some("Image is too noisy.  Possibly the table is mis-positioned.")
+        case _ if bbStdDevMultiple < Config.EPIDBBMinimumStandardDeviation             => Some("The image is too noisy to confidently locate the BB.")
+        case _                                                                         => None
+      }
     }
-  }
 
-  // ------------------------------------------------------------------------------------------------------------------------------------------------
-  // ------------------------------------------------------------------------------------------------------------------------------------------------
-  // ------------------------------------------------------------------------------------------------------------------------------------------------
-  // ------------------------------------------------------------------------------------------------------------------------------------------------
+    val result =
+      Result(
+        error,
+        pix = preciseStats.precise_pix,
+        al = al,
+        iso = bbCenter_mm,
+        toBBbyEPID(al, bbCenter_mm, outputPK, bbStdDevMultiple, preciseStats.backgroundStdDev_cu, preciseStats.backgroundMean_cu),
+        rawSearchArea = Some(wholeImage.getSubimage(searchRect)),
+        processedSearchArea = Some(searchImageColumnarCorrected),
+        bbPointList = Some(preciseStats.bbPixelList),
+        bbMean_cu = preciseStats.bbMean_cu
+      )
 
-  def findBB_subPixelTemplate(al: AttributeList, outputPK: Long): Either[FailedResult, Result] = {
-    ???
+    result
   }
 
   // ------------------------------------------------------------------------------------------------------------------------------------------------
@@ -667,7 +591,7 @@ object BBbyEPIDImageAnalysis extends Logging {
     new Rectangle(d2i(bbRectX), d2i(bbRectY), d2i(bbRectW), d2i(bbRectH))
   }
 
-  def findBBold(al: AttributeList, outputPK: Long): Either[FailedResult, Result] = {
+  def findBBold(al: AttributeList, outputPK: Long): Result = {
     val wholeImage = new DicomImage(al)
     val trans = new IsoImagePlaneTranslator(al)
     // Using a sub-area eliminates the need for having to deal with other objects, such as the couch rails.
@@ -722,37 +646,43 @@ object BBbyEPIDImageAnalysis extends Logging {
       val ok = bbStdDevMultiple >= Config.EPIDBBMinimumStandardDeviation
       ok
     }
+
+    val error = {
+
+      if (bbStdDevMultiple >= Config.EPIDBBMinimumStandardDeviation)
+        None
+      else
+        Some("Failed to find image of BB in EPID image with sufficient contrast to background. for gantry angle " + Util.gantryAngle(al))
+    }
+
+    if (error.isDefined)
+      logger.warn("Daily QA EPID Failure: " + error.get)
+
     logger.info("EPID bbStdDevMultiple: " + bbStdDevMultiple + "    valid: " + valid)
 
     // calculate values related to image quality
     val pixelStandardDeviation_cu = ImageUtil.stdDev(outValue)
     val pixelMean_cu = outValue.sum / outPixXY.size
 
-    if (valid) {
-      val xOffset = bbRect.x - searchRect.x
-      val yOffset = bbRect.y - searchRect.y
-      val bbLocation = new Point2d(bbCenter_mm.getX, -bbCenter_mm.getY)
-      val result =
-        Result(
-          bbCenter_pix,
-          al,
-          bbLocation,
-          toBBbyEPID(al, bbLocation, outputPK, bbStdDevMultiple = bbStdDevMultiple, pixelStandardDeviation_cu, pixelMean_cu),
-          rawSearchArea = Some(searchImage),
-          bbPointList = Some(inPixXY.map(p => new Point2i(p.x + xOffset, p.y + yOffset))),
-          bbMean_cu = bbMean_cu.toDouble
-        ) // Convert Y to DICOM gantry coordinate system
+    val xOffset = bbRect.x - searchRect.x
+    val yOffset = bbRect.y - searchRect.y
+    val bbLocation = new Point2d(bbCenter_mm.getX, -bbCenter_mm.getY)
+    val result =
+      Result(
+        error,
+        bbCenter_pix,
+        al,
+        bbLocation,
+        toBBbyEPID(al, bbLocation, outputPK, bbStdDevMultiple = bbStdDevMultiple, pixelStandardDeviation_cu, pixelMean_cu),
+        rawSearchArea = Some(searchImage),
+        bbPointList = Some(inPixXY.map(p => new Point2i(p.x + xOffset, p.y + yOffset))),
+        bbMean_cu = bbMean_cu.toDouble
+      ) // Convert Y to DICOM gantry coordinate system
 
-      Right(result)
-    } else {
-      val msg = "Failed to find image of BB in EPID image with sufficient contrast to background. for gantry angle " + Util.gantryAngle(al)
-      logger.warn(msg)
-      Left(FailedResult(msg, al))
-    }
+    result
   }
 
   // define the official function
-  def findBB(al: AttributeList, outputPK: Long): Either[FailedResult, Result] = findBBold(al, outputPK)
-
+  def findBB(al: AttributeList, outputPK: Long): Result = findBBold(al, outputPK)
 
 }

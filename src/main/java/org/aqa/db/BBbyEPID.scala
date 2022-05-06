@@ -19,7 +19,6 @@ package org.aqa.db
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.AngleType
 import org.aqa.Logging
 import org.aqa.Util
@@ -75,9 +74,11 @@ case class BBbyEPID(
       "\n    epid image X,Y : " + Util.fmtDbl(epidImageX_mm) + ", " + Util.fmtDbl(epidImageY_mm) +
       "\n    epid 3D X,Y,Z : " + Util.fmtDbl(epid3DX_mm) + ", " + Util.fmtDbl(epid3DY_mm) + ", " + Util.fmtDbl(epid3DZ_mm) +
       "\n    table Xlat,Yvert,Zlong : " + Util.fmtDbl(tableXlateral_mm) + ", " + Util.fmtDbl(tableYvertical_mm) + ", " + Util.fmtDbl(tableZlongitudinal_mm) +
-      "\n    BB standard deviation multiple: " + Util.fmtDbl(bbStdDevMultiple) + "    pixel std dev: " + Util.fmtDbl(pixelStandardDeviation_cu) + "    pixel mean CU: " + Util.fmtDbl(
-      pixelMean_cu
-    ) + "    is open field: " + isOpenFieldImage
+      "\n    BB standard deviation multiple: " + Util.fmtDbl(bbStdDevMultiple) +
+      "\n    background pixel coefficient of variation: " + Util.fmtDbl(pixelCoefficientOfVariation) +
+      "\n    background pixel std dev: " + Util.fmtDbl(pixelStandardDeviation_cu) +
+      "\n    background pixel mean CU: " + Util.fmtDbl(pixelMean_cu) +
+      "\n    is open field: " + isOpenFieldImage
 
   val epid = new Point3d(epid3DX_mm, epid3DY_mm, epid3DZ_mm)
 

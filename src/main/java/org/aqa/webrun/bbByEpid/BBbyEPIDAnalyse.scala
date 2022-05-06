@@ -20,9 +20,6 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
-import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.ImageUtil
-import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.AngleType
 import org.aqa.Logging
 import org.aqa.Util
@@ -36,7 +33,6 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.dailyQA.DailyQAActivity
 import org.restlet.Response
 
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import javax.vecmath.Point3d
@@ -302,57 +298,7 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
 
       val bbLocList = runReq.epidList.par.map(epid => BBbyEPIDImageAnalysis.findBB(epid, extendedData.output.outputPK.get)).toList
 
-      if (false) { // todo rm
-
-        val trans = new IsoImagePlaneTranslator(runReq.epidList.head)
-
-        val x = trans.iso2PixCoordX(-5)
-        val y = trans.iso2PixCoordY(-15)
-        val width = trans.iso2PixDistX(10)
-        val height = trans.iso2PixDistY(10)
-
-        val rect = Util.rectD(x, y, width, height)
-
-        val sub1 = new DicomImage(runReq.epidList.head).getSubArray(rect)
-        val sub2 = new DicomImage(runReq.epidList(1)).getSubArray(rect)
-
-        def fmt(d: Double) = d.formatted("%18.10f")
-
-        def stats(pixels: IndexedSeq[IndexedSeq[Float]]): String = {
-          val pix = pixels.flatten
-          val mean = pix.sum / pix.size
-          val stdDev = ImageUtil.stdDev(pix)
-          val coefficientOfVar = stdDev / mean
-          "mean: " + fmt(mean) + "    stdDev" + fmt(stdDev) + "    Coefficient of Var: " + fmt(coefficientOfVar) +
-            " pix: " + pixels.head.take(10).mkString("    ") + " :: " + pixels(1).take(10).mkString("    ")
-        }
-
-        val div = sub1.zip(sub2).map(rowPair => rowPair._1.zip(rowPair._2).map(ab => ab._1 / ab._2))
-
-        println(
-          "\n" +
-            "al 1 : " + stats(sub1) + "\n" +
-            "al 2 : " + stats(sub2) + "\n" +
-            "div  : " + stats(div) + "\n"
-        )
-
-        val dir = new File("""D:\pf\IntelliJ\ws\aqa\target\compare""")
-
-        def write(pix: IndexedSeq[IndexedSeq[Float]], name: String): Unit = {
-          val buf = ImageUtil.magnify(new DicomImage(pix).toDeepColorBufferedImage(0.01), 10)
-          Util.writePng(buf, new File(dir, name))
-        }
-
-        write(sub1, "sub1.png")
-        write(sub2, "sub2.png")
-        write(div, "div.png")
-
-        println("wrote images in " + dir.getAbsolutePath)
-      }
-
-      //  bbLocList.map(bbl => if (bbl.isLeft) Left(bbl.left.get) else (
-
-      val successList = bbLocList.filter(_.isRight).map(r => r.right.get) // list of bb's that were successfully found.
+      val successList = bbLocList.filter(_.error.isEmpty) // list of bb's that were successfully found.
       logger.info("Inserting " + successList.size + " BBbyEPID records into database")
       BBbyEPID.insertSeq(successList.map(_.bbByEpid))
 
