@@ -26,20 +26,20 @@
     <pre>
         &#xA0;
         SELECT
-          "institution"."name",                     -- anonymized name of institution
-          "machine"."id",                           -- anonymized name of machine
-          "machineType"."model",                    -- type of machine
-          "multileafCollimator"."model",            -- HD or Millenium
-          "output"."dataDate",                      -- time and date that data was collected
-       -- "output"."analysisDate",                  -- time and date that data was analyzed
-          "wedgePoint"."wedgeBeamName",             -- name of wedge beam in RTPLAN
-          "wedgePoint"."backgroundBeamName",        -- name of background beam in RTPLAN
-          "wedgePoint"."wedgeValue_cu",             -- value of wedge point in CU : Calibrated Units
-          "wedgePoint"."backgroundValue_cu",        -- corresponding value of background field point in CU : Calibrated Units
-          "wedgePoint"."percentOfBackground_pct",   -- (wedgeValue_cu * 100) / backgroundValue_cu
-          "wedgePoint"."isBaseline"                 -- If true, then this is to be used as a baseline.  If not preceded
-                                                    --     chronologically by a baseline, then it will be used as a base even
-                                                    --     if it is false.  Defaults to false.
+          "institution"."name" as "Institution",          -- anonymized name of institution
+          "machine"."id" as "Machine",                    -- anonymized name of machine
+          "machineType"."model",                          -- type of machine
+          "multileafCollimator"."model" as "Collimator",  -- HD or Millenium
+          "output"."dataDate",                            -- time and date that data was collected
+       -- "output"."analysisDate",                        -- time and date that data was analyzed
+          "wedgePoint"."wedgeBeamName",                   -- name of wedge beam in RTPLAN
+          "wedgePoint"."backgroundBeamName",              -- name of background beam in RTPLAN
+          "wedgePoint"."wedgeValue_cu",                   -- value of wedge point in CU : Calibrated Units
+          "wedgePoint"."backgroundValue_cu",              -- corresponding value of background field point in CU : Calibrated Units
+          "wedgePoint"."percentOfBackground_pct",         -- (wedgeValue_cu * 100) / backgroundValue_cu
+          "wedgePoint"."isBaseline"                       -- If true, then this is to be used as a baseline.  If not preceded
+                                                          --     chronologically by a baseline, then it will be used as a base even
+                                                          --     if it is false.  Defaults to false.
 		FROM
           public."wedgePoint",
           public."institution",

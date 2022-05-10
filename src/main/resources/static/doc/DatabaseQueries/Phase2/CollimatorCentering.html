@@ -25,22 +25,22 @@
     <pre>
         &#xA0;
         SELECT
-          "institution"."name",                         -- anonymized name of institution
-          "machine"."id",                               -- anonymized name of machine
-          "machineType"."model",                        -- type of machine
-          "multileafCollimator"."model",                -- HD or Millenium
-          "output"."dataDate",                          -- time and date that data was collected
-       -- "output"."analysisDate",                      -- time and date that data was analyzed
-          "collimatorCentering"."xCollimatorCenter_mm", -- X collimator isoplane center of rotation in mm
-          "collimatorCentering"."yCollimatorCenter_mm", -- Y collimator isoplane center of rotation in mm
-          "collimatorCentering"."X1_090_mm",            -- X1 position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
-          "collimatorCentering"."X2_090_mm",            -- X2 position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
-          "collimatorCentering"."Y1_090_mm",            -- Y1 position of collimator leaf edge for gantry at 90 degrees (Y axis) in mm
-          "collimatorCentering"."Y2_090_mm",            -- Y2 position of collimator leaf edge for gantry at 90 degrees (Y axis) in mm
-          "collimatorCentering"."X1_270_mm",            -- X1 position of collimator leaf edge for gantry at 270 degrees (X axis) in mm
-          "collimatorCentering"."X2_270_mm",            -- X2 position of collimator leaf edge for gantry at 270 degrees (X axis) in mm
-          "collimatorCentering"."Y1_270_mm",            -- Y1 position of collimator leaf edge for gantry at 270 degrees (Y axis) in mm
-          "collimatorCentering"."Y2_270_mm"             -- Y2 position of collimator leaf edge for gantry at 270 degrees (Y axis) in mm
+          "institution"."name" as "Institution",         -- anonymized name of institution
+          "machine"."id" as "Machine",                   -- anonymized name of machine
+          "machineType"."model",                         -- type of machine
+          "multileafCollimator"."model" as "Collimator", -- HD or Millenium
+          "output"."dataDate",                           -- time and date that data was collected
+       -- "output"."analysisDate",                       -- time and date that data was analyzed
+          "collimatorCentering"."xCollimatorCenter_mm",  -- X collimator isoplane center of rotation in mm
+          "collimatorCentering"."yCollimatorCenter_mm",  -- Y collimator isoplane center of rotation in mm
+          "collimatorCentering"."X1_090_mm",             -- X1 position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
+          "collimatorCentering"."X2_090_mm",             -- X2 position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
+          "collimatorCentering"."Y1_090_mm",             -- Y1 position of collimator leaf edge for gantry at 90 degrees (Y axis) in mm
+          "collimatorCentering"."Y2_090_mm",             -- Y2 position of collimator leaf edge for gantry at 90 degrees (Y axis) in mm
+          "collimatorCentering"."X1_270_mm",             -- X1 position of collimator leaf edge for gantry at 270 degrees (X axis) in mm
+          "collimatorCentering"."X2_270_mm",             -- X2 position of collimator leaf edge for gantry at 270 degrees (X axis) in mm
+          "collimatorCentering"."Y1_270_mm",             -- Y1 position of collimator leaf edge for gantry at 270 degrees (Y axis) in mm
+          "collimatorCentering"."Y2_270_mm"              -- Y2 position of collimator leaf edge for gantry at 270 degrees (Y axis) in mm
         FROM
           public."collimatorCentering",
           public."institution",

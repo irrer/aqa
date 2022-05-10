@@ -26,17 +26,17 @@
     <pre>
         &#xA0;
         SELECT
-          "institution"."name",             -- anonymized name of institution
-          "machine"."id",                   -- anonymized name of machine
-          "machineType"."model",            -- type of machine
-          "multileafCollimator"."model",    -- HD or Millenium
-          "output"."dataDate",              -- time and date that data was collected
-       -- "output"."analysisDate",          -- time and date that data was analyzed
-          "vmat"."beamNameMLC",             -- name of VMAT beam in RTPLAN
-          "vmat"."beamNameOpen",            -- name of open beam in RTPLAN
-          "vmat"."doseMLC_cu",              -- average dose value in CU
-          "vmat"."doseOpen_cu",             -- average dose value of open in CU
-          "vmat"."beamAverage_pct",         -- average percent dose value for all VMAT readings for this beam
+          "institution"."name" as "Institution",          -- anonymized name of institution
+          "machine"."id" as "Machine",                    -- anonymized name of machine
+          "machineType"."model",                          -- type of machine
+          "multileafCollimator"."model" as "Collimator",  -- HD or Millenium
+          "output"."dataDate",                            -- time and date that data was collected
+       -- "output"."analysisDate",                        -- time and date that data was analyzed
+          "vmat"."beamNameMLC",                           -- name of VMAT beam in RTPLAN
+          "vmat"."beamNameOpen",                          -- name of open beam in RTPLAN
+          "vmat"."doseMLC_cu",                            -- average dose value in CU
+          "vmat"."doseOpen_cu",                           -- average dose value of open in CU
+          "vmat"."beamAverage_pct",                       -- average percent dose value for all VMAT readings for this beam
 
               -- The following 4 columns are the top, bottom, left, and right positions of the
               --     collimator in mm for this data as specified by the RTPLAN.

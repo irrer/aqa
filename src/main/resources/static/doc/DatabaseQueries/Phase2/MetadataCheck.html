@@ -23,10 +23,10 @@
     <pre>
         &#xA0;
         SELECT
-          "institution"."name",                                 -- anonymized name of institution
-          "machine"."id",                                       -- anonymized name of machine
+          "institution"."name" as "Institution",                -- anonymized name of institution
+          "machine"."id" as "Machine",                          -- anonymized name of machine
           "machineType"."model",                                -- type of machine
-          "multileafCollimator"."model",                        -- HD or Millenium
+          "multileafCollimator"."model" as "Collimator",        -- HD or Millenium
           "output"."dataDate",                                  -- time and date that data was collected
        -- "output"."analysisDate",                              -- time and date that data was analyzed
           "metadataCheck"."beamName",                           -- name of beam in RTPLAN

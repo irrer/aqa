@@ -28,19 +28,19 @@
     <pre>
         &#xA0;
         SELECT
-          "institution"."name",                     -- anonymized name of institution
-          "machine"."id",                           -- anonymized name of machine
-          "machineType"."model",                    -- type of machine
-          "multileafCollimator"."model",            -- HD or Millenium
-          "output"."dataDate",                      -- time and date that data was collected
-       -- "output"."analysisDate",                  -- time and date that data was analyzed
-          "symmetryAndFlatness"."top_cu",           -- average value of pixels in top circle in CU
-          "symmetryAndFlatness"."bottom_cu",        -- average value of pixels in bottom circle in CU
-          "symmetryAndFlatness"."left_cu",          -- average value of pixels in left circle in CU
-          "symmetryAndFlatness"."right_cu",         -- average value of pixels in right circle in CU
-          "symmetryAndFlatness"."center_cu",        -- average value of pixels in center circle in CU
-          "symmetryAndFlatness"."isBaseline"        -- If true, then this data set should be used as a baseline for
-                                                    --   this and subsequent data sets with the same machine and beam.
+          "institution"."name" as "Institution",          -- anonymized name of institution
+          "machine"."id" as "Machine",                    -- anonymized name of machine
+          "machineType"."model",                          -- type of machine
+          "multileafCollimator"."model" as "Collimator",  -- HD or Millenium
+          "output"."dataDate",                            -- time and date that data was collected
+       -- "output"."analysisDate",                        -- time and date that data was analyzed
+          "symmetryAndFlatness"."top_cu",                 -- average value of pixels in top circle in CU
+          "symmetryAndFlatness"."bottom_cu",              -- average value of pixels in bottom circle in CU
+          "symmetryAndFlatness"."left_cu",                -- average value of pixels in left circle in CU
+          "symmetryAndFlatness"."right_cu",               -- average value of pixels in right circle in CU
+          "symmetryAndFlatness"."center_cu",              -- average value of pixels in center circle in CU
+          "symmetryAndFlatness"."isBaseline"              -- If true, then this data set should be used as a baseline for
+                                                          --   this and subsequent data sets with the same machine and beam.
         FROM
           public."symmetryAndFlatness",
           public."institution",

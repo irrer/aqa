@@ -23,14 +23,14 @@
     <pre>
         &#xA0;
         SELECT
-          "institution"."name",                     -- anonymized name of institution
-          "machine"."id",                           -- anonymized name of machine
-          "machineType"."model",                    -- type of machine
-          "multileafCollimator"."model",            -- HD or Millenium
-          "output"."dataDate",                      -- time and date that data was collected
-       -- "output"."analysisDate",                  -- time and date that data was analyzed
-          "centerDose"."beamName",                  -- name of beam in RTPLAN
-          "centerDose"."dose"                       -- average dose of pixels in center of image in CU
+          "institution"."name" AS "Institution",         -- anonymized name of institution
+          "machine"."id" AS "Machine",                   -- anonymized name of machine
+          "machineType"."model",                         -- type of machine
+          "multileafCollimator"."model" AS "Collimator", -- HD or Millenium
+          "output"."dataDate",                           -- time and date that data was collected
+       -- "output"."analysisDate",                       -- time and date that data was analyzed
+          "centerDose"."beamName",                       -- name of beam in RTPLAN
+          "centerDose"."dose"                            -- average dose of pixels in center of image in CU
         FROM
           public."centerDose",
           public."institution",

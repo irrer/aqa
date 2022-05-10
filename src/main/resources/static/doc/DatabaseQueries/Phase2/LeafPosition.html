@@ -31,20 +31,20 @@
     <pre>
         &#xA0;
         SELECT
-          "institution"."name",                     -- anonymized name of institution
-          "machine"."id",                           -- anonymized name of machine
-          "machineType"."model",                    -- type of machine
-          "multileafCollimator"."model",            -- HD or Millenium
-          "output"."dataDate",                      -- time and date that data was collected
-       -- "output"."analysisDate",                  -- time and date that data was analyzed
-          "leafPosition"."beamName",                -- name of beam in RTPLAN
-          "leafPosition"."leafIndex",               -- leaf number starting at 1
-          "leafPosition"."leafPositionIndex",       -- leaf position number as it moves across the field.  This will be a number from 1 to 10.
-          "leafPosition"."offset_mm",               -- difference from expected location in mm: measuredEndPosition_mm - expectedEndPosition_mm
-          "leafPosition"."measuredEndPosition_mm",  -- measured position of leaf end in mm
-          "leafPosition"."expectedEndPosition_mm",  -- expected position of leaf end in mm
-          "leafPosition"."measuredLowSide_mm",      -- measured position of top side of leaf in mm
-          "leafPosition"."measuredHighSide_mm"      -- measured position of bottom side of leaf in mm
+          "institution"."name" as "Institution",          -- anonymized name of institution
+          "machine"."id" as "Machine",                    -- anonymized name of machine
+          "machineType"."model",                          -- type of machine
+          "multileafCollimator"."model" as "Collimator",  -- HD or Millenium
+          "output"."dataDate",                            -- time and date that data was collected
+       -- "output"."analysisDate",                        -- time and date that data was analyzed
+          "leafPosition"."beamName",                      -- name of beam in RTPLAN
+          "leafPosition"."leafIndex",                     -- leaf number starting at 1
+          "leafPosition"."leafPositionIndex",             -- leaf position number as it moves across the field.  This will be a number from 1 to 10.
+          "leafPosition"."offset_mm",                     -- difference from expected location in mm: measuredEndPosition_mm - expectedEndPosition_mm
+          "leafPosition"."measuredEndPosition_mm",        -- measured position of leaf end in mm
+          "leafPosition"."expectedEndPosition_mm",        -- expected position of leaf end in mm
+          "leafPosition"."measuredLowSide_mm",            -- measured position of top side of leaf in mm
+          "leafPosition"."measuredHighSide_mm"            -- measured position of bottom side of leaf in mm
 		FROM
           public."leafPosition",
           public."institution",
