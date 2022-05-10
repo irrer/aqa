@@ -26,6 +26,7 @@ import org.aqa.db.Machine
 import org.aqa.db.MaintenanceRecord
 import org.aqa.db.Output
 import org.aqa.db.Procedure
+import org.aqa.web.MachineUpdate
 import org.aqa.web.WebServer
 import org.aqa.web.WebUtil
 
@@ -349,6 +350,45 @@ object Phase2Csv extends Logging {
     }
   }
 
+  private def machineAliasTable(institutionPK: Long): Elem = {
+    val machineSeq = metadataCache.machineMap.values.filter(m => m.institutionPK == institutionPK).toSeq
+
+    def sortMach(a: Machine, b: Machine): Boolean = {
+      val aName = a.getRealId
+      val bName = b.getRealId
+
+      val aNum = aName.replaceAll("[^0-9]", "")
+      val bNum = bName.replaceAll("[^0-9]", "")
+
+      if (aNum.isEmpty || bNum.isEmpty) aName.compareTo(bName) <= 0
+      else aNum.toLong <= bNum.toLong
+    }
+
+    val orderedSeq = machineSeq.sortWith(sortMach)
+
+    def toRow(machine: Machine): Elem = {
+      <tr>
+        <td>{MachineUpdate.linkToMachineUpdate(machine.machinePK.get, machine.id)}</td>
+        <td>{machine.id}</td>
+      </tr>
+    }
+
+    val content = {
+      <div class="row">
+        <h3 style="margin-top:30px;">Machine Alias Table</h3>
+        <div class="col-md-6 col-md-offset-3">
+          <table class="table table-bordered">
+            <tr>
+              <th title="Click for details.">Machine</th>
+              <th>Alias</th>
+            </tr>{orderedSeq.map(toRow)}
+          </table>
+        </div>
+      </div>
+    }
+    content
+  }
+
   /**
     * Generate a user friendly web page to act as an index and write it as a file.  This
     * also creates the ZIP file which contains all the CSV files.
@@ -409,6 +449,9 @@ object Phase2Csv extends Logging {
         </table>
         <center>
           <a href={zipFileName}>Download zipped version of all CSV files.</a>
+        </center>
+        <center>
+          {machineAliasTable(institutionPK)}
         </center>
         {notesTag}
       </div>
