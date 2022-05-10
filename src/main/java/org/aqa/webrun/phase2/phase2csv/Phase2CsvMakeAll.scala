@@ -25,11 +25,13 @@ import org.aqa.db.DbSetup
   */
 object Phase2CsvMakeAll extends Logging {
 
-  def main(args: Array[String]): Unit = {
-    DbSetup.init
+  /**
+    * Make all of the CSV content, overwriting old content.
+    */
+  def makeAll(): Unit = {
 
     val start = System.currentTimeMillis()
-    logger.info("Database has been initialized.  Starting CSV generation.")
+    logger.info("Starting CSV generation.")
 
     val metadataCache = MetadataCache.metadataCache
 
@@ -54,8 +56,7 @@ object Phase2CsvMakeAll extends Logging {
       for (dt <- dataTypeList) {
         try {
           dt.writeToFile(csvDir, machineList)
-        }
-        catch {
+        } catch {
           case t: Throwable => logger.error("Unexpected exception writing " + dt.getDataName + " : " + fmtEx(t))
         }
       }
@@ -71,6 +72,18 @@ object Phase2CsvMakeAll extends Logging {
     metadataCache.institutionNameMap.keys.foreach(institutionPK => Phase2Csv.generateIndex(institutionPK))
 
     logger.info("Done with CSV generation.  Elapsed time: " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
+  }
+
+  /**
+    * 'main' wrapper for function.
+    * @param args Not used.
+    */
+  def main(args: Array[String]): Unit = {
+    logger.info("Initializing database for CSV generation ...")
+    DbSetup.init
+    makeAll()
+    Thread.sleep(1000)
+    System.exit(0) // Note:
   }
 
 }
