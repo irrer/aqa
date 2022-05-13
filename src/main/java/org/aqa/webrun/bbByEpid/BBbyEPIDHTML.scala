@@ -203,12 +203,13 @@ object BBbyEPIDHTML {
               </div>
             </div>
             <div class="row">
-              <pre>
-                {result.diagnostics}
-              </pre>
-              <br/>DICOM Metadata<br/>
+              <br/><h4>DICOM Metadata</h4><br/>
               <pre>
                 {WebUtil.nl + DicomUtil.attributeListToString(al)}
+              </pre>
+              <h4 style="margin-top: 24px">Diagnostics of Image Analysis</h4>
+              <pre>
+                {WebUtil.nl + result.diagnostics}
               </pre>
               {WebUtil.nl}
               <p> </p>

@@ -94,7 +94,7 @@ object BBbyEPIDImageAnalysis extends Logging {
 
       def errorText = {
         if (ok)
-          "Result is ok.\n"
+          "Image noise was sufficiently low to find BB.\n"
         else
           "Error: " + error + "\n"
       }
@@ -122,7 +122,7 @@ object BBbyEPIDImageAnalysis extends Logging {
 
       def minMaxColumnRatioText = {
         if (minMaxColumnRatio.isDefined)
-          "minMaxColumnRatio: " + minMaxColumnRatio.get + "\n"
+          "max background column sum / min background column sum\n  (near 1 if amplifiers are calibrated consistently): " + minMaxColumnRatio.get + "\n"
         else
           ""
       }

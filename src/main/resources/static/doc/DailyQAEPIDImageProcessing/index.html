@@ -15,49 +15,170 @@
     limitations under the License.
     -->
 
-    <!-- This would be better with images. TODO -->
-
     <h2>@@title@@</h2>
     <p>
         This describes the BB finding algorithm and precise measurement of the BB's location.
     </p>
 
-    <h3>Coarse (approximate) Location of BB</h3>
+    <hr style='margin:40px;'/>
+    <h3>Defining the Search Area (Area of Interest)</h3>
     <p>
         The first step is to determine the BB's approximate location within the EPID plane. This is done by restricting
         the search area to a square centered in the image. The size of the square is 2 x BBbyEPIDSearchDistance_mm,
-        where BBbyEPIDSearchDistance_mm is a configuration value. The size of the square is smaller than the cube
-        containing the BB, as shown by the yellow box below.
+        where BBbyEPIDSearchDistance_mm is a configuration value (currently set to 8 mm, so the search area is 16x16mm).
+        The size of the square is smaller than the cube containing the BB, as shown by the yellow box below.
     </p>
     <center style="margin:40px;">
-        <img width='512' src="FullImage.png" style="margin:5px; border: 1px solid lightgrey;"/>
+        <img width='512' src="FullImage.png" style="margin:5px; border: 1px solid lightgray;"/>
     </center>
     <p>
-        The square is searched by examining each possible array of 2x2 pixels to see which is the
-        brightest. Next, the brightest adjacent pixels are included until an area has been acquired that is equivalent
-        to the area of the BB.
+        The reason for restricting the initial search area is:
     </p>
+    <ul>
+        <li>
+            Frequently there are element of the table in the image, and this is a simple way to ignore them.
+        </li>
+        <li>
+            If the BB is outside of this area, then the test would be considered a failure anyway.
+        </li>
+        <li>
+            Processing a smaller area is more resource efficient.
+        </li>
+    </ul>
+
+    <hr style='margin:40px;'/>
+    <h3>Columnar Amplification Correction</h3>
+
     <p>
-        The image below shows a close up image with pixel values contrasted for clarity. The pixels of the BB are
-        identified and marked as green.
+        The next step is to correct the image for differences in pixel amplification. When EPID images are captured,
+        each column is processed by a different amplifier circuit. Small differences between amplifiers can make some
+        columns brighter or darker than others.
     </p>
-    <center style="margin:60px;">
-        <img width='512' src="Closeup.png" style="margin:5px; border: 1px solid lightgrey;"/>
-    </center>
+
+    <p>
+        To correct for differences in columnar amplification, the areas above and below the search area are taken as
+        shown below. Each are the same size as the search area. Due to the design of the test, these ares will be flat
+        (featureless), and provide good samples of average pixel intensity.
+    </p>
+
+
+    <div style="margin:30px;">
+        <center>
+            <a href='FullImageColumnarSampling.png'
+               title='Green squares showing the areas used to establish the average brightness of each pixel column.'>
+                <img width='512' src='FullImageColumnarSampling.png'/>
+            </a>
+            <br/>
+            <i>Green squares above and below the search area (outlined in yellow) indicate the pixels used to determine
+                the average brightness of each column of pixels.</i>
+        </center>
+    </div>
+
+
+    <p>
+        The mean value of each column of pixels in the green areas (both above and below the search area) is calculated.
+        Next, the mean value of the dimmest column is selected. For each of the columns in the search area (in yellow),
+        the value of each pixel is multiplied by:
+    </p>
+
+    <div style="text-indent: 50px;">
+        <p style="margin:30px;">
+            $CompensationFactor = ColumnMeanValue / DimmestColumnMeanValue$
+        </p>
+    </div>
+
+
+    <p>
+        The result is to reduce the differences in columnar amplification.
+    </p>
+
+    <div style="margin:30px;">
+        <center>
+            <table>
+                <tr>
+                    <td>
+                        <a href='RawSearchArea.png' title='Search area before processing.' style='margin-right:40px;'>
+                            <img width='400'
+                                 src='RawSearchArea.png'/>
+                        </a>
+                    </td>
+                    <td>
+                        <a href='ColumnarCorrectedSearchArea.png' title='Search area after processing.'
+                           style='margin-left:40px;'> <img
+                                width='400' src='ColumnarCorrectedSearchArea.png'/> </a>
+                    </td>
+                </tr>
+            </table>
+            <br/>
+            <i>The images above show the initial raw image on the left and the processed image on the right. Notice that
+                the left portion of the image has been darkened in the second image.</i>
+        </center>
+    </div>
+
+
+    <p>
+        Testing of this image processing waas performed on over 200 images from seven different treatment machines.
+        Changes in pixel location were small and random, except in situations such as the one above, where there a
+        significant bias in the image. In those cases the BB's position would change by approximately 0.5 mm.
+    </p>
+
+
+    <hr style='margin:40px;'/>
+    <h3>Coarse (approximate) Location of BB</h3>
+    <p>
+        The square is searched by constructing a template of pixels approximating the BB. That template is checked at
+        every position within the search area to determine which position yields the brightest set of pixels. That
+        position is used as the coarse position of the BB.
+    </p>
+
+
+    <div style="margin:30px;">
+        <center>
+            <a href='IdealBB.png'
+               title='Example of template representing the profile of an ideal BB.'>
+                <img width='512' src='IdealBB.png'/>
+            </a>
+            <br/>
+            <i>Example of template representing the profile of an ideal BB. The number of pixels will vary depending on
+                the EPID pixel size.</i>
+        </center>
+    </div>
+
+    <hr style='margin:40px;'/>
+    <h3>Precise Location</h3>
+    <p>
+        To determine the BB's precise location, the center pixel of the coarse location is used as a starting point.
+        Next, the brightest of all adjacent pixels (sharing an edge or corner) is selected and added to what is
+        considered to be part of the BB. Again, the brightest pixel adjacent to the two BBs is found and added. This
+        process is iterated until enough pixels have been found such that the sum of their area is the same as the area
+        of the BB.
+    </p>
+
+
+    <div style="margin:30px;">
+        <center>
+            <a href='Closeup.png'
+               title='The image below shows a close up image with pixel values contrasted for clarity. The pixels of the BB are identified and marked as green.'>
+                <img width='512' src='Closeup.png'/>
+            </a>
+            <br/>
+            <i>A close up image with pixel values contrasted for clarity. The pixels of the BB ar identified and marked
+                as green. </i>
+        </center>
+    </div>
 
     <p>
         The center of mass (which includes the pixels' location and brightness) of the BB's
         pixels is calculated in X and Y to determine the BB's precise location.
     </p>
-    <p>
-        For the BB's location to be valid, it must be significantly brighter than the surrounding pixels. For
-        validation, the standard deviation and mean of the pixels in the search area that are not included by the BB is
-        calculated. A BB standard deviation multiple is calculated by:
-    </p>
+
+    <p>For the BB's location to be valid, it must be significantly brighter than the surrounding pixels. For validation,
+        the standard deviation and mean of the pixels in the search area that are not included by the BB is calculated.
+        A BB standard deviation multiple is calculated by:</p>
 
     <div style="text-indent: 50px;">
         <p style="margin:30px;">
-            $SearchArea_{mean}$ : Mean value of pixels inside the search area but not part of the BB
+            $SearchArea_{mean}$ : Mean value of pixels inside the search area but not part of the BB.
         </p>
         <p style="margin:30px;">
             $BB_{mean}$ : Mean value of BB's pixels (shown in green)
@@ -66,16 +187,98 @@
             $SearchArea_{StandardDeviation}$ : Standard deviation of pixels in search area but not part of BB
         </p>
         <p style="margin:30px;">
-            $$absoluteValueOf(BB_{mean} - SearchArea_{mean}) / SearchArea_{StandardDeviation} $$
+            $$RelativeBBBrightness = absoluteValueOf(BB_{mean} - SearchArea_{mean}) / SearchArea_{StandardDeviation} $$
         </p>
     </div>
+
+    <p style='margin-left:80px; margin-right:80px;'>
+        <i>Note: For pixels to qualify as background, they must
+            be far enough away from the precise center of the BB. The
+            distance used is three times the BB's radius (Configuration parameter: <b>EPIDBBPenumbra_mm</b>.)</i>
+    </p>
+
+    <p style='margin-top:50px;'>
+        If $RelativeBBBrightness$ is larger than the configuration parameter
+        <b><i>EPIDBBMinimumStandardDeviation</i></b>, then the BB is considered valid. The value of this configuration
+        parameter was chosen by observing the value from a variety of EPID images.
+    </p>
+
+    <hr style='margin:40px;'/>
+    <h3>Explanation of Technical Details</h3>
+
+    In the <b><i>BB Location by EPID</i></b> web page there is a <b><i>Technical Details</i></b> link for each image.
+    <center style="margin:40px;">
+        <img width='512' src="TechnicalDetailsLink.png" style="margin:5px; border: 1px solid lightgray;"/>
+    </center>
+
     <p>
-        If this value is large enough, then the BB is considered valid. The configuration value
-        <b><i>EPIDBBMinimumStandardDeviation</i></b> is used for the comparison.
+        This link will show the metadata for the DICOM image, as well as some statistics regarding the image. A partial
+        screenshot is shown below of image diagnostics values. These values are generally only used when diagnosing a
+        problem with image processing.
     </p>
 
-    <p style="margin:100px;">
+    <ul>
+        <li><b>Result is ok. : </b>Indicates that the BB was found with sufficient contrast to the background. The BB
+            may
+            or may not be centered properly, and the Daily QA may succeed or fail.
+        </li>
+        <li><b>Precise pixel coordinates (pix): </b>Precise coordinates of the BB in pixel coordinates within the image.
+        </li>
+        <li><b>Precise isoplane coordinates (pix): </b>Precise coordinates of the BB in isoplane coordinates.</li>
+        <li><b>bbByEpidPK: </b>Begins a list of values that are stored in the databse The 'None' will be overwritten and
+            can be ignored.
+        </li>
+        <li><b>outputPK : </b>Database output referenced by this database row.</li>
+        <li><b>epidSOPInstanceUid : </b>DICOM UID.</li>
+        <li><b>offset_mm : </b>Total offset in mm.</li>
+        <li><b>gantryAngle_deg : </b>Gantry angle in degrees.</li>
+        <li><b>status : </b>'Done' indicates processing completed as expected.</li>
+        <li><b>epid image X,Y : </b>Isoplane coordinates in mm.</li>
+        <li><b>epid 3D X,Y,Z : </b>3D Isoplane coordinates in mm.</li>
+        <li><b>table Xlat,Yvert,Zlong : </b>Table position in mm.</li>
+        <li><b>BB standard deviation multiple : </b>Indicates what factor the mean pixel value of the BB is above the
+            background standard deviation.
+        </li>
+        <li><b>background pixel coefficient of variation : </b>Background standard deviation divided by background mean.
+        </li>
+        <li><b>background pixel std dev : </b>Standard deviation of background pixels.</li>
+        <li><b>background pixel mean CU : </b>Mean value of background pixels.</li>
+        <li><b>is open field : </b>True if the EPID was an open field.</li>
+        <li><b>BB pixel coordinate list : </b>List of X,Y coordinates of the BB pixels. These are relative to the
+            upper-left corner of the search area.
+        </li>
+        <li><b>bbMean_cu : </b>Mean value of BB pixels.</li>
+        <li><b>minMaxColumnRatio : </b>Ratio of the brightest background column of pixels to the darkest. This value
+            should be close to 1. A value of around 1.02 means that the image
+            has a large variation between light and dark columns, and is possibly a sign that the EPID should be
+            re-calibrated.
+        </li>
+        <li><b>Raw search area pixels : </b>Grid of pixel values for the (raw) search area before columnar image
+            processing.
+        </li>
+        <li><b>Processed search area pixels : </b>Grid of pixel values for the search area after columnar image
+            processing. Showing both of these is an indication of how values changed.
+        </li>
+    </ul>
 
+
+    <div style="margin:30px;">
+        <center>
+            <i>Partial screenshot of example diagnostics. </i>
+            <br/>
+            <a href='DiagnosticsExample.png'
+               title='The image below shows a close up image with pixel values contrasted for clarity. The pixels of the BB are identified and marked as green.'>
+                <img src='DiagnosticsExample.png'/>
+            </a>
+        </center>
+    </div>
+
+    <hr style='margin:40px;'/>
+    <h3>Final Notes</h3>
+    <p>
+        While this test is sufficient to validate Daily QA OBI, it should be noted that because the BB is small, it's
+        location is based on a very few pixels. Also, because that EPID images are taken at a low energy, the images
+        tend to be noisier. The implication is that there are limits to how accurately the BB may be located.
     </p>
-
+    <hr style='margin:40px;'/>
 </div>
