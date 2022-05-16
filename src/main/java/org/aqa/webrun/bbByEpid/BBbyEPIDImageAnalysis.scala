@@ -527,7 +527,12 @@ object BBbyEPIDImageAnalysis extends Logging {
   }
 
   /**
-    * Find the BB in the RTIMAGE.
+    * Find the BB in the RTIMAGE.  Correct for columnar amplification by normalizing pixel columns.  Use
+    * the processed image for locating the BB.
+    *
+    * Note: This puts statistics from the raw image into the database as a more accurate way of
+    * assessing EPID health.
+    *
     * @param al RTIMAGE.
     * @param outputPK Output associated with this data.
     * @return Either success with data, or failure with an explanation.
@@ -568,13 +573,25 @@ object BBbyEPIDImageAnalysis extends Logging {
       }
     }
 
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    // Statistics of raw (not columnar corrected) image. These are put in the database and are a
+    // more realistic view of EPID health.
+    val preciseStatsRaw = preciseLocationUsingBBGrowth(coarseCenter, wholeImage.getSubimage(searchRect), trans, searchRect)
+    val backgroundCoOfVarRaw = preciseStatsRaw.backgroundStdDev_cu / preciseStatsRaw.backgroundMean_cu
+    println("Background coefficient of variation raw: " + backgroundCoOfVarRaw)
+
+    val bbStdDevMultipleRaw = (preciseStatsRaw.bbMean_cu - preciseStatsRaw.backgroundMean_cu) / preciseStatsRaw.backgroundStdDev_cu
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     val result =
       Result(
         error,
         pix = preciseStats.precise_pix,
         al = al,
         iso = bbCenter_mm,
-        toBBbyEPID(al, bbCenter_mm, outputPK, bbStdDevMultiple, preciseStats.backgroundStdDev_cu, preciseStats.backgroundMean_cu),
+        toBBbyEPID(al, bbCenter_mm, outputPK, bbStdDevMultipleRaw, preciseStatsRaw.backgroundStdDev_cu, preciseStatsRaw.backgroundMean_cu),
         rawSearchArea = Some(wholeImage.getSubimage(searchRect)),
         processedSearchArea = Some(searchImageColumnarCorrected),
         bbPointList = Some(preciseStats.bbPixelList),
@@ -590,7 +607,7 @@ object BBbyEPIDImageAnalysis extends Logging {
   // ------------------------------------------------------------------------------------------------------------------------------------------------
   // ------------------------------------------------------------------------------------------------------------------------------------------------
 
-  // the old way
+  // the old way.  This code is retained for comparison of results.  It does not use columnar amplification correction.
   /**
     * Define a rectangle twice the width and height of the BB centered on the coarse location of the BB
     * @param searchImage Sub-image to search for BB.

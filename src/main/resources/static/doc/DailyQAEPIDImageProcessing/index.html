@@ -74,7 +74,6 @@
         </center>
     </div>
 
-
     <p>
         The mean value of each column of pixels in the green areas (both above and below the search area) is calculated.
         Next, the mean value of the dimmest column is selected. For each of the columns in the search area (in yellow),
@@ -125,11 +124,10 @@
 
     <hr style='margin:40px;'/>
     <h3>Coarse (approximate) Location of BB</h3>
-    <p>
-        The square is searched by constructing a template of pixels approximating the BB. That template is checked at
-        every position within the search area to determine which position yields the brightest set of pixels. That
-        position is used as the coarse position of the BB.
-    </p>
+    <p> The square is searched by constructing a template of pixels approximating the BB using its radius
+        (configuration parameter <b>EPIDBBPenumbra_mm</b>). That template is checked at every position within the search
+        area to determine which position yields the brightest set of pixels. That position is used as the coarse
+        position of the BB. </p>
 
 
     <div style="margin:30px;">
@@ -139,8 +137,9 @@
                 <img width='512' src='IdealBB.png'/>
             </a>
             <br/>
-            <i>Example of template representing the profile of an ideal BB. The number of pixels will vary depending on
-                the EPID pixel size.</i>
+            <i>Enlarged example of template representing the profile of an ideal BB. The number of pixels will vary
+                depending on the EPID pixel size. This particular example includes only 9 pixels, which is typical for
+                the resolutions used for Daily QA OBI.</i>
         </center>
     </div>
 
@@ -148,33 +147,43 @@
     <h3>Precise Location</h3>
     <p>
         To determine the BB's precise location, the center pixel of the coarse location is used as a starting point.
-        Next, the brightest of all adjacent pixels (sharing an edge or corner) is selected and added to what is
-        considered to be part of the BB. Again, the brightest pixel adjacent to the two BBs is found and added. This
-        process is iterated until enough pixels have been found such that the sum of their area is the same as the area
-        of the BB.
+        Next, the brightest of all adjacent pixels (sharing an edge or corner) is selected and added to the BB. Again,
+        the brightest pixel adjacent to the two BBs is found and added. This process is iterated, growing the BB until
+        enough pixels have been found such that the sum of their area is the same as the area of the BB.
     </p>
 
 
     <div style="margin:30px;">
         <center>
-            <a href='Closeup.png'
+            <a href='CloseupAnimated.gif'
                title='The image below shows a close up image with pixel values contrasted for clarity. The pixels of the BB are identified and marked as green.'>
-                <img width='512' src='Closeup.png'/>
+                <img width='512' src='CloseupAnimated.gif'/>
             </a>
             <br/>
-            <i>A close up image with pixel values contrasted for clarity. The pixels of the BB ar identified and marked
-                as green. </i>
+            <i>An animated close up image with pixel values contrasted for clarity. The pixels of the BB are identified
+                and marked as green. The progression of images shows how the algorithm starts with the brightest pixel
+                from the coarse location, and then incrementally adds the brightest adjacent pixels. It stops when the
+                number of pixels is equivalent to the area of the BB. Using the center of mass gives bright pixels more
+                influence than dim ones.</i>
         </center>
     </div>
 
-    <p>
-        The center of mass (which includes the pixels' location and brightness) of the BB's
-        pixels is calculated in X and Y to determine the BB's precise location.
-    </p>
+    <p> Note that this will usually yield more pixels than the template because it does not have the restriction of
+        having to maintain geometric symmetry. One problem this approach addresses is that the BB has no clear edges, so
+        instead it bases 'what is part of the BB" on the BB's size. The adjacency requirement also avoids selecting
+        random single bright pixels that may be in the search area. </p>
 
-    <p>For the BB's location to be valid, it must be significantly brighter than the surrounding pixels. For validation,
-        the standard deviation and mean of the pixels in the search area that are not included by the BB is calculated.
-        A BB standard deviation multiple is calculated by:</p>
+    <p> Finally the center of mass (which includes the pixels' location and brightness) of the BB's pixels is calculated
+        in X and Y to determine the BB's precise location. </p>
+
+    <hr style='margin:40px;'/>
+    <h3>Validation</h3>
+    <p>Given the small number of pixels composing the BB, and the image's noisiness, it is possible that image noise in
+        the form of a few bright pixels could look like a BB and fool the algorithm. </p>
+
+    <p> To guard against this, the BB must be significantly brighter than the surrounding pixels. To determine this, the
+        standard deviation and mean of the pixels in the search area that are not included by the BB is calculated. A BB
+        standard deviation multiple is calculated by:</p>
 
     <div style="text-indent: 50px;">
         <p style="margin:30px;">
@@ -192,9 +201,8 @@
     </div>
 
     <p style='margin-left:80px; margin-right:80px;'>
-        <i>Note: For pixels to qualify as background, they must
-            be far enough away from the precise center of the BB. The
-            distance used is three times the BB's radius (Configuration parameter: <b>EPIDBBPenumbra_mm</b>.)</i>
+        <i>Note: For pixels to qualify as background, they must be far enough away from the precise center of the BB.
+            The distance used is three times the BB's radius (Configuration parameter: <b>EPIDBBPenumbra_mm</b>.)</i>
     </p>
 
     <p style='margin-top:50px;'>
