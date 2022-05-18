@@ -201,13 +201,11 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
       }
 
       def makeSopList(): Option[Elem] = {
-        if (dicomSeries.modality.equals("RTPLAN")) {
-          val elem = <SOPInstanceUIDList>
-            {dicomSeries.sopUidSeq.map(uid => <SOPInstanceUID>{uid.trim}</SOPInstanceUID>)}
+        val realUidList = dicomSeries.sopUidSeq.flatMap(uid => lookup(TagByName.SOPInstanceUID, uid))
+        val elem = <SOPInstanceUIDList>
+            {realUidList.map(uid => <SOPInstanceUID>{uid.trim}</SOPInstanceUID>)}
           </SOPInstanceUIDList>
-          Some(elem)
-        } else
-          None
+        Some(elem)
       }
 
       val output = outputOfDicomSeries(dicomSeries)
