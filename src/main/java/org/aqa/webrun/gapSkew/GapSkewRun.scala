@@ -20,6 +20,7 @@ import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.DicomSeries
@@ -110,6 +111,7 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
 
   /** Run the actual analysis.  This must create a display.html file in the output directory. */
   override def run(extendedData: ExtendedData, runReq: GapSkewRunReq, response: Response): ProcedureStatus.Value = {
+    val beamList = runReq.rtimageMap.keys.toSeq.mkString(" | ") // TODO rm
     val fleList = runReq.rtimageMap.keys.toSeq.filter(beam => Config.GapSkewBeamNameList.contains(beam)).map(runReq.rtimageMap)
     val dicomImageList = fleList.map(fle => new DicomImage(fle))
     val minMax = getMinMaxTrimmed(dicomImageList)
@@ -178,7 +180,24 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
         val beamNameList = failList.map(img => Phase2Util.getBeamNameOfRtimage(rtplan, img)).map(name => if (name.isDefined) name.get else "unknown")
         beamNameList
       }
+    }
 
+    /**
+      * Determine if at least one of the uploaded beams has a name that is in the configured list of beams.
+      * @return None if ok, message on failure.
+      */
+    def checkForNamedBeams(): Option[String] = {
+      val rtplan = getRtplan(rtplanRefList.head, rtplanList).get
+      val rtimageBeamNameList = rtimageList.map(rtImg => Phase2Util.getBeamNameOfRtimage(rtplan, rtImg).get).distinct
+      val identifiedBeamNameList = Config.GapSkewBeamNameList.intersect(rtimageBeamNameList)
+      if (identifiedBeamNameList.isEmpty) {
+        val text =
+          "None of the beams uploaded are configured for Gap Skew processing." + WebUtil.titleNewline +
+            "RTIMAGE beams: " + rtimageBeamNameList.mkString(" | ") + WebUtil.titleNewline +
+            "Configured beams: " + Config.GapSkewBeamNameList.mkString(" | ")
+        Some(text)
+      } else
+        None // no error
     }
 
     val result: Either[StyleMapT, RunReqClass] = 0 match {
@@ -188,6 +207,7 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
       case _ if machineSerialNumberList.size > 1 => formError("The RTIMAGE(s) reference more than one treatment machine.  There must be exactly one.")
       case _ if !rtplanIsAvailable()             => formError("Can not find the referenced RTPLAN.  Retry and upload the RTPLAN with the images.")
       case _ if !allHaveSerialNumber()           => formError("At least one RTIMAGE file does not have a device serial number defining which machine created it.")
+      case _ if checkForNamedBeams().isDefined   => formError(checkForNamedBeams().get)
       case _ if machineSerialNumberList.isEmpty =>
         formError(
           "None of the " + rtimageList.size +
