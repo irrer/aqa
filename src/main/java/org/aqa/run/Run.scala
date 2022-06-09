@@ -477,7 +477,7 @@ object Run extends Logging {
     val inputDir = makeInputDir(machine, procedure, inputWithoutDir.inputPK.get)
 
     // move input files to their final resting place
-    inputDir.getParentFile.mkdirs
+    Util.mkdirs(inputDir.getParentFile)
     renameFileTryingPersistently(sessionDir, inputDir)
     if (!inputDir.exists)
       throw new RuntimeException("Unable to rename temporary directory " + sessionDir.getAbsolutePath + " to input directory " + inputDir.getAbsolutePath)
@@ -487,7 +487,7 @@ object Run extends Logging {
     input.putFilesInDatabaseFuture(inputDir)
 
     val outputDir = new File(inputDir, outputSubdirNamePrefix + Util.timeAsFileName(startDate))
-    outputDir.mkdirs // create output directory
+    Util.mkdirs(outputDir) // create output directory
 
     val output = {
       val now = new Timestamp(startDate.getTime)
@@ -540,7 +540,7 @@ object Run extends Logging {
     val inputDir = makeInputDir(machine, procedure, input.inputPK.get)
 
     // move input files to their final resting place
-    inputDir.getParentFile.mkdirs
+    Util.mkdirs(inputDir.getParentFile)
     renameFileTryingPersistently(sessionDir, inputDir)
     if (!inputDir.exists)
       throw new RuntimeException("Unable to rename temporary directory " + sessionDir.getAbsolutePath + " to input directory " + inputDir.getAbsolutePath)
@@ -551,7 +551,7 @@ object Run extends Logging {
     val startDate = new Date(System.currentTimeMillis)
 
     val outputDir = new File(inputDir, outputSubdirNamePrefix + Util.timeAsFileName(startDate))
-    outputDir.mkdirs // create output directory
+    Util.mkdirs(outputDir) // create output directory
 
     val output = {
       val tempOutput = new Output(

@@ -177,7 +177,7 @@ object WebUtil extends Logging {
       * @param suffix Suffix without '.'.
       */
     def getUniquelyNamedFile(suffix: String): File = {
-      parentDir.mkdirs
+      Util.mkdirs(parentDir)
       def pickBaseName: String = {
         lazy val fileList = parentDir.listFiles.map(f => f.getName.take(writeUploadedFileDigits)).toSet
         @tailrec
@@ -330,7 +330,7 @@ object WebUtil extends Logging {
   private def saveFile(inputStream: InputStream, file: File, contentType: String, request: Request): Unit =
     writeUploadedFileDigits.synchronized {
       val parentDir = file.getParentFile
-      parentDir.mkdirs
+      Util.mkdirs(parentDir)
 
       val unique = UniquelyNamedFile(parentDir)
 

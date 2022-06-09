@@ -201,7 +201,7 @@ object BBbyCBCTHTML extends Logging {
       Util.writeFile(file, text)
     }
 
-    subDir.mkdirs
+    Util.mkdirs(subDir)
 
     val sortedCbct = runReq.cbctList.sortBy(al => getZ(al))
 

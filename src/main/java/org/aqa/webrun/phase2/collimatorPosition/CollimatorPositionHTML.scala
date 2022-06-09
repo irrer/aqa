@@ -96,7 +96,7 @@ object CollimatorPositionHTML {
           collimatorPosition.beamName.replace(" ", "_") + floodComp + ".png"
         }
         val subDir = new File(extendedData.output.dir, subDirName)
-        subDir.mkdirs
+        Util.mkdirs(subDir)
         val pngFile = new File(subDir, pngFileName)
         Util.writePng(bufImg, pngFile)
         val pngUrl = WebServer.urlOfResultsFile(pngFile)

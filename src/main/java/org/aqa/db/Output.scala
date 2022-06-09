@@ -18,6 +18,7 @@ package org.aqa.db
 
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Logging
+import org.aqa.Util
 import org.aqa.db.Db.driver.api._
 import org.aqa.run.ProcedureStatus
 import org.aqa.web.GetSeries
@@ -322,7 +323,7 @@ object Output extends Logging {
     *
     */
   def getFilesFromDatabase(outputPK: Long, dir: File): Boolean = {
-    dir.mkdirs
+    Util.mkdirs(dir)
     // Steps are done on separate lines so that if there is an error/exception it can be precisely tracked.
     OutputFiles.getByOutput(outputPK) match {
       case Some(outputFiles) =>

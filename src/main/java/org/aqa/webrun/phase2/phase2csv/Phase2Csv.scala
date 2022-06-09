@@ -152,7 +152,7 @@ abstract class Phase2Csv[T] extends Logging {
       def makeCsv(al: AttributeList): Unit = {
         val f = fileOf(Util.sopOfAl(al))
         if (!f.exists()) {
-          machDir.mkdirs()
+          Util.mkdirs(machDir)
           val text = dicomCsv.dicomToText(al)
           Util.writeFile(f, text)
         }
@@ -461,7 +461,7 @@ object Phase2Csv extends Logging {
     FileUtil.readFileTreeToZipFile(csvList, excludePatternList = Seq(), excludeFileList = Seq(), zipFile)
 
     val text = WebUtil.wrapBody(content, "CSV Index").replace(notesTag, readNotes())
-    csvDir.mkdirs()
+    Util.mkdirs(csvDir)
     val file = new File(csvDir, "index.html")
     Util.writeFile(file, text)
     logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath)
@@ -493,7 +493,7 @@ object Phase2Csv extends Logging {
       </div>
     }
     val text = WebUtil.wrapBody(content, name)
-    Phase2Csv.consortiumCsvDir.mkdirs()
+    Util.mkdirs(Phase2Csv.consortiumCsvDir)
     val file = new File(Phase2Csv.consortiumCsvDir, fileBaseName(dataName) + ".html")
     Util.writeFile(file, text)
     logger.info("Wrote " + file.length() + " bytes to file " + file.getAbsolutePath)
@@ -509,7 +509,7 @@ object Phase2Csv extends Logging {
     */
   def writeToFile(csvDir: File, csvContent: String, dataName: String): Unit = {
     val start = System.currentTimeMillis()
-    csvDir.mkdirs()
+    Util.mkdirs(csvDir)
     deleteCsvFiles(csvDir, dataName)
     val csvFile = new File(csvDir, Phase2Csv.csvFileName(fileBaseName(dataName)))
     Util.writeFile(csvFile, csvContent)

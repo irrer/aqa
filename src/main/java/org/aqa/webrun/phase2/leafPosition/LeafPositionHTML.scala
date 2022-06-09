@@ -225,7 +225,7 @@ object LeafPositionHTML extends Logging {
 
   def makeDisplay(extendedData: ExtendedData, runReq: RunReq, beamResultList: Seq[LeafPositionAnalysis.BeamResults], pass: Boolean): Elem = {
     val subDir = new File(extendedData.output.dir, subDirName)
-    subDir.mkdirs
+    Util.mkdirs(subDir)
     val mainHtmlFile = new File(subDir, mainHtmlFileName)
     val mainHtml =
       if (beamResultList.isEmpty) noBeams()

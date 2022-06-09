@@ -92,7 +92,7 @@ object BBbyCBCTAnalysis extends Logging {
    */
   def volumeAnalysis(cbctSeries: Seq[AttributeList], outputDir: File): Either[String, CBCTAnalysisResult] = {
     val sorted = Util.sortByZ(cbctSeries)
-    outputDir.mkdirs
+    Util.mkdirs(outputDir)
 
     val voxSize_mm = Util.getVoxSize_mm(sorted) // the size of a voxel in mm
 

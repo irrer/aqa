@@ -36,7 +36,7 @@ object VMATHTML {
   def makeDisplay(extendedData: ExtendedData, runReq: RunReq, resultList: Seq[Seq[VMAT]], status: ProcedureStatus.Value): Elem = {
 
     val vmatDir = new File(extendedData.output.dir, "VMAT")
-    vmatDir.mkdirs
+    Util.mkdirs(vmatDir)
 
     def fmt(d: Double) = {
       val t =

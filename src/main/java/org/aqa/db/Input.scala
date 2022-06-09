@@ -19,13 +19,16 @@ package org.aqa.db
 import Db.driver.api._
 import org.aqa.Logging
 import org.aqa.Config
+
 import java.sql.Timestamp
 import java.io.File
 import org.aqa.web.WebServer
 import edu.umro.ScalaUtil.FileUtil
+
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import edu.umro.ScalaUtil.Trace
+import org.aqa.Util
 
 case class Input(
   inputPK: Option[Long], // primary key
@@ -184,7 +187,7 @@ object Input extends Logging {
   def getFilesFromDatabase(inputPK: Long, dir: File): Unit = {
     // Steps are done on separate lines so that if there is an error/exception it can be precisely
     // tracked.  It is up to the caller to catch any exceptions and act accordingly.
-    dir.mkdirs
+    Util.mkdirs(dir)
     val inputFilesSeq = InputFiles.getByInputPK(inputPK)
     inputFilesSeq.map(inFiles => FileUtil.writeByteArrayZipToFileTree(inFiles.zippedContent, dir))
   }

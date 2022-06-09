@@ -366,7 +366,7 @@ class BBbyCBCTCoarseCenter(entireVolume: DicomVolume, voxSize_mm: Point3d) exten
     import java.io.File
     val date = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss").format(new java.util.Date)
     val dir = new File("""D:\tmp\aqa\tmp\cbctSlices\""" + date)
-    dir.mkdirs
+    Util.mkdirs(dir)
     logger.info("Created slice image directory: " + dir.getAbsolutePath)
     def writeImg(sliceIndex: Int): Unit = {
       val di = new DicomImage(horizontalSlice(sliceIndex))

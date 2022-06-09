@@ -80,7 +80,7 @@ object Config extends Logging {
 
   def makeDataDir(dirName: String): File = {
     val dir = new File(DataDir, dirName)
-    dir.mkdirs
+    Util.mkdirs(dir)
     dir
   }
 
@@ -89,7 +89,7 @@ object Config extends Logging {
   /** Directory for files shared by multiple machines, possibly multiple institutions. */
   lazy val sharedDir: File = {
     val f = new File(resultsDirFile, "shared")
-    f.mkdirs
+    Util.mkdirs(f)
     f
   }
 
@@ -282,7 +282,7 @@ object Config extends Logging {
   private def getDir(name: String): File = {
     val dir = new File(getMainText(name))
     logText(name, dir.getAbsolutePath)
-    dir.mkdirs
+    Util.mkdirs(dir)
     dir
   }
 
@@ -393,7 +393,7 @@ object Config extends Logging {
   val ProcedureDir: File = getDir("ProcedureDir")
   val DataDir: File = getDir("DataDir")
   val machineConfigurationDir = new File(DataDir, machineConfigurationDirName)
-  machineConfigurationDir.mkdirs
+  Util.mkdirs(machineConfigurationDir)
 
   val AuthenticationTimeout: Double = logMainText("AuthenticationTimeout", "7200.0").toDouble
   val AuthenticationTimeoutInMs: Long = (AuthenticationTimeout * 1000).toLong

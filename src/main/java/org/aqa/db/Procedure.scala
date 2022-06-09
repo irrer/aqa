@@ -18,6 +18,7 @@ package org.aqa.db
 
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Config
+import org.aqa.Util
 import org.aqa.db.Db.driver.api._
 import org.aqa.web.PatientProcedureXml
 
@@ -44,7 +45,7 @@ case class Procedure(
     val insertQuery = Procedure.query returning Procedure.query.map(_.procedurePK) into ((procedure, procedurePK) => procedure.copy(procedurePK = Some(procedurePK)))
     val action = insertQuery += this
     val result = Db.run(action)
-    execDir.mkdirs
+    Util.mkdirs(execDir)
     result
   }
 

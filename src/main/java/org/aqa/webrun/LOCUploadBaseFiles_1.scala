@@ -79,7 +79,7 @@ object LOCUploadBaseFiles_1 extends Logging {
        */
       def copyOutput(output: Output) = {
         val machConfigDir = machine.configDir.get
-        machConfigDir.mkdirs
+        Util.mkdirs(machConfigDir)
         def copy(name: String) = {
           val buf = Utility.readBinFile(new File(output.dir, name))
           Utility.writeFile(new File(machConfigDir, name), buf)

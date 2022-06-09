@@ -167,7 +167,7 @@ object DicomAccess extends Logging {
     val imagePageUrl = WebServer.urlOfResultsFile(imagePageFile)
 
     val badPixelDir = new File(outputDir, badPixelDirName)
-    badPixelDir.mkdirs
+    Util.mkdirs(badPixelDir)
 
     val badPixelVisualizationList = badPixels.map(badPixel => badPixelToHtml(badPixel, dicomImage, fileBaseName, bufferedImage, badPixelDir))
     val rowList = (0 until ((badPixelVisualizationList.size + pixRow - 1) / pixRow)).map(row => badPixelVisualizationList.drop(row * pixRow).take(pixRow))
@@ -265,7 +265,7 @@ object DicomAccess extends Logging {
    */
   def write(al: AttributeList, title: String, dir: File, fileBaseName: String, bufferedImage: Option[BufferedImage], dicomImage: Option[DicomImage], badPixels: Seq[DicomImage.PixelRating]): Option[String] = {
     try {
-      dir.mkdirs
+      Util.mkdirs(dir)
       makePage(al, title, dir, fileBaseName, bufferedImage, dicomImage, badPixels)
     } catch {
       case t: Throwable => {

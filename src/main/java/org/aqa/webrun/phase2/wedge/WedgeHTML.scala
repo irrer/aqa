@@ -270,7 +270,7 @@ object WedgeHTML {
 
     val outputDir = extendedData.output.dir
     val wedgeDir = new File(outputDir, "wedge")
-    wedgeDir.mkdirs
+    Util.mkdirs(wedgeDir)
 
     val htmlJs = {
       wedgePointList.map(wp => beamToDisplay(wp, runReq, wedgeDir, collimatorCenterOfRotation))

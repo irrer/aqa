@@ -251,7 +251,7 @@ object Machine extends Logging {
 
   private lazy val machConfigBaseDir: File = {
     val dir = new File(Config.DataDir, Config.machineConfigurationDirName)
-    dir.mkdirs
+    Util.mkdirs(dir)
     dir
   }
 
@@ -266,7 +266,7 @@ object Machine extends Logging {
     val rawName = (instName + "_" + machine.id + "_" + serialNumber).replace(' ', '_')
     val name = FileUtil.replaceInvalidFileNameCharacters(rawName, '_')
     val dir = getConfigDir(name)
-    dir.mkdirs
+    Util.mkdirs(dir)
     name
   }
 

@@ -112,7 +112,7 @@ object AnonymizeUtil extends Logging {
     def persist(): Unit = {
       val file = credentialFile(aliasName)
       try {
-        if (!securityDir.isDirectory) securityDir.mkdirs
+        if (!securityDir.isDirectory) Util.mkdirs(securityDir)
         val xml = {
           <InstitutionCredentials>
             <name>{aliasName}</name>

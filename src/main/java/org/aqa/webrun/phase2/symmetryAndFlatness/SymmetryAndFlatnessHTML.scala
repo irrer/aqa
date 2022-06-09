@@ -45,7 +45,7 @@ object SymmetryAndFlatnessHTML extends Logging {
     */
   def makeSubDir(outputDir: File): File = {
     val subDir = new File(outputDir, subDirName)
-    subDir.mkdirs
+    Util.mkdirs(subDir)
     subDir
   }
 

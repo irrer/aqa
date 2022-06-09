@@ -246,7 +246,7 @@ class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     */
   private def writeBaselineFilesLocally(extendedData: ExtendedData, runReq: LOCRunReq): Unit = {
     val dir = baselineDir(extendedData)
-    dir.mkdirs()
+    Util.mkdirs(dir)
 
     val openFile = new File(dir, "OPEN_Baseline.dcm")
     val transFile = new File(dir, "TRANS_Baseline.dcm")

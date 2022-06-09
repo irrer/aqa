@@ -236,7 +236,7 @@ object RunProcedure extends Logging {
       }
     }
 
-    newDir.getParentFile.mkdirs
+    Util.mkdirs(newDir.getParentFile)
     if (renameUsingOldIo) true
     else {
       if (renameUsingNio) true
@@ -296,7 +296,7 @@ object RunProcedure extends Logging {
     */
   private def makeOutputDir(inputDir: File, outputStartDate: Date): File = {
     val file = new File(inputDir, outputSubDirNamePrefix + Util.timeAsFileName(outputStartDate))
-    file.mkdirs
+    Util.mkdirs(file)
     file
   }
 
@@ -492,7 +492,7 @@ object RunProcedure extends Logging {
     if (sessionDir.isDefined)
       renameFileTryingPersistently(sessionDir.get, inputDir)
     else
-      inputDir.mkdirs
+      Util.mkdirs(inputDir)
     if (!inputDir.exists)
       throw new RuntimeException("Unable to rename temporary directory " + sessionDir + " to input directory " + inputDir.getAbsolutePath)
 

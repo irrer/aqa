@@ -251,7 +251,7 @@ abstract class CacheCSV extends Logging {
 
       val nonCached = requiredDayList.diff(allCached.map(_.dateText))
 
-      cacheDir.mkdirs()
+      Util.mkdirs(cacheDir)
 
       val newlyInstantiated = nonCached.map(nc => instantiateCache(nc, hostRef, institutionPK))
 
