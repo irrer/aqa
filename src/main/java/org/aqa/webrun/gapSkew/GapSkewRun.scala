@@ -20,7 +20,6 @@ import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.DicomSeries
@@ -111,7 +110,6 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
 
   /** Run the actual analysis.  This must create a display.html file in the output directory. */
   override def run(extendedData: ExtendedData, runReq: GapSkewRunReq, response: Response): ProcedureStatus.Value = {
-    val beamList = runReq.rtimageMap.keys.toSeq.mkString(" | ") // TODO rm
     val fleList = runReq.rtimageMap.keys.toSeq.filter(beam => Config.GapSkewBeamNameList.contains(beam)).map(runReq.rtimageMap)
     val dicomImageList = fleList.map(fle => new DicomImage(fle))
     val minMax = getMinMaxTrimmed(dicomImageList)
