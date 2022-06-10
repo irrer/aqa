@@ -57,15 +57,24 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
       val output = outputList.filter(_.machinePK.get == machine.machinePK.get).sortBy(_.dataDate.get.getTime).lastOption
 
       if (output.isDefined) {
-        val gapSkew = gapSkewList.filter(_.outputPK == output.get.outputPK.get).maxBy(_.largestHorzSkew_deg)
-        Latest(machine, output, Some(gapSkew))
+        val list = gapSkewList.filter(_.outputPK == output.get.outputPK.get)
+        if (list.isEmpty)
+          Latest(machine)
+        else {
+          val gapSkew = list.maxBy(_.largestHorzSkew_deg)
+          Latest(machine, output, Some(gapSkew))
+        }
       } else {
         Latest(machine)
       }
     }
 
-    private def largestGapSkew(output: Output): GapSkew = {
-      gapSkewList.filter(_.outputPK == output.outputPK.get).maxBy(_.largestHorzSkew_deg)
+    private def largestGapSkew(output: Output): Option[GapSkew] = {
+      val list = gapSkewList.filter(_.outputPK == output.outputPK.get)
+      if (list.isEmpty)
+        None
+      else
+        Some(list.maxBy(_.largestHorzSkew_deg))
     }
 
     /**
@@ -75,8 +84,16 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
       */
     def getPrevious(machine: Machine): Seq[OutputGapSkew] = {
       val outList = outputList.filter(_.machinePK.get == machine.machinePK.get).sortBy(_.dataDate.get.getTime).reverse
-      outList.map(o => OutputGapSkew(o, largestGapSkew(o)))
+      val list = outList.flatMap(o => {
+        val gs = largestGapSkew(o)
+        if (gs.isEmpty)
+          None
+        else
+          Some(OutputGapSkew(o, gs.get))
+      })
+      list
     }
+
   }
 
   private def getGapSkewData(institutionPK: Long): GapSkewData = {
