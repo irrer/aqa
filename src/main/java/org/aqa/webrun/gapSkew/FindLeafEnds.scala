@@ -17,6 +17,7 @@
 package org.aqa.webrun.gapSkew
 
 import com.pixelmed.dicom.AttributeList
+import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
@@ -193,6 +194,9 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
 
       val measurementSeparation_mm = (xRightPosition_mm - xRightWidth_mm / 2.0) - (xLeftPosition_mm + xLeftWidth_mm / 2.0)
 
+      val XRayImageReceptorTranslation = rtimage.get(TagByName.XRayImageReceptorTranslation)
+      val translationY = if (XRayImageReceptorTranslation == null) 0.0 else XRayImageReceptorTranslation.getDoubleValues()(1)
+
       val gapSkew = GapSkew(
         gapSkewPK = None,
         outputPK = extendedData.output.outputPK.get,
@@ -203,19 +207,19 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
         measurementSeparation_mm = measurementSeparation_mm,
         //
         topLeftEdgeTypeName = Some(edgesFromPlan.topOrLeft.get.edgeType.name),
-        topLeftValue_mm = Some(topLeft.yPosition_mm),
+        topLeftValue_mm = Some(topLeft.yPosition_mm + translationY),
         topLeftPlanned_mm = Some(edgesFromPlan.topOrLeft.get.position_mm),
         //
         topRightEdgeTypeName = Some(edgesFromPlan.topOrLeft.get.edgeType.name),
-        topRightValue_mm = Some(topRight.yPosition_mm),
+        topRightValue_mm = Some(topRight.yPosition_mm + translationY),
         topRightPlanned_mm = Some(edgesFromPlan.topOrLeft.get.position_mm),
         //
         bottomLeftEdgeTypeName = Some(edgesFromPlan.bottomOrRight.get.edgeType.name),
-        bottomLeftValue_mm = Some(bottomLeft.yPosition_mm),
+        bottomLeftValue_mm = Some(bottomLeft.yPosition_mm + translationY),
         bottomLeftPlanned_mm = Some(edgesFromPlan.bottomOrRight.get.position_mm),
         //
         bottomRightEdgeTypeName = Some(edgesFromPlan.bottomOrRight.get.edgeType.name),
-        bottomRightValue_mm = Some(bottomRight.yPosition_mm),
+        bottomRightValue_mm = Some(bottomRight.yPosition_mm + translationY),
         bottomRightPlanned_mm = Some(edgesFromPlan.bottomOrRight.get.position_mm)
       )
 
