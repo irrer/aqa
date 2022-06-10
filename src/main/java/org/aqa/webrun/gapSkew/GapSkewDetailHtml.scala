@@ -16,6 +16,10 @@
 
 package org.aqa.webrun.gapSkew
 
+import com.pixelmed.dicom.AttributeList
+import com.pixelmed.dicom.AttributeTag
+import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Config
 import org.aqa.Util
@@ -189,6 +193,87 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
 
   private val detailUrl: String = GapSkewDetailHtml.htmlFileName(gapSkew.beamName)
 
+  private def dicomValues(al: AttributeList): Elem = {
+
+    val trans = al.get(TagByName.XRayImageReceptorTranslation)
+
+    def getDbl(tag: AttributeTag): Double = {
+      val v = DicomUtil.findAllSingle(al, tag).head.getDoubleValues()(0)
+      v
+    }
+
+    <div>
+      <center style="margin-top: 80px;">
+        <h4>Selected DICOM Values</h4>
+      </center>
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th> Name </th>
+            <th> Value </th>
+          </tr>
+        </thead>
+
+
+        <tr>
+          <td style="white-space: nowrap;">RadiationMachine SAD</td>
+          <td>{al.get(TagByName.RadiationMachineSAD).getDoubleValues()(0)}</td>
+        </tr>
+
+        <tr>
+          <td style="white-space: nowrap;">RT Image SID</td>
+          <td>{al.get(TagByName.RTImageSID).getDoubleValues()(0)}</td>
+        </tr>
+
+        <tr>
+          <td style="white-space: nowrap;">Pixel Columns</td>
+          <td>{al.get(TagByName.Columns).getIntegerValues()(0)}</td>
+        </tr>
+
+        <tr>
+          <td style="white-space: nowrap;">Pixel Rows</td>
+          <td>{al.get(TagByName.Rows).getIntegerValues()(0)}</td>
+        </tr>
+
+        <tr>
+          <td style="white-space: nowrap;">Pixel X Spacing</td>
+          <td>{al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues()(0)}</td>
+        </tr>
+
+        <tr>
+          <td style="white-space: nowrap;">Pixel Y Spacing</td>
+          <td>{al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues()(1)}</td>
+        </tr>
+
+        <tr>
+          <td style="white-space: nowrap;">KVP</td>
+          <td>{getDbl(TagByName.KVP)}</td>
+        </tr>
+
+        <tr>
+          <td style="white-space: nowrap;">MetersetExposure</td>
+          <td>{getDbl(TagByName.MetersetExposure)}</td>
+        </tr>
+
+        <tr>
+          <td style="white-space: nowrap;">ExposureTime</td>
+          <td>{getDbl(TagByName.ExposureTime)}</td>
+        </tr>
+
+        <tr>
+          <td style="white-space: nowrap;">X Ray ImageReceptor Translation X</td>
+          <td>{if (trans == null) 0.0 else trans.getDoubleValues()(0)}</td>
+        </tr>
+
+        <tr>
+          <td style="white-space: nowrap;">X Ray ImageReceptor Translation Y</td>
+          <td>{if (trans == null) 0.0 else trans.getDoubleValues()(1)}</td>
+        </tr>
+        
+      </table>
+    </div>
+  }
+
   /**
     * Generate detailed HTML content for one RTIMAGE.
     * @return HTML content.
@@ -240,6 +325,19 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
             {historyCharts()}
           </div>
         </div>
+
+        <div class="row">
+          <div class="col-md-4 col-md-offset-4">
+            {dicomValues(leafSet.attributeList)}
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-10 col-md-offset-1">
+            <p style="margin-bottom: 80px;"> </p>
+          </div>
+        </div>
+
       </div>
     </div>
 
