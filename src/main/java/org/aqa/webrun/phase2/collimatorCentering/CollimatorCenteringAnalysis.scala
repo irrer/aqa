@@ -16,41 +16,28 @@
 
 package org.aqa.webrun.phase2.collimatorCentering
 
-import org.aqa.Logging
-import org.aqa.db.CollimatorCentering
-import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.TagFromName
-import org.aqa.Util
-import scala.collection.Seq
-import scala.xml.Elem
-import org.aqa.db.Output
-import org.aqa.run.ProcedureStatus
-import org.aqa.DicomFile
 import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.ImageUtil
-import java.awt.geom.Point2D
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.Config
-import java.awt.Rectangle
-import edu.umro.ImageUtil.LocateEdge
-import java.awt.image.BufferedImage
-import java.awt.Color
-import java.awt.Graphics2D
-import java.awt.BasicStroke
-import edu.umro.ScalaUtil.Trace
-import scala.collection.parallel.ParSeq
+import org.aqa.Logging
+import org.aqa.Util
+import org.aqa.db.CollimatorCentering
+import org.aqa.run.ProcedureStatus
 import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.MeasureTBLREdges
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.SubProcedureResult
-import edu.umro.ImageUtil.IsoImagePlaneTranslator
+
 import java.awt.Point
-import edu.umro.ScalaUtil.DicomUtil
+import java.awt.geom.Point2D
+import scala.collection.parallel.ParSeq
+import scala.xml.Elem
 
 /**
- * Analyze DICOM files for ImageAnalysis.
- */
+  * Analyze DICOM files for ImageAnalysis.
+  */
 object CollimatorCenteringAnalysis extends Logging {
 
   val subProcedureName = "Collimator Centering"
@@ -58,9 +45,16 @@ object CollimatorCenteringAnalysis extends Logging {
   case class CollimatorCenteringResult(sum: Elem, sts: ProcedureStatus.Value, result: CollimatorCentering) extends SubProcedureResult(sum, sts, subProcedureName)
 
   /**
-   * Perform actual analysis.
-   */
-  private def analyze(al090: AttributeList, al270: AttributeList, image090: DicomImage, image270: DicomImage, outputPK: Long, rtplan: AttributeList): (CollimatorCentering, MeasureTBLREdges.AnalysisResult, MeasureTBLREdges.AnalysisResult) = {
+    * Perform actual analysis.
+    */
+  private def analyze(
+      al090: AttributeList,
+      al270: AttributeList,
+      image090: DicomImage,
+      image270: DicomImage,
+      outputPK: Long,
+      rtplan: AttributeList
+  ): (CollimatorCentering, MeasureTBLREdges.AnalysisResult, MeasureTBLREdges.AnalysisResult) = {
 
     val collAngle090 = Util.collimatorAngle(al090)
     val collAngle270 = Util.collimatorAngle(al270)
@@ -77,7 +71,7 @@ object CollimatorCenteringAnalysis extends Logging {
       val rp = ParSeq(m090 _, m270 _).map(f => f()).toList
       rp
     }
-    val result090 = resultPair(0)
+    val result090 = resultPair.head
     val result270 = resultPair(1)
 
     val m090 = result090.measurementSet // in pixels
@@ -90,46 +84,70 @@ object CollimatorCenteringAnalysis extends Logging {
     val xCenter = (xy090.Y1 + xy090.Y2 + xy270.Y1 + xy270.Y2) / 4
     val yCenter = (xy090.X1 + xy090.X2 + xy270.X1 + xy270.X2) / 4
 
-    val measuredCntrIso = new Point2D.Double(xCenter, yCenter) // place in isoplane that is measured by collimator centering
+    val measuredCenterIso = new Point2D.Double(xCenter, yCenter) // place in isoplane that is measured by collimator centering
     val zero = new Point2D.Double(0, 0)
 
-    val errDistance = zero.distance(measuredCntrIso)
+    val errDistance = zero.distance(measuredCenterIso)
     val pass: Boolean = errDistance <= Config.CollimatorCenteringTolerence_mm
     val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
     logger.info("CollimatorCentering error in mm: " + errDistance + "    Status: " + procedureStatus)
 
-    val collimatorCentering = new CollimatorCentering(None, outputPK, procedureStatus.name,
-      Util.sopOfAl(al090), Util.sopOfAl(al270), // SOPInstanceUID090, SOPInstanceUID270
-      xCenter, yCenter, // xCollimatorCenter_mm, yCollimatorCenter_mm
-      xy090.X1, xy090.X2, xy090.Y1, xy090.Y2,
-      xy270.X1, xy270.X2, xy270.Y1, xy270.Y2)
+    val collimatorCentering = new CollimatorCentering(
+      None,
+      outputPK,
+      procedureStatus.name,
+      SOPInstanceUID090 = Util.sopOfAl(al090),
+      SOPInstanceUID270 = Util.sopOfAl(al270),
+      gantryAngleRounded_deg = Util.angleRoundedTo90(Util.gantryAngle(al090)),
+      beamName090 = Phase2Util.getBeamNameOfRtimage(rtplan, al090).get,
+      beamName270 = Phase2Util.getBeamNameOfRtimage(rtplan, al270).get,
+      xCenter,
+      yCenter, // xCollimatorCenter_mm, yCollimatorCenter_mm
+      xy090.X1,
+      xy090.X2,
+      xy090.Y1,
+      xy090.Y2,
+      xy270.X1,
+      xy270.X2,
+      xy270.Y1,
+      xy270.Y2
+    )
 
     (collimatorCentering, result090, result270)
   }
 
   /**
-   * For testing only
-   */
-  def testAnalyze(al090: AttributeList, al270: AttributeList, image090: DicomImage, image270: DicomImage, outputPK: Long, rtplan: AttributeList): (CollimatorCentering, MeasureTBLREdges.AnalysisResult, MeasureTBLREdges.AnalysisResult) = {
+    * For testing only
+    */
+  def testAnalyze(
+      al090: AttributeList,
+      al270: AttributeList,
+      image090: DicomImage,
+      image270: DicomImage,
+      outputPK: Long,
+      rtplan: AttributeList
+  ): (CollimatorCentering, MeasureTBLREdges.AnalysisResult, MeasureTBLREdges.AnalysisResult) = {
     analyze(al090, al270, image090, image270, outputPK, rtplan)
   }
 
   /**
-   * Run the CollimatorCentering sub-procedure, save results in the database, return true for pass or false for fail.
-   */
+    * Run the CollimatorCentering sub-procedure, save results in the database, return true for pass or false for fail.
+    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, CollimatorCenteringResult] = {
     try {
       logger.info("Starting analysis of CollimatorCentering for machine " + extendedData.machine.id)
-      val al090 = runReq.rtimageMap(Config.CollimatorCentering090BeamName)
-      val al270 = runReq.rtimageMap(Config.CollimatorCentering270BeamName)
-      val translator = new IsoImagePlaneTranslator(al090)
 
       val image090 = runReq.derivedMap(Config.CollimatorCentering090BeamName)
       val image270 = runReq.derivedMap(Config.CollimatorCentering270BeamName)
 
-      val analysisResult = analyze(runReq.rtimageMap(Config.CollimatorCentering090BeamName), runReq.rtimageMap(Config.CollimatorCentering270BeamName),
-        image090.pixelCorrectedImage, image270.pixelCorrectedImage,
-        extendedData.output.outputPK.get, runReq.rtplan)
+      val analysisResult = analyze(
+        runReq.rtimageMap(Config.CollimatorCentering090BeamName),
+        runReq.rtimageMap(Config.CollimatorCentering270BeamName),
+        image090.pixelCorrectedImage,
+        image270.pixelCorrectedImage,
+        extendedData.output.outputPK.get,
+        runReq.rtplan
+      )
 
       val collimatorCentering = analysisResult._1
       val result090 = analysisResult._2
@@ -142,14 +160,13 @@ object CollimatorCenteringAnalysis extends Logging {
 
       val elem = CollimatorCenteringHTML.makeDisplay(extendedData, collimatorCentering, procedureStatus, result090, result270, runReq)
       logger.info("Finished processing for " + subProcedureName)
-      val result = Right(new CollimatorCenteringResult(elem, procedureStatus, collimatorCentering))
+      val result = Right(CollimatorCenteringResult(elem, procedureStatus, collimatorCentering))
       logger.info("Finished analysis of CollimatorCentering for machine " + extendedData.machine.id)
       result
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         logger.warn("Unexpected error in analysis of CollimatorCentering: " + t + fmtEx(t))
         Left(Phase2Util.procedureCrash(subProcedureName))
-      }
     }
   }
 }

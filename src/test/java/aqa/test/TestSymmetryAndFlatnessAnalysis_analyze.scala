@@ -86,6 +86,9 @@ object TestSymmetryAndFlatnessAnalysis_analyze {
       status = "PASS",
       SOPInstanceUID090 = "12345",
       SOPInstanceUID270 = "23456",
+      gantryAngleRounded_deg = 0,
+      beamName090 = "beam090",
+      beamName270 = "beam270",
       xCollimatorCenter_mm = 0,
       yCollimatorCenter_mm = 0,
 

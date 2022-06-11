@@ -28,6 +28,9 @@ case class CollimatorCentering(
     status: String, // termination status
     SOPInstanceUID090: String, // UID of 90 degree DICOM image
     SOPInstanceUID270: String, // UID of 270 degree DICOM image
+    gantryAngleRounded_deg: Int, // Gantry angle rounded to the nearest multiple of 90 degrees
+    beamName090: String, // name of beam with collimator angle 90
+    beamName270: String, // name of beam with collimator angle 270
     xCollimatorCenter_mm: Double, // X collimator isoplane center of rotation in mm
     yCollimatorCenter_mm: Double, // Y collimator isoplane center of rotation in mm
     X1_090_mm: Double, // X1 position of collimator leaf edge for gantry at 90 degrees (X axis) in mm
@@ -57,6 +60,9 @@ case class CollimatorCentering(
       "    status: " + status + "\n" +
       "    SOPInstanceUID090: " + SOPInstanceUID090 + "\n" +
       "    SOPInstanceUID270: " + SOPInstanceUID270 + "\n" +
+      "    gantryAngleRounded_deg: " + gantryAngleRounded_deg + "\n" +
+      "    beamName090: " + beamName090 + "\n" +
+      "    beamName270: " + beamName270 + "\n" +
       "    xCollimatorCenter_mm: " + xCollimatorCenter_mm + "\n" +
       "    yCollimatorCenter_mm: " + yCollimatorCenter_mm + "\n" +
       "    X1_090_mm: " + X1_090_mm + "\n" +
@@ -81,6 +87,9 @@ object CollimatorCentering extends ProcedureOutput {
     def status = column[String]("status")
     def SOPInstanceUID090 = column[String]("SOPInstanceUID090")
     def SOPInstanceUID270 = column[String]("SOPInstanceUID270")
+    def gantryAngleRounded_deg = column[Int]("gantryAngleRounded_deg")
+    def beamName090 = column[String]("beamName090")
+    def beamName270 = column[String]("beamName270")
     def xCollimatorCenter_mm = column[Double]("xCollimatorCenter_mm")
     def yCollimatorCenter_mm = column[Double]("yCollimatorCenter_mm")
     def X1_090_mm = column[Double]("X1_090_mm")
@@ -99,6 +108,9 @@ object CollimatorCentering extends ProcedureOutput {
         status,
         SOPInstanceUID090,
         SOPInstanceUID270,
+        gantryAngleRounded_deg,
+        beamName090,
+        beamName270,
         xCollimatorCenter_mm,
         yCollimatorCenter_mm,
         X1_090_mm,

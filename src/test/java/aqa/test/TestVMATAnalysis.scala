@@ -41,7 +41,7 @@ class TestVMATAnalysis extends FlatSpec with Matchers {
 
   Config.validate
 
-  (0 to 5).map(_ => println("-----------------------------------------------------------------------------------------------------"))
+  (0 to 5).foreach(_ => println("-----------------------------------------------------------------------------------------------------"))
 
   private def testVmatPair(vmatPair: Config.VMATBeamPair, rtplan: AttributeList, imageList: Seq[DicomFile]): Unit = {
     println("Testing VMAT beam pair: " + vmatPair)
@@ -65,7 +65,27 @@ class TestVMATAnalysis extends FlatSpec with Matchers {
     println("AOI List: \n    " + aoiList.mkString("\n    "))
 
     // fake centering with offsets at 0
-    val collimatorCentering = new CollimatorCentering(None, -1, ProcedureStatus.running.toString, "sop090", "sop270", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    val collimatorCentering =
+      new CollimatorCentering(
+        None,
+        -1,
+        ProcedureStatus.running.toString,
+        "sop090",
+        "sop270",
+        gantryAngleRounded_deg = 0,
+        beamName090 = "beam090",
+        beamName270 = "beam270",
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      )
     val outputPK: Long = -1
     val vmatSeq = VMATAnalysis.testAnalyze(vmatPair, mlc, open, rtplan, collimatorCentering, outputPK, new DicomImage(mlc), new DicomImage(open))
 
@@ -100,7 +120,7 @@ class TestVMATAnalysis extends FlatSpec with Matchers {
 
     dirList.map(dir => testDir(dir))
 
-    (11 > 10) should be(true)
+    true should be(true)
 
   }
 
