@@ -229,7 +229,7 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     */
   private def validateGapSkew(valueMap: ValueMapT): StyleMapT = {
     val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
-    val gapSkewRtplan = CustomizeRtPlan.getCollimatorCompatibleDailyQAPlanForMachine(machine)
+    val gapSkewRtplan = CustomizeRtPlan.getCollimatorCompatibleGapSkewPlanForMachine(machine)
     val conf = validateConfigAndRtplanFileExists(gapSkewRtplan, machine, "Gap Skew", createGapSkewButton)
     validateEntryFields(valueMap) ++ conf
   }
