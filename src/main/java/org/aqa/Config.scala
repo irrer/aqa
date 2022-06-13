@@ -759,7 +759,7 @@ object Config extends Logging {
       val model = (node \ "@collimatorModel").head.text
       val fileName = node.head.text
 
-      val file = new File(rtplanDirFile, fileName)
+      val file = new File(rtplanDirFile, fileName.trim)
       val pfc = PlanFileConfig(procedure, manufacturer, model, file)
 
       // check to see if the file is readable DICOM.  If not, flag an error.
