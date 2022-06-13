@@ -765,7 +765,7 @@ object Config extends Logging {
       // check to see if the file is readable DICOM.  If not, flag an error.
       if (pfc.dicomFile.attributeList.isEmpty)
         logger.warn(
-          "Config problem.  Unable to ready DICOM RTPLAN file used for generating custom plans: " + pfc +
+          "Config problem.  Unable to read DICOM RTPLAN file used for generating custom plans: " + pfc +
             "\nFile: " + pfc.dicomFile.file.getAbsolutePath
         )
 
