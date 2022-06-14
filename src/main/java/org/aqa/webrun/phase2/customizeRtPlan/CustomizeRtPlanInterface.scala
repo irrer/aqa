@@ -330,8 +330,6 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     form.setFormResponse(valueMap, styleNone, "Download RTPLAN", response, Status.SUCCESS_OK)
   }
 
-  private case class BeamReference(beam: AttributeList, fractionReference: AttributeList) {}
-
   private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
     val value = valueMap.get(button.label)
     value.isDefined && value.get.equals(button.label)
