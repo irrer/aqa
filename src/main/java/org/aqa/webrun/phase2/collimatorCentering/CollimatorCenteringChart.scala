@@ -30,12 +30,12 @@ import java.util.Date
 /**
   * Make history charts for collimator centering.
   */
-class CollimatorCenteringChart(outputPK: Long) extends Logging {
+class CollimatorCenteringChart(outputPK: Long, gantryAngle: Int) extends Logging {
 
   private val output: Output = Output.get(outputPK).get
   private val machinePK: Long = output.machinePK.get
 
-  private val history: Seq[CollimatorCentering.ColCentHistory] = CollimatorCentering.history(machinePK)
+  private val history: Seq[CollimatorCentering.ColCentHistory] = CollimatorCentering.history(machinePK, gantryAngle, output.procedurePK)
 
   private val idSummary: String = C3Chart.idTagPrefix + "CollCenterSummary"
   private val id090: String = C3Chart.idTagPrefix + "CollCenter090"

@@ -30,6 +30,7 @@ import org.aqa.db.CollimatorCentering
 import org.aqa.db.VMAT
 import org.aqa.run.ProcedureStatus
 import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.phase2.CollimatorCenteringResource
 import org.aqa.webrun.phase2.MeasureTBLREdges
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
@@ -250,7 +251,7 @@ object VMATAnalysis extends Logging {
 
   case class VMATResult(summry: Elem, stats: ProcedureStatus.Value, resultList: Seq[VMAT]) extends SubProcedureResult(summry, stats, subProcedureName)
 
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, VMATResult] = {
+  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCenteringResource: CollimatorCenteringResource): Either[Elem, VMATResult] = {
     try {
       // This code only reports values without making judgment as to pass or fail.
       logger.info("Starting analysis of " + subProcedureName + " for machine " + extendedData.machine.id)
@@ -263,7 +264,7 @@ object VMATAnalysis extends Logging {
               runReq.derivedMap(vmatPair.MLC).attributeList,
               runReq.derivedMap(vmatPair.OPEN).attributeList,
               runReq.rtplan,
-              collimatorCentering,
+              collimatorCenteringResource.collimatorCenteringOfBeam(vmatPair.OPEN),
               extendedData.output.outputPK.get,
               runReq.derivedMap(vmatPair.MLC).originalImage,
               runReq.derivedMap(vmatPair.OPEN).originalImage

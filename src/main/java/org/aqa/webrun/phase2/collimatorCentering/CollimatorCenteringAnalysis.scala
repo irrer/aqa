@@ -36,13 +36,15 @@ import scala.collection.parallel.ParSeq
 import scala.xml.Elem
 
 /**
-  * Analyze DICOM files for ImageAnalysis.
+  * Analyse DICOM files for ImageAnalysis.
   */
 object CollimatorCenteringAnalysis extends Logging {
 
   val subProcedureName = "Collimator Centering"
 
-  case class CollimatorCenteringResult(sum: Elem, sts: ProcedureStatus.Value, result: CollimatorCentering) extends SubProcedureResult(sum, sts, subProcedureName)
+  case class CollimatorCenteringResult(sum: Elem, sts: ProcedureStatus.Value, result: Seq[CollimatorCentering]) extends SubProcedureResult(sum, sts, subProcedureName)
+
+  case class AnalysisResult(collimatorCentering: CollimatorCentering, measureTBLREdges090: MeasureTBLREdges.AnalysisResult, measureTBLREdges270: MeasureTBLREdges.AnalysisResult) {}
 
   /**
     * Perform actual analysis.
@@ -54,7 +56,7 @@ object CollimatorCenteringAnalysis extends Logging {
       image270: DicomImage,
       outputPK: Long,
       rtplan: AttributeList
-  ): (CollimatorCentering, MeasureTBLREdges.AnalysisResult, MeasureTBLREdges.AnalysisResult) = {
+  ): AnalysisResult = {
 
     val collAngle090 = Util.collimatorAngle(al090)
     val collAngle270 = Util.collimatorAngle(al270)
@@ -113,7 +115,7 @@ object CollimatorCenteringAnalysis extends Logging {
       xy270.Y2
     )
 
-    (collimatorCentering, result090, result270)
+    AnalysisResult(collimatorCentering, result090, result270)
   }
 
   /**
@@ -126,8 +128,62 @@ object CollimatorCenteringAnalysis extends Logging {
       image270: DicomImage,
       outputPK: Long,
       rtplan: AttributeList
-  ): (CollimatorCentering, MeasureTBLREdges.AnalysisResult, MeasureTBLREdges.AnalysisResult) = {
+  ): AnalysisResult = {
     analyze(al090, al270, image090, image270, outputPK, rtplan)
+  }
+
+  private case class CenteringBeam(name: String, al: AttributeList) {
+    val gantryAngle: Int = Util.angleRoundedTo90(Util.gantryAngle(al))
+    val collimatorAngle: Int = Util.angleRoundedTo90(Util.collimatorAngle(al))
+  }
+
+  private class BeamPair(beamList: Seq[CenteringBeam]) {
+    val beam090: CenteringBeam = beamList.filter(_.collimatorAngle == 90).head
+    val beam270: CenteringBeam = beamList.filter(_.collimatorAngle == 270).head
+  }
+
+  /**
+    * Get a list of collimator centering beam pairs.
+    * @return A list of collimator centering beam pairs.
+    */
+  private def getBeamPairList(runReq: RunReq): Seq[BeamPair] = {
+
+    /**
+      * Return list of beam pairs if all of the names are present.
+      * @param nameList List of required beam names.
+      * @return List if they are all present, empty list if one or more are missing.
+      */
+    def group(nameList: Seq[String]): Seq[BeamPair] = {
+      val list = runReq.rtimageMap.keys.filter(nameList.contains)
+      if (list.size == nameList.size) {
+        val groupList = nameList.map(beamName => CenteringBeam(beamName, runReq.rtimageMap(beamName))).groupBy(_.gantryAngle).values.map(pair => new BeamPair(pair))
+        groupList.toSeq
+      } else
+        Seq()
+    }
+
+    val phase3List = group(Config.collimatorCenteringPhase3List)
+    val phase2List = group(Config.collimatorCenteringPhase2List)
+
+    (phase3List, phase2List) match {
+      case (list, _) => list // match for Phase3
+      case (_, list) => list // match for Phase2
+      case _         => Seq() // could not find complete list for either Phase2 or Phase3
+    }
+  }
+
+  private def processBeamPair(extendedData: ExtendedData, runReq: RunReq, beamPair: BeamPair): AnalysisResult = {
+
+    val anlRes = analyze(
+      runReq.rtimageMap(Config.CollimatorCentering090BeamName),
+      runReq.rtimageMap(Config.CollimatorCentering270BeamName),
+      runReq.derivedMap(beamPair.beam090.name).pixelCorrectedImage,
+      runReq.derivedMap(beamPair.beam270.name).pixelCorrectedImage,
+      extendedData.output.outputPK.get,
+      runReq.rtplan
+    )
+
+    anlRes
   }
 
   /**
@@ -137,32 +193,32 @@ object CollimatorCenteringAnalysis extends Logging {
     try {
       logger.info("Starting analysis of CollimatorCentering for machine " + extendedData.machine.id)
 
-      val image090 = runReq.derivedMap(Config.CollimatorCentering090BeamName)
-      val image270 = runReq.derivedMap(Config.CollimatorCentering270BeamName)
+      val beamPairList = getBeamPairList(runReq).sortBy(_.beam090.gantryAngle)
+      if (beamPairList.isEmpty) {
+        Left(<div>CollimatorCentering beams are missing.</div>)
+      } else {
 
-      val analysisResult = analyze(
-        runReq.rtimageMap(Config.CollimatorCentering090BeamName),
-        runReq.rtimageMap(Config.CollimatorCentering270BeamName),
-        image090.pixelCorrectedImage,
-        image270.pixelCorrectedImage,
-        extendedData.output.outputPK.get,
-        runReq.rtplan
-      )
+        val resultList = beamPairList.map(pair => processBeamPair(extendedData, runReq, pair))
 
-      val collimatorCentering = analysisResult._1
-      val result090 = analysisResult._2
-      val result270 = analysisResult._3
+        val procedureStatus = {
+          if (resultList.map(_.collimatorCentering.status.toString).distinct.contains(ProcedureStatus.fail.toString()))
+            ProcedureStatus.fail
+          else
+            ProcedureStatus.pass
+        }
 
-      val procedureStatus = if (collimatorCentering.status.equals(ProcedureStatus.pass.toString)) ProcedureStatus.pass else ProcedureStatus.fail
+        // put data in the database
+        for (r <- resultList) {
+          logger.info("Inserting CollimatorCentering row: " + r.collimatorCentering)
+          r.collimatorCentering.insert
+        }
 
-      logger.info("Inserting CollimatorCentering row: " + collimatorCentering)
-      collimatorCentering.insert
-
-      val elem = CollimatorCenteringHTML.makeDisplay(extendedData, collimatorCentering, procedureStatus, result090, result270, runReq)
-      logger.info("Finished processing for " + subProcedureName)
-      val result = Right(CollimatorCenteringResult(elem, procedureStatus, collimatorCentering))
-      logger.info("Finished analysis of CollimatorCentering for machine " + extendedData.machine.id)
-      result
+        val elem = CollimatorCenteringHTML.makeDisplay(extendedData, procedureStatus, resultList, runReq)
+        logger.info("Finished processing for " + subProcedureName)
+        val result = Right(CollimatorCenteringResult(elem, procedureStatus, resultList.map(_.collimatorCentering)))
+        logger.info("Finished analysis of CollimatorCentering for machine " + extendedData.machine.id)
+        result
+      }
     } catch {
       case t: Throwable =>
         logger.warn("Unexpected error in analysis of CollimatorCentering: " + t + fmtEx(t))

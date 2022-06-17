@@ -21,6 +21,7 @@ import org.aqa.db.Institution
 import org.aqa.db.Machine
 import org.aqa.db.MachineType
 import org.aqa.db.MultileafCollimator
+import org.aqa.db.Procedure
 import org.aqa.db.User
 
 /**
@@ -46,6 +47,12 @@ class MetadataCache {
   /** Map of users. */
   val userMap: Map[Long, String] = User.list.map(u => (u.userPK.get, u.id)).toMap
 
+  /** Map of procedures. */
+  val procedureMap: Map[Long, Procedure] = Procedure.list.map(p => (p.procedurePK.get, p)).toMap
+
+  val phase2ProcedurePK: Long = Procedure.ProcOfPhase2.get.procedurePK.get
+
+  val phase3ProcedurePK: Long = Procedure.ProcOfPhase3.get.procedurePK.get
 }
 
 object MetadataCache {

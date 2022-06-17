@@ -30,6 +30,7 @@ import org.aqa.db.CollimatorCentering
 import org.aqa.db.LeafPosition
 import org.aqa.run.ProcedureStatus
 import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.phase2.CollimatorCenteringResource
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.SubProcedureResult
@@ -315,7 +316,7 @@ object LeafPositionAnalysis extends Logging {
     val status: ProcedureStatus.ProcedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
   }
 
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, LeafPositionResult] = {
+  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCenteringResource: CollimatorCenteringResource): Either[Elem, LeafPositionResult] = {
 
     try {
       logger.info("Starting analysis of " + subProcedureName + "  for machine " + extendedData.machine.id)
@@ -328,7 +329,14 @@ object LeafPositionAnalysis extends Logging {
       val beamResultList = beamNameList.map(beamName =>
         BeamResults(
           beamName,
-          measureBeam(beamName, outputPK, runReq.derivedMap(beamName).attributeList, runReq.derivedMap(beamName).pixelCorrectedImage, planAttrList, collimatorCentering)
+          measureBeam(
+            beamName,
+            outputPK,
+            imageAttrList = runReq.derivedMap(beamName).attributeList,
+            dicomImage = runReq.derivedMap(beamName).pixelCorrectedImage,
+            plan = planAttrList,
+            collimatorCentering = collimatorCenteringResource.collimatorCenteringOfBeam(beamName)
+          )
         )
       )
 

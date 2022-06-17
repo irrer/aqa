@@ -44,7 +44,7 @@ class VMATChartHistory(outputPK: Long, beamNameMLC: String) extends Logging {
 
   private val output = Output.get(outputPK).get
   private val machine = Machine.get(output.machinePK.get).get
-  private val history = VMAT.history(machine.machinePK.get).filter(h => h.vmat.beamNameMLC.equals(beamNameMLC))
+  private val history = VMAT.history(machine.machinePK.get, output.procedurePK).filter(h => h.vmat.beamNameMLC.equals(beamNameMLC))
 
   /**
     * Get history of given beam as an array of sets of percents ordered by date and each set within that date sorted by X position.

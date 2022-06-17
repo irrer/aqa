@@ -197,10 +197,10 @@ object VMAT extends ProcedureOutput {
     *
     * @param machinePK: For this machine
     */
-  def history(machinePK: Long): Seq[VMATHistory] = {
+  def history(machinePK: Long, procedurePK: Long): Seq[VMATHistory] = {
 
     val search = for {
-      output <- Output.query.filter(o => o.machinePK === machinePK)
+      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
       vmat <- VMAT.query.filter(c => c.outputPK === output.outputPK)
     } yield (output, vmat)
 

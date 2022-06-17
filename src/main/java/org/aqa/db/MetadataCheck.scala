@@ -201,10 +201,10 @@ object MetadataCheck extends ProcedureOutput with Logging {
     *
     * @param machinePK: For this machine
     */
-  def history(machinePK: Long): Seq[MetadataCheckHistory] = {
+  def history(machinePK: Long, procedurePK: Long): Seq[MetadataCheckHistory] = {
 
     val search = for {
-      output <- Output.query.filter(o => o.machinePK === machinePK)
+      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
       metadataCheck <- MetadataCheck.query.filter(c => c.outputPK === output.outputPK)
     } yield (output, metadataCheck)
 

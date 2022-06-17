@@ -45,7 +45,7 @@ class LeafPositionCsv extends Phase2Csv[LeafPosition.LeafPosHistory] {
     * @return List of data for the particular machine.
     */
   override protected def getData(machinePK: Long): Seq[LPH] = {
-    val lpSeq = LeafPosition.history(machinePK)
+    val lpSeq = LeafPosition.history(machinePK, MetadataCache.metadataCache.phase2ProcedurePK) ++ LeafPosition.history(machinePK, MetadataCache.metadataCache.phase3ProcedurePK)
     lpSeq
   }
 

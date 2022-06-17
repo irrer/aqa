@@ -339,7 +339,20 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- The maximum error tolerated for CollimatorCentering in mm. -->
     <CollimatorCenteringTolerence_mm>2.0</CollimatorCenteringTolerence_mm>
 
-    <!-- Beam names used by Phase2 CollimatorCentering -->
+    <!-- Beam names used by Phase2 CollimatorCentering.  Here for backwards compatibility. -->
+    <CollimatorCentering090BeamName>J10G0C90-6X</CollimatorCentering090BeamName>
+    <CollimatorCentering270BeamName>J10G0C270-6X</CollimatorCentering270BeamName>
+
+    <!-- Beam names used by Phase3 CollimatorCentering -->
+    <CollimatorCenteringBeamNameG000C090>M10G0C90</CollimatorCenteringBeamNameG000C090>
+    <CollimatorCenteringBeamNameG000C270>M10G0C270</CollimatorCenteringBeamNameG000C270>
+    <CollimatorCenteringBeamNameG180C090>M10G180C90</CollimatorCenteringBeamNameG180C090>
+    <CollimatorCenteringBeamNameG080C270>M10G180C270</CollimatorCenteringBeamNameG080C270>
+    <CollimatorCenteringBeamNameG270C090>M10G270C90</CollimatorCenteringBeamNameG270C090>
+    <CollimatorCenteringBeamNameG270C270>M10G270C270</CollimatorCenteringBeamNameG270C270>
+    <CollimatorCenteringBeamNameG090C090>M10G90C90</CollimatorCenteringBeamNameG090C090>
+    <CollimatorCenteringBeamNameG090C270>M10G90C270</CollimatorCenteringBeamNameG090C270>
+
     <CollimatorCentering090BeamName>J10G0C90-6X</CollimatorCentering090BeamName>
     <CollimatorCentering270BeamName>J10G0C270-6X</CollimatorCentering270BeamName>
     <!-- Width of band of pixels in isoplane mm to use for initial finding of edge. -->

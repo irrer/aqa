@@ -17,18 +17,14 @@
 
 package aqa.test;
 
-import org.aqa.Config
+import org.aqa.Util
+import org.aqa.db.DbSetup
+import org.aqa.db.Procedure
+import org.aqa.db.WedgePoint
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-import java.io.File
-import org.aqa.Util
-import edu.umro.ImageUtil.DicomImage
-import edu.umro.ScalaUtil.Trace
-import org.aqa.DicomFile
-import org.aqa.db.WedgePoint
+
 import java.sql.Timestamp
-import org.aqa.db.DbSetup
-import java.util.Date
 
 /**
  * Test the TestCenter_recentHistory method.
@@ -48,7 +44,7 @@ class TestWedge_recentHistory extends FlatSpec with Matchers {
   val dateTime = new Timestamp(date.getTime)
 
   println("\nStarting. Using date of:\n    " + Util.standardDateFormat.format(date))
-  val seq = WedgePoint.recentHistory(machinePK)
+  val seq = WedgePoint.recentHistory(machinePK, Procedure.ProcOfPhase2.get.procedurePK.get)
 
   println("results:\n    " + seq.map(_.date).mkString("\n    "))
   println("Number of results: " + seq.size)

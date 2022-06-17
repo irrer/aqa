@@ -23,16 +23,14 @@ import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Baseline
-import org.aqa.db.CollimatorCentering
 import org.aqa.db.WedgePoint
 import org.aqa.run.ProcedureStatus
 import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.phase2.CollimatorCenteringResource
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.SubProcedureResult
 
-import java.awt.Point
-import scala.collection.Seq
 import scala.xml.Elem
 
 /**
@@ -60,12 +58,12 @@ object WedgeAnalysis extends Logging {
 
   private case class WedgePair(beamName: String, backgroundBeamName: String)
 
-  private def analyzeWedgePair(wedgePair: WedgePair, pointList: Seq[Point], extendedData: ExtendedData, runReq: RunReq): WedgePoint = {
+  private def analyzeWedgePair(wedgePair: WedgePair,collimatorCenteringResource: CollimatorCenteringResource , extendedData: ExtendedData, runReq: RunReq): WedgePoint = {
     logger.info("Starting individual wedge analysis of " + wedgePair.beamName + " with background " + wedgePair.backgroundBeamName)
 
     def measure(beamName: String) = {
       val derived = runReq.derivedMap(beamName)
-      Phase2Util.measureDose(pointList, derived.originalImage, derived.attributeList)
+      Phase2Util.measureDose(collimatorCenteringResource.centerPointListOfBeam(beamName), derived.originalImage, derived.attributeList)
     }
 
     val baselineId = makeWedgeBaselineName(wedgePair)
@@ -108,8 +106,7 @@ object WedgeAnalysis extends Logging {
   /**
     * Use the center dose and flood CenterDose points to calculate the WedgePoints.
     */
-  private def analyze(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Seq[WedgePoint] = {
-    val pointList = Phase2Util.makeCenterDosePointList(runReq.flood, collimatorCentering.center)
+  private def analyze(extendedData: ExtendedData, runReq: RunReq, collimatorCenteringResource: CollimatorCenteringResource): Seq[WedgePoint] = {
 
     val beamList = runReq.derivedMap.keys.toList
 
@@ -128,7 +125,7 @@ object WedgeAnalysis extends Logging {
     }
 
     val wedgePairList = beamList.flatMap(b => findBeamPair(b))
-    wedgePairList.map(wp => analyzeWedgePair(wp, pointList, extendedData, runReq))
+    wedgePairList.map(wp => analyzeWedgePair(wp, collimatorCenteringResource, extendedData, runReq))
   }
 
   /**
@@ -151,11 +148,11 @@ object WedgeAnalysis extends Logging {
     * @param machinePK Machine from which they came.
     * @return True if all passed.
     */
-  private def allPass(wedgePointList: Seq[WedgePoint], machinePK: Long): Boolean = {
+  private def allPass(wedgePointList: Seq[WedgePoint], machinePK: Long, procedurePK: Long): Boolean = {
     if (wedgePointList.isEmpty)
       true
     else {
-      val history = WedgePoint.history(machinePK)
+      val history = WedgePoint.history(machinePK, procedurePK)
       val pkList = wedgePointList.map(_.wedgePointPK.get)
 
       def passes(hist: WedgePoint.WedgePointHistory): Boolean = {
@@ -175,21 +172,21 @@ object WedgeAnalysis extends Logging {
   /**
     * Run the WedgeAnalysis sub-procedure, save results in the database, return true for pass or false for fail.  For it to pass all images have to pass.
     */
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, WedgeResult] = {
+  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCenteringResource: CollimatorCenteringResource): Either[Elem, WedgeResult] = {
     try {
       logger.info("Starting analysis of " + subProcedureName + " for machine " + extendedData.machine.id)
 
       val wedgePointList = {
-        analyze(extendedData, runReq, collimatorCentering). // analyse wedge beams
+        analyze(extendedData, runReq, collimatorCenteringResource). // analyse wedge beams
         map(wp => restoreBaseline(wp, runReq.wedgeBaselineRedoBeamList)). // restore baselines as needed
         map(wp => wp.insert) // insert into database, which also defines wedgePointPK
       }
 
-      val pass = allPass(wedgePointList, extendedData.machine.machinePK.get)
+      val pass = allPass(wedgePointList, extendedData.machine.machinePK.get, extendedData.output.procedurePK)
 
       val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
       logger.info("Starting HTML generation for " + subProcedureName)
-      val summary = WedgeHTML.makeDisplay(extendedData, status, runReq, wedgePointList, collimatorCentering.center)
+      val summary = WedgeHTML.makeDisplay(extendedData, status, runReq, wedgePointList, collimatorCenteringResource)
       logger.info("Finished HTML generation for " + subProcedureName)
       val result = new WedgeResult(summary, status)
       logger.info("Finished analysis of " + subProcedureName + " for machine " + extendedData.machine.id)

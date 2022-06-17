@@ -59,7 +59,7 @@ class MetadataCheckCsv extends Phase2Csv[MetadataCheck.MetadataCheckHistory] {
     * @return List of data for the particular machine.
     */
   override protected def getData(machinePK: Long): Seq[MDC] = {
-    val mdcHistory = MetadataCheck.history(machinePK)
+    val mdcHistory = MetadataCheck.history(machinePK, MetadataCache.metadataCache.phase2ProcedurePK) ++ MetadataCheck.history(machinePK, MetadataCache.metadataCache.phase3ProcedurePK)
     mdcHistory
   }
 

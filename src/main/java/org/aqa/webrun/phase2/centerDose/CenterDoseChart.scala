@@ -43,7 +43,7 @@ class CenterDoseChart(outputPK: Long) extends Logging {
   val input: Input = Input.get(output.inputPK).get
   val machine: Machine = Machine.get(output.machinePK.get).get
 
-  val history: Seq[CenterDose.CenterDoseHistory] = CenterDose.history(machine.machinePK.get)
+  val history: Seq[CenterDose.CenterDoseHistory] = CenterDose.history(machine.machinePK.get, output.procedurePK)
 
   private val allDates = history.map(cd => cd.date)
 

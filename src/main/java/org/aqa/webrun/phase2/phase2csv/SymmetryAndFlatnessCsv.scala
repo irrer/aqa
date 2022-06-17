@@ -98,7 +98,8 @@ class SymmetryAndFlatnessCsv extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFl
     * @return List of data for the particular machine.
     */
   override protected def getData(machinePK: Long): Seq[SF] = {
-    val symFlat = SymmetryAndFlatness.history(machinePK).sortBy(h => h.output.dataDate.get.getTime + h.symmetryAndFlatness.beamName)
+    val data = SymmetryAndFlatness.history(machinePK, MetadataCache.metadataCache.phase2ProcedurePK) ++ SymmetryAndFlatness.history(machinePK, MetadataCache.metadataCache.phase3ProcedurePK)
+    val symFlat = data.sortBy(h => h.output.dataDate.get.getTime + h.symmetryAndFlatness.beamName)
     symFlat
   }
 
