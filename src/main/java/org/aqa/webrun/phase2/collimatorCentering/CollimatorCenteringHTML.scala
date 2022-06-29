@@ -101,7 +101,6 @@ object CollimatorCenteringHTML {
     val elem = {
       <div title="Click for details.">
         <a href={htmlFileName}>
-          {CollimatorCenteringAnalysis.subProcedureName}<br/>
           {summary}<br/>
           <img src={iconImage} height="32"/>
         </a>
@@ -244,8 +243,8 @@ object CollimatorCenteringHTML {
       s"""
     <script>
       ${gantryAngleList.map(pair).mkString("\n  ")}
-      ${gantryAngleList.map(ga => CollimatorCenteringChartHistoryRestlet.makeReference(outputPK, ga)).mkString("\n  ")}
     </script>
+    ${gantryAngleList.map(ga => CollimatorCenteringChartHistoryRestlet.makeReference(outputPK, ga)).mkString("\n  ")}
 """
     }
 
@@ -261,7 +260,7 @@ object CollimatorCenteringHTML {
 
     val content = {
       <div>
-        <div>
+        <div class="col-md-10 col-md-offset-1">
           <ul class="nav nav-tabs">
             {analysisResultList.zipWithIndex.map(a => makeTab(a._2, a._1))}
           </ul>

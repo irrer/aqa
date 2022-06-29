@@ -591,7 +591,7 @@ Note that when building a package for release, the Maven build process uses the 
         <!-- <BeamName>T3MLCSpeed</BeamName> Should not be used for this test.-->
         <BeamName>PF Stat 270</BeamName>
         <BeamName>T1 PF ARC</BeamName>
-        <BeamName>T1 PF ARC ERROR</BeamName>
+        <!-- <BeamName>T1 PF ARC ERROR</BeamName> -->
     </LeafPositionBeamNameList>
 
     <!-- Maximum amount +/- as a floating point percentage that each subfield is allowed to deviate from the average of the deviations until it is considered a failure. -->

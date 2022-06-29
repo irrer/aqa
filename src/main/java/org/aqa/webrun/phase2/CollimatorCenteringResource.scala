@@ -69,7 +69,7 @@ class CollimatorCenteringResource(collimatorCentering: Seq[CollimatorCentering],
     * @return Gantry angle of beam.
     */
   private def gantryAngleOfBeam(beamName: String): Int = {
-    val seq = Phase2Util.getBeamSequenceOfPlan("", runReq.rtplan)
+    val seq = Phase2Util.getBeamSequenceOfPlan(beamName, runReq.rtplan)
     val gantryAngleList = DicomUtil.findAllSingle(seq, TagByName.GantryAngle).map(_.getDoubleValues.head)
     val to180List = gantryAngleList.map(ga => if (ga > 180) 360 - ga else ga)
     val gantryAngle = Util.angleRoundedTo90(to180List.sum / to180List.size)

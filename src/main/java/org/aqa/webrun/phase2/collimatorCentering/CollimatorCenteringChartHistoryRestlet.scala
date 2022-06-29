@@ -36,7 +36,7 @@ object CollimatorCenteringChartHistoryRestlet {
   private val gantryAngleTag = "GantryAngle"
 
   def makeReference(outputPK: Long, gantryAngle: Int): String = {
-    s"<script src='$path?$outputPKTag=$outputPK&$gantryAngleTag=$gantryAngle></script>"
+    s"<script src='$path?$outputPKTag=$outputPK&$gantryAngleTag=$gantryAngle'></script>"
   }
 }
 

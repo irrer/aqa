@@ -166,9 +166,9 @@ object CollimatorCenteringAnalysis extends Logging {
     val phase2List = group(Config.collimatorCenteringPhase2List)
 
     (phase3List, phase2List) match {
-      case (list, _) => list // match for Phase3
-      case (_, list) => list // match for Phase2
-      case _         => Seq() // could not find complete list for either Phase2 or Phase3
+      case _ if phase3List.nonEmpty => phase3List // match for Phase3
+      case _ if phase2List.nonEmpty => phase2List // match for Phase2
+      case _                        => Seq() // could not find complete list for either Phase2 or Phase3
     }
   }
 
@@ -201,7 +201,7 @@ object CollimatorCenteringAnalysis extends Logging {
         val resultList = beamPairList.map(pair => processBeamPair(extendedData, runReq, pair))
 
         val procedureStatus = {
-          if (resultList.map(_.collimatorCentering.status.toString).distinct.contains(ProcedureStatus.fail.toString()))
+          if (resultList.map(_.collimatorCentering.status).distinct.contains(ProcedureStatus.fail.toString()))
             ProcedureStatus.fail
           else
             ProcedureStatus.pass
