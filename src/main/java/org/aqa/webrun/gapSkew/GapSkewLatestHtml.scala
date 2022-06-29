@@ -34,7 +34,7 @@ import java.text.SimpleDateFormat
 import scala.xml.Elem
 
 /**
-  * Support for generating JS scripts on request.
+  * Show latest gap skew results for all machines.
   */
 object GapSkewLatestHtml {
   val path = new String((new GapSkewLatestHtml).pathOf)
