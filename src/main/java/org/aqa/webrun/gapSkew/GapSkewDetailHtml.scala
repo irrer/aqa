@@ -197,9 +197,21 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
 
     val trans = al.get(TagByName.XRayImageReceptorTranslation)
 
-    def getDbl(tag: AttributeTag): Double = {
-      val v = DicomUtil.findAllSingle(al, tag).head.getDoubleValues()(0)
-      v
+    /**
+      * Get the first double value from the attribute and format it with full precision.
+      * @param tag Tag of attribute to get.
+      * @return Formatted value, or NA if not available.
+      */
+    def getDbl(tag: AttributeTag): String = {
+      try {
+        val list = DicomUtil.findAllSingle(al, tag)
+        if (list.nonEmpty)
+          list.head.getDoubleValues()(0).toString
+        else
+          "NA"
+      } catch {
+        case _: Throwable => "NA"
+      }
     }
 
     <div>
