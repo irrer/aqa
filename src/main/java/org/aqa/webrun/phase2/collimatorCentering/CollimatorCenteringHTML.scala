@@ -23,6 +23,7 @@ import org.aqa.Util
 import org.aqa.db.CollimatorCentering
 import org.aqa.run.ProcedureStatus
 import org.aqa.web.C3ChartHistory
+import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
@@ -34,22 +35,29 @@ import scala.xml.Elem
 
 object CollimatorCenteringHTML {
 
+  private val dirName = "CollimatorCentering"
+
+  private def dir(outputDir: File) = {
+    val d = new File(outputDir, dirName)
+    Util.mkdirs(d)
+    d
+  }
+
   private val htmlFileName = "CollimatorCentering.html"
 
-  private def fmt(d: Double): String = d.formatted("%8.3f")
+  private def fmt(d: Double): String = d.formatted("%8.2f").trim
 
   private def idOf(a: Int) = "Gantry" + a.formatted("%03d")
   private def id090(ga: Int) = idOf(ga) + "C090"
   private def id270(ga: Int) = idOf(ga) + "C270"
 
   private def showImage(fileName: String, outputDir: File, bufImg: BufferedImage, id: String): Elem = {
-    val fn = FileUtil.replaceInvalidFileNameCharacters(fileName, '_')
-    val pngFile = new File(outputDir, fn)
+    val pngFile = new File(dir(outputDir), fileName)
     Util.writePng(bufImg, pngFile)
     <div>
       <center id={id}>
-        <a href={fn}>
-          <img src={fn} class="img-responsive"/>
+        <a href={fileName}>
+          <img src={fileName} class="img-responsive"/>
         </a>
       </center>
     </div>
@@ -94,13 +102,13 @@ object CollimatorCenteringHTML {
   /**
     * Make a tiny summary and link to the detailed report.
     */
-  private def makeSummary(status: ProcedureStatus.Value, analysisResultList: Seq[CollimatorCenteringAnalysis.AnalysisResult]) = {
+  private def makeSummary(status: ProcedureStatus.Value, analysisResultList: Seq[CollimatorCenteringAnalysis.AnalysisResult], collimatorCenteringDir: File) = {
     val worst = analysisResultList.maxBy(r => r.collimatorCentering.center.distance(new Point2D.Double(0, 0))).collimatorCentering.center
     val summary = <span>Collimator Centering<br/>{Util.fmtDbl(worst.getX) + ", " + Util.fmtDbl(worst.getY)}</span>
     val iconImage = if (status == ProcedureStatus.pass) Config.passImageUrl else Config.failImageUrl
     val elem = {
       <div title="Click for details.">
-        <a href={htmlFileName}>
+        <a href={collimatorCenteringDir.getName + "/" + htmlFileName}>
           {summary}<br/>
           <img src={iconImage} height="32"/>
         </a>
@@ -115,7 +123,7 @@ object CollimatorCenteringHTML {
     * @param gantryAngle Gantry angle rounded to nearest 90 degrees.
     * @return
     */
-  private def makeCharts(outputPK: Long, gantryAngle: Int): Seq[Elem] = {
+  private def makeCharts(outputPK: Long, gantryAngle: Int, beamName090: String, beamName270: String): Seq[Elem] = {
 
     val charts = new CollimatorCenteringChart(outputPK, gantryAngle = gantryAngle)
 
@@ -137,7 +145,7 @@ object CollimatorCenteringHTML {
       <div class="row" style=" border: 1px solid grey; margin-bottom:10px;">
         <center>
           <h2>
-            {Config.CollimatorCentering090BeamName}
+            {beamName090}
           </h2>
         </center>{charts.collCenter090.html}
       </div>
@@ -147,7 +155,7 @@ object CollimatorCenteringHTML {
       <div class="row" style=" border: 1px solid grey; margin-bottom:10px;">
         <center>
           <h2>
-            {Config.CollimatorCentering270BeamName}
+            {beamName270}
           </h2>
         </center>{charts.collCenter270.html}
       </div>
@@ -170,8 +178,8 @@ object CollimatorCenteringHTML {
     val image270 = analysisResult.measureTBLREdges270
     val collimatorCentering = analysisResult.collimatorCentering
 
-    val attr090 = runReq.rtimageMap(Config.CollimatorCentering090BeamName)
-    val attr270 = runReq.rtimageMap(Config.CollimatorCentering270BeamName)
+    val attr090 = runReq.rtimageMap(analysisResult.collimatorCentering.beamName090)
+    val attr270 = runReq.rtimageMap(analysisResult.collimatorCentering.beamName270)
 
     val translator090 = new IsoImagePlaneTranslator(attr090)
     val translator270 = new IsoImagePlaneTranslator(attr270)
@@ -193,25 +201,32 @@ object CollimatorCenteringHTML {
       val href090 = Phase2Util.dicomViewHref(attr090, extendedData, runReq)
       val href270 = Phase2Util.dicomViewHref(attr270, extendedData, runReq)
 
+      val mainTitle =
+        "X, Y difference from isoplane center in mm" + WebUtil.titleNewline +
+          collimatorCentering.center.getX + ", " + collimatorCentering.center.getY
+
+      val png090FileName = FileUtil.replaceInvalidFileNameCharacters(collimatorCentering.beamName090, '_') + ".png"
+      val png270FileName = FileUtil.replaceInvalidFileNameCharacters(collimatorCentering.beamName270, '_') + ".png"
+
       <div id={idOf(gantryAngle)} class="tab-pane fade in active">
         <div class="row">
           <div class="col-md-4 col-md-offset-3" align="middle">
-            <h3 title='X, Y difference from isoplane center in mm'>Offset: {resultSummary} mm</h3>
+            <h3 title={mainTitle}>Gantry {gantryAngle} :: Offset: {resultSummary} mm</h3>
           </div>
           <div class="col-md-10 col-md-offset-1">
-            {makeCharts(outputPK, gantryAngle = gantryAngle)}
+            {makeCharts(outputPK, gantryAngle, analysisResult.collimatorCentering.beamName090, analysisResult.collimatorCentering.beamName270)}
           </div>
         </div>
         <div class="row" style="margin:30px;">
           <div class="col-md-4 col-md-offset-1" align="middle">
             {imageTitle(90, isoCenter090)}
-            <a title='Click for DICOM details' href={href090}>{Config.CollimatorCentering090BeamName}<br/></a>
-            {showImage("CollimatorCentering090_" + Config.CollimatorCentering090BeamName + ".png", outputDir, image090.bufferedImage, id090(gantryAngle))}
+            <a title='Click for DICOM details' href={href090}>{collimatorCentering.beamName090}<br/></a>
+            {showImage(png090FileName, outputDir, image090.bufferedImage, id090(gantryAngle))}
           </div>
           <div class="col-md-4" align="middle">
             {imageTitle(270, isoCenter270)}
-            <a title='Click for DICOM details' href={href270}>{Config.CollimatorCentering270BeamName}<br/></a>
-            {showImage("CollimatorCentering270_" + Config.CollimatorCentering270BeamName + ".png", outputDir, image270.bufferedImage, id270(gantryAngle))}
+            <a title='Click for DICOM details' href={href270}>{collimatorCentering.beamName270}<br/></a>
+            {showImage(png270FileName, outputDir, image270.bufferedImage, id270(gantryAngle))}
           </div>
         </div>
         <div class="col-md-4 col-md-offset-4" align="middle">
@@ -225,8 +240,9 @@ object CollimatorCenteringHTML {
 
   private def makeTab(index: Int, result: CollimatorCenteringAnalysis.AnalysisResult): Elem = {
     val angle = result.collimatorCentering.gantryAngleRounded_deg
+    val center = fmt(result.collimatorCentering.center.getX) + ", " + fmt(result.collimatorCentering.center.getY)
     <li class={if (index == 0) "active" else ""}>
-      <a data-toggle="tab" href={"#" + idOf(angle)}>Gantry {angle}</a>
+      <a data-toggle="tab" href={"#" + idOf(angle)} style="background-color:lightgray;margin-left:20px;"><center>Gantry {angle}<br/>{center}</center></a>
     </li>
   }
 
@@ -261,7 +277,7 @@ object CollimatorCenteringHTML {
     val content = {
       <div>
         <div class="col-md-10 col-md-offset-1">
-          <ul class="nav nav-tabs">
+          <ul class="nav nav-tabs" title="Click tabs to display data from different gantry angles.">
             {analysisResultList.zipWithIndex.map(a => makeTab(a._2, a._1))}
           </ul>
         </div>
@@ -281,10 +297,12 @@ object CollimatorCenteringHTML {
       Some(script),
       runReq
     )
-    val outFile = new File(extendedData.output.dir, htmlFileName)
+    val collimatorCenteringDir = new File(extendedData.output.dir, dirName)
+    Util.mkdirs(collimatorCenteringDir)
+    val outFile = new File(collimatorCenteringDir, htmlFileName)
     Util.writeFile(outFile, html)
 
-    makeSummary(status, analysisResultList)
+    makeSummary(status, analysisResultList, collimatorCenteringDir)
 
   }
 }

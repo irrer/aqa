@@ -25,6 +25,7 @@ import org.aqa.webrun.bbByEpid.BBbyEPIDRun
 import org.aqa.webrun.gapSkew.GapSkewRun
 import org.aqa.webrun.machLog.MachLogRun
 import org.aqa.webrun.phase2.Phase2
+import org.aqa.webrun.phase3.Phase3
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
@@ -58,6 +59,7 @@ object WebRun {
   private val interfaceList: Map[String, ConstructInterfaceT] = Map(
     ("LOCRun_1", procedure => new LOCRun_1(procedure)), // old LOC delivery
     ("Phase2", procedure => new Phase2(procedure)),
+    ("Phase3", procedure => new Phase3(procedure)),
     ("BBbyCBCT", procedure => new BBbyCBCTRun(procedure)),
     ("BBbyEPID", procedure => new BBbyEPIDRun(procedure)),
     ("LOCUploadBaseFiles_1", procedure => new LOCUploadBaseFiles_1(procedure)), // old LOC baseline

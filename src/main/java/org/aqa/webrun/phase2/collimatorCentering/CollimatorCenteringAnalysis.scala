@@ -175,8 +175,8 @@ object CollimatorCenteringAnalysis extends Logging {
   private def processBeamPair(extendedData: ExtendedData, runReq: RunReq, beamPair: BeamPair): AnalysisResult = {
 
     val anlRes = analyze(
-      runReq.rtimageMap(Config.CollimatorCentering090BeamName),
-      runReq.rtimageMap(Config.CollimatorCentering270BeamName),
+      runReq.rtimageMap(beamPair.beam090.name),
+      runReq.rtimageMap(beamPair.beam270.name),
       runReq.derivedMap(beamPair.beam090.name).pixelCorrectedImage,
       runReq.derivedMap(beamPair.beam270.name).pixelCorrectedImage,
       extendedData.output.outputPK.get,
@@ -198,7 +198,7 @@ object CollimatorCenteringAnalysis extends Logging {
         Left(<div>CollimatorCentering beams are missing.</div>)
       } else {
 
-        val resultList = beamPairList.map(pair => processBeamPair(extendedData, runReq, pair))
+        val resultList = beamPairList.par.map(pair => processBeamPair(extendedData, runReq, pair)).toList
 
         val procedureStatus = {
           if (resultList.map(_.collimatorCentering.status).distinct.contains(ProcedureStatus.fail.toString()))

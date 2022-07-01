@@ -353,8 +353,6 @@ Note that when building a package for release, the Maven build process uses the 
     <CollimatorCenteringBeamNameG090C090>M10G90C90</CollimatorCenteringBeamNameG090C090>
     <CollimatorCenteringBeamNameG090C270>M10G90C270</CollimatorCenteringBeamNameG090C270>
 
-    <CollimatorCentering090BeamName>J10G0C90-6X</CollimatorCentering090BeamName>
-    <CollimatorCentering270BeamName>J10G0C270-6X</CollimatorCentering270BeamName>
     <!-- Width of band of pixels in isoplane mm to use for initial finding of edge. -->
     <CollimatorCenteringCoarseBandWidth_mm>5.0</CollimatorCenteringCoarseBandWidth_mm>
 
@@ -424,6 +422,14 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>J18G180</BeamName>
         <BeamName>J18G270</BeamName>
         <BeamName>J18G90</BeamName>
+        <BeamName>M10G0C90</BeamName>
+        <BeamName>M10G0C270</BeamName>
+        <BeamName>M10G180C90</BeamName>
+        <BeamName>M10G180C270</BeamName>
+        <BeamName>M10G270C90</BeamName>
+        <BeamName>M10G270C270</BeamName>
+        <BeamName>M10G90C90</BeamName>
+        <BeamName>M10G90C270</BeamName>
     </CenterDoseBeamNameList>
 
     <!-- Allowed error in mm when measuring collimator positions measured in the image to planned positions. -->
@@ -461,6 +467,16 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName FloodCompensation='false'>J18G180</BeamName>
         <BeamName FloodCompensation='false'>J18G270</BeamName>
         <BeamName FloodCompensation='false'>J18G90</BeamName>
+
+        <!-- Collimator centering beams. -->
+        <BeamName FloodCompensation='false'>M10G0C90</BeamName>
+        <BeamName FloodCompensation='false'>M10G0C270</BeamName>
+        <BeamName FloodCompensation='false'>M10G180C90</BeamName>
+        <BeamName FloodCompensation='false'>M10G180C270</BeamName>
+        <BeamName FloodCompensation='false'>M10G270C90</BeamName>
+        <BeamName FloodCompensation='false'>M10G270C270</BeamName>
+        <BeamName FloodCompensation='false'>M10G90C90</BeamName>
+        <BeamName FloodCompensation='false'>M10G90C270</BeamName>
     </CollimatorPositionBeamList>
 
     <!-- The thickness of the band in mm in the isoplane across the center of the image used for drawing the wedge profile. -->

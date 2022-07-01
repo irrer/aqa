@@ -2,13 +2,16 @@ package org.aqa.webrun.phase2
 
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
 import org.aqa.db.CollimatorCentering
+import org.aqa.Logging
 
 import java.awt.Point
 import java.awt.geom.Point2D
+import javax.vecmath.Point2d
 
-class CollimatorCenteringResource(collimatorCentering: Seq[CollimatorCentering], runReq: RunReq) {
+class CollimatorCenteringResource(collimatorCentering: Seq[CollimatorCentering], runReq: RunReq) extends Logging {
 
   /**
     * Convert an instance of collimator centering to whatever is needed.
@@ -71,9 +74,24 @@ class CollimatorCenteringResource(collimatorCentering: Seq[CollimatorCentering],
   private def gantryAngleOfBeam(beamName: String): Int = {
     val seq = Phase2Util.getBeamSequenceOfPlan(beamName, runReq.rtplan)
     val gantryAngleList = DicomUtil.findAllSingle(seq, TagByName.GantryAngle).map(_.getDoubleValues.head)
-    val to180List = gantryAngleList.map(ga => if (ga > 180) 360 - ga else ga)
-    val gantryAngle = Util.angleRoundedTo90(to180List.sum / to180List.size)
-    gantryAngle
+
+    def distanceTo(angle: Double, angleRounded: Int): Double = {
+      val rad1 = Math.toRadians(Util.modulo360(angle))
+      val point1 = new Point2d(Math.cos(rad1), Math.sin(rad1))
+
+      val rad2 = Math.toRadians(Util.modulo360(angleRounded))
+      val point2 = new Point2d(Math.cos(rad2), Math.sin(rad2))
+
+      point1.distance(point2)
+    }
+
+    def sumOfDistances(angleRounded: Int): Double = gantryAngleList.map(ga => distanceTo(ga, angleRounded)).sum
+
+    val closest = Seq(0, 90, 180, 270).minBy(sumOfDistances)
+
+    logger.info("Gantry angles in beam " + beamName + " : " + gantryAngleList.map(Util.fmtDbl).mkString("  ") + " : closest multiple of 90: " + closest)
+
+    closest
   }
 
   /**
@@ -95,5 +113,13 @@ class CollimatorCenteringResource(collimatorCentering: Seq[CollimatorCentering],
     * @param beamName RTPLAN beam name.
     * @return Collimator centering.
     */
-  def collimatorCenteringOfBeam(beamName: String): CollimatorCentering = angleToCollimatorCentering(gantryAngleOfBeam(beamName))
+  def collimatorCenteringOfBeam(beamName: String): CollimatorCentering = {
+    if (true) { // TODO rm
+      val ga = gantryAngleOfBeam(beamName)
+      val cc = angleToCollimatorCentering(ga)
+
+      Trace.trace("Collimator centering  beam: " + beamName + "    beam gantry angle: " + ga + "    cc: " + cc.center + " : " + cc.beamName090 + " + " + cc.beamName270)
+    }
+    angleToCollimatorCentering(gantryAngleOfBeam(beamName))
+  }
 }
