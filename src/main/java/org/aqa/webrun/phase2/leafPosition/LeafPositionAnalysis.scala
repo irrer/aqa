@@ -352,7 +352,7 @@ object LeafPositionAnalysis extends Logging {
       val procedureStatus = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
       logger.info("Making HTML for " + subProcedureName)
-      val elem = LeafPositionHTML.makeDisplay(extendedData, runReq, beamResultList, pass) // TODO this takes 13 seconds.  Run in parallel?
+      val elem = LeafPositionHTML.makeDisplay(extendedData, runReq, beamResultList, pass, collimatorCenteringResource) // TODO this takes 13 seconds.  Run in parallel?
       val pcr = Right(LeafPositionResult(elem, procedureStatus, resultList))
       logger.info("Finished analysis of " + subProcedureName + "  for machine " + extendedData.machine.id)
       pcr

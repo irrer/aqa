@@ -26,6 +26,7 @@ import org.aqa.web.C3Chart
 import org.aqa.web.WebServer
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.BadPixelAnalysis
+import org.aqa.webrun.phase2.CollimatorCenteringResource
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
 
@@ -89,7 +90,13 @@ object LeafPositionHTML extends Logging {
   /**
     * Generate the details page for the given beam and return URLs to the HTML page and image.  Also write the HTML page to disk.
     */
-  private def makeBeamHtml(subDir: File, extendedData: ExtendedData, runReq: RunReq, beamResult: LeafPositionAnalysis.BeamResults): (String, String) = {
+  private def makeBeamHtml(
+      subDir: File,
+      extendedData: ExtendedData,
+      runReq: RunReq,
+      beamResult: LeafPositionAnalysis.BeamResults,
+      collimatorCenteringResource: CollimatorCenteringResource
+  ): (String, String) = {
     val beamName = beamResult.beamName
     val htmlFileName = Util.textToId(beamName) + ".html"
     val htmlFile = new File(subDir, htmlFileName)
@@ -99,6 +106,8 @@ object LeafPositionHTML extends Logging {
     val horizontal = Phase2Util.isHorizontal(derived.attributeList)
     val translator = new IsoImagePlaneTranslator(derived.attributeList)
     val leafWidthList_mm = LeafPositionUtil.getLeafWidthList_mm(LeafPositionUtil.listOfLeafPositionBoundariesInPlan_mm(horizontal, beamName, runReq.rtplan))
+
+    val collimatorCentering = collimatorCenteringResource.collimatorCenteringOfBeam(beamName)
 
     val image = LeafPositionAnnotateImage.annotateImage(beamResult.resultList, horizontal, derived.pixelCorrectedImage, leafWidthList_mm, translator)
     val imageFileName = Util.textToId(beamName) + ".png"
@@ -132,7 +141,10 @@ object LeafPositionHTML extends Logging {
     val content = {
       <div class="col-md-10 col-md-offset-1">
         <div class="row">
-          <h2>Beam  <a href={dicomHtmlHref} title="View DICOM">{beamName}</a> Max offset: {Util.fmtDbl(maxOffset)} </h2>
+          <span>
+            <h2>Beam  <a href={dicomHtmlHref} title="View DICOM">{beamName}</a> Max offset: {Util.fmtDbl(maxOffset)} </h2>
+            Collimator Centering offset. Gantry: {collimatorCentering.gantryAngleRounded_deg} X,Y: {Util.fmtDbl(collimatorCentering.xCollimatorCenter_mm)},
+            {Util.fmtDbl(collimatorCentering.yCollimatorCenter_mm)},           </span>
         </div>
         <div class="row">
           <h3>Error for Each Leaf at Each Position</h3>
@@ -163,9 +175,9 @@ object LeafPositionHTML extends Logging {
     (url, imageFileName)
   }
 
-  private def makeRow(subDir: File, extendedData: ExtendedData, runReq: RunReq, beamResult: LeafPositionAnalysis.BeamResults): Elem = {
+  private def makeRow(subDir: File, extendedData: ExtendedData, runReq: RunReq, beamResult: LeafPositionAnalysis.BeamResults, collimatorCenteringResource: CollimatorCenteringResource): Elem = {
 
-    val htmlUrlAndImageUrl = makeBeamHtml(subDir, extendedData, runReq, beamResult)
+    val htmlUrlAndImageUrl = makeBeamHtml(subDir, extendedData, runReq, beamResult, collimatorCenteringResource)
 
     val maxOffsetText = "Max Offset " + Util.fmtDbl(beamResult.resultList.map(_.offset_mm).maxBy(_.abs)) + " mm"
 
@@ -181,8 +193,14 @@ object LeafPositionHTML extends Logging {
     td
   }
 
-  private def makeMainHtml(subDir: File, extendedData: ExtendedData, runReq: RunReq, beamResultList: Seq[LeafPositionAnalysis.BeamResults]): Elem = {
-    val tdList = beamResultList.par.map(br => makeRow(subDir, extendedData, runReq, br)).toList
+  private def makeMainHtml(
+      subDir: File,
+      extendedData: ExtendedData,
+      runReq: RunReq,
+      beamResultList: Seq[LeafPositionAnalysis.BeamResults],
+      collimatorCenteringResource: CollimatorCenteringResource
+  ): Elem = {
+    val tdList = beamResultList.par.map(br => makeRow(subDir, extendedData, runReq, br, collimatorCenteringResource)).toList
     val groupedTdList = tdList.zipWithIndex.groupBy(_._2 / 4).toList.sortBy(_._1).map(ig => ig._2.map(_._1))
     val csvUrl = LeafPositionCSV.makeCsvFile(extendedData, runReq, beamResultList, subDir)
 
@@ -223,14 +241,14 @@ object LeafPositionHTML extends Logging {
     elem
   }
 
-  def makeDisplay(extendedData: ExtendedData, runReq: RunReq, beamResultList: Seq[LeafPositionAnalysis.BeamResults], pass: Boolean): Elem = {
+  def makeDisplay(extendedData: ExtendedData, runReq: RunReq, beamResultList: Seq[LeafPositionAnalysis.BeamResults], pass: Boolean, collimatorCenteringResource: CollimatorCenteringResource): Elem = {
     val subDir = new File(extendedData.output.dir, subDirName)
     Util.mkdirs(subDir)
     val mainHtmlFile = new File(subDir, mainHtmlFileName)
     val mainHtml =
       if (beamResultList.isEmpty) noBeams()
       else
-        makeMainHtml(subDir, extendedData, runReq, beamResultList)
+        makeMainHtml(subDir, extendedData, runReq, beamResultList, collimatorCenteringResource)
 
     val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
     val html = Phase2Util.wrapSubProcedure(extendedData, mainHtml, LeafPositionAnalysis.subProcedureName, status, None, runReq)
