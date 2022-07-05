@@ -198,6 +198,16 @@ object BadPixelAnalysis extends Logging {
         val dicomHref = Phase2Util.dicomViewHref(al, extendedData, runReq)
         val pngHref = Phase2Util.dicomViewImageHref(al, extendedData, runReq)
 
+        val collimatorCenteringBeamNameList: Seq[String] = {
+          0 match {
+            case _ if extendedData.procedure.isPhase2 => Config.collimatorCenteringPhase2List
+            case _ if extendedData.procedure.isPhase3 => Config.collimatorCenteringPhase3List
+            case _ =>
+              logger.warn("Unexpected problem, unable to determine which collimator centering beam names to use.  Procedure should be Phase2 or Phase3, but is: " + extendedData.procedure.toString())
+              Seq()
+          }
+        }
+
         val elem = {
           def boolToName(name: String, b: Boolean) = if (b) name else ""
           def isVmat(beamName: String): Boolean = {
@@ -212,7 +222,7 @@ object BadPixelAnalysis extends Logging {
           <td style="text-align: center;" title="Collimator opening in CM">{Phase2Util.jawDescription(al, runReq.rtplan)}</td>
           <td style="text-align: center;" title="Time since first image capture (mm:ss)">{relativeTimeText}</td>
           <td style="text-align: center;" title="Collimator Centering">{
-            boolToName("Col Cntr", Config.CollimatorCentering090BeamName.equals(beamName) || Config.CollimatorCentering270BeamName.equals(beamName))
+            boolToName("Col Cntr", collimatorCenteringBeamNameList.contains(beamName))
           }</td>
           <td style="text-align: center;" title="Center Dose">{boolToName("Cntr Dose", Config.CenterDoseBeamNameList.contains(beamName))}</td>
           <td style="text-align: center;" title="Collimator Position">{boolToName("Col Posn", Config.CollimatorPositionBeamList.exists(cp => cp.beamName.equalsIgnoreCase(beamName)))}</td>
