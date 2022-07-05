@@ -310,7 +310,14 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure(procedure) with Run
       </div>
     }
 
-    val text = Phase2Util.wrapSubProcedure(extendedData, table, "Phase 2", procedureStatus, None, runReq)
+    val procedureName = {
+      0 match {
+        case _ if extendedData.procedure.isPhase2 => "Phase 2"
+        case _ if extendedData.procedure.isPhase3 => "Phase 3"
+        case _ => extendedData.procedure.fullName
+      }
+    }
+    val text = Phase2Util.wrapSubProcedure(extendedData, table, procedureName, procedureStatus, None, runReq)
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeBinaryFile(file, text.getBytes)
   }
