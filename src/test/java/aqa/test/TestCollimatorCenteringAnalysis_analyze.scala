@@ -14,49 +14,37 @@
  * limitations under the License.
  */
 
+package aqa.test
 
-package aqa.test;
-
-import org.aqa.Config
-import org.scalatest.FlatSpec
-import org.scalatest.Matchers
-import java.io.File
-import org.aqa.Util
+import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
-import org.aqa.webrun.phase2.leafPosition.LeafPositionAnalysis
 import edu.umro.ImageUtil.ImageUtil
-import java.awt.Color
-import edu.umro.ScalaUtil.Trace
-import org.opensourcephysics.numerics.CubicSpline
-import org.aqa.webrun.phase2.leafPosition.LeafPositionCoarseLeafSides
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import org.aqa.webrun.phase2.leafPosition.LeafPositionUtil
-import org.aqa.webrun.phase2.centerDose.CenterDoseAnalysis
+import org.aqa.Config
 import org.aqa.DicomFile
-import org.aqa.db.CollimatorCentering
 import org.aqa.webrun.phase2.collimatorCentering.CollimatorCenteringAnalysis
 import org.aqa.webrun.phase2.Phase2Util
+import org.scalatest.FlatSpec
+import org.scalatest.Matchers
+
 import java.awt.image.BufferedImage
-import edu.umro.ScalaUtil.DicomUtil
-import com.pixelmed.dicom.AttributeList
+import java.io.File
 
 /**
- * Test the LeafPositionAnalysis.leafEnds method.
- */
+  * Test the LeafPositionAnalysis.leafEnds method.
+  */
 
 class TestCollimatorCenteringAnalysis_analyze extends FlatSpec with Matchers {
 
   Config.validate
 
-  val dir = new File("""src\test\resources\TestCollimatorCentering""")
-  val fileNameList = Seq(
-    ("TestCollimatorCentering090a.dcm", "TestCollimatorCentering270a.dcm"),
-    ("TestCollimatorCentering090b.dcm", "TestCollimatorCentering270b.dcm"))
+  private val dir = new File("""src\test\resources\TestCollimatorCentering""")
+  private val fileNameList = Seq(("TestCollimatorCentering090a.dcm", "TestCollimatorCentering270a.dcm"), ("TestCollimatorCentering090b.dcm", "TestCollimatorCentering270b.dcm"))
 
-  val outDir = new File("""target\TestCollimatorCenteringAnalysis""")
+  private val outDir = new File("""target\TestCollimatorCenteringAnalysis""")
   outDir.mkdirs
 
-  val rtplan = {
+  private val rtplan = {
     val file = new File(dir, "TestCollimatorCenteringRtplan.dcm")
     val al = new AttributeList
     al.read(file)
@@ -75,13 +63,13 @@ class TestCollimatorCenteringAnalysis_analyze extends FlatSpec with Matchers {
     def correctBadPix(dicomFile: DicomFile): DicomImage = {
       val al = dicomFile.attributeList.get
       val translator = new IsoImagePlaneTranslator(al)
-      val radius = (translator.iso2PixDistX(Config.BadPixelRadius_mm)).round.toInt
+      val radius = translator.iso2PixDistX(Config.BadPixelRadius_mm).round.toInt
       val imageOrig = new DicomImage(dicomFile.attributeList.get)
       val image = imageOrig.correctBadPixels(Phase2Util.identifyBadPixels(imageOrig, radius), radius)
       image
     }
 
-    def testFilePair(fileName090: String, fileName270: String) = {
+    def testFilePair(fileName090: String, fileName270: String): Unit = {
       val dicomFile090 = new DicomFile(new File(dir, fileName090))
       val dicomFile270 = new DicomFile(new File(dir, fileName270))
       println("\n\nfiles:\n    " + dicomFile090.file.getAbsolutePath + "\n    " + dicomFile270.file.getAbsolutePath)
@@ -91,9 +79,9 @@ class TestCollimatorCenteringAnalysis_analyze extends FlatSpec with Matchers {
 
       val analysisResult = CollimatorCenteringAnalysis.testAnalyze(dicomFile090.attributeList.get, dicomFile270.attributeList.get, image090, image270, -1, rtplan)
 
-      val collimatorCentering = analysisResult._1
-      val bufImage090 = analysisResult._2
-      val bufImage270 = analysisResult._3
+      val collimatorCentering = analysisResult.collimatorCentering
+      val bufImage090 = analysisResult.measureTBLREdges090
+      val bufImage270 = analysisResult.measureTBLREdges270
 
       writePng(fileName090, bufImage090.bufferedImage)
       writePng(fileName270, bufImage270.bufferedImage)
@@ -101,7 +89,7 @@ class TestCollimatorCenteringAnalysis_analyze extends FlatSpec with Matchers {
       println("centerDose: " + collimatorCentering)
     }
 
-    fileNameList.map(fn => testFilePair(fn._1, fn._2))
+    fileNameList.foreach(fn => testFilePair(fn._1, fn._2))
 
     true should be(true)
   }

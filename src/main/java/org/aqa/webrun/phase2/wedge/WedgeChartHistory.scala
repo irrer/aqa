@@ -36,7 +36,7 @@ class WedgeChartHistory(outputPK: Long) {
 
   private val output: Output = Output.get(outputPK).get
   private val machinePK: Long = output.machinePK.get
-  private val allHistory: Seq[WedgePoint.WedgePointHistory] = WedgePoint.history(machinePK)
+  private val allHistory: Seq[WedgePoint.WedgePointHistory] = WedgePoint.history(machinePK, output.procedurePK)
 
   /** All maintenance records for the entire history interval for all beams except for 'Set Baseline' to reduce clutter. */
   private val allMaintenanceRecordList: Seq[MaintenanceRecord] = MaintenanceRecord

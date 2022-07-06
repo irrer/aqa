@@ -28,6 +28,7 @@ import org.aqa.web.C3Chart
 import org.aqa.web.C3ChartHistory
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.phase2.CollimatorCenteringResource
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
 
@@ -266,14 +267,14 @@ object WedgeHTML {
       """.replace("\r", "").stripMargin
   }
 
-  def makeDisplay(extendedData: ExtendedData, status: ProcedureStatus.Value, runReq: RunReq, wedgePointList: Seq[WedgePoint], collimatorCenterOfRotation: Point2D.Double): Elem = {
+  def makeDisplay(extendedData: ExtendedData, status: ProcedureStatus.Value, runReq: RunReq, wedgePointList: Seq[WedgePoint], collimatorCenteringResource: CollimatorCenteringResource): Elem = {
 
     val outputDir = extendedData.output.dir
     val wedgeDir = new File(outputDir, "wedge")
     Util.mkdirs(wedgeDir)
 
     val htmlJs = {
-      wedgePointList.map(wp => beamToDisplay(wp, runReq, wedgeDir, collimatorCenterOfRotation))
+      wedgePointList.map(wp => beamToDisplay(wp, runReq, wedgeDir, collimatorCenteringResource.centerOfBeam(wp.wedgeBeamName)))
     }
 
     val content = {

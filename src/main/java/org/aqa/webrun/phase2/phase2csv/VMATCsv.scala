@@ -47,7 +47,8 @@ abstract class VMATCsv extends Phase2Csv[Seq[VMAT.VMATHistory]] {
     */
   override protected def getData(machinePK: Long): Seq[VHS] = {
     // @formatter:off
-    val vmatList = VMAT.history(machinePK).                // get all history for this machine
+    val data = VMAT.history(machinePK, MetadataCache.metadataCache.phase2ProcedurePK) ++ VMAT.history(machinePK, MetadataCache.metadataCache.phase3ProcedurePK)
+    val vmatList = data.                                   // get all history for this machine
       filter(_.vmat.beamNameMLC.equals(beamNameMLC())).    // only for this beam
       groupBy(_.vmat.SOPInstanceUIDMLC).                   // group all items for a given beam together
       values.                                              // do not need SOP UID

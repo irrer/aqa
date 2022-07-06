@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Regents of the University of Michigan
+ * Copyright 2022 Regents of the University of Michigan
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package org.aqa.webrun.phase2
+package org.aqa.webrun.phase3
 
 import org.aqa.db.Procedure
+import org.aqa.webrun.phase2.PhaseAny
 
 /**
-  * Run Phase2 code.
-  */
-class Phase2(procedure: Procedure) extends PhaseAny(procedure) {}
+ * Run Phase3 code.
+ */
+class Phase3(procedure: Procedure) extends PhaseAny(procedure) {}

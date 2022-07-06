@@ -73,7 +73,7 @@ class WedgePointCsv extends Phase2Csv[WedgePoint.WedgePointHistory] {
     * @return List of data for the particular machine.
     */
   override protected def getData(machinePK: Long): Seq[WH] = {
-    val wedgeList = WedgePoint.history(machinePK)
+    val wedgeList = WedgePoint.history(machinePK, MetadataCache.metadataCache.phase2ProcedurePK) ++ WedgePoint.history(machinePK, MetadataCache.metadataCache.phase3ProcedurePK)
     wedgeList
   }
 

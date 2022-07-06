@@ -129,10 +129,10 @@ object CenterDose extends ProcedureOutput {
     *
     * @param machinePK: For this machine
     */
-  def history(machinePK: Long): Seq[CenterDoseHistory] = {
+  def history(machinePK: Long, procedurePK: Long): Seq[CenterDoseHistory] = {
 
     val search = for {
-      output <- Output.query.filter(o => o.machinePK === machinePK)
+      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
       centerDose <- CenterDose.query.filter(c => c.outputPK === output.outputPK)
     } yield (output, centerDose)
 

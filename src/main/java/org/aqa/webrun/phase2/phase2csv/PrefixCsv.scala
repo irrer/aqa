@@ -52,7 +52,8 @@ class PrefixCsv(metadataCache: MetadataCache) {
       "Time of day that the first image in the data set was captured (delivery time).",
       (o: Output) => timeFormat.format(o.dataDate.get)
     ),
-    CsvCol("Analysis", "Date and time that data was analyzed.", (o: Output) => Util.standardDateFormat.format(o.startDate).replace('T', ' '))
+    CsvCol("Analysis", "Date and time that data was analyzed.", (o: Output) => Util.standardDateFormat.format(o.startDate).replace('T', ' ')),
+    CsvCol("Procedure", "Procedure (test) used to process data", (o: Output) => metadataCache.procedureMap(o.procedurePK).fullName)
   )
 
   def toCsvText(output: Output): String = {

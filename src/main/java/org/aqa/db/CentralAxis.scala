@@ -16,9 +16,8 @@
 
 package org.aqa.db
 
-import Db.driver.api._
+import org.aqa.db.Db.driver.api._
 import org.aqa.Config
-import org.aqa.Util
 
 case class CentralAxis(
   centralAxisPK: Option[Long], // primary key
@@ -78,12 +77,12 @@ object CentralAxis {
     Db.run(action)
   }
 
-  def getHistory(machinePK: Long, maxSize: Int): Seq[Double] = {
+  def getHistory(machinePK: Long, maxSize: Int, procedurePK: Long): Seq[Double] = {
     val valid = DataValidity.valid.toString
     val search = for {
       machine <- Machine.query if machine.machinePK === machinePK
       input <- Input.query if input.machinePK === machinePK
-      output <- Output.query if (output.inputPK === input.inputPK) //&& (output.dataValidity === valid)    TODO can we and?
+      output <- Output.query if ((output.inputPK === input.inputPK) && (output.procedurePK === procedurePK)) //&& (output.dataValidity === valid)    TODO can we and?
       centralAxis <- CentralAxis.query if (centralAxis.outputPK === output.outputPK)
     } yield (input.dataDate, centralAxis.maxLeafGap)
 
@@ -100,7 +99,7 @@ object CentralAxis {
   def main(args: Array[String]): Unit = {
     val valid = Config.validate
     DbSetup.init
-    getHistory(2, 10)
+    getHistory(2, 10, Procedure.ProcOfPhase2.get.procedurePK.get)
     //println("======== inst: " + get(5))
     //println("======== inst delete: " + delete(5))
   }

@@ -176,10 +176,10 @@ object CollimatorPosition extends ProcedureOutput {
     * @param machinePK Machine to get data for.
     * @return List of history items sorted by data date.  For items with the same date, sort by beam name.
     */
-  def history(machinePK: Long): Seq[ColPosHistory] = {
+  def history(machinePK: Long, procedurePK: Long): Seq[ColPosHistory] = {
 
     val search = for {
-      output <- Output.query.filter(o => o.machinePK === machinePK)
+      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
       colCent <- CollimatorPosition.query.filter(w => w.outputPK === output.outputPK)
     } yield (output, colCent)
 

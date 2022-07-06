@@ -34,6 +34,9 @@ class CollimatorCenteringCsv extends Phase2Csv[CollimatorCentering.ColCentHistor
 
   override protected def makeColList: Seq[CsvCol[CCH]] = {
     Seq(
+      CsvCol("Gantry Angle", "Gantry angle in degrees rounded to nearest 90 degrees.", (cch: CCH) => cch.colCent.gantryAngleRounded_deg),
+      CsvCol("Coll 90 Beam Name", "Name of beam delivered with collimator angle 90", (cch: CCH) => cch.colCent.beamName090),
+      CsvCol("Coll 270 Beam Name", "Name of beam delivered with collimator angle 270", (cch: CCH) => cch.colCent.beamName270),
       CsvCol("X Center", "X position of center of rotation in mm", (cch: CCH) => cch.colCent.xCollimatorCenter_mm),
       CsvCol("Y Center", "Y position of center of rotation in mm", (cch: CCH) => cch.colCent.yCollimatorCenter_mm),
       CsvCol("Total Offset", "Total offset from center: sqrt(X*X + Y*Y) in mm", (cch: CCH) => offset(cch.colCent)),
@@ -55,7 +58,10 @@ class CollimatorCenteringCsv extends Phase2Csv[CollimatorCentering.ColCentHistor
     * @return List of data for the particular machine.
     */
   override protected def getData(machinePK: Long): Seq[CCH] = {
-    val cchList = CollimatorCentering.history(machinePK)
+    val cchList = Seq(0, 90, 180, 270).flatMap(gantryAngle =>
+      CollimatorCentering.history(machinePK, gantryAngle, MetadataCache.metadataCache.phase2ProcedurePK) ++
+        CollimatorCentering.history(machinePK, gantryAngle, MetadataCache.metadataCache.phase3ProcedurePK)
+    )
     cchList
   }
 

@@ -18,6 +18,8 @@ package org.aqa.webrun.phase2.collimatorCentering
 
 import org.aqa.Logging
 import org.aqa.web.WebUtil._
+import org.aqa.webrun.phase2.collimatorCentering.CollimatorCenteringChartHistoryRestlet.gantryAngleTag
+import org.aqa.webrun.phase2.collimatorCentering.CollimatorCenteringChartHistoryRestlet.outputPKTag
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
@@ -29,8 +31,12 @@ import org.restlet.data.Status
   */
 object CollimatorCenteringChartHistoryRestlet {
   private val path = new String((new CollimatorCenteringChartHistoryRestlet).pathOf)
-  def makeReference(outputPK: Long): String = {
-    "<script src='" + path + "?outputPK=" + outputPK + "'></script>"
+
+  private val outputPKTag = "outputPK"
+  private val gantryAngleTag = "GantryAngle"
+
+  def makeReference(outputPK: Long, gantryAngle: Int): String = {
+    s"<script src='$path?$outputPKTag=$outputPK&$gantryAngleTag=$gantryAngle'></script>"
   }
 }
 
@@ -40,8 +46,14 @@ class CollimatorCenteringChartHistoryRestlet extends Restlet with SubUrlRoot wit
     try {
       super.handle(request, response)
       val valueMap = getValueMap(request)
-      val outputPK = valueMap("outputPK").toInt
-      val cdc = new CollimatorCenteringChart(outputPK)
+      val outputPK = valueMap(outputPKTag).toLong
+      val gantryAngle = {
+         valueMap.get(gantryAngleTag) match {
+           case Some(text) => text.toInt
+           case _ => 0 // for backwards compatibility.  Old web pages will not have the gantry angle
+         }
+      }
+      val cdc = new CollimatorCenteringChart(outputPK, gantryAngle)
       val js = cdc.javascript
       response.setStatus(Status.SUCCESS_OK)
       response.setEntity(js, MediaType.APPLICATION_JAVASCRIPT)

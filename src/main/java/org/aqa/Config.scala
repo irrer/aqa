@@ -438,27 +438,9 @@ object Config extends Logging {
     dbConfig
   }
 
-  private def getCenterDoseBeamNameList = {
-    val list = (document \ "CenterDoseBeamNameList" \ "BeamName").map(n => n.head.text.trim).toList
-    logText("CenterDoseBeamNameList", indentList(list))
-    list.distinct
-  }
-
-  private def getGapSkewBeamNameList = {
-    val list = (document \ "GapSkewBeamNameList" \ "BeamName").map(n => n.head.text.trim).toList
-    logText("GapSkewBeamNameList", indentList(list))
-    list.distinct
-  }
-
-  private def getSymmetryAndFlatnessBeamList = {
-    val list = (document \ "SymmetryAndFlatnessBeamList" \ "BeamName").map(n => n.head.text.trim)
-    logText("SymmetryAndFlatnessBeamList", indentList(list))
-    list.distinct
-  }
-
-  private def getLeafPositionBeamNameList = {
-    val list = (document \ "LeafPositionBeamNameList" \ "BeamName").map(n => n.head.text.trim).toList
-    logText("LeafPositionBeamNameList", indentList(list))
+  private def getBeamNameList(category: String): List[String] = {
+    val list = (document \ category \ "BeamName").map(n => n.head.text.trim).toList
+    logText(category, indentList(list))
     list.distinct
   }
 
@@ -805,6 +787,28 @@ object Config extends Logging {
   val CollimatorCenteringTolerence_mm: Double = logMainText("CollimatorCenteringTolerence_mm", "2.0").toDouble
   val CollimatorCentering090BeamName: String = logMainText("CollimatorCentering090BeamName", "J10G0C90-6X")
   val CollimatorCentering270BeamName: String = logMainText("CollimatorCentering270BeamName", "J10G0C270-6X")
+
+  val CollimatorCenteringBeamNameG000C090: String = logMainText(name = "CollimatorCenteringBeamNameG000C090", default = "M10G0C90")
+  val CollimatorCenteringBeamNameG000C270: String = logMainText(name = "CollimatorCenteringBeamNameG000C270", default = "M10G0C270")
+  val CollimatorCenteringBeamNameG180C090: String = logMainText(name = "CollimatorCenteringBeamNameG180C090", default = "M10G180C90")
+  val CollimatorCenteringBeamNameG080C270: String = logMainText(name = "CollimatorCenteringBeamNameG080C270", default = "M10G180C270")
+  val CollimatorCenteringBeamNameG270C090: String = logMainText(name = "CollimatorCenteringBeamNameG270C090", default = "M10G270C90")
+  val CollimatorCenteringBeamNameG270C270: String = logMainText(name = "CollimatorCenteringBeamNameG270C270", default = "M10G270C270")
+  val CollimatorCenteringBeamNameG090C090: String = logMainText(name = "CollimatorCenteringBeamNameG090C090", default = "M10G90C90")
+  val CollimatorCenteringBeamNameG090C270: String = logMainText(name = "CollimatorCenteringBeamNameG090C270", default = "M10G90C270")
+
+  val collimatorCenteringPhase2List: Seq[String] = Seq(CollimatorCentering090BeamName, CollimatorCentering270BeamName)
+
+  val collimatorCenteringPhase3List: Seq[String] = Seq(
+    CollimatorCenteringBeamNameG000C090,
+    CollimatorCenteringBeamNameG000C270,
+    CollimatorCenteringBeamNameG180C090,
+    CollimatorCenteringBeamNameG080C270,
+    CollimatorCenteringBeamNameG270C090,
+    CollimatorCenteringBeamNameG270C270,
+    CollimatorCenteringBeamNameG090C090,
+    CollimatorCenteringBeamNameG090C270
+  )
   val CollimatorCenteringCoarseBandWidth_mm: Double = logMainText("CollimatorCenteringCoarseBandWidth_mm", "5.0").toDouble
   val PenumbraThickness_mm: Double = logMainText("PenumbraThickness_mm", "20.0").toDouble
   val PenumbraPlateauPixelsPerMillion: Int = logMainText("PenumbraPlateauPixelsPerMillion", "500").toInt
@@ -845,7 +849,7 @@ object Config extends Logging {
 
   val CenterDoseRadius_mm: Double = logMainText("CenterDoseRadius_mm", "5.0").toDouble
   val CenterDoseHistoryRange: Int = logMainText("CenterDoseHistoryRange", "1000000").toInt
-  val CenterDoseBeamNameList: Seq[String] = getCenterDoseBeamNameList
+  val CenterDoseBeamNameList: Seq[String] = getBeamNameList("CenterDoseBeamNameList")
 
   val CollimatorPositionTolerance_mm: Double = logMainText("CollimatorPositionTolerance_mm", "2.0").toDouble
   val CollimatorPositionBeamList: Seq[CollimatorPositionBeamConfig] = getCollimatorPositionBeamList
@@ -864,7 +868,7 @@ object Config extends Logging {
   val SymFlatConstHistoryRange: Int = logMainText("SymFlatConstHistoryRange", "1000000").toInt
   val ProfileConstancyPercentLimit: Double = logMainText("ProfileConstancyPercentLimit", "2.0").toDouble
 
-  val SymmetryAndFlatnessBeamList: immutable.Seq[String] = getSymmetryAndFlatnessBeamList
+  val SymmetryAndFlatnessBeamList: immutable.Seq[String] = getBeamNameList("SymmetryAndFlatnessBeamList")
 
   val SymmetryAndFlatnessPointList: Seq[SymmetryAndFlatnessPoint] = getSymmetryAndFlatnessPointList
 
@@ -878,7 +882,7 @@ object Config extends Logging {
 
   val LeafPositionMaxError_mm: Double = logMainText("LeafPositionMaxError_mm", "1.0").toDouble
   val LeafPositionIsolationDistance_mm: Double = logMainText("LeafPositionIsolationDistance_mm", "0.5").toDouble
-  val LeafPositionBeamNameList: Seq[String] = getLeafPositionBeamNameList
+  val LeafPositionBeamNameList: Seq[String] = getBeamNameList("LeafPositionBeamNameList")
 
   val VMATDeviationThreshold_pct: Double = logMainText("VMATDeviationThreshold_pct", "3.0").toDouble
   val VMATAverageOfAbsoluteDeviationThreshold_pct: Double = logMainText("VMATAverageOfAbsoluteDeviationThreshold_pct", "1.5").toDouble
@@ -916,7 +920,7 @@ object Config extends Logging {
   val EPIDBBMaxBackgroundCoefficientOfVariation: Double = logMainText("EPIDBBMaxBackgroundCoefficientOfVariation", "0.03").toDouble.abs
   val BBbyCBCTMaximumSliceThickness_mm: Double = logMainText("BBbyCBCTMaximumSliceThickness_mm", "1.0").toDouble.abs
 
-  val GapSkewBeamNameList: List[String] = getGapSkewBeamNameList
+  val GapSkewBeamNameList: List[String] = getBeamNameList("GapSkewBeamNameList")
   val GapSkewLeafEndPenumbra_mm: Double = logMainText("GapSkewLeafEndPenumbra_mm", "20.0").toDouble.abs
   val GapSkewAngleWarn_deg: Double = logMainText("GapSkewAngleWarn_deg", "0.1").toDouble.abs
   val GapSkewAngleFail_deg: Double = logMainText("GapSkewAngleFail_deg", "0.2").toDouble.abs

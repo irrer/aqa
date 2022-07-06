@@ -16,23 +16,22 @@
 
 package org.aqa.webrun
 
-import org.restlet.Request
-import org.restlet.Response
-import play.api._
-import play.api.libs.concurrent.Execution.Implicits._
-import org.restlet.data.Status
-import org.aqa.web.WebUtil._
-import org.aqa.db.Machine
-import edu.umro.ScalaUtil.Trace._
-import java.io.File
-import org.aqa.db.Procedure
-import org.aqa.run.Run
-import org.aqa.Util
-import org.aqa.web.WebUtil
-import org.aqa.db.CentralAxis
-import org.restlet.Restlet
 import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.TagFromName
+import edu.umro.ScalaUtil.Trace._
+import org.aqa.db.Machine
+import org.aqa.db.Procedure
+import org.aqa.run.Run
+import org.aqa.web.WebUtil._
+import org.aqa.Util
+import org.aqa.db.CentralAxis
+import org.restlet.Request
+import org.restlet.Response
+import org.restlet.data.Status
+import play.api._
+import play.api.libs.concurrent.Execution.Implicits._
+
+import java.io.File
 
 object UploadAndChooseMachine_1 {
   val parametersFileName = "parameters.xml"
@@ -40,8 +39,8 @@ object UploadAndChooseMachine_1 {
 }
 
 /**
- * Runs procedures that only need the user to upload files and choose a treatment machine.
- */
+  * Runs procedures that only need the user to upload files and choose a treatment machine.
+  */
 class UploadAndChooseMachine_1(procedure: Procedure) extends WebRunProcedure(procedure) {
 
   /** Maximum tongue and groove offset in mm.  Exceeding this value probably indicates a user error. */
@@ -68,10 +67,10 @@ class UploadAndChooseMachine_1(procedure: Procedure) extends WebRunProcedure(pro
   private def validate(valueMap: ValueMapT): StyleMapT = {
     lazy val noDir = Error.make(form.uploadFileInput.get, "No files have been uploaded (no directory)")
     sessionDir(valueMap) match {
-      case None => noDir
+      case None                            => noDir
       case Some(dir) if (!dir.isDirectory) => noDir
       case Some(dir) if (dir.list.isEmpty) => Error.make(form.uploadFileInput.get, "At least one file is required.")
-      case _ => styleNone
+      case _                               => styleNone
     }
   }
 
@@ -79,7 +78,10 @@ class UploadAndChooseMachine_1(procedure: Procedure) extends WebRunProcedure(pro
   private val historyFileName = "history.txt"
 
   private def writeHistory(machinePK: Long, dir: File) = {
-    val text = CentralAxis.getHistory(machinePK, maxHistory).map(g => g.toString + System.lineSeparator).foldLeft("")((t, gt) => t + gt)
+    val data =
+      CentralAxis.getHistory(machinePK, maxHistory, Procedure.ProcOfPhase2.get.procedurePK.get) ++
+        CentralAxis.getHistory(machinePK, maxHistory, Procedure.ProcOfPhase3.get.procedurePK.get)
+    val text = data.map(g => g.toString + System.lineSeparator).foldLeft("")((t, gt) => t + gt)
     Util.writeFile(new File(dir, historyFileName), text)
   }
 
@@ -96,8 +98,8 @@ class UploadAndChooseMachine_1(procedure: Procedure) extends WebRunProcedure(pro
   }
 
   /**
-   * Run the procedure.
-   */
+    * Run the procedure.
+    */
   private def run(valueMap: ValueMapT, request: Request, response: Response) = {
     val errMap = validate(valueMap)
     if (errMap.isEmpty) {
@@ -128,8 +130,8 @@ class UploadAndChooseMachine_1(procedure: Procedure) extends WebRunProcedure(pro
     try {
       0 match {
         case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
-        case _ if buttonIs(valueMap, runButton) => run(valueMap, request, response)
-        case _ => emptyForm(response)
+        case _ if buttonIs(valueMap, runButton)    => run(valueMap, request, response)
+        case _                                     => emptyForm(response)
       }
     } catch {
       case t: Throwable => {

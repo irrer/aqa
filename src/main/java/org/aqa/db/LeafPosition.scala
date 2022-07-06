@@ -172,11 +172,10 @@ object LeafPosition extends ProcedureOutput with Logging {
     * @param machinePK Machine to get data for.
     * @return List of history items sorted by data date and then beam name.  The leafPosSeq is not sorted.
     */
-  def history(machinePK: Long): Seq[LeafPosHistory] = {
+  def history(machinePK: Long, procedurePK: Long): Seq[LeafPosHistory] = {
 
     logger.info("LeafPosition history starting for machine: " + machinePK + " : " + Machine.get(machinePK).get.id)
     val outputList = {
-      val procedurePK = Procedure.ProcOfPhase2.get.procedurePK.get
       val search = for {
         output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
       } yield output

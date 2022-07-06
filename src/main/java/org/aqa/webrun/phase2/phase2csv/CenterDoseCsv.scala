@@ -41,7 +41,7 @@ class CenterDoseCsv extends Phase2Csv[CenterDose.CenterDoseHistory] {
     * @return List of data for the particular machine.
     */
   override protected def getData(machinePK: Long): Seq[CD] = {
-    val cdHistory = CenterDose.history(machinePK)
+    val cdHistory = CenterDose.history(machinePK, MetadataCache.metadataCache.phase2ProcedurePK) ++ CenterDose.history(machinePK, MetadataCache.metadataCache.phase3ProcedurePK)
     cdHistory
   }
 

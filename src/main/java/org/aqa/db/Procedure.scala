@@ -91,6 +91,7 @@ case class Procedure(
   final val isBBbyCBCT = name.toLowerCase.contains("bb") && name.toLowerCase.contains("cbct")
   final val isBBbyEPID = name.toLowerCase.contains("bb") && name.toLowerCase.contains("epid")
   final val isPhase2 = name.toLowerCase.contains("phase2")
+  final val isPhase3 = name.toLowerCase.contains("phase3")
   final val isLOC = (name.toLowerCase.contains("loc") || name.toLowerCase.contains("leaf offset")) && (!name.toLowerCase.contains("base"))
   final val isLOCBaseline = name.toLowerCase.contains("loc") && name.toLowerCase.contains("base")
   final val isGapSkew = name.toLowerCase.contains("gap") && name.toLowerCase.contains("skew")
@@ -163,6 +164,7 @@ object Procedure {
   lazy val ProcOfBBbyCBCT: Option[Procedure] = list.filter(p => p.isBBbyCBCT).sortBy(_.version).lastOption
   lazy val ProcOfBBbyEPID: Option[Procedure] = list.filter(p => p.isBBbyEPID).sortBy(_.version).lastOption
   lazy val ProcOfPhase2: Option[Procedure] = list.filter(p => p.isPhase2).sortBy(_.version).lastOption
+  lazy val ProcOfPhase3: Option[Procedure] = list.filter(p => p.isPhase3).sortBy(_.version).lastOption
   lazy val ProcOfLOC: Option[Procedure] = list.filter(p => p.isLOC).sortBy(_.version).lastOption
   lazy val ProcOfLOCBaseline: Option[Procedure] = list.filter(p => p.isLOCBaseline).sortBy(_.version).lastOption
   lazy val ProcOfGapSkew: Option[Procedure] = list.filter(p => p.isGapSkew).sortBy(_.version).lastOption

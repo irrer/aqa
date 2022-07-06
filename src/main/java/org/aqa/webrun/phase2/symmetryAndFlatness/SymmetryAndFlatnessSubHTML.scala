@@ -39,7 +39,6 @@ import org.restlet.data.MediaType
 import org.restlet.data.Status
 
 import java.io.File
-import scala.collection.Seq
 import scala.collection.immutable
 import scala.xml.Elem
 
@@ -335,7 +334,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       */
     def makeDataSet(sf: SymmetryAndFlatness): Option[SymmetryAndFlatnessDataSet] = {
       try {
-        val baseline = SymmetryAndFlatness.getBaseline(output.machinePK.get, sf.beamName, dataDate).get.baseline
+        val baseline = SymmetryAndFlatness.getBaseline(output.machinePK.get, sf.beamName, dataDate, output.procedurePK).get.baseline
         val al: AttributeList = {
           val aa = alList.find(a => Util.sopOfAl(a).equals(sf.SOPInstanceUID))
           if (aa.isEmpty)
@@ -463,9 +462,10 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     */
   private def beamData(valueMap: ValueMapT, response: Response): Unit = {
     val outputPK = valueMap(outputPKTag).toLong
+    val output = Output.get(outputPK).get
     val machinePK = Output.get(outputPK).get.machinePK.get
     val beamName = valueMap(beamNameTag).replaceAll("%20", " ")
-    val history = SymmetryAndFlatness.history(machinePK, beamName)
+    val history = SymmetryAndFlatness.history(machinePK, beamName, output.procedurePK)
     val beamData = history.find(h => h.output.outputPK.get == outputPK).get
 
     val content = {

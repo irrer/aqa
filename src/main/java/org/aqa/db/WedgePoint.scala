@@ -169,7 +169,7 @@ object WedgePoint extends ProcedureOutput {
     * @param procedurePK : For this procedure
     *
     */
-  def recentHistory(machinePK: Long, procedurePK: Long = Procedure.ProcOfPhase2.get.procedurePK.get): Seq[WedgePointHistory1] = {
+  def recentHistory(machinePK: Long, procedurePK: Long): Seq[WedgePointHistory1] = {
 
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
@@ -224,10 +224,10 @@ object WedgePoint extends ProcedureOutput {
     * @param machinePK Machine to get data for.
     * @return Entire history.
     */
-  def history(machinePK: Long): Seq[WedgePointHistory] = {
+  def history(machinePK: Long, procedurePK: Long): Seq[WedgePointHistory] = {
 
     val search = for {
-      output <- Output.query.filter(o => o.machinePK === machinePK)
+      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
       wedgePoint <- WedgePoint.query.filter(w => w.outputPK === output.outputPK)
     } yield (output, wedgePoint)
 

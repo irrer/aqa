@@ -22,6 +22,7 @@ import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import org.aqa.Util
+
 import scala.collection.Seq
 import scala.xml.Elem
 import org.aqa.db.Output
@@ -29,16 +30,21 @@ import org.aqa.run.ProcedureStatus
 import org.aqa.DicomFile
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageUtil
+
 import java.awt.geom.Point2D
 import org.aqa.Config
+
 import java.awt.Rectangle
 import edu.umro.ImageUtil.LocateEdge
+
 import java.awt.image.BufferedImage
 import java.awt.Color
 import java.awt.BasicStroke
 import edu.umro.ScalaUtil.Trace
+
 import scala.collection.parallel.ParSeq
 import org.aqa.db.CollimatorCentering
+
 import java.awt.Point
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.ExtendedData
@@ -49,6 +55,7 @@ import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.webrun.phase2.MeasureTBLREdges.TBLR
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.DicomDict.TagByName
+import org.aqa.webrun.phase2.CollimatorCenteringResource
 
 /**
  * Analyze DICOM files for ImageAnalysis.
@@ -188,13 +195,12 @@ object CollimatorPositionAnalysis extends Logging {
   /**
    * Run the CollimatorPosition sub-procedure, save results in the database, return true for pass or false for fail.
    */
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, CollimatorPositionResult] = {
+  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCenteringResource: CollimatorCenteringResource): Either[Elem, CollimatorPositionResult] = {
     try {
       logger.info("Starting analysis of CollimatorPosition for machine " + extendedData.machine.id)
       val qualifiedImageList = runReq.derivedMap.toSeq.filter(ndf => imageQualifies(ndf._2.attributeList, runReq.rtplan)).toMap.keys.toSet
 
       val posnBeams = Config.CollimatorPositionBeamList.filter(cp => qualifiedImageList.contains(cp.beamName))
-      val collCntr = new Point2D.Double(collimatorCentering.xCollimatorCenter_mm, collimatorCentering.yCollimatorCenter_mm)
       val resultList = posnBeams.par.map(cp => measureImage(
         cp.beamName,
         cp.FloodCompensation,
@@ -204,7 +210,7 @@ object CollimatorPositionAnalysis extends Logging {
         runReq.derivedMap(cp.beamName).originalImage,
         extendedData.output.outputPK.get,
         runReq.floodOffset,
-        collCntr,
+        collimatorCenteringResource.centerOfBeam(cp.beamName),
         runReq.rtplan)).toList
 
       val doneList = resultList.filter(r => r.isRight).map(r => r.right.get)

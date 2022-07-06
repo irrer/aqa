@@ -24,10 +24,11 @@ import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
-import org.aqa.db.CollimatorCentering
+import org.aqa.db.Procedure
 import org.aqa.db.SymmetryAndFlatness
 import org.aqa.run.ProcedureStatus
 import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.phase2.CollimatorCenteringResource
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.SubProcedureResult
@@ -132,6 +133,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     */
   private def analyze(
       outputPK: Long,
+      procedurePK: Long,
       beamName: String,
       machinePK: Long,
       dataDate: Timestamp,
@@ -222,7 +224,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     )
 
     // Get the baseline for the given beam of the given type (dataName).  If it does not exist, then use this one to establish it.
-    val baseline = SymmetryAndFlatness.getBaseline(machinePK, beamName, dataDate) match {
+    val baseline = SymmetryAndFlatness.getBaseline(machinePK, beamName, dataDate, procedurePK) match {
       case Some(bl) => bl.symmetryAndFlatness
       case _        => symmetryAndFlatness
     }
@@ -248,7 +250,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     * @return
     */
   def testAnalyze(beamName: String, machinePK: Long, dataDate: Timestamp, attributeList: AttributeList, correctedImage: DicomImage, collimatorCenter: Point2D.Double): SymmetryAndFlatnessBeamResult = {
-    analyze(outputPK = -1, beamName, machinePK, dataDate, attributeList, correctedImage, collimatorCenter, Seq())
+    analyze(outputPK = -1, procedurePK = Procedure.ProcOfPhase2.get.procedurePK.get, beamName, machinePK, dataDate, attributeList, correctedImage, collimatorCenter, Seq())
   }
 
   /**
@@ -268,7 +270,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   /**
     * Run the CollimatorPosition sub-procedure, save results in the database, return right for proper execution or left for crash.
     */
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCentering: CollimatorCentering): Either[Elem, SymmetryAndFlatnessResult] = {
+  def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCenteringResource: CollimatorCenteringResource): Either[Elem, SymmetryAndFlatnessResult] = {
     try {
       logger.info("Starting analysis of SymmetryAndFlatness for machine " + extendedData.machine.id)
 
@@ -279,12 +281,13 @@ object SymmetryAndFlatnessAnalysis extends Logging {
         .map(beamName =>
           analyze(
             extendedData.output.outputPK.get,
+            extendedData.output.procedurePK,
             beamName = beamName,
             extendedData.machine.machinePK.get,
             extendedData.output.dataDate.get,
             attributeList = getAttributeList(beamName, runReq),
             correctedImage = runReq.derivedMap(beamName).pixelCorrectedImage,
-            collimatorCentering.center,
+            collimatorCenteringResource.centerOfBeam(beamName),
             runReq.symmetryAndFlatnessBaselineRedoBeamList
           )
         )

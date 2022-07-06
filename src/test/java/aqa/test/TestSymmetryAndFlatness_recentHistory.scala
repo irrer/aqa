@@ -21,6 +21,7 @@ package aqa.test
 
 import org.aqa.Util
 import org.aqa.db.DbSetup
+import org.aqa.db.Procedure
 import org.aqa.db.SymmetryAndFlatness
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
@@ -46,7 +47,7 @@ class TestSymmetryAndFlatness_recentHistory extends FlatSpec with Matchers {
   val dateTime = new Timestamp(date.getTime)
 
   println("\nStarting. Using date of:\n    " + Util.standardDateFormat.format(date))
-  val seq: Seq[SymmetryAndFlatness.SymmetryAndFlatnessHistory] = SymmetryAndFlatness.history(machinePK, beamName)
+  val seq: Seq[SymmetryAndFlatness.SymmetryAndFlatnessHistory] = SymmetryAndFlatness.history(machinePK, beamName, Procedure.ProcOfPhase2.get.procedurePK.get)
 
   println("results:\n    " + seq.map(_.output.dataDate.get).mkString("\n    "))
   println("Number of results: " + seq.size)

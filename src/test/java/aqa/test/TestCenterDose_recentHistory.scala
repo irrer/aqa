@@ -17,19 +17,14 @@
 
 package aqa.test;
 
-import org.aqa.Config
+import org.aqa.Util
+import org.aqa.db.CenterDose
+import org.aqa.db.DbSetup
+import org.aqa.db.Procedure
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-import java.io.File
-import org.aqa.Util
-import edu.umro.ImageUtil.DicomImage
-import edu.umro.ScalaUtil.Trace
-import org.aqa.webrun.phase2.centerDose.CenterDoseAnalysis
-import org.aqa.DicomFile
-import org.aqa.db.CenterDose
+
 import java.sql.Timestamp
-import org.aqa.db.DbSetup
-import java.util.Date
 
 /**
  * Test the TestCenter_recentHistory method.
@@ -47,7 +42,7 @@ class TestCenterDose_recentHistory extends FlatSpec with Matchers {
   val date = new Timestamp(Util.standardDateFormat.parse("2018-05-30T00:00:00.000").getTime)
 
   println("Starting")
-  val list = CenterDose.history(machinePK)
+  val list = CenterDose.history(machinePK, Procedure.ProcOfPhase2.get.procedurePK.get)
 
   println("results:\n    " + list.mkString("\n    "))
   println("Number of results: " + list.size)
