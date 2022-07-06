@@ -39,9 +39,15 @@ import org.aqa.db.MultileafCollimator
 import org.aqa.db.PatientProcedure
 import org.aqa.db.Procedure
 
-import java.io.File
-
 object CustomizeRtPlan extends Logging {
+
+  private val patternPhase2 = ".*phase *2.*"
+  private val patternPhase3 = ".*phase *3.*"
+  private val patternDailyQA = ".*daily.*qa.*"
+  private val patternGapSkew = ".*gap.*skew.*"
+  private val patternLOC = ".*loc.*"
+  private val patternLOCBaseline = ".*baseline.*"
+  private val patternLOCDelivery = ".*delivery.*"
 
   case class LOCRtplanPair(baseline: Config.PlanFileConfig, delivery: Config.PlanFileConfig) {
     def asSeq: Seq[AttributeList] = Seq(baseline.dicomFile.attributeList.get, delivery.dicomFile.attributeList.get)
@@ -50,18 +56,36 @@ object CustomizeRtPlan extends Logging {
   }
 
   /**
+    * Get the template rtplan for the given machine matching the given pattern.  If none exists, return None, which
+    * can happen if the system does not have such a plan configured.  This informs the user
+    * interface so that it can tell the user.
+    */
+  private def getCollimatorCompatiblePlanForMachine(machine: Machine, pattern: String): Seq[Config.PlanFileConfig] = {
+    val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
+    val planFile = Config.PlanFileList.filter(pf =>
+      pf.procedure.toLowerCase.matches(pattern) &&
+        pf.manufacturer.equalsIgnoreCase(collimator.manufacturer) &&
+        pf.collimatorModel.equalsIgnoreCase(collimator.model)
+    )
+    planFile
+  }
+
+  /**
     * Get the template rtplan for the given machine for Phase 2.  If none exists, return None, which
     * can happen if the system does not have such a plan configured.  This informs the user
     * interface so that it can tell the user.
     */
   def getCollimatorCompatiblePhase2PlanForMachine(machine: Machine): Option[Config.PlanFileConfig] = {
-    val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
-    val planFile = Config.PlanFileList.find(pf =>
-      pf.procedure.toLowerCase.matches(".*phase *2.*") &&
-        pf.manufacturer.equalsIgnoreCase(collimator.manufacturer) &&
-        pf.collimatorModel.equalsIgnoreCase(collimator.model)
-    )
-    planFile
+    getCollimatorCompatiblePlanForMachine(machine, patternPhase2).headOption
+  }
+
+  /**
+    * Get the template rtplan for the given machine for Phase 3.  If none exists, return None, which
+    * can happen if the system does not have such a plan configured.  This informs the user
+    * interface so that it can tell the user.
+    */
+  def getCollimatorCompatiblePhase3PlanForMachine(machine: Machine): Option[Config.PlanFileConfig] = {
+    getCollimatorCompatiblePlanForMachine(machine, patternPhase3).headOption
   }
 
   /**
@@ -73,13 +97,7 @@ object CustomizeRtPlan extends Logging {
     * existence) or this will return None.
     */
   def getCollimatorCompatibleDailyQAPlanForMachine(machine: Machine): Option[Config.PlanFileConfig] = {
-    val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
-    val planFile = Config.PlanFileList.find(pf =>
-      pf.procedure.toLowerCase.matches(".*daily.*qa.*") &&
-        pf.manufacturer.equalsIgnoreCase(collimator.manufacturer) &&
-        pf.collimatorModel.equalsIgnoreCase(collimator.model)
-    )
-    planFile
+    getCollimatorCompatiblePlanForMachine(machine, patternDailyQA).headOption
   }
 
   /**
@@ -91,13 +109,7 @@ object CustomizeRtPlan extends Logging {
     * existence) or this will return None.
     */
   def getCollimatorCompatibleGapSkewPlanForMachine(machine: Machine): Option[Config.PlanFileConfig] = {
-    val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
-    val planFile = Config.PlanFileList.find(pf =>
-      pf.procedure.toLowerCase.matches(".*gap.*skew.*") &&
-        pf.manufacturer.equalsIgnoreCase(collimator.manufacturer) &&
-        pf.collimatorModel.equalsIgnoreCase(collimator.model)
-    )
-    planFile
+    getCollimatorCompatiblePlanForMachine(machine, patternGapSkew).headOption
   }
 
   /**
@@ -106,15 +118,10 @@ object CustomizeRtPlan extends Logging {
     * interface so that it can tell the user.
     */
   def getCollimatorCompatibleLocPlanPairForMachine(machine: Machine): Option[LOCRtplanPair] = {
-    val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
-    val planList = Config.PlanFileList.filter(pf =>
-      pf.procedure.toLowerCase.matches(".*loc.*") &&
-        pf.manufacturer.equalsIgnoreCase(collimator.manufacturer) &&
-        pf.collimatorModel.equalsIgnoreCase(collimator.model)
-    )
+    val planList = getCollimatorCompatiblePlanForMachine(machine, patternLOC) // gets both baseline and delivery files
 
-    val baseline = planList.find(pf => pf.procedure.toLowerCase.matches(".*baseline.*"))
-    val delivery = planList.find(pf => pf.procedure.toLowerCase.matches(".*delivery.*"))
+    val baseline = planList.find(pf => pf.procedure.toLowerCase.matches(patternLOCBaseline))
+    val delivery = planList.find(pf => pf.procedure.toLowerCase.matches(patternLOCDelivery))
     val locRtplanPair = (baseline, delivery) match {
       case (Some(b), Some(d)) if b.dicomFile.attributeList.isDefined && d.dicomFile.attributeList.isDefined => Some(LOCRtplanPair(b, d))
       case _                                                                                                => None
@@ -128,8 +135,6 @@ object CustomizeRtPlan extends Logging {
     */
   private def saveAnonymizedDicom(machine: Machine, userPK: Long, rtplan: AttributeList, procedurePK: Option[Long]): AttributeList = {
     val anon = AnonymizeUtil.anonymizeDicom(machine.institutionPK, rtplan)
-    val file = new File(Config.sharedDir, Util.sopOfAl(anon) + ".dcm")
-    DicomUtil.writeAttributeListToFile(anon, file, "AQA") // TODO remove when shared directory is fully deprecated.
 
     DicomSeries.makeDicomSeries(userPK, None, machine.machinePK, Seq(rtplan), procedurePK) match {
       case Some(dicomSeries) => dicomSeries.insert
@@ -139,7 +144,12 @@ object CustomizeRtPlan extends Logging {
     anon
   }
 
-  private def replaceAllUIDs(attributeList: AttributeList) = {
+  /**
+    * Replace all UIDs so that this RTPLAN will be new and unique.
+    *
+    * @param attributeList Replace all in this list.
+    */
+  private def replaceAllUIDs(attributeList: AttributeList): Unit = {
     // get list of attributes that are UIDs
     val uidSet = Config.ToBeAnonymizedList.keySet.filter(tag => ValueRepresentation.isUniqueIdentifierVR(DicomUtil.dictionary.getValueRepresentationFromTag(tag)))
     val attrList = DicomUtil.findAll(attributeList, uidSet)
@@ -149,7 +159,7 @@ object CustomizeRtPlan extends Logging {
       at.removeValues()
       at.addValue(uid)
     }
-    attrList.map(at => replace(at))
+    attrList.foreach(at => replace(at))
   }
 
   /**
@@ -298,8 +308,7 @@ object CustomizeRtPlan extends Logging {
     }
   }
 
-  def getPlanBeamList(machine: Machine): List[PlanBeam] = {
-    val plan = getCollimatorCompatiblePhase2PlanForMachine(machine)
+  def getPlanBeamListX(machine: Machine, plan: Option[Config.PlanFileConfig]): List[PlanBeam] = {
     if (plan.isDefined) {
       val planAttrList = plan.get.dicomFile.attributeList.get
 
@@ -326,7 +335,7 @@ object CustomizeRtPlan extends Logging {
     * For testing only
     */
   def testGetPlanBeamList(machine: Machine): Seq[PlanBeam] = {
-    getPlanBeamList(machine)
+    getPlanBeamListX(machine, getCollimatorCompatiblePhase2PlanForMachine(machine))
   }
 
   /**
@@ -682,11 +691,11 @@ object CustomizeRtPlan extends Logging {
   }
 
   /**
-    * Given all the required information, create an rtplan that is compatible with the given machine for Phase2.
+    * Given all the required information, create an rtplan that is compatible with the given machine for Phase2 or Phase3.
     */
-  def makePlanPhase2(machine: Machine, userPK: Long, planSpecification: PlanSpecification, machineEnergyList: Seq[MachineBeamEnergy]): AttributeList = {
+  def makePlanPhaseAny(machine: Machine, userPK: Long, planSpecification: PlanSpecification, machineEnergyList: Seq[MachineBeamEnergy], procedure: Procedure, pattern: String): AttributeList = {
 
-    val rtplan = DicomUtil.clone(getCollimatorCompatiblePhase2PlanForMachine(machine).get.dicomFile.attributeList.get)
+    val rtplan = DicomUtil.clone(getCollimatorCompatiblePlanForMachine(machine, pattern).head.dicomFile.attributeList.get)
     replaceAllUIDs(rtplan) // change UIDs so that this plan will be considered new and unique from all others.
 
     planSpecification.setOverrides(rtplan)
@@ -695,9 +704,23 @@ object CustomizeRtPlan extends Logging {
 
     removeVarianPrivateTagAttributes(rtplan)
     reassignPlanEnergies(rtplan, machineEnergyList)
-    val anonDicom = saveAnonymizedDicom(machine, userPK, rtplan, Procedure.ProcOfPhase2.get.procedurePK)
-    setupPatientProcedure(machine.institutionPK, anonDicom.get(TagByName.PatientID), Procedure.ProcOfPhase2)
+    val anonDicom = saveAnonymizedDicom(machine, userPK, rtplan, procedure.procedurePK)
+    setupPatientProcedure(machine.institutionPK, anonDicom.get(TagByName.PatientID), Some(procedure))
     rtplan
+  }
+
+  /**
+    * Given all the required information, create an rtplan that is compatible with the given machine for Phase2.
+    */
+  def makePlanPhase2(machine: Machine, userPK: Long, planSpecification: PlanSpecification, machineEnergyList: Seq[MachineBeamEnergy]): AttributeList = {
+    makePlanPhaseAny(machine, userPK, planSpecification, machineEnergyList, Procedure.ProcOfPhase2.get, patternPhase2)
+  }
+
+  /**
+    * Given all the required information, create an rtplan that is compatible with the given machine for Phase3.
+    */
+  def makePlanPhase3(machine: Machine, userPK: Long, planSpecification: PlanSpecification, machineEnergyList: Seq[MachineBeamEnergy]): AttributeList = {
+    makePlanPhaseAny(machine, userPK, planSpecification, machineEnergyList, Procedure.ProcOfPhase3.get, patternPhase3)
   }
 
   /**
@@ -746,7 +769,7 @@ object CustomizeRtPlan extends Logging {
     val rtplanPair = getCollimatorCompatibleLocPlanPairForMachine(machine).get
 
     // change UIDs so that these plans will be considered new and unique from all others.
-    rtplanPair.asSeq.map(rtplan => replaceAllUIDs(rtplan))
+    rtplanPair.asSeq.foreach(rtplan => replaceAllUIDs(rtplan))
 
     // Force them to have the same study instance UID so we know they were made together.
     val studyAt = rtplanPair.delivery.dicomFile.attributeList.get.get(TagFromName.StudyInstanceUID)

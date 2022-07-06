@@ -119,13 +119,14 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
   }
 
   private val createPhase2Button = makeButton("Create Phase 2", ButtonType.BtnPrimary)
+  private val createPhase3Button = makeButton("Create Phase 3", ButtonType.BtnPrimary)
   private val createLocButton = makeButton("Create LOC", ButtonType.BtnPrimary)
   private val createDailyQAButton = makeButton("Create Daily QA", ButtonType.BtnPrimary)
   private val createGapSkewButton = makeButton("Create Gap Skew", ButtonType.BtnPrimary)
   private val cancelButton = makeButton("Cancel", ButtonType.BtnDefault)
   private val backButton = makeButton("Back", ButtonType.BtnDefault)
 
-  private val assignButtonList: WebRow = List(createPhase2Button, createLocButton, createDailyQAButton, createGapSkewButton, cancelButton, machinePK)
+  private val assignButtonList: WebRow = List(createPhase2Button, createPhase3Button, createLocButton, createDailyQAButton, createGapSkewButton, cancelButton, machinePK)
 
   private def formSelect(valueMap: ValueMapT, response: Response, machine: Machine): Unit = {
     val form = new WebForm(pathOf, List(row0, row1, row2) ++ List(assignButtonList))
@@ -215,6 +216,16 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
   }
 
   /**
+    * Make sure fields are valid for Phase 3.
+    */
+  private def validatePhase3(valueMap: ValueMapT): StyleMapT = {
+    val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
+    val phase3Rtplan = CustomizeRtPlan.getCollimatorCompatiblePhase3PlanForMachine(machine)
+    val conf = validateConfigAndRtplanFileExists(phase3Rtplan, machine, "Phase 3", createPhase2Button)
+    validateEntryFields(valueMap) ++ conf
+  }
+
+  /**
     * Make sure fields are valid for DailyQA.
     */
   private def validateDailyQA(valueMap: ValueMapT): StyleMapT = {
@@ -258,9 +269,11 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
   private def showDownload(alListWithNames: Seq[(AttributeList, String)], procedureName: String, valueMap: ValueMapT, machine: Machine, response: Response): Unit = {
 
     /** Make a name look like a DICOM file name. */
+    //noinspection RegExpSimplifiable
     def nameToDcm(name: String) = FileUtil.replaceInvalidFileNameCharacters(name.replace(' ', '-').trim, '_').replaceAll("__*", "_") + ".dcm"
 
     /** Change a name into a HTML valid id attribute. */
+    //noinspection RegExpSimplifiable
     def nameToId(name: String) = "ID_" + name.replaceAll("[^a-zA-Z0-9]", "_")
 
     val downloadUrl: String = {
@@ -366,6 +379,20 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     }
   }
 
+  private def validateAndMakePhase3Plan(valueMap: ValueMapT, response: Response): Unit = {
+    val styleMap = validatePhase3(valueMap)
+    if (styleMap.nonEmpty) {
+      showFailedCustomize(valueMap, styleMap, response)
+    } else {
+      val userPK = getUser(valueMap).get.userPK.get
+      val planSpecification = makePlanSpec(valueMap)
+      val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
+      val machineEnergyList = getMachineEnergyList(machine.machinePK.get)
+      val rtplan = CustomizeRtPlan.makePlanPhase3(machine, userPK, planSpecification, machineEnergyList)
+      showDownload(Seq((rtplan, "Phase 2")), "Phase2", valueMap, machine, response)
+    }
+  }
+
   private def validateAndMakeLocPlan(valueMap: ValueMapT, response: Response): Unit = {
     val styleMap = validateLOC(valueMap)
     if (styleMap.nonEmpty) {
@@ -423,6 +450,7 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
         case _ if buttonIs(valueMap, cancelButton)                                                               => updateMach()
         case _ if buttonIs(valueMap, backButton)                                                                 => updateMach()
         case _ if buttonIs(valueMap, createPhase2Button)                                                         => validateAndMakePhase2Plan(valueMap, response)
+        case _ if buttonIs(valueMap, createPhase3Button)                                                         => validateAndMakePhase3Plan(valueMap, response)
         case _ if buttonIs(valueMap, createLocButton)                                                            => validateAndMakeLocPlan(valueMap, response)
         case _ if buttonIs(valueMap, createDailyQAButton)                                                        => validateAndMakeDailyQAPlan(valueMap, response)
         case _ if buttonIs(valueMap, createGapSkewButton)                                                        => validateAndMakeGapSkewPlan(valueMap, response)
