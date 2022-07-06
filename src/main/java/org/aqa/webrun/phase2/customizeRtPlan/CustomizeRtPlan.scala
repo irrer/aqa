@@ -171,6 +171,10 @@ object CustomizeRtPlan extends Logging {
 
   /**
     * Determine if this is an FFF beam.
+    *
+    * @param beamAl Represents one member of 300a,00b0 BeamSequence list.
+    *
+    * @return True if this is an FFF beam.
     */
   private def isFFFBeam(beamAl: AttributeList): Boolean = {
     val PrimaryFluenceModeSequence = DicomUtil.seqToAttr(beamAl, TagByName.PrimaryFluenceModeSequence)
@@ -212,6 +216,17 @@ object CustomizeRtPlan extends Logging {
     DicomUtil.seqToAttr(rtplan, TagByName.FractionGroupSequence).foreach(al => setNumberOfBeams(al))
   }
 
+  /**
+    * Delete the given beam and all references.  This includes:
+    * <ul>
+    * <li>BeamSequence</li>
+    * <li>ReferencedBeamSequence</li>
+    * <li>PatientSetupSequence</li>
+    * </ul>
+    *
+    * @param rtplan Remove from this plan.
+    * @param beamName The name of the beam.
+    */
   private def removeBeamFromPlan(rtplan: AttributeList, beamName: String): Unit = {
     logger.info("Removing beam " + beamName)
     def deleteFractionSeq(BeamNumber: Int): Unit = {
