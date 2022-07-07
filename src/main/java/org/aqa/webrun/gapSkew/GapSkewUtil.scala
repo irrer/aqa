@@ -31,9 +31,10 @@ object GapSkewUtil {
     }
   }
 
-  val colorFail = "#E00034"
-  val colorWarn = "yellow"
-  val colorPass = "#1DC32B"
+  val colorFail = "#FFAAAA"
+  val colorWarn = "#FFFFAA"
+  val colorPass = "#AAFFAA"
+
   val colorNone = "#888888"
 
   def statusColor(angle: Double): String = {

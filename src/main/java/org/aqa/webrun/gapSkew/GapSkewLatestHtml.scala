@@ -42,6 +42,8 @@ object GapSkewLatestHtml {
 
 class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
 
+  private val userDateFormat = new SimpleDateFormat("d MMM yyyy")
+
   private case class Latest(machine: Machine, output: Option[Output] = None, gapSkew: Option[GapSkew] = None) {}
 
   private case class OutputGapSkew(output: Output, gapSkew: GapSkew) {}
@@ -106,11 +108,7 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
     GapSkewData(machineList, outputList, gapSkewList)
   }
 
-  private def decorate(elem: Elem, outputGapSkew: OutputGapSkew): Elem = {
-
-    val color = GapSkewUtil.statusColor(outputGapSkew.gapSkew.largestHorzSkew_deg)
-    val borderColor = if (dataExpired(Some(outputGapSkew.output))) GapSkewUtil.colorNone else color
-
+  private def dataTitle(outputGapSkew: OutputGapSkew): String = {
     val expired = dataExpired(Some(outputGapSkew.output))
 
     val spaces = "    "
@@ -149,10 +147,17 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
     val valueTitle = "Largest skew (deg): " + outputGapSkew.gapSkew.largestHorzSkew_deg.formatted("%10.5f").trim
 
     val title = Seq(valueTitle, dateTitle, statusTitle, limits).filterNot(_.isEmpty).mkString(sep1, sep1 + sep1, sep1)
+    title
+  }
 
-    val style = "margin:8px; background-color:" + color + "; border:solid " + borderColor + " 8px; border-radius: 15px; padding: 4px;white-space: nowrap; padding: 12px;"
+  private def decorate(elem: Elem, outputGapSkew: OutputGapSkew): Elem = {
 
-    <div title={title} style={style}>{elem}</div>
+    val color = GapSkewUtil.statusColor(outputGapSkew.gapSkew.largestHorzSkew_deg)
+    val borderColor = if (dataExpired(Some(outputGapSkew.output))) GapSkewUtil.colorNone else color
+
+    val style = "margin:8px; background-color:" + color + "; border:solid " + borderColor + " 5px; border-radius: 5px; padding: 4px;white-space: nowrap; padding: 12px;"
+
+    <div style={style}>{elem}</div>
   }
 
   /**
@@ -169,64 +174,57 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
 
     val latest = gapSkewData.getLatestForMachine(machine)
 
-    val machineElem = {
-      val content = {
-        val h = {
-          val length = latest.machine.getRealId.trim.length
-          length match {
-            case _ if length < 6  => <h1 aqaalias="">{latest.machine.id}</h1>
-            case _ if length < 12 => <h2 aqaalias="">{latest.machine.id}</h2>
-            case _                => <h3 aqaalias="">{latest.machine.id}</h3>
-          }
-        }
-        val elem = <center>{h}</center>
-        if (latest.output.isEmpty)
-          elem
-        else
-          decorate(elem, OutputGapSkew(latest.output.get, latest.gapSkew.get))
-      }
+    val rowHeight = 115
+    val colWidth = 150
 
-      <td style="vertical-align:middle; text-align:center;">{content}</td>
+    val machineElem = {
+      <h2 aqaalias="">{latest.machine.id}</h2>
     }
 
     val previousElem: Elem = {
       val previousList = gapSkewData.getPrevious(machine)
 
       def toElem(outputGapSkew: OutputGapSkew): Elem = {
+
         val largestHorzSkew_deg = outputGapSkew.gapSkew.largestHorzSkew_deg
         val outputDate = outputGapSkew.output.dataDate.get
 
-        val title = Util.timeHumanFriendly(outputDate) + WebUtil.titleNewline + "Largest skew (deg): " + largestHorzSkew_deg
-
         val elem = {
-          <div>{WebUtil.timeAgo(outputDate)}</div>
+          <div>{userDateFormat.format(outputDate)}</div>
         }
 
-        <div title={title} style="border: 1px solid lightgrey; padding: 5px; margin-right:8px; margin-top:3px; ">
-          <a href={ViewOutput.viewOutputUrl(outputGapSkew.output.outputPK.get)}>
+        val href = ViewOutput.viewOutputUrl(outputGapSkew.output.outputPK.get)
+
+        val style = s"width:${colWidth}px; padding-right:10px; padding-left:10px; border-right:1px solid lightgrey; "
+
+        <a title={dataTitle(outputGapSkew)} style={style} href={href}>
+          <center>
             {decorate(elem, outputGapSkew)}
-            <center>
-              <div>Skew (deg): {GapSkewUtil.fmt2(largestHorzSkew_deg)}</div>
-            </center>
-          </a>
-        </div>
+            <div>Skew (deg): {GapSkewUtil.fmt2(largestHorzSkew_deg)}</div>
+          </center>
+        </a>
       }
 
-      <td style="width:100%;">
-        <div style="overflow: auto; display: flex; flex-direction: row; vertical-align:middle;">
-            {if (previousList.isEmpty) <h3 style="color: lightgrey;"><i>No Data</i></h3> else previousList.map(toElem)}
-        </div>
+      val tdStyle = s"height: ${rowHeight}px; overflow: auto; display: flex; flex-direction: row; vertical-align:middle;"
+
+      def noData = { <h3 style="color: lightgrey;vertical-align:middle;"><i style="vertical-align:middle;">No Data</i></h3> }
+
+      val elemList = previousList.map(toElem)
+
+      <td style={tdStyle}>
+        {if (previousList.isEmpty) noData else elemList}
       </td>
+
     }
 
-    <div class="row" style="border-bottom:solid lightgrey 1px;">
-      <div class="col-md-2">
-        {machineElem}
-      </div>
-      <div class="col-md-10" style="border-left:solid lightgrey 1px;">
+    val row = {
+      <tr>
+        <td style="vertical-align:middle;width:1%;"> {machineElem} </td>
         {previousElem}
-      </div>
-    </div>
+    </tr>
+    }
+
+    row
   }
 
   private def content(gapSkewData: GapSkewData): Elem = {
@@ -238,15 +236,17 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
         </div>
         <div class="row">
           <div class="col-md-12">
-            <div class="row" style="border-bottom:solid lightgrey 1px;">
-              <div class="col-md-2">
-                <h3><u> Machine </u></h3>
-              </div>
-              <div class="col-md-10" style="border-left:solid lightgrey 1px;">
-                <h3><u> Results (most recent first) </u></h3>
-              </div>
-            </div>
+            <table class="table table-bordered">
+              <tr>
+                <td>
+                  <center><h3> Machine </h3></center>
+                </td>
+                <td>
+                  <h3> Results (most recent first) </h3>
+                </td>
+              </tr>
               {list}
+            </table>
           </div>
         </div>
       </div>

@@ -53,7 +53,7 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
       def toElem(title: String, text: String, color: String): Elem = {
         <td style={style}>
           <center>
-            <h2 style={s"background-color:$color; border:solid $color 1px; border-radius: 18px; padding: 12px;"} title={title + titleSuffix}> {text} </h2>
+            <h2 style={s"background-color:$color; border:solid $color 1px; border-radius: 8px; padding: 12px;"} title={title + titleSuffix}> {text} </h2>
           </center>
         </td>
       }
