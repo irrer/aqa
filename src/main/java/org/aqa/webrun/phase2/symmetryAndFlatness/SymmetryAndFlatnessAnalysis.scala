@@ -293,6 +293,22 @@ object SymmetryAndFlatnessAnalysis extends Logging {
         )
         .toList
 
+      def showIt(r: SymmetryAndFlatnessBeamResult): String = {
+        val bs = r.baseline
+        val sf = r.symmetryAndFlatness
+        val text = {
+          "    " + sf.beamName.formatted("%16s") + " : " +
+            "    axial sym:" + sf.axialSymmetryPass(bs).toString.formatted("%5s") + " : " +
+            "    flatness:" + sf.flatnessPass(bs).toString.formatted("%5s") + " : " +
+            "    transverse sym:" + sf.transverseSymmetryPass(bs).toString.formatted("%5s") + " : " +
+            "    profile const:" + sf.profileConstancyPass(bs).toString.formatted("%5s") + " : " +
+            "    all: " + sf.allPass(bs).toString.formatted("%5s")
+        }
+        text
+      }
+
+      logger.info("\n" + resultList.map(r => showIt(r)).mkString("\n"))
+
       val pass = resultList.map(r => r.symmetryAndFlatness.allPass(r.baseline)).reduce(_ && _)
       val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
