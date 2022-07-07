@@ -462,12 +462,12 @@ Note that when building a package for release, the Maven build process uses the 
         <!-- Collimator centering beams. -->
         <BeamName FloodCompensation='false'>M10G0C90</BeamName>
         <BeamName FloodCompensation='false'>M10G0C270</BeamName>
+        <BeamName FloodCompensation='false'>M10G90C90</BeamName>
+        <BeamName FloodCompensation='false'>M10G90C270</BeamName>
         <BeamName FloodCompensation='false'>M10G180C90</BeamName>
         <BeamName FloodCompensation='false'>M10G180C270</BeamName>
         <BeamName FloodCompensation='false'>M10G270C90</BeamName>
         <BeamName FloodCompensation='false'>M10G270C270</BeamName>
-        <BeamName FloodCompensation='false'>M10G90C90</BeamName>
-        <BeamName FloodCompensation='false'>M10G90C270</BeamName>
     </CollimatorPositionBeamList>
 
     <!-- The thickness of the band in mm in the isoplane across the center of the image used for drawing the wedge profile. -->
@@ -593,12 +593,12 @@ Note that when building a package for release, the Maven build process uses the 
     <LeafPositionBeamNameList>
         <BeamName>PF Stat 0</BeamName>
         <BeamName>PF Stat 180</BeamName>
-        <!-- <BeamName>T2-DG-RS</BeamName> Not finding leaf ends.-->
         <BeamName>PF Stat 90</BeamName>
-        <!-- <BeamName>T3MLCSpeed</BeamName> Should not be used for this test.-->
         <BeamName>PF Stat 270</BeamName>
         <BeamName>T1 PF ARC</BeamName>
         <!-- <BeamName>T1 PF ARC ERROR</BeamName> -->
+        <!-- <BeamName>T2-DG-RS</BeamName> Not finding leaf ends.-->
+        <!-- <BeamName>T3MLCSpeed</BeamName> Should not be used for this test.-->
     </LeafPositionBeamNameList>
 
     <!-- Maximum amount +/- as a floating point percentage that each subfield is allowed to deviate from the average of the deviations until it is considered a failure. -->
