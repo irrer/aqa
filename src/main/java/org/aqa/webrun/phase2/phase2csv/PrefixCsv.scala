@@ -42,16 +42,6 @@ class PrefixCsv(metadataCache: MetadataCache) {
       "Date and time that the first image in the data set was captured (delivery time).",
       (o: Output) => Util.standardDateFormat.format(o.dataDate.get).replace('T', ' ')
     ),
-    CsvCol(
-      "Acquisition Date",
-      "Date that the first image in the data set was captured (delivery date).",
-      (o: Output) => dateFormat.format(o.dataDate.get)
-    ),
-    CsvCol(
-      "Acquisition Time",
-      "Time of day that the first image in the data set was captured (delivery time).",
-      (o: Output) => timeFormat.format(o.dataDate.get)
-    ),
     CsvCol("Analysis", "Date and time that data was analyzed.", (o: Output) => Util.standardDateFormat.format(o.startDate).replace('T', ' ')),
     CsvCol("Procedure", "Procedure (test) used to process data", (o: Output) => metadataCache.procedureMap(o.procedurePK).fullName)
   )
