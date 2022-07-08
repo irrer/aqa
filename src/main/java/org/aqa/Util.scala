@@ -533,12 +533,12 @@ object Util extends Logging {
   /**
     * Specified by 300A,00B8  RTBeamLimitingDeviceType.
     */
-  val xOrientation = Seq("X", "ASYMX", "MLCX", "MLCX1", "MLCX2")
+  val xOrientation: Seq[String] = Seq("X", "ASYMX", "MLCX", "MLCX1", "MLCX2")
 
   /**
     * Specified by 300A,00B8  RTBeamLimitingDeviceType.
     */
-  val yOrientation = Seq("Y", "ASYMY", "MLCY")
+  val yOrientation: Seq[String] = Seq("Y", "ASYMY", "MLCY")
 
   def specifiesX(devType: String): Boolean = xOrientation.contains(devType.toUpperCase)
 
@@ -905,8 +905,12 @@ object Util extends Logging {
     val norm =
       if (name.matches("^[0-9][0-9]:.*"))
         name.substring(3)
-      else
-        name
+      else {
+        if (name.matches("^[0-9][0-9][abAB]:.*")) {
+          name.substring(4)
+        } else
+          name
+      }
     norm.trim
   }
 
