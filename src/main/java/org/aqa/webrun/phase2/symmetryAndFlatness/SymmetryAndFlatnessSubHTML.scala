@@ -212,7 +212,6 @@ object SymmetryAndFlatnessSubHTML extends Logging {
 
   private def makeRow(symFlatData: SymmetryAndFlatnessDataSet): Seq[Elem] = {
     val subDir = SymmetryAndFlatnessHTML.makeSubDir(symFlatData.output.dir)
-    println(symFlatData.symmetryAndFlatness.beamName)
 
     // @formatter:off
     Seq(

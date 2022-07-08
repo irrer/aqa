@@ -102,13 +102,17 @@ case class SymmetryAndFlatness(
     pass
   }
 
-  def axialSymmetryPass(baseline: SymmetryAndFlatness): Boolean = doesPass(axialSymmetry, baseline.axialSymmetry, Config.SymmetryPercentLimit)
+  def axialSymmetryPass(baseline: SymmetryAndFlatness): Boolean =
+    doesPass(axialSymmetry, baseline.axialSymmetry, Config.SymmetryPercentLimit)
 
-  def transverseSymmetryPass(baseline: SymmetryAndFlatness): Boolean = doesPass(transverseSymmetry, baseline.transverseSymmetry, Config.SymmetryPercentLimit)
+  def transverseSymmetryPass(baseline: SymmetryAndFlatness): Boolean =
+    doesPass(transverseSymmetry, baseline.transverseSymmetry, Config.SymmetryPercentLimit)
 
-  def flatnessPass(baseline: SymmetryAndFlatness): Boolean = doesPass(flatness, baseline.flatness, Config.FlatnessPercentLimit)
+  def flatnessPass(baseline: SymmetryAndFlatness): Boolean =
+    doesPass(flatness, baseline.flatness, Config.FlatnessPercentLimit)
 
-  def profileConstancyPass(baseline: SymmetryAndFlatness): Boolean = doesPass(profileConstancy(baseline), baseline.profileConstancy(baseline), Config.ProfileConstancyPercentLimit)
+  def profileConstancyPass(baseline: SymmetryAndFlatness): Boolean =
+    doesPass(profileConstancy(baseline), baseline.profileConstancy(baseline), Config.ProfileConstancyPercentLimit)
 
   def allPass(baseline: SymmetryAndFlatness): Boolean = {
     axialSymmetryPass(baseline) &&

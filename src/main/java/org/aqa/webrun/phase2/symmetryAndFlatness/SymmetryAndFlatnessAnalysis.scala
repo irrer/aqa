@@ -201,8 +201,6 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val transverse_pct = (0 until translator.width).map(x => translator.pix2Iso(x, 0).getX)
     val axial_pct = (0 until translator.height).map(y => translator.pix2Iso(0, y).getY)
 
-    logger.info("Getting baseline values for beam " + beamName)
-
     logger.info("Assembling result for beam " + beamName)
 
     val symmetryAndFlatness = new SymmetryAndFlatness(
@@ -223,9 +221,11 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       centerStdDev_cu = evalPointStdDev(Config.SymmetryPointCenter)
     )
 
+    logger.info("Getting baseline values for beam " + beamName)
+
     // Get the baseline for the given beam of the given type (dataName).  If it does not exist, then use this one to establish it.
     val baseline = SymmetryAndFlatness.getBaseline(machinePK, beamName, dataDate, procedurePK) match {
-      case Some(bl) => bl.symmetryAndFlatness
+      case Some(bl) => bl.baseline
       case _        => symmetryAndFlatness
     }
 
