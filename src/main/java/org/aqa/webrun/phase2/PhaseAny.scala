@@ -40,7 +40,6 @@ import org.aqa.webrun.phase2.collimatorCentering.CollimatorCenteringAnalysis
 import org.aqa.webrun.phase2.collimatorPosition.CollimatorPositionAnalysis
 import org.aqa.webrun.phase2.leafPosition.LeafPositionAnalysis
 import org.aqa.webrun.phase2.metadataCheck.MetadataCheckAnalysis
-import org.aqa.webrun.phase2.metadataCheck.MetadataCheckValidation
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessAnalysis
 import org.aqa.webrun.phase2.vmat.VMATAnalysis
 import org.aqa.webrun.phase2.wedge.WedgeAnalysis
@@ -115,10 +114,13 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure(procedure) with Run
 
     val planUIDReferences = rtimageList.map(img => Phase2Util.referencedPlanUID(img)).distinct
 
+    val dbSeriesList = planUIDReferences.flatMap(planUID => DicomSeries.getBySopInstanceUID(planUID))
+
+    val dbList = dbSeriesList.map(ds => ds.attributeListList.head)
+
     // Look in the uploaded rtplan list and DicomSeries in the database for the plan(s) referenced.  If that fails, then try the shared directory.
     val referencedRtplanList: Seq[AttributeList] = {
       val matchingUploaded = rtplanList.filter(plan => planUIDReferences.contains(Util.sopOfAl(plan)))
-      val dbList = planUIDReferences.flatMap(planUID => DicomSeries.getBySopInstanceUID(planUID)).map(ds => ds.attributeListList.head)
       val list = matchingUploaded ++ dbList
       if (list.nonEmpty)
         list
@@ -130,14 +132,25 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure(procedure) with Run
       }
     }
 
+    // look in the RTPLANs referenced in the database, and if there is one that is for a
+    // different procedure than what the user requested, flag an error.
+    val dbRefWrongProcedure: Option[String] = {
+      val wrong = dbSeriesList.find(s => s.procedurePK.isDefined && s.procedurePK.get != procedure.procedurePK.get)
+      if (wrong.isDefined) {
+        val wrongProc = Procedure.get(wrong.get.procedurePK.get).get
+        Some("User requested to run " + procedure.fullName + " but the RTPLAN referenced is for " + wrongProc.fullName)
+      } else
+        None // no error
+    }
+
     /**
       * Make a human readable list of machines
       */
-
     0 match {
-      case _ if planUIDReferences.size > 1   => formErr("The RTIMAGES reference more than one RTPLAN.")
-      case _ if referencedRtplanList.isEmpty => formErr("Can not find the referenced RTPLAN.  Retry and upload the RTPLAN with the images. ")
-      case _ if rtimageList.isEmpty          => formErr("No RTIMAGEs given")
+      case _ if planUIDReferences.size > 1    => formErr("The RTIMAGES reference more than one RTPLAN.")
+      case _ if referencedRtplanList.isEmpty  => formErr("Can not find the referenced RTPLAN.  Retry and upload the RTPLAN with the images. ")
+      case _ if rtimageList.isEmpty           => formErr("No RTIMAGEs given")
+      case _ if dbRefWrongProcedure.isDefined => formErr(dbRefWrongProcedure.get)
 
       case _ if machineSerialNumberList.isEmpty =>
         formErr(
@@ -253,12 +266,8 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure(procedure) with Run
         if (basicBeamValid.isLeft) basicBeamValid
         else {
           val runReq = basicBeamValid.right.get
-          val err = MetadataCheckValidation.validate(runReq)
-          if (err.isDefined) Left(Error.make(form.uploadFileInput.get, err.get))
-          else {
-            val bpErr = BadPixelAnalysis.validate(runReq)
-            if (bpErr.isDefined) Left(Error.make(form.uploadFileInput.get, err.get)) else Right(runReq)
-          }
+          val bpErr = BadPixelAnalysis.validate(runReq)
+          if (bpErr.isDefined) Left(Error.make(form.uploadFileInput.get, bpErr.get)) else Right(runReq)
         }
     }
   }
@@ -314,7 +323,7 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure(procedure) with Run
       0 match {
         case _ if extendedData.procedure.isPhase2 => "Phase 2"
         case _ if extendedData.procedure.isPhase3 => "Phase 3"
-        case _ => extendedData.procedure.fullName
+        case _                                    => extendedData.procedure.fullName
       }
     }
     val text = Phase2Util.wrapSubProcedure(extendedData, table, procedureName, procedureStatus, None, runReq)

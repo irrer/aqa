@@ -47,7 +47,7 @@ object CollimatorCenteringHTML {
 
   private def fmt(d: Double): String = d.formatted("%8.2f").trim
 
-  private def idOf(a: Int) = "Gantry" + a.formatted("%03d")
+  private def idOf(a: Int) = if (a == 0) "" else { "Gantry" + a.formatted("%03d") }
   private def id090(ga: Int) = idOf(ga) + "C090"
   private def id270(ga: Int) = idOf(ga) + "C270"
 
