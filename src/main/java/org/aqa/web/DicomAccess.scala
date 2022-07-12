@@ -17,27 +17,21 @@
 package org.aqa.web
 
 import com.pixelmed.dicom.AttributeList
-import java.io.File
-import org.aqa.DicomFile
-import org.aqa.Logging
 import com.pixelmed.dicom.TagFromName
-import edu.umro.ScalaUtil.DicomUtil
-import scala.xml.Elem
-import javax.imageio.ImageIO
-import edu.umro.ScalaUtil.FileUtil
-import java.io.ByteArrayOutputStream
-import java.io.FileOutputStream
-import edu.umro.ScalaUtil.Trace
-import java.awt.Point
-import java.awt.image.BufferedImage
+import edu.umro.ImageUtil.DicomImage
+import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
-import java.awt.Color
+import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.BadPixel
-import edu.umro.ImageUtil.DicomImage
+
+import java.awt.image.BufferedImage
 import java.awt.BasicStroke
-import edu.umro.ImageUtil.ImageText
-import slick.lifted.Constraint
+import java.awt.Color
+import java.io.File
+import java.io.FileOutputStream
+import scala.xml.Elem
 
 /**
  * Create a web page to display a DICOM file.
@@ -129,11 +123,11 @@ object DicomAccess extends Logging {
       xAxisLabel = "Pixel Value",
       xDataLabel = "Pixel Value",
       xValueList = xValues,
-      xFormat = ".d",
+      xFormat = ".0d",
       yAxisLabels = Seq("Count"),
       yDataLabel = "Count",
       yValues = Seq(yValues),
-      yFormat = ".d",
+      yFormat = ".0d",
       yColorList = Seq(Color.DARK_GRAY))
   }
 
