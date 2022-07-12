@@ -17,7 +17,6 @@
 package org.aqa.web
 
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.TagFromName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
@@ -34,15 +33,9 @@ import java.io.FileOutputStream
 import scala.xml.Elem
 
 /**
- * Create a web page to display a DICOM file.
- */
+  * Create a web page to display a DICOM file.
+  */
 object DicomAccess extends Logging {
-
-  private def makeTitle(attrList: Seq[AttributeList]): String = {
-    val SeriesDescription = attrList.map(al => al.get(TagFromName.SeriesDescription)).distinct.mkString("   ")
-    val Modality = attrList.map(al => al.get(TagFromName.Modality)).distinct.mkString("   ")
-    Modality + " : " + SeriesDescription
-  }
 
   /** Size to show a pixel in pixels.  Equivalent to a magnification factor. */
   private val pixelSize = 50
@@ -52,8 +45,6 @@ object DicomAccess extends Logging {
   private val pixRow = 4
 
   private val badPixelDirName = "badPixels"
-
-  private val pixelsPerRow = (BadPixel.radius * 2) + 1
 
   private val naColor = Color.lightGray
   private val naStroke = new BasicStroke(5, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, Array(1), 0)
@@ -86,7 +77,7 @@ object DicomAccess extends Logging {
         }
         graphics.setColor(contrastingColor)
         ImageText.setFont(graphics, ImageText.DefaultFont, textPointSize)
-        val text = dicomImage.get(xx, yy).round.toInt.toString
+        val text = dicomImage.get(xx, yy).round.toString
         ImageText.drawTextCenteredAt(graphics, xi + pixelSize / 2, yi + pixelSize / 2, text)
       } else {
         graphics.setColor(naColor)
@@ -110,9 +101,9 @@ object DicomAccess extends Logging {
 
     <div class="col-md-2" style="margin:8px;">
       <center>
-        <h4 title="Pixel coordinates">{ badPixel.x.toString + ", " + badPixel.y.toString }</h4>
+        <h4 title="Pixel coordinates">{badPixel.x.toString + ", " + badPixel.y.toString}</h4>
       </center>
-      <img src={ WebServer.urlOfResultsFile(pngFile) }/>
+      <img src={WebServer.urlOfResultsFile(pngFile)}/>
     </div>
   }
 
@@ -128,33 +119,20 @@ object DicomAccess extends Logging {
       yDataLabel = "Count",
       yValues = Seq(yValues),
       yFormat = ".0d",
-      yColorList = Seq(Color.DARK_GRAY))
+      yColorList = Seq(Color.DARK_GRAY)
+    )
   }
 
-  /**
-   * Remove the outlier pixels at the high end of the histogram.  Use a 5% change as a cutoff.
-   */
-  private def trimHistogram(h: Seq[(Float, Int)]): Seq[(Float, Int)] = {
-    val start = h.lastIndexWhere(vc => vc._2 > 5)
-
-    val pct = 5.0.toFloat
-
-    val left = h.take(start + 1)
-    val right = h.takeRight(h.size - left.size)
-
-    val rVal = right.map(vc => vc._1)
-    val rr = rVal.zip(rVal.tail :+ rVal.last)
-
-    def tooMuchDelta(a: Float, b: Float) = { (((b - a) / a).abs * 100) > pct }
-    val lastGood = {
-      val lg = rr.indexWhere(pn => tooMuchDelta(pn._1, pn._2))
-      if (lg < 0) 0 else lg
-    }
-
-    left ++ right.take(lastGood + 1)
-  }
-
-  private def makeImagePage(title: String, pngFile: File, outputDir: File, fileBaseName: String, dicomImage: DicomImage, bufferedImage: BufferedImage, badPixels: Seq[DicomImage.PixelRating], radius: Int): Elem = {
+  private def makeImagePage(
+      title: String,
+      pngFile: File,
+      outputDir: File,
+      fileBaseName: String,
+      dicomImage: DicomImage,
+      bufferedImage: BufferedImage,
+      badPixels: Seq[DicomImage.PixelRating],
+      radius: Int
+  ): Elem = {
 
     val pngUrl = WebServer.urlOfResultsFile(pngFile)
     val imagePageFile = new File(outputDir, fileBaseName + "_image.html")
@@ -164,50 +142,56 @@ object DicomAccess extends Logging {
     Util.mkdirs(badPixelDir)
 
     val badPixelVisualizationList = badPixels.map(badPixel => badPixelToHtml(badPixel, dicomImage, fileBaseName, bufferedImage, badPixelDir))
-    val rowList = (0 until ((badPixelVisualizationList.size + pixRow - 1) / pixRow)).map(row => badPixelVisualizationList.drop(row * pixRow).take(pixRow))
+    val rowList = (0 until ((badPixelVisualizationList.size + pixRow - 1) / pixRow)).map(row => badPixelVisualizationList.slice(row * pixRow, row * pixRow + pixRow))
 
     val dicomImageCorrected = dicomImage.correctBadPixels(badPixels, radius)
     val graphHistogramFixed = new GraphHistogram(dicomImageCorrected.binnedHistogram(512))
 
     def rowToHtml(row: Seq[Elem]): Elem = {
-      { <div class="row">{ row }</div> }
+      { <div class="row">{row}</div> }
     }
     val allRows = rowList.map(row => rowToHtml(row)).toList
 
     val imageContent = {
       <div>
-        <a href={ imagePageUrl }><img src={ pngUrl }/></a>
+        <a href={imagePageUrl}><img src={pngUrl}/></a>
         <p/>
-        <h2 title="Zoomed view of bad pixels (centered in each) and raw values with immediate neighbors.">Bad Pixels : { badPixels.size }</h2>
+        <h2 title="Zoomed view of bad pixels (centered in each) and raw values with immediate neighbors.">Bad Pixels : {badPixels.size}</h2>
         <p/>
-        { allRows }
+        {allRows}
         <p/>
         <h2 title="Shows how many times each approximatge pixel value occurs.  Bad pixel values have been removed.">Compressed Histogram of Pixel Values verses Count</h2>
-        { graphHistogramFixed.chart.html }
+        {graphHistogramFixed.chart.html}
         <p/>
       </div>
     }
 
     val mainImagePage = {
       <div class="col-md-10 col-md-offset-1">
-        <h2 title="Image with bad pixels annotated">{ title }</h2>
-        { imageContent }
+        <h2 title="Image with bad pixels annotated">{title}</h2>
+        {imageContent}
       </div>
     }
 
     val script = { """<script>""" + graphHistogramFixed.chart.javascript + """</script>""" }
 
-    val imagePageText = WebUtil.wrapBody(mainImagePage, title, None, true, Some(script))
+    val imagePageText = WebUtil.wrapBody(mainImagePage, title, None, c3 = true, Some(script))
     val imagePageOutStream = new FileOutputStream(imagePageFile)
     imagePageOutStream.write(imagePageText.getBytes)
-    imagePageOutStream.close
+    imagePageOutStream.close()
 
-    <a href={ imagePageUrl }><img src={ pngUrl } width="256"></img></a>
+    <a href={imagePageUrl}><img src={pngUrl} width="256"></img></a>
   }
 
-  private def makePage(al: AttributeList, title: String,
-    dir: File, fileBaseName: String, bufferedImage: Option[BufferedImage],
-    dicomImage: Option[DicomImage], badPixels: Seq[DicomImage.PixelRating]): Option[String] = {
+  private def makePage(
+      al: AttributeList,
+      title: String,
+      dir: File,
+      fileBaseName: String,
+      bufferedImage: Option[BufferedImage],
+      dicomImage: Option[DicomImage],
+      badPixels: Seq[DicomImage.PixelRating]
+  ): Option[String] = {
 
     val pngFile = new File(dir, fileBaseName + ".png")
 
@@ -217,9 +201,9 @@ object DicomAccess extends Logging {
       {
         <div>
           <br></br>
-          { if (bufferedImage.isDefined) makeImagePage(title, pngFile, dir, fileBaseName, dicomImage.get, bufferedImage.get, badPixels, Util.badPixelRadius(al)) }
+          {if (bufferedImage.isDefined) makeImagePage(title, pngFile, dir, fileBaseName, dicomImage.get, bufferedImage.get, badPixels, Util.badPixelRadius(al))}
           <p>
-            <pre title="DICOM meta-data">{ WebUtil.nl + text }</pre>
+            <pre title="DICOM meta-data">{WebUtil.nl + text}</pre>
           </p>
         </div>
       }
@@ -227,8 +211,8 @@ object DicomAccess extends Logging {
 
     val html = {
       <div class="row col-md-10 col-md-offset-1">
-        <h2 title="Scroll down for metadata">{ title }</h2>
-        { content }
+        <h2 title="Scroll down for metadata">{title}</h2>
+        {content}
       </div>
     }
 
@@ -237,7 +221,7 @@ object DicomAccess extends Logging {
     Util.writeBinaryFile(htmlFile, htmlText.getBytes)
 
     if (bufferedImage.isDefined) {
-      badPixels.map(bp => ImageUtil.annotatePixel(bufferedImage.get, bp.x, bp.y, bp.x + ", " + bp.y, true))
+      badPixels.foreach(bp => ImageUtil.annotatePixel(bufferedImage.get, bp.x, bp.y, bp.x + ", " + bp.y, encircle = true))
       Util.writePng(bufferedImage.get, pngFile)
     }
 
@@ -245,27 +229,32 @@ object DicomAccess extends Logging {
   }
 
   /**
-   * Create a page for viewing and downloading a DICOM file.
-   *
-   * @param dicom: Build display for this content
-   *
-   * @param title: Page title
-   *
-   * @param dir: Directory in which to write the HTML and image.
-   *
-   * @param contrastModel: How to render the image.  Only applicable for image modalities.
-   *
-   * @param badPixels: List of bad pixels.  If non-empty, annotate them on the image and show a zoomed view of each.
-   */
-  def write(al: AttributeList, title: String, dir: File, fileBaseName: String, bufferedImage: Option[BufferedImage], dicomImage: Option[DicomImage], badPixels: Seq[DicomImage.PixelRating]): Option[String] = {
+    * Create a page for viewing and downloading a DICOM file.
+    *
+    * @param al: Build display for this content
+    *
+    * @param title: Page title
+    *
+    * @param dir: Directory in which to write the HTML and image.
+    *
+    * @param badPixels: List of bad pixels.  If non-empty, annotate them on the image and show a zoomed view of each.
+    */
+  def write(
+      al: AttributeList,
+      title: String,
+      dir: File,
+      fileBaseName: String,
+      bufferedImage: Option[BufferedImage],
+      dicomImage: Option[DicomImage],
+      badPixels: Seq[DicomImage.PixelRating]
+  ): Option[String] = {
     try {
       Util.mkdirs(dir)
       makePage(al, title, dir, fileBaseName, bufferedImage, dicomImage, badPixels)
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         logger.warn("Unexpected error while generating DICOM view for directory " + dir.getAbsolutePath + " : " + fmtEx(t))
         None
-      }
     }
   }
 }
