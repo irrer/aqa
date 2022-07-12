@@ -123,7 +123,7 @@ object CollimatorCenteringHTML {
     * @param gantryAngle Gantry angle rounded to nearest 90 degrees.
     * @return
     */
-  private def makeCharts(outputPK: Long, gantryAngle: Int, beamName090: String, beamName270: String): Seq[Elem] = {
+  private def makeCharts(outputPK: Long, gantryAngle: Option[Int], beamName090: String, beamName270: String): Seq[Elem] = {
 
     val charts = new CollimatorCenteringChart(outputPK, gantryAngle = gantryAngle)
 
@@ -214,7 +214,7 @@ object CollimatorCenteringHTML {
             <h3 title={mainTitle}>Gantry {gantryAngle} :: Offset: {resultSummary} mm</h3>
           </div>
           <div class="col-md-10 col-md-offset-1">
-            {makeCharts(outputPK, gantryAngle, analysisResult.collimatorCentering.beamName090, analysisResult.collimatorCentering.beamName270)}
+            {makeCharts(outputPK, Some(gantryAngle), analysisResult.collimatorCentering.beamName090, analysisResult.collimatorCentering.beamName270)}
           </div>
         </div>
         <div class="row" style="margin:30px;">

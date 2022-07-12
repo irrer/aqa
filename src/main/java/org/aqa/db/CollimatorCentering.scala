@@ -181,11 +181,13 @@ object CollimatorCentering extends ProcedureOutput {
     * @param gantryAngle Gantry angle rounded to nearest 90 degrees.
     * @return List of history items sorted by data date.
     */
-  def history(machinePK: Long, gantryAngle: Int, procedurePK: Long): Seq[ColCentHistory] = {
+  def history(machinePK: Long, gantryAngle: Option[ Int], procedurePK: Long): Seq[ColCentHistory] = {
+
+    val ga = if (gantryAngle.isDefined) gantryAngle.get else 0
 
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
-      colCent <- CollimatorCentering.query.filter(w => (w.outputPK === output.outputPK) && (w.gantryAngleRounded_deg === gantryAngle))
+      colCent <- CollimatorCentering.query.filter(w => (w.outputPK === output.outputPK) && (w.gantryAngleRounded_deg === ga))
     } yield (output, colCent)
 
     val sorted = Db.run(search.result).map(oc => ColCentHistory(oc._1, oc._2)).sortBy(_.output.dataDate.get.getTime)

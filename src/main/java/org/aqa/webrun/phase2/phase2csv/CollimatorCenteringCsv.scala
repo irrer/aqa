@@ -59,8 +59,8 @@ class CollimatorCenteringCsv extends Phase2Csv[CollimatorCentering.ColCentHistor
     */
   override protected def getData(machinePK: Long): Seq[CCH] = {
     val cchList = Seq(0, 90, 180, 270).flatMap(gantryAngle =>
-      CollimatorCentering.history(machinePK, gantryAngle, MetadataCache.metadataCache.phase2ProcedurePK) ++
-        CollimatorCentering.history(machinePK, gantryAngle, MetadataCache.metadataCache.phase3ProcedurePK)
+      CollimatorCentering.history(machinePK, Some(gantryAngle), MetadataCache.metadataCache.phase2ProcedurePK) ++
+        CollimatorCentering.history(machinePK, Some(gantryAngle), MetadataCache.metadataCache.phase3ProcedurePK)
     )
     cchList
   }

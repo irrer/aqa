@@ -47,10 +47,10 @@ class CollimatorCenteringChartHistoryRestlet extends Restlet with SubUrlRoot wit
       super.handle(request, response)
       val valueMap = getValueMap(request)
       val outputPK = valueMap(outputPKTag).toLong
-      val gantryAngle = {
+      val gantryAngle: Option[Int] = {
          valueMap.get(gantryAngleTag) match {
-           case Some(text) => text.toInt
-           case _ => 0 // for backwards compatibility.  Old web pages will not have the gantry angle
+           case Some(text) => Some(text.toInt)
+           case _ => None // for backwards compatibility.  Old web pages will not have the gantry angle
          }
       }
       val cdc = new CollimatorCenteringChart(outputPK, gantryAngle)

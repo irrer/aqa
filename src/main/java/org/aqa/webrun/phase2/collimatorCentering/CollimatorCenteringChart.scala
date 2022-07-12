@@ -16,12 +16,12 @@
 
 package org.aqa.webrun.phase2.collimatorCentering
 
-import org.aqa.Logging
 import org.aqa.db.CollimatorCentering
 import org.aqa.db.MaintenanceRecord
-import org.aqa.db.Output
 import org.aqa.web.C3Chart
 import org.aqa.web.C3ChartHistory
+import org.aqa.Logging
+import org.aqa.db.Output
 
 import java.awt.Color
 import java.sql.Timestamp
@@ -29,10 +29,14 @@ import java.util.Date
 
 /**
   * Make history charts for collimator centering.
+  * @param outputPK Specifies the of collimator data.
+  * @param gantryAngle Specifies gantry angle.  This will be 0,90,180,270 or None.  If None, then it is
+  *                    because the web page was generated with the older Phase2 code that only had gantry angle 0.
   */
-class CollimatorCenteringChart(outputPK: Long, gantryAngle: Int) extends Logging {
+class CollimatorCenteringChart(outputPK: Long, gantryAngle: Option[Int]) extends Logging {
 
-  private val gantryText = "Gantry" + gantryAngle.formatted("%03d")
+  // support all 4 gantry angles and older Phase2 code.
+  private val gantryText = if (gantryAngle.isDefined) "Gantry" + gantryAngle.get.formatted("%03d") else ""
 
   private val output: Output = Output.get(outputPK).get
   private val machinePK: Long = output.machinePK.get
