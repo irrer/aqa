@@ -54,9 +54,8 @@ class CollimatorCenteringChartHistoryRestlet extends Restlet with SubUrlRoot wit
          }
       }
       val cdc = new CollimatorCenteringChart(outputPK, gantryAngle)
-      val js = cdc.javascript.replace("Gantry000", "")
       response.setStatus(Status.SUCCESS_OK)
-      response.setEntity(js, MediaType.APPLICATION_JAVASCRIPT)
+      response.setEntity(cdc.javascript, MediaType.APPLICATION_JAVASCRIPT)
     } catch {
       case t: Throwable =>
         internalFailure(response, t)
