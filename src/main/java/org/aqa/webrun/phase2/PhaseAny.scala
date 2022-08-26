@@ -19,6 +19,7 @@ package org.aqa.webrun.phase2
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Config
 import org.aqa.DicomFile
 import org.aqa.Util
@@ -195,19 +196,6 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure(procedure) with Run
   }
 
   /**
-    * determine if there is more than one image that reference/define the same beam
-    */
-  private def beamMultiRefProblem(basicData: BasicData): Option[String] = {
-    val multiRefList = basicData.rtimageListByBeam.filter(b => b._1.isDefined).groupBy(b => b._1.get.toUpperCase).values.filter(g => g.size > 1)
-    if (multiRefList.isEmpty) None
-    else {
-      val sep = "\\n    "
-      val text = "Same beam is referenced by multiple files:" + sep + multiRefList.map(mr => mr.map(r => r._1.get.trim + "-->" + Util.sopOfAl(r._2)).mkString(sep)).mkString(sep)
-      Some(text)
-    }
-  }
-
-  /**
     * Make sure that the beams required for collimator centering have been uploaded.
     * @param basicData List of beams.
     * @return Error message if there is a problem, None if ok.
@@ -238,19 +226,49 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure(procedure) with Run
   }
 
   /**
+    * Get the acquisition date+time of the given RTIMAGE.
+    * @param al This rtimage.
+    * @return Date+time as ms.
+    */
+  private def dateOfRtimage(al: AttributeList): Long = {
+    try {
+      val date = DicomUtil.getTimeAndDate(al, TagByName.AcquisitionDate, TagByName.AcquisitionTime).get
+      date.getTime
+    } catch {
+      case _: Throwable => -1
+    }
+  }
+
+  private def makeRtimageMap(basicData: BasicData): Map[String, AttributeList] = {
+    // only beams with known names
+    val list = basicData.rtimageListByBeam.filter(rl => rl._1.isDefined)
+
+    val groups = list.groupBy(rl => rl._1.get)
+
+    def latestOf(rl: Seq[(Option[String], AttributeList)]) = {
+      val latest = rl.maxBy(r => dateOfRtimage(r._2))
+      (latest._1.get, latest._2)
+    }
+
+    val culled = groups.map(g => latestOf(g._2)).filterNot(rl => rl._1.equals(Config.FloodFieldBeamName))
+
+    culled
+  }
+
+  /**
     * Check beam definitions, existence of flood field, and organize inputs into <code>RunReq</code> to facilitate further processing.
     */
   private def basicBeamValidation(basicData: BasicData): Either[StyleMapT, RunReq] = {
-    val rtimageMap = basicData.rtimageListByBeam.filter(rl => rl._1.isDefined && (!rl._1.get.equals(Config.FloodFieldBeamName))).map(rl => (rl._1.get, rl._2)).toMap
-    val flood = basicData.rtimageListByBeam.filter(rl => rl._1.isDefined && rl._1.get.equals(Config.FloodFieldBeamName))
+    val rtimageMap = makeRtimageMap(basicData)
+    //val rtimageMap = basicData.rtimageListByBeam.filter(rl => rl._1.isDefined && (!rl._1.get.equals(Config.FloodFieldBeamName))).map(rl => (rl._1.get, rl._2)).toMap
+    val flood = basicData.rtimageListByBeam.filter(rl => rl._1.isDefined && rl._1.get.equals(Config.FloodFieldBeamName)).sortBy(f => dateOfRtimage(f._2))
     val colCentering = validateCollimatorCentering(basicData)
 
-    (beamNotDefinedProblem(basicData), beamMultiRefProblem(basicData)) match {
-      case (Some(errorMessage), _)     => formErr(errorMessage)
-      case (_, Some(errorMessage))     => formErr(errorMessage)
+    beamNotDefinedProblem(basicData) match {
+      case Some(errorMessage)          => formErr(errorMessage)
       case _ if flood.isEmpty          => formErr("Flood field beam is missing")
       case _ if colCentering.isDefined => formErr(colCentering.get)
-      case _                           => Right(RunReq(basicData.rtplan, rtimageMap, flood.head._2, Seq(), Seq())) // success
+      case _                           => Right(RunReq(basicData.rtplan, rtimageMap, flood.last._2, Seq(), Seq())) // success
     }
   }
 
