@@ -115,14 +115,22 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
     val minMax = getMinMaxTrimmed(dicomImageList)
     val fleResultList = fleList.map(rtImg => FindLeafEnds(extendedData, rtImg, minMax._1, minMax._2, runReq.rtplan).leafSet)
 
-    fleResultList.map(r => r.gapSkew.insert)
+    // Find all valid results and store them in the database.
+    val gapSkewList = fleResultList.filter(_.gapSkew.isRight).map(_.gapSkew.right.get.insert)
+
+    val errorList = fleResultList.filter(_.gapSkew.isLeft).map(_.gapSkew.left.get)
 
     val status = {
-      val largest = fleResultList.map(r => r.gapSkew.largestHorzSkew_deg.abs).max
-      0 match {
-        case _ if largest > Config.GapSkewAngleFail_deg => ProcedureStatus.fail
-        case _ if largest > Config.GapSkewAngleWarn_deg => ProcedureStatus.warning
-        case _                                          => ProcedureStatus.pass
+      if (errorList.nonEmpty) {
+        ProcedureStatus.abort
+      } else {
+        val largest = if (gapSkewList.nonEmpty) gapSkewList.map(_.largestHorzSkew_deg.abs).max else Config.GapSkewAngleFail_deg
+
+        0 match {
+          case _ if Config.GapSkewAngleFail_deg <= largest => ProcedureStatus.fail
+          case _ if Config.GapSkewAngleWarn_deg <= largest => ProcedureStatus.warning
+          case _                                           => ProcedureStatus.pass
+        }
       }
     }
 

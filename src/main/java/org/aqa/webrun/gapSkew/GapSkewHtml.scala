@@ -16,8 +16,10 @@
 
 package org.aqa.webrun.gapSkew
 
+import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
+import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.Output
@@ -26,6 +28,7 @@ import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 
+import java.awt.image.BufferedImage
 import java.io.File
 import scala.xml.Elem
 
@@ -63,6 +66,8 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
           toElem("At least one of the angles was off by more than the fail limit.", "Failed", GapSkewUtil.colorFail)
         case ProcedureStatus.warning =>
           toElem("At least one of the angles was off by more than the warning limit.", "Warning", GapSkewUtil.colorWarn)
+        case ProcedureStatus.abort =>
+          toElem("At least one of the images could not be processed", "Aborted", GapSkewUtil.colorAbort)
         case _ =>
           toElem("All angles were less than the warning limit.", "Passed", GapSkewUtil.colorPass)
       }
@@ -118,15 +123,72 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
     ref
   }
 
-  val leafSetHtmlList: Seq[GapSkewDetailHtml] = leafSetSeq.sortBy(beamNameOf).map(leafSet => GapSkewDetailHtml(extendedData, leafSet, runReq))
+  /**
+    * The analysis of the beam was aborted because it is not able to be analyzed.
+    * @param error Description of problem.
+    * @param rtimage DICOM of RTIMAGE.
+    * @param bufferedImage Image to show user.
+    * @return HTML to put in the output's main page.
+    */
+  def abortHtml(error: String, rtimage: AttributeList, bufferedImage: BufferedImage): Elem = {
+    val beamName = Phase2Util.getBeamNameOfRtimage(runReq.rtplan, rtimage).get
+
+    val leafTitle: Elem = {
+      val color = GapSkewUtil.colorAbort
+      val collimatorAngle = Util.angleRoundedTo90(Util.collimatorAngle(rtimage))
+      val style = s"margin:8px; background-color:$color; border:solid $color 1px; border-radius: 8px; padding: 12px;"
+      val title = "Collimator angle: " + collimatorAngle
+      val heading = <h3 style={style} title={title}> {beamName} </h3>
+
+      heading
+    }
+
+    val imageUrl: String = FileUtil.replaceInvalidFileNameCharacters(beamName, '_').replace(' ', '_') + ".png"
+
+    val pngFile = new File(extendedData.output.dir, imageUrl);
+    Util.writePng(bufferedImage, pngFile)
+
+    <div class="row" style="margin-top: 40px;">
+      <div class="col-md-3">
+          <center style="padding: 24px;">
+            {leafTitle}<p></p>
+          </center>
+      </div>
+      <div class="col-md-5">
+        {error}
+      </div>
+      <div class="col-md-2">
+        <a href={imageUrl} title="Click for full sized image." class="screenshot" rel={imageUrl}>
+          <img class="img-responsive fit-image" src={imageUrl} style="width:384px;"/>
+        </a>
+      </div>
+    </div>
+  }
+
+  val leafSetHtmlList: Seq[Either[Elem, GapSkewDetailHtml]] = leafSetSeq
+    .sortBy(beamNameOf)
+    .map(leafSet => {
+      if (leafSet.gapSkew.isLeft)
+        Left(abortHtml(leafSet.gapSkew.left.get, leafSet.attributeList, leafSet.image))
+      else
+        Right(GapSkewDetailHtml(extendedData, leafSet.gapSkew.right.get, leafSet.attributeList, leafSet.image))
+    })
 
   private def content: Elem = {
+
+    val list = leafSetHtmlList.map(l => {
+      if (l.isLeft)
+        l.left.get
+      else
+        l.right.get.summaryHtml()
+    })
+
     <div class="row" style="margin-top:10px;">
-        <div class="col-md-8 col-md-offset-2" style="border:solid #bbbbbb 1px; padding: 12px; margin-bottom:500px;">
-          {generalReference()}
-          {leafSetHtmlList.map(l => l.summaryHtml())}
-        </div>
+      <div class="col-md-8 col-md-offset-2" style="border:solid #bbbbbb 1px; padding: 12px; margin-bottom:500px;">
+        {generalReference()}
+        {list}
       </div>
+    </div>
   }
 
   def makeDisplay(): Unit = {
@@ -134,10 +196,10 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeBinaryFile(file, text.getBytes)
 
-    leafSetHtmlList.foreach(l => l.writeDetailedHtml())
+    leafSetHtmlList.filter(_.isRight).foreach(l => l.right.get.writeDetailedHtml())
     dicomHtml.makeDicomContent(runReq.rtplan)
 
-    if (true) {
+    if (false) {
       val img = new DicomImage(runReq.rtimageMap.head._2)
       val text = img.pixelsToText
       val file = new File("""D:\tmp\pix.txt""")

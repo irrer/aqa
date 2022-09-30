@@ -34,6 +34,7 @@ object GapSkewUtil {
   val colorFail = "#FFAAAA"
   val colorWarn = "#FFFFAA"
   val colorPass = "#AAFFAA"
+  val colorAbort = "#FF0000"
 
   val colorNone = "#888888"
 

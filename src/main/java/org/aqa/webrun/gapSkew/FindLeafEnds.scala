@@ -17,7 +17,6 @@
 package org.aqa.webrun.gapSkew
 
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
@@ -31,6 +30,7 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 
 import java.awt.Rectangle
+import java.awt.image.BufferedImage
 
 case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minPixel: Float, maxPixel: Float, rtplan: AttributeList) extends Logging {
 
@@ -75,6 +75,28 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
 
       Leaf(endPosition_mm, translator.pix2IsoCoordX(box_pix.getX), translator.pix2IsoDistX(box_pix.getWidth))
     }
+  }
+
+  /**
+    * Verify if all the rectangles (area of interest for measuring edges) are in the bounds of the DICOM image.
+    * If the <b>3002,0026 RTImageSID</b> is wrong, then they may be partially off the screen.
+    *
+    * This can happen when the user does not set up the test correctly.  The value should be about 1000-1050 mm.
+    * @param list The four rectangular bounding boxes.
+    * @return True if they are all within the bounds of the DICOM image.
+    */
+  private def allRectanglesInBounds(list: Seq[Rectangle]): Boolean = {
+    val minX = list.map(_.getMinX).min
+    val minY = list.map(_.getMinY).min
+    val maxX = list.map(_.getMaxX).max
+    val maxY = list.map(_.getMaxY).max
+
+    val inBounds = (minX >= 0) &&
+      (minY >= 0) &&
+      (maxX <= dicomImage.width) &&
+      (maxY <= dicomImage.height)
+
+    inBounds
   }
 
   /**
@@ -173,65 +195,89 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
       val beamName = Phase2Util.getBeamNameOfRtimage(plan = rtplan, rtimage).get
       logger.info("GapSkew processing beam: " + Util.beamNumber(rtimage) + " : " + beamName)
 
-      val topLeft = endOfLeaf_iso(topLeftRect)
-      val topRight = endOfLeaf_iso(topRightRect)
-      val bottomLeft = endOfLeaf_iso(bottomLeftRect)
-      val bottomRight = endOfLeaf_iso(bottomRightRect)
+      val allRectangles = Seq(topLeftRect, topRightRect, bottomLeftRect, bottomRightRect)
 
-      val bufferedImage =
-        GapSkewAnnotateImage(
-          dicomImage,
-          collimatorAngleRounded_deg,
+      if (allRectanglesInBounds(allRectangles)) {
+
+        val topLeft = endOfLeaf_iso(topLeftRect)
+        val topRight = endOfLeaf_iso(topRightRect)
+        val bottomLeft = endOfLeaf_iso(bottomLeftRect)
+        val bottomRight = endOfLeaf_iso(bottomRightRect)
+
+        val bufferedImage =
+          GapSkewAnnotateImage(
+            dicomImage,
+            collimatorAngleRounded_deg,
+            beamName = beamName,
+            translator,
+            minPixel = minPixel,
+            maxPixel = maxPixel,
+            topLeft = topLeft,
+            topRight = topRight,
+            bottomLeft = bottomLeft,
+            bottomRight = bottomRight
+          ).annotate
+
+        val measurementSeparation_mm = (xRightPosition_mm - xRightWidth_mm / 2.0) - (xLeftPosition_mm + xLeftWidth_mm / 2.0)
+
+        val XRayImageReceptorTranslation = rtimage.get(TagByName.XRayImageReceptorTranslation)
+        val translationY = if (XRayImageReceptorTranslation == null) 0.0 else XRayImageReceptorTranslation.getDoubleValues()(1)
+
+        val gapSkew = GapSkew(
+          gapSkewPK = None,
+          outputPK = extendedData.output.outputPK.get,
+          rtimageUID = Util.sopOfAl(rtimage),
           beamName = beamName,
-          translator,
-          minPixel = minPixel,
-          maxPixel = maxPixel,
-          topLeft = topLeft,
-          topRight = topRight,
-          bottomLeft = bottomLeft,
-          bottomRight = bottomRight
-        ).annotate
+          collimatorAngle_deg = collimatorAngle_deg,
+          measurementWidth_mm = leafWidth_mm * 2,
+          measurementSeparation_mm = measurementSeparation_mm,
+          //
+          topLeftEdgeTypeName = Some(edgesFromPlan.topOrLeft.get.edgeType.name),
+          topLeftValue_mm = Some(topLeft.yPosition_mm + translationY),
+          topLeftPlanned_mm = Some(edgesFromPlan.topOrLeft.get.position_mm),
+          //
+          topRightEdgeTypeName = Some(edgesFromPlan.topOrLeft.get.edgeType.name),
+          topRightValue_mm = Some(topRight.yPosition_mm + translationY),
+          topRightPlanned_mm = Some(edgesFromPlan.topOrLeft.get.position_mm),
+          //
+          bottomLeftEdgeTypeName = Some(edgesFromPlan.bottomOrRight.get.edgeType.name),
+          bottomLeftValue_mm = Some(bottomLeft.yPosition_mm + translationY),
+          bottomLeftPlanned_mm = Some(edgesFromPlan.bottomOrRight.get.position_mm),
+          //
+          bottomRightEdgeTypeName = Some(edgesFromPlan.bottomOrRight.get.edgeType.name),
+          bottomRightValue_mm = Some(bottomRight.yPosition_mm + translationY),
+          bottomRightPlanned_mm = Some(edgesFromPlan.bottomOrRight.get.position_mm)
+        )
 
-      val measurementSeparation_mm = (xRightPosition_mm - xRightWidth_mm / 2.0) - (xLeftPosition_mm + xLeftWidth_mm / 2.0)
+        val set = LeafSet(
+          bufferedImage,
+          rtimage,
+          rtplan,
+          leafWidth_mm * 2,
+          Right(gapSkew)
+        )
 
-      val XRayImageReceptorTranslation = rtimage.get(TagByName.XRayImageReceptorTranslation)
-      val translationY = if (XRayImageReceptorTranslation == null) 0.0 else XRayImageReceptorTranslation.getDoubleValues()(1)
+        logger.info("MLC leaf end positions: " + set)
+        set
+      } else {
+        // Getting here means that at least one of the bounding boxes was out of bounds.  This is a hard failure.
+        val bufferedImage: BufferedImage = dicomImage.toDeepColorBufferedImage(minPixel, maxPixel)
 
-      val gapSkew = GapSkew(
-        gapSkewPK = None,
-        outputPK = extendedData.output.outputPK.get,
-        rtimageUID = Util.sopOfAl(rtimage),
-        beamName = beamName,
-        collimatorAngle_deg = collimatorAngle_deg,
-        measurementWidth_mm = leafWidth_mm * 2,
-        measurementSeparation_mm = measurementSeparation_mm,
-        //
-        topLeftEdgeTypeName = Some(edgesFromPlan.topOrLeft.get.edgeType.name),
-        topLeftValue_mm = Some(topLeft.yPosition_mm + translationY),
-        topLeftPlanned_mm = Some(edgesFromPlan.topOrLeft.get.position_mm),
-        //
-        topRightEdgeTypeName = Some(edgesFromPlan.topOrLeft.get.edgeType.name),
-        topRightValue_mm = Some(topRight.yPosition_mm + translationY),
-        topRightPlanned_mm = Some(edgesFromPlan.topOrLeft.get.position_mm),
-        //
-        bottomLeftEdgeTypeName = Some(edgesFromPlan.bottomOrRight.get.edgeType.name),
-        bottomLeftValue_mm = Some(bottomLeft.yPosition_mm + translationY),
-        bottomLeftPlanned_mm = Some(edgesFromPlan.bottomOrRight.get.position_mm),
-        //
-        bottomRightEdgeTypeName = Some(edgesFromPlan.bottomOrRight.get.edgeType.name),
-        bottomRightValue_mm = Some(bottomRight.yPosition_mm + translationY),
-        bottomRightPlanned_mm = Some(edgesFromPlan.bottomOrRight.get.position_mm)
-      )
+        val RTImageSID = rtimage.get(TagByName.RTImageSID).getDoubleValues.head
 
-      val set = LeafSet(
-        bufferedImage,
-        rtimage,
-        rtplan,
-        leafWidth_mm * 2,
-        gapSkew
-      )
-
-      logger.info("MLC leaf end positions: " + set)
-      set
+        val errorMessage =
+          s"""Either the collimator or jaw are out of bounds of the image.  This
+           | is most likely the result of a setup error where the 3002,0026 RTImageSID
+           | (AGT) is not correct.  The RTImageSID for this image is $RTImageSID.  The value
+           |  should typically be ~1000 or in some cases ~1050.""".stripMargin
+        val set = LeafSet(
+          bufferedImage,
+          rtimage,
+          rtplan,
+          leafWidth_mm * 2,
+          Left(errorMessage)
+        )
+        set
+      }
     }
 }

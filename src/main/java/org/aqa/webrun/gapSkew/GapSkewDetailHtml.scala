@@ -23,12 +23,14 @@ import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Config
 import org.aqa.Util
+import org.aqa.db.GapSkew
 import org.aqa.db.GapSkew.EdgeType
 import org.aqa.web.C3Chart
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.gapSkew.GapSkewUtil._
 
+import java.awt.image.BufferedImage
 import java.io.File
 import scala.xml.Elem
 
@@ -36,13 +38,18 @@ object GapSkewDetailHtml {
   def htmlFileName(beamName: String): String = Util.textToId(beamName) + ".html"
 }
 
-case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runReq: GapSkewRunReq) {
+/**
+  * For making a detailed report fore one given beam.
+  * @param extendedData Metadata for this output.
+  * @param gapSkew Calculated data.
+  * @param rtimage DICOM.
+  * @param bufferedImage Image to show user.
+  */
+case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtimage: AttributeList, bufferedImage: BufferedImage) {
 
-  private val gapSkew = leafSet.gapSkew
+  private val dicomHtml = DicomHtml(extendedData, title = gapSkew.beamName + " DICOM")
 
-  private val dicomHtml = DicomHtml(extendedData, title = leafSet.gapSkew.beamName + " DICOM")
-
-  private val imageUrl: String = FileUtil.replaceInvalidFileNameCharacters(leafSet.gapSkew.beamName, '_').replace(' ', '_') + ".png"
+  private val imageUrl: String = FileUtil.replaceInvalidFileNameCharacters(gapSkew.beamName, '_').replace(' ', '_') + ".png"
 
   private def td(d: Double): Elem = {
     <td title={d.toString}>{fmt2(d)}</td>
@@ -57,35 +64,6 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
 
   private def formatEdgeType(edgeType: EdgeType): String = {
     (if (edgeType.isX) "X" else "Y") + edgeType.bank + " " + (if (edgeType.isJaw) "Jaw" else "MLC")
-  }
-
-  /**
-    * Make a summary table for the beam.
-    * @return Summary as HTML.
-    */
-  private def summaryTable: Elem = {
-    <table class="table table-bordered">
-      <thead>
-        <tr>
-          <th> Position (mm) </th>
-          <th> Skew (deg) </th>
-          <th title="Change in mm of measurement: Right - Left "> Delta (mm) </th>
-        </tr>
-      </thead>
-
-        <tr>
-          <td style="white-space: nowrap;">{formatEdgeType(gapSkew.topLeftEdgeType)} (top)</td>
-          {tdAngle(gapSkew.topHorzSkew_deg)}
-          {td(gapSkew.topHorzDelta_mm)}
-        </tr>
-
-        <tr>
-          <td style="white-space: nowrap;">{formatEdgeType(gapSkew.bottomLeftEdgeType)} (bottom)</td>
-          {tdAngle(gapSkew.bottomHorzSkew_deg)}
-          {td(gapSkew.bottomHorzDelta_mm)}
-        </tr>
-
-    </table>
   }
 
   private def detailedTable: Elem = {
@@ -184,7 +162,7 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
 
   private val leafTitle: Elem = {
     val color = statusColor(gapSkew.largestHorzSkew_deg)
-    val collimatorAngle = Util.angleRoundedTo90(Util.collimatorAngle(leafSet.attributeList))
+    val collimatorAngle = Util.angleRoundedTo90(Util.collimatorAngle(rtimage))
     val style = s"margin:8px; background-color:$color; border:solid $color 1px; border-radius: 8px; padding: 12px;"
     val title = "Click for details" + WebUtil.titleNewline + "Collimator angle: " + collimatorAngle
     val heading = <h3 style={style} title={title}> {gapSkew.beamName}</h3>
@@ -340,7 +318,7 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
 
         <div class="row">
           <div class="col-md-4 col-md-offset-4">
-            {dicomValues(leafSet.attributeList)}
+            {dicomValues(rtimage)}
           </div>
         </div>
 
@@ -373,9 +351,38 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, leafSet: LeafSet, runRe
 
     Util.writeFile(file, text)
 
-    Util.writePng(leafSet.image, new File(extendedData.output.dir, imageUrl))
+    Util.writePng(bufferedImage, new File(extendedData.output.dir, imageUrl))
 
-    dicomHtml.makeDicomContent(leafSet.attributeList, Some(imageUrl))
+    dicomHtml.makeDicomContent(rtimage, Some(imageUrl))
+  }
+
+  /**
+    * Make a summary table for the beam.
+    * @return Summary as HTML.
+    */
+  private def summaryTable: Elem = {
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th> Position (mm) </th>
+          <th> Skew (deg) </th>
+          <th title="Change in mm of measurement: Right - Left "> Delta (mm) </th>
+        </tr>
+      </thead>
+
+      <tr>
+        <td style="white-space: nowrap;">{formatEdgeType(gapSkew.topLeftEdgeType)} (top)</td>
+        {tdAngle(gapSkew.topHorzSkew_deg)}
+        {td(gapSkew.topHorzDelta_mm)}
+      </tr>
+
+      <tr>
+        <td style="white-space: nowrap;">{formatEdgeType(gapSkew.bottomLeftEdgeType)} (bottom)</td>
+        {tdAngle(gapSkew.bottomHorzSkew_deg)}
+        {td(gapSkew.bottomHorzDelta_mm)}
+      </tr>
+
+    </table>
   }
 
   /**

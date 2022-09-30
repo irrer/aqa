@@ -36,5 +36,5 @@ case class LeafSet(
     attributeList: AttributeList,
     rtplan: AttributeList,
     measurementSpan_mm: Double,
-    gapSkew: GapSkew
+    gapSkew: Either[String, GapSkew] // Left: processing error, Right: Results of GapSkew
 ) {}
