@@ -46,7 +46,7 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
 
   private case class Latest(machine: Machine, output: Option[Output] = None, gapSkew: Option[GapSkew] = None) {}
 
-  private case class OutputGapSkew(output: Output, gapSkew: GapSkew) {}
+  private case class OutputGapSkew(output: Output, gapSkew: Option[GapSkew]) {}
 
   private case class GapSkewData(machineList: Seq[Machine], outputList: Seq[Output], gapSkewList: Seq[GapSkew]) {
 
@@ -61,7 +61,7 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
       if (output.isDefined) {
         val list = gapSkewList.filter(_.outputPK == output.get.outputPK.get)
         if (list.isEmpty)
-          Latest(machine)
+          Latest(machine, output)
         else {
           val gapSkew = list.maxBy(_.largestHorzSkew_deg)
           Latest(machine, output, Some(gapSkew))
@@ -88,10 +88,7 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
       val outList = outputList.filter(_.machinePK.get == machine.machinePK.get).sortBy(_.dataDate.get.getTime).reverse
       val list = outList.flatMap(o => {
         val gs = largestGapSkew(o)
-        if (gs.isEmpty)
-          None
-        else
-          Some(OutputGapSkew(o, gs.get))
+        Some(OutputGapSkew(o, gs))
       })
       list
     }
@@ -135,16 +132,25 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
     }
 
     val statusTitle = {
-      val largestSkew = outputGapSkew.gapSkew.largestHorzSkew_deg.abs
-      val text = 0 match {
-        case _ if largestSkew.abs > Config.GapSkewAngleFail_deg => "The largest skew is above the fail limit."
-        case _ if largestSkew.abs > Config.GapSkewAngleWarn_deg => "The largest skew is above the warning limit."
-        case _                                                  => "All skew angles are below the warning limit."
-      }
-      text
+      if (outputGapSkew.gapSkew.isDefined) {
+        val largestSkew = outputGapSkew.gapSkew.get.largestHorzSkew_deg.abs
+        val text = 0 match {
+          case _ if largestSkew.abs > Config.GapSkewAngleFail_deg => "The largest skew is above the fail limit."
+          case _ if largestSkew.abs > Config.GapSkewAngleWarn_deg => "The largest skew is above the warning limit."
+          case _                                                  => "All skew angles are below the warning limit."
+        }
+        text
+      } else "No Data"
     }
 
-    val valueTitle = "Largest skew (deg): " + outputGapSkew.gapSkew.largestHorzSkew_deg.formatted("%10.5f").trim
+    val valueTitle = {
+      "Largest skew (deg): " + {
+        if (outputGapSkew.gapSkew.isDefined)
+          outputGapSkew.gapSkew.get.largestHorzSkew_deg.formatted("%10.5f").trim
+        else
+          "No Data"
+      }
+    }
 
     val title = Seq(valueTitle, dateTitle, statusTitle, limits).filterNot(_.isEmpty).mkString(sep1, sep1 + sep1, sep1)
     title
@@ -152,7 +158,12 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
 
   private def decorate(elem: Elem, outputGapSkew: OutputGapSkew): Elem = {
 
-    val color = GapSkewUtil.statusColor(outputGapSkew.gapSkew.largestHorzSkew_deg)
+    val color = {
+      if (outputGapSkew.gapSkew.isDefined)
+        GapSkewUtil.statusColor(outputGapSkew.gapSkew.get.largestHorzSkew_deg)
+      else
+        GapSkewUtil.colorAbort
+    }
     val borderColor = if (dataExpired(Some(outputGapSkew.output))) GapSkewUtil.colorNone else color
 
     val style = "margin:8px; background-color:" + color + "; border:solid " + borderColor + " 5px; border-radius: 5px; padding: 4px;white-space: nowrap; padding: 12px;"
@@ -186,7 +197,13 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
 
       def toElem(outputGapSkew: OutputGapSkew): Elem = {
 
-        val largestHorzSkew_deg = outputGapSkew.gapSkew.largestHorzSkew_deg
+        val largestHorzSkew_deg: String = {
+          if (outputGapSkew.gapSkew.isDefined)
+            "Skew (deg): " + GapSkewUtil.fmt2(outputGapSkew.gapSkew.get.largestHorzSkew_deg)
+          else
+            "No Data"
+        }
+
         val outputDate = outputGapSkew.output.dataDate.get
 
         val elem = {
@@ -200,7 +217,7 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
         <a title={dataTitle(outputGapSkew)} style={style} href={href}>
           <center>
             {decorate(elem, outputGapSkew)}
-            <div>Skew (deg): {GapSkewUtil.fmt2(largestHorzSkew_deg)}</div>
+            <div>{largestHorzSkew_deg}</div>
           </center>
         </a>
       }
