@@ -17,8 +17,6 @@
 package org.aqa
 
 import com.pixelmed.dicom.AttributeTag
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
 import edu.umro.ImageUtil.Watermark
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.util.OpSys
@@ -416,7 +414,8 @@ object Config extends Logging {
     milliseconds
   }
 
-  private def getSlickDb: Config = {
+  private def getSlickDb: com.typesafe.config.Config = {
+    import com.typesafe.config.ConfigFactory
     val name = "SlickDb"
     val configText = {
       val text = getMainText(name)
@@ -769,7 +768,7 @@ object Config extends Logging {
     list
   }
 
-  val SlickDb: Config = getSlickDb
+  val SlickDb: com.typesafe.config.Config = getSlickDb
 
   val UserWhiteList: List[String] = (document \ "UserWhiteList" \ "User").toList.map(node => node.head.text.trim.toLowerCase)
 

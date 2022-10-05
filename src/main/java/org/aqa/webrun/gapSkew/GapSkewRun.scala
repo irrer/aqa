@@ -99,7 +99,6 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
           dropPixels(dropped + h.head.count, h.tail, hi)
       }
     }
-
     val trimmedHistogramHi = dropPixels(0, histogram, hi = true)
     val trimmedHistogramLo = dropPixels(0, trimmedHistogramHi, hi = false)
 
@@ -124,7 +123,7 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
       if (errorList.nonEmpty) {
         ProcedureStatus.abort
       } else {
-        val largest = if (gapSkewList.nonEmpty) gapSkewList.map(_.largestHorzSkew_deg.abs).max else Config.GapSkewAngleFail_deg
+        val largest = if (gapSkewList.nonEmpty) gapSkewList.map(_.collimatorMinusJawDiffSkew_deg.abs).max else Config.GapSkewAngleFail_deg
 
         0 match {
           case _ if Config.GapSkewAngleFail_deg <= largest => ProcedureStatus.fail

@@ -38,9 +38,9 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
 
   private def beamNameOf(leafSet: LeafSet): String = Phase2Util.getBeamNameOfRtimage(runReq.rtplan, leafSet.attributeList).get
 
-  private val dicomHtml = DicomHtml(extendedData, "RTPLAN")
+  private val rtplanHtml = DicomHtml(extendedData, "RTPLAN")
 
-  private def rtplanUrl = dicomHtml.htmlUrl
+  private def rtplanUrl = rtplanHtml.htmlUrl
 
   /**
     * Make an HTML reference to the RTPLAN so it can be viewed.
@@ -145,8 +145,10 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
 
     val imageUrl: String = FileUtil.replaceInvalidFileNameCharacters(beamName, '_').replace(' ', '_') + ".png"
 
-    val pngFile = new File(extendedData.output.dir, imageUrl);
+    val pngFile = new File(extendedData.output.dir, imageUrl)
     Util.writePng(bufferedImage, pngFile)
+    val dicomHtml = DicomHtml(extendedData: ExtendedData, beamName)
+    dicomHtml.makeDicomContent(rtimage, Some(pngFile.getName))
 
     <div class="row" style="margin-top: 40px;">
       <div class="col-md-3">
@@ -158,7 +160,7 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
         {error}
       </div>
       <div class="col-md-2">
-        <a href={imageUrl} title="Click for full sized image." class="screenshot" rel={imageUrl}>
+        <a href={dicomHtml.htmlUrl} title="Click for full sized image and metadata." class="screenshot" rel={imageUrl}>
           <img class="img-responsive fit-image" src={imageUrl} style="width:384px;"/>
         </a>
       </div>
@@ -197,7 +199,7 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
     Util.writeBinaryFile(file, text.getBytes)
 
     leafSetHtmlList.filter(_.isRight).foreach(l => l.right.get.writeDetailedHtml())
-    dicomHtml.makeDicomContent(runReq.rtplan)
+    rtplanHtml.makeDicomContent(runReq.rtplan)
 
     if (false) {
       val img = new DicomImage(runReq.rtimageMap.head._2)

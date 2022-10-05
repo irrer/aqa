@@ -142,9 +142,6 @@ case class GapSkew(
   /** Skew (angle) of bottom edge (if defined, else exception). */
   def bottomHorzSkew_deg: Double = Math.toDegrees(Math.atan(bottomHorzDelta_mm / measurementSeparation_mm))
 
-  /** Of the two horizontal angle skews, the one with the largest magnitude. */
-  def largestHorzSkew_deg: Double = Seq(topHorzSkew_deg, bottomHorzSkew_deg).maxBy(_.abs)
-
   /** Difference (error) in top left horizontal edge measurement from plan (planned - measured). */
   def topLeftHorzDelta_mm: Double = topLeftPlanned_mm.get - topLeftValue_mm.get
 
@@ -156,6 +153,22 @@ case class GapSkew(
 
   /** Difference (error) in bottom right horizontal edge measurement from plan (planned - measured). */
   def bottomRightHorzDelta_mm: Double = bottomRightPlanned_mm.get - bottomRightValue_mm.get
+
+  def collimatorMinusJawDiffSkew_deg: Double = {
+    val diff = topHorzSkew_deg - bottomHorzSkew_deg
+    if (bottomRightEdgeType.isJaw)
+      diff
+    else
+      -diff
+  }
+
+  def collimatorMinusJawDiffDelta_mm: Double = {
+    val diff = topHorzDelta_mm - bottomHorzDelta_mm
+    if (bottomRightEdgeType.isJaw)
+      diff
+    else
+      -diff
+  }
 
 }
 
@@ -277,7 +290,7 @@ object GapSkew extends ProcedureOutput with Logging {
     val Y2_MLC_Horz: EdgeType = EdgeType( isX = false, bank = 2, isJaw = false, isHorz =  true) // not supported by Varian
     val Y2_MLC_Vert: EdgeType = EdgeType( isX = false, bank = 2, isJaw = false, isHorz = false) // not supported by Varian
 
-    val list = List(
+    val list: Seq[EdgeType] = List(
       X1_Jaw_Horz, X1_Jaw_Vert, X1_MLC_Horz, X1_MLC_Vert, X2_Jaw_Horz, X2_Jaw_Vert, X2_MLC_Horz, X2_MLC_Vert,
       Y1_Jaw_Horz, Y1_Jaw_Vert, Y1_MLC_Horz, Y1_MLC_Vert, Y2_Jaw_Horz, Y2_Jaw_Vert, Y2_MLC_Horz, Y2_MLC_Vert
     )

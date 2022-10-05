@@ -763,6 +763,19 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>BBankC270</BeamName>
         <BeamName>BBankC90</BeamName>
         <BeamName>X1JawC270</BeamName>
+
+        <BeamName>AOpenC90p4</BeamName>
+        <BeamName>AOpenC90p6</BeamName>
+        <BeamName>AOpenC90p8</BeamName>
+        <BeamName>AOpenC270p4</BeamName>
+        <BeamName>AOpenC270p6</BeamName>
+        <BeamName>AOpenC270p8</BeamName>
+        <BeamName>BOpenC90p4</BeamName>
+        <BeamName>BOpenC90p6</BeamName>
+        <BeamName>BOpenC90p8</BeamName>
+        <BeamName>BOpenC270p4</BeamName>
+        <BeamName>BOpenC270p6</BeamName>
+        <BeamName>BOpenC270p8</BeamName>
     </GapSkewBeamNameList>
 
     <!-- For Gap Skew, if angle is greater than this then the user should be warned. -->

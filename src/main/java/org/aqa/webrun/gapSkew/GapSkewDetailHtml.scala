@@ -161,7 +161,7 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtima
   }
 
   private val leafTitle: Elem = {
-    val color = statusColor(gapSkew.largestHorzSkew_deg)
+    val color = statusColor(gapSkew.collimatorMinusJawDiffSkew_deg)
     val collimatorAngle = Util.angleRoundedTo90(Util.collimatorAngle(rtimage))
     val style = s"margin:8px; background-color:$color; border:solid $color 1px; border-radius: 8px; padding: 12px;"
     val title = "Click for details" + WebUtil.titleNewline + "Collimator angle: " + collimatorAngle
@@ -361,6 +361,14 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtima
     * @return Summary as HTML.
     */
   private def summaryTable: Elem = {
+
+    val diffName = {
+      if (gapSkew.bottomRightEdgeType.isJaw)
+        formatEdgeType(gapSkew.topLeftEdgeType) + " - " + formatEdgeType(gapSkew.bottomLeftEdgeType) + " (top-bottom)"
+      else
+        formatEdgeType(gapSkew.bottomLeftEdgeType) + " - " + formatEdgeType(gapSkew.topLeftEdgeType) + " (bottom-top)"
+    }
+
     <table class="table table-bordered">
       <thead>
         <tr>
@@ -369,6 +377,12 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtima
           <th title="Change in mm of measurement: Right - Left "> Delta (mm) </th>
         </tr>
       </thead>
+
+      <tr>
+        <td style="white-space: nowrap;">{diffName}</td>
+        {tdAngle(gapSkew.collimatorMinusJawDiffSkew_deg)}
+        {td(gapSkew.collimatorMinusJawDiffDelta_mm)}
+      </tr>
 
       <tr>
         <td style="white-space: nowrap;">{formatEdgeType(gapSkew.topLeftEdgeType)} (top)</td>
