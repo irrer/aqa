@@ -382,11 +382,36 @@ object GapSkew extends ProcedureOutput with Logging {
     * @return Complete history with baselines sorted by date.
     *
     */
-  def history(machinePK: Long, beamName: String): Seq[GapSkewHistory] = {
+  def historyByBeam(machinePK: Long, beamName: String): Seq[GapSkewHistory] = {
 
     val search = for {
       output <- Output.query.filter(o => o.machinePK === machinePK)
       gapSkew <- GapSkew.query.filter(c => c.outputPK === output.outputPK && c.beamName === beamName)
+    } yield {
+      (output, gapSkew)
+    }
+
+    // Fetch entire history from the database.  Also sort by dataDate.  This sorting also has the
+    // side effect of ensuring that the dataDate is defined.  If it is not defined, this will
+    // throw an exception.
+    val sr = search.result
+    val tsList = Db.run(sr).map(os => GapSkewHistory(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
+
+    tsList
+  }
+
+  /**
+    * Get the history of GapSkew results.
+    *
+    * @param machinePK : For this machine
+    * @return Complete history sorted by date.
+    *
+    */
+  def historyByMachine(machinePK: Long): Seq[GapSkewHistory] = {
+
+    val search = for {
+      output <- Output.query.filter(o => o.machinePK === machinePK)
+      gapSkew <- GapSkew.query.filter(c => c.outputPK === output.outputPK)
     } yield {
       (output, gapSkew)
     }

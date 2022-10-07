@@ -53,6 +53,8 @@ class MetadataCache {
   val phase2ProcedurePK: Long = Procedure.ProcOfPhase2.get.procedurePK.get
 
   val phase3ProcedurePK: Long = Procedure.ProcOfPhase3.get.procedurePK.get
+
+  val gapSkewProcedurePK: Long = Procedure.ProcOfGapSkew.get.procedurePK.get
 }
 
 object MetadataCache {

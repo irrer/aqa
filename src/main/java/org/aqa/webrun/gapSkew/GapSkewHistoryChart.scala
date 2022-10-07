@@ -18,7 +18,7 @@ class GapSkewHistoryChart(outputPK: Long, beamName: String) {
 
   private val machinePK = Output.get(outputPK).get.machinePK.get
 
-  private val history = GapSkew.history(machinePK, beamName)
+  private val history = GapSkew.historyByBeam(machinePK, beamName)
 
   private val gs = history.map(_.gapSkew)
 
