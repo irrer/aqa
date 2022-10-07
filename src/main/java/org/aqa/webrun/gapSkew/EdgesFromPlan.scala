@@ -157,13 +157,13 @@ object EdgesFromPlan extends Logging {
       case (jx1, jx2, _, _, Some(mxBottom), Some(mxTop), 90, true) =>
         val top =
           if (-jx1 < mxTop)
-            BeamLimit(-jx1, GapSkew.EdgeType.X1_Jaw_Horz)
+            BeamLimit(-jx1, GapSkew.EdgeType.X2_Jaw_Horz)
           else
             BeamLimit(mxTop, GapSkew.EdgeType.X2_MLC_Horz)
 
         val bottom =
           if (-jx2 > mxBottom)
-            BeamLimit(-jx2, GapSkew.EdgeType.X2_Jaw_Horz)
+            BeamLimit(-jx2, GapSkew.EdgeType.X1_Jaw_Horz)
           else
             BeamLimit(mxBottom, GapSkew.EdgeType.X1_MLC_Horz)
 
@@ -185,8 +185,8 @@ object EdgesFromPlan extends Logging {
 
       // no MLC, just jaws, topBottom: true
       case (jx1, jx2, _, _, None, None, _, true) =>
-        val top = BeamLimit(-jx1, GapSkew.EdgeType.X1_Jaw_Horz)
-        val bottom = BeamLimit(-jx2, GapSkew.EdgeType.X2_Jaw_Horz)
+        val top    = BeamLimit(-jx1, if (col == 90) GapSkew.EdgeType.X2_Jaw_Horz else GapSkew.EdgeType.X1_Jaw_Horz)
+        val bottom = BeamLimit(-jx2, if (col != 90) GapSkew.EdgeType.X2_Jaw_Horz else GapSkew.EdgeType.X1_Jaw_Horz)
         OrientedEdgePair(Some(top), Some(bottom))
 
       case _ =>
