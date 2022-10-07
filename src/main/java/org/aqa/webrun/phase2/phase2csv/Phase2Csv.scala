@@ -101,8 +101,6 @@ abstract class Phase2Csv[T] extends Logging {
 
   private val metadataCache = MetadataCache.metadataCache
 
-  def fileBaseNm: String = Phase2Csv.fileBaseName(dataName)
-
   private val prefixCsv = new PrefixCsv(metadataCache)
   private val machineDescriptionCsv = new MachineDescriptionCsv(metadataCache)
   private val dicomCsv = new DicomCsv

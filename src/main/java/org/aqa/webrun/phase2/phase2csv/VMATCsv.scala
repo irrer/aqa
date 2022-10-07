@@ -123,7 +123,7 @@ abstract class VMATCsv extends Phase2Csv[Seq[VMAT.VMATHistory]] {
     CsvCol(header, doc, function)
   }
 
-  def beamList() =
+  def beamList(): Seq[CsvCol[VHS]] =
     Seq(
       CsvCol("Beam Name MLC", "Name of RTPLAN MLC beam.", (vm: VHS) => vm.head.vmat.beamNameMLC),
       CsvCol("Beam Name Open", "Name of RTPLAN Open beam.", (vm: VHS) => vm.head.vmat.beamNameOpen)
