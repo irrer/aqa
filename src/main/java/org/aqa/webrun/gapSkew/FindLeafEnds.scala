@@ -206,20 +206,6 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
         val bottomLeft = endOfLeaf_iso(bottomLeftRect)
         val bottomRight = endOfLeaf_iso(bottomRightRect)
 
-        val bufferedImage =
-          GapSkewAnnotateImage(
-            dicomImage,
-            collimatorAngleRounded_deg,
-            beamName = beamName,
-            translator,
-            minPixel = minPixel,
-            maxPixel = maxPixel,
-            topLeft = topLeft,
-            topRight = topRight,
-            bottomLeft = bottomLeft,
-            bottomRight = bottomRight
-          ).annotate
-
         val measurementSeparation_mm = (xRightPosition_mm - xRightWidth_mm / 2.0) - (xLeftPosition_mm + xLeftWidth_mm / 2.0)
 
         val gapSkew = GapSkew(
@@ -247,6 +233,21 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
           bottomRightValue_mm = Some(bottomRight.yPosition_mm),
           bottomRightPlanned_mm = Some(edgesFromPlan.bottomOrRight.get.position_mm)
         )
+
+        val bufferedImage =
+          GapSkewAnnotateImage(
+            dicomImage,
+            collimatorAngleRounded_deg,
+            beamName = beamName,
+            translator,
+            minPixel = minPixel,
+            maxPixel = maxPixel,
+            topLeft = topLeft,
+            topRight = topRight,
+            bottomLeft = bottomLeft,
+            bottomRight = bottomRight,
+            gapSkew
+          ).annotate
 
         val set = LeafSet(
           bufferedImage,

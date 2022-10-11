@@ -21,6 +21,7 @@ import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.Util
+import org.aqa.db.GapSkew
 import org.aqa.webrun.gapSkew.GapSkewUtil._
 
 import java.awt.Color
@@ -37,7 +38,8 @@ case class GapSkewAnnotateImage(
     topLeft: Leaf,
     topRight: Leaf,
     bottomLeft: Leaf,
-    bottomRight: Leaf
+    bottomRight: Leaf,
+    gapSkew: GapSkew
 ) {
 
   private def d2i = Util.d2i _
@@ -146,6 +148,51 @@ case class GapSkewAnnotateImage(
     arrow(image, textX, arrowY1, textX, y)
   }
 
+  def addEdge(bufferedImage: BufferedImage, isTop: Boolean): Unit = {
+    val g = ImageUtil.getGraphics(bufferedImage)
+    ImageText.setFont(g, ImageText.DefaultFont, textPointSize = 30)
+    val fontHeight = ImageText.getFontHeight(g)
+
+    val x_pix = translator.iso2PixCoordX((topLeft.xCenter_mm + topRight.xCenter_mm) / 2)
+
+    val yOffset_pix = translator.pix2IsoDistY(fontHeight) * 2.5
+
+    val y_pix = {
+      if (isTop)
+        translator.iso2PixCoordY(-gapSkew.topLeftValue_mm.get) - yOffset_pix
+      else
+        translator.iso2PixCoordY(-gapSkew.bottomLeftValue_mm.get) + yOffset_pix
+    }
+
+    val edgeType =
+      if (isTop)
+        gapSkew.topLeftEdgeType
+      else
+        gapSkew.bottomLeftEdgeType
+
+    val text = {
+      val x = " X" + edgeType.bank
+
+      val mlc = {
+        "MLC" + " " + {
+          if (edgeType.bank == 1) "BBank" else "ABank"
+        }
+      }
+
+      val jm = {
+        if (edgeType.isJaw)
+          "Jaw"
+        else
+          mlc
+      }
+
+      x + " " + jm
+    }
+
+    g.setColor(Color.red)
+    ImageText.drawTextCenteredAt(g, x_pix, y_pix, text)
+  }
+
   /**
     * Create annotated image.
     */
@@ -158,6 +205,9 @@ case class GapSkewAnnotateImage(
     addLeaf(bufferedImage, topRight, isTop = true) // , isTop = !colIs270) // true)
     addLeaf(bufferedImage, bottomLeft, isTop = false) // , isTop = colIs270) // false)
     addLeaf(bufferedImage, bottomRight, isTop = false) // , isTop = colIs270) // false)
+
+    addEdge(bufferedImage, isTop = true)
+    addEdge(bufferedImage, isTop = false)
 
     bufferedImage
   }
