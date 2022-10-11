@@ -44,7 +44,7 @@ case class GapSkewAnnotateImage(
 
   private def d2i = Util.d2i _
 
-  private def arrow(image: BufferedImage, x1: Int, y1: Int, x2: Int, y2: Int, color: Color = Color.darkGray): Unit = {
+  private def drawArrow(image: BufferedImage, x1: Int, y1: Int, x2: Int, y2: Int, color: Color = Color.darkGray): Unit = {
     val g = ImageUtil.getGraphics(image)
     g.setColor(color)
     ImageUtil.setLineThickness(g, 2)
@@ -97,7 +97,13 @@ case class GapSkewAnnotateImage(
     ImageText.drawTextCenteredAt(g, centerX, centerY, beamName)
   }
 
-  private def addLeaf(image: BufferedImage, leaf: Leaf, isTop: Boolean): Unit = {
+  /**
+    * Annotate one of the four measurement points.
+    * @param image Write on this image.
+    * @param leaf Which leaf.
+    * @param isTop True if this is a top edge, false if bottom.
+    */
+  private def annotateLeaf(image: BufferedImage, leaf: Leaf, isTop: Boolean): Unit = {
     addBeamName(image)
     val g = ImageUtil.getGraphics(image)
     g.setColor(Color.darkGray)
@@ -145,10 +151,15 @@ case class GapSkewAnnotateImage(
       else
         d2i(textY - textHeight / 2.0)
     }
-    arrow(image, textX, arrowY1, textX, y)
+    drawArrow(image, textX, arrowY1, textX, y)
   }
 
-  def addEdge(bufferedImage: BufferedImage, isTop: Boolean): Unit = {
+  /**
+    * Add a description to an edge
+    * @param bufferedImage To this image.
+    * @param isTop True if top edge should be annotated, false if bottom edge.
+    */
+  private def annotateEdgeDescription(bufferedImage: BufferedImage, isTop: Boolean): Unit = {
     val g = ImageUtil.getGraphics(bufferedImage)
     ImageText.setFont(g, ImageText.DefaultFont, textPointSize = 30)
     val fontHeight = ImageText.getFontHeight(g)
@@ -171,7 +182,7 @@ case class GapSkewAnnotateImage(
         gapSkew.bottomLeftEdgeType
 
     val text = {
-      val x = " X" + edgeType.bank
+      val x = "X" + edgeType.bank
 
       val mlc = {
         "MLC" + " " + {
@@ -179,14 +190,14 @@ case class GapSkewAnnotateImage(
         }
       }
 
-      val jm = {
+      val jawOrMlc = {
         if (edgeType.isJaw)
           "Jaw"
         else
           mlc
       }
 
-      x + " " + jm
+      x + " " + jawOrMlc
     }
 
     g.setColor(Color.red)
@@ -201,13 +212,13 @@ case class GapSkewAnnotateImage(
     val bufferedImage: BufferedImage = dicomImage.toDeepColorBufferedImage(minPixel, maxPixel)
     Util.addGraticulesNegY(bufferedImage, translator, Color.yellow)
 
-    addLeaf(bufferedImage, topLeft, isTop = true) // , isTop = !colIs270) // true)
-    addLeaf(bufferedImage, topRight, isTop = true) // , isTop = !colIs270) // true)
-    addLeaf(bufferedImage, bottomLeft, isTop = false) // , isTop = colIs270) // false)
-    addLeaf(bufferedImage, bottomRight, isTop = false) // , isTop = colIs270) // false)
+    annotateLeaf(bufferedImage, topLeft, isTop = true) // , isTop = !colIs270) // true)
+    annotateLeaf(bufferedImage, topRight, isTop = true) // , isTop = !colIs270) // true)
+    annotateLeaf(bufferedImage, bottomLeft, isTop = false) // , isTop = colIs270) // false)
+    annotateLeaf(bufferedImage, bottomRight, isTop = false) // , isTop = colIs270) // false)
 
-    addEdge(bufferedImage, isTop = true)
-    addEdge(bufferedImage, isTop = false)
+    annotateEdgeDescription(bufferedImage, isTop = true)
+    annotateEdgeDescription(bufferedImage, isTop = false)
 
     bufferedImage
   }
