@@ -37,7 +37,9 @@ import scala.xml.Elem
   * Show latest gap skew results for all machines.
   */
 object GapSkewLatestHtml {
-  val path = new String((new GapSkewLatestHtml).pathOf)
+  val path: String = new String((new GapSkewLatestHtml).pathOf)
+
+  val ref: Elem = <a href={path} title="Latest results for all machines" style="margin-left:50px;"> Latest Gap Skew </a>
 }
 
 class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {

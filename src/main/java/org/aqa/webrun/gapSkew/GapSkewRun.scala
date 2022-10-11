@@ -133,7 +133,7 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
       }
     }
 
-    new GapSkewHtml(extendedData, runReq, fleResultList, status).makeDisplay()
+    new GapSkewHtml(extendedData, runReq, fleResultList, gapSkewList, status).makeDisplay()
     status
   }
 

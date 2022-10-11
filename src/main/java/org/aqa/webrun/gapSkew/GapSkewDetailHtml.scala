@@ -279,7 +279,7 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtima
             <center>
               {leafTitle}
               <br/>
-              <a href="display.html"> Back to main report </a> <a href={GapSkewLatestHtml.path} style="margin-left:50px;"> Latest Gap Skew </a>
+              <a href="display.html"> Back to main report </a> {GapSkewLatestHtml.ref}
               <p></p>
             </center>
           </div>

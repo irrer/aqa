@@ -18,10 +18,10 @@ package org.aqa.webrun.gapSkew
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
-import edu.umro.ImageUtil.DicomImage
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Config
 import org.aqa.Util
+import org.aqa.db.GapSkew
 import org.aqa.db.Output
 import org.aqa.run.ProcedureStatus
 import org.aqa.web.WebUtil
@@ -34,7 +34,7 @@ import scala.xml.Elem
 
 object GapSkewHtml {}
 
-class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq: Seq[LeafSet], procedureStatus: ProcedureStatus.Value) {
+class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq: Seq[LeafSet], gapSkewList: Seq[GapSkew], procedureStatus: ProcedureStatus.Value) {
 
   private def beamNameOf(leafSet: LeafSet): String = Phase2Util.getBeamNameOfRtimage(runReq.rtplan, leafSet.attributeList).get
 
@@ -86,7 +86,7 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
     val latestGapSkew =
       <td style={style}>
         <center>
-          <a href={GapSkewLatestHtml.path}> Latest Gap Skew </a>
+          {GapSkewLatestHtml.ref}
         </center>
       </td>
 
@@ -200,14 +200,6 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
 
     leafSetHtmlList.filter(_.isRight).foreach(l => l.right.get.writeDetailedHtml())
     rtplanHtml.makeDicomContent(runReq.rtplan)
-
-    if (false) {
-      val img = new DicomImage(runReq.rtimageMap.head._2)
-      val text = img.pixelsToText
-      val file = new File("""D:\tmp\pix.txt""")
-      Util.writeFile(file, text)
-      println("wrote to file " + file.getAbsolutePath)
-    }
   }
 
 }
