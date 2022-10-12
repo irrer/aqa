@@ -46,7 +46,6 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
     * Make an HTML reference to the RTPLAN so it can be viewed.
     * @return Link to rtplan.  Also show the patient ID and patient name.
     */
-
   private def generalReference(): Elem = {
 
     val style = "vertical-align:middle; padding:20px;"
@@ -123,6 +122,93 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
     ref
   }
 
+  private def makeGapOffsetContent(mlcX2ABank: GapSkew, mlcX1BBank: GapSkew): Elem = {
+
+    val aR = mlcX2ABank.topRightValue_mm.get
+    val aL = mlcX2ABank.topLeftValue_mm.get
+
+    val bR = mlcX1BBank.topRightValue_mm.get
+    val bL = mlcX1BBank.topLeftValue_mm.get
+
+    def fmt(d: Double): Elem = { <td title={d.toString}>{Util.fmtDbl(d)}</td> }
+
+    val avg = (aR + aL + bR + bL) / 4
+
+    val content = {
+      <div style="margin:10px;">
+        <h3>Collimator {mlcX2ABank.angleRounded}</h3>
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th> </th>
+              <th title="Measured Y position of righthand end of collimator for Bank A (X2).">Right mm</th>
+              <th title="Measured Y position of lefthand end of collimator for Bank A (X2).">Left mm</th>
+              <th title="Difference from right to left.">Right-Left mm</th>
+              <th title="Angle from right to left.">Skew deg</th>
+              <th title="Y position of midpoint between right and left. (Right+Left) / 2">Average</th>
+            </tr>
+          </thead>
+          <tr>
+            <th>Bank A</th>
+            {fmt(aR)}
+            {fmt(aL)}
+            {fmt(aR - aL)}
+            {fmt(mlcX2ABank.topHorzSkew_deg)}
+            {fmt((aR + aL) / 2)}
+          </tr>
+          <tr>
+            <th>Bank B</th>
+            {fmt(bR)}
+            {fmt(bL)}
+            {fmt(bR - bL)}
+            {fmt(mlcX1BBank.topHorzSkew_deg)}
+            {fmt((bR + bL) / 2)}
+          </tr>
+          <tr>
+            <th>A-B</th>
+            {fmt(aR - bR)}
+            {fmt(aL - bL)}
+            {fmt((aR - aL) - (bR - bL))}
+            {fmt(mlcX2ABank.topHorzSkew_deg - mlcX1BBank.topHorzSkew_deg)}
+            {fmt(((aR + aL) - (bR + bL)) / 2)}
+          </tr>
+        </table>
+        <span title={"(A Right + A Left + B Right + B Left) / 4 = " + avg}><b>Average A and B: </b>{Util.fmtDbl(avg)}</span>
+      </div>
+    }
+    content
+  }
+
+  private def makeContent270(mlc270X2ABank: GapSkew, mlc270X1BBank: GapSkew): Elem = {
+    ???
+  }
+
+  /**
+    * Show the gap and offset for the different banks.
+    * @return
+    */
+  def gapAndOffset(): Elem = {
+
+    def findMlc(angle: Int, mlcBank: Int): GapSkew = {
+      gapSkewList.find(gs => (gs.angleRounded == angle) && gs.edgeList.exists(e => e.isMlc && e.bank == mlcBank)).get
+    }
+
+    // top X2 ABank
+    val mlc090X2ABank = findMlc(90, 2)
+    // bottom X1 BBank
+    val mlc090X1BBank = findMlc(90, 1)
+
+    // bottom X2 ABank
+    val mlc270X2ABank = findMlc(270, 2)
+    // bottom X1 BBank
+    val mlc270X1BBank = findMlc(270, 1)
+
+    <div style="border:solid grey 1px;">
+      {makeGapOffsetContent(mlc090X2ABank, mlc090X1BBank)}
+      {makeGapOffsetContent(mlc270X2ABank, mlc270X1BBank)}
+    </div>
+  }
+
   /**
     * The analysis of the beam was aborted because it is not able to be analyzed.
     * @param error Description of problem.
@@ -188,6 +274,7 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
     <div class="row" style="margin-top:10px;">
       <div class="col-md-8 col-md-offset-2" style="border:solid #bbbbbb 1px; padding: 12px; margin-bottom:500px;">
         {generalReference()}
+        {gapAndOffset()}
         {list}
       </div>
     </div>

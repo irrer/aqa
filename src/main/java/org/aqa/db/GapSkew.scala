@@ -79,6 +79,9 @@ case class GapSkew(
     edgeTypeList.exists(et => !et.isJaw)
   }
 
+  /** Collimator angle rounded to nearest 90 degrees.  */
+  val angleRounded: Int = Util.angleRoundedTo90(collimatorAngle_deg)
+
   /** True if one of the edges is the MLC and the collimator is at 270 degrees. */
   val colIs270: Boolean = hasMlc && (Util.angleRoundedTo90(collimatorAngle_deg) == 270)
 
@@ -109,6 +112,8 @@ case class GapSkew(
   def topRightEdgeType: GapSkew.EdgeType = GapSkew.EdgeType.toEdgeType(topRightEdgeTypeName.get)
   def bottomLeftEdgeType: GapSkew.EdgeType = GapSkew.EdgeType.toEdgeType(bottomLeftEdgeTypeName.get)
   def bottomRightEdgeType: GapSkew.EdgeType = GapSkew.EdgeType.toEdgeType(bottomRightEdgeTypeName.get)
+
+  def edgeList = Seq(topLeftEdgeType, topRightEdgeType, bottomLeftEdgeType, bottomRightEdgeType)
 
   /** Planned separation of edges.  Only valid if there are two edges. */
   def plannedEdgeSeparation_mm: Double = {
@@ -230,8 +235,7 @@ object GapSkew extends ProcedureOutput with Logging {
   val query = TableQuery[GapSkewTable]
 
   /*
-   * The following diagram shows the jaw (not collimator) positions as seen on an RTIMAGE.
-   * To be clear, the X1 horizontal line shows the profile of the X2 jaw, which moves vertically.
+   * The following diagram shows the jaw and collimator names when the collimator angle is 90.
    *
    *  ..........................................
    *  .                                        .
@@ -264,6 +268,8 @@ object GapSkew extends ProcedureOutput with Logging {
         (if (isJaw) "Jaw" else "MLC") + " " +
         (if (isHorz) "Horz" else "Vert")
     }
+
+    val isMlc = !isJaw
     override def toString: String = name + "    isX: " + isX + "    is1: " + bank + "    isJaw: " + isJaw
   }
 
