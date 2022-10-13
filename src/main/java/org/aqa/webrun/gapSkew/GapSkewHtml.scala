@@ -27,6 +27,7 @@ import org.aqa.run.ProcedureStatus
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.Logging
 
 import java.awt.image.BufferedImage
 import java.io.File
@@ -34,7 +35,7 @@ import scala.xml.Elem
 
 object GapSkewHtml {}
 
-class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq: Seq[LeafSet], gapSkewList: Seq[GapSkew], procedureStatus: ProcedureStatus.Value) {
+class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq: Seq[LeafSet], gapSkewList: Seq[GapSkew], procedureStatus: ProcedureStatus.Value) extends Logging {
 
   private def beamNameOf(leafSet: LeafSet): String = Phase2Util.getBeamNameOfRtimage(runReq.rtplan, leafSet.attributeList).get
 
@@ -232,34 +233,22 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
     */
   def gapAndOffset(): Elem = {
 
-    def findMlc(angle: Int, mlcBank: Int): GapSkew = {
-      gapSkewList.find(gs => (gs.angleRounded == angle) && gs.edgeList.exists(e => e.isMlc && e.bank == mlcBank)).get
+    try {
+      if (gapSkewList.isEmpty)
+        <h3>No data to make summary.</h3>
+      else {
+        val gos = GapOffsetSkew.makeGapOffsetSkew(gapSkewList)
+
+        <div style="border:solid grey 1px;">
+          {makeGapOffsetContent2(gos.col090)}
+          {makeGapOffsetContent2(gos.col270)}
+        </div>
+      }
+    } catch {
+      case t: Throwable =>
+        logger.warn("Not able to make summary information: " + fmtEx(t))
+        <h3>Error while making summary.</h3>
     }
-
-    // top X2 ABank
-    val mlc090X2ABank = findMlc(90, 2)
-    // bottom X1 BBank
-    val mlc090X1BBank = findMlc(90, 1)
-
-    // bottom X2 ABank
-    val mlc270X2ABank = findMlc(270, 2)
-    // bottom X1 BBank
-    val mlc270X1BBank = findMlc(270, 1)
-
-    /*
-    <div style="border:solid grey 1px;">
-      {makeGapOffsetContent(mlc090X2ABank, mlc090X1BBank)}
-      {makeGapOffsetContent(mlc270X2ABank, mlc270X1BBank)}
-    </div>
-     */
-
-    val gos = GapOffsetSkew.makeGapOffsetSkew(gapSkewList)
-
-    <div style="border:solid grey 1px;">
-      {makeGapOffsetContent2(gos.col090)}
-      {makeGapOffsetContent2(gos.col270)}
-    </div>
-
   }
 
   /**

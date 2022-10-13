@@ -95,9 +95,9 @@ case class GapSkewAnnotateImage(
     g.setColor(Color.darkGray)
 
     ImageText.setFont(g, ImageText.DefaultFont, textPointSize = 30)
-    val centerX = dicomImage.width / 2
-    val centerY = ImageText.getTextDimensions(g, beamName).getHeight
-    ImageText.drawTextCenteredAt(g, centerX, centerY, beamName)
+    val textDimensions = ImageText.getTextDimensions(g, beamName)
+    val centerX = (textDimensions.getWidth / 2) + 20
+    ImageText.drawTextCenteredAt(g, centerX, textDimensions.getHeight, beamName)
   }
 
   /**
@@ -165,12 +165,12 @@ case class GapSkewAnnotateImage(
     */
   private def annotateEdgeDescription(bufferedImage: BufferedImage, isTop: Boolean): Unit = {
     val g = ImageUtil.getGraphics(bufferedImage)
-    ImageText.setFont(g, ImageText.DefaultFont, textPointSize = 30)
+    ImageText.setFont(g, ImageText.DefaultFont, textPointSize = 20)
     val fontHeight = ImageText.getFontHeight(g)
 
     val x_pix = translator.iso2PixCoordX((topLeft.xCenter_mm + topRight.xCenter_mm) / 2)
 
-    val yOffset_pix = translator.pix2IsoDistY(fontHeight) * 2.5
+    val yOffset_pix = translator.pix2IsoDistY(fontHeight) * 2.0
 
     val y_pix = {
       if (isTop)
@@ -190,7 +190,7 @@ case class GapSkewAnnotateImage(
 
       val mlc = {
         "MLC" + " " + {
-          if (edgeType.bank == 1) "BBank" else "ABank"
+          if (edgeType.bank == 1) "Bank B" else "Bank A"
         }
       }
 
