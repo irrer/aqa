@@ -44,10 +44,13 @@ case class GapSkewAnnotateImage(
 
   private def d2i = Util.d2i _
 
+  /** Number of pixels to draw edge line. */
+  private val lineThickness = 2
+
   private def drawArrow(image: BufferedImage, x1: Int, y1: Int, x2: Int, y2: Int, color: Color = Color.darkGray): Unit = {
     val g = ImageUtil.getGraphics(image)
     g.setColor(color)
-    ImageUtil.setLineThickness(g, 2)
+    ImageUtil.setLineThickness(g, lineThickness)
 
     g.drawLine(x1, y1, x2, y2)
 
@@ -106,7 +109,7 @@ case class GapSkewAnnotateImage(
   private def annotateLeaf(image: BufferedImage, leaf: Leaf, isTop: Boolean): Unit = {
     addBeamName(image)
     val g = ImageUtil.getGraphics(image)
-    g.setColor(Color.darkGray)
+    g.setColor(Color.white)
 
     val y = d2i(translator.iso2PixCoordY(-leaf.yPosition_mm))
     val x1 = d2i(translator.iso2PixCoordX(leaf.xLeftPosition_mm))
@@ -114,11 +117,12 @@ case class GapSkewAnnotateImage(
     ImageUtil.setLineThickness(g, 3)
     g.drawLine(d2i(x1), d2i(y), d2i(x2), d2i(y))
 
+    g.setColor(Color.darkGray)
     ImageText.setFont(g, ImageText.DefaultFont, textPointSize = 20)
     val textHeight = d2i(ImageText.getTextDimensions(g, "Hq").getHeight)
     val textOffsetY = d2i(textHeight * 1.5)
     val textX = d2i(translator.iso2PixCoordX(leaf.xLeftPosition_mm + leaf.width_mm / 2.0))
-    val textY = d2i(if (isTop) y - textOffsetY else y + textOffsetY)
+    val textY = d2i(if (isTop) y - textOffsetY - lineThickness else y + textOffsetY + lineThickness)
 
     val text = fmt2(leaf.yPosition_mm)
 
@@ -147,9 +151,9 @@ case class GapSkewAnnotateImage(
 
     val arrowY1 = {
       if (isTop)
-        d2i(textY + textHeight / 2.0)
+        d2i(textY + textHeight / 2.0) - lineThickness
       else
-        d2i(textY - textHeight / 2.0)
+        d2i(textY - textHeight / 2.0) + lineThickness
     }
     drawArrow(image, textX, arrowY1, textX, y)
   }

@@ -315,6 +315,16 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
         Right(GapSkewDetailHtml(extendedData, leafSet.gapSkew.right.get, leafSet.attributeList, leafSet.image))
     })
 
+  private def makeZoomScript: String = {
+    // when zooming, magnify images by this much
+    val magnify = 0.6
+    val idList = runReq.rtimageMap.keys.map(beamName => FileUtil.replaceInvalidFileNameCharacters(beamName, '_').replace(' ', '_') + "_png")
+
+    "\n<script>\n  " +
+      idList.map(id => "$(document).ready( function() { $('#" + id + "').zoom({ magnify: " + magnify + " }); });").mkString("\n  ") +
+      "\n</script>"
+  }
+
   private def content: Elem = {
 
     val list = leafSetHtmlList.map(l => {
@@ -334,7 +344,8 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
   }
 
   def makeDisplay(): Unit = {
-    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), "Leaf Gap and Skew", refresh = None)
+    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), "Leaf Gap and Skew", refresh = None, runScript = Some(makeZoomScript))
+    //val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), "Leaf Gap and Skew", refresh = None)
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeBinaryFile(file, text.getBytes)
 

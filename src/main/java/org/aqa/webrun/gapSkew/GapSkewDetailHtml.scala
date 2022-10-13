@@ -405,10 +405,12 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtima
     */
   def summaryHtml(): Elem = {
     <div class="row" style="margin-top: 40px;">
-      <div class="col-md-2">
-        <a href={detailUrl} title="Click for details." class="screenshot" rel={imageUrl}>
-          <img class="img-responsive fit-image" src={imageUrl} style="width:384px;"/>
-        </a>
+      <div class="col-md-3">
+        <div class="zoom" rel={imageUrl} id={imageUrl.replace('.', '_')}>
+          <a href={detailUrl} title="Click for details.">
+            <img class="img-responsive fit-image" src={imageUrl} style="width:384px;"/>
+          </a>
+        </div>
       </div>
       <div class="col-md-3">
         <a href={detailUrl} title="Click for details.">
