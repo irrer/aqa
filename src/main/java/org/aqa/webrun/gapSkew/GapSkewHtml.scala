@@ -212,12 +212,12 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
             <th>Bank B</th>{fmt(ca.bRight)}{fmt(ca.bLeft)}{fmt(ca.bRightLeftDiff)}{fmt(ca.bSkew)}{fmt(ca.bAvg)}
           </tr>
           <tr>
-            <th>A-B</th>{fmt(ca.abRightDiff)}{fmt(ca.abLeftDiff)}{fmt(ca.abRightLeftDiff)}{fmt(ca.abSkewDiff)}{fmt(ca.abAvgDiff)}
+            <th>Diff: A-B</th>{fmt(ca.abRightDiff)}{fmt(ca.abLeftDiff)}{fmt(ca.abRightLeftDiff)}{fmt(ca.abSkewDiff)}{fmt(ca.abAvgDiff)}
+          </tr>
+          <tr>
+            <th>Avg: (A+B)/2</th>{fmt(ca.abRightAvg)}{fmt(ca.abLeftAvg)}{fmt(ca.abRightLeftAvg)}{fmt(ca.abSkewAvg)}{fmt(ca.abAvgAvg)}
           </tr>
         </table>
-        <span title={"(A Right + A Left + B Right + B Left) / 4 = " + 55555}>
-          <b>Average A and B:</b>{Util.fmtDbl(55555)}
-        </span>
       </div>
     }
     content

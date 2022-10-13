@@ -154,9 +154,9 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
     new GosValue(
       v,
       s"${aRight.name} - ${bRight.name}",
-      s"${bRight.name} - ${bRight.name} : Difference for each bank's right hand values.",
-      s"$v = ${bRight.v} - ${bRight.v}",
-      Seq(bRight, bRight)
+      s"${aRight.name} - ${bRight.name} : Difference for each bank's right hand values.",
+      s"$v = ${aRight.v} - ${bRight.v}",
+      Seq(aRight, bRight)
     )
   }
 
@@ -165,9 +165,9 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
     new GosValue(
       v,
       s"${aLeft.name} - ${bLeft.name}",
-      s"${bLeft.name} - ${bLeft.name} : Difference for each bank's left hand values.",
-      s"$v = ${bLeft.v} - ${bLeft.v}",
-      Seq(bLeft, bLeft)
+      s"${aLeft.name} - ${bLeft.name} : Difference for each bank's left hand values.",
+      s"$v = ${aLeft.v} - ${bLeft.v}",
+      Seq(aLeft, bLeft)
     )
   }
 
@@ -184,7 +184,7 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
 
   val abSkewDiff: GosValue = {
     val v = aSkew.v - bSkew.v
-    new GosValue(
+    GosValue(
       v,
       s"${aSkew.name} - ${bSkew.name}",
       s"${aSkew.name} - ${bSkew.name} : Difference of skew between bank A and B.",
@@ -201,6 +201,64 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
       s"${aAvg.name} - ${bAvg.name}",
       s"${aAvg.name} - ${bAvg.name} : Difference of averages between bank A and B.",
       s"$v = ${aAvg.v} - ${bAvg.v}",
+      Seq(aAvg, bAvg)
+    )
+  }
+
+  // ----- averages -----
+
+  val abRightAvg: GosValue = {
+    val v = (aRight.v + bRight.v) / 2
+    new GosValue(
+      v,
+      s"(${aRight.name} + ${bRight.name}) / 2",
+      s"(${aRight.name} + ${bRight.name}) / 2 : Average of each bank's right hand values.",
+      s"$v = (${aRight.v} + ${bRight.v}) / 2",
+      Seq(aRight, bRight)
+    )
+  }
+
+  val abLeftAvg: GosValue = {
+    val v = (aLeft.v + bLeft.v) / 2
+    new GosValue(
+      v,
+      s"(${aLeft.name} + ${bLeft.name}) / 2",
+      s"(${aLeft.name} + ${bLeft.name}) / 2 : Average of each bank's left hand values.",
+      s"$v = (${aLeft.v} + ${bLeft.v}) / 2",
+      Seq(aLeft, bLeft)
+    )
+  }
+
+  val abRightLeftAvg: GosValue = {
+    val v = (aRightLeftDiff.v + bRightLeftDiff.v) / 2
+    new GosValue(
+      v,
+      s"(${aRightLeftDiff.name} + ${bRightLeftDiff.name}) / 2",
+      s"(${aRightLeftDiff.name} + ${bRightLeftDiff.name}) / 2 : Average of each bank's right and left hand difference values.",
+      s"$v = (${aRightLeftDiff.v} + ${bRightLeftDiff.v}) / 2",
+      Seq(aRightLeftDiff, bRightLeftDiff)
+    )
+  }
+
+  val abSkewAvg: GosValue = {
+    val v = (aSkew.v + bSkew.v) / 2
+    GosValue(
+      v,
+      s"(${aSkew.name} + ${bSkew.name}) / 2",
+      s"(${aSkew.name} + ${bSkew.name}) / 2 : Average of skews for bank A and B.",
+      s"($v = ${aSkew.v} + ${bSkew.v}) / 2",
+      Seq(aSkew, bSkew),
+      units = "deg"
+    )
+  }
+
+  val abAvgAvg: GosValue = {
+    val v = (aAvg.v + bAvg.v) / 2
+    new GosValue(
+      v,
+      s"(${aAvg.name} + ${bAvg.name}) / 2",
+      s"(${aAvg.name} + ${bAvg.name}) / 2 : Average of averages for bank A and B.",
+      s"$v = (${aAvg.v} + ${bAvg.v}) / 2",
       Seq(aAvg, bAvg)
     )
   }
@@ -236,7 +294,7 @@ object GapOffsetSkew {
     // bottom X1 BBank
     val c270B = findMlc(270, 1)
 
-    val c270Jaw = gapSkewList.find(gs => (gs.angleRounded == 270) && gs.edgeList.filter(e => e.isJaw).size == 4).get
+    val c270Jaw = gapSkewList.find(gs => (gs.angleRounded == 270) && gs.edgeList.count(e => e.isJaw) == 4).get
 
     val gos = GapOffsetSkew(
       c090A,
