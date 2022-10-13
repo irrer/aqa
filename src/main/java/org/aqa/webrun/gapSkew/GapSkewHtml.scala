@@ -124,11 +124,11 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
 
   private def makeGapOffsetContent(mlcX2ABank: GapSkew, mlcX1BBank: GapSkew): Elem = {
 
-    val aR = mlcX2ABank.topRightValue_mm.get
-    val aL = mlcX2ABank.topLeftValue_mm.get
+    val aR = Seq(mlcX2ABank.topRightValue_mm.get, mlcX2ABank.bottomRightValue_mm.get).minBy(_.abs)
+    val aL = Seq(mlcX2ABank.topLeftValue_mm.get, mlcX2ABank.bottomLeftValue_mm.get).minBy(_.abs)
 
-    val bR = mlcX1BBank.topRightValue_mm.get
-    val bL = mlcX1BBank.topLeftValue_mm.get
+    val bR = Seq(mlcX1BBank.topRightValue_mm.get, mlcX1BBank.bottomRightValue_mm.get).minBy(_.abs)
+    val bL = Seq(mlcX1BBank.topLeftValue_mm.get, mlcX1BBank.bottomLeftValue_mm.get).minBy(_.abs)
 
     def fmt(d: Double): Elem = { <td title={d.toString}>{Util.fmtDbl(d)}</td> }
 
@@ -179,6 +179,49 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
     content
   }
 
+  private def makeGapOffsetContent2(colAngle: ColAngle): Elem = {
+
+    val ca = colAngle
+
+    def fmt(v: GosValue): Elem = {
+      <td title={v.name + WebUtil.titleNewline + v.description + WebUtil.titleNewline + v.derivation}>
+        {Util.fmtDbl(v.v)}
+      </td>
+    }
+
+    val content = {
+      <div style="margin:10px;">
+        <h3>Collimator
+          {ca.bankA.angleRounded}
+        </h3>
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th></th>
+              <th title="Measured Y position of righthand end of collimator for Bank A (X2).">Right mm</th>
+              <th title="Measured Y position of lefthand end of collimator for Bank A (X2).">Left mm</th>
+              <th title="Difference from right to left.">Right-Left mm</th>
+              <th title="Angle from right to left.">Skew deg</th>
+              <th title="Y position of midpoint between right and left. (Right+Left) / 2">Average</th>
+            </tr>
+          </thead>
+          <tr>
+            <th>Bank A</th>{fmt(ca.aRight)}{fmt(ca.aLeft)}{fmt(ca.aRightLeftDiff)}{fmt(ca.aSkew)}{fmt(ca.aAvg)}
+          </tr>
+          <tr>
+            <th>Bank B</th>{fmt(ca.bRight)}{fmt(ca.bLeft)}{fmt(ca.bRightLeftDiff)}{fmt(ca.bSkew)}{fmt(ca.bAvg)}
+          </tr>
+          <tr>
+            <th>A-B</th>{fmt(ca.abRightDiff)}{fmt(ca.abLeftDiff)}{fmt(ca.abRightLeftDiff)}{fmt(ca.abSkewDiff)}{fmt(ca.abAvgDiff)}
+          </tr>
+        </table>
+        <span title={"(A Right + A Left + B Right + B Left) / 4 = " + 55555}>
+          <b>Average A and B:</b>{Util.fmtDbl(55555)}
+        </span>
+      </div>
+    }
+    content
+  }
   private def makeContent270(mlc270X2ABank: GapSkew, mlc270X1BBank: GapSkew): Elem = {
     ???
   }
@@ -203,10 +246,20 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
     // bottom X1 BBank
     val mlc270X1BBank = findMlc(270, 1)
 
+    /*
     <div style="border:solid grey 1px;">
       {makeGapOffsetContent(mlc090X2ABank, mlc090X1BBank)}
       {makeGapOffsetContent(mlc270X2ABank, mlc270X1BBank)}
     </div>
+     */
+
+    val gos = GapOffsetSkew.makeGapOffsetSkew(gapSkewList)
+
+    <div style="border:solid grey 1px;">
+      {makeGapOffsetContent2(gos.col090)}
+      {makeGapOffsetContent2(gos.col270)}
+    </div>
+
   }
 
   /**
