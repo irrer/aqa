@@ -7,7 +7,6 @@ import org.aqa.web.C3Chart
 import org.aqa.web.C3ChartHistory
 
 import java.awt.Color
-import scala.collection.Seq
 
 object GapSkewHistoryChart {
   def angleChartIdTag(beamName: String): String = C3Chart.textToChartId(beamName) + "_angle"
