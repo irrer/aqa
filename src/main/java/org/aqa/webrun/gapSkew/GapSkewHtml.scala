@@ -32,6 +32,7 @@ import org.aqa.Logging
 import java.awt.image.BufferedImage
 import java.io.File
 import scala.xml.Elem
+import scala.xml.NodeBuffer
 
 object GapSkewHtml {}
 
@@ -180,12 +181,15 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
     content
   }
 
-  private def makeGapOffsetContent2(colAngle: ColAngle): Elem = {
+  private def makeGapOffsetContent2(colAngle: ColAngle, jawJaw: Option[JawJaw]): Elem = {
 
     val ca = colAngle
 
     def fmt(v: GosValue): Elem = {
-      <td title={v.name + WebUtil.titleNewline + v.description + WebUtil.titleNewline + v.derivation}>
+
+      val nl = WebUtil.titleNewline
+
+      <td title={s"${v.name} (${v.units})${nl}${v.description}${nl}${v.derivation}${nl}"}>
         {Util.fmtDbl(v.v)}
       </td>
     }
@@ -203,7 +207,7 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
               <th title="Measured Y position of lefthand end of collimator for Bank A (X2).">Left mm</th>
               <th title="Difference from right to left.">Right-Left mm</th>
               <th title="Angle from right to left.">Skew deg</th>
-              <th title="Y position of midpoint between right and left. (Right+Left) / 2">Average</th>
+              <th title="Y position of midpoint between right and left. (Right+Left) / 2">Average mm</th>
             </tr>
           </thead>
           <tr>
@@ -218,13 +222,31 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
           <tr>
             <th>Avg: (A+B)/2</th>{fmt(ca.abRightAvg)}{fmt(ca.abLeftAvg)}{fmt(ca.abRightLeftAvg)}{fmt(ca.abSkewAvg)}{fmt(ca.abAvgAvg)}
           </tr>
+          {
+        // @formatter:off
+            val nodeBuffer: NodeBuffer = {
+              if (jawJaw.isDefined) {
+                val jj = jawJaw.get // shorthand
+                <tr style="border-top:solid lightgrey 8px;">
+                  <th>X1 Jaw</th>{fmt(jj.jawRight)}{fmt(jj.jawLeft)}{fmt(jj.jawRightLeftDiff)}{fmt(jj.jawSkew)}{fmt(jj.jawAvg)}
+                </tr>
+                <tr>
+                  <th>Diff: A-X1 Jaw</th>{fmt(jj.aJawRightDiff)}{fmt(jj.aJawLeftDiff)}{fmt(jj.aJawRightLeftDiff)}{fmt(jj.aJawSkewDiff)}{fmt(jj.aJawAvgDiff)}
+                </tr>
+                <tr>
+                  <th>Avg: (A+X1 Jaw)/2</th>{fmt(jj.aJawRightAvg)}{fmt(jj.aJawLeftAvg)}{fmt(jj.aJawRightLeftAvg)}{fmt(jj.aJawSkewAvg)}{fmt(jj.aJawAvgAvg)}
+                </tr>
+              } else {
+                new NodeBuffer
+              }
+            }
+            nodeBuffer
+          // @formatter:on
+      }
         </table>
       </div>
     }
     content
-  }
-  private def makeContent270(mlc270X2ABank: GapSkew, mlc270X1BBank: GapSkew): Elem = {
-    ???
   }
 
   /**
@@ -240,8 +262,8 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
         val gos = GapOffsetSkew.makeGapOffsetSkew(gapSkewList)
 
         <div style="border:solid grey 1px;">
-          {makeGapOffsetContent2(gos.col090)}
-          {makeGapOffsetContent2(gos.col270)}
+          {makeGapOffsetContent2(gos.col090, None)}
+          {makeGapOffsetContent2(gos.col270, Some(gos.jawJaw))}
         </div>
       }
     } catch {
