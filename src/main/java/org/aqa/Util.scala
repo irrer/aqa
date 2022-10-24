@@ -30,6 +30,8 @@ import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.util.Utility
+import org.apache.commons.csv.CSVFormat
+import org.apache.commons.csv.CSVParser
 
 import java.awt.BasicStroke
 import java.awt.Color
@@ -507,6 +509,25 @@ object Util extends Logging {
       '"' + text.replaceAll("\"", "\"\"") + '"'
     } else text
   }
+
+  /**
+    * Given CSV content, convert it to a single dimensional array of text strings.
+    *
+    * If the CSV is incorrectly formatted, then this will throw an exception.
+    *
+    * @param csv CSV content.  May have multiple lines.
+    * @return Array o text strings ordered as they were in the input.
+    */
+  def csvToText(csv: String): Seq[String] =
+    // Do this synchronized because it is not certain that the library is thread safe.
+    CSVFormat.DEFAULT.synchronized {
+      val parsed = CSVParser.parse(csv, CSVFormat.DEFAULT)
+      val textSeq = scala.collection.mutable.ArrayBuffer[String]()
+      parsed.forEach(line => {
+        line.forEach(col => textSeq.append(new String(col.getBytes)))
+      })
+      textSeq
+    }
 
   /**
     * Make a new file reference, putting the given file in the given directory.

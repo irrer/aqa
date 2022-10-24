@@ -132,5 +132,6 @@
     <orderEntry type="library" name="Maven: io.strongtyped:active-slick_2.12:0.3.5" level="project" />
     <orderEntry type="library" name="Maven: com.microsoft.sqlserver:sqljdbc4:4.0" level="project" />
     <orderEntry type="library" name="Maven: org.restlet.jee:org.restlet.ext.html:2.3.9" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.commons:commons-csv:1.8" level="project" />
   </component>
 </module>
