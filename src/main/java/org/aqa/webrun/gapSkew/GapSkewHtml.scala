@@ -202,12 +202,23 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
       if (gapSkewList.isEmpty)
         <h3>No data to make summary.</h3>
       else {
-        val gos = GapOffsetSkew.makeGapOffsetSkew(gapSkewList)
-
-        <div style="border:solid grey 1px;">
+        GapOffsetSkew.makeGapOffsetSkew(gapSkewList) match {
+          case Right(gos) =>
+            <div style="border:solid grey 1px;">
           {makeGapOffsetContent(gos.col090, None)}
           {makeGapOffsetContent(gos.col270, Some(gos.jawJaw))}
         </div>
+
+          case Left(error) =>
+            <div style="border:solid red 1px;">
+              <center>
+                <h3>Unable to make summary. The following types of beams were missing:</h3>
+                <b>
+                  {error.split("\n").map(err => <p>{err}</p>)}
+                </b>
+              </center>
+            </div>
+        }
       }
     } catch {
       case t: Throwable =>

@@ -465,31 +465,46 @@ case class GapOffsetSkew(
 }
 
 object GapOffsetSkew {
-  def makeGapOffsetSkew(gapSkewList: Seq[GapSkew]): GapOffsetSkew = {
+  def makeGapOffsetSkew(gapSkewList: Seq[GapSkew]): Either[String, GapOffsetSkew] = {
 
-    def findMlc(angle: Int, mlcBank: Int): GapSkew = {
-      gapSkewList.find(gs => (gs.angleRounded == angle) && gs.edgeList.exists(e => e.isMlc && e.bank == mlcBank)).get
+    def findMlc(angle: Int, mlcBank: Int, name: String): Either[String, GapSkew] = {
+      gapSkewList.find(gs => (gs.angleRounded == angle) && gs.edgeList.exists(e => e.isMlc && e.bank == mlcBank)) match {
+        case Some(mlc) => Right(mlc)
+        case _         => Left(name)
+      }
     }
 
     // top X2 ABank
-    val c090A = findMlc(90, 2)
+    val c090A = findMlc(90, 2, "Col 90 Bank A / X2")
     // bottom X1 BBank
-    val c090B = findMlc(90, 1)
+    val c090B = findMlc(90, 1, "Col 90 Bank B / X1")
 
     // bottom X2 ABank
-    val c270A = findMlc(270, 2)
+    val c270A = findMlc(270, 2, "Col 270 Bank A / X2")
     // bottom X1 BBank
-    val c270B = findMlc(270, 1)
+    val c270B = findMlc(270, 1, "Col 270 Bank B / X1")
 
-    val c270Jaw = gapSkewList.find(gs => (gs.angleRounded == 270) && gs.edgeList.count(e => e.isJaw) == 4).get
+    val c270Jaw = {
+      gapSkewList.find(gs => (gs.angleRounded == 270) && gs.edgeList.count(e => e.isJaw) == 4) match {
+        case Some(jaw) => Right(jaw)
+        case _         => Left("Col 270 with Jaw 1 and Jaw 2")
+      }
+    }
+    val list = Seq(c090A, c090B, c270A, c270B, c270Jaw)
 
-    val gos = GapOffsetSkew(
-      c090A,
-      c090B,
-      c270A,
-      c270B,
-      c270Jaw
-    )
-    gos
+    val fail = list.filter(_.isLeft)
+
+    if (fail.isEmpty) {
+      val gos = GapOffsetSkew(
+        c090A.right.get,
+        c090B.right.get,
+        c270A.right.get,
+        c270B.right.get,
+        c270Jaw.right.get
+      )
+      Right(gos)
+    } else {
+      Left(fail.map(_.left.get).mkString("\n"))
+    }
   }
 }

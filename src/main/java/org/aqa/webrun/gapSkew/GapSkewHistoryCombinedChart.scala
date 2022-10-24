@@ -23,7 +23,11 @@ class GapSkewHistoryCombinedChart(outputPK: Long, machine: Machine) {
     def toGroup(historyList: Seq[GapSkewHistory]): Option[Group] = {
       try {
         val gos = GapOffsetSkew.makeGapOffsetSkew(historyList.map(_.gapSkew))
-        Some (Group(historyList.head.output, gos))
+        if (gos.isRight)
+          Some(Group(historyList.head.output, gos.right.get))
+        else {
+          None
+        }
       } catch {
         case _: Throwable => None
       }
@@ -31,7 +35,6 @@ class GapSkewHistoryCombinedChart(outputPK: Long, machine: Machine) {
 
     h.flatMap(toGroup)
   }
-
 
   /*
   // list of all MaintenanceRecords in this time interval
@@ -114,5 +117,5 @@ class GapSkewHistoryCombinedChart(outputPK: Long, machine: Machine) {
 
   val javascript: String = angleChart.javascript + "\n" + offsetChart.javascript
 
-  */
+   */
 }

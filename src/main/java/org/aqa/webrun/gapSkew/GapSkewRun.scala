@@ -224,7 +224,7 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
       case _ if checkYJaws().nonEmpty =>
         formError(
           "The Y jaws are required to be at least " + Config.GapSkewMinimumFieldWidth_mm + " mm apart." + WebUtil.titleNewline +
-            "but they aer nor for beam(s): " + WebUtil.titleNewline +
+            "but they are not for beam(s): " + WebUtil.titleNewline +
             checkYJaws().mkString("    " + WebUtil.titleNewline)
         )
 
