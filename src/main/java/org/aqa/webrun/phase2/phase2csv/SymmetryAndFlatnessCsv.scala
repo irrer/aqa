@@ -103,7 +103,7 @@ class SymmetryAndFlatnessCsv extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFl
     symFlat
   }
 
-  override def getSopUID(data: SF): String = data.symmetryAndFlatness.SOPInstanceUID
+  override def getSopUID(data: SF): Option[String] = Some(data.symmetryAndFlatness.SOPInstanceUID)
 
   override def getOutput(data: SF): Output = data.output
 }

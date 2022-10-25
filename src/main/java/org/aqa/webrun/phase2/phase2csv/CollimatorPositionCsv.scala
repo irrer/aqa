@@ -55,7 +55,7 @@ class CollimatorPositionCsv extends Phase2Csv[CollimatorPosition.ColPosHistory] 
     cpHistory
   }
 
-  override def getSopUID(data: CP): String = data.colCent.SOPInstanceUID
+  override def getSopUID(data: CP): Option[String] = Some(data.colCent.SOPInstanceUID)
 
   override def getOutput(data: CP): Output = data.output
 }

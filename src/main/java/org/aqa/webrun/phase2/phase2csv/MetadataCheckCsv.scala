@@ -63,7 +63,7 @@ class MetadataCheckCsv extends Phase2Csv[MetadataCheck.MetadataCheckHistory] {
     mdcHistory
   }
 
-  override def getSopUID(data: MDC): String = data.metadataCheck.SOPInstanceUID.get
+  override def getSopUID(data: MDC): Option[String] = Some(data.metadataCheck.SOPInstanceUID.get)
 
   override def getOutput(data: MDC): Output = data.output
 }

@@ -57,7 +57,7 @@ class LeafPositionCsv extends Phase2Csv[LeafPosition.LeafPosHistory] {
     * @param lph Data using DICOM data.
     * @return SOP instance UID.
     */
-  override protected def getSopUID(lph: LPH): String = lph.leafPosSeq.head.SOPInstanceUID
+  override protected def getSopUID(lph: LPH): Option[String] = Some(lph.leafPosSeq.head.SOPInstanceUID)
 
   /**
     * Get a value with the matching indices.

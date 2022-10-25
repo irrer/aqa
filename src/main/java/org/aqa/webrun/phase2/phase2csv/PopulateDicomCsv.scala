@@ -66,7 +66,7 @@ class PopulateDicomCsv extends Phase2Csv[DicomInstance] with Logging {
     * @param data   Data using DICOM data.
     * @return SOP instance UID.
     */
-  override protected def getSopUID(data: DI): String = data.SOPInstanceUID
+  override protected def getSopUID(data: DI): Option[String] = Some(data.SOPInstanceUID)
 
   def populateAll(): Unit = {
     {

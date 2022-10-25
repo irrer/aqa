@@ -51,7 +51,7 @@ abstract class Phase2Csv[T] extends Logging {
     * @param data Data using DICOM data.
     * @return SOP instance UID.
     */
-  protected def getSopUID(data: T): String
+  protected def getSopUID(data: T): Option[String]
 
   /**
     * Allow the subclass to specify the prefix for each DICOM CSV column header.
@@ -226,7 +226,13 @@ abstract class Phase2Csv[T] extends Logging {
       val prefixText = prefixCsv.toCsvText(getOutput(dataList(dataIndex)))
       val machineDescriptionText = machineDescriptionCsv.toCsvText(getOutput(dataSet))
 
-      val dicomText = getDicomText(getSopUID(dataSet), machine)
+      val dicomText: Option[String] = {
+        val sop = getSopUID(dataSet)
+        if (sop.isDefined)
+          Some(getDicomText(sop.get, machine))
+        else
+          None
+      }
 
       val dicomText2: Option[String] = {
         if (dicom2HeaderPrefix.isEmpty)
@@ -237,7 +243,7 @@ abstract class Phase2Csv[T] extends Logging {
       }
 
       val csvRow = {
-        val text = Seq(prefixText, dataText, machineDescriptionText, dicomText).mkString(",")
+        val text = Seq(Some(prefixText), Some(dataText), Some(machineDescriptionText), dicomText).flatten.mkString(",")
         if (dicomText2.isEmpty)
           text
         else

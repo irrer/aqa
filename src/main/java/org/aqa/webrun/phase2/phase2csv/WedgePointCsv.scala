@@ -85,7 +85,7 @@ class WedgePointCsv extends Phase2Csv[WedgePoint.WedgePointHistory] {
     * @param data Data using DICOM data.
     * @return SOP instance UID.
     */
-  override protected def getSopUID(data: WH): String = data.wedgePoint.wedgeSOPInstanceUID
+  override protected def getSopUID(data: WH): Option[String] = Some(data.wedgePoint.wedgeSOPInstanceUID)
 
   override protected val dicom2HeaderPrefix: Option[String] = Some("Background")
 
