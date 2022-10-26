@@ -14,21 +14,26 @@ object GapSkewUtil {
     * @param d Number to format.
     * @return Formatted number.
     */
-  def fmt2(d: Double): String = {
+  def fmtX(d: Double): String = {
+    val significant = 3
     if (d.abs > 1)
-      d.formatted("%30.2f").trim
+      d.formatted("%30.3f").trim
     else {
       val mantissa = d.formatted("%30.20f").trim.replaceAll(""".*\.""", "")
       val firstSig = mantissa.indices.find(i => mantissa(i) != '0')
       val lastSig = {
         if (firstSig.isDefined)
-          firstSig.get + 2
+          firstSig.get + significant
         else
-          2
+          significant
       }
       val text = d.formatted("%30." + lastSig + "f").trim
       text
     }
+  }
+
+  def fmt2(d: Double): String = {
+    d.formatted("%20.3f").trim
   }
 
   val colorFail = "#FFAAAA"

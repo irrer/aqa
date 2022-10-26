@@ -45,7 +45,7 @@ class CenterDoseCsv extends Phase2Csv[CenterDose.CenterDoseHistory] {
     cdHistory
   }
 
-  override def getSopUID(data: CD): String = data.centerDose.SOPInstanceUID
+  override def getSopUID(data: CD): Option[String] = Some(data.centerDose.SOPInstanceUID)
 
   override def getOutput(data: CD): Output = data.output
 }

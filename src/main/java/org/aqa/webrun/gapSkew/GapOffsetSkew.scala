@@ -86,15 +86,27 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
     references = Seq(aRight, aLeft)
   )
 
-  val aSkew: GosValue = {
+  val aSkew_deg: GosValue = {
     val v = if (aTop) bankA.topHorzSkew_deg else bankA.bottomHorzSkew_deg
     GosValue(
       v,
       "Bank A Skew angle",
-      s"atan((${aRightLeftDiff.name}) / ${separation.name}",
-      s"$v = atan((${aRightLeftDiff.v}) / ${separation.v})",
+      s"atan(${aRightLeftDiff.name} / ${separation.name})",
+      s"$v = atan(${aRightLeftDiff.v} / ${separation.v})",
       Seq(aRightLeftDiff, separation),
       units = "deg"
+    )
+  }
+
+  val aSkew_mmPer40cm: GosValue = {
+    val v = if (aTop) bankA.topHorzSkew_mmPer40cm else bankA.bottomHorzSkew_mmPer40cm
+    GosValue(
+      v,
+      "Bank A Skew / 40cm",
+      s"(${aRightLeftDiff.name} / ${separation.name}) * 40",
+      s"$v = (${aRightLeftDiff.v} / ${separation.v}) * 40",
+      Seq(aRightLeftDiff, separation),
+      units = "mm/40cm"
     )
   }
 
@@ -123,15 +135,27 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
     references = Seq(bRight, bLeft)
   )
 
-  val bSkew: GosValue = {
+  val bSkew_deg: GosValue = {
     val v = if (bTop) bankB.topHorzSkew_deg else bankB.bottomHorzSkew_deg
     GosValue(
       v,
       "Bank B Skew angle",
-      s"atan((${bRightLeftDiff.name}) / ${separation.name}",
-      s"$v = atan((${bRightLeftDiff.v}) / ${separation.v})",
+      s"atan(${bRightLeftDiff.name} / ${separation.name})",
+      s"$v = atan(${bRightLeftDiff.v} / ${separation.v})",
       Seq(bRightLeftDiff, separation),
       units = "deg"
+    )
+  }
+
+  val bSkew_mmPer40cm: GosValue = {
+    val v = if (bTop) bankB.topHorzSkew_mmPer40cm else bankB.bottomHorzSkew_mmPer40cm
+    GosValue(
+      v,
+      "Bank B Skew / 40cm",
+      s"(${bRightLeftDiff.name} / ${separation.name}) * 40",
+      s"$v = (${bRightLeftDiff.v} / ${separation.v}) * 40",
+      Seq(bRightLeftDiff, separation),
+      units = "mm/40cm"
     )
   }
 
@@ -181,15 +205,27 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
     )
   }
 
-  val abSkewDiff: GosValue = {
-    val v = aSkew.v - bSkew.v
+  val abSkewDiff_deg: GosValue = {
+    val v = aSkew_deg.v - bSkew_deg.v
     GosValue(
       v,
-      s"${aSkew.name} - ${bSkew.name}",
-      s"${aSkew.name} - ${bSkew.name} : Difference of skew between bank A and B",
-      s"$v = ${aSkew.v} - ${bSkew.v}",
-      Seq(aSkew, bSkew),
+      s"${aSkew_deg.name} - ${bSkew_deg.name}",
+      s"${aSkew_deg.name} - ${bSkew_deg.name} : Difference of skew between bank A and B",
+      s"$v = ${aSkew_deg.v} - ${bSkew_deg.v}",
+      Seq(aSkew_deg, bSkew_deg),
       units = "deg"
+    )
+  }
+
+  val abSkewDiff_mmPer40cm: GosValue = {
+    val v = aSkew_mmPer40cm.v - bSkew_mmPer40cm.v
+    GosValue(
+      v,
+      s"${aSkew_mmPer40cm.name} - ${bSkew_mmPer40cm.name}",
+      s"${aSkew_mmPer40cm.name} - ${bSkew_mmPer40cm.name} : Difference of skew between bank A and B",
+      s"$v = ${aSkew_mmPer40cm.v} - ${bSkew_mmPer40cm.v}",
+      Seq(aSkew_mmPer40cm, bSkew_mmPer40cm),
+      units = "mm/40cm"
     )
   }
 
@@ -239,15 +275,27 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
     )
   }
 
-  val abSkewAvg: GosValue = {
-    val v = (aSkew.v + bSkew.v) / 2
+  val abSkewAvg_deg: GosValue = {
+    val v = (aSkew_deg.v + bSkew_deg.v) / 2
     GosValue(
       v,
-      s"(${aSkew.name} + ${bSkew.name}) / 2",
-      s"(${aSkew.name} + ${bSkew.name}) / 2 : Average of skews for bank A and B",
-      s"$v = (${aSkew.v} + ${bSkew.v}) / 2",
-      Seq(aSkew, bSkew),
+      s"(${aSkew_deg.name} + ${bSkew_deg.name}) / 2",
+      s"(${aSkew_deg.name} + ${bSkew_deg.name}) / 2 : Average of skews for bank A and B",
+      s"$v = (${aSkew_deg.v} + ${bSkew_deg.v}) / 2",
+      Seq(aSkew_deg, bSkew_deg),
       units = "deg"
+    )
+  }
+
+  val abSkewAvg_mmPer40cm: GosValue = {
+    val v = (aSkew_mmPer40cm.v + bSkew_mmPer40cm.v) / 2
+    GosValue(
+      v,
+      s"(${aSkew_mmPer40cm.name} + ${bSkew_mmPer40cm.name}) / 2",
+      s"(${aSkew_mmPer40cm.name} + ${bSkew_mmPer40cm.name}) / 2 : Average of skews for bank A and B",
+      s"$v = (${aSkew_mmPer40cm.v} + ${bSkew_mmPer40cm.v}) / 2",
+      Seq(aSkew_mmPer40cm, bSkew_mmPer40cm),
+      units = "mm/40cm"
     )
   }
 
@@ -310,15 +358,27 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
     )
   }
 
-  val jawSkew: GosValue = {
+  val jawSkew_deg: GosValue = {
     val v = if (jawIsTop) jawPair.topHorzSkew_deg else jawPair.bottomHorzSkew_deg
     GosValue(
       v,
       "Jaw Skew angle",
-      s"atan((${jawRightLeftDiff.name}) / ${c.separation.name}",
-      s"$v = atan((${jawRightLeftDiff.v}) / ${c.separation.v})",
+      s"atan(${jawRightLeftDiff.name} / ${c.separation.name})",
+      s"$v = atan(${jawRightLeftDiff.v} / ${c.separation.v})",
       Seq(jawRightLeftDiff, c.separation),
       units = "deg"
+    )
+  }
+
+  val jawSkew_mmPer40cm: GosValue = {
+    val v = if (jawIsTop) jawPair.topHorzSkew_mmPer40cm else jawPair.bottomHorzSkew_mmPer40cm
+    GosValue(
+      v,
+      "Jaw Skew / 40cm",
+      s"(${jawRightLeftDiff.name} / ${c.separation.name}) * 40",
+      s"$v = (${jawRightLeftDiff.v} / ${c.separation.v}) * 40",
+      Seq(jawRightLeftDiff, c.separation),
+      units = "mm/40cm"
     )
   }
 
@@ -367,15 +427,27 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
     )
   }
 
-  val aJawSkewDiff: GosValue = {
-    val v = c.aSkew.v - jawSkew.v
+  val aJawSkewDiff_deg: GosValue = {
+    val v = c.aSkew_deg.v - jawSkew_deg.v
     GosValue(
       v,
-      s"${c.aSkew.name} - ${jawSkew.name}",
-      s"${c.aSkew.name} - ${jawSkew.name} : Difference of skew between bank A and Jaw",
-      s"$v = ${c.aSkew.v} - ${jawSkew.v}",
-      Seq(c.aSkew, jawSkew),
+      s"${c.aSkew_deg.name} - ${jawSkew_deg.name}",
+      s"${c.aSkew_deg.name} - ${jawSkew_deg.name} : Difference of skew between bank A and Jaw",
+      s"$v = ${c.aSkew_deg.v} - ${jawSkew_deg.v}",
+      Seq(c.aSkew_deg, jawSkew_deg),
       units = "deg"
+    )
+  }
+
+  val aJawSkewDiff_mmPer40cm: GosValue = {
+    val v = c.aSkew_mmPer40cm.v - jawSkew_mmPer40cm.v
+    GosValue(
+      v,
+      s"${c.aSkew_mmPer40cm.name} - ${jawSkew_mmPer40cm.name}",
+      s"${c.aSkew_mmPer40cm.name} - ${jawSkew_mmPer40cm.name} : Difference of skew between bank A and Jaw",
+      s"$v = ${c.aSkew_mmPer40cm.v} - ${jawSkew_mmPer40cm.v}",
+      Seq(c.aSkew_mmPer40cm, jawSkew_mmPer40cm),
+      units = "mm/40cm"
     )
   }
 
@@ -425,15 +497,27 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
     )
   }
 
-  val aJawSkewAvg: GosValue = {
-    val v = (c.aSkew.v + jawSkew.v) / 2
+  val aJawSkewAvg_deg: GosValue = {
+    val v = (c.aSkew_deg.v + jawSkew_deg.v) / 2
     GosValue(
       v,
-      s"(${c.aSkew.name} + ${jawSkew.name}) / 2",
-      s"(${c.aSkew.name} + ${jawSkew.name}) / 2 : Average of skews for bank A and Jaw",
-      s"$v = (${c.aSkew.v} + ${jawSkew.v}) / 2",
-      Seq(c.aSkew, jawSkew),
+      s"(${c.aSkew_deg.name} + ${jawSkew_deg.name}) / 2",
+      s"(${c.aSkew_deg.name} + ${jawSkew_deg.name}) / 2 : Average of skews for bank A and Jaw",
+      s"$v = (${c.aSkew_deg.v} + ${jawSkew_deg.v}) / 2",
+      Seq(c.aSkew_deg, jawSkew_deg),
       units = "deg"
+    )
+  }
+
+  val aJawSkewAvg_mmPer40cm: GosValue = {
+    val v = (c.aSkew_mmPer40cm.v + jawSkew_mmPer40cm.v) / 2
+    GosValue(
+      v,
+      s"(${c.aSkew_mmPer40cm.name} + ${jawSkew_mmPer40cm.name}) / 2",
+      s"(${c.aSkew_mmPer40cm.name} + ${jawSkew_mmPer40cm.name}) / 2 : Average of skews for bank A and Jaw",
+      s"$v = (${c.aSkew_mmPer40cm.v} + ${jawSkew_mmPer40cm.v}) / 2",
+      Seq(c.aSkew_mmPer40cm, jawSkew_mmPer40cm),
+      units = "mm/40cm"
     )
   }
 

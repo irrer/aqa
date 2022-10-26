@@ -113,7 +113,7 @@ case class GapSkew(
   def bottomLeftEdgeType: GapSkew.EdgeType = GapSkew.EdgeType.toEdgeType(bottomLeftEdgeTypeName.get)
   def bottomRightEdgeType: GapSkew.EdgeType = GapSkew.EdgeType.toEdgeType(bottomRightEdgeTypeName.get)
 
-  def edgeList = Seq(topLeftEdgeType, topRightEdgeType, bottomLeftEdgeType, bottomRightEdgeType)
+  def edgeList: Seq[GapSkew.EdgeType] = Seq(topLeftEdgeType, topRightEdgeType, bottomLeftEdgeType, bottomRightEdgeType)
 
   /** Planned separation of edges.  Only valid if there are two edges. */
   def plannedEdgeSeparation_mm: Double = {
@@ -144,8 +144,14 @@ case class GapSkew(
   /** Skew (angle) of top edge (if defined, else exception). */
   def topHorzSkew_deg: Double = Math.toDegrees(Math.atan(topHorzDelta_mm / measurementSeparation_mm))
 
+  /** Skew as mm per 40 cm (if defined, else exception). */
+  def topHorzSkew_mmPer40cm: Double = (topHorzDelta_mm / measurementSeparation_mm) * 40
+
   /** Skew (angle) of bottom edge (if defined, else exception). */
   def bottomHorzSkew_deg: Double = Math.toDegrees(Math.atan(bottomHorzDelta_mm / measurementSeparation_mm))
+
+  /** Skew as mm per 40 cm (if defined, else exception). */
+  def bottomHorzSkew_mmPer40cm: Double = (bottomHorzDelta_mm / measurementSeparation_mm) * 40
 
   /** Difference (error) in top left horizontal edge measurement from plan (planned - measured). */
   def topLeftHorzDelta_mm: Double = topLeftPlanned_mm.get - topLeftValue_mm.get
@@ -269,7 +275,7 @@ object GapSkew extends ProcedureOutput with Logging {
         (if (isHorz) "Horz" else "Vert")
     }
 
-    val isMlc = !isJaw
+    val isMlc: Boolean = !isJaw
     override def toString: String = name + "    isX: " + isX + "    is1: " + bank + "    isJaw: " + isJaw
   }
 

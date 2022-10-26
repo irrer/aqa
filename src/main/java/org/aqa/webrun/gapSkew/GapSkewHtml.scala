@@ -133,11 +133,12 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
       val nl = WebUtil.titleNewline
 
       <td title={s"${v.name} (${v.units})$nl${v.description}$nl${v.derivation}$nl"}>
-        {Util.fmtDbl(v.v)}
+        {GapSkewUtil.fmt2(v.v)}
       </td>
     }
 
     val content = {
+      // @formatter:off
       <div style="margin:10px;">
         <h3>Collimator
           {ca.bankA.angleRounded}
@@ -149,46 +150,88 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
               <th title="Measured Y position of righthand end of collimator for Bank A (X2).">Right mm</th>
               <th title="Measured Y position of lefthand end of collimator for Bank A (X2).">Left mm</th>
               <th title="Difference from right to left.">Right-Left mm</th>
+              <th title="Angle from right to left.">Skew mm/40cm</th>
               <th title="Angle from right to left.">Skew deg</th>
               <th title="Y position of midpoint between right and left. (Right+Left) / 2">Average mm</th>
             </tr>
           </thead>
           <tr>
-            <th>Bank A</th>{fmt(ca.aRight)}{fmt(ca.aLeft)}{fmt(ca.aRightLeftDiff)}{fmt(ca.aSkew)}{fmt(ca.aAvg)}
+            <th>Bank A</th>
+            {fmt(ca.aRight)}
+            {fmt(ca.aLeft)}
+            {fmt(ca.aRightLeftDiff)}
+            {fmt(ca.aSkew_mmPer40cm)}
+            {fmt(ca.aSkew_deg)}
+            {fmt(ca.aAvg)}
           </tr>
           <tr>
-            <th>Bank B</th>{fmt(ca.bRight)}{fmt(ca.bLeft)}{fmt(ca.bRightLeftDiff)}{fmt(ca.bSkew)}{fmt(ca.bAvg)}
+            <th>Bank B</th>
+            {fmt(ca.bRight)}
+            {fmt(ca.bLeft)}
+            {fmt(ca.bRightLeftDiff)}
+            {fmt(ca.bSkew_mmPer40cm)}
+            {fmt(ca.bSkew_deg)}
+            {fmt(ca.bAvg)}
           </tr>
           <tr>
-            <th>Diff: A-B</th>{fmt(ca.abRightDiff)}{fmt(ca.abLeftDiff)}{fmt(ca.abRightLeftDiff)}{fmt(ca.abSkewDiff)}{fmt(ca.abAvgDiff)}
+            <th>Diff: A-B</th>
+            {fmt(ca.abRightDiff)}
+            {fmt(ca.abLeftDiff)}
+            {fmt(ca.abRightLeftDiff)}
+            {fmt(ca.abSkewDiff_mmPer40cm)}
+            {fmt(ca.abSkewDiff_deg)}
+            {fmt(ca.abAvgDiff)}
           </tr>
           <tr>
-            <th>Avg: (A+B)/2</th>{fmt(ca.abRightAvg)}{fmt(ca.abLeftAvg)}{fmt(ca.abRightLeftAvg)}{fmt(ca.abSkewAvg)}{fmt(ca.abAvgAvg)}
+            <th>Avg: (A+B)/2</th>
+            {fmt(ca.abRightAvg)}
+            {fmt(ca.abLeftAvg)}
+            {fmt(ca.abRightLeftAvg)}
+            {fmt(ca.abSkewAvg_mmPer40cm)}
+            {fmt(ca.abSkewAvg_deg)}
+            {fmt(ca.abAvgAvg)}
           </tr>
           {
-        // @formatter:off
             val nodeBuffer: NodeBuffer = {
               if (jawJaw.isDefined) {
                 val jj = jawJaw.get // shorthand
                 <tr style="border-top:solid lightgrey 8px;">
-                  <th>X1 Jaw</th>{fmt(jj.jawRight)}{fmt(jj.jawLeft)}{fmt(jj.jawRightLeftDiff)}{fmt(jj.jawSkew)}{fmt(jj.jawAvg)}
+                  <th>X1 Jaw</th>
+                  {fmt(jj.jawRight)}
+                  {fmt(jj.jawLeft)}
+                  {fmt(jj.jawRightLeftDiff)}
+                  {fmt(jj.jawSkew_mmPer40cm)}
+                  {fmt(jj.jawSkew_deg)}
+                  {fmt(jj.jawAvg)}
                 </tr>
                 <tr>
-                  <th>Diff: A-X1 Jaw</th>{fmt(jj.aJawRightDiff)}{fmt(jj.aJawLeftDiff)}{fmt(jj.aJawRightLeftDiff)}{fmt(jj.aJawSkewDiff)}{fmt(jj.aJawAvgDiff)}
+                  <th>Diff: A-X1 Jaw</th>
+                  {fmt(jj.aJawRightDiff)}
+                  {fmt(jj.aJawLeftDiff)}
+                  {fmt(jj.aJawRightLeftDiff)}
+                  {fmt(jj.aJawSkewDiff_mmPer40cm)}
+                  {fmt(jj.aJawSkewDiff_deg)}
+                  {fmt(jj.aJawAvgDiff)}
                 </tr>
                 <tr>
-                  <th>Avg: (A+X1 Jaw)/2</th>{fmt(jj.aJawRightAvg)}{fmt(jj.aJawLeftAvg)}{fmt(jj.aJawRightLeftAvg)}{fmt(jj.aJawSkewAvg)}{fmt(jj.aJawAvgAvg)}
+                  <th>Avg: (A+X1 Jaw)/2</th>
+                  {fmt(jj.aJawRightAvg)}
+                  {fmt(jj.aJawLeftAvg)}
+                  {fmt(jj.aJawRightLeftAvg)}
+                  {fmt(jj.aJawSkewAvg_mmPer40cm)}
+                  {fmt(jj.aJawSkewAvg_deg)}
+                  {fmt(jj.aJawAvgAvg)}
                 </tr>
               } else {
                 new NodeBuffer
               }
             }
             nodeBuffer
-          // @formatter:on
       }
         </table>
       </div>
     }
+    // @formatter:on
     content
   }
 

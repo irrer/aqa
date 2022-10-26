@@ -19,10 +19,10 @@ package org.aqa.webrun.gapSkew
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
+import org.aqa.db.CachedUser
 import org.aqa.db.GapSkew
 import org.aqa.db.Machine
 import org.aqa.db.Output
-import org.aqa.db.Procedure
 import org.aqa.web.ViewOutput
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil._
@@ -44,210 +44,108 @@ object GapSkewLatestHtml {
 
 class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
 
-  private val userDateFormat = new SimpleDateFormat("d MMM yyyy")
-
-  private case class Latest(machine: Machine, output: Option[Output] = None, gapSkew: Option[GapSkew] = None) {}
-
-  private case class OutputGapSkew(output: Output, gapSkew: Option[GapSkew]) {}
-
-  private case class GapSkewData(machineList: Seq[Machine], outputList: Seq[Output], gapSkewList: Seq[GapSkew]) {
-
-    /**
-      * Get the latest Output for GapSkew from the given machine.
-      * @param machine Data was from this machine.
-      * @return Latest output, or None if there is none.
-      */
-    def getLatestForMachine(machine: Machine): Latest = {
-      val output = outputList.filter(_.machinePK.get == machine.machinePK.get).sortBy(_.dataDate.get.getTime).lastOption
-
-      if (output.isDefined) {
-        val list = gapSkewList.filter(_.outputPK == output.get.outputPK.get)
-        if (list.isEmpty)
-          Latest(machine, output)
-        else {
-          val gapSkew = list.maxBy(_.collimatorMinusJawDiffSkew_deg)
-          Latest(machine, output, Some(gapSkew))
-        }
-      } else {
-        Latest(machine)
-      }
-    }
-
-    private def largestSkew(output: Output): Option[GapSkew] = {
-      val list = gapSkewList.filter(_.outputPK == output.outputPK.get)
-      if (list.isEmpty)
-        None
-      else
-        Some(list.maxBy(_.collimatorMinusJawDiffSkew_deg))
-    }
-
-    /**
-      * Get all GapSkew results for this machine, ordered as most recent first.
-      * @param machine Only for this machine.
-      * @return List of GapSkew results for this machine, ordered as most recent first.
-      */
-    def getPrevious(machine: Machine): Seq[OutputGapSkew] = {
-      val outList = outputList.filter(_.machinePK.get == machine.machinePK.get).sortBy(_.dataDate.get.getTime).reverse
-      val list = outList.flatMap(o => {
-        val gs = largestSkew(o)
-        Some(OutputGapSkew(o, gs))
-      })
-      list
-    }
-
-  }
-
-  private def getGapSkewData(institutionPK: Long): GapSkewData = {
-    val machineList = Machine.listMachinesFromInstitution(institutionPK).sortWith(Machine.orderMachine)
-    val procedurePK = Procedure.ProcOfGapSkew.get.procedurePK.get
-    val outputList = machineList.flatMap(m => Output.getByMachineAndProcedure(m.machinePK.get, procedurePK))
-    val outputSet = outputList.map(_.outputPK.get).toSet
-    val gapSkewList = GapSkew.listByOutputSet(outputSet)
-
-    GapSkewData(machineList, outputList, gapSkewList)
-  }
-
-  private def dataTitle(outputGapSkew: OutputGapSkew): String = {
-    val expired = dataExpired(Some(outputGapSkew.output))
-
-    val spaces = "    "
-
-    val sep1 = WebUtil.titleNewline + spaces
-
-    val expirationDateText = {
-      val days = Config.GapSkewExpiration_day
-      if (days.round == days)
-        days.round.toString
-      else
-        Util.fmtDbl(days)
-    }
-
-    val dateTitle = {
-      val dateFormat = new SimpleDateFormat("EEE MMM dd yyyy HH:mm")
-      dateFormat.format(outputGapSkew.output.dataDate.get) + {
-        if (expired) sep1 + sep1 + "The data for this machine more than " + expirationDateText + spaces + sep1 + "days old and is out of date. (grey border)" else ""
-      }
-    }
-
-    val limits = {
-      "Warning limit (deg): " + Config.GapSkewAngleWarn_deg + spaces + "Fail limit (deg): " + Config.GapSkewAngleFail_deg + spaces
-    }
-
-    val statusTitle = {
-      if (outputGapSkew.gapSkew.isDefined) {
-        val skew = outputGapSkew.gapSkew.get.collimatorMinusJawDiffSkew_deg.abs
-        val text = 0 match {
-          case _ if skew.abs > Config.GapSkewAngleFail_deg => "The skew is above the fail limit."
-          case _ if skew.abs > Config.GapSkewAngleWarn_deg => "The skew is above the warning limit."
-          case _                                           => "All skew angles are below the warning limit."
-        }
-        text
-      } else "No Data"
-    }
-
-    val valueTitle = {
-      "Skew (deg): " + {
-        if (outputGapSkew.gapSkew.isDefined)
-          outputGapSkew.gapSkew.get.collimatorMinusJawDiffSkew_deg.formatted("%10.5f").trim
-        else
-          "No Data"
-      }
-    }
-
-    val title = Seq(valueTitle, dateTitle, statusTitle, limits).filterNot(_.isEmpty).mkString(sep1, sep1 + sep1, sep1)
-    title
-  }
-
-  private def decorate(elem: Elem, outputGapSkew: OutputGapSkew): Elem = {
-
-    val color = {
-      if (outputGapSkew.gapSkew.isDefined)
-        GapSkewUtil.statusColor(outputGapSkew.gapSkew.get.collimatorMinusJawDiffSkew_deg)
-      else
-        GapSkewUtil.colorAbort
-    }
-    val borderColor = if (dataExpired(Some(outputGapSkew.output))) GapSkewUtil.colorNone else color
-
-    val style = "margin:8px; background-color:" + color + "; border:solid " + borderColor + " 5px; border-radius: 5px; padding: 4px;white-space: nowrap; padding: 12px;"
-
-    <div style={style}>{elem}</div>
-  }
-
   /**
-    * Return true if the output exists but is expired.  If the output is None then false is returned.
+    * Return true if the output exists and is recent.  If the output is None then false is returned.
     * @param output Check date of this output.
     * @return True if data expired.
     */
-  private def dataExpired(output: Option[Output]): Boolean = {
+  private def dataRecent(output: Output): Boolean = {
     val cutoff = System.currentTimeMillis() - Config.GapSkewExpiration_ms
-    output.isDefined && (output.get.dataDate.get.getTime < cutoff)
+    output.dataDate.get.getTime >= cutoff
   }
 
-  private def summaryToHtml(machine: Machine, gapSkewData: GapSkewData): Elem = {
+  private def toSummary(gapSkewHistory: Seq[GapSkew.GapSkewHistory]): Elem = {
 
-    val latest = gapSkewData.getLatestForMachine(machine)
+    val dateFormat = new SimpleDateFormat("EEE MMM d, yyyy HH:mm")
 
-    val rowHeight = 115
-    val colWidth = 150
+    val output = gapSkewHistory.head.output
 
-    val machineElem = {
-      <h2 aqaalias="">{latest.machine.id}</h2>
-    }
+    val href = ViewOutput.viewOutputUrl(output.outputPK.get)
 
-    val previousElem: Elem = {
-      val previousList = gapSkewData.getPrevious(machine)
+    def makeSummary(gos: GapOffsetSkew): Elem = {
 
-      def toElem(outputGapSkew: OutputGapSkew): Elem = {
-
-        val skew_deg: String = {
-          if (outputGapSkew.gapSkew.isDefined)
-            "Skew (deg): " + GapSkewUtil.fmt2(outputGapSkew.gapSkew.get.collimatorMinusJawDiffSkew_deg)
-          else
-            "No Data"
-        }
-
-        val outputDate = outputGapSkew.output.dataDate.get
-
-        val elem = {
-          <div>{userDateFormat.format(outputDate)}</div>
-        }
-
-        val href = ViewOutput.viewOutputUrl(outputGapSkew.output.outputPK.get)
-
-        val style = s"width:${colWidth}px; padding-right:10px; padding-left:10px; border-right:1px solid lightgrey; "
-
-        <a title={dataTitle(outputGapSkew)} style={style} href={href}>
-          <center>
-            {decorate(elem, outputGapSkew)}
-            <div>{skew_deg}</div>
-          </center>
-        </a>
+      def fmt(description: String, v090: GosValue, v270: GosValue): Elem = {
+        <tr>
+          <td style="text-align:right; padding-right:8px; border:1px solid lightgrey;white-space:nowrap;">{description + " " + v090.units}</td>
+          <td style="text-align:right; padding-left:8px; padding-right:8px; border:1px solid lightgrey;" title={v090.v.toString}><b>{GapSkewUtil.fmt2(v090.v)}</b></td>
+          <td style="text-align:right; padding-left:8px; border:1px solid lightgrey;" title={v270.v.toString}><b>{GapSkewUtil.fmt2(v270.v)}</b></td>
+        </tr>
       }
 
-      val tdStyle = s"height: ${rowHeight}px; overflow: auto; display: flex; flex-direction: row; vertical-align:middle;"
+      val dateStyle = {
+        if (dataRecent(output))
+          "border:solid #ddddff 1px; border-radius: 8px; padding: 8px;"
+        else
+          "background-color:#eeeeee; border:solid #dddddd 1px; border-radius: 8px; padding: 8px;"
+      }
 
-      def noData = { <h3 style="color: lightgrey;vertical-align:middle;"><i style="vertical-align:middle;">No Data</i></h3> }
+      val dateTitle = {
+        val age_day = (System.currentTimeMillis() - output.dataDate.get.getTime) / (24 * 60 * 60 * 1000.0).round.toInt
+        val ageText = s"Data is $age_day days old."
+        if (dataRecent(output))
+          ageText
+        else {
+          s"$ageText ${WebUtil.titleNewline}Grey background indicates data older than ${Config.GapSkewExpiration_day.toString} days"
+        }
+      }
 
-      val elemList = previousList.map(toElem)
-
-      <td style={tdStyle}>
-        {if (previousList.isEmpty) noData else elemList}
+      <td style="text-align:center; vertical-align:middle; border:1px solid darkgrey; padding-right:24px; padding-left:24px;">
+        <center style={dateStyle} title={dateTitle}><a href={href}>{Util.formatDate(dateFormat, output.dataDate.get)}</a></center>
+        <div>
+          <table class="table-borderless" style="border-collapse:collapse; border-style:hidden;">
+            <tr style="border:1px solid lightgrey;">
+              <td style="text-align:center;border:1px solid lightgrey;"> Value </td>
+              <td style="text-align:center;border:1px solid lightgrey;"> C90 </td>
+              <td style="text-align:center;border:1px solid lightgrey;"> C270 </td>
+            </tr>
+            {fmt("A Skew", gos.col090.aSkew_mmPer40cm, gos.col270.aSkew_mmPer40cm)}
+            {fmt("B Skew", gos.col090.bSkew_mmPer40cm, gos.col270.bSkew_mmPer40cm)}
+            {fmt("Gap", gos.col090.abAvgDiff, gos.col270.abAvgDiff)}
+            {fmt("Offset", gos.col090.abAvgAvg, gos.col270.abAvgAvg)}
+          </table>
+        </div>
       </td>
-
     }
 
-    val row = {
-      <tr>
-        <td style="vertical-align:middle;width:1%;"> {machineElem} </td>
-        {previousElem}
-    </tr>
+    GapOffsetSkew.makeGapOffsetSkew(gapSkewHistory.map(_.gapSkew)) match {
+      case Right(gos) => makeSummary(gos)
+      case Left(error) =>
+        val nl = WebUtil.titleNewline
+        val title = s"Unable to process.$nl${nl}Missing images that have:$nl$error$nl${nl}Click for details."
+        <td title={title} style={"vertical-align:middle; text-align:center; border:1px solid darkgrey;"}>
+          <a href={href}>{Util.formatDate(dateFormat, output.dataDate.get)}</a><br/>Missing Data
+        </td>
     }
-
-    row
   }
 
-  private def content(gapSkewData: GapSkewData): Elem = {
-    val list = gapSkewData.machineList.map(m => summaryToHtml(m, gapSkewData))
+  private def toTr(machine: Machine): Elem = {
+    val gapSkewHistoryList = {
+      // @formatter:off
+      GapSkew.historyByMachine(machine.machinePK.get).
+        groupBy(_.output.outputPK.get).
+        values.
+        toSeq.
+        sortBy(_.head.output.dataDate.get.getTime).
+        reverse // reverse sort to put the most recent first
+      // @formatter:on
+    }
+
+    <tr style="vertical-align:middle; border:1px solid darkgrey;">
+      <td style="text-align:left; border:1px solid darkgrey;">
+        <h2 aqaalias="">
+          {machine.id}
+        </h2>
+      </td>
+        {gapSkewHistoryList.map(toSummary)}
+    </tr>
+  }
+
+  private def makeContent(institutionPK: Long): Elem = {
+
+    val machineList = Machine.listMachinesFromInstitution(institutionPK).sortWith(Machine.orderMachine)
+
+    val list = machineList.map(toTr)
+
     <div class="row">
       <div class="col-md-10 col-md-offset-1">
         <div class="row">
@@ -255,13 +153,10 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
         </div>
         <div class="row">
           <div class="col-md-12">
-            <table class="table table-bordered">
-              <tr>
-                <td>
+            <table class="table table-bordered" style="vertical-align:middle; border:1px solid darkgrey;">
+              <tr style="vertical-align:middle; border:1px solid darkgrey;">
+                <td style="vertical-align:middle; border:1px solid darkgrey;">
                   <center><h3> Machine </h3></center>
-                </td>
-                <td>
-                  <h3> Results (most recent first) </h3>
                 </td>
               </tr>
               {list}
@@ -270,15 +165,21 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
         </div>
       </div>
     </div>
+
+  }
+
+  private def content(request: Request): Elem = {
+    CachedUser.get(request) match {
+      case Some(user) =>
+        makeContent(user.institutionPK)
+      case _ => <div><h3>No data for this institution</h3></div>
+    }
   }
 
   override def handle(request: Request, response: Response): Unit = {
     try {
       super.handle(request, response)
-      val valueMap = getValueMap(request)
-      val institutionPK = WebUtil.getUser(valueMap).get.institutionPK
-      val gapSkewData = getGapSkewData(institutionPK)
-      WebUtil.respond(content(gapSkewData), "Latest Gap Skew", response)
+      WebUtil.respond(content(request), "Latest Gap Skew", response)
     } catch {
       case t: Throwable =>
         internalFailure(response, t)

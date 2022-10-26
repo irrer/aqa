@@ -54,6 +54,11 @@ abstract class Phase2Csv[T] extends Logging {
   protected def getSopUID(data: T): Option[String]
 
   /**
+    * If true, the DICOM metadata associated with <code>getSopUID</code> will be added.
+    */
+  protected val showDicomMetadata: Boolean = true
+
+  /**
     * Allow the subclass to specify the prefix for each DICOM CSV column header.
     */
   protected val dicomHeaderPrefix: Option[String] = None
@@ -305,7 +310,13 @@ abstract class Phase2Csv[T] extends Logging {
   }
 
   def writeDoc(): Unit = {
-    val colList = prefixCsv.colList ++ makeColList ++ machineDescriptionCsv.colList ++ dicomCsv.colList
+    val colList = {
+      val cl = prefixCsv.colList ++ makeColList ++ machineDescriptionCsv.colList
+      if (showDicomMetadata)
+        cl :+ dicomCsv.colList
+      else
+        cl
+    }
     Phase2Csv.writeDoc(colList.asInstanceOf[Seq[CsvCol[Any]]], dataName)
   }
 
