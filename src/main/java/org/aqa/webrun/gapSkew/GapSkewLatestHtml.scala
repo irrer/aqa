@@ -23,6 +23,7 @@ import org.aqa.db.CachedUser
 import org.aqa.db.GapSkew
 import org.aqa.db.Machine
 import org.aqa.db.Output
+import org.aqa.db.Procedure
 import org.aqa.web.ViewOutput
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil._
@@ -44,6 +45,8 @@ object GapSkewLatestHtml {
 
 class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
 
+  private val dateFormat = new SimpleDateFormat("EEE MMM d, yyyy HH:mm")
+
   /**
     * Return true if the output exists and is recent.  If the output is None then false is returned.
     * @param output Check date of this output.
@@ -54,61 +57,57 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
     output.dataDate.get.getTime >= cutoff
   }
 
-  private def toSummary(gapSkewHistory: Seq[GapSkew.GapSkewHistory]): Elem = {
+  private def makeSummary(href: String, output: Output, gos: GapOffsetSkew): Elem = {
 
-    val dateFormat = new SimpleDateFormat("EEE MMM d, yyyy HH:mm")
+    def fmt(description: String, v090: GosValue, v270: GosValue): Elem = {
+      <tr>
+        <td style="text-align:right; padding-right:8px; border:1px solid lightgrey;white-space:nowrap;">{description + " " + v090.units}</td>
+        <td style="text-align:right; padding-left:8px; padding-right:8px; border:1px solid lightgrey;" title={v090.v.toString}><b>{GapSkewUtil.fmt2(v090.v)}</b></td>
+        <td style="text-align:right; padding-left:8px; border:1px solid lightgrey;" title={v270.v.toString}><b>{GapSkewUtil.fmt2(v270.v)}</b></td>
+      </tr>
+    }
 
-    val output = gapSkewHistory.head.output
+    val dateStyle = {
+      if (dataRecent(output))
+        "border:solid #ddddff 1px; border-radius: 8px; padding: 8px;"
+      else
+        "background-color:#eeeeee; border:solid #dddddd 1px; border-radius: 8px; padding: 8px;"
+    }
+
+    val dateTitle = {
+      val age_day = (System.currentTimeMillis() - output.dataDate.get.getTime) / (24 * 60 * 60 * 1000.0).round.toInt
+      val ageText = s"Data is $age_day days old."
+      if (dataRecent(output))
+        ageText
+      else {
+        s"$ageText ${WebUtil.titleNewline}Grey background indicates data older than ${Config.GapSkewExpiration_day.toString} days"
+      }
+    }
+
+    <td style="text-align:center; vertical-align:middle; border:1px solid darkgrey; padding-right:24px; padding-left:24px;">
+      <center style={dateStyle} title={dateTitle}><a href={href}>{Util.formatDate(dateFormat, output.dataDate.get)}</a></center>
+      <div>
+        <table class="table-borderless" style="border-collapse:collapse; border-style:hidden;">
+          <tr style="border:1px solid lightgrey;">
+            <td style="text-align:center;border:1px solid lightgrey;"> Value </td>
+            <td style="text-align:center;border:1px solid lightgrey;"> C90 </td>
+            <td style="text-align:center;border:1px solid lightgrey;"> C270 </td>
+          </tr>
+          {fmt("A Skew", gos.col090.aSkew_mmPer40cm, gos.col270.aSkew_mmPer40cm)}
+          {fmt("B Skew", gos.col090.bSkew_mmPer40cm, gos.col270.bSkew_mmPer40cm)}
+          {fmt("Gap", gos.col090.abAvgDiff, gos.col270.abAvgDiff)}
+          {fmt("Offset", gos.col090.abAvgAvg, gos.col270.abAvgAvg)}
+        </table>
+      </div>
+    </td>
+  }
+
+  private def toSummary(output: Output, gapSkewHistory: Seq[GapSkew.GapSkewHistory]): Elem = {
 
     val href = ViewOutput.viewOutputUrl(output.outputPK.get)
 
-    def makeSummary(gos: GapOffsetSkew): Elem = {
-
-      def fmt(description: String, v090: GosValue, v270: GosValue): Elem = {
-        <tr>
-          <td style="text-align:right; padding-right:8px; border:1px solid lightgrey;white-space:nowrap;">{description + " " + v090.units}</td>
-          <td style="text-align:right; padding-left:8px; padding-right:8px; border:1px solid lightgrey;" title={v090.v.toString}><b>{GapSkewUtil.fmt2(v090.v)}</b></td>
-          <td style="text-align:right; padding-left:8px; border:1px solid lightgrey;" title={v270.v.toString}><b>{GapSkewUtil.fmt2(v270.v)}</b></td>
-        </tr>
-      }
-
-      val dateStyle = {
-        if (dataRecent(output))
-          "border:solid #ddddff 1px; border-radius: 8px; padding: 8px;"
-        else
-          "background-color:#eeeeee; border:solid #dddddd 1px; border-radius: 8px; padding: 8px;"
-      }
-
-      val dateTitle = {
-        val age_day = (System.currentTimeMillis() - output.dataDate.get.getTime) / (24 * 60 * 60 * 1000.0).round.toInt
-        val ageText = s"Data is $age_day days old."
-        if (dataRecent(output))
-          ageText
-        else {
-          s"$ageText ${WebUtil.titleNewline}Grey background indicates data older than ${Config.GapSkewExpiration_day.toString} days"
-        }
-      }
-
-      <td style="text-align:center; vertical-align:middle; border:1px solid darkgrey; padding-right:24px; padding-left:24px;">
-        <center style={dateStyle} title={dateTitle}><a href={href}>{Util.formatDate(dateFormat, output.dataDate.get)}</a></center>
-        <div>
-          <table class="table-borderless" style="border-collapse:collapse; border-style:hidden;">
-            <tr style="border:1px solid lightgrey;">
-              <td style="text-align:center;border:1px solid lightgrey;"> Value </td>
-              <td style="text-align:center;border:1px solid lightgrey;"> C90 </td>
-              <td style="text-align:center;border:1px solid lightgrey;"> C270 </td>
-            </tr>
-            {fmt("A Skew", gos.col090.aSkew_mmPer40cm, gos.col270.aSkew_mmPer40cm)}
-            {fmt("B Skew", gos.col090.bSkew_mmPer40cm, gos.col270.bSkew_mmPer40cm)}
-            {fmt("Gap", gos.col090.abAvgDiff, gos.col270.abAvgDiff)}
-            {fmt("Offset", gos.col090.abAvgAvg, gos.col270.abAvgAvg)}
-          </table>
-        </div>
-      </td>
-    }
-
     GapOffsetSkew.makeGapOffsetSkew(gapSkewHistory.map(_.gapSkew)) match {
-      case Right(gos) => makeSummary(gos)
+      case Right(gos) => makeSummary(href, output, gos)
       case Left(error) =>
         val nl = WebUtil.titleNewline
         val title = s"Unable to process.$nl${nl}Missing images that have:$nl$error$nl${nl}Click for details."
@@ -119,16 +118,12 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
   }
 
   private def toTr(machine: Machine): Elem = {
-    val gapSkewHistoryList = {
-      // @formatter:off
-      GapSkew.historyByMachine(machine.machinePK.get).
-        groupBy(_.output.outputPK.get).
-        values.
-        toSeq.
-        sortBy(_.head.output.dataDate.get.getTime).
-        reverse // reverse sort to put the most recent first
-      // @formatter:on
-    }
+
+    val machinePK = machine.machinePK.get
+
+    val gapSkewHistoryList = GapSkew.historyByMachine(machinePK)
+
+    val outputList = Output.getByMachineAndProcedure(machinePK, procedurePK = Procedure.ProcOfGapSkew.get.procedurePK.get).sortBy(_.dataDate.get.getTime).reverse
 
     <tr style="vertical-align:middle; border:1px solid darkgrey;">
       <td style="text-align:left; border:1px solid darkgrey;">
@@ -136,7 +131,7 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
           {machine.id}
         </h2>
       </td>
-        {gapSkewHistoryList.map(toSummary)}
+        {outputList.map(o => toSummary(o, gapSkewHistoryList.filter(_.output.outputPK.get == o.outputPK.get)))}
     </tr>
   }
 
