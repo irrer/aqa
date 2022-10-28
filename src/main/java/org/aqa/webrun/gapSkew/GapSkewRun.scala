@@ -108,16 +108,35 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
     (min, max)
   }
 
+  private def noImageContent: Elem = {
+
+    val beamList = { Config.GapSkewBeamNameList.map(beamName => <b style="margin-left: 40px;">{beamName}<br/></b>) }
+
+    <div class="row">
+      <div class="col-md-6 col-md-offset-3">
+          <h3>No Gap-Offset-Skew Images</h3>
+          No images were found that correspond to the expected named beams.  This can happen
+          <br/>
+          if data was submitted that should not have been processed as Gap-Offset-Skew.
+          <br/>
+          The expected beams are in the application file and are configured by the system
+          <br/>
+          administrator:
+          <br/>
+          <p> </p>
+            {beamList}
+      </div>
+    </div>
+  }
+
   /** Run the actual analysis.  This must create a display.html file in the output directory. */
   override def run(extendedData: ExtendedData, runReq: GapSkewRunReq, response: Response): ProcedureStatus.Value = {
     val fleList = runReq.rtimageMap.keys.toSeq.filter(beam => Config.GapSkewBeamNameList.contains(beam)).map(runReq.rtimageMap)
     val dicomImageList = fleList.map(fle => new DicomImage(fle))
     val status = if (dicomImageList.isEmpty) {
-      val content = {
-        <div><h3>No Images</h3></div>
-      }
-      val text = WebUtil.wrapBody(content, "No Images")
-      val file = new File(extendedData.output.dir, "dislplay.html")
+
+      val text = WebUtil.wrapBody(noImageContent, "No Images")
+      val file = new File(extendedData.output.dir, "display.html")
       Util.writeFile(file, text)
       ProcedureStatus.done
     } else {
