@@ -92,6 +92,12 @@ class GapSkewHistoryChart(outputPK: Long, beamName: String) {
       Offset("Top Delta", 0xff00ff, gs => gs.topHorzDelta_mm),
       Offset("Bottom Delta", 0x808080, gs => gs.bottomHorzDelta_mm)
     ).filter(_.valueList.size == gs.size)
+    /* Note: the filter above takes into account that some results may
+    be missing.  In that case, skip all results of that type (e.g.
+    Left Vert).  This approach is needed because otherwise the y-value
+    arrays would be of different size, and values could be associated
+    with the wrong date.  Ideally there would be a different date
+    list for each value type, but we're not there yet. */
 
     val chart = new C3ChartHistory(
       chartIdOpt = Some(GapSkewHistoryChart.offsetChartIdTag(beamName)),
