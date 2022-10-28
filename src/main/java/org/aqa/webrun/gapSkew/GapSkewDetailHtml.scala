@@ -66,7 +66,8 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtima
     }
     angle match {
       case Some(ang) =>
-        <td style={"background-color:" + statusColor(ang) + ";"} title={title}>{fmt2(ang)}</td>
+        <td title={title}>{fmt2(ang)}</td>
+        // <td style={"background-color:" + statusColor(ang) + ";"} title={title}>{fmt2(ang)}</td>  // TODO add highlight color when limits are known
       case _ =>
         <td  title={"value not available" + WebUtil.titleNewline + title}>NA</td>
     }
@@ -80,11 +81,12 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtima
     <table class="table table-bordered">
       <thead>
         <tr>
-          <th> Position (mm) </th>
+          <th> Position </th>
           <th> Skew (deg) </th>
+          <th> Skew (mm/40cm) </th>
           <th title="Change in mm of measurement: Right - Left"> Delta (mm) </th>
 
-          <th>Planned (mm)</th>
+          <th>Planned</th>
           <th>Left (mm)</th>
           <th>Left Delta (mm)</th>
           <th>Right (mm)</th>
@@ -96,8 +98,8 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtima
       <tr>
         <td style="white-space: nowrap;">{formatEdgeType(gapSkew.topLeftEdgeType)} (top)</td>
         {tdAngle(gapSkew.topHorzSkew_deg)}
+        {tdAngle(gapSkew.topHorzSkew_mmPer40cm)}
         {td(gapSkew.topHorzDelta_mm)}
-
         {td(gapSkew.topLeftPlanned_mm)}
         {td(gapSkew.topLeftValue_mm)}
         {td(gapSkew.topLeftHorzDelta_mm)}
@@ -109,6 +111,7 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtima
       <tr>
         <td style="white-space: nowrap;">{formatEdgeType(gapSkew.bottomLeftEdgeType)} (bottom)</td>
         {tdAngle(gapSkew.bottomHorzSkew_deg)}
+        {tdAngle(gapSkew.bottomHorzSkew_mmPer40cm)}
         {td(gapSkew.bottomHorzDelta_mm)}
 
         {td(gapSkew.bottomLeftPlanned_mm)}
@@ -172,9 +175,9 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtima
 
   private val leafTitle: Elem = {
     val color = {
-      gapSkew.collimatorMinusJawDiffSkew_deg match {
-        case Some(d) => statusColor(d)
-        case _       => "white"
+      gapSkew.collimatorMinusJawDiffSkew_mmPer40cm match {
+        // case Some(d) => statusColor(d) // TODO need pass-fail limits
+        case _ => "white"
       }
     }
     val collimatorAngle = Util.angleRoundedTo90(Util.collimatorAngle(rtimage))
@@ -388,26 +391,26 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtima
       <thead>
         <tr>
           <th> Position (mm) </th>
-          <th> Skew (deg) </th>
+          <th> Skew (mm/40cm) </th>
           <th title="Change in mm of measurement: Right - Left "> Delta (mm) </th>
         </tr>
       </thead>
 
       <tr>
         <td style="white-space: nowrap;">{diffName}</td>
-        {tdAngle(gapSkew.collimatorMinusJawDiffSkew_deg)}
+        {tdAngle(gapSkew.collimatorMinusJawDiffSkew_mmPer40cm)}
         {td(gapSkew.collimatorMinusJawDiffDelta_mm)}
       </tr>
 
       <tr>
         <td style="white-space: nowrap;">{formatEdgeType(gapSkew.topLeftEdgeType)} (top)</td>
-        {tdAngle(gapSkew.topHorzSkew_deg)}
+        {tdAngle(gapSkew.topHorzSkew_mmPer40cm)}
         {td(gapSkew.topHorzDelta_mm)}
       </tr>
 
       <tr>
         <td style="white-space: nowrap;">{formatEdgeType(gapSkew.bottomLeftEdgeType)} (bottom)</td>
-        {tdAngle(gapSkew.bottomHorzSkew_deg)}
+        {tdAngle(gapSkew.bottomHorzSkew_mmPer40cm)}
         {td(gapSkew.bottomHorzDelta_mm)}
       </tr>
 

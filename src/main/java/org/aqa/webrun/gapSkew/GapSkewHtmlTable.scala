@@ -73,7 +73,7 @@ class GapSkewHtmlTable(gapSkew: GapSkew, dicomMetadataUrl: String, imageUrl: Str
 
   private val topCenter = {
     <center>
-      {span(t = "Top skew (deg)", value = gs.topHorzSkew_deg, "Angle of top edge (deg)")}
+      {span(t = "Top skew (mm/40cm)", value = gs.topHorzSkew_mmPer40cm, "Angle of top edge (mm/40cm)")}
       <br/>
       {span(t = "Change in top horizontal edge (mm)", value = gs.topHorzDelta_mm, "Rise or fall in top horizontal edge (mm)")}
     </center>
@@ -81,7 +81,7 @@ class GapSkewHtmlTable(gapSkew: GapSkew, dicomMetadataUrl: String, imageUrl: Str
 
   private val bottomCenter = {
     <center>
-      {span(t = "Bottom skew (deg)", value = gs.bottomHorzSkew_deg, "Angle of bottom edge (deg)")}
+      {span(t = "Bottom skew (mm/40cm)", value = gs.bottomHorzSkew_mmPer40cm, "Angle of bottom edge (mm/40cm)")}
       <br/>
       {span(t = "Change in bottom horizontal edge (mm)", value = gs.bottomHorzDelta_mm, "Rise or fall in bottom horizontal edge (mm)")}
     </center>

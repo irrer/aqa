@@ -32,26 +32,17 @@ class GapSkewHistoryChart(outputPK: Long, beamName: String) {
 
   private val yIndex = if (history.size < 2) -1 else history.indexWhere(h => h.gapSkew.outputPK == outputPK)
 
+  private case class Offset(name: String, colorInt: Int, value: GapSkew => Option[Double]) {
+    val color = new Color(colorInt)
+    def valueList: Seq[Double] = gs.flatMap(gs => value(gs))
+  }
+
   private val angleChart = {
 
-    val yTop = gs.flatMap(_.topHorzSkew_deg)
-    val yBottom = gs.flatMap(_.bottomHorzSkew_deg)
-
-    val yValues: Seq[Seq[Double]] = (yTop.size == gs.size, yBottom.size == gs.size) match {
-      case (true, true)  => Seq(yTop, yBottom)
-      case (true, false) => Seq(yTop)
-      case (false, true) => Seq(yTop)
-      case _             => Seq()
-    }
-
-    val yAxisLabels: Seq[String] = (yTop.size == gs.size, yBottom.size == gs.size) match {
-      case (true, true)  => Seq("Top", "Bottom")
-      case (true, false) => Seq("Top")
-      case (false, true) => Seq("Bottom")
-      case _             => Seq()
-    }
-
-    val yColorList = Seq(new Color(0x4477bb), new Color(0x44bb77))
+    val offsetList = Seq(
+      Offset("Top", 0x4477bb, gs => gs.topHorzSkew_mmPer40cm),
+      Offset("Bottom", 0x44bb77, gs => gs.bottomHorzSkew_mmPer40cm)
+    ).filter(_.valueList.size == gs.size)
 
     val chart = new C3ChartHistory(
       chartIdOpt = Some(GapSkewHistoryChart.angleChartIdTag(beamName)),
@@ -63,12 +54,12 @@ class GapSkewHistoryChart(outputPK: Long, beamName: String) {
       baseline = None,
       tolerance = None,
       yRange = None,
-      yAxisLabels,
-      yDataLabel = "Angle (deg)",
-      yValues,
+      yAxisLabels = offsetList.map(_.name),
+      yDataLabel = "Angle (mm/40cm)",
+      yValues = offsetList.map(_.valueList),
       yIndex = yIndex,
       yFormat = ".2g",
-      yColorList,
+      yColorList = offsetList.map(_.color),
       Seq()
     )
 
@@ -76,12 +67,6 @@ class GapSkewHistoryChart(outputPK: Long, beamName: String) {
   }
 
   private val offsetChart = {
-
-    case class Offset(name: String, colorInt: Int, value: GapSkew => Option[Double]) {
-      val color = new Color(colorInt)
-      def valueList: Seq[Double] = gs.flatMap(gs => value(gs))
-    }
-
     val offsetList = Seq(
       Offset("Top Left", 0xff0000, gs => gs.topLeftHorzDelta_mm),
       Offset("Top Right", 0x00ff00, gs => gs.topRightHorzDelta_mm),

@@ -144,7 +144,7 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
     <div class="row">
       <div class="col-md-10 col-md-offset-1">
         <div class="row">
-          <center><h2 style="margin-bottom:24px;">Latest Gap Skew Offset</h2></center>
+          <center><h2 style="margin-bottom:24px;">Gap Offset Skew</h2></center>
         </div>
         <div class="row">
           <div class="col-md-12">

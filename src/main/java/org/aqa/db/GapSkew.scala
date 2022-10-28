@@ -193,6 +193,15 @@ case class GapSkew(
     }
   }
 
+  def collimatorMinusJawDiffSkew_mmPer40cm: Option[Double] = {
+    val diff = minus(topHorzSkew_mmPer40cm, bottomHorzSkew_mmPer40cm)
+    if (bottomRightEdgeType.isJaw)
+      diff
+    else {
+      negate(diff)
+    }
+  }
+
   def collimatorMinusJawDiffDelta_mm: Option[Double] = {
     val diff = minus(topHorzDelta_mm, bottomHorzDelta_mm)
     if (bottomRightEdgeType.isJaw)
