@@ -51,10 +51,24 @@ case class GosValue(v: Double, name: String, description: String, derivation: St
 case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
 
   /** True if using the top edge of bankA, otherwise, using the bottom edge. */
-  private val aTop = bankA.topRightValue_mm.get.abs < bankA.bottomRightValue_mm.get.abs
+  private val aTop = {
+    (bankA.topRightValue_mm, bankA.bottomRightValue_mm) match {
+      case (Some(t), Some(b)) => t.abs < b.abs
+      case (Some(_), _)       => true
+      case (_, Some(_))       => false
+      case _                  => true
+    }
+  }
 
   /** True if using the top edge of bankB, otherwise, using the bottom edge. */
-  private val bTop = bankB.topRightValue_mm.get.abs < bankB.bottomRightValue_mm.get.abs
+  private val bTop = {
+    (bankB.topRightValue_mm, bankB.bottomRightValue_mm) match {
+      case (Some(t), Some(b)) => t.abs < b.abs
+      case (Some(_), _)       => true
+      case (_, Some(_))       => false
+      case _                  => true
+    }
+  }
 
   private val aR = if (aTop) bankA.topRightValue_mm.get else bankA.bottomRightValue_mm.get
   private val aL = if (aTop) bankA.topLeftValue_mm.get else bankA.bottomLeftValue_mm.get
@@ -65,10 +79,10 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
   val separation: GosValue = {
     val v = bankA.plannedEdgeSeparation_mm
     new GosValue(
-      v,
+      v.get,
       name = "Horizontal Separation",
       description = s"Horizontal (x axis) distance between the centers of the right and left measurements.  Used to calculate skew angle.",
-      derivation = v
+      derivation = v.get
     )
   }
 
@@ -89,7 +103,7 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
   val aSkew_deg: GosValue = {
     val v = if (aTop) bankA.topHorzSkew_deg else bankA.bottomHorzSkew_deg
     GosValue(
-      v,
+      v.get,
       "Bank A Skew angle",
       s"atan(${aRightLeftDiff.name} / ${separation.name})",
       s"$v = atan(${aRightLeftDiff.v} / ${separation.v})",
@@ -101,7 +115,7 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
   val aSkew_mmPer40cm: GosValue = {
     val v = if (aTop) bankA.topHorzSkew_mmPer40cm else bankA.bottomHorzSkew_mmPer40cm
     GosValue(
-      v,
+      v.get,
       "Bank A Skew / 40cm",
       s"(${aRightLeftDiff.name} / ${separation.name}) * 40",
       s"$v = (${aRightLeftDiff.v} / ${separation.v}) * 40",
@@ -138,7 +152,7 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
   val bSkew_deg: GosValue = {
     val v = if (bTop) bankB.topHorzSkew_deg else bankB.bottomHorzSkew_deg
     GosValue(
-      v,
+      v.get,
       "Bank B Skew angle",
       s"atan(${bRightLeftDiff.name} / ${separation.name})",
       s"$v = atan(${bRightLeftDiff.v} / ${separation.v})",
@@ -150,7 +164,7 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
   val bSkew_mmPer40cm: GosValue = {
     val v = if (bTop) bankB.topHorzSkew_mmPer40cm else bankB.bottomHorzSkew_mmPer40cm
     GosValue(
-      v,
+      v.get,
       "Bank B Skew / 40cm",
       s"(${bRightLeftDiff.name} / ${separation.name}) * 40",
       s"$v = (${bRightLeftDiff.v} / ${separation.v}) * 40",
@@ -327,7 +341,7 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
 
   val jawRight: GosValue = {
     // find the one closest to zero.  Should be the top one unless they change the RTPLAN.
-    val v = Seq(jawPair.topRightValue_mm.get, jawPair.bottomRightValue_mm.get).minBy(_.abs)
+    val v = Seq(jawPair.topRightValue_mm, jawPair.bottomRightValue_mm).flatten.minBy(_.abs)
 
     new GosValue(
       v = v,
@@ -339,7 +353,7 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
 
   val jawLeft: GosValue = {
     // find the one closest to zero.  Should be the top one unless they change the RTPLAN.
-    val v = Seq(jawPair.topLeftValue_mm.get, jawPair.bottomLeftValue_mm.get).minBy(_.abs)
+    val v = Seq(jawPair.topLeftValue_mm, jawPair.bottomLeftValue_mm).flatten.minBy(_.abs)
     new GosValue(
       v = v,
       s"Jaw Left",
@@ -361,7 +375,7 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
   val jawSkew_deg: GosValue = {
     val v = if (jawIsTop) jawPair.topHorzSkew_deg else jawPair.bottomHorzSkew_deg
     GosValue(
-      v,
+      v.get,
       "Jaw Skew angle",
       s"atan(${jawRightLeftDiff.name} / ${c.separation.name})",
       s"$v = atan(${jawRightLeftDiff.v} / ${c.separation.v})",
@@ -373,7 +387,7 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
   val jawSkew_mmPer40cm: GosValue = {
     val v = if (jawIsTop) jawPair.topHorzSkew_mmPer40cm else jawPair.bottomHorzSkew_mmPer40cm
     GosValue(
-      v,
+      v.get,
       "Jaw Skew / 40cm",
       s"(${jawRightLeftDiff.name} / ${c.separation.name}) * 40",
       s"$v = (${jawRightLeftDiff.v} / ${c.separation.v}) * 40",
@@ -551,25 +565,34 @@ case class GapOffsetSkew(
 object GapOffsetSkew {
   def makeGapOffsetSkew(gapSkewList: Seq[GapSkew]): Either[String, GapOffsetSkew] = {
 
-    def findMlc(angle: Int, mlcBank: Int, name: String): Either[String, GapSkew] = {
-      gapSkewList.find(gs => (gs.angleRounded == angle) && gs.edgeList.exists(e => e.isMlc && e.bank == mlcBank)) match {
+    def findMlc(angle: Int, mlcBank: Int, name: String, top: Boolean): Either[String, GapSkew] = {
+      // @formatter:off
+      gapSkewList.find(gs =>
+        (gs.angleRounded == angle) &&
+        gs.edgeList.exists(e => e.isMlc && e.bank == mlcBank) &&
+        (
+          (  top && gs.topLeftValue_mm.isDefined     && gs.topRightValue_mm.isDefined   ) ||
+          ((!top) && gs.bottomLeftValue_mm.isDefined && gs.bottomRightValue_mm.isDefined)
+        )
+      ) match {
         case Some(mlc) => Right(mlc)
         case _         => Left(name)
       }
+      // @formatter:on
     }
 
     // top X2 ABank
-    val c090A = findMlc(90, 2, "Col 90 Bank A / X2")
+    val c090A = findMlc(90, 2, "Col 90 Bank A / X2", top = true)
     // bottom X1 BBank
-    val c090B = findMlc(90, 1, "Col 90 Bank B / X1")
+    val c090B = findMlc(90, 1, "Col 90 Bank B / X1", top = false)
 
     // bottom X2 ABank
-    val c270A = findMlc(270, 2, "Col 270 Bank A / X2")
+    val c270A = findMlc(270, 2, "Col 270 Bank A / X2", top = false)
     // bottom X1 BBank
-    val c270B = findMlc(270, 1, "Col 270 Bank B / X1")
+    val c270B = findMlc(270, 1, "Col 270 Bank B / X1", top = true)
 
     val c270Jaw = {
-      gapSkewList.find(gs => (gs.angleRounded == 270) && gs.edgeList.count(e => e.isJaw) == 4) match {
+      gapSkewList.find(gs => (gs.angleRounded == 270) && gs.edgeList.count(e => e.isJaw) == 4 && gs.topRightValue_mm.isDefined && gs.topLeftValue_mm.isDefined) match {
         case Some(jaw) => Right(jaw)
         case _         => Left("Col 270 with Jaw 1 and Jaw 2")
       }

@@ -59,46 +59,41 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
     *            Note: This could be a Rectangle2D.Double so as to weight partial pixels on either side.
     * @return The position of the leaf in mm in isoplane.
     */
-  private def endOfLeaf_iso(box_pix: Rectangle): Leaf = {
+  private def endOfLeaf_iso(box_pix: Rectangle): Option[Leaf] = {
     if (isHorizontal) {
       throw new RuntimeException("endOfLeaf_pix: Not implemented for horizontally positioned collimator.")
     } else {
-      val profile = dicomImage.getSubimage(box_pix).rowSums
+      if (rectangleInBounds(box_pix)) {
+        val profile = dicomImage.getSubimage(box_pix).rowSums
 
-      val leafEndY = LocateEdge.locateEdge(profile, (profile.min + profile.max) / 2)
+        val leafEndY = LocateEdge.locateEdge(profile, (profile.min + profile.max) / 2)
 
-      val endPosition_pix = box_pix.getY + leafEndY
-      val endPosition_mm = {
-        val y = -translator.pix2IsoCoordY(endPosition_pix)
-        y // if (collimatorAngleRounded_deg == 270) y else -y
-      }
+        val endPosition_pix = box_pix.getY + leafEndY
+        val endPosition_mm = {
+          val y = -translator.pix2IsoCoordY(endPosition_pix)
+          y // if (collimatorAngleRounded_deg == 270) y else -y
+        }
 
-      val transY = translator.caxCenter_iso.getY //  if (XRayImageReceptorTranslation == null) 0.0 else XRayImageReceptorTranslation.getDoubleValues()(1)
+        val transY = translator.caxCenter_iso.getY //  if (XRayImageReceptorTranslation == null) 0.0 else XRayImageReceptorTranslation.getDoubleValues()(1)
 
-      Leaf(endPosition_mm, translator.pix2IsoCoordX(box_pix.getX) + transY, translator.pix2IsoDistX(box_pix.getWidth) + transY)
+        val leaf = Leaf(endPosition_mm, translator.pix2IsoCoordX(box_pix.getX) + transY, translator.pix2IsoDistX(box_pix.getWidth) + transY)
+        Some(leaf)
+      } else
+        None
     }
   }
 
   /**
-    * Verify if all the rectangles (area of interest for measuring edges) are in the bounds of the DICOM image.
-    * If the <b>3002,0026 RTImageSID</b> is wrong, then they may be partially off the screen.
+    * Return true if the rectangle is fully within the DICOM image.
     *
-    * This can happen when the user does not set up the test correctly.  The value should be about 1000-1050 mm.
-    * @param list The four rectangular bounding boxes.
-    * @return True if they are all within the bounds of the DICOM image.
+    * @param rectangle Check this.
+    * @return True if the rectangle is fully within the DICOM image.
     */
-  private def allRectanglesInBounds(list: Seq[Rectangle]): Boolean = {
-    val minX = list.map(_.getMinX).min
-    val minY = list.map(_.getMinY).min
-    val maxX = list.map(_.getMaxX).max
-    val maxY = list.map(_.getMaxY).max
-
-    val inBounds = (minX >= 0) &&
-      (minY >= 0) &&
-      (maxX <= dicomImage.width) &&
-      (maxY <= dicomImage.height)
-
-    inBounds
+  private def rectangleInBounds(rectangle: Rectangle): Boolean = {
+    (rectangle.getMinX >= 0) &&
+    (rectangle.getMinY >= 0) &&
+    (rectangle.getMaxX <= dicomImage.width) &&
+    (rectangle.getMaxY <= dicomImage.height)
   }
 
   /**
@@ -199,7 +194,9 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
 
       val allRectangles = Seq(topLeftRect, topRightRect, bottomLeftRect, bottomRightRect)
 
-      if (allRectanglesInBounds(allRectangles)) {
+      val inBounds = allRectangles.filter(rectangleInBounds)
+
+      if (inBounds.nonEmpty) {
 
         val topLeft = endOfLeaf_iso(topLeftRect)
         val topRight = endOfLeaf_iso(topRightRect)
@@ -218,19 +215,19 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
           measurementSeparation_mm = measurementSeparation_mm,
           //
           topLeftEdgeTypeName = Some(edgesFromPlan.topOrLeft.get.edgeType.name),
-          topLeftValue_mm = Some(topLeft.yPosition_mm),
+          topLeftValue_mm = if (topLeft.isDefined) Some(topLeft.get.yPosition_mm) else None,
           topLeftPlanned_mm = Some(edgesFromPlan.topOrLeft.get.position_mm),
           //
           topRightEdgeTypeName = Some(edgesFromPlan.topOrLeft.get.edgeType.name),
-          topRightValue_mm = Some(topRight.yPosition_mm),
+          topRightValue_mm = if (topRight.isDefined) Some(topRight.get.yPosition_mm) else None,
           topRightPlanned_mm = Some(edgesFromPlan.topOrLeft.get.position_mm),
           //
           bottomLeftEdgeTypeName = Some(edgesFromPlan.bottomOrRight.get.edgeType.name),
-          bottomLeftValue_mm = Some(bottomLeft.yPosition_mm),
+          bottomLeftValue_mm = if (bottomLeft.isDefined) Some(bottomLeft.get.yPosition_mm) else None,
           bottomLeftPlanned_mm = Some(edgesFromPlan.bottomOrRight.get.position_mm),
           //
           bottomRightEdgeTypeName = Some(edgesFromPlan.bottomOrRight.get.edgeType.name),
-          bottomRightValue_mm = Some(bottomRight.yPosition_mm),
+          bottomRightValue_mm = if (bottomRight.isDefined) Some(bottomRight.get.yPosition_mm) else None,
           bottomRightPlanned_mm = Some(edgesFromPlan.bottomOrRight.get.position_mm)
         )
 

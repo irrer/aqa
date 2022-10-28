@@ -33,7 +33,7 @@ class GapSkewHistoryChart(outputPK: Long, beamName: String) {
   private val yIndex = if (history.size < 2) -1 else history.indexWhere(h => h.gapSkew.outputPK == outputPK)
 
   private val angleChart = {
-    val yValues = Seq(gs.map(h => h.topHorzSkew_deg), gs.map(h => h.bottomHorzSkew_deg))
+    val yValues = Seq(gs.map(h => h.topHorzSkew_deg.get), gs.map(h => h.bottomHorzSkew_deg.get))
 
     val yColorList = Seq(new Color(0x4477bb), new Color(0x44bb77))
 
@@ -61,9 +61,9 @@ class GapSkewHistoryChart(outputPK: Long, beamName: String) {
 
   private val offsetChart = {
 
-    case class Offset(name: String, colorInt: Int, value: GapSkew => Double) {
+    case class Offset(name: String, colorInt: Int, value: GapSkew => Option[Double]) {
       val color = new Color(colorInt)
-      def valueList: Seq[Double] = gs.map(value)
+      def valueList: Seq[Double] = gs.map(gs => value(gs).get)
     }
 
     val offsetList = Seq(

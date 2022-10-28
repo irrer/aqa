@@ -35,10 +35,10 @@ case class GapSkewAnnotateImage(
     translator: IsoImagePlaneTranslator,
     minPixel: Float,
     maxPixel: Float,
-    topLeft: Leaf,
-    topRight: Leaf,
-    bottomLeft: Leaf,
-    bottomRight: Leaf,
+    topLeft: Option[Leaf],
+    topRight: Option[Leaf],
+    bottomLeft: Option[Leaf],
+    bottomRight: Option[Leaf],
     gapSkew: GapSkew
 ) {
 
@@ -103,59 +103,63 @@ case class GapSkewAnnotateImage(
   /**
     * Annotate one of the four measurement points.
     * @param image Write on this image.
-    * @param leaf Which leaf.
+    * @param leafOpt Leaf to annotate.  Only annotate it if it is defined.
     * @param isTop True if this is a top edge, false if bottom.
     */
-  private def annotateLeaf(image: BufferedImage, leaf: Leaf, isTop: Boolean): Unit = {
-    addBeamName(image)
-    val g = ImageUtil.getGraphics(image)
-    g.setColor(Color.white)
+  private def annotateLeaf(image: BufferedImage, leafOpt: Option[Leaf], isTop: Boolean): Unit = {
 
-    val y = d2i(translator.iso2PixCoordY(-leaf.yPosition_mm))
-    val x1 = d2i(translator.iso2PixCoordX(leaf.xLeftPosition_mm))
-    val x2 = d2i(translator.iso2PixCoordX(leaf.xLeftPosition_mm + leaf.width_mm))
-    ImageUtil.setLineThickness(g, 3)
-    g.drawLine(d2i(x1), d2i(y), d2i(x2), d2i(y))
+    if (leafOpt.isDefined) {
+      val leaf = leafOpt.get
+      addBeamName(image)
+      val g = ImageUtil.getGraphics(image)
+      g.setColor(Color.white)
 
-    g.setColor(Color.darkGray)
-    ImageText.setFont(g, ImageText.DefaultFont, textPointSize = 20)
-    val textHeight = d2i(ImageText.getTextDimensions(g, "Hq").getHeight)
-    val textOffsetY = d2i(textHeight * 1.5)
-    val textX = d2i(translator.iso2PixCoordX(leaf.xLeftPosition_mm + leaf.width_mm / 2.0))
-    val textY = d2i(if (isTop) y - textOffsetY - lineThickness else y + textOffsetY + lineThickness)
+      val y = d2i(translator.iso2PixCoordY(-leaf.yPosition_mm))
+      val x1 = d2i(translator.iso2PixCoordX(leaf.xLeftPosition_mm))
+      val x2 = d2i(translator.iso2PixCoordX(leaf.xLeftPosition_mm + leaf.width_mm))
+      ImageUtil.setLineThickness(g, 3)
+      g.drawLine(d2i(x1), d2i(y), d2i(x2), d2i(y))
 
-    val text = fmt2(leaf.yPosition_mm)
+      g.setColor(Color.darkGray)
+      ImageText.setFont(g, ImageText.DefaultFont, textPointSize = 20)
+      val textHeight = d2i(ImageText.getTextDimensions(g, "Hq").getHeight)
+      val textOffsetY = d2i(textHeight * 1.5)
+      val textX = d2i(translator.iso2PixCoordX(leaf.xLeftPosition_mm + leaf.width_mm / 2.0))
+      val textY = d2i(if (isTop) y - textOffsetY - lineThickness else y + textOffsetY + lineThickness)
 
-    val textBox = ImageText.getTextDimensions(g, text)
-    val margin = 6
-    val minX = margin + textBox.getCenterX
-    val maxX = dicomImage.width - (margin + textBox.getCenterX)
-    val minY = margin + textBox.getCenterY
-    val maxY = dicomImage.height - (margin + textBox.getCenterY)
+      val text = fmt2(leaf.yPosition_mm)
 
-    val tX = 0 match {
-      case _ if textX < minX => minX
-      case _ if textX > maxX => maxX
-      case _                 => textX
+      val textBox = ImageText.getTextDimensions(g, text)
+      val margin = 6
+      val minX = margin + textBox.getCenterX
+      val maxX = dicomImage.width - (margin + textBox.getCenterX)
+      val minY = margin + textBox.getCenterY
+      val maxY = dicomImage.height - (margin + textBox.getCenterY)
+
+      val tX = 0 match {
+        case _ if textX < minX => minX
+        case _ if textX > maxX => maxX
+        case _                 => textX
+      }
+
+      val tY = 0 match {
+        case _ if textY < minY => minY
+        case _ if textY > maxY => maxY
+        case _                 => textY
+      }
+
+      ImageText.drawTextCenteredAt(g, tX, tY, text)
+
+      // -----------------------------------------------------------------
+
+      val arrowY1 = {
+        if (isTop)
+          d2i(textY + textHeight / 2.0) - lineThickness
+        else
+          d2i(textY - textHeight / 2.0) + lineThickness
+      }
+      drawArrow(image, textX, arrowY1, textX, y)
     }
-
-    val tY = 0 match {
-      case _ if textY < minY => minY
-      case _ if textY > maxY => maxY
-      case _                 => textY
-    }
-
-    ImageText.drawTextCenteredAt(g, tX, tY, text)
-
-    // -----------------------------------------------------------------
-
-    val arrowY1 = {
-      if (isTop)
-        d2i(textY + textHeight / 2.0) - lineThickness
-      else
-        d2i(textY - textHeight / 2.0) + lineThickness
-    }
-    drawArrow(image, textX, arrowY1, textX, y)
   }
 
   /**
@@ -168,15 +172,27 @@ case class GapSkewAnnotateImage(
     ImageText.setFont(g, ImageText.DefaultFont, textPointSize = 20)
     val fontHeight = ImageText.getFontHeight(g)
 
-    val x_pix = translator.iso2PixCoordX((topLeft.xCenter_mm + topRight.xCenter_mm) / 2)
+    val x_pix = {
+      if (topLeft.isDefined && topRight.isDefined)
+        translator.iso2PixCoordX((topLeft.get.xCenter_mm + topRight.get.xCenter_mm) / 2)
+      else
+        bufferedImage.getWidth / 2.0
+    }
 
     val yOffset_pix = translator.pix2IsoDistY(fontHeight) * 2.0
 
     val y_pix = {
-      if (isTop)
-        translator.iso2PixCoordY(-gapSkew.topLeftValue_mm.get) - yOffset_pix
-      else
-        translator.iso2PixCoordY(-gapSkew.bottomLeftValue_mm.get) + yOffset_pix
+      if (isTop) {
+        if (gapSkew.topLeftValue_mm.isDefined)
+          translator.iso2PixCoordY(-gapSkew.topLeftValue_mm.get) - yOffset_pix
+        else
+          fontHeight
+      } else {
+        if (gapSkew.bottomLeftValue_mm.isDefined)
+          translator.iso2PixCoordY(-gapSkew.bottomLeftValue_mm.get) + yOffset_pix
+        else
+          bufferedImage.getHeight() - fontHeight
+      }
     }
 
     val edgeType =

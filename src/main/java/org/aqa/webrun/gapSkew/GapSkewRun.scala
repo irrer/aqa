@@ -40,6 +40,7 @@ import org.aqa.webrun.phase2.Phase2Util
 import org.restlet.Request
 import org.restlet.Response
 
+import java.io.File
 import java.sql.Timestamp
 import scala.annotation.tailrec
 import scala.xml.Elem
@@ -111,18 +112,29 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
   override def run(extendedData: ExtendedData, runReq: GapSkewRunReq, response: Response): ProcedureStatus.Value = {
     val fleList = runReq.rtimageMap.keys.toSeq.filter(beam => Config.GapSkewBeamNameList.contains(beam)).map(runReq.rtimageMap)
     val dicomImageList = fleList.map(fle => new DicomImage(fle))
-    val minMax = getMinMaxTrimmed(dicomImageList)
-    val fleResultList = fleList.map(rtImg => FindLeafEnds(extendedData, rtImg, minMax._1, minMax._2, runReq.rtplan).leafSet)
+    val status = if (dicomImageList.isEmpty) {
+      val content = {
+        <div><h3>No Images</h3></div>
+      }
+      val text = WebUtil.wrapBody(content, "No Images")
+      val file = new File(extendedData.output.dir, "dislplay.html")
+      Util.writeFile(file, text)
+      ProcedureStatus.done
+    } else {
+      val minMax = getMinMaxTrimmed(dicomImageList)
+      val fleResultList = fleList.map(rtImg => FindLeafEnds(extendedData, rtImg, minMax._1, minMax._2, runReq.rtplan).leafSet)
 
-    // Find all valid results and store them in the database.
-    val gapSkewList = fleResultList.filter(_.gapSkew.isRight).map(_.gapSkew.right.get.insert)
+      // Find all valid results and store them in the database.
+      val gapSkewList = fleResultList.filter(_.gapSkew.isRight).map(_.gapSkew.right.get.insert)
 
-    val errorList = fleResultList.filter(_.gapSkew.isLeft).map(_.gapSkew.left.get)
+      val errorList = fleResultList.filter(_.gapSkew.isLeft).map(_.gapSkew.left.get)
 
-    val status = {
-      if (errorList.nonEmpty) {
-        ProcedureStatus.abort
-      } else {
+      val status = {
+        if (errorList.nonEmpty) {
+          ProcedureStatus.abort
+        } else {
+          ProcedureStatus.done // TODO change this when the pass/fail criteria is determined
+          /*
         val largest = if (gapSkewList.nonEmpty) gapSkewList.map(_.collimatorMinusJawDiffSkew_deg.abs).max else Config.GapSkewAngleFail_deg
 
         0 match {
@@ -130,10 +142,13 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
           case _ if Config.GapSkewAngleWarn_deg <= largest => ProcedureStatus.warning
           case _                                           => ProcedureStatus.pass
         }
+           */
+        }
       }
+      new GapSkewHtml(extendedData, runReq, fleResultList, gapSkewList, status).makeDisplay()
+      status
     }
 
-    new GapSkewHtml(extendedData, runReq, fleResultList, gapSkewList, status).makeDisplay()
     status
   }
 

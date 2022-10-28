@@ -51,15 +51,25 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtima
 
   private val imageUrl: String = FileUtil.replaceInvalidFileNameCharacters(gapSkew.beamName, '_').replace(' ', '_') + ".png"
 
-  private def td(d: Double): Elem = {
-    <td title={d.toString}>{fmt2(d)}</td>
+  private def td(d: Option[Double]): Elem = {
+    d match {
+      case Some(dd) =>
+        <td title={dd.toString}>{fmt2(dd)}</td>
+      case _ =>
+        <td title="Value not available">NA</td>
+    }
   }
 
-  private def tdAngle(angle: Double): Elem = {
+  private def tdAngle(angle: Option[Double]): Elem = {
     val title = {
       angle.toString + "   Warning limit: " + Config.GapSkewAngleWarn_deg + "  Fail limit: " + Config.GapSkewAngleFail_deg
     }
-    <td style={"background-color:" + statusColor(angle) + ";"} title={title}>{fmt2(angle)}</td>
+    angle match {
+      case Some(ang) =>
+        <td style={"background-color:" + statusColor(ang) + ";"} title={title}>{fmt2(ang)}</td>
+      case _ =>
+        <td  title={"value not available" + WebUtil.titleNewline + title}>NA</td>
+    }
   }
 
   private def formatEdgeType(edgeType: EdgeType): String = {
@@ -88,10 +98,10 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtima
         {tdAngle(gapSkew.topHorzSkew_deg)}
         {td(gapSkew.topHorzDelta_mm)}
 
-        {td(gapSkew.topLeftPlanned_mm.get)}
-        {td(gapSkew.topLeftValue_mm.get)}
+        {td(gapSkew.topLeftPlanned_mm)}
+        {td(gapSkew.topLeftValue_mm)}
         {td(gapSkew.topLeftHorzDelta_mm)}
-        {td(gapSkew.topRightValue_mm.get)}
+        {td(gapSkew.topRightValue_mm)}
         {td(gapSkew.topRightHorzDelta_mm)}
 
       </tr>
@@ -101,10 +111,10 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtima
         {tdAngle(gapSkew.bottomHorzSkew_deg)}
         {td(gapSkew.bottomHorzDelta_mm)}
 
-        {td(gapSkew.bottomLeftPlanned_mm.get)}
-        {td(gapSkew.bottomLeftValue_mm.get)}
+        {td(gapSkew.bottomLeftPlanned_mm)}
+        {td(gapSkew.bottomLeftValue_mm)}
         {td(gapSkew.bottomLeftHorzDelta_mm)}
-        {td(gapSkew.bottomRightValue_mm.get)}
+        {td(gapSkew.bottomRightValue_mm)}
         {td(gapSkew.bottomRightHorzDelta_mm)}
 
       </tr>
@@ -161,7 +171,12 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtima
   }
 
   private val leafTitle: Elem = {
-    val color = statusColor(gapSkew.collimatorMinusJawDiffSkew_deg)
+    val color = {
+      gapSkew.collimatorMinusJawDiffSkew_deg match {
+        case Some(d) => statusColor(d)
+        case _       => "white"
+      }
+    }
     val collimatorAngle = Util.angleRoundedTo90(Util.collimatorAngle(rtimage))
     val style = s"margin:8px; background-color:$color; border:solid $color 1px; border-radius: 8px; padding: 12px;"
     val title = "Click for details" + WebUtil.titleNewline + "Collimator angle: " + collimatorAngle

@@ -115,70 +115,90 @@ case class GapSkew(
 
   def edgeList: Seq[GapSkew.EdgeType] = Seq(topLeftEdgeType, topRightEdgeType, bottomLeftEdgeType, bottomRightEdgeType)
 
-  /** Planned separation of edges.  Only valid if there are two edges. */
-  def plannedEdgeSeparation_mm: Double = {
-    if (topLeftEdgeType.isHorz)
-      (topLeftPlanned_mm.get - bottomRightPlanned_mm.get).abs
-    else
-      (topLeftPlanned_mm.get - topRightPlanned_mm.get).abs
+  private def math(a: OD, b: OD, func: (Double, Double) => Double): Option[Double] = {
+    (a, b) match {
+      case (Some(aa), Some(bb)) => Some(func(aa, bb))
+      case _                    => None
+    }
   }
+
+  private def minus(a: OD, b: OD): Option[Double] = math(a, b, (aa, bb) => aa - bb)
+  private def minusAbs(a: OD, b: OD): Option[Double] = math(a, b, (aa, bb) => (aa - bb).abs)
+
+  private def negate(a: OD): Option[Double] = {
+    a match {
+      case Some(aa) => Some(-aa)
+      case _        => None
+    }
+  }
+
+  /** Planned separation of edges.  Only valid if there are two edges. */
+  def plannedEdgeSeparation_mm: Option[Double] = {
+    if (topLeftEdgeType.isHorz)
+      minusAbs(topLeftPlanned_mm, bottomRightPlanned_mm)
+    else
+      minusAbs(topLeftPlanned_mm, topRightPlanned_mm)
+  }
+
+  private type OD = Option[Double]
 
   /** Rise or fall of top edge (if defined, else exception). */
-  def topHorzDelta_mm: Double = topRightValue_mm.get - topLeftValue_mm.get
+  def topHorzDelta_mm: Option[Double] = minus(topRightValue_mm, topLeftValue_mm)
 
   /** Rise or fall of bottom edge (if defined, else exception). */
-  def bottomHorzDelta_mm: Double = bottomRightValue_mm.get - bottomLeftValue_mm.get
+  def bottomHorzDelta_mm: Option[Double] = minus(bottomRightValue_mm, bottomLeftValue_mm)
 
   /** Vertical separation between upper and lower left horizontal edges. (if defined, else exception). */
-  def leftSeparationOfHorzEdges_mm: Double = (topLeftValue_mm.get - bottomLeftValue_mm.get).abs
+  def leftSeparationOfHorzEdges_mm: Option[Double] = minus(topLeftValue_mm, bottomLeftValue_mm)
 
   /** Vertical separation between upper and lower right horizontal edges. (if defined, else exception). */
-  def rightSeparationOfHorzEdges_mm: Double = (bottomRightValue_mm.get - topRightValue_mm.get).abs
+  def rightSeparationOfHorzEdges_mm: Option[Double] = math(bottomRightValue_mm, topRightValue_mm, (a, b) => (a - b).abs)
 
   /** Change (error) in vertical separation between upper and lower left horizontal edges. (planned - measured) (if defined, else exception). */
-  def leftDeltaSeparationOfHorzEdges_mm: Double = plannedEdgeSeparation_mm - leftSeparationOfHorzEdges_mm
+  def leftDeltaSeparationOfHorzEdges_mm: Option[Double] = minus(plannedEdgeSeparation_mm, leftSeparationOfHorzEdges_mm)
 
   /** Change (error) in vertical separation between upper and lower right horizontal edges. (planned - measured) (if defined, else exception). */
-  def rightDeltaSeparationOfHorzEdges_mm: Double = plannedEdgeSeparation_mm - rightSeparationOfHorzEdges_mm
+  def rightDeltaSeparationOfHorzEdges_mm: Option[Double] = minus(plannedEdgeSeparation_mm, rightSeparationOfHorzEdges_mm)
 
   /** Skew (angle) of top edge (if defined, else exception). */
-  def topHorzSkew_deg: Double = Math.toDegrees(Math.atan(topHorzDelta_mm / measurementSeparation_mm))
+  def topHorzSkew_deg: Option[Double] = math(topHorzDelta_mm, Some(measurementSeparation_mm), (a, b) => Math.toDegrees(Math.atan(a / b)))
 
   /** Skew as mm per 40 cm (if defined, else exception). */
-  def topHorzSkew_mmPer40cm: Double = (topHorzDelta_mm / measurementSeparation_mm) * 40
+  def topHorzSkew_mmPer40cm: Option[Double] = math(topHorzDelta_mm, Some(measurementSeparation_mm), (a, b) => (a / b) * 40)
 
   /** Skew (angle) of bottom edge (if defined, else exception). */
-  def bottomHorzSkew_deg: Double = Math.toDegrees(Math.atan(bottomHorzDelta_mm / measurementSeparation_mm))
+  def bottomHorzSkew_deg: Option[Double] = math(bottomHorzDelta_mm, Some(measurementSeparation_mm), (a, b) => Math.toDegrees(Math.atan(a / b)))
 
   /** Skew as mm per 40 cm (if defined, else exception). */
-  def bottomHorzSkew_mmPer40cm: Double = (bottomHorzDelta_mm / measurementSeparation_mm) * 40
+  def bottomHorzSkew_mmPer40cm: Option[Double] = math(bottomHorzDelta_mm, Some(measurementSeparation_mm), (a, b) => (a / b) * 40)
 
   /** Difference (error) in top left horizontal edge measurement from plan (planned - measured). */
-  def topLeftHorzDelta_mm: Double = topLeftPlanned_mm.get - topLeftValue_mm.get
+  def topLeftHorzDelta_mm: Option[Double] = minus(topLeftPlanned_mm, topLeftValue_mm)
 
   /** Difference (error) in top right horizontal edge measurement from plan (planned - measured). */
-  def topRightHorzDelta_mm: Double = topRightPlanned_mm.get - topRightValue_mm.get
+  def topRightHorzDelta_mm: Option[Double] = minus(topRightPlanned_mm, topRightValue_mm)
 
   /** Difference (error) in bottom left horizontal edge measurement from plan (planned - measured). */
-  def bottomLeftHorzDelta_mm: Double = bottomLeftPlanned_mm.get - bottomLeftValue_mm.get
+  def bottomLeftHorzDelta_mm: Option[Double] = minus(bottomLeftPlanned_mm, bottomLeftValue_mm)
 
   /** Difference (error) in bottom right horizontal edge measurement from plan (planned - measured). */
-  def bottomRightHorzDelta_mm: Double = bottomRightPlanned_mm.get - bottomRightValue_mm.get
+  def bottomRightHorzDelta_mm: Option[Double] = minus(bottomRightPlanned_mm, bottomRightValue_mm)
 
-  def collimatorMinusJawDiffSkew_deg: Double = {
-    val diff = topHorzSkew_deg - bottomHorzSkew_deg
+  def collimatorMinusJawDiffSkew_deg: Option[Double] = {
+    val diff = minus(topHorzSkew_deg, bottomHorzSkew_deg)
     if (bottomRightEdgeType.isJaw)
       diff
-    else
-      -diff
+    else {
+      negate(diff)
+    }
   }
 
-  def collimatorMinusJawDiffDelta_mm: Double = {
-    val diff = topHorzDelta_mm - bottomHorzDelta_mm
+  def collimatorMinusJawDiffDelta_mm: Option[Double] = {
+    val diff = minus(topHorzDelta_mm, bottomHorzDelta_mm)
     if (bottomRightEdgeType.isJaw)
       diff
     else
-      -diff
+      negate(diff)
   }
 
 }

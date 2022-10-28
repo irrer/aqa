@@ -8,10 +8,11 @@ import scala.xml.Elem
 
 class GapSkewHtmlTable(gapSkew: GapSkew, dicomMetadataUrl: String, imageUrl: String) {
 
-  private def span(t: String, value: Double, title: String): Elem = {
+  private def span(t: String, value: Option[Double], title: String): Elem = {
+    val text = t + ": " + (if (value.isDefined) fmt2(value.get) else "NA")
     <span title={title + WebUtil.titleNewline + "Value: " + value} style="white-space: nowrap;">
-        {t + ": " + fmt2(value)}
-      </span>
+      {text}
+    </span>
   }
 
   private val gs = gapSkew
@@ -28,9 +29,9 @@ class GapSkewHtmlTable(gapSkew: GapSkew, dicomMetadataUrl: String, imageUrl: Str
       <br/>
       {span(t = "Error (mm)", value = gs.topLeftHorzDelta_mm, "Top left planned position - actual position (mm)")}
       <br/>
-      {span(t = "Planned (mm)", value = gs.topLeftPlanned_mm.get, "Top left position in RTPLAN (mm)")}
+      {span(t = "Planned (mm)", value = gs.topLeftPlanned_mm, "Top left position in RTPLAN (mm)")}
       <br/>
-      {span(t = "Measured (mm)", value = gs.topLeftValue_mm.get, "Top left actual measured position (mm)")}
+      {span(t = "Measured (mm)", value = gs.topLeftValue_mm, "Top left actual measured position (mm)")}
     </center>
   }
 
@@ -40,9 +41,9 @@ class GapSkewHtmlTable(gapSkew: GapSkew, dicomMetadataUrl: String, imageUrl: Str
       <br/>
       {span(t = "Error (mm)", value = gs.topRightHorzDelta_mm, "Top right planned position - actual position (mm)")}
       <br/>
-      {span(t = "Planned (mm)", value = gs.topRightPlanned_mm.get, "Top right position in RTPLAN (mm)")}
+      {span(t = "Planned (mm)", value = gs.topRightPlanned_mm, "Top right position in RTPLAN (mm)")}
       <br/>
-      {span(t = "Measured (mm)", value = gs.topRightValue_mm.get, "Top right actual measured position (mm)")}
+      {span(t = "Measured (mm)", value = gs.topRightValue_mm, "Top right actual measured position (mm)")}
     </center>
   }
 
@@ -52,9 +53,9 @@ class GapSkewHtmlTable(gapSkew: GapSkew, dicomMetadataUrl: String, imageUrl: Str
       <br/>
       {span(t = "Error (mm)", value = gs.bottomLeftHorzDelta_mm, "Bottom left planned position - actual position (mm)")}
       <br/>
-      {span(t = "Planned (mm)", value = gs.bottomLeftPlanned_mm.get, "Bottom left position in RTPLAN (mm)")}
+      {span(t = "Planned (mm)", value = gs.bottomLeftPlanned_mm, "Bottom left position in RTPLAN (mm)")}
       <br/>
-      {span(t = "Measured (mm)", value = gs.bottomLeftValue_mm.get, "Bottom left actual measured position (mm)")}
+      {span(t = "Measured (mm)", value = gs.bottomLeftValue_mm, "Bottom left actual measured position (mm)")}
     </center>
   }
 
@@ -64,9 +65,9 @@ class GapSkewHtmlTable(gapSkew: GapSkew, dicomMetadataUrl: String, imageUrl: Str
       <br/>
       {span(t = "Error (mm)", value = gs.bottomRightHorzDelta_mm, "Bottom right planned position - actual position (mm)")}
       <br/>
-      {span(t = "Planned (mm)", value = gs.bottomRightPlanned_mm.get, "Bottom right position in RTPLAN (mm)")}
+      {span(t = "Planned (mm)", value = gs.bottomRightPlanned_mm, "Bottom right position in RTPLAN (mm)")}
       <br/>
-      {span(t = "Measured (mm)", value = gs.bottomRightValue_mm.get, "Bottom right actual measured position (mm)")}
+      {span(t = "Measured (mm)", value = gs.bottomRightValue_mm, "Bottom right actual measured position (mm)")}
     </center>
   }
 
@@ -97,7 +98,7 @@ class GapSkewHtmlTable(gapSkew: GapSkew, dicomMetadataUrl: String, imageUrl: Str
   }
 
   private val rightMiddle = {
-      <center>
+    <center>
         {span(t = "Right Vert Error (mm)", value = gs.rightDeltaSeparationOfHorzEdges_mm, "Measured distance between top and bottom on the right side (mm)")}
         <br/>
         {span(t = "Right Vert Planned (mm)", value = gapSkew.plannedEdgeSeparation_mm, "Rise or fall in bottom horizontal edge (mm)")}
