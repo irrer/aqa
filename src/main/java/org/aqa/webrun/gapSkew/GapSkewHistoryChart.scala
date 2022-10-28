@@ -33,7 +33,23 @@ class GapSkewHistoryChart(outputPK: Long, beamName: String) {
   private val yIndex = if (history.size < 2) -1 else history.indexWhere(h => h.gapSkew.outputPK == outputPK)
 
   private val angleChart = {
-    val yValues = Seq(gs.map(h => h.topHorzSkew_deg.get), gs.map(h => h.bottomHorzSkew_deg.get))
+
+    val yTop = gs.flatMap(_.topHorzSkew_deg)
+    val yBottom = gs.flatMap(_.bottomHorzSkew_deg)
+
+    val yValues: Seq[Seq[Double]] = (yTop.size == gs.size, yBottom.size == gs.size) match {
+      case (true, true)  => Seq(yTop, yBottom)
+      case (true, false) => Seq(yTop)
+      case (false, true) => Seq(yTop)
+      case _             => Seq()
+    }
+
+    val yAxisLabels: Seq[String] = (yTop.size == gs.size, yBottom.size == gs.size) match {
+      case (true, true)  => Seq("Top", "Bottom")
+      case (true, false) => Seq("Top")
+      case (false, true) => Seq("Bottom")
+      case _             => Seq()
+    }
 
     val yColorList = Seq(new Color(0x4477bb), new Color(0x44bb77))
 
@@ -47,7 +63,7 @@ class GapSkewHistoryChart(outputPK: Long, beamName: String) {
       baseline = None,
       tolerance = None,
       yRange = None,
-      yAxisLabels = Seq("Top", "Bottom"),
+      yAxisLabels,
       yDataLabel = "Angle (deg)",
       yValues,
       yIndex = yIndex,
@@ -63,7 +79,7 @@ class GapSkewHistoryChart(outputPK: Long, beamName: String) {
 
     case class Offset(name: String, colorInt: Int, value: GapSkew => Option[Double]) {
       val color = new Color(colorInt)
-      def valueList: Seq[Double] = gs.map(gs => value(gs).get)
+      def valueList: Seq[Double] = gs.flatMap(gs => value(gs))
     }
 
     val offsetList = Seq(
@@ -75,7 +91,7 @@ class GapSkewHistoryChart(outputPK: Long, beamName: String) {
       Offset("Right Vert", 0xffff00, gs => gs.rightDeltaSeparationOfHorzEdges_mm),
       Offset("Top Delta", 0xff00ff, gs => gs.topHorzDelta_mm),
       Offset("Bottom Delta", 0x808080, gs => gs.bottomHorzDelta_mm)
-    )
+    ).filter(_.valueList.size == gs.size)
 
     val chart = new C3ChartHistory(
       chartIdOpt = Some(GapSkewHistoryChart.offsetChartIdTag(beamName)),
