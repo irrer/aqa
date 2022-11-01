@@ -162,7 +162,7 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
             {fmt(ca.aRightLeftDiff)}
             {fmt(ca.aSkew_mmPer40cm)}
             {fmt(ca.aSkew_deg)}
-            {fmt(ca.aAvg)}
+            {fmt(ca.aRightLeftAvg)}
           </tr>
           <tr>
             <th>Bank B</th>
@@ -171,25 +171,25 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
             {fmt(ca.bRightLeftDiff)}
             {fmt(ca.bSkew_mmPer40cm)}
             {fmt(ca.bSkew_deg)}
-            {fmt(ca.bAvg)}
+            {fmt(ca.bRightLeftAvg)}
           </tr>
           <tr>
             <th>Diff: A-B</th>
-            {fmt(ca.abRightDiff)}
-            {fmt(ca.abLeftDiff)}
-            {fmt(ca.abRightLeftDiff)}
-            {fmt(ca.abSkewDiff_mmPer40cm)}
-            {fmt(ca.abSkewDiff_deg)}
-            {fmt(ca.abAvgDiff)}
+            {fmt(ca.rightDiff)}
+            {fmt(ca.leftDiff)}
+            {fmt(ca.rightLeftDiff)}
+            {fmt(ca.skewDiff_mmPer40cm)}
+            {fmt(ca.skewDiff_deg)}
+            {fmt(ca.gap)}
           </tr>
           <tr>
             <th>Avg: (A+B)/2</th>
-            {fmt(ca.abRightAvg)}
-            {fmt(ca.abLeftAvg)}
+            {fmt(ca.rightAvg)}
+            {fmt(ca.leftAvg)}
             {fmt(ca.abRightLeftAvg)}
             {fmt(ca.abSkewAvg_mmPer40cm)}
             {fmt(ca.abSkewAvg_deg)}
-            {fmt(ca.abAvgAvg)}
+            {fmt(ca.offset)}
           </tr>
           {
             val nodeBuffer: NodeBuffer = {
@@ -211,7 +211,7 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
                   {fmt(jj.aJawRightLeftDiff)}
                   {fmt(jj.aJawSkewDiff_mmPer40cm)}
                   {fmt(jj.aJawSkewDiff_deg)}
-                  {fmt(jj.aJawAvgDiff)}
+                  {fmt(jj.gap)}
                 </tr>
                 <tr>
                   <th>Avg: (A+X1 Jaw)/2</th>
@@ -220,7 +220,7 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
                   {fmt(jj.aJawRightLeftAvg)}
                   {fmt(jj.aJawSkewAvg_mmPer40cm)}
                   {fmt(jj.aJawSkewAvg_deg)}
-                  {fmt(jj.aJawAvgAvg)}
+                  {fmt(jj.offset)}
                 </tr>
               } else {
                 new NodeBuffer

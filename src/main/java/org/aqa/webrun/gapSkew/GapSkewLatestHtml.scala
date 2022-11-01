@@ -95,8 +95,8 @@ class GapSkewLatestHtml extends Restlet with SubUrlRoot with Logging {
           </tr>
           {fmt("A Skew", gos.col090.aSkew_mmPer40cm, gos.col270.aSkew_mmPer40cm)}
           {fmt("B Skew", gos.col090.bSkew_mmPer40cm, gos.col270.bSkew_mmPer40cm)}
-          {fmt("Gap", gos.col090.abAvgDiff, gos.col270.abAvgDiff)}
-          {fmt("Offset", gos.col090.abAvgAvg, gos.col270.abAvgAvg)}
+          {fmt("Gap", gos.col090.gap, gos.col270.gap)}
+          {fmt("Offset", gos.col090.offset, gos.col270.offset)}
         </table>
       </div>
     </td>

@@ -12,33 +12,35 @@ import org.aqa.db.GapSkew
   *                   otherwise related.  Default is no references.
   * @param units Unit of measurement.  Default is mm.
   */
-case class GosValue(v: Double, name: String, description: String, derivation: String, references: Seq[GosValue], units: String) {
+case class GosValue(v: Double, name: String, group: String, description: String, derivation: String, references: Seq[GosValue], units: String) {
 
-  def this(v: Double, name: String, description: String, derivation: Double) { this(v, name, description, derivation.toString, Seq(), "mm") }
+  def this(v: Double, name: String, group: String, description: String, derivation: Double) { this(v, name, group, description, derivation.toString, Seq(), "mm") }
 
-  def this(v: Double, name: String, description: String, derivation: Double, units: String) {
-    this(v, name, description, derivation.toString, Seq(), units)
+  def this(v: Double, name: String, group: String, description: String, derivation: Double, units: String) {
+    this(v, name, group, description, derivation.toString, Seq(), units)
   }
 
-  def this(v: Double, name: String, description: String, derivation: Double, references: Seq[GosValue]) {
-    this(v, name, description, derivation.toString, references, "mm")
+  def this(v: Double, name: String, group: String, description: String, derivation: Double, references: Seq[GosValue]) {
+    this(v, name, group, description, derivation.toString, references, "mm")
   }
 
-  def this(v: Double, name: String, description: String, derivation: Double, references: Seq[GosValue], units: String) {
-    this(v, name, description, derivation.toString, references, units)
+  def this(v: Double, name: String, group: String, description: String, derivation: Double, references: Seq[GosValue], units: String) {
+    this(v, name, group, description, derivation.toString, references, units)
   }
 
-  def this(v: Double, name: String, description: String, derivation: String) {
-    this(v, name, description, derivation, Seq(), "mm")
+  def this(v: Double, name: String, group: String, description: String, derivation: String) {
+    this(v, name, group, description, derivation, Seq(), "mm")
   }
 
-  def this(v: Double, name: String, description: String, derivation: String, units: String) {
-    this(v, name, description, derivation, Seq(), units)
+  def this(v: Double, name: String, group: String, description: String, derivation: String, units: String) {
+    this(v, name, group, description, derivation, Seq(), units)
   }
 
-  def this(v: Double, name: String, description: String, derivation: String, references: Seq[GosValue]) {
-    this(v, name, description, derivation, references, "mm")
+  def this(v: Double, name: String, group: String, description: String, derivation: String, references: Seq[GosValue]) {
+    this(v, name, group, description, derivation, references, "mm")
   }
+
+  val fullName = (group + " " + name).trim
 
 }
 
@@ -76,11 +78,14 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
   private val bR = if (bTop) bankB.topRightValue_mm.get else bankB.bottomRightValue_mm.get
   private val bL = if (bTop) bankB.topLeftValue_mm.get else bankB.bottomLeftValue_mm.get
 
+  private val group = "C" + bankA.angleRounded
+
   val separation: GosValue = {
     val v = bankA.plannedEdgeSeparation_mm
     new GosValue(
       v.get,
       name = "Horizontal Separation",
+      group,
       description = s"Horizontal (x axis) distance between the centers of the right and left measurements.  Used to calculate skew angle.",
       derivation = v.get
     )
@@ -88,13 +93,26 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
 
   // ----- Bank A -----
 
-  val aRight: GosValue = new GosValue(aR, "Bank A Right", s"Vertical measurement of Bank A (X2) MLC leaves on the right-hand end.", aR)
+  // @formatter:off
+  val aRight: GosValue = new GosValue(aR,
+     name = "Bank A Right", 
+     group, 
+     description = s"Vertical measurement of Bank A (X2) MLC leaves on the right-hand end.", 
+     derivation = aR)
+  // @formatter:on
 
-  val aLeft: GosValue = new GosValue(aL, "Bank A Left", s"Vertical measurement of Bank A (X2) MLC leaves on the left-hand end.", aL)
+  // @formatter:off
+  val aLeft: GosValue = new GosValue(aL,
+    name = "Bank A Left",
+    group, 
+    description = s"Vertical measurement of Bank A (X2) MLC leaves on the left-hand end.", 
+    derivation = aL)
+  // @formatter:on
 
   val aRightLeftDiff: GosValue = new GosValue(
     v = aRight.v - aLeft.v,
     name = "Bank A Right - Left",
+    group,
     description = s"""${aRight.name} - ${aLeft.name} showing the vertical change""",
     derivation = s"""${aRight.v - aLeft.v} = ${aRight.v} - ${aLeft.v}""",
     references = Seq(aRight, aLeft)
@@ -104,9 +122,10 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
     val v = if (aTop) bankA.topHorzSkew_deg else bankA.bottomHorzSkew_deg
     GosValue(
       v.get,
-      "Bank A Skew angle",
-      s"atan(${aRightLeftDiff.name} / ${separation.name})",
-      s"$v = atan(${aRightLeftDiff.v} / ${separation.v})",
+      name = "Bank A Skew angle",
+      group,
+      description = s"atan(${aRightLeftDiff.name} / ${separation.name})",
+      derivation = s"$v = atan(${aRightLeftDiff.v} / ${separation.v})",
       Seq(aRightLeftDiff, separation),
       units = "deg"
     )
@@ -116,34 +135,51 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
     val v = if (aTop) bankA.topHorzSkew_mmPer40cm else bankA.bottomHorzSkew_mmPer40cm
     GosValue(
       v.get,
-      "Bank A Skew / 40cm",
-      s"(${aRightLeftDiff.name} / ${separation.name}) * 40",
-      s"$v = (${aRightLeftDiff.v} / ${separation.v}) * 40",
+      name = "Bank A Skew",
+      group,
+      description = s"(${aRightLeftDiff.name} / ${separation.name}) * 40",
+      derivation = s"$v = (${aRightLeftDiff.v} / ${separation.v}) * 40",
       Seq(aRightLeftDiff, separation),
       units = "mm/40cm"
     )
   }
 
-  val aAvg: GosValue = {
+  val aRightLeftAvg: GosValue = {
     val v = (aRight.v + aLeft.v) / 2
     new GosValue(
       v,
-      "Bank A avg",
-      s"(${aRight.name} + ${aLeft.name}) / 2 : Average of Bank A giving the vertical position of the midpoint",
-      s"$v = (${aRight.v} + ${aLeft.v}) / 2",
+      name = "Bank A avg",
+      group,
+      description = s"(${aRight.name} + ${aLeft.name}) / 2 : Average of Bank A giving the vertical position of the midpoint",
+      derivation = s"$v = (${aRight.v} + ${aLeft.v}) / 2",
       Seq(aRight, aLeft)
     )
   }
 
   // ----- Bank B -----
 
-  val bRight: GosValue = new GosValue(bR, "Bank B Right", s"Vertical measurement of Bank B (X1) MLC leaves on the right-hand end for", bR)
+  // @formatter:off
+  val bRight: GosValue = new GosValue(
+    bR,
+    name = "Bank B Right",
+    group,
+    description =  s"Vertical measurement of Bank B (X1) MLC leaves on the right-hand end for",
+    bR)
+  // @formatter:on
 
-  val bLeft: GosValue = new GosValue(bL, "Bank B Left", s"Vertical measurement of Bank B (X1) MLC leaves on the left-hand end for", bL)
+  // @formatter:off
+  val bLeft: GosValue = new GosValue(
+    bL,
+    name = "Bank B Left",
+    group,
+    description =  s"Vertical measurement of Bank B (X1) MLC leaves on the left-hand end for",
+    bL)
+  // @formatter:on
 
   val bRightLeftDiff: GosValue = new GosValue(
     v = bRight.v - bLeft.v,
     name = "Bank B Right - Left",
+    group,
     description = s"${bRight.name} - ${bLeft.name} showing the vertical change",
     derivation = s"""${bRight.v - bLeft.v} = ${bRight.v} - ${bLeft.v}""",
     references = Seq(bRight, bLeft)
@@ -153,9 +189,10 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
     val v = if (bTop) bankB.topHorzSkew_deg else bankB.bottomHorzSkew_deg
     GosValue(
       v.get,
-      "Bank B Skew angle",
-      s"atan(${bRightLeftDiff.name} / ${separation.name})",
-      s"$v = atan(${bRightLeftDiff.v} / ${separation.v})",
+      name = "Bank B Skew angle",
+      group,
+      description = s"atan(${bRightLeftDiff.name} / ${separation.name})",
+      derivation = s"$v = atan(${bRightLeftDiff.v} / ${separation.v})",
       Seq(bRightLeftDiff, separation),
       units = "deg"
     )
@@ -165,115 +202,125 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
     val v = if (bTop) bankB.topHorzSkew_mmPer40cm else bankB.bottomHorzSkew_mmPer40cm
     GosValue(
       v.get,
-      "Bank B Skew / 40cm",
-      s"(${bRightLeftDiff.name} / ${separation.name}) * 40",
-      s"$v = (${bRightLeftDiff.v} / ${separation.v}) * 40",
+      name = "Bank B Skew / 40cm",
+      group,
+      description = s"(${bRightLeftDiff.name} / ${separation.name}) * 40",
+      derivation = s"$v = (${bRightLeftDiff.v} / ${separation.v}) * 40",
       Seq(bRightLeftDiff, separation),
       units = "mm/40cm"
     )
   }
 
-  val bAvg: GosValue = {
+  val bRightLeftAvg: GosValue = {
     val v = (bRight.v + bLeft.v) / 2
     new GosValue(
       v,
-      "Bank B avg",
-      s"(${bRight.name} + ${bLeft.name}) / 2 : Average of Bank B giving the vertical position of the midpoint",
-      s"$v = (${bRight.v} + ${bLeft.v}) / 2",
+      name = "Bank B avg",
+      group,
+      description = s"(${bRight.name} + ${bLeft.name}) / 2 : Average of Bank B giving the vertical position of the midpoint",
+      derivation = s"$v = (${bRight.v} + ${bLeft.v}) / 2",
       Seq(bRight, bLeft)
     )
   }
 
   // ----- A-B differences -----
 
-  val abRightDiff: GosValue = {
+  val rightDiff: GosValue = {
     val v = aRight.v - bRight.v
     new GosValue(
       v,
-      s"${aRight.name} - ${bRight.name}",
-      s"${aRight.name} - ${bRight.name} : Difference for each bank's right-hand values",
-      s"$v = ${aRight.v} - ${bRight.v}",
+      name = "Right Diff",
+      group,
+      description = s"${aRight.name} - ${bRight.name} : Difference for each bank's right-hand values",
+      derivation = s"$v = ${aRight.v} - ${bRight.v}",
       Seq(aRight, bRight)
     )
   }
 
-  val abLeftDiff: GosValue = {
+  val leftDiff: GosValue = {
     val v = aLeft.v - bLeft.v
     new GosValue(
       v,
-      s"${aLeft.name} - ${bLeft.name}",
-      s"${aLeft.name} - ${bLeft.name} : Difference for each bank's left-hand values",
-      s"$v = ${aLeft.v} - ${bLeft.v}",
+      name = "Left Diff",
+      group,
+      description = s"${aLeft.name} - ${bLeft.name} : Difference for each bank's left-hand values",
+      derivation = "$v = ${aLeft.v} - ${bLeft.v}",
       Seq(aLeft, bLeft)
     )
   }
 
-  val abRightLeftDiff: GosValue = {
+  val rightLeftDiff: GosValue = {
     val v = aRightLeftDiff.v - bRightLeftDiff.v
     new GosValue(
       v,
-      s"${aRightLeftDiff.name} - ${bRightLeftDiff.name}",
-      s"${aRightLeftDiff.name} - ${bRightLeftDiff.name} : Difference for each bank's right and left-hand difference values",
-      s"$v = ${aRightLeftDiff.v} - ${bRightLeftDiff.v}",
+      name = "Diff of Diffs",
+      group,
+      description = s"${aRightLeftDiff.name} - ${bRightLeftDiff.name} : Difference for each bank's right and left-hand difference values",
+      derivation = s"$v = ${aRightLeftDiff.v} - ${bRightLeftDiff.v}",
       Seq(aRightLeftDiff, bRightLeftDiff)
     )
   }
 
-  val abSkewDiff_deg: GosValue = {
+  val skewDiff_deg: GosValue = {
     val v = aSkew_deg.v - bSkew_deg.v
     GosValue(
       v,
-      s"${aSkew_deg.name} - ${bSkew_deg.name}",
-      s"${aSkew_deg.name} - ${bSkew_deg.name} : Difference of skew between bank A and B",
-      s"$v = ${aSkew_deg.v} - ${bSkew_deg.v}",
+      name = "Skew Diff",
+      group,
+      description = s"${aSkew_deg.name} - ${bSkew_deg.name} : Difference of skew between bank A and B",
+      derivation = s"$v = ${aSkew_deg.v} - ${bSkew_deg.v}",
       Seq(aSkew_deg, bSkew_deg),
       units = "deg"
     )
   }
 
-  val abSkewDiff_mmPer40cm: GosValue = {
+  val skewDiff_mmPer40cm: GosValue = {
     val v = aSkew_mmPer40cm.v - bSkew_mmPer40cm.v
     GosValue(
       v,
-      s"${aSkew_mmPer40cm.name} - ${bSkew_mmPer40cm.name}",
-      s"${aSkew_mmPer40cm.name} - ${bSkew_mmPer40cm.name} : Difference of skew between bank A and B",
-      s"$v = ${aSkew_mmPer40cm.v} - ${bSkew_mmPer40cm.v}",
+      name = s"Skew Diff",
+      group,
+      description = s"${aSkew_mmPer40cm.name} - ${bSkew_mmPer40cm.name} : Difference of skew between bank A and B",
+      derivation = s"$v = ${aSkew_mmPer40cm.v} - ${bSkew_mmPer40cm.v}",
       Seq(aSkew_mmPer40cm, bSkew_mmPer40cm),
       units = "mm/40cm"
     )
   }
 
-  val abAvgDiff: GosValue = {
-    val v = aAvg.v - bAvg.v
+  val gap: GosValue = {
+    val v = aRightLeftAvg.v - bRightLeftAvg.v
     new GosValue(
       v,
-      s"${aAvg.name} - ${bAvg.name}",
-      s"${aAvg.name} - ${bAvg.name} : Difference of averages between bank A and B",
-      s"$v = ${aAvg.v} - ${bAvg.v}",
-      Seq(aAvg, bAvg)
+      name = s"Gap",
+      group,
+      description = s"${aRightLeftAvg.name} - ${bRightLeftAvg.name} : Difference of averages between bank A and B",
+      derivation = s"$v = ${aRightLeftAvg.v} - ${bRightLeftAvg.v}",
+      Seq(aRightLeftAvg, bRightLeftAvg)
     )
   }
 
   // ----- (A+B)/2 averages -----
 
-  val abRightAvg: GosValue = {
+  val rightAvg: GosValue = {
     val v = (aRight.v + bRight.v) / 2
     new GosValue(
       v,
-      s"(${aRight.name} + ${bRight.name}) / 2",
-      s"(${aRight.name} + ${bRight.name}) / 2 : Average of each bank's right-hand values",
-      s"$v = (${aRight.v} + ${bRight.v}) / 2",
+      name = s"Right Avg",
+      group,
+      description = s"(${aRight.name} + ${bRight.name}) / 2 : Average of each bank's right-hand values",
+      derivation = s"$v = (${aRight.v} + ${bRight.v}) / 2",
       Seq(aRight, bRight)
     )
   }
 
-  val abLeftAvg: GosValue = {
+  val leftAvg: GosValue = {
     val v = (aLeft.v + bLeft.v) / 2
     new GosValue(
       v,
-      s"(${aLeft.name} + ${bLeft.name}) / 2",
-      s"(${aLeft.name} + ${bLeft.name}) / 2 : Average of each bank's left-hand values",
-      s"$v = (${aLeft.v} + ${bLeft.v}) / 2",
+      name = s"Left Avg",
+      group,
+      description = s"(${aLeft.name} + ${bLeft.name}) / 2 : Average of each bank's left-hand values",
+      derivation = s"$v = (${aLeft.v} + ${bLeft.v}) / 2",
       Seq(aLeft, bLeft)
     )
   }
@@ -282,9 +329,10 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
     val v = (aRightLeftDiff.v + bRightLeftDiff.v) / 2
     new GosValue(
       v,
-      s"(${aRightLeftDiff.name} + ${bRightLeftDiff.name}) / 2",
-      s"(${aRightLeftDiff.name} + ${bRightLeftDiff.name}) / 2 : Average of each bank's right and left-hand differences",
-      s"$v = (${aRightLeftDiff.v} + ${bRightLeftDiff.v}) / 2",
+      name = "Diff of A,B Diffs",
+      group,
+      description = s"(${aRightLeftDiff.name} + ${bRightLeftDiff.name}) / 2 : Average of each bank's right and left-hand differences",
+      derivation = s"$v = (${aRightLeftDiff.v} + ${bRightLeftDiff.v}) / 2",
       Seq(aRightLeftDiff, bRightLeftDiff)
     )
   }
@@ -293,9 +341,10 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
     val v = (aSkew_deg.v + bSkew_deg.v) / 2
     GosValue(
       v,
-      s"(${aSkew_deg.name} + ${bSkew_deg.name}) / 2",
-      s"(${aSkew_deg.name} + ${bSkew_deg.name}) / 2 : Average of skews for bank A and B",
-      s"$v = (${aSkew_deg.v} + ${bSkew_deg.v}) / 2",
+      name = "A,B Skew Angle Avg",
+      group,
+      description = s"(${aSkew_deg.name} + ${bSkew_deg.name}) / 2 : Average of skews for bank A and B",
+      derivation = s"$v = (${aSkew_deg.v} + ${bSkew_deg.v}) / 2",
       Seq(aSkew_deg, bSkew_deg),
       units = "deg"
     )
@@ -305,22 +354,24 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
     val v = (aSkew_mmPer40cm.v + bSkew_mmPer40cm.v) / 2
     GosValue(
       v,
-      s"(${aSkew_mmPer40cm.name} + ${bSkew_mmPer40cm.name}) / 2",
-      s"(${aSkew_mmPer40cm.name} + ${bSkew_mmPer40cm.name}) / 2 : Average of skews for bank A and B",
-      s"$v = (${aSkew_mmPer40cm.v} + ${bSkew_mmPer40cm.v}) / 2",
+      name = "A,B Skew Avg",
+      group,
+      description = s"(${aSkew_mmPer40cm.name} + ${bSkew_mmPer40cm.name}) / 2 : Average of skews for bank A and B",
+      derivation = s"$v = (${aSkew_mmPer40cm.v} + ${bSkew_mmPer40cm.v}) / 2",
       Seq(aSkew_mmPer40cm, bSkew_mmPer40cm),
       units = "mm/40cm"
     )
   }
 
-  val abAvgAvg: GosValue = {
-    val v = (aAvg.v + bAvg.v) / 2
+  val offset: GosValue = {
+    val v = (aRightLeftAvg.v + bRightLeftAvg.v) / 2
     new GosValue(
       v,
-      s"(${aAvg.name} + ${bAvg.name}) / 2",
-      s"(${aAvg.name} + ${bAvg.name}) / 2 : Average of averages for bank A and B",
-      s"$v = (${aAvg.v} + ${bAvg.v}) / 2",
-      Seq(aAvg, bAvg)
+      name = s"Offset",
+      group,
+      description = s"(${aRightLeftAvg.name} + ${bRightLeftAvg.name}) / 2 : Average of averages for bank A and B",
+      derivation = s"$v = (${aRightLeftAvg.v} + ${bRightLeftAvg.v}) / 2",
+      Seq(aRightLeftAvg, bRightLeftAvg)
     )
   }
 
@@ -337,6 +388,8 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
 
   private val c = colAngle // shorthand
 
+  private val group = "J" + colAngle.bankA.angleRounded
+
   // ----- Jaw (the one near the vertical center of the image) -----
 
   val jawRight: GosValue = {
@@ -345,8 +398,9 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
 
     new GosValue(
       v = v,
-      s"Jaw Right",
-      s"Measurement taken at right of edge of jaw near vertical center of image.",
+      name = s"Jaw Right",
+      group,
+      description = s"Measurement taken at right of edge of jaw near vertical center of image.",
       v
     )
   }
@@ -356,8 +410,9 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
     val v = Seq(jawPair.topLeftValue_mm, jawPair.bottomLeftValue_mm).flatten.minBy(_.abs)
     new GosValue(
       v = v,
-      s"Jaw Left",
-      s"Measurement taken at left of edge of jaw near vertical center of image.",
+      name = s"Jaw Left",
+      group,
+      description = s"Measurement taken at left of edge of jaw near vertical center of image.",
       v
     )
   }
@@ -366,9 +421,10 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
     val v = jawRight.v - jawLeft.v
     new GosValue(
       v = v,
-      s"${jawRight.name} - ${jawLeft.name}",
-      s"Jaw difference between ${jawRight.name} - ${jawLeft.name}.",
-      s"$v = ${jawRight.v} - ${jawLeft.v}"
+      name = "Jaw Diff",
+      group,
+      description = s"Jaw difference between ${jawRight.name} - ${jawLeft.name}.",
+      derivation = s"$v = ${jawRight.v} - ${jawLeft.v}"
     )
   }
 
@@ -376,9 +432,10 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
     val v = if (jawIsTop) jawPair.topHorzSkew_deg else jawPair.bottomHorzSkew_deg
     GosValue(
       v.get,
-      "Jaw Skew angle",
-      s"atan(${jawRightLeftDiff.name} / ${c.separation.name})",
-      s"$v = atan(${jawRightLeftDiff.v} / ${c.separation.v})",
+      name = "Jaw Skew angle",
+      group,
+      description = s"atan(${jawRightLeftDiff.name} / ${c.separation.name})",
+      derivation = s"$v = atan(${jawRightLeftDiff.v} / ${c.separation.v})",
       Seq(jawRightLeftDiff, c.separation),
       units = "deg"
     )
@@ -388,9 +445,10 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
     val v = if (jawIsTop) jawPair.topHorzSkew_mmPer40cm else jawPair.bottomHorzSkew_mmPer40cm
     GosValue(
       v.get,
-      "Jaw Skew / 40cm",
-      s"(${jawRightLeftDiff.name} / ${c.separation.name}) * 40",
-      s"$v = (${jawRightLeftDiff.v} / ${c.separation.v}) * 40",
+      name = "Jaw Skew",
+      group,
+      description = s"(${jawRightLeftDiff.name} / ${c.separation.name}) * 40",
+      derivation = s"$v = (${jawRightLeftDiff.v} / ${c.separation.v}) * 40",
       Seq(jawRightLeftDiff, c.separation),
       units = "mm/40cm"
     )
@@ -400,9 +458,10 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
     val v = (jawRight.v + jawLeft.v) / 2
     new GosValue(
       v = v,
-      s"Jaw Avg",
-      s"Jaw average (midpoint) between ${jawRight.name} and ${jawLeft.name}.",
-      s"$v = (${jawRight.v} + ${jawLeft.v}) / 2"
+      name = s"Jaw Avg",
+      group,
+      description = s"Jaw average (midpoint) between ${jawRight.name} and ${jawLeft.name}.",
+      derivation = s"$v = (${jawRight.v} + ${jawLeft.v}) / 2"
     )
   }
 
@@ -412,9 +471,10 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
     val v = c.aRight.v - jawRight.v
     new GosValue(
       v,
-      s"${c.aRight.name} - ${jawRight.name}",
-      s"${c.aRight.name} - ${jawRight.name} : Difference between bank A and jaw right-hand values",
-      s"$v = ${c.aRight.v} - ${jawRight.v}",
+      name = "Right Diff",
+      group,
+      description = s"${c.aRight.name} - ${jawRight.name} : Difference between bank A and jaw right-hand values",
+      derivation = s"$v = ${c.aRight.v} - ${jawRight.v}",
       Seq(c.aRight, jawRight)
     )
   }
@@ -423,9 +483,10 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
     val v = c.aLeft.v - jawLeft.v
     new GosValue(
       v,
-      s"${c.aLeft.name} - ${jawLeft.name}",
-      s"${c.aLeft.name} - ${jawLeft.name} : Difference between bank A and left-hand values",
-      s"$v = ${c.aLeft.v} - ${jawLeft.v}",
+      name = "Left Diff",
+      group,
+      description = s"${c.aLeft.name} - ${jawLeft.name} : Difference between bank A and left-hand values",
+      derivation = s"$v = ${c.aLeft.v} - ${jawLeft.v}",
       Seq(c.aLeft, jawLeft)
     )
   }
@@ -434,9 +495,10 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
     val v = c.aRightLeftDiff.v - jawRightLeftDiff.v
     new GosValue(
       v,
-      s"${c.aRightLeftDiff.name} - ${jawRightLeftDiff.name}",
-      s"${c.aRightLeftDiff.name} - ${jawRightLeftDiff.name} : Difference between bank A and jaw right-hand differences",
-      s"$v = ${c.aRightLeftDiff.v} - ${jawRightLeftDiff.v}",
+      name = "Right-Left Diffs Diff",
+      group,
+      description = s"${c.aRightLeftDiff.name} - ${jawRightLeftDiff.name} : Difference between bank A and jaw right-hand differences",
+      derivation = s"$v = ${c.aRightLeftDiff.v} - ${jawRightLeftDiff.v}",
       Seq(c.aRightLeftDiff, jawRightLeftDiff)
     )
   }
@@ -445,9 +507,10 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
     val v = c.aSkew_deg.v - jawSkew_deg.v
     GosValue(
       v,
-      s"${c.aSkew_deg.name} - ${jawSkew_deg.name}",
-      s"${c.aSkew_deg.name} - ${jawSkew_deg.name} : Difference of skew between bank A and Jaw",
-      s"$v = ${c.aSkew_deg.v} - ${jawSkew_deg.v}",
+      name = "Skew Angle Diff",
+      group,
+      description = s"${c.aSkew_deg.name} - ${jawSkew_deg.name} : Difference of skew between bank A and Jaw",
+      derivation = s"$v = ${c.aSkew_deg.v} - ${jawSkew_deg.v}",
       Seq(c.aSkew_deg, jawSkew_deg),
       units = "deg"
     )
@@ -457,22 +520,24 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
     val v = c.aSkew_mmPer40cm.v - jawSkew_mmPer40cm.v
     GosValue(
       v,
-      s"${c.aSkew_mmPer40cm.name} - ${jawSkew_mmPer40cm.name}",
-      s"${c.aSkew_mmPer40cm.name} - ${jawSkew_mmPer40cm.name} : Difference of skew between bank A and Jaw",
-      s"$v = ${c.aSkew_mmPer40cm.v} - ${jawSkew_mmPer40cm.v}",
+      name = "Skew Diff",
+      group,
+      description = s"${c.aSkew_mmPer40cm.name} - ${jawSkew_mmPer40cm.name} : Difference of skew between bank A and Jaw",
+      derivation = s"$v = ${c.aSkew_mmPer40cm.v} - ${jawSkew_mmPer40cm.v}",
       Seq(c.aSkew_mmPer40cm, jawSkew_mmPer40cm),
       units = "mm/40cm"
     )
   }
 
-  val aJawAvgDiff: GosValue = {
-    val v = c.aAvg.v - jawAvg.v
+  val gap: GosValue = {
+    val v = c.aRightLeftAvg.v - jawAvg.v
     new GosValue(
       v,
-      s"${c.aAvg.name} - ${jawAvg.name}",
-      s"${c.aAvg.name} - ${jawAvg.name} : Difference of averages between bank A and Jaw",
-      s"$v = ${c.aAvg.v} - ${jawAvg.v}",
-      Seq(c.aAvg, jawAvg)
+      name = s"Gap",
+      group,
+      description = s"${c.aRightLeftAvg.name} - ${jawAvg.name} : Difference of averages between bank A and Jaw",
+      derivation = s"$v = ${c.aRightLeftAvg.v} - ${jawAvg.v}",
+      Seq(c.aRightLeftAvg, jawAvg)
     )
   }
 
@@ -482,9 +547,10 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
     val v = (c.aRight.v + jawRight.v) / 2
     new GosValue(
       v,
-      s"(${c.aRight.name} + ${jawRight.name}) / 2",
-      s"(${c.aRight.name} + ${jawRight.name}) / 2 : Average of bank A and jaw right-hand values",
-      s"$v = (${c.aRight.v} + ${jawRight.v}) / 2",
+      name = "Right Avg",
+      group,
+      description = s"(${c.aRight.name} + ${jawRight.name}) / 2 : Average of bank A and jaw right-hand values",
+      derivation = s"$v = (${c.aRight.v} + ${jawRight.v}) / 2",
       Seq(c.aRight, jawRight)
     )
   }
@@ -493,9 +559,10 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
     val v = (c.aLeft.v + jawLeft.v) / 2
     new GosValue(
       v,
-      s"(${c.aLeft.name} + ${jawLeft.name}) / 2",
-      s"(${c.aLeft.name} + ${jawLeft.name}) / 2 : Average of bank A and jaw left-hand values",
-      s"$v = (${c.aLeft.v} + ${jawLeft.v}) / 2",
+      name = "Left Avg",
+      group,
+      description = s"(${c.aLeft.name} + ${jawLeft.name}) / 2 : Average of bank A and jaw left-hand values",
+      derivation = s"$v = (${c.aLeft.v} + ${jawLeft.v}) / 2",
       Seq(c.aLeft, jawLeft)
     )
   }
@@ -504,9 +571,10 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
     val v = (c.aRightLeftDiff.v + jawRightLeftDiff.v) / 2
     new GosValue(
       v,
-      s"(${c.aRightLeftDiff.name} + ${jawRightLeftDiff.name}) / 2",
-      s"(${c.aRightLeftDiff.name} + ${jawRightLeftDiff.name}) / 2 : Average of bank A and jaw right and left-hand difference values",
-      s"$v = (${c.aRightLeftDiff.v} + ${jawRightLeftDiff.v}) / 2",
+      name = s"Right,Left Diffs Avg",
+      group,
+      description = s"(${c.aRightLeftDiff.name} + ${jawRightLeftDiff.name}) / 2 : Average of bank A and jaw right and left-hand difference values",
+      derivation = s"$v = (${c.aRightLeftDiff.v} + ${jawRightLeftDiff.v}) / 2",
       Seq(c.aRightLeftDiff, jawRightLeftDiff)
     )
   }
@@ -515,9 +583,10 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
     val v = (c.aSkew_deg.v + jawSkew_deg.v) / 2
     GosValue(
       v,
-      s"(${c.aSkew_deg.name} + ${jawSkew_deg.name}) / 2",
-      s"(${c.aSkew_deg.name} + ${jawSkew_deg.name}) / 2 : Average of skews for bank A and Jaw",
-      s"$v = (${c.aSkew_deg.v} + ${jawSkew_deg.v}) / 2",
+      name = "Avg Skew Angle",
+      group,
+      description = s"(${c.aSkew_deg.name} + ${jawSkew_deg.name}) / 2 : Average of skews for bank A and Jaw",
+      derivation = s"$v = (${c.aSkew_deg.v} + ${jawSkew_deg.v}) / 2",
       Seq(c.aSkew_deg, jawSkew_deg),
       units = "deg"
     )
@@ -527,22 +596,24 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
     val v = (c.aSkew_mmPer40cm.v + jawSkew_mmPer40cm.v) / 2
     GosValue(
       v,
-      s"(${c.aSkew_mmPer40cm.name} + ${jawSkew_mmPer40cm.name}) / 2",
-      s"(${c.aSkew_mmPer40cm.name} + ${jawSkew_mmPer40cm.name}) / 2 : Average of skews for bank A and Jaw",
-      s"$v = (${c.aSkew_mmPer40cm.v} + ${jawSkew_mmPer40cm.v}) / 2",
+      name = "Avg Skew",
+      group,
+      description = s"(${c.aSkew_mmPer40cm.name} + ${jawSkew_mmPer40cm.name}) / 2 : Average of skews for bank A and Jaw",
+      derivation = s"$v = (${c.aSkew_mmPer40cm.v} + ${jawSkew_mmPer40cm.v}) / 2",
       Seq(c.aSkew_mmPer40cm, jawSkew_mmPer40cm),
       units = "mm/40cm"
     )
   }
 
-  val aJawAvgAvg: GosValue = {
-    val v = (c.aAvg.v + jawAvg.v) / 2
+  val offset: GosValue = {
+    val v = (c.aRightLeftAvg.v + jawAvg.v) / 2
     new GosValue(
       v,
-      s"(${c.aAvg.name} + ${jawAvg.name}) / 2",
-      s"(${c.aAvg.name} + ${jawAvg.name}) / 2 : Average of averages for bank A and Jaw",
-      s"$v = (${c.aAvg.v} + ${jawAvg.v}) / 2",
-      Seq(c.aAvg, jawAvg)
+      name = s"Offset",
+      group,
+      description = s"(${c.aRightLeftAvg.name} + ${jawAvg.name}) / 2 : Average of averages for bank A and Jaw",
+      derivation = s"$v = (${c.aRightLeftAvg.v} + ${jawAvg.v}) / 2",
+      Seq(c.aRightLeftAvg, jawAvg)
     )
   }
 

@@ -39,6 +39,7 @@ object Phase2CsvMakeAll extends Logging {
 
     val dataTypeList = Seq(
       new CenterDoseCsv,
+      new GapSkewCsv,
       new CollimatorCenteringCsv,
       new CollimatorPositionCsv,
       new LeafPositionCsv,

@@ -18,53 +18,174 @@ package org.aqa.webrun.phase2.phase2csv
 
 import org.aqa.db.GapSkew
 import org.aqa.db.Output
+import org.aqa.webrun.gapSkew.ColAngle
 import org.aqa.webrun.gapSkew.GapOffsetSkew
+import org.aqa.webrun.gapSkew.GosValue
+import org.aqa.webrun.gapSkew.JawJaw
 
-case class GapOffsetSkewHistory(output: Output, gapOffsetSkew: GapOffsetSkew){
-  def gapSkew : GapSkew = ???
-}
+case class GapOffsetSkewHistory(output: Output, gapOffsetSkew: GapOffsetSkew) {}
 
-//abstract class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
+class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
 
-class FooFoo {
-  """
   // abbreviation for the long name
   type GOSH = GapOffsetSkewHistory
 
-
-  String
-
   /** Name of open beam. */
-  protected def beamNameOpen(): String
+  // protected def beamNameOpen(): String
 
   /** List of the X coordinates of the centers of areas of interest in the RTPLAN in mm. */
-  protected def centerList_mm(): Seq[Double]
+  // protected def centerList_mm(): Seq[Double]
 
-  override val dataName: String = "GapSkew"
+  override val dataName: String = "GapOffsetSkew"
+
+  /**
+    * Given a field within a <code>ColAngle</code>, make a pair of column, one for
+    * each of the 90 and 270 degree MLC angles.
+    * @param field For this field.
+    * @return Pair of CSV columns.
+    */
+  private def mlcToCsvCol(field: ColAngle => GosValue): Seq[CsvCol[GapOffsetSkewHistory]] = {
+    val sg = GapSkewCsvX2.staticGapOffsetSkew
+    val sf090 = field(sg.col090)
+    val sf270 = field(sg.col270)
+
+    val csvCol090 = CsvCol(s"${sf090.fullName} (${sf090.units})", sf090.description, (gosh: GOSH) => field(gosh.gapOffsetSkew.col090).v.toString)
+    val csvCol270 = CsvCol(s"${sf270.fullName} (${sf270.units})", sf270.description, (gosh: GOSH) => field(gosh.gapOffsetSkew.col270).v.toString)
+
+    Seq(csvCol090, csvCol270)
+  }
+
+  /**
+    * Given a field within a <code>ColAngle</code>, make a pair of column, one for
+    * each of the 90 and 270 degree MLC angles.
+    * @param field For this field.
+    * @return Pair of CSV columns.
+    */
+  private def jawToCsvCol(field: JawJaw => GosValue): Seq[CsvCol[GOSH]] = {
+    val sg = GapSkewCsvX2.staticGapOffsetSkew
+    val sf = field(sg.jawJaw)
+
+    val csvCol = CsvCol(s"${sf.fullName} (${sf.units})", sf.description, (gosh: GOSH) => field(gosh.gapOffsetSkew.jawJaw).v.toString)
+
+    Seq(csvCol)
+  }
+
+  /**
+    * Given a field within a <code>ColAngle</code>, make a pair of column, one for
+    * each of the 90 and 270 degree MLC angles.
+    * @param field For this field.
+    * @return Pair of CSV columns.
+    */
+  private def gapSkewCsvCol(name: String, description: String, field: GapSkew => Option[Double]): Seq[CsvCol[GOSH]] = {
+
+    val C090A = CsvCol(
+      "C90 A " + name,
+      "Collimator 90 Bank A " + description,
+      (gosh: GOSH) =>
+        field(gosh.gapOffsetSkew.col090.bankA) match {
+          case Some(d) => d.toString
+          case _       => "NA"
+        }
+    )
+
+    val C090B = CsvCol(
+      "C90 B " + name,
+      "Collimator 90 Bank B " + description,
+      (gosh: GOSH) =>
+        field(gosh.gapOffsetSkew.col090.bankB) match {
+          case Some(d) => d.toString
+          case _       => "NA"
+        }
+    )
+
+    val C270A = CsvCol(
+      "C270 A " + name,
+      "Collimator 270 Bank A " + description,
+      (gosh: GOSH) =>
+        field(gosh.gapOffsetSkew.col270.bankA) match {
+          case Some(d) => d.toString
+          case _       => "NA"
+        }
+    )
+
+    val C270B = CsvCol(
+      "C270 B " + name,
+      "Collimator 270 Bank B " + description,
+      (gosh: GOSH) =>
+        field(gosh.gapOffsetSkew.col270.bankB) match {
+          case Some(d) => d.toString
+          case _       => "NA"
+        }
+    )
+
+    val J270 = CsvCol(
+      "J270 " + name,
+      "Jaw 270 " + description,
+      (gosh: GOSH) =>
+        field(gosh.gapOffsetSkew.jawJaw.jawPair) match {
+          case Some(d) => d.toString
+          case _       => "NA"
+        }
+    )
+
+    val list = Seq(C090A, C090B, C270A, C270B, J270)
+
+    list
+  }
 
   override protected def makeColList: Seq[CsvCol[GOSH]] = {
-    Seq(
-      CsvCol("Beam Name", "Name of beam in RTPLAN", (gsh: GOSH) => gsh.gapSkew.beamName),
-      CsvCol("Coll. Angle Rounded deg", "Collimator in degrees rounded to nearest 90", (gsh: GOSH) => Util.angleRoundedTo90(gsh.gapSkew.collimatorAngle_deg),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GOSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GOSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GOSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GOSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GOSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GOSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GOSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GOSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GOSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GOSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GOSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GOSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GOSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GOSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GOSH) => gsh.gapSkew.jjjjj),
-        CsvCol("Coll Angle deg", "Collimator angle in degrees not rounded.", (gsh: GOSH) => gsh.gapSkew.collimatorAngle_deg),
-      CsvCol("RTIMAGE UID", "UID of RTIMAGE", (gsh: GOSH) => gsh.gapSkew.rtimageUID),
 
-    )
+    val list =
+      mlcToCsvCol((ca: ColAngle) => ca.gap) ++
+        mlcToCsvCol((ca: ColAngle) => ca.offset) ++
+        mlcToCsvCol((ca: ColAngle) => ca.aSkew_mmPer40cm) ++
+        mlcToCsvCol((ca: ColAngle) => ca.bSkew_mmPer40cm) ++
+        mlcToCsvCol((ca: ColAngle) => ca.aRight) ++
+        mlcToCsvCol((ca: ColAngle) => ca.aLeft) ++
+        mlcToCsvCol((ca: ColAngle) => ca.bRight) ++
+        mlcToCsvCol((ca: ColAngle) => ca.bLeft) ++
+        mlcToCsvCol((ca: ColAngle) => ca.separation) ++
+        mlcToCsvCol((ca: ColAngle) => ca.aRightLeftDiff) ++
+        mlcToCsvCol((ca: ColAngle) => ca.aSkew_deg) ++
+        mlcToCsvCol((ca: ColAngle) => ca.aRightLeftAvg) ++
+        mlcToCsvCol((ca: ColAngle) => ca.bRightLeftDiff) ++
+        mlcToCsvCol((ca: ColAngle) => ca.bSkew_deg) ++
+        mlcToCsvCol((ca: ColAngle) => ca.bRightLeftAvg) ++
+        mlcToCsvCol((ca: ColAngle) => ca.rightDiff) ++
+        mlcToCsvCol((ca: ColAngle) => ca.leftDiff) ++
+        mlcToCsvCol((ca: ColAngle) => ca.rightLeftDiff) ++
+        mlcToCsvCol((ca: ColAngle) => ca.skewDiff_deg) ++
+        mlcToCsvCol((ca: ColAngle) => ca.skewDiff_mmPer40cm) ++
+        mlcToCsvCol((ca: ColAngle) => ca.rightAvg) ++
+        mlcToCsvCol((ca: ColAngle) => ca.leftAvg) ++
+        mlcToCsvCol((ca: ColAngle) => ca.abRightLeftAvg) ++
+        mlcToCsvCol((ca: ColAngle) => ca.abSkewAvg_deg) ++
+        mlcToCsvCol((ca: ColAngle) => ca.abSkewAvg_mmPer40cm) ++
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        jawToCsvCol((jaw: JawJaw) => jaw.gap) ++
+        jawToCsvCol((jaw: JawJaw) => jaw.offset) ++
+        jawToCsvCol((jaw: JawJaw) => jaw.jawSkew_mmPer40cm) ++
+        jawToCsvCol((jaw: JawJaw) => jaw.jawSkew_deg) ++
+        jawToCsvCol((jaw: JawJaw) => jaw.jawRight) ++
+        jawToCsvCol((jaw: JawJaw) => jaw.jawLeft) ++
+        jawToCsvCol((jaw: JawJaw) => jaw.jawRightLeftDiff) ++
+        jawToCsvCol((jaw: JawJaw) => jaw.jawAvg) ++
+        jawToCsvCol((jaw: JawJaw) => jaw.aJawRightDiff) ++
+        jawToCsvCol((jaw: JawJaw) => jaw.aJawLeftDiff) ++
+        jawToCsvCol((jaw: JawJaw) => jaw.aJawRightLeftDiff) ++
+        jawToCsvCol((jaw: JawJaw) => jaw.aJawSkewDiff_mmPer40cm) ++
+        jawToCsvCol((jaw: JawJaw) => jaw.aJawSkewDiff_deg) ++
+        jawToCsvCol((jaw: JawJaw) => jaw.aJawRightAvg) ++
+        jawToCsvCol((jaw: JawJaw) => jaw.aJawLeftAvg) ++
+        jawToCsvCol((jaw: JawJaw) => jaw.aJawRightLeftAvg) ++
+        jawToCsvCol((jaw: JawJaw) => jaw.aJawSkewAvg_mmPer40cm) ++
+        jawToCsvCol((jaw: JawJaw) => jaw.aJawSkewAvg_deg) ++
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        gapSkewCsvCol("Top Right", "Y values measured at top right.", _.topRightValue_mm) ++
+        gapSkewCsvCol("Top Left", "Y values measured at top left.", _.topLeftValue_mm) ++
+        gapSkewCsvCol("Bottom Right", "Y values measured at bottom right.", _.bottomRightValue_mm) ++
+        gapSkewCsvCol("Bottom Left", "Y values measured at bottom left.", _.bottomLeftValue_mm)
+    list
   }
 
   /**
@@ -85,8 +206,8 @@ class FooFoo {
 
     def toGosh(list: Seq[GapSkew.GapSkewHistory]): Option[GOSH] = {
       GapOffsetSkew.makeGapOffsetSkew(list.map(_.gapSkew)) match {
-        case Right(gos) => Some(GapOffsetSkewHistory(list.head.output,  gos))
-        case _ => None
+        case Right(gos) => Some(GapOffsetSkewHistory(list.head.output, gos))
+        case _          => None
       }
     }
 
@@ -106,65 +227,6 @@ class FooFoo {
 
   override protected val showDicomMetadata: Boolean = false
 
+  override protected def getSopUID2(data: GOSH): String = "" // data.head.gapSkew.SOPInstanceUIDOpen
 
-  override protected val dicom2HeaderPrefix: Option[String] = Some("Open")
-
-  override protected def getSopUID2(data: GOSH): String = data.head.gapSkew.SOPInstanceUIDOpen
-
-  private def fmtCenter(center_mm: Double) = (center_mm / 10.0).toString.trim + " cm"
-
-  def gapSkewValue(center: Double, vhs: GOSH, h: GapSkew.GapSkewHistory => Double): String = {
-    // The GapSkew entry with the correct center of AOI
-    val gapSkewOf = vhs.find(history => (history.gapSkew.leftRtplan_mm < center) && (history.gapSkew.rightRtplan_mm > center))
-    gapSkewOf match {
-      case Some(history) => h(history).toString
-      case _             => "NA"
-    }
-  }
-
-  private def colLS(center_mm: Double): CsvCol[GOSH] = {
-    val header = "R LS " + fmtCenter(center_mm)
-    val doc = "Avg CU of T3MLCSpeed for AOI centered at X = " + fmtCenter(center_mm)
-    val function = (vhs: GOSH) => gapSkewValue(center_mm, vhs, (h: GapSkew.GapSkewHistory) => h.gapSkew.doseMLC_cu)
-    CsvCol(header, doc, function)
-  }
-
-  private def colOpen(center_mm: Double): CsvCol[GOSH] = {
-    val header = "R Open " + fmtCenter(center_mm)
-    val doc = "Avg CU of T3 Open for AOI centered at X = " + fmtCenter(center_mm)
-    val function = (vhs: GOSH) => gapSkewValue(center_mm, vhs, (h: GapSkew.GapSkewHistory) => h.gapSkew.doseOpen_cu)
-    CsvCol(header, doc, function)
-  }
-
-  private def colCorr(center_mm: Double): CsvCol[GOSH] = {
-    val header = "R Corr " + fmtCenter(center_mm)
-    val doc = "100 * LS / Open for AOI centered at X = " + fmtCenter(center_mm)
-    val function = (vhs: GOSH) => gapSkewValue(center_mm, vhs, (h: GapSkew.GapSkewHistory) => h.gapSkew.doseMLC_cu * 100 / h.gapSkew.doseOpen_cu)
-    CsvCol(header, doc, function)
-  }
-
-  private def colDiff(center_mm: Double): CsvCol[GOSH] = {
-    val header = "Diff(X) " + fmtCenter(center_mm)
-    val doc = "R corr minus avg R corr for AOI centered at X = " + fmtCenter(center_mm)
-    val function = (vhs: GOSH) => gapSkewValue(center_mm, vhs, (h: GapSkew.GapSkewHistory) => h.gapSkew.diff_pct)
-    CsvCol(header, doc, function)
-  }
-
-  private def avgAbsDev(centerList_mm: Seq[Double]) = {
-    val header = "Avg of abs Diff(X)"
-    val doc = "Average of absolute deviations (Diff Abs)"
-    val function = (vhs: GOSH) => {
-      Trace.trace(vhs.size)
-      vhs.map(_.gapSkew.diff_pct.abs).sum / vhs.size
-    }
-    CsvCol(header, doc, function)
-  }
-
-  def beamList(): Seq[CsvCol[GOSH]] =
-    Seq(
-      CsvCol("Beam Name MLC", "Name of RTPLAN MLC beam.", (vm: GOSH) => vm.head.gapSkew.beamNameMLC),
-      CsvCol("Beam Name Open", "Name of RTPLAN Open beam.", (vm: GOSH) => vm.head.gapSkew.beamNameOpen)
-    )
-
-"""
 }

@@ -18,6 +18,7 @@ package org.aqa.webrun.phase2.phase2csv
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ScalaUtil.FileUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -120,13 +121,18 @@ abstract class Phase2Csv[T] extends Logging {
     */
   def makeHeader(): String = {
     val dataHeaderList = colList.map(col => Util.textToCsv(col.header)).mkString(",")
-    prefixCsv.headerText + "," + dataHeaderList + "," + machineDescriptionCsv.headerText + "," + dicomCsv.headerText() + {
+
+    val dicomHeader = if (showDicomMetadata) dicomCsv.headerText() else ""
+
+    val dicom2Header =
       if (dicom2HeaderPrefix.isEmpty)
         ""
       else {
-        "," + dicomCsv.headerText(dicom2HeaderPrefix)
+        dicomCsv.headerText(dicom2HeaderPrefix)
       }
-    }
+
+    val list = Seq(prefixCsv.headerText, dataHeaderList, machineDescriptionCsv.headerText, dicomHeader, dicom2Header).filter(_.nonEmpty)
+    list.mkString(",")
   }
 
   /**
@@ -229,6 +235,7 @@ abstract class Phase2Csv[T] extends Logging {
       }
 
       val prefixText = prefixCsv.toCsvText(getOutput(dataList(dataIndex)))
+
       val machineDescriptionText = machineDescriptionCsv.toCsvText(getOutput(dataSet))
 
       val dicomText: Option[String] = {
@@ -248,11 +255,10 @@ abstract class Phase2Csv[T] extends Logging {
       }
 
       val csvRow = {
-        val text = Seq(Some(prefixText), Some(dataText), Some(machineDescriptionText), dicomText).flatten.mkString(",")
-        if (dicomText2.isEmpty)
-          text
-        else
-          text + "," + dicomText2.get
+        val opt = Seq(dicomText, dicomText2).flatten
+        val list = Seq(prefixText, dataText, machineDescriptionText)
+        val text = (list ++ opt).mkString(",")
+        text
       }
 
       val maintenanceText: Seq[String] = {
@@ -311,11 +317,10 @@ abstract class Phase2Csv[T] extends Logging {
 
   def writeDoc(): Unit = {
     val colList = {
-      val cl = prefixCsv.colList ++ makeColList ++ machineDescriptionCsv.colList
       if (showDicomMetadata)
-        cl :+ dicomCsv.colList
+        prefixCsv.colList ++ makeColList ++ machineDescriptionCsv.colList ++ dicomCsv.colList
       else
-        cl
+        prefixCsv.colList ++ makeColList ++ machineDescriptionCsv.colList
     }
     Phase2Csv.writeDoc(colList.asInstanceOf[Seq[CsvCol[Any]]], dataName)
   }
@@ -493,6 +498,15 @@ object Phase2Csv extends Logging {
     * in the consortium CSV directory.
     */
   def writeDoc(colList: Seq[CsvCol[Any]], dataName: String): Unit = {
+    if (true) {
+      Trace.trace(colList.size)
+      val j0 = colList.head
+      Trace.trace(j0)
+      val j1 = colList(1)
+      Trace.trace(j1)
+      val t = colList.head.getClass
+      Trace.trace(t)
+    }
     val name = "Definitions for " + dataName + " CSV columns."
     val content: Elem = {
       <div class="col-md-10 col-md-offset-1 ">

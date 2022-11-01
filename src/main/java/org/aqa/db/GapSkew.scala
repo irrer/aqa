@@ -71,19 +71,19 @@ case class GapSkew(
   private val edgeTypeNameList = Seq(topLeftEdgeTypeName, topRightEdgeTypeName, bottomLeftEdgeTypeName, bottomRightEdgeTypeName).flatten
 
   /** True if there are two edges defined, false if just one. */
-  val hasTwoEdges: Boolean = edgeTypeNameList.size == 4
+  def hasTwoEdges: Boolean = edgeTypeNameList.size == 4
 
   /** True if at least one of the edges was defined by an MLC. */
-  val hasMlc: Boolean = {
+  def hasMlc: Boolean = {
     val edgeTypeList = edgeTypeNameList.map(GapSkew.EdgeType.toEdgeType)
     edgeTypeList.exists(et => !et.isJaw)
   }
 
   /** Collimator angle rounded to nearest 90 degrees.  */
-  val angleRounded: Int = Util.angleRoundedTo90(collimatorAngle_deg)
+  def angleRounded: Int = Util.angleRoundedTo90(collimatorAngle_deg)
 
   /** True if one of the edges is the MLC and the collimator is at 270 degrees. */
-  val colIs270: Boolean = hasMlc && (Util.angleRoundedTo90(collimatorAngle_deg) == 270)
+  def colIs270: Boolean = hasMlc && (Util.angleRoundedTo90(collimatorAngle_deg) == 270)
 
   /*
    * ---------------------------------------------------------------------------------------------------------
