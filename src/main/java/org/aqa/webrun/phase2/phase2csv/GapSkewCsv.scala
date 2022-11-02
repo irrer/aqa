@@ -301,5 +301,6 @@ object GapSkewCsv {
     bottomRightEdgeTypeName = Some("X2 Jaw Horz"))
   // @formatter:on
 
+  // construct a static instance of the GapOffsetSkew class that is useful for accessing names and descriptions.
   def staticGapOffsetSkew = new GapOffsetSkew(c090A, c090B, c270A, c270B, c270Jaw)
 }
