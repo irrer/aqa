@@ -68,12 +68,10 @@ abstract class VMATCsv extends Phase2Csv[Seq[VMAT.VMATHistory]] {
     * @param data Data using DICOM data.
     * @return SOP instance UID.
     */
-  override protected def getSopUID(data: VHS): Option[String] = Some(data.head.vmat.SOPInstanceUIDMLC)
 
-  override protected val dicom2HeaderPrefix: Option[String] = Some("Open")
+  override def getSopUidList(data: VHS): Seq[String] = Seq(data.head.vmat.SOPInstanceUIDMLC)
 
-  override protected def getSopUID2(data: VHS): String = data.head.vmat.SOPInstanceUIDOpen
-
+  override protected val dicomHeaderPrefixList: Seq[String] = Seq("", "Open")
   private def fmtCenter(center_mm: Double) = (center_mm / 10.0).toString.trim + " cm"
 
   def vmatValue(center: Double, vhs: VHS, h: VMAT.VMATHistory => Double): String = {

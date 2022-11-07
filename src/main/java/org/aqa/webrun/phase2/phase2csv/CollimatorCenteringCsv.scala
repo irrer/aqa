@@ -67,16 +67,8 @@ class CollimatorCenteringCsv extends Phase2Csv[CollimatorCentering.ColCentHistor
 
   override def getOutput(data: CCH): Output = data.output
 
-  /**
-    * Get the SOP of the DICOM for this data set.
-    *
-    * @param data Data using DICOM data.
-    * @return SOP instance UID.
-    */
-  override protected def getSopUID(data: CCH): Option[String] = Some(data.colCent.SOPInstanceUID270)
+  override protected def getSopUidList(data: CCH): Seq[String] = Seq(data.colCent.SOPInstanceUID090, data.colCent.SOPInstanceUID270)
 
-  override protected val dicomHeaderPrefix: Option[String] = Some("C 90")
-  override protected val dicom2HeaderPrefix: Option[String] = Some("C 270")
+  override protected val dicomHeaderPrefixList: Seq[String] = Seq("C 90", "C 270")
 
-  override protected def getSopUID2(data: CCH): String = data.colCent.SOPInstanceUID090
 }

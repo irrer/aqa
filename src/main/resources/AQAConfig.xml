@@ -758,10 +758,10 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>Open_B_Bank</BeamName>
         <BeamName>Open_X2_Jaw</BeamName>
 
-        <BeamName>ABankC270</BeamName>
         <BeamName>ABankC90</BeamName>
-        <BeamName>BBankC270</BeamName>
         <BeamName>BBankC90</BeamName>
+        <BeamName>ABankC270</BeamName>
+        <BeamName>BBankC270</BeamName>
         <BeamName>X1JawC270</BeamName>
 
         <BeamName>AOpenC90p4</BeamName>

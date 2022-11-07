@@ -76,6 +76,21 @@ object Phase2CsvMakeAll extends Logging {
   }
 
   /**
+    * Make all the CSV files in a separate thread after the given delay.
+    * @param delay_ms Wait this much time before starting.
+    */
+  def makeAllInFuture(delay_ms: Long): Unit = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    import scala.concurrent.Future
+
+    Future[Unit] {
+      Thread.sleep(delay_ms)
+      makeAll()
+    }
+
+  }
+
+  /**
     * 'main' wrapper for function.
     * @param args Not used.
     */

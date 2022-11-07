@@ -52,33 +52,47 @@ abstract class Phase2Csv[T] extends Logging {
     * @param data Data using DICOM data.
     * @return SOP instance UID.
     */
-  protected def getSopUID(data: T): Option[String]
+  protected def getSopUidList(data: T): Seq[String] = Seq()
 
   /**
-    * If true, the DICOM metadata associated with <code>getSopUID</code> will be added.
+    * Specify the prefixes for each of the sets of DICOM metadata.
     */
-  protected val showDicomMetadata: Boolean = true
+  protected val dicomHeaderPrefixList: Seq[String]
 
   /**
-    * Allow the subclass to specify the prefix for each DICOM CSV column header.
+    * If true, the DICOM metadata will be grouped by type.  For example, all of the KVP values
+    * will be listed together.  If false, each set of metadata will be listed sequentially, one set aa a time.
     */
-  protected val dicomHeaderPrefix: Option[String] = None
+  protected val groupDicomMetadata: Boolean = false
 
-  /**
-    * If there is a second DICOM file involved for the data set, then the subclass should
-    * specify the prefix for each DICOM CSV column header to distinguish it from the first set of DICOM data.
-    */
-  protected val dicom2HeaderPrefix: Option[String] = None
+  private def getDicomColList: Seq[CsvCol[AttributeList]] = {
 
-  /**
-    * Get the SOP of the second DICOM image for this data set.
-    *
-    * This is only used if <code>dicom2HeaderPrefix</code> is defined.
-    *
-    * @param data Data using DICOM data.
-    * @return Header prefix and second SOP instance UID.
-    */
-  protected def getSopUID2(data: T): String = ""
+    def rename(prefix: String) = {
+
+      def preface(text: String): String = {
+        (prefix + " " + text).trim
+      }
+
+      dicomCsv.colList.map(dc => CsvCol[AttributeList](preface(dc.header), preface(dc.description), dc.toText))
+    }
+
+    val list = dicomHeaderPrefixList.flatMap(rename)
+    list
+  }
+
+  private def makeDicomHeader: String = {
+    def rename(prefix: String): Seq[String] = {
+      dicomCsv.colList.map(c => (prefix + " " + c.header).trim)
+    }
+    val header = dicomHeaderPrefixList.flatMap(rename).mkString(",")
+    header
+  }
+
+  private def makeDicomCsvRow(dataSet: T, machine: Machine): String = {
+    val list = getSopUidList(dataSet).map(uid => getDicomText(uid, machine))
+
+    list.mkString(",")
+  }
 
   /**
     * Get the output associated with the data.
@@ -122,16 +136,7 @@ abstract class Phase2Csv[T] extends Logging {
   def makeHeader(): String = {
     val dataHeaderList = colList.map(col => Util.textToCsv(col.header)).mkString(",")
 
-    val dicomHeader = if (showDicomMetadata) dicomCsv.headerText() else ""
-
-    val dicom2Header =
-      if (dicom2HeaderPrefix.isEmpty)
-        ""
-      else {
-        dicomCsv.headerText(dicom2HeaderPrefix)
-      }
-
-    val list = Seq(prefixCsv.headerText, dataHeaderList, machineDescriptionCsv.headerText, dicomHeader, dicom2Header).filter(_.nonEmpty)
+    val list = Seq(prefixCsv.headerText, dataHeaderList, machineDescriptionCsv.headerText, makeDicomHeader).filter(_.nonEmpty)
     list.mkString(",")
   }
 
@@ -238,27 +243,11 @@ abstract class Phase2Csv[T] extends Logging {
 
       val machineDescriptionText = machineDescriptionCsv.toCsvText(getOutput(dataSet))
 
-      val dicomText: Option[String] = {
-        val sop = getSopUID(dataSet)
-        if (sop.isDefined)
-          Some(getDicomText(sop.get, machine))
-        else
-          None
-      }
-
-      val dicomText2: Option[String] = {
-        if (dicom2HeaderPrefix.isEmpty)
-          None
-        else {
-          Some(getDicomText(getSopUID2(dataSet), machine))
-        }
-      }
+      val dicomText = makeDicomCsvRow(dataSet, machine)
 
       val csvRow = {
-        val opt = Seq(dicomText, dicomText2).flatten
-        val list = Seq(prefixText, dataText, machineDescriptionText)
-        val text = (list ++ opt).mkString(",")
-        text
+        val list = Seq(prefixText, dataText, machineDescriptionText, dicomText)
+        list.filter(_.nonEmpty).mkString(",")
       }
 
       val maintenanceText: Seq[String] = {
@@ -316,12 +305,8 @@ abstract class Phase2Csv[T] extends Logging {
   }
 
   def writeDoc(): Unit = {
-    val colList = {
-      if (showDicomMetadata)
-        prefixCsv.colList ++ makeColList ++ machineDescriptionCsv.colList ++ dicomCsv.colList
-      else
-        prefixCsv.colList ++ makeColList ++ machineDescriptionCsv.colList
-    }
+    val colList = prefixCsv.colList ++ makeColList ++ machineDescriptionCsv.colList ++ getDicomColList
+
     Phase2Csv.writeDoc(colList.asInstanceOf[Seq[CsvCol[Any]]], dataName)
   }
 
@@ -451,7 +436,10 @@ object Phase2Csv extends Logging {
         <center>
           <h2>Index of CSV Files</h2>
           <em>These files are periodically generated and contain data from <span aqaalias="">{metadataCache.institutionNameMap(institutionPK)}</span>.</em>
+          <br/>
           <em>Number of data sets: {dataCount.toString}</em>
+          <br/>
+          <em><a href={Phase2CsvRestlet.pathOfRegenerate}>Click here</a> to re-generate the CSV files and bring them up to date.  This may take several minutes.</em>
         </center>
         <table class="table table-bordered" style="margin:30px;">
           <tr>

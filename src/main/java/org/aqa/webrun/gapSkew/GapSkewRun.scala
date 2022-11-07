@@ -48,13 +48,13 @@ import scala.xml.Elem
 class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[GapSkewRunReq] {
 
   /**
-   * Get the map of images to be used.  If there is more than one image that reference the same beam number, then
-   * use the latest (chronologically) one.  Choosing one image for each beam addresses the problem of ambiguity.
-   * Choosing the latest one allows the operator to fix mistakes (re-capture images).
-   * @param rtplan
-   * @param rtimageList
-   * @return
-   */
+    * Get the map of images to be used.  If there is more than one image that reference the same beam number, then
+    * use the latest (chronologically) one.  Choosing one image for each beam addresses the problem of ambiguity.
+    * Choosing the latest one allows the operator to fix mistakes (re-capture images).
+    * @param rtplan DICOM RTPLAN.
+    * @param rtimageList List of RTIMAGES.
+    * @return
+    */
   private def makeRtimageMap(rtplan: AttributeList, rtimageList: Seq[AttributeList]): Map[String, AttributeList] = {
     // sort chronologically
     val sortedRtimageList = rtimageList.sortBy(r => Util.extractDateTimeAndPatientIdFromDicomAl(r)._1.head.getTime)
@@ -174,6 +174,7 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
         }
       }
       new GapSkewHtml(extendedData, runReq, fleResultList, gapSkewList, status).makeDisplay()
+
       status
     }
 

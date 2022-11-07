@@ -210,6 +210,27 @@ case class GapSkew(
       negate(diff)
   }
 
+  /**
+    * Controls what order the beams are shown to the user.
+    * @return Number that can be used to sort them.
+    */
+  def viewOrdering: Int = {
+
+    val topIs0 = topLeftPlanned_mm.isDefined && (topLeftPlanned_mm.get.round == 0)
+    val bottomIs0 = bottomLeftPlanned_mm.isDefined && (bottomLeftPlanned_mm.get.round == 0)
+    val topIsMlc = topIs0 && topLeftEdgeTypeName.isDefined && topLeftEdgeType.isMlc
+    val bottomIsMlc = bottomIs0 && bottomLeftEdgeTypeName.isDefined && bottomLeftEdgeType.isMlc
+
+    val ordering = 0 match {
+      case _ if (angleRounded == 90) && topIsMlc                        => 1 // ABank C90
+      case _ if (angleRounded == 90) && bottomIsMlc                     => 2 // BBank C90
+      case _ if (angleRounded == 270) && bottomIsMlc                    => 3 // ABank C270
+      case _ if (angleRounded == 270) && topIsMlc                       => 4 // BBank C270
+      case _ if (angleRounded == 270) && (edgeList.count(_.isJaw) == 4) => 5 // 270 Jaw-Jaw
+      case _                                                            => 6 // Don't know what this is.  Put it last.
+    }
+    ordering
+  }
 }
 
 object GapSkew extends ProcedureOutput with Logging {

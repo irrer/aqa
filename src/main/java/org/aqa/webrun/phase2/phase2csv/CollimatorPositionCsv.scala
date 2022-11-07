@@ -51,11 +51,12 @@ class CollimatorPositionCsv extends Phase2Csv[CollimatorPosition.ColPosHistory] 
     * @return List of data for the particular machine.
     */
   override protected def getData(machinePK: Long): Seq[CP] = {
-    val cpHistory = CollimatorPosition.history(machinePK, MetadataCache.metadataCache.phase2ProcedurePK) ++  CollimatorPosition.history(machinePK, MetadataCache.metadataCache.phase3ProcedurePK)
+    val cpHistory = CollimatorPosition.history(machinePK, MetadataCache.metadataCache.phase2ProcedurePK) ++ CollimatorPosition.history(machinePK, MetadataCache.metadataCache.phase3ProcedurePK)
     cpHistory
   }
 
-  override def getSopUID(data: CP): Option[String] = Some(data.colCent.SOPInstanceUID)
+  override def getSopUidList(data: CP): Seq[String] = Seq(data.colCent.SOPInstanceUID)
 
+  override protected val dicomHeaderPrefixList: Seq[String] = Seq("")
   override def getOutput(data: CP): Output = data.output
 }

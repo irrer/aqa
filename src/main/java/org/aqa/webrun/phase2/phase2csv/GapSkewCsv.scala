@@ -72,6 +72,30 @@ class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
     Seq(csvCol)
   }
 
+  override def getSopUidList(data: GOSH): Seq[String] = {
+
+    val list = Seq(
+      data.gapOffsetSkew.col090.bankA,
+      data.gapOffsetSkew.col090.bankB,
+      data.gapOffsetSkew.col270.bankA,
+      data.gapOffsetSkew.col270.bankB,
+      data.gapOffsetSkew.jawJaw.jawPair
+    ).sortBy(_.viewOrdering).map(_.rtimageUID)
+
+    list
+  }
+
+  override protected val dicomHeaderPrefixList: Seq[String] = {
+    // @formatter:off
+    Seq(
+      "ABank C90",
+      "BBank C90",
+      "ABank C270",
+      "BBank C270",
+      "Jaw X1 C270")
+    // @formatter:on
+  }
+
   /**
     * Given a field within a <code>ColAngle</code>, make a pair of column, one for
     * each of the 90 and 270 degree MLC angles.
@@ -81,7 +105,7 @@ class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
   private def gapSkewCsvCol(name: String, description: String, field: GapSkew => Option[Double]): Seq[CsvCol[GOSH]] = {
 
     val C090A = CsvCol(
-      "C90 A " + name,
+      "ABank C90 " + name,
       "Collimator 90 Bank A " + description,
       (gosh: GOSH) =>
         field(gosh.gapOffsetSkew.col090.bankA) match {
@@ -91,7 +115,7 @@ class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
     )
 
     val C090B = CsvCol(
-      "C90 B " + name,
+      "BBank C90 " + name,
       "Collimator 90 Bank B " + description,
       (gosh: GOSH) =>
         field(gosh.gapOffsetSkew.col090.bankB) match {
@@ -101,7 +125,7 @@ class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
     )
 
     val C270A = CsvCol(
-      "C270 A " + name,
+      "ABank C270 " + name,
       "Collimator 270 Bank A " + description,
       (gosh: GOSH) =>
         field(gosh.gapOffsetSkew.col270.bankA) match {
@@ -111,7 +135,7 @@ class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
     )
 
     val C270B = CsvCol(
-      "C270 B " + name,
+      "BBank C270 " + name,
       "Collimator 270 Bank B " + description,
       (gosh: GOSH) =>
         field(gosh.gapOffsetSkew.col270.bankB) match {
@@ -121,8 +145,8 @@ class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
     )
 
     val J270 = CsvCol(
-      "J270 " + name,
-      "Jaw 270 " + description,
+      "X1Jaw C270 " + name,
+      "Jaw 270 X1" + description,
       (gosh: GOSH) =>
         field(gosh.gapOffsetSkew.jawJaw.jawPair) match {
           case Some(d) => d.toString
@@ -218,18 +242,6 @@ class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
   }
 
   override def getOutput(data: GOSH): Output = data.output
-
-  /**
-    * Get the SOP of the DICOM for this data set.
-    *
-    * @param data Data using DICOM data.
-    * @return SOP instance UID.
-    */
-  override protected def getSopUID(data: GOSH): Option[String] = None
-
-  override protected val showDicomMetadata: Boolean = false
-
-  override protected def getSopUID2(data: GOSH): String = "" // data.head.gapSkew.SOPInstanceUIDOpen
 
 }
 

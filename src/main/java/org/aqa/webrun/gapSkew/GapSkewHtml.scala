@@ -38,8 +38,6 @@ object GapSkewHtml {}
 
 class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq: Seq[LeafSet], gapSkewList: Seq[GapSkew], procedureStatus: ProcedureStatus.Value) extends Logging {
 
-  private def beamNameOf(leafSet: LeafSet): String = Phase2Util.getBeamNameOfRtimage(runReq.rtplan, leafSet.attributeList).get
-
   private val rtplanHtml = DicomHtml(extendedData, "RTPLAN")
 
   private def rtplanUrl = rtplanHtml.htmlUrl
@@ -315,7 +313,8 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
   }
 
   val leafSetHtmlList: Seq[Either[Elem, GapSkewDetailHtml]] = leafSetSeq
-    .sortBy(beamNameOf)
+    .filter(_.gapSkew.isRight)
+    .sortBy(_.gapSkew.right.get.viewOrdering)
     .map(leafSet => {
       if (leafSet.gapSkew.isLeft)
         Left(abortHtml(leafSet.gapSkew.left.get, leafSet.attributeList, leafSet.image))
