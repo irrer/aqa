@@ -22,6 +22,7 @@ import org.aqa.db.DbSetup
 import org.aqa.db.DicomSeries
 import org.aqa.db.Machine
 import org.aqa.db.Output
+import org.aqa.db.Procedure
 
 case class DicomInstance(SOPInstanceUID: String) {}
 
@@ -80,9 +81,11 @@ class PopulateDicomCsv extends Phase2Csv[DicomInstance] with Logging {
       def populate(m: Machine): Unit = {
         val seriesList = DicomSeries.getByMachine(m.machinePK.get)
 
+        val procedureList = Seq(Procedure.ProcOfGapSkew, Procedure.ProcOfPhase2, Procedure.ProcOfPhase3).flatten.map(_.procedurePK.get)
+
         def doSeries(series: DicomSeries): Unit = {
           try {
-            if (series.modality.equals("RTIMAGE")) {
+            if (series.modality.equals("RTIMAGE") && series.procedurePK.isDefined && procedureList.contains(series.procedurePK.get)) {
               val di = series.sopInstanceUIDList.split(" ").filter(_.nonEmpty).map(DicomInstance).head
               populateDicomCsv.getDicomText(di.SOPInstanceUID, m)
             } else
