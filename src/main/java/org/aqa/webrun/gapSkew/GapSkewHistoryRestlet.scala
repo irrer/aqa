@@ -17,6 +17,7 @@
 package org.aqa.webrun.gapSkew
 
 import org.aqa.Logging
+import org.aqa.db.Machine
 import org.aqa.web.WebUtil._
 import org.restlet.Request
 import org.restlet.Response
@@ -32,9 +33,14 @@ object GapSkewHistoryRestlet {
 
   private val outputPKTag = "outputPK"
   private val beamNameTag = "beamName"
+  private val machinePKTag = "machinePK"
 
   def scriptReference(beamName: String, outputPK: Long): String = {
     s"""<script src='$path?$outputPKTag=$outputPK&$beamNameTag=$beamName'></script>"""
+  }
+
+  def combinedScriptReference(outputPK: Long, machinePK: Long): String = {
+    s"""<script src='$path?$outputPKTag=$outputPK&$machinePKTag=$machinePK'></script>"""
   }
 }
 
@@ -44,11 +50,24 @@ class GapSkewHistoryRestlet extends Restlet with SubUrlRoot with Logging {
     try {
       super.handle(request, response)
       val valueMap = getValueMap(request)
-      val outputPK = valueMap(GapSkewHistoryRestlet.outputPKTag).toInt
-      val beamName = valueMap(GapSkewHistoryRestlet.beamNameTag).replaceAll("%20", " ")
-      val js = new GapSkewHistoryChart(outputPK, beamName).javascript
-      response.setStatus(Status.SUCCESS_OK)
-      response.setEntity(js, MediaType.APPLICATION_JAVASCRIPT)
+
+      if (valueMap.contains(GapSkewHistoryRestlet.beamNameTag)) {
+        val outputPK = valueMap(GapSkewHistoryRestlet.outputPKTag).toInt
+        val beamName = valueMap(GapSkewHistoryRestlet.beamNameTag).replaceAll("%20", " ")
+        val js = new GapSkewHistoryChart(outputPK, beamName).javascript
+        response.setStatus(Status.SUCCESS_OK)
+        response.setEntity(js, MediaType.APPLICATION_JAVASCRIPT)
+      }
+
+      if (valueMap.contains(GapSkewHistoryRestlet.machinePKTag)) {
+        val machinePK = valueMap(GapSkewHistoryRestlet.machinePKTag).toInt
+        val outputPK = valueMap(GapSkewHistoryRestlet.outputPKTag).toInt
+        val machine = Machine.get(machinePK).get
+        val combinedChart = new GapSkewHistoryCombinedChart(outputPK, machine)
+        response.setStatus(Status.SUCCESS_OK)
+        response.setEntity(combinedChart.javascript, MediaType.APPLICATION_JAVASCRIPT)
+      }
+
     } catch {
       case t: Throwable =>
         internalFailure(response, t)

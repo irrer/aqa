@@ -40,7 +40,7 @@ case class GosValue(v: Double, name: String, group: String, description: String,
     this(v, name, group, description, derivation, references, "mm")
   }
 
-  val fullName = (group + " " + name).trim
+  val fullName: String = (group + " " + name).trim
 
 }
 
@@ -202,7 +202,7 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
     val v = if (bTop) bankB.topHorzSkew_mmPer40cm else bankB.bottomHorzSkew_mmPer40cm
     GosValue(
       v.get,
-      name = "Bank B Skew / 40cm",
+      name = "Bank B Skew",
       group,
       description = s"(${bRightLeftDiff.name} / ${separation.name}) * 40",
       derivation = s"$v = (${bRightLeftDiff.v} / ${separation.v}) * 40",

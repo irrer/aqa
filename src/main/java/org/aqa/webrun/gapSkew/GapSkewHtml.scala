@@ -332,6 +332,16 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
       "\n</script>"
   }
 
+  private def historyChart(): Elem = {
+    <div>
+      <p> </p>
+      <div style="border:solid grey 1px;">
+        <center><h3>History</h3></center>
+        <div id="GapOffsetSkew">GapSkewHistoryCombinedChart</div>
+      </div>
+    </div>
+  }
+
   private def content: Elem = {
 
     val list = leafSetHtmlList.map(l => {
@@ -345,13 +355,15 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
       <div class="col-md-8 col-md-offset-2" style="border:solid #bbbbbb 1px; padding: 12px; margin-bottom:500px;">
         {generalReference()}
         {gapAndOffset()}
+        {historyChart()}
         {list}
       </div>
     </div>
   }
 
   def makeDisplay(): Unit = {
-    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), "Leaf Gap and Skew", refresh = None, runScript = Some(makeZoomScript))
+    val runScript = makeZoomScript + "\n" + GapSkewHistoryRestlet.combinedScriptReference(extendedData.output.outputPK.get, extendedData.machine.machinePK.get)
+    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), "Leaf Gap and Skew", refresh = None, c3 = true, runScript = Some(runScript))
     //val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), "Leaf Gap and Skew", refresh = None)
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeBinaryFile(file, text.getBytes)
