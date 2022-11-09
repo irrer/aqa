@@ -63,7 +63,7 @@ object Db extends Logging {
     d
   }
 
-  import Db.driver.api._
+  import org.aqa.db.Db.driver.api._
 
   /**
     * Default timeout for general database overhead operations.  This includes operations like
@@ -125,43 +125,49 @@ object Db extends Logging {
 
   private def tableName(table: TableQuery[Table[_]]): String = table.shaped.value.tableName
 
-  def run[R](op: DBIOAction[R, NoStream, Nothing]): R = {
+  private val dbSync = "Synchronize the database 4329832097432095743250743287325987687698769876"
 
-    /** A database operation that takes longer than this (in ms) is considered to have taken a very long time. */
-    val veryLongTime_ms = 5 * 1000
-    try {
-      val start = System.currentTimeMillis()
-      val dbAction = db.run(op)
-      val elapsed = System.currentTimeMillis() - start
-      if (elapsed > veryLongTime_ms) {
-        val stackText = Thread.currentThread.getStackTrace.tail
-          .map(_.toString)
-          .filterNot(_.contains("scala.collection")) // filter out stuff we don't care about
-          .filterNot(_.contains("org.restlet")) // filter out stuff we don't care about
-          .take(10)
-          .map(se => "    " + se)
-          .mkString("\n")
-        logger.info("Database operation took the very long time of " + Util.elapsedTimeHumanFriendly(elapsed) + " when called from\n" + stackText)
+  def run[R](op: DBIOAction[R, NoStream, Nothing]): R =
+    dbSync.synchronized {
+
+      /** A database operation that takes longer than this (in ms) is considered to have taken a very long time. */
+      val veryLongTime_ms = 5 * 1000
+      try {
+        val start = System.currentTimeMillis()
+        val dbAction = db.run(op)
+        val result = Await.result(dbAction, TIMEOUT)
+        val elapsed = System.currentTimeMillis() - start
+        if (elapsed > veryLongTime_ms) {
+          val stackText = Thread.currentThread.getStackTrace.tail
+            .map(_.toString)
+            .filterNot(_.contains("scala.collection")) // filter out stuff we don't care about
+            .filterNot(_.contains("org.restlet")) // filter out stuff we don't care about
+            .take(10)
+            .map(se => "    " + se)
+            .mkString("\n")
+          logger.info("Database operation took the very long time of " + Util.elapsedTimeHumanFriendly(elapsed) + " when called from\n" + stackText)
+        }
+
+        logger.info("Database elapsed time: " + Util.elapsedTimeHumanFriendly(elapsed) + "    op: " + op.toString)
+
+        dbAction.onComplete {
+          case Failure(ex) =>
+            val stackTrace = fmtEx(new RuntimeException("Db.run stack trace"))
+            logger.warn("Error from database: " + fmtEx(ex) + "\nAQA source stack trace:" + stackTrace)
+            throw ex
+          case Success(_) =>
+        }
+        result
+      } catch {
+        case ex: Throwable =>
+          val stackTrace = fmtEx(new RuntimeException("Db.run stack trace from Slick internal error"))
+          val msg = "Error from Slick: " + fmtEx(ex) + "\nAQA source stack trace:" + stackTrace
+          logger.warn(msg)
+          throw new RuntimeException(msg)
+
       }
-      val result = Await.result(dbAction, TIMEOUT)
-      dbAction.onComplete {
-        case Failure(ex) =>
-          val stackTrace = fmtEx(new RuntimeException("Db.run stack trace"))
-          logger.warn("Error from database: " + fmtEx(ex) + "\nAQA source stack trace:" + stackTrace)
-          throw ex
-        case Success(_) =>
-      }
-      result
-    } catch {
-      case ex: Throwable =>
-        val stackTrace = fmtEx(new RuntimeException("Db.run stack trace from Slick internal error"))
-        val msg = "Error from Slick: " + fmtEx(ex) + "\nAQA source stack trace:" + stackTrace
-        logger.warn(msg)
-        throw new RuntimeException(msg)
 
     }
-
-  }
 
   def perform(dbOperation: driver.ProfileAction[Unit, NoStream, Effect.Schema]): Unit = {
     dbOperation.statements.foreach { s => logger.info("Executing database statement: " + s) }
