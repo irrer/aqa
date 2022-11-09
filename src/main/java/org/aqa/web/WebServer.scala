@@ -18,7 +18,6 @@ package org.aqa.web
 
 import edu.umro.RestletUtil.NetworkIpFilter
 import edu.umro.RestletUtil.RestletHttps
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.CachedUser
@@ -351,9 +350,12 @@ class WebServer extends Application with Logging {
 
         httpActiveRequests.acquire()
         val inUseCount = maxHttpActiveCount - httpActiveRequests.availablePermits()
-        maxAttainedHttpActiveCount = Math.max(inUseCount, maxAttainedHttpActiveCount)
 
-        Trace.trace("Starting HTTP operation.   inUseCount: " + inUseCount + "    Maximum number of simultaneous HTTP connections since server was started: " + maxAttainedHttpActiveCount)
+        // show usage if it is large-ish.
+        if ((inUseCount > maxAttainedHttpActiveCount) || (inUseCount > 2)) {
+          maxAttainedHttpActiveCount = inUseCount
+          logger.info("Starting HTTP operation.   inUseCount: " + inUseCount + "    Maximum number of simultaneous HTTP connections since server was started: " + maxAttainedHttpActiveCount)
+        }
 
         // If there are no credentials, then let the authenticator decide whether to
         // accept or reject the request.  If rejected (not publik), then it will
@@ -372,8 +374,8 @@ class WebServer extends Application with Logging {
       override def afterHandle(request: Request, response: Response): Unit = {
         super.afterHandle(request, response)
         httpActiveRequests.release()
-        val inUseCount = maxHttpActiveCount - httpActiveRequests.availablePermits()
-        Trace.trace("Finished HTTP operation.     inUseCount: " + inUseCount)
+        // val inUseCount = maxHttpActiveCount - httpActiveRequests.availablePermits()
+        // Trace.trace("Finished HTTP operation.     inUseCount: " + inUseCount)
       }
     }
 
