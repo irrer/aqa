@@ -372,7 +372,7 @@ object Config extends Logging {
   val LdapUrl: Option[String] = getLdapUrl
 
   val RestletMinThreads: Int = logMainText("RestletMinThreads", "5").toInt
-  val RestletMaxThreads: Int = logMainText("RestletMaxThreads", "50").toInt
+  val RestletMaxThreads: Int = logMainText("RestletMaxThreads", "20").toInt
   val MonitorThreadCountInterval_sec: Double = logMainText("MonitorThreadCountInterval_sec", "0.0").toDouble
   val MonitorThreadCountInterval_ms: Long = (MonitorThreadCountInterval_sec * 1000).round
 
