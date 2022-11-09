@@ -148,7 +148,8 @@ object Db extends Logging {
           logger.info("Database operation took the very long time of " + Util.elapsedTimeHumanFriendly(elapsed_ms) + " when called from\n" + stackText)
         }
 
-        logger.info("Database elapsed time: " + Util.elapsedTimeHumanFriendly(elapsed_ms) + "    op: " + op.toString)
+        if (elapsed_ms >= 100)
+          logger.info("Database elapsed time: " + Util.elapsedTimeHumanFriendly(elapsed_ms) + "    op: " + op.toString)
 
         dbAction.onComplete {
           case Failure(ex) =>
