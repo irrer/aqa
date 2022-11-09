@@ -136,8 +136,8 @@ object Db extends Logging {
         val start = System.currentTimeMillis()
         val dbAction = db.run(op)
         val result = Await.result(dbAction, TIMEOUT)
-        val elapsed = System.currentTimeMillis() - start
-        if (elapsed > veryLongTime_ms) {
+        val elapsed_ms = System.currentTimeMillis() - start
+        if (elapsed_ms > veryLongTime_ms) {
           val stackText = Thread.currentThread.getStackTrace.tail
             .map(_.toString)
             .filterNot(_.contains("scala.collection")) // filter out stuff we don't care about
@@ -145,10 +145,10 @@ object Db extends Logging {
             .take(10)
             .map(se => "    " + se)
             .mkString("\n")
-          logger.info("Database operation took the very long time of " + Util.elapsedTimeHumanFriendly(elapsed) + " when called from\n" + stackText)
+          logger.info("Database operation took the very long time of " + Util.elapsedTimeHumanFriendly(elapsed_ms) + " when called from\n" + stackText)
         }
 
-        logger.info("Database elapsed time: " + Util.elapsedTimeHumanFriendly(elapsed) + "    op: " + op.toString)
+        logger.info("Database elapsed time: " + Util.elapsedTimeHumanFriendly(elapsed_ms) + "    op: " + op.toString)
 
         dbAction.onComplete {
           case Failure(ex) =>
