@@ -13,6 +13,25 @@ object ThreadMonitor extends Logging {
   /** Previous number of threads. */
   private var threadCount = 0
 
+  private def show(ti: ThreadInfo): String = {
+    val stackText = ti.getStackTrace.mkString("\n    : : ")
+
+    def has(pattern: String): String = {
+      "    " + pattern + ": " + { if (stackText.contains(pattern)) "1" else "0" }
+    }
+
+    val text = "---------------------------------------------------------------\n" +
+      "ThreadId: " + ti.getThreadId +
+      "    state: " + ti.getThreadState +
+      has("org.aqa") +
+      has("slick") +
+      has("restlet") +
+      "\n    " + stackText
+    text
+  }
+
+  private val prefix = "::::" // add :::: so that it is obvious in the log.
+
   /**
     * Log information on any new threads.
     *
@@ -21,7 +40,9 @@ object ThreadMonitor extends Logging {
     */
   def logNewThreads(): Unit = {
     val threadBean = ManagementFactory.getThreadMXBean
-    val threadIdList = threadBean.getAllThreadIds
+
+    val threadIdList = threadBean.getAllThreadIds.sorted
+
     val threadInfoList = {
       val til =
         if ((!threadBean.isObjectMonitorUsageSupported) || (!threadBean.isSynchronizerUsageSupported))
@@ -36,24 +57,7 @@ object ThreadMonitor extends Logging {
 
     newIdList.foreach(threadIdSet.add)
 
-    val prefix = "::::" // add :::: so that it is obvious in the log.
-
-    def show(ti: ThreadInfo): String = {
-      val stackText = ti.getStackTrace.mkString("\n    : : ")
-
-      def has(pattern: String): String = {
-        "    " + pattern + ": " + { if (stackText.contains(pattern)) "1" else "0" }
-      }
-
-      val text = "---------------------------------------------------------------\n" +
-        "ThreadId: " + ti.getThreadId +
-        "    state: " + ti.getThreadState +
-        has("org.aqa") +
-        has("slick") +
-        has("restlet") +
-        "\n    " + stackText
-      text
-    }
+    Trace.trace(prefix + " Active thread ID list: " + threadIdList.sorted.mkString("  "))
 
     if (threadInfoList.nonEmpty)
       Trace.trace(threadInfoList.sortBy(_.getThreadId).map(show).mkString("\n\n").replaceAllLiterally("\n", "\n" + prefix + " "))
