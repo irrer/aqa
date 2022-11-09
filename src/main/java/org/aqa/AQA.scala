@@ -45,7 +45,11 @@ object AQA extends Logging {
         DbSetup.smokeTest
         // Run.handleRunningProcedureList
         RunProcedure.cleanupRunningProcedures()
+
         new WebServer
+
+        // val webServer = new WebServer
+        // monitorShutDownHttp(webServer)
 
         if (Config.MonitorThreadCountInterval_ms > 0) ThreadMonitor.monitorThreads(Config.MonitorThreadCountInterval_ms)
 
@@ -89,5 +93,53 @@ object AQA extends Logging {
     }
     new InitiateServiceRestart
   }
+
+  // ---------------------------------------------------------------------------------------------------------------------
+
+  /**
+    * Shut down Restlet HTTP server when file is changed.
+    *
+    * This is a diagnostic/debugging tool used to determine the effects on resources (compute mostly) of
+    * shutting down the Restlet code.
+    *
+    * THIS SHOULD NEVER BE USED IN PRODUCTION!
+    *
+    * Param webServer Shut down this web server.
+    */
+
+  /*
+  private def monitorShutDownHttp(webServer: WebServer): Unit = {
+
+    import edu.umro.ScalaUtil.Trace
+
+    import java.io.File
+
+    class LookForCommand extends Runnable {
+      private val file = new File("httpShutdown")
+
+      private var oldContent = "change this file to restart the web service\n"
+      override def run(): Unit = {
+        while (true) {
+          Thread.sleep(1000)
+
+          val content = Util.readTextFile(file).right.get
+          if (!content.equals(oldContent)) {
+            Trace.trace("Restarting WebServer")
+            webServer.shutdown()
+            Trace.trace("Restarted WebServer")
+          }
+          oldContent = content
+        }
+      }
+
+      Util.writeFile(file, oldContent)
+      new Thread(this).start()
+    }
+
+    new LookForCommand
+  }
+   */
+
+  // ---------------------------------------------------------------------------------------------------------------------
 
 }

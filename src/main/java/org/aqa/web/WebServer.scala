@@ -18,13 +18,14 @@ package org.aqa.web
 
 import edu.umro.RestletUtil.NetworkIpFilter
 import edu.umro.RestletUtil.RestletHttps
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
-import org.aqa.simpleRtPlan.SimpleRtPlanInterface
 import org.aqa.db.CachedUser
 import org.aqa.db.Input
 import org.aqa.db.Output
 import org.aqa.db.UserRole
+import org.aqa.simpleRtPlan.SimpleRtPlanInterface
 import org.aqa.webrun.WebRun
 import org.aqa.webrun.bbByCBCT.BBbyCBCTChartHistoryRestlet
 import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryPartialRestlet
@@ -190,7 +191,7 @@ class WebServer extends Application with Logging {
         Output.getByDirectory(fileNameSuffix(outputDir)) match {
           case Some(output) =>
             Output.getFilesFromDatabase(output.outputPK.get, outputDir.getParentFile)
-            logger.info("Restored ouput directory from database: " + outputDir.getAbsolutePath)
+            logger.info("Restored output directory from database: " + outputDir.getAbsolutePath)
           case _ =>
         }
 
@@ -304,10 +305,16 @@ class WebServer extends Application with Logging {
     role
   }
 
+  private val maxHttpActiveCount = 1000000
+  private val httpActiveRequests = new java.util.concurrent.Semaphore(maxHttpActiveCount)
+  // maximum number of simultaneous HTTP connections.
+  private var maxAttainedHttpActiveCount = -1
+
   private def initAuthentication(restlet: Restlet): Restlet = {
-    val challAuthn = new ChallengeAuthenticator(getContext.createChildContext, ChallengeScheme.HTTP_BASIC, Config.PasswordPrompt) // TODO remove when we figure out how to make a real login page
-    challAuthn.setVerifier(new AuthenticationVerifier(getRequestedRole))
-    challAuthn.setNext(restlet)
+    val challengeAuthentication =
+      new ChallengeAuthenticator(getContext.createChildContext, ChallengeScheme.HTTP_BASIC, Config.PasswordPrompt) // TODO remove when we figure out how to make a real login page
+    challengeAuthentication.setVerifier(new AuthenticationVerifier(getRequestedRole))
+    challengeAuthentication.setNext(restlet)
 
     def checkAuthorization(request: Request, response: Response, challResp: ChallengeResponse): Unit = {
       try {
@@ -334,13 +341,20 @@ class WebServer extends Application with Logging {
         }
       } catch {
         case t: Throwable =>
-          logger.warn("Unexpected exception during authentical.  Can not identify user from request: " + request.toString + " :\n" + fmtEx(t))
+          logger.warn("Unexpected exception during authentication.  Can not identify user from request: " + request.toString + " :\n" + fmtEx(t))
           response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
       }
     }
 
     class RedirectUnauthorizedToLogin extends Filter {
       override def beforeHandle(request: Request, response: Response): Int = {
+
+        httpActiveRequests.acquire()
+        val inUseCount = maxHttpActiveCount - httpActiveRequests.availablePermits()
+        maxAttainedHttpActiveCount = Math.max(inUseCount, maxAttainedHttpActiveCount)
+
+        Trace.trace("Starting HTTP operation.   inUseCount: " + inUseCount + "    Maximum number of simultaneous HTTP connections since server was started: " + maxAttainedHttpActiveCount)
+
         // If there are no credentials, then let the authenticator decide whether to
         // accept or reject the request.  If rejected (not publik), then it will
         // send a challenge request to the client.
@@ -354,15 +368,22 @@ class WebServer extends Application with Logging {
               Filter.SKIP
         }
       }
+
+      override def afterHandle(request: Request, response: Response): Unit = {
+        super.afterHandle(request, response)
+        httpActiveRequests.release()
+        val inUseCount = maxHttpActiveCount - httpActiveRequests.availablePermits()
+        Trace.trace("Finished HTTP operation.     inUseCount: " + inUseCount)
+      }
     }
 
-    val rutl = new RedirectUnauthorizedToLogin
-    rutl.setNext(challAuthn)
+    val ru = new RedirectUnauthorizedToLogin
+    ru.setNext(challengeAuthentication)
     if (Config.AllowedHttpIpList.isEmpty)
-      rutl
+      ru
     else {
       val networkIpFilter = new NetworkIpFilter(getContext, Config.AllowedHttpIpList)
-      networkIpFilter.setNext(rutl)
+      networkIpFilter.setNext(ru)
       networkIpFilter
     }
   }
@@ -586,6 +607,7 @@ class WebServer extends Application with Logging {
       val parameters = serverList.get(i).getContext.getParameters
       parameters.add("maxThreads", Config.RestletMaxThreads.toString)
       parameters.add("minThreads", Config.RestletMinThreads.toString)
+      logger.info("set min and max threads: " + Config.RestletMinThreads.toString + " - " + Config.RestletMaxThreads.toString)
     })
   }
 
@@ -603,6 +625,25 @@ class WebServer extends Application with Logging {
     waitForWebServiceToStart()
     logger.info("Started web service.   Restlets that failed to be constructed: " + forceConstruction)
   }
+
+  /**
+    * Shut down the Restlet HTTP server.  This is only for testing/diagnostics.  See the <code>AQA.scala</code> for usage.
+    */
+  /*
+  def shutdown(): Unit = {
+    val serverList = component.getServers
+    (0 until serverList.size()).foreach(i => {
+
+      val server = serverList.get(i)
+      server.stop()
+    })
+
+    Thread.sleep(5 * 1000)
+
+    // This was an attempt to restart the HTTP server, but it did not work
+    // init()
+  }
+   */
 
   init()
 }
