@@ -1,6 +1,8 @@
 <component name="ProjectCodeStyleConfiguration">
   <code_scheme name="Project" version="173">
     <ScalaCodeStyleSettings>
+      <option name="addImportsRelativeToBasePackage" value="false" />
+      <option name="classCountToUseImportOnDemand" value="10" />
       <option name="collectImports" value="false" />
       <option name="doNotChangeLocalImportsOnOptimize" value="false" />
       <option name="sortAsScalastyle" value="true" />

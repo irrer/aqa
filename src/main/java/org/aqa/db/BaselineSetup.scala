@@ -17,8 +17,8 @@
 package org.aqa.db
 
 /**
- * How the baseline was created.
- */
+  * How the baseline was created.
+  */
 object BaselineSetup extends Enumeration {
 
   /** When a baseline value is needed, but none has been established, a procedure may default to the values from the given data set.*/
@@ -28,8 +28,8 @@ object BaselineSetup extends Enumeration {
   val chosen = Value
 
   /**
-   * Given a string get the corresponding <code>BaselineSetup</code>.
-   */
+    * Given a string get the corresponding <code>BaselineSetup</code>.
+    */
   def stringToBaselineSetup(name: String): Option[BaselineSetup.Value] = {
     val matches = BaselineSetup.values.filter(s => name.equalsIgnoreCase(s.toString)).toList
     if (matches.isEmpty) None else Some(matches.head)

@@ -16,19 +16,19 @@
 
 package org.aqa.db
 
-import Db.driver.api._
+import org.aqa.db.Db.driver.api._
 import org.aqa.Config
-import org.aqa.Util
-import java.io.File
-import scala.xml.XML
-import scala.xml.Node
-import scala.xml.Elem
 import org.aqa.procedures.ProcedureOutput
 
+import java.io.File
+import scala.xml.Elem
+import scala.xml.Node
+import scala.xml.XML
+
 case class EPIDCenterCorrection(
-  epidCenterCorrectionPK: Option[Long], // primary key
-  outputPK: Long, // output primary key
-  epidCenterCorrection_mm: Double // distance in mm required to correct image to center
+    epidCenterCorrectionPK: Option[Long], // primary key
+    outputPK: Long, // output primary key
+    epidCenterCorrection_mm: Double // distance in mm required to correct image to center
 ) {
 
   def insert: EPIDCenterCorrection = {
@@ -52,10 +52,7 @@ object EPIDCenterCorrection extends ProcedureOutput {
     def outputPK = column[Long]("outputPK")
     def epidCenterCorrection_mm = column[Double]("epidCenterCorrection_mm")
 
-    def * = (
-      epidCenterCorrectionPK.?,
-      outputPK,
-      epidCenterCorrection_mm) <> ((EPIDCenterCorrection.apply _)tupled, EPIDCenterCorrection.unapply _)
+    def * = (epidCenterCorrectionPK.?, outputPK, epidCenterCorrection_mm) <> ((EPIDCenterCorrection.apply _) tupled, EPIDCenterCorrection.unapply _)
 
     def outputFK = foreignKey("EPIDCenterCorrection_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -73,8 +70,8 @@ object EPIDCenterCorrection extends ProcedureOutput {
   }
 
   /**
-   * Get a list of all epidCenterCorrections for the given output
-   */
+    * Get a list of all epidCenterCorrections for the given output
+    */
   def getByOutput(outputPK: Long): Seq[EPIDCenterCorrection] = {
     val action = for {
       inst <- EPIDCenterCorrection.query if inst.outputPK === outputPK
@@ -103,7 +100,7 @@ object EPIDCenterCorrection extends ProcedureOutput {
 
     (elem \ topXmlLabel).headOption match {
       case Some(node) => Seq(nodeToEPIDCenterCorrection(node))
-      case None => Seq[EPIDCenterCorrection]()
+      case None       => Seq[EPIDCenterCorrection]()
     }
   }
 
@@ -119,8 +116,12 @@ object EPIDCenterCorrection extends ProcedureOutput {
     DbSetup.init
     val elem = XML.loadFile(new File("""D:\tmp\aqa\LOC.xml"""))
     val xmlList = xmlToList(elem, 90)
-    xmlList.map(loc => println("    outputPK: " + loc.outputPK +
-      "     epidCenterCorrection_mm: " + loc.epidCenterCorrection_mm))
+    xmlList.map(loc =>
+      println(
+        "    outputPK: " + loc.outputPK +
+          "     epidCenterCorrection_mm: " + loc.epidCenterCorrection_mm
+      )
+    )
     xmlList.map(loc => loc.insertOrUpdate)
     println("EPIDCenterCorrection.main done")
     //println("======== inst: " + get(5))

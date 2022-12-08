@@ -16,26 +16,22 @@
 
 package org.aqa.db
 
-import Db.driver.api._
-import org.aqa.Config
-import org.aqa.Util
-import java.io.File
-import scala.xml.XML
-import scala.xml.Node
-import scala.xml.Elem
+import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
 
+import scala.xml.Elem
+
 /**
- * Describe a bad pixel found in a DICOM image.
- */
+  * Describe a bad pixel found in a DICOM image.
+  */
 case class BadPixel(
-  badPixelPK: Option[Long], // primary key
-  outputPK: Long, // output primary key
-  x: Int, // X coordinate
-  y: Int, // Y coordinate
-  SOPInstanceUID: String, // UID of DICOM image
-  imageName: String, // name of image.  If applicable the beam name is used.
-  pixelValues_csv: String // square array of integer pixel values in CSV (comma separated values) format with bad pixel in the center. Pixels that are beyond the edge of the image are marked as 'NA'
+    badPixelPK: Option[Long], // primary key
+    outputPK: Long, // output primary key
+    x: Int, // X coordinate
+    y: Int, // Y coordinate
+    SOPInstanceUID: String, // UID of DICOM image
+    imageName: String, // name of image.  If applicable the beam name is used.
+    pixelValues_csv: String // square array of integer pixel values in CSV (comma separated values) format with bad pixel in the center. Pixels that are beyond the edge of the image are marked as 'NA'
 ) {
 
   def insert: BadPixel = {
@@ -71,23 +67,16 @@ object BadPixel extends ProcedureOutput {
     def imageName = column[String]("imageName")
     def pixelValues_csv = column[String]("pixelValues_csv")
 
-    def * = (
-      badPixelPK.?,
-      outputPK,
-      x,
-      y,
-      SOPInstanceUID,
-      imageName,
-      pixelValues_csv) <> ((BadPixel.apply _)tupled, BadPixel.unapply _)
+    def * = (badPixelPK.?, outputPK, x, y, SOPInstanceUID, imageName, pixelValues_csv) <> ((BadPixel.apply _) tupled, BadPixel.unapply _)
 
     def outputFK = foreignKey("BadPixel_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   /**
-   * Size of region around bad pixel reported for comparison. Should be a small positive integer.
-   * For example: A value of n equal 2 results in (n*2+1 = 5) would mean that a 5x5 region would
-   * be put in the CSV with the bad pixel at the center.
-   */
+    * Size of region around bad pixel reported for comparison. Should be a small positive integer.
+    * For example: A value of n equal 2 results in (n*2+1 = 5) would mean that a 5x5 region would
+    * be put in the CSV with the bad pixel at the center.
+    */
   val radius = 2
 
   val query = TableQuery[BadPixelTable]
@@ -102,8 +91,8 @@ object BadPixel extends ProcedureOutput {
   }
 
   /**
-   * Get a list of all rows for the given output
-   */
+    * Get a list of all rows for the given output
+    */
   def getByOutput(outputPK: Long): Seq[BadPixel] = {
     val action = for {
       inst <- BadPixel.query if inst.outputPK === outputPK

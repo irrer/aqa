@@ -16,28 +16,28 @@
 
 package org.aqa.db
 
-import Db.driver.api._
-import org.aqa.Logging
-import org.aqa.Config
-
-import java.sql.Timestamp
-import java.io.File
-import org.aqa.web.WebServer
 import edu.umro.ScalaUtil.FileUtil
-
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-import edu.umro.ScalaUtil.Trace
+import org.aqa.db.Db.driver.api._
+import org.aqa.Config
+import org.aqa.Logging
+import org.aqa.web.WebServer
 import org.aqa.Util
 
+import java.io.File
+import java.sql.Timestamp
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
 case class Input(
-  inputPK: Option[Long], // primary key
-  directory: Option[String], // main directory where procedure related data is stored.  Contains input and 0 or more output directories.  Is relative to configuration value for <code>Config.DataDir</code>.
-  uploadDate: Timestamp, // when data was loaded into this system
-  userPK: Option[Long], // user that ran the procedure
-  machinePK: Option[Long], // procedure was run on this machine.  Machine is optional to support procedures that do not correlate to a single machine.
-  patientId: Option[String], // patient ID if applicable.  Often derived from associated DICOM files
-  dataDate: Option[Timestamp] // earliest date when data was acquired.  Often derived from associated DICOM files.
+    inputPK: Option[Long], // primary key
+    directory: Option[
+      String
+    ], // main directory where procedure related data is stored.  Contains input and 0 or more output directories.  Is relative to configuration value for <code>Config.DataDir</code>.
+    uploadDate: Timestamp, // when data was loaded into this system
+    userPK: Option[Long], // user that ran the procedure
+    machinePK: Option[Long], // procedure was run on this machine.  Machine is optional to support procedures that do not correlate to a single machine.
+    patientId: Option[String], // patient ID if applicable.  Often derived from associated DICOM files
+    dataDate: Option[Timestamp] // earliest date when data was acquired.  Often derived from associated DICOM files.
 ) {
 
   def insert: Input = {
@@ -52,10 +52,10 @@ case class Input(
   def dir: File = WebServer.fileOfResultsPath(directory.get)
 
   /**
-   * Update the directory and content from that directory, excluding child output directories.  Returns number of
-   * records updated, which should always be one.  If it is zero then it is probably because the object is not
-   * in the database.
-   */
+    * Update the directory and content from that directory, excluding child output directories.  Returns number of
+    * records updated, which should always be one.  If it is zero then it is probably because the object is not
+    * in the database.
+    */
   def updateDirectory(inDir: File) = {
     val dirName = WebServer.fileToResultsPath(inDir)
     if (inputPK.isEmpty) throw new RuntimeException("Attempting to search for an input using a null inputPK: " + this)
@@ -63,8 +63,8 @@ case class Input(
   }
 
   /**
-   * Update content
-   */
+    * Update content
+    */
   def putFilesInDatabase(inputDir: File): InputFiles = {
     val outputDirList = Output.listByInputPK(inputPK.get).map(o => o.dir)
     val zippedContent = FileUtil.readFileTreeToZipByteArray(Seq(inputDir), Seq[String](), outputDirList)
@@ -75,8 +75,8 @@ case class Input(
   }
 
   /**
-   * Update content in parallel thread.
-   */
+    * Update content in parallel thread.
+    */
   def putFilesInDatabaseFuture(inputDir: File): Future[InputFiles] = {
     val later = Future {
       val future = putFilesInDatabase(inputDir)
@@ -99,14 +99,7 @@ object Input extends Logging {
     def patientId = column[Option[String]]("patientId") // patient ID for potential tracking
     def dataDate = column[Option[Timestamp]]("dataDate") // when data was generated
 
-    def * = (
-      inputPK.?,
-      directory,
-      uploadDate,
-      userPK,
-      machinePK,
-      patientId,
-      dataDate) <> ((Input.apply _)tupled, Input.unapply _)
+    def * = (inputPK.?, directory, uploadDate, userPK, machinePK, patientId, dataDate) <> ((Input.apply _) tupled, Input.unapply _)
 
     def userFK = foreignKey("Input_userPKConstraint", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Restrict)
     def machineFK = foreignKey("Input_machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Restrict)
@@ -123,8 +116,8 @@ object Input extends Logging {
   }
 
   /**
-   * Get a list of inputs that reference the given machine.
-   */
+    * Get a list of inputs that reference the given machine.
+    */
   def getByMachine(machinePK: Long): Seq[Input] = {
     val action = for {
       input <- query if input.machinePK === machinePK
@@ -134,9 +127,9 @@ object Input extends Logging {
   }
 
   /**
-   * Given the input directory, return the text for the relative path of the directory.  This path is
-   * used so that files will be independent of the configuration.
-   */
+    * Given the input directory, return the text for the relative path of the directory.  This path is
+    * used so that files will be independent of the configuration.
+    */
   def directoryOf(inputDir: File): String = {
     val resultsDirName = Config.resultsDirFile.getAbsolutePath
     val inputDirName = inputDir.getAbsolutePath
@@ -145,8 +138,8 @@ object Input extends Logging {
   }
 
   /**
-   * Find the input given the name of its directory.  This parameter must exactly match the <code>input.directory</code> field.
-   */
+    * Find the input given the name of its directory.  This parameter must exactly match the <code>input.directory</code> field.
+    */
   def getByDirectory(dirName: String) = {
     val action = for { input <- Input.query if input.directory === dirName } yield (input)
     val list = Db.run(action.result)
@@ -154,8 +147,8 @@ object Input extends Logging {
   }
 
   /**
-   * Find the number of inputs that reference this user.
-   */
+    * Find the number of inputs that reference this user.
+    */
   def getUserRefernceCount(userPK: Long): Int = {
     val action = Input.query.filter(input => input.userPK === userPK).size
     val count = Db.run(action.result)
@@ -179,11 +172,11 @@ object Input extends Logging {
   }
 
   /**
-   * Get the files from the database and restore them to the file system.  Overwrite any files that are already there.
-   *
-   * It is up to the caller to determine if the files need to be restored.
-   *
-   */
+    * Get the files from the database and restore them to the file system.  Overwrite any files that are already there.
+    *
+    * It is up to the caller to determine if the files need to be restored.
+    *
+    */
   def getFilesFromDatabase(inputPK: Long, dir: File): Unit = {
     // Steps are done on separate lines so that if there is an error/exception it can be precisely
     // tracked.  It is up to the caller to catch any exceptions and act accordingly.

@@ -16,25 +16,26 @@
 
 package org.aqa.db
 
-import Db.driver.api._
+import org.aqa.db.Db.driver.api._
 import org.aqa.Config
-import org.aqa.Util
 
 case class MultileafCollimator(
-  multileafCollimatorPK: Option[Long], // primary key
-  manufacturer: String, // manufacturer's name
-  model: String, // manufacturer's model name
-  version: String, // details if manufacturer and model are not sufficiently unique
-  outerLeafPairCount: Int, // total number of opposing outer leaf pairs
-  innerLeafPairCount: Int, // total number of opposing inner leaf pairs
-  outerLeafWidth_cm: Double, // width of each outer leaf in cm
-  innerLeafWidth_cm: Double, // width of each inner leaf in cm
-  leafTravelDistance_cm: Double, // distance that a leaf can move in cm
-  notes: String // any extra information
+    multileafCollimatorPK: Option[Long], // primary key
+    manufacturer: String, // manufacturer's name
+    model: String, // manufacturer's model name
+    version: String, // details if manufacturer and model are not sufficiently unique
+    outerLeafPairCount: Int, // total number of opposing outer leaf pairs
+    innerLeafPairCount: Int, // total number of opposing inner leaf pairs
+    outerLeafWidth_cm: Double, // width of each outer leaf in cm
+    innerLeafWidth_cm: Double, // width of each inner leaf in cm
+    leafTravelDistance_cm: Double, // distance that a leaf can move in cm
+    notes: String // any extra information
 ) {
 
   def insert: MultileafCollimator = {
-    val insertQuery = MultileafCollimator.query returning MultileafCollimator.query.map(_.multileafCollimatorPK) into ((multileafCollimator, multileafCollimatorPK) => multileafCollimator.copy(multileafCollimatorPK = Some(multileafCollimatorPK)))
+    val insertQuery = MultileafCollimator.query returning MultileafCollimator.query.map(_.multileafCollimatorPK) into ((multileafCollimator, multileafCollimatorPK) =>
+      multileafCollimator.copy(multileafCollimatorPK = Some(multileafCollimatorPK))
+    )
     val action = insertQuery += this
     val result = Db.run(action)
     result
@@ -59,17 +60,19 @@ object MultileafCollimator {
     def leafTravelDistance_cm = column[Double]("leafTravelDistance_cm")
     def notes = column[String]("notes")
 
-    def * = (
-      multileafCollimatorPK.?,
-      manufacturer,
-      model,
-      version,
-      outerLeafPairCount,
-      innerLeafPairCount,
-      outerLeafWidth_cm,
-      innerLeafWidth_cm,
-      leafTravelDistance_cm,
-      notes) <> ((MultileafCollimator.apply _)tupled, MultileafCollimator.unapply _)
+    def * =
+      (
+        multileafCollimatorPK.?,
+        manufacturer,
+        model,
+        version,
+        outerLeafPairCount,
+        innerLeafPairCount,
+        outerLeafWidth_cm,
+        innerLeafWidth_cm,
+        leafTravelDistance_cm,
+        notes
+      ) <> ((MultileafCollimator.apply _) tupled, MultileafCollimator.unapply _)
   }
 
   val query = TableQuery[MultileafCollimatorTable]
@@ -93,8 +96,8 @@ object MultileafCollimator {
   }
 
   /**
-   * Get a list of all multileafCollimators.
-   */
+    * Get a list of all multileafCollimators.
+    */
   def list = Db.run(query.result)
 
   def delete(multileafCollimatorPK: Long): Int = {

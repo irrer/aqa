@@ -16,31 +16,26 @@
 
 package org.aqa.db
 
-import Db.driver.api._
+import org.aqa.db.Db.driver.api._
 import org.aqa.Config
-import org.aqa.Util
-import java.io.File
-import scala.xml.XML
-import scala.xml.Node
-import scala.xml.Elem
 import org.aqa.procedures.ProcedureOutput
-import java.sql.Timestamp
-import java.util.Date
+
 import java.awt.geom.Rectangle2D
+import scala.xml.Elem
 
 /**
- * Rectangle describing an area in an EPID image and it's average intensity.
- */
+  * Rectangle describing an area in an EPID image and it's average intensity.
+  */
 case class Rect(
-  rectPK: Option[Long], // primary key
-  outputPK: Long, // output primary key
-  SOPInstanceUID: String, // SOPInstanceUID of DICOM file.
-  name: String, // identifies what this is related to.  Usually specifies beam name and test.
-  intensity_cu: Double, // average intensity for the entire rectangle in CU / square mm
-  x_mm: Double, // x in mm from isocenter in isoplane.  0 is center.
-  y_mm: Double, // y in mm from isocenter in isoplane.  0 is center.
-  width_mm: Double, // width in mm in isoplane.
-  height_mm: Double // height in mm in isoplane.
+    rectPK: Option[Long], // primary key
+    outputPK: Long, // output primary key
+    SOPInstanceUID: String, // SOPInstanceUID of DICOM file.
+    name: String, // identifies what this is related to.  Usually specifies beam name and test.
+    intensity_cu: Double, // average intensity for the entire rectangle in CU / square mm
+    x_mm: Double, // x in mm from isocenter in isoplane.  0 is center.
+    y_mm: Double, // y in mm from isocenter in isoplane.  0 is center.
+    width_mm: Double, // width in mm in isoplane.
+    height_mm: Double // height in mm in isoplane.
 ) {
 
   def insert: Rect = {
@@ -80,16 +75,7 @@ object Rect extends ProcedureOutput {
     def width_mm = column[Double]("width_mm")
     def height_mm = column[Double]("height_mm")
 
-    def * = (
-      rectPK.?,
-      outputPK,
-      SOPInstanceUID,
-      name,
-      intensity_cu,
-      x_mm,
-      y_mm,
-      width_mm,
-      height_mm) <> ((Rect.apply _)tupled, Rect.unapply _)
+    def * = (rectPK.?, outputPK, SOPInstanceUID, name, intensity_cu, x_mm, y_mm, width_mm, height_mm) <> ((Rect.apply _) tupled, Rect.unapply _)
 
     def outputFK = foreignKey("Rect_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -107,8 +93,8 @@ object Rect extends ProcedureOutput {
   }
 
   /**
-   * Get a list of all rects for the given output
-   */
+    * Get a list of all rects for the given output
+    */
   def getByOutput(outputPK: Long): Seq[Rect] = {
     val action = for {
       inst <- Rect.query if inst.outputPK === outputPK

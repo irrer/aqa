@@ -16,7 +16,6 @@
 
 package org.aqa.db
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 
@@ -181,6 +180,6 @@ object Baseline extends Logging {
 
     Trace.trace("--- Finish baseline.  Changed text to boolean ----------------------------------------------------------")
     println("run with: java -cp  target\\AQA-0.3.1-jar-with-dependencies.jar org.aqa.db.Baseline")
-  */
+     */
   }
 }

@@ -16,16 +16,15 @@
 
 package org.aqa.db
 
-import Db.driver.api._
+import org.aqa.db.Db.driver.api._
 import org.aqa.Config
-import org.aqa.Util
 
 case class MachineType(
-  machineTypePK: Option[Long], // primary key
-  manufacturer: String, // company name
-  model: String, // manufacturer's model name
-  version: String, // details if manufacturer and model are not sufficiently unique
-  notes: String // any extra information
+    machineTypePK: Option[Long], // primary key
+    manufacturer: String, // company name
+    model: String, // manufacturer's model name
+    version: String, // details if manufacturer and model are not sufficiently unique
+    notes: String // any extra information
 ) {
 
   def insert: MachineType = {
@@ -49,12 +48,7 @@ object MachineType {
     def version = column[String]("version")
     def notes = column[String]("notes")
 
-    def * = (
-      machineTypePK.?,
-      manufacturer,
-      model,
-      version,
-      notes) <> ((MachineType.apply _)tupled, MachineType.unapply _)
+    def * = (machineTypePK.?, manufacturer, model, version, notes) <> ((MachineType.apply _) tupled, MachineType.unapply _)
   }
 
   val query = TableQuery[MachineTypeTable]
@@ -78,8 +72,8 @@ object MachineType {
   }
 
   /**
-   * Get a list of all machineTypes.
-   */
+    * Get a list of all machineTypes.
+    */
   def list = Db.run(query.result)
 
   def delete(machineTypePK: Long): Int = {

@@ -16,21 +16,19 @@
 
 package org.aqa.db
 
-import Db.driver.api._
+import org.aqa.db.Db.driver.api._
 import org.aqa.Config
-import org.aqa.Util
-import edu.umro.ScalaUtil.Trace
 
 case class EPID(
-  epidPK: Option[Long], // primary key
-  manufacturer: String, // manufacturer's name
-  model: String, // manufacturer's model name
-  hardwareVersion: String, // version of hardware
-  pixelCountX: Int, // number of columns
-  pixelCountY: Int, // number of rows
-  width_cm: Double, // width of imager in cm
-  height_cm: Double, // height of imager in cm
-  notes: String // any extra information
+    epidPK: Option[Long], // primary key
+    manufacturer: String, // manufacturer's name
+    model: String, // manufacturer's model name
+    hardwareVersion: String, // version of hardware
+    pixelCountX: Int, // number of columns
+    pixelCountY: Int, // number of rows
+    width_cm: Double, // width of imager in cm
+    height_cm: Double, // height of imager in cm
+    notes: String // any extra information
 ) {
 
   def insert: EPID = {
@@ -58,16 +56,7 @@ object EPID {
     def height_cm = column[Double]("height_cm")
     def notes = column[String]("notes")
 
-    def * = (
-      epidPK.?,
-      manufacturer,
-      model,
-      hardwareVersion,
-      pixelCountX,
-      pixelCountY,
-      width_cm,
-      height_cm,
-      notes) <> ((EPID.apply _)tupled, EPID.unapply _)
+    def * = (epidPK.?, manufacturer, model, hardwareVersion, pixelCountX, pixelCountY, width_cm, height_cm, notes) <> ((EPID.apply _) tupled, EPID.unapply _)
   }
 
   val query = TableQuery[EPIDTable]
@@ -91,8 +80,8 @@ object EPID {
   }
 
   /**
-   * Get a list of all epids.
-   */
+    * Get a list of all epids.
+    */
   def list = Db.run(query.result)
 
   def delete(epidPK: Long): Int = {

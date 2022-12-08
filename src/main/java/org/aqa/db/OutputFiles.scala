@@ -16,27 +16,24 @@
 
 package org.aqa.db
 
-import Db.driver.api._
+import org.aqa.db.Db.driver.api._
 import org.aqa.Logging
-import org.aqa.Config
-import edu.umro.ScalaUtil.FileUtil
-import org.aqa.Util
-import java.security.InvalidParameterException
 
 /**
- * Store the zipped file contents of an Output.
- *
- * The convention for the primary key, which is enforced by the code, is to use the same pk for this
- * table as the corresponding output entry.  This is to help ensure that there is at most one OutputFiles
- * for each Output.
- *
- * Note that this tables does NOT use an auto-incrementing counter for the primary key,
- */
+  * Store the zipped file contents of an Output.
+  *
+  * The convention for the primary key, which is enforced by the code, is to use the same pk for this
+  * table as the corresponding output entry.  This is to help ensure that there is at most one OutputFiles
+  * for each Output.
+  *
+  * Note that this tables does NOT use an auto-incrementing counter for the primary key,
+  */
 case class OutputFiles(
-  outputFilesPK: Long, // primary key
-  outputPK: Long, // referenced output
-  zippedContent: Array[Byte]) // The files in zip form created by the process
-  {
+    outputFilesPK: Long, // primary key
+    outputPK: Long, // referenced output
+    zippedContent: Array[Byte]
+) // The files in zip form created by the process
+{
 
   def insert: Unit = Db.run(OutputFiles.query += this)
 
@@ -49,7 +46,7 @@ object OutputFiles extends Logging {
     def outputPK = column[Long]("outputPK")
     def zippedContent = column[Array[Byte]]("zippedContent")
 
-    def * = (outputFilesPK, outputPK, zippedContent) <> ((OutputFiles.apply _)tupled, OutputFiles.unapply _)
+    def * = (outputFilesPK, outputPK, zippedContent) <> ((OutputFiles.apply _) tupled, OutputFiles.unapply _)
 
     def outputFK = foreignKey("OutputFiles_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }

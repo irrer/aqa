@@ -30,7 +30,7 @@ import java.io.File
 
 object DbSetup extends Logging {
 
-  import Db.driver.api._
+  import org.aqa.db.Db.driver.api._
 
   private def makeDefaultInstitution: Institution = {
     val inst = new Institution(None, "AQA", None, Util.aqaUrl, "Automated Quality Assurance").insert

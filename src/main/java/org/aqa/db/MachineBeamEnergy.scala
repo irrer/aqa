@@ -16,21 +16,22 @@
 
 package org.aqa.db
 
-import Db.driver.api._
+import org.aqa.db.Db.driver.api._
 import org.aqa.Config
 import org.aqa.Util
-import java.io.File
 
 case class MachineBeamEnergy(
-  machineBeamEnergyPK: Option[Long], // primary key
-  machinePK: Long, // machine primary key
-  photonEnergy_MeV: Option[Double], // photon energy in million electron volts
-  maxDoseRate_MUperMin: Option[Double], // dose rate in MU / minute
-  fffEnergy_MeV: Option[Double] // flat filter free energy in million electron volts
+    machineBeamEnergyPK: Option[Long], // primary key
+    machinePK: Long, // machine primary key
+    photonEnergy_MeV: Option[Double], // photon energy in million electron volts
+    maxDoseRate_MUperMin: Option[Double], // dose rate in MU / minute
+    fffEnergy_MeV: Option[Double] // flat filter free energy in million electron volts
 ) {
 
   def insert: MachineBeamEnergy = {
-    val insertQuery = MachineBeamEnergy.query returning MachineBeamEnergy.query.map(_.machineBeamEnergyPK) into ((machineBeamEnergy, machineBeamEnergyPK) => machineBeamEnergy.copy(machineBeamEnergyPK = Some(machineBeamEnergyPK)))
+    val insertQuery = MachineBeamEnergy.query returning MachineBeamEnergy.query.map(_.machineBeamEnergyPK) into ((machineBeamEnergy, machineBeamEnergyPK) =>
+      machineBeamEnergy.copy(machineBeamEnergyPK = Some(machineBeamEnergyPK))
+    )
     val action = insertQuery += this
     val result = Db.run(action)
     result
@@ -41,8 +42,8 @@ case class MachineBeamEnergy(
   override def equals(o: Any): Boolean = {
     val other = o.asInstanceOf[MachineBeamEnergy]
     photonEnergy_MeV.equals(other.photonEnergy_MeV) &&
-      maxDoseRate_MUperMin.equals(other.maxDoseRate_MUperMin) &&
-      fffEnergy_MeV.equals(other.fffEnergy_MeV)
+    maxDoseRate_MUperMin.equals(other.maxDoseRate_MUperMin) &&
+    fffEnergy_MeV.equals(other.fffEnergy_MeV)
   }
 
   def isFFF = fffEnergy_MeV.isDefined && (fffEnergy_MeV.get > 0)
@@ -67,12 +68,7 @@ object MachineBeamEnergy {
     def maxDoseRate_MUperMin = column[Option[Double]]("maxDoseRate_MUperMin")
     def fffEnergy_MeV = column[Option[Double]]("fffEnergy_MeV")
 
-    def * = (
-      machineBeamEnergyPK.?,
-      machinePK,
-      photonEnergy_MeV,
-      maxDoseRate_MUperMin,
-      fffEnergy_MeV) <> ((MachineBeamEnergy.apply _)tupled, MachineBeamEnergy.unapply _)
+    def * = (machineBeamEnergyPK.?, machinePK, photonEnergy_MeV, maxDoseRate_MUperMin, fffEnergy_MeV) <> ((MachineBeamEnergy.apply _) tupled, MachineBeamEnergy.unapply _)
 
     def machineFK = foreignKey("MachineBeamEnergy_machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -96,8 +92,8 @@ object MachineBeamEnergy {
   }
 
   /**
-   * Get a list of all machineBeamEnergies.
-   */
+    * Get a list of all machineBeamEnergies.
+    */
   def list = Db.run(query.result)
 
   def delete(machineBeamEnergyPK: Long): Int = {
@@ -121,7 +117,7 @@ object MachineBeamEnergy {
       { (mbe(a), mbe(b)) } match {
         case (Some(a), _) => Some(false)
         case (_, Some(b)) => Some(true)
-        case _ => None
+        case _            => None
       }
     }
     Seq(srtDef(_.photonEnergy_MeV), srtDef(_.maxDoseRate_MUperMin), srtDef(_.fffEnergy_MeV)).flatten.headOption match {
@@ -129,7 +125,7 @@ object MachineBeamEnergy {
       case _ => {
         Seq(srtNotDef(_.photonEnergy_MeV), srtNotDef(_.maxDoseRate_MUperMin), srtNotDef(_.fffEnergy_MeV)).flatten.headOption match {
           case Some(b) => b
-          case _ => false
+          case _       => false
         }
       }
     }

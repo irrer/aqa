@@ -30,22 +30,23 @@ import javax.vecmath.Point3d
 import scala.xml.Elem
 
 case class BBbyCBCT(
-                     bbByCBCTPK: Option[Long], // primary key
-                     outputPK: Long, // output primary key
-                     rtplanSOPInstanceUID: String, // UID of RTPLAN
-                     cbctSeriesInstanceUid: String, // series instance UID of CBCT
-                     offset_mm: Double, // distance between measured CBCT position and expected (plan) location (aka: positioning error)
-                     status: String, // termination status
-                     rtplanX_mm: Double, // expected X position in RTPLAN
-                     rtplanY_mm: Double, // expected Y position in RTPLAN
-                     rtplanZ_mm: Double, // expected Z position in RTPLAN
-                     cbctX_mm: Double, // measured bb X position in CBCT
-                     cbctY_mm: Double, // measured bb Y position in CBCT
-                     cbctZ_mm: Double, // measured bb Z position in CBCT
-                     tableXlateral_mm: Double, // table position in X dimension / lateral
-                     tableYvertical_mm: Double, // table position in Y dimension / vertical
-                     tableZlongitudinal_mm: Double, // table position in Z dimension / longitudinal
-                     metadata_dcm_zip: Option[Array[Byte]]) { // DICOM without image for one slice from the CBCT's series
+    bbByCBCTPK: Option[Long], // primary key
+    outputPK: Long, // output primary key
+    rtplanSOPInstanceUID: String, // UID of RTPLAN
+    cbctSeriesInstanceUid: String, // series instance UID of CBCT
+    offset_mm: Double, // distance between measured CBCT position and expected (plan) location (aka: positioning error)
+    status: String, // termination status
+    rtplanX_mm: Double, // expected X position in RTPLAN
+    rtplanY_mm: Double, // expected Y position in RTPLAN
+    rtplanZ_mm: Double, // expected Z position in RTPLAN
+    cbctX_mm: Double, // measured bb X position in CBCT
+    cbctY_mm: Double, // measured bb Y position in CBCT
+    cbctZ_mm: Double, // measured bb Z position in CBCT
+    tableXlateral_mm: Double, // table position in X dimension / lateral
+    tableYvertical_mm: Double, // table position in Y dimension / vertical
+    tableZlongitudinal_mm: Double, // table position in Z dimension / longitudinal
+    metadata_dcm_zip: Option[Array[Byte]]
+) { // DICOM without image for one slice from the CBCT's series
 
   def insert: BBbyCBCT = {
     val insertQuery = BBbyCBCT.query returning BBbyCBCT.query.map(_.bbByCBCTPK) into ((bbByCBCT, bbByCBCTPK) => bbByCBCT.copy(bbByCBCTPK = Some(bbByCBCTPK)))
@@ -118,23 +119,25 @@ object BBbyCBCT extends ProcedureOutput {
 
     def metadata_dcm_zip = column[Option[Array[Byte]]]("metadata_dcm_zip")
 
-    def * = (
-      bbByCBCTPK.?,
-      outputPK,
-      rtplanSOPInstanceUID,
-      cbctSeriesInstanceUid,
-      offset_mm,
-      status,
-      planX_mm,
-      planY_mm,
-      planZ_mm,
-      cbctX_mm,
-      cbctY_mm,
-      cbctZ_mm,
-      tableXlateral_mm,
-      tableYvertical_mm,
-      tableZlongitudinal_mm,
-      metadata_dcm_zip) <> ((BBbyCBCT.apply _) tupled, BBbyCBCT.unapply _)
+    def * =
+      (
+        bbByCBCTPK.?,
+        outputPK,
+        rtplanSOPInstanceUID,
+        cbctSeriesInstanceUid,
+        offset_mm,
+        status,
+        planX_mm,
+        planY_mm,
+        planZ_mm,
+        cbctX_mm,
+        cbctY_mm,
+        cbctZ_mm,
+        tableXlateral_mm,
+        tableYvertical_mm,
+        tableZlongitudinal_mm,
+        metadata_dcm_zip
+      ) <> ((BBbyCBCT.apply _) tupled, BBbyCBCT.unapply _)
 
     def outputFK = foreignKey("BBbyCBCT_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -152,8 +155,8 @@ object BBbyCBCT extends ProcedureOutput {
   }
 
   /**
-   * Get a list of all BBbyCBCT for the given output
-   */
+    * Get a list of all BBbyCBCT for the given output
+    */
   def getByOutput(outputPK: Long): Seq[BBbyCBCT] = {
     val action = for {
       inst <- BBbyCBCT.query if inst.outputPK === outputPK
@@ -196,12 +199,12 @@ object BBbyCBCT extends ProcedureOutput {
   }
 
   /**
-   * Get all BBbyCBCT results that are nearest in time to the given date.
-   *
-   * @param machinePK   : For this machine
-   * @param procedurePK : For this procedure
-   *
-   */
+    * Get all BBbyCBCT results that are nearest in time to the given date.
+    *
+    * @param machinePK   : For this machine
+    * @param procedurePK : For this procedure
+    *
+    */
   def history(machinePK: Long, procedurePK: Long) = {
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
@@ -214,8 +217,8 @@ object BBbyCBCT extends ProcedureOutput {
   }
 
   /**
-   * Get the procedure PK for the BBbyCBCT procedure.
-   */
+    * Get the procedure PK for the BBbyCBCT procedure.
+    */
   /*
   def getProcedurePK: Option[Long] = {
 
@@ -231,20 +234,21 @@ object BBbyCBCT extends ProcedureOutput {
 
     Db.run(Procedure.query.result).filter(p => p.isBBbyCBCT).map(p => p.procedurePK.get).headOption
   }
-  */
+   */
 
   /** CBCT data and related results. */
   case class DailyDataSetCBCT(output: Output, machine: Machine, dicomSeries: DicomSeries, cbct: Option[BBbyCBCT] = None) {
+
     /**
-     * An attribute list that is representative of the CBCT volume.  Try getting it
-     * from the BBcyCBCT if possible because it is less resource intensive.
-     */
+      * An attribute list that is representative of the CBCT volume.  Try getting it
+      * from the BBcyCBCT if possible because it is less resource intensive.
+      */
     lazy val al: AttributeList = if (cbct.isDefined) cbct.get.attributeList else dicomSeries.attributeListList.head
   }
 
   /**
-   * Get all results that were acquired on one day for one institution.
-   */
+    * Get all results that were acquired on one day for one institution.
+    */
   def getForOneDay(date: Date, institutionPK: Long): Seq[DailyDataSetCBCT] = {
     val beginDate = new Timestamp(Util.dateTimeToDate(date).getTime)
     val endDate = new Timestamp(beginDate.getTime + (24 * 60 * 60 * 1000))
@@ -282,13 +286,12 @@ object BBbyCBCT extends ProcedureOutput {
     seq
   }
 
-
   /**
-   * Get the earliest date+time of an CBCT result.
-   *
-   * @param institutionPK Get for this institution.
-   * @return The date+time of the first composite result, if there is at least one.
-   */
+    * Get the earliest date+time of an CBCT result.
+    *
+    * @param institutionPK Get for this institution.
+    * @return The date+time of the first composite result, if there is at least one.
+    */
   def getEarliestDate(institutionPK: Long): Option[Timestamp] = {
 
     val search = for {
@@ -304,11 +307,10 @@ object BBbyCBCT extends ProcedureOutput {
     result.headOption
   }
 
-
   /**
-   * For testing only
-   * @param args Ignored.
-   */
+    * For testing only
+    * @param args Ignored.
+    */
   def main(args: Array[String]): Unit = {
     DbSetup.init
     (0 to 5).foreach(_ => println("-----------------------------------------------------------"))

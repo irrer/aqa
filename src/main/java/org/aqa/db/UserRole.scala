@@ -17,8 +17,8 @@
 package org.aqa.db
 
 /**
- * Define roles of users, each of which authorizes them to do do various things.
- */
+  * Define roles of users, each of which authorizes them to do do various things.
+  */
 object UserRole extends Enumeration {
 
   val publik = Value // can look at 'about us' type of information
@@ -28,13 +28,13 @@ object UserRole extends Enumeration {
   val admin = Value // can change configuration
 
   /**
-   * Convert text to a UserRole.  Is case insensitive.
-   */
+    * Convert text to a UserRole.  Is case insensitive.
+    */
   def stringToUserRole(text: String): Option[UserRole.Value] = UserRole.values.find(ur => ur.toString.equalsIgnoreCase(text))
 
   /**
-   * For testing only.
-   */
+    * For testing only.
+    */
   def main(args: Array[String]): Unit = {
 
     def foo(ur: UserRole.Value): Unit = {

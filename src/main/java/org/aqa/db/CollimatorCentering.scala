@@ -181,7 +181,7 @@ object CollimatorCentering extends ProcedureOutput {
     * @param gantryAngle Gantry angle rounded to nearest 90 degrees.
     * @return List of history items sorted by data date.
     */
-  def history(machinePK: Long, gantryAngle: Option[ Int], procedurePK: Long): Seq[ColCentHistory] = {
+  def history(machinePK: Long, gantryAngle: Option[Int], procedurePK: Long): Seq[ColCentHistory] = {
 
     val ga = if (gantryAngle.isDefined) gantryAngle.get else 0
 

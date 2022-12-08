@@ -20,9 +20,9 @@ import org.aqa.db.Db.driver.api._
 import org.aqa.Config
 
 case class CentralAxis(
-  centralAxisPK: Option[Long], // primary key
-  outputPK: Long, // output primary key
-  maxLeafGap: Double // maximum leaf gap
+    centralAxisPK: Option[Long], // primary key
+    outputPK: Long, // output primary key
+    maxLeafGap: Double // maximum leaf gap
 ) {
 
   def insert: CentralAxis = {
@@ -44,10 +44,7 @@ object CentralAxis {
     def outputPK = column[Long]("outputPK")
     def maxLeafGap = column[Double]("maxLeafGap")
 
-    def * = (
-      centralAxisPK.?,
-      outputPK,
-      maxLeafGap) <> ((CentralAxis.apply _)tupled, CentralAxis.unapply _)
+    def * = (centralAxisPK.?, outputPK, maxLeafGap) <> ((CentralAxis.apply _) tupled, CentralAxis.unapply _)
   }
 
   val query = TableQuery[CentralAxisTable]
@@ -61,8 +58,8 @@ object CentralAxis {
   }
 
   /**
-   * Get a list of all centralAxiss.
-   */
+    * Get a list of all centralAxiss.
+    */
   def list = Db.run(query.result)
 
   def delete(centralAxisPK: Long): Int = {
