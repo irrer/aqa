@@ -16,55 +16,38 @@
 
 package org.aqa.webrun
 
-import org.restlet.Request
-import org.restlet.Response
-import play.api._
-import play.api.libs.concurrent.Execution.Implicits._
-import org.restlet.data.Status
+import com.pixelmed.dicom.AttributeList
+import edu.umro.util.Utility
+import edu.umro.MSOfficeUtil.Excel.ExcelUtil
+import org.apache.poi.ss.usermodel.Workbook
 import org.aqa.web.WebUtil._
 import org.aqa.Logging
 import org.aqa.db.Machine
-import edu.umro.ScalaUtil.Trace._
-import java.io.File
 import org.aqa.db.Procedure
 import org.aqa.run.Run
 import org.aqa.Util
-import org.aqa.web.WebUtil
-import org.aqa.db.CentralAxis
-import org.aqa.db.Institution
-import org.restlet.Restlet
-import com.pixelmed.dicom.DicomFileUtilities
-import com.pixelmed.dicom.TagFromName
-import edu.umro.util.Utility
-import com.pixelmed.dicom.AttributeList
-import org.aqa.web.WebRunIndex
-import org.aqa.run.PostProcess
-import org.aqa.run.PostProcess
-import org.aqa.run.PostProcess
-import org.aqa.run.ActiveProcess
-import org.aqa.db.LeafOffsetCorrection
-import org.aqa.db.LeafTransmission
-import scala.xml.Elem
-import java.util.Date
-import org.aqa.db.User
-import org.aqa.db.Output
 import org.aqa.db.DbSetup
+import org.aqa.db.Institution
+import org.aqa.db.LeafTransmission
+import org.aqa.db.Output
+import org.aqa.db.User
+import org.aqa.run.ActiveProcess
+import org.aqa.run.PostProcess
+import org.aqa.web.WebRunIndex
+import org.aqa.web.WebUtil
 import org.aqa.Config
-import org.aqa.run.ProcedureStatus
-import org.aqa.db.DataValidity
-import java.sql.Timestamp
-import org.aqa.db.Input
-import org.aqa.web.ViewOutput
 import org.aqa.db.EPIDCenterCorrection
 import org.aqa.procedures.ProcedureOutputUtil
-import java.io.File
-import org.apache.poi.ss.usermodel.Workbook
-import org.apache.poi.ss.usermodel.Sheet
-import org.apache.poi.ss.usermodel.CellType
-import org.apache.poi.ss.usermodel.Row
-import edu.umro.MSOfficeUtil.Excel.ExcelUtil
-import scala.xml.XML
 import org.aqa.run.StdLogger
+import org.aqa.web.ViewOutput
+import org.restlet.Request
+import org.restlet.Response
+import org.restlet.data.Status
+
+import java.io.File
+import java.util.Date
+import scala.xml.Elem
+import scala.xml.XML
 
 object LOCRun_1 {
   val parametersFileName = "parameters.xml"
@@ -112,8 +95,8 @@ object LOCRun_1 {
 }
 
 /**
- * Run LOC code.
- */
+  * Run LOC code.
+  */
 class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with PostProcess with Logging {
 
   /** Defines precision - Format to use when showing numbers. */
@@ -153,20 +136,21 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
     sessionDir(valueMap) match {
       case Some(dir) if (!dir.isDirectory) => formErr("No files have been uploaded")
-      case _ if (alList.isEmpty) => formErr("No DICOM files have been uploaded.")
-      case _ if (machList.size > 1) => formErr("Files from more than one machine were found.  Click Cancel to start over.")
+      case _ if (alList.isEmpty)           => formErr("No DICOM files have been uploaded.")
+      case _ if (machList.size > 1)        => formErr("Files from more than one machine were found.  Click Cancel to start over.")
       case _ if (machList.isEmpty) => {
         logger.info("machList.isEmpty: " + machList.isEmpty) // TODO rm
         formErr("These files do not have a serial number of a known machine.  Click Cancel and use the baseline LOC upload procedure.")
       }
-      case _ if (!LOCUploadBaseFiles_1.ensureBaseline(mach.get.machinePK.get)) => formErr("There are no baseline files for machine " + mach.get.id + ".  Click Cancel and use the baseline LOC upload procedure.")
+      case _ if (!LOCUploadBaseFiles_1.ensureBaseline(mach.get.machinePK.get)) =>
+        formErr("There are no baseline files for machine " + mach.get.id + ".  Click Cancel and use the baseline LOC upload procedure.")
       case Some(dir) => Right(new RunRequirementsLOC(mach.get, dir, alList))
     }
   }
 
   /**
-   * Run the procedure.
-   */
+    * Run the procedure.
+    */
   private def run(valueMap: ValueMapT, request: Request, response: Response) = {
     validate(valueMap) match {
       case Right(runReq) => {
@@ -180,12 +164,12 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
   }
 
   /**
-   * Cancel the procedure.  Remove files and redirect to procedure list.
-   */
+    * Cancel the procedure.  Remove files and redirect to procedure list.
+    */
   private def cancel(valueMap: ValueMapT, response: Response) = {
     sessionDir(valueMap) match {
       case Some(dir) => Utility.deleteFileTree(dir)
-      case _ => ;
+      case _         => ;
     }
     WebRunIndex.redirect(response)
   }
@@ -196,8 +180,8 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
   }
 
   /**
-   * Main entry point of web interface.
-   */
+    * Main entry point of web interface.
+    */
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
 
@@ -207,8 +191,8 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
       0 match {
         //case _ if (!sessionDefined(valueMap)) => redirectWithNewSession(response);
         case _ if buttonIs(valueMap, cancelButton) => cancel(valueMap, response)
-        case _ if buttonIs(valueMap, runButton) => run(valueMap, request, response)
-        case _ => emptyForm(valueMap, response)
+        case _ if buttonIs(valueMap, runButton)    => run(valueMap, request, response)
+        case _                                     => emptyForm(valueMap, response)
       }
     } catch {
       case t: Throwable => {
@@ -225,7 +209,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
     val machineId = machine match {
       case Some(mach) => mach.id
-      case _ => ""
+      case _          => ""
     }
 
     val numberOfBadValues = {
@@ -253,13 +237,13 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
     val institutionName = institution match {
       case Some(inst) => inst.name
-      case _ => ""
+      case _          => ""
     }
 
     val epidCenterCorrection: String = {
       EPIDCenterCorrection.getByOutput(outputPK).headOption match {
         case Some(ecc) => ecc.epidCenterCorrection_mm.formatted("%6.3f")
-        case _ => "not available"
+        case _         => "not available"
       }
     }
 
@@ -267,13 +251,13 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
     val userId = user match {
       case Some(u) => u.id
-      case _ => ""
+      case _       => ""
     }
 
     val elapsed: String = {
       val fin = output.finishDate match {
         case Some(finDate) => finDate.getTime
-        case _ => System.currentTimeMillis
+        case _             => System.currentTimeMillis
       }
       val elapsed = fin - output.startDate.getTime
       Util.elapsedTimeHumanFriendly(elapsed)
@@ -282,7 +266,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
     val analysisDate: String = {
       val date = output.analysisDate match {
         case Some(d) => d
-        case _ => output.startDate
+        case _       => output.startDate
       }
       Util.timeHumanFriendly(date)
     }
@@ -290,7 +274,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
     def dateToString(date: Option[Date]): String = {
       date match {
         case Some(date) => Util.timeHumanFriendly(date)
-        case _ => "unknown"
+        case _          => "unknown"
       }
     }
 
@@ -307,6 +291,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
     def fmt(d: Double): String = d.formatted("%7.5e")
 
     def groupToDataString(group: Seq[LeafValue]): String = {
+
       /** Number of digits of precision to display. */
       val sorted = group.sortWith((a, b) => a.leafIndex < b.leafIndex)
       "            ['Position" + sorted.head.section + "'," + sorted.map(x => x.value).toSeq.map(d => fmt(d)).mkString(", ") + "]"
@@ -371,7 +356,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
     val linkToFiles: Elem = {
       val url = ViewOutput.path + "?outputPK=" + outputPK + "&summary=true"
-      <a href={ url }>Files</a>
+      <a href={url}>Files</a>
     }
 
     def spreadSheetLinks(fileWorkbookList: Seq[FileWorkbook]): IndexedSeq[Elem] = {
@@ -380,8 +365,9 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
       def links(fs: FileWorkbook) = {
         val base = Util.fileBaseName(fs.file)
         Seq(
-          { <div><a href={ base + ".html" } title="View HTML version of spreadsheet">View { base }</a>{ spaces }</div> },
-          { <div><a href={ fs.file.getName } title="Download spreadsheet">Download { base }</a>{ spaces }</div> })
+          { <div><a href={base + ".html"} title="View HTML version of spreadsheet">View {base}</a>{spaces}</div> },
+          { <div><a href={fs.file.getName} title="Download spreadsheet">Download {base}</a>{spaces}</div> }
+        )
       }
 
       if (fileWorkbookList.isEmpty) {
@@ -390,16 +376,16 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
     }
 
     val viewLog: Elem = {
-      <a href={ StdLogger.LOG_TEXT_FILE_NAME }>View Log</a>
+      <a href={StdLogger.LOG_TEXT_FILE_NAME}>View Log</a>
     }
 
     val viewXml: Elem = {
-      <a href={ ProcedureOutputUtil.outputFileName }>View XML</a>
+      <a href={ProcedureOutputUtil.outputFileName}>View XML</a>
     }
 
     /**
-     * Javascript to display the graphs.
-     */
+      * Javascript to display the graphs.
+      */
     def runScript = {
       """
             <script>
@@ -522,45 +508,45 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
 
     def make: String = {
       def wrap(col: Int, elem: Elem): Elem = {
-        <div class={ "col-md-" + col }>{ elem }</div>
+        <div class={"col-md-" + col}>{elem}</div>
       }
 
       def wrap2(col: Int, name: String, value: String): Elem = {
-        <div class={ "col-md-" + col }><em>{ name }:</em><br/>{ value }</div>
+        <div class={"col-md-" + col}><em>{name}:</em><br/>{value}</div>
       }
 
       def wrap2Anon(col: Int, name: String, value: String): Elem = {
-        <div class={ "col-md-" + col }><em>{ name }:</em><br/><span aqaalias="">{ value }</span></div>
+        <div class={"col-md-" + col}><em>{name}:</em><br/><span aqaalias="">{value}</span></div>
       }
 
       val div = {
         <div class="row col-md-10 col-md-offset-1">
           <div class="row">
             <div class="col-md-1" title="Leaf Offset Constancy and Transmission"><h2>LOC</h2></div>
-            <div class="col-md-2 col-md-offset-1" title="Machine"><h2 aqaalias="">{ machineId }</h2></div>
-            <div class="col-md-3 col-md-offset-1">EPID Center Correction in mm: { epidCenterCorrection }</div>
+            <div class="col-md-2 col-md-offset-1" title="Machine"><h2 aqaalias="">{machineId}</h2></div>
+            <div class="col-md-3 col-md-offset-1">EPID Center Correction in mm: {epidCenterCorrection}</div>
           </div>
           <div class="row" style="margin:20px;">
-            { wrap2(1, "Institution", institutionName) }
-            { wrap2(2, "Data Acquisition", dateToString(output.dataDate)) }
-            { wrap2(2, "Analysis", analysisDate) }
-            { wrap2Anon(1, "Analysis by", userId) }
-            { wrap2Anon(1, "Elapsed", elapsed) }
-            { wrap2(3, "Procedure", procedureDesc) }
+            {wrap2(1, "Institution", institutionName)}
+            {wrap2(2, "Data Acquisition", dateToString(output.dataDate))}
+            {wrap2(2, "Analysis", analysisDate)}
+            {wrap2Anon(1, "Analysis by", userId)}
+            {wrap2Anon(1, "Elapsed", elapsed)}
+            {wrap2(3, "Procedure", procedureDesc)}
           </div>
           <div class="row" style="margin:20px;">
-            { spreadSheetLinks(fileWorkbookList).map(e => { wrap(3, e) }) }
+            {spreadSheetLinks(fileWorkbookList).map(e => { wrap(3, e) })}
           </div>
           <div class="row" style="margin:20px;">
-            { wrap(2, linkToFiles) }
-            { wrap(2, viewLog) }
-            { wrap(2, viewXml) }
+            {wrap(2, linkToFiles)}
+            {wrap(2, viewLog)}
+            {wrap(2, viewXml)}
           </div>
           <div class="row">
             {
-              if (numberOfBadValues > 0) {
-                <div style="color:red">
-                  <h3>Caution: There were { numberOfBadValues } invalid values in the results</h3>
+          if (numberOfBadValues > 0) {
+            <div style="color:red">
+                  <h3>Caution: There were {numberOfBadValues} invalid values in the results</h3>
                   <p>
                     Invalid values are caused by unchecked arithmetic calculations, such as
                     division by zero.  Examples are<b>NaN</b>
@@ -575,8 +561,8 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
                     They will be displayed as <b>#NUM!</b>.
                   </p>
                 </div>
-              }
-            }
+          }
+        }
           </div>
           <div class="row">
             <h4>Leaf Offset in mm</h4>

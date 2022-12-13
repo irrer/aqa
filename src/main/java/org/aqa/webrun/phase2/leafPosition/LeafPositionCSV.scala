@@ -17,12 +17,12 @@
 package org.aqa.webrun.phase2.leafPosition
 
 import org.aqa.Util
-import java.io.File
-import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.phase2.RunReq
-import scala.collection.Seq
 import org.aqa.db.LeafPosition
 import org.aqa.web.WebServer
+import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.phase2.RunReq
+
+import java.io.File
 
 object LeafPositionCSV {
 
@@ -35,7 +35,7 @@ object LeafPositionCSV {
     val analysisDate: String = {
       val date = extendedData.output.analysisDate match {
         case Some(d) => d
-        case _ => extendedData.output.startDate
+        case _       => extendedData.output.startDate
       }
       Util.timeHumanFriendly(date)
     }
@@ -63,13 +63,14 @@ object LeafPositionCSV {
       ("Machine ID", (lp: LP) => machineId),
       ("Institution", (lp: LP) => institutionName),
       ("Acquistion Date", (lp: LP) => acquisitionDate),
-      ("Patient ID", (lp: LP) => runReq.patientIdOfSop(lp.SOPInstanceUID)))
+      ("Patient ID", (lp: LP) => runReq.patientIdOfSop(lp.SOPInstanceUID))
+    )
 
     def beamResultsToCsv(lp: LeafPosition): String = {
       def fmt(any: Any): String = {
         any match {
           case d: Double => d.formatted("%14.11e")
-          case _ => Util.textToCsv(any.toString)
+          case _         => Util.textToCsv(any.toString)
         }
       }
       columns.map(c => fmt(c._2(lp))).mkString(",")
@@ -82,11 +83,10 @@ object LeafPositionCSV {
         ("Institution", extendedData.institution.name),
         ("Acquisition Date", acquisitionDate),
         ("Analysis Date", analysisDate),
-        ("User", userId))
+        ("User", userId)
+      )
 
-      Seq(
-        info.map(s => Util.textToCsv(s._1)).mkString(","),
-        info.map(s => Util.textToCsv(s._2)).mkString(","))
+      Seq(info.map(s => Util.textToCsv(s._1)).mkString(","), info.map(s => Util.textToCsv(s._2)).mkString(","))
     }
 
     val header = Seq(columns.map(c => c._1).mkString(","))

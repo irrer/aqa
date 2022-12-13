@@ -16,10 +16,11 @@
 
 package org.aqa.web
 
-import org.restlet.Response
-import scala.xml.Elem
 import org.aqa.db.EPID
 import org.aqa.web.WebUtil._
+import org.restlet.Response
+
+import scala.xml.Elem
 
 object EPIDList {
   private val path = new String((new EPIDList).pathOf)
@@ -36,7 +37,7 @@ class EPIDList extends GenericList[EPID] with WebUtil.SubUrlAdmin {
 
   override def getPK(value: EPID): Long = value.epidPK.get
 
-  private def notesHTML(machineType: EPID): Elem = <div>{ WebUtil.firstPartOf(machineType.notes, 60) }</div>
+  private def notesHTML(machineType: EPID): Elem = <div>{WebUtil.firstPartOf(machineType.notes, 60)}</div>
 
   private val manufacturerCol = new Column[EPID]("Manufacturer", _.manufacturer, (mlc) => makePrimaryKeyHtml(mlc.manufacturer, mlc.epidPK))
 

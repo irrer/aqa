@@ -28,7 +28,6 @@ import org.aqa.webrun.phase2.RunReq
 
 import java.awt.Color
 import java.io.File
-import scala.collection.Seq
 import scala.xml.Elem
 
 /**

@@ -16,18 +16,18 @@
 
 package org.aqa.webrun.phase2.leafPosition
 
-import org.aqa.Logging
-import edu.umro.ScalaUtil.Trace
-import java.awt.image.BufferedImage
-import org.aqa.db.LeafPosition
 import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import edu.umro.ImageUtil.ImageUtil
-import java.awt.Color
-import org.aqa.Config
 import edu.umro.ImageUtil.ImageText
+import edu.umro.ImageUtil.ImageUtil
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import org.aqa.Logging
+import org.aqa.db.LeafPosition
+import org.aqa.Config
 import org.aqa.Util
+
+import java.awt.image.BufferedImage
 import java.awt.BasicStroke
+import java.awt.Color
 
 object LeafPositionAnnotateImage extends Logging {
 
@@ -52,8 +52,8 @@ object LeafPositionAnnotateImage extends Logging {
   }
 
   /**
-   * Create an image that has the leaf positions annotated.
-   */
+    * Create an image that has the leaf positions annotated.
+    */
   def annotateImage(leafPositionList: Seq[LeafPosition], horizontal: Boolean, dicomImage: DicomImage, leafWidthList_mm: Seq[Double], translator: IsoImagePlaneTranslator): BufferedImage = {
     val bufImg = makeZoomedImage(dicomImage)
     val graphics = ImageUtil.getGraphics(bufImg)
@@ -143,9 +143,9 @@ object LeafPositionAnnotateImage extends Logging {
         graphics.drawLine(i2pX(x1), i2pY(y1), i2pX(x2), i2pY(y2))
 
         val degrees = (horizontal, lp.offset_mm < 0) match {
-          case (true, true) => 180
-          case (true, false) => 0
-          case (false, true) => 90
+          case (true, true)   => 180
+          case (true, false)  => 0
+          case (false, true)  => 90
           case (false, false) => 270
         }
 

@@ -16,34 +16,26 @@
 
 package org.aqa.webrun.phase2
 
-import org.aqa.Logging
-import org.aqa.db.CollimatorCentering
-import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.TagFromName
-import org.aqa.Util
-import scala.collection.Seq
-import scala.xml.Elem
-import org.aqa.db.Output
-import org.aqa.run.ProcedureStatus
-import org.aqa.DicomFile
+import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
+import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
-import java.awt.geom.Point2D
-import org.aqa.Config
-import java.awt.Rectangle
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ImageUtil.LocateEdge
+import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.Config
+import org.aqa.Logging
+import org.aqa.Util
+
+import java.awt.geom.Point2D
+import java.awt.Rectangle
 import java.awt.image.BufferedImage
+import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Graphics2D
-import java.awt.BasicStroke
 import java.awt.Point
-import edu.umro.ScalaUtil.Trace
-import edu.umro.ImageUtil.ImageText
-import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import java.awt.geom.Rectangle2D
-import edu.umro.DicomDict.TagByName
 
 /*
 
@@ -94,28 +86,20 @@ import edu.umro.DicomDict.TagByName
                                         .
 .....................................................................................
 
-*/
+ */
 
 /**
- * Measure the four edges in an image (TBLR : top, bottom, left, right) in pixels.
- */
+  * Measure the four edges in an image (TBLR : top, bottom, left, right) in pixels.
+  */
 object MeasureTBLREdges extends Logging {
 
   case class X1X2Y1Y2(X1: Double, X2: Double, Y1: Double, Y2: Double) {
-    def minus(other: X1X2Y1Y2) = new X1X2Y1Y2(
-      X1 - other.X1,
-      X2 - other.X2,
-      Y1 - other.Y1,
-      X2 - other.X2)
+    def minus(other: X1X2Y1Y2) = new X1X2Y1Y2(X1 - other.X1, X2 - other.X2, Y1 - other.Y1, X2 - other.X2)
 
     def toSeq = Seq(X1, X2, Y1, Y2)
 
     def pix2iso(translator: IsoImagePlaneTranslator): X1X2Y1Y2 = {
-      new X1X2Y1Y2(
-        translator.pix2IsoCoordX(X1),
-        translator.pix2IsoCoordX(X2),
-        translator.pix2IsoCoordY(Y1),
-        translator.pix2IsoCoordY(Y2))
+      new X1X2Y1Y2(translator.pix2IsoCoordX(X1), translator.pix2IsoCoordX(X2), translator.pix2IsoCoordY(Y1), translator.pix2IsoCoordY(Y2))
     }
 
     override def toString = {
@@ -125,8 +109,8 @@ object MeasureTBLREdges extends Logging {
 
     def toTBLR(collimatorAngle: Double): TBLR = {
       Util.angleRoundedTo90(collimatorAngle) match {
-        case 0 => new TBLR(-Y2, -Y1, X1, X2)
-        case 90 => new TBLR(-X2, -X1, -Y2, -Y1)
+        case 0   => new TBLR(-Y2, -Y1, X1, X2)
+        case 90  => new TBLR(-X2, -X1, -Y2, -Y1)
         case 180 => new TBLR(Y1, Y2, -X2, -X1)
         case 270 => new TBLR(X1, X2, Y1, Y2)
       }
@@ -135,20 +119,20 @@ object MeasureTBLREdges extends Logging {
 
   def TBLRtoX1X2Y1Y2(collimatorAngle: Double, tblr: TBLR) = {
     Util.angleRoundedTo90(collimatorAngle) match {
-      case 0 => new X1X2Y1Y2(tblr.left, tblr.right, tblr.bottom, tblr.top)
-      case 90 => new X1X2Y1Y2(tblr.bottom, tblr.top, tblr.right, tblr.left)
+      case 0   => new X1X2Y1Y2(tblr.left, tblr.right, tblr.bottom, tblr.top)
+      case 90  => new X1X2Y1Y2(tblr.bottom, tblr.top, tblr.right, tblr.left)
       case 180 => new X1X2Y1Y2(tblr.right, tblr.left, tblr.top, tblr.bottom)
       case 270 => new X1X2Y1Y2(tblr.top, tblr.bottom, tblr.left, tblr.right)
     }
   }
 
   /**
-   * Given a collimator angle, return the respective names of the top, bottom, left, and right edges.
-   */
+    * Given a collimator angle, return the respective names of the top, bottom, left, and right edges.
+    */
   def edgeNames(collimatorAngle: Double): Seq[String] = {
     Util.angleRoundedTo90(collimatorAngle) match {
-      case 0 => Seq("Y2", "Y1", "X1", "X2")
-      case 90 => Seq("X2", "X1", "Y2", "Y1")
+      case 0   => Seq("Y2", "Y1", "X1", "X2")
+      case 90  => Seq("X2", "X1", "Y2", "Y1")
       case 180 => Seq("Y1", "Y2", "X2", "X1")
       case 270 => Seq("X1", "X2", "Y1", "Y2")
     }
@@ -165,52 +149,32 @@ object MeasureTBLREdges extends Logging {
       new TBLR(transY(top), transY(bottom), transX(left), transX(right))
     }
 
-    def minus(other: TBLR) = new TBLR(
-      top - other.top,
-      bottom - other.bottom,
-      left - other.left,
-      right - other.right)
+    def minus(other: TBLR) = new TBLR(top - other.top, bottom - other.bottom, left - other.left, right - other.right)
 
-    def addOffset(point: Point2D.Double) = new TBLR(
-      top + point.getY,
-      bottom + point.getY,
-      left + point.getX,
-      right + point.getX)
+    def addOffset(point: Point2D.Double) = new TBLR(top + point.getY, bottom + point.getY, left + point.getX, right + point.getX)
 
     def toX1X2Y1Y2(collimatorAngle: Double) = TBLRtoX1X2Y1Y2(collimatorAngle, this)
     //def toX1X2Y1Y2 = TBLRtoX1X2Y1Y2(270, this)
 
     def pix2iso(translator: IsoImagePlaneTranslator): TBLR = {
-      new TBLR(
-        translator.pix2IsoCoordY(top),
-        translator.pix2IsoCoordY(bottom),
-        translator.pix2IsoCoordX(left),
-        translator.pix2IsoCoordX(right))
+      new TBLR(translator.pix2IsoCoordY(top), translator.pix2IsoCoordY(bottom), translator.pix2IsoCoordX(left), translator.pix2IsoCoordX(right))
     }
 
     def iso2Pix(translator: IsoImagePlaneTranslator): TBLR = {
-      new TBLR(
-        translator.iso2PixCoordY(top),
-        translator.iso2PixCoordY(bottom),
-        translator.iso2PixCoordX(left),
-        translator.iso2PixCoordX(right))
+      new TBLR(translator.iso2PixCoordY(top), translator.iso2PixCoordY(bottom), translator.iso2PixCoordX(left), translator.iso2PixCoordX(right))
     }
 
     /**
-     * Grow (positive value) or shrink (negative value) the rectangle this
-     * describes by adding or subtracting the given amount to all four sides.
-     */
+      * Grow (positive value) or shrink (negative value) the rectangle this
+      * describes by adding or subtracting the given amount to all four sides.
+      */
     def resize(change: Double): TBLR = {
-      new TBLR(
-        top - change,
-        bottom + change,
-        left - change,
-        right + change)
+      new TBLR(top - change, bottom + change, left - change, right + change)
     }
 
     /**
-     * Convert to Rectangle
-     */
+      * Convert to Rectangle
+      */
     def toRectangle: Rectangle2D.Double = {
       new Rectangle2D.Double(left, top, right - left, bottom - top)
     }
@@ -292,8 +256,8 @@ object MeasureTBLREdges extends Logging {
     }
 
     /**
-     * Get the most often occurring non-zero leaf gap
-     */
+      * Get the most often occurring non-zero leaf gap
+      */
     def rectangleWidth(colmtr: Colmtr): Double = {
       val nonZero = (0 until colmtr.leafPairCount).map(leafIndex => colmtr.leafGap(leafIndex)).filter(gap => gap > 0.0001)
       val width = nonZero.groupBy(gap => gap.round.toInt).values.toSeq.sortBy(group => group.size).last.head
@@ -316,8 +280,8 @@ object MeasureTBLREdges extends Logging {
   }
 
   /**
-   * Get the collimator (jaw) positions from the image.  This assumes that the positions given in the image are valid.
-   */
+    * Get the collimator (jaw) positions from the image.  This assumes that the positions given in the image are valid.
+    */
   private def getCollimatorPositionsFromImage(rtimage: AttributeList): X1X2Y1Y2 = {
     val ExposureSequence = DicomUtil.seqToAttr(rtimage, TagByName.ExposureSequence).head
     val BeamLimitingDeviceSequence = DicomUtil.seqToAttr(ExposureSequence, TagByName.BeamLimitingDeviceSequence)
@@ -384,12 +348,12 @@ object MeasureTBLREdges extends Logging {
   //
 
   /**
-   * Calculate the point at the given percent between the highest and loleft pixel value.
-   *
-   * @param image: Contains range of pixel values
-   *
-   * @param thresholdPercent: Must be from 0 to 1 non-inclusive, indicates where the actual edge should be considered to be.
-   */
+    * Calculate the point at the given percent between the highest and loleft pixel value.
+    *
+    * @param image: Contains range of pixel values
+    *
+    * @param thresholdPercent: Must be from 0 to 1 non-inclusive, indicates where the actual edge should be considered to be.
+    */
   private def calcPercentPixelValue(image: DicomImage, thresholdPercent: Double): Double = {
     if (!((thresholdPercent > 0) && (thresholdPercent < 1))) throw new IllegalArgumentException("thresholdPercent is " + thresholdPercent + " but must be 0 < t < 1.")
     val pixelCount = ((Config.PenumbraPlateauPixelsPerMillion / 1000000.0) * image.width * image.height).round.toInt
@@ -429,8 +393,7 @@ object MeasureTBLREdges extends Logging {
   private val dashedLine = new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, Array(1, 4), 0)
   private val solidLine = new BasicStroke
 
-  private def annotateTopBottom(bufImg: BufferedImage, graphics: Graphics2D, pixelEdge: Double, name: String,
-    scaledEdge: Double, rect: Rectangle, floodOffset: Point) = {
+  private def annotateTopBottom(bufImg: BufferedImage, graphics: Graphics2D, pixelEdge: Double, name: String, scaledEdge: Double, rect: Rectangle, floodOffset: Point) = {
 
     val xOff = floodOffset.getX.round.toInt
     val yOff = floodOffset.getY.round.toInt
@@ -515,10 +478,20 @@ object MeasureTBLREdges extends Logging {
   }
 
   /**
-   * Make an annotated image that illustrates the edges.
-   */
-  private def makeAnnotatedImage(image: DicomImage, measurementSet: TBLR, transMeasurementSet: TBLR, collimatorAngle: Double,
-    topRect: Rectangle, bottomRect: Rectangle, rightRect: Rectangle, leftRect: Rectangle, floodOffset: Point, translator: IsoImagePlaneTranslator): BufferedImage = {
+    * Make an annotated image that illustrates the edges.
+    */
+  private def makeAnnotatedImage(
+      image: DicomImage,
+      measurementSet: TBLR,
+      transMeasurementSet: TBLR,
+      collimatorAngle: Double,
+      topRect: Rectangle,
+      bottomRect: Rectangle,
+      rightRect: Rectangle,
+      leftRect: Rectangle,
+      floodOffset: Point,
+      translator: IsoImagePlaneTranslator
+  ): BufferedImage = {
     //val bufImg = image.toBufferedImage(imageColor)
     val bufImg = image.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
     Config.applyWatermark(bufImg)
@@ -556,19 +529,27 @@ object MeasureTBLREdges extends Logging {
   }
 
   /**
-   * Measure the four edges in the image, and create an annotated image.
-   *
-   * @param image: Image to analyze.  Should have already been corrected for flood field if necessary.
-   *
-   * @param translator: IsoImagePlaneTranslator.
-   *
-   * @param expected_mm: Expected edge position in mm in isoplane.
-   *
-   * @param annotate: Image containing pixels to be annotated.
-   *
-   * @param floodOffset: XY offset of image to annotate.
-   */
-  def measure(image: DicomImage, translator: IsoImagePlaneTranslator, expected_mm: Option[TBLR], collimatorAngle: Double, annotate: DicomImage, floodOffset: Point, thresholdPercent: Double): AnalysisResult = {
+    * Measure the four edges in the image, and create an annotated image.
+    *
+    * @param image: Image to analyze.  Should have already been corrected for flood field if necessary.
+    *
+    * @param translator: IsoImagePlaneTranslator.
+    *
+    * @param expected_mm: Expected edge position in mm in isoplane.
+    *
+    * @param annotate: Image containing pixels to be annotated.
+    *
+    * @param floodOffset: XY offset of image to annotate.
+    */
+  def measure(
+      image: DicomImage,
+      translator: IsoImagePlaneTranslator,
+      expected_mm: Option[TBLR],
+      collimatorAngle: Double,
+      annotate: DicomImage,
+      floodOffset: Point,
+      thresholdPercent: Double
+  ): AnalysisResult = {
     val threshold = calcPercentPixelValue(image, thresholdPercent)
 
     val coarse = {
@@ -579,7 +560,8 @@ object MeasureTBLREdges extends Logging {
           translator.iso2PixCoordY(expected_mm.get.top),
           translator.iso2PixCoordY(expected_mm.get.bottom),
           translator.iso2PixCoordX(expected_mm.get.left),
-          translator.iso2PixCoordX(expected_mm.get.right))
+          translator.iso2PixCoordX(expected_mm.get.right)
+        )
       }
     }
 

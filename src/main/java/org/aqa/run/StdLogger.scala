@@ -17,17 +17,18 @@
 package org.aqa.run
 
 import org.aqa.db.Output
-import scala.sys.process._
-import java.io.FileWriter
+
 import java.io.Closeable
-import java.io.Flushable
 import java.io.File
+import java.io.FileWriter
+import java.io.Flushable
 import java.text.SimpleDateFormat
 import java.util.Date
+import scala.sys.process._
 
 /**
- * Write stdout and stderr to a single file, prefixing each line with 'out' or 'err' and a time stamp.
- */
+  * Write stdout and stderr to a single file, prefixing each line with 'out' or 'err' and a time stamp.
+  */
 
 class StdLogger(output: Output) extends ProcessLogger with Closeable with Flushable {
   private val LS = System.lineSeparator

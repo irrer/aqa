@@ -255,7 +255,7 @@ object BBbyCBCTExecute extends Logging {
     */
   def runProcedure(extendedData: ExtendedData, runReq: BBbyCBCTRunReq, response: Response): ProcedureStatus.Value = {
     val institutionPK = extendedData.user.institutionPK
-    val dataDate  = extendedData.output.dataDate.get
+    val dataDate = extendedData.output.dataDate.get
     val status =
       try {
         // This code only reports values and considers the test to have passed if

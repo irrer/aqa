@@ -52,7 +52,13 @@ class MachineDailyQAUpdate extends Restlet with SubUrlAdmin {
 
   private val warningLimit = new WebInputText("Warning Limit (mm)", 2, 0, "")
 
-  private val requireXRayOffset = new WebInputCheckbox("Require X-Ray Offset", showLabel = true, Some("Check if the machine supports X-Ray offset, and it will be required to NOT have the value of exactly 0, 0, -500"), col = 2, offset = 0)
+  private val requireXRayOffset = new WebInputCheckbox(
+    "Require X-Ray Offset",
+    showLabel = true,
+    Some("Check if the machine supports X-Ray offset, and it will be required to NOT have the value of exactly 0, 0, -500"),
+    col = 2,
+    offset = 0
+  )
 
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
     val action: String = pathOf + "?" + name + "=" + name

@@ -16,11 +16,9 @@
 
 package org.aqa.web
 
-import org.restlet.Response
-import org.aqa.web.WebUtil._
-import org.aqa.Config
-import java.io.File
 import org.aqa.db.SystemModification
+import org.aqa.web.WebUtil._
+import org.restlet.Response
 
 object SystemModificationList {
   val path = new String((new SystemModificationList).pathOf)
@@ -43,8 +41,7 @@ class SystemModificationList extends GenericList[SystemModification.SystemModifi
 
   //private val userCol = new Column[SMC]("User", _.user.id, (smc) => wrapAlias(smc.user.id))
 
-  private val summaryCol = new Column[SMC](
-    "Summary", _.systemModification.summary, (smc) => <div>{ WebUtil.firstPartOf(smc.systemModification.summary, 120) }</div>)
+  private val summaryCol = new Column[SMC]("Summary", _.systemModification.summary, (smc) => <div>{WebUtil.firstPartOf(smc.systemModification.summary, 120)}</div>)
 
   private def optionToString[T](opt: Option[T]): String = if (opt.isDefined) opt.get.toString else "none";
 

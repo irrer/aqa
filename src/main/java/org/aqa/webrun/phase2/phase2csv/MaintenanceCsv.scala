@@ -100,8 +100,8 @@ object MaintenanceCsv {
   }
 
   /**
-   * Write the documentation for columns.
-   */
+    * Write the documentation for columns.
+    */
   def writeDoc(): Unit = {
     Phase2Csv.writeDoc(colList.asInstanceOf[Seq[CsvCol[Any]]], dataName)
   }

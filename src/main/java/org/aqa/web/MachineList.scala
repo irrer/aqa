@@ -16,12 +16,13 @@
 
 package org.aqa.web
 
-import org.restlet.Response
 import org.aqa.db.Machine
 import org.aqa.web.WebUtil._
-import scala.xml.Elem
 import org.aqa.AnonymizeUtil
 import org.aqa.db.CachedUser
+import org.restlet.Response
+
+import scala.xml.Elem
 
 object MachineList {
   private val path = new String((new MachineList).pathOf)
@@ -62,10 +63,10 @@ class MachineList extends GenericList[Machine.MMI] with WebUtil.SubUrlAdmin {
     }
     Machine.listWithDependencies(instPK)
   }
-  
+
   override def getPK(value: Machine.MMI): Long = value.machine.machinePK.get
 
-  private def machineTypeHTML(mmi: MMI): Elem = <div> { WebUtil.firstPartOf(mmi.machineType.toName, 40) } </div>
+  private def machineTypeHTML(mmi: MMI): Elem = <div> {WebUtil.firstPartOf(mmi.machineType.toName, 40)} </div>
 
   private val idCol = new Column[MMI]("Name", _.machine.id, (mmi) => makePrimaryKeyHtmlWithAQAAlias(mmi.machine.id, mmi.machine.machinePK))
 
@@ -79,10 +80,10 @@ class MachineList extends GenericList[Machine.MMI] with WebUtil.SubUrlAdmin {
     val a = mmiA.machine.serialNumber
     val b = mmiB.machine.serialNumber
     val cmpr = (a.isDefined, b.isDefined) match {
-      case (true, true) => a.get.compareTo(b.get) < 0
+      case (true, true)   => a.get.compareTo(b.get) < 0
       case (false, false) => false
-      case (true, false) => false
-      case (false, true) => true
+      case (true, false)  => false
+      case (false, true)  => true
     }
     cmpr
   }

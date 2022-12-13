@@ -17,16 +17,17 @@
 package org.aqa.run
 
 import org.aqa.db.Output
-import scala.collection.mutable.HashMap
-import scala.sys.process._
 import org.restlet.Response
 
+import scala.collection.mutable.HashMap
+import scala.sys.process._
+
 /**
- * Keep track of running processes.
- *
- * Although the database can be queried for running processes, it is not possible,
- * given only that information, to destroy a process or close a logger.
- */
+  * Keep track of running processes.
+  *
+  * Although the database can be queried for running processes, it is not possible,
+  * given only that information, to destroy a process or close a logger.
+  */
 object ActiveProcess {
 
   private val activeProcessList = new HashMap[Long, ActiveProcess]()

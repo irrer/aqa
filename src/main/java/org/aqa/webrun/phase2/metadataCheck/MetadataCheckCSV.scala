@@ -18,15 +18,10 @@ package org.aqa.webrun.phase2.metadataCheck
 
 import org.aqa.db.MetadataCheck
 import org.aqa.Util
-import java.io.File
-import org.aqa.db.Output
-import org.aqa.db.Machine
-import org.aqa.db.Institution
-import org.aqa.db.Procedure
-import org.aqa.db.Input
-import org.aqa.db.User
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.RunReq
+
+import java.io.File
 
 object MetadataCheckCSV {
 
@@ -39,7 +34,7 @@ object MetadataCheckCSV {
     val analysisDate: String = {
       val date = extendedData.output.analysisDate match {
         case Some(d) => d
-        case _ => extendedData.output.startDate
+        case _       => extendedData.output.startDate
       }
       Util.timeHumanFriendly(date)
     }
@@ -71,13 +66,14 @@ object MetadataCheckCSV {
       ("energyPlan_kev", (ii: II) => ii.energyPlan_kev),
       ("energyPlanMinusImage_kev", (ii: II) => ii.energyPlanMinusImage_kev),
       ("flatteningFilter", (ii: II) => ii.flatteningFilter),
-      ("pass", (ii: II) => ii.pass))
+      ("pass", (ii: II) => ii.pass)
+    )
 
     def metadataCheckToCsv(ii: MetadataCheck): String = {
       def fmt(any: Any): String = {
         any match {
           case d: Double => d.formatted("%14.11e")
-          case _ => Util.textToCsv(any.toString)
+          case _         => Util.textToCsv(any.toString)
         }
       }
       columns.map(c => fmt(c._2(ii))).mkString(",")
@@ -90,11 +86,10 @@ object MetadataCheckCSV {
         ("Institution", extendedData.institution.name),
         ("Acquisition Date", acquisitionDate),
         ("Analysis Date", analysisDate),
-        ("User", userId))
+        ("User", userId)
+      )
 
-      Seq(
-        info.map(s => Util.textToCsv(s._1)).mkString(","),
-        info.map(s => Util.textToCsv(s._2)).mkString(","))
+      Seq(info.map(s => Util.textToCsv(s._1)).mkString(","), info.map(s => Util.textToCsv(s._2)).mkString(","))
     }
 
     val header = Seq(columns.map(c => c._1).mkString(","))

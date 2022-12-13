@@ -16,15 +16,14 @@
 
 package org.aqa
 
-import java.io.File
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.SequenceAttribute
 import com.pixelmed.dicom.TagFromName
 import com.pixelmed.display.ConsumerFormatImageMaker
-import edu.umro.ScalaUtil.DicomUtil
-import java.awt.image.BufferedImage
-import edu.umro.ScalaUtil.Trace
 import edu.umro.ImageUtil.DicomImage
+import edu.umro.ScalaUtil.DicomUtil
+
+import java.awt.image.BufferedImage
+import java.io.File
 
 case class DicomFile(file: File) extends Logging {
   private lazy val readResult = Util.readDicomFile(file)
@@ -64,7 +63,7 @@ case class DicomFile(file: File) extends Logging {
 
   def getImage(contrastModel: DicomFile.ContrastModel.Value): Option[BufferedImage] = {
     contrastModel match {
-      case DicomFile.ContrastModel.standard => standardImage
+      case DicomFile.ContrastModel.standard    => standardImage
       case DicomFile.ContrastModel.maxContrast => maxContrastImage
       case _ => {
         logger.error(fmtEx(new RuntimeException("Invalid colorScheme: " + contrastModel)))
@@ -83,7 +82,7 @@ case class DicomFile(file: File) extends Logging {
   lazy val originalDicomImage: Option[DicomImage] = {
     attributeList match {
       case Some(al) => Some(new DicomImage(attributeList.get))
-      case _ => None
+      case _        => None
     }
   }
 
@@ -104,7 +103,7 @@ case class DicomFile(file: File) extends Logging {
   lazy val correctedDicomImage: Option[DicomImage] = {
     (originalDicomImage, badPixelList) match {
       case (Some(odi), Some(bpl)) => Some(odi.correctBadPixels(bpl, Util.badPixelRadius(attributeList.get)))
-      case _ => None
+      case _                      => None
     }
   }
 }
@@ -123,15 +122,15 @@ object DicomFile extends Logging {
   private lazy val rgbTable = (0 until 256).map(b => (b << 8) + b)
 
   /**
-   * Return a list of all the DICOM files in the given directory.  Return the list of all files, DICOM or not.
-   */
+    * Return a list of all the DICOM files in the given directory.  Return the list of all files, DICOM or not.
+    */
   def readDicomInDir(dir: File): Seq[DicomFile] = {
     Util.listDirFiles(dir).map(f => new DicomFile(f))
   }
 
   /**
-   * Return a list of DicomFiles that ha SOPInstanceUID.
-   */
+    * Return a list of DicomFiles that ha SOPInstanceUID.
+    */
   def distinctSOPInstanceUID(dicomFileList: Seq[DicomFile]): Seq[DicomFile] = {
     val after = dicomFileList.filter(df => df.valid).map(df => (Util.sopOfAl(df.attributeList.get), df)).toMap.values.toSeq
     after // TODO rm

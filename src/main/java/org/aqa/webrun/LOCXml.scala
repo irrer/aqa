@@ -16,16 +16,16 @@
 
 package org.aqa.webrun
 
-import scala.xml.XML
-import java.io.File
-import scala.xml.Elem
-import scala.xml.Node
-import scala.xml.NodeSeq
 import org.aqa.procedures.ProcedureOutputUtil
 
+import java.io.File
+import scala.collection.immutable
+import scala.xml.NodeSeq
+import scala.xml.XML
+
 /**
- * Extract LOC related values from XML file.
- */
+  * Extract LOC related values from XML file.
+  */
 class LOCXml(dir: File) {
   private val file = new File(dir, ProcedureOutputUtil.outputFileName)
   private val elem = XML.loadFile(file)
@@ -37,35 +37,35 @@ class LOCXml(dir: File) {
   private val constancy = elem \ "LeafOffsetConstancy"
   private val constancyLeafList = constancy \ "LeafList" \ "Leaf"
 
-  val outputPK = (elem \ "@outputPK").head.text.toLong
+  val outputPK: Long = (elem \ "@outputPK").head.text.toLong
 
-  val epidCenterCorrection_mm = (elem \ "EPIDCenterCorrection").head.text.toDouble
+  val epidCenterCorrection_mm: Double = (elem \ "EPIDCenterCorrection").head.text.toDouble
 
-  val LeafOffsetConstancyValue = constancyLeafList.map(n => nodeSeqToDouble(n \ "Value"))
-  val LeafOffsetConstancyMean = nodeSeqToDouble(constancyLeafList \ "Mean")
-  val LeafOffsetConstancyRange = nodeSeqToDouble(constancyLeafList \ "Range")
-  val LeafOffsetConstancySectionMean = nodeSeqToDouble(constancy \ "MeanList" \ "Mean")
-  val LeafOffsetConstancySectionSTD = nodeSeqToDouble(constancy \ "STDList" \ "STD")
-  val LeafOffsetConstancySectionCoeffOfVar = nodeSeqToDouble(constancy \ "CoeffOfVarList" \ "CoeffOfVar")
-  val LeafOffsetConstancySectionRange = nodeSeqToDouble(constancy \ "RangeList" \ "Range")
+  val LeafOffsetConstancyValue: immutable.Seq[Seq[Double]] = constancyLeafList.map(n => nodeSeqToDouble(n \ "Value"))
+  val LeafOffsetConstancyMean: Seq[Double] = nodeSeqToDouble(constancyLeafList \ "Mean")
+  val LeafOffsetConstancyRange: Seq[Double] = nodeSeqToDouble(constancyLeafList \ "Range")
+  val LeafOffsetConstancySectionMean: Seq[Double] = nodeSeqToDouble(constancy \ "MeanList" \ "Mean")
+  val LeafOffsetConstancySectionSTD: Seq[Double] = nodeSeqToDouble(constancy \ "STDList" \ "STD")
+  val LeafOffsetConstancySectionCoeffOfVar: Seq[Double] = nodeSeqToDouble(constancy \ "CoeffOfVarList" \ "CoeffOfVar")
+  val LeafOffsetConstancySectionRange: Seq[Double] = nodeSeqToDouble(constancy \ "RangeList" \ "Range")
 
   private val transmission = elem \ "LeafTransmission"
   private val transmissionLeafList = transmission \ "LeafList" \ "Leaf"
-  val LeafOffsetTransmissionValue = transmissionLeafList.map(n => nodeSeqToDouble(n \ "Value"))
-  val LeafOffsetTransmissionMean = nodeSeqToDouble(transmissionLeafList \ "Mean")
-  val LeafOffsetTransmissionSectionMean = nodeSeqToDouble(transmission \ "MeanList" \ "Mean")
-  val LeafOffsetTransmissionSectionSTD = nodeSeqToDouble(transmission \ "STDList" \ "STD")
-  val LeafOffsetTransmissionSectionCoeffOfVar = nodeSeqToDouble(transmission \ "CoeffOfVarList" \ "CoeffOfVar")
-  val LeafOffsetTransmissionSectionRange = nodeSeqToDouble(transmission \ "RangeList" \ "Range")
+  val LeafOffsetTransmissionValue: immutable.Seq[Seq[Double]] = transmissionLeafList.map(n => nodeSeqToDouble(n \ "Value"))
+  val LeafOffsetTransmissionMean: Seq[Double] = nodeSeqToDouble(transmissionLeafList \ "Mean")
+  val LeafOffsetTransmissionSectionMean: Seq[Double] = nodeSeqToDouble(transmission \ "MeanList" \ "Mean")
+  val LeafOffsetTransmissionSectionSTD: Seq[Double] = nodeSeqToDouble(transmission \ "STDList" \ "STD")
+  val LeafOffsetTransmissionSectionCoeffOfVar: Seq[Double] = nodeSeqToDouble(transmission \ "CoeffOfVarList" \ "CoeffOfVar")
+  val LeafOffsetTransmissionSectionRange: Seq[Double] = nodeSeqToDouble(transmission \ "RangeList" \ "Range")
 
-  val LOCRSquared = (elem \ "LOCRSquared" \ "Leaf").map(n => nodeSeqToDouble(n \ "Value"))
+  val LOCRSquared: immutable.Seq[Seq[Double]] = (elem \ "LOCRSquared" \ "Leaf").map(n => nodeSeqToDouble(n \ "Value"))
 
-  val LOCDifferenceFromBaselineOpen = (elem \ "LOCDifferenceFromBaselineOpen" \ "Leaf").map(n => nodeSeqToDouble(n \ "Value"))
+  val LOCDifferenceFromBaselineOpen: immutable.Seq[Seq[Double]] = (elem \ "LOCDifferenceFromBaselineOpen" \ "Leaf").map(n => nodeSeqToDouble(n \ "Value"))
 
-  val LOCDifferenceFromBaselineTrans = (elem \ "LOCDifferenceFromBaselineTrans" \ "Leaf").map(n => nodeSeqToDouble(n \ "Value"))
+  val LOCDifferenceFromBaselineTrans: immutable.Seq[Seq[Double]] = (elem \ "LOCDifferenceFromBaselineTrans" \ "Leaf").map(n => nodeSeqToDouble(n \ "Value"))
 
-  val leafIndexList = (constancyLeafList \ "leafIndex").map(n => n.head.text.toInt).distinct.sorted
-  val sections = LeafOffsetConstancyValue.head.size
+  val leafIndexList: immutable.Seq[Int] = (constancyLeafList \ "leafIndex").map(n => n.head.text.toInt).distinct.sorted
+  val sections: Int = LeafOffsetConstancyValue.head.size
 }
 
 object LOCXml {
@@ -86,27 +86,27 @@ object LOCXml {
     val dir = new File("""D:\tmp\aqa\tmp\mario\bad""")
     val locXml = new LOCXml(dir)
 
-    def show(seq: Seq[Double], name: String) = {
+    def show(seq: Seq[Double], name: String): Unit = {
       print(name + " : " + seq.size + " : ")
-      seq.map(d => print(d.formatted("  %10f")))
+      seq.foreach(d => print(d.formatted("  %10f")))
       println
     }
 
-    def show2(seqSeq: Seq[Seq[Double]], name: String) = {
+    def show2(seqSeq: Seq[Seq[Double]], name: String): Unit = {
       println(name + " : " + seqSeq.size + " * " + (if (seqSeq.nonEmpty) seqSeq.head.size else 0))
       for (seq <- seqSeq) {
-        seq.map(d => print(d.formatted("  %10f")))
+        seq.foreach(d => print(d.formatted("  %10f")))
         println
       }
     }
 
-    def showInt(seq: Seq[Int], name: String) = {
+    def showInt(seq: Seq[Int], name: String): Unit = {
       print(name + " :")
-      seq.map(d => print(d.formatted("%5d")))
+      seq.foreach(d => print(d.formatted("%5d")))
       println
     }
 
-    def line = println("\n-------------------------------------------------------------------------\n")
+    def line(): Unit = println("\n-------------------------------------------------------------------------\n")
 
     show2(locXml.LeafOffsetConstancyValue, "LeafOffsetConstancyValue")
     show(locXml.LeafOffsetConstancyMean, "LeafOffsetConstancyMean")
@@ -115,23 +115,23 @@ object LOCXml {
     show(locXml.LeafOffsetConstancySectionSTD, "LeafOffsetConstancySectionSTD")
     show(locXml.LeafOffsetConstancySectionCoeffOfVar, "LeafOffsetConstancySectionCoeffOfVar")
     show(locXml.LeafOffsetConstancySectionRange, "LeafOffsetConstancySectionRange")
-    line
+    line()
     show2(locXml.LeafOffsetTransmissionValue, "LeafOffsetTransmissionValue")
     show(locXml.LeafOffsetTransmissionMean, "LeafOffsetTransmissionMean")
     show(locXml.LeafOffsetTransmissionSectionMean, "LeafOffsetTransmissionSectionMean")
     show(locXml.LeafOffsetTransmissionSectionSTD, "LeafOffsetTransmissionSectionSTD")
     show(locXml.LeafOffsetTransmissionSectionCoeffOfVar, "LeafOffsetTransmissionSectionCoeffOfVar")
     show(locXml.LeafOffsetTransmissionSectionRange, "LeafOffsetTransmissionSectionRange")
-    line
+    line()
     show2(locXml.LOCRSquared, "LOCRSquared")
-    line
+    line()
     show2(locXml.LOCDifferenceFromBaselineOpen, "LOCDifferenceFromBaselineOpen")
-    line
+    line()
     show2(locXml.LOCDifferenceFromBaselineTrans, "LOCDifferenceFromBaselineTrans")
-    line
+    line()
     showInt(locXml.leafIndexList, "leafIndexList")
-    line
+    line()
     println("Number of sections: " + locXml.sections)
-    line
+    line()
   }
 }

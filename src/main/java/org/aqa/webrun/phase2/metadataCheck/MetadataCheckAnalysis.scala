@@ -29,7 +29,6 @@ import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.SubProcedureResult
 
-import scala.collection.Seq
 import scala.xml.Elem
 
 /**

@@ -52,9 +52,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.concurrent.TimeUnit
 import scala.annotation.tailrec
+import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent._
 import scala.concurrent.duration.Duration
 import scala.util.Try
 import scala.xml.Elem

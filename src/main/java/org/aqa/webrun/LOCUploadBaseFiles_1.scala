@@ -16,43 +16,33 @@
 
 package org.aqa.webrun
 
-import org.restlet.Request
-import org.restlet.Response
-import play.api._
-import play.api.libs.concurrent.Execution.Implicits._
-import org.restlet.data.Status
+import com.pixelmed.dicom.AttributeList
+import edu.umro.util.Utility
 import org.aqa.web.WebUtil._
 import org.aqa.Logging
 import org.aqa.db.Machine
-import edu.umro.ScalaUtil.Trace._
-import java.io.File
 import org.aqa.db.Procedure
 import org.aqa.run.Run
 import org.aqa.Util
-import org.aqa.web.WebUtil
-import org.aqa.db.CentralAxis
-import org.restlet.Restlet
-import com.pixelmed.dicom.DicomFileUtilities
-import com.pixelmed.dicom.TagFromName
-import edu.umro.util.Utility
-import com.pixelmed.dicom.AttributeList
-import org.aqa.web.WebRunIndex
-import org.aqa.db.Machine.MMI
-import scala.xml.Elem
-import org.aqa.db.Output
 import org.aqa.db.Input
+import org.aqa.db.Output
 import org.aqa.procedures.UploadTransAndOpen
-import org.aqa.Config
-import edu.umro.ScalaUtil.Trace
+import org.aqa.web.WebRunIndex
+import org.restlet.Request
+import org.restlet.Response
+import org.restlet.data.Status
+
+import java.io.File
+import scala.xml.Elem
 
 object LOCUploadBaseFiles_1 extends Logging {
   val parametersFileName = "parameters.xml"
   val LOCUploadBaseFiles_1PKTag = "LOCUploadBaseFiles_1PK"
 
   /**
-   * Given a machine PK, make sure that the baseline files are available, getting them from the
-   * database if necessary.  If it is not possible to get the files, then return false.
-   */
+    * Given a machine PK, make sure that the baseline files are available, getting them from the
+    * database if necessary.  If it is not possible to get the files, then return false.
+    */
   def ensureBaseline(machinePK: Long): Boolean = {
 
     try {
@@ -75,8 +65,8 @@ object LOCUploadBaseFiles_1 extends Logging {
       }
 
       /**
-       * Copy the LOC baseline files from the output directory to the machine configuration directory.
-       */
+        * Copy the LOC baseline files from the output directory to the machine configuration directory.
+        */
       def copyOutput(output: Output) = {
         val machConfigDir = machine.configDir.get
         Util.mkdirs(machConfigDir)
@@ -117,8 +107,8 @@ object LOCUploadBaseFiles_1 extends Logging {
 }
 
 /**
- * Runs procedures that only need the user to upload files and choose a treatment machine.
- */
+  * Runs procedures that only need the user to upload files and choose a treatment machine.
+  */
 class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedure) with Logging {
 
   private def getInstructions(valueMap: ValueMapT): Elem = {
@@ -162,17 +152,17 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
     def formErr(msg: String) = Left(Error.make(form.uploadFileInput.get, msg))
 
     sessionDir(valueMap) match {
-      case Some(dir) if (!dir.isDirectory) => formErr("No files have been uploaded")
-      case _ if (alList.isEmpty) => formErr("No DICOM files have been uploaded.")
-      case _ if (alList.size == 1) => formErr("Only one DICOM file has been loaded.  Two are required.")
-      case _ if (alList.size > 2) => formErr("More than two DICOM files have been loaded.  Exactly two are required.  Click Cancel to start over.")
-      case _ if (serNoList.size > 1) => formErr("Files from more than two different machines were found.  Click Cancel to start over.")
+      case Some(dir) if (!dir.isDirectory)               => formErr("No files have been uploaded")
+      case _ if (alList.isEmpty)                         => formErr("No DICOM files have been uploaded.")
+      case _ if (alList.size == 1)                       => formErr("Only one DICOM file has been loaded.  Two are required.")
+      case _ if (alList.size > 2)                        => formErr("More than two DICOM files have been loaded.  Exactly two are required.  Click Cancel to start over.")
+      case _ if (serNoList.size > 1)                     => formErr("Files from more than two different machines were found.  Click Cancel to start over.")
       case _ if (machList.isEmpty && chosenMach.isEmpty) => Left(Error.make(machine, "A machine must be chosen"))
-      case _ if (mach.isEmpty) => Left(Error.make(machine, "A machine needs to be chosen"))
+      case _ if (mach.isEmpty)                           => Left(Error.make(machine, "A machine needs to be chosen"))
       case Some(dir) => {
         val newSerialNumber: Option[String] = chosenMach match {
           case Some(m) => serNoList.headOption
-          case _ => None
+          case _       => None
         }
         logger.info("LOCUploadBaseFiles_1 newSerialNumber: " + newSerialNumber)
         Right(new RunRequirements(mach.get, newSerialNumber, dir, alList))
@@ -181,8 +171,8 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
   }
 
   /**
-   * Run the procedure.
-   */
+    * Run the procedure.
+    */
   private def run(valueMap: ValueMapT, request: Request, response: Response) = {
     validate(valueMap) match {
       case Right(runReq) => {
@@ -192,8 +182,8 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
         logger.info("runReq.machine.serialNumber: " + runReq.machine.serialNumber)
         (runReq.serialNumber, runReq.machine.serialNumber) match {
           case (Some(newSer), Some(oldSer)) if (newSer != oldSer) => Machine.setSerialNumber(machPK, newSer)
-          case (Some(newSer), _) => Machine.setSerialNumber(runReq.machine.machinePK.get, newSer)
-          case _ => ;
+          case (Some(newSer), _)                                  => Machine.setSerialNumber(runReq.machine.machinePK.get, newSer)
+          case _                                                  => ;
         }
 
         val dtp = Util.dateTimeAndPatientIdFromDicom(runReq.sessionDir)
@@ -205,8 +195,8 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
   }
 
   /**
-   * Cancel the procedure.  Remove files and redirect to procedure list.
-   */
+    * Cancel the procedure.  Remove files and redirect to procedure list.
+    */
   private def cancel(valueMap: ValueMapT, response: Response) = {
     sessionDir(valueMap) match {
       case Some(dir) => {
@@ -231,8 +221,8 @@ class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedu
     try {
       0 match {
         case _ if buttonIs(valueMap, cancelButton) => cancel(valueMap, response)
-        case _ if buttonIs(valueMap, runButton) => run(valueMap, request, response)
-        case _ => emptyForm(valueMap, response)
+        case _ if buttonIs(valueMap, runButton)    => run(valueMap, request, response)
+        case _                                     => emptyForm(valueMap, response)
       }
     } catch {
       case t: Throwable => {

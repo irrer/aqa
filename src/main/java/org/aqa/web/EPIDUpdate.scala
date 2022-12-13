@@ -16,25 +16,12 @@
 
 package org.aqa.web
 
-import org.restlet.Restlet
+import org.aqa.db.EPID
+import org.aqa.web.WebUtil._
 import org.restlet.Request
 import org.restlet.Response
-import org.restlet.data.Method
-import java.util.Date
-import scala.xml.Elem
-import org.restlet.data.Parameter
-import org.aqa.db.EPID
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.api._
-import play.api.libs.concurrent.Execution.Implicits._
-import org.restlet.data.Form
-import scala.xml.PrettyPrinter
+import org.restlet.Restlet
 import org.restlet.data.Status
-import org.restlet.data.MediaType
-import WebUtil._
-import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
-import org.aqa.db.Db
 
 object EPIDUpdate {
   val epidPKTag = "epidPK"
@@ -64,17 +51,14 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
     new FormButton(name, 1, 0, subUrl, action, buttonType)
   }
 
-  private val createButton = makeButton("Create", true, ButtonType.BtnPrimary)
-  private val saveButton = makeButton("Save", true, ButtonType.BtnPrimary)
-  private val deleteButton = makeButton("Delete", false, ButtonType.BtnDanger)
-  private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
+  private val createButton = makeButton("Create", primary = true, ButtonType.BtnPrimary)
+  private val saveButton = makeButton("Save", primary = true, ButtonType.BtnPrimary)
+  private val deleteButton = makeButton("Delete", primary = false, ButtonType.BtnDanger)
+  private val cancelButton = makeButton("Cancel", primary = false, ButtonType.BtnDefault)
 
   private val epidPK = new WebInputHidden(EPIDUpdate.epidPKTag)
 
-  val fieldList: List[WebRow] = List(List(manufacturer), List(model), List(hardwareVersion),
-    List(pixelCountX, pixelCountY),
-    List(width_cm, height_cm),
-    List(notes))
+  val fieldList: List[WebRow] = List(List(manufacturer), List(model), List(hardwareVersion), List(pixelCountX, pixelCountY), List(width_cm, height_cm), List(notes))
 
   val createButtonList: List[WebRow] = List(List(createButton, cancelButton))
   val editButtonList: List[WebRow] = List(List(saveButton, cancelButton, deleteButton, epidPK))
@@ -154,8 +138,8 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Only whitelisted users may make changes to EPIDs.
-   */
+    * Only whitelisted users may make changes to EPIDs.
+    */
   private def validateAuthorization(valueMap: ValueMapT, create: Boolean, response: Response): Boolean = {
     if (WebUtil.userIsWhitelisted(response)) true
     else {
@@ -169,14 +153,14 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
   private def okToSave(valueMap: ValueMapT, response: Response): Boolean = {
     0 match {
       case _ if !fieldsAreValid(valueMap, pageTitleEdit, response) => false
-      case _ if !okToSaveAs(valueMap, pageTitleEdit, response) => false
-      case _ => validateAuthorization(valueMap, false, response)
+      case _ if !okToSaveAs(valueMap, pageTitleEdit, response)     => false
+      case _                                                       => validateAuthorization(valueMap, create = false, response)
     }
   }
 
   /**
-   * Save changes made to form.
-   */
+    * Save changes made to form.
+    */
   private def save(valueMap: ValueMapT, pageTitle: String, response: Response): Unit = {
     if (okToSave(valueMap, response)) {
       (createEPIDFromParameters(valueMap)).insertOrUpdate
@@ -185,8 +169,8 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Create a new epid
-   */
+    * Create a new epid
+    */
   private def createEPIDFromParameters(valueMap: ValueMapT): EPID = {
     val epidPK: Option[Long] = {
       val e = valueMap.get(EPIDUpdate.epidPKTag)
@@ -202,7 +186,8 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
       pixelCountY.getValOrEmpty(valueMap).trim.toInt,
       width_cm.getValOrEmpty(valueMap).trim.toDouble,
       height_cm.getValOrEmpty(valueMap).trim.toDouble,
-      notes.getValOrEmpty(valueMap).trim)
+      notes.getValOrEmpty(valueMap).trim
+    )
   }
 
   private def emptyForm(response: Response) = {
@@ -211,13 +196,13 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
 
   private def fieldsAreValid(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
     0 match {
-      case _ if emptyManufacturer(valueMap, pageTitle, response) => false
-      case _ if emptyModel(valueMap, pageTitle, response) => false
-      case _ if !isPositiveInt(valueMap, pageTitle, response, pixelCountX) => false
-      case _ if !isPositiveInt(valueMap, pageTitle, response, pixelCountY) => false
-      case _ if !isPositiveDouble(valueMap, pageTitle, response, width_cm) => false
+      case _ if emptyManufacturer(valueMap, pageTitle, response)            => false
+      case _ if emptyModel(valueMap, pageTitle, response)                   => false
+      case _ if !isPositiveInt(valueMap, pageTitle, response, pixelCountX)  => false
+      case _ if !isPositiveInt(valueMap, pageTitle, response, pixelCountY)  => false
+      case _ if !isPositiveDouble(valueMap, pageTitle, response, width_cm)  => false
       case _ if !isPositiveDouble(valueMap, pageTitle, response, height_cm) => false
-      case _ => true
+      case _                                                                => true
     }
   }
 
@@ -225,7 +210,7 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
     0 match {
       case _ if !fieldsAreValid(valueMap, pageTitleCreate, response) => false
       case _ if (alreadyExists(valueMap, pageTitleCreate, response)) => false
-      case _ => validateAuthorization(valueMap, true, response)
+      case _                                                         => validateAuthorization(valueMap, create = true, response)
     }
   }
 
@@ -243,14 +228,12 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
       (manufacturer.label, inst.manufacturer),
       (model.label, inst.model),
       (hardwareVersion.label, inst.hardwareVersion),
-
       (pixelCountX.label, inst.pixelCountX.toString),
       (pixelCountY.label, inst.pixelCountY.toString),
-
       (width_cm.label, inst.width_cm.toString),
       (height_cm.label, inst.height_cm.toString),
-
-      (notes.label, inst.notes))
+      (notes.label, inst.notes)
+    )
     formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
   }
 
@@ -272,7 +255,7 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
 
   private def delete(valueMap: ValueMapT, response: Response) = {
     val value = valueMap.get(EPIDUpdate.epidPKTag)
-    if (value.isDefined && validateAuthorization(valueMap, false, response)) {
+    if (value.isDefined && validateAuthorization(valueMap, create = false, response)) {
       EPID.delete(value.get.toLong)
       EPIDList.redirect(response)
     }
@@ -284,8 +267,8 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Determine if the incoming request is to edit an existing epid.
-   */
+    * Determine if the incoming request is to edit an existing epid.
+    */
   private def isEdit(valueMap: ValueMapT, response: Response): Boolean = {
     val inst = getReference(valueMap)
     val value = valueMap.get(EPIDUpdate.epidPKTag)
@@ -303,10 +286,10 @@ class EPIDUpdate extends Restlet with SubUrlAdmin {
       0 match {
         case _ if buttonIs(valueMap, cancelButton) => EPIDList.redirect(response)
         case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
-        case _ if buttonIs(valueMap, saveButton) => save(valueMap, pageTitleEdit, response)
+        case _ if buttonIs(valueMap, saveButton)   => save(valueMap, pageTitleEdit, response)
         case _ if buttonIs(valueMap, deleteButton) => delete(valueMap, response)
-        case _ if isEdit(valueMap, response) => Nil
-        case _ => emptyForm(response)
+        case _ if isEdit(valueMap, response)       => Nil
+        case _                                     => emptyForm(response)
       }
     } catch {
       case t: Throwable => {

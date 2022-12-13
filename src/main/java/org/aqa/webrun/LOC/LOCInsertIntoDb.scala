@@ -4,9 +4,9 @@ import org.aqa.Logging
 import org.aqa.db.DiffBaselineOpen
 import org.aqa.db.DiffBaselineTrans
 import org.aqa.db.EPIDCenterCorrection
-import org.aqa.db.LOCRSquared
 import org.aqa.db.LeafOffsetCorrection
 import org.aqa.db.LeafTransmission
+import org.aqa.db.LOCRSquared
 import org.aqa.webrun.LOCXml
 
 import scala.xml.Elem

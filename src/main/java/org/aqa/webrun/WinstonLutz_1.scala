@@ -16,20 +16,17 @@
 
 package org.aqa.webrun
 
-import org.restlet.Request
-import org.restlet.Response
-import play.api._
-import play.api.libs.concurrent.Execution.Implicits._
-import org.restlet.data.Status
-import org.aqa.web.WebUtil._
 import org.aqa.db.Machine
-import edu.umro.ScalaUtil.Trace._
-import java.io.File
 import org.aqa.db.Procedure
 import org.aqa.run.Run
+import org.aqa.web.WebUtil._
 import org.aqa.Util
 import org.aqa.web.WebUtil
-import org.restlet.Restlet
+import org.restlet.Request
+import org.restlet.Response
+import org.restlet.data.Status
+
+import java.io.File
 
 object WinstonLutz_1 {
   val parametersFileName = "parameters.xml"
@@ -59,15 +56,10 @@ class WinstonLutz_1(procedure: Procedure) extends WebRunProcedure(procedure) {
   private val runButton = makeButton("Run", true, ButtonType.BtnPrimary)
   private val cancelButton = makeButton("Cancel", false, ButtonType.BtnDefault)
 
-  private val form = new WebForm(
-    procedure.webUrl,
-    List(List(machine), List(tongueAndGrooveX, tongueAndGrooveY), List(runButton, cancelButton)),
-    6)
+  private val form = new WebForm(procedure.webUrl, List(List(machine), List(tongueAndGrooveX, tongueAndGrooveY), List(runButton, cancelButton)), 6)
 
   private val defaultValueMap: ValueMapT =
-    Map(
-      (tongueAndGrooveX.label, "0.0"),
-      (tongueAndGrooveY.label, "0.0"))
+    Map((tongueAndGrooveX.label, "0.0"), (tongueAndGrooveY.label, "0.0"))
 
   private def emptyForm(response: Response) = {
     form.setFormResponse(defaultValueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
@@ -86,9 +78,9 @@ class WinstonLutz_1(procedure: Procedure) extends WebRunProcedure(procedure) {
 
   private def validateFiles(valueMap: ValueMapT): StyleMapT = {
     sessionDir(valueMap) match {
-      case Some(dir) if (!dir.isDirectory) => Error.make(form.uploadFileInput.get, "No files have been uploaded (no directory)") // TODO
+      case Some(dir) if (!dir.isDirectory)  => Error.make(form.uploadFileInput.get, "No files have been uploaded (no directory)") // TODO
       case Some(dir) if (dir.list.size < 2) => Error.make(form.uploadFileInput.get, "At least two files are required.") // TODO
-      case _ => styleNone
+      case _                                => styleNone
     }
   }
 
@@ -102,8 +94,8 @@ class WinstonLutz_1(procedure: Procedure) extends WebRunProcedure(procedure) {
 
     val xml = {
       <WinstonLutzParameters>
-        <TongueAndGrooveOffsetX>{ tongueAndGrooveX.getValOrEmpty(valueMap) }</TongueAndGrooveOffsetX>
-        <TongueAndGrooveOffsetY>{ tongueAndGrooveY.getValOrEmpty(valueMap) }</TongueAndGrooveOffsetY>
+        <TongueAndGrooveOffsetX>{tongueAndGrooveX.getValOrEmpty(valueMap)}</TongueAndGrooveOffsetX>
+        <TongueAndGrooveOffsetY>{tongueAndGrooveY.getValOrEmpty(valueMap)}</TongueAndGrooveOffsetY>
       </WinstonLutzParameters>
     }
 
@@ -117,8 +109,8 @@ class WinstonLutz_1(procedure: Procedure) extends WebRunProcedure(procedure) {
   }
 
   /**
-   * Run the procedure.
-   */
+    * Run the procedure.
+    */
   private def run(valueMap: ValueMapT, request: Request, response: Response) = {
     val errMap = validate(valueMap)
     if (errMap.isEmpty) {
@@ -148,8 +140,8 @@ class WinstonLutz_1(procedure: Procedure) extends WebRunProcedure(procedure) {
     try {
       0 match {
         case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
-        case _ if buttonIs(valueMap, runButton) => run(valueMap, request, response)
-        case _ => emptyForm(response)
+        case _ if buttonIs(valueMap, runButton)    => run(valueMap, request, response)
+        case _                                     => emptyForm(response)
       }
     } catch {
       case t: Throwable => {

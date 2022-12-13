@@ -28,8 +28,8 @@ import org.aqa.Util
 import org.aqa.db.CachedUser
 import org.aqa.db.Machine
 import org.aqa.web.WebUtil
-import org.aqa.web.WebUtil.ValueMapT
 import org.aqa.web.WebUtil._
+import org.aqa.web.WebUtil.ValueMapT
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet

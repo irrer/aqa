@@ -66,7 +66,6 @@ class DailyQASummary extends Restlet with SubUrlRoot with Logging {
     valueMap.get(dateField.label) match {
       case Some(text) => text
       case _          => dateField.dateFormat.format(new Date)
-      case _          => Util.formatDate(dateField.dateFormat, new Date)
     }
   }
 

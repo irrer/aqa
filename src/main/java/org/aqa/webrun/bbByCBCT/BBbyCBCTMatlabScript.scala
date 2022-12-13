@@ -31,8 +31,8 @@ import java.text.SimpleDateFormat
 import javax.vecmath.Point3d
 
 /**
- * Create a Matlab script that will do the calculations.  This is for visibility for the user.
- */
+  * Create a Matlab script that will do the calculations.  This is for visibility for the user.
+  */
 
 class BBbyCBCTMatlabScript(output: Output, machine: Machine, cbctAnalysisResult: BBbyCBCTAnalysis.CBCTAnalysisResult, runReq: BBbyCBCTRunReq, response: Response) extends Logging {
 

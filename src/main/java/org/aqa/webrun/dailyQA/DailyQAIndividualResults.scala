@@ -27,9 +27,9 @@ import java.util.Date
 import scala.xml.Elem
 
 /**
- * Report the individual results for all EPID and CBCT analysis on the given day.  This
- * is generally more of a diagnostic tool than for daily use.
- */
+  * Report the individual results for all EPID and CBCT analysis on the given day.  This
+  * is generally more of a diagnostic tool than for daily use.
+  */
 object DailyQAIndividualResults {
 
   private val dateFormat = new SimpleDateFormat("EEE MMM dd, YYYY")
@@ -43,9 +43,11 @@ object DailyQAIndividualResults {
     }
 
     // list of CBCT and EPID outputs for this date and institution
-    val extList = Output.extendedList(Some(instPK), 1000, Some(date)).
-      filter(e => procedureNameSet.contains(e.procedure_name)).
-      sortBy(_.input_dataDate.get.getTime) // this determines the order that rows appear.  Maybe should be: <code>sortBy(_.output_startDate.getTime)</code> instead?
+    val extList =
+      Output
+        .extendedList(Some(instPK), 1000, Some(date))
+        .filter(e => procedureNameSet.contains(e.procedure_name))
+        .sortBy(_.input_dataDate.get.getTime) // this determines the order that rows appear.  Maybe should be: <code>sortBy(_.output_startDate.getTime)</code> instead?
 
     def extToRow(ext: Output.ExtendedValues) = {
 

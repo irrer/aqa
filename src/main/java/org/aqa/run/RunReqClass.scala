@@ -16,5 +16,4 @@
 
 package org.aqa.run
 
-abstract class RunReqClass {
-}
+abstract class RunReqClass {}

@@ -27,9 +27,7 @@ import org.aqa.web.ViewOutput
 
 import java.sql.Timestamp
 
-
 class DailyQACSVCacheCBCT(hostRef: String, institutionPK: Long) extends CacheCSV {
-
 
   private def patientIdOf(dataSet: BBbyCBCT.DailyDataSetCBCT): String = {
     dataSet.dicomSeries.attributeListList.head
@@ -37,18 +35,15 @@ class DailyQACSVCacheCBCT(hostRef: String, institutionPK: Long) extends CacheCSV
     anonPatId
   }
 
-
   private def textFromAl(dataSet: BBbyCBCT.DailyDataSetCBCT, tag: AttributeTag): String = {
     val attr = dataSet.al.get(tag)
     if (attr == null) "NA"
     else attr.getSingleStringValueOrEmptyString
   }
 
-
   private def getCbctValues(dataSet: BBbyCBCT.DailyDataSetCBCT, tag: AttributeTag, scale: Double = 1.0): Seq[String] = {
     DailyQAUtil.getValues(dataSet.al, tag, scale)
   }
-
 
   private case class Col(header: String, toText: BBbyCBCT.DailyDataSetCBCT => String) {}
 
@@ -66,67 +61,108 @@ class DailyQACSVCacheCBCT(hostRef: String, institutionPK: Long) extends CacheCSV
     Col("Analysis", dataSet => Util.spreadsheetDateFormat.format(dataSet.output.startDate)),
     Col(PatientIDColHeader, dataSet => patientIdOf(dataSet)),
     Col("Status", dataSet => dataSet.output.status),
-
-    Col("X CBCT mm", dataSet => dataSet.cbct match {
-      case Some(c) => c.cbctX_mm.toString;
-      case _ => "NA"
-    }),
-    Col("Y CBCT mm", dataSet => dataSet.cbct match {
-      case Some(c) => c.cbctY_mm.toString;
-      case _ => "NA"
-    }),
-    Col("Z CBCT mm", dataSet => dataSet.cbct match {
-      case Some(c) => c.cbctZ_mm.toString;
-      case _ => "NA"
-    }),
-
-    Col("X ISO mm", dataSet => dataSet.cbct match {
-      case Some(c) => c.rtplanX_mm.toString;
-      case _ => "NA"
-    }),
-    Col("Y ISO mm", dataSet => dataSet.cbct match {
-      case Some(c) => c.rtplanY_mm.toString;
-      case _ => "NA"
-    }),
-    Col("Z ISO mm", dataSet => dataSet.cbct match {
-      case Some(c) => c.rtplanZ_mm.toString;
-      case _ => "NA"
-    }),
-
-    Col("X CBCT - ISO mm", dataSet => dataSet.cbct match {
-      case Some(c) => (c.cbctX_mm - c.rtplanX_mm).toString;
-      case _ => "NA"
-    }),
-    Col("Y CBCT - ISO mm", dataSet => dataSet.cbct match {
-      case Some(c) => (c.cbctY_mm - c.rtplanY_mm).toString;
-      case _ => "NA"
-    }),
-    Col("Z CBCT - ISO mm", dataSet => dataSet.cbct match {
-      case Some(c) => (c.cbctZ_mm - c.rtplanZ_mm).toString;
-      case _ => "NA"
-    }),
-
-    Col("X/lat Table Posn CBCT cm", dataSet => dataSet.cbct match {
-      case Some(c) => (c.tableXlateral_mm / 10).toString;
-      case _ => "NA"
-    }),
-    Col("Y/vrt Table Posn CBCT cm", dataSet => dataSet.cbct match {
-      case Some(c) => (c.tableYvertical_mm / 10).toString;
-      case _ => "NA"
-    }),
-    Col("Z/lng Table Posn CBCT cm", dataSet => dataSet.cbct match {
-      case Some(c) => (c.tableZlongitudinal_mm / 10).toString;
-      case _ => "NA"
-    }),
-
-
+    Col(
+      "X CBCT mm",
+      dataSet =>
+        dataSet.cbct match {
+          case Some(c) => c.cbctX_mm.toString;
+          case _       => "NA"
+        }
+    ),
+    Col(
+      "Y CBCT mm",
+      dataSet =>
+        dataSet.cbct match {
+          case Some(c) => c.cbctY_mm.toString;
+          case _       => "NA"
+        }
+    ),
+    Col(
+      "Z CBCT mm",
+      dataSet =>
+        dataSet.cbct match {
+          case Some(c) => c.cbctZ_mm.toString;
+          case _       => "NA"
+        }
+    ),
+    Col(
+      "X ISO mm",
+      dataSet =>
+        dataSet.cbct match {
+          case Some(c) => c.rtplanX_mm.toString;
+          case _       => "NA"
+        }
+    ),
+    Col(
+      "Y ISO mm",
+      dataSet =>
+        dataSet.cbct match {
+          case Some(c) => c.rtplanY_mm.toString;
+          case _       => "NA"
+        }
+    ),
+    Col(
+      "Z ISO mm",
+      dataSet =>
+        dataSet.cbct match {
+          case Some(c) => c.rtplanZ_mm.toString;
+          case _       => "NA"
+        }
+    ),
+    Col(
+      "X CBCT - ISO mm",
+      dataSet =>
+        dataSet.cbct match {
+          case Some(c) => (c.cbctX_mm - c.rtplanX_mm).toString;
+          case _       => "NA"
+        }
+    ),
+    Col(
+      "Y CBCT - ISO mm",
+      dataSet =>
+        dataSet.cbct match {
+          case Some(c) => (c.cbctY_mm - c.rtplanY_mm).toString;
+          case _       => "NA"
+        }
+    ),
+    Col(
+      "Z CBCT - ISO mm",
+      dataSet =>
+        dataSet.cbct match {
+          case Some(c) => (c.cbctZ_mm - c.rtplanZ_mm).toString;
+          case _       => "NA"
+        }
+    ),
+    Col(
+      "X/lat Table Posn CBCT cm",
+      dataSet =>
+        dataSet.cbct match {
+          case Some(c) => (c.tableXlateral_mm / 10).toString;
+          case _       => "NA"
+        }
+    ),
+    Col(
+      "Y/vrt Table Posn CBCT cm",
+      dataSet =>
+        dataSet.cbct match {
+          case Some(c) => (c.tableYvertical_mm / 10).toString;
+          case _       => "NA"
+        }
+    ),
+    Col(
+      "Z/lng Table Posn CBCT cm",
+      dataSet =>
+        dataSet.cbct match {
+          case Some(c) => (c.tableZlongitudinal_mm / 10).toString;
+          case _       => "NA"
+        }
+    ),
     Col("pixel spacing X mm", dataSet => getCbctValues(dataSet, TagFromName.PixelSpacing).head),
     Col("pixel spacing Y mm", dataSet => getCbctValues(dataSet, TagFromName.PixelSpacing)(1)),
     Col("Slice Thickness Z mm", dataSet => getCbctValues(dataSet, TagFromName.SliceThickness).head),
     Col("num X pix", dataSet => getCbctValues(dataSet, TagFromName.Columns).head),
     Col("num Y pix", dataSet => getCbctValues(dataSet, TagFromName.Rows).head),
     Col("num Z pix (slices)", dataSet => dataSet.dicomSeries.size.toString),
-
     Col("KVP Peak kilo voltage", dataSet => getCbctValues(dataSet, TagByName.KVP).head),
     Col("Exposure Time ms", dataSet => getCbctValues(dataSet, TagByName.ExposureTime).head),
     Col("X-Ray Tube Current mA", dataSet => getCbctValues(dataSet, TagByName.XRayTubeCurrent).head),
@@ -142,10 +178,12 @@ class DailyQACSVCacheCBCT(hostRef: String, institutionPK: Long) extends CacheCSV
     Col("CBCT Details", dataSet => hostRef + ViewOutput.viewOutputUrl(dataSet.output.outputPK.get))
   )
 
-
-  private def makeRow(dataSet: BBbyCBCT.DailyDataSetCBCT) = colList.map(col => {
-    col.toText(dataSet)
-  }).mkString(",")
+  private def makeRow(dataSet: BBbyCBCT.DailyDataSetCBCT) =
+    colList
+      .map(col => {
+        col.toText(dataSet)
+      })
+      .mkString(",")
 
   // Trace.trace(TagByName.dict.getTagFromName("ApprovalStatus"))
 

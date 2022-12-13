@@ -16,25 +16,13 @@
 
 package org.aqa.web
 
-import org.restlet.Restlet
+import org.aqa.db.Machine
+import org.aqa.db.MultileafCollimator
+import org.aqa.web.WebUtil._
 import org.restlet.Request
 import org.restlet.Response
-import org.restlet.data.Method
-import java.util.Date
-import scala.xml.Elem
-import org.restlet.data.Parameter
-import org.aqa.db.MultileafCollimator
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.api._
-import play.api.libs.concurrent.Execution.Implicits._
-import org.restlet.data.Form
-import scala.xml.PrettyPrinter
+import org.restlet.Restlet
 import org.restlet.data.Status
-import org.restlet.data.MediaType
-import WebUtil._
-import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
-import org.aqa.db.Machine
 
 object MultileafCollimatorUpdate {
   val multileafCollimatorPKTag = "multileafCollimatorPK"
@@ -74,11 +62,15 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
 
   private val multileafCollimatorPK = new WebInputHidden(MultileafCollimatorUpdate.multileafCollimatorPKTag)
 
-  val fieldList: List[WebRow] = List(List(manufacturer), List(model), List(version),
+  val fieldList: List[WebRow] = List(
+    List(manufacturer),
+    List(model),
+    List(version),
     List(outerLeafPairCount, innerLeafPairCount),
     List(outerLeafWidth_cm, innerLeafWidth_cm),
     List(leafTravelDistance_cm),
-    List(notes))
+    List(notes)
+  )
 
   val createButtonList: List[WebRow] = List(List(createButton, cancelButton))
   val editButtonList: List[WebRow] = List(List(saveButton, cancelButton, deleteButton, multileafCollimatorPK))
@@ -149,8 +141,8 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Only whitelisted users may make changes to multileaf collimators.
-   */
+    * Only whitelisted users may make changes to multileaf collimators.
+    */
   private def validateAuthorization(valueMap: ValueMapT, create: Boolean, response: Response): Boolean = {
     if (WebUtil.userIsWhitelisted(response)) true
     else {
@@ -173,14 +165,14 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
   private def okToSave(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
     0 match {
       case _ if !fieldsAreValid(valueMap, pageTitleEdit, response) => false
-      case _ if !okToSaveAs(valueMap, pageTitleEdit, response) => false
-      case _ => validateAuthorization(valueMap, false, response)
+      case _ if !okToSaveAs(valueMap, pageTitleEdit, response)     => false
+      case _                                                       => validateAuthorization(valueMap, false, response)
     }
   }
 
   /**
-   * Save changes made to form.
-   */
+    * Save changes made to form.
+    */
   private def save(valueMap: ValueMapT, pageTitle: String, response: Response): Unit = {
     if (okToSave(valueMap, pageTitle, response)) {
       (createMultileafCollimatorFromParameters(valueMap)).insertOrUpdate
@@ -189,8 +181,8 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Create a new multileafCollimator
-   */
+    * Create a new multileafCollimator
+    */
   private def createMultileafCollimatorFromParameters(valueMap: ValueMapT): MultileafCollimator = {
     val multileafCollimatorPK: Option[Long] = {
       val e = valueMap.get(MultileafCollimatorUpdate.multileafCollimatorPKTag)
@@ -207,7 +199,8 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
       outerLeafWidth_cm.getValOrEmpty(valueMap).trim.toDouble,
       innerLeafWidth_cm.getValOrEmpty(valueMap).trim.toDouble,
       leafTravelDistance_cm.getValOrEmpty(valueMap).trim.toDouble,
-      notes.getValOrEmpty(valueMap).trim)
+      notes.getValOrEmpty(valueMap).trim
+    )
   }
 
   private def emptyForm(response: Response) = {
@@ -216,14 +209,14 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
 
   private def fieldsAreValid(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
     0 match {
-      case _ if emptyManufacturer(valueMap, pageTitle, response) => false
-      case _ if emptyModel(valueMap, pageTitle, response) => false
-      case _ if !isPositiveInt(valueMap, pageTitle, response, outerLeafPairCount) => false
-      case _ if !isPositiveInt(valueMap, pageTitle, response, innerLeafPairCount) => false
+      case _ if emptyManufacturer(valueMap, pageTitle, response)                    => false
+      case _ if emptyModel(valueMap, pageTitle, response)                           => false
+      case _ if !isPositiveInt(valueMap, pageTitle, response, outerLeafPairCount)   => false
+      case _ if !isPositiveInt(valueMap, pageTitle, response, innerLeafPairCount)   => false
       case _ if !isPositiveDouble(valueMap, pageTitle, response, outerLeafWidth_cm) => false
       case _ if !isPositiveDouble(valueMap, pageTitle, response, innerLeafWidth_cm) => false
-      case _ if !isDouble(valueMap, pageTitle, response, leafTravelDistance_cm) => false
-      case _ => true
+      case _ if !isDouble(valueMap, pageTitle, response, leafTravelDistance_cm)     => false
+      case _                                                                        => true
     }
   }
 
@@ -231,7 +224,7 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
     0 match {
       case _ if !fieldsAreValid(valueMap, pageTitleCreate, response) => false
       case _ if (alreadyExists(valueMap, pageTitleCreate, response)) => false
-      case _ => validateAuthorization(valueMap, true, response)
+      case _                                                         => validateAuthorization(valueMap, true, response)
     }
   }
 
@@ -249,16 +242,13 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
       (manufacturer.label, inst.manufacturer),
       (model.label, inst.model),
       (version.label, inst.version),
-
       (outerLeafPairCount.label, inst.outerLeafPairCount.toString),
       (innerLeafPairCount.label, inst.innerLeafPairCount.toString),
-
       (outerLeafWidth_cm.label, inst.outerLeafWidth_cm.toString),
       (innerLeafWidth_cm.label, inst.innerLeafWidth_cm.toString),
-
       (leafTravelDistance_cm.label, inst.leafTravelDistance_cm.toString),
-
-      (notes.label, inst.notes))
+      (notes.label, inst.notes)
+    )
     formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
   }
 
@@ -301,8 +291,8 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Determine if the incoming request is to edit an existing multileafCollimator.
-   */
+    * Determine if the incoming request is to edit an existing multileafCollimator.
+    */
   private def isEdit(valueMap: ValueMapT, response: Response): Boolean = {
     val inst = getReference(valueMap)
     val value = valueMap.get(MultileafCollimatorUpdate.multileafCollimatorPKTag)
@@ -320,10 +310,10 @@ class MultileafCollimatorUpdate extends Restlet with SubUrlAdmin {
       0 match {
         case _ if buttonIs(valueMap, cancelButton) => MultileafCollimatorList.redirect(response)
         case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
-        case _ if buttonIs(valueMap, saveButton) => save(valueMap, pageTitleEdit, response)
+        case _ if buttonIs(valueMap, saveButton)   => save(valueMap, pageTitleEdit, response)
         case _ if buttonIs(valueMap, deleteButton) => delete(valueMap, response)
-        case _ if isEdit(valueMap, response) => Nil
-        case _ => emptyForm(response)
+        case _ if isEdit(valueMap, response)       => Nil
+        case _                                     => emptyForm(response)
       }
     } catch {
       case t: Throwable => {

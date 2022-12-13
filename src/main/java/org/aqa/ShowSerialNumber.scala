@@ -16,12 +16,11 @@
 
 package org.aqa
 
-import java.io.File
-import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.TagFromName
-import com.pixelmed.dicom.TagFromName
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.DicomFileUtilities
+import com.pixelmed.dicom.TagFromName
+
+import java.io.File
 
 object ShowSerialNumber { // TODO should this be in production?
 
@@ -56,12 +55,14 @@ object ShowSerialNumber { // TODO should this be in production?
           val date = if (InstanceCreationDate.nonEmpty) InstanceCreationDate else if (AcquisitionDate.nonEmpty) AcquisitionDate else ContentDate
           val time = if (InstanceCreationTime.nonEmpty) InstanceCreationTime else if (AcquisitionTime.nonEmpty) AcquisitionTime else ContentTime
 
-          println(DeviceSerialNumber + " : " +
-            StationName + " : " + Modality +
-            "  SeriesInstanceUID: " + SeriesInstanceUID +
-            " : " + "  SOPInstanceUID: " + SOPInstanceUID +
-            " : " + "  : " + date + "::" + time +
-            " : " + file.getAbsolutePath)
+          println(
+            DeviceSerialNumber + " : " +
+              StationName + " : " + Modality +
+              "  SeriesInstanceUID: " + SeriesInstanceUID +
+              " : " + "  SOPInstanceUID: " + SOPInstanceUID +
+              " : " + "  : " + date + "::" + time +
+              " : " + file.getAbsolutePath
+          )
         }
       }
     } catch {

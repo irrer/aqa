@@ -16,10 +16,11 @@
 
 package org.aqa.web
 
-import org.restlet.Response
-import scala.xml.Elem
 import org.aqa.db.MachineType
 import org.aqa.web.WebUtil._
+import org.restlet.Response
+
+import scala.xml.Elem
 
 object MachineTypeList {
   private val path = new String((new MachineTypeList).pathOf)
@@ -34,7 +35,7 @@ class MachineTypeList extends GenericList[MachineType] with WebUtil.SubUrlAdmin 
 
   override def getPK(value: MachineType): Long = value.machineTypePK.get
 
-  private def notesHTML(machineType: MachineType): Elem = <div>{ WebUtil.firstPartOf(machineType.notes, 60) }</div>
+  private def notesHTML(machineType: MachineType): Elem = <div>{WebUtil.firstPartOf(machineType.notes, 60)}</div>
 
   private val modelCol = new Column[MachineType]("Model", _.model, (mt) => makePrimaryKeyHtml(mt.model, mt.machineTypePK))
 

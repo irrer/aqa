@@ -19,9 +19,10 @@ package org.aqa.procedures
 import scala.xml.Elem
 
 /**
- * Describe a database table that represents data output by a procedure.
- */
+  * Describe a database table that represents data output by a procedure.
+  */
 trait ProcedureOutput {
+
   /** Identifies the top level XML tag for procedure output. */
   val topXmlLabel: String;
 

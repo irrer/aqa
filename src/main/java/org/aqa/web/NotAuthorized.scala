@@ -16,27 +16,11 @@
 
 package org.aqa.web
 
-import org.restlet.Restlet
+import org.aqa.web.WebUtil._
 import org.restlet.Request
 import org.restlet.Response
-import org.restlet.data.Method
-import java.util.Date
-import scala.xml.Elem
-import org.restlet.data.Parameter
-import slick.lifted.TableQuery
-import slick.backend.DatabaseConfig
-import scala.concurrent.duration.DurationInt
-import org.aqa.db.MachineType
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.api._
-import play.api.libs.concurrent.Execution.Implicits._
-import org.restlet.data.Form
-import scala.xml.PrettyPrinter
+import org.restlet.Restlet
 import org.restlet.data.Status
-import org.restlet.data.MediaType
-import WebUtil._
-import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
 
 class NotAuthorized extends Restlet with SubUrlRoot {
 
@@ -51,7 +35,7 @@ class NotAuthorized extends Restlet with SubUrlRoot {
 
   private val content = "Your user id and password are correct, but you are not authorized to use this part of the web site."
 
-  private val message = new WebPlainText("message", false, 6, 0, _ => <div>{ content }</div>)
+  private val message = new WebPlainText("message", false, 6, 0, _ => <div>{content}</div>)
 
   private val form = new WebForm(pathOf, List(List(message), List(homeButton)))
 
@@ -70,7 +54,7 @@ class NotAuthorized extends Restlet with SubUrlRoot {
     try {
       0 match {
         case _ if buttonIs(valueMap, homeButton) => response.redirectSeeOther("/")
-        case _ => emptyForm(response)
+        case _                                   => emptyForm(response)
       }
     } catch {
       case t: Throwable => {

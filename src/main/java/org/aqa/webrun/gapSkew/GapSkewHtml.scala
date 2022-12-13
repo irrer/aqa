@@ -108,7 +108,8 @@ class GapSkewHtml(extendedData: ExtendedData, runReq: GapSkewRunReq, leafSetSeq:
         <div class="col-md-12">
           <table style="padding:20px;">
             <tr>
-              {status}
+              { /* status TODO: Put back in when (if?) we are given pass/warning/fail criteria. */ }
+              {<td><h2> <h2 style={s"background-color:lightblue; border:solid lightblue 1px; border-radius: 8px; padding: 12px;"} > Gap Offset Skew </h2> </h2></td>}
               {rtplan}
               {patientId}
               {patientName}

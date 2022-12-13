@@ -67,7 +67,7 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtima
     angle match {
       case Some(ang) =>
         <td title={title}>{fmt2(ang)}</td>
-        // <td style={"background-color:" + statusColor(ang) + ";"} title={title}>{fmt2(ang)}</td>  // TODO add highlight color when limits are known
+      // <td style={"background-color:" + statusColor(ang) + ";"} title={title}>{fmt2(ang)}</td>  // TODO add highlight color when limits are known
       case _ =>
         <td  title={"value not available" + WebUtil.titleNewline + title}>NA</td>
     }

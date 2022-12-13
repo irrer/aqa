@@ -17,17 +17,16 @@
 package org.aqa
 
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.TagFromName
+import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
+
 import javax.vecmath.Matrix4d
 import javax.vecmath.Point3d
-import edu.umro.ScalaUtil.Trace
-import edu.umro.DicomDict.TagByName
 
 /**
- * Support operations on image registration (spatial transforms) files.
- */
+  * Support operations on image registration (spatial transforms) files.
+  */
 
 case class ImageRegistration(attrList: AttributeList) {
   def this(dicomFile: DicomFile) = this(dicomFile.attributeList.get)
@@ -61,22 +60,21 @@ case class ImageRegistration(attrList: AttributeList) {
   }
 
   /**
-   * Get a copy of the matrix.  Use clone because matrixes are mutable.  Wish they weren't.
-   */
+    * Get a copy of the matrix.  Use clone because matrixes are mutable.  Wish they weren't.
+    */
   def getMatrix = matrix.clone.asInstanceOf[Matrix4d]
 
   /**
-   * Transform a point by this matrix and create a new point.
-   */
+    * Transform a point by this matrix and create a new point.
+    */
   def transform(point: Point3d): Point3d = Util.transform(matrix, point)
 
   /**
-   * Transform a point by an inverse of this matrix and create a new point.
-   */
+    * Transform a point by an inverse of this matrix and create a new point.
+    */
   def invTransform(point: Point3d): Point3d = Util.invTransform(matrix, point)
 
   override def toString: String = {
     "frameOfRefUID: " + frameOfRefUID + "    otherFrameOfRefUID: " + otherFrameOfRefUID
   }
 }
-

@@ -16,46 +16,31 @@
 
 package org.aqa.web
 
-import org.restlet.Request
-import org.restlet.Response
-import java.util.Date
-import scala.xml.Elem
-import WebUtil._
+import org.aqa.db.Input
 import org.aqa.db.Output
 import org.aqa.db.Procedure
-import org.aqa.db.Input
-import org.restlet.routing.Filter
-import org.restlet.Context
+import org.aqa.web.WebUtil._
+import org.aqa.Config
+import org.aqa.Crypto
+import org.aqa.Util
+import org.restlet.Request
+import org.restlet.Response
 import org.restlet.data.MediaType
 import org.restlet.data.Status
-import org.aqa.Util
-import java.io.File
 import org.restlet.Restlet
-import org.aqa.Config
-import scala.collection.mutable.HashMap
+
+import java.io.File
 import java.sql.Timestamp
-import org.aqa.run.ProcedureStatus
-import org.aqa.Crypto
+import scala.collection.mutable.HashMap
 import scala.util.Try
+import scala.xml.Elem
 
 /**
- * Version of Output that only has immutable fields.  Useful for caching.
- */
-private class ImmutableOutput(
-  val outputPK: Long,
-  val inputPK: Long,
-  val dir: File,
-  val procedurePK: Long,
-  val userPK: Option[Long],
-  val startDate: Timestamp) {
+  * Version of Output that only has immutable fields.  Useful for caching.
+  */
+private class ImmutableOutput(val outputPK: Long, val inputPK: Long, val dir: File, val procedurePK: Long, val userPK: Option[Long], val startDate: Timestamp) {
 
-  def this(output: Output) = this(
-    output.outputPK.get,
-    output.inputPK,
-    WebServer.fileOfResultsPath(output.directory),
-    output.procedurePK,
-    output.userPK,
-    output.startDate)
+  def this(output: Output) = this(output.outputPK.get, output.inputPK, WebServer.fileOfResultsPath(output.directory), output.procedurePK, output.userPK, output.startDate)
 }
 
 object ViewOutput {
@@ -72,17 +57,17 @@ object ViewOutput {
 
   private def shouldShowSummary(outputFileExists: Boolean, procedureIsRunning: Boolean, summaryRequested: Boolean, clientOnPendingList: Boolean): Boolean = {
     (outputFileExists, procedureIsRunning, summaryRequested, clientOnPendingList) match {
-      case (false, _, _, _) => true
+      case (false, _, _, _)       => true
       case (true, _, true, false) => true
-      case _ => false
+      case _                      => false
     }
   }
 
   private def shouldRemoveFromPending(outputFileExists: Boolean, procedureIsRunning: Boolean, summaryRequested: Boolean, clientOnPendingList: Boolean): Boolean = {
     (outputFileExists, procedureIsRunning, summaryRequested, clientOnPendingList) match {
       case (false, true, true, true) => false
-      case (_, _, _, true) => true
-      case _ => false
+      case (_, _, _, true)           => true
+      case _                         => false
     }
   }
 
@@ -98,7 +83,7 @@ object ViewOutput {
       val row = {
         <div class="row">
           <div class="col-md-2">
-            <a href={ WebServer.urlOfResultsFile(file) }>{ file.getName }</a>
+            <a href={WebServer.urlOfResultsFile(file)}>{file.getName}</a>
           </div>
         </div>
       }
@@ -110,7 +95,7 @@ object ViewOutput {
         val text = "reloadOn(" + dblQuote(output.outputPK.get.toString) + ", " + dblQuote(secureHashOfOutput(output.outputPK.get)) + ");\n"
         val elem = {
           <script>
-            { text }
+            {text}
           </script>
         }
         List(elem)
@@ -122,9 +107,9 @@ object ViewOutput {
 
       val statusElem = {
         if (status.isDefined)
-          <div class="col-md-1" title={ org.aqa.run.ProcedureStatus.descriptionOf(status.get) }>Status: { output.status }</div>
+          <div class="col-md-1" title={org.aqa.run.ProcedureStatus.descriptionOf(status.get)}>Status: {output.status}</div>
         else
-          <div class="col-md-1">Status: { output.status }</div>
+          <div class="col-md-1">Status: {output.status}</div>
       }
 
       val inputDir = WebServer.urlOfResultsPath(Input.get(output.inputPK).get.directory.get)
@@ -132,21 +117,21 @@ object ViewOutput {
       val html: Elem = {
         <div class="row col-md-10 col-md-offset-1">
           <p id="demo">demo demo</p>
-          { reload }
+          {reload}
           <div class="row">
-            <div class="col-md-4">Procedure: { procedure.fullName }</div>
-            <div class="col-md-2">User: { if (user.isDefined) wrapAlias(user.get.id) else "none" }</div>
-            { statusElem }
+            <div class="col-md-4">Procedure: {procedure.fullName}</div>
+            <div class="col-md-2">User: {if (user.isDefined) wrapAlias(user.get.id) else "none"}</div>
+            {statusElem}
           </div>
           <div class="row">
             <div class="col-md-4">
-              <a href={ inputDir }> { "Input" } </a>
+              <a href={inputDir}> {"Input"} </a>
             </div>
-            <div class="col-md-2">Started: { Util.timeHumanFriendly(output.startDate) }</div>
-            <div class="col-md-2">Elapsed: { elapsed }</div>
+            <div class="col-md-2">Started: {Util.timeHumanFriendly(output.startDate)}</div>
+            <div class="col-md-2">Elapsed: {elapsed}</div>
           </div>
           { val x = getCachedOutput(output.outputPK.get).dir }
-          { getCachedOutput(output.outputPK.get).dir.listFiles.map(f => fileToRow(f)) }
+          {getCachedOutput(output.outputPK.get).dir.listFiles.map(f => fileToRow(f))}
         </div>
       }
 
@@ -171,8 +156,8 @@ object ViewOutput {
   private val outputDirCache = HashMap[Long, ImmutableOutput]();
 
   /**
-   * Get the cached copy of a an output directory to save excessive database calls.
-   */
+    * Get the cached copy of a an output directory to save excessive database calls.
+    */
   private def getCachedOutput(outputPK: Long): ImmutableOutput = {
     outputDirCache.synchronized({
       if (!(outputDirCache.get(outputPK).isDefined)) outputDirCache.put(outputPK, new ImmutableOutput(Output.get(outputPK).get))
@@ -190,16 +175,16 @@ object ViewOutput {
   }
 
   /**
-   * Redirect the user to the progress of running the procedure.
-   *
-   * @param response Respond to this HTTP entity.
-   *
-   * @param isAuto If true, the client wants to be treated like an automatic process (non-human process as
-   *   opposed to human using a web browser).  Upon completion, just send the client the return status as
-   *   opposed to being redirected to a page containing the results or a progress page.
-   *
-   * @param outputPK Output being produced.
-   */
+    * Redirect the user to the progress of running the procedure.
+    *
+    * @param response Respond to this HTTP entity.
+    *
+    * @param isAuto If true, the client wants to be treated like an automatic process (non-human process as
+    *   opposed to human using a web browser).  Upon completion, just send the client the return status as
+    *   opposed to being redirected to a page containing the results or a progress page.
+    *
+    * @param outputPK Output being produced.
+    */
   def redirectToViewRunProgress(response: Response, isAuto: Boolean, outputPK: Long): Unit = {
     if (isAuto) {
       // set the response to indicate that processing has been successfully started
@@ -212,17 +197,17 @@ object ViewOutput {
   }
 
   /**
-   * Redirect the user to the progress of running the procedure.
-   */
+    * Redirect the user to the progress of running the procedure.
+    */
   def redirectToViewRunProgress(response: Response, valueMap: ValueMapT, outputPK: Long): Unit = redirectToViewRunProgress(response, isAutoUpload(valueMap), outputPK)
 
 }
 
 /**
- * Monitor a process that is running a procedure.  If there is no 'output.*' file, then
- * show some metadata and the directory contents, updating it periodically.  If an
- * 'output.*' is created, then show that instead.
- */
+  * Monitor a process that is running a procedure.  If there is no 'output.*' file, then
+  * show some metadata and the directory contents, updating it periodically.  If an
+  * 'output.*' is created, then show that instead.
+  */
 class ViewOutput extends Restlet with SubUrlView {
 
   private def pageTitle = "Output"
@@ -235,8 +220,8 @@ class ViewOutput extends Restlet with SubUrlView {
   private val abortButton = makeButton("Abort", true, ButtonType.BtnPrimary)
 
   /**
-   * Abort the procedure.
-   */
+    * Abort the procedure.
+    */
   private def abort(valueMap: ValueMapT, request: Request, response: Response) = {
     // TODO
   }
@@ -279,10 +264,10 @@ class ViewOutput extends Restlet with SubUrlView {
 
       0 match {
         case _ if (output.isDefined && checksum.isDefined) => ViewOutput.giveStatus(output.get.outputPK, checksum.get, response)
-        case _ if (output.isDefined && showSummary) => ViewOutput.showSummary(output.get.outputPK, response)
-        case _ if displayFile.isDefined => setResponseWithOutputFile(displayFile.get, response)
-        case _ if (output.isDefined) => ViewOutput.showSummary(output.get.outputPK, response)
-        case _ => ViewOutput.noOutput(response)
+        case _ if (output.isDefined && showSummary)        => ViewOutput.showSummary(output.get.outputPK, response)
+        case _ if displayFile.isDefined                    => setResponseWithOutputFile(displayFile.get, response)
+        case _ if (output.isDefined)                       => ViewOutput.showSummary(output.get.outputPK, response)
+        case _                                             => ViewOutput.noOutput(response)
       }
     } catch {
       case e: Exception => internalFailure(response, "Unexpected error: " + e.getMessage)

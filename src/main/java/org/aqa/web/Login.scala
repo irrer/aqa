@@ -16,27 +16,21 @@
 
 package org.aqa.web
 
-import org.restlet.security.ChallengeAuthenticator
-import org.restlet.data.ChallengeScheme
+import org.aqa.db.CachedUser
+import org.aqa.web.WebUtil._
 import org.restlet.data.ChallengeRequest
 import org.restlet.data.ChallengeResponse
-import org.restlet.Context
 import org.restlet.Request
 import org.restlet.Response
-import org.restlet.security.Verifier
 import org.restlet.Restlet
-import org.aqa.web.WebUtil._
-import org.aqa.db.User
-import org.restlet.data.Status
-import scala.xml.Elem
-import java.net.URLDecoder
-import org.restlet.engine.security.AuthenticatorHelper
-import org.restlet.engine.security.HttpBasicHelper
-import org.restlet.engine.header.ChallengeWriter
 import org.restlet.data.Header
+import org.restlet.data.Status
+import org.restlet.engine.header.ChallengeWriter
+import org.restlet.engine.security.HttpBasicHelper
 import org.restlet.util.Series
-import org.restlet.security.SecretVerifier
-import org.aqa.db.CachedUser
+
+import java.net.URLDecoder
+import scala.xml.Elem
 
 object Login {
   val path = "/Login"
@@ -57,7 +51,7 @@ class Login extends Restlet with SubUrlRoot {
     <div>{
       valueMap.get(message.label) match {
         case Some(optMsg) => URLDecoder.decode(optMsg, "UTF-8")
-        case _ => ""
+        case _            => ""
       }
     }</div>
   }
@@ -82,8 +76,8 @@ class Login extends Restlet with SubUrlRoot {
   }
 
   /**
-   * Verify id and password.
-   */
+    * Verify id and password.
+    */
   private def validatePassword(valueMap: ValueMapT): StyleMapT = {
     val idText = valueMap.get(id.label).get
     val user = CachedUser.get(idText).get
@@ -95,8 +89,8 @@ class Login extends Restlet with SubUrlRoot {
   }
 
   /**
-   * Show this when user asks to log in.
-   */
+    * Show this when user asks to log in.
+    */
   private def emptyForm(valueMap: ValueMapT, response: Response) = {
     val onlyMessage = valueMap.filter(v => v._1.equals(message.label))
     form.setFormResponse(onlyMessage, styleNone, pageTitle, response, Status.SUCCESS_OK)
@@ -109,8 +103,8 @@ class Login extends Restlet with SubUrlRoot {
   }
 
   /**
-   * Get user id and password and set up credentials.
-   */
+    * Get user id and password and set up credentials.
+    */
   private def login(valueMap: ValueMapT, request: Request, response: Response) = {
     val styleMap = {
       val vu = validateUser(valueMap)
@@ -178,9 +172,9 @@ class Login extends Restlet with SubUrlRoot {
     val valueMap = getValueMap(request)
     try {
       0 match {
-        case _ if buttonIs(valueMap, loginButton) => login(valueMap, request, response)
+        case _ if buttonIs(valueMap, loginButton)  => login(valueMap, request, response)
         case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
-        case _ => emptyForm(valueMap, response)
+        case _                                     => emptyForm(valueMap, response)
       }
     } catch {
       case t: Throwable => {

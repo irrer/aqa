@@ -16,10 +16,11 @@
 
 package org.aqa.web
 
-import org.restlet.Response
-import scala.xml.Elem
 import org.aqa.db.MultileafCollimator
 import org.aqa.web.WebUtil._
+import org.restlet.Response
+
+import scala.xml.Elem
 
 object MultileafCollimatorList {
   private val path = new String((new MultileafCollimatorList).pathOf)
@@ -34,7 +35,7 @@ class MultileafCollimatorList extends GenericList[MultileafCollimator] with WebU
 
   override def getPK(value: MultileafCollimator): Long = value.multileafCollimatorPK.get
 
-  private def notesHTML(machineType: MultileafCollimator): Elem = <div>{ WebUtil.firstPartOf(machineType.notes, 60) }</div>
+  private def notesHTML(machineType: MultileafCollimator): Elem = <div>{WebUtil.firstPartOf(machineType.notes, 60)}</div>
 
   private val manufacturerCol = new Column[MultileafCollimator]("Manufacturer", _.manufacturer, (mlc) => makePrimaryKeyHtml(mlc.manufacturer, mlc.multileafCollimatorPK))
 

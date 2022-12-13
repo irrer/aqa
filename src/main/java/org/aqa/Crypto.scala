@@ -42,11 +42,11 @@ object Crypto extends Logging {
   def byteArrayToHex(bytes: Array[Byte]): String = bytes.foldLeft("")((t, b) => t + b.formatted("%02x"))
 
   /**
-   * Convert string of hex characters to byte array.  There is a standard java
-   *  library javax.xml.bind.DatatypeConverter.parseHexBinary that does this but
-   *  in Java 12 it requires pulling in an extra jar which creates an extra dependency.
-   *  This is only a few lines of code.
-   */
+    * Convert string of hex characters to byte array.  There is a standard java
+    *  library javax.xml.bind.DatatypeConverter.parseHexBinary that does this but
+    *  in Java 12 it requires pulling in an extra jar which creates an extra dependency.
+    *  This is only a few lines of code.
+    */
   def hexToByteArray(text: String): Array[Byte] = {
 
     def oneByte(array: Array[Byte], index: Int): Array[Byte] = {
@@ -66,12 +66,12 @@ object Crypto extends Logging {
   }
 
   /**
-   * Construct a secure hash from the given data.  Secure in this context means it
-   * is not computationally viable to reverse.
-   *
-   * @param data Source data.
-   * @return Secure hash of data.
-   */
+    * Construct a secure hash from the given data.  Secure in this context means it
+    * is not computationally viable to reverse.
+    *
+    * @param data Source data.
+    * @return Secure hash of data.
+    */
   def secureHash(data: Array[Byte]): Array[Byte] = {
     val md = HashFactory.getInstance(DIGEST_NAME)
     md.update(data, 0, data.size)
@@ -79,13 +79,13 @@ object Crypto extends Logging {
   }
 
   /**
-   * Calculate a secure hash of the given text.
-   */
+    * Calculate a secure hash of the given text.
+    */
   def secureHash(text: String): String = byteArrayToHex(secureHash(text.getBytes))
 
   /**
-   * Generate a random cryptographically secure hash value.
-   */
+    * Generate a random cryptographically secure hash value.
+    */
   def randomSecureHash: String = {
     val rand = new Random
     val words = (0 until 100).map(i => rand.nextLong.toString)
@@ -105,12 +105,13 @@ object Crypto extends Logging {
   def makeRandomCipherKey: String = byteArrayToHex(makeRandBlock)
 
   /**
-   * Create cipher that can be used to encrypt and decrypt.
-   *
-   * @param key: Secret password, original value must be 32 characters long
-   */
+    * Create cipher that can be used to encrypt and decrypt.
+    *
+    * @param key: Secret password, original value must be 32 characters long
+    */
   def getCipher(keyAsHex: String): IBlockCipher = {
-    import gnu.crypto.cipher.{CipherFactory, IBlockCipher}
+    import gnu.crypto.cipher.CipherFactory
+    import gnu.crypto.cipher.IBlockCipher
 
     import java.util.HashMap
 
@@ -120,7 +121,8 @@ object Crypto extends Logging {
     val cipher = CipherFactory.getInstance(cipherType)
 
     val attributes = new HashMap[String, Object]()
-    attributes.put(IBlockCipher.CIPHER_BLOCK_SIZE.toString, new Integer(cipherBlockSize))
+    val size: Object = cipherBlockSize.asInstanceOf[Object]
+    attributes.put(IBlockCipher.CIPHER_BLOCK_SIZE, size)
     attributes.put(IBlockCipher.KEY_MATERIAL, key)
     cipher.init(attributes)
 
@@ -128,25 +130,25 @@ object Crypto extends Logging {
   }
 
   /**
-   * Copy all bytes from source into destination starting at the destination offset.
-   *
-   * This is necessarily mutable, but that is due to the support functions used.
-   */
+    * Copy all bytes from source into destination starting at the destination offset.
+    *
+    * This is necessarily mutable, but that is due to the support functions used.
+    */
   private def byteCopy(src: Array[Byte], dest: Array[Byte], destOffset: Int) = {
     src.indices.map(i => dest(destOffset + i) = src(i))
   }
 
   /**
-   * Encrypt and produce a string that is a string representation of the hex output.
-   *
-   * The encryption algorithm requires that the input be broken into fixed sized blocks,
-   * each of which is encrypted separately.  To make each block unique, the first half of
-   * each is filled with the input text, and the second half is randomized.
-   *
-   * @param clearText: Text to be encrypted.
-   *
-   * @param cipher: Cipher to be used.
-   */
+    * Encrypt and produce a string that is a string representation of the hex output.
+    *
+    * The encryption algorithm requires that the input be broken into fixed sized blocks,
+    * each of which is encrypted separately.  To make each block unique, the first half of
+    * each is filled with the input text, and the second half is randomized.
+    *
+    * @param clearText: Text to be encrypted.
+    *
+    * @param cipher: Cipher to be used.
+    */
   def encryptWithNonce(clearText: String, cipher: IBlockCipher): String = {
 
     // prepend the text with its length and a blank.
@@ -176,8 +178,8 @@ object Crypto extends Logging {
   def encryptWithNonce(clearText: String, key: String): String = encryptWithNonce(clearText, getCipher(key))
 
   /**
-   * Decrypt text encrypted by <code>encrypt</code>.
-   */
+    * Decrypt text encrypted by <code>encrypt</code>.
+    */
   def decryptWithNonce(encryptedTextAsHex: String, cipher: IBlockCipher): String = {
 
     try {
@@ -208,8 +210,8 @@ object Crypto extends Logging {
   def decryptWithNonce(encryptedText: String, key: String): String = decryptWithNonce(encryptedText, getCipher(key))
 
   /**
-   * Encrypt the given text (without nonce) and then calculate and return a secure hash of the result.
-   */
+    * Encrypt the given text (without nonce) and then calculate and return a secure hash of the result.
+    */
   def encryptAndHash(text: String, cipher: IBlockCipher): String = {
     val numBlock = (text.size / cipherBlockSize) + 1
     val empty = new String(Array.fill(cipherBlockSize)(0.asInstanceOf[Byte]))

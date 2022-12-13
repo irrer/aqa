@@ -27,7 +27,6 @@ import org.aqa.db.Institution
 import org.aqa.web.WebUtil
 
 import java.io.File
-import scala.collection.Seq
 import scala.collection.mutable.ArrayBuffer
 import scala.xml.Elem
 import scala.xml.Node

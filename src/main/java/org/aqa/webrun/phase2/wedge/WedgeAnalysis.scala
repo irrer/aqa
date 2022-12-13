@@ -58,7 +58,7 @@ object WedgeAnalysis extends Logging {
 
   private case class WedgePair(beamName: String, backgroundBeamName: String)
 
-  private def analyzeWedgePair(wedgePair: WedgePair,collimatorCenteringResource: CollimatorCenteringResource , extendedData: ExtendedData, runReq: RunReq): WedgePoint = {
+  private def analyzeWedgePair(wedgePair: WedgePair, collimatorCenteringResource: CollimatorCenteringResource, extendedData: ExtendedData, runReq: RunReq): WedgePoint = {
     logger.info("Starting individual wedge analysis of " + wedgePair.beamName + " with background " + wedgePair.backgroundBeamName)
 
     def measure(beamName: String) = {

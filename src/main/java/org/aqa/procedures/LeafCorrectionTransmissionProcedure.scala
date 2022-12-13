@@ -16,23 +16,21 @@
 
 package org.aqa.procedures
 
-import java.io.File
-import org.aqa.Util
-import org.aqa.Logging
+import edu.umro.MSOfficeUtil.Excel.ExcelUtil
 import org.apache.poi.ss.usermodel.Cell
+import org.apache.poi.ss.usermodel.CellType
+import org.apache.poi.ss.usermodel.Row
+import org.apache.poi.ss.usermodel.Sheet
+import org.apache.poi.ss.usermodel.Workbook
+import org.aqa.Logging
+import org.aqa.Util
 import org.aqa.run.ProcedureStatus
+import org.aqa.web.WebUtil
+
+import java.io.File
 import scala.xml.Elem
 import scala.xml.Node
 import scala.xml.PrettyPrinter
-import org.aqa.web.WebUtil
-import org.apache.poi.ss.usermodel.Workbook
-import org.apache.poi.ss.usermodel.Sheet
-import org.apache.poi.ss.usermodel.CellType
-import org.apache.poi.ss.usermodel.Row
-import edu.umro.MSOfficeUtil.Excel.ExcelUtil
-import org.aqa.Config
-import org.aqa.db.Db
-import edu.umro.ScalaUtil.Trace
 
 object LeafCorrectionTransmissionProcedure extends Logging {
 
@@ -66,12 +64,12 @@ object LeafCorrectionTransmissionProcedure extends Logging {
   private def locToXml(valueLabel: String, row: Row, col: Int, sheet: Sheet): Elem = {
     val leaf = row.getCell(0).getNumericCellValue.toInt.toString
     val loc = row.getCell(col).getNumericCellValue.toString
-    (<Value Leaf={ leaf }>{ loc }</Value>).copy(label = valueLabel)
+    (<Value Leaf={leaf}>{loc}</Value>).copy(label = valueLabel)
   }
 
   private def colToXml(lbl: String, col: Int, colId: Int, sheet: Sheet, rowList: Seq[Int]): Elem = {
-    <Section id={ colId.toString }>
-      { rowList.map(row => locToXml(lbl, sheet.getRow(row), col, sheet)) }
+    <Section id={colId.toString}>
+      {rowList.map(row => locToXml(lbl, sheet.getRow(row), col, sheet))}
     </Section>
   }
 
@@ -79,9 +77,10 @@ object LeafCorrectionTransmissionProcedure extends Logging {
   private def getRowList(sheet: Sheet, headerRow: Int): Seq[Int] = {
     def isLeafRow(row: Row): Boolean = {
       (row != null) &&
-        (row.getCell(0) != null) &&
-        (row.getCell(0).getCellTypeEnum == CellType.NUMERIC) &&
-        (row.getCell(0).getNumericCellValue == row.getCell(0).getNumericCellValue.toInt)
+      (row.getCell(0) != null) &&
+      //(row.getCell(0).getCellTypeEnum == CellType.NUMERIC) &&
+      (row.getCell(0).getCellType == CellType.NUMERIC) &&
+      (row.getCell(0).getNumericCellValue == row.getCell(0).getNumericCellValue.toInt)
     }
     (headerRow + 1 until 1000).toList.takeWhile { rownum => isLeafRow(sheet.getRow(rownum)) }.sorted
   }
@@ -91,7 +90,7 @@ object LeafCorrectionTransmissionProcedure extends Logging {
     val headers = getColumnList(sheet)
     val rowList = getRowList(sheet, headers._1)
     (<Main>
-       { headers._2.zipWithIndex.map(colInd => colToXml(valueLabel, colInd._1, colInd._2 + 1, sheet, rowList)) }
+       {headers._2.zipWithIndex.map(colInd => colToXml(valueLabel, colInd._1, colInd._2 + 1, sheet, rowList))}
      </Main>).copy(label = mainLabel)
   }
 
@@ -105,9 +104,9 @@ object LeafCorrectionTransmissionProcedure extends Logging {
 
     def process(workbook: Workbook): Option[Elem] = {
       getSheet(workbook, nameList) match {
-        case Some(sheet) => Some(get(sheet, mainLabel, valueLabel))
+        case Some(sheet)      => Some(get(sheet, mainLabel, valueLabel))
         case None if required => { ProcedureStatus.terminate("Required sheet " + nameList + " not found", ProcedureStatus.fail); None }
-        case _ => None
+        case _                => None
       }
     }
   }
@@ -115,13 +114,14 @@ object LeafCorrectionTransmissionProcedure extends Logging {
   private def excelToXml(workbook: Workbook) = {
     val sheetSpecList: List[SheetSpec] = List(
       new SheetSpec(Seq("LOC", "Sheet1"), "LeafOffsetCorrectionList", "LeafOffsetCorrection_mm", true),
-      new SheetSpec(Seq("Trans", "Transmission", "Sheet2"), "LeafTransmissionList", "LeafTransmission_pct", true))
+      new SheetSpec(Seq("Trans", "Transmission", "Sheet2"), "LeafTransmissionList", "LeafTransmission_pct", true)
+    )
 
     val elemList = sheetSpecList.map(ss => ss.process(workbook)).flatten
 
     val xml = {
-      <Output outputPK={ System.getenv("outputPK") }>
-        { elemList }
+      <Output outputPK={System.getenv("outputPK")}>
+        {elemList}
       </Output>
     }
 
@@ -130,9 +130,9 @@ object LeafCorrectionTransmissionProcedure extends Logging {
   }
 
   /**
-   * Extract DOT-DOA values from Excel spreadsheet and put into XML form for consumption by database.  Also convert
-   * spreadsheet to HTML for viewing by user.
-   */
+    * Extract DOT-DOA values from Excel spreadsheet and put into XML form for consumption by database.  Also convert
+    * spreadsheet to HTML for viewing by user.
+    */
   def main(args: Array[String]): Unit = {
     try {
       val workbook = getExcelFile

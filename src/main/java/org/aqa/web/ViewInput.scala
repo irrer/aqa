@@ -16,26 +16,19 @@
 
 package org.aqa.web
 
+import org.aqa.db.Input
+import org.aqa.web.WebUtil._
+import org.aqa.Config
+import org.aqa.Util
+import org.aqa.db.Machine
+import org.aqa.db.User
 import org.restlet.Request
 import org.restlet.Response
-import java.util.Date
-import scala.xml.Elem
-import WebUtil._
-import org.aqa.db.Input
-import org.aqa.db.Procedure
-import org.aqa.db.Input
-import org.restlet.routing.Filter
-import org.restlet.Context
 import org.restlet.data.MediaType
-import org.restlet.data.Status
-import org.aqa.Util
-import java.io.File
 import org.restlet.Restlet
-import org.aqa.Config
-import java.sql.Timestamp
-import org.aqa.run.ProcedureStatus
-import org.aqa.db.User
-import org.aqa.db.Machine
+
+import java.io.File
+import scala.xml.Elem
 
 object ViewInput {
   private val path = new String((new InstitutionList).pathOf)
@@ -45,19 +38,19 @@ object ViewInput {
 
   private def shouldShowSummary(inputFileExists: Boolean, procedureIsRunning: Boolean, summaryRequested: Boolean, clientOnPendingList: Boolean): Boolean = {
     (inputFileExists, procedureIsRunning, summaryRequested, clientOnPendingList) match {
-      case (false, _, _, _) => true
+      case (false, _, _, _)       => true
       case (true, _, true, false) => true
-      case _ => false
+      case _                      => false
     }
   }
 
 }
 
 /**
- * Monitor a process that is running a procedure.  If there is no 'input.*' file, then
- * show some metadata and the directory contents, updating it periodically.  If an
- * 'input.*' is created, then show that instead.
- */
+  * Monitor a process that is running a procedure.  If there is no 'input.*' file, then
+  * show some metadata and the directory contents, updating it periodically.  If an
+  * 'input.*' is created, then show that instead.
+  */
 class ViewInput extends Restlet with SubUrlView {
 
   private def pageTitle = "Input"
@@ -81,7 +74,7 @@ class ViewInput extends Restlet with SubUrlView {
     val machine = Machine.get(input.machinePK.get)
 
     val machineDescription: Elem = {
-      if (machine.isDefined) { <a href={ SubUrl.url(SubUrl.admin, "MachineUpdate") + "?machinePK=" + machine.get.machinePK }>{ machine.get.id }</a> }
+      if (machine.isDefined) { <a href={SubUrl.url(SubUrl.admin, "MachineUpdate") + "?machinePK=" + machine.get.machinePK}>{machine.get.id}</a> }
       else { <div>"Not Available"</div> }
     }
 
@@ -126,16 +119,14 @@ class ViewInput extends Restlet with SubUrlView {
         }
 
         respond(content, "Current Input", response)
-        */
+     */
   }
 
   def noInput(response: Response): Unit = {
     response.setEntity("Unknown test input", MediaType.TEXT_PLAIN) // TODO
   }
 
-  private def redirectToDir(dir: Option[File], response: Response) = {
-
-  }
+  private def redirectToDir(dir: Option[File], response: Response) = {}
 
   override def handle(request: Request, response: Response) = {
     super.handle(request, response)
@@ -152,8 +143,8 @@ class ViewInput extends Restlet with SubUrlView {
 
       0 match {
         case _ if (input.isDefined && showSummary) => summary(input.get, response)
-        case _ if (input.isDefined) => redirectToDir(inputDir(input.get), response)
-        case _ => noInput(response)
+        case _ if (input.isDefined)                => redirectToDir(inputDir(input.get), response)
+        case _                                     => noInput(response)
       }
     } catch {
       case e: Exception => internalFailure(response, "Unexpected error: " + e.getMessage)

@@ -16,14 +16,13 @@
 
 package org.aqa.web
 
-import org.restlet.Restlet
+import org.aqa.AQA
+import org.aqa.web.WebUtil._
 import org.restlet.Request
 import org.restlet.Response
-import play.api.libs.json._
-import org.restlet.data.Status
-import org.aqa.AQA
+import org.restlet.Restlet
 import org.restlet.data.MediaType
-import org.aqa.web.WebUtil._
+import org.restlet.data.Status
 
 object ServiceInstance {
   private val path = new String((new ServiceInfo).pathOf)

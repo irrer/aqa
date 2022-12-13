@@ -18,11 +18,9 @@ package org.aqa.webrun
 
 import org.aqa.Logging
 
-object CenterCollimator {
-}
+object CenterCollimator {}
 
 /**
- *
- */
-class CenterCollimator extends Logging {
-}
+  *
+  */
+class CenterCollimator extends Logging {}

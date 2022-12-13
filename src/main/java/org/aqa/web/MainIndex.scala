@@ -16,15 +16,15 @@
 
 package org.aqa.web
 
-import org.restlet.Restlet
+import org.aqa.Util
 import org.restlet.Request
 import org.restlet.Response
-import java.io.File
-import java.io.FileInputStream
-import org.restlet.data.Status
+import org.restlet.Restlet
 import org.restlet.data.MediaType
-import org.aqa.Util
+import org.restlet.data.Status
 import org.restlet.representation.ByteArrayRepresentation
+
+import java.io.File
 
 class MainIndex(staticDir: File) extends Restlet {
 

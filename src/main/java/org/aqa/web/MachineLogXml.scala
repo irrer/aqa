@@ -16,7 +16,6 @@
 
 package org.aqa.web
 
-import org.aqa.AnonymizeUtil
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Machine

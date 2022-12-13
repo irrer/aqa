@@ -55,7 +55,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
     val isWhitelisted = request.isDefined && userIsWhitelisted(request.get)
 
     def instToChoice(inst: Institution) = (inst.institutionPK.get.toString, inst.name)
-    if (isWhitelisted) Institution.list.sortBy(_.name).map(instToChoice )
+    if (isWhitelisted) Institution.list.sortBy(_.name).map(instToChoice)
     else {
       if (request.isDefined) {
         val valueMap = getValueMap(request.get)
@@ -155,7 +155,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
   /**
     * Return an error message if the user is not whitelisted.
     */
-  private def validateIsWhitelisted( response: Response): StyleMapT = {
+  private def validateIsWhitelisted(response: Response): StyleMapT = {
     if (WebUtil.userIsWhitelisted(response))
       styleNone
     else
@@ -341,7 +341,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
 
   private def delete(valueMap: ValueMapT, response: Response): Unit = {
 
-    val errMap = validateAuthentication(valueMap, response.getRequest) ++ userHasMaintenanceRecord(valueMap) ++ userHasInput(valueMap) ++ validateIsWhitelisted( response)
+    val errMap = validateAuthentication(valueMap, response.getRequest) ++ userHasMaintenanceRecord(valueMap) ++ userHasInput(valueMap) ++ validateIsWhitelisted(response)
 
     if (errMap.nonEmpty) {
       formEdit.setFormResponse(valueMap, errMap, pageTitleEdit, response, Status.SUCCESS_OK)

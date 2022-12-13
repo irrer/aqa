@@ -18,15 +18,10 @@ package org.aqa.webrun.phase2.collimatorPosition
 
 import org.aqa.db.CollimatorPosition
 import org.aqa.Util
-import java.io.File
-import org.aqa.db.Output
-import org.aqa.db.Machine
-import org.aqa.db.Institution
-import org.aqa.db.Procedure
-import org.aqa.db.Input
-import org.aqa.db.User
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.RunReq
+
+import java.io.File
 
 object CollimatorPositionCSV {
 
@@ -39,7 +34,7 @@ object CollimatorPositionCSV {
     val analysisDate: String = {
       val date = extendedData.output.analysisDate match {
         case Some(d) => d
-        case _ => extendedData.output.startDate
+        case _       => extendedData.output.startDate
       }
       Util.timeHumanFriendly(date)
     }
@@ -74,13 +69,14 @@ object CollimatorPositionCSV {
       ("X2_Expected_mm", (ii: II) => ii.X2_ExpectedMinusImage_mm + ii.X2_mm),
       ("Y1_Expected_mm", (ii: II) => ii.Y1_ExpectedMinusImage_mm + ii.Y1_mm),
       ("Y2_Expected_mm", (ii: II) => ii.Y2_ExpectedMinusImage_mm + ii.Y2_mm),
-      ("pass-fail status", (ii: II) => ii.status))
+      ("pass-fail status", (ii: II) => ii.status)
+    )
 
     def collimatorPositionToCsv(ii: CollimatorPosition): String = {
       def fmt(any: Any): String = {
         any match {
           case d: Double => d.formatted("%14.11e")
-          case _ => Util.textToCsv(any.toString)
+          case _         => Util.textToCsv(any.toString)
         }
       }
       columns.map(c => fmt(c._2(ii))).mkString(",")
@@ -98,9 +94,7 @@ object CollimatorPositionCSV {
         ("YCollimatorCenterOfRotation_mm", collimatorPositionSeq.head.YCollimatorCenterOfRotation_mm.toString)
       )
 
-      Seq(
-        info.map(s => Util.textToCsv(s._1)).mkString(","),
-        info.map(s => Util.textToCsv(s._2)).mkString(","))
+      Seq(info.map(s => Util.textToCsv(s._1)).mkString(","), info.map(s => Util.textToCsv(s._2)).mkString(","))
     }
 
     val header = Seq(columns.map(c => c._1).mkString(","))

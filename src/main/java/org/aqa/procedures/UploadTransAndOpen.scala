@@ -16,30 +16,17 @@
 
 package org.aqa.procedures
 
-import java.io.File
-import org.aqa.Util
-import org.aqa.Logging
-import org.apache.poi.ss.usermodel.Cell
-import org.aqa.run.ProcedureStatus
-import scala.xml.Elem
-import scala.xml.Node
-import scala.xml.PrettyPrinter
-import org.aqa.web.WebUtil
-import org.apache.poi.ss.usermodel.Workbook
-import org.apache.poi.ss.usermodel.Sheet
-import org.apache.poi.ss.usermodel.CellType
-import org.apache.poi.ss.usermodel.Row
-import edu.umro.MSOfficeUtil.Excel.ExcelUtil
-import org.aqa.Config
-import org.aqa.db.Db
-import edu.umro.ScalaUtil.Trace
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.TagFromName
-import com.pixelmed.dicom.SequenceAttribute
-import com.pixelmed.dicom.TransferSyntax
 import com.pixelmed.dicom.DicomFileUtilities
-import org.aqa.db.Output
+import com.pixelmed.dicom.SequenceAttribute
 import edu.umro.DicomDict.TagByName
+import org.aqa.Logging
+import org.aqa.Util
+import org.aqa.db.Output
+import org.aqa.run.ProcedureStatus
+import org.aqa.web.WebUtil
+
+import java.io.File
 
 object UploadTransAndOpen extends Logging {
 
@@ -50,6 +37,7 @@ object UploadTransAndOpen extends Logging {
   private def curDir = new File(System.getProperty("user.dir"))
 
   private case class DicomFile(file: File, attributeList: AttributeList) {
+
     /**  Get the ExposureSequence --> ExposureTime.  */
     def getExposureTime: Option[Int] = {
       try {
@@ -100,7 +88,7 @@ object UploadTransAndOpen extends Logging {
         <div class="col-md-5 col-md-offset-2">
           <h3>Success</h3>
           Both the open field and transmission files were written to the configuration directory for
-                machine{ System.getenv(Util.machineIdEnvName) + " at " + System.getenv(Util.institutionIdEnvName) }
+                machine{System.getenv(Util.machineIdEnvName) + " at " + System.getenv(Util.institutionIdEnvName)}
         </div>
       </div>
     }
@@ -110,10 +98,10 @@ object UploadTransAndOpen extends Logging {
   }
 
   /**
-   * Upload calibration (baseline) files for running the DLG Averages over 2.5mm x 60mm layers for
-   * a total area of interest of 60mm x 200mm
-   *
-   */
+    * Upload calibration (baseline) files for running the DLG Averages over 2.5mm x 60mm layers for
+    * a total area of interest of 60mm x 200mm
+    *
+    */
   def main(args: Array[String]): Unit = {
     try {
       println("Starting UploadTransAndOpen")

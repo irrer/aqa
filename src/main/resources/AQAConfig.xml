@@ -695,7 +695,7 @@ Note that when building a package for release, the Maven build process uses the 
     <BBbyCBCTHistoryRange>1000000</BBbyCBCTHistoryRange>
 
     <!-- The distance in floating point in mm from center to search for the BB in EPID images in the isoplane. -->
-    <BBbyEPIDSearchDistance_mm>8.0</BBbyEPIDSearchDistance_mm>
+    <BBbyEPIDSearchDistance_mm>4.0</BBbyEPIDSearchDistance_mm>
 
     <!-- Radius in mm in floating point of the EPID BB penumbra.  Different
     from CBCT, which has different imaging characteristics. -->
@@ -706,7 +706,7 @@ Note that when building a package for release, the Maven build process uses the 
     legitimate.  This check is done to ensure that if there is no BB, then the algorithm will not settle for
     the brightest bit of white noise from the background.  The 1.75 number given was arrived at
     empirically after running several tests. -->
-    <EPIDBBMinimumStandardDeviation>2.25</EPIDBBMinimumStandardDeviation>
+    <EPIDBBMinimumStandardDeviation>2.30</EPIDBBMinimumStandardDeviation>
 
     <!-- Color to use when making EPID images in HEX notation specifying red+green+blue.  Set
     to 000000 (black) to use deep (multi) coloring.-->

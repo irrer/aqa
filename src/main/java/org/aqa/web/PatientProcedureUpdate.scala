@@ -22,8 +22,8 @@ import org.aqa.Logging
 import org.aqa.db.DicomAnonymous
 import org.aqa.db.PatientProcedure
 import org.aqa.db.Procedure
-import org.aqa.web.WebUtil.ValueMapT
 import org.aqa.web.WebUtil._
+import org.aqa.web.WebUtil.ValueMapT
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet

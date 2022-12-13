@@ -16,29 +16,17 @@
 
 package org.aqa.web
 
-import org.restlet.security.ChallengeAuthenticator
-import org.restlet.data.ChallengeScheme
-import org.restlet.data.ChallengeRequest
-import org.restlet.data.ChallengeResponse
-import org.restlet.Context
+import org.aqa.db.CachedUser
+import org.aqa.db.User
+import org.aqa.db.UserRole
+import org.aqa.web.WebUtil._
+import org.aqa.Crypto
 import org.restlet.Request
 import org.restlet.Response
-import org.restlet.security.Verifier
 import org.restlet.Restlet
-import org.aqa.web.WebUtil._
-import org.aqa.db.User
 import org.restlet.data.Status
+
 import scala.xml.Elem
-import java.net.URLDecoder
-import org.restlet.engine.security.AuthenticatorHelper
-import org.restlet.engine.security.HttpBasicHelper
-import org.restlet.engine.header.ChallengeWriter
-import org.restlet.data.Header
-import org.restlet.util.Series
-import org.aqa.Util
-import org.aqa.db.UserRole
-import org.aqa.db.CachedUser
-import org.aqa.Crypto
 
 object SetPassword {
   val path = "/SetPassword"
@@ -76,16 +64,16 @@ class SetPassword extends Restlet with SubUrlRoot {
   private val formChangeForbidden = new WebForm(pathOf, List(List(forbiddenMessage), List(cancelButton)))
 
   /**
-   * Only permit high quality passwords.
-   */
+    * Only permit high quality passwords.
+    */
   private def judgePassword(valueMap: ValueMapT): StyleMapT = {
     val err = AuthenticationVerifier.judgePassword(valueMap.get(password.label).get)
     if (err.isDefined) Error.make(password, err.get) else styleNone
   }
 
   /**
-   * Compare passwords to make sure they are the same.
-   */
+    * Compare passwords to make sure they are the same.
+    */
   private def comparePasswords(valueMap: ValueMapT): StyleMapT = {
     val text1 = valueMap.get(password.label).get
     val text2 = valueMap.get(verifyPassword.label).get
@@ -95,8 +83,8 @@ class SetPassword extends Restlet with SubUrlRoot {
   }
 
   /**
-   * Show this when asks to change password.
-   */
+    * Show this when asks to change password.
+    */
   private def emptyForm(valueMap: ValueMapT, response: Response) = {
     form.setFormResponse(valueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
   }
@@ -108,11 +96,11 @@ class SetPassword extends Restlet with SubUrlRoot {
     val isAdmin = role.isDefined && (role.get == UserRole.admin)
 
     0 match {
-      case _ if (!targetUser.isDefined) => Error.make(id, "Target user has not been defined")
-      case _ if (!authnUser.isDefined) => Error.make(id, "User has not been authenticated")
-      case _ if isAdmin => styleNone // user is admin so they can change anyone's passord
+      case _ if (!targetUser.isDefined)                                    => Error.make(id, "Target user has not been defined")
+      case _ if (!authnUser.isDefined)                                     => Error.make(id, "User has not been authenticated")
+      case _ if isAdmin                                                    => styleNone // user is admin so they can change anyone's passord
       case _ if (authnUser.get.userPK.get.toString.equals(targetUser.get)) => styleNone // user is changing their own password
-      case _ => Error.make(id, "You can only change your own password unless you are an administrator")
+      case _                                                               => Error.make(id, "You can only change your own password unless you are an administrator")
     }
   }
 
@@ -146,7 +134,7 @@ class SetPassword extends Restlet with SubUrlRoot {
           //CachedUser.put(userId, newUser)
           val content = {
             <div>
-              The password for{ origUser.id }
+              The password for{origUser.id}
               has been changed.
               <p></p>
               You will need to login again with the new password.
@@ -169,8 +157,8 @@ class SetPassword extends Restlet with SubUrlRoot {
   }
 
   /**
-   * Use the current (authenticated) user.
-   */
+    * Use the current (authenticated) user.
+    */
   private def getAuthenticatedUserAndRetry(valueMap: ValueMapT, request: Request, response: Response): Unit = {
     val authUser = getUser(request)
     if (authUser.isDefined) {
@@ -190,9 +178,9 @@ class SetPassword extends Restlet with SubUrlRoot {
     val authOk = userIsWhitelisted(response) || (clientUser.isDefined && user.isDefined && (clientUser.get.institutionPK == user.get.institutionPK))
     0 match {
       case _ if buttonIs(valueMap, saveButton) && authOk => save(valueMap, request, response)
-      case _ if buttonIs(valueMap, saveButton) => formChangeForbidden.setFormResponse(valueMap, styleNone, pageTitle, response, Status.CLIENT_ERROR_UNAUTHORIZED)
-      case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
-      case _ => emptyForm(valueMap, response)
+      case _ if buttonIs(valueMap, saveButton)           => formChangeForbidden.setFormResponse(valueMap, styleNone, pageTitle, response, Status.CLIENT_ERROR_UNAUTHORIZED)
+      case _ if buttonIs(valueMap, cancelButton)         => response.redirectSeeOther("/")
+      case _                                             => emptyForm(valueMap, response)
     }
 
   }

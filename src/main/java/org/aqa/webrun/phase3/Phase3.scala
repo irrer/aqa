@@ -20,6 +20,6 @@ import org.aqa.db.Procedure
 import org.aqa.webrun.phase2.PhaseAny
 
 /**
- * Run Phase3 code.
- */
+  * Run Phase3 code.
+  */
 class Phase3(procedure: Procedure) extends PhaseAny(procedure) {}

@@ -21,8 +21,8 @@ import org.aqa.db.Machine
 import org.aqa.db.Output
 import org.aqa.db.WedgePoint
 import org.aqa.web.WebUtil
-import org.aqa.web.WebUtil.SubUrlRun
 import org.aqa.web.WebUtil._
+import org.aqa.web.WebUtil.SubUrlRun
 import org.aqa.webrun.phase2.wedge.WedgeUseAsBaseline._
 import org.restlet.Request
 import org.restlet.Response

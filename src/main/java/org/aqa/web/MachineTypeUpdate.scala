@@ -16,22 +16,12 @@
 
 package org.aqa.web
 
-import org.restlet.Restlet
+import org.aqa.db.MachineType
+import org.aqa.web.WebUtil._
 import org.restlet.Request
 import org.restlet.Response
-import org.restlet.data.Method
-import java.util.Date
-import scala.xml.Elem
-import org.restlet.data.Parameter
-import slick.lifted.TableQuery
-import org.aqa.db.MachineType
-import org.restlet.data.Form
-import scala.xml.PrettyPrinter
+import org.restlet.Restlet
 import org.restlet.data.Status
-import org.restlet.data.MediaType
-import WebUtil._
-import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
 
 object MachineTypeUpdate {
   val machineTypePKTag = "machineTypePK"
@@ -95,8 +85,8 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Only whitelisted users may make changes to procedures.
-   */
+    * Only whitelisted users may make changes to procedures.
+    */
   private def validateAuthorization(response: Response) = {
     if (WebUtil.userIsWhitelisted(response)) styleNone
     else Error.make(model, "Only system administrators are allowed to create, modify, or delete machine types.")
@@ -109,8 +99,8 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Save changes made to form editing an existing machine type.
-   */
+    * Save changes made to form editing an existing machine type.
+    */
   private def saveEdits(valueMap: ValueMapT, pageTitle: String, response: Response): Unit = {
     val styleMap = validateManufacturer(valueMap) ++ validateModel(valueMap) ++ okToSaveEdited(valueMap) ++ validateAuthorization(response)
     if (styleMap.isEmpty) {
@@ -120,20 +110,15 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Create a new machineType
-   */
+    * Create a new machineType
+    */
   private def createMachineTypeFromParameters(valueMap: ValueMapT): MachineType = {
     val machineTypePK: Option[Long] = {
       val e = valueMap.get(MachineTypeUpdate.machineTypePKTag)
       if (e.isDefined) Some(e.get.toLong) else None
     }
 
-    new MachineType(
-      machineTypePK,
-      manufacturer.getValOrEmpty(valueMap).trim,
-      model.getValOrEmpty(valueMap).trim,
-      version.getValOrEmpty(valueMap).trim,
-      notes.getValOrEmpty(valueMap).trim)
+    new MachineType(machineTypePK, manufacturer.getValOrEmpty(valueMap).trim, model.getValOrEmpty(valueMap).trim, version.getValOrEmpty(valueMap).trim, notes.getValOrEmpty(valueMap).trim)
   }
 
   private def emptyForm(response: Response) = {
@@ -155,7 +140,13 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
   }
 
   private def edit(inst: MachineType, response: Response) = {
-    val valueMap = Map((machineTypePK.label, inst.machineTypePK.get.toString), (manufacturer.label, inst.manufacturer), (model.label, inst.model), (version.label, inst.version), (notes.label, inst.notes))
+    val valueMap = Map(
+      (machineTypePK.label, inst.machineTypePK.get.toString),
+      (manufacturer.label, inst.manufacturer),
+      (model.label, inst.model),
+      (version.label, inst.version),
+      (notes.label, inst.notes)
+    )
     formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
   }
 
@@ -194,8 +185,8 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Determine if the incoming request is to edit an existing machineType.
-   */
+    * Determine if the incoming request is to edit an existing machineType.
+    */
   private def isEdit(valueMap: ValueMapT, response: Response): Boolean = {
     val inst = getReference(valueMap)
     val value = valueMap.get(MachineTypeUpdate.machineTypePKTag)
@@ -213,10 +204,10 @@ class MachineTypeUpdate extends Restlet with SubUrlAdmin {
       0 match {
         case _ if buttonIs(valueMap, cancelButton) => MachineTypeList.redirect(response)
         case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
-        case _ if buttonIs(valueMap, saveButton) => saveEdits(valueMap, pageTitleEdit, response)
+        case _ if buttonIs(valueMap, saveButton)   => saveEdits(valueMap, pageTitleEdit, response)
         case _ if buttonIs(valueMap, deleteButton) => delete(valueMap, response)
-        case _ if isEdit(valueMap, response) => Nil
-        case _ => emptyForm(response)
+        case _ if isEdit(valueMap, response)       => Nil
+        case _                                     => emptyForm(response)
       }
     } catch {
       case t: Throwable => {

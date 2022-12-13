@@ -25,10 +25,10 @@ import org.aqa.webrun.ExtendedData
 import java.io.File
 
 /**
- * Make an html file containing the image (if this is an image) and the metadata.
- * @param extendedData Regarding the output.
- * @param title Name of web page.
- */
+  * Make an html file containing the image (if this is an image) and the metadata.
+  * @param extendedData Regarding the output.
+  * @param title Name of web page.
+  */
 case class DicomHtml(extendedData: ExtendedData, title: String) {
 
   private val baseFileName = title.replaceAll("[^a-zA-Z0-9_]", "_")

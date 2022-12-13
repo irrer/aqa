@@ -16,10 +16,11 @@
 
 package org.aqa.web
 
-import org.restlet.Response
-import scala.xml.Elem
 import org.aqa.db.Procedure
 import org.aqa.web.WebUtil._
+import org.restlet.Response
+
+import scala.xml.Elem
 
 object ProcedureList {
   private val path = new String((new ProcedureList).pathOf)
@@ -35,12 +36,12 @@ class ProcedureList extends GenericList[Procedure.ProcedureUser] with WebUtil.Su
 
   private val idCol = new Column[PU]("Name", _.procedure.name, (inst) => makePrimaryKeyHtml(inst.procedure.name, inst.procedure.procedurePK))
 
-  private def userToHtml(pu: PU) = <span aqaalias="">{ pu.user.id }</span>
+  private def userToHtml(pu: PU) = <span aqaalias="">{pu.user.id}</span>
   private val supportedByCol = new Column[PU]("Supported By", _.user.fullName_real, userToHtml)
 
   private val versionCol = new Column[PU]("Version", _.procedure.version)
 
-  private def notesHTML(pu: PU): Elem = { <div>{ WebUtil.firstPartOf(pu.procedure.notes, 60) }</div> }
+  private def notesHTML(pu: PU): Elem = { <div>{WebUtil.firstPartOf(pu.procedure.notes, 60)}</div> }
 
   private val notesCol = new Column[PU]("Notes", _.procedure.notes, notesHTML)
 

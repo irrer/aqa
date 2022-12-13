@@ -16,19 +16,16 @@
 
 package org.aqa.procedures
 
-import scala.xml.Elem
-import java.io.File
-import org.aqa.db.LeafOffsetCorrection
-import org.aqa.db.LeafTransmission
-import org.aqa.db.EPIDCenterCorrection
-import org.aqa.db.LOCRSquared
 import org.aqa.db.DiffBaselineOpen
 import org.aqa.db.DiffBaselineTrans
-import org.aqa.run.ProcedureStatus
-import scala.xml.XML
-import org.aqa.db.DbSetup
-import org.aqa.Config
+import org.aqa.db.EPIDCenterCorrection
+import org.aqa.db.LeafOffsetCorrection
+import org.aqa.db.LeafTransmission
+import org.aqa.db.LOCRSquared
 import org.aqa.Logging
+
+import java.io.File
+import scala.xml.Elem
 
 object ProcedureOutputUtil extends Logging {
 
@@ -60,12 +57,12 @@ object ProcedureOutputUtil extends Logging {
   }
 
   /**
-   * Give each of the ProcedureOutput classes an opportunity to extract data from the XML and insert it into the database.
-   */
+    * Give each of the ProcedureOutput classes an opportunity to extract data from the XML and insert it into the database.
+    */
   def insertIntoDatabase(elem: Elem, outputPK: Option[Long]): Unit = {
     val outPK: Long = outputPK match {
       case Some(opk) => opk
-      case _ => outputPkFromElem(elem).get
+      case _         => outputPkFromElem(elem).get
     }
     procedureList.map(p => p.insert(elem, outPK))
   }
@@ -93,6 +90,6 @@ object ProcedureOutputUtil extends Logging {
             }
         }
     }
-    */
+   */
 
 }

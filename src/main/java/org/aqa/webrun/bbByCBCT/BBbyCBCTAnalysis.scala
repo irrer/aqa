@@ -33,8 +33,8 @@ import javax.vecmath.Point3d
 import javax.vecmath.Point3i
 
 /**
- * Find the BB in the CBCT volume.
- */
+  * Find the BB in the CBCT volume.
+  */
 
 object BBbyCBCTAnalysis extends Logging {
 
@@ -45,21 +45,21 @@ object BBbyCBCTAnalysis extends Logging {
   private def i2d(i: Point3i): Point3d = new Point3d(i.getX.toDouble, i.getY.toDouble, i.getZ)
 
   /**
-   * Container for intermediary results.
-   *
-   * @param coarseLocation_vox        Initial measurement/location of bb in CBCT in voxel coordinate.
-   * @param fineLocation_vox          Final measurement of location of bb in CBCT in voxel coordinates.
-   * @param volumeTranslator          CBCT volume translator.  Translates between pixels and mm in CBCT frame of reference.  Provided as a convenience and because creating it consumes resources.
-   * @param cbctFrameOfRefLocation_mm Location of BB in CBCT frame of reference in mm.
-   * @param imageXYZ                  List of images from perspective of X, Y, and Z axis.
-   */
+    * Container for intermediary results.
+    *
+    * @param coarseLocation_vox        Initial measurement/location of bb in CBCT in voxel coordinate.
+    * @param fineLocation_vox          Final measurement of location of bb in CBCT in voxel coordinates.
+    * @param volumeTranslator          CBCT volume translator.  Translates between pixels and mm in CBCT frame of reference.  Provided as a convenience and because creating it consumes resources.
+    * @param cbctFrameOfRefLocation_mm Location of BB in CBCT frame of reference in mm.
+    * @param imageXYZ                  List of images from perspective of X, Y, and Z axis.
+    */
   case class CBCTAnalysisResult(coarseLocation_vox: Point3i, fineLocation_vox: Point3d, volumeTranslator: VolumeTranslator, cbctFrameOfRefLocation_mm: Point3d, imageXYZ: Seq[BufferedImage])
 
   /**
-   * Get the maximum (sub-voxel) point in the given volume.  It must
-   * deviate sufficiently from the volume's mean to be considered a
-   * valid maximum.
-   */
+    * Get the maximum (sub-voxel) point in the given volume.  It must
+    * deviate sufficiently from the volume's mean to be considered a
+    * valid maximum.
+    */
   private def getMaxPoint(volume: DicomVolume): Option[Point3d] = {
 
     val profileList = Seq(volume.xPlaneProfile, volume.yPlaneProfile, volume.zPlaneProfile)
@@ -85,11 +85,11 @@ object BBbyCBCTAnalysis extends Logging {
   }
 
   /**
-   * Look in a center cubic volume of the CBCT set for the BB.
-   *
-   * The BB must be within a certain distance or the test fails.  Taking advantage of this
-   * requirement greatly speeds the algorithm because it has fewer voxels to search.
-   */
+    * Look in a center cubic volume of the CBCT set for the BB.
+    *
+    * The BB must be within a certain distance or the test fails.  Taking advantage of this
+    * requirement greatly speeds the algorithm because it has fewer voxels to search.
+    */
   def volumeAnalysis(cbctSeries: Seq[AttributeList], outputDir: File): Either[String, CBCTAnalysisResult] = {
     val sorted = Util.sortByZ(cbctSeries)
     Util.mkdirs(outputDir)
@@ -106,13 +106,13 @@ object BBbyCBCTAnalysis extends Logging {
     }
 
     /**
-     * Get sub-volume of the entire volume that contains just the
-     * BB and some of surrounding cube, according to the coarse
-     * location.  Getting a larger volume ensures that the BB's
-     * location is actually in the volume, and also provides a
-     * larger sample of voxels inside the cube to differentiate
-     * from the brightness of the BB.
-     */
+      * Get sub-volume of the entire volume that contains just the
+      * BB and some of surrounding cube, according to the coarse
+      * location.  Getting a larger volume ensures that the BB's
+      * location is actually in the volume, and also provides a
+      * larger sample of voxels inside the cube to differentiate
+      * from the brightness of the BB.
+      */
     def getBbVolume(offset_vox: Point3i, bbVolumeStart: Point3i): DicomVolume = {
       val size_vox = offset_vox
       size_vox.scale(2)
@@ -120,27 +120,28 @@ object BBbyCBCTAnalysis extends Logging {
     }
 
     /**
-     * Given the fine (precise) location, build results.
-     */
+      * Given the fine (precise) location, build results.
+      */
     def processFineLocation(relOpt: Point3d, bbVolumeStart: Point3i, coarse_vox: Point3i): CBCTAnalysisResult = {
       val fineLocation_vox = relOpt
       fineLocation_vox.add(i2d(bbVolumeStart))
       val volumeTranslator = new VolumeTranslator(sorted)
       val cbctForLocation_mm = volumeTranslator.vox2mm(fineLocation_vox)
       val imageXYZ = BBbyCBCTMakeImageXYZ.makeImagesXYZ(entireVolume, fineLocation_vox, voxSize_mm)
-      val result = CBCTAnalysisResult(coarse_vox, fineLocation_vox, volumeTranslator,
-        cbctForLocation_mm: Point3d, imageXYZ)
+      val result = CBCTAnalysisResult(coarse_vox, fineLocation_vox, volumeTranslator, cbctForLocation_mm: Point3d, imageXYZ)
 
       def fmt(d: Double) = d.formatted("%12.7f")
 
       def fmtPoint(point: Point3d): String = fmt(point.getX) + ",  " + fmt(point.getY) + ",  " + fmt(point.getZ)
 
       val contentDateTime = cbctSeries.flatMap(al => DicomUtil.getTimeAndDate(al, TagFromName.ContentDate, TagFromName.ContentTime)).minBy(_.getTime)
-      logger.info("BB found in CBCT" +
-        "\n    ImagePositionPatient first slice: " + volumeTranslator.ImagePositionPatient +
-        "\n    Content date and time: " + new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss").format(contentDateTime) +
-        "    coordinates in voxels: " + fmtPoint(fineLocation_vox) +
-        "\n    frame of ref coordinates in mm: " + fmtPoint(cbctForLocation_mm))
+      logger.info(
+        "BB found in CBCT" +
+          "\n    ImagePositionPatient first slice: " + volumeTranslator.ImagePositionPatient +
+          "\n    Content date and time: " + new SimpleDateFormat("EEE MMM dd yyyy HH:mm:ss").format(contentDateTime) +
+          "    coordinates in voxels: " + fmtPoint(fineLocation_vox) +
+          "\n    frame of ref coordinates in mm: " + fmtPoint(cbctForLocation_mm)
+      )
 
       result
     }
@@ -149,7 +150,6 @@ object BBbyCBCTAnalysis extends Logging {
 
     coarseOpt_vox match {
       case Some(coarse_vox) =>
-
         // found the coarse location of the BB.  Now try to find the fine (exact) location.
         val searchExtensionFactor = 4.0
         val offset_mm = Config.CBCTBBPenumbra_mm * searchExtensionFactor

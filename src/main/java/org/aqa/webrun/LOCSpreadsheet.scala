@@ -16,37 +16,29 @@
 
 package org.aqa.webrun
 
-import scala.xml.XML
-import java.io.File
-import scala.xml.Elem
-import scala.xml.Node
-import scala.xml.NodeSeq
-import org.aqa.procedures.ProcedureOutputUtil
-import org.apache.poi.ss.usermodel.Workbook
-import org.apache.poi.xssf.streaming.SXSSFWorkbook
-import org.apache.poi.xssf.streaming.SXSSFRow
+import com.pixelmed.dicom.AttributeTag
+import com.pixelmed.dicom.TagFromName
 import org.apache.poi.ss.usermodel.CellType
-import java.io.FileOutputStream
+import org.apache.poi.ss.util.CellAddress
+import org.apache.poi.xssf.streaming.SXSSFRow
 import org.apache.poi.xssf.streaming.SXSSFSheet
-import org.aqa.db.Output
+import org.apache.poi.xssf.streaming.SXSSFWorkbook
+import org.aqa.db.EPID
+import org.aqa.db.Institution
 import org.aqa.db.Machine
 import org.aqa.db.MultileafCollimator
-import org.aqa.db.Institution
-import org.aqa.db.EPID
+import org.aqa.db.Output
 import org.aqa.Util
 import org.aqa.db.Input
-import org.apache.poi.xssf.streaming.SXSSFCell
-import org.apache.poi.ss.util.CellAddress
-import java.util.Date
-import com.pixelmed.dicom.TagFromName
-import com.pixelmed.dicom.AttributeTag
-import org.restlet.Response
 import org.aqa.web.ViewOutput
-import org.apache.poi.ss.util.CellRangeAddress
+import org.restlet.Response
+
+import java.io.File
+import java.io.FileOutputStream
 
 /**
- * Extract LOC related values from XML file.
- */
+  * Extract LOC related values from XML file.
+  */
 class LOCSpreadsheet(dir: File, locXml: LOCXml, response: Response) {
 
   private def newRowFromSheet(sheet: SXSSFSheet): SXSSFRow = {
@@ -92,8 +84,8 @@ class LOCSpreadsheet(dir: File, locXml: LOCXml, response: Response) {
   }
 
   /**
-   * Make first sheet.
-   */
+    * Make first sheet.
+    */
   private def sheetLeafOffsetConstancy(workbook: SXSSFWorkbook) = {
     val sheet = workbook.createSheet("Leaf Offset Constancy")
     def newRow = newRowFromSheet(sheet)

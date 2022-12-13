@@ -185,7 +185,7 @@ object EdgesFromPlan extends Logging {
 
       // no MLC, just jaws, topBottom: true
       case (jx1, jx2, _, _, None, None, _, true) =>
-        val top    = BeamLimit(-jx1, if (col == 90) GapSkew.EdgeType.X2_Jaw_Horz else GapSkew.EdgeType.X1_Jaw_Horz)
+        val top = BeamLimit(-jx1, if (col == 90) GapSkew.EdgeType.X2_Jaw_Horz else GapSkew.EdgeType.X1_Jaw_Horz)
         val bottom = BeamLimit(-jx2, if (col != 90) GapSkew.EdgeType.X2_Jaw_Horz else GapSkew.EdgeType.X1_Jaw_Horz)
         OrientedEdgePair(Some(top), Some(bottom))
 

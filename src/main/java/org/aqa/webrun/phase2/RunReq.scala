@@ -30,14 +30,15 @@ import java.awt.Rectangle
 import java.awt.image.BufferedImage
 
 /**
- * @param rtplan                                  RTPLAN file
- * @param rtimageMap                              List of RTIMAGE files except for flood field
- * @param flood                                   Flood field file
- * @param symmetryAndFlatnessBaselineRedoBeamList List of beams that were explicitly marked as baselines when this data was processed previously
- * @param wedgeBaselineRedoBeamList               List of beams that were explicitly marked as baselines when this data was processed previously
- */
-case class RunReq(rtplan: AttributeList, rtimageMap: Map[String, AttributeList], flood: AttributeList,
-                  symmetryAndFlatnessBaselineRedoBeamList: Seq[String], wedgeBaselineRedoBeamList: Seq[String]) extends RunReqClass with Logging {
+  * @param rtplan                                  RTPLAN file
+  * @param rtimageMap                              List of RTIMAGE files except for flood field
+  * @param flood                                   Flood field file
+  * @param symmetryAndFlatnessBaselineRedoBeamList List of beams that were explicitly marked as baselines when this data was processed previously
+  * @param wedgeBaselineRedoBeamList               List of beams that were explicitly marked as baselines when this data was processed previously
+  */
+case class RunReq(rtplan: AttributeList, rtimageMap: Map[String, AttributeList], flood: AttributeList, symmetryAndFlatnessBaselineRedoBeamList: Seq[String], wedgeBaselineRedoBeamList: Seq[String])
+    extends RunReqClass
+    with Logging {
 
   private val floodAttributeList = flood
   val floodOriginalImage = new DicomImage(floodAttributeList)
@@ -58,14 +59,22 @@ case class RunReq(rtplan: AttributeList, rtimageMap: Map[String, AttributeList],
 
   private val floodExpected_mm = MeasureTBLREdges.imageCollimatorPositions(floodAttributeList, rtplan).toTBLR(Util.collimatorAngle(flood))
 
-  private val floodMeasurementAndImage = MeasureTBLREdges.measure(floodCorrectedImage, floodTranslator, Some(floodExpected_mm), Util.collimatorAngle(floodAttributeList), floodCorrectedImage, new Point(0, 0), Config.PenumbraThresholdPercent / 100)
+  private val floodMeasurementAndImage = MeasureTBLREdges.measure(
+    floodCorrectedImage,
+    floodTranslator,
+    Some(floodExpected_mm),
+    Util.collimatorAngle(floodAttributeList),
+    floodCorrectedImage,
+    new Point(0, 0),
+    Config.PenumbraThresholdPercent / 100
+  )
 
   val floodMeasurement: MeasureTBLREdges.TBLR = floodMeasurementAndImage.measurementSet
 
   /**
-   * Rectangle in pixels (not mm) within an image that flood field floods.  Image analysis for other images should
-   * be done within the confines of this rectangle.
-   */
+    * Rectangle in pixels (not mm) within an image that flood field floods.  Image analysis for other images should
+    * be done within the confines of this rectangle.
+    */
   val floodRectangle: Rectangle = {
 
     val pnX = floodTranslator.iso2PixDistX(Config.PenumbraThickness_mm / 2)

@@ -16,13 +16,12 @@
 
 package org.aqa.web
 
+import org.restlet.Context
 import org.restlet.Request
 import org.restlet.Response
-import org.restlet.data.MediaType
-import org.restlet.data.Status
-import org.restlet.Context
-import java.util.Date
 import org.restlet.routing.Filter
+
+import java.util.Date
 
 object ExpLtrFilt {
   val path = "/UserList"

@@ -16,29 +16,18 @@
 
 package org.aqa.web
 
-import org.restlet.Restlet
+import org.aqa.db.Institution
+import org.aqa.web.WebUtil._
+import org.aqa.AnonymizeUtil
 import org.restlet.Request
 import org.restlet.Response
-import org.restlet.data.Method
-import java.util.Date
-import scala.xml.Elem
-import org.restlet.data.Parameter
-import org.aqa.db.Institution
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.api._
-import play.api.libs.concurrent.Execution.Implicits._
-import org.restlet.data.Form
-import scala.xml.PrettyPrinter
+import org.restlet.Restlet
 import org.restlet.data.Status
-import org.restlet.data.MediaType
-import WebUtil._
-import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
-import org.aqa.Crypto
-import org.aqa.AnonymizeUtil
 
 object InstitutionUpdate {
   val institutionPKTag = "institutionPK"
+
+  play.api.libs.concurrent.Akka.toString
 }
 
 class InstitutionUpdate extends Restlet with SubUrlAdmin {
@@ -74,8 +63,8 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
   private val formNotAuthorized = new WebForm(pathOf, List(List(notAuthorizedField), List(cancelButton)))
 
   /**
-   * Return true if the name is empty.
-   */
+    * Return true if the name is empty.
+    */
   private def emptyName(valueMap: ValueMapT, pageTitle: String, response: Response): Boolean = {
     val nameText = valueMap.get(name.label).get.trim
     val isEmpty = nameText.trim.size == 0
@@ -97,8 +86,8 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Save changes made to form.
-   */
+    * Save changes made to form.
+    */
   private def save(valueMap: ValueMapT, response: Response): Unit = {
     if (emptyName(valueMap, pageTitleEdit, response)) {
       val errMap = Error.make(name, "Instituton name is required")
@@ -110,8 +99,8 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Create a new institution
-   */
+    * Create a new institution
+    */
   private def createInstitutionFromParameters(valueMap: ValueMapT): Unit = {
     val institution: Option[Institution] = {
       val e = valueMap.get(InstitutionUpdate.institutionPKTag)
@@ -143,8 +132,8 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
   private def createRequestIsValid(valueMap: ValueMapT, response: Response): Boolean = {
     0 match {
       case _ if (emptyName(valueMap, pageTitleCreate, response)) => false
-      case _ if (alreadyExists(valueMap, response)) => false
-      case _ => true
+      case _ if (alreadyExists(valueMap, response))              => false
+      case _                                                     => true
     }
   }
 
@@ -163,7 +152,8 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
       (institutionPK.label, pk),
       (name.label, { if (inst.name_real.isDefined) decrypt(inst.name_real.get) else "" }),
       (url.label, decrypt(inst.url_real)),
-      (description.label, decrypt(inst.description_real)))
+      (description.label, decrypt(inst.description_real))
+    )
     val err = deleteErr(Map((institutionPK.label, pk)))
     formEdit.setFormResponse(valueMap, err, pageTitleEdit, response, Status.SUCCESS_OK)
   }
@@ -217,8 +207,8 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Determine if the incoming request is to edit an existing institution.
-   */
+    * Determine if the incoming request is to edit an existing institution.
+    */
   private def isEdit(valueMap: ValueMapT, response: Response): Boolean = {
     val inst = getReference(valueMap)
     val value = valueMap.get(InstitutionUpdate.institutionPKTag)
@@ -229,8 +219,8 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Return true if the user is authorized to view and modify this institution.
-   */
+    * Return true if the user is authorized to view and modify this institution.
+    */
   private def isAuthorized(request: Request, valueMap: ValueMapT): Boolean = {
     val user = getUser(request)
     val value = valueMap.get(institutionPK.label)
@@ -238,8 +228,8 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * The user has attempted to edit or view an institution that they should not be able to.
-   */
+    * The user has attempted to edit or view an institution that they should not be able to.
+    */
   private def showNotAuthorized(response: Response) = {
     formNotAuthorized.setFormResponse(emptyValueMap, styleNone, "Not Authorized", response, Status.CLIENT_ERROR_UNAUTHORIZED)
   }
@@ -253,13 +243,13 @@ class InstitutionUpdate extends Restlet with SubUrlAdmin {
       val authorized = isAuthorized(request, valueMap) || isWhitelisted
 
       0 match {
-        case _ if buttonIs(valueMap, cancelButton) => InstitutionList.redirect(response)
+        case _ if buttonIs(valueMap, cancelButton)                  => InstitutionList.redirect(response)
         case _ if buttonIs(valueMap, createButton) && isWhitelisted => create(valueMap, response)
-        case _ if buttonIs(valueMap, saveButton) => if (authorized) save(valueMap, response) else showNotAuthorized(response)
-        case _ if buttonIs(valueMap, deleteButton) => if (isWhitelisted) delete(valueMap, response) else showNotAuthorized(response)
-        case _ if isEdit(valueMap, response) => if (authorized) edit(getReference(valueMap).get, response) else showNotAuthorized(response)
-        case _ if isWhitelisted => emptyForm(response)
-        case _ => showNotAuthorized(response)
+        case _ if buttonIs(valueMap, saveButton)                    => if (authorized) save(valueMap, response) else showNotAuthorized(response)
+        case _ if buttonIs(valueMap, deleteButton)                  => if (isWhitelisted) delete(valueMap, response) else showNotAuthorized(response)
+        case _ if isEdit(valueMap, response)                        => if (authorized) edit(getReference(valueMap).get, response) else showNotAuthorized(response)
+        case _ if isWhitelisted                                     => emptyForm(response)
+        case _                                                      => showNotAuthorized(response)
       }
     } catch {
       case t: Throwable => {

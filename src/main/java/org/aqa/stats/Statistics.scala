@@ -1,5 +1,3 @@
 package org.aqa.stats
 
-class Statistics {
-
-}
+class Statistics {}

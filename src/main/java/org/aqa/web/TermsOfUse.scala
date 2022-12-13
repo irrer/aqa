@@ -16,30 +16,18 @@
 
 package org.aqa.web
 
-import org.restlet.security.ChallengeAuthenticator
-import org.restlet.data.ChallengeScheme
-import org.restlet.data.ChallengeRequest
-import org.restlet.data.ChallengeResponse
-import org.restlet.Context
-import org.restlet.Request
-import org.restlet.Response
-import org.restlet.security.Verifier
-import org.restlet.Restlet
 import org.aqa.web.WebUtil._
-import org.aqa.db.User
-import org.restlet.data.Status
-import scala.xml.Elem
-import java.net.URLDecoder
-import org.restlet.engine.security.AuthenticatorHelper
-import org.restlet.engine.security.HttpBasicHelper
-import org.restlet.engine.header.ChallengeWriter
-import org.restlet.data.Header
-import org.restlet.util.Series
-import org.restlet.security.SecretVerifier
 import org.aqa.Config
 import org.aqa.db.CachedUser
+import org.restlet.data.ChallengeRequest
+import org.restlet.Request
+import org.restlet.Response
+import org.restlet.Restlet
+import org.restlet.data.Status
+
 import java.sql.Timestamp
 import java.util.concurrent.CopyOnWriteArrayList
+import scala.xml.Elem
 
 object TermsOfUse {
   val path = "/TermsOfUse"
@@ -106,9 +94,9 @@ class TermsOfUse extends Restlet with SubUrlRoot {
     val valueMap = getValueMap(request)
     try {
       0 match {
-        case _ if buttonIs(valueMap, agreeButton) => agree(request, response)
+        case _ if buttonIs(valueMap, agreeButton)  => agree(request, response)
         case _ if buttonIs(valueMap, cancelButton) => response.redirectSeeOther("/")
-        case _ => emptyForm(valueMap, response)
+        case _                                     => emptyForm(valueMap, response)
       }
     } catch {
       case t: Throwable => {

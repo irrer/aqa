@@ -16,31 +16,14 @@
 
 package org.aqa.web
 
-import org.restlet.Restlet
+import org.aqa.db.Procedure
+import org.aqa.db.User
+import org.aqa.web.WebUtil._
+import org.aqa.webrun.WebRun
 import org.restlet.Request
 import org.restlet.Response
-import org.restlet.data.Method
-import java.util.Date
-import scala.xml.Elem
-import org.restlet.data.Parameter
-import slick.lifted.TableQuery
-import slick.backend.DatabaseConfig
-import scala.concurrent.duration.DurationInt
-import org.aqa.db.Procedure
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.api._
-import play.api.libs.concurrent.Execution.Implicits._
-import org.restlet.data.Form
-import scala.xml.PrettyPrinter
+import org.restlet.Restlet
 import org.restlet.data.Status
-import org.restlet.data.MediaType
-import WebUtil._
-import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
-import org.aqa.db.Institution.InstitutionTable
-import org.aqa.db.Institution
-import org.aqa.db.User
-import org.aqa.webrun.WebRun
 
 object ProcedureUpdate {
   val procedurePKTag = "procedurePK"
@@ -138,15 +121,15 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
     }
     null match {
       case _ if timeoutText.size == 0 => Error.make(timeout, "Timeout can not be empty")
-      case _ if (!valOf.isDefined) => Error.make(timeout, "Timeout must be a valid floating point number")
-      case _ if (valOf.get <= 0) => Error.make(timeout, "Timeout must be greater than 0.")
-      case _ => styleNone // success
+      case _ if (!valOf.isDefined)    => Error.make(timeout, "Timeout must be a valid floating point number")
+      case _ if (valOf.get <= 0)      => Error.make(timeout, "Timeout must be greater than 0.")
+      case _                          => styleNone // success
     }
   }
 
   /**
-   * Save changes made to form.
-   */
+    * Save changes made to form.
+    */
   private def save(valueMap: ValueMapT, response: Response): Unit = {
     val errMap = emptyName(valueMap) ++ validateVersion(valueMap) ++ validateUniqueness(valueMap) ++ validateAuthorization(response)
     if (errMap.isEmpty) {
@@ -160,8 +143,8 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Create a new procedure
-   */
+    * Create a new procedure
+    */
   private def createProcedureFromParameters(valueMap: ValueMapT): Procedure = {
     val procedurePK: Option[Long] = {
       val e = valueMap.get(ProcedureUpdate.procedurePKTag)
@@ -179,24 +162,24 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Show this when procedure asks to create a new procedure from procedure list.
-   */
+    * Show this when procedure asks to create a new procedure from procedure list.
+    */
   private def emptyForm(response: Response) = {
     formCreate.setFormResponse(emptyValueMap, styleNone, pageTitleCreate, response, Status.SUCCESS_OK)
   }
 
   /**
-   * Only whitelisted users may make changes to procedures.
-   */
+    * Only whitelisted users may make changes to procedures.
+    */
   private def validateAuthorization(response: Response) = {
     if (WebUtil.userIsWhitelisted(response)) styleNone
     else Error.make(name, "Only system administrators are allowed to create, modify, or delete procedures.")
   }
 
   /**
-   * Call this when procedure has clicked create button.  If everything is ok, then create the new procedure,
-   * otherwise show the same screen and communicate the error.
-   */
+    * Call this when procedure has clicked create button.  If everything is ok, then create the new procedure,
+    * otherwise show the same screen and communicate the error.
+    */
   private def create(valueMap: ValueMapT, response: Response) = {
     val errMap = emptyName(valueMap) ++ validateVersion(valueMap) ++ validateTimeout(valueMap) ++ validateUniqueness(valueMap) ++ validateAuthorization(response)
 
@@ -210,8 +193,8 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Populate the fields with the current values so that the user can edit them.
-   */
+    * Populate the fields with the current values so that the user can edit them.
+    */
   private def edit(valueMap: ValueMapT, response: Response) = {
 
     val procOpt = getReference(valueMap)
@@ -225,7 +208,8 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
         (timeout.label, procedure.timeout.toString),
         (supportingUserPK.label, procedure.supportingUserPK.toString),
         (webInterface.label, procedure.webInterface.toString),
-        (notes.label, procedure.notes))
+        (notes.label, procedure.notes)
+      )
 
       formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
     } else emptyForm(response)
@@ -245,8 +229,8 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Perform the delete.
-   */
+    * Perform the delete.
+    */
   private def delete(valueMap: ValueMapT, response: Response): Unit = {
 
     val errMap = validateAuthorization(response)
@@ -268,8 +252,8 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Determine if the incoming request is to edit an existing procedure.
-   */
+    * Determine if the incoming request is to edit an existing procedure.
+    */
   private def isEdit(valueMap: ValueMapT): Boolean = valueMap.get(procedurePK.label).isDefined
 
   override def handle(request: Request, response: Response): Unit = {
@@ -279,10 +263,10 @@ class ProcedureUpdate extends Restlet with SubUrlAdmin {
       0 match {
         case _ if buttonIs(valueMap, cancelButton) => ProcedureList.redirect(response)
         case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
-        case _ if buttonIs(valueMap, saveButton) => save(valueMap, response)
+        case _ if buttonIs(valueMap, saveButton)   => save(valueMap, response)
         case _ if buttonIs(valueMap, deleteButton) => delete(valueMap, response)
-        case _ if isEdit(valueMap) => edit(valueMap, response)
-        case _ => emptyForm(response)
+        case _ if isEdit(valueMap)                 => edit(valueMap, response)
+        case _                                     => emptyForm(response)
       }
     } catch {
       case t: Throwable => {

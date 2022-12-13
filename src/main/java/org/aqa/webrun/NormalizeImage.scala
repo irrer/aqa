@@ -18,13 +18,9 @@ package org.aqa.webrun
 
 import org.aqa.Logging
 
-object NormalizeImage {
-
-}
+object NormalizeImage {}
 
 /**
- *
- */
-class NormalizeImage extends Logging {
-
-}
+  *
+  */
+class NormalizeImage extends Logging {}

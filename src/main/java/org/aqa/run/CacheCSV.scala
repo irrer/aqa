@@ -32,21 +32,21 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 /**
- * Support for caching CSV content.  The point is to save content so that the
- * entire data set does not have to be regenerated every time a user asks for
- * the CSV.  The granularity is institution + data type + day.  When cache is
- * invalidated, the granularity is institution + day.
- */
+  * Support for caching CSV content.  The point is to save content so that the
+  * entire data set does not have to be regenerated every time a user asks for
+  * the CSV.  The granularity is institution + data type + day.  When cache is
+  * invalidated, the granularity is institution + day.
+  */
 object CacheCSV extends Logging {
   // Map of Institution.institutionPK --> Institution.name (name is anonymized) to be used as a cache
   private val institutionMap = scala.collection.mutable.Map[Long, String]()
 
   /**
-   * Given an institutionPK, get its name.
-   *
-   * @param institutionPK Primary key of institution.
-   * @return Name of institution.
-   */
+    * Given an institutionPK, get its name.
+    *
+    * @param institutionPK Primary key of institution.
+    * @return Name of institution.
+    */
   private def getInstitutionName(institutionPK: Long) = {
     if (institutionMap.contains(institutionPK))
       institutionMap(institutionPK)
@@ -64,18 +64,18 @@ object CacheCSV extends Logging {
   private def dateToFileName(date: Date) = dateFormat.format(date) + csvSuffix
 
   /**
-   * Remove cached entries for the given institution on the given date.  This is
-   * done when old data is analysed at a later date or new analysis of old data
-   * makes the cached value invalid.
-   *
-   * To simplify the interface, a slightly heavy-handed approach is taken where
-   * all cached data for that date for that institution is invalidated.  Thi
-   * is also a more robust approach, and it is more important to invalidate cache
-   * rather than keep some to be ever so slightly more efficient.
-   *
-   * @param date          Date of cached entry.
-   * @param institutionPK For the cache of this institution.
-   */
+    * Remove cached entries for the given institution on the given date.  This is
+    * done when old data is analysed at a later date or new analysis of old data
+    * makes the cached value invalid.
+    *
+    * To simplify the interface, a slightly heavy-handed approach is taken where
+    * all cached data for that date for that institution is invalidated.  Thi
+    * is also a more robust approach, and it is more important to invalidate cache
+    * rather than keep some to be ever so slightly more efficient.
+    *
+    * @param date          Date of cached entry.
+    * @param institutionPK For the cache of this institution.
+    */
   def invalidateCacheEntries(date: Date, institutionPK: Long): Unit = {
     try {
       val institutionDir = new File(Config.cacheDirFile, getInstitutionName(institutionPK))
@@ -89,8 +89,7 @@ object CacheCSV extends Logging {
       }
 
       FileUtil.listFiles(institutionDir).foreach(cacheDir => invalidateCache(cacheDir))
-    }
-    catch {
+    } catch {
       case t: Throwable =>
         logger.error("Unexpected exception while invalidating cache entry for date " + date + " institutionPK: " + institutionPK + " : " + fmtEx(t))
     }
@@ -103,13 +102,13 @@ abstract class CacheCSV extends Logging {
   protected def cacheDirName(): String
 
   /**
-   * Given a date and an institution PK, get the corresponding data as text.
-   *
-   * @param date          Get for this date.
-   * @param hostRef       URL prefix that references host. (https://somehost/)
-   * @param institutionPK Indicates which institution.
-   * @return Text representation of data.  If no data, then a zero length string.
-   */
+    * Given a date and an institution PK, get the corresponding data as text.
+    *
+    * @param date          Get for this date.
+    * @param hostRef       URL prefix that references host. (https://somehost/)
+    * @param institutionPK Indicates which institution.
+    * @return Text representation of data.  If no data, then a zero length string.
+    */
   protected def fetchData(date: Timestamp, hostRef: String, institutionPK: Long): String
 
   protected def constructHeaders: String
@@ -117,19 +116,18 @@ abstract class CacheCSV extends Logging {
   protected def firstDataDate(institutionPK: Long): Option[Timestamp]
 
   /**
-   * Allow the custom modification of the CSV content after all the pieces have been assembled.
-   *
-   * Default is to do nothing.
-   *
-   * @param assembledCsvText Sorted list of CSV lines without the headers.
-   * @return List of CSV lines.
-   */
+    * Allow the custom modification of the CSV content after all the pieces have been assembled.
+    *
+    * Default is to do nothing.
+    *
+    * @param assembledCsvText Sorted list of CSV lines without the headers.
+    * @return List of CSV lines.
+    */
   protected def postProcessing(assembledCsvText: Seq[String]): Seq[String] = {
     assembledCsvText
   }
 
   protected def getInstitutionPK: Long
-
 
   val cacheDir: File = {
     val institutionDir = new File(Config.cacheDirFile, CacheCSV.getInstitutionName(getInstitutionPK))
@@ -137,44 +135,41 @@ abstract class CacheCSV extends Logging {
   }
 
   /** Convert a file to a date formatted as text.  Do this by removing the
-   * suffix.  The file name format is yyyy-MM-dd.csv .
-   */
+    * suffix.  The file name format is yyyy-MM-dd.csv .
+    */
   private def fileToDateText(file: File): String = file.getName.dropRight(CacheCSV.csvSuffix.length)
 
-
   /**
-   * Given the text representation of a date, construct the file.
-   *
-   * @param dateText date as <code>dateFormat</code>
-   * @return File in cache where the data is persisted..
-   */
+    * Given the text representation of a date, construct the file.
+    *
+    * @param dateText date as <code>dateFormat</code>
+    * @return File in cache where the data is persisted..
+    */
   private def dateTextToFile(dateText: String) = new File(cacheDir, dateText + CacheCSV.csvSuffix)
 
-
   /**
-   * Represent the CSV content entry for a given day.
-   *
-   * @param file File containing content.
-   * @param csv  CSV content.
-   */
+    * Represent the CSV content entry for a given day.
+    *
+    * @param file File containing content.
+    * @param csv  CSV content.
+    */
   private case class CachedResult(file: File, csv: String) {
     val dateText: String = fileToDateText(file)
   }
 
   /**
-   * Get all of the data from the cache.
-   *
-   * @return Cached data.
-   */
+    * Get all of the data from the cache.
+    *
+    * @return Cached data.
+    */
   private def retrieveAllCached(): Seq[CachedResult] = {
 
     def fileNameIsValidFormat(file: File): Boolean = {
       try {
         val name = file.getName
         name.endsWith(CacheCSV.csvSuffix) &&
-          (CacheCSV.dateFormat.parse(name.dropRight(CacheCSV.csvSuffix.length)).getTime > 0)
-      }
-      catch {
+        (CacheCSV.dateFormat.parse(name.dropRight(CacheCSV.csvSuffix.length)).getTime > 0)
+      } catch {
         case _: Throwable => false
       }
     }
@@ -184,11 +179,10 @@ abstract class CacheCSV extends Logging {
         val cachedResult =
           Util.readTextFile(file) match {
             case Right(text) => Some(CachedResult(file, text))
-            case _ => None
+            case _           => None
           }
         cachedResult
-      }
-      else
+      } else
         None
     }
 
@@ -199,14 +193,14 @@ abstract class CacheCSV extends Logging {
   }
 
   /**
-   * Create a cache entry by getting the data from the database and then storing it as
-   * a file in the cache directory.
-   *
-   * @param dateText      Date for which to get data.
-   * @param hostRef       Host reference for generating URLs.
-   * @param institutionPK Indicates which institution this is for.
-   * @return A new cache entry that has been written to disk.
-   */
+    * Create a cache entry by getting the data from the database and then storing it as
+    * a file in the cache directory.
+    *
+    * @param dateText      Date for which to get data.
+    * @param hostRef       Host reference for generating URLs.
+    * @param institutionPK Indicates which institution this is for.
+    * @return A new cache entry that has been written to disk.
+    */
   private def instantiateCache(dateText: String, hostRef: String, institutionPK: Long): CachedResult = {
     val timestamp = new Timestamp(Util.parseDate(CacheCSV.dateFormat, dateText).getTime)
     val csvText = fetchData(timestamp, hostRef = hostRef, institutionPK)
@@ -216,27 +210,28 @@ abstract class CacheCSV extends Logging {
   }
 
   /**
-   * Assemble the CSV results for the user's institution and put it in the response.  Use previously
-   * calculated values as much as possible because they are faster to get.  For any values that are
-   * not cached get them from the database and add them to the cache.
-   *
-   * The response is where the data is put, but is also used to get the request, which
-   * indicates the user, which is used to get the institution.
-   *
-   * @param response Put the CSV here.
-   */
+    * Assemble the CSV results for the user's institution and put it in the response.  Use previously
+    * calculated values as much as possible because they are faster to get.  For any values that are
+    * not cached get them from the database and add them to the cache.
+    *
+    * The response is where the data is put, but is also used to get the request, which
+    * indicates the user, which is used to get the institution.
+    *
+    * @param response Put the CSV here.
+    */
   def assemble(response: Response): Unit = {
 
     removeOldCacheVersions()
 
     /**
-     * Process the data by formatting it into a CSV.
-     *
-     * @param firstTime Time stamp of first (earliest acquired) data.
-     */
+      * Process the data by formatting it into a CSV.
+      *
+      * @param firstTime Time stamp of first (earliest acquired) data.
+      */
     def processCsv(firstTime: Timestamp, institutionPK: Long): Unit = {
 
       logger.info("First data date: " + firstTime)
+
       /** One day in milliseconds. */
       val dayInMs = 24 * 60 * 60 * 1000.toLong
 
@@ -258,10 +253,13 @@ abstract class CacheCSV extends Logging {
       val all: Seq[CachedResult] = allCached ++ newlyInstantiated
 
       val assembledAndSorted = all. // all content
-        map(_.csv).
-        mkString("\n"). // Separate each day's content with a newline.
-        replaceAll("\n\n\n*", "\n"). // Remove multiple sequential newlines.
-        split("\n"). // break into list of lines
+      map(_.csv)
+        .mkString("\n")
+        . // Separate each day's content with a newline.
+        replaceAll("\n\n\n*", "\n")
+        . // Remove multiple sequential newlines.
+        split("\n")
+        . // break into list of lines
         sorted
 
       // Perform post-processing and make into a single CSV
@@ -271,22 +269,21 @@ abstract class CacheCSV extends Logging {
       response.setStatus(Status.SUCCESS_OK)
     }
 
-
     val institutionPK = WebUtil.getUser(response.getRequest).get.institutionPK
 
     // if there is any data, then process it
     firstDataDate(institutionPK) match {
       case Some(firstTime) => processCsv(firstTime, institutionPK)
-      case _ =>
+      case _               =>
     }
 
   }
 
   /**
-   * Remove old versions of this cache if they exist for the given institution.  Assume that
-   * the cache name is of the form baseName-version.  Find all versions with the base name
-   * and delete all but the current version.
-   */
+    * Remove old versions of this cache if they exist for the given institution.  Assume that
+    * the cache name is of the form baseName-version.  Find all versions with the base name
+    * and delete all but the current version.
+    */
   private def removeOldCacheVersions(): Unit = {
     class DeleteOldVersions extends Runnable {
       override def run(): Unit = {
@@ -301,8 +298,7 @@ abstract class CacheCSV extends Logging {
             toDeleteList.map(FileUtil.deleteFileTree)
             logger.info("Deleted old versions of cache:\n" + toDeleteList.map(_.getAbsolutePath).mkString("\n"))
           }
-        }
-        catch {
+        } catch {
           case t: Throwable => logger.warn("Unexpected exception in removeOldCacheVersions: " + fmtEx(t))
         }
       }

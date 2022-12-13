@@ -17,13 +17,14 @@
 package org.aqa
 
 import edu.umro.ImageUtil.Watermark
+
+import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
-import java.awt.image.BufferedImage
 
 /**
- * Mark images with a watermark that show patient orientation.
- */
+  * Mark images with a watermark that show patient orientation.
+  */
 object OrientationWatermark extends Enumeration with Logging {
 
   val Frontal = Value
@@ -33,12 +34,7 @@ object OrientationWatermark extends Enumeration with Logging {
   val Transversal = Value
 
   // percent width
-  private val percent = Map(
-    (Frontal, 10.0),
-    (Posterior, 10.0),
-    (SagittalLeft, 5.0),
-    (SagittalRight, 5.0),
-    (Transversal, 10.0))
+  private val percent = Map((Frontal, 10.0), (Posterior, 10.0), (SagittalLeft, 5.0), (SagittalRight, 5.0), (Transversal, 10.0))
 
   /** Internal buffer to reuse watermarks to improve performance. */
   private val watermarkList = scala.collection.mutable.Map[OrientationWatermark.Value, Watermark]()
@@ -60,8 +56,8 @@ object OrientationWatermark extends Enumeration with Logging {
   this.values.map(ow => add(ow))
 
   /**
-   * Apply a watermark to the given image.
-   */
+    * Apply a watermark to the given image.
+    */
   def mark(ow: OrientationWatermark.Value, image: BufferedImage): Unit = if (watermarkList.contains(ow)) watermarkList(ow).mark(image)
 
 }

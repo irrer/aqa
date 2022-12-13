@@ -16,16 +16,14 @@
 
 package org.aqa.web
 
-import org.restlet.security.Verifier
 import org.aqa.Config
-import org.aqa.Util
-import org.aqa.db.User
 import org.aqa.db.DbSetup
-import org.aqa.db.UserRole
-import scala.io.StdIn
+import org.aqa.db.User
 import org.aqa.Crypto
 import org.aqa.db.CachedUser
 import org.aqa.AnonymizeUtil
+
+import scala.io.StdIn
 
 object SetPasswordManually {
 

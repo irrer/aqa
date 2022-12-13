@@ -16,11 +16,12 @@
 
 package org.aqa.web
 
-import org.restlet.Response
-import scala.xml.Elem
 import org.aqa.db.Institution
 import org.aqa.web.WebUtil._
 import org.aqa.AnonymizeUtil
+import org.restlet.Response
+
+import scala.xml.Elem
 
 object InstitutionList {
   private val path = new String((new InstitutionList).pathOf)
@@ -38,12 +39,12 @@ class InstitutionList extends GenericList[Institution] with WebUtil.SubUrlAdmin 
   private def urlHTML(institution: Institution): Elem = {
     val url = institution.url_real.trim
     if (url.size > 0)
-      <a href={ url } target="_blank" title={ url }>{ humanReadableURL(url) }</a>
+      <a href={url} target="_blank" title={url}>{humanReadableURL(url)}</a>
     else <div></div>
   }
 
   private def descriptionHTML(institution: Institution): Elem = {
-    <div> { WebUtil.firstPartOf(institution.description_real, 60) } </div>
+    <div> {WebUtil.firstPartOf(institution.description_real, 60)} </div>
   }
 
   private val idCol = new Column[Institution]("Name", _.name, (inst) => makePrimaryKeyHtmlWithAQAAlias(inst.name, inst.institutionPK))

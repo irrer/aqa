@@ -64,7 +64,7 @@ class PatientProcedureList extends GenericList[ExtendedData] with WebUtil.SubUrl
   private val cbctPK: Option[Long] = if (dailyQaActive) Procedure.ProcOfBBbyCBCT.get.procedurePK else None
   private val epidPK: Option[Long] = if (dailyQaActive) Procedure.ProcOfBBbyEPID.get.procedurePK else None
 
-  private val locActive =  Procedure.ProcOfLOC.isDefined && Procedure.ProcOfLOCBaseline.isDefined
+  private val locActive = Procedure.ProcOfLOC.isDefined && Procedure.ProcOfLOCBaseline.isDefined
 
   private val locPK: Option[Long] = if (locActive) Procedure.ProcOfLOC.get.procedurePK else None
   private val locBaselinePK: Option[Long] = if (locActive) Procedure.ProcOfLOCBaseline.get.procedurePK else None
@@ -77,9 +77,9 @@ class PatientProcedureList extends GenericList[ExtendedData] with WebUtil.SubUrl
   private def procedureName(pip: PIP): String = {
 
     0 match {
-      case _ if dailyQaActive && (pip.patientProcedure.procedurePK == cbctPK.get || pip.patientProcedure.procedurePK == epidPK.get) => "Daily QA"
+      case _ if dailyQaActive && (pip.patientProcedure.procedurePK == cbctPK.get || pip.patientProcedure.procedurePK == epidPK.get)   => "Daily QA"
       case _ if locActive && (pip.patientProcedure.procedurePK == locPK.get || pip.patientProcedure.procedurePK == locBaselinePK.get) => "LOC"
-      case _ => pip.procedure.name
+      case _                                                                                                                          => pip.procedure.name
     }
   }
 

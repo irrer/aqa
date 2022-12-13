@@ -16,65 +16,49 @@
 
 package org.aqa.webrun.phase2.collimatorPosition
 
+import com.pixelmed.dicom.AttributeList
+import com.pixelmed.dicom.AttributeTag
+import com.pixelmed.dicom.TagFromName
+import edu.umro.DicomDict.TagByName
+import edu.umro.ImageUtil.DicomImage
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.Logging
 import org.aqa.db.CollimatorPosition
-import com.pixelmed.dicom.AttributeTag
-import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.TagFromName
 import org.aqa.Util
-
-import scala.collection.Seq
-import scala.xml.Elem
-import org.aqa.db.Output
 import org.aqa.run.ProcedureStatus
-import org.aqa.DicomFile
-import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.ImageUtil
-
-import java.awt.geom.Point2D
 import org.aqa.Config
-
-import java.awt.Rectangle
-import edu.umro.ImageUtil.LocateEdge
-
-import java.awt.image.BufferedImage
-import java.awt.Color
-import java.awt.BasicStroke
-import edu.umro.ScalaUtil.Trace
-
-import scala.collection.parallel.ParSeq
-import org.aqa.db.CollimatorCentering
-
-import java.awt.Point
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.phase2.CollimatorCenteringResource
 import org.aqa.webrun.phase2.MeasureTBLREdges
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.SubProcedureResult
-import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import org.aqa.webrun.phase2.MeasureTBLREdges.TBLR
-import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.DicomDict.TagByName
-import org.aqa.webrun.phase2.CollimatorCenteringResource
+
+import java.awt.geom.Point2D
+import java.awt.image.BufferedImage
+import java.awt.Point
+import scala.xml.Elem
 
 /**
- * Analyze DICOM files for ImageAnalysis.
- */
+  * Analyze DICOM files for ImageAnalysis.
+  */
 object CollimatorPositionAnalysis extends Logging {
 
   /**
-   * Measure the four collimator edges.  Function is public to make it testable.
-   */
+    * Measure the four collimator edges.  Function is public to make it testable.
+    */
   private def measureImage(
-    beamName: String,
-    FloodCompensation: Boolean,
-    biasAndPixelCorrectedCroppedImage: DicomImage, pixelCorrectedImage: DicomImage,
-    rtimage: AttributeList,
-    originalImage: DicomImage,
-    outputPK: Long,
-    floodOffset: Point,
-    collimatorCenter: Point2D.Double,
-    rtplan: AttributeList): Either[String, (CollimatorPosition, BufferedImage)] = {
+      beamName: String,
+      FloodCompensation: Boolean,
+      biasAndPixelCorrectedCroppedImage: DicomImage,
+      pixelCorrectedImage: DicomImage,
+      rtimage: AttributeList,
+      originalImage: DicomImage,
+      outputPK: Long,
+      floodOffset: Point,
+      collimatorCenter: Point2D.Double,
+      rtplan: AttributeList
+  ): Either[String, (CollimatorPosition, BufferedImage)] = {
     try {
       val collimatorAngle = Util.collimatorAngle(rtimage)
       val gantryAngle = Util.gantryAngle(rtimage)
@@ -90,7 +74,8 @@ object CollimatorPositionAnalysis extends Logging {
             expected_mm.top - translator.pix2IsoDistY(floodOffset.getY),
             expected_mm.bottom - translator.pix2IsoDistY(floodOffset.getY),
             expected_mm.left - translator.pix2IsoDistX(floodOffset.getX),
-            expected_mm.right - translator.pix2IsoDistX(floodOffset.getX))
+            expected_mm.right - translator.pix2IsoDistX(floodOffset.getX)
+          )
           MeasureTBLREdges.measure(biasAndPixelCorrectedCroppedImage, translator, Some(exp_mm), collimatorAngle, originalImage, floodOffset, Config.PenumbraThresholdPercent / 100)
         } else
           MeasureTBLREdges.measure(pixelCorrectedImage, translator, Some(expected_mm), collimatorAngle, originalImage, new Point(0, 0), Config.PenumbraThresholdPercent / 100)
@@ -103,10 +88,12 @@ object CollimatorPositionAnalysis extends Logging {
       val measuredX1X2Y1Y2 = measuredTBLR.toX1X2Y1Y2(collimatorAngle)
 
       val expMinusMeasured = expectedEdgesTBLR.minus(measuredTBLR).toX1X2Y1Y2(collimatorAngle)
-      logger.info("Beam " + beamName + " flood Comp: " + FloodCompensation +
-        "\n    expected edges: " + expectedEdgesTBLR.toX1X2Y1Y2(collimatorAngle) +
-        "\n    measured edges: " + measuredX1X2Y1Y2 +
-        "\n    expected - measured: " + expMinusMeasured)
+      logger.info(
+        "Beam " + beamName + " flood Comp: " + FloodCompensation +
+          "\n    expected edges: " + expectedEdgesTBLR.toX1X2Y1Y2(collimatorAngle) +
+          "\n    measured edges: " + measuredX1X2Y1Y2 +
+          "\n    expected - measured: " + expMinusMeasured
+      )
 
       val worst = expMinusMeasured.toSeq.map(m => m.abs).max
 
@@ -114,7 +101,13 @@ object CollimatorPositionAnalysis extends Logging {
 
       val uid = rtimage.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
 
-      val colPosn = new CollimatorPosition(None, outputPK, status.toString, uid, beamName, FloodCompensation,
+      val colPosn = new CollimatorPosition(
+        None,
+        outputPK,
+        status.toString,
+        uid,
+        beamName,
+        FloodCompensation,
         measuredX1X2Y1Y2.X1,
         measuredX1X2Y1Y2.X2,
         measuredX1X2Y1Y2.Y1,
@@ -125,7 +118,9 @@ object CollimatorPositionAnalysis extends Logging {
         expMinusMeasured.Y2,
         collimatorCenter.getX,
         collimatorCenter.getY,
-        gantryAngle, collimatorAngle)
+        gantryAngle,
+        collimatorAngle
+      )
 
       logger.info("CollimatorPosition\n" + colPosn)
 
@@ -141,10 +136,19 @@ object CollimatorPositionAnalysis extends Logging {
   }
 
   /**
-   *  For testing only.
-   */
-  def testMeasureImage(beamName: String, FloodCompensation: Boolean, biasAndPixelCorrectedCroppedImage: DicomImage, pixelCorrectedImage: DicomImage,
-    al: AttributeList, originalImage: DicomImage, outputPK: Long, floodOffset: Point, rtplan: AttributeList): Either[String, (CollimatorPosition, BufferedImage)] = {
+    *  For testing only.
+    */
+  def testMeasureImage(
+      beamName: String,
+      FloodCompensation: Boolean,
+      biasAndPixelCorrectedCroppedImage: DicomImage,
+      pixelCorrectedImage: DicomImage,
+      al: AttributeList,
+      originalImage: DicomImage,
+      outputPK: Long,
+      floodOffset: Point,
+      rtplan: AttributeList
+  ): Either[String, (CollimatorPosition, BufferedImage)] = {
     measureImage(beamName, FloodCompensation, biasAndPixelCorrectedCroppedImage, pixelCorrectedImage, al, originalImage, outputPK, floodOffset, new Point2D.Double(0, 0), rtplan)
   }
 
@@ -153,9 +157,9 @@ object CollimatorPositionAnalysis extends Logging {
   case class CollimatorPositionResult(sum: Elem, sts: ProcedureStatus.Value, resultList: Seq[CollimatorPosition], crashList: Seq[String]) extends SubProcedureResult(sum, sts, subProcedureName)
 
   /**
-   * Determine if the given image qualifies for collimator position analysis.  It must be on
-   * the configured list of beams and have edges inside the image by 1/2 the penumbra thickness.
-   */
+    * Determine if the given image qualifies for collimator position analysis.  It must be on
+    * the configured list of beams and have edges inside the image by 1/2 the penumbra thickness.
+    */
   private def imageQualifies(rtimage: AttributeList, rtplan: AttributeList): Boolean = {
 
     val colPosnBeamNameList = Config.CollimatorPositionBeamList.map(cp => cp.beamName).toSet
@@ -193,25 +197,30 @@ object CollimatorPositionAnalysis extends Logging {
   }
 
   /**
-   * Run the CollimatorPosition sub-procedure, save results in the database, return true for pass or false for fail.
-   */
+    * Run the CollimatorPosition sub-procedure, save results in the database, return true for pass or false for fail.
+    */
   def runProcedure(extendedData: ExtendedData, runReq: RunReq, collimatorCenteringResource: CollimatorCenteringResource): Either[Elem, CollimatorPositionResult] = {
     try {
       logger.info("Starting analysis of CollimatorPosition for machine " + extendedData.machine.id)
       val qualifiedImageList = runReq.derivedMap.toSeq.filter(ndf => imageQualifies(ndf._2.attributeList, runReq.rtplan)).toMap.keys.toSet
 
       val posnBeams = Config.CollimatorPositionBeamList.filter(cp => qualifiedImageList.contains(cp.beamName))
-      val resultList = posnBeams.par.map(cp => measureImage(
-        cp.beamName,
-        cp.FloodCompensation,
-        runReq.derivedMap(cp.beamName).biasAndPixelCorrectedCroppedImage,
-        runReq.derivedMap(cp.beamName).pixelCorrectedImage,
-        runReq.derivedMap(cp.beamName).attributeList,
-        runReq.derivedMap(cp.beamName).originalImage,
-        extendedData.output.outputPK.get,
-        runReq.floodOffset,
-        collimatorCenteringResource.centerOfBeam(cp.beamName),
-        runReq.rtplan)).toList
+      val resultList = posnBeams.par
+        .map(cp =>
+          measureImage(
+            cp.beamName,
+            cp.FloodCompensation,
+            runReq.derivedMap(cp.beamName).biasAndPixelCorrectedCroppedImage,
+            runReq.derivedMap(cp.beamName).pixelCorrectedImage,
+            runReq.derivedMap(cp.beamName).attributeList,
+            runReq.derivedMap(cp.beamName).originalImage,
+            extendedData.output.outputPK.get,
+            runReq.floodOffset,
+            collimatorCenteringResource.centerOfBeam(cp.beamName),
+            runReq.rtplan
+          )
+        )
+        .toList
 
       val doneList = resultList.filter(r => r.isRight).map(r => r.right.get)
       val crashList = resultList.filter(l => l.isLeft).map(l => l.left.get)

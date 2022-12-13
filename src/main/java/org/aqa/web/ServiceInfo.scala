@@ -17,10 +17,16 @@
 package org.aqa.web
 
 import edu.umro.util.OpSys
+import org.aqa.AQA
+import org.aqa.Config
+import org.aqa.Logging
+import org.aqa.Util
 import org.aqa.web.WebUtil._
-import org.aqa.{AQA, Config, Logging, Util}
-import org.restlet.data.{MediaType, Status}
-import org.restlet.{Request, Response, Restlet}
+import org.restlet.Request
+import org.restlet.Response
+import org.restlet.Restlet
+import org.restlet.data.MediaType
+import org.restlet.data.Status
 
 import java.io.File
 import java.text.SimpleDateFormat
@@ -41,7 +47,7 @@ class ServiceInfo extends Restlet with SubUrlAdmin with Logging {
     val logFileName: String = {
       Util.buildProperties.getProperty("wrapper.logfile") match {
         case name: String if (name != null) => name
-        case _ => """C:\Program Files\AQA\logging""" // Assume a reasonable default
+        case _                              => """C:\Program Files\AQA\logging""" // Assume a reasonable default
       }
     }
     new File(logFileName).getParentFile
@@ -147,8 +153,7 @@ Jobs in progress will be aborted.">Confirm Restart</a>
         </h5>
         <p></p>{requestRestart}
       </div>
-    }
-    else {
+    } else {
       <div class="row">
         <h5>Details not available.</h5>
       </div>
@@ -168,8 +173,8 @@ Jobs in progress will be aborted.">Confirm Restart</a>
   }
 
   /**
-   * Show a page that lets the user do a confirmation to really really restart the service.
-   */
+    * Show a page that lets the user do a confirmation to really really restart the service.
+    */
   private def doConfirm(response: Response) = {
     val content = {
       <div class="row">
@@ -204,8 +209,8 @@ Jobs in progress will be aborted.">Confirm Restart</a>
   val waitForRestartLabel = "waitForRestart"
 
   /**
-   * Show a page that waits until the service has restarted and then redirects them to the home page.
-   */
+    * Show a page that waits until the service has restarted and then redirects them to the home page.
+    */
   private def waitForRestart(response: Response) = {
     val content = {
       <div class="row">
@@ -287,8 +292,8 @@ setTimeout(watchStatus, WebRefreshTime);
         case _ if valueMap.contains(requestRestartLabel) => doConfirm(response)
         case _ if valueMap.contains(confirmRestartLabel) => restartService(response)
         case _ if valueMap.contains(waitForRestartLabel) => waitForRestart(response)
-        case _ if showFileContents(valueMap, response) => {}
-        case _ => showServiceInfo(response)
+        case _ if showFileContents(valueMap, response)   => {}
+        case _                                           => showServiceInfo(response)
       }
     } catch {
       case t: Throwable => {

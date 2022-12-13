@@ -16,27 +16,17 @@
 
 package org.aqa.web
 
-import org.restlet.Restlet
+import org.aqa.db.SystemModification
+import org.aqa.web.WebUtil._
 import org.restlet.Request
 import org.restlet.Response
-import org.restlet.data.Method
-import java.util.Date
-import scala.xml.Elem
-import org.restlet.data.Parameter
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.api._
-import play.api.libs.concurrent.Execution.Implicits._
-import org.restlet.data.Form
-import scala.xml.PrettyPrinter
+import org.restlet.Restlet
 import org.restlet.data.Status
-import org.restlet.data.MediaType
-import WebUtil._
-import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
-import org.aqa.db.SystemModification
+
 import java.sql.Timestamp
-import scala.xml.XML
 import java.text.SimpleDateFormat
+import scala.xml.Elem
+import scala.xml.XML
 
 object SystemModificationUpdate {
   val systemModificationPKTag = "systemModificationPK"
@@ -78,7 +68,7 @@ class SystemModificationUpdate extends Restlet with SubUrlAdmin {
   private def validateSummary(valueMap: ValueMapT): StyleMapT = {
     0 match {
       case _ if (valueMap.get(summary.label).get.trim.isEmpty) => Error.make(summary, "Summary can not be empty")
-      case _ => styleNone
+      case _                                                   => styleNone
     }
   }
 
@@ -87,8 +77,8 @@ class SystemModificationUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Save changes made to form editing an existing machine type.
-   */
+    * Save changes made to form editing an existing machine type.
+    */
   private def saveEdits(valueMap: ValueMapT, pageTitle: String, response: Response): Unit = {
     val styleMap = validateSummary(valueMap)
     if (styleMap.isEmpty) {
@@ -98,8 +88,8 @@ class SystemModificationUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Create a new machineType
-   */
+    * Create a new machineType
+    */
   private def createSystemModificationFromParameters(valueMap: ValueMapT): SystemModification = {
     val pk = {
       val v = valueMap.get(systemModificationPK.label)
@@ -109,12 +99,8 @@ class SystemModificationUpdate extends Restlet with SubUrlAdmin {
         None
     }
 
-    val sysMod = new SystemModification(
-      pk,
-      new Timestamp(date.dateFormat.parse(valueMap(date.label)).getTime),
-      getUser(valueMap).get.userPK.get,
-      valueMap(summary.label).trim,
-      valueMap(description.label))
+    val sysMod =
+      new SystemModification(pk, new Timestamp(date.dateFormat.parse(valueMap(date.label)).getTime), getUser(valueMap).get.userPK.get, valueMap(summary.label).trim, valueMap(description.label))
     sysMod
   }
 
@@ -134,14 +120,15 @@ class SystemModificationUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Populate the fields with the currently row.
-   */
+    * Populate the fields with the currently row.
+    */
   private def edit(systemModification: SystemModification, response: Response) = {
     val valueMap: ValueMapT = Map(
       (systemModificationPK.label, systemModification.systemModificationPK.get.toString),
       (date.label, date.dateFormat.format(systemModification.date)),
       (summary.label, systemModification.summary),
-      (description.label, systemModification.description))
+      (description.label, systemModification.description)
+    )
 
     formEdit.setFormResponse(valueMap, styleNone, pageTitleEdit, response, Status.SUCCESS_OK)
   }
@@ -174,8 +161,8 @@ class SystemModificationUpdate extends Restlet with SubUrlAdmin {
   }
 
   /**
-   * Determine if the incoming request is to edit an existing machineType.
-   */
+    * Determine if the incoming request is to edit an existing machineType.
+    */
   private def isEdit(valueMap: ValueMapT, response: Response): Boolean = {
     val inst = getReference(valueMap)
     val value = valueMap.get(systemModificationPK.label)
@@ -205,8 +192,8 @@ class SystemModificationUpdate extends Restlet with SubUrlAdmin {
         elem
       } catch {
         case t: Throwable => {
-          val lines = sysMod.description.split("\n").toSeq.map(s => <p>{ s }</p>)
-          <div>{ lines }</div>
+          val lines = sysMod.description.split("\n").toSeq.map(s => <p>{s}</p>)
+          <div>{lines}</div>
         }
       }
     }
@@ -215,10 +202,10 @@ class SystemModificationUpdate extends Restlet with SubUrlAdmin {
       <div>
         <div class="row">
           <div class="col-md-3">
-            <b>Date: </b>{ date.dateFormat.format(sysMod.date) }
+            <b>Date: </b>{date.dateFormat.format(sysMod.date)}
           </div>
           <div class="col-md-6">
-            <b>Summary: </b>{ sysMod.summary }
+            <b>Summary: </b>{sysMod.summary}
           </div>
         </div>
         <div class="row">
@@ -228,12 +215,12 @@ class SystemModificationUpdate extends Restlet with SubUrlAdmin {
         </div>
         <div class="row">
           <div class="col-md-6 col-md-offset-1">
-            <br></br>{ descriptionAsHtml }
+            <br></br>{descriptionAsHtml}
           </div>
         </div>
         <div class="row" style="margin-top:30px">
           <div class="col-md-2">
-            <a href={ SystemModificationList.path }>Back to list</a>
+            <a href={SystemModificationList.path}>Back to list</a>
           </div>
         </div>
       </div>
@@ -245,7 +232,7 @@ class SystemModificationUpdate extends Restlet with SubUrlAdmin {
   private def readOnly(valueMap: ValueMapT, response: Response) = {
     valueMap.get(systemModificationPK.label) match {
       case Some(pkText) => simpleWebPage(sysModToHtml(pkText.toLong, response), Status.SUCCESS_OK, "System Modification", response)
-      case _ => forbidden(response)
+      case _            => forbidden(response)
     }
   }
 
@@ -261,8 +248,8 @@ class SystemModificationUpdate extends Restlet with SubUrlAdmin {
       val withMods = {
         <a href="/admin/SystemModificationList">
           System Modifications
-          <span class="badge badge-secondary" title="Number of system modifications">{ size.toString }</span>
-          <span title="Date of latest system modification">{ dateText }</span>
+          <span class="badge badge-secondary" title="Number of system modifications">{size.toString}</span>
+          <span title="Date of latest system modification">{dateText}</span>
         </a>
       }
       withMods
@@ -278,13 +265,13 @@ class SystemModificationUpdate extends Restlet with SubUrlAdmin {
     try {
       0 match {
         case _ if valueMap.get(SystemModificationUpdate.latestTag).isDefined => showLatest(response)
-        case _ if !userIsWhitelisted(request) => readOnly(valueMap, response)
-        case _ if buttonIs(valueMap, cancelButton) => SystemModificationList.redirect(response)
-        case _ if buttonIs(valueMap, createButton) => create(valueMap, response)
-        case _ if buttonIs(valueMap, saveButton) => saveEdits(valueMap, pageTitleEdit, response)
-        case _ if isDelete(valueMap, response) => Nil
-        case _ if isEdit(valueMap, response) => Nil
-        case _ => emptyForm(response)
+        case _ if !userIsWhitelisted(request)                                => readOnly(valueMap, response)
+        case _ if buttonIs(valueMap, cancelButton)                           => SystemModificationList.redirect(response)
+        case _ if buttonIs(valueMap, createButton)                           => create(valueMap, response)
+        case _ if buttonIs(valueMap, saveButton)                             => saveEdits(valueMap, pageTitleEdit, response)
+        case _ if isDelete(valueMap, response)                               => Nil
+        case _ if isEdit(valueMap, response)                                 => Nil
+        case _                                                               => emptyForm(response)
       }
     } catch {
       case t: Throwable => {

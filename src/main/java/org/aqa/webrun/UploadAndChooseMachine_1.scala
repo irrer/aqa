@@ -18,7 +18,6 @@ package org.aqa.webrun
 
 import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.TagFromName
-import edu.umro.ScalaUtil.Trace._
 import org.aqa.db.Machine
 import org.aqa.db.Procedure
 import org.aqa.run.Run
@@ -28,8 +27,6 @@ import org.aqa.db.CentralAxis
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.data.Status
-import play.api._
-import play.api.libs.concurrent.Execution.Implicits._
 
 import java.io.File
 

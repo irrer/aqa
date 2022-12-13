@@ -16,29 +16,19 @@
 
 package org.aqa.webrun.phase2.collimatorPosition
 
-import scala.xml.Elem
-import org.aqa.db.Output
-import org.aqa.db.Machine
-import org.aqa.db.Institution
-import org.aqa.db.Input
-import org.aqa.db.Procedure
-import org.aqa.db.User
 import org.aqa.Util
-import java.util.Date
-import org.aqa.web.WebServer
 import org.aqa.db.CollimatorPosition
-import org.aqa.web.DicomAccess
-import org.aqa.web.WebUtil._
-import org.aqa.DicomFile
-import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.run.ProcedureStatus
-import java.io.File
+import org.aqa.web.WebServer
 import org.aqa.Config
-import java.awt.image.BufferedImage
-import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.phase2.RunReq
-import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.web.WebUtil
+import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.webrun.phase2.RunReq
+
+import java.awt.image.BufferedImage
+import java.io.File
+import scala.xml.Elem
 
 object CollimatorPositionHTML {
   val htmlFileName = "CollimatorPosition.html"
@@ -46,26 +36,26 @@ object CollimatorPositionHTML {
   val subDirName = "CollimatorPosition"
 
   /**
-   * Generate a detailed report and write it to the output directory.  Also write a CSV file.  Return an
-   * HTML snippet that serves as a summary and a link to the detailed report.
-   */
+    * Generate a detailed report and write it to the output directory.  Also write a CSV file.  Return an
+    * HTML snippet that serves as a summary and a link to the detailed report.
+    */
   def makeDisplay(extendedData: ExtendedData, runReq: RunReq, resultList: Seq[(CollimatorPosition, BufferedImage)], crashList: Seq[String], status: ProcedureStatus.Value): Elem = {
 
     val resultDataList = resultList.map(cpb => cpb._1)
     CollimatorPositionCSV.makeCsvFile(extendedData, runReq, resultDataList)
 
     val csvFileReference = {
-      <a title={ "Download " + CollimatorPositionAnalysis.subProcedureName + " as CSV File" } href={ CollimatorPositionCSV.csvFileName }>CSV</a>
+      <a title={"Download " + CollimatorPositionAnalysis.subProcedureName + " as CSV File"} href={CollimatorPositionCSV.csvFileName}>CSV</a>
     }
 
     val viewRtPlan = {
       val planHref = Phase2Util.dicomViewHref(runReq.rtplan, extendedData, runReq)
-      <a title="View RT Plan DICOM file" href={ planHref }>RT Plan</a>
+      <a title="View RT Plan DICOM file" href={planHref}>RT Plan</a>
     }
 
     class Col(val title: String, name: String, val get: (CollimatorPosition, BufferedImage) => Any) {
-      def toHeader = <th title={ title }>{ name }</th>
-      def toRow(psnChk: CollimatorPosition, bufImg: BufferedImage) = <td title={ title }>{ get(psnChk, bufImg).toString }</td>
+      def toHeader = <th title={title}>{name}</th>
+      def toRow(psnChk: CollimatorPosition, bufImg: BufferedImage) = <td title={title}>{get(psnChk, bufImg).toString}</td>
     }
 
     def degree(deg: Double): String = (Util.modulo360(deg).round.toInt % 360).formatted("%4d")
@@ -81,9 +71,9 @@ object CollimatorPositionHTML {
 
         val elem = {
           if (pass)
-            <td title={ title }>{ text }</td>
+            <td title={title}>{text}</td>
           else
-            <td title={ title } class="danger">{ text }</td>
+            <td title={title} class="danger">{text}</td>
         }
         elem
       }
@@ -102,10 +92,10 @@ object CollimatorPositionHTML {
         val pngUrl = WebServer.urlOfResultsFile(pngFile)
         val pass = collimatorPosition.status.toString.equals(ProcedureStatus.pass.toString)
         val text = " " + collimatorPosition.beamName + " : " + (if (pass) "Pass" else "Fail")
-        val link = { <a href={ pngUrl }>{ text }</a> }
+        val link = { <a href={pngUrl}>{text}</a> }
         val elem = {
-          if (pass) { <td title={ title }>{ link }</td> }
-          else { <td class="danger" title={ title }>{ link }</td> }
+          if (pass) { <td title={title}>{link}</td> }
+          else { <td class="danger" title={title}>{link}</td> }
         }
         elem
       }
@@ -119,24 +109,25 @@ object CollimatorPositionHTML {
       new ColSide("Expected X1 - X1 edge in image, in mm", "X1 mm", (psnChk: CollimatorPosition, bufImg: BufferedImage) => psnChk.X1_ExpectedMinusImage_mm),
       new ColSide("Expected X2 - X2 edge in image, in mm", "X2 mm", (psnChk: CollimatorPosition, bufImg: BufferedImage) => psnChk.X2_ExpectedMinusImage_mm),
       new ColSide("Expected Y1 - Y1 edge in image, in mm", "Y1 mm", (psnChk: CollimatorPosition, bufImg: BufferedImage) => psnChk.Y1_ExpectedMinusImage_mm),
-      new ColSide("Expected Y2 - Y2 edge in image, in mm", "Y2 mm", (psnChk: CollimatorPosition, bufImg: BufferedImage) => psnChk.Y2_ExpectedMinusImage_mm))
+      new ColSide("Expected Y2 - Y2 edge in image, in mm", "Y2 mm", (psnChk: CollimatorPosition, bufImg: BufferedImage) => psnChk.Y2_ExpectedMinusImage_mm)
+    )
 
     def collimatorPositionTableHeader: Elem = {
-      <thead><tr>{ rowList.map(row => row.toHeader) }</tr></thead>
+      <thead><tr>{rowList.map(row => row.toHeader)}</tr></thead>
     }
 
     def collimatorPositionToTableRow(collimatorPosition: CollimatorPosition, bufImg: BufferedImage): Elem = {
-      <tr>{ rowList.map(row => row.toRow(collimatorPosition, bufImg)) }</tr>
+      <tr>{rowList.map(row => row.toRow(collimatorPosition, bufImg))}</tr>
     }
 
     val tbody = resultList.map(psnChk => collimatorPositionToTableRow(psnChk._1, psnChk._2))
 
     val crashTable = {
-      def stringToRow(s: String) = { <tr><td>{ s }</td></tr> }
+      def stringToRow(s: String) = { <tr><td>{s}</td></tr> }
       <div>
         <h3>Crashed Beams</h3>
         <table class="table table-striped">
-          <tbody>{ crashList.map(c => stringToRow(c)) }</tbody>
+          <tbody>{crashList.map(c => stringToRow(c))}</tbody>
         </table>
       </div>
     }
@@ -144,22 +135,22 @@ object CollimatorPositionHTML {
     val collimatorCenterOfRotation = {
       def fmt(d: Double) = d.formatted("%7.3f")
       val text = fmt(resultList.head._1.XCollimatorCenterOfRotation_mm) + ", " + fmt(resultList.head._1.YCollimatorCenterOfRotation_mm)
-      <span title="X,Y coordinates of collimator center of rotation">Collimator center of rotation { text }</span>
+      <span title="X,Y coordinates of collimator center of rotation">Collimator center of rotation {text}</span>
     }
 
     val content = {
       <div class="col-md-10 col-md-offset-1">
         <div class="row" style="margin:20px;">
-          <div class="col-md-1">{ csvFileReference }</div>
-          <div class="col-md-1">{ viewRtPlan }</div>
-          <div class="col-md-2">   { collimatorCenterOfRotation }</div>
+          <div class="col-md-1">{csvFileReference}</div>
+          <div class="col-md-1">{viewRtPlan}</div>
+          <div class="col-md-2">   {collimatorCenterOfRotation}</div>
         </div>
         <div class="row" style="margin:20px;">
           <table class="table table-striped">
-            { collimatorPositionTableHeader }
-            <tbody>{ tbody }</tbody>
+            {collimatorPositionTableHeader}
+            <tbody>{tbody}</tbody>
           </table>
-          { if (crashList.nonEmpty) crashTable }
+          {if (crashList.nonEmpty) crashTable}
         </div>
       </div>
     }
@@ -170,15 +161,15 @@ object CollimatorPositionHTML {
     Util.writeBinaryFile(file, text.getBytes)
 
     /**
-     * Make a tiny summary and link to the detailed report.
-     */
+      * Make a tiny summary and link to the detailed report.
+      */
     def makeSummary = {
       val iconImage = if (status == ProcedureStatus.pass) Config.passImageUrl else Config.failImageUrl
       val elem = {
         <div title="Click for details.">
-          <a href={ htmlFileName }>
+          <a href={htmlFileName}>
             Collimator Position<br/>
-            <img src={ iconImage } height="32"/>
+            <img src={iconImage} height="32"/>
           </a>
         </div>
       }

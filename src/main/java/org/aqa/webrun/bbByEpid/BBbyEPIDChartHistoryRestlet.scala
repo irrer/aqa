@@ -16,17 +16,17 @@
 
 package org.aqa.webrun.bbByEpid
 
-import org.restlet.Restlet
+import org.aqa.web.WebUtil._
+import org.aqa.Logging
 import org.restlet.Request
 import org.restlet.Response
-import org.aqa.web.WebUtil._
+import org.restlet.Restlet
 import org.restlet.data.MediaType
-import org.aqa.Logging
 import org.restlet.data.Status
 
 /**
- * Support for generating JS scripts on request.
- */
+  * Support for generating JS scripts on request.
+  */
 object BBbyEPIDChartHistoryRestlet {
   private val path = new String((new BBbyEPIDChartHistoryRestlet).pathOf)
   def makeReference(outputPK: Long) = {

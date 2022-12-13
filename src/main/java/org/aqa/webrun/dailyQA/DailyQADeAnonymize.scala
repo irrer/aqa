@@ -22,12 +22,11 @@ import org.aqa.AnonymizeUtil
 import org.aqa.db.DicomAnonymous
 import org.aqa.db.Machine
 
-
 /**
- * De-anonymize fields in a CSV.
- *
- * @param institutionPK Indicates which institution.
- */
+  * De-anonymize fields in a CSV.
+  *
+  * @param institutionPK Indicates which institution.
+  */
 class DailyQADeAnonymize(institutionPK: Long, machineColIndex: Int = -1, patientIdColIndex: Int = -1, operatorsNameColIndex: Int = -1) {
 
   // Map id --> de-anonymized real id
@@ -38,8 +37,7 @@ class DailyQADeAnonymize(institutionPK: Long, machineColIndex: Int = -1, patient
   }
 
   private def tagMap(tag: AttributeTag): Map[String, String] = {
-    DicomAnonymous.getAttributesByTag(institutionPK, Seq(tag)).
-      map(da => (da.value, AnonymizeUtil.decryptWithNonce(institutionPK, da.value_real))).toMap
+    DicomAnonymous.getAttributesByTag(institutionPK, Seq(tag)).map(da => (da.value, AnonymizeUtil.decryptWithNonce(institutionPK, da.value_real))).toMap
   }
 
   private val patIdMap = tagMap(TagFromName.PatientID)
@@ -47,11 +45,11 @@ class DailyQADeAnonymize(institutionPK: Long, machineColIndex: Int = -1, patient
   private val operatorsNameMap = tagMap(TagFromName.OperatorsName)
 
   /**
-   * Replace anonymized values with real values.
-   *
-   * @param line Entire text of one line.
-   * @return Same line with fields de-anonymized.
-   */
+    * Replace anonymized values with real values.
+    *
+    * @param line Entire text of one line.
+    * @return Same line with fields de-anonymized.
+    */
   def deAnonymize(line: String): String = {
     val columnList = line.split(",")
 
@@ -62,8 +60,7 @@ class DailyQADeAnonymize(institutionPK: Long, machineColIndex: Int = -1, patient
           colList.patch(colIndex, Seq(map(anon)), 1)
         else
           colList
-      }
-      else
+      } else
         colList
     }
 
@@ -73,6 +70,5 @@ class DailyQADeAnonymize(institutionPK: Long, machineColIndex: Int = -1, patient
 
     c3.mkString(",")
   }
-
 
 }

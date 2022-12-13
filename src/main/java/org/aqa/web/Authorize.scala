@@ -16,23 +16,16 @@
 
 package org.aqa.web
 
+import org.aqa.db.CachedUser
+import org.aqa.db.UserRole
 import org.restlet.routing.Filter
 import org.restlet.Request
 import org.restlet.Response
-import org.aqa.db.UserRole
-import org.aqa.db.User
 import org.restlet.Restlet
-import org.restlet.routing.Router
 import org.restlet.data.Status
-import org.aqa.db.CachedUser
+import org.restlet.routing.Router
 
-class Authorize(
-  publicList: List[Restlet],
-  guestList: List[Restlet],
-  userList: List[Restlet],
-  devList: List[Restlet],
-  adminList: List[Restlet],
-  router: Router) extends Filter {
+class Authorize(publicList: List[Restlet], guestList: List[Restlet], userList: List[Restlet], devList: List[Restlet], adminList: List[Restlet], router: Router) extends Filter {
 
   private def getUserRole(id: String): Option[UserRole.Value] = {
     val user = CachedUser.get(id)
@@ -51,10 +44,10 @@ class Authorize(
 
     0 match {
       case _ if (publicList.contains(restlet)) => UserRole.publik
-      case _ if (guestList.contains(restlet)) => UserRole.guest
-      case _ if (userList.contains(restlet)) => UserRole.user
-      case _ if (devList.contains(restlet)) => UserRole.dev
-      case _ => UserRole.admin // default to most restrictive use
+      case _ if (guestList.contains(restlet))  => UserRole.guest
+      case _ if (userList.contains(restlet))   => UserRole.user
+      case _ if (devList.contains(restlet))    => UserRole.dev
+      case _                                   => UserRole.admin // default to most restrictive use
     }
   }
 
@@ -62,7 +55,7 @@ class Authorize(
     val content = {
       <div>
         You are not authorized to access that page, and must<br/>
-        have at least{ reqRol.toString }
+        have at least{reqRol.toString}
         privileges to do so.
       </div>
     }

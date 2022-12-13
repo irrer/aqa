@@ -17,15 +17,15 @@
 package org.aqa
 
 import com.pixelmed.dicom.AttributeList
-import java.awt.geom.Point2D
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.TagFromName
-import org.aqa.webrun.phase2.Phase2Util
+
+import java.awt.geom.Point2D
 import javax.vecmath.Point3d
 
 /**
- * Support mapping points between the coordinates in voxels verses the coordinates in mm.
- */
+  * Support mapping points between the coordinates in voxels verses the coordinates in mm.
+  */
 
 class VolumeTranslator(alList: Seq[AttributeList]) {
 
@@ -62,4 +62,3 @@ class VolumeTranslator(alList: Seq[AttributeList]) {
   }
 
 }
-

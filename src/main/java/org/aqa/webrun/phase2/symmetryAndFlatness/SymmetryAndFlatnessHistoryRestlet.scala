@@ -16,17 +16,17 @@
 
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
-import org.restlet.Restlet
-import org.restlet.Request
-import org.restlet.Response
-import org.restlet.data.MediaType
 import org.aqa.web.WebUtil._
 import org.aqa.Logging
+import org.restlet.Request
+import org.restlet.Response
+import org.restlet.Restlet
+import org.restlet.data.MediaType
 import org.restlet.data.Status
 
 /**
- * Support for generating JS scripts on request.
- */
+  * Support for generating JS scripts on request.
+  */
 object SymmetryAndFlatnessHistoryRestlet {
   private val path = new String((new SymmetryAndFlatnessHistoryRestlet).pathOf)
 
@@ -56,4 +56,3 @@ class SymmetryAndFlatnessHistoryRestlet extends Restlet with SubUrlRoot with Log
   }
 
 }
-

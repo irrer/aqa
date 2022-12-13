@@ -16,40 +16,23 @@
 
 package org.aqa.webrun.phase2.centerDose
 
-import scala.xml.Elem
-import org.aqa.db.Output
-import org.aqa.db.Machine
-import org.aqa.db.Institution
-import org.aqa.db.Input
-import org.aqa.db.Procedure
-import org.aqa.db.User
-import org.aqa.Util
-
-import java.util.Date
-import org.aqa.web.WebServer
-import org.aqa.db.CenterDose
-import org.aqa.web.DicomAccess
-import org.aqa.web.WebUtil._
-import org.aqa.DicomFile
-import edu.umro.ScalaUtil.DicomUtil
-import org.aqa.run.ProcedureStatus
-
-import java.io.File
-import org.aqa.Config
-import edu.umro.ImageUtil.DicomImage
-
-import java.awt.geom.Point2D
 import com.pixelmed.dicom.AttributeList
-
-import java.awt.Point
 import com.pixelmed.dicom.TagFromName
+import edu.umro.ImageUtil.DicomImage
+import org.aqa.db.CenterDose
+import org.aqa.DicomFile
+import org.aqa.run.ProcedureStatus
+import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.phase2.RunReq
-import org.aqa.webrun.phase2.Phase2Util
-import org.aqa.webrun.phase2.SubProcedureResult
-import org.aqa.db.CollimatorCentering
 import org.aqa.webrun.phase2.CollimatorCenteringResource
+import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.webrun.phase2.RunReq
+import org.aqa.webrun.phase2.SubProcedureResult
+
+import java.awt.geom.Point2D
+import java.awt.Point
+import scala.xml.Elem
 
 object CenterDoseAnalysis extends Logging {
 
