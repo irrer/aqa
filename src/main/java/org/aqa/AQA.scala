@@ -36,9 +36,7 @@ object AQA extends Logging {
 
     try {
       println("AQA service starting at " + Util.timeHumanFriendly(new Date(serviceStartTime)))
-      Util.showJarFile(this)
-
-      println(edu.umro.ScalaUtil.Util.getJarPropertyFile(AQA.getClass))
+      logger.info("Verifying logging.")
 
       if (Config.validate) {
         DbSetup.init
