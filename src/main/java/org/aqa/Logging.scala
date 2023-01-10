@@ -16,56 +16,9 @@
 
 package org.aqa
 
-import org.restlet.Restlet
-import org.slf4j.Logger
-
-trait Logging {
-  protected lazy val logger: Logger = org.slf4j.LoggerFactory.getLogger(this.getClass)
-
-  /**
-    * Format a <code>Throwable</code>.
-    *
-    * @param throwable Contains description and stack trace.
-    *
-    * @return Human readable version of <code>Throwable</code> and stack trace.
-    */
-  def fmtEx(throwable: Throwable): String = {
-    val textList = throwable.getStackTrace.map(ste => "\n    " + ste) // convert to text
-    throwable.getMessage + textList.mkString // join as one string
-  }
-}
-
-object LoggingMain extends Logging {
-
-  def main(args: Array[String]): Unit = {
-    println("Logging starting")
-    System.setProperty("log4j.rootLogger", "ALL")
-    System.setProperty("log4j.logger.org.restlet", "WARN")
-    System.setProperty("log4j.logger.org.springframework", "WARN")
-
-    val simple = new org.apache.commons.logging.impl.SimpleLog("alfred")
-    simple.warn("A warning")
-
-    class Foo extends Restlet {
-      def wrn(): Unit = getLogger.warning("Warning from foo")
-    }
-    val foo = new Foo
-    foo.wrn()
-    println("foo.getLogger: " + foo.getLogger)
-    println("foo.getLogger.getName: " + foo.getLogger.getName)
-    println("foo.getLogger.getParent.getName: " + foo.getLogger.getParent.getName)
-
-    // val priority = new org.apache.spi.ErrorCode
-    //        import org.apache.log4j.FileAppender
-    //        val fileAppender = new FileAppender
-
-    //org.apache.commons.logging.impl.SimpleLog.warn()
-
-    // println("simple.dateTimeFormat: " + simple.)
-
-    logger.error("Hello from logging!")
-    println("LoggingMain done")
-    System.exit(99)
-  }
-
-}
+/**
+  * This was originally implemented locally to the AQA project, but was changed to use edu.umro.ScalaUtil.Logging .
+  * This removes duplicate code. The class could be removed entirely, but the source file for each class and
+  * object in AQA would have to be modified.
+  */
+trait Logging extends edu.umro.ScalaUtil.Logging {}

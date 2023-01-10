@@ -1,15 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration>
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <target>System.out</target>
-        <encoder>
-            <pattern>%date{MM/dd HH:mm:ss} %-5level[%.15thread] %logger{1} %msg%n</pattern>
-        </encoder>
-    </appender>
+<Configuration strict="true" status="info" xmlns="http://logging.apache.org/log4j/2.0/config" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://logging.apache.org/log4j/2.0/config 
+    https://raw.githubusercontent.com/apache/logging-log4j2/master/log4j-core/src/main/resources/Log4j-config.xsd">
 
-    <logger name="scala.slick" level="INFO" />
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="|| %location | %msg\r\n" />
+        </Console>
+    </Appenders>
 
-    <root level="DEBUG">
-        <appender-ref ref="CONSOLE"/>
-    </root>
-</configuration>
+    <Loggers>
+        <!-- Only our code shows ALL log messages, the others show INFO. -->
+        <Logger name="org.aqa" level="ALL"/>
+        <Logger name="org.umro" level="ALL"/>
+        <Root level="INFO">
+            <AppenderRef ref="Console" />
+        </Root>
+    </Loggers>
+</Configuration>
