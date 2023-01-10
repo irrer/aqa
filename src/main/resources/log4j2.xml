@@ -5,14 +5,14 @@
 
     <Appenders>
         <Console name="Console" target="SYSTEM_OUT">
-            <PatternLayout pattern="|| %location | %msg\r\n" />
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level %location | %msg\r\n" />
         </Console>
     </Appenders>
 
     <Loggers>
         <!-- Only our code shows ALL log messages, the others show INFO. -->
-        <Logger name="org.aqa" level="ALL"/>
-        <Logger name="org.umro" level="ALL"/>
+        <Logger name="org.aqa" level="INFO"/>
+        <Logger name="org.umro" level="INFO"/>
         <Root level="INFO">
             <AppenderRef ref="Console" />
         </Root>
