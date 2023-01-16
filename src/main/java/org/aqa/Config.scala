@@ -933,6 +933,14 @@ object Config extends Logging {
 
   // =================================================================================
 
+  // Winston Lutz values
+  val WLBoxEdgeTolerance_mm: Double = logMainText("WLBoxEdgeTolerance_mm", "5.5").toDouble
+  val WLScale: Double = logMainText("WLScale", "16").toInt
+  val WLBallRadius: Double = logMainText("WLBallRadius", "2.5").toInt
+
+
+  // =================================================================================
+
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true
 

@@ -803,4 +803,13 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
+    <!-- Tolerance in pixels for how far to search from the expected center for
+    the fine edge of box, given the coarse position of the edge.  Also used
+    determine where an edge of the box finishes to define the
+    area to look for the ball.  Must be a positive floating point value given
+    in mm. -->
+    <WLBoxEdgeTolerance_mm>5.5</WLBoxEdgeTolerance_mm>
+
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
 </AQAConfig>
