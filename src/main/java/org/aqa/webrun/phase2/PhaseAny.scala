@@ -213,9 +213,37 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure(procedure) with Run
     val uploaded = requiredBeamList.map(_.trim).filter(allBeamNames.contains).sorted.mkString(sep)
     val expected = requiredBeamList.map(_.trim).sorted.mkString(sep)
 
-    if (uploaded.equals(expected))
-      None
-    else {
+    /**
+      * Check to make sure that there is a collimator centering beam at collimator angle 90 and 270 for each of the gantry angles.
+      * @param list List of all collimator centering beams.
+      * @return None if everything is ok, or, a message indicating the problem.
+      */
+    def allAreOpposingPairs(list: Seq[AttributeList]): Option[String] = {
+      def ga(img: AttributeList) = Util.angleRoundedTo90(Util.gantryAngle(img))
+      def ca(img: AttributeList) = Util.angleRoundedTo90(Util.collimatorAngle(img))
+
+      val gantryAngleGroupList = list.groupBy(ga)
+
+      /**
+        * Determine if there are two beams at this gantry angle and their collimator angles are 90 and 270.
+        * @param imgList List of beams for one gantry angle.
+        * @return None if ok, message if something is wrong.
+        */
+      def hasBoth(imgList: Seq[AttributeList]): Option[String] = {
+        if ((imgList.size == 2) && imgList.exists(img => ca(img) == 90) && imgList.exists(img => ca(img) == 270))
+          None
+        else
+          Some(s"Collimator centering beams for gantry angle ${ga(list.head)} have collimator angles of ${list.map(ca).sorted.mkString(", ")} but should be 90 and 270 degrees.")
+      }
+
+      val errorList = gantryAngleGroupList.values.flatMap(hasBoth)
+      errorList.headOption
+    }
+
+    if (uploaded.equals(expected)) {
+      val rtimageList = basicData.rtimageListByBeam.filter(rtimage => rtimage._1.isDefined && requiredBeamList.contains(rtimage._1.get)).map(_._2)
+      allAreOpposingPairs(rtimageList)
+    } else {
       val nl = WebUtil.titleNewline
       val text = {
         s"Did not find required collimator centering beams.$nl" +
