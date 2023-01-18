@@ -5,6 +5,7 @@ import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.util.Utility
 import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomReceiver
 import org.aqa.db.BadPixel
 import org.aqa.Config
 import org.aqa.Logging
@@ -19,7 +20,19 @@ import java.awt.Graphics2D
 import java.awt.RenderingHints
 import java.io.File
 import java.io.PrintStream
+import java.text.SimpleDateFormat
+import java.util.Date
 import scala.annotation.tailrec
+
+
+class WLBadPixel(val x: Int, val y: Int, val rawValue: Int, val correctedValue: Float, val adjacentValidValueList: List[Int]) {
+  override def toString: String = {
+    "   x: " + x + "   y: " + y + "   rawValue: " + rawValue + "   correctedValue: " + correctedValue +
+      adjacentValidValueList.sorted.reverse.foldLeft("\n            Adjacent Valid Values and difference from raw:")((t, v) => t + "\n                " + v + "  :  " + Math.abs(v - rawValue))
+  }
+}
+
+
 
 object WLProcessImage {
   val DIAGNOSTICS_TEXT_FILE_NAME = "diagnostics.txt"
@@ -28,11 +41,17 @@ object WLProcessImage {
 class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends Logging {
 
   private val trans = new IsoImagePlaneTranslator(rtimage)
-  val ResolutionX = trans.pix2IsoDistX(trans.pixelSizeX)
-  val ResolutionY = trans.pix2IsoDistY(trans.pixelSizeY)
+  private  val ResolutionX = trans.pix2IsoDistX(trans.pixelSizeX)
+  private  val ResolutionY = trans.pix2IsoDistY(trans.pixelSizeY)
 
-  val gantryAngle = Util.gantryAngle(rtimage)
-  val collimatorAngle = Util.collimatorAngle(rtimage)
+  private val SizeX = trans.width
+  private val SizeY = trans.height
+
+  private  val gantryAngle = Util.gantryAngle(rtimage)
+  private  val collimatorAngle = Util.collimatorAngle(rtimage)
+
+  private val EMPTY_PIXEL: Int = Config.WLTextColor.getRGB() + 1
+  private val IMAGE_FILE_SUFFIX = ".png"
 
   case class WLImageResult(i: Int) {
     ???
@@ -71,10 +90,19 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
 
     def diag(text: String): Unit = {
       diagnostics.println(text)
-      logger.info(imageMetaData.getName(groupStartTime) + " Diagnostics: " + text)
+      val msg =
+      "G" + Util.angleRoundedTo90(Util.gantryAngle(rtimage)).formatted("%03d") +
+      "C" + Util.angleRoundedTo90(Util.collimatorAngle(rtimage)).formatted("%03d") + " " + {
+        val fmt = new SimpleDateFormat("MM:ss")
+        val ms = DicomUtil.getTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get.getTime
+        val elapsed_ms = ms - extendedData.output.dataDate.get.getTime
+        fmt.format(new Date(elapsed_ms))
+      } +
+      " Diagnostics: " + text
+      logger.info(msg)
     }
 
-    diag("\n\nMeta-Image Data from ARIA:\n" + imageMetaData.toString)
+    diag("\n\nMeta-Image Data from ARIA:\n" + extendedData.output.toString)
 
     def writeDicomAsText(attributeList: AttributeList): Unit = {
       try {
@@ -86,12 +114,12 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       }
     }
 
-    class UncorrectedBadPixel(val x: Int, val y: Int, val rawValue: Double)
+    class UncorrectedWLBadPixel(val x: Int, val y: Int, val rawValue: Double)
 
     /**
       * Make a list of bad pixels.
       */
-    def findBadPixels(rawPixels: Array[Array[Float]], pixelGapLimit: Int, rawDistinctSortedList: List[Float]): List[UncorrectedBadPixel] = {
+    def findWLBadPixels(rawPixels: Array[Array[Float]], pixelGapLimit: Int, rawDistinctSortedList: List[Float]): List[UncorrectedWLBadPixel] = {
       def getLimits: (Double, Double) = {
         def isGood(a: Double, b: Double): Boolean = scala.math.abs(a - b) <= pixelGapLimit
 
@@ -123,12 +151,12 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       }
       diag("Range of valid pixel values (inclusive): " + limits._1 + " - " + limits._2 + "    Largest value gap in good pixels: " + largestGoodGap)
 
-      val badList = rawPixels.flatten.zipWithIndex.filter(pi => !isValid(pi._1)).map(pix => new UncorrectedBadPixel(pix._2 % imageMetaData.SizeX, pix._2 / imageMetaData.SizeX, pix._1))
+      val badList = rawPixels.flatten.zipWithIndex.filter(pi => !isValid(pi._1)).map(pix => new UncorrectedWLBadPixel(pix._2 % SizeX, pix._2 / SizeX, pix._1))
 
       badList.toList
     }
 
-    def uncorrectedBadPixelsToBadPixels(rawPixelData: Array[Array[Float]], badPixelList: List[UncorrectedBadPixel]): List[BadPixel] = {
+    def uncorrectedWLBadPixelsToWLBadPixels(rawPixelData: Array[Array[Float]], badPixelList: List[UncorrectedWLBadPixel]): List[WLBadPixel] = {
       // A pixel is good if its coordinates are valid and it is not on the bad pixel list
       val height = rawPixelData.length
       val width = rawPixelData(0).length
@@ -137,43 +165,43 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         (x >= 0) && (y >= 0) && (x < width) && (y < height) && badPixelList.filter(p => p.x == x && p.y == y).isEmpty
       }
 
-      val radius = Config.BadPixelCorrectionRadius
+      val radius: Int = Config.WLBadPixelCorrectionRadius
       val radSq = radius * radius
 
-      def isClose(bad: UncorrectedBadPixel, x: Int, y: Int): Boolean = {
+      def isClose(bad: UncorrectedWLBadPixel, x: Int, y: Int): Boolean = {
         ((x - bad.x) * (x - bad.x)) + ((y - bad.y) * (y - bad.y)) <= radSq
       }
 
-      def correctSinglePixel(unCor: UncorrectedBadPixel): BadPixel = {
+      def correctSinglePixel(unCor: UncorrectedWLBadPixel): WLBadPixel = {
         val list =
           for (x <- unCor.x - radius to unCor.x + radius; y <- unCor.y - radius to unCor.y + radius; if isGoodPixel(x, y) && isClose(unCor, x, y)) yield rawPixelData(y)(x)
         val correctedValue = list.sum / list.size
-        new BadPixel(unCor.x, unCor.y, unCor.rawValue.toInt, correctedValue, list.map(f => f.toInt).toList)
+        new WLBadPixel(unCor.x, unCor.y, unCor.rawValue.toInt, correctedValue, list.map(f => f.toInt).toList)
       }
 
       badPixelList.map(bad => correctSinglePixel(bad))
     }
 
     @tailrec
-    def correctBadPixels(rawPixels: Array[Array[Float]], badPixelList: List[BadPixel]): Array[Array[Float]] = {
+    def correctWLBadPixels(rawPixels: Array[Array[Float]], badPixelList: List[WLBadPixel]): Array[Array[Float]] = {
       if (badPixelList.isEmpty)
         rawPixels
       else {
         val bad = badPixelList.head
 
         def fixRow(r: Array[Float]): Array[Float] = {
-          (0 until imageMetaData.SizeX).map(col => if (col == bad.x) bad.correctedValue else r(col)).toArray
+          (0 until SizeX).map(col => if (col == bad.x) bad.correctedValue else r(col)).toArray
         }
 
-        val o = (0 until imageMetaData.SizeY).map(row => if (row == bad.y) fixRow(rawPixels(row)) else rawPixels(row)).toArray
-        correctBadPixels(o, badPixelList.tail)
+        val o = (0 until SizeY).map(row => if (row == bad.y) fixRow(rawPixels(row)) else rawPixels(row)).toArray
+        correctWLBadPixels(o, badPixelList.tail)
       }
     }
 
     def calcExtremeAveragesRange(pix: Array[Array[Float]]): Double = {
       val ordered = pix.flatten.toList.sorted
-      val min = ordered.take(AveragePixelsForBrightness).sum / AveragePixelsForBrightness
-      val max = ordered.reverse.take(AveragePixelsForBrightness).sum / AveragePixelsForBrightness
+      val min = ordered.take(Config.WLAveragePixelsForBrightness).sum / Config.WLAveragePixelsForBrightness
+      val max = ordered.reverse.take(Config.WLAveragePixelsForBrightness).sum / Config.WLAveragePixelsForBrightness
       max - min
     }
 
@@ -182,7 +210,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       val width = pix(0).length
       val min = pix.map(y => y.min).min
       val range = pix.map(y => y.max).max - min
-      val imageColor = Config.ImageColor.getRGB
+      val imageColor = Config.WLImageColor.getRGB
 
       val png = new BufferedImage(width * imageScale, height * imageScale, BufferedImage.TYPE_INT_RGB)
 
@@ -228,9 +256,9 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
 
     def makePngFile(name: String): File = {
       val pngName =
-        if (name.endsWith(JobList.IMAGE_FILE_SUFFIX)) name
+        if (name.endsWith(IMAGE_FILE_SUFFIX)) name
         else {
-          name + JobList.IMAGE_FILE_SUFFIX
+          name + IMAGE_FILE_SUFFIX
         }
       new File(subDir, pngName)
     }
@@ -834,12 +862,12 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       drawCross(graphics, ballCenterX, ballCenterY, BALL_RADIUS)
     }
 
-    def highlightBadPixelList(badPixelList: List[BadPixel], graphics: Graphics2D) = {
-      val circleRadius = Config.BadPixelCorrectionRadius
+    def highlightWLBadPixelList(badPixelList: List[WLBadPixel], graphics: Graphics2D) = {
+      val circleRadius = Config.WLBadPixelCorrectionRadius
       val dotRadius = 3.0 / SCALE
       graphics.setColor(Config.FailColor)
 
-      def highlightBadPixel(badPixel: BadPixel) = {
+      def highlightWLBadPixel(badPixel: WLBadPixel) = {
         val hp = SCALE / 2
 
         def crd(x: Double): Int = ((x * SCALE) + 0.5).toInt
@@ -855,7 +883,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         (0 until 3).map(i => graphics.drawRect(crd(x) - i, crd(y) - i, SCALE + (2 * i), SCALE + (2 * i)))
       }
 
-      badPixelList.map(b => highlightBadPixel(b))
+      badPixelList.map(b => highlightWLBadPixel(b))
     }
 
     /**
@@ -867,7 +895,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         errorScaledX: Double,
         errorScaledY: Double,
         errorScaledXYCombined: Double,
-        badPixelList: List[BadPixel],
+        badPixelList: List[WLBadPixel],
         background: Boolean
     ): ImageStatus.ImageStatus = {
       def fmt(d: Double) = d.formatted("%6.2f").replaceAll(" ", "")
@@ -1036,7 +1064,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
     /**
       * Indicate that something is wrong with the image.
       */
-    def imageError(status: ImageStatus.ImageStatus, msg: String, badPixelList: List[BadPixel], marginalPixelList: List[BadPixel]): WLImageResult = {
+    def imageError(status: ImageStatus.ImageStatus, msg: String, badPixelList: List[WLBadPixel], marginalPixelList: List[WLBadPixel]): WLImageResult = {
       val fullMsg = "Image " + imageMetaData.getName(groupStartTime) + "  " + msg
       logger.error(fullMsg)
       diag(fullMsg)
@@ -1075,9 +1103,9 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         edgesUnscaled: Edges,
         ballRelativeCenter: (Double, Double),
         ballArea: Array[Array[Float]],
-        badPixelList: List[BadPixel],
-        badPixelListShifted: List[BadPixel],
-        marginalPixelList: List[BadPixel],
+        badPixelList: List[WLBadPixel],
+        badPixelListShifted: List[WLBadPixel],
+        marginalPixelList: List[WLBadPixel],
         attributeList: AttributeList
     ): WLImageResult = {
 
@@ -1102,9 +1130,9 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       drawBallGraphics(brightGraphics, ballCenterX, ballCenterY)
       drawBallGraphics(blackGraphics, ballCenterX, ballCenterY)
 
-      highlightBadPixelList(badPixelListShifted, normalGraphics)
-      highlightBadPixelList(badPixelListShifted, brightGraphics)
-      highlightBadPixelList(badPixelListShifted, blackGraphics)
+      highlightWLBadPixelList(badPixelListShifted, normalGraphics)
+      highlightWLBadPixelList(badPixelListShifted, brightGraphics)
+      highlightWLBadPixelList(badPixelListShifted, blackGraphics)
 
       val bin = 6
       val bout = 6
@@ -1182,30 +1210,30 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       imageResult
     }
 
-    def saveBadPixelImage(pixels: Array[Array[Float]], badPixelList: List[BadPixel], marginalPixelList: List[BadPixel]): Unit = {
+    def saveWLBadPixelImage(pixels: Array[Array[Float]], badPixelList: List[WLBadPixel], marginalPixelList: List[WLBadPixel]): Unit = {
       val png = toPngScaled(pixels, 1)
       val graphics = png.getGraphics
 
-      def drawBadPixelList(list: List[BadPixel], color: Color): Unit = {
+      def drawWLBadPixelList(list: List[WLBadPixel], color: Color): Unit = {
         graphics.setColor(color)
 
         // Put a single dot on the pixel
         list.map(b => png.setRGB(b.x, b.y, color.getRGB))
 
-        val radius = Config.BadPixelCorrectionRadius // was 10
+        val radius = Config.WLBadPixelCorrectionRadius // was 10
         // draw a circle around each dot
         list.map(b => graphics.drawOval(b.x - radius, b.y - radius, radius * 2, radius * 2))
       }
 
-      drawBadPixelList(marginalPixelList, Color.YELLOW)
-      drawBadPixelList(badPixelList, Config.FailColor)
+      drawWLBadPixelList(marginalPixelList, Color.YELLOW)
+      drawWLBadPixelList(badPixelList, Config.FailColor)
 
       writeImageLater(png, JobList.BAD_PIXEL_FILE_NAME)
     }
 
     def dicomFile: File = new File(JobList.jobsSubDir(groupStartTime), imageMetaData.SliceUID + JobList.DICOM_SUFFIX)
 
-    def badPixelIsNotOnList(badPixel: BadPixel, list: List[BadPixel]): Boolean = {
+    def badPixelIsNotOnList(badPixel: WLBadPixel, list: List[WLBadPixel]): Boolean = {
       list.filter(b => (b.x == badPixel.x) && (b.y == badPixel.y)).isEmpty
     }
 
@@ -1238,33 +1266,33 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       val rawDistinctSortedList = rawPixels.flatten.toList.distinct.sorted
 
       if (rawDistinctSortedList.size < Config.MinimumDistinctPixelValues) {
-        imageError(ImageStatus.BoxNotFound, "Image lacks visible features", List[BadPixel](), List[BadPixel]())
+        imageError(ImageStatus.BoxNotFound, "Image lacks visible features", List[WLBadPixel](), List[WLBadPixel]())
       } else {
 
         /* Raw pixels with bad pixels set to average pixel value */
-        val badPixelListUncorrected = findBadPixels(rawPixels, Config.BadPixelGapLimit, rawDistinctSortedList)
+        val badPixelListUncorrected = findWLBadPixels(rawPixels, Config.WLBadPixelGapLimit, rawDistinctSortedList)
         logger.info("Number of bad pixels: " + badPixelListUncorrected.size)
 
-        val marginalPixelListUncorrected = findBadPixels(rawPixels, Config.MarginalPixelGapLimit, rawDistinctSortedList)
+        val marginalPixelListUncorrected = findWLBadPixels(rawPixels, Config.MarginalPixelGapLimit, rawDistinctSortedList)
         logger.info("Number of marginal pixels: " + marginalPixelListUncorrected.size)
 
-        val badPixelList = uncorrectedBadPixelsToBadPixels(rawPixels, badPixelListUncorrected)
-        val marginalPixelList = uncorrectedBadPixelsToBadPixels(rawPixels, marginalPixelListUncorrected).filter(m => badPixelIsNotOnList(m, badPixelList))
+        val badPixelList = uncorrectedWLBadPixelsToWLBadPixels(rawPixels, badPixelListUncorrected)
+        val marginalPixelList = uncorrectedWLBadPixelsToWLBadPixels(rawPixels, marginalPixelListUncorrected).filter(m => badPixelIsNotOnList(m, badPixelList))
 
-        val pixels = correctBadPixels(rawPixels, badPixelList)
+        val pixels = correctWLBadPixels(rawPixels, badPixelList)
 
         val rawExtremeAveragesRange = calcExtremeAveragesRange(pixels)
 
         //val minRawPixel = minPixel(pixels)
         //val maxRawPixel = maxPixel(pixels)
 
-        if ((!badPixelList.isEmpty) || marginalPixelList.nonEmpty) saveBadPixelImage(pixels, badPixelList, marginalPixelList)
+        if ((!badPixelList.isEmpty) || marginalPixelList.nonEmpty) saveWLBadPixelImage(pixels, badPixelList, marginalPixelList)
 
         val coarseY = coarseBoxLocate(rowSum(pixels))
         val coarseX = coarseBoxLocate(colSum(pixels))
 
         // Shift the bad pixels so that they point to the proper place in the area of interest (AOI)
-        val badPixelListShifted = badPixelList.map(b => new BadPixel(b.x - coarseX._1, b.y - coarseY._1, b.rawValue, b.correctedValue, b.adjacentValidValueList))
+        val badPixelListShifted = badPixelList.map(b => new WLBadPixel(b.x - coarseX._1, b.y - coarseY._1, b.rawValue, b.correctedValue, b.adjacentValidValueList))
 
         diag("\n\nbox coarse boundaries of area of interest    X: " + coarseX + "    Y: " + coarseY)
 
@@ -1310,7 +1338,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         val msg = "ProcessImage.process Unexpected exception: " + JobList.e2msg(e)
         logger.error(msg)
         diag(msg)
-        val imageResult = new WLImageResult(ImageStatus.UnexpectedError, null, null, null, subDir, imageMetaData, null, null, List[BadPixel](), List[BadPixel]())
+        val imageResult = new WLImageResult(ImageStatus.UnexpectedError, null, null, null, subDir, imageMetaData, null, null, List[WLBadPixel](), List[WLBadPixel]())
         diag(imageResult.toString)
 
         try {

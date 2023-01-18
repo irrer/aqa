@@ -810,6 +810,93 @@ Note that when building a package for release, the Maven build process uses the 
     in mm. -->
     <WLBoxEdgeTolerance_mm>5.5</WLBoxEdgeTolerance_mm>
 
+
+    <!-- When correcting a bad pixel, the new value is calculated by taking the average value of the pixels within a
+    given radius (number of pixels).  This number is that radius.  This is an integer 1 or greater.-->
+    <WLBadPixelCorrectionRadius>2</WLBadPixelCorrectionRadius>
+
+
+
+    <!-- Factor by which to   the original image to create a viewable image.  Must be a positive integer. -->
+    <WLScale>16</WLScale>
+
+    <!-- When locating the ball within the dark area within the box, each row is
+     expected (and therefore required) to have at least this many background pixels.
+     Must be a positive integer 1 or greater.  Must be a positive integer. -->
+    <WLNumBackgroundPixels>5</WLNumBackgroundPixels>
+
+    <!-- The expected approximate radius of the ball in mm.  Must be a positive floating point. -->
+    <WLBallRadius>2.5</WLBallRadius>
+    <!-- <BallRadius>1.25</BallRadius> -->
+
+    <!-- The expected approximate width of the collimator field (box) in mm.  Must be a positive floating point. -->
+    <WLFieldWidth>20.0</WLFieldWidth>
+
+    <!-- Tolerance in pixels for how far to search from the expected center for
+    the fine edge of box, given the coarse position of the edge.  Also used
+    determine where an edge of the box finishes, so as to define the
+    area to look for the ball.  Must be a positive floating point value given
+    in mm. -->
+    <WLBoxEdgeTolerance>5.5</WLBoxEdgeTolerance>
+
+    <!-- One of the checks done on the image is to determine whether there is a ball within
+    the box by determining the 'flatness' of the area within the box.  If it is too flat (all
+    dark) then there is no ball and the imaging process will return a failure.  To determine
+    flatness, the range of the pixels in the entire area of interest around the ball (including
+    the ball), by the range of the pixels in the background around the ball (not including the
+    ball). If that ratio is too low, then the area is considered flat.  This configuration
+    defines the exact limit.
+
+    In tests, a 'good' image will yield a ratio of about 17, and a 'bad' image with no ball
+    will be around 1.
+    -->
+    <WLBallAreaFlatnessRatioLowerLimit>5.0</WLBallAreaFlatnessRatioLowerLimit>
+
+    <!-- The percentage of the height of the profile spline for the ball that should be
+    used to determine the center of the ball.  Expressed as a floating point value from
+    0 to 100.  The lower parts of the spline should be rejected because they just represent
+    the background surrounding the ball. -->
+    <WLBallHeightPercentForeground>50.0</WLBallHeightPercentForeground>
+
+    <!-- Color used to draw pixels.  Each color (RGB) must be either 0 or 1. -->
+    <WLWLImageColor>000001</WLImageColor>
+
+    <!-- Color of graphics drawn on box. -->
+    <WLBoxColor>00ff00</WLBoxColor>
+
+    <!-- Color of graphics drawn on box whose position has been corrected for tongue and groove and collimator leaf ends. -->
+    <WLBoxColorCorrected>d0d0d0</WLBoxColorCorrected>
+
+    <!-- Color of graphics drawn on ball. -->
+    <WLBallColor>ffff00</WLBallColor>
+
+    <!-- Color of graphics drawn to show offset between centers. -->
+    <WLOffsetColor>ff0000</WLOffsetColor>
+
+    <!-- Color of splines. -->
+    <WLSplineColor>ffff00</WLSplineColor>  <!-- ffc800 = orange -->
+
+    <!-- Color of text. -->
+    <WLTextColor>000000</WLTextColor>  <!-- ffc800 = orange -->
+
+    <!-- Color of background of pass message. -->
+    <WLPassColor>1dc32b</WLPassColor>
+
+    <!-- Color of background of fail message. -->
+    <WLFailColor>e00034</WLFailColor>
+
+    <!--  Font of text drawn on image. -->
+    <WLTextFont>SansSerif</WLTextFont>
+
+    <!-- Size of text drawn on image. -->
+    <WLTextPointSize>30</WLTextPointSize>
+
+    <!-- Number of concentric circles drawn on ball.  Must be an integer 1 or greater. -->
+    <WLNumberOfCircles>2</WLNumberOfCircles>
+
+    <!-- HTML value used to size the width of summary images on the main report. -->
+    <WLSummarySize>350</WLSummarySize>
+
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
 </AQAConfig>
