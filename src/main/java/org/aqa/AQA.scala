@@ -18,6 +18,7 @@ package org.aqa
 
 import edu.umro.ScalaUtil.PeriodicRestart
 import org.aqa.db.DbSetup
+import org.aqa.db.DicomSeries
 import org.aqa.run.RunProcedure
 import org.aqa.web.WebServer
 
@@ -52,6 +53,7 @@ object AQA extends Logging {
         if (Config.MonitorThreadCountInterval_ms > 0) ThreadMonitor.monitorThreads(Config.MonitorThreadCountInterval_ms)
 
         new PeriodicRestart(Config.RestartTime)
+        DicomSeries.fixRedundantInBackground(delFlag = true, delay_ms = 30 * 1000)
         logger.info("AQA service started")
       } else
         logger.error("Could not validate configuration")

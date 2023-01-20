@@ -18,7 +18,6 @@ package org.aqa.webrun.phase2.symmetryAndFlatness
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ScalaUtil.PrettyXML
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -333,25 +332,33 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       */
     def makeDataSet(sf: SymmetryAndFlatness): Option[SymmetryAndFlatnessDataSet] = {
       try {
+        logger.info("Making data set for: " + sf)
         val baseline = SymmetryAndFlatness.getBaseline(output.machinePK.get, sf.beamName, dataDate, output.procedurePK).get.baseline
-        val al: AttributeList = {
+
+        val al: Option[AttributeList] = {
           val aa = alList.find(a => Util.sopOfAl(a).equals(sf.SOPInstanceUID))
           if (aa.isEmpty)
-            throw new RuntimeException(
-              "Could not find RTIMAGE SOP " + sf.SOPInstanceUID
-            )
-          aa.get
+            logger.warn(s"Could not find RTIMAGE SOP ${sf.SOPInstanceUID}    Beam Name: ${sf.beamName}")
+          aa
         }
-        val refRtplanSop = Phase2Util.referencedPlanUID(al)
-        val rtplanAl = {
-          val aa = rtplanAlList.find(a => Util.sopOfAl(a).equals(refRtplanSop))
-          if (aa.isEmpty)
-            throw new RuntimeException(
-              "Could not find RTPLAN SOP " + refRtplanSop + "   List of RTPLAN SOPs size: " + rtplanAlList.size + " : " + rtplanAlList.map(Util.sopOfAl).mkString("  ")
-            )
-          aa.get
+
+        sf.toString
+
+        val rtplanAl: Option[AttributeList] = {
+          if (al.isDefined) {
+            val refRtplanSop = Phase2Util.referencedPlanUID(al.get)
+            val aa = rtplanAlList.find(a => Util.sopOfAl(a).equals(refRtplanSop))
+            if (aa.isEmpty)
+              logger.warn(s"Could not find RTPLAN SOP $refRtplanSop   Beam name: ${sf.beamName} List of RTPLAN SOPs size: ${rtplanAlList.size} : " + rtplanAlList.map(Util.sopOfAl).mkString("  "))
+            aa
+          } else
+            None
         }
-        Some(SymmetryAndFlatnessDataSet(sf, output, baseline, al, rtplanAl))
+
+        if (al.isDefined && rtplanAl.isDefined)
+          Some(SymmetryAndFlatnessDataSet(sf, output, baseline, al.get, rtplanAl.get))
+        else
+          None
       } catch {
         case t: Throwable =>
           logger.error("Unexpected error: " + fmtEx(t))
@@ -382,7 +389,6 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     * @return HTML to display.
     */
   private def resultTable(beamData: SymmetryAndFlatness.SymmetryAndFlatnessHistory): Elem = {
-    Trace.trace("making results table")
 
     <div style="margin:20px;">
       <center><h3>Results</h3></center>
@@ -545,7 +551,6 @@ class SymmetryAndFlatnessSubHTML extends Restlet with Logging with SubUrlAdmin {
     def has(tag: String) = valueMap.contains(tag)
     val SF = SymmetryAndFlatnessSubHTML
 
-    Trace.trace("tag+value list:\n" + valueMap.keys.map(k => k + " : " + valueMap(k)).mkString("\n"))
     try {
       0 match {
         case _ if has(SF.csvTag)                             => SF.makeCsv(valueMap, response)

@@ -17,6 +17,7 @@
 package org.aqa.db
 
 import org.aqa.db.Db.driver.api._
+import org.aqa.Crypto
 import org.aqa.Logging
 
 /**
@@ -35,7 +36,11 @@ case class InputFiles(
 ) // The files in zip form created by the process
 {
 
-  def insert: Unit = Db.run(InputFiles.query += this)
+  def insert(): Unit = Db.run(InputFiles.query += this)
+
+  override def toString: String = {
+    s"inputFilesPK: $inputFilesPK    inputPK: $inputPK     zippedContent size ${zippedContent.length} : ${Crypto.byteArrayToHex(zippedContent.take(50))}"
+  }
 
 }
 
@@ -46,7 +51,7 @@ object InputFiles extends Logging {
     def inputPK = column[Long]("inputPK")
     def zippedContent = column[Array[Byte]]("zippedContent")
 
-    def * = (inputFilesPK, inputPK, zippedContent) <> ((InputFiles.apply _) tupled, InputFiles.unapply _)
+    def * = (inputFilesPK, inputPK, zippedContent) <> (InputFiles.apply _ tupled, InputFiles.unapply _)
 
     def inputFK = foreignKey("InputFiles_inputPKConstraint", inputPK, Input.query)(_.inputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -56,15 +61,15 @@ object InputFiles extends Logging {
   def get(inputFilesPK: Long): Option[InputFiles] = {
     val action = for {
       inputFiles <- query if inputFiles.inputFilesPK === inputFilesPK
-    } yield (inputFiles)
+    } yield inputFiles
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   def getByInputPK(inputPK: Long): Seq[InputFiles] = {
     val action = for {
       inputFiles <- query if inputFiles.inputPK === inputPK
-    } yield (inputFiles)
+    } yield inputFiles
     val list = Db.run(action.result)
     list
   }
@@ -91,7 +96,7 @@ object InputFiles extends Logging {
 
     val data: Array[Byte] = Array(1, 2, 3, 4)
     val inputFiles = new InputFiles(pk, pk, data)
-    inputFiles.insert
+    inputFiles.insert()
     println("inserted inputFiles")
 
     Input.delete(pk)

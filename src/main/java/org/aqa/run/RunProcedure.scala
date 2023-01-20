@@ -20,7 +20,6 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
-import edu.umro.ScalaUtil.Trace
 import edu.umro.util.Utility
 import org.aqa.Config
 import org.aqa.DicomFile
@@ -110,12 +109,12 @@ object RunProcedure extends Logging {
     }
   }
 
-  val machineSelectorLabel = "Machine"
+  private val machineSelectorLabel = "Machine"
 
   /** Convenience function for constructing error messages to display to user on web page. */
-  def formError(msg: String) = Left(WebUtil.Error.make(WebUtil.uploadFileLabel, msg))
+  def formError(msg: String): Left[Map[String, Error], Nothing] = Left(WebUtil.Error.make(WebUtil.uploadFileLabel, msg))
 
-  def makeForm(runTrait: RunTrait[RunReqClass]): WebForm = {
+  private def makeForm(runTrait: RunTrait[RunReqClass]): WebForm = {
     val machineSelector = new WebInputSelectMachine(machineSelectorLabel, 6, 0)
 
     def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
@@ -165,85 +164,51 @@ object RunProcedure extends Logging {
   }
 
   /**
+    * Delete the given directory later, waiting for locks to be released.
+    * @param dir Directory to be deleted.
+    */
+  private def deleteDirLater(dir: File): Unit = {
+    Future {
+      val start = System.currentTimeMillis()
+      val timeout = start + 5 * 60 * 1000
+
+      while (dir.exists() && (timeout > System.currentTimeMillis())) {
+        try {
+          Util.deleteFileTreeSafely(dir)
+          if (!dir.exists())
+            logger.info("Deleted " + dir.getAbsolutePath + " after: " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
+        } catch {
+          case _: Throwable =>
+        }
+        Thread.sleep(5 * 1000)
+      }
+      if (dir.exists())
+        logger.warn("Unable to delete old directory : " + dir.getAbsolutePath + "\n")
+    }
+  }
+
+  /**
     * Move all of the files from the old to the new directory.
     */
-  private def renameFileTryingPersistently(oldDir: File, newDir: File): Boolean = {
+  private def renameFile(oldDir: File, newDir: File): Boolean = {
     logger.info("Attempting to rename file from : " + oldDir.getAbsolutePath + " to " + newDir.getAbsolutePath)
 
-    // This is fast, but only works if the new and old files are in the same disk partition.
-    def renameUsingOldIo: Boolean = {
+    def copyFiles: Boolean = {
       try {
-        val status = oldDir.renameTo(newDir)
-        if (status) logger.info("Used File.renameTo to successfully rename from : " + oldDir.getAbsolutePath + " to " + newDir.getAbsolutePath)
-        status
-      } catch {
-        case t: Throwable =>
-          logger.warn("Failed to rename file with File.renameTo from : " + oldDir.getAbsolutePath + " to " + newDir.getAbsolutePath + " : " + fmtEx(t))
-          false
-      }
-    }
-
-    @tailrec
-    def renameUsingNio: Boolean = {
-      val retryLimitMs = 2 * 1000
-      val timeout = System.currentTimeMillis + retryLimitMs
-
-      val oldPath = java.nio.file.Paths.get(oldDir.getAbsolutePath)
-      val newPath = java.nio.file.Paths.get(newDir.getAbsolutePath)
-      try {
-        java.nio.file.Files.move(oldPath, newPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-        logger.info("Used nio to successfully rename from : " + oldDir.getAbsolutePath + " to " + newDir.getAbsolutePath)
-        true
-      } catch {
-        case t: Throwable =>
-          if (System.currentTimeMillis < timeout) {
-            logger.warn("Failed to rename file with nio - retrying. From : " + oldDir.getAbsolutePath + " to " + newDir.getAbsolutePath + " : " + fmtEx(t))
-            Thread.sleep(500)
-            renameUsingNio
-          } else {
-            logger.error("Unable using nio to rename file " + oldDir.getAbsolutePath + " to " + newDir.getAbsolutePath + " : " + fmtEx(t))
-            false
-          }
-      }
-    }
-
-    def deleteLater(f: File): Unit = {
-      class DeleteLater() extends Runnable {
-        val timeout: Long = System.currentTimeMillis + (60 * 60 * 1000) // try for up to an hour
-        override def run(): Unit = {
-          while ((System.currentTimeMillis < timeout) && f.exists) {
-            Thread.sleep(20 * 1000)
-            Util.deleteFileTreeSafely(f)
-          }
-          if (f.exists) logger.info("Was able to delete file " + f.getAbsolutePath)
-          else logger.warn("Was not able to delete file " + f.getAbsolutePath)
-        }
-
-      }
-      new Thread(new DeleteLater()).start()
-    }
-
-    def copyFilesAndDeleteLater: Boolean = {
-      try {
+        Util.mkdirs(newDir.getParentFile)
         Utility.copyFileTree(oldDir, newDir)
         logger.info("Used copyFileTree to successfully copy from : " + oldDir.getAbsolutePath + " to " + newDir.getAbsolutePath)
-        deleteLater(oldDir)
-        true
+        deleteDirLater(oldDir)
+
+        newDir.isDirectory
       } catch {
         case t: Throwable =>
-          logger.error("Unable using nio to rename file " + oldDir.getAbsolutePath + " to " + newDir.getAbsolutePath + " : " + fmtEx(t))
+          logger.error("Unable to rename file " + oldDir.getAbsolutePath + " to " + newDir.getAbsolutePath + " : " + fmtEx(t))
           false
       }
     }
 
-    Util.mkdirs(newDir.getParentFile)
-    if (renameUsingOldIo) true
-    else {
-      if (renameUsingNio) true
-      else {
-        copyFilesAndDeleteLater
-      }
-    }
+    copyFiles
   }
 
   /**
@@ -490,19 +455,15 @@ object RunProcedure extends Logging {
 
     // move input files to their final resting place
     if (sessionDir.isDefined)
-      renameFileTryingPersistently(sessionDir.get, inputDir)
+      renameFile(sessionDir.get, inputDir)
     else
       Util.mkdirs(inputDir)
     if (!inputDir.exists)
       throw new RuntimeException("Unable to rename temporary directory " + sessionDir + " to input directory " + inputDir.getAbsolutePath)
 
-    Trace.trace()
     inputWithoutDir.updateDirectory(inputDir)
-    Trace.trace()
     val input = Input.get(inputWithoutDir.inputPK.get).get // update the directory
-    Trace.trace()
     input.putFilesInDatabaseFuture(inputDir)
-    Trace.trace()
     input
   }
 
@@ -516,7 +477,7 @@ object RunProcedure extends Logging {
   /**
     * Validate the machine selection.
     */
-  def validateMachineSelection(valueMap: ValueMapT, deviceSerialNumberList: Seq[String]): Either[StyleMapT, Machine] = {
+  private def validateMachineSelection(valueMap: ValueMapT, deviceSerialNumberList: Seq[String]): Either[StyleMapT, Machine] = {
 
     val machineByInputList = deviceSerialNumberList.distinct.flatMap(dsn => Machine.findMachinesBySerialNumber(dsn)).groupBy(_.id).map(dsnM => dsnM._2.head)
 
@@ -548,9 +509,7 @@ object RunProcedure extends Logging {
     val userPK = if (user.isDefined) user.get.userPK else None
 
     val input = makeNewInput(sessionDir(valueMap), now, userPK, PatientID, dataDate, machine, runTrait.getProcedure, alList)
-    Trace.trace()
     val outputDir = makeOutputDir(input.dir, now)
-    Trace.trace()
 
     val output = {
       val tempOutput = new Output(
@@ -567,42 +526,28 @@ object RunProcedure extends Logging {
         status = ProcedureStatus.running.toString,
         dataValidity = DataValidity.valid.toString
       )
-      Trace.trace()
       val out = tempOutput.insert
       out
     }
-    Trace.trace()
 
     // invalidate cache in case this data was from a previous date
     CacheCSV.invalidateCacheEntries(output.dataDate.get, machine.institutionPK)
-    Trace.trace()
 
     val extendedData = ExtendedData.get(output)
-    Trace.trace()
 
     // If this is the same data being re-submitted, then delete the old version of the analysis.  The
     // usual reasons are that the analysis was changed or the analysis aborted.
-    Trace.trace()
     Future {
-      Trace.trace()
       val redundantList = Output.redundantWith(output)
       val msg = redundantList.size + " old output(s) and corresponding inputs: " + redundantList.mkString("\n    ", "\n    ", "\n    ")
-      Trace.trace()
       logger.info("Removing " + msg)
-      Trace.trace()
       redundantList.foreach(o => deleteInput(o.inputPK))
-      Trace.trace()
       logger.info("Done removing " + msg)
-      Trace.trace()
     }
 
-    Trace.trace()
     runAnalysis(valueMap, runTrait, runReq, extendedData, response, sync)
-    Trace.trace()
 
-    Trace.trace()
     ViewOutput.redirectToViewRunProgress(response, WebUtil.isAutoUpload(valueMap), output.outputPK.get)
-    Trace.trace()
   }
 
   /**
