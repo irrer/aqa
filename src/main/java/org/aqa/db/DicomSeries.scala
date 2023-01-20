@@ -632,6 +632,37 @@ object DicomSeries extends Logging {
     new Thread(new Fix).start()
   }
 
+  /*
+
+  -- This will list the rows that should be deleted:
+
+  -- Postgresql
+  select
+    "dicomSeriesPK"
+   ,"inputPK"
+   ,"seriesInstanceUID"
+  from "dicomSeries" ou
+  where (select count(*) from "dicomSeries" inr
+  where inr."seriesInstanceUID" = ou."seriesInstanceUID") > 1
+  limit 100
+
+  -- SqlServer
+  SELECT TOP (100) [dicomSeriesPK]
+     ,[inputPK]
+     ,[seriesInstanceUID]
+     ,[modality]
+     ,[deviceSerialNumber]
+     ,[date]
+     ,[procedurePK]
+   ROM [AQAmsPR].[dbo].[dicomSeries] ou
+   where
+  ou.modality <> 'RTPLAN'
+  AND
+  (select count(*) from dicomSeries inr
+  where inr.seriesInstanceUID = ou.seriesInstanceUID) > 1
+
+   */
+
   def main(args: Array[String]): Unit = {
 
     Trace.trace()
