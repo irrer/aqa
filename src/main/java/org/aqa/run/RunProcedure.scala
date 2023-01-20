@@ -173,14 +173,16 @@ object RunProcedure extends Logging {
       val timeout = start + 5 * 60 * 1000
 
       while (dir.exists() && (timeout > System.currentTimeMillis())) {
+        Thread.sleep(5 * 1000)
         try {
           Util.deleteFileTreeSafely(dir)
-          if (!dir.exists())
+          if (dir.exists())
+            logger.warn("Attempt to delete directory failed. Will retry to delete old directory : " + dir.getAbsolutePath + "\n")
+          else
             logger.info("Deleted " + dir.getAbsolutePath + " after: " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
         } catch {
           case _: Throwable =>
         }
-        Thread.sleep(5 * 1000)
       }
       if (dir.exists())
         logger.warn("Unable to delete old directory : " + dir.getAbsolutePath + "\n")
