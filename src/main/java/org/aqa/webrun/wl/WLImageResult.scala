@@ -2,7 +2,6 @@ package org.aqa.webrun.wl
 
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
-import org.aqa.db.BadPixel
 import org.aqa.Util
 import org.aqa.webrun.wl
 
@@ -72,7 +71,7 @@ class WLImageResult(
 
   override def toString: String = {
 
-    def badPixelListToString(list: List[BadPixel], name: String): String = {
+    def badPixelListToString(list: List[WLBadPixel], name: String): String = {
       "" +
         "    " + name + " pixels: " + list.size + "\n" +
         list.foldLeft("")((t, bad) => { t + "    " + bad + "\n" })

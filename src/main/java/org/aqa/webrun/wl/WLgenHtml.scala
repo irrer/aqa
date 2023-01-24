@@ -1,9 +1,13 @@
 package org.aqa.webrun.wl
 
 import org.aqa.webrun.ExtendedData
+import org.aqa.Config
 
 import java.io.File
 import java.io.FileOutputStream
+import java.util.Date
+import scala.xml.Elem
+import scala.xml.PrettyPrinter
 
 object WLgenHtml {
 
@@ -15,6 +19,19 @@ object WLgenHtml {
   val ORIGINAL_FILE_NAME = "original" + IMAGE_FILE_SUFFIX
   val BAD_PIXEL_FILE_NAME = "badPixels" + IMAGE_FILE_SUFFIX
   val DIAGNOSTICS_HTML_FILE_NAME = "diagnostics.html"
+  val MAIN_HTML_FILE_NAME = "index.html"
+
+  def prettyPrint(elem: Elem): String = new PrettyPrinter(1024, 2).format(elem)
+
+  def code2Html(src: String): String = {
+    val NL = "@@NL@@"
+    val textNewLine = src.replaceAll("""[\012\015][\012\015]*""", NL)
+    val elem: Elem = <code>
+      {textNewLine}
+    </code>
+    val escapedText = prettyPrint(elem)
+    escapedText.replaceAll(NL, "<br/>\n")
+  }
 
   def generateHtml(extendedData: ExtendedData, imageResult: WLImageResult): Unit = {
     val vs = "<p/><br/>" // vertical space
@@ -57,7 +74,7 @@ object WLgenHtml {
       val diagFile = new File(extendedData.output.dir, WLProcessImage.DIAGNOSTICS_TEXT_FILE_NAME)
       if (diagFile.exists) {
         val text = scala.io.Source.fromFile(diagFile).mkString
-        val textHtml = JobList.code2Html(text)
+        val textHtml = code2Html(text)
         "<pre style='background: #eeeeee'; font-size: small>\n" + textHtml + "</pre><p/>\n"
       } else "Diagnostics file " + WLProcessImage.DIAGNOSTICS_TEXT_FILE_NAME + " does not exist"
     }
@@ -162,7 +179,7 @@ object WLgenHtml {
       HTML_PREFIX + "\n" +
       "</head>\n" +
       "<body>\n" +
-      "<a href='/" + JobList.MAIN_HTML_FILE_NAME + "'>Home</a><p/>\n" +
+      "<a href='/" + MAIN_HTML_FILE_NAME + "'>Home</a><p/>\n" +
       "<center>\n" +
       "<h2>Diagnostics<p/>" + imageMetaData.getNameHtml(groupStartTime) + "</h2><p/>\n" +
       "<h2><p>" + JobList.passedText(imageResult, imageMetaDataGroup) + "</p></h2>\n" +
