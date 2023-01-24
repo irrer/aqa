@@ -803,6 +803,141 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
+    <!-- Maximum allowable offset in mm between centers of ball and box for a test to pass. -->
+    <WLPassLimit>1.5</WLPassLimit>
+
+    <!-- Expected size of box on image in mm.  This is used for a basic sanity check when doing
+    initial coarse location of the box in the image.  This is a floating point value. -->
+    <WLBoxSize>29</WLBoxSize>
+
+    <!--  Font of text drawn on image. -->
+    <WLTextFont>SansSerif</WLTextFont>
+
+    <!-- Size of text drawn on image. -->
+    <WLTextPointSize>30</WLTextPointSize>
+
+    <!-- The BadPixelGapLimit and BadPixelCountLimit are used in the algorithm to find 'bad' pixels.
+
+    That 'bad' pixels are considered to be a malfunction of the imaging device.
+
+    BadPixelGapLimit: When searching an image for bad pixels, all pixel values are sorted.  The values should be
+    clustered, and there should be no significant gaps in the list.  When comparing consecutively ordered values, a
+    difference by this amount is used to indicate that the pixel(s) deviating from the main group of values is
+    considered 'bad', and discarded.  Should be an integer greater than one.
+    -->
+    <WLBadPixelGapLimit>1000</WLBadPixelGapLimit>
+
+
+
+    <!-- Treatment machine parameters.
+
+    Name : Name of treatment machine.  Names are case insensitive.
+
+    PixelSizeX, PixelSizeY : The default width and height of pixels in mm if the value from Aria is missing.
+
+    PixelSizeLowerLimit : If the incoming value of PixelSizeX or PixelSizeY is at or below this level, then
+    the incoming value is replace by the default value.
+
+    XCorrected : The amount in mm to correct for tongue and groove error for collimator positioned to 270 degrees
+
+    YCorrected : The amount in mm to correct for end of collimator leaf error for collimator positioned to 270 degrees
+    -->
+    <WLTreatmentMachineList>
+        <WLTreatmentMachine>
+            <MachineId>UM-600CD</MachineId>
+            <MachineName>UM-600CD</MachineName>
+            <DeviceSerialNumber>824327626427</DeviceSerialNumber>  <!-- TODO Is this right?  Eclipse says 898 -->
+            <XCorrected>0.0</XCorrected>
+            <YCorrected>-0.0</YCorrected>
+        </WLTreatmentMachine>
+        <WLTreatmentMachine>
+            <MachineId>UM_TB1</MachineId>
+            <MachineName>UM_TB1</MachineName>
+            <DeviceSerialNumber>3068</DeviceSerialNumber>
+            <XCorrected>0.0</XCorrected>
+            <YCorrected>0.0</YCorrected>
+        </WLTreatmentMachine>
+        <WLTreatmentMachine>
+            <MachineId>UM_TB3</MachineId>
+            <MachineName>UM_TB3</MachineName>
+            <DeviceSerialNumber>4471</DeviceSerialNumber>
+            <XCorrected>0.0</XCorrected>
+            <YCorrected>0.0</YCorrected>
+        </WLTreatmentMachine>
+        <WLTreatmentMachine>
+            <MachineId>UM-EX4</MachineId>
+            <MachineName>UM-EX4</MachineName>
+            <DeviceSerialNumber>3340</DeviceSerialNumber>
+            <XCorrected>0.0</XCorrected>
+            <YCorrected>0.0</YCorrected>
+        </WLTreatmentMachine>
+        <WLTreatmentMachine>
+            <MachineId>UM_TB5</MachineId>
+            <MachineName>UM_TB5</MachineName>
+            <DeviceSerialNumber>2448</DeviceSerialNumber>
+            <XCorrected>0.0</XCorrected>
+            <YCorrected>0.0</YCorrected>
+        </WLTreatmentMachine>
+        <WLTreatmentMachine>
+            <MachineId>UM-TX2</MachineId>
+            <MachineName>UM-TX2</MachineName>
+            <DeviceSerialNumber>1039</DeviceSerialNumber>
+            <XCorrected>0.0</XCorrected>
+            <YCorrected>0.0</YCorrected>
+        </WLTreatmentMachine>
+        <WLTreatmentMachine>
+            <MachineId>UM-TX6</MachineId>
+            <MachineName>UM-TX6</MachineName>
+            <DeviceSerialNumber>3526</DeviceSerialNumber>
+            <XCorrected>0.0</XCorrected>
+            <YCorrected>0.0</YCorrected>
+        </WLTreatmentMachine>
+        <WLTreatmentMachine>
+            <MachineId>BR1</MachineId>
+            <MachineName>BR1</MachineName>
+            <DeviceSerialNumber>3525</DeviceSerialNumber>
+            <XCorrected>0.0</XCorrected>
+            <YCorrected>0.0</YCorrected>
+        </WLTreatmentMachine>
+        <WLTreatmentMachine>
+            <MachineId>NO-CORRECTION</MachineId>
+            <MachineName>NO-CORRECTION</MachineName>
+            <!-- <DeviceSerialNumber></DeviceSerialNumber> -->
+            <XCorrected>0.0</XCorrected>
+            <YCorrected>0.0</YCorrected>
+        </WLTreatmentMachine>
+    </WLTreatmentMachineList>
+
+
+
+    <!-- The MarginalPixelGapLimit is similar to BadPixelGapLimit, but it is only used as a warning about noise in
+    the image.  This value should always be less than BadPixelGapLimit. This is an integer. -->
+    <WLMarginalPixelGapLimit>500</WLMarginalPixelGapLimit>
+
+    <!-- Allowed deviation of the size of the box on image (in percent of size).  This is used for a basic sanity check when doing
+    initial coarse location of the box in the image.  A value of 30 means that when the box is located, it will be rejected
+    if it is larger than 30 percent of the expected size or 30 percent smaller than the expected size.  This is a floating
+    point value. -->
+    <WLBoxSizePercent>30.0</WLBoxSizePercent>
+
+    <!-- There have been instances of very low contrast images or images that are entirely one value.  To intelligently
+    reject these images, incoming images must have at least this many distinct pixel values (levels) for the image to
+    be processed.  This must be an integer of value 1 or greater. -->
+    <WLMinimumDistinctPixelValues>40</WLMinimumDistinctPixelValues>
+
+    <!-- Allowed deviation of the position of the box center of the box in the image (in multiples of the box's size).
+    This is used for a basic sanity check when doing initial coarse location of the box in the image.  A value of 2 means
+    that when the box is located, it will be rejected if the center of the box is more than two times the box's size from
+    the center of the image.  This is a floating point value. -->
+    <WLBoxPositionFactor>2.0</WLBoxPositionFactor>
+    <!-- <BoxPositionFactor>20</BoxPositionFactor> for testing only -->
+
+    <!-- When checking to make sure that an edge is considering a large enough area that covers both the extremely
+    bright and extremely dark portions of the image, the range of brightness of each edge is compared to the range
+    of brightness of the image as a whole.  The value must be within this percentage for the edge area to be
+    considered valid. -->
+    <WLMaxAllowedBrightnessRangePercentDifference>20.0</WLMaxAllowedBrightnessRangePercentDifference>
+
     <!-- Tolerance in pixels for how far to search from the expected center for
     the fine edge of box, given the coarse position of the edge.  Also used
     determine where an edge of the box finishes to define the
@@ -810,12 +945,9 @@ Note that when building a package for release, the Maven build process uses the 
     in mm. -->
     <WLBoxEdgeTolerance_mm>5.5</WLBoxEdgeTolerance_mm>
 
-
     <!-- When correcting a bad pixel, the new value is calculated by taking the average value of the pixels within a
     given radius (number of pixels).  This number is that radius.  This is an integer 1 or greater.-->
     <WLBadPixelCorrectionRadius>2</WLBadPixelCorrectionRadius>
-
-
 
     <!-- Factor by which to   the original image to create a viewable image.  Must be a positive integer. -->
     <WLScale>16</WLScale>
@@ -859,7 +991,7 @@ Note that when building a package for release, the Maven build process uses the 
     <WLBallHeightPercentForeground>50.0</WLBallHeightPercentForeground>
 
     <!-- Color used to draw pixels.  Each color (RGB) must be either 0 or 1. -->
-    <WLWLImageColor>000001</WLImageColor>
+    <WLImageColor>000001</WLImageColor>
 
     <!-- Color of graphics drawn on box. -->
     <WLBoxColor>00ff00</WLBoxColor>
