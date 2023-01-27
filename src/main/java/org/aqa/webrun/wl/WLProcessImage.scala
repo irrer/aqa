@@ -9,13 +9,10 @@ import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.wl.WLProcessImage._
-import org.aqa.webrun.wl.WLProcessImage.SearchRange
 import org.opensourcephysics.numerics.CubicSpline
 
 import java.awt.image.BufferedImage
 import java.awt.Color
-import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
 import java.io.File
@@ -32,6 +29,13 @@ class WLBadPixel(val x: Int, val y: Int, val rawValue: Int, val correctedValue: 
 }
 
 class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends org.aqa.Logging {
+
+  import org.aqa.webrun.wl.WLProcessImage.colSum
+  import org.aqa.webrun.wl.WLProcessImage.rowSum
+  import org.aqa.webrun.wl.WLProcessImage.toPngScaled
+  import org.aqa.webrun.wl.WLProcessImage.unitize
+  import org.aqa.webrun.wl.WLProcessImage.SearchRange
+  import org.aqa.webrun.wl.WLProcessImage.toCubicSpline
 
   private val trans = new IsoImagePlaneTranslator(rtimage)
   private val ResolutionX = trans.pix2IsoDistX(1)
@@ -88,6 +92,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       elapsed_ms
     }
 
+    def toPng(pix: Array[Array[Float]]): BufferedImage = toPngScaled(pix, SCALE)
+
     val gantryRounded_deg = Util.angleRoundedTo90(Util.gantryAngle(rtimage))
     val collimatorRounded_deg = Util.angleRoundedTo90(Util.collimatorAngle(rtimage))
 
@@ -133,6 +139,16 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       } catch {
         case e: Exception =>
           diagnosticMessage("Unable to write DICOM file as text: " + e)
+      }
+    }
+
+    def writeDicomAsBinaryDicom(attributeList: AttributeList): Unit = {
+      try {
+        val file = new File(subDir, Util.sopOfAl(rtimage) + ".dcm")
+        DicomUtil.writeAttributeListToFile(attributeList, file, "AQA")
+      } catch {
+        case e: Exception =>
+          diagnosticMessage("Unable to write DICOM file as binary DICOM: " + e)
       }
     }
 
@@ -257,10 +273,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
     def writeImageLater(img: BufferedImage, name: String): Unit = WLProcessImage.writeImage(img, makePngFile(name))
 
     def bound(x: Double, lo: Int, hi: Int) = {
-      if (x < lo) lo else if (x > hi) hi else x
-    }
-
-    def boundInt(x: Int, lo: Int, hi: Int) = {
       if (x < lo) lo else if (x > hi) hi else x
     }
 
@@ -451,10 +463,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
     }
      */
 
-
-
-
-
     /**
       * Draw the horizontal and vertical lines marking the center of something.  By convention in
       * this project, it marks the center of the ball.
@@ -505,7 +513,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         }
 
         def saveImage(center: (Int, Int)): Unit = {
-          val png = WLProcessImage.toPng(approxAoi)
+          val png = toPng(approxAoi)
           val annotate = new WLAnnotate(SCALE, BALL_RADIUS)
           annotate.drawCross(png.getGraphics.asInstanceOf[Graphics2D], center._1, center._2, 1)
           writeImageLater(png, "ball_coarse")
@@ -587,7 +595,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         writeImageLater(image, "ball_fine")
 
         if (singleMax(cSpline, cSum) && singleMax(rSpline, rSum)) {
-          diagnosticMessage("Ball fine location relative to box in pixels: " + fineX.center + ", " + fineY.center); val j = 0
+          diagnosticMessage("Ball fine location relative to box in pixels: " + fineX.center + ", " + fineY.center)
           Some(fineX.center, fineY.center)
         } else None
       }
@@ -599,8 +607,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       val topEdge = coarseCenter._2 + tol2 - radius
       val ballRoi = subSection(areaOfInterest, leftEdge, radius * 2, topEdge, radius * 2)
 
-      writeImageLater(WLProcessImage.toPng(normalizeArea(ballRoi)), "ballRoiNormalized")
-      writeImageLater(WLProcessImage.toPng(ballRoi), "ballRoiRaw")
+      writeImageLater(toPng(normalizeArea(ballRoi)), "ballRoiNormalized")
+      writeImageLater(toPng(ballRoi), "ballRoiRaw")
 
       fineBallLocate(ballRoi) match {
         case Some(loc: (Double, Double)) => Some(loc._1 + leftEdge, loc._2 + topEdge)
@@ -719,20 +727,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       } else
         Left(status)
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     /*
     def highlightWLBadPixelList(badPixelList: List[WLBadPixel], graphics: Graphics2D) = {
@@ -856,12 +850,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
 
       val xCenterImage = (SizeX / 2.0) * ResolutionX
       val yCenterImage = (SizeY / 2.0) * ResolutionY
-
-      val boxSmallestAllowed = (1 - (Config.WLBoxSizePercent * 0.01)) * Config.WLBoxSize
-      val boxLargestAllowed = (1 + (Config.WLBoxSizePercent * 0.01)) * Config.WLBoxSize
-
-      val width = (coarseX._2 - coarseX._1) * ResolutionX
-      val height = (coarseY._2 - coarseY._1) * ResolutionY
 
       val ok: Boolean = 0 match {
         case _ if (xCenterImage - xCenterBox) > boxPositionVariance => diagnosticMessage("Box located too far to left"); false
@@ -1111,6 +1099,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
     try {
       val rawPixels = fetchRawPixels()
       writeImageLater(toPngScaled(rawPixels, 1), "original")
+      writeDicomAsBinaryDicom(rtimage)
       writeDicomAsText(rtimage)
 
       // List of raw distinct pixel values sorted by value
@@ -1225,6 +1214,10 @@ object WLProcessImage extends org.aqa.Logging {
   val DIAGNOSTICS_TEXT_FILE_NAME = "diagnostics.txt"
   val DIAGNOSTICS_HTML_FILE_NAME = "diagnostics.html"
 
+  def boundInt(x: Int, lo: Int, hi: Int): Int = {
+    if (x < lo) lo else if (x > hi) hi else x
+  }
+
   class SearchRange(val lo: Double, val center: Double, val hi: Double) {}
 
   /**
@@ -1286,8 +1279,6 @@ object WLProcessImage extends org.aqa.Logging {
     (0 until height).foreach(y => doRow(y))
     png
   }
-
-  def toPng(pix: Array[Array[Float]]): BufferedImage = toPngScaled(pix, SCALE)
 
   // def indexes(length: Int): Array[Double] = (0 until length).toArray.map(x => x.toDouble)
   private def writeImage(img: BufferedImage, file: File): Unit = {

@@ -1,20 +1,19 @@
 package org.aqa.webrun.wl
 
 import org.aqa.Config
+import org.aqa.webrun.wl.WLProcessImage._
 
 import java.awt.Graphics2D
 import java.awt.image.BufferedImage
-import WLProcessImage._
-
 import java.awt.Color
 
-class WLAnnotate(SCALE: Double, BALL_RADIUS: Int) {
+class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
 
   /**
     * Translate a source image coordinate into a the coordinate system used to draw graphics.
     * Add the 0.5 to get to the center of the displayed pixel.
     */
-  def coordinate(x: Double): Int = {
+  private def coordinate(x: Double): Int = {
     ((x + 0.5) * SCALE).toInt
   }
 
@@ -41,7 +40,7 @@ class WLAnnotate(SCALE: Double, BALL_RADIUS: Int) {
 
   }
 
-  def drawCircles(graphics: Graphics2D, x: Double, y: Double): Unit = {
+  private def drawCircles(graphics: Graphics2D, x: Double, y: Double): Unit = {
     graphics.setColor(Config.WLBallColor)
     val NUM_CIRCLE = Config.WLNumberOfCircles
 
@@ -53,11 +52,11 @@ class WLAnnotate(SCALE: Double, BALL_RADIUS: Int) {
     }
   }
 
-  def highlightWLBadPixelList(badPixelList: List[WLBadPixel], graphics: Graphics2D) = {
+  def highlightWLBadPixelList(badPixelList: List[WLBadPixel], graphics: Graphics2D): Unit = {
     val circleRadius = Config.WLBadPixelCorrectionRadius
     graphics.setColor(Config.WLFailColor)
 
-    def highlightWLBadPixel(badPixel: WLBadPixel) = {
+    def highlightWLBadPixel(badPixel: WLBadPixel): Unit = {
       val hp = SCALE / 2
 
       def crd(x: Double): Int = ((x * SCALE) + 0.5).toInt
@@ -75,7 +74,7 @@ class WLAnnotate(SCALE: Double, BALL_RADIUS: Int) {
           crd(ry * 2) // height
         )
       })
-      (0 until 3).map(i =>
+      (0 until 3).foreach(i =>
         graphics.drawRect(
           crd(x) - i, // x
           crd(y) - i, // y
@@ -85,16 +84,16 @@ class WLAnnotate(SCALE: Double, BALL_RADIUS: Int) {
       )
     }
 
-    badPixelList.map(b => highlightWLBadPixel(b))
+    badPixelList.foreach(b => highlightWLBadPixel(b))
   }
 
-  def saveFineLocatedImage(aoi: Array[Array[Float]],  xPosn: SearchRange, yPosn: SearchRange): BufferedImage = {
+  def saveFineLocatedImage(aoi: Array[Array[Float]], xPosn: SearchRange, yPosn: SearchRange): BufferedImage = {
     val rSpline = toCubicSpline(unitize(rowSum(aoi)).map(x => (x * .5).toFloat))
     val cSpline = toCubicSpline(unitize(colSum(aoi)).map(x => (x * .5).toFloat))
 
     val width = aoi(0).length
     val height = aoi.length
-    val png = toPng(aoi)
+    val png = toPngScaled(aoi, SCALE)
 
     for (x <- -SCALE until width * SCALE) {
       val y = (height * SCALE - 1 - (cSpline.evaluate(x.toDouble / SCALE) * (height * SCALE - 2))).toInt
@@ -127,9 +126,9 @@ class WLAnnotate(SCALE: Double, BALL_RADIUS: Int) {
   }
 
   /**
-   * Draw graphics to indicate where the ball is.
-   * Draw outline of ball and diagonal cross-hairs at center of ball
-   */
+    * Draw graphics to indicate where the ball is.
+    * Draw outline of ball and diagonal cross-hairs at center of ball
+    */
   def drawBallGraphics(graphics: Graphics2D, ballCenterX: Double, ballCenterY: Double): Unit = {
     graphics.setColor(Config.WLBallColor)
 
@@ -137,10 +136,9 @@ class WLAnnotate(SCALE: Double, BALL_RADIUS: Int) {
     drawCross(graphics, ballCenterX, ballCenterY, BALL_RADIUS)
   }
 
-
   /**
-   * Draw the lines that show where the box has been located.
-   */
+    * Draw the lines that show where the box has been located.
+    */
   def drawBoxGraphics(graphics: Graphics2D, top: Double, bottom: Double, left: Double, right: Double, color: Color, outside: Double, inside: Double): Unit = {
     graphics.setColor(color)
     graphics.drawLine(coordinate(left), coordinate(top), coordinate(left), coordinate(bottom)) // vertical line left
@@ -193,6 +191,5 @@ class WLAnnotate(SCALE: Double, BALL_RADIUS: Int) {
       }
     }
   }
-
 
 }

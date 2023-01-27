@@ -5,6 +5,7 @@ import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.Util
+import org.aqa.db.Output
 
 import java.io.File
 import java.io.FileOutputStream
@@ -22,7 +23,6 @@ object WLgenHtml {
   val DIAGNOSTICS_HTML_FILE_NAME = "diagnostics.html"
   private val MAIN_HTML_FILE_NAME = "index.html"
   val RESULTS_DIRECTORY = "results"
-  private val REPORT_FILE_NAME = "report.html"
   private val DICOM_SUFFIX = ".dcm"
   private val standardDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
 
@@ -43,6 +43,7 @@ object WLgenHtml {
 
   private def code2Html(src: String): String = {
     val NL = "@@NL@@"
+    //noinspection RegExpSimplifiable
     val textNewLine = src.replaceAll("""[\012\015][\012\015]*""", NL)
     val elem: Elem = <code>
       {textNewLine}
@@ -61,10 +62,12 @@ object WLgenHtml {
                 <script src="/static/bootstrap/html5shiv/3.7.0/html5shiv.js"></script>
                 <script src="/static/bootstrap/libs/respond/1.4.2/respond.min.js"></script>
             <![endif]-->
-            <script src='/static/jquery.min.js'></script>
-            <script src='/static/jquery.zoom.js'></script>
-            <script src='/static/jquery.timeago.js'></script>
-            <script src='/static/tooltip.js'></script>
+            <link rel="icon" href="/static/images/favicon.ico?" type="image/x-icon"/>
+            <link rel="stylesheet" href="/static/AQA.css"/>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+            <script src="/static/zoom/jquery.zoom.js"></script>
+            <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery-timeago/1.5.4/jquery.timeago.min.js'></script>
+            <script src="/static/tooltip/tooltip.js"></script>
             <script>
                 $(document).ready(function(){ $('#ex1').zoom(); });
                 jQuery(document).ready(function() {jQuery('abbr.timeago').timeago();})
@@ -90,7 +93,7 @@ object WLgenHtml {
       if (diagFile.exists) {
         val text = FileUtil.readTextFile(diagFile).right.get
         val textHtml = code2Html(text)
-        "<pre style='background: #eeeeee'; font-size: small>\n" + textHtml + "</pre><p/>\n"
+        "<pre style='background: #eeeeee; font-size: small'>\n" + textHtml + "</pre><p/>\n"
       } else "Diagnostics file " + WLProcessImage.DIAGNOSTICS_TEXT_FILE_NAME + " does not exist"
     }
 
@@ -187,9 +190,9 @@ object WLgenHtml {
 
     val statusText = {
       if (imageResult.imageStatus == ImageStatus.Passed)
-        "<passed>PASSED</passed>"
+        "<passed> &nbsp; PASSED &nbsp; </passed>"
       else
-        "<failed>{imageResult.imageStatus}</failed>"
+        s"<failed> &nbsp; ${imageResult.imageStatus} &nbsp; </failed>"
     }
 
     val imageDate = {
@@ -205,11 +208,11 @@ object WLgenHtml {
       "<body>\n" +
       "<a href='/" + MAIN_HTML_FILE_NAME + "'>Home</a><p/>\n" +
       "<center>\n" +
-      "<h2>Diagnostics<p/>" + statusText + "</h2><p/>\n" +
+      "<h2>Diagnostics<p/>\n" +
       "<h2><p>" + statusText + "</p></h2>\n" +
-      "<a title='Go back to report' href='../" + REPORT_FILE_NAME + "'>Report</a>" +
+      "<a title='Go back to report' href='../" + Output.displayFilePrefix + ".html'>Report</a>" +
       " &nbsp; &nbsp; &nbsp; &nbsp; " +
-      "<a title='Download original DICOM image' href='../../" + Util.sopOfAl(imageResult.rtimage) + DICOM_SUFFIX + "'>DICOM</a>" +
+      "<a title='Download original DICOM image' href='" + Util.sopOfAl(imageResult.rtimage) + DICOM_SUFFIX + "'>DICOM</a>" +
       " &nbsp; &nbsp; &nbsp; &nbsp; " +
       "<a title='View original DICOM formatted as text' href='" + Util.sopOfAl(imageResult.rtimage) + ".txt'>DICOM as text</a>" +
       "<p/>\n" +
