@@ -26,6 +26,7 @@ import org.aqa.webrun.gapSkew.GapSkewRun
 import org.aqa.webrun.machLog.MachLogRun
 import org.aqa.webrun.phase2.Phase2
 import org.aqa.webrun.phase3.Phase3
+import org.aqa.webrun.wl.WLRun
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
@@ -64,6 +65,7 @@ object WebRun {
     ("BBbyEPID", procedure => new BBbyEPIDRun(procedure)),
     ("LOCUploadBaseFiles_1", procedure => new LOCUploadBaseFiles_1(procedure)), // old LOC baseline
     ("GapSkewRun", procedure => new GapSkewRun(procedure)),
+    ("WinstonLutz", procedure => new WLRun(procedure)),
     ("UploadAndChooseMachine_1", procedure => new UploadAndChooseMachine_1(procedure)),
     ("WinstonLutz_1", procedure => new WinstonLutz_1(procedure)),
     ("MachineLog", procedure => new MachLogRun(procedure)),

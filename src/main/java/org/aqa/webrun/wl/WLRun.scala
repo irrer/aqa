@@ -4,6 +4,7 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.run.ProcedureStatus
@@ -14,9 +15,14 @@ import org.aqa.web.WebUtil.ValueMapT
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.WebRunProcedure
 import org.aqa.Util
+import org.aqa.run.RunProcedure
 import org.aqa.web.WebUtil
+import org.aqa.web.WebUtil.emptyValueMap
+import org.aqa.web.WebUtil.getValueMap
+import org.restlet.Request
 import org.restlet.Response
 
+import java.io.File
 import java.sql.Timestamp
 import scala.xml.Elem
 
@@ -33,9 +39,25 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
   private def getRtimageList(alList: Seq[AttributeList]) = alList.filter(al => Util.isRtimage(al)).sortBy(dateTime)
 
   override def run(extendedData: ExtendedData, runReq: WLRunReq, response: Response): ProcedureStatus.Value = {
-    val status = WLAnalyse(runReq)
-    status
-    ???
+    val status = WLAnalyse(extendedData, runReq)
+    Trace.trace(runReq)
+    Trace.trace(status)
+
+    if (true) { // TODO replace
+      val outDir = extendedData.output.dir
+      val subDirList = Util.listDirFiles(outDir).filter(_.isDirectory)
+      def d2ref(d: File) = <p><a href={d.getName + "/diagnostics.html"}>{d.getName}</a></p>
+      val file = new File(outDir, Output.displayFilePrefix + ".html")
+      val content = {
+        <div>
+            {subDirList.map(d2ref)}
+          </div>
+      }
+      val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), "Winston Lutz")
+      Util.writeFile(file, text)
+      ProcedureStatus.done // TODO put real status here
+    } else
+      ProcedureStatus.done // TODO put real status here
   }
 
   override def validate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Either[StyleMapT, RunReqClass] = {
@@ -92,5 +114,12 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
     val rtimageList = alList.filter(al => Util.isRtimage(al))
     val dsnList = rtimageList.flatMap(al => Util.attributeListToDeviceSerialNumber(al)).distinct
     dsnList
+  }
+
+  override def handle(request: Request, response: Response): Unit = {
+    super.handle(request, response)
+
+    val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
+    RunProcedure.handleInput(valueMap, response, this.asInstanceOf[RunTrait[RunReqClass]], authenticatedUserPK = None, sync = true)
   }
 }

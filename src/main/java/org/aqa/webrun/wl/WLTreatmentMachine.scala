@@ -26,11 +26,11 @@ class WLTreatmentMachine(document: Node) extends Logging {
     }
   }
 
-  val MachineId = mainText("MachineId")
-  val MachineName = mainText("MachineName")
-  val DeviceSerialNumber = mainTextOpt("DeviceSerialNumber")
-  val XCorrected = mainText("XCorrected").toDouble
-  val YCorrected = mainText("YCorrected").toDouble
+  val MachineId: String = mainText("MachineId")
+  val MachineName: String = mainText("MachineName")
+  val DeviceSerialNumber: Option[String] = mainTextOpt("DeviceSerialNumber")
+  val XCorrected: Double = mainText("XCorrected").toDouble
+  val YCorrected: Double = mainText("YCorrected").toDouble
 
   override def toString: String = {
     valueText.foldLeft("TreatmentMachine Configuration values:")((b, t) => b + "\n    " + t)

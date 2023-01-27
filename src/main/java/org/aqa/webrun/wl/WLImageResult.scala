@@ -2,10 +2,14 @@ package org.aqa.webrun.wl
 
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
+import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Util
 import org.aqa.webrun.wl
+import org.aqa.webrun.ExtendedData
 
 import java.io.File
+import java.text.SimpleDateFormat
 import java.util.Date
 
 class Point(val x: Double, val y: Double) {
@@ -50,10 +54,11 @@ class WLImageResult(
     boxEdgesP: Edges,
     val directory: File,
     // val imageMetaData: ImageMetaData,
-    val attributeList: AttributeList,
+    val rtimage: AttributeList,
     val pixels: Array[Array[Float]],
     val badPixelList: List[WLBadPixel],
-    val marginalPixelList: List[WLBadPixel]
+    val marginalPixelList: List[WLBadPixel],
+    val extendedData: ExtendedData
 ) {
   val ok: Boolean = !((boxP == null) || (ballP == null))
   val offX: Double = if (ok) boxP.x - ballP.x else -1
@@ -65,17 +70,37 @@ class WLImageResult(
   val ball: Point = if (ballP == null) new Point(-1, -1) else ballP
   val boxEdges: Edges = if (boxEdgesP == null) new Edges(-1, -1, -1, -1) else boxEdgesP
 
-  def attr(tag: AttributeTag): String = attributeList.get(tag).getSingleStringValueOrNull
+  val elapsedTime_ms = {
+    val ms = DicomUtil.getTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get.getTime
+    val elapsed_ms = ms - extendedData.output.dataDate.get.getTime
+    elapsed_ms
+  }
 
-  val gantryAngle: Int = Util.angleRoundedTo90(Util.gantryAngle(attributeList)) //attrFloat(TagByName.GantryAngle)
+  val gantryRounded_deg = Util.angleRoundedTo90(Util.gantryAngle(rtimage))
+  val collimatorRounded_deg = Util.angleRoundedTo90(Util.collimatorAngle(rtimage))
+
+  val gantryRounded_txt = "G" + gantryRounded_deg.formatted(("%03d"))
+  val collimatorRounded_txt = "C" + collimatorRounded_deg.formatted(("%03d"))
+  val elapsedTime_txt = new SimpleDateFormat("MM:ss").format(new Date(elapsedTime_ms))
+
+  val imageName: String = gantryRounded_txt + collimatorRounded_txt + elapsedTime_txt
+
+  def attr(tag: AttributeTag): String = rtimage.get(tag).getSingleStringValueOrNull
+
+  val gantryAngle: Int = Util.angleRoundedTo90(Util.gantryAngle(rtimage)) //attrFloat(TagByName.GantryAngle)
 
   override def toString: String = {
 
     def badPixelListToString(list: List[WLBadPixel], name: String): String = {
-      "" +
-        "    " + name + " pixels: " + list.size + "\n" +
-        list.foldLeft("")((t, bad) => { t + "    " + bad + "\n" })
+      if (list == null)
+        "NA"
+      else
+        "" +
+          "    " + name + " pixels: " + list.size + "\n" +
+          list.foldLeft("")((t, bad) => { t + "    " + bad + "\n" })
     }
+
+    // WLImageResult(status, boxP = null, ballP = null,boxEdgesP =  null, directory = subDir, rtimage = rtimage,  pixels = null, badPixelList =  null, marginalPixelList, extendedData)
 
     "" +
       "    Directory: " + directory.getAbsolutePath + "\n" +

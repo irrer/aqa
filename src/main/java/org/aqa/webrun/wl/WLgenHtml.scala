@@ -1,10 +1,14 @@
 package org.aqa.webrun.wl
 
+import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.FileUtil
 import org.aqa.webrun.ExtendedData
-import org.aqa.Config
+import org.aqa.Util
 
 import java.io.File
 import java.io.FileOutputStream
+import java.text.SimpleDateFormat
 import java.util.Date
 import scala.xml.Elem
 import scala.xml.PrettyPrinter
@@ -12,18 +16,32 @@ import scala.xml.PrettyPrinter
 object WLgenHtml {
 
   val IMAGE_FILE_SUFFIX = ".png"
-  private val HTML_PREFIX_TAG = "%%%%HTML_PREFIX%%%%"
   private val BAD_PIXEL_FILE_NAME = "badPixels" + IMAGE_FILE_SUFFIX
-  val NORMAL_SUMMARY_FILE_NAME = "normalSummary" + IMAGE_FILE_SUFFIX
-  val BRIGHT_SUMMARY_FILE_NAME = "brightSummary" + IMAGE_FILE_SUFFIX
-  val ORIGINAL_FILE_NAME = "original" + IMAGE_FILE_SUFFIX
-  val BAD_PIXEL_FILE_NAME = "badPixels" + IMAGE_FILE_SUFFIX
+  val NORMAL_SUMMARY_FILE_NAME: String = "normalSummary" + IMAGE_FILE_SUFFIX
+  val BRIGHT_SUMMARY_FILE_NAME: String = "brightSummary" + IMAGE_FILE_SUFFIX
   val DIAGNOSTICS_HTML_FILE_NAME = "diagnostics.html"
-  val MAIN_HTML_FILE_NAME = "index.html"
+  private val MAIN_HTML_FILE_NAME = "index.html"
+  val RESULTS_DIRECTORY = "results"
+  private val REPORT_FILE_NAME = "report.html"
+  private val DICOM_SUFFIX = ".dcm"
+  private val standardDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
 
-  def prettyPrint(elem: Elem): String = new PrettyPrinter(1024, 2).format(elem)
+  // Format date in human friendly HTML way
+  private def fmtDate(date: Date): String = {
+    val format = new SimpleDateFormat("EEE dd MMM YYYY  h:mm aa")
+    format.format(date)
+  }
 
-  def code2Html(src: String): String = {
+  private def timeAgo(date: Date): String = "<abbr class='timeago' title='" + standardDateFormat.format(date) + "'>" + fmtDate(date) + "</abbr>"
+
+  // Format date and elapsed time in human friendly HTML way
+  private def timeAndTimeAgo(date: Date): String = {
+    fmtDate(date) + "\n" + " &nbsp; &nbsp; " + timeAgo(date)
+  }
+
+  private def prettyPrint(elem: Elem): String = new PrettyPrinter(1024, 2).format(elem)
+
+  private def code2Html(src: String): String = {
     val NL = "@@NL@@"
     val textNewLine = src.replaceAll("""[\012\015][\012\015]*""", NL)
     val elem: Elem = <code>
@@ -33,11 +51,8 @@ object WLgenHtml {
     escapedText.replaceAll(NL, "<br/>\n")
   }
 
-  def generateHtml(extendedData: ExtendedData, imageResult: WLImageResult): Unit = {
+  def generateHtml(extendedData: ExtendedData, subDir: File, imageResult: WLImageResult): Unit = {
     val vs = "<p/><br/>" // vertical space
-
-
-
 
     val HTML_PREFIX = {
       """
@@ -63,7 +78,7 @@ object WLgenHtml {
     def img(name: String): String = {
       val shortName = if (name.endsWith(IMAGE_FILE_SUFFIX)) name.substring(0, name.length - IMAGE_FILE_SUFFIX.length) else name
       val longName = shortName + IMAGE_FILE_SUFFIX
-      if (new File(extendedData.output.dir, longName).exists) {
+      if (new File(subDir, longName).exists) {
         "<a href='" + longName + "'><img title='" + shortName + "' src='" + longName + "'></a>\n"
       } else {
         "Image for " + longName + " does not exist"
@@ -71,9 +86,9 @@ object WLgenHtml {
     }
 
     val diagnosticsText: String = {
-      val diagFile = new File(extendedData.output.dir, WLProcessImage.DIAGNOSTICS_TEXT_FILE_NAME)
+      val diagFile = new File(subDir, WLProcessImage.DIAGNOSTICS_TEXT_FILE_NAME)
       if (diagFile.exists) {
-        val text = scala.io.Source.fromFile(diagFile).mkString
+        val text = FileUtil.readTextFile(diagFile).right.get
         val textHtml = code2Html(text)
         "<pre style='background: #eeeeee'; font-size: small>\n" + textHtml + "</pre><p/>\n"
       } else "Diagnostics file " + WLProcessImage.DIAGNOSTICS_TEXT_FILE_NAME + " does not exist"
@@ -92,7 +107,6 @@ object WLgenHtml {
     val originalImage: String = vs + vs + imageTitle + "<br/>\n" + img("original") + "<p/>\n"
 
     val summaryWithEdges: String = {
-      val w = Config.WLSummarySize
       vs + vs + "Summary with Edges<p/>\n" +
         "<table>\n" +
         "<tr>\n" +
@@ -129,7 +143,6 @@ object WLgenHtml {
     }
 
     val background: String = {
-      val w = Config.WLSummarySize
       vs + vs + "Background Surrounding Ball<p/>\n" +
         "<table cellpadding='10'>\n" +
         "<tr>\n" +
@@ -147,7 +160,6 @@ object WLgenHtml {
     }
 
     val ballStages: String = {
-      val w = Config.WLSummarySize
       vs + vs + "Location of Ball<p/>\n" +
         "<table cellpadding='10'>\n" +
         "<tr>\n" +
@@ -173,6 +185,18 @@ object WLgenHtml {
         img("brightSummary")
     }
 
+    val statusText = {
+      if (imageResult.imageStatus == ImageStatus.Passed)
+        "<passed>PASSED</passed>"
+      else
+        "<failed>{imageResult.imageStatus}</failed>"
+    }
+
+    val imageDate = {
+      val date = DicomUtil.getTimeAndDate(imageResult.rtimage, TagByName.ContentDate, TagByName.ContentTime)
+      date.get
+    }
+
     val html: String = "<!DOCTYPE html>\n" +
       "<html>\n" +
       "<head>\n" +
@@ -181,17 +205,17 @@ object WLgenHtml {
       "<body>\n" +
       "<a href='/" + MAIN_HTML_FILE_NAME + "'>Home</a><p/>\n" +
       "<center>\n" +
-      "<h2>Diagnostics<p/>" + imageMetaData.getNameHtml(groupStartTime) + "</h2><p/>\n" +
-      "<h2><p>" + JobList.passedText(imageResult, imageMetaDataGroup) + "</p></h2>\n" +
-      "<a title='Go back to report' href='../" + JobList.REPORT_FILE_NAME + "'>Report</a>" +
+      "<h2>Diagnostics<p/>" + statusText + "</h2><p/>\n" +
+      "<h2><p>" + statusText + "</p></h2>\n" +
+      "<a title='Go back to report' href='../" + REPORT_FILE_NAME + "'>Report</a>" +
       " &nbsp; &nbsp; &nbsp; &nbsp; " +
-      "<a title='Download original DICOM image' href='../../" + imageMetaData.SliceUID + JobList.DICOM_SUFFIX + "'>DICOM</a>" +
+      "<a title='Download original DICOM image' href='../../" + Util.sopOfAl(imageResult.rtimage) + DICOM_SUFFIX + "'>DICOM</a>" +
       " &nbsp; &nbsp; &nbsp; &nbsp; " +
-      "<a title='View original DICOM formatted as text' href='" + imageMetaData.SliceUID + ".txt'>DICOM as text</a>" +
+      "<a title='View original DICOM formatted as text' href='" + Util.sopOfAl(imageResult.rtimage) + ".txt'>DICOM as text</a>" +
       "<p/>\n" +
-      "Treatment " + JobList.timeAndTimeAgo(imageMetaData.CreationDate) +
+      "Treatment " + timeAndTimeAgo(imageDate) +
       " &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\n" +
-      "Analysis " + JobList.timeAndTimeAgo(new Date) + "<p/>\n" +
+      "Analysis " + timeAndTimeAgo(new Date) + "<p/>\n" +
       "</center>\n" +
       diagnosticsText +
       "<center>\n" +
@@ -205,7 +229,7 @@ object WLgenHtml {
       "</body>\n" +
       "</html>"
 
-    val fos = new FileOutputStream(new File(subDir, JobList.DIAGNOSTICS_HTML_FILE_NAME))
+    val fos = new FileOutputStream(new File(subDir, DIAGNOSTICS_HTML_FILE_NAME))
     fos.write(html.getBytes)
     fos.close()
   }

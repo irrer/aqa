@@ -5,9 +5,12 @@ import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.util.Utility
 import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.wl.WLProcessImage._
+import org.aqa.webrun.wl.WLProcessImage.SearchRange
 import org.opensourcephysics.numerics.CubicSpline
 
 import java.awt.image.BufferedImage
@@ -31,8 +34,8 @@ class WLBadPixel(val x: Int, val y: Int, val rawValue: Int, val correctedValue: 
 class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends org.aqa.Logging {
 
   private val trans = new IsoImagePlaneTranslator(rtimage)
-  private val ResolutionX = trans.pix2IsoDistX(trans.pixelSizeX)
-  private val ResolutionY = trans.pix2IsoDistY(trans.pixelSizeY)
+  private val ResolutionX = trans.pix2IsoDistX(1)
+  private val ResolutionY = trans.pix2IsoDistY(1)
 
   private val SizeX = trans.width
   private val SizeY = trans.height
@@ -75,25 +78,39 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
     /** Expected radius of ball in (units of) number of pixels. */
     val BALL_RADIUS = toPixels(Config.WLBallRadius)
 
+    val annotate = new WLAnnotate(SCALE, BALL_RADIUS)
+
     def fmt(d: Double): String = d.formatted("%10.5f")
 
-    val imageName: String = {
-      val timeText = {
-
-        val fmt = new SimpleDateFormat("MM:ss")
-        val ms = DicomUtil.getTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get.getTime
-        val elapsed_ms = ms - extendedData.output.dataDate.get.getTime
-        fmt.format(new Date(elapsed_ms))
-      }
-
-      "G" + Util.angleRoundedTo90(Util.gantryAngle(rtimage)).formatted("%03d") +
-        "C" + Util.angleRoundedTo90(Util.collimatorAngle(rtimage)).formatted("%03d") + " " +
-        timeText
+    val elapsedTime_ms = {
+      val ms = DicomUtil.getTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get.getTime
+      val elapsed_ms = ms - extendedData.output.dataDate.get.getTime
+      elapsed_ms
     }
 
-    val diagnostics = new PrintStream(new File(extendedData.output.dir, WLProcessImage.DIAGNOSTICS_TEXT_FILE_NAME))
+    val gantryRounded_deg = Util.angleRoundedTo90(Util.gantryAngle(rtimage))
+    val collimatorRounded_deg = Util.angleRoundedTo90(Util.collimatorAngle(rtimage))
 
-    def diag(text: String): Unit = {
+    val gantryRounded_txt = "G" + gantryRounded_deg.formatted("%03d")
+    val collimatorRounded_txt = "C" + collimatorRounded_deg.formatted("%03d")
+    val elapsedTime_txt = new SimpleDateFormat("MM:ss").format(new Date(elapsedTime_ms))
+
+    val imageName: String = gantryRounded_txt + collimatorRounded_txt + elapsedTime_txt
+
+    val subDir: File = {
+      val min = elapsedTime_ms / (60 * 1000)
+      val sec = (elapsedTime_ms / 1000) % 60
+
+      val name = min.formatted("%d") + "_" + sec.formatted("%02d") + "__" + gantryRounded_txt + "__" + collimatorRounded_txt
+
+      val dir = new File(extendedData.output.dir, name)
+      dir.mkdirs()
+      dir
+    }
+
+    val diagnostics = new PrintStream(new File(subDir, WLProcessImage.DIAGNOSTICS_TEXT_FILE_NAME))
+
+    def diagnosticMessage(text: String): Unit = {
       diagnostics.println(text)
       val msg =
         "G" + Util.angleRoundedTo90(Util.gantryAngle(rtimage)).formatted("%03d") +
@@ -107,15 +124,15 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       logger.info(msg)
     }
 
-    diag("\n\nMeta-Image Data from ARIA:\n" + extendedData.output.toString)
+    diagnosticMessage("\n\nMeta-Image Data from ARIA:\n" + extendedData.output.toString)
 
     def writeDicomAsText(attributeList: AttributeList): Unit = {
       try {
         val text = DicomUtil.attributeListToString(attributeList)
-        Utility.writeFile(new File(extendedData.output.dir, Util.sopOfAl(rtimage) + ".txt"), text.getBytes)
+        Utility.writeFile(new File(subDir, Util.sopOfAl(rtimage) + ".txt"), text.getBytes)
       } catch {
         case e: Exception =>
-          diag("Unable to write DICOM file as text: " + e)
+          diagnosticMessage("Unable to write DICOM file as text: " + e)
       }
     }
 
@@ -154,7 +171,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
 
         (1 until rawDistinctSortedList.size).map(i => gapOf(i)).max
       }
-      diag("Range of valid pixel values (inclusive): " + limits._1 + " - " + limits._2 + "    Largest value gap in good pixels: " + largestGoodGap)
+      diagnosticMessage("Range of valid pixel values (inclusive): " + limits._1 + " - " + limits._2 + "    Largest value gap in good pixels: " + largestGoodGap)
 
       val badList = rawPixels.flatten.zipWithIndex.filter(pi => !isValid(pi._1)).map(pix => new UncorrectedWLBadPixel(pix._2 % SizeX, pix._2 / SizeX, pix._1))
 
@@ -210,46 +227,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       max - min
     }
 
-    def toPngScaled(pix: Array[Array[Float]], imageScale: Int): BufferedImage = {
-      val height = pix.length
-      val width = pix(0).length
-      val min = pix.map(y => y.min).min
-      val range = pix.map(y => y.max).max - min
-      val imageColor = Config.WLImageColor.getRGB
-
-      val png = new BufferedImage(width * imageScale, height * imageScale, BufferedImage.TYPE_INT_RGB)
-
-      def doPixel(x: Int, y: Int): Unit = {
-        val rgb: Int = (((pix(y)(x) - min) / range) * 255).toInt
-        val boundedRgb = (if (rgb < 0) 0 else if (rgb > 255) 255 else rgb) * imageColor
-        val yb = y * imageScale
-        val xb = x * imageScale
-        val ye = yb + imageScale
-        val xe = xb + imageScale
-        for (yi <- yb until ye) for (xi <- xb until xe) png.setRGB(xi, yi, boundedRgb)
-      }
-
-      def doRow(y: Int): Unit = (0 until width).foreach(x => doPixel(x, y))
-
-      (0 until height).foreach(y => doRow(y))
-      /*
-            pix.zipWithIndex foreach {
-                case (row: Array[Float], y: Int) => {
-                    row.zipWithIndex foreach {
-                        case (p: Float, x: Int) => {
-                            val rgb: Int = (((p - min) / range) * 255).toInt
-                            val boundedRgb = (if (rgb < 0) 0 else if (rgb > 255) 255 else rgb) * imageColor
-                            for (sx <- 0 until imageScale) for (sy <- 0 until imageScale) png.setRGB((x * imageScale) + sx, (y * imageScale) + sy, boundedRgb)
-                        }
-                    }
-                }
-            }
-       */
-      png
-    }
-
-    def toPng(pix: Array[Array[Float]]): BufferedImage = toPngScaled(pix, SCALE)
-
     /**
       * Generate an image of the given size with all black pixels
       */
@@ -265,7 +242,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         else {
           name + WLgenHtml.IMAGE_FILE_SUFFIX
         }
-      new File(extendedData.output.dir, pngName)
+      new File(subDir, pngName)
     }
 
     /*
@@ -291,28 +268,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       val avg = values.sum / values.length
       Math.sqrt(values.map(x => (x - avg) * (x - avg)).sum / values.length)
     }
-
-    /**
-      * Make a list of the sum of each row.
-      */
-    def rowSum(pix: Array[Array[Float]]): Array[Float] = pix.map(row => row.sum)
-
-    /**
-      * Make a list of the sum of each column.
-      */
-    def colSum(pix: Array[Array[Float]]): Array[Float] = {
-      def oneColSum(c: Int) = pix.indices.map(y => pix(y)(c)).sum
-
-      pix(0).indices.map(c => oneColSum(c)).toArray
-    }
-
-    def unitize(data: Array[Float]): Array[Float] = {
-      val min = data.min
-      val range = data.max - min
-      data.map(x => (x - min) / range)
-    }
-
-    def indexes(length: Int): Array[Double] = (0 until length).toArray.map(x => x.toDouble)
 
     /*
      * Copy a 2 dimensional sub-array from the given 2 dimensional array.
@@ -353,11 +308,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       val pixY = range(pixIn, y, yHeight)
       pixY.map(row => range(row, x, xWidth))
     }
-
-    /**
-      * Convert a list to a cubic spline
-      */
-    def toCubicSpline(data: Array[Float]): CubicSpline = new CubicSpline(data.indices.toArray.map(s => s.toDouble), data.map(f => f.toDouble))
 
     /**
       * Save the given edge image, drawing the cubic spline on it to visualize the gradient of the edge.  This is just
@@ -430,7 +380,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       val slope = (sumXY - ((sumX * sumY) / sum.length)) / (sumXSq - ((sumX * sumX) / sum.length))
       val yIntercept = meanY - (slope * meanX)
 
-      diag(
+      diagnosticMessage(
         "Edge stats for " + name.formatted("%8s") +
           "    min: " + fmt(sum.min) +
           "    max: " + fmt(sum.max) +
@@ -451,14 +401,11 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
     def findEdge(pixIn: Array[Array[Float]], vertical: Boolean, name: String, rawExtremeAveragesRange: Double): Either[ImageStatus.Value, Double] = {
       val length = if (vertical) pixIn(0).length else pixIn.length
       val sum = if (vertical) colSum(pixIn) else rowSum(pixIn)
-      val min = sum.min
-      val range = sum.max - min
       val scaledSum = unitize(sum)
-      val indexes = (0 until length).toArray.map(x => x.toDouble)
       val spline = toCubicSpline(scaledSum)
 
       saveEdgeImage(pixIn, vertical, name, spline)
-      diag("\n\n")
+      diagnosticMessage("\n\n")
       val terminalEdgeSlopes = getTerminalEdgeSlopes(spline, scaledSum.length)
       showEdgeStats(pixIn, vertical, name, terminalEdgeSlopes)
 
@@ -484,7 +431,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       val brightnessMessage = "edge brightness   Max percent diff range allowed: " + Config.WLMaxAllowedBrightnessRangePercentDifference +
         "  image brightness range: " + rawExtremeAveragesRange.formatted("%7.2f") +
         name.formatted("%s8") + " edge brightness range: " + brightnessRange.formatted("%7.2f") + "    percent diff: " + pct.formatted("%7.3f")
-      diag(brightnessMessage)
+      diagnosticMessage(brightnessMessage)
 
       if (pct >= Config.WLMaxAllowedBrightnessRangePercentDifference) {
         val errorMsg =
@@ -504,24 +451,22 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
     }
      */
 
-    /**
-      * Translate a source image coordinate into a the coordinate system used to draw graphics.
-      * Add the 0.5 to get to the center of the displayed pixel.
-      */
-    def coordinate(x: Double): Int = {
-      ((x + 0.5) * SCALE).toInt
-    }
+
+
+
 
     /**
       * Draw the horizontal and vertical lines marking the center of something.  By convention in
       * this project, it marks the center of the ball.
       */
+    /*
     def drawCross(graphics: Graphics, x: Double, y: Double, markerSize: Double): Unit = {
       graphics.drawLine(coordinate(x - markerSize), coordinate(y), coordinate(x + markerSize), coordinate(y))
       graphics.drawLine(coordinate(x), coordinate(y - markerSize), coordinate(x), coordinate(y + markerSize))
-
     }
+     */
 
+    /*
     def drawCircles(graphics: Graphics, x: Double, y: Double): Unit = {
       graphics.setColor(Config.WLBallColor)
       val NUM_CIRCLE = Config.WLNumberOfCircles
@@ -533,12 +478,13 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         graphics.drawOval(coordinate(x - radius), coordinate(y - radius), graphicDistance(radius * 2), graphicDistance(radius * 2))
       }
     }
+     */
 
     /**
       * Find the center of the ball within the given area.  Return the
       * coordinates relative to the area given.
       */
-    def findBallCenter(areaOfInterest: Array[Array[Float]], approxAoi: Array[Array[Float]], fieldWidthUnscaled: Double): Option[(Double, Double)] = {
+    def findBallCenter(areaOfInterest: Array[Array[Float]], approxAoi: Array[Array[Float]]): Option[(Double, Double)] = {
 
       /**
         * Coarsely locate the center of the ball by creating a copy of the area expected to contain
@@ -559,8 +505,9 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         }
 
         def saveImage(center: (Int, Int)): Unit = {
-          val png = toPng(approxAoi)
-          drawCross(png.getGraphics, center._1, center._2, 1)
+          val png = WLProcessImage.toPng(approxAoi)
+          val annotate = new WLAnnotate(SCALE, BALL_RADIUS)
+          annotate.drawCross(png.getGraphics.asInstanceOf[Graphics2D], center._1, center._2, 1)
           writeImageLater(png, "ball_coarse")
         }
 
@@ -571,48 +518,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         center
       }
 
-      class SearchRange(val lo: Double, val center: Double, val hi: Double) {}
-
-      def saveFineLocatedImage(aoi: Array[Array[Float]], name: String, xPosn: SearchRange, yPosn: SearchRange): Unit = {
-        val rSpline = toCubicSpline(unitize(rowSum(aoi)).map(x => (x * .5).toFloat))
-        val cSpline = toCubicSpline(unitize(colSum(aoi)).map(x => (x * .5).toFloat))
-
-        val width = aoi(0).length
-        val height = aoi.length
-        val png = toPng(aoi)
-
-        for (x <- -SCALE until width * SCALE) {
-          val y = (height * SCALE - 1 - (cSpline.evaluate(x.toDouble / SCALE) * (height * SCALE - 2))).toInt
-          val xo = x + (SCALE / 2)
-          if ((xo >= 0) && (xo < (width * SCALE))) png.setRGB(xo, boundInt(y, 0, height * SCALE - 1), Config.WLSplineColor.getRGB)
-        }
-
-        for (y <- -SCALE until height * SCALE) {
-          val x = (1 + (rSpline.evaluate(y.toDouble / SCALE) * (width * SCALE - 2))).toInt
-          val yo = y + (SCALE / 2)
-          if ((yo >= 0) && (yo < (height * SCALE))) png.setRGB(boundInt(x, 0, width * SCALE - 1), yo, Config.WLSplineColor.getRGB)
-        }
-
-        val graphics = png.getGraphics
-        graphics.setColor(Config.WLBallColor)
-
-        drawCross(graphics, xPosn.center, yPosn.center, 20)
-
-        drawCircles(graphics, xPosn.center, yPosn.center)
-
-        graphics.setColor(Config.WLSplineColor)
-        graphics.drawLine(coordinate(xPosn.lo), 0, coordinate(xPosn.lo), coordinate(height))
-        graphics.drawLine(coordinate(xPosn.hi), 0, coordinate(xPosn.hi), coordinate(height))
-
-        graphics.setColor(Config.WLSplineColor)
-        graphics.drawLine(0, coordinate(yPosn.lo), coordinate(width), coordinate(yPosn.lo))
-        graphics.drawLine(0, coordinate(yPosn.hi), coordinate(width), coordinate(yPosn.hi))
-
-        writeImageLater(png, name)
-      }
-
       def centerOfMass(spline: CubicSpline, len: Int): SearchRange = {
-        val pointList = (0.0 until len.toDouble by X_INCREMENT).map(i => spline.evaluate(i))
+        val pointList = (0 until (len / X_INCREMENT).round.toInt).map(i => spline.evaluate(i * X_INCREMENT))
         val min = pointList.min
         val max = pointList.max
 
@@ -650,10 +557,10 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         val state = (0 to (values.length * increment)).toList.foldLeft((0, false))((s, x) => cross(x, s._1, s._2))
         val crsCount = state._1
         if (crsCount == 2) {
-          diag(" Ball spline verified to cross average height exactly twice")
+          diagnosticMessage(" Ball spline verified to cross average height exactly twice")
           true
         } else {
-          diag(" Wrong number of times that the ball spline crossed the average value.  Should be 2 but was " + crsCount)
+          diagnosticMessage(" Wrong number of times that the ball spline crossed the average value.  Should be 2 but was " + crsCount)
           false
         }
       }
@@ -664,16 +571,23 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
        */
 
       def fineBallLocate(aoiFine: Array[Array[Float]]): Option[(Double, Double)] = {
-        val rSum = unitize(rowSum(aoiFine))
-        val rSpline = toCubicSpline(rSum)
-        val cSum = unitize(colSum(aoiFine))
-        val cSpline = toCubicSpline(cSum)
+
+        val annotate = new WLAnnotate(SCALE, BALL_RADIUS)
+
+        if (Util.sopOfAl(rtimage).equals("1.3.6.1.4.1.22361.17483843774714.767955427.1674650787748.7"))
+          Trace.trace("hey")
+        val rSum = WLProcessImage.unitize(WLProcessImage.rowSum(aoiFine))
+        val rSpline = WLProcessImage.toCubicSpline(rSum)
+        val cSum = WLProcessImage.unitize(WLProcessImage.colSum(aoiFine))
+        val cSpline = WLProcessImage.toCubicSpline(cSum)
 
         val fineX = centerOfMass(cSpline, cSum.length)
         val fineY = centerOfMass(rSpline, rSum.length)
-        saveFineLocatedImage(aoiFine, "ball_fine", fineX, fineY)
+        val image = annotate.saveFineLocatedImage(aoiFine, fineX, fineY)
+        writeImageLater(image, "ball_fine")
 
         if (singleMax(cSpline, cSum) && singleMax(rSpline, rSum)) {
+          diagnosticMessage("Ball fine location relative to box in pixels: " + fineX.center + ", " + fineY.center); val j = 0
           Some(fineX.center, fineY.center)
         } else None
       }
@@ -685,8 +599,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       val topEdge = coarseCenter._2 + tol2 - radius
       val ballRoi = subSection(areaOfInterest, leftEdge, radius * 2, topEdge, radius * 2)
 
-      writeImageLater(toPng(normalizeArea(ballRoi)), "ballRoiNormalized")
-      writeImageLater(toPng(ballRoi), "ballRoiRaw")
+      writeImageLater(WLProcessImage.toPng(normalizeArea(ballRoi)), "ballRoiNormalized")
+      writeImageLater(WLProcessImage.toPng(ballRoi), "ballRoiRaw")
 
       fineBallLocate(ballRoi) match {
         case Some(loc: (Double, Double)) => Some(loc._1 + leftEdge, loc._2 + topEdge)
@@ -697,6 +611,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
     /**
       * draw line between center of square and center of ball
       */
+    /*
     def drawBoxBallOffset(graphics: Graphics, ballCenter: (Double, Double), boxCenter: (Double, Double)): Unit = {
       graphics.setColor(Config.WLOffsetColor)
 
@@ -706,6 +621,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       graphics.drawLine(coordinate(ballCenter._1), coordinate(ballCenter._2) - 1, coordinate(boxCenter._1), coordinate(boxCenter._2) - 1)
       graphics.drawLine(coordinate(ballCenter._1), coordinate(ballCenter._2) + 1, coordinate(boxCenter._1), coordinate(boxCenter._2) + 1)
     }
+     */
 
     def list2Array(x: Array[Array[Float]]) = x.map(x => x)
 
@@ -742,18 +658,23 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       * be either vertical or horizontal, and is the sum of all pixels
       * in that orientation.
       */
-    def coarseBoxLocate(sum: Array[Float]): (Int, Int) = {
-      val lo = sum.min.toDouble
-      val range = sum.max.toDouble - lo
-      val dSum = sum.map(s => (s.toDouble - lo) / range)
+    def coarseBoxLocate(profile: Array[Float]): (Int, Int) = {
+      val lo = profile.min.toDouble
+      val range = profile.max.toDouble - lo
+      val dSum = profile.map(s => (s.toDouble - lo) / range)
 
-      val hiList = sum.indices.filter(d => dSum(d) < 0.5)
-      val edgeA = sum.indices.filter(d => dSum(d) < 0.5).head
-      val edgeB = sum.indices.filter(d => dSum(d) < 0.5).last
+      val hiList = profile.indices.filter(d => dSum(d) < 0.5)
 
-      def bound(v: Int): Int = if (v < tol) tol else if (v > (sum.length - (tol + 1))) sum.length - tol else v
+      def bound(v: Int): Int =
+        if (v < tol)
+          tol
+        else if (v > (profile.length - (tol + 1)))
+          profile.length - tol
+        else
+          v
 
-      (bound(hiList.head) - tol, bound(hiList.last) + tol)
+      val pos = (bound(hiList.head) - tol, bound(hiList.last) + tol)
+      pos
     }
 
     /**
@@ -775,8 +696,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
 
       def edgeStatus(e: Either[ImageStatus.Value, Double]): ImageStatus.Value = {
         e match {
-          case Right(dbl) => ImageStatus.Passed
-          case Left(s)    => s
+          case Right(_) => ImageStatus.Passed
+          case Left(s)  => s
         }
       }
 
@@ -791,86 +712,31 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         val edgeLeft = eLeft.right.get
         val edgeRight = eRight.right.get + (width - tol2)
 
-        val boxPrefix = "Box "
-
         val edges = new Edges(edgeTop, edgeBottom, edgeLeft, edgeRight)
-        diag("\n\nUnscaled box dimensions in pixels")
+        diagnosticMessage("\n\nUnscaled box dimensions in pixels")
         diagnostics.write(edges.toString.getBytes)
         Right(edges)
       } else
         Left(status)
     }
 
-    /**
-      * Draw the lines that show where the box has been located.
-      */
-    def drawBoxGraphics(png: BufferedImage, graphics: Graphics, top: Double, bottom: Double, left: Double, right: Double, color: Color, outside: Double, inside: Double): Unit = {
-      graphics.setColor(color)
-      graphics.drawLine(coordinate(left), coordinate(top), coordinate(left), coordinate(bottom)) // vertical line left
-      graphics.drawLine(coordinate(right), coordinate(top), coordinate(right), coordinate(bottom)) // vertical line right
-      graphics.drawLine(coordinate(left), coordinate(top), coordinate(right), coordinate(top)) // horizontal line top
-      graphics.drawLine(coordinate(left), coordinate(bottom), coordinate(right), coordinate(bottom)) // horizontal line bottom
 
-      {
-        val m = (top - bottom) / (left - right)
-        val b = top - (left * m)
-        val x1 = left - outside
-        val y1 = (m * x1) + b
 
-        if (inside >= 0) {
-          val x2 = left + inside
-          val y2 = (m * x2) + b
-          graphics.drawLine(coordinate(x1), coordinate(y1), coordinate(x2), coordinate(y2))
 
-          val x3 = right - inside
-          val y3 = m * x3 + b
-          val x4 = right + outside
-          val y4 = m * x4 + b
-          graphics.drawLine(coordinate(x3), coordinate(y3), coordinate(x4), coordinate(y4))
-        } else {
-          val x2 = right
-          val y2 = bottom
-          graphics.drawLine(coordinate(x1), coordinate(y1), coordinate(x2), coordinate(y2))
-        }
-      }
 
-      {
-        val m = (top - bottom) / (right - left)
-        val b = top - (right * m)
-        val x1 = right + outside
-        val y1 = (m * x1) + b
-        if (inside >= 0) {
-          val x2 = right - inside
-          val y2 = (m * x2) + b
-          graphics.drawLine(coordinate(x1), coordinate(y1), coordinate(x2), coordinate(y2))
 
-          val x3 = left - outside
-          val y3 = m * x3 + b
-          val x4 = left + inside
-          val y4 = m * x4 + b
-          graphics.drawLine(coordinate(x3), coordinate(y3), coordinate(x4), coordinate(y4))
-        } else {
-          val x2 = left
-          val y2 = bottom
-          graphics.drawLine(coordinate(x1), coordinate(y1), coordinate(x2), coordinate(y2))
-        }
-      }
-    }
 
-    /**
-      * Draw graphics to indicate where the ball is.
-      * Draw outline of ball and diagonal cross-hairs at center of ball
-      */
-    def drawBallGraphics(graphics: Graphics, ballCenterX: Double, ballCenterY: Double): Unit = {
-      graphics.setColor(Config.WLBallColor)
 
-      drawCircles(graphics, ballCenterX, ballCenterY)
-      drawCross(graphics, ballCenterX, ballCenterY, BALL_RADIUS)
-    }
 
+
+
+
+
+
+
+    /*
     def highlightWLBadPixelList(badPixelList: List[WLBadPixel], graphics: Graphics2D) = {
       val circleRadius = Config.WLBadPixelCorrectionRadius
-      val dotRadius = 3.0 / SCALE
       graphics.setColor(Config.WLFailColor)
 
       def highlightWLBadPixel(badPixel: WLBadPixel) = {
@@ -891,6 +757,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
 
       badPixelList.map(b => highlightWLBadPixel(b))
     }
+     */
 
     /**
       * Annotate the image with words and numbers.
@@ -901,7 +768,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         errorScaledX: Double,
         errorScaledY: Double,
         errorScaledXYCombined: Double,
-        badPixelList: List[WLBadPixel],
         background: Boolean
     ): ImageStatus.Value = {
       def fmt(d: Double) = d.formatted("%6.2f").replaceAll(" ", "")
@@ -910,7 +776,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
 
       val font = GraphicFont.getFont
       graphics.setFont(font)
-      val fontHeight = GraphicFont.getFontHeight
       graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_GASP)
 
       val spacer = "        "
@@ -999,15 +864,15 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       val height = (coarseY._2 - coarseY._1) * ResolutionY
 
       val ok: Boolean = 0 match {
-        case _ if (xCenterImage - xCenterBox) > boxPositionVariance => diag("Box located too far to left"); false
-        case _ if (yCenterImage - yCenterBox) > boxPositionVariance => diag("Box located too far to top"); false
-        case _ if (xCenterBox - xCenterImage) > boxPositionVariance => diag("Box located too far to right"); false
-        case _ if (yCenterBox - yCenterImage) > boxPositionVariance => diag("Box located too far to bottom"); false
+        case _ if (xCenterImage - xCenterBox) > boxPositionVariance => diagnosticMessage("Box located too far to left"); false
+        case _ if (yCenterImage - yCenterBox) > boxPositionVariance => diagnosticMessage("Box located too far to top"); false
+        case _ if (xCenterBox - xCenterImage) > boxPositionVariance => diagnosticMessage("Box located too far to right"); false
+        case _ if (yCenterBox - yCenterImage) > boxPositionVariance => diagnosticMessage("Box located too far to bottom"); false
 
-        case _ if width < boxSmallestAllowed  => diag("Box is too narrow"); false
-        case _ if width > boxLargestAllowed   => diag("Box is too wide"); false
-        case _ if height < boxSmallestAllowed => diag("Box is too short"); false
-        case _ if height > boxLargestAllowed  => diag("Box is too tall"); false
+        // case _ if width < boxSmallestAllowed  => diagnosticMessage("Box is too narrow"); false TODO put back
+        // case _ if width > boxLargestAllowed   => diagnosticMessage("Box is too wide"); false TODO put back
+        // case _ if height < boxSmallestAllowed => diagnosticMessage("Box is too short"); false TODO put back
+        // case _ if height > boxLargestAllowed  => diagnosticMessage("Box is too tall"); false TODO put back
 
         case _ => true
       }
@@ -1054,12 +919,12 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       if (ratio < Config.WLBallAreaFlatnessRatioLowerLimit) {
         val msg = "Flatness check: Failed to find ball in box because area inside box was flat. " + stats
         logger.error(msg)
-        diag("Severe error: " + msg)
+        diagnosticMessage("Severe error: " + msg)
         true
       } else {
         val msg = "Flatness check: The area inside the box contains a ball. " + stats
         logger.error(msg)
-        diag(msg)
+        diagnosticMessage(msg)
         false
       }
     }
@@ -1067,13 +932,14 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
     /**
       * Indicate that something is wrong with the image.
       */
-    def imageError(status: ImageStatus.Value, msg: String, badPixelList: List[WLBadPixel], marginalPixelList: List[WLBadPixel]): WLImageResult = {
+    def imageError(status: ImageStatus.Value, msg: String, marginalPixelList: List[WLBadPixel]): WLImageResult = {
       val fullMsg = "Image " + imageName + "  " + msg
       logger.error(fullMsg)
-      diag(fullMsg)
-      val imageResult = new WLImageResult(status, null, null, null, directory = extendedData.output.dir, attributeList = rtimage, null, null, marginalPixelList)
-      diag(imageResult.toString)
-      WLgenHtml.generateHtml(extendedData, imageResult)
+      diagnosticMessage(fullMsg)
+      val imageResult =
+        new WLImageResult(status, boxP = null, ballP = null, boxEdgesP = null, directory = subDir, rtimage = rtimage, pixels = null, badPixelList = null, marginalPixelList, extendedData)
+      diagnosticMessage(imageResult.toString)
+      WLgenHtml.generateHtml(extendedData, subDir, imageResult)
       imageResult
     }
 
@@ -1104,11 +970,11 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
 
       // Limit all pixel brightnesses to the maximum ball pixel brightness.  This makes the ball stand out more in the final image.
       val maxBallPixel = ballArea.flatten.max
-      val thresholdedAreaOfInterest = areaOfInterest.map(r => r.map(c => if (c > maxBallPixel) maxBallPixel else c))
+      val thresholdLimitedAreaOfInterest = areaOfInterest.map(r => r.map(c => if (c > maxBallPixel) maxBallPixel else c))
 
       //drawGraphics()
       val normalPng = toPng(areaOfInterest)
-      val brightPng = toPng(thresholdedAreaOfInterest)
+      val brightPng = toPng(thresholdLimitedAreaOfInterest)
       val blackPng = toBlackPng(areaOfInterest)
 
       // draw edge of box
@@ -1116,31 +982,31 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       val brightGraphics = brightPng.getGraphics.asInstanceOf[Graphics2D]
       val blackGraphics = blackPng.getGraphics.asInstanceOf[Graphics2D]
 
-      drawBallGraphics(normalGraphics, ballCenterX, ballCenterY)
-      drawBallGraphics(brightGraphics, ballCenterX, ballCenterY)
-      drawBallGraphics(blackGraphics, ballCenterX, ballCenterY)
+      annotate.drawBallGraphics(normalGraphics, ballCenterX, ballCenterY)
+      annotate.drawBallGraphics(brightGraphics, ballCenterX, ballCenterY)
+      annotate.drawBallGraphics(blackGraphics, ballCenterX, ballCenterY)
 
-      highlightWLBadPixelList(badPixelListShifted, normalGraphics)
-      highlightWLBadPixelList(badPixelListShifted, brightGraphics)
-      highlightWLBadPixelList(badPixelListShifted, blackGraphics)
+      annotate.highlightWLBadPixelList(badPixelListShifted, normalGraphics)
+      annotate.highlightWLBadPixelList(badPixelListShifted, brightGraphics)
+      annotate.highlightWLBadPixelList(badPixelListShifted, blackGraphics)
 
       val bin = 6
       val bout = 6
-      drawBoxGraphics(normalPng, normalGraphics, edgesUnscaled.top, edgesUnscaled.bottom, edgesUnscaled.left, edgesUnscaled.right, Config.WLBoxColor, bin, bout)
-      drawBoxGraphics(brightPng, brightGraphics, edgesUnscaled.top, edgesUnscaled.bottom, edgesUnscaled.left, edgesUnscaled.right, Config.WLBoxColor, bin, bout)
-      drawBoxGraphics(blackPng, blackGraphics, edgesUnscaled.top, edgesUnscaled.bottom, edgesUnscaled.left, edgesUnscaled.right, Config.WLBoxColor, bin, bout)
+      annotate.drawBoxGraphics(normalGraphics, edgesUnscaled.top, edgesUnscaled.bottom, edgesUnscaled.left, edgesUnscaled.right, Config.WLBoxColor, bin, bout)
+      annotate.drawBoxGraphics(brightGraphics, edgesUnscaled.top, edgesUnscaled.bottom, edgesUnscaled.left, edgesUnscaled.right, Config.WLBoxColor, bin, bout)
+      annotate.drawBoxGraphics(blackGraphics, edgesUnscaled.top, edgesUnscaled.bottom, edgesUnscaled.left, edgesUnscaled.right, Config.WLBoxColor, bin, bout)
 
       val boxShrink = 5
       val boxUnscaledCorrected = correctUnscaledEdges(edgesUnscaled)
       val buc = boxUnscaledCorrected
-      val inner = 24
-      drawBoxGraphics(normalPng, normalGraphics, buc.top + boxShrink, buc.bottom - boxShrink, buc.left + boxShrink, buc.right - boxShrink, Config.WLBoxColorCorrected, 0, -1)
-      drawBoxGraphics(brightPng, brightGraphics, buc.top + boxShrink, buc.bottom - boxShrink, buc.left + boxShrink, buc.right - boxShrink, Config.WLBoxColorCorrected, 0, -1)
-      drawBoxGraphics(blackPng, blackGraphics, buc.top + boxShrink, buc.bottom - boxShrink, buc.left + boxShrink, buc.right - boxShrink, Config.WLBoxColorCorrected, 0, -1)
+      // val inner = 24
+      annotate.drawBoxGraphics(normalGraphics, buc.top + boxShrink, buc.bottom - boxShrink, buc.left + boxShrink, buc.right - boxShrink, Config.WLBoxColorCorrected, 0, -1)
+      annotate.drawBoxGraphics(brightGraphics, buc.top + boxShrink, buc.bottom - boxShrink, buc.left + boxShrink, buc.right - boxShrink, Config.WLBoxColorCorrected, 0, -1)
+      annotate.drawBoxGraphics(blackGraphics, buc.top + boxShrink, buc.bottom - boxShrink, buc.left + boxShrink, buc.right - boxShrink, Config.WLBoxColorCorrected, 0, -1)
 
-      drawBoxBallOffset(normalGraphics, (ballCenterX, ballCenterY), ((buc.left + buc.right) / 2, (buc.top + buc.bottom) / 2))
-      drawBoxBallOffset(brightGraphics, (ballCenterX, ballCenterY), ((buc.left + buc.right) / 2, (buc.top + buc.bottom) / 2))
-      drawBoxBallOffset(blackGraphics, (ballCenterX, ballCenterY), ((buc.left + buc.right) / 2, (buc.top + buc.bottom) / 2))
+      annotate.drawBoxBallOffset(normalGraphics, (ballCenterX, ballCenterY), ((buc.left + buc.right) / 2, (buc.top + buc.bottom) / 2))
+      annotate.drawBoxBallOffset(brightGraphics, (ballCenterX, ballCenterY), ((buc.left + buc.right) / 2, (buc.top + buc.bottom) / 2))
+      annotate.drawBoxBallOffset(blackGraphics, (ballCenterX, ballCenterY), ((buc.left + buc.right) / 2, (buc.top + buc.bottom) / 2))
 
       val boxUnscaledCorrectedCenterX = (boxUnscaledCorrected.left + boxUnscaledCorrected.right) / 2
       val boxUnscaledCorrectedCenterY = (boxUnscaledCorrected.top + boxUnscaledCorrected.bottom) / 2
@@ -1155,11 +1021,11 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       val errorScaledXYCombined = Math.sqrt((errorScaledX * errorScaledX) + (errorScaledY * errorScaledY))
 
       val passed: ImageStatus.ImageStatus = {
-        val p = annotateImage(normalPng, normalGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, badPixelListShifted, background = true)
+        val p = annotateImage(normalPng, normalGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true)
         p
       }
-      annotateImage(brightPng, brightGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, badPixelListShifted, background = true)
-      annotateImage(blackPng, blackGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, badPixelListShifted, background = false)
+      annotateImage(brightPng, brightGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true)
+      annotateImage(blackPng, blackGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = false)
 
       val pixelData = constructPixelData(blackPng, areaOfInterest)
 
@@ -1176,33 +1042,34 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         edgesUnscaled.right * ResolutionX
       )
 
-      diag("\n\nScaled box dimensions in mm")
+      diagnosticMessage("\n\nScaled box dimensions in mm")
       diagnostics.write(edgesScaled.toString.getBytes)
 
-      diag("\n\n")
-      diag("ball center mm   X: " + fmt(ballCenterScaledX) + "    Y: " + fmt(ballCenterScaledY))
-      diag("box  center mm   X: " + fmt(boxCenterScaledX) + "    Y: " + fmt(boxCenterScaledY))
+      diagnosticMessage("\n\n")
+      diagnosticMessage("ball center mm   X: " + fmt(ballCenterScaledX) + "    Y: " + fmt(ballCenterScaledY))
+      diagnosticMessage("box  center mm   X: " + fmt(boxCenterScaledX) + "    Y: " + fmt(boxCenterScaledY))
 
-      diag("X Offset mm " + fmt(errorScaledX))
-      diag("Y Offset mm " + fmt(errorScaledY))
-      diag("R mm " + fmt(errorScaledXYCombined))
+      diagnosticMessage("X Offset mm " + fmt(errorScaledX))
+      diagnosticMessage("Y Offset mm " + fmt(errorScaledY))
+      diagnosticMessage("R mm " + fmt(errorScaledXYCombined))
 
       val imageResult = new WLImageResult(
         imageStatus = passed,
         boxP = boxPoint,
         ballP = ballPoint,
         boxEdgesP = edgesScaled,
-        directory = extendedData.output.dir,
+        directory = subDir,
         // extendedData,
-        attributeList = attributeList,
+        rtimage = attributeList,
         pixels = pixelData,
         badPixelList = badPixelList,
-        marginalPixelList = marginalPixelList
+        marginalPixelList = marginalPixelList,
+        extendedData = extendedData
       )
 
-      diag("Image processing Results:\n" + imageResult.toString)
+      diagnosticMessage("Image processing Results:\n" + imageResult.toString)
 
-      WLgenHtml.generateHtml(extendedData, imageResult)
+      WLgenHtml.generateHtml(extendedData, subDir, imageResult)
 
       imageResult
     }
@@ -1250,7 +1117,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       val rawDistinctSortedList = rawPixels.flatten.toList.distinct.sorted
 
       if (rawDistinctSortedList.size < Config.WLMinimumDistinctPixelValues) {
-        imageError(ImageStatus.BoxNotFound, "Image lacks visible features", List[WLBadPixel](), List[WLBadPixel]())
+        imageError(ImageStatus.BoxNotFound, "Image lacks visible features", List[WLBadPixel]())
       } else {
 
         /* Raw pixels with bad pixels set to average pixel value */
@@ -1278,11 +1145,11 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         // Shift the bad pixels so that they point to the proper place in the area of interest (AOI)
         val badPixelListShifted = badPixelList.map(b => new WLBadPixel(b.x - coarseX._1, b.y - coarseY._1, b.rawValue, b.correctedValue, b.adjacentValidValueList))
 
-        diag("\n\nbox coarse boundaries of area of interest    X: " + coarseX + "    Y: " + coarseY)
+        diagnosticMessage("\n\nbox coarse boundaries of area of interest    X: " + coarseX + "    Y: " + coarseY)
 
         // check to see if the target has been found reasonably far from any edge.  If not, fail.
         if (!coarseBoxLocationIsGood(coarseX, coarseY)) {
-          imageError(ImageStatus.BoxNotFound, "Could not locate box", badPixelList, marginalPixelList)
+          imageError(ImageStatus.BoxNotFound, "Could not locate box", marginalPixelList)
         } else {
           val areaOfInterest = subSection(pixels, coarseX._1, coarseX._2 - coarseX._1, coarseY._1, coarseY._2 - coarseY._1)
 
@@ -1301,19 +1168,19 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
               showBallBackgroundNoise(normalizeArea(ballArea), "normalized_ball_background")
 
               if (ballAreaIsFlat(areaOfInterest, edgesUnscaled)) {
-                imageError(ImageStatus.BallMissing, "No ball found.  Ball area is flat", badPixelList, marginalPixelList)
+                imageError(ImageStatus.BallMissing, "No ball found.  Ball area is flat", marginalPixelList)
               } else {
-                val fieldWidthUnscaled = edgesUnscaled.right - edgesUnscaled.left
-                findBallCenter(areaOfInterest, ballArea, fieldWidthUnscaled) match {
+                findBallCenter(areaOfInterest, ballArea) match {
                   case Some(ballRelativeCenter: (Double, Double)) =>
                     val brcX = ballRelativeCenter._1
                     val brcY = ballRelativeCenter._2
                     val ir = processLocation(areaOfInterest, edgesUnscaled, (brcX, brcY), ballArea, badPixelList, badPixelListShifted, marginalPixelList, rtimage)
+                    WLgenHtml.generateHtml(extendedData, subDir, imageResult = ir)
                     ir
-                  case None => imageError(ImageStatus.BallAreaNoisy, "Could not confidently locate ball.  Ball area is too noisy.", badPixelList, marginalPixelList)
+                  case None => imageError(ImageStatus.BallAreaNoisy, "Could not confidently locate ball.  Ball area is too noisy.", marginalPixelList)
                 }
               }
-            case Left(status) => imageError(status, "Edge extremities not found", badPixelList, marginalPixelList)
+            case Left(status) => imageError(status, "Edge extremities not found", marginalPixelList)
           }
         }
       }
@@ -1321,7 +1188,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       case e: Exception =>
         val msg = "ProcessImage.process Unexpected exception: " + fmtEx(e)
         logger.error(msg)
-        diag(msg)
+        diagnosticMessage(msg)
 
         val imageResult =
           new WLImageResult(
@@ -1329,18 +1196,19 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
             boxP = null,
             ballP = null,
             boxEdgesP = null,
-            directory = extendedData.output.dir,
+            directory = subDir,
             // val imageMetaData =   ,
-            attributeList = rtimage,
+            rtimage = rtimage,
             pixels = null,
             badPixelList = List(),
-            marginalPixelList = List()
+            marginalPixelList = List(),
+            extendedData = extendedData
           )
 
-        diag(imageResult.toString)
+        diagnosticMessage(imageResult.toString)
 
         try {
-          if (!new File(extendedData.output.dir, WLgenHtml.DIAGNOSTICS_HTML_FILE_NAME).exists) WLgenHtml.generateHtml(extendedData, imageResult)
+          if (!new File(subDir, WLgenHtml.DIAGNOSTICS_HTML_FILE_NAME).exists) WLgenHtml.generateHtml(extendedData, subDir, imageResult)
         } catch {
           case e: Exception => logger.error("ProcessImage.process tried to save results of failure: " + fmtEx(e))
         }
@@ -1357,6 +1225,19 @@ object WLProcessImage extends org.aqa.Logging {
   val DIAGNOSTICS_TEXT_FILE_NAME = "diagnostics.txt"
   val DIAGNOSTICS_HTML_FILE_NAME = "diagnostics.html"
 
+  class SearchRange(val lo: Double, val center: Double, val hi: Double) {}
+
+  /**
+    * Convert a list to a cubic spline
+    */
+  def toCubicSpline(data: Array[Float]): CubicSpline = new CubicSpline(data.indices.toArray.map(s => s.toDouble), data.map(f => f.toDouble))
+
+  def unitize(data: Array[Float]): Array[Float] = {
+    val min = data.min
+    val range = data.max - min
+    data.map(x => (x - min) / range)
+  }
+
   def angleRoundedTo22_5(angle: Double): Double = (((angle + 3600) / 22.5).round.toInt % 16) * 22.5 // convert to nearest multiple of 22.5 degrees
 
   def angleRounded(angle: Double): Double = {
@@ -1367,6 +1248,48 @@ object WLProcessImage extends org.aqa.Logging {
     (((angle + 3600) / fraction).round % parts) * fraction
   }
 
+  /**
+    * Make a list of the sum of each row.
+    */
+  def rowSum(pix: Array[Array[Float]]): Array[Float] = pix.map(row => row.sum)
+
+  /**
+    * Make a list of the sum of each column.
+    */
+  def colSum(pix: Array[Array[Float]]): Array[Float] = {
+    def oneColSum(c: Int) = pix.indices.map(y => pix(y)(c)).sum
+
+    pix(0).indices.map(c => oneColSum(c)).toArray
+  }
+
+  def toPngScaled(pix: Array[Array[Float]], imageScale: Int): BufferedImage = {
+    val height = pix.length
+    val width = pix(0).length
+    val min = pix.map(y => y.min).min
+    val range = pix.map(y => y.max).max - min
+    val imageColor = Config.WLImageColor.getRGB
+
+    val png = new BufferedImage(width * imageScale, height * imageScale, BufferedImage.TYPE_INT_RGB)
+
+    def doPixel(x: Int, y: Int): Unit = {
+      val rgb: Int = (((pix(y)(x) - min) / range) * 255).toInt
+      val boundedRgb = (if (rgb < 0) 0 else if (rgb > 255) 255 else rgb) * imageColor
+      val yb = y * imageScale
+      val xb = x * imageScale
+      val ye = yb + imageScale
+      val xe = xb + imageScale
+      for (yi <- yb until ye) for (xi <- xb until xe) png.setRGB(xi, yi, boundedRgb)
+    }
+
+    def doRow(y: Int): Unit = (0 until width).foreach(x => doPixel(x, y))
+
+    (0 until height).foreach(y => doRow(y))
+    png
+  }
+
+  def toPng(pix: Array[Array[Float]]): BufferedImage = toPngScaled(pix, SCALE)
+
+  // def indexes(length: Int): Array[Double] = (0 until length).toArray.map(x => x.toDouble)
   private def writeImage(img: BufferedImage, file: File): Unit = {
     logger.info("writing image file: " + file.getAbsolutePath + "   width: " + img.getWidth + "    height: " + img.getHeight)
     Util.writePng(img, file)
