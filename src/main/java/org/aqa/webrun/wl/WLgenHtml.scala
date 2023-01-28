@@ -25,6 +25,7 @@ object WLgenHtml {
   val RESULTS_DIRECTORY = "results"
   private val DICOM_SUFFIX = ".dcm"
   private val standardDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+  val ORIGINAL_FILE_NAME = "original" + IMAGE_FILE_SUFFIX
 
   // Format date in human friendly HTML way
   private def fmtDate(date: Date): String = {
@@ -106,7 +107,7 @@ object WLgenHtml {
       }
     }
 
-    val imageTitle = "Entire image" + (if (imageResult.badPixelList.isEmpty) "" else " with bad pixels corrected")
+    val imageTitle = "Entire image" + (if ((imageResult.badPixelList == null) || imageResult.badPixelList.isEmpty) "" else " with bad pixels corrected")
     val originalImage: String = vs + vs + imageTitle + "<br/>\n" + img("original") + "<p/>\n"
 
     val summaryWithEdges: String = {

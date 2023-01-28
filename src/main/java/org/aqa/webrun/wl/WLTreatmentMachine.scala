@@ -1,7 +1,7 @@
 package org.aqa.webrun.wl
 
 
-import edu.umro.ScalaUtil.Logging
+import org.aqa.Logging
 
 import scala.collection.mutable.ArrayBuffer
 import scala.xml.Node

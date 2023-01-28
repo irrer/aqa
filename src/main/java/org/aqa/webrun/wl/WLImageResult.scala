@@ -56,8 +56,8 @@ class WLImageResult(
     // val imageMetaData: ImageMetaData,
     val rtimage: AttributeList,
     val pixels: Array[Array[Float]],
-    val badPixelList: List[WLBadPixel],
-    val marginalPixelList: List[WLBadPixel],
+    val badPixelList: Seq[WLBadPixel],
+    val marginalPixelList: Seq[WLBadPixel],
     val extendedData: ExtendedData
 ) {
   val ok: Boolean = !((boxP == null) || (ballP == null))
@@ -76,14 +76,38 @@ class WLImageResult(
     elapsed_ms
   }
 
-  val gantryRounded_deg = Util.angleRoundedTo90(Util.gantryAngle(rtimage))
-  val collimatorRounded_deg = Util.angleRoundedTo90(Util.collimatorAngle(rtimage))
+  val contentTime = DicomUtil.getTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get
+
+  val gantry_deg = Util.gantryAngle(rtimage)
+  val collimator_deg = Util.collimatorAngle(rtimage)
+  def angleRoundedTo22_5(angle: Double): Double = (((angle + 3600) / 22.5).round.toInt % 16) * 22.5 // convert to nearest multiple of 22.5 degrees
+
+  val gantryRounded_deg = Util.angleRoundedTo90(gantry_deg)
+  val collimatorRounded_deg = angleRoundedTo22_5(collimator_deg)
 
   val gantryRounded_txt = "G" + gantryRounded_deg.formatted(("%03d"))
-  val collimatorRounded_txt = "C" + collimatorRounded_deg.formatted(("%03d"))
+  val collimatorRounded_txt = "C" + {
+    if (collimatorRounded_deg.toInt == collimatorRounded_deg)
+      collimatorRounded_deg.toInt.formatted("%03d")
+    else
+      collimatorRounded_deg.formatted("%5.1f")
+  }
   val elapsedTime_txt = new SimpleDateFormat("MM:ss").format(new Date(elapsedTime_ms))
 
   val imageName: String = gantryRounded_txt + collimatorRounded_txt + elapsedTime_txt
+
+  def subDirName: String = {
+    val min = elapsedTime_ms / (60 * 1000)
+    val sec = (elapsedTime_ms / 1000) % 60
+    val name = min.formatted("%d") + "_" + sec.formatted("%02d") + "__" + gantryRounded_txt + "__" + collimatorRounded_txt
+    name
+  }
+
+  def subDir: File = {
+    val dir = new File(extendedData.output.dir, subDirName)
+    dir.mkdirs()
+    dir
+  }
 
   def attr(tag: AttributeTag): String = rtimage.get(tag).getSingleStringValueOrNull
 
@@ -91,7 +115,7 @@ class WLImageResult(
 
   override def toString: String = {
 
-    def badPixelListToString(list: List[WLBadPixel], name: String): String = {
+    def badPixelListToString(list: Seq[WLBadPixel], name: String): String = {
       if (list == null)
         "NA"
       else

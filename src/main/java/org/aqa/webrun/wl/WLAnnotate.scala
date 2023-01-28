@@ -6,6 +6,7 @@ import org.aqa.webrun.wl.WLProcessImage._
 import java.awt.Graphics2D
 import java.awt.image.BufferedImage
 import java.awt.Color
+import java.awt.RenderingHints
 
 class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
 
@@ -52,7 +53,7 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
     }
   }
 
-  def highlightWLBadPixelList(badPixelList: List[WLBadPixel], graphics: Graphics2D): Unit = {
+  def highlightWLBadPixelList(badPixelList: Seq[WLBadPixel], graphics: Graphics2D): Unit = {
     val circleRadius = Config.WLBadPixelCorrectionRadius
     graphics.setColor(Config.WLFailColor)
 
@@ -191,5 +192,68 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
       }
     }
   }
+
+
+
+  /**
+   * Annotate the image with words and numbers.
+   */
+  def annotateImage(
+                     png: BufferedImage,
+                     graphics: Graphics2D,
+                     errorScaledX: Double,
+                     errorScaledY: Double,
+                     errorScaledXYCombined: Double,
+                     background: Boolean,
+                     imageName: String
+                   ): ImageStatus.Value = {
+    def fmt(d: Double) = d.formatted("%6.2f").replaceAll(" ", "")
+
+    graphics.setColor(Config.WLTextColor)
+
+    val font = GraphicFont.getFont
+    graphics.setFont(font)
+    graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_GASP)
+
+    val spacer = "        "
+    val text1 = "Offset in mm:    X = " + fmt(errorScaledX) + spacer + " Y = " + fmt(errorScaledY) + spacer
+    val frc = GraphicFont.getFontRenderContext
+    val stringRectangle1 = font.getStringBounds(text1, frc)
+    val xPosn1 = (png.getWidth - stringRectangle1.getWidth) / 2
+    val yPosn1 = stringRectangle1.getHeight
+    graphics.drawString(text1, xPosn1.toInt, yPosn1.toInt)
+
+    val combinedXY = "R = " + fmt(errorScaledXYCombined)
+    val passed = if (errorScaledXYCombined <= Config.WLPassLimit) ImageStatus.Passed else ImageStatus.OffsetLimitExceeded
+    val statusText: String = {
+      if (passed == ImageStatus.Passed) "PASSED" else "FAILED"
+    }
+
+    val statusColor = if (passed == ImageStatus.Passed) Config.WLPassColor else Config.WLFailColor
+    graphics.setBackground(statusColor)
+    val text2 = combinedXY + spacer + statusText
+    val stringRectangle2 = font.getStringBounds(text2, frc)
+    val xPosn2 = (png.getWidth - font.getStringBounds(text2, frc).getWidth) / 2
+    val yPosn2 = stringRectangle1.getHeight + stringRectangle2.getHeight
+    val stringRectangleStatus = font.getStringBounds(statusText, frc)
+
+    val statusWidth = stringRectangleStatus.getWidth.toInt
+    val statusHeight = graphics.getFontMetrics.getMaxAscent
+    val statusX = (xPosn2 + stringRectangle2.getWidth - stringRectangleStatus.getWidth).toInt
+    val statusY = yPosn2 - stringRectangleStatus.getHeight + ((graphics.getFontMetrics.getHeight - graphics.getFontMetrics.getAscent) * 1.5 - 1)
+    if (background) graphics.clearRect(statusX, statusY.toInt, statusWidth, statusHeight)
+    graphics.drawString(text2, xPosn2.toInt, yPosn2.toInt)
+
+    val stringRectangle3 = font.getStringBounds(imageName, frc)
+    val xPosn3 = (png.getWidth - stringRectangle3.getWidth) / 2
+    val yPosn3 = png.getHeight - stringRectangle3.getHeight
+    graphics.drawString(imageName, xPosn3.toInt, yPosn3.toInt)
+
+    ImageStatus.Passed
+  }
+
+
+
+
 
 }

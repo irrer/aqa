@@ -14,14 +14,13 @@ import org.opensourcephysics.numerics.CubicSpline
 import java.awt.image.BufferedImage
 import java.awt.Color
 import java.awt.Graphics2D
-import java.awt.RenderingHints
 import java.io.File
 import java.io.PrintStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import scala.annotation.tailrec
 
-class WLBadPixel(val x: Int, val y: Int, val rawValue: Int, val correctedValue: Float, val adjacentValidValueList: List[Int]) {
+class WLBadPixel(val x: Int, val y: Int, val rawValue: Int, val correctedValue: Float, val adjacentValidValueList: Seq[Int]) {
   override def toString: String = {
     "   x: " + x + "   y: " + y + "   rawValue: " + rawValue + "   correctedValue: " + correctedValue +
       adjacentValidValueList.sorted.reverse.foldLeft("\n            Adjacent Valid Values and difference from raw:")((t, v) => t + "\n                " + v + "  :  " + Math.abs(v - rawValue))
@@ -157,7 +156,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
     /**
       * Make a list of bad pixels.
       */
-    def findWLBadPixels(rawPixels: Array[Array[Float]], pixelGapLimit: Int, rawDistinctSortedList: List[Float]): List[UncorrectedWLBadPixel] = {
+    def findWLBadPixels(rawPixels: Array[Array[Float]], pixelGapLimit: Int, rawDistinctSortedList: Seq[Float]): Seq[UncorrectedWLBadPixel] = {
       def getLimits: (Double, Double) = {
         def isGood(a: Double, b: Double): Boolean = scala.math.abs(a - b) <= pixelGapLimit
 
@@ -194,7 +193,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       badList.toList
     }
 
-    def uncorrectedWLBadPixelsToWLBadPixels(rawPixelData: Array[Array[Float]], badPixelList: List[UncorrectedWLBadPixel]): List[WLBadPixel] = {
+    def uncorrectedWLBadPixelsToWLBadPixels(rawPixelData: Array[Array[Float]], badPixelList: Seq[UncorrectedWLBadPixel]): Seq[WLBadPixel] = {
       // A pixel is good if its coordinates are valid and it is not on the bad pixel list
       val height = rawPixelData.length
       val width = rawPixelData(0).length
@@ -221,7 +220,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
     }
 
     @tailrec
-    def correctWLBadPixels(rawPixels: Array[Array[Float]], badPixelList: List[WLBadPixel]): Array[Array[Float]] = {
+    def correctWLBadPixels(rawPixels: Array[Array[Float]], badPixelList: Seq[WLBadPixel]): Array[Array[Float]] = {
       if (badPixelList.isEmpty)
         rawPixels
       else {
@@ -710,7 +709,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       }
 
       val status: ImageStatus.Value = {
-        val list = List(eTop, eBottom, eLeft, eRight).map(edgeStatus).distinct.filterNot(_ == ImageStatus.Passed)
+        val list = Seq(eTop, eBottom, eLeft, eRight).map(edgeStatus).distinct.filterNot(_ == ImageStatus.Passed)
         if (list.isEmpty) ImageStatus.Passed else list.head
       }
 
@@ -729,7 +728,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
     }
 
     /*
-    def highlightWLBadPixelList(badPixelList: List[WLBadPixel], graphics: Graphics2D) = {
+    def highlightWLBadPixelList(badPixelList: Seq[WLBadPixel], graphics: Graphics2D) = {
       val circleRadius = Config.WLBadPixelCorrectionRadius
       graphics.setColor(Config.WLFailColor)
 
@@ -752,62 +751,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       badPixelList.map(b => highlightWLBadPixel(b))
     }
      */
-
-    /**
-      * Annotate the image with words and numbers.
-      */
-    def annotateImage(
-        png: BufferedImage,
-        graphics: Graphics2D,
-        errorScaledX: Double,
-        errorScaledY: Double,
-        errorScaledXYCombined: Double,
-        background: Boolean
-    ): ImageStatus.Value = {
-      def fmt(d: Double) = d.formatted("%6.2f").replaceAll(" ", "")
-
-      graphics.setColor(Config.WLTextColor)
-
-      val font = GraphicFont.getFont
-      graphics.setFont(font)
-      graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_GASP)
-
-      val spacer = "        "
-      val text1 = "Offset in mm:    X = " + fmt(errorScaledX) + spacer + " Y = " + fmt(errorScaledY) + spacer
-      val frc = GraphicFont.getFontRenderContext
-      val stringRectangle1 = font.getStringBounds(text1, frc)
-      val xPosn1 = (png.getWidth - stringRectangle1.getWidth) / 2
-      val yPosn1 = stringRectangle1.getHeight
-      graphics.drawString(text1, xPosn1.toInt, yPosn1.toInt)
-
-      val combinedXY = "R = " + fmt(errorScaledXYCombined)
-      val passed = if (errorScaledXYCombined <= Config.WLPassLimit) ImageStatus.Passed else ImageStatus.OffsetLimitExceeded
-      val statusText: String = {
-        if (passed == ImageStatus.Passed) "PASSED" else "FAILED"
-      }
-
-      val statusColor = if (passed == ImageStatus.Passed) Config.WLPassColor else Config.WLFailColor
-      graphics.setBackground(statusColor)
-      val text2 = combinedXY + spacer + statusText
-      val stringRectangle2 = font.getStringBounds(text2, frc)
-      val xPosn2 = (png.getWidth - font.getStringBounds(text2, frc).getWidth) / 2
-      val yPosn2 = stringRectangle1.getHeight + stringRectangle2.getHeight
-      val stringRectangleStatus = font.getStringBounds(statusText, frc)
-
-      val statusWidth = stringRectangleStatus.getWidth.toInt
-      val statusHeight = graphics.getFontMetrics.getMaxAscent
-      val statusX = (xPosn2 + stringRectangle2.getWidth - stringRectangleStatus.getWidth).toInt
-      val statusY = yPosn2 - stringRectangleStatus.getHeight + ((graphics.getFontMetrics.getHeight - graphics.getFontMetrics.getAscent) * 1.5 - 1)
-      if (background) graphics.clearRect(statusX, statusY.toInt, statusWidth, statusHeight)
-      graphics.drawString(text2, xPosn2.toInt, yPosn2.toInt)
-
-      val stringRectangle3 = font.getStringBounds(imageName, frc)
-      val xPosn3 = (png.getWidth - stringRectangle3.getWidth) / 2
-      val yPosn3 = png.getHeight - stringRectangle3.getHeight
-      graphics.drawString(imageName, xPosn3.toInt, yPosn3.toInt)
-
-      ImageStatus.Passed
-    }
 
     /**
       * Construct the pixel data destined to be put in the DICOM image with graphics and annotations.  This is done by
@@ -920,7 +863,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
     /**
       * Indicate that something is wrong with the image.
       */
-    def imageError(status: ImageStatus.Value, msg: String, marginalPixelList: List[WLBadPixel]): WLImageResult = {
+    def imageError(status: ImageStatus.Value, msg: String, marginalPixelList: Seq[WLBadPixel]): WLImageResult = {
       val fullMsg = "Image " + imageName + "  " + msg
       logger.error(fullMsg)
       diagnosticMessage(fullMsg)
@@ -947,9 +890,9 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         edgesUnscaled: Edges,
         ballRelativeCenter: (Double, Double),
         ballArea: Array[Array[Float]],
-        badPixelList: List[WLBadPixel],
-        badPixelListShifted: List[WLBadPixel],
-        marginalPixelList: List[WLBadPixel],
+        badPixelList: Seq[WLBadPixel],
+        badPixelListShifted: Seq[WLBadPixel],
+        marginalPixelList: Seq[WLBadPixel],
         attributeList: AttributeList
     ): WLImageResult = {
 
@@ -1009,11 +952,11 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       val errorScaledXYCombined = Math.sqrt((errorScaledX * errorScaledX) + (errorScaledY * errorScaledY))
 
       val passed: ImageStatus.ImageStatus = {
-        val p = annotateImage(normalPng, normalGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true)
+        val p = annotate.annotateImage(normalPng, normalGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true, imageName)
         p
       }
-      annotateImage(brightPng, brightGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true)
-      annotateImage(blackPng, blackGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = false)
+      annotate.annotateImage(brightPng, brightGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true, imageName)
+      annotate.annotateImage(blackPng, blackGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = false, imageName)
 
       val pixelData = constructPixelData(blackPng, areaOfInterest)
 
@@ -1062,11 +1005,11 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       imageResult
     }
 
-    def saveWLBadPixelImage(pixels: Array[Array[Float]], badPixelList: List[WLBadPixel], marginalPixelList: List[WLBadPixel]): Unit = {
+    def saveWLBadPixelImage(pixels: Array[Array[Float]], badPixelList: Seq[WLBadPixel], marginalPixelList: Seq[WLBadPixel]): Unit = {
       val png = toPngScaled(pixels, 1)
       val graphics = png.getGraphics
 
-      def drawWLBadPixelList(list: List[WLBadPixel], color: Color): Unit = {
+      def drawWLBadPixelList(list: Seq[WLBadPixel], color: Color): Unit = {
         graphics.setColor(color)
 
         // Put a single dot on the pixel
@@ -1083,7 +1026,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       writeImageLater(png, BAD_PIXEL_FILE_NAME)
     }
 
-    def badPixelIsNotOnList(badPixel: WLBadPixel, list: List[WLBadPixel]): Boolean = {
+    def badPixelIsNotOnList(badPixel: WLBadPixel, list: Seq[WLBadPixel]): Boolean = {
       !list.exists(b => (b.x == badPixel.x) && (b.y == badPixel.y))
     }
 
@@ -1102,11 +1045,11 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       writeDicomAsBinaryDicom(rtimage)
       writeDicomAsText(rtimage)
 
-      // List of raw distinct pixel values sorted by value
+      // Seq of raw distinct pixel values sorted by value
       val rawDistinctSortedList = rawPixels.flatten.toList.distinct.sorted
 
       if (rawDistinctSortedList.size < Config.WLMinimumDistinctPixelValues) {
-        imageError(ImageStatus.BoxNotFound, "Image lacks visible features", List[WLBadPixel]())
+        imageError(ImageStatus.BoxNotFound, "Image lacks visible features", Seq[WLBadPixel]())
       } else {
 
         /* Raw pixels with bad pixels set to average pixel value */
@@ -1186,11 +1129,10 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
             ballP = null,
             boxEdgesP = null,
             directory = subDir,
-            // val imageMetaData =   ,
             rtimage = rtimage,
             pixels = null,
-            badPixelList = List(),
-            marginalPixelList = List(),
+            badPixelList = Seq(),
+            marginalPixelList = Seq(),
             extendedData = extendedData
           )
 

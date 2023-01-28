@@ -827,7 +827,8 @@ Note that when building a package for release, the Maven build process uses the 
     -->
     <WLBadPixelGapLimit>1000</WLBadPixelGapLimit>
 
-
+    <!-- Maximum allowable offset in mm for laser correction values. -->
+    <LaserCorrectionLimit>0.5</LaserCorrectionLimit>
 
     <!-- Treatment machine parameters.
 

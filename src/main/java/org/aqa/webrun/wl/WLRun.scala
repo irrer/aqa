@@ -4,7 +4,6 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.run.ProcedureStatus
@@ -39,11 +38,13 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
   private def getRtimageList(alList: Seq[AttributeList]) = alList.filter(al => Util.isRtimage(al)).sortBy(dateTime)
 
   override def run(extendedData: ExtendedData, runReq: WLRunReq, response: Response): ProcedureStatus.Value = {
-    val status = WLAnalyse(extendedData, runReq)
-    Trace.trace(runReq)
-    Trace.trace(status)
+    val resultList = runReq.epidList.map(rtimage => (new WLProcessImage(extendedData, rtimage)).process)
+    val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, resultList)
+    val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
+    Util.writeFile(file, mainHtmlText)
+    logger.info("Wrote main HTML file " + file.getAbsolutePath)
 
-    if (true) { // TODO replace
+    if (false) { // TODO replace
       val outDir = extendedData.output.dir
       val subDirList = Util.listDirFiles(outDir).filter(_.isDirectory)
       def d2ref(d: File) = <p><a href={d.getName + "/diagnostics.html"}>{d.getName}</a></p>
@@ -99,7 +100,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
     * Acquisition Date+Time.
     *
     * @param valueMap Not used.
-    * @param alList List of incoming DICOM files.
+    * @param alList Seq of incoming DICOM files.
     * @param xmlList Not used.
     * @return Earliest date+time if available.
     */
