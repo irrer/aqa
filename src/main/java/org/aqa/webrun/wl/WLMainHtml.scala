@@ -10,10 +10,12 @@ import java.awt.Color
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
+import scala.xml.Elem
+import scala.xml.XML
 
 object WLMainHtml extends Logging {
 
-  private def spaces(count: Int): String = (0 to (count / 2)).foldLeft(" ")((t, _) => t + "&nbsp; ")
+  private def spaces(count: Int): String = (0 to (count / 2)).foldLeft(" ")((t, _) => t + "&#160; ")
 
   private val fileDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss")
   private val standardDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
@@ -26,6 +28,10 @@ object WLMainHtml extends Logging {
     val format = new SimpleDateFormat("EEE dd MMM YYYY  h:mm aa")
     format.format(date)
   }
+
+  private def x2t(elem: Elem): String = Util.prettyPrint(elem)
+
+  private def t2t(text: String): String = x2t(XML.loadString(text))
 
   val HTML_PREFIX: String = {
     """
@@ -49,9 +55,9 @@ object WLMainHtml extends Logging {
               $(document).ready(function(){ $('#ex1').zoom(); });
               jQuery(document).ready(function() {jQuery('abbr.timeago').timeago();})
           </script>
-          <link rel='stylesheet' href='/static/WLQA.css'/>
       """
   }
+  // <link rel='stylesheet' href='/static/WLQA.css'/>
 
   def generateGroupHtml(extendedData: ExtendedData, resultList: Seq[WLImageResult]): String = {
     val jobDir = resultList.head.directory.getParentFile
@@ -99,59 +105,78 @@ object WLMainHtml extends Logging {
     // val readyForEvaluation = if (jobStatus(resultList) == JobStatus.ReadyForEvaluation) "*" else ""
 
     def irTextHtml(ir: WLImageResult): String = {
-      def fmt(value: Double): String = value.formatted("%6.2f").replaceAll(" ", "")
+      def fmtDbl(value: Double): String = value.formatted("%6.2f").trim
 
-      val diagnostics: String = {
-        if (canRead(WLgenHtml.DIAGNOSTICS_HTML_FILE_NAME, ir))
-          "<a href='" + relUrl(ir) + "/" + WLgenHtml.DIAGNOSTICS_HTML_FILE_NAME + "'>Diagnostics</a>\n"
-        else
-          "<a href='" + relUrl(ir) + "'>Generated Files</a>\n"
+      val diagnostics: Elem = {
+        val elem =
+          if (canRead(WLgenHtml.DIAGNOSTICS_HTML_FILE_NAME, ir))
+            <a href={relUrl(ir) + "/" + WLgenHtml.DIAGNOSTICS_HTML_FILE_NAME}>Diagnostics</a>
+          else {
+            <a href={relUrl(ir)}>Generated Files</a>
+          }
+        elem
       }
 
-      val badPixels: String = {
-        if ((ir.badPixelList == null) || ir.badPixelList.isEmpty) ""
+      val badPixels: Elem = {
+        if ((ir.badPixelList == null) || ir.badPixelList.isEmpty)
+          <span></span>
         else {
-          " &nbsp; &nbsp; &nbsp; Bad Pixels: " + ir.badPixelList.size
+          <span>{ir.badPixelList.size}</span>
         }
       }
 
-      val laserHtml = if (WLLaserCorrection.getCorrectionOfImage(laserCorrectionList, ir).isDefined) "<td/>" else ""
+      val laserIsDefined = WLLaserCorrection.getCorrectionOfImage(laserCorrectionList, ir).isDefined
+      val laserHtml: Option[Elem] = if (laserIsDefined) Some(<td/>) else None
 
       def getNameHtml(ir: WLImageResult): String = {
         ir.gantryRounded_txt + spaces(4) + ir.collimatorRounded_txt + spaces(4) + fmtTime(ir)
       }
 
-      def passedText(ir: WLImageResult) = {
+      def passedText(ir: WLImageResult): Elem = {
         if (ir.imageStatus == ImageStatus.Passed)
-          "<passed>&nbsp; PASSED &nbsp;</passed>"
-        else "<failed>&nbsp;" + ir.imageStatus + " &nbsp;</failed>"
+          <span style={"color:black; background:" + Config.WLPassColor}>&#160; PASSED &#160;</span>
+        else
+          <span style={"color:black; background:" + Config.WLFailColor}> {ir.imageStatus} </span>
       }
 
-      laserHtml +
-        "<td style='background: #eeeeee'><center>\n" +
-        "<h2 title='Gantry angle, collimator angle, and time since start'>" + getNameHtml(ir) + "</h2><p> </p>\n" +
-        "Offset in mm &nbsp; X = " + fmt(ir.offX) + " &nbsp; &nbsp; &nbsp; Y = " + fmt(ir.offY) + "<p> </p>\n" +
-        "R = " + fmt(ir.offXY) + " &nbsp; &nbsp; &nbsp; " + passedText(ir) + "<p> </p>\n" +
-        diagnostics +
-        badPixels +
-        "</center></td>\n"
+      val elem = {
+        <td style='background: #eeeeee'>
+          <center>
+            <h2 title='Gantry angle, collimator angle, and time since start'>{getNameHtml(ir)}</h2>
+            <p>
+            Offset in mm X = {fmtDbl(ir.offX)} Y = {fmtDbl(ir.offY)}
+            </p>
+            <p>
+              R = {fmtDbl(ir.offXY)}  {passedText(ir)}
+            </p>
+            <p>
+              {diagnostics}
+            </p>
+            <p>
+              {badPixels}
+            </p>
+          </center>
+        </td>
+      }
+
+      val text = Seq(laserHtml, Some(elem)).flatten.map(x2t).mkString("\n")
+      text
     }
 
     def toHtml(color: Color): String = {
       "#" + (color.getRGB & 0xffffff).formatted("%06x")
     }
 
-    def irThumbImageHtml(ir: WLImageResult): String = {
+    def irThumbImageHtml(ir: WLImageResult): Elem = {
       val color = if (ir.imageStatus == ImageStatus.Passed) toHtml(Config.WLPassColor) else toHtml(Config.WLFailColor)
-      "<td height='20' width='20' style='background:" + color + ";forground:#" + color + ";'> </td>\n"
+      <td height="20" width="20" style={s"background:$color;foreground:$color;"}> </td>
     }
 
-    def irThumbImageListHtml: String = {
-      "<table border='0' cellspacing='4'   cellpadding='0'><tr>\n" + {
-        resultList.map(ir => irThumbImageHtml(ir)).foldLeft("")((a, b) => a + b)
-      } + "\n" +
-        "</tr>\n" +
-        "</table>\n"
+    def irThumbImageListHtml: Elem = {
+      <table border="0" cellspacing="4"   cellpadding="0"><tr>
+        {resultList.map(irThumbImageHtml)}
+        </tr>
+      </table>
     }
 
     def irImageHtml(ir: WLImageResult): String = {
@@ -206,7 +231,7 @@ object WLMainHtml extends Logging {
 
       def row(name: String, value: Double, instruction: Instruction): String = {
         val instr = if (value >= 0) instruction.pos else instruction.neg
-        val corrStatus = if (value.abs < Config.WLLaserCorrectionLimit) "<passed>&nbsp;" + correction.passedText + "&nbsp;</passed>" else "<caution>&nbsp;" + correction.failedText + "&nbsp;</caution>"
+        val corrStatus = if (value.abs < Config.WLLaserCorrectionLimit) "<passed>&#160;" + correction.passedText + "&#160;</passed>" else "<caution>&#160;" + correction.failedText + "&#160;</caution>"
         "<tr><td>" + name + "</td><td>" + value.formatted("%6.2f mm").trim + "</td><td>" + instr + "</td><td>" + corrStatus + "</td></tr>\n"
       }
 
@@ -222,6 +247,7 @@ object WLMainHtml extends Logging {
         "</center>\n"
     }
 
+    /*
     def irCorrectionHtml(ir: WLImageResult): String = {
       "<td>" + {
         WLLaserCorrection.getCorrectionOfImage(laserCorrectionList, ir) match {
@@ -235,9 +261,10 @@ object WLMainHtml extends Logging {
       } +
         "</td>\n"
     }
+     */
 
     def csvLink(ir: WLImageResult): String = {
-      "<a title='Results as spreadsheet friendly CSV (comma separated values)' href='" + ir.directory.getParentFile.getParentFile.getName + CSV_FILE_SUFFIX + "'>Results</a>\n"
+      "<a title='Results as spreadsheet/CSV' href='" + ir.directory.getParentFile.getParentFile.getName + CSV_FILE_SUFFIX + "'>Results</a>\n"
     }
 
     def html(resultList: Seq[WLImageResult]): String = {
@@ -259,9 +286,9 @@ object WLMainHtml extends Logging {
       def jobStatusDescription(): String = {
         val statusTypeList = resultList.map(_.imageStatus).distinct
         if ((statusTypeList.size == 1) && statusTypeList.head.equals(ImageStatus.Passed)) {
-          "<passed> &nbsp; " + allImagesPassed().toString.toUpperCase + " &nbsp; </passed>"
+          "<passed> &#160; " + allImagesPassed().toString.toUpperCase + " &#160; </passed>"
         } else {
-          "<failed> &nbsp; " + allImagesPassed().toString + " &nbsp; </failed>"
+          "<failed> &#160; " + allImagesPassed().toString + " &#160; </failed>"
         }
       }
 
@@ -278,7 +305,7 @@ object WLMainHtml extends Logging {
           "Stereotactic RadioSurgery Winston-Lutz Test Quality Assurance Report<p> </p>\n" +
           "<table  border='0' cellspacing='4' cellpadding='0'>\n" +
           "<tr valign='center'>\n" +
-          "<td><h1>Machine " + machId + " &nbsp; </h1></td>\n" +
+          "<td><h1>Machine " + machId + " &#160; </h1></td>\n" +
           "<td><h1>" + jobStatusDescription() + "</h1></td>\n" +
           "</tr>\n" +
           "</table>\n"
@@ -314,7 +341,7 @@ object WLMainHtml extends Logging {
 
       val offsets: String = {
         "<table border='0'   cellspacing='4' cellpadding='0'>\n" +
-          "<tr><td>Tongue &amp; Groove Offsets &nbsp; dX = 0.0 &nbsp; &nbsp; &nbsp; dY = 0.0 " +
+          "<tr><td>Tongue &amp; Groove Offsets &#160; dX = 0.0 &#160; &#160; &#160; dY = 0.0 " +
           "</td></tr>\n" +
           "<tr><td>" +
           "Radial Offset Tolerance, Rtol = " + Config.WLPassLimit + " mm\n" +
@@ -367,7 +394,7 @@ object WLMainHtml extends Logging {
           "<td>" + spaces(SP) + "</td>\n" +
           "<td>" + resultList.size + " images</td>\n" +
           "<td>" + spaces(SP) + "</td>\n" +
-          "<td>" + irThumbImageListHtml + "</td>\n" +
+          "<td>" + x2t(irThumbImageListHtml) + "</td>\n" +
           "</tr>\n" +
           "</table>\n"
       }
