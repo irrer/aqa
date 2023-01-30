@@ -86,7 +86,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
     def fmt(d: Double): String = d.formatted("%10.5f")
 
     val elapsedTime_ms = {
-      val ms = DicomUtil.getTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get.getTime
+      val ms = Util.dicomGetTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get.getTime
       val elapsed_ms = ms - extendedData.output.dataDate.get.getTime
       elapsed_ms
     }
@@ -121,7 +121,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         "G" + Util.angleRoundedTo90(Util.gantryAngle(rtimage)).formatted("%03d") +
           "C" + Util.angleRoundedTo90(Util.collimatorAngle(rtimage)).formatted("%03d") + " " + {
           val fmt = new SimpleDateFormat("MM:ss")
-          val ms = DicomUtil.getTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get.getTime
+          val ms = Util.dicomGetTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get.getTime
           val elapsed_ms = ms - extendedData.output.dataDate.get.getTime
           fmt.format(new Date(elapsed_ms))
         } +

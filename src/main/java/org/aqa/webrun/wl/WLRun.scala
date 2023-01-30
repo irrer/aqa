@@ -3,7 +3,6 @@ package org.aqa.webrun.wl
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
-import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.run.ProcedureStatus
@@ -29,8 +28,8 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
 
   private def dateTime(al: AttributeList) = {
     val dt = Seq(
-      DicomUtil.getTimeAndDate(al, TagByName.ContentDate, TagByName.ContentTime),
-      DicomUtil.getTimeAndDate(al, TagByName.AcquisitionDate, TagByName.AcquisitionTime)
+      Util.dicomGetTimeAndDate(al, TagByName.ContentDate, TagByName.ContentTime),
+      Util.dicomGetTimeAndDate(al, TagByName.AcquisitionDate, TagByName.AcquisitionTime)
     ).flatten.head
     dt.getTime
   }
@@ -38,27 +37,17 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
   private def getRtimageList(alList: Seq[AttributeList]) = alList.filter(al => Util.isRtimage(al)).sortBy(dateTime)
 
   override def run(extendedData: ExtendedData, runReq: WLRunReq, response: Response): ProcedureStatus.Value = {
-    val resultList = runReq.epidList.map(rtimage => (new WLProcessImage(extendedData, rtimage)).process)
+    val resultList = runReq.epidList.par.map(rtimage => new WLProcessImage(extendedData, rtimage).process).toList
     val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, resultList)
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(file, mainHtmlText)
     logger.info("Wrote main HTML file " + file.getAbsolutePath)
 
-    if (false) { // TODO replace
-      val outDir = extendedData.output.dir
-      val subDirList = Util.listDirFiles(outDir).filter(_.isDirectory)
-      def d2ref(d: File) = <p><a href={d.getName + "/diagnostics.html"}>{d.getName}</a></p>
-      val file = new File(outDir, Output.displayFilePrefix + ".html")
-      val content = {
-        <div>
-            {subDirList.map(d2ref)}
-          </div>
-      }
-      val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), "Winston Lutz")
-      Util.writeFile(file, text)
-      ProcedureStatus.done // TODO put real status here
-    } else
-      ProcedureStatus.done // TODO put real status here
+    val statusList = resultList.map(_.imageStatus).distinct
+    if (statusList.contains(ImageStatus.Passed) && statusList.size == 1)
+      ProcedureStatus.pass
+    else
+      ProcedureStatus.fail
   }
 
   override def validate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Either[StyleMapT, RunReqClass] = {

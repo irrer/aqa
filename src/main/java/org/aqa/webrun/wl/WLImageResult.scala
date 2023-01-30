@@ -9,7 +9,6 @@ import org.aqa.webrun.wl
 import org.aqa.webrun.ExtendedData
 
 import java.io.File
-import java.text.SimpleDateFormat
 import java.util.Date
 
 class Point(val x: Double, val y: Double) {
@@ -22,15 +21,15 @@ class Point(val x: Double, val y: Double) {
 /** Describe the edges of a box. */
 class Edges(val top: Double, val bottom: Double, val left: Double, val right: Double) {
   override def toString: String = {
-    def prnt(name: String, value: Double) = "    " + name + value.formatted("%7.4f\n")
+    def prt(name: String, value: Double) = "    " + name + value.formatted("%7.4f\n")
 
-    prnt("Edge top     : ", top) +
-      prnt("Edge bottom  : ", bottom) +
-      prnt("Edge left    : ", left) +
-      prnt("Edge right   : ", right) +
-      prnt("Width        : ", right - left) +
-      prnt("Height       : ", bottom - top) +
-      prnt("Aspect Ratio : ", (right - left) / (bottom - top))
+    prt("Edge top     : ", top) +
+      prt("Edge bottom  : ", bottom) +
+      prt("Edge left    : ", left) +
+      prt("Edge right   : ", right) +
+      prt("Width        : ", right - left) +
+      prt("Height       : ", bottom - top) +
+      prt("Aspect Ratio : ", (right - left) / (bottom - top))
   }
 }
 
@@ -70,29 +69,33 @@ class WLImageResult(
   val ball: Point = if (ballP == null) new Point(-1, -1) else ballP
   val boxEdges: Edges = if (boxEdgesP == null) new Edges(-1, -1, -1, -1) else boxEdgesP
 
-  val elapsedTime_ms = {
-    val ms = DicomUtil.getTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get.getTime
+  val elapsedTime_ms: Long = {
+    val ms =  Util.standardDateFormat.synchronized( Util.dicomGetTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get.getTime)
     val elapsed_ms = ms - extendedData.output.dataDate.get.getTime
     elapsed_ms
   }
 
-  val contentTime = DicomUtil.getTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get
+  val contentTime: Date = Util.dicomGetTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get
 
-  val gantry_deg = Util.gantryAngle(rtimage)
-  val collimator_deg = Util.collimatorAngle(rtimage)
-  def angleRoundedTo22_5(angle: Double): Double = (((angle + 3600) / 22.5).round.toInt % 16) * 22.5 // convert to nearest multiple of 22.5 degrees
+  private val gantry_deg: Double = Util.gantryAngle(rtimage)
+  private val collimator_deg: Double = Util.collimatorAngle(rtimage)
+  private def angleRoundedTo22_5(angle: Double): Double = (((angle + 3600) / 22.5).round.toInt % 16) * 22.5 // convert to nearest multiple of 22.5 degrees
 
-  val gantryRounded_deg = Util.angleRoundedTo90(gantry_deg)
-  val collimatorRounded_deg = angleRoundedTo22_5(collimator_deg)
+  val gantryRounded_deg: Int = Util.angleRoundedTo90(gantry_deg)
+  val collimatorRounded_deg: Double = angleRoundedTo22_5(collimator_deg)
 
-  val gantryRounded_txt = "G" + gantryRounded_deg.formatted(("%03d"))
-  val collimatorRounded_txt = "C" + {
+  val gantryRounded_txt: String = "G" + gantryRounded_deg.formatted("%03d")
+  val collimatorRounded_txt: String = "C" + {
     if (collimatorRounded_deg.toInt == collimatorRounded_deg)
       collimatorRounded_deg.toInt.formatted("%03d")
     else
       collimatorRounded_deg.formatted("%5.1f")
   }
-  val elapsedTime_txt = new SimpleDateFormat("MM:ss").format(new Date(elapsedTime_ms))
+
+  val elapsedTime_txt: String = {
+    val totalSeconds = elapsedTime_ms / 1000
+    (totalSeconds / 60) + ":" + (totalSeconds % 60).formatted("%02d")
+  }
 
   val imageName: String = gantryRounded_txt + collimatorRounded_txt + elapsedTime_txt
 
@@ -109,7 +112,9 @@ class WLImageResult(
     dir
   }
 
-  def attr(tag: AttributeTag): String = rtimage.get(tag).getSingleStringValueOrNull
+  def attr(tag: AttributeTag): String = {
+    DicomUtil.findAllSingle(rtimage, tag).map(_.getSingleStringValueOrEmptyString()).head
+  }
 
   val gantryAngle: Int = Util.angleRoundedTo90(Util.gantryAngle(rtimage)) //attrFloat(TagByName.GantryAngle)
 

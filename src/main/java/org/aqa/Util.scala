@@ -91,6 +91,10 @@ object Util extends Logging {
   def formatDate(format: SimpleDateFormat, date: Date): String = standardDateFormat.synchronized(format.format(date))
   def parseDate(format: SimpleDateFormat, text: String): Date = standardDateFormat.synchronized(format.parse(text))
 
+  def dicomGetTimeAndDate(al: AttributeList, dateTag: AttributeTag, timeTag: AttributeTag): Option[Date] = {
+    standardDateFormat.synchronized(DicomUtil.getTimeAndDate(al, dateTag, timeTag))
+  }
+
   def dateTimeToDate(date: Date): Date = {
     val stdText = Util.formatDate(Util.standardDateFormat, date)
     val day = Util.parseDate(Util.standardDateFormat, stdText.replaceAll("T.*", "T00:00:00"))
