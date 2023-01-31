@@ -785,6 +785,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       * position and of the size that is expected.  If so, return true.  If not, log
       * a diagnostic message and return false.
       */
+    /*
     def coarseBoxLocationIsGood(coarseX: (Int, Int), coarseY: (Int, Int)): Boolean = {
       val boxPositionVariance = Config.WLBoxPositionFactor * Config.WLBoxSize
 
@@ -794,21 +795,28 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       val xCenterImage = (SizeX / 2.0) * ResolutionX
       val yCenterImage = (SizeY / 2.0) * ResolutionY
 
+      // val boxSmallestAllowed = (1 - (Config.BoxSizePercent * 0.01)) * Config.BoxSize
+      // val boxLargestAllowed = (1 + (Config.BoxSizePercent * 0.01)) * Config.BoxSize
+
+      // val width = (coarseX._2 - coarseX._1) * ResolutionX
+      // val height = (coarseY._2 - coarseY._1) * ResolutionY
+
       val ok: Boolean = 0 match {
         case _ if (xCenterImage - xCenterBox) > boxPositionVariance => diagnosticMessage("Box located too far to left"); false
         case _ if (yCenterImage - yCenterBox) > boxPositionVariance => diagnosticMessage("Box located too far to top"); false
         case _ if (xCenterBox - xCenterImage) > boxPositionVariance => diagnosticMessage("Box located too far to right"); false
         case _ if (yCenterBox - yCenterImage) > boxPositionVariance => diagnosticMessage("Box located too far to bottom"); false
 
-        // case _ if width < boxSmallestAllowed  => diagnosticMessage("Box is too narrow"); false TODO put back
-        // case _ if width > boxLargestAllowed   => diagnosticMessage("Box is too wide"); false TODO put back
-        // case _ if height < boxSmallestAllowed => diagnosticMessage("Box is too short"); false TODO put back
-        // case _ if height > boxLargestAllowed  => diagnosticMessage("Box is too tall"); false TODO put back
+        // case _ if width < boxSmallestAllowed  => diagnosticMessage("Box is too narrow"); false
+        // case _ if width > boxLargestAllowed   => diagnosticMessage("Box is too wide"); false
+        // case _ if height < boxSmallestAllowed => diagnosticMessage("Box is too short"); false
+        // case _ if height > boxLargestAllowed  => diagnosticMessage("Box is too tall"); false
 
         case _ => true
       }
       ok
     }
+     */
 
     /**
       * Determine whether the area inside the box is flat.  Do this by determine the ratio of the
@@ -1079,42 +1087,38 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
 
         diagnosticMessage("\n\nbox coarse boundaries of area of interest    X: " + coarseX + "    Y: " + coarseY)
 
-        // check to see if the target has been found reasonably far from any edge.  If not, fail.
-        if (!coarseBoxLocationIsGood(coarseX, coarseY)) {
-          imageError(ImageStatus.BoxNotFound, "Could not locate box", marginalPixelList)
-        } else {
-          val areaOfInterest = subSection(pixels, coarseX._1, coarseX._2 - coarseX._1, coarseY._1, coarseY._2 - coarseY._1)
+        val areaOfInterest = subSection(pixels, coarseX._1, coarseX._2 - coarseX._1, coarseY._1, coarseY._2 - coarseY._1)
 
-          fineBoxLocate(areaOfInterest, rawExtremeAveragesRange) match {
-            case Right(edgesUnscaled) =>
-              val ballArea = subSection(
-                areaOfInterest,
-                edgesUnscaled.left.toInt + tol,
-                (edgesUnscaled.right - edgesUnscaled.left).toInt - tol2,
-                edgesUnscaled.top.toInt + tol,
-                (edgesUnscaled.bottom - edgesUnscaled.top).toInt - tol2
-              )
-              showBallBackgroundNoise(ballArea, "ball_background")
-              writeImageLater(toPng(ballArea), "ball_before_normalization")
+        fineBoxLocate(areaOfInterest, rawExtremeAveragesRange) match {
+          case Right(edgesUnscaled) =>
+            val ballArea = subSection(
+              areaOfInterest,
+              edgesUnscaled.left.toInt + tol,
+              (edgesUnscaled.right - edgesUnscaled.left).toInt - tol2,
+              edgesUnscaled.top.toInt + tol,
+              (edgesUnscaled.bottom - edgesUnscaled.top).toInt - tol2
+            )
+            showBallBackgroundNoise(ballArea, "ball_background")
+            writeImageLater(toPng(ballArea), "ball_before_normalization")
 
-              showBallBackgroundNoise(normalizeArea(ballArea), "normalized_ball_background")
+            showBallBackgroundNoise(normalizeArea(ballArea), "normalized_ball_background")
 
-              if (ballAreaIsFlat(areaOfInterest, edgesUnscaled)) {
-                imageError(ImageStatus.BallMissing, "No ball found.  Ball area is flat", marginalPixelList)
-              } else {
-                findBallCenter(areaOfInterest, ballArea) match {
-                  case Some(ballRelativeCenter: (Double, Double)) =>
-                    val brcX = ballRelativeCenter._1
-                    val brcY = ballRelativeCenter._2
-                    val ir = processLocation(areaOfInterest, edgesUnscaled, (brcX, brcY), ballArea, badPixelList, badPixelListShifted, marginalPixelList, rtimage)
-                    WLgenHtml.generateHtml(extendedData, subDir, imageResult = ir)
-                    ir
-                  case None => imageError(ImageStatus.BallAreaNoisy, "Could not confidently locate ball.  Ball area is too noisy.", marginalPixelList)
-                }
+            if (ballAreaIsFlat(areaOfInterest, edgesUnscaled)) {
+              imageError(ImageStatus.BallMissing, "No ball found.  Ball area is flat", marginalPixelList)
+            } else {
+              findBallCenter(areaOfInterest, ballArea) match {
+                case Some(ballRelativeCenter: (Double, Double)) =>
+                  val brcX = ballRelativeCenter._1
+                  val brcY = ballRelativeCenter._2
+                  val ir = processLocation(areaOfInterest, edgesUnscaled, (brcX, brcY), ballArea, badPixelList, badPixelListShifted, marginalPixelList, rtimage)
+                  WLgenHtml.generateHtml(extendedData, subDir, imageResult = ir)
+                  ir
+                case None => imageError(ImageStatus.BallAreaNoisy, "Could not confidently locate ball.  Ball area is too noisy.", marginalPixelList)
               }
-            case Left(status) => imageError(status, "Edge extremities not found", marginalPixelList)
-          }
+            }
+          case Left(status) => imageError(status, "Edge extremities not found", marginalPixelList)
         }
+
       }
     } catch {
       case e: Exception =>
