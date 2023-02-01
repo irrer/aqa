@@ -100,7 +100,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
     val collimatorRounded_txt = "C" + collimatorRounded_deg.formatted("%03d")
     val elapsedTime_txt = new SimpleDateFormat("MM:ss").format(new Date(elapsedTime_ms))
 
-    val imageName: String = gantryRounded_txt + collimatorRounded_txt + elapsedTime_txt
+    val imageName: String = gantryRounded_txt + " " + collimatorRounded_txt + " " + elapsedTime_txt
 
     val subDir: File = {
       val min = elapsedTime_ms / (60 * 1000)
