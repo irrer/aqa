@@ -140,7 +140,7 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
   /**
     * Draw the lines that show where the box has been located.
     */
-  def drawBoxGraphics(graphics: Graphics2D, top: Double, bottom: Double, left: Double, right: Double, color: Color, outside: Double, inside: Double): Unit = {
+  def drawBoxGraphics(graphics: Graphics2D, top: Double, bottom: Double, left: Double, right: Double, color: Color,  inside: Double,outside: Double): Unit = {
     graphics.setColor(color)
     graphics.drawLine(coordinate(left), coordinate(top), coordinate(left), coordinate(bottom)) // vertical line left
     graphics.drawLine(coordinate(right), coordinate(top), coordinate(right), coordinate(bottom)) // vertical line right

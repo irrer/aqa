@@ -38,7 +38,9 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
   private def getRtimageList(alList: Seq[AttributeList]) = alList.filter(al => Util.isRtimage(al)).sortBy(dateTime)
 
   override def run(extendedData: ExtendedData, runReq: WLRunReq, response: Response): ProcedureStatus.Value = {
-    val resultList = runReq.epidList.par.map(rtimage => new WLProcessImage(extendedData, rtimage, runReq).process).toList
+    // Process in parallel for speed.  Afterwards, sort by data time.
+    val resultList = runReq.epidList.par.map(rtimage => new WLProcessImage(extendedData, rtimage, runReq).process).toList.sortBy(_.elapsedTime_ms)
+
     val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, resultList)
     resultList.map(_.toWinstonLutz).map(_.insert)
     logger.info(s"Inserted ${resultList.size} WinstonLutz rows into database.")
@@ -56,7 +58,6 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
   override def validate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Either[StyleMapT, RunReqClass] = {
 
     val epidList = getRtimageList(alList)
-    val rtplanList = alList.filter(al => Util.isRtplan(al))
 
     val epidSeriesList = epidList.map(Util.serInstOfAl).distinct
 

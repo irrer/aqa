@@ -58,9 +58,13 @@ case class WinstonLutz(
 
   def insertOrUpdate(): Int = Db.run(WinstonLutz.query.insertOrUpdate(this))
 
+  //noinspection ScalaWeakerAccess
   def boxCenterX: Double = (leftEdge_mm + rightEdge_mm) / 2
+  //noinspection ScalaWeakerAccess
   def boxCenterY: Double = (topEdge_mm + bottomEdge_mm) / 2
+  //noinspection ScalaWeakerAccess
   def errorX: Double = boxCenterX - ballX_mm
+  //noinspection ScalaWeakerAccess
   def errorY: Double = boxCenterY - ballY_mm
   def errorXY: Double = Math.sqrt((errorX * errorX) + (errorY * errorY))
 }
@@ -97,7 +101,8 @@ object WinstonLutz extends ProcedureOutput with Logging {
     def ballY_mm = column[Double]("ballY_mm")
 
     def * =
-      (winstonLutzPK.?,
+      (
+        winstonLutzPK.?,
         outputPK,
         rtimageUID,
         rtplanUID,

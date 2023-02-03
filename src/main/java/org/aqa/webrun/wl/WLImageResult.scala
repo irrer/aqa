@@ -3,6 +3,7 @@ package org.aqa.webrun.wl
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import edu.umro.DicomDict.TagByName
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Util
 import org.aqa.db.WinstonLutz
@@ -53,11 +54,15 @@ class WLImageResult(
     val imageStatus: ImageStatus.ImageStatus,
     boxP: Point,
     ballP: Point,
+    edgesUnscaled: Edges,
     boxEdgesP: Edges,
     val directory: File,
-    // val imageMetaData: ImageMetaData,
     val rtimage: AttributeList,
     val pixels: Array[Array[Float]],
+    coarseX: (Int, Int),
+    coarseY: (Int, Int),
+    brcX: Double,
+    brcY: Double,
     val badPixelList: Seq[WLBadPixel],
     val marginalPixelList: Seq[WLBadPixel],
     val extendedData: ExtendedData,
@@ -68,6 +73,7 @@ class WLImageResult(
   val offY: Double = if (ok) boxP.y - ballP.y else -1
   val offXY: Double = if (ok) Math.sqrt((offX * offX) + (offY * offY)) else -1
   val date = new Date
+  private val trans = new IsoImagePlaneTranslator(rtimage)
 
   val box: Point = if (boxP == null) new Point(-1, -1) else boxP
   val ball: Point = if (ballP == null) new Point(-1, -1) else ballP
@@ -106,7 +112,7 @@ class WLImageResult(
     (totalSeconds / 60) + ":" + (totalSeconds % 60).formatted("%02d")
   }
 
-  val imageName: String = gantryRounded_txt + collimatorRounded_txt + elapsedTime_txt
+  val imageName: String = gantryRounded_txt + " " + collimatorRounded_txt + " " + elapsedTime_txt
 
   def subDirName: String = {
     val min = elapsedTime_ms / (60 * 1000)
@@ -127,6 +133,26 @@ class WLImageResult(
 
   val gantryAngle: Int = Util.angleRoundedTo90(Util.gantryAngle(rtimage)) //attrFloat(TagByName.GantryAngle)
 
+  private val left_pix = edgesUnscaled.left + coarseX._1
+  private val right_pix = edgesUnscaled.right + coarseX._1
+  private val top_pix = edgesUnscaled.top + coarseY._1
+  private val bottom_pix = edgesUnscaled.bottom + coarseY._1
+
+  private val left_mm = trans.pix2IsoCoordX(left_pix)
+  private val right_mm = trans.pix2IsoCoordX(right_pix)
+  private val top_mm = trans.pix2IsoCoordY(top_pix)
+  private val bottom_mm = trans.pix2IsoCoordY(bottom_pix)
+
+  private val ballX_pix = brcX + coarseX._1
+  private val ballY_pix = brcY + coarseY._1
+  private val ballCenter_mm = trans.pix2Iso(ballX_pix, ballY_pix)
+  private val boxCenterX_pix = (right_pix + left_pix) / 2.0
+  private val boxCenterY_pix = (bottom_pix + top_pix) / 2.0
+  private val boxCenter_mm = trans.pix2Iso(boxCenterX_pix, boxCenterY_pix)
+  private val offsetX_mm = boxCenter_mm.getX - ballCenter_mm.getX
+  private val offsetY_mm = boxCenter_mm.getY - ballCenter_mm.getY
+  private val offset_mm = Math.sqrt((offsetX_mm * offsetX_mm) + (offsetY_mm * offsetY_mm))
+
   override def toString: String = {
 
     def badPixelListToString(list: Seq[WLBadPixel], name: String): String = {
@@ -142,13 +168,27 @@ class WLImageResult(
 
     "" +
       "    Directory: " + directory.getAbsolutePath + "\n" +
-      "    Status: " + imageStatus + "\n" +
+      s"    Status: $imageStatus\n" +
       "    Box Center: " + box + "\n" +
       "    Ball Center: " + ball + "\n" +
       "    Box Edges: " + boxEdges + "\n" +
       "    Offset: " + (if (ok) new Point(offX, offY).toString else "not available") + "\n" +
       "    sqrt(x*x + y*y): " + (if (ok) offXY.formatted("%8.5f") else "not available") + "\n" +
-      badPixelListToString(badPixelList, "bad") +
+      s"    Box  left      pix: $left_pix\n" +
+      s"    Box  right     pix: $right_pix\n" +
+      s"    Box  top       pix: $top_pix\n" +
+      s"    Box  bottom    pix: $bottom_pix\n" +
+      s"    Box center X,Y pix: $boxCenterX_pix, $boxCenterY_pix\n" +
+      s"    Ball X,Y       pix: $ballX_pix, $ballY_pix\n" +
+      s"    Box  left      iso mm: $left_mm\n" +
+      s"    Box  right     iso mm: $right_mm\n" +
+      s"    Box  top       iso mm: $top_mm\n" +
+      s"    Box  bottom    iso mm: $bottom_mm\n" +
+      s"    Ball X,Y       iso mm: ${ballCenter_mm.getX},${ballCenter_mm.getY}\n" +
+      s"    Box X,Y        iso mm: ${boxCenter_mm.getX}, ${boxCenter_mm.getY}\n" +
+      s"    offset X,Y     iso mm: $offsetX_mm, $offsetY_mm\n" +
+      s"    offset         iso mm: $offset_mm\n" +
+    badPixelListToString(badPixelList, "bad") +
       badPixelListToString(marginalPixelList, "marginal")
   }
 
@@ -174,12 +214,12 @@ class WLImageResult(
       gantryAngle_deg = gantry_deg,
       collimatorAngle_deg = collimator_deg,
       dataDate = new Timestamp(contentTime.getTime),
-      topEdge_mm = boxEdgesP.top,
-      bottomEdge_mm = boxEdgesP.bottom,
-      leftEdge_mm = boxEdgesP.left,
-      rightEdge_mm = boxEdgesP.right,
-      ballX_mm = ballP.x,
-      ballY_mm = ballP.y
+      topEdge_mm = top_mm,
+      bottomEdge_mm = bottom_mm,
+      leftEdge_mm = left_mm,
+      rightEdge_mm = right_mm,
+      ballX_mm = ballCenter_mm.getX,
+      ballY_mm = ballCenter_mm.getY
     )
     wl
   }
