@@ -27,6 +27,7 @@ import org.aqa.DicomFile
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Baseline
+import org.aqa.db.DicomSeries
 import org.aqa.db.Machine
 import org.aqa.db.MaintenanceRecord
 import org.aqa.db.Output
@@ -511,5 +512,37 @@ object Phase2Util extends Logging {
     * Other collimator angles such as 45 degrees may give unexpected results.
     */
   def isHorizontal(image: AttributeList): Boolean = (Util.angleRoundedTo90(image.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head) % 180) == 0
+
+  /**
+    * First try getting the RTPLAN from the uploaded DICOM, then from the database.  If both fail, then return None.
+    *
+    * @param rtplanUid SOP Instance UID of RTPLAN
+    * @param alList    List of DICOM files.
+    * @return RTPLAN or None.
+    */
+  def fetchRtplan(rtplanUid: String, alList: Seq[AttributeList]): Option[AttributeList] = {
+
+    def rtplanReferencedByUploadedRtimage(rtplanUid: String, alList: Seq[AttributeList]) = {
+      val rtplanList = alList.filter(Util.isRtplan)
+      rtplanList.find(al => Util.sopOfAl(al).equals(rtplanUid)) match {
+        case Some(al) => Some(al)
+        case _        => None
+      }
+    }
+
+    def rtplanInDb(rtplanUid: String): Option[AttributeList] = {
+      val rtplan = DicomSeries
+        .getBySopInstanceUID(rtplanUid)
+        .flatMap(_.attributeListList)
+        .filter(al => Util.sopOfAl(al).equals(rtplanUid))
+        .headOption
+      rtplan
+    }
+
+    rtplanReferencedByUploadedRtimage(rtplanUid, alList) match {
+      case Some(al) => Some(al)
+      case _        => rtplanInDb(rtplanUid)
+    }
+  }
 
 }

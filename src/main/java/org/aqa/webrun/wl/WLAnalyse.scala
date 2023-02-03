@@ -6,7 +6,7 @@ import org.aqa.webrun.ExtendedData
 case class WLAnalyse(extendedData: ExtendedData, runReq: WLRunReq) {
 
   def process(rtimage: AttributeList): WLImageResult = {
-    val processImage = new WLProcessImage(extendedData, rtimage)
+    val processImage = new WLProcessImage(extendedData, rtimage, runReq)
     val imageResult = processImage.process
     imageResult
   }

@@ -27,7 +27,7 @@ class WLBadPixel(val x: Int, val y: Int, val rawValue: Int, val correctedValue: 
   }
 }
 
-class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends org.aqa.Logging {
+class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq: WLRunReq) extends org.aqa.Logging {
 
   import org.aqa.webrun.wl.WLProcessImage.colSum
   import org.aqa.webrun.wl.WLProcessImage.rowSum
@@ -876,7 +876,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
       logger.error(fullMsg)
       diagnosticMessage(fullMsg)
       val imageResult =
-        new WLImageResult(status, boxP = null, ballP = null, boxEdgesP = null, directory = subDir, rtimage = rtimage, pixels = null, badPixelList = null, marginalPixelList, extendedData)
+        new WLImageResult(status, boxP = null, ballP = null, boxEdgesP = null, directory = subDir, rtimage = rtimage, pixels = null, badPixelList = null, marginalPixelList, extendedData, runReq)
       diagnosticMessage(imageResult.toString)
       WLgenHtml.generateHtml(extendedData, subDir, imageResult)
       imageResult
@@ -901,7 +901,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         badPixelList: Seq[WLBadPixel],
         badPixelListShifted: Seq[WLBadPixel],
         marginalPixelList: Seq[WLBadPixel],
-        attributeList: AttributeList
+        attributeList: AttributeList,
+        runReq: WLRunReq
     ): WLImageResult = {
 
       val ballCenterX = ballRelativeCenter._1
@@ -1003,7 +1004,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
         pixels = pixelData,
         badPixelList = badPixelList,
         marginalPixelList = marginalPixelList,
-        extendedData = extendedData
+        extendedData = extendedData,
+        runReq
       )
 
       diagnosticMessage("Image processing Results:\n" + imageResult.toString)
@@ -1079,8 +1081,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
 
         if (badPixelList.nonEmpty || marginalPixelList.nonEmpty) saveWLBadPixelImage(pixels, badPixelList, marginalPixelList)
 
-        val coarseY = coarseBoxLocate(rowSum(pixels))
         val coarseX = coarseBoxLocate(colSum(pixels))
+        val coarseY = coarseBoxLocate(rowSum(pixels))
 
         // Shift the bad pixels so that they point to the proper place in the area of interest (AOI)
         val badPixelListShifted = badPixelList.map(b => new WLBadPixel(b.x - coarseX._1, b.y - coarseY._1, b.rawValue, b.correctedValue, b.adjacentValidValueList))
@@ -1110,7 +1112,58 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
                 case Some(ballRelativeCenter: (Double, Double)) =>
                   val brcX = ballRelativeCenter._1
                   val brcY = ballRelativeCenter._2
-                  val ir = processLocation(areaOfInterest, edgesUnscaled, (brcX, brcY), ballArea, badPixelList, badPixelListShifted, marginalPixelList, rtimage)
+                  if (true) WLProcessImage.synchronized {
+                    Trace.trace()
+                    println("------------------------------")
+                    println(s"Image name: $imageName")
+                    val left_pix = edgesUnscaled.left + coarseX._1
+                    val right_pix = edgesUnscaled.right + coarseX._1
+                    val top_pix = edgesUnscaled.top + coarseY._1
+                    val bottom_pix = edgesUnscaled.bottom + coarseY._1
+
+                    println(s"Box  precise left   pix: $left_pix")
+                    println(s"Box  precise right  pix: $right_pix")
+
+                    println(s"Box  precise top    pix: $top_pix")
+                    println(s"Box  precise bottom pix: $bottom_pix")
+
+                    val ballX_pix = brcX + coarseX._1
+                    val ballY_pix = brcY + coarseY._1
+                    println(s"Ball precise X,Y    pix: $ballX_pix, $ballY_pix")
+
+                    // ------------------------------
+
+                    println(s"Box  precise left   mm: ${trans.pix2IsoCoordX(left_pix)}")
+                    println(s"Box  precise right  mm: ${trans.pix2IsoCoordX(right_pix)}")
+
+                    println(s"Box  precise top    mm: ${trans.pix2IsoCoordY(top_pix)}")
+                    println(s"Box  precise bottom mm: ${trans.pix2IsoCoordY(bottom_pix)}")
+
+                    val ballCenter_mm = trans.pix2Iso(ballX_pix, ballY_pix)
+                    println(s"Ball precise X,Y    mm: $ballCenter_mm")
+
+                    // ------------------------------
+
+                    val boxCenterX_pix = ((right_pix + left_pix) / 2.0)
+                    val boxCenterY_pix = ((bottom_pix + top_pix) / 2.0)
+
+                    val boxCenter_mm = trans.pix2Iso(boxCenterX_pix, boxCenterY_pix)
+
+                    println(s"Box center X,Y pix: $boxCenterX_pix, $boxCenterY_pix")
+                    println(s"Box precise X,Y    mm: $boxCenter_mm")
+
+                    val offsetX_mm = boxCenter_mm.getX - ballCenter_mm.getX
+                    val offsetY_mm = boxCenter_mm.getY - ballCenter_mm.getY
+
+                    println(s"offset X,Y mm: $offsetX_mm, $offsetY_mm")
+
+                    val offset_mm = Math.sqrt((offsetX_mm * offsetX_mm) + (offsetY_mm * offsetY_mm))
+
+                    println(s"offset mm: $offset_mm")
+                    println("------------------------------")
+                    Trace.trace()
+                  }
+                  val ir = processLocation(areaOfInterest, edgesUnscaled, (brcX, brcY), ballArea, badPixelList, badPixelListShifted, marginalPixelList, rtimage, runReq)
                   WLgenHtml.generateHtml(extendedData, subDir, imageResult = ir)
                   ir
                 case None => imageError(ImageStatus.BallAreaNoisy, "Could not confidently locate ball.  Ball area is too noisy.", marginalPixelList)
@@ -1137,7 +1190,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList) extends
             pixels = null,
             badPixelList = Seq(),
             marginalPixelList = Seq(),
-            extendedData = extendedData
+            extendedData = extendedData,
+            runReq
           )
 
         diagnosticMessage(imageResult.toString)

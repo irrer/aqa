@@ -5,10 +5,13 @@ import com.pixelmed.dicom.AttributeTag
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Util
+import org.aqa.db.WinstonLutz
 import org.aqa.webrun.wl
 import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.phase2.Phase2Util
 
 import java.io.File
+import java.sql.Timestamp
 import java.util.Date
 
 class Point(val x: Double, val y: Double) {
@@ -57,7 +60,8 @@ class WLImageResult(
     val pixels: Array[Array[Float]],
     val badPixelList: Seq[WLBadPixel],
     val marginalPixelList: Seq[WLBadPixel],
-    val extendedData: ExtendedData
+    val extendedData: ExtendedData,
+    val runReq: WLRunReq
 ) {
   val ok: Boolean = !((boxP == null) || (ballP == null))
   val offX: Double = if (ok) boxP.x - ballP.x else -1
@@ -69,13 +73,18 @@ class WLImageResult(
   val ball: Point = if (ballP == null) new Point(-1, -1) else ballP
   val boxEdges: Edges = if (boxEdgesP == null) new Edges(-1, -1, -1, -1) else boxEdgesP
 
+  val contentTime: Date = {
+    val content = Util.dicomGetTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime)
+    val acquisition = Util.dicomGetTimeAndDate(rtimage, TagByName.AcquisitionDate, TagByName.AcquisitionTime)
+    val list = Seq(content, acquisition).flatten
+    list.head
+  }
+
   val elapsedTime_ms: Long = {
-    val ms =  Util.standardDateFormat.synchronized( Util.dicomGetTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get.getTime)
+    val ms = contentTime.getTime
     val elapsed_ms = ms - extendedData.output.dataDate.get.getTime
     elapsed_ms
   }
-
-  val contentTime: Date = Util.dicomGetTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get
 
   private val gantry_deg: Double = Util.gantryAngle(rtimage)
   private val collimator_deg: Double = Util.collimatorAngle(rtimage)
@@ -141,5 +150,37 @@ class WLImageResult(
       "    sqrt(x*x + y*y): " + (if (ok) offXY.formatted("%8.5f") else "not available") + "\n" +
       badPixelListToString(badPixelList, "bad") +
       badPixelListToString(marginalPixelList, "marginal")
+  }
+
+  /**
+    * Construct a database object from these results.
+    * @return database row content
+    */
+  def toWinstonLutz: WinstonLutz = {
+
+    val beamName: Option[String] = {
+      if (runReq.rtplan.isDefined)
+        Phase2Util.getBeamNameOfRtimage(runReq.rtplan.get, rtimage)
+      else
+        None
+    }
+
+    val wl = WinstonLutz(
+      winstonLutzPK = None,
+      outputPK = extendedData.output.outputPK.get,
+      rtimageUID = Util.sopOfAl(rtimage),
+      rtplanUID = Phase2Util.referencedPlanUID(rtimage),
+      beamName = beamName,
+      gantryAngle_deg = gantry_deg,
+      collimatorAngle_deg = collimator_deg,
+      dataDate = new Timestamp(contentTime.getTime),
+      topEdge_mm = boxEdgesP.top,
+      bottomEdge_mm = boxEdgesP.bottom,
+      leftEdge_mm = boxEdgesP.left,
+      rightEdge_mm = boxEdgesP.right,
+      ballX_mm = ballP.x,
+      ballY_mm = ballP.y
+    )
+    wl
   }
 }

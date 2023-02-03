@@ -17,6 +17,7 @@ import org.aqa.run.RunProcedure
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil.emptyValueMap
 import org.aqa.web.WebUtil.getValueMap
+import org.aqa.webrun.phase2.Phase2Util
 import org.restlet.Request
 import org.restlet.Response
 
@@ -37,8 +38,10 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
   private def getRtimageList(alList: Seq[AttributeList]) = alList.filter(al => Util.isRtimage(al)).sortBy(dateTime)
 
   override def run(extendedData: ExtendedData, runReq: WLRunReq, response: Response): ProcedureStatus.Value = {
-    val resultList = runReq.epidList.par.map(rtimage => new WLProcessImage(extendedData, rtimage).process).toList
+    val resultList = runReq.epidList.par.map(rtimage => new WLProcessImage(extendedData, rtimage, runReq).process).toList
     val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, resultList)
+    resultList.map(_.toWinstonLutz).map(_.insert)
+    logger.info(s"Inserted ${resultList.size} WinstonLutz rows into database.")
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(file, mainHtmlText)
     logger.info("Wrote main HTML file " + file.getAbsolutePath)
@@ -53,6 +56,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
   override def validate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Either[StyleMapT, RunReqClass] = {
 
     val epidList = getRtimageList(alList)
+    val rtplanList = alList.filter(al => Util.isRtplan(al))
 
     val epidSeriesList = epidList.map(Util.serInstOfAl).distinct
 
@@ -63,19 +67,31 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
 
     val numSeries = epidList.map(epid => epid.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString).distinct.sorted.size
 
+    // first try getting the RTPLAN from the uploaded values, then from the database.
+    val rtplan = {
+      epidList.filter(Util.isRtimage).map(Phase2Util.referencedPlanUID).headOption match {
+        case Some(rtplanUid) => Phase2Util.fetchRtplan(rtplanUid, alList)
+        case _               => None
+      }
+    }
+
     val result: Either[WebUtil.StyleMapT, WLRunReq] = 0 match {
       case _ if epidList.isEmpty              => formError("No EPID files uploaded")
       case _ if epidSeriesList.size > 1       => formError("EPID images are from " + numSeries + " different series.")
       case _ if orthogonalAngleList.size != 2 => formError("Need to have images with both vertical and horizontal gantry angles.  Given beam had " + gantryAngleList.mkString("  "))
       case _ =>
-        val runReq = WLRunReq(epidList.sortBy(dateTime))
+        val runReq = WLRunReq(epidList.sortBy(dateTime), rtplan)
         Right(runReq)
     }
     result
   }
 
   override def makeRunReqForRedo(alList: Seq[AttributeList], xmlList: Seq[Elem], oldOutput: Option[Output]): WLRunReq = {
-    val result = WLRunReq(getRtimageList(alList))
+    val rtplan = alList.filter(Util.isRtimage).map(Phase2Util.referencedPlanUID).headOption match {
+      case Some(rtplanUid) => Phase2Util.fetchRtplan(rtplanUid, alList)
+      case _               => None
+    }
+    val result = WLRunReq(getRtimageList(alList), rtplan)
     result
   }
 
