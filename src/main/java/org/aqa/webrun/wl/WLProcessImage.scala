@@ -732,31 +732,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
         Left(status)
     }
 
-    /*
-    def highlightWLBadPixelList(badPixelList: Seq[WLBadPixel], graphics: Graphics2D) = {
-      val circleRadius = Config.WLBadPixelCorrectionRadius
-      graphics.setColor(Config.WLFailColor)
-
-      def highlightWLBadPixel(badPixel: WLBadPixel) = {
-        val hp = SCALE / 2
-
-        def crd(x: Double): Int = ((x * SCALE) + 0.5).toInt
-
-        val x = badPixel.x
-        val y = badPixel.y
-
-        (0 until 9).foreach(i => {
-          val rx = circleRadius + ((i % 3).toFloat / SCALE)
-          val ry = circleRadius + ((i / 3).toFloat / SCALE)
-          graphics.drawOval(crd(x - rx) + hp, crd(y - ry) + hp, crd(rx * 2), crd(ry * 2))
-        })
-        (0 until 3).map(i => graphics.drawRect(crd(x) - i, crd(y) - i, SCALE + (2 * i), SCALE + (2 * i)))
-      }
-
-      badPixelList.map(b => highlightWLBadPixel(b))
-    }
-     */
-
     /**
       * Construct the pixel data destined to be put in the DICOM image with graphics and annotations.  This is done by
       * taking a buffered image that is all black except for the graphics and annotations, and then mapping that onto
