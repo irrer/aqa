@@ -279,7 +279,7 @@ object CustomizeRtPlan extends Logging {
     * Represent a plan beam.  This class is public only to support testing.
     */
   case class PlanBeam(energy: Double, name: String, fff: Boolean) {
-    def fffAsText: String = { if (fff) " FFF" else "" }
+    private def fffAsText: String = { if (fff) " FFF" else "" }
 
     override def toString: String = {
       name + " : " + Util.fmtDbl(energy) + fffAsText
@@ -323,7 +323,7 @@ object CustomizeRtPlan extends Logging {
     }
   }
 
-  def getPlanBeamListX(machine: Machine, plan: Option[Config.PlanFileConfig]): List[PlanBeam] = {
+  private def getPlanBeamListX(machine: Machine, plan: Option[Config.PlanFileConfig]): List[PlanBeam] = {
     if (plan.isDefined) {
       val planAttrList = plan.get.dicomFile.attributeList.get
 
@@ -342,8 +342,8 @@ object CustomizeRtPlan extends Logging {
 
       logger.info("Energy list found in plan for machine " + machine.id + " :\n    " + planBeamList.mkString("\n    "))
       planBeamList.toList
-    } else List[PlanBeam]()
-
+    } else
+      List[PlanBeam]() // no plan given means no beams
   }
 
   /**
@@ -708,7 +708,14 @@ object CustomizeRtPlan extends Logging {
   /**
     * Given all the required information, create an rtplan that is compatible with the given machine for Phase2 or Phase3.
     */
-  def makePlanPhaseAny(machine: Machine, userPK: Long, planSpecification: PlanSpecification, machineEnergyList: Seq[MachineBeamEnergy], procedure: Procedure, pattern: String): AttributeList = {
+  private def makePlanPhaseAny(
+      machine: Machine,
+      userPK: Long,
+      planSpecification: PlanSpecification,
+      machineEnergyList: Seq[MachineBeamEnergy],
+      procedure: Procedure,
+      pattern: String
+  ): AttributeList = {
 
     val rtplan = DicomUtil.clone(getCollimatorCompatiblePlanForMachine(machine, pattern).head.dicomFile.attributeList.get)
     replaceAllUIDs(rtplan) // change UIDs so that this plan will be considered new and unique from all others.
