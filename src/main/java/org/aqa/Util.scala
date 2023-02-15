@@ -91,6 +91,10 @@ object Util extends Logging {
   def formatDate(format: SimpleDateFormat, date: Date): String = standardDateFormat.synchronized(format.format(date))
   def parseDate(format: SimpleDateFormat, text: String): Date = standardDateFormat.synchronized(format.parse(text))
 
+  def dicomGetTimeAndDate(al: AttributeList, dateTag: AttributeTag, timeTag: AttributeTag): Option[Date] = {
+    standardDateFormat.synchronized(DicomUtil.getTimeAndDate(al, dateTag, timeTag))
+  }
+
   def dateTimeToDate(date: Date): Date = {
     val stdText = Util.formatDate(Util.standardDateFormat, date)
     val day = Util.parseDate(Util.standardDateFormat, stdText.replaceAll("T.*", "T00:00:00"))
@@ -307,7 +311,7 @@ object Util extends Logging {
   /**
     * Get dates and patient ID from DICOM file.
     */
-  def extractDateTimeAndPatientIdFromDicom(file: File): (Seq[Date], Option[String]) = {
+  private def extractDateTimeAndPatientIdFromDicom(file: File): (Seq[Date], Option[String]) = {
     val al = new AttributeList
     al.read(file)
     extractDateTimeAndPatientIdFromDicomAl(al)
@@ -765,9 +769,10 @@ object Util extends Logging {
   /**
     * Number f pixels from edge to put axis arrows.
     */
-  val axisOffsetFromEdge = 40
+  private val axisOffsetFromEdge = 40
 
-  def addAxisLabels(image: BufferedImage, horzLabel: String, vertLabel: String, color: Color, top: Boolean = true, bottom: Boolean = true, left: Boolean = true, right: Boolean = true): Unit = {
+  private def addAxisLabels(image: BufferedImage, horzLabel: String, vertLabel: String, color: Color, top: Boolean = true, bottom: Boolean = true, left: Boolean = true, right: Boolean = true)
+      : Unit = {
 
     val lineThickness: Float = 3
     val arrowLength = 5
@@ -1453,6 +1458,35 @@ object Util extends Logging {
       case Some(e) => Some(e.text)
       case _       => None
     }
+  }
+
+  /**
+    * Get the list of beam names whose fields always are open for the given size centered.
+    * This is used to determine which beams are suitable for tests that require a minimally
+    * sized rectangular field, such as symmetry+flatness or center dose.
+    * @param rtplan Plan under scrutiny.
+    * @param minSize_mm Minimum vertical and horizontal field size in mm.
+    * @return List of qualifying beam names.
+    */
+  def minCenteredFieldBeamList(rtplan: AttributeList, minSize_mm: Double): Seq[String] = {
+
+    val distance = minSize_mm / 2
+
+    /**
+      * Return true if this beam qualifies.
+      * @param beam Check this beam.
+      * @return true if this beam qualifies.
+      */
+    def isOpen(beam: AttributeList): Boolean = {
+      val positionList = DicomUtil.findAllSingle(beam, TagByName.LeafJawPositions).flatMap(_.getDoubleValues)
+      val notOpen = positionList.exists(pos => pos.abs < distance)
+      val wedgeList = DicomUtil.findAllSingle(beam, TagByName.NumberOfWedges).flatMap(_.getIntegerValues).distinct.filter(_ != 0)
+      (!notOpen) && wedgeList.isEmpty
+    }
+
+    val BeamSequence = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
+    val list = BeamSequence.filter(isOpen).map(normalizedBeamName).distinct
+    list
   }
 
   def main(args: Array[String]): Unit = {

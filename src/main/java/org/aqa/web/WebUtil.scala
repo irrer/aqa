@@ -76,7 +76,7 @@ object WebUtil extends Logging {
 
   val spacer = "\n.spacer {  margin-top: 40px; }"
 
-  private val singleQuote = "@@quote1@@"
+  val singleQuote = "@@quote1@@"
   private val doubleQuote = "@@quote2@@"
   val amp = "@@amp@@"
   val nl = "@@nl@@"

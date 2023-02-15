@@ -22,6 +22,7 @@ import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.util.OpSys
 import org.aqa.db.MaintenanceCategory
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessPoint
+import org.aqa.webrun.wl.WLTreatmentMachine
 
 import java.awt.Color
 import java.awt.geom.Point2D
@@ -930,6 +931,52 @@ object Config extends Logging {
   val GapSkewMinimumMeasurementLength_mm: Double = logMainText("GapSkewMinimumMeasurementLength_mm", "20.0").toDouble
 
   val SimpleRtplanTemplateDir: Option[File] = getSimpleRtplanTemplateDir
+
+  // =================================================================================
+
+  // Winston Lutz values
+  def toColor(s: String) = new Color(Integer.parseInt(s, 16))
+
+  val WLBoxSize: Int = logMainText("WLBoxSize", "29").toInt
+  val WLAveragePixelsForBrightness: Int = logMainText("WLAveragePixelsForBrightness", "10").toInt
+  val WLImageColor: Color = toColor(logMainText("WLImageColor", default = "000001"))
+  val WLMinimumDistinctPixelValues: Int = logMainText("WLMinimumDistinctPixelValues", "40").toInt
+  val WLMarginalPixelGapLimit: Int = logMainText("WLMarginalPixelGapLimit", "500").toInt
+  val WLBadPixelGapLimit: Int = logMainText("WLBadPixelGapLimit", "1000").toInt
+
+  val WLPassLimit: Double = logMainText("WLPassLimit", "1.5").toDouble
+  val WLBoxSizePercent: Double = logMainText("WLBoxSizePercent", "30.0").toDouble
+  val WLBoxPositionFactor: Double = logMainText("WLBoxPositionFactor", "2.0").toDouble
+  val WLLaserCorrectionLimit: Double = logMainText("WLLaserCorrectionLimit", "0.5").toDouble
+
+  val WLMaxAllowedBrightnessRangePercentDifference: Double = logMainText("WLMaxAllowedBrightnessRangePercentDifference", "20.0").toDouble
+  val WLBoxEdgeTolerance_mm: Double = logMainText("WLBoxEdgeTolerance_mm", "5.5").toDouble
+  val WLBadPixelCorrectionRadius: Int = logMainText("WLBadPixelCorrectionRadius", "2").toInt
+  val WLScale: Int = logMainText("WLScale", "16").toInt
+  val WLNumBackgroundPixels: Int = logMainText("WLNumBackgroundPixels", "5").toInt
+  val WLBallRadius: Double = logMainText("WLBallRadius", "2.5").toDouble
+  val WLFieldWidth: Double = logMainText("WLFieldWidth", "20.0").toDouble
+  val WLBoxEdgeTolerance: Double = logMainText("WLBoxEdgeTolerance", "5.5").toDouble
+  val WLBallAreaFlatnessRatioLowerLimit: Double = logMainText("WLBallAreaFlatnessRatioLowerLimit", "5.0").toDouble
+  val WLBallHeightPercentForeground: Double = logMainText("WLBallHeightPercentForeground", "50.0").toDouble
+  val WLWLImageColor: Color = toColor(logMainText("WLWLImageColor", "000001"))
+  val WLBoxColor: Color = toColor(logMainText("WLBoxColor", "00ff00"))
+  val WLBoxColorCorrected: Color = toColor(logMainText("WLBoxColorCorrected", "d0d0d0"))
+  val WLBallColor: Color = toColor(logMainText("WLBallColor", "ffff00"))
+  val WLOffsetColor: Color = toColor(logMainText("WLOffsetColor", "ff0000"))
+  val WLSplineColor: Color = toColor(logMainText("WLSplineColor", "ffff00"))
+  val WLTextColor: Color = toColor(logMainText("WLTextColor", "000000"))
+  val WLPassColor: Color = toColor(logMainText("WLPassColor", "1dc32b"))
+  val WLFailColor: Color = toColor(logMainText("WLFailColor", "e00034"))
+  val WLTextFont: String = logMainText("WLTextFont", "SansSerif")
+  val WLTextPointSize: Int = logMainText("WLTextPointSize", "30").toInt
+  val WLNumberOfCircles: Int = logMainText("WLNumberOfCircles", "2").toInt
+  val WLSummarySize: Int = logMainText("WLSummarySize", "350").toInt
+
+  val WLTreatmentMachineList: List[WLTreatmentMachine] = {
+    val list = (document \ "WLTreatmentMachineList" \ "WLTreatmentMachine").toList.map(e => new WLTreatmentMachine(e))
+    list
+  }
 
   // =================================================================================
 

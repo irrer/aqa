@@ -128,7 +128,8 @@ object DbSetup extends Logging {
     SymmetryAndFlatness.query,
     LeafPosition.query,
     VMAT.query,
-    GapSkew.query
+    GapSkew.query,
+    WinstonLutz.query
   )
 
   /**

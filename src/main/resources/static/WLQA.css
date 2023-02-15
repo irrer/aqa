@@ -1,0 +1,65 @@
+body {
+	color: #555555;
+	margin: 30px;
+	border: 0px;
+	padding: 0px;
+	background: #ffffff;
+	direction: ltr;
+	font-family: Arial Unicode MS, Arial, sans-serif;
+	font-size: small;
+	line-height: 100%;
+}
+
+table {
+	font-size: small;
+}
+
+passed {
+	color: #000000;
+	background: #1dc32b;
+}
+
+failed {
+	color: #000000;
+	background: #e00034;
+}
+
+caution {
+	color: #000000;
+	background: YELLOW;
+}
+
+code {
+	font-family: courier, 'courier new', monospace;
+	font-size: 12;
+	line-height: 75%;
+	background: #f0f0f0;
+}
+
+/* Supports tooltip.js file (#tooltip, #preview, #screenshot) */
+#tooltip {
+	position: absolute;
+	border: 1px solid #333;
+	background: #f7f5d1;
+	padding: 2px 5px;
+	color: #333;
+	display: none;
+}
+
+#preview {
+	position: absolute;
+	border: 1px solid #ccc;
+	background: #333;
+	padding: 5px;
+	display: none;
+	color: #fff;
+}
+
+#screenshot {
+	position: absolute;
+	border: 1px solid #ccc;
+	background: #333;
+	padding: 5px;
+	display: none;
+	color: #fff;
+}
