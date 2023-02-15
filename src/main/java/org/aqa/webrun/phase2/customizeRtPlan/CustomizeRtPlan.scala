@@ -643,7 +643,7 @@ object CustomizeRtPlan extends Logging {
     logger.info("machineEnergyList size: " + machineEnergyList.size + "\n    " + machineEnergyList.mkString("\n    "))
     removeUnsupportedBeams(rtplan, machineEnergyList)
 
-    val unsupportedEnergyList = machineEnergyList.filter(me => !machineEnergyIsInPlan(rtplan, me))
+    val unsupportedEnergyList = machineEnergyList.filter(_.maxDoseRate_MUperMin.isDefined).filter(me => !machineEnergyIsInPlan(rtplan, me))
 
     logger.info("unsupportedEnergyList size: " + unsupportedEnergyList.size + "\n    " + unsupportedEnergyList.map(me => me.toString).mkString("\n    "))
 
