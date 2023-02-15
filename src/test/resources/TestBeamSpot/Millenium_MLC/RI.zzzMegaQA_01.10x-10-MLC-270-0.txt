@@ -1,0 +1,130 @@
+0002,0000 UL  FileMetaInformationGroupLength: 192
+0002,0001 OB  FileMetaInformationVersion: 0x0 0x1
+0002,0002 UI  MediaStorageSOPClassUID: 1.2.840.10008.5.1.4.1.1.481.1 (RT Image Storage)
+0002,0003 UI  MediaStorageSOPInstanceUID: 1.2.246.352.62.1.5719569492553990470.10530529525418406070
+0002,0010 UI  TransferSyntaxUID: 1.2.840.10008.1.2
+0002,0012 UI  ImplementationClassUID: 1.2.246.352.70.2.1.160.3
+0002,0013 SH  ImplementationVersionName: DCIE 2.2
+0008,0005 CS  SpecificCharacterSet: ISO_IR 192
+0008,0008 CS  ImageType: ORIGINAL \ PRIMARY \ PORTAL \ ACQUIRED_DOSE
+0008,0012 DA  InstanceCreationDate: 20230202
+0008,0013 TM  InstanceCreationTime: 145538
+0008,0016 UI  SOPClassUID: 1.2.840.10008.5.1.4.1.1.481.1 (RT Image Storage)
+0008,0018 UI  SOPInstanceUID: 1.2.246.352.62.1.5719569492553990470.10530529525418406070
+0008,0020 DA  StudyDate: 20190820
+0008,0022 DA  AcquisitionDate: 20230202
+0008,0023 DA  ContentDate: 20230202
+0008,0030 TM  StudyTime: 140559.107
+0008,0032 TM  AcquisitionTime: 120952.757
+0008,0033 TM  ContentTime: 120952.757
+0008,0050 SH  AccessionNumber: <null>
+0008,0060 CS  Modality: RTIMAGE
+0008,0064 CS  ConversionType: DI
+0008,0070 LO  Manufacturer: Varian Medical Systems
+0008,0090 PN  ReferringPhysicianName: <null>
+0008,1010 SH  StationName: TITAN2
+0008,1030 LO  StudyDescription: 
+0008,1070 PN  OperatorsName: 60162887
+0008,1090 LO  ManufacturerModelName: Patient Verification
+0008,3010 UI  IrradiationEventUID: 1.2.246.352.62.30.4682263905339188748.17443477837184670124
+0010,0010 PN  PatientName: MegaQA^ver1
+0010,0020 LO  PatientID: zzzMegaQA_01
+0010,0030 DA  PatientBirthDate: <null>
+0010,0040 CS  PatientSex: <null>
+0018,1000 LO  DeviceSerialNumber: 4745
+0018,1020 LO  SoftwareVersions: 2.24.0.0
+0018,5100 CS  PatientPosition: HFS
+0020,000d UI  StudyInstanceUID: 1.2.246.352.205.5469742509352948036.18032890301503588252
+0020,000e UI  SeriesInstanceUID: 1.2.246.352.62.2.5481797073029431948.4130652748037412020
+0020,0010 SH  StudyID: Phantom1
+0020,0011 IS  SeriesNumber: 1
+0020,0013 IS  InstanceNumber: 11
+0020,0020 CS  PatientOrientation: <null>
+0020,0052 UI  FrameOfReferenceUID: 1.2.246.352.62.3.4890341110427556370.6212755069364049801
+0020,1040 LO  PositionReferenceIndicator: <null>
+0028,0002 US  SamplesPerPixel: 1
+0028,0004 CS  PhotometricInterpretation: MONOCHROME2
+0028,0010 US  Rows: 1190
+0028,0011 US  Columns: 1190
+0028,0100 US  BitsAllocated: 16
+0028,0101 US  BitsStored: 16
+0028,0102 US  HighBit: 15
+0028,0103 US  PixelRepresentation: 0
+0028,1040 CS  PixelIntensityRelationship: LIN
+0028,1041 SS  PixelIntensityRelationshipSign: 1
+0028,1050 DS  WindowCenter: 0.52820892757966
+0028,1051 DS  WindowWidth: 1.05213928505375
+0028,1052 DS  RescaleIntercept: 0
+0028,1053 DS  RescaleSlope: 1.8521948509e-05
+0028,1054 LO  RescaleType: CU
+3002,0002 SH  RTImageLabel: MV_0_0a1014
+3002,0004 ST  RTImageDescription: 10x [MV], 600 [MU/min]   ModeId: Dosimetry  Mode Type : Continuous  Offset Corr. : true  Gain Corr. : true  Pixel Corr. : true  Averaging : false  Integration : true  Reset Frames : 0  AEC : false  Image Median: 16  Histogram ROI: (2147483647,2147483647),(2147483647,2147483647)  
+3002,000a CS  ReportedValuesOrigin: ACTUAL
+3002,000c CS  RTImagePlane: NORMAL
+3002,000d DS  XRayImageReceptorTranslation: 0.00034165445681 \ -0.0251457903969 \ -0.0416208450901
+3002,000e DS  XRayImageReceptorAngle: 0
+3002,0010 DS  RTImageOrientation: 1 \ 0 \ 0 \ 0 \ -1 \ 0
+3002,0011 DS  ImagePlanePixelSpacing: 0.336 \ 0.336
+3002,0012 DS  RTImagePosition: -199.752 \ 199.752
+3002,0020 SH  RadiationMachineName: TITAN2
+3002,0022 DS  RadiationMachineSAD: 1000
+3002,0026 DS  RTImageSID: 1000.04162084509
+3002,0029 IS  FractionNumber: 0
+3002,0030 SQ  ExposureSequence: 
+  Item 1 / 1
+    0008,1160 IS  ReferencedFrameNumber: 1
+    0018,0060 DS  KVP: 10000
+    0018,1150 IS  ExposureTime: 10154
+    3002,0032 DS  MetersetExposure: 100.004967985494
+    300a,00b6 SQ  BeamLimitingDeviceSequence: 
+      Item 1 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: ASYMX
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+        300a,011c DS  LeafJawPositions: -99.999959024914 \ 99.9999911311016
+      Item 2 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: ASYMY
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+        300a,011c DS  LeafJawPositions: -100.00002819079 \ 100.000003887757
+    300a,00f0 IS  NumberOfBlocks: 0
+    300a,011e DS  GantryAngle: 0.00663508035359
+    300a,0120 DS  BeamLimitingDeviceAngle: 269.999876294496
+    300a,0122 DS  PatientSupportAngle: 0.001953125
+    300a,0128 DS  TableTopVerticalPosition: -0.22573950832
+    300a,0129 DS  TableTopLongitudinalPosition: 206.182230663996
+    300a,012a DS  TableTopLateralPosition: -0.0014384035708
+    300a,0140 FL  TableTopPitchAngle: 360
+    300a,0144 FL  TableTopRollAngle: 360
+300a,00b3 CS  PrimaryDosimeterUnit: MU
+300a,011e DS  GantryAngle: 0.00663508035359
+300a,0120 DS  BeamLimitingDeviceAngle: 269.999876294496
+300a,0122 DS  PatientSupportAngle: 0.001953125
+300a,0128 DS  TableTopVerticalPosition: -0.22573950832
+300a,0129 DS  TableTopLongitudinalPosition: 206.182230663996
+300a,012a DS  TableTopLateralPosition: -0.0014384035708
+300a,012c DS  IsocenterPosition: 0 \ 0 \ 0
+300a,0140 FL  TableTopPitchAngle: 360
+300a,0144 FL  TableTopRollAngle: 360
+300c,0002 SQ  ReferencedRTPlanSequence: 
+  Item 1 / 1
+    0008,1150 UI  ReferencedSOPClassUID: 1.2.840.10008.5.1.4.1.1.481.5 (RT Plan Storage)
+    0008,1155 UI  ReferencedSOPInstanceUID: 1.2.246.352.71.5.700377998926.2044872.20201231122050
+300c,0006 IS  ReferencedBeamNumber: 22
+300c,0008 DS  StartCumulativeMetersetWeight: 2.9120903656e-06
+300c,0009 DS  EndCumulativeMetersetWeight: 1.0000525919453
+300c,0022 IS  ReferencedFractionGroupNumber: 1
+3253,0010 LO  <unknown>: Varian Medical Systems VISION 3253
+3253,1000 UN  <unknown>: unknown
+3253,1001 UN  <unknown>: unknown
+3253,1002 UN  <unknown>: unknown
+3273,0010 LO  <unknown>: Varian Medical Systems VISION 3273
+3273,1000 UN  <unknown>: unknown
+3273,1001 UN  <unknown>: unknown
+5000,0005 US  CurveDimensions: 2
+5000,0010 US  NumberOfPoints: 4
+5000,0020 CS  TypeOfData: ROI
+5000,0030 SH  AxisUnits: PIXL \ PIXL
+5000,0040 SH  AxisLabels: Plan Field Edge \ Plan Field Edge
+5000,0103 US  DataValueRepresentation: 3
+5000,2500 LO  CurveLabel: Field Edge (10x-
+5000,3000 OX  CurveData: 0x30 0xa8 0xda 0x40 0x4b 0x51 0x39 0x40 0x4 0x81 0x3a 0x40 0x4b 0x51 0x39 0x40 0x4 0x81 0x3a 0x40 0xbe 0x48 0xd9 0x40 0x30 0xa8 0xda 0x40 0xbe 0x48 0xd9 0x40
+7fe0,0010 OX  PixelData: 0x6 0x7 0x7 0x6 0x6 0x7 0x6 0x6 0x6 0x7 0x6 0x6 0x5 0x6 0x6 0x6 0x7 0x6 0x6 0x6 0x5 0x6 0x6 0x6 0x7 0x6 0x6 0x6 0x6 0x6 0x6 0x6 0x6 0x6 0x6 0x6 0x7 0x5 0x6 0x6 0x6 0x5 0x6 0x6 0x5 0x5 0x6 0x6 0x6 0x5 0x5 0x5 0x5 0x5 0x5 0x6 0x6 0x6 0x6 0x5 0x4 0x5 0x6 0x5 0x6 0x5 0x5 0x5 0x5 0x5 0x5 0x5 0x5 0x4 0x5 0x4 0x5 0x5 0x5 0x4 0x5 0x5 0x5 0x5 0x5 0x5 0x4 0x5 0x4 0x4 0x4 0x5 0x4 0x4 0x4 0x5 0x4 0x4 0x4 0x4 0x5 0x5 0x4 0x5 0x4 0x4 0x4 0x4 0x4 0x4 0x3 0x4 0x3 0x3 0x3 0x3 0x3 0x3 0x3 0x3 0x3 0x3 0x3 0x2 0x2 0x2 0x2 0x2 0x2 0x1 0x1 0x1 0x1 0x1 0x1 0x1 0x1 0x1 0x1 0x1 0x1 0x1 0x0 0x1 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0 0x0
