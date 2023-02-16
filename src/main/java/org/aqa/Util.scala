@@ -1489,6 +1489,36 @@ object Util extends Logging {
     list
   }
 
+  /**
+    * Determine which beams can be used for center dose analysis
+    *
+    * @param rtplan Based on this RTPLAN.
+    * @return List of normalized beam names.
+    */
+  def makeCenterDoseBeamNameList(rtplan: AttributeList): Seq[String] = {
+    // list of beam names
+    val list = Util.minCenteredFieldBeamList(rtplan, Config.CenterDoseRadius_mm * 2)
+    list
+  }
+
+  /**
+    * Determine which beams can be used for symmetry+flatness analysis
+    *
+    * @param rtplan Based on this RTPLAN.
+    * @return List of normalized beam names.
+    */
+  def makeSymFlatConstBeamNameList(rtplan: AttributeList): Seq[String] = {
+    val margin = Config.SymmetryAndFlatnessDiameter_mm / 2
+
+    // calculate the farthest possible points
+    val max = Config.SymmetryAndFlatnessPointList.flatMap(p => Seq(p.x_mm, p.y_mm)).map(c => c.abs + margin).max
+
+    // list of beam names
+    val list = Util.minCenteredFieldBeamList(rtplan, max * 2)
+
+    list
+  }
+
   def main(args: Array[String]): Unit = {
 
     if (true) {

@@ -34,7 +34,6 @@ import java.util.Date
 import java.util.concurrent.Semaphore
 import javax.imageio.ImageIO
 import scala.annotation.tailrec
-import scala.collection.immutable
 import scala.collection.mutable.ArrayBuffer
 import scala.xml.Elem
 import scala.xml.Node
@@ -77,7 +76,7 @@ object Config extends Logging {
     throw new RuntimeException(msg)
   }
 
-  def makeDataDir(dirName: String): File = {
+  private def makeDataDir(dirName: String): File = {
     val dir = new File(DataDir, dirName)
     Util.mkdirs(dir)
     dir
@@ -374,7 +373,7 @@ object Config extends Logging {
 
   val RestletMinThreads: Int = logMainText("RestletMinThreads", "5").toInt
   val RestletMaxThreads: Int = logMainText("RestletMaxThreads", "20").toInt
-  val MonitorThreadCountInterval_sec: Double = logMainText("MonitorThreadCountInterval_sec", "0.0").toDouble
+  private val MonitorThreadCountInterval_sec: Double = logMainText("MonitorThreadCountInterval_sec", "0.0").toDouble
   val MonitorThreadCountInterval_ms: Long = (MonitorThreadCountInterval_sec * 1000).round
 
   val LdapInstitutionName: String = logMainText("LdapInstitutionName", "not specified")
@@ -382,7 +381,7 @@ object Config extends Logging {
   val LdapGroupList: Seq[String] = getLdapGroupList
 
   val MaxProcedureCount: Int = logMainText("MaxProcedureCount", "1").toInt
-  val MaxProcedureWaitTime_min: Double = logMainText("MaxProcedureWaitTime_min", "10.0").toDouble
+  private val MaxProcedureWaitTime_min: Double = logMainText("MaxProcedureWaitTime_min", "10.0").toDouble
   val MaxProcedureWaitTime_ms: Long = (MaxProcedureWaitTime_min * 60 * 1000).round
 
   /** used to synchronize the running of procedures.  Should only process a maximum number of jobs at a time so as not to overload the hardware. */
@@ -394,7 +393,7 @@ object Config extends Logging {
   val machineConfigurationDir = new File(DataDir, machineConfigurationDirName)
   Util.mkdirs(machineConfigurationDir)
 
-  val AuthenticationTimeout: Double = logMainText("AuthenticationTimeout", "7200.0").toDouble
+  private val AuthenticationTimeout: Double = logMainText("AuthenticationTimeout", "7200.0").toDouble
   val AuthenticationTimeoutInMs: Long = (AuthenticationTimeout * 1000).toLong
 
   val PasswordPrompt: String = logMainText("PasswordPrompt", "Please enter your password")
@@ -587,7 +586,7 @@ object Config extends Logging {
   }
 
   val imageDirFile = new File(staticDirFile, "images")
-  val rtplanDirFile = new File(staticDirFile, "rtplan")
+  private val rtplanDirFile = new File(staticDirFile, "rtplan")
 
   /**
     * Get the directory containing the DICOM file used as a template to make a simple RTPLAN.
@@ -676,7 +675,7 @@ object Config extends Logging {
   /**
     * Construct lookup table for finding DICOM attributes to be anonymized and how to anonymize them.
     */
-  def getToBeAnonymizedList: Map[AttributeTag, ToBeAnonymized] = {
+  private def getToBeAnonymizedList: Map[AttributeTag, ToBeAnonymized] = {
     def makeToBeAnon(node: Node): ToBeAnonymized = {
       val Name: Option[String] = {
         val ns = node \ "@Name"
@@ -785,17 +784,17 @@ object Config extends Logging {
   val PrefixForMachineDependentBeamName: String = logMainText("PrefixForMachineDependentBeamName", "J18G0-")
 
   val CollimatorCenteringTolerence_mm: Double = logMainText("CollimatorCenteringTolerence_mm", "2.0").toDouble
-  val CollimatorCentering090BeamName: String = logMainText("CollimatorCentering090BeamName", "J10G0C90-6X")
-  val CollimatorCentering270BeamName: String = logMainText("CollimatorCentering270BeamName", "J10G0C270-6X")
+  private val CollimatorCentering090BeamName: String = logMainText("CollimatorCentering090BeamName", "J10G0C90-6X")
+  private val CollimatorCentering270BeamName: String = logMainText("CollimatorCentering270BeamName", "J10G0C270-6X")
 
-  val CollimatorCenteringBeamNameG000C090: String = logMainText(name = "CollimatorCenteringBeamNameG000C090", default = "M10G0C90")
-  val CollimatorCenteringBeamNameG000C270: String = logMainText(name = "CollimatorCenteringBeamNameG000C270", default = "M10G0C270")
-  val CollimatorCenteringBeamNameG180C090: String = logMainText(name = "CollimatorCenteringBeamNameG180C090", default = "M10G180C90")
-  val CollimatorCenteringBeamNameG080C270: String = logMainText(name = "CollimatorCenteringBeamNameG080C270", default = "M10G180C270")
-  val CollimatorCenteringBeamNameG270C090: String = logMainText(name = "CollimatorCenteringBeamNameG270C090", default = "M10G270C90")
-  val CollimatorCenteringBeamNameG270C270: String = logMainText(name = "CollimatorCenteringBeamNameG270C270", default = "M10G270C270")
-  val CollimatorCenteringBeamNameG090C090: String = logMainText(name = "CollimatorCenteringBeamNameG090C090", default = "M10G90C90")
-  val CollimatorCenteringBeamNameG090C270: String = logMainText(name = "CollimatorCenteringBeamNameG090C270", default = "M10G90C270")
+  private val CollimatorCenteringBeamNameG000C090: String = logMainText(name = "CollimatorCenteringBeamNameG000C090", default = "M10G0C90")
+  private val CollimatorCenteringBeamNameG000C270: String = logMainText(name = "CollimatorCenteringBeamNameG000C270", default = "M10G0C270")
+  private val CollimatorCenteringBeamNameG180C090: String = logMainText(name = "CollimatorCenteringBeamNameG180C090", default = "M10G180C90")
+  private val CollimatorCenteringBeamNameG080C270: String = logMainText(name = "CollimatorCenteringBeamNameG080C270", default = "M10G180C270")
+  private val CollimatorCenteringBeamNameG270C090: String = logMainText(name = "CollimatorCenteringBeamNameG270C090", default = "M10G270C90")
+  private val CollimatorCenteringBeamNameG270C270: String = logMainText(name = "CollimatorCenteringBeamNameG270C270", default = "M10G270C270")
+  private val CollimatorCenteringBeamNameG090C090: String = logMainText(name = "CollimatorCenteringBeamNameG090C090", default = "M10G90C90")
+  private val CollimatorCenteringBeamNameG090C270: String = logMainText(name = "CollimatorCenteringBeamNameG090C270", default = "M10G90C270")
 
   val collimatorCenteringPhase2List: Seq[String] = Seq(CollimatorCentering090BeamName, CollimatorCentering270BeamName)
 
@@ -849,7 +848,6 @@ object Config extends Logging {
 
   val CenterDoseRadius_mm: Double = logMainText("CenterDoseRadius_mm", "5.0").toDouble
   val CenterDoseHistoryRange: Int = logMainText("CenterDoseHistoryRange", "1000000").toInt
-  val CenterDoseBeamNameList: Seq[String] = getBeamNameList("CenterDoseBeamNameList")
 
   val CollimatorPositionTolerance_mm: Double = logMainText("CollimatorPositionTolerance_mm", "2.0").toDouble
   val CollimatorPositionBeamList: Seq[CollimatorPositionBeamConfig] = getCollimatorPositionBeamList
@@ -867,8 +865,6 @@ object Config extends Logging {
   val FlatnessPercentLimit: Double = logMainText("FlatnessPercentLimit", "2.0").toDouble
   val SymFlatConstHistoryRange: Int = logMainText("SymFlatConstHistoryRange", "1000000").toInt
   val ProfileConstancyPercentLimit: Double = logMainText("ProfileConstancyPercentLimit", "2.0").toDouble
-
-  val SymmetryAndFlatnessBeamList: immutable.Seq[String] = getBeamNameList("SymmetryAndFlatnessBeamList")
 
   val SymmetryAndFlatnessPointList: Seq[SymmetryAndFlatnessPoint] = getSymmetryAndFlatnessPointList
 
@@ -889,7 +885,7 @@ object Config extends Logging {
   val VMATBeamPairList: Seq[VMATBeamPair] = getVMATBeamPairList
   val VMATHistoryRange: Int = logMainText("VMATHistoryRange", "1000000").toInt
 
-  val DailyQAInProgressInterval_min: Double = logMainText("DailyQAInProgressInterval_min", "30.0").toDouble
+  private val DailyQAInProgressInterval_min: Double = logMainText("DailyQAInProgressInterval_min", "30.0").toDouble
   val DailyQAInProgressInterval_ms: Long = (DailyQAInProgressInterval_min * 60 * 1000).round
   val DailyQACBCTLimit_mm: Double = logMainText("DailyQACBCTLimit_mm", "1.0").toDouble
   val DailyQAPassLimit_mm: Double = logMainText("DailyQAPassLimit_mm", "1.0").toDouble

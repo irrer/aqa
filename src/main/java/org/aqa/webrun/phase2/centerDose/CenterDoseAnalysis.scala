@@ -22,13 +22,13 @@ import edu.umro.ImageUtil.DicomImage
 import org.aqa.db.CenterDose
 import org.aqa.DicomFile
 import org.aqa.run.ProcedureStatus
-import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.CollimatorCenteringResource
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.SubProcedureResult
+import org.aqa.Util
 
 import java.awt.geom.Point2D
 import java.awt.Point
@@ -49,7 +49,8 @@ object CenterDoseAnalysis extends Logging {
   private def analyse(extendedData: ExtendedData, runReq: RunReq, collimatorCenteringResource: CollimatorCenteringResource): Seq[CenterDose] = {
     val outputPK = extendedData.output.outputPK.get
 
-    val availableBeamList = Config.CenterDoseBeamNameList.filter(beamName => runReq.derivedMap.contains(beamName))
+    val availableBeamList = Util.makeCenterDoseBeamNameList(runReq.rtplan).filter(beamName => runReq.derivedMap.contains(beamName))
+    logger.info("Center Dose using beams:\n    " + availableBeamList.mkString("\n    "))
     val resultList = availableBeamList.map(beamName =>
       constructCenterDose(beamName, collimatorCenteringResource.centerPointListOfBeam(beamName), outputPK, runReq.derivedMap(beamName).originalImage, runReq.rtimageMap(beamName))
     )
@@ -80,14 +81,13 @@ object CenterDoseAnalysis extends Logging {
       val resultList = analyse(extendedData, runReq, collimatorCenteringResource)
       CenterDose.insert(resultList)
       val summary = CenterDoseHTML.makeDisplay(extendedData, runReq, resultList, status)
-      val result = Right(new CenterDoseResult(summary, status, resultList))
+      val result = Right(CenterDoseResult(summary, status, resultList))
       logger.info("Finished analysis of CenterDose for machine " + extendedData.machine.id)
       result
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         logger.warn("Unexpected error in analysis of CenterDose: " + t + fmtEx(t))
         Left(Phase2Util.procedureCrash(subProcedureName))
-      }
     }
   }
 

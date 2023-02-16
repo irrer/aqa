@@ -214,6 +214,9 @@ object BadPixelAnalysis extends Logging {
             Config.VMATBeamPairList.flatMap(p => Seq(p.MLC, p.OPEN)).exists(n => n.equalsIgnoreCase(beamName))
           }
 
+          val centerDoseBeamNameList = Util.makeCenterDoseBeamNameList(runReq.rtplan)
+          val symFlatConstBeamNameList = Util.makeSymFlatConstBeamNameList(runReq.rtplan)
+
           <tr align="center">
           <td style="text-align: center;" title="Click for DICOM metadata"><a href={dicomHref}>{beamName}</a></td>
           <td style="text-align: center;" title="Click for full size image"><a href={Phase2Util.dicomViewImageHtmlHref(al, extendedData, runReq)}><img src={pngHref} width={smallImageWidth}/></a></td>
@@ -224,10 +227,10 @@ object BadPixelAnalysis extends Logging {
           <td style="text-align: center;" title="Collimator Centering">{
             boolToName("Col Cntr", collimatorCenteringBeamNameList.contains(beamName))
           }</td>
-          <td style="text-align: center;" title="Center Dose">{boolToName("Cntr Dose", Config.CenterDoseBeamNameList.contains(beamName))}</td>
+          <td style="text-align: center;" title="Center Dose">{boolToName("Cntr Dose", centerDoseBeamNameList.contains(beamName))}</td>
           <td style="text-align: center;" title="Collimator Position">{boolToName("Col Posn", Config.CollimatorPositionBeamList.exists(cp => cp.beamName.equalsIgnoreCase(beamName)))}</td>
           <td style="text-align: center;" title="Wedge">{boolToName("Wedge", Config.WedgeBeamList.exists(w => w.wedge.equals(beamName)))}</td>
-          <td style="text-align: center;" title="Symmetry and Flatness">{boolToName("Sym+Flat+Const", Config.SymmetryAndFlatnessBeamList.contains(beamName))}</td>
+          <td style="text-align: center;" title="Symmetry and Flatness">{boolToName("Sym+Flat+Const", symFlatConstBeamNameList.contains(beamName))}</td>
           <td style="text-align: center;" title="Leaf Position">{boolToName("Leaf Posn", Config.LeafPositionBeamNameList.contains(beamName))}</td>
           <td style="text-align: center;" title="VMAT">{boolToName("VMAT", isVmat(beamName))}</td>
         </tr>

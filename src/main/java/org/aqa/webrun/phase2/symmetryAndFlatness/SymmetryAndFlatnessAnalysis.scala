@@ -78,7 +78,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
      */
   }
 
-  def circleRadiusInPixels(isoImageTrans: IsoImagePlaneTranslator): Double = {
+  private def circleRadiusInPixels(isoImageTrans: IsoImagePlaneTranslator): Double = {
     val radius_mm = Config.SymmetryAndFlatnessDiameter_mm / 2
     val imagePlaneCenterInPixels = isoImageTrans.iso2Pix(0, 0)
     val radiusInPixels = isoImageTrans.iso2Pix(radius_mm, radius_mm).distance(imagePlaneCenterInPixels)
@@ -274,8 +274,9 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     try {
       logger.info("Starting analysis of SymmetryAndFlatness for machine " + extendedData.machine.id)
 
-      val beamNameList = Config.SymmetryAndFlatnessBeamList.filter(beamName => runReq.derivedMap.contains(beamName))
-
+      // val beamNameList = Config.SymmetryAndFlatnessBeamList.filter(beamName => runReq.derivedMap.contains(beamName))
+      val beamNameList = Util.makeSymFlatConstBeamNameList(runReq.rtplan).filter(beamName => runReq.derivedMap.contains(beamName))
+      logger.info("Sym+Flat using beams:\n    " + beamNameList.mkString("\n    "))
       // only process beams that are both configured and have been uploaded
       val resultList = beamNameList.par
         .map(beamName =>
@@ -309,7 +310,11 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
       logger.info("\n" + resultList.map(r => showIt(r)).mkString("\n"))
 
-      val pass = resultList.map(r => r.symmetryAndFlatness.allPass(r.baseline)).reduce(_ && _)
+      //val pass = resultList.map(r => r.symmetryAndFlatness.allPass(r.baseline)).reduce(_ && _)
+      val pass = {
+        val list = resultList.map(r => r.symmetryAndFlatness.allPass(r.baseline))
+        (list.size > 0) && list.reduce(_ && _)
+      }
       val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
       storeResultsInDb(resultList)

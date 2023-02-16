@@ -16,7 +16,6 @@
 
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
-import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.Institution
 import org.aqa.db.Machine
@@ -129,11 +128,11 @@ object SymmetryAndFlatnessCSV {
 
     val data: Iterable[String] = {
       if (machine.isDefined) {
-        val beamList = Config.SymmetryAndFlatnessBeamList.sorted
-        val list = beamList.flatMap(beamName =>
-          SymmetryAndFlatness.history(machine.get.machinePK.get, beamName, Procedure.ProcOfPhase2.get.procedurePK.get) ++
-            SymmetryAndFlatness.history(machine.get.machinePK.get, beamName, Procedure.ProcOfPhase3.get.procedurePK.get)
-        )
+        val list = {
+          SymmetryAndFlatness.history(machine.get.machinePK.get, Procedure.ProcOfPhase2.get.procedurePK.get) ++
+            SymmetryAndFlatness.history(machine.get.machinePK.get, Procedure.ProcOfPhase3.get.procedurePK.get)
+        }
+
         val textList = list.map(sfb => symmetryAndFlatnessToCsv(sfb))
         textList
       } else

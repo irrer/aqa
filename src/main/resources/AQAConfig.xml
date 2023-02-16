@@ -264,24 +264,38 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!--Name of DICOM RTPLAN files.  This is the basis for creating a plan customized plan for a given machine.  -->
     <PlanFileList>
-        <PlanFile procedure='Phase2'      manufacturer='Varian' collimatorModel='HD'       >rtplanPhase2Hdmlc.dcm</PlanFile>
-        <PlanFile procedure='Phase2'      manufacturer='Varian' collimatorModel='Millenium'>rtplanPhase2Millenium.dcm</PlanFile>
+        <PlanFile procedure='Phase2' manufacturer='Varian' collimatorModel='HD'>rtplanPhase2Hdmlc.dcm</PlanFile>
+        <PlanFile procedure='Phase2' manufacturer='Varian' collimatorModel='Millenium'>rtplanPhase2Millenium.dcm
+        </PlanFile>
 
-        <PlanFile procedure='Phase3'      manufacturer='Varian' collimatorModel='HD'       >rtplanPhase3Hdmlc.dcm</PlanFile>
-        <PlanFile procedure='Phase3'      manufacturer='Varian' collimatorModel='Millenium'>rtplanPhase3Millenium.dcm</PlanFile>
+        <PlanFile procedure='Phase3' manufacturer='Varian' collimatorModel='HD'>rtplanPhase3Hdmlc.dcm</PlanFile>
+        <PlanFile procedure='Phase3' manufacturer='Varian' collimatorModel='Millenium'>rtplanPhase3Millenium.dcm
+        </PlanFile>
 
-        <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='HD'       >rtplanLocHdmlcWithoutErrorBaseline.dcm</PlanFile>
-        <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='Millenium'>rtplanLocMilleniumWithoutErrorBaseline.dcm</PlanFile>
+        <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='HD'>
+            rtplanLocHdmlcWithoutErrorBaseline.dcm
+        </PlanFile>
+        <PlanFile procedure='LOCBaseline' manufacturer='Varian' collimatorModel='Millenium'>
+            rtplanLocMilleniumWithoutErrorBaseline.dcm
+        </PlanFile>
 
-        <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='HD'       >rtplanLocHdmlcWithErrorDelivery.dcm</PlanFile>
-        <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='Millenium'>rtplanLocMilleniumWithErrorDelivery.dcm</PlanFile>
+        <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='HD'>
+            rtplanLocHdmlcWithErrorDelivery.dcm
+        </PlanFile>
+        <PlanFile procedure='LOCDelivery' manufacturer='Varian' collimatorModel='Millenium'>
+            rtplanLocMilleniumWithErrorDelivery.dcm
+        </PlanFile>
 
         <!-- Note that the DailyQA RTPLAN is the same for both HD and Millenium. -->
-        <PlanFile procedure='DailyQA'     manufacturer='Varian' collimatorModel='HD'       >rtplanDailyQA2021-07-07T08-24-08.dcm</PlanFile>
-        <PlanFile procedure='DailyQA'     manufacturer='Varian' collimatorModel='Millenium'>rtplanDailyQA2021-07-07T08-24-08.dcm</PlanFile>
+        <PlanFile procedure='DailyQA' manufacturer='Varian' collimatorModel='HD'>rtplanDailyQA2021-07-07T08-24-08.dcm
+        </PlanFile>
+        <PlanFile procedure='DailyQA' manufacturer='Varian' collimatorModel='Millenium'>
+            rtplanDailyQA2021-07-07T08-24-08.dcm
+        </PlanFile>
 
-        <PlanFile procedure='GapSkew'     manufacturer='Varian' collimatorModel='HD'       >rtplanGapSkewHdmlc.dcm</PlanFile>
-        <PlanFile procedure='GapSkew'     manufacturer='Varian' collimatorModel='Millenium'>rtplanGapSkewMillenium.dcm</PlanFile>
+        <PlanFile procedure='GapSkew' manufacturer='Varian' collimatorModel='HD'>rtplanGapSkewHdmlc.dcm</PlanFile>
+        <PlanFile procedure='GapSkew' manufacturer='Varian' collimatorModel='Millenium'>rtplanGapSkewMillenium.dcm
+        </PlanFile>
     </PlanFileList>
 
     <!-- Name of subdirectory that contains the DICOM template files for creating a simple RTPLAN.  This is located under
@@ -393,6 +407,7 @@ Note that when building a package for release, the Maven build process uses the 
     <CenterDoseHistoryRange>1000000</CenterDoseHistoryRange>
 
     <!-- List of beam names of that can be used to record dose at the center of the image. -->
+    <!--
     <CenterDoseBeamNameList>
         <BeamName>Flood 6X</BeamName>
         <BeamName>J10G180</BeamName>
@@ -422,6 +437,7 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>M10G90C90</BeamName>
         <BeamName>M10G90C270</BeamName>
     </CenterDoseBeamNameList>
+    -->
 
     <!-- Allowed error in mm when measuring collimator positions measured in the image to planned positions. -->
     <CollimatorPositionTolerance_mm>2.0</CollimatorPositionTolerance_mm>
@@ -531,6 +547,7 @@ Note that when building a package for release, the Maven build process uses the 
     <SymFlatConstHistoryRange>1000000</SymFlatConstHistoryRange>
 
     <!-- List of names of beams to be evaluated for Symmetry, Flatness and Constancy. -->
+    <!--
     <SymmetryAndFlatnessBeamList>
         <BeamName>Flood 6X</BeamName>
         <BeamName>J20G0-6X</BeamName>
@@ -548,6 +565,7 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName>J18G270</BeamName>
         <BeamName>J18G90</BeamName>
     </SymmetryAndFlatnessBeamList>
+    -->
 
     <!-- Coordinates of centers of sampling points.  All are in mm, relative to the center of the image, and in the isoplane. -->
     <SymmetryAndFlatnessPointList>
@@ -908,7 +926,6 @@ Note that when building a package for release, the Maven build process uses the 
             <YCorrected>0.0</YCorrected>
         </WLTreatmentMachine>
     </WLTreatmentMachineList>
-
 
 
     <!-- The MarginalPixelGapLimit is similar to BadPixelGapLimit, but it is only used as a warning about noise in
