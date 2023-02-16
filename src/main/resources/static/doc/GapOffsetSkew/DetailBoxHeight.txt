@@ -1,0 +1,3 @@
+Box height is defined by a configuration parameter which determines the distance above and below the expected edge position.  When set to the default of 20 mm, it makes the box 40 mm tall.
+
+To measure the edge, each row of pixels in the box is summed to create a profile of the edge. A cubic spline is then fit ot that profile, and then the point at which it crosses 50 percent of pixel brightness yields the vertical position of the edge. The brightest and dimmest rows in the box are used as the bounds.  Using the cubic spline provides sub-pixel accuracy.

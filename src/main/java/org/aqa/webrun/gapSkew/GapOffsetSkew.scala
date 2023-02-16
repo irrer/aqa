@@ -81,13 +81,13 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
   private val group = "C" + bankA.angleRounded
 
   val separation: GosValue = {
-    val v = bankA.plannedEdgeSeparation_mm
+    val v = bankA.plannedEdgeSeparation_mm.get
     new GosValue(
-      v.get,
+      v,
       name = "Horizontal Separation",
       group,
       description = s"Horizontal (x axis) distance between the centers of the right and left measurements.  Used to calculate skew angle.",
-      derivation = v.get
+      derivation = v
     )
   }
 
@@ -119,9 +119,9 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
   )
 
   val aSkew_deg: GosValue = {
-    val v = if (aTop) bankA.topHorzSkew_deg else bankA.bottomHorzSkew_deg
+    val v = (if (aTop) bankA.topHorzSkew_deg else bankA.bottomHorzSkew_deg).get
     GosValue(
-      v.get,
+      v,
       name = "Bank A Skew angle",
       group,
       description = s"atan(${aRightLeftDiff.name} / ${separation.name})",
@@ -132,13 +132,13 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
   }
 
   val aSkew_mmPer40cm: GosValue = {
-    val v = if (aTop) bankA.topHorzSkew_mmPer40cm else bankA.bottomHorzSkew_mmPer40cm
+    val v = (if (aTop) bankA.topHorzSkew_mmPer40cm else bankA.bottomHorzSkew_mmPer40cm).get
     GosValue(
-      v.get,
+      v,
       name = "Bank A Skew",
       group,
-      description = s"(${aRightLeftDiff.name} / ${separation.name}) * 40",
-      derivation = s"$v = (${aRightLeftDiff.v} / ${separation.v}) * 40",
+      description = s"(${aRightLeftDiff.name} / ${separation.name}) * 400",
+      derivation = s"$v = (${aRightLeftDiff.v} / ${separation.v}) * 400",
       Seq(aRightLeftDiff, separation),
       units = "mm/40cm"
     )
@@ -186,9 +186,9 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
   )
 
   val bSkew_deg: GosValue = {
-    val v = if (bTop) bankB.topHorzSkew_deg else bankB.bottomHorzSkew_deg
+    val v = (if (bTop) bankB.topHorzSkew_deg else bankB.bottomHorzSkew_deg).get
     GosValue(
-      v.get,
+      v,
       name = "Bank B Skew angle",
       group,
       description = s"atan(${bRightLeftDiff.name} / ${separation.name})",
@@ -199,13 +199,13 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
   }
 
   val bSkew_mmPer40cm: GosValue = {
-    val v = if (bTop) bankB.topHorzSkew_mmPer40cm else bankB.bottomHorzSkew_mmPer40cm
+    val v = (if (bTop) bankB.topHorzSkew_mmPer40cm else bankB.bottomHorzSkew_mmPer40cm).get
     GosValue(
-      v.get,
+      v,
       name = "Bank B Skew",
       group,
-      description = s"(${bRightLeftDiff.name} / ${separation.name}) * 40",
-      derivation = s"$v = (${bRightLeftDiff.v} / ${separation.v}) * 40",
+      description = s"(${bRightLeftDiff.name} / ${separation.name}) * 400",
+      derivation = s"$v = (${bRightLeftDiff.v} / ${separation.v}) * 400",
       Seq(bRightLeftDiff, separation),
       units = "mm/40cm"
     )
@@ -244,7 +244,7 @@ case class ColAngle(bankA: GapSkew, bankB: GapSkew) {
       name = "Left Diff",
       group,
       description = s"${aLeft.name} - ${bLeft.name} : Difference for each bank's left-hand values",
-      derivation = "$v = ${aLeft.v} - ${bLeft.v}",
+      derivation = s"$v = ${aLeft.v} - ${bLeft.v}",
       Seq(aLeft, bLeft)
     )
   }
@@ -429,9 +429,9 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
   }
 
   val jawSkew_deg: GosValue = {
-    val v = if (jawIsTop) jawPair.topHorzSkew_deg else jawPair.bottomHorzSkew_deg
+    val v = (if (jawIsTop) jawPair.topHorzSkew_deg else jawPair.bottomHorzSkew_deg).get
     GosValue(
-      v.get,
+      v,
       name = "Jaw Skew angle",
       group,
       description = s"atan(${jawRightLeftDiff.name} / ${c.separation.name})",
@@ -442,13 +442,13 @@ case class JawJaw(jawPair: GapSkew, colAngle: ColAngle) {
   }
 
   val jawSkew_mmPer40cm: GosValue = {
-    val v = if (jawIsTop) jawPair.topHorzSkew_mmPer40cm else jawPair.bottomHorzSkew_mmPer40cm
+    val v = (if (jawIsTop) jawPair.topHorzSkew_mmPer40cm else jawPair.bottomHorzSkew_mmPer40cm).get
     GosValue(
-      v.get,
+      v,
       name = "Jaw Skew",
       group,
-      description = s"(${jawRightLeftDiff.name} / ${c.separation.name}) * 40",
-      derivation = s"$v = (${jawRightLeftDiff.v} / ${c.separation.v}) * 40",
+      description = s"(${jawRightLeftDiff.name} / ${c.separation.name}) * 400",
+      derivation = s"$v = (${jawRightLeftDiff.v} / ${c.separation.v}) * 400",
       Seq(jawRightLeftDiff, c.separation),
       units = "mm/40cm"
     )

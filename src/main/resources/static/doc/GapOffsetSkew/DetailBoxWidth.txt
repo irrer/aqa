@@ -1,0 +1,5 @@
+Box width is the width of two collimator leaves, with each side of the box
+placed at the center of each leaf.
+
+Note: font in Paint is: Arial 14
+

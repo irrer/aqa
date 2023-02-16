@@ -164,13 +164,13 @@ case class GapSkew(
   def topHorzSkew_deg: Option[Double] = math(topHorzDelta_mm, Some(measurementSeparation_mm), (a, b) => Math.toDegrees(Math.atan(a / b)))
 
   /** Skew as mm per 40 cm (if defined, else exception). */
-  def topHorzSkew_mmPer40cm: Option[Double] = math(topHorzDelta_mm, Some(measurementSeparation_mm), (a, b) => (a / b) * 40)
+  def topHorzSkew_mmPer40cm: Option[Double] = math(topHorzDelta_mm, Some(measurementSeparation_mm), (a, b) => (a / b) * 400)
 
   /** Skew (angle) of bottom edge (if defined, else exception). */
   def bottomHorzSkew_deg: Option[Double] = math(bottomHorzDelta_mm, Some(measurementSeparation_mm), (a, b) => Math.toDegrees(Math.atan(a / b)))
 
   /** Skew as mm per 40 cm (if defined, else exception). */
-  def bottomHorzSkew_mmPer40cm: Option[Double] = math(bottomHorzDelta_mm, Some(measurementSeparation_mm), (a, b) => (a / b) * 40)
+  def bottomHorzSkew_mmPer40cm: Option[Double] = math(bottomHorzDelta_mm, Some(measurementSeparation_mm), (a, b) => (a / b) * 400)
 
   /** Difference (error) in top left horizontal edge measurement from plan (planned - measured). */
   def topLeftHorzDelta_mm: Option[Double] = minus(topLeftPlanned_mm, topLeftValue_mm)
