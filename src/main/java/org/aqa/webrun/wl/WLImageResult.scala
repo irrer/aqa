@@ -188,7 +188,7 @@ class WLImageResult(
       s"    Box X,Y        iso mm: ${boxCenter_mm.getX}, ${boxCenter_mm.getY}\n" +
       s"    offset X,Y     iso mm: $offsetX_mm, $offsetY_mm\n" +
       s"    offset         iso mm: $offset_mm\n" +
-    badPixelListToString(badPixelList, "bad") +
+      badPixelListToString(badPixelList, "bad") +
       badPixelListToString(marginalPixelList, "marginal")
   }
 
@@ -200,7 +200,7 @@ class WLImageResult(
 
     val beamName: Option[String] = {
       if (runReq.rtplan.isDefined)
-        Phase2Util.getBeamNameOfRtimage(runReq.rtplan.get, rtimage)
+        Util.getBeamNameOfRtimage(runReq.rtplan.get, rtimage)
       else
         None
     }

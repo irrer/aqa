@@ -1519,6 +1519,38 @@ object Util extends Logging {
     list
   }
 
+  /**
+    * Given an RTPLAN and an RTIMAGE, get the beam's attribute list in the RTPLAN.
+    *
+    * @param plan RTPLAN
+    * @param rtimage RTIMAGE
+    * @return Beam parameters.
+    */
+  def getBeamOfRtimage(plan: AttributeList, rtimage: AttributeList): Option[AttributeList] = {
+    try {
+      val ReferencedBeamNumber = rtimage.get(TagByName.ReferencedBeamNumber).getIntegerValues.head
+      val beam = DicomUtil.seqToAttr(plan, TagByName.BeamSequence).find(bs => bs.get(TagByName.BeamNumber).getIntegerValues.head == ReferencedBeamNumber)
+      beam
+    } catch {
+      case _: Throwable => None
+    }
+  }
+
+  /**
+    * Given an RTPLAN and an RTIMAGE, get the name of the beam that the RTIMAGE is referencing in the plan.
+    *
+    * @param plan RTPLAN
+    * @param rtimage RTIMAGE
+    * @return Beam name.
+    */
+  def getBeamNameOfRtimage(plan: AttributeList, rtimage: AttributeList): Option[String] = {
+    try {
+      getBeamOfRtimage(plan, rtimage).map(Util.normalizedBeamName)
+    } catch {
+      case _: Throwable => None
+    }
+  }
+
   def main(args: Array[String]): Unit = {
 
     if (true) {
