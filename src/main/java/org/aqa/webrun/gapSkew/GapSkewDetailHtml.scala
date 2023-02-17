@@ -62,7 +62,11 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtima
 
   private def tdAngle(angle: Option[Double]): Elem = {
     val title = {
-      angle.toString + "   Warning limit: " + Config.GapSkewAngleWarn_deg + "  Fail limit: " + Config.GapSkewAngleFail_deg
+      val limits = "Warning limit: " + Config.GapSkewAngleWarn_deg + "  Fail limit: " + Config.GapSkewAngleFail_deg
+      angle match {
+        case Some(ang) => ang.toString + "    " + limits
+        case _         => limits
+      }
     }
     angle match {
       case Some(ang) =>
