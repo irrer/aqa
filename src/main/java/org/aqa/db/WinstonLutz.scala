@@ -19,6 +19,7 @@ package org.aqa.db
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
+import org.aqa.Util
 
 import scala.xml.Elem
 
@@ -54,6 +55,19 @@ case class WinstonLutz(
     val action = insertQuery += this
     val result = Db.run(action)
     result
+  }
+
+  /**
+    * Get a beam name.  Use the one in the RTPLAN, but if that is not available, construct one based on the gantry and collimator angles.
+    * @return The name of the beam.
+    */
+  def beamNameOf: String = {
+    if (beamName.isDefined)
+      beamName.get
+    else {
+      val name = "WL G" + Util.angleRoundedTo90(gantryAngle_deg) + " C" + Util.angleRoundedTo90(collimatorAngle_deg)
+      name
+    }
   }
 
   def insertOrUpdate(): Int = Db.run(WinstonLutz.query.insertOrUpdate(this))
